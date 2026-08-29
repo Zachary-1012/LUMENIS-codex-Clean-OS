@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>版本中心 - CTH-POMS</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Segoe UI", sans-serif;
+    background:#f2f2f7; color:#1c1c1e; min-height:100vh; padding-bottom:46px;
+  }
+  .profile-header { background:linear-gradient(135deg,#5b6ee1 0%,#7a4fb5 100%); padding:38px 20px 28px; color:#fff; text-align:center; }
+  .avatar { width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.18);margin:0 auto 14px;
+    display:flex;align-items:center;justify-content:center;font-size:30px;border:3px solid rgba(255,255,255,.28); }
+  .profile-name{font-size:21px;font-weight:600;margin-bottom:4px;}
+  .profile-role{display:inline-block;background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;font-size:12px;margin-top:8px;}
+  .wrap{max-width:680px;margin:-14px auto 0;padding:0 16px;}
+  .group-title{font-size:13px;color:#8e8e93;padding:16px 16px 8px;letter-spacing:.5px;}
+  .group{background:#fff;border-radius:14px;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  .row{display:flex;align-items:center;padding:14px 16px;border-bottom:.5px solid #e5e5ea;}
+  .row:last-child{border-bottom:none;}
+  .row .k{color:#8e8e93;font-size:14px;min-width:88px;}
+  .row .v{flex:1;font-size:15px;text-align:right;word-break:break-all;}
+  .ver-hero{text-align:center;padding:22px 16px 18px;}
+  .ver-num{font-size:40px;font-weight:700;letter-spacing:.5px;background:linear-gradient(135deg,#5b6ee1,#7a4fb5);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sync-line{display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:14px;color:#3a3a3c;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .dot.g{background:#34c759;box-shadow:0 0 0 3px rgba(52,199,89,.15);}
+  .dot.y{background:#ffcc00;box-shadow:0 0 0 3px rgba(255,204,0,.18);}
+  .dot.r{background:#ff3b30;box-shadow:0 0 0 3px rgba(255,59,48,.15);}
+  .dot.o{background:#ff9500;box-shadow:0 0 0 3px rgba(255,149,0,.15);}
+  .dot.gray{background:#c7c7cc;}
+  .dot.pulse{animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%{opacity:1}50%{opacity:.35}100%{opacity:1}}
+  .changed{padding:12px 16px;font-size:13px;color:#d68910;background:#fff8e6;border-bottom:.5px solid #ffe2a8;display:none;}
+  .changed.show{display:block;}
+  .changed .flist{margin-top:6px;max-height:120px;overflow:auto;color:#8e6a12;font-size:12px;line-height:1.6;}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px;}
+  .btns .span2{grid-column:1 / -1;}
+  .btn{border:none;border-radius:11px;padding:12px 14px;font-size:15px;font-weight:500;cursor:pointer;transition:opacity .15s,transform .05s;font-family:inherit;}
+  .btn:active{transform:scale(.97);} .btn:hover{opacity:.86;}
+  .btn-primary{background:#007aff;color:#fff;}
+  .btn-secondary{background:#e5e5ea;color:#1c1c1e;}
+  .btn-green{background:#34c759;color:#fff;}
+  .btn-ghost{background:#f2f2f7;color:#007aff;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .hist{max-height:380px;overflow-y:auto;}
+  .commit{padding:13px 16px;border-bottom:.5px solid #f0f0f5;}
+  .commit:last-child{border-bottom:none;}
+  .commit-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .sha{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#f2f2f7;padding:2px 7px;border-radius:6px;color:#5856d6;}
+  .ctime{font-size:12px;color:#8e8e93;margin-left:auto;}
+  .csubject{font-size:14px;line-height:1.4;}
+  .current-tag{font-size:10px;background:#34c759;color:#fff;padding:2px 7px;border-radius:9px;}
+  .rollback{margin-top:7px;font-size:12px;border:none;background:transparent;color:#ff3b30;cursor:pointer;padding:0;}
+  .switch{position:relative;width:46px;height:28px;flex:none;}
+  .switch input{display:none;} .switch .track{position:absolute;inset:0;background:#e5e5ea;border-radius:16px;transition:.2s;}
+  .switch .thumb{position:absolute;top:2px;left:2px;width:24px;height:24px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .switch input:checked + .track{background:#34c759;} .switch input:checked + .track .thumb{transform:translateX(18px);}
+  .note{font-size:12px;color:#8e8e93;line-height:1.6;padding:0 16px 14px;}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.active{display:flex;}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:420px;padding:22px;max-height:86vh;overflow-y:auto;}
+  .modal h3{font-size:18px;margin-bottom:16px;text-align:center;}
+  .fg{margin-bottom:14px;} .fg label{display:block;font-size:13px;color:#8e8e93;margin-bottom:6px;}
+  .fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1px solid #e5e5ea;border-radius:10px;font-size:15px;outline:none;font-family:inherit;}
+  .fg input:focus,.fg textarea:focus{border-color:#007aff;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;} .modal-actions .btn{flex:1;}
+  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:11px 22px;border-radius:10px;font-size:14px;z-index:2000;opacity:0;transition:opacity .3s;max-width:90%;text-align:center;}
+  .toast.show{opacity:1;}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite;vertical-align:-2px;}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  @media (max-width:480px){
+    .profile-header{padding:28px 16px 22px;} .avatar{width:60px;height:60px;font-size:25px;}
+    .profile-name{font-size:18px;} .wrap{padding:0 12px;} .ver-num{font-size:34px;}
+    .btns{grid-template-columns:1fr;} .btns .span2{grid-column:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="profile-header">
+  <div class="avatar">
+    <!-- 版本/分支图标 -->
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><circle cx="6" cy="6.5" r="2.4"/><circle cx="18" cy="6.5" r="2.4"/><path d="M6 9v2.2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9M12 15v3"/></svg>
+  </div>
+  <div class="profile-name">版本中心</div>
+  <div style="font-size:13px;opacity:.85;">GitHub 源码版本保险库 · 自动保存 / 历史 / 回滚</div>
+  <span class="profile-role">{{ current_user.display_name or current_user.username }} ·
+    {% if current_user.role=='owner' %}超级主账号{% elif current_user.role=='admin' %}管理员{% else %}普通账号{% endif %}</span>
+</div>
+
+<div class="wrap">
+
+  <div class="group-title">当前版本</div>
+  <div class="group">
+    <div class="ver-hero">
+      <div class="ver-num" id="verNum">—</div>
+      <div class="sync-line"><span class="dot gray" id="syncDot"></span><span id="syncText">加载中…</span></div>
+    </div>
+    <div class="changed" id="changedBox">
+      <b id="changedTitle"></b>
+      <div class="flist" id="changedList"></div>
+    </div>
+    <div class="row"><span class="k">分支</span><span class="v" id="fBranch">—</span></div>
+    <div class="row"><span class="k">当前提交</span><span class="v" id="fHead">—</span></div>
+    <div class="row"><span class="k">最近保存</span><span class="v" id="fLastTime">—</span></div>
+    <div class="row"><span class="k">最近更新</span><span class="v" id="fLastMsg">—</span></div>
+    <div class="row"><span class="k">远程仓库</span><span class="v" id="fRemote" style="font-size:12px;">—</span></div>
+  </div>
+
+  {% if current_user.role == 'owner' %}
+  <div class="group-title">版本操作</div>
+  <div class="group">
+    <div class="btns">
+      <button class="btn btn-primary span2" onclick="openSave()">⬆️ 立即保存版本（提交并同步 GitHub）</button>
+      <button class="btn btn-green" onclick="checkUpdate()"><span id="cuTxt">🔄 检查更新</span></button>
+      <button class="btn btn-secondary" onclick="pushNow()">☁️ 推送到 GitHub</button>
+      <button class="btn btn-ghost span2" onclick="pullNow()">⬇️ 拉取远程最新（拉取前自动要求工作区干净）</button>
+    </div>
+  </div>
+
+  <div class="group-title">自动保存（手机/后台也可自动成版本）</div>
+  <div class="group">
+    <div class="row">
+      <span style="flex:1;font-size:15px;">检测到源码变化自动提交</span>
+      <label class="switch"><input type="checkbox" id="autoCommit" onchange="saveCfg()"><span class="track"><span class="thumb"></span></span></label>
+    </div>
+    <div class="row">
+      <span style="flex:1;font-size:15px;">自动提交后自动推送 GitHub</span>
+      <label class="switch"><input type="checkbox" id="autoPush" onchange="saveCfg()"><span class="track"><span class="thumb"></span></span></label>
+    </div>
+    <div class="row">
+      <span class="k">巡检间隔</span>
+      <select id="interval" style="flex:1;padding:8px;border:1px solid #e5e5ea;border-radius:9px;" onchange="saveCfg()">
+        <option value="10">10 分钟</option><option value="30">30 分钟</option>
+        <option value="60">1 小时</option><option value="180">3 小时</option><option value="360">6 小时</option>
+      </select>
+    </div>
+    <div class="note" style="padding-top:4px;">自动保存只收源码 / 模板 / 配置模板 / 依赖清单 / 迁移与更新日志；Cookie、密钥、密码、生产数据库、采集原始数据由安全闸与 .gitignore 双重拦截，永不入库。</div>
+  </div>
+  {% else %}
+  <div class="group"><div class="note" style="padding:14px 16px;">当前为只读角色：可查看版本状态与历史；保存版本、推送、回滚等开发操作需超级主账号。</div></div>
+  {% endif %}
+
+  <div class="group-title">
+    版本历史 <span style="float:right;cursor:pointer;color:#007aff;" onclick="loadAll()">刷新</span>
+  </div>
+  <div class="group"><div class="hist" id="hist"><div style="padding:18px;color:#8e8e93;text-align:center;">加载中…</div></div></div>
+
+</div>
+
+<!-- 保存版本弹窗 -->
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <h3>⬆️ 保存版本</h3>
+    <div class="fg"><label>版本说明（留空自动生成）</label>
+      <textarea id="saveMsg" rows="3" placeholder="例如：优化小红书采集任务调度"></textarea></div>
+    <div class="fg"><label>版本号递进</label>
+      <select id="bump">
+        <option value="">不递进（沿用当前）</option>
+        <option value="patch" selected>修订号 +1（推荐，小改/修复）</option>
+        <option value="minor">次版本 +1（新增功能）</option>
+        <option value="major">主版本 +1（重大升级）</option>
+      </select></div>
+    <div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="doPush" checked style="width:auto;"> 提交后立即推送到 GitHub</label></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeM('saveModal')">取消</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="doSave()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 回滚确认弹窗 -->
+<div class="modal-overlay" id="rbModal">
+  <div class="modal">
+    <h3>↩️ 回滚版本</h3>
+    <p style="font-size:14px;line-height:1.6;">将回滚到 <span class="sha" id="rbSha"></span>。<br>
+    默认使用 <b>安全回滚（revert）</b>：新增一条“反向提交”抵消改动，<b>完整保留历史、可再次撤销</b>。</p>
+    <div class="fg" style="margin-top:14px;"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#ff3b30;">
+      <input type="checkbox" id="hardMode" style="width:auto;"> 危险：硬重置（丢弃之后的提交，不可恢复）</label></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeM('rbModal')">取消</button>
+      <button class="btn btn-danger btn" id="rbBtn" style="background:#ff3b30;color:#fff;" onclick="doRollback()">确认回滚</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API="/v4/version-center/api";
+const IS_OWNER = {{ 'true' if current_user.role=='owner' else 'false' }};
+let CURRENT_SHA="", RB_TARGET="";
+function token(){return localStorage.getItem("v4_token")||"";}
+async function api(url,opt={}){
+  const h={"Content-Type":"application/json",...(opt.headers||{})};
+  const t=token(); if(t)h.Authorization="Bearer "+t;
+  const res=await fetch(API+url,{...opt,headers:h});
+  if(res.status===401){toast("登录已过期，请重新登录");setTimeout(()=>location.href="/v4/settings/login",900);throw new Error("401");}
+  return res.json();
+}
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2600);}
+function openM(id){document.getElementById(id).classList.add("active");}
+function closeM(id){document.getElementById(id).classList.remove("active");}
+function fmtTime(iso){if(!iso)return "—";const d=new Date(iso);return d.toLocaleString("zh-CN",{hour12:false});}
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+const SYNC={synced:["g","🟢 已与 GitHub 同步"],ahead:["y","🟡 有本地提交待推送"],behind:["r","🔴 落后于远程，建议拉取"],
+  diverged:["o","🟠 本地与远程分叉，需先拉取合并"],no_upstream:["gray","⚪ 尚未关联远程"]};
+
+async function loadStatus(){
+  try{
+    const r=await api("/status"); if(!r.success)return;
+    const s=r.status;
+    document.getElementById("verNum").textContent=s.version||"—";
+    document.getElementById("fBranch").textContent=s.branch||"—";
+    document.getElementById("fHead").textContent=s.head_short? s.head_short.slice(0,10):"—";
+    document.getElementById("fLastTime").textContent=s.last_commit&&s.last_commit.time?fmtTime(s.last_commit.time):"—";
+    document.getElementById("fLastMsg").textContent=(s.last_commit&&s.last_commit.subject)||"—";
+    document.getElementById("fRemote").textContent=s.remote_url||"未配置";
+    CURRENT_SHA=s.head_short;
+    const [cls,txt]=SYNC[s.sync_state]||["gray",s.sync_state];
+    const dot=document.getElementById("syncDot");dot.className="dot "+cls;dot.textContent="";
+    document.getElementById("syncText").textContent=txt+(s.ahead?`（领先 ${s.ahead}）`:"")+(s.behind?`（落后 ${s.behind}）`:"");
+    const box=document.getElementById("changedBox");
+    if(s.changed_count>0){box.classList.add("show");document.getElementById("changedTitle").textContent=`⚠️ 有 ${s.changed_count} 处未保存改动`;
+      document.getElementById("changedList").innerHTML=(s.changed_files||[]).map(f=>"· "+esc(f)).join("<br>");}
+    else box.classList.remove("show");
+  }catch(e){}
+}
+
+async function loadAll(){
+  const [sh,h,cfg]=await Promise.all([api("/status"),api("/history?limit=30"),
+    IS_OWNER?api("/config"):Promise.resolve({config:null})]);
+  if(sh.success)renderStatus(sh.status);
+  if(h.success)renderHistory(h.items);
+  if(cfg&&cfg.config){document.getElementById("autoCommit").checked=!!cfg.config.auto_commit;
+    document.getElementById("autoPush").checked=!!cfg.config.auto_push;
+    document.getElementById("interval").value=String(cfg.config.interval_minutes||30);}
+}
+function renderStatus(s){
+  document.getElementById("verNum").textContent=s.version||"—";
+  document.getElementById("fBranch").textContent=s.branch||"—";
+  document.getElementById("fHead").textContent=(s.head_short||"—").slice(0,10);
+  document.getElementById("fLastTime").textContent=s.last_commit?.time?fmtTime(s.last_commit.time):"—";
+  document.getElementById("fLastMsg").textContent=s.last_commit?.subject||"—";
+  document.getElementById("fRemote").textContent=s.remote_url||"未配置";CURRENT_SHA=s.head_short;
+  const [cls,txt]=SYNC[s.sync_state]||["gray",s.sync_state];
+  document.getElementById("syncDot").className="dot "+cls;
+  document.getElementById("syncText").textContent=txt+(s.ahead?`（领先 ${s.ahead}）`:"")+(s.behind?`（落后 ${s.behind}）`:"");
+  const box=document.getElementById("changedBox");
+  if(s.changed_count>0){box.classList.add("show");document.getElementById("changedTitle").textContent=`⚠️ 有 ${s.changed_count} 处未保存改动`;
+    document.getElementById("changedList").innerHTML=(s.changed_files||[]).map(f=>"· "+esc(f)).join("<br>");}else box.classList.remove("show");
+}
+function renderHistory(items){
+  const box=document.getElementById("hist");
+  if(!items||!items.length){box.innerHTML='<div style="padding:18px;color:#8e8e93;text-align:center;">暂无提交记录</div>';return;}
+  box.innerHTML=items.map(it=>`
+    <div class="commit">
+      <div class="commit-top">
+        <span class="sha">${it.short}</span>
+        ${it.short===CURRENT_SHA?'<span class="current-tag">当前</span>':''}
+        <span class="ctime">${fmtTime(it.time)}</span>
+      </div>
+      <div class="csubject">${esc(it.subject)}</div>
+      ${IS_OWNER && it.short!==CURRENT_SHA?`<button class="rollback" onclick="askRollback('${it.short}')">↩️ 回滚到此版本</button>`:""}
+    </div>`).join("");
+}
+
+function openSave(){document.getElementById("saveMsg").value="";openM("saveModal");}
+async function doSave(){
+  const btn=document.getElementById("saveBtn");btn.disabled=true;btn.innerHTML='<span class="spin"></span> 保存中…';
+  try{
+    const body={message:document.getElementById("saveMsg").value.trim(),
+      bump:document.getElementById("bump").value||null,do_push:document.getElementById("doPush").checked};
+    const r=await api("/save",{method:"POST",body:JSON.stringify(body)});
+    if(r.ok||r.success){toast(r.committed?`已保存 ${r.version||""}${r.pushed?" · 已同步":" · 已提交(未推送)"}`:"没有需要保存的改动");closeM("saveModal");await loadAll();}
+    else{toast((r.error||"保存失败")+(r.blocked?("："+r.blocked.slice(0,3).join(",")):""));}
+  }catch(e){toast("保存异常");}finally{btn.disabled=false;btn.textContent="保存";}
+}
+async function pushNow(){
+  toast("正在推送…");
+  const r=await api("/push",{method:"POST"});
+  toast(r.success?"已推送到 GitHub ✅":("推送失败："+(r.err||r.error||"网络/认证")));loadStatus();
+}
+async function checkUpdate(){
+  const el=document.getElementById("cuTxt");el.innerHTML='<span class="spin"></span> 检查中';
+  const r=await api("/check",{method:"POST"});el.textContent="🔄 检查更新";
+  if(r.ok){const map={synced:"已是最新，已同步",ahead:`本地领先 ${r.ahead}，可推送`,behind:`远程有 ${r.behind} 个新提交，可拉取`,diverged:"本地与远程分叉"};
+    toast(map[r.sync_state]||r.sync_state);loadStatus();}
+  else toast("检查失败："+(r.detail||r.error||""));
+}
+async function pullNow(){
+  const r=await api("/pull",{method:"POST"});
+  toast(r.success?"已拉取远程更新 ✅":("拉取失败："+(r.err||"请先保存本地改动")));loadAll();
+}
+function askRollback(sha){RB_TARGET=sha;document.getElementById("rbSha").textContent=sha;document.getElementById("hardMode").checked=false;openM("rbModal");}
+async function doRollback(){
+  const hard=document.getElementById("hardMode").checked;
+  if(hard && !confirm("硬重置会永久丢弃该版本之后的提交，确认继续？"))return;
+  const btn=document.getElementById("rbBtn");btn.disabled=true;btn.textContent="回滚中…";
+  const r=await api("/rollback",{method:"POST",body:JSON.stringify({sha:RB_TARGET,mode:hard?"hard":"revert",confirm:hard})});
+  btn.disabled=false;btn.textContent="确认回滚";
+  if(r.success){toast("已回滚 ✅");closeM("rbModal");loadAll();}else toast("回滚失败："+(r.err||r.error||""));
+}
+async function saveCfg(){
+  if(!IS_OWNER)return;
+  const body={auto_commit:document.getElementById("autoCommit").checked,
+    auto_push:document.getElementById("autoPush").checked,interval_minutes:parseInt(document.getElementById("interval").value)};
+  const r=await api("/config",{method:"POST",body:JSON.stringify(body)});
+  if(r.success)toast("自动保存设置已更新");
+}
+loadAll();
+setInterval(loadStatus, 30000);
+</script>
+</body>
+</html>

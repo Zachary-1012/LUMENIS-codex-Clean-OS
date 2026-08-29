@@ -15,6 +15,7 @@ from .collect import collect_bp
 from .importer import importer_bp
 from .ai_hub import ai_bp
 from .console import console_bp
+from .version_center import version_bp, start_version_watcher
 from .adapters import registry, register_default_adapters
 from .adapters import collector_service
 from .adapters import auth_recovery
@@ -32,6 +33,7 @@ def create_v4_blueprint() -> Blueprint:
     v4_bp.register_blueprint(importer_bp)
     v4_bp.register_blueprint(ai_bp)
     v4_bp.register_blueprint(console_bp)  # 含 /v4/ 与 /v4/console/ 统一控制台
+    v4_bp.register_blueprint(version_bp)  # 版本中心 /v4/version-center/
 
     # ============ 认证API ============
 
@@ -324,3 +326,8 @@ def init_v4_modules():
     """初始化所有V4模块（建表等）"""
     ensure_initialized()
     register_default_adapters()
+    # 启动版本中心自动保存守护（检测源码变化→自动成版本→自动推送；内部已做异常隔离）
+    try:
+        start_version_watcher()
+    except Exception as e:  # noqa: BLE001
+        print(f"[v4] 版本守护未启动(不影响主系统): {e}")

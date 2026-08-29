@@ -205,6 +205,14 @@
       <div class="item-label">模块管理</div>
       <div class="item-arrow">›</div>
     </div>
+    <div class="group-item" onclick="location.href='/v4/version-center/'">
+      <div class="item-icon" style="background:#5856d6;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="6" cy="6.5" r="2.2"/><circle cx="18" cy="6.5" r="2.2"/><path d="M6 8.8v2.4a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8.8M12 15.2V18"/></svg>
+      </div>
+      <div class="item-label">版本中心</div>
+      <div class="item-value" id="vcSyncMini">GitHub 同步 / 历史 / 回滚</div>
+      <div class="item-arrow">›</div>
+    </div>
     {% if current_user.role == 'owner' %}
     <div class="group-item" onclick="openAuditLogs()">
       <div class="item-icon" style="background:#ff3b30;">📋</div>
