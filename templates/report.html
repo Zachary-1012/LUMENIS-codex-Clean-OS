@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}报告中心 - 广州太古汇舆情监测系统{% endblock %}
+
+{% block content %}
+<div class="report-center">
+    <section class="report-section">
+        <h2 class="section-title">报告导出</h2>
+        <div class="report-types">
+            <div class="report-type-card">
+                <h3>日报</h3>
+                <p>每日舆情汇总，按自然日00:00-24:00</p>
+                <div class="report-actions">
+                    <input type="date" id="report-date-daily" />
+                    <button class="btn btn-primary" onclick="exportReport('daily', 'word')">导出Word</button>
+                    <button class="btn btn-secondary" onclick="exportReport('daily', 'excel')">导出Excel</button>
+                </div>
+            </div>
+            <div class="report-type-card">
+                <h3>周报</h3>
+                <p>每周舆情汇总，按自然周周一至周日</p>
+                <div class="report-actions">
+                    <input type="week" id="report-week-weekly" />
+                    <button class="btn btn-primary" onclick="exportReport('weekly', 'word')">导出Word</button>
+                    <button class="btn btn-secondary" onclick="exportReport('weekly', 'excel')">导出Excel</button>
+                </div>
+            </div>
+            <div class="report-type-card">
+                <h3>月报</h3>
+                <p>每月舆情汇总，按自然月1号至月末</p>
+                <div class="report-actions">
+                    <input type="month" id="report-month-monthly" />
+                    <button class="btn btn-primary" onclick="exportReport('monthly', 'word')">导出Word</button>
+                    <button class="btn btn-secondary" onclick="exportReport('monthly', 'excel')">导出Excel</button>
+                </div>
+            </div>
+            <div class="report-type-card">
+                <h3>年报</h3>
+                <p>每年舆情汇总，按自然年1月1日至12月31日</p>
+                <div class="report-actions">
+                    <input type="number" id="report-year-yearly" placeholder="2026" min="2020" max="2030" />
+                    <button class="btn btn-primary" onclick="exportReport('yearly', 'word')">导出Word</button>
+                    <button class="btn btn-secondary" onclick="exportReport('yearly', 'excel')">导出Excel</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="report-section">
+        <h2 class="section-title">报告模板说明</h2>
+        <div class="template-info">
+            <h3>太古汇舆情汇报模板</h3>
+            <ul>
+                <li><strong>汇报周期：</strong>YYYY.MM.DD – YYYY.MM.DD</li>
+                <li><strong>舆情等级：</strong>🔴重大 / 🟡关注 / 🟢平稳</li>
+                <li><strong>核心结论：</strong>1句话概览</li>
+                <li><strong>数据概览：</strong>总提及量、负面量、负面占比、最高单条互动</li>
+                <li><strong>分业态分布：</strong>零售品牌、餐饮、商场服务、活动展览、环境设施、安全突发</li>
+                <li><strong>重点负面帖清单：</strong>业态、标题、发布时间、互动量、核心诉求、处理状态</li>
+                <li><strong>舆情归因：</strong>高发业态、触发类型、传播路径</li>
+                <li><strong>应对动作：</strong>已执行、待执行、风险预警</li>
+            </ul>
+            <p class="note">注意：周报/月报/年报中的负面笔记必须是二次确认的。</p>
+        </div>
+    </section>
+
+    <section class="report-section">
+        <h2 class="section-title">历史报告</h2>
+        <div class="history-list" id="report-history">
+            <div class="loading">加载中...</div>
+        </div>
+    </section>
+</div>
+{% endblock %}

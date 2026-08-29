@@ -1,0 +1,153 @@
+"""
+XHSCollector - 小红书采集器实现
+
+继承 PlatformCollector，实现小红书平台的搜索、详情、评论采集。
+
+红线：主体过滤绝不放进爬虫。爬虫只负责抓原始数据。
+subject_hit() 仍由现有系统判定。
+"""
+from typing import List, Optional, Tuple
+from ..base import PlatformCollector, RawNote, RawComment
+from ..session import BrowserSession, SessionConfig
+from .client import XHSClient, RequestConfig
+from .parser import XHSParser
+from .models import XHSNote, XHSComment
+
+
+class XHSCollector(PlatformCollector):
+    """
+    小红书采集器
+
+    支持两种采集模式：
+    1. API 模式：使用 XHSClient 直接调用 API（需要签名）
+    2. 浏览器模式：使用 BrowserSession + Playwright 模拟浏览器操作
+
+    默认使用浏览器模式（兼容现有 xhs_search.js 方案）。
+    """
+
+    platform_name = 'xiaohongshu'
+    base_url = 'https://www.xiaohongshu.com'
+
+    def __init__(self, session: BrowserSession = None, config: dict = None,
+                 client: XHSClient = None, use_browser: bool = True):
+        """
+        初始化小红书采集器
+        :param session: 浏览器会话（浏览器模式）
+        :param config: 采集器配置
+        :param client: HTTP 客户端（API 模式）
+        :param use_browser: 是否使用浏览器模式
+        """
+        super().__init__(session, config)
+        self.client = client or XHSClient()
+        self.parser = XHSParser()
+        self.use_browser = use_browser
+        self._search_script = self.config.get('search_script', 'xhs_search.js')
+
+    def search(self, keyword: str, max_scroll: int = 4) -> List[RawNote]:
+        """
+        搜索小红书笔记
+        :param keyword: 搜索关键词
+        :param max_scroll: 最大滚动次数
+        :return: 原始笔记列表
+        """
+        if self.use_browser:
+            return self._search_by_browser(keyword, max_scroll)
+        else:
+            return self._search_by_api(keyword, max_scroll)
+
+    def _search_by_browser(self, keyword: str, max_scroll: int) -> List[XHSNote]:
+        """
+        使用浏览器模式搜索（兼容现有 xhs_search.js）
+        实际实现调用 Node.js 脚本 xhs_search.js
+        """
+        import subprocess
+        import json
+        import os
+        from datetime import datetime
+
+        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        search_script = os.path.join(script_dir, self._search_script)
+        output_path = os.path.join(script_dir, 'data', f'search_{int(datetime.now().timestamp())}.json')
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        cmd = ['node', search_script, '--keyword', keyword, '--output', output_path, '--max-scroll', str(max_scroll)]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            if result.returncode != 0:
+                print(f'[XHSCollector] 搜索失败: {keyword}, 错误: {result.stderr[-200:]}')
+                return []
+            stdout = result.stdout.strip()
+            idx = stdout.find('{')
+            if idx >= 0:
+                data = json.loads(stdout[idx:])
+                raw_notes = data.get('notes', [])
+                return [self._convert_to_xhs_note(n) for n in raw_notes if n.get('note_id')]
+        except subprocess.TimeoutExpired:
+            print(f'[XHSCollector] 搜索超时: {keyword}')
+        except Exception as e:
+            print(f'[XHSCollector] 搜索异常: {keyword}, 错误: {e}')
+        return []
+
+    def _search_by_api(self, keyword: str, max_scroll: int) -> List[XHSNote]:
+        """使用 API 模式搜索"""
+        all_notes = []
+        for page in range(1, max_scroll + 1):
+            data = self.client.search_notes(keyword, page=page, page_size=20)
+            if not data:
+                break
+            notes = self.parser.parse_search_response(data)
+            if not notes:
+                break
+            all_notes.extend(notes)
+            if len(notes) < 20:
+                break
+        return all_notes
+
+    def _convert_to_xhs_note(self, raw: dict) -> XHSNote:
+        """将现有 xhs_search.js 输出的字典转换为 XHSNote"""
+        return XHSNote(
+            note_id=raw.get('note_id', ''),
+            title=raw.get('title', '') or '',
+            content=raw.get('content', '') or '',
+            url=raw.get('url', '') or '',
+            cover=raw.get('cover', '') or '',
+            author_id=raw.get('author_id', '') or '',
+            author_nickname=raw.get('author_nickname', '') or '',
+            author_avatar=raw.get('author_avatar', '') or '',
+            likes=int(raw.get('likes', 0) or 0),
+            comments=int(raw.get('comments', 0) or 0),
+            collects=int(raw.get('collects', 0) or 0),
+            shares=int(raw.get('shares', 0) or 0),
+            note_type=raw.get('type', 'normal') or 'normal',
+            xsec_token=raw.get('xsec_token', '') or '',
+            publish_date=raw.get('publish_date', '') or '',
+            raw_data=raw,
+        )
+
+    def get_detail(self, note_id: str) -> Optional[RawNote]:
+        """获取笔记详情"""
+        if not self.use_browser:
+            data = self.client.get_note_detail(note_id)
+            if data:
+                return self.parser.parse_detail_response(data)
+        # 浏览器模式：从已搜索结果中获取，或单独打开页面
+        return None
+
+    def get_comments(self, note_id: str, cursor: str = None,
+                     max_count: int = 100) -> Tuple[List[RawComment], Optional[str], bool]:
+        """
+        获取笔记评论（分页）
+        评论分页保留：cursor + has_more 循环拉全
+        """
+        if not self.use_browser:
+            data = self.client.get_comments(note_id, cursor=cursor or '', page_size=20)
+            if data:
+                comments, next_cursor, has_more = self.parser.parse_comments_response(data)
+                return comments, next_cursor if has_more else None, has_more
+        return [], None, False
+
+    def close(self):
+        """关闭采集器"""
+        super().close()
+        if self.client:
+            self.client.close()

@@ -1,0 +1,69 @@
+{
+  "_comment": "GitHub 参考仓库种子清单（5 大分类，按本系统技术栈相关性挑选）。update_reference.py 会拉取最新 star/最近提交，并按分类自动搜新仓库补充。full_name 不区分大小写，脚本自动去重。",
+  "categories": [
+    {
+      "key": "web_production",
+      "name": "① Web 生产部署 / 调度 / 稳定性",
+      "search_queries": ["flask production waitress", "apscheduler python", "python wsgi server production"]
+    },
+    {
+      "key": "crawler_browser",
+      "name": "② 爬虫 / 浏览器自动化 / CDP",
+      "search_queries": ["playwright python crawler", "xiaohongshu crawler", "chrome cdp automation python"]
+    },
+    {
+      "key": "social_monitor",
+      "name": "③ 社媒 / 舆情 / 小红书 / 微博 / B站",
+      "search_queries": ["weibo crawler", "xiaohongshu spider", "bilibili api", "public opinion monitor python"]
+    },
+    {
+      "key": "nlp_ai",
+      "name": "④ 中文 NLP / 情感分析 / 本地大模型",
+      "search_queries": ["chinese sentiment analysis", "local llm python", "chinese nlp toolkit"]
+    },
+    {
+      "key": "frontend_dashboard",
+      "name": "⑤ 前端 Dashboard / 响应式 / 图表 / 图标",
+      "search_queries": ["admin dashboard responsive", "javascript chart library", "lucide icon three.js dashboard"]
+    }
+  ],
+  "repos": [
+    {"full_name": "pallets/flask", "category": "web_production"},
+    {"full_name": "Pylons/waitress", "category": "web_production"},
+    {"full_name": "benoitc/gunicorn", "category": "web_production"},
+    {"full_name": "agronholm/apscheduler", "category": "web_production"},
+    {"full_name": "encode/uvicorn", "category": "web_production"},
+    {"full_name": "pallets/werkzeug", "category": "web_production"},
+    {"full_name": "prometheus/client_python", "category": "web_production"},
+
+    {"full_name": "microsoft/playwright-python", "category": "crawler_browser"},
+    {"full_name": "SeleniumHQ/selenium", "category": "crawler_browser"},
+    {"full_name": "scrapy/scrapy", "category": "crawler_browser"},
+    {"full_name": "pyppeteer/pyppeteer", "category": "crawler_browser"},
+    {"full_name": "ultrafunkamsterdam/undetected-chromedriver", "category": "crawler_browser"},
+    {"full_name": "psf/requests", "category": "crawler_browser"},
+    {"full_name": "encode/httpx", "category": "crawler_browser"},
+    {"full_name": "g1879/DrissionPage", "category": "crawler_browser"},
+    {"full_name": "NanmiCoder/MediaCrawler", "category": "crawler_browser"},
+
+    {"full_name": "dataabc/weibo-crawler", "category": "social_monitor"},
+    {"full_name": "dataabc/weibo-search", "category": "social_monitor"},
+    {"full_name": "SocialSisterYi/bilibili-API-collect", "category": "social_monitor"},
+
+    {"full_name": "isnowfy/snownlp", "category": "nlp_ai"},
+    {"full_name": "huggingface/transformers", "category": "nlp_ai"},
+    {"full_name": "facebookresearch/fastText", "category": "nlp_ai"},
+    {"full_name": "ollama/ollama", "category": "nlp_ai"},
+    {"full_name": "openai/openai-python", "category": "nlp_ai"},
+    {"full_name": "PaddlePaddle/PaddleNLP", "category": "nlp_ai"},
+
+    {"full_name": "apache/echarts", "category": "frontend_dashboard"},
+    {"full_name": "chartjs/Chart.js", "category": "frontend_dashboard"},
+    {"full_name": "tabler/tabler", "category": "frontend_dashboard"},
+    {"full_name": "ColorlibHQ/AdminLTE", "category": "frontend_dashboard"},
+    {"full_name": "ant-design/ant-design", "category": "frontend_dashboard"},
+    {"full_name": "tailwindlabs/tailwindcss", "category": "frontend_dashboard"},
+    {"full_name": "lucide-icons/lucide", "category": "frontend_dashboard"},
+    {"full_name": "mrdoob/three.js", "category": "frontend_dashboard"}
+  ]
+}

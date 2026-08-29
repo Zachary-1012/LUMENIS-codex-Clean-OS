@@ -1,0 +1,324 @@
+# -*- coding: utf-8 -*-
+"""
+共享拟人浏览层（Human Browser Layer）
+=================================================
+定位：面向小红书 / 抖音 / Google 等“强反爬、需真人浏览”的采集源，
+提供统一的、基于 CDP 连接真实 Edge 的拟人化浏览器操作底座。
+
+设计原则（结合 GitHub 反检测开源实践 niespodd/browser-fingerprinting、
+nodriver、SeleniumBase 等的共识）：
+  1. 隐蔽性主防线是“真实有头 Edge + 持久化指纹 Profile + connectOverCDP”，
+     而非 playwright 自启的自动化内核——本层只连接由 cdp_helper 拉起的、
+     带固定用户目录的 Edge，保证 IP、指纹、登录态长期稳定一致；
+  2. JS 层 stealth 注入仅作纵深防御（掩盖 navigator.webdriver 等显性泄漏），
+     不把它当作唯一手段；
+  3. 行为拟人：贝塞尔鼠标轨迹、人类打字节奏、变速/偶发回滚的滚动、
+     高斯随机停顿，替代固定 sleep 与机械滚轮；
+  4. 六态严格分离：SUCCESS / EMPTY / BLOCKED / CAPTCHA / AUTH_FAILED /
+     NETWORK_ERROR，绝不把被拦或加载失败伪装成“0 条成功”；
+  5. CDP 模式只关闭自己新建的标签页，绝不 browser.close()（否则会连同
+     用户的真实 Edge 一起关掉）。
+
+线程模型：playwright sync_api 需在工作线程内独立创建实例，HumanBrowser
+作为上下文管理器在单次采集任务内创建与释放。
+"""
+import time
+import random
+import socket
+import logging
+from dataclasses import dataclass
+from typing import Optional, List, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# 六态定义（对齐系统采集状态机，禁止与“0 条”混淆）
+# ============================================================
+class PageState:
+    SUCCESS = "SUCCESS"              # 正常取到内容（是否有数据由选择器另行判断）
+    EMPTY = "EMPTY"                  # 正常加载但确无结果
+    BLOCKED = "BLOCKED"              # IP/风控拦截（如小红书 300012、Google knitsail）
+    CAPTCHA = "CAPTCHA"              # 人机/滑块/图形验证码
+    AUTH_FAILED = "AUTH_FAILED"      # 登录态失效，需重新登录/扫码
+    NETWORK_ERROR = "NETWORK_ERROR"  # 网络中断、加载失败、about:blank
+
+
+# 各状态的通用文本特征（小写匹配）；平台特有特征可在 detect_state 追加
+_STATE_MARKERS = {
+    PageState.BLOCKED: [
+        "300012", "ip存在风险", "安全限制", "访问过于频繁", "unusual traffic",
+        "如果您无法访问", "knitsail", "请求过于频繁", "系统检测到异常",
+    ],
+    PageState.CAPTCHA: [
+        "图形验证码", "拖动滑块", "完成安全验证", "点击验证", "人机验证",
+        "我不是机器人", "captcha", "nc_icon", "安全验证", "请通过验证", "滑块验证",
+    ],
+    PageState.AUTH_FAILED: [
+        "请先登录", "扫码登录", "登录后查看", "登录后即可", "website-login",
+        "请登录", "登录小红书", "登录抖音", "验证码登录", "密码登录", "sign in to continue",
+    ],
+    PageState.NETWORK_ERROR: [
+        "无法访问此网站", "加载失败", "err_", "连接超时", "网页可能暂时无法连接",
+        "dns_probe", "网络错误", "请检查网络",
+    ],
+}
+
+# 纵深防御：掩盖最显性的自动化指纹（真实 Edge + CDP 下多数本就不存在）
+_STEALTH_INIT_JS = r"""
+Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+if (!window.chrome) { window.chrome = { runtime: {} }; }
+Object.defineProperty(navigator, 'languages', {get: () => ['zh-CN', 'zh', 'en']});
+Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
+const originalQuery = window.navigator.permissions && window.navigator.permissions.query;
+if (originalQuery) {
+  window.navigator.permissions.query = (p) => (
+    p && p.name === 'notifications'
+      ? Promise.resolve({state: Notification.permission})
+      : originalQuery(p)
+  );
+}
+"""
+
+
+def is_cdp_open(host: str = "127.0.0.1", port: int = 9222, timeout: float = 1.0) -> bool:
+    """探测 CDP 调试端口是否在监听。"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(timeout)
+            return s.connect_ex((host, port)) == 0
+    except Exception:
+        return False
+
+
+@dataclass
+class HumanConfig:
+    """拟人节奏参数（毫秒/秒级，贴近真人分布）。"""
+    type_min_ms: int = 70           # 单键最小间隔
+    type_max_ms: int = 240          # 单键最大间隔
+    typo_prob: float = 0.03         # 误触后回删重打的概率
+    scroll_min_px: int = 120        # 单次滚动最小距离
+    scroll_max_px: int = 520        # 单次滚动最大距离
+    scroll_back_prob: float = 0.10  # 小幅回滚概率
+    move_duration_s: Tuple[float, float] = (0.4, 0.9)
+    settle_s: Tuple[float, float] = (0.1, 0.4)   # 鼠标到位后、点击前停顿
+    pause_s: Tuple[float, float] = (0.6, 1.6)    # 动作间普通停顿
+
+
+class HumanBrowser:
+    """拟人浏览器：连接已存在的 CDP Edge，提供拟人操作与六态识别。"""
+
+    def __init__(self, cdp_url: Optional[str] = None,
+                 config: Optional[HumanConfig] = None,
+                 auto_ensure: bool = True, *,
+                 port: int = 9222, profile_dir: Optional[str] = None,
+                 proxy_server: Optional[str] = None,
+                 launch_url: str = "about:blank",
+                 browser: str = "edge"):
+        # 允许直接给 cdp_url；否则按端口拼。port/profile/proxy 用于自动拉起对应实例
+        self.cdp_url = cdp_url or f"http://127.0.0.1:{port}"
+        self.port = port
+        self.profile_dir = profile_dir
+        self.proxy_server = proxy_server
+        self.launch_url = launch_url
+        self.browser = (browser or "edge").lower()  # 内核：edge / chrome（firefox/safari 预留）
+        self.cfg = config or HumanConfig()
+        self.auto_ensure = auto_ensure
+        self._pw = None
+        self._browser = None
+        self._context = None
+        self._owned_pages: List = []
+
+    # ---------- 生命周期 ----------
+    def connect(self):
+        """连接 CDP Edge；auto_ensure 时端口未开则尝试经 cdp_helper 拉起。"""
+        if not is_cdp_open(port=self.port):
+            if not self.auto_ensure:
+                raise RuntimeError(f"CDP 浏览器未启动（端口 {self.port}），且 auto_ensure=False")
+            self._ensure_browser()
+        from playwright.sync_api import sync_playwright
+        self._pw = sync_playwright().start()
+        self._browser = self._pw.chromium.connect_over_cdp(self.cdp_url)
+        if not self._browser.contexts:
+            raise RuntimeError("CDP 浏览器没有可用的浏览器上下文")
+        self._context = self._browser.contexts[0]
+        logger.info("HumanBrowser 已连接 %s，既有标签页 %d 个",
+                    self.cdp_url, len(self._context.pages))
+        return self
+
+    def _ensure_browser(self):
+        """通过项目根 cdp_helper 拉起带持久 Profile 的 Edge（可选依赖）。"""
+        try:
+            from cdp_helper import ensure_cdp_browser
+            kwargs = {"port": self.port, "auto_start": True,
+                      "launch_url": self.launch_url, "browser": self.browser}
+            if self.profile_dir:
+                kwargs["profile_dir"] = self.profile_dir
+            if self.proxy_server:
+                kwargs["proxy_server"] = self.proxy_server
+            info = ensure_cdp_browser(**kwargs)
+            if not info.get("success") and not info.get("available"):
+                raise RuntimeError(f"无法拉起 CDP Edge：{info.get('message')}")
+            time.sleep(1.5)
+        except ImportError as e:
+            raise RuntimeError("cdp_helper 不可用，无法自动启动 CDP 浏览器") from e
+
+    def new_page(self, stealth: bool = True):
+        """新建一个干净标签页并注入反检测脚本；返回 page。"""
+        page = self._context.new_page()
+        if stealth:
+            page.add_init_script(_STEALTH_INIT_JS)
+        self._owned_pages.append(page)
+        return page
+
+    def close(self):
+        """只关闭本层创建的标签页与 CDP 连接，绝不动用户的 Edge。"""
+        for page in self._owned_pages:
+            try:
+                if page and not page.is_closed():
+                    page.close()
+            except Exception:
+                pass
+        self._owned_pages.clear()
+        try:
+            if self._browser:
+                self._browser.close()  # CDP 下仅断开连接，不关 Edge
+        except Exception:
+            pass
+        try:
+            if self._pw:
+                self._pw.stop()
+        except Exception:
+            pass
+
+    def __enter__(self):
+        return self.connect()
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+        return False
+
+    # ---------- 拟人原语 ----------
+    @staticmethod
+    def pause(a: float, b: float):
+        """均匀随机停顿。"""
+        time.sleep(random.uniform(a, b))
+
+    @staticmethod
+    def gauss_pause(mean: float = 1.0, sigma: float = 0.3, floor: float = 0.2):
+        """高斯停顿，模拟真人动作间隔的自然抖动。"""
+        time.sleep(max(floor, random.gauss(mean, sigma)))
+
+    @staticmethod
+    def _bezier_path(start: Tuple[float, float], end: Tuple[float, float],
+                     steps: int = 24) -> List[Tuple[float, float]]:
+        """生成带两个随机控制点的三次贝塞尔鼠标轨迹。"""
+        sx, sy = start
+        ex, ey = end
+        dx, dy = ex - sx, ey - sy
+        cp1 = (sx + dx * random.uniform(0.2, 0.45) + random.uniform(-30, 30),
+               sy + dy * random.uniform(0.2, 0.45) + random.uniform(-30, 30))
+        cp2 = (sx + dx * random.uniform(0.55, 0.8) + random.uniform(-30, 30),
+               sy + dy * random.uniform(0.55, 0.8) + random.uniform(-30, 30))
+
+        def b(t, p0, p1, p2, p3):
+            mt = 1 - t
+            return (mt ** 3 * p0 + 3 * mt ** 2 * t * p1 + 3 * mt * t ** 2 * p2 + t ** 3 * p3)
+
+        return [(b(i / steps, sx, cp1[0], cp2[0], ex),
+                 b(i / steps, sy, cp1[1], cp2[1], ey)) for i in range(steps + 1)]
+
+    def human_move_and_click(self, page, locator, *, click: bool = True):
+        """沿贝塞尔轨迹把鼠标移入元素随机内点，停顿后再真实点击。"""
+        locator.scroll_into_view_if_needed(timeout=8000)
+        box = locator.bounding_box()
+        if not box:
+            raise RuntimeError("目标元素无布局位置，无法移动点击")
+        tx = box["x"] + box["width"] * random.uniform(0.25, 0.75)
+        ty = box["y"] + box["height"] * random.uniform(0.25, 0.75)
+        mx = page.mouse
+        path = self._bezier_path((random.uniform(0, 400), random.uniform(0, 300)),
+                                 (tx, ty))
+        dur = random.uniform(*self.cfg.move_duration_s)
+        per = dur / len(path)
+        for x, y in path:
+            mx.move(x, y)
+            time.sleep(per)
+        self.pause(*self.cfg.settle_s)
+        if click:
+            mx.down()
+            self.pause(0.04, 0.12)
+            mx.up()
+
+    def human_type(self, page, locator, text: str, *, clear_first: bool = True):
+        """逐字符拟人输入，偶发误触→停顿→退格→重打。"""
+        locator.click()
+        if clear_first:
+            page.keyboard.press("Control+A")
+            self.pause(0.08, 0.2)
+        for ch in text:
+            if random.random() < self.cfg.typo_prob:
+                wrong = "z" if ch != "z" else "x"
+                page.keyboard.type(wrong)
+                self.pause(0.15, 0.4)
+                page.keyboard.press("Backspace")
+                self.pause(0.1, 0.3)
+            page.keyboard.type(ch, delay=random.randint(self.cfg.type_min_ms, self.cfg.type_max_ms))
+            if random.random() < 0.05:
+                self.gauss_pause(0.5, 0.2)  # 思考式短暂停顿
+
+    def human_scroll(self, page, *, total_px: int = 1600, rounds: Optional[int] = None):
+        """变速、偶发小幅回滚地向下滚动，替代固定 mouse.wheel(0,2000)。"""
+        scrolled = 0
+        rounds = rounds or max(2, total_px // 300)
+        for _ in range(rounds):
+            if random.random() < self.cfg.scroll_back_prob:
+                page.mouse.wheel(0, -random.randint(60, 180))  # 偶尔回看
+            else:
+                step = random.randint(self.cfg.scroll_min_px, self.cfg.scroll_max_px)
+                page.mouse.wheel(0, step)
+                scrolled += step
+            self.pause(0.3, 0.9)
+            if scrolled >= total_px and rounds <= 2:
+                break
+        return scrolled
+
+    # ---------- 六态识别 ----------
+    @staticmethod
+    def detect_state(page, *, extra_markers: Optional[dict] = None,
+                     success_selector: Optional[str] = None) -> str:
+        """依据 URL / 正文 / 结果选择器判定页面六态。
+
+        success_selector 命中即 SUCCESS；未命中且页面正常则 EMPTY；
+        命中各风控/登录/网络特征返回对应状态。调用方据此决定熔断或恢复。
+        """
+        try:
+            url = (page.url() or "").lower()
+        except Exception:
+            url = ""
+        if url.startswith("about:blank"):
+            return PageState.NETWORK_ERROR
+        try:
+            body = page.locator("body").inner_text(timeout=3000).lower()
+        except Exception:
+            body = ""
+
+        markers = {k: list(v) for k, v in _STATE_MARKERS.items()}
+        if extra_markers:
+            for state, words in extra_markers.items():
+                markers.setdefault(state, []).extend(w.lower() for w in words)
+
+        # 风控/验证/登录/网络优先级高于空结果判定
+        for state in (PageState.BLOCKED, PageState.CAPTCHA,
+                      PageState.AUTH_FAILED, PageState.NETWORK_ERROR):
+            if any(w.lower() in body or w.lower() in url for w in markers.get(state, [])):
+                return state
+
+        if success_selector:
+            try:
+                if page.locator(success_selector).count() > 0:
+                    return PageState.SUCCESS
+            except Exception:
+                pass
+            return PageState.EMPTY if body else PageState.NETWORK_ERROR
+        return PageState.SUCCESS if body else PageState.EMPTY

@@ -1,0 +1,146 @@
+# 取证2 数据库
+db 文件: data\monitor.db, monitor.db, 你的数据库文件名.db
+选定主库: data\monitor.db  4532 KB
+
+## 表数量 37
+
+### ai_filter_log  rows=554  cols=9
+   id:INTEGER, note_id:TEXT, filter_stage:TEXT, filter_result:TEXT, filter_reason:TEXT, noise_type:TEXT, confidence:REAL, provider:TEXT, filtered_at:TEXT
+
+### brand_industry_monitor  rows=198  cols=12
+   id:INTEGER, brand_name:TEXT, brand_name_cn:TEXT, industry:TEXT, floor:TEXT, shop_number:TEXT, note_count:INTEGER, negative_count:INTEGER, positive_count:INTEGER, total_engagement:INTEGER, risk_level:TEXT, last_updated:TEXT
+
+### collection_counters  rows=0  cols=8
+   id:INTEGER, date:TEXT, daily_count:INTEGER, manual_count:INTEGER, auto_count:INTEGER, last_collect_at:TEXT, created_at:TEXT, updated_at:TEXT
+
+### collection_logs  rows=278  cols=7
+   id:INTEGER, keyword:TEXT, notes_count:INTEGER, status:TEXT, error_msg:TEXT, started_at:TEXT, finished_at:TEXT
+
+### collector_quality_log  rows=7  cols=9
+   id:INTEGER, note_id:TEXT, status:TEXT, score:REAL, detail_status:TEXT, comments_collected:INTEGER, collector_version:TEXT, checked_at:TEXT, reason:TEXT
+
+### comments  rows=2  cols=14
+   id:INTEGER, note_id:TEXT, comment_id:TEXT, content:TEXT, author_id:TEXT, author_nickname:TEXT, likes:INTEGER, create_time:TEXT, sentiment:TEXT, risk_level:TEXT, risk_score:INTEGER, is_negative:INTEGER, collected_at:TEXT, is_taikoo_verified:INTEGER
+
+### daily_digest  rows=3  cols=15
+   id:INTEGER, digest_date:TEXT, total_found:INTEGER, effective_count:INTEGER, positive_count:INTEGER, neutral_count:INTEGER, risk_count:INTEGER, risk_index:REAL, brand_health_score:REAL, ai_summary:TEXT, executive_summary:TEXT, key_insights:TEXT, action_items:TEXT, top_events:TEXT, generated_at:TEXT
+
+### daily_reports  rows=17  cols=29
+   id:INTEGER, report_type:TEXT, report_date:TEXT, period_start:TEXT, period_end:TEXT, total_notes:INTEGER, positive_count:INTEGER, neutral_count:INTEGER, negative_count:INTEGER, high_risk_count:INTEGER, medium_risk_count:INTEGER, low_risk_count:INTEGER, total_likes:INTEGER, total_comments:INTEGER, total_engagements:INTEGER, top_topics:TEXT, hot_notes:TEXT, risk_alerts:TEXT, key_events:TEXT, event_su
+
+### event_insights  rows=2  cols=10
+   id:INTEGER, event_id:INTEGER, ai_summary:TEXT, risk_assessment:TEXT, recommended_action:TEXT, sentiment_trend:TEXT, propagation_analysis:TEXT, key_voices:TEXT, provider:TEXT, generated_at:TEXT
+
+### event_mentions  rows=511  cols=6
+   id:INTEGER, event_id:INTEGER, source_type:TEXT, source_id:TEXT, match_score:REAL, created_at:TEXT
+
+### events  rows=395  cols=22
+   id:INTEGER, event_key:TEXT, title:TEXT, summary:TEXT, fact_status:TEXT, impact:TEXT, risk_reason:TEXT, recommended_action:TEXT, first_seen:TEXT, last_seen:TEXT, mention_count:INTEGER, source_count:INTEGER, risk_level:TEXT, risk_score:INTEGER, status:TEXT, keywords:TEXT, translations:TEXT, ai_provider:TEXT, negative_confirmed:INTEGER, negative_confirmed_at:TEXT, negative_confirmed_by:TEXT, event_da
+
+### feedback_keywords  rows=13  cols=7
+   keyword:TEXT, source:TEXT, score:REAL, enabled:INTEGER, first_seen:TEXT, last_seen:TEXT, used_count:INTEGER
+
+### industry_stats  rows=8  cols=9
+   id:INTEGER, industry:TEXT, brand_count:INTEGER, note_count:INTEGER, negative_count:INTEGER, positive_count:INTEGER, total_engagement:INTEGER, avg_risk_score:REAL, last_updated:TEXT
+
+### note_comments  rows=141  cols=11
+   id:INTEGER, comment_id:TEXT, note_id:TEXT, content:TEXT, author_id:TEXT, author_nickname:TEXT, likes:INTEGER, publish_time:TEXT, parent_id:TEXT, raw_json:TEXT, fetched_at:TEXT
+
+### note_review_history  rows=8245  cols=11
+   id:INTEGER, note_id:TEXT, old_relevance:TEXT, new_relevance:TEXT, old_sentiment:TEXT, new_sentiment:TEXT, old_risk:TEXT, new_risk:TEXT, reason:TEXT, provider:TEXT, reviewed_at:TEXT
+
+### notes  rows=875  cols=65
+   id:INTEGER, note_id:TEXT, title:TEXT, content:TEXT, url:TEXT, cover:TEXT, author_id:TEXT, author_nickname:TEXT, author_avatar:TEXT, likes:INTEGER, comments:INTEGER, collects:INTEGER, shares:INTEGER, note_type:TEXT, xsec_token:TEXT, collected_at:TEXT, publish_date:TEXT, sentiment:TEXT, sentiment_score:REAL, risk_level:TEXT, risk_score:INTEGER, summary:TEXT, topics:TEXT, ai_provider:TEXT, ai_analyze
+
+### notification_config  rows=0  cols=7
+   id:INTEGER, channel_name:TEXT, channel_type:TEXT, config_json:TEXT, enabled:INTEGER, created_at:TEXT, updated_at:TEXT
+
+### notification_logs  rows=3  cols=12
+   id:INTEGER, notification_type:TEXT, level:TEXT, title:TEXT, content:TEXT, channel:TEXT, status:TEXT, error_message:TEXT, retry_count:INTEGER, message_hash:TEXT, created_at:TEXT, sent_at:TEXT
+
+### review_logs  rows=0  cols=9
+   id:INTEGER, ticket_id:TEXT, note_id:TEXT, action:TEXT, operator:TEXT, comment:TEXT, old_status:TEXT, new_status:TEXT, created_at:TEXT
+
+### review_samples  rows=0  cols=13
+   id:INTEGER, note_id:TEXT, title:TEXT, content:TEXT, original_sentiment:TEXT, reviewed_sentiment:TEXT, original_risk:TEXT, reviewed_risk:TEXT, is_negative_confirmed:INTEGER, reviewer:TEXT, review_time:TEXT, model_trained:INTEGER, created_at:TEXT
+
+### review_tickets  rows=0  cols=15
+   id:INTEGER, ticket_id:TEXT, note_id:TEXT, review_type:TEXT, status:TEXT, priority:TEXT, reason:TEXT, reviewer:TEXT, review_comment:TEXT, review_time:TEXT, created_at:TEXT, updated_at:TEXT, escalated_to:TEXT, sample_label:TEXT, model_version:TEXT
+
+### schema_version  rows=7  cols=5
+   id:INTEGER, version:INTEGER, description:TEXT, applied_at:TIMESTAMP, applied_by:TEXT
+
+### swire_events  rows=10  cols=12
+   id:INTEGER, project_key:TEXT, brand:TEXT, event_type:TEXT, title:TEXT, summary:TEXT, source:TEXT, url:TEXT, event_date:TEXT, sentiment:TEXT, tags:TEXT, created_at:TEXT
+
+### swire_notes  rows=0  cols=14
+   id:INTEGER, project_key:TEXT, brand:TEXT, note_id:TEXT, title:TEXT, author:TEXT, likes:INTEGER, comments:INTEGER, collects:INTEGER, shares:INTEGER, sentiment:TEXT, note_url:TEXT, publish_date:TEXT, collected_at:TEXT
+
+### swire_projects  rows=8  cols=13
+   project_key:TEXT, name:TEXT, city:TEXT, line:TEXT, opened:TEXT, intro:TEXT, sort:INTEGER, kind:TEXT, keywords:TEXT, is_active:INTEGER, collect_status:TEXT, created_at:TEXT, updated_at:TEXT
+
+### system_config  rows=10  cols=6
+   id:INTEGER, config_key:TEXT, config_value:TEXT, description:TEXT, created_at:TEXT, updated_at:TEXT
+
+### token_stat  rows=1  cols=2
+   day:TEXT, used:INTEGER
+
+### topic_campaign_notes  rows=0  cols=16
+   id:INTEGER, campaign_key:TEXT, topic:TEXT, note_id:TEXT, title:TEXT, content:TEXT, author:TEXT, publish_datetime:TEXT, likes:INTEGER, comments:INTEGER, collects:INTEGER, shares:INTEGER, note_url:TEXT, first_seen_at:TEXT, last_seen_at:TEXT, raw_json:TEXT
+
+### topic_campaign_snapshots  rows=70  cols=12
+   id:INTEGER, campaign_key:TEXT, topic:TEXT, captured_at:TEXT, browse_count:INTEGER, discussion_count:INTEGER, note_count:INTEGER, new_note_count:INTEGER, engagement_count:INTEGER, status:TEXT, error:TEXT, raw_json:TEXT
+
+### topic_campaign_topics  rows=7  cols=6
+   id:INTEGER, campaign_key:TEXT, topic:TEXT, normalized_topic:TEXT, enabled:INTEGER, created_at:TEXT
+
+### topic_campaigns  rows=1  cols=9
+   id:INTEGER, campaign_key:TEXT, name:TEXT, start_date:TEXT, end_date:TEXT, status:TEXT, interval_minutes:INTEGER, created_at:TEXT, updated_at:TEXT
+
+### web_events  rows=20  cols=13
+   id:INTEGER, title:TEXT, description:TEXT, source:TEXT, url:TEXT, published_at:TEXT, discovered_at:TEXT, sentiment:TEXT, risk_level:TEXT, relevance_score:REAL, tags:TEXT, status:TEXT, created_at:TEXT
+
+### web_mentions  rows=60  cols=24
+   id:INTEGER, source_id:TEXT, source_platform:TEXT, source_type:TEXT, title:TEXT, content:TEXT, url:TEXT, domain:TEXT, published_at:TEXT, fetched_at:TEXT, relevance:TEXT, verification:TEXT, confidence:REAL, sentiment:TEXT, risk_level:TEXT, risk_score:INTEGER, summary:TEXT, event_hint:TEXT, topics:TEXT, ai_provider:TEXT, related_event_id:INTEGER, source_adapter:TEXT, query:TEXT, canonical_url:TEXT
+
+### web_runs  rows=15  cols=9
+   id:INTEGER, adapter:TEXT, query:TEXT, started_at:TEXT, finished_at:TEXT, fetched:INTEGER, accepted:INTEGER, rejected:INTEGER, error:TEXT
+
+### web_sources  rows=0  cols=9
+   id:INTEGER, source_key:TEXT, source_name:TEXT, adapter:TEXT, enabled:INTEGER, last_run_at:TEXT, last_success_at:TEXT, last_error:TEXT, item_count:INTEGER
+
+### web_topics  rows=96  cols=11
+   id:INTEGER, topic:TEXT, source:TEXT, sentiment:TEXT, relevance_score:REAL, mention_count:INTEGER, first_seen:TEXT, last_seen:TEXT, tags:TEXT, summary:TEXT, created_at:TEXT
+
+### weekly_events  rows=30  cols=17
+   id:INTEGER, week_key:TEXT, event_title:TEXT, event_type:TEXT, urgency:TEXT, description:TEXT, location:TEXT, people_involved:TEXT, process:TEXT, screenshot_path:TEXT, user_demand:TEXT, sentiment:TEXT, risk_level:TEXT, status:TEXT, confirmed_negative:INTEGER, created_at:TEXT, updated_at:TEXT
+
+## 索引/唯一 (sqlite_master type=index)
+  idx_ai_filter_note on ai_filter_log :: CREATE INDEX idx_ai_filter_note ON ai_filter_log(note_id)
+  idx_ai_filter_result on ai_filter_log :: CREATE INDEX idx_ai_filter_result ON ai_filter_log(filter_result)
+  idx_collector_quality_note on collector_quality_log :: CREATE INDEX idx_collector_quality_note ON collector_quality_log(note_id)
+  idx_daily_digest_date on daily_digest :: CREATE INDEX idx_daily_digest_date ON daily_digest(digest_date)
+  idx_reports_type_date on daily_reports :: CREATE UNIQUE INDEX idx_reports_type_date ON daily_reports(report_type, report_date)
+  idx_event_insights_event on event_insights :: CREATE INDEX idx_event_insights_event ON event_insights(event_id)
+  idx_events_risk on events :: CREATE INDEX idx_events_risk ON events(risk_level)
+  idx_note_comments_note on note_comments :: CREATE INDEX idx_note_comments_note ON note_comments(note_id)
+  idx_notes_sentiment on notes :: CREATE INDEX idx_notes_sentiment ON notes(sentiment)
+  idx_notes_risk on notes :: CREATE INDEX idx_notes_risk ON notes(risk_level)
+  idx_notes_category on notes :: CREATE INDEX idx_notes_category ON notes(category)
+  idx_notes_collected on notes :: CREATE INDEX idx_notes_collected ON notes(collected_at)
+  idx_notes_author on notes :: CREATE INDEX idx_notes_author ON notes(author_id)
+  idx_notes_publish_date on notes :: CREATE INDEX idx_notes_publish_date ON notes(publish_date)
+  idx_notes_status on notes :: CREATE INDEX idx_notes_status ON notes(status)
+  idx_notes_verified on notes :: CREATE INDEX idx_notes_verified ON notes(is_taikoo_verified)
+  idx_notes_negative_confirmed on notes :: CREATE INDEX idx_notes_negative_confirmed ON notes(negative_confirmed)
+  idx_notes_publish_datetime on notes :: CREATE INDEX idx_notes_publish_datetime ON notes(publish_datetime)
+  idx_notes_captured_at on notes :: CREATE INDEX idx_notes_captured_at ON notes(captured_at)
+  idx_swe_proj on swire_events :: CREATE INDEX idx_swe_proj ON swire_events(project_key,event_date DESC)
+  idx_swn_proj on swire_notes :: CREATE INDEX idx_swn_proj ON swire_notes(project_key)
+  idx_tcn_campaign_topic_time on topic_campaign_notes :: CREATE INDEX idx_tcn_campaign_topic_time ON topic_campaign_notes(campaign_key, topic, last
+  idx_tcs_campaign_topic_time on topic_campaign_snapshots :: CREATE INDEX idx_tcs_campaign_topic_time ON topic_campaign_snapshots(campaign_key, topic, 
+  idx_web_events_published_at on web_events :: CREATE INDEX idx_web_events_published_at ON web_events(published_at)
+  idx_web_relevance on web_mentions :: CREATE INDEX idx_web_relevance ON web_mentions(relevance)
+  idx_web_published on web_mentions :: CREATE INDEX idx_web_published ON web_mentions(published_at)
+  idx_web_topics_topic on web_topics :: CREATE INDEX idx_web_topics_topic ON web_topics(topic)
+  idx_weekly_events_week_key on weekly_events :: CREATE INDEX idx_weekly_events_week_key ON weekly_events(week_key)

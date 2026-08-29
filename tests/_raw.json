@@ -1,0 +1,12 @@
+{
+  "keyword": "广州太古汇",
+  "fetched_at": "2026-08-29T08:27:56.471Z",
+  "state": "NETWORK_ERROR",
+  "total": 0,
+  "api_calls": 0,
+  "error_code": "",
+  "error_msg": "",
+  "blocked_reason": "EMPTY_NO_API",
+  "page_hint": "安全验证|https://www.xiaohongshu.com/website-login/captcha?redirectPath=https%3A%2F%2Fwww.xiaohongshu.com%2Fsearch_result%2F%3Fkeyword%3D%E5%B9%BF%E5%B7%9E%E5%A4%AA%E5%8F%A4%E6%B1%87%26source%3Dweb_explor",
+  "notes": []
+}

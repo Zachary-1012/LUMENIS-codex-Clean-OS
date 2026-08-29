@@ -1,0 +1,952 @@
+对，这份“技术学习进度汇报”也应该并入最终方案，而且它和我们前面确定的双产品线 + 本地 Ollama + Cookie/Session 恢复 + 生产级稳定性其实是能很好衔接的。
+我建议最终不要再把它当成一份单独的“学习报告”，而是把它升级成 Codex 接管时的技术基线与施工原则。这样 Codex 看到的不是零散需求，而是一套完整的工程约束。
+下面是我建议采用的最新总方案 V4.0。
+舆情监测系统双产品线升级总方案 V4.0
+一、最终产品定义
+产品 01：客户交付版
+CorTech Lab-GuangZhou Taikoo Hui Public Opinion Monitoring System
+简称：
+CorTech-TKH
+定位：
+广州太古汇专属、独立部署、稳定交付、业务口径冻结的生产系统。
+产品 02：自有母平台
+Z-Brand Monitoring Platform
+简称：
+Z-Brand
+定位：
+自己长期使用和持续研发的多品牌舆情监测母平台。
+未来可以：
+Z-Brand
+   │
+   ├── 广州太古汇
+   ├── 品牌A
+   ├── 品牌B
+   ├── 品牌C
+   └── 新客户
+二、最核心的产品战略
+最终不是：
+两套源码。
+而是：
+一套 Core，两个独立 Release。
+                  Z-Brand Core
+                       │
+          ┌────────────┴────────────┐
+          ↓                         ↓
+  CUSTOMER_RELEASE          ZBRAND_PLATFORM
+          ↓                         ↓
+     CorTech-TKH                 Z-Brand
+          ↓                         ↓
+      客户电脑独立运行          自己研发使用
+两者：
+逻辑同源
+Core能力共用
+数据库隔离
+配置隔离
+AI实验隔离
+运行实例隔离
+Release独立
+不允许客户版运行时依赖Z-Brand
+三、但有一个非常重要的现实调整
+今晚出来的版本不一定就是最终版。
+所以这次交付不要把：
+“今晚版本 = 最终产品”
+作为前提。
+而应该采用：
+Z-Brand Core
+     ↓
+当前稳定基线
+     ↓
+Release Candidate
+     ↓
+CorTech-TKH RC
+     ↓
+真实电脑部署测试
+     ↓
+发现问题
+     ↓
+回到Core修复
+     ↓
+重新Build
+     ↓
+RC2
+     ↓
+RC3
+     ↓
+Final Release
+也就是说：
+两个交付包现在就必须有。
+但是：
+两个包都是可运行的 Release Candidate，不意味着必须一次性定死为最终版。
+这反而是最安全的。
+四、两个交付包最终都必须能够直接给豆包/Codex部署
+最终交付：
+DELIVERY/
+│
+├── CorTech-Lab-GuangZhou-Taikoo-Hui/
+│
+└── Z-Brand-Monitoring-Platform/
+每一个都必须具备：
+源码
+配置
+数据库
+启动脚本
+预检脚本
+健康检查
+备份
+回滚
+依赖说明
+部署说明
+版本说明
+测试报告
+不能只是：
+“这里是一堆 Python 文件，你自己研究。”
+五、源码交付资产清单
+你后续给我的/Codex 的源码包，建议完整包含以下内容。
+1. 源代码
+*.py
+包括：
+Flask/App
+Models
+Collector
+Scheduler
+Risk
+Event
+Topic
+Campaign
+Report
+Auth
+Notification
+AI
+API
+Utils
+六、前端文件
+必须一起提供：
+templates/
+static/
+包括：
+HTML
+CSS
+JS
+页面组件
+图标
+图片
+前端配置
+尤其不能只给 Python。
+七、数据库
+这一项你提醒得非常对。
+不要只给：
+源码 + 一个数据库
+而是要把所有实际业务数据库资产都纳入审计。
+包括：
+*.db
+*.sqlite
+*.sqlite3
+同时识别：
+*.db-wal
+*.db-shm
+但 WAL/SHM 不能简单当成长期备份文件复制，要通过安全方式生成一致性数据库快照。
+八、数据库必须分类
+最终需要识别：
+生产数据库
+production.db
+测试数据库
+test.db
+历史数据库
+legacy.db
+实验数据库
+如果存在：
+experiment.db
+数据库迁移
+migrations/
+九、不能只看数据库结构
+Codex 必须检查：
+表
+字段
+索引
+关系
+数据量
+重复数据
+空数据
+时间字段
+历史记录
+尤其确认：
+notes
+events
+risks
+topics
+campaigns
+daily_reports
+crawl_logs
+以及当前源码实际存在的全部表。
+十、Cookie / Session 也属于交付资产，但不能把真实秘密直接硬编码进源码
+必须识别：
+Cookie
+Session
+Browser Profile
+账号配置
+Token
+环境变量
+但是：
+不应该：
+COOKIE = "真实Cookie"
+直接提交到源码。
+应该：
+config
++
+.env
++
+本地安全存储
++
+Browser Profile
+并且：
+真实 Cookie 不应该进入 Git 仓库。
+十一、Cookie/Session恢复机制成为 Core 核心能力
+这是这次升级的一个真正重点。
+最终：
+采集器
+ ↓
+Session Health Check
+ ↓
+正常？
+ ├── YES → 采集
+ │
+ └── NO
+      ↓
+识别失效原因
+      ↓
+Session Recovery
+      ↓
+人工恢复
+      ↓
+重新验证
+      ↓
+恢复采集
+十二、不要把所有异常都叫“Cookie失效”
+至少区分：
+SESSION_EXPIRED
+NEED_LOGIN
+NEED_VERIFY
+RISK_WARNING
+IP_BLOCKED
+PLATFORM_BLOCKED
+COLLECT_ERROR
+NETWORK_ERROR
+特别是你之前遇到的：
+300012
+IP存在风险
+不能误判成：
+Cookie过期。
+十三、人工二维码恢复
+如果当前平台/浏览器实际返回合法的登录或验证二维码：
+系统可以自动进入：
+AUTH RECOVERY
+前端弹出：
+小红书登录恢复窗口
+里面显示：
+平台：小红书
+账号：xxxx
+状态：需要人工验证
+[二维码区域]
+等待扫码……
+[刷新二维码]
+[重新检测]
+[关闭]
+扫码成功后：
+Browser Session
+      ↓
+重新验证
+      ↓
+SUCCESS
+      ↓
+恢复任务
+十四、非常重要：不能把二维码恢复设计成“绕过平台验证”
+系统只能：
+正常展示平台实际提供的登录/验证流程。
+不能：
+绕过验证码
+破解风控
+自动解决安全验证
+伪造平台验证结果
+我们做的是：
+风控感知 + 安全暂停 + 人工恢复 + 自动续跑。
+十五、小红书必须解决“静默零条”
+这是当前实际问题之一。
+以后：
+小红书：0条
+必须知道为什么。
+至少显示：
+[表格]
+状态 | 含义
+SUCCESS | 正常采集
+NO_NEW_DATA | 正常但无新增
+NEED_VERIFY | 等待人工验证
+SESSION_EXPIRED | 登录态失效
+RISK_WARNING | 风控风险
+BLOCKED | 当前采集被限制
+COLLECT_ERROR | 技术错误
+COOLING_DOWN | 系统主动冷却
+[表格结束]
+这样：
+0条 ≠ 没有舆情。
+十六、小红书动态调度
+不再把：
+30分钟、1小时
+当成绝对固定规则。
+而是：
+健康
+↓
+正常调度
+轻度风险
+↓
+降低频率
+验证
+↓
+暂停
+IP风险
+↓
+长冷却
+恢复
+↓
+低频试探
+持续稳定
+↓
+逐步恢复
+十七、采集架构最终统一
+Monitoring Engine
+        ↓
+     Scheduler
+        ↓
+ Platform Adapter
+ ┌──────┼───────┐
+ ↓      ↓       ↓
+ XHS   Weibo   Bilibili
+ ↓      ↓       ↓
+ Normalize
+        ↓
+ Deduplicate
+        ↓
+ Subject Filter
+        ↓
+ Quality
+        ↓
+ Note Store
+十八、采集器不能继续无限增加
+现有类似：
+collector_v2
+xhs_cookie_bridge
+xhs_search_v2
+rednote
+xhs_cookie_search
+必须审计。
+最终确定：
+Production Adapter
+        +
+Fallback Adapter
+而不是：
+v1
+v2
+v3
+v4
+v5
+全部一起跑。
+十九、数据时间口径永久锁定
+数据库至少明确：
+publish_at
+captured_at
+first_seen_at
+last_seen_at
+detail_fetched_at
+其中：
+报告：
+使用：
+publish_at
+采集：
+使用：
+captured_at
+所以：
+8月27日发布、8月28日采集的笔记，属于8月27日发布舆情。
+二十、笔记库是事实层
+统一：
+Note Store
+所有：
+话题
+事件
+风险
+报告
+专题
+AI分析
+都基于 Note Store。
+不能重复建立：
+15周年笔记库
+普通笔记库
+活动笔记库
+二十一、专题正式平台化
+广州太古汇15周年：
+不再写成：
+if campaign == "15周年":
+而是：
+Campaign Engine
+任何品牌都可以：
+创建专题
+↓
+关键词
+↓
+时间范围
+↓
+平台
+↓
+监测规则
+↓
+报告
+↓
+复盘
+二十二、Z-Brand最终支持
+例如：
+Brand Profile
+│
+├── Brand Name
+├── Alias
+├── Include Words
+├── Exclude Words
+├── Risk Rules
+├── Platform Rules
+├── Competitors
+└── Campaigns
+输入：
+某个品牌名称
+即可建立新的监测主体。
+但必须经过：
+品牌 Profile → 规则 → 采集 → 质量 → 分析
+不能只是简单搜索品牌名字。
+二十三、广州太古汇规则必须保持原样
+当前：
+SUBJECT_WORDS
+SUBJECT_EXCLUDE_WORDS
+subject_hit()
+以及：
+_subject_sql_and_values()
+aggregate_events()
+build_daily_report()
+属于：
+生产业务不可破坏资产。
+未来平台化只是把：
+广州太古汇规则
+抽象成：
+Brand Profile Rule
+不能为了平台化把现有口径破坏掉。
+二十四、Risk必须增加实时告警旁路
+正确：
+Risk Engine
+     │
+     ├──→ Analytics
+     │       ↓
+     │    报告/看板
+     │
+     └──→ Risk Alert
+             ↓
+        微信/通知中心
+高风险不能等日报。
+二十五、Analytics不应该只是报告生成器
+最终：
+Analytics
+ ├── Dashboard
+ ├── Daily
+ ├── Weekly
+ ├── Monthly
+ ├── Trend
+ ├── Event Analysis
+ ├── Risk Analysis
+ └── Campaign Analysis
+二十六、AI最终改成本地 Ollama
+这是当前版本的关键变量。
+不再把：
+豆包 API Key
+作为生产系统必要条件。
+最终：
+System
+ ↓
+AI Adapter
+ ↓
+Ollama
+ ↓
+Local Model
+二十七、AI完全故障隔离
+如果 Ollama 没开：
+Ollama ❌
+采集       ✅
+数据库     ✅
+风险规则   ✅
+事件       ✅
+Dashboard  ✅
+报告       ✅
+最多：
+AI辅助分析暂不可用
+不能：
+AI启动失败
+↓
+Flask启动失败
+二十八、AI不能夺取系统主权
+系统：
+主判断。
+Ollama：
+辅助判断。
+最终：
+规则
++
+统计
++
+事件
++
+风险
++
+Ollama
+↓
+系统最终结果
+二十九、AI Shadow继续保留在Z-Brand
+原始数据
+↓
+系统判断
+↓
+Ollama判断
+↓
+差异
+↓
+人工确认
+↓
+Sample Bank
+但：
+CorTech-TKH
+隐藏并禁用实验接口。
+Z-Brand
+开放研发能力。
+三十、启动系统必须重新设计
+今天已经暴露：
+重复 Endpoint、启动脚本、进程管理等问题。
+所以最终：
+PRECHECK
+ ↓
+Import Check
+ ↓
+DB Check
+ ↓
+Config Check
+ ↓
+Route Check
+ ↓
+Blueprint Check
+ ↓
+启动
+ ↓
+Health Check
+ ↓
+READY
+三十一、禁止危险进程操作
+尤其检查：
+taskkill /F /IM python.exe
+这类操作。
+禁止把：
+停止某个服务
+实现成：
+杀掉电脑上所有 Python。
+必须采用：
+PID
+Process Group
+Service Identity
+精确管理。
+三十二、公网和核心系统彻底解耦
+核心系统
+127.0.0.1:8200
+       ↓
+    READY
+       ↓
+公网入口
+公网挂掉：
+公网 ❌
+核心系统 ✅
+三十三、5G访问不是系统生命线
+公网访问只是：
+Access Layer。
+不是：
+Core Layer。
+三十四、自动修复必须有熔断
+异常
+ ↓
+诊断
+ ↓
+恢复
+ ↓
+Health Check
+ ↓
+成功 → END
+ ↓
+失败
+ ↓
+再次恢复
+ ↓
+仍失败
+ ↓
+Circuit Breaker
+ ↓
+告警
+不能：
+错误
+↓
+无限重启
+↓
+电脑卡死
+三十五、双产品的真正差异
+[表格]
+能力 | CorTech-TKH | Z-Brand
+广州太古汇 | ✅ | Profile
+多品牌 | ❌ | ✅
+多竞品 | 固定 | ✅
+专题 | ✅ | ✅
+15周年 | ✅ | Profile
+小红书 | ✅ | ✅
+微博 | 已有能力则保留 | ✅
+B站 | 已有能力则保留 | ✅
+AI Ollama | 辅助 | 完整
+AI Shadow | 隐藏 | ✅
+AI Sample Bank | ❌ | ✅
+多模型 | ❌/基础 | ✅
+账号中心 | 简化 | 完整
+开发工具 | ❌ | ✅
+规则编辑 | 固化 | ✅
+数据 | 太古汇独立 | 多品牌
+Runtime依赖 | 独立 | 独立
+[表格结束]
+三十六、今晚版本必须允许继续升级
+因此 Release 包必须带：
+VERSION
+CORE_VERSION
+PROFILE_VERSION
+SCHEMA_VERSION
+BUILD_TIME
+例如：
+Core: 1.0.0
+Profile: TKH-1.0
+Schema: 1.0
+Build: 2026-08-29
+以后：
+RC1
+RC2
+RC3
+Final
+都可以追溯。
+三十七、必须建立版本血缘
+例如：
+Z-Brand Core 1.2.0
+        ↓
+CorTech-TKH RC1
+        ↓
+真实部署
+        ↓
+发现问题
+        ↓
+Core 1.2.1
+        ↓
+CorTech-TKH RC2
+这样以后绝不会出现：
+“这个客户包到底是哪一版代码？”
+三十八、Codex接管后的第一件事
+不是写代码。
+而是：
+审计。
+第一步：
+扫描整个项目
+第二步：
+生成文件清单
+第三步：
+扫描数据库
+第四步：
+扫描路由
+第五步：
+扫描依赖
+第六步：
+扫描采集器
+第七步：
+扫描启动链
+第八步：
+扫描前端API
+第九步：
+建立真实架构图
+三十九、Codex不得根据这份方案臆造不存在的代码
+例如：
+方案说有：
+RiskAlertService
+但源码没有。
+不能直接假定它已经存在。
+应该：
+源码没有
+↓
+标记 MISSING
+↓
+判断是否P0/P1
+↓
+设计新增
+四十、Codex必须输出差异表
+至少：
+[表格]
+模块 | 当前状态 | 目标状态 | 改造级别
+App | 已存在 | 稳定 | P0
+XHS | 多入口 | Adapter | P0/P1
+Auth | 部分 | Recovery | P0
+Campaign | 已有 | 通用化 | P1
+AI | 外部/旧逻辑 | Ollama | P1
+DB | 已有 | 双产品隔离 | P0
+Build | 缺失/不完整 | Release | P1/P2
+[表格结束]
+四十一、三层测试体系
+第一层：静态
+Syntax
+Import
+Route
+Blueprint
+Dependency
+Config
+第二层：功能
+登录
+搜索
+详情
+评论
+入库
+事件
+风险
+报告
+专题
+AI
+第三层：E2E
+登录态
+↓
+采集
+↓
+标准化
+↓
+过滤
+↓
+入库
+↓
+分析
+↓
+风险
+↓
+事件
+↓
+报告
+↓
+前端
+四十二、最终验收等级
+🔴 P0
+没有这些不能交付：
+能启动
+能停止
+数据库正常
+API正常
+前端正常
+主体口径正常
+小红书主链可运行
+Session异常不会崩溃
+风控不会静默变0条
+发布时间正确
+报告正确
+15周年专题保留
+Ollama失败不影响系统
+公网失败不影响核心
+没有危险全局杀Python
+客户数据库独立
+🟠 P1
+QR人工恢复
+动态冷却
+Risk Alert
+通知中心
+通用Campaign
+多品牌Profile
+AI Shadow
+数据质量
+API/前端完整联调
+Backup/Rollback
+版本血缘
+🟡 P2
+一键双Release Build
+多模型
+CI/CD
+自动评测
+AI替代率
+完整账号中心
+更丰富的数据分析
+四十三、你给 Codex 的完整项目资料
+最终建议你的项目包至少包含：
+PROJECT/
+│
+├── SOURCE CODE
+│
+├── DATABASE
+│
+├── TEMPLATES
+│
+├── STATIC
+│
+├── CONFIG
+│
+├── BROWSER PROFILE
+│
+├── MIGRATIONS
+│
+├── TESTS
+│
+├── SCRIPTS
+│
+├── DEPLOYMENT
+│
+├── DOCUMENTATION
+│
+├── LOGS
+│
+└── CURRENT VERSION INFO
+但有一个安全原则：
+不要把真实秘密直接打进 Git
+尤其：
+真实Cookie
+Token
+密码
+API Key
+邮箱密码
+可以提供：
+.env.example
+config.example
+而真实值通过本地环境配置。
+四十四、最终交付结构
+DELIVERY
+│
+├── 01_CorTech-TKH/
+│
+│   ├── application/
+│   ├── data/
+│   ├── config/
+│   ├── tests/
+│   ├── deployment/
+│   ├── PRECHECK.bat
+│   ├── START.bat
+│   ├── HEALTH_CHECK.bat
+│   ├── BACKUP.bat
+│   ├── ROLLBACK.bat
+│   ├── README.md
+│   └── RELEASE_NOTES.md
+│
+└── 02_Z-Brand/
+    ├── application/
+    ├── data/
+    ├── config/
+    ├── tests/
+    ├── deployment/
+    ├── PRECHECK.bat
+    ├── START.bat
+    ├── HEALTH_CHECK.bat
+    ├── BACKUP.bat
+    ├── ROLLBACK.bat
+    ├── README.md
+    └── RELEASE_NOTES.md
+但这只是逻辑交付结构。
+Codex必须以你实际源码目录为准，不允许为了“看起来漂亮”而强行移动大量现有代码。
+四十五、最终运行目标
+你最终希望做到：
+在电脑上
+双击 START.bat
+        ↓
+系统启动
+        ↓
+浏览器打开
+        ↓
+Dashboard
+        ↓
+正常运行
+如果小红书 Session 失效：
+系统发现异常
+        ↓
+暂停采集
+        ↓
+弹出恢复窗口
+        ↓
+二维码
+        ↓
+手机扫码
+        ↓
+系统重新验证
+        ↓
+恢复采集
+如果 Ollama 没启动：
+AI不可用
+但系统继续运行
+如果公网入口失败：
+公网不可用
+但系统继续运行
+如果采集失败：
+采集失败
+↓
+记录状态
+↓
+冷却
+↓
+恢复
+而不是：
+采集失败
+↓
+Flask崩溃
+↓
+整个系统挂掉
+四十六、最终产品形态
+最终不是：
+一个会爬小红书的 Flask 网站。
+而是：
+                Z-BRAND CORE
+                     │
+       ┌─────────────┴─────────────┐
+       │                           │
+  CorTech-TKH                 Z-Brand
+       │                           │
+ 广州太古汇客户版               多品牌平台
+       │                           │
+       └────────── Core ───────────┘
+                     │
+              Monitoring Engine
+                     │
+        ┌────────────┼────────────┐
+        ↓            ↓            ↓
+       XHS          Weibo       Bilibili
+        │            │            │
+        └────────────┼────────────┘
+                     ↓
+                Data Pipeline
+                     ↓
+              Note Store
+                     ↓
+        ┌────────────┼────────────┐
+        ↓            ↓            ↓
+      Topic         Event        Risk
+        │            │            │
+        └────────────┼────────────┘
+                     ↓
+                 Analytics
+                     ↓
+          Dashboard / Reports
+                     ↓
+                Campaign
+                     ↓
+              Local Ollama
+四十七、最终施工口诀
+这次整个项目就按照下面这 12 条执行：
+1. 不推倒。2. 先审计。3. 先保数据。4. Core统一。5. 两个Release。6. 客户独立。7. 太古汇口径锁死。8. 小红书风控可感知、可暂停、可人工恢复。9. 发布时间决定报告。10. Ollama是AI辅助，不是系统生命线。11. 所有升级先测试再上线。12. 每一个版本都必须能回滚。
+最终结论
+你现在的方案已经不是单纯的“广州太古汇系统升级”。
+实际上已经完成了一个很关键的产品化转变：
+广州太古汇项目 → CorTech-TKH 客户产品
+同时：
+广州太古汇的底层能力 → Z-Brand Monitoring Platform 的 Core 能力
+而且考虑到你说的今晚版本很可能还会继续改，我认为最正确的做法不是强行宣布今晚就是 Final，而是：
+今晚先做两个可运行的 RC 交付包 → 让 Codex 在你的电脑真实部署 → 跑真实数据 → 暴露问题 → 回到 Core 修复 → 再重新生成两个 Release。
+这样反而比“一次性做最终版”可靠得多。
+你现在给 Codex 的目标应该是：
+“把现有系统接管、跑起来、测出来、再改好。”
+而不是：
+“按照我的文档重新写一个系统。”
+这两者的工程风险完全不同。

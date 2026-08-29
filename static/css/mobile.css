@@ -1,0 +1,138 @@
+/* ============================================================
+   mobile.css  —  广州太古汇舆情系统 · 手机端统一响应式（v5.9.0）
+   作用：仅在 ≤768px 生效，权威统一此前多套互相冲突的媒体查询。
+   方案：iOS 风格 —— 顶部紧凑栏 + 左侧抽屉导航 + 全宽分组卡片。
+   说明：本文件最后一个引入，同特异性下覆盖旧规则；不影响桌面端。
+   ============================================================ */
+
+/* ---------- 抽屉导航遮罩（由 app.js 控制 .show） ---------- */
+#navMask{
+  display:none;position:fixed;inset:0;z-index:1050;
+  background:rgba(0,0,0,.42);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  animation:navMaskIn .22s ease;
+}
+#navMask.show{display:block}
+@keyframes navMaskIn{from{opacity:0}to{opacity:1}}
+
+@media (max-width:768px){
+  /* ============ 1. 顶栏 ============ */
+  .topbar{
+    height:56px!important;padding:0 10px 0 50px!important;
+    gap:8px;position:sticky;top:0;z-index:90;
+  }
+  .menu-toggle{
+    display:flex!important;position:fixed;top:10px;left:10px;
+    width:36px;height:36px;z-index:1001;border-radius:10px;
+    align-items:center;justify-content:center;
+    background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12);
+  }
+  .brand{min-width:0!important;gap:8px;flex:1 1 auto;overflow:hidden}
+  .brandmark{width:30px;height:30px;flex-shrink:0}
+  .brand h1{
+    font-size:15px!important;line-height:1.2;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  .brand p,.top-center{display:none!important}
+  .top-actions{
+    min-width:0!important;gap:6px;flex:0 1 auto;flex-wrap:nowrap;
+    overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding:0!important;justify-content:flex-end;
+  }
+  .top-actions::-webkit-scrollbar{display:none}
+  .top-actions .action{
+    padding:7px 10px!important;font-size:12px;white-space:nowrap;flex-shrink:0;
+  }
+  /* 手机端只留图标，隐藏按钮文字，避免挤压 */
+  .top-actions .action span:not(.svgicon):not(.nav-badge){display:none!important}
+  .top-actions .action{min-width:36px;height:36px;padding:7px!important;justify-content:center}
+
+  /* ============ 2. 布局：取消 grid，单列 ============ */
+  .layout{display:block!important;max-width:100%!important}
+
+  /* ============ 3. 侧边栏：固定抽屉，默认藏起 ============ */
+  .sidebar{
+    position:fixed!important;top:0!important;left:0!important;bottom:0!important;
+    height:100dvh!important;width:268px!important;max-width:84vw;
+    transform:translateX(-100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:1100!important;overflow-y:auto;overflow-x:hidden;
+    border-right:1px solid var(--line,rgba(0,0,0,.08));
+    border-radius:0 20px 20px 0;padding:58px 12px calc(20px + env(safe-area-inset-bottom))!important;
+  }
+  .sidebar.open{
+    transform:translateX(0)!important;
+    box-shadow:0 8px 40px rgba(0,0,0,.28);
+  }
+  .side-nav{flex-direction:column!important;min-width:0!important;gap:4px}
+  /* 抽屉内显示完整菜单文字（覆盖桌面端图标收起规则） */
+  .side-item span:not(.navicon){display:inline!important}
+  .side-item{width:100%;justify-content:flex-start;text-align:left}
+  .side-footer{display:block!important;margin-top:14px}
+
+  /* ============ 4. 主内容：全宽、回到顶部 ============ */
+  .content{
+    margin-left:0!important;width:100%;min-width:0;
+    padding:14px 12px calc(84px + env(safe-area-inset-bottom))!important;
+  }
+
+  /* ============ 5. 指标卡 / 网格：2 列，分组卡片 ============ */
+  .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .metric-card{padding:14px!important;border-radius:16px}
+  .metric-card strong{font-size:21px}
+  .metric-card .metric-label{font-size:11px}
+  .bottom-grid,.panel-row,.charts-grid,.stats-grid{
+    grid-template-columns:1fr!important;gap:12px!important;
+  }
+  .hero-section{margin-bottom:14px}
+  .hero-section h2{font-size:20px!important}
+  .panel{padding:16px!important;border-radius:16px}
+  .panel-head h3{font-size:15px}
+  .panel-head p{font-size:12px}
+
+  /* ============ 6. 图表自适应、不塌陷 ============ */
+  .donut-layout{flex-direction:column!important;align-items:center;gap:14px;min-height:0!important;padding:6px 0 14px!important}
+  .donut{width:138px!important;height:138px!important;flex-shrink:0}
+  .legend{width:100%!important}
+  canvas,svg{max-width:100%;height:auto}
+  .cat-chart,.category-chart{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .cat-chart{min-width:max-content}
+
+  /* ============ 7. 表格横向滚动，不挤压 ============ */
+  .table-wrap,.note-table-wrap,.data-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:560px;border-collapse:collapse}
+
+  /* ============ 8. 弹窗：底部上滑、近全屏（iOS sheet） ============ */
+  .modal-overlay,.zachary-chat-mask{padding:0!important;align-items:flex-end!important}
+  .modal,.modal-panel{
+    max-width:100%!important;width:100%!important;
+    max-height:92dvh;border-radius:20px 20px 0 0!important;margin:0!important;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .drawer-panel{width:100%!important;max-width:100%!important;border-radius:20px 20px 0 0!important}
+  .note-day-list{max-height:52dvh}
+
+  /* ============ 9. Zachary：缩小悬浮体，聊天全屏 ============ */
+  .zachary-float{width:56px;height:56px;bottom:calc(16px + env(safe-area-inset-bottom));right:16px}
+  .zachary-robot{width:56px;height:56px}
+  .zachary-chat-panel{
+    width:100%!important;max-width:100%!important;
+    height:100dvh!important;max-height:100dvh!important;
+    right:0!important;bottom:0!important;border-radius:0!important;
+  }
+
+  /* ============ 10. 通用 ============ */
+  .fab-nav{bottom:calc(14px + env(safe-area-inset-bottom));right:14px}
+  .fab-nav button{width:42px;height:42px}
+  .calendar .day{padding:4px 2px}
+  .day-summary{gap:8px;font-size:11px;flex-wrap:wrap}
+  /* 隐藏纯装饰性、手机端冗余的元素 */
+  .desktop-only{display:none!important}
+}
+
+/* ---------- 超小屏（≤380，iPhone SE 等）单列指标卡 ---------- */
+@media (max-width:380px){
+  .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  .brand h1{font-size:14px}
+  .topbar{padding-left:48px!important}
+}

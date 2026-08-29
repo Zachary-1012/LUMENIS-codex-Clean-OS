@@ -1,0 +1,138 @@
+# Z-Brand 系统 · 双产品线最终产品与技术基线 V1.0（唯一最终基线）
+
+> 本基线整合 7 版方案（1.6 定稿）+ 2026-08-29 源码深度审计（见《7版方案x当前源码_深度匹配审计报告.md》）+ 你的最新调整。
+> 一切后续开发/交接/Codex/豆包接管以本文件为唯一基准；与旧文档冲突时以本基线为准（冲突清单见审计报告 §5/§6）。
+> 状态标记：✅已落地（有源码证据）　🔵有壳未跑通　❌未建。
+
+---
+
+## 0. 命名与产品基准（定死）
+- **大系统总名：Z-Brand Core**（唯一内核，绝不两份源码；Croe 统一为 Core）。
+- **产品① CTH-POMS**：CorTech Lab-GuangZhou Taikoo Hui Public Opinion Monitoring System｜广州太古汇舆情监测与品牌传播系统｜**默认开启、客户交付、主体口径 LOCK、独立库、独立运行**。
+- **产品② ZBMP**：Z-Brand Monitoring Platform｜Z-品牌舆情监控系统｜**默认隐藏，设置→「ZbMP」→小尺寸椭圆弹窗→密钥 `사랑해` 解锁**；未解锁时**后端所有 ZBMP 接口 403**（不只前端藏）。
+- 当前阶段：**一套运行时 + 产品门**；交付阶段同一 Core 打两个 Release 包。
+- 版本：当前基线 **5.8.5**（app.py 常量、静态戳、footer、CHANGELOG 四处统一；实测活页面 static/index.html 已 5.8.5）。
+
+## 配套 1 · 最终架构方案
+```
+                 Z-Brand Core（一套内核，profile 驱动）
+                          │
+        ┌─────────────────┼─────────────────┐
+   RELEASE_PROFILE=customer(默认)      =platform(密钥사랑해解锁)
+        │                                  │
+  CTH-POMS 客户版                    ZBMP 母平台
+  太古汇 profile/独立DB/裁剪研发域    多品牌多客户/实验域/Release构建
+        └──────────── 共享 Core 服务（不复制）────────────┘
+  collectors(PlatformAdapter) → auth(Auth Center) → normalize/dedup
+  → subject-filter(LOCK) → content_type/主体 → 内容库 & 事件中心(三类+关系)
+  → 风险/趋势/消费者/对标 → 可插拔AI(规则默认/Ollama可选/云端默认关)
+  → 报告/告警/导出 ; 全程 health/guardian/backup/log
+```
+- 目标目录（稳定后分批迁，运行中不硬搬）：`core/{auth,collectors,analysis,report,ai,importer,platform,storage}` + `products/{cth_poms,zbmp}` + `frontend` + `deployment` + `tests` + `docs` + `data`。
+- app.py（162 路由/4500+行）按蓝图旁路迁移，每迁一域跑回归。
+
+## 配套 2 · 源码交接清单（交付资产，敏感信息不进仓库）
+源码(py/js/html/css/templates/static/collectors/adapters/blueprints/scheduler/analysis/reports/auth/cdp/ollama/notification)；**实际运行 DB**（37 表 .db + 历史/备份库）；schema/migration/seed/索引/唯一约束；requirements（补齐 waitress/bs4/APScheduler）；deployment 八件套脚本；.env.example（不放真密钥/Cookie/Token）；前端完整源码；各平台采集链（旧版不提前删）；Auth/Cookie/Profile/CDP；调度与任务锁；分析引擎；15 周年（已并入话题）；AI Provider 与 Ollama 预留；通知；测试与回归样本；README/CHANGELOG/已知问题。
+
+## 配套 3 · 数据库完整清单（实测 37 表 → 目标七域）
+现状分域（data/monitor.db）：
+- 内容域：notes(875,65列)、note_comments(141)、comments(2,待合并)
+- 事件域：events(395)、event_mentions(511)、event_insights(2)、weekly_events(30)
+- 采集域：collection_logs(278)、collection_counters(0)、collector_quality_log(7)、web_runs(15)、web_sources(0)
+- 全网/外延/专题：web_topics(96)/web_events(20)/web_mentions(60)；swire_projects(8)/events(10)/notes(0)；topic_campaigns(1)/topics(7)/snapshots(70)/notes(0)
+- 品牌/业态：brand_industry_monitor(198)、industry_stats(8)
+- 报告：daily_reports(17)、daily_digest(3,待定主从)
+- 审核：note_review_history(8245)、review_tickets(0)/samples(0)/logs(0)
+- AI：ai_filter_log(554)、token_stat(1)
+- 系统：system_config(10)、schema_version(7)、feedback_keywords(13)、notification_config(0)/logs(3)
+目标新增（ALTER/新建，先备份）：**传播主体域** subjects/subject_profiles/subject_metrics；**事件** events 增 event_type/lifecycle_stage，event_relation/event_lifecycle；**内容** notes 增 content_type/subject_id；**账号域** accounts/platform_sessions/auth_states/crawl_tasks/health_checks；**AI 域** ai_runs/decisions/feedback/prompts/usage/training_samples；**基础业务域** brands/competitors/campaigns（由 swire/brand_industry 演进，不重复）。合并/废弃见审计 §6/§13。
+
+## 配套 4 · P0/P1/P2 施工清单（唯一排期口径）
+- **P0**：全局装依赖+脚本收敛+双击实测；版本四处统一/归档旧 templates；时间字段回填与归一；197空正文+topic/swire笔记真采；Auth Recovery Center 骨架（先小红书）；AI 两处硬 import 改 try；Z-Brand Core 命名+zbmp 预留壳+椭圆密钥门（后端拦截）；启动前自动备份+回滚。
+- **P1**：登录双方式+三级 RBAC+安全问答（Basic 兜底）；三类事件/传播主体/content_type/event_relation/生命周期；统一 PlatformAdapter+零风险源+豆包搜索+微博B站免登；外部数据导入；报告一套化+年报+负面审核含事件闭环+消费者/对标；AI 规范域+Shadow+Ollama+system_guardian 主循环+微信接入；手机苹果风/Zachary 收敛/图标统一。
+- **P2**：ZBMP 多品牌/多客户/竞品/Campaign、事件图谱、一键双 Release、CI/CD、服务器+域名正式部署。
+> 顺序铁律：先审计→兼容→旁路→单测→E2E→真实数据→再切换；每步可回滚。
+
+## 配套 5 · 双产品 Release 规则
+- 一套 Core、profile 驱动：`RELEASE_PROFILE=customer|platform`，功能开关集中 config；**后端用装饰器做路由/数据拦截**，客户版构建期 tree-shake ZBMP 蓝图与目录。
+- 客户版保证：独立 DB、独立部署、不依赖平台侧在线、不暴露多品牌/AI实验/样本库/Release 构建；太古汇口径锁死。
+- 两包结构：`DELIVERY/{CorTech-Lab-GuangZhou-Taikoo-Hui, Z-Brand-Monitoring-Platform}/{application,database,config,START,PRECHECK,HEALTH_CHECK,BACKUP,ROLLBACK,STOP,README,RELEASE_NOTES}`。
+- Release 血缘：Core 版本 + profile + commit + schema_version 写入 RELEASE_NOTES 与 /api/version。
+
+## 配套 6 · AI / Ollama 方案（AI 仅辅助，系统内循环优先）
+- Provider 链：**本地规则(默认、必达) → Ollama(可选) → 云端 ark/openai/deepseek/qwen(接口保留、默认关、无 key 不启用)**。
+- 核心（采集/主体/去重/风险/事件/统计/报告/告警）在全部 AI 关闭时必须照常；daily_report.py:25-26、xhs_cookie_bridge.py:14 硬 import 改 try。
+- Ollama 只做：摘要、解释、诉求/主题辅助、语义辅助分类、事件聚类辅助、报告润色；**系统判断→AI 建议→人工确认→落库**，AI 不覆盖原始事实。
+- AI 独立成域（配套3），Shadow Mode 先并行比对、达标再进结果链；系统沉淀规则样本实现"学会 AI、最终可脱离 AI"。
+
+## 配套 7 · 采集 / 登录态 / 二维码恢复方案（统一 Auth Recovery Center，P0）
+- 抽象：Platform Account→Session/Cookie→Health Check→Auth State，覆盖小红书/微博/B站/未来平台，新增平台不改恢复框架。
+- **不跳页**：任何页面（含手机）检测失效→停当前任务→记 AUTH_REQUIRED→当前页弹全局 Modal（平台/账号/状态/二维码/三步扫码态/重新检测），二维码在 Modal 内。
+- 状态机：AUTH_VALID→EXPIRED→REQUIRED→QR_DISPLAYED→WAITING_SCAN→SCANNED→CONFIRMING→RECOVERED→HEALTH_CHECK→恢复；异常 QR_EXPIRED 自动刷新 / QR_FAILED 重取 / AUTH_FAILED 保持 / PLATFORM_BLOCKED 进冷却。
+- 三类分清：A 登录失效=弹码；B NEED_VERIFY/CAPTCHA=提示人工验证；C IP_RISK/300012=熔断冷却（不许伪装成扫码可解）。
+- 远程恢复：夜间失效保留任务，手机开公网网址扫码续采（依赖配套部署的公网链路，每次修复给本地+公网地址）。
+- 首页全局状态中心：各平台健康小点，点击直接开对应恢复 Modal。
+
+## 配套 8 · 小红书风控状态机（不硬刚、不静默报零）
+- 统一状态：SUCCESS / NO_NEW_DATA / PARTIAL_SUCCESS / AUTH_REQUIRED / SESSION_EXPIRED / QR_REQUIRED/QR_EXPIRED / RECOVERING/RECOVERED / NEED_VERIFY / CAPTCHA / RISK_WARNING / BLOCKED / IP_RISK / COLLECT_ERROR / COOLING_DOWN（现有 xhs 六态为基础扩全）。
+- 搜索/详情/评论三段分别记状态；失败 items=None（不是 []），绝不计入"0 条正常"。
+- 动态调度：健康正常采→轻度风险降频→风险升高延长冷却→NEED_VERIFY 暂停→IP_RISK 熔断→健康检查稳定后逐步恢复；旧"每日9+3/冷却15分"仅作健康态默认值，不写死。
+- 证据锚点：network_adaptive.py、xhs_cookie_bridge.get_circuit_state、rednote_collector.cjs:114、xhs_cookie_search.js:114、app.py:1564。
+- 长期：官方开放平台仅在开放适用 Scope 时作 Official Adapter，不强行替换合法浏览器访问；不绕验证码。
+
+## 配套 9 · 传播主体 + 内容 + 三类事件体系（WHO/WHAT/WHAT HAPPENED/SO WHAT）
+- **WHO 传播主体**：KOS/KOL/KOC/普通用户/媒体/官方/机构；subjects 六维画像（身份/内容力/传播力/品牌关系/舆情表现/事件贡献）。
+- **WHAT 内容**：UGC/商业/官方/测评/体验/投诉/活动为 **content_type**；**UGC 不是 subject_type**，KOL+UGC、官方+官方内容都合法（notes 现有 category 迁移映射到 content_type，note_type normal/video 是形式维度保留）。
+- **WHAT HAPPENED 事件**：主 events 增 event_type ∈ 营销/传播/舆情，事件中心三 Tab；event_relation 记 trigger/derived/follow-up/parallel，event_lifecycle 记阶段，形成非强制线性的事件网络。
+- **SO WHAT**：风险/传播/消费者需求/竞品对标/决策建议。
+- 按你最新调整：**这套四层能力下沉共享 Core，CTH-POMS 客户版同样可用**（仅多品牌跨客户部分留 ZBMP）。
+
+## 配套 10 · 最终验收矩阵
+见审计报告 §14（启动/回归/采集/主体/时间/Auth/权限/AI故障注入/数据真采/双端/隔离/双包独立运行 12 类），每个 P0/P1 项必须有对应自动化或 E2E 证据；补实 15 个空壳测试，目标核心链路有用例覆盖；无证据不得标完成。
+
+## 配套 11 · Codex / 豆包 接管指令（可直接粘贴）
+> 你接管的是 Z-Brand Core（当前客户版 CTH-POMS，Flask 单体 app.py + static SPA，主库 data/monitor.db 37 表，运行端口 8200）。第一任务不是改代码，而是：①读 docs 下审计报告与本基线；②运行 tests/audit_probe_1..6 复现证据；③备份 data 与 app.py；④严格按 P0→P1→P2，先兼容旁路、单测/E2E/真实数据验证后再切换。硬约束：主体口径以 subject_rules.py 为 LOCK 不改内部；采集失败绝不显示 0；300012 熔断不硬刚；publish 与 captured 时间分离；AI 全关核心照常；客户版后端裁剪 ZBMP；不删未知用途文件；每次改动给本地+公网地址与回归结果。
+
+## 配套 12 · 客户交付包 / 研发母平台包结构
+见配套5两包目录；客户包只含 customer profile 与太古汇数据/配置，研发包含 platform profile、实验域、样本库与 Release 构建器；共同 Core 以同一版本号发布，禁止分叉维护。
+
+---
+
+## 13. 可复用 Core（开源脚手架）：复制 Core + 填一份 Profile = 一套新监测系统
+> 这是你新增的硬性目标：让同类型项目"填空即生成新系统"。设计原则——**变化的全部收敛到一份 profile，不变的全部沉到 Core，禁止把品牌差异写死进 Core**。
+
+### 13.1 一个新系统只需提供 1 份 profile（YAML/JSON）
+```yaml
+# profiles/<新品牌>.profile.yaml  —— 复制后只改这里
+product:
+  key: cth_poms                 # 产品标识
+  name_cn: 广州太古汇舆情监测与品牌传播系统
+  name_en: CorTech Lab-GuangZhou Taikoo Hui POMS
+  release: customer            # customer | platform
+subject:                        # 主体口径（原 LOCK 词表外置化）
+  include: [太古汇, 广州太古汇, Taikoo Hui Guangzhou]
+  exclude: [太古里, 颐堤港, 上海太古汇, 成都太古里]   # 同名排除
+  disambiguation: {广州: [天河, 体育西路]}
+platforms: [xiaohongshu, weibo, bilibili, web_rss, doubao]   # 启用采集端
+keywords: {核心: [太古汇], 活动: [15周年], 品牌: [品牌A,品牌B]}
+topics: [{key: anniversary15, name: 15周年, start: 2026-01-01, end: 2026-12-31}]
+brands: []                     # 品牌业态/竞品初始清单
+database: {path: data/<key>.db}
+auth: {zbmp_unlock_key_required: false}
+ai: {provider_chain: [rule, ollama], ollama_url: ""}
+report: {daily_push: [negative_only], weekly: natural_week, channels: []}
+ui: {theme: default, robot: zachary}
+```
+### 13.2 Core 提供的"填空插槽"（全部由 profile 驱动，不写死品牌）
+主体词/排除词加载器（subject_rules 从 profile 读，不再硬编码）；PlatformAdapter 注册器（启用哪些端、各端状态机/Auth 通用）；四层数据模型与事件引擎；风险/情感规则；报告模板（日/周/月/年，周期口径配置化）；15 视图 SPA 与响应式；Auth Recovery Center；RBAC；备份/健康/守护；可插拔 AI 网关；外部导入器。
+### 13.3 一键脚手架命令（P2 落地，先定接口）
+- `python -m core.scaffold new --profile xxx.yaml --out ../NewSystem`：复制 Core、注入 profile、初始化独立 DB、生成品牌名/主题/词表、产出 START 脚本与 RELEASE_NOTES。
+- `python -m core.scaffold check --profile xxx.yaml`：校验必填项（主体词、同名排除、平台、DB 路径、周期口径），缺项报错不允许构建。
+- `python -m core.scaffold release --profile xxx.yaml --type customer|platform`：打出对应 Release 包（客户版自动 tree-shake ZBMP）。
+### 13.4 复用红线
+- Core 内**不得出现任何具体品牌名/具体词表/具体路径**（审计时用 grep 兜底，出现即不通过）；差异只允许存在于 profiles/。
+- CTH-POMS 自身就是第一个 profile 样例（把现在写死在 subject_rules 的太古汇词表外置为 profiles/cth_poms.yaml），既满足当前客户，又天然成为开源模板。
+- 数据/配置/缓存/浏览器 profile 全部按产品 key 隔离，复制出的新系统与原系统零耦合。
+
+## 14. 不能再丢的清单（逐条回指，作为回归基线）
+Cookie失效不跳登录页、系统内弹窗、弹窗承载二维码、六态不混、风控不报0、熔断冷却健康恢复、300012不硬刚、publish/captured分离、197空正文补抓、三类事件、四层模型、传播主体统一、UGC是内容类型、主体六维、事件生命周期+relation、营销→传播→舆情链、消费者需求、品牌对标、品牌营销案例库、话题监测端口、15周年（已并入话题）、报告中心升级、手机端、Zachary、15SPA+独立话题页、37表及历史数据、P0/P1/P2、一套Core两Release、客户版不依赖ZBMP、太古汇口径锁死、ZBMP研发母平台、Ollama为AI路线、云端退出核心照跑、AI仅辅助、AI Shadow/样本/反馈与客户版隔离、可复用Core填空即新系统。

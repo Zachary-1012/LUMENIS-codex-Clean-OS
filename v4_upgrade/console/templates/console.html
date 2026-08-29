@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Z-Brand Core · CTH-POMS 统一控制台</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --panel-2:#fafafa; --ink:#1d1d1f; --ink-2:#6e6e73;
+  --line:#e8e8ed; --accent:#0a84ff; --accent-soft:#e8f2ff; --ok:#34c759; --warn:#ff9f0a;
+  --bad:#ff3b30; --purple:#bf5af2; --radius:16px; --shadow:0 8px 30px rgba(0,0,0,.08);
+  --shadow-sm:0 2px 10px rgba(0,0,0,.05); --side-w:236px;
+  --ease-spring:cubic-bezier(.34,1.4,.5,1); --ease-out:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Segoe UI",sans-serif;
+  background:var(--bg);color:var(--ink);font-size:14px;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#d6d6dc;border-radius:8px}
+
+/* ============ 整体骨架 ============ */
+.app{display:flex;height:100%;width:100%}
+.side{width:var(--side-w);flex:0 0 var(--side-w);background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(20px);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px;z-index:40;transition:transform .32s var(--ease-out)}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px}
+.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0a84ff,#bf5af2);
+  display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;box-shadow:0 4px 12px rgba(10,132,255,.35)}
+.brand b{font-size:14px;letter-spacing:.2px;display:block;line-height:1.2}
+.brand small{font-size:10.5px;color:var(--ink-2);font-weight:500}
+.nav{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-top:4px}
+.nav-group{font-size:10.5px;color:#a1a1a6;font-weight:600;letter-spacing:1px;padding:14px 10px 5px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;color:var(--ink-2);
+  font-weight:500;transition:all .2s var(--ease-out);position:relative;white-space:nowrap}
+.nav-item .ic{width:20px;text-align:center;font-size:15px}
+.nav-item:hover{background:#f0f0f4;color:var(--ink)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-item.active::before{content:"";position:absolute;left:-14px;top:50%;transform:translateY(-50%);
+  width:3px;height:18px;border-radius:0 3px 3px 0;background:var(--accent)}
+.nav-item .badge{margin-left:auto;background:var(--bad);color:#fff;font-size:10px;min-width:17px;height:17px;
+  border-radius:9px;display:grid;place-items:center;padding:0 5px;font-weight:600}
+.user-card{display:flex;align-items:center;gap:9px;padding:10px;border-top:1px solid var(--line);margin-top:8px}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#34c759,#0a84ff);
+  display:grid;place-items:center;color:#fff;font-size:12px;font-weight:600}
+.user-card .u-name{font-size:12.5px;font-weight:600;line-height:1.3}.user-card .u-role{font-size:10.5px;color:var(--ink-2)}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:12px;padding:0 22px;
+  background:rgba(245,246,248,.8);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);z-index:20}
+.hamburger{display:none;font-size:20px;color:var(--ink)}
+.topbar h1{font-size:16px;font-weight:700;margin:0}
+.topbar .sub{font-size:11.5px;color:var(--ink-2)}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.ai-pill{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:6px 11px;border-radius:20px;
+  background:var(--panel);border:1px solid var(--line);color:var(--ink-2);box-shadow:var(--shadow-sm)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(52,199,89,.15)}
+.dot.rule{background:var(--warn);box-shadow:0 0 0 3px rgba(255,159,10,.15)}
+.dot.off{background:#c7c7cc;box-shadow:none}
+.content{flex:1;overflow-y:auto;position:relative}
+.view{display:none;height:100%}
+.view.show{display:block;animation:viewIn .38s var(--ease-out)}
+@keyframes viewIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.frame-wrap{height:100%}.frame-wrap iframe{width:100%;height:100%;border:0;background:#fff}
+
+/* ============ 卡片/工作台 ============ */
+.pad{padding:22px;max-width:1180px;margin:0 auto}
+.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 17px;
+  box-shadow:var(--shadow-sm);transition:transform .22s var(--ease-out),box-shadow .22s}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.card h3{margin:0 0 12px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.kpi{font-size:26px;font-weight:700;letter-spacing:-.5px}.kpi-label{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.health-matrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+.hcell{display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:12px;background:var(--panel-2);
+  border:1px solid var(--line);font-size:12px;cursor:pointer;transition:all .18s}
+.hcell:hover{border-color:var(--accent);background:var(--accent-soft)}
+.hcell .hd{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+.hd.SUCCESS,.hd.IDLE{background:#c7c7cc}.hd.RUNNING{background:var(--accent);animation:pulse 1.2s infinite}
+.hd.AUTH_REQUIRED,.hd.AUTH_FAILED{background:var(--warn)}.hd.CAPTCHA,.hd.NEED_VERIFY{background:#ffd60a}
+.hd.BLOCKED,.hd.IP_RISK,.hd.FAIL,.hd.ERROR{background:var(--bad)}.hd.SUCCESS.on{background:var(--ok)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.4)}50%{box-shadow:0 0 0 6px rgba(10,132,255,0)}}
+.hcell .hn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hcell .hs{font-size:10.5px;color:var(--ink-2)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:11px;font-size:13px;font-weight:600;
+  background:var(--accent);color:#fff;transition:transform .12s var(--ease-spring),filter .2s;box-shadow:0 3px 10px rgba(10,132,255,.28)}
+.btn:active{transform:scale(.95)}.btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn.sm{padding:6px 11px;font-size:12px;border-radius:9px}
+.btn.ok{background:var(--ok);box-shadow:none}.btn.no{background:#f0f0f4;color:var(--ink-2);box-shadow:none}
+
+/* ============ Zachary 聊天 ============ */
+.ai-layout{display:flex;flex-direction:column;height:100%;background:linear-gradient(180deg,#fbfbfd,#f5f6f8)}
+.chat-scroll{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:14px;max-width:860px;width:100%;margin:0 auto}
+.msg{display:flex;gap:10px;max-width:88%;animation:viewIn .3s var(--ease-out)}
+.msg .ma{width:30px;height:30px;border-radius:9px;flex:0 0 30px;display:grid;place-items:center;font-size:14px;color:#fff}
+.msg.ai .ma{background:linear-gradient(135deg,#0a84ff,#bf5af2)}.msg.me{flex-direction:row-reverse;align-self:flex-end}
+.msg.me .ma{background:linear-gradient(135deg,#34c759,#30b0c7)}
+.bubble{padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.msg.ai .bubble{background:var(--panel);border:1px solid var(--line);border-top-left-radius:4px;box-shadow:var(--shadow-sm)}
+.msg.me .bubble{background:var(--accent);color:#fff;border-top-right-radius:4px}
+.prov-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--ink-2);margin-top:7px;
+  padding:2px 8px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line)}
+.target-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.tchip{font-size:11px;padding:4px 10px;border-radius:13px;background:var(--accent-soft);color:var(--accent);
+  border:1px solid #d5e7ff;transition:transform .12s}.tchip:active{transform:scale(.93)}
+.typing{display:inline-flex;gap:4px;padding:4px 0}.typing i{width:7px;height:7px;border-radius:50%;background:#c1c1c6;animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.chat-input{flex:0 0 auto;border-top:1px solid var(--line);background:rgba(255,255,255,.9);backdrop-filter:blur(16px);padding:14px 22px}
+.ci-inner{max-width:860px;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
+.ci-inner textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:14px;padding:11px 14px;font-size:13.5px;
+  font-family:inherit;max-height:140px;outline:none;transition:border .2s;background:var(--panel)}
+.ci-inner textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(10,132,255,.12)}
+.suggests{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}
+.suggests .tchip{background:#f2f2f7;color:var(--ink-2);border-color:var(--line)}
+
+/* ============ 影子审核 ============ */
+.sh-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:11px;
+  box-shadow:var(--shadow-sm);animation:viewIn .3s}
+.sh-head{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.sh-mod{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:9px;background:var(--purple);color:#fff}
+.sh-title{font-size:13.5px;font-weight:600;flex:1}
+.sh-time{font-size:10.5px;color:var(--ink-2)}
+.sh-rationale{font-size:12px;color:var(--ink-2);background:var(--panel-2);border-radius:9px;padding:8px 11px;margin-bottom:10px}
+.sh-actions{display:flex;gap:8px}
+.empty{text-align:center;color:var(--ink-2);padding:46px 20px;font-size:13px}
+.empty .big{font-size:34px;display:block;margin-bottom:10px;opacity:.5}
+
+/* ============ Zachary 悬浮球 + 抽屉 ============ */
+.fab{position:fixed;right:22px;bottom:22px;width:58px;height:58px;border-radius:50%;z-index:90;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);display:grid;place-items:center;color:#fff;font-size:24px;
+  box-shadow:0 10px 28px rgba(10,132,255,.45);transition:transform .25s var(--ease-spring)}
+.fab:hover{transform:translateY(-3px) scale(1.05)}.fab:active{transform:scale(.92)}
+.fab::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(10,132,255,.4);animation:ring 2.4s infinite}
+@keyframes ring{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.35);opacity:0}}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(440px,94vw);background:var(--bg);z-index:100;
+  box-shadow:-12px 0 40px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .38s var(--ease-spring);
+  display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:95;opacity:0;pointer-events:none;transition:opacity .3s}
+.mask.show{opacity:1;pointer-events:auto}
+.drawer-head{flex:0 0 54px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);background:#fff}
+.drawer-head b{font-size:14px}.drawer-head .x{margin-left:auto;font-size:20px;color:var(--ink-2)}
+.drawer .chat-scroll{padding:14px}.drawer .chat-input{padding:10px 12px}
+
+/* ============ 经典版入口 ============ */
+.legacy-grid a{text-decoration:none;color:inherit;display:block}
+.legacy-item{display:flex;align-items:center;gap:13px;padding:15px 16px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;transition:all .2s}.legacy-item:hover{border-color:var(--accent);transform:translateX(3px)}
+.legacy-item .li-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:var(--accent-soft)}
+.legacy-item b{font-size:13.5px;display:block}.legacy-item small{color:var(--ink-2);font-size:11px}
+.legacy-item .go{margin-left:auto;color:#c1c1c6}
+
+/* ============ 手机端 ============ */
+.mobile-tab{display:none}
+.overlay-side{display:none}
+@media(max-width:900px){
+  .g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}
+  /* 给固定底栏让位：整个应用高度减去底栏，贴底的聊天输入框即落在底栏之上 */
+  .app{height:calc(100vh - 60px);height:calc(100dvh - 60px)}
+  .side{position:fixed;left:0;top:0;height:100%;transform:translateX(-105%);box-shadow:8px 0 30px rgba(0,0,0,.15)}
+  .side.open{transform:none}
+  .hamburger{display:block}
+  .overlay-side.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:35}
+  .pad{padding:14px 13px 84px}
+  .mobile-tab{display:flex;position:fixed;left:0;right:0;bottom:0;height:60px;background:rgba(255,255,255,.92);
+    backdrop-filter:blur(20px);border-top:1px solid var(--line);z-index:60;justify-content:space-around;align-items:center;
+    padding-bottom:env(safe-area-inset-bottom)}
+  .mtab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--ink-2);position:relative;padding:4px 8px}
+  .mtab .ic{font-size:18px}.mtab.active{color:var(--accent);font-weight:600}
+  .mtab .badge{position:absolute;top:-1px;right:2px;background:var(--bad);color:#fff;font-size:9px;min-width:15px;height:15px;border-radius:8px;display:grid;place-items:center;padding:0 4px}
+  .fab{right:16px;bottom:74px;width:52px;height:52px;font-size:21px}
+  .topbar{padding:0 14px}.chat-scroll{padding:14px}.msg{max-width:94%}
+}
+@media(max-width:380px){.g4{grid-template-columns:1fr}.brand b{font-size:12.5px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 侧边导航 -->
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="logo">Z</div>
+      <div><b>Z-Brand Core</b><small>CTH-POMS · 广州太古汇</small></div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-group">工作台</div>
+      <button class="nav-item active" data-view="home"><span class="ic">◈</span>总览</button>
+      <button class="nav-item" data-view="collect"><span class="ic">❖</span>全网采集</button>
+      <div class="nav-group">智能</div>
+      <button class="nav-item" data-view="ai"><span class="ic">✦</span>Zachary 助手</button>
+      <button class="nav-item" data-view="shadow"><span class="ic">⛉</span>影子审核<span class="badge" id="navShadowBadge" style="display:none">0</span></button>
+      <div class="nav-group">数据（经典版）</div>
+      <button class="nav-item" data-view="legacy"><span class="ic">▤</span>事件 / 笔记 / 报告</button>
+      <div class="nav-group">系统</div>
+      <button class="nav-item" data-view="settings"><span class="ic">⚙</span>账号与设置</button>
+    </nav>
+    <div class="user-card">
+      <div class="avatar">{{ (current_user.username or 'Z')[0]|upper }}</div>
+      <div style="flex:1;min-width:0">
+        <div class="u-name">{{ current_user.username }}</div>
+        <div class="u-role">{{ {'owner':'主账号','admin':'管理员','user':'普通账号'}.get(current_user.role, current_user.role) }}</div>
+      </div>
+    </div>
+  </aside>
+  <div class="overlay-side" id="overlaySide" onclick="toggleSide(false)"></div>
+
+  <!-- 主区 -->
+  <div class="main">
+    <header class="topbar">
+      <button class="hamburger" onclick="toggleSide(true)">☰</button>
+      <div><h1 id="pageTitle">总览</h1></div>
+      <div class="right">
+        <div class="ai-pill"><span class="dot off" id="aiDot"></span><span id="aiPillText">AI 检测中…</span></div>
+      </div>
+    </header>
+    <div class="content" id="content">
+      <!-- 总览 -->
+      <section class="view show" data-view="home">
+        <div class="pad">
+          <div class="grid g4" style="margin-bottom:14px">
+            <div class="card"><div class="kpi" id="kpiPlatforms">–</div><div class="kpi-label">采集平台</div></div>
+            <div class="card"><div class="kpi" id="kpiOk">–</div><div class="kpi-label">状态正常</div></div>
+            <div class="card"><div class="kpi" id="kpiShadow">–</div><div class="kpi-label">影子待审</div></div>
+            <div class="card"><div class="kpi" id="kpiAi">–</div><div class="kpi-label">AI 运行模式</div></div>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <h3>❖ 采集健康状态（点击处理登录/验证/熔断）</h3>
+            <div class="health-matrix" id="healthMatrix"><div class="empty">加载中…</div></div>
+          </div>
+          <div class="grid g2">
+            <div class="card">
+              <h3>✦ 快捷动作</h3>
+              <div style="display:flex;flex-wrap:wrap;gap:9px">
+                <button class="btn" onclick="go('collect')">去采集</button>
+                <button class="btn ghost" onclick="go('ai')">问 Zachary</button>
+                <button class="btn ghost" onclick="go('shadow')">审核影子建议</button>
+                <button class="btn ghost" onclick="go('settings')">账号设置</button>
+              </div>
+            </div>
+            <div class="card">
+              <h3>◷ 系统说明</h3>
+              <div style="font-size:12px;color:var(--ink-2);line-height:1.9">
+                · AI 为增强通道：本地模型优先、云端次之、规则引擎永远保底，外部退出系统仍完整运行。<br>
+                · AI 的变更类建议只进「影子审核」，人工确认后才执行，不直接改客户数据。<br>
+                · 采集遵循动态风控六态，登录失效在当前页弹窗恢复，不跳陌生页。
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 采集（内嵌，单页不跳走） -->
+      <section class="view" data-view="collect">
+        <div class="frame-wrap"><iframe data-src="/v4/collect/" title="全网采集"></iframe></div>
+      </section>
+
+      <!-- Zachary 大视图 -->
+      <section class="view" data-view="ai">
+        <div class="ai-layout">
+          <div class="chat-scroll" id="aiScroll"></div>
+          <div class="chat-input">
+            <div class="ci-inner" style="flex-direction:column;align-items:stretch;max-width:860px">
+              <div class="suggests">
+                <button class="tchip" onclick="fillQ('帮我分析当前各平台采集健康和风险')">采集健康分析</button>
+                <button class="tchip" onclick="fillQ('最近有哪些需要关注的负面舆情')">负面舆情</button>
+                <button class="tchip" onclick="fillQ('总结一下广州太古汇15周年相关话题')">15周年话题</button>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-end">
+                <textarea id="aiInput" rows="1" placeholder="问 Zachary：可分析系统内任意模块的数据…" oninput="autoGrow(this)" onkeydown="sendKey(event)"></textarea>
+                <button class="btn" id="aiSend" onclick="sendChat()">发送</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 影子审核 -->
+      <section class="view" data-view="shadow">
+        <div class="pad">
+          <div class="card" style="margin-bottom:13px"><h3>⛉ AI 影子审核</h3>
+            <div style="font-size:12px;color:var(--ink-2)">AI 建议一律先进入影子队列，与客户业务数据隔离；主账号/管理员逐条确认后才会被执行或采纳。</div>
+            <div style="margin-top:11px;display:flex;gap:8px" id="shadowTabs">
+              <button class="btn sm" data-st="pending" onclick="loadShadow('pending')">待审</button>
+              <button class="btn sm no" data-st="accepted" onclick="loadShadow('accepted')">已采纳</button>
+              <button class="btn sm no" data-st="rejected" onclick="loadShadow('rejected')">已驳回</button>
+              <button class="btn sm no" data-st="all" onclick="loadShadow('all')">全部</button>
+            </div>
+          </div>
+          <div id="shadowList"></div>
+        </div>
+      </section>
+
+      <!-- 经典版 -->
+      <section class="view" data-view="legacy">
+        <div class="pad">
+          <div class="card" style="margin-bottom:14px"><h3>▤ 经典版模块（层级跳转）</h3>
+            <div style="font-size:12px;color:var(--ink-2)">统一控制台以单页为主；下列为既有经典页面，按层级在新层打开，后续会逐模块内收进控制台。</div></div>
+          <div class="grid g2 legacy-grid">
+            <a href="/" target="_blank"><div class="legacy-item"><div class="li-ic">◈</div><div><b>舆情总览</b><small>经典版首页 / 15 视图</small></div><span class="go">›</span></div></a>
+            <a href="/events" target="_blank"><div class="legacy-item"><div class="li-ic">◉</div><div><b>事件中心</b><small>事件聚类 / 传播 / 处置</small></div><span class="go">›</span></div></a>
+            <a href="/notes" target="_blank"><div class="legacy-item"><div class="li-ic">❒</div><div><b>笔记库</b><small>全平台原始笔记</small></div><span class="go">›</span></div></a>
+            <a href="/report" target="_blank"><div class="legacy-item"><div class="li-ic">◪</div><div><b>报告中心</b><small>日报 / 周报 / 导出</small></div><span class="go">›</span></div></a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 设置（内嵌） -->
+      <section class="view" data-view="settings">
+        <div class="frame-wrap"><iframe data-src="/v4/settings/" title="账号与设置"></iframe></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- 手机底栏 -->
+<nav class="mobile-tab">
+  <button class="mtab active" data-view="home"><span class="ic">◈</span>总览</button>
+  <button class="mtab" data-view="collect"><span class="ic">❖</span>采集</button>
+  <button class="mtab" data-view="ai"><span class="ic">✦</span>Zachary</button>
+  <button class="mtab" data-view="shadow"><span class="ic">⛉</span>审核<span class="badge" id="tabShadowBadge" style="display:none">0</span></button>
+  <button class="mtab" data-view="settings"><span class="ic">⚙</span>设置</button>
+</nav>
+
+<!-- Zachary 悬浮球 + 全局聊天抽屉 -->
+<button class="fab" id="fab" onclick="toggleDrawer(true)">✦</button>
+<div class="mask" id="mask" onclick="toggleDrawer(false)"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head"><div class="avatar" style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0a84ff,#bf5af2">✦</div><b>Zachary 助手</b><button class="x" onclick="toggleDrawer(false)">×</button></div>
+  <div class="chat-scroll" id="drawerScroll"></div>
+  <div class="chat-input">
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <textarea id="drawerInput" rows="1" placeholder="分析任意模块 / 提问…" oninput="autoGrow(this)" onkeydown="sendKey(event,true)"></textarea>
+      <button class="btn sm" onclick="sendChat(true)">发送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TITLES={home:"总览",collect:"全网采集",ai:"Zachary 助手",shadow:"AI 影子审核",legacy:"经典版模块",settings:"账号与设置"};
+const STATE={view:"home",loaded:{},shadowSt:"pending",chats:[],drawerChats:[]};
+async function api(path,opt){const r=await fetch(path,Object.assign({credentials:"same-origin",headers:{"Content-Type":"application/json"}},opt||{}));if(r.status===401||r.status===403){location.href="/v4/settings/login";throw new Error("auth");}return r.json();}
+function go(v){switchView(v)}
+function toggleSide(open){document.getElementById("side").classList.toggle("open",open);document.getElementById("overlaySide").classList.toggle("show",open);}
+function switchView(v){
+  STATE.view=v;
+  document.querySelectorAll(".view").forEach(x=>x.classList.toggle("show",x.dataset.view===v));
+  document.querySelectorAll(".nav-item[data-view],.mtab[data-view]").forEach(x=>x.classList.toggle("active",x.dataset.view===v));
+  document.getElementById("pageTitle").textContent=TITLES[v]||"";
+  document.getElementById("fab").style.display=(v==="ai")?"none":"grid";
+  toggleSide(false);
+  document.getElementById("content").scrollTop=0;
+  const f=document.querySelector(`.view[data-view="${v}"] iframe`);
+  if(f&&!f.src&&f.dataset.src){f.src=f.dataset.src;}
+  if(v==="home"&&!STATE.loaded.home){loadHome();STATE.loaded.home=true;}
+  if(v==="shadow"){loadShadow(STATE.shadowSt);}
+  if(v==="ai"&&!STATE.loaded.ai){welcome(document.getElementById("aiScroll"));STATE.loaded.ai=true;}
+}
+document.querySelectorAll(".nav-item[data-view],.mtab[data-view]").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+
+/* ---------- 总览 ---------- */
+const STATE_CN={IDLE:"待机",RUNNING:"采集中",SUCCESS:"正常",EMPTY:"无结果",AUTH_REQUIRED:"需登录",AUTH_FAILED:"登录失效",
+  CAPTCHA:"人机验证",NEED_VERIFY:"需验证",BLOCKED:"已熔断",IP_RISK:"IP风险",NETWORK_ERROR:"网络异常",FAIL:"失败",ERROR:"错误"};
+async function loadHome(){
+  api("/v4/adapters/health").then(d=>{
+    const h=d.health||[];document.getElementById("kpiPlatforms").textContent=h.length;
+    const ok=h.filter(x=>["SUCCESS","IDLE","EMPTY"].includes(x.state)).length;
+    document.getElementById("kpiOk").textContent=ok+"/"+h.length;
+    const box=document.getElementById("healthMatrix");box.innerHTML="";
+    h.forEach(x=>{
+      const c=document.createElement("div");c.className="hcell";
+      const st=x.state||"IDLE";
+      c.innerHTML=`<span class="hd ${st} ${x.count?'on':''}"></span><span class="hn">${x.platform_cn||x.platform}</span><span class="hs">${STATE_CN[st]||st}${x.count?(' · '+x.count):''}</span>`;
+      c.onclick=()=>switchView("collect");box.appendChild(c);
+    });
+  }).catch(()=>{});
+  api("/v4/ai/status").then(d=>renderAi(d.ai)).catch(()=>{});
+  api("/v4/ai/shadow/stats").then(d=>{
+    const p=d.stats?.pending||0;document.getElementById("kpiShadow").textContent=p;
+    document.getElementById("navShadowBadge").style.display=p?"":"none";
+    document.getElementById("tabShadowBadge").style.display=p?"":"none";
+    document.getElementById("navShadowBadge").textContent=p;document.getElementById("tabShadowBadge").textContent=p;
+  }).catch(()=>{});
+}
+function renderAi(ai){
+  if(!ai)return;
+  const dot=document.getElementById("aiDot"),txt=document.getElementById("aiPillText");
+  const runtime=ai.runtime;
+  if(runtime==="local"){dot.className="dot";txt.textContent="本地模型 · "+(ai.model||"");}
+  else if(runtime==="cloud"){dot.className="dot";txt.textContent="云端 · "+(ai.provider||"");}
+  else{dot.className="dot rule";txt.textContent="规则引擎保底";}
+  document.getElementById("kpiAi").textContent=runtime==="local"?"本地":(runtime==="cloud"?"云端":"规则");
+}
+
+/* ---------- Zachary 聊天 ---------- */
+function welcome(box){
+  box.innerHTML="";
+  addMsg(box,"ai","你好，我是 Zachary。我可以基于系统内真实数据分析采集、事件、笔记、话题、案例与报告；涉及变更的建议我会先放进影子审核，由你确认。",null);
+}
+function addMsg(box,role,text,extra){
+  const m=document.createElement("div");m.className="msg "+(role==="me"?"me":"ai");
+  let inner=`<div class="ma">${role==="me"?"我":"✦"}</div><div><div class="bubble">${escapeHtml(text)}</div>`;
+  if(extra){
+    if(extra.provider)inner+=`<div class="prov-tag">${providerCN(extra.provider)}${extra.model?(" · "+extra.model):""}</div>`;
+    if(extra.targets&&extra.targets.length){
+      inner+=`<div class="target-chips">`+extra.targets.map(t=>`<button class="tchip" onclick="targetGo('${t.page}')">${t.label} ›</button>`).join("")+`</div>`;
+    }
+  }
+  inner+="</div>";m.innerHTML=inner;box.appendChild(m);box.scrollTop=box.scrollHeight;return m;
+}
+function providerCN(p){return{rule:"规则引擎保底",ollama:"本地 Ollama",lmstudio:"本地 LM Studio",zhipu:"智谱",qwen:"通义千问",deepseek:"DeepSeek",ark:"豆包",openai:"OpenAI"}[p]||p||"";}
+function escapeHtml(s){return(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function targetGo(page){const m={monitor:"collect",alerts:"collect",overview:"home",events:"legacy",notes:"legacy",topics:"legacy"};if(m[page])switchView(m[page]);}
+function fillQ(t){document.getElementById("aiInput").value=t;document.getElementById("aiInput").focus();}
+function autoGrow(t){t.style.height="auto";t.style.height=Math.min(t.scrollHeight,140)+"px";}
+function sendKey(e,drawer){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat(drawer);}}
+let busy=false;
+async function sendChat(drawer){
+  const input=document.getElementById(drawer?"drawerInput":"aiInput");
+  const box=document.getElementById(drawer?"drawerScroll":"aiScroll");
+  const q=(input.value||"").trim();if(!q||busy)return;
+  if(STATE.loaded.ai===false&&!drawer){}
+  if(!box.children.length)welcome(box);
+  addMsg(box,"me",q);input.value="";autoGrow(input);busy=true;
+  const typ=addMsg(box,"ai",`<span class="typing"><i></i><i></i><i></i></span>`);typ.querySelector(".bubble").style.color="transparent";
+  try{
+    const d=await api("/v4/ai/chat",{method:"POST",body:JSON.stringify({message:q,scope:STATE.view==="ai"?"all":STATE.view})});
+    typ.remove();
+    if(d.success){addMsg(box,"ai",d.reply,{provider:d.provider,model:d.model,targets:d.targets});
+      if(d.used_rule_fallback){/* 规则保底已在文案内说明 */}
+      loadHome();
+    }else addMsg(box,"ai","出错了："+(d.error||"未知错误"));
+  }catch(e){typ.remove();addMsg(box,"ai","连接中断，请稍后再试。");}
+  busy=false;
+}
+
+/* ---------- 影子审核 ---------- */
+async function loadShadow(st){
+  STATE.shadowSt=st;
+  document.querySelectorAll("#shadowTabs .btn").forEach(b=>{const on=b.dataset.st===st;b.classList.toggle("ghost",!on);});
+  const box=document.getElementById("shadowList");box.innerHTML='<div class="empty">加载中…</div>';
+  const d=await api("/v4/ai/shadow?status="+st);
+  const items=d.items||[];
+  if(!items.length){box.innerHTML='<div class="empty"><span class="big">⛉</span>暂无相关 AI 建议</div>';return;}
+  box.innerHTML="";
+  items.forEach(it=>{
+    const el=document.createElement("div");el.className="sh-item";
+    const rat=it.rationale&&Object.keys(it.rationale).length?JSON.stringify(it.rationale):"";
+    el.innerHTML=`<div class="sh-head"><span class="sh-mod">${it.module||"-"}</span><span class="sh-title">${escapeHtml(it.title)}</span><span class="sh-time">${it.created_at}</span></div>
+      ${rat?`<div class="sh-rationale">依据：${escapeHtml(rat)}</div>`:""}
+      <div class="sh-actions">
+        ${it.status==="pending"
+          ?'<button class="btn sm ok" onclick="decide(\''+it.id+'\',\'accepted\')">采纳</button><button class="btn sm no" onclick="decide(\''+it.id+'\',\'rejected\')">驳回</button>'
+          :'<span class="prov-tag">状态：'+({accepted:"已采纳",rejected:"已驳回",dismissed:"已忽略"}[it.status]||it.status)+(it.decided_by?(" · "+it.decided_by):"")+'</span>'}
+      </div>`;
+    box.appendChild(el);
+  });
+}
+async function decide(id,decision){await api(`/v4/ai/shadow/${id}/decide`,{method:"POST",body:JSON.stringify({decision})});loadShadow(STATE.shadowSt);loadHome();}
+
+/* ---------- 悬浮抽屉 ---------- */
+function toggleDrawer(open){document.getElementById("drawer").classList.toggle("open",open);document.getElementById("mask").classList.toggle("show",open);
+  if(open){const box=document.getElementById("drawerScroll");if(!box.children.length)welcome(box);document.getElementById("drawerInput").focus();}}
+
+/* ---------- 初始化 ---------- */
+loadHome();STATE.loaded.home=true;
+setInterval(()=>{if(STATE.view==="home")loadHome();},15000);
+</script>
+</body>
+</html>

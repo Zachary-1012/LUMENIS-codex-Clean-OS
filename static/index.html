@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f7">
+<title>广州太古汇·舆情监测系统</title>
+<link rel="stylesheet" href="/static/css/style.css?v=5.8.5">
+<link rel="stylesheet" href="/static/css/nomi_global_drag.css?v=5.8.5">
+<link rel="stylesheet" href="/static/css/architecture_dashboard.css?v=5.8.5">
+
+<link rel="stylesheet" href="/static/css/ui_optimized.css?v=5.8.5">
+<link rel="stylesheet" href="/static/css/mobile.css?v=5.8.5">
+<!-- Zachary 3D 机器人 Three.js（本地化，避免外网 CDN 失效导致 3D 不加载） -->
+<script src="/static/js/vendor/three.min.js"></script>
+</head>
+<body>
+<button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
+<div class="app-shell">
+  <header class="topbar glass">
+    <div class="brand">
+      <div class="brandmark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div><h1>广州太古汇·舆情监测系统</h1><p>小红书舆情监测 · AI辅助分析</p></div>
+    </div>
+    <div class="top-center"><div class="system-state"><i></i><span id="systemState">系统运行中</span></div><span class="clock" id="clock">—</span></div>
+    <div class="top-actions">
+      <button class="action icon-only tip" id="alertBellBtn" data-tip="舆情预警：高风险/高影响力/上升过快时弹窗通知" onclick="navigateTo('alerts')"><span class="svgicon">🔔</span><span class="nav-badge" id="alertBadge" style="display:none">0</span></button>
+      <button class="action primary tip" id="refreshBtn" data-tip="立即更新：手动采集最新数据，每日3次机会，冷却15分钟"><span class="svgicon">↻</span><span class="btn-label">采集数据</span></button>
+      <button class="action secondary tip" id="rednoteBtn" style="display:none" data-tip="备选采集（rednote/CDP）：通过CDP连接已登录浏览器采集，入口已收至系统设置，计入每日次数"><span class="svgicon">◎</span><span class="btn-label">rednote采集</span></button>
+      <button class="action secondary tip" id="reviewBtn" data-tip="AI分析：复核历史笔记的相关性、情感、风险和摘要"><span class="svgicon">✦</span><span class="btn-label">AI 分析</span></button>
+      <button class="action tertiary tip" id="reportBtn" data-tip="导出报告：进入日报、周报、月报和年报"><span class="svgicon">▣</span><span class="btn-label">导出报告</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar glass">
+      <nav class="side-nav">
+        <button class="side-item active" data-page="overview" data-desc="今日舆情概览、风险预警、事件中心、热门话题、舆情日历"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span>首页概览</span></button>
+        <button class="side-item" data-page="monitor" data-desc="情感分布、风险等级、内容分类统计"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span>舆情监测</span></button>
+        <button class="side-item" data-page="alerts" data-desc="高风险预警通知、已读可消除红点"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span>风险预警</span><b class="nav-badge" id="sideRisk">0</b></button>
+        <button class="side-item" data-page="events" data-desc="舆情事件聚合、传播路径、案例对标"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg></span><span>事件中心</span></button>
+        <button class="side-item" data-page="negative" data-desc="负面舆情二次确认、核准后才计入周报月报"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><span>负面确认</span><b class="nav-badge" id="sideNegative">0</b></button>
+        <button class="side-item" data-page="topics" data-desc="热门话题、正向体验、消费热度"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span><span>热门话题</span></button>
+        <a id="topic-campaign-entry-v573" class="side-item" href="/topic-campaign" style="text-decoration:none"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span><span>话题监测端口</span></a>
+        <button class="side-item" data-page="notes" data-desc="笔记搜索、详情查看、复核记录"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><span>笔记搜索</span></button>
+        <button class="side-item" data-page="analysis" data-desc="近14天舆情变化趋势、数据点详情"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><span>数据分析</span></button>
+        <button class="side-item" data-page="brands" data-desc="8大业态分布、198个品牌舆情、点击查看笔记"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l1.5-3h17L22 7"/><path d="M4 7v13h16V7"/><path d="M2 7a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0"/><path d="M9 20v-6h6v6"/></svg></span><span>品牌业态</span></button>
+        <button class="side-item" data-page="official" data-desc="官网、微博、微信公众号官方动态采集"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span><span>官方动态</span></button>
+        <button class="side-item" data-page="swire" data-desc="品牌营销案例库：以品牌为一级维度，下钻其营销事件库与小红书笔记库，可自行增删品牌"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span><span>品牌营销案例库</span></button>
+        <button class="side-item" data-page="cases" data-desc="全网舆情案例库、事件→回应→效果、太古汇启示"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span>案例库</span></button>
+        <button class="side-item" data-page="calendar" data-desc="舆情日历、每日舆情概览、点击查看详情"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>舆情日历</span></button>
+        <button class="side-item" data-page="reports" data-desc="日报/周报/月报/年报导出，Word/Excel/CSV格式"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span><span>报告中心</span></button>
+        <button class="side-item" data-page="settings" data-desc="公司域名、推送邮箱、AI配置、开发者工具运行代码"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>系统设置</span></button>
+      </nav>
+      <div class="side-footer">
+        <div class="update-card">
+          <div><b>数据更新</b><button class="info-btn tip" data-tip="每日9次自动采集（8/10/12/14/16/18/20/22/23点）+ 3次手动，冷却15分钟保护账号">i</button></div>
+          <small id="lastUpdate">—</small>
+          <div class="collect-status" id="collectStatus">
+            <div class="collect-row"><span>今日采集</span><b id="todayRuns">0/12</b></div>
+            <div class="collect-row"><span>手动剩余</span><b id="manualLeft">3/3</b></div>
+            <div class="collect-row"><span>自动剩余</span><b id="autoLeft">9/9</b></div>
+            <div class="collect-row"><span>状态</span><b id="collectState" class="status-ready">就绪</b></div>
+            <div class="collect-hours" id="collectHours"></div>
+          </div>
+          <div class="progress"><span id="progressBar"></span></div>
+          <button class="update-link" id="quickRefresh">↻ 立即更新</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <!-- 首页概览 -->
+      <section class="page-view active" id="page-overview">
+        <div class="page-hero">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+            <div>
+              <span class="eyebrow">OVERVIEW</span>
+              <h2>舆情总览</h2>
+              <p>广州太古汇 · 小红书舆情健康度实时监测；首页仅呈现需优先关注的信息，点击卡片进入详情。</p>
+            </div>
+            <div class="export-dropdown">
+              <button class="action primary" onclick="toggleExportMenu()">📊 导出日报</button>
+              <div class="export-menu" id="exportMenu">
+                <div class="export-menu-title">选择导出格式</div>
+                <button onclick="exportReportWithVerify('daily')">📗 Excel表格 (.xlsx)</button>
+                <button onclick="exportReportWithVerify('daily','docx')">📘 Word文档 (.docx)</button>
+                <button onclick="exportReportWithVerify('daily','csv')">📄 CSV数据 (.csv)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card glass-card" data-page="monitor"><div class="metric-icon blue"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div><div class="metric-label">监测笔记总数</div><strong id="mTotal">—</strong><div class="metric-sub">较昨日 <b id="mTotalDelta">—</b></div><div class="spark" id="sparkTotal"></div></article>
+          <article class="metric-card glass-card" data-page="monitor"><div class="metric-icon green"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9.5" x2="9.01" y2="9.5"/><line x1="15" y1="9.5" x2="15.01" y2="9.5"/></svg></div><div class="metric-label">正面舆情</div><strong class="positive" id="mPos">—</strong><div class="metric-sub" id="mPosPct">—</div><div class="spark" id="sparkPos"></div></article>
+          <article class="metric-card glass-card" data-page="monitor"><div class="metric-icon gray"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9.5" x2="9.01" y2="9.5"/><line x1="15" y1="9.5" x2="15.01" y2="9.5"/><line x1="9" y1="14.5" x2="15" y2="14.5"/></svg></div><div class="metric-label">中性舆情</div><strong id="mNeu">—</strong><div class="metric-sub" id="mNeuPct">—</div><div class="spark" id="sparkNeu"></div></article>
+          <article class="metric-card glass-card" data-page="monitor"><div class="metric-icon red"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9.5" x2="9.01" y2="9.5"/><line x1="15" y1="9.5" x2="15.01" y2="9.5"/><path d="M8.5 15.5S10 14 12 14s3.5 1.5 3.5 1.5"/></svg></div><div class="metric-label">负面舆情</div><strong class="negative" id="mNeg">—</strong><div class="metric-sub" id="mNegPct">—</div><div class="spark" id="sparkNeg"></div></article>
+          <article class="metric-card glass-card" data-page="alerts"><div class="metric-icon amber"><svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="metric-label">高风险内容</div><strong class="risk" id="mHigh">—</strong><div class="metric-sub">需要重点关注</div><div class="spark" id="sparkHigh"></div></article>
+          <article class="metric-card glass-card" data-page="analysis"><div class="metric-icon purple"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="metric-label">总互动量</div><strong id="mEng">—</strong><div class="metric-sub">较昨日 <b id="mEngDelta">—</b></div><div class="spark" id="sparkEng"></div></article>
+        </div>
+        <div class="home-cards">
+          <article class="home-card glass-card" data-page="alerts">
+            <div class="home-card-head"><span class="eyebrow">ATTENTION</span><h3>风险预警</h3><span class="chev">›</span></div>
+            <div class="risk-table compact" id="riskListHome"></div>
+          </article>
+          <article class="home-card glass-card" data-page="events">
+            <div class="home-card-head"><span class="eyebrow">EVENTS</span><h3>事件中心</h3><span class="chev">›</span></div>
+            <div class="event-list compact" id="eventListHome"></div>
+          </article>
+          <article class="home-card glass-card" data-page="topics">
+            <div class="home-card-head"><span class="eyebrow">HOT TOPICS</span><h3>热门话题</h3><span class="chev">›</span></div>
+            <div class="topic-list compact" id="topicListHome"></div>
+          </article>
+          <article class="home-card glass-card" data-page="calendar">
+            <div class="home-card-head"><span class="eyebrow">CALENDAR</span><h3>舆情日历</h3><div class="calendar-nav"><button class="icon-button" id="prevMonth">‹</button><b id="calendarTitle">2026年8月</b><button class="icon-button" id="nextMonth">›</button></div></div>
+            <div class="calendar" id="calendarGrid"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- 舆情监测 -->
+      <section class="page-view" id="page-monitor">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>舆情监测</h2></div>
+        <div id="monitorPageContent"></div>
+        <div class="panel-row">
+          <article class="panel glass-card"><div class="panel-head"><div><h3>情感分布</h3><p>正面、中性、负面在有效笔记中的结构占比</p></div></div><div class="donut-layout"><div class="donut" id="sentimentDonut"><div><b id="ringNeg">—</b><span>负面</span></div></div><div class="legend-list"><div><i class="blue-dot"></i><span>正面</span><b id="lPos">—</b><small id="lPosPct">—</small></div><div><i class="gray-dot"></i><span>中性</span><b id="lNeu">—</b><small id="lNeuPct">—</small></div><div><i class="red-dot"></i><span>负面</span><b id="lNeg">—</b><small id="lNegPct">—</small></div></div></div></article>
+          <article class="panel glass-card"><div class="panel-head"><div><h3>风险等级分布</h3><p>按照风险优先级观察需要处理的内容</p></div></div><div class="donut-layout"><div class="donut risk-donut" id="riskDonut"><div><b id="ringHigh">—</b><span>高风险</span></div></div><div class="legend-list"><div><i class="blue-dot"></i><span>高风险</span><b id="rHigh">—</b><small id="rHighPct">—</small></div><div><i class="red-dot"></i><span>中风险</span><b id="rMed">—</b><small id="rMedPct">—</small></div><div><i class="amber-dot"></i><span>低风险</span><b id="rLow">—</b><small id="rLowPct">—</small></div></div></div></article>
+          <article class="panel glass-card"><div class="panel-head"><div><h3>内容分类 Top 7</h3><p>最近有效笔记的主要内容方向</p></div></div><div class="category-chart" id="categoryChart"></div></article>
+        </div>
+      </section>
+
+      <!-- 风险预警 -->
+      <section class="page-view" id="page-alerts">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>风险预警</h2><div class="page-actions"><button class="action secondary" onclick="refreshAlerts()">↻ 刷新预警</button><button class="action tertiary" onclick="markAllAlertsRead()">✓ 全部已读</button></div></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">ALERT CENTER</span><h3>舆情预警通知</h3><p>实时监测高风险、高影响力、上升过快的舆情，弹窗通知，已读可去除红点</p></div></div><div class="alert-list" id="alertsPageList"></div></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">ATTENTION</span><h3>高 / 中风险内容</h3></div></div><div class="risk-table" id="riskList"></div></div>
+      </section>
+
+      <!-- 事件中心 -->
+      <section class="page-view" id="page-events">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>事件中心</h2></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">EVENT CENTER</span><h3>舆情事件</h3><p>把多条相近笔记整理成更容易处理的事件；中高风险与待确认优先，单篇泛化讨论自动折叠</p></div></div><div class="event-list" id="eventList"></div><div id="eventListMore"></div></div>
+      </section>
+
+      <!-- 负面舆情二次确认 -->
+      <section class="page-view" id="page-negative">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>负面舆情二次确认</h2></div>
+        <div class="metric-grid" style="grid-template-columns:repeat(3,1fr)">
+          <article class="metric-card glass-card"><div class="metric-icon amber">⏳</div><div class="metric-label">待确认</div><strong class="risk" id="negPending">—</strong><div class="metric-sub">需要你核准</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon green">✓</div><div class="metric-label">已确认</div><strong class="positive" id="negConfirmed">—</strong><div class="metric-sub">计入周报月报</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon gray">✗</div><div class="metric-label">已驳回</div><strong id="negRejected">—</strong><div class="metric-sub">误判负面</div></article>
+        </div>
+        <div class="panel glass-card">
+          <div class="panel-head">
+            <div><span class="eyebrow">PENDING REVIEW</span><h3>待确认负面笔记</h3><p>核准后才计入周报/月报/年报；日报弹窗不受影响</p></div>
+            <div class="segmented">
+              <button class="tab active" data-negtab="pending">待确认</button>
+              <button class="tab" data-negtab="confirmed">已确认</button>
+              <button class="tab" data-negtab="rejected">已驳回</button>
+            </div>
+          </div>
+          <div class="negative-list" id="negativeList"></div>
+          <div class="pagination" id="negativePagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
+        </div>
+      </section>
+
+      <!-- 热门话题 -->
+      <section class="page-view" id="page-topics">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>热门话题</h2></div>
+        <div class="panel glass-card" style="margin-bottom:16px">
+          <div class="panel-head"><div><span class="eyebrow">CASE LIBRARY</span><h3>案例收录</h3><p>系统已收录的相关笔记沉淀为案例，点击查看</p></div></div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button class="action primary" onclick="showNoteCases('广州太古汇 · 笔记案例库','keyword='+encodeURIComponent('广州太古汇'))">广州太古汇笔记案例</button>
+            <button class="action secondary" onclick="navigateTo('brand')">品牌 / 业态案例</button>
+          </div>
+        </div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">HOT TOPICS</span><h3>热门话题</h3><p>点击话题查看系统收录案例，亦可前往小红书检索更多</p></div></div><div class="topic-list" id="topicList"></div></div>
+      </section>
+
+      <!-- 笔记搜索 -->
+      <section class="page-view" id="page-notes">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>笔记搜索</h2></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">NOTE WORKSPACE</span><h3>笔记搜索</h3><p>点击笔记进入详情弹窗</p></div><div class="segmented"><button class="tab active" data-tab="notes">笔记</button><button class="tab" data-tab="history">复核记录</button><button class="tab" data-tab="web">来源</button><button class="tab" data-tab="reports">报告</button></div></div><div id="explorerContent"></div></div>
+      </section>
+
+      <!-- 数据分析 -->
+      <section class="page-view" id="page-analysis">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>数据分析</h2></div>
+        <div id="analysisPageContent"></div>
+      </section>
+
+      <!-- 品牌业态统计 -->
+      <section class="page-view" id="page-brands">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>品牌业态统计</h2></div>
+        <div class="metric-grid" id="brandCategoryGrid"></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">PIE CHART</span><h3>8大业态舆情分布</h3><p>点击扇形区域查看该业态详情，动态展示百分比</p></div></div><div class="pie-chart-container"><div class="pie-chart" id="brandPieChart"></div><div class="pie-legend" id="brandPieLegend"></div></div></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">TREND</span><h3>近7天舆情趋势</h3><p>点击数据点查看当天详情</p></div><div class="trend-legend"><span><i class="blue-line"></i>全部</span><span><i class="red-line"></i>负面</span></div></div><div class="trend-chart" id="brandTrendChart"></div></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">TOP BRANDS</span><h3>品牌舆情TOP10</h3><p>场内品牌提及量排名，点击查看对应笔记</p></div></div><div class="brand-list" id="brandTopList"></div></div>
+      </section>
+
+      <!-- 太古集团全域事件/笔记库 -->
+      <section class="page-view" id="page-swire">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>品牌营销案例库</h2><button class="action primary" id="swireAddBrandBtn" style="margin-left:auto">+ 添加品牌</button></div>
+        <div class="panel glass-card">
+          <div class="panel-head"><div><span class="eyebrow">BRAND MATRIX</span><h3>品牌主体矩阵 · 点击进入该品牌事件库</h3><p>收录太古汇 / 太古里 / 颐堤港各项目与场内品牌的营销活动、展览联名、开业周年、服务体验与舆情风险；删除为软删除，数据保留可恢复</p></div></div>
+          <div class="metric-grid" id="swireStat" style="grid-template-columns:repeat(4,1fr)"></div>
+          <div class="swire-projects" id="swireProjects" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:14px"></div>
+        </div>
+        <div class="bottom-grid" id="swireDetailView" style="grid-template-columns:1.35fr 1fr;display:none">
+          <div id="swireDetailHead" class="panel glass-card" style="grid-column:1/-1;margin-bottom:0"></div>
+          <div class="panel glass-card">
+            <div class="panel-head"><div><span class="eyebrow">EVENTS</span><h3>全网营销 / 品牌事件</h3></div></div>
+            <div class="filter-tabs" id="swireTypeTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+            <div class="swire-events" id="swireEvents"></div>
+          </div>
+          <div class="panel glass-card">
+            <div class="panel-head"><div><span class="eyebrow">NOTES</span><h3>相关小红书笔记库</h3><p id="swireNotesSrc"></p></div><input type="text" id="swireKw" placeholder="搜索标题/作者" style="padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);min-width:120px"></div>
+            <div class="swire-notes" id="swireNotes" style="max-height:640px;overflow-y:auto;display:flex;flex-direction:column;gap:9px"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 官方动态 -->
+      <section class="page-view" id="page-official">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>官方动态</h2><button class="action primary" onclick="collectOfficialInfo()" style="margin-left:auto">↻ 采集官方动态</button></div>
+        <div class="panel glass-card" id="auxSourcePanel"><div class="panel-head"><div><span class="eyebrow">AUX SOURCES</span><h3>辅助数据源 · 微博 / B站</h3><p>Cookie 直连、无需扫码，不占用小红书检索次数；结果用于反哺小红书关键词与事件发现</p></div></div><div id="auxSourceStatus" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="auxKeyword" value="广州太古汇" placeholder="关键词" style="flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)"/><button class="action primary" id="auxCollectBtn">↻ 全网采集（不占小红书次数）</button></div><div id="auxResult" class="muted" style="margin-top:10px;font-size:12px"></div></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">OFFICIAL SOURCES</span><h3>官方信息源</h3><p>广州太古汇官网、官方微博、微信公众号等官方渠道动态</p></div></div><div class="integration-list" id="officialSourceList"></div></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">OFFICIAL NEWS</span><h3>官方动态列表</h3><p>点击查看详情，官方活动与舆情关联分析</p></div><div class="filter-tabs" id="officialFilterTabs"><span class="filter-tab active" data-source="all">全部</span><span class="filter-tab" data-source="taikoo_official">官网</span><span class="filter-tab" data-source="weibo_official">微博</span><span class="filter-tab" data-source="wechat_service">微信</span></div></div><div class="official-list" id="officialList"></div></div>
+      </section>
+
+      <!-- 案例库 -->
+      <section class="page-view" id="page-cases">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>全网舆情案例库</h2><button class="action primary" onclick="showAddCaseForm()" style="margin-left:auto">+ 收录案例</button></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">CASE LIBRARY</span><h3>案例检索</h3><p>按场景分类检索，每个案例含事件→传播→回应→效果→启示五要素，专报触发时匹配同类案例参考</p></div></div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="caseSearch" placeholder="搜索案例名称/事件/启示..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">
+          <select id="caseCategoryFilter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)"><option value="">全部分类</option></select>
+          <select id="caseLevelFilter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)"><option value="">全部等级</option><option value="🔴">🔴重大</option><option value="🟡">🟡关注</option><option value="🟢">🟢平稳</option></select>
+        </div>
+        <div id="addCaseForm" style="display:none;padding:14px;background:var(--bg);border-radius:10px;margin-bottom:16px;border:1px solid var(--border)">
+          <h4 style="margin:0 0 10px">收录新案例（重大事件）</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><label style="font-size:12px;color:var(--muted)">案例标题 *</label><input type="text" id="newCaseTitle" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)"></div>
+            <div><label style="font-size:12px;color:var(--muted)">地点</label><input type="text" id="newCaseLocation" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)"></div>
+            <div><label style="font-size:12px;color:var(--muted)">场景分类 *</label><select id="newCaseCategory" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)"><option value="">请选择</option><option>服务态度·歧视</option><option>服务态度·肢体冲突</option><option>活动安全·秩序</option><option>活动运营·排队</option><option>食品安全·卫生</option><option>内容审核·营销争议</option><option>价格规则·押金</option><option>反面教材·硬刚</option><option>标杆应对·超预期补偿</option><option>标杆应对·快速止损</option></select></div>
+            <div><label style="font-size:12px;color:var(--muted)">等级</label><select id="newCaseLevel" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)"><option>🔴</option><option>🟡</option><option>🟢</option></select></div>
+          </div>
+          <div style="margin-top:10px"><label style="font-size:12px;color:var(--muted)">事件经过</label><textarea id="newCaseEvent" rows="2" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)"></textarea></div>
+          <div style="margin-top:8px"><label style="font-size:12px;color:var(--muted)">官方回应</label><textarea id="newCaseResponse" rows="2" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)"></textarea></div>
+          <div style="margin-top:8px"><label style="font-size:12px;color:var(--muted)">对太古汇启示</label><textarea id="newCaseInsight" rows="2" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)"></textarea></div>
+          <div style="margin-top:10px;display:flex;gap:8px"><button class="action primary" onclick="submitAddCase()">确认收录</button><button class="action tertiary" onclick="document.getElementById('addCaseForm').style.display='none'">取消</button></div>
+        </div>
+        <div class="case-list" id="caseList"></div>
+        <div id="casePagination" style="margin-top:12px;text-align:center"></div>
+        </div>
+      </section>
+
+      <!-- 舆情日历 -->
+      <section class="page-view" id="page-calendar">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>舆情日历</h2></div>
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">CALENDAR</span><h3>舆情日历</h3><p>按笔记发布日期归集（非采集日期），点击日期查看当天笔记</p></div><div class="calendar-nav"><button class="icon-button" id="prevMonth2">‹</button><b id="calendarTitle2">—</b><button class="icon-button" id="nextMonth2">›</button><button class="icon-button" id="todayMonth2" title="回到本月">今</button></div></div><div class="calendar large" id="calendarGrid2"></div><div class="calendar-legend"><span><i class="low-dot"></i>低风险（1-3条）</span><span><i class="med-dot"></i>中风险（4-7条）</span><span><i class="high-dot"></i>高风险（≥8条）</span></div></div>
+      </section>
+
+      <!-- 报告中心 -->
+      <section class="page-view" id="page-reports">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>报告中心</h2></div>
+        <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+          <article class="metric-card glass-card">
+            <div class="metric-icon blue">📅</div>
+            <div class="metric-label">舆情日报</div>
+            <strong>每日 00:00-24:00</strong>
+            <div class="metric-sub">当天采集的全部舆情事件</div>
+            <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('daily')">Excel</button>
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('daily','docx')">Word</button>
+              <button class="action tertiary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('daily','csv')">CSV</button>
+            </div>
+          </article>
+          <article class="metric-card glass-card">
+            <div class="metric-icon green">📆</div>
+            <div class="metric-label">舆情周报</div>
+            <strong>周一至周日</strong>
+            <div class="metric-sub">自然周舆情汇总分析</div>
+            <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('weekly','xlsx')">Excel</button>
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('weekly','docx')">Word</button>
+              <button class="action tertiary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('weekly','csv')">CSV</button>
+              <button class="action primary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="sendWeeklyEmail()">📧 发邮件</button>
+            </div>
+          </article>
+          <article class="metric-card glass-card">
+            <div class="metric-icon amber">📊</div>
+            <div class="metric-label">舆情月报</div>
+            <strong>1号至月末</strong>
+            <div class="metric-sub">自然月舆情深度分析</div>
+            <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('monthly','xlsx')">Excel</button>
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('monthly','docx')">Word</button>
+              <button class="action tertiary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('monthly','csv')">CSV</button>
+            </div>
+          </article>
+          <article class="metric-card glass-card">
+            <div class="metric-icon purple">📈</div>
+            <div class="metric-label">舆情年报</div>
+            <strong>1.1至12.31</strong>
+            <div class="metric-sub">自然年全年舆情总结</div>
+            <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('yearly','xlsx')">Excel</button>
+              <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('yearly','docx')">Word</button>
+              <button class="action tertiary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('yearly','csv')">CSV</button>
+            </div>
+          </article>
+        </div>
+        <div class="panel glass-card" style="margin-top:20px" id="reportPreviewPanel">
+          <div class="panel-head">
+            <div><span class="eyebrow">REPORT PREVIEW</span><h3>报告预览</h3><p>进入报告中心默认展示<b>最近一个自然周（周一至周日）</b>，可切换周期与基准日期，不再按滚动近 7 天</p></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="rpPeriod" onchange="loadReportPreview()" style="padding:6px 10px;border-radius:8px;border:1px solid #d8dde8;background:#fff">
+                <option value="daily">日报（当日）</option>
+                <option value="weekly" selected>自然周报（周一至周日）</option>
+                <option value="monthly">自然月报</option>
+                <option value="yearly">自然年报</option>
+              </select>
+              <input type="date" id="rpDate" onchange="loadReportPreview()" style="padding:6px 10px;border-radius:8px;border:1px solid #d8dde8">
+              <button class="action secondary" onclick="loadReportPreview()">↻ 刷新预览</button>
+            </div>
+          </div>
+          <div id="reportPreviewBody" style="padding:4px 16px 16px">正在加载报告预览…</div>
+        </div>
+        <div class="panel glass-card" style="margin-top:20px">
+          <div class="panel-head"><div><span class="eyebrow">REPORT TEMPLATE</span><h3>报告模板说明</h3><p>按照太古汇舆情汇报模板导出，包含核心结论、数据概览、分业态分布、重点笔记、舆情归因、应对动作</p></div></div>
+          <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <div style="padding:12px;background:#f8f9fa;border-radius:8px"><b>1. 核心结论</b><p style="font-size:12px;color:#666;margin:4px 0 0">一句话总结本期舆情</p></div>
+            <div style="padding:12px;background:#f8f9fa;border-radius:8px"><b>2. 数据概览</b><p style="font-size:12px;color:#666;margin:4px 0 0">总提及/负面/占比/最高互动</p></div>
+            <div style="padding:12px;background:#f8f9fa;border-radius:8px"><b>3. 分业态分布</b><p style="font-size:12px;color:#666;margin:4px 0 0">8大业态舆情分布与等级</p></div>
+            <div style="padding:12px;background:#f8f9fa;border-radius:8px"><b>4. 重点笔记清单</b><p style="font-size:12px;color:#666;margin:4px 0 0">TOP20笔记详情与互动</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 系统设置 -->
+      <section class="page-view" id="page-settings">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>系统设置</h2></div>
+
+        <!-- 增项接口配置 -->
+        <div class="panel glass-card">
+          <div class="panel-head"><div><span class="eyebrow">INTEGRATION</span><h3>增项接口配置</h3><p>公司域名、推送邮箱等可扩展接口，点击单项可跳转配置，也可删除</p></div></div>
+          <div class="integration-list" id="integrationList">
+            <div class="integration-item" onclick="openConfigModal('company_domain')">
+              <div class="integration-icon blue">🌐</div>
+              <div class="integration-info"><h4>公司域名接入</h4><p>配置公司域名，后期一键可用，系统自动适配</p></div>
+              <span class="integration-status" id="companyDomainStatus">未配置</span>
+              <span class="chev">›</span>
+            </div>
+            <div class="integration-item" onclick="openConfigModal('email_push')">
+              <div class="integration-icon green">📧</div>
+              <div class="integration-info"><h4>推送邮箱管理</h4><p>添加/删除日报推送邮箱，支持多邮箱</p></div>
+              <span class="integration-status" id="emailPushStatus">0个邮箱</span>
+              <span class="chev">›</span>
+            </div>
+            <div class="integration-item" onclick="openConfigModal('run_code')">
+              <div class="integration-icon purple">⚡</div>
+              <div class="integration-info"><h4>运行代码（热更新）</h4><p>复制代码进去自动运行，测试OK直接更新系统</p></div>
+              <span class="integration-status">开发者功能</span>
+              <span class="chev">›</span>
+            </div>
+            <div class="integration-item" onclick="openBrandManager()">
+              <div class="integration-icon amber">🏪</div>
+              <div class="integration-info"><h4>场内品牌管理（进场/退场）</h4><p>198个品牌，8大业态，支持添加进场、删除退场、修改信息</p></div>
+              <span class="integration-status" id="brandManagerStatus">198个品牌</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 系统设置 -->
+        <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">SETTINGS</span><h3>系统设置</h3><p>访问、更新频率和AI状态</p></div></div><div class="settings-grid"><div><b>当前版本</b><span id="versionText">5.8.2</span></div><div><b>采集频率</b><span>8:05–23:05错峰约9次/天，也可手动一键更新</span></div><div><b>分析模式</b><span id="aiStatusText">正在检测本机智能引擎…</span></div><div><b>远程访问</b><span>支持局域网与 Cloudflare Quick Tunnel</span></div><div><b>rednote CDP</b><span id="cdpStatusText">备选采集</span></div><div><b>自动采集</b><span id="autoIntervalText">错峰·冷却1h</span></div></div><div class="ai-console"><div class="ai-console-head"><div><span class="eyebrow">INTELLIGENCE GATEWAY</span><h4>智能引擎</h4><p>无需购买 Key。系统优先检测本机 Ollama、LM Studio、llama.cpp；未发现时自动使用内置本地规则。</p></div><span class="ai-live" id="aiLive"><i></i>检测中</span></div><div class="ai-console-grid"><div><span>当前引擎</span><b id="aiProvider">—</b></div><div><span>模型</span><b id="aiModel">—</b></div><div><span>运行状态</span><b id="aiRuntime">—</b></div><div><span>接口</span><b>本地可插拔</b></div></div><div class="ai-console-actions"><button class="action secondary" id="aiDetectBtn">重新检测</button><button class="action tertiary" id="aiTestBtn">测试 AI 接口</button></div><div class="ai-hints" id="aiHints"></div></div></div>
+      </section>
+
+      <footer><span>© 2026 广州太古汇·舆情监测系统 v5.8.0</span><span>数据来源：小红书 · AI辅助分析 · 主体过滤优先</span></footer>
+    </main>
+  </div>
+</div>
+
+<!-- 居中弹窗 -->
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="modal-mask"></div>
+  <div class="modal-panel"><button class="modal-close" id="modalClose" aria-label="关闭">×</button><div class="modal-content" id="modalContent"></div></div>
+</div>
+<!-- 全局错误提示 -->
+<div id="globalError" style="display:none;position:fixed;top:0;left:0;right:0;background:#ff3b30;color:#fff;padding:12px 20px;z-index:99999;font-size:14px;line-height:1.6"></div>
+
+<!-- Zachary 浮动AI机器人 -->
+<div class="zachary-float" id="zacharyFloat" title="Zachary - 长按拖动，点击对话">
+  <div class="zachary-robot zachary-robot-png">
+    <!-- v5.8.2 设计稿PNG形象：黑球身体+紫光猫耳+青色耳机+NOMI液晶脸（open/close双表情） -->
+    <div class="zachary-png-glow"></div>
+    <img class="zachary-png-face" id="zacharyPngFace" src="/static/img/robot_open.png?v=5.8.5" alt="Zachary" draggable="false">
+  </div>
+  <div class="zachary-tip">问我 anything</div>
+</div>
+
+<!-- Zachary 聊天弹窗 -->
+<div class="zachary-chat-modal" id="zacharyChatModal">
+  <div class="zachary-chat-mask" onclick="toggleZacharyChat()"></div>
+  <div class="zachary-chat-panel">
+    <div class="zachary-chat-header">
+      <div class="zachary-chat-avatar">
+        <div class="zachary-mini">
+          <div class="zachary-mini-body">
+            <div class="zachary-mini-face">
+              <div class="zachary-mini-eyes">
+                <div class="zachary-mini-eye l"></div>
+                <div class="zachary-mini-eye r"></div>
+              </div>
+              <div class="zachary-mini-mouth"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="zachary-chat-title">
+        <h4>Zachary</h4>
+        <span class="zachary-chat-status"><i></i>系统已连接 · 实时同步</span>
+      </div>
+      <button class="zachary-chat-close" onclick="toggleZacharyChat()">×</button>
+    </div>
+    <div class="zachary-chat-messages" id="zacharyMessages">
+      <div class="zachary-msg zachary-msg-bot">
+        <div class="zachary-msg-avatar">Z</div>
+        <div class="zachary-msg-bubble">你好！我是 <b>Zachary</b>，广州太古汇舆情系统的智能助手。我已接入系统全部数据，可以帮你：<br>• 查询实时舆情数据和趋势<br>• 解读风险事件和预警<br>• 说明系统架构和功能模块<br>• 生成日报/周报/月报摘要<br>• 分析品牌业态分布<br><br>有什么可以帮你的？</div>
+      </div>
+    </div>
+    <div class="zachary-chat-quick" id="zacharyQuick">
+      <button onclick="zacharyQuickAsk('今天舆情概况怎么样？')">今日舆情</button>
+      <button onclick="zacharyQuickAsk('有哪些高风险预警？')">风险预警</button>
+      <button onclick="zacharyQuickAsk('系统架构是怎样的？')">系统架构</button>
+      <button onclick="zacharyQuickAsk('今天采集了多少条笔记？')">采集数据</button>
+      <button onclick="zacharyQuickAsk('品牌业态分布如何？')">品牌分析</button>
+      <button onclick="zacharyQuickAsk('怎么导出日报？')">导出日报</button>
+    </div>
+    <div class="zachary-chat-input">
+      <input type="text" id="zacharyInput" placeholder="输入你的问题..." onkeydown="if(event.key==='Enter')sendZacharyMsg()">
+      <button onclick="sendZacharyMsg()" id="zacharySendBtn">发送</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<!-- 舆情预警浮动通知容器 -->
+<div class="alert-container" id="alertContainer"></div>
+<script src="/static/js/app.js?v=5.8.5"></script>
+<!-- v5.8.4 太古集团全域事件/笔记库 -->
+<script src="/static/js/swire_group.js?v=5.8.5"></script>
+
+<!-- v5.8.0 Zachary机器人模块（增强版） -->
+<script src="/static/js/zachary_robot_enhanced.js?v=5.8.5"></script>
+<!-- v5.8.2 Zachary 3D(Three.js) 已停用，改用设计稿PNG形象，避免双外观叠加；保留文件备查
+<script src="/static/js/zachary_3d.js?v=5.8.5"></script> -->
+<!-- v5.8.2 Zachary PNG双表情切换（睁眼↔闭眼微笑，淡入淡出） -->
+<script src="/static/js/zachary_png_face.js?v=5.8.5"></script>
+<!-- v5.8.0 前端交互补丁 -->
+<script src="/static/js/ui_interactions_v5.8.0.js?v=5.8.5"></script>
+
+<!-- v5.9.0 5层闭环架构状态面板 -->
+<script src="/static/js/architecture_dashboard.js?v=5.8.5"></script>
+
+<!-- v5.9.0 Zachary系统知识增强 -->
+<script src="/static/js/zachary_system_knowledge.js?v=5.8.5"></script>
+
+<!-- v5.9.0 红点提醒管理 -->
+<script src="/static/js/badge_manager.js?v=5.8.5"></script>
+
+<!-- v5.9.0 系统功能前端接入 -->
+<script src="/static/js/system_features_ui.js?v=5.8.5"></script>
+
+<!-- v5.8.0 公关案例前端 -->
+<script src="/static/js/pr_case_integration.js?v=5.8.5"></script>
+
+<!-- v5.8.0 系统控制 -->
+<script src="/static/js/system_controls.js?v=5.8.5"></script>
+
+<!-- v5.8.0 前端增强 -->
+<script src="/static/js/frontend_enhancement.js?v=5.8.5"></script>
+<!-- v5.8.2 辅助数据源（微博/B站Cookie直连） -->
+<script src="/static/js/auxiliary_sources.js?v=5.8.5"></script>
+</body></html>

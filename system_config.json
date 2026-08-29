@@ -1,0 +1,112 @@
+{
+  "version": "2026.08.27",
+  "app_name": "广州太古汇舆情监测系统",
+  "app_version": "v5.7.0",
+  "description": "广州太古汇小红书舆情监测系统配置",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8200,
+    "debug": false,
+    "threaded": true
+  },
+  "auth": {
+    "enabled": true,
+    "username_env": "TAIKOO_AUTH_USER",
+    "password_env": "TAIKOO_AUTH_PASSWORD"
+  },
+  "collection": {
+    "platform": "rednote",
+    "daily_limit": 12,
+    "manual_limit": 3,
+    "auto_limit": 9,
+    "auto_schedule_hours": [8, 10, 12, 14, 16, 18, 20, 22, 23],
+    "cooldown_minutes": 15,
+    "new_account_light_runs": 3,
+    "keywords": ["广州太古汇", "太古汇 投诉", "太古汇 避雷", "太古汇 停车", "太古汇 活动"],
+    "max_scroll": 5,
+    "max_details": 20,
+    "max_comment_pages": 5
+  },
+  "subject_filter": {
+    "enabled": true,
+    "positive_keywords": ["广州太古汇", "太古汇", "天河太古汇"],
+    "negative_keywords": ["上海太古汇", "香港太古汇", "成都太古汇", "北京太古汇"],
+    "verify_location": true
+  },
+  "ai": {
+    "enabled": true,
+    "local_provider": "ollama",
+    "local_model": "llama3.2",
+    "local_endpoint": "http://127.0.0.1:11434",
+    "cloud_providers": ["doubao", "gpt", "trae"],
+    "async_analysis": true,
+    "max_analysis_per_run": 20
+  },
+  "report": {
+    "daily_push_time": "09:00",
+    "weekly_push_day": "monday",
+    "weekly_push_time": "09:00",
+    "monthly_push_day": 1,
+    "yearly_push_month": 1,
+    "yearly_push_day": 1,
+    "formats": ["word", "excel"],
+    "template": "太古汇舆情汇报模板",
+    "negative_requires_confirmation": {
+      "daily": false,
+      "weekly": true,
+      "monthly": true,
+      "yearly": true
+    }
+  },
+  "alert": {
+    "enabled": true,
+    "negative_interaction_threshold": 500,
+    "negative_post_threshold": 3,
+    "rapid_growth_threshold": 100,
+    "popup_notification": true,
+    "red_dot_unread": true
+  },
+  "zachary": {
+    "enabled": true,
+    "name": "Zachary",
+    "appearance": {
+      "body": "黑色球体",
+      "face": "液晶面板",
+      "face_colors": ["荧光白", "荧光蓝"],
+      "accessories": ["蓝色帽子", "小耳麦"],
+      "hat_random": true,
+      "style": "苹果AI机器人质感"
+    },
+    "interaction": {
+      "click": "打开聊天弹窗",
+      "drag": "全局可移动",
+      "position_pc": "右下角浮动",
+      "position_mobile": "左侧浮动"
+    },
+    "capabilities": ["系统架构问答", "舆情事件分析", "日报周报解读", "数据查询", "操作指引"]
+  },
+  "external_sources": {
+    "brand_websites": true,
+    "official_accounts": true,
+    "web_search": true,
+    "web_search_cooldown_hours": 6
+  },
+  "cloudflare": {
+    "enabled": true,
+    "type": "quick_tunnel",
+    "protocol": "http2",
+    "ha_connections": 4,
+    "no_autoupdate": true,
+    "named_tunnel_configured": false
+  },
+  "data": {
+    "database_path": "data/monitor.db",
+    "backup_dir": "data/backups",
+    "screenshot_dir": "data/screenshots",
+    "report_dir": "data/reports",
+    "log_dir": "logs",
+    "auto_backup": true,
+    "backup_interval_hours": 24
+  },
+  "last_updated": "2026-08-27"
+}

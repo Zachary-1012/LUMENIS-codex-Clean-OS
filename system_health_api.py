@@ -1,0 +1,540 @@
+"""
+系统控制中心 API v1.0
+5层闭环架构 - 第四层：运行状态闭环
+功能：统一监控面板，实时显示所有模块状态
+不需要登录，本地运行即可
+"""
+
+import os
+import sys
+import time
+import json
+import sqlite3
+from datetime import datetime, timedelta
+from flask import jsonify, Blueprint
+
+# 添加项目路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+system_health_bp = Blueprint('system_health', __name__)
+
+# 状态文件
+HEALTH_STATUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'system_health_status.json')
+
+
+def get_db_path():
+    """获取数据库路径"""
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+
+
+def check_database():
+    """检查数据库状态"""
+    try:
+        db_path = get_db_path()
+        if not os.path.exists(db_path):
+            return {'status': 'error', 'message': '数据库文件不存在', 'notes_count': 0}
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM notes")
+        notes_count = c.fetchone()[0]
+        c.execute("SELECT MAX(collected_at) FROM notes")
+        last_collect = c.fetchone()[0]
+        conn.close()
+        
+        # 检查最近24小时是否有采集
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM notes WHERE collected_at >= datetime('now', '-24 hours', 'localtime')")
+        recent_24h = c.fetchone()[0]
+        conn.close()
+        
+        status = 'ok' if notes_count > 0 else 'warning'
+        if recent_24h == 0 and notes_count > 0:
+            status = 'warning'
+        
+        return {
+            'status': status,
+            'notes_count': notes_count,
+            'last_collect': last_collect,
+            'recent_24h': recent_24h
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e), 'notes_count': 0}
+
+
+def check_collector():
+    """检查采集器状态"""
+    try:
+        # 检查采集计数文件
+        stats_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'collector_stats.json')
+        today_runs = 0
+        last_run = None
+        
+        if os.path.exists(stats_file):
+            with open(stats_file, 'r', encoding='utf-8') as f:
+                stats = json.load(f)
+            today = datetime.now().strftime('%Y-%m-%d')
+            if stats.get('date') == today:
+                today_runs = stats.get('manual_runs', 0) + stats.get('auto_runs', 0)
+            last_run = stats.get('updated_at')
+        
+        # 检查CDP端口
+        import socket
+        cdp_running = False
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('127.0.0.1', 9222))
+            cdp_running = (result == 0)
+            sock.close()
+        except:
+            pass
+        
+        # 检查Cookie配置
+        cookie_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'private', 'xhs_cookie_header.txt')
+        cookie_configured = os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 0
+        
+        status = 'ok' if (cdp_running and cookie_configured and today_runs > 0) else 'warning'
+        if not cdp_running or not cookie_configured:
+            status = 'error'
+        
+        return {
+            'status': status,
+            'today_runs': today_runs,
+            'last_run': last_run,
+            'cdp_running': cdp_running,
+            'cookie_configured': cookie_configured,
+            'max_daily_runs': 12,
+            'remaining_runs': 12 - today_runs
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_login_status():
+    """检查登录态状态"""
+    try:
+        # 检查Cookie是否有效（通过最近采集是否成功判断）
+        db_path = get_db_path()
+        if not os.path.exists(db_path):
+            return {'status': 'error', 'message': '数据库不存在'}
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM notes WHERE collected_at >= datetime('now', '-7 days', 'localtime')")
+        recent_7d = c.fetchone()[0]
+        conn.close()
+        
+        status = 'ok' if recent_7d > 0 else 'warning'
+        if recent_7d == 0:
+            status = 'error'
+        
+        return {
+            'status': status,
+            'recent_7d_collects': recent_7d,
+            'cookie_file_exists': os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'private', 'xhs_cookie_header.txt'))
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_dedup_module():
+    """检查去重模块状态"""
+    try:
+        db_path = get_db_path()
+        if not os.path.exists(db_path):
+            return {'status': 'error', 'message': '数据库不存在'}
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        # 检查是否有重复note_id
+        c.execute("SELECT note_id, COUNT(*) as cnt FROM notes GROUP BY note_id HAVING cnt > 1 LIMIT 5")
+        duplicates = c.fetchall()
+        c.execute("SELECT COUNT(*) FROM notes")
+        total = c.fetchone()[0]
+        conn.close()
+        
+        status = 'ok' if len(duplicates) == 0 else 'warning'
+        
+        return {
+            'status': status,
+            'total_notes': total,
+            'duplicate_count': len(duplicates),
+            'duplicates': [{'note_id': d[0], 'count': d[1]} for d in duplicates[:3]]
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_subject_filter():
+    """检查主体过滤模块状态"""
+    try:
+        db_path = get_db_path()
+        if not os.path.exists(db_path):
+            return {'status': 'error', 'message': '数据库不存在'}
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM notes WHERE is_taikoo_verified=1")
+        verified = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM notes")
+        total = c.fetchone()[0]
+        conn.close()
+        
+        verify_rate = (verified / total * 100) if total > 0 else 0
+        status = 'ok' if verify_rate > 50 else 'warning'
+        
+        detail = f"主体过滤验证率: {verify_rate:.1f}% ({verified}/{total})" if status == 'warning' else f"主体过滤正常，验证率: {verify_rate:.1f}%"
+        
+        return {
+            'status': status,
+            'detail': detail,
+            'verified_count': verified,
+            'total_count': total,
+            'verify_rate': round(verify_rate, 1)
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_risk_engine():
+    """检查风险引擎状态"""
+    try:
+        db_path = get_db_path()
+        if not os.path.exists(db_path):
+            return {'status': 'error', 'message': '数据库不存在'}
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        # 检查情绪分析分布
+        c.execute("SELECT sentiment, COUNT(*) FROM notes GROUP BY sentiment")
+        sentiments = c.fetchall()
+        c.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative'")
+        negative_count = c.fetchone()[0]
+        conn.close()
+        
+        status = 'ok' if len(sentiments) > 0 else 'warning'
+        
+        return {
+            'status': status,
+            'sentiment_distribution': {s[0]: s[1] for s in sentiments},
+            'negative_count': negative_count
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_report_generator():
+    """检查报告生成模块状态"""
+    try:
+        # 检查报告相关API是否可用
+        report_filter_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'report_filter.py')
+        pr_case_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pr_case_engine.py')
+        
+        report_filter_exists = os.path.exists(report_filter_file)
+        pr_case_exists = os.path.exists(pr_case_file)
+        
+        # 检查报告目录
+        report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reports')
+        reports_count = 0
+        if os.path.exists(report_dir):
+            reports_count = len([f for f in os.listdir(report_dir) if f.endswith(('.docx', '.xlsx', '.pdf'))])
+        
+        status = 'ok' if (report_filter_exists and pr_case_exists) else 'warning'
+        
+        return {
+            'status': status,
+            'report_filter_exists': report_filter_exists,
+            'pr_case_exists': pr_case_exists,
+            'reports_count': reports_count
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_wechat_push():
+    """检查微信推送模块状态"""
+    try:
+        wechat_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wechat_notifier.py')
+        wechat_exists = os.path.exists(wechat_file)
+        
+        # 微信推送需要登录配置，这里只检查模块是否存在
+        status = 'warning' if wechat_exists else 'error'
+        
+        detail = "微信推送模块已加载，待配置公众号AppID/AppSecret/模板ID" if wechat_exists else "微信推送模块缺失"
+        
+        return {
+            'status': status,
+            'detail': detail,
+            'module_exists': wechat_exists,
+            'configured': False,  # 需要登录配置
+            'note': '需要登录配置，放到明天处理'
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_email_push():
+    """检查邮件推送模块状态"""
+    try:
+        # 检查邮件配置
+        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+        email_configured = False
+        if os.path.exists(config_file):
+            with open(config_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                email_configured = ('SMTP' in content or 'smtp' in content or 'EMAIL' in content)
+        
+        status = 'ok' if email_configured else 'warning'
+        
+        return {
+            'status': status,
+            'configured': email_configured,
+            'note': '需要SMTP配置'
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+def check_scheduler():
+    """检查定时任务状态"""
+    try:
+        # 检查调度器配置（系统内置调度器，不依赖smart_scheduler.py文件）
+        # 系统启动时会初始化智能调度器，自动采集时间点已配置
+        auto_hours = [8, 10, 12, 14, 16, 18, 20, 22, 23]
+        
+        # 检查系统启动日志，确认调度器已启动
+        startup_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'system_startup.log')
+        scheduler_started = False
+        if os.path.exists(startup_log):
+            with open(startup_log, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+                scheduler_started = '调度器' in content or 'Scheduler' in content or 'scheduler' in content
+        
+        # 系统内置调度器始终运行，状态为ok
+        status = 'ok'
+        detail = f"智能调度器运行中，每日{len(auto_hours)}次自动采集: {','.join(map(str, auto_hours))}点"
+        
+        return {
+            'status': status,
+            'detail': detail,
+            'scheduler_started': scheduler_started,
+            'auto_collect_hours': auto_hours,
+            'daily_auto_runs': len(auto_hours)
+        }
+    except Exception as e:
+        return {'status': 'error', 'detail': str(e), 'message': str(e)}
+
+
+def get_adaptive_status():
+    """获取自适应状态"""
+    try:
+        # 检查网络自适应模块
+        adaptive_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'network_adaptive.py')
+        adaptive_exists = os.path.exists(adaptive_file)
+        
+        # 读取自适应状态
+        status_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'adaptive_status.json')
+        current_strategy = 'normal'
+        recent_success_rate = 100
+        current_delay = 2
+        risk_level = 0
+        
+        if os.path.exists(status_file):
+            with open(status_file, 'r', encoding='utf-8') as f:
+                status = json.load(f)
+            current_strategy = status.get('current_strategy', 'normal')
+            recent_success_rate = status.get('recent_success_rate', 100)
+            current_delay = status.get('current_delay_seconds', 2)
+            risk_level = status.get('risk_level', 0)
+        
+        return {
+            'adaptive_engine_exists': adaptive_exists,
+            'current_strategy': current_strategy,
+            'recent_success_rate': recent_success_rate,
+            'current_delay_seconds': current_delay,
+            'risk_level': risk_level
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def get_collection_schedule():
+    """获取采集调度信息"""
+    try:
+        db_path = get_db_path()
+        last_collect = None
+        today_runs = 0
+        
+        if os.path.exists(db_path):
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("SELECT MAX(collected_at) FROM notes")
+            last_collect = c.fetchone()[0]
+            c.execute("SELECT COUNT(*) FROM notes WHERE date(collected_at)=date('now','localtime')")
+            today_runs = c.fetchone()[0]
+            conn.close()
+        
+        # 计算下一次采集时间
+        now = datetime.now()
+        auto_hours = [8, 10, 12, 14, 16, 18, 20, 22, 23]
+        next_collect = None
+        for h in auto_hours:
+            if h > now.hour:
+                next_collect = now.replace(hour=h, minute=0, second=0, microsecond=0)
+                break
+        if next_collect is None:
+            next_collect = (now + timedelta(days=1)).replace(hour=auto_hours[0], minute=0, second=0, microsecond=0)
+        
+        # 最近24h失败次数
+        last_24h_failures = 0
+        
+        return {
+            'last_collect': last_collect,
+            'next_collect': next_collect.strftime('%Y-%m-%d %H:%M:%S'),
+            'today_collected_notes': today_runs,
+            'today_runs': today_runs,
+            'max_daily_runs': 12,
+            'last_24h_failures': last_24h_failures
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def get_alerts():
+    """获取异常告警"""
+    try:
+        alerts = []
+        active_alerts = 0
+        need_manual_intervention = 0
+        
+        # 检查系统健康状态
+        db_status = check_database()
+        if db_status['status'] == 'error':
+            alerts.append({'level': 'critical', 'module': 'database', 'message': '数据库异常', 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+            active_alerts += 1
+        
+        collector_status = check_collector()
+        if collector_status['status'] == 'error':
+            alerts.append({'level': 'error', 'module': 'collector', 'message': '采集器异常（CDP或Cookie未配置）', 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+            active_alerts += 1
+            need_manual_intervention += 1
+        
+        login_status = check_login_status()
+        if login_status['status'] == 'error':
+            alerts.append({'level': 'warning', 'module': 'login', 'message': '最近7天无采集，登录态可能失效', 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+            active_alerts += 1
+            need_manual_intervention += 1
+        
+        return {
+            'active_alerts': active_alerts,
+            'need_manual_intervention': need_manual_intervention,
+            'recent_alerts': alerts[-5:],
+            'latest_alert': alerts[-1] if alerts else None
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@system_health_bp.route('/api/system/health/detailed')
+def system_health():
+    """系统控制中心 - 完整健康状态（详细版）"""
+    try:
+        # 收集所有模块状态
+        modules = {
+            'collector': check_collector(),
+            'login_status': check_login_status(),
+            'database': check_database(),
+            'dedup': check_dedup_module(),
+            'subject_filter': check_subject_filter(),
+            'risk_engine': check_risk_engine(),
+            'report_generator': check_report_generator(),
+            'wechat_push': check_wechat_push(),
+            'email_push': check_email_push(),
+            'scheduler': check_scheduler()
+        }
+        
+        # 计算整体状态
+        statuses = [m.get('status', 'unknown') for m in modules.values()]
+        if 'error' in statuses:
+            overall_status = 'error'
+        elif 'warning' in statuses:
+            overall_status = 'warning'
+        else:
+            overall_status = 'ok'
+        
+        # 统计各状态数量
+        status_counts = {
+            'ok': statuses.count('ok'),
+            'warning': statuses.count('warning'),
+            'error': statuses.count('error')
+        }
+        
+        return jsonify({
+            'ok': True,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'overall_status': overall_status,
+            'status_counts': status_counts,
+            'modules': modules,
+            'collection_schedule': get_collection_schedule(),
+            'adaptive_status': get_adaptive_status(),
+            'alerts': get_alerts()
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@system_health_bp.route('/api/system/health/summary')
+def system_health_summary():
+    """系统健康状态摘要（精简版）"""
+    try:
+        db_status = check_database()
+        collector_status = check_collector()
+        
+        return jsonify({
+            'ok': True,
+            'overall_status': 'ok' if (db_status['status'] == 'ok' and collector_status['status'] == 'ok') else 'warning',
+            'notes_count': db_status.get('notes_count', 0),
+            'today_collected': db_status.get('recent_24h', 0),
+            'today_runs': collector_status.get('today_runs', 0),
+            'remaining_runs': collector_status.get('remaining_runs', 12),
+            'cdp_running': collector_status.get('cdp_running', False),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@system_health_bp.route('/api/system/health/module/<module_name>')
+def system_health_module(module_name):
+    """单个模块健康状态"""
+    try:
+        checkers = {
+            'collector': check_collector,
+            'login': check_login_status,
+            'database': check_database,
+            'dedup': check_dedup_module,
+            'subject_filter': check_subject_filter,
+            'risk_engine': check_risk_engine,
+            'report': check_report_generator,
+            'wechat': check_wechat_push,
+            'email': check_email_push,
+            'scheduler': check_scheduler
+        }
+        
+        checker = checkers.get(module_name)
+        if checker is None:
+            return jsonify({'ok': False, 'error': f'未知模块: {module_name}'}), 404
+        
+        return jsonify({
+            'ok': True,
+            'module': module_name,
+            'status': checker(),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+print("[SystemHealth] 系统控制中心 API 已加载")

@@ -1,0 +1,1174 @@
+可以。我这次把 2026-08-28 20:51 → 2026-08-29 05:15 这一阶段已经确定下来的内容重新收口，而且把你刚才提出的关键点——“交付给你的东西不能只有源码，所有数据库都应该带上”——正式提升为交付规范。
+先说明一个边界：我目前能恢复并整合的是这段时间在当前项目上下文里已经保留下来的聊天/决策信息，不是从你的 ChatGPT 账户后台导出一份逐条原始消息记录。因此下面不是假装逐字复刻聊天，而是把这一阶段已经形成的需求、修改、约束、方案和交付要求做成一份最终施工基线，避免后面拿 ZIP 时遗漏。
+广州太古汇舆情监测系统
+→ 双产品线最终升级施工总方案 V5.0
+时间基线：2026-08-28 20:51 — 2026-08-29 05:15
+⸻
+一、最终确定的两个产品
+① CTH-POMS
+CorTech Lab-GuangZhou Taikoo Hui Public Opinion Monitoring System
+定位：
+广州太古汇专属客户交付版。
+特点：
+* 单品牌：广州太古汇
+* 业务口径固化
+* 数据独立
+* 客户界面
+* 不开放研发实验能力
+* 独立部署
+* 不依赖 ZBMP
+* Ollama 本地 AI
+* Cookie / Session 失效后人工扫码恢复
+* 可独立运行、备份、回滚
+⸻
+② ZBMP
+Z-Brand Monitoring Platform
+定位：
+你的品牌舆情监控母平台。
+未来：
+ZBMP
+├── 广州太古汇
+├── Brand A
+├── Brand B
+├── Brand C
+└── Brand N
+可以创建：
+* 品牌
+* 公司
+* 竞品
+* 活动
+* 专题
+* 监测任务
+* 平台账号
+* 关键词
+* 排除词
+* 风险规则
+⸻
+二、最核心的最终架构
+不是两套系统源码。
+而是：
+                  Z-Brand Core
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+     ZBMP Platform             CTH Build
+          │                         │
+    多品牌研发平台              太古汇客户版
+          │                         │
+          └────────────┬────────────┘
+                       │
+                 独立运行时
+                       │
+                    Ollama
+                       │
+                 本地AI模型
+核心原则
+一套 Core，两个独立 Release。
+而不是：
+复制两份源码分别维护。
+⸻
+三、最大的变量已经正式改变：不再使用云端大模型 API
+这一点必须从旧方案中彻底更新。
+正式产品 AI
+唯一正式 AI 运行方式：
+Ollama + 本地模型
+不再把：
+* 豆包 API
+* OpenAI API
+* 其他云端大模型 API
+作为系统运行依赖。
+⸻
+豆包 / ChatGPT 的角色
+它们属于：
+开发协作工具
+而不是：
+生产系统 AI 服务。
+所以：
+手机
+电脑
+ChatGPT
+豆包
+GitHub
+       ↓
+开发 / 修改 / 部署
+与：
+CTH-POMS / ZBMP
+       ↓
+Core
+       ↓
+Ollama
+       ↓
+本地模型
+彻底分开。
+这样你以后无论：
+* 手机
+* Windows电脑
+* 另一台电脑
+* 换开发工具
+都不会改变产品本身。
+⸻
+四、AI必须故障隔离
+最终原则：
+Ollama正常
+    ↓
+AI READY
+    ↓
+正常提供AI辅助
+Ollama没启动
+    ↓
+AI OFFLINE
+    ↓
+舆情系统继续运行
+绝不能：
+Ollama挂了
+ ↓
+Flask挂了
+ ↓
+整个系统不能启动
+所以：
+AI OFFLINE ≠ SYSTEM OFFLINE
+这是 P0。
+⸻
+五、系统完整主链
+最终统一为：
+Brand Platform
+       ↓
+Brand Profile
+       ↓
+Campaign / Topic / Competitor
+       ↓
+Monitoring Engine
+       ↓
+Scheduler
+       ↓
+小红书 / 微博 / B站
+       ↓
+Normalize
+       ↓
+Deduplicate
+       ↓
+Subject Filter
+       ↓
+Quality
+       ↓
+Note Store
+       ↓
+ ┌─────┼─────┐
+ ↓     ↓     ↓
+Topic Event Risk
+ │      │     │
+ └──────┼─────┘
+        ↓
+   Analytics
+        ↓
+ ┌──────┼───────────────┐
+ ↓      ↓      ↓        ↓
+Dashboard 日报  周报    月报
+                  ↓
+              Campaign
+                  ↓
+             AI Gateway
+                  ↓
+               Ollama
+                  ↓
+             AI Result
+同时：
+Risk
+ ↓
+Risk Alert
+ ↓
+实时通知
+不等待日报。
+⸻
+六、你提出的 Cookie / Session 失效机制正式升级为 P0
+这个需求非常重要，我建议不要再称为“小红书登录补丁”。
+正式定义：
+Auth Recovery Engine
+⸻
+正常状态
+Collector
+ ↓
+Browser Profile / Session
+ ↓
+Session Health Check
+ ↓
+VALID
+ ↓
+继续采集
+⸻
+登录失效
+例如：
+* Cookie过期
+* Session失效
+* 返回登录页
+* 401
+* 403
+* 特征性404
+* 验证码
+* 登录态丢失
+进入：
+Auth State Detector
+ ↓
+AUTH_REQUIRED
+ ↓
+暂停当前采集任务
+ ↓
+启动恢复流程
+ ↓
+获取二维码
+ ↓
+前端弹窗
+⸻
+七、最终弹窗效果
+类似：
+┌──────────────────────────────┐
+│       小红书登录已失效       │
+│                              │
+│          [二维码]            │
+│                              │
+│      请使用手机扫码登录      │
+│                              │
+│      正在等待登录……          │
+│                              │
+│       ● 等待扫码              │
+└──────────────────────────────┘
+扫码成功：
+扫码
+ ↓
+检测登录成功
+ ↓
+保存新的Session/Profile
+ ↓
+验证
+ ↓
+恢复采集任务
+⸻
+八、关键原则：不能因为 Cookie 失效而让整个系统崩溃
+错误：
+Cookie失效
+ ↓
+Flask崩溃
+正确：
+小红书采集任务
+ ↓
+AUTH_REQUIRED
+ ↓
+PAUSED
+其他功能继续：
+* Dashboard
+* 数据库
+* 事件
+* 风险
+* 报告
+* Ollama
+* 微博
+* B站
+全部正常。
+扫码后：
+AUTH OK
+ ↓
+RESUME
+⸻
+九、不能把所有404都当Cookie失效
+必须有状态判断：
+AUTH_VALID
+AUTH_EXPIRED
+AUTH_REQUIRED
+CHALLENGE_REQUIRED
+PLATFORM_ERROR
+NETWORK_ERROR
+UNKNOWN
+例如：
+普通404
+ ↓
+平台错误
+登录态特征404
+ ↓
+Auth Recovery
+ ↓
+二维码
+避免误判。
+⸻
+十、今天已经暴露的启动问题必须作为重点回归
+已经出现过：
+AssertionError
+View function mapping is overwriting
+an existing endpoint function
+涉及：
+api_cases_list
+所以必须建立：
+Endpoint Collision Check
+启动前自动检查：
+* 重复 endpoint
+* 重复 route
+* Blueprint 重复注册
+* 函数重复注册
+⸻
+十一、禁止危险启动脚本
+尤其检查：
+taskkill /F /IM python.exe
+这种方式。
+因为它可能：
+把不属于本系统的 Python 进程全部杀掉。
+最终要求：
+启动本系统
+ ↓
+获取自身PID
+ ↓
+只管理自己的进程
+不能全局杀 Python。
+⸻
+十二、建立正式 Preflight
+以后运行：
+PRECHECK
+检查：
+Python
+ ↓
+Dependencies
+ ↓
+Import
+ ↓
+Database
+ ↓
+Migration
+ ↓
+Config
+ ↓
+Environment
+ ↓
+Blueprint
+ ↓
+Endpoint
+ ↓
+启动脚本
+ ↓
+危险进程操作
+ ↓
+Ollama
+ ↓
+Browser
+ ↓
+Profile
+通过：
+READY
+才启动。
+⸻
+十三、系统启动必须分层
+START
+ ↓
+Core Check
+ ↓
+Database
+ ↓
+Flask
+ ↓
+Health Check
+ ↓
+READY
+ ↓
+Scheduler
+ ↓
+Collectors
+ ↓
+AI
+ ↓
+Notifications
+ ↓
+公网入口
+任何增强模块失败：
+不得拖死 Core。
+⸻
+十四、5G / 公网访问必须隔离
+最终：
+本地系统
+127.0.0.1:8200
+        ↓
+核心服务
+公网：
+Internet
+ ↓
+穿透
+ ↓
+本地系统
+穿透失败：
+公网 ❌
+Core ✅
+不能：
+穿透失败
+ ↓
+系统启动失败
+⸻
+十五、主体口径必须继续作为不可破坏资产
+广州太古汇现有：
+* SUBJECT_WORDS
+* SUBJECT_EXCLUDE_WORDS
+* subject_hit()
+* _subject_sql_and_values()
+* aggregate_events()
+* build_daily_report()
+必须保留其业务语义。
+尤其不能因为平台化而把：
+“广州太古汇”
+变成泛“太古汇”。
+⸻
+十六、ZBMP与CTH-POMS对主体词处理不同
+CTH-POMS
+太古汇主体词
+       ↓
+固化
+       ↓
+客户不可修改
+ZBMP
+Brand Profile
+       ↓
+主体词
+       ↓
+可配置
+但是：
+客户版后端 API 也必须锁死。
+不能只隐藏 UI。
+⸻
+十七、数据时间口径
+数据库至少要支持：
+publish_at
+captured_at
+first_seen_at
+last_seen_at
+detail_fetched_at
+核心原则：
+报告统计按照发布时间。
+例如：
+8月27日发布：
+8月27日发布
+8月28日采集
+属于：
+8月27日新增发布内容。
+8月28日报告不能因为8月28日采到而再次统计。
+但它必须进入：
+笔记库。
+⸻
+十八、统一 Note Store
+所有平台数据：
+小红书
+微博
+B站
+ ↓
+Normalize
+ ↓
+Deduplicate
+ ↓
+Subject Filter
+ ↓
+Note Store
+一条笔记只存一次。
+然后建立关系：
+Note
+ ├── Topic
+ ├── Event
+ ├── Risk
+ └── Campaign
+⸻
+十九、15周年不能继续写成专用功能
+最终：
+Campaign Engine
+例如：
+Campaign
+├── 广州太古汇15周年
+├── 圣诞季
+├── 新店开业
+├── 品牌活动
+├── 新品发布
+└── 任意活动
+15周年只是第一个实例。
+⸻
+二十、Campaign必须引用Note，而不是复制Note
+正确：
+Note Store
+   ↓
+Campaign Relation
+错误：
+普通笔记库
++
+15周年笔记库
+否则统计必然重复。
+⸻
+二十一、事件系统
+Event不能只是一个标签。
+必须能够追踪：
+Event
+├── event_id
+├── event_name
+├── start_at
+├── end_at
+├── status
+├── note_ids
+├── timeline
+├── sentiment
+├── risk
+└── evidence
+能够回答：
+这个事件由哪些笔记组成？
+⸻
+二十二、Risk必须独立告警
+最终：
+Risk Engine
+     │
+     ├────────→ Analytics
+     │              ↓
+     │          日/周/月报告
+     │
+     └────────→ Alert Engine
+                    ↓
+                 实时通知
+高风险不能等报告。
+⸻
+二十三、AI结果要保存，但不能覆盖原始事实
+AI：
+原始笔记
+ ↓
+AI分析
+ ↓
+AI Result Store
+不要破坏：
+原始采集事实。
+最终应该区分：
+Raw Data
+System Decision
+AI Decision
+Human Decision
+Final Decision
+这样以后才能做 AI 评估。
+⸻
+二十四、ZBMP才开放完整AI实验体系
+CTH-POMS
+只提供：
+* 摘要
+* 风险解释
+* 事件摘要
+* 报告辅助
+* 活动复盘
+* 内容理解
+ZBMP
+增加：
+* AI Shadow
+* Sample Bank
+* Human Feedback
+* AI Evaluation
+* Prompt Version
+* Model Version
+* AI/System差异
+* AI置信度
+* 模型评测
+⸻
+二十五、数据库现在正式纳入“全部交付资产”
+你刚才说的这一点我完全同意。
+以后：
+源码 ZIP 不能只理解为代码 ZIP。
+应该是：
+完整可恢复项目基线包
+数据库属于一级交付资产。
+⸻
+二十六、你给我的源码/项目包完整清单
+建议你给我：
+① 源代码
+包括：
+.py
+.html
+.js
+.css
+.json
+.yaml
+.yml
+以及所有实际运行需要的源码文件。
+⸻
+② 数据库
+所有数据库都提供。
+包括：
+当前生产 SQLite
+例如：
+*.db
+*.sqlite
+*.sqlite3
+如果 SQLite 正在运行，还应特别注意：
+xxx.db
+xxx.db-wal
+xxx.db-shm
+这些属于数据库运行状态文件。
+如果存在，不要自行删除。
+⸻
+数据库备份
+例如：
+backup/
+├── *.db
+├── *.sqlite3
+└── ...
+已有历史数据库也保留。
+⸻
+数据库迁移
+包括：
+migrations/
+以及：
+* 建表 SQL
+* ALTER SQL
+* 初始化 SQL
+* 数据迁移脚本
+* Seed 数据
+* Schema 定义
+⸻
+二十七、为什么我要你把“所有数据库”都给我
+因为我要判断：
+源码
+        ↓
+models.py
+        ↓
+数据库Schema
+        ↓
+真实数据库
+是否一致。
+不能只看：
+models.py
+然后猜数据库。
+我要检查真实数据：
+* 当前有哪些表
+* 有多少数据
+* 字段是否一致
+* 是否有旧字段
+* 是否存在孤儿数据
+* 是否存在重复数据
+* 时间字段实际格式
+* Event关系
+* Campaign关系
+* Report数据
+* Crawl Logs
+* Keywords
+* Notes
+⸻
+二十八、现有核心数据库也要完整保留
+你之前系统里已经存在的核心表，包括：
+keywords
+notes
+events
+daily_reports
+crawl_logs
+如果新版 ZIP 里已经新增：
+* campaigns
+* topics
+* risks
+* accounts
+* sessions
+* notifications
+* AI相关表
+* system health
+* task records
+也全部交给我。
+不要为了“干净”提前删除。
+我来判断：
+KEEP
+MERGE
+MIGRATE
+DEPRECATE
+⸻
+二十九、数据不能只给数据库
+最好同时提供：
+数据库
++
+数据库结构
++
+数据库备份
++
+迁移脚本
++
+当前数据说明
+这样才能完整恢复。
+⸻
+三十、登录态相关资产
+这里必须区别：
+可以给
+Profile目录结构
+配置模板
+登录管理代码
+Cookie字段结构
+Session管理代码
+脱敏配置
+不建议直接打包
+真实：
+* Cookie
+* 密码
+* Token
+* API Key
+* 私钥
+* 个人敏感凭证
+可以保留在你的本机运行环境。
+如果源码里存在：
+.env
+建议提供：
+.env.example
+真实 .env 不作为公共升级包的一部分。
+⸻
+三十一、浏览器相关文件也很重要
+因为现在小红书核心采集依赖浏览器登录态。
+所以源码包里如果存在：
+browser/
+profiles/
+playwright/
+chromium/
+session/
+auth/
+相关结构都要提供。
+但真实账号登录数据仍然注意保护。
+⸻
+三十二、依赖文件
+至少：
+requirements.txt
+以及如果存在：
+package.json
+package-lock.json
+pyproject.toml
+Pipfile
+Pipfile.lock
+全部提供。
+⸻
+三十三、启动与部署文件
+全部提供：
+START.bat
+START_PRODUCTION.bat
+STOP.bat
+RESTART.bat
+PRECHECK.bat
+HEALTH_CHECK.bat
+ROLLBACK.bat
+如果有：
+.ps1
+.vbs
+.sh
+也不要删。
+我要检查是否存在：
+危险进程控制。
+⸻
+三十四、测试文件
+全部提供：
+tests/
+以及：
+* API测试
+* 数据库测试
+* Subject测试
+* Event测试
+* Risk测试
+* Report测试
+* Campaign测试
+* Collector测试
+* 登录测试
+* Health测试
+如果目前没有，也没关系。
+这次升级补。
+⸻
+三十五、前端必须完整
+包括：
+templates/
+static/
+js/
+css/
+images/
+icons/
+以及所有页面。
+尤其现在已有：
+* Dashboard
+* Notes
+* Events
+* Risks
+* Topics
+* Reports
+* Campaign
+* Cases
+* Robot
+* Health
+* System
+* 登录相关页面
+全部保留。
+⸻
+三十六、报告模板也属于资产
+提供：
+日报模板
+周报模板
+月报模板
+专题报告模板
+活动复盘模板
+Word模板
+Excel模板
+PDF相关模板
+如果有。
+⸻
+三十七、历史数据也属于资产
+你说的：
+“所有数据库”
+我建议再进一步：
+所有真实业务历史数据都不要在升级前删除。
+尤其：
+历史笔记
+历史事件
+历史风险
+历史日报
+历史采集日志
+历史专题
+历史关键词
+因为我们还需要做：
+升级前后回归验证。
+⸻
+三十八、日志文件也建议一起提供
+例如：
+logs/
+├── app.log
+├── crawler.log
+├── error.log
+├── scheduler.log
+├── auth.log
+└── ...
+如果 ZIP 很大，可以提供关键日志。
+因为今天发生过：
+启动崩溃、Endpoint冲突、进程停止。
+日志对于定位这种问题非常重要。
+⸻
+三十九、旧版本不要删除
+如果你现在电脑里有：
+v5.8.0
+v5.7
+FULL_WITH_DATA
+当前最新版
+都不要先删。
+尤其：
+v5.8.0_FULL_WITH_DATA
+继续作为：
+REGRESSION REFERENCE
+而你今晚/现在最新 ZIP：
+PRIMARY BASELINE
+⸻
+四十、最终我收到你的包后怎么处理
+不是：
+解压
+ ↓
+直接改代码
+而是：
+PRIMARY BASELINE
+       ↓
+完整清点
+       ↓
+文件地图
+       ↓
+数据库地图
+       ↓
+API地图
+       ↓
+页面地图
+       ↓
+依赖地图
+       ↓
+启动链地图
+       ↓
+采集链地图
+       ↓
+旧版基线对比
+       ↓
+P0/P1/P2
+       ↓
+施工
+⸻
+四十一、这次尤其要做“数据库体检”
+我会把数据库单独列出来检查：
+Schema
+ ↓
+Tables
+ ↓
+Columns
+ ↓
+Indexes
+ ↓
+Foreign Keys
+ ↓
+Constraints
+ ↓
+Data Count
+ ↓
+Duplicate
+ ↓
+Orphan
+ ↓
+Timestamp
+ ↓
+Migration
+重点确认：
+代码认为数据库是什么样子，真实数据库是不是这个样子。
+⸻
+四十二、最终双产品数据隔离
+CTH-POMS
+CTH-POMS
+   ↓
+cth_taikoo_hui.db
+只包含：
+广州太古汇正式业务数据。
+⸻
+ZBMP
+ZBMP
+   ↓
+zbrand.db
+包含：
+* Brand Profile
+* 多品牌
+* Campaign
+* Competitor
+* AI Sample
+* AI Evaluation
+* 实验数据
+两者：
+运行时不能互相访问数据库。
+⸻
+四十三、客户版不能把你的研发资产带出去
+CTH-POMS：
+客户业务
++
+Core能力
++
+必要AI能力
+但不暴露：
+AI Sample Bank
+AI Evaluation
+Prompt实验
+内部规则实验
+其他品牌
+其他客户
+研发数据
+⸻
+四十四、版本血缘必须留下
+以后：
+ZBMP Core vX.X.X
+        ↓
+CTH-POMS Release X.X
+交付记录：
+Core版本
++
+源码Commit
++
+配置版本
++
+数据库Schema版本
++
+测试结果
++
+发布日期
+这样以后你才能知道：
+这个客户版本到底来自哪个母平台版本。
+⸻
+四十五、今晚不是必须把所有理想功能一次做完
+这是这次方案非常重要的一条。
+今晚的 ZIP 即使：
+不是最终永久版
+也没有关系。
+我们定义：
+Production Candidate
+后续发现问题：
+Core
+ ↓
+修复
+ ↓
+重新测试
+ ↓
+CTH Release
+ ↓
+ZBMP Release
+而不是重新做两个项目。
+⸻
+四十六、最终验收等级
+🔴 P0——不能失败
+系统
+* 能启动
+* 无重复 Endpoint
+* Blueprint正常
+* DB正常
+* API正常
+* Dashboard正常
+采集
+* 小红书
+* 微博
+* B站
+登录
+* Cookie检测
+* Session检测
+* 登录失效识别
+* QR二维码
+* 弹窗
+* 扫码恢复
+* 任务暂停
+* 任务恢复
+数据
+* Normalize
+* Deduplicate
+* Subject Filter
+* Note Store
+分析
+* Topic
+* Event
+* Risk
+报告
+* 日报
+* 周报
+* 月报
+* 发布日口径
+专题
+* 15周年
+* Campaign基础能力
+AI
+* Ollama
+* AI可用
+* Ollama不可用时系统仍运行
+系统稳定性
+* Preflight
+* Health Check
+* Backup
+* Rollback
+* 不误杀Python
+* 公网失败不拖死Core
+⸻
+四十七、🟠 P1
+* Brand Profile
+* Competitor
+* Campaign Engine
+* Scheduler
+* Retry
+* Circuit Breaker
+* Risk Alert
+* Auth Center
+* AI Gateway
+* AI Result Store
+* 双产品模式
+* 客户版功能隔离
+* 数据隔离
+* API/前端完整联调
+⸻
+四十八、🟡 P2
+* 一键双Release
+* AI Sample Bank
+* AI Evaluation
+* Human Feedback
+* Model Evaluation
+* 多模型管理
+* 更完整的多品牌平台
+* 自动化Build
+* CI/CD
+⸻
+四十九、最终你给我的“完整项目包”建议清单
+你可以直接按照这个准备：
+【A】源代码
+□ Python
+□ HTML
+□ JS
+□ CSS
+□ JSON/YAML/YML
+□ 所有模块
+【B】数据库
+□ 当前全部 .db
+□ 全部 .sqlite
+□ 全部 .sqlite3
+□ WAL
+□ SHM
+□ 数据库备份
+□ 数据库迁移
+□ Schema
+□ Seed
+□ SQL
+【C】历史数据
+□ 历史笔记
+□ 历史事件
+□ 历史风险
+□ 历史日报
+□ 历史报告
+□ 历史专题
+□ 历史关键词
+□ 历史采集记录
+【D】登录/采集
+□ Collector
+□ Playwright
+□ Browser Profile结构
+□ Auth代码
+□ Cookie管理代码
+□ Session管理代码
+□ 登录恢复代码
+【E】配置
+□ requirements.txt
+□ pyproject等
+□ config
+□ .env.example
+□ 配置模板
+【F】启动
+□ START
+□ STOP
+□ RESTART
+□ PRECHECK
+□ HEALTH_CHECK
+□ ROLLBACK
+□ PowerShell/BAT脚本
+【G】前端
+□ templates
+□ static
+□ JS
+□ CSS
+□ 图片
+□ 图标
+【H】报告
+□ 日报
+□ 周报
+□ 月报
+□ 专题
+□ 活动复盘
+□ Word/Excel/PDF模板
+【I】测试
+□ tests
+□ API测试
+□ DB测试
+□ Subject测试
+□ Collector测试
+□ Report测试
+□ Campaign测试
+【J】日志
+□ app logs
+□ crawler logs
+□ error logs
+□ scheduler logs
+□ auth logs
+【K】旧版本
+□ 当前最新版
+□ v5.8.0_FULL_WITH_DATA
+□ 其他重要基线版本
+【L】文档
+□ README
+□ 部署说明
+□ 当前版本说明
+□ 更新日志
+□ 已知问题
+□ 配置说明
+⸻
+五十、最终的“交付关系”我现在给你锁定
+                 你的完整源码基线
+                         │
+        ┌────────────────┼────────────────┐
+        ↓                ↓                ↓
+      源代码           数据库           数据资产
+        │                │                │
+        └────────────────┼────────────────┘
+                         ↓
+                    Core升级
+                         │
+              ┌──────────┴──────────┐
+              ↓                     ↓
+            ZBMP                  CTH
+              ↓                     ↓
+       品牌母平台              太古汇客户版
+              │                     │
+         多品牌研发              固化Profile
+              │                     │
+          Ollama                 Ollama
+              │                     │
+          独立运行              独立运行
+最终原则只有一句话：
+代码、数据库、历史业务数据、配置结构、采集能力、登录态管理、报告资产一起构成“完整系统基线”；ZBMP负责未来持续演进，CTH-POMS负责经过验证的客户稳定交付，两者共享Core逻辑但运行时、数据库、AI实验域和客户数据彻底隔离。
+而你刚才新增的 “所有数据库都给你”，我认为应该正式写进这次施工协议的硬性要求，不是可选项。
+尤其这次不要先清理数据库、不要先删旧数据、不要为了“整理 ZIP”擅自删除看起来没用的文件。先完整交给我，我根据真实源码 + 真实数据库 + 历史基线判断什么该保留、迁移、废弃。
+这样才有资格做你要求的那种：不是看起来能跑，而是拿到你电脑上以后能够真正启动、测试、发现问题、继续升级，并且最终形成两个可独立交付产品的工程基线。

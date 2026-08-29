@@ -1,0 +1,114 @@
+## 1 templates 页面清单
+  templates\base.html  (3KB)
+  templates\events.html  (2KB)
+  templates\index.html  (4KB)
+  templates\notes.html  (3KB)
+  templates\report.html  (3KB)
+  base.html 中 data-view/viewId 数: 0; 样例 []
+
+## 2 base.html 引用的本地 JS
+  /static/js/app.js?v=5.8.0
+  /static/js/zachary_robot_enhanced.js?v=5.8.0
+  /static/js/zachary_system_knowledge.js?v=5.8.0
+  /static/js/ui_interactions_v5.8.0.js?v=5.8.0
+  /static/js/pr_case_integration.js?v=5.8.0
+  /static/js/badge_manager.js?v=5.8.0
+  /static/js/system_controls.js?v=5.8.0
+  /static/js/system_features_ui.js?v=5.8.0
+  /static/js/architecture_dashboard.js?v=5.8.0
+  /static/js/frontend_enhancement.js?v=5.8.0
+  CDN: 
+
+## 3 移动端 viewport / @media / 断点
+  base viewport: <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  static\topic_campaign.css: 断点[480, 768, 1100]
+  static\css\architecture_dashboard.css: 断点[768]
+  static\css\mobile.css: 断点[380, 768]
+  static\css\nomi_global_drag.css: 断点[768]
+  static\css\style.css: 断点[560, 768, 769, 900, 1024, 1250]
+  static\css\ui_optimized.css: 断点[1024, 1400]
+  static\css\zachary_robot.css: 断点[480]
+
+## 4 Zachary 机器人证据
+  static\js\app.js: zachary/robot 命中3
+  static\js\architecture_dashboard.js: zachary/robot 命中8
+  static\js\badge_manager.js: zachary/robot 命中7
+  static\js\frontend_enhancement.js: zachary/robot 命中1
+  static\js\nomi_global_drag.js: zachary/robot 命中9
+  static\js\system_controls.js: zachary/robot 命中1
+  static\js\system_features_ui.js: zachary/robot 命中1
+  static\js\zachary_3d.js: zachary/robot 命中32
+  static\js\zachary_png_face.js: zachary/robot 命中10
+  static\js\zachary_robot.js: zachary/robot 命中227
+  static\js\zachary_robot_enhanced.js: zachary/robot 命中90
+  static\js\zachary_system_knowledge.js: zachary/robot 命中15
+  templates\base.html: zachary/robot 命中10
+  img: static/img\robot_close.png
+  img: static/img\robot_open.png
+  img: static\css\zachary_robot.css
+  img: static\img\robot_close.png
+  img: static\img\robot_open.png
+  img: static\js\zachary_robot.js
+  img: static\js\zachary_robot_enhanced.js
+
+## 5 system_guardian/auto_recovery/data_feedback_loop 是否被 import/启动
+  system_guardian.py 存在=True; 外部引用: 无(未接入)
+  auto_recovery.py 存在=True; 外部引用: ['architecture_api.py:5:- 自动修复引擎 (auto_recovery)', 'architecture_api.py:22:from auto_recovery import recovery_engine, FixStatus, AlertLevel', 'system_guardian.py:93:recovery_result = auto_recovery(func, e, args, kwargs)', 'system_guardian.py:104:def auto_recovery(func, error, args, kwargs):']
+  data_feedback_loop.py 存在=True; 外部引用: ['architecture_api.py:6:- 数据闭环引擎 (data_feedback_loop)', 'architecture_api.py:23:from data_feedback_loop import data_feedback_loop', 'architecture_api.py:174:anomalies = data_feedback_loop.analyze_report_anomalies(date_str)', 'architecture_api.py:189:anomalies = data_feedback_loop.analyze_report_anomalies(date_str)']
+
+## 6 wechat_notifier 配置/启用
+  35: class NotificationLevel(Enum):
+  49: class NotificationType(Enum):
+  64: class NotificationChannel:
+  67: def __init__(self, name: str, enabled: bool = True):
+  69: self.enabled = enabled
+  71: def send(self, title: str, content: str, level: NotificationLevel = NotificationLevel.INFO
+  83: class WeComBotChannel(NotificationChannel):
+  86: def __init__(self, webhook_url: str, enabled: bool = True):
+  87: super().__init__('企业微信群机器人', enabled)
+  90: def send(self, title: str, content: str, level: NotificationLevel = NotificationLevel.INFO
+  92: if not self.enabled or not self.webhook_url:
+  app.py 引用 wechat_notifier: 否(未接入)
+
+## 7 tests 正式测试文件
+  tests\test_adaptive_engine.py  用例0
+  tests\test_ai.py  用例14
+  tests\test_api.py  用例12
+  tests\test_auto_recovery.py  用例0
+  tests\test_bilibili.py  用例0
+  tests\test_brand_library.py  用例0
+  tests\test_browser_e2e.py  用例0
+  tests\test_collection_full.py  用例0
+  tests\test_data_feedback.py  用例0
+  tests\test_database.py  用例7
+  tests\test_e2e.py  用例13
+  tests\test_event_curation.py  用例0
+  tests\test_event_date.py  用例0
+  tests\test_negative_event_api.py  用例0
+  tests\test_report_periods.py  用例0
+  tests\test_safety_boundary.py  用例0
+  tests\test_sentiment_engine.py  用例0
+  tests\test_system.py  用例0
+  tests\test_topic_port.py  用例0
+  正式 test 文件 19 个
+
+## 8 版本号出现位置
+  app.py:73:APP_VERSION='5.8.4'
+  app.py:1306:return jsonify({'ok': False, 'error': '生产环境已禁用任意代码执行（安全策略），请在本地开发环境操作', 'version
+  app.py:1313:'version': APP_VERSION,
+  app.py:1763:return jsonify({'ok':True,'server_time':now.strftime('%Y-%m-%d %H:%M:%S'),'stats
+  app.py:1877:return jsonify({'ok':True,'version':APP_VERSION,'service':'taikoo-monitor'})
+  app.py:1883:result={'version':APP_VERSION,'service':'taikoo-monitor','time':now.strftime('%Y
+  app.py:1966:return jsonify({'ok':True,'system':'广州太古汇舆情监测系统','version':APP_VERSION,'collecto
+  app.py:2660:'version': APP_VERSION,
+  app.py:3561:print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{not args.no
+  app.py:3767:'version': APP_VERSION,
+  app.py:3790:'version': APP_VERSION,
+  app.py:4454:print(f"广州太古汇舆情监测系统 v{APP_VERSION}")
+  templates\base.html: v5.8.0
+
+## 9 ai_analyzer/intelligence/ai_filter 是否依赖云端 ark/requests-llm
+  ai_analyzer.py: 无云端依赖(本地规则)
+  intelligence.py: ["elif requested in ('qwen','openai','deepseek','ark','doubao'):", "'openai':(_env('OPENAI_API_KEY'),_env('OPENAI_BASE_URL','https://api.openai.com/v1'),_env(", "'deepseek':(_env('DEEPSEEK_API_KEY'),_env('DEEPSEEK_BASE_URL','https://api.deepseek.com/v1"]
+  ai_filter.py: 无云端依赖(本地规则)
+  local_ai_client.py: 无云端依赖(本地规则)

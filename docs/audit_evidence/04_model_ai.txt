@@ -1,0 +1,211 @@
+
+## 1 SUBJECT_WORDS / EXCLUDE 定义与引用
+   10  subject_rules.py
+    5  ai_analyzer.py
+    4  tests\test_ai.py
+    4  tests\test_system.py
+    3  tests\audit_probe_4.py
+    2  app.py
+    2  risk_engine.py
+    2  stability_monitor.py
+    1  ai_filter.py
+
+## 2 subject_hit() 引用
+    9  app.py
+    5  database.py
+    5  tests\test_ai.py
+    4  collector_v2\run_live_engine.py
+    4  tests\test_system.py
+    3  subject_rules.py
+    3  collector_v2\xhs\live_engine.py
+    2  ai_analyzer.py
+    2  export_report.py
+    2  data\test_persist.py
+    2  tests\audit_probe_4.py
+    2  tests\test_negative_event_api.py
+    1  ai_filter.py
+    1  collector_automation.py
+    1  stability_monitor.py
+
+## 3 _subject_sql_and_values 引用
+   12  app.py
+    4  risk_engine.py
+    3  database.py
+    3  subject_rules.py
+    3  tests\audit_probe_4.py
+    2  tests\test_negative_event_api.py
+    2  tests\test_system.py
+
+## 4 aggregate_events 引用
+    2  tests\audit_probe_4.py
+
+## 5 publish_datetime / captured_at 代码使用
+   18  database.py
+   12  topic_campaign.py
+    9  app.py
+    7  data\verify_db2.py
+    6  scripts\init_db.py
+    5  data\verify_final.py
+    4  database_migrations.py
+    4  tests\audit_probe_4.py
+    4  tests\_probe_db2.py
+    2  export_report.py
+    2  models.py
+    2  data\migrate_db.py
+    2  data\verify_db.py
+    2  scripts\check_system.py
+    1  collector_automation.py
+    1  collector_v2\xhs\live_engine.py
+    1  report_export\report_engine.py
+    1  tests\_persist_rednote.py
+
+## 6 event_date 代码使用
+   23  tests\test_event_date.py
+   11  database.py
+   11  swire_group.py
+    3  reprocess.py
+    2  export_report.py
+    2  tests\audit_probe_4.py
+    1  tests\_probe_db2.py
+
+## 7 三类事件 营销/传播/舆情 event_type
+   13  swire_group.py
+   10  export_report.py
+    7  populate_empty_tables.py
+    6  ai_learning_engine.py
+    6  public_opinion_cases.py
+    5  app.py
+    5  report_export\report_engine.py
+    5  tests\audit_probe_4.py
+    3  evaluation_system.py
+    3  stability_monitor.py
+    2  models.py
+    2  tests\_probe_db2.py
+    1  daily_report.py
+    1  database.py
+    1  intelligence.py
+    1  wechat_notifier.py
+    1  weekly_events.py
+    1  scripts\init_db.py
+
+## 8 传播主体 KOL/KOS/KOC/主体画像
+    8  tests\audit_probe_4.py
+    1  app.py
+
+## 9 content_type / subject_type
+    4  tests\audit_probe_4.py
+    2  tests\_probe_db2.py
+
+## 10 event_relation / lifecycle 事件关系/生命周期
+    8  tests\audit_probe_4.py
+    1  cdp_helper.py
+    1  stability_monitor.py
+    1  tests\_probe_db2.py
+
+## 11 品牌营销案例库 pr_case
+   12  app.py
+    7  system_health_api.py
+    6  pr_case_integration.py
+    6  swire_group.py
+    5  tests\audit_probe_4.py
+    1  pr_case_engine.py
+    1  tests\test_brand_library.py
+
+## 12 话题监测 topic_campaign / 15周年
+   45  topic_campaign.py
+   10  swire_group.py
+    9  tests\test_topic_port.py
+    7  app.py
+    5  tests\audit_probe_4.py
+    2  xhs_cookie_bridge.py
+    1  web_monitor_v570.py
+    1  collector_v2\official_info_scraper.py
+    1  tests\test_sentiment_engine.py
+
+## 13 报告 daily/weekly/monthly/annual
+   95  app.py
+   28  report_filter.py
+   28  report_export\report_engine.py
+   13  ai_analyzer.py
+   12  wechat_notifier.py
+   11  evaluate_system_timing.py
+   10  evaluation_system.py
+   10  tests\audit_probe_4.py
+    9  export_report.py
+    9  populate_empty_tables.py
+    9  scripts\init_database_data.py
+    8  scripts\export_report.py
+    7  report_engine.py
+    6  ark_llm.py
+    6  scripts\init_db.py
+    5  run_production.py
+    5  verify_system_e2e.py
+    5  tests\test_browser_e2e.py
+    3  function_registry.py
+    3  models.py
+    2  settings_module.py
+    2  tests\test_report_periods.py
+    1  check_empty_tables.py
+    1  check_system.py
+    1  risk_engine.py
+    1  stability_monitor.py
+    1  weekly_events.py
+    1  scripts\check_system.py
+    1  tests\test_database.py
+    1  tests\_inspect_tables.py
+
+## 14 品牌对标 / 消费者需求
+    7  tests\audit_probe_4.py
+
+## 15 AI 模块引用分布
+   37  app.py
+   15  reprocess.py
+   14  tests\test_ai.py
+   12  intelligence.py
+   11  system_features_api.py
+    9  tests\audit_probe_4.py
+    7  daily_report.py
+    5  ai_filter.py
+    5  ai_learning_engine.py
+    2  ai_gateway_v570.py
+    2  report_engine.py
+    2  deployment\健康检查.py
+    2  deployment\deployment\σüÑσ║╖µúÇµƒÑ.py
+    2  scripts\check_system.py
+    1  ark_llm.py
+    1  ci_cd.py
+    1  database.py
+    1  local_ai_client.py
+    1  monitor_pipeline.py
+    1  security_scanner.py
+    1  verify_system_e2e.py
+    1  xhs_cookie_bridge.py
+    1  _reanalyze.py
+    1  collector_v2\run_live_engine.py
+    1  tests\test_sentiment_engine.py
+    1  tests\test_system.py
+
+## 16 关键业务模块顶部 import AI 情况（判断AI解耦）
+  data_collector.py 不存在
+  risk_engine.py: 顶部无AI导入(解耦)
+  daily_report.py: [(25, 'import ai_analyzer'), (26, 'import intelligence')]
+  collector_automation.py: 顶部无AI导入(解耦)
+  xhs_cookie_bridge.py: [(14, 'import ai_analyzer')]
+
+## 17 app.py AI import 上下文(50-60行)
+  45: import pr_case_integration
+  46: import system_features_api
+  47: import collector_automation
+  48: import ai_learning_engine
+  49: import public_opinion_cases
+  50: # 豆包AI API（可选辅助功能，导入失败不影响系统启动）
+  51: try:
+  52:     import ark_llm
+  53:     ARK_LLM_AVAILABLE = True
+  54: except Exception as e:
+  55:     ark_llm = None
+  56:     ARK_LLM_AVAILABLE = False
+  57:     print(f'[ARK] 豆包AI模块导入失败（不影响系统运行）: {e}')
+  58: from subject_rules import SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS, subject_hit, subject_sql_and_values
+  59: 
+  60: app=Flask(__name__, static_folder='static', static_url_path='/static')

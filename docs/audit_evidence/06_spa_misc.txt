@@ -1,0 +1,78 @@
+## index.html 中视图/页面容器 (class/id 含 view/page/section/tab)
+
+## app.js 视图切换函数目标 4: ['cases', 'monitor', 'overview', 'reports']
+  app.js data-page/nav: []
+
+## 侧边菜单中文名 (index.html)
+  数据概览
+  今日发布
+  当日新发布笔记
+  今日采集
+  历史发布今日采集
+  待确认负面
+  需要人工审核
+  采集次数
+  今日剩余次数
+  舆情趋势
+  情感分布
+  正面
+  中性
+  负面
+  热门话题
+  最新舆情笔记
+  风险预警
+  每日舆情简报
+  查看完整报告
+  关闭
+  待确认负面舆情
+  立即审核
+  稍后处理
+
+## 独立页面路由 (render_template)
+
+## 登录双方式/手机验证码/三级权限/RBAC 证据
+  手机验证: 无
+  sms: 无
+  send_code: 无
+  verify_code: 无
+  role: ['app.py']
+  is_admin: 无
+  permission: 无
+  RBAC: 无
+  安全问答: 无
+  security_question: 无
+  login.html: 无
+
+## CHANGELOG 最新版本
+--- CHANGELOG.md ---
+  # 变更日志
+  
+  ## [5.8.5] - 2026-08-29
+  
+  ### 升级：「太古集团」→「品牌营销案例库」
+  - 以品牌主体为一级维度，点击品牌下钻其【事件库 + 小红书笔记库】（与品牌/太古舆情同逻辑）。
+  - 品牌增删接口：brand-save（新增或重新激活同名品牌并更新资料）、brand-remove（软删除 is_active=0，事件/笔记数据完整保留，重加同名自动恢复）、brand-collect（手动再采集补齐）、brand-detail（二级下钻：品牌信息+6 项统计+类型分布+事件库+笔记库）。
+  - swire_projects 无损迁移新增 kind/keywords/is_active/collect_status/created_at/updated_at（老库自动 ALTER 补列）；添加品牌后异步 CDP 关键词采集写入 swire_notes，环境受限优雅降级为“待补齐”，不阻塞、不伪装成功。
+  - 前端：品牌卡片矩阵（采集状态点、软删 ×、点击下钻）、品牌详情层（返回/采集补齐/6 统计卡/类型筛选/事件库/笔记库）、添加品牌弹窗；侧边栏更名「品牌营销案例库」。
+  
+  ### 升级：「十五周年专题」→「话题监测端口」（多任务泛化）
+  - 由单一固定活动泛化为通用话题监测：输入任务名 + 起止时间段 + 话题集合即可建任务，各自独立专题笔记库 / 快照 / 传播趋势；十五周年作为内置任务保留，接口默认值向后兼容。
+  - 新增 campaigns（任务列表 + 各任务话题/笔记/快照数 + 窗口状态）、campaign-save（新建/更新，话题支持换行与 ; , 分隔，key 自动生成、编辑复用）、campaign-toggle（active/paused 启停）；status/topics/timeline/notes/export 全部支持 campaign_key；手动 run 按所选任务自身窗口判断，暂停或窗口外拒绝并提示。
+  - 调度器由只跑固定活动改为遍历所有 active 且在各自时间窗内的任务；新增 _campaign_in_window()（固定任务走旧窗口，其余按自身 start/end/status，暂停不放行）。
+
+## requirements.txt
+  Flask>=2.0.0
+  Werkzeug>=2.0.0
+  pandas>=1.3.0
+  openpyxl>=3.0.0
+  xlsxwriter>=3.0.0
+  python-docx>=0.8.11
+  reportlab>=3.6.0
+  playwright>=1.30.0
+  selenium>=4.0.0
+  psutil>=5.9.0
+  requests>=2.28.0
+  httpx>=0.24.0
+  python-dotenv>=0.21.0
+  colorama>=0.4.6
+  tqdm>=4.64.0

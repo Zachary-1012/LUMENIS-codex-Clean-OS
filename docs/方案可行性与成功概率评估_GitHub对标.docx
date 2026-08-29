@@ -1,0 +1,116 @@
+# Z-Brand Core 方案可行性与成功概率评估（GitHub 真实项目对标版）
+
+> 评估时间：2026-08-30｜数据来源：GitHub Search/Repositories API 实查（star/fork/最近 push/归档/license），辅以官方文档与公开实践文章。
+> 评估对象：《Z-Brand 双产品线最终基线 V1.0》全部模块。结论先行，证据在后。**只评估、不改代码。**
+
+---
+
+## 0. 结论先行（一句话）
+**这套方案在软件工程上高度可行——绝大多数模块都有 star 数千到 9 万级、仍在活跃维护的成熟开源对标，"做不做得出来"几乎没有悬念；真正决定成败的不是代码，而是三件事：① 小红书自动采集的合规与反爬可持续性（外部不可控、有真实判赔案例）；② 当前 app.py 4500 行单体的技术债与巨大工程量；③ 长期维护投入。**
+
+### 0.1 分情景成功概率（带依据，非拍脑袋）
+| 情景 | 成功概率 | 主要约束 |
+|---|---|---|
+| A. 本地/内部把全链路跑通、可演示 | **85–90%** | 纯工程量，范式都有对标 |
+| B. 做成能交付客户、长期稳定运行的 CTH-POMS | **65–75%** | 卡点在小红书采集的**合规与稳定性**，不在软件 |
+| C. 完整 ZBMP 母平台 + 可复用 Core 开源 | **55–70%** | 工程量最大，需分阶段、砍范围 |
+| D. 完全无人值守、永不掉线地抓小红书 | **不建议承诺（40–55%）** | 平台风控持续演进，任何方案都无法保证 |
+
+### 0.2 模块级可行性一览（详见 §2）
+高可行(≥85%)：蓝图重构、RBAC、调度、熔断、AI 网关、脚手架、生产部署、响应式、零风险源采集、双产品 profile 隔离。
+中可行(70–84%)：系统内扫码 Auth Recovery、四层业务模型/三类事件/传播主体、微博/B站登录态采集、197 空正文补抓。
+外部受限：**小红书长期稳定自动采集（合规+风控，非代码可控）**。
+
+---
+
+## 1. 评估方法
+- 用 GitHub API 按主题检索并按 star 排序，记录 star/fork/最近 push/是否 archived/license，只采信"仍维护、有真实落地"的项目（剔除纯 demo）。
+- 每个方案模块找 ≥1 个直接对标，判断：成熟度（有无事实标准）、适配度、许可证是否可用于闭源客户交付。
+- 结合公开工程实践与合规判例评估外部风险。原始数据存 `docs/audit_evidence/07_github.txt`。
+
+## 2. 逐模块对标矩阵（真实仓库，2026-08-30 实查）
+
+### 2.1 采集层（方案：统一 PlatformAdapter / 小红书 / 微博B站 / 零风险源 / Auth 恢复）
+| 方案模块 | GitHub 真实对标（star / 最近push / license） | 成熟度 | 可行性 | 建议 |
+|---|---|---|---|---|
+| 多平台社媒采集(CDP/搜索/详情/评论) | **NanmiCoder/MediaCrawler 64.0k，08-14，七平台、CDP模式、扫码/Cookie/短信三登录、登录态缓存、IP池** | 高(事实标杆) | 高 | 学其 CDP+状态分层，**不直接拷**(license=NOASSERTION 需核) |
+| 小红书 Web 请求封装+扫码状态机 | ReaJason/xhs 2.2k(MIT，get_qrcode/check_qrcode)；cv-cat/Spider_XHS 7.4k；JoeanAmier/XHS-Downloader 12.5k(GPL-3) | 高 | 高 | 优先用 **MIT 的 ReaJason/xhs 思路**；扫码轮询状态机直接参考 |
+| 单机低频+持久Profile+SQLite(与我们最像) | lengmingz/xhs_crawler(red-crawl，Playwright+持久Profile+SQLite，08-26)；z-mio/ParseHub 156(MIT，异步聚合解析) | 中高 | 高 | 架构几乎一致，证明路线成立 |
+| 微博采集 | dataabc/weiboSpider 9.7k；**nghuyong/WeiboSpider 4.1k(MIT，06-30活跃)**；WeiboSuperSpider 1.7k(用户/话题/评论/情感/关系网) | 高 | 高(公开) | 用 MIT 版做话题/关键词/评论，免登录优先 |
+| B站采集 | SocialSisterYi/bilibili-API-collect 20.2k(**已 archived**)；Nemo2011/bilibili-api 4.2k(**已 archived**) | 中(标杆停更) | 中高 | 两大标杆均归档，接口可能漂移，需自维护薄适配、以公开数据为主 |
+| 零风险源(RSS/新闻聚合/公开搜索) | ForgeRSS 103(AGPL，网站转RSS，08-29)；vikiboss/60s 5.7k(各平台热搜聚合API)；web_monitor 已有 google_news/gdelt/rss | 高 | 高(85-90%) | **优先做大**：不登录、不触风控，作为微博/B站主通道 |
+| 浏览器自动化底座 | microsoft/playwright 95.3k(Apache，08-29) | 极高 | 高 | 已在用，继续 |
+| 反检测(仅降误判，不绕验证码) | SeleniumBase 13k、camofox 8.9k、Scrapling 77k | 高 | 中 | **合规红线内**只用持久指纹/拟人节奏，不做对抗突破 |
+| 系统内扫码 Auth Recovery Modal | ReaJason/xhs 扫码状态机 + MediaCrawler 登录态缓存已验证后端可行 | 中高 | 中高(75-85%) | 后端状态机有先例；把二维码/轮询嵌进 Web Modal 是常规前后端工作 |
+
+> 采集层小结：**"采得到"全部有成熟先例；"长期稳定采、且合规"是外部问题（见 §3）。** 你定的"持久 profile + 低频 + 熔断 + 不绕验证码 + 系统内恢复"正是这些标杆共同收敛出的稳妥路线，方向正确。
+
+### 2.2 平台/架构层（方案：一套Core双产品、profile 隔离、密钥门、蓝图化、可复用脚手架）
+| 方案模块 | 对标（star/license） | 成熟度 | 可行性 | 建议 |
+|---|---|---|---|---|
+| Flask 大型化/蓝图/应用工厂 | Flask 官方 Blueprints 文档；Application Factory 是公认黄金标准 | 极高 | 95% | 用 create_app + 蓝图逐步拆 app.py，官方范式 |
+| 可复用脚手架(填空即新系统) | **cookiecutter-flask 4.7k(MIT)**；microsoft/cookiecutter-python-flask 167；hypermodern 1.9k | 高 | 85-90% | 直接基于 Cookiecutter 做 `scaffold new`，难点是 Core 去品牌化纪律而非技术 |
+| 一套Core双Release/profile | Flask 多租户生态偏弱(最高 Baobab 60)，但"配置profile+功能开关+路由裁剪"是通用模式 | 中高 | 90% | 不依赖多租户框架，自研轻量 RELEASE_PROFILE + 装饰器即可 |
+| 三级权限 RBAC | **casbin/casbin 20.4k(Apache，08-21)** 支持角色/策略；flask-login 生态 | 高 | 90% | 用 Casbin 或轻量装饰器，后端拦截；不要纯前端隐藏 |
+| 任务调度 | **agronholm/apscheduler 7.6k(MIT，08-24)**；flask-apscheduler 1.1k | 极高 | 95% | 已在用；动态频率/任务锁/防重入照官方最佳实践 |
+| 熔断/冷却/重试 | **pybreaker 692(BSD，07-04)**、fabfuel/circuitbreaker 523；tenacity 重试 | 高 | 90% | 用成熟库替换手写熔断，减少 bug |
+| 生产 WSGI(Windows) | waitress(PyPI，Windows 推荐)；Linux 用 gunicorn | 高 | 90% | run_production 已用 waitress，补全局依赖即可 |
+| 数据分析/BI 可视化参考 | apache/superset 74.5k(Apache，活跃) | 极高 | 参考 | 学其指标/图表组织，不引入整套 |
+
+### 2.3 智能层（方案：规则默认/Ollama可选/云端默认关/可插拔网关/Shadow自学习）
+| 方案模块 | 对标（star/license） | 成熟度 | 可行性 | 建议 |
+|---|---|---|---|---|
+| 多模型统一网关+本地优先+fallback+cooldown | **BerriAI/litellm 57.5k(08-29极活跃)**，OpenAI 兼容、路由/回退/冷却/预算；Ollama+LiteLLM 生产自托管栈多篇落地 | 极高(事实标准) | 90% | **不要自研 provider 链**，直接接 LiteLLM，规则引擎仍在 Core、AI 仅增强 |
+| AI 可观测/样本/反馈(自学习记录) | langfuse 33.9k；llmix 132(生产LLM层+熔断+human-in-loop，正合 Shadow) | 高 | 80% | ai_runs/decisions/feedback 表结构可参考其 trace 模型 |
+| 本地中文情感/聚类(去AI也能跑) | jieba/SnowNLP/TF-IDF 为公开舆情项目通用栈(BettaFish微舆/NewsCrawl 等) | 高 | 85% | 现有本地规则方向正确，补词典与规则测试 |
+| 开源舆情整体产品对标 | BettaFish(微舆，多智能体、30+平台、约17k star，纯Python一键部署)；casual-silva/NewsCrawl 685(企业级舆情爬虫+定时+监控) | 中高 | 参考 | 证明"垂直舆情+报告+可视化"自建路线成立，但**它们偏通用，你的商业地产垂直+主体LOCK是差异化** |
+
+### 2.4 端/交付层
+| 模块 | 对标 | 可行性 | 建议 |
+|---|---|---|---|
+| PC/移动同一网址响应式 | 主流断点 768/1024/1440、移动 390 设计稿是行业通用 | 90% | 现有断点齐全，补苹果风分组是纯前端工作量 |
+| 公网隧道/部署 | cloudflared(已自带)；正式用云服务器+域名 | 85% | 先隧道给链接，后服务器 waitress+HTTPS |
+| 双 Release 打包 | Cookiecutter + 构建脚本 tree-shake | 80% | P2，客户包构建期裁掉 ZBMP 路由 |
+
+## 3. 最大风险不在代码：合规与外部风控（务必读）
+1. **平台协议与判例**：小红书《用户协议》明确禁止自动化抓取；公开检索到**杭州中院终审案例：通过换 ID/换 IP 绕过技术保护措施并对外售卖数据，判赔 490 万元**；另有赔 110 万案例。司法判定核心是"是否突破技术保护措施 + 是否商业牟利"，同时受《网络安全法》《反不正当竞争法》《个人信息保护法(PIPL)》约束。
+2. **对本项目的含义（直接影响情景 B 成功率）**：
+   - 安全侧：只采**公开可见笔记**、不碰私信/手机号等隐私、不养号/不批量注册、**不绕验证码/不突破风控**、低频（公开建议单 IP 间隔≥2–5 秒、日量级数百条）、数据**内部用于品牌监测分析、不对外转售**、需要时走官方开放平台/授权。
+   - 你已定的"300012 熔断不硬刚、持久真人 profile、系统内人工扫码恢复、零风险 RSS 源优先、长期接官方 API"与上述安全侧**完全吻合，是正确的降险路线**，应写进交付说明与客户知情确认。
+   - **不得对客户承诺"7×24 全自动稳定抓取小红书"**；应表述为"自动监测为主、登录态/验证人工兜底、合规公开源补充、官方接口为长期方向"。
+3. **许可证传染风险（客户交付/开源必须区分）**：
+   - 可放心依赖(宽松许可)：Playwright(Apache)、LiteLLM、Casbin(Apache)、APScheduler(MIT)、pybreaker(BSD)、ReaJason/xhs(MIT)、nghuyong/WeiboSpider(MIT)、cookiecutter-flask(MIT)。
+   - **传染性许可，只能学思路、不能拷代码进可交付闭源产品**：XHS-Downloader(GPL-3)、lxSpider(GPL-3)、ForgeRSS(AGPL-3)；MediaCrawler 为 NOASSERTION（未声明，商用前必须核实其 LICENSE 或仅作原理参考）。
+   - 若未来 Z-Brand Core 开源，需先做依赖许可证清单（SBOM），GPL/AGPL 依赖与核心隔离。
+
+## 4. 风险登记册（概率 × 影响 × 缓解）
+| 风险 | 概率 | 影响 | 缓解措施 |
+|---|---|---|---|
+| 小红书风控升级导致采集中断 | 高 | 高 | 熔断降频+持久profile+人工扫码兜底+RSS/公开源补位+官方API长期方案；不承诺全自动 |
+| 合规争议(商用抓取) | 中 | 极高 | 严守§3红线、内部使用、客户知情、优先授权源；不绕技术措施 |
+| app.py 单体改造引入回归(曾崩过) | 中高 | 高 | 应用工厂+蓝图旁路迁移，每域单测/E2E，备份回滚，绝不一锅端 |
+| 工程量远超预期(P1/P2 太多) | 高 | 中高 | 严格 P0→P1→P2，先交付 CTH-POMS 最小闭环，ZBMP 后置 |
+| AI 依赖/Token 成本与不可用 | 中 | 中 | LiteLLM 抽象+本地规则兜底+Ollama，AI 全关停核心照跑 |
+| B站标杆停更导致接口漂移 | 中 | 中 | 薄适配、公开数据为主、零风险源补位 |
+| 重复实现/技术债拖垮迭代 | 中高 | 中 | 按审计§6收敛重复(报告/web_monitor/评论表/Zachary JS/启动脚本) |
+| 双产品隔离不彻底泄漏到客户版 | 低中 | 高 | 后端装饰器+构建期裁剪+隔离测试用例(验收矩阵) |
+| 维护者单一、知识不沉淀 | 中 | 中 | 可复用 Core + profile 文档 + Codex 接管指令 + 测试覆盖 |
+
+## 5. "拿来主义"清单（别重复造轮子）
+- **直接引入成熟库**：LiteLLM(AI网关)、Casbin(RBAC)、APScheduler(调度)、pybreaker(熔断)、tenacity(重试)、Cookiecutter(脚手架)、waitress/gunicorn(部署)。
+- **学思路不拷代码(许可/合规)**：MediaCrawler(多平台CDP分层)、ReaJason/xhs(扫码状态机,MIT可更直接参考)、nghuyong/WeiboSpider(MIT)、微舆/NewsCrawl(舆情产品形态)、Superset(分析可视化)。
+- **必须自研(核心壁垒，外面没有现成)**：广州太古汇主体口径 LOCK、四层数据模型(WHO/WHAT/事件/SO WHAT)、三类事件与关系、品牌业态/案例库/话题监测业务、Z-Brand profile 体系与密钥门、符合你工作流的报告与审核闭环、Zachary 与品牌 UI。
+
+## 6. 基于对标对基线方案的 6 条修正建议
+1. AI 网关不要自研多 provider：直接接 **LiteLLM**，本地 Ollama 优先、云端默认关、规则引擎永远在最前。
+2. 权限用 **Casbin**（或极薄装饰器）实现三级 RBAC + ZBMP 密钥门，后端强拦截。
+3. 熔断/重试换成 **pybreaker + tenacity**，替掉部分手写状态，降低再崩概率。
+4. 采集端**重排优先级**：零风险 RSS/公开搜索/热搜聚合(60s/ForgeRSS 思路)先做厚做稳 → 小红书走持久 profile 低频+人工兜底 → 微博用 MIT 开源、B站薄适配并接受标杆已停更。
+5. 可复用 Core 用 **Cookiecutter** 落地，并加一条 CI 检查：`grep` Core 内不得出现具体品牌名，保证"填空即新系统"。
+6. 交付与对外口径增加**合规说明 + SBOM 许可证清单**；对客户只承诺"自动监测+人工兜底+多源互补"，不承诺"无人值守硬抓"。
+
+## 7. 最终判断
+- **方向正确、技术可行、生态支撑充足**：方案里几乎每个技术点都能找到活跃的、star 量级很高的开源先例，没有"无人做到过"的幻想型模块；你现有的六态/熔断/主体LOCK/话题端口/案例库也已被证明踩在主流路线上。
+- **整体成功概率**：本地闭环 **≈85%**；可长期交付的客户版 **≈70%**（差距主要由小红书合规与稳定性决定，可通过多源+人工兜底+官方接口把它拉到区间上限）；完整母平台/开源 **≈60%**，建议分阶段、先把客户版做扎实。
+- **成败关键排序**：① 采集合规与多源冗余（外部）＞② 单体技术债治理与工程节奏（内部）＞③ 业务模型与 UI 打磨（可累积）＞④ AI（锦上添花、非瓶颈）。
+- **建议动作**：按基线 P0 先做"稳定 + 合规采集 + Auth 恢复 + 命名/密钥门"，同时引入 §5 的成熟库替代手写，2–3 个迭代先交付 CTH-POMS 稳定客户版，再谈 ZBMP 与开源。

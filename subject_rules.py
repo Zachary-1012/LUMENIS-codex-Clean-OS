@@ -1,0 +1,97 @@
+"""广州太古汇主体口径：全系统唯一、可审计的硬过滤规则。
+
+原则：
+1. SUBJECT_EXCLUDE_WORDS 一票否决。
+2. 五个业务字段任一命中 SUBJECT_WORDS 才算主体相关。
+3. 任何展示、统计、事件、报告都应复用本模块。
+"""
+from __future__ import annotations
+
+import re
+from typing import Iterable
+
+SUBJECT_WORDS = [
+    '广州太古汇', '太古汇', '太古汇商场', '太古仓', '汇悦台',
+    '太古汇保安', '太古汇停车场', '太古汇售后', '太古汇客服台',
+    'LV太古汇', '香奈儿太古汇', '迪奥太古汇', 'Dior太古汇',
+    '太古汇发廊', '太古汇日料', '太古汇理发店', '太古汇总监',
+]
+
+SUBJECT_EXCLUDE_WORDS = [
+    '上海太古汇', '兴业太古汇', '上海兴业太古汇', '北京太古汇',
+    '三里屯太古汇', '成都太古汇', '成都远洋太古汇', '远洋太古汇',
+    '深圳太古汇', '香港太古汇', '太古城', '上海站', '上海静安',
+    '上海静安区', '南京西路', '魔都', '新天地', '北京三里屯',
+]
+
+SUBJECT_FIELDS = ('title', 'body', 'content', 'source_keyword', 'matched_keywords')
+
+
+def _text(value: object) -> str:
+    if value is None:
+        return ''
+    if isinstance(value, (list, tuple, set)):
+        return ' '.join(str(x) for x in value)
+    return str(value)
+
+
+def subject_hit(
+    title: object = '',
+    body: object = '',
+    content: object = '',
+    source_keyword: object = '',
+    matched_keywords: object = '',
+) -> bool:
+    """严格主体判断：排除词优先，一票否决；随后检查正向主体词。"""
+    fields = [_text(x) for x in (title, body, content, source_keyword, matched_keywords)]
+    joined = ' '.join(fields).lower()
+    for word in SUBJECT_EXCLUDE_WORDS:
+        if word.lower() in joined:
+            return False
+    return any(word.lower() in field.lower() for field in fields for word in SUBJECT_WORDS)
+
+
+def subject_hit_note(note: dict) -> bool:
+    return subject_hit(*(note.get(k, '') for k in SUBJECT_FIELDS))
+
+
+def subject_reason(note: dict) -> str:
+    fields = [_text(note.get(k, '')) for k in SUBJECT_FIELDS]
+    joined = ' '.join(fields).lower()
+    for word in SUBJECT_EXCLUDE_WORDS:
+        if word.lower() in joined:
+            return f'主体排除词一票否决:{word}'
+    for word in SUBJECT_WORDS:
+        if any(word.lower() in field.lower() for field in fields):
+            return f'命中主体词:{word}'
+    return '未命中广州太古汇主体词'
+
+
+def _column(alias: str, field: str) -> str:
+    prefix = f'{alias}.' if alias else ''
+    # body/source_keyword/matched_keywords 是新增兼容字段；旧库会由 migration 自动补齐。
+    return f"LOWER(COALESCE({prefix}{field}, ''))"
+
+
+def _subject_sql_and_values(alias: str = '') -> tuple[str, list[str]]:
+    """返回可直接拼接到 WHERE 的统一主体 SQL + 参数。"""
+    positives = []
+    values: list[str] = []
+    for field in SUBJECT_FIELDS:
+        for word in SUBJECT_WORDS:
+            positives.append(f"{_column(alias, field)} LIKE ?")
+            values.append(f'%{word.lower()}%')
+    excludes = []
+    for field in SUBJECT_FIELDS:
+        for word in SUBJECT_EXCLUDE_WORDS:
+            excludes.append(f"{_column(alias, field)} LIKE ?")
+            values.append(f'%{word.lower()}%')
+    return f"({' OR '.join(positives)}) AND NOT ({' OR '.join(excludes)})", values
+
+
+# 保留项目历史命名，避免旧模块/脚本调用断裂。
+subject_sql_and_values = _subject_sql_and_values
+
+
+def canonical_text(note: dict) -> str:
+    return ' '.join(_text(note.get(k, '')) for k in SUBJECT_FIELDS).strip()

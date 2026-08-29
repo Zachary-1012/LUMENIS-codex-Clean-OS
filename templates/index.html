@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}仪表盘 - 广州太古汇舆情监测系统{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- 数据概览卡片 -->
+    <section class="dashboard-section">
+        <h2 class="section-title">数据概览</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">今日发布</div>
+                <div class="stat-value" id="stat-published-today">0</div>
+                <div class="stat-trend">当日新发布笔记</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">今日采集</div>
+                <div class="stat-value" id="stat-collected-today">0</div>
+                <div class="stat-trend">历史发布今日采集</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">待确认负面</div>
+                <div class="stat-value text-warning" id="stat-pending-negative">0</div>
+                <div class="stat-trend">需要人工审核</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">采集次数</div>
+                <div class="stat-value" id="stat-collect-count">0/12</div>
+                <div class="stat-trend">今日剩余次数</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 趋势图 -->
+    <section class="dashboard-section">
+        <h2 class="section-title">舆情趋势</h2>
+        <div class="chart-container">
+            <div id="trend-chart" class="trend-chart">
+                <div class="chart-loading">加载中...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 情感分布 -->
+    <section class="dashboard-section">
+        <h2 class="section-title">情感分布</h2>
+        <div class="sentiment-grid">
+            <div class="sentiment-card positive">
+                <div class="sentiment-label">正面</div>
+                <div class="sentiment-value" id="sentiment-positive">0</div>
+                <div class="sentiment-percent" id="sentiment-positive-percent">0%</div>
+            </div>
+            <div class="sentiment-card neutral">
+                <div class="sentiment-label">中性</div>
+                <div class="sentiment-value" id="sentiment-neutral">0</div>
+                <div class="sentiment-percent" id="sentiment-neutral-percent">0%</div>
+            </div>
+            <div class="sentiment-card negative">
+                <div class="sentiment-label">负面</div>
+                <div class="sentiment-value" id="sentiment-negative">0</div>
+                <div class="sentiment-percent" id="sentiment-negative-percent">0%</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 热门话题 -->
+    <section class="dashboard-section">
+        <h2 class="section-title">热门话题</h2>
+        <div class="topics-list" id="hot-topics">
+            <div class="loading">加载中...</div>
+        </div>
+    </section>
+
+    <!-- 最新笔记 -->
+    <section class="dashboard-section">
+        <h2 class="section-title">最新舆情笔记</h2>
+        <div class="notes-list" id="latest-notes">
+            <div class="loading">加载中...</div>
+        </div>
+    </section>
+
+    <!-- 风险预警 -->
+    <section class="dashboard-section">
+        <h2 class="section-title">风险预警</h2>
+        <div class="alerts-list" id="risk-alerts">
+            <div class="loading">加载中...</div>
+        </div>
+    </section>
+</div>
+
+<!-- 每日弹窗 -->
+<div id="daily-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>每日舆情简报</h3>
+            <button class="modal-close" onclick="closeDailyModal()">×</button>
+        </div>
+        <div class="modal-body" id="daily-modal-content">
+            <div class="loading">加载中...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="viewFullReport()">查看完整报告</button>
+            <button class="btn btn-secondary" onclick="closeDailyModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 待确认负面弹窗 -->
+<div id="negative-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>待确认负面舆情</h3>
+            <button class="modal-close" onclick="closeNegativeModal()">×</button>
+        </div>
+        <div class="modal-body" id="negative-modal-content">
+            <div class="loading">加载中...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="goToNegativeReview()">立即审核</button>
+            <button class="btn btn-secondary" onclick="closeNegativeModal()">稍后处理</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

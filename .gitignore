@@ -1,0 +1,123 @@
+# ============================================================
+# Z-Brand Core / CTH-POMS  .gitignore
+# 原则：只入库“源码 + 启动脚本 + 文档 + 业务种子配置”；
+#      凭证 / Cookie / 数据库 / 浏览器登录态 / 模型 / 依赖 / 运行产物 一律不入库。
+# ============================================================
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ---------- 虚拟环境 / 前端依赖 / 自带运行时（用 requirements、package.json 重建） ----------
+.venv/
+venv/
+env/
+node_modules/
+nodejs/
+dependencies/
+
+# ---------- 本地大模型与 AI 运行时（数 GB，绝不入库） ----------
+.ollama/
+models/
+*.gguf
+*.safetensors
+*.onnx
+
+# ---------- IDE / 编辑器 / 工具缓存 ----------
+.vscode/
+.idea/
+.trae-cn/
+.skills-router/
+.skills/
+.DS_Store
+Thumbs.db
+
+# ---------- 密钥 / 环境变量 / 凭证（最高优先级，绝不入库） ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*
+*secret*
+*_cookies.json
+*cookies*.json
+*cookie*raw*
+data/cookies/
+data/private/
+data/security/
+
+# ---------- 数据库（私有业务数据，不入库） ----------
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+backups/
+data/backups/
+data/cache/
+
+# ---------- 浏览器持久化 Profile（含登录态 Cookie，且体积巨大） ----------
+edge-cdp-*/
+chrome-cdp-*/
+data/taikoo_browser_profile/
+data/weibo_profile/
+data/*profile*/
+
+# ---------- 运行日志 / 临时输出 ----------
+*.log
+logs/
+_ref_frames/
+_shots/
+_u/
+2026-*/
+data/logs/
+data/recovery/
+data/stability/
+data/evaluation/
+data/exports/
+data/imports/
+data/adaptive_*
+data/collector_*
+data/*_stats.json
+data/ai_learning_log.jsonl
+data/alerts.json
+
+# ---------- 可执行 / 压缩包 / 大体积素材（不入库） ----------
+*.exe
+*.dll
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+tools/
+监测系统-ui架构&互动视频参考案例/
+*.mp4
+*.mov
+
+# ---------- 开发期临时截图与诊断脚本（tests 下正式 test 保留） ----------
+/eval_image*.png
+/screenshot_ui.png
+/ui_reference.png
+/user_screenshot.png
+tests/_*.py
+tests/_*.txt
+tests/_*.png
+tests/_*.log
+*.bak
+*.tmp
+
+# ---------- data 默认整体忽略，仅白名单保留业务种子/配置 ----------
+data/*
+!data/_zbmp_docs/
+!data/brand_directory.json
+!data/brand_websites.json
+!data/case_library.json
+!data/.gitkeep

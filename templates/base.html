@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}广州太古汇舆情监测系统{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/zachary_robot.css">
+    <link rel="stylesheet" href="/static/css/architecture_dashboard.css">
+    <link rel="stylesheet" href="/static/css/ui_optimized.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div id="app">
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="app-title">广州太古汇舆情监测系统</h1>
+                <span class="app-version">v5.8.0</span>
+            </div>
+            <div class="header-right">
+                <div class="header-actions">
+                    <button id="btn-refresh" class="btn btn-primary">一键更新</button>
+                    <button id="btn-settings" class="btn btn-secondary">设置</button>
+                </div>
+                <div class="user-info">
+                    <span id="user-name">管理员</span>
+                </div>
+            </div>
+        </header>
+
+        <nav class="app-nav">
+            <ul class="nav-list">
+                <li class="nav-item active"><a href="/">仪表盘</a></li>
+                <li class="nav-item"><a href="/notes">舆情笔记</a></li>
+                <li class="nav-item"><a href="/events">舆情事件</a></li>
+                <li class="nav-item"><a href="/reports">报告中心</a></li>
+                <li class="nav-item"><a href="/brands">品牌业态</a></li>
+                <li class="nav-item"><a href="/cases">案例库</a></li>
+                <li class="nav-item"><a href="/negative">负面审核</a></li>
+            </ul>
+        </nav>
+
+        <main class="app-main">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="app-footer">
+            <p>广州太古汇舆情监测系统 v5.8.0 | 数据更新时间: <span id="last-update">--</span></p>
+        </footer>
+    </div>
+
+    <!-- Zachary 机器人由 zachary_robot_enhanced.js 动态创建 -->
+    <!-- 聊天弹窗由 zachary_robot_enhanced.js 动态创建 -->
+
+    <script src="/static/js/app.js?v=5.8.0"></script>
+    <script src="/static/js/zachary_robot_enhanced.js?v=5.8.0"></script>
+    <script src="/static/js/zachary_system_knowledge.js?v=5.8.0"></script>
+    <script src="/static/js/ui_interactions_v5.8.0.js?v=5.8.0"></script>
+    <script src="/static/js/pr_case_integration.js?v=5.8.0"></script>
+    <script src="/static/js/badge_manager.js?v=5.8.0"></script>
+    <script src="/static/js/system_controls.js?v=5.8.0"></script>
+    <script src="/static/js/system_features_ui.js?v=5.8.0"></script>
+    <script src="/static/js/architecture_dashboard.js?v=5.8.0"></script>
+    <script src="/static/js/frontend_enhancement.js?v=5.8.0"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

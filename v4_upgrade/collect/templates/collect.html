@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>全网采集中心 - CTH-POMS</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Segoe UI",sans-serif;
+    background:#f2f2f7; color:#1c1c1e; min-height:100vh; padding-bottom:60px;
+  }
+  .nav-bar { background:rgba(255,255,255,.92); backdrop-filter:blur(20px); position:sticky; top:0; z-index:50;
+    padding:14px 18px; display:flex; align-items:center; gap:12px; border-bottom:.5px solid #e5e5ea; }
+  .nav-bar a { color:#007aff; text-decoration:none; font-size:15px; }
+  .nav-bar .title { font-size:17px; font-weight:600; flex:1; text-align:center; padding-right:48px; }
+  .kb-toggle { display:flex; align-items:center; gap:6px; font-size:12px; color:#8e8e93; cursor:pointer; user-select:none; }
+  .switch { width:40px; height:24px; border-radius:12px; background:#e5e5ea; position:relative; transition:.2s; }
+  .switch.on { background:#34c759; }
+  .switch i { position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .switch.on i { left:18px; }
+  .wrap { max-width:860px; margin:0 auto; padding:16px; }
+  .group { background:#fff; border-radius:14px; margin-bottom:18px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  .group-title { font-size:13px; color:#8e8e93; padding:16px 16px 8px; letter-spacing:.5px; }
+  .row { display:flex; align-items:center; padding:12px 16px; border-bottom:.5px solid #f0f0f5; gap:10px; font-size:15px; }
+  .row:last-child { border-bottom:none; }
+  .row.clickable { cursor:pointer; } .row.clickable:hover { background:#f9f9fb; }
+  .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .s-SUCCESS{background:#34c759;} .s-EMPTY{background:#c7c7cc;} .s-IDLE{background:#d1d1d6;}
+  .s-AUTH_REQUIRED,.s-AUTH_FAILED,.s-NEED_VERIFY{background:#ff9500;} .s-CAPTCHA{background:#ffcc00;}
+  .s-BLOCKED,.s-IP_RISK{background:#ff3b30;}
+  .s-NETWORK_ERROR{background:#ffcc00;}
+  .s-FAIL,.s-COOLDOWN{background:#ff9500;}
+  .pname { flex:1; }
+  .ptag { font-size:10px; padding:1px 6px; border-radius:8px; background:#e5e5ea; color:#636e72; margin-left:6px; }
+  .risk { font-size:10px; padding:1px 6px; border-radius:8px; margin-left:4px; }
+  .risk-HEALTHY{background:#e8f9ee;color:#1d8a43;} .risk-LIGHT,.risk-RECOVERING{background:#fff4e0;color:#c77c00;}
+  .risk-MEDIUM,.risk-NEED_VERIFY{background:#ffe9e6;color:#d33;} .risk-IP_RISK{background:#ff3b30;color:#fff;}
+  .pstate { font-size:12px; color:#8e8e93; } .pcount { font-size:12px; color:#8e8e93; min-width:44px; text-align:right; }
+  input[type=text],input[type=number]{ width:100%; padding:11px 13px; border:1px solid #e5e5ea; border-radius:10px; font-size:15px; outline:none; }
+  input:focus{ border-color:#007aff; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; padding:4px 16px 14px; }
+  .chip { padding:6px 12px; border-radius:16px; background:#f2f2f7; font-size:13px; cursor:pointer; border:1px solid transparent; user-select:none; }
+  .chip.on { background:#e5f0ff; color:#007aff; border-color:#007aff; }
+  .chip .br { font-size:10px; opacity:.7; }
+  .btn { display:inline-block; padding:11px 20px; border:none; border-radius:10px; font-size:15px; font-weight:500; cursor:pointer; }
+  .btn-primary{background:#007aff;color:#fff;} .btn-secondary{background:#e5e5ea;color:#1c1c1e;} .btn-danger{background:#ff3b30;color:#fff;}
+  .btn:disabled{opacity:.5; cursor:not-allowed; }
+  .bar { height:6px; background:#e5e5ea; border-radius:3px; overflow:hidden; margin:10px 16px 14px; }
+  .bar > i { display:block; height:100%; background:#007aff; width:0; transition:width .3s; }
+  .mini { font-size:12px; }
+  .err { color:#ff3b30; font-size:11px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .recovery-banner { display:none; color:#fff; padding:12px 16px; margin:0 0 16px; border-radius:12px;
+    align-items:center; gap:10px; cursor:pointer; }
+  .recovery-banner.show { display:flex; }
+  .recovery-banner.AUTH{background:linear-gradient(135deg,#ff9500,#ff7a00);}
+  .recovery-banner.VERIFY{background:linear-gradient(135deg,#ffcc00,#ffb400);color:#3a2e00;}
+  .recovery-banner.BLOCKED{background:linear-gradient(135deg,#ff3b30,#e0281d);}
+  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:2000;opacity:0;transition:opacity .3s;}
+  .toast.show{opacity:1;}
+  .toolbar{display:flex;gap:8px;padding:12px 16px;align-items:center;flex-wrap:wrap;}
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.active { display:flex; }
+  .modal { background:#fff; border-radius:16px; width:100%; max-width:420px; padding:22px; max-height:90vh; overflow-y:auto; }
+  .modal.kind-BLOCKED { border-top:4px solid #ff3b30; }
+  .modal.kind-AUTH { border-top:4px solid #ff9500; }
+  .modal.kind-VERIFY { border-top:4px solid #ffcc00; }
+  .modal h3 { font-size:18px; margin-bottom:4px; text-align:center; }
+  .kind-badge { text-align:center; font-size:11px; margin-bottom:6px; }
+  .kind-badge span{padding:2px 10px;border-radius:10px;font-weight:600;}
+  .kb-AUTH{background:#fff1e3;color:#c76a00;} .kb-VERIFY{background:#fff7d6;color:#9a7400;} .kb-BLOCKED{background:#ffe5e2;color:#d33;}
+  .modal .sub { font-size:13px; color:#8e8e93; text-align:center; margin-bottom:12px; }
+  .rec-meta{font-size:12px;color:#636e72;background:#f9f9fb;border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.6;}
+  .steps{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;}
+  .step{display:flex;align-items:center;gap:6px;font-size:11px;color:#8e8e93;}
+  .step .sd{width:22px;height:22px;border-radius:50%;background:#e5e5ea;color:#8e8e93;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+  .step.done .sd{background:#34c759;color:#fff;} .step.active .sd{background:#007aff;color:#fff;}
+  .step-line{width:18px;height:2px;background:#e5e5ea;}
+  .shot-wrap{position:relative;width:100%;border:1px solid #e5e5ea;border-radius:10px;background:#f2f2f7;min-height:120px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;}
+  .shot-wrap img{max-width:100%;border-radius:10px;}
+  .blocked-box{background:#fff0ef;border:1px solid #ffd4d1;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b3261e;line-height:1.7;}
+  .rec-status { font-size:13px; text-align:center; color:#007aff; margin-bottom:10px; min-height:18px; }
+  .remote-hint{font-size:11px;color:#a1a1a6;text-align:center;line-height:1.5;margin-top:10px;border-top:.5px solid #f0f0f5;padding-top:10px;}
+  .modal-actions { display:flex; gap:10px; margin-top:8px; } .modal-actions .btn { flex:1; }
+  /* iOS 风格虚拟键盘 */
+  #iosKb { display:none; position:fixed; left:0; right:0; bottom:0; z-index:1500; background:#d1d5db;
+    padding:8px 6px 10px; user-select:none; box-shadow:0 -2px 10px rgba(0,0,0,.15); }
+  #iosKb.show { display:block; }
+  .kb-row { display:flex; justify-content:center; gap:5px; margin-bottom:7px; }
+  .kb-key { flex:1; max-width:44px; height:42px; background:#fff; border-radius:7px; display:flex; align-items:center;
+    justify-content:center; font-size:17px; font-weight:400; color:#1c1c1e; cursor:pointer; box-shadow:0 1px 0 rgba(0,0,0,.25); }
+  .kb-key:active { background:#c8ccd1; }
+  .kb-key.wide { max-width:64px; background:#adb3bd; font-size:13px; }
+  .kb-key.space { max-width:none; flex:4; }
+  .kb-key.enter { max-width:74px; background:#007aff; color:#fff; font-size:14px; }
+  @media(max-width:480px){ .wrap{padding:12px;} body{padding-bottom:300px;} }
+</style>
+</head>
+<body>
+<div class="nav-bar">
+  <a href="/v4/settings/">‹ 设置</a>
+  <div class="title">全网采集中心</div>
+  <div class="kb-toggle" onclick="toggleKb()">
+    <div class="switch" id="kbSwitch"><i></i></div><span>苹果键盘</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="recovery-banner" id="recBanner" onclick="openRecovery(window.__needRecPlatform, window.__needRecState)">
+    <span style="font-size:20px;" id="recBannerIcon">⚠️</span>
+    <div style="flex:1;font-size:14px;" id="recBannerText"></div>
+    <span style="font-size:18px;">›</span>
+  </div>
+
+  <div class="group-title">采集健康状态（六态 + 动态风控；橙=重新登录 黄=人机验证 红=熔断冷却，均可点击处理）</div>
+  <div class="group" id="healthBox"><div class="row pstate">加载中…</div></div>
+
+  <div class="group-title">发起采集（后台运行，结果自动入库，发布时间与采集时间分离）</div>
+  <div class="group">
+    <div class="toolbar">
+      <input type="text" id="kw" data-ioskb placeholder="关键词，如：广州太古汇" style="flex:1;min-width:200px;">
+      <input type="number" id="maxn" value="10" min="1" max="50" style="width:80px;" title="每平台条数">
+      <button class="btn btn-primary" id="startBtn" onclick="startCollect()">开始采集</button>
+      <button class="btn btn-secondary" onclick="toggleAll(true)">全选</button>
+      <button class="btn btn-secondary" onclick="toggleAll(false)">清空</button>
+    </div>
+    <div class="chips" id="chipBox"></div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="taskSummary" class="row mini pstate" style="display:none;"></div>
+    <div id="taskRows"></div>
+  </div>
+</div>
+
+<!-- 统一 Auth Recovery Center 全局弹窗（不跳页，三类分清） -->
+<div class="modal-overlay" id="recModal">
+  <div class="modal" id="recCard">
+    <h3 id="recTitle">账号登录恢复</h3>
+    <div class="kind-badge"><span id="recKindBadge"></span></div>
+    <div class="sub" id="recSub"></div>
+    <div class="rec-meta" id="recMeta"></div>
+
+    <!-- A登录 / B验证：三步 + 二维码 -->
+    <div id="recAuthBox">
+      <div class="steps">
+        <div class="step" id="st1"><span class="sd">1</span>打开登录页</div>
+        <span class="step-line"></span>
+        <div class="step" id="st2"><span class="sd">2</span>扫码/验证</div>
+        <span class="step-line"></span>
+        <div class="step" id="st3"><span class="sd">3</span>自动恢复</div>
+      </div>
+      <div class="shot-wrap"><img id="recShot" alt="登录二维码/登录页截图"></div>
+    </div>
+
+    <!-- C熔断：只冷却，不给扫码假象 -->
+    <div id="recBlockedBox" class="blocked-box" style="display:none;">
+      <b>这是平台/IP 风控熔断，不是登录问题。</b><br>
+      扫码无法解除，系统已自动降频并进入冷却，剩余冷却：
+      <b id="recCooldown">--:--</b>。<br>
+      小红书 300012 等情况请切换网络/等待冷却，<b>请勿硬刚</b>；冷却到期后系统自动半开试探并逐步恢复频率。
+    </div>
+
+    <div class="rec-status" id="recStatus">准备中…</div>
+    <div class="modal-actions" id="recAuthActions">
+      <button class="btn btn-secondary" onclick="closeRec()">关闭</button>
+      <button class="btn btn-secondary" onclick="startRec()">重取二维码</button>
+      <button class="btn btn-primary" onclick="checkRec()">我已登录·检测</button>
+    </div>
+    <div class="modal-actions" id="recBlockedActions" style="display:none;">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeRec()">知道了</button>
+    </div>
+    <div class="remote-hint" id="recRemote"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="iosKb"></div>
+
+<script>
+const STATE_CN = {SUCCESS:"正常",EMPTY:"空结果",IDLE:"未运行",AUTH_REQUIRED:"需重新登录",AUTH_FAILED:"需重新登录",
+  CAPTCHA:"人机验证",BLOCKED:"已熔断/风控",IP_RISK:"IP风控熔断",NEED_VERIFY:"暂停·待登录",
+  NETWORK_ERROR:"网络异常",COOLDOWN:"冷却中",FAIL:"失败",
+  AUTH_VALID:"登录有效",QR_DISPLAYED:"二维码已展示",WAITING_SCAN:"等待扫码/登录",SCANNED:"已扫码·待确认",
+  CONFIRMING:"确认登录中",RECOVERED:"已恢复",HEALTH_CHECK:"健康检查中",QR_EXPIRED:"二维码过期·自动刷新",
+  QR_FAILED:"取码失败",AUTH_FAILED2:"尚未恢复",PLATFORM_BLOCKED:"风控冷却中"};
+const AUTH_STATES=new Set(["AUTH_REQUIRED","AUTH_FAILED","NEED_VERIFY"]);
+const VERIFY_STATES=new Set(["CAPTCHA"]);
+const BLOCK_STATES=new Set(["BLOCKED","IP_RISK"]);
+let HEALTH=[], pollTimer=null, recPlatform=null, recWatch=null, recKind="AUTH", lastShotState="";
+
+function getToken(){ return localStorage.getItem("v4_token")||""; }
+async function api(path,opt={}){
+  const headers={"Content-Type":"application/json",...(opt.headers||{})};
+  const t=getToken(); if(t) headers["Authorization"]="Bearer "+t;
+  const res=await fetch(path,{...opt,headers});
+  if(res.status===401){ showToast("登录已失效，请重新登录"); setTimeout(()=>location.href="/v4/settings/login",1200); throw new Error("401"); }
+  return res.json();
+}
+function showToast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2400); }
+function fmtMMSS(s){ s=Math.max(0,parseInt(s||0)); return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+
+async function loadHealth(){
+  try{ const r=await api("/v4/adapters/health"); HEALTH=r.health||[]; renderHealth(); renderChips(); scanRecovery(); }catch(e){}
+}
+function recStateOf(h){
+  if(BLOCK_STATES.has(h.state)||(h.risk&&h.risk.level==="IP_RISK")) return "IP_RISK";
+  if(VERIFY_STATES.has(h.state)) return "CAPTCHA";
+  if(AUTH_STATES.has(h.state)||(h.risk&&h.risk.level==="NEED_VERIFY")) return "AUTH_REQUIRED";
+  return "";
+}
+function renderHealth(){
+  const box=document.getElementById("healthBox");
+  if(!HEALTH.length){ box.innerHTML='<div class="row pstate">暂无适配器</div>'; return; }
+  box.innerHTML=HEALTH.map(h=>{
+    const rs=recStateOf(h); const can=!!rs;
+    const rk=h.risk?`<span class="risk risk-${h.risk.level}">${h.risk.level_cn}</span>`:"";
+    return `<div class="row ${can?'clickable':''}" ${can?`onclick="openRecovery('${h.platform}','${rs}')"`:""}>
+      <span class="dot s-${h.state}"></span>
+      <span class="pname">${h.display}${h.needs_browser?'<span class="ptag">真人浏览器</span>':''}${rk}</span>
+      <span class="pstate">${STATE_CN[h.state]||h.state}</span>
+      <span class="pcount">${h.fetched||0} 条</span>
+      ${can?'<span style="font-size:18px;">›</span>':''}
+    </div>`;
+  }).join("");
+}
+function renderChips(){
+  const box=document.getElementById("chipBox"); const exist={};
+  box.querySelectorAll(".chip").forEach(c=>exist[c.dataset.p]=c.classList.contains("on"));
+  box.innerHTML=HEALTH.map(h=>{
+    const on=(h.platform in exist)?exist[h.platform]:["sogou_search"].includes(h.platform);
+    return `<span class="chip ${on?'on':''}" data-p="${h.platform}" onclick="this.classList.toggle('on')">
+      ${h.display}${h.needs_browser?' <span class="br">浏览器</span>':''}</span>`;
+  }).join("");
+}
+function toggleAll(on){ document.querySelectorAll("#chipBox .chip").forEach(c=>c.classList.toggle("on",on)); }
+function picked(){ return [...document.querySelectorAll("#chipBox .chip.on")].map(c=>c.dataset.p); }
+
+function scanRecovery(){
+  // 严重度优先：熔断 > 验证 > 登录
+  const order=["IP_RISK","CAPTCHA","AUTH_REQUIRED"];
+  let target=null,state="";
+  for(const o of order){ const h=HEALTH.find(x=>recStateOf(x)===o); if(h){target=h;state=o;break;} }
+  const b=document.getElementById("recBanner");
+  if(target){
+    window.__needRecPlatform=target.platform; window.__needRecState=state;
+    const kind=state==="IP_RISK"?"BLOCKED":(state==="CAPTCHA"?"VERIFY":"AUTH");
+    b.className="recovery-banner show "+kind;
+    document.getElementById("recBannerIcon").textContent=kind==="BLOCKED"?"⛔":(kind==="VERIFY"?"🛡️":"⚠️");
+    const map={BLOCKED:`${target.display} 触发风控熔断，点击查看冷却`,VERIFY:`${target.display} 需要人机验证，点击处理`,AUTH:`${target.display} 账号需要重新登录，点击恢复`};
+    document.getElementById("recBannerText").textContent=map[kind];
+  } else b.classList.remove("show");
+}
+
+async function startCollect(){
+  const keyword=document.getElementById("kw").value.trim();
+  if(!keyword){ showToast("请输入关键词"); return; }
+  const platforms=picked(); if(!platforms.length){ showToast("请至少选择一个平台"); return; }
+  const maxn=parseInt(document.getElementById("maxn").value||"10",10);
+  const btn=document.getElementById("startBtn"); btn.disabled=true;
+  document.getElementById("taskRows").innerHTML="";
+  document.getElementById("taskSummary").style.display="flex";
+  const r=await api("/v4/adapters/collect",{method:"POST",body:JSON.stringify({keyword,platforms,max_results:maxn})});
+  if(!r.success){ showToast(r.error||"启动失败"); btn.disabled=false; return; }
+  pollTask(r.task_id,btn);
+}
+function pollTask(tid,btn){
+  clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    const r=await api("/v4/adapters/task/"+tid);
+    if(!r.success){ clearInterval(pollTimer); btn.disabled=false; return; }
+    const t=r.task;
+    document.getElementById("prog").style.width=(t.total?Math.round(t.done/t.total*100):0)+"%";
+    document.getElementById("taskRows").innerHTML=Object.values(t.per_platform||{}).map(s=>{
+      const rs=recStateOf({state:s.state,risk:s.risk?{level:s.risk.level}:null});
+      const can=AUTH_STATES.has(s.state)||VERIFY_STATES.has(s.state)||BLOCK_STATES.has(s.state);
+      return `<div class="row mini ${can?'clickable':''}" ${can?`onclick="openRecovery('${s.platform}','${rs}')"`:""}>
+        <span class="dot s-${s.state}"></span>
+        <span class="pname">${s.display||s.platform}</span>
+        <span class="pstate">${STATE_CN[s.state]||s.state} · ${(s.duration||0).toFixed(1)}s</span>
+        <span class="pcount">抓${s.fetched||0}/新${s.inserted||0}/重${s.updated||0}</span>
+        ${s.error?`<span class="err" title="${(s.error||'').replace(/"/g,'')}">${s.error}</span>`:""}
+      </div>`;
+    }).join("");
+    if(t.status==="finished"){
+      clearInterval(pollTimer); btn.disabled=false;
+      document.getElementById("taskSummary").innerHTML=`完成：抓取 <b>${t.total_fetched}</b> 条，新增入库 <b>${t.total_inserted}</b>，已存在更新 <b>${t.total_updated}</b>`;
+      showToast("采集完成"); loadHealth();
+    }
+  },1200);
+}
+
+// ---------- 统一 Auth Recovery Center ----------
+async function openRecovery(platform, sourceState){
+  if(!platform) return; recPlatform=platform;
+  document.getElementById("recModal").classList.add("active");
+  document.getElementById("recStatus").textContent="正在建立恢复任务…";
+  const r=await api("/v4/adapters/recovery/start",{method:"POST",
+    body:JSON.stringify({platform, source_state:sourceState||""})});
+  if(!r.success){ document.getElementById("recStatus").textContent=r.error||"无法恢复"; return; }
+  recKind=r.kind||"AUTH";
+  renderRec(r.session, recKind);
+  clearInterval(recWatch); recWatch=setInterval(pollRec,1500); pollRec();
+}
+function renderRec(s,kind){
+  if(!s) return; recKind=kind||s.kind||"AUTH";
+  const card=document.getElementById("recCard");
+  card.className="modal kind-"+recKind;
+  const badge=document.getElementById("recKindBadge");
+  badge.className="kb-"+recKind;
+  badge.textContent = recKind==="AUTH" ? "A · 登录失效 → 扫码恢复"
+    : recKind==="VERIFY" ? "B · 人机验证 → 人工通过" : "C · 风控熔断 → 冷却降频";
+  document.getElementById("recTitle").textContent=`${s.display||s.platform} 登录恢复`;
+  document.getElementById("recSub").textContent = recKind==="BLOCKED"
+    ? "系统已暂停该平台自动采集并冷却，扫码无法解除"
+    : "不跳页：在采集浏览器完成操作后，系统自动检测并续采";
+  document.getElementById("recMeta").innerHTML =
+    `平台账号：<b>${s.account||s.display||'-'}</b><br>采集浏览器：端口 ${s.risk?'':''}${portOf(s.platform)} · 持久Profile（登录一次长期复用）`;
+  document.getElementById("recRemote").textContent =
+    (s.remote_hint||"")+"　｜　远程：公网部署后，手机打开同一公网地址即可看到本弹窗与二维码续采";
+  const isBlock=recKind==="BLOCKED";
+  document.getElementById("recAuthBox").style.display=isBlock?"none":"block";
+  document.getElementById("recAuthActions").style.display=isBlock?"none":"flex";
+  document.getElementById("recBlockedBox").style.display=isBlock?"block":"none";
+  document.getElementById("recBlockedActions").style.display=isBlock?"flex":"none";
+  setSteps(s.steps||{});
+  if(isBlock){ document.getElementById("recCooldown").textContent=fmtMMSS(s.cooldown_remain); }
+}
+const PORT_OF={douyin:9222,xiaohongshu:9222,weibo:9222,bilibili:9222,instagram:9223,google:9223};
+function portOf(p){return PORT_OF[p]||"-";}
+function setSteps(steps){
+  const set=(id,on,act)=>{const e=document.getElementById(id);e.className="step "+(on?"done":(act?"active":""));};
+  set("st1",steps.open,!steps.open);
+  set("st2",steps.scan,steps.open&&!steps.scan);
+  set("st3",steps.done,steps.scan&&!steps.done);
+}
+async function startRec(){
+  if(!recPlatform) return;
+  document.getElementById("recStatus").textContent="正在采集浏览器打开官方登录页并重取二维码…";
+  await api("/v4/adapters/recovery/start",{method:"POST",body:JSON.stringify({platform:recPlatform})});
+  setTimeout(()=>{ lastShotState=""; pollRec(); },2500);
+}
+async function checkRec(){
+  if(!recPlatform) return;
+  document.getElementById("recStatus").textContent="正在检测登录态…";
+  const r=await api("/v4/adapters/recovery/check",{method:"POST",body:JSON.stringify({platform:recPlatform})});
+  if(r.recovered) recoveredUI();
+  else document.getElementById("recStatus").textContent=`尚未恢复（${r.status_cn||r.status}），请完成后再检测`;
+}
+async function pollRec(){
+  if(!recPlatform) return;
+  const r=await api("/v4/adapters/recovery/status");
+  const s=(r.tasks||[]).find(x=>x.platform===recPlatform);
+  if(!s) return;
+  renderRec(s, recKind);
+  document.getElementById("recStatus").textContent=(STATE_CN[s.state]||s.state)+(s.message?("｜"+s.message):"");
+  // 二维码/登录截图：在“已展示/过期重取”时刷新
+  if(recKind!=="BLOCKED" && ["QR_DISPLAYED","SCANNED","CONFIRMING"].includes(s.state) && lastShotState!==s.state+String(s.shot_at||"")){
+    const im=document.getElementById("recShot");
+    im.src="/v4/adapters/recovery/shot/"+recPlatform+"?t="+(s.shot_at||Date.now());
+    lastShotState=s.state+String(s.shot_at||"");
+  }
+  if(s.state==="AUTH_VALID"||s.state==="RECOVERED") recoveredUI();
+}
+function recoveredUI(){
+  clearInterval(recWatch);
+  setSteps({open:true,scan:true,done:true});
+  document.getElementById("recStatus").textContent="✅ 登录态已恢复，风控解除，下一轮自动采集继续";
+  showToast("登录已恢复"); loadHealth();
+  setTimeout(closeRec,1800);
+}
+function closeRec(){ document.getElementById("recModal").classList.remove("active"); clearInterval(recWatch); }
+
+// ---------- iOS 风格虚拟键盘 ----------
+const KB_LETTER=[["q","w","e","r","t","y","u","i","o","p"],["a","s","d","f","g","h","j","k","l"],["shift","z","x","c","v","b","n","m","back"]];
+const KB_NUM=[["1","2","3","4","5","6","7","8","9","0"],["-","/",":",";","(",")","$","&","@","\""],["sym",".",",","?","!","'","back"]];
+const KB_SYM=[["[","]","{","}","#","%","^","*","+","="],["_","\\","|","~","<",">","€","£","¥","`"],["num",".",",","?","!","'","back"]];
+let kbMode="letter", kbUpper=false, kbTarget=null;
+function toggleKb(){
+  const on=!document.getElementById("kbSwitch").classList.contains("on");
+  document.getElementById("kbSwitch").classList.toggle("on",on);
+  localStorage.setItem("ios_kb",on?"1":"0");
+  if(!on) hideKb(); else showToast("苹果键盘已开启，点输入框弹出");
+}
+function renderKb(){
+  const rows = kbMode==="letter"?KB_LETTER : kbMode==="num"?KB_NUM:KB_SYM;
+  const kb=document.getElementById("iosKb"); let html="";
+  rows.forEach((r,ri)=>{
+    html+='<div class="kb-row">';
+    if(ri===1&&kbMode==="letter") html+='<div class="kb-key wide" data-k="shift">⇧</div>';
+    r.forEach(k=>{
+      if(k==="back") html+='<div class="kb-key wide" data-k="back">⌫</div>';
+      else if(k==="shift") html+='<div class="kb-key wide" data-k="shift">⇧</div>';
+      else if(k==="sym") html+='<div class="kb-key wide" data-k="sym">#+=</div>';
+      else if(k==="num") html+='<div class="kb-key wide" data-k="num">'+(kbMode==="letter"?"123":"ABC")+'</div>';
+      else html+=`<div class="kb-key" data-k="${k}">${(kbMode==="letter"&&kbUpper)?k.toUpperCase():k}</div>`;
+    });
+    if(ri===1&&kbMode==="letter") html+='<div class="kb-key wide" data-k="shift">⇧</div>';
+    html+='</div>';
+  });
+  html+='<div class="kb-row"><div class="kb-key wide" data-k="num">'+(kbMode==="letter"?"123":"ABC")+'</div>'
+      +'<div class="kb-key space" data-k=" ">空格</div><div class="kb-key enter" data-k="enter">搜索</div></div>';
+  kb.innerHTML=html;
+  kb.querySelectorAll(".kb-key").forEach(el=>{ el.addEventListener("mousedown",e=>{e.preventDefault();kbPress(el.dataset.k);}); });
+}
+function kbPress(k){
+  if(!kbTarget) return;
+  const el=kbTarget, s=el.selectionStart??el.value.length, e=el.selectionEnd??el.value.length;
+  if(k==="back"){ el.value=el.value.slice(0,s-1)+el.value.slice(e); el.setSelectionRange(s-1,s-1); }
+  else if(k==="shift"){ kbUpper=!kbUpper; renderKb(); return; }
+  else if(k==="num"){ kbMode=kbMode==="letter"?"num":"letter"; renderKb(); return; }
+  else if(k==="sym"){ kbMode=kbMode==="sym"?"num":"sym"; renderKb(); return; }
+  else if(k==="enter"){ hideKb(); startCollect(); return; }
+  else { const ch=(kbMode==="letter"&&kbUpper)?k.toUpperCase():k;
+    el.value=el.value.slice(0,s)+ch+el.value.slice(e); el.setSelectionRange(s+ch.length,s+ch.length); kbUpper=false; if(kbMode==="letter")renderKb(); }
+  el.dispatchEvent(new Event("input",{bubbles:true}));
+}
+function showKbFor(el){ if(localStorage.getItem("ios_kb")!=="1")return; kbTarget=el; renderKb(); document.getElementById("iosKb").classList.add("show"); }
+function hideKb(){ document.getElementById("iosKb").classList.remove("show"); }
+document.addEventListener("focusin",e=>{ if(e.target.dataset&&e.target.dataset.ioskb!==undefined) showKbFor(e.target); });
+if(localStorage.getItem("ios_kb")==="1") document.getElementById("kbSwitch").classList.add("on");
+
+loadHealth();
+setInterval(loadHealth,8000);
+</script>
+</body>
+</html>
