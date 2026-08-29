@@ -80,6 +80,7 @@ class GitVersionManager:
         self.git = _find_git()
         self._lock = threading.RLock()      # 串行化所有写操作，避免自动线程与手动并发
         self._last_auto_ts = 0.0            # 自动保存防抖
+        self._boot_ts = time.time()         # 启动时刻，用于首次自动保存宽限
         self._cfg_path = self.root / "data" / "version_center.json"
 
     # ---------- 单例 ----------
@@ -127,8 +128,8 @@ class GitVersionManager:
     def _local_proxies(self) -> list[str]:
         return [f"http://127.0.0.1:{p}" for p in _PROXY_CANDIDATE_PORTS if self._port_open(p)]
 
-    def _run_remote(self, args: list[str], timeout: int = 90) -> dict:
-        """远程操作：先直连，连接类失败再逐个回退本机代理。"""
+    def _run_remote(self, args: list[str], timeout: int = 90, retries: int = 3) -> dict:
+        """远程操作：直连优先并对“连接抖动”有限次退避重试，再逐个回退本机代理。"""
         r = self._run(args, timeout=timeout, env_clear_proxy=True)
         if r["ok"]:
             return r
@@ -137,7 +138,15 @@ class GitVersionManager:
             "could not connect", "failed to connect", "timed out", "timeout",
             "connection refused", "connection was reset", "unable to access"))
         if not connection_like:
-            return r  # 认证/分支等非连通问题，换代理无意义，原样返回
+            return r  # 认证/分支等非连通问题，换通道无意义，原样返回
+        # 直连网络抖动：短退避有限重试
+        for attempt in range(1, retries):
+            time.sleep(2 * attempt)
+            r = self._run(args, timeout=timeout, env_clear_proxy=True)
+            if r["ok"]:
+                r["via"] = f"direct-retry{attempt}"
+                return r
+        # 直连仍失败 → 本机代理回退
         for px in self._local_proxies():
             rr = self._run(args, timeout=timeout, proxy=px)
             if rr["ok"]:
@@ -387,6 +396,9 @@ class GitVersionManager:
         interval = min_interval_sec if min_interval_sec is not None else cfg["interval_minutes"] * 60
         if time.time() - self._last_auto_ts < interval:
             return {"ok": True, "skipped": "cooldown"}
+        # 启动宽限：系统刚启动的一个巡检间隔内不抢提交，避免开发中途/启动加载时过早成版本
+        if self._last_auto_ts == 0 and time.time() - self._boot_ts < interval:
+            return {"ok": True, "skipped": "boot_grace"}
         st = self.status()
         if not st.get("ok") or st["changed_count"] == 0:
             self._last_auto_ts = time.time()
