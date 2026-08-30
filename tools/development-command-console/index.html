@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Development Command Console</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#171717;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}.app{max-width:900px;margin:auto}.top{background:#111;color:#fff;padding:18px 20px;display:flex;justify-content:space-between;align-items:center}.brand{font-weight:700}.sub{font-size:11px;opacity:.6;margin-top:4px}.status{font-size:11px}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#42d392;margin-right:5px}main{padding:14px}.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.05)}h2{font-size:15px;margin:0 0 12px}textarea{width:100%;min-height:145px;border:1px solid #ddd;border-radius:10px;padding:12px;font-size:14px;line-height:1.7;resize:vertical;outline:0}textarea:focus{border-color:#111}button{border:1px solid #ddd;background:#fff;border-radius:9px;padding:10px 12px;font-weight:600}button.primary{width:100%;margin-top:10px;background:#111;color:#fff;border:0}.row{display:flex;gap:8px}.row button{flex:1}.label{font-size:11px;font-weight:700;opacity:.5;text-transform:uppercase;margin:12px 0 5px}.out{background:#f6f7f9;border-radius:8px;padding:10px;font-size:13px;line-height:1.65;white-space:pre-wrap}.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.levels button{min-height:58px}.current{margin-top:9px;background:#f1f2f4;border-radius:8px;padding:10px;font-size:13px}.history{padding:10px 0;border-bottom:1px solid #eee;font-size:13px}.history:last-child{border:0}.meta{font-size:11px;opacity:.5;margin-top:4px}.hidden{display:none}@media(max-width:600px){main{padding:9px}.card{padding:14px}.top{padding:15px}.brand{font-size:15px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div><div class="brand">Development Command Console</div><div class="sub">MVP v0.1 · Human-AI Engineering Control</div></div><div class="status"><span class="dot"></span>LOCAL</div></header>
+<main>
+<section class="card"><h2>01 · 新建开发任务</h2><textarea id="req" placeholder="例如：把采集调度改成动态的，但不能影响现在生产系统。先旁路测试，确认稳定后再接入。"></textarea><button class="primary" onclick="createTask()">生成工程任务</button></section>
+<section id="result" class="card hidden"><h2>02 · 工程任务合同</h2><div class="label">Goal</div><div id="goal" class="out"></div><div class="label">Scope</div><div id="scope" class="out"></div><div class="label">Must Preserve</div><div id="preserve" class="out"></div><div class="label">Forbidden</div><div id="forbid" class="out"></div><div class="label">Acceptance Criteria</div><div id="accept" class="out"></div><div class="label">Test Plan</div><div id="test" class="out"></div><div class="label">Rollback Plan</div><div id="rollback" class="out"></div></section>
+<section id="cmdSection" class="card hidden"><h2>03 · AI 开发执行指令</h2><textarea id="cmd" readonly></textarea><div class="row"><button onclick="copyCmd()">复制指令</button><button onclick="downloadCmd()">导出任务</button></div></section>
+<section id="audit" class="card hidden"><h2>04 · 验收状态</h2><div class="levels"><button onclick="level('L0')">L0<br><small>Concept</small></button><button onclick="level('L1')">L1<br><small>Planned</small></button><button onclick="level('L2')">L2<br><small>Implemented</small></button><button onclick="level('L3')">L3<br><small>Tested</small></button><button onclick="level('L4')">L4<br><small>E2E</small></button><button onclick="level('L5')">L5<br><small>Production</small></button></div><div id="current" class="current">当前状态：L1 Planned</div></section>
+<section class="card"><h2>05 · 本机任务历史</h2><div id="history"></div></section>
+</main></div>
+<script>
+const KEY='dcc_tasks_v01';let task=null;
+const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
+function id(){return Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,6).toUpperCase()}
+function createTask(){const r=document.getElementById('req').value.trim();if(!r)return alert('请输入开发需求');task={id:id(),createdAt:new Date().toISOString(),requirement:r,goal:r,scope:'仅处理本次需求直接涉及的模块；先读取现有结构，避免扩大修改范围。',preserve:'保持现有生产功能、业务口径、数据兼容性与稳定链路。',forbidden:'禁止删除现有功能；禁止未经确认改变业务口径；禁止把规划描述成已实现；禁止直接破坏生产主链。',accept:['代码实现完成','原有功能回归通过','新增功能测试通过','无新增阻断性错误','GitHub记录与实际代码一致','未验证能力不得标记为Production'],test:['静态检查','模块/单元测试','原功能回归测试','新增功能测试','必要时E2E测试','检查运行日志'],rollback:'保留修改前稳定Commit；出现生产异常时回退到最后稳定版本。',level:'L1'};save();render()}
+function save(){let a=JSON.parse(localStorage.getItem(KEY)||'[]');let i=a.findIndex(x=>x.id===task.id);if(i>=0)a[i]=task;else a.unshift(task);localStorage.setItem(KEY,JSON.stringify(a.slice(0,50)));renderHistory()}
+function render(){goal.textContent=task.goal;scope.textContent=task.scope;preserve.textContent=task.preserve;forbid.textContent=task.forbidden;accept.textContent=task.accept.map((x,i)=>`${i+1}. ${x}`).join('\n');test.textContent=task.test.map((x,i)=>`${i+1}. ${x}`).join('\n');rollback.textContent=task.rollback;cmd.value=command();result.classList.remove('hidden');cmdSection.classList.remove('hidden');audit.classList.remove('hidden');showLevel();}
+function command(){return `【AI 软件工程执行任务】\n\n任务ID：${task.id}\n\n一、原始需求\n${task.requirement}\n\n二、Goal\n${task.goal}\n\n三、Scope\n${task.scope}\n\n四、Must Preserve\n${task.preserve}\n\n五、Forbidden\n${task.forbidden}\n\n六、Acceptance Criteria\n${task.accept.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n七、Test Plan\n${task.test.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n八、Rollback Plan\n${task.rollback}\n\n九、执行规则\n1. 先读取当前项目结构和GitHub当前版本。\n2. 不要根据猜测修改不存在的文件。\n3. 先确认功能是否已经存在，避免重复实现。\n4. 修改前确认依赖关系。\n5. 不得删除稳定功能。\n6. 不得未经确认改变核心业务口径。\n7. 新能力优先旁路、兼容或影子模式。\n8. 完成代码后必须执行测试。\n9. 测试失败不得声称完成。\n10. 没有E2E证据不得标记L4。\n11. 没有生产证据不得标记L5。\n12. 最终必须报告实际修改文件、测试结果、Commit、证据、完成等级和未完成项。\n13. 不得虚构测试、Commit、部署或生产状态。`.trim()}
+function level(l){if(!task)return;task.level=l;save();showLevel()}
+function showLevel(){const m={L0:'L0 Concept',L1:'L1 Planned',L2:'L2 Implemented',L3:'L3 Tested',L4:'L4 E2E Verified',L5:'L5 Production'};current.textContent='当前状态：'+m[task.level]}
+async function copyCmd(){await navigator.clipboard.writeText(cmd.value);alert('已复制')}
+function downloadCmd(){const b=new Blob([cmd.value],{type:'text/plain;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=`development-task-${task.id}.txt`;a.click();URL.revokeObjectURL(u)}
+function load(id){const a=JSON.parse(localStorage.getItem(KEY)||'[]');task=a.find(x=>x.id===id);if(task)render()}
+function renderHistory(){const a=JSON.parse(localStorage.getItem(KEY)||'[]');history.innerHTML=a.length?a.map(x=>`<div class="history" onclick="load('${x.id}')"><b>${esc(x.requirement)}</b><div class="meta">${new Date(x.createdAt).toLocaleString()} · ${x.level}</div></div>`).join(''):'<div class="meta">暂无任务记录</div>'}
+renderHistory();
+</script>
+</body>
+</html>
