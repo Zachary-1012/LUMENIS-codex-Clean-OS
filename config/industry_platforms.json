@@ -1,0 +1,98 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-08-31",
+  "description": "Z-Brand Core 行业知识平台链接配置 - 用于系统持续学习和知识采集",
+  "platforms": {
+    "marketing_creative": {
+      "name": "营销/广告创意平台",
+      "priority": "high",
+      "sites": [
+        {"name": "数英网", "url": "https://www.digitaling.com", "value": "中国营销创意第一平台，案例库最全，深度拆解多", "priority": "high"},
+        {"name": "广告门", "url": "https://www.adquan.com", "value": "广告行业垂直媒体，4A公司动态、案例评析", "priority": "high"},
+        {"name": "TopMarketing", "url": "https://www.itopmarketing.com", "value": "营销行业深度分析，案例复盘质量高", "priority": "medium"},
+        {"name": "SocialBeta", "url": "https://socialbeta.com", "value": "社交媒体营销案例库，每日案例更新", "priority": "medium"},
+        {"name": "戛纳创意节官网", "url": "https://www.canneslions.com", "value": "全球最高创意奖项，获奖案例完整库", "priority": "high"},
+        {"name": "Campaign中国", "url": "https://www.campaignchina.com", "value": "国际广告杂志中文版，全球视野", "priority": "medium"},
+        {"name": "梅花网", "url": "https://www.meihua.info", "value": "营销信息聚合，案例+资讯+情报", "priority": "low"}
+      ]
+    },
+    "pr_public_opinion": {
+      "name": "舆情/公关平台",
+      "priority": "high",
+      "sites": [
+        {"name": "公关之家", "url": "https://www.prjia.com", "value": "公关行业门户，危机公关案例库", "priority": "high"},
+        {"name": "识微科技", "url": "https://www.civiw.com", "value": "舆情监测专业平台，行业报告", "priority": "medium"},
+        {"name": "清博智能", "url": "https://www.gsdata.cn", "value": "新媒体大数据，舆情分析方法论", "priority": "low"},
+        {"name": "新榜", "url": "https://www.newrank.cn", "value": "内容产业服务，社交媒体数据", "priority": "low"}
+      ]
+    },
+    "commercial_real_estate": {
+      "name": "商业地产平台",
+      "priority": "high",
+      "sites": [
+        {"name": "赢商网", "url": "https://www.winshang.com", "value": "商业地产第一门户，项目案例最全", "priority": "high"},
+        {"name": "观点地产网", "url": "https://www.guandian.cn", "value": "地产行业深度分析，太古/华润等标杆动态", "priority": "high"},
+        {"name": "联商网", "url": "https://www.linkshop.com.cn", "value": "零售商业门户，购物中心运营案例", "priority": "medium"},
+        {"name": "中购联", "url": "https://www.mallchina.org", "value": "购物中心行业协会，行业报告", "priority": "low"}
+      ]
+    },
+    "global_4a_agencies": {
+      "name": "全球4A公司官网/案例库",
+      "priority": "high",
+      "sites": [
+        {"name": "奥美 Ogilvy", "url": "https://www.ogilvy.com", "value": "案例库最丰富，真实之美等经典案例", "priority": "high"},
+        {"name": "WPP", "url": "https://www.wpp.com", "value": "集团层面案例整合，戛纳获奖汇总", "priority": "high"},
+        {"name": "阳狮 Publicis", "url": "https://www.publicis.com", "value": "全球创意案例，数据驱动营销", "priority": "medium"},
+        {"name": "DDB", "url": "https://www.ddb.com", "value": "ROI理论发源地，经典创意案例", "priority": "medium"},
+        {"name": "电通 Dentsu", "url": "https://www.dentsu.com", "value": "AISAS模型发源地，日本营销案例", "priority": "medium"},
+        {"name": "BBDO", "url": "https://www.bbdo.com", "value": "The Work, The Work, The Work，创意标杆", "priority": "low"},
+        {"name": "麦肯 McCann", "url": "https://www.mccann.com", "value": "全球创意网络， Truth Well Told", "priority": "low"}
+      ]
+    },
+    "knowledge_academic": {
+      "name": "知识/学术平台",
+      "priority": "medium",
+      "sites": [
+        {"name": "哈佛商业评论中文版", "url": "https://www.hbrchina.org", "value": "商业管理深度文章，品牌战略", "priority": "high"},
+        {"name": "麦肯锡季刊", "url": "https://www.mckinsey.com", "value": "全球行业洞察，消费/零售/营销", "priority": "medium"},
+        {"name": "Kantar", "url": "https://www.kantar.com", "value": "品牌价值研究，BrandZ榜单", "priority": "medium"},
+        {"name": "人人都是产品经理", "url": "https://www.woshipm.com", "value": "营销/运营方法论，用户研究", "priority": "low"},
+        {"name": "运营派", "url": "https://www.yunyingpai.com", "value": "运营方法论，用户增长", "priority": "low"}
+      ]
+    }
+  },
+  "knowledge_categories": {
+    "brand_marketing": "品牌营销理论与实践",
+    "advertising": "广告创意与效果评估",
+    "pr_management": "舆情管理与公关策略",
+    "crisis_management": "危机公关案例与方法论",
+    "consumer_behavior": "消费者行为学理论",
+    "case_study": "品牌营销与整合传播案例",
+    "commercial_real_estate": "商业地产营销案例",
+    "data_analytics": "数据分析与营销归因"
+  },
+  "collection_strategy": {
+    "frequency": "每周/每月更新",
+    "priority_platforms": ["数英网", "广告门", "戛纳创意节", "赢商网", "观点地产网", "奥美官网", "哈佛商业评论"],
+    "collection_criteria": [
+      "影响大：行业影响力大，获得重要奖项或媒体广泛报道",
+      "转化高：有明确的销售/品牌指标提升数据",
+      "有创新：创意/策略/技术上有突破性创新",
+      "创意好：视觉/文案/体验上有高水准创意表现",
+      "可复用：方法论和框架可以被其他品牌/项目借鉴"
+    ],
+    "deep_analysis_dimensions": [
+      "案例基本信息",
+      "核心问题/挑战",
+      "策略目标",
+      "核心创意 Big Idea",
+      "执行细节（分阶段）",
+      "传播渠道整合",
+      "数据成果",
+      "获奖情况",
+      "成功要素分析（带权重）",
+      "可复用方法论",
+      "对Z-Brand系统的启示"
+    ]
+  }
+}
