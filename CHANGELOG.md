@@ -1,5 +1,28 @@
 # 变更日志
 
+## [5.8.7] - 2026-08-30（22:00 豆包施工基线：公网平台化 + Ollama + 双产品适配）
+### 新增：正式施工入口
+- 新增 `docs/DOUBAO_2200_EXECUTION.md`，作为 22:00 豆包本地执行的正式施工指令。
+- 明确 GitHub main 为研发事实源；开始任务先读取 AGENTS/README/CURRENT_BASELINE/PROJECT_STATUS/CHANGELOG/DEV_LOG/AI_POLICY/ARCHITECTURE/DEPLOYMENT/DOUBAO_GITHUB_UPGRADE_PROTOCOL 及品牌平台蓝图。
+
+### 架构收口
+- 产品 A：广州太古汇舆情监测系统；产品 B：品牌传播与市场情报智能平台；共享 Core，保持配置、数据隔离和版本血缘。
+- WHO/WHAT/WHAT HAPPENED/SO WHAT 模型固定；`subject_type` 与 `content_type` 严格分离；营销/传播/舆情三类事件通过 `event_relation` 关联。
+- Ollama 为正式本地 AI Runtime；云端 AI 不作为生产依赖；新 AI 能力优先 Shadow Mode。
+
+### 公网与无人值守原则
+- 公网访问采用 HTTPS + 反向代理/Cloudflare Tunnel，8200 不裸暴露。
+- Web/API 与 Worker/Scheduler 解耦，页面关闭不影响后台任务。
+- 生产启动入口必须统一 Python/依赖环境，修复全局 Python 与 `.venv` 不一致。
+
+### Auth/采集保护
+- Cookie/session 任何时候失效都进入系统内 Auth Recovery Modal，不简单跳登录页；合法流程支持时显示二维码/验证入口，验证成功后健康检查并恢复。
+- `300012`、验证码、IP 风控进入状态机/熔断/冷却/告警；不伪装成 0 条，不进行验证码破解或风控绕过。
+- 采集采用动态调度，不以固定 30 分钟/1 小时/固定时间点作为生产硬规则。
+
+### 文档事实基线
+- `PROJECT_STATUS.md` 同步为 v5.8.6 后续施工基线，并将公网、Ollama、Auth Recovery 纳入当前重点。
+
 ## [5.8.6] - 2026-08-30（平台 Adapter 架构 + 商业化代码来源审计基线）
 ### 新增：统一 Platform Adapter 层
 - 新增 `platform_adapters/base.py`：统一 search/detail/comments/creator/health_check 与 CollectionStatus/CollectionResult 契约。
@@ -35,23 +58,5 @@
 
 ### 新增：统一 Auth Recovery Center 前端闭环（P0，冲刺5）
 - 统一控制台外壳新增“全局状态中心 + 不跳页统一恢复弹窗”：首页采集健康矩阵并入小红书主采集六态（v4 适配器 + 老链路合并，共 12 平台），修正平台中文名/数量字段；异常平台点击直接在当前页弹恢复窗而非跳陌生页。
-- 弹窗严格 A 登录失效 / B 人机验证 / C IP风控熔断 三类分清：C 类只显示冷却倒计时、不显示扫码（扫码不可解）；三步状态机（打开登录页→扫码/验证→恢复续采）、二维码或登录页截图、“我已完成验证/重新检测”“稍后处理（保持暂停不伪装）”；恢复成功自动解除暂停续采。
+- 弹窗严格 A 登录失效 / B 人机验证 / C IP风控熔断三类分清：C 类只显示冷却倒计时、不显示扫码（扫码不可解）；三步状态机（打开登录页→扫码/验证→恢复续采）、二维码或登录页截图、“我已完成验证/重新检测”“稍后处理（保持暂停不伪装）”；恢复成功自动解除暂停续采。
 - 全局看门每 12s 巡检，任何子页（含 iframe）平台失效都在外壳弹同一弹窗，手机端底部卡片适配。后端复用既有 /v4/adapters/recovery/* 与 /api/xhs/collect-health，未重造。浏览器真机 E2E：12 平台矩阵、A/B/C/恢复四态渲染、无 JS 运行错误；小红书持久 Profile 登录态只读探测 AUTH_VALID。
-
-### 修复：采集六态正确落库 + 失效自动建恢复任务（冲刺6）
-- 新增 `collector.classify_collect_state`，把采集结果归一为 SUCCESS/EMPTY/AUTH_REQUIRED/CAPTCHA/BLOCKED/NETWORK_ERROR 标准六态写入 collection_logs（修复旧版笼统 success/error、熔断被误判空结果的缺陷，guard 硬状态优先）；AUTH/CAPTCHA/BLOCKED 三类幂等自动创建 Auth 恢复任务，形成“失效→暂停→建任务→恢复续采”后端闭环。13 项单测通过、集成回归真机大写 SUCCESS。
-
-### 修复：数据质量治理（冲刺7）
-- 脏发布时间归一（captured 优先、昨天/前天/编辑于 MM-DD 跨年判断、非法月日不臆造）；`insert_note` 标题兜底（正文首句/作者回退，UPDATE 同步补存量），空标题与相对时间脏值清零。
-
-### 新增：版本中心接入统一控制台（冲刺8）
-- 统一控制台「系统」组内嵌版本中心（单页 iframe 不跳页，手机侧栏可进）；后端 9 接口只读实测、真机渲染 v5.8.5/同步态/历史/操作按钮正常，配合每日 08·18·24 定时同步与 30 分钟自动巡检，形成开发→成版本→推送 GitHub→可回滚闭环。
-
-### 新增：ProxyPool 可插拔代理池接入（冲刺9，对齐《ProxyPool 补丁1.0》）
-- 补齐 proxy_pool 模块的 Flask 最后一公里：可选导入、启动加载本机付费代理节点、独立健康巡检线程、`/api/proxy/status|check`（Basic、URL 脱敏）。总开关默认关闭（关闭等同直连原版），代理失败冷却切换、按平台策略回退直连，强制出海平台无节点不裸奔，不自动抓免费节点。11 项单测通过，付费代理 10808 真实健康检查出海成功（约 1.2s）。《交叉认证》补丁审计：采集风险五档/状态机/熔断/恢复已由 collector_guard 覆盖，多 Provider/交叉认证属母平台分期。
-
-### 修复：双时间补齐 + 核心回归全绿（冲刺10）
-- captured_at 空串老数据由旧采集列 collected_at 回填 492 条（只补采集时间）；publish_datetime 与 publish_date 双列一致清洗（8 条脏原文归一）；修复后空标题/采集时间缺失/发布晚于采集/脏时间全部为 0。5 个测试补项目根路径引导可独立运行，核心回归 16/16 全绿；上线就绪审计 44 表 integrity ok、subject_hit 64.6% 口径未弱化。
-
-### 运维：运行态实例巡检（冲刺11）
-- 新增 `scripts/inspect_instances.ps1` 只读诊断 8200/8201 监听归属与重复实例；实证多实例有采集锁兜底、无重复入库（同词同分钟重复=0），8200 历史重复实例的清理与版本切换按约定留待授权。
