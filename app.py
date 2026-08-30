@@ -387,7 +387,7 @@ def brand_report_export(report_id):
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-APP_VERSION='5.9.7'
+APP_VERSION='5.9.8'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')
