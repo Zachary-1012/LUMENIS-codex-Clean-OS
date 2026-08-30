@@ -39,7 +39,7 @@ DEFAULT_TOPICS = [
 ]
 START_DATE = '2026-08-28'
 END_DATE = '2026-10-07'
-MODULE_VERSION = '5.8.10-p0-runtime-state'
+MODULE_VERSION = '5.8.11-probe-fix'
 CAMPAIGN_KEY = 'taikoo_15th'
 
 # 中频率固定时间点调度（与主采集 8/10/12/14/16/18/20/22/23 完全错峰，间隔约2小时）

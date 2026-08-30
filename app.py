@@ -103,7 +103,7 @@ app.register_blueprint(export_report.export_bp)
 app.register_blueprint(pr_case_integration.pr_case_bp)
 # 注册系统功能API蓝图
 app.register_blueprint(system_features_api.system_features_bp)
-APP_VERSION='5.8.10'
+APP_VERSION='5.8.11'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')

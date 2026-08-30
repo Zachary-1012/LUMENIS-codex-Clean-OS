@@ -1,4 +1,39 @@
-# 变更日志
+﻿# 变更日志
+
+## [5.8.11] - 2026-08-31（探活修复 + 详情补抓 + 话题聚合页指标研究结论）
+
+### 探活函数修复（P0，已E2E验证）
+- 修复 \_probe_xhs_health_via_cdp\ 中 \page.url()\ 应为 \page.url\（属性非方法）的bug，原报错被异常吞掉导致健康探活永远失败。
+- 修复 \	opic_recover\ 调用 \_probe_runtime_state\ 在熔断OPEN时跳过实时探活的bug，改为直接做完整探活（explore + 搜索测试）。
+- 增强 \_probe_xhs_health_via_cdp\ 增加 \	est_search\ 参数：recover时额外做搜索测试，只有搜索也不跳验证页才判定完全健康并解除熔断。
+- 修复 \	opic_note_detail_backfill.py\ 中同样的 \page.url()\ bug。
+
+### 详情补抓完成（已实测）
+- 120条笔记详情补抓完成：94条 full（正文+媒体+评论齐全）、25条 partial、1条 failed（页面加载失败）。
+- 117条有正文、119条有媒体（平均20张/条）、96条有评论。
+- 全程拟人间隔3-8秒，未触发验证，未撞风控。
+- 补抓后重新分类回填：主体命中59条（49.2%），内容类型 UGC85/官方16/体验11/活动内容8，情绪 neutral107/positive13。
+
+### 话题聚合页指标研究结论（已知限制，不伪造数据）
+- 研究发现：小红书Web端搜索结果页无"话题"tab，也无浏览量/讨论量指标。
+- 小红书Web端话题页（\/topic/话题名\）是引导下载App的落地页，无浏览量/讨论量数据。
+- 结论：话题浏览量/讨论量仅在小红书App内显示，Web端无法通过CDP采集。保持 \rowse_count=0, discussion_count=0\，绝不伪造数据。
+- 后续可选方案：研究小红书App端API接口（需逆向），或在文档中明确标注该指标为App端专属。
+
+### E2E测试（8/8通过）
+- 依赖自检：flask/playwright/sqlite3/requests OK（apscheduler为可选依赖）。
+- 模块导入：app/topic_campaign/xhs_runtime_state/subject_rules/collector 全部OK。
+- 数据库：4表存在，新字段完整，120条笔记，94条full证据。
+- 健康检查：healthz返回5.8.10，ok=True。
+- API Smoke：status/runtime-state/stats/campaigns/topics/notes/timeline 7个接口全部OK。
+- 六态验证：overall=healthy, auth=valid, session=real_session_valid, platform=reachable, circuit=closed。
+- 主体口径：17主体词/18排除词，4个测试用例全部通过。
+- Note Detail API：689字正文/20媒体/11评论，主体命中，官方类型，full证据。
+
+### 未解决 / 已知限制
+- 话题卡 browse_count/discussion_count 保持0（小红书Web端无此数据，App端专属，不伪造）。
+- 8200现网仍运行v5.8.4，是否切v5.8.11生产待用户拍板。
+- trycloudflare公网隧道为临时随机域名，固定域名需Cloudflare token。
 
 ## [5.8.10] - 2026-08-31（V2.0 基线 P0 收口：Runtime State 六态 + Topic Evidence Layer + UI Drill-down + 数据对齐）
 
@@ -154,3 +189,4 @@
 - 统一控制台外壳新增“全局状态中心 + 不跳页统一恢复弹窗”：首页采集健康矩阵并入小红书主采集六态（v4 适配器 + 老链路合并，共 12 平台），修正平台中文名/数量字段；异常平台点击直接在当前页弹恢复窗而非跳陌生页。
 - 弹窗严格 A 登录失效 / B 人机验证 / C IP风控熔断三类分清：C 类只显示冷却倒计时、不显示扫码（扫码不可解）；三步状态机（打开登录页→扫码/验证→恢复续采）、二维码或登录页截图、“我已完成验证/重新检测”“稍后处理（保持暂停不伪装）”；恢复成功自动解除暂停续采。
 - 全局看门每 12s 巡检，任何子页（含 iframe）平台失效都在外壳弹同一弹窗，手机端底部卡片适配。后端复用既有 /v4/adapters/recovery/* 与 /api/xhs/collect-health，未重造。浏览器真机 E2E：12 平台矩阵、A/B/C/恢复四态渲染、无 JS 运行错误；小红书持久 Profile 登录态只读探测 AUTH_VALID。
+
