@@ -457,6 +457,22 @@ def sync(keywords=None,max_scroll=6):
         'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
+def _shadow_record_result(task_state, items_found, blocked='', run_type='auto'):
+    """v5.8.6 动态调度影子闭环：把本次真实采集状态回写统一规划器。
+    仅演进影子状态/写审计，不门控、不影响采集，任何异常 fail-open；AI 不参与此决策。"""
+    try:
+        from platform_adapters.scheduling import get_planner
+        _map = {'EMPTY': 'NO_NEW_DATA', 'PARTIAL_BLOCKED': 'RISK_WARNING', 'SUCCESS': 'SUCCESS'}
+        raw = _map.get(task_state, task_state)
+        planner = get_planner()
+        planner.record_result('xhs', raw, now=datetime.now(),
+                              items_found=int(items_found or 0),
+                              error_code=str(blocked or '')[:120],
+                              trigger_source=f'xhs-{run_type}')
+    except Exception as e:
+        print('[xhs-bridge] shadow record skipped:', e, flush=True)
+
+
 def create_task(keywords=None,max_scroll=6,run_type='manual'):
     """创建采集任务
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
@@ -501,6 +517,12 @@ def create_task(keywords=None,max_scroll=6,run_type='manual'):
             if result.get('blocked') and ts=='SUCCESS':
                 done_msg=f'[{type_label}]未采集到新笔记：{result["blocked"]}（已自动降频，建议切换网络或稍后重试）'
             _tasks[task_id].update(status='done',progress=100,message=done_msg,result=result,finished_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            # v5.8.6 真实结果回写动态调度影子（不门控、不影响采集）
+            try:
+                _shadow_record_result(ts, result.get('inserted',0)+result.get('updated',0),
+                                      result.get('blocked') or '', run_type)
+            except Exception as _be:
+                print('[xhs-bridge] shadow feedback non-blocking:', _be, flush=True)
         except Exception as e:
             _tasks[task_id].update(status='error',progress=100,message=str(e),error=str(e))
         finally: _lock.release()

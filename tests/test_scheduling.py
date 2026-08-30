@@ -141,6 +141,8 @@ check("13d 登录失效为A类", sm.incident_class(sm.to_canonical("AUTH_REQUIRE
 check("13e 验证码为B类", sm.incident_class(sm.to_canonical("CAPTCHA")) == sm.CLASS_B_VERIFY)
 check("13f 风控态必须停请求", sm.is_stop_request(sm.CS.BLOCKED) and sm.is_stop_request(sm.CS.NEED_VERIFY))
 check("13g 网络态走退避非0条", sm.is_network(sm.to_canonical("NETWORK_ERROR")))
+check("13h AUTH_FAILED归A类登录失效", sm.to_canonical("AUTH_FAILED") == sm.CS.SESSION_EXPIRED and sm.incident_class(sm.to_canonical("AUTH_FAILED")) == sm.CLASS_A_AUTH)
+check("13i 部分拦截归RISK_WARNING", sm.to_canonical("PARTIAL_BLOCKED") == sm.CS.RISK_WARNING)
 
 # 14/15. 旁路决策表：幂等建表、字段完整、绝不影响旧表
 tmpdir = tempfile.mkdtemp()

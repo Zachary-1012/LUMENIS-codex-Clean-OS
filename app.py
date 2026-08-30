@@ -3531,11 +3531,8 @@ def _get_shadow_planner():
     global _shadow_schedule_planner
     if _shadow_schedule_planner is None:
         try:
-            from platform_adapters.scheduling import PlatformSchedulePlanner, ScheduleDecisionStore
-            _root = os.path.dirname(os.path.abspath(__file__))
-            _store = ScheduleDecisionStore(os.path.join(_root, 'data', 'monitor.db'))
-            _shadow_schedule_planner = PlatformSchedulePlanner(
-                state_file=os.path.join(_root, 'data', 'schedule_state.json'), store=_store)
+            from platform_adapters.scheduling import get_planner
+            _shadow_schedule_planner = get_planner()  # 包级进程单例，与采集结果回写共享状态
         except Exception as e:
             print(f'[ShadowPlanner] init fail (non-blocking): {e}')
             _shadow_schedule_planner = False
