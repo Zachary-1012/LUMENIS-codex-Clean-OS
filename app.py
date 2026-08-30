@@ -70,6 +70,16 @@ import system_features_api
 import collector_automation
 import ai_learning_engine
 import public_opinion_cases
+# ProxyPool 可插拔代理池（可选；导入失败不影响系统启动；总开关默认关闭，关闭时等同直连原版）
+try:
+    from proxy_pool import proxy_manager as _proxy_mgr
+    from proxy_pool.loader import load_proxy_nodes as _load_proxy_nodes
+    from proxy_pool.config import ProxyConfig as _ProxyCfg
+    PROXY_POOL_AVAILABLE = True
+except Exception as _pe:
+    _proxy_mgr = None; _load_proxy_nodes = None; _ProxyCfg = None
+    PROXY_POOL_AVAILABLE = False
+    print('[ProxyPool] 模块不可用（不影响系统运行）:', _pe)
 # 豆包AI API（可选辅助功能，导入失败不影响系统启动）
 try:
     import ark_llm
@@ -98,6 +108,43 @@ APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')
 AUTH_PASSWORD=os.getenv('TAIKOO_AUTH_PASSWORD','')
+
+def _proxy_health_loop(interval=300):
+    # 独立守护线程做节点健康巡检，与核心采集调度解耦，任何异常都不影响主系统
+    while True:
+        try:
+            time.sleep(interval)
+            if _proxy_mgr is not None and _proxy_mgr.nodes:
+                _proxy_mgr.check_all()
+        except Exception:
+            time.sleep(60)
+
+if PROXY_POOL_AVAILABLE:
+    try:
+        _load_proxy_nodes()
+        if _proxy_mgr.nodes:
+            threading.Thread(target=_proxy_health_loop,
+                             args=(int(os.getenv('PROXY_HEALTH_INTERVAL', '300')),),
+                             daemon=True).start()
+        print('[ProxyPool] 节点加载完成 enabled=%s mode=%s 节点数=%d'
+              % (_ProxyCfg.ENABLED, _ProxyCfg.MODE, len(_proxy_mgr.nodes)))
+    except Exception as _le:
+        print('[ProxyPool] 节点加载失败（不影响系统运行）:', _le)
+
+@app.route('/api/proxy/status')
+def proxy_status_api():
+    if not PROXY_POOL_AVAILABLE:
+        return jsonify({'success': False, 'error': 'proxy_pool_unavailable'})
+    return jsonify({'success': True, 'status': _proxy_mgr.status()})
+
+@app.route('/api/proxy/check', methods=['POST'])
+def proxy_check_api():
+    if not PROXY_POOL_AVAILABLE:
+        return jsonify({'success': False, 'error': 'proxy_pool_unavailable'})
+    try:
+        return jsonify({'success': True, 'results': _proxy_mgr.check_all()})
+    except Exception as ex:
+        return jsonify({'success': False, 'error': str(ex)})
 
 def _auth_enabled():
     return bool(AUTH_USER and AUTH_PASSWORD)

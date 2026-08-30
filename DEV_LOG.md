@@ -134,3 +134,38 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 
 ### 说明
 - 版本中心后端（git_manager：安全闸/保存/推送/检查/拉取/回滚/自动守护）此前已就位，本次完成「统一控制台入口 + 真机/接口联调」；配合每日 08/18/24 定时同步与自动巡检，形成 开发→自动成版本→推送 GitHub→可回滚 的闭环。
+
+
+---
+
+## 2026-08-30 15:21 · v5.8.5 上线冲刺 9（ProxyPool 代理池接入 + 两份补丁审计对齐 + 空正文补抓）
+
+### 一、ProxyPool 可插拔代理池（用户补丁《可插拔 ProxyPool 补丁1.0》落地）
+- 现状审计：proxy_pool/ 模块（config/models/health/manager/adapters/loader/__init__/README）与 config/proxy_nodes.example.json 此前已建好且实现严谨，但**未接入 Flask**（无加载、无路由）。本次补齐最后一公里，不重写已稳定模块。
+- app.py 最小侵入接入（全部 try 包裹，失败不影响启动）：
+  1. 可选导入 proxy_manager/load_proxy_nodes/ProxyConfig；
+  2. 启动时 load_proxy_nodes()：从 .env 的 PROXY_HTTP/PROXY_SOCKS 及历史 GOOGLE_PROXY/OPENAI_PROXY 自动识别本机付费代理为 local-primary，另加载人工审核的 config/proxy_nodes.json（缺文件正常启动）；
+  3. 独立守护线程做节点健康巡检（与核心采集 scheduler_loop 解耦）；
+  4. 新增 GET /api/proxy/status、POST /api/proxy/check（走现有 HTTP Basic，URL 脱敏，不覆盖任何现有路由）。
+- 安全边界：总开关 PROXY_POOL_ENABLED 默认 false（关闭时 get_requests_proxies 恒 None，系统等同直连原版）；代理失败→节点冷却→切换→按平台策略决定是否直连，强制出海平台 allow_direct=False 时无节点即抛 ProxyUnavailable，绝不把登录态流量裸奔到直连；不自动抓取任何免费节点；敏感只从 env/本地 json，config/proxy_nodes.json 已在 .gitignore。
+
+### 二、真实测试结果（非静态）
+- tests/test_proxy_pool.py：11 项单测全过（默认关闭等同直连、冷却跳过选路、平台匹配、强制出海不裸奔、失败回退直连并标记冷却、状态脱敏、loader 缺文件容错、无自动抓取结构断言）。
+- 付费代理真实健康检查：经 127.0.0.1:10808（本地 Xray→付费节点）连 gstatic generate_204 成功，延迟约 1219–1241ms。
+- 接口实测（带 Basic）：GET status=200（enabled=false/mode=direct/1 节点 local-primary）；POST check=200（local-primary ok=True）。
+- py_compile：proxy_pool 全部 + app.py 通过。
+
+### 三、《交叉认证+风险闸门+采集安全控制》补丁审计对齐（不硬造半成品）
+- 已覆盖：补丁「采集风险五档 NORMAL/WATCH/THROTTLED/COOLDOWN/CIRCUIT_OPEN、状态机、熔断器、受控恢复」已由现有 collector_guard（state/guard/rate_limiter）+ risk_engine 五档评分 + auth_recovery 落地，语义一一对应且状态划分更细（区分 AUTH_REQUIRED/NEED_VERIFY/NETWORK_ERROR，见冲刺6 classify_collect_state）；坚持「停止任务而非绕过平台安全机制」。
+- 列入分期（本次不硬造）：brand_core 多品牌工作区、ai_gateway 多 Provider（Dots/OpenRouter）、ai_validation 交叉认证/证据引擎/置信度、security 的 ai_data_gate/secret_scanner —— 属 Z-Brand Monitoring Platform 母平台长期底座；当前正式 AI 架构 Ollama-only、云端默认关闭、AI 仅增强层，故这些模块按 BLUEPRINT 分期预留，不在上线冲刺里写无真实调用方的空壳。
+
+### 四、历史空正文补抓（真人通道、慢速受控）
+- 通过 9222 已登录真人浏览器，分 3 批、每条间隔 7–9s、遇验证即停，共补 17 条真实笔记正文（空正文 195→178），零拦截；唯一 1 条失败为无 xsec_token 的 explore 链接（结构性 404，非风控）。
+- 管线 tests/backfill_detail_cdp.py 验证有效（#detail-desc 等选择器仍可取出正文），天然断点续跑；剩余空正文后续每天小批量慢速补，避免与整点自动采集争抢 9222。
+
+### 数据库
+- 仅补写 17 条 notes.content 与 detail_fetched_at（数据补齐），无表结构变更、无迁移。
+
+### 未实测/遗留
+- ProxyPool 当前保持默认关闭，未把现有小红书/Google 采集器统一切到 safe_request（渐进接入，避免动稳定采集链；Google/IG 现有代理读取仍正常）。
+- 交叉认证/多 Provider 母平台模块未开发（分期，见上）。
