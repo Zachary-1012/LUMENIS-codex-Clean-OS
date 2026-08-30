@@ -132,6 +132,173 @@ def brand_knowledge_search():
         return jsonify({'ok': True, 'results': results, 'count': len(results)})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+# V3.0 传播主体分类器API
+@app.route('/api/subject-classifier/classify', methods=['POST'])
+def subject_classify():
+    """传播主体分类"""
+    try:
+        from subject_classifier import get_subject_classifier
+        clf = get_subject_classifier()
+        data = request.get_json() or {}
+        result = clf.classify(
+            author_name=data.get('author_name', ''),
+            author_desc=data.get('author_desc', ''),
+            followers=int(data.get('followers', 0)),
+            is_verified=bool(data.get('is_verified', False)),
+            verified_type=data.get('verified_type', ''),
+            content_pattern=data.get('content_pattern', ''),
+        )
+        return jsonify({'ok': True, 'result': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/subject-classifier/types')
+def subject_types():
+    """获取所有主体类型"""
+    try:
+        from subject_classifier import SubjectClassifier
+        return jsonify({
+            'ok': True,
+            'subject_types': SubjectClassifier.get_all_subject_types(),
+            'content_types': SubjectClassifier.get_all_content_types(),
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# V3.0 事件关系图谱API
+@app.route('/api/event-graph/stats')
+def event_graph_stats():
+    """事件图谱统计"""
+    try:
+        from event_graph import get_event_graph
+        graph = get_event_graph()
+        return jsonify({'ok': True, 'data': graph.get_stats()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/event-graph/events')
+def event_graph_events():
+    """获取所有事件"""
+    try:
+        from event_graph import get_event_graph
+        graph = get_event_graph()
+        event_type = request.args.get('type', '')
+        if event_type:
+            events = graph.get_events_by_type(event_type)
+        else:
+            events = list(graph.events.values())
+        return jsonify({'ok': True, 'events': [e.to_dict() for e in events], 'count': len(events)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/event-graph/chain/<event_id>')
+def event_graph_chain(event_id):
+    """获取事件链"""
+    try:
+        from event_graph import get_event_graph
+        graph = get_event_graph()
+        max_depth = int(request.args.get('max_depth', 5))
+        chain = graph.get_event_chain(event_id, max_depth)
+        return jsonify({'ok': True, 'chain': [e.to_dict() for e in chain], 'count': len(chain)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/event-graph/types')
+def event_graph_types():
+    """获取所有事件类型和关系类型"""
+    try:
+        from event_graph import EventGraph
+        return jsonify({
+            'ok': True,
+            'event_types': EventGraph.get_all_event_types(),
+            'relation_types': EventGraph.get_all_relation_types(),
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# V3.0 品牌分析报告API
+@app.route('/api/brand-report/generate', methods=['POST'])
+def brand_report_generate():
+    """生成品牌分析报告"""
+    try:
+        from brand_report_generator import BrandReportGenerator
+        data = request.get_json() or {}
+        generator = BrandReportGenerator(
+            brand_name=data.get('brand_name', 'Z-Brand'),
+            report_period=data.get('report_period', ''),
+        )
+        # 设置各部分数据
+        if 'executive_summary' in data:
+            es = data['executive_summary']
+            generator.set_executive_summary(
+                core_findings=es.get('core_findings', []),
+                key_metrics=es.get('key_metrics', {}),
+                action_items=es.get('action_items', []),
+            )
+        if 'communication_analysis' in data:
+            ca = data['communication_analysis']
+            generator.set_communication_analysis(
+                subject_distribution=ca.get('subject_distribution', {}),
+                channel_analysis=ca.get('channel_analysis', {}),
+                effect_evaluation=ca.get('effect_evaluation', {}),
+                content_type_distribution=ca.get('content_type_distribution', {}),
+            )
+        if 'market_intelligence' in data:
+            mi = data['market_intelligence']
+            generator.set_market_intelligence(
+                competitor_updates=mi.get('competitor_updates', []),
+                industry_trends=mi.get('industry_trends', []),
+                opportunities=mi.get('opportunities', []),
+                threats=mi.get('threats', []),
+            )
+        if 'public_opinion_analysis' in data:
+            po = data['public_opinion_analysis']
+            generator.set_public_opinion_analysis(
+                sentiment_distribution=po.get('sentiment_distribution', {}),
+                hot_topics=po.get('hot_topics', []),
+                key_influencers=po.get('key_influencers', []),
+                risk_warnings=po.get('risk_warnings', []),
+            )
+        if 'event_graph_analysis' in data:
+            eg = data['event_graph_analysis']
+            generator.set_event_graph_analysis(
+                marketing_events=eg.get('marketing_events', []),
+                propagation_events=eg.get('propagation_events', []),
+                opinion_events=eg.get('opinion_events', []),
+                event_chains=eg.get('event_chains', []),
+            )
+        if 'recommendations' in data:
+            rec = data['recommendations']
+            generator.set_recommendations(
+                short_term=rec.get('short_term', []),
+                medium_term=rec.get('medium_term', []),
+                long_term=rec.get('long_term', []),
+            )
+        report = generator.generate_report()
+        return jsonify({'ok': True, 'report': report, 'report_id': report['report_id']})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/brand-report/export/<report_id>')
+def brand_report_export(report_id):
+    """导出品牌分析报告（JSON/Markdown）"""
+    try:
+        from brand_report_generator import BrandReportGenerator
+        format_type = request.args.get('format', 'json')
+        # 这里简化处理，实际应从存储中读取报告
+        generator = BrandReportGenerator()
+        if format_type == 'markdown':
+            filepath = f'data/brand_report_{report_id}.md'
+            generator.export_markdown(filepath)
+            return jsonify({'ok': True, 'format': 'markdown', 'filepath': filepath})
+        else:
+            filepath = f'data/brand_report_{report_id}.json'
+            generator.export_json(filepath)
+            return jsonify({'ok': True, 'format': 'json', 'filepath': filepath})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 APP_VERSION='5.9.0'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
