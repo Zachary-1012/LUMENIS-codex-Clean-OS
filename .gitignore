@@ -111,6 +111,9 @@ tests/_*.py
 tests/_*.txt
 tests/_*.png
 tests/_*.log
+tests/_*.js
+tests/_*.json
+tests/_*.csv
 *.bak
 *.tmp
 

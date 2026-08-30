@@ -45,7 +45,8 @@ _FORBIDDEN_STAGED = re.compile(
     r"|(^|/)\.venv(/|$)|(^|/)node_modules(/|$)|(^|/)\.ollama(/|$)"
     r"|\.?(pem|key|p12|pfx)$"
     r"|secret|credential"
-    r"|__pycache__|\.(pyc|log|tmp|bak)$",
+    r"|__pycache__|\.(pyc|log|tmp|bak)$"
+    r"|(^|/)tests/_[^/]*$",  # tests 下划线临时诊断/产物一律不入库（正式 test_* 保留）
     re.IGNORECASE,
 )
 # 视为“源码/配置”、纳入自动版本的扩展名（白名单，自动提交只收这些，进一步收窄风险）
