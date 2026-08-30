@@ -67,7 +67,7 @@ DCC 负责研发审计、任务合同、测试、证据和受控升级；不得�
 
 ### 5.1 当前事实
 
-截至 2026-08-31，小红书官方开放平台公开文档显示首期开放范围仅有 `basic_info`；`read_notes` 等能力仍处于规划状态。官方 API 参考当前主要覆盖授权、Token 和用户基本信息接口，并明确开放接口按 `接口 + app_id` 维度限流。cite source external research; do not copy citation into repo
+截至 2026-08-31，小红书官方开放平台公开文档显示首期开放范围仅有 `basic_info`；`read_notes` 等能力仍处于规划状态。官方 API 参考当前主要覆盖授权、Token 和用户基本信息接口，并明确开放接口按 `接口 + app_id` 维度限流。
 
 因此：**当前不得把“小红书 App 话题指标 API”当作官方可用生产接口。**
 
