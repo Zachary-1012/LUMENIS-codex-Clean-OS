@@ -36,9 +36,9 @@ HEALTH_CHECK_URL = 'http://127.0.0.1:8200/api/dashboard/all'
 SYSTEM_STARTUP_SCRIPT = 'app.py'
 SYSTEM_HOST = '0.0.0.0'
 SYSTEM_PORT = '8200'
-# HTTP认证信息
-AUTH_USERNAME = 'Zachary'
-AUTH_PASSWORD = 'ID082610'
+# HTTP 认证信息：统一从环境变量读取，禁止在源码硬编码凭证（与 app.py 的 TAIKOO_AUTH_* 一致）
+AUTH_USERNAME = os.getenv('TAIKOO_AUTH_USER', '')
+AUTH_PASSWORD = os.getenv('TAIKOO_AUTH_PASSWORD', '')
 
 class SystemWatchdog:
     """系统看门狗"""
@@ -56,12 +56,12 @@ class SystemWatchdog:
             import urllib.request
             import base64
             
-            # 创建带认证的请求
+            # 创建请求；仅在配置了凭证时才带 Basic 认证头（未配置则匿名，适配本机免认证场景）
             request = urllib.request.Request(HEALTH_CHECK_URL)
-            auth_string = f"{AUTH_USERNAME}:{AUTH_PASSWORD}"
-            auth_bytes = auth_string.encode('ascii')
-            base64_auth = base64.b64encode(auth_bytes).decode('ascii')
-            request.add_header('Authorization', f'Basic {base64_auth}')
+            if AUTH_USERNAME and AUTH_PASSWORD:
+                auth_string = f"{AUTH_USERNAME}:{AUTH_PASSWORD}"
+                base64_auth = base64.b64encode(auth_string.encode('ascii')).decode('ascii')
+                request.add_header('Authorization', f'Basic {base64_auth}')
             
             response = urllib.request.urlopen(request, timeout=10)
             if response.status == 200:

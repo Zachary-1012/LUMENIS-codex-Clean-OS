@@ -1,5 +1,19 @@
 # 变更日志
 
+## [5.8.8] - 2026-08-30（Release Gate V1.0 基线门禁 + 统一认证 Contract + 安全整改，旁路不重构）
+### 安全整改
+- 移除 `system_watchdog.py` 源码内硬编码凭证，改读 `TAIKOO_AUTH_USER/TAIKOO_AUTH_PASSWORD` 环境变量（与 app.py 一致），仅在配置时发送 Basic 头。
+- 新增 `tests/test_security_scan.py`：断言被跟踪源码无真实 Cookie/Session 票据、`.env`/生产库/私有状态目录被忽略、无硬编码密码（ALL_PASS 已实测）。
+### 认证统一（安全不降）
+- `app.py::_basic_auth` 在保留 HTTP Basic 的同时认可 v4 有效会话（Bearer/同名 session cookie），修复手机端仅登录 v4 时根级健康 API 401、全局健康小点无法取数的问题；匿名/无效会话仍返回 401。
+### 测试 / 门禁
+- 主体红线断言 12 → 24 项（外地太古汇排除、品牌词单独不命中、五字段命中、跨字段一票否决），`tests/test_subject_redline.py` 24/24 通过。
+- 新增 `tests/test_api_smoke.py`（10 端点 200 + 匿名 401，测试会话自清理）；核心回归 `run_core_regression.py` 11/11 通过；四页面真实浏览器 E2E 无第一方 JS 错误。
+### 文档 / 能力归类
+- 新增 `docs/CAPABILITY_BASELINE.md`：Production/Compatibility/Shadow/Experimental/Rollback/Deprecated 六级能力分类，明确四代采集器、两套 Registry、多代 AI 的归属与唯一事实源，不做物理大合并。
+### 公网边界
+- 本地 Release Gate 全绿；未擅自建立公网隧道，公网 HTTPS healthz 为唯一待用户授权项（如实标注未实测）。
+
 ## [5.8.7] - 2026-08-30（22:00 豆包施工基线：公网平台化 + Ollama + 双产品适配）
 ### 新增：正式施工入口
 - 新增 `docs/DOUBAO_2200_EXECUTION.md`，作为 22:00 豆包本地执行的正式施工指令。

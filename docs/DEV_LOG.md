@@ -4,6 +4,29 @@
 
 ## 2026-08-30
 
+### Release Gate V1.0 baseline audit (sidecar, no production rewrite)
+- Ran the 22-step release gate from the global code-level baseline V1.0 against real main source / DB / runtime, read-only first. No production chain replaced; `collector.py`, both existing registries and subject red-lines preserved.
+- Entry audit: single `app.py` Flask app (13 blueprints / 303 routes); production WSGI chain = `scripts/start_production.ps1` -> `run_supervised.py` -> `run_production.py` (Waitress). Four collector generations classified; two registries intentionally kept; DCC has zero files (Experimental). Output: `docs/CAPABILITY_BASELINE.md`.
+- Subject red-line: `subject_rules.py` is the single authoritative adjudicator; `risk_engine.py` is a compatibility forwarder; the nested `subject_hit` in app.py worker calls rule `subject_hit` first (AI does not decide subject). Extended `tests/test_subject_redline.py` 12 -> 24 assertions. **24/24 PASS (tested).**
+- DB: copied `data/monitor.db` -> `data/backups/monitor-pre-baseline-20260830-215836.db` (quick_check ok, rollback-ready, gitignored). Live db quick_check ok, 45 tables, notes=905/events=413/collection_logs=353. No DROP/rebuild, no migration executed.
+- 20:05 auto-collection window (real DB, tested): 20 keywords ALL SUCCESS, 40 each, 800 raw, 0 BLOCKED; schedule_decisions xhs-auto result=SUCCESS items_found=179, dynamic interval 3600s, next 21:09; no circuit file. Proves cookie-sync + dynamic scheduling + subject filter end-to-end recovery.
+- Core regression `scripts/run_core_regression.py`: **11/11 PASS (tested)** after all edits.
+
+### Unified auth contract (minimal, security not weakened)
+- Gap found: root-level `/api/platform-health` & `/api/xhs/collect-health` were guarded only by HTTP Basic while `/v4/*` uses token sessions; a mobile v4-only session would get 401 and the global health dot could not load.
+- Fix in `app.py::_basic_auth`: Basic retained; additionally accept a valid v4 session (Bearer / same-name cookie); anonymous/invalid still 401. `tests/test_api_smoke.py`: 10 endpoints 200 with v4 session, anonymous still 401, healthz open. **ALL_PASS (tested).**
+
+### Security hardening
+- Removed hard-coded credential in `system_watchdog.py` (now reads TAIKOO_AUTH_* env, Basic header only when configured); compiles; repo-wide re-scan = 0 hard-coded password.
+- New `tests/test_security_scan.py`: no real cookie/session ticket in tracked source, `.env`/db/`data/private` ignored, zero high-severity source findings (excluding untracked IDE `.trae-cn` and scanner self-strings). **ALL_PASS (tested).**
+- Bulk scanner hits are false positives (IDE minified libs, JS `.exec(`, legitimate list-form Popen / sandboxed exec); no shell=True with user input. Old password remains in earlier git history (history NOT rewritten, rollback-safe); recommend out-of-band credential rotation.
+
+### Browser E2E / JS scan (tested)
+- Restarted 8201; console/collect/settings/version-center all show global health dot, `/api/platform-health` ok under v4 session, zero first-party JS console errors after filtering third-party/restart noise.
+
+### Public boundary
+- No cloudflared running; 8200/8201 listen on 0.0.0.0; tunnel NOT started without explicit sign-off. Local gate green; public HTTPS health check is the single user-authorized pending item (untested, not claimed done).
+
 ### Governance
 - Confirmed ChatGPT main development window as architecture/review/decision coordinator.
 - Confirmed other chat windows as auxiliary research windows whose useful conclusions must be consolidated here or in GitHub.
