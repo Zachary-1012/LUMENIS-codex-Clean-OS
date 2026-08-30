@@ -166,6 +166,16 @@ class ScheduleDecider:
             return "NETWORK"
         return "NORMAL"
 
+    def _deny(self, code: str, msg: str, now: datetime, trigger_source: str,
+              *, next_run_at: Optional[str] = None) -> ScheduleDecision:
+        st = self.state
+        return ScheduleDecision(
+            self.policy.platform, False, code, msg,
+            st.current_interval or self.policy.normal_interval,
+            next_run_at=next_run_at if code != "PLATFORM_DISABLED" else None,
+            cooldown_until=st.cooldown_until, verification_required=st.paused_for_human,
+            risk_status=st.risk_status, trigger_source=trigger_source)
+
     # ---------- 决策：现在能不能跑 ----------
     def decide(self, *, now: datetime, is_hotspot: bool = False,
                trigger_source: str = "scheduler") -> ScheduleDecision:
@@ -191,11 +201,16 @@ class ScheduleDecider:
                 st.current_interval or p.normal_interval, next_run_at=_iso(cdu),
                 cooldown_until=_iso(cdu), risk_status=st.risk_status, trigger_source=trigger_source)
 
-        # 目标间隔：热点可提频，但绝不低于平台硬上限 min_interval
+        # 目标间隔：热点可提频，但绝不低于平台硬上限 min_interval。
+        # 冷却/网络退避/恢复试探属于“安全等待后的健康检查”，不是提高采集频率，
+        # 其自身间隔予以保留（仅做最大上限保护），不被 min_interval 额外抬高。
         target = st.current_interval or p.normal_interval
         if is_hotspot and p.hotspot_enabled:
             target = max(p.min_interval, min(target, p.hotspot_interval))
-        target = p.clamped_interval(target)
+        elif st.in_recovery:
+            target = int(min(p.max_interval, target))
+        else:
+            target = p.clamped_interval(target)
 
         if st.last_run_at is None:
             return ScheduleDecision(p.platform, True, "FIRST_RUN", "首次运行，允许采集",

@@ -103,7 +103,7 @@ app.register_blueprint(export_report.export_bp)
 app.register_blueprint(pr_case_integration.pr_case_bp)
 # 注册系统功能API蓝图
 app.register_blueprint(system_features_api.system_features_bp)
-APP_VERSION='5.8.5'
+APP_VERSION='5.8.6'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')
@@ -3524,11 +3524,27 @@ def _next_half_hour(now=None):
         candidate=now.replace(minute=0, second=0, microsecond=0)+timedelta(hours=1)
     return candidate
 
+# v5.8.6 统一动态调度（影子模式）：固定时钟恢复为“唤醒检查点”，动态决策器先只做对照记录、
+# 不门控生产；门控灰度经回归与确认后再切换。任何异常一律 fail-open，绝不阻断自动采集。
+_shadow_schedule_planner = None
+def _get_shadow_planner():
+    global _shadow_schedule_planner
+    if _shadow_schedule_planner is None:
+        try:
+            from platform_adapters.scheduling import PlatformSchedulePlanner, ScheduleDecisionStore
+            _root = os.path.dirname(os.path.abspath(__file__))
+            _store = ScheduleDecisionStore(os.path.join(_root, 'data', 'monitor.db'))
+            _shadow_schedule_planner = PlatformSchedulePlanner(
+                state_file=os.path.join(_root, 'data', 'schedule_state.json'), store=_store)
+        except Exception as e:
+            print(f'[ShadowPlanner] init fail (non-blocking): {e}')
+            _shadow_schedule_planner = False
+    return _shadow_schedule_planner or None
+
+
 def scheduler_loop():
-    """智能自动采集调度器：按固定时间点触发，每日9次自动 + 3次手动，冷却15分钟。
-    自动采集时间点：8:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00, 23:00
-    确保7*24h每天都有完整舆情日报。
-    """
+    """自动采集调度器：固定时间点作为唤醒检查点，叠加账号频率保护；
+    v5.8.6 起由统一动态决策器做影子对照(动态间隔/状态驱动/next_run_at)，门控后续灰度。"""
     auto_collect_hours = [8, 10, 12, 14, 16, 18, 20, 22, 23]
     today_auto_hours = set()  # 今天已执行的自动采集小时
     last_report_date = ''
@@ -3553,7 +3569,16 @@ def scheduler_loop():
             
             # 检查是否到达自动采集时间点（错峰：整点后5-10分钟触发，避免与报告生成冲突）
             if now.hour in auto_collect_hours and now.hour not in today_auto_hours and 5 <= now.minute < 10:
-                # 检查频率限制
+                _sp = None
+                # v5.8.6 影子：记录动态决策器对“此刻是否该采”的独立判断（仅对照，不门控）
+                try:
+                    _sp = _get_shadow_planner()
+                    if _sp is not None:
+                        _sd = _sp.decide('xhs', now=now, trigger_source='shadow-auto', persist=True)
+                        print(f'[ShadowPlanner] xhs allow={_sd.allow} code={_sd.reason_code} next={_sd.next_run_at}')
+                except Exception as _e:
+                    print(f'[ShadowPlanner] eval non-blocking: {_e}')
+                # 账号频率保护（生产既有逻辑，保留）
                 rate_ok, rate_msg = xhs_cookie_bridge.check_rate_limit('auto')
                 if rate_ok:
                     try:
@@ -3565,6 +3590,13 @@ def scheduler_loop():
                         )
                         today_auto_hours.add(now.hour)
                         print(f'[Scheduler] 自动采集触发 {now.hour}:05（错峰），任务ID: {task_id}')
+                        # 影子回写一次健康触发以推进动态间隔（真实条目数在任务完成链路回写，后续灰度）
+                        try:
+                            if _sp is not None:
+                                _sp.record_result('xhs', 'SUCCESS', now=now, items_found=1,
+                                                  trigger_source='shadow-auto')
+                        except Exception:
+                            pass
                     except Exception as e:
                         print(f'[Scheduler] 自动采集创建任务失败: {e}')
                 else:
@@ -3627,11 +3659,10 @@ if __name__=='__main__':
     parser.add_argument('--no-scheduler',action='store_true',help='仅启动 Web，不启动自动采集调度器')
     args=parser.parse_args()
     if not args.no_scheduler:
-        # 暂时禁用调度器，排查崩溃问题
-        # threading.Thread(target=scheduler_loop,daemon=True,name='scheduler').start()
-        # v5.7.0 周报定时任务（每周一9:10生成，9:15发送邮件 - 错峰执行）
+        # v5.8.6 恢复主采集调度器：固定时钟唤醒 + 动态决策影子对照（周报线程另行评估后启用）
+        threading.Thread(target=scheduler_loop, daemon=True, name='scheduler').start()
         # threading.Thread(target=_weekly_scheduler,daemon=True,name='weekly_scheduler').start()
-        print('[Scheduler] 调度器已暂时禁用（排查崩溃问题）')
+        print('[Scheduler] 主采集调度器已启用（唤醒点+动态影子对照）')
     
     # 启动内存监控（防止OOM崩溃）——崩溃根因(重复endpoint)已修复，重新启用
     try:

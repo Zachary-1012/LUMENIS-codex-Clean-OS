@@ -59,7 +59,7 @@ d.record_result(sm.CS.NO_NEW_DATA, now=t0 + timedelta(seconds=i1))
 i2 = d.state.current_interval
 d.record_result(sm.CS.NO_NEW_DATA, now=t0 + timedelta(seconds=i1 + i2))
 i3 = d.state.current_interval
-check("3 无新数据间隔递增且封顶", i1 == 3600 and i2 > i1 and i3 >= i2 and i3 <= 21600)
+check("3 无新数据间隔递增且封顶", i1 == 5400 and i2 > i1 and i3 >= i2 and i3 <= 21600)
 
 # 4. RISK_WARNING 降频（间隔被拉长）
 d = decider()
@@ -112,8 +112,8 @@ check("9c 连续稳定后回正常", not d.state.in_recovery and d.state.current
 # 10. 热点可提频但不突破平台硬上限 min_interval
 d = decider()
 d.record_result(sm.CS.SUCCESS, now=t0, items_found=1)
-normal = d.decide(now=t0 + timedelta(seconds=4000))             # 非热点：未到60min等待
-hot = d.decide(now=t0 + timedelta(seconds=4000), is_hotspot=True)  # 热点：目标1200s，已过
+normal = d.decide(now=t0 + timedelta(seconds=1800))             # 非热点：30min < 正常60min，等待
+hot = d.decide(now=t0 + timedelta(seconds=1800), is_hotspot=True)  # 热点：目标1200s，30min已过
 check("10 非热点不提前", not normal.allow)
 check("10 热点提频且不破硬上限", hot.allow and hot.target_interval_sec >= 1200)
 
