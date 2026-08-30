@@ -184,7 +184,7 @@ class CaseDeepAnalysis:
             return self._row_to_dict(row)
 
     def list_cases(self, case_type: str = '', brand: str = '', industry: str = '',
-                    min_quality: float = 0, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+                    min_quality: float = 0, min_quality_score: float = 0, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
         """获取案例列表（支持筛选）"""
         query = 'SELECT * FROM case_deep_analysis WHERE 1=1'
         params = []
@@ -197,9 +197,10 @@ class CaseDeepAnalysis:
         if industry:
             query += ' AND industry LIKE ?'
             params.append(f'%{industry}%')
-        if min_quality > 0:
+        _mq = min_quality_score if min_quality_score > 0 else min_quality
+        if _mq > 0:
             query += ' AND quality_score >= ?'
-            params.append(min_quality)
+            params.append(_mq)
         query += ' ORDER BY quality_score DESC, created_at DESC LIMIT ? OFFSET ?'
         params.extend([limit, offset])
 
@@ -237,6 +238,52 @@ class CaseDeepAnalysis:
                 except Exception:
                     pass
         return data
+
+    def search_cases(self, keyword: str) -> List[Dict[str, Any]]:
+        """搜索案例（在标题、品牌、行业、创意、挑战、策略中搜索）"""
+        keyword = keyword.lower()
+        all_cases = self.list_cases(limit=1000)
+        results = []
+        for case in all_cases:
+            search_text = ' '.join([
+                str(case.get('case_title', '')),
+                str(case.get('brand', '')),
+                str(case.get('industry', '')),
+                str(case.get('big_idea', '')),
+                str(case.get('challenge', '')),
+                str(case.get('strategy', '')),
+            ]).lower()
+            if keyword in search_text:
+                results.append(case)
+        return results
+
+    def get_all_methodologies(self) -> List[Dict[str, Any]]:
+        """获取所有案例中的可复用方法论"""
+        all_cases = self.list_cases(limit=1000)
+        methodologies = []
+        for case in all_cases:
+            for m in case.get('methodology', []):
+                methodologies.append({
+                    'case_id': case.get('case_id'),
+                    'case_title': case.get('case_title'),
+                    'brand': case.get('brand'),
+                    'methodology': m,
+                })
+        return methodologies
+
+    def get_all_system_insights(self) -> List[Dict[str, Any]]:
+        """获取所有案例中对Z-Brand系统的启示"""
+        all_cases = self.list_cases(limit=1000)
+        insights = []
+        for case in all_cases:
+            for i in case.get('system_insights', []):
+                insights.append({
+                    'case_id': case.get('case_id'),
+                    'case_title': case.get('case_title'),
+                    'brand': case.get('brand'),
+                    'insight': i,
+                })
+        return insights
 
     def export_to_json(self, filepath: str) -> bool:
         """导出全部案例为JSON"""

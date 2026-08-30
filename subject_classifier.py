@@ -91,56 +91,55 @@ class SubjectClassifier:
                  followers: int = 0, is_verified: bool = False,
                  verified_type: str = '', content_pattern: str = '') -> Dict[str, Any]:
         """
-        分类传播主体类型
+        分类传播主体类型（V2：多类型匹配+冲突解决）
 
-        参数：
-            author_name: 作者名称
-            author_desc: 作者简介/描述
-            followers: 粉丝数
-            is_verified: 是否认证
-            verified_type: 认证类型（企业/个人/媒体等）
-            content_pattern: 内容模式（销售导向/内容创作/日常分享等）
-
-        返回：
-            {
-                'subject_type': 'kol',  # 主体类型
-                'subject_type_name': 'KOL',  # 主体类型中文名
-                'confidence': 0.8,  # 置信度
-                'reasons': ['粉丝数>10万', '内容创作导向'],  # 判断依据
-                'content_type_hint': 'ugc',  # 内容类型建议（仅供参考，最终由content分类器决定）
-            }
+        核心改进：
+        - 先收集所有匹配的类型，再按优先级解决冲突
+        - 媒体+官方同时匹配时，判定为媒体（如"羊城晚报官方账号"）
+        - 机构+官方同时匹配时，判定为机构
+        - 传统媒体关键词（日报/晚报/电视台）置信度更高
         """
         reasons = []
-        confidence = 0.3  # 默认置信度
+        confidence = 0.3
 
-        # 合并文本用于关键词匹配
         full_text = f'{author_name} {author_desc} {verified_type}'.lower()
 
-        # 1. 官方账号判断
-        if self._match_official(full_text, verified_type):
-            reasons.append('名称/认证包含官方关键词')
-            confidence = max(confidence, 0.9)
-            return self._result('official', confidence, reasons, 'official')
+        # V2: 多类型匹配
+        matches = {}
 
-        # 2. 媒体账号判断
-        if self._match_media(full_text, verified_type):
-            reasons.append('名称/认证包含媒体关键词')
-            confidence = max(confidence, 0.85)
-            return self._result('media', confidence, reasons, 'ugc')
+        official_match = self._match_official_detailed(full_text, verified_type)
+        if official_match:
+            matches['official'] = official_match
 
-        # 3. 机构账号判断
-        if self._match_institution(full_text, verified_type):
-            reasons.append('名称/认证包含机构关键词')
-            confidence = max(confidence, 0.85)
-            return self._result('institution', confidence, reasons, 'official')
+        media_match = self._match_media_detailed(full_text, verified_type)
+        if media_match:
+            matches['media'] = media_match
 
-        # 4. KOS判断（销售导向）
-        if self._match_kos(full_text, content_pattern):
-            reasons.append('名称/内容包含销售/导购特征')
-            confidence = max(confidence, 0.75)
-            return self._result('kos', confidence, reasons, 'commercial')
+        institution_match = self._match_institution_detailed(full_text, verified_type)
+        if institution_match:
+            matches['institution'] = institution_match
 
-        # 5. KOL/KOC/普通用户判断（基于粉丝数）
+        kos_match = self._match_kos_detailed(full_text, content_pattern)
+        if kos_match:
+            matches['kos'] = kos_match
+
+        # 冲突解决
+        if matches:
+            resolved = self._resolve_conflicts(matches, full_text)
+            subject_type = resolved['type']
+            confidence = max(confidence, resolved['confidence'])
+            reasons.extend(resolved['reasons'])
+
+            content_hint_map = {
+                'official': 'official',
+                'media': 'ugc',
+                'institution': 'official',
+                'kos': 'commercial',
+            }
+            return self._result(subject_type, confidence, reasons,
+                                content_hint_map.get(subject_type, 'ugc'))
+
+        # KOL/KOC/普通用户判断（基于粉丝数）
         if followers > 0:
             if followers >= 100000:
                 reasons.append(f'粉丝数{followers}>10万')
@@ -159,9 +158,144 @@ class SubjectClassifier:
                 confidence = max(confidence, 0.6)
                 return self._result('normal_user', confidence, reasons, 'ugc')
 
-        # 6. 默认普通用户
+        # 默认普通用户
         reasons.append('无明显主体特征，默认普通用户')
         return self._result('normal_user', confidence, reasons, 'ugc')
+
+    def _resolve_conflicts(self, matches: dict, full_text: str) -> dict:
+        """冲突解决：当多个类型同时匹配时，按优先级规则解决"""
+        types = list(matches.keys())
+
+        # 规则1：媒体 + 官方 → 媒体（如"羊城晚报官方账号"）
+        if 'media' in matches and 'official' in matches:
+            media_kw = matches['media']['matched_keywords']
+            official_kw = matches['official']['matched_keywords']
+            return {
+                'type': 'media',
+                'confidence': 0.9,
+                'reasons': [
+                    f'同时匹配媒体关键词{media_kw}和官方关键词{official_kw}',
+                    '冲突解决：媒体+官方组合判定为媒体（"XX晚报官方账号"是媒体账号）',
+                    f'媒体关键词更具体（{media_kw}），"官方"为通用后缀不改变媒体属性',
+                ],
+            }
+
+        # 规则2：机构 + 官方 → 机构
+        if 'institution' in matches and 'official' in matches:
+            return {
+                'type': 'institution',
+                'confidence': 0.85,
+                'reasons': [
+                    '同时匹配机构关键词和官方关键词',
+                    '冲突解决：机构+官方组合判定为机构（如"XX协会官方"是机构账号）',
+                ],
+            }
+
+        # 规则3：媒体 + 机构 → 媒体
+        if 'media' in matches and 'institution' in matches:
+            return {
+                'type': 'media',
+                'confidence': 0.85,
+                'reasons': [
+                    '同时匹配媒体关键词和机构关键词',
+                    '冲突解决：媒体+机构组合判定为媒体（媒体属性更明确）',
+                ],
+            }
+
+        # 规则4：KOS + 官方 → KOS
+        if 'kos' in matches and 'official' in matches:
+            return {
+                'type': 'kos',
+                'confidence': 0.8,
+                'reasons': [
+                    '同时匹配KOS关键词和官方关键词',
+                    '冲突解决：KOS+官方组合判定为KOS（导购/销售账号本质是KOS）',
+                ],
+            }
+
+        # 规则5：单一匹配
+        if len(types) == 1:
+            t = types[0]
+            return {
+                'type': t,
+                'confidence': matches[t]['confidence'],
+                'reasons': [f'匹配{t}关键词：{matches[t]["matched_keywords"]}'],
+            }
+
+        # 规则6：其他多匹配情况，按置信度最高
+        best_type = max(matches.keys(), key=lambda k: matches[k]['confidence'])
+        return {
+            'type': best_type,
+            'confidence': matches[best_type]['confidence'],
+            'reasons': [
+                f'多类型匹配：{list(matches.keys())}',
+                f'按置信度最高选择：{best_type}',
+            ],
+        }
+
+    def _match_official_detailed(self, text: str, verified_type: str):
+        """详细匹配官方账号"""
+        matched = []
+        for kw in self.official_keywords:
+            if kw.lower() in text:
+                matched.append(kw)
+        if '企业' in verified_type or '机构' in verified_type:
+            matched.append(f'认证类型:{verified_type}')
+        if matched:
+            return {'matched_keywords': matched, 'confidence': 0.9}
+        return None
+
+    def _match_media_detailed(self, text: str, verified_type: str):
+        """详细匹配媒体账号"""
+        matched = []
+        for kw in self.media_keywords:
+            if kw.lower() in text:
+                matched.append(kw)
+        if '媒体' in verified_type or '新闻' in verified_type:
+            matched.append(f'认证类型:{verified_type}')
+        if matched:
+            strong_media = ['日报', '晚报', '电视台', '广播', '周刊', '杂志', '新闻']
+            has_strong = any(kw in matched for kw in strong_media)
+            conf = 0.9 if has_strong else 0.8
+            return {'matched_keywords': matched, 'confidence': conf}
+        return None
+
+    def _match_institution_detailed(self, text: str, verified_type: str):
+        """详细匹配机构账号"""
+        matched = []
+        for kw in self.institution_keywords:
+            if kw.lower() in text:
+                matched.append(kw)
+        if matched:
+            return {'matched_keywords': matched, 'confidence': 0.85}
+        return None
+
+    def _match_kos_detailed(self, text: str, content_pattern: str):
+        """详细匹配KOS账号"""
+        matched = []
+        for kw in self.kos_keywords:
+            if kw.lower() in text:
+                matched.append(kw)
+        if '销售' in content_pattern or '导购' in content_pattern or '转化' in content_pattern:
+            matched.append(f'内容模式:{content_pattern}')
+        if matched:
+            return {'matched_keywords': matched, 'confidence': 0.75}
+        return None
+
+    # 保留旧接口兼容
+    def _match_official(self, text: str, verified_type: str) -> bool:
+        return self._match_official_detailed(text, verified_type) is not None
+
+    def _match_media(self, text: str, verified_type: str) -> bool:
+        return self._match_media_detailed(text, verified_type) is not None
+
+    def _match_institution(self, text: str, verified_type: str) -> bool:
+        return self._match_institution_detailed(text, verified_type) is not None
+
+    def _match_kos(self, text: str, content_pattern: str) -> bool:
+        return self._match_kos_detailed(text, content_pattern) is not None
+
+
 
     def _match_official(self, text: str, verified_type: str) -> bool:
         """匹配官方账号"""
