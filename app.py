@@ -157,10 +157,10 @@ def case_analysis_list():
         limit = int(request.args.get('limit', 50))
         offset = int(request.args.get('offset', 0))
         results = analysis.list_cases(
-            case_type=case_type or None,
-            industry=industry or None,
-            brand=brand or None,
-            min_quality_score=float(min_quality) if min_quality else None,
+            case_type=case_type or '',
+            industry=industry or '',
+            brand=brand or '',
+            min_quality_score=float(min_quality) if min_quality else 0,
             limit=limit,
             offset=offset,
         )
@@ -386,7 +386,7 @@ def brand_report_export(report_id):
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-APP_VERSION='5.9.0'
+APP_VERSION='5.9.6'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')

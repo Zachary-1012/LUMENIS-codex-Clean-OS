@@ -654,6 +654,13 @@ navigateTo = function(pageId){
       if(d.trend_data) renderDynamicTrendChart('trendChart', d.trend_data);
     }).catch(()=>{});
   }
+  if(pageId==='case-analysis' && window.CaseDeepAnalysis){
+    if(!CaseDeepAnalysis.state.stats){
+      CaseDeepAnalysis.init();
+    }else{
+      CaseDeepAnalysis.loadCases();
+    }
+  }
 };
 
 /* ===== v5.4 官方动态模块 ===== */
