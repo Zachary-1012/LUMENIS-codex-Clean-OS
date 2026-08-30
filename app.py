@@ -3596,13 +3596,9 @@ def scheduler_loop():
                         )
                         today_auto_hours.add(now.hour)
                         print(f'[Scheduler] 自动采集触发 {now.hour}:05（错峰），任务ID: {task_id}')
-                        # 影子回写一次健康触发以推进动态间隔（真实条目数在任务完成链路回写，后续灰度）
-                        try:
-                            if _sp is not None:
-                                _sp.record_result('xhs', 'SUCCESS', now=now, items_found=1,
-                                                  trigger_source='shadow-auto')
-                        except Exception:
-                            pass
+                        # 不在触发瞬间乐观回写 SUCCESS：任务刚创建不代表成功。
+                        # 真实六态由任务完成时 xhs_cookie_bridge._shadow_record_result 回写，
+                        # 避免把“已创建任务”伪装成“采集成功/有数据”。
                     except Exception as e:
                         print(f'[Scheduler] 自动采集创建任务失败: {e}')
                 else:
