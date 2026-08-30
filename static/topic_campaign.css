@@ -342,3 +342,19 @@ body{
   .action{padding:7px 10px;font-size:11px}
 }
 
+
+
+/* v5.8.9 风控/Auth 熔断横幅 + need_verify/blocked 卡片态 */
+.circuit-banner{margin:10px 0;padding:12px 14px;border-radius:14px;font-size:13px;line-height:1.5}
+.circuit-banner.verify{background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.4)}
+.circuit-banner.blocked{background:rgba(255,69,58,.1);border:1px solid rgba(255,69,58,.38)}
+.cb-title{font-weight:700;margin-bottom:4px}
+.circuit-banner.verify .cb-title{color:#b25e00}
+.circuit-banner.blocked .cb-title{color:#c42b23}
+.cb-reason{color:#6b6b72;word-break:break-word}
+.cb-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.cb-btn{border:none;background:#0a84ff;color:#fff;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer}
+.cb-btn:disabled{opacity:.6}
+.cb-sub{color:#8e8e93;font-size:12px;flex:1;min-width:160px}
+.topic-warn{color:#b25e00;font-size:12px;margin:4px 0;word-break:break-word}
+.topic-card.warn{border-color:rgba(255,159,10,.45);background:rgba(255,159,10,.05)}

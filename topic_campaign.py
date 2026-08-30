@@ -41,6 +41,9 @@ CAMPAIGN_MAX_SCROLL = 6              # 每个话题最大滚动次数
 CAMPAIGN_TOPIC_GAP_MIN = 12          # 同一轮内相邻话题的拟人随机冷却下限（秒），避免短时密集搜索被软降频
 CAMPAIGN_TOPIC_GAP_MAX = 28          # 相邻话题冷却上限（秒）
 CAMPAIGN_TOPIC_GAP_CAP = 90          # 连续空结果退避时的间隔封顶（秒）
+CAMPAIGN_IP_RISK_COOLDOWN = 2700      # IP_RISK 熔断冷却（秒，45分钟）后自动半开；NEED_VERIFY 不自动恢复，须人工验证
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_CAMPAIGN_CIRCUIT = os.path.join(_BASE_DIR, 'data', 'private', 'topic_campaign_circuit.json')
 _today_campaign_runs = []            # 今日专题采集时间戳列表
 
 # ========== 线程安全 ==========
@@ -197,12 +200,101 @@ def _run_collector(topic):
         idx = out.find('{')
         data = json.loads(out[idx:]) if idx >= 0 else {}
         if p.returncode != 0:
-            data.update(ok=False, error=(p.stderr or out)[-1500:])
+            if data.get('risk_status'):
+                # node 风控退出码（3=NEED_VERIFY / 4=IP_RISK）：结构化状态已在 stdout，保留 risk_status，不用整段输出覆盖
+                data['ok'] = False
+                data.setdefault('topic', topic)
+            else:
+                data.update(ok=False, error=(p.stderr or out)[-1500:])
         return data
     except subprocess.TimeoutExpired:
         return {'ok': False, 'error': f'专题采集超时（{CAMPAIGN_COLLECT_TIMEOUT}秒）', 'topic': topic}
     except Exception as e:
         return {'ok': False, 'error': str(e), 'topic': topic}
+
+# ========== 专题级风控熔断（NEED_VERIFY 须人工恢复，IP_RISK 定时冷却；绝不把验证页伪装成 0 条） ==========
+def _trip_campaign_circuit(status, reason=''):
+    """命中安全验证/IP 风控时落熔断文件，停止后续危险请求。"""
+    try:
+        os.makedirs(os.path.dirname(_CAMPAIGN_CIRCUIT), exist_ok=True)
+        now = time.time()
+        cooldown = CAMPAIGN_IP_RISK_COOLDOWN if status == 'IP_RISK' else 0
+        obj = {
+            'status': status, 'reason': reason, 'platform': 'xiaohongshu',
+            'opened_at': _now(),
+            'resume_at': datetime.fromtimestamp(now + cooldown).strftime('%Y-%m-%d %H:%M:%S') if cooldown else None,
+        }
+        with io.open(_CAMPAIGN_CIRCUIT, 'w', encoding='utf-8') as f:
+            json.dump(obj, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def _campaign_circuit_state():
+    """仍生效返回熔断 dict；NEED_VERIFY 人工清除前一直阻断，IP_RISK 到 resume_at 后半开放行；无熔断返回 None。"""
+    try:
+        if not os.path.exists(_CAMPAIGN_CIRCUIT):
+            return None
+        with io.open(_CAMPAIGN_CIRCUIT, 'r', encoding='utf-8') as f:
+            obj = json.load(f)
+        if obj.get('status') == 'NEED_VERIFY':
+            return obj
+        ra = obj.get('resume_at')
+        if ra:
+            try:
+                if datetime.now() < datetime.strptime(ra, '%Y-%m-%d %H:%M:%S'):
+                    return obj
+            except Exception:
+                return obj
+        return None
+    except Exception:
+        return None
+
+def clear_campaign_circuit():
+    """人工完成验证/健康检查通过后调用，解除专题熔断。"""
+    try:
+        if os.path.exists(_CAMPAIGN_CIRCUIT):
+            os.remove(_CAMPAIGN_CIRCUIT)
+    except Exception:
+        pass
+
+def _probe_xhs_health_via_cdp():
+    """连 9222 已登录浏览器做一次轻量健康探活：访问 explore，判断是否仍被重定向到 captcha/登录页。
+    返回 (healthy:bool, detail:str)。绝不绕过验证——只有真实会话正常才判定健康。"""
+    page = None
+    try:
+        try:
+            from cdp_helper import reset_cdp_targets
+            from urllib.parse import urlparse
+            _u = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222')
+            try: reset_cdp_targets(urlparse(_u).port or 9222, timeout=6)
+            except Exception: pass
+        except Exception:
+            _u = os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222'
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as pw:
+            browser = pw.chromium.connect_over_cdp(_u, timeout=15000)
+            ctx = browser.contexts[0]
+            page = ctx.new_page()
+            page.goto('https://www.xiaohongshu.com/explore', wait_until='domcontentloaded', timeout=15000)
+            page.wait_for_timeout(2500)
+            u = page.url() or ''
+            body = ''
+            try: body = page.evaluate("() => document.body ? document.body.innerText.slice(0,600) : ''") or ''
+            except Exception: pass
+            try: page.goto('about:blank', timeout=4000)
+            except Exception: pass
+            try: browser.close()
+            except Exception: pass
+        bad_url = ('captcha' in u) or ('/website-login' in u) or ('/login' in u)
+        bad_txt = any(k in body for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '验证码'))
+        if bad_url or bad_txt:
+            return False, '仍停留在登录/安全验证页，请在已登录浏览器完成扫码验证后再检测'
+        return True, '会话正常（explore 未跳验证页）'
+    except Exception as e:
+        try:
+            if page: page.goto('about:blank', timeout=3000)
+        except Exception: pass
+        return False, f'健康探活失败：{str(e)[:120]}'
 
 # ========== 专题独立频率控制（不占用主舆情采集配额） ==========
 def _clean_today_runs():
@@ -295,6 +387,10 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
     rate_ok, rate_msg = _check_campaign_rate_limit()
     if not rate_ok:
         return {'ok': False, 'rate_limited': True, 'message': rate_msg}
+    _cb = _campaign_circuit_state()
+    if _cb:
+        return {'ok': False, 'circuit_open': True, 'risk_status': _cb.get('status'),
+                'message': f"专题采集熔断中（{_cb.get('status')}）：{_cb.get('reason','')}；NEED_VERIFY 需人工验证后解除，IP_RISK 冷却结束自动半开"}
     if not _lock.acquire(False):
         return {'ok': False, 'busy': True, 'message': '专题采集正在运行'}
     # 与主采集互斥
@@ -330,9 +426,11 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
                     )
                     _insert_snapshot(conn, campaign_key, topic, data)
             else:
-                # 采集失败：记录错误快照，绝不伪造数据
+                # 采集失败：记录真实状态快照，绝不伪造数据、绝不显示成 0 条
+                _rs = data.get('risk_status', '')
+                _snap_status = 'need_verify' if _rs == 'NEED_VERIFY' else ('blocked' if _rs in ('IP_RISK', 'BLOCKED') else 'error')
                 with db.get_db() as conn:
-                    _insert_snapshot(conn, campaign_key, topic, data, 'error', data.get('error', ''))
+                    _insert_snapshot(conn, campaign_key, topic, data, _snap_status, data.get('error', ''))
             results.append({
                 'topic': topic,
                 'ok': bool(data.get('ok')),
@@ -347,6 +445,10 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
                 empty_streak += 1
             elif data.get('ok'):
                 empty_streak = 0
+            # 命中安全验证/IP 风控：落熔断并立即终止本轮后续话题（停止危险请求，不继续撞击平台）
+            if (not data.get('ok')) and data.get('risk_status') in ('NEED_VERIFY', 'IP_RISK', 'BLOCKED'):
+                _trip_campaign_circuit(data['risk_status'], data.get('error', ''))
+                break
         _last_run = time.time()
         _record_campaign_run()  # 记录一次专题采集运行
         return {'ok': True, 'campaign_key': campaign_key, 'captured_at': _now(), 'results': results}
@@ -476,6 +578,7 @@ def register_topic_campaign(app, collect_lock=None):
             'last_run_at': datetime.fromtimestamp(_last_run).strftime('%Y-%m-%d %H:%M:%S') if _last_run else '',
             'today_run_hours': sorted(list(_today_run_hours)),
             'rate_status': get_campaign_rate_status(),
+            'circuit': _campaign_circuit_state(),
         })
 
     @app.route('/api/topic-campaign/topics')
@@ -494,8 +597,24 @@ def register_topic_campaign(app, collect_lock=None):
         ck = (d.get('campaign_key') or request.args.get('campaign_key') or CAMPAIGN_KEY).strip()
         if not _campaign_in_window(ck):
             return jsonify({'ok': False, 'error': '该任务不在监测时间窗内或已暂停（可在任务里调整起止日期）'}), 400
+        _cb0 = _campaign_circuit_state()
+        if _cb0:
+            return jsonify({'ok': False, 'circuit_open': True, 'risk_status': _cb0.get('status'),
+                            'error': f"专题采集熔断中（{_cb0.get('status')}）：{_cb0.get('reason','')}。NEED_VERIFY 请在已登录浏览器完成扫码验证后解除；IP_RISK 冷却结束自动半开。"}), 423
+        if not _lock.acquire(False):
+            return jsonify({'ok': False, 'busy': True, 'error': '上一轮专题采集仍在运行，请稍后'}), 429
+        _lock.release()
         threading.Thread(target=run_campaign, args=(ck,), daemon=True, name='topic-campaign-manual').start()
         return jsonify({'ok': True, 'campaign_key': ck, 'message': '话题监测任务已启动，可在页面实时查看状态'})
+
+    @app.route('/api/topic-campaign/recover', methods=['POST'])
+    def topic_recover():
+        # 人工在已登录浏览器完成扫码/验证后调用：先做真实健康探活，通过才解除熔断（不绕过任何平台验证）
+        healthy, detail = _probe_xhs_health_via_cdp()
+        if healthy:
+            clear_campaign_circuit()
+            return jsonify({'ok': True, 'recovered': True, 'message': '健康检查通过，已解除熔断，可恢复采集', 'detail': detail})
+        return jsonify({'ok': False, 'recovered': False, 'message': '尚未通过健康检查，保持熔断', 'detail': detail}), 423
 
     @app.route('/api/topic-campaign/timeline')
     def topic_timeline():

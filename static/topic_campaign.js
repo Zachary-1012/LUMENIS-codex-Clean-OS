@@ -138,11 +138,18 @@ async function loadStatus() {
       cards.innerHTML = '<div class="topic-card"><div class="topic-name">暂无快照</div><div class="metric-sub">点击「立即更新」开始采集</div></div>';
     } else {
       cards.innerHTML = latest.map(x => {
-        const isError = x.status === 'error';
+        const st = x.status || '';
+        const isError = st === 'error';
+        const isVerify = st === 'need_verify';
+        const isBlocked = st === 'blocked';
+        const cardCls = isError ? 'error' : ((isVerify || isBlocked) ? 'warn' : '');
         const errMsg = cleanErr(x.error);
-        return `<div class="topic-card ${isError ? 'error' : ''}" title="${escHtml(errMsg)}">
+        const stateLine = isError ? `<div class="topic-err">采集未成功：${escHtml(errMsg.slice(0, 48)) || '浏览器未连接'}</div>`
+          : isVerify ? `<div class="topic-warn">需安全验证：${escHtml(errMsg.slice(0, 48))}（已熔断，不计 0 条）</div>`
+          : isBlocked ? `<div class="topic-warn">风控熔断冷却：${escHtml(errMsg.slice(0, 48))}</div>` : '';
+        return `<div class="topic-card ${cardCls}" title="${escHtml(errMsg)}">
           <div class="topic-name">${escHtml(x.topic)}</div>
-          ${isError ? `<div class="topic-err">采集未成功：${escHtml(errMsg.slice(0, 48)) || '浏览器未连接'}</div>` : ''}
+          ${stateLine}
           <div class="metric-row"><span class="metric-value blue">${shortNum(x.browse_count)}</span><span class="metric-label">浏览</span></div>
           <div class="metric-row"><span class="metric-value amber">${shortNum(x.discussion_count)}</span><span class="metric-label">讨论</span></div>
           <div class="metric-sub">笔记 <b>${n(x.note_count)}</b> · 新增 <b>${n(x.new_note_count)}</b> · 互动 <b>${n(x.engagement_count)}</b></div>
@@ -150,7 +157,28 @@ async function loadStatus() {
       }).join('');
     }
     if (s.last_run_at) $('#statusText').textContent += ` · 最近 ${s.last_run_at.slice(5, 16)}`;
+    renderCircuitBanner(s.circuit);
   } catch (e) { $('#campaignMeta').textContent = '加载失败: ' + e.message; }
+}
+
+/* 全局 Auth/风控熔断横幅：不跳页，当前详情内直接显示平台状态 + 合法验证后的恢复入口（对应统一 Auth Recovery） */
+function renderCircuitBanner(cir) {
+  const bar0 = $('#circuitBanner');
+  if (!cir) { if (bar0) bar0.remove(); return; }
+  const isVerify = cir.status === 'NEED_VERIFY';
+  let bar = bar0;
+  if (!bar) { bar = document.createElement('div'); bar.id = 'circuitBanner'; $('#topicCards').parentNode.insertBefore(bar, $('#topicCards')); }
+  bar.className = 'circuit-banner ' + (isVerify ? 'verify' : 'blocked');
+  bar.innerHTML =
+    '<div class="cb-title">' + (isVerify ? '⚠ 小红书需要重新安全验证（采集已暂停，未计为 0 条）' : '⛔ 小红书采集风控熔断冷却中') + '</div>' +
+    '<div class="cb-reason">平台：小红书 · 状态：' + escHtml(cir.status || '') + ' · ' + escHtml(cir.reason || '') + ' · 触发 ' + escHtml((cir.opened_at || '').slice(5)) + '</div>' +
+    '<div class="cb-actions"><button class="cb-btn" id="cbRecoverBtn" type="button">我已完成验证，重新检测</button>' +
+    '<span class="cb-sub">' + (isVerify ? '请在已登录浏览器或手机小红书 App 完成官方扫码/验证后，点此做健康检查，通过即自动恢复采集' : '冷却至 ' + escHtml(cir.resume_at || '—') + '，期间不发起任何请求') + '</span></div>';
+  $('#cbRecoverBtn').onclick = async () => {
+    const b = $('#cbRecoverBtn'); b.disabled = true; const oldTxt = b.textContent; b.textContent = '健康检测中…';
+    try { const r = await api('/api/topic-campaign/recover', { method: 'POST' }); toast(r.message || '已恢复，熔断解除'); loadStatus(); }
+    catch (e) { b.disabled = false; b.textContent = oldTxt; toast('尚未通过健康检查，保持熔断'); }
+  };
 }
 
 async function loadTopics() {

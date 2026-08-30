@@ -163,6 +163,35 @@ async function resetCdpTargets(cdpUrl) {
   } catch { /* 复位失败不阻断，交给 connectOverCDP 自身超时/上层硬超时 */ }
 }
 
+/**
+ * 风控/安全验证页识别（P0 红线：绝不能把验证码/安全验证/IP风控当成“0条笔记 ok=true”）
+ * 返回 {hit,status,reason}；status: NEED_VERIFY（需人工扫码/滑块）| IP_RISK（频率/IP 限制）
+ */
+async function detectRisk(page) {
+  try {
+    const u = page.url() || '';
+    const body = await page.evaluate(() => document.body ? (document.body.innerText || '').slice(0, 1000) : '').catch(() => '');
+    if (/website-login\/captcha|\/website-login\/|verifyType=|\/login\?/.test(u))
+      return { hit: true, status: 'NEED_VERIFY', reason: '跳转登录/扫码安全验证页（verifyType），需在已登录浏览器人工扫码', pageUrl: u };
+    if (/扫码验证|扫码验证身份|安全验证|拖动滑块|完成验证|人机验证|请使用.*APP.*扫码/.test(body))
+      return { hit: true, status: 'NEED_VERIFY', reason: '页面出现安全/扫码/滑块验证，需人工完成验证', pageUrl: u };
+    if (/访问过于频繁|操作过于频繁|操作频繁|稍后再试|系统繁忙|账号异常|限制访问|IP风险|300012/.test(body))
+      return { hit: true, status: 'IP_RISK', reason: '频率/IP 风控提示，需熔断冷却', pageUrl: u };
+    return { hit: false };
+  } catch { return { hit: false }; }
+}
+
+// 输出结构化风控结果并以独立退出码退出：3=NEED_VERIFY，4=IP_RISK（区别于 1 普通错误、2 硬超时）
+function emitRisk(topic, status, reason, pageUrl) {
+  const out = {
+    ok: false, topic, risk_status: status, status, error: reason,
+    need_manual_verify: status === 'NEED_VERIFY',
+    captured_at: new Date().toISOString(), page_url: pageUrl || '',
+  };
+  try { process.stdout.write(JSON.stringify(out)); } catch {}
+  process.exit(status === 'NEED_VERIFY' ? 3 : 4);
+}
+
 async function main() {
   let browser, context;
   // 硬超时兜底：任何环节（CDP 握手 / goto / service worker / close）意外挂起时强制退出，
@@ -193,6 +222,13 @@ async function main() {
     }
     const page = context.pages()[0] || await context.newPage();
     const notes = new Map();
+    // 命中风控/验证：复位工作页 -> 断开 -> 输出结构化状态后退出（不继续任何请求）
+    const abortRisk = async (info) => {
+      try { if (cdpUrl) await page.goto('about:blank', { timeout: 4000 }); } catch {}
+      try { await Promise.race([cdpUrl ? browser.close() : context.close(), new Promise(r => setTimeout(r, 4000))]); } catch {}
+      clearTimeout(hardTimer);
+      emitRisk(topic, info.status, info.reason, info.pageUrl || page.url());
+    };
 
     // 拦截搜索 API 响应，获取完整笔记数据（含互动数据）
     page.on('response', async (response) => {
@@ -216,20 +252,30 @@ async function main() {
     // 真人也是先打开站点再站内搜索。先访问 explore 建立会话，再进搜索页，避免 goto 超时（已实测：冷跳搜索页 30s 超时，预热后 1.1s）
     await page.goto('https://www.xiaohongshu.com/explore', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(1200);
+    // 进站即触发验证：直接熔断，不进搜索页（避免加重风控）
+    let __pre = await detectRisk(page);
+    if (__pre.hit) { await abortRisk(__pre); return; }
     // 访问搜索结果页
     const searchKeyword = topic.replace(/^#/, '');
     const url = `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(searchKeyword)}&source=web_explore_feed`;
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(PAGE_WAIT);
+    // 搜索后检测：被重定向到验证/风控页则立即停止，绝不当作 0 条
+    let __post = await detectRisk(page);
+    if (__post.hit) { await abortRisk(__post); return; }
 
     // 提取话题浏览量/讨论量（滚动前提取，话题卡片在页面顶部）
     const topicMetrics = await extractTopicMetrics(page);
 
     // 滚动加载更多笔记（中频率：间隔2.5秒，安全第一）
+    let scrollRisk = null;
     for (let i = 0; i < maxScroll; i++) {
       await page.evaluate(() => window.scrollBy(0, 1000)).catch(() => {});
       await page.waitForTimeout(SCROLL_DELAY);
+      const __sr = await detectRisk(page);
+      if (__sr.hit) { scrollRisk = __sr; break; } // 滚动中触发验证/风控：立即停止，不再继续请求
     }
+    if (scrollRisk) { await abortRisk(scrollRisk); return; }
 
     // DOM 兜底：API 未拦截到时从渲染卡片提取（浏览器上下文必须自包含，不能引用 node 侧 clean）
     try {

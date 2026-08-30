@@ -141,3 +141,4 @@ faulthandler.log
 
 # ---------- cloudflared 运行时产物（临时公网地址/日志，不入库） ----------
 tunnel_url.txt
+tests/_*.cjs

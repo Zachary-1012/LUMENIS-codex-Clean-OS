@@ -12,7 +12,14 @@
 - 修复 `_run_collector` 缺省 `XHS_CDP_URL` 为空导致误走 headless 未登录 profile，默认连 9222 已登录浏览器（可用环境变量覆盖）。
 - 修复 `_save_notes` INSERT 占位符 15、参数仅 14 的 `sqlite3.ProgrammingError`（补 first_seen_at，不改表结构、不迁移）。
 - 同一轮相邻话题增加拟人随机冷却（12–28s）与连续空结果指数退避（封顶 90s），避免短时密集搜索被平台软降频（不报错、结果暂空），符合状态驱动/不撞风控口径。
-- 实测：手动单话题「太古汇」19.6s EXIT=0、60 条真实笔记字段完整；8201 端到端 run_campaign 7 话题快照全部无 connectOverCDP 错误、每话题 24–26s 正常退出，热词各 60 条真实笔记落库（共 120，作者/赞评藏/链接齐全）。冷词在密集采集软空结果窗为 0（冷却后分批复测，非失败、不伪造）。
+- 实测：手动单话题「太古汇」19.6s EXIT=0、60 条真实笔记字段完整；8201 端到端 run_campaign 7 话题快照全部无 connectOverCDP 错误、每话题 24–26s 正常退出，热词各 60 条真实笔记落库（共 120，作者/赞评藏/链接齐全）。排查中曾疑冷词“0 条”为密集搜索软空窗，经诊断实测真因为连续采集触发小红书安全验证（302 到 website-login/captcha、verifyType=124），已由下述风控识别与熔断机制接管，绝不显示为 0 条。
+### 风控识别 / 熔断 / 恢复（P0，已实测）
+- node 采集脚本新增 `detectRisk`：识别跳转 captcha/login、扫码/滑块/安全验证、频繁/IP 风险/300012；命中即停止后续请求，输出结构化 risk_status（NEED_VERIFY/IP_RISK）与独立退出码（3/4），绝不再把验证页当成“0 笔记 ok=true”。实测命中后约 9.8s 退出、退出码 3、状态结构化。
+- Python 专题采集新增熔断：快照状态区分 success/need_verify/blocked/error；命中即终止本轮后续话题并写 `data/private/topic_campaign_circuit.json`（NEED_VERIFY 须人工恢复、IP_RISK 冷却 45 分钟自动半开）；`run_campaign` 与 `/run` 接口熔断中直接拒绝（HTTP 423、不起 node、不撞平台，实测），`/status` 返回 circuit。
+- 新增 `/api/topic-campaign/recover`：人工完成官方扫码/验证后做真实 CDP 健康探活（访问 explore 不跳验证页才算通过），通过才解除熔断，不绕过任何平台验证。
+- 相邻话题拟人随机冷却 12–28s + 连续空结果指数退避（封顶 90s），降低短时密集搜索触发风控的概率。
+- 前端话题详情新增全局熔断横幅（不跳页）：显示平台/状态/原因/触发时间与「我已完成验证，重新检测」按钮，need_verify 卡片橙色标注“已熔断，不计 0 条”；移动 390 与桌面 1440 双端实测零横向溢出、零第一方 JS 错误。
+
 ### 版本统一
 - 运行时版本统一升 v5.8.9（VERSION、app.APP_VERSION、waitress ident、version_center 兜底、页头页脚、静态缓存戳、启动打印，共 40+ 处）。
 ### 回归（已实测）
