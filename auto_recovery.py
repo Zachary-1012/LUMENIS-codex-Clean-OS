@@ -310,7 +310,8 @@ class AutoRecoveryEngine:
                 '--remote-debugging-port=9222',
                 f'--user-data-dir={user_data_dir}',
                 '--no-first-run',
-                '--no-default-browser-check'
+                '--no-default-browser-check',
+                '--remote-allow-origins=*'
             ])
 
             # 等待启动并验证

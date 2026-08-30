@@ -162,6 +162,9 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=False,
         "--disable-sync",
         "--password-store=basic",
         "--disable-features=Translate,MediaRouter,OptimizationHints,InterestFeedContentSuggestions",
+        # Chromium 111+ / 新版 Edge 要求显式允许 CDP WebSocket 的 Origin，
+        # 否则 Playwright connect_over_cdp 会在 ws 握手阶段挂起直至 Timeout（话题端口曾因此全 0）。
+        "--remote-allow-origins=*",
     ]
     
     if anti_automation:

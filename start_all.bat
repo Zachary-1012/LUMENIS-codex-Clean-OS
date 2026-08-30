@@ -36,7 +36,7 @@ if not exist node_modules (
 echo [4/4] 启动 Edge 调试模式（CDP 端口 9222）...
 tasklist /fi "imagename eq msedge.exe" 2>nul | findstr /i "msedge.exe" >nul
 if errorlevel 1 (
-  start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\Microsoft\Edge\User Data" "https://www.rednote.com"
+  start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --remote-debugging-port=9222 --remote-allow-origins=* --user-data-dir="%LOCALAPPDATA%\Microsoft\Edge\User Data" "https://www.rednote.com"
   echo   Edge 已启动，请确保已登录 rednote 账号
 ) else (
   echo   Edge 已在运行，请确保已使用 --remote-debugging-port=9222 启动

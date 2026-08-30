@@ -103,6 +103,7 @@ class CollectorAutomation:
             '--disable-dev-shm-usage',
             '--disable-background-networking',
             '--disable-component-update',
+            '--remote-allow-origins=*',
             # 国内主采集强制直连：不跟随系统代理(v2rayN 10808)，代理核心未连/切节点时国内站也能采；
             # 海外平台(Google/Instagram)走 9223 独立代理 profile，互不影响。
             '--no-proxy-server',

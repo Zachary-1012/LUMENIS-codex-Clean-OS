@@ -25,7 +25,7 @@ if %errorlevel%==0 (
     if exist "%EDGE_PATH%" (
         echo   启动Edge浏览器（CDP模式）...
         if not exist "%PROFILE_DIR%" mkdir "%PROFILE_DIR%"
-        start "" "%EDGE_PATH%" --remote-debugging-port=%CDP_PORT% --user-data-dir="%PROFILE_DIR%" --no-first-run --no-default-browser-check https://www.xiaohongshu.com
+        start "" "%EDGE_PATH%" --remote-debugging-port=%CDP_PORT% --remote-allow-origins=* --user-data-dir="%PROFILE_DIR%" --no-first-run --no-default-browser-check https://www.xiaohongshu.com
         echo   Edge已启动，等待CDP端口就绪...
         timeout /t 5 /nobreak >nul
     ) else (

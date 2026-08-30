@@ -51,7 +51,7 @@ if ($edgeHttpOk) {
     Write-Output '[start_production] 9222 Edge already present (starting), skip duplicate'
 } else {
     $Profile = Join-Path $Root 'edge-cdp-profile'
-    $EdgeArgs = @('--remote-debugging-port=9222',"--user-data-dir=$Profile",'--no-first-run','--no-default-browser-check','--disable-popup-blocking','--disable-extensions','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking','--disable-component-update','--no-proxy-server','about:blank')
+    $EdgeArgs = @('--remote-debugging-port=9222',"--user-data-dir=$Profile",'--no-first-run','--no-default-browser-check','--disable-popup-blocking','--disable-extensions','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking','--disable-component-update','--remote-allow-origins=*','--no-proxy-server','about:blank')
     Start-Process -FilePath $Edge -ArgumentList $EdgeArgs -WorkingDirectory $Root
     Write-Output '[start_production] 9222 Edge starting'
 }

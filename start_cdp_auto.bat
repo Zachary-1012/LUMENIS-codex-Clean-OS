@@ -36,7 +36,7 @@ if %errorlevel%==0 (
     echo   CDP端口 %CDP_PORT% 已在使用，跳过启动Edge
 ) else (
     echo   启动Edge浏览器（CDP模式）...
-    start "" "%EDGE_PATH%" --remote-debugging-port=%CDP_PORT% --user-data-dir="%PROFILE_DIR%" --no-first-run --no-default-browser-check
+    start "" "%EDGE_PATH%" --remote-debugging-port=%CDP_PORT% --remote-allow-origins=* --user-data-dir="%PROFILE_DIR%" --no-first-run --no-default-browser-check
     echo   Edge已启动，请在浏览器中登录小红书/rednote
     timeout /t 3 /nobreak >nul
 )

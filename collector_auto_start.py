@@ -95,6 +95,7 @@ class CollectorAutoStarter:
             "--no-first-run",
             "--no-default-browser-check",
             "--disable-popup-blocking",
+            "--remote-allow-origins=*",
             "--start-maximized",
             "about:blank"
         ]
