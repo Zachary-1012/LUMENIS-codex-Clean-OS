@@ -5,8 +5,8 @@
  * ============================================================ */
 (function () {
   'use strict';
-  var OPEN = '/static/img/robot_open.png?v=5.8.8';
-  var CLOSE = '/static/img/robot_close.png?v=5.8.8';
+  var OPEN = '/static/img/robot_open.png?v=5.8.9';
+  var CLOSE = '/static/img/robot_close.png?v=5.8.9';
   var INTERVAL = 3200;   // 表情切换间隔
   var FADE = 320;        // 淡入淡出时长(ms)
   var timer = null, current = 'open', img = null;

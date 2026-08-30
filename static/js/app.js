@@ -247,14 +247,14 @@ function openEvent(e){const FACT={unconfirmed:'待核实',confirmed:'已核实',
 function openAIResult(d){$('modalContent').innerHTML=`<div class="modal-eyebrow">AI 接口测试</div><h2 class="modal-title">${esc(d.provider||'local_rule')}</h2><p class="big-summary">${esc(d.message||'')}</p><div class="kv"><span>模型</span><span>${esc(d.model||'—')}</span></div><div class="kv"><span>测试结果</span><span>${esc(d.reply||'—')}</span></div><div class="kv"><span>降级策略</span><span>AI 不可用时自动回退本地规则，不影响系统运行。</span></div>`;openModal()}
 
 /* ===== 数据加载（使用合并API，减少并发请求，提高稳定性）===== */
-async function load(){try{const d=await api('/api/dashboard/all');const s=d.stats||{},r=d.risk_alerts||[],e=d.events||[],t=d.hot_topics||[],o=d.overview||{},st=d.system_status||{};renderDonut(Object.assign({}, s.sentiment||{}, {total: s.total||1, high_risk: s.high_risk||0, medium_risk: s.medium_risk||0, low_risk: s.low_risk||0, total_engagements: s.total_engagements||0, total_comments: s.total_comments||0}));renderMonitorDonuts(s);renderCategories(s.categories||[]);renderRisk(r.notes||r||[]);renderRisk(r.notes||r||[],'riskListHome');renderEvents(e.events||e||[],'eventListHome',8);renderTopics(t.topics||t||[]);renderTopics(t.topics||t||[],'topicListHome');renderTrend(o.trend||[]);$('systemState').textContent=st.ai_enabled?'系统运行中':'系统运行中 · 本地分析';$('lastUpdate').textContent='最后更新：'+(st.last_collection?.finished_at||d.server_time||'—');$('versionText').textContent=st.version||'5.8.8';const aiSt=d.ai_status||{};$('aiStatusText').textContent=aiSt.enabled?(aiSt.ai_detail||'AI Provider 已连接'):'本地规则引擎已接管，可按需接入本地AI';$('progressBar').style.width='100%';renderAIStatusLite(aiSt);applyMergedAlerts(d.alerts||[],d.unread_alerts);applyPendingNegative(d.pending_negative);
+async function load(){try{const d=await api('/api/dashboard/all');const s=d.stats||{},r=d.risk_alerts||[],e=d.events||[],t=d.hot_topics||[],o=d.overview||{},st=d.system_status||{};renderDonut(Object.assign({}, s.sentiment||{}, {total: s.total||1, high_risk: s.high_risk||0, medium_risk: s.medium_risk||0, low_risk: s.low_risk||0, total_engagements: s.total_engagements||0, total_comments: s.total_comments||0}));renderMonitorDonuts(s);renderCategories(s.categories||[]);renderRisk(r.notes||r||[]);renderRisk(r.notes||r||[],'riskListHome');renderEvents(e.events||e||[],'eventListHome',8);renderTopics(t.topics||t||[]);renderTopics(t.topics||t||[],'topicListHome');renderTrend(o.trend||[]);$('systemState').textContent=st.ai_enabled?'系统运行中':'系统运行中 · 本地分析';$('lastUpdate').textContent='最后更新：'+(st.last_collection?.finished_at||d.server_time||'—');$('versionText').textContent=st.version||'5.8.9';const aiSt=d.ai_status||{};$('aiStatusText').textContent=aiSt.enabled?(aiSt.ai_detail||'AI Provider 已连接'):'本地规则引擎已接管，可按需接入本地AI';$('progressBar').style.width='100%';renderAIStatusLite(aiSt);applyMergedAlerts(d.alerts||[],d.unread_alerts);applyPendingNegative(d.pending_negative);
 /* v5.9.0 统一数据总线：主轮询数据广播给其他模块，替代它们各自独立轮询 */
 window.__TAIKOO_POLL__=d;try{document.dispatchEvent(new CustomEvent('taikoo-poll',{detail:d}))}catch(_){}
 // 舆情监测页补充categories数据（dashboard/all可能不含categories）
 if(!s.categories||!s.categories.length){api('/api/stats').then(sd=>{if(sd.categories)renderCategories(sd.categories)}).catch(()=>{})}
 updateCollectCard();
 }catch(e){console.warn('合并API加载失败，回退独立API:',e.message);loadFallback()}}
-async function loadFallback(){try{const [s,r,e,t,o,st]=await Promise.all([api('/api/stats'),api('/api/risk-alerts'),api('/api/events'),api('/api/hot-topics?limit=14'),api('/api/overview'),api('/api/status')]);renderDonut(s.stats||{});renderCategories(s.categories||[]);renderRisk(r.notes||[]);renderRisk(r.notes||[],'riskListHome');renderEvents(e.events||[],'eventListHome',8);renderTopics(t.topics||[]);renderTopics(t.topics||[],'topicListHome');renderTrend(o.trend||[]);$('systemState').textContent=st.ai_enabled?'系统运行中':'系统运行中 · 本地分析';$('lastUpdate').textContent='最后更新：'+(st.last_collection?.finished_at||st.server_time||'—');$('versionText').textContent=st.version||'5.8.8';$('aiStatusText').textContent=st.ai_enabled?(st.ai_detail||'AI Provider 已连接'):'本地规则引擎已接管，可按需接入本地AI';$('progressBar').style.width='100%'}catch(e){toast('读取数据失败：'+e.message)}}
+async function loadFallback(){try{const rs=await Promise.allSettled([api('/api/stats'),api('/api/risk-alerts'),api('/api/events'),api('/api/hot-topics?limit=14'),api('/api/overview'),api('/api/status')]);const g=i=>rs[i]&&rs[i].status==='fulfilled'?rs[i].value:null;const s=g(0),r=g(1),e=g(2),t=g(3),o=g(4),st=g(5);if(s){renderDonut(s.stats||{});renderCategories(s.categories||[]);}if(r){renderRisk(r.notes||[]);renderRisk(r.notes||[],'riskListHome');}if(e)renderEvents(e.events||[],'eventListHome',8);if(t){renderTopics(t.topics||[]);renderTopics(t.topics||[],'topicListHome');}if(o)renderTrend(o.trend||[]);if(st){$('systemState').textContent=st.ai_enabled?'系统运行中':'系统运行中 · 本地分析';$('lastUpdate').textContent='最后更新：'+(st.last_collection?.finished_at||st.server_time||'—');$('versionText').textContent=st.version||'5.8.9';$('aiStatusText').textContent=st.ai_enabled?(st.ai_detail||'AI Provider 已连接'):'本地规则引擎已接管，可按需接入本地AI';}const pb=$('progressBar');if(pb)pb.style.width='100%';const failN=rs.filter(x=>x.status==='rejected').length;if(failN===rs.length){console.warn('首屏接口全部失败，3 秒后自动重拉一次');setTimeout(()=>{try{load()}catch(_){}},3000);}}catch(e){toast('读取数据失败：'+e.message);setTimeout(()=>{try{load()}catch(_){}},3000);}}
 /* ===== v5.9.0 合并轮询辅助：纯渲染，不再独立发请求 ===== */
 function renderAIStatusLite(d){try{const live=$('aiLive');if($('aiProvider'))$('aiProvider').textContent=d.provider||'local_rule';if($('aiModel'))$('aiModel').textContent=d.model||'—';if($('aiRuntime'))$('aiRuntime').textContent=d.enabled?(d.runtime==='local'?'本地 AI 已连接':'云端 AI 已连接'):'本地规则引擎';if(live){live.innerHTML='<i></i>'+esc(d.enabled?'已连接':'规则模式');live.classList.toggle('off',!d.enabled)}if($('aiHints'))$('aiHints').innerHTML=(d.hints||[]).map(h=>`<span>${esc(h.detail)}</span>`).join('')}catch(e){}}
 function applyMergedAlerts(alerts,unread){try{const n=(typeof unread==='number')?unread:alerts.length;const badge=$('alertBadge');if(badge){badge.textContent=n;badge.style.display=n>0?'flex':'none'}const side=$('sideAlertBadge');if(side){side.textContent=n;side.style.display=n>0?'flex':'none'}(alerts||[]).slice(0,3).forEach(a=>{if(!shownAlertIds.has(a.id)){shownAlertIds.add(a.id);showAlertPopup(a)}})}catch(e){}}
@@ -470,7 +470,12 @@ async function checkDailyReportPopup(){
         <button class="action secondary" onclick="exportReport('daily')">导出日报</button>
         <button class="action tertiary" onclick="closeModal()">知道了，归档</button>
       </div>`;
-    openModal();
+    // v5.8.9 移动端不直接弹全屏日报遮挡首屏，收进底部轻提示，点击查看
+    if (window.matchMedia && window.matchMedia('(max-width:768px)').matches && window.showMobileNotice) {
+      window.showMobileNotice(`📊 日报速览：合计 ${s.total||0} 条 · 负面 ${s.negative||0} 条`, openModal);
+    } else {
+      openModal();
+    }
   }catch(e){ console.log('日报弹窗：暂无昨今新发布', e.message); }
 }
 setTimeout(checkDailyReportPopup, 5000);
@@ -1103,7 +1108,7 @@ async function renderMonitorPage(){
           <div class="monitor-item"><span class="monitor-label">自动采集</span><b>每日约9次·8:05–23:05错峰·冷却1h</b></div>
           <div class="monitor-item"><span class="monitor-label">数据源</span><b>固定账号Cookie保护（主） · rednote/CDP（备选）</b></div>
           <div class="monitor-item"><span class="monitor-label">CDP模式</span><b id="cdpStatusText2">${st.cdp_connected?'已连接':'未连接'}</b></div>
-          <div class="monitor-item"><span class="monitor-label">系统版本</span><b>${esc(st.version||'5.8.8')}</b></div>
+          <div class="monitor-item"><span class="monitor-label">系统版本</span><b>${esc(st.version||'5.8.9')}</b></div>
         </div>
       </div>
       <div class="panel glass-card">

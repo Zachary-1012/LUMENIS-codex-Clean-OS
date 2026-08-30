@@ -23,6 +23,15 @@
         apiBase: '/api'
     };
 
+    // v5.8.9 移动端浮层缩小、贴安全区，避免遮挡指标卡；尺寸/位置集中由该函数给出
+    const isMobileUI = () => !!(window.matchMedia && window.matchMedia('(max-width:768px)').matches);
+    function floatBox() {
+        if (isMobileUI()) {
+            return { w: 52, h: 52, bottom: 'calc(10px + env(safe-area-inset-bottom))', right: '10px' };
+        }
+        return { w: CONFIG.sizeW, h: CONFIG.sizeH, bottom: CONFIG.position.bottom, right: CONFIG.position.right };
+    }
+
     // ============================================================
     // Zachary状态
     // ============================================================
@@ -56,12 +65,13 @@
         let container = document.getElementById('zacharyFloat');
         if (container) {
             // 确保样式正确
+            const __fb = floatBox();
             container.style.cssText = `
                 position: fixed;
-                bottom: ${CONFIG.position.bottom};
-                right: ${CONFIG.position.right};
-                width: ${CONFIG.sizeW}px;
-                height: ${CONFIG.sizeH}px;
+                bottom: ${__fb.bottom};
+                right: ${__fb.right};
+                width: ${__fb.w}px;
+                height: ${__fb.h}px;
                 z-index: 9999;
                 cursor: grab;
                 user-select: none;
@@ -72,12 +82,13 @@
         container = document.createElement('div');
         container.id = 'zacharyFloat';
         container.className = 'zachary-float';
+        const __fb = floatBox();
         container.style.cssText = `
             position: fixed;
-            bottom: ${CONFIG.position.bottom};
-            right: ${CONFIG.position.right};
-            width: ${CONFIG.size}px;
-            height: ${CONFIG.size}px;
+            bottom: ${__fb.bottom};
+            right: ${__fb.right};
+            width: ${__fb.w}px;
+            height: ${__fb.h}px;
             z-index: 9999;
             cursor: grab;
             user-select: none;
@@ -476,6 +487,16 @@
             document.removeEventListener('touchmove', onMove);
             document.removeEventListener('touchend', onEnd);
             
+            // v5.8.9 移动端拖拽结束自动吸附最近左右边缘，不停在中部遮挡内容
+            if (hasMoved && isMobileUI()) {
+                const w = container.offsetWidth || 52;
+                const rc = container.getBoundingClientRect();
+                const toLeft = (rc.left + rc.width / 2) < (window.innerWidth / 2);
+                container.style.top = Math.max(8, Math.min(rc.top, window.innerHeight - w - 8)) + 'px';
+                container.style.left = (toLeft ? 8 : window.innerWidth - w - 8) + 'px';
+                container.style.right = 'auto';
+                container.style.bottom = 'auto';
+            }
             // 如果没有移动，视为点击
             if (!hasMoved) {
                 toggleChat();

@@ -105,7 +105,7 @@ def main():
             port=args.port,
             threads=args.threads,
             backlog=args.backlog,
-            ident='TaikooMonitor/5.8.8',
+            ident='TaikooMonitor/5.8.9',
             # 性能优化
             max_request_body_size=1073741824,  # 1GB
             outbuf_overflow=1048576,  # 1MB

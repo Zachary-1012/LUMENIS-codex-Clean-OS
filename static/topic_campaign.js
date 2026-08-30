@@ -192,7 +192,7 @@ async function drawChart(topic = '') {
   const d = await api(url);
   const snapshots = d.snapshots || [];
   const canvas = $('#trendChart'), ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, H = 260;
+  const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, isNarrow = W < 480, H = isNarrow ? 230 : 260;
   canvas.width = W * dpr; canvas.height = H * dpr; ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
   if (!snapshots.length) {
@@ -219,7 +219,7 @@ async function drawChart(topic = '') {
     ctx.fillStyle = '#86868b'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('该话题暂无数据', W / 2, H / 2); return;
   }
-  const padL = 50, padR = 20, padT = 20, padB = 36;
+  const padL = isNarrow ? 44 : 50, padR = isNarrow ? 14 : 20, padT = 20, padB = isNarrow ? 46 : 36;
   const cw = W - padL - padR, chh = H - padT - padB;
   const maxVal = Math.max(1, ...points.map(x => Math.max(Number(x.browse_count || 0), Number(x.discussion_count || 0), Number(x.note_count || 0))));
   const niceMax = niceCeil(maxVal);
@@ -230,11 +230,14 @@ async function drawChart(topic = '') {
     ctx.fillText(shortNum(niceMax * i / 4), padL - 6, y + 3);
   }
   ctx.textAlign = 'center';
-  const lc = Math.min(6, points.length);
+  // v5.8.9 窄屏减少 x 轴标签数量并分两行显示，避免时间标签互相重叠
+  const lc = Math.min(isNarrow ? 4 : 6, points.length);
   for (let i = 0; i < lc; i++) {
     const idx = Math.floor(i * (points.length - 1) / Math.max(1, lc - 1));
     const x = padL + cw * idx / Math.max(1, points.length - 1);
-    ctx.fillText(points[idx].time ? points[idx].time.slice(5, 10) + ' ' + points[idx].time.slice(11, 16) : '', x, H - padB + 18);
+    const tp = points[idx].time || '';
+    if (isNarrow) { ctx.fillText(tp.slice(5, 10), x, H - padB + 18); ctx.fillText(tp.slice(11, 16), x, H - padB + 31); }
+    else { ctx.fillText(tp.slice(5, 10) + ' ' + tp.slice(11, 16), x, H - padB + 18); }
   }
   function line(key, color, fill) {
     ctx.beginPath();

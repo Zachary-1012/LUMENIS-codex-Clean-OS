@@ -136,3 +136,45 @@
   .brand h1{font-size:14px}
   .topbar{padding-left:48px!important}
 }
+
+/* ============================================================
+   v5.8.9 双端显示收口补丁（仅 ≤768px，最后加载、同特异性覆盖旧规则）
+   ============================================================ */
+@media (max-width:768px){
+  /* 全局杜绝横向溢出 */
+  html,body{max-width:100%;overflow-x:hidden}
+  body{position:relative}
+  /* JS 动态生成的 .modal-backdrop 弹窗体系统一为底部 iOS sheet，不再居中遮挡、不超屏 */
+  .modal-backdrop{align-items:flex-end!important;justify-content:stretch!important;padding:0!important}
+  .modal-backdrop>.modal-content{
+    width:100%!important;max-width:100%!important;max-height:92dvh!important;
+    border-radius:20px 20px 0 0!important;margin:0!important;
+    padding:20px 16px calc(18px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;
+  }
+  /* 机器人浮层兜底压缩，内联尺寸也覆盖；位置仍由 JS 吸附控制 */
+  .zachary-float{width:52px!important;height:52px!important}
+  .zachary-float .zachary-body{width:52px!important;height:52px!important}
+  /* 抽屉/卡片底部不被 Home 指示条遮挡 */
+  .sidebar .side-footer{padding-bottom:env(safe-area-inset-bottom)}
+  /* 窄屏按钮行允许换行，不横向溢出 */
+  .form-actions,.modal-footer,.task-actions,.card-actions{flex-wrap:wrap;gap:8px}
+  /* 顶栏操作按钮不残留空壳，统一紧凑 */
+  .top-actions .action{min-width:0}
+  /* 话题/任务卡内按钮行换行 */
+  .task-card .task-head,.task-card .task-toolbar{flex-wrap:wrap}
+}
+
+/* v5.8.9 #modal 全屏容器修正：.modal 曾被旧“白色卡片”规则(style.css L100 的
+   padding/max-width/max-height)与“全屏 flex 容器”规则(L149)同时命中，导致手机端
+   面板不贴屏幕底、左右留白。此处仅在 ≤768px、仅对 #modal 强制为真正全屏容器。 */
+@media (max-width:768px){
+  #modal.modal{inset:0!important;max-width:none!important;max-height:none!important;
+    padding:0!important;margin:0!important;border-radius:0!important;
+    background:transparent!important;overflow:visible!important}
+  #modal .modal-panel{align-self:flex-end!important;margin:0!important;
+    width:100%!important;max-width:100%!important}
+  /* 面板内部内容区可滚，底部按钮始终可见 */
+  #modal .modal-panel{display:flex;flex-direction:column}
+  #modal .modal-content{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch}
+}
+

@@ -225,6 +225,20 @@
     `;
     document.head.appendChild(style);
 
+    // v5.8.9 移动端非阻断轻提示：首屏不被全屏弹窗遮挡，点击横幅才展开完整弹窗（桌面端不受影响）
+    window.showMobileNotice = function (html, onClick) {
+        let bar = document.getElementById('mobileNoticeBar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'mobileNoticeBar';
+            bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:99998;background:#1d1d1f;color:#fff;border-radius:14px;padding:11px 14px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.3);display:flex;gap:8px;align-items:center;line-height:1.45;max-width:100%;box-sizing:border-box';
+            document.body.appendChild(bar);
+        }
+        bar.innerHTML = '<span style="flex:1;min-width:0">'+html+'</span><span style="opacity:.78;font-size:13px;white-space:nowrap">点击查看 ›</span>';
+        bar.onclick = function () { bar.remove(); try { onClick && onClick(); } catch (e) {} };
+        return bar;
+    };
+
     // ============================================================
     // 1. 每日弹窗优先推送待确认负面
     // ============================================================
@@ -281,7 +295,7 @@
             </div>
         `;
 
-        document.body.appendChild(modal);
+        // v5.8.9 先绑定、暂不挂载，末尾按端决定（移动端收进底部轻提示，不遮挡首屏）
 
         modal.querySelector('.modal-close').onclick = () => modal.remove();
         modal.querySelector('#negativeLater').onclick = () => modal.remove();
@@ -292,6 +306,11 @@
         modal.onclick = (e) => {
             if (e.target === modal) modal.remove();
         };
+        if (window.matchMedia && window.matchMedia('(max-width:768px)').matches) {
+            window.showMobileNotice(`⚠️ 您有 <b>${stats.pending}</b> 条负面舆情待确认`, () => document.body.appendChild(modal));
+        } else {
+            document.body.appendChild(modal);
+        }
     }
 
     // ============================================================

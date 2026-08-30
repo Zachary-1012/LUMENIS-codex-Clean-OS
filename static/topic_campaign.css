@@ -326,3 +326,19 @@ body{
 .task-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.08)}
 .task-state{user-select:none}
 @media(max-width:768px){.modal-row{grid-template-columns:1fr}.top-actions{flex-wrap:wrap}}
+
+/* v5.8.9 手机端收口：安全区、紧凑工具条、趋势图不横向溢出（x 轴标签稀疏化在 JS 内） */
+@media(max-width:768px){
+  html,body{max-width:100%;overflow-x:hidden}
+  .campaign-content{padding:12px 10px calc(18px + env(safe-area-inset-bottom))!important}
+  .top-actions{gap:8px}
+  .action{white-space:nowrap}
+  .chart-wrap{overflow-x:hidden;width:100%;box-sizing:border-box}
+  #trendChart{max-width:100%}
+  .topic-grid{gap:10px}
+  .glass-card{border-radius:16px}
+}
+@media(max-width:480px){
+  .action{padding:7px 10px;font-size:11px}
+}
+
