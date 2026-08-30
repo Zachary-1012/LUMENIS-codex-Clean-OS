@@ -62,6 +62,26 @@ def _cdp_online(timeout=2.0):
         return False
 
 
+def _ensure_cdp_online(timeout=30):
+    """9222 真人通道掉线时自动拉起持久 Edge（无人值守自愈）；拉起失败返回 False，由上层走兜底。"""
+    import time as _time
+    if _cdp_online():
+        return True
+    try:
+        from collector_automation import CollectorAutomation
+        ctrl = CollectorAutomation(base_dir=SCRIPT_DIR)
+        print('[Collector] 9222 不在线，尝试自动拉起真人采集浏览器 ...')
+        ctrl.start_browser(account='default', headless=False)  # 内部已等待 CDP 就绪
+        for _ in range(timeout):
+            if _cdp_online():
+                print('[Collector] 9222 已自动拉起并就绪')
+                return True
+            _time.sleep(1)
+    except Exception as e:
+        print('[Collector] 自动拉起 9222 失败:', e)
+    return _cdp_online()
+
+
 def _norm_cdp_note(rec):
     """把 rednote_collector.cjs 的详情记录映射为 collector/insert_note 标准字段。"""
     pub = rec.get('detail_publish_time') or rec.get('publish_time') or rec.get('publish_datetime') or ''
@@ -185,7 +205,7 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10):
 
     # 主路径：CDP 真人通道
     try:
-        if os.path.exists(CDP_SCRIPT) and _cdp_online():
+        if os.path.exists(CDP_SCRIPT) and (_cdp_online() or _ensure_cdp_online()):
             res = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details)
             if res.get('notes') or res.get('error') in _CDP_RISK_STATES:
                 return res  # 真出数 / 明确风控态都直接返回
