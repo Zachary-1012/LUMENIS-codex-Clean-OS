@@ -661,5 +661,6 @@ loadHome();STATE.loaded.home=true;
 setInterval(()=>{if(STATE.view==="home")loadHome();},15000);
 setInterval(authWatchdog,12000);  // 全局登录态看门：任何页面(含iframe子页)平台失效即弹统一恢复窗，不跳页
 </script>
+  <script src="/v4/static/auth_global.js" defer></script>
 </body>
 </html>

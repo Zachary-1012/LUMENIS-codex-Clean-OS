@@ -90,6 +90,27 @@
 - Follow-up: cookie rotation is a recurring operational event; next step is auto-detecting type=51 and wiring
   the one-click 9222 sync into the unified Auth Recovery Modal (class A), instead of a manual script run.
 
+### 2026-08-30 ~18:55 - Global in-page Auth Recovery & collection-health widget (no page jump)
+- Goal: the unified Auth Recovery must trigger on ANY v4 page (desktop + mobile), not only the console,
+  and never navigate the user to a separate/stranger login page.
+- v4 parent blueprint now serves a shared static folder (/v4/static/<file>).
+- New self-contained v4_upgrade/static/auth_global.js (no dependencies, no credentials):
+  * polls GET /api/platform-health every 20s (pauses when tab hidden, silent on 401, never redirect-loop);
+  * floating health pill + panel listing every platform with its REAL state; disabled platforms show
+    "未启用" explicitly (never "0 notes"/failure);
+  * auto-opens a global Auth Modal only when a platform needs human action; "稍后处理" snoozes it;
+  * three-class separation in the modal: A login-expired (legal login/QR via persistent profile),
+    B human/security verification (manual, never bypassed), C IP/platform risk such as 300012 (cooldown
+    only, QR cannot solve it); re-check calls /v4/adapters/recovery/start|check|cancel;
+  * if a page already ships its own #authMask + window.openAuthModal (console), the widget DELEGATES to it
+    instead of duplicating the modal; mobile (<=640px) renders as a bottom sheet.
+- Wired into collect / console / settings / version_center templates with one script tag each (login page
+  intentionally excluded).
+- Browser E2E (real, logged-in): static JS 200; /api/platform-health polled ok; pill reads "采集健康";
+  panel lists 7 platforms (xhs 正常, other six 未启用); no modal auto-popped while healthy; verified on
+  BOTH /v4/console/ and /v4/version-center/ (cross-page global). A/B/C forced-failure modal text not yet
+  driven live (requires a real incident) -> marked 未实测 for the auto-popup branch.
+
 ### Unresolved / not yet tested
 - The 18:05 wake-up is the first real end-to-end observation of the re-enabled auto collection + shadow decision; until observed in collection_logs / schedule_decisions it remains "not yet E2E verified".
 - Dynamic scheduler is shadow-only; production gating cutover awaits explicit sign-off.
