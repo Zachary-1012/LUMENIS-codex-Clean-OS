@@ -38,7 +38,7 @@ def _thread_excepthook(args):
 threading.excepthook = _thread_excepthook
 
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, request, send_from_directory, send_file, Response
+from flask import Flask, jsonify, request, send_from_directory, send_file, Response, redirect
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import database as db
 import ai_analyzer
