@@ -169,3 +169,31 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 ### 未实测/遗留
 - ProxyPool 当前保持默认关闭，未把现有小红书/Google 采集器统一切到 safe_request（渐进接入，避免动稳定采集链；Google/IG 现有代理读取仍正常）。
 - 交叉认证/多 Provider 母平台模块未开发（分期，见上）。
+
+
+---
+
+## 2026-08-30 15:30 · v5.8.5 上线冲刺 10（双时间补齐治理 + 核心回归全绿 + 上线就绪审计）
+
+### 一、发现并修复双时间两处真实问题（只读审计先行，不臆断）
+- 上线就绪审计初看「publish 晚于 captured 500 条」，核查证实是审计口径把空串 '' 当非空比较所致的**假象**；但顺藤摸出两个真实问题并修复：
+  1. **captured_at 492 条为空串**：均为历史笔记，旧采集列 collected_at 有值而新规范列 captured_at 未回填。增强清洗模块新增 backfill_captured_from_collected()，按“只补采集时间、绝不碰发布时间”的铁律回填 492 条，现 882 条 captured_at 全部有值、缺失=0。
+  2. **publish_datetime 8 条残留脏原文**（编辑于/昨天/小时前）：冲刺7只清了 publish_date，双列不一致。fix_publish_dates() 升级为双列一致清洗——publish_date 已干净时用其标准日期同步脏的 publish_datetime，8 条全部归一，两列脏值均=0。
+- 修复后复查：integrity_check=ok；空标题=0、captured_at 缺失=0、发布日晚于采集日=0、相对时间残留=0、非法日期=0。
+
+### 二、核心回归套件 16/16 全绿
+- 初次跑发现 5 个测试（sentiment/safety_boundary/data_feedback/auto_recovery/adaptive_engine）直接 python tests/xxx.py 运行时缺项目根路径引导（带 PYTHONPATH 即可过，属测试脚本健壮性问题、非产品缺陷）；统一补 sys.path 注入后，不带任何环境变量独立运行全部 EXIT=0。
+- 最终核心回归：六态归一、标题兜底、Guard 接线、风险引擎、事件日期、报告周期、情感引擎、安全边界、数据库、采集管线、ProxyPool(11)、Auth API、版本 API、数据闭环、自动恢复、自适应引擎 = 16/16 通过。
+
+### 三、上线就绪只读审计结果（tests/_readiness_audit.py）
+- 44 张表 integrity ok；notes 882（小红书 873 + CDP 9），今日新增 7；events 401、daily_reports 25。
+- 采集六态：今日新批次为标准大写 SUCCESS（冲刺6 生效），历史小写 success/error 为旧代码记录，保留不改历史。
+- subject_hit 主体命中 570/882=64.6%（未命中的为 silver/Manga 等干扰词采集后被主体硬过滤 reject 的笔记，证明太古汇主体口径在起作用、未被弱化）。
+- 空正文剩 178：冲刺9 已真人慢速补 17 条；其余多为无 xsec_token 的 explore 结构性 404（补不到）+ 后续每日小批量慢速补。
+
+### 数据库
+- 数据修复：492 条 captured_at 回填、8 条 publish_datetime 归一；无表结构变更、无迁移。
+
+### 未实测/遗留
+- 历史 collection_logs 的小写 status 为旧批次事实记录，未做改写（不篡改运行历史）。
+- 178 条空正文按慢速补抓计划持续消化，不在整点采集前争抢 9222。

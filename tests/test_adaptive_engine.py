@@ -1,4 +1,6 @@
 """测试自动调节引擎"""
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 from adaptive_engine import adaptive_engine, StrategyLevel, RiskLevel
 
 print("=== 测试自动调节引擎 ===")

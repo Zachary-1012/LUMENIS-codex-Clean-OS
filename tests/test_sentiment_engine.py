@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys, io, os
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+_ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0,_ROOT); os.chdir(_ROOT)
 import ai_analyzer as A
 
 cases = [

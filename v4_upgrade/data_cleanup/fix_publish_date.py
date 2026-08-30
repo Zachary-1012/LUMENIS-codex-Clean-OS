@@ -92,32 +92,70 @@ def parse_relative_date(raw: str, captured_at: str = None, collected_at: str = N
 
 
 def fix_publish_dates(dry_run: bool = True) -> dict:
-    """修复所有 publish_date 脏数据。dry_run=True 只预览不写库。"""
+    """修复发布时间脏数据，publish_date 与 publish_datetime 双列保持一致。
+
+    - publish_date 为相对/残缺时间时解析为标准 YYYY-MM-DD；
+    - publish_datetime 若残留“编辑于/昨天/小时前”等脏原文，用同一标准日期同步，避免双列不一致；
+    - 只规范发布时间，绝不改 captured_at/collected_at（采集时间）。dry_run=True 只预览。
+    """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.execute(
-            "SELECT id, publish_date, captured_at, collected_at FROM notes "
-            "WHERE publish_date IS NOT NULL AND TRIM(publish_date) <> ''"
+            "SELECT id, publish_date, publish_datetime, captured_at, collected_at FROM notes "
+            "WHERE (publish_date IS NOT NULL AND TRIM(publish_date) <> '') "
+            "OR (publish_datetime IS NOT NULL AND TRIM(publish_datetime) <> '')"
         )
         rows = cur.fetchall()
-        dirty = []
+        fixed = []
         for row in rows:
-            raw = row["publish_date"]
-            parsed = parse_relative_date(raw, row["captured_at"], row["collected_at"])
-            if parsed != raw and _STD.match(parsed):
-                dirty.append({"id": row["id"], "raw": raw, "parsed": parsed,
-                              "captured_at": row["captured_at"]})
+            sets = {}
+            pdate = (row["publish_date"] or "").strip()
+            pdt = (row["publish_datetime"] or "").strip()
+            # 标准发布日期：优先已干净的 publish_date，否则解析相对时间（基准 captured→collected→now）
+            if pdate and _STD.match(pdate):
+                std = pdate[:10]
+            else:
+                parsed = parse_relative_date(pdate, row["captured_at"], row["collected_at"])
+                std = parsed[:10] if parsed and _STD.match(parsed) else None
+                if std and pdate and not _STD.match(pdate):
+                    sets["publish_date"] = std
+            # datetime 列脏、但能得到标准日期时同步（多数行两列同为日期粒度，保持一致）
+            if std and pdt and not _STD.match(pdt):
+                sets["publish_datetime"] = std
+            if sets:
+                fixed.append({"id": row["id"], "sets": sets, "raw_date": pdate, "raw_dt": pdt})
                 if not dry_run:
-                    conn.execute("UPDATE notes SET publish_date=? WHERE id=?", (parsed, row["id"]))
+                    cols = ", ".join(f"{k}=?" for k in sets)
+                    conn.execute(f"UPDATE notes SET {cols} WHERE id=?",
+                                 list(sets.values()) + [row["id"]])
         if not dry_run:
             conn.commit()
         return {
             "total_checked": len(rows),
-            "dirty_count": len(dirty),
-            "fixed": dirty if dry_run else [d["id"] for d in dirty],
+            "fixed_count": len(fixed),
+            "fixed": fixed if dry_run else [f["id"] for f in fixed],
             "dry_run": dry_run,
         }
+    finally:
+        conn.close()
+
+
+def backfill_captured_from_collected(dry_run: bool = True) -> dict:
+    """老数据新规范列 captured_at 为空串/NULL、而旧采集列 collected_at 有值时回填。
+
+    语义：collected_at 本就是历史采集时刻，回填到 captured_at 仅为补齐“采集时间”列，
+    绝不触碰任何发布时间列，不混淆 publish 与 captured。
+    """
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        where = ("(captured_at IS NULL OR TRIM(captured_at)='') "
+                 "AND collected_at IS NOT NULL AND TRIM(collected_at)<>''")
+        n = conn.execute(f"SELECT COUNT(*) FROM notes WHERE {where}").fetchone()[0]
+        if not dry_run and n:
+            conn.execute(f"UPDATE notes SET captured_at=collected_at WHERE {where}")
+            conn.commit()
+        return {"backfill_count": n, "dry_run": dry_run}
     finally:
         conn.close()
 
@@ -160,9 +198,11 @@ def generate_backfill_tasks(batch_size: int = 10) -> dict:
 if __name__ == "__main__":
     import json
     mode_apply = "--apply" in sys.argv
-    print("=== publish_date 清洗（%s）===" % ("APPLY 写库" if mode_apply else "dry run 预览"))
+    print("=== 发布时间清洗 publish_date/publish_datetime（%s）===" % ("APPLY 写库" if mode_apply else "dry run 预览"))
     result = fix_publish_dates(dry_run=not mode_apply)
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    print("\n=== 采集时间回填 captured_at<-collected_at（%s）===" % ("APPLY 写库" if mode_apply else "dry run 预览"))
+    print(json.dumps(backfill_captured_from_collected(dry_run=not mode_apply), ensure_ascii=False, indent=2))
     print("\n=== 空正文笔记统计 ===")
     empty = find_empty_content_notes()
     print(f"总数: {empty['total']}  按平台: {empty['by_platform']}")

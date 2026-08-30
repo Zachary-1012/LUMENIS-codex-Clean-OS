@@ -1,4 +1,6 @@
 """测试数据闭环引擎"""
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 from data_feedback_loop import data_feedback_loop
 
 print("=== 测试数据闭环引擎 ===")
