@@ -27,6 +27,10 @@
 ### Public boundary
 - No cloudflared running; 8200/8201 listen on 0.0.0.0; tunnel NOT started without explicit sign-off. Local gate green; public HTTPS health check is the single user-authorized pending item (untested, not claimed done).
 
+### Version unification + public tunnel (tested)
+- Unified runtime-facing version to v5.8.8: VERSION file, app.APP_VERSION, waitress ident, version_center fallback, header/footer, static cache-busting query, startup print; daily_git_sync commit title now reads VERSION dynamically. Historical "introduced in vX.Y.Z" comments and real filenames intentionally kept. VERSION had been reset to 5.8.5 by the main dev window while app ran 5.8.6 and footer showed 5.8.0 — now single value.
+- Fixed start_tunnel.py (it hard-coded a non-existent legacy project path); now uses project root and TUNNEL_PORT (default 8201). Started a cloudflared quick tunnel to 8201; public /healthz returned 5.8.8 three times, protected routes return 401 without credentials, /v4/ redirects to /v4/settings/login and the login page renders (account+password / access-key tabs), real-browser public E2E passed. Only one edge connection registered because local DNS cannot resolve some argotunnel.com feature hosts (non-fatal; quick tunnel serves traffic). Temporary trycloudflare hostname; a stable hostname needs a named tunnel with account token. Tunnel points at the 8201 sidecar; 8200 production is untouched pending user sign-off.
+
 ### Governance
 - Confirmed ChatGPT main development window as architecture/review/decision coordinator.
 - Confirmed other chat windows as auxiliary research windows whose useful conclusions must be consolidated here or in GitHub.

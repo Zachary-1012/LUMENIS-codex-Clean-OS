@@ -11,8 +11,11 @@
 - 新增 `tests/test_api_smoke.py`（10 端点 200 + 匿名 401，测试会话自清理）；核心回归 `run_core_regression.py` 11/11 通过；四页面真实浏览器 E2E 无第一方 JS 错误。
 ### 文档 / 能力归类
 - 新增 `docs/CAPABILITY_BASELINE.md`：Production/Compatibility/Shadow/Experimental/Rollback/Deprecated 六级能力分类，明确四代采集器、两套 Registry、多代 AI 的归属与唯一事实源，不做物理大合并。
-### 公网边界
-- 本地 Release Gate 全绿；未擅自建立公网隧道，公网 HTTPS healthz 为唯一待用户授权项（如实标注未实测）。
+### 版本统一
+- 运行时对外版本统一为 v5.8.8：`VERSION`、`app.APP_VERSION`、waitress ident、version_center 兜底、页头/页脚显示、静态资源缓存戳、启动打印；`daily_git_sync` 自动提交标题改为动态读取 VERSION，避免再次发散。历史引入注释与真实文件名保留不改。
+### 公网上线（已实测）
+- 修复 `start_tunnel.py` 的旧项目硬编码路径，改为项目根 + `TUNNEL_PORT` 环境变量（默认 8201 验证实例，切生产设 8200）。
+- cloudflared quick tunnel 建立并通过公网验证：`/healthz` 3/3 返回 5.8.8；受保护根路由与 `/api/platform-health` 无凭证返回 401（不裸奔）；`/v4/` 未登录跳转 `/v4/settings/login` 登录页正常；真实浏览器公网 E2E 通过。quick tunnel 为随机临时域名，固定域名需后续绑定 Cloudflare 命名隧道。
 
 ## [5.8.7] - 2026-08-30（22:00 豆包施工基线：公网平台化 + Ollama + 双产品适配）
 ### 新增：正式施工入口

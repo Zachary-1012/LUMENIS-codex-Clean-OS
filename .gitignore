@@ -138,3 +138,6 @@ data/supervisor_state.json
 data/stability/
 faulthandler.log
 *.pyc
+
+# ---------- cloudflared 运行时产物（临时公网地址/日志，不入库） ----------
+tunnel_url.txt
