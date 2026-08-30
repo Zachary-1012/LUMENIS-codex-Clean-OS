@@ -106,6 +106,32 @@ app.register_blueprint(pr_case_integration.pr_case_bp)
 app.register_blueprint(system_features_api.system_features_bp)
 # V3.0 P0: Auth Recovery Center（认证恢复中心）
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
+
+# V3.0 影子板块：品牌营销知识库API
+@app.route('/api/brand-knowledge/stats')
+def brand_knowledge_stats():
+    """品牌知识库统计"""
+    try:
+        from brand_knowledge_base import get_knowledge_base
+        kb = get_knowledge_base()
+        return jsonify({'ok': True, 'data': kb.get_stats()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/brand-knowledge/search')
+def brand_knowledge_search():
+    """品牌知识库搜索"""
+    try:
+        from brand_knowledge_base import get_knowledge_base
+        kb = get_knowledge_base()
+        keyword = request.args.get('q', '')
+        category = request.args.get('category', '')
+        limit = int(request.args.get('limit', 20))
+        offset = int(request.args.get('offset', 0))
+        results = kb.search(keyword=keyword, category=category, limit=limit, offset=offset)
+        return jsonify({'ok': True, 'results': results, 'count': len(results)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 APP_VERSION='5.9.0'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
@@ -1982,6 +2008,31 @@ def api_report_verify_v571():
         'events':events,
         'warning': '报告应基于发布日期统计，采集日期仅作参考' if published!=collected else None
     })
+
+@app.route('/remote')
+def remote_access():
+    """本地固定入口：自动跳转到当前Cloudflare隧道公网URL
+    用于解决trycloudflare临时域名每次重启变化的问题。
+    用户访问 http://127.0.0.1:8200/remote 即可自动跳转到最新的公网地址。
+    """
+    import os
+    url_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tunnel_url.txt')
+    try:
+        if os.path.exists(url_file):
+            with open(url_file, 'r', encoding='utf-8') as f:
+                url = f.read().strip()
+            if url and url.startswith('http'):
+                return redirect(url, code=302)
+    except Exception:
+        pass
+    # 隧道未启动时显示提示
+    return jsonify({
+        'ok': False,
+        'message': '公网隧道未启动，请先运行 tunnel_guardian.py 启动隧道',
+        'local_url': 'http://127.0.0.1:8200',
+        'tunnel_url_file': url_file,
+    }), 503
+
 
 @app.route('/healthz')
 def healthz():
