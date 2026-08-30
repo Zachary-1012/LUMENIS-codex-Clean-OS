@@ -1669,6 +1669,15 @@ def api_xhs_collect_health():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/api/platform-health')
+def api_platform_health():
+    """全局采集健康状态中心（只读）：逐平台状态 + 三类分清 + 动态调度，供首页健康小点与统一 Auth Modal。"""
+    try:
+        from platform_adapters.health_center import build_platform_health
+        return jsonify(build_platform_health())
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+
 # ========== 网络自适应 & 本地缓存降级 API ==========
 @app.route('/api/network/status')
 def api_network_status():

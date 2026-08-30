@@ -12,7 +12,7 @@ PY = os.path.join(ROOT, '.venv', 'Scripts', 'python.exe')
 FILES = [
     'test_database', 'test_collect_state', 'test_guard_wiring', 'test_risk_engine',
     'test_event_date', 'test_report_periods', 'test_safety_boundary', 'test_title_fallback',
-    'test_scheduling', 'test_subject_redline',
+    'test_scheduling', 'test_health_center', 'test_subject_redline',
 ]
 
 
