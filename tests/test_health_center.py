@@ -28,10 +28,12 @@ xhs, dy, wb = find(h, 'xhs'), find(h, 'douyin'), find(h, 'weibo')
 check('1a xhs启用且待命IDLE', xhs['status'] == IDLE and xhs['enabled'])
 check('1b 抖音SECONDARY禁用且非0条', dy['status'] == DISABLED and not dy['enabled'])
 check('1c 共7个平台槽位', len(h['platforms']) == 7)
+check('1d 全待命时overall=IDLE', h['overall'] == IDLE)
 
 # 2. 成功
 h = health(last={'state': 'SUCCESS', 'notes': 5, 'msg': '', 'at': 't'})
 check('2 成功态OK', find(h, 'xhs')['status'] == sm.CS.SUCCESS and find(h, 'xhs')['triage'] == 'OK')
+check('2b 有正常平台时overall=OK', h['overall'] == 'OK')
 
 # 3. 空批 = NO_NEW_DATA（接口正常无新内容，区别于风控空）
 h = health(last={'state': 'EMPTY', 'notes': 0, 'msg': '', 'at': 't'})

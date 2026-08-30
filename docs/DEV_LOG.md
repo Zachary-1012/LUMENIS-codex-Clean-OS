@@ -62,6 +62,34 @@
 - Core regression is now 11/11 (added test_health_center); scheduling 31/31; health center 13/13.
 - Committed/pushed: b013305 (closed loop + state mapping), 484de8e (health center backend).
 
+### 2026-08-30 18:05-18:32 - Auto-collection E2E observed; rotated-cookie root cause found and recovered
+- 18:05 wake-up fired the first real auto task after re-enabling the scheduler: task xhs-20260830180503-219;
+  shadow decision logged (allow=FIRST_RUN). This confirms the scheduling P0 fix end-to-end (trigger path).
+- The task returned 20/20 BLOCKED IP_RISK_OR_CAPTCHA: the headless channel was redirected to
+  website-login/error?type=51 ("安全限制") before any search API call (api_calls=0, no error_code 300012).
+  Six-state logging was correct (BLOCKED, never "0 notes"); circuit tripped at 18:18 (20/20) until 19:18;
+  the per-task feedback wrote the real BLOCKED back and overwrote the trigger-time state, proving the
+  scheduling closed loop and cooldown/next_run computation.
+- Root cause (NOT an IP ban, NOT a captcha): the headless channel injects a static cookie header exported
+  2026-08-29 07:26; the 9222 human persistent profile had since rotated its session (web_session valid to
+  2027 but different; a1/webId/gid also differed). The stale session was rejected at the web routing layer.
+- Fix / recovery:
+  * New reusable tool scripts/sync_xhs_cookie_from_cdp.py merges FRESH 9222 http cookies (rotating login
+    state) with stable non-http account fields inherited from the previous header / latest .bak
+    (x-user-id-pro whitelist, customerClientId). No cookie values are printed; private file, timestamped backup.
+  * After sync, a single light probe returned SUCCESS with 40 real notes; a 2-keyword recovery sync through
+    the full production chain returned SUCCESS/SUCCESS (69 unique, 6 inserted, 30 updated). Circuit cleared;
+    planner entered the prescribed recovery path (recovery_streak=1, low-freq 1800s probe, not full rate).
+  * verify_account() now passes again (x-user-id-pro matches whitelist).
+- Removed the trigger-time optimistic SUCCESS feedback in app.py scheduler: a created task is not a success;
+  only the real per-task six-state outcome (xhs_cookie_bridge._shadow_record_result) writes back.
+- health_center fixes: corrected `import db` to `import database` (the swallowed import had hidden the last
+  batch and produced a false SESSION_EXPIRED); overall now resolves OK / IDLE / DISABLED correctly.
+  tests/test_health_center.py extended to 15 assertions.
+- Tests: core regression 11/11; scheduling 31/31; health center 15/15.
+- Follow-up: cookie rotation is a recurring operational event; next step is auto-detecting type=51 and wiring
+  the one-click 9222 sync into the unified Auth Recovery Modal (class A), instead of a manual script run.
+
 ### Unresolved / not yet tested
 - The 18:05 wake-up is the first real end-to-end observation of the re-enabled auto collection + shadow decision; until observed in collection_logs / schedule_decisions it remains "not yet E2E verified".
 - Dynamic scheduler is shadow-only; production gating cutover awaits explicit sign-off.

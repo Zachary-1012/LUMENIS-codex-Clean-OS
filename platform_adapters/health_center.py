@@ -36,7 +36,7 @@ def _xhs_runtime() -> Dict[str, Any]:
         except Exception:
             out["circuit"] = {}
         try:
-            import db as _db
+            import database as _db
             with _db.get_db() as conn:
                 row = conn.execute(
                     "SELECT status,notes_count,COALESCE(error_msg,''),finished_at "
@@ -67,7 +67,7 @@ def build_platform_health(*, runtime_provider: Optional[Callable[[str], Dict[str
         snap = {}
     platforms: List[Dict[str, Any]] = []
     counts = {"ok": 0, "idle": 0, "disabled": 0, "incident": 0, "needs_human": 0, "stop": 0}
-    worst = IDLE
+    worst = None
 
     for key, cap in PLATFORM_CAPABILITIES.items():
         enabled = bool(cap.get("enabled"))
@@ -149,10 +149,18 @@ def build_platform_health(*, runtime_provider: Optional[Callable[[str], Dict[str
         worst = _escalate(worst, canon)
 
     needs_attention = counts["incident"] > 0
+    if needs_attention:
+        overall = worst
+    elif counts["ok"]:
+        overall = "OK"
+    elif counts["idle"]:
+        overall = IDLE
+    else:
+        overall = DISABLED
     return {
         "ok": True,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "overall": worst,
+        "overall": overall,
         "needs_attention": needs_attention,
         "needs_human": counts["needs_human"] > 0,
         "counts": counts,
