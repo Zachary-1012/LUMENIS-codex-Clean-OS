@@ -162,6 +162,15 @@ def _basic_auth():
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
         return None
+    # 统一认证 Contract（V1.0 基线）：Basic 之外也认可 v4 有效会话（Bearer/同名 session cookie），
+    # 使手机端登录 v4 后根级只读健康 API（/api/platform-health 等）可被全局 Auth 健康中心取到；
+    # 未登录/无效会话仍 401，安全等级不降，现网 HTTP Basic 行为完全保留。
+    try:
+        from v4_upgrade.auth.service import get_current_user
+        if get_current_user():
+            return None
+    except Exception:
+        pass
     return ('需要登录', 401, {'WWW-Authenticate':'Basic realm=TaikooMonitor'})
 class ProxyPrefixMiddleware:
     def __init__(self,wsgi_app): self.wsgi_app=wsgi_app
