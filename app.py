@@ -305,6 +305,91 @@ def event_graph_types():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# V3.0 事件关系图谱写入API（v5.9.9 新增数据库持久化）
+@app.route('/api/event-graph/events', methods=['POST'])
+def event_graph_create_event():
+    """创建新事件"""
+    try:
+        from event_graph import get_event_graph
+        data = request.get_json() or {}
+        event_type = data.get('event_type', '')
+        title = data.get('title', '')
+        if not event_type or not title:
+            return jsonify({'ok': False, 'error': 'event_type 和 title 不能为空'}), 400
+        graph = get_event_graph()
+        event = graph.create_event(
+            event_type=event_type, title=title,
+            description=data.get('description', ''),
+            event_time=data.get('event_time'),
+            source=data.get('source', 'manual'),
+            status=data.get('status', 'ongoing'),
+            metadata=data.get('metadata'),
+            source_event_id=data.get('source_event_id'),
+        )
+        return jsonify({'ok': True, 'data': event.to_dict(), 'message': '事件创建成功'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/event-graph/relations', methods=['POST'])
+def event_graph_add_relation():
+    """添加事件关系"""
+    try:
+        from event_graph import get_event_graph
+        data = request.get_json() or {}
+        source_id = data.get('source_event_id', '')
+        target_id = data.get('target_event_id', '')
+        relation_type = data.get('relation_type', '')
+        if not source_id or not target_id or not relation_type:
+            return jsonify({'ok': False, 'error': '参数不能为空'}), 400
+        graph = get_event_graph()
+        relation = graph.add_relation(
+            source_id=source_id, target_id=target_id,
+            relation_type=relation_type,
+            evidence=data.get('evidence', ''),
+            confidence=data.get('confidence', 0.5),
+        )
+        if not relation:
+            return jsonify({'ok': False, 'error': '源事件或目标事件不存在'}), 404
+        return jsonify({'ok': True, 'data': relation.to_dict(), 'message': '关系添加成功'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/event-graph/import', methods=['POST'])
+def event_graph_import_existing():
+    """从现有events表导入事件"""
+    try:
+        from event_graph import get_event_graph, reset_event_graph
+        data = request.get_json() or {}
+        limit = int(data.get('limit', 20))
+        reset_event_graph()
+        graph = get_event_graph()
+        imported = graph.import_from_existing_events(limit=limit)
+        stats = graph.get_stats()
+        return jsonify({'ok': True, 'imported': imported, 'stats': stats, 'message': f'成功导入 {imported} 条事件'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/event-graph/events/<event_id>', methods=['DELETE'])
+def event_graph_delete_event(event_id):
+    """删除事件（同时删除关联关系）"""
+    try:
+        from event_graph import get_event_graph
+        import sqlite3 as _sq3
+        graph = get_event_graph()
+        if event_id not in graph.events:
+            return jsonify({'ok': False, 'error': '事件不存在'}), 404
+        del graph.events[event_id]
+        graph.relations = [r for r in graph.relations
+                          if r.source_event.event_id != event_id and r.target_event.event_id != event_id]
+        _dbp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+        with _sq3.connect(_dbp) as conn:
+            conn.execute("DELETE FROM event_graph_events WHERE event_id=?", (event_id,))
+            conn.execute("DELETE FROM event_graph_relations WHERE source_event_id=? OR target_event_id=?", (event_id, event_id))
+            conn.commit()
+        return jsonify({'ok': True, 'message': '事件已删除'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # V3.0 品牌分析报告API
 @app.route('/api/brand-report/generate', methods=['POST'])
 def brand_report_generate():
@@ -387,7 +472,7 @@ def brand_report_export(report_id):
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-APP_VERSION='5.9.8'
+APP_VERSION='5.9.9'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')

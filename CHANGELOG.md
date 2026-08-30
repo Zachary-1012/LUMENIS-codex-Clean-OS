@@ -1,5 +1,27 @@
 ﻿# 变更日志
 
+## [5.9.9] - 2026-08-31（事件关系图谱数据库持久化修复）
+
+### 修复：event_graph.py 从纯内存实现改为数据库持久化
+
+**问题**：event_graph.py 使用内存字典存储事件和关系，没有数据库表，进程重启后数据丢失，无法与现有events表（427条）关联。前端事件关系图谱页面永远显示"空状态"。
+
+**修复内容**：
+1. 新增数据库表：event_graph_events（事件表，含source_event_id关联现有events表）、event_graph_relations（关系表，唯一约束防重复）
+2. BrandEvent类新增：from_row()、save_to_db()、source_event_id、created_at/updated_at
+3. EventRelation类新增：save_to_db()、created_at
+4. EventGraph类重构：__init__自动建表+加载、load_from_db()、add_event/create_event/add_relation自动持久化、import_from_existing_events()从现有events表导入（按risk_level判断类型）、reset_event_graph()
+5. 新增写入API：POST /api/event-graph/events、POST /api/event-graph/relations、POST /api/event-graph/import、DELETE /api/event-graph/events/<id>
+6. 保留所有现有读取API，向后兼容
+
+**数据**：从现有events表导入15条（13传播+2舆情），手动创建1条营销事件，添加1条触发关系。当前16事件+1关系。
+
+**验证**：健康检查5.9.9、统计/列表/创建/添加关系API全部正常、进程重启数据不丢失、前端页面正常加载。
+
+### 版本号统一
+- VERSION文件：5.9.8 -> 5.9.9
+- app.py APP_VERSION：5.9.8 -> 5.9.9
+
 ## [5.9.8] - 2026-08-31（P0-1生产事实校准 + P0-2阶段1影子模式 + P1 App Evidence最小版）
 
 ### P0-1 生产事实校准（版本漂移修复）
