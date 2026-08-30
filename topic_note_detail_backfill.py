@@ -56,7 +56,7 @@ def extract_note_detail(page, note_url):
         page.wait_for_timeout(3000)
 
         # 检查是否跳验证页
-        cur_url = page.url() or ''
+        cur_url = page.url or ''
         if any(k in cur_url for k in ('captcha', 'website-login', '/login')):
             body = ''
             try:

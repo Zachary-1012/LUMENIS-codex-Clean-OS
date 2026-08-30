@@ -360,10 +360,14 @@ def clear_campaign_circuit():
     except Exception:
         pass
 
-def _probe_xhs_health_via_cdp():
+def _probe_xhs_health_via_cdp(test_search=False):
     """连 9222 已登录浏览器做一次轻量健康探活：访问 explore，判断是否仍被重定向到 captcha/登录页。
+
+    Args:
+        test_search: 是否额外做一次搜索测试（recover 时启用）。只有搜索也不跳验证页才判定完全健康。
     返回 (healthy:bool, detail:str)。绝不绕过验证——只有真实会话正常才判定健康。"""
     page = None
+    browser = None
     try:
         try:
             from cdp_helper import reset_cdp_targets
@@ -378,24 +382,50 @@ def _probe_xhs_health_via_cdp():
             browser = pw.chromium.connect_over_cdp(_u, timeout=15000)
             ctx = browser.contexts[0]
             page = ctx.new_page()
+            # 第一步：explore 首页检查
             page.goto('https://www.xiaohongshu.com/explore', wait_until='domcontentloaded', timeout=15000)
             page.wait_for_timeout(2500)
-            u = page.url() or ''
+            u = page.url or ''
             body = ''
             try: body = page.evaluate("() => document.body ? document.body.innerText.slice(0,600) : ''") or ''
             except Exception: pass
+            bad_url = ('captcha' in u) or ('/website-login' in u) or ('/login' in u)
+            bad_txt = any(k in body for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '验证码'))
+            if bad_url or bad_txt:
+                try: page.goto('about:blank', timeout=4000)
+                except Exception: pass
+                try: browser.close()
+                except Exception: pass
+                return False, 'explore 仍停留在登录/安全验证页，请在已登录浏览器完成扫码验证后再检测'
+            # 第二步：搜索测试（recover 时启用）——在同一个 page/browser 上做，不提前关闭
+            if test_search:
+                page.goto('https://www.xiaohongshu.com/search_result?keyword=太古汇', wait_until='domcontentloaded', timeout=20000)
+                page.wait_for_timeout(3500)
+                su = page.url or ''
+                sbody = ''
+                try: sbody = page.evaluate("() => document.body ? document.body.innerText.slice(0,400) : ''") or ''
+                except Exception: pass
+                s_bad_url = ('captcha' in su) or ('/website-login' in su) or ('/login' in su)
+                s_bad_txt = any(k in sbody for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '二维码1分钟失效'))
+                try: page.goto('about:blank', timeout=4000)
+                except Exception: pass
+                try: browser.close()
+                except Exception: pass
+                if s_bad_url or s_bad_txt:
+                    return False, 'explore 正常，但搜索仍触发安全验证页（需小红书App扫码）。请在9222浏览器手动搜索一次并完成扫码，再点重新检测'
+                return True, 'explore + 搜索均正常，会话完全健康'
+            # 非搜索测试模式：explore 通过即返回
             try: page.goto('about:blank', timeout=4000)
             except Exception: pass
             try: browser.close()
             except Exception: pass
-        bad_url = ('captcha' in u) or ('/website-login' in u) or ('/login' in u)
-        bad_txt = any(k in body for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '验证码'))
-        if bad_url or bad_txt:
-            return False, '仍停留在登录/安全验证页，请在已登录浏览器完成扫码验证后再检测'
         return True, '会话正常（explore 未跳验证页）'
     except Exception as e:
         try:
             if page: page.goto('about:blank', timeout=3000)
+        except Exception: pass
+        try:
+            if browser: browser.close()
         except Exception: pass
         return False, f'健康探活失败：{str(e)[:120]}'
 
@@ -802,19 +832,36 @@ def register_topic_campaign(app, collect_lock=None):
 
     @app.route('/api/topic-campaign/recover', methods=['POST'])
     def topic_recover():
-        # V2.0 P0-2/P0-4：人工完成扫码/验证后调用，统一六态探活，通过才解除熔断
-        state = _probe_runtime_state()
-        if isinstance(state, XhsRuntimeState) if _RUNTIME_STATE_AVAILABLE else False:
+        # V2.0 P0-2/P0-4：人工完成扫码/验证后调用，做完整探活（explore + 搜索测试），通过才解除熔断
+        # 注意：不调用 _probe_runtime_state()，因为它在熔断 OPEN 时会跳过实时探活
+        healthy, detail = _probe_xhs_health_via_cdp(test_search=True)
+        # 构建六态返回
+        if _RUNTIME_STATE_AVAILABLE:
+            state = state_from_circuit(_CAMPAIGN_CIRCUIT)
+            state.set_health_probe_result(healthy, {'health_detail': detail, 'search_test': True})
             sd = state.to_dict()
         else:
-            sd = state  # 降级 dict
-        if sd.get('healthy'):
+            cb = _campaign_circuit_state()
+            sd = {
+                'overall': 'healthy' if healthy else ('circuit_open' if cb else 'unhealthy'),
+                'healthy': healthy,
+                'auth_state': 'valid' if healthy else 'required',
+                'session_state': 'real_session_valid' if healthy else 'browser_disconnected',
+                'platform_state': 'reachable' if healthy else 'unreachable',
+                'collector_state': 'idle',
+                'circuit_state': 'open' if cb else 'closed',
+                'recovery_state': 'idle',
+                'last_check': _now(),
+                'circuit': cb,
+                'detail': {'health_detail': detail},
+            }
+        if healthy:
             clear_campaign_circuit()
             sd['recovered'] = True
-            sd['message'] = '六态健康检查通过，已解除熔断，可恢复采集'
+            sd['message'] = 'explore + 搜索均正常，已解除熔断，可恢复采集和详情补抓'
             return jsonify({'ok': True, **sd})
         sd['recovered'] = False
-        sd['message'] = '尚未通过六态健康检查，保持熔断（请确认已完成扫码/验证）'
+        sd['message'] = detail or '尚未通过健康检查，保持熔断'
         return jsonify({'ok': False, **sd}), 423
 
     @app.route('/api/topic-campaign/runtime-state')
@@ -1116,3 +1163,4 @@ def register_topic_campaign(app, collect_lock=None):
         return jsonify({'ok': True, 'campaign_key': ck, 'status': status})
 
     print('[TopicCampaign] 话题监测端口模块已注册（多任务 + 固定时间点调度，独立线程）')
+
