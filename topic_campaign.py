@@ -15,6 +15,18 @@ import os, json, threading, subprocess, time, csv, io, sys, random
 from datetime import datetime
 from flask import jsonify, request, send_from_directory, Response
 
+# V2.0 基线 P0-1：统一 XHS Runtime State 六态状态机
+# AUTH / SESSION / PLATFORM / COLLECTOR / CIRCUIT / RECOVERY
+try:
+    from xhs_runtime_state import (
+        XhsRuntimeState, state_from_probe, state_from_circuit,
+        CircuitState, PlatformState, AuthState, CollectorState, RecoveryState,
+    )
+    _RUNTIME_STATE_AVAILABLE = True
+except Exception as _e:
+    _RUNTIME_STATE_AVAILABLE = False
+    _RUNTIME_STATE_IMPORT_ERROR = str(_e)
+
 # ========== 专题配置 ==========
 DEFAULT_TOPICS = [
     '#广州太古汇十五周年',
@@ -27,7 +39,7 @@ DEFAULT_TOPICS = [
 ]
 START_DATE = '2026-08-28'
 END_DATE = '2026-10-07'
-MODULE_VERSION = '5.7.3-adapted-v2'
+MODULE_VERSION = '5.8.10-p0-runtime-state'
 CAMPAIGN_KEY = 'taikoo_15th'
 
 # 中频率固定时间点调度（与主采集 8/10/12/14/16/18/20/22/23 完全错峰，间隔约2小时）
@@ -130,41 +142,132 @@ def _insert_snapshot(conn, campaign_key, topic, data, status='success', error=''
          json.dumps(data, ensure_ascii=False)[:200000])
     )
 
+def _classify_note(n, subject_hit_flag):
+    """V2.0 P0-6：基于规则的笔记分类（不依赖AI，可解释、可追溯）。
+
+    返回 (content_type, sentiment, risk_level, evidence_quality)。
+    主体口径由 subject_rules.py 决定，这里只做内容类型/情绪/风险的规则判断。
+    """
+    title = (n.get('title') or n.get('desc') or n.get('content') or '').lower()
+    author = (n.get('author') or n.get('nickname') or '').lower()
+    has_content = bool((n.get('content') or n.get('desc') or '').strip())
+    has_media = bool(n.get('media') or n.get('images') or n.get('image_list'))
+    has_comments_detail = bool(n.get('comments_detail') or n.get('comment_list'))
+
+    if has_content and has_media and has_comments_detail:
+        eq = 'full'
+    elif has_content or has_media:
+        eq = 'partial'
+    else:
+        eq = 'search_only'
+
+    if any(k in author for k in ('太古汇', '官方', 'taikoo')):
+        ct = '官方'
+    elif any(k in title for k in ('推广', '广告', '赞助', '合作', '商单', '种草')):
+        ct = '商业'
+    elif any(k in title for k in ('投诉', '差评', '维权', '避雷', '垃圾', '坑', '失望', '退款')):
+        ct = '投诉'
+    elif any(k in title for k in ('测评', '对比', '评测', '横评')):
+        ct = '测评'
+    elif any(k in title for k in ('体验', '打卡', '探店', '逛', '一日游')):
+        ct = '体验'
+    elif any(k in title for k in ('活动', '促销', '优惠', '打折', '周年庆', '展览', '展')):
+        ct = '活动内容'
+    else:
+        ct = 'UGC'
+
+    pos_words = ('好', '赞', '喜欢', '棒', '美', '优秀', '推荐', '满意', '开心', '惊喜', '值得', '完美', '用心')
+    neg_words = ('差', '烂', '坑', '失望', '垃圾', '投诉', '避雷', '维权', '退款', '生气', '不满', '糟糕', '骗')
+    pos_count = sum(1 for w in pos_words if w in title)
+    neg_count = sum(1 for w in neg_words if w in title)
+    if neg_count > pos_count and neg_count > 0:
+        st = 'negative'
+    elif pos_count > neg_count and pos_count > 0:
+        st = 'positive'
+    else:
+        st = 'neutral'
+
+    if subject_hit_flag and ct == '投诉':
+        rl = 'high'
+    elif subject_hit_flag and st == 'negative':
+        rl = 'medium'
+    elif st == 'negative':
+        rl = 'low'
+    else:
+        rl = 'none'
+
+    return ct, st, rl, eq
+
+
 def _save_notes(conn, campaign_key, topic, notes):
+    """V2.0 P0-5/P0-6：保存话题笔记，集成主体过滤、分类、情绪、风险、证据质量。
+
+    主体判断必须调用 subject_rules.subject_hit()，绝不重新实现第二套主体规则。
+    新增字段：media_json, comments_json, subject_hit, content_type, sentiment, risk_level, evidence_quality, detail_captured_at。
+    向后兼容：旧字段不变，新字段有默认值。
+    """
+    try:
+        from subject_rules import subject_hit as _subject_hit
+    except Exception:
+        def _subject_hit(text):
+            t = (text or '').lower()
+            return any(k in t for k in ('太古汇', 'taikoo hui', '广州太古汇'))
+
     now = _now()
     new = 0
     for n in notes or []:
         nid = str(n.get('note_id') or n.get('id') or '').strip()
         if not nid:
             continue
+        subject_text = ' '.join([
+            str(n.get('title', '')), str(n.get('content', n.get('desc', ''))),
+            str(n.get('author', n.get('nickname', '')))
+        ])
+        s_hit = 1 if _subject_hit(subject_text) else 0
+        ct, st, rl, eq = _classify_note(n, s_hit)
+
+        media_json = json.dumps(n.get('media') or n.get('images') or n.get('image_list') or [], ensure_ascii=False)[:50000]
+        comments_json = json.dumps(n.get('comments_detail') or n.get('comment_list') or [], ensure_ascii=False)[:50000]
+        detail_captured = n.get('detail_captured_at', '') or (now if eq in ('full', 'partial') else '')
+
         cur = conn.execute(
             "SELECT id FROM topic_campaign_notes WHERE campaign_key=? AND topic=? AND note_id=?",
             (campaign_key, topic, nid)
         ).fetchone()
-        vals = (
-            n.get('title', ''),
-            n.get('content', n.get('desc', '')),
-            n.get('author', n.get('nickname', '')),
-            n.get('publish_datetime', n.get('publish_time', '')),
-            int(n.get('likes', n.get('liked_count', 0)) or 0),
-            int(n.get('comments', n.get('comment_count', 0)) or 0),
-            int(n.get('collects', n.get('collected_count', 0)) or 0),
-            int(n.get('shares', n.get('share_count', 0)) or 0),
-            n.get('note_url', n.get('url', '')) or '',
-            now,
-            json.dumps(n, ensure_ascii=False)[:100000]
-        )
         if cur:
             conn.execute(
-                """UPDATE topic_campaign_notes SET title=?,content=?,author=?,publish_datetime=?,likes=?,comments=?,collects=?,shares=?,note_url=?,last_seen_at=?,raw_json=? WHERE id=?""",
-                vals + (cur['id'],)
+                """UPDATE topic_campaign_notes SET title=?,content=?,author=?,publish_datetime=?,likes=?,comments=?,collects=?,shares=?,note_url=?,last_seen_at=?,raw_json=?,media_json=?,comments_json=?,subject_hit=?,content_type=?,sentiment=?,risk_level=?,evidence_quality=?,detail_captured_at=? WHERE id=?""",
+                (
+                    n.get('title', ''), n.get('content', n.get('desc', '')),
+                    n.get('author', n.get('nickname', '')),
+                    n.get('publish_datetime', n.get('publish_time', '')),
+                    int(n.get('likes', n.get('liked_count', 0)) or 0),
+                    int(n.get('comments', n.get('comment_count', 0)) or 0),
+                    int(n.get('collects', n.get('collected_count', 0)) or 0),
+                    int(n.get('shares', n.get('share_count', 0)) or 0),
+                    n.get('note_url', n.get('url', '')) or '',
+                    now, json.dumps(n, ensure_ascii=False)[:100000],
+                    media_json, comments_json, s_hit, ct, st, rl, eq, detail_captured,
+                    cur['id'],
+                )
             )
         else:
-            # INSERT 含 first_seen_at/last_seen_at 两个时间列，新笔记两者都取 now；
-            # vals = [title..note_url 共9项, last_seen_at(now), raw_json]，故在 note_url 后补一个 now 作为 first_seen_at
             conn.execute(
-                """INSERT INTO topic_campaign_notes(campaign_key,topic,note_id,title,content,author,publish_datetime,likes,comments,collects,shares,note_url,first_seen_at,last_seen_at,raw_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (campaign_key, topic, nid) + vals[:9] + (now, now) + vals[10:]
+                """INSERT INTO topic_campaign_notes(campaign_key,topic,note_id,title,content,author,publish_datetime,likes,comments,collects,shares,note_url,first_seen_at,last_seen_at,raw_json,media_json,comments_json,subject_hit,content_type,sentiment,risk_level,evidence_quality,detail_captured_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    campaign_key, topic, nid,
+                    n.get('title', ''), n.get('content', n.get('desc', '')),
+                    n.get('author', n.get('nickname', '')),
+                    n.get('publish_datetime', n.get('publish_time', '')),
+                    int(n.get('likes', n.get('liked_count', 0)) or 0),
+                    int(n.get('comments', n.get('comment_count', 0)) or 0),
+                    int(n.get('collects', n.get('collected_count', 0)) or 0),
+                    int(n.get('shares', n.get('share_count', 0)) or 0),
+                    n.get('note_url', n.get('url', '')) or '',
+                    now, now, json.dumps(n, ensure_ascii=False)[:100000],
+                    media_json, comments_json, s_hit, ct, st, rl, eq, detail_captured,
+                )
             )
             new += 1
     return new
@@ -295,6 +398,89 @@ def _probe_xhs_health_via_cdp():
             if page: page.goto('about:blank', timeout=3000)
         except Exception: pass
         return False, f'健康探活失败：{str(e)[:120]}'
+
+# ========== V2.0 P0-1：统一 Runtime State 六态探活 ==========
+
+def _probe_runtime_state():
+    """统一六态探活：加载熔断 → CDP 真实探活 → 聚合 XhsRuntimeState。
+
+    返回 XhsRuntimeState 对象（to_dict() 可直接给前端）。
+    与 _probe_xhs_health_via_cdp 的区别：返回结构化六态，不只是 bool+str。
+    """
+    if not _RUNTIME_STATE_AVAILABLE:
+        # 降级：用旧探活 + 熔断文件拼一个最小 dict
+        healthy, detail = _probe_xhs_health_via_cdp()
+        cb = _campaign_circuit_state()
+        return {
+            'overall': 'circuit_open' if cb else ('healthy' if healthy else 'unhealthy'),
+            'healthy': healthy and not cb,
+            'auth_state': 'valid' if healthy else 'required',
+            'session_state': 'real_session_valid' if healthy else 'browser_disconnected',
+            'platform_state': 'reachable' if healthy else 'unreachable',
+            'collector_state': 'idle',
+            'circuit_state': 'open' if cb else 'closed',
+            'recovery_state': 'idle',
+            'last_check': _now(),
+            'circuit': cb,
+            'detail': {'health_detail': detail, 'runtime_state_unavailable': _RUNTIME_STATE_IMPORT_ERROR},
+        }
+    state = state_from_circuit(_CAMPAIGN_CIRCUIT)
+    # 只有熔断不是 OPEN 时才做真实探活（OPEN 时探活无意义且可能撞风控）
+    if state.circuit == CircuitState.OPEN:
+        state.last_check = _now()
+        state.detail['skipped_probe'] = 'circuit open, skip live probe to avoid hitting platform'
+        return state
+    healthy, detail = _probe_xhs_health_via_cdp()
+    state.set_health_probe_result(healthy, {'health_detail': detail})
+    return state
+
+
+def _half_open_probe():
+    """IP_RISK 冷却结束后的半开探测：小流量、单话题、短超时，成功才完全解除熔断。
+
+    返回 (success:bool, detail:str)。
+    半开探测只做 1 个话题、滚动 1 次、超时 60 秒，绝不做全量采集。
+    """
+    if not _RUNTIME_STATE_AVAILABLE:
+        # 降级：直接做健康探活
+        return _probe_xhs_health_via_cdp()
+    state = state_from_circuit(_CAMPAIGN_CIRCUIT)
+    if state.circuit != CircuitState.HALF_OPEN:
+        return False, f'当前非半开状态（{state.circuit.value}），无需半开探测'
+    # 半开第一步：CDP 健康探活
+    healthy, detail = _probe_xhs_health_via_cdp()
+    if not healthy:
+        # 探活失败 → 回到 COOLING，重新计时
+        _trip_campaign_circuit('IP_RISK', f'半开探活失败：{detail}')
+        return False, f'半开探活失败，已重新冷却：{detail}'
+    # 半开第二步：单话题小流量采集验证（1话题、滚动1次、60秒超时）
+    try:
+        script = os.path.join(_BASE_DIR, 'xhs_campaign_monitor.js')
+        cdp = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222').strip()
+        # 取第一个启用的话题做探针
+        db = _db()
+        with db.get_db() as conn:
+            row = conn.execute(
+                'SELECT topic FROM topic_campaign_topics WHERE campaign_key=? AND enabled=1 LIMIT 1',
+                (CAMPAIGN_KEY,)).fetchone()
+        probe_topic = row['topic'] if row else '#广州太古汇'
+        cmd = ['node', script, '--topic', probe_topic, '--max-scroll', '1', '--cdp', cdp]
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+        out = (p.stdout or '').strip()
+        idx = out.find('{')
+        data = json.loads(out[idx:]) if idx >= 0 else {}
+        if p.returncode == 0 and data.get('ok', True) and data.get('notes'):
+            # 半开成功 → 解除熔断，标记 recovery=RECOVERED
+            clear_campaign_circuit()
+            return True, f'半开探测成功（话题「{probe_topic}」获 {len(data.get("notes",[]))} 条），已解除熔断'
+        if data.get('risk_status'):
+            _trip_campaign_circuit(data['risk_status'], f'半开探测命中风控：{data.get("risk_detail","")}')
+            return False, f'半开探测命中风控（{data["risk_status"]}），已重新熔断'
+        return False, f'半开探测未获数据（exit={p.returncode}），保持熔断'
+    except subprocess.TimeoutExpired:
+        return False, '半开探测超时（90秒），保持熔断'
+    except Exception as e:
+        return False, f'半开探测异常：{str(e)[:120]}'
 
 # ========== 专题独立频率控制（不占用主舆情采集配额） ==========
 def _clean_today_runs():
@@ -566,6 +752,12 @@ def register_topic_campaign(app, collect_lock=None):
             total = conn.execute(
                 'SELECT COUNT(*) c FROM topic_campaign_notes WHERE campaign_key=?', (ck,)
             ).fetchone()['c']
+        # V2.0 P0-1：统一六态（仅加载熔断文件，不做实时CDP探活，避免status接口变慢）
+        if _RUNTIME_STATE_AVAILABLE:
+            _rs = state_from_circuit(_CAMPAIGN_CIRCUIT)
+            runtime_state = _rs.to_dict()
+        else:
+            runtime_state = {'overall': 'unknown', 'runtime_state_unavailable': _RUNTIME_STATE_IMPORT_ERROR}
         return jsonify({
             'ok': True,
             'module_version': MODULE_VERSION,
@@ -579,6 +771,7 @@ def register_topic_campaign(app, collect_lock=None):
             'today_run_hours': sorted(list(_today_run_hours)),
             'rate_status': get_campaign_rate_status(),
             'circuit': _campaign_circuit_state(),
+            'runtime_state': runtime_state,
         })
 
     @app.route('/api/topic-campaign/topics')
@@ -609,12 +802,97 @@ def register_topic_campaign(app, collect_lock=None):
 
     @app.route('/api/topic-campaign/recover', methods=['POST'])
     def topic_recover():
-        # 人工在已登录浏览器完成扫码/验证后调用：先做真实健康探活，通过才解除熔断（不绕过任何平台验证）
-        healthy, detail = _probe_xhs_health_via_cdp()
-        if healthy:
+        # V2.0 P0-2/P0-4：人工完成扫码/验证后调用，统一六态探活，通过才解除熔断
+        state = _probe_runtime_state()
+        if isinstance(state, XhsRuntimeState) if _RUNTIME_STATE_AVAILABLE else False:
+            sd = state.to_dict()
+        else:
+            sd = state  # 降级 dict
+        if sd.get('healthy'):
             clear_campaign_circuit()
-            return jsonify({'ok': True, 'recovered': True, 'message': '健康检查通过，已解除熔断，可恢复采集', 'detail': detail})
-        return jsonify({'ok': False, 'recovered': False, 'message': '尚未通过健康检查，保持熔断', 'detail': detail}), 423
+            sd['recovered'] = True
+            sd['message'] = '六态健康检查通过，已解除熔断，可恢复采集'
+            return jsonify({'ok': True, **sd})
+        sd['recovered'] = False
+        sd['message'] = '尚未通过六态健康检查，保持熔断（请确认已完成扫码/验证）'
+        return jsonify({'ok': False, **sd}), 423
+
+    @app.route('/api/topic-campaign/runtime-state')
+    def topic_runtime_state():
+        """V2.0 P0-1：返回统一六态运行时状态（前端全局健康小点/Auth Modal 共用）。"""
+        state = _probe_runtime_state()
+        if isinstance(state, XhsRuntimeState) if _RUNTIME_STATE_AVAILABLE else False:
+            return jsonify({'ok': True, **state.to_dict()})
+        return jsonify({'ok': True, **state})
+
+    @app.route('/api/topic-campaign/half-open-probe', methods=['POST'])
+    def topic_half_open_probe():
+        """V2.0 P0-3：IP_RISK 冷却结束后的半开探测（小流量单话题验证，成功才完全解除）。"""
+        success, detail = _half_open_probe()
+        state = _probe_runtime_state()
+        if isinstance(state, XhsRuntimeState) if _RUNTIME_STATE_AVAILABLE else False:
+            sd = state.to_dict()
+        else:
+            sd = state
+        return jsonify({'ok': success, 'half_open_success': success, 'detail': detail, **sd})
+
+    @app.route('/api/topic-campaign/note/<note_id>')
+    def topic_note_detail(note_id):
+        """V2.0 P0-7：获取单条笔记完整详情（正文/媒体/评论/主体/分类/情绪/风险），用于 Note Detail 下钻。"""
+        ck = request.args.get('campaign_key', CAMPAIGN_KEY).strip()
+        db = _db()
+        with db.get_db() as conn:
+            row = conn.execute(
+                'SELECT * FROM topic_campaign_notes WHERE campaign_key=? AND note_id=?',
+                (ck, note_id)
+            ).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': '笔记不存在'}), 404
+        d = dict(row)
+        # 解析 media_json 和 comments_json
+        try:
+            d['media'] = json.loads(d.get('media_json') or '[]')
+        except Exception:
+            d['media'] = []
+        try:
+            d['comments'] = json.loads(d.get('comments_json') or '[]')
+        except Exception:
+            d['comments'] = []
+        return jsonify({'ok': True, 'note': d})
+
+    @app.route('/api/topic-campaign/backfill-detail', methods=['POST'])
+    def topic_backfill_detail():
+        """V2.0 P0-5：触发笔记详情补抓（单条 note_id 或批量 limit）。
+
+        熔断中拒绝（423），避免撞风控。补抓在后台线程执行。
+        """
+        d = request.get_json(silent=True) or {}
+        ck = (d.get('campaign_key') or CAMPAIGN_KEY).strip()
+        note_id = (d.get('note_id') or '').strip()
+        limit = min(int(d.get('limit') or 20), 50)
+
+        # 熔断检查
+        cb = _campaign_circuit_state()
+        if cb:
+            return jsonify({'ok': False, 'circuit_open': True,
+                            'error': f'熔断中（{cb.get("status")}），请先解除熔断再补抓'}), 423
+
+        def _backfill_worker():
+            try:
+                import subprocess as _sp
+                cmd = [sys.executable, os.path.join(_BASE_DIR, 'topic_note_detail_backfill.py'),
+                       '--campaign-key', ck]
+                if note_id:
+                    cmd.extend(['--note-id', note_id])
+                else:
+                    cmd.extend(['--limit', str(limit)])
+                _sp.run(cmd, capture_output=True, text=True, timeout=1800, cwd=_BASE_DIR)
+            except Exception as _e:
+                print(f'[backfill] worker error: {_e}')
+
+        threading.Thread(target=_backfill_worker, daemon=True, name='topic-detail-backfill').start()
+        scope = f'note_id={note_id}' if note_id else f'limit={limit}'
+        return jsonify({'ok': True, 'message': f'详情补抓已启动（{scope}），后台执行中', 'campaign_key': ck})
 
     @app.route('/api/topic-campaign/timeline')
     def topic_timeline():
@@ -632,6 +910,95 @@ def register_topic_campaign(app, collect_lock=None):
             p.append(limit)
             rows = [dict(r) for r in conn.execute(q, tuple(p)).fetchall()]
         return jsonify({'ok': True, 'snapshots': rows})
+
+    @app.route('/api/topic-campaign/stats')
+    def topic_stats():
+        """V2.0 P0-8：话题聚合统计（Unique/New/Runs口径统一 + 主体/风险/分类分布）。
+
+        Unique = 去重后笔记总数（按note_id）
+        New = 最近24小时首次出现的笔记（first_seen_at）
+        Runs = 该话题的快照采集次数
+        主体命中 = subject_hit=1 的笔记数
+        风险笔记 = risk_level in (medium,high,critical)
+        """
+        ck = request.args.get('campaign_key', CAMPAIGN_KEY).strip()
+        db = _db()
+        with db.get_db() as conn:
+            # 按话题聚合
+            topic_stats = conn.execute("""
+                SELECT
+                    n.topic,
+                    COUNT(DISTINCT n.note_id) AS unique_notes,
+                    COUNT(DISTINCT CASE WHEN n.first_seen_at >= datetime('now','-24 hours') THEN n.note_id END) AS new_notes,
+                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.subject_hit=1) AS subject_hits,
+                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.risk_level IN ('medium','high','critical')) AS risk_notes,
+                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.evidence_quality='full') AS full_evidence,
+                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.evidence_quality='search_only') AS search_only
+                FROM topic_campaign_notes n
+                WHERE n.campaign_key=?
+                GROUP BY n.topic
+                ORDER BY unique_notes DESC
+            """, (ck,)).fetchall()
+
+            # Runs次数（按话题统计快照数）
+            runs_by_topic = dict(conn.execute("""
+                SELECT topic, COUNT(*) AS runs FROM topic_campaign_snapshots
+                WHERE campaign_key=? AND status='success' GROUP BY topic
+            """, (ck,)).fetchall())
+
+            # 内容类型分布
+            type_dist = conn.execute("""
+                SELECT content_type, COUNT(DISTINCT note_id) AS cnt
+                FROM topic_campaign_notes WHERE campaign_key=? AND content_type != ''
+                GROUP BY content_type ORDER BY cnt DESC
+            """, (ck,)).fetchall()
+
+            # 情绪分布
+            sent_dist = conn.execute("""
+                SELECT sentiment, COUNT(DISTINCT note_id) AS cnt
+                FROM topic_campaign_notes WHERE campaign_key=? AND sentiment != ''
+                GROUP BY sentiment
+            """, (ck,)).fetchall()
+
+            # 全局汇总
+            total = conn.execute("""
+                SELECT
+                    COUNT(DISTINCT note_id) AS total_unique,
+                    COUNT(DISTINCT CASE WHEN first_seen_at >= datetime('now','-24 hours') THEN note_id END) AS total_new,
+                    COUNT(DISTINCT note_id) FILTER (WHERE subject_hit=1) AS total_subject_hits,
+                    COUNT(DISTINCT note_id) FILTER (WHERE risk_level IN ('medium','high','critical')) AS total_risk,
+                    COUNT(DISTINCT note_id) FILTER (WHERE evidence_quality='full') AS total_full_evidence
+                FROM topic_campaign_notes WHERE campaign_key=?
+            """, (ck,)).fetchone()
+
+            total_runs = conn.execute(
+                "SELECT COUNT(*) FROM topic_campaign_snapshots WHERE campaign_key=? AND status='success'",
+                (ck,)
+            ).fetchone()[0]
+
+        topics = []
+        for ts in topic_stats:
+            t = dict(ts)
+            t['runs'] = runs_by_topic.get(t['topic'], 0)
+            t['subject_hit_rate'] = round(t['subject_hits'] / max(1, t['unique_notes']) * 100, 1)
+            topics.append(t)
+
+        return jsonify({
+            'ok': True,
+            'campaign_key': ck,
+            'total': {
+                'unique_notes': total['total_unique'] or 0,
+                'new_notes_24h': total['total_new'] or 0,
+                'runs': total_runs,
+                'subject_hits': total['total_subject_hits'] or 0,
+                'subject_hit_rate': round((total['total_subject_hits'] or 0) / max(1, total['total_unique'] or 0) * 100, 1),
+                'risk_notes': total['total_risk'] or 0,
+                'full_evidence': total['total_full_evidence'] or 0,
+            },
+            'by_topic': topics,
+            'content_type_dist': [dict(r) for r in type_dist],
+            'sentiment_dist': [dict(r) for r in sent_dist],
+        })
 
     @app.route('/api/topic-campaign/notes')
     def topic_notes():

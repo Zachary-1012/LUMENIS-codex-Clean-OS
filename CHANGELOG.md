@@ -1,5 +1,55 @@
 # 变更日志
 
+## [5.8.10] - 2026-08-31（V2.0 基线 P0 收口：Runtime State 六态 + Topic Evidence Layer + UI Drill-down + 数据对齐）
+
+### P0-1：统一 Runtime State 六态（已实测）
+- 新建 `xhs_runtime_state.py`：统一 XHS 六态状态机（AUTH/SESSION/PLATFORM/COLLECTOR/CIRCUIT/RECOVERY），含 `XhsRuntimeState` 类、6 个枚举、`state_from_circuit()`/`state_from_probe()` 便捷函数。
+- `topic_campaign.py` 新增 `_probe_runtime_state()`：熔断 OPEN 时跳过实时 CDP 探活（避免撞风控），仅加载熔断文件返回六态；非熔断时做真实探活。
+- 新增 `/api/topic-campaign/runtime-state` 接口：返回统一六态（overall/auth/session/platform/collector/circuit/recovery + detail + last_check），前端全局健康小点/Auth Modal 共用。
+- `topic_status` 集成 `runtime_state` 字段输出，`topic_recover` 改造为返回完整六态 dict。
+- 实测：当前 NEED_VERIFY 熔断正确识别为 `circuit_open / auth=required / platform=verify / session=no_cookie / collector=idle / recovery=idle`，detail 标注 `skipped_probe`。
+
+### P0-3/P0-4：熔断恢复闭环 + 半开探测（已实测）
+- 新增 `_half_open_probe()`：IP_RISK 冷却结束后做半开探测（CDP 探活 + 单话题小流量采集验证），成功才解除熔断，失败重新冷却，绝不直接全量恢复。
+- 新增 `/api/topic-campaign/half-open-probe` 接口（POST）：触发半开探测，返回探测结果 + 当前六态。
+- 恢复闭环：识别→停止→熔断→冷却→人工验证→健康探活→半开→完全恢复，全程不绕过平台验证。
+
+### P0-5/P0-6：Topic Evidence Layer + 主体过滤 + 分类（已实测）
+- `topic_campaign_notes` 表向后兼容扩展 8 字段（16→24）：`media_json`/`comments_json`/`subject_hit`/`content_type`/`sentiment`/`risk_level`/`evidence_quality`/`detail_captured_at`，无迁移、无数据丢失。
+- `_save_notes` 重写：集成 `subject_rules.subject_hit()` 正式主体规则（绝不重新实现第二套），新增 `_classify_note()` 基于规则的内容类型/情绪/风险/证据质量判断（不依赖 AI，可解释可追溯）。
+- 120 条历史笔记分类回填完成：主体命中 59 条（49.2%），内容类型 UGC 85/官方 16/体验 11/活动内容 8，情绪 neutral 107/positive 13，风险全部 none，证据质量全部 search_only（证实详情补抓必要性）。
+- 新建 `topic_note_detail_backfill.py`：对 search_only 笔记进入小红书详情页补抓正文/媒体/评论，熔断中拒绝启动（423），遇验证立即停止，拟人间隔 3-8 秒。
+- 新增 `/api/topic-campaign/backfill-detail` 接口（POST）：后台线程触发补抓（支持单条 note_id 或批量 limit），熔断中返回 423。
+
+### P0-7/P0-8：UI Drill-down + 数据对齐（已实测）
+- 新增 `/api/topic-campaign/note/<note_id>` 接口：返回单条笔记完整详情（正文/媒体/评论/主体/分类/情绪/风险/证据质量），用于 Note Detail 下钻。
+- 新增 `/api/topic-campaign/stats` 接口：话题聚合统计（Unique/New 24h/Runs/主体命中/风险/完整证据 + 按话题分组 + 内容类型分布 + 情绪分布），口径统一。
+- 前端 `topic_campaign.js`：笔记列表增加分类标签（主体/内容类型/风险/证据质量/情绪），笔记行点击打开 Note Detail 弹窗（显示正文/媒体九宫格/评论/四指标/标签）。
+- 前端 `topic_campaign.html`：增加 `#noteDetailModal` 弹窗 DOM，JS 缓存戳升级 v=5.8.10。
+- 前端 `topic_campaign.css`：增加分类标签样式（7 种内容类型色 + 3 级风险 + 3 级证据质量 + 3 级情绪）、Note Detail 弹窗样式（header/stats/section/media/comments/actions）。
+- 实测：stats API 返回 Unique=79（去重）、Runs=14、主体命中率 44.3%、full_evidence=0；笔记详情 API 正常返回全字段；JS 语法通过。
+
+### 回归（已实测）
+- Python 语法：topic_campaign.py / xhs_runtime_state.py / topic_note_detail_backfill.py / app.py / subject_rules.py 全部 OK。
+- 导入测试：全部模块导入成功，MODULE_VERSION=5.8.10-p0-runtime-state。
+- DB 验证：24 字段无缺失，120 条笔记，59 条主体命中，全部 search_only。
+- API 冒烟：healthz / status / runtime-state / stats / campaigns / notes / timeline 全部 OK。
+- 前端：JS 语法 OK，HTML noteDetailModal 存在，CSS type-tag 存在。
+- 主体红线：subject_rules.py 未修改，_save_notes 调用正式 subject_hit()。
+
+### 未解决 / 需用户操作
+- 【需操作一次】当前 9222 小红书会话仍为 NEED_VERIFY 熔断（系统已正确保护，未硬撞）。需在 9222 真实窗口或手机小红书 App 完成官方扫码，再到话题页点「我已完成验证，重新检测」，健康探活通过即自动恢复。
+- 120 条笔记全部为 search_only（无正文/媒体/评论），熔断解除后需运行 `python topic_note_detail_backfill.py` 或调用 `/api/topic-campaign/backfill-detail` 补抓详情。
+- 话题卡 browse_count/discussion_count 仍为 0（该指标位于话题聚合页，当前抓的是笔记搜索页，不伪造，后续补聚合页抓取）。
+- 8200 现网仍运行 v5.8.4（8/30 启动的旧进程），是否切到 v5.8.10 需用户拍板。
+- trycloudflare 公网隧道当前未运行，固定域名需 Cloudflare 账号 token 建命名隧道。
+
+### 绝对禁止（本轮遵守）
+- 未删除 collector.py、未切 collector_v2、未删 Topic 表、未重建/清空生产 DB。
+- 未修改 subject_rules.py 主体词/排除词/subject_hit()。
+- 未破解验证码、未绕过风控、未新增第三套 Adapter 或 AI Gateway。
+- 公网未混入本轮核心修复，8200 现网全程未动。
+
 ## [5.8.9] - 2026-08-31（双端显示一次性修复 + 话题采集链路多层根因修复 + 版本统一）
 ### 前端双端显示修复（已实测）
 - 修复手机端 `#modal` 被两套旧 `.modal` 规则复用导致的居中裁切：`mobile.css` 增加移动端全屏容器、`.modal-panel` 贴底 sheet、`.modal-content` 弹性滚动；390 视口实测满宽（x=0、宽 390、bottom 贴屏幕底 844）、内容可滚。

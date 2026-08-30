@@ -200,10 +200,21 @@ async function loadNotes(topic = '') {
     tbody.innerHTML = '<tr><td colspan="10" class="empty-row">暂无笔记数据，点击「立即更新」开始采集</td></tr>';
     return;
   }
-  tbody.innerHTML = allNotes.map(x => `
-    <tr>
+  tbody.innerHTML = allNotes.map(x => {
+    const typeCls = {'官方':'tag-official','商业':'tag-ad','投诉':'tag-risk','测评':'tag-review','体验':'tag-exp','活动内容':'tag-event'}.hasOwnProperty(x.content_type) ? x.content_type : 'UGC';
+    const typeTag = x.content_type ? `<span class="type-tag type-${typeCls}">${escHtml(x.content_type)}</span>` : '';
+    const subjTag = x.subject_hit ? '<span class="subj-tag">主体</span>' : '';
+    const riskCls = {'high':'risk-high','medium':'risk-med','low':'risk-low'}.hasOwnProperty(x.risk_level) ? x.risk_level : '';
+    const riskTag = riskCls ? `<span class="risk-tag risk-${riskCls}">${escHtml(x.risk_level)}</span>` : '';
+    const eqTag = x.evidence_quality === 'full' ? '<span class="eq-tag eq-full">完整</span>' :
+                  x.evidence_quality === 'partial' ? '<span class="eq-tag eq-partial">部分</span>' :
+                  '<span class="eq-tag eq-search">仅搜索</span>';
+    return `
+    <tr class="note-row" data-note-id="${escHtml(x.note_id)}" style="cursor:pointer">
       <td>${escHtml(x.topic)}</td>
-      <td class="title-cell" title="${escHtml(x.title || '')}">${escHtml(x.title || '—')}</td>
+      <td class="title-cell" title="${escHtml(x.title || '')}">
+        ${subjTag}${typeTag}${riskTag}${eqTag}<br>${escHtml(x.title || '—')}
+      </td>
       <td>${escHtml(x.author || '—')}</td>
       <td>${x.publish_datetime ? escHtml(x.publish_datetime.slice(0, 10)) : '—'}</td>
       <td class="num likes">${n(x.likes)}</td>
@@ -211,8 +222,62 @@ async function loadNotes(topic = '') {
       <td class="num collects">${n(x.collects)}</td>
       <td class="num shares">${n(x.shares)}</td>
       <td>${x.last_seen_at ? escHtml(x.last_seen_at.slice(5, 16)) : '—'}</td>
-      <td>${x.note_url ? `<a href="${escHtml(x.note_url)}" target="_blank">查看</a>` : '—'}</td>
-    </tr>`).join('');
+      <td>${x.note_url ? `<a href="${escHtml(x.note_url)}" target="_blank" onclick="event.stopPropagation()">查看</a>` : '—'}</td>
+    </tr>`;
+  }).join('');
+  // 绑定点击事件
+  $$('.note-row').forEach(row => {
+    row.addEventListener('click', () => showNoteDetail(row.dataset.noteId));
+  });
+}
+
+/* ============ Note Detail 弹窗（V2.0 P0-7 下钻） ============ */
+async function showNoteDetail(noteId) {
+  const modal = $('#noteDetailModal');
+  const body = $('#noteDetailBody');
+  if (!modal || !body) return;
+  body.innerHTML = '<div style="padding:40px;text-align:center;color:#86868b">加载中…</div>';
+  modal.classList.add('show');
+  try {
+    const d = await api('/api/topic-campaign/note/' + encodeURIComponent(noteId) + '?campaign_key=' + encodeURIComponent(CUR_KEY || ''));
+    if (!d.ok || !d.note) { body.innerHTML = '<div style="padding:40px;text-align:center;color:#ff3b30">加载失败</div>'; return; }
+    const x = d.note;
+    const media = x.media || [];
+    const comments = x.comments || [];
+    const typeCls = {'官方':'tag-official','商业':'tag-ad','投诉':'tag-risk','测评':'tag-review','体验':'tag-exp','活动内容':'tag-event'}.hasOwnProperty(x.content_type) ? x.content_type : 'UGC';
+    body.innerHTML = `
+      <div class="nd-header">
+        <div class="nd-title">${escHtml(x.title || '（无标题）')}</div>
+        <div class="nd-meta">
+          <span class="nd-author">${escHtml(x.author || '—')}</span>
+          <span>${x.publish_datetime ? escHtml(x.publish_datetime.slice(0,16)) : '—'}</span>
+          ${x.subject_hit ? '<span class="subj-tag">主体命中</span>' : ''}
+          ${x.content_type ? `<span class="type-tag type-${typeCls}">${escHtml(x.content_type)}</span>` : ''}
+          ${x.sentiment ? `<span class="sent-tag sent-${x.sentiment}">${x.sentiment==='positive'?'正面':x.sentiment==='negative'?'负面':'中性'}</span>` : ''}
+          ${x.risk_level && x.risk_level!=='none' ? `<span class="risk-tag risk-${x.risk_level}">${escHtml(x.risk_level)}</span>` : ''}
+          ${x.evidence_quality ? `<span class="eq-tag eq-${x.evidence_quality}">${x.evidence_quality==='full'?'完整证据':x.evidence_quality==='partial'?'部分证据':'仅搜索结果'}</span>` : ''}
+        </div>
+      </div>
+      <div class="nd-stats">
+        <div class="nd-stat"><div class="nd-stat-num">${n(x.likes)}</div><div class="nd-stat-label">点赞</div></div>
+        <div class="nd-stat"><div class="nd-stat-num">${n(x.comments)}</div><div class="nd-stat-label">评论</div></div>
+        <div class="nd-stat"><div class="nd-stat-num">${n(x.collects)}</div><div class="nd-stat-label">收藏</div></div>
+        <div class="nd-stat"><div class="nd-stat-num">${n(x.shares)}</div><div class="nd-stat-label">分享</div></div>
+      </div>
+      <div class="nd-section">
+        <div class="nd-section-title">正文</div>
+        <div class="nd-content">${x.content ? escHtml(x.content).replace(/\n/g,'<br>') : '<span style="color:#86868b">（未采集正文，点击「补抓详情」获取）</span>'}</div>
+      </div>
+      ${media.length ? `<div class="nd-section"><div class="nd-section-title">媒体（${media.length}）</div><div class="nd-media">${media.slice(0,9).map(m=>`<img src="${escHtml(m.url||'')}" loading="lazy" onerror="this.style.display='none'">`).join('')}</div></div>` : ''}
+      ${comments.length ? `<div class="nd-section"><div class="nd-section-title">评论（${comments.length}）</div><div class="nd-comments">${comments.slice(0,20).map(c=>`<div class="nd-comment"><span class="nd-c-author">${escHtml(c.author||'')}</span><span class="nd-c-text">${escHtml(c.content||'')}</span></div>`).join('')}</div></div>` : ''}
+      <div class="nd-actions">
+        ${x.note_url ? `<a href="${escHtml(x.note_url)}" target="_blank" class="nd-btn">在小红书打开</a>` : ''}
+        <button class="nd-btn nd-btn-secondary" onclick="document.getElementById('noteDetailModal').classList.remove('show')">关闭</button>
+      </div>
+    `;
+  } catch(e) {
+    body.innerHTML = `<div style="padding:40px;text-align:center;color:#ff3b30">加载失败: ${escHtml(cleanErr(e))}</div>`;
+  }
 }
 
 async function drawChart(topic = '') {
