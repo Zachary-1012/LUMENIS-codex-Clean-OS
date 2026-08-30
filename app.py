@@ -1,4 +1,4 @@
-"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
 from pathlib import Path
 
@@ -67,6 +67,7 @@ import security_scanner
 import local_ai_client
 import pr_case_integration
 import system_features_api
+import auth_recovery_api  # V3.0 P0: Auth Recovery Center
 import collector_automation
 import ai_learning_engine
 import public_opinion_cases
@@ -103,7 +104,9 @@ app.register_blueprint(export_report.export_bp)
 app.register_blueprint(pr_case_integration.pr_case_bp)
 # 注册系统功能API蓝图
 app.register_blueprint(system_features_api.system_features_bp)
-APP_VERSION='5.8.11'
+# V3.0 P0: Auth Recovery Center（认证恢复中心）
+app.register_blueprint(auth_recovery_api.auth_recovery_bp)
+APP_VERSION='5.9.0'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')
@@ -4655,3 +4658,4 @@ if __name__ == '__main__':
     finally:
         logging.info("[System] 系统已停止")
         print("系统已停止")
+

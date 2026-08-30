@@ -1,5 +1,65 @@
 ﻿# 变更日志
 
+## [5.9.0] - 2026-08-31（V3.0 基线首批落地：Auth Recovery Center + XHS App Topic Adapter + QR_REQUIRED状态）
+
+### V3.0 P0: Auth Recovery Center（认证恢复中心）
+- 新增 \uth_recovery_center.py\：认证异常检测 → 恢复任务创建 → 前端弹窗提示 → 用户扫码恢复 → 状态回写 → 健康探活 → 解除熔断 完整闭环。
+- 新增 \uth_recovery_tasks\ 表：存储恢复任务（platform/issue_type/status/title/description/recovery_url/expires_at等）。
+- 恢复任务状态：pending / in_progress / completed / failed / expired，TTL 1小时自动过期。
+- 支持异常类型：cookie_expired / login_expired / captcha / qr_required / session_invalid / ip_risk / unknown。
+- 去重机制：相同platform+issue_type的pending任务不重复创建。
+
+### V3.0 P0: Auth Recovery API（认证恢复API蓝图）
+- 新增 \uth_recovery_api.py\：\/api/auth-recovery/\ 蓝图，提供6个接口：
+  - GET /health：恢复中心健康检查
+  - GET /summary：恢复中心摘要（前端轮询用，判断是否需要弹窗）
+  - GET /tasks：获取恢复任务列表
+  - POST /tasks：创建恢复任务
+  - POST /tasks/<id>/start：标记任务为进行中
+  - POST /tasks/<id>/complete：标记任务完成（自动触发后台健康探活和熔断恢复）
+  - POST /tasks/<id>/fail：标记任务失败
+- 任务完成后自动在后台线程调用 \	opic_campaign.topic_recover()\ 执行健康探活，确认完全健康才解除熔断。
+
+### V3.0 P0: CollectionStatus 增加 QR_REQUIRED 状态
+- \platform_adapters/base.py\ 的 CollectionStatus 枚举增加 \QR_REQUIRED\ 状态，用于标识需要扫码恢复的采集异常。
+- 与现有 NEED_VERIFY / BLOCKED / SESSION_EXPIRED 等状态并列，不破坏现有逻辑。
+
+### V3.0 P1: XHS App Topic Adapter（小红书App端话题适配器）
+- 新增 \platform_adapters/xhs_app_topic.py\：继承 BasePlatformAdapter，实现 search/detail/health_check 接口。
+- 目标：补齐话题发现 + 话题浏览量/讨论量（App端专属数据，Web端无法获取）。
+- Feature Flag 控制：\XHS_APP_TOPIC_ENABLED\ 环境变量，默认关闭，不影响现有Web采集主链路。
+- 来源字段区分：\enrich_note_with_source()\ 方法为笔记数据增加 source=data_source 字段，区分 xhs_web / xhs_app。
+- App端API接入点预留：\_discover_topics_from_app()\ 和 \_topic_metrics_from_app()\ 方法待实现（需要小红书App端API endpoint和签名算法），当前返回空（不伪造数据）。
+- 已注册到 Adapter Registry：\list_adapters()\ 返回 ['douyin', 'xhs', 'xhs_app_topic']。
+
+### V3.0 约束遵守
+- 不修改现有Web采集主链路（xhs_campaign_monitor.js / topic_campaign.py 核心逻辑未动）。
+- Adapter化接入，复用 BasePlatformAdapter 接口和 Registry。
+- 数据统一进入 Content Center（预留，后续接入）。
+- 复用事件中心（预留，后续接入）。
+- 保留主体过滤规则（subject_rules.py 未修改，Adapter层不做业务判断）。
+- Feature Flag 控制上线，默认关闭。
+- 禁止大规模重构，禁止破坏现有CTH-POMS生产能力。
+
+### 端到端测试（已实测通过）
+- 模块导入：auth_recovery_center / auth_recovery_api / platform_adapters.xhs_app_topic 全部导入成功。
+- Adapter注册：list_adapters() 返回 ['douyin', 'xhs', 'xhs_app_topic']。
+- QR_REQUIRED状态：CollectionStatus.QR_REQUIRED.value == 'QR_REQUIRED'。
+- Auth Recovery API健康检查：/api/auth-recovery/health 返回 ok=True, module=auth_recovery_center。
+- 恢复任务完整流程：创建(task_id=1, status=pending) → 查询(count=1) → 摘要(pending_count=1, has_issue=True) → 标记完成(ok=True, 触发后台健康探活)。
+- healthz：8201旁路 ok=True, version=5.8.11。
+
+### 数据库变化
+- 新增表：\uth_recovery_tasks\（恢复任务表，12字段，2个索引）。
+- 无结构变化、无迁移、历史数据零删除零清空。
+
+### 未解决 / 后续计划
+- XHS App Topic Adapter 的 App端API接入：需要小红书App端API endpoint和签名算法（逆向或抓包），当前为框架预留。
+- 话题 browse_count/discussion_count：Web端无此数据（App端专属），待App端API接入后获取。
+- 影子板块（AI学习知识库）：品牌营销/广告宣传/舆情监测知识的全网学习和数据库充实，作为下一批V3.0任务。
+- 传播主体模型（subject_type分离）、事件关系图谱、品牌分析报告升级：按V3.0开发顺序后续推进。
+- 8200现网仍运行v5.8.4，是否切v5.9.0生产待用户拍板。
+
 ## [5.8.11] - 2026-08-31（探活修复 + 详情补抓 + 话题聚合页指标研究结论）
 
 ### 探活函数修复（P0，已E2E验证）
@@ -189,4 +249,5 @@
 - 统一控制台外壳新增“全局状态中心 + 不跳页统一恢复弹窗”：首页采集健康矩阵并入小红书主采集六态（v4 适配器 + 老链路合并，共 12 平台），修正平台中文名/数量字段；异常平台点击直接在当前页弹恢复窗而非跳陌生页。
 - 弹窗严格 A 登录失效 / B 人机验证 / C IP风控熔断三类分清：C 类只显示冷却倒计时、不显示扫码（扫码不可解）；三步状态机（打开登录页→扫码/验证→恢复续采）、二维码或登录页截图、“我已完成验证/重新检测”“稍后处理（保持暂停不伪装）”；恢复成功自动解除暂停续采。
 - 全局看门每 12s 巡检，任何子页（含 iframe）平台失效都在外壳弹同一弹窗，手机端底部卡片适配。后端复用既有 /v4/adapters/recovery/* 与 /api/xhs/collect-health，未重造。浏览器真机 E2E：12 平台矩阵、A/B/C/恢复四态渲染、无 JS 运行错误；小红书持久 Profile 登录态只读探测 AUTH_VALID。
+
 
