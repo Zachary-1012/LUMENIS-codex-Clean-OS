@@ -1,5 +1,25 @@
 # 变更日志
 
+## [5.8.9] - 2026-08-31（双端显示一次性修复 + 话题采集链路多层根因修复 + 版本统一）
+### 前端双端显示修复（已实测）
+- 修复手机端 `#modal` 被两套旧 `.modal` 规则复用导致的居中裁切：`mobile.css` 增加移动端全屏容器、`.modal-panel` 贴底 sheet、`.modal-content` 弹性滚动；390 视口实测满宽（x=0、宽 390、bottom 贴屏幕底 844）、内容可滚。
+- 首页/话题监测移动端布局收口：指标卡、任务卡、工具按钮自动换行整齐全宽，错误信息完整不截断，移动/桌面均零横向溢出；Zachary 机器人窄屏 52 贴边吸附；底部轻提示点击先移除黑条再展开贴底 sheet，不再叠加遮挡。桌面端维持原有弹窗交互不变。
+### 话题采集链路根因修复（已实测真出数）
+- Edge/Chromium 远程调试补 `--remote-allow-origins=*`（8 个启动点），修复 111+ 版本 ws 握手挂起导致的 connectOverCDP Timeout。
+- `xhs_campaign_monitor.js` 成功路径补 `process.exit(0)`、150s 硬超时、close 5s 保护，修复事件循环被挂住、subprocess 空等 50 分钟、快照永不落地。
+- 新增 CDP 目标复位（`cdp_helper.reset_cdp_targets` 与 node `resetCdpTargets`，纯 HTTP `PUT /json/new`+`/json/close`），连接前把重页面复位到 about:blank，修复 attach 重页面 30s 超时；复位后连接约 0.15s。
+- 搜索前先 goto `/explore` 预热（冷导航 search_result 会挂起）；笔记接口匹配由 v1 改为 `v\d+` 以兼容已升级的 `/api/sns/web/v2/search/notes`；重写 DOM 兜底为浏览器侧自包含（原实现在 page.evaluate 内引用 node 侧 `clean()` 必抛 ReferenceError 并被静默吞掉，兜底从未生效）。
+- 修复 `_run_collector` 缺省 `XHS_CDP_URL` 为空导致误走 headless 未登录 profile，默认连 9222 已登录浏览器（可用环境变量覆盖）。
+- 修复 `_save_notes` INSERT 占位符 15、参数仅 14 的 `sqlite3.ProgrammingError`（补 first_seen_at，不改表结构、不迁移）。
+- 同一轮相邻话题增加拟人随机冷却（12–28s）与连续空结果指数退避（封顶 90s），避免短时密集搜索被平台软降频（不报错、结果暂空），符合状态驱动/不撞风控口径。
+- 实测：手动单话题「太古汇」19.6s EXIT=0、60 条真实笔记字段完整；8201 端到端 run_campaign 7 话题快照全部无 connectOverCDP 错误、每话题 24–26s 正常退出，热词各 60 条真实笔记落库（共 120，作者/赞评藏/链接齐全）。冷词在密集采集软空结果窗为 0（冷却后分批复测，非失败、不伪造）。
+### 版本统一
+- 运行时版本统一升 v5.8.9（VERSION、app.APP_VERSION、waitress ident、version_center 兜底、页头页脚、静态缓存戳、启动打印，共 40+ 处）。
+### 回归（已实测）
+- 主体红线 24/24；安全扫描 ALL_PASS；API 冒烟 ALL_PASS；核心回归 16/16（test_auth_api 空闲复跑通过，前次 ReadTimeout 系采集占用的瞬时现象）；移动 390 无阻断弹窗、6 指标齐全、零第一方 JS 错误、零横向溢出，桌面 1440 数字齐全且维持原行为。
+### 未实测 / 遗留
+- 话题卡 browse_count/discussion_count 在笔记搜索页为 0（该指标位于话题聚合页，当前未抓话题页，不伪造）；冷词在软空结果窗的长期表现需冷却后分批观察；trycloudflare 为临时随机域名，固定域名需 Cloudflare 命名隧道 token。
+
 ## [5.8.8] - 2026-08-30（Release Gate V1.0 基线门禁 + 统一认证 Contract + 安全整改，旁路不重构）
 ### 安全整改
 - 移除 `system_watchdog.py` 源码内硬编码凭证，改读 `TAIKOO_AUTH_USER/TAIKOO_AUTH_PASSWORD` 环境变量（与 app.py 一致），仅在配置时发送 Basic 头。
