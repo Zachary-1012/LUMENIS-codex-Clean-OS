@@ -138,12 +138,44 @@ async function extractTopicMetrics(page) {
   return result;
 }
 
+// 连接前用纯 HTTP CDP 接口把活动页复位为 about:blank（不走 WebSocket，不受挂起影响）。
+// 根因：connectOverCDP 会 attach 现有 page；若停在小红书等"重页面"（持续 XHR / 长连接 / 复杂 JS），
+// attach 阶段的 CDP 初始化会挂起直到 30s 超时。复位为 about:blank 后可秒连。专用采集 profile，关闭其采集页安全（登录态在 profile 内不依赖页面）。
+async function resetCdpTargets(cdpUrl) {
+  try {
+    const base = cdpUrl.replace(/\/$/, '');
+    const get = async (u, opt) => { try { return await (await fetch(u, opt)).text(); } catch { return ''; } };
+    let list = [];
+    try { list = JSON.parse(await get(base + '/json/list')); } catch { return; }
+    const heavy = list.filter(t => t.type === 'page' && t.url && !t.url.includes('about:blank'));
+    if (!heavy.length) return; // 已是干净态，无需复位
+    await get(base + '/json/new?about:blank', { method: 'PUT' });           // 新版 Chromium 需 PUT
+    await get(base + '/json/new?about:blank');                              // 旧版 GET 兜底
+    await new Promise(r => setTimeout(r, 500));
+    let list2 = [];
+    try { list2 = JSON.parse(await get(base + '/json/list')); } catch { list2 = list; }
+    for (const t of list2) {
+      if (t.type === 'page' && t.url && !t.url.includes('about:blank')) {
+        await get(base + '/json/close/' + t.id);
+      }
+    }
+    await new Promise(r => setTimeout(r, 400));
+  } catch { /* 复位失败不阻断，交给 connectOverCDP 自身超时/上层硬超时 */ }
+}
+
 async function main() {
   let browser, context;
+  // 硬超时兜底：任何环节（CDP 握手 / goto / service worker / close）意外挂起时强制退出，
+  // 绝不伪造数据；避免父进程 subprocess.run 永久等待导致快照不落地
+  const hardTimer = setTimeout(() => {
+    try { process.stdout.write(JSON.stringify({ ok: false, topic, error: '采集硬超时(150s)保护退出，未伪造数据' })); } catch {}
+    process.exit(2);
+  }, 150000);
   try {
     if (cdpUrl) {
-      // 模式1：连接已运行的 CDP 浏览器（已登录）
-      browser = await chromium.connectOverCDP(cdpUrl);
+      // 模式1：连接已运行的 CDP 浏览器（已登录）；先 HTTP 复位重页面，避免 attach 挂起
+      await resetCdpTargets(cdpUrl);
+      browser = await chromium.connectOverCDP(cdpUrl, { timeout: 20000 });
       const contexts = browser.contexts();
       if (!contexts.length) throw new Error('CDP 连接成功但无 browser context');
       context = contexts[0];
@@ -220,12 +252,13 @@ async function main() {
       }
     } catch {}
 
-    // 关闭浏览器（CDP 模式下断开连接，不关闭原浏览器）
-    if (cdpUrl) {
-      try { await browser.close(); } catch {}
-    } else {
-      await context.close();
-    }
+    if (cdpUrl) { try { await page.goto('about:blank', { timeout: 5000 }); } catch {} }
+    // 关闭连接（CDP 模式下断开、不关闭原浏览器）；加 5s 超时保护，
+    // 避免 service worker / 残留 CDP ws 让 close 挂住
+    await Promise.race([
+      cdpUrl ? browser.close() : context.close(),
+      new Promise(r => setTimeout(r, 5000)),
+    ]).catch(() => {});
 
     const result = {
       ok: true,
@@ -240,7 +273,11 @@ async function main() {
       page_url: url,
       scroll_count: maxScroll,
     };
+    clearTimeout(hardTimer);
     process.stdout.write(JSON.stringify(result));
+    // 关键：connectOverCDP 的 ws / service worker 可能让事件循环挂住，结果已输出必须显式退出，
+    // 否则父进程 subprocess.run 一直等待、快照无法落地
+    process.exit(0);
   } catch (e) {
     // 采集失败：返回错误信息，绝不伪造数据
     console.error(JSON.stringify({ ok: false, topic, error: String(e.message || e) }));
