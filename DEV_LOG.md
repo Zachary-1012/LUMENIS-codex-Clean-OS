@@ -66,3 +66,27 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 
 ### 回滚点
 - 前端仅 console.html 单文件，回滚即 `git revert` 本次提交；采集链改动均有 env 开关（TAIKOO_COLLECTOR_GUARD=0 可关 Guard、TAIKOO_WEB_DISCOVERY=0 可关全网发现）。
+
+
+---
+
+## 2026-08-30 14:45 · v5.8.5 上线冲刺 6（采集六态正确落库 + 失效自动建恢复任务）
+
+### 问题
+主采集链此前把任何错误都笼统写成 collection_logs.status='error'，全局健康无法区分 登录失效 / 人机验证 / IP熔断 / 网络异常，夜间失效也不会自动产生恢复任务。
+
+### 改动 / 文件
+- collector.py：新增正式函数 `classify_collect_state(error, guard_state, count)`，归一化为 SUCCESS/EMPTY/AUTH_REQUIRED/CAPTCHA/BLOCKED/NETWORK_ERROR；guard 硬状态（cooldown/paused/auth_required/need_verify）优先于空结果判定，避免熔断被误判成 EMPTY。
+- app.py：采集结果按标准六态落库（不再笼统 error/success）；AUTH_REQUIRED/CAPTCHA/BLOCKED 自动幂等调用 auth_recovery.request_recovery，夜间失效即保留登录/验证入口，手机打开统一控制台即可恢复，形成“采集→发现失效→暂停→建恢复任务→手机恢复→续采”闭环。
+- tests/test_collect_state.py：13 项六态归一化单测全部通过。
+
+### 数据库
+- 无结构变更、无迁移；仅 collection_logs.status 写入标准六态值（文本字段，向后兼容旧值）。
+
+### 测试与真实结果
+- 13 项单测全过（含“guard 已熔断但 error 为空不得判 EMPTY”这一回归点，修复前后对比验证）。
+- py_compile app/collector 通过，8201 已重启加载。
+- 未实测：AUTH/CAPTCHA/BLOCKED 真实触发自动建恢复任务的端到端（当前小红书登录有效，未人为制造失效；函数与 Auth 后端 request_recovery 已分别单测/接口实测，待真实失效时由自动采集自然验证）。
+
+### 回滚点
+- 单一函数 + 一段循环，`git revert` 本次提交即可；恢复任务创建包裹 try/except，任何异常都不影响采集主流程。

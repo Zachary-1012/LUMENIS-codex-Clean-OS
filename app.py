@@ -175,7 +175,19 @@ def _run_collect_task(task_id,keywords,max_scroll):
         for note in verified:
             _,is_new=db.insert_note(note); inserted += int(is_new); updated += int(not is_new)
         for r in results:
-            db.log_collection(r['keyword'],r.get('count',0),'error' if r.get('error') else 'success',r.get('error',''))
+            # 六态归一化：SUCCESS/EMPTY/AUTH_REQUIRED/CAPTCHA/BLOCKED/NETWORK_ERROR，绝不含糊记成 error
+            _err = (r.get('error') or '')
+            cstate = collector.classify_collect_state(_err, r.get('guard_state', ''), r.get('count', 0))
+            db.log_collection(r['keyword'], r.get('count', 0), cstate, _err)
+            # 需人工介入的态：自动创建统一恢复任务（幂等，已存在则复用；BLOCKED 只冷却不开浏览器），
+            # 这样夜间失效也会保留登录/验证入口，手机打开即可恢复，而不是次日才发现失败。
+            if cstate in ('AUTH_REQUIRED', 'CAPTCHA', 'BLOCKED'):
+                try:
+                    from v4_upgrade.adapters import auth_recovery as _ar
+                    _ar.request_recovery('xiaohongshu', source_state=cstate, detail=_err)
+                    print(f'[Collect] 检测到 {cstate}，已自动创建登录/验证恢复任务（{r.get("keyword","")}）')
+                except Exception as _re:  # 恢复通道异常绝不影响采集主流程
+                    print('[Collect] 自动创建恢复任务失败(不影响主流程):', _re)
         with _task_lock: collect_tasks[task_id].update(status='ai-review',message='正在进行AI/规则复核、去噪、正负面判断与事件提示…',progress=62,inserted=inserted,updated=updated)
         with db.get_db() as conn:
             clause,sp=_subject_sql_and_values(); rows=conn.execute(f"SELECT * FROM notes WHERE is_taikoo_verified=1 AND (ai_analyzed_at='' OR ai_analyzed_at IS NULL) AND {clause} ORDER BY id DESC LIMIT 500",tuple(sp)).fetchall()

@@ -290,3 +290,30 @@ def import_from_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return data.get('notes', [])
+
+
+def classify_collect_state(error='', guard_state='', count=0):
+    """把单次关键词采集结果归一化为标准六态（与全局健康中心 / Auth Recovery 对齐）。
+    返回 SUCCESS / EMPTY / AUTH_REQUIRED / CAPTCHA / BLOCKED / NETWORK_ERROR。
+    只做识别与归类，不绕过任何平台安全机制；空结果(EMPTY)与风控严格区分。"""
+    err = error or ''
+    gs = (guard_state or '').upper()
+    el = err.lower()
+    # 1) guard 硬状态优先：即使 error 为空，熔断/暂停/需验证/登录失效也绝不能被当成 EMPTY
+    if gs in ('COOLDOWN', 'PAUSED', 'CIRCUIT_OPEN'):
+        return 'BLOCKED'
+    if gs == 'AUTH_REQUIRED':
+        return 'AUTH_REQUIRED'
+    if gs == 'NEED_VERIFY':
+        return 'CAPTCHA'
+    # 2) 无错误信号：有内容=SUCCESS，确无内容=EMPTY（EMPTY 不是风控）
+    if not err:
+        return 'SUCCESS' if count and count > 0 else 'EMPTY'
+    # 3) 依据错误文本细分
+    if 'IP_RISK' in err or '300012' in err:
+        return 'BLOCKED'
+    if 'NEED_VERIFY' in err.upper() or 'captcha' in el or '验证' in err:
+        return 'CAPTCHA'
+    if 'login' in el or 'auth' in el or 'session' in el or '登录' in err:
+        return 'AUTH_REQUIRED'
+    return 'NETWORK_ERROR'
