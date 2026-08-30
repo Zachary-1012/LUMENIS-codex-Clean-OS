@@ -133,6 +133,93 @@ def brand_knowledge_search():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# V3.0 影子板块：案例深度拆解API
+@app.route('/api/case-analysis/stats')
+def case_analysis_stats():
+    """案例深度拆解库统计"""
+    try:
+        from case_deep_analysis import get_case_analysis
+        analysis = get_case_analysis()
+        return jsonify({'ok': True, 'data': analysis.get_stats()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/case-analysis/list')
+def case_analysis_list():
+    """案例深度拆解列表（支持筛选）"""
+    try:
+        from case_deep_analysis import get_case_analysis
+        analysis = get_case_analysis()
+        case_type = request.args.get('type', '')
+        industry = request.args.get('industry', '')
+        brand = request.args.get('brand', '')
+        min_quality = request.args.get('min_quality', 0)
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+        results = analysis.list_cases(
+            case_type=case_type or None,
+            industry=industry or None,
+            brand=brand or None,
+            min_quality_score=float(min_quality) if min_quality else None,
+            limit=limit,
+            offset=offset,
+        )
+        return jsonify({'ok': True, 'results': results, 'count': len(results)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/case-analysis/detail')
+def case_analysis_detail():
+    """案例深度拆解详情"""
+    try:
+        from case_deep_analysis import get_case_analysis
+        analysis = get_case_analysis()
+        case_id = request.args.get('id', '')
+        if not case_id:
+            return jsonify({'ok': False, 'error': '缺少案例ID参数'}), 400
+        result = analysis.get_case(case_id)
+        if not result:
+            return jsonify({'ok': False, 'error': f'案例 {case_id} 不存在'}), 404
+        return jsonify({'ok': True, 'data': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/case-analysis/search')
+def case_analysis_search():
+    """案例深度拆解搜索"""
+    try:
+        from case_deep_analysis import get_case_analysis
+        analysis = get_case_analysis()
+        keyword = request.args.get('q', '')
+        if not keyword:
+            return jsonify({'ok': False, 'error': '缺少搜索关键词'}), 400
+        results = analysis.search_cases(keyword)
+        return jsonify({'ok': True, 'results': results, 'count': len(results)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/case-analysis/methodology')
+def case_analysis_methodology():
+    """获取所有可复用方法论"""
+    try:
+        from case_deep_analysis import get_case_analysis
+        analysis = get_case_analysis()
+        results = analysis.get_all_methodologies()
+        return jsonify({'ok': True, 'results': results, 'count': len(results)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/case-analysis/system-insights')
+def case_analysis_system_insights():
+    """获取所有对Z-Brand系统的启示"""
+    try:
+        from case_deep_analysis import get_case_analysis
+        analysis = get_case_analysis()
+        results = analysis.get_all_system_insights()
+        return jsonify({'ok': True, 'results': results, 'count': len(results)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # V3.0 传播主体分类器API
 @app.route('/api/subject-classifier/classify', methods=['POST'])
 def subject_classify():
