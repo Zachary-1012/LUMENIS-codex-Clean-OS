@@ -101,8 +101,16 @@ class CollectorAutomation:
             '--disable-extensions',
             '--disable-gpu',
             '--disable-dev-shm-usage',
+            '--disable-background-networking',
+            '--disable-component-update',
+            # 国内主采集强制直连：不跟随系统代理(v2rayN 10808)，代理核心未连/切节点时国内站也能采；
+            # 海外平台(Google/Instagram)走 9223 独立代理 profile，互不影响。
+            '--no-proxy-server',
+            # 起始页固定 about:blank：避免默认 MSN 新标签页的 service-worker/worker target，
+            # 那会让 Playwright connect_over_cdp 在枚举 target 时握手挂起（ws 已连却 30s 超时）。
+            'about:blank',
         ]
-        
+
         if headless:
             args.append('--headless=new')
         

@@ -99,7 +99,7 @@ async function main() {
   const searchUrl = `https://www.xiaohongshu.com/search_result?keyword=${encodedKeyword}&source=web_explore_feed`;
 
   const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: 'new',
+    headless: process.env.XHS_HEADFUL === '1' ? false : true,  // 新版 playwright 只接受布尔；XHS_HEADFUL=1 时有头拟人
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled'],
   });
 
