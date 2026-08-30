@@ -3,21 +3,21 @@
 Baseline ID: ZB-PROD-2026-08-31-04
 Status: ACTIVE / HARD PRODUCTION GATE
 
-> This file records the current cross-repository facts. GitHub HEAD and current source are authoritative if this document becomes stale.
+> This is a coordination snapshot, not a substitute for live GitHub state. Before every write or promotion, read the live `main` HEAD and the live Core submodule pointer again.
 
-## Current State
+## Snapshot
 
-| Field | Value |
+| Field | Snapshot value |
 |---|---|
 | Core repository | Zachary-1012/Z-Brand-Core |
 | Core visibility | Private |
-| Core HEAD | 9b9dfde60acbcaaa2a2011b4e57aa96a7a4a24d0 |
+| Core HEAD observed before this state-document commit | b3ddcd36680203243af06e7adc0919961451e27b |
 | Core version | v5.9.8 development line |
 | DCC repository | Zachary-1012/Development-Command-Console |
 | DCC visibility | Private |
-| DCC HEAD | 28041521c349c5fa6f6e11197255cf44e7080750 |
+| DCC HEAD observed before this state-document commit | e7e8cd0144e8f0c9a676906f70d1166d8112506c |
 | DCC version | v0.3.x development line |
-| Core pinned DCC SHA | 51d6a7353af4d244faa09e59fdc92a3d6a03dfd1 |
+| Core pinned DCC SHA observed | 51d6a7353af4d244faa09e59fdc92a3d6a03dfd1 |
 | DCC HEAD vs pinned | AHEAD / normal |
 | DCC Release Candidate | NOT DECLARED |
 | Promotion to Core | NOT APPROVED |
@@ -42,6 +42,4 @@ Before writing to either repository: re-read remote HEAD and this state. If remo
 
 ## Promotion Record
 
-Current DCC pinned commit: `51d6a7353af4d244faa09e59fdc92a3d6a03dfd1`.
-
-The current DCC HEAD is newer because the dual-repository policy was added after the pinned commit. This is expected; the new policy does not itself authorize promotion. A future promotion must be a separate, explicit Core submodule update after testing and approval.
+The observed Core pin is `51d6a7353af4d244faa09e59fdc92a3d6a03dfd1`. The DCC HEAD can be newer without authorization for promotion. A future promotion must be a separate, explicit Core submodule update after DCC testing, security/audit evidence, Core compatibility/regression verification, and approval.
