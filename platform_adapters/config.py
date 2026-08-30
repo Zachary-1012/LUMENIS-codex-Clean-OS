@@ -1,7 +1,9 @@
 """Platform capability configuration.
 
-Only Xiaohongshu and Douyin are enabled for deep implementation in the current
-release. Other platforms remain extension points for event monitoring.
+Current production release keeps only the existing XHS collector active through the
+adapter boundary. Douyin is a planned secondary platform and remains disabled until a
+verified, compliant backend is implemented and regression-tested. Other platforms are
+event-monitoring extension points only.
 """
 
 PLATFORM_CAPABILITIES = {
@@ -20,16 +22,19 @@ PLATFORM_CAPABILITIES = {
     },
     "douyin": {
         "name": "抖音",
-        "enabled": True,
+        "enabled": False,
         "priority": "secondary",
-        "search": True,
-        "detail": True,
-        "comments": True,
-        "replies": True,
-        "creator": True,
-        "session_cache": True,
-        "proxy_pool": True,
-        "comment_wordcloud": True,
+        "planned_capabilities": [
+            "search",
+            "detail",
+            "comments",
+            "replies",
+            "creator",
+            "session_cache",
+            "proxy_pool",
+            "comment_wordcloud",
+        ],
+        "enable_gate": "verified_compliant_backend_plus_regression_tests",
     },
     "kuaishou": {"name": "快手", "enabled": False, "priority": "event"},
     "bilibili": {"name": "B站", "enabled": False, "priority": "event"},
