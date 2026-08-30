@@ -56,7 +56,7 @@ _SOURCE_SUFFIX = {
     ".requirements", "",
 }
 _VERSION_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
-_DEFAULT_VERSION = "v5.8.5"
+_DEFAULT_VERSION = "v5.8.8"
 
 
 def _find_git() -> str | None:

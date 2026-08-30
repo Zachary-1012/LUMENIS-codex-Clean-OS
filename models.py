@@ -310,7 +310,7 @@ def get_all_table_names() -> List[str]:
 
 if __name__ == "__main__":
     print("广州太古汇舆情监测系统 - 数据模型")
-    print(f"版本: v5.8.0")
+    print(f"版本: v5.8.8")
     print(f"模型数量: {len(MODEL_REGISTRY)}")
     print()
     print("数据表列表:")

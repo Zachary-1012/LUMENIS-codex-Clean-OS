@@ -69,7 +69,9 @@ def main() -> int:
 
         # [2/5] 安全闸 + 本地成版本（不推送）
         ts = datetime.now().strftime("%H:%M")
-        saved = gm.save_version(f"v5.8.6 定时同步版本（{ts}）", do_push=False, author="daily-sync")
+        _curv = gm.current_version or ""
+        _curv = _curv if str(_curv).startswith("v") else "v" + str(_curv)
+        saved = gm.save_version(f"{_curv} 定时同步版本（{ts}）", do_push=False, author="daily-sync")
         if not saved.get("ok"):
             log(f"[2/5] 安全闸拦截/提交失败：{saved.get('error')} blocked={saved.get('blocked')}")
             # 安全闸拦截属于硬失败，终止（可能有敏感文件误入），等待人工
