@@ -13,6 +13,7 @@
 <!-- Zachary 3D 机器人 Three.js（本地化，避免外网 CDN 失效导致 3D 不加载） -->
 <script src="/static/js/vendor/three.min.js"></script>
 <link rel="stylesheet" href="/static/css/case_deep_analysis.css?v=5.9.6">
+<link rel="stylesheet" href="/static/css/v3_modules.css?v=5.9.7">
 </head>
 <body>
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
@@ -49,6 +50,10 @@
         <button class="side-item" data-page="swire" data-desc="品牌营销案例库：以品牌为一级维度，下钻其营销事件库与小红书笔记库，可自行增删品牌"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span><span>品牌营销案例库</span></button>
         <button class="side-item" data-page="cases" data-desc="全网舆情案例库、事件→回应→效果、太古汇启示"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span>案例库</span></button>
         <button class="side-item" data-page="case-analysis" data-desc="20个11维深度拆解案例：品牌营销/危机公关/商业地产/社媒平台/产品化营销，含成功要素权重、可复用方法论、系统启示"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span>案例深度拆解</span></button>
+        <button class="side-item" data-page="knowledge-base" data-desc="品牌营销/广告宣传/舆情管理知识库，80条结构化知识，影子板块为脱离AI做基础"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>品牌知识库</span></button>
+        <button class="side-item" data-page="event-graph" data-desc="营销事件/传播事件/舆情事件的关系图谱，触发/衍生/继发/并行四种关系"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/><line x1="8" y1="19" x2="16" y2="19"/></svg></span><span>事件关系图谱</span></button>
+        <button class="side-item" data-page="brand-report" data-desc="品牌传播与市场情报报告生成器，多维度自动分析（V3.0升级版）"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span>品牌分析报告</span></button>
+
 
         <button class="side-item" data-page="calendar" data-desc="舆情日历、每日舆情概览、点击查看详情"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>舆情日历</span></button>
         <button class="side-item" data-page="reports" data-desc="日报/周报/月报/年报导出，Word/Excel/CSV格式"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span><span>报告中心</span></button>
@@ -271,6 +276,42 @@
           <button class="tertiary" onclick="CaseDeepAnalysis.resetFilters()">↺ 重置</button>
         </div>
         <div class="case-list-grid" id="caseAnalysisList"></div>
+      </section>
+
+      <!-- 品牌知识库 -->
+      <section class="page-view" id="page-knowledge-base">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>品牌知识库</h2>
+          <div class="page-actions" style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:12px;color:var(--muted)">影子板块 · 为脱离AI做基础 · 80条知识</span>
+          </div>
+        </div>
+        <div id="kbStats"></div>
+        <div class="kb-search-bar">
+          <input type="text" id="kbSearch" placeholder="搜索知识条目..." onkeydown="if(event.key==='Enter')V3Modules.knowledge.search(this.value)">
+          <button onclick="V3Modules.knowledge.search(document.getElementById('kbSearch').value)">🔍 搜索</button>
+        </div>
+        <div id="kbResults"></div>
+      </section>
+
+      <!-- 事件关系图谱 -->
+      <section class="page-view" id="page-event-graph">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>事件关系图谱</h2>
+          <div class="page-actions" style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:12px;color:var(--muted)">营销/传播/舆情事件 · 触发/衍生/继发/并行</span>
+          </div>
+        </div>
+        <div id="egStats"></div>
+        <div id="egEvents"></div>
+      </section>
+
+      <!-- 品牌分析报告 -->
+      <section class="page-view" id="page-brand-report">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>品牌分析报告</h2>
+          <div class="page-actions" style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:12px;color:var(--muted)">品牌传播与市场情报报告 · V3.0升级版</span>
+          </div>
+        </div>
+        <div id="brForm"></div>
       </section>
 
       <!-- 舆情日历 -->
@@ -509,6 +550,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // 延迟初始化，确保所有依赖加载完成
         setTimeout(function() { CaseDeepAnalysis.init(); }, 800);
     }
+});
+</script>
+<script src="/static/js/v3_modules.js?v=5.9.7"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (window.V3Modules) {
+            // 页面切换时初始化对应模块
+            const origNav = window.navigateTo;
+            if (origNav) {
+                window.navigateTo = function(pageId) {
+                    origNav(pageId);
+                    if (pageId === 'knowledge-base') V3Modules.knowledge.init();
+                    if (pageId === 'event-graph') V3Modules.eventGraph.init();
+                    if (pageId === 'brand-report') V3Modules.brandReport.init();
+                };
+            }
+        }
+    }, 800);
 });
 </script>
 </body></html>

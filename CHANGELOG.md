@@ -1,5 +1,130 @@
 ﻿# 变更日志
 
+## [5.9.6] - 2026-08-31（案例深度拆解前端全链路集成 + 知识库第六批扩充 + 系统全面测试）
+
+### 案例深度拆解前端页面集成（全链路完成）
+- 新增侧边栏导航入口「案例深度拆解」，与现有页面风格统一。
+- 新增页面：统计卡片（20案例/5类型/平均质量分100）+ 类型筛选 + 关键词搜索 + 案例卡片列表（响应式网格）。
+- 案例详情弹窗：11维数据完整展示——核心挑战、策略目标、核心创意、执行细节（时间线）、传播渠道、数据成果、成功要素（带权重条）、可复用方法论（公式+适用场景）、系统启示。
+- 新增 static/js/case_deep_analysis.js（18KB）和 static/css/case_deep_analysis.css（12KB），含移动端响应式适配。
+- app.js navigateTo 重写中添加 case-analysis 页面懒加载初始化。
+
+### 知识库第六批扩充（60→80条）
+- 消费者行为学（4条）：双因素理论、前景理论（损失厌恶/框架效应）、社会认同理论、认知失调理论。
+- 广告创意理论（4条）：USP独特销售主张、品牌形象论、定位理论、IMC整合营销传播。
+- 全球品牌案例（3条）：Dior文化叙事、Spotify数据个性化、Patagonia环保价值观。
+- 商业地产案例（3条）：成都远洋太古里、上海前滩太古里、东京表参道。
+- 危机公关案例（2条）：肯德基鸡荒（正面）、特斯拉刹车门（反面）。
+- 舆情管理方法论（2条）：黄金4小时法则、三级响应机制。
+- 传播策略（2条）：AISAS模型、KOL营销金字塔。
+- 知识库分类：品牌营销16/危机公关14/品牌案例24/舆情管理9/消费者行为8/广告宣传7/传播策略2。
+
+### Bug修复
+- 修复案例深度拆解列表API 500错误：min_quality_score传None导致TypeError，改为传0。
+- 传播主体分类器验证：「羊城晚报官方账号」→ 媒体(media)，置信度0.9。
+
+### 系统全面测试（33项全部通过，通过率100%）
+- 系统基础、舆情监测核心、话题监测、事件管理。
+- 案例深度拆解API（6端点）、品牌知识库API（2端点）、传播主体分类器、事件关系图谱。
+- 前端页面集成验证、静态资源加载、核心功能回归。
+
+### 版本号更新
+- APP_VERSION: 5.9.0 → 5.9.6
+- 前端22处资源引用版本号统一更新为 v=5.9.6
+
+## [5.9.5] - 2026-08-31（传播主体分类器V2 + 案例拆解API集成 + 第五批知识扩充）
+
+### 传播主体分类器V2：多类型匹配+冲突解决机制
+- 修复「羊城晚报官方账号」被误判为官方的问题：媒体+官方组合判定为媒体。
+- 新增6条冲突解决规则：媒体+官方、机构+官方、媒体+机构、KOS+官方等组合优先级。
+- 传统媒体关键词（日报/晚报/电视台）置信度提升至0.9。
+- 12/12测试用例全部通过。
+
+### 案例深度拆解API集成到app.py（6个路由）
+- GET /api/case-analysis/stats - 案例库统计
+- GET /api/case-analysis/list - 案例列表（筛选+分页）
+- GET /api/case-analysis/detail - 案例详情（11维）
+- GET /api/case-analysis/search - 案例搜索
+- GET /api/case-analysis/methodology - 所有方法论（58条）
+- GET /api/case-analysis/system-insights - 所有系统启示（77条）
+
+### 第五批知识扩充（知识库52→60条，案例库12→20个）
+- 8条新知识：耐克Just Do It、苹果Think Different、抖音、小红书、小米生态链、特斯拉、阿那亚、天目里。
+- 8个案例11维深度拆解，质量分均100。
+
+### 端到端测试：30/30全部通过
+
+## [5.9.4] - 2026-08-31（案例深度拆解模块 + 行业平台配置 + 知识库扩充至52条）
+
+### case_deep_analysis.py：11维案例深度拆解框架
+- 11维结构：基本信息、核心挑战、策略目标、核心创意Big Idea、执行细节、传播渠道、数据成果、获奖、成功要素（带权重）、可复用方法论、系统启示。
+- SQLite存储，支持筛选/搜索/JSON导出。
+
+### 12个经典案例11维深度拆解（质量分均100）
+- 品牌营销（5）：多芬、可口可乐、奥利奥、凡士林、喜力。
+- 危机公关（4）：强生泰诺、星巴克、海底捞、Airbnb。
+- 商业地产（3）：广州太古汇、兴业太古汇、成都万象城。
+
+### config/industry_platforms.json：行业平台链接配置
+- 7大类30+平台：营销创意、舆情公关、商业地产、全球4A、知识学术、数据研究、社交媒体。
+
+### 知识库扩充至52条（第四批8条）
+- 危机公关：丰田召回、三星Note7、SK-II。
+- 商业地产：侨福芳草地。
+- 营销理论：AARRR、私域流量、营销归因、A/B测试。
+
+## [5.9.3] - 2026-08-31（XHS App API研究 + 新模块API路由集成）
+
+### XHS App端API可行性研究
+- 结论：小红书App端API采用签名算法（x-s/x-t/x-s-common），Web端无法直接调用。
+- 话题浏览量/讨论量仅在App端显示，Web端无此数据。
+- 当前选择：保持Web端数据真实性，不伪造，该指标标注为App端专属。
+
+### 新模块API路由集成到app.py
+- 传播主体分类器：POST /api/subject-classifier/classify、GET /api/subject-classifier/types。
+- 事件关系图谱：GET /api/event-graph/stats、GET /api/event-graph/events。
+- 品牌分析报告：POST /api/brand-report/generate。
+- 品牌知识库：GET /api/brand-knowledge/stats、GET /api/brand-knowledge/search。
+
+## [5.9.2] - 2026-08-31（/remote修复 + 事件关系图谱 + 品牌分析报告升级）
+
+### /remote和知识库API 404修复
+- 问题：旧进程未完全停止导致新路由未加载。
+- 修复：彻底重启8200进程，确认所有新API路由正常加载。
+
+### 事件关系图谱模块（event_graph.py）
+- 三类事件：营销事件、传播事件、舆情事件。
+- 四种关系：触发（trigger）、衍生（derive）、继发（follow）、并行（parallel）。
+- API：GET /api/event-graph/stats、GET /api/event-graph/events。
+
+### 品牌分析报告升级（brand_report_generator.py）
+- 从舆情报告升级为品牌传播与市场情报报告。
+- 报告维度：品牌声量、传播主体、内容类型、情绪、竞品对比、营销事件、舆情风险、建议。
+- API：POST /api/brand-report/generate。
+
+## [5.9.1] - 2026-08-31（隧道守护 + 品牌知识库 + 传播主体分类器V1）
+
+### Cloudflare隧道稳定性守护（tunnel_guardian.py）
+- 隧道守护进程，自动检测隧道状态，断开时自动重连。
+- 限制：trycloudflare免费版无法固定域名，固定域名需Cloudflare付费版token。
+
+### 品牌知识库模块（brand_knowledge_base.py，影子板块）
+- 目标：全网学习品牌营销、广告宣传、舆情监测知识，为系统脱离外部AI提供知识基础。
+- 9大分类：品牌营销、广告宣传、舆情管理、消费者行为、市场趋势、品牌案例、传播策略、危机公关。
+- SQLite存储，支持分类检索、全文搜索、标签关联。
+- API：GET /api/brand-knowledge/stats、GET /api/brand-knowledge/search。
+- 首批知识44条。
+
+### 传播主体分类器V1（subject_classifier.py）
+- subject_type与content_type分离：传播主体身份与内容属性独立判断。
+- 基于规则的分类：作者名称关键词、认证信息、粉丝量级、内容模式。
+- API：POST /api/subject-classifier/classify、GET /api/subject-classifier/types。
+- 已知问题：「羊城晚报官方账号」被误判为官方（V2在5.9.5修复）。
+
+### 数据库变化
+- 新增表：brand_knowledge、event_graph、case_deep_analysis。
+- 无结构变化、无迁移、历史数据零删除零清空。
+
 ## [5.9.0] - 2026-08-31（V3.0 基线首批落地：Auth Recovery Center + XHS App Topic Adapter + QR_REQUIRED状态）
 
 ### V3.0 P0: Auth Recovery Center（认证恢复中心）
