@@ -86,6 +86,42 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .btn.sm{padding:6px 11px;font-size:12px;border-radius:9px}
 .btn.ok{background:var(--ok);box-shadow:none}.btn.no{background:#f0f0f4;color:var(--ink-2);box-shadow:none}
 
+/* ============ 统一 Auth Recovery 弹窗（不跳页·全局·手机适配） ============ */
+.auth-mask{position:fixed;inset:0;background:rgba(0,0,0,.32);backdrop-filter:blur(6px);z-index:120;
+  display:none;align-items:center;justify-content:center;padding:20px;animation:fadeIn .25s var(--ease-out)}
+.auth-mask.show{display:flex}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.auth-modal{width:min(440px,94vw);max-height:90vh;overflow-y:auto;background:var(--panel);border-radius:20px;
+  box-shadow:0 24px 70px rgba(0,0,0,.28);animation:popIn .34s var(--ease-spring)}
+@keyframes popIn{from{opacity:0;transform:scale(.94) translateY(14px)}to{opacity:1;transform:none}}
+.am-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.am-head b{font-size:16px}.am-sub{font-size:11.5px;color:var(--ink-2);margin-top:3px}
+.auth-modal .x{font-size:22px;line-height:1;color:var(--ink-2);width:30px;height:30px;border-radius:50%}
+.auth-modal .x:hover{background:#f0f0f4}
+.am-body{padding:16px 20px}
+.am-rows{display:grid;grid-template-columns:auto 1fr;gap:9px 16px;font-size:12.5px;margin-bottom:12px}
+.am-rows span{color:var(--ink-2)}.am-rows b{font-weight:600;text-align:right;word-break:break-all}
+.am-kind{font-size:12px;line-height:1.6;padding:10px 12px;border-radius:12px;margin-bottom:12px;background:var(--accent-soft);color:#0a6ad0}
+.am-kind.verify{background:#fff7e6;color:#b25e00}.am-kind.blocked{background:#ffeceb;color:#d72e24}
+.am-steps{display:flex;align-items:center;gap:6px;margin:4px 0 14px}
+.am-step{flex:1;text-align:center;font-size:11px;color:var(--ink-2);position:relative;padding-top:24px}
+.am-step::before{content:attr(data-n);position:absolute;top:0;left:50%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;
+  background:#e8e8ed;color:#fff;font-size:11px;display:grid;place-items:center;font-weight:700}
+.am-step.done::before{background:var(--ok)}.am-step.active::before{background:var(--accent);animation:pulse 1.2s infinite}
+.am-step.done,.am-step.active{color:var(--ink);font-weight:600}
+.am-qr{display:none;flex-direction:column;align-items:center;gap:9px;padding:12px;border:1px dashed var(--line);border-radius:14px;margin-bottom:12px;background:var(--panel-2)}
+.am-qr.show{display:flex}
+.am-qr img{max-width:220px;width:100%;border-radius:10px;background:#fff}
+.am-qr-hint{font-size:11.5px;color:var(--ink-2);text-align:center;line-height:1.6}
+.am-cool{display:none;font-size:12px;line-height:1.7;padding:11px 13px;border-radius:12px;background:#ffeceb;color:#d72e24;margin-bottom:12px}
+.am-cool.show{display:block}.am-cool .bar{height:6px;border-radius:6px;background:#ffd6d3;margin-top:8px;overflow:hidden}
+.am-cool .bar i{display:block;height:100%;background:var(--bad);border-radius:6px;transition:width .6s}
+.am-pause{font-size:11.5px;color:var(--ink-2);line-height:1.7;background:var(--panel-2);border-radius:10px;padding:9px 11px}
+.am-foot{display:flex;gap:10px;padding:14px 20px 20px;justify-content:flex-end;flex-wrap:wrap}
+.am-foot .btn{flex:1;min-width:130px;justify-content:center}
+@media(max-width:640px){.auth-mask{align-items:flex-end;padding:0}.auth-modal{width:100%;max-height:92vh;border-radius:20px 20px 0 0}
+  .am-foot .btn{flex:1 1 auto}}
+
 /* ============ Zachary 聊天 ============ */
 .ai-layout{display:flex;flex-direction:column;height:100%;background:linear-gradient(180deg,#fbfbfd,#f5f6f8)}
 .chat-scroll{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:14px;max-width:860px;width:100%;margin:0 auto}
@@ -334,6 +370,40 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
 </div>
 
+<!-- ============ 全局统一 Auth Recovery Modal（任何页面失效都在此弹，不跳走） ============ -->
+<div class="auth-mask" id="authMask">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="账号登录恢复">
+    <div class="am-head">
+      <div><b id="amTitle">账号恢复中心</b><div class="am-sub" id="amSub">统一登录态恢复 · 不离开当前页面</div></div>
+      <button class="x" onclick="closeAuthModal()" aria-label="关闭">×</button>
+    </div>
+    <div class="am-body">
+      <div class="am-rows">
+        <span>平台</span><b id="amPlatform">–</b>
+        <span>当前账号</span><b id="amAccount">–</b>
+        <span>当前状态</span><b id="amState">–</b>
+        <span>失效原因</span><b id="amReason">–</b>
+      </div>
+      <div class="am-kind" id="amKind"></div>
+      <div class="am-steps">
+        <div class="am-step" data-n="1" id="amStep1">打开登录页</div>
+        <div class="am-step" data-n="2" id="amStep2">扫码 / 验证</div>
+        <div class="am-step" data-n="3" id="amStep3">恢复续采</div>
+      </div>
+      <div class="am-qr" id="amQrBox">
+        <img id="amQr" alt="平台登录二维码或登录页截图"/>
+        <div class="am-qr-hint" id="amQrHint"></div>
+      </div>
+      <div class="am-cool" id="amCool"></div>
+      <div class="am-pause" id="amPause">该平台采集任务已自动暂停，恢复成功后将自动续采，不会把验证 / 风控误显示为“0 条舆情”。</div>
+    </div>
+    <div class="am-foot">
+      <button class="btn ghost" onclick="laterAuth()">稍后处理</button>
+      <button class="btn" id="amRecheck" onclick="recheckAuth()">我已完成验证，重新检测</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const TITLES={home:"总览",collect:"全网采集",ai:"Zachary 助手",shadow:"AI 影子审核",legacy:"经典版模块",settings:"账号与设置"};
 const STATE={view:"home",loaded:{},shadowSt:"pending",chats:[],drawerChats:[]};
@@ -356,20 +426,140 @@ function switchView(v){
 }
 document.querySelectorAll(".nav-item[data-view],.mtab[data-view]").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
 
+/* ---------- 统一 Auth Recovery Center（不跳页·全局） ---------- */
+const AUTH_BAD=new Set(["AUTH_REQUIRED","AUTH_FAILED","CAPTCHA","NEED_VERIFY","BLOCKED","IP_RISK","NETWORK_ERROR","FAIL","ERROR"]);
+const AUTH_STATE_CN={AUTH_VALID:"登录有效",EXPIRED:"登录已失效",REQUIRED:"准备恢复",QR_DISPLAYED:"二维码已展示",
+  WAITING_SCAN:"等待扫码/登录",SCANNED:"已扫码待确认",CONFIRMING:"确认登录中",RECOVERED:"已恢复",
+  HEALTH_CHECK:"恢复后健康检查",QR_EXPIRED:"二维码过期·自动刷新",QR_FAILED:"取码失败·可重试",
+  AUTH_FAILED:"尚未恢复",PLATFORM_BLOCKED:"平台风控冷却中",UNKNOWN:"浏览器未启动"};
+let authTimer=null,authSnoozed=new Set();
+
+function openAuthModal(platform,sourceState,detail){
+  if(!platform)return;
+  STATE.authPlatform=platform;authSnoozed.delete(platform);
+  document.getElementById("authMask").classList.add("show");
+  document.getElementById("amPlatform").textContent=platform;
+  document.getElementById("amState").textContent=STATE_CN[sourceState]||sourceState||"检测中…";
+  document.getElementById("amReason").textContent=detail||"采集时检测到该平台需要重新登录或人工验证";
+  document.getElementById("amAccount").textContent="读取中…";
+  document.getElementById("amKind").className="am-kind";document.getElementById("amKind").textContent="";
+  document.getElementById("amCool").classList.remove("show");
+  [1,2,3].forEach(i=>document.getElementById("amStep"+i).className="am-step");
+  api("/v4/adapters/recovery/start",{method:"POST",body:JSON.stringify({platform,source_state:sourceState||"",detail:detail||""})})
+    .then(d=>renderAuthSession(d.session,d.kind))
+    .catch(e=>{document.getElementById("amReason").textContent="恢复通道启动失败："+(e.message||e);});
+  if(authTimer)clearInterval(authTimer);
+  authTimer=setInterval(pollAuth,2500);pollAuth();
+}
+function closeAuthModal(){
+  document.getElementById("authMask").classList.remove("show");
+  if(authTimer){clearInterval(authTimer);authTimer=null;}
+  STATE.authPlatform=null;
+}
+function laterAuth(){ // 稍后处理：保持 NEED_VERIFY/PAUSED，不伪装恢复，恢复前不再自动打扰
+  const p=STATE.authPlatform;
+  if(p){authSnoozed.add(p);
+    api("/v4/adapters/recovery/cancel",{method:"POST",body:JSON.stringify({platform:p})}).catch(()=>{});}
+  closeAuthModal();
+}
+async function recheckAuth(){
+  const p=STATE.authPlatform;if(!p)return;
+  const btn=document.getElementById("amRecheck");btn.disabled=true;btn.textContent="检测中…";
+  try{const d=await api("/v4/adapters/recovery/check",{method:"POST",body:JSON.stringify({platform:p})});
+    if(d.recovered)renderRecovered();else pollAuth();}catch(e){}
+  btn.disabled=false;btn.textContent="我已完成验证，重新检测";
+}
+function renderRecovered(){
+  setSteps(3);
+  document.getElementById("amState").textContent="已恢复 · 自动续采";
+  document.getElementById("amQrBox").classList.remove("show");
+  document.getElementById("amCool").classList.remove("show");
+  const k=document.getElementById("amKind");k.className="am-kind";
+  k.textContent="✓ 登录态已恢复，系统自动解除暂停并继续采集。";
+  setTimeout(()=>{closeAuthModal();loadHome();},1600);
+}
+function setSteps(done){for(let i=1;i<=3;i++){const el=document.getElementById("amStep"+i);
+  el.className="am-step"+(i<=done?" done":"")+(i===done+1?" active":"");}}
+function renderAuthSession(s,kind){
+  if(!s)return;kind=kind||s.kind;
+  if(s.display||s.account)document.getElementById("amAccount").textContent=s.display||s.account;
+  const st=s.state;
+  document.getElementById("amState").textContent=AUTH_STATE_CN[st]||st;
+  const kindBox=document.getElementById("amKind"),qrBox=document.getElementById("amQrBox"),cool=document.getElementById("amCool");
+  if(kind==="BLOCKED"||st==="PLATFORM_BLOCKED"){ // C类：只冷却，不显示扫码
+    kindBox.className="am-kind blocked";
+    kindBox.textContent="C 类 · IP/平台风控（如 300012）：扫码无法解决，系统已自动降频熔断冷却，不硬刚。";
+    qrBox.classList.remove("show");
+    const rem=Math.max(0,Math.round(s.cooldown_remain||(s.risk&&s.risk.cooldown_remain)||0));
+    cool.classList.add("show");
+    cool.innerHTML=`熔断冷却中，剩余约 <b>${Math.floor(rem/60)}分${rem%60}秒</b>，冷却结束先做健康检查再逐步恢复。<div class="bar"><i style="width:${rem?Math.min(100,rem/600*100):0}%"></i></div>`;
+    setSteps(-1);return;
+  }
+  if(kind==="VERIFY"){ // B类：人机验证，不是重新登录
+    kindBox.className="am-kind verify";
+    kindBox.textContent="B 类 · 人机验证：这不是重新登录。请在弹出的采集浏览器完成滑块/安全验证后点“重新检测”。";
+  }else{ // A类：登录失效
+    kindBox.className="am-kind";
+    kindBox.textContent="A 类 · 登录失效：用对应 App 扫码，或在弹出的采集浏览器登录（持久 Profile，登录一次长期复用）。";
+  }
+  cool.classList.remove("show");
+  if(st==="AUTH_VALID"||st==="RECOVERED"){renderRecovered();return;}
+  const steps=s.steps||{};
+  setSteps(steps.done?3:(steps.scan?1:(steps.open?1:0)));
+  if(kind!=="BLOCKED"){
+    qrBox.classList.add("show");
+    const img=document.getElementById("amQr");
+    img.src=`/v4/adapters/recovery/shot/${s.platform}?t=${Date.now()}`;
+    img.onerror=()=>{qrBox.classList.remove("show");};
+    document.getElementById("amQrHint").textContent=s.remote_hint||"若二维码未出现，可直接在采集浏览器登录页操作";
+  }
+}
+async function pollAuth(){
+  const p=STATE.authPlatform;if(!p)return;
+  try{const d=await api("/v4/adapters/recovery/status");
+    const s=(d.tasks||[]).find(x=>x.platform===p);if(s)renderAuthSession(s);}catch(e){}
+}
+async function authWatchdog(){ // 任何 view（含 iframe 子页）平台失效即弹；稍后处理过的恢复前不打扰
+  try{const h=await fetchAllHealth();
+    h.forEach(x=>{
+      const healthy=["SUCCESS","IDLE","EMPTY","RUNNING"].includes(x.state);
+      if(!healthy&&AUTH_BAD.has(x.state)&&STATE.authPlatform!==x.platform&&!authSnoozed.has(x.platform))
+        openAuthModal(x.platform,x.state,x.last_error||"");
+      if(healthy)authSnoozed.delete(x.platform);
+    });
+  }catch(e){}
+}
+
 /* ---------- 总览 ---------- */
 const STATE_CN={IDLE:"待机",RUNNING:"采集中",SUCCESS:"正常",EMPTY:"无结果",AUTH_REQUIRED:"需登录",AUTH_FAILED:"登录失效",
   CAPTCHA:"人机验证",NEED_VERIFY:"需验证",BLOCKED:"已熔断",IP_RISK:"IP风险",NETWORK_ERROR:"网络异常",FAIL:"失败",ERROR:"错误"};
+async function fetchAllHealth(){
+  // v4 适配器注册表健康 + 小红书主采集(老链路 /api/xhs/collect-health) 六态合并，状态中心不漏主平台
+  const d=await api("/v4/adapters/health");let h=d.health||[];
+  try{
+    const x=await api("/api/xhs/collect-health"),cnt=x.state_counts||{};let fetched=0;
+    Object.keys(cnt).forEach(k=>{if(["SUCCESS","EMPTY"].includes(k))fetched+=(cnt[k].notes||0);});
+    const bad=(x.recent||[]).find(r=>["BLOCKED","AUTH_FAILED","CAPTCHA","NETWORK_ERROR"].includes(r.state));
+    let st="IDLE";
+    if(x.circuit&&x.circuit.open)st="BLOCKED";else if(x.overall==="FAILED")st=bad?bad.state:"FAIL";
+    else if(x.overall==="OK")st="SUCCESS";
+    h=[{platform:"xiaohongshu",display:"小红书·主采集",needs_browser:true,state:st,fetched,
+        last_error:(x.circuit&&x.circuit.detail)||(bad&&bad.msg)||""}].concat(h);
+  }catch(e){}
+  return h;
+}
 async function loadHome(){
-  api("/v4/adapters/health").then(d=>{
-    const h=d.health||[];document.getElementById("kpiPlatforms").textContent=h.length;
+  fetchAllHealth().then(h=>{
+    document.getElementById("kpiPlatforms").textContent=h.length;
     const ok=h.filter(x=>["SUCCESS","IDLE","EMPTY"].includes(x.state)).length;
     document.getElementById("kpiOk").textContent=ok+"/"+h.length;
     const box=document.getElementById("healthMatrix");box.innerHTML="";
     h.forEach(x=>{
       const c=document.createElement("div");c.className="hcell";
-      const st=x.state||"IDLE";
-      c.innerHTML=`<span class="hd ${st} ${x.count?'on':''}"></span><span class="hn">${x.platform_cn||x.platform}</span><span class="hs">${STATE_CN[st]||st}${x.count?(' · '+x.count):''}</span>`;
-      c.onclick=()=>switchView("collect");box.appendChild(c);
+      const st=x.state||"IDLE";const bad=AUTH_BAD.has(st);
+      c.innerHTML=`<span class="hd ${st} ${x.fetched?'on':''}"></span><span class="hn">${x.display||x.platform}</span><span class="hs">${STATE_CN[st]||st}${x.fetched?(' · '+x.fetched):''}</span>`;
+      c.onclick=()=>{ if(bad){openAuthModal(x.platform,st,x.last_error||"");} else {switchView("collect");} };
+      box.appendChild(c);
     });
   }).catch(()=>{});
   api("/v4/ai/status").then(d=>renderAi(d.ai)).catch(()=>{});
@@ -463,6 +653,7 @@ function toggleDrawer(open){document.getElementById("drawer").classList.toggle("
 /* ---------- 初始化 ---------- */
 loadHome();STATE.loaded.home=true;
 setInterval(()=>{if(STATE.view==="home")loadHome();},15000);
+setInterval(authWatchdog,12000);  // 全局登录态看门：任何页面(含iframe子页)平台失效即弹统一恢复窗，不跳页
 </script>
 </body>
 </html>
