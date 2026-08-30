@@ -51,6 +51,7 @@ import ai_filter
 import daily_report
 import report_engine
 import topic_campaign
+import app_evidence
 import swire_group
 import weekly_events
 import browser_discovery
@@ -467,6 +468,7 @@ db.init_db()
 
 collect_tasks={}; _task_lock=threading.Lock(); _collect_lock=threading.Lock()
 topic_campaign.register_topic_campaign(app, _collect_lock)
+app_evidence.register_app_evidence(app)
 swire_group.register_swire_group(app)
 
 def _strict_verify(note):

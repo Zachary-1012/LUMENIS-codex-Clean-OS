@@ -27,6 +27,15 @@ except Exception as _e:
     _RUNTIME_STATE_AVAILABLE = False
     _RUNTIME_STATE_IMPORT_ERROR = str(_e)
 
+# V3.0 P0-2 阶段1：统一动态调度影子模式接入
+# 只做观察、记录、回写，不门控固定时钟，不改变任何生产采集行为
+try:
+    from platform_adapters.scheduling import get_planner
+    _SCHEDULER_AVAILABLE = True
+except Exception as _e:
+    _SCHEDULER_AVAILABLE = False
+    _SCHEDULER_IMPORT_ERROR = str(_e)
+
 # ========== 专题配置 ==========
 DEFAULT_TOPICS = [
     '#广州太古汇十五周年',
@@ -667,6 +676,41 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
                 break
         _last_run = time.time()
         _record_campaign_run()  # 记录一次专题采集运行
+        # P0-2 阶段1影子模式：采集完成后回写结果到统一Scheduler，不改变执行
+        if _SCHEDULER_AVAILABLE:
+            try:
+                _planner = get_planner()
+                _total_new = sum(int(r.get('new_note_count', 0) or 0) for r in results)
+                _total_notes = sum(int(r.get('note_count', 0) or 0) for r in results)
+                _has_risk = any((not r.get('ok')) and r.get('error') for r in results)
+                _risk_status = ''
+                for r in results:
+                    if not r.get('ok'):
+                        _err = str(r.get('error', ''))
+                        if 'NEED_VERIFY' in _err or '验证' in _err:
+                            _risk_status = 'NEED_VERIFY'
+                            break
+                        elif 'IP_RISK' in _err or 'BLOCKED' in _err or '风控' in _err:
+                            _risk_status = 'IP_RISK_OR_300012'
+                            break
+                if _risk_status:
+                    _canon = _planner.record_result('xhs', _risk_status, now=datetime.now(),
+                                                     items_found=_total_new, xhs_code=_risk_status)
+                    print(f'[Shadow][TopicCampaign] 回写风险状态: {_canon}, new_notes={_total_new}')
+                elif _total_new > 0:
+                    _canon = _planner.record_result('xhs', 'SUCCESS', now=datetime.now(),
+                                                     items_found=_total_new)
+                    print(f'[Shadow][TopicCampaign] 回写成功: {_canon}, new_notes={_total_new}')
+                elif _total_notes > 0:
+                    _canon = _planner.record_result('xhs', 'SUCCESS', now=datetime.now(),
+                                                     items_found=0)
+                    print(f'[Shadow][TopicCampaign] 回写无新数据(有历史): {_canon}')
+                else:
+                    _canon = _planner.record_result('xhs', 'NO_NEW_DATA', now=datetime.now(),
+                                                     items_found=0)
+                    print(f'[Shadow][TopicCampaign] 回写无新数据: {_canon}')
+            except Exception as _re:
+                print(f'[Shadow][TopicCampaign] Scheduler结果回写失败: {_re}')
         return {'ok': True, 'campaign_key': campaign_key, 'captured_at': _now(), 'results': results}
     finally:
         if _app_lock is not None:
@@ -710,6 +754,16 @@ def _campaign_scheduler_loop():
                     and now.hour not in _today_run_hours
                     and 5 <= now.minute < 10):
                 print(f'[TopicCampaign] 触发话题监测调度 {now.hour}:05（错峰，独立配额）')
+                # P0-2 阶段1影子模式：同时调用统一Scheduler获取决策，记录对比日志，不改变执行
+                if _SCHEDULER_AVAILABLE:
+                    try:
+                        _planner = get_planner()
+                        _decision = _planner.decide('xhs', now=now, trigger_source='topic_campaign_shadow')
+                        print(f'[Shadow][TopicCampaign] 固定触发=YES, Scheduler allow={_decision.allow}, '
+                              f'reason={_decision.reason_code}, next_run_at={_decision.next_run_at}, '
+                              f'risk={_decision.risk_status}, verify={_decision.verification_required}')
+                    except Exception as _se:
+                        print(f'[Shadow][TopicCampaign] Scheduler决策调用失败: {_se}')
                 # 遍历所有启用且在各自监测窗口内的任务（十五周年为内置任务之一）
                 _dbx = _db()
                 with _dbx.get_db() as _cn:

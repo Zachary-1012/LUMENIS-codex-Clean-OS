@@ -1,5 +1,54 @@
 ﻿# 变更日志
 
+## [5.9.8] - 2026-08-31（P0-1生产事实校准 + P0-2阶段1影子模式 + P1 App Evidence最小版）
+
+### P0-1 生产事实校准（版本漂移修复）
+- VERSION文件: 5.9.0 → 5.9.7。
+- README.md: 版本声明→v5.9.7，最新进度重写，新增v5.9.0~v5.9.7演进记录。
+- CURRENT_BASELINE.md: v5.8.6→v5.9.7。
+- PROJECT_STATUS.md: v5.8.11→v5.9.7。
+- 未触碰采集核心代码，仅修正文档版本漂移。
+
+### P0-2 阶段1：Topic Campaign 调度收口（影子模式）
+- 统一动态调度体系已存在（platform_adapters/scheduling/）：policy+decision+planner+store+state_map。
+- topic_campaign.py接入：
+  - 导入统一Scheduler（get_planner），异常降级不影响生产。
+  - 固定时间点触发时同时调用planner.decide('xhs')，记录对比日志。
+  - 采集完成后调用planner.record_result()回写结果（SUCCESS/NO_NEW_DATA/NEED_VERIFY/IP_RISK）。
+- 不改变任何生产采集行为，只做观察、记录、回写。
+- 保留固定时间点[9,11,13,15,17,19]，阶段2灰度后再由Scheduler门控。
+
+### P1：XHS App Evidence Adapter 最小可运行版（Shadow模式）
+- 定位：用户主动截图上传→字段识别→人工确认→Shadow。
+- 严格禁止：自动登录、自动浏览、私有API、逆向签名、抓包、绕风控。
+- 新增app_evidence.py（14KB）：
+  - AppEvidence数据结构 + 数据库表app_evidence_records。
+  - 支持来源xhs_app/douyin_app/weibo_app/other。
+  - 支持指标browse_count/discussion_count/note_count等。
+  - 状态机pending→confirmed/rejected/shadow。
+  - MD5哈希去重。
+- API路由（8端点）：stats/list/get/upload/confirm/reject/shadow/delete。
+- 前端页面：导航入口+统计卡片+上传表单+筛选+记录列表。
+- 新增static/js/app_evidence.js（12.8KB）。
+
+### 端到端测试（全部通过）
+- 健康检查v5.9.7正常。
+- App Evidence API：统计/列表/上传/确认/删除全部正常。
+- 前端资源：app_evidence.js 200/12808 bytes，导航/页面/JS引用全部存在。
+- 语法验证：app_evidence.py/topic_campaign.py语法正确。
+
+## [5.9.7] - 2026-08-31（CHANGELOG补全 + V3.0三模块前端页面全链路集成）
+
+### CHANGELOG补全
+- 补全v5.9.1~v5.9.6共6个版本的完整变更记录。
+
+### V3.0三模块前端页面集成
+- 品牌知识库：导航+统计(80条/7分类)+分类筛选+搜索+详情。
+- 事件关系图谱：导航+统计+关系图例+空状态+事件卡片。
+- 品牌分析报告：导航+生成表单+报告展示(6维度)。
+- 新增v3_modules.js(20KB)+v3_modules.css(9.6KB)。
+- 42项E2E全部通过。
+
 ## [5.9.6] - 2026-08-31（案例深度拆解前端全链路集成 + 知识库第六批扩充 + 系统全面测试）
 
 ### 案例深度拆解前端页面集成（全链路完成）

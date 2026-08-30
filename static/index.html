@@ -53,6 +53,7 @@
         <button class="side-item" data-page="knowledge-base" data-desc="品牌营销/广告宣传/舆情管理知识库，80条结构化知识，影子板块为脱离AI做基础"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>品牌知识库</span></button>
         <button class="side-item" data-page="event-graph" data-desc="营销事件/传播事件/舆情事件的关系图谱，触发/衍生/继发/并行四种关系"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/><line x1="8" y1="19" x2="16" y2="19"/></svg></span><span>事件关系图谱</span></button>
         <button class="side-item" data-page="brand-report" data-desc="品牌传播与市场情报报告生成器，多维度自动分析（V3.0升级版）"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span>品牌分析报告</span></button>
+        <button class="side-item" data-page="app-evidence" data-desc="App端数据证据采集（Shadow模式）：用户主动截图上传→字段识别→人工确认，不碰App自动化"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span>App证据</span></button>
 
 
         <button class="side-item" data-page="calendar" data-desc="舆情日历、每日舆情概览、点击查看详情"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>舆情日历</span></button>
@@ -314,6 +315,79 @@
         <div id="brForm"></div>
       </section>
 
+      <!-- App证据（Shadow模式） -->
+      <section class="page-view" id="page-app-evidence">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>App证据</h2>
+          <div class="page-actions" style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:12px;color:var(--muted)">Shadow模式 · 用户主动上传 · 不碰App自动化</span>
+          </div>
+        </div>
+        <div id="aeStats"></div>
+        <div class="ae-upload-section">
+          <h3 style="margin:16px 0 12px;font-size:15px">上传证据</h3>
+          <div class="ae-form-grid">
+            <div class="ae-form-item">
+              <label>来源平台</label>
+              <select id="aeSource">
+                <option value="xhs_app">小红书App</option>
+                <option value="douyin_app">抖音App</option>
+                <option value="weibo_app">微博App</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+            <div class="ae-form-item">
+              <label>采集方式</label>
+              <select id="aeCaptureMode">
+                <option value="screenshot">截图</option>
+                <option value="share_link">分享链接</option>
+                <option value="manual_input">手动输入</option>
+              </select>
+            </div>
+            <div class="ae-form-item">
+              <label>关联话题</label>
+              <input type="text" id="aeTopic" placeholder="#广州太古汇十五周年">
+            </div>
+            <div class="ae-form-item">
+              <label>指标名</label>
+              <select id="aeMetricName">
+                <option value="browse_count">浏览量</option>
+                <option value="discussion_count">讨论量</option>
+                <option value="note_count">笔记数</option>
+                <option value="like_count">点赞数</option>
+                <option value="comment_count">评论数</option>
+                <option value="collect_count">收藏数</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+            <div class="ae-form-item">
+              <label>指标值</label>
+              <input type="text" id="aeMetricValue" placeholder="例如：12345">
+            </div>
+            <div class="ae-form-item">
+              <label>截图/证据文件</label>
+              <input type="file" id="aeFile" accept="image/*,.pdf">
+            </div>
+            <div class="ae-form-item ae-form-full">
+              <label>备注</label>
+              <input type="text" id="aeNotes" placeholder="可选：补充说明">
+            </div>
+          </div>
+          <button class="primary" onclick="AppEvidence.upload()" style="margin-top:12px">↑ 上传证据</button>
+        </div>
+        <div class="ae-filter-bar">
+          <select id="aeStatusFilter" onchange="AppEvidence.loadList()">
+            <option value="">全部状态</option>
+            <option value="pending">待确认</option>
+            <option value="confirmed">已确认</option>
+            <option value="rejected">已拒绝</option>
+            <option value="shadow">Shadow</option>
+          </select>
+          <input type="text" id="aeTopicSearch" placeholder="搜索话题..." onkeydown="if(event.key==='Enter')AppEvidence.loadList()">
+          <button onclick="AppEvidence.loadList()">🔍 筛选</button>
+        </div>
+        <div id="aeList"></div>
+      </section>
+
       <!-- 舆情日历 -->
       <section class="page-view" id="page-calendar">
         <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>舆情日历</h2></div>
@@ -553,6 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script src="/static/js/v3_modules.js?v=5.9.7"></script>
+<script src="/static/js/app_evidence.js?v=1.0.0"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
@@ -565,6 +640,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (pageId === 'knowledge-base') V3Modules.knowledge.init();
                     if (pageId === 'event-graph') V3Modules.eventGraph.init();
                     if (pageId === 'brand-report') V3Modules.brandReport.init();
+                    if (pageId === 'app-evidence') AppEvidence.init();
                 };
             }
         }
