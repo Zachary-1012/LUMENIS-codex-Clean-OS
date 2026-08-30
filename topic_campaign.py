@@ -11,7 +11,7 @@
 8. 活动窗口（2026-08-28 ~ 2026-10-07）外自动停止
 9. 绝不伪造数据：采集失败记录错误快照，浏览量/讨论量采不到就存0并标注状态
 """
-import os, json, threading, subprocess, time, csv, io, sys
+import os, json, threading, subprocess, time, csv, io, sys, random
 from datetime import datetime
 from flask import jsonify, request, send_from_directory, Response
 
@@ -38,6 +38,9 @@ CAMPAIGN_MAX_DAILY_RUNS = 8       # 专题每日最大采集次数（含手动�
 CAMPAIGN_MIN_INTERVAL_MINUTES = 30 # 两次专题采集最小间隔（分钟）
 CAMPAIGN_COLLECT_TIMEOUT = 3000     # 单次采集最长时间（秒）= 50分钟
 CAMPAIGN_MAX_SCROLL = 6              # 每个话题最大滚动次数
+CAMPAIGN_TOPIC_GAP_MIN = 12          # 同一轮内相邻话题的拟人随机冷却下限（秒），避免短时密集搜索被软降频
+CAMPAIGN_TOPIC_GAP_MAX = 28          # 相邻话题冷却上限（秒）
+CAMPAIGN_TOPIC_GAP_CAP = 90          # 连续空结果退避时的间隔封顶（秒）
 _today_campaign_runs = []            # 今日专题采集时间戳列表
 
 # ========== 线程安全 ==========
@@ -154,9 +157,11 @@ def _save_notes(conn, campaign_key, topic, notes):
                 vals + (cur['id'],)
             )
         else:
+            # INSERT 含 first_seen_at/last_seen_at 两个时间列，新笔记两者都取 now；
+            # vals = [title..note_url 共9项, last_seen_at(now), raw_json]，故在 note_url 后补一个 now 作为 first_seen_at
             conn.execute(
                 """INSERT INTO topic_campaign_notes(campaign_key,topic,note_id,title,content,author,publish_datetime,likes,comments,collects,shares,note_url,first_seen_at,last_seen_at,raw_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (campaign_key, topic, nid) + vals
+                (campaign_key, topic, nid) + vals[:9] + (now, now) + vals[10:]
             )
             new += 1
     return new
@@ -171,7 +176,9 @@ def _run_collector(topic):
     if not os.path.exists(script):
         return {'ok': False, 'error': f'采集脚本不存在: {script}', 'topic': topic}
 
-    cdp = os.getenv('XHS_CDP_URL', '').strip()
+    # 默认连 9222 已登录采集浏览器（app 主进程自身未必注入该 env，这里补缺省，避免误走 headless 未登录 profile）；
+    # 仍可用 XHS_CDP_URL 环境变量覆盖
+    cdp = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222').strip()
     profile_dir = os.getenv('XHS_PROFILE_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'taikoo_browser_profile'))
 
     # 中频率充分采集：滚动6次，单次最长50分钟
@@ -303,7 +310,12 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
                 "SELECT topic FROM topic_campaign_topics WHERE campaign_key=? AND enabled=1 ORDER BY id",
                 (campaign_key,)
             ).fetchall()]
-        for topic in topics:
+        empty_streak = 0  # 连续“成功但0笔记”计数：疑似平台软降频（不报错、结果暂空）时拉长下一话题间隔
+        for idx, topic in enumerate(topics):
+            if idx > 0:
+                # 拟人随机冷却；连续空结果则指数退避（封顶），保护账号，不硬撞平台频率限制
+                gap = random.uniform(CAMPAIGN_TOPIC_GAP_MIN, CAMPAIGN_TOPIC_GAP_MAX) * (2 ** min(empty_streak, 2))
+                time.sleep(min(gap, CAMPAIGN_TOPIC_GAP_CAP))
             data = _run_collector(topic)
             if data.get('ok'):
                 with db.get_db() as conn:
@@ -330,6 +342,11 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
                 'new_note_count': data.get('new_note_count', 0),
                 'error': data.get('error', '')
             })
+            # 成功出数清零；成功但 0 笔记累计（用于下一话题退避）；失败不累计（失败另有错误快照）
+            if data.get('ok') and not data.get('note_count'):
+                empty_streak += 1
+            elif data.get('ok'):
+                empty_streak = 0
         _last_run = time.time()
         _record_campaign_run()  # 记录一次专题采集运行
         return {'ok': True, 'campaign_key': campaign_key, 'captured_at': _now(), 'results': results}

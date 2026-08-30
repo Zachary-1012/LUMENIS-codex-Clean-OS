@@ -137,6 +137,12 @@ class HumanBrowser:
                 raise RuntimeError(f"CDP 浏览器未启动（端口 {self.port}），且 auto_ensure=False")
             self._ensure_browser()
         from playwright.sync_api import sync_playwright
+        # 连接前 HTTP 复位重页面/残留 worker，避免 attach 现有重页面时 CDP 握手挂起
+        try:
+            from cdp_helper import reset_cdp_targets
+            reset_cdp_targets(self.port)
+        except Exception:
+            pass
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.connect_over_cdp(self.cdp_url)
         if not self._browser.contexts:

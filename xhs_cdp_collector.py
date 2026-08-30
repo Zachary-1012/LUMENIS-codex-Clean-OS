@@ -130,6 +130,13 @@ def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
     from playwright.sync_api import sync_playwright
     result = {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {}}
     with sync_playwright() as p:
+        # 连接前 HTTP 复位重页面/残留 worker，避免 attach 现有重页面时 CDP 握手挂起
+        try:
+            from cdp_helper import reset_cdp_targets
+            _port = int(str(cdp_url).split(':')[-1].split('/')[0])
+            reset_cdp_targets(_port)
+        except Exception:
+            pass
         browser = p.chromium.connect_over_cdp(cdp_url, timeout=30000)
         ctx = browser.contexts[0] if browser.contexts else browser.new_context()
         page = ctx.new_page()

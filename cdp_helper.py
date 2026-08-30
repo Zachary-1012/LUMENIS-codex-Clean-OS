@@ -242,6 +242,65 @@ def ensure_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, auto_start=True,
     }
 
 
+def reset_cdp_targets(port=DEFAULT_CDP_PORT, timeout=6):
+    """连接前用纯 HTTP CDP 接口复位活动 target（不走 WebSocket，不受挂起影响）。
+
+    根因：Playwright connect_over_cdp 会 attach 现有 page；若浏览器停在小红书等"重页面"
+    （持续 XHR / 长连接 / 复杂 JS）或残留 service worker，attach 阶段的 CDP 初始化会挂起直至超时
+    （话题端口曾因此 connectOverCDP 30s 超时、数据全 0）。
+    做法：新开 about:blank 保底，再关闭所有重 page 与 service_worker / shared_worker，
+    使后续 connect_over_cdp 秒连（实测复位后 0.15s）。专用采集 profile，关闭其采集页安全
+    （登录态保存在 profile 内，不依赖某个页面常开）。best-effort，任何异常都不阻断主流程，返回关闭数。
+    """
+    import urllib.request
+    import json as _json
+    base = f"http://127.0.0.1:{port}"
+
+    def _http(path, method="GET"):
+        req = urllib.request.Request(base + path, method=method)
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.read().decode("utf-8", "ignore")
+
+    closed = 0
+    try:
+        try:
+            targets = _json.loads(_http("/json/list"))
+        except Exception:
+            return 0
+        heavy = [t for t in targets
+                 if not (t.get("type") == "page" and "about:blank" in (t.get("url") or ""))]
+        if not heavy:
+            return 0
+        # 先开一个空白页保底（新版 Chromium 需 PUT，旧版用 GET 兜底）
+        try:
+            _http("/json/new?about:blank", "PUT")
+        except Exception:
+            try:
+                _http("/json/new?about:blank", "GET")
+            except Exception:
+                pass
+        time.sleep(0.6)
+        try:
+            targets = _json.loads(_http("/json/list"))
+        except Exception:
+            targets = heavy
+        for t in targets:
+            if t.get("type") == "page" and "about:blank" in (t.get("url") or ""):
+                continue
+            tid = t.get("id")
+            if not tid:
+                continue
+            try:
+                _http(f"/json/close/{tid}")
+                closed += 1
+            except Exception:
+                pass
+        time.sleep(0.4)
+    except Exception:
+        return closed
+    return closed
+
+
 def get_cdp_status(port=DEFAULT_CDP_PORT):
     """获取CDP浏览器状态"""
     return {

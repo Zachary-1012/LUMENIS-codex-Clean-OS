@@ -187,6 +187,10 @@ async function main() {
       });
     }
 
+    // CDP 模式：关闭可能处于僵死/重状态的既有页，新建干净工作页（残留页 attach/evaluate 可能挂起）
+    if (cdpUrl) {
+      for (const oldPage of context.pages()) { try { await oldPage.close(); } catch {} }
+    }
     const page = context.pages()[0] || await context.newPage();
     const notes = new Map();
 
@@ -195,7 +199,8 @@ async function main() {
       try {
         const req = response.request();
         if (req.method().toLowerCase() !== 'post' || response.status() !== 200) return;
-        if (!response.url().includes('/api/sns/web/v1/search/notes')) return;
+        // 兼容 v1(edith.xiaohongshu.com) 与 v2(so.xiaohongshu.com) 两版笔记搜索接口，不写死版本号
+        if (!/\/api\/sns\/web\/v\d+\/search\/notes/.test(response.url())) return;
         const ct = response.headers()['content-type'] || '';
         if (!ct.includes('json')) return;
         const data = await response.json();
@@ -207,10 +212,14 @@ async function main() {
       } catch {}
     });
 
+    // 进站预热：小红书对 search_result 冷导航（无站内 referer / 会话上下文）会挂起文档响应，
+    // 真人也是先打开站点再站内搜索。先访问 explore 建立会话，再进搜索页，避免 goto 超时（已实测：冷跳搜索页 30s 超时，预热后 1.1s）
+    await page.goto('https://www.xiaohongshu.com/explore', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(1200);
     // 访问搜索结果页
     const searchKeyword = topic.replace(/^#/, '');
     const url = `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(searchKeyword)}&source=web_explore_feed`;
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(PAGE_WAIT);
 
     // 提取话题浏览量/讨论量（滚动前提取，话题卡片在页面顶部）
@@ -222,31 +231,42 @@ async function main() {
       await page.waitForTimeout(SCROLL_DELAY);
     }
 
-    // DOM 兜底：从页面链接提取笔记（API 未拦截到时的补充）
+    // DOM 兜底：API 未拦截到时从渲染卡片提取（浏览器上下文必须自包含，不能引用 node 侧 clean）
     try {
-      const domNotes = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('a[href*="/explore/"]'))
-          .map(a => ({
-            note_id: (a.href.match(/\/explore\/([A-Za-z0-9_-]+)/) || [])[1],
-            note_url: a.href,
-            title: clean(a.innerText),
-          }))
-          .filter(x => x.note_id)
-      );
+      const domNotes = await page.evaluate(() => {
+        const txt = el => (el && el.innerText ? el.innerText : '').replace(/\s+/g, ' ').trim();
+        const pickId = h => {
+          const m = h.match(/\/explore\/([A-Za-z0-9_-]+)/) || h.match(/\/search_result\/([A-Za-z0-9_-]+)/);
+          return m ? m[1] : '';
+        };
+        const out = [];
+        document.querySelectorAll('section.note-item').forEach(sec => {
+          const a = sec.querySelector('a[href*="/explore"],a[href*="/search_result"]');
+          const id = a ? pickId(a.href) : '';
+          if (!id) return;
+          out.push({
+            note_id: id, note_url: a.href,
+            title: txt(sec.querySelector('.title, .note-title, a')),
+            author: txt(sec.querySelector('.author .name, .name, .author-wrapper .name')),
+            likeTxt: txt(sec.querySelector('.like-wrapper .count, .like-count, .count')),
+          });
+        });
+        document.querySelectorAll('a[href*="/explore/"]').forEach(a => {
+          const id = pickId(a.href);
+          if (id) out.push({ note_id: id, note_url: a.href, title: txt(a), author: '', likeTxt: '' });
+        });
+        return out;
+      });
+      const parseLike = t => {
+        if (!t) return 0; const m = t.match(/([\d.]+)\s*(万|亿)?/); if (!m) return 0;
+        let n = Number(m[1]); if (m[2] === '万') n *= 1e4; if (m[2] === '亿') n *= 1e8; return Math.round(n);
+      };
       for (const x of domNotes) {
         if (!notes.has(x.note_id)) {
           notes.set(x.note_id, {
-            note_id: x.note_id,
-            title: x.title,
-            content: '',
-            author: '',
-            likes: 0,
-            comments: 0,
-            collects: 0,
-            shares: 0,
-            note_url: x.note_url,
-            publish_datetime: '',
-            xsec_token: '',
+            note_id: x.note_id, title: clean(x.title), content: '', author: clean(x.author || ''),
+            likes: parseLike(x.likeTxt), comments: 0, collects: 0, shares: 0,
+            note_url: x.note_url, publish_datetime: '', xsec_token: '',
           });
         }
       }
