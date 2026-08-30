@@ -52,6 +52,20 @@ CDP_NODE_FALLBACK = os.path.join(SCRIPT_DIR, 'rednote_collector.cjs')  # 备用 
 _CDP_RISK_STATES = ('IP_RISK_OR_300012', 'NEED_VERIFY')
 
 
+_XHS_GUARD = None
+
+
+def _get_xhs_guard():
+    """懒加载小红书采集保护层（CollectorGuard），避免无条件 import 影响其它通道。"""
+    global _XHS_GUARD
+    if _XHS_GUARD is None:
+        from collector_guard.guard import CollectorGuard
+        enabled = os.getenv('TAIKOO_COLLECTOR_GUARD', '1').lower() not in ('0', 'false', 'no', 'off')
+        base = float(os.getenv('XHS_GUARD_BASE_INTERVAL', '6'))
+        _XHS_GUARD = CollectorGuard('xiaohongshu', enabled=enabled, base_interval=base)
+    return _XHS_GUARD
+
+
 def _cdp_online(timeout=2.0):
     """探测 9222 CDP 是否在线（不启动浏览器，只探测）。"""
     import urllib.request
@@ -245,7 +259,15 @@ def collect_all(keywords=None, max_scroll=4):
         kw_details = 10 if is_core else 3
         kw_scroll = max_scroll if is_core else min(max_scroll, 2)
         print(f"[Collector] 搜索: {kw} ({'核心' if is_core else '扩展'}浅采)" if not is_core else f"[Collector] 搜索: {kw}")
-        result = search_xiaohongshu(kw, max_scroll=kw_scroll, max_details=kw_details)
+        guard = _get_xhs_guard()
+        gr = guard.run(lambda kw=kw, ss=kw_scroll, dd=kw_details: search_xiaohongshu(kw, max_scroll=ss, max_details=dd), kw)
+        result = gr.raw if isinstance(gr.raw, dict) else {'keyword': kw, 'total': len(gr.notes), 'notes': gr.notes, 'error': '', 'channel': 'guard'}
+        if gr.should_stop:
+            collection_results.append({'keyword': kw, 'count': result.get('total', 0),
+                                       'error': result.get('error', '') or gr.reason,
+                                       'guard_state': gr.state, 'tier': 'core' if is_core else 'expand'})
+            print(f"[Collector]   !! 受控暂停/熔断({gr.to_dict().get('state_label')})，停止后续关键词请求：{gr.detail}")
+            break
         count = result.get('total', 0)
         error = result.get('error', '')
         collection_results.append({'keyword': kw, 'count': count, 'error': error, 'tier': 'core' if is_core else 'expand'})

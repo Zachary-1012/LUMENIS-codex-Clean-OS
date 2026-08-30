@@ -144,7 +144,7 @@ def _run_collect_task(task_id,keywords,max_scroll):
             _ex=concurrent.futures.ThreadPoolExecutor(max_workers=1)
             _future=_ex.submit(reprocess.discover_web,limit=80,translate=False)
             try:
-                web_result=_future.result(timeout=max(5,int(os.getenv('TAIKOO_WEB_DISCOVERY_TIMEOUT','30'))))
+                web_result=_future.result(timeout=max(5,int(os.getenv('TAIKOO_WEB_DISCOVERY_TIMEOUT','8'))))
             except concurrent.futures.TimeoutError:
                 _future.cancel()
                 web_result={'fetched':0,'keywords':[],'error':'timeout'}
@@ -153,7 +153,14 @@ def _run_collect_task(task_id,keywords,max_scroll):
             finally:
                 # 不等待超时任务结束，避免采集锁被“假超时”长期占用。
                 _ex.shutdown(wait=False, cancel_futures=True)
-        feedback=[x['keyword'] for x in db.get_feedback_keywords(8)]
+        # 反馈词先清洗英文停用词/单字符/纯符号噪声并限量，避免无意义词拖慢采集、徒增风控暴露
+        feedback=[]
+        for _x in db.get_feedback_keywords(12):
+            _kw=(_x.get('keyword') or '').strip()
+            if _kw and _kw not in keywords and not collector._is_noise_keyword(_kw):
+                feedback.append(_kw)
+            if len(feedback)>=6:
+                break
         effective=list(dict.fromkeys(list(keywords)+feedback))[:20]
         with _task_lock: collect_tasks[task_id].update(status='collecting',message=f'全网发现完成，正在用 {len(effective)} 个关键词回搜小红书…',progress=18,web_discovered=web_result.get('fetched',0),feedback_keywords=feedback)
         notes,results=collector.collect_all(keywords=effective,max_scroll=max_scroll)
