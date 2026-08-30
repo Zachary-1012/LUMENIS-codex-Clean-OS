@@ -1,0 +1,21 @@
+{
+  "_comment": "人工审核后的代理节点模板。复制为 proxy_nodes.json 后填写；本文件仅为模板，可提交；proxy_nodes.json 含真实节点，禁止提交。免费公开节点必须先人工审核再放入，禁止自动抓取后直接用于生产账号。",
+  "nodes": [
+    {
+      "name": "local-xray-main",
+      "url": "http://127.0.0.1:10809",
+      "platform": "general",
+      "priority": 150,
+      "enabled": true,
+      "source": "manual"
+    },
+    {
+      "name": "paid-backup-hk",
+      "url": "http://127.0.0.1:10810",
+      "platform": "general",
+      "priority": 120,
+      "enabled": false,
+      "source": "manual"
+    }
+  ]
+}

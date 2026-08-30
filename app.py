@@ -14,6 +14,29 @@ def _load_dotenv(path='.env'):
 
 _load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
+# === 生产稳定性：原生崩溃(C段错误/被信号终止)默认无任何 Python 堆栈，是历史上“进程静默消失”无线索的根因。
+# faulthandler 在解释器层把崩溃瞬间全部线程栈写入 logs/faulthandler.log；threading.excepthook 兜住后台线程未捕获异常。 ===
+import faulthandler as _faulthandler
+import traceback as _fault_tb
+try:
+    _LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+    os.makedirs(_LOG_DIR, exist_ok=True)
+    _fault_fh = open(os.path.join(_LOG_DIR, 'faulthandler.log'), 'a', encoding='utf-8')
+    _faulthandler.enable(file=_fault_fh, all_threads=True)
+except Exception as _fault_e:
+    print('[FaultHandler] enable failed:', _fault_e)
+
+def _thread_excepthook(args):
+    try:
+        import logging as _logging
+        _logging.getLogger('threading').error(
+            'Uncaught in thread %s: %s: %s\n%s', getattr(args.thread, 'name', args.thread),
+            getattr(args.exc_type, '__name__', args.exc_type), args.exc_value,
+            ''.join(_fault_tb.format_tb(args.exc_traceback)))
+    except Exception:
+        pass
+threading.excepthook = _thread_excepthook
+
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, request, send_from_directory, send_file, Response
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -70,7 +93,7 @@ app.register_blueprint(export_report.export_bp)
 app.register_blueprint(pr_case_integration.pr_case_bp)
 # 注册系统功能API蓝图
 app.register_blueprint(system_features_api.system_features_bp)
-APP_VERSION='5.8.4'
+APP_VERSION='5.8.5'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')
@@ -4456,9 +4479,13 @@ if __name__ == '__main__':
     werkzeug_logger.setLevel(logging.INFO)
     # 不添加handler，避免重复记录
     
+    # 命令行 --host/--port 优先于 .env（修复历史 bug：此前末尾 app.run 固定用 .env 的 APP_PORT，
+    # 忽略 --port，导致旁路测试实例抢占现网端口）
+    RUN_HOST = getattr(globals().get('args'), 'host', APP_HOST)
+    RUN_PORT = getattr(globals().get('args'), 'port', APP_PORT)
     print("=" * 60)
     print(f"广州太古汇舆情监测系统 v{APP_VERSION}")
-    print(f"启动地址: http://{APP_HOST}:{APP_PORT}")
+    print(f"启动地址: http://{RUN_HOST}:{RUN_PORT}")
     print(f"多线程模式: 开启")
     print(f"详细日志: {os.path.join(log_dir, 'system.log')}")
     print("=" * 60)
@@ -4513,7 +4540,7 @@ if __name__ == '__main__':
     
     try:
         # 使用多线程模式，支持并发请求
-        app.run(host=APP_HOST, port=APP_PORT, debug=False, threaded=True)
+        app.run(host=RUN_HOST, port=RUN_PORT, debug=False, threaded=True)
     except Exception as e:
         logging.critical(f"[System] 系统启动失败: {e}", exc_info=True)
         print(f"系统启动失败: {e}")

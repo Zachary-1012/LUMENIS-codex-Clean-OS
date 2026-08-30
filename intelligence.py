@@ -82,9 +82,11 @@ def _provider_config():
             key,base,model=configs[requested]
             detected=(provider_name,model,base.rstrip('/')) if key else None
         else:
-            # auto：优先本机 AI；没有则尝试配置了 Key 的云端 provider；最后 rule。
+            # 正式架构 Ollama-only：auto 只自动发现本机模型；本机没有即回退本地规则引擎（离线可跑、
+            # 绝不因云端网络挂起而把批量复核卡死）。云端为 Legacy/Optional，默认不自动启用：
+            # 确需云端请显式 AI_PROVIDER=<provider>，或置 ALLOW_CLOUD_AI=true 让 auto 纳入已配 Key 的云端。
             detected=_detect_local()
-            if not detected:
+            if not detected and _env('ALLOW_CLOUD_AI','').lower() in ('1','true','yes','on','y'):
                 for p,key,base,model in [
                     ('zhipu',_env('ZHIPU_API_KEY'),_env('ZHIPU_BASE_URL','https://open.bigmodel.cn/api/paas/v4'),_env('ZHIPU_MODEL','glm-4.5-air')),
                     ('qwen',_env('DASHSCOPE_API_KEY'),_env('DASHSCOPE_BASE_URL','https://dashscope.aliyuncs.com/compatible-mode/v1'),_env('QWEN_MODEL','qwen-plus')),

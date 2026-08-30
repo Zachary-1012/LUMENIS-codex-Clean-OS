@@ -121,3 +121,17 @@ data/*
 !data/brand_websites.json
 !data/case_library.json
 !data/.gitkeep
+
+# === 本地敏感/运行态（不入版本库，Z-Brand Core 安全闸）===
+config/proxy_nodes.json
+edge-cdp-profile/
+edge-cdp-newaccount/
+edge-cdp-proxy/
+chrome-cdp-profile/
+chrome-cdp-test/
+.skills-router/
+data/search_*.json
+data/supervisor_state.json
+data/stability/
+faulthandler.log
+*.pyc
