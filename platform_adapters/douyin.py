@@ -7,17 +7,14 @@ from .registry import register_adapter
 
 
 class DouyinAdapter(BasePlatformAdapter):
-    """Douyin adapter contract.
+    """Planned secondary-platform adapter.
 
-    The current repository does not expose a verified production Douyin collector in
-    the same way as the XHS collector. Therefore this adapter is deliberately a safe
-    extension point rather than a fake implementation. Once a compliant backend is
-    selected and locally tested, inject it through ``backend`` without changing the
-    upper business layer.
+    This release intentionally does not activate Douyin in production. A verified,
+    compliant backend may later be injected without changing the upper business layer.
     """
 
     platform = "douyin"
-    enabled = True
+    enabled = False
     monitor_priority = "secondary"
 
     def __init__(self, *, backend: Any = None, **kwargs: Any) -> None:
@@ -29,29 +26,29 @@ class DouyinAdapter(BasePlatformAdapter):
             status=CollectionStatus.COLLECT_ERROR,
             platform=self.platform,
             message=(
-                f"Douyin {operation} backend is not installed in this release. "
+                f"Douyin {operation} backend is not enabled in this release. "
                 "Do not silently fall back to another platform or report zero data."
             ),
             metadata={"content_id": content_id, "ready_for_backend": True},
         )
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
-        if self.backend is None:
+        if self.backend is None or not self.enabled:
             return self._not_ready("search")
         return self.backend.search(keyword, **kwargs)
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
-        if self.backend is None:
+        if self.backend is None or not self.enabled:
             return self._not_ready("detail", content_id)
         return self.backend.detail(content_id, **kwargs)
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
-        if self.backend is None:
+        if self.backend is None or not self.enabled:
             return self._not_ready("comments", content_id)
         return self.backend.comments(content_id, include_replies=include_replies, **kwargs)
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
-        if self.backend is None:
+        if self.backend is None or not self.enabled:
             return self._not_ready("creator", creator_id)
         return self.backend.creator(creator_id, **kwargs)
 
