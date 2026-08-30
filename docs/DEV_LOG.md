@@ -43,6 +43,25 @@
 - Added `scripts/run_core_regression.py`; core regression is 10/10 green (database, six-state, guard wiring, risk engine, event date, report periods, safety boundary, title fallback, scheduling, subject redline).
 - Restarted 8201 on v5.8.6 as a single logical chain, healthz ok; APP_VERSION aligned to 5.8.6.
 
+### 2026-08-30 ~17:53 - Dynamic scheduling closed loop + global health center (shadow, non-gating)
+- Scheduling feedback closed loop: the real per-task outcome is written back to the planner.
+  - platform_adapters/scheduling/__init__.py adds process-level singleton get_planner(); the scheduler wake-up
+    evaluation and the collector result feedback now share one in-memory state (no state-file overwrite race).
+  - app.py _get_shadow_planner() delegates to that singleton.
+  - xhs_cookie_bridge.py adds _shadow_record_result(): the task-level state (SUCCESS/EMPTY/PARTIAL_BLOCKED/
+    BLOCKED/CAPTCHA/AUTH_FAILED/NETWORK_ERROR) is canonicalized and planner.record_result is called once per task.
+    Fail-open; never gates or affects collection; AI takes no part in the decision.
+- state_map.py: AUTH_FAILED -> SESSION_EXPIRED (class A auth, not COLLECT_ERROR); PARTIAL_BLOCKED -> RISK_WARNING
+  (partial throttling lowers frequency rather than tripping the circuit or showing 0). Scheduling tests now 31/31.
+- Global health center backend (data foundation for the home health dots and the unified in-app Auth Modal):
+  - platform_adapters/health_center.py build_platform_health(): per-platform isolated status, triage A/B/C,
+    session validity, risk/cooldown/next_run/current interval/recovery streak, last batch. IDLE (enabled, no run yet)
+    is distinguished from DISABLED (extension slot); neither is a failure or "0 notes". Read-only, no network, no gating.
+  - app.py: new read-only route GET /api/platform-health (takes effect after the next 8201 restart).
+  - tests/test_health_center.py: 13 assertions (three-class split, platform isolation, no fake-zero).
+- Core regression is now 11/11 (added test_health_center); scheduling 31/31; health center 13/13.
+- Committed/pushed: b013305 (closed loop + state mapping), 484de8e (health center backend).
+
 ### Unresolved / not yet tested
 - The 18:05 wake-up is the first real end-to-end observation of the re-enabled auto collection + shadow decision; until observed in collection_logs / schedule_decisions it remains "not yet E2E verified".
 - Dynamic scheduler is shadow-only; production gating cutover awaits explicit sign-off.
