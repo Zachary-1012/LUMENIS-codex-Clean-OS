@@ -8,6 +8,11 @@ subject filtering, risk, event aggregation and reporting remain in the core syst
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .registry import get_adapter, list_adapters, register_adapter
 
+# Import built-in adapters so registration happens when the package is imported.
+# Their implementations are deliberately thin and do not replace the existing core.
+from . import douyin as _douyin  # noqa: F401,E402
+from . import xhs as _xhs  # noqa: F401,E402
+
 __all__ = [
     "BasePlatformAdapter",
     "CollectionResult",
