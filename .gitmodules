@@ -1,0 +1,3 @@
+[submodule "tools/development-command-console"]
+	path = tools/development-command-console
+	url = https://github.com/Zachary-1012/Development-Command-Console.git
