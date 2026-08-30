@@ -67,13 +67,22 @@ def _norm_cdp_note(rec):
     pub = rec.get('detail_publish_time') or rec.get('publish_time') or rec.get('publish_datetime') or ''
     m = re.match(r'(\d{4}-\d{2}-\d{2})', str(pub))
     publish_date = m.group(1) if m else ''
+    _title = rec.get('detail_title') or rec.get('title') or ''
+    _desc = rec.get('desc') or rec.get('content') or ''
+    if not _title and _desc:
+        # 详情标题偶发缺失：用正文首个非空行兜底（截断 40 字），保证入库标题不留空
+        for _line in str(_desc).splitlines():
+            _line = _line.strip(' \t\r\n　')
+            if _line:
+                _title = _line[:40]
+                break
     def _int(v):
         try: return int(v or 0)
         except Exception: return 0
     return {
         'note_id': rec.get('note_id', ''),
-        'title': rec.get('detail_title') or rec.get('title') or '',
-        'content': rec.get('desc') or rec.get('content') or '',
+        'title': _title,
+        'content': _desc,
         'url': rec.get('url', ''),
         'cover': rec.get('cover', ''),
         'author_id': rec.get('author_id', ''),
@@ -144,9 +153,32 @@ def _search_standalone(keyword, max_scroll, output_path):
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': str(e), 'channel': 'standalone'}
 
 
-def search_xiaohongshu(keyword, max_scroll=4, output_path=None):
+# 英文停用词/噪声（多来自 GDELT 等英文网页发现），对广州太古汇主体无意义，采集前剔除
+_KEYWORD_STOPWORDS = {
+    'the', 'a', 'an', 'of', 'and', 'or', 'to', 'in', 'on', 'at', 'for', 'is', 'are',
+    'was', 'were', 'be', 'been', 'with', 'by', 'from', 'as', 'it', 'this', 'that',
+    'these', 'those', 'you', 'your', 'we', 'they', 'he', 'she', 'his', 'her', 'their',
+    'what', 'which', 'who', 'whom', 'how', 'why', 'when', 'where', 'can', 'could',
+    'will', 'would', 'should', 'may', 'might', 'must', 'shall', 'about', 'into', 'over',
+    'after', 'before', 'more', 'most', 'some', 'any', 'all', 'not', 'no', 'yes', 'news',
+}
+
+
+def _is_noise_keyword(k):
+    k = (k or '').strip()
+    if len(k) < 2:
+        return True
+    if re.fullmatch(r'[\d\W_]+', k):  # 纯数字/符号
+        return True
+    if k.lower() in _KEYWORD_STOPWORDS:
+        return True
+    return False
+
+
+def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10):
     """多通道搜索小红书：9222 CDP 真人通道优先，独立 Chromium 兜底。
-    返回 dict: {keyword,total,notes,error,channel}。风控态(IP风险/验证码)显式返回，不当作普通0条。"""
+    返回 dict: {keyword,total,notes,error,channel}。风控态(IP风险/验证码)显式返回，不当作普通0条。
+    max_details 控制 CDP 进入多少个详情页（核心词深采、扩展词浅采以提速降风控）。"""
     if output_path is None:
         output_path = os.path.join(SCRIPT_DIR, 'data', f'search_{int(datetime.now().timestamp())}.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -154,7 +186,7 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None):
     # 主路径：CDP 真人通道
     try:
         if os.path.exists(CDP_SCRIPT) and _cdp_online():
-            res = _search_via_cdp(keyword, max_scroll, output_path)
+            res = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details)
             if res.get('notes') or res.get('error') in _CDP_RISK_STATES:
                 return res  # 真出数 / 明确风控态都直接返回
             # CDP 非风控空结果，落兜底通道再试一次
@@ -174,15 +206,29 @@ def collect_all(keywords=None, max_scroll=4):
     if keywords is None:
         keywords = MONITOR_KEYWORDS
 
+    # 清洗噪声词 + 去重保序 + 限量（避免英文网页发现的 the/silver 类噪声拖慢采集、徒增风控暴露）
+    seen_kw, clean_kw = set(), []
+    for k in keywords:
+        k = (k or '').strip()
+        if not k or _is_noise_keyword(k) or k.lower() in seen_kw:
+            continue
+        seen_kw.add(k.lower()); clean_kw.append(k)
+    keywords = clean_kw[:12]
+
     all_notes = {}
     collection_results = []
+    core_set = set(MONITOR_KEYWORDS or [])
 
-    for kw in keywords:
-        print(f"[Collector] 搜索: {kw}")
-        result = search_xiaohongshu(kw, max_scroll=max_scroll)
+    for idx, kw in enumerate(keywords):
+        # 首个显式词与主体监测词为核心，深采；其余为扩展反馈词，浅采（提速、降负载、降风控）
+        is_core = (idx == 0) or (kw in core_set)
+        kw_details = 10 if is_core else 3
+        kw_scroll = max_scroll if is_core else min(max_scroll, 2)
+        print(f"[Collector] 搜索: {kw} ({'核心' if is_core else '扩展'}浅采)" if not is_core else f"[Collector] 搜索: {kw}")
+        result = search_xiaohongshu(kw, max_scroll=kw_scroll, max_details=kw_details)
         count = result.get('total', 0)
         error = result.get('error', '')
-        collection_results.append({'keyword': kw, 'count': count, 'error': error})
+        collection_results.append({'keyword': kw, 'count': count, 'error': error, 'tier': 'core' if is_core else 'expand'})
         print(f"[Collector]   -> {count} 条 {'(错误: '+error+')' if error else ''}")
 
         for note in result.get('notes', []):

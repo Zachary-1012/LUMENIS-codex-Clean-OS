@@ -317,6 +317,9 @@ def insert_note(note_data):
             'source_keyword': note_data.get('source_keyword','') or '',
             'matched_keywords': note_data.get('matched_keywords','') or '',
         }
+        # 双时间铁律：publish_* 来自平台发布时间，captured_at 是本机采集时刻，二者来源不同、绝不互相顶替。
+        # 真人通道通常只给到日期(publish_date)，用它回填缺失的 publish_datetime，保证发布时间不留空。
+        pub_dt = (note_data.get('publish_datetime', '') or vals.get('publish_date', '') or '').strip()
         if existing:
             conn.execute("""UPDATE notes SET source_platform=?, title=?, content=CASE WHEN ?<>'' THEN ? ELSE content END,
                 url=CASE WHEN ?<>'' THEN ? ELSE url END, cover=CASE WHEN ?<>'' THEN ? ELSE cover END,
@@ -342,7 +345,7 @@ def insert_note(note_data):
                 vals['author_id'], vals['author_id'], vals['author_nickname'], vals['author_nickname'],
                 vals['author_avatar'], vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'],
                 vals['note_type'], vals['xsec_token'], vals['xsec_token'], vals['publish_date'], vals['publish_date'], vals['is_taikoo_verified'], vals['verify_reason'], vals['verify_reason'],
-                note_data.get('publish_datetime','') or '', note_data.get('publish_datetime','') or '',
+                pub_dt, pub_dt,
                 note_data.get('captured_at','') or '', note_data.get('captured_at','') or '',
                 note_data.get('detail_fetched_at','') or '', note_data.get('detail_fetched_at','') or '',
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
@@ -359,7 +362,7 @@ def insert_note(note_data):
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'active',?,?,?,?)""", (
             nid, vals['source_platform'], vals['title'], vals['content'], vals['url'], vals['cover'], vals['author_id'], vals['author_nickname'],
             vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'], vals['note_type'],
-            vals['xsec_token'], vals['publish_date'], note_data.get('publish_datetime','') or '', note_data.get('captured_at','') or now,
+            vals['xsec_token'], vals['publish_date'], pub_dt, note_data.get('captured_at','') or now,
             note_data.get('detail_fetched_at','') or '', note_data.get('comments_fetched_at','') or '', int(note_data.get('comments_collected',0) or 0),
             note_data.get('data_quality_status','unknown') or 'unknown', float(note_data.get('data_quality_score',0) or 0),
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))
