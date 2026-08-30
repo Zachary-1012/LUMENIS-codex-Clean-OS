@@ -405,3 +405,61 @@ body{
 .nd-actions { display:flex; gap:10px; justify-content:flex-end; padding:16px 24px; }
 .nd-btn { padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; text-decoration:none; display:inline-block; }
 .nd-btn-secondary { background:rgba(0,0,0,.06); color:#1c1c1e; }
+
+/* ========== v5.9.9 话题卡片升级 ========== */
+.topic-card .topic-card-header{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:12px;gap:8px;
+}
+.topic-card .topic-card-header .topic-name{
+  margin-bottom:0;font-size:14px;
+}
+.topic-card .topic-time{
+  font-size:10px;color:var(--muted);
+  white-space:nowrap;padding-top:2px;
+}
+.topic-card .topic-main-metrics{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:8px;margin-bottom:12px;
+  padding:10px 0;border-top:1px solid rgba(0,0,0,.04);
+  border-bottom:1px solid rgba(0,0,0,.04);
+}
+.topic-card .main-metric{
+  text-align:center;
+}
+.topic-card .main-value{
+  display:block;font-size:20px;font-weight:700;
+  color:#1d1d1f;letter-spacing:-.5px;
+  font-variant-numeric:tabular-nums;line-height:1.2;
+}
+.topic-card .main-value.green{color:#34c759;}
+.topic-card .main-label{
+  display:block;font-size:10px;color:var(--muted);
+  margin-top:3px;
+}
+.topic-card .topic-sub-metrics{
+  display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;
+}
+.topic-card .topic-sub-metrics .metric-row{
+  margin-top:0;
+}
+.topic-card .topic-sub-metrics .metric-value{
+  font-size:15px;
+}
+.topic-card .metric-value.muted{
+  color:#c7c7cc;font-weight:500;
+}
+.topic-card .trend-up{
+  color:#34c759;font-size:14px;margin-left:2px;
+}
+
+/* 窄屏适配 */
+@media (max-width:480px){
+  .topic-card .topic-main-metrics{
+    grid-template-columns:repeat(3,1fr);gap:4px;
+  }
+  .topic-card .main-value{font-size:16px;}
+  .topic-card .topic-sub-metrics{
+    grid-template-columns:1fr;
+  }
+}

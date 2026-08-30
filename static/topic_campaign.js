@@ -137,6 +137,9 @@ async function loadStatus() {
     if (!latest.length) {
       cards.innerHTML = '<div class="topic-card"><div class="topic-name">暂无快照</div><div class="metric-sub">点击「立即更新」开始采集</div></div>';
     } else {
+      // 计算总笔记数和总新增数，用于判断趋势
+      const totalNotes = latest.reduce((s, x) => s + Number(x.note_count || 0), 0);
+      const totalNew = latest.reduce((s, x) => s + Number(x.new_note_count || 0), 0);
       cards.innerHTML = latest.map(x => {
         const st = x.status || '';
         const isError = st === 'error';
@@ -147,12 +150,40 @@ async function loadStatus() {
         const stateLine = isError ? `<div class="topic-err">采集未成功：${escHtml(errMsg.slice(0, 48)) || '浏览器未连接'}</div>`
           : isVerify ? `<div class="topic-warn">需安全验证：${escHtml(errMsg.slice(0, 48))}（已熔断，不计 0 条）</div>`
           : isBlocked ? `<div class="topic-warn">风控熔断冷却：${escHtml(errMsg.slice(0, 48))}</div>` : '';
+        // 浏览量/讨论量为0时标注App端专属
+        const browseZero = Number(x.browse_count || 0) === 0;
+        const discussZero = Number(x.discussion_count || 0) === 0;
+        const browseCls = browseZero ? 'metric-value muted' : 'metric-value blue';
+        const discussCls = discussZero ? 'metric-value muted' : 'metric-value amber';
+        const browseLabel = browseZero ? '浏览(App专属)' : '浏览';
+        const discussLabel = discussZero ? '讨论(App专属)' : '讨论';
+        // 新增数趋势箭头
+        const newCount = Number(x.new_note_count || 0);
+        const trendArrow = newCount > 0 ? '<span class="trend-up">↑</span>' : '';
         return `<div class="topic-card ${cardCls}" title="${escHtml(errMsg)}">
-          <div class="topic-name">${escHtml(x.topic)}</div>
+          <div class="topic-card-header">
+            <div class="topic-name">${escHtml(x.topic)}</div>
+            ${x.captured_at ? `<div class="topic-time">${escHtml(String(x.captured_at).slice(5, 16))}</div>` : ''}
+          </div>
           ${stateLine}
-          <div class="metric-row"><span class="metric-value blue">${shortNum(x.browse_count)}</span><span class="metric-label">浏览</span></div>
-          <div class="metric-row"><span class="metric-value amber">${shortNum(x.discussion_count)}</span><span class="metric-label">讨论</span></div>
-          <div class="metric-sub">笔记 <b>${n(x.note_count)}</b> · 新增 <b>${n(x.new_note_count)}</b> · 互动 <b>${n(x.engagement_count)}</b></div>
+          <div class="topic-main-metrics">
+            <div class="main-metric">
+              <span class="main-value">${n(x.note_count)}</span>
+              <span class="main-label">笔记总数</span>
+            </div>
+            <div class="main-metric">
+              <span class="main-value green">${n(x.new_note_count)} ${trendArrow}</span>
+              <span class="main-label">本轮新增</span>
+            </div>
+            <div class="main-metric">
+              <span class="main-value">${n(x.engagement_count)}</span>
+              <span class="main-label">互动总量</span>
+            </div>
+          </div>
+          <div class="topic-sub-metrics">
+            <div class="metric-row"><span class="${browseCls}">${browseZero ? '—' : shortNum(x.browse_count)}</span><span class="metric-label">${browseLabel}</span></div>
+            <div class="metric-row"><span class="${discussCls}">${discussZero ? '—' : shortNum(x.discussion_count)}</span><span class="metric-label">${discussLabel}</span></div>
+          </div>
         </div>`;
       }).join('');
     }
@@ -352,6 +383,86 @@ async function drawChart(topic = '') {
   line('browse_count', '#0a84ff', 'rgba(10,132,255,.08)');
   line('discussion_count', '#ff9f0a', 'rgba(255,159,10,.05)');
   line('note_count', '#34c759', 'rgba(52,199,89,.06)');
+
+  // 数据点标记
+  points.forEach((p, i) => {
+    const x = padL + cw * i / Math.max(1, points.length - 1);
+    // 笔记量数据点
+    const yNote = padT + chh * (1 - Number(p.note_count || 0) / niceMax);
+    ctx.beginPath();
+    ctx.arc(x, yNote, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#34c759';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // 浏览量/讨论量全为0时标注
+  const allBrowseZero = points.every(p => Number(p.browse_count || 0) === 0);
+  const allDiscussZero = points.every(p => Number(p.discussion_count || 0) === 0);
+  if (allBrowseZero || allDiscussZero) {
+    ctx.fillStyle = 'rgba(134,134,139,.7)';
+    ctx.font = '11px -apple-system,sans-serif';
+    ctx.textAlign = 'right';
+    const note = [];
+    if (allBrowseZero) note.push('浏览量');
+    if (allDiscussZero) note.push('讨论量');
+    ctx.fillText(note.join('、') + '为App端专属数据，Web端暂不采集', W - padR, padT + 14);
+  }
+
+  // 笔记量趋势变化标注
+  if (points.length >= 2) {
+    const first = Number(points[0].note_count || 0);
+    const last = Number(points[points.length - 1].note_count || 0);
+    if (first > 0) {
+      const change = ((last - first) / first * 100).toFixed(1);
+      const changeNum = Number(change);
+      const trendText = changeNum > 0 ? `笔记量趋势 ↑ +${change}%` : (changeNum < 0 ? `笔记量趋势 ↓ ${change}%` : '笔记量趋势 → 持平');
+      const trendColor = changeNum > 0 ? '#34c759' : (changeNum < 0 ? '#ff3b30' : '#8e8e93');
+      ctx.fillStyle = trendColor;
+      ctx.font = 'bold 12px -apple-system,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(trendText, padL, padT + 14);
+    }
+  }
+
+  // Hover tooltip
+  const tooltip = document.getElementById('chartTooltip');
+  if (!tooltip) {
+    const tip = document.createElement('div');
+    tip.id = 'chartTooltip';
+    tip.style.cssText = 'position:absolute;display:none;background:rgba(0,0,0,.85);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;pointer-events:none;z-index:1000;line-height:1.6;max-width:200px';
+    canvas.parentNode.style.position = 'relative';
+    canvas.parentNode.appendChild(tip);
+  }
+  const tipEl = document.getElementById('chartTooltip');
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    let nearest = -1, minDist = Infinity;
+    points.forEach((p, i) => {
+      const x = padL + cw * i / Math.max(1, points.length - 1);
+      const dist = Math.abs(mx - x);
+      if (dist < minDist) { minDist = dist; nearest = i; }
+    });
+    if (nearest >= 0 && minDist < 30) {
+      const p = points[nearest];
+      tipEl.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${escHtml(p.time || '')}</div>` +
+        `<div>笔记量: <b>${n(p.note_count)}</b></div>` +
+        `<div>新增: <b>${n(p.new_note_count || 0)}</b></div>` +
+        `<div>互动: <b>${n(p.engagement_count || 0)}</b></div>` +
+        (Number(p.browse_count || 0) > 0 ? `<div>浏览量: <b>${shortNum(p.browse_count)}</b></div>` : '') +
+        (Number(p.discussion_count || 0) > 0 ? `<div>讨论量: <b>${shortNum(p.discussion_count)}</b></div>` : '');
+      tipEl.style.display = 'block';
+      tipEl.style.left = Math.min(mx + 12, rect.width - 180) + 'px';
+      tipEl.style.top = (my - 10) + 'px';
+    } else {
+      tipEl.style.display = 'none';
+    }
+  };
+  canvas.onmouseleave = () => { if (tipEl) tipEl.style.display = 'none'; };
 }
 
 /* ============ 新建 / 编辑弹窗 ============ */
