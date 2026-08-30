@@ -227,6 +227,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="nav-group">数据（经典版）</div>
       <button class="nav-item" data-view="legacy"><span class="ic">▤</span>事件 / 笔记 / 报告</button>
       <div class="nav-group">系统</div>
+      <button class="nav-item" data-view="version"><span class="ic">⧖</span>版本中心</button>
       <button class="nav-item" data-view="settings"><span class="ic">⚙</span>账号与设置</button>
     </nav>
     <div class="user-card">
@@ -339,6 +340,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         </div>
       </section>
 
+      <!-- 版本中心（内嵌，单页不跳走） -->
+      <section class="view" data-view="version">
+        <div class="frame-wrap"><iframe data-src="/v4/version-center/" title="版本中心"></iframe></div>
+      </section>
+
       <!-- 设置（内嵌） -->
       <section class="view" data-view="settings">
         <div class="frame-wrap"><iframe data-src="/v4/settings/" title="账号与设置"></iframe></div>
@@ -405,7 +411,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 </div>
 
 <script>
-const TITLES={home:"总览",collect:"全网采集",ai:"Zachary 助手",shadow:"AI 影子审核",legacy:"经典版模块",settings:"账号与设置"};
+const TITLES={home:"总览",collect:"全网采集",ai:"Zachary 助手",shadow:"AI 影子审核",legacy:"经典版模块",version:"版本中心",settings:"账号与设置"};
 const STATE={view:"home",loaded:{},shadowSt:"pending",chats:[],drawerChats:[]};
 async function api(path,opt){const r=await fetch(path,Object.assign({credentials:"same-origin",headers:{"Content-Type":"application/json"}},opt||{}));if(r.status===401||r.status===403){location.href="/v4/settings/login";throw new Error("auth");}return r.json();}
 function go(v){switchView(v)}
