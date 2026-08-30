@@ -2,6 +2,7 @@
 import sqlite3
 import json
 import os
+import re
 from datetime import datetime
 from contextlib import contextmanager
 from subject_rules import SUBJECT_FIELDS, subject_hit, subject_sql_and_values
@@ -317,6 +318,16 @@ def insert_note(note_data):
             'source_keyword': note_data.get('source_keyword','') or '',
             'matched_keywords': note_data.get('matched_keywords','') or '',
         }
+        # 标题兜底：标题缺失时用正文首句(去空白/截24)补，再退作者昵称；保证列表不出现空标题(新增/更新均覆盖)
+        if not (vals['title'] or '').strip():
+            _t = ''
+            _ct = (vals['content'] or '').strip()
+            if _ct:
+                _first = re.split(r'[\n\r\t。！？!?]', _ct)[0]
+                _t = re.sub(r'\s+', '', _first).strip(':：').strip()[:24]
+            if not _t and vals['author_nickname']:
+                _t = vals['author_nickname'] + '的笔记'
+            vals['title'] = _t
         # 双时间铁律：publish_* 来自平台发布时间，captured_at 是本机采集时刻，二者来源不同、绝不互相顶替。
         # 真人通道通常只给到日期(publish_date)，用它回填缺失的 publish_datetime，保证发布时间不留空。
         pub_dt = (note_data.get('publish_datetime', '') or vals.get('publish_date', '') or '').strip()
