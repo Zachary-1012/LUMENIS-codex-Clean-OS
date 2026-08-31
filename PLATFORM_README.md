@@ -247,7 +247,25 @@ GitHub and industry projects are used to learn architecture, testing, security, 
 - automate only after repeated verification
 - retain human gates for high/critical risk
 
-## 18. Non-negotiable rule
+## 18. Five-times-daily engineering inspection
+
+GitHub Actions is the execution layer for the platform's recurring engineering inspection. DDC owns the inspection contract; Z-Brand-Core remains the domain/production owner.
+
+The DDC workflow `.github/workflows/platform-five-inspections.yml` schedules five deterministic inspections per UTC day across all three repositories. Each run checks out the target repository at a recent history window and executes the read-only `tools/platform_inspection.py` evidence collector.
+
+The inspection is intentionally **read-only**: it records repository SHA, working-tree state, structure markers, tracked-file counts, and inspection-tool provenance. It does not silently modify source code, release production code, or declare unexecuted tests successful.
+
+For private repositories, the workflow requires an explicitly configured read-only `ZACHARY_PLATFORM_TOKEN`; it never bypasses GitHub authentication.
+
+The five daily inspections are the engineering heartbeat. Actual optimization remains gated by the permanent pre-change protocol and delivery standard:
+
+```text
+Inspection → Three-repository understanding → Research → Candidate → Minimal change → Real verification → Evidence → Acceptance → Push/Release → Learning
+```
+
+This design deliberately separates **ChatGPT/AI research and reminder assistance** from **GitHub Actions deterministic engineering inspection**. AI may propose improvements; Actions supplies repeatable repository evidence. Neither may bypass the delivery gates.
+
+## 19. Non-negotiable rule
 
 **The platform can only grow stronger.** New frameworks, models, providers, runtimes, protocols, or product requirements enter only when compatible with this baseline and improve capability without damaging safety, stability, boundaries, verification, rollback, or complexity control.
 
