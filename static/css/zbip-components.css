@@ -1,0 +1,170 @@
+/* =============================================================================
+ * ZBIP Component System · 基础组件层 v1.0（Atom + 基础 Molecule + State）
+ * 严格只使用 zbip-tokens.css 的 --zb-* 令牌；class 一律 .zb- 前缀，
+ * 不覆盖任何存量（.action/.metric-card/.panel/.glass-card 等）选择器，
+ * 因此本文件即使被旧页面引入也零影响——只有显式使用 .zb-* 的新结构才生效。
+ * 对应 docs/UI/COMPONENT-SYSTEM.md。状态=点+文字+图标三重，颜色非唯一信息。
+ * ========================================================================== */
+
+/* ---------- 0. 作用域内基础 ---------- */
+.zb-btn, .zb-input, .zb-select, .zb-textarea, .zb-tab, .zb-icon-btn {
+  font-family: var(--zb-font-sans);
+  font-size: var(--zb-fs-13);
+  line-height: var(--zb-lh-tight);
+  color: var(--zb-text);
+  box-sizing: border-box;
+}
+.zb-mono { font-family: var(--zb-font-mono); font-variant-numeric: var(--zb-num); }
+.zb-num { font-variant-numeric: var(--zb-num); }
+
+/* 统一可见焦点环（无障碍） */
+.zb-btn:focus-visible, .zb-input:focus-visible, .zb-select:focus-visible,
+.zb-textarea:focus-visible, .zb-tab:focus-visible, .zb-icon-btn:focus-visible {
+  outline: 2px solid var(--zb-stone-900);
+  outline-offset: 1px;
+}
+
+/* ---------- 1. Button ---------- */
+.zb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--zb-sp-2);
+  height: 32px; padding: 0 var(--zb-sp-4);
+  border-radius: var(--zb-r-md); border: 1px solid transparent;
+  font-weight: var(--zb-fw-medium); white-space: nowrap; cursor: pointer; user-select: none;
+  transition: background var(--zb-dur-micro) var(--zb-ease-standard),
+              border-color var(--zb-dur-micro) var(--zb-ease-standard),
+              color var(--zb-dur-micro) var(--zb-ease-standard),
+              transform var(--zb-dur-micro) var(--zb-ease-standard);
+}
+.zb-btn:active { transform: scale(var(--zb-press-scale)); }
+.zb-btn:disabled, .zb-btn[aria-disabled="true"] {
+  opacity: .5; cursor: not-allowed; transform: none; pointer-events: none;
+}
+.zb-btn-sm { height: 26px; padding: 0 var(--zb-sp-3); font-size: var(--zb-fs-12); border-radius: var(--zb-r-sm); }
+.zb-btn-lg { height: 38px; padding: 0 var(--zb-sp-5); font-size: var(--zb-fs-14); }
+/* variants：主操作用近黑而非彩色 */
+.zb-btn-primary { background: var(--zb-brand); color: var(--zb-text-inverse); }
+.zb-btn-primary:hover { background: var(--zb-brand-hover); }
+.zb-btn-secondary { background: var(--zb-surface); border-color: var(--zb-border-strong); color: var(--zb-text); }
+.zb-btn-secondary:hover { background: var(--zb-stone-100); }
+.zb-btn-ghost { background: transparent; color: var(--zb-text-secondary); }
+.zb-btn-ghost:hover { background: var(--zb-stone-100); color: var(--zb-text); }
+.zb-btn-danger { background: var(--zb-danger); color: #fff; }
+.zb-btn-danger:hover { filter: brightness(.94); }
+.zb-btn-danger.zb-btn-secondary, .zb-btn--outline-danger {
+  background: var(--zb-danger-bg); border-color: var(--zb-danger-border); color: var(--zb-danger);
+}
+.zb-btn.is-loading { position: relative; color: transparent !important; pointer-events: none; }
+.zb-btn.is-loading::after {
+  content: ""; position: absolute; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%;
+  animation: zb-spin .7s linear infinite;
+}
+.zb-icon-btn {
+  display: inline-grid; place-items: center; width: 30px; height: 30px;
+  border-radius: var(--zb-r-md); border: 1px solid transparent; background: transparent;
+  color: var(--zb-text-secondary); cursor: pointer;
+  transition: background var(--zb-dur-micro) var(--zb-ease-standard);
+}
+.zb-icon-btn:hover { background: var(--zb-stone-100); color: var(--zb-text); }
+
+/* ---------- 2. Form ---------- */
+.zb-field { display: flex; flex-direction: column; gap: var(--zb-sp-1); }
+.zb-label { font-size: var(--zb-fs-12); font-weight: var(--zb-fw-medium); color: var(--zb-text-secondary); }
+.zb-hint { font-size: var(--zb-fs-12); color: var(--zb-text-muted); }
+.zb-input, .zb-select, .zb-textarea {
+  width: 100%; background: var(--zb-surface); color: var(--zb-text);
+  border: 1px solid var(--zb-border-strong); border-radius: var(--zb-r-sm);
+  padding: 7px var(--zb-sp-3); transition: border-color var(--zb-dur-micro) var(--zb-ease-standard),
+                                        box-shadow var(--zb-dur-micro) var(--zb-ease-standard);
+}
+.zb-textarea { padding: var(--zb-sp-3); line-height: var(--zb-lh-normal); resize: vertical; }
+.zb-input::placeholder, .zb-textarea::placeholder { color: var(--zb-text-disabled); }
+.zb-input:hover, .zb-select:hover, .zb-textarea:hover { border-color: var(--zb-stone-400); }
+.zb-input:focus, .zb-select:focus, .zb-textarea:focus {
+  outline: none; border-color: var(--zb-stone-800);
+  box-shadow: 0 0 0 3px rgba(28,25,23,.08);
+}
+.zb-input:disabled { background: var(--zb-stone-100); color: var(--zb-text-disabled); cursor: not-allowed; }
+.zb-input.is-invalid { border-color: var(--zb-danger); box-shadow: 0 0 0 3px rgba(220,38,38,.10); }
+.zb-search { position: relative; }
+.zb-search > .zb-input { padding-left: 30px; }
+.zb-search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--zb-text-muted); pointer-events: none; }
+
+/* ---------- 3. StatusDot / Badge（点+文字，颜色非唯一信息） ---------- */
+.zb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; background: var(--zb-unknown); }
+.zb-status-dot.is-success { background: var(--zb-success); }
+.zb-status-dot.is-info { background: var(--zb-info); }
+.zb-status-dot.is-attention { background: var(--zb-attention); }
+.zb-status-dot.is-risk { background: var(--zb-risk); }
+.zb-status-dot.is-danger { background: var(--zb-danger); animation: zb-breathe 2s var(--zb-ease-standard) infinite; }
+.zb-status-line { display: inline-flex; align-items: center; gap: var(--zb-sp-2); font-size: var(--zb-fs-12); color: var(--zb-text-secondary); }
+.zb-badge {
+  display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 var(--zb-sp-2);
+  border-radius: var(--zb-r-sm); font-size: var(--zb-fs-12); font-weight: var(--zb-fw-medium);
+  background: var(--zb-unknown-bg); color: var(--zb-text-secondary); border: 1px solid var(--zb-unknown-border);
+}
+.zb-badge.is-success { background: var(--zb-success-bg); color: var(--zb-success); border-color: var(--zb-success-border); }
+.zb-badge.is-info { background: var(--zb-info-bg); color: var(--zb-info); border-color: var(--zb-info-border); }
+.zb-badge.is-attention { background: var(--zb-attention-bg); color: var(--zb-attention); border-color: var(--zb-attention-border); }
+.zb-badge.is-risk { background: var(--zb-risk-bg); color: var(--zb-risk); border-color: var(--zb-risk-border); }
+.zb-badge.is-danger { background: var(--zb-danger-bg); color: var(--zb-danger); border-color: var(--zb-danger-border); }
+.zb-badge .zb-status-dot { width: 6px; height: 6px; flex-basis: 6px; animation: none; }
+
+/* ---------- 4. Tabs ---------- */
+.zb-tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--zb-stone-100); border-radius: var(--zb-r-md); }
+.zb-tab {
+  border: none; background: transparent; height: 28px; padding: 0 var(--zb-sp-3);
+  border-radius: var(--zb-r-sm); color: var(--zb-text-secondary); cursor: pointer; font-weight: var(--zb-fw-medium);
+  transition: background var(--zb-dur-micro) var(--zb-ease-standard), color var(--zb-dur-micro) var(--zb-ease-standard);
+}
+.zb-tab:hover { color: var(--zb-text); }
+.zb-tab.is-active { background: var(--zb-surface); color: var(--zb-text); box-shadow: var(--zb-shadow-1); font-weight: var(--zb-fw-semibold); }
+
+/* ---------- 5. Table（高密度、tabular-nums） ---------- */
+.zb-table { width: 100%; border-collapse: collapse; font-size: var(--zb-fs-13); }
+.zb-table thead th {
+  text-align: left; font-size: var(--zb-fs-12); font-weight: var(--zb-fw-semibold); color: var(--zb-text-muted);
+  background: var(--zb-stone-100); padding: 8px var(--zb-sp-3); border-bottom: 1px solid var(--zb-border);
+  white-space: nowrap;
+}
+.zb-table tbody td { padding: 9px var(--zb-sp-3); border-bottom: 1px solid var(--zb-border); color: var(--zb-text); vertical-align: middle; }
+.zb-table tbody tr { transition: background var(--zb-dur-micro) var(--zb-ease-standard); }
+.zb-table tbody tr:hover { background: var(--zb-stone-50); }
+.zb-table .zb-num, .zb-table td.num, .zb-table th.num { text-align: right; font-variant-numeric: var(--zb-num); }
+.zb-table.is-compact thead th { padding: 5px var(--zb-sp-2); } .zb-table.is-compact tbody td { padding: 6px var(--zb-sp-2); }
+
+/* ---------- 6. Panel / Card（边框优先，弱阴影） ---------- */
+.zb-panel { background: var(--zb-surface); border: 1px solid var(--zb-border); border-radius: var(--zb-r-lg); }
+.zb-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--zb-sp-3); padding: var(--zb-sp-4) var(--zb-sp-4) var(--zb-sp-3); }
+.zb-panel-title { font-size: var(--zb-fs-14); font-weight: var(--zb-fw-semibold); color: var(--zb-text); margin: 0; }
+.zb-panel-sub { font-size: var(--zb-fs-12); color: var(--zb-text-muted); margin: 2px 0 0; }
+.zb-panel-body { padding: 0 var(--zb-sp-4) var(--zb-sp-4); }
+.zb-panel.is-raised:hover { box-shadow: var(--zb-shadow-1); border-color: var(--zb-border-strong); }
+.zb-eyebrow { font-size: 11px; font-weight: var(--zb-fw-semibold); letter-spacing: .08em; color: var(--zb-text-muted); text-transform: uppercase; }
+
+/* ---------- 7. Toolbar ---------- */
+.zb-toolbar { display: flex; align-items: center; gap: var(--zb-sp-2); flex-wrap: wrap; padding: var(--zb-sp-3) 0; }
+.zb-toolbar .zb-spacer { flex: 1; }
+
+/* ---------- 8. 四态：Empty / Loading / Error / Success ---------- */
+.zb-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--zb-sp-2); padding: var(--zb-sp-7) var(--zb-sp-4); text-align: center; color: var(--zb-text-muted); }
+.zb-state-title { font-size: var(--zb-fs-14); font-weight: var(--zb-fw-semibold); color: var(--zb-text-secondary); }
+.zb-state-desc { font-size: var(--zb-fs-12); max-width: 360px; line-height: var(--zb-lh-normal); }
+.zb-spinner { width: 22px; height: 22px; border: 2px solid var(--zb-stone-200); border-top-color: var(--zb-stone-800); border-radius: 50%; animation: zb-spin .7s linear infinite; }
+.zb-state.is-error .zb-state-title { color: var(--zb-danger); }
+.zb-state.is-success .zb-state-title { color: var(--zb-success); }
+
+/* ---------- 9. 小工具 ---------- */
+.zb-kbd { font-family: var(--zb-font-mono); font-size: 11px; padding: 1px 5px; border: 1px solid var(--zb-border-strong); border-bottom-width: 2px; border-radius: var(--zb-r-sm); background: var(--zb-stone-50); color: var(--zb-text-secondary); }
+.zb-divider { height: 1px; background: var(--zb-border); border: 0; margin: var(--zb-sp-3) 0; }
+.zb-skeleton { background: linear-gradient(90deg, var(--zb-stone-100) 25%, var(--zb-stone-200) 37%, var(--zb-stone-100) 63%); background-size: 400% 100%; animation: zb-shimmer 1.4s ease infinite; border-radius: var(--zb-r-sm); }
+
+/* ---------- keyframes & 无障碍动效降级 ---------- */
+@keyframes zb-spin { to { transform: rotate(360deg); } }
+@keyframes zb-breathe { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,.35); } 70% { box-shadow: 0 0 0 6px rgba(220,38,38,0); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
+@keyframes zb-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .zb-btn, .zb-input, .zb-select, .zb-textarea, .zb-tab, .zb-table tbody tr, .zb-panel { transition: none !important; }
+  .zb-status-dot.is-danger, .zb-spinner, .zb-skeleton { animation: none !important; }
+  .zb-btn:active { transform: none; }
+}

@@ -260,3 +260,13 @@
 - ZBIP Token 单层：新增 static/css/zbip-tokens.css（设计系统 v1.0 全部 --zb-* 令牌：Stone 暖灰阶/六语义/字号/4px间距/小半径/三级弱阴影/动效时长缓动/z-index/布局尺寸/prefers-reduced-motion）。**本文件只定义 :root 变量、无任何元素选择器**，故对存量页面零视觉影响；在 index.html 所有旧 CSS 之后最后引入。实测 getComputedStyle：--zb-stone-900=#1C1917、--zb-r-md=6px 生效。
 - 验证（已实测）：HTTP /、/static/css/zbip-tokens.css、/v4/static/auth_global.js 均 200；浏览器 DOM 断言 tokenLinked/authLinked/fabExists=true、21 个侧栏项与总览数据正常渲染、页面未崩。未取得：browser-use 截图接口两次 COMMAND_TIMEOUT（工具侧），像素级视觉对比待补，已用 DOM 断言 + a11y snapshot 替代；后端 pytest 本轮未改 .py 故未重跑。
 - 范围：仅 static/index.html(+4) 与 static/css/zbip-tokens.css(新)，无 .py/.db/.env/采集/主体口径/API 变更，无 DB 迁移。下一步 Step 2：zbip-components 基础组件（Button/Input/StatusDot/Table/Modal/Drawer/四态/⌘K）仅在 Staging 实现。
+
+---
+
+## 2026-08-31 · UI 施工 Step 2（ZBIP 基础组件层 + 隔离组件预览页，纯新增零引用）
+
+- 新增 static/css/zbip-components.css：Button(4 variant×3 size×disabled/loading)、IconButton、Form(Input/Select/Textarea/Search/错误/禁用)、StatusDot+Badge 六语义、Tabs、高密度 Table(tabular-nums)、Panel/Card、Toolbar、四态(Empty/Loading/Error/Success)、Kbd/Skeleton/Divider；统一 focus-visible 焦点环、prefers-reduced-motion 降级、移动端触控。**全部 .zb- 前缀、只用 --zb-* 令牌、不覆盖任何存量 class**。
+- 新增 static/zb-preview.html 隔离组件画廊（不挂任何现有页面、不加后端路由，/static/zb-preview.html 直达），覆盖组件×全状态，作为视觉验收与 UI Evidence。
+- 实测（8301，已实测）：两资源 200；浏览器 DOM 断言 13 按钮/10 badge/4 表格行/4 态/4 tab；主按钮背景 rgb(28,25,23)=#1C1917 近黑、圆角 6px、危险点 #DC2626、数字格 font-variant-numeric=tabular-nums、画布底 #FAFAF9；截图证据 docs/UI/evidence/step2-components-top.png、-bottom.png（侘寂黑白灰、语义色仅状态，达标）。
+- 零影响论证：本步不修改 index.html / 任何现有模板，新文件无任何生产页面引用，故合入 main 也不改变运行界面；Modal/Drawer/CommandMenu/AIChatDrawer 与首个真实页面迁移放 Step 3，**改真实页面 DOM 时只在 Staging 分支验收后才合 main**。
+- 范围：仅新增 static/css/zbip-components.css、static/zb-preview.html、2 张 evidence 与 DEV_LOG；无 .py/.db/.env/采集/API/主体口径变更，无 DB 迁移。
