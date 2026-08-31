@@ -7,7 +7,10 @@ from datetime import datetime
 from contextlib import contextmanager
 from subject_rules import SUBJECT_FIELDS, subject_hit, subject_sql_and_values
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'monitor.db')
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 数据库路径：允许通过环境变量 ZBC_DB_PATH 指定独立库（Staging/测试隔离）。
+# 未设置该变量时默认生产库 data/monitor.db，行为与历史完全一致（向后兼容）。
+DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or os.path.join(_BASE_DIR, 'data', 'monitor.db'))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS notes (

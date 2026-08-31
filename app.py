@@ -4174,7 +4174,7 @@ def api_dashboard_all():
         import sqlite3
         from datetime import datetime, timedelta
         
-        DB_PATH = str(Path(__file__).parent / 'data' / 'monitor.db')
+        DB_PATH = db.DB_PATH
         # 使用WAL模式和超时配置，提高多线程稳定性
         conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
         conn.execute('PRAGMA journal_mode=WAL')
@@ -4561,7 +4561,7 @@ def api_web_collect():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 def get_db():
-    db_path = os.path.join(os.path.dirname(__file__), 'data', 'monitor.db')
+    db_path = db.DB_PATH
     conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     # 启用WAL模式，提高并发性能
