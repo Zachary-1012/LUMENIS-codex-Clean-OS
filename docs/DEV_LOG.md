@@ -218,3 +218,13 @@
 - 收口上一条"命名冲突待拍板"：原口头「Z-Brand Intelligence Platform」并非与 ZBP 二选一，而是 ZBP 之上的统一平台层。
 - 仅改命名/架构文档：PRODUCT_NAMING_BASELINE（权威重写）、THREE_REPOSITORY_MATRIX_POINTER、UNIFIED_PRODUCTION_ARCHITECTURE_v1.0、consolidation-002 五份治理文档与其只读生成器 build_asset_registry.py（重跑，数字不变 400/84/136、189/363、51）。
 - 未改任何业务代码 / 数据库 / 采集器 / UI / API / Runtime / Feature / Owner 判断，未删文件；历史日志条目不改写，仅追加本决议。
+
+---
+
+## 2026-08-31 · 三仓同步审计 + GitHub 深度研究（只审计/研究/沉淀，不改生产）
+
+- 三仓 HEAD 实测：ZBC `8fda223`（本地=远程 0/0）；DCC 本地 `77dd1e4` 落后远程 `023e2ba` **27**、领先 0，工作区脏 3 文件（package.json/learning-store.js/persistence.js，非本任务产生，未整合）；SICI 本地原未克隆，本次只读克隆到 ZBC 外 `D:\repo-audit\SICI-Core`，远程 main `64eb6a7`（纯静态站点，0 py）。
+- Feature 全链路（新增只读脚本 scripts/inventory/feature_crosscheck.py，py_compile 通过）：34 条；真实路由 341（app.py 内 189）、表 51；**声明的 DB 表 100% 命中、登记 .py 的 Owner 100% 存在、无虚假 ACTIVE**；6 条 API"缺失"经人工甄别 4 条为蓝图 url_prefix 嵌套误报（auth-recovery/v4.auth/version-center/settings 真实存在），2 条为登记前缀不精确（schedule/circuit，P3）。
+- GitHub 研究：33 条 Research（LR-20260831-001..033，star/license 为 08-31 GitHub API 一手），沉淀 docs/learning/ 8 份；结论=保持 Flask+SQLite+Playwright+APScheduler，Windows 生产 WSGI 选 waitress（gunicorn/supervisor 不支持 Windows），迁移候选 Alembic，学习库候选 sqlite-vec，测试 pytest+Playwright trace；不采用 Celery/Nx/Scrapy/独立向量库。
+- 问题分级：**无新增 P0**；P1=AUTH-01 主 SPA 挂弹窗/三套运行代码高危入口收口/SCHED-01 待签字/统一 pytest L0-L10/DIM-01/EVT-01/DCC 整合；P2=并行基线 ADR 收敛/Alembic/API 契约版本化/重复能力按门槛退/Evidence 体系；P3=跨仓 ZBIP 缩写对齐/2 处 API 登记/8200 重复实例/.trae-cn 忽略等。OPT-001..010 + OPT-API/DOC 只登记不施工。
+- 报告：docs/governance/consolidation-002/CROSS-REPO-AUDIT-RESEARCH-2026-08-31.md。全程未改业务代码/DB/采集/UI/API/Runtime、未删文件；生产 8201/8200 v5.9.9、9222 在线，小红书保持 BLOCKED 熔断未触发。
