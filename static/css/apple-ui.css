@@ -87,7 +87,7 @@
 }
 
 /* ============================================
-   全局基础 - iOS风格
+   全局基础 - iOS风格（强制浅色模式）
    ============================================ */
 * {
     -webkit-font-smoothing: antialiased;
@@ -97,11 +97,28 @@
 
 html, body {
     font-family: var(--ios-font);
-    background: var(--ios-secondary-system-grouped-background);
-    color: var(--ios-label);
+    background: var(--ios-secondary-system-grouped-background) !important;
+    color: var(--ios-label) !important;
     line-height: 1.47;
     letter-spacing: -0.01em;
     user-select: none;
+    color-scheme: light !important;
+}
+
+/* 强制覆盖所有元素的深色模式背景 */
+body, .app-shell, .layout, .content, .page-view,
+.topbar, .sidebar, .dashboard-layout, .gpt-layout,
+.codex-layout, .split-view, .bottom-bar {
+    background: var(--ios-secondary-system-grouped-background) !important;
+    color: var(--ios-label) !important;
+}
+
+.topbar {
+    background: var(--ios-material) !important;
+}
+
+.sidebar {
+    background: var(--ios-system-grouped-background) !important;
 }
 
 /* 可选中的文本区域 */
@@ -901,6 +918,7 @@ html, body {
 /* ============================================
    深色模式支持
    ============================================ */
+/* 深色模式已禁用 - 强制浅色模式（如需启用请删除下方注释）
 @media (prefers-color-scheme: dark) {
     :root {
         --ios-label: #FFFFFF;
@@ -920,6 +938,7 @@ html, body {
         --ios-material-thick: rgba(30, 30, 30, 0.85);
     }
 }
+*/
 
 /* ============================================
    减少动效偏好
