@@ -974,6 +974,24 @@ footer {
 }
 
 /* ============================================
+   桌面端侧边栏强制显示（覆盖原系统可能的隐藏设置）
+   ============================================ */
+@media (min-width: 481px) {
+    .sidebar {
+        display: block !important;
+        position: static !important;
+        transform: none !important;
+        width: var(--sidebar-width) !important;
+    }
+    .menu-toggle {
+        display: none !important;
+    }
+    .sidebar-overlay {
+        display: none !important;
+    }
+}
+
+/* ============================================
    响应式适配 - 手机（断点480px，仅真正手机端触发）
    ============================================ */
 @media (max-width: 480px) {
