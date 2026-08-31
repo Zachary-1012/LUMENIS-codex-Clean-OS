@@ -1,0 +1,5 @@
+# UI/交互研究源视频体积大（单段最高约 291MB，超过 GitHub 普通文件 100MB 上限），统一走 Git LFS。
+# 仅对专门的源视频目录生效，最小化影响范围；历史已跟踪文件不做 renormalize。
+docs/reference/ui-research/source-videos/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
+docs/reference/ui-research/source-videos/**/*.mov filter=lfs diff=lfs merge=lfs -text
+docs/reference/ui-research/source-videos/**/*.webm filter=lfs diff=lfs merge=lfs -text

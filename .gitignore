@@ -149,3 +149,9 @@ video_frames/
 
 # ---------- 轻量 Staging 运行时（独立库副本/日志，不入库） ----------
 staging/
+
+# ---------- 例外：UI/交互研究源视频（统一走 Git LFS，见 .gitattributes） ----------
+!docs/reference/ui-research/source-videos/
+!docs/reference/ui-research/source-videos/*.mp4
+!docs/reference/ui-research/source-videos/*.mov
+!docs/reference/ui-research/source-videos/*.webm
