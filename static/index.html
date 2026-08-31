@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/static/css/apple-ui.css?v=7.0.0">
 <link rel="stylesheet" href="/static/css/compat.css?v=7.0.0">
 <style id="v7-inline-style">
-/* v7.0.0 桌面端强制样式 - 全局无媒体查询 */
+/* v7.0.0 桌面端强制样式 - 全局，所有宽度都显示桌面端 */
 .sidebar {
     position: static !important;
     transform: none !important;
@@ -42,24 +42,18 @@
     min-height: 0 !important;
 }
 footer { display: flex !important; }
+/* 平板端（≤1024px）- 3列指标+2列内容 */
 @media (max-width: 1024px) {
     .sidebar { width: 200px !important; }
     #page-overview .metric-grid { grid-template-columns: repeat(3, 1fr) !important; }
     #page-overview .home-cards { grid-template-columns: 1fr 1fr !important; }
     #page-overview .home-cards > :last-child { grid-column: 1 / -1 !important; }
 }
-@media (max-width: 480px) {
-    .sidebar {
-        position: fixed !important;
-        transform: translateX(-100%) !important;
-        width: 260px !important;
-        z-index: 900 !important;
-    }
-    .sidebar.open { transform: translateX(0) !important; }
-    .menu-toggle { display: flex !important; }
+/* 超窄屏（≤600px）- 2列指标+1列内容，但侧边栏仍显示 */
+@media (max-width: 600px) {
+    .sidebar { width: 180px !important; }
     #page-overview .metric-grid { grid-template-columns: repeat(2, 1fr) !important; }
     #page-overview .home-cards { grid-template-columns: 1fr !important; }
-    footer { display: none !important; }
 }
 </style>
 </head>
