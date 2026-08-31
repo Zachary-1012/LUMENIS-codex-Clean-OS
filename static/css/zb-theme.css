@@ -412,3 +412,114 @@ input[type=checkbox].ios-toggle,.switch input,.toggle input{ accent-color:var(--
   .top-actions .action.primary .svgicon{ font-size:17px!important; color:#fff; display:inline-flex; }
   body,html{ height:auto; overflow-x:hidden; overflow-y:auto; }
 }
+
+/* ============================================================================
+   §14 桌面端三栏布局：>1280px 显示右侧AI洞察面板（Codex风格）
+============================================================================ */
+@media(min-width:1280px){
+  .layout{ grid-template-columns:var(--w-sidebar-w) minmax(0,1fr) var(--w-inspector-w)!important; }
+  .right-panel{
+    display:flex!important; flex-direction:column;
+    background:var(--w-surface)!important; border-left:1px solid var(--w-border)!important;
+    height:calc(100vh - var(--w-topbar-h))!important; overflow-y:auto;
+  }
+  .right-panel.collapsed{ display:none!important; }
+  .right-panel-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 16px 12px; border-bottom:1px solid var(--w-border);
+  }
+  .right-panel-title h3{ font-size:15px; font-weight:600; color:var(--w-ink); margin:0; }
+  .ai-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--w-ok-bg); color:var(--w-ok);
+    font-size:11px; font-weight:500; padding:3px 8px; border-radius:var(--w-r-pill);
+    margin-top:4px;
+  }
+  .ai-badge .dot{
+    width:6px; height:6px; border-radius:50%; background:var(--w-ok);
+    animation:zbPulse 2s ease-in-out infinite;
+  }
+  @keyframes zbPulse{ 0%,100%{opacity:1} 50%{opacity:.4} }
+  .right-panel-body{ padding:12px 16px 16px; flex:1; }
+  .quick-stats{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px;
+  }
+  .quick-stat{
+    background:var(--w-surface-2); border:1px solid var(--w-border);
+    border-radius:var(--w-r-md); padding:10px 12px;
+  }
+  .quick-stat-value{ font-size:18px; font-weight:650; line-height:1.2; }
+  .quick-stat-label{ font-size:11px; color:var(--w-ink-3); margin-top:2px; }
+  .text-success{ color:var(--w-ok); } .text-danger{ color:var(--w-danger); }
+  .text-warning{ color:var(--w-warn); } .text-info{ color:var(--w-accent); }
+  .ai-insight-card{
+    background:var(--w-surface); border:1px solid var(--w-border);
+    border-radius:var(--w-r-lg); padding:14px; margin-bottom:12px;
+  }
+  .ai-insight-card-header{
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+    color:var(--w-ink-2);
+  }
+  .ai-insight-card-header svg{ width:16px; height:16px; flex-shrink:0; }
+  .ai-insight-card-header span{ font-size:13px; font-weight:600; color:var(--w-ink); }
+  .ai-insight-card p{ font-size:12px; line-height:1.6; color:var(--w-ink-2); margin:0; }
+  .btn-icon{
+    width:28px; height:28px; border-radius:var(--w-r-sm);
+    background:transparent; border:0; color:var(--w-ink-3);
+    display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:background var(--w-d-micro),color var(--w-d-micro);
+  }
+  .btn-icon:hover{ background:var(--w-hover); color:var(--w-ink); }
+  .btn-icon svg{ width:16px; height:16px; }
+}
+
+/* ============================================================================
+   §15 隐藏花哨装饰：3D机器人/渐变背景/大阴影（侘寂极简）
+============================================================================ */
+.zachary-robot, #zacharyRobot, .robot-container, .robot-3d,
+.nomi-robot, .floating-robot, .robot-float{
+  display:none!important;
+}
+.zachary_robot.css, .zachary-robot-enhanced{ display:none!important; }
+.gradient-bg, .bg-gradient, [style*="gradient"]{
+  background-image:none!important;
+}
+[style*="box-shadow: 0 20px"], [style*="box-shadow: 0 15px"],
+[style*="box-shadow: 0 10px 40px"]{
+  box-shadow:var(--w-sh-xs)!important;
+}
+
+/* ============================================================================
+   §16 表格统一：Codex风格紧凑数据表
+============================================================================ */
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+thead th{
+  text-align:left; font-weight:600; color:var(--w-ink-2);
+  padding:10px 12px; border-bottom:1px solid var(--w-border-2);
+  background:var(--w-surface-2); font-size:12px; letter-spacing:.02em;
+}
+tbody td{ padding:10px 12px; border-bottom:1px solid var(--w-border); color:var(--w-ink); }
+tbody tr:hover{ background:var(--w-hover); }
+tbody tr:last-child td{ border-bottom:0; }
+
+/* ============================================================================
+   §17 时间线统一
+============================================================================ */
+.timeline{ position:relative; padding-left:20px; }
+.timeline::before{
+  content:''; position:absolute; left:6px; top:4px; bottom:4px;
+  width:1px; background:var(--w-border-2);
+}
+.timeline-item{ position:relative; padding-bottom:16px; }
+.timeline-item::before{
+  content:''; position:absolute; left:-20px; top:4px;
+  width:9px; height:9px; border-radius:50%;
+  background:var(--w-surface); border:2px solid var(--w-border-strong);
+}
+.timeline-item.success::before{ border-color:var(--w-ok); background:var(--w-ok-bg); }
+.timeline-item.warning::before{ border-color:var(--w-warn); background:var(--w-warn-bg); }
+.timeline-item.danger::before{ border-color:var(--w-danger); background:var(--w-danger-bg); }
+.timeline-item.info::before{ border-color:var(--w-accent); background:var(--w-accent-soft); }
+.timeline-time{ font-size:11px; color:var(--w-ink-3); margin-bottom:2px; }
+.timeline-title{ font-size:13px; font-weight:600; color:var(--w-ink); }
+.timeline-desc{ font-size:12px; color:var(--w-ink-2); margin-top:2px; line-height:1.5; }
