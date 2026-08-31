@@ -38,7 +38,7 @@
     /* 布局尺寸 */
     --sidebar-width: 260px;
     --sidebar-collapsed: 64px;
-    --right-panel-width: 340px;
+    --right-panel-width: 280px;
     --topbar-height: 56px;
 }
 
@@ -1356,4 +1356,60 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--gpt-text-tertiary);
+}
+
+/* ============================================
+   桌面端强制三栏布局（覆盖旧样式）
+   ============================================ */
+@media (min-width: 601px) {
+    .app-shell {
+        flex-direction: column !important;
+    }
+    
+    .layout {
+        display: flex !important;
+        flex: 1 !important;
+        overflow: hidden !important;
+    }
+    
+    .sidebar {
+        position: relative !important;
+        transform: none !important;
+        width: var(--sidebar-width) !important;
+        min-width: var(--sidebar-width) !important;
+        display: flex !important;
+    }
+    
+    .sidebar.collapsed {
+        width: var(--sidebar-collapsed) !important;
+        min-width: var(--sidebar-collapsed) !important;
+    }
+    
+    .content {
+        flex: 1 !important;
+        min-width: 0 !important;
+        overflow-y: auto !important;
+    }
+    
+    .right-panel {
+        display: flex !important;
+        width: var(--right-panel-width) !important;
+        min-width: var(--right-panel-width) !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .right-panel.collapsed {
+        width: 0 !important;
+        min-width: 0 !important;
+        border-left: none !important;
+    }
+    
+    .menu-toggle {
+        display: none !important;
+    }
+    
+    .mobile-tab-bar,
+    .mobile-tabbar {
+        display: none !important;
+    }
 }
