@@ -2023,6 +2023,26 @@ def api_xhs_cookie_sync():
     type_label = '手动触发（一键实时更新）' if run_type == 'manual' else '定时自动采集'
     return jsonify({'ok':True,'task_id':task_id,'run_type':run_type,'message':f'已创建{type_label}任务'})
 
+@app.route('/api/xhs/collect-pause',methods=['POST'])
+def api_xhs_collect_pause():
+    """用户主动暂停小红书采集（手动/自动一律不发起请求，直到 resume）；区别于风控熔断。"""
+    data=request.get_json(silent=True) or {}
+    reason=(data.get('reason') or '用户手动暂停')[:120]
+    ok=xhs_cookie_bridge.set_user_paused(reason)
+    return jsonify({'ok':ok,'paused':True,'reason':reason,'message':'小红书采集已暂停，自动/手动均不会发起请求，恢复后继续'})
+
+@app.route('/api/xhs/collect-resume',methods=['POST'])
+def api_xhs_collect_resume():
+    """恢复小红书采集（仅解除用户暂停开关；风控熔断按其自身健康检查恢复）。"""
+    ok=xhs_cookie_bridge.resume_user_paused()
+    return jsonify({'ok':ok,'paused':False,'message':'已解除手动暂停；如仍处风控熔断，需先完成验证与健康检查'})
+
+@app.route('/api/xhs/collect-pause-state',methods=['GET'])
+def api_xhs_collect_pause_state():
+    _p=xhs_cookie_bridge.is_user_paused()
+    _c=xhs_cookie_bridge.get_circuit_state()
+    return jsonify({'ok':True,'user_paused':bool(_p),'pause_info':_p,'circuit':_c})
+
 @app.route('/api/xhs/cookie/sync/<task_id>')
 def api_xhs_cookie_sync_status(task_id):
     task=xhs_cookie_bridge.get_task(task_id)

@@ -300,6 +300,33 @@ def _run_search(keyword,max_scroll=6):
 
 # ========== 六态状态机：采集日志落库 + 自动熔断 ==========
 CIRCUIT_FILE=os.path.join(ROOT,'data','private','xhs_circuit.json')
+# 用户级“手动暂停采集”开关（区别于风控熔断：由用户主动设置，手动/自动一律不发起平台请求，直到用户主动恢复）
+USER_PAUSE_FILE=os.path.join(ROOT,'data','private','xhs_user_paused.json')
+
+def is_user_paused():
+    """返回用户暂停信息 dict；未暂停返回 None。"""
+    try:
+        if not os.path.exists(USER_PAUSE_FILE): return None
+        d=json.load(open(USER_PAUSE_FILE,encoding='utf-8'))
+        return d if d.get('paused') else None
+    except Exception:
+        return None
+
+def set_user_paused(reason='用户手动暂停'):
+    try:
+        os.makedirs(os.path.dirname(USER_PAUSE_FILE),exist_ok=True)
+        with open(USER_PAUSE_FILE,'w',encoding='utf-8') as f:
+            json.dump({'paused':True,'reason':reason,'at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')},f,ensure_ascii=False)
+        return True
+    except Exception:
+        return False
+
+def resume_user_paused():
+    try:
+        if os.path.exists(USER_PAUSE_FILE): os.remove(USER_PAUSE_FILE)
+        return True
+    except OSError:
+        return False
 STATE_LABEL={'SUCCESS':'正常','EMPTY':'正常但无数据','BLOCKED':'IP风控拦截','AUTH_FAILED':'登录态失效',
              'CAPTCHA':'需要人机验证','NETWORK_ERROR':'网络异常','PARTIAL_BLOCKED':'部分关键词被拦截'}
 
@@ -477,6 +504,10 @@ def create_task(keywords=None,max_scroll=6,run_type='manual'):
     """创建采集任务
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
     """
+    # 用户主动暂停期间，手动/自动一律不发起平台请求（测试模式旁路），保护账号，直到用户显式恢复
+    _paused = is_user_paused()
+    if _paused and not is_test_mode():
+        raise RuntimeError(f"小红书采集已手动暂停（{_paused.get('reason','')}，{_paused.get('at','')}）。请恢复后再采集。")
     # 账号白名单验证
     account_ok, account_msg = verify_account()
     if not account_ok:
