@@ -1,0 +1,1548 @@
+/* ============================================================================
+   Z-BRAND GPT THEME · 100% GPT手机版设计语言
+   参考：ChatGPT iOS App 逐帧分析（66.73秒视频，143帧）
+   设计原则：极简白色 · 大圆角 · 毛玻璃 · 底部弹窗 · 骨架屏 · 空状态引导
+   版本：v1.0
+   ============================================================================ */
+
+/* ============================================================================
+   §1 GPT DESIGN TOKENS —— 100%对齐ChatGPT iOS设计语言
+   ============================================================================ */
+:root{
+  /* 1.1 背景 - 纯白为主 */
+  --gpt-bg: #FFFFFF;
+  --gpt-bg-secondary: #F5F5F7;
+  --gpt-bg-tertiary: #EBEBF0;
+  --gpt-bg-grouped: #F2F2F7;
+  --gpt-surface: #FFFFFF;
+  --gpt-surface-raised: #FFFFFF;
+
+  /* 1.2 毛玻璃 */
+  --gpt-glass-bg: rgba(255,255,255,0.72);
+  --gpt-glass-blur: blur(20px) saturate(180%);
+  --gpt-glass-border: rgba(0,0,0,0.06);
+
+  /* 1.3 文字 - 黑色为主，清晰四级 */
+  --gpt-text: #000000;
+  --gpt-text-secondary: #3C3C43;
+  --gpt-text-tertiary: #8E8E93;
+  --gpt-text-quaternary: #AEAEB2;
+  --gpt-text-placeholder: #C7C7CC;
+
+  /* 1.4 分隔线 - 极浅灰 */
+  --gpt-border: #E5E5EA;
+  --gpt-border-light: #F2F2F7;
+  --gpt-border-strong: #D1D1D6;
+
+  /* 1.5 强调色 - 系统蓝（仅小面积：链接/焦点/选中态） */
+  --gpt-blue: #007AFF;
+  --gpt-blue-hover: #0066D6;
+  --gpt-blue-soft: rgba(0,122,255,0.08);
+  --gpt-blue-line: rgba(0,122,255,0.20);
+
+  /* 1.6 状态色 - 仅状态点/小图标，绝不铺大面 */
+  --gpt-green: #34C759;
+  --gpt-green-bg: rgba(52,199,89,0.10);
+  --gpt-green-line: rgba(52,199,89,0.20);
+  --gpt-orange: #FF9500;
+  --gpt-orange-bg: rgba(255,149,0,0.10);
+  --gpt-orange-line: rgba(255,149,0,0.20);
+  --gpt-red: #FF3B30;
+  --gpt-red-bg: rgba(255,59,48,0.10);
+  --gpt-red-line: rgba(255,59,48,0.20);
+  --gpt-purple: #AF52DE;
+  --gpt-purple-bg: rgba(175,82,222,0.10);
+  --gpt-purple-line: rgba(175,82,222,0.20);
+  --gpt-gray: #8E8E93;
+  --gpt-gray-bg: rgba(142,142,147,0.10);
+
+  /* 1.7 字体 - SF Pro 层级 */
+  --gpt-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --gpt-font-mono: "SF Mono", Menlo, Consolas, monospace;
+  --gpt-fs-large-title: 34px;
+  --gpt-fs-title-1: 28px;
+  --gpt-fs-title-2: 22px;
+  --gpt-fs-title-3: 20px;
+  --gpt-fs-headline: 17px;
+  --gpt-fs-body: 16px;
+  --gpt-fs-callout: 16px;
+  --gpt-fs-subhead: 15px;
+  --gpt-fs-footnote: 13px;
+  --gpt-fs-caption-1: 12px;
+  --gpt-fs-caption-2: 11px;
+
+  /* 1.8 字重 */
+  --gpt-fw-bold: 700;
+  --gpt-fw-semibold: 600;
+  --gpt-fw-medium: 500;
+  --gpt-fw-regular: 400;
+
+  /* 1.9 间距 - 8px基准，GPT风格宽松 */
+  --gpt-sp-1: 4px;
+  --gpt-sp-2: 8px;
+  --gpt-sp-3: 12px;
+  --gpt-sp-4: 16px;
+  --gpt-sp-5: 20px;
+  --gpt-sp-6: 24px;
+  --gpt-sp-8: 32px;
+  --gpt-sp-10: 40px;
+  --gpt-page-padding: 20px;
+
+  /* 1.10 圆角 - GPT大圆角风格 */
+  --gpt-r-xs: 6px;
+  --gpt-r-sm: 8px;
+  --gpt-r-md: 10px;
+  --gpt-r-lg: 12px;
+  --gpt-r-xl: 14px;
+  --gpt-r-2xl: 16px;
+  --gpt-r-3xl: 20px;
+  --gpt-r-pill: 999px;
+  --gpt-r-sheet: 24px 24px 0 0;
+
+  /* 1.11 阴影 - 极淡，GPT风格几乎无阴影 */
+  --gpt-sh-xs: 0 1px 2px rgba(0,0,0,0.03);
+  --gpt-sh-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  --gpt-sh-md: 0 4px 12px rgba(0,0,0,0.06);
+  --gpt-sh-lg: 0 12px 32px rgba(0,0,0,0.10);
+  --gpt-sh-sheet: 0 -4px 24px rgba(0,0,0,0.12);
+  --gpt-sh-focus: 0 0 0 3px rgba(0,122,255,0.15);
+
+  /* 1.12 动效 - iOS风格平滑 */
+  --gpt-d-fast: 150ms;
+  --gpt-d-normal: 250ms;
+  --gpt-d-slow: 350ms;
+  --gpt-d-sheet: 400ms;
+  --gpt-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --gpt-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* 1.13 布局尺寸 */
+  --gpt-topbar-h: 56px;
+  --gpt-sidebar-w: 260px;
+  --gpt-tabbar-h: 64px;
+  --gpt-inspector-w: 320px;
+  --gpt-content-max: 1200px;
+}
+
+/* ============================================================================
+   §2 全局基底 - GPT纯白极简
+   ============================================================================ */
+*{
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+html, body{
+  background: var(--gpt-bg) !important;
+  color: var(--gpt-text);
+  font-family: var(--gpt-font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-size: var(--gpt-fs-body);
+  line-height: 1.5;
+}
+body{
+  background-image: none !important;
+  background: var(--gpt-bg) !important;
+}
+::selection{
+  background: var(--gpt-blue-soft);
+  color: var(--gpt-text);
+}
+a{
+  color: var(--gpt-blue);
+  text-decoration: none;
+}
+a:hover{
+  text-decoration: underline;
+}
+h1,h2,h3,h4,h5,h6{
+  color: var(--gpt-text);
+  font-weight: var(--gpt-fw-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+h1{ font-size: var(--gpt-fs-large-title); }
+h2{ font-size: var(--gpt-fs-title-1); }
+h3{ font-size: var(--gpt-fs-title-2); }
+h4{ font-size: var(--gpt-fs-title-3); }
+
+/* 滚动条 - iOS风格细滚动条 */
+::-webkit-scrollbar{
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,0.15);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover{
+  background: rgba(0,0,0,0.25);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+/* ============================================================================
+   §3 顶部导航栏 - GPT毛玻璃风格
+   ============================================================================ */
+.topbar{
+  height: var(--gpt-topbar-h) !important;
+  background: var(--gpt-glass-bg) !important;
+  backdrop-filter: var(--gpt-glass-blur) !important;
+  -webkit-backdrop-filter: var(--gpt-glass-blur) !important;
+  border: none !important;
+  border-bottom: 0.5px solid var(--gpt-glass-border) !important;
+  box-shadow: none !important;
+  padding: 0 var(--gpt-page-padding) !important;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.glass{
+  background: var(--gpt-glass-bg) !important;
+  backdrop-filter: var(--gpt-glass-blur) !important;
+  -webkit-backdrop-filter: var(--gpt-glass-blur) !important;
+  border: 0.5px solid var(--gpt-glass-border) !important;
+  box-shadow: none !important;
+}
+.brandmark{
+  background: var(--gpt-text) !important;
+  border-radius: var(--gpt-r-md) !important;
+  box-shadow: none !important;
+  gap: 2px;
+  width: 28px;
+  height: 28px;
+}
+.brandmark span{
+  background: #fff !important;
+}
+.brand h1{
+  font-weight: var(--gpt-fw-semibold) !important;
+  font-size: var(--gpt-fs-headline);
+  color: var(--gpt-text);
+}
+.brand p{
+  color: var(--gpt-text-tertiary) !important;
+  font-size: var(--gpt-fs-footnote);
+}
+.clock{
+  color: var(--gpt-text-tertiary) !important;
+  font-size: var(--gpt-fs-footnote);
+  font-variant-numeric: tabular-nums;
+}
+.system-state{
+  background: var(--gpt-green-bg) !important;
+  color: var(--gpt-green) !important;
+  border: none;
+  font-weight: var(--gpt-fw-medium);
+  font-size: var(--gpt-fs-caption-1);
+  padding: 4px 10px;
+  border-radius: var(--gpt-r-pill);
+}
+.system-state i{
+  background: var(--gpt-green) !important;
+  box-shadow: 0 0 0 3px var(--gpt-green-bg) !important;
+  width: 6px;
+  height: 6px;
+}
+
+/* ============================================================================
+   §4 侧边栏导航 - GPT风格
+   ============================================================================ */
+.layout{
+  grid-template-columns: var(--gpt-sidebar-w) minmax(0, 1fr) !important;
+}
+.sidebar{
+  background: var(--gpt-bg-grouped) !important;
+  border-right: 0.5px solid var(--gpt-border) !important;
+  top: var(--gpt-topbar-h) !important;
+  height: calc(100vh - var(--gpt-topbar-h)) !important;
+  padding: var(--gpt-sp-4) var(--gpt-sp-3) !important;
+}
+.side-item{
+  border-radius: var(--gpt-r-md) !important;
+  color: var(--gpt-text-secondary) !important;
+  font-weight: var(--gpt-fw-regular);
+  font-size: var(--gpt-fs-subhead);
+  height: 40px !important;
+  gap: var(--gpt-sp-3) !important;
+  padding: 0 var(--gpt-sp-3) !important;
+  transition: background var(--gpt-d-fast), color var(--gpt-d-fast);
+}
+.side-item .navicon{
+  color: var(--gpt-text-tertiary);
+  opacity: 1 !important;
+  width: 18px;
+  height: 18px;
+  transition: color var(--gpt-d-fast);
+}
+.side-item:hover{
+  background: var(--gpt-bg-tertiary) !important;
+  color: var(--gpt-text) !important;
+}
+.side-item:hover .navicon{
+  color: var(--gpt-text-secondary);
+}
+.side-item.active{
+  background: var(--gpt-bg-tertiary) !important;
+  color: var(--gpt-text) !important;
+  font-weight: var(--gpt-fw-medium);
+}
+.side-item.active .navicon{
+  color: var(--gpt-text);
+}
+.nav-badge{
+  background: var(--gpt-red) !important;
+  color: #fff;
+  font-weight: var(--gpt-fw-semibold);
+  font-size: var(--gpt-fs-caption-2);
+  box-shadow: none;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--gpt-r-pill);
+}
+.nav-group-title{
+  color: var(--gpt-text-tertiary);
+  font-size: var(--gpt-fs-caption-1);
+  font-weight: var(--gpt-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--gpt-sp-2) var(--gpt-sp-3);
+}
+
+/* ============================================================================
+   §5 主内容区 - GPT宽松留白
+   ============================================================================ */
+.content{
+  background: var(--gpt-bg) !important;
+  padding: var(--gpt-sp-6) var(--gpt-page-padding) !important;
+  max-width: var(--gpt-content-max);
+  margin: 0 auto;
+  width: 100%;
+}
+.page-hero{
+  margin-bottom: var(--gpt-sp-6);
+}
+.page-hero h2{
+  font-size: var(--gpt-fs-title-1);
+  font-weight: var(--gpt-fw-bold);
+  margin-bottom: var(--gpt-sp-2);
+}
+.page-hero p{
+  color: var(--gpt-text-tertiary);
+  font-size: var(--gpt-fs-subhead);
+  line-height: 1.5;
+}
+.section-intro{
+  margin-bottom: var(--gpt-sp-5);
+}
+.section-intro h2{
+  font-size: var(--gpt-fs-title-3);
+  font-weight: var(--gpt-fw-semibold);
+  margin-bottom: var(--gpt-sp-2);
+}
+.section-intro p{
+  color: var(--gpt-text-tertiary);
+  font-size: var(--gpt-fs-footnote);
+}
+.eyebrow{
+  color: var(--gpt-text-tertiary) !important;
+  font-size: var(--gpt-fs-caption-1);
+  font-weight: var(--gpt-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ============================================================================
+   §6 按钮 - GPT黑色主按钮风格
+   ============================================================================ */
+.action{
+  border-radius: var(--gpt-r-md) !important;
+  font-weight: var(--gpt-fw-medium);
+  font-size: var(--gpt-fs-subhead);
+  height: 40px;
+  padding: 0 var(--gpt-sp-4);
+  gap: var(--gpt-sp-2);
+  transition: all var(--gpt-d-fast) var(--gpt-ease);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.action.primary{
+  background: var(--gpt-text) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.action.primary:hover{
+  background: #2a2a2a !important;
+  transform: scale(1.02);
+}
+.action.primary:active{
+  transform: scale(0.98);
+}
+.action.secondary{
+  background: var(--gpt-bg-secondary) !important;
+  color: var(--gpt-text) !important;
+  border: none;
+}
+.action.secondary:hover{
+  background: var(--gpt-bg-tertiary) !important;
+}
+.action.tertiary{
+  background: transparent !important;
+  color: var(--gpt-blue) !important;
+  border: none;
+}
+.action.tertiary:hover{
+  background: var(--gpt-blue-soft) !important;
+}
+.action.danger{
+  background: var(--gpt-red) !important;
+  color: #fff !important;
+}
+.action:disabled,
+.action[disabled]{
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.icon-button{
+  width: 36px;
+  height: 36px;
+  border-radius: var(--gpt-r-md);
+  background: transparent;
+  border: none;
+  color: var(--gpt-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--gpt-d-fast);
+}
+.icon-button:hover{
+  background: var(--gpt-bg-secondary);
+  color: var(--gpt-text);
+}
+.text-btn, .back-btn{
+  color: var(--gpt-blue) !important;
+  font-size: var(--gpt-fs-subhead);
+  font-weight: var(--gpt-fw-regular);
+}
+
+/* ============================================================================
+   §7 卡片/面板 - GPT纯白大圆角
+   ============================================================================ */
+.glass-card, .panel, .metric-card, .report-card, .home-card, .event-card, .ai-console-grid > div{
+  background: var(--gpt-surface) !important;
+  border: 0.5px solid var(--gpt-border) !important;
+  box-shadow: var(--gpt-sh-xs) !important;
+  border-radius: var(--gpt-r-xl) !important;
+  transition: box-shadow var(--gpt-d-normal), transform var(--gpt-d-normal);
+}
+.panel:hover, .home-card:hover, .event-card:hover{
+  box-shadow: var(--gpt-sh-sm) !important;
+  transform: translateY(-1px);
+}
+.panel-head{
+  padding: var(--gpt-sp-4) var(--gpt-sp-5);
+  border-bottom: 0.5px solid var(--gpt-border-light);
+}
+.panel-head h3{
+  font-size: var(--gpt-fs-headline);
+  font-weight: var(--gpt-fw-semibold);
+}
+.panel-head em{
+  color: var(--gpt-text-tertiary);
+  font-size: var(--gpt-fs-footnote);
+  font-style: normal;
+}
+.panel-body{
+  padding: var(--gpt-sp-4) var(--gpt-sp-5);
+}
+
+/* 指标卡片 - GPT风格 */
+.metric-card{
+  padding: var(--gpt-sp-5) !important;
+  position: relative;
+  overflow: hidden;
+}
+.metric-card .metric-label{
+  color: var(--gpt-text-tertiary) !important;
+  font-size: var(--gpt-fs-footnote);
+  font-weight: var(--gpt-fw-medium);
+  margin-bottom: var(--gpt-sp-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.metric-card strong{
+  color: var(--gpt-text) !important;
+  font-size: var(--gpt-fs-title-1);
+  font-weight: var(--gpt-fw-bold);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.metric-card .metric-sub{
+  color: var(--gpt-text-tertiary);
+  font-size: var(--gpt-fs-caption-1);
+  margin-top: var(--gpt-sp-1);
+}
+.metric-card .spark{
+  position: absolute !important;
+  left: var(--gpt-sp-5);
+  right: var(--gpt-sp-5);
+  bottom: var(--gpt-sp-4);
+  top: auto;
+  height: 32px;
+  opacity: 0.6;
+}
+.metric-icon{
+  width: 36px !important;
+  height: 36px !important;
+  background: var(--gpt-bg-secondary) !important;
+  border: none !important;
+  border-radius: var(--gpt-r-md) !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--gpt-sp-3);
+}
+.metric-icon svg{
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+}
+.metric-icon.blue{ color: var(--gpt-blue); }
+.metric-icon.green{ color: var(--gpt-green); }
+.metric-icon.red{ color: var(--gpt-red); }
+.metric-icon.orange{ color: var(--gpt-orange); }
+.metric-icon.purple{ color: var(--gpt-purple); }
+.metric-icon.gray{ color: var(--gpt-gray); }
+
+/* 指标网格 - GPT宽松间距 */
+.metric-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--gpt-sp-4);
+  margin-bottom: var(--gpt-sp-6);
+}
+
+/* ============================================================================
+   §8 列表项 - GPT风格分组列表
+   ============================================================================ */
+.list-item, .note-item, .event-item, .alert-item, .topic-item{
+  background: var(--gpt-surface);
+  border-radius: var(--gpt-r-lg);
+  padding: var(--gpt-sp-4);
+  transition: background var(--gpt-d-fast);
+  cursor: pointer;
+}
+.list-item:hover, .note-item:hover, .event-item:hover, .alert-item:hover, .topic-item:hover{
+  background: var(--gpt-bg-secondary);
+}
+.list-item + .list-item,
+.note-item + .note-item,
+.event-item + .event-item,
+.alert-item + .alert-item,
+.topic-item + .topic-item{
+  border-top: 0.5px solid var(--gpt-border-light);
+  border-radius: 0;
+}
+.list-item:first-child,
+.note-item:first-child,
+.event-item:first-child,
+.alert-item:first-child,
+.topic-item:first-child{
+  border-radius: var(--gpt-r-lg) var(--gpt-r-lg) 0 0;
+}
+.list-item:last-child,
+.note-item:last-child,
+.event-item:last-child,
+.alert-item:last-child,
+.topic-item:last-child{
+  border-radius: 0 0 var(--gpt-r-lg) var(--gpt-r-lg);
+}
+.list-item:only-child,
+.note-item:only-child,
+.event-item:only-child,
+.alert-item:only-child,
+.topic-item:only-child{
+  border-radius: var(--gpt-r-lg);
+}
+.item-title{
+  color: var(--gpt-text);
+  font-size: var(--gpt-fs-subhead);
+  font-weight: var(--gpt-fw-medium);
+  line-height: 1.4;
+  margin-bottom: var(--gpt-sp-1);
+}
+.item-desc{
+  color: var(--gpt-text-tertiary);
+  font-size: var(--gpt-fs-footnote);
+  line-height: 1.5;
+}
+.item-meta{
+  color: var(--gpt-text-quaternary);
+  font-size: var(--gpt-fs-caption-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   §9 状态点/徽章 - GPT小面积彩色
+   ============================================================================ */
+.status-dot, .dot{
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.green, .dot.green, .low-dot{ background: var(--gpt-green); }
+.status-dot.orange, .dot.orange, .med-dot, .amber-dot{ background: var(--gpt-orange); }
+.status-dot.red, .dot.red, .high-dot{ background: var(--gpt-red); }
+.status-dot.blue, .dot.blue, .info-dot{ background: var(--gpt-blue); }
+.status-dot.gray, .dot.gray{ background: var(--gpt-gray); }
+.status-dot.purple, .dot.purple{ background: var(--gpt-purple); }
+
+.badge, .status-tag, .tag{
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gpt-sp-1);
+  padding: 3px 8px;
+  border-radius: var(--gpt-r-pill);
+  font-size: var(--gpt-fs-caption-1);
+  font-weight: var(--gpt-fw-medium);
+  background: var(--gpt-bg-secondary);
+  color: var(--gpt-text-secondary);
+  border: none;
+}
+.badge.green, .status-tag.up, .status-tag.success{
+  background: var(--gpt-green-bg);
+  color: var(--gpt-green);
+}
+.badge.orange, .status-tag.warning{
+  background: var(--gpt-orange-bg);
+  color: var(--gpt-orange);
+}
+.badge.red, .status-tag.danger, .status-tag.high{
+  background: var(--gpt-red-bg);
+  color: var(--gpt-red);
+}
+.badge.blue, .status-tag.info, .status-tag.multi{
+  background: var(--gpt-blue-soft);
+  color: var(--gpt-blue);
+}
+.risk-score.high{
+  background: var(--gpt-red-bg) !important;
+  color: var(--gpt-red) !important;
+}
+.risk-score.medium{
+  background: var(--gpt-orange-bg) !important;
+  color: var(--gpt-orange) !important;
+}
+.risk-score.low{
+  background: var(--gpt-green-bg) !important;
+  color: var(--gpt-green) !important;
+}
+
+/* ============================================================================
+   §10 表单 - GPT风格
+   ============================================================================ */
+input[type=text], input[type=search], input[type=email], input[type=password],
+input[type=number], select, textarea{
+  background: var(--gpt-bg-secondary);
+  border: none;
+  border-radius: var(--gpt-r-md);
+  color: var(--gpt-text);
+  font-family: var(--gpt-font);
+  font-size: var(--gpt-fs-body);
+  padding: var(--gpt-sp-3) var(--gpt-sp-4);
+  transition: all var(--gpt-d-fast);
+  width: 100%;
+}
+input::placeholder, textarea::placeholder{
+  color: var(--gpt-text-placeholder);
+}
+input:focus, select:focus, textarea:focus{
+  background: var(--gpt-surface);
+  box-shadow: var(--gpt-sh-focus);
+  outline: none;
+}
+.search-input{
+  background: var(--gpt-bg-secondary);
+  border-radius: var(--gpt-r-md);
+  padding: var(--gpt-sp-3) var(--gpt-sp-4) var(--gpt-sp-3) 40px;
+  position: relative;
+}
+.search-input::before{
+  content: '';
+  position: absolute;
+  left: var(--gpt-sp-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: var(--gpt-text-tertiary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat center;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat center;
+}
+
+/* ============================================================================
+   §11 苹果风格底部弹出式弹窗 (Sheet) - 100%对齐iOS
+   ============================================================================ */
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--gpt-d-sheet) var(--gpt-ease), visibility var(--gpt-d-sheet);
+}
+.modal-overlay.open{
+  opacity: 1;
+  visibility: visible;
+}
+.modal{
+  background: var(--gpt-surface) !important;
+  border-radius: var(--gpt-r-sheet) !important;
+  box-shadow: var(--gpt-sh-sheet) !important;
+  border: none !important;
+  width: 100%;
+  max-width: 540px;
+  max-height: 85vh;
+  transform: translateY(100%);
+  transition: transform var(--gpt-d-sheet) var(--gpt-ease-spring);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 0 auto;
+}
+.modal-overlay.open .modal{
+  transform: translateY(0);
+}
+/* 弹窗顶部抓手 - iOS风格 */
+.modal::before{
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 5px;
+  background: var(--gpt-border-strong);
+  border-radius: 999px;
+  opacity: 0.6;
+}
+.modal-header{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gpt-sp-5) var(--gpt-sp-5) var(--gpt-sp-3);
+  position: relative;
+  border-bottom: 0.5px solid var(--gpt-border-light);
+}
+.modal-title{
+  font-size: var(--gpt-fs-headline);
+  font-weight: var(--gpt-fw-semibold);
+  color: var(--gpt-text);
+  text-align: center;
+}
+.modal-close{
+  position: absolute;
+  right: var(--gpt-sp-4);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--gpt-bg-secondary);
+  border: none;
+  color: var(--gpt-text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--gpt-d-fast);
+}
+.modal-close:hover{
+  background: var(--gpt-bg-tertiary);
+  color: var(--gpt-text);
+}
+.modal-body{
+  padding: var(--gpt-sp-5);
+  flex: 1;
+  overflow-y: auto;
+}
+.modal-footer{
+  padding: var(--gpt-sp-4) var(--gpt-sp-5) calc(var(--gpt-sp-5) + env(safe-area-inset-bottom, 0px));
+  border-top: 0.5px solid var(--gpt-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpt-sp-2);
+}
+.modal-footer .action{
+  width: 100%;
+  height: 48px;
+  font-size: var(--gpt-fs-headline);
+  font-weight: var(--gpt-fw-semibold);
+  border-radius: var(--gpt-r-lg);
+}
+.modal-footer .action.secondary{
+  background: var(--gpt-bg-secondary);
+  color: var(--gpt-blue);
+}
+.modal-footer .action.secondary:hover{
+  background: var(--gpt-bg-tertiary);
+}
+
+/* 桌面端居中弹窗（大屏时） */
+@media (min-width: 768px){
+  .modal-overlay{
+    align-items: center;
+  }
+  .modal{
+    border-radius: var(--gpt-r-2xl) !important;
+    transform: scale(0.95);
+    max-width: 540px;
+  }
+  .modal-overlay.open .modal{
+    transform: scale(1);
+  }
+  .modal::before{
+    display: none;
+  }
+}
+
+/* ============================================================================
+   §12 抽屉 - GPT风格
+   ============================================================================ */
+.drawer-panel{
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 90vw;
+  background: var(--gpt-surface);
+  box-shadow: var(--gpt-sh-lg);
+  transform: translateX(100%);
+  transition: transform var(--gpt-d-sheet) var(--gpt-ease);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+}
+.drawer-panel.open{
+  transform: translateX(0);
+}
+.drawer-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gpt-sp-4) var(--gpt-sp-5);
+  border-bottom: 0.5px solid var(--gpt-border-light);
+}
+.drawer-title{
+  font-size: var(--gpt-fs-headline);
+  font-weight: var(--gpt-fw-semibold);
+}
+.drawer-body{
+  padding: var(--gpt-sp-5);
+  flex: 1;
+  overflow-y: auto;
+}
+.drawer-footer{
+  padding: var(--gpt-sp-4) var(--gpt-sp-5);
+  border-top: 0.5px solid var(--gpt-border-light);
+  display: flex;
+  gap: var(--gpt-sp-2);
+  justify-content: flex-end;
+}
+
+/* ============================================================================
+   §13 Toast - GPT风格
+   ============================================================================ */
+.toast-container{
+  position: fixed;
+  top: calc(var(--gpt-topbar-h) + var(--gpt-sp-3));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpt-sp-2);
+  align-items: center;
+}
+.toast{
+  display: flex;
+  align-items: center;
+  gap: var(--gpt-sp-2);
+  padding: var(--gpt-sp-2) var(--gpt-sp-4);
+  background: rgba(0,0,0,0.85) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #fff !important;
+  border-radius: var(--gpt-r-pill) !important;
+  box-shadow: var(--gpt-sh-md) !important;
+  font-size: var(--gpt-fs-subhead);
+  font-weight: var(--gpt-fw-medium);
+  border: none !important;
+  animation: gptToastIn var(--gpt-d-normal) var(--gpt-ease-spring);
+}
+@keyframes gptToastIn{
+  from{ opacity: 0; transform: translateY(-12px) scale(0.95); }
+  to{ opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast.success{ background: var(--gpt-green) !important; }
+.toast.error{ background: var(--gpt-red) !important; }
+.toast.warning{ background: var(--gpt-orange) !important; }
+.toast.info{ background: var(--gpt-blue) !important; }
+
+/* ============================================================================
+   §14 空状态 - GPT风格居中引导
+   ============================================================================ */
+.empty-state{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gpt-sp-10) var(--gpt-sp-6);
+  text-align: center;
+}
+.empty-state-icon{
+  width: 56px;
+  height: 56px;
+  border-radius: var(--gpt-r-xl);
+  background: var(--gpt-bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gpt-text-tertiary);
+  margin-bottom: var(--gpt-sp-4);
+}
+.empty-state-icon svg{
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.5;
+}
+.empty-state-title{
+  font-size: var(--gpt-fs-title-3);
+  font-weight: var(--gpt-fw-semibold);
+  color: var(--gpt-text);
+  margin-bottom: var(--gpt-sp-2);
+}
+.empty-state-desc{
+  font-size: var(--gpt-fs-subhead);
+  color: var(--gpt-text-tertiary);
+  line-height: 1.5;
+  max-width: 320px;
+  margin-bottom: var(--gpt-sp-5);
+}
+.empty-state-action{
+  display: flex;
+  gap: var(--gpt-sp-3);
+}
+
+/* ============================================================================
+   §15 加载状态 - GPT骨架屏
+   ============================================================================ */
+.loading-state{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gpt-sp-10);
+  gap: var(--gpt-sp-3);
+}
+.loading-spinner{
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid var(--gpt-bg-tertiary);
+  border-top-color: var(--gpt-blue);
+  border-radius: 50%;
+  animation: gptSpin 0.8s linear infinite;
+}
+@keyframes gptSpin{ to{ transform: rotate(360deg); } }
+.loading-text{
+  font-size: var(--gpt-fs-footnote);
+  color: var(--gpt-text-tertiary);
+}
+.skeleton{
+  background: linear-gradient(90deg, var(--gpt-bg-secondary) 25%, var(--gpt-bg-tertiary) 50%, var(--gpt-bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: gptShimmer 1.5s infinite;
+  border-radius: var(--gpt-r-sm);
+}
+@keyframes gptShimmer{
+  0%{ background-position: 200% 0; }
+  100%{ background-position: -200% 0; }
+}
+
+/* ============================================================================
+   §16 错误状态 - GPT风格
+   ============================================================================ */
+.error-state{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gpt-sp-10);
+  text-align: center;
+  gap: var(--gpt-sp-2);
+}
+.error-state-icon{
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gpt-red-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gpt-red);
+  margin-bottom: var(--gpt-sp-2);
+}
+.error-state-icon svg{
+  width: 28px;
+  height: 28px;
+}
+.error-state-title{
+  font-size: var(--gpt-fs-title-3);
+  font-weight: var(--gpt-fw-semibold);
+  color: var(--gpt-red);
+}
+.error-state-desc{
+  font-size: var(--gpt-fs-subhead);
+  color: var(--gpt-text-tertiary);
+  line-height: 1.5;
+  max-width: 320px;
+}
+.error-state-retry{
+  margin-top: var(--gpt-sp-4);
+}
+
+/* ============================================================================
+   §17 表格 - GPT风格
+   ============================================================================ */
+table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--gpt-fs-subhead);
+}
+thead th{
+  text-align: left;
+  font-weight: var(--gpt-fw-semibold);
+  color: var(--gpt-text-tertiary);
+  padding: var(--gpt-sp-3) var(--gpt-sp-4);
+  border-bottom: 0.5px solid var(--gpt-border);
+  background: var(--gpt-bg-grouped);
+  font-size: var(--gpt-fs-caption-1);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+tbody td{
+  padding: var(--gpt-sp-3) var(--gpt-sp-4);
+  border-bottom: 0.5px solid var(--gpt-border-light);
+  color: var(--gpt-text);
+}
+tbody tr:hover{
+  background: var(--gpt-bg-secondary);
+}
+tbody tr:last-child td{
+  border-bottom: none;
+}
+
+/* ============================================================================
+   §18 时间线 - GPT风格
+   ============================================================================ */
+.timeline{
+  position: relative;
+  padding-left: 28px;
+}
+.timeline::before{
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--gpt-border);
+}
+.timeline-item{
+  position: relative;
+  padding-bottom: var(--gpt-sp-5);
+}
+.timeline-item::before{
+  content: '';
+  position: absolute;
+  left: -28px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gpt-surface);
+  border: 2px solid var(--gpt-border-strong);
+}
+.timeline-item.success::before{ border-color: var(--gpt-green); background: var(--gpt-green-bg); }
+.timeline-item.warning::before{ border-color: var(--gpt-orange); background: var(--gpt-orange-bg); }
+.timeline-item.danger::before{ border-color: var(--gpt-red); background: var(--gpt-red-bg); }
+.timeline-item.info::before{ border-color: var(--gpt-blue); background: var(--gpt-blue-soft); }
+.timeline-time{
+  font-size: var(--gpt-fs-caption-1);
+  color: var(--gpt-text-tertiary);
+  margin-bottom: var(--gpt-sp-1);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-title{
+  font-size: var(--gpt-fs-subhead);
+  font-weight: var(--gpt-fw-medium);
+  color: var(--gpt-text);
+}
+.timeline-desc{
+  font-size: var(--gpt-fs-footnote);
+  color: var(--gpt-text-tertiary);
+  margin-top: var(--gpt-sp-1);
+  line-height: 1.5;
+}
+
+/* ============================================================================
+   §19 分段控件/Tab - GPT风格
+   ============================================================================ */
+.segmented{
+  display: inline-flex;
+  background: var(--gpt-bg-secondary);
+  border-radius: var(--gpt-r-md);
+  padding: 2px;
+  gap: 2px;
+}
+.segmented .tab, .segmented .segment{
+  padding: var(--gpt-sp-2) var(--gpt-sp-4);
+  border-radius: var(--gpt-r-sm);
+  font-size: var(--gpt-fs-footnote);
+  font-weight: var(--gpt-fw-medium);
+  color: var(--gpt-text-tertiary);
+  cursor: pointer;
+  transition: all var(--gpt-d-fast);
+  border: none;
+  background: transparent;
+}
+.segmented .tab.active, .segmented .segment.active{
+  background: var(--gpt-surface);
+  color: var(--gpt-text);
+  box-shadow: var(--gpt-sh-xs);
+}
+.tabs{
+  display: flex;
+  gap: var(--gpt-sp-5);
+  border-bottom: 0.5px solid var(--gpt-border-light);
+  margin-bottom: var(--gpt-sp-5);
+}
+.tabs .tab{
+  padding: var(--gpt-sp-3) 0;
+  font-size: var(--gpt-fs-subhead);
+  font-weight: var(--gpt-fw-medium);
+  color: var(--gpt-text-tertiary);
+  cursor: pointer;
+  position: relative;
+  transition: color var(--gpt-d-fast);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -0.5px;
+}
+.tabs .tab:hover{
+  color: var(--gpt-text-secondary);
+}
+.tabs .tab.active{
+  color: var(--gpt-text);
+  border-bottom-color: var(--gpt-text);
+}
+
+/* ============================================================================
+   §20 日历 - GPT风格
+   ============================================================================ */
+.calendar{
+  background: var(--gpt-surface);
+  border-radius: var(--gpt-r-xl);
+  border: 0.5px solid var(--gpt-border);
+  padding: var(--gpt-sp-4);
+}
+.calendar-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gpt-sp-4);
+}
+.calendar-title{
+  font-size: var(--gpt-fs-headline);
+  font-weight: var(--gpt-fw-semibold);
+}
+.calendar-grid{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.calendar-weekday{
+  text-align: center;
+  font-size: var(--gpt-fs-caption-2);
+  font-weight: var(--gpt-fw-semibold);
+  color: var(--gpt-text-tertiary);
+  padding: var(--gpt-sp-2) 0;
+  text-transform: uppercase;
+}
+.calendar-day{
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--gpt-fs-footnote);
+  color: var(--gpt-text-secondary);
+  border-radius: var(--gpt-r-md);
+  cursor: pointer;
+  transition: all var(--gpt-d-fast);
+  position: relative;
+}
+.calendar-day:hover{
+  background: var(--gpt-bg-secondary);
+}
+.calendar-day.today{
+  background: var(--gpt-text);
+  color: #fff;
+  font-weight: var(--gpt-fw-semibold);
+}
+.calendar-day.has-data::after{
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gpt-blue);
+}
+.calendar-day.today.has-data::after{
+  background: #fff;
+}
+.calendar-day.other-month{
+  color: var(--gpt-text-quaternary);
+}
+.day.low{ background: var(--gpt-green-bg) !important; }
+.day.med{ background: var(--gpt-orange-bg) !important; }
+.day.high{ background: var(--gpt-red-bg) !important; }
+.day.today{ outline: 2px solid var(--gpt-blue) !important; outline-offset: -2px; }
+
+/* ============================================================================
+   §21 右侧AI洞察面板 - GPT风格
+   ============================================================================ */
+@media(min-width: 1280px){
+  .layout{
+    grid-template-columns: var(--gpt-sidebar-w) minmax(0, 1fr) var(--gpt-inspector-w) !important;
+  }
+  .right-panel{
+    display: flex !important;
+    flex-direction: column;
+    background: var(--gpt-bg-grouped) !important;
+    border-left: 0.5px solid var(--gpt-border) !important;
+    height: calc(100vh - var(--gpt-topbar-h)) !important;
+    overflow-y: auto;
+  }
+  .right-panel.collapsed{
+    display: none !important;
+  }
+}
+.right-panel-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gpt-sp-4) var(--gpt-sp-4) var(--gpt-sp-3);
+  border-bottom: 0.5px solid var(--gpt-border-light);
+}
+.right-panel-title h3{
+  font-size: var(--gpt-fs-headline);
+  font-weight: var(--gpt-fw-semibold);
+  margin: 0;
+}
+.ai-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--gpt-green-bg);
+  color: var(--gpt-green);
+  font-size: var(--gpt-fs-caption-1);
+  font-weight: var(--gpt-fw-medium);
+  padding: 3px 8px;
+  border-radius: var(--gpt-r-pill);
+  margin-top: var(--gpt-sp-1);
+}
+.ai-badge .dot{
+  width: 6px;
+  height: 6px;
+  background: var(--gpt-green);
+  animation: gptPulse 2s ease-in-out infinite;
+}
+@keyframes gptPulse{
+  0%, 100%{ opacity: 1; }
+  50%{ opacity: 0.4; }
+}
+.right-panel-body{
+  padding: var(--gpt-sp-4);
+  flex: 1;
+}
+.quick-stats{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gpt-sp-2);
+  margin-bottom: var(--gpt-sp-5);
+}
+.quick-stat{
+  background: var(--gpt-surface);
+  border-radius: var(--gpt-r-lg);
+  padding: var(--gpt-sp-3) var(--gpt-sp-4);
+  border: 0.5px solid var(--gpt-border-light);
+}
+.quick-stat-value{
+  font-size: var(--gpt-fs-title-3);
+  font-weight: var(--gpt-fw-bold);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.quick-stat-label{
+  font-size: var(--gpt-fs-caption-1);
+  color: var(--gpt-text-tertiary);
+  margin-top: 2px;
+}
+.ai-insight-card{
+  background: var(--gpt-surface);
+  border: 0.5px solid var(--gpt-border-light);
+  border-radius: var(--gpt-r-lg);
+  padding: var(--gpt-sp-4);
+  margin-bottom: var(--gpt-sp-3);
+}
+.ai-insight-card-header{
+  display: flex;
+  align-items: center;
+  gap: var(--gpt-sp-2);
+  margin-bottom: var(--gpt-sp-2);
+  color: var(--gpt-text-secondary);
+}
+.ai-insight-card-header svg{
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
+}
+.ai-insight-card-header span{
+  font-size: var(--gpt-fs-subhead);
+  font-weight: var(--gpt-fw-semibold);
+  color: var(--gpt-text);
+}
+.ai-insight-card p{
+  font-size: var(--gpt-fs-footnote);
+  line-height: 1.6;
+  color: var(--gpt-text-secondary);
+  margin: 0;
+}
+
+/* ============================================================================
+   §22 底部导航栏 - 手机端GPT风格
+   ============================================================================ */
+.mobile-tabbar{
+  display: none;
+}
+@media(max-width: 768px){
+  .mobile-tabbar{
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--gpt-tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--gpt-glass-bg);
+    backdrop-filter: var(--gpt-glass-blur);
+    -webkit-backdrop-filter: var(--gpt-glass-blur);
+    border-top: 0.5px solid var(--gpt-glass-border);
+    z-index: 99;
+  }
+  .mobile-tabbar-item{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: var(--gpt-text-tertiary);
+    font-size: var(--gpt-fs-caption-2);
+    font-weight: var(--gpt-fw-medium);
+    cursor: pointer;
+    transition: color var(--gpt-d-fast);
+  }
+  .mobile-tabbar-item svg{
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.8;
+  }
+  .mobile-tabbar-item.active{
+    color: var(--gpt-blue);
+  }
+  .content{
+    padding-bottom: calc(var(--gpt-tabbar-h) + var(--gpt-sp-5) + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* ============================================================================
+   §23 响应式 - GPT风格适配
+   ============================================================================ */
+@media(max-width: 1024px){
+  :root{
+    --gpt-sidebar-w: 64px;
+  }
+  .layout{
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+  }
+  .sidebar .side-item span,
+  .sidebar .nav-group-title,
+  .sidebar .sidebar-footer,
+  .sidebar .brand h1,
+  .sidebar .brand p{
+    display: none;
+  }
+  .sidebar .side-item{
+    justify-content: center;
+    padding: 0 !important;
+  }
+}
+@media(max-width: 768px){
+  .app-shell{
+    display: block !important;
+    height: auto !important;
+    min-height: 100vh;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  .layout{
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .topbar{
+    height: 52px !important;
+    position: sticky !important;
+    top: 0;
+  }
+  .sidebar{
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: auto !important;
+    height: 100dvh !important;
+    width: 280px !important;
+    max-width: 85vw;
+    transform: translateX(-100%) !important;
+    overflow-y: auto;
+    border-right: 0.5px solid var(--gpt-border) !important;
+    background: var(--gpt-bg) !important;
+    box-shadow: var(--gpt-sh-lg);
+    z-index: 200;
+    transition: transform var(--gpt-d-sheet) var(--gpt-ease);
+  }
+  .sidebar.open{
+    transform: translateX(0) !important;
+  }
+  .sidebar-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 199;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--gpt-d-normal);
+  }
+  .sidebar-overlay.open{
+    opacity: 1;
+    visibility: visible;
+  }
+  .content{
+    padding: var(--gpt-sp-5) var(--gpt-sp-4) calc(var(--gpt-tabbar-h) + var(--gpt-sp-6)) !important;
+  }
+  .metric-grid{
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gpt-sp-3);
+  }
+  .metric-card strong{
+    font-size: var(--gpt-fs-title-2);
+  }
+  .page-hero h2{
+    font-size: var(--gpt-fs-title-2);
+  }
+  .right-panel{
+    display: none !important;
+  }
+  body, html{
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
+/* ============================================================================
+   §24 动效统一 - iOS风格
+   ============================================================================ */
+.page-view{
+  animation: gptPageIn var(--gpt-d-slow) var(--gpt-ease);
+}
+@keyframes gptPageIn{
+  from{
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce){
+  *{
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   §25 工具类
+   ============================================================================ */
+.gpt-hidden{ display: none !important; }
+.gpt-flex{ display: flex; }
+.gpt-flex-col{ display: flex; flex-direction: column; }
+.gpt-items-center{ align-items: center; }
+.gpt-justify-between{ justify-content: space-between; }
+.gpt-gap-1{ gap: 4px; }
+.gpt-gap-2{ gap: 8px; }
+.gpt-gap-3{ gap: 12px; }
+.gpt-gap-4{ gap: 16px; }
+.gpt-p-2{ padding: 8px; }
+.gpt-p-3{ padding: 12px; }
+.gpt-p-4{ padding: 16px; }
+.gpt-mt-2{ margin-top: 8px; }
+.gpt-mt-3{ margin-top: 12px; }
+.gpt-mt-4{ margin-top: 16px; }
+.gpt-text-sm{ font-size: 13px; }
+.gpt-text-base{ font-size: 15px; }
+.gpt-text-lg{ font-size: 17px; }
+.gpt-text-muted{ color: var(--gpt-text-tertiary); }
+.gpt-text-secondary{ color: var(--gpt-text-secondary); }
+.gpt-rounded{ border-radius: 12px; }
+.gpt-rounded-full{ border-radius: 999px; }
+.gpt-border{ border: 0.5px solid var(--gpt-border); }
+.gpt-bg-surface{ background: var(--gpt-surface); }
+.gpt-bg-secondary{ background: var(--gpt-bg-secondary); }
