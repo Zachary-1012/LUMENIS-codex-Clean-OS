@@ -4,17 +4,17 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7">
 <title>广州太古汇·舆情监测系统</title>
-<link rel="stylesheet" href="/static/css/style.css?v=5.9.10">
-<link rel="stylesheet" href="/static/css/nomi_global_drag.css?v=5.9.10">
-<link rel="stylesheet" href="/static/css/architecture_dashboard.css?v=5.9.10">
+<link rel="stylesheet" href="/static/css/style.css?v=5.9.11">
+<link rel="stylesheet" href="/static/css/nomi_global_drag.css?v=5.9.11">
+<link rel="stylesheet" href="/static/css/architecture_dashboard.css?v=5.9.11">
 
-<link rel="stylesheet" href="/static/css/ui_optimized.css?v=5.9.10">
-<link rel="stylesheet" href="/static/css/mobile.css?v=5.9.10">
-<link rel="stylesheet" href="/static/css/ui_modern.css?v=5.9.10">
+<link rel="stylesheet" href="/static/css/ui_optimized.css?v=5.9.11">
+<link rel="stylesheet" href="/static/css/mobile.css?v=5.9.11">
+<link rel="stylesheet" href="/static/css/ui_modern.css?v=5.9.11">
 <!-- Zachary 3D 机器人 Three.js（本地化，避免外网 CDN 失效导致 3D 不加载） -->
 <script src="/static/js/vendor/three.min.js"></script>
-<link rel="stylesheet" href="/static/css/case_deep_analysis.css?v=5.9.10">
-<link rel="stylesheet" href="/static/css/v3_modules.css?v=5.9.10">
+<link rel="stylesheet" href="/static/css/case_deep_analysis.css?v=5.9.11">
+<link rel="stylesheet" href="/static/css/v3_modules.css?v=5.9.11">
 </head>
 <body>
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
@@ -318,19 +318,47 @@
 
       <!-- App证据（Shadow模式） -->
       <section class="page-view" id="page-app-evidence">
-        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>App证据</h2>
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>App证据采集</h2>
           <div class="page-actions" style="display:flex;gap:8px;align-items:center">
-            <span style="font-size:12px;color:var(--muted)">Shadow模式 · 用户主动上传 · 不碰App自动化</span>
+            <span class="badge-shadow">Shadow模式</span>
+            <span style="font-size:12px;color:var(--text-tertiary)">用户主动上传 · 不碰App自动化</span>
           </div>
         </div>
         <div id="aeStats"></div>
+
+        <!-- 平台快速选择卡片 -->
+        <div class="ae-platform-cards">
+          <div class="ae-platform-card active" data-platform="xhs_app" onclick="AppEvidence.selectPlatform('xhs_app')">
+            <div class="ae-platform-icon xhs">📕</div>
+            <div class="ae-platform-name">小红书App</div>
+            <div class="ae-platform-desc">话题浏览/讨论量</div>
+          </div>
+          <div class="ae-platform-card" data-platform="wechat_mini" onclick="AppEvidence.selectPlatform('wechat_mini')">
+            <div class="ae-platform-icon wechat">💬</div>
+            <div class="ae-platform-name">微信小程序</div>
+            <div class="ae-platform-desc">页面访问/用户数据</div>
+          </div>
+          <div class="ae-platform-card" data-platform="wechat_mp" onclick="AppEvidence.selectPlatform('wechat_mp')">
+            <div class="ae-platform-icon mp">📢</div>
+            <div class="ae-platform-name">微信公众号</div>
+            <div class="ae-platform-desc">文章阅读/在看/分享</div>
+          </div>
+          <div class="ae-platform-card" data-platform="douyin_app" onclick="AppEvidence.selectPlatform('douyin_app')">
+            <div class="ae-platform-icon dy">🎵</div>
+            <div class="ae-platform-name">抖音App</div>
+            <div class="ae-platform-desc">视频播放/互动数据</div>
+          </div>
+        </div>
+
         <div class="ae-upload-section">
-          <h3 style="margin:16px 0 12px;font-size:15px">上传证据</h3>
+          <h3 style="margin:16px 0 12px;font-size:15px;font-weight:600">上传证据</h3>
           <div class="ae-form-grid">
             <div class="ae-form-item">
               <label>来源平台</label>
               <select id="aeSource">
                 <option value="xhs_app">小红书App</option>
+                <option value="wechat_mini">微信小程序</option>
+                <option value="wechat_mp">微信公众号</option>
                 <option value="douyin_app">抖音App</option>
                 <option value="weibo_app">微博App</option>
                 <option value="other">其他</option>
@@ -345,18 +373,31 @@
               </select>
             </div>
             <div class="ae-form-item">
-              <label>关联话题</label>
+              <label>关联话题/品牌</label>
               <input type="text" id="aeTopic" placeholder="#广州太古汇十五周年">
+            </div>
+            <div class="ae-form-item" id="aeMiniAppNameWrap" style="display:none">
+              <label>小程序名称</label>
+              <input type="text" id="aeMiniAppName" placeholder="例如：广州太古汇会员小程序">
+            </div>
+            <div class="ae-form-item" id="aeMiniPagePathWrap" style="display:none">
+              <label>小程序页面路径</label>
+              <input type="text" id="aeMiniPagePath" placeholder="例如：pages/activity/detail?id=123">
             </div>
             <div class="ae-form-item">
               <label>指标名</label>
               <select id="aeMetricName">
                 <option value="browse_count">浏览量</option>
+                <option value="visit_count">访问次数</option>
+                <option value="uv_count">独立访客(UV)</option>
                 <option value="discussion_count">讨论量</option>
                 <option value="note_count">笔记数</option>
                 <option value="like_count">点赞数</option>
                 <option value="comment_count">评论数</option>
                 <option value="collect_count">收藏数</option>
+                <option value="share_count">分享数</option>
+                <option value="read_count">阅读量</option>
+                <option value="watching_count">在看数</option>
                 <option value="other">其他</option>
               </select>
             </div>
@@ -366,15 +407,38 @@
             </div>
             <div class="ae-form-item">
               <label>截图/证据文件</label>
-              <input type="file" id="aeFile" accept="image/*,.pdf">
+              <div class="ae-file-upload" onclick="document.getElementById('aeFile').click()">
+                <div class="ae-file-icon">📤</div>
+                <div class="ae-file-text">点击上传或拖拽文件到此处</div>
+                <div class="ae-file-hint">支持 PNG/JPG/PDF，最大 10MB</div>
+              </div>
+              <input type="file" id="aeFile" accept="image/*,.pdf" style="display:none" onchange="AppEvidence.handleFileSelect(this)">
+              <div id="aeFilePreview" style="display:none;margin-top:8px"></div>
             </div>
             <div class="ae-form-item ae-form-full">
               <label>备注</label>
-              <input type="text" id="aeNotes" placeholder="可选：补充说明">
+              <input type="text" id="aeNotes" placeholder="可选：补充说明，如数据截图时间、页面位置等">
             </div>
           </div>
-          <button class="primary" onclick="AppEvidence.upload()" style="margin-top:12px">↑ 上传证据</button>
+          <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+            <button class="action primary" onclick="AppEvidence.upload()" style="padding:10px 24px;font-size:14px">
+              <span style="margin-right:6px">↑</span> 上传证据
+            </button>
+            <button class="action tertiary" onclick="AppEvidence.resetForm()">重置表单</button>
+            <span id="aeUploadStatus" style="font-size:12px;color:var(--text-tertiary)"></span>
+          </div>
         </div>
+
+        <!-- 上传说明卡片 -->
+        <div class="ae-info-card">
+          <div class="ae-info-icon">ℹ️</div>
+          <div class="ae-info-content">
+            <b>小程序采集说明</b>
+            <p>微信小程序数据相对封闭，无公开搜索入口。本系统采用 Shadow 模式：用户主动截图小程序数据页面 → 系统 OCR 识别字段 → 人工确认后入库。不碰小程序自动化、不逆向 API、不抓包，完全合规。</p>
+            <p style="margin-top:6px"><b>适用场景：</b>小程序活动页访问量、会员数据、优惠券领取量、门店预约数等 Web 端无法获取的指标。</p>
+          </div>
+        </div>
+
         <div class="ae-filter-bar">
           <select id="aeStatusFilter" onchange="AppEvidence.loadList()">
             <option value="">全部状态</option>
@@ -383,13 +447,20 @@
             <option value="rejected">已拒绝</option>
             <option value="shadow">Shadow</option>
           </select>
+          <select id="aeSourceFilter" onchange="AppEvidence.loadList()">
+            <option value="">全部平台</option>
+            <option value="xhs_app">小红书App</option>
+            <option value="wechat_mini">微信小程序</option>
+            <option value="wechat_mp">微信公众号</option>
+            <option value="douyin_app">抖音App</option>
+          </select>
           <input type="text" id="aeTopicSearch" placeholder="搜索话题..." onkeydown="if(event.key==='Enter')AppEvidence.loadList()">
-          <button onclick="AppEvidence.loadList()">🔍 筛选</button>
+          <button class="action secondary" onclick="AppEvidence.loadList()">🔍 筛选</button>
         </div>
         <div id="aeList"></div>
       </section>
 
-      <!-- 舆情日历 -->
+<!-- 舆情日历 -->
       <section class="page-view" id="page-calendar">
         <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>舆情日历</h2></div>
         <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">CALENDAR</span><h3>舆情日历</h3><p>按笔记发布日期归集（非采集日期），点击日期查看当天笔记</p></div><div class="calendar-nav"><button class="icon-button" id="prevMonth2">‹</button><b id="calendarTitle2">—</b><button class="icon-button" id="nextMonth2">›</button><button class="icon-button" id="todayMonth2" title="回到本月">今</button></div></div><div class="calendar large" id="calendarGrid2"></div><div class="calendar-legend"><span><i class="low-dot"></i>低风险（1-3条）</span><span><i class="med-dot"></i>中风险（4-7条）</span><span><i class="high-dot"></i>高风险（≥8条）</span></div></div>
@@ -529,7 +600,7 @@
   <div class="zachary-robot zachary-robot-png">
     <!-- v5.9.9 设计稿PNG形象：黑球身体+紫光猫耳+青色耳机+NOMI液晶脸（open/close双表情） -->
     <div class="zachary-png-glow"></div>
-    <img class="zachary-png-face" id="zacharyPngFace" src="/static/img/robot_open.png?v=5.9.10" alt="Zachary" draggable="false">
+    <img class="zachary-png-face" id="zacharyPngFace" src="/static/img/robot_open.png?v=5.9.11" alt="Zachary" draggable="false">
   </div>
   <div class="zachary-tip">问我 anything</div>
 </div>
@@ -582,42 +653,42 @@
 <div class="toast" id="toast"></div>
 <!-- 舆情预警浮动通知容器 -->
 <div class="alert-container" id="alertContainer"></div>
-<script src="/static/js/app.js?v=5.9.10"></script>
+<script src="/static/js/app.js?v=5.9.11"></script>
 <!-- v5.8.4 太古集团全域事件/笔记库 -->
-<script src="/static/js/swire_group.js?v=5.9.10"></script>
+<script src="/static/js/swire_group.js?v=5.9.11"></script>
 
 <!-- v5.8.0 Zachary机器人模块（增强版） -->
-<script src="/static/js/zachary_robot_enhanced.js?v=5.9.10"></script>
+<script src="/static/js/zachary_robot_enhanced.js?v=5.9.11"></script>
 <!-- v5.9.9 Zachary 3D(Three.js) 已停用，改用设计稿PNG形象，避免双外观叠加；保留文件备查
-<script src="/static/js/zachary_3d.js?v=5.9.10"></script> -->
+<script src="/static/js/zachary_3d.js?v=5.9.11"></script> -->
 <!-- v5.9.9 Zachary PNG双表情切换（睁眼↔闭眼微笑，淡入淡出） -->
-<script src="/static/js/zachary_png_face.js?v=5.9.10"></script>
+<script src="/static/js/zachary_png_face.js?v=5.9.11"></script>
 <!-- v5.8.0 前端交互补丁 -->
-<script src="/static/js/ui_interactions_v5.8.0.js?v=5.9.10"></script>
+<script src="/static/js/ui_interactions_v5.8.0.js?v=5.9.11"></script>
 
 <!-- v5.9.0 5层闭环架构状态面板 -->
-<script src="/static/js/architecture_dashboard.js?v=5.9.10"></script>
+<script src="/static/js/architecture_dashboard.js?v=5.9.11"></script>
 
 <!-- v5.9.0 Zachary系统知识增强 -->
-<script src="/static/js/zachary_system_knowledge.js?v=5.9.10"></script>
+<script src="/static/js/zachary_system_knowledge.js?v=5.9.11"></script>
 
 <!-- v5.9.0 红点提醒管理 -->
-<script src="/static/js/badge_manager.js?v=5.9.10"></script>
+<script src="/static/js/badge_manager.js?v=5.9.11"></script>
 
 <!-- v5.9.0 系统功能前端接入 -->
-<script src="/static/js/system_features_ui.js?v=5.9.10"></script>
+<script src="/static/js/system_features_ui.js?v=5.9.11"></script>
 
 <!-- v5.8.0 公关案例前端 -->
-<script src="/static/js/pr_case_integration.js?v=5.9.10"></script>
+<script src="/static/js/pr_case_integration.js?v=5.9.11"></script>
 
 <!-- v5.8.0 系统控制 -->
-<script src="/static/js/system_controls.js?v=5.9.10"></script>
+<script src="/static/js/system_controls.js?v=5.9.11"></script>
 
 <!-- v5.8.0 前端增强 -->
-<script src="/static/js/frontend_enhancement.js?v=5.9.10"></script>
+<script src="/static/js/frontend_enhancement.js?v=5.9.11"></script>
 <!-- v5.9.9 辅助数据源（微博/B站Cookie直连） -->
-<script src="/static/js/auxiliary_sources.js?v=5.9.10"></script>
-<script src="/static/js/case_deep_analysis.js?v=5.9.10"></script>
+<script src="/static/js/auxiliary_sources.js?v=5.9.11"></script>
+<script src="/static/js/case_deep_analysis.js?v=5.9.11"></script>
 <script>
 // 案例深度拆解模块初始化（页面加载后）
 document.addEventListener('DOMContentLoaded', function() {
@@ -627,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-<script src="/static/js/v3_modules.js?v=5.9.10"></script>
+<script src="/static/js/v3_modules.js?v=5.9.11"></script>
 <script src="/static/js/app_evidence.js?v=1.0.0"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -648,4 +719,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 800);
 });
 </script>
+
+<!-- 手机端底部导航（APP式交互） -->
+<nav class="mobile-tab-bar" id="mobileTabBar">
+  <button class="mobile-tab-item active" data-page="overview" onclick="navigateTo('overview')">
+    <span class="mobile-tab-icon">🏠</span>
+    <span>首页</span>
+  </button>
+  <button class="mobile-tab-item" data-page="monitor" onclick="navigateTo('monitor')">
+    <span class="mobile-tab-icon">📊</span>
+    <span>舆情</span>
+  </button>
+  <button class="mobile-tab-item" data-page="topics" onclick="navigateTo('topics')">
+    <span class="mobile-tab-icon">🔥</span>
+    <span>话题</span>
+  </button>
+  <button class="mobile-tab-item" data-page="cases" onclick="navigateTo('cases')">
+    <span class="mobile-tab-icon">📚</span>
+    <span>案例</span>
+  </button>
+  <button class="mobile-tab-item" data-page="knowledge-base" onclick="navigateTo('knowledge-base')">
+    <span class="mobile-tab-icon">🧠</span>
+    <span>知识</span>
+  </button>
+</nav>
 </body></html>
