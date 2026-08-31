@@ -1,0 +1,29 @@
+# =====================================================================
+# Staging overlay - use together with docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+# Fully isolated from prod: own port, own named volumes (own DB copy),
+# scheduler OFF, web discovery OFF, XHS_PRODUCTION=false. Never triggers
+# real platform collection.
+# =====================================================================
+services:
+  zbc:
+    image: zbrand-core:latest
+    build: .
+    container_name: zbc-staging
+    command: ["python", "app.py", "--host", "0.0.0.0", "--port", "8301", "--no-scheduler"]
+    ports:
+      - "8301:8301"
+    environment:
+      - ZBC_ENV=staging
+      - XHS_PRODUCTION=false
+      - TAIKOO_WEB_DISCOVERY=0
+      - TAIKOO_PORT=8301
+      - ZBC_DB_PATH=/app/data/monitor.staging.db
+    volumes:
+      - zbc-staging-data:/app/data
+      - zbc-staging-logs:/app/logs
+    restart: "no"
+
+volumes:
+  zbc-staging-data:
+  zbc-staging-logs:

@@ -1,0 +1,38 @@
+# =====================================================================
+# Z-Brand Core / CTH-POMS  -  production-shaped compose template
+# ---------------------------------------------------------------------
+# State (SQLite + logs) lives on named volumes, never inside the image.
+# Collection browser is external (set XHS_CDP_URL / proxy via .env).
+# Bring up:        docker compose up -d
+# Staging overlay: docker compose -f docker-compose.yml \
+#                  -f docker-compose.staging.yml up -d
+# =====================================================================
+services:
+  zbc:
+    build: .
+    image: zbrand-core:latest
+    container_name: zbc-prod
+    ports:
+      - "8201:8201"
+    environment:
+      - TAIKOO_HOST=0.0.0.0
+      - TAIKOO_PORT=8201
+      - ZBC_DB_PATH=/app/data/monitor.db
+    # .env is git-ignored and machine-local; optional so a fresh clone can still boot.
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - zbc-data:/app/data
+      - zbc-logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8201/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  zbc-data:
+  zbc-logs:
