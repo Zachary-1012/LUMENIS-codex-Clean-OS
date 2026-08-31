@@ -464,7 +464,7 @@ footer {
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
     #page-overview {
         padding: 12px !important;
         gap: 10px !important;
