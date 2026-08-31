@@ -31,19 +31,7 @@ Lower priorities may never override higher priorities.
 
 ## 3. Z-Brand-Core responsibility
 
-Z-Brand-Core owns domain intelligence and production business capability, including:
-
-- brand / market intelligence
-- data collection and normalization
-- subject/content classification
-- sentiment and risk logic
-- event aggregation and relationships
-- reports and decision outputs
-- brand knowledge
-- AI-assisted domain analysis
-- domain learning and evaluation
-- CTH-POMS production capability
-- ZBMP controlled enhancement capability
+Z-Brand-Core owns domain intelligence and production business capability, including brand/market intelligence, data collection and normalization, subject/content classification, sentiment and risk logic, event aggregation, reports, brand knowledge, AI-assisted domain analysis, domain learning, CTH-POMS production capability, and ZBMP controlled enhancement capability.
 
 **CTH-POMS remains the production priority.** ZBMP remains an enhancement layer inside Core and must not become a second independently maintained Core.
 
@@ -65,22 +53,27 @@ Copy/paste duplication is not considered reuse.
 
 ## 5. Complexity guard
 
-Reject or redesign an integration if it creates unnecessary:
-
-- coupling
-- dependencies
-- cross-repository edits
-- deployment steps
-- testing burden
-- runtime assumptions
-- hidden ownership
-- duplicated state
+Reject or redesign an integration if it creates unnecessary coupling, dependencies, cross-repository edits, deployment steps, testing burden, runtime assumptions, hidden ownership, or duplicated state.
 
 A shared component must have one clear owner and a stable interface.
 
-## 6. Verification infrastructure
+## 6. Mandatory pre-change protocol
 
-The platform may use the following controlled verification path:
+Before **every material optimization, feature change, refactor, integration, or release**, the engineering agent must:
+
+1. Inspect the current state of **all three repositories**.
+2. Read the current platform baselines and relevant source modules.
+3. Identify ownership, dependencies, reusable capability, conflicts, and production impact.
+4. Check current branch/commit/baseline and available verification evidence.
+5. Compare the proposed change against the permanent principles and delivery contract.
+6. Run applicable verification before changing code whenever the execution environment permits.
+7. Produce a minimal-change plan.
+
+If live execution is unavailable, state that limitation explicitly. Repository inspection is never represented as a runtime test.
+
+## 7. Verification infrastructure
+
+The platform may use the following controlled path:
 
 ```text
 GitHub
@@ -106,104 +99,75 @@ GitHub Actions supplements controlled verification; it does not replace the evid
 
 Every release validation should identify repository, SHA, runtime/container, dependencies, test version, timestamp, result, and evidence.
 
-## 7. Permanent delivery standard
+## 8. Permanent delivery standard
 
-A material change is not considered complete merely because code was written or an AI reports success.
+A material change is not complete merely because code was written or an AI reports success.
 
 ```text
-Requirement
- ↓
-Ownership / scope
- ↓
-Implementation
- ↓
-Compatibility check
- ↓
-Tests
- ↓
-E2E where applicable
- ↓
-Fixed-SHA verification
- ↓
-Evidence
- ↓
-Risk / permission review
- ↓
-Acceptance
- ↓
-Release
- ↓
-Learning
+Requirement → Ownership/scope → Implementation → Compatibility → Tests → E2E where applicable → Fixed-SHA verification → Evidence → Risk/permission review → Acceptance → Release → Learning
 ```
 
 Delivery states are:
 
 `D0 Idea → D1 Planned → D2 Implemented → D3 Tested → D4 Verified → D5 Accepted → D6 Released → D7 Learned`
 
-The system must never represent a lower state as a higher state. Failed or incomplete verification remains explicitly visible.
+A lower state must never be reported as a higher state. Failed or incomplete verification remains visible.
 
-## 8. AI dependency reduction
+## 9. AI dependency reduction
 
-AI is an accelerator, not a single point of failure.
-
-When a task becomes deterministic and repeatedly verified, progressively move it from AI-dependent execution to rules, skills, automation, or native platform capability.
-
-This is **capability maturation**, not weakening AI:
+AI is an accelerator, not a single point of failure. When a task becomes deterministic and repeatedly verified, progressively move it from AI-dependent execution to rules, skills, automation, or native platform capability.
 
 `Observe → AI-assisted → AI-led + verification → skill/rule automation → stable automation → native capability`
 
 AI remains available for ambiguity, novel problems, high-value reasoning, and escalation.
 
-## 9. Learning acceleration
-
-The permanent learning loop is:
+## 10. Learning acceleration
 
 ```text
-Task
- ↓
-Execution
- ↓
-Verification
- ↓
-Evidence
- ↓
-Human/rule evaluation
- ↓
-Learning
- ↓
-Skill / rule / automation
- ↓
-Re-verification
+Task → Execution → Verification → Evidence → Human/rule evaluation → Learning → Skill/rule/automation → Re-verification
 ```
 
-Repeated successful patterns become reusable capabilities. Repeated failures become diagnostic knowledge. Learning must be grounded in actual execution/evidence, not self-reported model confidence.
+Repeated successful patterns become reusable capabilities. Repeated failures become diagnostic knowledge. Learning must be grounded in actual execution/evidence, not model confidence.
 
-Z-Brand domain learning and DDC engineering learning remain separately owned and can exchange information only through stable contracts.
+Z-Brand domain learning and DDC engineering learning remain separately owned and exchange information only through stable contracts.
 
-## 10. Risk and autonomy
+## 11. Self-optimization protocol
+
+After each material delivery, the engineering AI evaluates its own **process** against evidence:
+
+- complexity removed/added
+- capability reused or duplicated
+- repeated failure/success patterns
+- unnecessary AI context/quota consumption
+- candidate deterministic tests, skills, rules, or automations
+- next-cycle process improvements
+
+Only evidence-backed process improvements may be added to the operating method. The AI may optimize its workflow; it may not silently weaken the immutable platform principles.
+
+## 12. Risk and autonomy
 
 Risk and capability maturity are separate dimensions.
 
 - **Low risk + mature capability:** may run automatically.
-- **Medium risk:** automatic handling may escalate for confirmation.
+- **Medium risk:** may escalate for confirmation.
 - **High risk:** explicit authorization required.
 - **Critical risk:** human gate retained.
 
 Highest authorization never means unlimited or unaudited access.
 
-## 11. Shadow-first
+## 13. Shadow-first
 
 New AI decision capabilities should, where practical, operate in shadow mode against existing rules/human decisions before becoming authoritative. Promotion requires measurable evidence.
 
-## 12. Production protection
+## 14. Production protection
 
 Existing production behavior, subject/data calibration, security controls, and customer delivery paths must be preserved. Experimental AI, new adapters, Runtime work, and cross-repository integration must be isolated or feature-gated when necessary.
 
-## 13. External research
+## 15. External research
 
 GitHub and industry projects are used to learn architecture, testing, security, runtime isolation, agent evaluation, and engineering practice. External code is not copied indiscriminately. License and provenance must be audited before reuse.
 
-## 14. Three-repository target architecture
+## 16. Three-repository target architecture
 
 ```text
                     Zachary AI
@@ -229,7 +193,7 @@ GitHub and industry projects are used to learn architecture, testing, security, 
                    Zachary AI
 ```
 
-## 15. Implementation roadmap
+## 17. Implementation roadmap
 
 ### P0 — Baseline
 - preserve existing production behavior
@@ -281,8 +245,8 @@ GitHub and industry projects are used to learn architecture, testing, security, 
 - automate only after repeated verification
 - retain human gates for high/critical risk
 
-## 16. Non-negotiable rule
+## 18. Non-negotiable rule
 
-**The platform can only grow stronger.** New frameworks, models, providers, runtimes, protocols, or product requirements enter only when they are compatible with this baseline and improve capability without damaging safety, stability, boundaries, verification, rollback, or complexity control.
+**The platform can only grow stronger.** New frameworks, models, providers, runtimes, protocols, or product requirements enter only when compatible with this baseline and improve capability without damaging safety, stability, boundaries, verification, rollback, or complexity control.
 
 For Z-Brand-Core specifically: **never sacrifice production stability to accelerate platform experimentation.**
