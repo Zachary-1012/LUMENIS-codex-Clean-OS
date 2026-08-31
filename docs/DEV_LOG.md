@@ -335,3 +335,22 @@
   - 回归：test_ai/test_api 主体 + 新测共 33 passed；6 项失败为 Staging 既有 ENV（test_database 写死相对 data/monitor.db、TestAuthAPI 两例依赖开启 HTTP Basic），与本改动无关（已核对 test_database 不经 v4 config）。
 - 未实测/遗留：① 密钥“签发/列表/吊销”管理 UI 未做（接口已就绪，并入 Step7 设置页同构）；② ZBMP 工作台页面本体未建（下一步按手机录屏范式做网页适配=Step5c）；③ 生产 .env 是否设 ZBC_DB_PATH 已确认不设（生产行为不变），但合 main 前需在主 worktree 再跑一次导入/healthz 验证；④ grant 目前 12h 固定，续期/多设备管理后续做。
 - 决策：仍只在 ui/staging-foundation 提交 push，**不合 main、不动 8201**。回滚 = 删 workspace.py + blueprint 内 workspace 段落与 import + 前端密钥门退回；两张新表独立，保留不影响既有功能。
+
+---
+
+## 2026-09-01 · 阶段收尾断点（Step1–5b 完成，暂停休息）
+
+- 收尾时真实状态（已核对）：
+  - Staging worktree `D:\Taikoo-staging-ui`，分支 `ui/staging-foundation`，HEAD=**a9ab157**，工作区干净，本地=origin 0/0（已推）。
+  - 主 worktree `D:\Taikoo-monitor-new`，main HEAD=**e1bf094**（02:08 自动巡检提交，非本窗口操作），本地=origin/main 0/0；本窗口全程未改主 worktree 源码。
+  - 进程：生产 8201 LISTENING（v5.9.9，冻结未动）；Staging 8301 LISTENING（后台 task 3a628867，重启后 pid 以 netstat 为准）。
+- 已完成里程碑：Step1 统一 Auth 弹窗+令牌注入(bd8e7e7，已在 main) → Step2 基础组件层+组件画廊(d16d000，已在 main) → Step3 旧总览令牌重映射换肤+侧栏塌陷修复(dcae19a，仅分支) → Step4 GPT/Codex 式工作台外壳(9515767，仅分支) → Step5a CTH 微调+Home 竞态根治+390 适配(df4f523，仅分支) → Step5b ZBMP 正式 API Key+用户体系(a9ab157，仅分支)。
+- **下次精确续接 = Step5c：ZBMP 工作台页面本体**（只在 Staging）：
+  1. 重读 docs/reference/ui-research/ref-20260901-step5/frames/f001..f031.png（手机 ChatGPT 录屏每 5s 抽帧，已精读，范式见 Step5 研究笔记）与 docs/UI/ZBIP-DESIGN-SYSTEM.md、COMPONENT-SYSTEM.md。
+  2. 用侘寂黑白灰做**网页适配**（不照抄深色/手机尺寸）：分组设置卡（浅灰底+白圆角卡+每行线性 icon/标题/右值或 toggle/行间细分隔线）、二级页头（圆形返回+居中标题）、半屏 sheet（大圆角+遮罩+全宽主胶囊+取消）、连接器/插件列表、搜索分类胶囊 Tab、全屏引导 Modal。
+  3. 实现弹层「微光」：柔和边缘光晕 + 淡入上移（micro120/state220/page320，cubic-bezier(.16,1,.3,1)），动效只表达状态、不炫技。
+  4. 密钥「签发/列表/吊销」管理 UI 并入设置页同构侧栏（Step7，接口已就绪：/v4/auth/workspace/keys*）。
+  5. 断点补测：430/768/1024/1280/1440 逐档取图（CDP 改宽不稳，优先真机/新 target 截图）。
+- 合 main 决策（待用户验收）：Step3+4+5a+5b 目前都只在 ui/staging-foundation；因 Step5b 含后端新表/端点，合 main 前需在主 worktree 跑一次 import + healthz + 主体口径回归，确认生产不设 ZBC_DB_PATH 时行为不变，再 FF/merge、切 8201。
+- 体验入口：8301 左上工作区切换器→ZBMP，Staging 测试密钥存于副本库（browser-e2e label），生产合入后由 owner 经设置页签发、明文仅一次。
+- 红线不变：不改/弱化主体口径与 subject_hit/_subject_sql_and_values/aggregate_events/build_daily_report；publish_datetime≠captured_at；不删清覆盖生产库；AI=Ollama-only 增强层；小红书风控只识别-熔断-合法人工验证-恢复；不提交 .env/*.db/cookie/token/profile；DCC 子模块指针不 add；一任务一 commit，先旁路 Staging 验证再合 main。
