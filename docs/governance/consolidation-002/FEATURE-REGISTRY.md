@@ -2,7 +2,18 @@
 
 > 规则：以后任何代码改动先查 Feature ID；**无 ID 不允许直接新增功能**，先在此登记。
 > 一个 Feature 绑定：产品 / Owner 模块（对应 ASSET-ID）/ API 组 / DB 表 / UI 页面 / 状态 / Evidence / 版本。
-> 状态：ACTIVE 生产在用 · DEVELOPING 在建旁路 · PLANNED 已规划未落地 · RESERVED 预留 · LEGACY 待退。
+> **Feature 状态枚举（正式 9 态，状态列唯一合法取值）**
+> - **ACTIVE**：已实现，并且通过当前要求的验证。
+> - **DEVELOPING**：正在开发，尚未达到 ACTIVE。
+> - **EXPERIMENTAL**：已经存在真实实现/实验能力，但尚未达到生产接管标准。
+> - **PLANNED**：已经确定需要建设，但尚未实现。
+> - **RESERVED**：提前占位，未来可能建设，当前不实施。
+> - **LEGACY**：历史实现，当前不作为新 Owner。
+> - **DUPLICATE**：已确认与其他能力重复，必须指向唯一 Owner。
+> - **MIGRATION_REQUIRED**：已确认需要迁移，但迁移尚未完成。
+> - **NOT_VERIFIED**：存在实现、声明或历史记录，但当前证据不足，不能判断为完成。
+>
+> 状态列括号内仅为备注（暂停原因/工单号/窗口等），不改变状态词本身。本表为 **Feature 9 态（不含 DEPRECATED）**；资产侧 10 态（含 DEPRECATED）见 `ASSET-REGISTRY.md`，两者适用对象不同、不得混用。
 > 层级：Z-Brand Intelligence Platform（统一平台层）→ ZBP 品牌业务生产平台（本仓库，与 DCC/SICI 并列）→ CTH-POMS / ZBMP。
 > 产品：CTH=CTH-POMS（广州太古汇舆情，生产主入口）；ZBMP=ZBP 内母平台增强层（共用 Core）。
 
