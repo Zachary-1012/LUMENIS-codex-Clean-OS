@@ -61,6 +61,20 @@
         var b = document.getElementById(id), ic = b && b.querySelector('.svgicon');
         if (ic && SVG[map[id]]) ic.innerHTML = SVG[map[id]];
       });
+      // 采集数据：去 primary 实心、左置到顶栏左上角、纯文字轻量（与导出报告同规范）
+      var topbar = document.querySelector('.topbar');
+      var refresh = document.getElementById('refreshBtn');
+      if (topbar && refresh && !refresh.dataset.zbMoved) {
+        refresh.classList.remove('primary'); refresh.classList.add('zb-text-action');
+        var left = el('div', 'zb-top-left');
+        topbar.insertBefore(left, topbar.firstChild);
+        left.appendChild(refresh);
+        refresh.dataset.zbMoved = '1';
+      }
+      // AI 分析 / 导出报告：统一纯文字轻量（去旧 secondary/tertiary 底色与蓝链）
+      ['reviewBtn', 'reportBtn'].forEach(function (id) {
+        var b = document.getElementById(id); if (b) b.classList.add('zb-text-action');
+      });
     }
 
     /* ---- A. 导航分组（运行时包裹，不改源 DOM 顺序之外的结构） ---- */
@@ -113,8 +127,8 @@
     /* ---- D. 浮层：工作区切换 ---- */
     var wsPop = el('div', 'zb-pop');
     wsPop.innerHTML =
-      popItem('cth', SVG.grid, 'CTH-POMS', '广州太古汇舆情监测 · 生产', '<span class="trail zb-check">✓</span>') +
-      popItem('zbmp', SVG.lock, 'ZBMP', 'Z-Brand 品牌监测 · 需密钥', '<span class="trail">密钥</span>');
+      popItem('cth', SVG.grid, 'CTH-POMS', '广州太古汇舆情监测系统 · 生产', '<span class="trail zb-check">✓</span>') +
+      popItem('zbmp', SVG.lock, 'ZBMP 品牌监测平台', 'Z-Brand Monitoring Platform · 需密钥', '<span class="trail">密钥</span>');
     document.body.appendChild(wsPop);
     function popItem(key, ico, name, desc, trail) {
       return '<button class="zb-pop-item" data-ws="' + key + '"><span class="ico">' + ico + '</span><span class="txt"><b>' + name + '</b><small>' + desc + '</small></span>' + trail + '</button>';

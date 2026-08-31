@@ -447,27 +447,27 @@ async function checkDailyReportPopup(){
     dailyReportShown = true;
     localStorage.setItem(key, 'read');                     // 看过即归档
     const s = r.stats;
-    const level = (s.negative||0) >= 3 ? '🔴 重大' : (s.negative||0) >= 1 ? '🟡 关注' : '🟢 平稳';
+    const negN = s.negative||0; const lvlkey = negN >= 3 ? 'danger' : negN >= 1 ? 'warn' : 'ok'; const levelTxt = negN >= 3 ? '重大' : negN >= 1 ? '关注' : '平稳';
     const riskCN = {high:'高',medium:'中',low:'低'};
     const noteList = (r.notes||[]).slice(0,8).map(n=>{
-      return `<li style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:8px">
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--danger);font-weight:600">${esc(n.title||'无标题')}</span>
-        <span style="color:var(--muted);font-size:12px;white-space:nowrap">${n.publish_date||''} · ${riskCN[n.risk_level]||''}风险 · ${n.engagement||0}互动</span></li>`;
-    }).join('') || '<li style="padding:8px 0;color:var(--success)">昨日+今日未发现负面舆情笔记（无）</li>';
+      return `<li>
+        <span class="dr-note-t">${esc(n.title||'无标题')}</span>
+        <span class="dr-note-m">${n.publish_date||''} · ${riskCN[n.risk_level]||''}风险 · ${n.engagement||0}互动</span></li>`;
+    }).join('') || '<li class="dr-empty">昨日+今日未发现负面舆情笔记（无）</li>';
     const mc = $('modalContent');
-    mc.innerHTML = `<h3>📊 日报速览（仅负面 · 昨日+今日新发布）</h3>
-      <div style="text-align:center;padding:14px 0"><div style="font-size:30px;margin-bottom:6px">${level}</div><div style="color:var(--muted);font-size:13px">${esc(r.date_range||today)} · ${win==='morning'?'早间窗口':'晚间窗口'}</div></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0">
-        <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px"><div style="font-size:22px;font-weight:700">${s.total||0}</div><div style="color:var(--muted);font-size:12px">合计收录</div></div>
-        <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px"><div style="font-size:22px;font-weight:700">${s.yesterday_count||0}</div><div style="color:var(--muted);font-size:12px">昨日</div></div>
-        <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px"><div style="font-size:22px;font-weight:700;color:var(--danger)">${s.negative||0}</div><div style="color:var(--muted);font-size:12px">负面</div></div>
-        <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px"><div style="font-size:22px;font-weight:700;color:var(--danger)">${s.pushed||0}</div><div style="color:var(--muted);font-size:12px">推送条数</div></div>
+    mc.innerHTML = `<h3>日报速览<span class="dr-sub">仅负面 · 昨日+今日新发布</span></h3>
+      <div class="dr-level"><span class="dr-dot dr-dot-${lvlkey}"></span><span class="dr-level-txt">${levelTxt}</span><span class="dr-range">${esc(r.date_range||today)} · ${win==='morning'?'早间窗口':'晚间窗口'}</span></div>
+      <div class="dr-stats">
+        <div class="dr-stat"><b>${s.total||0}</b><span>合计收录</span></div>
+        <div class="dr-stat"><b>${s.yesterday_count||0}</b><span>昨日</span></div>
+        <div class="dr-stat"><b>${s.negative||0}</b><span>负面</span></div>
+        <div class="dr-stat"><b>${s.pushed||0}</b><span>推送条数</span></div>
       </div>
-      <div style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.6"><b>核心结论：</b>${esc(r.conclusion||'')}</div>
-      <div style="max-height:220px;overflow:auto;margin-bottom:14px"><ul style="list-style:none;margin:0;padding:0;font-size:13px">${noteList}</ul></div>
+      <div class="dr-concl"><b>核心结论</b><span>${esc(r.conclusion||'')}</span></div>
+      <div class="dr-notes"><ul>${noteList}</ul></div>
       <div class="form-actions">
         <button class="action primary" onclick="navigateTo('reports');closeModal()">查看完整报告</button>
-        <button class="action secondary" onclick="exportReport('daily')">导出日报</button>
+        <button class="action tertiary" onclick="exportReport('daily')">导出日报</button>
         <button class="action tertiary" onclick="closeModal()">知道了，归档</button>
       </div>`;
     // v5.8.9 移动端不直接弹全屏日报遮挡首屏，收进底部轻提示，点击查看

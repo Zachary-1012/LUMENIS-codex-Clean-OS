@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="/static/css/tokens.css?v=1.0.0">
 <link rel="stylesheet" href="/static/css/components.css?v=1.0.0">
 <link rel="stylesheet" href="/static/css/layout.css?v=1.0.0">
-<title>广州太古汇·舆情监测系统</title>
+<title>广州太古汇舆情监测系统 · CTH-POMS</title>
 <link rel="stylesheet" href="/static/css/style.css?v=8.0.0">
 <link rel="stylesheet" href="/static/css/nomi_global_drag.css?v=8.0.0">
 <link rel="stylesheet" href="/static/css/architecture_dashboard.css?v=8.0.0">
@@ -32,7 +32,7 @@
 <!-- [STAGING ONLY] 旧界面令牌重映射换肤层：验收前不合 main，回滚=删此 link -->
 <link rel="stylesheet" href="/static/css/zbip-theme-override.css?v=1.0.2">
 <!-- [STAGING ONLY] ZBIP App Shell 外壳层（GPT式工作台）：验收前不合 main，回滚=删以下两行 -->
-<link rel="stylesheet" href="/static/css/zbip-shell.css?v=1.0.8">
+<link rel="stylesheet" href="/static/css/zbip-shell.css?v=1.1.0">
 <!-- [STAGING ONLY] ZBMP 工作台视图 + 统一交互组件层（分组卡/Sheet/微光），回滚=删此 link -->
 <link rel="stylesheet" href="/static/css/zbmp-workbench.css?v=1.0.4">
 </head>
@@ -106,9 +106,9 @@
         <div class="page-hero">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
             <div>
-              <span class="eyebrow">OVERVIEW</span>
-              <h2>舆情总览</h2>
-              <p>广州太古汇 · 小红书舆情健康度实时监测；首页仅呈现需优先关注的信息，点击卡片进入详情。</p>
+              <span class="eyebrow">CORTECH LAB · CTH-POMS</span>
+              <h2>舆情驾驶舱</h2>
+              <p>CorTech Lab · Guangzhou Taikoo Hui Public Opinion Monitoring System — 广州太古汇 · 小红书舆情健康度实时监测；首页仅呈现需优先关注的信息，点击卡片进入详情。</p>
             </div>
             <div class="export-dropdown">
               <button class="action primary" onclick="toggleExportMenu()">📊 导出日报</button>
@@ -604,7 +604,7 @@
         <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">SETTINGS</span><h3>系统设置</h3><p>访问、更新频率和AI状态</p></div></div><div class="settings-grid"><div><b>当前版本</b><span id="versionText">5.8.2</span></div><div><b>采集频率</b><span>8:05–23:05错峰约9次/天，也可手动一键更新</span></div><div><b>分析模式</b><span id="aiStatusText">正在检测本机智能引擎…</span></div><div><b>远程访问</b><span>支持局域网与 Cloudflare Quick Tunnel</span></div><div><b>rednote CDP</b><span id="cdpStatusText">备选采集</span></div><div><b>自动采集</b><span id="autoIntervalText">错峰·冷却1h</span></div></div><div class="ai-console"><div class="ai-console-head"><div><span class="eyebrow">INTELLIGENCE GATEWAY</span><h4>智能引擎</h4><p>无需购买 Key。系统优先检测本机 Ollama、LM Studio、llama.cpp；未发现时自动使用内置本地规则。</p></div><span class="ai-live" id="aiLive"><i></i>检测中</span></div><div class="ai-console-grid"><div><span>当前引擎</span><b id="aiProvider">—</b></div><div><span>模型</span><b id="aiModel">—</b></div><div><span>运行状态</span><b id="aiRuntime">—</b></div><div><span>接口</span><b>本地可插拔</b></div></div><div class="ai-console-actions"><button class="action secondary" id="aiDetectBtn">重新检测</button><button class="action tertiary" id="aiTestBtn">测试 AI 接口</button></div><div class="ai-hints" id="aiHints"></div></div></div>
       </section>
 
-      <footer><span>© 2026 广州太古汇·舆情监测系统 <span id="footerVersion">v5.9.9</span></span><span>数据来源：小红书 · AI辅助分析 · 主体过滤优先</span></footer>
+      <footer><span>© 2026 广州太古汇舆情监测系统（CTH-POMS） <span id="footerVersion">v5.9.9</span></span><span>数据来源：小红书 · AI辅助分析 · 主体过滤优先</span></footer>
     
     <!-- Codex风格右侧AI洞察面板 -->
     <aside class="right-panel" id="rightPanel">
@@ -747,7 +747,7 @@
 <div class="toast" id="toast"></div>
 <!-- 舆情预警浮动通知容器 -->
 <div class="alert-container" id="alertContainer"></div>
-<script src="/static/js/app.js?v=8.0.0"></script>
+<script src="/static/js/app.js?v=8.0.1"></script>
 <!-- v5.8.4 太古集团全域事件/笔记库 -->
 <script src="/static/js/swire_group.js?v=8.0.0"></script>
 
@@ -874,7 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- GAP-03 全局 Auth Recovery：任何页面登录失效/人机验证/IP风控即在当前页弹统一恢复窗，不跳页；与 v4 子页同一实现 -->
 <script src="/v4/static/auth_global.js?v=zbip1" defer></script>
 <!-- [STAGING ONLY] ZBIP App Shell 运行时（分组/工作区切换/搜索/账户/Home） -->
-<script src="/static/js/zbip-shell.js?v=1.0.8" defer></script>
+<script src="/static/js/zbip-shell.js?v=1.1.0" defer></script>
 <!-- [STAGING ONLY] ZBMP 工作台运行时（双工作区/模块IA/连接器/设置/密钥Sheet），须在 shell 之后，回滚=删此 script -->
 <script src="/static/js/zbmp-workbench.js?v=1.0.3" defer></script>
 </body></html>

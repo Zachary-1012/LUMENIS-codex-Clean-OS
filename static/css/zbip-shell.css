@@ -29,14 +29,14 @@ body.zb-shell-on .page {
 body.zb-shell-on .sidebar {
   width: 248px !important; flex: 0 0 248px !important; max-width: 248px;
   background: var(--zb-stone-100, #F5F5F4) !important;
-  border-right: 0 !important; padding: 10px 10px 8px !important;
-  gap: 4px; position: sticky; top: 56px; height: calc(100vh - 56px);
+  border-right: 0 !important; padding: 8px 10px 8px !important;
+  gap: 4px; position: sticky !important; top: 56px !important; height: calc(100vh - 56px) !important; align-self: flex-start;
   backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
 }
 body.zb-shell-on .sidebar.glass { background: var(--zb-stone-100,#F5F5F4) !important; border: 0 !important; box-shadow: none !important; }
 
 /* 工作区切换器 + 搜索 注入槽 */
-.zb-workspace-bar { display: flex; align-items: center; gap: 6px; padding: 4px 4px 8px; }
+.zb-workspace-bar { display: flex; align-items: center; gap: 6px; padding: 2px 4px 6px; }
 .zb-ws-switch {
   display: flex; align-items: center; gap: 6px; border: 0; background: transparent;
   font: inherit; font-size: 15px; font-weight: 600; color: var(--zb-stone-900,#1C1917);
@@ -67,10 +67,10 @@ body.zb-shell-on .side-nav {
   flex: 1 1 auto !important; overflow-y: auto !important; overflow-x: hidden !important;
   display: flex; flex-direction: column; gap: 1px; padding-right: 2px; min-height: 0 !important;
 }
-.zb-nav-group { display: flex; flex-direction: column; gap: 1px; margin-bottom: 6px; }
+.zb-nav-group { display: flex; flex-direction: column; gap: 1px; margin-bottom: 4px; }
 .zb-nav-title {
   font-size: 11px; font-weight: 600; color: var(--zb-stone-500,#78716C);
-  padding: 10px 10px 4px; letter-spacing: .04em;
+  padding: 8px 10px 3px; letter-spacing: .04em;
 }
 body.zb-shell-on .side-item {
   height: 34px !important; min-height: 34px !important; border-radius: var(--zb-r-md,6px) !important;
@@ -83,6 +83,11 @@ body.zb-shell-on .side-item .navicon svg { width: 16px; height: 16px; filter: dr
 body.zb-shell-on .side-item:hover { background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important; }
 body.zb-shell-on .side-item.active { background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important; font-weight: 600; }
 body.zb-shell-on .side-item.active .navicon { color: var(--zb-stone-900,#1C1917); }
+/* 选中指示：旧绿色竖条（design-v9 ::before --gpt-green）统一覆盖为中性黑，Codex 式灰底+左黑条 */
+body.zb-shell-on .side-item.active::before {
+  content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 18px; background: var(--zb-stone-900,#1C1917) !important; border-radius: 0 2px 2px 0;
+}
 body.zb-shell-on .side-item.hidden-by-search { display: none !important; }
 body.zb-shell-on .nav-badge { background: var(--zb-danger,#DC2626); font-size: 10px; min-width: 18px; height: 18px; }
 /* 重要度小圆点（可挂在导航项右侧） */
@@ -205,6 +210,7 @@ body.zb-shell-on #zbHome.show { display: flex; }
 /* 隐藏乱飘的旧 Zachary 浮动头像（功能收进 Home/账户，不删源码） */
 body.zb-shell-on #zacharyFloat { display: none !important; }
 
+body.zb-shell-on .export-dropdown .action.primary,body.zb-shell-on .page-hero .action.primary{background:#fff!important;color:var(--zb-stone-700,#44403C)!important;border:1px solid var(--zb-stone-300,#D6D3D1)!important;box-shadow:none!important} body.zb-shell-on .export-dropdown .action.primary:hover,body.zb-shell-on .page-hero .action.primary:hover{background:var(--zb-stone-100,#F5F5F4)!important;color:var(--zb-stone-900,#1C1917)!important}
 /* ---------- 5. 顶栏收敛：去渐变/苹果色，对齐工程感 ---------- */
 body.zb-shell-on .topbar { background: var(--zb-stone-100,#F5F5F4) !important; border-bottom: 1px solid var(--zb-stone-200,#E7E5E4) !important; backdrop-filter: none !important; height: 56px !important; }
 /* 身份信息由左栏工作区切换器承担，旧顶栏品牌/居中状态/时钟在外壳下弱化，右侧操作保留 */
@@ -214,7 +220,21 @@ body.zb-shell-on .topbar .clock,
 body.zb-shell-on .topbar .topbar-time { display: none !important; }
 /* 隐藏 brand 后把操作区推到右侧，避免左上空一大片 */
 body.zb-shell-on .topbar { display: flex; align-items: center; }
-body.zb-shell-on .topbar .top-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+body.zb-shell-on .topbar .top-actions { margin-left: 0; display: flex; align-items: center; gap: 4px; }
+/* 左上角轻量操作槽（采集数据左置，zbip-shell.js 运行时把 refreshBtn 移入） */
+body.zb-shell-on .zb-top-left { display: flex; align-items: center; gap: 6px; margin-right: auto; min-width: 0; }
+/* 顶栏文字型操作统一为纯文字轻量（采集/AI分析/导出同规范：透明底、hover 浅灰，去实心/去蓝链） */
+body.zb-shell-on .topbar .action.zb-text-action,
+body.zb-shell-on .topbar .top-actions .action.secondary,
+body.zb-shell-on .topbar .top-actions .action.tertiary {
+  background: transparent !important; box-shadow: none !important; border: 1px solid transparent !important;
+  color: var(--zb-stone-700,#44403C) !important; padding: 0 9px; font-weight: 550;
+}
+body.zb-shell-on .topbar .action.zb-text-action:hover,
+body.zb-shell-on .topbar .top-actions .action.secondary:hover,
+body.zb-shell-on .topbar .top-actions .action.tertiary:hover {
+  background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important;
+}
 /* 顶栏操作统一为线性图标紧凑按钮（emoji 由 JS 替换为内联 SVG） */
 body.zb-shell-on .topbar .action { display: inline-flex; align-items: center; gap: 6px; height: 34px; border-radius: 7px; font-size: 13px; font-weight: 550; }
 body.zb-shell-on .topbar .action.icon-only { width: 34px; justify-content: center; padding: 0; }
@@ -226,14 +246,21 @@ body.zb-shell-on .brandmark { background: var(--zb-stone-900,#1C1917) !important
 /* ---------- 6. 响应式：390 侧栏抽屉、Home 自适应 ---------- */
 @media (max-width: 760px) {
   body.zb-shell-on #zbHome { left: 0; top: 56px; }
-  body.zb-shell-on .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 1200; transform: translateX(-102%); transition: transform .24s var(--zb-ease-out,cubic-bezier(.16,1,.3,1)); height: 100vh; }
-  body.zb-shell-on.zb-nav-open .sidebar { transform: translateX(0); box-shadow: 0 0 40px rgba(28,25,23,.2) !important; }
+  /* 手机：外壳单列、内容收满宽，避免沿用桌面 flex 双栏导致整页横向溢出 */
+  body.zb-shell-on .app-shell { display: block; }
+  body.zb-shell-on .layout { display: block !important; width: 100% !important; max-width: 100% !important; grid-template-columns: none !important; }
+  body.zb-shell-on .content { width: auto !important; max-width: 100% !important; min-width: 0 !important; margin: 6px !important; padding: 14px !important; box-sizing: border-box; }
+  body.zb-shell-on .page-view, body.zb-shell-on .page-hero { max-width: 100% !important; min-width: 0 !important; }
+  body.zb-shell-on .page-hero p { overflow-wrap: anywhere; word-break: break-word; }
+  body.zb-shell-on .sidebar { position: fixed !important; left: 0; top: 0; bottom: 0; z-index: 1200; transform: translateX(-102%) !important; transition: transform .24s var(--zb-ease-out,cubic-bezier(.16,1,.3,1)); height: 100vh !important; }
+  body.zb-shell-on.zb-nav-open .sidebar { transform: translateX(0) !important; box-shadow: 0 0 40px rgba(28,25,23,.2) !important; }
   body.zb-shell-on .content, body.zb-shell-on .page { margin: 6px; min-height: calc(100vh - 64px); }
   .zb-home-title { font-size: 24px; }
   /* 手机顶栏只留线性图标，隐藏文字标签，避免拥挤 */
   body.zb-shell-on .topbar .action .btn-label { display: none; }
   body.zb-shell-on .topbar .top-actions { gap: 4px; }
   body.zb-shell-on .topbar .action { padding: 0; width: 34px; justify-content: center; }
+  body.zb-shell-on .zb-top-left .action.zb-text-action { padding: 0; width: 34px; justify-content: center; }
   .zb-home-inner { padding: 0 4px; }
   .zb-ask { border-radius: 14px; }
   .zb-ask textarea { min-height: 46px; }
@@ -243,3 +270,5 @@ body.zb-shell-on .brandmark { background: var(--zb-stone-900,#1C1917) !important
 @media (prefers-reduced-motion: reduce) {
   .zb-pop, .zb-modal, .zb-ask, .zb-chip, .zb-ws-switch svg, .zb-tip { transition: none !important; }
 }
+/* 日报速览弹窗收编：黑白灰/小状态点/内联统计/模态按钮统一 */
+#modalContent h3{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:16px} #modalContent .dr-sub{font-weight:400;color:var(--zb-stone-500,#78716C);font-size:12px} #modalContent .dr-level{display:flex;align-items:center;gap:8px;padding:4px 0 12px;margin-bottom:12px;border-bottom:1px solid var(--zb-stone-200,#E7E5E4)} #modalContent .dr-dot{width:8px;height:8px;border-radius:99px;background:var(--zb-stone-500,#78716C);flex:none} #modalContent .dr-dot-danger{background:#DC2626} #modalContent .dr-dot-warn{background:#D97706} #modalContent .dr-dot-ok{background:#16A34A} #modalContent .dr-level-txt{font-weight:650;font-size:14px;color:var(--zb-stone-900,#1C1917)} #modalContent .dr-range{margin-left:auto;color:var(--zb-stone-500,#78716C);font-size:12px} #modalContent .dr-stats{display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:12px} #modalContent .dr-stat{text-align:center;border-right:1px solid var(--zb-stone-200,#E7E5E4)} #modalContent .dr-stat:last-child{border-right:0} #modalContent .dr-stat b{display:block;font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;color:var(--zb-stone-900,#1C1917)} #modalContent .dr-stat span{display:block;color:var(--zb-stone-500,#78716C);font-size:11px;margin-top:2px} #modalContent .dr-concl{background:var(--zb-stone-100,#F5F5F4);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--zb-stone-700,#44403C)} #modalContent .dr-concl b{color:var(--zb-stone-900,#1C1917);margin-right:6px} #modalContent .dr-notes{max-height:220px;overflow:auto;margin-bottom:14px} #modalContent .dr-notes ul{list-style:none;margin:0;padding:0;font-size:13px} #modalContent .dr-notes li{padding:7px 0;border-bottom:1px solid var(--zb-stone-200,#E7E5E4);display:flex;justify-content:space-between;gap:8px} #modalContent .dr-notes .dr-note-t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--zb-stone-900,#1C1917);font-weight:550} #modalContent .dr-notes .dr-note-m{color:var(--zb-stone-500,#78716C);font-size:12px;white-space:nowrap} #modalContent .dr-empty{color:var(--zb-stone-500,#78716C)!important} body.zb-shell-on .modal .action.primary{background:var(--zb-stone-900,#1C1917)!important;color:#fff!important;border:1px solid var(--zb-stone-900,#1C1917)!important;box-shadow:none!important} body.zb-shell-on .modal .action.secondary,body.zb-shell-on .modal .action.tertiary{background:transparent!important;color:var(--zb-stone-700,#44403C)!important;border:1px solid var(--zb-stone-300,#D6D3D1)!important;box-shadow:none!important} body.zb-shell-on #modal.modal{background:transparent!important;border:0!important;border-radius:0!important;max-width:none!important;max-height:none!important;width:100%!important;height:100%!important;padding:0!important;overflow:hidden!important} body.zb-shell-on #modal .modal-mask{position:fixed!important;inset:0!important;background:rgba(28,25,23,.40)!important;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);border-radius:0!important} body.zb-shell-on #modal .modal-close{color:var(--zb-stone-500,#78716C)!important;background:transparent!important;border:0!important;font-size:20px!important;top:12px!important;right:14px!important} @media(min-width:761px){body.zb-shell-on #modal .modal-panel{position:relative!important;background:#fff!important;border-radius:12px!important;box-shadow:0 16px 48px rgba(28,25,23,.20)!important;padding:22px 24px!important;max-width:560px!important;width:calc(100% - 48px)!important;max-height:84vh!important;overflow-y:auto!important;animation:zbPop .22s cubic-bezier(.16,1,.3,1)!important}} @media(max-width:760px){body.zb-shell-on #modal .modal-panel{background:#fff!important;border-radius:16px 16px 0 0!important;padding:20px 16px!important;width:100%!important;max-width:none!important;max-height:88vh!important}} @keyframes zbPop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
