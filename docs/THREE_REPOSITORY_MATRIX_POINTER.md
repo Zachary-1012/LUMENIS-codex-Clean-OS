@@ -1,5 +1,7 @@
 # 三仓库统一系统矩阵
 
+> 命名层级（以 PRODUCT_NAMING_BASELINE 为准）：ZBP（本仓库 Z-Brand-Core）、DCC、SICI 三者**并列**，共同上属于最顶层统一平台层 **Z-Brand Intelligence Platform**；ZBP 不是统辖 DCC/SICI 的顶层母平台。
+
 Z-Brand-Core 的跨仓库 Contract / Version Truth / Runtime / Evidence / Dependency 统一协调矩阵由 Development-Command-Console 维护：
 
 `Development-Command-Console/docs/THREE_REPOSITORY_SYSTEM_MATRIX.md`

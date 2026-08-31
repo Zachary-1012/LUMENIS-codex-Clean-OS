@@ -209,3 +209,12 @@
 - ④为源码事实下的 Owner 初判，最终人工签字；DUPLICATE/LEGACY 退出须走引用→替代→回归门槛，本轮未删任何文件。
 - UI 视觉(⑨)继续暂停；AUTH-01 主 SPA 挂 auth_global、SCHED-01 影子转门控、DIM-01 双维度落库、EVT-01 三类事件四关系、P0-FIX-1 版本号括号 bug 均登记待办，本轮不改。
 - 生产 8201/9222 全程未触碰。
+
+---
+
+## 2026-08-31 · 命名层级决议（只修层级认知，无业务改动）
+
+- 决议：最顶层统一平台层 = **Z-Brand Intelligence Platform**（不缩写）；其下 **ZBP（品牌业务生产平台）/ DCC / SICI 三者并列**，共同属于该顶层；**ZBP 不是整个母平台/最顶层**。CTH-POMS、ZBMP 继续归属于 ZBP。
+- 收口上一条"命名冲突待拍板"：原口头「Z-Brand Intelligence Platform」并非与 ZBP 二选一，而是 ZBP 之上的统一平台层。
+- 仅改命名/架构文档：PRODUCT_NAMING_BASELINE（权威重写）、THREE_REPOSITORY_MATRIX_POINTER、UNIFIED_PRODUCTION_ARCHITECTURE_v1.0、consolidation-002 五份治理文档与其只读生成器 build_asset_registry.py（重跑，数字不变 400/84/136、189/363、51）。
+- 未改任何业务代码 / 数据库 / 采集器 / UI / API / Runtime / Feature / Owner 判断，未删文件；历史日志条目不改写，仅追加本决议。

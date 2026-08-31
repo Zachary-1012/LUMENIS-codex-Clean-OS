@@ -1,7 +1,7 @@
 # ARCHITECTURE-MAP · 架构分层映射（Consolidation-002 / ③）
 
 > 只**映射**现状，不搬目录、不改代码。任何目录搬迁的前置条件：import / route / template / static / test / deployment 全部回归为绿。
-> 数据源：`ASSET-REGISTRY.md`（②，400 py / app 可达 84 / app.py 189 路由 / 51 表）+ 运行时实测。命名暂用本地基线 **ZBP（品牌业务生产平台）**，命名冲突见 ASSET-REGISTRY §0。
+> 数据源：`ASSET-REGISTRY.md`（②，400 py / app 可达 84 / app.py 189 路由 / 51 表）+ 运行时实测。命名层级见 §0。
 
 ## 0. 顶层定位（一套 Core，不拆第二套）
 

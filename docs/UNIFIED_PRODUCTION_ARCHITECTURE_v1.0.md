@@ -34,6 +34,8 @@ Z-Brand-Core
 
 三个仓库继续独立 Git 管理，不做粗暴物理合并，不互相覆盖源码。
 
+> 命名层级（以 PRODUCT_NAMING_BASELINE 为准）：三者**平级并列**，共同上属于最顶层统一平台层 **Z-Brand Intelligence Platform**；下图箭头仅表示 Research→Governance→Production 的协作流向，不是隶属或统辖关系。本仓库 Z-Brand-Core 对应其中的 **ZBP（品牌业务生产平台）**，不是顶层母平台。
+
 统一的是：Contracts、Evidence、Version、Change Map、Research Records、Release Gate。
 
 ## 2. ZBC 当前生产边界
