@@ -1,4 +1,4 @@
-﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
 from pathlib import Path
 
@@ -40,6 +40,16 @@ threading.excepthook = _thread_excepthook
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, request, send_from_directory, send_file, Response, redirect
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# === v5.9.9 统一日志增强：yyds-logger补丁模式，一行启用，不影响现有logging调用 ===
+# 多实例隔离/JSON结构化/request_id/按sink级别/异常捕获，所有后续模块自动受益
+try:
+    os.environ.setdefault("APP_ENV", "prod")
+    os.environ.setdefault("LOG_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs"))
+    from v4_upgrade.unified_logger import patch_logging
+    patch_logging()
+    print("[UnifiedLogger] yyds-logger补丁已启用（JSON结构化+多实例隔离+request_id）")
+except Exception as _log_e:
+    print(f"[UnifiedLogger] 启用失败（不影响系统运行）: {_log_e}")
 import database as db
 import ai_analyzer
 import collector
