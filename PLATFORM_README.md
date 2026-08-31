@@ -55,7 +55,7 @@ Unify stable contracts, not repository internals.
 
 Shared platform contracts may include:
 
-`Task` · `Risk` · `Permission` · `Execution` · `Evidence` · `Test` · `Rollback` · `Session` · `Learning`
+`Task` · `Risk` · `Permission` · `Execution` · `Evidence` · `Test` · `Rollback` · `Session` · `Learning` · `Delivery`
 
 Existing capability must be reused through:
 
@@ -106,7 +106,43 @@ GitHub Actions supplements controlled verification; it does not replace the evid
 
 Every release validation should identify repository, SHA, runtime/container, dependencies, test version, timestamp, result, and evidence.
 
-## 7. AI dependency reduction
+## 7. Permanent delivery standard
+
+A material change is not considered complete merely because code was written or an AI reports success.
+
+```text
+Requirement
+ ↓
+Ownership / scope
+ ↓
+Implementation
+ ↓
+Compatibility check
+ ↓
+Tests
+ ↓
+E2E where applicable
+ ↓
+Fixed-SHA verification
+ ↓
+Evidence
+ ↓
+Risk / permission review
+ ↓
+Acceptance
+ ↓
+Release
+ ↓
+Learning
+```
+
+Delivery states are:
+
+`D0 Idea → D1 Planned → D2 Implemented → D3 Tested → D4 Verified → D5 Accepted → D6 Released → D7 Learned`
+
+The system must never represent a lower state as a higher state. Failed or incomplete verification remains explicitly visible.
+
+## 8. AI dependency reduction
 
 AI is an accelerator, not a single point of failure.
 
@@ -118,7 +154,7 @@ This is **capability maturation**, not weakening AI:
 
 AI remains available for ambiguity, novel problems, high-value reasoning, and escalation.
 
-## 8. Learning acceleration
+## 9. Learning acceleration
 
 The permanent learning loop is:
 
@@ -144,7 +180,7 @@ Repeated successful patterns become reusable capabilities. Repeated failures bec
 
 Z-Brand domain learning and DDC engineering learning remain separately owned and can exchange information only through stable contracts.
 
-## 9. Risk and autonomy
+## 10. Risk and autonomy
 
 Risk and capability maturity are separate dimensions.
 
@@ -155,19 +191,19 @@ Risk and capability maturity are separate dimensions.
 
 Highest authorization never means unlimited or unaudited access.
 
-## 10. Shadow-first
+## 11. Shadow-first
 
 New AI decision capabilities should, where practical, operate in shadow mode against existing rules/human decisions before becoming authoritative. Promotion requires measurable evidence.
 
-## 11. Production protection
+## 12. Production protection
 
 Existing production behavior, subject/data calibration, security controls, and customer delivery paths must be preserved. Experimental AI, new adapters, Runtime work, and cross-repository integration must be isolated or feature-gated when necessary.
 
-## 12. External research
+## 13. External research
 
 GitHub and industry projects are used to learn architecture, testing, security, runtime isolation, agent evaluation, and engineering practice. External code is not copied indiscriminately. License and provenance must be audited before reuse.
 
-## 13. Three-repository target architecture
+## 14. Three-repository target architecture
 
 ```text
                     Zachary AI
@@ -193,7 +229,7 @@ GitHub and industry projects are used to learn architecture, testing, security, 
                    Zachary AI
 ```
 
-## 14. Implementation roadmap
+## 15. Implementation roadmap
 
 ### P0 — Baseline
 - preserve existing production behavior
@@ -209,7 +245,9 @@ GitHub and industry projects are used to learn architecture, testing, security, 
 - Evidence
 - Test
 - Rollback
+- Session
 - Learning
+- Delivery
 
 ### P2 — Mobile-first SICI
 - keep SICI lightweight
@@ -243,7 +281,7 @@ GitHub and industry projects are used to learn architecture, testing, security, 
 - automate only after repeated verification
 - retain human gates for high/critical risk
 
-## 15. Non-negotiable rule
+## 16. Non-negotiable rule
 
 **The platform can only grow stronger.** New frameworks, models, providers, runtimes, protocols, or product requirements enter only when they are compatible with this baseline and improve capability without damaging safety, stability, boundaries, verification, rollback, or complexity control.
 
