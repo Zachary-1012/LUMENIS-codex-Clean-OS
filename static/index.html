@@ -32,7 +32,9 @@
 <!-- [STAGING ONLY] 旧界面令牌重映射换肤层：验收前不合 main，回滚=删此 link -->
 <link rel="stylesheet" href="/static/css/zbip-theme-override.css?v=1.0.2">
 <!-- [STAGING ONLY] ZBIP App Shell 外壳层（GPT式工作台）：验收前不合 main，回滚=删以下两行 -->
-<link rel="stylesheet" href="/static/css/zbip-shell.css?v=1.0.7">
+<link rel="stylesheet" href="/static/css/zbip-shell.css?v=1.0.8">
+<!-- [STAGING ONLY] ZBMP 工作台视图 + 统一交互组件层（分组卡/Sheet/微光），回滚=删此 link -->
+<link rel="stylesheet" href="/static/css/zbmp-workbench.css?v=1.0.2">
 </head>
 <body>
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
@@ -872,5 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- GAP-03 全局 Auth Recovery：任何页面登录失效/人机验证/IP风控即在当前页弹统一恢复窗，不跳页；与 v4 子页同一实现 -->
 <script src="/v4/static/auth_global.js?v=zbip1" defer></script>
 <!-- [STAGING ONLY] ZBIP App Shell 运行时（分组/工作区切换/搜索/账户/Home） -->
-<script src="/static/js/zbip-shell.js?v=1.0.7" defer></script>
+<script src="/static/js/zbip-shell.js?v=1.0.8" defer></script>
+<!-- [STAGING ONLY] ZBMP 工作台运行时（双工作区/模块IA/连接器/设置/密钥Sheet），须在 shell 之后，回滚=删此 script -->
+<script src="/static/js/zbmp-workbench.js?v=1.0.0" defer></script>
 </body></html>

@@ -210,6 +210,8 @@
     function setWorkspace(name) {
       wsBtn.querySelector('.zb-ws-name').textContent = name;
       var meta = accBtn.querySelector('.zb-account-meta small'); if (meta) meta.textContent = '本地账户 · ' + name;
+      // 通知 workbench 等外层做视图切换（CTH/ZBMP 双工作区）
+      window.dispatchEvent(new CustomEvent('zb:workspace', { detail: { name: name } }));
     }
 
     /* ---- G. Home 干净居中提问页 ---- */

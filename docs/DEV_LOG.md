@@ -377,3 +377,44 @@
 - 合 main：Step3/4/5a/5b 仍只在分支；合前需在主 worktree 跑 import+healthz+主体口径回归（确认生产不设 ZBC_DB_PATH 时行为不变），用户已确认视觉，可在接入首批模块稳定后择机合并并切 8201。
 - 既有 GAP（择期，不阻塞接入）：GAP-01 统一 pytest 入口、GAP-04 三套 run-code 收口、GAP-05 调度影子转门控、GAP-06 双维度落库(禁 user_type=UGC)、GAP-07 事件三类四关系、#rightPanel 假数据接真实、侧栏搜索与 Ctrl+K 合并、253 条空正文补抓、8 条脏相对时间归一。
 - 环境/运维遗留：8200 legacy 重复实例清理待授权；cloudflared 临时公网当前未开；固定域名/服务器与 Docker 落地未定；小红书当前 BLOCKED 熔断、按用户令暂停采集，恢复时点待定。
+
+---
+
+## Step5c｜ZBMP 工作台视图架构 + 统一交互组件层（2026-09-01，仅 ui/staging-foundation，未合 main）
+
+### 目标（用户指令）
+"先把整体大系统 UI 视觉交互架构搞定"：风格用户已验收 OK 不推翻；本轮立起双工作区视图架构 + ZBMP 工作台 IA 骨架 + 统一交互组件层；模块先用诚实占位（下轮接真实数据），CTH 业务 DOM 不碰。ZBMP 全程对标手机录屏 ca72d2a…raw.mp4 的流程质感做**网页适配**（不照抄深色/手机尺寸）。
+
+### 改了什么 / 哪些文件（新增 2、改 2）
+1. **新增 static/css/zbmp-workbench.css（v1.0.2，约 14.6KB）**：双工作区切换（body[data-workspace=zbmp] 隐藏 CTH .side-nav、显示 .zbmp-nav；#zbmpView 独立 fixed 主区）、ZBMP 独立侧栏、二级页头（圆形返回+标题+副述，sticky 毛玻璃）、Home 工作台（logo+整宽搜索+分组 tile 网格 auto-fill minmax218）、分组设置卡 .zb-group/.zb-card/.zb-row、iOS 风格 .zb-switch（开 success 绿/关 stone）、分段 .zb-seg、连接器 .zb-connector、诚实空状态 .zb-empty、右侧半屏 .zb-sheet（遮罩+大圆角抽屉+全宽主/次胶囊按钮）、微光动效 @keyframes zbHalo（弹层边缘光晕+淡入）/zbFadeUp（页面淡入上移 260ms）、@760 手机适配（主区 left0、tile 两列、sheet 全屏）。
+2. **新增 static/js/zbmp-workbench.js（v1.0.0，约 22.5KB）**：IIFE 防重；ZBMP 6 分组 IA（概览/品牌[品牌资产·竞品监控·案例库]/监测[内容监测·话题战役]/洞察[事件中心·事件关系·AI 评估]/产出[报告中心]/系统[连接器·工作区设置]）；注入独立侧栏与 #zbmpView；内部路由（侧栏/tile→模块、圆形返回→Home）；连接器页真实平台适配器范式（小红书 PRIMARY 橙点"暂停/熔断保护中"、抖音 SECONDARY disabled、微博/B站/快手知乎贴吧 future 灰点）；设置页 4 分组卡（外观/通用/安全与访问/关于）+ toggle 交互；**密钥管理 Sheet 接 Step5b 真实后端**（GET keys 列表含有效/已吊销状态点、POST 签发明文仅一次、revoke 吊销）；其余未接入模块统一 .zb-empty 诚实占位（"Core 能力已具备·正在接入工作台"/"规划中"，不展示任何编造数字）。
+3. **改 static/js/zbip-shell.js（v1.0.7→1.0.8）**：setWorkspace 内新增 `window.dispatchEvent(new CustomEvent('zb:workspace'))`，作为外壳→工作台的唯一切换信号（仅 +1 行逻辑，不改 CTH 任何行为）。
+4. **改 static/index.html**：在 shell 层后引入 zbmp-workbench.css/js（均标 [STAGING ONLY]、注明回滚=删引用），shell 引用 bump 1.0.8。
+- 回滚：删除 index.html 两行引用即完全恢复，不改源 DOM 顺序/后端/DB。
+
+### 为什么（机制）
+沿用 Strangler 增量层路线：CTH 业务视图与 ZBMP 工作台**物理共存、按 data-workspace 显隐**，进入 ZBMP 时 #zbmpView 不透明覆盖 .content、返回即恢复 CTH 原状态，因此不重写、不拼旧选择器、零业务 DOM 改动；组件全部只引用 --zb-* token，不新增随意颜色。
+
+### 数据库 / 迁移
+**无变化、无迁移**。本轮纯前端；密钥 Sheet 仅读取/调用 Step5b 已建的 v4_workspace_keys/v4_workspace_grants（a9ab157），Staging 副本库未改结构，生产库未碰。
+
+### 测试与真实结果（已实测，浏览器真实加载 + DOM 断言 + 双视口截图）
+- 双工作区切换：初始 body[data-workspace]=cth、zbmpView/nav 已注入但隐藏、CTH side-nav flex；已授权会话点 ZBMP→data-workspace=zbmp、zbmpView flex、CTH side-nav none、独立 zbmp-nav flex、Home 标题与 11 tile/11 侧栏项正确（未授权会话弹密钥门为 Step5b 既有行为，本轮复测一致）。
+- 内部路由：连接器 5 平台行、设置 4 分组 9 行 2 toggle、toggle aria-checked true→false 可切、events 等未接入模块显示诚实空状态与标签、圆形返回回 Home 恢复 11 tile。
+- **密钥 Sheet 真实打通后端**：打开后从副本库读到 2 把 key——#2 browser-e2e 有效（绿点）、#1 http-smoke 已吊销（灰点），含 key_prefix/最近使用/#编号/吊销按钮，证明 Step5b 后端与新管理 UI 闭环（未在本轮新签发，避免产生多余测试 key）。
+- 自修 1 个真实样式 bug：设置行右值"跟随系统/14/13"被 flex 压缩成 56×56 逐字竖排（inline-flex 内匿名 CJK 文本节点的 flexbox 断行坑），定位到 flex:0 0 auto 仍因匿名 item 被压后，改 .rv 为 inline-block+nowrap，复测全部右值单行（offsetHeight 19–20、首个 71px 宽）水平对齐。
+- 返回闭环：ZBMP→设置→"返回 CTH-POMS 工作区"→data-workspace 回 cth、zbmpView none、CTH side-nav flex、CTH 业务视图/KPI 仍在（CTH 零破坏）。
+- 手机 390（CDP setDeviceMetricsOverride 实测后已 clear）：汉堡顶栏、整宽搜索、tile 两列、分组标题、状态点、无横向溢出。
+- 静态/健康：node --check 两个 JS 均 OK；8301 /healthz ok v5.9.9；**8201 生产 /healthz 全程 ok v5.9.9 冻结未动**。
+- 证据截图：docs/UI/evidence/step5c-home.png、step5c-settings.png（修复后）、step5c-keysheet.png、step5c-connectors（页面已实测）、step5c-home-390.png。
+
+### 未实测 / 遗留（如实）
+- 430/768/1024/1280/1440 断点未逐档取图（本轮仅桌面 1066 与 390）；超窄 320 未测；连接器页未单独存图。
+- 设置页外观组（主题/强调色/字号）目前是范式静态行（弹层选择器下轮做），高密度/微交互两个 toggle 仅本地态、尚未持久化到配置。
+- 除连接器/设置外 9 个模块均为诚实占位，**下轮主线=逐块接真实 API/数据**（接入一个实测一个）。
+- ZBMP 下顶栏仍露出 CTH 全局操作按钮（采集数据/AI 分析/导出报告），下轮按工作区做显隐/语义区分。
+- Step5b 遗留不变：grant 固定 12h、续期/多设备管理未做。
+
+### Git
+- 本轮提交见本次 commit（ui/staging-foundation）；生产 main 与 8201 全程未动；合 main 仍待用户验收 + 主 worktree import/healthz/主体口径回归。
+- 红线自检：未碰 SUBJECT_WORDS/EXCLUDE/subject_hit/_subject_sql_and_values/aggregate_events/build_daily_report/risk_engine；未混淆 publish_datetime/captured_at；未改 DB；AI 仍 Ollama-only 增强层；未提交 .env/*.db/cookie/token/profile。
