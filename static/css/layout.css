@@ -520,12 +520,15 @@
 
 /* 页面视图 */
 .page-view {
-    display: none;
+    display: none !important;
     animation: page-in var(--duration-page) var(--easing-decelerate);
 }
 
 .page-view.active {
-    display: block;
+    display: block !important;
+    overflow: visible !important;
+    flex: none !important;
+    flex-direction: column !important;
 }
 
 @keyframes page-in {
