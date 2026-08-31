@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    Z-BRAND DESIGN SYSTEM · WABI-SABI THEME  (zb-theme.css)
    唯一权威视觉层 · 侘寂极简 / 黑白灰为体 / 状态色仅作小面积标识
    参考：ChatGPT 桌面端的克制 + Apple 的细腻 + Codex 的工程感
@@ -38,17 +38,17 @@
   --w-on-dark:       #FFFFFF;
 
   /* 1.4 强调色（克制蓝，仅小面积：链接/toggle/焦点/主图标） */
-  --w-accent:        #2F6FED;
-  --w-accent-hover:  #1F5BD8;
-  --w-accent-soft:   rgba(47,111,237,.08);
-  --w-accent-line:   rgba(47,111,237,.22);
+  --w-accent:        #3B82F6;
+  --w-accent-hover:  #2563EB;
+  --w-accent-soft:   rgba(59,130,246,.08);
+  --w-accent-line:   rgba(59,130,246,.20);
 
   /* 1.5 状态色（低饱和，仅状态点/细图标/小标签，绝不铺大面） */
-  --w-ok:      #1FA463;  --w-ok-bg: rgba(31,164,99,.08);   --w-ok-line: rgba(31,164,99,.22);
-  --w-warn:    #C77B16;  --w-warn-bg: rgba(199,123,22,.09); --w-warn-line: rgba(199,123,22,.24);
-  --w-danger:  #E04E4A;  --w-danger-bg: rgba(224,78,74,.08);--w-danger-line: rgba(224,78,74,.22);
-  --w-info:    #2F6FED;  --w-info-bg: rgba(47,111,237,.08);
-  --w-ai:      #7C5CFC;  --w-ai-bg: rgba(124,92,252,.07);  --w-ai-line: rgba(124,92,252,.20);
+  --w-ok:      #22C55E;  --w-ok-bg: rgba(34,197,94,.08);   --w-ok-line: rgba(34,197,94,.20);
+  --w-warn:    #EAB308;  --w-warn-bg: rgba(234,179,8,.09); --w-warn-line: rgba(234,179,8,.22);
+  --w-danger:  #EF4444;  --w-danger-bg: rgba(239,68,68,.08);--w-danger-line: rgba(239,68,68,.20);
+  --w-info:    #3B82F6;  --w-info-bg: rgba(59,130,246,.08);
+  --w-ai:      #8B5CF6;  --w-ai-bg: rgba(139,92,246,.07);  --w-ai-line: rgba(139,92,246,.18);
 
   /* 1.6 字体 */
   --w-font: -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
@@ -66,7 +66,7 @@
   --w-sh-sm:0 1px 3px rgba(16,16,20,.05),0 1px 2px rgba(16,16,20,.03);
   --w-sh-md:0 4px 16px rgba(16,16,20,.06);
   --w-sh-lg:0 12px 32px rgba(16,16,20,.10);
-  --w-sh-focus:0 0 0 3px rgba(47,111,237,.14);
+  --w-sh-focus:0 0 0 3px rgba(59,130,246,.14);
 
   /* 1.10 动效（克制：仅 opacity/transform） */
   --w-d-micro:130ms; --w-d-normal:200ms; --w-d-panel:280ms; --w-d-page:340ms;
@@ -656,3 +656,100 @@ tbody tr:last-child td{ border-bottom:0; }
 .zb-rounded{ border-radius:var(--w-r-md); } .zb-rounded-full{ border-radius:var(--w-r-pill); }
 .zb-border{ border:1px solid var(--w-border); }
 .zb-bg-surface{ background:var(--w-surface); } .zb-bg-subtle{ background:var(--w-surface-2); }
+
+/* ============================================================================
+   §21 图标统一：GPT/Codex Lucide/Feather 线性风格
+   所有图标统一为：stroke线性、1.5-2线宽、圆角线帽、当前文字色、16-20px
+   禁止：填充图标、渐变图标、彩色图标背景（状态色图标除外）
+============================================================================ */
+svg{
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  flex-shrink:0;
+}
+/* 导航图标 */
+.side-item .navicon, .side-item svg{
+  width:18px; height:18px;
+  color:var(--w-ink-3);
+  stroke-width:1.8;
+  transition:color var(--w-d-micro);
+}
+.side-item:hover .navicon, .side-item:hover svg{ color:var(--w-ink-2); }
+.side-item.active .navicon, .side-item.active svg{ color:var(--w-ink); }
+/* 顶栏图标 */
+.topbar svg, .top-actions svg, .icon-button svg{
+  width:18px; height:18px;
+  color:var(--w-ink-2);
+  stroke-width:1.8;
+}
+.icon-button:hover svg{ color:var(--w-ink); }
+/* 指标卡片图标 */
+.metric-icon{
+  width:32px; height:32px;
+  background:var(--w-surface-2)!important;
+  border:1px solid var(--w-border)!important;
+  border-radius:var(--w-r-md)!important;
+  box-shadow:none!important;
+  display:flex; align-items:center; justify-content:center;
+}
+.metric-icon svg{
+  width:16px; height:16px;
+  stroke-width:1.8;
+  color:currentColor;
+}
+.metric-icon.blue{ color:var(--w-accent); }
+.metric-icon.green{ color:var(--w-ok); }
+.metric-icon.red{ color:var(--w-danger); }
+.metric-icon.amber{ color:var(--w-warn); }
+.metric-icon.purple{ color:var(--w-ai); }
+.metric-icon.gray{ color:var(--w-ink-3); }
+/* 按钮图标 */
+.action svg, .btn svg{
+  width:16px; height:16px;
+  stroke-width:1.8;
+}
+/* 卡片头部图标 */
+.panel-head svg, .home-card-head svg, .section-intro svg{
+  width:16px; height:16px;
+  color:var(--w-ink-3);
+  stroke-width:1.8;
+}
+/* AI洞察卡片图标 */
+.ai-insight-card-header svg{
+  width:16px; height:16px;
+  color:var(--w-ink-2);
+  stroke-width:1.8;
+}
+/* 空状态/加载/错误图标 */
+.empty-state-icon svg, .error-state-icon svg{
+  width:24px; height:24px;
+  stroke-width:1.6;
+}
+/* 时间线图标 */
+.timeline-item svg{
+  width:14px; height:14px;
+  stroke-width:1.8;
+}
+/* 表格操作图标 */
+table svg, .table-actions svg{
+  width:14px; height:14px;
+  stroke-width:1.8;
+}
+/* 关闭按钮图标 */
+.close svg, .btn-icon svg{
+  width:16px; height:16px;
+  stroke-width:1.8;
+}
+/* 品牌logo图标保持填充 */
+.brandmark svg, .brandmark span{
+  fill:#fff;
+  stroke:none;
+}
+/* 状态点保持填充圆形 */
+.dot, .status-dot, [class*="-dot"]{
+  fill:currentColor;
+  stroke:none;
+}
