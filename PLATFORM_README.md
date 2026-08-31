@@ -195,7 +195,48 @@ GitHub and industry projects are used to learn architecture, testing, security, 
                    Zachary AI
 ```
 
-## 17. Implementation roadmap
+## 17. Mutual verification and feedback loop — IMMUTABLE
+
+The three repositories must **verify and strengthen one another without collapsing their boundaries**.
+
+```text
+Z-Brand-Core
+  │  domain requirements / production truth
+  ↓
+DDC
+  │  engineering contracts / verification / evidence
+  ↓
+SICI-Core
+  │  mobile interaction / real workflow feedback
+  ↓
+DDC
+  │  execution + test evidence
+  ↓
+Z-Brand-Core
+  │  domain validation / production applicability
+  └──────────────→ Learning → all three
+```
+
+This is a **mutual feedback contract**, not mutual ownership:
+
+1. **Z-Brand-Core validates business meaning and production applicability.**
+2. **DDC validates engineering execution, risk, permissions, tests, evidence, rollback, and delivery state.**
+3. **SICI validates mobile usability, interaction flow, device-side constraints, and user-facing execution feedback.**
+4. Findings from one repository become inputs to the other repositories only through explicit contracts, Evidence, tests, or reviewed learning records.
+5. A repository may challenge another repository's assumptions, but may not silently rewrite another repository's owned internals.
+6. Reusable improvements are adapted and re-verified at their destination; successful behavior in one repository is never assumed to be valid everywhere.
+7. A failed verification is a platform learning signal and must remain visible until resolved or explicitly accepted.
+8. The loop must continuously reduce duplicated work, failure recurrence, AI dependency, and integration complexity while increasing verified capability.
+
+### Permanent principle
+
+> **三方反哺、互相验证、边界不破、能力共享、责任分明。**
+>
+> **Z-Brand-Core 提供业务/生产真相；DDC 提供工程控制与验证真相；SICI-Core 提供移动交互与真实使用反馈。三方通过 Contract + Evidence + Test + Learning 形成闭环，任何一方都不能成为另外两方的无边界上级。**
+
+This section is immutable. It may only be clarified, strengthened, or expanded. It may not be deleted, weakened, bypassed, or reinterpreted to permit uncontrolled coupling or one-way dependency.
+
+## 18. Implementation roadmap
 
 ### P0 — Baseline
 - preserve existing production behavior
@@ -247,7 +288,7 @@ GitHub and industry projects are used to learn architecture, testing, security, 
 - automate only after repeated verification
 - retain human gates for high/critical risk
 
-## 18. Five-times-daily engineering inspection
+## 19. Five-times-daily engineering inspection
 
 GitHub Actions is the execution layer for the platform's recurring engineering inspection. DDC owns the inspection contract; Z-Brand-Core remains the domain/production owner.
 
@@ -265,7 +306,7 @@ Inspection → Three-repository understanding → Research → Candidate → Min
 
 This design deliberately separates **ChatGPT/AI research and reminder assistance** from **GitHub Actions deterministic engineering inspection**. AI may propose improvements; Actions supplies repeatable repository evidence. Neither may bypass the delivery gates.
 
-## 19. Non-negotiable rule
+## 20. Non-negotiable rule
 
 **The platform can only grow stronger.** New frameworks, models, providers, runtimes, protocols, or product requirements enter only when compatible with this baseline and improve capability without damaging safety, stability, boundaries, verification, rollback, or complexity control.
 
