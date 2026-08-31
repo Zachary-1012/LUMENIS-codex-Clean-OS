@@ -354,3 +354,26 @@
 - 合 main 决策（待用户验收）：Step3+4+5a+5b 目前都只在 ui/staging-foundation；因 Step5b 含后端新表/端点，合 main 前需在主 worktree 跑一次 import + healthz + 主体口径回归，确认生产不设 ZBC_DB_PATH 时行为不变，再 FF/merge、切 8201。
 - 体验入口：8301 左上工作区切换器→ZBMP，Staging 测试密钥存于副本库（browser-e2e label），生产合入后由 owner 经设置页签发、明文仅一次。
 - 红线不变：不改/弱化主体口径与 subject_hit/_subject_sql_and_values/aggregate_events/build_daily_report；publish_datetime≠captured_at；不删清覆盖生产库；AI=Ollama-only 增强层；小红书风控只识别-熔断-合法人工验证-恢复；不提交 .env/*.db/cookie/token/profile；DCC 子模块指针不 add；一任务一 commit，先旁路 Staging 验证再合 main。
+
+### 用户验收结论（2026-09-01 休息前确认）
+- **当前 8301 这页风格 OK、整体 OK**：Step3 换肤 + Step4 工作台外壳 + Step5a 微调的黑白灰侘寂/GPT 式方向获用户确认通过，下次不再推翻视觉基调，只做精修与模块接入。
+- **下次开工主线 = 在已确认的外壳里接入真实模块**（不再重做风格/布局）：把现有真实功能按 6 分组逐块接进外壳与导航，ZBMP 侧同步建工作台页面；接入一个、在 8301 实测一个、再接入下一个。
+
+### 【已完成】（Step1–5b，均在 ui/staging-foundation；Step1/2 已在 main）
+1. Step1 全局 Auth 恢复弹窗挂主 SPA + ZBIP 设计令牌注入（纯变量零视觉影响，bd8e7e7，已在 main）。
+2. Step2 .zb- 基础组件层 + 隔离组件画廊 /static/zb-preview.html（d16d000，已在 main）。
+3. Step3 旧总览令牌重映射换肤（冷灰蓝→Stone 暖黑白灰、主按钮近黑、圆角/阴影收敛）+ 修复侧栏 21 项被压到 0.58px 的塌陷 bug（dcae19a，仅分支）。
+4. Step4 GPT/Codex 式工作台外壳：左上工作区切换器(CTH-POMS/ZBMP 密钥门)、21 项归 6 分组线性侧栏、干净居中 Home「你今天想知道什么？」+Zachary、账户浮层、常规搜索、窄留白色差（9515767，仅分支）。
+5. Step5a CTH 微调：顶栏 5 按钮 emoji→线性 SVG、操作靠右修左上留白、侧栏字距字号收紧、Home 加载竞态根治(isTrusted+fixed 居中+两次兜底)、「话题监测端口」→「话题监测」、390 手机适配（df4f523，仅分支）。
+6. Step5b ZBMP 正式 API Key+用户体系：复用 v4 auth，新增 workspace 密钥签发/校验/吊销/12h grant（5 端点+2 幂等表）、修复 v4 DB_PATH 的 Staging 隔离、前端密钥门接真实 unlock；6 单测 + HTTP 全链路 + 浏览器 E2E 全部实测通过（a9ab157，仅分支）。
+7. 治理/研究资产：docs/UI 设计系统/组件/页面地图、docs/learning、FEATURE-FINAL-VERIFICATION-MATRIX(34 Feature 九态)、FEATURE-GAP-REGISTER(GAP-01..22)、UI-FINAL-CAPABILITY-MAP、TECHNOLOGY-OPTIMIZATION-BACKLOG、资产扫描矩阵、UI 研究素材(12 参考图+31 抽帧+LFS 源视频)。
+8. 生产安全：全程 8201 v5.9.9 冻结未动、生产库未碰；每次只 add 指定路径并做敏感反查；分支本地=远程 0/0。
+
+### 【未完成 / 下次做】
+- P0-接入（用户已令下次开始）：在已确认外壳内逐模块接入真实功能（总览/监测/分析/品牌资产/产出/系统 6 分组），替换占位、接通真实 API 与数据；ZBMP 侧建工作台页面本体（Step5c，范式用 ref-20260901-step5 31 帧做网页适配：分组设置卡/二级页头/半屏 sheet/连接器列表/搜索分类 Tab/全屏引导 Modal）。
+- 弹层「微光」动效（柔和边缘光晕+淡入上移，120/220/320ms）尚未写进 CSS。
+- 密钥「签发/列表/吊销」管理 UI 未做（后端接口已就绪，并入设置页同构侧栏 Step7）；grant 续期/多设备管理未做。
+- 响应式断点 430/768/1024/1280/1440 未逐档取图（CDP 改宽不稳，需真机/新 target）；超窄 320 折行未测。
+- 合 main：Step3/4/5a/5b 仍只在分支；合前需在主 worktree 跑 import+healthz+主体口径回归（确认生产不设 ZBC_DB_PATH 时行为不变），用户已确认视觉，可在接入首批模块稳定后择机合并并切 8201。
+- 既有 GAP（择期，不阻塞接入）：GAP-01 统一 pytest 入口、GAP-04 三套 run-code 收口、GAP-05 调度影子转门控、GAP-06 双维度落库(禁 user_type=UGC)、GAP-07 事件三类四关系、#rightPanel 假数据接真实、侧栏搜索与 Ctrl+K 合并、253 条空正文补抓、8 条脏相对时间归一。
+- 环境/运维遗留：8200 legacy 重复实例清理待授权；cloudflared 临时公网当前未开；固定域名/服务器与 Docker 落地未定；小红书当前 BLOCKED 熔断、按用户令暂停采集，恢复时点待定。
