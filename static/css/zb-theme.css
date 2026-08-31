@@ -241,6 +241,13 @@ h1,h2,h3,h4{ color:var(--w-ink); letter-spacing:-.01em; }
 .progress{ background:var(--w-surface-3)!important; }
 .progress span{ background:var(--w-ink)!important; }
 .update-link{ color:var(--w-accent)!important; }
+/* 动态注入的架构状态面板收编为侘寂白卡，去掉饱和蓝 */
+.arch-panel,.architecture-panel{ background:var(--w-surface)!important;border:1px solid var(--w-border)!important;border-radius:var(--w-r-lg)!important;box-shadow:var(--w-sh-xs)!important;margin:10px 2px; }
+.arch-refresh-btn{ background:var(--w-ink)!important;color:#fff!important;border:0!important;border-radius:var(--w-r-md)!important;box-shadow:none!important; }
+.arch-refresh-btn:hover{ background:#2c2c30!important; }
+.arch-health-btn{ background:var(--w-surface-3)!important;color:var(--w-ink-2)!important;border:1px solid var(--w-border)!important;border-radius:var(--w-r-md)!important; }
+.arch-health-btn:hover{ background:var(--w-active)!important;color:var(--w-ink)!important; }
+.arch-layer-status{ border-radius:var(--w-r-pill)!important;font-weight:500; }
 
 /* ============================================================================
    §6 按钮：主操作近黑（侘寂），次级浅灰，去彩色投影
@@ -267,6 +274,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .metric-card,.panel{ backdrop-filter:none!important; }
 .metric-card:hover,.panel:hover,.home-card:hover{ box-shadow:var(--w-sh-md)!important; transform:translateY(-1px); }
+.metric-card{ position:relative; padding-bottom:30px; }
+.metric-card .spark{ position:absolute!important; left:14px; right:14px; bottom:8px; top:auto; height:24px; }
+.metric-card .metric-sub{ margin-bottom:18px; }
+/* 小统计卡：高度自适应，多行说明正常换行不叠字（提高特异性压过历史换皮层） */
+.monitor-status .monitor-item{ height:auto!important; min-height:0!important; align-items:flex-start!important; overflow:visible!important; }
+.monitor-status .monitor-item b{ display:block!important; line-height:1.5!important; height:auto!important; min-height:0!important; white-space:normal!important; overflow:visible!important; }
+.settings-grid>div{ height:auto!important; min-height:0!important; }
+.panel .settings-grid>div span{ display:block!important; line-height:1.5!important; height:auto!important; white-space:normal!important; overflow:visible!important; }
 .metric-label{ color:var(--w-ink-3)!important; }
 .metric-card strong{ color:var(--w-ink)!important; }
 .metric-sub,.panel-head em,.eyebrow{ color:var(--w-ink-3)!important; }
@@ -342,6 +357,13 @@ input[type=checkbox].ios-toggle,.switch input,.toggle input{ accent-color:var(--
 /* ============================================================================
    §12 页面进入动效统一（仅 opacity/transform，克制）
 ============================================================================ */
+/* ============================================================================
+   §12 页面视图显隐契约 + 进入动效（仅 opacity/transform，克制）
+   历史换皮层曾让非 active 页仍 display:flex 堆叠在下方（手机要滚很久/显示不全），
+   这里以 !important 钉死：只有 active 页渲染，其余彻底隐藏。
+============================================================================ */
+.content .page-view{ display:none!important; }
+.content .page-view.active{ display:flex!important; flex-direction:column; }
 .page-view{ animation:zbPage var(--w-d-page) var(--w-ease)!important; }
 @keyframes zbPage{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media (prefers-reduced-motion:reduce){ *{ animation-duration:.01ms!important; transition-duration:.01ms!important; } }
@@ -364,21 +386,26 @@ input[type=checkbox].ios-toggle,.switch input,.toggle input{ accent-color:var(--
     transform:translateX(-100%)!important; overflow-y:auto; border-right:1px solid var(--w-border)!important;
     border-bottom:0!important; background:var(--w-surface)!important; box-shadow:var(--w-sh-lg); }
   .sidebar.open{ transform:translateX(0)!important; }
+  .sidebar{ display:flex; flex-direction:column; }
+  .sidebar .side-nav{ flex:1 1 auto; min-height:150px; overflow-y:auto; }
+  .sidebar .side-footer,.sidebar .arch-panel{ flex:0 0 auto; }
   .sidebar-overlay{ position:fixed; inset:0; z-index:1099; background:rgba(0,0,0,.32); }
   .content{ position:static!important; flex:none!important; width:auto!important; height:auto!important;
     overflow:visible!important; padding:14px 14px calc(var(--w-tabbar-h) + 16px)!important; }
   /* 桌面右侧 Inspector 在手机先隐藏（P1 改为 Bottom Sheet / Drawer） */
   .right-panel{ display:none!important; }
-  /* 首页三卡手机改单列纵向堆叠，避免标题被挤成单字竖排 */
-  .home-cards{ grid-template-columns:1fr!important; gap:12px!important; }
+  /* 首页三卡手机改单列纵向堆叠，避免标题被挤成单字竖排（id 特异性压过历史换皮层） */
+  #page-overview .metric-grid{ grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:10px!important; }
+  #page-overview .home-cards{ grid-template-columns:1fr!important; gap:12px!important; }
   .home-card-head{ gap:8px; }
   .home-card-head h3{ font-size:15px!important; white-space:nowrap; }
   .home-card-head .eyebrow{ font-size:10px!important; letter-spacing:.06em; }
   .metric-card strong{ font-size:22px!important; }
   .section-intro h2,.page-hero h2{ font-size:21px!important; }
   .panel,.metric-card,.event-card{ border-radius:var(--w-r-md)!important; }
-  /* 手机端图标按钮：保证主按钮内 glyph 可见，避免纯黑空块 */
-  .top-actions .action.primary{ width:38px!important; min-width:38px!important; height:36px!important; padding:0!important; }
+  /* 手机端按钮：内容区保留文字（修复 font-size:0 吞掉 emoji/文字变空黑块），仅顶栏采集钮保持圆图标 */
+  .content .action{ font-size:13px!important; height:auto!important; min-height:34px; width:auto!important; padding:8px 14px!important; gap:6px; }
+  .top-actions .action.primary{ width:38px!important; min-width:38px!important; height:36px!important; padding:0!important; font-size:0!important; }
   .top-actions .action.primary .svgicon{ font-size:17px!important; color:#fff; display:inline-flex; }
   body,html{ height:auto; overflow-x:hidden; overflow-y:auto; }
 }
