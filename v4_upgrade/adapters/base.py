@@ -1,13 +1,21 @@
 """
 采集适配器基类
 所有新采集源继承此基类，实现统一接口
-支持：熔断器、重试、标准化输出、故障隔离
+支持：熔断器、重试、限流、降级、标准化输出、故障隔离、指标统计
+
+v5.9.9 增量增强：
+- 新增 RateLimiter 令牌桶限流
+- 新增 Fallback 降级机制（采集失败返回缓存/空结果，不抛异常）
+- 新增 AdapterMetrics 运行指标统计
+- 新增 safe_collect() 永不抛异常入口
+- 保留原有 search()/collect() 接口完全不变，20个适配器零改动
 """
 import time
 import logging
 from abc import ABC, abstractmethod
+from collections import deque
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
 from ..config import ADAPTER_CONFIG
 
 logger = logging.getLogger(__name__)
