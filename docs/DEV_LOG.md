@@ -228,3 +228,14 @@
 - GitHub 研究：33 条 Research（LR-20260831-001..033，star/license 为 08-31 GitHub API 一手），沉淀 docs/learning/ 8 份；结论=保持 Flask+SQLite+Playwright+APScheduler，Windows 生产 WSGI 选 waitress（gunicorn/supervisor 不支持 Windows），迁移候选 Alembic，学习库候选 sqlite-vec，测试 pytest+Playwright trace；不采用 Celery/Nx/Scrapy/独立向量库。
 - 问题分级：**无新增 P0**；P1=AUTH-01 主 SPA 挂弹窗/三套运行代码高危入口收口/SCHED-01 待签字/统一 pytest L0-L10/DIM-01/EVT-01/DCC 整合；P2=并行基线 ADR 收敛/Alembic/API 契约版本化/重复能力按门槛退/Evidence 体系；P3=跨仓 ZBIP 缩写对齐/2 处 API 登记/8200 重复实例/.trae-cn 忽略等。OPT-001..010 + OPT-API/DOC 只登记不施工。
 - 报告：docs/governance/consolidation-002/CROSS-REPO-AUDIT-RESEARCH-2026-08-31.md。全程未改业务代码/DB/采集/UI/API/Runtime、未删文件；生产 8201/8200 v5.9.9、9222 在线，小红书保持 BLOCKED 熔断未触发。
+
+---
+
+## 2026-08-31 · Feature Final Verification 2.0（只验证/登记/文档，不改生产）
+
+- 产出：docs/FEATURE-FINAL-VERIFICATION-MATRIX.md（34 条全链矩阵+A–I 分组）、docs/FEATURE-GAP-REGISTER.md（GAP-01..22）、docs/UI-FINAL-CAPABILITY-MAP.md（含未完成占位）、docs/TECHNOLOGY-OPTIMIZATION-BACKLOG.md（P0–P3）；只读脚本 scripts/inventory/feature_final_verify.py（py_compile 通过）。
+- **真实测试证据（本轮实跑，非假设）**：36 个 test_*.py 中仅 5 个含 `def test_`（test_ai/api/database/e2e/llm_gateway），合计 **50 用例 50 passed in 16.06s**，覆盖主体过滤/风险等级/事件聚合/日报/DB 结构与完整性/认证/LLM 兜底；其余 31 个为脚本式（无 def test_），且统一 `pytest tests` 被 test_api_smoke.py 顶层 sys.exit 打成 INTERNALERROR（仅收集 26）→ GAP-01/18。
+- 红线直接测试缺口（GAP-02，实测）：test_risk_engine.py 实际 import collector_guard、test_report_periods 实际测 export_report；根 risk_engine / aggregate_events / build_daily_report 仅 test_e2e 集成级覆盖，缺函数级直接单测。
+- Evidence：app_evidence_records 为外部抓取表且 0 行，无统一测试/运行 Evidence 落库 → GAP-08。
+- 状态保持 Registry 原值不擅改：ACTIVE21/DEVELOPING6/EXPERIMENTAL2/PLANNED4/RESERVED1，NOT_VERIFIED/DUPLICATE/MIGRATION_REQUIRED/LEGACY 的 Feature 级均 0（重复在实现层以 DUPLICATE_CANDIDATE 登记 GAP-04/09/10）；ASSET_MISSING=0。
+- 结论：P0=0；UI 信息架构/占位已覆盖全部 34 功能，具备一次性施工的映射条件，但建议先做 GAP-03（主 SPA 挂 Auth Modal）+ CSS Token 单层收敛两个前置并在 Staging 施工；是否开工由用户拍板。全程未改业务/DB/采集/UI/API/Runtime、未删文件。
