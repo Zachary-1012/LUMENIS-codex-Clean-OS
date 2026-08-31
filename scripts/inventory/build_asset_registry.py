@@ -113,6 +113,8 @@ for rel, g in mods.items():
         methods = mm.group(1).replace("'", "").replace('"', "").replace(" ", "") if mm else "GET"
         routes.append((rel, m.group(1), methods))
 
+APP_ROUTE_N = sum(1 for r in routes if r[0] == "app.py")
+
 def route_group(rule):
     seg = [x for x in rule.split("/") if x]
     if not seg:
