@@ -177,3 +177,35 @@
 - Verify Auth modal integration across all platform collectors.
 - Verify database migrations and data isolation for the two product releases.
 - Verify test coverage and startup paths.
+
+---
+
+## 2026-08-31 · Consolidation-002 ②–⑥ 资产身份/架构/Owner/Feature/UI地图 + 素材核对（只读治理，业务代码零改动）
+
+对齐 MASTER TASK `ZBC-UNIFIED-PRODUCTION-CONSOLIDATION-001` 与"先收敛、再 UI"顺序；本轮不施工视觉、不搬目录、不删码、不碰生产库与运行服务。
+
+### 产出（docs/governance/consolidation-002/）
+- 新增只读生成器 `scripts/inventory/build_asset_registry.py`（消费① module_graph，不重算依赖；只读提路由/表/前端/依赖），产出 **ASSET-REGISTRY.md（②）**。
+- **ARCHITECTURE-MAP.md（③）** 分层映射；**CAPABILITY-OWNERSHIP.md（④）** 唯一 Owner 初判；**FEATURE-REGISTRY.md（⑤）** FEATURE-CTH/ZBMP 总账；**UI-FEATURE-MAP.md（⑥）** 信息架构/页面/交互/组件（不含视觉）。
+
+### 真实数字（已实测，与①对齐）
+- Python 400（非测试 220 / 测试 180），app 静态可达 84；不可达非测试 136 = 孤立候选 53 + 独立入口 34 + 新一代在建 23 + 旁路引用 26（①口径"孤立61"=53+collector_v2 内 8，已在文档对账）。
+- 路由：app.py 内 **189**（与既有口径精确一致），全仓合计 363（含 v4 蓝图）；数据库表 **51**；CSS 23 / JS 22 / 模板 10；requirements 15。
+- 生产库只读：notes 957 / events 427 / collection_logs 477 / event_graph_events 16；未做任何写入。
+
+### 素材核对（SHA256 铁证，零重复上传）
+- 本轮重发 9 段录屏经 SHA 比对全部=已上 LFS 的 7 段（38613e1f=25031310…=LFS03；4d230a36=3E951E45…=LFS08），**未重复传视频**。
+- 参考图 14→16（仅新增 01712291、cd9009bc）；归集 Word《z-Brand Core UI视觉&交互逻辑1.0.docx》到 reference-docs/；004120 在 MANIFEST 定死为"交互&动效参考基准之一"。
+
+### 关键裁定（④，只标记不删除）
+- 红线 Owner 锁：subject_rules / aggregate_events / daily_report.build_daily_report / 根 risk_engine，口径不得改。
+- AI：intelligence(规则兜底,Ollama-only 正式)+ai_analyzer(执行器) ACTIVE；ark/ai_gateway/local_ai 云端 Legacy 默认关。
+- 采集：collector.py 链为唯一生产事实来源；collector_v2(23) DEVELOPING 未接管；高危运行代码 3 入口标 MIGRATION_REQUIRED；Selenium/httpx/xlsxwriter/colorama/tqdm 0 引用仅登记。
+
+### 命名冲突（待用户拍板，未自行改名）
+- 本地 PRODUCT_NAMING_BASELINE 钉「品牌业务生产平台 ZBP」；本轮口头材料出现「Z-Brand Intelligence Platform」。按权威顺序暂用 ZBP，冲突登记于 ASSET-REGISTRY §0。
+
+### 未实测 / 遗留
+- ④为源码事实下的 Owner 初判，最终人工签字；DUPLICATE/LEGACY 退出须走引用→替代→回归门槛，本轮未删任何文件。
+- UI 视觉(⑨)继续暂停；AUTH-01 主 SPA 挂 auth_global、SCHED-01 影子转门控、DIM-01 双维度落库、EVT-01 三类事件四关系、P0-FIX-1 版本号括号 bug 均登记待办，本轮不改。
+- 生产 8201/9222 全程未触碰。

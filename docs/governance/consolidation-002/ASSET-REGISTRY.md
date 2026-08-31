@@ -9,7 +9,8 @@
 - Python 资产：**400**（非测试 220 / 测试 180）；app 静态可达 **84**。
 - 状态初判（非测试）：ACTIVE=84，DEPRECATED?=53，RESERVED=34，NOT_VERIFIED=26，DEVELOPING=23
 - 完全孤立 DEPRECATED? 候选 **53**；独立入口 RESERVED **34**；新一代在建 DEVELOPING **23**；旁路 NOT_VERIFIED **26**。
-- 路由提取 **363** 条；数据库表 **51**；CSS 23 / JS 22 / 模板 10；requirements 依赖 15。
+- 不可达非测试 136 对账：孤立候选 53 + 独立入口 34 + 新一代在建 23 + 旁路引用 26 = 136（与①一致；①口径“孤立61”=本表 53 + collector_v2 内 8 个纯孤立，已统一并入 DEVELOPING 视角）。
+- 路由：app.py 内 **189**（对齐既有约189口径），全仓合计 **363**（含 v4 蓝图/子系统 register 路由）；数据库表 **51**；CSS 23 / JS 22 / 模板 10；requirements 依赖 15。
 - 十状态：ACTIVE / DEVELOPING / PLANNED / RESERVED / EXPERIMENTAL / LEGACY / DEPRECATED / DUPLICATE / MIGRATION_REQUIRED / NOT_VERIFIED。
 
 > **命名冲突登记（待拍板）**：本地 `docs/PRODUCT_NAMING_BASELINE.md` 钉的平台全称为「品牌业务生产平台（Z-Brand Business Production Platform, ZBP）」；
@@ -447,7 +448,7 @@
 | `tests/test_version_api.py` | 1 |
 | `tests/v4_smoke.py` | 1 |
 
-## F. API / 路由身份（提取 363 条，按前缀分组；逐条 ROUTE 明细以既有 Phase1 盘点为准，不重复全列）
+## F. API / 路由身份（app.py 189 + 子系统蓝图 = 全仓 363，按前缀分组；逐条明细以既有 Phase1 盘点为准，不重复全列）
 
 | 路由组 | 数量 |
 |---|--:|

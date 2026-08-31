@@ -207,7 +207,8 @@ W("")
 W(f"- Python 资产：**{graph['total_py']}**（非测试 {len(non_test)} / 测试 {len(test_mods)}）；app 静态可达 **{graph.get('entry_reachable_count', len(active))}**。")
 W(f"- 状态初判（非测试）：" + "，".join(f"{k}={v}" for k, v in sorted(status_count.items(), key=lambda x: -x[1])))
 W(f"- 完全孤立 DEPRECATED? 候选 **{len(orphans)}**；独立入口 RESERVED **{len(standalone)}**；新一代在建 DEVELOPING **{len(developing)}**；旁路 NOT_VERIFIED **{len(notver)}**。")
-W(f"- 路由提取 **{len(routes)}** 条；数据库表 **{len(tables)}**；CSS {len(css_files)} / JS {len(js_files)} / 模板 {len(tpl_files)}；requirements 依赖 {len(deps)}。")
+W(f"- 不可达非测试 136 对账：孤立候选 {len(orphans)} + 独立入口 {len(standalone)} + 新一代在建 {len(developing)} + 旁路引用 {len(notver)} = {len(orphans)+len(standalone)+len(developing)+len(notver)}（与①一致；①口径“孤立61”=本表 53 + collector_v2 内 8 个纯孤立，已统一并入 DEVELOPING 视角）。")
+W(f"- 路由：app.py 内 **{APP_ROUTE_N}**（对齐既有约189口径），全仓合计 **{len(routes)}**（含 v4 蓝图/子系统 register 路由）；数据库表 **{len(tables)}**；CSS {len(css_files)} / JS {len(js_files)} / 模板 {len(tpl_files)}；requirements 依赖 {len(deps)}。")
 W("- 十状态：ACTIVE / DEVELOPING / PLANNED / RESERVED / EXPERIMENTAL / LEGACY / DEPRECATED / DUPLICATE / MIGRATION_REQUIRED / NOT_VERIFIED。")
 W("")
 W("> **命名冲突登记（待拍板）**：本地 `docs/PRODUCT_NAMING_BASELINE.md` 钉的平台全称为「品牌业务生产平台（Z-Brand Business Production Platform, ZBP）」；")
@@ -278,7 +279,7 @@ for k, v in sorted(tdir.items(), key=lambda x: -x[1]):
 W("")
 
 # 表F 路由
-W(f"## F. API / 路由身份（提取 {len(routes)} 条，按前缀分组；逐条 ROUTE 明细以既有 Phase1 盘点为准，不重复全列）")
+W(f"## F. API / 路由身份（app.py {APP_ROUTE_N} + 子系统蓝图 = 全仓 {len(routes)}，按前缀分组；逐条明细以既有 Phase1 盘点为准，不重复全列）")
 W("")
 grp = {}
 for _, rule, meth in routes:

@@ -1,14 +1,14 @@
 # 进度断点与续接交接（PROGRESS & HANDOFF）
 
 > 任务线：ZBC / DCC / SICI 统一生产架构 —— ZBC 资产收敛（Consolidation-002）
-> 状态：**资产收敛进行中（完成①全量盘点的静态扫描）；UI 视觉施工按用户指令暂停**，待与 GPT 侧三仓库源码审计做第二轮交叉核对后，才钉死 UI 信息架构并一次施工。
+> 状态：**①静态扫描 + ②资产身份登记 + ③架构映射 + ④唯一Owner + ⑤Feature总账 + ⑥UI功能地图 均已完成（2026-08-31）；UI 视觉施工(⑨)仍按用户指令暂停**，待三仓库交叉核对后钉死信息架构再一次施工。
 > 原则（用户原话固化）：**收敛不是删除**。任何旧代码/旧包/旧 API/旧页面/旧库表结构，在未完成「依赖确认→替代确认→迁移确认→回归验证」前不得删除。源码 / 数据库 / 运行时实测事实 > 基线文档 > 开发记录 > 聊天结论。
 
 ---
 
 ## 0. 一句话续接
 
-新会话先读本文件 + `docs/PRODUCT_NAMING_BASELINE.md` + `docs/governance/consolidation-002/raw/` 三份机器产物，再从「§7 下一步」的 ② 继续；**不要重做扫描、不要先动 UI、不要删任何旧文件、不要碰运行中的 8200/8201/9222 与数据库和采集。**
+新会话先读本文件 + `docs/PRODUCT_NAMING_BASELINE.md` + 本目录 5 份收敛产物（ASSET-REGISTRY / ARCHITECTURE-MAP / CAPABILITY-OWNERSHIP / FEATURE-REGISTRY / UI-FEATURE-MAP）；**②–⑥ 已完成勿重做、不要重扫、不要先动 UI、不要删任何旧文件、不要碰运行中的 8200/8201/9222 与数据库和采集。** 续接从 §7 剩余项（三系统启动页 → ⑦三仓库交叉 → ⑧IA 锁定 → ⑨UI 一次性施工）起。
 
 ## 1. 命名基线（已钉死，文档首次出现须写全称）
 
@@ -72,11 +72,15 @@ ZBP 内部两产品：
 - `.gitattributes`（新增）：仅 `docs/reference/ui-research/source-videos/**` 走 LFS；已 `git lfs install --local`，7 段视频 check-attr 全部命中 `filter: lfs`。
 - `.gitignore`：新增源视频目录的 `!` 例外（全局 `*.mp4` 仍忽略其它位置）。
 - `docs/reference/ui-research/source-videos/`：7 段源视频（约 403MB，LFS），清单/sha256/用途见 `docs/reference/ui-research/VIDEO-SOURCE-MANIFEST.md`。
-- `docs/reference/ui-research/reference-images/`：14 张微信参考图。
+- `docs/reference/ui-research/reference-images/`：16 张微信参考图（2026-08-31 经 SHA 比对仅新增 01712291、cd9009bc 两张，其余为重发重复）。
+- `docs/reference/ui-research/reference-docs/`：需求 Word《z-Brand Core UI视觉&交互逻辑1.0.docx》。
+- 2026-08-31 重发 9 段录屏经 SHA256 比对全部=已上 LFS 7 段，零重复上传（详见 MANIFEST §3.6）。
 - 既有 `ref_gpt_v2/`（353 文件，普通 Git 跟踪）保留。
 - 手机版 ChatGPT 原始录屏已被微信清理、全机未找到；其抽帧留存于 `ref_gpt_v2/frames/`（已在 MANIFEST 如实记录）。
 
 ## 7. 下一步（精确续接顺序，一次只做一个 TASK / 一个 commit）
+
+> **②–⑥ 已于 2026-08-31 完成（勿重做）**：②ASSET-REGISTRY（生成器 build_asset_registry.py，400/84/136、app.py 路由189/全仓363、51表）、③ARCHITECTURE-MAP、④CAPABILITY-OWNERSHIP、⑤FEATURE-REGISTRY、⑥UI-FEATURE-MAP。下列②–⑥条目存档；剩余推进顺序见本节末「剩余顺序」。
 
 - **② 资产身份登记**：以 module_graph.json + 189 路由 + 51 表为底，给每个资产补「系统/产品/业务域/模块/解决什么/谁调用/调用谁/依赖/重复/旧版本/被谁替代」并用 §5 十状态打标；产出 `ASSET-REGISTRY.md`。
 - **③ 架构收敛**：落「系统→产品→业务域→模块→功能→服务→API→数据→UI→Runtime」的 `ARCHITECTURE-MAP.md`（只映射不搬目录；如要搬迁必须 import/route/template/static/test/部署全绿才做）。
@@ -85,6 +89,14 @@ ZBP 内部两产品：
 - **功能资产注册表**：`FEATURE-CTH-XXX-NNN / FEATURE-ZBMP-XXX-NNN`，字段含 系统/产品/模块/Owner/UI/API/DB/Status/Evidence；以后改代码前先查 Feature ID，不存在先登记。
 - **三系统启动页（用户已要求，独立不启用）**：ZBP/DCC/SICI 各做网页版+手机版启动页，启动后为居中密码登录弹窗，系统名缩小居中于最底部；**当前不启用，单独放一个独立文件夹并附 README 说明如何启用**。注意 DCC/SICI 是独立仓库，本仓库只做 ZBP 侧或静态原型，不写入其仓库。
 - UI 视觉/交互施工：**继续暂停**，等 GPT 侧源码审计回来交叉核对、UI 信息架构一次钉死后再做；既定 GPT/Codex + iOS + 侘寂黑白灰方向与 token 见 `ref_gpt_v2` 与本目录 MANIFEST §6，不推翻。
+
+**剩余顺序（②–⑥已完成后续接这里）：**
+1. 三系统启动页（ZBP/DCC/SICI 网页+手机静态原型，独立文件夹、默认不启用、附 README；DCC/SICI 独立仓不写入）。
+2. ⑦ 三仓库交叉审计（与 GPT 侧源码审计交叉核对，校准 Owner/Feature）。
+3. ⑧ UI 信息架构最终锁定（以 UI-FEATURE-MAP + MANIFEST 素材为底，交叉核对后一次钉死）。
+4. ⑨ UI 一次性施工（侘寂黑白灰+语义小状态点+统一 Token/组件，390/430/768/1024/1280/1440 全断点，含修复手机/网页显示不全；先 Staging 后灰度）。
+5. ⑩ Runtime / L0–L10 E2E → ⑪ 生产验收 Release Gate。
+6. 并行业务工单（不阻塞收敛）：AUTH-01 主 SPA 挂 auth_global、SCHED-01 影子转门控(待签字)、DIM-01 双维度落库、EVT-01 三类事件四关系、P0-FIX-1 daily_git_sync 版本号漏括号。
 
 ## 8. 边界红线（每步自检）
 
