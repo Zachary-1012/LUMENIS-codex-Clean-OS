@@ -37,6 +37,11 @@
         }
     }
 
+    // 暴露到全局，供HTML按钮调用
+    window.toggleCommandPalette = toggleCommandPalette;
+    window.openCommandPalette = openCommandPalette;
+    window.closeCommandPalette = closeCommandPalette;
+
     function filterCommands(query) {
         if (!commandResults) return;
         const items = commandResults.querySelectorAll('.command-result-item');
