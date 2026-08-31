@@ -1,0 +1,50 @@
+# LEARNING-REGISTRY · 统一学习资产索引
+
+> 用途：所有 GitHub / 业界研究成果必须沉淀于此，不允许只停留在聊天记录。
+> Research ID 规则：`LR-YYYYMMDD-NNN`。状态：VERIFIED（已用一手来源核实）/ CANDIDATE（候选，待 Staging）/ ADOPTED（已采用）/ REJECTED（明确不采用）/ REFERENCE-ONLY（只学思想不引依赖）。
+> 数据取数日：**2026-08-31**，star/license 来自 GitHub REST API 一手返回；license 显示 NOASSERTION 表示 GitHub 未自动识别标准 SPDX，**以该仓库 LICENSE 原文为准**。
+> 铁律：只学习架构思想 / 工程模式 / 算法 / 治理与测试方法 / 数据结构 / 可验证机制；**不直接复制第三方源码**，不把受限许可代码包装成自研。任何依赖引入走 THIRD_PARTY_LICENSE_AUDIT + SBOM。
+
+## 一、研究总表（对应任务书 A–S 方向）
+
+| Research ID | 方向 | 项目 | GitHub | License | star(08-31) | 结论 | 关联 Feature/Asset |
+|---|---|---|---|---|---|---|---|
+| LR-20260831-001 | A 能力/服务目录 | Backstage | backstage/backstage | Apache-2.0 | 34283 | REFERENCE-ONLY（学 Catalog 模型，不引重型平台） | FEATURE-REGISTRY / ASSET-REGISTRY |
+| LR-20260831-002 | B 架构治理 | ADR（Architecture Decision Records） | joelparkerhenderson/architecture-decision-record | 见仓库 LICENSE | 16778 | ADOPT-思想（轻量 Markdown ADR，已存在 ARCHITECTURE_DECISION_RECORD_20260830） | docs/governance |
+| LR-20260831-003 | C 来源/证据 | in-toto | in-toto/in-toto | Apache-2.0（以仓库为准） | 1035 | REFERENCE-ONLY（学 Attestation/链路证据结构） | app_evidence_records / Evidence |
+| LR-20260831-004 | C 供应链等级 | SLSA Generator | slsa-framework/slsa-github-generator | Apache-2.0 | 596 | REFERENCE-ONLY（学"分级+可验证产物"思想） | Release Gate |
+| LR-20260831-005 | D/E 追踪/可观测 | OpenTelemetry Python | open-telemetry/opentelemetry-python | Apache-2.0 | 2607 | CANDIDATE（先 structlog，量大后再 OTel） | SYS-001 / health |
+| LR-20260831-006 | E 指标 | prometheus_client | prometheus/client_python | Apache-2.0 | 4363 | CANDIDATE（/metrics 后续暴露） | SYS-001 |
+| LR-20260831-007 | E 结构化日志 | structlog | hynek/structlog | MIT/Apache（以仓库为准） | 4937 | CANDIDATE（统一日志键，利于审计/E2E Evidence） | 全链日志 |
+| LR-20260831-008 | F 依赖图 | pydeps | thebjorn/pydeps | BSD-2-Clause | 2105 | ADOPT-工具（只读生成模块依赖图，不进运行时） | module_graph.json |
+| LR-20260831-009 | F/G 图结构/关系 | NetworkX | networkx/networkx | BSD（以仓库为准） | 17236 | CANDIDATE（事件关系图谱算法，event_graph） | EVT-002 |
+| LR-20260831-010 | G 代码智能 | tree-sitter | tree-sitter/tree-sitter | MIT | 26804 | REFERENCE-ONLY（未来多语言静态解析，当前正则足够） | asset_scan |
+| LR-20260831-011 | H/S 多仓/版本治理 | Changesets | changesets/changesets | MIT | 12344 | REFERENCE-ONLY（学"变更单+版本+changelog"绑定） | 版本中心 |
+| LR-20260831-012 | S Monorepo 平台 | Nx | nrwl/nx | MIT | 29285 | REJECT（过重，三仓独立，不引入构建体系） | — |
+| LR-20260831-013 | I 安全迁移 | Alembic | sqlalchemy/alembic | MIT | 4357 | CANDIDATE→ADOPT（DB 向后兼容迁移/回滚，51 表治理） | schema_version / 迁移 |
+| LR-20260831-014 | J 浏览器自动化 | Playwright Py | microsoft/playwright-python | Apache-2.0 | 14965 | ADOPT（主浏览器测试/运行基础） | human_browser/cdp_helper |
+| LR-20260831-015 | J 浏览器自动化 | Selenium | SeleniumHQ/selenium | Apache-2.0 | 34428 | DEPRECATED 候选（本仓 0 真 import，回归后退） | CAPABILITY-OWNERSHIP §9 |
+| LR-20260831-016 | K 采集框架 | Crawlee Py | apify/crawlee-python | Apache-2.0 | 9479 | REFERENCE-ONLY（学 RequestQueue/自动限速/去重，不换采集主链） | collector 链 |
+| LR-20260831-017 | K 爬虫框架 | Scrapy | scrapy/scrapy | BSD-3-Clause | 64136 | REJECT（重型异步框架，与真人 CDP 路线不符） | — |
+| LR-20260831-018 | L 限流 | slowapi | laurentS/slowapi | MIT | 2051 | CANDIDATE（对外 API 限流，保护自身服务） | 对外 API |
+| LR-20260831-019 | L 重试退避 | tenacity | jd/tenacity | Apache-2.0 | 8769 | ADOPT-候选（NETWORK_ERROR 指数退避，替代手写重试） | 调度/采集恢复 |
+| LR-20260831-020 | L 退避 | backoff | litl/backoff | MIT | 2694 | 备选（与 tenacity 二选一，避免重复依赖） | 同上 |
+| LR-20260831-021 | L 熔断 | circuitbreaker | fabfuel/circuitbreaker | 见仓库 LICENSE | 523 | REFERENCE-ONLY（学状态机，本仓熔断逻辑自研且贴合平台，不换） | RISK-002 |
+| LR-20260831-022 | M 调度 | APScheduler | agronholm/apscheduler | MIT | 7619 | ADOPT（进程内轻量调度，契合动态频率状态机） | MON-003 |
+| LR-20260831-023 | M 分布式调度 | Celery | celery/celery | BSD（以仓库为准） | 28842 | REJECT（需 broker/worker，单机场景过度复杂） | — |
+| LR-20260831-024 | N 测试 | pytest | pytest-dev/pytest | MIT | 14462 | ADOPT（统一 L0–L10 入口） | tests/ |
+| LR-20260831-025 | O 生产 WSGI | gunicorn | benoitc/gunicorn | 见仓库 LICENSE | 10663 | REJECT-on-Windows（**不支持 Windows**；Linux 云部署时再用） | 部署 |
+| LR-20260831-026 | O 进程守护 | supervisor | Supervisor/supervisor | 见仓库 LICENSE | 9111 | REJECT-on-Windows（**仅 Unix**） | 部署 |
+| LR-20260831-027 | O 生产 WSGI(Win) | waitress | Pylons/waitress | ZPL/MIT 类（以仓库为准） | 1598 | ADOPT-候选（**Windows 可跑**的生产 WSGI，替代开发服务器） | 部署 |
+| LR-20260831-028 | O 文件看门/自愈 | watchdog | gorakhargosh/watchdog | Apache-2.0 | 7404 | CANDIDATE（源码变化检测→自动版本保存触发） | SYS-002 版本中心 |
+| LR-20260831-029 | Q 学习库/向量 | sqlite-vec | asg017/sqlite-vec | Apache-2.0 | 8061 | ADOPT-候选（SQLite 向量扩展，单文件、零额外服务，做学习/案例语义检索） | SICI 学习库 / AI-001 |
+| LR-20260831-030 | R 设计 Token | Style Dictionary | amzn/style-dictionary | Apache-2.0 | 4793 | REFERENCE-ONLY（学 token 编译/多端输出，UI ⑨ 用原生 CSS 变量即可） | UI-FEATURE-MAP |
+| LR-20260831-031 | 依赖/环境复现 | uv | astral-sh/uv | Apache-2.0 | 89277 | CANDIDATE（极速锁定/复现环境，Staging 一致性） | Staging Runtime |
+| LR-20260831-032 | 安全签名 | PyJWT | jpadilla/pyjwt | MIT | 5696 | CANDIDATE（session/token 签名，替代裸存） | AUTH-002 |
+| LR-20260831-033 | Flask 签名 | itsdangerous | pallets/itsdangerous | BSD-3-Clause | 3131 | 已是 Flask 生态（随 Flask，用于签名/会话） | AUTH |
+
+## 二、结论分布
+- **可直接采用（工具/库，需走 Staging + License 审计）**：pydeps（只读工具）、Playwright、APScheduler、pytest；候选优先：waitress（Windows 生产 WSGI）、sqlite-vec（学习库）、tenacity（退避）、alembic（迁移）。
+- **只学思想不引依赖**：Backstage、in-toto/SLSA、Crawlee、Style Dictionary、Nx 治理、circuitbreaker、tree-sitter。
+- **明确不采用**：Nx、Celery、Scrapy（过重/路线不符）；gunicorn、supervisor（Windows 不支持，仅未来 Linux 云部署备选）。
+- 详见 `CASE-STUDIES.md`（逐案例字段）、`TECHNOLOGY-COMPARISON.md`（择优评分）、各 PATTERNS 文件。
