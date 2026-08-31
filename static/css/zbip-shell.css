@@ -236,6 +236,7 @@ body.zb-shell-on .brandmark { background: var(--zb-stone-900,#1C1917) !important
   body.zb-shell-on .topbar .action { padding: 0; width: 34px; justify-content: center; }
   .zb-home-inner { padding: 0 4px; }
   .zb-ask { border-radius: 14px; }
+  .zb-ask textarea { min-height: 46px; }
   .zb-chips { gap: 6px; }
   .zb-chip { padding: 6px 11px; font-size: 12px; }
 }

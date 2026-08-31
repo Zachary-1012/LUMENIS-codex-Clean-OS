@@ -42,7 +42,17 @@
     var nav = sidebar && sidebar.querySelector('.side-nav');
     if (!sidebar || !nav) return;
     document.body.classList.add('zb-shell-on');
+    var userNavigated = false; // 仅真实用户导航才收起 Home，屏蔽主 app 初始化的程序化 click
     linearizeTopbar();
+    normalizeNavLabels();
+
+    // 规范个别旧导航文案（只改展示文本，不动源 DOM/路由；TreeWalker 兼容翻译包裹层）
+    function normalizeNavLabels() {
+      var tc = document.querySelector('#topic-campaign-entry-v573');
+      if (!tc) return;
+      var w = document.createTreeWalker(tc, NodeFilter.SHOW_TEXT), n;
+      while ((n = w.nextNode())) { if (/话题监测端口/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace('话题监测端口', '话题监测'); }
+    }
 
     // 顶栏 emoji 图标 → 线性 SVG（源 HTML 不改，仅外壳层替换，可回滚）
     function linearizeTopbar() {
@@ -200,7 +210,10 @@
         '<div class="zb-home-sub">Z-Brand Core · CTH-POMS 生产工作区 · 数据来自本地采集与分析管线</div>' +
         '</div>';
       content.insertBefore(home, content.firstChild);
-      requestAnimationFrame(function () { home.classList.add('show'); });
+      requestAnimationFrame(function () { if (!userNavigated) home.classList.add('show'); });
+      // 兜底：主 app 初始化时会程序化 .click() 默认页（isTrusted=false），延迟两次确保 Home 不被竞态带走
+      window.addEventListener('load', function () { if (!userNavigated) requestAnimationFrame(showHome); });
+      setTimeout(function () { if (!userNavigated) showHome(); }, 450);
 
       function chip(key, ico, txt) { return '<button class="zb-chip" data-q="' + key + '" type="button">' + ico + txt + '</button>'; }
       var ta = document.getElementById('zbHomeInput');
@@ -215,7 +228,7 @@
       ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } });
       home.addEventListener('click', function (e) {
         var c = e.target.closest('.zb-chip'); if (!c) return;
-        var q = c.getAttribute('data-q'); hideHome();
+        var q = c.getAttribute('data-q'); userNavigated = true; hideHome();
         if (q === 'cockpit') gotoPage('overview');
         else if (q === 'risk') gotoPage('alerts');
         else if (q === 'event') gotoPage('events');
@@ -225,10 +238,11 @@
     function hideHome() { var h = document.getElementById('zbHome'); if (h) h.classList.remove('show'); }
     function showHome() { var h = document.getElementById('zbHome'); if (h) h.classList.add('show'); }
 
-    // 点任意侧栏功能 → 进入具体页，收起 Home
+    // 点任意侧栏功能 → 进入具体页，收起 Home（只认真实用户点击，屏蔽初始化程序 click）
     nav.addEventListener('click', function (e) {
       var it = e.target.closest('.side-item'); if (!it) return;
-      if (it.getAttribute('data-page')) hideHome();
+      if (!e.isTrusted) return;
+      if (it.getAttribute('data-page')) { userNavigated = true; hideHome(); }
     });
     // 点工作区名 → 回 Home
     wsBtn.addEventListener('dblclick', showHome);

@@ -297,3 +297,21 @@
 - 过程运维：发现 Staging 8301 后台进程已退出（连接拒绝；生产 8201 正常 v5.9.9），按隔离参数（TAIKOO_PORT=8301/ZBC_DB_PATH=只读副本/XHS_CDP_URL=''/TAIKOO_WEB_DISCOVERY=0）重新后台拉起，healthz 200 后再测，未动 8201。
 - 未实测/遗留（如实登记）：① 430/768/1024/1280/1440 断点未稳定取到（CDP emulate mobile=false 改宽不可靠、DSF 致截图左右合成残影；DOM 断言 topbar/sidebar/ws 均=1 证明非真实重复），需真机或手动补图；② ZBMP 密钥门为前端占位，密钥来源/后端鉴权方式待用户拍板，ZBMP 工作区页面本身未建；③ 设置页同构侧栏（ref10/12）留 Step7；④ 常规搜索当前只过滤侧栏，后续与既有 commandPalette(Ctrl+K) 合并；⑤ 驾驶舱 KPI metric-icon 弱底、sparkline 多色、右侧 AI 洞察写死假数据(65%/9.8%/22/448K) 留后续精修/接真实数据；⑥ 顶栏 .top-actions 在 Home 下是否进一步弱化待验收。
 - 决策：Step4 改变 IA 与真实外观，继续只在 ui/staging-foundation 提交并 push 该分支备份，**不合 main、不动 8201**；待用户对 Step3+Step4 整体视觉点头后统一合 main。范围仅 zbip-shell.css/js、index.html(+4)、STEP4 文档、2 张 evidence、DEV_LOG；无 .py/.db/.env/采集/API/主体口径/时间口径变更，无 DB 迁移。回滚 = 删除 index.html 中两行 [STAGING ONLY] 引用。
+
+---
+
+## 2026-09-01 · UI 施工 Step 5a（CTH 细节微调 + Home 竞态根治 + 手机适配，仅 Staging）
+
+- 触发：用户确认外壳方向 OK（75 分基线），点名四处微调：① 左上顶栏图标还是 emoji/方块、要线性化；② 状态栏（侧栏）图标与文字太远、字号偏小；③ 隐藏 brand 后左上空一大片；④ 必须做手机适配。另把旧文案“话题监测端口”规范为“话题监测”。
+- 改了什么（仍只动 Shell 层 zbip-shell.css/js + index.html 版本号，业务/后端/DB 零改动）：
+  1. 顶栏线性化：zbip-shell.js 新增 linearizeTopbar()，运行时把 commandPaletteBtn/alertBellBtn/refreshBtn/reviewBtn/reportBtn 的 emoji .svgicon 替换为内联线性 SVG（搜索/铃/刷新/四向星/文档，stroke 2、16px）；CSS 统一 .action 高 34、圆角 7、图标 16。
+  2. 修左上留白：隐藏 .brand/.top-center 后给 .top-actions 设 margin-left:auto，操作整体靠右（实测计算剩余 155.6px，左侧不再空洞）。
+  3. 侧栏收紧：.side-item 项高 32→34、gap 10→7、字号 13→13.5px，navicon 18→17，图标与文字更聚合、更易读。
+  4. 【真实 bug 根治】Home 加载竞态：主 app 初始化会程序化 .click() 默认页 page-overview（isTrusted=false），该合成点击冒泡到 nav 误触发 hideHome，且 #zbHome 原 absolute 跟随被各 page 撑高的 .content（实测被撑到 2992px，居中内容跑到视口外显示空白）。修复：(a) nav 点击仅认 e.isTrusted 真实用户点击，新增 userNavigated 标志，屏蔽初始化合成点击；(b) window load + 450ms 两次兜底 showHome；(c) #zbHome 由 absolute 改 fixed（top56/left248/right0/bottom0，手机 left0），永远相对视口居中，不被内容撑高。
+  5. 文案：normalizeNavLabels() 用 TreeWalker 递归（兼容翻译标记包裹层）把“话题监测端口”展示文本改为“话题监测”，源 DOM/路由不动。
+  6. 手机适配（≤760）：顶栏隐藏 .btn-label 只留线性图标、间距收紧；Home 输入框 textarea min-height 46px 避免 placeholder 两行被裁；chip/ask 圆角与间距适配。
+- 数据库：无变化、无迁移；Staging 连只读副本，生产库未碰。
+- 测试（8301，已实测）：桌面 1706——顶栏 5 按钮全部 svg=1、操作靠右无空洞，侧栏 gap7/13.5px、6 分组、话题监测文案正确，Home show/top56/高=视口高居中；进驾驶舱回归：page-overview active、6 KPI 真实出数 957/622/241/94/22/448,410、风险预警（高风险83/81/62/61）、事件中心（方所闭店29/OLE投诉63/餐饮81）、热门话题、2026年9月日历全在，能力零丢失。390 移动：侧栏默认 translateX(-260) 抽屉、顶栏纯线性图标无文字、Home 标题24/输入框46px/chip 2×2、Home 稳定显示（竞态修复后不再空白）。Evidence：step5a-home-desktop.png、step5a-home-mobile-390.png、step5a-cockpit-regress.png。
+- 过程问题：browser-use 抓帧通道在旧 target 连续超时（bu.js 正常、screenshot/CDP 卡，页面 three.js/sparkline 持续重绘叠加多次 CDP attach 所致），新开 target 后恢复；属测试工具问题非页面 bug。另：负面确认角标在不同刷新时序偶发显示 0/31（既有 badge_manager 异步取数，非本轮引入，登记）。
+- 未实测/遗留：430/768/1024/1280/1440 断点仍未逐档取图（CDP 改宽不稳，需真机）；顶栏线性图标在超窄 320px 的折行未测；ZBMP 密钥门仍为前端占位（用户已拍板用正式 API Key+用户体系，转 Step5b 后端实施）。
+- 决策：继续只在 ui/staging-foundation 提交 push，**不合 main、不动 8201**；用户已确认 Step3+Step4 方向，Step5a 微调协和后，待 Step5b ZBMP 地基一并验收再统一合 main。回滚 = 删除 index.html 两行 [STAGING ONLY] 引用。
