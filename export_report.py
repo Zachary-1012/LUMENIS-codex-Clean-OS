@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 export_bp = Blueprint('export', __name__)
 
 # 数据库路径
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
 EXPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'exports')
 os.makedirs(EXPORT_DIR, exist_ok=True)
 

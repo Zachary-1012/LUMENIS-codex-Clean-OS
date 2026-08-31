@@ -2617,7 +2617,7 @@ def api_negative_pending():
         per_page = int(request.args.get('per_page', 20))
         status = request.args.get('status', 'pending')
         offset = (page - 1) * per_page
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -2663,7 +2663,7 @@ def api_negative_confirm():
         note_id = data.get('note_id')
         if not note_id:
             return jsonify({'ok': False, 'error': '缺少note_id'}), 400
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("""
@@ -2686,7 +2686,7 @@ def api_negative_reject():
         note_id = data.get('note_id')
         if not note_id:
             return jsonify({'ok': False, 'error': '缺少note_id'}), 400
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("""
@@ -2705,7 +2705,7 @@ def api_negative_reject():
 def api_negative_review_confirm(note_id):
     """负面审核-确认（RESTful 路径参数，兼容前端 NegativeReview.confirmItem）"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); cursor = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("UPDATE notes SET negative_confirmed=1, negative_confirmed_at=?, negative_confirmed_by='admin' WHERE note_id=?", (now, note_id))
         conn.commit(); affected = cursor.rowcount; conn.close()
@@ -2717,7 +2717,7 @@ def api_negative_review_confirm(note_id):
 def api_negative_review_reject(note_id):
     """负面审核-驳回（RESTful 路径参数，兼容前端 NegativeReview.rejectItem）"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); cursor = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("UPDATE notes SET negative_confirmed=2, negative_confirmed_at=?, negative_confirmed_by='admin' WHERE note_id=?", (now, note_id))
         conn.commit(); affected = cursor.rowcount; conn.close()
@@ -2730,7 +2730,7 @@ def _event_set_review(event_id, state, by='admin'):
     """事件二次确认。state=1确认负面时，联动确认其关联负面笔记（事件由笔记聚合，
     确认事件即确认其下笔记）；关联走 event_mentions，缺失时用事件关键词兜底匹配。
     返回 {'events':事件更新行数, 'notes':联动笔记数}"""
-    conn = sqlite3.connect('data/monitor.db'); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     # 兼容主键 id 或 event_key，先定位到事件真实行
     try:
@@ -2795,7 +2795,7 @@ def api_event_review_pending():
     """待人工确认的事件：风险事件且未二次确认（negative_confirmed=0），按风险/时间倒序"""
     try:
         limit = request.args.get('limit', 50, type=int)
-        conn = sqlite3.connect('data/monitor.db'); conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row
         rows = conn.execute("""SELECT * FROM events
                                WHERE (negative_confirmed=0 OR negative_confirmed IS NULL)
                                  AND (risk_level IN ('high','medium') OR fact_status IN ('unconfirmed','partially_confirmed'))
@@ -2809,7 +2809,7 @@ def api_event_review_pending():
 def api_event_review_stats():
     """事件负面确认统计：待确认/已确认/已驳回"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); cur = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); cur = conn.cursor()
         pending = cur.execute("SELECT COUNT(*) FROM events WHERE (negative_confirmed=0 OR negative_confirmed IS NULL) AND risk_level IN('high','medium')").fetchone()[0]
         confirmed = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=1").fetchone()[0]
         rejected = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=2").fetchone()[0]
@@ -2823,7 +2823,7 @@ def api_event_notes(event_id):
     """事件关联的真实笔记：优先 event_mentions 关联表（event_id→note_id），
     关联缺失时用事件关键词兜底匹配。负面/高风险在前，供事件详情“查看相关笔记案例”。"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
         try:
             row = cur.execute("SELECT * FROM events WHERE id=?", (int(event_id),)).fetchone()
         except (TypeError, ValueError):
@@ -2862,7 +2862,7 @@ def api_event_notes(event_id):
 def api_negative_stats():
     """获取负面舆情统计"""
     try:
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
         # 待确认
         cursor.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
