@@ -315,3 +315,23 @@
 - 过程问题：browser-use 抓帧通道在旧 target 连续超时（bu.js 正常、screenshot/CDP 卡，页面 three.js/sparkline 持续重绘叠加多次 CDP attach 所致），新开 target 后恢复；属测试工具问题非页面 bug。另：负面确认角标在不同刷新时序偶发显示 0/31（既有 badge_manager 异步取数，非本轮引入，登记）。
 - 未实测/遗留：430/768/1024/1280/1440 断点仍未逐档取图（CDP 改宽不稳，需真机）；顶栏线性图标在超窄 320px 的折行未测；ZBMP 密钥门仍为前端占位（用户已拍板用正式 API Key+用户体系，转 Step5b 后端实施）。
 - 决策：继续只在 ui/staging-foundation 提交 push，**不合 main、不动 8201**；用户已确认 Step3+Step4 方向，Step5a 微调协和后，待 Step5b ZBMP 地基一并验收再统一合 main。回滚 = 删除 index.html 两行 [STAGING ONLY] 引用。
+
+---
+
+## 2026-09-01 · Step 5b（ZBMP 正式 API Key + 用户体系，仅 Staging）
+
+- 触发：用户在「本地口令 vs 正式 API Key+用户体系」中拍板选方案②（正式体系、允许动后端）。先审计既有 v4_upgrade/auth（models/security/service/config/blueprint），确认已有完整用户/会话/限流/PBKDF2/owner 体系与 login_by_key，故**复用而非新造**，只加“工作区级密钥授权”薄层。
+- 改了什么：
+  1. 新增 `v4_upgrade/auth/workspace.py`：幂等建 v4_workspace_keys / v4_workspace_grants 两表；签发（明文仅返回一次、库存 PBKDF2 hash）、校验（active+未过期、命中回写 last_used）、列表（不含 hash/明文）、吊销（连带失效 grant）、会话 grant、session_can_access、无会话时以 owner 建立本地会话。
+  2. `v4_upgrade/blueprint.py`：导入 g 与 workspace 函数，新增 5 端点（status / unlock / keys GET·POST / keys/revoke），owner 才能签发吊销；unlock 无会话时自动以 owner 建会话并 Set-Cookie + 12h grant。
+  3. `v4_upgrade/config.py`：新增 WORKSPACE_CONFIG；**修复 Staging 隔离漏洞**——v4 DB_PATH 原只读 MONITOR_DB_PATH（未设则回落生产库），改为 ZBC_DB_PATH→MONITOR_DB_PATH→默认生产；生产不设 ZBC_DB_PATH，行为不变。
+  4. 前端 `static/js/zbip-shell.js`：密钥门从“非空即 localStorage 占位”改为真实 fetch unlock；点 ZBMP 先 GET status，已授权直接进、未授权弹门；错钥留 CTH 并报错，对钥进入；sessionStorage 仅 UI 提示，权威为后端 cookie+grant。index.html shell 引用 bump v=1.0.7。
+  5. 新增 tests/test_workspace_keys.py（6 用例）与 docs/ZBMP-WORKSPACE-AUTH.md。
+- 数据库：新增 2 张独立表（CREATE IF NOT EXISTS，向后兼容、不删不改既有表/数据）；**无既有表结构变更、无数据迁移**；Staging 全程连只读副本，生产库未碰。
+- 测试（已实测）：
+  - 单元：tests/test_workspace_keys.py 6/6 passed（临时库）。
+  - HTTP 全链路 8301：匿名 status=CTH true·ZBMP false·未登录；owner 登录 200+Set-Cookie；签发 200 明文仅一次；错钥 401；对钥 200 自动建会话+12h grant；再查 status ZBMP=true·logged_in=true；列表只回 prefix 无 hash；吊销 200。
+  - 浏览器 E2E：未授权点 ZBMP 弹门；错钥 mask 保持、提示“工作区密钥无效或已吊销/过期”、仍 CTH-POMS；对钥 mask 关闭、工作区=ZBMP；切回 CTH 再点 ZBMP 凭后端授权直接进入不弹门。
+  - 回归：test_ai/test_api 主体 + 新测共 33 passed；6 项失败为 Staging 既有 ENV（test_database 写死相对 data/monitor.db、TestAuthAPI 两例依赖开启 HTTP Basic），与本改动无关（已核对 test_database 不经 v4 config）。
+- 未实测/遗留：① 密钥“签发/列表/吊销”管理 UI 未做（接口已就绪，并入 Step7 设置页同构）；② ZBMP 工作台页面本体未建（下一步按手机录屏范式做网页适配=Step5c）；③ 生产 .env 是否设 ZBC_DB_PATH 已确认不设（生产行为不变），但合 main 前需在主 worktree 再跑一次导入/healthz 验证；④ grant 目前 12h 固定，续期/多设备管理后续做。
+- 决策：仍只在 ui/staging-foundation 提交 push，**不合 main、不动 8201**。回滚 = 删 workspace.py + blueprint 内 workspace 段落与 import + 前端密钥门退回；两张新表独立，保留不影响既有功能。

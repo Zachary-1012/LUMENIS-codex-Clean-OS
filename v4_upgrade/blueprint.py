@@ -5,10 +5,14 @@ V4 升级模块蓝图总入口
     from v4_upgrade import create_v4_blueprint
     app.register_blueprint(create_v4_blueprint())
 """
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, g
 from .auth import (
     login, login_by_key, logout, get_current_user, require_auth, require_owner,
     create_user, list_users, ensure_initialized, log_audit
+)
+from .auth.workspace import (
+    verify_workspace_key, issue_workspace_key, list_workspace_keys,
+    revoke_workspace_key, grant_session, session_can_access, open_owner_session,
 )
 from .settings import settings_bp
 from .collect import collect_bp
@@ -101,6 +105,73 @@ def create_v4_blueprint() -> Blueprint:
         """获取当前用户信息"""
         user = get_current_user()
         return jsonify({"success": True, "user": user})
+
+    # ---- 受限工作区（ZBMP）访问密钥 ----
+    @v4_bp.route("/auth/workspace/unlock", methods=["POST"])
+    def api_workspace_unlock():
+        from .config import AUTH_CONFIG, WORKSPACE_CONFIG
+        data = request.get_json(silent=True) or {}
+        ws = (data.get("workspace") or "ZBMP").strip().upper()
+        key = (data.get("key") or "").strip()
+        rec = verify_workspace_key(ws, key)
+        if not rec:
+            log_audit("workspace_unlock_denied", "auth", ws, "workspace key invalid")
+            return jsonify({"success": False, "error": "工作区密钥无效或已吊销/过期"}), 401
+        user = get_current_user()
+        resp_token = None
+        if not user:
+            sess = open_owner_session(request.remote_addr, request.headers.get("User-Agent", ""))
+            if not sess:
+                return jsonify({"success": False, "error": "主账号未初始化，请先登录一次"}), 409
+            user = {"id": sess["user_id"], "username": sess["username"], "role": sess["role"], "token": sess["token"]}
+            resp_token = sess["token"]
+        gres = grant_session(user["id"], ws, rec["id"], user["token"], WORKSPACE_CONFIG["grant_hours"])
+        log_audit("workspace_unlock", "auth", ws, "unlock workspace " + ws)
+        resp = jsonify({"success": True, "workspace": ws, "granted": True,
+                        "expires_at": gres["expires_at"],
+                        "user": {"username": user["username"], "role": user["role"]}})
+        if resp_token:
+            resp.set_cookie(AUTH_CONFIG["session_cookie_name"], resp_token,
+                            max_age=AUTH_CONFIG["token_expire_hours"] * 3600,
+                            httponly=True, samesite="Lax", path="/")
+        return resp
+
+    @v4_bp.route("/auth/workspace/status", methods=["GET"])
+    def api_workspace_status():
+        from .config import WORKSPACE_CONFIG
+        user = get_current_user()
+        workspaces = {w: True for w in WORKSPACE_CONFIG["default_workspaces"]}
+        workspaces["ZBMP"] = bool(user and session_can_access(user.get("token", ""), "ZBMP"))
+        return jsonify({"success": True, "workspaces": workspaces, "logged_in": bool(user),
+                        "user": ({"username": user["username"], "role": user["role"]} if user else None)})
+
+    @v4_bp.route("/auth/workspace/keys", methods=["GET"])
+    @require_auth
+    def api_workspace_keys_list():
+        ws = (request.args.get("workspace") or "").strip().upper() or None
+        return jsonify({"success": True, "keys": list_workspace_keys(ws)})
+
+    @v4_bp.route("/auth/workspace/keys", methods=["POST"])
+    @require_owner
+    def api_workspace_keys_issue():
+        data = request.get_json(silent=True) or {}
+        ws = (data.get("workspace") or "ZBMP").strip().upper()
+        out = issue_workspace_key(ws, data.get("label", ""), g.current_user["id"], data.get("expires_days"))
+        if not out.get("success"):
+            return jsonify(out), 400
+        log_audit("workspace_key_issue", "auth", ws, "issue key #" + str(out["id"]))
+        return jsonify(out)
+
+    @v4_bp.route("/auth/workspace/keys/revoke", methods=["POST"])
+    @require_owner
+    def api_workspace_keys_revoke():
+        data = request.get_json(silent=True) or {}
+        kid = data.get("id")
+        if not kid:
+            return jsonify({"success": False, "error": "missing id"}), 400
+        revoke_workspace_key(kid)
+        log_audit("workspace_key_revoke", "auth", None, "revoke key #" + str(kid))
+        return jsonify({"success": True})
 
     # ============ 采集适配器API ============
 

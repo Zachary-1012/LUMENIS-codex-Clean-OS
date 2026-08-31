@@ -76,4 +76,15 @@ IMPORTER_CONFIG = {
 }
 
 # 数据库路径（复用现有数据库）
-DB_PATH = os.environ.get("MONITOR_DB_PATH", os.path.join(BASE_DIR, "..", "data", "monitor.db"))
+DB_PATH = os.path.abspath(
+    os.environ.get("ZBC_DB_PATH")
+    or os.environ.get("MONITOR_DB_PATH")
+    or os.path.join(BASE_DIR, "..", "data", "monitor.db")
+)
+
+# 受限工作区（ZBMP）访问密钥配置
+WORKSPACE_CONFIG = {
+    "key_prefix": "zbmp_",          # 工作区密钥明文前缀
+    "grant_hours": 12,              # unlock 成功后会话对该工作区的授权有效期(小时)
+    "default_workspaces": ["CTH-POMS"],  # 默认即可进入、无需密钥的工作区
+}

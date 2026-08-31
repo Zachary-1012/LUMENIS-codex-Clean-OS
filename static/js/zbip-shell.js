@@ -128,7 +128,7 @@
       var opt = e.target.closest('.zb-pop-item'); if (!opt) return;
       var ws = opt.getAttribute('data-ws');
       if (ws === 'cth') { setWorkspace('CTH-POMS'); closeAllPops(); }
-      else { closeAllPops(); openKeyGate(); }
+      else { closeAllPops(); enterZbmp(); }
     });
 
     /* ---- E. 浮层：账户 ---- */
@@ -163,7 +163,7 @@
     mask.innerHTML =
       '<div class="zb-modal" role="dialog" aria-modal="true">' +
       '<h3>进入 ZBMP 工作区</h3>' +
-      '<p>Z-Brand 品牌监测平台为受限工作区，需要访问密钥。密钥由管理员分发；当前为前端门禁，后端鉴权待接入。</p>' +
+      '<p>ZBMP 为受限工作区，需要管理员签发的访问密钥；校验通过后本会话获得 12 小时授权，登出或过期后需重新验证。</p>' +
       '<div class="zb-field"><input type="password" id="zbKeyInput" placeholder="请输入 ZBMP 访问密钥" autocomplete="off"></div>' +
       '<div class="zb-key-err" id="zbKeyErr"></div>' +
       '<div class="zb-modal-actions">' +
@@ -171,6 +171,16 @@
       '<button class="zb-btn-primary" id="zbKeyOk" type="button">解锁进入</button></div></div>';
     document.body.appendChild(mask);
     function openKeyGate() { mask.classList.add('show'); setTimeout(function () { var i = document.getElementById('zbKeyInput'); if (i) i.focus(); }, 60); }
+    // 进入 ZBMP：先问后端当前会话是否已授权，已授权直接进，否则弹密钥门
+    function enterZbmp() {
+      fetch('/v4/auth/workspace/status', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (j && j.workspaces && j.workspaces['ZBMP']) { try { sessionStorage.setItem('zbmp_unlocked', '1'); } catch (e) {} setWorkspace('ZBMP'); toast('已进入 ZBMP 工作区（会话授权有效）'); }
+          else openKeyGate();
+        })
+        .catch(function () { openKeyGate(); });
+    }
     mask.addEventListener('click', function (e) { if (e.target === mask) mask.classList.remove('show'); });
     document.getElementById('zbKeyCancel').addEventListener('click', function () { mask.classList.remove('show'); });
     document.getElementById('zbKeyOk').addEventListener('click', submitKey);
@@ -178,11 +188,24 @@
     function submitKey() {
       var v = (document.getElementById('zbKeyInput').value || '').trim();
       var err = document.getElementById('zbKeyErr');
-      // 前端门禁占位：不硬编码真实密钥；非空即记录本地通过标记，真正鉴权由后端补
+      var okBtn = document.getElementById('zbKeyOk');
       if (!v) { err.textContent = '请输入密钥'; return; }
-      try { localStorage.setItem('zbmp_unlocked', '1'); } catch (e) {}
-      mask.classList.remove('show'); setWorkspace('ZBMP');
-      toast('ZBMP 工作区建设中，当前先进入外壳；密钥后端鉴权待接入（未实测）');
+      err.textContent = ''; okBtn.disabled = true; okBtn.textContent = '验证中…';
+      fetch('/v4/auth/workspace/unlock', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace: 'ZBMP', key: v })
+      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (res.ok && res.j.success) {
+            try { sessionStorage.setItem('zbmp_unlocked', '1'); } catch (e) {}
+            document.getElementById('zbKeyInput').value = '';
+            mask.classList.remove('show'); setWorkspace('ZBMP');
+            toast('ZBMP 工作区已解锁，本会话授权 12 小时');
+          } else { err.textContent = (res.j && res.j.error) || '密钥无效'; }
+        })
+        .catch(function () { err.textContent = '网络错误，暂时无法校验密钥'; })
+        .finally(function () { okBtn.disabled = false; okBtn.textContent = '解锁进入'; });
     }
     function setWorkspace(name) {
       wsBtn.querySelector('.zb-ws-name').textContent = name;
