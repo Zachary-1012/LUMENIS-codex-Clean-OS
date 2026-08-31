@@ -281,3 +281,19 @@
 - 实测（8301，已实测）：桌面 1066：:root 变量生效（--w-bg#FAFAF9/--w-ink#1C1917/--w-accent#1C1917/--w-danger#DC2626/圆角8/侧栏240），21 导航完整、active 高亮，6 KPI 真实出数 957/622/241/94/22/448,410，风险预警/事件中心(方所闭店29、OLE投诉63)/热门话题/日历齐全，右下 Auth fab“需处理1”正常，证据 step3-overview-desktop-1066.png。移动 390（CDP Emulation，mobile=true）：layout=block、KPI 2 列、单顶栏、6 KPI 全出数、fab 正常，证据 step3-overview-mobile-390.png。两视口下 /api/* 均 status=ok。
 - 未实测/登记：① 430/768/1280/1440 断点本轮未稳定取到（CDP emulate 在 mobile=false 时未可靠改宽且截图有合成残影，非真实 DOM 重复——已核 DOM 仅 1 个 .topbar），留待下轮补证；② .action.primary 计算色为 rgb(0,0,0)（旧层硬编码）与 #1C1917 有极微差，待统一；③ sparkline 折线仍为蓝/绿/红/紫数据色，暂保留（数据可视化语义色），后续决定是否降饱和；④ 侧栏状态/架构卡片移出属 IA 改造，登记不擅改。
 - 决策：Step3 改变真实页面外观，按“验收前生产冻结”只在 ui/staging-foundation 提交，**不 FF 到 main、不动 8201 生产**；待用户确认视觉方向后再合入。范围仅 override.css、index.html（+1 link）、2 张 evidence、DEV_LOG；无 .py/.db/.env/采集/API/主体口径变更，无 DB 迁移。回滚 = 删除 index.html 中 override 的 link。
+
+---
+
+## 2026-09-01 · UI 施工 Step 4（GPT/Codex 式工作台外壳：工作区切换/分组侧栏/干净 Home/账户层级，仅 Staging）
+
+- 触发：用户 12 张 ChatGPT Work/Codex/设置参考图 + 新 IA 口径（系统打开叫 Z-Brand Core；左上工作区切换 CTH-POMS/ZBMP，ZBMP 必须密钥；Home 像 GPT 一样干净、Zachary 收进中央输入不再乱飘；加常规搜索框；四周窄留白色差；线性 icon；重要度用彩色小圆点；账户→设置层级；设置页同构侧栏）。12 图全部精读，对照见 docs/UI/STEP4-WORKBENCH-IA.md。
+- 改了什么（纯增量 Shell 层，可整层回滚）：
+  1. 新增 static/css/zbip-shell.css（v1.0.1）：body.zb-shell-on 作用域；外层 stone-200 衬底+主区白圆角内面形成窄留白色差；侧栏 248 stone-100、分组标题、项高 32/圆角 6/active stone-200 胶囊、线性 icon 统一；工作区切换器/搜索/通知槽；账户槽；浮层 .zb-pop（白圆角弱阴影）、黑胶囊 .zb-tip、ZBMP 密钥门 .zb-modal；Home 居中提问（标题/圆角输入/黑圆发送钮/胶囊 chip）；隐藏乱飘 #zacharyFloat；顶栏去渐变并弱化旧 .brand/.top-center/.clock（保留 .top-actions 采集/AI/导出）；六语义 .zb-dot；≤760 侧栏抽屉化、reduced-motion。
+  2. 新增 static/js/zbip-shell.js（v1.0.1）：运行时把 21 个 .side-item 按 总览/监测/分析/品牌资产/产出/系统 6 组包裹（源 DOM 不删、顺序保留，overview 改名“舆情驾驶舱”）；注入工作区切换器（CTH-POMS 默认✓ / ZBMP 锁·密钥）、整宽搜索框（输入即时过滤功能）、通知、底部账户；工作区浮层/账户浮层（邮箱/Zachary/设置 Ctrl+,/退出）；ZBMP 密钥门 modal（前端占位，非空记 localStorage，不硬编码密钥，文案标注后端鉴权待接）；注入 #zbHome（标题“你今天想知道什么？”+复用既有 #zacharyInput/sendZacharyMsg/toggleZacharyChat，不新造 AI+4 快捷 chip）；点侧栏/chip 收 Home 进具体页、双击工作区名回 Home；移动端驱动既有 #menuToggle 抽屉。
+  3. static/index.html 仅 +4 行（head 1 link、body 末 1 script，均标 [STAGING ONLY]）。
+- 为什么：用户要 GPT 式干净落地页与清晰层级，且明确“现有能力一个不丢、不做大重构”。用 Strangler Shell 层运行时重组外观与 IA，业务路由/数据/采集/主体口径全部不经手，回滚只需删 2 行引用。
+- 数据库：无变化、无迁移；Staging 仍连只读副本 staging/monitor.staging.db，生产 data/monitor.db 未碰。
+- 测试（8301，已实测）：① 结构断言 shellOn/6 分组/切换器/搜索/账户/Home 全在、21 项全保留、#zacharyFloat=display:none、无新增 console error（仅既有 three.js r150 deprecation warning）；② 工作区浮层 CTH-POMS(✓)/ZBMP(锁·密钥) 正常；③ ZBMP 密钥门开/取消正常；④ 搜索“事件”→仅显事件中心/事件关系图谱、隐 19，清空恢复 21；⑤ 账户浮层 4 行，账户→设置正确跳 page-settings；⑥ chip“进入舆情驾驶舱”→Home 收起、page-overview active，6 KPI 真实出数 957/622/241/94/22/448,410，风险 8 行/事件 8 行(方所闭店29)/话题 7 行/2026年9月日历齐全（能力零丢失回归通过）；⑦ 双击工作区名回 Home；⑧ 390 移动：侧栏默认 translateX(-260) 抽屉、汉堡滑出 translateX(0)、Home 标题 24px、21 项在、底部账户槽在。Evidence：docs/UI/evidence/step4-home-desktop.png、step4-cockpit-desktop.png。
+- 过程运维：发现 Staging 8301 后台进程已退出（连接拒绝；生产 8201 正常 v5.9.9），按隔离参数（TAIKOO_PORT=8301/ZBC_DB_PATH=只读副本/XHS_CDP_URL=''/TAIKOO_WEB_DISCOVERY=0）重新后台拉起，healthz 200 后再测，未动 8201。
+- 未实测/遗留（如实登记）：① 430/768/1024/1280/1440 断点未稳定取到（CDP emulate mobile=false 改宽不可靠、DSF 致截图左右合成残影；DOM 断言 topbar/sidebar/ws 均=1 证明非真实重复），需真机或手动补图；② ZBMP 密钥门为前端占位，密钥来源/后端鉴权方式待用户拍板，ZBMP 工作区页面本身未建；③ 设置页同构侧栏（ref10/12）留 Step7；④ 常规搜索当前只过滤侧栏，后续与既有 commandPalette(Ctrl+K) 合并；⑤ 驾驶舱 KPI metric-icon 弱底、sparkline 多色、右侧 AI 洞察写死假数据(65%/9.8%/22/448K) 留后续精修/接真实数据；⑥ 顶栏 .top-actions 在 Home 下是否进一步弱化待验收。
+- 决策：Step4 改变 IA 与真实外观，继续只在 ui/staging-foundation 提交并 push 该分支备份，**不合 main、不动 8201**；待用户对 Step3+Step4 整体视觉点头后统一合 main。范围仅 zbip-shell.css/js、index.html(+4)、STEP4 文档、2 张 evidence、DEV_LOG；无 .py/.db/.env/采集/API/主体口径/时间口径变更，无 DB 迁移。回滚 = 删除 index.html 中两行 [STAGING ONLY] 引用。
