@@ -43,6 +43,19 @@
 | LR-20260831-032 | 安全签名 | PyJWT | jpadilla/pyjwt | MIT | 5696 | CANDIDATE（session/token 签名，替代裸存） | AUTH-002 |
 | LR-20260831-033 | Flask 签名 | itsdangerous | pallets/itsdangerous | BSD-3-Clause | 3131 | 已是 Flask 生态（随 Flask，用于签名/会话） | AUTH |
 
+### UI/UX 设计工程研究（2026-08-31 增补，详见 `docs/learning/ui/`）
+| ID | 方向 | 标杆 | 官方/来源 | 采用结论 | 关联 |
+|---|---|---|---|---|---|
+| LR-20260831-034 | R 设计体系 | GitHub Primer | primer.style | ADOPT：token 三层 + functional color + 密度档 | Design System |
+| LR-20260831-035 | R 高密度/命令 | Linear | linear.app | ADOPT：⌘K、紧凑列表、Drawer 不跳页 | 全局交互 |
+| LR-20260831-036 | R 黑白灰工程感 | Vercel Geist | vercel.com/geist | ADOPT：近黑主操作、边框优先、Skeleton | Design System |
+| LR-20260831-037 | R AI 分区 | OpenAI 产品 | platform.openai.com | REFERENCE：AI/系统/人工三分区，仅 AI 区 | AI-001 |
+| LR-20260831-038 | R 安全控制台 | Anthropic Console | console.anthropic.com | ADOPT：密钥脱敏、危险确认 | SETT/AUTH |
+| LR-20260831-039 | R 列表-详情 | Stripe Dashboard | stripe.com | ADOPT：列表+抽屉、数字对齐、向导 | 笔记/事件/报告 |
+| LR-20260831-040 | R 监控驾驶舱 | Datadog | datadoghq.com | ADOPT 结构/REJECT 高饱和配色 | CTH 总览 |
+| LR-20260831-041 | R 事件生命周期 | Sentry | sentry.io | ADOPT：Issue 流/严重度/Evidence | 事件中心/DCC |
+| 动效标尺 | Motion | 行业公开经验（100/200/300ms、4-8pt、小半径） | 见 ui/MOTION-INTERACTION-PATTERNS | ADOPT，数值固化进 Design System §10 | 全局 |
+
 ## 二、结论分布
 - **可直接采用（工具/库，需走 Staging + License 审计）**：pydeps（只读工具）、Playwright、APScheduler、pytest；候选优先：waitress（Windows 生产 WSGI）、sqlite-vec（学习库）、tenacity（退避）、alembic（迁移）。
 - **只学思想不引依赖**：Backstage、in-toto/SLSA、Crawlee、Style Dictionary、Nx 治理、circuitbreaker、tree-sitter。

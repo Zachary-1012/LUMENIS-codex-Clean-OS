@@ -239,3 +239,14 @@
 - Evidence：app_evidence_records 为外部抓取表且 0 行，无统一测试/运行 Evidence 落库 → GAP-08。
 - 状态保持 Registry 原值不擅改：ACTIVE21/DEVELOPING6/EXPERIMENTAL2/PLANNED4/RESERVED1，NOT_VERIFIED/DUPLICATE/MIGRATION_REQUIRED/LEGACY 的 Feature 级均 0（重复在实现层以 DUPLICATE_CANDIDATE 登记 GAP-04/09/10）；ASSET_MISSING=0。
 - 结论：P0=0；UI 信息架构/占位已覆盖全部 34 功能，具备一次性施工的映射条件，但建议先做 GAP-03（主 SPA 挂 Auth Modal）+ CSS Token 单层收敛两个前置并在 Staging 施工；是否开工由用户拍板。全程未改业务/DB/采集/UI/API/Runtime、未删文件。
+
+---
+
+## 2026-08-31 · ZBIP 统一 UI/UX 设计工程启动（只定设计规范与地图，不写页面代码）
+
+- 阶段切换：从审计转入设计工程，纪律=先设计系统→页面地图→组件→最后代码；本轮**未改 static/ 与任何业务代码**（git 无 static/*.py 改动，已核）。
+- 现状根因实测：static/css 共 22 个 CSS 约 1.7 万行，index.html 串行 link 17 个样式层层覆盖、多套 token 并存（tokens/tokens-minimal/zb-theme/zb-gpt-theme/design-v8/v9），是“新 UI 被旧样式覆盖/风格不一”的机制根因；设计系统规定 zbip-tokens 为唯一真相并给出旧层 ACTIVE/DUPLICATE/LEGACY 退役策略（本轮只定策略不删文件）。
+- 产出 docs/UI/：ZBIP-DESIGN-SYSTEM.md（哲学/三层 Color Token/字体/栅格/间距/圆角/阴影/图标/六语义状态/动效时长与 z-index/旧 CSS 收敛/无障碍性能，含可直接施工的具体 token 值）、COMPONENT-SYSTEM.md（Atom/Molecule/Overlay/State/Pattern 组件地图与规格）、UI-EVIDENCE-PROCESS.md（七步门禁+UI Evidence 字段+防覆盖）、page-maps 四份（CTH 驾驶舱/ZBMP 分析工作台/DCC 工程控制台/SICI 实验工作台，每页含目标/用户/数据/组件/交互/状态/权限，未完成功能占位）。
+- 学习资产 docs/learning/ui/：UI-DESIGN-RESEARCH.md（Primer/Linear/Vercel/OpenAI/Anthropic/Stripe/Datadog/Sentry 八标杆取舍，LR-034..041 已登记进 LEARNING-REGISTRY）、MOTION-INTERACTION-PATTERNS.md（100/200/300ms 动效标尺、状态叙事、⌘K、四态、移动差异、性能红线）。
+- 视觉定调：侘寂黑白灰（Stone 暖灰）为底，六语义色仅状态/关键操作，状态=点+文字+图标三重、颜色不作唯一信息；动效目的优先并支持 prefers-reduced-motion；六断点 390/430/768/1024/1280/1440。
+- 下一步开发顺序（待用户确认开工）：① GAP-03 主 SPA 挂 Auth Modal；② Staging(8301) 建 zbip-tokens/components 单层并按组件地图实现；③ CTH 总览/采集/事件优先，ZBMP 随后，DCC/SICI 仅冻结 IA；逐组件/页面走 UI Evidence 七步门禁。生产 8201 与后端在 UI 施工期冻结、不改业务。
