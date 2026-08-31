@@ -364,6 +364,9 @@ input[type=checkbox].ios-toggle,.switch input,.toggle input{ accent-color:var(--
 ============================================================================ */
 .content .page-view{ display:none!important; }
 .content .page-view.active{ display:flex!important; flex-direction:column; }
+/* design-v8 用 #page-overview{display:flex!important}（id 特异性）把首页永久钉显示，
+   导致切页后首页仍堆叠在顶部；以 id+:not(.active) 更高特异性在非激活时彻底隐藏 */
+.content #page-overview:not(.active){ display:none!important; }
 .page-view{ animation:zbPage var(--w-d-page) var(--w-ease)!important; }
 @keyframes zbPage{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media (prefers-reduced-motion:reduce){ *{ animation-duration:.01ms!important; transition-duration:.01ms!important; } }
