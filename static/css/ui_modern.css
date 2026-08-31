@@ -1,0 +1,1173 @@
+/**
+ * Z-Brand Core - 现代化UI升级 v5.9.10
+ * 设计融合：Apple HIG + OpenAI GPT + OpenAI Codex
+ * 核心原则：简洁、层次、呼吸感、微动效、全局响应式
+ */
+
+/* ============================================
+   设计令牌（Design Tokens）
+   ============================================ */
+:root {
+    /* 色彩系统 - Apple风格 */
+    --apple-blue: #0071e3;
+    --apple-blue-hover: #0077ed;
+    --apple-green: #34c759;
+    --apple-red: #ff3b30;
+    --apple-orange: #ff9500;
+    --apple-purple: #af52de;
+    --apple-gray: #8e8e93;
+
+    /* 文本层次 */
+    --text-primary: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --text-tertiary: #86868b;
+    --text-quaternary: #aeaeb2;
+
+    /* 背景层次 */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f7;
+    --bg-tertiary: #fafafa;
+    --bg-elevated: #ffffff;
+
+    /* 边框与分隔 */
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --border-default: rgba(0, 0, 0, 0.1);
+    --border-strong: rgba(0, 0, 0, 0.15);
+
+    /* 阴影 - Apple风格细腻阴影 */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+    /* 圆角 - Apple风格 */
+    --radius-xs: 6px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-full: 9999px;
+
+    /* 间距系统 */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+
+    /* 动效 - Apple风格弹性曲线 */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duration-fast: 0.15s;
+    --duration-normal: 0.25s;
+    --duration-slow: 0.4s;
+
+    /* 毛玻璃 */
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-blur: blur(20px) saturate(180%);
+
+    /* 布局 */
+    --sidebar-width: 240px;
+    --sidebar-collapsed: 64px;
+    --topbar-height: 52px;
+    --content-max-width: 1400px;
+}
+
+/* ============================================
+   全局重置与基础
+   ============================================ */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+                 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+}
+
+/* 滚动条美化 - Apple风格 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: var(--radius-full);
+    transition: background var(--duration-fast) var(--ease-out);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   顶部导航栏 - Apple风格毛玻璃
+   ============================================ */
+.topbar {
+    height: var(--topbar-height);
+    padding: 0 var(--space-5);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--border-subtle);
+    transition: all var(--duration-normal) var(--ease-out);
+}
+
+.topbar:hover {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.brand h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+.brand p {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 1px;
+}
+
+/* 系统状态指示器 */
+.system-state {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(52, 199, 89, 0.1);
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--apple-green);
+}
+
+.system-state i {
+    width: 6px;
+    height: 6px;
+    background: var(--apple-green);
+    border-radius: 50%;
+    animation: pulse-dot 2s var(--ease-in-out) infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+/* 时钟 */
+.clock {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================
+   按钮系统 - Apple风格
+   ============================================ */
+.action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.action:active {
+    transform: scale(0.97);
+}
+
+.action.primary {
+    background: var(--apple-blue);
+    color: white;
+    box-shadow: 0 1px 3px rgba(0, 113, 227, 0.3);
+}
+
+.action.primary:hover {
+    background: var(--apple-blue-hover);
+    box-shadow: 0 2px 8px rgba(0, 113, 227, 0.4);
+    transform: translateY(-1px);
+}
+
+.action.secondary {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+}
+
+.action.secondary:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: var(--border-default);
+}
+
+.action.tertiary {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.action.tertiary:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+
+.action.icon-only {
+    padding: 7px;
+    width: 34px;
+    height: 34px;
+    justify-content: center;
+}
+
+/* 按钮图标 */
+.svgicon {
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ============================================
+   侧边栏导航 - GPT风格
+   ============================================ */
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-subtle);
+    padding: var(--space-3) var(--space-2);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.side-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    text-align: left;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.side-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleY(0);
+    width: 3px;
+    height: 20px;
+    background: var(--apple-blue);
+    border-radius: 0 var(--radius-full) var(--radius-full) 0;
+    transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.side-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-primary);
+}
+
+.side-item.active {
+    background: rgba(0, 113, 227, 0.08);
+    color: var(--apple-blue);
+    font-weight: 600;
+}
+
+.side-item.active::before {
+    transform: translateY(-50%) scaleY(1);
+}
+
+.side-item .navicon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    opacity: 0.8;
+}
+
+.side-item.active .navicon {
+    opacity: 1;
+}
+
+.side-item .nav-badge {
+    margin-left: auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: var(--apple-red);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 侧边栏底部更新卡片 */
+.side-footer {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.update-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+}
+
+.update-card b {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.collect-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.collect-row b {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.status-ready {
+    color: var(--apple-green) !important;
+}
+
+/* 进度条 */
+.progress {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.progress span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--apple-blue), var(--apple-purple));
+    border-radius: var(--radius-full);
+    transition: width var(--duration-slow) var(--ease-out);
+}
+
+.update-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--apple-blue);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.update-link:hover {
+    background: rgba(0, 113, 227, 0.1);
+}
+
+/* ============================================
+   主内容区
+   ============================================ */
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6);
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* 页面标题区 */
+.page-hero {
+    margin-bottom: var(--space-6);
+}
+
+.eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--apple-blue);
+    margin-bottom: 6px;
+}
+
+.page-hero h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.page-hero p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    max-width: 600px;
+}
+
+/* 页面头部（带返回按钮） */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--space-5);
+}
+
+.page-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.back-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.page-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+}
+
+/* ============================================
+   指标卡片 - Apple风格
+   ============================================ */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.metric-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-out);
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--card-accent, var(--apple-blue)), transparent);
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-default);
+}
+
+.metric-card:hover::after {
+    opacity: 1;
+}
+
+.metric-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-3);
+    font-size: 16px;
+}
+
+.metric-icon.blue { background: rgba(0, 113, 227, 0.1); color: var(--apple-blue); }
+.metric-icon.green { background: rgba(52, 199, 89, 0.1); color: var(--apple-green); }
+.metric-icon.red { background: rgba(255, 59, 48, 0.1); color: var(--apple-red); }
+.metric-icon.amber { background: rgba(255, 149, 0, 0.1); color: var(--apple-orange); }
+.metric-icon.purple { background: rgba(175, 82, 222, 0.1); color: var(--apple-purple); }
+.metric-icon.gray { background: rgba(142, 142, 147, 0.1); color: var(--apple-gray); }
+
+.metric-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.metric-card strong {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    line-height: 1.1;
+    display: block;
+    font-variant-numeric: tabular-nums;
+}
+
+.metric-card strong.positive { color: var(--apple-green); }
+.metric-card strong.negative { color: var(--apple-red); }
+.metric-card strong.risk { color: var(--apple-orange); }
+
+.metric-sub {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 6px;
+}
+
+.metric-sub b {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* 迷你趋势图 */
+.spark {
+    height: 28px;
+    margin-top: 8px;
+    opacity: 0.7;
+}
+
+/* ============================================
+   面板/卡片容器
+   ============================================ */
+.panel {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+    transition: all var(--duration-normal) var(--ease-out);
+}
+
+.panel:hover {
+    border-color: var(--border-default);
+}
+
+.panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+    gap: 12px;
+}
+
+.panel-head h3 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.panel-head p {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+/* 首页卡片网格 */
+.home-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-4);
+}
+
+.home-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-out);
+}
+
+.home-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-default);
+}
+
+.home-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+}
+
+.home-card-head h3 {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.chev {
+    color: var(--text-quaternary);
+    font-size: 14px;
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.home-card:hover .chev {
+    transform: translateX(3px);
+    color: var(--text-tertiary);
+}
+
+/* ============================================
+   列表项 - 统一风格
+   ============================================ */
+.risk-table, .event-list, .topic-list, .case-list, .note-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.risk-item, .event-item, .topic-item, .case-item, .note-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.risk-item:hover, .event-item:hover, .topic-item:hover,
+.case-item:hover, .note-item:hover {
+    background: var(--bg-secondary);
+    border-color: var(--border-subtle);
+    transform: translateX(2px);
+}
+
+/* 风险等级标签 */
+.risk-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.risk-tag.high { background: rgba(255, 59, 48, 0.1); color: var(--apple-red); }
+.risk-tag.medium { background: rgba(255, 149, 0, 0.1); color: var(--apple-orange); }
+.risk-tag.low { background: rgba(52, 199, 89, 0.1); color: var(--apple-green); }
+
+/* 情感标签 */
+.sentiment-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+}
+
+.sentiment-tag.positive { background: rgba(52, 199, 89, 0.1); color: var(--apple-green); }
+.sentiment-tag.negative { background: rgba(255, 59, 48, 0.1); color: var(--apple-red); }
+.sentiment-tag.neutral { background: rgba(142, 142, 147, 0.1); color: var(--apple-gray); }
+
+/* ============================================
+   弹窗/Modal - Apple风格
+   ============================================ */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--duration-normal) var(--ease-out);
+}
+
+.modal[aria-hidden="false"] {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-panel {
+    position: relative;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    max-width: 720px;
+    width: 90%;
+    max-height: 85vh;
+    overflow: hidden;
+    transform: scale(0.95) translateY(10px);
+    transition: transform var(--duration-slow) var(--ease-spring);
+}
+
+.modal[aria-hidden="false"] .modal-panel {
+    transform: scale(1) translateY(0);
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 50%;
+    font-size: 16px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    z-index: 10;
+}
+
+.modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.modal-content {
+    padding: var(--space-6);
+    overflow-y: auto;
+    max-height: 85vh;
+}
+
+/* ============================================
+   Toast 提示 - Apple风格
+   ============================================ */
+.toast {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    color: white;
+    padding: 10px 20px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--duration-normal) var(--ease-spring);
+    box-shadow: var(--shadow-lg);
+}
+
+.toast.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================
+   分页
+   ============================================ */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: var(--space-4);
+}
+
+.pagination button {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.pagination button:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.pagination button.active {
+    background: var(--apple-blue);
+    color: white;
+    border-color: var(--apple-blue);
+}
+
+/* ============================================
+   搜索框/输入框
+   ============================================ */
+input[type="text"], input[type="search"], input[type="date"],
+input[type="number"], select, textarea {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    transition: all var(--duration-fast) var(--ease-out);
+    outline: none;
+}
+
+input[type="text"]:focus, input[type="search"]:focus,
+input[type="date"]:focus, input[type="number"]:focus,
+select:focus, textarea:focus {
+    background: var(--bg-primary);
+    border-color: var(--apple-blue);
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--text-quaternary);
+}
+
+/* ============================================
+   标签页/Tab
+   ============================================ */
+.segmented {
+    display: inline-flex;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    gap: 2px;
+}
+
+.segmented .tab {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.segmented .tab:hover {
+    color: var(--text-primary);
+}
+
+.segmented .tab.active {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-xs);
+    font-weight: 600;
+}
+
+/* ============================================
+   页脚
+   ============================================ */
+footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-5) 0;
+    margin-top: var(--space-8);
+    border-top: 1px solid var(--border-subtle);
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+/* ============================================
+   响应式适配 - 平板
+   ============================================ */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-width: 200px;
+    }
+
+    .content {
+        padding: var(--space-5);
+    }
+
+    .metric-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .home-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   响应式适配 - 手机（断点480px，仅真正手机端触发）
+   ============================================ */
+@media (max-width: 480px) {
+    :root {
+        --topbar-height: 48px;
+    }
+
+    /* 侧边栏改为抽屉式 */
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 260px;
+        z-index: 900;
+        transform: translateX(-100%);
+        transition: transform var(--duration-slow) var(--ease-out);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 899;
+        opacity: 0;
+        visibility: hidden;
+        transition: all var(--duration-normal) var(--ease-out);
+    }
+
+    .sidebar-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .content {
+        padding: var(--space-4);
+        padding-top: calc(var(--topbar-height) + var(--space-4));
+    }
+
+    /* 顶栏优化 */
+    .topbar {
+        padding: 0 var(--space-3);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 800;
+    }
+
+    .brand h1 {
+        font-size: 14px;
+    }
+
+    .brand p, .clock, .system-state {
+        display: none;
+    }
+
+    .top-actions .btn-label {
+        display: none;
+    }
+
+    .top-actions .action {
+        padding: 7px;
+        width: 36px;
+        height: 36px;
+        justify-content: center;
+    }
+
+    /* 菜单按钮显示 */
+    .menu-toggle {
+        display: flex !important;
+    }
+
+    /* 页面标题 */
+    .page-hero h2 {
+        font-size: 22px;
+    }
+
+    .page-header h2 {
+        font-size: 18px;
+    }
+
+    /* 指标卡片 */
+    .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-3);
+    }
+
+    .metric-card {
+        padding: var(--space-4);
+    }
+
+    .metric-card strong {
+        font-size: 22px;
+    }
+
+    /* 面板 */
+    .panel {
+        padding: var(--space-4);
+        border-radius: var(--radius-md);
+    }
+
+    /* 弹窗全宽 */
+    .modal-panel {
+        width: 95%;
+        max-height: 90vh;
+        border-radius: var(--radius-lg);
+    }
+
+    .modal-content {
+        padding: var(--space-4);
+    }
+
+    /* 表格横向滚动 */
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 页脚 */
+    footer {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
+}
+
+/* 超小屏 */
+@media (max-width: 380px) {
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   深色模式（预留，默认不自动触发，保持系统浅色主题）
+   ============================================ */
+/* 如需启用深色模式，取消下方注释
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-primary: #f5f5f7;
+        --text-secondary: #a1a1a6;
+        --text-tertiary: #86868b;
+        --bg-primary: #1d1d1f;
+        --bg-secondary: #000000;
+        --bg-tertiary: #2c2c2e;
+        --bg-elevated: #1d1d1f;
+        --border-subtle: rgba(255, 255, 255, 0.08);
+        --border-default: rgba(255, 255, 255, 0.12);
+        --glass-bg: rgba(29, 29, 31, 0.72);
+    }
+}
+*/
+
+/* ============================================
+   减少动效偏好
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================
+   工具类
+   ============================================ */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+.text-blue { color: var(--apple-blue); }
+.text-green { color: var(--apple-green); }
+.text-red { color: var(--apple-red); }
+.text-orange { color: var(--apple-orange); }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+
+.w-full { width: 100%; }
+.hidden { display: none !important; }
