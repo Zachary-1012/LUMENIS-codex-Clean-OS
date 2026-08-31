@@ -19,7 +19,9 @@
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
     send: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>',
-    spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>'
+    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>',
+    sparkle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.7L19 20l-.7-1.8L16.5 17.5l1.8-.7z"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>'
   };
 
   // 21 项 → 分组（data-page；话题监测是 a#id）
@@ -40,6 +42,16 @@
     var nav = sidebar && sidebar.querySelector('.side-nav');
     if (!sidebar || !nav) return;
     document.body.classList.add('zb-shell-on');
+    linearizeTopbar();
+
+    // 顶栏 emoji 图标 → 线性 SVG（源 HTML 不改，仅外壳层替换，可回滚）
+    function linearizeTopbar() {
+      var map = { commandPaletteBtn: 'search', alertBellBtn: 'bell', refreshBtn: 'refresh', reviewBtn: 'sparkle', reportBtn: 'doc' };
+      Object.keys(map).forEach(function (id) {
+        var b = document.getElementById(id), ic = b && b.querySelector('.svgicon');
+        if (ic && SVG[map[id]]) ic.innerHTML = SVG[map[id]];
+      });
+    }
 
     /* ---- A. 导航分组（运行时包裹，不改源 DOM 顺序之外的结构） ---- */
     var itemMap = {};
@@ -182,7 +194,7 @@
         '<div class="zb-chips">' +
         chip('cockpit', SVG.grid, '进入舆情驾驶舱') +
         chip('risk', SVG.bell, '今日高风险') +
-        chip('event', SVG.spark, '最新事件') +
+        chip('event', SVG.sparkle, '最新事件') +
         chip('report', SVG.gear, '生成日报') +
         '</div>' +
         '<div class="zb-home-sub">Z-Brand Core · CTH-POMS 生产工作区 · 数据来自本地采集与分析管线</div>' +

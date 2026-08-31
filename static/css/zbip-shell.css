@@ -73,12 +73,12 @@ body.zb-shell-on .side-nav {
   padding: 10px 10px 4px; letter-spacing: .04em;
 }
 body.zb-shell-on .side-item {
-  height: 32px !important; min-height: 32px !important; border-radius: var(--zb-r-md,6px) !important;
-  padding: 0 10px !important; gap: 10px !important; font-size: 13px !important; font-weight: 450;
+  height: 34px !important; min-height: 34px !important; border-radius: var(--zb-r-md,6px) !important;
+  padding: 0 10px !important; gap: 7px !important; font-size: 13.5px !important; font-weight: 450;
   color: var(--zb-stone-600,#57534E) !important; background: transparent !important;
   position: relative;
 }
-body.zb-shell-on .side-item .navicon { width: 18px; display: grid; place-items: center; color: var(--zb-stone-500,#78716C); opacity: 1 !important; }
+body.zb-shell-on .side-item .navicon { width: 17px; flex: 0 0 17px; display: grid; place-items: center; color: var(--zb-stone-500,#78716C); opacity: 1 !important; }
 body.zb-shell-on .side-item .navicon svg { width: 16px; height: 16px; filter: drop-shadow(0 1px 1px rgba(28,25,23,.06)); }
 body.zb-shell-on .side-item:hover { background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important; }
 body.zb-shell-on .side-item.active { background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important; font-weight: 600; }
@@ -168,8 +168,8 @@ body.zb-shell-on .side-footer, body.zb-shell-on .architecture-panel { display: n
 
 /* ---------- 4. Home：干净居中 Zachary 提问页 ---------- */
 #zbHome {
-  position: absolute; inset: 0; z-index: 50; background: #fff; border-radius: var(--zb-r-lg,8px);
-  display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+  position: fixed; top: 56px; left: 248px; right: 0; bottom: 0; z-index: 50; background: var(--zb-stone-50,#FAFAF9);
+  display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; overflow: auto;
 }
 body.zb-shell-on #zbHome.show { display: flex; }
 .zb-home-inner { width: min(720px, 100%); text-align: center; }
@@ -212,15 +212,32 @@ body.zb-shell-on .topbar .brand,
 body.zb-shell-on .topbar .top-center,
 body.zb-shell-on .topbar .clock,
 body.zb-shell-on .topbar .topbar-time { display: none !important; }
+/* 隐藏 brand 后把操作区推到右侧，避免左上空一大片 */
+body.zb-shell-on .topbar { display: flex; align-items: center; }
+body.zb-shell-on .topbar .top-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+/* 顶栏操作统一为线性图标紧凑按钮（emoji 由 JS 替换为内联 SVG） */
+body.zb-shell-on .topbar .action { display: inline-flex; align-items: center; gap: 6px; height: 34px; border-radius: 7px; font-size: 13px; font-weight: 550; }
+body.zb-shell-on .topbar .action.icon-only { width: 34px; justify-content: center; padding: 0; }
+body.zb-shell-on .topbar .action .svgicon { display: inline-grid; place-items: center; width: 16px; height: 16px; line-height: 1; font-size: 0; }
+body.zb-shell-on .topbar .action .svgicon svg { width: 16px; height: 16px; }
 body.zb-shell-on .action.primary { background: var(--zb-stone-900,#1C1917) !important; color: #fff !important; box-shadow: none !important; border-radius: var(--zb-r-md,6px) !important; }
 body.zb-shell-on .brandmark { background: var(--zb-stone-900,#1C1917) !important; border-radius: 7px !important; box-shadow: 0 1px 2px rgba(28,25,23,.18) !important; }
 
 /* ---------- 6. 响应式：390 侧栏抽屉、Home 自适应 ---------- */
 @media (max-width: 760px) {
+  body.zb-shell-on #zbHome { left: 0; top: 56px; }
   body.zb-shell-on .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 1200; transform: translateX(-102%); transition: transform .24s var(--zb-ease-out,cubic-bezier(.16,1,.3,1)); height: 100vh; }
   body.zb-shell-on.zb-nav-open .sidebar { transform: translateX(0); box-shadow: 0 0 40px rgba(28,25,23,.2) !important; }
   body.zb-shell-on .content, body.zb-shell-on .page { margin: 6px; min-height: calc(100vh - 64px); }
   .zb-home-title { font-size: 24px; }
+  /* 手机顶栏只留线性图标，隐藏文字标签，避免拥挤 */
+  body.zb-shell-on .topbar .action .btn-label { display: none; }
+  body.zb-shell-on .topbar .top-actions { gap: 4px; }
+  body.zb-shell-on .topbar .action { padding: 0; width: 34px; justify-content: center; }
+  .zb-home-inner { padding: 0 4px; }
+  .zb-ask { border-radius: 14px; }
+  .zb-chips { gap: 6px; }
+  .zb-chip { padding: 6px 11px; font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .zb-pop, .zb-modal, .zb-ask, .zb-chip, .zb-ws-switch svg, .zb-tip { transition: none !important; }
