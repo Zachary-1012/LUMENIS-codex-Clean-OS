@@ -250,3 +250,13 @@
 - 学习资产 docs/learning/ui/：UI-DESIGN-RESEARCH.md（Primer/Linear/Vercel/OpenAI/Anthropic/Stripe/Datadog/Sentry 八标杆取舍，LR-034..041 已登记进 LEARNING-REGISTRY）、MOTION-INTERACTION-PATTERNS.md（100/200/300ms 动效标尺、状态叙事、⌘K、四态、移动差异、性能红线）。
 - 视觉定调：侘寂黑白灰（Stone 暖灰）为底，六语义色仅状态/关键操作，状态=点+文字+图标三重、颜色不作唯一信息；动效目的优先并支持 prefers-reduced-motion；六断点 390/430/768/1024/1280/1440。
 - 下一步开发顺序（待用户确认开工）：① GAP-03 主 SPA 挂 Auth Modal；② Staging(8301) 建 zbip-tokens/components 单层并按组件地图实现；③ CTH 总览/采集/事件优先，ZBMP 随后，DCC/SICI 仅冻结 IA；逐组件/页面走 UI Evidence 七步门禁。生产 8201 与后端在 UI 施工期冻结、不改业务。
+
+---
+
+## 2026-08-31 · UI 施工 Step 1（Staging 8301 隔离环境 + GAP-03 主SPA挂Auth + ZBIP Token 单层落地）
+
+- 隔离方式（先旁路验证再切换，生产零影响）：`git worktree add D:\Taikoo-staging-ui (ui/staging-foundation@5a80b3d)`，用主 venv 以 `TAIKOO_PORT=8301 / ZBC_DB_PATH=staging\monitor.staging.db（在线一致备份，notes957/events427/logs477）/ XHS_CDP_URL=空 / TAIKOO_WEB_DISCOVERY=0 / host=127.0.0.1` 起独立 Staging；主目录 8200/8201 生产全程未改文件、未重启，持续 v5.9.9。
+- GAP-03（主 SPA 缺统一 Auth 弹窗）：static/index.html 末尾引入 `/v4/static/auth_global.js`（与 console/collect/settings/version_center 四个 v4 子页同一实现，不新写逻辑）。实测 8301：#zaFab 已挂载，读到 /api/platform-health 并显示“需处理 1”（小红书 BLOCKED/C_RISK 被正确识别为风控，而非 0 条）。
+- ZBIP Token 单层：新增 static/css/zbip-tokens.css（设计系统 v1.0 全部 --zb-* 令牌：Stone 暖灰阶/六语义/字号/4px间距/小半径/三级弱阴影/动效时长缓动/z-index/布局尺寸/prefers-reduced-motion）。**本文件只定义 :root 变量、无任何元素选择器**，故对存量页面零视觉影响；在 index.html 所有旧 CSS 之后最后引入。实测 getComputedStyle：--zb-stone-900=#1C1917、--zb-r-md=6px 生效。
+- 验证（已实测）：HTTP /、/static/css/zbip-tokens.css、/v4/static/auth_global.js 均 200；浏览器 DOM 断言 tokenLinked/authLinked/fabExists=true、21 个侧栏项与总览数据正常渲染、页面未崩。未取得：browser-use 截图接口两次 COMMAND_TIMEOUT（工具侧），像素级视觉对比待补，已用 DOM 断言 + a11y snapshot 替代；后端 pytest 本轮未改 .py 故未重跑。
+- 范围：仅 static/index.html(+4) 与 static/css/zbip-tokens.css(新)，无 .py/.db/.env/采集/主体口径/API 变更，无 DB 迁移。下一步 Step 2：zbip-components 基础组件（Button/Input/StatusDot/Table/Modal/Drawer/四态/⌘K）仅在 Staging 实现。
