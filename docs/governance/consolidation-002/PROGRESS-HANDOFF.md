@@ -12,6 +12,8 @@
 
 ## 1. 命名基线（已钉死，文档首次出现须写全称）
 
+**层级（2026-08-31 决议，以 PRODUCT_NAMING_BASELINE 为准）**：最顶层统一平台层 = **Z-Brand Intelligence Platform**（不缩写）；其下 **ZBP / DCC / SICI 并列**、共同属于该顶层；**ZBP 不是最顶层母平台**。ZBP 内部再分 CTH-POMS、ZBMP（下表三行即顶层下三个并列平台）。
+
 | 中文正式名 | English | 简称 | 仓库 |
 |---|---|---|---|
 | 品牌业务生产平台 | Z-Brand Business Production Platform | ZBP | Zachary-1012/Z-Brand-Core（本仓库） |

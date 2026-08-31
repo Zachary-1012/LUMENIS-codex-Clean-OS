@@ -13,8 +13,8 @@
 - 路由：app.py 内 **189**（对齐既有约189口径），全仓合计 **363**（含 v4 蓝图/子系统 register 路由）；数据库表 **51**；CSS 23 / JS 22 / 模板 10；requirements 依赖 15。
 - 十状态：ACTIVE / DEVELOPING / PLANNED / RESERVED / EXPERIMENTAL / LEGACY / DEPRECATED / DUPLICATE / MIGRATION_REQUIRED / NOT_VERIFIED。
 
-> **命名冲突登记（待拍板）**：本地 `docs/PRODUCT_NAMING_BASELINE.md` 钉的平台全称为「品牌业务生产平台（Z-Brand Business Production Platform, ZBP）」；
-> 本轮口头材料出现「Z-Brand Intelligence Platform」。按权威顺序（当前源码/基线文件 > 聊天结论），本总账暂用 **ZBP**，冲突保留待你确认，不自行改名。
+> **命名层级（已决议，以 PRODUCT_NAMING_BASELINE 为准）**：最顶层统一平台层 = **Z-Brand Intelligence Platform**；其下 **ZBP（品牌业务生产平台，本仓库）/ DCC / SICI 三者并列**；
+> ZBP 不是最顶层母平台，CTH-POMS 与 ZBMP 隶属于 ZBP。本总账登记范围为 ZBP（仓库 Z-Brand-Core）内资产。
 
 ## A. Core 运行时资产（app 静态可达 = ACTIVE）
 
