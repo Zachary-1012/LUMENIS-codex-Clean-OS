@@ -53,8 +53,8 @@ body.zb-shell-on[data-workspace="zbmp"] #zbHome { display: none !important; }
 }
 .zbmp-back:hover { background: var(--zb-stone-100,#F5F5F4); }
 .zbmp-back svg { width: 17px; height: 17px; }
-.zbmp-pagehead h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; color: var(--zb-text,#1C1917); }
-.zbmp-pagehead .sub { font-size: 12px; color: var(--zb-text-muted,#78716C); margin-left: 2px; }
+.zbmp-pagehead h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; color: var(--zb-text,#1C1917); white-space: nowrap; flex: 0 0 auto; }
+.zbmp-pagehead .sub { font-size: 12px; color: var(--zb-text-muted,#78716C); margin-left: 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zbmp-pagehead .ph-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
 /* ============ 2. ZBMP Home 工作台 ============ */
@@ -179,6 +179,34 @@ body.zb-shell-on[data-workspace="zbmp"] #zbHome { display: none !important; }
 }
 .zbmp-page-in { animation: zbFadeUp .26s var(--zb-ease-standard); }
 @media (prefers-reduced-motion: reduce) { .zbmp-page-in, .zb-pop.show, .zb-modal-mask.show .zb-modal { animation: none; } .zb-sheet { transition: none; } }
+
+/* ============ 7.5 真实数据：小结条 + 数据列表（事件/内容接入） ============ */
+.zb-statstrip { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.zb-stat { flex: 1 1 120px; background: var(--zb-surface,#FFF); border: 1px solid var(--zb-border,#E7E5E4); border-radius: var(--zb-r-lg,8px); padding: 10px 12px; }
+.zb-stat .k { font-size: 11.5px; color: var(--zb-text-muted,#78716C); display: block; margin-bottom: 3px; }
+.zb-stat .v { font-size: 20px; font-weight: 600; color: var(--zb-text,#1C1917); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.zb-stat .v small { font-size: 11.5px; font-weight: 400; color: var(--zb-text-muted,#78716C); margin-left: 3px; }
+
+.zb-list { display: flex; flex-direction: column; gap: 8px; }
+.zb-li { background: var(--zb-surface,#FFF); border: 1px solid var(--zb-border,#E7E5E4); border-radius: var(--zb-r-lg,8px); padding: 11px 13px; transition: border-color var(--zb-dur-micro,120ms) var(--zb-ease-standard), box-shadow var(--zb-dur-micro,120ms); cursor: default; }
+.zb-li:hover { border-color: var(--zb-border-strong,#D6D3D1); box-shadow: var(--zb-shadow-1); }
+.zb-li-row1 { display: flex; align-items: center; gap: 8px; }
+.zb-li-title { font-size: 13.5px; font-weight: 600; color: var(--zb-text,#1C1917); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zb-li-sub { font-size: 12.5px; color: var(--zb-text-secondary,#57534E); line-height: 1.55; margin: 4px 0 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.zb-li-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: var(--zb-text-muted,#78716C); }
+.zb-li-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--zb-stone-400,#A8A29E); display: inline-block; }
+.zb-mini-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 1px 7px; border-radius: var(--zb-r-pill,999px); background: var(--zb-stone-100,#F5F5F4); color: var(--zb-text-secondary,#57534E); border: 1px solid var(--zb-border,#E7E5E4); }
+.zb-mini-tag.is-hot { background: var(--zb-risk-bg,#FFF7ED); color: var(--zb-risk,#EA580C); border-color: var(--zb-risk-border,#FED7AA); }
+.zb-num { font-variant-numeric: tabular-nums; }
+a.zb-li-link { color: inherit; text-decoration: none; display: block; }
+a.zb-li-link:hover .zb-li-title { color: var(--zb-brand,#1C1917); text-decoration: underline; text-underline-offset: 3px; }
+
+.zb-data-note { font-size: 11.5px; color: var(--zb-text-muted,#78716C); margin: 2px 0 12px; display: flex; align-items: center; gap: 6px; }
+.zb-skel { background: var(--zb-surface,#FFF); border: 1px solid var(--zb-border,#E7E5E4); border-radius: 8px; padding: 14px; }
+.zb-skel .bar { height: 11px; border-radius: 4px; background: linear-gradient(90deg,var(--zb-stone-100,#F5F5F4),var(--zb-stone-200,#E7E5E4),var(--zb-stone-100,#F5F5F4)); background-size: 200% 100%; animation: zbShimmer 1.1s infinite; margin-bottom: 8px; }
+.zb-skel .bar.w60 { width: 60%; } .zb-skel .bar.w80 { width: 80%; } .zb-skel .bar.w40 { width: 40%; }
+@keyframes zbShimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .zb-skel .bar { animation: none; } }
 
 /* ============ 8. 响应式 ============ */
 @media (max-width: 760px) {

@@ -128,12 +128,17 @@ UI Layer → Interaction Layer → Application/Feature Layer → Domain Layer
 
 ## 9. 已登记冲突（STOP，待用户拍板，本轮不自行改）
 
-- **C1（中间层 ZBP 是否保留）**：现 `PRODUCT_NAMING_BASELINE.md` 为「ZBIP → ZBP/DCC/SICI 三并列，ZBP 内含 CTH+ZBMP」；本指令直接列「CTH/ZBMP/DCC/SICI/AI-D 五身份、四仓库」，未提 ZBP 中间层。**本轮不删 ZBP、不改命名基线**；代码/UI 暂不引入新层级文字，待确认 ZBP 是保留为业务分组还是退役。
-- **C2（SICI 职责迁移）**：现基线 SICI = 智能研究学习中枢；本指令 SICI = 手机端 AI 开发执行控制台（研究学习移交 AI-D）。待确认后再统一改命名/定位文档。
-- **C3（AI-D 新增与仓库归属）**：AI-D 为新增第五身份，其独立仓库还是并入 SICI-Core / DCC 未指定，标 NOT_VERIFIED。
-- **C4（ZBMP 中文名）**：现"Z-Brand 品牌监测平台"与英文 Z-Brand Monitoring Platform 一致，无冲突；仅确认对外中文是否固定为"Z-Brand 品牌监测平台"。
+### 用户裁决（2026-09-01，本版起生效）
 
-> 以上冲突在用户裁决前，一切以当前源码与现行命名基线为准，本母规范仅登记差异，不产生全局替换。
+- **C2（SICI 职责迁移）→ 同步研究**：SICI 定位为「手机端 AI 开发执行控制台」（Code/Run/Preview/Test/Git/Deploy/Browser Surface）；原"研究学习"职能移交 AI-D。**迁移走研究路线、不立即改 SICI 现有代码**，产出迁移研究文档后再定切换。
+- **C3（AI-D 归属）→ 裁决：独立仓库、AI 研发、重度深化**：AI-D 为第五身份，**独立 Git 仓库**（不并入 SICI/DCC），承担 Research/Experiment/Benchmark/Shadow/Evidence/Case/Learning/Capability；战略目标是让「Zachary」尽早成长为可独立工作的 AI。研究深化路线见 `docs/AI-D-RESEARCH-ROADMAP.md`。由此仓库关系确定为 **4 个 Git 仓库承载 5 个身份**：Z-Brand-Core（CTH-POMS+ZBMP）、Development-Command-Console、SICI-Core、AI-D（独立新仓，仓库英文命名待最终确认，建议 `AI-D-Core` 对齐既有命名）。
+- **C4（ZBMP 中文名）→ 裁决：固定**：对外中文固定为「Z-Brand 品牌监测平台」，英文 Z-Brand Monitoring Platform，不再变更。
+- **C1（中间层 ZBP 是否保留）→ 附功能盘点，建议保留为逻辑分组（待最终确认）**：经盘点，ZBP「品牌业务生产平台」当前涵盖的功能面 = Z-Brand-Core 内 CTH-POMS（已生产）+ ZBMP（在建增强层）的全部生产业务：
+  - **CTH-POMS（生产）六域**：总览（舆情驾驶舱 KPI/趋势/风险/事件/话题/日历）；监测（看板/预警/负面确认/笔记库/官方账号/话题战役/话题）；分析（分析/事件/事件图谱/日历）；品牌资产（品牌/太古/案例库/案例分析/知识库/品牌报告/APP 证据）；产出（日/周/月/专题报告与导出）；系统（设置）。底层引擎：采集（小红书 PRIMARY、抖音 disabled 待验证）、动态调度/熔断/冷却、主体过滤红线、去重、风险引擎、事件聚合、AI 增强（Ollama-only）、代理池、健康检查、自动恢复、证据链、PDF/Word/Excel 导出。
+  - **ZBMP（在建）六组**：概览 Home；品牌（品牌资产/竞品监控/案例库）；监测（内容监测/话题战役）；洞察（事件中心/事件关系/AI 评估）；产出（报告中心）；系统（连接器/工作区设置/密钥体系）。
+  - **建议**：ZBP 不是运行时、不是第四个仓库，仅作为"业务生产平台"逻辑分组标签，正好容纳 CTH-POMS+ZBMP，与 DCC/SICI/AI-D 三个并列域同属 ZBIP；保留它成本为零且让五身份归属清晰。**最终是否保留该中间层名称待用户确认；确认前不做全局改名。**
+
+> 已裁决项（C2/C3/C4）据此推进；C1 在最终确认前，代码/UI 仍以当前源码与现行命名基线为准，不做全局替换。任何改名必须引用分析 + 回归 + Evidence，不得整目录覆盖。
 
 ---
 

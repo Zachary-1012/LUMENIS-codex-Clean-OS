@@ -40,10 +40,10 @@
       { k: 'compete', t: '竞品监控', i: 'crosshair', s: 'planned', d: '竞品声量与对比分析，规划中。' },
       { k: 'cases', t: '案例库', i: 'book', s: 'core', d: '公关/传播案例库，接入 Core 案例能力。' } ] },
     { title: '监测', items: [
-      { k: 'content', t: '内容监测', i: 'file', s: 'core', d: '跨平台内容流与主体过滤，接入 Core 采集管线。' },
+      { k: 'content', t: '内容监测', i: 'file', s: 'live', d: '跨平台内容流与主体过滤，接入 Core 采集管线。' },
       { k: 'campaign', t: '话题战役', i: 'target', s: 'core', d: '15 周年等专题/战役监测，接入 Core 话题能力。' } ] },
     { title: '洞察', items: [
-      { k: 'events', t: '事件中心', i: 'zap', s: 'core', d: '营销/传播/舆情事件与生命周期，接入 Core 事件引擎。' },
+      { k: 'events', t: '事件中心', i: 'zap', s: 'live', d: '营销/传播/舆情事件与生命周期，接入 Core 事件引擎。' },
       { k: 'graph', t: '事件关系', i: 'share', s: 'core', d: '触发/衍生/继发/并行关系图谱，接入 Core 关系数据。' },
       { k: 'ai-eval', t: 'AI 评估', i: 'sparkle', s: 'core', d: 'Ollama 本地 AI 增强分析（仅增强层，不决定系统事实）。' } ] },
     { title: '产出', items: [
@@ -251,7 +251,124 @@
       if (route === 'home') return renderHome();
       if (route === 'connectors') return renderConnectors();
       if (route === 'settings') return renderSettings();
+      if (route === 'events') return renderEvents();
+      if (route === 'content') return renderContent();
       var m = MOD[route]; if (m) return renderEmpty(m); return renderHome();
+    }
+
+    /* -------- 真实数据接入（复用 Core 现有 API，不另建后端；失败显错误，绝不伪装 0 条） -------- */
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+    }
+    function riskMeta(level) {
+      var v = String(level == null ? '' : level).toLowerCase();
+      if (/high|严重|红|^3|danger|urgent/.test(v)) return { cls: 'danger', t: '高风险' };
+      if (/med|mid|中|^2|risk|orange/.test(v)) return { cls: 'risk', t: '中风险' };
+      if (/low|低|^1|attention/.test(v)) return { cls: 'attention', t: '低风险' };
+      if (/normal|正常|安全|resolved|success/.test(v)) return { cls: 'success', t: '正常' };
+      return { cls: 'muted', t: level ? esc(level) : '未定级' };
+    }
+    function fmtTime(s) {
+      if (!s) return '';
+      var m = String(s).match(/(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+      return m ? (m[1] + ' ' + m[2]) : String(s).slice(0, 16);
+    }
+    function skel(n) { var h = ''; for (var i = 0; i < n; i++) h += '<div class="zb-skel" style="margin-bottom:8px"><div class="bar w60"></div><div class="bar w80"></div><div class="bar w40"></div></div>'; return h; }
+    function failBox(box, title, msg) {
+      box.innerHTML = '<div class="zb-empty"><div class="ei">' + I.zap + '</div><h3>' + esc(title) + '</h3>' +
+        '<p>数据接口未返回有效结果（' + esc(msg || 'network') + '）。这里不会用 0 条伪装成功，请检查 Core 服务/接口后重试。</p>' +
+        '<button class="zb-add-btn" id="zbRetry" type="button">重试</button></div>';
+      var rb = document.getElementById('zbRetry'); if (rb) rb.addEventListener('click', function () { render(); });
+    }
+    function statStrip(items) { return '<div class="zb-statstrip">' + items.map(function (x) { return '<div class="zb-stat"><span class="k">' + x.k + '</span><span class="v">' + x.v + (x.s ? '<small>' + x.s + '</small>' : '') + '</span></div>'; }).join('') + '</div>'; }
+
+    function renderEvents() {
+      main.innerHTML = '<div class="zbmp-page-in">' + pageHead('事件中心', '营销 / 传播 / 舆情事件 · 来自 Core 事件引擎') +
+        '<div class="zbmp-wrap"><div class="zb-data-note">统计按事件口径聚合；风险等级与证实状态来自系统规则，AI 仅辅助不决定事实。</div><div id="zbEvt"></div></div></div>';
+      bindBack();
+      var box = document.getElementById('zbEvt');
+      box.innerHTML = skel(4);
+      fetch('/api/events?limit=50', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j || j.ok === false) throw new Error('接口返回 ok=false');
+          var evs = j.events || [];
+          var hi = 0, mid = 0, confirmed = 0, active = 0;
+          evs.forEach(function (e) { var m = riskMeta(e.risk_level); if (m.cls === 'danger') hi++; else if (m.cls === 'risk') mid++; if (/verif|confirm|证实|确认/.test(String(e.fact_status || ''))) confirmed++; if (e.status && !/resolv|archived|关闭/.test(String(e.status))) active++; });
+          var html = statStrip([
+            { k: '事件总数', v: evs.length, s: '/ 本页 50' },
+            { k: '活跃事件', v: active },
+            { k: '高 / 中风险', v: hi + ' / ' + mid },
+            { k: '已证实', v: confirmed }
+          ]);
+          if (!evs.length) { html += '<div class="zb-empty"><div class="ei">' + I.zap + '</div><h3>当前无事件</h3><p>Core 事件引擎未返回事件（NO_NEW_DATA），这不是失败。</p></div>'; box.innerHTML = html; return; }
+          html += '<div class="zb-list">';
+          evs.forEach(function (e) {
+            var rm = riskMeta(e.risk_level);
+            var isConf = /verif|confirm|证实|确认/.test(String(e.fact_status || ''));
+            var meta = '<span class="zb-status"><span class="zb-dot ' + rm.cls + '"></span>' + rm.t + '</span>' +
+              '<span class="sep"></span><span>' + (e.event_date ? esc(e.event_date) : '日期未知') + '</span>' +
+              '<span class="sep"></span><span class="zb-num">提及 ' + (e.mention_count || 0) + ' · 来源 ' + (e.source_count || 0) + '</span>' +
+              (e.status ? '<span class="sep"></span><span class="zb-mini-tag">' + esc(e.status) + '</span>' : '') +
+              '<span class="zb-mini-tag" style="' + (isConf ? 'color:var(--zb-success,#16A34A)' : 'color:var(--zb-attention,#D97706)') + '">' + (isConf ? '已证实' : '待核') + '</span>';
+            html += '<div class="zb-li"><div class="zb-li-row1"><span class="zb-li-title">' + esc(e.title || '未命名事件') + '</span></div>' +
+              (e.summary ? '<div class="zb-li-sub">' + esc(e.summary) + '</div>' : '') +
+              '<div class="zb-li-meta">' + meta + '</div></div>';
+          });
+          html += '</div>';
+          box.innerHTML = html;
+        })
+        .catch(function (err) { failBox(box, '事件数据加载失败', err.message); });
+    }
+
+    function renderContent() {
+      main.innerHTML = '<div class="zbmp-page-in">' + pageHead('内容监测', '跨平台内容流 · 已过主体过滤与去重') +
+        '<div class="zbmp-wrap"><div class="zb-data-note">时间一律取真实发布时间 publish_datetime；缺失则标“发布时间未知”，绝不用采集时间 captured_at 顶替。</div><div id="zbNote"></div></div></div>';
+      bindBack();
+      var box = document.getElementById('zbNote');
+      box.innerHTML = skel(4);
+      fetch('/api/notes?per_page=30', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j || j.ok === false) throw new Error('接口返回 ok=false');
+          var notes = j.notes || [];
+          var neg = 0, official = 0, eng = { likes: 0, comments: 0, collects: 0 };
+          notes.forEach(function (n) {
+            if (/neg|负面|高|中/.test(String(n.risk_level || '').toLowerCase()) || n.negative_confirmed) neg++;
+            if (n.is_official) official++;
+            eng.likes += Number(n.likes) || 0; eng.comments += Number(n.comments) || 0; eng.collects += Number(n.collects) || 0;
+          });
+          var html = statStrip([
+            { k: '命中总量', v: j.total != null ? j.total : notes.length, s: '条' },
+            { k: '本页 / 总页', v: (j.page || 1) + ' / ' + (j.total_pages || 1) },
+            { k: '负面 / 官方', v: neg + ' / ' + official },
+            { k: '本页互动', v: eng.likes + eng.comments + eng.collects, s: '赞评藏' }
+          ]);
+          if (!notes.length) { html += '<div class="zb-empty"><div class="ei">' + I.file + '</div><h3>当前无内容</h3><p>未返回笔记（NO_NEW_DATA），这不是失败，也不显示为 0 条采集成功。</p></div>'; box.innerHTML = html; return; }
+          html += '<div class="zb-list">';
+          notes.forEach(function (n) {
+            var rm = riskMeta(n.risk_level || n.sentiment);
+            var title = n.title || (n.content || n.body || '').slice(0, 34) || '无标题内容';
+            var sub = n.content || n.body || '';
+            var pub = fmtTime(n.publish_datetime);
+            var kws = [];
+            if (n.matched_keywords) { var k = typeof n.matched_keywords === 'string' ? n.matched_keywords.split(/[,，;；]/) : n.matched_keywords; if (Array.isArray(k)) kws = k.slice(0, 3); }
+            var meta = '<span class="zb-status"><span class="zb-dot ' + rm.cls + '"></span>' + rm.t + '</span>' +
+              '<span class="sep"></span><span>' + esc(n.source_platform || n.note_type || '未知平台') + '</span>' +
+              (n.author_nickname ? '<span class="sep"></span><span>' + esc(n.author_nickname) + '</span>' : '') +
+              '<span class="sep"></span><span>' + (pub ? '发布 ' + esc(pub) : '发布时间未知') + '</span>' +
+              '<span class="sep"></span><span class="zb-num">赞 ' + (n.likes || 0) + ' · 评 ' + (n.comments || 0) + ' · 藏 ' + (n.collects || 0) + '</span>' +
+              (n.is_official ? '<span class="zb-mini-tag">官方</span>' : '') +
+              kws.map(function (x) { return '<span class="zb-mini-tag">' + esc(x) + '</span>'; }).join('');
+            var inner = '<div class="zb-li-row1"><span class="zb-li-title">' + esc(title) + '</span></div>' +
+              (sub ? '<div class="zb-li-sub">' + esc(sub) + '</div>' : '') +
+              '<div class="zb-li-meta">' + meta + '</div>';
+            html += n.url ? '<a class="zb-li-link" href="' + esc(n.url) + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>' : '<div class="zb-li">' + inner + '</div>';
+          });
+          html += '</div>';
+          box.innerHTML = html;
+        })
+        .catch(function (err) { failBox(box, '内容数据加载失败', err.message); });
     }
 
     /* ---- 工作区切换：由 zbip-shell 派发事件驱动 ---- */

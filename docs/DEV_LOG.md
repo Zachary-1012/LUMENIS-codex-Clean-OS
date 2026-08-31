@@ -459,3 +459,40 @@
 
 ### Git / 生产安全
 - 本轮提交见本次 commit（ui/staging-foundation）；生产 main 未动；8201 恢复后 v5.9.9、主体口径/采集/AI/DB 全部未碰；不提交 .env/*.db/cookie/token/profile/日志。
+
+---
+
+## Step5e｜ZBMP 模块接入第一批（事件中心/内容监测真实数据）+ 五身份命名裁决 + AI-D 研究路线（2026-09-01，仅 ui/staging-foundation，未合 main）
+
+### 用户裁决（命名）
+- C3：**AI-D 独立 Git 仓库**做 AI 研发、重度深化，目标让 Zachary 尽早独立为 AI；C2：SICI 转手机执行端、研究职能移交 AI-D，**同步研究但暂不改 SICI 代码**；C4：ZBMP 中文名固定「Z-Brand 品牌监测平台」；C1：先盘点 ZBP 功能面再定去留（已在母规范附完整盘点 + 建议保留为逻辑分组，待最终确认，未全局改名）。
+
+### 改了什么 / 文件
+1. static/js/zbmp-workbench.js（v1.0.0→v1.0.3）：新增 renderEvents / renderContent，复用 Core 现有 `/api/events`、`/api/notes`（**不新增后端**）；通用 esc 转义（笔记为用户内容，防 XSS）、riskMeta 风险映射、骨架屏加载、失败显式错误态（**不伪装 0 条**）、小结条；Home 中 events/content 状态 core→live。
+2. static/css/zbmp-workbench.css（v1.0.2→v1.0.4）：新增 .zb-statstrip/.zb-stat、.zb-list/.zb-li 数据列表、.zb-mini-tag、骨架屏 shimmer；修页头窄屏标题换行（h2 nowrap、sub ellipsis）。
+3. static/index.html：bump workbench css/js 版本。
+4. docs/ZBIP-UNIFIED-CONVERGENCE-BASELINE.md：§9 冲突段改为「用户裁决」，补 ZBP 功能盘点与 4 仓 5 身份关系。
+5. 新增 docs/AI-D-RESEARCH-ROADMAP.md：AI-D 定位/边界、Zachary 自主度 L0-L5、研究能力栈、研究流水线、M0-M5 里程碑、红线、与 SICI 分工。
+6. 证据：step5e-events.png / step5e-content.png / step5e-events-390.png。
+
+### 为什么
+按"接入一个、实测一个"推进，先接 Core 数据最现成的事件与内容；只在 ZBMP 工作台层渲染既有 API，不碰 CTH 业务 DOM、不改后端/DB/采集/主体口径，回滚=移除这两个 render 分支。
+
+### 数据库 / 迁移
+无变化、无迁移；只读调用现有 API，Staging 副本库与生产库结构均未改。
+
+### 测试与真实结果（已实测，8301）
+- 事件中心：小结 事件总数 50 / 活跃 50 / 高中风险 **3/41** / 已证实 50；50 条真实事件（方所闭店、OLE 员工投诉、餐饮安全等），高风险红点、中风险橙点、日期/提及/来源/状态/证实标签齐全。
+- 过程自抓自修 1 个真 bug：riskMeta 正则用 "mid" 未匹配到 "medium"（medium 不含连续子串 mid），中风险被误判灰点且显示英文原文；补 "med" 后复测 3/41、橙点、文案"中风险"正确。
+- 内容监测：命中总量 **604**、本页/总页 1/21、负面/官方 0/0、本页互动 1627；30 条真实小红书笔记，**时间取 publish_datetime（如 2026-08-30），缺失标"发布时间未知"，绝不用 captured_at 顶替**；互动数按"线性 icon、正式 UI 不用 emoji"要求由 ♥💬★ 改为"赞/评/藏"文字；外链 target=_blank rel=noopener；用户笔记原文自带 emoji 属真实内容予以保留（已 HTML 转义）。
+- 390 手机（CDP，测后清除）：小结 2×2、列表卡片全宽、无横向溢出（scrollWidth==innerWidth）、页头标题单行（h2 高 20px）副标题省略。
+- node --check 通过；8301 healthz v5.9.9。
+
+### 未实测 / 遗留
+- 430/768/1024/1280/1440 断点未逐档取图（本轮 1066 与 390）；内容分页交互（翻到第 2 页）、服务端筛选/排序尚未接（当前仅首 30 条展示）。
+- 其余 7 个 ZBMP 模块仍为诚实占位（竞品/案例库/话题战役/事件关系/AI 评估/报告中心等），下一批建议接 报告中心 + 事件关系（event_graph 已有 16 事件/1 关系）。
+- C1 ZBP 中间层最终命名、AI-D 仓英文命名与远程创建待用户确认；C2 SICI 迁移仅研究、未改代码。
+- components.css 少量写死色组件的 Dark 迁移仍挂起（Step5d 遗留）。
+
+### Git / 生产安全
+- 本轮提交见本次 commit（ui/staging-foundation）；生产 main 未动；8201 v5.9.9 正常、主体口径/采集/AI/DB 未碰；不提交 .env/*.db/cookie/token/profile/日志。
