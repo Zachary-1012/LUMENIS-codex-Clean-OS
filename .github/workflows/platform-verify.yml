@@ -9,7 +9,7 @@ on:
 
 jobs:
   verify:
-    uses: Zachary-1012/Development-Command-Console/.github/workflows/reusable-verify.yml@e5546fe72ef62cfdb11711d21d038547a41c1c67
+    uses: Zachary-1012/Development-Command-Console/.github/workflows/reusable-verify.yml@448ba215c8b9516fa63c77ddcced5a54a68f2742
     with:
       runtime: python
       install_command: python -m pip install --disable-pip-version-check -r requirements.txt
