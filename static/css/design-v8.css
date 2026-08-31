@@ -358,6 +358,8 @@ html, body {
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 13px;
+    display: inline !important;
+    color: inherit !important;
 }
 
 .nav-badge {
