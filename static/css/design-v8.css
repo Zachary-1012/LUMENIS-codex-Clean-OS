@@ -492,7 +492,8 @@ html, body {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
+    margin-bottom: 8px !important;
 }
 
 .eyebrow {
@@ -506,37 +507,41 @@ html, body {
 }
 
 .page-hero h2 {
-    font-size: 22px;
+    font-size: 20px !important;
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--text-primary);
-    margin: 0;
+    margin: 0 !important;
+    line-height: 1.2 !important;
 }
 
 .page-hero p {
-    font-size: 13px;
+    font-size: 12px !important;
     color: var(--text-tertiary);
-    margin: 4px 0 0;
+    margin: 2px 0 0 !important;
     max-width: 500px;
+    line-height: 1.4 !important;
 }
 
 /* 指标网格 - 6个卡片 */
 .metric-grid {
     flex-shrink: 0;
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 12px;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 10px !important;
 }
 
 .metric-card {
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 14px 16px;
+    padding: 10px 12px !important;
     cursor: pointer;
     transition: all var(--duration-normal) var(--ease-out);
     position: relative;
     overflow: hidden;
+    min-height: 0 !important;
 }
 
 .metric-card:hover {
@@ -546,14 +551,19 @@ html, body {
 }
 
 .metric-icon {
-    width: 32px;
-    height: 32px;
+    width: 26px !important;
+    height: 26px !important;
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 10px;
-    font-size: 16px;
+    margin-bottom: 6px !important;
+    font-size: 14px !important;
+}
+
+.metric-icon svg {
+    width: 16px !important;
+    height: 16px !important;
 }
 
 .metric-icon.blue { background: rgba(0, 122, 255, 0.1); color: var(--accent); }
@@ -564,18 +574,18 @@ html, body {
 .metric-icon.gray { background: var(--bg-tertiary); color: var(--text-tertiary); }
 
 .metric-label {
-    font-size: 12px;
+    font-size: 11px !important;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 4px;
+    margin-bottom: 2px !important;
 }
 
 .metric-card strong {
-    font-size: 24px;
+    font-size: 20px !important;
     font-weight: 700;
     letter-spacing: -0.03em;
     color: var(--text-primary);
-    line-height: 1.1;
+    line-height: 1.1 !important;
     display: block;
     font-variant-numeric: tabular-nums;
 }
@@ -585,9 +595,9 @@ html, body {
 .metric-card strong.risk { color: var(--warning); }
 
 .metric-sub {
-    font-size: 11px;
+    font-size: 10px !important;
     color: var(--text-tertiary);
-    margin-top: 6px;
+    margin-top: 3px !important;
 }
 
 .metric-sub b {
@@ -596,18 +606,159 @@ html, body {
 }
 
 .spark {
-    height: 24px;
-    margin-top: 6px;
+    height: 18px !important;
+    margin-top: 4px !important;
+}
     opacity: 0.5;
 }
 
 /* 内容卡片行 - 3栏 */
 .home-cards {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-    min-height: 0;
+    flex: 1 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 12px !important;
+    min-height: 220px !important;
+    margin-top: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* 强制修复：首页内容卡片直接放在section下时的显示和布局 */
+#page-overview > article:not(.metric-card),
+#page-overview article.home-card,
+#page-overview article.glass-card:not(.metric-card) {
+    display: flex !important;
+    flex-direction: column !important;
+    background: var(--bg-primary, #ffffff) !important;
+    border: 1px solid var(--border, #e5e5ea) !important;
+    border-radius: var(--radius-lg, 10px) !important;
+    padding: 10px 12px !important;
+    margin: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 120px !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    position: relative !important;
+    z-index: 1 !important;
+    flex: 1 1 auto !important;
+}
+
+/* 首页布局 - flex列布局 */
+#page-overview {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+/* 指标网格 */
+#page-overview .metric-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* 内容卡片区域 - 使用grid布局 */
+#page-overview .home-cards {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+
+#page-overview .metric-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* 内容卡片头部样式 */
+#page-overview .home-card-head,
+#page-overview article:not(.metric-card) > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 8px !important;
+    flex-shrink: 0 !important;
+}
+
+#page-overview .home-card-head h3 {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    color: var(--text-primary, #1c1c1e) !important;
+}
+
+#page-overview .eyebrow {
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    color: var(--text-secondary, #8e8e93) !important;
+    text-transform: uppercase !important;
+}
+
+/* 内容卡片内容区域 - 可滚动 */
+#page-overview .risk-table.compact,
+#page-overview .event-list.compact,
+#page-overview .topic-list.compact,
+#page-overview article:not(.metric-card) > div:not(:first-child) {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+}
+
+/* 内容卡片内的行项目 */
+#page-overview .risk-row,
+#page-overview .event-item,
+#page-overview .topic-item {
+    padding: 6px 0 !important;
+    border-bottom: 1px solid var(--border, #f0f0f0) !important;
+}
+
+#page-overview .risk-row:last-child,
+#page-overview .event-item:last-child,
+#page-overview .topic-item:last-child {
+    border-bottom: none !important;
+}
+
+/* 风险分数标签 */
+#page-overview .risk-score {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+}
+
+/* 话题列表 */
+#page-overview .topic-list a {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 5px 0 !important;
+    font-size: 11px !important;
+    color: var(--text-primary, #1c1c1e) !important;
+    text-decoration: none !important;
+}
+
+#page-overview .topic-list a:hover {
+    color: var(--accent, #007aff) !important;
+}
+
+#page-overview .topic-count {
+    font-weight: 600 !important;
+    color: var(--text-secondary, #8e8e93) !important;
+    font-size: 11px !important;
 }
 
 .home-card {
