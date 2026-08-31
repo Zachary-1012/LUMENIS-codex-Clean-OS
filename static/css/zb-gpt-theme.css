@@ -2129,3 +2129,219 @@ tbody tr:last-child td{
 button:focus:not(:focus-visible),
 .action:focus:not(:focus-visible){ outline: none; }
 
+
+/* ============================================================================
+   §38 真实弹窗结构适配 - .modal/.modal-mask/.modal-panel（实际HTML class）
+   桌面端：苹果风格居中弹窗；手机端：底部Sheet带抓手
+   ============================================================================ */
+.modal{
+  z-index: 2000 !important;
+  padding: var(--gpt-sp-5) !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.modal-mask{
+  background: rgba(0,0,0,0.4) !important;
+  backdrop-filter: blur(8px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+}
+.modal-panel{
+  background: var(--gpt-surface) !important;
+  border-radius: var(--gpt-r-3xl) !important;
+  max-width: 560px !important;
+  width: 100% !important;
+  max-height: 85vh !important;
+  padding: var(--gpt-sp-6) var(--gpt-sp-6) var(--gpt-sp-5) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.18) !important;
+  border: 0.5px solid var(--gpt-border-light) !important;
+  position: relative !important;
+  animation: gptModalIn var(--gpt-d-sheet) var(--gpt-ease-spring) !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+@keyframes gptModalIn{
+  from{ opacity: 0; transform: scale(0.94) translateY(12px); }
+  to{ opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-close{
+  position: absolute !important;
+  top: var(--gpt-sp-4) !important;
+  right: var(--gpt-sp-4) !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  border-radius: 50% !important;
+  background: var(--gpt-bg-secondary) !important;
+  color: var(--gpt-text-tertiary) !important;
+  font-size: 18px !important;
+  border: none !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: all var(--gpt-d-fast);
+  line-height: 1;
+}
+.modal-close:hover{
+  background: var(--gpt-bg-tertiary) !important;
+  color: var(--gpt-text) !important;
+}
+.modal-content{
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.modal-eyebrow{
+  font-size: var(--gpt-fs-caption-1) !important;
+  font-weight: var(--gpt-fw-semibold) !important;
+  letter-spacing: 0.06em !important;
+  color: var(--gpt-text-tertiary) !important;
+  text-transform: uppercase;
+  margin-bottom: var(--gpt-sp-2) !important;
+}
+.modal-content h2, .modal-content h3, .modal-title{
+  font-size: var(--gpt-fs-title-3) !important;
+  font-weight: var(--gpt-fw-bold) !important;
+  letter-spacing: -0.02em !important;
+  color: var(--gpt-text) !important;
+  line-height: 1.25 !important;
+  margin: 0 0 var(--gpt-sp-3) !important;
+  padding-right: 40px;
+}
+.modal-content p{
+  font-size: var(--gpt-fs-subhead);
+  color: var(--gpt-text-secondary);
+  line-height: 1.6;
+}
+/* 弹窗内统计卡片横向排列 */
+.modal-content .summary-grid,
+.modal-content .stats-row,
+.modal-content .kv-row{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--gpt-sp-2);
+  margin: var(--gpt-sp-4) 0;
+}
+.modal-content .summary-stat,
+.modal-content .stat-box{
+  background: var(--gpt-bg-secondary);
+  border-radius: var(--gpt-r-lg);
+  padding: var(--gpt-sp-3);
+  text-align: center;
+}
+.modal-content .summary-stat b,
+.modal-content .stat-box b{
+  display: block;
+  font-size: var(--gpt-fs-title-2);
+  font-weight: var(--gpt-fw-bold);
+  color: var(--gpt-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.modal-content .summary-stat span,
+.modal-content .stat-box span{
+  font-size: var(--gpt-fs-caption-1);
+  color: var(--gpt-text-tertiary);
+  margin-top: 2px;
+  display: block;
+}
+/* 弹窗内列表 */
+.modal-content .modal-list-item{
+  display: flex;
+  align-items: center;
+  gap: var(--gpt-sp-2);
+  padding: var(--gpt-sp-3);
+  border-radius: var(--gpt-r-md);
+  transition: background var(--gpt-d-fast);
+}
+.modal-content .modal-list-item:hover{
+  background: var(--gpt-bg-secondary);
+}
+/* 弹窗底部按钮区（如果存在） */
+.modal-content .modal-actions,
+.modal-footer-actions{
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpt-sp-2);
+  margin-top: var(--gpt-sp-5);
+  padding-top: var(--gpt-sp-4);
+  border-top: 0.5px solid var(--gpt-border-light);
+}
+.modal-content .modal-actions .action,
+.modal-footer-actions .action{
+  width: 100%;
+  height: 46px;
+  font-size: var(--gpt-fs-headline);
+  font-weight: var(--gpt-fw-semibold);
+  border-radius: var(--gpt-r-lg);
+}
+
+/* 手机端：底部Sheet */
+@media(max-width: 768px){
+  .modal{
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+  .modal-panel{
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 88vh !important;
+    border-radius: var(--gpt-r-sheet) !important;
+    padding: var(--gpt-sp-6) var(--gpt-sp-5) calc(var(--gpt-sp-5) + env(safe-area-inset-bottom,0px)) !important;
+    animation: gptSheetUp var(--gpt-d-sheet) var(--gpt-ease-spring) !important;
+  }
+  @keyframes gptSheetUp{
+    from{ transform: translateY(100%); }
+    to{ transform: translateY(0); }
+  }
+  /* 顶部抓手 */
+  .modal-panel::before{
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 5px;
+    background: var(--gpt-border-strong);
+    border-radius: var(--gpt-r-pill);
+    opacity: 0.5;
+    z-index: 6;
+  }
+  .modal-close{
+    top: var(--gpt-sp-5) !important;
+  }
+}
+
+/* ============================================================================
+   §39 手机端底部TabBar实际class适配
+   ============================================================================ */
+.bottom-nav, .mobile-nav, .tab-bar{
+  background: var(--gpt-glass-bg) !important;
+  backdrop-filter: var(--gpt-glass-blur) !important;
+  -webkit-backdrop-filter: var(--gpt-glass-blur) !important;
+  border-top: 0.5px solid var(--gpt-glass-border) !important;
+  box-shadow: none !important;
+}
+.bottom-nav .nav-item, .mobile-nav .nav-item, .tab-bar .tab-item{
+  color: var(--gpt-text-tertiary);
+  font-size: var(--gpt-fs-caption-2);
+  font-weight: var(--gpt-fw-medium);
+  transition: color var(--gpt-d-fast);
+}
+.bottom-nav .nav-item.active,
+.mobile-nav .nav-item.active,
+.tab-bar .tab-item.active{
+  color: var(--gpt-blue);
+}
+.bottom-nav .nav-item svg,
+.mobile-nav .nav-item svg,
+.tab-bar .tab-item svg{
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.8;
+}
+
