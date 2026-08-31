@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    Z-BRAND GPT THEME · 100% GPT手机版设计语言
    参考：ChatGPT iOS App 逐帧分析（66.73秒视频，143帧）
    设计原则：极简白色 · 大圆角 · 毛玻璃 · 底部弹窗 · 骨架屏 · 空状态引导
@@ -13,7 +13,7 @@
   --gpt-bg: #FFFFFF;
   --gpt-bg-secondary: #F5F5F7;
   --gpt-bg-tertiary: #EBEBF0;
-  --gpt-bg-grouped: #F2F2F7;
+  --gpt-bg-grouped: #F9F9F9;
   --gpt-surface: #FFFFFF;
   --gpt-surface-raised: #FFFFFF;
 
