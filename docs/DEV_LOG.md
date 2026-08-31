@@ -270,3 +270,14 @@
 - 实测（8301，已实测）：两资源 200；浏览器 DOM 断言 13 按钮/10 badge/4 表格行/4 态/4 tab；主按钮背景 rgb(28,25,23)=#1C1917 近黑、圆角 6px、危险点 #DC2626、数字格 font-variant-numeric=tabular-nums、画布底 #FAFAF9；截图证据 docs/UI/evidence/step2-components-top.png、-bottom.png（侘寂黑白灰、语义色仅状态，达标）。
 - 零影响论证：本步不修改 index.html / 任何现有模板，新文件无任何生产页面引用，故合入 main 也不改变运行界面；Modal/Drawer/CommandMenu/AIChatDrawer 与首个真实页面迁移放 Step 3，**改真实页面 DOM 时只在 Staging 分支验收后才合 main**。
 - 范围：仅新增 static/css/zbip-components.css、static/zb-preview.html、2 张 evidence 与 DEV_LOG；无 .py/.db/.env/采集/API/主体口径变更，无 DB 迁移。
+
+---
+
+## 2026-08-31 · UI 施工 Step 3（旧总览令牌重映射换肤 + 侧栏塌陷修复，仅 Staging，暂不合 main）
+
+- 新增 static/css/zbip-theme-override.css（Strangler 适配层，最后加载、只重定义 zb-theme 暴露的 --w-* 底层令牌，不改 DOM/布局/旧 CSS）：冷灰 #F7F7F8→Stone 暖灰 #FAFAF9、主操作去蓝 #3B82F6→近黑 #1C1917（信息蓝保留给 --w-info/链接）、六语义对齐 zbip-tokens（success#16A34A/info#2563EB/attention#D97706/danger#DC2626，AI 去紫转中性）、圆角 8/10/12/14→4/6/6/8/12、阴影更弱暖黑、侧栏 248→240、动效时长对齐；并把硬编码大色块 .metric-icon 降为弱底+语义色、#globalError 苹果红收敛到 danger。
+- 过程中修复一个自身 bug：override 文件头注释里 `--w-r-*/` 的 `*/` 提前闭合块注释，导致 :root 整块被浏览器丢弃（首验变量未生效）；改为中文描述后 :root 正常生效（教训：CSS 注释内不得出现 */，已 30/30 配对校验）。
+- 【真实问题修复】侧栏 21 个导航项被压成 0.58px：根因是侧栏底部 JS 注入的 side-footer(324px)+architecture-panel(375px) 挤占，flex column 下 .side-nav 仅剩 69px，导航项被 flex-shrink 压缩（禁用 override 后依旧，证明非换肤引入，属既有 IA/布局问题）。override 层补偿：.sidebar 内部滚动、.side-nav/side-item flex:none 且定高 36px，导航完整恢复；长期应把非导航状态卡移出侧栏（登记 IA 优化，本步不做结构改动）。
+- 实测（8301，已实测）：桌面 1066：:root 变量生效（--w-bg#FAFAF9/--w-ink#1C1917/--w-accent#1C1917/--w-danger#DC2626/圆角8/侧栏240），21 导航完整、active 高亮，6 KPI 真实出数 957/622/241/94/22/448,410，风险预警/事件中心(方所闭店29、OLE投诉63)/热门话题/日历齐全，右下 Auth fab“需处理1”正常，证据 step3-overview-desktop-1066.png。移动 390（CDP Emulation，mobile=true）：layout=block、KPI 2 列、单顶栏、6 KPI 全出数、fab 正常，证据 step3-overview-mobile-390.png。两视口下 /api/* 均 status=ok。
+- 未实测/登记：① 430/768/1280/1440 断点本轮未稳定取到（CDP emulate 在 mobile=false 时未可靠改宽且截图有合成残影，非真实 DOM 重复——已核 DOM 仅 1 个 .topbar），留待下轮补证；② .action.primary 计算色为 rgb(0,0,0)（旧层硬编码）与 #1C1917 有极微差，待统一；③ sparkline 折线仍为蓝/绿/红/紫数据色，暂保留（数据可视化语义色），后续决定是否降饱和；④ 侧栏状态/架构卡片移出属 IA 改造，登记不擅改。
+- 决策：Step3 改变真实页面外观，按“验收前生产冻结”只在 ui/staging-foundation 提交，**不 FF 到 main、不动 8201 生产**；待用户确认视觉方向后再合入。范围仅 override.css、index.html（+1 link）、2 张 evidence、DEV_LOG；无 .py/.db/.env/采集/API/主体口径变更，无 DB 迁移。回滚 = 删除 index.html 中 override 的 link。
