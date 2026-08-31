@@ -65,9 +65,18 @@ body {
    ============================================ */
 .app-shell {
     display: flex;
+    flex-direction: column;
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+}
+
+/* 布局容器 - 三栏 */
+.layout {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
 }
 
 /* ============================================
@@ -1191,7 +1200,7 @@ body {
 /* ============================================
    响应式 - 手机端iOS风格
    ============================================ */
-@media (max-width: 768px) {
+@media (max-width: 600px) {
     .sidebar {
         position: fixed;
         left: 0;
@@ -1288,7 +1297,7 @@ body {
     }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 601px) {
     .mobile-tabbar,
     .menu-toggle {
         display: none;
