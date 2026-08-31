@@ -5,10 +5,14 @@
 
 ## 0. 顶层定位（一套 Core，不拆第二套）
 
+> 命名层级以 `docs/PRODUCT_NAMING_BASELINE.md` 为准：最顶层统一平台层 = **Z-Brand Intelligence Platform**；其下 ZBP / DCC / SICI 三者并列；本仓库属于其中的 **ZBP（品牌业务生产平台）**。
+
 ```
-品牌业务生产平台 ZBP（仓库 Z-Brand-Core，单 Core / 单 DB / 单 Runtime / 单 Release Gate）
-├── CTH-POMS  广州太古汇舆情监测系统 —— 当前生产主入口 / 客户交付（ACTIVE）
-└── ZBMP      Z-Brand 品牌监测平台 —— Core 内母平台增强能力层（v4_upgrade，共用 Core，非独立服务）
+Z-Brand Intelligence Platform（统一平台层，最顶层）
+└── 品牌业务生产平台 ZBP（仓库 Z-Brand-Core，单 Core / 单 DB / 单 Runtime / 单 Release Gate）
+    ├── CTH-POMS  广州太古汇舆情监测系统 —— 当前生产主入口 / 客户交付（ACTIVE）
+    └── ZBMP      Z-Brand 品牌监测平台 —— ZBP 内母平台增强能力层（v4_upgrade，共用 Core，非独立服务）
+（DCC、SICI 与 ZBP 并列、同属 Z-Brand Intelligence Platform，不在本仓库内）
 ```
 
 硬约束：CTH-POMS 不依赖外部 ZBMP 服务；两者共用同一 Core、数据库治理、Runtime、安全边界、Release Gate；不复制第二套 DB/用户/配置/API/UI/AI。

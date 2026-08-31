@@ -3,7 +3,8 @@
 > 规则：以后任何代码改动先查 Feature ID；**无 ID 不允许直接新增功能**，先在此登记。
 > 一个 Feature 绑定：产品 / Owner 模块（对应 ASSET-ID）/ API 组 / DB 表 / UI 页面 / 状态 / Evidence / 版本。
 > 状态：ACTIVE 生产在用 · DEVELOPING 在建旁路 · PLANNED 已规划未落地 · RESERVED 预留 · LEGACY 待退。
-> 产品：CTH=CTH-POMS（广州太古汇舆情，生产主入口）；ZBMP=母平台增强层（共用 Core）。
+> 层级：Z-Brand Intelligence Platform（统一平台层）→ ZBP 品牌业务生产平台（本仓库，与 DCC/SICI 并列）→ CTH-POMS / ZBMP。
+> 产品：CTH=CTH-POMS（广州太古汇舆情，生产主入口）；ZBMP=ZBP 内母平台增强层（共用 Core）。
 
 ## 一、CTH-POMS 生产功能（P0，红线域不得改口径）
 
