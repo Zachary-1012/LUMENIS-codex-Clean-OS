@@ -95,6 +95,8 @@ GitHub Actions
 Release decision
 ```
 
+DDC owns the engineering verification contract in `Development-Command-Console/docs/PLATFORM-VERIFICATION-RUNTIME.md`. Z-Brand-Core remains the owner of its domain tests and production validation; verification infrastructure must not become a runtime dependency of CTH-POMS.
+
 GitHub Actions supplements controlled verification; it does not replace the evidence model.
 
 Every release validation should identify repository, SHA, runtime/container, dependencies, test version, timestamp, result, and evidence.
