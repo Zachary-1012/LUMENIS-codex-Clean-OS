@@ -1,0 +1,57 @@
+# Z-Brand Core · 启动入口台账与收敛方案（LAUNCHERS）
+
+> G-LAUNCH 交付物。原则：**新增唯一对人入口 `run.ps1`，但运行期间不改、不删任何旧脚本、不改计划任务**；
+> 旧入口下线必须在停机窗口，经「引用分析→改派计划任务→回归→删除」五步。
+
+## 1. 唯一推荐入口（新增）
+
+| 命令 | 作用 | 实测 |
+|---|---|---|
+| `.\run.ps1 prod`（默认） | 幂等拉起生产：转发已验证的 `scripts/start_production.ps1`（8201 看门狗 + 9222 CDP，带 mutex/healthz/进程守卫三重幂等） | 语法 OK；转发链路为现网在用 |
+| `.\run.ps1 dev` | 前台开发直跑 `.venv python app.py 127.0.0.1:8200` | 未实测（不在运行期触发） |
+| `.\run.ps1 staging` | 127.0.0.1:8301 + `XHS_PRODUCTION=false`；**端口/任务开关已隔离，独立 DB/.env/profile 待 G-STAGE**，未完成前不触发真实采集 | 预留，未实测 |
+| `.\run.ps1 status` | 只读探测 8200/8201/9222 | **已实测**：8201 UP、9222 UP、8200 down |
+
+> run.ps1 只用 .venv 解释器、不做全局 taskkill、不写死 D 盘（用 `$PSScriptRoot`）、全 ASCII 兼容 PS5.1/GBK。
+
+## 2. 现网计划任务链路（实测 `schtasks /query`，勿运行时改动）
+
+| 计划任务 | 实际执行 | 现状 |
+|---|---|---|
+| `\TaikooMonitor` | `cmd /c start /min start_system.bat`（8200 直跑 app.py + 9222 edge-cdp-newaccount，无看门狗） | Enabled；实测 8200 当前 down |
+| `\ZBrand-HealthGuard` | `powershell -File scripts/start_production.ps1`（8201 supervised + 9222 edge-cdp-profile，幂等） | Enabled；**当前实际生产链路** |
+| `\ZBrand-GitSync-0000/0800/1800` | `.venv python scripts/daily_git_sync.py` | Enabled，每日三次版本同步 |
+
+**技术债登记（不在运行期合并）**：8200（直跑无看门狗，profile=newaccount）与 8201（supervised，profile=profile）双实例/双 profile 并存。最终应统一为 8201 supervised 一条链；需停机窗口把 TaikooMonitor 改派 `run.ps1 prod` 后再停 8200 旧链。
+
+## 3. 旧入口分类（共 34 个，本阶段只登记不删）
+
+### A. 现网在用·保留不动（计划任务/看门狗依赖）
+`scripts/start_production.ps1`、`run_supervised.py`、`run_production.py`、`start_system.bat`（TaikooMonitor 依赖）、`scripts/daily_git_sync.py`、`start_xhs_cookie_sync.bat`、`scripts/install_scheduled_tasks.ps1`、`scripts/install_healthguard_task.ps1`。
+
+### B. 危险·建议停用（含全局杀进程，会误伤其它 Python）
+| 文件 | 风险点（实测） |
+|---|---|
+| `start_stable.bat` | `taskkill /F /IM python.exe` 杀全部 python；用**全局 python**而非 .venv；版本号写死 v5.8.0 |
+| `系统守护闭环_可靠版.bat` | 含 taskkill |
+| `系统守护闭环_优化版.bat` | 含 taskkill |
+| `系统守护闭环.ps1` | 含 Stop-Process/taskkill |
+
+### C. 公网隧道相关·保留（cloudflared 链路，与启动解耦）
+`start_cloudflare_stable.bat`、`start_cloudflare_tunnel.bat`、`start_cloudflare_guardian.bat`、`start_remote_cloudflare.bat`、`start_remote_5g.bat`、`monitor_cloudflare_tunnel.bat`、`install_cloudflared.bat`、`cloudflared_guardian.ps1`、`start_cf.ps1`、`start_cloudflare_hidden.vbs`、`start_cloudflare_hidden_new.vbs`、`start_tunnel.bat`。
+> 固定域名/命名隧道 token 属部署工单 G-STAGE/部署，当前为临时 trycloudflare。
+
+### D. CDP / Cookie 相关·保留
+`start_cdp_auto.bat`、`start_xhs_cookie_sync.bat`。
+
+### E. 历史/重复/多版本守护·DEPRECATED 候选（下线前逐个引用分析）
+`start_all.bat`、`start_lan.bat`、`start_windows.bat`、`start_v4.bat`、`启动系统.bat`、`一键启动系统.bat`、`一键安装依赖.bat`、`一键登录微博.bat`、`启动系统守护闭环.bat`、`start_system_hidden.vbs`、`check_local_ai.bat`，以及 `deployment/` 下重复的 `start_local.bat/start_remote.bat/启动系统.bat/启动远程访问.bat`（其中 `deployment/deployment/` 存在编码损坏的乱码文件名，列 G-CLEAN 后续）。
+
+## 4. 收敛路线（后续，不在运行期执行）
+1. 停机窗口：把 `\TaikooMonitor` 改派为 `powershell -File run.ps1 prod`，停用 8200 直跑链，统一到 8201 supervised。
+2. B 类危险脚本先改名为 `.deprecated.bat` 观察一个版本，确认无人工/任务依赖后删除。
+3. E 类逐个引用分析（grep 计划任务/其它脚本/快捷方式）后归档 `archive/launchers/`。
+4. 全程每步：回归启动 + status 探测 + 可回滚（git 还原/改回计划任务）。
+
+## 5. 回滚
+本次仅**新增** `run.ps1` 与本文档，未改任何旧入口与计划任务；回滚 = 删除新增的 run.ps1（`git rm run.ps1` 或 `git revert <commit>`），现网链路完全不受影响。
