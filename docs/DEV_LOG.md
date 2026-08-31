@@ -418,3 +418,44 @@
 ### Git
 - 本轮提交见本次 commit（ui/staging-foundation）；生产 main 与 8201 全程未动；合 main 仍待用户验收 + 主 worktree import/healthz/主体口径回归。
 - 红线自检：未碰 SUBJECT_WORDS/EXCLUDE/subject_hit/_subject_sql_and_values/aggregate_events/build_daily_report/risk_engine；未混淆 publish_datetime/captured_at；未改 DB；AI 仍 Ollama-only 增强层；未提交 .env/*.db/cookie/token/profile。
+
+---
+
+## Step5d｜ZBIP 统一收敛母规范同步 + Design Token 双主题/动效/Icon 增量（2026-09-01，仅 ui/staging-foundation，未合 main）
+
+### 触发与性质
+用户下发《ZBIP 四产品统一「架构/规则/UI视觉/交互」收敛指令》：一套母规范 + 各产品按职责适配（不是做成一样）；明确为 **4 仓库 / 5 身份**（CTH-POMS、ZBMP 同处 Z-Brand-Core；DCC；SICI=手机执行端；新增 AI-D=研究学习中枢）；六阶段（读取→收敛 Map→Design Token→开发→测试→交付），禁止跳过架构收敛直接大改 UI。用户既有指令 DCC/SICI 本轮不动，只做 Z-Brand-Core 内属于 CTH/ZBMP 的部分。
+
+### 改了什么 / 文件（新增 1 文档、改 3 前端、2 证据）
+1. **新增 docs/ZBIP-UNIFIED-CONVERGENCE-BASELINE.md（母规范 v1.0）**：4仓5身份与职责、统一六层架构、六阶段、UI母规范（色彩/字/圆角/边框/线性Icon/**Light-Dark**/Mobile-first/交互语言/Motion 区间）、WHO-WHAT-WHY-ACTION 页面架构、五产品布局差异、生产/AI/采集/Browser Surface 红线、ZBC 落地映射、Evidence 固定字段、**登记 4 项命名/结构冲突待用户拍板（不自行全局替换）**、本轮范围声明。
+2. **改 static/css/zbip-tokens.css（v1.0→v1.1.0）**：
+   - 新增 **Dark 主题语义别名层** `:root[data-theme="dark"]`：primitive Stone 色阶不动，只重映射 bg/surface/border/text/brand 与六语义（前景提亮、弱底弱边改半透明）、深色阴影、color-scheme；**默认无 data-theme=Light，零视觉变化**；切换 = documentElement 设 data-theme。
+   - Motion 增补（不改已验收现值）：--zb-dur-quick 140ms（快速100-180）、--zb-dur-sheet 360ms（Sheet280-420）、--zb-ease-spring 轻物理弹簧；reduced-motion 同步关闭。
+   - 线性 Icon Token：--zb-icon-stroke 1.75px / size sm14·md18·lg20 / cap·join round。
+   - Mobile-first：--zb-safe-*（env safe-area-inset）与 --zb-bottomnav-h 56。
+3. **改 static/zb-preview.html**：组件画廊加 Light/Dark 切换（localStorage 记忆），作为双主题隔离验证面，不碰业务页；tokens 引用 bump 1.1.0。
+4. **改 static/index.html**：主站 tokens 引用 bump 1.1.0（默认仍 Light、零外观变化）。
+5. 证据：docs/UI/evidence/step5d-gallery-dark.png、step5d-gallery-light.png。
+
+### 为什么（机制与边界）
+- 母规范要求"先 Token 再页面"。本轮只在**唯一 token 真相层**增量，不重写组件、不改业务页；Dark 只重映射语义别名，故只有"全程引用 --zb-* 语义别名"的组件自动跟随，写死颜色的旧组件不强行套 Dark（逐组件迁移、回归后启用），避免一次性变色风险，回滚=移除 data-theme / 还原 tokens。
+- 命名结构差异（ZBP 中间层去留、SICI 职责迁移、AI-D 归属）按指令"冲突先 STOP 登记"处理，**未改 PRODUCT_NAMING_BASELINE、未做全局替换**。
+
+### 数据库 / 迁移
+无变化、无迁移；生产库与 Staging 副本库均未改结构。
+
+### 测试与真实结果（已实测）
+- 画廊默认无 data-theme=Light：--zb-bg #FAFAF9 / text #1C1917 / surface #FFFFFF（与验收基线一致）。
+- 点 Dark：data-theme=dark，--zb-bg #171411 / text #F5F5F4 / surface #211D1A / brand #F5F5F4；主按钮计算背景 rgb(245,245,244)（黑底近白），body 渲染 rgb(23,20,17)；六语义状态点在深底清晰；新 token icon-stroke 1.75px / sheet 360ms / safe-bottom 0px 均生效。
+- 点 Light 完整恢复 #FAFAF9；主站 8301 默认无 data-theme、--zb-bg #FAFAF9、data-workspace=cth，**Step5c 工作台 Light 零回归**。node 侧无 JS 改动。
+- **如实登记（NOT_VERIFIED/后续）**：components.css 中 disabled/loading/icon-btn 等少量组件在 Dark 下仍呈浅色（写死色值、未全用语义别名），本轮按"不扩大范围"不强改，登记为 Dark 逐组件迁移项；业务旧页面未套 Dark（符合设计）。
+- **运维（非代码改动，如实记录）**：开机/休眠后 8301 与 8201 的 Python 进程均已退出（9222 生产浏览器 profile 仍活）。按隔离环境重启 Staging 8301（独立副本库、XHS_CDP_URL 空、WEB_DISCOVERY 关）；按生产方式用 run_supervised.py 恢复 8201（主 worktree、不设 ZBC_DB_PATH=生产库、0.0.0.0:8201）。恢复后双口 healthz 均 ok v5.9.9 且稳定共存；8200 legacy 两实例按约定未动。启动时序上 8201 supervised 拉起瞬间曾使先起的 8301 退出一次，清理残留后重启 8301 即稳定（记录为环境注意项）。
+
+### 未实测 / 遗留
+- Dark 仅在隔离组件画廊实测；**业务页 Dark 未启用也未逐页取图**（需先完成组件写死色迁移 + 业务页语义别名化，属后续任务）。
+- 430/768/1024/1280/1440 断点、Bottom Nav/Sheet/Swipe 等 Mobile 交互仍待逐页落地（本轮只补 token）。
+- 4 项命名冲突（C1 ZBP 中间层去留 / C2 SICI 职责迁移 / C3 AI-D 仓库归属 / C4 ZBMP 中文定名）待用户裁决，裁决前以现命名基线为准。
+- Step5c 遗留不变：9 模块仍为诚实占位，下轮逐块接真实 API。
+
+### Git / 生产安全
+- 本轮提交见本次 commit（ui/staging-foundation）；生产 main 未动；8201 恢复后 v5.9.9、主体口径/采集/AI/DB 全部未碰；不提交 .env/*.db/cookie/token/profile/日志。
