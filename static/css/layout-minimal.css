@@ -851,3 +851,217 @@
     font-size: 10px;
     font-weight: var(--font-weight-medium);
 }
+
+/* ============================================
+   覆盖旧样式 - 强制极简风格
+   ============================================ */
+
+/* 强制三栏flex布局(覆盖旧grid布局) */
+.layout {
+    display: flex !important;
+    grid-template-columns: none !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+/* 强制右侧面板显示 */
+.right-panel,
+.inspector {
+    display: flex !important;
+    width: 280px !important;
+    min-width: 280px !important;
+    flex-shrink: 0 !important;
+}
+
+.right-panel.collapsed,
+.inspector.collapsed {
+    width: 280px !important;
+    min-width: 280px !important;
+    display: flex !important;
+    border-left: 1px solid var(--color-border-subtle) !important;
+}
+
+/* 主按钮改为深灰(覆盖旧蓝色) */
+.action.primary,
+.btn-primary {
+    background: var(--color-primary) !important;
+    color: var(--color-text-inverse) !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: none !important;
+}
+.action.primary:hover,
+.btn-primary:hover {
+    background: var(--color-primary-hover) !important;
+}
+
+/* 次按钮改为浅灰 */
+.action.secondary,
+.btn-secondary {
+    background: var(--color-bg-surface) !important;
+    color: var(--color-text-primary) !important;
+    border-color: var(--color-border-default) !important;
+}
+
+/* 顶部栏高度统一 */
+.topbar {
+    height: var(--layout-topbar-height) !important;
+    min-height: var(--layout-topbar-height) !important;
+    padding: 0 var(--space-lg) !important;
+}
+
+/* 侧边栏白色背景(覆盖旧样式) */
+.sidebar {
+    background: var(--color-bg-surface) !important;
+    border-right: 1px solid var(--color-border-subtle) !important;
+    position: relative !important;
+    top: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+}
+
+/* 导航项极简风格 */
+.side-item {
+    height: auto !important;
+    padding: var(--space-sm) var(--space-md) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--color-text-secondary) !important;
+    font-weight: var(--font-weight-normal) !important;
+}
+.side-item:hover {
+    background: var(--color-bg-hover) !important;
+    color: var(--color-text-primary) !important;
+}
+.side-item.active {
+    background: var(--color-bg-active) !important;
+    color: var(--color-text-primary) !important;
+    font-weight: var(--font-weight-medium) !important;
+}
+
+/* 内容区浅灰背景 */
+.content {
+    background: var(--color-bg-app) !important;
+    padding: var(--space-xl) !important;
+}
+
+/* 指标卡片极简风格 */
+.metric-card {
+    background: var(--color-bg-surface) !important;
+    border: 1px solid var(--color-border-default) !important;
+    border-radius: var(--radius-card) !important;
+    box-shadow: var(--shadow-xs) !important;
+    min-height: auto !important;
+    padding: var(--space-lg) !important;
+}
+.metric-card:hover {
+    box-shadow: var(--shadow-sm) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* 移除花哨渐变图标 */
+.metric-icon {
+    background: var(--color-bg-subtle) !important;
+    box-shadow: none !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: var(--radius-md) !important;
+}
+.metric-icon svg {
+    stroke: var(--color-text-secondary) !important;
+}
+
+/* 卡片极简风格 */
+.panel,
+.card {
+    background: var(--color-bg-surface) !important;
+    border: 1px solid var(--color-border-default) !important;
+    border-radius: var(--radius-card) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+/* 移除花哨阴影和渐变 */
+.glass {
+    background: var(--glass-bg) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 品牌logo极简 */
+.brandmark {
+    background: var(--color-neutral-900) !important;
+    box-shadow: none !important;
+    border-radius: var(--radius-sm) !important;
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+}
+
+/* 系统状态极简 */
+.system-state {
+    background: var(--color-success-bg) !important;
+    color: var(--color-success) !important;
+    border-radius: var(--radius-full) !important;
+    padding: 4px 10px !important;
+}
+.system-state i {
+    box-shadow: none !important;
+}
+
+/* 话题标签极简 */
+.topic-chip {
+    background: var(--color-bg-subtle) !important;
+    border: 1px solid var(--color-border-default) !important;
+    box-shadow: none !important;
+    border-radius: var(--radius-full) !important;
+}
+.topic-chip:hover {
+    background: var(--color-bg-surface) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* 事件卡片极简 */
+.event-card {
+    background: var(--color-bg-surface) !important;
+    border: 1px solid var(--color-border-default) !important;
+    border-radius: var(--radius-card) !important;
+    box-shadow: none !important;
+}
+.event-card:hover {
+    background: var(--color-bg-subtle) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* 风险行极简 */
+.risk-row {
+    border-top: 1px solid var(--color-border-subtle) !important;
+    border-radius: var(--radius-md) !important;
+}
+.risk-row:hover {
+    background: var(--color-bg-subtle) !important;
+    transform: none !important;
+}
+
+/* 日历极简 */
+.day {
+    background: var(--color-bg-subtle) !important;
+    border: 1px solid var(--color-border-subtle) !important;
+    border-radius: var(--radius-sm) !important;
+}
+.day:hover {
+    background: var(--color-bg-surface) !important;
+    transform: none !important;
+}
+.day.today {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: -2px !important;
+}
+
+/* 页脚极简 */
+footer {
+    color: var(--color-text-tertiary) !important;
+    font-size: 10px !important;
+    padding: var(--space-md) 0 !important;
+}

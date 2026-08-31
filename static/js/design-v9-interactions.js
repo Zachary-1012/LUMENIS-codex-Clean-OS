@@ -148,11 +148,12 @@
         closeRightPanelBtn.addEventListener('click', toggleRightPanel);
     }
 
-    // 恢复右侧面板状态
+    // 恢复右侧面板状态 - 默认展开
     try {
-        const collapsed = localStorage.getItem('rightPanelCollapsed');
-        if (collapsed === 'true' && rightPanel) {
-            rightPanel.classList.add('collapsed');
+        // 强制展开右侧面板（极简风格默认显示）
+        if (rightPanel) {
+            rightPanel.classList.remove('collapsed');
+            localStorage.setItem('rightPanelCollapsed', 'false');
         }
     } catch(e) {}
 
