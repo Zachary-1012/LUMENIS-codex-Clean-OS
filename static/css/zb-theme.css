@@ -523,3 +523,136 @@ tbody tr:last-child td{ border-bottom:0; }
 .timeline-time{ font-size:11px; color:var(--w-ink-3); margin-bottom:2px; }
 .timeline-title{ font-size:13px; font-weight:600; color:var(--w-ink); }
 .timeline-desc{ font-size:12px; color:var(--w-ink-2); margin-top:2px; line-height:1.5; }
+
+/* ============================================================================
+   §18 空状态 / 加载 / 错误状态统一
+============================================================================ */
+.empty-state{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:48px 24px; text-align:center;
+}
+.empty-state-icon{
+  width:48px; height:48px; border-radius:50%;
+  background:var(--w-surface-2); display:flex; align-items:center; justify-content:center;
+  color:var(--w-ink-3); margin-bottom:16px;
+}
+.empty-state-icon svg{ width:24px; height:24px; }
+.empty-state-title{ font-size:15px; font-weight:600; color:var(--w-ink); margin-bottom:6px; }
+.empty-state-desc{ font-size:13px; color:var(--w-ink-3); line-height:1.5; max-width:320px; }
+.empty-state-action{ margin-top:16px; }
+
+/* 加载状态 */
+.loading-state{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:48px 24px; gap:12px;
+}
+.loading-spinner{
+  width:24px; height:24px; border:2px solid var(--w-border-2);
+  border-top-color:var(--w-accent); border-radius:50%;
+  animation:zbSpin .8s linear infinite;
+}
+@keyframes zbSpin{ to{ transform:rotate(360deg); } }
+.loading-text{ font-size:13px; color:var(--w-ink-3); }
+
+/* 骨架屏 */
+.skeleton{
+  background:linear-gradient(90deg, var(--w-surface-2) 25%, var(--w-surface-3) 50%, var(--w-surface-2) 75%);
+  background-size:200% 100%; animation:zbShimmer 1.5s infinite;
+  border-radius:var(--w-r-sm);
+}
+@keyframes zbShimmer{ 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* 错误状态 */
+.error-state{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:48px 24px; text-align:center; gap:8px;
+}
+.error-state-icon{
+  width:48px; height:48px; border-radius:50%;
+  background:var(--w-danger-bg); display:flex; align-items:center; justify-content:center;
+  color:var(--w-danger); margin-bottom:8px;
+}
+.error-state-icon svg{ width:24px; height:24px; }
+.error-state-title{ font-size:15px; font-weight:600; color:var(--w-danger); }
+.error-state-desc{ font-size:13px; color:var(--w-ink-3); line-height:1.5; }
+.error-state-retry{ margin-top:12px; }
+
+/* ============================================================================
+   §19 抽屉 / 弹窗 / Toast 交互状态完善
+============================================================================ */
+.drawer-panel{
+  position:fixed; top:0; right:0; bottom:0; width:420px; max-width:90vw;
+  background:var(--w-surface); box-shadow:var(--w-sh-lg);
+  transform:translateX(100%); transition:transform var(--w-d-panel) var(--w-ease);
+  z-index:1100; display:flex; flex-direction:column;
+}
+.drawer-panel.open{ transform:translateX(0); }
+.drawer-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px; border-bottom:1px solid var(--w-border);
+}
+.drawer-title{ font-size:16px; font-weight:600; color:var(--w-ink); }
+.drawer-body{ padding:20px; flex:1; overflow-y:auto; }
+.drawer-footer{
+  padding:16px 20px; border-top:1px solid var(--w-border);
+  display:flex; gap:8px; justify-content:flex-end;
+}
+
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.4);
+  display:flex; align-items:center; justify-content:center;
+  z-index:1200; opacity:0; visibility:hidden;
+  transition:opacity var(--w-d-normal), visibility var(--w-d-normal);
+}
+.modal-overlay.open{ opacity:1; visibility:visible; }
+.modal{
+  width:480px; max-width:90vw; max-height:85vh;
+  background:var(--w-surface); border-radius:var(--w-r-xl);
+  box-shadow:var(--w-sh-lg); overflow:hidden;
+  transform:translateY(8px) scale(.98);
+  transition:transform var(--w-d-panel) var(--w-ease);
+  display:flex; flex-direction:column;
+}
+.modal-overlay.open .modal{ transform:translateY(0) scale(1); }
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px; border-bottom:1px solid var(--w-border);
+}
+.modal-title{ font-size:16px; font-weight:600; color:var(--w-ink); }
+.modal-body{ padding:20px; flex:1; overflow-y:auto; }
+.modal-footer{
+  padding:16px 20px; border-top:1px solid var(--w-border);
+  display:flex; gap:8px; justify-content:flex-end;
+}
+
+.toast-container{
+  position:fixed; top:16px; right:16px; z-index:2000;
+  display:flex; flex-direction:column; gap:8px;
+}
+.toast{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px; background:#1D1D1F; color:#fff;
+  border-radius:var(--w-r-pill); box-shadow:var(--w-sh-lg);
+  font-size:13px; font-weight:500;
+  animation:zbToastIn .3s var(--w-ease);
+}
+@keyframes zbToastIn{ from{opacity:0; transform:translateX(20px)} to{opacity:1; transform:translateX(0)} }
+.toast.success{ background:var(--w-ok); }
+.toast.error{ background:var(--w-danger); }
+.toast.warning{ background:var(--w-warn); }
+.toast.info{ background:var(--w-accent); }
+
+/* ============================================================================
+   §20 工具类 / 辅助类
+============================================================================ */
+.zb-hidden{ display:none!important; }
+.zb-flex{ display:flex; } .zb-flex-col{ display:flex; flex-direction:column; }
+.zb-items-center{ align-items:center; } .zb-justify-between{ justify-content:space-between; }
+.zb-gap-1{ gap:4px; } .zb-gap-2{ gap:8px; } .zb-gap-3{ gap:12px; } .zb-gap-4{ gap:16px; }
+.zb-p-2{ padding:8px; } .zb-p-3{ padding:12px; } .zb-p-4{ padding:16px; }
+.zb-mt-2{ margin-top:8px; } .zb-mt-3{ margin-top:12px; } .zb-mt-4{ margin-top:16px; }
+.zb-text-sm{ font-size:12px; } .zb-text-base{ font-size:13px; } .zb-text-lg{ font-size:15px; }
+.zb-text-muted{ color:var(--w-ink-3); } .zb-text-secondary{ color:var(--w-ink-2); }
+.zb-rounded{ border-radius:var(--w-r-md); } .zb-rounded-full{ border-radius:var(--w-r-pill); }
+.zb-border{ border:1px solid var(--w-border); }
+.zb-bg-surface{ background:var(--w-surface); } .zb-bg-subtle{ background:var(--w-surface-2); }
