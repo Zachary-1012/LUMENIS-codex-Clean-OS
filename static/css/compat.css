@@ -4,35 +4,40 @@
  */
 
 /* ============================================
-   桌面端强制样式（>480px）- 覆盖layout.css/apple-ui.css的768px断点
+   全局桌面端样式（所有宽度默认桌面端，手机端再覆盖）
    ============================================ */
-@media (min-width: 481px) {
-    .sidebar {
-        position: static !important;
-        transform: none !important;
-        width: 232px !important;
-        display: flex !important;
-    }
-    .menu-toggle {
-        display: none !important;
-    }
-    .sidebar-overlay {
-        display: none !important;
-    }
-    #page-overview .metric-grid {
-        grid-template-columns: repeat(6, 1fr) !important;
-    }
-    #page-overview .home-cards {
-        grid-template-columns: 1fr 1fr 1fr !important;
-        display: grid !important;
-    }
-    footer {
-        display: flex !important;
-    }
+.sidebar {
+    position: static !important;
+    transform: none !important;
+    width: 232px !important;
+    display: flex !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+}
+.menu-toggle {
+    display: none !important;
+}
+.sidebar-overlay {
+    display: none !important;
+}
+#page-overview .metric-grid {
+    grid-template-columns: repeat(6, 1fr) !important;
+    display: grid !important;
+}
+#page-overview .home-cards {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    display: grid !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+footer {
+    display: flex !important;
 }
 
-/* 平板端（481px-1024px） */
-@media (min-width: 481px) and (max-width: 1024px) {
+/* 平板端（≤1024px） */
+@media (max-width: 1024px) {
     .sidebar {
         width: 200px !important;
     }
