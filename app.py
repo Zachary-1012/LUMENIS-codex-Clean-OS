@@ -4859,6 +4859,105 @@ def api_dev_run_code():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+# ===== ZBIP Workspace 只读面板（文件树 / 只读终端）——Staging 旁路，纯只读、过滤敏感、防路径穿越 =====
+import subprocess as _ws_sp
+_WS_ROOT = Path(__file__).resolve().parent
+_WS_HIDE_DIRS = {'.git', '.venv', 'node_modules', '__pycache__', '.pytest_cache',
+                 '.skills-router', '.trae-cn', '.vscode', '.idea', 'data/cookies'}
+_WS_HIDE_RE = re.compile(r'(^\.env)|cookie|token|secret|credential|passwd|password|\.(db|sqlite|sqlite3|pem|key|pfx)$|profile', re.I)
+
+def _ws_hidden(name, is_dir):
+    # 名称命中即隐藏，不依赖 is_dir：git linked-worktree 中 .git 是文件而非目录，
+    # 若用 is_dir 门控会导致 worktree 内 .git 文件漏出。
+    if name in _WS_HIDE_DIRS or name.startswith('edge-cdp') or name.startswith('chrome-cdp'):
+        return True
+    return bool(_WS_HIDE_RE.search(name))
+
+@app.route('/api/workspace/file-tree')
+def api_workspace_file_tree():
+    """只读列目录：限定项目根、过滤敏感文件/目录、防路径穿越，返回真实文件数。"""
+    try:
+        rel = (request.args.get('path') or '').strip().replace('\\', '/').lstrip('/')
+        target = (_WS_ROOT / rel).resolve() if rel else _WS_ROOT
+        if target != _WS_ROOT and _WS_ROOT not in target.parents:
+            return jsonify({'ok': False, 'error': '路径越界，已拒绝'}), 403
+        if not target.exists() or not target.is_dir():
+            return jsonify({'ok': False, 'error': '目录不存在'}), 404
+        items, nd, nf = [], 0, 0
+        for p in sorted(target.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+            try:
+                isd = p.is_dir()
+            except OSError:
+                continue
+            if _ws_hidden(p.name, isd):
+                continue
+            if isd:
+                nd += 1
+            else:
+                nf += 1
+            items.append({'name': p.name, 'type': 'dir' if isd else 'file',
+                          'rel': str(p.relative_to(_WS_ROOT)).replace('\\', '/'),
+                          'size': None if isd else p.stat().st_size})
+        return jsonify({'ok': True, 'root': _WS_ROOT.name, 'path': rel,
+                        'items': items, 'counts': {'dirs': nd, 'files': nf, 'total': nd + nf}})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'{type(e).__name__}: {e}'}), 500
+
+_WS_TERM_ALLOW = {'ls', 'dir', 'pwd', 'whoami', 'help', 'clear', 'python', 'git'}
+_WS_GIT_READONLY = {'status', 'log', 'diff', 'branch', 'rev-parse', 'show', 'remote', 'ls-files', 'count-objects'}
+
+@app.route('/api/workspace/term', methods=['POST'])
+def api_workspace_term():
+    """只读 Web 终端：白名单命令、shell=False、cwd 锁定项目根、超时；拒绝一切写/管道/重定向。"""
+    data = request.get_json(silent=True) or {}
+    raw = (data.get('cmd') or '').strip()
+    if not raw:
+        return jsonify({'ok': False, 'error': '命令为空'}), 400
+    if re.search(r'[;&|`$><]|\.\.', raw):
+        return jsonify({'ok': False, 'blocked': True, 'error': '含管道/重定向/命令替换/上级路径，只读终端已拒绝。写操作请在本机终端执行。'}), 403
+    parts = raw.split()
+    head = parts[0].lower()
+    if head not in _WS_TERM_ALLOW:
+        return jsonify({'ok': False, 'blocked': True,
+                        'error': 'Web 终端仅开放只读命令：ls / pwd / whoami / python --version / git 只读子命令 / help / clear。'}), 403
+    try:
+        if head in ('ls', 'dir'):
+            lines = []
+            for p in sorted(_WS_ROOT.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+                try:
+                    isd = p.is_dir()
+                except OSError:
+                    continue
+                if _ws_hidden(p.name, isd):
+                    continue
+                lines.append(('[D] ' if isd else '    ') + p.name)
+            return jsonify({'ok': True, 'cmd': raw, 'cwd': str(_WS_ROOT), 'output': '\n'.join(lines)})
+        if head == 'pwd':
+            return jsonify({'ok': True, 'cmd': raw, 'cwd': str(_WS_ROOT), 'output': str(_WS_ROOT)})
+        if head == 'help':
+            return jsonify({'ok': True, 'cmd': raw, 'output':
+                '只读 Web 终端可用命令：\n  ls                       列出项目根（自动过滤敏感项）\n  pwd                      项目根路径\n  whoami                   当前用户\n  python --version         Python 版本\n  git status|log|diff|branch|rev-parse|show|remote|ls-files   Git 只读查询\n  clear                    清屏\n写操作（commit/push/reset/安装/删除等）请在本机终端执行。'})
+        if head == 'clear':
+            return jsonify({'ok': True, 'clear': True})
+        if head == 'python':
+            if len(parts) < 2 or parts[1] != '--version':
+                return jsonify({'ok': False, 'blocked': True, 'error': 'python 仅允许 --version'}), 403
+            cmd = [sys.executable, '--version']
+        elif head == 'whoami':
+            cmd = ['whoami']
+        else:  # git
+            sub = parts[1].lower() if len(parts) > 1 else ''
+            if sub not in _WS_GIT_READONLY:
+                return jsonify({'ok': False, 'blocked': True, 'error': f'git {sub or "(无子命令)"} 不是只读子命令，已拒绝。'}), 403
+            cmd = ['git', '-C', str(_WS_ROOT)] + parts[1:]
+        r = _ws_sp.run(cmd, capture_output=True, text=True, timeout=15,
+                       cwd=str(_WS_ROOT), encoding='utf-8', errors='replace')
+        return jsonify({'ok': r.returncode == 0, 'cmd': raw, 'cwd': str(_WS_ROOT),
+                        'output': (r.stdout or '') + (r.stderr or ''), 'code': r.returncode})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'{type(e).__name__}: {e}'}), 500
+
+
 # ===== 公关案例库 API（双模块联动体系） =====
 @app.route('/api/pr/cases')
 def api_pr_cases():

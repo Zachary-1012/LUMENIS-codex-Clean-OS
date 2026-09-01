@@ -528,3 +528,30 @@
 
 ### Git / 生产安全
 - main 线：ccd22b6 已推（含预检安全增强）；Staging 线本次 commit 见下；生产 8201 v5.9.9 全程未重启、主体口径/采集/AI/DB 未碰；不提交 .env/*.db/cookie/token/profile/日志。
+
+---
+
+## Step5g｜新增 Codex 式「底部只读终端 + 右侧文件树 + 视图菜单」（2026-09-01，用户参考图驱动）
+
+### 需求（用户给 3 张 Codex 截图，黑框圈定）
+- 下方新增**终端面板**（打开终端 Ctrl+`、切换底部面板 Ctrl+J，标签+新建+关闭+Alt 数字切标签）；右侧新增**文件树面板**（切换文件树 Ctrl+Shift+E，打开文件/筛选/目录树/文件数）；统一从**视图菜单**进入。随后继续推进 2→1→3。
+
+### 后端：新增两个**纯只读、安全白名单**路由（app.py，纯增量，不改任何现有路由/DB/主体口径）
+- `GET /api/workspace/file-tree?path=`：限定项目根、防路径穿越（resolve 后必须在根内，越界 403）、过滤敏感（.env/.venv/.git/node_modules/__pycache__/cookie/token/secret/*.db/*.key/profile 等），返回真实目录/文件/大小与「目录数·文件数」。
+- `POST /api/workspace/term`：**只读 Web 终端**。白名单 ls/pwd/whoami/help/clear/python --version/git{status,log,diff,branch,rev-parse,show,remote,ls-files,count-objects}；shell=False、list 参数、cwd 锁定项目根、15s 超时；拒绝管道/重定向/命令替换/`..`、拒绝写命令与非只读 git 子命令（403 blocked）。**明确不复用**现有三套高危 run-code（/api/dev/run-code 直接 exec 任意 Python，属 GAP-04 待收口，不拿它做终端）。
+- **自抓自修 1 个真 bug**：Staging 是 git linked-worktree，其内 `.git` 是**文件**而非目录，初版用 `is_dir` 门控隐藏集合导致 `.git` 文件漏出；改为「名称命中隐藏集合即隐藏，不区分文件/目录」后，.git/.venv/*.db 全隐藏、.github 正常保留（193 项）。
+
+### 前端（纯增量，不覆盖旧 class，全 token）
+- static/css/zbip-panels.css（v1.0.0）：右上视图工具条+下拉菜单、底部深色 Stone 只读终端（等宽、绿 prompt/白输出/橙拒绝语义色、标签栏、spring 上移）、右侧文件树（线性 folder/file icon、chevron 展开、大小、底部文件数）、面板打开时主内容自动让位、≤760px 抽屉化、prefers-reduced-motion 兜底。
+- static/js/zbip-panels.js（v1.0.0）：轮询挂载到 #zbmpView（仅 ZBMP 生效，CTH 视图不触发）；文件树懒加载子目录+当前层筛选+真实文件数；终端多标签会话、Alt+数字切换、回车走后端白命令；快捷键 Ctrl+`/Ctrl+J 终端、Ctrl+Shift+E 文件树、Esc 关菜单、外部点击关菜单。
+- static/index.html：各 +1 行 link/script（panels css/js 跟在 workbench 之后）。
+
+### 已实测（8301，证据 step5g-files/term/files-390.png）
+- 文件树：根 20 目录/173 文件/193 项；static 懒加载展开出 css/img/js/launch-screens 与文件大小；data 层 *.db/cookies 被过滤；路径穿越 ../../../Windows → 403。
+- 终端：help 出帮助；git rev-parse 真实返回 33aca48；ls 真实列目录（[D] 标目录）；python --version=3.13.15；git push / rm -rf / 管道 / python -c / npm i / cd .. 全部 403 拒绝（前端橙色提示，不执行）；新建标签/Alt 切换/clear 正常。
+- 视图菜单三项+快捷键正确；主内容自动让位无遮挡；390 无横向滚动、面板抽屉化。
+- 回归：tests/healthcheck.py ok=true、9 模块 ok、主体 gz_hit/sh_excluded=true；/healthz、/api/overview、/api/event-graph/types 全 200；node --check 通过；py_compile app.py 通过。
+- **未实测/遗留**：终端暂不支持多命令历史上下键（↑↓）与自动补全；文件树递归总文件数（当前为"当前层"计数，非全仓递归，避免大目录开销）；文件点击仅展示、未做只读文件内容预览（下一批评估，仍需过滤敏感）；430/768/1024/1280/1440 断点未逐档。
+
+### Git / 生产安全
+- 本次为 Staging 分支 commit（见下），新增后端路由为纯只读增量，合 main 前将在主 worktree 再跑 import+healthz+主体回归；生产 8201 v5.9.9 全程未动；不提交 .env/*.db/cookie/token/profile/日志。
