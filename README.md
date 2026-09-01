@@ -4,7 +4,7 @@
 
 > **产品标识**：📊 Z-Brand-Core（双子星 A 产品｜业务生产权威）
 > **当前版本**：v5.9.7｜main 分支｜E2E 42/42 通过
->7:> **双子对端**：🤖 [Zachary-OS-AI README 双子关系段](https://github.com/Zachary-1012/Zachary-OS-AI#双子产品关系) (repo=Zachary-1012/Zachary-OS-AI, branch=main, section=双子产品关系, last_verified_sha=f0b8bb5)
+>7:> **双子对端**：🤖 [Zachary-OS-AI README 双子关系段](https://github.com/Zachary-1012/Zachary-OS-AI#双子产品关系) (repo=Zachary-1012/Zachary-OS-AI, branch=main, section=双子产品关系, last_verified_sha=2fbdfba)
 > **生产边界硬约束（不可编辑）**：CTH-POMS / ZBMP 生产运行绝对不依赖 Zachary-OS-AI 任何组件。依据 [AGENTS.md §2](AGENTS.md#2-一套-core配置驱动运行隔离)。
 
 > **品牌传播与市场情报智能平台核心底座**
@@ -904,11 +904,11 @@ Shadow Sample / 规则校准
 
 ### 11.2 跨仓索引（3 条，E-009 三元元信息 + last_verified_sha）
 
-1. 🤖 [Zachary-OS-AI README 双子关系段](https://github.com/Zachary-1012/Zachary-OS-AI#双子产品关系) (repo=Zachary-1012/Zachary-OS-AI, branch=main, section=双子产品关系, last_verified_sha=f0b8bb5)
-2. 📘 [DCC README §17 与 Z-Brand-Core 的 13 项职责](https://github.com/Zachary-1012/Development-Command-Console#17-与-z-brand-core-的关系) (repo=Zachary-1012/Development-Command-Console, branch=main, section=§17, last_verified_sha=f0b8bb5)
-3. 🔧 [AI-DRH Capability Registry](https://github.com/Zachary-1012/AI-Development-Research-Hub/blob/main/CAPABILITY-REGISTRY.md) (repo=Zachary-1012/AI-Development-Research-Hub, branch=main, section=Capability Registry, last_verified_sha=f0b8bb5)
+1. 🤖 [Zachary-OS-AI README 双子关系段](https://github.com/Zachary-1012/Zachary-OS-AI#双子产品关系) (repo=Zachary-1012/Zachary-OS-AI, branch=main, section=双子产品关系, last_verified_sha=2fbdfba)
+2. 📘 [DCC README §17 与 Z-Brand-Core 的 13 项职责](https://github.com/Zachary-1012/Development-Command-Console#17-与-z-brand-core-的关系) (repo=Zachary-1012/Development-Command-Console, branch=main, section=§17, last_verified_sha=2fbdfba)
+3. 🔧 [AI-DRH Capability Registry](https://github.com/Zachary-1012/AI-Development-Research-Hub/blob/main/CAPABILITY-REGISTRY.md) (repo=Zachary-1012/AI-Development-Research-Hub, branch=main, section=Capability Registry, last_verified_sha=2fbdfba)
 
-> 说明：last_verified_sha 指 ZOSAI 仓（B 仓）当前本地 HEAD，因为三链接目标 GitHub 仓内容在本地都以 ZOSAI components/ 快照形式同步验证过。A 仓当前 HEAD = `b497277`（本仓自证）。
+> 说明：last_verified_sha 指 ZOSAI 仓（B 仓）权威基线 commit（`2fbdfba` = README 12节 + .gitignore + 6 组件 E-008 四库术语升级，稳定锚点不因后续 CHANGELOG/commit 变更而漂移）；三链接目标 GitHub 仓内容在本地都以 ZOSAI components/ 快照形式同步验证过。A 仓当前最终 HEAD（README 融合 + 资产清单 + 四层矩阵 + E-001~E-009 + CHANGELOG 开工/结束）= `065eaa6`（**最终 SHA 若因后续 amend 变动，以 `git log -1 --oneline` 输出为唯一权威；锚点 last_verified_sha=2fbdfba 保持不变**）。
 
 ---
 

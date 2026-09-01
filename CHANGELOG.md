@@ -1,4 +1,66 @@
-﻿# 变更日志
+# 变更日志
+
+## [5.9.9-t1] - 2026-09-02（双子星B0阶段：README融合12节母体+四库体系术语升级+跨仓SHA锚点回写+首次双仓同步Push）
+
+### 【开工记录 05:03】
+- **阶段**：B0 双子星审计收敛（Spec Mode Implement → Review Gate PASS → B0-5 SHA回写 + Push）
+- **执行人**：Zachary-OS-AI 总执行师（TRAE Main Window）
+- **授权依据**：用户 2026-09-02 指令「好的，执行吧」+「任何时候开工前开工结束都要推送至双子星库仓库里并同步写每回日志」
+- **本次施工范围（硬边界 NFR-001）**：
+  - 仅 `.md` / `.gitignore` / Spec 辅助文件；**零 .py/.js/.html/.db 业务源码修改**
+  - A 仓：仅 `README.md`（43 历史杂改保持未暂存，绝不纳入 commit）
+  - B 仓：仅 `README.md` amend（components/ 其余未审计实现文件绝不纳入 commit）
+- **前置基线锚（开工前 git log -1）**：
+  - A 仓 ZBC main：`39e1ba7`（README 融合 + 矩阵 + 资产清单 + E-001~E-009）
+  - B 仓 ZOSAI main：`2fbdfba`（README 12节 + .gitignore + E-008 组件四库术语升级 6md）
+- **目标输出**：
+  1. NEW_A_SHA / NEW_B_SHA 与 README 内 `last_verified_sha` 双向锚点对齐
+  2. 首次两仓同时 git push origin main（开工前 push 次数 = 0）
+  3. CHANGELOG 开工/结束双段写入并随本次 push
+  4. AGENTS §16 交付 10 要素完整报告
+- **硬禁止（违规即 BLOCK）**：不 push 生产 DB / Cookie / Key / 43 历史杂改 / B 仓 components 实现文件
+
+## [5.9.9-t0] - 2026-09-02（Zachary-OS-AI 总执行师 T0 基线锚定 + SEC 加固 + 启动收口 + 首次四层 E2E 实锚）
+
+### T0-1 生产数据库事实基线锁定（只读审计）
+- 四候选库对账，锁定真实生产库 = `data/monitor.db`（6.41 MB / 53 表 / notes=957 / events=427 / daily_reports=33 / collection_logs=495 / ai_filter_log=827 / note_review_history=8327）。
+- 证伪 CONFLICT-001：原"7 张 models 有/database.py 无"为假阳性（运行时 `CREATE TABLE IF NOT EXISTS` 已全部落地）。
+- 根目录 `monitor.db` 仅 12 KB / 1 张 `token_stat` 表 = 废弃壳，不再作为基线。
+- 双时间铁律 P0 验证：`publish_datetime IS NULL = 0 / publish_datetime = captured_at = 0`，**零违规**。
+
+### T0-2 SEC-001 HIGH 清零 + 依赖补完
+- **`import_cookies.py` 移除 6+17 条硬编码 Cookie**（微博 SESSDATA + B站 bili_ticket JWT 等高敏感凭证），改为读取 `.env`：
+  - `ZBC_WEIBO_COOKIE_JSON` / `ZBC_BILI_COOKIE_JSON`：JSON 数组形式，无配置时打印友好提示不硬报错，最终全部为空 `sys.exit(1)` 防静默空落盘。
+- `.env.example` 新增 `ZBC_WEIBO_COOKIE_JSON / ZBC_BILI_COOKIE_JSON / ZBC_API_KEY` 三模板占位。
+- `.gitignore` 追加 `.env.local/.env.prod/.env.txt`，并加 `scripts/_zachary_t0*` 临时审计脚本忽略。
+- SEC-006：`requirements.txt` 从 18 项扩至 31 项，补全 Flask-CORS、Flask-Limiter、APScheduler、schedule、beautifulsoup4、lxml、websocket-client、python-dateutil、PyYAML 九项实际运行依赖；本地 `.venv` 单包重试 3 次 → 9/9 装成。
+- Secret 扫描：ZBC 源码层面 **0 HIGH**；OSAI 库 **0 HIGH**（双库 SEC 基线到净）。
+
+### T0-3 启动入口统一收敛为 `scripts\start_production.ps1`
+- 35 个 LEGACY 入口（start_\*、一键\*、启动系统\*、run_\*、start_tunnel、系统守护闭环、run.ps1、run_production、run_supervised、cloudflared_guardian 等 .bat/.ps1/.vbs/.py）统一在首行注入 **LEGACY REDIRECT NOTICE**：指向 `scripts/start_production.ps1`（保留 shebang/@echo off/编码声明，不删主体逻辑以兼容）。
+- `scripts/start_production.ps1` 重写为 ASCII 安全 + UTF-8 输出版：
+  - 互斥锁 `Global\ZBrandCoreLauncher8201`；.venv Python 强制路径（避开全局 3.14.7 vs .venv 3.13.15 混用）。
+  - 新增启动前依赖预检，调用 `scripts/_prod_dep_check.py`（flask/playwright/apscheduler/schedule/dotenv/requests/bs4 7 项；OK exit 0 / MISSING exit 2 + 中文指引）。
+  - 8201 Flask / 9222 Edge CDP 三幂等（互斥+进程存在+HTTP 健康）；启动后 15 秒 healthz 等待；失败自动打印日志末 20 行 stderr。
+  - 启动完成打印看板：`Zachary-OS-AI · Z-Brand-Core production launcher` + UP/Healthz/CDP 地址。
+- 新增 `scripts/_prod_dep_check.py`（被 start_production.ps1 调用，必须随仓库保留）。
+
+### T0-4 首次四层 E2E 实锚（真实启动，非静态断言）
+- L1 HTTP 健康：`/healthz` = HTTP 200 / `{"ok":true,"service":"taikoo-monitor","version":"5.9.9"}`。
+- L2 路由注册：359 条 Flask 路由已注册 → 60 页 SPA/SSR + 290 `/api/*` 接口。
+- L3 Playwright 真实浏览器 15 SPA：
+  - 修正 Basic Auth 用 Header 注入（不再 user:pass@URL 导致浏览器 `Failed to execute fetch`）后，`/` 首页 HTTP 200 + `title=广州太古汇舆情监测系统·CTH-POMS`。
+  - 15 张 Hash Router SPA（/#/overview ... /#/settings）DOM 判据：15/15 全部 OK；**JS fatal / pageerror = 0**；Console 错误 = 2（非致命样式警告）。
+  - SSR `/v4/` + `/topic-campaign` = HTTP 200 OK。
+  - 非阻塞告警：`/architecture` + `/event-graph` 两蓝图路由返回 404（属 P1 能力，不阻塞 CTH 15 核心页上线）。
+- L4 pytest 核心 152 用例：exit=0，**152 passed · 0 failed · 0 error**（`-k 'not browser or playwright or selenium or e2e or live or remote'` + `ZBC_DB_PATH=staging/monitor.staging.db` 与生产隔离）。
+- L5 双时间铁律再验：`publish空=0 / pub=cap嫌疑=0`；遗留 notes 空正文 = 253 → 记为 T1-1 分批 CDP 补抓。
+- pytest-timeout 2.4.0 补装解决早期 `unrecognized arguments: --timeout`。
+
+### 已知风险 / 后续
+- 真实 bili_ticket expires=2026-08-31 已过期（系统启服不阻塞，但 B 站采前需 `.env` 换最新凭证）。
+- 小红书 NEED_VERIFY 全链路真人扫码闭环未人为触发真实验证 → 安排至 T1-2。
+- `_tmp_p0_*`、`.trae/`、`_zachary_t0*` 脚本与截图本提交不包含；临时产物已于审计结束后物理删除。
 
 ## [5.9.9] - 2026-08-31（事件关系图谱数据库持久化修复）
 
