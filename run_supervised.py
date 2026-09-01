@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+# ============================================================
+# Z-Brand-Core · Zachary-OS-AI T0-3 Legacy Redirect Notice
+#  此入口已标注为 LEGACY（保留用于调试/历史兼容）。官方统一生产入口已收敛为：
+#     powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+#  如确需直接执行此 .py，请使用项目 .venv：  .venv\Scripts\python.exe <this_file>.py
+# ============================================================
 """Z-Brand Core / CTH-POMS 进程看门狗（生产常驻监督器）。
 
 解决两类宕机：
