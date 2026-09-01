@@ -36,12 +36,22 @@
 <!-- [STAGING ONLY] ZBMP 工作台视图 + 统一交互组件层（分组卡/Sheet/微光），回滚=删此 link -->
 <link rel="stylesheet" href="/static/css/zbmp-workbench.css?v=1.0.6">
 <link rel="stylesheet" href="/static/css/zbip-panels.css?v=1.0.3">
-<link rel="stylesheet" href="/static/css/splash.css?v=1.0.0">
+<link rel="stylesheet" href="/static/css/splash.css?v=2.0.0">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) -->
 <div id="splash" class="splash" data-product="cth">
+  <div class="splash-atmos" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="orb orb-3"></span></div>
+  <div class="splash-grain" aria-hidden="true"></div>
   <span class="splash-skip">点击跳过</span>
+  <div class="splash-orbit" aria-hidden="true">
+    <span class="float-card fc-1"><i class="dot dot-info"></i>舆情监测</span>
+    <span class="float-card fc-2"><i class="dot dot-warn"></i>风险预警</span>
+    <span class="float-card fc-3"><i class="dot"></i>事件图谱</span>
+    <span class="float-card fc-4"><i class="dot"></i>品牌知识库</span>
+    <span class="float-card fc-5"><i class="dot dot-ok"></i>智能报告</span>
+    <span class="float-card fc-6"><i class="dot"></i>AI 洞察</span>
+  </div>
   <div class="splash-content">
     <div class="splash-abbr">CTH-POMS</div>
     <div class="splash-divider"></div>
@@ -59,7 +69,7 @@
     setTimeout(function(){if(splash.parentNode)splash.parentNode.removeChild(splash);},800);
   }
   splash.addEventListener('click',hideSplash);
-  setTimeout(hideSplash,2800);
+  setTimeout(hideSplash,3400);
 })();
 </script>
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>

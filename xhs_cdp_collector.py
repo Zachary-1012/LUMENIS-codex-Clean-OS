@@ -182,6 +182,60 @@ def _find_first(page, selectors, timeout_ms=4000):
     return None
 
 
+def human_click_note_coords(page, note_id):
+    """真人坐标点击：实时取该笔记封面相对视口的中心点，贝塞尔移动后真实按下/抬起。
+    绕过 Playwright actionability 对瀑布流封面的误判（not visible/stable）。返回是否点击。"""
+    js = """(nid) => {
+      const items = document.querySelectorAll('section.note-item');
+      for (const it of items) {
+        const a = it.querySelector('a.cover') || it.querySelector('a[href*="search_result"]') || it.querySelector('a[href*="explore"]') || it.querySelector('a');
+        if (!a || !a.href || a.href.indexOf(nid) < 0) continue;
+        const r = a.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          return {x: r.x + r.width*0.5, y: r.y + r.height*0.5,
+                  top: r.top, bottom: r.bottom, vh: window.innerHeight};
+        }
+      }
+      return null;
+    }"""
+    try:
+        rect = page.evaluate(js, note_id)
+    except Exception:
+        rect = None
+    if not rect:
+        return False
+    # 不在视口则真人式滚动到其附近，再取一次坐标
+    if rect['top'] < 60 or rect['bottom'] > rect['vh'] - 60:
+        try:
+            page.evaluate("""(nid) => {
+              const items = document.querySelectorAll('section.note-item');
+              for (const it of items) {
+                const a = it.querySelector('a.cover')||it.querySelector('a');
+                if (a && a.href && a.href.indexOf(nid)>=0){ it.scrollIntoView({block:'center',behavior:'instant'}); return; }
+              }}""", note_id)
+            gauss_sleep(0.5, 0.15, 0.3)
+            rect = page.evaluate(js, note_id) or rect
+        except Exception:
+            pass
+    # 安全护栏：坐标点上的元素不得是互动按钮
+    try:
+        hit = page.evaluate("""({x,y}) => {
+            const el = document.elementFromPoint(x,y);
+            let cur = el, blob='';
+            for (let i=0;i<3 && cur;i++){ blob += ' '+(cur.className||'')+' '+(cur.getAttribute&&cur.getAttribute('aria-label')||''); cur=cur.parentElement; }
+            return blob.toLowerCase();
+        }""", {'x': rect['x'], 'y': rect['y']})
+        if hit and any(b in hit for b in ['like', 'collect', 'follow', 'comment-input', 'publish', 'submit']):
+            return False
+    except Exception:
+        pass
+    move_mouse_human(page, rect['x'], rect['y'])
+    page.mouse.down()
+    human_sleep(0.05, 0.14)
+    page.mouse.up()
+    return True
+
+
 def human_search_keyword(page, keyword):
     """真人搜索：聚焦搜索框 → 逐字符键盘输入（偶发误触回删+思考停顿）→ 停顿 → 回车。"""
     box = _find_first(page, _SEARCH_INPUT_SEL, timeout_ms=6000)
@@ -519,14 +573,22 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                     card_loc = page.locator(f'section.note-item:has(a[href*="{target["note_id"]}"])').first
                     if card_loc.count() == 0:
                         card_loc = page.locator('section.note-item').nth(min(i, max(len(cards)-1, 0)))
-                    cover = card_loc.locator('a.cover, a[href*="search_result"], a[href*="explore"]').first
-                    if cover.count() > 0 and not _is_interact_element(page, cover):
-                        try:
-                            move_to_locator_and_click(page, cover)
+                    # 优先真人坐标点击封面（最像真人，且不受 actionability 误判影响）
+                    try:
+                        if human_click_note_coords(page, target['note_id']):
                             opened_by_click = True
-                            trace.append({'note_id': target['note_id'], 'open': 'mouse_click'})
-                        except Exception as e:
-                            log(f'真人点击打开失败，回退直达: {e}')
+                            trace.append({'note_id': target['note_id'], 'open': 'mouse_coords_click'})
+                    except Exception as e:
+                        log(f'坐标点击异常，尝试locator: {e}')
+                    if not opened_by_click:
+                        cover = card_loc.locator('a.cover, a[href*="search_result"], a[href*="explore"]').first
+                        if cover.count() > 0 and not _is_interact_element(page, cover):
+                            try:
+                                move_to_locator_and_click(page, cover)
+                                opened_by_click = True
+                                trace.append({'note_id': target['note_id'], 'open': 'mouse_locator_click'})
+                            except Exception as e:
+                                log(f'真人点击打开失败，回退直达: {e}')
                     if not opened_by_click:
                         page.goto(target['url'], wait_until='domcontentloaded', timeout=30000)
                         trace.append({'note_id': target['note_id'], 'open': 'goto_fallback'})

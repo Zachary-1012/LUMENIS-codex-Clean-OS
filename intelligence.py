@@ -108,10 +108,47 @@ def ai_status():
 
 def ai_enabled(): return bool(_provider_config())
 
+# ============================================================
+# 外接云端 AI 发送前脱敏（最高原则：敏感信息不出内网）
+# 本地模型(ollama/lmstudio)不出网，不脱敏；仅云端 provider 发送前强制脱敏。
+# 硬脱敏：凭证/令牌/手机号/身份证/邮箱/内网主机/内部端口/本地路径。
+# 品牌/客户名默认保留（品牌分析需要真实业务语义），可用 AI_CLOUD_REDACT_BRAND=true
+# 配合 AI_REDACT_NAMES=名称1,名称2 做软脱敏。
+# ============================================================
+_REDACT_PATTERNS = [
+    (re.compile(r'(?i)(api[_-]?key|access[_-]?key|secret|password|passwd|pwd|cookie|authorization|bearer|session[_-]?id)\s*[:=]\s*[^\s,;"\']+'), r'\1=[REDACTED]'),
+    (re.compile(r'(?i)(xsec_token|access_token|refresh_token|web_session|web_session_v2|sig|sign|ticket)=[A-Za-z0-9%._\-]+'), r'\1=[REDACTED]'),
+    (re.compile(r'Bearer\s+[A-Za-z0-9._\-]{8,}'), 'Bearer [REDACTED]'),
+    (re.compile(r'1[3-9]\d{9}'), '[手机号]'),
+    (re.compile(r'\b[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dXx]\b'), '[身份证]'),
+    (re.compile(r'\b\d{16,19}\b'), '[银行卡号]'),
+    (re.compile(r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}'), '[邮箱]'),
+    (re.compile(r'\b(?:127\.0\.0\.1|localhost|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'), '[内网主机]'),
+    (re.compile(r':(?:8200|8201|8300|8301|9222|11434|10808)\b'), ':[内部端口]'),
+    (re.compile(r'[A-Za-z]:\\[^\s"\'<>]+'), '[本地路径]'),
+]
+
+def redact_for_cloud(text):
+    """对外接云端模型的文本做脱敏；返回脱敏后文本。"""
+    if not text:
+        return text
+    out = str(text)
+    for pat, rep in _REDACT_PATTERNS:
+        try:
+            out = pat.sub(rep, out)
+        except Exception:
+            continue
+    if _env('AI_CLOUD_REDACT_BRAND', '').lower() in ('1', 'true', 'yes', 'on', 'y'):
+        for name in [x.strip() for x in _env('AI_REDACT_NAMES', '').split(',') if x.strip()]:
+            out = out.replace(name, '[客户]')
+    return out
+
 def _chat(system,user,temperature=0.1,max_tokens=1200):
     d=_provider_config()
     if not d: return None,'rule'
     provider,model,base=d
+    if provider != 'ollama':  # 仅云端脱敏，本地模型保留原文
+        system, user = redact_for_cloud(system), redact_for_cloud(user)
     payload_obj={'model':model,'temperature':temperature,'max_tokens':max_tokens,'messages':[{'role':'system','content':system},{'role':'user','content':user}]}
     payload=json.dumps(payload_obj,ensure_ascii=False).encode('utf-8')
     try:
