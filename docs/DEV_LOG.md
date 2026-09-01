@@ -777,3 +777,17 @@ classifier 现仅按主体类型映射 content_type_hint；review/experience/com
 - 新增 tests/test_report_center_route.py 7 用例全过；统一入口 `pytest tests` **134 passed**。
 ### 未接管（登记）
 ReportExporter 的 Word/PDF 导出与自动发送仍旁路；12 条旧报告路由的收敛仍属 GAP-10 剩余，导出接管前须先与 RPT-001/002 Owner 对齐，避免双写/双发。
+
+
+---
+
+## 2026-09-01 21:20 · 新增能力接管②：adapter 韧性层（熔断/限流/双池）单测验证（阶段4b）
+
+### 事实与边界
+- `v4_upgrade/adapters/base.py`（CircuitBreaker/RateLimiter/AdapterMetrics/BaseAdapter.safe_collect）与 `dual_pool.py`（Cookie/Proxy 池 + DualPoolManager）为增强层，**主采集链当前不经过它们**；本轮只做行为验证，不把它们接入生产主链、不改任何现有采集器。
+
+### 落地（仅新增测试，零业务代码改动）
+新增 tests/test_adapter_resilience.py 9 用例：熔断器 阈值熔断→冷却半开→成功复位；令牌桶 burst 耗尽即限流；指标 success_rate/avg/p95/to_dict；**safe_collect 永不抛异常**；Cookie 300012/验证码直接冷却且到期自愈、普通失败 SUSPECT→FAILED 递进、成功复位；Proxy 冷却→失败递进；CookiePool tmp 隔离 add/get/冷却摘除/get_stats；DualPoolManager 凭证装配 + 失败触发 risk_callback + health_check。
+
+### 结果（已实测）
+9 用例全过；统一入口 `pytest tests` **143 passed**。结论：韧性增强层行为正确、可作为后续采集 Adapter 化的可靠底座；是否真正接入主采集链仍按「先旁路验证再切换」另行评估，本轮不接管。
