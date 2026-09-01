@@ -73,6 +73,43 @@ def _now() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
+# ===== GAP-07 关系推断：保守、可解释、无证据不连边 =====
+AUTO_REL_PREFIX = '[auto]'
+# 全域高频通用 bigram（所有事件几乎都含，会造成“全相连”伪关系），不计入主题重叠
+_STOP_BIGRAM = {'太古', '古汇', '广州', '商场', '活动', '事件', '品牌', '门店', '顾客', '消费',
+                '购物', '中心', '广场', '有限', '公司', '我们', '他们', '这个', '一个', '可以'}
+
+
+def _text_tokens(text: str) -> set:
+    """中文 2-gram（去通用停用）+ 英文/数字词，作为主题重叠证据。"""
+    import re as _re
+    s = str(text or '').lower()
+    toks = set()
+    for seg in _re.findall(r'[一-龥]{2,}', s):
+        for i in range(len(seg) - 1):
+            g = seg[i:i + 2]
+            if g not in _STOP_BIGRAM:
+                toks.add(g)
+    for w in _re.findall(r'[a-z0-9]{2,}', s):
+        toks.add(w)
+    return toks
+
+
+def _parse_dt(value: str):
+    """宽松解析事件时间为 datetime；无法判定返回 None（时间不可比则不自动连边，保守）。"""
+    s = str(value or '').strip().replace('T', ' ')
+    if not s:
+        return None
+    try:
+        if len(s) >= 19:
+            return datetime.strptime(s[:19], '%Y-%m-%d %H:%M:%S')
+        if len(s) >= 16:
+            return datetime.strptime(s[:16], '%Y-%m-%d %H:%M')
+        return datetime.strptime(s[:10], '%Y-%m-%d')
+    except Exception:
+        return None
+
+
 def init_db() -> None:
     """初始化数据库表"""
     with _get_db() as conn:
