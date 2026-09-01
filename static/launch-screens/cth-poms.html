@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>广州太古汇舆情监测系统 · CTH-POMS 启动</title>
+<link rel="stylesheet" href="launch-common.css">
+</head>
+<body>
+  <!-- 启动海报 -->
+  <div class="stage" id="stage">
+    <div class="atmos" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="orb orb-3"></span></div>
+    <div class="grain" aria-hidden="true"></div>
+    <button class="skip" id="skip" type="button">点击跳过</button>
+    <div class="orbit" aria-hidden="true">
+      <span class="fcard f1"><i class="dot d-info"></i>舆情监测</span>
+      <span class="fcard f2"><i class="dot d-warn"></i>风险预警</span>
+      <span class="fcard f3"><i class="dot "></i>事件图谱</span>
+      <span class="fcard f4"><i class="dot "></i>传播主体</span>
+      <span class="fcard f5"><i class="dot d-ok"></i>智能报告</span>
+      <span class="fcard f6"><i class="dot "></i>AI 洞察</span>
+    </div>
+    <div class="hero">
+      <div class="abbr">CTH-POMS</div>
+      <div class="divider"></div>
+      <div class="zh">广州太古汇舆情监测系统</div>
+      <div class="en">CorTech Lab · Guangzhou Taikoo Hui Public Opinion Monitoring System</div>
+    </div>
+    <div class="sysfoot">广州太古汇舆情监测系统 · CTH-POMS（主力生产 / 客户交付入口）</div>
+  </div>
+
+  <!-- 苹果风居中密码登录弹窗 -->
+  <div class="login" id="login" role="dialog" aria-modal="true" aria-label="进入广州太古汇舆情监测系统">
+    <form class="login-card" onsubmit="return false">
+      <div class="login-mark">CTH-POMS</div>
+      <div class="login-title">进入广州太古汇舆情监测系统</div>
+      <div class="login-sub">CorTech Lab · Taikoo Hui Public Opinion Monitoring</div>
+      <div class="field">
+        <label>账号</label>
+        <input id="accountInput" type="text" autocomplete="username" placeholder="请输入账号" value="Zachary">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input id="pwdInput" type="password" autocomplete="current-password" placeholder="请输入密码">
+      </div>
+      <div class="login-err" id="loginErr"></div>
+      <button class="btn-login" id="btnLogin" type="button">进 入</button>
+      <div class="login-hint">CorTech Lab · Guangzhou Taikoo Hui Public Opinion Monitoring System · 安全登录</div>
+    </form>
+  </div>
+
+  <!-- 登录后占位（接入真实系统时替换为跳转） -->
+  <div class="after" id="after">
+    <div class="big">CTH-POMS</div>
+    <div class="small">已通过本地校验 · 接入真实系统时从此跳转（当前为独立预览，未启用）</div>
+  </div>
+  <script src="launch-common.js"></script>
+</body>
+</html>

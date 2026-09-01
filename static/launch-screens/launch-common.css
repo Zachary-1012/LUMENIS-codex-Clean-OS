@@ -1,0 +1,118 @@
+/* ============================================================
+   ZBIP 多系统启动页 + 密码登录 共享样式（当前不接入主系统，独立预览）
+   设计：侘寂黑白灰 + 漂浮能力卡 + 苹果 iOS 居中登录弹窗
+   适配：网页版 / 手机版（响应式）。纯 CSS，零外部依赖。
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --ink: #0b0b0c;
+  --paper: rgba(255,255,255,0.045);
+  --line: rgba(255,255,255,0.09);
+  --line-strong: rgba(255,255,255,0.16);
+  --text: rgba(255,255,255,0.92);
+  --text-sub: rgba(255,255,255,0.58);
+  --text-faint: rgba(255,255,255,0.32);
+  --ok: #5ec27e; --warn: #e0a64b; --info: #6aa6e6; --idle: rgba(255,255,255,0.38);
+  --radius: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+}
+html, body { height: 100%; background: var(--ink); color: var(--text); overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+/* ---------- 启动海报 ---------- */
+.stage { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center;
+  background: radial-gradient(120% 90% at 50% 18%, #161618 0%, var(--ink) 58%, #060607 100%);
+  transition: opacity .7s cubic-bezier(.4,0,.2,1); }
+.stage::after { content:''; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%); z-index:3; }
+.grain { position:absolute; inset:-50%; width:200%; height:200%; z-index:2; pointer-events:none; opacity:.045; mix-blend-mode:screen;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain 1.2s steps(3) infinite; }
+@keyframes grain { 0%{transform:translate(0,0)} 33%{transform:translate(-1.5%,1%)} 66%{transform:translate(1%,-1.5%)} 100%{transform:translate(0,0)} }
+.atmos{position:absolute; inset:0; z-index:1; pointer-events:none;}
+.orb{position:absolute; border-radius:50%; filter:blur(70px); opacity:.5;}
+.orb-1{width:46vmin;height:46vmin;left:8%;top:12%;background:radial-gradient(circle,rgba(255,255,255,.055),transparent 70%);animation:drift1 22s ease-in-out infinite;}
+.orb-2{width:40vmin;height:40vmin;right:6%;top:30%;background:radial-gradient(circle,rgba(200,208,222,.05),transparent 70%);animation:drift2 27s ease-in-out infinite;}
+.orb-3{width:38vmin;height:38vmin;left:34%;bottom:4%;background:radial-gradient(circle,rgba(255,255,255,.04),transparent 70%);animation:drift3 25s ease-in-out infinite;}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(4vmin,3vmin)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-3.5vmin,-2.5vmin)}}
+@keyframes drift3{0%,100%{transform:translate(0,0)}50%{transform:translate(2.5vmin,-3.5vmin)}}
+
+.orbit{position:absolute; inset:0; z-index:2; pointer-events:none;}
+.fcard{position:absolute; display:inline-flex; align-items:center; gap:8px; padding:9px 15px; font-size:13px; letter-spacing:1.5px;
+  color:var(--text-sub); background:var(--paper); border:1px solid var(--line); border-radius:12px; backdrop-filter:blur(8px);
+  box-shadow:0 8px 30px rgba(0,0,0,.28); white-space:nowrap; opacity:0; animation:cardIn .9s cubic-bezier(.22,1,.36,1) forwards;}
+.fcard .dot{width:6px;height:6px;border-radius:50%;background:var(--idle);flex:none;}
+.fcard .d-ok{background:var(--ok);box-shadow:0 0 8px rgba(94,194,126,.5);}
+.fcard .d-warn{background:var(--warn);box-shadow:0 0 8px rgba(224,166,75,.5);}
+.fcard .d-info{background:var(--info);box-shadow:0 0 8px rgba(106,166,230,.5);}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1}}
+.f1{left:11%;top:20%;transform:rotate(-9deg);animation-delay:.5s}
+.f2{right:11%;top:17%;transform:rotate(8deg);animation-delay:.65s}
+.f3{left:8%;top:47%;transform:rotate(6deg);animation-delay:.8s}
+.f4{right:8%;top:45%;transform:rotate(-7deg);animation-delay:.95s}
+.f5{left:14%;bottom:17%;transform:rotate(10deg);animation-delay:1.1s}
+.f6{right:13%;bottom:19%;transform:rotate(-8deg);animation-delay:1.25s}
+
+.hero{position:relative; z-index:4; text-align:center; animation:heroIn 1.1s cubic-bezier(.22,1,.36,1);}
+@keyframes heroIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.abbr{font-size:64px;font-weight:200;letter-spacing:11px;text-indent:11px;color:var(--text);margin-bottom:24px;
+  animation:breathe 5s ease-in-out infinite 1.2s;}
+@keyframes breathe{0%,100%{opacity:1;text-shadow:0 0 38px rgba(255,255,255,.06)}50%{opacity:.9;text-shadow:0 0 54px rgba(255,255,255,.12)}}
+.divider{width:46px;height:1px;margin:0 auto 24px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);}
+.zh{font-size:22px;font-weight:400;letter-spacing:4px;text-indent:4px;color:var(--text-sub);margin-bottom:12px;animation:up .9s ease-out .5s both;}
+.en{font-size:12px;font-weight:300;letter-spacing:.6px;line-height:1.7;color:var(--text-faint);max-width:560px;margin:0 auto;animation:up .9s ease-out .7s both;}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* 系统名缩小在正中最底下 */
+.sysfoot{position:absolute;bottom:30px;left:0;right:0;text-align:center;z-index:4;font-size:10.5px;letter-spacing:2px;
+  color:rgba(255,255,255,.22);animation:up 1s ease-out 1s both;}
+.skip{position:absolute;top:24px;right:24px;z-index:6;font-size:11px;letter-spacing:1.5px;color:var(--text-faint);background:none;border:none;cursor:pointer;}
+.skip:hover{color:var(--text-sub);}
+
+.stage.gone{opacity:0;pointer-events:none;}
+
+/* ---------- 苹果风居中密码登录弹窗 ---------- */
+.login{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  background:rgba(10,10,11,.42);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);
+  opacity:0;pointer-events:none;transition:opacity .45s ease; padding:24px;}
+.login.show{opacity:1;pointer-events:auto;}
+.login-card{width:100%;max-width:360px;background:rgba(28,28,30,.72);border:1px solid var(--line-strong);border-radius:20px;
+  padding:30px 28px 26px;box-shadow:0 24px 70px rgba(0,0,0,.5);transform:translateY(18px) scale(.97);
+  transition:transform .5s cubic-bezier(.22,1,.36,1);}
+.login.show .login-card{transform:translateY(0) scale(1);}
+.login-mark{width:46px;height:46px;border-radius:13px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:300;letter-spacing:1px;color:var(--text);background:var(--paper);border:1px solid var(--line);}
+.login-title{text-align:center;font-size:17px;font-weight:500;letter-spacing:1px;margin-bottom:5px;}
+.login-sub{text-align:center;font-size:12px;color:var(--text-faint);margin-bottom:22px;line-height:1.6;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;letter-spacing:1px;color:var(--text-faint);margin-bottom:7px;}
+.field input{width:100%;height:42px;padding:0 14px;font-size:14px;color:var(--text);background:rgba(255,255,255,.05);
+  border:1px solid var(--line);border-radius:11px;outline:none;transition:border-color .2s,background .2s;}
+.field input:focus{border-color:var(--line-strong);background:rgba(255,255,255,.08);}
+.field input::placeholder{color:rgba(255,255,255,.25);}
+.login-err{font-size:11.5px;color:#e08585;min-height:16px;margin:2px 0 10px;letter-spacing:.5px;}
+.btn-login{width:100%;height:44px;border:none;border-radius:12px;font-size:14.5px;letter-spacing:2px;cursor:pointer;
+  color:#0b0b0c;background:var(--text);transition:opacity .2s,transform .1s;}
+.btn-login:hover{opacity:.9;}
+.btn-login:active{transform:scale(.985);}
+.login-hint{text-align:center;font-size:10.5px;color:rgba(255,255,255,.22);margin-top:16px;letter-spacing:1px;}
+
+/* ---------- 登录后主界面占位 ---------- */
+.after{position:fixed;inset:0;z-index:15;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;}
+.after.show{display:flex;}
+.after .big{font-size:22px;font-weight:300;letter-spacing:3px;}
+.after .small{font-size:12px;color:var(--text-faint);letter-spacing:1px;}
+
+/* ---------- 手机端 ---------- */
+@media (max-width:768px){
+  .abbr{font-size:40px;letter-spacing:6px;text-indent:6px;margin-bottom:18px;}
+  .divider{width:34px;margin-bottom:18px;}
+  .zh{font-size:17px;letter-spacing:2.5px;text-indent:2.5px;margin-bottom:10px;padding:0 24px;}
+  .en{font-size:10px;max-width:320px;padding:0 22px;}
+  .fcard{padding:7px 12px;font-size:11.5px;letter-spacing:1px;border-radius:10px;}
+  .f1{left:5%;top:13%}.f2{right:5%;top:13%}.f3,.f4{display:none}
+  .f5{left:6%;bottom:13%}.f6{right:6%;bottom:13%}
+  .orb{filter:blur(50px);}
+  .sysfoot{bottom:22px;font-size:9.5px;padding:0 20px;}
+  .login-card{padding:26px 22px 22px;border-radius:18px;}
+}
+@media (prefers-reduced-motion:reduce){.grain,.orb,.abbr,.fcard,.hero{animation:none!important}.fcard{opacity:1}}
