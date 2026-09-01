@@ -43,3 +43,19 @@ def db():
     conn = db_module.get_connection()
     yield conn
     conn.close()
+
+
+def pytest_ignore_collect(collection_path, config):
+    """GAP-01 统一测试入口：纯脚本式 test_ 文件（全文无 def test_）默认不收集，
+    避免 import 期执行真实平台/网络副作用或顶层 sys.exit 打断收集；
+    仍可用 `python tests/xxx.py` 手动运行。含 def test_ 的规范用例正常收集。"""
+    import re as _re, os as _os
+    pp = str(collection_path)
+    if _os.path.basename(pp).startswith("test_") and pp.endswith(".py"):
+        try:
+            txt = open(pp, encoding="utf-8", errors="replace").read()
+        except OSError:
+            return False
+        if not _re.search(r"^\s*def test_", txt, _re.M):
+            return True
+    return False
