@@ -26,7 +26,7 @@
 
   // 21 项 → 分组（data-page；话题监测是 a#id）
   var GROUPS = [
-    { title: '总览', items: ['overview'], rename: { overview: '舆情驾驶舱' } },
+    { title: '总览', items: ['overview'], rename: { overview: '智能问答' } },
     { title: '监测', items: ['monitor', 'alerts', 'negative', 'notes', 'official', 'topic-campaign', 'topics'] },
     { title: '分析', items: ['analysis', 'events', 'event-graph', 'calendar'] },
     { title: '品牌资产', items: ['brands', 'swire', 'cases', 'case-analysis', 'knowledge-base', 'brand-report', 'app-evidence'] },
@@ -241,7 +241,7 @@
         '<div class="zb-ask-bar"><span class="zb-ask-model">Zachary · 本地 AI（Ollama）</span><span class="spacer"></span>' +
         '<button class="zb-send" id="zbHomeSend" type="button" title="发送">' + SVG.send + '</button></div></div>' +
         '<div class="zb-chips">' +
-        chip('cockpit', SVG.grid, '进入舆情驾驶舱') +
+        chip('cockpit', SVG.grid, '进入智能问答') +
         chip('risk', SVG.bell, '今日高风险') +
         chip('event', SVG.sparkle, '最新事件') +
         chip('report', SVG.gear, '生成日报') +
