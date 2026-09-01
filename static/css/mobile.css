@@ -102,12 +102,11 @@
   .table-wrap,.note-table-wrap,.data-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{min-width:560px;border-collapse:collapse}
 
-  /* ============ 8. 弹窗：底部上滑、近全屏（iOS sheet） ============ */
-  .modal-overlay,.zachary-chat-mask{padding:0!important;align-items:flex-end!important}
+  /* ============ 8. 弹窗：页面居中（桌面/手机统一居中，非底部Sheet） ============ */
+  .modal-overlay,.zachary-chat-mask{padding:16px!important;align-items:center!important}
   .modal,.modal-panel{
-    max-width:100%!important;width:100%!important;
-    max-height:92dvh;border-radius:20px 20px 0 0!important;margin:0!important;
-    padding-bottom:env(safe-area-inset-bottom);
+    max-width:520px!important;width:calc(100vw - 32px)!important;
+    max-height:82vh;border-radius:12px!important;margin:0!important;
   }
   .drawer-panel{width:100%!important;max-width:100%!important;border-radius:20px 20px 0 0!important}
   .note-day-list{max-height:52dvh}
