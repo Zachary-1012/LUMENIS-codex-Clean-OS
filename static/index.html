@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -36,8 +36,32 @@
 <!-- [STAGING ONLY] ZBMP 工作台视图 + 统一交互组件层（分组卡/Sheet/微光），回滚=删此 link -->
 <link rel="stylesheet" href="/static/css/zbmp-workbench.css?v=1.0.6">
 <link rel="stylesheet" href="/static/css/zbip-panels.css?v=1.0.3">
-</head>
+<link rel="stylesheet" href="/static/css/splash.css?v=1.0.0">
+
 <body>
+<!-- 产品启动海报 Splash Screen (CTH-POMS) -->
+<div id="splash" class="splash" data-product="cth">
+  <span class="splash-skip">点击跳过</span>
+  <div class="splash-content">
+    <div class="splash-abbr">CTH-POMS</div>
+    <div class="splash-divider"></div>
+    <div class="splash-zh">广州太古汇舆情监测系统</div>
+    <div class="splash-en">CorTech Lab · Guangzhou Taikoo Hui Public Opinion Monitoring System</div>
+  </div>
+  <div class="splash-footer">v5.9.9 · Z-Brand Core</div>
+</div>
+<script>
+(function(){
+  var splash=document.getElementById('splash');
+  if(!splash)return;
+  function hideSplash(){
+    splash.classList.add('hide');
+    setTimeout(function(){if(splash.parentNode)splash.parentNode.removeChild(splash);},800);
+  }
+  splash.addEventListener('click',hideSplash);
+  setTimeout(hideSplash,2800);
+})();
+</script>
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
 <div class="app-shell">
   <header class="topbar glass">
