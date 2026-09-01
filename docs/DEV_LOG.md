@@ -758,3 +758,22 @@ classifier 现仅按主体类型映射 content_type_hint；review/experience/com
 新增 tests/test_schedule_gate.py 6 用例（默认 shadow 不门控 / enforce 按 allow / canary 仅名单门控 / hard_allow=False 任何模式不放松 / 门控器异常 fail-open / 非法值回退）全过；统一入口 `pytest tests` **127 passed**。
 ### 运维路径（未执行，待逐步开）
 默认 shadow 上线 → 先 canary 对低风险平台（如 web/bilibili）灰度观察 schedule_decisions → 稳定后再纳入 xhs → 最终 enforce；任一步异常改回 shadow 即回滚。生产 8201 未重启，当前仍跑旧进程。
+
+
+---
+
+## 2026-09-01 21:00 · 新增能力接管①：report_center 标准化报告只读旁路预览（阶段4）
+
+### 事实
+- `v4_upgrade/report_center`（ReportGenerator：cth/zbmp 双话术、日/周/月/年/专报、18 节结构化）代码入库但 app.py 无路由 = EXPERIMENTAL 旁路；它通过 `import database` 取数，天然尊重 DB_PATH（Staging 可重定向到副本，不硬编码生产库）。
+
+### 落地（只加只读新前缀，不碰既有报告 Owner）
+- 新增 `GET /api/v2/report-center/preview?period=&brand_mode=&start_date=&end_date=`：
+  period∈{daily,weekly,monthly,yearly,event}、brand_mode∈{cth,zbmp} 白名单，日期严格 YYYY-MM-DD 校验，非法 400；**只读、不写库、不导出文件、不自动发送**；响应 note 显式标注「不替代既有报告 Owner（GAP-10 边界）」；内部异常不向前端泄堆栈。
+- 不改 daily_report/brand_report_generator 与任何既有 /api/reports、/api/report/* 路由。
+
+### 真实结果（Staging 副本 + Flask test_client，已实测；生产库/8201 未碰）
+- cth 日报、zbmp 周报均 HTTP200、各 18 节（周报取近7天=98 条有效舆情、正/负面占比、执行摘要齐全）；非法 period/brand/日期均 400；无 Basic 401；默认参数回落到当日日报。
+- 新增 tests/test_report_center_route.py 7 用例全过；统一入口 `pytest tests` **134 passed**。
+### 未接管（登记）
+ReportExporter 的 Word/PDF 导出与自动发送仍旁路；12 条旧报告路由的收敛仍属 GAP-10 剩余，导出接管前须先与 RPT-001/002 Owner 对齐，避免双写/双发。

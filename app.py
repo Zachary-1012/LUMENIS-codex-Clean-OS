@@ -398,6 +398,35 @@ def event_graph_rebuild_relations():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# ===== v4 report_center 标准化报告：只读旁路预览（不改既有 daily/brand 报告路由、不抢 RPT Owner、不写库/不导出/不自动发送）=====
+@app.route('/api/v2/report-center/preview')
+def report_center_preview():
+    import re as _re
+    period = (request.args.get('period') or 'daily').strip().lower()
+    brand_mode = (request.args.get('brand_mode') or 'cth').strip().lower()
+    if period not in ('daily', 'weekly', 'monthly', 'yearly', 'event'):
+        return jsonify({'ok': False, 'error': 'period 非法，仅 daily/weekly/monthly/yearly/event'}), 400
+    if brand_mode not in ('cth', 'zbmp'):
+        return jsonify({'ok': False, 'error': 'brand_mode 仅支持 cth/zbmp'}), 400
+    sd = (request.args.get('start_date') or '').strip()
+    ed = (request.args.get('end_date') or '').strip()
+    _dr = _re.compile(r'^\d{4}-\d{2}-\d{2}$')
+    if sd and not _dr.match(sd):
+        return jsonify({'ok': False, 'error': 'start_date 需 YYYY-MM-DD'}), 400
+    if ed and not _dr.match(ed):
+        return jsonify({'ok': False, 'error': 'end_date 需 YYYY-MM-DD'}), 400
+    try:
+        from v4_upgrade.report_center import ReportGenerator
+        rep = ReportGenerator(brand_mode=brand_mode).generate(
+            period, start_date=sd or None, end_date=ed or None)
+        return jsonify({'ok': True, 'report': rep,
+                        'note': '只读旁路预览，不替代既有报告 Owner（GAP-10 边界）'})
+    except ValueError as ve:
+        return jsonify({'ok': False, 'error': str(ve)}), 400
+    except Exception:
+        app.logger.exception('report_center preview failed')
+        return jsonify({'ok': False, 'error': '报告生成失败，请查看服务端日志'}), 500
+
 @app.route('/api/event-graph/events/<event_id>', methods=['DELETE'])
 def event_graph_delete_event(event_id):
     """删除事件（同时删除关联关系）"""

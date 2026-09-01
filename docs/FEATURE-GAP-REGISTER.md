@@ -15,7 +15,7 @@
 | GAP-07 ✅RESOLVED(2026-09-01) | CTH-EVT | ~~三类四关系仅1条trigger~~ **字典本已齐（3事件类型/4关系）；新增 EventGraph.infer_and_link_relations 双证据保守推断器（时间+标题主题词，先剔除『广州太古汇』全域通用名与摘要样板词，无证据不连边、trigger强因果不自动造、[auto]关系可幂等重算且保留手工）；新增 POST /api/event-graph/rebuild-relations**；Staging 真实16事件得3条有证据并行(IWC/会员/漂亮饭)+原手工trigger，117无证据对不连 | P1→已闭 | 关系可解释、不伪造 | 此前只导节点不建关系 | derive/follow 待跨天强延续真实数据出现自然补全；前端图例已支持四类 | 否 | 否 | 是(5✓) | 是 | 是 |
 | GAP-08 | 全局/Evidence | app_evidence_records 为外部抓取表且 0 行；测试/运行 Evidence 无统一存储与 L0-L10 归档 | P2 | 「跑过/通过」无版本化证据可追 | 未建 Evidence 层 | 建 Evidence 记录(commit/version/result/artifact) | 否 | 否 | 是 | 是 | 是 |
 | GAP-09 | CTH-EVT-003 | 负面评审两套 API（/negative/* 与 /negative-review/*+event-review）并存 | P2 | 状态可能双写不一致 | 新旧实现未退 | 定唯一 Owner，另一标 DUPLICATE→回归→退 | 否 | 否 | 是 | 是 | 是 |
-| GAP-10 | CTH-RPT-002 | 报告导出/渲染多实现（报告域 12 路由） | P2 | 维护重复 | 多窗口叠加 | 统计唯一走 build_daily_report，渲染收敛 | 否 | 否 | 是 | 是 | 是 |
+| GAP-10 🚧部分推进(2026-09-01) | RPT | 报告多路由（12）+report_center 无路由 **→ 已挂只读旁路 GET /api/v2/report-center/preview（period/brand_mode/日期白名单校验、复用 database 尊重 ZBC_DB_PATH、不写库/不导出/不自动发送、不抢 RPT-001/002 Owner）；Staging cth/zbmp 双模式实测各18节、7测试过**；Word/PDF 导出与自动发送仍旁路未接管、12 旧路由收敛仍待做 | P2 | 标准化报告可读 | 导出接管/旧路由收敛有Owner冲突风险 | 导出(ReportExporter)挂路由前先与 RPT Owner 对齐 | 否 | 否 | 是(7✓) | 是 | 是 |
 | GAP-11 | 跨仓/DCC | DCC 本地 77dd1e4 落后远程 023e2ba 27 提交，且脏 package.json/learning-store.js/persistence.js | P2 | 跨仓基线分叉 | 多窗口并行 | 需授权：先审本地 3 处去留→rebase→回 ZBC 升子模块指针 | 否 | 否 | 否 | 否 | 是 |
 | GAP-12 | 治理/文档 | 多份并行基线（两份 PRODUCTION_BASELINE、PHASE1 与 UPA-PHASE1、consolidation-001/002） | P2 | 权威顺序易混 | 阶段叠加 | ADR 标注 Superseded，留一份权威 | 否 | 否 | 否 | 否 | 否 |
 | GAP-13 | 数据库 | 51 表无可回滚迁移体系（Alembic 未引入） | P2 | schema 变更缺 Gate/回滚 | 一直 create-if-not-exist | Staging 副本先 baseline，再向后兼容迁移 | 否 | 否 | 是 | 是 | 是 |
