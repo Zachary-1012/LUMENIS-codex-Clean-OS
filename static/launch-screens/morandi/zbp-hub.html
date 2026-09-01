@@ -77,6 +77,9 @@ body.z-recall .card-pos{transform:translate(0,0) scale(.15);opacity:0;transition
 
 /* ================= 中央主视觉 ================= */
 .hero{position:fixed;z-index:5;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:min(680px,90vw)}
+.hero{transition:opacity .6s var(--ease)}
+body.hero-out .hero{opacity:0;pointer-events:none}
+body.picked .products,body.picked .enter{opacity:0!important;pointer-events:none}
 .hero .h-icon{width:46px;height:46px;margin:0 auto 18px;border-radius:13px;display:grid;place-items:center;
   background:linear-gradient(150deg,#fff,#EFE9DF);border:1px solid var(--line);
   box-shadow:0 8px 24px rgba(70,60,48,.10);animation:breathe 5s ease-in-out infinite}
@@ -98,8 +101,8 @@ body.cth-burst .chars span{transform:translate(var(--cx),var(--cy)) rotate(var(-
 .btn:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(38,34,29,.22)}
 .btn.ghost{background:rgba(255,255,255,.6);color:var(--ink);border-color:var(--line);box-shadow:none}
 .btn.ghost:hover{background:#fff}
-.products{display:flex;gap:14px;justify-content:center;margin-top:8px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.6s var(--ease)}
-body.orbit .products{opacity:1;transform:none;pointer-events:auto}
+.products{position:absolute;left:0;right:0;top:58px;display:flex;gap:14px;justify-content:center;margin-top:0;opacity:0;transform:translateY(10px);pointer-events:none;transition:.6s var(--ease)}
+body.orbit .products{opacity:1;transform:none;pointer-events:auto;position:static}
 body.orbit .enter-main{opacity:0;transform:translateY(-8px);pointer-events:none;position:absolute}
 .pcard{min-width:200px;padding:16px 18px;text-align:left;border-radius:16px;background:rgba(255,255,255,.66);
   border:1px solid var(--line);cursor:pointer;transition:.25s var(--ease);backdrop-filter:blur(8px)}
@@ -222,18 +225,19 @@ body.land .landing{opacity:1}
   function vmin(){return Math.min(innerWidth,innerHeight);}
   function orbitPos(i){
     var ang=(-90 + i*(360/N))*Math.PI/180;
-    var rx=(isMob?40:34)* (innerWidth/vmin()) * (vmin()/100); // 横向半径 px
-    var ry=(isMob?33:30)*(vmin()/100);
-    // 不规则扰动
-    var jx=(Math.random()*40-20), jy=(Math.random()*30-15);
-    return {x:Math.cos(ang)*rx* (innerWidth/vmin()) + jx, y:Math.sin(ang)*ry + jy};
+    var rx=(isMob?0.36:0.325)*innerWidth;   // 椭圆横向半径 px（保证卡片不出血）
+    var ry=(isMob?0.30:0.315)*innerHeight; // 纵向半径 px
+    var jx=(Math.random()*36-18), jy=(Math.random()*26-13); // 不规则扰动
+    return {x:Math.cos(ang)*rx + jx, y:Math.sin(ang)*ry + jy};
   }
   /* 散落位置：分四个象限随机、避开中央 240px、不密集 */
   function scatterPos(i){
     var vw=innerWidth, vh=innerHeight, x,y,ok=false,t=0;
-    var minR=isMob?150:230;
+    var minR=isMob?135:275;
+    // 移动端收窄范围防出血，并上移预留底部系统名安全区
+    var kx=isMob?.62:.84, ky=isMob?.62:.78, yUp=isMob?-26:0;
     while(!ok&&t++<60){
-      x=(Math.random()-.5)*vw*.86; y=(Math.random()-.5)*vh*.8;
+      x=(Math.random()-.5)*vw*kx; y=(Math.random()-.5)*vh*ky + yUp;
       ok=Math.hypot(x,y)>minR;
     }
     return {x:x,y:y};
@@ -245,7 +249,6 @@ body.land .landing{opacity:1}
     var pos=document.createElement('div');pos.className='card-pos';
     var fl=document.createElement('div');fl.className='card-float';
     var card=document.createElement('div');card.className='card';
-    var mc='var('+M[d[1]][0]+)', md='var('+M[d[1]][1]+')';
     card.style.setProperty('--mc','var('+M[d[1]][0]+')');
     card.style.setProperty('--md','var('+M[d[1]][1]+')');
     card.style.setProperty('--pct',d[2]+'%');
@@ -283,13 +286,13 @@ body.land .landing{opacity:1}
   });
   /* CTH：名字拆解扩散 → 承接 CTH */
   document.getElementById('pickCTH').addEventListener('click',function(){
-    charBurst();body.classList.add('cth-burst');
+    body.classList.add('picked');charBurst();body.classList.add('cth-burst');
     setTimeout(function(){
-      document.getElementById('lEn').textContent='CorTech Lab · Guangzhou Taikoo Hui POMS';
+      document.getElementById('lEn').textContent='CorTech Lab · Guangzhou Taikoo Hui Public Opinion Monitoring System';
       document.getElementById('lCn').textContent='广州太古汇舆情监测系统';
       document.getElementById('lAb').textContent='CTH-POMS';
-      body.classList.add('land');
-    },1050);
+      body.classList.add('hero-out','land');
+    },1100);
   });
   /* ZBMP：密钥 → 全白 → 元素逆回收（无卡片，只留大名）→ 白弱化渐隐 → 进入 */
   var mask=document.getElementById('keyMask');
@@ -301,6 +304,7 @@ body.land .landing{opacity:1}
     var k=document.getElementById('zbmpKey').value;
     if(k.length<4){document.getElementById('keyErr').textContent='密钥长度不足（演示：任意 4 位以上）';return;}
     mask.classList.remove('show');
+    body.classList.add('picked','hero-out');
     document.getElementById('lEn').textContent='Z-Brand Monitoring Platform';
     document.getElementById('lCn').textContent='Z-Brand 品牌监测平台';
     document.getElementById('lAb').textContent='ZBMP';
