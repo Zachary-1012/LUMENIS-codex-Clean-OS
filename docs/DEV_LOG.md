@@ -691,3 +691,26 @@ GAP-04 三套 run-code 安全收口 → GAP-01 统一 pytest 入口 / GAP-02 红
 
 ### 数据库/生产
 无 schema 变更；生产 8201 未重启；不弱化任何主体/时间/风险红线。
+
+
+---
+
+## 2026-09-01 19:10 · GAP-06 传播主体/内容双维度落库（P1，向后兼容）
+
+### 改了什么（纯增量，5 处注入 + 1 迁移 + 6 测试）
+1. `subject_classifier.py` 新增 `enrich_note_types()`：惰性单例调用现有 classifier，返回 (subject_type, content_type)，**任何异常兜底空串、绝不向采集链抛出**（不伪造类型、不影响出数）。
+2. `database.py` NOTE_MIGRATIONS 幂等加 `subject_type`/`content_type` 两列（DEFAULT ''）；`migrations/010_notes_subject_content_type.sql` 留档。
+3. `insert_note` 在不改动既有 INSERT 列清单的前提下，沿用现有「后置 UPDATE 补 body」同模式补双维度（新值非空才写，保护人工标注）。
+4. `_apply_filters` 增加双维度**固定枚举白名单**筛选（主体 7 值 / 内容 7 值），非法值/注入串一律忽略；不接受旧 `user_type=UGC` 写法。
+5. `/api/notes` 透传 `?subject_type=&content_type=`。
+
+### 数据库 / 红线
+- 仅向后兼容 ADD COLUMN，无删除、无回填、无 schema 破坏；生产库未执行（8201 冻结），**Staging 副本 init_db 两次幂等成功（67 列）、957 条历史双维度默认空串、计数不变**。
+- 不触碰 subject_hit/_subject_sql_and_values/风险/统计/时间口径；双维度为纯增强标注层。
+
+### 测试（已实测）
+- 新增 `tests/test_subject_dual_dimension.py` 6 用例全过（纯函数/异常兜底/迁移幂等/落库/白名单筛选与注入忽略/主体红线不回归）。
+- 统一入口 `pytest tests`：**116 passed**。
+
+### 残余（登记）
+classifier 现仅按主体类型映射 content_type_hint；review/experience/complaint/event 等基于正文的细分内容识别为后续增强，本轮不扩分类器。

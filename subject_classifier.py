@@ -368,3 +368,22 @@ def get_subject_classifier() -> SubjectClassifier:
     if _classifier_instance is None:
         _classifier_instance = SubjectClassifier()
     return _classifier_instance
+
+
+# ===== GAP-06 传播主体/内容双维度落库：惰性单例 + 失败兜底，绝不阻断采集 =====
+_ENRICHER_SINGLETON = None
+
+def enrich_note_types(author_name='', author_desc='', followers=0,
+                      is_verified=False, verified_type='', content_pattern=''):
+    """返回 (subject_type, content_type)。分类器任何异常都兜底空串，
+    采集链路永不因双维度标注失败而中断（失败不伪造类型、不影响出数）。"""
+    global _ENRICHER_SINGLETON
+    try:
+        if _ENRICHER_SINGLETON is None:
+            _ENRICHER_SINGLETON = get_subject_classifier()
+        res = _ENRICHER_SINGLETON.classify(
+            str(author_name or ''), str(author_desc or ''), int(followers or 0),
+            bool(is_verified), str(verified_type or ''), str(content_pattern or '')[:500])
+        return (res.get('subject_type', '') or '', res.get('content_type_hint', '') or '')
+    except Exception:
+        return ('', '')

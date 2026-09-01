@@ -193,6 +193,9 @@ NOTE_MIGRATIONS.update({
     'body': "ALTER TABLE notes ADD COLUMN body TEXT DEFAULT ''",
     'source_keyword': "ALTER TABLE notes ADD COLUMN source_keyword TEXT DEFAULT ''",
     'matched_keywords': "ALTER TABLE notes ADD COLUMN matched_keywords TEXT DEFAULT ''",
+    # GAP-06 传播主体/内容双维度（纯增量、向后兼容、默认空串，不影响既有主体/风险/统计口径）
+    'subject_type': "ALTER TABLE notes ADD COLUMN subject_type TEXT DEFAULT ''",
+    'content_type': "ALTER TABLE notes ADD COLUMN content_type TEXT DEFAULT ''",
 })
 
 WEB_MIGRATIONS = {
@@ -333,6 +336,15 @@ def insert_note(note_data):
             vals['title'] = _t
         # 双时间铁律：publish_* 来自平台发布时间，captured_at 是本机采集时刻，二者来源不同、绝不互相顶替。
         # 真人通道通常只给到日期(publish_date)，用它回填缺失的 publish_datetime，保证发布时间不留空。
+        # GAP-06 双维度标注（纯增强：失败兜底空串，不参与主体口径/风险/统计，不阻断采集）
+        try:
+            from subject_classifier import enrich_note_types as _enrich_types
+            _stype, _ctype = _enrich_types(
+                vals.get('author_nickname', ''), note_data.get('author_desc', ''),
+                note_data.get('followers', 0) or 0, int(vals.get('is_official', 0) or 0),
+                note_data.get('verified_type', ''), (vals.get('title', '') + ' ' + vals.get('body', '')))
+        except Exception:
+            _stype = _ctype = ''
         pub_dt = (note_data.get('publish_datetime', '') or vals.get('publish_date', '') or '').strip()
         if existing:
             conn.execute("""UPDATE notes SET source_platform=?, title=?, content=CASE WHEN ?<>'' THEN ? ELSE content END,
@@ -368,6 +380,10 @@ def insert_note(note_data):
                 float(note_data.get('data_quality_score',0) or 0), float(note_data.get('data_quality_score',0) or 0),
                 note_data.get('collector_version','') or '', note_data.get('collector_version','') or '', now, nid))
             conn.execute("UPDATE notes SET body=CASE WHEN ?<>'' THEN ? ELSE body END, source_keyword=CASE WHEN ?<>'' THEN ? ELSE source_keyword END, matched_keywords=CASE WHEN ?<>'' THEN ? ELSE matched_keywords END WHERE note_id=?", (vals['body'], vals['body'], vals['source_keyword'], vals['source_keyword'], vals['matched_keywords'], vals['matched_keywords'], nid))
+            if _stype:
+                conn.execute("UPDATE notes SET subject_type=CASE WHEN ?<>'' THEN ? ELSE subject_type END, "
+                             "content_type=CASE WHEN ?<>'' THEN ? ELSE content_type END WHERE note_id=?",
+                             (_stype, _stype, _ctype, _ctype, nid))
             return existing['id'], False
         cur = conn.execute("""INSERT INTO notes
             (note_id,source_platform,title,content,url,cover,author_id,author_nickname,author_avatar,likes,comments,collects,shares,
@@ -381,6 +397,10 @@ def insert_note(note_data):
             note_data.get('data_quality_status','unknown') or 'unknown', float(note_data.get('data_quality_score',0) or 0),
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))
         conn.execute('UPDATE notes SET body=?, source_keyword=?, matched_keywords=? WHERE note_id=?', (vals['body'], vals['source_keyword'], vals['matched_keywords'], nid))
+        if _stype:
+            conn.execute("UPDATE notes SET subject_type=CASE WHEN ?<>'' THEN ? ELSE subject_type END, "
+                         "content_type=CASE WHEN ?<>'' THEN ? ELSE content_type END WHERE note_id=?",
+                         (_stype, _stype, _ctype, _ctype, nid))
         return cur.lastrowid, True
 
 
@@ -432,6 +452,11 @@ def _apply_filters(query, params, filters):
     if filters.get('date_start'): query += ' AND publish_date>=?'; params.append(filters['date_start'])
     if filters.get('date_end'): query += ' AND publish_date<=?'; params.append(filters['date_end'])
     if filters.get('verified') is not None: query += ' AND is_taikoo_verified=?'; params.append(1 if filters['verified'] else 0)
+    # GAP-06 双维度筛选：固定枚举白名单，拒绝任意列名/非法值，不接受旧 user_type=UGC 写法
+    _ST = {'official','kos','kol','koc','normal_user','media','institution'}
+    _CT = {'ugc','commercial','official','review','experience','complaint','event'}
+    if filters.get('subject_type') in _ST: query += ' AND subject_type=?'; params.append(filters['subject_type'])
+    if filters.get('content_type') in _CT: query += ' AND content_type=?'; params.append(filters['content_type'])
     return query, params
 
 

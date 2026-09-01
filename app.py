@@ -1137,6 +1137,10 @@ def api_notes():
         if v: filters[key]=v
     if request.args.get('is_official') in ('0','1'): filters['is_official']=request.args.get('is_official')=='1'
     if request.args.get('verified') in ('0','1'): filters['verified']=request.args.get('verified')=='1'
+    # GAP-06 双维度筛选透传（非法枚举在 _apply_filters 白名单内被忽略）
+    for _dim in ('subject_type','content_type'):
+        _dv=request.args.get(_dim,'')
+        if _dv: filters[_dim]=_dv
     offset=(page-1)*per_page; notes=db.get_notes(filters,per_page,offset); total=db.get_note_count(filters)
     return jsonify({'ok':True,'notes':notes,'total':total,'page':page,'per_page':per_page,'total_pages':(total+per_page-1)//per_page})
 
