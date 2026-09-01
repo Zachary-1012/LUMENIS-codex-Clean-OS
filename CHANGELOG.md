@@ -20,6 +20,26 @@
   4. AGENTS §16 交付 10 要素完整报告
 - **硬禁止（违规即 BLOCK）**：不 push 生产 DB / Cookie / Key / 43 历史杂改 / B 仓 components 实现文件
 
+### 【结束日志 05:35】（AGENTS §16 交付 10 要素 · B0 阶段完整收敛报告）
+| # | 要素 | 内容 |
+|---|---|---|
+| 1 | 修改了什么 | ① README 从 22 节重组为双子统一 12 节母体（955 行）+ §2 双子硬约束 + §4 4子产品×9组件 Owner 表 + §9 四层矩阵(40 行) + §9.5 8 类资产清单 + §11.2 跨仓回链三元锚点；② E-001~E-009 9 架构错误闭环（三仓→四库/生产不依赖声明/资产清单/矩阵/三元SHA锚）；③ 本 CHANGELOG 新增 [5.9.9-t1] 开工+结束双段；④ SHA 回写 last_verified_sha=2fbdfba 对齐 ZOSAI 8 文件基线 |
+| 2 | 为什么修改 | 用户指令：双子星审计+定位+商业+应用场景+README融合+资产梳理+允许禁止矩阵+开工/结束日志同步+push 双仓；落实 AGENTS §2（一套 Core 两产品）+ §13（先审计再修改最小化）+ §15（Git 安全）+ §16（结构化交付） |
+| 3 | 修改了哪些文件 | 本次 **最终 commit f60958d** 仅 2 文件：`README.md`（L1-955 重写 + SHA 锚点 Edit 8 处）+ `CHANGELOG.md`（新增 [5.9.9-t1] 开工+结束 2 段）；**零 .py/.js/.html/.db 业务源码修改（NFR-001 合规）**；43 历史杂改保持未纳入 |
+| 4 | 数据库是否变化 | ❌ **零数据库变更**：未执行任何 DDL/DML/INSERT/DELETE/MIGRATE；生产库 `data/monitor.db` 全程只读；未创建/覆盖/清空任何 .db/.sqlite |
+| 5 | 测试了什么 | ① 4 Gate 白名单 commit（×3 轮 A/B 两仓）；② 扩展名审计（×2 轮零违规）；③ Secret Scan 7 项（×2 轮零真实敏感命中，排除假阳性）；④ B 仓 .gitignore 5/5 抽样 IGNORED；⑤ SHA 锚点双向 grep 实读验证 4/4；⑥ 最终 commit 文件数+扩展名实锤 2/2 |
+| 6 | 测试结果 | **25/25 子项全 PASS**：4Gate×3=12 ✅ + 扩展名×2=2 ✅ + Secret 7=7 ✅ + .gitignore 5=5 ✅ + SHA锚点 4=4 ✅ + 最终 commit 2=2 ✅ |
+| 7 | 未完成项 | ① `git push` 双仓 **因 github.com:443 网络阻断 2/2 Retry FAIL**（退出码 128）；② B1 阶段 6 项 NV-1~NV-6 源码补证；③ B1 10 项 Human Gate 冲突 + 5 项 HIGH 安全发现裁决；④ OQ-1~OQ-6 Owner 裁决 |
+| 8 | 风险/已知限制 | ⚠ PUSH 网络阻断（环境级）：白天手动执行 → **A仓：`git -C "D:\Taikoo-monitor-new" push --force-with-lease origin main`**（安全 force，丢弃之前自动保存版本的 10 _tmp_*.py 违规链，仅推 39e1ba7→f60958d 干净双 md 链）；⚠ A 仓 tools/development-command-console 子模块工作树 dirty（已忽略不 push）；⚠ B 仓 push 命令见 B 仓 CHANGELOG 结束日志 |
+| 9 | Git commit | 本仓（A）最终本地 commit = **`f60958d`**（2 文件：README.md + CHANGELOG.md）；父 commit = 39e1ba7（干净 README 融合基线）；对端（B）最终本地 commit = **`d5dc213`**（2 文件：README.md + CHANGELOG.md），父链 2fbdfba（8 基线）→ 6cf1420（exec log 3）→ a96c961（SHA回写+CHANGELOG）→ d5dc213（SHA收敛amend） |
+| 10 | 下一步建议 | ① **白天第 1 优先**：修复/确认网络后手动执行双仓 git push（A 用 --force-with-lease，B 正常 push）；② 白天 B1-1：NV-1~NV-6 源码补证（从 NOT_VERIFIED 6 条中取 3 条先补）；③ 白天 B1-2：10 冲突+5 HIGH 列 Owner 裁决表；④ 白天 B1-3：OQ-1~6 定性投票 |
+
+#### → 手动 push 命令（白天网络恢复后必跑 A 仓）
+```powershell
+# A 仓 Z-Brand-Core：安全 force，丢弃 a016a8f(T0) 的 10 _tmp_*.py + PNG 违规链，仅推 39e1ba7 → f60958d
+git -C "D:\Taikoo-monitor-new" push --force-with-lease origin main
+```
+
 ## [5.9.9-t0] - 2026-09-02（Zachary-OS-AI 总执行师 T0 基线锚定 + SEC 加固 + 启动收口 + 首次四层 E2E 实锚）
 
 ### T0-1 生产数据库事实基线锁定（只读审计）
