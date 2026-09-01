@@ -41,10 +41,10 @@
       '.kb-empty{display:none;padding:30px 8px;text-align:center;color:var(--muted,#86868b);font-size:13px}',
       '@media(max-width:600px){.kb-dialog{max-height:86vh}.kb-head{flex-direction:column;align-items:flex-start;gap:3px}.kb-body{max-height:64vh}.kb-name{font-size:13px}.kb-keys kbd{font-size:11px;padding:3px 6px}}',
       /* 快捷键窗口专属：桌面/移动一律苹果式居中（覆盖全局移动端底部 Sheet，仅作用本窗口） */
-      '#modal.kb-modal{transform:none!important}',
-      '#modal.kb-modal .modal-panel{position:fixed!important;top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;margin:0!important;width:calc(100vw - 32px)!important;max-width:520px!important;max-height:82vh!important;animation:none!important;overflow:auto!important;-webkit-overflow-scrolling:touch}',
-      '#modal.kb-modal .modal-panel::before{display:none!important}',
-      '@media(min-width:769px){#modal.kb-modal .modal-panel{width:520px!important}}'
+      'body.zb-shell-on #modal.kb-modal,#modal.kb-modal{transform:none!important}',
+      'body.zb-shell-on #modal.kb-modal .modal-panel,#modal.kb-modal .modal-panel{position:fixed!important;top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;margin:0!important;width:calc(100vw - 32px)!important;max-width:520px!important;max-height:82vh!important;animation:none!important;overflow:auto!important;-webkit-overflow-scrolling:touch}',
+      'body.zb-shell-on #modal.kb-modal .modal-panel::before,#modal.kb-modal .modal-panel::before{display:none!important}',
+      '@media(min-width:769px){body.zb-shell-on #modal.kb-modal .modal-panel,#modal.kb-modal .modal-panel{width:520px!important}}'
     ].join('');
     var st = document.createElement('style');
     st.id = KB_STYLE_ID;
