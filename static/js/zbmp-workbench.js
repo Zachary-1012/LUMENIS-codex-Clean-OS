@@ -44,10 +44,10 @@
       { k: 'campaign', t: '话题战役', i: 'target', s: 'core', d: '15 周年等专题/战役监测，接入 Core 话题能力。' } ] },
     { title: '洞察', items: [
       { k: 'events', t: '事件中心', i: 'zap', s: 'live', d: '营销/传播/舆情事件与生命周期，接入 Core 事件引擎。' },
-      { k: 'graph', t: '事件关系', i: 'share', s: 'core', d: '触发/衍生/继发/并行关系图谱，接入 Core 关系数据。' },
+      { k: 'graph', t: '事件关系', i: 'share', s: 'live', d: '触发/衍生/继发/并行关系图谱，接入 Core 关系数据。' },
       { k: 'ai-eval', t: 'AI 评估', i: 'sparkle', s: 'core', d: 'Ollama 本地 AI 增强分析（仅增强层，不决定系统事实）。' } ] },
     { title: '产出', items: [
-      { k: 'reports', t: '报告中心', i: 'doc', s: 'core', d: '日/周/月报与专题导出，接入 Core 报告能力。' } ] },
+      { k: 'reports', t: '报告中心', i: 'doc', s: 'live', d: '日/周/月报与专题导出，接入 Core 报告能力。' } ] },
     { title: '系统', items: [
       { k: 'connectors', t: '连接器', i: 'plug', s: 'live', d: '平台采集适配器与状态。' },
       { k: 'settings', t: '工作区设置', i: 'gear', s: 'live', d: '外观、安全密钥与关于。' } ] }
@@ -253,6 +253,8 @@
       if (route === 'settings') return renderSettings();
       if (route === 'events') return renderEvents();
       if (route === 'content') return renderContent();
+      if (route === 'graph') return renderGraph();
+      if (route === 'reports') return renderReports();
       var m = MOD[route]; if (m) return renderEmpty(m); return renderHome();
     }
 
@@ -369,6 +371,97 @@
           box.innerHTML = html;
         })
         .catch(function (err) { failBox(box, '内容数据加载失败', err.message); });
+    }
+
+    function getJSON(u) { return fetch(u, { credentials: 'same-origin' }).then(function (r) { return r.json(); }); }
+    function typeChips(obj, cls) {
+      var keys = Object.keys(obj || {});
+      if (!keys.length) return '<span class="zb-mini-tag">字典为空</span>';
+      return keys.map(function (k) { return '<span class="zb-mini-tag ' + (cls || '') + '">' + esc(obj[k]) + ' <span class="zb-num" style="opacity:.6">(' + esc(k) + ')</span></span>'; }).join(' ');
+    }
+
+    /* 事件关系：三类事件 × 四关系，数据来自 Core event_graph；Staging 副本无节点时诚实标注 */
+    function renderGraph() {
+      main.innerHTML = '<div class="zbmp-page-in">' + pageHead('事件关系', '营销 / 传播 / 舆情事件的触发·衍生·继发·并行关系图谱') +
+        '<div class="zbmp-wrap"><div class="zb-data-note">关系类型与节点来自 Core event_graph；关系判定遵循系统规则，AI 仅辅助建议。</div><div id="zbGraph"></div></div></div>';
+      bindBack();
+      var box = document.getElementById('zbGraph');
+      box.innerHTML = skel(3);
+      Promise.all([getJSON('/api/event-graph/stats'), getJSON('/api/event-graph/events'), getJSON('/api/event-graph/types')])
+        .then(function (rs) {
+          var st = rs[0] || {}, ev = rs[1] || {}, ty = rs[2] || {};
+          var d = st.data || {};
+          var html = statStrip([
+            { k: '图谱节点', v: d.total_events != null ? d.total_events : (ev.count || 0) },
+            { k: '关系连线', v: d.total_relations != null ? d.total_relations : 0 },
+            { k: '事件类型', v: Object.keys(ty.event_types || {}).length },
+            { k: '关系类型', v: Object.keys(ty.relation_types || {}).length }
+          ]);
+          html += '<div class="zb-li" style="margin-bottom:10px"><div class="zb-li-title" style="margin-bottom:7px">事件三类</div><div class="zb-li-meta">' + typeChips(ty.event_types) + '</div></div>';
+          html += '<div class="zb-li" style="margin-bottom:14px"><div class="zb-li-title" style="margin-bottom:7px">关系四类</div><div class="zb-li-meta">' + typeChips(ty.relation_types, 'is-hot') + '</div></div>';
+          var nodes = ev.events || [];
+          if (!nodes.length) {
+            html += '<div class="zb-empty"><div class="ei">' + I.share + '</div><h3>Staging 副本暂无图谱节点</h3>' +
+              '<p>接口与类型体系已接通（三类事件 × 四关系字典真实返回）；当前 Staging 只读副本未同步 event_graph 数据，生产库已有节点与关系。这里不用占位数据造假，切到生产或同步副本后即自动出图。</p></div>';
+          } else {
+            html += '<div class="zb-list">';
+            nodes.forEach(function (n) {
+              var tname = (ty.event_types && ty.event_types[n.event_type]) || n.event_type || '未分类';
+              html += '<div class="zb-li"><div class="zb-li-row1"><span class="zb-li-title">' + esc(n.title || n.name || n.event_id || '未命名节点') + '</span>' +
+                '<span class="zb-mini-tag">' + esc(tname) + '</span></div>' +
+                '<div class="zb-li-meta"><span class="zb-num">节点 ' + esc(n.event_id || n.id || '') + '</span>' +
+                (n.relation_count != null ? '<span class="sep"></span><span class="zb-num">关系 ' + n.relation_count + '</span>' : '') + '</div></div>';
+            });
+            html += '</div>';
+          }
+          box.innerHTML = html;
+        })
+        .catch(function (err) { failBox(box, '事件关系数据加载失败', err.message); });
+    }
+
+    /* 报告中心：报告列表 + 真实统计口径；Staging 无报告文件时诚实标注，不自动触发生成 */
+    function renderReports() {
+      main.innerHTML = '<div class="zbmp-page-in">' + pageHead('报告中心', '日报 / 周报 / 月报 / 专题，统计默认按 publish_datetime') +
+        '<div class="zbmp-wrap"><div class="zb-data-note">报告统计口径以系统规则为准（发布时间、负面确认、时效分类），AI 仅做润色与解释，不改写统计数字。</div><div id="zbRep"></div></div></div>';
+      bindBack();
+      var box = document.getElementById('zbRep');
+      box.innerHTML = skel(3);
+      Promise.all([getJSON('/api/reports'), getJSON('/api/report/v2/stats')])
+        .then(function (rs) {
+          var list = rs[0] || {}, stats = rs[1] || {};
+          var reps = list.reports || [];
+          var nc = stats.negative_confirmation || {};
+          var df = stats.daily_filter || {};
+          var html = statStrip([
+            { k: '报告总数', v: list.count != null ? list.count : reps.length, s: '份' },
+            { k: '今日纳入日报', v: df.daily_report_included != null ? df.daily_report_included : '—' },
+            { k: '负面确认率', v: nc.confirmation_rate != null ? nc.confirmation_rate + '%' : '—' },
+            { k: '已确认 / 待确认', v: (nc.confirmed != null ? nc.confirmed : '—') + ' / ' + (nc.pending != null ? nc.pending : '—') }
+          ]);
+          html += '<div class="zb-data-note">报告类型：' +
+            '<span class="zb-mini-tag">日报 daily</span> <span class="zb-mini-tag">周报 weekly</span> <span class="zb-mini-tag">月报 monthly</span> <span class="zb-mini-tag is-hot">专题 special</span></div>';
+          if (stats.ok !== false) {
+            var lines = [];
+            ['daily_filter', 'age_classification', 'negative_confirmation', 'logic_explanation'].forEach(function (kk) {
+              if (stats[kk] != null) lines.push('<div style="margin:3px 0"><span style="color:var(--zb-text-muted)">' + kk + '：</span>' + esc(typeof stats[kk] === 'object' ? JSON.stringify(stats[kk]) : stats[kk]) + '</div>');
+            });
+            if (lines.length) html += '<div class="zb-li" style="margin-bottom:12px"><div class="zb-li-title" style="margin-bottom:5px">统计口径（系统规则）</div>' + lines.join('') + '</div>';
+          }
+          if (!reps.length) {
+            html += '<div class="zb-empty"><div class="ei">' + I.doc + '</div><h3>Staging 副本暂无已生成报告</h3>' +
+              '<p>报告列表接口已接通；报告文件由生产侧按周期生成，Staging 只读副本未携带历史报告，故此处为空（不是 0 份生产报告）。可在 CTH-POMS 生产侧生成后回到此处查看/下载。</p></div>';
+          } else {
+            html += '<div class="zb-list">';
+            reps.forEach(function (rp) {
+              var title = rp.title || rp.filename || rp.report_id || '未命名报告';
+              var meta = [rp.report_type, rp.period || rp.date, rp.created_at || rp.generated_at].filter(Boolean).map(esc).join(' · ');
+              html += '<div class="zb-li"><div class="zb-li-row1"><span class="zb-li-title">' + esc(title) + '</span></div><div class="zb-li-meta"><span>' + meta + '</span></div></div>';
+            });
+            html += '</div>';
+          }
+          box.innerHTML = html;
+        })
+        .catch(function (err) { failBox(box, '报告数据加载失败', err.message); });
     }
 
     /* ---- 工作区切换：由 zbip-shell 派发事件驱动 ---- */

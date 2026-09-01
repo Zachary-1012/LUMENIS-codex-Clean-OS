@@ -496,3 +496,35 @@
 
 ### Git / 生产安全
 - 本轮提交见本次 commit（ui/staging-foundation）；生产 main 未动；8201 v5.9.9 正常、主体口径/采集/AI/DB 未碰；不提交 .env/*.db/cookie/token/profile/日志。
+
+---
+
+## Step5f｜feat/zb-runtime-preflight 合 main + 回归自动巡检修复 + ZBMP 第二批模块接入（事件关系/报告中心）（2026-09-01）
+
+### A. 特性分支 feat/zb-runtime-preflight 安全合并 main（用户点名）
+- 三 worktree 布局确认：MAIN(D:\Taikoo-monitor-new, main)、STAGING(D:\Taikoo-staging-ui, ui/staging-foundation)、SECURITY(D:\Taikoo-security, feat/zb-runtime-preflight)。
+- 合并前独立审查：该分支 3 commit、**纯增量 874 行/0 删除**（runtime_preflight.py 335 + data_boundary.py 224 + tests 153 + 2 份治理文档 + app.py 仅 +11）。app.py 接入点为启动时 try/except 调 run_preflight()，**默认只记录 Attestation 不阻断**，仅 ZBC_PREFLIGHT_ENFORCE=1 且存在 P0 才 SystemExit；新模块 subprocess 仅用于只读 `git rev-parse`，写操作只涉及自建临时探针与 attestation，无删库/DROP/网络外发/eval。
+- 合并前主 worktree 基线：healthcheck EXIT=0、ok=true、主体 gz_hit/sh_excluded=true、notes 957（首次 exit 1 系 `Select -Last` 截断管道 BrokenPipe，非测试失败，无截断重跑 EXIT=0 证实）。
+- `git merge --no-ff` 成功（merge commit **ccd22b6**，ort 策略无冲突）。
+- 合并后主 worktree 回归：py_compile app.py+2 新模块 EXIT=0；pytest test_runtime_preflight **24 passed**；实跑 run_preflight=总体 PASS/P0 阻断 0/警告 0、data_boundary 扫 1042 跟踪文件无凭证/DB 入库；healthcheck 回归 EXIT=0 主体口径仍 true。
+- 隔离冷启动：临时 8302 + Staging 副本库 + 不设 ENFORCE，真实启动打印整块预检（8 项全 ✓，正确识别 DB=ISOLATED_STAGING、XHS_PRODUCTION=False）、healthz 200 后关闭；**现网 8201 全程在线零影响**（合并只改磁盘文件，不重启在跑进程）。
+- 已 push origin main，main=origin=**ccd22b6** 0/0，敏感反查空。特性分支 feat/zb-runtime-preflight 保留（未删，本地在 SECURITY worktree 检出、远程保留）。
+
+### B. 回归自动巡检在 Staging 的两个修复（确认生效，非本窗口改动）
+- 7368944（DB 连接统一 db.DB_PATH）：此前登记的 Staging 4 个 500（/api/negative/pending、/api/negative/stats、/api/export/preview?period=weekly）本轮复测**全部 200**，ENV 问题闭环。
+- 448e611（单模态收敛，负面待确认改非阻断 toast、待审写侧栏 badge，bump ui_interactions 8.0.1）：代码已在分支，未改业务口径。
+- 自动巡检另补 GPT-iOS 逐帧分析素材（analysis-0901-gpt transA-F/frames3s）与 launch-screens（CTH/ZBMP 桌面+移动启动页原型），仅研究/原型资产。
+
+### C. ZBMP 第二批模块接入（事件关系 graph、报告中心 reports）
+- static/js/zbmp-workbench.js（v1.0.3→v1.0.5）：新增 renderGraph / renderReports，复用现有 `/api/event-graph/stats|events|types`、`/api/reports`、`/api/report/v2/stats`（**不新增后端**）；通用 getJSON/typeChips；GROUPS 中 graph/reports 状态 core→live。
+- **严守不造假**：Staging 副本库 event_graph 与 reports 均为空（生产库才有 16 节点/1 关系与历史报告），两模块不灌假数据——事件关系展示真实「三类事件（营销/传播/舆情）× 四关系（触发/衍生/继发/并行）」字典 + 统计条，节点空则诚实标注"Staging 副本未同步、生产已有，切生产即出图"；报告中心展示真实统计指标（负面确认率 14.3%、已确认/待确认 1/3、今日纳入 0）+ 报告口径卡（daily_filter/age_classification/negative_confirmation/logic_explanation 真实系统规则，含"负面须 negative_confirmed=1 才进报告"），报告列表空则诚实标注，**不自动 POST 生成**。
+- 已实测（8301）：事件关系 4 stat（节点0/连线0/类型3/关系4）+7 chips + 诚实空态；报告中心 4 真实指标 + 4 类型 chip + 口径卡（536 字符真实规则）+ 诚实空态；node --check 通过；三接口 200。证据 step5f-graph.png / step5f-reports.png。
+
+### 未实测 / 遗留
+- 事件关系的真实图谱**可视化（节点-连线画布）**尚未做：当前是类型体系+列表框架，等接入生产 event_graph 数据后再做力导向/关系图渲染（Staging 无数据无法验证画布，不提前造假图）。
+- 报告列表 item 字段因 Staging 无报告未在真实数据上验证渲染（已做保守字段兜底，生产出报告后复核）。
+- 430/768/1024/1280/1440 断点本批未逐档取图（桌面 1066 已测）。
+- 剩余 ZBMP 占位：品牌资产/竞品/案例库/话题战役/AI 评估（竞品 planned，其余 core）；下一批建议 品牌资产 + 话题战役（topic_campaign_notes 生产有 120 条，数据现成）。
+
+### Git / 生产安全
+- main 线：ccd22b6 已推（含预检安全增强）；Staging 线本次 commit 见下；生产 8201 v5.9.9 全程未重启、主体口径/采集/AI/DB 未碰；不提交 .env/*.db/cookie/token/profile/日志。
