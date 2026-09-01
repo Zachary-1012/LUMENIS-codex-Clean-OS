@@ -244,3 +244,27 @@ a.zb-li-link:hover .zb-li-title { color: var(--zb-brand,#1C1917); text-decoratio
 .zb-rk-medium,.zb-rk-mid{background:rgba(217,119,6,.12);color:var(--zb-attention,#D97706)}
 .zb-rk-low{background:var(--zb-stone-100,#F5F5F4);color:var(--zb-text-muted,#78716C)}
 @media (max-width:760px){.zb-graph-stage{overflow-x:auto}.zb-gnode{width:210px!important}}
+
+/* ===== Step5j ③全局交互精修（第一批） ===== */
+/* ZBMP 是分析工作台，隐藏 CTH-POMS 生产操作按钮（采集/AI复核/导出/rednote），id 不随 linearize 改变 */
+body[data-workspace="zbmp"] #refreshBtn,
+body[data-workspace="zbmp"] #reviewBtn,
+body[data-workspace="zbmp"] #reportBtn,
+body[data-workspace="zbmp"] #rednoteBtn{display:none!important}
+/* ZBMP 视图内页面切换微过渡（page 320ms 体系内的轻量淡入上移） */
+#zbmpView .zbmp-page-in{animation:zbPageIn var(--zb-dur-state,220ms) var(--zb-ease-out,ease) both}
+@keyframes zbPageIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#zbmpView .zbmp-page-in{animation:none}}
+/* 键盘可达：侧栏项 / 列表链接 focus-visible 清晰焦点环 */
+.zbmp-item:focus-visible,a.zb-li-link:focus-visible,.zb-gnode:focus-visible{outline:2px solid var(--zb-info,#2563EB);outline-offset:2px;border-radius:var(--zb-r-sm,4px)}
+/* 侧栏导航项统一交互反馈 */
+.zbmp-item{transition:background var(--zb-dur-micro,120ms),color var(--zb-dur-micro,120ms)}
+.zbmp-item:active{transform:scale(.99)}
+/* 节点卡可聚焦（为下一批下钻预留） */
+.zb-gnode{cursor:default}
+/* 窄屏：statStrip/网格更紧凑，避免顶栏与页头挤压 */
+@media (max-width:760px){
+  .zb-statstrip{grid-template-columns:repeat(2,1fr)!important;gap:8px}
+  .zbmp-pagehead{gap:8px}
+  .zbmp-pagehead h2{font-size:17px}
+}
