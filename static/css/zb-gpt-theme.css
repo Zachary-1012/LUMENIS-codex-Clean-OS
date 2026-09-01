@@ -730,11 +730,13 @@ input:focus, select:focus, textarea:focus{
   overflow: hidden;
   margin: 0 auto;
 }
-.modal-overlay.open .modal{
+.modal-overlay.open .modal,
+.modal.open{
   transform: translateY(0);
 }
-/* 弹窗顶部抓手 - iOS风格 */
+/* 弹窗顶部抓手 - 已禁用(居中弹窗不需要底部sheet抓手) */
 .modal::before{
+  display: none !important;
   content: '';
   position: absolute;
   top: 8px;
