@@ -867,9 +867,9 @@ async function renderCasePage(){
         <button class="action tertiary" style="padding:4px 10px;font-size:12px" ${caseManagerPage>=totalPages?'disabled':''} onclick="caseManagerPage++;renderCasePage()">下一页</button>`;
     }
     // 绑定筛选
-    $('caseSearch').oninput = (e)=>{ caseManagerKeyword = e.target.value; caseManagerPage=1; renderCasePage(); };
-    $('caseCategoryFilter').onchange = (e)=>{ caseManagerCategory = e.target.value; caseManagerPage=1; renderCasePage(); };
-    $('caseLevelFilter').onchange = (e)=>{ caseManagerLevel = e.target.value; caseManagerPage=1; renderCasePage(); };
+    if($('caseSearch')) $('caseSearch').oninput = (e)=>{ caseManagerKeyword = e.target.value; caseManagerPage=1; renderCasePage(); };
+    if($('caseCategoryFilter')) $('caseCategoryFilter').onchange = (e)=>{ caseManagerCategory = e.target.value; caseManagerPage=1; renderCasePage(); };
+    if($('caseLevelFilter')) $('caseLevelFilter').onchange = (e)=>{ caseManagerLevel = e.target.value; caseManagerPage=1; renderCasePage(); };
   }catch(e){console.warn('案例库加载失败',e)}
 }
 async function openCaseDetail(case_id){
