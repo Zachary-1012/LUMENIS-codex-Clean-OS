@@ -12,6 +12,9 @@ for line in io.open(".env", encoding="utf-8"):
 os.environ["AI_TIMEOUT_SECONDS"] = "20"
 import intelligence
 
+# 本地 provider（本地优先基线：auto 时 Ollama/LMStudio/llama.cpp 优先于云端）
+LOCAL_PROVIDERS = ("ollama", "lmstudio", "llama_cpp")
+
 def use(p):
     os.environ["AI_PROVIDER"] = p
     intelligence._CACHE["ts"] = 0
@@ -36,7 +39,7 @@ def test_auto_priority():
     for k in ("ARK_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY"):
         os.environ.pop(k, None)
     st = use("auto")
-    assert st["provider"] in ("zhipu", "local_rule"), st
+    assert st["provider"] in ("zhipu", "local_rule") + LOCAL_PROVIDERS, st
     print("[PASS] auto 选择 ->", st["provider"], st.get("model"))
 
 def test_review_note_structure():
@@ -45,7 +48,7 @@ def test_review_note_structure():
     res = intelligence.review_note(note, rule)
     assert res["verification"] in ("verified", "review", "suspicious_fake", "rejected")
     assert res.get("summary")
-    assert res.get("provider") in ("zhipu", "rule", "openai", "qwen", "deepseek", "ark")
+    assert res.get("provider") in ("zhipu", "rule", "openai", "qwen", "deepseek", "ark") + LOCAL_PROVIDERS
     print("[PASS] review_note 结构合法，分析来源 ->", res["provider"])
 
 if __name__ == "__main__":
