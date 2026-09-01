@@ -539,6 +539,78 @@ class EventGraph:
         """获取所有关系类型"""
         return RELATION_TYPES.copy()
 
+    def infer_and_link_relations(self, days_window: int = 21, parallel_hours: float = 36,
+                                 min_follow_overlap: int = 1, min_derive_overlap: int = 2,
+                                 persist: bool = True, drop_auto_first: bool = True) -> Dict[str, Any]:
+        """GAP-07：基于【时间 + 主题词】双证据保守推断 follow/derive/parallel。
+        - 无主题重叠或时间不可比 -> 不连边（绝不伪造关系）；
+        - trigger 属强因果，不在此自动生成，保留人工/直接证据；
+        - 自动关系 evidence 以 [auto] 开头，重算只清理自动关系，手工关系保留；
+        - 幂等：(source,target,type) UNIQUE + INSERT OR IGNORE。
+        """
+        dropped = 0
+        if drop_auto_first:
+            before = len(self.relations)
+            self.relations = [r for r in self.relations
+                              if not str(r.evidence or '').startswith(AUTO_REL_PREFIX)]
+            dropped = before - len(self.relations)
+            if persist:
+                with _get_db() as conn:
+                    cur = conn.execute(
+                        "DELETE FROM event_graph_relations WHERE evidence LIKE ?",
+                        (AUTO_REL_PREFIX + '%',))
+                    dropped = max(dropped, cur.rowcount or 0)
+                    conn.commit()
+
+        items = []
+        for e in self.events.values():
+            dt = _parse_dt(e.event_time)
+            if dt is not None:
+                items.append((dt, e))
+        items.sort(key=lambda x: x[0])
+
+        by_type = {'follow': 0, 'derive': 0, 'parallel': 0}
+        added = 0
+        no_evidence = 0
+        existing = {(r.source_event.event_id, r.target_event.event_id, r.relation_type)
+                    for r in self.relations}
+        for i in range(len(items)):
+            dt_a, a = items[i]
+            ta = _text_tokens(a.title + ' ' + a.description)
+            if not ta:
+                continue
+            for j in range(i + 1, len(items)):
+                dt_b, b = items[j]
+                shared = sorted(ta & _text_tokens(b.title + ' ' + b.description))
+                if not shared:
+                    no_evidence += 1
+                    continue
+                gap_h = (dt_b - dt_a).total_seconds() / 3600.0
+                rtype, conf = None, 0.5
+                if abs(gap_h) <= parallel_hours:
+                    rtype, conf = 'parallel', 0.55
+                elif 0 < gap_h <= days_window * 24:
+                    if len(shared) >= min_derive_overlap:
+                        rtype, conf = 'derive', 0.7
+                    elif len(shared) >= min_follow_overlap:
+                        rtype, conf = 'follow', 0.5
+                if not rtype:
+                    no_evidence += 1
+                    continue
+                key = (a.event_id, b.event_id, rtype)
+                if key in existing:
+                    continue
+                ev = (f"{AUTO_REL_PREFIX} 时间差{gap_h / 24:.1f}天/"
+                      f"共享主题词:{','.join(shared[:5])}/规则{rtype}")
+                rel = self.add_relation(a.event_id, b.event_id, rtype,
+                                        evidence=ev, confidence=conf, persist=persist)
+                if rel is not None:
+                    existing.add(key)
+                    added += 1
+                    by_type[rtype] += 1
+        return {'dropped_auto': dropped, 'added': added,
+                'by_type': by_type, 'no_evidence_pairs': no_evidence}
+
 
 # 全局单例
 _graph_instance: Optional[EventGraph] = None
@@ -554,3 +626,8 @@ def reset_event_graph() -> None:
     """重置全局单例（用于测试或强制重新加载）"""
     global _graph_instance
     _graph_instance = None
+
+
+def infer_and_persist_relations(**kwargs) -> Dict[str, Any]:
+    """便捷入口：对全局图谱执行一次保守关系推断并持久化。"""
+    return get_event_graph().infer_and_link_relations(**kwargs)

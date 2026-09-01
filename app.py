@@ -380,6 +380,24 @@ def event_graph_import_existing():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/api/event-graph/rebuild-relations', methods=['POST'])
+def event_graph_rebuild_relations():
+    """GAP-07：基于时间+主题词双证据保守重算 follow/derive/parallel；
+    不自动生成 trigger（强因果保留人工），只清理并重算 [auto] 关系，幂等可重复。"""
+    try:
+        from event_graph import get_event_graph
+        data = request.get_json(silent=True) or {}
+        graph = get_event_graph()
+        result = graph.infer_and_link_relations(
+            days_window=int(data.get('days_window', 21)),
+            parallel_hours=float(data.get('parallel_hours', 36)),
+            persist=True, drop_auto_first=True)
+        return jsonify({'ok': True, 'result': result, 'stats': graph.get_stats()})
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'days_window/parallel_hours 必须为数值'}), 400
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/api/event-graph/events/<event_id>', methods=['DELETE'])
 def event_graph_delete_event(event_id):
     """删除事件（同时删除关联关系）"""
