@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/static/css/zachary_robot.css">
     <link rel="stylesheet" href="/static/css/architecture_dashboard.css">
     <link rel="stylesheet" href="/static/css/ui_optimized.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -22,6 +23,8 @@
                     <button id="btn-refresh" class="btn btn-primary">一键更新</button>
                     <button id="btn-settings" class="btn btn-secondary">设置</button>
                 </div>
+                <!-- AGENTS §7.2 Auth Recovery 系统内可见徽章（0时隐藏） -->
+                <span id="ar-badge" class="ar-badge hidden" title="存在需要人工处理的认证恢复任务">🔔 <span id="ar-count">0</span></span>
                 <div class="user-info">
                     <span id="user-name">管理员</span>
                 </div>
@@ -62,6 +65,12 @@
     <script src="/static/js/system_features_ui.js?v=5.8.9"></script>
     <script src="/static/js/architecture_dashboard.js?v=5.8.9"></script>
     <script src="/static/js/frontend_enhancement.js?v=5.8.9"></script>
+    <!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS 安全：纯 createElement + textContent） -->
+    <script src="/static/js/auth_recovery_poller.js?v=5.8.9"></script>
+    <script>
+      // Footer 数据更新时间戳（页面加载时立刻填入，避免一直显示 --）
+      try { var lu = document.getElementById('last-update'); if (lu) lu.textContent = new Date().toLocaleString('zh-CN'); } catch(e) {}
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

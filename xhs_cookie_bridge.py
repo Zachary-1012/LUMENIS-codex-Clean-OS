@@ -23,8 +23,35 @@ DEFAULT_KEYWORDS=['广州太古汇','太古汇 15周年','太古汇 周年庆','
                   '太古汇 新店','太古汇 开业','太古汇 美食','太古汇 探店','太古汇 打卡','太古汇 方所','太古汇 品牌',
                   '太古汇 投诉','太古汇 避雷','太古汇 差评','太古汇 吐槽','太古汇 维权','太古汇 服务','太古汇 停车']
 
-# ========== 账号安全保护机制 ==========
-ALLOWED_USER_ID = "61d58d560000000010005a8a"  # 白名单：只有这个账号可以运行爬虫
+# ========== 账号安全保护机制（双子星库 Contract：双身份硬白名单） ==========
+# 逻辑身份常量（Contract 入口：Z-Brand Core 所有采集仅接受下面两个身份名）
+XHS_CN_PRIMARY_NAME = "XHS_CN_PRIMARY"   # 主账号：日常采集/驻场
+XHS_RETINAUT_NAME  = "XHS_RETINAUT"      # Retinaut 账号：备用身份/隔离采集
+# 物理 user_id 白名单（与逻辑身份一一绑定）
+XHS_CN_PRIMARY = "61d58d560000000010005a8a"   # 现有主账号（100% 向后兼容原 ALLOWED_USER_ID）
+XHS_RETINAUT  = None                            # Retinaut：用户提供真实 x-user-id-pro 后填入；None=暂不启用
+ALLOWED_USER_IDS = tuple(x for x in (XHS_CN_PRIMARY, XHS_RETINAUT) if x)
+# 向后兼容别名：防止其它 import ALLOWED_USER_ID 的代码失效
+ALLOWED_USER_ID = XHS_CN_PRIMARY  # LEGACY ALIAS（只读）
+# 逻辑身份 → 物理配置（Cookie 文件 + CDP Profile 目录）
+ACCOUNT_PROFILES = {
+    XHS_CN_PRIMARY_NAME: (
+        COOKIE_FILE,  # 原主 Cookie：data/private/xhs_cookie_header.txt
+        os.path.join(ROOT, "edge-cdp-newaccount"),
+    ),
+    XHS_RETINAUT_NAME: (
+        os.path.join(ROOT, "data", "private", "xhs_cookie_retinaut.txt"),
+        os.path.join(ROOT, "edge-cdp-retinaut"),
+    ),
+}
+# 配置一致性断言：逻辑身份在 ACCOUNT_PROFILES 中存在 / 白名单数量匹配
+assert XHS_CN_PRIMARY_NAME in ACCOUNT_PROFILES and XHS_RETINAUT_NAME in ACCOUNT_PROFILES, \
+    "ACCOUNT_PROFILES 必须覆盖所有双身份逻辑名"
+assert len(ALLOWED_USER_IDS) == (1 if XHS_RETINAUT is None else 2), \
+    f"ALLOWED_USER_IDS 长度不匹配：XHS_RETINAUT 配置为 {XHS_RETINAUT!r}（None=暂不启用）"
+# 运行时当前激活的身份（select_account 设置；None=默认 XHS_CN_PRIMARY_NAME + 未 override）
+_ACTIVE_ACCOUNT: str | None = None
+
 MAX_DAILY_RUNS = 12  # 每日最大运行次数（保护账号）
 MAX_MANUAL_RUNS = 3  # 每日手动触发（一键实时更新）最大次数
 MAX_AUTO_RUNS = 9  # 每日自动定时采集最大次数
@@ -122,33 +149,75 @@ def _save_stats():
 # 模块加载时自动恢复统计
 _load_stats()
 
+def _effective_cookie_file() -> str:
+    """返回当前生效的 Cookie 文件路径：优先 select_account() 设置的 override；否则默认 PRIMARY。"""
+    override = os.environ.get('XHS_COOKIE_FILE_OVERRIDE', '').strip()
+    if override:
+        return override
+    return COOKIE_FILE
+
+
+def _extract_user_id_from_cookie_text(content: str):
+    """从Cookie字符串（分号分隔）中提取 x-user-id-pro；提取不到返回 None。"""
+    if not content:
+        return None
+    for part in content.split(';'):
+        part = part.strip()
+        if part.startswith('x-user-id-pro='):
+            return part.split('=', 1)[1].strip()
+    return None
+
+
 def _get_current_user_id():
-    """从本地Cookie文件中提取当前登录账号ID"""
+    """从当前生效 Cookie 文件中提取登录账号ID（兼容 override / env header / 默认路径）。"""
     try:
-        if os.path.exists(COOKIE_FILE):
-            content = open(COOKIE_FILE, encoding='utf-8').read()
-            # 提取 x-user-id-pro 的值
-            for part in content.split(';'):
-                part = part.strip()
-                if part.startswith('x-user-id-pro='):
-                    return part.split('=', 1)[1].strip()
+        cookie_file = _effective_cookie_file()
+        # 1) 首选：Cookie 文件（支持 select_account override）
+        if cookie_file and os.path.exists(cookie_file):
+            content = open(cookie_file, encoding='utf-8', errors='replace').read()
+            uid = _extract_user_id_from_cookie_text(content)
+            if uid:
+                return uid
+        # 2) 其次：XHS_COOKIE_HEADER 环境变量（全局 HTTP Header Cookie）
         if os.getenv('XHS_COOKIE_HEADER'):
-            for part in os.getenv('XHS_COOKIE_HEADER', '').split(';'):
-                part = part.strip()
-                if part.startswith('x-user-id-pro='):
-                    return part.split('=', 1)[1].strip()
+            uid = _extract_user_id_from_cookie_text(os.environ['XHS_COOKIE_HEADER'])
+            if uid:
+                return uid
+        # 3) 兜底：XHS_COOKIES_JSON（老格式兼容）
+        if os.getenv('XHS_COOKIES_JSON'):
+            try:
+                cj = json.loads(os.environ['XHS_COOKIES_JSON'])
+                if isinstance(cj, list):
+                    for c in cj:
+                        if str(c.get('name', '')).lower() in ('x-user-id-pro', 'a1') and c.get('value'):
+                            return str(c['value']).strip()
+                elif isinstance(cj, dict):
+                    for k, v in cj.items():
+                        if 'x-user-id-pro' in str(k).lower() and v:
+                            return str(v).strip()
+            except Exception:
+                pass
     except Exception:
         pass
     return None
 
 def verify_account():
-    """验证当前登录账号是否在白名单中"""
+    """验证当前登录账号是否在双子星库 Contract 白名单（PRIMARY / RETINAUT 任一 allow）。"""
     current_id = _get_current_user_id()
     if not current_id:
-        return False, "无法读取账号ID，请检查Cookie配置"
-    if current_id != ALLOWED_USER_ID:
-        return False, f"当前账号({current_id[:8]}...)不在白名单中，禁止爬虫。仅允许轻量检索。"
-    return True, f"账号验证通过({current_id[:8]}...)"
+        cookie_p = _effective_cookie_file()
+        return False, f"无法读取账号ID。请检查Cookie文件配置（当前生效路径={cookie_p!r}）或环境变量 XHS_COOKIE_HEADER。"
+    if current_id not in ALLOWED_USER_IDS:
+        allow_preview = "、".join(f"{x[:8]}..." for x in ALLOWED_USER_IDS)
+        name_map = {XHS_CN_PRIMARY: XHS_CN_PRIMARY_NAME}
+        if XHS_RETINAUT:
+            name_map[XHS_RETINAUT] = XHS_RETINAUT_NAME
+        return False, (
+            f"当前账号({current_id[:8]}...)不在硬白名单内（双子星库 Contract：仅允许 "
+            f"{list(name_map.values())} = {allow_preview}）。其它身份禁止进入采集任务，仅允许轻量检索。"
+        )
+    active = _ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME
+    return True, f"账号验证通过（身份={active}, user_id={current_id[:8]}...）"
 
 def check_rate_limit(run_type='manual'):
     """检查频率限制，返回(是否允许, 提示信息)
@@ -190,20 +259,26 @@ def record_run(run_type='manual'):
     _save_stats()
 
 def get_account_status():
-    """获取账号健康状态"""
+    """获取账号健康状态（双子星库 Contract：显示双身份 + 当前激活身份）。"""
     current_id = _get_current_user_id()
     today = datetime.now().strftime('%Y-%m-%d')
     today_runs = len([t for t in _daily_runs if datetime.fromtimestamp(t).strftime('%Y-%m-%d') == today])
-    in_whitelist = (current_id == ALLOWED_USER_ID) if current_id else False
+    in_whitelist = (current_id in ALLOWED_USER_IDS) if current_id else False
     cooldown_remaining = 0
     if _last_run_time:
         elapsed = time.time() - _last_run_time
         if elapsed < COOLDOWN_MINUTES * 60:
             cooldown_remaining = int((COOLDOWN_MINUTES * 60 - elapsed) / 60) + 1
+    active_account = _ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME
+    allowed_preview = [x[:12] + '...' for x in ALLOWED_USER_IDS]
     return {
+        'active_account': active_account,
+        'active_cookie_file': _effective_cookie_file(),
         'current_user_id': current_id[:12] + '...' if current_id else None,
         'in_whitelist': in_whitelist,
-        'allowed_user_id': ALLOWED_USER_ID[:12] + '...',
+        'allowed_user_ids': allowed_preview,
+        'allowed_user_id': allowed_preview[0] if allowed_preview else None,  # LEGACY：向后兼容，= PRIMARY
+        'allowed_accounts': list(ACCOUNT_PROFILES.keys()),  # 逻辑身份名列表
         'today_runs': today_runs,
         'today_manual_runs': _daily_manual_runs,
         'today_auto_runs': _daily_auto_runs,
@@ -219,7 +294,12 @@ def get_account_status():
     }
 
 def cookie_configured():
-    return bool(os.getenv('XHS_COOKIE_HEADER') or os.getenv('XHS_COOKIES_JSON') or (os.path.exists(COOKIE_FILE) and open(COOKIE_FILE,encoding='utf-8').read().strip()))
+    """当前身份的 Cookie 是否齐备（支持 select_account override 生效路径）。"""
+    if os.getenv('XHS_COOKIE_HEADER') or os.getenv('XHS_COOKIES_JSON'):
+        return True
+    cookie_file = _effective_cookie_file()
+    return bool(cookie_file and os.path.exists(cookie_file) and
+                open(cookie_file, encoding='utf-8', errors='replace').read().strip())
 
 def _run_search(keyword,max_scroll=6):
     # 网络自适应：使用当前自适应设置
@@ -229,7 +309,8 @@ def _run_search(keyword,max_scroll=6):
     
     out=os.path.join(ROOT,'data','private',f'xhs_{int(time.time()*1000)}.json')
     env=os.environ.copy()
-    env['XHS_COOKIE_FILE']=COOKIE_FILE
+    # 双子星库 Contract：传 select_account() 选择的身份对应 Cookie 文件（Node 进程读取一致）
+    env['XHS_COOKIE_FILE'] = _effective_cookie_file()
     cmd=['node',SEARCH_JS,'--keyword',keyword,'--output',out,'--max-scroll',str(effective_scroll)]
     try:
         # 使用Popen+轮询，避免Flask线程中subprocess阻塞
@@ -371,7 +452,53 @@ def is_test_mode():
     """测试模式：环境变量 XHS_TEST_MODE=1 时跳过冷却/新账号保护/熔断拦截，端到端测试期使用"""
     return os.environ.get('XHS_TEST_MODE','').strip() in ('1','true','TRUE','yes')
 
-def sync(keywords=None,max_scroll=6):
+def select_account(account_name: str):
+    """双子星库 Contract：选择小红书采集身份（硬白名单 ACCOUNT_PROFILES）。
+
+    成功 → 设置模块级 _ACTIVE_ACCOUNT + 环境变量 XHS_COOKIE_FILE_OVERRIDE；
+    失败 → 返回 (False, 详细错误信息)，绝不静默降级到其他身份。
+
+    Args:
+        account_name: 逻辑身份名，必须 ∈ ACCOUNT_PROFILES.keys()
+
+    Returns:
+        (ok: bool, message: str)
+    """
+    global _ACTIVE_ACCOUNT
+    if not account_name:
+        return False, "身份名为空，必须显式指定双子星库 Contract 白名单身份之一"
+    if account_name not in ACCOUNT_PROFILES:
+        return False, (f"身份 [{account_name}] 不在双子星库 Contract 硬白名单中。"
+                       f"允许身份: {list(ACCOUNT_PROFILES.keys())}")
+    cookie_path, cdp_profile_dir = ACCOUNT_PROFILES[account_name]
+    # RETINAUT 等未配置身份（XHS_RETINAUT is None 或 cookie 文件不存在）给出友好错误
+    if cookie_path is None:
+        return False, (f"身份 [{account_name}] Cookie 路径尚未配置（XHS_RETINAUT 等身份需提供真实 user_id + cookie 文件）。"
+                       f"当前激活: {list(ACCOUNT_PROFILES.keys())}，请先补齐 data/private/ 下对应 cookie 文件。")
+    if not os.path.isfile(cookie_path):
+        return False, (f"身份 [{account_name}] 对应 Cookie 文件不存在: {cookie_path}。"
+                       f"请先合法导入对应身份 Cookie 到该路径后重试。")
+    if not ACCOUNT_PROFILES[account_name][1] or not os.path.isdir(ACCOUNT_PROFILES[account_name][1]):
+        # CDP profile 目录缺失仅警告，不阻塞（cookie_bridge 模式可能不走 CDP；Playwright 模式会再报错）
+        pass
+    # 写入生效 Contract：环境变量 override 优先级最高，所有下游 _effective_cookie_file() 读到一致身份
+    os.environ['XHS_COOKIE_FILE_OVERRIDE'] = str(cookie_path)
+    _ACTIVE_ACCOUNT = account_name
+    return True, (f"身份切换成功: {account_name} | cookie={os.path.basename(cookie_path)} "
+                  f"| cdp_profile={os.path.basename(cdp_profile_dir) if cdp_profile_dir else 'N/A'}")
+
+def sync(keywords=None, max_scroll=6, account=None):
+    # ── 双子星库 Contract 身份门控（最先执行，防止未授权身份进入采集）──
+    if account is not None:
+        ok_sel, msg_sel = select_account(account)
+        if not ok_sel:
+            raise RuntimeError(f"[XHS身份门控] {msg_sel}")
+    elif _ACTIVE_ACCOUNT is None:
+        # 默认激活 XHS_CN_PRIMARY（向后兼容，保持历史行为不变）
+        ok_default, msg_default = select_account(XHS_CN_PRIMARY_NAME)
+        if not ok_default:
+            raise RuntimeError(f"[XHS默认身份激活失败] {msg_default}")
+
     if not cookie_configured():
         raise RuntimeError('未配置本机 XHS Cookie。请在 data/private/xhs_cookie_header.txt 配置，或使用已登录的 Playwright profile。')
     keywords=list(dict.fromkeys(keywords or DEFAULT_KEYWORDS))[:32]
@@ -481,6 +608,10 @@ def sync(keywords=None,max_scroll=6):
         'network_status': net_status,
         'cache_status': cache_manager.get_cache_status(),
         'blocked': blocked_summary,
+        # ── 双子星库 Contract 身份证据链（写入所有 sync 返回，方便追溯哪条数据由哪个身份采集）──
+        'active_account': (_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME),
+        'active_user_id': ((_cid[:12] + '...') if (_cid := _get_current_user_id()) else None),
+        'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
         'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 

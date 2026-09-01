@@ -87,6 +87,8 @@
       <button class="action secondary tip" id="rednoteBtn" style="display:none" data-tip="备选采集（rednote/CDP）：通过CDP连接已登录浏览器采集，入口已收至系统设置，计入每日次数"><span class="svgicon">◎</span><span class="btn-label">rednote采集</span></button>
       <button class="action secondary tip" id="reviewBtn" data-tip="AI分析：复核历史笔记的相关性、情感、风险和摘要"><span class="svgicon">✦</span><span class="btn-label">AI 分析</span></button>
       <button class="action tertiary tip" id="reportBtn" data-tip="导出报告：进入日报、周报、月报和年报"><span class="svgicon">▣</span><span class="btn-label">导出报告</span></button>
+      <!-- AGENTS §7.2 Auth Recovery 徽章（系统内可见；0 时 hidden） -->
+      <span id="ar-badge" class="ar-badge hidden" title="存在需要人工处理的认证恢复任务"><span class="svgicon">🔔</span> <span id="ar-count">0</span></span>
     </div>
   </header>
 
@@ -639,7 +641,7 @@
         <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">SETTINGS</span><h3>系统设置</h3><p>访问、更新频率和AI状态</p></div></div><div class="settings-grid"><div><b>当前版本</b><span id="versionText">5.8.2</span></div><div><b>采集频率</b><span>8:05–23:05错峰约9次/天，也可手动一键更新</span></div><div><b>分析模式</b><span id="aiStatusText">正在检测本机智能引擎…</span></div><div><b>远程访问</b><span>支持局域网与 Cloudflare Quick Tunnel</span></div><div><b>rednote CDP</b><span id="cdpStatusText">备选采集</span></div><div><b>自动采集</b><span id="autoIntervalText">错峰·冷却1h</span></div></div><div class="ai-console"><div class="ai-console-head"><div><span class="eyebrow">INTELLIGENCE GATEWAY</span><h4>智能引擎</h4><p>无需购买 Key。系统优先检测本机 Ollama、LM Studio、llama.cpp；未发现时自动使用内置本地规则。</p></div><span class="ai-live" id="aiLive"><i></i>检测中</span></div><div class="ai-console-grid"><div><span>当前引擎</span><b id="aiProvider">—</b></div><div><span>模型</span><b id="aiModel">—</b></div><div><span>运行状态</span><b id="aiRuntime">—</b></div><div><span>接口</span><b>本地可插拔</b></div></div><div class="ai-console-actions"><button class="action secondary" id="aiDetectBtn">重新检测</button><button class="action tertiary" id="aiTestBtn">测试 AI 接口</button></div><div class="ai-hints" id="aiHints"></div></div></div>
       </section>
 
-      <footer><span>© 2026 广州太古汇舆情监测系统（CTH-POMS） <span id="footerVersion">v5.9.9</span></span><span>数据来源：小红书 · AI辅助分析 · 主体过滤优先</span></footer>
+      <footer><span>© 2026 广州太古汇舆情监测系统（CTH-POMS） <span id="footerVersion">v5.9.9</span> · 数据更新时间: <span id="last-update">--</span></span><span>数据来源：小红书 · AI辅助分析 · 主体过滤优先</span></footer>
     
     <!-- Codex风格右侧AI洞察面板 -->
     <aside class="right-panel" id="rightPanel">
@@ -916,4 +918,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- [STAGING ONLY] ZBMP 工作台运行时（双工作区/模块IA/连接器/设置/密钥Sheet），须在 shell 之后，回滚=删此 script -->
 <script src="/static/js/zbmp-workbench.js?v=1.1.0" defer></script>
 <script src="/static/js/zbip-panels.js?v=1.0.0" defer></script>
+<!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS安全；依赖style.css .ar-badge 样式；所有动态DOM=createElement+textContent） -->
+<script src="/static/js/auth_recovery_poller.js?v=5.8.9"></script>
+<script>
+  // Footer 数据更新时间戳：页面加载立刻填入，避免一直显示 --
+  try { var _lu=document.getElementById('last-update'); if(_lu) _lu.textContent=new Date().toLocaleString('zh-CN'); } catch(e){}
+  // 若系统有全局版本更新事件，可刷新一次 last-update（兼容老 setInterval 时钟）
+  (function(){
+    function refresh(){ try{var u=document.getElementById('last-update');if(u)u.textContent=new Date().toLocaleString('zh-CN');}catch(e){} }
+    setInterval(refresh, 60000); // 每 1 分钟刷新一次时间戳
+  })();
+</script>
 </body></html>
