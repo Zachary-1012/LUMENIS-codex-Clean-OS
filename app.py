@@ -2628,7 +2628,7 @@ def api_negative_pending():
         per_page = int(request.args.get('per_page', 20))
         status = request.args.get('status', 'pending')
         offset = (page - 1) * per_page
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -2674,7 +2674,7 @@ def api_negative_confirm():
         note_id = data.get('note_id')
         if not note_id:
             return jsonify({'ok': False, 'error': '缺少note_id'}), 400
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("""
@@ -2697,7 +2697,7 @@ def api_negative_reject():
         note_id = data.get('note_id')
         if not note_id:
             return jsonify({'ok': False, 'error': '缺少note_id'}), 400
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("""
@@ -2716,7 +2716,7 @@ def api_negative_reject():
 def api_negative_review_confirm(note_id):
     """负面审核-确认（RESTful 路径参数，兼容前端 NegativeReview.confirmItem）"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); cursor = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("UPDATE notes SET negative_confirmed=1, negative_confirmed_at=?, negative_confirmed_by='admin' WHERE note_id=?", (now, note_id))
         conn.commit(); affected = cursor.rowcount; conn.close()
@@ -2728,7 +2728,7 @@ def api_negative_review_confirm(note_id):
 def api_negative_review_reject(note_id):
     """负面审核-驳回（RESTful 路径参数，兼容前端 NegativeReview.rejectItem）"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); cursor = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); cursor = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("UPDATE notes SET negative_confirmed=2, negative_confirmed_at=?, negative_confirmed_by='admin' WHERE note_id=?", (now, note_id))
         conn.commit(); affected = cursor.rowcount; conn.close()
@@ -2741,7 +2741,7 @@ def _event_set_review(event_id, state, by='admin'):
     """事件二次确认。state=1确认负面时，联动确认其关联负面笔记（事件由笔记聚合，
     确认事件即确认其下笔记）；关联走 event_mentions，缺失时用事件关键词兜底匹配。
     返回 {'events':事件更新行数, 'notes':联动笔记数}"""
-    conn = sqlite3.connect('data/monitor.db'); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     # 兼容主键 id 或 event_key，先定位到事件真实行
     try:
@@ -2806,7 +2806,7 @@ def api_event_review_pending():
     """待人工确认的事件：风险事件且未二次确认（negative_confirmed=0），按风险/时间倒序"""
     try:
         limit = request.args.get('limit', 50, type=int)
-        conn = sqlite3.connect('data/monitor.db'); conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row
         rows = conn.execute("""SELECT * FROM events
                                WHERE (negative_confirmed=0 OR negative_confirmed IS NULL)
                                  AND (risk_level IN ('high','medium') OR fact_status IN ('unconfirmed','partially_confirmed'))
@@ -2820,7 +2820,7 @@ def api_event_review_pending():
 def api_event_review_stats():
     """事件负面确认统计：待确认/已确认/已驳回"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); cur = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); cur = conn.cursor()
         pending = cur.execute("SELECT COUNT(*) FROM events WHERE (negative_confirmed=0 OR negative_confirmed IS NULL) AND risk_level IN('high','medium')").fetchone()[0]
         confirmed = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=1").fetchone()[0]
         rejected = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=2").fetchone()[0]
@@ -2834,7 +2834,7 @@ def api_event_notes(event_id):
     """事件关联的真实笔记：优先 event_mentions 关联表（event_id→note_id），
     关联缺失时用事件关键词兜底匹配。负面/高风险在前，供事件详情“查看相关笔记案例”。"""
     try:
-        conn = sqlite3.connect('data/monitor.db'); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+        conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
         try:
             row = cur.execute("SELECT * FROM events WHERE id=?", (int(event_id),)).fetchone()
         except (TypeError, ValueError):
@@ -2873,7 +2873,7 @@ def api_event_notes(event_id):
 def api_negative_stats():
     """获取负面舆情统计"""
     try:
-        conn = sqlite3.connect('data/monitor.db')
+        conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
         # 待确认
         cursor.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
@@ -4868,6 +4868,105 @@ def api_dev_run_code():
         return jsonify({'ok': False, 'error': f'语法错误: 第{e.lineno}行 - {e.msg}'}), 400
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+# ===== ZBIP Workspace 只读面板（文件树 / 只读终端）——Staging 旁路，纯只读、过滤敏感、防路径穿越 =====
+import subprocess as _ws_sp
+_WS_ROOT = Path(__file__).resolve().parent
+_WS_HIDE_DIRS = {'.git', '.venv', 'node_modules', '__pycache__', '.pytest_cache',
+                 '.skills-router', '.trae-cn', '.vscode', '.idea', 'data/cookies'}
+_WS_HIDE_RE = re.compile(r'(^\.env)|cookie|token|secret|credential|passwd|password|\.(db|sqlite|sqlite3|pem|key|pfx)$|profile', re.I)
+
+def _ws_hidden(name, is_dir):
+    # 名称命中即隐藏，不依赖 is_dir：git linked-worktree 中 .git 是文件而非目录，
+    # 若用 is_dir 门控会导致 worktree 内 .git 文件漏出。
+    if name in _WS_HIDE_DIRS or name.startswith('edge-cdp') or name.startswith('chrome-cdp'):
+        return True
+    return bool(_WS_HIDE_RE.search(name))
+
+@app.route('/api/workspace/file-tree')
+def api_workspace_file_tree():
+    """只读列目录：限定项目根、过滤敏感文件/目录、防路径穿越，返回真实文件数。"""
+    try:
+        rel = (request.args.get('path') or '').strip().replace('\\', '/').lstrip('/')
+        target = (_WS_ROOT / rel).resolve() if rel else _WS_ROOT
+        if target != _WS_ROOT and _WS_ROOT not in target.parents:
+            return jsonify({'ok': False, 'error': '路径越界，已拒绝'}), 403
+        if not target.exists() or not target.is_dir():
+            return jsonify({'ok': False, 'error': '目录不存在'}), 404
+        items, nd, nf = [], 0, 0
+        for p in sorted(target.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+            try:
+                isd = p.is_dir()
+            except OSError:
+                continue
+            if _ws_hidden(p.name, isd):
+                continue
+            if isd:
+                nd += 1
+            else:
+                nf += 1
+            items.append({'name': p.name, 'type': 'dir' if isd else 'file',
+                          'rel': str(p.relative_to(_WS_ROOT)).replace('\\', '/'),
+                          'size': None if isd else p.stat().st_size})
+        return jsonify({'ok': True, 'root': _WS_ROOT.name, 'path': rel,
+                        'items': items, 'counts': {'dirs': nd, 'files': nf, 'total': nd + nf}})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'{type(e).__name__}: {e}'}), 500
+
+_WS_TERM_ALLOW = {'ls', 'dir', 'pwd', 'whoami', 'help', 'clear', 'python', 'git'}
+_WS_GIT_READONLY = {'status', 'log', 'diff', 'branch', 'rev-parse', 'show', 'remote', 'ls-files', 'count-objects'}
+
+@app.route('/api/workspace/term', methods=['POST'])
+def api_workspace_term():
+    """只读 Web 终端：白名单命令、shell=False、cwd 锁定项目根、超时；拒绝一切写/管道/重定向。"""
+    data = request.get_json(silent=True) or {}
+    raw = (data.get('cmd') or '').strip()
+    if not raw:
+        return jsonify({'ok': False, 'error': '命令为空'}), 400
+    if re.search(r'[;&|`$><]|\.\.', raw):
+        return jsonify({'ok': False, 'blocked': True, 'error': '含管道/重定向/命令替换/上级路径，只读终端已拒绝。写操作请在本机终端执行。'}), 403
+    parts = raw.split()
+    head = parts[0].lower()
+    if head not in _WS_TERM_ALLOW:
+        return jsonify({'ok': False, 'blocked': True,
+                        'error': 'Web 终端仅开放只读命令：ls / pwd / whoami / python --version / git 只读子命令 / help / clear。'}), 403
+    try:
+        if head in ('ls', 'dir'):
+            lines = []
+            for p in sorted(_WS_ROOT.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+                try:
+                    isd = p.is_dir()
+                except OSError:
+                    continue
+                if _ws_hidden(p.name, isd):
+                    continue
+                lines.append(('[D] ' if isd else '    ') + p.name)
+            return jsonify({'ok': True, 'cmd': raw, 'cwd': str(_WS_ROOT), 'output': '\n'.join(lines)})
+        if head == 'pwd':
+            return jsonify({'ok': True, 'cmd': raw, 'cwd': str(_WS_ROOT), 'output': str(_WS_ROOT)})
+        if head == 'help':
+            return jsonify({'ok': True, 'cmd': raw, 'output':
+                '只读 Web 终端可用命令：\n  ls                       列出项目根（自动过滤敏感项）\n  pwd                      项目根路径\n  whoami                   当前用户\n  python --version         Python 版本\n  git status|log|diff|branch|rev-parse|show|remote|ls-files   Git 只读查询\n  clear                    清屏\n写操作（commit/push/reset/安装/删除等）请在本机终端执行。'})
+        if head == 'clear':
+            return jsonify({'ok': True, 'clear': True})
+        if head == 'python':
+            if len(parts) < 2 or parts[1] != '--version':
+                return jsonify({'ok': False, 'blocked': True, 'error': 'python 仅允许 --version'}), 403
+            cmd = [sys.executable, '--version']
+        elif head == 'whoami':
+            cmd = ['whoami']
+        else:  # git
+            sub = parts[1].lower() if len(parts) > 1 else ''
+            if sub not in _WS_GIT_READONLY:
+                return jsonify({'ok': False, 'blocked': True, 'error': f'git {sub or "(无子命令)"} 不是只读子命令，已拒绝。'}), 403
+            cmd = ['git', '-C', str(_WS_ROOT)] + parts[1:]
+        r = _ws_sp.run(cmd, capture_output=True, text=True, timeout=15,
+                       cwd=str(_WS_ROOT), encoding='utf-8', errors='replace')
+        return jsonify({'ok': r.returncode == 0, 'cmd': raw, 'cwd': str(_WS_ROOT),
+                        'output': (r.stdout or '') + (r.stderr or ''), 'code': r.returncode})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'{type(e).__name__}: {e}'}), 500
 
 
 # ===== 公关案例库 API（双模块联动体系） =====

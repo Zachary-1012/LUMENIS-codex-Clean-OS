@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ZBIP 组件预览 · Component Gallery</title>
-<link rel="stylesheet" href="/static/css/zbip-tokens.css?v=1.0.0">
+<link rel="stylesheet" href="/static/css/zbip-tokens.css?v=1.1.0">
 <link rel="stylesheet" href="/static/css/zbip-components.css?v=1.0.0">
 <style>
   body{margin:0;background:var(--zb-bg);color:var(--zb-text);font-family:var(--zb-font-sans);padding:var(--zb-sp-6);max-width:1080px;margin:0 auto}
@@ -20,6 +20,10 @@
 <body>
 <h1>ZBIP Component Gallery</h1>
 <p class="lead">侘寂黑白灰 · 六语义仅状态 · 高密度低装饰 · 仅 --zb-* 令牌 · 本页不接入任何生产页面</p>
+<div style="position:fixed;top:14px;right:18px;display:flex;gap:6px;z-index:10">
+  <button class="zb-btn zb-btn-sm" id="thmLight" type="button">Light</button>
+  <button class="zb-btn zb-btn-sm" id="thmDark" type="button">Dark</button>
+</div>
 
 <section class="g">
   <h2>Button · 主操作近黑 / 描边 / 幽灵 / 危险 × 尺寸 × 禁用 · 加载</h2>
@@ -110,5 +114,13 @@
     <div class="zb-panel"><div class="zb-state is-success"><div style="font-size:22px">✓</div><div class="zb-state-title">已恢复续采</div><div class="zb-state-desc">健康检查通过，低频试运行后逐步恢复正常频率。</div></div></div>
   </div>
 </section>
+<script>
+(function(){
+  function setT(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem('zb-theme', t); }
+  document.getElementById('thmLight').addEventListener('click', function(){ setT('light'); });
+  document.getElementById('thmDark').addEventListener('click', function(){ setT('dark'); });
+  var saved = localStorage.getItem('zb-theme'); if (saved) document.documentElement.setAttribute('data-theme', saved);
+})();
+</script>
 </body>
 </html>

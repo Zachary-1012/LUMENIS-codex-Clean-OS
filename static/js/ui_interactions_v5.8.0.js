@@ -247,7 +247,8 @@
             .then(data => {
                 if (data.ok && data.pending > 0) {
                     UIState.negativePendingCount = data.pending;
-                    showNegativePendingModal(data);
+                    /* 单模态原则：不再自动弹居中模态（会与“日报速览”叠加）；待审数仍写入侧栏 badge，提醒改非阻断 toast，入口在左侧“负面确认” */
+                    try { if (window.showToast) showToast('您有 ' + data.pending + ' 条负面舆情待确认（见左侧“负面确认”）', 'info'); } catch(e) {}
                 }
             })
             .catch(err => console.warn('检查待确认负面失败:', err));

@@ -1,0 +1,274 @@
+/* =============================================================================
+ * ZBIP App Shell · GPT/Codex 式工作台外壳层 v1.0（Staging only）
+ * 参考 docs/reference/ui-research/ref-20260901-step4（ChatGPT Work/Codex/设置）。
+ * 纯增量：只在 body.zb-shell-on 作用域下生效；不改源 DOM 结构、不改业务/后端，
+ * 分组由 zbip-shell.js 运行时包裹（回滚 = 移除本层 link/script）。
+ * 语言：Stone 暖黑白灰；侧栏 stone-100、主区白、四周窄留白色差；线性图标；
+ * 重要度用六语义小圆点；弹窗/浮层弱边框极弱阴影；黑胶囊 tooltip。
+ * ========================================================================== */
+
+/* ---------- 0. 外壳衬底：四周窄留白 + 内外色差 ---------- */
+body.zb-shell-on { background: var(--zb-stone-200, #E7E5E4); margin: 0; }
+body.zb-shell-on .app-shell {
+  background: var(--zb-stone-100, #F5F5F4);
+  min-height: 100vh;
+}
+/* 主内容区做成白色内面，与浅灰侧栏/外层形成窄边框色差 */
+body.zb-shell-on .layout { gap: 0; max-width: none; margin: 0; display: flex !important; align-items: stretch; }
+body.zb-shell-on .content,
+body.zb-shell-on .page {
+  background: var(--zb-stone-0, #FFFFFF);
+  border-radius: var(--zb-r-lg, 8px);
+  margin: 8px 8px 8px 0;
+  min-height: calc(100vh - 72px);
+  box-shadow: 0 1px 2px rgba(28,25,23,.04);
+  border: 1px solid var(--zb-stone-200, #E7E5E4);
+}
+
+/* ---------- 1. 侧栏：GPT 浅灰栏、线性、分组 ---------- */
+body.zb-shell-on .sidebar {
+  width: 248px !important; flex: 0 0 248px !important; max-width: 248px;
+  background: var(--zb-stone-100, #F5F5F4) !important;
+  border-right: 0 !important; padding: 8px 10px 8px !important;
+  gap: 4px; position: sticky !important; top: 56px !important; height: calc(100vh - 56px) !important; align-self: flex-start;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+body.zb-shell-on .sidebar.glass { background: var(--zb-stone-100,#F5F5F4) !important; border: 0 !important; box-shadow: none !important; }
+
+/* 工作区切换器 + 搜索 注入槽 */
+.zb-workspace-bar { display: flex; align-items: center; gap: 6px; padding: 2px 4px 6px; }
+.zb-ws-switch {
+  display: flex; align-items: center; gap: 6px; border: 0; background: transparent;
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--zb-stone-900,#1C1917);
+  padding: 6px 8px; border-radius: var(--zb-r-md,6px); cursor: pointer; letter-spacing:-.01em;
+  white-space: nowrap; flex: 0 0 auto;
+}
+.zb-ws-switch:hover { background: var(--zb-stone-200,#E7E5E4); }
+.zb-ws-switch svg { transition: transform var(--zb-d-micro,120ms); }
+.zb-ws-switch.open svg { transform: rotate(180deg); }
+.zb-icon-btn {
+  width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center;
+  border: 0; background: transparent; border-radius: var(--zb-r-md,6px); cursor: pointer;
+  color: var(--zb-stone-500,#78716C);
+}
+.zb-icon-btn:hover { background: var(--zb-stone-200,#E7E5E4); color: var(--zb-stone-900,#1C1917); }
+
+.zb-search { position: relative; margin: 0 4px 8px; }
+.zb-search svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zb-stone-400,#A8A29E); pointer-events:none; }
+.zb-search input {
+  width: 100%; height: 32px; border: 1px solid transparent; border-radius: var(--zb-r-md,6px);
+  background: rgba(28,25,23,.05); padding: 0 10px 0 30px; font: inherit; font-size: 13px; color: var(--zb-stone-900,#1C1917); outline: none;
+}
+.zb-search input::placeholder { color: var(--zb-stone-400,#A8A29E); }
+.zb-search input:focus { background: #fff; border-color: var(--zb-stone-300,#D6D3D1); }
+
+/* 侧栏导航滚动区 */
+body.zb-shell-on .side-nav {
+  flex: 1 1 auto !important; overflow-y: auto !important; overflow-x: hidden !important;
+  display: flex; flex-direction: column; gap: 1px; padding-right: 2px; min-height: 0 !important;
+}
+.zb-nav-group { display: flex; flex-direction: column; gap: 1px; margin-bottom: 4px; }
+.zb-nav-title {
+  font-size: 11px; font-weight: 600; color: var(--zb-stone-500,#78716C);
+  padding: 8px 10px 3px; letter-spacing: .04em;
+}
+body.zb-shell-on .side-item {
+  height: 34px !important; min-height: 34px !important; border-radius: var(--zb-r-md,6px) !important;
+  padding: 0 10px !important; gap: 7px !important; font-size: 13.5px !important; font-weight: 450;
+  color: var(--zb-stone-600,#57534E) !important; background: transparent !important;
+  position: relative;
+}
+body.zb-shell-on .side-item .navicon { width: 17px; flex: 0 0 17px; display: grid; place-items: center; color: var(--zb-stone-500,#78716C); opacity: 1 !important; }
+body.zb-shell-on .side-item .navicon svg { width: 16px; height: 16px; filter: drop-shadow(0 1px 1px rgba(28,25,23,.06)); }
+body.zb-shell-on .side-item:hover { background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important; }
+body.zb-shell-on .side-item.active { background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important; font-weight: 600; }
+body.zb-shell-on .side-item.active .navicon { color: var(--zb-stone-900,#1C1917); }
+/* 选中指示：旧绿色竖条（design-v9 ::before --gpt-green）统一覆盖为中性黑，Codex 式灰底+左黑条 */
+body.zb-shell-on .side-item.active::before {
+  content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 18px; background: var(--zb-stone-900,#1C1917) !important; border-radius: 0 2px 2px 0;
+}
+body.zb-shell-on .side-item.hidden-by-search { display: none !important; }
+body.zb-shell-on .nav-badge { background: var(--zb-danger,#DC2626); font-size: 10px; min-width: 18px; height: 18px; }
+/* 重要度小圆点（可挂在导航项右侧） */
+.zb-dot { width: 7px; height: 7px; border-radius: 999px; flex: 0 0 7px; display: inline-block; }
+.zb-dot.ok{background:var(--zb-success,#16A34A)} .zb-dot.info{background:var(--zb-info,#2563EB)}
+.zb-dot.attention{background:var(--zb-attention,#D97706)} .zb-dot.risk{background:var(--zb-risk,#EA580C)}
+.zb-dot.danger{background:var(--zb-danger,#DC2626)} .zb-dot.muted{background:var(--zb-stone-400,#A8A29E)}
+
+/* 侧栏底部：旧状态卡默认收起到更克制 + 账户槽 */
+body.zb-shell-on .side-footer, body.zb-shell-on .architecture-panel { display: none !important; }
+.zb-account-slot { flex: 0 0 auto; border-top: 1px solid var(--zb-stone-200,#E7E5E4); padding: 6px 4px 2px; }
+.zb-account-btn {
+  width: 100%; display: flex; align-items: center; gap: 9px; border: 0; background: transparent;
+  padding: 7px 8px; border-radius: var(--zb-r-md,6px); cursor: pointer; font: inherit; text-align: left;
+}
+.zb-account-btn:hover { background: var(--zb-stone-200,#E7E5E4); }
+.zb-avatar {
+  width: 26px; height: 26px; border-radius: 999px; flex: 0 0 26px; display: grid; place-items: center;
+  background: var(--zb-stone-900,#1C1917); color: #fff; font-size: 11px; font-weight: 600;
+  box-shadow: 0 1px 2px rgba(28,25,23,.18);
+}
+.zb-account-meta { min-width: 0; flex: 1; }
+.zb-account-meta b { display: block; font-size: 13px; font-weight: 600; color: var(--zb-stone-900,#1C1917); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zb-account-meta small { display: block; font-size: 11px; color: var(--zb-stone-500,#78716C); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 2. 浮层菜单（工作区切换 / 账户 / 项目） ---------- */
+.zb-pop {
+  position: fixed; z-index: var(--zb-z-dropdown,1000); min-width: 232px;
+  background: #fff; border: 1px solid var(--zb-stone-200,#E7E5E4); border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(28,25,23,.12), 0 2px 6px rgba(28,25,23,.06);
+  padding: 6px; opacity: 0; transform: translateY(-4px) scale(.99); pointer-events: none;
+  transition: opacity var(--zb-d-micro,120ms), transform var(--zb-d-micro,120ms);
+}
+.zb-pop.show { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.zb-pop-item {
+  width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: transparent;
+  padding: 8px 9px; border-radius: 7px; cursor: pointer; font: inherit; text-align: left; color: var(--zb-statext,#44403C);
+}
+.zb-pop-item:hover { background: var(--zb-stone-100,#F5F5F4); }
+.zb-pop-item .ico { width: 18px; display:grid; place-items:center; color: var(--zb-stone-500,#78716C); }
+.zb-pop-item .txt { flex: 1; min-width: 0; }
+.zb-pop-item .txt b { display:block; font-size: 13px; font-weight: 600; color: var(--zb-stone-900,#1C1917); }
+.zb-pop-item .txt small { display:block; font-size: 11px; color: var(--zb-stone-500,#78716C); }
+.zb-pop-item .trail { color: var(--zb-stone-400,#A8A29E); font-size: 11px; }
+.zb-pop-item.locked .trail { color: var(--zb-attention,#D97706); }
+.zb-pop-sep { height: 1px; background: var(--zb-stone-200,#E7E5E4); margin: 5px 4px; }
+
+/* 黑胶囊 tooltip */
+.zb-tip {
+  position: fixed; z-index: var(--zb-z-toast,1400); background: #1C1917; color: #FAFAF9;
+  font-size: 11px; line-height: 1; padding: 6px 9px; border-radius: 7px; pointer-events: none;
+  opacity: 0; transform: translateY(2px); transition: opacity .12s; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.zb-tip.show { opacity: 1; }
+
+/* ---------- 3. ZBMP 密钥门 Modal ---------- */
+.zb-modal-mask {
+  position: fixed; inset: 0; z-index: var(--zb-z-modal,1300); background: rgba(28,25,23,.32);
+  display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .18s;
+}
+.zb-modal-mask.show { opacity: 1; pointer-events: auto; }
+.zb-modal {
+  width: min(420px, 92vw); background: #fff; border-radius: 12px; border: 1px solid var(--zb-stone-200,#E7E5E4);
+  box-shadow: 0 20px 60px rgba(28,25,23,.22); padding: 20px; transform: translateY(6px); transition: transform .2s var(--zb-ease-out,cubic-bezier(.16,1,.3,1));
+}
+.zb-modal-mask.show .zb-modal { transform: translateY(0); }
+.zb-modal h3 { margin: 0 0 4px; font-size: 16px; font-weight: 650; color: var(--zb-stone-900,#1C1917); }
+.zb-modal p { margin: 0 0 14px; font-size: 12.5px; color: var(--zb-stone-500,#78716C); line-height: 1.6; }
+.zb-modal .zb-field { margin-bottom: 14px; }
+.zb-modal input[type=password], .zb-modal input[type=text] {
+  width: 100%; height: 36px; border: 1px solid var(--zb-stone-300,#D6D3D1); border-radius: 8px; padding: 0 11px; font: inherit; font-size: 13px; outline: none;
+}
+.zb-modal input:focus { border-color: var(--zb-stone-900,#1C1917); }
+.zb-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.zb-key-err { color: var(--zb-danger,#DC2626); font-size: 12px; min-height: 16px; margin: 0 0 8px; }
+.zb-btn-primary, .zb-btn-ghost {
+  height: 34px; padding: 0 14px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.zb-btn-primary { background: var(--zb-stone-900,#1C1917); color: #fff; border: 1px solid var(--zb-stone-900,#1C1917); }
+.zb-btn-primary:hover { background: var(--zb-stone-700,#44403C); }
+.zb-btn-ghost { background: #fff; color: var(--zb-stone-700,#44403C); border: 1px solid var(--zb-stone-300,#D6D3D1); }
+.zb-btn-ghost:hover { background: var(--zb-stone-100,#F5F5F4); }
+
+/* ---------- 4. Home：干净居中 Zachary 提问页 ---------- */
+#zbHome {
+  position: fixed; top: 56px; left: 248px; right: 0; bottom: 0; z-index: 50; background: var(--zb-stone-50,#FAFAF9);
+  display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; overflow: auto;
+}
+body.zb-shell-on #zbHome.show { display: flex; }
+.zb-home-inner { width: min(720px, 100%); text-align: center; }
+.zb-home-title { font-size: 30px; font-weight: 650; letter-spacing: -.02em; color: var(--zb-stone-900,#1C1917); margin: 0 0 26px; }
+.zb-ask {
+  border: 1px solid var(--zb-stone-300,#D6D3D1); border-radius: 18px; background: #fff;
+  box-shadow: 0 2px 10px rgba(28,25,23,.05); padding: 14px 14px 10px; text-align: left; transition: box-shadow .18s, border-color .18s;
+}
+.zb-ask:focus-within { border-color: var(--zb-stone-400,#A8A29E); box-shadow: 0 6px 22px rgba(28,25,23,.10); }
+.zb-ask textarea {
+  width: 100%; border: 0; outline: none; resize: none; font: inherit; font-size: 14px; color: var(--zb-stone-900,#1C1917);
+  min-height: 30px; max-height: 160px; background: transparent;
+}
+.zb-ask textarea::placeholder { color: var(--zb-stone-400,#A8A29E); }
+.zb-ask-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.zb-ask-bar .spacer { flex: 1; }
+.zb-ask-model { font-size: 11px; color: var(--zb-stone-500,#78716C); }
+.zb-send {
+  width: 30px; height: 30px; border-radius: 999px; border: 0; display: grid; place-items: center;
+  background: var(--zb-stone-900,#1C1917); color: #fff; cursor: pointer;
+}
+.zb-send:disabled { background: var(--zb-stone-300,#D6D3D1); cursor: default; }
+.zb-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+.zb-chip {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--zb-stone-200,#E7E5E4); background: #fff;
+  border-radius: 999px; padding: 7px 13px; font: inherit; font-size: 12.5px; color: var(--zb-stone-700,#44403C); cursor: pointer;
+  transition: background .14s, border-color .14s;
+}
+.zb-chip:hover { background: var(--zb-stone-100,#F5F5F4); border-color: var(--zb-stone-300,#D6D3D1); }
+.zb-chip svg { width: 14px; height: 14px; color: var(--zb-stone-500,#78716C); }
+.zb-home-sub { margin-top: 22px; font-size: 11.5px; color: var(--zb-stone-400,#A8A29E); }
+
+/* 隐藏乱飘的旧 Zachary 浮动头像（功能收进 Home/账户，不删源码） */
+body.zb-shell-on #zacharyFloat { display: none !important; }
+
+body.zb-shell-on .export-dropdown .action.primary,body.zb-shell-on .page-hero .action.primary{background:#fff!important;color:var(--zb-stone-700,#44403C)!important;border:1px solid var(--zb-stone-300,#D6D3D1)!important;box-shadow:none!important} body.zb-shell-on .export-dropdown .action.primary:hover,body.zb-shell-on .page-hero .action.primary:hover{background:var(--zb-stone-100,#F5F5F4)!important;color:var(--zb-stone-900,#1C1917)!important}
+/* ---------- 5. 顶栏收敛：去渐变/苹果色，对齐工程感 ---------- */
+body.zb-shell-on .topbar { background: var(--zb-stone-100,#F5F5F4) !important; border-bottom: 1px solid var(--zb-stone-200,#E7E5E4) !important; backdrop-filter: none !important; height: 56px !important; }
+/* 身份信息由左栏工作区切换器承担，旧顶栏品牌/居中状态/时钟在外壳下弱化，右侧操作保留 */
+body.zb-shell-on .topbar .brand,
+body.zb-shell-on .topbar .top-center,
+body.zb-shell-on .topbar .clock,
+body.zb-shell-on .topbar .topbar-time { display: none !important; }
+/* 隐藏 brand 后把操作区推到右侧，避免左上空一大片 */
+body.zb-shell-on .topbar { display: flex; align-items: center; }
+body.zb-shell-on .topbar .top-actions { margin-left: 0; display: flex; align-items: center; gap: 4px; }
+/* 左上角轻量操作槽（采集数据左置，zbip-shell.js 运行时把 refreshBtn 移入） */
+body.zb-shell-on .zb-top-left { display: flex; align-items: center; gap: 6px; margin-right: auto; min-width: 0; }
+/* 顶栏文字型操作统一为纯文字轻量（采集/AI分析/导出同规范：透明底、hover 浅灰，去实心/去蓝链） */
+body.zb-shell-on .topbar .action.zb-text-action,
+body.zb-shell-on .topbar .top-actions .action.secondary,
+body.zb-shell-on .topbar .top-actions .action.tertiary {
+  background: transparent !important; box-shadow: none !important; border: 1px solid transparent !important;
+  color: var(--zb-stone-700,#44403C) !important; padding: 0 9px; font-weight: 550;
+}
+body.zb-shell-on .topbar .action.zb-text-action:hover,
+body.zb-shell-on .topbar .top-actions .action.secondary:hover,
+body.zb-shell-on .topbar .top-actions .action.tertiary:hover {
+  background: var(--zb-stone-200,#E7E5E4) !important; color: var(--zb-stone-900,#1C1917) !important;
+}
+/* 顶栏操作统一为线性图标紧凑按钮（emoji 由 JS 替换为内联 SVG） */
+body.zb-shell-on .topbar .action { display: inline-flex; align-items: center; gap: 6px; height: 34px; border-radius: 7px; font-size: 13px; font-weight: 550; }
+body.zb-shell-on .topbar .action.icon-only { width: 34px; justify-content: center; padding: 0; }
+body.zb-shell-on .topbar .action .svgicon { display: inline-grid; place-items: center; width: 16px; height: 16px; line-height: 1; font-size: 0; }
+body.zb-shell-on .topbar .action .svgicon svg { width: 16px; height: 16px; }
+body.zb-shell-on .action.primary { background: var(--zb-stone-900,#1C1917) !important; color: #fff !important; box-shadow: none !important; border-radius: var(--zb-r-md,6px) !important; }
+body.zb-shell-on .brandmark { background: var(--zb-stone-900,#1C1917) !important; border-radius: 7px !important; box-shadow: 0 1px 2px rgba(28,25,23,.18) !important; }
+
+/* ---------- 6. 响应式：390 侧栏抽屉、Home 自适应 ---------- */
+@media (max-width: 760px) {
+  body.zb-shell-on #zbHome { left: 0; top: 56px; }
+  /* 手机：外壳单列、内容收满宽，避免沿用桌面 flex 双栏导致整页横向溢出 */
+  body.zb-shell-on .app-shell { display: block; }
+  body.zb-shell-on .layout { display: block !important; width: 100% !important; max-width: 100% !important; grid-template-columns: none !important; }
+  body.zb-shell-on .content { width: auto !important; max-width: 100% !important; min-width: 0 !important; margin: 6px !important; padding: 14px !important; box-sizing: border-box; }
+  body.zb-shell-on .page-view, body.zb-shell-on .page-hero { max-width: 100% !important; min-width: 0 !important; }
+  body.zb-shell-on .page-hero p { overflow-wrap: anywhere; word-break: break-word; }
+  body.zb-shell-on .sidebar { position: fixed !important; left: 0; top: 0; bottom: 0; z-index: 1200; transform: translateX(-102%) !important; transition: transform .24s var(--zb-ease-out,cubic-bezier(.16,1,.3,1)); height: 100vh !important; }
+  body.zb-shell-on.zb-nav-open .sidebar { transform: translateX(0) !important; box-shadow: 0 0 40px rgba(28,25,23,.2) !important; }
+  body.zb-shell-on .content, body.zb-shell-on .page { margin: 6px; min-height: calc(100vh - 64px); }
+  .zb-home-title { font-size: 24px; }
+  /* 手机顶栏只留线性图标，隐藏文字标签，避免拥挤 */
+  body.zb-shell-on .topbar .action .btn-label { display: none; }
+  body.zb-shell-on .topbar .top-actions { gap: 4px; }
+  body.zb-shell-on .topbar .action { padding: 0; width: 34px; justify-content: center; }
+  body.zb-shell-on .zb-top-left .action.zb-text-action { padding: 0; width: 34px; justify-content: center; }
+  .zb-home-inner { padding: 0 4px; }
+  .zb-ask { border-radius: 14px; }
+  .zb-ask textarea { min-height: 46px; }
+  .zb-chips { gap: 6px; }
+  .zb-chip { padding: 6px 11px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zb-pop, .zb-modal, .zb-ask, .zb-chip, .zb-ws-switch svg, .zb-tip { transition: none !important; }
+}
+/* 日报速览弹窗收编：黑白灰/小状态点/内联统计/模态按钮统一 */
+#modalContent h3{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:16px} #modalContent .dr-sub{font-weight:400;color:var(--zb-stone-500,#78716C);font-size:12px} #modalContent .dr-level{display:flex;align-items:center;gap:8px;padding:4px 0 12px;margin-bottom:12px;border-bottom:1px solid var(--zb-stone-200,#E7E5E4)} #modalContent .dr-dot{width:8px;height:8px;border-radius:99px;background:var(--zb-stone-500,#78716C);flex:none} #modalContent .dr-dot-danger{background:#DC2626} #modalContent .dr-dot-warn{background:#D97706} #modalContent .dr-dot-ok{background:#16A34A} #modalContent .dr-level-txt{font-weight:650;font-size:14px;color:var(--zb-stone-900,#1C1917)} #modalContent .dr-range{margin-left:auto;color:var(--zb-stone-500,#78716C);font-size:12px} #modalContent .dr-stats{display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:12px} #modalContent .dr-stat{text-align:center;border-right:1px solid var(--zb-stone-200,#E7E5E4)} #modalContent .dr-stat:last-child{border-right:0} #modalContent .dr-stat b{display:block;font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;color:var(--zb-stone-900,#1C1917)} #modalContent .dr-stat span{display:block;color:var(--zb-stone-500,#78716C);font-size:11px;margin-top:2px} #modalContent .dr-concl{background:var(--zb-stone-100,#F5F5F4);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--zb-stone-700,#44403C)} #modalContent .dr-concl b{color:var(--zb-stone-900,#1C1917);margin-right:6px} #modalContent .dr-notes{max-height:220px;overflow:auto;margin-bottom:14px} #modalContent .dr-notes ul{list-style:none;margin:0;padding:0;font-size:13px} #modalContent .dr-notes li{padding:7px 0;border-bottom:1px solid var(--zb-stone-200,#E7E5E4);display:flex;justify-content:space-between;gap:8px} #modalContent .dr-notes .dr-note-t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--zb-stone-900,#1C1917);font-weight:550} #modalContent .dr-notes .dr-note-m{color:var(--zb-stone-500,#78716C);font-size:12px;white-space:nowrap} #modalContent .dr-empty{color:var(--zb-stone-500,#78716C)!important} body.zb-shell-on .modal .action.primary{background:var(--zb-stone-900,#1C1917)!important;color:#fff!important;border:1px solid var(--zb-stone-900,#1C1917)!important;box-shadow:none!important} body.zb-shell-on .modal .action.secondary,body.zb-shell-on .modal .action.tertiary{background:transparent!important;color:var(--zb-stone-700,#44403C)!important;border:1px solid var(--zb-stone-300,#D6D3D1)!important;box-shadow:none!important} body.zb-shell-on #modal.modal{background:transparent!important;border:0!important;border-radius:0!important;max-width:none!important;max-height:none!important;width:100%!important;height:100%!important;padding:0!important;overflow:hidden!important} body.zb-shell-on #modal .modal-mask{position:fixed!important;inset:0!important;background:rgba(28,25,23,.40)!important;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);border-radius:0!important} body.zb-shell-on #modal .modal-close{color:var(--zb-stone-500,#78716C)!important;background:transparent!important;border:0!important;font-size:20px!important;top:12px!important;right:14px!important} @media(min-width:761px){body.zb-shell-on #modal .modal-panel{position:relative!important;background:#fff!important;border-radius:12px!important;box-shadow:0 16px 48px rgba(28,25,23,.20)!important;padding:22px 24px!important;max-width:560px!important;width:calc(100% - 48px)!important;max-height:84vh!important;overflow-y:auto!important;animation:zbPop .22s cubic-bezier(.16,1,.3,1)!important}} @media(max-width:760px){body.zb-shell-on #modal .modal-panel{background:#fff!important;border-radius:16px 16px 0 0!important;padding:20px 16px!important;width:100%!important;max-width:none!important;max-height:88vh!important}} @keyframes zbPop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}

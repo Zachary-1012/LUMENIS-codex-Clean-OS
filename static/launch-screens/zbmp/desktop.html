@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Z-Brand 品牌监测平台 · ZBMP</title>
+<style>
+  /* 侘寂黑白灰启动封面 · 桌面版 · 当前不接入系统（独立静态页，可直接双击打开） */
+  :root{
+    --bg:#FAFAF9; --surface:#FFFFFF; --stone-900:#1C1917; --stone-700:#44403C;
+    --stone-500:#78716C; --stone-300:#D6D3D1; --stone-200:#E7E5E4;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--stone-900); -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+  }
+  .bootline{position:fixed;top:0;left:0;height:1px;width:0;background:var(--stone-900);animation:boot 1.1s var(--ease) forwards}
+  @keyframes boot{to{width:100%}}
+  .stage{text-align:center;animation:rise .6s var(--ease) both;max-width:760px;padding:24px}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .mark{width:40px;height:40px;margin:0 auto 26px;color:var(--stone-900)}
+  .cn{font-size:34px;font-weight:650;letter-spacing:-.01em;line-height:1.25}
+  .en{margin-top:12px;font-size:13px;color:var(--stone-500);letter-spacing:.02em;line-height:1.6}
+  .divider{width:40px;height:1px;background:var(--stone-300);margin:22px auto}
+  .abbr{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;color:var(--stone-700);
+    border:1px solid var(--stone-200);border-radius:999px;padding:6px 14px;background:var(--surface)}
+  .abbr .dot{width:6px;height:6px;border-radius:999px;background:var(--stone-900)}
+  .sysfoot{position:fixed;left:0;right:0;bottom:26px;text-align:center;font-size:11px;letter-spacing:.16em;color:var(--stone-500)}
+  .mask{position:fixed;inset:0;background:rgba(28,25,23,.32);display:grid;place-items:center;
+    opacity:0;pointer-events:none;transition:opacity .24s var(--ease)}
+  .mask.show{opacity:1;pointer-events:auto}
+  .sheet{width:min(380px,90vw);background:var(--surface);border:1px solid var(--stone-200);border-radius:14px;
+    padding:24px;box-shadow:0 24px 64px rgba(28,25,23,.20);transform:translateY(8px) scale(.99);
+    transition:transform .28s var(--ease)}
+  .mask.show .sheet{transform:none}
+  .sheet h3{font-size:16px;font-weight:650;margin-bottom:4px}
+  .sheet p{font-size:12.5px;color:var(--stone-500);line-height:1.6;margin-bottom:18px}
+  .sheet input{width:100%;height:40px;border:1px solid var(--stone-300);border-radius:9px;padding:0 12px;
+    font:inherit;font-size:14px;outline:none;background:var(--bg)}
+  .sheet input:focus{border-color:var(--stone-900)}
+  .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .btn{height:36px;padding:0 16px;border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--stone-900);color:#fff;border:1px solid var(--stone-900)}
+  .btn.ghost{background:#fff;color:var(--stone-700);border:1px solid var(--stone-300)}
+  .hint{margin-top:12px;font-size:11px;color:var(--stone-500);text-align:center}
+</style>
+</head>
+<body>
+  <div class="bootline"></div>
+  <div class="stage">
+    <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+    <div class="cn">Z-Brand 品牌监测平台</div>
+    <div class="en">Z-Brand Monitoring Platform</div>
+    <div class="divider"></div>
+    <span class="abbr"><span class="dot"></span>ZBMP · 内部母平台增强能力层</span>
+  </div>
+  <div class="sysfoot">Z-BRAND CORE</div>
+
+  <div class="mask" id="loginMask" role="dialog" aria-modal="true">
+    <div class="sheet">
+      <h3>进入 ZBMP 工作区</h3>
+      <p>Z-Brand 品牌监测平台为受限工作区，请输入管理员签发的访问密钥</p>
+      <input type="password" id="pw" placeholder="ZBMP 访问密钥" autocomplete="off">
+      <div class="row">
+        <button class="btn ghost" type="button" onclick="document.getElementById('loginMask').classList.remove('show')">取消</button>
+        <button class="btn primary" type="button" onclick="alert('静态封面示意：正式接入后在此校验密钥')">解锁进入</button>
+      </div>
+      <div class="hint">启动页为独立静态示意，当前未接入主系统</div>
+    </div>
+  </div>
+<script>
+  setTimeout(function(){ document.getElementById('loginMask').classList.add('show'); }, 1200);
+</script>
+</body>
+</html>
