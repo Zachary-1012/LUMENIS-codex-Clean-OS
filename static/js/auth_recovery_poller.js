@@ -59,7 +59,16 @@
     }
     if (children && Array.isArray(children)) {
       for (var i = 0; i < children.length; i++) {
-        if (children[i] != null) el.appendChild(children[i]);
+        var child = children[i];
+        if (child != null) {
+          // 兼容 primitive 字符串/数字/布尔 → 自动转 TextNode（防止 appendChild(字符串) 抛 "not of type Node"）
+          if (typeof child === 'string' || typeof child === 'number' || typeof child === 'boolean') {
+            el.appendChild(document.createTextNode(String(child)));
+          } else if (child.nodeType) {
+            el.appendChild(child);
+          }
+          // 其他非 DOM/非 primitive 类型静默跳过（避免污染 DOM）
+        }
       }
     }
     return el;
@@ -159,7 +168,7 @@
     ]));
     // recovery_url 外链区
     var linkWrap = h('div', null, { 'id': 'ar-modal-linkwrap', 'style': 'margin-top:14px;padding:12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;display:none;' });
-    linkWrap.appendChild(h('div', null, { 'style': 'font-size:12px;color:#64748b;margin-bottom:6px;' }, ['去官方完成验证 ↓']));
+    linkWrap.appendChild(h('div', '去官方完成验证 ↓', { 'style': 'font-size:12px;color:#64748b;margin-bottom:6px;' }));
     linkWrap.appendChild(h('a', null, { 'id': 'ar-modal-recovery-link', 'href': '#' }));
     body.appendChild(linkWrap);
     // Actions
