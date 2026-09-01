@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>品牌业务生产平台 · ZBP 启动</title>
+<style>
+/* ============ 浅色莫兰迪设计系统（暖白 + 低饱和莫兰迪） ============ */
+:root{
+  --paper:#F6F3EE;        /* 暖白纸面 */
+  --paper-2:#EFEAE1;      /* 次浅底 */
+  --ink:#26221D;          /* 主文字 暖石黑 */
+  --ink-2:#6E675E;        /* 次文字 */
+  --ink-3:#A39A8E;        /* 弱文字 */
+  --line:rgba(38,34,29,.10);
+  /* 莫兰迪 低饱和色板 */
+  --m-blue:#AEBCCB;  --m-blue-d:#94A6BA;
+  --m-rose:#D3C0BF;  --m-rose-d:#BCA3A2;
+  --m-sage:#B3BFAE;  --m-sage-d:#97A892;
+  --m-oat:#D6CAB2;   --m-oat-d:#C0B193;
+  --m-clay:#CDB3A2;
+  --m-lilac:#BDB5C6;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --ease-soft:cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:
+    radial-gradient(1200px 800px at 78% -10%, #EDE7DC 0%, transparent 55%),
+    radial-gradient(1000px 760px at -10% 110%, #E9E6E0 0%, transparent 55%),
+    var(--paper);
+  color:var(--ink); -webkit-font-smoothing:antialiased; position:relative;
+}
+/* 极细颗粒，增加纸面质感（极淡） */
+.grain{position:fixed;inset:0;pointer-events:none;opacity:.035;z-index:1;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+
+/* ================= 波纹层（极淡莫兰迪圆环） ================= */
+.ripples{position:fixed;inset:0;z-index:1;pointer-events:none;display:grid;place-items:center}
+.ripple{position:absolute;width:26vmin;height:26vmin;border-radius:50%;
+  border:1px solid rgba(148,166,186,.35);animation:ripple 9s var(--ease-soft) infinite}
+.ripple:nth-child(2){animation-delay:3s;border-color:rgba(188,163,162,.30)}
+.ripple:nth-child(3){animation-delay:6s;border-color:rgba(151,168,146,.28)}
+@keyframes ripple{0%{transform:scale(.5);opacity:0}18%{opacity:.9}100%{transform:scale(5.2);opacity:0}}
+
+/* ================= 浮动小窗口层 ================= */
+.cards{position:fixed;inset:0;z-index:2;pointer-events:none}
+.card-pos{position:absolute;left:50%;top:50%;
+  transform:translate(var(--sx),var(--sy)) scale(var(--ss,1));
+  transition:transform 1.15s var(--ease),opacity .9s var(--ease)}
+body.orbit .card-pos{transform:translate(var(--ox),var(--oy)) scale(1)}
+body.cth-burst .card-pos{transform:translate(var(--bx),var(--by)) scale(.4);opacity:0;transition:transform 1.3s var(--ease),opacity 1.1s ease}
+body.z-recall .card-pos{transform:translate(0,0) scale(.15);opacity:0;transition:transform 1.05s var(--ease),opacity .9s ease}
+.card-float{animation:floaty var(--fd,7s) ease-in-out infinite;animation-delay:var(--fdel,0s)}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(var(--rot,0deg))}50%{transform:translateY(-12px) rotate(calc(var(--rot,0deg) + 1.1deg))}}
+.card{position:relative;width:var(--cw,132px);padding:13px 14px;border-radius:16px;
+  background:linear-gradient(150deg,var(--mc,#fff) 0%, color-mix(in srgb,var(--mc,#fff) 78%,#fff) 100%);
+  border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 10px 30px rgba(70,60,48,.10), inset 0 1px 0 rgba(255,255,255,.6);
+  backdrop-filter:blur(6px);overflow:hidden;
+  opacity:.96;
+}
+/* 流光表面划过 */
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.55) 48%,rgba(255,255,255,.0) 62%);
+  transform:translateX(-130%);animation:sheen var(--sh,6.5s) ease-in-out infinite;animation-delay:var(--shdel,0s)}
+@keyframes sheen{0%,55%{transform:translateX(-130%)}85%,100%{transform:translateX(130%)}}
+.card .c-dot{width:7px;height:7px;border-radius:50%;background:var(--md,#8a8a8a);box-shadow:0 0 0 3px rgba(255,255,255,.5)}
+.card .c-top{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.card .c-name{font-size:12.5px;font-weight:600;letter-spacing:.02em;color:#3c382f}
+.card .c-bar{height:4px;border-radius:4px;background:rgba(255,255,255,.5);overflow:hidden;margin-bottom:6px}
+.card .c-bar i{display:block;height:100%;width:var(--pct,60%);border-radius:4px;background:rgba(255,255,255,.85)}
+.card .c-meta{font-size:9.5px;color:rgba(60,56,47,.55);letter-spacing:.06em;text-transform:uppercase}
+@media (max-width:640px){ .card{width:var(--mcw,104px);padding:10px 11px;border-radius:13px} .card .c-name{font-size:11px} }
+
+/* ================= 中央主视觉 ================= */
+.hero{position:fixed;z-index:5;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:min(680px,90vw)}
+.hero .h-icon{width:46px;height:46px;margin:0 auto 18px;border-radius:13px;display:grid;place-items:center;
+  background:linear-gradient(150deg,#fff,#EFE9DF);border:1px solid var(--line);
+  box-shadow:0 8px 24px rgba(70,60,48,.10);animation:breathe 5s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.hero .h-en{font-size:12.5px;letter-spacing:.20em;color:var(--ink-2);text-transform:uppercase;font-weight:500;margin-bottom:12px}
+.hero .h-cn{font-size:clamp(28px,4.6vw,46px);font-weight:650;letter-spacing:.04em;line-height:1.18;color:var(--ink)}
+.hero .h-abbr{margin:16px auto 0;font-size:13px;letter-spacing:.34em;color:var(--ink-2);
+  border:1px solid var(--line);border-radius:999px;padding:7px 20px;background:rgba(255,255,255,.5);display:inline-block}
+.hero .h-rule{width:44px;height:1px;background:var(--ink-3);margin:20px auto;opacity:.7}
+/* 拆字容器（CTH 扩散用） */
+.chars{display:inline-flex;justify-content:center;flex-wrap:wrap}
+.chars span{display:inline-block;transition:transform 1.2s var(--ease),opacity 1s ease,filter 1s ease}
+body.cth-burst .chars span{transform:translate(var(--cx),var(--cy)) rotate(var(--cr)) scale(1.15);opacity:0;filter:blur(6px)}
+/* 进入按钮 / 产品选择 */
+.enter{margin-top:26px;display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap}
+.btn{height:46px;padding:0 30px;border-radius:999px;border:1px solid var(--ink);background:var(--ink);color:#F6F3EE;
+  font:inherit;font-size:14px;font-weight:600;letter-spacing:.08em;cursor:pointer;transition:.25s var(--ease);
+  box-shadow:0 10px 26px rgba(38,34,29,.18)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(38,34,29,.22)}
+.btn.ghost{background:rgba(255,255,255,.6);color:var(--ink);border-color:var(--line);box-shadow:none}
+.btn.ghost:hover{background:#fff}
+.products{display:flex;gap:14px;justify-content:center;margin-top:8px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.6s var(--ease)}
+body.orbit .products{opacity:1;transform:none;pointer-events:auto}
+body.orbit .enter-main{opacity:0;transform:translateY(-8px);pointer-events:none;position:absolute}
+.pcard{min-width:200px;padding:16px 18px;text-align:left;border-radius:16px;background:rgba(255,255,255,.66);
+  border:1px solid var(--line);cursor:pointer;transition:.25s var(--ease);backdrop-filter:blur(8px)}
+.pcard:hover{transform:translateY(-3px);background:#fff;box-shadow:0 16px 36px rgba(70,60,48,.12)}
+.pcard .p-t{font-size:14.5px;font-weight:650;margin-bottom:4px}
+.pcard .p-s{font-size:11px;color:var(--ink-2);letter-spacing:.03em;line-height:1.5}
+.pcard .p-k{margin-top:9px;font-size:10px;letter-spacing:.18em;color:var(--ink-3)}
+@media (max-width:640px){.products{flex-direction:column;align-items:center}.pcard{min-width:240px}}
+.enter-main{transition:.5s var(--ease)}
+.hint-back{position:absolute;top:-46px;left:50%;transform:translateX(-50%);font-size:11.5px;color:var(--ink-3);letter-spacing:.05em;opacity:0;transition:.4s}
+body.orbit .hint-back{opacity:1}
+
+/* ================= 底部系统名（全程保留） ================= */
+.sysfoot{position:fixed;z-index:8;left:0;right:0;bottom:24px;text-align:center;font-size:10.5px;letter-spacing:.22em;color:var(--ink-3)}
+
+/* ================= 苹果风居中密钥弹窗 ================= */
+.mask{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(38,34,29,.22);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
+.mask.show{opacity:1;pointer-events:auto}
+.sheet{width:min(360px,88vw);background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.7);border-radius:18px;
+  padding:26px 24px;box-shadow:0 30px 80px rgba(40,34,26,.24);transform:translateY(10px) scale(.98);transition:.32s var(--ease)}
+.mask.show .sheet{transform:none}
+.sheet h3{font-size:16px;font-weight:650;margin-bottom:4px}
+.sheet p{font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:18px}
+.sheet input{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;padding:0 13px;font:inherit;font-size:14px;outline:none;background:#FBFAF7}
+.sheet input:focus{border-color:var(--ink-2)}
+.sheet .row{display:flex;gap:9px;justify-content:flex-end;margin-top:16px}
+.sheet .btn{height:38px;padding:0 18px;font-size:13px}
+.sheet .err{color:#b06a5c;font-size:11.5px;margin-top:8px;min-height:14px}
+
+/* ================= ZBMP 全白回收遮罩 ================= */
+.whiteout{position:fixed;inset:0;z-index:15;background:#FBFAF7;opacity:0;pointer-events:none;transition:opacity .7s var(--ease)}
+body.z-white .whiteout{opacity:1}
+body.z-fade .whiteout{opacity:0;transition:opacity 1.4s var(--ease)}
+/* 承接页（产品名） */
+.landing{position:fixed;inset:0;z-index:14;display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity 1s var(--ease)}
+body.land .landing{opacity:1}
+.landing .l-inner{text-align:center}
+.landing .l-en{font-size:12px;letter-spacing:.22em;color:var(--ink-3);text-transform:uppercase;margin-bottom:10px}
+.landing .l-cn{font-size:clamp(26px,4vw,40px);font-weight:650;letter-spacing:.05em}
+.landing .l-ab{margin-top:14px;font-size:12px;letter-spacing:.3em;color:var(--ink-2)}
+.landing .l-tip{margin-top:26px;font-size:11.5px;color:var(--ink-3)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.15ms !important}}
+</style>
+</head>
+<body>
+  <div class="grain"></div>
+  <div class="ripples"><span class="ripple"></span><span class="ripple"></span><span class="ripple"></span></div>
+  <div class="cards" id="cards"></div>
+
+  <!-- 中央主视觉 -->
+  <div class="hero" id="hero">
+    <div class="h-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#26221D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 18h18"/><path d="M6 15V9"/><path d="M11 15V6"/><path d="M16 15v-4"/><path d="M20 15V11"/>
+      </svg>
+    </div>
+    <div class="h-en">Z-Brand Business Production Platform</div>
+    <div class="h-cn"><span class="chars" id="cnChars">品牌业务生产平台</span></div>
+    <div class="h-abbr">Z B P</div>
+    <div class="h-rule"></div>
+
+    <div class="enter">
+      <div class="enter-main" id="enterMain">
+        <button class="btn" id="btnEnter">进 入</button>
+      </div>
+      <div class="products" id="products">
+        <div class="pcard" id="pickCTH">
+          <div class="p-t">广州太古汇舆情监测系统</div>
+          <div class="p-s">CorTech Lab · Guangzhou Taikoo Hui<br>Public Opinion Monitoring System</div>
+          <div class="p-k">CTH-POMS · 生产 / 客户交付</div>
+        </div>
+        <div class="pcard" id="pickZBMP">
+          <div class="p-t">Z-Brand 品牌监测平台</div>
+          <div class="p-s">Z-Brand Monitoring Platform</div>
+          <div class="p-k">ZBMP · 母平台增强能力层</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sysfoot">Z-BRAND INTELLIGENCE PLATFORM · 品牌业务生产平台</div>
+
+  <!-- ZBMP 密钥弹窗 -->
+  <div class="mask" id="keyMask">
+    <form class="sheet" onsubmit="return false">
+      <h3>进入 ZBMP</h3>
+      <p>Z-Brand Monitoring Platform · 请输入工作区访问密钥</p>
+      <input type="password" id="zbmpKey" placeholder="访问密钥" autocomplete="off">
+      <div class="err" id="keyErr"></div>
+      <div class="row">
+        <button class="btn ghost" type="button" id="keyCancel">取消</button>
+        <button class="btn" type="button" id="keyOk">解锁进入</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 全白遮罩 -->
+  <div class="whiteout"></div>
+  <!-- 承接页 -->
+  <div class="landing" id="landing"><div class="l-inner">
+    <div class="l-en" id="lEn"></div><div class="l-cn" id="lCn"></div><div class="l-ab" id="lAb"></div>
+    <div class="l-tip">（独立预览示意 · 正式接入时从此跳转对应工作区）</div>
+  </div></div>
+
+<script>
+(function(){
+  /* ---- 能力小窗口数据（莫兰迪配色，低饱和） ---- */
+  var M = {blue:['--m-blue','--m-blue-d'],rose:['--m-rose','--m-rose-d'],sage:['--m-sage','--m-sage-d'],
+           oat:['--m-oat','--m-oat-d'],clay:['--m-clay','--m-clay'],lilac:['--m-lilac','--m-lilac']};
+  var DATA=[
+    ['舆情监测','blue',66],['风险预警','clay',48],['事件图谱','lilac',58],['品牌知识库','sage',72],
+    ['智能报告','oat',61],['AI 洞察','rose',54],['消费者洞察','blue',44],['市场情报','sage',57],['案例拆解','rose',63]
+  ];
+  var isMob = matchMedia('(max-width:640px)').matches;
+  var layer=document.getElementById('cards');
+  var N=DATA.length, cards=[];
+
+  /* 椭圆轨道半径（vmin 响应式） */
+  function vmin(){return Math.min(innerWidth,innerHeight);}
+  function orbitPos(i){
+    var ang=(-90 + i*(360/N))*Math.PI/180;
+    var rx=(isMob?40:34)* (innerWidth/vmin()) * (vmin()/100); // 横向半径 px
+    var ry=(isMob?33:30)*(vmin()/100);
+    // 不规则扰动
+    var jx=(Math.random()*40-20), jy=(Math.random()*30-15);
+    return {x:Math.cos(ang)*rx* (innerWidth/vmin()) + jx, y:Math.sin(ang)*ry + jy};
+  }
+  /* 散落位置：分四个象限随机、避开中央 240px、不密集 */
+  function scatterPos(i){
+    var vw=innerWidth, vh=innerHeight, x,y,ok=false,t=0;
+    var minR=isMob?150:230;
+    while(!ok&&t++<60){
+      x=(Math.random()-.5)*vw*.86; y=(Math.random()-.5)*vh*.8;
+      ok=Math.hypot(x,y)>minR;
+    }
+    return {x:x,y:y};
+  }
+  /* 扩散出屏方向（CTH） */
+  function burstPos(i){var a=(i/N)*Math.PI*2;var d=Math.max(innerWidth,innerHeight)*.8;return{x:Math.cos(a)*d,y:Math.sin(a)*d};}
+
+  DATA.forEach(function(d,i){
+    var pos=document.createElement('div');pos.className='card-pos';
+    var fl=document.createElement('div');fl.className='card-float';
+    var card=document.createElement('div');card.className='card';
+    var mc='var('+M[d[1]][0]+)', md='var('+M[d[1]][1]+')';
+    card.style.setProperty('--mc','var('+M[d[1]][0]+')');
+    card.style.setProperty('--md','var('+M[d[1]][1]+')');
+    card.style.setProperty('--pct',d[2]+'%');
+    card.innerHTML='<div class="c-top"><span class="c-dot"></span><span class="c-name">'+d[0]+'</span></div>'+
+                    '<div class="c-bar"><i></i></div><div class="c-meta">ZBP · capability</div>';
+    fl.appendChild(card);pos.appendChild(fl);layer.appendChild(pos);
+    var s=scatterPos(i), o=orbitPos(i), b=burstPos(i);
+    pos.style.setProperty('--sx',s.x+'px'); pos.style.setProperty('--sy',s.y+'px');
+    pos.style.setProperty('--ox',o.x+'px'); pos.style.setProperty('--oy',o.y+'px');
+    pos.style.setProperty('--bx',b.x+'px'); pos.style.setProperty('--by',b.y+'px');
+    pos.style.setProperty('--ss',(0.9+Math.random()*.25).toFixed(2));
+    fl.style.setProperty('--fd',(5.5+Math.random()*3.5).toFixed(2)+'s');
+    fl.style.setProperty('--fdel',(-Math.random()*5).toFixed(2)+'s');
+    fl.style.setProperty('--rot',(Math.random()*6-3).toFixed(1)+'deg');
+    card.style.setProperty('--sh',(5+Math.random()*4).toFixed(1)+'s');
+    card.style.setProperty('--shdel',(-Math.random()*4).toFixed(1)+'s');
+    cards.push(pos);
+  });
+
+  /* ---- 中央中文拆字（CTH 扩散） ---- */
+  var cn=document.getElementById('cnChars');
+  var txt=cn.textContent;cn.innerHTML='';
+  txt.split('').forEach(function(ch){var s=document.createElement('span');s.textContent=ch;cn.appendChild(s);});
+  function charBurst(){
+    [...cn.children].forEach(function(s,i){
+      var a=(-90+i*(150/Math.max(txt.length-1,1))-75)*Math.PI/180;var d=120+Math.random()*90;
+      s.style.setProperty('--cx',Math.cos(a)*d+'px');s.style.setProperty('--cy',Math.sin(a)*d*.7+'px');
+      s.style.setProperty('--cr',(Math.random()*40-20)+'deg');
+    });
+  }
+
+  var body=document.body, stage=0;
+  document.getElementById('btnEnter').addEventListener('click',function(){
+    body.classList.add('orbit');stage=1;
+  });
+  /* CTH：名字拆解扩散 → 承接 CTH */
+  document.getElementById('pickCTH').addEventListener('click',function(){
+    charBurst();body.classList.add('cth-burst');
+    setTimeout(function(){
+      document.getElementById('lEn').textContent='CorTech Lab · Guangzhou Taikoo Hui POMS';
+      document.getElementById('lCn').textContent='广州太古汇舆情监测系统';
+      document.getElementById('lAb').textContent='CTH-POMS';
+      body.classList.add('land');
+    },1050);
+  });
+  /* ZBMP：密钥 → 全白 → 元素逆回收（无卡片，只留大名）→ 白弱化渐隐 → 进入 */
+  var mask=document.getElementById('keyMask');
+  document.getElementById('pickZBMP').addEventListener('click',function(){mask.classList.add('show');setTimeout(()=>document.getElementById('zbmpKey').focus(),300);});
+  document.getElementById('keyCancel').addEventListener('click',function(){mask.classList.remove('show');});
+  document.getElementById('keyOk').addEventListener('click',goZBMP);
+  document.getElementById('zbmpKey').addEventListener('keydown',e=>{if(e.key==='Enter')goZBMP();});
+  function goZBMP(){
+    var k=document.getElementById('zbmpKey').value;
+    if(k.length<4){document.getElementById('keyErr').textContent='密钥长度不足（演示：任意 4 位以上）';return;}
+    mask.classList.remove('show');
+    document.getElementById('lEn').textContent='Z-Brand Monitoring Platform';
+    document.getElementById('lCn').textContent='Z-Brand 品牌监测平台';
+    document.getElementById('lAb').textContent='ZBMP';
+    // 1) 全页面变白（底部 sysfoot z-index 更高仍保留）
+    body.classList.add('z-white');
+    // 2) 扩散出去的卡片按原轨迹逆推回中央并消失
+    setTimeout(function(){body.classList.add('z-recall');},500);
+    // 3) 中央换为 ZBMP 大名（只留平台名，无小窗口）
+    setTimeout(function(){
+      document.querySelector('.h-en').textContent='Z-Brand Monitoring Platform';
+      cn.textContent='Z-Brand 品牌监测平台';document.querySelector('.h-abbr').textContent='Z B M P';
+      body.classList.add('land');
+    },1100);
+    // 4) 白色弱化渐变至透明，正式进入
+    setTimeout(function(){body.classList.remove('z-white');body.classList.add('z-fade');},1900);
+    setTimeout(function(){body.classList.remove('z-fade');},3400);
+  }
+  window.addEventListener('resize',function(){location.reload();});
+})();
+</script>
+</body>
+</html>
