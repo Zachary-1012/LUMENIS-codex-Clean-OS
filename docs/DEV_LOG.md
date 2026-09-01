@@ -736,3 +736,25 @@ classifier 现仅按主体类型映射 content_type_hint；review/experience/com
 
 ### 测试（已实测）
 新增 tests/test_event_graph_relations.py 5 用例（字典完整/derive+parallel+不伪造/follow/停用词防全相连/重算幂等且保手工）全过；统一入口 `pytest tests` **121 passed**。
+
+
+---
+
+## 2026-09-01 20:20 · GAP-05 动态调度影子→门控（P1，已签字；默认 shadow 零行为变化）
+
+### 事实
+- `platform_adapters/scheduling` 决策器本已完备（平台独立 policy/decider/state，决策审计落 schedule_decisions），但生产话题调度 `topic_campaign.py` 触发点写死「固定触发=YES」，只 shadow 调 decide 打印 allow、**不用 allow 门控**。
+
+### 落地（只加一层可回滚开关，不改既有熔断/时钟）
+1. 新增 `platform_adapters/scheduling/gate.py`：
+   - `ZBC_SCHED_GATE_MODE` 三态：**shadow（默认，只评估+落审计，不阻断）/ canary（仅 ZBC_SCHED_GATE_PLATFORMS 名单内平台按 allow 门控）/ enforce（全平台按 allow 门控）**；
+   - 铁律 **只收紧不放松**：门控态 `should_run = hard_allow AND decision.allow`，既有活动窗口/让行/熔断/冷却等 hard_allow 上游逻辑一律不动，本层绝不可能把「上游不跑」变成「跑」；
+   - 门控器自身异常 fail-open 回 hard_allow（新组件故障不卡死既有调度）；非法模式回退 shadow；
+   - **回滚零代码**：变量改回 shadow（或删除）即恢复固定时钟。
+2. `topic_campaign.py` 话题触发点由 shadow 打印改为经 `gate_should_run`：门控态 allow=False 时打印原因并 continue（冷却/风险窗不撞），shadow 态行为与原先完全一致。
+3. `.env.example` 登记两个开关（真实 .env 未碰）。
+
+### 测试（已实测）
+新增 tests/test_schedule_gate.py 6 用例（默认 shadow 不门控 / enforce 按 allow / canary 仅名单门控 / hard_allow=False 任何模式不放松 / 门控器异常 fail-open / 非法值回退）全过；统一入口 `pytest tests` **127 passed**。
+### 运维路径（未执行，待逐步开）
+默认 shadow 上线 → 先 canary 对低风险平台（如 web/bilibili）灰度观察 schedule_decisions → 稳定后再纳入 xhs → 最终 enforce；任一步异常改回 shadow 即回滚。生产 8201 未重启，当前仍跑旧进程。

@@ -754,16 +754,21 @@ def _campaign_scheduler_loop():
                     and now.hour not in _today_run_hours
                     and 5 <= now.minute < 10):
                 print(f'[TopicCampaign] 触发话题监测调度 {now.hour}:05（错峰，独立配额）')
-                # P0-2 阶段1影子模式：同时调用统一Scheduler获取决策，记录对比日志，不改变执行
+                # GAP-05 影子→门控三态：默认 shadow 不改变固定触发；canary/enforce 且 allow=False 时保守跳过本轮（只收紧、不弱化熔断）
+                _gate_run = True
                 if _SCHEDULER_AVAILABLE:
                     try:
-                        _planner = get_planner()
-                        _decision = _planner.decide('xhs', now=now, trigger_source='topic_campaign_shadow')
-                        print(f'[Shadow][TopicCampaign] 固定触发=YES, Scheduler allow={_decision.allow}, '
-                              f'reason={_decision.reason_code}, next_run_at={_decision.next_run_at}, '
-                              f'risk={_decision.risk_status}, verify={_decision.verification_required}')
+                        from platform_adapters.scheduling import gate_should_run
+                        _gate_run, _gd, _gmode = gate_should_run(get_planner(), 'xhs', now=now)
+                        if _gd is not None:
+                            print(f'[Gate:{_gmode}][TopicCampaign] should_run={_gate_run}, allow={_gd.allow}, '
+                                  f'reason={_gd.reason_code}, next_run_at={_gd.next_run_at}, risk={_gd.risk_status}')
                     except Exception as _se:
-                        print(f'[Shadow][TopicCampaign] Scheduler决策调用失败: {_se}')
+                        print(f'[Gate][TopicCampaign] 门控调用失败，按固定触发继续: {_se}')
+                if not _gate_run:
+                    print(f'[Gate][TopicCampaign] 本轮被动态调度门控保守跳过（冷却/风险窗），不触发采集；下轮再评估')
+                    time.sleep(20)
+                    continue
                 # 遍历所有启用且在各自监测窗口内的任务（十五周年为内置任务之一）
                 _dbx = _db()
                 with _dbx.get_db() as _cn:

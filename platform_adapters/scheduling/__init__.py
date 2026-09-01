@@ -7,6 +7,7 @@ from .policy import PlatformSchedulePolicy, DEFAULT_POLICIES, build_default_poli
 from .decision import ScheduleDecider, ScheduleDecision, PlatformScheduleState
 from .planner import PlatformSchedulePlanner
 from .store import ScheduleDecisionStore
+from .gate import gate_should_run, gate_mode, canary_platforms
 from . import state_map
 import os as _os
 import threading as _threading
@@ -32,5 +33,5 @@ __all__ = [
     "PlatformSchedulePolicy", "DEFAULT_POLICIES", "build_default_policies",
     "ScheduleDecider", "ScheduleDecision", "PlatformScheduleState",
     "PlatformSchedulePlanner", "ScheduleDecisionStore", "state_map",
-    "get_planner",
+    "get_planner", "gate_should_run", "gate_mode", "canary_platforms",
 ]
