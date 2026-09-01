@@ -77,13 +77,21 @@ def _now() -> str:
 AUTO_REL_PREFIX = '[auto]'
 # 全域高频通用 bigram（所有事件几乎都含，会造成“全相连”伪关系），不计入主题重叠
 _STOP_BIGRAM = {'太古', '古汇', '广州', '商场', '活动', '事件', '品牌', '门店', '顾客', '消费',
-                '购物', '中心', '广场', '有限', '公司', '我们', '他们', '这个', '一个', '可以'}
+                '购物', '中心', '广场', '有限', '公司', '我们', '他们', '这个', '一个', '可以',
+                # 自动摘要/免责样板套话（description 常见，防止模板化全相连）
+                '相关', '讨论', '事实', '仅能', '仍需', '关提', '关讨', '需要', '以及', '关的',
+                '仅供', '参考', '不构', '建议', '信息', '来源', '网络', '整理', '编辑'}
+
+
+_DROP_PHRASES = ['广州太古汇', '太古汇', '太古', '广州']  # 先整体剔除全域通用名，避免跨界 bigram 噪声
 
 
 def _text_tokens(text: str) -> set:
-    """中文 2-gram（去通用停用）+ 英文/数字词，作为主题重叠证据。"""
+    """先整体剔除全域通用短语，再做中文 2-gram（去停用）+ 英文/数字词，作为主题重叠证据。"""
     import re as _re
     s = str(text or '').lower()
+    for _ph in _DROP_PHRASES:
+        s = s.replace(_ph, ' ')
     toks = set()
     for seg in _re.findall(r'[一-龥]{2,}', s):
         for i in range(len(seg) - 1):
@@ -540,7 +548,7 @@ class EventGraph:
         return RELATION_TYPES.copy()
 
     def infer_and_link_relations(self, days_window: int = 21, parallel_hours: float = 36,
-                                 min_follow_overlap: int = 1, min_derive_overlap: int = 2,
+                                 min_follow_overlap: int = 1, min_derive_overlap: int = 3,
                                  persist: bool = True, drop_auto_first: bool = True) -> Dict[str, Any]:
         """GAP-07：基于【时间 + 主题词】双证据保守推断 follow/derive/parallel。
         - 无主题重叠或时间不可比 -> 不连边（绝不伪造关系）；
@@ -576,12 +584,12 @@ class EventGraph:
                     for r in self.relations}
         for i in range(len(items)):
             dt_a, a = items[i]
-            ta = _text_tokens(a.title + ' ' + a.description)
+            ta = _text_tokens(a.title)
             if not ta:
                 continue
             for j in range(i + 1, len(items)):
                 dt_b, b = items[j]
-                shared = sorted(ta & _text_tokens(b.title + ' ' + b.description))
+                shared = sorted(ta & _text_tokens(b.title))
                 if not shared:
                     no_evidence += 1
                     continue

@@ -714,3 +714,25 @@ GAP-04 三套 run-code 安全收口 → GAP-01 统一 pytest 入口 / GAP-02 红
 
 ### 残余（登记）
 classifier 现仅按主体类型映射 content_type_hint；review/experience/complaint/event 等基于正文的细分内容识别为后续增强，本轮不扩分类器。
+
+
+---
+
+## 2026-09-01 19:50 · GAP-07 事件三类四关系补全（P1，不伪造）
+
+### 事实
+- 字典层本就完整：EVENT_TYPES 三类（营销/传播/舆情）、RELATION_TYPES 四类（trigger/derive/follow/parallel）；缺口是 `import_from_existing_events` 只导节点、**不建任何关系**，故 16 事件仅 1 条手工 trigger。
+
+### 落地（event_graph.py + app.py + 5 测试）
+1. 新增保守推断器 `EventGraph.infer_and_link_relations()`：**时间 + 标题主题词双证据**。
+   - parallel：|Δt|≤36h 且主题相关；derive：0<Δt≤21d 且强主题延续(≥3 共享 bigram)；follow：先后弱相关(1-2)；
+   - **trigger 属强因果，不自动生成，保留人工/直接证据**；时间不可比或无主题重叠一律不连边。
+   - 自动关系 evidence 以 `[auto]` 开头，重算只清自动、保留手工；(source,target,type) UNIQUE 幂等。
+2. 主题证据**只用 title**：真实数据验证发现 description 是自动摘要样板（“事实/仅能/仍需”套话）会造成 78 条伪全相连；同时先整体剔除“广州太古汇/太古汇”全域通用名、扩充样板停用 bigram，消除“州太/汇啦”跨界噪声。
+3. 新增 `POST /api/event-graph/rebuild-relations`（参数校验、只读统计回传）。
+
+### 真实结果（Staging 副本，已实测；生产库未碰）
+- 修正前 78 条伪并行 → 修正后 **16 事件仅 3 条有证据并行**：IWC进驻↔新店启幕IWC(iwc)、会员服务讨论↔会员看过来(会员)、济州岛漂亮饭↔打卡漂亮饭(漂亮)；加原手工 trigger 共 4 关系；**117 对无证据不连**；方所跨年(2026-01↔2026-08)超 21 天窗正确不连。derive/follow 因当前无跨天强延续真实数据而为 0（不伪造，后续有数据自然补）。
+
+### 测试（已实测）
+新增 tests/test_event_graph_relations.py 5 用例（字典完整/derive+parallel+不伪造/follow/停用词防全相连/重算幂等且保手工）全过；统一入口 `pytest tests` **121 passed**。

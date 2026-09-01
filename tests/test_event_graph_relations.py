@@ -37,7 +37,7 @@ def test_dictionaries_complete():
 
 def test_derive_parallel_and_no_fabrication(graph):
     e1 = _mk(graph, 'marketing_event', '方所闭店公告', '2026-08-01 09:00:00')
-    e2 = _mk(graph, 'propagation_event', '方所闭店后续讨论', '2026-08-02 09:00:00')
+    e2 = _mk(graph, 'propagation_event', '方所闭店后续讨论', '2026-08-03 09:00:00')  # 48h>并行窗
     e3 = _mk(graph, 'public_opinion_event', 'OLE投诉处理', '2026-08-01 10:00:00')
     e4 = _mk(graph, 'propagation_event', 'OLE投诉排队', '2026-08-01 12:00:00')
     e5 = _mk(graph, 'propagation_event', '美食节开业', '2026-08-05 09:00:00')
