@@ -533,6 +533,26 @@ def _risk_check(page, result):
     return False
 
 
+def robust_goto(page, url, commit_to=30000, dom_to=45000):
+    """稳健导航：先等最快的 commit；冷挂起时降级 domcontentloaded；两轮仍失败才抛，
+    避免一次冷导航超时把整轮采集判死。同页二次 goto 会取消上一挂起导航。"""
+    last = None
+    for attempt in range(2):
+        try:
+            page.goto(url, wait_until='commit', timeout=commit_to)
+            return 'commit'
+        except Exception as e1:
+            last = e1
+            try:
+                page.goto(url, wait_until='domcontentloaded', timeout=dom_to)
+                return 'dom'
+            except Exception as e2:
+                last = e2
+                if attempt == 0:
+                    gauss_sleep(1.0, 0.4, 0.6)
+    raise last
+
+
 # ============================================================
 # 真人采集主流程（默认）
 # ============================================================
@@ -552,10 +572,11 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
         page = ctx.new_page()
         try:
             from urllib.parse import quote
-            # 先到搜索落地页（不带 keyword，关键词由真人键盘输入）
-            landing = 'https://www.xiaohongshu.com/search_result?source=web_explore_feed'
-            log('真人模式：打开搜索页')
-            page.goto(landing, wait_until='commit', timeout=30000)
+            # 先稳落探索页（无 keyword 的 search_result 冷导航易挂起；explore 实测稳定），
+            # 再由真人键盘输入关键词触发结果页，更像真人且更稳
+            landing = 'https://www.xiaohongshu.com/explore'
+            log('真人模式：打开探索页')
+            robust_goto(page, landing)
             human_sleep(2.4, 3.8)
             if _risk_check(page, result):
                 return result
@@ -565,8 +586,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
             except Exception as e:
                 # 兜底：键盘输入失败时退回 URL 直达（仍继续真人浏览，不中断采集）
                 log(f'键盘输入失败，回退URL直达: {e}')
-                page.goto(f'https://www.xiaohongshu.com/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51',
-                          wait_until='commit', timeout=30000)
+                robust_goto(page, f'https://www.xiaohongshu.com/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51')
             try:
                 page.wait_for_selector('section.note-item', timeout=18000)
             except Exception:
