@@ -35,15 +35,15 @@
 整合结论：DCC/SICI/AI-D **不是 CTH 生产运行时依赖**，可 monorepo 分包整合为 zachary-ai（packages/governance、packages/research-hub、apps/mobile-surface + design-tokens + contracts）；**ZBC 保持独立生产仓**，仅契约/Evidence 弱协作。详见拆解蓝图第 3 节，待用户拍板仓库名/时机/历史保留方式。
 注意：SICI/AI-D 旧文档把 DCC 写成 "DDC"，整合时统一为 DCC。ZBC 内还嵌套 `tools/development-command-console`(gitlink 77dd1e41) 是旧副本，本轮未动。
 
-## 4. 本地 AI 接入（差最后一步）
-- .env（不入库）已设：`AI_PROVIDER=auto`、`LOCAL_AI_PREFERRED=ollama`、`OLLAMA_BASE_URL=http://127.0.0.1:11434`、`OLLAMA_MODEL=qwen2.5:7b`、`ALLOW_CLOUD_AI=true`。
+## 4. 本地 AI 接入（已完成 ✅）
+- .env（不入库）：`AI_PROVIDER=auto`、`LOCAL_AI_PREFERRED=ollama`、`OLLAMA_BASE_URL=http://127.0.0.1:11434`、`OLLAMA_MODEL=qwen2.5:7b`、`ALLOW_CLOUD_AI=true`。
 - 自动顺序：本地(Ollama>LMStudio>llama.cpp)优先；本地无且 ALLOW_CLOUD_AI 才走 zhipu→qwen→deepseek→ark→openai；**云端发送前强制 redact_for_cloud（本轮已加固），本地 ollama 不脱敏不出网**。
-- 下载：官方源直连仅 12KB/s，已让 `ollama serve` 带 `HTTPS_PROXY=http://127.0.0.1:10808` 重启，提速到 3.3MB/s（日志 staging\ollama_pull3.err）。
-- **下载完成后接续步骤**：① `ollama list` 见 qwen2.5:7b；② 只杀 8201 app 进程树让看门狗重启；③ urllib 打 /api/ai/status 应 provider=ollama、runtime=local；④ 断云端仅本地仍可 /api/ai/chat 应答。
+- 模型 qwen2.5:7b(4.7GB) 已下载完成：官方源直连仅 12KB/s，让 `ollama serve` 带 `HTTPS_PROXY=http://127.0.0.1:10808` 重启后提速到 3.3MB/s 拉完（经验：以后拉模型走代理）。
+- **已验证**：/api/ai/status = provider ollama / model qwen2.5:7b / runtime local；/api/ai/chat 端到端 21s 本地应答、provider=ollama、不出内网（staging\test_e2e_local_ai.py）。
+- 注意：当前 ollama serve 是带 10808 代理的后台进程；若电脑重启后托盘自启的是无代理 serve，模型已在本地、推理无需联网，不影响使用（仅再拉新模型时需带代理）。
 
 ## 5. 未完成清单（按优先级）
 ### P1（近期）
-1. 本地模型下完后的接入验证（见上，步骤已固化）。
 2. 莫兰迪标杆批量套用到 CTH/ZBMP/DCC/SICI/AI-D 启动页；主系统 static\css\splash.css（现深色v2）对齐浅色——**UI 方向用户要求先暂停，等收敛蓝图拍板再施工**。
 3. ZBC 前端层叠收敛（实测 29 CSS + 25 JS，app.js 113KB、style.css 79KB 等）：唯一 design token + 唯一主题层，先登记引用矩阵再合并，不直接删。
 4. topic_campaign 固定时钟(9/11/13/15/17/19)收口进 Dynamic Scheduler。
