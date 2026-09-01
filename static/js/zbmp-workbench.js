@@ -402,22 +402,89 @@
           var nodes = ev.events || [];
           if (!nodes.length) {
             html += '<div class="zb-empty"><div class="ei">' + I.share + '</div><h3>Staging 副本暂无图谱节点</h3>' +
-              '<p>接口与类型体系已接通（三类事件 × 四关系字典真实返回）；当前 Staging 只读副本未同步 event_graph 数据，生产库已有节点与关系。这里不用占位数据造假，切到生产或同步副本后即自动出图。</p></div>';
+              '<p>三列分层关系画布已就绪（营销 → 传播 → 舆情，触发/衍生/继发/并行连线）；当前 Staging 只读副本未同步 event_graph 数据，生产库已有节点与关系。这里不用占位数据造假，切到生产或同步副本后即自动出图。</p></div>';
           } else {
-            html += '<div class="zb-list">';
-            nodes.forEach(function (n) {
-              var tname = (ty.event_types && ty.event_types[n.event_type]) || n.event_type || '未分类';
-              html += '<div class="zb-li"><div class="zb-li-row1"><span class="zb-li-title">' + esc(n.title || n.name || n.event_id || '未命名节点') + '</span>' +
-                '<span class="zb-mini-tag">' + esc(tname) + '</span></div>' +
-                '<div class="zb-li-meta"><span class="zb-num">节点 ' + esc(n.event_id || n.id || '') + '</span>' +
-                (n.relation_count != null ? '<span class="sep"></span><span class="zb-num">关系 ' + n.relation_count + '</span>' : '') + '</div></div>';
-            });
-            html += '</div>';
+            html += '<div id="zbGraphCanvas"></div>';
           }
           box.innerHTML = html;
+          if (nodes.length) drawGraphCanvas(document.getElementById('zbGraphCanvas'), nodes, ty);
         })
         .catch(function (err) { failBox(box, '事件关系数据加载失败', err.message); });
     }
+
+    /* 三列分层关系画布：营销/传播/舆情三列，SVG 连线（自研、无第三方库）；颜色+文字双重表达关系 */
+    var REL_COLOR = { trigger: '#DC2626', derive: '#2563EB', follow: '#78716C', parallel: '#D97706' };
+    var TYPE_ORDER = ['marketing_event', 'propagation_event', 'public_opinion_event'];
+    function drawGraphCanvas(host, events, ty) {
+      var COLW = 248, GAPX = 84, NODEH = 72, GAPY = 14, PAD = 12, HEAD = 38;
+      var etNames = (ty && ty.event_types) || {};
+      var cols = {}; TYPE_ORDER.forEach(function (t) { cols[t] = []; });
+      events.forEach(function (e) { (cols[e.event_type] || (cols[e.event_type] = [])).push(e); });
+      var colKeys = Object.keys(cols).filter(function (k) { return cols[k].length; });
+      var pos = {};
+      colKeys.forEach(function (k, ci) {
+        cols[k].forEach(function (e, ri) {
+          pos[e.event_id] = { x: PAD + ci * (COLW + GAPX), y: PAD + HEAD + ri * (NODEH + GAPY), col: ci, e: e };
+        });
+      });
+      var rows = colKeys.reduce(function (m, k) { return Math.max(m, cols[k].length); }, 0);
+      var W = PAD * 2 + colKeys.length * COLW + (colKeys.length - 1) * GAPX;
+      var H = PAD * 2 + HEAD + rows * NODEH + (rows - 1) * GAPY;
+      var svg = ['<svg class="zb-graph-svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">'];
+      Object.keys(REL_COLOR).forEach(function (rt) {
+        svg.push('<marker id="zbArr' + rt + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="' + REL_COLOR[rt] + '"/></marker>');
+      });
+      var labels = [];
+      events.forEach(function (e) {
+        var s = pos[e.event_id]; if (!s) return;
+        (e.relations || []).forEach(function (rel) {
+          var t = pos[rel.target_event_id]; if (!t) return;
+          var rt = rel.relation_type || 'follow', color = REL_COLOR[rt] || REL_COLOR.follow;
+          var d, lx, ly, x1, x2, y1, y2;
+          if (t.col === s.col) {
+            // 同列：底部→顶部垂直连线
+            var cx = s.x + COLW / 2;
+            x1 = cx; y1 = s.y + NODEH; x2 = cx; y2 = t.y;
+            d = 'M' + x1 + ',' + y1 + ' L' + x2 + ',' + y2;
+            lx = cx + 6; ly = (y1 + y2) / 2 - 10;
+          } else {
+            y1 = s.y + NODEH / 2; y2 = t.y + NODEH / 2;
+            if (t.col > s.col) { x1 = s.x + COLW; x2 = t.x; } else { x1 = s.x; x2 = t.x + COLW; }
+            var mx = (x1 + x2) / 2;
+            d = 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2;
+            lx = mx - 26; ly = (y1 + y2) / 2 - 10;
+          }
+          svg.push('<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.55" marker-end="url(#zbArr' + rt + ')"/>');
+          labels.push('<span class="zb-edge-tag" style="left:' + lx + 'px;top:' + ly + 'px;border-color:' + color + ';color:' + color + '">' +
+            esc(rel.relation_type_name || rt) + '</span>');
+        });
+      });
+      svg.push('</svg>');
+      var heads = '';
+      colKeys.forEach(function (k, ci) {
+        var x = PAD + ci * (COLW + GAPX);
+        heads += '<div class="zb-graph-colhead" style="left:' + x + 'px;width:' + COLW + 'px"><span class="zb-graph-coldot zb-tc-' + k + '"></span>' + esc(etNames[k] || k) + '<span class="zb-num">' + cols[k].length + '</span></div>';
+      });
+      var nodesHtml = '';
+      colKeys.forEach(function (k) {
+        cols[k].forEach(function (e) {
+          var p = pos[e.event_id]; var md = e.metadata || {};
+          var risk = md.risk_level || '';
+          var deg = e.relations ? e.relations.length : 0;
+          nodesHtml += '<div class="zb-gnode zb-tc-' + k + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + COLW + 'px;height:' + NODEH + 'px" title="' + esc(e.description || e.title) + '">' +
+            '<div class="zb-gnode-t">' + esc(e.title || e.event_id) + '</div>' +
+            '<div class="zb-gnode-m"><span>' + esc(e.event_time || '时间未知') + '</span>' +
+            (risk ? '<span class="zb-gnode-risk zb-rk-' + risk + '">' + esc(risk) + '</span>' : '') +
+            (deg ? '<span class="zb-num">关系 ' + deg + '</span>' : '') + '</div></div>';
+        });
+      });
+      var legend = '<div class="zb-graph-legend">' + Object.keys(REL_COLOR).map(function (rt) {
+        var nm = (ty.relation_types && ty.relation_types[rt]) || rt;
+        return '<span><i style="background:' + REL_COLOR[rt] + '"></i>' + esc(nm) + '</span>';
+      }).join('') + '</div>';
+      host.innerHTML = legend + '<div class="zb-graph-stage" style="width:' + W + 'px;height:' + H + 'px">' + svg.join('') + heads + labels.join('') + nodesHtml + '</div>';
+    }
+    if (typeof window !== 'undefined') window.__zbDrawGraphCanvas = drawGraphCanvas; // 调试/真实数据验证钩子（只读渲染）
 
     /* 报告中心：报告列表 + 真实统计口径；Staging 无报告文件时诚实标注，不自动触发生成 */
     function renderReports() {

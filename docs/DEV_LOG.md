@@ -555,3 +555,24 @@
 
 ### Git / 生产安全
 - 本次为 Staging 分支 commit（见下），新增后端路由为纯只读增量，合 main 前将在主 worktree 再跑 import+healthz+主体回归；生产 8201 v5.9.9 全程未动；不提交 .env/*.db/cookie/token/profile/日志。
+
+---
+
+## Step5h｜事件关系升级为「三列分层关系画布」（②号任务，2026-09-01）
+
+### 改动（纯前端，不新增后端、不改 DB）
+- static/js/zbmp-workbench.js（v1.0.5→v1.0.8）：renderGraph 节点列表替换为自研 drawGraphCanvas——营销/传播/舆情三列分层定坐标，SVG 底层画带箭头关系连线 + 关系名胶囊标签，HTML 节点卡（类型左边框色、标题两行截断、event_time、risk 小标、关系数）；跨列贝塞尔连线、**同列垂直连线**（自抓自调：唯一真实关系为同列，初版绕边走线不佳，改为底→顶直线+下箭头）；四关系语义色（触发 danger/衍生 info/继发 stone/并行 attention），颜色之外同时有中文关系名（颜色非唯一信息）；暴露 window.__zbDrawGraphCanvas 只读渲染钩子用于真实数据验证。无第三方图形库。
+- static/css/zbmp-workbench.css（v1.0.4→v1.0.5）：.zb-graph-* 画布/列头/节点卡/边标签/图例/风险标，全部走 token，≤760 横向滚动。
+- static/index.html：bump workbench css/js。
+
+### 已实测（真实数据，证据 step5h-graph-canvas-real.png）
+- Staging 副本 event_graph 为空：正式页面仍显示**诚实空状态**（不回归、不造假，文案提示切生产即出图）。
+- 为真实验证画布算法，以 **mode=ro 只读**连接生产库导出 16 节点/1 关系（传播13·舆情2·营销1）为临时 JSON，仅在浏览器 console 调渲染钩子验证后即弃，**不写入任何库、不提交该 JSON**（git status 已反查无 eg_real/_eg_export 痕迹）。
+- 实测：16 节点全部绘制、三列列头与计数正确（营销1/传播13/舆情2）、1 条 trigger 路径与"触发"标签正确、risk low/medium 标签、图例四关系齐全；node --check 通过。
+- **登记 1 条源数据质量问题（非 UI bug）**：营销列唯一节点 title 在生产库中本身为 `?????15???????` 乱码（event_time 亦为完整时间戳 2026-08-31 07:20:29），画布如实呈现；建议后续在数据治理侧排查该条 import 编码，不在 UI 层掩盖。
+
+### 未实测/遗留
+- 生产真实页面出图需等 UI 合 main 切 8201（或同步 event_graph 到 Staging 副本）后截图归档；画布拖拽/缩放/节点点击下钻（跳事件详情）未做，下一批；跨多列复杂网状关系（当前生产仅 1 条边）布局压力未充分验证。
+
+### Git/生产安全
+- Staging 分支 commit（见下）；app.py/DB/采集/主体口径本轮零改动；生产 8201 v5.9.9 未动；不提交 .env/*.db/cookie/token/profile/日志与生产业务数据。
