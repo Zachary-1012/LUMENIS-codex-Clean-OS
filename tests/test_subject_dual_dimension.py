@@ -97,3 +97,39 @@ def test_filter_whitelist_and_reject_illegal(temp_db):
     # 表仍在、数据未丢
     assert temp_db.get_note_count({}) == 2
     assert len(illegal) == 2
+
+
+# ---------- 媒体优先级与冲突解决（GAP 媒体匹配优先级） ----------
+def test_media_plus_official_resolves_to_media():
+    """羊城晚报官方账号：同时匹配媒体(晚报)+官方(官方)，必须判为媒体而非官方"""
+    from subject_classifier import get_subject_classifier
+    clf = get_subject_classifier()
+    r = clf.classify(author_name='羊城晚报官方账号')
+    assert r['subject_type'] == 'media'
+    assert r['confidence'] >= 0.9
+
+
+def test_media_keywords_cover_urban_daily():
+    """南方都市报：扩充媒体关键词后应识别为媒体（此前漏判为普通用户）"""
+    from subject_classifier import get_subject_classifier
+    clf = get_subject_classifier()
+    r = clf.classify(author_name='南方都市报')
+    assert r['subject_type'] == 'media'
+
+
+def test_institution_plus_official_resolves_to_institution():
+    """XX协会官方：同时匹配机构+官方，必须判为机构"""
+    from subject_classifier import get_subject_classifier
+    clf = get_subject_classifier()
+    r = clf.classify(author_name='XX协会官方')
+    assert r['subject_type'] == 'institution'
+
+
+def test_strong_media_high_confidence():
+    """传统媒体关键词(日报/晚报/电视台/新闻等)置信度>=0.9"""
+    from subject_classifier import get_subject_classifier
+    clf = get_subject_classifier()
+    for name in ['央视新闻', '澎湃新闻', '广州日报']:
+        r = clf.classify(author_name=name)
+        assert r['subject_type'] == 'media', f'{name} 应判为媒体'
+        assert r['confidence'] >= 0.9, f'{name} 置信度应>=0.9'

@@ -61,6 +61,8 @@ OFFICIAL_KEYWORDS = [
 MEDIA_KEYWORDS = [
     '新闻', '日报', '晚报', '电视台', '广播', '周刊', '杂志', '资讯',
     '爆料', '吃瓜', '热搜', '头条', '快报',
+    '都市报', '时报', '商报', '晨报', '导报', '邮报',
+    '通讯社', '传媒', '报业', '广电',
     'news', 'media', 'daily', 'times',
 ]
 
@@ -254,7 +256,8 @@ class SubjectClassifier:
         if '媒体' in verified_type or '新闻' in verified_type:
             matched.append(f'认证类型:{verified_type}')
         if matched:
-            strong_media = ['日报', '晚报', '电视台', '广播', '周刊', '杂志', '新闻']
+            strong_media = ['日报', '晚报', '电视台', '广播', '周刊', '杂志', '新闻',
+                            '都市报', '时报', '商报', '晨报', '导报', '邮报', '通讯社', '传媒', '报业']
             has_strong = any(kw in matched for kw in strong_media)
             conf = 0.9 if has_strong else 0.8
             return {'matched_keywords': matched, 'confidence': conf}
@@ -296,42 +299,6 @@ class SubjectClassifier:
         return self._match_kos_detailed(text, content_pattern) is not None
 
 
-
-    def _match_official(self, text: str, verified_type: str) -> bool:
-        """匹配官方账号"""
-        if '企业' in verified_type or '机构' in verified_type:
-            for kw in self.official_keywords:
-                if kw.lower() in text:
-                    return True
-        for kw in self.official_keywords:
-            if kw.lower() in text:
-                return True
-        return False
-
-    def _match_media(self, text: str, verified_type: str) -> bool:
-        """匹配媒体账号"""
-        if '媒体' in verified_type or '新闻' in verified_type:
-            return True
-        for kw in self.media_keywords:
-            if kw.lower() in text:
-                return True
-        return False
-
-    def _match_institution(self, text: str, verified_type: str) -> bool:
-        """匹配机构账号"""
-        for kw in self.institution_keywords:
-            if kw.lower() in text:
-                return True
-        return False
-
-    def _match_kos(self, text: str, content_pattern: str) -> bool:
-        """匹配KOS账号"""
-        for kw in self.kos_keywords:
-            if kw.lower() in text:
-                return True
-        if '销售' in content_pattern or '导购' in content_pattern or '转化' in content_pattern:
-            return True
-        return False
 
     def _result(self, subject_type: str, confidence: float,
                 reasons: list, content_type_hint: str) -> Dict[str, Any]:
