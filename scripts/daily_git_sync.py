@@ -69,8 +69,9 @@ def main() -> int:
 
         # [2/5] 安全闸 + 本地成版本（不推送）
         ts = datetime.now().strftime("%H:%M")
-        _curv = gm.current_version or ""
+        _curv = gm.current_version() or ""
         _curv = _curv if str(_curv).startswith("v") else "v" + str(_curv)
+        assert _curv.startswith("v") and len(_curv) >= 2, f"版本号格式异常: {_curv!r}"
         saved = gm.save_version(f"{_curv} 定时同步版本（{ts}）", do_push=False, author="daily-sync")
         if not saved.get("ok"):
             log(f"[2/5] 安全闸拦截/提交失败：{saved.get('error')} blocked={saved.get('blocked')}")
