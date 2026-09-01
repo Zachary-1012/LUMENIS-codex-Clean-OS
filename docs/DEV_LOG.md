@@ -808,3 +808,21 @@ ReportExporter 的 Word/PDF 导出与自动发送仍旁路；12 条旧报告路�
 overview：benchmarks **19** 条、mechanisms **16** 条、cases **10** 条（version 1.0/1.0/2026.09.01，status=research_seed）。新增 tests/test_global_bil_read.py 4 用例全过；统一入口 `pytest tests` **147 passed**。
 ### 未接管（登记）
 bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monitor.db；BIL 与生产 notes/events 的关联分析、前端研究工作台仍属后续 research 任务。
+
+
+---
+
+## 2026-09-01 22:00 · 阶段5①：RedNote 运行策略 SoT 落地（三端开关/香港为主/真人频率占位，默认不自动跑）
+
+### 审计事实（只读）
+- 真实采集引擎是根目录 `rednote_collector.cjs`（Node + Playwright connectOverCDP 9222），Python 侧 `collector_v2/xhs/live_engine.py` 封装；**cjs 搜索入口当前硬编码国内 `www.xiaohongshu.com/search_result`（L96）**，滚动/详情为固定 waitForTimeout(2s/3s)，无三端区分、无每日登录保活；风控识别（300012/验证码/加载失败）已如实返回不显 0。
+- 话题端另有 feature flag `XHS_APP_TOPIC_ENABLED`（platform_adapters/xhs_app_topic.py，默认 false）。
+
+### 落地（纯策略层，零真实平台动作）
+新增 `platform_adapters/rednote_policy.py` 作为暂行策略唯一 SoT：primary_region=intl（RedNote 香港/国际为主）、cn_paused=True（国内暂停不撞）；三端白名单 topic=True / public_opinion=True / event=False（事件笔记暂不开）；daily_login_keepalive=once_per_day；**auto_run 与自动保活总闸默认 False**，须显式 env 授权；真人节奏用保守占位且显式标 `NOT_VERIFIED`。新增 tests/test_rednote_policy.py 4 用例（默认符合拍板/未知 kind 默认拒/env 显式覆盖/真人频率未实测标记）全过；统一入口 **151 passed**。
+
+### 待实测阻塞（未做，禁止凭空伪造，需真实浏览器窗口）
+1. **rednote.com 国际/香港站 DOM 选择器**与国内站是否一致（note-item/detail-desc 等）未验证——入口从 xiaohongshu.com 切到 rednote.com 前必须真实加载验证；
+2. **最新真人频率实测数值**未定位/未取得，当前为保守占位（NOT_VERIFIED），需按真人测试结果覆盖 HUMAN_CADENCE；
+3. **每日登录保活的自动调度**未接线（默认关），需在 9222 会话与登录态确认后、经一次手动成功保活再开自动。
+以上三项具备真实窗口后按「先旁路验证再切换」推进；国内熔断维持不撞不绕。
