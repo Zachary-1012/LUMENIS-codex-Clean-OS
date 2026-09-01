@@ -264,7 +264,7 @@ def human_search_keyword(page, keyword):
     log(f'真人键盘输入关键词并回车: {keyword}')
 
 
-def human_swipe_gallery(page):
+def human_swipe_gallery(page, depth=0.5):
     """详情内左右滑动浏览图片：识别图片张数，逐张点“下一张/方向键/拖拽”，每张随机停留。"""
     swiped = 0
     try:
@@ -284,12 +284,13 @@ def human_swipe_gallery(page):
         slides = page.locator('.swiper-slide, .slider-slide, .note-slider-img, .media-container img').count()
         total = max(total, slides)
         if total <= 1:
-            # 单图也停留“看一眼”
-            gauss_sleep(1.2, 0.4, 0.6)
+            # 单图也停留“看一眼”（深度越低看得越快）
+            gauss_sleep(0.8 + 0.8*depth, 0.35, 0.5)
             return 0
         nxt = _find_first(page, _GALLERY_NEXT_SEL.split(', '), timeout_ms=1500)
-        for i in range(min(total - 1, 12)):  # 最多翻 12 张，避免超长帖拖垮节奏
-            gauss_sleep(1.4, 0.6, 0.8)     # 每张图观看停留
+        max_swipe = max(1, round(1 + 11*depth))   # 浅读只翻1~2张，深读翻更多
+        for i in range(min(total - 1, max_swipe)):
+            gauss_sleep(0.9 + 1.0*depth, 0.5, 0.6)     # 每张图观看停留，时长不一
             moved = False
             if nxt is not None:
                 try:
@@ -313,7 +314,7 @@ def human_swipe_gallery(page):
     return swiped
 
 
-def human_watch_video(page):
+def human_watch_video(page, depth=0.5):
     """识别视频笔记并“观看”：等待播放 + 按时长/封顶随机停留，绝不点赞。返回是否视频。"""
     try:
         v = page.locator(_VIDEO_SEL).first
@@ -325,10 +326,14 @@ def human_watch_video(page):
              if(!v) return null;
              return {dur: Number.isFinite(v.duration)?v.duration:0, paused:v.paused}; }"""
         )
-        # 真人观看：视频时长的一部分，封顶 8~26 秒（只浏览不看完，符合刷到即走）
+        # 真人观看：深度决定观看比例与封顶；每次随机不一致，低深度偶发“没兴趣秒划”
         dur = (info or {}).get('dur', 0) if info else 0
-        watch = min(max(dur * random.uniform(0.25, 0.6), 8.0), 26.0) if dur else random.uniform(8, 16)
-        log(f'视频笔记，模拟观看 {watch:.1f}s')
+        lo, hi = 0.12 + 0.55*depth, 0.25 + 0.70*depth
+        cap_lo, cap_hi = 4 + 10*depth, 9 + 26*depth
+        watch = min(max(dur * random.uniform(lo, hi), cap_lo), cap_hi) if dur else random.uniform(cap_lo, cap_hi)
+        if random.random() < 0.35*(1-depth):    # 看得越浅越可能秒退
+            watch = min(watch, random.uniform(1.0, 2.6))
+        log(f'视频笔记，模拟观看 {watch:.1f}s (depth={depth:.2f})')
         time.sleep(watch)
         # 观看中轻微移动鼠标，不点击
         vw, vh = _viewport_size(page)
@@ -338,24 +343,27 @@ def human_watch_video(page):
         return False
 
 
-def human_read_content(page):
+def human_read_content(page, depth=0.5):
     """滚动阅读正文：分 2~4 次小幅向下滚动，每次高斯停留（模拟阅读）。"""
     try:
-        rounds = random.randint(2, 4)
+        base = max(1, round(1 + 3*depth))
+        rounds = random.randint(base, min(5, base+1)) if base > 1 else 1
         for _ in range(rounds):
             page.mouse.wheel(0, random.randint(120, 360))
-            gauss_sleep(0.9, 0.3, 0.5)
+            gauss_sleep(0.5 + 0.75*depth, 0.3, 0.4)
     except Exception:
         pass
 
 
-def human_read_comments(page):
+def human_read_comments(page, depth=0.5):
     """滚动阅读评论区：先定位评论区，再分 2~5 次小幅滚动，随机停留阅读。"""
     try:
         cnt = page.locator(_COMMENT_ITEM_SEL).count()
         if cnt == 0:
             return 0
-        rounds = min(max(cnt, 2), 5)
+        if depth < 0.3 and random.random() < 0.6:
+            return 0   # 浅读多数不展开评论
+        rounds = min(max(cnt, 1 if depth < 0.3 else 2), max(2, round(1+4*depth)))
         for _ in range(rounds):
             page.mouse.wheel(0, random.randint(140, 420))
             gauss_sleep(0.8, 0.3, 0.4)
@@ -365,6 +373,39 @@ def human_read_comments(page):
         return cnt
     except Exception:
         return 0
+
+
+def human_reading_profile():
+    """人类浏览行为画像：秒退/浅读/正常/深读，按真人分布抽样；每篇独立、时长不一。"""
+    r = random.random()
+    if r < 0.14:                                   # 点进去就退出
+        return 'skip', 0.0
+    if r < 0.40:                                   # 只看一点点
+        return 'skim', round(random.uniform(0.10, 0.28), 2)
+    if r < 0.82:                                   # 正常浏览
+        return 'normal', round(random.uniform(0.42, 0.66), 2)
+    return 'deep', round(random.uniform(0.78, 1.0), 2)   # 仔细阅读
+
+
+def human_consume_detail(page, profile, depth):
+    """按行为画像编排一次详情阅读，返回过程证据；全程只被动浏览，不产生任何互动。"""
+    t0 = time.time(); is_video=False; img_swiped=0; comment_seen=0
+    try:
+        if profile == 'skip':
+            # 秒退：仅短暂扫视封面/标题即离开，不滑图、不读评论
+            gauss_sleep(1.0, 0.5, 0.7)
+            time.sleep(random.uniform(0.4, 1.4))
+        else:
+            is_video = human_watch_video(page, depth)
+            if not is_video:
+                img_swiped = human_swipe_gallery(page, depth)
+            human_read_content(page, depth)
+            comment_seen = human_read_comments(page, depth)
+    except Exception as e:
+        log(f'真人阅读阶段异常(不影响采集): {e}')
+    return {'profile': profile, 'depth': depth, 'is_video': is_video,
+            'images_swiped': img_swiped, 'comments_seen': comment_seen,
+            'dwell_sec': round(time.time()-t0, 1)}
 
 
 def parse_count(s):
@@ -436,6 +477,14 @@ _DETAIL_JS = r"""
 () => {
   const q = sels => { for (const s of sels) { const e = document.querySelector(s); if (e && (e.innerText||'').trim()) return (e.innerText||'').trim(); } return ''; };
   const counts = Array.from(document.querySelectorAll('.count')).map(c => (c.innerText||'').trim()).filter(Boolean);
+  const wc = sels => { for (const s of sels) { const e=document.querySelector(s); const v=e?(e.innerText||'').trim():''; if(v) return v; } return ''; };
+  // 语义化互动计数（只读取数字，绝不点击）：赞/藏/评/分享，缺省为空串由后端兜底
+  const engage = {
+    like_raw: wc(['.like-wrapper .count','.engage-bar .like .count','[class*="like-wrapper"] .count','[class*="like"] .count']),
+    collect_raw: wc(['.collect-wrapper .count','.engage-bar .collect .count','[class*="collect-wrapper"] .count','[class*="collect"] .count']),
+    comment_raw: wc(['.chat-wrapper .count','.engage-bar .chat .count','[class*="chat-wrapper"] .count','[class*="comment"] .count']),
+    share_raw: wc(['.share-wrapper .count','.engage-bar .share .count','[class*="share-wrapper"] .count','[class*="share"] .count'])
+  };
   const comments = Array.from(document.querySelectorAll('.comment-item, .parent-comment')).map(c => {
     const u = c.querySelector('.name,.author a,.user .name'), x = c.querySelector('.content,.comment-content,.note-text'),
           t = c.querySelector('.time,.date'), l = c.querySelector('.like .count,.count');
@@ -449,7 +498,7 @@ _DETAIL_JS = r"""
     desc: q(['#detail-desc','.note-content .desc','.note-text','.desc']),
     author: q(['.author-container .name','.author .name','.username']),
     time_raw: q(['.author-container .time','.publish-time','.date','.time']),
-    all_counts: counts, comment_list: comments, comment_count: comments.length,
+    all_counts: counts, engage: engage, comment_list: comments, comment_count: comments.length,
     is_video: hasVideo, image_count: slideImgs
   };
 }
@@ -600,19 +649,19 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                     if _risk_check(page, result):
                         return result
 
-                    # 4) 真人阅读：视频 / 滑图 / 正文 / 评论
-                    is_video = human_watch_video(page)
-                    img_swiped = 0
-                    if not is_video:
-                        img_swiped = human_swipe_gallery(page)
-                    human_read_content(page)
-                    comment_seen = human_read_comments(page)
+                    # 4) 真人阅读：按行为画像(秒退/浅读/正常/深读)差异化停留，每次时长不一
+                    profile, depth = human_reading_profile()
+                    consume = human_consume_detail(page, profile, depth)
+                    is_video = consume['is_video']; img_swiped = consume['images_swiped']
+                    comment_seen = consume['comments_seen']
 
                     d = page.evaluate(_DETAIL_JS)
                     nums = [int(x) for x in d.get('all_counts', []) if re.fullmatch(r'\d+', str(x))]
-                    likes = nums[-3] if len(nums) >= 3 else (nums[-1] if nums else parse_count(target.get('likes_raw')))
-                    collects = nums[-2] if len(nums) >= 2 else 0
-                    comments = nums[-1] if len(nums) >= 1 else 0
+                    eng = d.get('engage') or {}
+                    likes = parse_count(eng.get('like_raw')) or (nums[-3] if len(nums) >= 3 else (nums[-1] if nums else parse_count(target.get('likes_raw'))))
+                    collects = parse_count(eng.get('collect_raw')) or (nums[-2] if len(nums) >= 2 else 0)
+                    comments = parse_count(eng.get('comment_raw')) or (nums[-1] if nums else 0)
+                    shares = parse_count(eng.get('share_raw'))
                     pub = normalize_publish_time(d.get('time_raw')) or normalize_publish_time(target.get('time_raw'))
                     rec = {
                         'note_id': target['note_id'], 'xsec_token': target.get('xsec_token', ''),
@@ -622,20 +671,22 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         'author': d.get('author') or target.get('author', ''),
                         'detail_author': d.get('author') or target.get('author', ''),
                         'detail_publish_time': pub, 'publish_time': pub,
-                        'likes': likes, 'collects': collects, 'comments': comments,
+                        'likes': likes, 'collects': collects, 'comments': comments, 'shares': shares,
                         'comment_list': d.get('comment_list', []), 'comment_count': d.get('comment_count', comment_seen),
                         'is_video': bool(d.get('is_video') or is_video),
                         'image_count': d.get('image_count', img_swiped + 1),
                         'cover': target.get('cover', ''), 'url': page.url if opened_by_click else target['url'],
                         'human_view': {'opened_by': 'click' if opened_by_click else 'goto',
+                                       'profile': profile, 'depth': depth,
+                                       'dwell_sec': consume['dwell_sec'],
                                        'video_watched': is_video, 'images_swiped': img_swiped,
                                        'comments_seen': comment_seen},
                         'detail_fetched': True, 'captured_at': datetime.now().isoformat(),
-                        'collector_version': 'xhs-cdp-py-human-2.0',
+                        'collector_version': 'xhs-cdp-py-human-2.1',
                     }
                     result['notes'].append(rec)
                     ok_detail += 1
-                    log(f'真人阅评 {i+1}/{actual}: {rec["title"][:22]} 视频={rec["is_video"]} 翻图={img_swiped} 评{comment_seen} 赞{likes} {pub}')
+                    log(f'真人阅评 {i+1}/{actual} [{profile}/{consume["dwell_sec"]}s]: {rec["title"][:20]} 视频={rec["is_video"]} 翻图={img_swiped} 评{comment_seen} 赞{likes} 藏{collects} 享{shares} {pub}')
 
                     # 5) 真人“返回”信息流（优先返回键/关闭弹层，不触发互动）
                     self_closed = False
