@@ -1779,11 +1779,41 @@ def api_report_file(report_id):
         return jsonify({'ok': False, 'error': '报告不存在'}), 404
     return send_from_directory(report_dir, safe, as_attachment=True)
 
+# ===== GAP-04 三套 run-code 统一安全收口（单一安全策略，2026-09-01）=====
+# 生产默认禁用服务端任意代码执行/写静态文件，消除 RCE 与持久化注入面；
+# 仅本地开发显式 ZBC_DEV_EXEC=1 放行，且仍拦截危险构造并打印审计行。三入口统一走此闸门，
+# 路由保留（前端得到明确 403 契约而非 404），不删除历史能力。
+_DEV_EXEC_ENABLED = os.environ.get('ZBC_DEV_EXEC', '0') == '1'
+_DEV_EXEC_BLOCK_RE = re.compile(
+    r'(__[\w_]+__|\b(?:import|exec|eval|compile|open|globals|locals|vars|getattr|setattr|delattr|breakpoint)\b'
+    r'|os\.|sys\.|subprocess|socket|shutil|pathlib|\.write(?:_text|_bytes)?\s*\(|rmtree|(?:unlink|remove)\s*\('
+    r'|environ|urllib|requests\.|http\.client|pickle)',
+    re.I)
+
+def _dev_exec_guard(code):
+    """统一代码执行闸门：None=放行(仅开发态)；否则返回 (response,403/400)。"""
+    if not _DEV_EXEC_ENABLED:
+        return jsonify({'ok': False, 'code': 'DEV_EXEC_DISABLED',
+                        'error': '生产环境已禁用服务端任意代码执行/写文件（GAP-04 安全收口）；本地热更请显式设置 ZBC_DEV_EXEC=1',
+                        'version': APP_VERSION}), 403
+    if code is None or not str(code).strip():
+        return jsonify({'ok': False, 'error': '代码不能为空'}), 400
+    if _DEV_EXEC_BLOCK_RE.search(str(code)):
+        print('[SEC][GAP-04] dev-exec blocked dangerous construct')
+        return jsonify({'ok': False, 'code': 'DEV_EXEC_DANGEROUS',
+                        'error': '开发态仍拦截危险构造（import/exec/eval/文件写/网络/反射等），请改用受控 API'}), 400
+    return None
+
 @app.route('/api/developer/run', methods=['POST'])
 def api_developer_run():
-    """开发者工具-运行代码：生产环境安全策略，禁止服务端执行任意代码（防 RCE 后门）。
-    仅返回当前版本与安全提示，不执行请求体中的 code。"""
-    return jsonify({'ok': False, 'error': '生产环境已禁用任意代码执行（安全策略），请在本地开发环境操作', 'version': APP_VERSION}), 403
+    """GAP-04 统一收口点①（兼容保留）：生产永久禁用，开发态走统一闸门。"""
+    data = request.get_json(silent=True) or {}
+    guarded = _dev_exec_guard(data.get('code', ''))
+    if guarded:
+        return guarded
+    return jsonify({'ok': False, 'code': 'DEV_EXEC_DISABLED',
+                    'error': '该入口为兼容保留端点，生产不执行任意代码', 'version': APP_VERSION}), 403
+
 
 @app.route('/api/settings')
 def api_settings_get():
@@ -3291,11 +3321,10 @@ def api_run_code():
         return jsonify({'ok': False, 'error': '请输入有效的Python代码'}), 400
     if len(code) > 50000:
         return jsonify({'ok': False, 'error': '代码过长（超过50000字符）'}), 400
-    # 安全检查：禁止危险操作
-    dangerous = ['os.system', 'subprocess', 'eval(', 'exec(', '__import__', 'rmtree', 'remove(', 'unlink(']
-    for d in dangerous:
-        if d in code and not data.get('allow_dangerous', False):
-            return jsonify({'ok': False, 'error': f'代码包含危险操作: {d}，如需执行请设置 allow_dangerous=true'}), 400
+    # GAP-04：统一安全闸门（生产 403；开发态 ZBC_DEV_EXEC=1 仍拦危险构造），移除 allow_dangerous 绕过
+    _guarded = _dev_exec_guard(code)
+    if _guarded:
+        return _guarded
     try:
         # 在受限命名空间中执行
         exec_globals = {
@@ -4839,6 +4868,10 @@ def api_dev_run_code():
     code_type = data.get('type', 'python')  # python / javascript
     if not code:
         return jsonify({'ok': False, 'error': '代码不能为空'}), 400
+    # GAP-04：统一闸门。生产禁用 exec 与写 static/js（防 RCE/持久化注入）
+    _guarded = _dev_exec_guard(code)
+    if _guarded:
+        return _guarded
     try:
         if code_type == 'python':
             # 1. 语法检查

@@ -9,7 +9,7 @@
 | GAP-01 | 全局/测试体系 | 统一 `pytest tests` INTERNALERROR：test_api_smoke.py 顶层 sys.exit 打断收集；36 个 test_ 仅 5 个含 def test_（50 用例），31 个脚本式 | P1 | 无统一可重复测试入口，CI/Release Gate 无自动证据 | 历史以独立脚本充当测试 | 脚本迁 scripts/ 或改造为 pytest；统一 run 入口 L0-L10 | 否(生产在跑) | 否 | 是(测试码) | 是 | 是 |
 | GAP-02 | SUBJ/EVT/RISK/RPT 红线 | 根 risk_engine、aggregate_events、build_daily_report 仅 test_e2e 集成级覆盖，缺函数级直接单测；test_risk_engine 实参测 collector_guard、test_report_periods 实参测 export_report（名实不符） | P1 | 红线回归靠集成用例，边界/异常分支覆盖不足 | 早期测试按链路写 | 为三个 Owner 补纯函数直接单测（含时间口径/主体边界/空输入） | 否 | 否 | 是 | 是 | 是 |
 | GAP-03 ✅RESOLVED(2026-09-01) | CTH-AUTH-001 | ~~主 SPA static/index.html 未引~~ **Step1 已挂主 SPA 并随 main=`580c2cf` 合并，8301 实测统一弹窗正常**；残余：A/B/C 三分支 E2E 与规范 pytest 未补 | P1→残余P2 | 主 SPA 弹窗缺口已闭 | 已随 UI 合并解决 | 补三分支 E2E/pytest（不再阻塞 UI） | 否 | 否(已闭) | 是(测试) | 是 |
-| GAP-04 | ZBMP-SETT-001/安全 | 三套可执行代码入口 /api/developer/run、/api/dev/run-code、/api/config/run-code 并存未收口 | P1(安全) | 远程执行面重复、审计分散 | 多窗口迭代叠加 | 单一受控入口+权限+审计，其余 MIGRATION_REQUIRED→回归→退 | 否 | 否 | 是 | 是 | 是 |
+| GAP-04 ✅RESOLVED(2026-09-01) | ZBMP-SETT-001/安全 | ~~三套可执行代码入口并存未收口~~ **已统一走 `_dev_exec_guard`：生产默认 403（含 JS 写 static 分支），仅本地 ZBC_DEV_EXEC=1 放行且拦危险构造；路由保留不删**；新增 test_dev_exec_guard 9 用例 | P1(安全)→已闭 | RCE/持久化注入面已关 | 统一闸门收口 | 后续观察是否彻底退旧路由（当前保留兼容） | 否 | 否 | 是(已做) | 是(9✓) | 是 |
 | GAP-05 🚧已签字施工中 | CTH-MON-003 | 动态调度仍 shadow-only，未门控生产 | P1 | 固定/动态两套策略并存 | **用户 2026-09-01 已签字门控** | feature flag 默认保守(仍 shadow)→灰度→门控，附回滚；不弱化熔断 | 否 | 否 | 是 | 是 | 是 |
 | GAP-06 | CTH-SUBJ-002 | subject_type/content_type 枚举与 /types API 已有，notes 落库列/写入/筛选未贯通；禁 user_type=UGC | P1 | 双维度无法在列表/统计使用 | 只做到 API 层 | 向后兼容加列+写入+筛选 | 否 | 否 | 是 | 是 | 是 |
 | GAP-07 | CTH-EVT-002 | 营销/传播/舆情三类 + 触发/衍生/继发/并行四关系未完成（现 16 事件 1 关系） | P1 | 事件演进链不完整 | 图谱刚持久化 | 补类型/关系与前端只读图 | 否 | 否 | 是 | 是 | 是 |

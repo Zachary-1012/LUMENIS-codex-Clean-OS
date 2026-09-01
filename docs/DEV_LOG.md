@@ -647,3 +647,24 @@
 
 ### 下一步（阶段3 P1，按序）
 GAP-04 三套 run-code 安全收口 → GAP-01 统一 pytest 入口 / GAP-02 红线函数级单测 → GAP-06 双维度落库 → GAP-07 事件三类四关系 → GAP-05 调度门控（已签字，feature flag 灰度+回滚）。
+
+
+---
+
+## 2026-09-01 18:10 · GAP-04 三套 run-code 安全收口（P1 安全）
+
+### 问题（审计实测）
+- `/api/developer/run` 本已硬编码 403（安全）；
+- `/api/config/run-code` 用 `exec()` 服务端执行，给全量 `__builtins__/os/db`，且黑名单可被前端传 `allow_dangerous=true` 绕过=高危 RCE；
+- `/api/dev/run-code` 同样 `exec()` + 备份写盘，其 javascript 分支直接把代码**追加写入 static/js/dev_custom.js**=持久化脚本注入，且无鉴权门。
+
+### 收口（最小改动、不删路由、不削本地能力）
+- 新增统一闸门 `_dev_exec_guard()`：生产默认（无 `ZBC_DEV_EXEC`）一律 403 `DEV_EXEC_DISABLED`，不 exec、不写盘、不写 static；仅本地显式 `ZBC_DEV_EXEC=1` 放行，且危险正则（import/exec/eval/文件写/网络/反射/__dunder__）仍拦 400 并打审计行。
+- 三端点统一接入；移除 allow_dangerous 绕过；路由全部保留（前端得明确 403 契约而非 404）。
+
+### 测试（已实测）
+- 新增 `tests/test_dev_exec_guard.py` **9 用例全过**：生产三端点+危险 payload+JS 写文件全 403 且无副作用；开发态危险构造 400、安全算术 200（验证本地热更能力保留）。
+- 全量回归 **89 passed**；8301 黑盒：三端点 + JS 分支生产态均 403。
+
+### 数据库/生产
+无 schema 变更；生产 8201 未重启；不弱化任何红线。
