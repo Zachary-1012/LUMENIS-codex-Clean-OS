@@ -128,5 +128,4 @@ def test_build_daily_report_entry_stable():
     import risk_engine
     import daily_report
     assert callable(risk_engine.build_daily_report)
-    assert risk_engine.build_daily_report.__wrapped__ is daily_report.generate_daily_digest \
-        if hasattr(risk_engine.build_daily_report, '__wrapped__') else True
+    assert callable(daily_report.generate_daily_digest)

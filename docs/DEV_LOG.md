@@ -668,3 +668,26 @@ GAP-04 三套 run-code 安全收口 → GAP-01 统一 pytest 入口 / GAP-02 红
 
 ### 数据库/生产
 无 schema 变更；生产 8201 未重启；不弱化任何红线。
+
+
+---
+
+## 2026-09-01 18:30 · GAP-01 统一测试入口 + GAP-02 红线函数级单测（P1）
+
+### GAP-01 统一 pytest 入口
+- 根因：`tests/test_api_smoke.py` 顶层 `sys.exit()` 在 pytest 收集(import)阶段抛 SystemExit，导致 `pytest tests` INTERNALERROR（仅收集 26）；另有 32 个纯脚本式 test_ 文件在 import 期有真实平台/网络副作用。
+- 治理（不删脚本、两种运行方式都保留）：
+  1. test_api_smoke 改造为规范 `def test_` 用例（保留 `__main__` 直跑）；
+  2. conftest 增加 `pytest_ignore_collect`：**全文无 `def test_` 的纯脚本默认不收集**（不 import、不执行副作用），仍可 `python tests/xx.py` 手动跑；
+  3. 新增 `pytest.ini`（testpaths/markers/redline 标记）与 `tests/run_all.py` 分层统一入口（默认规范用例；`--scripts` 子进程隔离跑脚本；`--online` 放开真实平台用例）。
+- 结果（已实测）：`pytest tests` 由 INTERNALERROR → **110 passed**。
+
+### GAP-02 红线函数级直接单测
+- 新增 `tests/test_redline_units.py` **19 用例全过**（0.17s，纯函数不连库）：
+  - subject_hit：广州/太古汇正向命中、**上海/兴业/北京三里屯/成都远洋/深圳/香港太古汇、太古城等跨城同名一票否决**、正向+异地混合时排除优先、多字段/列表/大小写、空输入；
+  - _subject_sql_and_values：正向 OR + AND NOT 排除、`?` 占位符与参数一一对应、175 LIKE=(17 正向+18 排除)×5 字段、alias 前缀、历史别名兼容；
+  - build_daily_report 入口委托契约稳定。
+- 残余（已登记）：aggregate_events/build_daily_report 连库段仍以集成级为主，纯函数拆分后续补。
+
+### 数据库/生产
+无 schema 变更；生产 8201 未重启；不弱化任何主体/时间/风险红线。

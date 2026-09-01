@@ -75,5 +75,15 @@ def main():
     return 0
 
 
+def test_all_css_structurally_balanced():
+    """GAP-01：纳入统一 pytest 收集——static/css 全部文件括号/花括号/注释/引号必须平衡。"""
+    bad = []
+    for f in sorted(CSS_DIR.glob("*.css")):
+        paren, brace, in_c, q, err = check(f.read_text(encoding="utf-8"))
+        if not (paren == 0 and brace == 0 and not in_c and q is None and err is None):
+            bad.append(f"{f.name}: paren={paren} brace={brace} comment={in_c} quote={q!r} {err}")
+    assert not bad, "CSS 结构不平衡: " + "; ".join(bad)
+
+
 if __name__ == "__main__":
     sys.exit(main())
