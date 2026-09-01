@@ -36,12 +36,12 @@
     { title: '概览', items: [
       { k: 'home', t: '工作台', i: 'grid', hideInNav: true } ] },
     { title: '品牌', items: [
-      { k: 'brands', t: '品牌资产', i: 'layers', s: 'core', d: '品牌画像、资产沉淀与健康度，接入 Core 品牌库。' },
+      { k: 'brands', t: '品牌资产', i: 'layers', s: 'live', d: '品牌画像、资产沉淀与健康度，接入 Core 品牌库。' },
       { k: 'compete', t: '竞品监控', i: 'crosshair', s: 'planned', d: '竞品声量与对比分析，规划中。' },
       { k: 'cases', t: '案例库', i: 'book', s: 'core', d: '公关/传播案例库，接入 Core 案例能力。' } ] },
     { title: '监测', items: [
       { k: 'content', t: '内容监测', i: 'file', s: 'live', d: '跨平台内容流与主体过滤，接入 Core 采集管线。' },
-      { k: 'campaign', t: '话题战役', i: 'target', s: 'core', d: '15 周年等专题/战役监测，接入 Core 话题能力。' } ] },
+      { k: 'campaign', t: '话题战役', i: 'target', s: 'live', d: '15 周年等专题/战役监测，接入 Core 话题能力。' } ] },
     { title: '洞察', items: [
       { k: 'events', t: '事件中心', i: 'zap', s: 'live', d: '营销/传播/舆情事件与生命周期，接入 Core 事件引擎。' },
       { k: 'graph', t: '事件关系', i: 'share', s: 'live', d: '触发/衍生/继发/并行关系图谱，接入 Core 关系数据。' },
@@ -255,6 +255,8 @@
       if (route === 'content') return renderContent();
       if (route === 'graph') return renderGraph();
       if (route === 'reports') return renderReports();
+      if (route === 'brands') return renderBrands();
+      if (route === 'campaign') return renderCampaign();
       var m = MOD[route]; if (m) return renderEmpty(m); return renderHome();
     }
 
@@ -529,6 +531,113 @@
           box.innerHTML = html;
         })
         .catch(function (err) { failBox(box, '报告数据加载失败', err.message); });
+    }
+
+    function fmtEng(n) { if (n == null) return '—'; n = +n; if (n >= 10000) return (n / 10000).toFixed(1) + 'w'; if (n >= 1000) return (n / 1000).toFixed(1) + 'k'; return '' + n; }
+
+    /* 品牌资产：场内品牌 + 业态分布 + 知识库，全部来自 Core 真实品牌库 */
+    function renderBrands() {
+      main.innerHTML = '<div class="zbmp-page-in">' + pageHead('品牌资产', '场内品牌画像、业态分布与品牌知识库，接入 Core 品牌库') +
+        '<div class="zbmp-wrap"><div class="zb-data-note">品牌/楼层/铺号来自 Core 品牌目录，主体口径不变；这里只读呈现，不做改写。</div><div id="zbBrands"></div></div></div>';
+      bindBack();
+      var box = document.getElementById('zbBrands');
+      box.innerHTML = skel(3);
+      Promise.all([getJSON('/api/brands'), getJSON('/api/brand-stats'), getJSON('/api/brand-knowledge/stats')])
+        .then(function (rs) {
+          var bl = rs[0] || {}, bs = rs[1] || {}, bk = rs[2] || {};
+          var brands = bl.brands || [];
+          var cats = bs.categories || {};
+          var byCat = (bk.data && bk.data.by_category) || {};
+          var taikoo = brands.filter(function (b) { return b.is_taikoo_brand; }).length;
+          var knowTotal = Object.keys(byCat).reduce(function (s, k) { return s + (+byCat[k] || 0); }, 0);
+          var html = statStrip([
+            { k: '场内品牌', v: brands.length },
+            { k: '业态分类', v: Object.keys(cats).length },
+            { k: '太古汇在场', v: taikoo },
+            { k: '品牌知识库', v: knowTotal, s: '条' }
+          ]);
+          var catKeys = Object.keys(cats);
+          html += '<div class="zb-li" style="margin-bottom:12px"><div class="zb-li-title" style="margin-bottom:7px">业态分布</div><div class="zb-li-meta">' +
+            catKeys.map(function (c) { return '<span class="zb-mini-tag">' + esc(c) + ' · ' + (cats[c].brand_count != null ? cats[c].brand_count : (cats[c].brands || []).length) + '</span>'; }).join(' ') + '</div></div>';
+          if (Object.keys(byCat).length) {
+            html += '<div class="zb-li" style="margin-bottom:12px"><div class="zb-li-title" style="margin-bottom:7px">品牌知识库分类</div><div class="zb-li-meta">' +
+              Object.keys(byCat).map(function (k) { return '<span class="zb-mini-tag is-hot">' + esc(k) + ' · ' + byCat[k] + '</span>'; }).join(' ') + '</div></div>';
+          }
+          html += '<div class="zb-list">';
+          brands.forEach(function (b) {
+            var name = (b.brand_cn && b.brand_cn !== '-') ? b.brand_cn : (b.brand_en || '未命名品牌');
+            var meta = [b.category, b.floor ? (b.floor + (b.shop ? ' ' + b.shop : '')) : '', b.brand_en].filter(Boolean).map(esc).join(' · ');
+            html += '<div class="zb-li"><div class="zb-li-row1"><span class="zb-li-title">' + esc(name) + '</span>' +
+              (b.is_taikoo_brand ? '<span class="zb-mini-tag is-hot">在场</span>' : '') + '</div>' +
+              '<div class="zb-li-meta"><span>' + meta + '</span></div></div>';
+          });
+          html += '</div>';
+          if (!brands.length) html += '<div class="zb-empty"><h3>暂无品牌目录数据</h3><p>品牌接口已接通，当前环境无品牌记录。</p></div>';
+          box.innerHTML = html;
+        })
+        .catch(function (err) { failBox(box, '品牌资产加载失败', err.message); });
+    }
+
+    /* 话题战役：战役状态 + 分话题主体命中表现 + 最新笔记，严守主体口径展示 */
+    function renderCampaign() {
+      main.innerHTML = '<div class="zbmp-page-in">' + pageHead('话题战役', '专题/战役监测、分话题主体命中与证据沉淀') +
+        '<div class="zbmp-wrap"><div class="zb-data-note">分话题「主体命中率」来自 Core 主体过滤统计，是主体红线的直接体现；笔记均为命中主体后的真实采集。</div><div id="zbCamp"></div></div></div>';
+      bindBack();
+      var box = document.getElementById('zbCamp');
+      box.innerHTML = skel(4);
+      Promise.all([getJSON('/api/topic-campaign/status'), getJSON('/api/topic-campaign/campaigns'),
+      getJSON('/api/topic-campaign/topics'), getJSON('/api/topic-campaign/stats'),
+      getJSON('/api/topic-campaign/notes?limit=20')])
+        .then(function (rs) {
+          var st = rs[0] || {}, cp = rs[1] || {}, tp = rs[2] || {}, sta = rs[3] || {}, nt = rs[4] || {};
+          var campaigns = cp.campaigns || [];
+          var cur = campaigns[0] || {}; var agg = cur.agg || {};
+          var topics = tp.topics || [];
+          var byTopic = sta.by_topic || [];
+          var notes = nt.notes || [];
+          var avgHit = byTopic.length ? (byTopic.reduce(function (s, t) { return s + (+t.subject_hit_rate || 0); }, 0) / byTopic.length) : 0;
+          var html = statStrip([
+            { k: '战役笔记', v: agg.notes != null ? agg.notes : 0 },
+            { k: '总互动', v: fmtEng(agg.eng) },
+            { k: '监测话题', v: topics.length },
+            { k: '平均主体命中率', v: avgHit ? avgHit.toFixed(1) + '%' : '—' }
+          ]);
+          if (cur.name || st.campaign) {
+            var c = st.campaign || cur;
+            var paused = (c.status === 'paused');
+            html += '<div class="zb-li" style="margin-bottom:12px"><div class="zb-li-row1"><span class="zb-li-title">' + esc(cur.name || c.name || '当前战役') + '</span>' +
+              '<span class="zb-mini-tag ' + (paused ? '' : 'is-hot') + '">' + esc(c.status || '未知') + '</span></div>' +
+              '<div class="zb-li-meta"><span>' + esc((c.start_date || '?') + ' ~ ' + (c.end_date || '?')) + '</span>' +
+              (agg.last ? '<span class="sep"></span><span>最近采集 ' + esc(agg.last) + '</span>' : '') +
+              (c.interval_minutes ? '<span class="sep"></span><span>间隔 ' + c.interval_minutes + ' 分钟</span>' : '') + '</div></div>';
+          }
+          if (byTopic.length) {
+            html += '<div class="zb-list" style="margin-bottom:12px">';
+            byTopic.forEach(function (t) {
+              html += '<div class="zb-li"><div class="zb-li-row1"><span class="zb-li-title">' + esc(t.topic || '未命名话题') + '</span>' +
+                '<span class="zb-num">主体命中 ' + (t.subject_hits != null ? t.subject_hits : '—') + ' / ' + (t.unique_notes != null ? t.unique_notes : '—') + '</span></div>' +
+                '<div class="zb-li-meta"><span>命中率 ' + (t.subject_hit_rate != null ? t.subject_hit_rate + '%' : '—') + '</span>' +
+                '<span class="sep"></span><span>完整证据 ' + (t.full_evidence != null ? t.full_evidence : '—') + '</span>' +
+                (t.risk_notes ? '<span class="sep"></span><span style="color:var(--zb-danger)">风险 ' + t.risk_notes + '</span>' : '') +
+                '<span class="sep"></span><span>运行 ' + (t.runs != null ? t.runs : '—') + '</span></div></div>';
+            });
+            html += '</div>';
+          }
+          if (notes.length) {
+            html += '<div class="zb-li-title" style="margin:6px 0 8px">最新战役笔记</div><div class="zb-list">';
+            notes.forEach(function (n) {
+              var body = n.content || n.body || n.title || n.note_text || '';
+              var inter = [n.likes != null ? '赞 ' + n.likes : '', n.comments != null ? '评 ' + n.comments : '', n.collects != null ? '藏 ' + n.collects : ''].filter(Boolean).join(' · ');
+              html += '<div class="zb-li"><div class="zb-li-row1"><span class="zb-li-title">' + esc(n.author || '匿名') + '</span>' +
+                (inter ? '<span class="zb-num">' + esc(inter) + '</span>' : '') + '</div>' +
+                (body ? '<div class="zb-li-sub">' + esc(String(body).slice(0, 110)) + '</div>' : '') + '</div>';
+            });
+            html += '</div>';
+          }
+          if (!campaigns.length && !byTopic.length) html += '<div class="zb-empty"><h3>暂无进行中的话题战役</h3><p>战役接口已接通，当前环境无战役记录。</p></div>';
+          box.innerHTML = html;
+        })
+        .catch(function (err) { failBox(box, '话题战役加载失败', err.message); });
     }
 
     /* ---- 工作区切换：由 zbip-shell 派发事件驱动 ---- */

@@ -576,3 +576,25 @@
 
 ### Git/生产安全
 - Staging 分支 commit（见下）；app.py/DB/采集/主体口径本轮零改动；生产 8201 v5.9.9 未动；不提交 .env/*.db/cookie/token/profile/日志与生产业务数据。
+
+---
+
+## Step5i｜品牌资产 + 话题战役真实接入（①号任务，2026-09-01）
+
+### 改动（纯前端，不新增后端、不改 DB）
+- static/js/zbmp-workbench.js（v1.0.8→v1.1.0）：GROUPS 中 brands/campaign 由 core 占位改 live；render() 增分发；新增两个真实渲染：
+  - renderBrands：并取 /api/brands + /api/brand-stats + /api/brand-knowledge/stats。statStrip（场内品牌/业态分类/太古汇在场/知识库条目）+ 业态分布 chips + 品牌知识库分类 chips + 品牌列表（中文名/英文名/品类/楼层铺号/在场标）；brand_cn 为 '-' 占位时 fallback 到 brand_en（自抓自修）。
+  - renderCampaign：并取 /api/topic-campaign/{status,campaigns,topics,stats,notes}。statStrip（战役笔记/总互动 w 缩写/监测话题/平均主体命中率）+ 当前战役卡（名称/周期/状态/间隔/最近采集）+ 分话题表现（主体命中 x/y、命中率%、完整证据、风险、运行）+ 最新战役笔记（作者、正文摘要、赞评藏）。新增 fmtEng 数字缩写。
+- static/index.html：bump workbench.js。
+
+### 已实测（真实数据，证据 step5i-brands / step5i-campaign / step5i-campaign-390）
+- 品牌资产（1066）：场内品牌 50、业态分类 9、太古汇在场 50、品牌知识库 103 条；业态 chips（女装48/珠宝钟表35/餐饮41…）、知识库分类（品牌案例40/危机公关14/品牌营销21…合计103）、品牌列表含路易威登/迪奥/古驰等真实楼层铺号；'-' 占位 fallback 后无破折号标题。
+- 话题战役（1066）：战役笔记 120、总互动 6.1w、监测话题 7、平均主体命中率 49.2%；战役「广州太古汇十五周年 2026-08-28~10-07 paused 间隔240分」；分话题 #广州太古汇15周年 28/60(46.7%)、#广州太古汇十五周年 31/60(51.7%)，完整证据 49/45；最新笔记 Koieee/Chelseaci/半斤佳(赞4118) 等真实正文与赞评藏。
+- 390 手机（CDP）：两模块 stat 两列、无横向滚动（scrollWidth 不超 390）、'-' 标题归零。
+- node --check 通过；不新增后端路由。
+
+### 未实测/遗留
+- 品牌列表未做分类筛选/搜索/分页（当前 50 条一次渲染可接受，品牌增多后补）；品牌健康度/画像详情下钻未做；战役笔记正文 comments_json 未展开（仅摘要）；战役 run/recover 等写操作未接（只读优先）；390 顶部「终端/文件/视图」工具条与页标题略挤，列入全局交互精修（窄屏收进溢出菜单）。
+
+### Git/生产安全
+- Staging 分支 commit（见下）；app.py/DB/采集/主体口径零改动（分话题主体命中率直接展示 Core 主体过滤结果，不重算不改写）；生产 8201 v5.9.9 未动；不提交 .env/*.db/cookie/token/profile/日志。
