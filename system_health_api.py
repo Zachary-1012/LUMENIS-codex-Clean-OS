@@ -485,25 +485,129 @@ def system_health():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+def _check_db_writable_fast():
+    """PRAGMA quick_check + write-permission test (no actual writes to business tables)."""
+    try:
+        db_path = get_db_path()
+        # 1. Check journal / directory write permission
+        db_dir = os.path.dirname(db_path)
+        if not os.access(db_dir, os.W_OK):
+            return {'writable': False, 'reason': 'data/ 目录不可写', 'status': 'error'}
+        # 2. SQLite integrity quick_check
+        import sqlite3
+        conn = sqlite3.connect(db_path, timeout=2)
+        c = conn.cursor()
+        c.execute("PRAGMA quick_check(1)")
+        qc = c.fetchone()
+        conn.close()
+        if qc and qc[0] != 'ok':
+            return {'writable': True, 'quick_check': qc[0][:80], 'status': 'warning'}
+        return {'writable': True, 'quick_check': 'ok', 'status': 'ok'}
+    except Exception as e:
+        return {'writable': False, 'reason': str(e)[:80], 'status': 'error'}
+
+
 @system_health_bp.route('/api/system/health/summary')
 def system_health_summary():
-    """系统健康状态摘要（精简版）"""
+    """系统健康状态摘要（精简版） — P0 红绿灯增强版：4 子灯 + critical 区分 + ok 不误报。"""
     try:
         db_status = check_database()
+        db_write = _check_db_writable_fast()
         collector_status = check_collector()
-        
+        login_status = check_login_status()
+        alerts_info = get_alerts()
+
+        # -------- 4 子灯（红/黄/绿：error/warning/ok） --------
+        # 1) database_light: 读写综合
+        if db_status['status'] == 'error' or db_write['status'] == 'error':
+            database_light = 'error'
+        elif db_status['status'] == 'warning' or db_write['status'] == 'warning':
+            database_light = 'warning'
+        else:
+            database_light = 'ok'
+        # 2) collector_light: CDP + cookie + today_runs 综合（原 check_collector 已覆盖）
+        collector_light = collector_status.get('status', 'warning')
+        # 3) auth_light: 登录态 + 最近采集有效性（recent_24h=0 为黄 最近7天=0 为红）
+        auth_light = login_status.get('status', 'warning')
+        # 4) xhs_platform_light: 小红书采集链路综合（CDP OK + 最近24h有数据才绿；CDP OK 但 24h=0 → 黄；CDP 掉 → 红）
+        recent_24h = db_status.get('recent_24h', 0)
+        cdp_ok = collector_status.get('cdp_running', False)
+        cookie_ok = collector_status.get('cookie_configured', False)
+        if (not cdp_ok) or (not cookie_ok):
+            xhs_light = 'error'
+        elif recent_24h == 0 and db_status.get('notes_count', 0) > 0:
+            xhs_light = 'warning'
+        else:
+            xhs_light = 'ok'
+
+        # -------- overall_status 升级规则（critical 新层级，P0 必看） --------
+        module_statuses = [database_light, collector_light, auth_light, xhs_light]
+        need_manual = alerts_info.get('need_manual_intervention', 0)
+        if 'error' in module_statuses or need_manual >= 1:
+            overall = 'critical'
+        elif 'warning' in module_statuses:
+            overall = 'warning'
+        else:
+            overall = 'ok'
+
+        # -------- ok 不再硬编码 True：有任何 warning+ 就是 ok=False --------
+        #   - ok=True 只表示：没有任何需要用户担心的问题
+        #   - ok=False + overall=warning/critical：提醒用户去主页看红灯
+        ok_result = (overall == 'ok')
+
+        # -------- 诊断 hint（4 子灯各自说明问题所在，帮助用户快速定位 32h 0 条类故障） --------
+        hints = []
+        if database_light != 'ok':
+            hints.append(f"数据库：{db_status.get('message','异常')}；写权限={db_write.get('status','unknown')}（{db_write.get('reason','')}）")
+        if collector_light != 'ok':
+            if not collector_status.get('cdp_running'):
+                hints.append("采集：浏览器(Edge CDP 9222)未启动 → 点 [启动浏览器] 或运行 start_system.bat")
+            elif not collector_status.get('cookie_configured'):
+                hints.append("采集：Cookie 缺失 → 登录小红书后扫码恢复")
+            else:
+                hints.append(f"采集：今日已跑 {collector_status.get('today_runs',0)}/12，剩余 {collector_status.get('remaining_runs',0)}")
+        if xhs_light == 'warning':
+            hints.append("小红书平台：最近24小时 0 条新笔记 → 可能风控拦截 / 验证码 / IP限制。若持续超过 6 小时，请前往 Auth Recovery Center 发起恢复任务。")
+        if auth_light == 'error':
+            hints.append("登录态：最近 7 天无采集 → 登录态大概率已失效 → 扫码重登")
+        if alerts_info.get('latest_alert'):
+            la = alerts_info['latest_alert']
+            hints.append(f"最近告警 [{la['level']}] {la['module']}: {la['message']}")
+
         return jsonify({
-            'ok': True,
-            'overall_status': 'ok' if (db_status['status'] == 'ok' and collector_status['status'] == 'ok') else 'warning',
+            'ok': ok_result,
+            'overall_status': overall,
+            # 4 子灯红绿灯（前端主页直接用这 4 个字段画红/黄/绿灯）
+            'sub_lights': {
+                'database':    {'light': database_light,    'label': '数据库', 'status': db_status.get('status',''),
+                                'notes_count': db_status.get('notes_count',0), 'recent_24h': recent_24h,
+                                'writable': db_write.get('writable', False)},
+                'collector':   {'light': collector_light,   'label': '采集器', 'status': collector_light,
+                                'cdp_running': collector_status.get('cdp_running', False),
+                                'cookie_ok': collector_status.get('cookie_configured', False),
+                                'today_runs': collector_status.get('today_runs', 0)},
+                'auth':        {'light': auth_light,        'label': '登录态/Auth', 'status': login_status.get('status',''),
+                                'recent_7d': login_status.get('recent_7d_collects', 0),
+                                'cookie_file_exists': login_status.get('cookie_file_exists', False)},
+                'xhs_platform':{'light': xhs_light,         'label': '小红书主平台', 'status': xhs_light,
+                                'recent_24h_new_notes': recent_24h,
+                                'next_auto_collect': get_collection_schedule().get('next_collect','')},
+            },
+            'need_manual_intervention': alerts_info.get('need_manual_intervention', 0),
+            'active_alerts': alerts_info.get('active_alerts', 0),
+            # 原摘要字段（保持向后兼容，不破坏原前端）
             'notes_count': db_status.get('notes_count', 0),
-            'today_collected': db_status.get('recent_24h', 0),
+            'today_collected': recent_24h,
             'today_runs': collector_status.get('today_runs', 0),
             'remaining_runs': collector_status.get('remaining_runs', 12),
             'cdp_running': collector_status.get('cdp_running', False),
+            'diagnostic_hints': hints,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         })
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        import traceback
+        return jsonify({'ok': False, 'overall_status': 'error', 'error': str(e),
+                        'traceback': traceback.format_exc()[-600:]}), 500
 
 
 @system_health_bp.route('/api/system/health/module/<module_name>')

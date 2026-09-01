@@ -1,0 +1,18 @@
+Z-Brand-Core T0 commit manifest (Zachary-OS-AI 2026-09-02)
+以下为精确应入库的 6 个核心代码修复 + 1 个配套工具 + 2 个变更日志 + 35 个 LEGACY NOTICE 启动脚本。
+.gitignore / .env.example / import_cookies.py / requirements.txt /
+scripts/_prod_dep_check.py / scripts/start_production.ps1 /
+CHANGELOG.md / DEV_LOG.md
+外加 35 个 LEGACY 启动脚本（见下）。
+严格禁止把 .env / _tmp_p0_* / scripts/_zachary_t0* / .venv / .trae / .trae-cn / backups / *.db 入库。
+LEGACY 启动脚本 (首行注入 REDIRECT NOTICE):
+  start_all.bat start_cdp_auto.bat start_cf.ps1 start_cloudflare_guardian.bat
+  start_cloudflare_hidden.vbs start_cloudflare_hidden_new.vbs start_cloudflare_stable.bat
+  start_cloudflare_tunnel.bat start_lan.bat start_remote_5g.bat start_remote_cloudflare.bat
+  start_stable.bat start_system.bat start_system_guardian.bat start_system_hidden.vbs
+  start_tunnel.bat start_tunnel.py start_v4.bat start_windows.bat start_xhs_cookie_sync.bat
+  一键启动系统.bat 一键安装依赖.bat 一键登录微博.bat 启动系统.bat 启动系统守护闭环.bat
+  系统守护闭环.ps1 系统守护闭环_优化版.bat 系统守护闭环_可靠版.bat
+  check_local_ai.bat cloudflared_guardian.ps1 install_cloudflared.bat monitor_cloudflare_tunnel.bat
+  run.ps1 run_production.py run_supervised.py start_production.ps1 (生产启动主入口，非 LEGACY 本体重写)
+README.md 本次不暂存（之前的变更不属 T0 基线范围）。
