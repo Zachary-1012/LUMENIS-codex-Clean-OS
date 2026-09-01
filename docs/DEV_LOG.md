@@ -626,3 +626,24 @@
 
 ### Git/生产安全
 - Staging 分支 commit（见下）；app.py/DB/采集/主体口径零改动；排查中仅重启过 8301 Staging（标准副本库 env），**生产 8201 四进程全程未动**（重启前后 healthz 均 ok v5.9.9）；不提交 .env/*.db/cookie/token/profile/日志。
+
+
+---
+
+## 2026-09-01 17:55 · UI 线并入 main + Feature 矩阵刷新（阶段1/2）
+
+### 本次做了什么
+1. **ui/staging-foundation(Step1–Step5j) 并入 main**：合并前基线 74 passed；merge 仅 static/index.html 一处冲突（app.js 版本号 + main 独有 modal_simplify.js，两者都保留），app.py 自动合并。期间自动巡检以线性快照带入合并内容，补 `-s ours` merge commit 记录拓扑（零内容改动）。
+2. **合并后回归**：规范用例 **80 passed**（50 + runtime_preflight 24 + workspace_keys 6），tests/test_css_balance.py CSS 结构平衡全绿，py_compile/191 路由通过。
+3. **8301 合并版实测**（ISOLATED_STAGING 副本库，生产 8201 未重启）：Preflight 总体 PASS/P0=0/DB 隔离；CTH Home 侘寂壳与完整线性导航正常；ZBMP 密钥门解锁成功；话题战役 120/6.1w；事件关系 16 节点三列（营销1/传播13/舆情2）四关系图例真实渲染；file-tree/term 两只只读路由命中；main 的键盘快捷键/预检与 staging UI 共存无冲突。
+4. **三线对齐**：main = ui/staging-foundation = origin/main = `580c2cf`（0/0），长期分叉消除。
+5. **FEATURE-FINAL-VERIFICATION-MATRIX 刷新**：34 → **44 条**（补登 ZBMP API Key、ZBMP 六组工作台、ZBIP 设计系统、只读工程面板、runtime_preflight、unified_logger、键盘快捷键、适配器基座、report_center、Global BIL）；计数 ACTIVE25/DEVELOPING11/EXPERIMENTAL4/PLANNED3/RESERVED1；GAP-03 标 RESOLVED、GAP-05 标已签字施工中。
+
+### 云端 AI（ark/ai_gateway）评估结论（用户已同意）
+保持 Legacy 默认关、不全局开启。后续按 AI Provider 化做可选通道：默认 Ollama，仅公开非敏感内容可手动单次切云端（脱敏+审计），客户敏感数据永不过云。登记 Backlog，本轮不打开。
+
+### 数据库
+无 schema 变更、无迁移；全程使用 staging 副本库，生产 data/monitor.db 未触碰。
+
+### 下一步（阶段3 P1，按序）
+GAP-04 三套 run-code 安全收口 → GAP-01 统一 pytest 入口 / GAP-02 红线函数级单测 → GAP-06 双维度落库 → GAP-07 事件三类四关系 → GAP-05 调度门控（已签字，feature flag 灰度+回滚）。
