@@ -3,7 +3,10 @@
 运行：.venv\\Scripts\\python.exe tests\\test_event_curation.py
 """
 import os, sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import classify_event_quality, _event_title_is_noise, get_events_curated

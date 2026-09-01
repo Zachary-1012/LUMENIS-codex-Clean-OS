@@ -8,7 +8,10 @@
 运行：.venv\\Scripts\\python.exe tests\\test_negative_event_api.py
 """
 import os, sys, io, sqlite3
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from subject_rules import subject_sql_and_values, subject_hit
 from database import note_to_dict

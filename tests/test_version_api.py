@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """版本中心后端接口只读集成测试：登录 -> status/history/config。不触发 save/push/pull/rollback。"""
 import io, os, sys, json, urllib.request
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 BASE = 'http://127.0.0.1:8201'
 
 def call(path, method='GET', token=None, body=None):

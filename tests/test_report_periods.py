@@ -2,7 +2,10 @@
 import sys, io, os
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _root)
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 os.chdir(_root)
 import export_report as E
 for period in ('daily','weekly','monthly','yearly'):

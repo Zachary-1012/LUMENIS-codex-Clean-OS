@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """验证 insert_note 标题兜底：空标题+正文→取首句；空标题空正文+作者→作者的笔记。测试后立即删除，不留垃圾。"""
 import io, os, sys, sqlite3
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import database
 db = database.DB_PATH

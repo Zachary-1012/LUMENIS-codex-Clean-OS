@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """classify_collect_state 六态归一化单测：空结果/登录/验证/IP熔断/网络严格区分。"""
 import io, os, sys
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import collector
 f = collector.classify_collect_state

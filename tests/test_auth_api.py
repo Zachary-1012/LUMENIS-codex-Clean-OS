@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """只读验证 Auth Recovery 后端链路（不调 start，避免真开浏览器标签）。"""
 import io, os, sys, json
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 import requests
 B = 'http://127.0.0.1:8201'
 s = requests.Session()

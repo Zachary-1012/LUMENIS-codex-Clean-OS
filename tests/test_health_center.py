@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """全局平台健康状态中心单测：三类分清 / 平台隔离 / 未启用≠0条 / 不伪装。纯内存不触网。"""
 import io, os, sys
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from platform_adapters.health_center import build_platform_health, IDLE, DISABLED
 from platform_adapters.scheduling import PlatformSchedulePlanner

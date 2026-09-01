@@ -2,7 +2,10 @@
 """ProxyPool 可插拔代理池单元测试（不依赖真实网络/代理在线）。
 覆盖《可插拔 ProxyPool 补丁1.0》验收标准中的关键安全行为。运行：python -m pytest tests/test_proxy_pool.py 或直接 python 运行。"""
 import os, sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from proxy_pool.manager import ProxyManager, ProxyUnavailable

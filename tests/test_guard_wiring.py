@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """验证 CollectorGuard 接入逻辑：健康透传 + 显式风控熔断后不再调用采集函数。"""
 import io, os, sys
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from collector_guard.guard import CollectorGuard
 from collector_guard.state import CollectState

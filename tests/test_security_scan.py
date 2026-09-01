@@ -6,7 +6,10 @@
 4) 内置 SecurityScanner 敏感信息扫描（排除 IDE 内置目录后）无高危命中。
 不打印任何真实凭证值。"""
 import io, os, sys, re, subprocess
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 sys.path.insert(0, ROOT)
