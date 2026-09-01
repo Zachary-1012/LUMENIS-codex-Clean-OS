@@ -461,9 +461,9 @@ body.nomi-open{overflow:hidden}
   .topbar{padding-left:56px}
   .menu-toggle{display:flex!important}
   .sidebar{box-shadow:20px 0 60px rgba(0,0,0,.12);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
-  .modal{padding:0;align-items:flex-end}
-  .modal-panel{width:100%;max-width:none;max-height:92vh;border-radius:20px 20px 0 0;padding:28px 18px 22px;animation:modalSheetIn .28s cubic-bezier(.22,1,.36,1)}
-  .nomi-chat-panel{width:100%;height:min(88vh,760px);border-radius:20px 20px 0 0}
+  .modal{padding:16px;align-items:center}
+  .modal-panel{width:calc(100vw - 32px);max-width:520px;max-height:82vh;border-radius:12px;padding:20px 16px;animation:modalFadeIn .25s ease}
+  .nomi-chat-panel{width:calc(100vw - 32px);max-width:520px;height:min(82vh,680px);border-radius:12px}
 }
 @keyframes modalSheetIn{from{transform:translateY(28px);opacity:.7}to{transform:translateY(0);opacity:1}}
 @media(min-width:769px){.modal-panel{min-height:180px}}
