@@ -466,6 +466,7 @@ body.nomi-open{overflow:hidden}
   .nomi-chat-panel{width:calc(100vw - 32px);max-width:520px;height:min(82vh,680px);border-radius:12px}
 }
 @keyframes modalSheetIn{from{transform:translateY(28px);opacity:.7}to{transform:translateY(0);opacity:1}}
+@keyframes modalFadeIn{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
 @media(min-width:769px){.modal-panel{min-height:180px}}
 
 /* ===== v5.6.3 采集状态显示 ===== */

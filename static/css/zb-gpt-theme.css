@@ -1,4 +1,4 @@
-﻿/* ============================================================================
+/* ============================================================================
    Z-BRAND GPT THEME · 100% GPT手机版设计语言
    参考：ChatGPT iOS App 逐帧分析（66.73秒视频，143帧）
    设计原则：极简白色 · 大圆角 · 毛玻璃 · 底部弹窗 · 骨架屏 · 空状态引导
@@ -717,7 +717,7 @@ input:focus, select:focus, textarea:focus{
 }
 .modal{
   background: var(--gpt-surface) !important;
-  border-radius: var(--gpt-r-sheet) !important;
+  border-radius: 12px !important;
   box-shadow: var(--gpt-sh-sheet) !important;
   border: none !important;
   width: 100%;
@@ -1418,7 +1418,7 @@ tbody tr:last-child td{
   }
   .sidebar .side-item{
     justify-content: center;
-    padding: 0 !important;
+    padding: 16px !important;
   }
 }
 @media(max-width: 768px){
@@ -1426,7 +1426,7 @@ tbody tr:last-child td{
     display: block !important;
     height: auto !important;
     min-height: 100vh;
-    width: 100% !important;
+    width: calc(100vw - 32px) !important;
     overflow: visible !important;
   }
   .layout{
@@ -2149,7 +2149,7 @@ button:focus:not(:focus-visible),
   background: var(--gpt-surface) !important;
   border-radius: var(--gpt-r-3xl) !important;
   max-width: 560px !important;
-  width: 100% !important;
+  width: calc(100vw - 32px) !important;
   max-height: 85vh !important;
   padding: var(--gpt-sp-6) var(--gpt-sp-6) var(--gpt-sp-5) !important;
   box-shadow: 0 24px 80px rgba(0,0,0,0.18) !important;
@@ -2282,35 +2282,23 @@ button:focus:not(:focus-visible),
 /* 手机端：底部Sheet */
 @media(max-width: 768px){
   .modal{
-    padding: 0 !important;
-    align-items: flex-end !important;
+    padding: 16px !important;
+    align-items: center !important;
   }
   .modal-panel{
-    max-width: 100% !important;
-    width: 100% !important;
-    max-height: 88vh !important;
-    border-radius: var(--gpt-r-sheet) !important;
-    padding: var(--gpt-sp-6) var(--gpt-sp-5) calc(var(--gpt-sp-5) + env(safe-area-inset-bottom,0px)) !important;
-    animation: gptSheetUp var(--gpt-d-sheet) var(--gpt-ease-spring) !important;
+    max-width: 520px !important;
+    width: calc(100vw - 32px) !important;
+    max-height: 82vh !important;
+    border-radius: 12px !important;
+    padding: 20px 16px !important;
+    animation: gptModalFadeIn .25s ease !important;
   }
-  @keyframes gptSheetUp{
-    from{ transform: translateY(100%); }
-    to{ transform: translateY(0); }
+  @keyframes gptModalFadeIn{
+    from{ transform: translateY(8px) scale(.98); opacity: 0; }
+    to{ transform: translateY(0) scale(1); opacity: 1; }
   }
-  /* 顶部抓手 */
-  .modal-panel::before{
-    content: '';
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 36px;
-    height: 5px;
-    background: var(--gpt-border-strong);
-    border-radius: var(--gpt-r-pill);
-    opacity: 0.5;
-    z-index: 6;
-  }
+  /* 居中弹窗不显示底部 sheet 顶部抓手 */
+  .modal-panel::before{ display: none !important; }
   .modal-close{
     top: var(--gpt-sp-5) !important;
   }

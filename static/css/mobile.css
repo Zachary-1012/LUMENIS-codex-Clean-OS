@@ -171,8 +171,9 @@
   #modal.modal{inset:0!important;max-width:none!important;max-height:none!important;
     padding:0!important;margin:0!important;border-radius:0!important;
     background:transparent!important;overflow:visible!important}
-  #modal .modal-panel{align-self:flex-end!important;margin:0!important;
-    width:100%!important;max-width:100%!important}
+  #modal .modal-panel{align-self:center!important;margin:0!important;
+    width:calc(100vw - 32px)!important;max-width:520px!important;max-height:82vh!important;
+    border-radius:12px!important}
   /* 面板内部内容区可滚，底部按钮始终可见 */
   #modal .modal-panel{display:flex;flex-direction:column}
   #modal .modal-content{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch}
