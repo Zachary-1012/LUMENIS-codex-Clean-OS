@@ -162,7 +162,7 @@ class GitVersionManager:
     def current_version(self) -> str:
         vf = self.root / "VERSION"
         if vf.exists():
-            t = vf.read_text(encoding="utf-8", errors="replace").strip()
+            t = vf.read_text(encoding="utf-8-sig", errors="replace").strip()
             if _VERSION_RE.match(t):
                 return t if t.startswith("v") else f"v{t}"
         m = self._run(["log", "-1", "--pretty=%s"])
