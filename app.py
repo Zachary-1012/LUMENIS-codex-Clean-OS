@@ -427,6 +427,24 @@ def report_center_preview():
         app.logger.exception('report_center preview failed')
         return jsonify({'ok': False, 'error': '报告生成失败，请查看服务端日志'}), 500
 
+# ===== Global BIL 全球品牌智能：research-stage 只读（从 seed JSON 读，不建表/不写库/不联网，不参与生产口径）=====
+@app.route('/api/v2/global-bil/overview')
+@app.route('/api/v2/global-bil/<resource>')
+def global_bil_read(resource='overview'):
+    try:
+        from v4_upgrade.global_bil import load_resource, overview, _FILES
+        if resource == 'overview':
+            return jsonify({'ok': True, 'stage': 'research', 'overview': overview()})
+        if resource not in _FILES:
+            return jsonify({'ok': False, 'error': 'resource 非法，仅 overview/benchmarks/mechanisms/cases'}), 400
+        data = load_resource(resource)
+        if data is None:
+            return jsonify({'ok': False, 'error': 'BIL seed 未就绪'}), 404
+        return jsonify({'ok': True, 'stage': 'research', 'resource': resource, 'data': data})
+    except Exception:
+        app.logger.exception('global_bil read failed')
+        return jsonify({'ok': False, 'error': 'BIL 读取失败，请查看服务端日志'}), 500
+
 @app.route('/api/event-graph/events/<event_id>', methods=['DELETE'])
 def event_graph_delete_event(event_id):
     """删除事件（同时删除关联关系）"""

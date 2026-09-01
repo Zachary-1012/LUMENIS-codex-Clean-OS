@@ -791,3 +791,20 @@ ReportExporter 的 Word/PDF 导出与自动发送仍旁路；12 条旧报告路�
 
 ### 结果（已实测）
 9 用例全过；统一入口 `pytest tests` **143 passed**。结论：韧性增强层行为正确、可作为后续采集 Adapter 化的可靠底座；是否真正接入主采集链仍按「先旁路验证再切换」另行评估，本轮不接管。
+
+
+---
+
+## 2026-09-01 21:40 · 新增能力接管③：Global BIL research-stage 只读接管（阶段4c）
+
+### 事实
+- Global BIL 此前仅有 13 篇 docs + 3 个 seed JSON（data/global_bil_*_v1.json）+ migrations/009 隔离迁移，**无任何 Python/路由**；009 明确 staging-only，不得对生产库执行。
+
+### 落地（只读取研究 seed，不建表/不写库/不联网）
+1. 新增 `v4_upgrade/global_bil.py`：白名单只读 loader（benchmarks/mechanisms/cases），mtime 缓存 + overview 概览；非法资源名 KeyError。
+2. 新增只读路由 `GET /api/v2/global-bil/overview` 与 `/api/v2/global-bil/<resource>`：resource 白名单、未就绪 404、非法 400、无 Basic 401；响应标注 `stage=research`，**不参与任何生产统计/主体/风控口径**。
+
+### 真实结果（已实测，真实 seed 计数）
+overview：benchmarks **19** 条、mechanisms **16** 条、cases **10** 条（version 1.0/1.0/2026.09.01，status=research_seed）。新增 tests/test_global_bil_read.py 4 用例全过；统一入口 `pytest tests` **147 passed**。
+### 未接管（登记）
+bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monitor.db；BIL 与生产 notes/events 的关联分析、前端研究工作台仍属后续 research 任务。
