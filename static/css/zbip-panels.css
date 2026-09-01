@@ -70,7 +70,7 @@
 .zb-tree-row .ico{width:14px;height:14px;flex:0 0 14px;color:var(--zb-text-muted,#78716C)}
 .zb-tree-row.is-dir .ico{color:var(--zb-text,#44403C)}
 .zb-tree-row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.zb-tree-row .sz{font-size:10.5px;color:var(--zb-text-muted,#A8A29E;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.zb-tree-row .sz{font-size:10.5px;color:var(--zb-text-muted,#A8A29E);font-variant-numeric:tabular-nums;flex:0 0 auto}
 .zb-tree-children{display:none}
 .zb-tree-children.open{display:block}
 .zb-tree-empty{padding:18px 12px;font-size:12px;color:var(--zb-text-muted,#78716C);text-align:center;line-height:1.7}

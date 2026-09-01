@@ -598,3 +598,31 @@
 
 ### Git/生产安全
 - Staging 分支 commit（见下）；app.py/DB/采集/主体口径零改动（分话题主体命中率直接展示 Core 主体过滤结果，不重算不改写）；生产 8201 v5.9.9 未动；不提交 .env/*.db/cookie/token/profile/日志。
+
+---
+
+## Step5j｜③全局交互精修第一批 + 修复 Step5g 遗留 CSS 截断 bug（2026-09-01）
+
+### 关键 bug 自抓自修（重要）
+- 现象：390 窄屏面板工具条始终显示「终端/文件/视图」文字，窄屏规则不生效。
+- 定位过程：禁缓存/换 query/重启 8301 均复现 → 浏览器 CSSOM 枚举发现 **zbip-panels.css 解析到 `.zb-tree-row .sz`（行73）后整段中断，其后规则（.zb-tree-children/.zb-files-foot/面板打开让位/两个 @media）全部未进入 CSSOM**。
+- 根因：行73 `color:var(--zb-text-muted,#A8A29E` **漏写右括号 `)`**，浏览器进入未闭合 var() 后把后续全部内容当函数参数吞到文件尾。此前自检脚本只统计花括号/注释、未统计圆括号故漏检（圆括号扫描确认该文件 balance=1，修复后归零；另两份 CSS 平衡）。
+- 影响面：这是 **Step5g 即存在**的问题——文件树展开/收起、footer、面板打开主内容让位、≤820 抽屉化、prefers-reduced-motion 实际一直未生效（Step5g 当时部分能力靠 JS 内联呈现，误判为通过）。本轮补 `)` 后全部恢复，并补一个圆括号平衡检查脚本以防复发。
+
+### 本批精修（纯前端）
+- ZBMP 工作区隐藏 CTH-POMS 生产按钮：body[data-workspace=zbmp] 下 #refreshBtn/#reviewBtn/#reportBtn/#rednoteBtn display:none（搜索/预警保留）；切回 CTH 自动恢复。已实测。
+- ZBMP 页面切换轻量淡入上移（220ms，遵循 reduced-motion 关闭）。
+- 侧栏项/列表链接/节点卡 :focus-visible 焦点环（键盘可达）；导航项 active 微反馈。
+- ≤820（原760 上调）面板工具条只留 34×30 线性图标方形按钮（id 级特异性 + font-size:0 双保险压过历史 CSS 层）、statStrip 强制两列、页头收紧。
+- 文件：zbip-panels.css(v1.0.0→v1.0.3)、zbmp-workbench.css(v1.0.5→v1.0.6)、index.html bump。
+
+### 已实测（证据 step5j-desktop-files / step5j-files-drawer-390）
+- 桌面 1066：工具条正常带文字；文件树打开并展开 static（css/img/js/launch-screens + 文件大小），footer「目录20·文件173·共193」，主内容让位不遮挡；ZBMP 下采集/AI分析/导出按钮隐藏、搜索保留；Home 模块状态点（可用/规划中/接入中）正确。
+- 390（CDP，先开页后模拟）：matchMedia820=true、.lbl computed display=none、按钮 34px、CSSOM 820 媒体块=1、.zb-tree-children 规则恢复=1；文件树为 84vw 抽屉；stat 两列、无横向滚动。
+- node --check 通过；三 CSS 圆括号/花括号平衡归零。
+
+### 未实测/遗留
+- 430/768/1024/1280/1440 断点仍未逐档取图；顶部 topbar 在 ZBMP 仍显示 CTH 系统标题（纯文本，下批按工作区分发标题）；终端 ↑↓ 历史/Tab 补全、文件点击只读预览、侧栏搜索与 Ctrl+K 命令面板合并仍挂起；CDP mobile 截图偶发重绘叠影（模拟器合成问题，DOM 断言为准）。
+
+### Git/生产安全
+- Staging 分支 commit（见下）；app.py/DB/采集/主体口径零改动；排查中仅重启过 8301 Staging（标准副本库 env），**生产 8201 四进程全程未动**（重启前后 healthz 均 ok v5.9.9）；不提交 .env/*.db/cookie/token/profile/日志。
