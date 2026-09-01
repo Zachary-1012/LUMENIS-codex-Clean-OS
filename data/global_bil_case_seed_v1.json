@@ -1,0 +1,78 @@
+{
+  "version": "2026.09.01",
+  "status": "research_seed",
+  "purpose": "Global BIL mechanism training seed; not production KPI data",
+  "cases": [
+    {
+      "brand": "PVH",
+      "brands": ["Calvin Klein", "Tommy Hilfiger"],
+      "archetype": ["portfolio", "fashion", "consumer_intelligence"],
+      "mechanism": ["social_voice", "share_of_wardrobe", "emotion_context", "cross_functional_insight"],
+      "analysis": "PVH uses social intelligence beyond simple brand mentions: it tracks fashion conversations such as OOTD to understand which brands consumers actually wear, share of voice, product trends and changing consumer moods. The reusable mechanism is Social Signal -> Consumer Truth -> Product/Marketing discussion -> Action.",
+      "evidence": [{"source":"Brandwatch PVH case study","url":"https://www.brandwatch.com/case-studies/pvh/","status":"verified_public_case"}]
+    },
+    {
+      "brand": "CeraVe",
+      "archetype": ["beauty", "social_native", "community"],
+      "mechanism": ["creator_signal", "ugc", "platform_affinity", "brand_health"],
+      "analysis": "CeraVe demonstrates that platform-specific creator and UGC signals can explain why brand health changes within a sub-audience. BIL should therefore connect social content with audience/platform affinity rather than treating all mentions as homogeneous.",
+      "evidence": [{"source":"YouGov consumer and brand intelligence case","url":"https://business.yougov.com/content/39702-yougov-consumer-brand-intelligence-post-pandemic","status":"verified_public_case"}]
+    },
+    {
+      "brand": "L'Oreal Indonesia",
+      "archetype": ["beauty", "multi_source", "market_intelligence"],
+      "mechanism": ["social_plus_traditional", "trend_detection", "campaign_tracking", "product_insight"],
+      "analysis": "The case demonstrates the value of combining social and traditional datasets, historical conversation backtracking and campaign dashboards. BIL should support multi-source evidence and historical comparison rather than isolated social snapshots.",
+      "evidence": [{"source":"Brandwatch/L'Oreal Indonesia case summary","url":"https://www.casestudies.com/company/brandwatch/case-study/how-brandwatch-helped-loreal-improve-their-market-share-by-equipping-them-with-deep-consumer-insights","status":"public_case_summary"}]
+    },
+    {
+      "brand": "Glossier",
+      "archetype": ["beauty", "community", "ugc_led"],
+      "mechanism": ["experience_sharing", "advocacy", "co_development", "community"],
+      "analysis": "Glossier is useful as a community mechanism benchmark: consumer experience sharing can become advocacy and product/community learning. BIL should distinguish ordinary UGC from advocacy and co-development signals.",
+      "evidence": [{"source":"Brandwatch case-study index / Glossier + TikTok","url":"https://www.brandwatch.com/case-studies/page/3/","status":"public_case_index"}]
+    },
+    {
+      "brand": "Salomon",
+      "archetype": ["outdoor", "sport", "creator_community"],
+      "mechanism": ["athlete_network", "creator_content", "ugc", "community"],
+      "analysis": "Salomon is a useful global creator/community benchmark. BIL should measure creator contribution by content quality, engagement, advocacy and downstream UGC rather than follower count alone.",
+      "evidence": [{"source":"Roster Salomon case study","url":"https://www.getroster.com/case-studies/salomon/","status":"public_case"}]
+    },
+    {
+      "brand": "Fashion Retailer",
+      "archetype": ["fashion", "audience_intelligence", "always_on"],
+      "mechanism": ["persona", "brand_health", "campaign_optimization", "platform_selection"],
+      "analysis": "Audience personas become materially more useful when connected to continuous brand-health tracking. BIL should join audience segments, campaign exposure and Brand Health/Consideration/Purchase Intent over time.",
+      "evidence": [{"source":"YouGov fashion retailer audience profiling case","url":"https://yougov.com/en-gb/case-studies/50347-fashion-retailer-audience-profiling-case-study","status":"verified_public_case"}]
+    },
+    {
+      "brand": "Hamptons",
+      "archetype": ["retail", "rebrand", "campaign_effectiveness"],
+      "mechanism": ["brand_health", "awareness", "consideration", "competitor_benchmark"],
+      "analysis": "The case is useful for measuring pre/during/post campaign brand health and competitor benchmarks. BIL should preserve time windows and methodology versions so campaign effects are not confused with baseline movement.",
+      "evidence": [{"source":"YouGov Hamptons case study","url":"https://yougov.com/en-us/case-studies/46983-hamptons-tracked-brand-awareness-increase-rebrand-campaigns","status":"verified_public_case"}]
+    },
+    {
+      "brand": "Jacquemus",
+      "archetype": ["designer", "luxury", "visual_social"],
+      "mechanism": ["visual_identity", "creator_culture", "product_culture", "global_local"],
+      "analysis": "Use as a benchmark for globally recognizable visual identity and product-led social culture. Research must separate global attention from local market conversion and store/channel presence.",
+      "evidence": [{"source":"BIL research seed","status":"requires_current_source_verification"}]
+    },
+    {
+      "brand": "Patagonia",
+      "archetype": ["outdoor", "values_led", "community"],
+      "mechanism": ["values", "community", "product_use", "lifecycle"],
+      "analysis": "Use as a benchmark where brand meaning and community behavior are inseparable from product discussion. BIL should connect values-related discourse, product use and local community activity.",
+      "evidence": [{"source":"BIL research seed","status":"requires_current_source_verification"}]
+    },
+    {
+      "brand": "BY FAR",
+      "archetype": ["designer", "social_growth", "lifecycle"],
+      "mechanism": ["viral_growth", "ugc_stock", "offline_presence", "decline_or_recovery"],
+      "analysis": "Use as a lifecycle stress-test: high historical social visibility must not be interpreted as current commercial health. BIL should compare current momentum, UGC stock, purchase intent and offline presence over time.",
+      "evidence": [{"source":"BIL research seed","status":"requires_current_source_verification"}]
+    }
+  ]
+}
