@@ -1,9 +1,10 @@
 # FEATURE-FINAL-VERIFICATION-MATRIX（Feature Final Verification 2.0）
 
 > 初版 2026-08-31（main=`af28436`）；**刷新 2026-09-01，main=`580c2cf`（ui/staging-foundation Step1–Step5j 已并入 main，main=staging=origin 三线同点）**。**判定优先级：源码 > DB > Runtime > 测试 > Evidence > 文档。**
-> 只读核验脚本：`scripts/inventory/feature_final_verify.py`；测试事实为**真实运行**：合并后规范用例 **80 passed**（test_ai/test_api/test_database/test_e2e/test_llm_gateway 50 + test_runtime_preflight 24 + test_workspace_keys 6），另 `tests/test_css_balance.py` CSS 结构平衡门禁全绿。
+> 只读核验脚本：`scripts/inventory/feature_final_verify.py`；测试事实为**真实运行**：合并后规范用例 **80 passed**（test_ai/test_api/test_database/test_e2e/test_llm_gateway 50 + test_runtime_preflight 24 + test_workspace_keys 6），另 `tests/test_css_balance.py` CSS 结构平衡门禁全绿；**2026-09-01 晚统一入口 `pytest tests` = 151 passed（GAP-01 已解，conftest 智能收集纯脚本、pytest.ini/run_all 分层入口）**。
 > 8301 合并版实测（ISOLATED_STAGING 副本库，生产 8201 未重启）：Preflight 总体 PASS/P0=0、CTH Home 侘寂壳、ZBMP 密钥门解锁、话题战役 120/6.1w、事件关系 16 节点三列四关系真实渲染、两只只读路由 file-tree/term 命中。
 > 关键事实：pytest 可收集的 `test_*.py` 中多数为独立脚本（无 def test_、靠 __main__/sys.exit 运行），统一 `pytest tests` 仍被 `test_api_smoke.py` 顶层 `sys.exit` 打成 INTERNALERROR（**GAP-01 待清**）；`app_evidence_records` 仍 0 行（GAP-08）。
+> **2026-09-01 晚二次刷新（main=`9092697`）：P1 全清（GAP-01/02/03/04/05/06/07 均 RESOLVED），统一 `pytest tests` 由 INTERNALERROR 收敛到 151 passed；新增调度三态门控(默认 shadow)、事件关系保守推断、report_center/Global BIL 只读旁路、adapter 韧性层测试、RedNote 策略 SoT。**
 > **Status 列保留 FEATURE-REGISTRY 原值，不擅自升降级**；严格 ACTIVE 五要素=代码+Owner+运行路径+测试+Evidence，缺口写入 Gap 列与 FEATURE-GAP-REGISTER。本轮新增条目一律以合并后 main 实测/用例为据，不足五要素者不标 ACTIVE。
 
 ## 图例
@@ -12,18 +13,18 @@
 - Test：**50✓**=被本轮 50 个 PASS 用例直接覆盖；脚=有对应脚本式验证（非 pytest、未统一执行）；无=缺。
 - Evidence：**本轮 PASS**=50 用例实测通过覆盖；缺=无统一可归档运行证据（EVIDENCE_MISSING）。
 
-## 全量矩阵（44 条 = 原 34 + 2026-09-01 补登 10）
+## 全量矩阵（48 条 = 原 34 + 09-01 补登 10 + 09-01 晚补登 4）
 | ID | Feature | Product | Asset | Owner | API | DB | UI | Runtime | Test | Evidence | Status | Gap | Risk |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CTH-MON-001 | 关键词笔记采集(真人CDP) | CTH | Y | collector.py/xhs_cdp_collector | Y /api/collect* | notes,collection_logs | Y collect | 主链 | 脚(collect_state/collection_full/browser_e2e) | 缺(不能在CI打真实平台,需mock) | ACTIVE | 采集链无规范pytest；当前 BLOCKED 熔断 | 账号/IP 风控(非代码缺陷) |
 | CTH-MON-002 | 15周年专题监测 | CTH | Y | topic_campaign.py | Y | topic_campaign_notes(120) | Y 专题页 | 主链 | 脚(test_topic_port) | 缺 | ACTIVE | 缺规范用例 | 窗口至 10-07 |
-| CTH-MON-003 | 采集调度(固定→动态) | CTH | Y | platform_adapters/scheduling | 前缀*(实际 /api/collect/schedule-status) | schedule_decisions | Y console | 旁路(影子) | 脚(test_scheduling) | 影子日志 | DEVELOPING | **GAP-05 用户已签字(2026-09-01)，门控施工中：feature flag 默认保守+灰度+回滚**；GAP-14 | 未门控前不控生产 |
+| CTH-MON-003 | 采集调度(固定→动态) | CTH | Y | platform_adapters/scheduling | 前缀*(实际 /api/collect/schedule-status) | schedule_decisions | Y console | 旁路(影子) | 脚(test_scheduling) | 影子日志 | ACTIVE(默认shadow) | **GAP-05 已落地(ea3143d)：scheduling/gate.py 三态 shadow/canary/enforce，默认 shadow 零行为变化、只收紧不放松、fail-open、env 回滚；6 测**；灰度时点为运维开关；GAP-14 | enforce 全量门控待逐步开 |
 | CTH-MON-004 | 采集健康/六态 | CTH | Y | health_center.py | Y /api/platform-health | collection_logs | Y 健康点 | 主链 | 脚(test_health_center) | 缺 | ACTIVE | 缺规范用例 | 低 |
 | CTH-MON-005 | 全网搜索采集 | CTH | Y | web_monitor/v4 adapters | Y /api/web-* | web_*(5表) | Y | 旁路 | 无 | 缺 | EXPERIMENTAL | 无测试 | 中转链稳定性 |
 | CTH-SUBJ-001 | 广州太古汇主体过滤🔴 | CTH | Y | subject_rules.py | 内部 | notes.subject_hit | Y | 主链 | **50✓** test_e2e::subject_filter + 脚 redline | **本轮 PASS** | ACTIVE | 可补函数级边界用例 | 红线，禁弱化 |
-| CTH-SUBJ-002 | 主体/内容双维度 | CTH | Y | subject_classifier.py | Y /api/subject-classifier/types | 落库列未建 | Y | 旁路 | 50✓(AI/e2e 间接) | 部分 | DEVELOPING | GAP-06 落库贯通；禁 user_type=UGC | 枚举口径 |
+| CTH-SUBJ-002 | 主体/内容双维度 | CTH | Y | subject_classifier.py | Y /api/subject-classifier/types | 落库列未建 | Y | 旁路 | 50✓(AI/e2e 间接) | 部分 | ACTIVE | **GAP-06 已落库(87274ff)：notes 增 subject_type/content_type 两列(幂等迁移、默认空串不回填)、insert 计算、白名单筛选、/api/notes 透传；6 测**；禁 user_type=UGC | 低 |
 | CTH-EVT-001 | 事件聚合🔴 | CTH | Y | aggregate_events() | Y /api/events* | events(427) | Y | 主链 | **50✓** test_e2e::events_aggregation | **本轮 PASS(集成级)** | ACTIVE | GAP-02 缺函数级直接单测 | 红线 |
-| CTH-EVT-002 | 事件关系图谱 | CTH | Y | event_graph.py | Y /api/event-graph/* | event_graph_events(16)/relations(1) | Y | 主链 | 无 | 缺 | ACTIVE | GAP-07 三类四关系未全；无直接测试 | 关系数据极少 |
+| CTH-EVT-002 | 事件关系图谱 | CTH | Y | event_graph.py | Y /api/event-graph/* | event_graph_events(16)/relations(1) | Y | 主链 | 无 | 缺 | ACTIVE | **GAP-07 已补(f413548)：infer_and_link_relations 时间+标题双证据保守推断(无证据不连边、trigger 不自动造)+POST rebuild-relations；Staging 16 事件得 3 条有证据并行、117 对不连；5 测** | derive/follow 待真实跨天数据 |
 | CTH-EVT-003 | 负面确认/评审 | CTH | Y | events 评审流 | Y negative/event-review | note_review_history(8327) | Y | 主链 | 脚(negative_event_api) | 缺 | ACTIVE | GAP-09 两套并存 DUPLICATE_CANDIDATE | 双写状态不一致 |
 | CTH-RISK-001 | 风险判定/等级🔴 | CTH | Y | 根 risk_engine.py | Y /api/risk* | events | Y | 主链 | **50✓** test_e2e::risk_level | **本轮 PASS(集成级)** | ACTIVE | GAP-02 test_risk_engine 实参测 collector_guard，根 risk_engine 无直接单测 | 红线 |
 | CTH-RISK-002 | 熔断/冷却/300012 | CTH | Y | collector_guard/xhs_cookie_bridge | 前缀*(无独立 /api/circuit*) | xhs_circuit(json) | Y | 主链 | 脚(guard_wiring/risk_engine) | 缺 | ACTIVE | GAP-14 登记口径；只识别不破解 | 合规红线 |
@@ -74,6 +75,10 @@
 - **【I】LEGACY（0 条 Feature 级）**：LEGACY 实现在 CAPABILITY-OWNERSHIP（**云端 ark/ai_gateway 经评估保持 Legacy 默认关，仅公开非敏感内容未来可作可选 Provider、客户数据永不过云**、旧 JS 采集、v570、Selenium 等）登记，不在 Feature 总账虚列。
 
 ## 计数汇总
-ACTIVE 25 / DEVELOPING 11 / EXPERIMENTAL 4 / NOT_VERIFIED 0 / PLANNED 3 / RESERVED 1 / DUPLICATE 0 / MIGRATION_REQUIRED 0 / LEGACY 0（合计 44，基线 main=`580c2cf`）。
+| CTH-MON-006 | RedNote 运行策略 SoT | CTH | Y | platform_adapters/rednote_policy.py | -(纯策略) | - | 无 | 旁路(默认不自动跑) | **4✓** test_rednote_policy | 本轮 PASS | DEVELOPING | intl 为主/cn 暂停/三端开关已固化；国际站选择器、真人频率实测值、保活调度待真实窗口 | 真实平台风控 |
+| CTH-RPT-003 | 标准化报告只读预览 | CTH/ZBMP | Y | v4_upgrade/report_center | Y GET /api/v2/report-center/preview | notes/events(只读) | 待接 | 旁路只读 | **7✓** test_report_center_route | 本轮 PASS(Staging 18节) | EXPERIMENTAL | 导出/自动发送未接管，不抢 RPT-001/002 Owner(GAP-10) | Owner 冲突 |
+| ZBMP-INTEL-001 | Global BIL 全球品牌智能(研究) | ZBMP | Y | v4_upgrade/global_bil.py | Y GET /api/v2/global-bil/* | seed JSON(不建表) | 待接 | research 只读 | **4✓** test_global_bil_read | 本轮 PASS(19基准/16机制/10案例) | EXPERIMENTAL | bi_* 表仅隔离库 009 迁移；不参与生产口径 | 研究阶段 |
+| CTH-SYS-004 | 采集 Adapter 韧性层(熔断/限流/双池) | CTH | Y | v4_upgrade/adapters(base,dual_pool) | -(未挂主链) | - | 无 | 旁路(增强未接主链) | **9✓** test_adapter_resilience | 本轮 PASS | EXPERIMENTAL | 主采集链当前不经过，接入另评估 | 低 |
+ACTIVE 27 / DEVELOPING 10 / EXPERIMENTAL 7 / NOT_VERIFIED 0 / PLANNED 3 / RESERVED 1 / DUPLICATE 0 / MIGRATION_REQUIRED 0 / LEGACY 0（合计 48，基线 main=`9092697`；ACTIVE 含 GAP-05 默认 shadow 门控、GAP-06 双维度，状态升级均有测试+Staging 证据）。
 ASSET_MISSING=0；Owner 冲突=0 新增（重复候选见 GAP）；合并后真实测试 **80 passed / 0 failed** + CSS 平衡门禁全绿；统一 Evidence 落库=0（体系缺口 GAP-08）。
-**本轮关键集成**：ui/staging-foundation Step1–Step5j 已并入 main（main=staging=origin=`580c2cf`），GAP-03 主 SPA 挂载随之解决；report_center/Global BIL 明确为 EXPERIMENTAL 旁路（未挂路由，不与生产 Owner 冲突）。
+**本轮关键集成**：ui/staging-foundation Step1–Step5j 已并入 main（main=staging=origin=`580c2cf`），GAP-03 主 SPA 挂载随之解决；report_center/Global BIL 已于 09-01 晚挂**只读旁路路由**（/api/v2 前缀，不抢生产 Owner、不写库），状态仍 EXPERIMENTAL；adapter 韧性层经 9 测验证但未接主采集链；RedNote 策略 SoT 默认不自动跑。统一测试 **151 passed**。
