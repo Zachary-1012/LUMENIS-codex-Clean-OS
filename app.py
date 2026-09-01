@@ -75,6 +75,7 @@ import evaluation_system
 import settings_module
 import export_report
 import security_scanner
+import runtime_preflight  # ZBIP Runtime Integrity Preflight（统一启动闸门；默认只记录不阻断，ZBC_PREFLIGHT_ENFORCE=1 时 P0 阻断）
 import local_ai_client
 import pr_case_integration
 import system_features_api
@@ -5023,6 +5024,16 @@ if __name__ == '__main__':
     print(f"详细日志: {os.path.join(log_dir, 'system.log')}")
     print("=" * 60)
     
+    # ===== ZBIP Runtime Integrity Preflight（统一启动闸门）=====
+    # 默认只记录并写 Attestation、不阻断现网；ZBC_PREFLIGHT_ENFORCE=1 时存在 P0 即终止启动。
+    try:
+        _pf_report = runtime_preflight.run_preflight()
+        print(runtime_preflight.format_summary(_pf_report))
+    except SystemExit:
+        raise
+    except Exception as _pf_e:
+        print(f"[Preflight] 预检异常，不阻断启动: {type(_pf_e).__name__}: {_pf_e}")
+
     # 自动检查并启动CDP浏览器（确保采集功能可用）
     # 注意：暂时禁用自动启动，避免Edge浏览器崩溃导致主进程退出
     # 采集时会按需启动CDP浏览器
