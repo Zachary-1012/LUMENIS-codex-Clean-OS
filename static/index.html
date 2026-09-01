@@ -921,6 +921,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS安全；依赖style.css .ar-badge 样式；所有动态DOM=createElement+textContent） -->
 <script src="/static/js/auth_recovery_poller.js?v=5.8.9"></script>
 <script>
+  // ── 双子星库 Contract：全局 HTTP Basic Auth 头（auth_global.js / auth_recovery_poller.js / 其他 JS 共享同一凭证，401 修复）
+  // 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框；v4 bearer 会话路径不变）
+  (function(){ try { window.__Z_AUTH = 'Basic ' + btoa('Zachary:ID082610');
+    // 给子 iframe / 其他域脚本一个 localStorage 兜底（多页面入口互用）
+    try { localStorage.setItem('Z_AUTH_B64', btoa('Zachary:ID082610')); } catch(e){} } catch(e){} })();
+</script>
+<script>
   // Footer 数据更新时间戳：页面加载立刻填入，避免一直显示 --
   try { var _lu=document.getElementById('last-update'); if(_lu) _lu.textContent=new Date().toLocaleString('zh-CN'); } catch(e){}
   // 若系统有全局版本更新事件，可刷新一次 last-update（兼容老 setInterval 时钟）

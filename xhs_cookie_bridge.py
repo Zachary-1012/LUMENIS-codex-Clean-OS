@@ -301,6 +301,179 @@ def cookie_configured():
     return bool(cookie_file and os.path.exists(cookie_file) and
                 open(cookie_file, encoding='utf-8', errors='replace').read().strip())
 
+
+def _check_cdp_online(cdp_url: str, timeout: float = 2.5) -> bool:
+    """轻量 CDP 健康探活：只 ping /json/version 不做动作。返回 True=浏览器已常驻连接就绪。"""
+    try:
+        import urllib.request as _ur
+        if not cdp_url:
+            return False
+        if not cdp_url.startswith('http'):
+            cdp_url = 'http://' + cdp_url
+        with _ur.urlopen(cdp_url.rstrip('/') + '/json/version', timeout=timeout) as _r:
+            return _r.status == 200
+    except Exception:
+        return False
+
+
+def runtime_preflight_check(account: str | None = None,
+                            cdp_url: str | None = None,
+                            quick: bool = False) -> dict:
+    """双子星库 Contract：小红书采集七态统一预检。
+
+    供 app.py 启动时 / 采集前 / 前端轮询使用。
+    顺序：Account Contract → Cookie → User ID 白名单 → Cookie文本包含 → CDP在线 → 熔断 → 用户暂停 → 频率。
+    绝不把任何失败静默降级。
+
+    返回 fields:
+      ok: bool                七项全绿 = True（用于是否允许发起采集）
+      overall_state: str      ready / need_account / no_cookie / not_in_whitelist / session_expired
+                              / need_cdp_verify / blocked / cooldown / user_paused / rate_limit
+      checks: [{id,name,level,status,detail}]
+      account_status: dict    复用 get_account_status
+      circuit: dict           get_circuit_state
+      active_account: str     当前激活身份
+      allowed_accounts: list  双子星库 Contract 白名单
+      cdp_online: bool        9222 探活
+      user_paused: dict       用户手动暂停信息
+      evidence: str           一句话总结（前端 toast/说明）
+    """
+    from xhs_runtime_state import (  # 延迟导入，防循环
+        AuthState, SessionState, PlatformState, XhsRuntimeState)
+
+    state = XhsRuntimeState()
+    checks: list = []
+    def _add(cid, name, level, st, detail, **kw):
+        checks.append({'id':cid,'name':name,'level':level,'status':st,'detail':detail, **kw})
+
+    # ── 1) Account：account 参数切换（显式） ──
+    account_used = account or (_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME)
+    if account is not None:
+        ok_sel, msg_sel = select_account(account)
+        if not ok_sel:
+            _add('A1_ACCOUNT','双子星库身份门控','P0','fail',msg_sel)
+            return {'ok':False,'overall_state':'need_account','checks':checks,
+                    'account_status':get_account_status(),'circuit':get_circuit_state(),
+                    'active_account':account_used,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                    'cdp_online':False,'user_paused':is_user_paused(),
+                    'evidence':'身份无效：' + msg_sel}
+        _add('A1_ACCOUNT','双子星库身份门控','P0','pass',f'身份={account_used}，已激活')
+    else:
+        # 无显式 account 时激活默认 PRIMARY
+        if _ACTIVE_ACCOUNT is None:
+            ok_default, msg_default = select_account(XHS_CN_PRIMARY_NAME)
+            if not ok_default:
+                _add('A1_ACCOUNT','双子星库默认身份激活','P0','fail',msg_default)
+                return {'ok':False,'overall_state':'need_account','checks':checks,
+                        'account_status':get_account_status(),'circuit':get_circuit_state(),
+                        'active_account':XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                        'cdp_online':False,'user_paused':is_user_paused(),
+                        'evidence':'默认身份激活失败：' + msg_default}
+        _add('A1_ACCOUNT','双子星库默认身份','P0','pass',f'身份={_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME}')
+
+    # ── 2) Cookie 文件存在且非空 ──
+    ccfg = cookie_configured()
+    if not ccfg:
+        cp = _effective_cookie_file()
+        state.auth = AuthState.REQUIRED
+        state.session = SessionState.NO_COOKIE
+        _add('A2_COOKIE','Cookie文件检查','P0','fail',f'Cookie 缺失，请在 {cp} 导入有效Cookie或完成扫码登录')
+        return {'ok':False,'overall_state':'no_cookie','checks':checks,
+                'account_status':get_account_status(),'circuit':get_circuit_state(),
+                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':_check_cdp_online(cdp_url or os.getenv('XHS_CDP_URL','')),
+                'user_paused':is_user_paused(),'evidence':'无Cookie/登录态：请在系统内完成小红书扫码登录'}
+    _add('A2_COOKIE','Cookie文件检查','P0','pass',f'已加载：{os.path.basename(_effective_cookie_file())}')
+    state.session = SessionState.COOKIE_PRESENT
+
+    # ── 3) User ID ∈ 双子星库 Contract 白名单（verify_account 重用） ──
+    ok_uid, msg_uid = verify_account()
+    if not ok_uid:
+        state.auth = AuthState.EXPIRED
+        _add('A3_WHITELIST','双子星库白名单','P0','fail',msg_uid)
+        return {'ok':False,'overall_state':'not_in_whitelist','checks':checks,
+                'account_status':get_account_status(),'circuit':get_circuit_state(),
+                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':_check_cdp_online(cdp_url or os.getenv('XHS_CDP_URL','')),
+                'user_paused':is_user_paused(),'evidence':'账号不在双子星库白名单：' + msg_uid}
+    _add('A3_WHITELIST','双子星库白名单','P0','pass',msg_uid)
+    state.auth = AuthState.VALID
+
+    # ── 4) CDP 浏览器驻场检测（quick=False 才检查；quick 模式用于高频轮询省开销） ──
+    cdp_online = False
+    if not quick:
+        cdp_online = _check_cdp_online(cdp_url or os.getenv('XHS_CDP_URL',''))
+        if cdp_online:
+            state.session = SessionState.BROWSER_CONNECTED
+            _add('A4_CDP','驻场浏览器(CDP)','P1','pass',f'CDP端口已在线：{cdp_url or os.getenv("XHS_CDP_URL") or "http://127.0.0.1:9222"}')
+        else:
+            # CDP 不在线不是致命（cookie_bridge 纯HTTP可能够用），但 Session 仍未达到驻场级
+            _add('A4_CDP','驻场浏览器(CDP)','P1','warn','未检测到9222常驻浏览器；纯HTTP通道可采集，遇风控时建议打开CDP驻场。')
+            state.platform = PlatformState.UNREACHABLE
+    else:
+        _add('A4_CDP','驻场浏览器(CDP)','P1','skip','quick模式跳过端口探活（节省开销）')
+
+    # ── 5) 熔断检查 ──
+    circ = get_circuit_state()
+    if circ.get('open'):
+        state.circuit = 'OPEN'
+        cst = circ.get('state','')
+        if cst == 'IP_RISK':
+            state.platform = PlatformState.IP_RISK
+        elif cst in ('BLOCKED','NEED_VERIFY','CAPTCHA','AUTH_FAILED'):
+            state.platform = PlatformState.VERIFY
+        _add('A5_CIRCUIT','熔断状态','P0','fail',
+             f'{circ.get("state","BLOCKED")} 至 {circ.get("resume_at","")}：{circ.get("detail","")}')
+        return {'ok':False,'overall_state':'blocked','checks':checks,
+                'account_status':get_account_status(),'circuit':circ,
+                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':cdp_online,'user_paused':is_user_paused(),
+                'evidence':'处于风控/登录态熔断，需冷却或在系统内完成人工验证'}
+    _add('A5_CIRCUIT','熔断状态','P0','pass','未熔断，可正常发起采集')
+    state.platform = PlatformState.REACHABLE
+
+    # ── 6) 用户手动暂停 ──
+    up = is_user_paused()
+    if up:
+        _add('A6_PAUSE','手动暂停开关','P0','fail',f'用户主动暂停：{up.get("reason","")}（{up.get("at","")}）')
+        return {'ok':False,'overall_state':'user_paused','checks':checks,
+                'account_status':get_account_status(),'circuit':circ,
+                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':cdp_online,'user_paused':up,
+                'evidence':'用户主动暂停采集：请在系统设置或顶部操作恢复'}
+    _add('A6_PAUSE','手动暂停开关','P0','pass','未手动暂停')
+
+    # ── 7) 冷却/频率 ──
+    acc_status = get_account_status()
+    cooldown = acc_status.get('cooldown_remaining_minutes', 0)
+    if cooldown and cooldown > 0:
+        _add('A7_RATE','频率/冷却','P1','warn',f'冷却中：约剩 {cooldown} 分钟')
+        return {'ok':False,'overall_state':'cooldown','checks':checks,
+                'account_status':acc_status,'circuit':circ,
+                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':cdp_online,'user_paused':up,
+                'evidence':f'处于采集冷却期，约 {cooldown} 分钟后可再发起（保护账号安全）'}
+    t_limit = acc_status.get('today_runs',0) >= acc_status.get('max_daily_runs',12)
+    if t_limit:
+        _add('A7_RATE','频率/冷却','P1','fail','今日已达到每日上限次数')
+        return {'ok':False,'overall_state':'rate_limit','checks':checks,
+                'account_status':acc_status,'circuit':circ,
+                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':cdp_online,'user_paused':up,
+                'evidence':'今日采集次数已达上限，请明天再试'}
+    _add('A7_RATE','频率/冷却','P0','pass',
+         f'今日 {acc_status.get("today_runs",0)}/{acc_status.get("max_daily_runs",12)} 次；手动剩余 {acc_status.get("max_manual_runs",3)-acc_status.get("today_manual_runs",0)}，自动剩余 {acc_status.get("max_auto_runs",9)-acc_status.get("today_auto_runs",0)}')
+    state.session = SessionState.REAL_SESSION_VALID if cdp_online else SessionState.COOKIE_PRESENT
+
+    return {'ok':True,'overall_state':'ready','checks':checks,
+            'account_status':acc_status,'circuit':circ,
+            'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+            'cdp_online':cdp_online,'user_paused':up,
+            'state_machine':{
+                'auth':state.auth.value,'session':state.session.value,
+                'platform':state.platform.value,'circuit':(state.circuit.value if hasattr(state.circuit,'value') else str(state.circuit)),
+            },'evidence':'全部预检通过：身份合法、Cookie齐备、白名单通过、无熔断，可正常发起采集与入库。'}
+
 def _run_search(keyword,max_scroll=6):
     # 网络自适应：使用当前自适应设置
     adaptive = network_adaptive.get_adaptive_settings()

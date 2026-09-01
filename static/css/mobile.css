@@ -268,3 +268,113 @@ img,svg,canvas,video,iframe{max-width:100%;height:auto}
   #modal .modal-content{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch}
 }
 
+/* ============================================================
+   v5.9.0 P0 XHS 驻场版 补充（审计 style.css/components.css/layout.css 固定超宽漏网）
+   Cascade 顺序：本块最后加载，同权覆盖前文件写死的 width 大像素
+   ============================================================ */
+@media (max-width:768px){
+  /* style.css .dashboard{width:1440px} → max-width:100%已在L33兜底，此处显式补 width:100% 防某些子继承死宽 */
+  .dashboard,.layout,.app-shell{width:100%!important;max-width:100%!important;min-width:0!important}
+  /* components.css .topbar-search{width:480px} → 手机端搜索框自适应顶栏宽度 */
+  .topbar-search{width:auto!important;max-width:42vw!important;min-width:120px!important}
+  /* style.css .ai-console p{width:720px} → AI 控制台段落手机端全宽 */
+  .ai-console p,.ai-console pre,.ai-console code{width:100%!important;max-width:100%!important;word-break:break-word;white-space:pre-wrap}
+  /* style.css .nomi-chat-panel{width:520/420px} → 聊天面板手机端全屏（对齐 zachary-chat-panel） */
+  .nomi-chat-panel,.nomi-panel,.chat-panel{width:100%!important;max-width:100%!important;height:100dvh!important;max-height:100dvh!important;right:0!important;bottom:0!important;border-radius:0!important}
+  /* style.css .alert-container{width:380px} → 告警容器手机端全宽减边距 */
+  .alert-container,.zachary-chat-panel{width:calc(100vw - 32px)!important;max-width:100%!important}
+  /* components.css .toast{width:480px} → Toast 手机端 100%减边距（内联 max-width:360 已兜底，此处全局） */
+  .toast,.ar-toast{width:calc(100vw - 48px)!important;max-width:calc(100vw - 48px)!important;right:24px!important}
+}
+@media (max-width:480px){
+  /* 超小屏：Toast 右上固定宽度改顶部居中，防挤压 */
+  .toast,.ar-toast{top:64px!important;right:50%!important;transform:translateX(50%)!important;width:calc(100vw - 32px)!important;max-width:calc(100vw - 32px)!important}
+  /* 超小屏 dashboard section padding 再小一档 */
+  .dashboard-section{padding:10px!important;border-radius:10px!important}
+  .content{padding:12px 10px!important}
+  /* Zachary/AI 聊天区在 480 以下真的全屏（不保留 calc(100vw-32px)），与 L207 zachary-chat-panel 保持一致 */
+  .zachary-chat-panel,.alert-container{width:100%!important;max-width:100%!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;right:0!important;bottom:0!important}
+}
+@media (max-width:380px){
+  /* iPhone SE 一代：顶栏所有操作按钮再紧一档，badge 字体 9px 单行 */
+  .topbar{padding-left:44px!important;padding-right:6px!important;gap:4px!important}
+  .brand h1{font-size:13px!important;max-width:50vw!important}
+  .ar-badge{padding:2px 6px!important;font-size:9px!important;line-height:14px!important}
+  .metric-card strong{font-size:18px!important}
+  .stat-value{font-size:19px!important}
+  .hero-section h2{font-size:18px!important}
+}
+/* ────────────────────────────────────────────
+ * v5.9.9-P0 UI 视觉修复（本轮新补丁，按用户要求：手机端/网页端适配/显示不合理全部修复）
+ * 清单：
+ *   M1) ≤768px 顶栏 action .btn-label 文字隐藏→只留图标（7个按钮/552px 视口 287px 防挤压）
+ *   M2) ≤768px .top-center 隐藏/最小化（title + state + clock 三栏在小屏挤占）
+ *   M3) 768<vw<1024 .top-actions .btn-label 缩小 11px / 减少 padding
+ *   M4) 桌面端 ≥1440px hero/metric 增强视觉层级（用户要求显示不合理修复）
+ *   M5) ≤560px alert-container 真正 calc(100vw-24px) 居中（解决之前 520px 挤压 552 视口）
+ *   M6) ≤768px modal-panel 横屏手机增加 max-height: 88vh, 防止被键盘顶出屏幕
+ *   M7) sidebar 菜单项 line-height 降低，手机端 navicon 紧凑 22px
+ *   M8) svg/spark 图表 响应式 max-width:100%，防 metric 卡溢出
+ *   M9) toast 层级调高，防被 Zachary/AI 面板覆盖
+ ──────────────────────────────────────────── */
+/* M1 + M2：手机端顶栏彻底减负（≤768） */
+@media (max-width:768px){
+  .top-actions .action .btn-label{display:none!important}
+  .top-actions .action{padding:6px 8px!important;font-size:13px!important;gap:0!important}
+  .top-actions .action.icon-only{padding:6px!important;min-width:34px!important;height:34px!important}
+  .top-center .clock{display:none!important}
+  .top-center{gap:4px!important;margin:0 6px!important;font-size:11px!important}
+  .top-center .system-state{font-size:11px!important}
+  .top-actions{gap:4px!important}
+  .brand p{display:none!important}  /* 子描述隐藏，只留品牌名一行 */
+  .topbar{padding:10px 8px!important;grid-template-columns:auto 1fr auto!important}
+}
+/* M3：平板间段 769-1023 顶栏适度收紧 */
+@media (min-width:769px) and (max-width:1023px){
+  .top-actions .action{padding:7px 10px!important;font-size:12px!important;gap:6px!important}
+  .top-actions .action .btn-label{font-size:11px!important}
+  .brand h1{font-size:14px!important}
+  .brand p{font-size:11px!important}
+}
+/* M4：大屏增强（≥1440） */
+@media (min-width:1440px){
+  .hero-section h1,.hero h1,.zb-hero h2{font-size:30px!important;line-height:1.3!important}
+  .hero-section .hero-desc{font-size:15px!important;line-height:1.7!important}
+  .metric-card{padding:20px 22px!important;gap:10px!important}
+  .metric-card strong{font-size:28px!important;line-height:1.1!important}
+  .metric-card .metric-label{font-size:13px!important}
+  .main{padding:24px 32px!important}
+  .dashboard-section{padding:22px 24px!important;border-radius:16px!important}
+  .side-item{padding:10px 14px!important;font-size:13.5px!important}
+  .sidebar{padding-top:16px!important}
+}
+/* M5：alert-container 520px 挤压手机视口修复（≤560px 宽度=窗口-24 居中） */
+@media (max-width:560px){
+  .alert-container{
+    top:72px!important;
+    right:50%!important;
+    transform:translateX(50%)!important;
+    width:calc(100vw - 24px)!important;
+    max-width:calc(100vw - 24px)!important;
+    pointer-events:auto!important;
+  }
+  .alert-container .alert{
+    min-width:0!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+}
+/* M6：≤768 modal-panel 横屏紧凑 */
+@media (max-width:768px) and (orientation:landscape){
+  .modal-panel,.modal{max-height:88vh!important;padding:14px 18px!important;border-radius:10px!important}
+  .modal-title{font-size:16px!important}
+}
+/* M7：sidebar 紧凑 */
+.side-item{line-height:1.35!important}
+.navicon{width:22px!important;height:22px!important;flex:0 0 22px!important}
+/* M8：SVG/图表 卡片溢出修复 */
+.metric-card svg,.metric-card .spark{max-width:100%!important;height:auto!important}
+.chart-stage svg,.chart-svg svg{max-width:100%!important;height:auto!important}
+/* M9：Toast 层级提到 99998，防止新引入的 zachary-panel/modal 遮挡 */
+.toast,.ar-toast{z-index:99998!important}
+

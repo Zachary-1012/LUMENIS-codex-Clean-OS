@@ -67,7 +67,28 @@ class CollectorAutomation:
         return None
     
     def _get_cdp_profile_dir(self, account='default'):
-        """获取CDP配置目录"""
+        """获取CDP配置目录（双子星库 Contract 对齐：优先 xhs_cookie_bridge.ACCOUNT_PROFILES）。
+
+        优先级：
+          1) account ∈ 双子星库 Contract 白名单 → 用 ACCOUNT_PROFILES[account][1]（与 select_account 一致）
+          2) 否则：兼容 legacy 映射（default/new/newaccount），保留历史行为，不破坏外部调用。
+        """
+        # ── 双子星库 Contract：优先读取 xhs_cookie_bridge 的身份定义（与 xhs_cookie_bridge.select_account 同源）──
+        try:
+            import xhs_cookie_bridge as _xcb
+            contract_profiles = getattr(_xcb, 'ACCOUNT_PROFILES', None) or {}
+            if account in contract_profiles:
+                # ACCOUNT_PROFILES[name] = (cookie_path, cdp_profile_dir)
+                _, profile_dir = contract_profiles[account]
+                if profile_dir:
+                    # 允许 profile_dir 是相对路径（基于项目根目录）→ 拼接成绝对
+                    if not os.path.isabs(profile_dir):
+                        profile_dir = os.path.join(self.base_dir, profile_dir)
+                    os.makedirs(profile_dir, exist_ok=True)
+                    return profile_dir
+        except Exception:
+            pass  # 导入失败时降级 legacy，不阻塞
+        # ── Legacy 兼容映射（保持向后不变）──
         profile_map = {
             'default': 'edge-cdp-profile',
             'new': 'edge-cdp-profile-new',
@@ -197,12 +218,48 @@ class CollectorAutomation:
             return False
     
     def start_collection(self, keywords=None, mode='standard', account='default', force=False):
-        """启动采集任务。force=True 跳过 1 小时冷却（测试期使用）"""
+        """启动采集任务。force=True 跳过 1 小时冷却（测试期使用）。
+
+        双子星库 Contract 门控：采集前调用 xhs_cookie_bridge.runtime_preflight_check()。
+        - account 传 'default' 时：等价于无显式 account，runtime_preflight 会激活默认 XHS_CN_PRIMARY。
+        - account ∈ {XHS_CN_PRIMARY_NAME, XHS_RETINAUT_NAME}：按 Contract 白名单切换；不在白名单直接拒绝。
+        - 任何预检失败（熔断/无Cookie/白名单/冷却/暂停）→ 如实返回错误，绝不静默启动空跑。
+        """
         with self._lock:
             if self.is_running:
                 logger.warning("采集任务已在运行中")
                 return {'ok': False, 'error': '采集任务已在运行中'}
-            
+
+            # ── 双子星库 Contract 预检（在所有调度逻辑之前，fail-fast）──
+            pre_ok, pre_msg, pre_detail = True, '', {}
+            try:
+                import xhs_cookie_bridge as _xcb
+                # 归一化：'default' 传 None → runtime_preflight 使用默认 XHS_CN_PRIMARY_NAME
+                _account_for_check = None if account in (None, '', 'default') else account
+                # force=True 预检仍跑（保留真实报告），但只在严重 P0 阻断（身份/白名单/熔断）时才拦截
+                preflight = _xcb.runtime_preflight_check(account=_account_for_check,
+                                                          cdp_url=os.getenv('XHS_CDP_URL', f'http://127.0.0.1:{self.cdp_port}'),
+                                                          quick=False)
+                pre_detail = {'overall_state': preflight.get('overall_state'),
+                              'evidence': preflight.get('evidence'),
+                              'active_account': preflight.get('active_account'),
+                              'checks_fail_count': sum(1 for c in preflight.get('checks', []) if c.get('status') == 'fail')}
+                if not preflight.get('ok'):
+                    ov = str(preflight.get('overall_state', ''))
+                    # force=True 允许旁路 cooldown / rate_limit（用于测试 & 紧急）；但 P0 严重项仍然阻断
+                    p0_blocker = ov in ('need_account', 'no_cookie', 'not_in_whitelist', 'blocked', 'user_paused')
+                    if p0_blocker or not force:
+                        pre_ok = False
+                        pre_msg = f'[采集预检未通过·状态={ov}] {preflight.get("evidence","")}'
+            except Exception as _pe:
+                # import 或预检异常视为失败（防止异常时静默启动）
+                pre_ok = False
+                pre_msg = f'[采集预检异常] {type(_pe).__name__}: {str(_pe)}'
+                pre_detail = {'exception': pre_msg}
+            if not pre_ok:
+                logger.warning(pre_msg)
+                return {'ok': False, 'error': pre_msg, 'preflight': pre_detail}
+
             # 配置采集参数
             if keywords is None:
                 keywords = ['广州太古汇', '太古汇', '广州太古汇 舆情']

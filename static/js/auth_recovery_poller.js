@@ -75,11 +75,30 @@
   }
 
   // ── 工具：带 timeout 的 fetch（避免卡住 UI）──
+  // P0 Fix：自动注入全局共享 window.__Z_AUTH Basic Auth Header（auth_global.js 401 ERR_ABORTED 同根因）
+  function _getSharedAuthHeader() {
+    try {
+      if (typeof window.__Z_AUTH === 'string' && window.__Z_AUTH) return window.__Z_AUTH;
+      if (typeof window.__AUTH_B64 === 'string' && window.__AUTH_B64) return 'Basic ' + window.__AUTH_B64;
+      var ls = (typeof localStorage !== 'undefined') ? localStorage.getItem('Z_AUTH_B64') : '';
+      if (ls) return 'Basic ' + ls;
+    } catch (e) {}
+    return '';
+  }
   function fetchTimeout(url, opts) {
     return new Promise(function (resolve, reject) {
       var timer = setTimeout(function () { reject(new Error('timeout ' + FETCH_TIMEOUT_MS + 'ms')); }, FETCH_TIMEOUT_MS);
       try {
-        fetch(url, opts || {}).then(function (r) { clearTimeout(timer); resolve(r); },
+        var finalOpts = opts ? Object.assign({}, opts) : {};
+        finalOpts.headers = finalOpts.headers ? Object.assign({}, finalOpts.headers) : {};
+        // credentials 默认 same-origin，除非调用方显式改写
+        if (!('credentials' in finalOpts)) finalOpts.credentials = 'same-origin';
+        // 注入共享 Basic Auth（避免 401 ERR_ABORTED；v4 bearer 会话不冲突，Authorization 头多字段浏览器允许覆盖）
+        var sharedAuth = _getSharedAuthHeader();
+        if (sharedAuth && !finalOpts.headers['Authorization']) {
+          finalOpts.headers['Authorization'] = sharedAuth;
+        }
+        fetch(url, finalOpts).then(function (r) { clearTimeout(timer); resolve(r); },
           function (e) { clearTimeout(timer); reject(e); });
       } catch (e) { clearTimeout(timer); reject(e); }
     });

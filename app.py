@@ -1590,6 +1590,116 @@ def api_collector_browser_stop():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# ========== 双子星库 Contract · XHS Runtime 统一预检 & 双身份切换 ==========
+@app.route('/api/xhs/runtime-check', methods=['GET', 'POST'])
+def api_xhs_runtime_check():
+    """XHS 运行时七态预检（前端轮询用）。
+
+    query/body:
+      account: 可选 · 显式指定要预检的身份（XHS_CN_PRIMARY / XHS_RETINAUT）
+      quick:   可选 · 1/true 时跳过 CDP 端口 ping，用于高频轮询节省开销
+    字段结构: ok / overall_state / checks[7] / account_status / circuit /
+              active_account / allowed_accounts / cdp_online / user_paused / state_machine / evidence
+    """
+    try:
+        data = {}
+        if request.method == 'POST':
+            data = request.get_json(silent=True) or {}
+        account = (request.args.get('account') or data.get('account') or '').strip() or None
+        quick = str(request.args.get('quick', '') or data.get('quick', '')).lower() in ('1', 'true', 'yes', 'on')
+        cdp_url = os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9222')
+        result = xhs_cookie_bridge.runtime_preflight_check(account=account, cdp_url=cdp_url, quick=quick)
+        # overall_state 对应 Auth Recovery Center：
+        #   no_cookie / need_account / blocked → 需要前端弹扫码 / 验证入口
+        #   ready / cooldown / user_paused → 正常态提示
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e),
+                        'overall_state': 'error',
+                        'evidence': f'XHS Runtime 预检异常：{type(e).__name__}: {str(e)[:200]}'}), 500
+
+
+@app.route('/api/xhs/switch-account', methods=['POST'])
+def api_xhs_switch_account():
+    """双子星库 Contract：切换采集身份（硬白名单）。
+
+    body:
+      account: 必填 · XHS_CN_PRIMARY / XHS_RETINAUT 之一
+    成功 → 设置模块级身份 + 环境变量；下次采集/同步自动使用。
+    失败 → 保留原身份不动，返回友好错误（绝不静默切到其他身份）。
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        account = (data.get('account') or '').strip()
+        if not account:
+            return jsonify({'ok': False, 'error': '缺少 account 参数，必须显式指定双子星库白名单身份'}), 400
+        ok_sel, msg_sel = xhs_cookie_bridge.select_account(account)
+        if not ok_sel:
+            return jsonify({'ok': False, 'error': msg_sel,
+                            'allowed_accounts': list(xhs_cookie_bridge.ACCOUNT_PROFILES.keys())}), 400
+        # 切换完成后再跑一次 quick 预检返回
+        status = xhs_cookie_bridge.get_account_status()
+        return jsonify({'ok': True,
+                        'message': msg_sel,
+                        'active_account': status.get('active_account'),
+                        'allowed_accounts': list(xhs_cookie_bridge.ACCOUNT_PROFILES.keys()),
+                        'account_status': status})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/xhs/accounts', methods=['GET'])
+def api_xhs_accounts():
+    """双子星库 Contract：双身份白名单列表（前端身份切换 UI 源）。
+
+    返回 allowed_accounts 逻辑名 + 每个身份的配置状态：
+      - cookie_ready：Cookie 文件存在且非空
+      - user_id_match：user_id 是否落在物理白名单里
+      - can_use：是否可实际采集
+      - active: 是否当前激活身份
+    绝不返回真实 user_id 明文或 cookie 内容，仅返回是否命中 + 前 12 位预览。
+    """
+    try:
+        import os as _os
+        active = getattr(xhs_cookie_bridge, '_ACTIVE_ACCOUNT', None) or xhs_cookie_bridge.XHS_CN_PRIMARY_NAME
+        accounts = []
+        for name, (cookie_path, cdp_profile_dir) in xhs_cookie_bridge.ACCOUNT_PROFILES.items():
+            c_ready = bool(cookie_path and _os.path.isfile(cookie_path) and
+                           open(cookie_path, encoding='utf-8', errors='replace').read().strip())
+            current_uid = None
+            try:
+                # 仅当身份为激活时读生效路径才是该身份的 uid；非激活身份临时切读
+                if name != active:
+                    override_bak = _os.environ.get('XHS_COOKIE_FILE_OVERRIDE', '')
+                    _os.environ['XHS_COOKIE_FILE_OVERRIDE'] = str(cookie_path or '')
+                    current_uid = xhs_cookie_bridge._get_current_user_id()
+                    if override_bak: _os.environ['XHS_COOKIE_FILE_OVERRIDE'] = override_bak
+                    elif 'XHS_COOKIE_FILE_OVERRIDE' in _os.environ: del _os.environ['XHS_COOKIE_FILE_OVERRIDE']
+                else:
+                    current_uid = xhs_cookie_bridge._get_current_user_id()
+            except Exception:
+                current_uid = None
+            id_match = bool(current_uid and current_uid in xhs_cookie_bridge.ALLOWED_USER_IDS)
+            accounts.append({
+                'account': name,
+                'active': (name == active),
+                'cookie_ready': c_ready,
+                'user_id_match': id_match,
+                'user_id_preview': (current_uid[:12] + '...') if current_uid else None,
+                'can_use': (c_ready and id_match),
+                'cdp_profile_dir_exist': bool(cdp_profile_dir and _os.path.isdir(cdp_profile_dir)),
+            })
+        return jsonify({
+            'ok': True,
+            'active_account': active,
+            'allowed_accounts': list(xhs_cookie_bridge.ACCOUNT_PROFILES.keys()),
+            'accounts': accounts,
+            'allowed_user_ids_preview': [x[:12] + '...' for x in xhs_cookie_bridge.ALLOWED_USER_IDS],
+            'contract_version': 'Z-Brand-Core · 双子星库 Contract v1.0（仅 XHS_CN_PRIMARY + XHS_RETINAUT）',
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # ========== AI学习引擎与全网舆情检索 API ==========
 @app.route('/api/ai-learning/status')
 def api_ai_learning_status():

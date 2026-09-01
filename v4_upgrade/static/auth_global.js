@@ -188,8 +188,21 @@
   }
 
   // ---------- 轮询 ----------
+  function _getBasicAuthHeader() {
+    // 共享主站 app.js 已写入的基础认证，避免在 Basic Auth 页面 401。
+    // 优先级：1) window.__Z_AUTH 原生 Auth Header  2) window.__AUTH_B64 手动设置的 btoa  3) localStorage Z_AUTH_B64
+    try {
+      if (typeof window.__Z_AUTH === 'string' && window.__Z_AUTH) return window.__Z_AUTH;
+      if (typeof window.__AUTH_B64 === 'string' && window.__AUTH_B64) return 'Basic ' + window.__AUTH_B64;
+      var ls = (typeof localStorage !== 'undefined') ? localStorage.getItem('Z_AUTH_B64') : '';
+      if (ls) return 'Basic ' + ls;
+    } catch (e) {}
+    return '';
+  }
   function api(url, body) {
     var opt = { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } };
+    var authHdr = _getBasicAuthHeader();
+    if (authHdr) opt.headers['Authorization'] = authHdr;
     if (body) { opt.method = 'POST'; opt.body = JSON.stringify(body); }
     return fetch(url, opt).then(function (r) {
       if (r.status === 401 || r.status === 403) return null; // 未登录页静默，不做跳转
