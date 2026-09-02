@@ -58,6 +58,18 @@ HARD_SIGNAL_BAND = {
 # 熔断/冷却档集合：进入即记录 opened_at，冷却结束后转半开试探
 _TRIPPED_BANDS = ('COOLDOWN', 'CIRCUIT_OPEN')
 
+# UNIFIED-BASELINE §10 宏观采集生命周期六态（对外统一 State Model；内部仍保留连续风险分档，二者分层不互替）：
+#   NORMAL 正常 / ADAPTIVE 自适应降频 / COOLDOWN 冷却 / FROZEN 硬冻结(转恢复检测,不重试)
+#   / RECOVERING 半开探测中 / RECOVERED 刚恢复(观察窗口内健康)
+LIFECYCLE_ACTIONS = {
+    'NORMAL': 'schedule_normal',        # Scheduler/Worker 正常调度
+    'ADAPTIVE': 'backoff_interval',     # 拉长采集间隔、降并发（Backpressure）
+    'COOLDOWN': 'pause_until_cooldown', # 该平台暂停到冷却结束，任务进 Queue 等待
+    'FROZEN': 'freeze_and_recover',     # 硬冻结：停止请求，转 Auth/恢复检测，不无限重试
+    'RECOVERING': 'probe_only',         # 半开：只放行单次探测，其余继续排队
+    'RECOVERED': 'ramp_up',             # 恢复：逐步回到满载，观察窗口内保持警惕
+}
+
 
 class RiskEngine:
     """单平台单任务的滚动采集风险评分。线程内使用；多平台请各建一个实例。
@@ -70,7 +82,7 @@ class RiskEngine:
 
     def __init__(self, weights=None, decay_per_success=12, decay_per_10s=3,
                  max_score=100, bands=None, reset_timeout=300,
-                 half_open_success_threshold=1):
+                 half_open_success_threshold=1, recovered_window_s=None):
         self.weights = dict(DEFAULT_FACTOR_WEIGHTS)
         if weights:
             self.weights.update(weights)
@@ -88,6 +100,8 @@ class RiskEngine:
         self.opened_at = None       # 进入熔断/冷却档的时刻（time.time），None 表示未熔断
         self.half_open = False      # 是否处于半开试探期
         self.half_open_successes = 0  # 半开期累计连续成功数
+        self.recovered_at = None          # 半开探测通过、完全闭合的时刻（用于 RECOVERED 观察窗口）
+        self.recovered_window_s = reset_timeout if recovered_window_s is None else recovered_window_s  # RECOVERED→NORMAL 观察窗口
 
     def _time_decay(self, now):
         elapsed = max(0.0, now - self.last_update)
@@ -123,6 +137,7 @@ class RiskEngine:
         """登记一次风险因子，返回 (score, band, state)。factor 见 DEFAULT_FACTOR_WEIGHTS 的 key。"""
         now = time.time()
         self._time_decay(now)
+        self.recovered_at = None  # 新风险出现，退出 RECOVERED 观察
         # 半开试探期再次失败：立即重新熔断并刷新冷却计时
         if self.half_open:
             self.half_open = False
@@ -158,6 +173,7 @@ class RiskEngine:
                 self.opened_at = None
                 self.half_open = False
                 self.half_open_successes = 0
+                self.recovered_at = now  # 进入 RECOVERED 观察窗口
                 self.last_update = now
                 return self.score, 'NORMAL', BAND_TO_STATE['NORMAL']
             self.last_update = now
@@ -170,6 +186,28 @@ class RiskEngine:
             # 风险分已回落正常：清除熔断痕迹
             self.opened_at = None
         return self.score, band, BAND_TO_STATE[band]
+
+    def lifecycle_state(self, now=None):
+        """把内部风险分档+半开状态映射为 BASELINE §10 宏观六态（只读映射，不改变内部状态）。"""
+        if now is None:
+            now = time.time()
+        if self.half_open:
+            return 'RECOVERING'
+        band = self._last_band
+        if band == 'CIRCUIT_OPEN':
+            return 'FROZEN'
+        if band == 'COOLDOWN':
+            return 'COOLDOWN'
+        if band == 'THROTTLED':
+            return 'ADAPTIVE'
+        if (self.recovered_at is not None
+                and (now - self.recovered_at) <= self.recovered_window_s):
+            return 'RECOVERED'
+        return 'NORMAL'
+
+    def lifecycle_action(self, now=None):
+        """当前生命周期对应的 Scheduler/Queue/Worker 联动建议动作（BASELINE §10 联动契约）。"""
+        return LIFECYCLE_ACTIONS.get(self.lifecycle_state(now), 'schedule_normal')
 
     def snapshot(self):
         now = time.time()
@@ -188,10 +226,13 @@ class RiskEngine:
             cooldown_remaining = (max(0.0, self.reset_timeout - (now - self.opened_at))
                                   if (band in _TRIPPED_BANDS and self.opened_at is not None)
                                   else 0.0)
+        lifecycle = self.lifecycle_state(now)
         return {
             'risk_score': self.score,
             'band': band,
             'state': BAND_TO_STATE[band],
+            'lifecycle': lifecycle,
+            'lifecycle_action': LIFECYCLE_ACTIONS.get(lifecycle, 'schedule_normal'),
             'consecutive_failures': self.consecutive_failures,
             'should_stop_request': should_stop,
             'half_open': is_half_open,

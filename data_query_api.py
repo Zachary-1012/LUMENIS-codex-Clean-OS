@@ -87,5 +87,17 @@ def register_data_query_api(app):
         limit = max(1, min(30, request.args.get('limit', 12, type=int)))
         return jsonify({'ok': True, 'topics': db.get_hot_topics(limit)})
 
+    @bp.route('/api/metric-trend', endpoint='api_metric_trend')
+    def api_metric_trend():
+        # 指标快照时间序列（BASELINE §9/§11/§12）：只读，供报告/前端动态可视化绑定真实数据
+        entity_type = request.args.get('entity_type', 'note')
+        entity_key = request.args.get('entity_key', '').strip()
+        if entity_type not in ('note', 'topic') or not entity_key:
+            return jsonify({'ok': False, 'error': 'entity_type must be note|topic and entity_key required'}), 400
+        limit = max(1, min(1000, request.args.get('limit', 200, type=int)))
+        rows = db.get_metric_trend(entity_type, entity_key, limit)
+        return jsonify({'ok': True, 'entity_type': entity_type, 'entity_key': entity_key,
+                        'points': len(rows), 'trend': rows})
+
     app.register_blueprint(bp)
     return bp

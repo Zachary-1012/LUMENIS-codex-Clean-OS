@@ -150,6 +150,22 @@ CREATE TABLE IF NOT EXISTS note_comments (
 );
 CREATE INDEX IF NOT EXISTS idx_collector_quality_note ON collector_quality_log(note_id);
 CREATE INDEX IF NOT EXISTS idx_note_comments_note ON note_comments(note_id);
+
+-- ===== 指标快照时序（UNIFIED-BASELINE §9/§11）：note 互动量 + topic 指标统一 Canonical 快照表 =====
+-- notes 单行只保留最新值；每次采集指标"发生变化"时在此留痕，保证 likes/comments/... 随时间可追溯、可恢复。
+-- entity_type='note' 用互动量四列；entity_type='topic' 用 browse/discussion/note_count 三列。snapshot_at 为独立 Snapshot Date。
+CREATE TABLE IF NOT EXISTS metric_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT NOT NULL,
+    entity_key TEXT NOT NULL,
+    likes INTEGER, comments INTEGER, collects INTEGER, shares INTEGER,
+    browse_count INTEGER, discussion_count INTEGER, note_count INTEGER,
+    raw_json TEXT DEFAULT '{}',
+    source TEXT DEFAULT '',
+    collector_version TEXT DEFAULT '',
+    snapshot_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_metric_snap_entity ON metric_snapshots(entity_type, entity_key, snapshot_at);
 """
 
 NOTE_MIGRATIONS = {
@@ -384,6 +400,15 @@ def insert_note(note_data):
                 conn.execute("UPDATE notes SET subject_type=CASE WHEN ?<>'' THEN ? ELSE subject_type END, "
                              "content_type=CASE WHEN ?<>'' THEN ? ELSE content_type END WHERE note_id=?",
                              (_stype, _stype, _ctype, _ctype, nid))
+            # 指标快照（基线§11 Snapshot Date）：互动量被覆盖前留痕；纯旁路，任何异常都不得阻断采集主流程
+            try:
+                record_note_metric_snapshot(
+                    conn, nid,
+                    {'likes': vals['likes'], 'comments': vals['comments'],
+                     'collects': vals['collects'], 'shares': vals['shares']},
+                    source='live', collector_version=note_data.get('collector_version', '') or '')
+            except Exception:
+                pass
             return existing['id'], False
         cur = conn.execute("""INSERT INTO notes
             (note_id,source_platform,title,content,url,cover,author_id,author_nickname,author_avatar,likes,comments,collects,shares,
@@ -402,6 +427,81 @@ def insert_note(note_data):
                          "content_type=CASE WHEN ?<>'' THEN ? ELSE content_type END WHERE note_id=?",
                          (_stype, _stype, _ctype, _ctype, nid))
         return cur.lastrowid, True
+
+
+def _metric_snapshot_enabled():
+    """指标快照开关（默认开；ZBC_METRIC_SNAPSHOT=0/false/off/no 关闭）。资源受限时可关，不影响主流程。"""
+    return os.environ.get('ZBC_METRIC_SNAPSHOT', '1').strip().lower() not in ('0', 'false', 'off', 'no')
+
+
+_NOTE_METRIC_KEYS = ('likes', 'comments', 'collects', 'shares')
+_TOPIC_METRIC_KEYS = ('browse_count', 'discussion_count', 'note_count')
+
+
+def record_note_metric_snapshot(conn, note_id, metrics, source='live', collector_version='', force=False):
+    """在已有事务连接内为笔记写一条互动量快照；仅当指标相对上一条快照发生变化时写入（不该算的一次不浪费）。
+
+    返回 True=已写 / False=跳过。调用方需自行 try/except 旁路，保证快照失败不阻断采集。
+    """
+    if not _metric_snapshot_enabled() or not note_id:
+        return False
+    cur_vals = tuple(int(metrics.get(k, 0) or 0) for k in _NOTE_METRIC_KEYS)
+    if not force:
+        row = conn.execute(
+            "SELECT likes,comments,collects,shares FROM metric_snapshots "
+            "WHERE entity_type='note' AND entity_key=? ORDER BY id DESC LIMIT 1", (note_id,)).fetchone()
+        if row is not None and tuple(int(row[k] or 0) for k in _NOTE_METRIC_KEYS) == cur_vals:
+            return False  # 指标无变化，不重复刷表
+    conn.execute(
+        "INSERT INTO metric_snapshots(entity_type,entity_key,likes,comments,collects,shares,"
+        "browse_count,discussion_count,note_count,source,collector_version) "
+        "VALUES('note',?,?,?,?,?,NULL,NULL,NULL,?,?)",
+        (note_id, *cur_vals, source, collector_version or ''))
+    return True
+
+
+def record_topic_snapshot(topic_key, browse_count=None, discussion_count=None, note_count=None,
+                          source='live', extra=None):
+    """为话题写一条指标快照（浏览量/讨论量/笔记数随时间变化，基线§9 Topic Snapshot）。
+
+    独立连接、变化才写、旁路不抛错。返回 True=已写 / False=跳过或关闭。
+    """
+    try:
+        if not _metric_snapshot_enabled() or not topic_key:
+            return False
+        cur = (None if browse_count is None else int(browse_count),
+               None if discussion_count is None else int(discussion_count),
+               None if note_count is None else int(note_count))
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT browse_count,discussion_count,note_count FROM metric_snapshots "
+                "WHERE entity_type='topic' AND entity_key=? ORDER BY id DESC LIMIT 1", (topic_key,)).fetchone()
+            if row is not None:
+                prev = tuple(None if row[k] is None else int(row[k]) for k in _TOPIC_METRIC_KEYS)
+                if prev == cur:
+                    return False
+            conn.execute(
+                "INSERT INTO metric_snapshots(entity_type,entity_key,likes,comments,collects,shares,"
+                "browse_count,discussion_count,note_count,raw_json,source) "
+                "VALUES('topic',?,NULL,NULL,NULL,NULL,?,?,?,?,?)",
+                (topic_key, cur[0], cur[1], cur[2],
+                 json.dumps(extra or {}, ensure_ascii=False), source))
+        return True
+    except Exception:
+        return False
+
+
+def get_metric_trend(entity_type, entity_key, limit=200):
+    """读取某实体的指标时间序列（snapshot_at 升序），供报告/前端动态可视化绑定真实数据。"""
+    out = []
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM metric_snapshots WHERE entity_type=? AND entity_key=? "
+            "ORDER BY id ASC LIMIT ?", (entity_type, entity_key, int(limit))).fetchall()
+        for r in rows:
+            d = dict(r)
+            out.append(d)
+    return out
 
 
 def mark_disappeared_notes(seen_note_ids=None):
