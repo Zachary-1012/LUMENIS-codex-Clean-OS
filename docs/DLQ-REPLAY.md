@@ -29,6 +29,14 @@ python scripts/dlq_ops.py replay <module:handler>     # handler(keyword, context
 python scripts/dlq_ops.py ack <task_id>
 ```
 
+## 四·B 生产接线状态（2026-09-03 晚更新）
+
+- 恢复期自动重放已生产化：collector_guard/schedule_adapter.maybe_replay_dlq。
+- 触发态：RECOVERING(probe_only 半开) / RECOVERED(ramp_up 恢复)；非恢复态返回 None 不触发。
+- handler 为空 = dry（返回待重放 pending 供监控/决策）；提供 handler = 实际补采。
+- 与六态联动：COOLDOWN/FROZEN 仍停止（不重放），恢复后自动补采失败任务 —— 数据零丢失闭环补全。
+- 测试：tests/test_dlq_schedule_replay.py 4 过（合计 schedule+dlq 16 过）。
+
 ## 四、接入采集失败路径（最小 patch，待确认后接线）
 
 在 `collector.py` 单关键词采集失败处（`gr.should_stop` / `_feed_risk_engine` 熔断分支）：
