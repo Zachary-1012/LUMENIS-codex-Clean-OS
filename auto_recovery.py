@@ -143,7 +143,7 @@ class AutoRecoveryEngine:
             self.log('error', f'添加告警失败: {e}', module='alerts')
             return None
 
-    def check_port(self, host='127.0.0.1', port=8200, timeout=3):
+    def check_port(self, host='127.0.0.1', port=8201, timeout=3):
         """检查端口是否可连接"""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -224,7 +224,7 @@ class AutoRecoveryEngine:
                 python_path = 'python'
 
             subprocess.Popen(
-                [python_path, 'app.py', '--host', '0.0.0.0', '--port', '8200'],
+                [python_path, 'app.py', '--host', '0.0.0.0', '--port', '8201'],
                 cwd=self.root_dir,
                 creationflags=subprocess.CREATE_NEW_CONSOLE
             )
@@ -232,7 +232,7 @@ class AutoRecoveryEngine:
             # 等待启动并验证
             for i in range(30):
                 time.sleep(2)
-                if self.check_port(port=8200):
+                if self.check_port(port=8201):
                     self.log('info', f'进程重启成功，已等待 {i*2+2} 秒', module=module)
                     return True, '进程重启成功'
 
@@ -332,7 +332,7 @@ class AutoRecoveryEngine:
 
         results = {
             'timestamp': self.stats['last_check'],
-            'system_port': self.check_port(port=8200),
+            'system_port': self.check_port(port=8201),
             'cdp_port': self.check_cdp(),
             'database': self.check_database()[0],
             'alerts': self.get_active_alerts()
