@@ -87,7 +87,9 @@ def _get_xhs_risk_engine():
         enabled = os.getenv('TAIKOO_RISK_ENGINE', '1').lower() not in ('0', 'false', 'no', 'off')
         if enabled:
             from collector_guard.risk_engine import RiskEngine
-            _XHS_RISK = RiskEngine()
+            # T-P0A-1: 熔断/冷却状态跨进程重启持久化（data/collector_* 已 gitignore，不入库）
+            _risk_state = os.path.join('data', 'collector_guard', 'xhs_risk_state.json')
+            _XHS_RISK = RiskEngine(state_file=_risk_state)
         else:
             _XHS_RISK = False
     return _XHS_RISK or None

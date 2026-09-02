@@ -13,6 +13,8 @@
 
 风险分随“成功/健康响应”衰减、随时间自然回落，实现 健康→升高→熔断→恢复检查→逐渐恢复 的闭环。
 """
+import json
+import os
 import time
 
 from .state import CollectState
@@ -82,7 +84,15 @@ class RiskEngine:
 
     def __init__(self, weights=None, decay_per_success=12, decay_per_10s=3,
                  max_score=100, bands=None, reset_timeout=300,
-                 half_open_success_threshold=1, recovered_window_s=None):
+                 half_open_success_threshold=1, recovered_window_s=None,
+                 state_file=None):
+        # T-P0A-1 可选崩溃持久化：仅当显式传入 state_file 才落盘/恢复；默认 None=纯内存，行为与旧版完全一致。
+        self.state_file = state_file
+        if state_file:
+            try:
+                os.makedirs(os.path.dirname(state_file) or '.', exist_ok=True)
+            except Exception:
+                pass
         self.weights = dict(DEFAULT_FACTOR_WEIGHTS)
         if weights:
             self.weights.update(weights)
@@ -102,6 +112,59 @@ class RiskEngine:
         self.half_open_successes = 0  # 半开期累计连续成功数
         self.recovered_at = None          # 半开探测通过、完全闭合的时刻（用于 RECOVERED 观察窗口）
         self.recovered_window_s = reset_timeout if recovered_window_s is None else recovered_window_s  # RECOVERED→NORMAL 观察窗口
+        if self.state_file:
+            self._restore_state()
+
+    def _persist(self):
+        """原子落盘当前熔断/冷却关键状态（tmp+replace，与 checkpoint.py 同模式）。
+
+        只持久化影响「重启后是否继续保护平台」的状态；不存 last_factors 全量，避免膨胀。
+        """
+        if not self.state_file:
+            return
+        try:
+            d = {
+                'score': self.score,
+                'consecutive_failures': self.consecutive_failures,
+                'last_update': self.last_update,
+                '_last_band': self._last_band,
+                'opened_at': self.opened_at,
+                'half_open': self.half_open,
+                'half_open_successes': self.half_open_successes,
+                'recovered_at': self.recovered_at,
+            }
+            tmp = self.state_file + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as fp:
+                json.dump(d, fp, ensure_ascii=False)
+            os.replace(tmp, self.state_file)
+        except Exception:
+            pass  # 持久化失败绝不阻断采集主流程
+
+    def _restore_state(self):
+        """从 state_file 恢复关键状态。冷却若已到期，安全进入半开（不恢复后立刻全速采集）。"""
+        try:
+            with open(self.state_file, encoding='utf-8') as fp:
+                d = json.load(fp)
+            self.score = max(0, float(d.get('score', 0)))
+            self.consecutive_failures = int(d.get('consecutive_failures', 0))
+            self.last_update = float(d.get('last_update', time.time()))
+            self._last_band = str(d.get('_last_band', 'NORMAL'))
+            self.opened_at = d.get('opened_at')
+            if self.opened_at is not None:
+                self.opened_at = float(self.opened_at)
+            self.half_open = bool(d.get('half_open', False))
+            self.half_open_successes = int(d.get('half_open_successes', 0))
+            self.recovered_at = d.get('recovered_at')
+            if self.recovered_at is not None:
+                self.recovered_at = float(self.recovered_at)
+            # 冷却/熔断若在重启期间已到期：转半开试探，而不是恢复后立刻全速
+            if (not self.half_open and self._last_band in _TRIPPED_BANDS
+                    and self.opened_at is not None
+                    and (time.time() - self.opened_at) >= self.reset_timeout):
+                self.half_open = True
+                self.half_open_successes = 0
+        except Exception:
+            pass  # 状态文件缺失/损坏：按全新引擎启动，不阻断
 
     def _time_decay(self, now):
         elapsed = max(0.0, now - self.last_update)
@@ -123,6 +186,7 @@ class RiskEngine:
             self.opened_at = now
             self.half_open = False
             self.half_open_successes = 0
+            self._persist()
 
     def _maybe_enter_half_open(self, now):
         """冷却时间已过则进入半开试探，返回当前是否半开。"""
@@ -154,6 +218,7 @@ class RiskEngine:
         band = HARD_SIGNAL_BAND.get(factor) or self.band_of()
         self._last_band = band
         self._trip(band, now)
+        self._persist()
         return self.score, band, BAND_TO_STATE[band]
 
     def record_success(self):
@@ -175,6 +240,7 @@ class RiskEngine:
                 self.half_open_successes = 0
                 self.recovered_at = now  # 进入 RECOVERED 观察窗口
                 self.last_update = now
+                self._persist()
                 return self.score, 'NORMAL', BAND_TO_STATE['NORMAL']
             self.last_update = now
             return self.score, 'HALF_OPEN', BAND_TO_STATE['HALF_OPEN']
@@ -185,6 +251,7 @@ class RiskEngine:
         if band == 'NORMAL':
             # 风险分已回落正常：清除熔断痕迹
             self.opened_at = None
+        self._persist()
         return self.score, band, BAND_TO_STATE[band]
 
     def lifecycle_state(self, now=None):
