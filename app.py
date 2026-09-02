@@ -5418,7 +5418,7 @@ def api_ai_resource_packs_per_call_execute():
         user_request = str(data.get('request') or data.get('prompt') or '').strip()
         if not user_request:
             return jsonify({'ok': False, 'error': '需求不能为空'}), 400
-        model = data.get('model', 'glm-4-plus')
+        model = data.get('model', 'glm-5.3')
         result = ai_resource_packs.execute_per_call_request(user_request, model)
         return jsonify(result)
     except Exception as e:

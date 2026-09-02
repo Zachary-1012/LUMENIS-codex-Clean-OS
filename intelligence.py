@@ -143,10 +143,11 @@ def redact_for_cloud(text):
             out = out.replace(name, '[客户]')
     return out
 
-def _chat(system,user,temperature=0.1,max_tokens=1200):
+def _chat(system,user,temperature=0.1,max_tokens=1200,model=None):
     d=_provider_config()
     if not d: return None,'rule'
-    provider,model,base=d
+    provider,model_default,base=d
+    model = model or model_default
     if provider != 'ollama':  # 仅云端脱敏，本地模型保留原文
         system, user = redact_for_cloud(system), redact_for_cloud(user)
     payload_obj={'model':model,'temperature':temperature,'max_tokens':max_tokens,'messages':[{'role':'system','content':system},{'role':'user','content':user}]}
@@ -171,13 +172,18 @@ def _chat(system,user,temperature=0.1,max_tokens=1200):
         opener = (urllib.request.build_opener(urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url}))
                   if proxy_url else urllib.request.build_opener(urllib.request.ProxyHandler({})))
         if provider == 'zhipu':
-            # GLM 思考模型默认先输出 reasoning_content 会挤空正式结果；关闭思考，直接出最终 JSON
-            payload_obj['thinking'] = {'type': 'disabled'}
+            # GLM 思考模型默认先输出 reasoning_content 会挤空正式结果；关闭思考，直接出最终 JSON。
+            # glm-5.3 系列为"始终思考"模型，任何 thinking 参数都会 400，必须完全不传（思考结果在 reasoning_content）。
+            if not str(model).startswith('glm-5.3'):
+                payload_obj['thinking'] = {'type': 'disabled'}
             payload = json.dumps(payload_obj, ensure_ascii=False).encode('utf-8')
         req = urllib.request.Request(base.rstrip('/') + '/chat/completions', data=payload, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key}, method='POST')
         with opener.open(req,timeout=int(_env('AI_TIMEOUT_SECONDS','90'))) as resp:
             data=json.loads(resp.read().decode('utf-8','replace'))
-        return data['choices'][0]['message']['content'],provider
+        _msg = data['choices'][0]['message']
+        # 优先正式 content；glm-5.3 思考模型若 content 为空，回退 reasoning_content 兜底
+        _content = (_msg.get('content') or '').strip() or (_msg.get('reasoning_content') or '').strip()
+        return _content, provider
     except Exception as exc:
         print('[AI] local/provider failed:',exc)
         return None,'rule'

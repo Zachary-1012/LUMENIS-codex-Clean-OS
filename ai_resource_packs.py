@@ -208,10 +208,11 @@ def is_paused() -> Dict:
 
 
 # ============ 按次计费需求执行 ============
-def execute_per_call_request(user_request: str, model: str = "glm-4-plus") -> Dict:
+def execute_per_call_request(user_request: str, model: str = "glm-5.3") -> Dict:
     """
     按次计费需求执行接口。
     用户输入需求，系统调度执行（消耗1次按次计费额度）。
+    默认走智谱当前最强可用模型 glm-5.3（最大算力优先；豆包仅编排不承担推理）。
     """
     # 检查按次计费额度
     quota = check_quota("per_call", 1)
@@ -228,7 +229,7 @@ def execute_per_call_request(user_request: str, model: str = "glm-4-plus") -> Di
     # 记录使用
     record_usage("per_call", 1, endpoint="per_call_request", detail=user_request)
 
-    # 调用 AI 执行需求（通过 intelligence 网关）
+    # 调用 AI 执行需求（通过 intelligence 网关；model 真正传下去，默认智谱旗舰 glm-5.3）
     try:
         import intelligence
         result, provider = intelligence._chat(
@@ -236,6 +237,7 @@ def execute_per_call_request(user_request: str, model: str = "glm-4-plus") -> Di
             user=user_request,
             temperature=0.3,
             max_tokens=2000,
+            model=model,
         )
         return {
             "ok": True,
