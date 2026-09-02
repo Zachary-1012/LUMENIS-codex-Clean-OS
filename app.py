@@ -5440,6 +5440,40 @@ if __name__ == '__main__':
         logging.critical(f"线程异常: {args.exc_type.__name__}: {args.exc_value}", exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
     
     threading.excepthook = thread_exception_handler
+
+    # ===== P1-7 三 guardian 模块受控接入（守护 / 自动恢复 / 数据反馈闭环）=====
+    # 全部 try/except 包裹，任一失败不阻断启动；ZBC_GUARDIAN_ENABLED=0 可整体关闭
+    if os.environ.get('ZBC_GUARDIAN_ENABLED', '1') == '1':
+        try:
+            import auto_recovery as _ar
+            _ar_eng = _ar.recovery_engine
+            if not getattr(_ar_eng, '_p17_started', False):
+                _ar_eng.start_background_monitor(60)
+                _ar_eng._p17_started = True
+                print('[Guardian] auto_recovery 自动恢复监控已启动(60s)')
+        except Exception as _ge:
+            print(f'[Guardian] auto_recovery 启动失败: {_ge}')
+        try:
+            import data_feedback_loop as _dfl
+            _dfl_eng = _dfl.data_feedback_loop
+            def _fb_loop():
+                import time as _t
+                while True:
+                    try:
+                        _dfl_eng.run_feedback_cycle()
+                    except Exception as _fe:
+                        print(f'[Guardian] 数据反馈闭环异常: {_fe}')
+                    _t.sleep(21600)
+            threading.Thread(target=_fb_loop, daemon=True, name='data-feedback-loop').start()
+            print('[Guardian] data_feedback_loop 数据反馈闭环已启动(6h)')
+        except Exception as _ge:
+            print(f'[Guardian] data_feedback_loop 启动失败: {_ge}')
+        try:
+            import system_guardian as _sg
+            _sg.health_check()
+            print('[Guardian] system_guardian 健康状态已记录')
+        except Exception as _ge:
+            print(f'[Guardian] system_guardian 启动失败: {_ge}')
     
     try:
         # 使用多线程模式，支持并发请求
