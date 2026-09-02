@@ -1,3 +1,9 @@
+# ============================================================
+# Z-Brand-Core · Zachary-OS-AI T0-3 Legacy Redirect Notice
+#  此入口已标注为 LEGACY（保留用于调试/历史兼容）。官方统一生产入口已收敛为：
+#     powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+#  如确需直接执行此 .py，请使用项目 .venv：  .venv\Scripts\python.exe <this_file>.py
+# ============================================================
 """启动 cloudflared 快速隧道（trycloudflare）并捕获公网 URL。
 
 - 目标端口由环境变量 TUNNEL_PORT 指定，默认 8201（v4 验证实例）；切生产时设 TUNNEL_PORT=8200。

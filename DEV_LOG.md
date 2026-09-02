@@ -1,5 +1,71 @@
 # Z-Brand-Core 开发协作日志
 
+## 2026-09-02｜Zachary-OS-AI 总工程执行师 T0 基线锚定（四层 E2E 实跑 · SEC HIGH 清零 · 启动收口 · Git Push 同步）
+> 执行协议：HUB-PROTO-AI-WORKLOG-PUSH-V1 · WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY → HANDOFF
+> GitHub：Zachary-1012/Z-Brand-Core (main) · 远端同步：Zachary-1012/Zachary-OS-AI 三份 ZBIP_EXECUTION_LOG_2026-09-02
+
+**执行师身份**：Zachary-OS-AI（总工程执行师）。用户授权："以后你作为Zachary-OS-AI，代码开发的总工程执行师，负责落地等等一系列保证开发完成能够上线的任务，保证进度" + "评估未完成排序，优先上线系统为基准"后回复【可以】启动 T0-1~T0-4。
+
+**核心改动文件**：
+1. import_cookies.py（148→123 行：SEC-001 硬编码 Cookie 迁移至 `.env` 的 ZBC_WEIBO_COOKIE_JSON / ZBC_BILI_COOKIE_JSON）
+2. requirements.txt（18→31 项：补 Flask-CORS / Flask-Limiter / APScheduler / schedule / bs4 / lxml / websocket-client / python-dateutil / PyYAML + pytest-timeout 插件独立装）
+3. .env.example（尾 3 模板：ZBC_WEIBO_COOKIE_JSON / ZBC_BILI_COOKIE_JSON / ZBC_API_KEY）
+4. .gitignore（新增 .env.local/.env.prod/.env.txt；加 scripts/_zachary_t0\* 临时审计脚本忽略）
+5. scripts/start_production.ps1（122 行重写：ASCII 安全、UTF-8 中文报错、.venv 强制路径、互斥、7 依赖预检、8201+9222 三幂等、15 秒 healthz 等待、失败日志末 20 行自动打印）
+6. scripts/_prod_dep_check.py（7 依赖预检 exit 0/2，被启动脚本调用）
+7. 35 个 LEGACY 启动脚本：.bat/.ps1/.vbs/.py 首行注入 LEGACY REDIRECT NOTICE → scripts/start_production.ps1（保留 @echo off/编码声明/Shebang，不删原逻辑以兼容）
+8. 文档变更：CHANGELOG.md 新增 [5.9.9-t0] 章；DEV_LOG.md（本条）
+
+**目的**：
+- 先审计再修改：按 Z-Brand-Core AGENTS.md §13 10 项交付 + 您说的"每回开发必须端到端启动系统测试"，执行 T0-1~T0-4 四项今日必须项，锚定可回归的可信生产基线。
+- 双产品线（CTH-POMS + ZBMP）一套 Core 不复制；35 LEGACY 入口兼容而非删除；Cookie 凭证全迁出源码；requirements 新机 `pip install -r` 可复现；pytest + Playwright 双层 E2E 做基线证据。
+
+**数据库**：
+- DDL/DML：零变更（全程以 `file:data/monitor.db?mode=ro` 只读打开）。
+- 生产库锁定：data/monitor.db，53 表 / notes=957 / events=427 / daily_reports=33 / collection_logs=495 / ai_filter_log=827 / note_review_history=8327。
+- 根目录 monitor.db（1表 token_stat 12KB）已证伪 = 废弃壳。
+- 双时间铁律：publish空=0 / pub=cap嫌疑=0 ✅；notes 空正文=253（T1-1 分批 CDP 补抓）。
+
+**实测（真实启动 E2E，非静态检查，按 AGENTS 10 项交付）**：
+1. T0-1 DB Schema 对账：notes/events/daily_reports 等核心表 4 候选库比对 + 三列对账。CONFLICT-001 证伪 ✅。
+2. T0-2 SEC：高精度 secret scan v2（EXCLUDE 目录 + placeholder/pattern 误报过滤 + IGNORE_HINTS）→ ZBC 源码 HIGH=0 / OSAI HIGH=0 ✅。`python import_cookies.py` → 微博=6 / B站=17 正确回写到 data/\*_cookies.json ✅；.venv 9 依赖逐包 3 次重试 → 全装成功 ✅。
+3. T0-3 Launch：`python scripts/_prod_dep_check.py` → OK ✅；35 LEGACY NOTICE 注入 → 35/35 100% ✅；start_production.ps1 实跑 → Already healthy（幂等正常，8201/9222 重复拉起被跳过）✅。
+4. T0-4 E2E 四层防线：
+   - L1 HTTP：`/healthz` 200 · `{"ok":true,"service":"taikoo-monitor","version":"5.9.9"}` ✅
+   - L2 路由：359（60 页 / 290 API）✅
+   - L3 Playwright Chromium 无头 1440×900：
+     · Basic Auth 从 URL 注入改为 Header 注入，修复浏览器顶部红色横幅 `TypeError: Failed to execute fetch`（URL 带 credentials 被浏览器 Fetch 拒绝）✅
+     · `/` 200 · title="广州太古汇舆情监测系统 · CTH-POMS" ✅
+     · 15 SPA Hash 路由 /#/overview ... /#/settings = 15/15 DOM OK；JS fatal/pageerror=0；Console 错误=2（非致命样式警告）✅
+     · SSR /v4/ + /topic-campaign = 200 OK ✅
+     · WARN：`/architecture` + `/event-graph` 蓝图路由=404（P1 能力，不阻塞 CTH-POMS 核心 15 页上线）
+   - L4 pytest：`ZBC_DB_PATH=staging/monitor.staging.db .venv/Scripts/python.exe -m pytest -x -q --timeout=180 --maxfail=5 -k "not browser or playwright or selenium or e2e or live or remote"` → exit 0 · **152 passed · 0 failed · 0 error** ✅
+   - L5 双时间铁律再验：0/0 违规 ✅
+
+**未完成项（已登记到 T1/T2/T3，下次按 AGENTS 排序开工）**：
+- T1-1 notes 空正文 253 条分批 CDP 补抓
+- T1-2 XHS NEED_VERIFY 真人扫码闭环真实触发
+- T1-3 Cloudflare 固定 HTTPS 域名隧道自启验收
+- T1-4 Golden Dataset 50 样本
+- T1-5 全新 venv `pip install -r` 完整复现验收
+- T1-6 日报 Word/Excel 导出 + 微信真实发送
+- T1-7 Pre-push CI 守门脚本（≤2min：secret + DB schema + 50 pytest 红线）
+- T2-1~T2-6 安全稳定层：system_config 脱敏、自动备份调度回滚、ZBC Header 鉴权最小骨架、PII 90 天保留 v1、重复 watchdog 单实例、app_backup_v589.py CI 观察后删
+- T3-? `/architecture` + `/event-graph` 蓝图 404 补
+
+**已知风险**：
+1. `.env` 中 B 站 bili_ticket expires=2026-08-31（已过期）。系统启服 & 报告不受影响，B 站真实采集前需人工更新 `.env` 的 ZBC_BILI_COOKIE_JSON。
+2. XHS Cookie 实际 NEED_VERIFY 全链路恢复需真人配合，尚未真实验证（不是代码问题，是风控前置条件）。
+3. `.venv` 3.13.15 与全局 Python 3.14.7 并存：已通过 start_production.ps1 的硬路径 `.venv\Scripts\python.exe` 规避，但历史 LEGACY 脚本仍需经 REDIRECT NOTICE 被操作人员看到才会切换。
+
+**回滚点**：`git revert` 本 commit 后所有启动脚本仍可被原方式手工双击执行（LEGACY NOTICE 仅注入不删逻辑）。Cookie 硬编码已迁移至 `.env`，回滚后重新写入 `.env` 即可，不写回源码。
+
+**交接（豆包/Ollama/下一轮 ChatGPT 必读）**：
+- 生产基线 SHA：见 `git log -1 --oneline`（本次 commit 后再 push）。
+- 双库同步后开工第一步必须：先 `git fetch origin main` 再审计 SHA 是否变化；认证失败立即标 BLOCKED，不得宣称 push 成功。
+- 未来 T1 任何改动：WORK → VERIFY → DEV_LOG.md append → CHANGELOG.md append → commit → push → 远端 VERIFY → OSAI 三仓 ZBIP_EXECUTION_LOG append → commit → push → 远端 VERIFY。
+
+
 ## 2026-08-30｜上线冲刺(2) 进程韧性 + 采集主链修复 + 采集风险引擎（本地执行，commit df79c1e）
 
 **改动文件**：run_supervised.py、collector.py、database.py、collector_guard/risk_engine.py(新)、docs/BLUEPRINT_brand_intel_platform.md(新)、tests/healthcheck.py、tests/test_risk_engine.py。

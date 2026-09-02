@@ -39,6 +39,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.env.local
+.env.prod
+.env.txt
 *.pem
 *.key
 *.p12
@@ -51,6 +54,11 @@ Thumbs.db
 data/cookies/
 data/private/
 data/security/
+
+# 临时审计脚本产物（Zachary-OS-AI 工具生成，不入仓库）
+scripts/_zachary_t0*.py
+scripts/_zachary_t0*.json
+
 
 # ---------- 数据库（私有业务数据，不入库） ----------
 *.db
