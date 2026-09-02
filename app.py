@@ -39,6 +39,12 @@ threading.excepthook = _thread_excepthook
 
 from datetime import datetime, timedelta
 import dev_exec_core
+# 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
+try:
+    from runtime_bin import resolve_node as _resolve_node
+    _NODE_BIN = _resolve_node() or 'node'
+except Exception:
+    _NODE_BIN = 'node'
 from flask import Flask, jsonify, request, send_from_directory, send_file, Response, redirect
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # === v5.9.9 统一日志增强：yyds-logger补丁模式，一行启用，不影响现有logging调用 ===
@@ -775,7 +781,7 @@ def run_rednote_collect(keyword='广州太古汇', max_scroll=3, max_details=10,
     env = os.environ.copy()
     env['XHS_CDP_URL'] = cdp_url
     out_file = Path(__file__).parent / 'data' / f'rednote_{datetime.now():%Y%m%d_%H%M%S}.json'
-    cmd = ['node', str(REDNOTE_SCRIPT), '--keyword', keyword, '--output', str(out_file),
+    cmd = [_NODE_BIN, str(REDNOTE_SCRIPT), '--keyword', keyword, '--output', str(out_file),
            '--max-scroll', str(max_scroll), '--max-details', str(max_details)]
     try:
         p = subprocess.run(cmd, cwd=str(Path(__file__).parent), capture_output=True, text=True, timeout=1800, env=env)

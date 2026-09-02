@@ -15,6 +15,13 @@ from ..pipeline.deduplicate import deduplicate
 from ..pipeline.subject_filter import filter_subject
 import database
 
+# 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
+try:
+    from runtime_bin import resolve_node as _resolve_node
+    _NODE_BIN = _resolve_node() or 'node'
+except Exception:
+    _NODE_BIN = 'node'
+
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / 'rednote_collector.cjs'  # rednote CDP 采集引擎（验证通过）
 SCRIPT_FALLBACK = ROOT / 'xhs_live_engine.js'  # 备用旧引擎
@@ -26,7 +33,7 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
     env = os.environ.copy()
     if cdp_url:
         env['XHS_CDP_URL'] = cdp_url
-    cmd = ['node', str(SCRIPT), '--keyword', keyword, '--output', str(out),
+    cmd = [_NODE_BIN, str(SCRIPT), '--keyword', keyword, '--output', str(out),
            '--max-scroll', str(max_scroll), '--max-details', str(max_details),
            '--max-comment-pages', str(max_comment_pages), '--wait-ms', str(wait_ms)]
     if not comments:

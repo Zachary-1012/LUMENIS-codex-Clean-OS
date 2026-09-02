@@ -12,6 +12,13 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
+try:
+    from runtime_bin import resolve_node as _resolve_node
+    _NODE_BIN = _resolve_node() or 'node'
+except Exception:
+    _NODE_BIN = 'node'
+
 # 配置日志
 logger = logging.getLogger(__name__)
 
@@ -533,7 +540,7 @@ class CollectorAutomation:
         for kw in (task.get('keywords') or []):
             attempted += 1
             out = os.path.join(self.data_dir, f'rednote_cdp_{datetime.now():%Y%m%d_%H%M%S}_{abs(hash(kw))%10000}.json')
-            cmd = ['node', cjs, '--keyword', str(kw), '--output', out,
+            cmd = [_NODE_BIN, cjs, '--keyword', str(kw), '--output', out,
                    '--max-scroll', str(max_scroll), '--max-details', str(max_details)]
             try:
                 p = subprocess.run(cmd, cwd=self.base_dir, capture_output=True, text=True, timeout=900, env=env)

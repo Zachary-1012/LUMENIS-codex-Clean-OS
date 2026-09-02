@@ -10,6 +10,13 @@ import re
 import sys
 from datetime import datetime
 
+# 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
+try:
+    from runtime_bin import resolve_node as _resolve_node
+    _NODE_BIN = _resolve_node() or 'node'
+except Exception:
+    _NODE_BIN = 'node'
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 def _resolve_search_script():
     # xhs_search_v2.js 为首选；若该文件缺失（历史上曾丢失导致 0 条），回退到参数/输出契约一致的
@@ -227,7 +234,7 @@ def _search_standalone(keyword, max_scroll, output_path):
     """回退通道：独立持久化 Chromium（xhs_search.js）。无 CDP 时使用，headless 易被风控，仅作兜底。"""
     if not os.path.exists(SEARCH_SCRIPT):
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': f'搜索脚本缺失: {SEARCH_SCRIPT}', 'channel': 'standalone'}
-    cmd = ['node', SEARCH_SCRIPT, '--keyword', keyword, '--output', output_path, '--max-scroll', str(max_scroll)]
+    cmd = [_NODE_BIN, SEARCH_SCRIPT, '--keyword', keyword, '--output', output_path, '--max-scroll', str(max_scroll)]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         if result.returncode != 0:

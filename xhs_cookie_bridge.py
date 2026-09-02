@@ -16,6 +16,12 @@ import network_adaptive
 import cache_manager
 
 ROOT=os.path.dirname(os.path.abspath(__file__))
+# 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
+try:
+    from runtime_bin import resolve_node as _resolve_node
+    _NODE_BIN=_resolve_node() or 'node'
+except Exception:
+    _NODE_BIN='node'
 SEARCH_JS=os.path.join(ROOT,'xhs_cookie_search.js')
 COOKIE_FILE=os.path.join(ROOT,'data','private','xhs_cookie_header.txt')
 STATS_FILE=os.path.join(ROOT,'data','collector_stats.json')  # 采集计数持久化文件
@@ -517,7 +523,7 @@ def _run_search(keyword,max_scroll=6):
     env=os.environ.copy()
     # 双子星库 Contract：传 select_account() 选择的身份对应 Cookie 文件（Node 进程读取一致）
     env['XHS_COOKIE_FILE'] = _effective_cookie_file()
-    cmd=['node',SEARCH_JS,'--keyword',keyword,'--output',out,'--max-scroll',str(effective_scroll)]
+    cmd=[_NODE_BIN,SEARCH_JS,'--keyword',keyword,'--output',out,'--max-scroll',str(effective_scroll)]
     try:
         # 使用Popen+轮询，避免Flask线程中subprocess阻塞
         stdout_file = out + '.stdout'

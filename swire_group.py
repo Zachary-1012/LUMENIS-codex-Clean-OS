@@ -16,6 +16,12 @@ import threading
 import datetime as _dt
 from flask import request, jsonify
 
+# 统一 Node 解析（移除写死的旧沙箱hash路径，改走 canonical 解析器）
+try:
+    from runtime_bin import resolve_node as _resolve_node
+except Exception:
+    def _resolve_node(): return 'node'
+
 try:
     import database as _dbmod
     DB_PATH = _dbmod.DB_PATH
@@ -183,10 +189,10 @@ def _brand_collect_job(key, brand_name, keywords):
         _set_brand_status(key, 'collecting')
         root = os.path.dirname(os.path.abspath(__file__))
         cjs = os.path.join(root, 'rednote_collector.cjs')
-        node_candidates = [
-            r'C:\Users\28049\AppData\Local\Doubao\User Data\sandbox_runtime\bases\9f6d27f23933fb44a3a1c728c88a5ce4\node\node.exe',
-            'node']
-        node = next((x for x in node_candidates if x == 'node' or os.path.exists(x)), None)
+        try:
+            node = _resolve_node()
+        except Exception:
+            node = 'node'
         kw = (keywords or brand_name or '').replace('；', ';').split(';')[0].strip() or brand_name
         if not (node and os.path.exists(cjs)):
             _set_brand_status(key, 'pending'); return
