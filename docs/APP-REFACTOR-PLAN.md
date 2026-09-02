@@ -6,7 +6,7 @@
 | 批1 | `data_query_api.py` | stats/notes/risk-alerts/hot-notes/comments/events/web-mentions/feedback-keywords/hot-topics（9 个纯只读） | ✅ 完成，6013→5966 行，362 回归全过，x-route-count 405 不变 |
 | 批2a | `collection_api.py` | collector status/schedule-status/start/stop/history（5 个，仅依赖可 import 模块） | ✅ 完成，5966→5851 行，362 回归全过，鉴权 before_request 仍生效 |
 | 批2b | collection_api.py 续 | /api/xhs/cookie/status·sync·sync/<id>·collect-pause·resume·pause-state·collect-health（7 条纯 xhs_cookie_bridge 封装，闭包审计 SAFE） | ✅ 完成，5302 行，E2E 8/8 过 |
-| 批3 | report_api.py | 报告 | ⏳ 待施工 |
+| 批3 | report_api.py | 报告（api_report_daily/report_v2/digest/special 等）——闭包审计见 6 条 SAFE 但依赖 app.py 模块级 helper(_generate_all_reports/report_engine 实例等)，需先做 helper 提取 | ⏳ 待施工（依赖 helper 提取） |
 | 批4 | ai_api.py | AI | ⏳ 待施工 |
 | 批5 | ops_api.py | 系统/运维/代码执行（含权限敏感） | ⏳ 待施工 |
 | 批6 | page_routes.py | 页面渲染 | ⏳ 待施工 |
