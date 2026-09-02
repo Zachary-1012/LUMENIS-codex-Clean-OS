@@ -208,3 +208,9 @@ class NoteNormalizer:
 
 # 导入timedelta（放在文件末尾避免循环导入问题）
 from datetime import timedelta
+
+
+
+def normalize_note(note) -> dict:
+    """模块级适配函数：兼容 live_engine 调用契约，委托 NoteNormalizer。"""
+    return NoteNormalizer().normalize_note(note)

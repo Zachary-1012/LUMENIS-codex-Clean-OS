@@ -170,3 +170,9 @@ class SimHashDeduplicator:
             'threshold': self.threshold,
             'is_duplicate': distance <= self.threshold
         }
+
+
+
+def deduplicate(notes) -> list:
+    """模块级适配函数：兼容 live_engine 调用契约，委托 SimHashDeduplicator。"""
+    return SimHashDeduplicator().batch_deduplicate(notes)
