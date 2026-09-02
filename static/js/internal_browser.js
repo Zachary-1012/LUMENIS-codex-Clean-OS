@@ -23,7 +23,7 @@
     function el(id) { return document.getElementById(id); }
 
     function init() {
-        var root = el('internal-browser-section');
+        var root = el('page-internal-browser');
         if (!root) return;
 
         // 标签切换

@@ -20,7 +20,7 @@
     }
 
     function init() {
-        if (!el('evidence-dashboard-section')) return;
+        if (!el('page-evidence')) return;
         // 筛选 chips
         var chips = document.querySelectorAll('.ev-chip[data-filter]');
         chips.forEach(function (chip) {

@@ -40,6 +40,7 @@
   <link rel="stylesheet" href="/static/css/resident_health.css?v=5.9.9">
   <link rel="stylesheet" href="/static/css/internal_browser.css?v=5.9.9">
   <link rel="stylesheet" href="/static/css/evidence_dashboard.css?v=5.9.9">
+  <link rel="stylesheet" href="/static/css/osai-shell.css?v=5.9.9">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) -->
@@ -119,6 +120,10 @@
         <button class="side-item" data-page="app-evidence" data-desc="App端数据证据采集（Shadow模式）：用户主动截图上传→字段识别→人工确认，不碰App自动化"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span>App证据</span></button>
 
 
+        <div class="side-group-label">ZACHARY OS AI</div>
+        <button class="side-item" data-page="resident-health" data-desc="双身份驻场浏览器三层健康检测、登录态监控、失效扫码恢复"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="7 11 9.5 11 11 8.5 13 13.5 14.5 11 17 11"/></svg></span><span>驻场浏览器</span></button>
+        <button class="side-item" data-page="internal-browser" data-desc="系统内置浏览器，小红书/rednote 双账号系统内完成，不跳转外部浏览器"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16 8 13.5 10.5 10.5 13.5 8 16 10.5 13.5 13.5 10.5 16 8"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span><span>内置浏览器</span></button>
+        <button class="side-item" data-page="evidence" data-desc="健康与采集全程证据看板，每个完成/失败都可回放"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 9 4-1 7-4.5 7-9V6z"/><polyline points="9 12 11 14 15 10"/></svg></span><span>证据看板</span></button>
         <button class="side-item" data-page="calendar" data-desc="舆情日历、每日舆情概览、点击查看详情"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>舆情日历</span></button>
         <button class="side-item" data-page="reports" data-desc="日报/周报/月报/年报导出，Word/Excel/CSV格式"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span><span>报告中心</span></button>
         <button class="side-item" data-page="settings" data-desc="公司域名、推送邮箱、AI配置、开发者工具运行代码"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>系统设置</span></button><button class="side-item" id="kbShortcutsEntry" type="button" data-desc="查看并使用全部键盘快捷键（Ctrl+/ 随时唤起）"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7.5 14h9"/></svg></span><span>键盘快捷键</span></button>
@@ -187,10 +192,28 @@
             <div class="calendar" id="calendarGrid"></div>
           </article>
         </div>
+        <div class="osai-module-grid">
+          <article class="osai-module-card glass-card" data-page="resident-health">
+            <span class="osai-module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="7 11 9.5 11 11 8.5 13 13.5 14.5 11 17 11"/></svg></span>
+            <div class="osai-module-text"><h3>驻场浏览器状态</h3><p>双身份独立驻场 · 三层健康检测 · 登录态实时监控</p></div>
+            <span class="chev">›</span>
+          </article>
+          <article class="osai-module-card glass-card" data-page="internal-browser">
+            <span class="osai-module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16 8 13.5 10.5 10.5 13.5 8 16 10.5 13.5 13.5 10.5 16 8"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span>
+            <div class="osai-module-text"><h3>系统内置浏览器</h3><p>小红书 / rednote 系统内操作 · 双账号双窗口 · 不跳外部</p></div>
+            <span class="chev">›</span>
+          </article>
+          <article class="osai-module-card glass-card" data-page="evidence">
+            <span class="osai-module-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 9 4-1 7-4.5 7-9V6z"/><polyline points="9 12 11 14 15 10"/></svg></span>
+            <div class="osai-module-text"><h3>证据看板</h3><p>健康 / 采集全程可回放证据 · PASS·FAIL 时间线</p></div>
+            <span class="chev">›</span>
+          </article>
+        </div>
       </section>
 
       <!-- 驻场浏览器健康状态（Zachary OS AI · Resident Browser Health Monitor） -->
-      <section class="page-view active" id="page-resident-health" style="margin-top:16px;">
+      <section class="page-view" id="page-resident-health">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>驻场浏览器状态</h2></div>
         <div class="section-intro" style="margin-bottom:14px;">
           <div>
             <span class="eyebrow">ZACHARY OS AI · RESIDENT BROWSER</span>
@@ -206,7 +229,8 @@
       </section>
 
       <!-- Zachary OS AI 系统内置浏览器（小红书/rednote 系统内完成，不跳转外部） -->
-      <section class="page-view active" id="internal-browser-section" style="margin-top:24px;">
+      <section class="page-view" id="page-internal-browser">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>系统内置浏览器</h2></div>
         <div class="section-intro" style="margin-bottom:14px;">
           <div>
             <span class="eyebrow">ZACHARY OS AI · INTERNAL BROWSER</span>
@@ -244,7 +268,8 @@
       </section>
 
       <!-- Zachary OS AI Evidence 证据看板 -->
-      <section class="page-view active" id="evidence-dashboard-section" style="margin-top:24px;">
+      <section class="page-view" id="page-evidence">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>证据看板</h2></div>
         <div class="section-intro" style="margin-bottom:14px;">
           <div>
             <span class="eyebrow">ZACHARY OS AI · EVIDENCE</span>
@@ -330,7 +355,7 @@
           <div class="panel-head"><div><span class="eyebrow">CASE LIBRARY</span><h3>案例收录</h3><p>系统已收录的相关笔记沉淀为案例，点击查看</p></div></div>
           <div style="display:flex;gap:12px;flex-wrap:wrap">
             <button class="action primary" onclick="showNoteCases('广州太古汇 · 笔记案例库','keyword='+encodeURIComponent('广州太古汇'))">广州太古汇笔记案例</button>
-            <button class="action secondary" onclick="navigateTo('brand')">品牌 / 业态案例</button>
+            <button class="action secondary" onclick="navigateTo('brands')">品牌 / 业态案例</button>
           </div>
         </div>
         <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">HOT TOPICS</span><h3>热门话题</h3><p>点击话题查看系统收录案例，亦可前往小红书检索更多</p></div></div><div class="topic-list" id="topicList"></div></div>
@@ -947,23 +972,23 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- 手机端底部导航（APP式交互） -->
 <nav class="mobile-tab-bar" id="mobileTabBar">
   <button class="mobile-tab-item active" data-page="overview" onclick="navigateTo('overview')">
-    <span class="mobile-tab-icon">🏠</span>
+    <span class="mobile-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
     <span>首页</span>
   </button>
   <button class="mobile-tab-item" data-page="monitor" onclick="navigateTo('monitor')">
-    <span class="mobile-tab-icon">📊</span>
+    <span class="mobile-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
     <span>舆情</span>
   </button>
   <button class="mobile-tab-item" data-page="topics" onclick="navigateTo('topics')">
-    <span class="mobile-tab-icon">🔥</span>
+    <span class="mobile-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span>
     <span>话题</span>
   </button>
   <button class="mobile-tab-item" data-page="cases" onclick="navigateTo('cases')">
-    <span class="mobile-tab-icon">📚</span>
+    <span class="mobile-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-4 0z"/></svg></span>
     <span>案例</span>
   </button>
   <button class="mobile-tab-item" data-page="knowledge-base" onclick="navigateTo('knowledge-base')">
-    <span class="mobile-tab-icon">🧠</span>
+    <span class="mobile-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span>
     <span>知识</span>
   </button>
 </nav>
