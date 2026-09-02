@@ -356,12 +356,14 @@ img,svg,canvas,video,iframe{max-width:100%;height:auto}
     transform:translateX(50%)!important;
     width:calc(100vw - 24px)!important;
     max-width:calc(100vw - 24px)!important;
-    pointer-events:auto!important;
+    /* 容器本身绝不拦截指针（空容器曾全屏挡住抽屉导航点击）；仅真实 .alert 可点 */
+    pointer-events:none!important;
   }
   .alert-container .alert{
     min-width:0!important;
     width:100%!important;
     max-width:100%!important;
+    pointer-events:auto!important;
   }
 }
 /* M6：≤768 modal-panel 横屏紧凑 */
