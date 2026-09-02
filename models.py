@@ -1,7 +1,7 @@
 """
 广州太古汇舆情监测系统 - 数据模型定义
 基于SQLite数据库表结构的ORM模型
-版本: v5.8.0
+版本: v5.9.9（版本号以 VERSION 文件 / app.APP_VERSION 为单一权威，2026-09-02 P1-1 对齐）
 """
 
 import sqlite3
@@ -310,7 +310,7 @@ def get_all_table_names() -> List[str]:
 
 if __name__ == "__main__":
     print("广州太古汇舆情监测系统 - 数据模型")
-    print(f"版本: v5.8.9")
+    print(f"版本: v5.9.9")
     print(f"模型数量: {len(MODEL_REGISTRY)}")
     print()
     print("数据表列表:")

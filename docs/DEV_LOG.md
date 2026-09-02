@@ -916,3 +916,16 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - 新增 openapi_spec.py：Flask `<conv:name>`→OpenAPI `{name}`，operation 带 operationId/tags/path 参数；认证标注严格对齐 app.before_request：/healthz public(1)、/v4/* 独立 v4Auth(65)、其余 httpBasic 或 v4 会话(306)。
 - 产物：docs/API-OPENAPI-SPEC.json（标准 OpenAPI 3.0.3 + securitySchemes）、docs/API-ROUTE-MATRIX.md（人类可读矩阵）。新增 tests/test_openapi_spec.py 5 测：最小 Flask 验证转换/认证映射、真实 app spec 与 url_map 完全一致（一条不漏）、产物合法。
 - 结果：187 passed（182→187）。未新增/修改/删除任何端点，DB 零变更、生产 8201 未碰；请求/响应 schema 细化与 12 旧报告路由收敛另列 BACKLOG。
+
+
+---
+
+## 2026-09-02 14:28 · P1-1 OSAI 25 契约逐项决策台账 + 版本单一权威对齐
+
+- 通读 OSAI reconciliation/06_CONTRACT_RECONCILIATION.md（25 契约 + V-01~07 + I-01~10），在 ZBC 侧逐项给决策，产出 docs/CONTRACT-DECISION-LEDGER.md，无 UNKNOWN 悬挂：
+  - safe_collection 的 PII/audit/离线管线/速率 = ADOPT-BYPASS（本轮 P1-3 已旁路实现，10 测，待采集后处理接入）；风险即停 CLOSED（现役 collector_guard 七态）。
+  - V-01/02 多账号/代理池「违规」= REVISE-SCOPE：契约定位低风险人工 QR 单账号，ZBC 以 deployment_target 分级化解（internal 受控、public_web 硬禁，已实现并测），回写 OSAI 建议补 scope，非 ZBC 违规。
+  - research_record/AI 协作/CAPABILITY 等 = NOT-APPLICABLE（OSAI 研究侧职责）；I-01 API 契约 CLOSED（P1-2 OpenAPI）、I-03 DB 契约 CLOSED（P1-5 registry）、I-02 主体口径 ZBC-OWNS；P1-8 证据流转/production_unchanged/Capability Delta 登记 BACKLOG。
+- 版本对齐（06 称 VERSION 5.9.9 vs package.json 5.6.2 不一致，实测另一窗口已统一为 5.9.9，06 滞后）：仅 models.py 文件头 v5.8.0 与 __main__ 打印 v5.8.9 两处过时注释/打印统一为 v5.9.9（纯文本零逻辑）。
+- 新增 tests/test_version_consistency.py 2 测锁定 VERSION=package.json=app.APP_VERSION=5.9.9 且 models.py 无旧版本残留（VERSION 带 BOM，用 utf-8-sig 读）。
+- 结果：189 passed（187→189）。DB/采集/主体口径零变更，生产 8201 未碰。
