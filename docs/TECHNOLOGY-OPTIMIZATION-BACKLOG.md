@@ -21,10 +21,10 @@
 
 ## P1 — 建议处理（显著提升稳定性/安全/可维护）
 ### T-P1-1 Windows 生产 WSGI：waitress
-- 当前：Flask dev server / 看门狗直接拉起。候选：Pylons/waitress（1598★，纯 Python、**Windows 可用**）。为什么：gunicorn(10663★)/supervisor(9111★)**不支持 Windows**，不能作为本机生产方案。性能：中；稳定性：高（成熟多线程 WSGI）；复杂度：低；迁移成本：低（改启动命令）；风险：低。**现在做：Staging 验证后做；上 Linux 云时再评估 gunicorn。**
+- 当前：Flask dev server / 看门狗直接拉起。候选：Pylons/waitress（1598★，纯 Python、**Windows 可用**）。为什么：gunicorn(10663★)/supervisor(9111★)**不支持 Windows**，不能作为本机生产方案。性能：中；稳定性：高（成熟多线程 WSGI）；复杂度：低；迁移成本：低（改启动命令）；风险：低。**现在做：已落地（可配置化 ZB_WSGI=waitress，staging 8305 已验证 healthz 200，默认 Flask 零影响，可回滚）。上 Linux 云时再评估 gunicorn。**
 
 ### T-P1-2 网络/外部调用退避：tenacity（与 litl/backoff 二选一）
-- 当前：自写重试。候选：jd/tenacity（Apache-2.0 8769★）统一退避/熔断前退避。收益：避免 NETWORK_ERROR 连续撞击；复杂度下降；成本低；风险低。**现在做：是（仅网络层，不碰平台风控决策）。**
+- 当前：自写重试。候选：jd/tenacity（Apache-2.0 8769★）统一退避/熔断前退避。收益：避免 NETWORK_ERROR 连续撞击；复杂度下降；成本低；风险低。**现在做：已落地（collector.py _cdp_online 指数退避，可选依赖缺省回落，单测通过，全量回归 479 passed）。**
 
 ### T-P1-3 可回滚 DB 迁移：Alembic
 - 当前：51 表 create-if-not-exist，无版本化迁移。候选：sqlalchemy/alembic（MIT 4357★）。收益：schema 变更可追可回滚；复杂度上升（引入迁移链）；成本：中（先对 Staging 副本 autogenerate baseline，绝不对生产库重建）；风险：中（必须向后兼容、先备份）。**现在做：先 Staging baseline，生产切换走 Gate（关联 GAP-13）。**

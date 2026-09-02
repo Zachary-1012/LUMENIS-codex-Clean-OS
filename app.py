@@ -5832,8 +5832,21 @@ if __name__ == '__main__':
             print(f'[Guardian] system_guardian 启动失败: {_ge}')
     
     try:
-        # 使用多线程模式，支持并发请求
-        app.run(host=RUN_HOST, port=RUN_PORT, debug=False, threaded=True)
+        # T-P1-1 waitress 可配置化：ZB_WSGI=waitress 时用生产级多线程 WSGI（waitress.serve），
+        # 默认仍 Flask dev server（零影响）。先 Staging 验证再切生产；缺 waitress 自动回落 Flask。
+        _wsgi = os.environ.get('ZB_WSGI', '').strip().lower()
+        if _wsgi == 'waitress':
+            try:
+                from waitress import serve as _waitress_serve
+                _threads = int(os.environ.get('ZB_WSGI_THREADS', '8') or '8')
+                print(f'[System] 生产 WSGI: waitress.serve(host={RUN_HOST}, port={RUN_PORT}, threads={_threads})')
+                _waitress_serve(app, host=RUN_HOST, port=RUN_PORT, threads=_threads)
+            except ImportError:
+                print('[System] waitress 未安装，回落 Flask dev server')
+                app.run(host=RUN_HOST, port=RUN_PORT, debug=False, threaded=True)
+        else:
+            # 使用多线程模式，支持并发请求
+            app.run(host=RUN_HOST, port=RUN_PORT, debug=False, threaded=True)
     except Exception as e:
         logging.critical(f"[System] 系统启动失败: {e}", exc_info=True)
         print(f"系统启动失败: {e}")
