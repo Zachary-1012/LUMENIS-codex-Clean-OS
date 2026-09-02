@@ -852,3 +852,16 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - 项目内剩余“import 未声明”逐项定性：**aiohttp**（collector_v2/xhs/client.py 方法内 try import，ImportError 自动降级 requests 同步，当前 venv 未装也正常跑）、**yyds-logger**（unified_logger try import，缺省回退标准 logging，本 venv 0.8.1 已装并实际生效）、docx2pdf/pypdf（仅 v4_upgrade 报告导出/导入器旁路，未接管）。**结论：生产启动主链无硬依赖缺失，不阻断 run_production/collector_v2。**
 - 收尾：requirements.txt 增“可选增强”分组，显式声明 aiohttp / yyds-logger（注释写明内置降级与 win32-setctime、docx2pdf/pypdf 适用范围），不把可选变强制，保持“无重依赖全链可跑”。
 - 证据：tests/healthcheck.py 只读（副本库）ok=true，subject_guard gz_hit/sh_excluded 均 true，has_publish_datetime/has_captured_at 均 true；统一入口 161 passed 不变。DB 零变更、生产 8201 未碰。
+
+
+---
+
+## 2026-09-02 13:24 · P1-4 风险权威归属校正（零运行时变更，文档与实现对齐）
+
+### 只读审计事实
+- 根 risk_engine.py 是历史兼容层（转发 daily_report / subject_rules），但其旧声明把“采集风险权威”写成 collector_guard/risk_engine.py 的 RiskEngine。
+- 运行时实测：采集主链 collector.py:62 默认启用 CollectorGuard，现役风险/熔断由 state.CollectState 七态 + analyzer.ResponseAnalyzer + rate_limiter.AdaptiveRateLimiter（连续失败 3 次→动态降频→冷却封顶 30min→熔断→恢复）承担；**全仓无任何 RiskEngine( 实例化**，它是“已实现 + tests/test_risk_engine.py 7 用例覆盖、但未接管”的备用连续分评分器。
+### 最小收尾（不改现役熔断、不强行接线）
+- 校正根 risk_engine.py 职责声明：现役权威=CollectorGuard 七态；RiskEngine 标注为已实现/已测/未接管的增强件，未来须旁路验证后再接入；报告口径=daily_report/report_engine。
+- 新增 tests/test_risk_authority_wiring.py 3 测：现役 Guard 持有四件套且不实例化 RiskEngine（源码层 guard.py 不 import risk_engine）；根兼容层纯转发（subject_sql_and_values 结果一致、build_daily_report 走 daily_report 哨兵验证）；备用评分器模块独立可导入。
+- 结果：新增 3 测全过、既有 7 测不重复；统一入口 164 passed（161→164）。DB 零变更、生产 8201 未碰、现役熔断行为零变化。
