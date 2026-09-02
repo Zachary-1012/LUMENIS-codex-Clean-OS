@@ -33,12 +33,14 @@ def field_state(note: Dict[str, Any], field: str) -> str:
     A separate collector failure state can be supplied through `collection_state`
     and is intentionally not converted to EMPTY.
     """
-    if field not in note:
-        return "UNKNOWN"
+    # 顺序修复(2026-09-02): collection_state / _not_applicable 是状态决定因子，
+    # 必须优先于字段存在性判断，否则 BLOCKED / NOT_APPLICABLE 在字段缺失时永不触发。
     if note.get("collection_state") in {"BLOCKED", "AUTH_REQUIRED", "CAPTCHA", "NETWORK_ERROR"}:
         return note["collection_state"]
     if note.get(f"{field}_not_applicable"):
         return "NOT_APPLICABLE"
+    if field not in note:
+        return "UNKNOWN"
     return "PRESENT" if _present(note.get(field)) else "EMPTY"
 
 
