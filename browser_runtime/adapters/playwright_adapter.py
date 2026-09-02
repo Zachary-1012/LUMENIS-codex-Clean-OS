@@ -20,13 +20,22 @@ class PlaywrightAdapter(BrowserContract):
     NAME = "playwright"
 
     def __init__(self, headless: bool = True, browser_type: str = "chromium",
-                 timeout_ms: int = 15000, **kw):
+                 timeout_ms: int = 15000,
+                 user_data_dir: Optional[str] = None,
+                 storage_state: Optional[str] = None,
+                 **kw):
+        """P0-BR-06 Session/Profile 隔离：user_data_dir 提供时用持久化 context，
+        否则保持默认 launch()+new_page()。storage_state 可用于恢复登录态。
+        默认行为不变，仅新增可选参数。"""
         self.headless = headless
         self.browser_type = browser_type
         self.timeout_ms = timeout_ms
+        self.user_data_dir = user_data_dir
+        self.storage_state = storage_state
         self.beep = BEEPExecutor()
         self._pw = None
         self._browser = None
+        self._context = None
         self._page = None
         self._load_error = None
         self._lazy_init()
@@ -36,8 +45,20 @@ class PlaywrightAdapter(BrowserContract):
             from playwright.sync_api import sync_playwright
             self._pw = sync_playwright().start()
             launcher = getattr(self._pw, self.browser_type)
-            self._browser = launcher.launch(headless=self.headless)
-            self._page = self._browser.new_page()
+            if self.user_data_dir:
+                # P0-BR-06: 持久化 context，profile 隔离
+                self._context = launcher.launch_persistent_context(
+                    user_data_dir=self.user_data_dir,
+                    headless=self.headless,
+                    storage_state=self.storage_state,
+                )
+                self._browser = None  # persistent context 自带 browser
+                self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
+            else:
+                # 默认行为：launch + new_page（无 profile 隔离）
+                self._browser = launcher.launch(headless=self.headless)
+                self._context = self._browser.new_context(storage_state=self.storage_state)
+                self._page = self._context.new_page()
             self._page.set_default_timeout(self.timeout_ms)
         except Exception as e:
             self._load_error = str(e)
@@ -110,11 +131,23 @@ class PlaywrightAdapter(BrowserContract):
         if self._page is None:
             return {"status": "down", "error": self._load_error}
         try:
-            return {"status": "up", "url": self._page.url, "title": self._page.title()}
+            return {
+                "status": "up",
+                "url": self._page.url,
+                "title": self._page.title(),
+                "profile_isolated": self.user_data_dir is not None,
+                "user_data_dir": self.user_data_dir,
+                "storage_state": bool(self.storage_state),
+            }
         except Exception as e:
             return {"status": "degraded", "error": str(e)[:200]}
 
     def close(self, **kw) -> None:
+        try:
+            if self._context is not None:
+                self._context.close()
+        except Exception:
+            pass
         try:
             if self._browser is not None:
                 self._browser.close()

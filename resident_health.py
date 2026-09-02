@@ -193,8 +193,30 @@ def check_account(account: str) -> dict[str, Any]:
 
 
 def check_account_with_evidence(account: str) -> dict[str, Any]:
-    """执行健康检查并写入 Evidence 记录。失败也落证据（禁止只存状态不存证据）。"""
+    """执行健康检查并写入 Evidence 记录。失败也落证据（禁止只存状态不存证据）。
+    P0-BR-11：增加 last_success_at / last_failure_at 字段，从 state 读取历史，
+    根据当前 status 更新并持久化。向后兼容，只增不删。"""
     result = check_account(account)
+    # P0-BR-11: 从 state 读取历史 last_success_at / last_failure_at
+    try:
+        state = _load_state()
+        hh = state.setdefault("health_history", {})
+        rec = hh.setdefault(account, {"last_success_at": None, "last_failure_at": None})
+        result["last_success_at"] = rec.get("last_success_at")
+        result["last_failure_at"] = rec.get("last_failure_at")
+        # 根据当前 status 更新
+        if result["status"] == "HEALTHY":
+            rec["last_success_at"] = result["checked_at"]
+        else:
+            rec["last_failure_at"] = result["checked_at"]
+        result["last_success_at"] = rec.get("last_success_at")
+        result["last_failure_at"] = rec.get("last_failure_at")
+        _persist_state(state)
+    except Exception as e:
+        # health_history 读写失败不影响主流程
+        result.setdefault("last_success_at", None)
+        result.setdefault("last_failure_at", None)
+        result["health_history_error"] = str(e)
     try:
         from evidence_store import record_health_evidence
         # 状态映射：HEALTHY→PASS，其他→FAIL
