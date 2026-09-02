@@ -349,6 +349,110 @@ def extract_keywords(text, num_keywords=10):
     return []
 
 
+def search_enhance(query, context='', max_results=5, model='search-std'):
+    """
+    搜索增强（智谱 search-std 模型）。
+    用于案例库搜索增强、品牌知识库 RAG、产品全局架构检索。
+    【安全原则】搜索结果必须有来源标注，不直接写入生产数据库，仅作为参考。
+
+    Args:
+        query: 搜索查询
+        context: 上下文信息（可选）
+        max_results: 最大结果数
+        model: 模型名称，默认 search-std
+
+    Returns:
+        dict: {ok, results: [{title, content, source, url}], summary, provider}
+    """
+    if not query or not query.strip():
+        return {'ok': False, 'error': '查询不能为空', 'results': []}
+
+    # 检查 AI 资源包额度（search-std 100次）
+    try:
+        import ai_resource_packs
+        quota = ai_resource_packs.check_quota('search_std', 1)
+        if not quota['allowed']:
+            return {'ok': False, 'error': f'search-std 额度不足: {quota["reason"]}', 'results': []}
+    except Exception:
+        pass  # 额度检查失败不阻塞
+
+    system_prompt = f'''你是搜索增强助手。根据用户查询和上下文，返回{max_results}条最相关的搜索结果。
+要求：
+1. 每条结果必须包含：title(标题)、content(内容摘要)、source(来源)、url(链接，如无可为空)
+2. 结果必须真实可查，不得编造
+3. 优先返回权威来源（官方网站、权威媒体、学术论文）
+4. 只输出严格JSON格式：{{"results":[{{"title":"","content":"","source":"","url":""}}],"summary":""}}
+5. summary 是对所有结果的综合摘要，不超过200字'''
+
+    user_prompt = f'查询: {query}\n'
+    if context:
+        user_prompt += f'上下文: {context[:2000]}\n'
+    user_prompt += '请返回搜索结果。'
+
+    try:
+        # 使用 search-std 模型（通过 _chat 调用，但模型名需要临时替换）
+        # 由于 _chat 使用默认模型，这里直接调用智谱 API
+        import os, json, urllib.request
+        api_key = os.environ.get('ZHIPU_API_KEY', '')
+        base_url = os.environ.get('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')
+        if not api_key:
+            return {'ok': False, 'error': '智谱 API Key 未配置', 'results': []}
+
+        payload = {
+            'model': model,
+            'messages': [
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_prompt},
+            ],
+            'temperature': 0.1,
+            'max_tokens': 2000,
+            'thinking': {'type': 'disabled'},
+        }
+        req = urllib.request.Request(
+            base_url.rstrip('/') + '/chat/completions',
+            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+            headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key},
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read().decode('utf-8', 'replace'))
+        raw = data['choices'][0]['message']['content']
+
+        # 记录 search-std 使用
+        try:
+            import ai_resource_packs
+            ai_resource_packs.record_usage('search_std', 1, endpoint='search_enhance', detail=query[:100])
+        except Exception:
+            pass
+
+        # 解析结果
+        result_data = _json_from_text(raw) or {}
+        results = result_data.get('results', [])
+        if not isinstance(results, list):
+            results = []
+        # 过滤无效结果
+        valid_results = []
+        for r in results[:max_results]:
+            if isinstance(r, dict) and r.get('title') and r.get('content'):
+                valid_results.append({
+                    'title': str(r.get('title', ''))[:100],
+                    'content': str(r.get('content', ''))[:500],
+                    'source': str(r.get('source', '未知'))[:50],
+                    'url': str(r.get('url', ''))[:200],
+                })
+
+        return {
+            'ok': True,
+            'results': valid_results,
+            'summary': str(result_data.get('summary', ''))[:200],
+            'provider': 'zhipu',
+            'model': model,
+            'query': query,
+        }
+    except Exception as e:
+        return {'ok': False, 'error': str(e), 'results': []}
+
+
 def generate_report(title, data, report_type="daily"):
     """舆情报告生成（智谱驱动）。返回 markdown 报告字符串；失败回退规则拼装。"""
     system = (f'你是品牌舆情报告撰写助手，根据数据生成{report_type}报告正文（markdown），'

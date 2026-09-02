@@ -5769,6 +5769,25 @@ def api_xhs_login_save():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+
+# ============ Search-STD 搜索增强（案例库/知识库/RAG） ============
+@app.route('/api/search/enhance', methods=['POST'])
+def api_search_enhance():
+    """搜索增强（智谱 search-std，100次额度）。用于案例库搜索增强、品牌知识库RAG、产品全局架构检索。"""
+    try:
+        data = request.get_json(silent=True) or {}
+        query = str(data.get('query') or data.get('q') or '').strip()
+        context = str(data.get('context') or '')
+        max_results = int(data.get('max_results', 5))
+        if not query:
+            return jsonify({'ok': False, 'error': '查询不能为空'}), 400
+        import intelligence
+        result = intelligence.search_enhance(query, context, max_results)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     import logging
     from logging.handlers import RotatingFileHandler
