@@ -5666,6 +5666,109 @@ def api_v4_api_keys_revoke():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+
+
+# ============ 小红书系统内二维码登录（Auth Recovery） ============
+@app.route('/api/xhs/login/start', methods=['POST'])
+def api_xhs_login_start():
+    """启动小红书登录：通过CDP浏览器打开登录页，返回登录会话ID"""
+    try:
+        import json, time, uuid
+        session_id = 'xhs_login_' + uuid.uuid4().hex[:8]
+        # 记录登录会话
+        login_sessions = getattr(app, '_xhs_login_sessions', {})
+        login_sessions[session_id] = {
+            'status': 'pending',
+            'created_at': time.time(),
+            'platform': 'xhs',
+        }
+        app._xhs_login_sessions = login_sessions
+        # 通过CDP浏览器打开登录页（异步，不阻塞）
+        try:
+            from playwright.sync_api import sync_playwright
+            import threading
+            def _open_login_page():
+                try:
+                    with sync_playwright() as p:
+                        browser = p.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=15000)
+                        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+                        page = ctx.new_page()
+                        page.goto('https://www.xiaohongshu.com', wait_until='domcontentloaded', timeout=30000)
+                        login_sessions[session_id]['status'] = 'page_opened'
+                        login_sessions[session_id]['url'] = page.url
+                except Exception as e:
+                    login_sessions[session_id]['status'] = 'error'
+                    login_sessions[session_id]['error'] = str(e)
+            threading.Thread(target=_open_login_page, daemon=True).start()
+        except Exception as e:
+            login_sessions[session_id]['status'] = 'browser_unavailable'
+            login_sessions[session_id]['error'] = str(e)
+        return jsonify({'ok': True, 'session_id': session_id, 'status': 'pending', 'message': '请在弹出的浏览器窗口中扫码登录小红书'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/login/status')
+def api_xhs_login_status():
+    """检查小红书登录状态"""
+    try:
+        session_id = request.args.get('session_id', '')
+        login_sessions = getattr(app, '_xhs_login_sessions', {})
+        session = login_sessions.get(session_id, {'status': 'not_found'})
+        # 尝试通过CDP检查是否已登录
+        is_logged_in = False
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=10000)
+                ctx = browser.contexts[0] if browser.contexts else None
+                if ctx:
+                    cookies = ctx.cookies('https://www.xiaohongshu.com')
+                    is_logged_in = any(c.get('name') == 'web_session' for c in cookies)
+        except Exception:
+            pass
+        return jsonify({
+            'ok': True,
+            'session_id': session_id,
+            'status': session.get('status', 'unknown'),
+            'is_logged_in': is_logged_in,
+            'message': '已登录' if is_logged_in else '等待扫码登录',
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/login/save', methods=['POST'])
+def api_xhs_login_save():
+    """保存小红书登录态（cookies）"""
+    try:
+        import json
+        # 从CDP浏览器获取cookies并保存
+        cookies_saved = False
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=15000)
+                ctx = browser.contexts[0] if browser.contexts else None
+                if ctx:
+                    cookies = ctx.cookies('https://www.xiaohongshu.com')
+                    # 保存到文件
+                    cookie_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'xhs_cookies.json')
+                    with open(cookie_path, 'w', encoding='utf-8') as f:
+                        json.dump(cookies, f, ensure_ascii=False, indent=2)
+                    cookies_saved = True
+        except Exception as e:
+            return jsonify({'ok': False, 'error': f'保存cookies失败: {str(e)}'}), 500
+        # 标记auth_recovery任务完成
+        try:
+            from auth_recovery_center import auth_recovery_center
+            pending = auth_recovery_center.get_pending_tasks('xhs')
+            for task in pending:
+                auth_recovery_center.mark_completed(task.id, '系统内二维码登录成功')
+        except Exception:
+            pass
+        return jsonify({'ok': True, 'cookies_saved': cookies_saved, 'message': '小红书登录态已保存'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     import logging
     from logging.handlers import RotatingFileHandler

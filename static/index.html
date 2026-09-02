@@ -138,7 +138,7 @@
   <header class="topbar glass">
     <div class="brand">
       <div class="brandmark" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div><h1>广州太古汇·舆情监测系统</h1><p>小红书舆情监测 · AI辅助分析</p></div>
+      <div><h1 id="topbarTitle">广州太古汇·舆情监测系统</h1><p id="topbarSubtitle">小红书舆情监测 · AI辅助分析</p></div>
     </div>
     <div class="top-center"><div class="system-state"><i></i><span id="systemState">系统运行中</span></div><span class="clock" id="clock">—</span></div>
     <div class="top-actions">
@@ -191,6 +191,41 @@
     </div>
     <div class="ai-pack-footer">
       <span class="ai-pack-note">按次计费需求执行：输入需求→消耗1次→AI执行</span>
+    </div>
+  </div>
+
+  
+  <!-- 小红书系统内二维码登录弹窗 -->
+  <div class="xhs-login-modal hidden" id="xhsLoginModal">
+    <div class="xhs-login-overlay" onclick="closeXhsLogin()"></div>
+    <div class="xhs-login-dialog">
+      <div class="xhs-login-header">
+        <span class="xhs-login-title">📱 小红书登录</span>
+        <button class="xhs-login-close" onclick="closeXhsLogin()">✕</button>
+      </div>
+      <div class="xhs-login-body" id="xhsLoginBody">
+        <div class="xhs-login-step" id="xhsLoginStep1">
+          <div class="xhs-login-icon">🔐</div>
+          <div class="xhs-login-text">系统将通过内置浏览器打开小红书登录页<br>请使用手机小红书 App 扫码登录</div>
+          <button class="xhs-login-btn primary" onclick="startXhsLogin()">开始登录</button>
+        </div>
+        <div class="xhs-login-step hidden" id="xhsLoginStep2">
+          <div class="xhs-login-icon">📱</div>
+          <div class="xhs-login-text">已打开浏览器登录页<br>请在弹出的浏览器窗口中扫码登录</div>
+          <div class="xhs-login-status" id="xhsLoginStatus">等待扫码…</div>
+          <div class="xhs-login-actions">
+            <button class="xhs-login-btn" onclick="checkXhsLoginStatus()">刷新状态</button>
+            <button class="xhs-login-btn danger" onclick="closeXhsLogin()">取消</button>
+          </div>
+        </div>
+        <div class="xhs-login-step hidden" id="xhsLoginStep3">
+          <div class="xhs-login-icon success">✓</div>
+          <div class="xhs-login-text success">登录成功！<br>正在保存登录态…</div>
+        </div>
+      </div>
+      <div class="xhs-login-footer">
+        <span class="xhs-login-note">登录态仅保存在本地，不会上传到任何第三方</span>
+      </div>
     </div>
   </div>
 
@@ -1313,4 +1348,110 @@ function toggleAiPackPanel(){
 document.addEventListener('DOMContentLoaded',function(){ fetchAiPackStatus(); setInterval(fetchAiPackStatus,300000); });
 
 </script>
+
+<script>
+// ============ Topbar 标题按工作区分发 ============
+const PAGE_TITLE_MAP = {
+  'overview':      {title: '广州太古汇·舆情监测系统', subtitle: '首页概览 · 风险预警 · 事件中心'},
+  'monitor':       {title: '舆情监测', subtitle: '情感分布 · 风险等级 · 内容分类统计'},
+  'alerts':        {title: '风险预警', subtitle: '高风险预警通知 · 已读可消除红点'},
+  'events':        {title: '事件中心', subtitle: '舆情事件聚合 · 传播路径 · 案例对标'},
+  'negative':      {title: '负面确认', subtitle: '负面舆情二次确认 · 核准后计入周报月报'},
+  'topics':        {title: '热门话题', subtitle: '热门话题 · 正向体验 · 消费热度'},
+  'notes':         {title: '笔记搜索', subtitle: '笔记搜索 · 详情查看 · 复核记录'},
+  'analysis':      {title: '数据分析', subtitle: '近14天舆情变化趋势 · 数据点详情'},
+  'brands':        {title: '品牌业态', subtitle: '8大业态分布 · 198个品牌舆情 · 点击查看笔记'},
+  'official':      {title: '官方动态', subtitle: '官网 · 微博 · 微信公众号官方动态采集'},
+  'swire':         {title: '品牌营销案例库', subtitle: '以品牌为一级维度 · 下钻营销事件与笔记库'},
+  'cases':         {title: '案例库', subtitle: '全网舆情案例库 · 事件→回应→效果 · 太古汇启示'},
+  'case-analysis': {title: '案例深度拆解', subtitle: '20个11维深度拆解案例 · 成功要素权重 · 可复用方法论'},
+  'knowledge-base':{title: '品牌知识库', subtitle: '品牌营销/广告宣传/舆情管理知识库 · 80条结构化知识'},
+  'event-graph':   {title: '事件关系图谱', subtitle: '营销/传播/舆情事件关系图谱 · 触发/衍生/继发/并行'},
+  'brand-report':  {title: '品牌分析报告', subtitle: '品牌传播与市场情报报告生成器 · 多维度自动分析'},
+  'app-evidence':  {title: 'App证据采集', subtitle: 'App端数据证据采集 · Shadow模式 · 用户主动截图上传'},
+  'settings':      {title: '系统设置', subtitle: '账户 · 密钥 · 采集配置 · AI治理 · 系统状态'},
+};
+function updateTopbarTitle(pageId){
+  const map = PAGE_TITLE_MAP[pageId];
+  const titleEl = document.getElementById('topbarTitle');
+  const subEl = document.getElementById('topbarSubtitle');
+  if(!titleEl) return;
+  if(map){
+    titleEl.textContent = map.title;
+    if(subEl) subEl.textContent = map.subtitle;
+  } else {
+    titleEl.textContent = '广州太古汇·舆情监测系统';
+    if(subEl) subEl.textContent = '小红书舆情监测 · AI辅助分析';
+  }
+  document.title = map ? map.title + ' · Z-Brand Core' : 'Z-Brand Core';
+}
+// 监听 side-item 点击
+document.addEventListener('click', function(e){
+  const item = e.target.closest('.side-item[data-page]');
+  if(item){
+    const pageId = item.getAttribute('data-page');
+    updateTopbarTitle(pageId);
+  }
+});
+// 初始化
+document.addEventListener('DOMContentLoaded', function(){
+  const active = document.querySelector('.side-item.active[data-page]');
+  if(active) updateTopbarTitle(active.getAttribute('data-page'));
+});
+</script>
+
+
+<script>
+// ============ 小红书系统内登录 ============
+let _xhsLoginSessionId = null;
+let _xhsLoginPollTimer = null;
+function openXhsLogin(){
+  document.getElementById('xhsLoginModal').classList.remove('hidden');
+  document.getElementById('xhsLoginStep1').classList.remove('hidden');
+  document.getElementById('xhsLoginStep2').classList.add('hidden');
+  document.getElementById('xhsLoginStep3').classList.add('hidden');
+}
+function closeXhsLogin(){
+  document.getElementById('xhsLoginModal').classList.add('hidden');
+  if(_xhsLoginPollTimer){ clearInterval(_xhsLoginPollTimer); _xhsLoginPollTimer=null; }
+}
+async function startXhsLogin(){
+  const auth='Basic '+btoa('Zachary:Zachary01');
+  try{
+    const r=await fetch('/api/xhs/login/start',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth}});
+    const d=await r.json();
+    if(!d.ok) throw new Error(d.error);
+    _xhsLoginSessionId=d.session_id;
+    document.getElementById('xhsLoginStep1').classList.add('hidden');
+    document.getElementById('xhsLoginStep2').classList.remove('hidden');
+    document.getElementById('xhsLoginStatus').textContent='已打开浏览器，请扫码…';
+    // 开始轮询状态
+    _xhsLoginPollTimer=setInterval(checkXhsLoginStatus,3000);
+  }catch(e){
+    document.getElementById('xhsLoginStatus').textContent='启动失败: '+e.message;
+  }
+}
+async function checkXhsLoginStatus(){
+  if(!_xhsLoginSessionId) return;
+  const auth='Basic '+btoa('Zachary:Zachary01');
+  try{
+    const r=await fetch('/api/xhs/login/status?session_id='+_xhsLoginSessionId,{headers:{Authorization:auth}});
+    const d=await r.json();
+    if(d.is_logged_in){
+      // 登录成功，保存cookies
+      document.getElementById('xhsLoginStep2').classList.add('hidden');
+      document.getElementById('xhsLoginStep3').classList.remove('hidden');
+      if(_xhsLoginPollTimer){ clearInterval(_xhsLoginPollTimer); _xhsLoginPollTimer=null; }
+      // 保存cookies
+      await fetch('/api/xhs/login/save',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth}});
+      setTimeout(closeXhsLogin,2000);
+    } else {
+      document.getElementById('xhsLoginStatus').textContent=d.message||'等待扫码…';
+    }
+  }catch(e){
+    document.getElementById('xhsLoginStatus').textContent='状态检查失败: '+e.message;
+  }
+}
+</script>
+
 </body></html>
