@@ -27,9 +27,9 @@ _DEFAULT_KIND_ENABLED = {
     "event": False,           # 事件笔记端：暂不开放
 }
 
-# 入口区域：intl=RedNote 香港/国际为主；cn=国内（当前暂停）
+# 入口区域：intl=RedNote 香港/国际为主；cn=国内（2026-09-02 用户指令恢复国内采集，不再暂停）
 DEFAULT_PRIMARY_REGION = "intl"
-CN_PAUSED = True
+CN_PAUSED = False
 
 # 真人节奏保守占位（秒）。NOT_VERIFIED：待最新一轮真人频率实测后用实测值覆盖；
 # 这里宁慢勿快，避免把未实测数值当作结论。

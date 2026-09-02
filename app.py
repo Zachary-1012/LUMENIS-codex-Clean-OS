@@ -4213,7 +4213,9 @@ def scheduler_loop():
     last_morning_report_date = ''   # 09:00日报生成记录
     last_evening_report_date = ''   # 23:30日报生成记录
     
-    print(f'[Scheduler] 智能调度器启动，自动采集时间点: {auto_collect_hours}（错峰5分执行）')
+    import os as _os
+    _os.environ.setdefault('ZBC_SCHED_GATE_MODE', 'enforce')
+    print(f'[Scheduler] 自适应调度器启动，gate_mode={_os.environ.get("ZBC_SCHED_GATE_MODE")}（固定时间点仅作历史参考，实际由 ShadowPlanner 门控）')
     
     while True:
         try:
@@ -4226,36 +4228,49 @@ def scheduler_loop():
                 last_date_check = today_str
                 print(f'[Scheduler] 新的一天 {today_str}，自动采集次数已重置')
             
-            # 检查是否到达自动采集时间点（错峰：整点后5-10分钟触发，避免与报告生成冲突）
-            if now.hour in auto_collect_hours and now.hour not in today_auto_hours and 5 <= now.minute < 10:
-                _sp = None
-                # v5.8.6 影子：记录动态决策器对“此刻是否该采”的独立判断（仅对照，不门控）
+            # 自适应调度（GAP-05 门控，2026-09-02 用户签字）：不再用固定时间点，
+            # 由 ShadowPlanner 根据状态（上次采集/成功率/熔断/频率）决定此刻是否采集；
+            # gate 只收紧不放松，异常 fail-open 回退允许，绝不因新组件卡死既有调度。
+            _should_run = True
+            _gate_mode = 'no-planner'
+            _sd = None
+            _sp = _get_shadow_planner()
+            if _sp is not None:
                 try:
-                    _sp = _get_shadow_planner()
-                    if _sp is not None:
-                        _sd = _sp.decide('xhs', now=now, trigger_source='shadow-auto', persist=True)
-                        print(f'[ShadowPlanner] xhs allow={_sd.allow} code={_sd.reason_code} next={_sd.next_run_at}')
+                    from platform_adapters.scheduling.gate import gate_should_run
+                    _should_run, _sd, _gate_mode = gate_should_run(
+                        _sp, 'xhs', now=now, hard_allow=True, persist=True)
+                    if _sd is not None:
+                        print(f'[Scheduler] gate={_gate_mode} should_run={_should_run} code={_sd.reason_code} next={_sd.next_run_at}')
                 except Exception as _e:
-                    print(f'[ShadowPlanner] eval non-blocking: {_e}')
+                    _should_run, _gate_mode = True, 'fallback'
+                    print(f'[Scheduler] gate eval fail-open: {_e}')
+
+            if _should_run:
                 # 账号频率保护（生产既有逻辑，保留）
                 rate_ok, rate_msg = xhs_cookie_bridge.check_rate_limit('auto')
                 if rate_ok:
                     try:
+                        # 自适应参数：max_scroll 由 adaptive_engine 根据状态决定（回退6）
+                        try:
+                            import adaptive_engine as _ae
+                            _max_scroll = int(_ae.adaptive_engine.get_current_params().get('max_scroll', 6))
+                        except Exception:
+                            _max_scroll = 6
                         # 使用xhs_cookie_bridge创建任务（自动接入次数限制和账号保护）
                         task_id = xhs_cookie_bridge.create_task(
                             keywords=xhs_cookie_bridge.DEFAULT_KEYWORDS,
-                            max_scroll=6,
+                            max_scroll=_max_scroll,
                             run_type='auto'
                         )
-                        today_auto_hours.add(now.hour)
-                        print(f'[Scheduler] 自动采集触发 {now.hour}:05（错峰），任务ID: {task_id}')
+                        print(f'[Scheduler] 自适应采集触发 gate={_gate_mode} max_scroll={_max_scroll} 任务ID: {task_id}')
                         # 不在触发瞬间乐观回写 SUCCESS：任务刚创建不代表成功。
                         # 真实六态由任务完成时 xhs_cookie_bridge._shadow_record_result 回写，
                         # 避免把“已创建任务”伪装成“采集成功/有数据”。
                     except Exception as e:
-                        print(f'[Scheduler] 自动采集创建任务失败: {e}')
+                        print(f'[Scheduler] 自适应采集创建任务失败: {e}')
                 else:
-                    print(f'[Scheduler] 自动采集跳过（频率限制）: {rate_msg}')
+                    print(f'[Scheduler] 自适应采集跳过（频率限制）: {rate_msg}')
             
             # 日报生成 - 三个时间点确保信息准确性
             # 1. 00:00 - 生成前一天的日报（总结前一天完整数据）
