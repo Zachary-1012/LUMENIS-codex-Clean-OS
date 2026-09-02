@@ -1712,6 +1712,48 @@ def api_xhs_accounts():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# ========== Zachary OS AI · Resident Browser Health Monitor API ==========
+@app.route('/api/resident/health', methods=['GET'])
+def api_resident_health():
+    """双身份驻场浏览器健康状态查询（三层：端口→CDP→登录态）。
+
+    Query:
+      account=XHS_CN_PRIMARY|XHS_RETINAUT  只查指定身份（缺省=全部）
+      cache=1                                 只读上次持久化结果，不实时探测
+    绝不返回 cookie 值，仅返回存在性/数量/状态分级。
+    """
+    try:
+        import resident_health as rh
+        account = request.args.get('account') or None
+        use_cache = request.args.get('cache') in ('1', 'true', 'yes')
+        if use_cache:
+            return jsonify({'ok': True, 'cached': True, 'result': rh.status(use_cache=True)})
+        if account:
+            return jsonify({'ok': True, 'account': account, 'result': rh.check_account(account)})
+        return jsonify({'ok': True, 'result': rh.check_all()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/resident/recover', methods=['POST'])
+def api_resident_recover():
+    """手动触发驻场浏览器自动恢复（DOWN/CDP_DEGRADED 时拉起；NEEDS_LOGIN 不自动恢复，需人工扫码）。
+
+    Body JSON: {account: XHS_CN_PRIMARY|XHS_RETINAUT|null(全部), force: bool}
+    恢复动作委托 scripts/start_resident_browsers.py（幂等），连续恢复超 3 次标记 UNRECOVERABLE。
+    """
+    try:
+        import resident_health as rh
+        data = request.get_json(silent=True) or {}
+        account = data.get('account') or None
+        force = bool(data.get('force', False))
+        if account:
+            return jsonify({'ok': True, 'account': account, 'result': rh.recover_account(account, force=force)})
+        return jsonify({'ok': True, 'result': rh.recover_all(force=force)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 # ========== AI学习引擎与全网舆情检索 API ==========
 @app.route('/api/ai-learning/status')
 def api_ai_learning_status():
