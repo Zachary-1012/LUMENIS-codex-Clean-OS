@@ -36,6 +36,15 @@ from flask import jsonify, request
 # ========== 配置 ==========
 MODULE_VERSION = '1.0.0-shadow'
 EVIDENCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'app_evidence')
+# 上传安全限制（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
+EVIDENCE_ALLOWED_EXTENSIONS = {
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp',  # 图片
+    '.pdf', '.txt', '.csv',                              # 文档
+    '.mp4', '.mov', '.webm',                             # 视频
+}
+EVIDENCE_MAX_FILE_SIZE_MB = 500
+EVIDENCE_MAX_FILE_SIZE_BYTES = EVIDENCE_MAX_FILE_SIZE_MB * 1024 * 1024
+
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
 
 # 支持的来源平台
@@ -323,11 +332,18 @@ def register_app_evidence(app):
             if 'file' in request.files:
                 file = request.files['file']
                 if file.filename:
-                    # 保存文件
-                    ext = os.path.splitext(file.filename)[1] or '.png'
+                    # 扩展名白名单校验
+                    ext = os.path.splitext(file.filename)[1].lower() or '.png'
+                    if ext not in EVIDENCE_ALLOWED_EXTENSIONS:
+                        return jsonify({'ok': False, 'error': f'不支持的文件格式: {ext}，允许: {sorted(EVIDENCE_ALLOWED_EXTENSIONS)}'}), 400
+                    # 先保存再检查大小（Flask MAX_CONTENT_LENGTH 已在全局拦截，这里二次校验）
                     filename = f"evidence_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.urandom(4).hex()}{ext}"
                     evidence_path = os.path.join(EVIDENCE_DIR, filename)
                     file.save(evidence_path)
+                    actual_size = os.path.getsize(evidence_path)
+                    if actual_size > EVIDENCE_MAX_FILE_SIZE_BYTES:
+                        os.remove(evidence_path)
+                        return jsonify({'ok': False, 'error': f'文件超过 {EVIDENCE_MAX_FILE_SIZE_MB}MB 限制'}), 400
 
             record, err = create_evidence(
                 source=source, capture_mode=capture_mode, captured_at=captured_at,

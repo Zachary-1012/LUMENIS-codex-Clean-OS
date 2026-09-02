@@ -70,7 +70,7 @@ ADAPTER_CONFIG = {
 
 # 外部导入配置
 IMPORTER_CONFIG = {
-    "max_file_size_mb": 50,
+    "max_file_size_mb": 500,  # 对齐 INGESTION_AND_TERMINOLOGY_STANDARD 500MB
     "allowed_extensions": [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt"],
     "preview_limit": 100,  # 导入预览最多显示100条
 }

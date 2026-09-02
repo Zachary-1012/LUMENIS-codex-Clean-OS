@@ -105,6 +105,8 @@ except Exception as e:
 from subject_rules import SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS, subject_hit, subject_sql_and_values
 
 app=Flask(__name__, static_folder='static', static_url_path='/static')
+# 全局上传大小限制：500MB（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 # 注册系统控制中心蓝图
 app.register_blueprint(system_health_api.system_health_bp)
 # 注册5层闭环架构蓝图

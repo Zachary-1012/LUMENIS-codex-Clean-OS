@@ -349,12 +349,63 @@ class CollectorAutomation:
             task['status'] = 'completed'
             task['end_time'] = datetime.now().isoformat()
             logger.info(f"任务 {task['id']}: 采集完成，新增 {new_notes} 条笔记")
+            # Evidence：采集成功落证据（禁止只存状态不存证据）
+            try:
+                from evidence_store import record_collection_evidence
+                _detail = task.get('collect_detail', {}) or {}
+                _start = datetime.fromisoformat(task['start_time'])
+                _dur = int((datetime.now() - _start).total_seconds() * 1000)
+                record_collection_evidence(
+                    account=task.get('account', '') or 'unknown',
+                    platform='xhs',
+                    notes_collected=int(_detail.get('raw_unique', new_notes) or 0),
+                    notes_filtered=int(_detail.get('rejected', 0) or 0),
+                    notes_inserted=int(_detail.get('inserted', new_notes) or 0),
+                    notes_updated=int(_detail.get('updated', 0) or 0),
+                    duration_ms=_dur,
+                    result='PASS',
+                    session_state='logged_in',
+                    keywords=task.get('keywords', []),
+                    started_at=task.get('start_time', ''),
+                )
+            except Exception as _ev_e:
+                logger.error(f"任务 {task['id']}: Evidence 写入失败(不影响主流程): {_ev_e}")
+
             
         except Exception as e:
             task['status'] = 'failed'
             task['errors'].append(str(e))
             task['end_time'] = datetime.now().isoformat()
             logger.error(f"任务 {task['id']}: 采集失败: {e}", exc_info=True)
+            # Evidence：采集失败必留证据链（异常类型+消息，禁止以0条充当结果）
+            try:
+                from evidence_store import record_collection_evidence
+                _start = datetime.fromisoformat(task['start_time'])
+                _dur = int((datetime.now() - _start).total_seconds() * 1000)
+                _err_str = str(e)
+                if any(k in _err_str for k in ['验证码', '人机验证', '风控', '安全拦截']):
+                    _err_type = 'CAPTCHA'
+                elif any(k in _err_str.upper() for k in ['AUTH', 'LOGIN', 'COOKIE']) or '登录' in _err_str:
+                    _err_type = 'AUTH_FAILED'
+                elif '网络' in _err_str or '超时' in _err_str or 'timeout' in _err_str.lower():
+                    _err_type = 'NETWORK_ERROR'
+                else:
+                    _err_type = 'COLLECTION_ERROR'
+                record_collection_evidence(
+                    account=task.get('account', '') or 'unknown',
+                    platform='xhs',
+                    notes_collected=0, notes_filtered=0, notes_inserted=0, notes_updated=0,
+                    duration_ms=_dur,
+                    result='FAIL',
+                    error_type=_err_type,
+                    error_message=_err_str[:500],
+                    session_state='unknown',
+                    keywords=task.get('keywords', []),
+                    started_at=task.get('start_time', ''),
+                )
+            except Exception as _ev_e:
+                logger.error(f"任务 {task['id']}: Evidence 写入失败(不影响主流程): {_ev_e}")
+
         finally:
             # 自动关闭浏览器
             logger.info(f"任务 {task['id']}: 自动关闭浏览器...")
