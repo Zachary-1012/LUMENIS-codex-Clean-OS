@@ -929,3 +929,13 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - 版本对齐（06 称 VERSION 5.9.9 vs package.json 5.6.2 不一致，实测另一窗口已统一为 5.9.9，06 滞后）：仅 models.py 文件头 v5.8.0 与 __main__ 打印 v5.8.9 两处过时注释/打印统一为 v5.9.9（纯文本零逻辑）。
 - 新增 tests/test_version_consistency.py 2 测锁定 VERSION=package.json=app.APP_VERSION=5.9.9 且 models.py 无旧版本残留（VERSION 带 BOM，用 utf-8-sig 读）。
 - 结果：189 passed（187→189）。DB/采集/主体口径零变更，生产 8201 未碰。
+
+
+---
+
+## 2026-09-02 14:55 · P1-8 ZBC→OSAI 只读证据自动流转（旁路、增量、可审计）
+
+- 新增 platform_adapters/evidence_exporter.py：源库强制 mode=ro（物理不可写生产）；只导已核准证据——notes 必须 is_taikoo_verified=1（过主体口径）、events 取 fact_status in (confirmed, partially_confirmed)、daily_reports 全量；白名单字段投影，剔除 author_id/nickname/avatar/xsec_token/cover，url 剥离凭证 query；复用 safe_collection.redact_text 做联系方式脱敏（返回 (text,hits)）；按各表 id 增量水位幂等；产物 JSONL + manifest（schema zbc.evidence-export.v1、counts、sha256、production_unchanged=true 回应契约 V-06、approval_basis、record_ids）；默认写本仓 outbox，不直写 OSAI 仓库（解耦），零网络。
+- 新增 tests/test_evidence_exporter.py 3 测：只导核准+脱敏+剔除凭证字段；增量水位只取新增；端到端 manifest/sha256/源库行数不变（只读证明）/二次导出为 0。
+- 真实冒烟（Staging 副本，未碰生产库）：608 verified notes + 7 confirmed/partially_confirmed events + 29 daily_reports = 644 条，redacted=0（真实正文无联系方式），二次增量 0。
+- 结果：192 passed（189→192，exit=0）。DB/采集/主体口径零变更，生产 8201 未碰；导出器未接入定时调度（BACKLOG，等用户确认后接）。
