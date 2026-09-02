@@ -355,3 +355,73 @@ body::after{
 .xhs-login-footer{padding:12px 24px;border-top:1px solid var(--zb-border,#E7E5E4);background:var(--zb-surface-raised,#FAFAF9);text-align:center}
 .xhs-login-note{font-size:11px;color:var(--zb-text-muted,#A8A29E)}
 @media(max-width:480px){.xhs-login-dialog{width:95vw}.xhs-login-body{padding:24px 16px}}
+
+
+/* ===== 智能能力中心 + 设计风格升级 ===== */
+.smart-center{margin-bottom:24px}
+.smart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:16px 20px}
+.smart-card{display:flex;align-items:center;gap:12px;padding:16px;background:var(--zb-surface,#FFFFFF);border:1px solid var(--zb-border,#E7E5E4);border-radius:12px;cursor:pointer;transition:all 0.2s ease;position:relative;overflow:hidden}
+.smart-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(28,25,23,0.08);border-color:var(--zb-border-strong,#D6D3D1)}
+.smart-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--zb-accent,#1C1917),transparent);opacity:0;transition:opacity 0.2s}
+.smart-card:hover::before{opacity:1}
+.smart-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.smart-icon svg{width:20px;height:20px}
+.smart-icon.key{background:linear-gradient(135deg,#FEF3C7,#FDE68A);color:#92400E}
+.smart-icon.pack{background:linear-gradient(135deg,#DBEAFE,#BFDBFE);color:#1E40AF}
+.smart-icon.xhs{background:linear-gradient(135deg,#FCE7F3,#FBCFE8);color:#9D174D}
+.smart-icon.search{background:linear-gradient(135deg,#D1FAE5,#A7F3D0);color:#065F46}
+.smart-info{flex:1;min-width:0}
+.smart-info h4{font-size:13px;font-weight:600;color:var(--zb-text,#1C1917);margin-bottom:2px}
+.smart-info p{font-size:11px;color:var(--zb-text-muted,#A8A29E);line-height:1.4}
+.smart-badge{font-size:10px;padding:3px 8px;border-radius:10px;background:var(--zb-surface-raised,#F5F5F4);color:var(--zb-text-secondary,#57534E);font-weight:500;flex-shrink:0}
+
+/* search-std 搜索增强 */
+.search-enhance{padding:0 20px 16px;border-top:1px solid var(--zb-border,#E7E5E4);padding-top:16px}
+.search-enhance.hidden{display:none}
+.search-enhance-input{display:flex;gap:8px;margin-bottom:12px}
+.search-enhance-input input{flex:1;padding:10px 14px;border:1px solid var(--zb-border-strong,#D6D3D1);border-radius:8px;font-size:13px;font-family:inherit;background:var(--zb-surface,#FFFFFF);transition:border-color 0.15s}
+.search-enhance-input input:focus{outline:none;border-color:var(--zb-accent,#1C1917);box-shadow:0 0 0 3px rgba(28,25,23,0.05)}
+.search-loading,.search-empty,.search-error{padding:16px;text-align:center;font-size:13px;color:var(--zb-text-muted,#A8A29E);background:var(--zb-surface-raised,#FAFAF9);border-radius:8px}
+.search-error{color:#DC2626;background:#FEF2F2}
+.search-summary{padding:12px 16px;background:linear-gradient(135deg,#F0FDF4,#ECFDF5);border:1px solid #BBF7D0;border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.6;color:#166534}
+.search-results-list{display:flex;flex-direction:column;gap:10px}
+.search-result-item{padding:14px 16px;background:var(--zb-surface,#FFFFFF);border:1px solid var(--zb-border,#E7E5E4);border-radius:10px;transition:all 0.15s}
+.search-result-item:hover{border-color:var(--zb-border-strong,#D6D3D1);box-shadow:0 4px 12px rgba(28,25,23,0.04)}
+.search-result-title{font-size:13px;font-weight:600;color:var(--zb-text,#1C1917);margin-bottom:6px}
+.search-result-content{font-size:12px;color:var(--zb-text-secondary,#57534E);line-height:1.6;margin-bottom:8px}
+.search-result-meta{font-size:11px;color:var(--zb-text-muted,#A8A29E)}
+.search-result-meta a{color:#2563EB;text-decoration:none}
+.search-result-meta a:hover{text-decoration:underline}
+
+/* API Key 管理弹窗 */
+.api-key-modal{position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center}
+.api-key-overlay{position:absolute;inset:0;background:rgba(28,25,23,0.5);backdrop-filter:blur(4px)}
+.api-key-dialog{position:relative;background:var(--zb-surface,#FFFFFF);border-radius:16px;box-shadow:0 24px 64px rgba(28,25,23,0.2);width:90vw;max-width:900px;height:80vh;display:flex;flex-direction:column;overflow:hidden;animation:apiKeyIn 0.25s ease-out}
+@keyframes apiKeyIn{from{opacity:0;transform:scale(0.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.api-key-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--zb-border,#E7E5E4);background:var(--zb-surface-raised,#FAFAF9)}
+.api-key-header span{font-size:15px;font-weight:600;color:var(--zb-text,#1C1917)}
+.api-key-header button{background:none;border:none;font-size:16px;color:var(--zb-text-muted,#A8A29E);cursor:pointer;padding:4px 8px;border-radius:6px}
+.api-key-header button:hover{background:var(--zb-surface,#F5F5F4)}
+.api-key-iframe{flex:1;border:none;width:100%}
+
+/* 设计风格全局升级：更柔和阴影 + 大圆角 + 毛玻璃增强 */
+.glass-card{border-radius:14px !important;box-shadow:0 2px 12px rgba(28,25,23,0.04),0 1px 3px rgba(28,25,23,0.06) !important;border:1px solid rgba(231,229,228,0.8) !important}
+.panel{border-radius:14px !important}
+.panel-head{padding:18px 20px 14px !important}
+.integration-item{border-radius:10px !important;transition:all 0.2s ease !important}
+.integration-item:hover{transform:translateX(4px);background:var(--zb-surface-raised,#FAFAF9) !important}
+.action{border-radius:8px !important;transition:all 0.15s ease !important}
+.action:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(28,25,23,0.08) !important}
+.action.primary{background:linear-gradient(135deg,#1C1917,#44403C) !important;border:none !important}
+.action.primary:hover{background:linear-gradient(135deg,#44403C,#57534E) !important}
+.topbar{backdrop-filter:blur(20px) saturate(180%) !important;-webkit-backdrop-filter:blur(20px) saturate(180%) !important;background:rgba(255,255,255,0.85) !important}
+.sidebar{backdrop-filter:blur(16px) saturate(160%) !important;-webkit-backdrop-filter:blur(16px) saturate(160%) !important}
+.side-item{border-radius:10px !important;transition:all 0.15s ease !important}
+.side-item.active{background:linear-gradient(135deg,rgba(28,25,23,0.06),rgba(28,25,23,0.03)) !important}
+.page-view{animation:pageFadeIn 0.3s ease-out}
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:768px){
+  .smart-grid{grid-template-columns:1fr}
+  .api-key-dialog{width:95vw;height:85vh}
+}

@@ -851,7 +851,43 @@
         </div>
       </section>
 
-      <!-- 系统设置 -->
+      
+        <!-- 智能能力中心 -->
+        <div class="panel glass-card smart-center">
+          <div class="panel-head"><div><span class="eyebrow">SMART CAPABILITIES</span><h3>智能能力中心</h3><p>API密钥管理 · AI资源包 · 小红书登录 · 搜索增强</p></div></div>
+          <div class="smart-grid">
+            <div class="smart-card" onclick="openApiKeyManager()">
+              <div class="smart-icon key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
+              <div class="smart-info"><h4>API Key 管理</h4><p>生成/撤销/查看密钥，ZBMP访问控制</p></div>
+              <span class="smart-badge">181 keys</span>
+            </div>
+            <div class="smart-card" onclick="toggleAiPackPanel()">
+              <div class="smart-icon pack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+              <div class="smart-info"><h4>AI 资源包</h4><p>用量监控 · 暂停连接 · 按次需求执行</p></div>
+              <span class="smart-badge" id="smartPackBadge">4 packs</span>
+            </div>
+            <div class="smart-card" onclick="openXhsLogin()">
+              <div class="smart-icon xhs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h10M7 12h10M7 17h6"/></svg></div>
+              <div class="smart-info"><h4>小红书登录</h4><p>系统内二维码扫码登录，不跳转外部</p></div>
+              <span class="smart-badge" id="smartXhsBadge">待登录</span>
+            </div>
+            <div class="smart-card" onclick="toggleSearchEnhance()">
+              <div class="smart-icon search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+              <div class="smart-info"><h4>搜索增强</h4><p>智谱search-std，案例库/知识库/RAG检索</p></div>
+              <span class="smart-badge">100次</span>
+            </div>
+          </div>
+          <!-- search-std 搜索框（默认隐藏） -->
+          <div class="search-enhance hidden" id="searchEnhanceBox">
+            <div class="search-enhance-input">
+              <input type="text" id="searchEnhanceQuery" placeholder="输入搜索查询，例如：商业地产舆情危机公关案例…" />
+              <button class="action primary" onclick="runSearchEnhance()">搜索</button>
+            </div>
+            <div class="search-enhance-results" id="searchEnhanceResults"></div>
+          </div>
+        </div>
+
+        <!-- 系统设置 -->
       <section class="page-view" id="page-settings">
         <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>系统设置</h2></div>
 
@@ -1452,6 +1488,59 @@ async function checkXhsLoginStatus(){
     document.getElementById('xhsLoginStatus').textContent='状态检查失败: '+e.message;
   }
 }
+</script>
+
+
+<script>
+// ============ 智能能力中心 ============
+function openApiKeyManager(){
+  // 系统内打开API Key管理（iframe弹窗）
+  const modal = document.createElement('div');
+  modal.className = 'api-key-modal';
+  modal.innerHTML = '<div class="api-key-overlay" onclick="this.parentElement.remove()"></div><div class="api-key-dialog"><div class="api-key-header"><span>API Key 管理</span><button onclick="this.closest('.api-key-modal').remove()">✕</button></div><iframe src="/static/api-keys.html" class="api-key-iframe"></iframe></div>';
+  document.body.appendChild(modal);
+}
+function toggleSearchEnhance(){
+  const box = document.getElementById('searchEnhanceBox');
+  box.classList.toggle('hidden');
+  if(!box.classList.contains('hidden')){
+    document.getElementById('searchEnhanceQuery').focus();
+  }
+}
+async function runSearchEnhance(){
+  const query = document.getElementById('searchEnhanceQuery').value.trim();
+  const results = document.getElementById('searchEnhanceResults');
+  if(!query){ results.innerHTML = '<div class="search-empty">请输入搜索查询</div>'; return; }
+  results.innerHTML = '<div class="search-loading">搜索中…（消耗1次search-std额度）</div>';
+  const auth='Basic '+btoa('Zachary:Zachary01');
+  try{
+    const r = await fetch('/api/search/enhance',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({query,max_results:5})});
+    const d = await r.json();
+    if(!d.ok){ results.innerHTML = '<div class="search-error">搜索失败: '+d.error+'</div>'; return; }
+    let html = '';
+    if(d.summary) html += '<div class="search-summary"><b>综合摘要：</b>'+d.summary+'</div>';
+    if(d.results && d.results.length>0){
+      html += '<div class="search-results-list">';
+      d.results.forEach((r,i)=>{
+        html += '<div class="search-result-item"><div class="search-result-title">'+(i+1)+'. '+r.title+'</div><div class="search-result-content">'+r.content+'</div><div class="search-result-meta">来源: '+r.source+(r.url?' · <a href="'+r.url+'" target="_blank">链接</a>':'')+'</div></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="search-empty">无搜索结果</div>';
+    }
+    results.innerHTML = html;
+  }catch(e){
+    results.innerHTML = '<div class="search-error">请求失败: '+e.message+'</div>';
+  }
+}
+// 页面加载时更新智能能力中心状态
+document.addEventListener('DOMContentLoaded',function(){
+  // 更新小红书登录状态
+  fetch('/api/xhs/login/status?session_id=init',{headers:{Authorization:'Basic '+btoa('Zachary:Zachary01')}}).then(r=>r.json()).then(d=>{
+    const badge = document.getElementById('smartXhsBadge');
+    if(badge) badge.textContent = d.is_logged_in ? '已登录' : '待登录';
+  }).catch(()=>{});
+});
 </script>
 
 </body></html>
