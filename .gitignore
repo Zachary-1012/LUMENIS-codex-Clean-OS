@@ -167,3 +167,7 @@ staging/
 # P0 local backups (never commit)
 app.py.bak_*
 *.bak_p0_*
+
+# local source backups (never commit)
+*.prev*_bak
+*.prev2_bak
