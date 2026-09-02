@@ -231,6 +231,7 @@ input{font-family:inherit}
 <script>
 (function(){
   const $ = s => document.querySelector(s);
+  function escHtml(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   const $$ = s => document.querySelectorAll(s);
   const contentArea = $('#contentArea');
   const termBody = $('#termBody');
@@ -350,7 +351,25 @@ input{font-family:inherit}
         </div>`;
     },
     brand: ()=> placeholder('品牌概览','品牌资产、市场表现、竞品动态汇总（接入中）'),
-    monitor: ()=> placeholder('实时监测','实时舆情采集与主体过滤（接入 CTH 生产数据）'),
+    monitor: async ()=>{
+      contentArea.innerHTML = '<div class="page-head"><h1>实时监测</h1><span class="meta"><span class="dot-s ok"></span> 接入 CTH 生产数据</span></div><div class="welcome"><div class="ft-loading">加载预警中…</div></div>';
+      try{
+        const {json} = await api('/api/alerts?unread=0');
+        if(!json || !json.ok){ contentArea.innerHTML = '<div class="page-head"><h1>实时监测</h1></div><div class="welcome"><p>加载失败</p></div>'; return; }
+        const alerts = json.alerts || [];
+        const typeMap = {risk:{c:'danger',t:'高风险'}, rising:{c:'warn',t:'上升过快'}, influence:{c:'info',t:'高影响力'}};
+        const rows = alerts.slice(0,30).map(a=>{
+          const tm = typeMap[a.type] || {c:'gray',t:a.type||'其他'};
+          return '<div class="ft-item" style="padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer" onclick="fetch(\'/api/notes/'+a.note_id+'\').then(r=>r.json()).then(d=>{if(d.note){const w=window.open(\'\'+\'\',\'_blank\');w.document.write(\'<pre>\'+JSON.stringify(d.note,null,2)+\'</pre>\')}})">'
+            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span class="dot-s '+tm.c+'"></span><span style="font-size:11px;font-weight:650;color:var(--text-2)">'+tm.t+'</span><span style="margin-left:auto;font-size:10.5px;color:var(--text-3)">'+(a.read?'已读':'未读')+'</span></div>'
+            +'<div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:3px">'+escHtml(a.title||a.message||'')+'</div>'
+            +'<div style="font-size:11px;color:var(--text-3)">'+(a.created_at||'')+' · 赞'+(a.likes||0)+' 评'+(a.comments||0)+' · 影响力'+(a.influence||0)+'</div></div>';
+        }).join('');
+        contentArea.innerHTML = '<div class="page-head"><h1>实时监测</h1><span class="meta"><span class="dot-s ok"></span> '+alerts.length+' 条预警 · 实时接入</span></div>'
+          +'<div class="file-preview" style="max-height:none"><div class="fp-head"><span class="fp-path">/api/alerts?unread=0</span><span class="fp-meta">CTH 生产数据 · 只读</span></div>'
+          +'<div style="padding:0">'+(rows || '<div style="padding:24px;text-align:center;color:var(--text-3)">暂无预警</div>')+'</div></div>';
+      }catch(e){ contentArea.innerHTML = '<div class="page-head"><h1>实时监测</h1></div><div class="welcome"><p>加载异常: '+e.message+'</p></div>'; }
+    },
     events: ()=> placeholder('事件中心','事件聚类、风险分级、生命周期管理（接入中）'),
     ai: ()=> placeholder('AI 洞察','本地 Ollama 驱动的语义分析、趋势解释、报告润色（AI 仅增强层）'),
     reports: ()=> placeholder('报告中心','日报/专报/品牌报告生成与导出（接入中）'),
