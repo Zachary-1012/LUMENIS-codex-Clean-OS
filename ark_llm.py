@@ -20,7 +20,7 @@ logger = logging.getLogger('ark_llm')
 
 # =========配置区========
 # 优先从环境变量读取，没有则使用默认值
-API_KEY = os.getenv('ARK_API_KEY', 'ark-394752aa-15cb-4061-b6c2-b0d04f1c13b3-c83bd')
+API_KEY = os.getenv('ARK_API_KEY', '').strip()
 API_URL = os.getenv('ARK_BASE_URL', 'https://ark.cn-beijing.volces.com/api/v3') + '/chat/completions'
 MODEL_NAME = os.getenv('ARK_MODEL', 'doubao-seed-evolving-latest-version')
 MAX_DAILY_TOKEN = int(os.getenv('ARK_MAX_DAILY_TOKEN', '190000'))
@@ -85,6 +85,10 @@ def call_ark_api(messages, temperature=0.7, max_tokens=None):
     :param max_tokens: 最大生成token数
     :return: 响应内容字符串
     """
+    # 安全：无 API_KEY 立即明确报错（调用方可见），禁止发空 Bearer 请求
+    if not API_KEY:
+        raise RuntimeError("ARK_API_KEY not configured: set in .env (gitignore-protected) and restart")
+
     # 检查token限制
     ok, daily_token_used = check_token_limit()
     if not ok:
