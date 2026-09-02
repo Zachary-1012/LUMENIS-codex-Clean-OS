@@ -79,3 +79,26 @@
 - 红线 Feature（SUBJ-001/EVT-001/RPT-001/RISK-001）任何改动走 Release Gate + 主体口径回归，禁止为扩量取消过滤。
 - 在建工单索引：AUTH-01（主SPA挂弹窗）、SCHED-01（影子转门控，待签字）、DIM-01（双维度落库）、EVT-01（三类事件四关系）、P0-FIX-1（版本号括号）。
 - 新增功能流程：登记 Feature ID → 绑 Owner/API/DB/UI → 旁路实现 → Staging 回归 → 灰度 ACTIVE。
+
+## 四、本轮新增能力（2026-09-02 推进）
+
+| Feature ID | 功能 | Owner | API | DB | UI | 状态 | Commit |
+|---|---|---|---|---|---|---|---|
+| FEATURE-SYS-BR-002 | browser_runtime CDP 接入（connect_over_cdp） | browser_runtime/adapters/playwright_adapter.py | /api/browser-runtime/* | — | — | ACTIVE（旁路验证，Feature Gate 默认关） | 59ce5c3 |
+| FEATURE-SYS-BR-003 | XHS 采集旁路桥接层 | browser_runtime/adapters/xhs_collector_bridge.py | — | — | — | ACTIVE（旁路，ZBC_BROWSER_RUNTIME_XHS=1 启用） | 59ce5c3 |
+| FEATURE-SYS-DEV-001 | 三 run-code 统一执行核心 | dev_exec_core.py | /api/config/run-code, /api/dev/run-code | — | — | ACTIVE（行为完全一致，仅重构） | 4e99af2 |
+| FEATURE-SYS-TEST-001 | 统一测试入口 L0-L10 | scripts/run_tests.ps1 + run.ps1 test | — | — | — | ACTIVE（.\\run.ps1 test） | 8053230 |
+| FEATURE-SYS-RPT-001 | 报告中心旁路路由 | v4_upgrade/report_center/api.py | /api/report-center/{status,generate,export} | — | — | ACTIVE（旁路，Feature Gate 默认关） | f53385c |
+| FEATURE-SYS-AI-002 | AI 治理（脱敏回传+额度+统计+标记） | ai_governance.py | /api/ai-governance/status | data/ai_governance_stats.json | — | ACTIVE（已接入 ark/summary+ark/keywords） | 81c6d70 |
+| FEATURE-SYS-SCH-001 | 调度门控三态切换（shadow/canary/enforce） | platform_adapters/scheduling/gate.py | — | — | — | ACTIVE（生产 enforce 模式运行） | 已有 |
+| FEATURE-CTH-SUBJ-002 | 传播主体/内容双维度落库 | subject_classifier.py + database.py | — | notes.subject_type, notes.content_type | — | ACTIVE（Schema+957条回填+10测试通过） | 已有 |
+
+### 本轮 GAP 闭环状态
+
+- GAP-01 统一测试入口 ✅ (8053230)
+- GAP-02 红线函数级单测 ✅ (32 passed)
+- GAP-03 Auth 弹窗 ✅ (main 已有)
+- GAP-04 三 run-code 收口 ✅ (4e99af2)
+- GAP-05 调度影子转门控 ✅ (生产 enforce 运行)
+- GAP-06 双维度落库 ✅ (Schema+回填+测试)
+- GAP-07 事件三类四关系 ✅ (5 passed)
