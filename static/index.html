@@ -37,6 +37,7 @@
 <link rel="stylesheet" href="/static/css/zbmp-workbench.css?v=1.0.6">
 <link rel="stylesheet" href="/static/css/zbip-panels.css?v=1.0.3">
 <link rel="stylesheet" href="/static/css/splash.css?v=2.0.0">
+  <link rel="stylesheet" href="/static/css/resident_health.css?v=5.9.9">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) -->
@@ -183,6 +184,22 @@
             <div class="home-card-head"><span class="eyebrow">CALENDAR</span><h3>舆情日历</h3><div class="calendar-nav"><button class="icon-button" id="prevMonth">‹</button><b id="calendarTitle">2026年8月</b><button class="icon-button" id="nextMonth">›</button></div></div>
             <div class="calendar" id="calendarGrid"></div>
           </article>
+        </div>
+      </section>
+
+      <!-- 驻场浏览器健康状态（Zachary OS AI · Resident Browser Health Monitor） -->
+      <section class="page-view active" id="page-resident-health" style="margin-top:16px;">
+        <div class="section-intro" style="margin-bottom:14px;">
+          <div>
+            <span class="eyebrow">ZACHARY OS AI · RESIDENT BROWSER</span>
+            <h2 style="font-size:20px;margin:4px 0;">驻场浏览器状态</h2>
+            <p style="font-size:12px;color:#86868b;margin:4px 0 0;">双身份独立驻场（大陆主号 9222 / 香港 rednote 9223），三层健康检测：端口存活 → CDP 控制面 → 登录态有效性。</p>
+          </div>
+          <button class="action secondary" onclick="ResidentHealth.refresh()">刷新检测</button>
+        </div>
+        <div id="rh-overview"></div>
+        <div class="rh-grid" id="rh-grid">
+          <div class="rh-loading"><span class="spinner"></span><span>正在检测驻场浏览器状态...</span></div>
         </div>
       </section>
 
@@ -919,7 +936,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/static/js/zbmp-workbench.js?v=1.1.0" defer></script>
 <script src="/static/js/zbip-panels.js?v=1.0.0" defer></script>
 <!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS安全；依赖style.css .ar-badge 样式；所有动态DOM=createElement+textContent） -->
-<script src="/static/js/auth_recovery_poller.js?v=5.8.9"></script>
+<script src="/static/js/auth_recovery_poller.js?v=5.8.9">
+  <script src="/static/js/resident_health.js?v=5.9.9"></script></script>
 <script>
   // ── 双子星库 Contract：全局 HTTP Basic Auth 头（auth_global.js / auth_recovery_poller.js / 其他 JS 共享同一凭证，401 修复）
   // 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框；v4 bearer 会话路径不变）

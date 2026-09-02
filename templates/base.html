@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/static/css/architecture_dashboard.css">
     <link rel="stylesheet" href="/static/css/ui_optimized.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/resident_health.css?v=5.9.9">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -67,6 +68,7 @@
     <script src="/static/js/frontend_enhancement.js?v=5.9.9"></script>
     <!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS 安全：纯 createElement + textContent） -->
     <script src="/static/js/auth_recovery_poller.js?v=5.9.9"></script>
+    <script src="/static/js/resident_health.js?v=5.9.9"></script>
     <script>
       // Footer 数据更新时间戳（页面加载时立刻填入，避免一直显示 --）
       try { var lu = document.getElementById('last-update'); if (lu) lu.textContent = new Date().toLocaleString('zh-CN'); } catch(e) {}
