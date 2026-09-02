@@ -11,7 +11,7 @@ import ai_analyzer
 import ai_filter
 import daily_report
 
-REPORT_TYPES = ('daily', 'weekly', 'monthly', 'yearly')
+REPORT_TYPES = ('daily', 'weekly', 'monthly', 'yearly', 'special')
 
 
 def period_for(report_type: str, now: datetime | None = None):
@@ -25,6 +25,9 @@ def period_for(report_type: str, now: datetime | None = None):
         return now.replace(day=1).strftime('%Y-%m-%d'), today
     if report_type == 'yearly':
         return now.replace(month=1, day=1).strftime('%Y-%m-%d'), today
+    if report_type == 'special':
+        # 专报：默认近 30 天；调用方可传 start/end 自定义（generate_report 优先用自定义）
+        return (now - timedelta(days=30)).strftime('%Y-%m-%d'), today
     raise ValueError(f'无效报告类型: {report_type}')
 
 
