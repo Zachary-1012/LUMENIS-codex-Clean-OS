@@ -103,8 +103,8 @@ def _session_healthy() -> bool:
     _check_cdp_online / verify_account 等），不重写采集探活逻辑。
     """
     try:
-        ok, msg = bridge.runtime_preflight_check(account=None)
-        return bool(ok)
+        pre = bridge.runtime_preflight_check(account=None)
+        return bool(pre.get("ok"))
     except Exception as e:  # noqa: BLE001
         _logger.warning("session health probe failed: %s", e)
         return False
@@ -215,10 +215,15 @@ def trigger_collection(account_name: str | None = None,
     if not ok_sel:
         return {"ok": False, "msg": f"[身份门控] {msg_sel}"}
 
-    # 门控 3：Session 健康预检
-    ok_pre, msg_pre = bridge.runtime_preflight_check(account=account)
+    # 门控 3：Session 健康预检（返回 dict，非元组）
+    pre = bridge.runtime_preflight_check(account=account)
+    ok_pre = bool(pre.get("ok"))
+    msg_pre = str(pre.get("evidence") or pre.get("overall_state") or "预检未通过")
     if not ok_pre:
-        _mark_session_lost(str(msg_pre))
+        _mark_session_lost(msg_pre)
+        # 用户主动暂停不触发扫码（尊重用户暂停开关，守 AGENTS §7）
+        if pre.get("overall_state") == "user_paused":
+            return {"ok": False, "msg": f"[Session门控] {msg_pre}（用户已手动暂停）"}
         trigger_scan_recovery()
         return {"ok": False, "msg": f"[Session门控] {msg_pre} → 已触发扫码恢复"}
 
