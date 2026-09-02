@@ -90,3 +90,14 @@
 - **观察项（未改，登记）**：①glm-5.3 变体用 startswith 前缀匹配会 over-match（glm-5.30 等），建议未来改显式集合/环境变量；②未来 glm-5.4 若也是始终思考需更新集合；③reasoning_content 回退的 CoT 可能不是合法 JSON（下游解析风险）；④qwen/deepseek 的 reasoning 模型未单独处理 thinking。
 - **沉淀**：`docs/learning/P0B2-AI-GATEWAY-REVIEW-20260903.md`
 - **状态**：P1 bug 已修 + 测试；观察项登记。**现在做：修复完成。**
+
+### T-P0C-1 采集链合规+稳定性深度审查（智谱 glm-5.3，2026-09-03，per_call 1 次）
+- **结论**：时间模型/主体过滤/熔断联动/合规边界 4 维核实——**红线均未弱化**（智谱"疑点"多为证据边界，非真实 bug）：
+  - 时间模型：captured_at 在 insert_note 有 `or now` 兜底（database.py:420），publish_date 独立来自平台 → 无混淆；但采集层 _norm_cdp_note 原不显式传 captured_at，依赖下游隐式兜底。
+  - 主体过滤：app.py:730 → ai_analyzer.verify_taikoo_location → **subject_hit() 硬规则优先**（ai_analyzer.py:141），AI 仅增强 → 红线未弱化。
+  - 熔断联动：RiskEngine→CollectorGuard→AdaptiveRateLimiter 链路完整，恢复安全（on_success 收敛10%非立即全速）。
+  - 合规：六态归一化 + 硬信号分类（BLOCKED/AUTH_REQUIRED/NEED_VERIFY），不绕过风控。
+- **加固（已落地）**：collector.py `_norm_cdp_note` 显式落 `captured_at`（datetime.now），使双时间铁律在采集层即明确，不依赖下游兜底；新增 tests/test_collector_dual_time.py 3 用例（双时间分离/publish缺失/字段透传）。
+- **观察项（未改，登记）**：①EMPTY 空结果走 record_success 让风险分衰减，无法区分"真无内容"与"软风控空响应"，软空响应可能提前解除熔断；②RiskEngine 熔断未写入 limiter.force_pause（联动单向），跨轮次依赖自身持久化状态；③冷却到期无 half-open 探测（直接按 interval 发首请求，可接受非最优）。
+- **沉淀**：`docs/learning/P0C-COLLECTOR-REVIEW-20260903.md`
+- **状态**：✅ 加固已落地；观察项登记。**现在做：完成。**

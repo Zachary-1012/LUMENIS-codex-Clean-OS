@@ -192,6 +192,9 @@ def _norm_cdp_note(rec):
         'collects': _int(rec.get('collects')),
         'shares': _int(rec.get('shares')),
         'publish_date': publish_date,
+        # 双时间铁律：publish_date 来自平台发布时间；captured_at 是本机采集时刻，来源不同。
+        # 显式落采集时刻，不依赖下游 insert_note 的隐式兜底（智谱采集链审查 P0-C 加固）。
+        'captured_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'xsec_token': rec.get('xsec_token', ''),
         'source_channel': 'cdp_edge_9222',
         'quality_status': rec.get('quality_status', ''),
