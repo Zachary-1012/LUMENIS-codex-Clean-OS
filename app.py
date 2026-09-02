@@ -122,6 +122,13 @@ app.register_blueprint(system_features_api.system_features_bp)
 # V3.0 P0: Auth Recovery Center（认证恢复中心）
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
 
+# Zachary OS AI：系统内置浏览器（小红书/rednote 不跳转外部，系统内完成）
+try:
+    import internal_browser
+    internal_browser.register_internal_browser(app)
+except Exception as _ib_e:
+    print(f"[internal_browser] blueprint register failed: {_ib_e}")
+
 # V3.0 影子板块：品牌营销知识库API
 @app.route('/api/brand-knowledge/stats')
 def brand_knowledge_stats():

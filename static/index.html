@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="/static/css/zbip-panels.css?v=1.0.3">
 <link rel="stylesheet" href="/static/css/splash.css?v=2.0.0">
   <link rel="stylesheet" href="/static/css/resident_health.css?v=5.9.9">
+  <link rel="stylesheet" href="/static/css/internal_browser.css?v=5.9.9">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) -->
@@ -200,6 +201,44 @@
         <div id="rh-overview"></div>
         <div class="rh-grid" id="rh-grid">
           <div class="rh-loading"><span class="spinner"></span><span>正在检测驻场浏览器状态...</span></div>
+        </div>
+      </section>
+
+      <!-- Zachary OS AI 系统内置浏览器（小红书/rednote 系统内完成，不跳转外部） -->
+      <section class="page-view active" id="internal-browser-section" style="margin-top:24px;">
+        <div class="section-intro" style="margin-bottom:14px;">
+          <div>
+            <span class="eyebrow">ZACHARY OS AI · INTERNAL BROWSER</span>
+            <h2 style="font-size:20px;margin:4px 0;">系统内置浏览器</h2>
+            <p style="font-size:12px;color:#86868b;margin:4px 0 0;">双账号在系统内直接操作，不跳转外部浏览器（点击画面交互 · 滚轮滚动）</p>
+          </div>
+          <button class="action secondary" id="ib-btn-refresh">刷新画面</button>
+        </div>
+        <div class="ib-container">
+          <div class="ib-tabs">
+            <button class="ib-tab active" data-account="XHS_CN_PRIMARY"><span class="ib-tab-dot"></span>大陆主号 9222</button>
+            <button class="ib-tab" data-account="XHS_RETINAUT"><span class="ib-tab-dot"></span>香港 Retinaut 9223</button>
+          </div>
+          <div class="ib-toolbar">
+            <button class="ib-btn" id="ib-btn-back" title="后退">‹</button>
+            <button class="ib-btn" id="ib-btn-forward" title="前进">›</button>
+            <button class="ib-btn" id="ib-btn-reload" title="刷新页面">⟳</button>
+            <button class="ib-btn" id="ib-btn-home" title="回到主页">⌂</button>
+            <div class="ib-address"><span class="ib-lock">●</span><span class="ib-url" id="ib-url">正在连接…</span></div>
+            <input id="ib-nav-input" placeholder="输入关键词搜索 / 网址"
+                   style="flex:1;min-width:120px;height:34px;padding:0 12px;border:1px solid rgba(120,110,180,0.16);background:rgba(255,255,255,0.85);border-radius:10px;font-size:12.5px;">
+            <button class="ib-btn primary" id="ib-btn-nav"><span class="ib-btn-label">前往</span></button>
+            <label class="ib-live-toggle"><input type="checkbox" id="ib-live-checkbox" checked><span class="lbl" id="ib-live-text">实时</span></label>
+          </div>
+          <div class="ib-viewport-wrap" id="ib-viewport">
+            <img class="ib-screenshot" id="ib-screenshot" style="display:none;" alt="内置浏览器视图">
+            <div class="ib-placeholder" id="ib-placeholder"><div class="ib-spinner"></div><div>正在连接驻场浏览器…</div></div>
+            <div class="ib-statusbar" id="ib-statusbar"><span class="ib-pulse"></span><span id="ib-captured-at"></span></div>
+          </div>
+          <div class="ib-footer">
+            <span class="ib-title-text" id="ib-title-text"></span>
+            <span>截图流 · 点击画面可交互</span>
+          </div>
         </div>
       </section>
 
@@ -937,7 +976,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/static/js/zbip-panels.js?v=1.0.0" defer></script>
 <!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS安全；依赖style.css .ar-badge 样式；所有动态DOM=createElement+textContent） -->
 <script src="/static/js/auth_recovery_poller.js?v=5.8.9">
-  <script src="/static/js/resident_health.js?v=5.9.9"></script></script>
+  <script src="/static/js/resident_health.js?v=5.9.9"></script>
+  <script src="/static/js/internal_browser.js?v=5.9.9"></script></script>
 <script>
   // ── 双子星库 Contract：全局 HTTP Basic Auth 头（auth_global.js / auth_recovery_poller.js / 其他 JS 共享同一凭证，401 修复）
   // 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框；v4 bearer 会话路径不变）
