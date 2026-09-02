@@ -52,3 +52,9 @@ tqdm>=4.64.0
 # ===== 邮件相关 =====
 # smtplib 是Python内置，无需安装
 # email 是Python内置，无需安装
+
+# === 可选增强（缺省均有内置降级，不阻断启动；干净环境按需安装，保持“无重依赖全链可跑”）===
+aiohttp>=3.9.0          # collector_v2 异步 HTTP 客户端；缺省时 client.py 自动降级 requests 同步
+yyds-logger>=0.8.0      # v4_upgrade/unified_logger 统一日志增强；缺省时回退标准 logging
+# win32-setctime：仅 Windows 下 yyds-logger 需要（非 Windows 忽略）
+# docx2pdf / pypdf：仅 v4_upgrade 报告导出(word_pdf_export)与导入器(importer)旁路使用，接管前不强制

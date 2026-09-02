@@ -842,3 +842,13 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - 新增 tests/test_event_aggregation_authority.py 3 测：兼容名转发同一权威并透传 limit；静态扫描全仓两处定义均只在 reprocess.py（单一 Owner）；monkeypatch 隔离 db/intelligence 验证风险来自数据（max=70→high、mention_count=2）、AI 关闭仍聚合、上游只取 verified。
 - 结果：3 测全过；统一入口 161 passed（158→161）。运行旁证：回归日志见 [Gate:shadow][TopicCampaign] allow=True，GAP-05 门控 shadow 真实在线。
 - DB：零变更；生产 8201 未重启未碰。
+
+
+---
+
+## 2026-09-02 13:15 · P0-4 依赖声明收尾（AST 全仓对账，主链无硬缺失）
+
+- AST 扫生产代码第三方 import vs requirements.txt（排除 .venv/.trae-cn/IDE skill/backups/tests）：waitress/beautifulsoup4 已由前序提交补齐。
+- 项目内剩余“import 未声明”逐项定性：**aiohttp**（collector_v2/xhs/client.py 方法内 try import，ImportError 自动降级 requests 同步，当前 venv 未装也正常跑）、**yyds-logger**（unified_logger try import，缺省回退标准 logging，本 venv 0.8.1 已装并实际生效）、docx2pdf/pypdf（仅 v4_upgrade 报告导出/导入器旁路，未接管）。**结论：生产启动主链无硬依赖缺失，不阻断 run_production/collector_v2。**
+- 收尾：requirements.txt 增“可选增强”分组，显式声明 aiohttp / yyds-logger（注释写明内置降级与 win32-setctime、docx2pdf/pypdf 适用范围），不把可选变强制，保持“无重依赖全链可跑”。
+- 证据：tests/healthcheck.py 只读（副本库）ok=true，subject_guard gz_hit/sh_excluded 均 true，has_publish_datetime/has_captured_at 均 true；统一入口 161 passed 不变。DB 零变更、生产 8201 未碰。
