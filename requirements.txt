@@ -58,3 +58,4 @@ aiohttp>=3.9.0          # collector_v2 异步 HTTP 客户端；缺省时 client.
 yyds-logger>=0.8.0      # v4_upgrade/unified_logger 统一日志增强；缺省时回退标准 logging
 # win32-setctime：仅 Windows 下 yyds-logger 需要（非 Windows 忽略）
 # docx2pdf / pypdf：仅 v4_upgrade 报告导出(word_pdf_export)与导入器(importer)旁路使用，接管前不强制
+tenacity>=9.1.0        # 网络层指数退避重试（可选增强：CDP探测瞬断重试等；缺省时回落原生单次重试）

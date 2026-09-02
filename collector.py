@@ -147,11 +147,32 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
 def _cdp_online(timeout=2.0):
     """探测 9222 CDP 是否在线（不启动浏览器，只探测）。"""
     import urllib.request
-    try:
+
+    def _probe():
         with urllib.request.urlopen(CDP_URL + '/json/version', timeout=timeout) as r:
             return getattr(r, 'status', 200) == 200
-    except Exception:
-        return False
+
+    # P1-2 tenacity 可选增强：CDP 探测偶发瞬断（瞬时抖动）时指数退避重试，
+    # 避免把「瞬时抖动」误判为「浏览器掉线」而触发不必要的浏览器拉起。
+    # 纯本机 CDP HTTP 探测，零风控风险；仅网络层，不碰平台风控决策。
+    try:
+        from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+        import urllib.error
+        @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=0.3, min=0.2, max=1.2),
+               retry=retry_if_exception_type((urllib.error.URLError, OSError, TimeoutError)),
+               reraise=True)
+        def _probe_retry():
+            return _probe()
+        try:
+            return bool(_probe_retry())
+        except Exception:
+            return False
+    except ImportError:
+        # tenacity 未安装（可选依赖）：回落原生单次探测，保持「无重依赖全链可跑」
+        try:
+            return bool(_probe())
+        except Exception:
+            return False
 
 
 def _ensure_cdp_online(timeout=30):
