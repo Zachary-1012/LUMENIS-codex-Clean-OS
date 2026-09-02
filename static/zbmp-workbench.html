@@ -400,7 +400,35 @@ input{font-family:inherit}
           +'<div style="padding:0">'+(rows || '<div style="padding:24px;text-align:center;color:var(--text-3)">暂无预警</div>')+'</div></div>';
       }catch(e){ contentArea.innerHTML = '<div class="page-head"><h1>实时监测</h1></div><div class="welcome"><p>加载异常: '+e.message+'</p></div>'; }
     },
-    events: ()=> placeholder('事件中心','事件聚类、风险分级、生命周期管理（接入中）'),
+    events: async ()=>{
+      contentArea.innerHTML = '<div class="page-head"><h1>事件中心</h1><span class="meta"><span class="dot-s ok"></span> 接入 CTH 生产数据</span></div><div class="welcome"><div class="ft-loading">加载中…</div></div>';
+      try{
+        const [ov, ev] = await Promise.all([api('/api/overview'), api('/api/events?limit=30')]);
+        const activeN = (ov.json && ov.json.active_events) || 0;
+        const negN = (ov.json && ov.json.recent_negative) || 0;
+        const totalN = (ev.json && ev.json.total) || (ev.json && ev.json.events && ev.json.events.length) || 0;
+        const events = (ev.json && ev.json.events) || [];
+        const sevMap = {high:{c:'danger',t:'高'}, medium:{c:'warn',t:'中'}, low:{c:'info',t:'低'}};
+        const rows = events.slice(0,25).map(e=>{
+          const sev = sevMap[e.risk_level] || {c:'gray',t:e.risk_level||'未分级'};
+          const stColor = e.status==='active'?'ok':(e.status==='resolved'?'gray':'info');
+          return '<div class="ft-item" style="padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer">'
+            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="dot-s '+sev.c+'"></span>'
+            +'<span style="font-size:11px;font-weight:650;color:var(--text-2)">'+sev.t+'风险</span>'
+            +'<span class="dot-s '+stColor+'" style="margin-left:6px"></span><span style="font-size:11px;color:var(--text-3)">'+(e.status||'未知')+'</span>'
+            +'<span style="margin-left:auto;font-size:11px;color:var(--text-3)">提及 '+(e.mention_count||0)+' · 来源 '+(e.source_count||0)+'</span></div>'
+            +'<div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:3px">'+escHtml(e.title||'')+'</div>'
+            +'<div style="font-size:11px;color:var(--text-3)">'+(e.first_seen||'')+(e.risk_score?' · 风险分 '+e.risk_score:'')+(e.summary?' · '+escHtml(e.summary.substring(0,60)):'')+'</div></div>';
+        }).join('');
+        contentArea.innerHTML = '<div class="page-head"><h1>事件中心</h1><span class="meta"><span class="dot-s ok"></span> 活跃 '+activeN+' · 近期负面 '+negN+' · 总计 '+totalN+'</span></div>'
+          +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'
+          +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px"><div style="font-size:11px;color:var(--text-3);font-weight:600">活跃事件</div><div style="font-size:22px;font-weight:700">'+activeN+'</div></div>'
+          +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px"><div style="font-size:11px;color:var(--text-3);font-weight:600">近期负面</div><div style="font-size:22px;font-weight:700;color:var(--danger)">'+negN+'</div></div>'
+          +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px"><div style="font-size:11px;color:var(--text-3);font-weight:600">事件总数</div><div style="font-size:22px;font-weight:700">'+totalN+'</div></div></div>'
+          +'<div class="file-preview" style="max-height:none"><div class="fp-head"><span class="fp-path">/api/events?limit=30</span><span class="fp-meta">CTH 生产数据 · 只读</span></div>'
+          +'<div style="padding:0">'+(rows || '<div style="padding:24px;text-align:center;color:var(--text-3)">暂无事件</div>')+'</div></div>';
+      }catch(e){ contentArea.innerHTML = '<div class="page-head"><h1>事件中心</h1></div><div class="welcome"><p>加载异常: '+e.message+'</p></div>'; }
+    },
     ai: ()=> placeholder('AI 洞察','本地 Ollama 驱动的语义分析、趋势解释、报告润色（AI 仅增强层）'),
     reports: ()=> placeholder('报告中心','日报/专报/品牌报告生成与导出（接入中）'),
     settings: ()=> placeholder('设置','采集频率、AI 引擎、账号与权限（接入中）'),
