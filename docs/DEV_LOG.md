@@ -51,3 +51,11 @@
   - Dark模式未迁移到ZBMP工作台（当前仅Light主题）。
   - Feature Registry / FEATURE-FINAL-VERIFICATION-MATRIX 尚未补登ZBMP工作台7个新Feature。
   - ui/staging-foundation分支的Step3/Step4 override换肤层尚未合main（zbip-refine.css精修层已在main替代其功能）。
+
+## 2026-09-02 小红书采集合规优化
+
+- 恢复话题活动: 广州太古汇十五周年 paused→active
+- 建立 note_type 三级分类: topic(64)/opinion(388)/event(505), 共957条
+- 事件笔记自动关联: 505条笔记与events表关联(event_mentions)
+- 新增 note_type_backup 列备份原值
+- 数据库变更不入库(.gitignore), 仅记录日志
