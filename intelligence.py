@@ -234,3 +234,75 @@ def translate_text(text,target='en'):
     labels={'en':'English','ko':'Korean'}
     raw,_=_chat(f'Translate the following Chinese public-opinion text into {labels.get(target,target)}. Preserve Guangzhou Taikoo Hui and brand names. Return translation only.',text[:3000],0,700)
     return (raw or '').strip() or text
+
+
+# ============================================================
+# 云智(ARK) 已停用 → 智谱(zhipu) 驱动的通用 AI 能力（S1 OpenAI 智能功能补强）
+# 复用 _chat（智谱网关）+ 脱敏 + 结构化 JSON 解析；失败回退规则/空值，绝不崩溃。
+# 返回结构与旧 ark_llm.sentiment_analyse/generate_summary/extract_keywords 兼容。
+# ============================================================
+
+def analyze_sentiment(text, max_len=2000):
+    """情感/摘要/关键词一站式分析（智谱驱动）。返回 {sentiment:-1/0/1, label, summary, keywords, provider}。"""
+    if not text or not text.strip():
+        return {'sentiment': 0, 'label': 'neutral', 'summary': '', 'keywords': [], 'provider': 'rule'}
+    system = ('你是专业舆情分析助手，只输出严格JSON，不要其他文字。字段：'
+              'sentiment(-1负面,0中性,1正面),label(positive/neutral/negative),'
+              f'summary(不超过{max_len}字的简要总结),keywords(关键词数组最多10个)。')
+    raw, provider = _chat(system, str(text)[:6000], 0.1, 800)
+    data = _json_from_text(raw) or {}
+    try:
+        s = int(data.get('sentiment', 0))
+    except Exception:
+        s = 0
+    label = data.get('label') or ({1: 'positive', -1: 'negative'}.get(s, 'neutral'))
+    return {
+        'sentiment': s,
+        'label': label,
+        'summary': str(data.get('summary', ''))[:max_len],
+        'keywords': data.get('keywords', []) if isinstance(data.get('keywords', []), list) else [],
+        'provider': provider,
+    }
+
+
+def generate_summary(text, max_length=200):
+    """文本摘要（智谱驱动）。返回摘要字符串；失败回退前 max_length 字。"""
+    if not text or not text.strip():
+        return ''
+    system = f'你是专业文本摘要助手，生成简洁准确的中文摘要，不超过{max_length}字。只输出摘要内容。'
+    raw, provider = _chat(system, str(text)[:6000], 0.3, max_length + 100)
+    out = (raw or '').strip()
+    if not out:
+        return str(text)[:max_length] + ('...' if len(str(text)) > max_length else '')
+    if len(out) > max_length:
+        out = out[:max_length]
+    return out
+
+
+def extract_keywords(text, num_keywords=10):
+    """关键词提取（智谱驱动）。返回关键词列表；失败回退空列表。"""
+    if not text or not text.strip():
+        return []
+    system = f'你是关键词提取助手，提取{num_keywords}个最重要的关键词。只输出严格JSON：{{"keywords":[...]}}。'
+    raw, provider = _chat(system, str(text)[:6000], 0.2, 400)
+    data = _json_from_text(raw) or {}
+    kws = data.get('keywords', [])
+    if isinstance(kws, list):
+        return [str(k)[:30] for k in kws[:num_keywords]]
+    return []
+
+
+def generate_report(title, data, report_type="daily"):
+    """舆情报告生成（智谱驱动）。返回 markdown 报告字符串；失败回退规则拼装。"""
+    system = (f'你是品牌舆情报告撰写助手，根据数据生成{report_type}报告正文（markdown），'
+              f'标题围绕「{title}」，结论可追溯到数据，不编造事实。只输出报告正文。')
+    raw, provider = _chat(system, json.dumps(data, ensure_ascii=False)[:8000], 0.4, 1500)
+    out = (raw or '').strip()
+    if out:
+        return out
+    # 规则回退：列出关键数据点
+    lines = [f'# {title}', '']
+    if isinstance(data, dict):
+        for k, v in list(data.items())[:20]:
+            lines.append(f'- {k}: {v}')
+    return '\n'.join(lines)
