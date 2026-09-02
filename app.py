@@ -2741,10 +2741,11 @@ def api_rednote_collect():
             result = run_rednote_collect(keyword, max_scroll, max_details, cdp_url)
             if persist and result.get('ok'):
                 def subject_hit(text):
+                    # P0-02 收敛：统一委托 subject_rules 权威主体口径（排除词一票否决+正向词命中），
+                    # 不再用 AI verify 替代，避免口径分叉（对账 GAP-P0-02）。
                     try:
-                        from ai_analyzer import verify_taikoo_location
-                        ok, _reason = verify_taikoo_location(text, '')
-                        return bool(ok)
+                        from subject_rules import subject_hit_text
+                        return subject_hit_text(text)
                     except Exception:
                         return False
                 persist_rednote_data(result, subject_hit)

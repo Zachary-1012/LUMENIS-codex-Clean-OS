@@ -10,12 +10,12 @@ def main():
     p.add_argument('--cdp-url', default='')
     p.add_argument('--no-comments', action='store_true')
     a=p.parse_args()
-    # 由现有业务层注入 subject_hit。默认拒绝，避免误把非广州太古汇内容写入数据库。
+    # P0-02 收敛：统一委托 subject_rules 权威主体口径（排除词一票否决+正向词命中），
+    # 不再用 AI verify 替代，避免口径分叉；导入失败时默认拒绝，避免误写入（对账 GAP-P0-02）。
     try:
-        from ai_analyzer import verify_taikoo_location
+        from subject_rules import subject_hit_text
         def subject_hit(text):
-            ok, _reason = verify_taikoo_location(text, '')
-            return bool(ok)
+            return subject_hit_text(text)
     except Exception:
         def subject_hit(_): return False
     all_stats=[]

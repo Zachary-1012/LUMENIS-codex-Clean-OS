@@ -6,6 +6,7 @@ Flask>=2.0.0
 Werkzeug>=2.0.0
 Flask-CORS>=3.0.0
 Flask-Limiter>=3.5.0
+waitress>=2.1.0  # 生产级 WSGI 服务器（run_production.py 依赖）
 
 # ===== 调度 =====
 APScheduler>=3.10.0
