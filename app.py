@@ -66,7 +66,7 @@ import app_evidence
 import swire_group
 import weekly_events
 import browser_discovery
-import ai_gateway_v570
+# P1-A(2026-09-02): ai_gateway_v570已废弃，统一到intelligence.py
 import memory_optimizer
 import stability_monitor
 import web_monitor_v570
@@ -1338,6 +1338,14 @@ def api_intelligence_refresh():
     threading.Thread(target=worker,daemon=True).start()
     return jsonify({'ok':True,'task_id':task_id})
 
+@app.route('/api/ai-governance/status')
+def api_ai_governance_status():
+    """AI 治理状态：额度/使用统计/配置/脱敏状态（余额需在智谱控制台查看）"""
+    try:
+        return jsonify(ai_governance.get_governance_status())
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/api/ai/status')
 def api_ai_status():
     status = intelligence.ai_status()
@@ -1396,7 +1404,7 @@ def api_ark_sentiment():
 
 @app.route('/api/ark/summary', methods=['POST'])
 def api_ark_summary():
-    """AI摘要生成（智谱驱动，不可用时回退截断摘要）"""
+    """AI摘要生成（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
@@ -1407,14 +1415,34 @@ def api_ark_summary():
             max_length = int(max_length)
         except Exception:
             max_length = 200
-        summary = intelligence.generate_summary(text, max_length=max_length)
-        return jsonify({'ok': True, 'summary': summary, 'provider': 'zhipu'})
+        # AI 治理：额度检查
+        allowed, quota = ai_governance._usage_tracker.check_quota()
+        if not allowed:
+            return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota, 'fallback': 'local'}), 429
+        # AI 治理：脱敏（敏感实体→占位符）
+        desensitized_text, mapping = ai_governance.desensitize_text(text)
+        # 调用智谱
+        summary = intelligence.generate_summary(desensitized_text, max_length=max_length)
+        # AI 治理：回传补回实体
+        summary = ai_governance.restore_text(summary, mapping)
+        # AI 治理：记录使用统计
+        ai_governance.record_ai_call('ark/summary', prompt_tokens=len(text)//2,
+                                       completion_tokens=len(summary)//2,
+                                       total_tokens=(len(text)+len(summary))//2,
+                                       provider='zhipu', success=True)
+        # AI 治理：输出标记（增强层，非 System Truth，可用于 Zachary 学习）
+        result = ai_governance.mark_ai_output(
+            {'ok': True, 'summary': summary, 'desensitized': bool(mapping),
+             'quota_remaining': quota['call_remaining']},
+            provider='zhipu', endpoint='ark/summary')
+        return jsonify(result)
     except Exception as e:
+        ai_governance.record_ai_call('ark/summary', provider='zhipu', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/api/ark/keywords', methods=['POST'])
 def api_ark_keywords():
-    """AI关键词提取（智谱驱动，不可用时回退本地提取）"""
+    """AI关键词提取（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
@@ -1425,13 +1453,35 @@ def api_ark_keywords():
             num_keywords = int(num_keywords)
         except Exception:
             num_keywords = 10
-        keywords = intelligence.extract_keywords(text, num_keywords=num_keywords)
+        # AI 治理：额度检查
+        allowed, quota = ai_governance._usage_tracker.check_quota()
+        if not allowed:
+            # 额度超限直接回退本地
+            topics = ai_analyzer.extract_topics(text, '')
+            return jsonify({'ok': True, 'keywords': topics, 'provider': 'local',
+                            'fallback': True, 'quota_exceeded': True}), 200
+        # AI 治理：脱敏
+        desensitized_text, mapping = ai_governance.desensitize_text(text)
+        # 调用智谱
+        keywords = intelligence.extract_keywords(desensitized_text, num_keywords=num_keywords)
         if keywords:
-            return jsonify({'ok': True, 'keywords': keywords, 'provider': 'zhipu'})
+            # AI 治理：回传补回实体（关键词列表）
+            restored_keywords = [ai_governance.restore_text(kw, mapping) for kw in keywords]
+            ai_governance.record_ai_call('ark/keywords', prompt_tokens=len(text)//2,
+                                           completion_tokens=sum(len(k) for k in restored_keywords)//2,
+                                           total_tokens=(len(text)+sum(len(k) for k in restored_keywords))//2,
+                                           provider='zhipu', success=True)
+            result = ai_governance.mark_ai_output(
+                {'ok': True, 'keywords': restored_keywords, 'desensitized': bool(mapping),
+                 'quota_remaining': quota['call_remaining']},
+                provider='zhipu', endpoint='ark/keywords')
+            return jsonify(result)
         # 回退本地规则提取
         topics = ai_analyzer.extract_topics(text, '')
+        ai_governance.record_ai_call('ark/keywords', provider='local', success=True)
         return jsonify({'ok': True, 'keywords': topics, 'provider': 'local', 'fallback': True})
     except Exception as e:
+        ai_governance.record_ai_call('ark/keywords', provider='zhipu', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ========== 采集器自动化 API ==========
@@ -2486,18 +2536,35 @@ def api_ai_providers_v570():
         local = ai_analyzer.ai_status() if hasattr(ai_analyzer, 'ai_status') else {'available': False, 'model': 'none', 'message': '本地AI未配置'}
     except Exception:
         local = {'available': False, 'model': 'none', 'message': '本地AI状态获取失败'}
+    # P1-A(2026-09-02): ai_gateway_v570已废弃，统一到intelligence.py
     try:
-        remote = ai_gateway_v570.providers()
+        ai_stat = intelligence.ai_status()
+        remote = [{
+            'id': ai_stat.get('provider', 'unknown'),
+            'name': f"AI Provider ({ai_stat.get('provider', 'unknown')})",
+            'type': ai_stat.get('runtime', 'unknown'),
+            'status': 'available' if ai_stat.get('enabled') else 'unavailable',
+            'model': ai_stat.get('model', 'unknown')
+        }] if ai_stat.get('enabled') else []
     except Exception:
         remote = []
     return jsonify({'ok': True, 'local': local, 'remote': remote})
 
 @app.route('/api/ai/analyze-v570',methods=['POST'])
 def api_ai_analyze_v570():
+    # P1-A(2026-09-02): ai_gateway_v570已废弃，统一到intelligence._chat()
     data=request.get_json(silent=True) or {}
     text=data.get('text','')
     context=data.get('context','')
-    return jsonify(ai_gateway_v570.analyze(text,context))
+    if not text:
+        return jsonify({'ok': False, 'text': text, 'context': context, 'provider': 'none', 'analysis': '', 'error': '文本为空'})
+    try:
+        system_prompt = "你是广州太古汇舆情分析助手。请分析以下内容的情感倾向、风险等级和关键要点。"
+        user_prompt = f"内容：{text}\n上下文：{context or '无'}\n请给出：1)情感倾向 2)风险等级 3)关键要点 4)建议"
+        raw, provider = intelligence._chat(system_prompt, user_prompt, 0.3, 800)
+        return jsonify({'ok': True, 'text': text, 'context': context, 'provider': provider, 'analysis': raw or '', 'error': ''})
+    except Exception as e:
+        return jsonify({'ok': False, 'text': text, 'context': context, 'provider': 'none', 'analysis': '', 'error': str(e)})
 
 @app.route('/api/trends/global')
 def api_global_trends_v570():
@@ -5372,6 +5439,9 @@ app.register_blueprint(create_v4_blueprint())
 # GAP-10 report_center 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
 from v4_upgrade.report_center.api import report_center_bp
 app.register_blueprint(report_center_bp)
+
+# AI Governance — 脱敏回传+额度控制+使用统计+输出标记（云端 zhipu 内置系统）
+import ai_governance
 
 # ===== 系统启动入口 =====
 if __name__ == '__main__':
