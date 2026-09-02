@@ -38,20 +38,22 @@
 | `--zb-stone-400` | #A8A29E | 禁用状态 |
 | `--zb-stone-500` | #78716C | muted 文本 |
 | `--zb-stone-600` | #57534E | 次级文本 |
-| `--zb-stone-700` | #44403C | 主文本 |
-| `--zb-stone-800` | #292524 | 强调文本/按钮 |
-| `--zb-stone-900` | #1C1917 | 最深文本 |
+| `--zb-stone-700` | #44403C | 次级强调文本 |
+| `--zb-stone-800` | #292524 | 次级主文本/悬停 |
+| `--zb-stone-900` | #1C1917 | 主文本/标题/品牌主操作 |
 
 ### 2.2 语义色（仅用于状态和重要操作）
 
 | 颜色 | 值 | 用途 |
 |---|---|---|
-| Success | #22C55E | 正常/健康/成功 |
-| Warning | #F59E0B | 关注/警告 |
-| Danger | #EF4444 | 严重/错误/风险 |
-| Info | #3B82F6 | 信息/进行中 |
-| Idle | #D6D3D1 | 未知/未激活 |
+| Success | #16A34A | 正常/健康/成功 |
+| Attention | #D97706 | 关注/警告 |
+| Risk | #EA580C | 风险/预警（橙） |
+| Danger | #DC2626 | 严重/错误/风险（红） |
+| Info | #2563EB | 信息/进行中 |
+| Unknown | #78716C | 未知/未激活 |
 
+**三层语义（fg 主色 / bg 弱底 / border 弱边）**：组件只引用语义别名层（--zb-success / --zb-attention / --zb-risk / --zb-danger / --zb-info / --zb-unknown 及对应 -bg/-border），禁止直接写裸色值。
 **规则**：颜色不能成为唯一的信息表达方式，必须同时有文字 + icon + 状态。
 
 ### 2.3 间距 Token
@@ -61,10 +63,12 @@
 - 区块间距：32-40px
 
 ### 2.4 圆角 Token
-- 4px：小元素（标签、状态点）
-- 8px：按钮、输入框、卡片
-- 12px：弹窗、抽屉、大卡片
-- 禁止：超过 16px 的圆角
+- 4px（--zb-r-sm）：小元素（标签、Badge、输入）
+- 6px（--zb-r-md）：按钮/控件默认
+- 8px（--zb-r-lg）：卡片/弹窗
+- 12px（--zb-r-xl）：大面板，少用
+- 999px（--zb-r-pill）：状态点容器/胶囊，仅状态用
+- 禁止：超过 12px 的常规圆角（pill 仅限状态点）
 
 ### 2.5 阴影 Token（微光银柔和阴影）
 - 卡片默认：`0 1px 3px rgba(28,25,23,0.04), 0 4px 12px rgba(28,25,23,0.03)`
@@ -118,14 +122,14 @@ Workspace（工作区）
 ### 4.1 基础组件
 | 组件 | 规格 |
 |---|---|
-| Button | 高度 32-36px，圆角 8px，主按钮近黑渐变，次按钮白底灰边 |
+| Button | 高度 32-36px，圆角 6px（--zb-r-md），主按钮近黑纯色（--zb-brand=stone-900），次按钮白底灰边 |
 | IconButton | 32x32px，圆角 8px，hover 浅灰背景 |
 | Input | 高度 36px，圆角 8px，白底灰边，focus 近黑边 |
 | Select | 同 Input，右侧下拉箭头 |
 | Search | Input + 搜索 icon，支持快捷键 Ctrl+K |
 | Tabs | 下划线式，active 近黑，inactive 灰色 |
 | Badge | 圆角 4px，小号文字，语义色背景 |
-| StatusDot | 7px 圆点，带发光效果，语义色 |
+| StatusDot | 7px 圆点（--zb-r-pill），语义色；发光仅限状态点呼吸（非阴影发光，符合“禁止发光阴影”） |
 
 ### 4.2 布局组件
 | 组件 | 规格 |
@@ -177,11 +181,14 @@ Workspace（工作区）
 ### 5.4 动效系统
 | 动效类型 | 时长 | 曲线 | 用途 |
 |---|---|---|---|
-| 微交互（hover/click） | 100-150ms | ease-out | 按钮、链接、icon |
-| 状态变化 | 180-280ms | ease-in-out | 状态点、标签、展开/收起 |
-| 页面/弹窗转换 | 280-400ms | cubic-bezier(0.4,0,0.2,1) | 弹窗、抽屉、页面切换 |
+| 微交互（hover/click） | 100-180ms | --zb-ease-standard | 按钮、链接、icon |
+| 状态变化 | 180-280ms | --zb-ease-standard | 状态点、标签、展开/收起 |
+| 页面/弹窗转换 | 280-420ms | --zb-ease-emil-out / -inout | 弹窗、抽屉、页面切换 |
+| 弹簧（toggle/sheet/drag） | 280-420ms | --zb-ease-spring | 面板、抽屉、拖动 |
 | 全局流光 | 12-18s | ease-in-out infinite | 银色流光海浪浮动 |
 
+**唯一权威曲线**：进/出场 → --zb-ease-emil-out；屏内移动/变形 → --zb-ease-emil-inout；抽屉 → --zb-ease-drawer。
+**禁止**：--zb-ease-in（起手慢=迟钝），UI 一律不用。
 **规则**：所有动画必须有目的，禁止无意义动画。低端设备必须能正常运行。
 
 ### 5.5 键盘导航

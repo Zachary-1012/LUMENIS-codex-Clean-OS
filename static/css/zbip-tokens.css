@@ -153,8 +153,14 @@
   --zb-icon-size-sm: 14px;
   --zb-icon-size-md: 18px;  /* 默认 */
   --zb-icon-size-lg: 20px;
+  --zb-icon-size-xl: 28px;  /* 大彩色语义 icon / EmptyState 主图标 */
   --zb-icon-cap: round;
   --zb-icon-join: round;
+
+  /* ---- 状态点签名（彩色小圆点，ZBIP 视觉签名；发光仅限状态点呼吸） ---- */
+  --zb-status-dot: 7px;
+  --zb-status-dot-lg: 10px;
+  --zb-status-glow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
 
   /* ---- 12. Mobile-first：安全区与底部导航 ---- */
   --zb-safe-top: env(safe-area-inset-top, 0px);

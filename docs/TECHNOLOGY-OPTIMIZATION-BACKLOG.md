@@ -101,3 +101,12 @@
 - **观察项（未改，登记）**：①EMPTY 空结果走 record_success 让风险分衰减，无法区分"真无内容"与"软风控空响应"，软空响应可能提前解除熔断；②RiskEngine 熔断未写入 limiter.force_pause（联动单向），跨轮次依赖自身持久化状态；③冷却到期无 half-open 探测（直接按 interval 发首请求，可接受非最优）。
 - **沉淀**：`docs/learning/P0C-COLLECTOR-REVIEW-20260903.md`
 - **状态**：✅ 加固已落地；观察项登记。**现在做：完成。**
+
+### T-P0C-2 UI 设计系统一致性审查（智谱 glm-5.3，2026-09-03，per_call 1 次）
+- **结论**：审查 ZBIP 脱敏设计文档 vs zbip-tokens.css 一致性，发现 **8 处文档/token 不一致 + 2 个 token 缺口**。
+- **已收敛（纯文档/增量，不推翻）**：
+  - 脱敏文档 8 处修正使其与 token 完全一致：语义色值（Success #16A34A 等 600 级深色，对比度更好）、三层语义（fg/bg/border）、主文本角色映射（--zb-text=stone-900）、圆角（--zb-r-md=6px 按钮）、主按钮近黑纯色（非渐变）、状态点发光歧义消除、动效唯一权威曲线（emil-out/inout/drawer，禁 ease-in）。
+  - zbip-tokens.css 追加 2 个缺口 token：`--zb-icon-size-xl`(28px 大彩色语义icon) + `--zb-status-dot/status-dot-lg/status-glow`（状态点签名）。
+- **观察项（登记，未改）**：①动效三套曲线（basic/spring/emil）并存有开发者混用风险，建议后续收敛到 emil 权威+旧变量标记 deprecated；②语义色 fg 对比度 #16A34A≈3.3:1 对正文临界，图标/状态点可用、正文建议用深一档；③`--zb-ease-in` 定义但禁用，后续可移除或标注 exit-only。
+- **沉淀**：`docs/learning/P0C-UI-DESIGN-REVIEW-20260903.md`
+- **状态**：✅ 已收敛；观察项登记。**现在做：完成。**
