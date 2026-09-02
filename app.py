@@ -2279,26 +2279,6 @@ def api_xhs_cookie_sync_status(task_id):
     task=xhs_cookie_bridge.get_task(task_id)
     return (jsonify({'ok':True,'task':task}),200) if task else (jsonify({'ok':False,'error':'任务不存在'}),404)
 
-@app.route('/api/xhs/collect-health')
-def api_xhs_collect_health():
-    """采集六态状态中心：熔断状态 + 今日各状态计数 + 最近批次日志（BLOCKED 绝不伪装成 0 条）"""
-    try:
-        circ = xhs_cookie_bridge.get_circuit_state()
-        with db.get_db() as conn:
-            today = conn.execute("SELECT status,COUNT(*),SUM(notes_count) FROM collection_logs WHERE date(finished_at)=date('now','localtime') GROUP BY status").fetchall()
-            recent = conn.execute("SELECT keyword,notes_count,status,COALESCE(error_msg,''),finished_at FROM collection_logs ORDER BY id DESC LIMIT 10").fetchall()
-        state_counts = {r[0]: {'runs': r[1], 'notes': r[2] or 0} for r in today}
-        recent_list = [{'keyword': r[0], 'notes': r[1], 'state': r[2], 'msg': r[3], 'at': r[4]} for r in recent]
-        # 总状态判定
-        bad = sum(v['runs'] for k, v in state_counts.items() if k in ('BLOCKED', 'AUTH_FAILED', 'CAPTCHA', 'NETWORK_ERROR'))
-        ok = sum(v['runs'] for k, v in state_counts.items() if k in ('SUCCESS', 'EMPTY'))
-        overall = 'BLOCKED' if circ.get('open') else ('OK' if ok else ('FAILED' if bad else 'IDLE'))
-        return jsonify({'ok': True, 'overall': overall, 'circuit': circ,
-                        'state_counts': state_counts, 'recent': recent_list,
-                        'state_label': xhs_cookie_bridge.STATE_LABEL, 'test_mode': xhs_cookie_bridge.is_test_mode()})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
 @app.route('/api/platform-health')
 def api_platform_health():
     """全局采集健康状态中心（只读）：逐平台状态 + 三类分清 + 动态调度，供首页健康小点与统一 Auth Modal。"""
