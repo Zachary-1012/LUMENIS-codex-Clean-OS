@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZBMP Workbench · Z-Brand Core</title>
+<link rel="stylesheet" href="/static/css/zbip-tokens.css?v=1.1.0">
+<style>
+:root{
+  --bg:#FAFAF9; --surface:#FFFFFF; --surface-2:#F5F5F4; --border:#E7E5E4;
+  --text:#1C1917; --text-2:#57534E; --text-3:#A8A29E;
+  --accent:#1C1917; --ok:#16A34A; --warn:#D97706; --danger:#DC2626; --info:#2563EB;
+  --mono:"SF Mono",Consolas,"Courier New",monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit}
+
+/* ===== 顶栏 ===== */
+.topbar{height:44px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:12px;flex-shrink:0}
+.topbar .brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;letter-spacing:-.01em}
+.topbar .brand .dot{width:7px;height:7px;border-radius:999px;background:var(--ok);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.topbar .brand .sep{color:var(--text-3);font-weight:400}
+.topbar .spacer{flex:1}
+.topbar .tb-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;color:var(--text-2);font-size:12px;transition:background .15s}
+.topbar .tb-btn:hover{background:var(--surface-2);color:var(--text)}
+.topbar .tb-btn svg{width:14px;height:14px}
+
+/* ===== 主体三栏 ===== */
+.main{display:flex;height:calc(100vh - 44px);overflow:hidden}
+
+/* 左导航 */
+.sidenav{width:200px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .25s var(--ease)}
+.sidenav.collapsed{width:0;overflow:hidden}
+.sidenav .nav-group{padding:14px 10px 6px}
+.sidenav .nav-title{font-size:10px;font-weight:650;letter-spacing:.08em;color:var(--text-3);text-transform:uppercase;padding:0 8px 6px}
+.sidenav .nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:var(--text-2);font-size:12.5px;cursor:pointer;transition:background .12s,color .12s;width:100%;text-align:left}
+.sidenav .nav-item:hover{background:var(--surface-2);color:var(--text)}
+.sidenav .nav-item.active{background:var(--surface-2);color:var(--text);font-weight:600}
+.sidenav .nav-item svg{width:14px;height:14px;flex:none;color:var(--text-3)}
+.sidenav .nav-item.active svg{color:var(--text)}
+
+/* 中栏：内容+终端 */
+.center{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.content-area{flex:1;overflow:auto;padding:18px 22px;min-height:0}
+.content-area .page-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.content-area .page-head h1{font-size:17px;font-weight:650;letter-spacing:-.02em}
+.content-area .page-head .meta{font-size:11.5px;color:var(--text-3)}
+
+/* 欢迎卡片 */
+.welcome{max-width:720px;margin:40px auto 0;text-align:center}
+.welcome h2{font-size:26px;font-weight:700;letter-spacing:-.03em;margin-bottom:10px}
+.welcome p{color:var(--text-2);font-size:13.5px;margin-bottom:24px;line-height:1.7}
+.welcome .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.welcome .chip{padding:7px 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:12px;color:var(--text-2);cursor:pointer;transition:all .15s}
+.welcome .chip:hover{border-color:var(--text-3);color:var(--text);background:var(--surface-2)}
+
+/* 文件预览 */
+.file-preview{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.file-preview .fp-head{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px}
+.file-preview .fp-head .fp-path{font-family:var(--mono);color:var(--text-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-preview .fp-head .fp-meta{color:var(--text-3);font-size:11px;flex:none}
+.file-preview pre{padding:14px;font-family:var(--mono);font-size:11.5px;line-height:1.6;overflow:auto;max-height:calc(100vh - 280px);white-space:pre;tab-size:2;color:var(--text)}
+
+/* 终端 */
+.terminal{height:200px;background:#1C1917;color:#E7E5E4;font-family:var(--mono);font-size:12px;display:flex;flex-direction:column;border-top:1px solid #000;flex-shrink:0;transition:height .25s var(--ease)}
+.terminal.collapsed{height:30px}
+.terminal .term-head{height:30px;display:flex;align-items:center;padding:0 12px;gap:8px;background:#292524;border-bottom:1px solid #000;flex-shrink:0;cursor:pointer;user-select:none}
+.terminal .term-head .dots{display:flex;gap:5px}
+.terminal .term-head .dots span{width:10px;height:10px;border-radius:999px}
+.terminal .term-head .dots span:nth-child(1){background:#EF4444}
+.terminal .term-head .dots span:nth-child(2){background:#F59E0B}
+.terminal .term-head .dots span:nth-child(3){background:#22C55E}
+.terminal .term-head .term-title{font-size:11px;color:#A8A29E;letter-spacing:.03em}
+.terminal .term-head .spacer{flex:1}
+.terminal .term-head .term-hint{font-size:10.5px;color:#78716C}
+.terminal .term-body{flex:1;overflow-y:auto;padding:8px 12px;line-height:1.55}
+.terminal .term-line{white-space:pre-wrap;word-break:break-all}
+.terminal .term-line.cmd{color:#FBBF24}
+.terminal .term-line.err{color:#F87171}
+.terminal .term-line.ok{color:#86EFAC}
+.terminal .term-input-row{display:flex;align-items:center;gap:6px;padding:4px 12px 8px;border-top:1px solid #292524;flex-shrink:0}
+.terminal .term-prompt{color:#4ADE80;font-family:var(--mono);font-size:12px;flex:none}
+.terminal .term-input{flex:1;background:transparent;border:none;outline:none;color:#E7E5E4;font-family:var(--mono);font-size:12px;caret-color:#4ADE80}
+
+/* 右文件树 */
+.filetree{width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .25s var(--ease)}
+.filetree.collapsed{width:0;overflow:hidden}
+.filetree .ft-head{height:36px;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid var(--border);gap:8px;flex-shrink:0}
+.filetree .ft-head .ft-title{font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--text-3);text-transform:uppercase;flex:1}
+.filetree .ft-head .ft-count{font-size:10.5px;color:var(--text-3);background:var(--surface-2);padding:2px 7px;border-radius:999px}
+.filetree .ft-body{flex:1;overflow:auto;padding:6px 4px}
+.filetree .ft-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text-2);transition:background .1s;user-select:none}
+.filetree .ft-item:hover{background:var(--surface-2)}
+.filetree .ft-item.active{background:var(--surface-2);color:var(--text);font-weight:600}
+.filetree .ft-item .ft-icon{width:14px;height:14px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--text-3)}
+.filetree .ft-item .ft-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filetree .ft-item .ft-size{font-size:10.5px;color:var(--text-3);flex:none}
+.filetree .ft-item.dir .ft-icon{color:var(--info)}
+.filetree .ft-children{margin-left:14px;border-left:1px solid var(--border);padding-left:4px}
+.filetree .ft-loading{padding:10px 12px;color:var(--text-3);font-size:11.5px}
+
+/* 状态点 */
+.dot-s{display:inline-block;width:7px;height:7px;border-radius:999px;flex:none}
+.dot-s.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.dot-s.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(217,119,6,.12)}
+.dot-s.danger{background:var(--danger);box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+.dot-s.info{background:var(--info);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.dot-s.gray{background:var(--text-3)}
+
+/* 响应式 */
+@media(max-width:1023px){
+  .sidenav{position:absolute;z-index:50;height:calc(100vh - 44px);box-shadow:2px 0 12px rgba(0,0,0,.08);transform:translateX(-100%);transition:transform .25s var(--ease)}
+  .sidenav.open{transform:translateX(0)}
+  .filetree{width:240px}
+}
+@media(max-width:760px){
+  .filetree{display:none}
+  .terminal{height:160px}
+  .content-area{padding:14px}
+  .topbar .tb-btn{padding:5px 6px;font-size:0}
+  .topbar .tb-btn svg{width:16px;height:16px}
+  .topbar .brand{font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <button class="tb-btn" id="btnNav" title="切换导航">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="brand"><span class="dot"></span>Z-Brand Core <span class="sep">/</span> ZBMP Workbench</div>
+  <div class="spacer"></div>
+  <button class="tb-btn" id="btnTerm" title="切换终端">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    终端
+  </button>
+  <button class="tb-btn" id="btnTree" title="切换文件树">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    文件
+  </button>
+  <a class="tb-btn" href="/" title="返回 CTH 主页">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    CTH
+  </a>
+</div>
+
+<div class="main">
+  <!-- 左导航 -->
+  <nav class="sidenav" id="sidenav">
+    <div class="nav-group">
+      <div class="nav-title">总览</div>
+      <button class="nav-item active" data-view="welcome">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        工作台
+      </button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">品牌监测</div>
+      <button class="nav-item" data-view="brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        品牌概览
+      </button>
+      <button class="nav-item" data-view="monitor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        实时监测
+      </button>
+      <button class="nav-item" data-view="events">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        事件中心
+      </button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">AI 分析</div>
+      <button class="nav-item" data-view="ai">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1a3 3 0 0 1-3 3h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1-3-3v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/></svg>
+        AI 洞察
+      </button>
+      <button class="nav-item" data-view="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        报告中心
+      </button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">系统</div>
+      <button class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        设置
+      </button>
+    </div>
+  </nav>
+
+  <!-- 中栏 -->
+  <div class="center">
+    <div class="content-area" id="contentArea">
+      <!-- 动态内容 -->
+    </div>
+
+    <!-- 终端 -->
+    <div class="terminal" id="terminal">
+      <div class="term-head" id="termHead">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="term-title">workspace · 只读终端</div>
+        <div class="spacer"></div>
+        <div class="term-hint">ls / pwd / git status / git log / clear · ↑↓ 历史</div>
+      </div>
+      <div class="term-body" id="termBody"></div>
+      <div class="term-input-row">
+        <span class="term-prompt">❯</span>
+        <input class="term-input" id="termInput" placeholder="输入命令，回车执行（只读白名单）" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </div>
+
+  <!-- 右文件树 -->
+  <aside class="filetree" id="filetree">
+    <div class="ft-head">
+      <div class="ft-title">文件树</div>
+      <div class="ft-count" id="ftCount">—</div>
+    </div>
+    <div class="ft-body" id="ftBody">
+      <div class="ft-loading">加载中…</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+  const contentArea = $('#contentArea');
+  const termBody = $('#termBody');
+  const termInput = $('#termInput');
+  const ftBody = $('#ftBody');
+  const ftCount = $('#ftCount');
+  let termHistory = [];
+  let termHistIdx = -1;
+  let currentFile = null;
+
+  /* ===== 工具：fetch 带 Basic Auth（同源 cookie 已带，/api 走 session） ===== */
+  async function api(path, opts){
+    const r = await fetch(path, opts);
+    const t = await r.text();
+    try { return {status:r.status, json:JSON.parse(t)}; }
+    catch(e){ return {status:r.status, text:t}; }
+  }
+
+  /* ===== 终端 ===== */
+  function termPrint(text, cls){
+    const line = document.createElement('div');
+    line.className = 'term-line' + (cls?' '+cls:'');
+    line.textContent = text;
+    termBody.appendChild(line);
+    termBody.scrollTop = termBody.scrollHeight;
+  }
+  async function termRun(cmd){
+    if(!cmd.trim()) return;
+    termPrint('❯ ' + cmd, 'cmd');
+    termHistory.push(cmd);
+    termHistIdx = termHistory.length;
+    if(cmd.trim()==='clear'){ termBody.innerHTML=''; return; }
+    try{
+      const {status, json} = await api('/api/workspace/term', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cmd})
+      });
+      if(json && json.ok){
+        if(json.clear){ termBody.innerHTML=''; return; }
+        const out = (json.output||'').trim();
+        if(out) termPrint(out, json.code===0?'ok':'');
+        else termPrint('(无输出)', '');
+      } else {
+        termPrint((json&&json.error)||('HTTP '+status), 'err');
+      }
+    }catch(e){ termPrint('请求失败: '+e.message, 'err'); }
+  }
+  termInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ const v=termInput.value; termInput.value=''; termRun(v); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); if(termHistIdx>0){termHistIdx--;termInput.value=termHistory[termHistIdx];} }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); if(termHistIdx<termHistory.length-1){termHistIdx++;termInput.value=termHistory[termHistIdx];} else {termHistIdx=termHistory.length;termInput.value='';} }
+    else if(e.key==='Tab'){ e.preventDefault(); }
+  });
+  $('#termHead').addEventListener('click', ()=> $('#terminal').classList.toggle('collapsed'));
+  termPrint('ZBMP Workbench 只读终端 · 项目根 D:\\Taikoo-monitor-new', 'ok');
+  termPrint('可用: ls / pwd / whoami / python --version / git status|log|diff|branch|rev-parse|show / help / clear', '');
+  termPrint('写操作（commit/push/安装/删除）请在本机终端执行。', '');
+
+  /* ===== 文件树 ===== */
+  const expanded = new Set(['']);
+  async function loadTree(path, container){
+    const {json} = await api('/api/workspace/file-tree?path='+encodeURIComponent(path||''));
+    if(!json || !json.ok){ container.innerHTML='<div class="ft-loading">加载失败</div>'; return; }
+    if(path==='') ftCount.textContent = json.counts.dirs+' dirs / '+json.counts.files+' files';
+    container.innerHTML='';
+    (json.items||[]).forEach(it=>{
+      const row = document.createElement('div');
+      row.className = 'ft-item' + (it.type==='dir'?' dir':'');
+      row.innerHTML = `<span class="ft-icon">${it.type==='dir'?'▸':'📄'}</span><span class="ft-name">${it.name}</span>${it.type==='file'?`<span class="ft-size">${fmtSize(it.size)}</span>`:''}`;
+      const childWrap = document.createElement('div');
+      childWrap.className = 'ft-children';
+      childWrap.style.display='none';
+      if(it.type==='dir'){
+        row.addEventListener('click', ()=>{
+          const open = childWrap.style.display==='none';
+          childWrap.style.display = open?'block':'none';
+          row.querySelector('.ft-icon').textContent = open?'▾':'▸';
+          if(open && !childWrap.dataset.loaded){
+            childWrap.innerHTML='<div class="ft-loading">…</div>';
+            loadTree(it.rel, childWrap).then(()=> childWrap.dataset.loaded='1');
+          }
+        });
+      } else {
+        row.addEventListener('click', ()=>{ $$('.ft-item.active').forEach(e=>e.classList.remove('active')); row.classList.add('active'); previewFile(it.rel, it.name, it.size); });
+      }
+      container.appendChild(row);
+      if(it.type==='dir') container.appendChild(childWrap);
+    });
+  }
+  function fmtSize(b){ if(b==null)return''; if(b<1024)return b+'B'; if(b<1048576)return (b/1024).toFixed(1)+'K'; return (b/1048576).toFixed(1)+'M'; }
+  async function previewFile(rel, name, size){
+    currentFile = rel;
+    contentArea.innerHTML = `<div class="page-head"><h1>${name}</h1><span class="meta">${rel} · ${fmtSize(size)}</span></div><div class="file-preview"><div class="fp-head"><span class="fp-path">${rel}</span><span class="fp-meta">只读预览 · 限200KB</span></div><pre>加载中…</pre></div>`;
+    const {json} = await api('/api/workspace/file?path='+encodeURIComponent(rel));
+    const pre = contentArea.querySelector('pre');
+    if(json && json.ok){
+      if(json.binary) pre.textContent = '[二进制文件，不提供文本预览]';
+      else { pre.textContent = json.content; if(json.truncated) pre.textContent += '\n\n… [文件超过200KB，已截断，完整内容请在本机查看]'; }
+    } else pre.textContent = '加载失败: ' + ((json&&json.error)||'未知');
+  }
+  loadTree('', ftBody);
+
+  /* ===== 左导航视图 ===== */
+  const views = {
+    welcome: ()=>{
+      contentArea.innerHTML = `<div class="page-head"><h1>工作台</h1><span class="meta"><span class="dot-s ok"></span> 系统在线 · 只读模式</span></div>
+        <div class="welcome">
+          <h2>你今天想分析什么？</h2>
+          <p>ZBMP Workbench · 品牌监测 + AI 分析 + 开发者工作台。右侧文件树可预览源码，下方终端执行只读命令。</p>
+          <div class="chips">
+            <button class="chip" onclick="document.querySelector('[data-view=brand]').click()">品牌概览</button>
+            <button class="chip" onclick="document.querySelector('[data-view=monitor]').click()">实时监测</button>
+            <button class="chip" onclick="document.querySelector('[data-view=events]').click()">事件中心</button>
+            <button class="chip" onclick="document.querySelector('[data-view=ai]').click()">AI 洞察</button>
+            <button class="chip" onclick="termRun('git status')">终端: git status</button>
+            <button class="chip" onclick="termRun('ls')">终端: ls</button>
+          </div>
+        </div>`;
+    },
+    brand: ()=> placeholder('品牌概览','品牌资产、市场表现、竞品动态汇总（接入中）'),
+    monitor: ()=> placeholder('实时监测','实时舆情采集与主体过滤（接入 CTH 生产数据）'),
+    events: ()=> placeholder('事件中心','事件聚类、风险分级、生命周期管理（接入中）'),
+    ai: ()=> placeholder('AI 洞察','本地 Ollama 驱动的语义分析、趋势解释、报告润色（AI 仅增强层）'),
+    reports: ()=> placeholder('报告中心','日报/专报/品牌报告生成与导出（接入中）'),
+    settings: ()=> placeholder('设置','采集频率、AI 引擎、账号与权限（接入中）'),
+  };
+  function placeholder(title, desc){
+    contentArea.innerHTML = `<div class="page-head"><h1>${title}</h1><span class="meta"><span class="dot-s warn"></span> 开发中</span></div>
+      <div class="welcome"><h2 style="font-size:20px">${title}</h2><p>${desc}</p>
+      <div class="chips"><button class="chip" onclick="document.querySelector('[data-view=welcome]').click()">← 返回工作台</button></div></div>`;
+  }
+  $$('.nav-item').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      $$('.nav-item').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const v = btn.dataset.view;
+      if(views[v]) views[v]();
+      if(window.innerWidth<=1023) $('#sidenav').classList.remove('open');
+    });
+  });
+  views.welcome();
+
+  /* ===== 顶栏切换 ===== */
+  $('#btnNav').addEventListener('click', ()=>{
+    if(window.innerWidth<=1023) $('#sidenav').classList.toggle('open');
+    else $('#sidenav').classList.toggle('collapsed');
+  });
+  $('#btnTerm').addEventListener('click', ()=> $('#terminal').classList.toggle('collapsed'));
+  $('#btnTree').addEventListener('click', ()=> $('#filetree').classList.toggle('collapsed'));
+
+  /* 点击内容区关闭移动端抽屉 */
+  contentArea.addEventListener('click', ()=>{ if(window.innerWidth<=1023) $('#sidenav').classList.remove('open'); });
+})();
+</script>
+</body>
+</html>
