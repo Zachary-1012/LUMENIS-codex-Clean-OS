@@ -1,5 +1,23 @@
 # 变更日志
 
+## [5.9.9-t2] - 2026-09-02（双子星库 Contract：小红书 P0 采集链生产编排落地 + 白名单门控 + 驻场心跳 + 扫码恢复）
+
+### 【P0 施工记录】（AGENTS §16 交付 10 要素）
+| # | 要素 | 内容 |
+|---|---|---|
+| 1 | 修改了什么 | 新增 xhs_p0_orchestrator.py（编排层）：系统启动→Runtime 检查→Session 有效驻场/失效弹扫码→人工扫码→长期驻场→白名单采集→入库→主体过滤；身份硬白名单（XHS_CN_PRIMARY/XHS_RETINAUT）；心跳驻场（30s 探活、连续 3 次失败触发扫码、恢复后 300s 冷却）；app.py 3 处集成（import/start_resident/3 个 API） |
+| 2 | 为什么修改 | 用户指令 ZBC 小红书 P0 直接写代码执行 + 双账号硬白名单 + ZBC=生产执行侧；落实 AGENTS §2/§7/§13/§15 |
+| 3 | 修改了哪些文件 | 新增 xhs_p0_orchestrator.py；修改 app.py；修改 CHANGELOG.md；未触碰子模块与历史杂改 |
+| 4 | 数据库是否变化 | 零数据库变更；复用既有 auth_recovery_center 表 |
+| 5 | 测试了什么 | py_compile、selfcheck 白名单、恢复流程 6 项单测、真实 CDP E2E（Edge 9222+小红书页）、服务实启实测 3 API |
+| 6 | 测试结果 | 全部 PASS；验证中修复 3 个真实 BUG（见风险栏） |
+| 7 | 未完成项 | 真实扫码 E2E 待用户扫码动作；XHS_RETINAUT 配置待提供；未 push |
+| 8 | 风险/已知限制 | 修复 BUG：元组解包 runtime_preflight_check 崩溃×2；用户暂停被误判为 Session 失效触发扫码→新增 USER_PAUSED 独立模式；认证走既有 Basic |
+| 9 | Git commit | 自动保存巡检先行提交主体（545a3ab/a4adf70）；本次人工提交=暂停语义修复+CHANGELOG |
+| 10 | 下一步建议 | 补全 XHS_RETINAUT；解除暂停后真实扫码驻场 E2E；确认后 push；UI/交互/移动端适配线继续 |
+
+
+
 ## [5.9.9-t1] - 2026-09-02（双子星B0阶段：README融合12节母体+四库体系术语升级+跨仓SHA锚点回写+首次双仓同步Push）
 
 ### 【开工记录 05:03】

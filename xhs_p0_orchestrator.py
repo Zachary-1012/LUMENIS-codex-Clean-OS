@@ -249,6 +249,20 @@ def _resident_loop() -> None:
     """
     while True:
         try:
+            # 用户手动暂停时：心跳只记录状态，不判 Session 失效、不触发扫码（守 AGENTS §7）
+            try:
+                from xhs_cookie_bridge import is_user_paused
+                if is_user_paused():
+                    with _STATE.lock:
+                        _STATE.session_ok = False
+                        _STATE.heartbeat_fails = 0
+                        _STATE.heartbeat_last = time.time()
+                        _STATE.last_error = "用户手动暂停采集（不触发扫码恢复）"
+                    time.sleep(HEARTBEAT_INTERVAL)
+                    continue
+            except Exception:
+                pass  # 暂停状态不可用时继续常规探活
+
             healthy = _session_healthy()
             if healthy:
                 with _STATE.lock:
@@ -273,8 +287,17 @@ def get_status() -> dict:
     snap["allowed_identities"] = list(ALLOWED_IDENTITY_NAMES)
     snap["heartbeat_interval"] = HEARTBEAT_INTERVAL
     snap["fail_threshold"] = SESSION_FAIL_THRESHOLD
+    # 用户手动暂停是主动状态，与 Session 失效区分（守 AGENTS §7）
+    try:
+        from xhs_cookie_bridge import is_user_paused
+        paused = is_user_paused()
+        snap["user_paused"] = bool(paused)
+    except Exception:
+        snap["user_paused"] = False
     # 驻场模式描述（供前端展示）
-    if snap["resident_active"]:
+    if snap["user_paused"]:
+        snap["resident_mode"] = "USER_PAUSED"
+    elif snap["resident_active"]:
         snap["resident_mode"] = "RESIDENT_ACTIVE"
     elif snap["session_ok"] is False:
         snap["resident_mode"] = "NEED_SCAN_RECOVERY"
