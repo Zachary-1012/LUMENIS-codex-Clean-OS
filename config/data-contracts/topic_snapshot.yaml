@@ -1,0 +1,32 @@
+# Topic 快照数据契约（DataQualityGate · 对齐五时间模型）
+contract:
+  name: topic_snapshot
+  version: "1.0"
+  owner: "ZBC Topic Engine"
+  status: active
+  rules:
+    - name: topic_not_empty
+      type: not_empty
+      field: topic
+      severity: error
+    - name: view_count_range
+      type: range
+      field: view_count
+      min: 0
+      max: 10000000000
+      severity: warning
+    - name: note_count_range
+      type: range
+      field: note_count
+      min: 0
+      max: 100000000
+      severity: warning
+    - name: snapshot_date_format
+      type: date_format
+      field: snapshot_date
+      format: "%Y-%m-%d %H:%M:%S"
+      severity: error
+    - name: topic_unique_in_batch
+      type: unique
+      field: topic
+      severity: error

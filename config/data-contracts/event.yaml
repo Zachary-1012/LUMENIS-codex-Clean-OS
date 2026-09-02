@@ -1,0 +1,22 @@
+# 事件数据契约（DataQualityGate）
+contract:
+  name: event
+  version: "1.0"
+  owner: "ZBC Event Engine"
+  status: active
+  rules:
+    - name: event_type_valid
+      type: allowed_values
+      field: event_type
+      allowed_values: [propagation_event, risk_event, cluster_event, normal_event]
+      severity: error
+    - name: risk_level_valid
+      type: allowed_values
+      field: risk_level
+      allowed_values: [low, medium, high, critical, unconfirmed]
+      severity: error
+    - name: event_time_format
+      type: date_format
+      field: event_time
+      format: "%Y-%m-%d"
+      severity: warning
