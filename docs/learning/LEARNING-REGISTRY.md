@@ -66,3 +66,13 @@
 | 来源 | 资产 | 结论 | 状态 | 关联 |
 |---|---|---|---|---|
 | 智谱 glm-5.3 架构评审（ZHIPU-ENGINEERING-REVIEW-20260903.md） | 1.CTF: risk_engine 熔断状态为内存态，重启即丢→冷却违约/风控风险，需崩溃持久化；2.SQLite 单写+54表+时序快照，需 VACUUM INTO 定期备份+metric 独立DB；3.CDP 端口/代码沙箱/Flask 绑定=攻击面，须绑 127.0.0.1；4.统一时间源(utcnow)+单一snapshot写入；5.browser_lifecycle 统一CDP生命周期 | ADOPT（逐项最小落地） | P0-A / P0-G / 备份 / 安全 |
+
+## 四、智谱源码级交叉验证方法（2026-09-03，per_call 1 次）
+
+- **Research ID**：LR-20260903-002
+- **来源**：智谱 glm-5.3 对 ZBC 脱敏源码头（docstring/import/关键签名）的逐项核对
+- **方法（可复用，已脚本化思想）**：把 CAPABILITY-REGISTRY 声称"✅已落地"的 Capability + 对应文件真实源码头喂给大模型，要求"只依据证据、不臆测、无法确认标需补证"，输出 OK/疑似失实/需补证 三项结论。**防假闭环（文档说完成、代码没完成）的关键手段**。
+- **发现**：① risk_engine 声称"六态生命周期"与源码不符——真实为 `state.py` 七态(HEALTHY/WARNING/COOLDOWN/PAUSED/AUTH_REQUIRED/NEED_VERIFY/NETWORK_ERROR) + `risk_engine.py` 五风险档(NORMAL/WATCH/THROTTLED/COOLDOWN/CIRCUIT_OPEN)，已按源码修正 CAPABILITY-REGISTRY；② dev_exec "JSONL审计"头部无据但实现真实存在(data/audit/dev_exec_audit.jsonl)→Registry 正确；③ 其余 8 项 OK。
+- **教训**：①给模型的源码片段必须**真实包含内容**（脚本 bug 曾导致传空→模型正确拒绝臆断）；②"源码头"足以初判，但涉及状态枚举/审计逻辑需看实现体；③文档状态口径必须与源码一致，不一致时**以源码为准改文档**。
+- **沉淀**：`docs/learning/P0B-CAPABILITY-CROSSCHECK-20260903.md`
+- **状态**：ADOPT（方法）；发现已修复

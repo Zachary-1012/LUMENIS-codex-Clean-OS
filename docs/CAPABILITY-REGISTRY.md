@@ -18,7 +18,7 @@
 
 | Capability | Owner | 文件 | Status | 证据 |
 |---|---|---|---|---|
-| 风险引擎六态生命周期 | ZBC | `collector_guard/risk_engine.py` | ✅ | NORMAL→ADAPTIVE→COOLDOWN→FROZEN→RECOVERING→RECOVERED，`lifecycle_state/action`+`LIFECYCLE_ACTIONS` |
+| 采集风险引擎（风险分档→采集动作映射） | ZBC | `collector_guard/risk_engine.py` + `collector_guard/state.py` | ✅ | 风险分 0-100 五档 `NORMAL→WATCH→THROTTLED→COOLDOWN→CIRCUIT_OPEN`（阈值可由 `config/collector_guard.yaml` 覆盖）；映射 `CollectState` 七态 `HEALTHY/WARNING/COOLDOWN/PAUSED/AUTH_REQUIRED/NEED_VERIFY/NETWORK_ERROR`；熔断=CIRCUIT_OPEN（停止任务走恢复检测，不无限重试）。⚠️ 2026-09-03 智谱交叉验证修正：原"六态生命周期(NORMAL→ADAPTIVE→FROZEN…)"口径与源码不符，已改为源码真实口径（七态+五档） |
 | 指标快照时序 | ZBC | `database.py` + `data_query_api.py` | ✅ | `metric_snapshots` 表 + `/api/metric-trend`，五时间模型 |
 | 采集执行 Guard | ZBC | `collector_guard/` | ✅ | retry/backoff/heartbeat/last_success_at |
 
