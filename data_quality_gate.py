@@ -175,3 +175,24 @@ class DataQualityGate:
                         seen[key] = True
             results.append(res)
         return results
+
+    def enrich_quality_record(self, contract_name, record):
+        """生产接线：把质量校验结果转为 DB data_quality_* 标记字段（软门，不拒绝写入）。
+
+        返回 dict（可直接并入写入记录，数据零丢失）：
+          data_quality_status: ok / warning / error
+          data_quality_score:  100 / 90 / max(0, 100-10*nerror)
+          data_quality_errors: 失败明细摘要（限 5 条）
+        """
+        res = self.validate(contract_name, record)
+        nerr = len(res["errors"])
+        nwarn = len(res["warnings"])
+        if nerr == 0 and nwarn == 0:
+            status, score = "ok", 100
+        elif nerr == 0:
+            status, score = "warning", 90
+        else:
+            status, score = "error", max(0, 100 - 10 * nerr)
+        brief = ["%s.%s:%s" % (e["rule"], e["field"], e["message"]) for e in res["errors"][:5]]
+        return {"data_quality_status": status, "data_quality_score": score,
+                "data_quality_errors": "|".join(brief)}

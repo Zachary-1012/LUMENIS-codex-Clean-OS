@@ -75,3 +75,16 @@ def test_condition_rule_skip(gate):
     # condition 仅当条件字段等于值时应用（用 note 契约无 condition，验证不报错）
     res = gate.validate("note", {})
     assert res["valid"] is False  # 缺 title/url/date 都 error
+
+
+def test_enrich_quality_record(gate):
+    # 合法记录 -> ok/100
+    r = gate.enrich_quality_record("note", {
+        "title": "ok", "url": "https://x.com/a", "risk_level": "low",
+        "publish_date": "2026-08-31"})
+    assert r["data_quality_status"] == "ok" and r["data_quality_score"] == 100
+    # 缺 title/url/date -> error，分数降低，摘要含明细
+    r2 = gate.enrich_quality_record("note", {})
+    assert r2["data_quality_status"] == "error"
+    assert r2["data_quality_score"] < 100
+    assert "title" in r2["data_quality_errors"]
