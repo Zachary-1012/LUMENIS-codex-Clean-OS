@@ -878,3 +878,18 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 ### 安全收口复核（GAP-04 / 对账 GAP-P1-12 / OSAI CTR-SEC-P0）
 - 三套 run-code（/api/developer/run、/api/config/run-code、/api/dev/run-code）确认全部经 _dev_exec_guard：生产 ZBC_DEV_EXEC 默认 0 一律拒绝（deny-by-default 硬门槛，比 CTR-SEC「Task-bound 为唯一硬门槛」更保守，生产无服务端执行面），开发态 opt-in 仍拦危险构造、JS 分支不写 static/js；tests/test_dev_exec_guard.py 9 测复跑全绿。结论：该项已真实闭环，无需新增代码；OSAI 提议的「沙箱 + Task-bound」属开发态纵深防御，登记 BACKLOG 不在本轮打开。
 - 结果：统一入口 167 passed（164→167）。DB 零变更、生产 8201 未碰。
+
+
+---
+
+## 2026-09-02 13:46 · P1-3 safe_collection 无公害采集契约层落地（旁路新增，零网络/不改现役采集）
+
+### 决策
+- 对照 OSAI CASE-2026-0013 / src/contracts/safe_collection.py（学契约不复制代码，schema 独立为 zbc.collection-audit.v1），选择「ZBC 落地合规采集契约」而非放宽账号/代理池：dual_pool 只允许 internal/侧端，public_web 下池化/写入被 policy 硬拦截。
+### 新增（platform_adapters/safe_collection.py，纯离线、import 无副作用、不串现役主链）
+- PII 脱敏 redact_text/redact_record（字段级 + 手机/邮箱/微信/QQ 文本级，深拷贝不改原、note_id 内容标识保留、价格短号不误伤）+ sanitize 递归剔除 cookie/token/api_key 等凭证键。
+- CollectionHygienePolicy（默认只读/单本机账号/禁双池/≥2s 限速/日上限 200/批 20/写入需人工，validate/is_safe）+ RateGovernor（不 sleep、时钟可注入的 permit/daily_cap/batch，assess_risk_signal 与 collector_guard 七态信号对齐：300012/验证码/登录过期→stop）。
+- build/validate_collection_audit（provenance：audit_id/策略快照/计数/状态，凭证不搭车，非人工触发须 automation_justification）+ run_offline_pipeline（限速判定→脱敏→审计，遇风控停止不伪装成正常 0 条）。
+### 测试
+- 新增 tests/test_safe_collection_contract.py 10 测全过；统一入口 177 passed（167→177）。
+- 边界：本层不替代 collector_guard 在线熔断（互补：在线熔断 vs 离线合规/证据）；当前为旁路，真实采集链接管须先旁路验证 + Release Gate；详情/评论级与大批量稳定性仍 NOT_VERIFIED。DB 零变更、生产 8201 未碰。
