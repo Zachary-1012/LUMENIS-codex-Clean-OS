@@ -430,7 +430,31 @@ input{font-family:inherit}
       }catch(e){ contentArea.innerHTML = '<div class="page-head"><h1>事件中心</h1></div><div class="welcome"><p>加载异常: '+e.message+'</p></div>'; }
     },
     ai: ()=> placeholder('AI 洞察','本地 Ollama 驱动的语义分析、趋势解释、报告润色（AI 仅增强层）'),
-    reports: ()=> placeholder('报告中心','日报/专报/品牌报告生成与导出（接入中）'),
+    reports: async ()=>{
+      contentArea.innerHTML = '<div class="page-head"><h1>报告中心</h1><span class="meta"><span class="dot-s ok"></span> 接入 CTH 生产数据</span></div><div class="welcome"><div class="ft-loading">加载中…</div></div>';
+      try{
+        const {json} = await api('/api/reports');
+        const count = (json && json.count) || 0;
+        const types = [
+          {name:'每日舆情日报', desc:'每日自动汇总监测数据、风险事件、话题趋势', status:'active'},
+          {name:'专项舆情报告', desc:'针对特定事件/话题的深度分析报告', status:'active'},
+          {name:'品牌传播周报', desc:'品牌声量、传播路径、竞品对比周报', status:'dev'},
+          {name:'AI 智能摘要', desc:'本地 Ollama 驱动的报告文字润色与趋势解释', status:'dev'},
+        ];
+        const typeHtml = types.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span class="dot-s ${t.status==='active'?'ok':'warn'}"></span>
+          <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">${t.name}</div><div style="font-size:11.5px;color:var(--text-3);margin-top:2px">${t.desc}</div></div>
+          <span style="font-size:11px;font-weight:650;color:${t.status==='active'?'var(--ok)':'var(--warn)'}">${t.status==='active'?'可用':'开发中'}</span>
+        </div>`).join('');
+        contentArea.innerHTML = '<div class="page-head"><h1>报告中心</h1><span class="meta"><span class="dot-s ok"></span> 已生成 '+count+' 份 · 报告生成在 CTH 主页</span></div>'
+          +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">'
+          +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-3);font-weight:600">已生成报告</div><div style="font-size:26px;font-weight:700">'+count+'</div><div style="font-size:11px;color:var(--text-3);margin-top:4px">/api/reports</div></div>'
+          +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-3);font-weight:600">可用报告类型</div><div style="font-size:26px;font-weight:700">2 / 4</div><div style="font-size:11px;color:var(--text-3);margin-top:4px">日报+专报可用，周报+AI开发中</div></div></div>'
+          +'<div class="file-preview" style="max-height:none"><div class="fp-head"><span class="fp-path">报告类型</span><span class="fp-meta">CTH 生产能力 · 只读</span></div>'
+          +'<div style="padding:8px 14px">'+typeHtml+'</div></div>'
+          +'<div style="margin-top:14px;text-align:center"><a href="/v4/reports" style="display:inline-block;padding:9px 20px;background:var(--accent);color:#fff;border-radius:8px;font-size:12.5px;font-weight:600;text-decoration:none">前往 CTH 报告页生成报告 →</a></div>';
+      }catch(e){ contentArea.innerHTML = '<div class="page-head"><h1>报告中心</h1></div><div class="welcome"><p>加载异常: '+e.message+'</p></div>'; }
+    },
     settings: ()=> placeholder('设置','采集频率、AI 引擎、账号与权限（接入中）'),
   };
   function placeholder(title, desc){
