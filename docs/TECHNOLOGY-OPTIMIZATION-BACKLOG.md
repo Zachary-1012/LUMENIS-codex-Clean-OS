@@ -7,12 +7,14 @@
 ### T-P0-1 统一可重复测试入口（关联 GAP-01/02/18）
 - 当前：36 个 test_ 仅 5 个规范 pytest（本轮实测 50 passed），31 个脚本；`pytest tests` 被顶层 sys.exit 打成 INTERNALERROR。
 - 候选：pytest 为唯一入口（pytest-dev/pytest MIT 14462★，已在用），脚本迁 scripts/ 或加 test_ 函数；分层 L0 Syntax→L1 Import→L2 Startup→L3 Health→L4 API→L5 DB→L6 Page→L7 E2E→L8 Browser→L9 Restart→L10 Regression。
-- 为什么：Release Gate 需要一条命令产出可归档证据，现状无法做到。性能：无；稳定性：高（回归可重复）；复杂度：下降（入口统一）；迁移成本：中（改 31 个脚本形态，不改业务）；风险：低（只动测试）。**现在做：是（上线前）。**
+- 为什么：Release Gate 需要一条命令产出可归档证据。性能：无；稳定性：高（回归可重复）；复杂度：下降（入口统一）；迁移成本：中（改 31 个脚本形态，不改业务）；风险：低（只动测试）。
+- **✅ 已落地（2026-09-03，ZELL 审计实证）**：pytest.ini 已配 GAP-01 统一入口（testpaths=tests / python_files=test_*.py / python_functions=test_*），tests/conftest.py 有 pytest_ignore_collect 自动跳过纯脚本式；全量回归 400 passed 一次命令产出可归档证据。INTERNALERROR 历史问题已消除（collect + 全量实测均通过）。**状态：✅ 完成。**
 
 ### T-P0-2 红线 Owner 函数级直接单测（关联 GAP-02）
 - 当前：subject_hit 有 e2e 覆盖；根 risk_engine / aggregate_events / build_daily_report 仅集成级。
 - 候选：纯函数 pytest 用例 + 黄金样例（含 publish_datetime/captured_at、主体边界、空输入、300012）。
-- 收益：红线改动秒级回归；复杂度略增（只加测试）；迁移成本低；风险无（只读断言）。**现在做：是。**
+- 收益：红线改动秒级回归；复杂度略增（只加测试）；迁移成本低；风险无（只读断言）。
+- **✅ 已落地（2026-09-03，ZELL 审计实证）**：tests/test_redline_units.py（pytest.mark.redline）已覆盖 subject_hit 黄金样例（正向/跨城同名一票否决/混合优先/空输入/五字段/大小写）、_subject_sql_and_values 结构自洽与参数一致、subject_hit_note/canonical_text、risk_engine.build_daily_report 入口委托稳定；另有 tests/test_subject_redline.py（23 项脚本断言）+ test_subject_dual_dimension.py。**状态：✅ 完成。**
 
 ### T-P0-3 保持现栈的明确决定（防反复）
 - Flask（BSD,72k★）/SQLite/APScheduler（MIT 7619★）/Playwright（Apache-2.0 14965★）继续；**显式拒绝**在此阶段迁移 FastAPI/Django/PostgreSQL/React/Celery/Scrapy。理由：迁移风险远大于收益，当前目标是稳定上线。**现在做：记录为架构决定（ADR），不写迁移代码。**
