@@ -15,14 +15,15 @@ window.addEventListener('unhandledrejection',function(e){
 /* ===== 全局fetch拦截器：自动添加Basic Auth认证头 ===== */
 (function(){
   const _origFetch = window.fetch;
-  const _auth = window.__Z_AUTH;
+  // 动态读取：__Z_AUTH 由 /api/auth/config 异步注入，不能加载时常量快照（config返回前会锁死空值→401）
+  const _getAuth = ()=> (window.__Z_AUTH || (window._zbAuth?('Basic '+btoa(window._zbAuth.user+':'+window._zbAuth.pass)):''));
   window.fetch = function(input, init){
     try {
       if (input instanceof Request) {
         // 如果input是Request对象，需要创建新的Request
         const url = input.url.replace(/^https?:\/\/[^@]+@/, ''); // 移除URL中的credentials
         const headers = new Headers(input.headers);
-        if(!headers.has('Authorization')) headers.set('Authorization', _auth);
+        if(!headers.has('Authorization')) headers.set('Authorization', _getAuth());
         const newInit = {
           method: input.method,
           headers: headers,
@@ -43,7 +44,7 @@ window.addEventListener('unhandledrejection',function(e){
         // input是URL字符串
         init = init || {};
         const headers = new Headers(init.headers || {});
-        if(!headers.has('Authorization')) headers.set('Authorization', _auth);
+        if(!headers.has('Authorization')) headers.set('Authorization', _getAuth());
         init.headers = headers;
         // 移除URL中可能包含的credentials
         if(typeof input === 'string' && input.includes('@')) {

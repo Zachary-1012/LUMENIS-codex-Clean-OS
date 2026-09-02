@@ -2,42 +2,77 @@
 <html lang="zh-CN">
 <head>
 <script>
-/* ===== 全局fetch凭证修复：剥离URL中的Basic Auth凭证，解决"Request cannot be constructed from a URL that includes credentials" ===== */
+/* ===== 全局 fetch/XHR 凭证层：①剥离URL内嵌Basic Auth避免构造报错 ②同源请求统一补Authorization，消除浏览器对Basic Auth重放不一致导致的随机401 ===== */
 (function(){
+  // 最早期先初始化全局凭证：app.js 等下游 fetch 包装器与 api() 直接读 window.__Z_AUTH，
+  // 若不在这里赋值，它们会快照到 undefined 并给请求设无效 Authorization 导致 401。
+  (function initGlobalAuth(){
+    var v=window.__Z_AUTH;
+    if(!v){ try{v=sessionStorage.getItem('zb_auth')}catch(e){} }
+    if(!v){ try{v='Basic '+btoa('Zachary:Zachary01')}catch(e){v='Basic '+('WmFjaGFyeTp6YWNoYXJ5MDE=')} }
+    window.__Z_AUTH=v;
+    if(!window._zbAuth) window._zbAuth={user:'Zachary',pass:'Zachary01'};
+  })();
+  // 凭证来源优先级：window._zbAuth(运行时设置) > sessionStorage > 本地默认(单机固定账户，可被覆盖)；仅注入同源请求
+  function getAuth(){
+    try{
+      if(window._zbAuth && window._zbAuth.user) return 'Basic '+btoa(window._zbAuth.user+':'+window._zbAuth.pass);
+      var s=sessionStorage.getItem('zb_auth'); if(s) return s;
+      if(window.__Z_AUTH) return window.__Z_AUTH;
+      return 'Basic '+btoa('Zachary:Zachary01'); // 本地单机默认，登录后可用 setZbAuth 覆盖
+    }catch(e){ return ''; }
+  }
+  window.setZbAuth=function(user,pass,remember){
+    window._zbAuth={user:user,pass:pass};
+    var v='Basic '+btoa(user+':'+pass); window.__Z_AUTH=v;
+    if(remember){ try{sessionStorage.setItem('zb_auth',v)}catch(e){} }
+  };
+  function sameOrigin(u){ try{ return new URL(u,location.origin).origin===location.origin; }catch(e){ return true; } }
+  function stripCred(u){
+    if(typeof u==='string'){
+      if(u.startsWith('/')&&!u.startsWith('//')) return location.origin+u;
+      if(u.includes('@')&&/^https?:\/\//.test(u)) return u.replace(/^(https?:\/\/)[^@/]+@/,'$1');
+      return u;
+    } return u;
+  }
   const _origFetch = window.fetch.bind(window);
   window.fetch = function(input, init){
     try{
-      if(typeof input === 'string'){
-        // 相对路径：用干净的origin构建（location.origin不含凭证）
-        if(input.startsWith('/') && !input.startsWith('//')){
-          input = location.origin + input;
+      init = init || {};
+      var url = (typeof input==='string')?input:(input&&input.url?input.url:'');
+      url = stripCred(url);
+      if(typeof input==='string'){ input=url; }
+      else if(input&&input.url){ input=new Request(url,input); }
+      if(sameOrigin(url)){
+        var hs=init.headers||(input&&input.headers)||{};
+        var has=false;
+        try{
+          if(hs instanceof Headers) has=hs.has('Authorization');
+          else if(Array.isArray(hs)) has=hs.some(function(x){return String(x[0]).toLowerCase()==='authorization'});
+          else has=Object.keys(hs).some(function(k){return k.toLowerCase()==='authorization'});
+        }catch(e){}
+        if(!has){
+          var auth=getAuth();
+          if(auth){
+            if(hs instanceof Headers){ hs.set('Authorization',auth); init.headers=hs; }
+            else if(input&&input.headers&&(input.headers instanceof Headers)){ input.headers.set('Authorization',auth); }
+            else { init.headers=Object.assign({}, hs, {'Authorization':auth}); }
+          }
         }
-        // 完整URL：剥离user:password@凭证
-        else if(input.includes('@') && /^https?:\/\//.test(input)){
-          input = input.replace(/^(https?:\/\/)[^@/]+@/, '$1');
-        }
-      } else if(input && input.url && input.url.includes('@')){
-        // Request对象：重建干净URL
-        const cleanUrl = input.url.replace(/^(https?:\/\/)[^@/]+@/, '$1');
-        input = new Request(cleanUrl, input);
       }
-    }catch(e){ console.warn('[fetch-fix]', e); }
+    }catch(e){ console.warn('[fetch-auth]', e); }
     return _origFetch(input, init);
   };
-  // 同样修复XMLHttpRequest
   const _origOpen = XMLHttpRequest.prototype.open;
+  const _origSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function(method, url){
-    try{
-      if(typeof url === 'string'){
-        if(url.startsWith('/') && !url.startsWith('//')){
-          url = location.origin + url;
-        } else if(url.includes('@') && /^https?:\/\//.test(url)){
-          url = url.replace(/^(https?:\/\/)[^@/]+@/, '$1');
-        }
-        arguments[1] = url;
-      }
-    }catch(e){}
+    this.__zbSame=sameOrigin(url);
+    try{ arguments[1]=stripCred(url); }catch(e){}
     return _origOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send=function(body){
+    try{ if(this.__zbSame){ this.setRequestHeader('Authorization',getAuth()); } }catch(e){}
+    return _origSend.apply(this,arguments);
   };
 })();
 </script>
@@ -64,7 +99,8 @@
   function _restoreCached() {
     var cached = '';
     try { cached = sessionStorage.getItem('Z_AUTH_B64') || ''; } catch(e){}
-    window.__Z_AUTH = cached ? ('Basic ' + cached) : '';
+    if (cached) { window.__Z_AUTH = 'Basic ' + cached; }
+    // 缓存为空时不清空 head 已注入的兜底凭证（避免 auth/config 返回前的首屏竞态空窗）；后端值返回后仍会权威覆盖
     return cached;
   }
   // 首屏立即用缓存恢复（同步，避免 JS 加载后首个请求无凭证）

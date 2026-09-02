@@ -1755,6 +1755,116 @@
         ]
       }
     },
+    "/api/collector/status": {
+      "get": {
+        "operationId": "collection.api_collector_status",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "采集器状态查询",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collect/schedule-status": {
+      "get": {
+        "operationId": "collection.api_collect_schedule_status",
+        "tags": [
+          "api/collect"
+        ],
+        "parameters": [],
+        "summary": "数据更新卡片真实状态：聚合额度/熔断/运行任务/今日入库/下次计划，区分",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/start": {
+      "post": {
+        "operationId": "collection.api_collector_start",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "启动采集任务",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/stop": {
+      "post": {
+        "operationId": "collection.api_collector_stop",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "停止采集任务",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/history": {
+      "get": {
+        "operationId": "collection.api_collector_history",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "采集历史记录",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
     "/api/internal-browser/accounts": {
       "get": {
         "operationId": "internal_browser.api_accounts",
@@ -3714,116 +3824,6 @@
         ],
         "parameters": [],
         "summary": "AI关键词提取（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）",
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/collector/status": {
-      "get": {
-        "operationId": "api_collector_status",
-        "tags": [
-          "api/collector"
-        ],
-        "parameters": [],
-        "summary": "采集器状态查询",
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/collect/schedule-status": {
-      "get": {
-        "operationId": "api_collect_schedule_status",
-        "tags": [
-          "api/collect"
-        ],
-        "parameters": [],
-        "summary": "数据更新卡片真实状态：聚合额度/熔断/运行任务/今日入库/下次计划，区分",
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/collector/start": {
-      "post": {
-        "operationId": "api_collector_start",
-        "tags": [
-          "api/collector"
-        ],
-        "parameters": [],
-        "summary": "启动采集任务",
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/collector/stop": {
-      "post": {
-        "operationId": "api_collector_stop",
-        "tags": [
-          "api/collector"
-        ],
-        "parameters": [],
-        "summary": "停止采集任务",
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/collector/history": {
-      "get": {
-        "operationId": "api_collector_history",
-        "tags": [
-          "api/collector"
-        ],
-        "parameters": [],
-        "summary": "采集历史记录",
         "security": [
           [
             {
