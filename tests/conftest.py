@@ -17,6 +17,13 @@ TEST_CONFIG = {
     'auth_pass': 'ID082610',
 }
 
+# 测试鉴权隔离（P1-9 权限审计修复）：
+# app.py 在 import 时经 _load_dotenv 读取 .env，但只填充「环境变量中不存在」的 key。
+# 因此在 import app 之前强制注入测试专用凭证，使测试自洽、可重复、不依赖 .env 真实密码，
+# 也避免真实生产凭证被测试日志/断言回显。dev_exec_guard 等鉴权用例据此拿到一致凭证。
+os.environ['TAIKOO_AUTH_USER'] = TEST_CONFIG['auth_user']
+os.environ['TAIKOO_AUTH_PASSWORD'] = TEST_CONFIG['auth_pass']
+
 @pytest.fixture(scope='session')
 def app():
     """创建Flask应用实例"""

@@ -53,6 +53,7 @@ _CDP_RISK_STATES = ('IP_RISK_OR_300012', 'NEED_VERIFY')
 
 
 _XHS_GUARD = None
+_XHS_RISK = None
 
 
 def _get_xhs_guard():
@@ -64,6 +65,62 @@ def _get_xhs_guard():
         base = float(os.getenv('XHS_GUARD_BASE_INTERVAL', '6'))
         _XHS_GUARD = CollectorGuard('xiaohongshu', enabled=enabled, base_interval=base)
     return _XHS_GUARD
+
+
+def _get_xhs_risk_engine():
+    """懒加载连续风险评分引擎（P1-4 接入）。
+
+    与 CollectorGuard 的离散七态互补：RiskEngine 给出 0-100 连续风险分并随
+    成功/健康响应衰减、随时间回落，当风险档位进入 COOLDOWN/CIRCUIT_OPEN 时
+    触发熔断，避免单一信号漏判导致无限重试。
+    默认开启（TAIKOO_RISK_ENGINE=0/false 关闭，关闭时行为与原链路完全一致）。
+    """
+    global _XHS_RISK
+    if _XHS_RISK is None:
+        enabled = os.getenv('TAIKOO_RISK_ENGINE', '1').lower() not in ('0', 'false', 'no', 'off')
+        if enabled:
+            from collector_guard.risk_engine import RiskEngine
+            _XHS_RISK = RiskEngine()
+        else:
+            _XHS_RISK = False
+    return _XHS_RISK or None
+
+
+# 采集结果六态 -> RiskEngine 风险因子（BLOCKED/CAPTCHA/AUTH 为硬信号，NETWORK 累加；
+# SUCCESS/EMPTY 属正常响应，不加分；EMPTY 与真实无内容一致，交给 guard 节流）
+_RISK_FACTOR_BY_STATE = {
+    'BLOCKED': 'security_page',
+    'CAPTCHA': 'security_page',
+    'AUTH_REQUIRED': 'login_error',
+    'NETWORK_ERROR': 'http_error',
+}
+
+
+def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
+    """把单次关键词采集结果喂给 RiskEngine（P1-4 接入）。
+
+    返回 True 表示风险引擎判定熔断，调用方应停止后续关键词请求。
+    risk 为 None（Feature Flag 关闭）时恒返回 False，不改变原链路行为。
+    """
+    if risk is None:
+        return False
+    state = classify_collect_state(error=error, guard_state=guard_state, count=count)
+    factor = _RISK_FACTOR_BY_STATE.get(state)
+    if factor:
+        score, band, st = risk.record_failure(factor)
+    else:
+        score, band, st = risk.record_success()
+    snap = risk.snapshot()
+    if snap['should_stop_request']:
+        results.append({
+            'keyword': kw, 'count': count,
+            'error': error or '', 'guard_state': guard_state or '',
+            'risk_score': snap['risk_score'], 'risk_band': snap['band'],
+            'tier': 'core' if is_core else 'expand',
+        })
+        print(f"[Collector]   !! 风险引擎熔断({snap['band']}, score={snap['risk_score']})，停止后续关键词请求")
+        return True
+    return False
 
 
 def _cdp_online(timeout=2.0):
@@ -270,6 +327,10 @@ def collect_all(keywords=None, max_scroll=4):
             break
         count = result.get('total', 0)
         error = result.get('error', '')
+        # ── RiskEngine 连续风险分接入（P1-4）：与 guard 七态互补，硬信号/累积风险触发熔断 ──
+        if _feed_risk_engine(_get_xhs_risk_engine(), error=error, guard_state=getattr(gr, 'state', ''),
+                             count=count, kw=kw, is_core=is_core, results=collection_results):
+            break
         collection_results.append({'keyword': kw, 'count': count, 'error': error, 'tier': 'core' if is_core else 'expand'})
         print(f"[Collector]   -> {count} 条 {'(错误: '+error+')' if error else ''}")
 

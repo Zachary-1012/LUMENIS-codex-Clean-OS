@@ -71,6 +71,7 @@ class RiskEngine:
         self.consecutive_failures = 0
         self.last_update = time.time()
         self.last_factors = []
+        self._last_band = 'NORMAL'  # 最近一次操作的档位（硬信号优先，供 snapshot 反映）
 
     def _time_decay(self, now):
         elapsed = max(0.0, now - self.last_update)
@@ -100,6 +101,7 @@ class RiskEngine:
         self.last_update = now
         self.last_factors.append((now, factor))
         band = HARD_SIGNAL_BAND.get(factor) or self.band_of()
+        self._last_band = band
         return self.score, band, BAND_TO_STATE[band]
 
     def record_success(self):
@@ -110,11 +112,14 @@ class RiskEngine:
         self.score = max(0, self.score - self.decay_per_success)
         self.last_update = now
         band = self.band_of()
+        self._last_band = band
         return self.score, band, BAND_TO_STATE[band]
 
     def snapshot(self):
         self._time_decay(time.time())
-        band = self.band_of()
+        # 以最近一次操作的档位为准：硬信号（安全页/登录失效/限流）即使分数不高也必须持续反映，
+        # 直到一次 record_success 重算（成功/健康响应代表风险解除）。
+        band = self._last_band
         return {
             'risk_score': self.score,
             'band': band,
