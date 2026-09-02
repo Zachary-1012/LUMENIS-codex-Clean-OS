@@ -21,3 +21,33 @@
   - 另一套空导航骨架（概览/品牌/监测/洞察/产出/系统，0 side-item，不在 .side-nav 内、视觉不可见）来源待查，暂不影响。
   - 本层与 Step3/Step4 同在 Staging，**尚未合 main**，等最终验收后一次性合并切生产。
 
+
+
+## 2026-09-02 ZBMP Workbench 工作台完整建设（7视图+终端+文件树，Staging 8301+生产8201静态可用）
+
+- **方式**：新增独立页面 static/zbmp-workbench.html，不影响 CTH 主页；布局=左4分组导航+中主内容+下方黑底只读终端+右侧文件树；侘寂黑白灰+语义小圆点。
+- **后端 API**：新增 /api/workspace/file（只读文件预览，限200KB/二进制拒绝/敏感文件403/防路径穿越），插入 app.py L5313；复用已有 /api/workspace/file-tree 和 /api/workspace/term（只读白名单 ls/pwd/git只读/clear）。
+- **7个视图全部接入真实数据（已实测 Playwright）**：
+  1. 工作台：欢迎页'你今天想知道什么？'+快捷按钮
+  2. 品牌概览：6 KPI（总笔记604/高风险22/正面310/负面53/总互动289970/总点赞159466）+热门话题TOP8
+  3. 实时监测：30条预警（红高风险/橙上升过快/蓝高影响力小圆点+标题+meta）
+  4. 事件中心：3 KPI（活跃152/近期负面10/总数50）+25条事件（风险点+状态点+风险分+摘要）
+  5. AI洞察：4 KPI+6项AI能力（4可用/2开发中）+云端Provider（通义/OpenAI）+AI仅增强层定位说明
+  6. 报告中心：报告能力状态（日报/专报可用，周报/AI开发中）+跳转CTH报告页
+  7. 设置：系统设置（版本5.9.9/AI/Auth/自动采集全开启）+采集器状态（9222运行中/今日采集2次）+只读说明+跳转CTH设置页
+- **CTH主页入口**：顶栏新增'ZBMP 工作台'按钮（▦ icon），点击跳转 /static/zbmp-workbench.html。
+- **终端**：黑底三色圆点，只读白名单命令，↑↓历史切换，可折叠，调用 /api/workspace/term。
+- **文件树**：右侧可展开目录树，点击文件调用 /api/workspace/file 预览内容，敏感文件（.env/cookie/token等）403拒绝。
+- **响应式**：桌面1440+手机390/430实测无横向溢出；≤1023抽屉导航，≤760隐藏文件树+顶栏只留icon。
+- **AI视图防阻塞**：用 Promise.allSettled + 4秒超时替代 Promise.all，防止云端API慢导致页面卡死。
+- **测试**：Playwright独立chromium双视口（1440/390/430）实测7视图全部渲染成功、数据真实、0 console error；全量pytest主体口径红线29 passed；import OK；双healthz 200；只读路由安全。
+- **Evidence**：docs/UI/evidence/refine_audit/（zbmp_desk/zbmp_mobile/zbmp_monitor_real/zbmp_brand_real/zbmp_events_real/zbmp_ai_real/zbmp_settings_real/cth_topbar_zbmp_entry/zbmp_workbench_final/zbmp_mobile_390/zbmp_mobile_430 等截图）。
+- **Git**：全部在 main 分支开发并推送，本地=远程=ab43ad9（含自动巡检提交）；一任务一commit，敏感正则反查通过，DCC子模块未add。
+- **未完成 / 未实测（如实记录）**：
+  - 8201生产需重启才能加载 /api/workspace/file 和 /api/workspace/term 新API（静态页面已可用，6个数据视图用现有CTH API全可用）；按'不允许关闭'约定未主动重启8201。
+  - ZBMP工作台的AI洞察KPI因云端/api/ai/status响应慢（>4秒）显示降级状态（AI能力和Provider硬编码数据正常显示）。
+  - 终端Tab补全仅preventDefault，未实现实际补全；↑↓历史已实现。
+  - 文件树搜索/过滤未实现；侧栏搜索与Ctrl+K合并未做。
+  - Dark模式未迁移到ZBMP工作台（当前仅Light主题）。
+  - Feature Registry / FEATURE-FINAL-VERIFICATION-MATRIX 尚未补登ZBMP工作台7个新Feature。
+  - ui/staging-foundation分支的Step3/Step4 override换肤层尚未合main（zbip-refine.css精修层已在main替代其功能）。
