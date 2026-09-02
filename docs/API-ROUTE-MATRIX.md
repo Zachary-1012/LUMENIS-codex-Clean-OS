@@ -1,6 +1,6 @@
 # API 路由矩阵（P1-2，由 openapi_spec 从 url_map 自动生成，勿手改）
 
-- 非 static 路由（path 去重后）：**350**；url_map 规则数：364
+- 非 static 路由（path 去重后）：**391**；url_map 规则数：405
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint | 认证 | 分组 |
@@ -13,8 +13,14 @@
 | `/api/ai-filter/cleanup` | POST | api_ai_filter_cleanup | basic/v4 | api/ai-filter |
 | `/api/ai-filter/run` | POST | api_ai_filter_run | basic/v4 | api/ai-filter |
 | `/api/ai-filter/stats` | GET | api_ai_filter_stats | basic/v4 | api/ai-filter |
+| `/api/ai-governance/status` | GET | api_ai_governance_status | basic/v4 | api/ai-governance |
 | `/api/ai-learning/optimization/{operation_type}` | GET | api_ai_learning_optimization | basic/v4 | api/ai-learning |
 | `/api/ai-learning/status` | GET | api_ai_learning_status | basic/v4 | api/ai-learning |
+| `/api/ai-resource-packs/glm-4-5-air` | GET | api_ai_resource_packs_glm_status | basic/v4 | api/ai-resource-packs |
+| `/api/ai-resource-packs/pause` | POST | api_ai_resource_packs_pause | basic/v4 | api/ai-resource-packs |
+| `/api/ai-resource-packs/per-call-execute` | POST | api_ai_resource_packs_per_call_execute | basic/v4 | api/ai-resource-packs |
+| `/api/ai-resource-packs/resume` | POST | api_ai_resource_packs_resume | basic/v4 | api/ai-resource-packs |
+| `/api/ai-resource-packs/status` | GET | api_ai_resource_packs_status | basic/v4 | api/ai-resource-packs |
 | `/api/ai/analyze` | POST | api_ai_analyze_v580 | basic/v4 | api/ai |
 | `/api/ai/analyze-v570` | POST | api_ai_analyze_v570 | basic/v4 | api/ai |
 | `/api/ai/chat` | POST | api_ai_chat | basic/v4 | api/ai |
@@ -46,6 +52,7 @@
 | `/api/auth-recovery/tasks/{task_id}/complete` | POST | auth_recovery.complete_task | basic/v4 | api/auth-recovery |
 | `/api/auth-recovery/tasks/{task_id}/fail` | POST | auth_recovery.fail_task | basic/v4 | api/auth-recovery |
 | `/api/auth-recovery/tasks/{task_id}/start` | POST | auth_recovery.start_task | basic/v4 | api/auth-recovery |
+| `/api/auth/config` | GET | auth_config_api | basic/v4 | api/auth |
 | `/api/backup` | POST | api_backup | basic/v4 | api/backup |
 | `/api/bilibili/clear-login` | POST | api_bilibili_clear_login | basic/v4 | api/bilibili |
 | `/api/bilibili/login-status` | GET | api_bilibili_login_status | basic/v4 | api/bilibili |
@@ -70,6 +77,8 @@
 | `/api/brands` | POST | api_brand_add | basic/v4 | api/brands |
 | `/api/brands/{brand_en}` | DELETE | api_brand_delete | basic/v4 | api/brands |
 | `/api/brands/{brand_en}` | PUT | api_brand_update | basic/v4 | api/brands |
+| `/api/browser-runtime/probe` | POST | browser_runtime_api.browser_runtime_probe | basic/v4 | api/browser-runtime |
+| `/api/browser-runtime/status` | GET | browser_runtime_api.browser_runtime_status | basic/v4 | api/browser-runtime |
 | `/api/cache/create` | POST | api_cache_create | basic/v4 | api/cache |
 | `/api/cache/data` | GET | api_cache_data | basic/v4 | api/cache |
 | `/api/cache/snapshots` | GET | api_cache_snapshots | basic/v4 | api/cache |
@@ -140,6 +149,10 @@
 | `/api/event-review/{event_id}/reject` | POST | api_event_review_reject | basic/v4 | api/event-review |
 | `/api/events` | GET | api_events | basic/v4 | api/events |
 | `/api/events/{event_id}/notes` | GET | api_event_notes | basic/v4 | api/events |
+| `/api/evidence/list` | GET | evidence_api.evidence_list | basic/v4 | api/evidence |
+| `/api/evidence/stats` | GET | evidence_api.evidence_stats | basic/v4 | api/evidence |
+| `/api/evidence/timeline` | GET | evidence_api.evidence_timeline | basic/v4 | api/evidence |
+| `/api/evidence/{record_id}` | GET | evidence_api.evidence_detail | basic/v4 | api/evidence |
 | `/api/export/excel` | GET | export.export_excel | basic/v4 | api/export |
 | `/api/export/file/{filename}` | GET | export.export_file | basic/v4 | api/export |
 | `/api/export/generate` | GET | export.export_generate | basic/v4 | api/export |
@@ -160,6 +173,17 @@
 | `/api/hot-notes` | GET | api_hot_notes | basic/v4 | api/hot-notes |
 | `/api/hot-topics` | GET | api_hot_topics | basic/v4 | api/hot-topics |
 | `/api/intelligence/refresh` | POST | api_intelligence_refresh | basic/v4 | api/intelligence |
+| `/api/internal-browser/accounts` | GET | internal_browser.api_accounts | basic/v4 | api/internal-browser |
+| `/api/internal-browser/click` | POST | internal_browser.api_click | basic/v4 | api/internal-browser |
+| `/api/internal-browser/evaluate` | POST | internal_browser.api_evaluate | basic/v4 | api/internal-browser |
+| `/api/internal-browser/history` | POST | internal_browser.api_history | basic/v4 | api/internal-browser |
+| `/api/internal-browser/navigate` | POST | internal_browser.api_navigate | basic/v4 | api/internal-browser |
+| `/api/internal-browser/screenshot` | GET | internal_browser.api_screenshot | basic/v4 | api/internal-browser |
+| `/api/internal-browser/scroll` | POST | internal_browser.api_scroll | basic/v4 | api/internal-browser |
+| `/api/internal-browser/state` | GET | internal_browser.api_state | basic/v4 | api/internal-browser |
+| `/api/internal-browser/type` | POST | internal_browser.api_type | basic/v4 | api/internal-browser |
+| `/api/learning/history` | GET | api_learning_history | basic/v4 | api/learning |
+| `/api/learning/scan` | POST | api_learning_scan | basic/v4 | api/learning |
 | `/api/local-ai/analyze` | POST | system_features.local_ai_analyze | basic/v4 | api/local-ai |
 | `/api/local-ai/chat` | POST | system_features.local_ai_chat | basic/v4 | api/local-ai |
 | `/api/local-ai/status` | GET | system_features.local_ai_status | basic/v4 | api/local-ai |
@@ -198,6 +222,9 @@
 | `/api/recovery/run-cycle` | POST | architecture.recovery_run_cycle | basic/v4 | api/recovery |
 | `/api/recovery/stats` | GET | architecture.recovery_stats | basic/v4 | api/recovery |
 | `/api/rednote/collect` | POST | api_rednote_collect | basic/v4 | api/rednote |
+| `/api/report-center/export` | POST | report_center.export | basic/v4 | api/report-center |
+| `/api/report-center/generate` | POST | report_center.generate | basic/v4 | api/report-center |
+| `/api/report-center/status` | GET | report_center.status | basic/v4 | api/report-center |
 | `/api/report/daily` | GET | api_report_daily | basic/v4 | api/report |
 | `/api/report/export` | GET | api_report_export | basic/v4 | api/report |
 | `/api/report/generate` | POST | api_generate_report | basic/v4 | api/report |
@@ -211,9 +238,12 @@
 | `/api/reports/export-all` | GET | api_reports_export_all_v532 | basic/v4 | api/reports |
 | `/api/reports/{report_id}/download` | GET | api_report_download | basic/v4 | api/reports |
 | `/api/reports/{report_id}/file` | GET | api_report_file | basic/v4 | api/reports |
+| `/api/resident/health` | GET | api_resident_health | basic/v4 | api/resident |
+| `/api/resident/recover` | POST | api_resident_recover | basic/v4 | api/resident |
 | `/api/risk-alerts` | GET | api_risk_alerts | basic/v4 | api/risk-alerts |
 | `/api/search` | GET | api_unified_search | basic/v4 | api/search |
 | `/api/search` | POST | api_unified_search | basic/v4 | api/search |
+| `/api/search/enhance` | POST | api_search_enhance | basic/v4 | api/search |
 | `/api/security/baseline` | POST | system_features.security_create_baseline | basic/v4 | api/security |
 | `/api/security/dangerous-code` | GET | system_features.security_dangerous_code | basic/v4 | api/security |
 | `/api/security/integrity` | GET | system_features.security_check_integrity | basic/v4 | api/security |
@@ -273,6 +303,9 @@
 | `/api/v2/global-bil/{resource}` | GET | global_bil_read | basic/v4 | api/v2 |
 | `/api/v2/report-center/preview` | GET | report_center_preview | basic/v4 | api/v2 |
 | `/api/v2/report/export` | GET | api_report_export | basic/v4 | api/v2 |
+| `/api/v4/api-keys` | GET | api_v4_api_keys_list | basic/v4 | api/v4 |
+| `/api/v4/api-keys/generate` | POST | api_v4_api_keys_generate | basic/v4 | api/v4 |
+| `/api/v4/api-keys/revoke` | POST | api_v4_api_keys_revoke | basic/v4 | api/v4 |
 | `/api/web-mentions` | GET | api_web_mentions | basic/v4 | api/web-mentions |
 | `/api/web-sentiment/history` | GET | api_web_sentiment_history | basic/v4 | api/web-sentiment |
 | `/api/web-sentiment/search` | POST | api_web_sentiment_search | basic/v4 | api/web-sentiment |
@@ -292,6 +325,7 @@
 | `/api/weibo/cookies` | GET | api_weibo_cookies | basic/v4 | api/weibo |
 | `/api/weibo/login-status` | GET | api_weibo_login_status | basic/v4 | api/weibo |
 | `/api/weibo/start-login` | POST | api_weibo_start_login | basic/v4 | api/weibo |
+| `/api/workspace/file` | GET | api_workspace_file | basic/v4 | api/workspace |
 | `/api/workspace/file-tree` | GET | api_workspace_file_tree | basic/v4 | api/workspace |
 | `/api/workspace/term` | POST | api_workspace_term | basic/v4 | api/workspace |
 | `/api/xhs/accounts` | GET | api_xhs_accounts | basic/v4 | api/xhs |
@@ -302,9 +336,16 @@
 | `/api/xhs/cookie/status` | GET | api_xhs_cookie_status | basic/v4 | api/xhs |
 | `/api/xhs/cookie/sync` | POST | api_xhs_cookie_sync | basic/v4 | api/xhs |
 | `/api/xhs/cookie/sync/{task_id}` | GET | api_xhs_cookie_sync_status | basic/v4 | api/xhs |
+| `/api/xhs/login/save` | POST | api_xhs_login_save | basic/v4 | api/xhs |
+| `/api/xhs/login/start` | POST | api_xhs_login_start | basic/v4 | api/xhs |
+| `/api/xhs/login/status` | GET | api_xhs_login_status | basic/v4 | api/xhs |
+| `/api/xhs/optimizer/classify` | POST | api_xhs_optimizer_classify | basic/v4 | api/xhs |
+| `/api/xhs/optimizer/config` | GET | api_xhs_optimizer_config | basic/v4 | api/xhs |
 | `/api/xhs/p0/collection` | POST | api_xhs_p0_collection | basic/v4 | api/xhs |
 | `/api/xhs/p0/recovery/complete` | POST | api_xhs_p0_recovery_complete | basic/v4 | api/xhs |
 | `/api/xhs/p0/status` | GET | api_xhs_p0_status | basic/v4 | api/xhs |
+| `/api/xhs/rednote/check-login` | POST | api_xhs_rednote_check_login | basic/v4 | api/xhs |
+| `/api/xhs/rednote/keepalive` | GET | api_xhs_rednote_keepalive | basic/v4 | api/xhs |
 | `/api/xhs/runtime-check` | GET | api_xhs_runtime_check | basic/v4 | api/xhs |
 | `/api/xhs/runtime-check` | POST | api_xhs_runtime_check | basic/v4 | api/xhs |
 | `/api/xhs/switch-account` | POST | api_xhs_switch_account | basic/v4 | api/xhs |

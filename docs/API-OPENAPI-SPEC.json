@@ -19,7 +19,7 @@
       }
     }
   },
-  "x-route-count": 364,
+  "x-route-count": 405,
   "paths": {
     "/api/system/health/detailed": {
       "get": {
@@ -1566,6 +1566,336 @@
         ]
       }
     },
+    "/api/internal-browser/accounts": {
+      "get": {
+        "operationId": "internal_browser.api_accounts",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/state": {
+      "get": {
+        "operationId": "internal_browser.api_state",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/screenshot": {
+      "get": {
+        "operationId": "internal_browser.api_screenshot",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/navigate": {
+      "post": {
+        "operationId": "internal_browser.api_navigate",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/evaluate": {
+      "post": {
+        "operationId": "internal_browser.api_evaluate",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/click": {
+      "post": {
+        "operationId": "internal_browser.api_click",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/type": {
+      "post": {
+        "operationId": "internal_browser.api_type",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/scroll": {
+      "post": {
+        "operationId": "internal_browser.api_scroll",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/internal-browser/history": {
+      "post": {
+        "operationId": "internal_browser.api_history",
+        "tags": [
+          "api/internal-browser"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evidence/stats": {
+      "get": {
+        "operationId": "evidence_api.evidence_stats",
+        "tags": [
+          "api/evidence"
+        ],
+        "parameters": [],
+        "summary": "证据统计：总数 + 按 result/level/account/source 分组 + 最近 10 条。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evidence/list": {
+      "get": {
+        "operationId": "evidence_api.evidence_list",
+        "tags": [
+          "api/evidence"
+        ],
+        "parameters": [],
+        "summary": "证据列表（支持 source/feature_id/level/result/account/env 筛选 + 分页）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evidence/{record_id}": {
+      "get": {
+        "operationId": "evidence_api.evidence_detail",
+        "tags": [
+          "api/evidence"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "单条证据详情。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evidence/timeline": {
+      "get": {
+        "operationId": "evidence_api.evidence_timeline",
+        "tags": [
+          "api/evidence"
+        ],
+        "parameters": [],
+        "summary": "时间线视图：按 feature_id 分组的最近证据（健康/采集分开）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/browser-runtime/status": {
+      "get": {
+        "operationId": "browser_runtime_api.browser_runtime_status",
+        "tags": [
+          "api/browser-runtime"
+        ],
+        "parameters": [],
+        "summary": "Provider 注册表 + 默认 Provider + 状态机（只读）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/browser-runtime/probe": {
+      "post": {
+        "operationId": "browser_runtime_api.browser_runtime_probe",
+        "tags": [
+          "api/browser-runtime"
+        ],
+        "parameters": [],
+        "summary": "探测指定 Provider：先过 Policy Gate，再执行导航/健康检查。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
     "/api/brand-knowledge/stats": {
       "get": {
         "operationId": "brand_knowledge_stats",
@@ -2153,6 +2483,28 @@
           "api/proxy"
         ],
         "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/auth/config": {
+      "get": {
+        "operationId": "auth_config_api",
+        "tags": [
+          "api/auth"
+        ],
+        "parameters": [],
+        "summary": "P0-B(2026-09-02): 前端 Auth 动态注入端点 — 前端从此读取凭证，前端代码库不再硬编码任何凭证。",
         "security": [
           [
             {
@@ -3202,6 +3554,28 @@
         ]
       }
     },
+    "/api/ai-governance/status": {
+      "get": {
+        "operationId": "api_ai_governance_status",
+        "tags": [
+          "api/ai-governance"
+        ],
+        "parameters": [],
+        "summary": "AI 治理状态：额度/使用统计/配置/脱敏状态（余额需在智谱控制台查看）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
     "/api/ai/status": {
       "get": {
         "operationId": "api_ai_status",
@@ -3251,7 +3625,7 @@
           "api/ark"
         ],
         "parameters": [],
-        "summary": "豆包AI API状态查询",
+        "summary": "AI API状态查询（智谱驱动）",
         "security": [
           [
             {
@@ -3273,7 +3647,7 @@
           "api/ark"
         ],
         "parameters": [],
-        "summary": "豆包AI通用聊天（辅助功能，不可用时回退本地AI）",
+        "summary": "AI通用聊天（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）",
         "security": [
           [
             {
@@ -3295,7 +3669,7 @@
           "api/ark"
         ],
         "parameters": [],
-        "summary": "豆包AI舆情分析（辅助功能，不可用时回退本地分析）",
+        "summary": "AI舆情分析（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）",
         "security": [
           [
             {
@@ -3317,7 +3691,7 @@
           "api/ark"
         ],
         "parameters": [],
-        "summary": "豆包AI摘要生成（辅助功能，不可用时回退本地摘要）",
+        "summary": "AI摘要生成（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）",
         "security": [
           [
             {
@@ -3339,7 +3713,7 @@
           "api/ark"
         ],
         "parameters": [],
-        "summary": "豆包AI关键词提取（辅助功能，不可用时回退本地提取）",
+        "summary": "AI关键词提取（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）",
         "security": [
           [
             {
@@ -3580,6 +3954,50 @@
         ],
         "parameters": [],
         "summary": "双子星库 Contract：双身份白名单列表（前端身份切换 UI 源）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/resident/health": {
+      "get": {
+        "operationId": "api_resident_health",
+        "tags": [
+          "api/resident"
+        ],
+        "parameters": [],
+        "summary": "双身份驻场浏览器健康状态查询（三层：端口→CDP→登录态）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/resident/recover": {
+      "post": {
+        "operationId": "api_resident_recover",
+        "tags": [
+          "api/resident"
+        ],
+        "parameters": [],
+        "summary": "手动触发驻场浏览器自动恢复（DOWN/CDP_DEGRADED 时拉起；NEEDS_LOGIN 不自动恢复，需人工扫码）。",
         "security": [
           [
             {
@@ -5856,7 +6274,7 @@
           "api/config"
         ],
         "parameters": [],
-        "summary": "运行代码热更新：复制Python代码进去自动运行，测试OK直接更新系统",
+        "summary": "GAP-04 统一收口点②：运行代码热更新（调用 dev_exec_core 统一执行核心）。",
         "security": [
           [
             {
@@ -6773,7 +7191,7 @@
           "api/dev"
         ],
         "parameters": [],
-        "summary": "开发者工具：运行升级代码，测试通过后自动部署",
+        "summary": "GAP-04 统一收口点③：开发者工具运行升级代码（调用 dev_exec_core 统一执行核心）。",
         "security": [
           [
             {
@@ -6818,6 +7236,28 @@
         ],
         "parameters": [],
         "summary": "只读 Web 终端：白名单命令、shell=False、cwd 锁定项目根、超时；拒绝一切写/管道/重定向。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/workspace/file": {
+      "get": {
+        "operationId": "api_workspace_file",
+        "tags": [
+          "api/workspace"
+        ],
+        "parameters": [],
+        "summary": "只读文件内容预览：限定项目根、过滤敏感、防路径穿越、限200KB、文本only、二进制拒绝预览。",
         "security": [
           [
             {
@@ -7972,6 +8412,468 @@
           {
             "v4Auth": []
           }
+        ]
+      }
+    },
+    "/api/report-center/status": {
+      "get": {
+        "operationId": "report_center.status",
+        "tags": [
+          "api/report-center"
+        ],
+        "parameters": [],
+        "summary": "报告中心状态（旁路，Feature Gate 控制）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report-center/generate": {
+      "post": {
+        "operationId": "report_center.generate",
+        "tags": [
+          "api/report-center"
+        ],
+        "parameters": [],
+        "summary": "生成标准化报告（旁路，Feature Gate 控制）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report-center/export": {
+      "post": {
+        "operationId": "report_center.export",
+        "tags": [
+          "api/report-center"
+        ],
+        "parameters": [],
+        "summary": "导出 Word/PDF 报告（旁路，Feature Gate 控制）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-resource-packs/status": {
+      "get": {
+        "operationId": "api_ai_resource_packs_status",
+        "tags": [
+          "api/ai-resource-packs"
+        ],
+        "parameters": [],
+        "summary": "所有资源包状态查询",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-resource-packs/glm-4-5-air": {
+      "get": {
+        "operationId": "api_ai_resource_packs_glm_status",
+        "tags": [
+          "api/ai-resource-packs"
+        ],
+        "parameters": [],
+        "summary": "glm-4.5-air 实时状态（小 icon 用）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-resource-packs/pause": {
+      "post": {
+        "operationId": "api_ai_resource_packs_pause",
+        "tags": [
+          "api/ai-resource-packs"
+        ],
+        "parameters": [],
+        "summary": "暂停 AI 连接",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-resource-packs/resume": {
+      "post": {
+        "operationId": "api_ai_resource_packs_resume",
+        "tags": [
+          "api/ai-resource-packs"
+        ],
+        "parameters": [],
+        "summary": "恢复 AI 连接",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-resource-packs/per-call-execute": {
+      "post": {
+        "operationId": "api_ai_resource_packs_per_call_execute",
+        "tags": [
+          "api/ai-resource-packs"
+        ],
+        "parameters": [],
+        "summary": "按次计费需求执行接口（用户输入需求，消耗1次按次额度）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/v4/api-keys": {
+      "get": {
+        "operationId": "api_v4_api_keys_list",
+        "tags": [
+          "api/v4"
+        ],
+        "parameters": [],
+        "summary": "API Key 列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/v4/api-keys/generate": {
+      "post": {
+        "operationId": "api_v4_api_keys_generate",
+        "tags": [
+          "api/v4"
+        ],
+        "parameters": [],
+        "summary": "生成新 API Key",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/v4/api-keys/revoke": {
+      "post": {
+        "operationId": "api_v4_api_keys_revoke",
+        "tags": [
+          "api/v4"
+        ],
+        "parameters": [],
+        "summary": "撤销 API Key",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/login/start": {
+      "post": {
+        "operationId": "api_xhs_login_start",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "启动小红书登录：通过CDP浏览器打开登录页，返回登录会话ID",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/login/status": {
+      "get": {
+        "operationId": "api_xhs_login_status",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "检查小红书登录状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/login/save": {
+      "post": {
+        "operationId": "api_xhs_login_save",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "保存小红书登录态（cookies）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/search/enhance": {
+      "post": {
+        "operationId": "api_search_enhance",
+        "tags": [
+          "api/search"
+        ],
+        "parameters": [],
+        "summary": "搜索增强（智谱 search-std，100次额度）。用于案例库搜索增强、品牌知识库RAG、产品全局架构检索。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/learning/scan": {
+      "post": {
+        "operationId": "api_learning_scan",
+        "tags": [
+          "api/learning"
+        ],
+        "parameters": [],
+        "summary": "运行学习采集扫描（全量代码库学习，可选AI深度分析）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/learning/history": {
+      "get": {
+        "operationId": "api_learning_history",
+        "tags": [
+          "api/learning"
+        ],
+        "parameters": [],
+        "summary": "获取学习历史",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/optimizer/config": {
+      "get": {
+        "operationId": "api_xhs_optimizer_config",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "获取小红书采集分类配置",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/optimizer/classify": {
+      "post": {
+        "operationId": "api_xhs_optimizer_classify",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "分类笔记（topic/opinion/event）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/rednote/keepalive": {
+      "get": {
+        "operationId": "api_xhs_rednote_keepalive",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "获取香港RedNote登录保活状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/rednote/check-login": {
+      "post": {
+        "operationId": "api_xhs_rednote_check_login",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "检查香港RedNote登录状态（通过CDP 9223）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
         ]
       }
     }
