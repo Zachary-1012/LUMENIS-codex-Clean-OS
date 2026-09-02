@@ -642,3 +642,42 @@ body::after{
 }
 .ib-btn-external:hover{background:var(--zb-surface-raised,#F5F5F4) !important;color:var(--zb-text,#1C1917) !important}
 .ib-btn-external svg{width:15px;height:15px}
+
+
+/* =============================================================================
+ * FIX(20260903): .toast 多套定位冲突修复
+ * 根因：style.css 设 bottom:30px + design-v8 设 top:60px 同时生效，
+ * top+bottom 把固定定位 toast 纵向拉伸到 810px，再叠加 border-radius:999px
+ * 变成黑色竖椭圆盖屏（任一 API 报错弹 toast 即触发）；mobile.css 又给 z:99998。
+ * 在最高精修层收口为「顶部居中、宽高自适应」小胶囊，不改任何旧 CSS 文件。
+ * ========================================================================== */
+.toast{
+  top:64px !important;
+  bottom:auto !important;
+  left:50% !important;
+  right:auto !important;
+  transform:translateX(-50%) !important;
+  width:auto !important;
+  min-width:0 !important;
+  max-width:min(480px,calc(100vw - 32px)) !important;
+  height:auto !important;
+  min-height:0 !important;
+  box-sizing:border-box !important;
+  padding:9px 16px !important;
+  border-radius:999px !important;
+  background:rgba(28,25,23,.92) !important;
+  color:#FAFAF9 !important;
+  font-size:13px !important;
+  line-height:1.5 !important;
+  z-index:1400 !important;             /* 对齐 --zb-z-toast，高于 modal，低于 command */
+  white-space:normal !important;
+  word-break:break-word !important;
+  box-shadow:0 4px 14px rgba(28,25,23,.18) !important;
+}
+/* 进入：只做轻微下移+淡入（Emil：emil-out，180ms；键盘/高频不加重） */
+.toast.show{ animation:zb-toast-in 180ms cubic-bezier(.23,1,.32,1) both !important; }
+@keyframes zb-toast-in{ from{opacity:0; transform:translateX(-50%) translateY(-8px);} to{opacity:1; transform:translateX(-50%) translateY(0);} }
+.toast.success{ background:rgba(22,101,52,.95) !important; }
+.toast.error{ background:rgba(153,27,27,.95) !important; }
+.toast.warning{ background:rgba(146,64,14,.95) !important; }
+@media (prefers-reduced-motion:reduce){ .toast.show{ animation:none !important; } }

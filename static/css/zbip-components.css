@@ -227,3 +227,59 @@
   .zb-pressable{ transition:none !important; }
   .zb-pressable:active{ transform:none; }
 }
+
+
+/* =============================================================================
+ * 业务页面卡片组错峰入场（LRN-UI-20260903-01）
+ * 页面 .page-view 切到 active 时，内部标准卡片容器轻错峰浮现；
+ * 只作用于静态 article 卡片（轮询只改内部文本、不重建卡片，故不重播闪烁）。
+ * 比首页更短更克制（260ms / 35ms 步进），与页面整体淡入协调，不拖沓。
+ * ========================================================================== */
+.page-view.active .metric-grid > article,
+.page-view.active .home-cards > article,
+.page-view.active .osai-module-grid > article{
+  opacity:0;
+  transform:translateY(8px) scale(.985);
+  animation:zb-in 260ms var(--zb-ease-emil-out,cubic-bezier(.23,1,.32,1)) both;
+}
+.page-view.active .metric-grid > article:nth-child(1),
+.page-view.active .home-cards > article:nth-child(1),
+.page-view.active .osai-module-grid > article:nth-child(1){animation-delay:30ms}
+.page-view.active .metric-grid > article:nth-child(2),
+.page-view.active .home-cards > article:nth-child(2),
+.page-view.active .osai-module-grid > article:nth-child(2){animation-delay:65ms}
+.page-view.active .metric-grid > article:nth-child(3),
+.page-view.active .home-cards > article:nth-child(3),
+.page-view.active .osai-module-grid > article:nth-child(3){animation-delay:100ms}
+.page-view.active .metric-grid > article:nth-child(4),
+.page-view.active .home-cards > article:nth-child(4),
+.page-view.active .osai-module-grid > article:nth-child(4){animation-delay:135ms}
+.page-view.active .metric-grid > article:nth-child(5),
+.page-view.active .osai-module-grid > article:nth-child(5){animation-delay:170ms}
+.page-view.active .metric-grid > article:nth-child(6),
+.page-view.active .osai-module-grid > article:nth-child(6){animation-delay:205ms}
+.page-view.active .metric-grid > article:nth-child(n+7),
+.page-view.active .osai-module-grid > article:nth-child(n+7){animation-delay:240ms}
+
+/* 可点卡片（带 data-page）按压反馈 + 可中断 hover 抬升 */
+.metric-card[data-page],.home-card[data-page],.osai-module-card[data-page]{
+  transition:transform 140ms cubic-bezier(.23,1,.32,1), box-shadow var(--zb-dur-state,220ms) ease, border-color var(--zb-dur-micro,120ms) ease;
+  cursor:pointer;
+}
+@media (hover:hover) and (pointer:fine){
+  .metric-card[data-page]:hover,.home-card[data-page]:hover,.osai-module-card[data-page]:hover{
+    transform:translateY(-2px);
+    box-shadow:var(--zb-shadow-2,0 4px 12px rgba(28,25,23,.08));
+  }
+}
+.metric-card[data-page]:active,.home-card[data-page]:active,.osai-module-card[data-page]:active{
+  transform:scale(.985);
+}
+
+@media (prefers-reduced-motion:reduce){
+  .page-view.active .metric-grid > article,
+  .page-view.active .home-cards > article,
+  .page-view.active .osai-module-grid > article{ animation-duration:1ms !important; animation-delay:0ms !important; opacity:1; transform:none; }
+  .metric-card[data-page],.home-card[data-page],.osai-module-card[data-page]{ transition:none; }
+  .metric-card[data-page]:active,.home-card[data-page]:active,.osai-module-card[data-page]:active{ transform:none; }
+}
