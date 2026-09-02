@@ -79,7 +79,10 @@ def _provider_config():
                 'doubao':(_env('ARK_API_KEY'),_env('ARK_BASE_URL','https://ark.cn-beijing.volces.com/api/v3'),_env('ARK_MODEL','doubao-seed-evolving-latest-version')),
             }
             provider_name = 'zhipu' if requested == 'glm' else ('ark' if requested in ('ark','doubao') else requested)
-            key,base,model=configs[requested]
+            # 'glm' 是 zhipu 的别名（provider_name 已映射），但 configs 无 'glm' 键；
+            # 若直接用 requested 取 configs 会 KeyError 且发生在 _chat 的 try 块外导致崩溃（智谱评审 P0B-2）。
+            lookup_key = requested if requested in configs else 'zhipu'
+            key, base, model = configs[lookup_key]
             detected=(provider_name,model,base.rstrip('/')) if key else None
         else:
             # 正式架构 Ollama-only：auto 只自动发现本机模型；本机没有即回退本地规则引擎（离线可跑、
@@ -174,7 +177,7 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None):
         if provider == 'zhipu':
             # GLM 思考模型默认先输出 reasoning_content 会挤空正式结果；关闭思考，直接出最终 JSON。
             # glm-5.3 系列为"始终思考"模型，任何 thinking 参数都会 400，必须完全不传（思考结果在 reasoning_content）。
-            if not str(model).startswith('glm-5.3'):
+            if not str(model).lower().startswith('glm-5.3'):
                 payload_obj['thinking'] = {'type': 'disabled'}
             payload = json.dumps(payload_obj, ensure_ascii=False).encode('utf-8')
         req = urllib.request.Request(base.rstrip('/') + '/chat/completions', data=payload, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key}, method='POST')

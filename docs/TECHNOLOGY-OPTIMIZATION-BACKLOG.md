@@ -83,3 +83,10 @@
 ## 结论
 - 当前**没有任何一项要求更换核心技术栈**；P0 全部是「测试/证据/红线」底座，P1 是低风险增强，且都可在不动生产主链前提下旁路→Staging→灰度。
 - 推荐落地顺序：T-P0-1/2 → T-P1-1(waitress,Staging) → T-P1-2(tenacity) → T-P1-3(Alembic Staging baseline) → 其余随 Release 节奏。
+
+### T-P0B-2 AI 网关 intelligence 深度审查（智谱 glm-5.3，2026-09-03，per_call 1 次）
+- **发现 P1 bug（已修复）**：`_provider_config` 中 `AI_PROVIDER=glm` 时 `configs[requested]` KeyError（configs 无 'glm' 键），且发生在 `_chat` 的 try 块外→直接崩溃而非降级 rule。已修复（lookup_key 映射 'glm'→'zhipu'）+ 4 个回归测试。
+- **加固（已修复）**：`model.startswith('glm-5.3')` 大小写敏感→`.lower()`；glm-5.3-flash 变体正确跳过 thinking。
+- **观察项（未改，登记）**：①glm-5.3 变体用 startswith 前缀匹配会 over-match（glm-5.30 等），建议未来改显式集合/环境变量；②未来 glm-5.4 若也是始终思考需更新集合；③reasoning_content 回退的 CoT 可能不是合法 JSON（下游解析风险）；④qwen/deepseek 的 reasoning 模型未单独处理 thinking。
+- **沉淀**：`docs/learning/P0B2-AI-GATEWAY-REVIEW-20260903.md`
+- **状态**：P1 bug 已修 + 测试；观察项登记。**现在做：修复完成。**
