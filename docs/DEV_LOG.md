@@ -865,3 +865,16 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - 校正根 risk_engine.py 职责声明：现役权威=CollectorGuard 七态；RiskEngine 标注为已实现/已测/未接管的增强件，未来须旁路验证后再接入；报告口径=daily_report/report_engine。
 - 新增 tests/test_risk_authority_wiring.py 3 测：现役 Guard 持有四件套且不实例化 RiskEngine（源码层 guard.py 不 import risk_engine）；根兼容层纯转发（subject_sql_and_values 结果一致、build_daily_report 走 daily_report 哨兵验证）；备用评分器模块独立可导入。
 - 结果：新增 3 测全过、既有 7 测不重复；统一入口 164 passed（161→164）。DB 零变更、生产 8201 未碰、现役熔断行为零变化。
+
+
+---
+
+## 2026-09-02 13:34 · P1-7 guardian 三模块接线锁定 + 安全收口复核（零运行时改动）
+
+### P1-7 只读审计事实
+- system_guardian.py(226)/auto_recovery.py(453)/data_feedback_loop.py(379) 均为实质实现；app.py 启动主路径（app.run 之前）已在 ZBC_GUARDIAN_ENABLED 默认 1 下受控接入：auto_recovery 60s 后台监控（app 层 _p17_started 幂等，引擎自身每次起线程故必须由接线层防重复）、data_feedback_loop daemon 6h、system_guardian.health_check()；三模块各自 try/except，任一失败只打印不阻断启动。
+- 运行中 8201 为冻结旧进程（接入前启动），日志暂无 [Guardian] 行属预期，重启生效；本次不重启。
+- 收尾：新增 tests/test_guardian_wiring.py 3 测（不重复 test_auto_recovery/test_data_feedback 模块内部测试）：静态锁定默认启用/可关/三模块导入/三处失败隔离/幂等标志/接线先于 app.run；三单例与入口可调用；复刻 app 层幂等守卫连进两轮只起一次监控。
+### 安全收口复核（GAP-04 / 对账 GAP-P1-12 / OSAI CTR-SEC-P0）
+- 三套 run-code（/api/developer/run、/api/config/run-code、/api/dev/run-code）确认全部经 _dev_exec_guard：生产 ZBC_DEV_EXEC 默认 0 一律拒绝（deny-by-default 硬门槛，比 CTR-SEC「Task-bound 为唯一硬门槛」更保守，生产无服务端执行面），开发态 opt-in 仍拦危险构造、JS 分支不写 static/js；tests/test_dev_exec_guard.py 9 测复跑全绿。结论：该项已真实闭环，无需新增代码；OSAI 提议的「沙箱 + Task-bound」属开发态纵深防御，登记 BACKLOG 不在本轮打开。
+- 结果：统一入口 167 passed（164→167）。DB 零变更、生产 8201 未碰。
