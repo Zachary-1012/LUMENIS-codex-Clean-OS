@@ -5309,6 +5309,38 @@ def api_workspace_term():
         return jsonify({'ok': False, 'error': f'{type(e).__name__}: {e}'}), 500
 
 
+@app.route('/api/workspace/file')
+def api_workspace_file():
+    """只读文件内容预览：限定项目根、过滤敏感、防路径穿越、限200KB、文本only、二进制拒绝预览。"""
+    rel = (request.args.get('path') or '').strip().replace('\\', '/').lstrip('/')
+    if not rel:
+        return jsonify({'ok': False, 'error': 'path 为空'}), 400
+    try:
+        target = (_WS_ROOT / rel).resolve()
+    except Exception:
+        return jsonify({'ok': False, 'error': '路径非法'}), 400
+    if target != _WS_ROOT and _WS_ROOT not in target.parents:
+        return jsonify({'ok': False, 'error': '路径越界，已拒绝'}), 403
+    if not target.exists() or not target.is_file():
+        return jsonify({'ok': False, 'error': '文件不存在'}), 404
+    if _ws_hidden(target.name, False):
+        return jsonify({'ok': False, 'error': '敏感文件，拒绝预览（.env/cookie/token/secret/db/profile 等）'}), 403
+    size = target.stat().st_size
+    MAX = 200 * 1024
+    try:
+        raw = target.read_bytes()[:MAX + 1]
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'{type(e).__name__}: {e}'}), 500
+    if b'\x00' in raw[:8192]:
+        return jsonify({'ok': True, 'path': rel, 'size': size, 'binary': True,
+                        'content': '[二进制文件，不提供文本预览]'})
+    text = raw.decode('utf-8', errors='replace')
+    truncated = size > MAX
+    return jsonify({'ok': True, 'path': rel, 'size': size,
+                    'lines': text.count('\n') + 1, 'truncated': truncated,
+                    'content': text[:MAX]})
+
+
 # ===== 公关案例库 API（双模块联动体系） =====
 @app.route('/api/pr/cases')
 def api_pr_cases():
