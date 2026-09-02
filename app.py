@@ -134,6 +134,13 @@ try:
 except Exception as _ib_e:
     print(f"[internal_browser] blueprint register failed: {_ib_e}")
 
+# Zachary OS AI：系统内置浏览器实时画面流（Screencast over SSE，持久连接主动推帧）
+try:
+    import internal_browser_stream
+    internal_browser_stream.register_stream(app)
+except Exception as _ibs_e:
+    print(f"[internal_browser_stream] blueprint register failed: {_ibs_e}")
+
 # Zachary OS AI：Evidence 查询 API（只读证据接口）
 try:
     import evidence_api
