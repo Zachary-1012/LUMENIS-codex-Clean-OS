@@ -15,6 +15,16 @@
 <link rel="stylesheet" href="/static/css/mobile.css?v=8.0.0">
 <!-- Zachary 3D 机器人 Three.js（本地化，避免外网 CDN 失效导致 3D 不加载） -->
 <script src="/static/js/vendor/three.min.js"></script>
+<script>
+// P0安全修复(2026-09-02): 全局Auth唯一注入点 — 所有JS文件从此读取，不再各自硬编码
+// 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框）
+// 后续可改为从后端 /api/auth/config 动态注入
+(function(){ try {
+  window.__Z_AUTH = 'Basic ' + btoa('Zachary:ID082610');
+  // sessionStorage兜底（关闭浏览器即清除，非持久化）
+  try { sessionStorage.setItem('Z_AUTH_B64', btoa('Zachary:ID082610')); } catch(e){}
+} catch(e){} })();
+</script>
 <link rel="stylesheet" href="/static/css/case_deep_analysis.css?v=8.0.0">
 <link rel="stylesheet" href="/static/css/v3_modules.css?v=8.0.0">
 <link rel="stylesheet" href="/static/css/design-v8.css?v=8.0.1">
@@ -88,6 +98,12 @@
     <div class="top-center"><div class="system-state"><i></i><span id="systemState">系统运行中</span></div><span class="clock" id="clock">—</span></div>
     <div class="top-actions">
       <button class="action icon-only tip" id="commandPaletteBtn" data-tip="搜索页面、功能或操作（Ctrl+K）" onclick="toggleCommandPalette()"><span class="svgicon">🔍</span></button>
+      <!-- AI 治理状态：用量/额度/余额可控（数据可控 icon） -->
+      <button class="action icon-only tip ai-gov-btn" id="aiGovBtn" data-tip="AI 治理：今日用量/每日额度/余额/脱敏状态" onclick="toggleAiGovPanel()">
+        <span class="svgicon">✦</span>
+        <span class="ai-gov-dot" id="aiGovDot" style="background:#22c55e"></span>
+        <span class="ai-gov-count" id="aiGovCount">0</span>
+      </button>
       <a class="action secondary tip" id="zbmpWorkbenchBtn" data-tip="ZBMP 工作台：品牌概览/实时监测/事件中心/报告中心 + 只读终端 + 文件树" href="/static/zbmp-workbench.html" style="text-decoration:none"><span class="svgicon">▦</span><span class="btn-label">ZBMP 工作台</span></a>
       <button class="action icon-only tip" id="alertBellBtn" data-tip="舆情预警：高风险/高影响力/上升过快时弹窗通知" onclick="navigateTo('alerts')"><span class="svgicon">🔔</span><span class="nav-badge" id="alertBadge" style="display:none">0</span></button>
       <button class="action primary tip" id="refreshBtn" data-tip="立即更新：手动采集最新数据，每日3次机会，冷却15分钟"><span class="svgicon">↻</span><span class="btn-label">采集数据</span></button>
@@ -98,6 +114,20 @@
       <span id="ar-badge" class="ar-badge hidden" title="存在需要人工处理的认证恢复任务"><span class="svgicon">🔔</span> <span id="ar-count">0</span></span>
     </div>
   </header>
+
+  <!-- AI 治理弹出面板：数据可控（用量/额度/余额/脱敏） -->
+  <div class="ai-gov-panel hidden" id="aiGovPanel">
+    <div class="ai-gov-header">
+      <span class="ai-gov-title">✦ AI 治理 · 数据可控</span>
+      <button class="ai-gov-close" onclick="toggleAiGovPanel()">✕</button>
+    </div>
+    <div class="ai-gov-body" id="aiGovBody">
+      <div class="ai-gov-loading">加载中…</div>
+    </div>
+    <div class="ai-gov-footer">
+      <span class="ai-gov-note">余额查询：<a href="https://open.bigmodel.cn/usercenter/finance" target="_blank">智谱控制台</a></span>
+    </div>
+  </div>
 
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 <div class="layout">
@@ -1045,11 +1075,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <script src="/static/js/internal_browser.js?v=5.9.9"></script>
   <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script></script>
 <script>
-  // ── 双子星库 Contract：全局 HTTP Basic Auth 头（auth_global.js / auth_recovery_poller.js / 其他 JS 共享同一凭证，401 修复）
-  // 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框；v4 bearer 会话路径不变）
-  (function(){ try { window.__Z_AUTH = 'Basic ' + btoa('Zachary:ID082610');
-    // P0安全缓解(2026-09-02): localStorage→sessionStorage，关闭浏览器即清除，降低持久化泄露风险
-    try { sessionStorage.setItem('Z_AUTH_B64', btoa('Zachary:ID082610')); } catch(e){} } catch(e){} })();
+  // P0安全修复(2026-09-02): window.__Z_AUTH 定义已移至 <head>（three.min.js之后），确保所有JS文件加载前已定义
+  // 此处不再重复定义，避免执行顺序问题
 </script>
 <script>
   // Footer 数据更新时间戳：页面加载立刻填入，避免一直显示 --
@@ -1058,6 +1085,68 @@ document.addEventListener('DOMContentLoaded', function() {
   (function(){
     function refresh(){ try{var u=document.getElementById('last-update');if(u)u.textContent=new Date().toLocaleString('zh-CN');}catch(e){} }
     setInterval(refresh, 60000); // 每 1 分钟刷新一次时间戳
+  })();
+  // AI 治理：数据可控（用量/额度/余额/脱敏）
+  (function(){
+    var _aiGovCache = null;
+    function _authHeaders(){
+      // Basic Auth（与系统一致，从 cookie 或全局变量获取）
+      var h = {'Content-Type':'application/json'};
+      if(window._zbAuth){ h['Authorization']='Basic '+btoa(window._zbAuth.user+':'+window._zbAuth.pass); }
+      return h;
+    }
+    function fetchAiGovStatus(){
+      return fetch('/api/ai-governance/status',{headers:_authHeaders()})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ _aiGovCache=d; updateAiGovIcon(d); return d; })
+        .catch(function(e){ console.warn('AI gov status fetch failed:',e); });
+    }
+    function updateAiGovIcon(d){
+      if(!d || !d.quota) return;
+      var dot=document.getElementById('aiGovDot');
+      var cnt=document.getElementById('aiGovCount');
+      if(dot){
+        var pct=d.quota.call_usage_pct||0;
+        if(pct>=90 || !d.quota.allowed){ dot.style.background='#ef4444'; }
+        else if(pct>=70){ dot.style.background='#f59e0b'; }
+        else{ dot.style.background='#22c55e'; }
+      }
+      if(cnt){ cnt.textContent=d.quota.call_used||0; }
+    }
+    function renderAiGovPanel(d){
+      var body=document.getElementById('aiGovBody');
+      if(!body) return;
+      if(!d || !d.quota){ body.innerHTML='<div class="ai-gov-error">无法获取 AI 治理状态</div>'; return; }
+      var q=d.quota;
+      var html='<div class="ai-gov-metrics">'+
+        '<div class="ai-gov-metric"><span class="ai-gov-label">Provider</span><span class="ai-gov-value">'+(d.provider||'zhipu')+'</span></div>'+
+        '<div class="ai-gov-metric"><span class="ai-gov-label">脱敏</span><span class="ai-gov-value '+(d.desensitization==='enabled'?'ai-gov-ok':'ai-gov-warn')+'">'+(d.desensitization||'unknown')+'</span></div>'+
+        '<div class="ai-gov-metric"><span class="ai-gov-label">今日调用</span><span class="ai-gov-value">'+q.call_used+' / '+q.call_limit+'</span></div>'+
+        '<div class="ai-gov-metric"><span class="ai-gov-label">今日Token</span><span class="ai-gov-value">'+(q.token_used||0)+' / '+q.token_limit+'</span></div>'+
+        '<div class="ai-gov-metric"><span class="ai-gov-label">剩余调用</span><span class="ai-gov-value">'+q.call_remaining+'</span></div>'+
+        '<div class="ai-gov-metric"><span class="ai-gov-label">额度状态</span><span class="ai-gov-value '+(q.allowed?'ai-gov-ok':'ai-gov-danger')+'">'+(q.allowed?'正常':'已超限')+'</span></div>'+
+        '</div>'+
+        '<div class="ai-gov-progress"><div class="ai-gov-bar" style="width:'+Math.min(100,q.call_usage_pct||0)+'%"></div></div>'+
+        '<div class="ai-gov-tip">调用用量 '+q.call_usage_pct+'% · Token 用量 '+(q.token_usage_pct||0)+'%</div>'+
+        '<div class="ai-gov-total">累计调用 '+(d.total_usage&&d.total_usage.calls||0)+' 次 · 累计 Token '+(d.total_usage&&d.total_usage.total_tokens||0)+'</div>';
+      body.innerHTML=html;
+    }
+    window.toggleAiGovPanel=function(){
+      var panel=document.getElementById('aiGovPanel');
+      if(!panel) return;
+      if(panel.classList.contains('hidden')){
+        panel.classList.remove('hidden');
+        if(_aiGovCache){ renderAiGovPanel(_aiGovCache); }
+        fetchAiGovStatus().then(renderAiGovPanel);
+      } else {
+        panel.classList.add('hidden');
+      }
+    };
+    // 页面加载后自动获取状态
+    if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',fetchAiGovStatus); }
+    else { fetchAiGovStatus(); }
+    // 每 5 分钟刷新一次
+    setInterval(fetchAiGovStatus, 300000);
   })();
 </script>
 </body></html>
