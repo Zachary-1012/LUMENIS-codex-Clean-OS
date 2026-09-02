@@ -295,9 +295,14 @@ def get_status() -> dict:
     except Exception:
         snap["user_paused"] = False
     # 驻场模式描述（供前端展示）
+    now = time.time()
+    in_cooldown = bool(snap["resident_until"] and now < snap["resident_until"])
+    # 心跳新鲜度：最近一次成功心跳在 2 个周期内视为驻场存活
+    hb_fresh = bool(snap["heartbeat_last"] and (now - snap["heartbeat_last"]) < HEARTBEAT_INTERVAL * 2)
     if snap["user_paused"]:
         snap["resident_mode"] = "USER_PAUSED"
-    elif snap["resident_active"]:
+    elif in_cooldown or (snap["session_ok"] is True and hb_fresh):
+        # Session 有效且心跳存活 → 直接驻场（P0：有效即驻场，无需扫码）
         snap["resident_mode"] = "RESIDENT_ACTIVE"
     elif snap["session_ok"] is False:
         snap["resident_mode"] = "NEED_SCAN_RECOVERY"
