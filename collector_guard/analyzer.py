@@ -41,13 +41,14 @@ class ResponseAnalyzer:
     """无状态分类器，可被任意采集器复用。"""
 
     @staticmethod
-    def classify(status_code=200, text='', error=None, has_content=False):
+    def classify(status_code=200, text='', error=None, has_content=False, retry_after=None):
         """返回 dict: {state, reason, detail, should_stop}。
 
         :param status_code: HTTP 状态码（拿不到可传 0）
         :param text: 响应正文/页面可见文本片段
         :param error: 捕获到的异常对象或字符串（网络层）
         :param has_content: 是否确实解析到业务内容（用于区分真空与风控空）
+        :param retry_after: 服务端 Retry-After 指示的等待秒数（可选，用于授权冷却时长）
         """
         body = (text or '')
         low = body
@@ -86,10 +87,11 @@ class ResponseAnalyzer:
             return {'state': CollectState.COOLDOWN, 'reason': Reason.FORBIDDEN,
                     'detail': f'HTTP {status_code} 拒绝访问', 'should_stop': True}
 
-        # 5) 频控
+        # 5) 频控：429 立即返回（原先被后续 EMPTY/HEALTHY 分支吞掉，导致频控信号丢失）
         if status_code == 429:
+            _ra = {'retry_after': retry_after} if retry_after else {}
             return {'state': CollectState.WARNING, 'reason': Reason.RATE_LIMITED,
-                    'detail': 'HTTP 429', 'should_stop': False}
+                    'detail': 'HTTP 429', 'should_stop': False, **_ra}
         for pat in _RATE_PATTERNS:
             m = pat.search(low)
             if m:

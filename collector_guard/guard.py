@@ -116,7 +116,7 @@ class CollectorGuard:
         if st in (CollectState.AUTH_REQUIRED, CollectState.NEED_VERIFY, CollectState.COOLDOWN):
             self.limiter.force_pause(st)
         else:
-            self.limiter.on_failure()
+            self.limiter.on_failure(retry_after=cls.get('retry_after'))
         self.metrics.record(False, lat, cls.get('detail', ''))
 
     @staticmethod

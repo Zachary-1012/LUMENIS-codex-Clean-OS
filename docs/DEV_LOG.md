@@ -59,3 +59,25 @@
 - 事件笔记自动关联: 505条笔记与events表关联(event_mentions)
 - 新增 note_type_backup 列备份原值
 - 数据库变更不入库(.gitignore), 仅记录日志
+## 2026-09-03 · collector_guard 采集合规增强：jitter + Retry-After + 修复 429 吞信号 bug（GitHub 研究驱动）
+
+### 背景
+持续链接 GitHub 研究（Scrapling AutoThrottle / Polite Scraper 五习惯）发现：① 采集固定间隔有"节拍器效应"（机器特征）；② 无 Retry-After 响应头感知。
+
+### 改动（纯增强、可回滚、不改语义）
+1. `collector_guard/analyzer.py`：`classify` 增 `retry_after=None` 参数；**修复 429 分支未 return 导致频控信号被吞的真实 bug**（429 下空响应→误判 EMPTY、有内容→误判 HEALTHY），429 现在立即返回 WARNING/RATE_LIMITED 并回填 retry_after。
+2. `collector_guard/rate_limiter.py`：`wait_slot` 加 jitter（`random.uniform(0.7,1.3)`，构造参数 `jitter=True` 默认开可关）；`on_failure(retry_after=None)` 冷却时长取 `max(退避, retry_after)`（服务端指示优先，非法值静默忽略）。
+3. `collector_guard/guard.py`：`_after_fail` 透传 `cls.get('retry_after')` 给 `on_failure`。
+
+### 测试（已实测）
+- 新增 `tests/test_guard_jitter_retryafter.py` 7 用例：jitter 范围 / jitter 可关回归 / retry_after 覆盖 / 更长者胜 / 非法忽略 / analyzer 回填 / 缺省无键。
+- 全量回归 479+7 passed，零失败零 error。
+
+### 红线确认
+未弱化任何主体过滤 / 时间口径 / 熔断联动；jitter 与 Retry-After 均为更礼貌更合规；拒绝 stealth/bypass（守合规红线）。
+
+### 研究沉淀
+- ZBC `docs/learning/GITHUB-FRONTIER-20260903-COLLECTOR-AIGATEWAY-OBSERVABILITY.md`
+- LEARNING-REGISTRY 新增 LR-20260903-003~009
+- OSAI `learning-feed/github-benchmarks-04-collector-ai-observability-20260903.md`
+- BACKLOG 新增 T-P1G-01 / T-P0D-03（观察）

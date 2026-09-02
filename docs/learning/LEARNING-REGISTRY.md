@@ -76,3 +76,14 @@
 - **教训**：①给模型的源码片段必须**真实包含内容**（脚本 bug 曾导致传空→模型正确拒绝臆断）；②"源码头"足以初判，但涉及状态枚举/审计逻辑需看实现体；③文档状态口径必须与源码一致，不一致时**以源码为准改文档**。
 - **沉淀**：`docs/learning/P0B-CAPABILITY-CROSSCHECK-20260903.md`
 - **状态**：ADOPT（方法）；发现已修复
+### 五、GitHub 前沿研究：采集合规自适应 / AI 网关路由 / Agent 可观测（2026-09-03，详见 GITHUB-FRONTIER-20260903-COLLECTOR-AIGATEWAY-OBSERVABILITY.md）
+
+| Research ID | 方向 | 项目 | GitHub | License | 结论 | 关联 |
+|---|---|---|---|---|---|---|
+| LR-20260903-003 | K 采集自适应 | Scrapling | D4Vinci/Scrapling | MIT 类 | ADOPT-部分（**AutoThrottle 思想**：补 jitter + Retry-After；拒绝其 stealth/bypass，守合规红线） | collector_guard/rate_limiter |
+| LR-20260903-004 | K 礼貌爬取 | Polite Scraper 五习惯 | link.sc / Firecrawl | 文 | ADOPT（per-host 并发 + **jitter 随机化** + Retry-After + 激进缓存 + 背压；本轮已落地） | collector_guard/guard |
+| LR-20260903-005 | L 动态限流 | GitHub API Pacer | 社区方案 | 文 | ADOPT-方法（动态水位感知优于静态计数；429=软信号非硬熔断） | analyzer/rate_limiter |
+| LR-20260903-006 | AI 网关 | LiteLLM | BerriAI/litellm | MIT | REFERENCE-ONLY（自研 intelligence.py+ai_budget 已覆盖核心；吸收 fallback cooldown + per-key budget 思想） | intelligence.py / ai_budget.py |
+| LR-20260903-007 | AI 路由 | vLLM Semantic Router | vllm-project/semantic-router | Apache-2.0 | CANDIDATE（Signal/Decision 分离设计值得借鉴；任务量足够前不引入 embedding 分类器；登记 BACKLOG T-P1G-01） | AI Task Router |
+| LR-20260903-008 | 观测/自愈 | TraceRoot | traceroot-ai/traceroot | 开源 | REFERENCE-ONLY（生产发现→golden dataset→离线 eval 循环 = Observatory+ZELL 成熟对标；登记 BACKLOG T-P0D-03） | zell_trace / observatory_feed |
+| LR-20260903-009 | 观测/采样 | Tail-based Sampling | AgentOps/OTel | 文 | ADOPT-思想（指标全保/审计结构保/内容抽样保；ai_budget 记账分层） | ai_budget.py |

@@ -120,3 +120,15 @@
   采集入口加 kind 策略审计日志；`REDNOTE_DAILY_LOGIN_KEEPALIVE` 接入保活线程。
 - **状态**：✅ 审计完成（docs/learning/P0C-REDNOTE-POLICY-AUDIT-20260903.md）；
   接入施工需用户拍板（涉及生产采集行为，即使默认收紧）。
+### T-P1G-01 AI 意图路由层（观察，2026-09-03 研究登记）
+- 来源：vLLM Semantic Router（LR-20260903-007）Signal/Decision 分离 + fast/reasoning path。
+- 现状：AI Task Router 为静态优先级（Rule→Cache→Local→Zachary→Zhipu→Doubao），无语义路由。
+- 建议：当 AI 调用量显著放大时，参考引入轻量意图分类（简单请求 fast path / 复杂请求 reasoning path），当前不实现。
+- 状态：观察。
+
+### T-P0D-03 Observatory golden dataset + 离线 eval（观察，2026-09-03 研究登记）
+- 来源：TraceRoot（LR-20260903-008）生产发现→golden dataset→离线 eval 闭环。
+- 现状：zell_trace.jsonl + observatory_feed.py 骨架已跑通（zell_total=25）。
+- 建议：未来把生产发现沉淀为 golden dataset，每次修复前离线 eval 验证，形成可度量的学习闭环；当前不实现。
+- 状态：观察。
+
