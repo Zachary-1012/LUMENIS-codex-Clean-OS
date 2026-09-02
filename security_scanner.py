@@ -55,10 +55,24 @@ class SecurityScanner:
             (r'(?i)(private[_-]?key)\s*[:=]\s*["\']([^"\']{16,})["\']', '私钥'),
             (r'AKIA[0-9A-Z]{16}', 'AWS Access Key'),
             (r'sk-[a-zA-Z0-9]{20,}', 'OpenAI API Key'),
+        ]        # S2 增强：Agent/AI 供应链风险模式（对照 GitHub 标杆 SkillSpector 思路）
+        # 1) 国产云平台密钥（火山方舟 ark- / 智谱 id.secret）
+        # 2) Prompt Injection 风险（skill/plugin 供应链投毒迹象）
+        # 3) 数据外泄迹象（webhook/异常 exfiltration URL）
+        self.agent_risk_patterns = [
+            (r'\bark-[0-9a-f]{8,}-[0-9a-f]{4,}', 'VolcanoARK API Key (火山方舟)'),
+            (r'\b[0-9a-f]{32}\.[0-9a-zA-Z]{20,}', 'ZhipuGLM API Key (智谱)'),
+            (r'(?i)ignore\s+(all\s+)?previous\s+(instructions|prompts?|directions)', 'Prompt Injection: 忽略历史指令'),
+            (r'(?i)you\s+are\s+now\s+(?:a|an)?\s*(?:free|unleashed|no\s*lim)', 'Prompt Injection: 角色越权引导'),
+            (r'(?i)exfiltrate|exfiltration|steal\s+credentials|send\s+(?:all|the)\s+(?:data|tokens|secrets)', '数据外泄指令'),
+            (r'https?://[\w.-]+\.(?:ngrok\.io|webhook\.site|requestbin\.com|pipedream\.net|webhook\.me)', '外泄/回调 URL'),
+            (r'(?i)(?:set|change|override)\s+(?:system\s+)?prompt\s*[:=]', 'Prompt 覆盖指令'),
         ]
 
+
+
         # 扫描的文件扩展名
-        self.scan_extensions = ['.py', '.js', '.html', '.css', '.json', '.yml', '.yaml', '.env', '.cfg', '.ini']
+        self.scan_extensions = ['.py', '.js', '.html', '.css', '.json', '.yml', '.yaml', '.env', '.cfg', '.ini', '.md']
 
         # 排除的目录
         self.exclude_dirs = ['.venv', 'node_modules', '__pycache__', '.git', 'data', 'logs', 'backups', '.ollama']
@@ -242,6 +256,18 @@ class SecurityScanner:
                             'line': line_num,
                             'issue': description,
                             'severity': 'high',
+                            'preview': match.group(0)[:50] + '...'
+                        })
+
+                # S2：Agent/AI 供应链风险扫描（medium severity）
+                for pattern, description in self.agent_risk_patterns:
+                    for match in re.finditer(pattern, content):
+                        line_num = content[:match.start()].count('\n') + 1
+                        findings.append({
+                            'file': rel_path,
+                            'line': line_num,
+                            'issue': description,
+                            'severity': 'medium',
                             'preview': match.group(0)[:50] + '...'
                         })
             except Exception:
