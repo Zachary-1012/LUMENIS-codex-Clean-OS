@@ -129,6 +129,18 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
         })
         print(f"[Collector]   !! 风险引擎熔断({snap['band']}, score={snap['risk_score']})，停止后续关键词请求")
         return True
+    # P1-A：ResourceGuard 资源/效率层联动——消费 lifecycle_action(六态) -> 四态 -> 调度停止
+    from collector_guard.schedule_adapter import schedule_state, should_stop_schedule
+    if should_stop_schedule(snap.get('lifecycle_action')):
+        results.append({
+            'keyword': kw, 'count': count,
+            'error': error or '', 'guard_state': guard_state or '',
+            'risk_score': snap.get('risk_score'), 'risk_band': snap.get('band'),
+            'schedule_state': schedule_state(snap.get('lifecycle_action')),
+            'tier': 'core' if is_core else 'expand',
+        })
+        print(f"[Collector]   !! 资源/效率守卫({snap.get('lifecycle_action')})，停止后续关键词请求")
+        return True
     return False
 
 
