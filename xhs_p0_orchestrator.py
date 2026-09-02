@@ -17,7 +17,8 @@ P0 目标流程（硬编码在 run_once / trigger_collection）：
   xhs_cookie_bridge  : select_account / verify_account / runtime_preflight_check /
                        ACCOUNT_PROFILES / ALLOWED_USER_IDS / XHS_CN_PRIMARY_NAME / XHS_RETINAUT_NAME
   runtime_preflight  : run_preflight（启动预检）
-  auth_recovery_api  : create_task / start_task / complete_task（扫码恢复任务落库）
+  auth_recovery_center : recovery_center 服务层（create_task / mark_in_progress /
+                       mark_completed / mark_failed）——不依赖 HTTP 请求上下文，可后台线程调用
 
 身份硬白名单（双子星库 Contract）：
   XHS_CN_PRIMARY  = 主账号（日常采集/驻场）
@@ -36,7 +37,6 @@ from datetime import datetime, timedelta
 
 import xhs_cookie_bridge as bridge
 import runtime_preflight
-import auth_recovery_api
 
 # ============ 常量（双子星库 Contract 硬白名单） ============
 # 直接引用 bridge 的唯一权威白名单（绝不本地再复制一份账号表）
@@ -135,17 +135,20 @@ def trigger_scan_recovery() -> dict:
         _STATE.recovery_started = time.time()
 
     try:
-        # auth_recovery_api.create_task 返回 (task_id, msg) 或 dict——按实际返回兼容
-        created = auth_recovery_api.create_task()
-        if isinstance(created, (tuple, list)):
-            task_id = created[0]
-        elif isinstance(created, dict):
-            task_id = created.get("task_id")
-        else:
-            task_id = created
+        # 直接调用服务层（不依赖 HTTP 请求上下文），避免后台线程调 Flask 视图函数报错
+        from auth_recovery_center import recovery_center
+        task = recovery_center.create_task(
+            platform="xhs",
+            issue_type="session_invalid",
+            title="小红书 Session 失效，请扫码恢复",
+            description="系统检测到小红书 Session 失效，已自动弹出扫码。请使用白名单账号扫码一次完成验证。",
+            recovery_url="",
+        )
+        task_id = task.id if hasattr(task, "id") else getattr(task, "task_id", None)
         if not task_id:
-            return {"ok": False, "msg": f"扫码恢复任务创建失败: {created}"}
-        auth_recovery_api.start_task(int(task_id))
+            return {"ok": False, "msg": f"扫码恢复任务创建失败: {task}"}
+        # 标记为进行中（等价 auth_recovery_api.start_task）
+        recovery_center.mark_in_progress(int(task_id))
         with _STATE.lock:
             _STATE.recovery_task_id = int(task_id)
             _STATE.last_error = "Session 失效，已弹出扫码恢复"
@@ -169,10 +172,11 @@ def complete_scan_recovery(success: bool = True) -> dict:
         _STATE.recovery_task_id = None
     if task_id:
         try:
+            from auth_recovery_center import recovery_center
             if success:
-                auth_recovery_api.complete_task(int(task_id))
+                recovery_center.mark_completed(int(task_id))
             else:
-                auth_recovery_api.fail_task(int(task_id))
+                recovery_center.mark_failed(int(task_id), error_message="扫码未完成")
         except Exception as e:  # noqa: BLE001
             _logger.warning("finalize recovery task %s failed: %s", task_id, e)
     with _STATE.lock:
@@ -182,6 +186,8 @@ def complete_scan_recovery(success: bool = True) -> dict:
             _STATE.resident_until = time.time() + COOLDOWN_AFTER_RECOVERY
             _STATE.last_error = ""
         else:
+            _STATE.session_ok = False
+            _STATE.resident_until = None  # 驻场不再有效，回到需扫码状态
             _STATE.last_error = "扫码恢复未完成，Session 仍未恢复"
     return {"ok": True, "success": success}
 

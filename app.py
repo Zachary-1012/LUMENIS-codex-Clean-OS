@@ -80,6 +80,7 @@ import local_ai_client
 import pr_case_integration
 import system_features_api
 import auth_recovery_api  # V3.0 P0: Auth Recovery Center
+import xhs_p0_orchestrator
 import collector_automation
 import ai_learning_engine
 import public_opinion_cases
@@ -4306,6 +4307,12 @@ if __name__=='__main__':
     if not args.no_scheduler:
         # v5.8.6 恢复主采集调度器：固定时钟唤醒 + 动态决策影子对照（周报线程另行评估后启用）
         threading.Thread(target=scheduler_loop, daemon=True, name='scheduler').start()
+    # 双子星库 Contract: 小红书 P0 长期驻场心跳（Session 失效→扫码恢复→白名单采集）
+    try:
+        xhs_p0_orchestrator.start_resident()
+        print('[XHS-P0] 小红书 P0 驻场心跳已启动')
+    except Exception as _pe:
+        print(f'[XHS-P0] 驻场心跳启动失败: {_pe}')
         # threading.Thread(target=_weekly_scheduler,daemon=True,name='weekly_scheduler').start()
         print('[Scheduler] 主采集调度器已启用（唤醒点+动态影子对照）')
     
@@ -4327,6 +4334,38 @@ if __name__=='__main__':
     print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{not args.no_scheduler} | HTTP认证：{auth_state}')
 
 # ===== v5.8.0 新增API =====
+
+# ===== 小红书 P0 生产编排 API（双子星库 Contract） =====
+@app.route('/api/xhs/p0/status', methods=['GET'])
+def api_xhs_p0_status():
+    """前端轮询：小红书 P0 驻场/会话/恢复状态聚合"""
+    try:
+        return jsonify({'ok': True, **xhs_p0_orchestrator.get_status()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/p0/recovery/complete', methods=['POST'])
+def api_xhs_p0_recovery_complete():
+    """人工扫码后触发：关闭恢复任务，标记 Session 已恢复"""
+    try:
+        data = request.get_json(silent=True) or {}
+        success = bool(data.get('success', True))
+        return jsonify(xhs_p0_orchestrator.complete_scan_recovery(success=success))
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/p0/collection', methods=['POST'])
+def api_xhs_p0_collection():
+    """手动触发采集：身份硬白名单门控后进入采集链"""
+    try:
+        data = request.get_json(silent=True) or {}
+        account = data.get('account')
+        keywords = data.get('keywords')
+        max_scroll = int(data.get('max_scroll', 4))
+        return jsonify(xhs_p0_orchestrator.trigger_collection(
+            account_name=account, keywords=keywords, max_scroll=max_scroll))
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ===== 稳定性监控API =====
 @app.route('/api/stability/status', methods=['GET'])
