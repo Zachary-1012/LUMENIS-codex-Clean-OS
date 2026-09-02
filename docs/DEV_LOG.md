@@ -939,3 +939,16 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - 新增 tests/test_evidence_exporter.py 3 测：只导核准+脱敏+剔除凭证字段；增量水位只取新增；端到端 manifest/sha256/源库行数不变（只读证明）/二次导出为 0。
 - 真实冒烟（Staging 副本，未碰生产库）：608 verified notes + 7 confirmed/partially_confirmed events + 29 daily_reports = 644 条，redacted=0（真实正文无联系方式），二次增量 0。
 - 结果：192 passed（189→192，exit=0）。DB/采集/主体口径零变更，生产 8201 未碰；导出器未接入定时调度（BACKLOG，等用户确认后接）。
+
+
+---
+
+## 2026-09-02 14:25 · 国内采集恢复 + 自适应调度门控上线（GAP-05 enforce，生产 8201 已重启）
+
+- **用户指令**：国内采集不再暂停；不用固定时间采集，启动不定时根据状态确定采集数量的自适应调度；功能不依靠 VPN，任何网络可用。
+- **VPN 确认**：10808 仅用于 git push（GitHub 直连被重置），系统运行（Flask/采集/数据库/healthz）完全不依赖代理；proxy_pool 可插拔默认关闭，关闭时等同直连。
+- **熔断/暂停**：xhs_circuit.json 实测 state=SUCCESS（冷却期已过，已清除）；用户暂停文件不存在（未手动暂停）。
+- **rednote_policy**：CN_PAUSED True→False（国内采集恢复），primary_region 仍 intl（香港为主，国内并行）；三端策略不变（话题开/舆情笔记开/事件笔记关）。
+- **scheduler_loop 自适应门控**：去掉固定时间点（auto_collect_hours）硬触发，改为每 20 秒循环问 ShadowPlanner「此刻是否该采」；gate_should_run enforce 模式（只收紧不放松，异常 fail-open）；max_scroll 由 adaptive_engine.get_current_params() 动态决定（当前 normal=6，风险升高会自动降）；账号频率保护 check_rate_limit（60 分钟最小间隔）和熔断全部保留在上游。
+- **生产验证**：8201 已重启（pid 16428→29168），healthz ok v5.9.9；日志确认 gate=enforce should_run=True code=RUN_DUE，频率保护合理拦截（距上次运行不足 60 分钟，约 14:51 自动触发）；9222/9223 CDP 双驻场在线。
+- **测试**：test_rednote_policy 期望同步更新（cn_paused=False）；全量 exit=0。DB/主体口径/红线函数零变更。

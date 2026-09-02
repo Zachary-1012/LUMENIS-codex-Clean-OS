@@ -15,7 +15,7 @@ def test_default_policy_matches_signed_off_strategy(monkeypatch):
         monkeypatch.delenv(k, raising=False)
     from platform_adapters.rednote_policy import effective_policy
     p = effective_policy()
-    assert p.primary_region == "intl" and p.cn_paused is True
+    assert p.primary_region == "intl" and p.cn_paused is False  # 2026-09-02 用户指令恢复国内采集，不再暂停
     # 默认不自动跑真实平台（不撞熔断）
     assert p.auto_run_enabled is False and p.daily_login_keepalive is False
     # 三端：话题开、舆情笔记开、事件笔记关
