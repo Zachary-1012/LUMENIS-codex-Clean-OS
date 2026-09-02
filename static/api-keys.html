@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Key 管理 · Z-Brand Intelligence Platform</title>
+<style>
+:root{
+  --zb-bg:#FAFAF9;--zb-surface:#FFFFFF;--zb-surface-raised:#F5F5F4;
+  --zb-border:#E7E5E4;--zb-border-strong:#D6D3D1;
+  --zb-text:#1C1917;--zb-text-secondary:#57534E;--zb-text-muted:#A8A29E;
+  --zb-accent:#1C1917;--zb-success:#16A34A;--zb-warning:#D97706;--zb-danger:#DC2626;--zb-info:#2563EB;
+  --zb-radius:8px;--zb-radius-sm:4px;--zb-spacing:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--zb-bg);color:var(--zb-text);font-size:14px;line-height:1.6}
+.page{max-width:960px;margin:0 auto;padding:40px 24px}
+.header{margin-bottom:32px}
+.header h1{font-size:24px;font-weight:600;letter-spacing:-0.3px;margin-bottom:4px}
+.header p{color:var(--zb-text-secondary);font-size:13px}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--zb-surface);border:1px solid var(--zb-border);border-radius:var(--zb-radius);padding:16px}
+.stat-card .label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--zb-text-muted);margin-bottom:4px}
+.stat-card .value{font-size:24px;font-weight:600}
+.stat-card .value.active{color:var(--zb-success)}
+.stat-card .value.revoked{color:var(--zb-text-muted)}
+.stat-card .value.total{color:var(--zb-text)}
+.panel{background:var(--zb-surface);border:1px solid var(--zb-border);border-radius:var(--zb-radius);margin-bottom:24px;overflow:hidden}
+.panel-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--zb-border);background:var(--zb-surface-raised)}
+.panel-header h2{font-size:15px;font-weight:600}
+.btn{padding:8px 16px;border-radius:var(--zb-radius-sm);border:1px solid var(--zb-border-strong);background:var(--zb-surface);color:var(--zb-text);font-size:13px;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn:hover{background:var(--zb-surface-raised)}
+.btn.primary{background:var(--zb-accent);color:#fff;border-color:var(--zb-accent)}
+.btn.primary:hover{background:#44403C}
+.btn.danger{color:var(--zb-danger);border-color:#FECACA}
+.btn.danger:hover{background:#FEF2F2}
+.btn.sm{padding:4px 10px;font-size:12px}
+.generate-form{padding:20px;display:none;border-bottom:1px solid var(--zb-border)}
+.generate-form.show{display:block}
+.form-row{display:flex;gap:12px;margin-bottom:12px;align-items:flex-end}
+.form-group{flex:1}
+.form-group label{display:block;font-size:12px;color:var(--zb-text-secondary);margin-bottom:4px;font-weight:500}
+.form-group input,.form-group select{width:100%;padding:8px 10px;border:1px solid var(--zb-border-strong);border-radius:var(--zb-radius-sm);font-size:13px;font-family:inherit;background:var(--zb-surface)}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--zb-accent)}
+.key-list{list-style:none}
+.key-item{padding:16px 20px;border-bottom:1px solid var(--zb-border);display:flex;justify-content:space-between;align-items:center;transition:background 0.15s}
+.key-item:last-child{border-bottom:none}
+.key-item:hover{background:var(--zb-surface-raised)}
+.key-info{flex:1}
+.key-label{font-size:14px;font-weight:500;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.key-prefix{font-family:'SF Mono',Monaco,Consolas,monospace;font-size:12px;color:var(--zb-text-secondary);background:var(--zb-surface-raised);padding:2px 6px;border-radius:3px}
+.key-meta{font-size:11px;color:var(--zb-text-muted);margin-top:4px;display:flex;gap:16px}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%}
+.status-dot.active{background:var(--zb-success);box-shadow:0 0 6px var(--zb-success)}
+.status-dot.revoked{background:var(--zb-text-muted)}
+.status-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.status-badge.active{background:#DCFCE7;color:#166534}
+.status-badge.revoked{background:#F5F5F4;color:#78716C}
+.key-actions{display:flex;gap:8px}
+.new-key-result{padding:20px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:var(--zb-radius);margin:16px 20px;display:none}
+.new-key-result.show{display:block}
+.new-key-result .title{font-size:13px;font-weight:600;color:#166534;margin-bottom:8px}
+.new-key-result .key{font-family:'SF Mono',Monaco,Consolas,monospace;font-size:13px;background:#fff;padding:10px 12px;border-radius:4px;border:1px solid #BBF7D0;word-break:break-all;margin-bottom:8px;user-select:all}
+.new-key-result .warn{font-size:11px;color:#92400E;margin-top:4px}
+.empty-state{padding:48px 20px;text-align:center;color:var(--zb-text-muted)}
+.empty-state .icon{font-size:32px;margin-bottom:8px;opacity:0.4}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;background:var(--zb-text);color:#fff;border-radius:var(--zb-radius);font-size:13px;z-index:1000;opacity:0;transition:opacity 0.2s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.error{background:var(--zb-danger)}
+@media(max-width:640px){
+  .page{padding:24px 16px}
+  .stats-row{grid-template-columns:1fr}
+  .form-row{flex-direction:column}
+  .key-item{flex-direction:column;align-items:flex-start;gap:12px}
+  .key-actions{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <h1>API Key 管理</h1>
+    <p>管理 ZBMP 工作区 API 密钥，用于外部系统接入与自动化调用</p>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="label">总密钥</div><div class="value total" id="statTotal">0</div></div>
+    <div class="stat-card"><div class="label">活跃</div><div class="value active" id="statActive">0</div></div>
+    <div class="stat-card"><div class="label">已撤销</div><div class="value revoked" id="statRevoked">0</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h2>密钥列表</h2>
+      <button class="btn primary" onclick="toggleGenerateForm()">+ 生成新密钥</button>
+    </div>
+    <div class="generate-form" id="generateForm">
+      <div class="form-row">
+        <div class="form-group"><label>密钥名称 (Label)</label><input type="text" id="newKeyLabel" placeholder="例如：ZBMP-生产环境-主密钥"></div>
+        <div class="form-group"><label>工作区</label><select id="newKeyWorkspace"><option value="ZBMP">ZBMP</option><option value="CTH">CTH-POMS</option><option value="GLOBAL">全局</option></select></div>
+        <div class="form-group"><label>有效期</label><select id="newKeyExpires"><option value="0">永不过期</option><option value="30">30 天</option><option value="90">90 天</option><option value="180">180 天</option><option value="365">365 天</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="generateKey()">确认生成</button>
+        <button class="btn" onclick="toggleGenerateForm()">取消</button>
+      </div>
+    </div>
+    <div class="new-key-result" id="newKeyResult">
+      <div class="title">✓ 新密钥已生成，请立即保存</div>
+      <div class="key" id="newKeyValue"></div>
+      <div class="warn">⚠️ 此密钥只显示一次，关闭后无法再次查看。请妥善保管。</div>
+    </div>
+    <ul class="key-list" id="keyList"><li class="empty-state"><div class="icon">🔑</div>加载中…</li></ul>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const AUTH='Basic '+btoa('Zachary:Zachary01');
+function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isError?' error':'');setTimeout(()=>t.classList.remove('show'),100);setTimeout(()=>t.classList.add('show'),200);setTimeout(()=>t.classList.remove('show'),3000)}
+function fmtDate(s){if(!s)return'—';const d=new Date(s);return d.toLocaleDateString('zh-CN')+' '+d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}
+async function loadKeys(){
+  try{
+    const r=await fetch('/api/v4/api-keys',{headers:{Authorization:AUTH}});
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error);
+    document.getElementById('statTotal').textContent=d.total;
+    document.getElementById('statActive').textContent=d.stats.active||0;
+    document.getElementById('statRevoked').textContent=d.stats.revoked||0;
+    const list=document.getElementById('keyList');
+    if(!d.keys||d.keys.length===0){list.innerHTML='<li class="empty-state"><div class="icon">🔑</div>暂无密钥，点击右上角生成</li>';return}
+    list.innerHTML=d.keys.map(k=>`
+      <li class="key-item">
+        <div class="key-info">
+          <div class="key-label"><span class="status-dot ${k.status}"></span>${k.label}<span class="status-badge ${k.status}">${k.status==='active'?'活跃':'已撤销'}</span></div>
+          <div class="key-prefix">${k.key_prefix}</div>
+          <div class="key-meta">
+            <span>工作区: ${k.workspace}</span>
+            <span>创建: ${fmtDate(k.created_at)}</span>
+            <span>最后使用: ${fmtDate(k.last_used_at)}</span>
+            ${k.expires_at?`<span>过期: ${fmtDate(k.expires_at)}</span>`:''}
+          </div>
+        </div>
+        <div class="key-actions">
+          ${k.status==='active'?`<button class="btn sm danger" onclick="revokeKey(${k.id},'${k.label}')">撤销</button>`:''}
+        </div>
+      </li>`).join('');
+  }catch(e){document.getElementById('keyList').innerHTML='<li class="empty-state">加载失败: '+e.message+'</li>'}
+}
+function toggleGenerateForm(){const f=document.getElementById('generateForm');f.classList.toggle('show');document.getElementById('newKeyResult').classList.remove('show')}
+async function generateKey(){
+  const label=document.getElementById('newKeyLabel').value.trim();
+  if(!label){showToast('请输入密钥名称',true);return}
+  const workspace=document.getElementById('newKeyWorkspace').value;
+  const expires_days=parseInt(document.getElementById('newKeyExpires').value);
+  try{
+    const r=await fetch('/api/v4/api-keys/generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:AUTH},body:JSON.stringify({label,workspace,expires_days})});
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error);
+    document.getElementById('newKeyValue').textContent=d.key_plain;
+    document.getElementById('newKeyResult').classList.add('show');
+    document.getElementById('newKeyLabel').value='';
+    showToast('密钥生成成功，请保存');
+    loadKeys();
+  }catch(e){showToast('生成失败: '+e.message,true)}
+}
+async function revokeKey(id,label){
+  if(!confirm(`确认撤销密钥「${label}」？撤销后无法恢复。`))return;
+  try{
+    const r=await fetch('/api/v4/api-keys/revoke',{method:'POST',headers:{'Content-Type':'application/json',Authorization:AUTH},body:JSON.stringify({key_id:id})});
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error);
+    showToast('密钥已撤销');
+    loadKeys();
+  }catch(e){showToast('撤销失败: '+e.message,true)}
+}
+loadKeys();
+</script>
+</body>
+</html>

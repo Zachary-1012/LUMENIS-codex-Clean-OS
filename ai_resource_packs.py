@@ -38,7 +38,7 @@ RESOURCE_PACKS = {
         "total": 100,                 # 100次
         "daily_limit": None,          # 不按天限制，总量控制
         "unit": "次",
-        "description": "搜索增强模型，用在刀刃上（RAG/实时信息检索）",
+        "description": "搜索增强模型(100次)，用在刀刃上：案例库搜索增强、品牌知识库RAG、产品全局架构、层级关系优化、采集器智能检索",
         "enabled": True,
     },
     "per_call": {
@@ -47,9 +47,9 @@ RESOURCE_PACKS = {
         "total": 20,                  # 20次
         "daily_limit": None,
         "unit": "次",
-        "description": "高价值模型按次调用，2次用于ChatGPT/Codex学习采集，其余按需求执行",
+        "description": "高价值模型按次调用(20次)：2次预留用于采集ChatGPT/Codex编程设计功能、交互及学习能力、可进化板块-实时推进开发执行；其余18次按用户需求执行",
         "enabled": True,
-        "reserved_for_learning": 2,   # 预留2次用于学习采集
+        "reserved_for_learning": 2,   # 预留2次用于学习采集(ChatGPT/Codex编程/交互/可进化板块)
     },
     "glm_4_6v": {
         "name": "GLM-4.6V 视觉",

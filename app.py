@@ -624,10 +624,27 @@ def _subject_sql_and_values(alias=''):
     """系统历史兼容入口：所有 API 统计统一调用主体硬过滤。"""
     return subject_sql_and_values(alias)
 
+@app.route('/api/auth/config')
+def auth_config_api():
+    """P0-B(2026-09-02): 前端 Auth 动态注入端点 — 前端从此读取凭证，前端代码库不再硬编码任何凭证。
+    放行认证（列入 _basic_auth 白名单），仅返回 auth_enabled + auth_header。
+    auth_header 仅在认证开启时返回；凭证单一来源在此端点（后端环境变量），可动态轮换/环境分离。
+    """
+    if not _auth_enabled():
+        return jsonify({'ok': True, 'auth_enabled': False, 'auth_header': ''})
+    try:
+        import base64 as _b64
+        header = 'Basic ' + _b64.b64encode(('%s:%s' % (AUTH_USER, AUTH_PASSWORD)).encode('utf-8')).decode('ascii')
+        return jsonify({'ok': True, 'auth_enabled': True, 'auth_header': header})
+    except Exception as _e:
+        return jsonify({'ok': True, 'auth_enabled': True, 'auth_header': '', 'error': str(_e)})
+
+
 @app.before_request
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
-    if not _auth_enabled() or request.path in ('/healthz',) or request.path.startswith('/v4/'):
+    # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
+    if not _auth_enabled() or request.path in ('/healthz', '/api/auth/config') or request.path.startswith('/v4/'):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -5553,6 +5570,98 @@ def api_ai_resource_packs_per_call_execute():
         model = data.get('model', 'glm-4-plus')
         result = ai_resource_packs.execute_per_call_request(user_request, model)
         return jsonify(result)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+
+
+# ============ API Key 管理（v4_workspace_keys 前端接入） ============
+@app.route('/api/v4/api-keys')
+def api_v4_api_keys_list():
+    """API Key 列表"""
+    try:
+        import sqlite3
+        db_path = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("""SELECT id, workspace, label, key_prefix, status, expires_at, last_used_at, created_at, created_by
+                     FROM v4_workspace_keys ORDER BY created_at DESC LIMIT 200""")
+        keys = [dict(row) for row in c.fetchall()]
+        c.execute("SELECT status, COUNT(*) as cnt FROM v4_workspace_keys GROUP BY status")
+        stats = {row['status']: row['cnt'] for row in c.fetchall()}
+        conn.close()
+        return jsonify({'ok': True, 'keys': keys, 'stats': stats, 'total': len(keys)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/v4/api-keys/generate', methods=['POST'])
+def api_v4_api_keys_generate():
+    """生成新 API Key"""
+    try:
+        import os, hashlib, secrets
+        from datetime import datetime, timedelta
+        data = request.get_json(silent=True) or {}
+        label = str(data.get('label') or '').strip()
+        workspace = str(data.get('workspace') or 'ZBMP').strip()
+        expires_days = int(data.get('expires_days') or 0)  # 0=永不过期
+        if not label:
+            return jsonify({'ok': False, 'error': 'label 不能为空'}), 400
+
+        # 生成密钥
+        key_plain = 'zbmp_' + secrets.token_urlsafe(24)[:32]
+        salt = os.urandom(16).hex()
+        dk = hashlib.pbkdf2_hmac('sha256', key_plain.encode('utf-8'), bytes.fromhex(salt), 120000)
+        key_hash = f"pbkdf2$120000${salt}${dk.hex()}"
+        key_prefix = key_plain[:12] + '...'
+        expires_at = (datetime.now() + timedelta(days=expires_days)).isoformat() if expires_days > 0 else None
+
+        import sqlite3
+        db_path = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""INSERT INTO v4_workspace_keys
+                     (workspace, label, key_prefix, key_hash, created_by, status, expires_at, created_at)
+                     VALUES (?, ?, ?, ?, ?, 'active', ?, ?)""",
+                  (workspace, label, key_prefix, key_hash, 'Zachary', expires_at, datetime.now().isoformat()))
+        conn.commit()
+        key_id = c.lastrowid
+        conn.close()
+
+        return jsonify({
+            'ok': True,
+            'key_id': key_id,
+            'key_plain': key_plain,  # 只在生成时返回一次
+            'key_prefix': key_prefix,
+            'label': label,
+            'workspace': workspace,
+            'expires_at': expires_at,
+            'message': '请立即保存此密钥，之后无法再次查看',
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/v4/api-keys/revoke', methods=['POST'])
+def api_v4_api_keys_revoke():
+    """撤销 API Key"""
+    try:
+        data = request.get_json(silent=True) or {}
+        key_id = data.get('key_id')
+        if not key_id:
+            return jsonify({'ok': False, 'error': 'key_id 不能为空'}), 400
+        import sqlite3
+        from datetime import datetime
+        db_path = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("UPDATE v4_workspace_keys SET status='revoked' WHERE id=?", (key_id,))
+        conn.commit()
+        affected = c.rowcount
+        conn.close()
+        if affected == 0:
+            return jsonify({'ok': False, 'error': '密钥不存在'}), 404
+        return jsonify({'ok': True, 'key_id': key_id, 'status': 'revoked'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
