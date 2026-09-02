@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ZBC 移动轻量监控</title>
+<style>
+  :root{--bg:#F4F3EE;--card:#fff;--line:#E4E3DD;--text:#1A1B1C;--sub:#6B7280;--accent:#8BC8EA;--ok:#52C41A;--warn:#FAAD14;--err:#EA6668}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Roboto','Segoe UI',Arial,sans-serif;padding:12px 12px 40px;line-height:1.5}
+  h1{font-size:17px;font-weight:600}
+  .bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .chip{font-size:11px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px 8px}
+  .cards{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .card{flex:1 1 108px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+  .card .k{font-size:11px;color:var(--sub)}
+  .card .v{font-size:20px;font-weight:600;margin-top:2px}
+  .card .v.small{font-size:15px}
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px}
+  .sec h2{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--sub)}
+  .ev{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .ev:last-child{border-bottom:none}
+  .dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex:0 0 auto}
+  .ev .t{font-size:13px;font-weight:500}
+  .ev .d{font-size:11px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev .x{font-size:12px;color:var(--text);margin-top:4px;display:none;white-space:normal}
+  .ev.open .x{display:block}
+  .footer{font-size:10px;color:var(--sub);text-align:center;margin-top:16px}
+  svg{width:100%;height:auto;display:block}
+  .empty{font-size:12px;color:var(--sub);padding:12px 0;text-align:center}
+  .tag{font-size:10px;border-radius:6px;padding:1px 5px;color:#fff;flex:0 0 auto}
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>ZBC 移动监控</h1>
+  <span class="chip" id="aiChip">AI …</span>
+</div>
+<div class="cards" id="cards"><div class="empty">加载中…</div></div>
+<div class="sec"><h2>事件构成</h2><div id="chart"><div class="empty">加载中…</div></div></div>
+<div class="sec"><h2>日报结论</h2><div id="digest"><div class="empty">加载中…</div></div></div>
+<div class="sec"><h2>事件时间轴</h2><div id="timeline"><div class="empty">加载中…</div></div></div>
+<div class="footer">数据来自 ZBC 生产 API · 只读端</div>
+<script>
+(function(){
+  'use strict';
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  var $=function(id){return document.getElementById(id);};
+  var AUTH='';
+  function boot(){
+    try{
+      fetch('/api/auth/config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
+        if(cfg && cfg.auth_header){AUTH=cfg.auth_header;try{sessionStorage.setItem('zbc_auth',AUTH);}catch(e){}}
+        else{try{AUTH=sessionStorage.getItem('zbc_auth')||'';}catch(e){}}
+        loadAll();
+      }).catch(function(){try{AUTH=sessionStorage.getItem('zbc_auth')||'';}catch(e){};loadAll();});
+    }catch(e){loadAll();}
+  }
+  function hdr(){var h={'Accept':'application/json'};if(AUTH){h['Authorization']=AUTH;}return h;}
+  function get(url){return fetch(url,{headers:hdr(),cache:'no-store'}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();});}
+  function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+  function loadAll(){ loadAI(); loadStats(); loadChart(); loadDigest(); loadTimeline(); }
+
+  function loadAI(){
+    get('/api/ai/status').then(function(d){
+      var s=d && d.ok!==false ? (d.model||d.provider||'n/a') : 'n/a';
+      var rt=d && d.runtime ? d.runtime : '';
+      $('aiChip').textContent='AI '+(d&&d.enabled?'on':'off')+' · '+s+(rt?' · '+rt:'');
+    }).catch(function(){ $('aiChip').textContent='AI 离线'; });
+  }
+  function loadStats(){
+    get('/api/stats').then(function(d){
+      var st=d.stats||{}; var c=$('cards'); c.innerHTML='';
+      function card(k,v,small){var n=el('div','card');n.appendChild(el('div','k',k));var vv=el('div',small?'v small':'v',String(v));n.appendChild(vv);c.appendChild(n);}
+      card('总笔记',st.total||0); card('正向',st.positive||0); card('中性',st.neutral||0); card('负向',st.negative||0);
+      card('高风险',st.high_risk||0,true); card('中风险',st.medium_risk||0,true); card('低风险',st.low_risk||0,true);
+    }).catch(function(){ $('cards').innerHTML='<div class="empty">统计加载失败</div>'; });
+  }
+  function donut(data){
+    var total=0;for(var k in data){total+=data[k]||0;}
+    var wrap=$('chart'); if(total<=0){wrap.innerHTML='<div class="empty">暂无事件数据</div>';return;}
+    var cols={'风险':'#EA6668','正面':'#52C41A','中性':'#9EACEA','预警':'#FAAD14'};
+    var order=Object.keys(data).sort(function(a,b){return data[b]-data[a];});
+    var html='<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
+    html+='<svg viewBox="0 0 100 100" style="width:90px;height:90px;flex:0 0 auto"><circle cx="50" cy="50" r="40" fill="none" stroke="#E4E3DD" stroke-width="16"/>';
+    var ang=-90, cx=50, cy=50, r=40, ir=32;
+    order.forEach(function(k){
+      var frac=(data[k]||0)/total, a2=ang+frac*360;
+      var x1=cx+r*Math.cos(ang*Math.PI/180), y1=cy+r*Math.sin(ang*Math.PI/180);
+      var x2=cx+r*Math.cos(a2*Math.PI/180), y2=cy+r*Math.sin(a2*Math.PI/180);
+      var large=frac>0.5?1:0;
+      html+='<path d="M '+x1.toFixed(2)+' '+y1.toFixed(2)+' A '+r+' '+r+' 0 '+large+' 1 '+x2.toFixed(2)+' '+y2.toFixed(2)+'" fill="none" stroke="'+(cols[k]||'#8BC8EA')+'" stroke-width="16"/>';
+      ang=a2;
+    });
+    html+='</svg><div style="flex:1 1 120px;min-width:0">';
+    order.forEach(function(k){
+      var pct=Math.round((data[k]||0)/total*100);
+      html+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;margin:3px 0"><span style="width:10px;height:10px;border-radius:2px;background:'+(cols[k]||'#8BC8EA')+'"></span>'+esc(k)+'<span style="color:#6B7280">'+pct+'%</span></div>';
+    });
+    html+='</div></div>';
+    wrap.innerHTML=html;
+  }
+  function loadChart(){
+    get('/api/event-graph/stats').then(function(d){
+      if(!d || !d.data || !d.data.events_by_type){ $('chart').innerHTML='<div class="empty">暂无事件数据</div>';return;}
+      donut(d.data.events_by_type);
+    }).catch(function(){ $('chart').innerHTML='<div class="empty">事件统计加载失败</div>'; });
+  }
+  function loadDigest(){
+    get('/api/report/daily').then(function(d){
+      var box=$('digest');
+      if(!d || !d.report){box.innerHTML='<div class="empty">暂无日报</div>';return;}
+      var html='<div style="font-size:13px">'+esc(d.report.conclusion||'（无结论）')+'</div>';
+      if(d.report.date_range){html+='<div style="font-size:11px;color:#6B7280;margin-top:4px">'+esc(d.report.date_range)+'</div>';}
+      box.innerHTML=html;
+    }).catch(function(){ $('digest').innerHTML='<div class="empty">日报加载失败</div>'; });
+  }
+  var RISK_COLORS={'风险':'#EA6668','预警':'#FAAD14','正面':'#52C41A','中性':'#9EACEA'};
+  function typeColor(et){
+    var s=String(et||'');
+    if(/风险|负面|危机|舆情/.test(s))return '#EA6668';
+    if(/预警|警示|异动/.test(s))return '#FAAD14';
+    if(/正面|利好|机会/.test(s))return '#52C41A';
+    return '#8BC8EA';
+  }
+  function loadTimeline(){
+    get('/api/event-graph/events?limit=50').then(function(d){
+      var box=$('timeline'); box.innerHTML='';
+      var list=(d&&d.events)||[];
+      if(!list.length){box.innerHTML='<div class="empty">暂无事件</div>';return;}
+      list.forEach(function(ev){
+        var row=el('div','ev'); row.setAttribute('tabindex','0');
+        var dot=el('div','dot'); dot.style.background=typeColor(ev.event_type);
+        var mid=el('div'); mid.style.cssText='flex:1 1 0;min-width:0';
+        mid.appendChild(el('div','t',(ev.event_type_name||ev.event_type||'事件')+' · '+esc(ev.event_time||'')));
+        mid.appendChild(el('div','d',esc(ev.description||'')));
+        var x=el('div','x',esc(ev.description||'')+(ev.source?'\n来源：'+esc(ev.source):''));
+        mid.appendChild(x);
+        row.appendChild(dot); row.appendChild(mid);
+        row.addEventListener('click',function(){row.classList.toggle('open');});
+        box.appendChild(row);
+      });
+    }).catch(function(){ $('timeline').innerHTML='<div class="empty">事件加载失败</div>'; });
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',boot);}else{boot();}
+})();
+</script>
+</body>
+</html>
