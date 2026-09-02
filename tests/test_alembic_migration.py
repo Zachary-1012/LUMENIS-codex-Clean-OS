@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 T-P1-3 Alembic 可回滚 DB 迁移 —— 回归测试
-在隔离的自建 mini 库上验证 stamp baseline / upgrade / downgrade 全链路，
-不触碰生产库 data/monitor.db（不读、不写）。
+在隔离的自建 mini 库上验证 stamp baseline / upgrade / downgrade 全链路。
+迁移脚本写入仓库 alembic/versions/（与真实使用一致），测试结束清理，绝不残留。
+关键隔离点：清除其他测试（如 test_workspace_keys 模块级设置）泄漏的 ZBC_DB_PATH，
+避免 alembic env.py 误连到别的库。不触碰生产库 data/monitor.db。
 """
 import os
 import sqlite3
@@ -14,11 +16,12 @@ from alembic import command
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(TESTS_DIR)
 INI = os.path.join(REPO_DIR, "alembic.ini")
+VERSIONS_DIR = os.path.join(REPO_DIR, "alembic", "versions")
 BASELINE_REV = "e4278c4d1d79"
+_MIG_FILE = "zz_test_rollback.py"
 
 
 def _make_mini_db(db_path: str) -> str:
-    """自建最小业务库：notes + events 两表（模拟既有库形态）。"""
     if os.path.exists(db_path):
         os.remove(db_path)
     c = sqlite3.connect(db_path)
@@ -46,6 +49,10 @@ def _make_mini_db(db_path: str) -> str:
 
 
 def _cfg(db_path: str) -> Config:
+    # 隔离：全量加载时其他测试可能设置 ZBC_DB_PATH（模块级、未清理），必须清除，
+    # 否则 alembic/env.py 会用它覆盖 sqlalchemy.url 误连到别的库。
+    os.environ.pop("ZBC_DB_PATH", None)
+    os.chdir(REPO_DIR)
     cfg = Config(INI)
     cfg.set_main_option(
         "sqlalchemy.url",
@@ -72,18 +79,27 @@ def _version(db_path: str):
     return rows
 
 
+def _cleanup_zz():
+    p = os.path.join(VERSIONS_DIR, _MIG_FILE)
+    if os.path.exists(p):
+        os.remove(p)
+
+
 def test_stamp_baseline_writes_version(tmp_path):
+    _cleanup_zz()
     db = _make_mini_db(str(tmp_path / "t.db"))
     cfg = _cfg(db)
     command.stamp(cfg, BASELINE_REV)
     ver = _version(db)
-    assert ver == [BASELINE_REV], "stamp 后 alembic_version 应记录 baseline（曾因 reflection 配置失败）"
+    assert ver == [BASELINE_REV], (
+        "stamp 后 alembic_version 应记录 baseline（曾因 reflection 配置失败）")
     tables = _tables(db)
     assert "notes" in tables and "events" in tables
     assert "alembic_version" in tables
 
 
 def test_upgrade_then_downgrade_rollback(tmp_path):
+    _cleanup_zz()
     db = _make_mini_db(str(tmp_path / "t2.db"))
     cfg = _cfg(db)
     command.stamp(cfg, BASELINE_REV)
@@ -91,9 +107,7 @@ def test_upgrade_then_downgrade_rollback(tmp_path):
         "SELECT count(*) FROM notes").fetchone()[0]
     assert before == 2
 
-    vdir = os.path.join(REPO_DIR, "alembic", "versions")
-    os.makedirs(vdir, exist_ok=True)
-    mig_path = os.path.join(vdir, "zz_test_rollback.py")
+    mig_path = os.path.join(VERSIONS_DIR, _MIG_FILE)
     mig_src = (
         '"""zz test rollback"""\n'
         "from alembic import op\n"
@@ -122,8 +136,7 @@ def test_upgrade_then_downgrade_rollback(tmp_path):
         assert "zz_test_col" not in cols
         assert _version(db) == [BASELINE_REV]
     finally:
-        if os.path.exists(mig_path):
-            os.remove(mig_path)
+        _cleanup_zz()
 
     after = sqlite3.connect(f"file:{db}?mode=ro", uri=True).execute(
         "SELECT count(*) FROM notes").fetchone()[0]
