@@ -1,26 +1,33 @@
 /* ============================================================
-   Z-Brand Core 产品启动海报 (Splash Screen) v2
-   设计语言：侘寂黑白灰 + 豆包式漂浮卡片/呼吸动效 + 胶片情绪质感
-   （重庆森林式朦胧光斑 / 细腻颗粒 / 暗角），克制冷静、典雅不浮夸
+   Z-Brand Core 产品启动海报 (Splash Screen) v3 — 浅色系
+   设计语言：侘寂浅灰白 + 银色流光海浪 + 微光银浮动 + 大彩色状态icon
+   参考：Prada/MiuMiu 极简时尚 + LeLabo/观夏 留白架构
    产品：CTH-POMS / ZBMP；纯 CSS，零外部资源、零依赖
    ============================================================ */
 
 .splash {
-  --splash-ink: #0b0b0c;
-  --splash-paper: rgba(255, 255, 255, 0.045);
-  --splash-line: rgba(255, 255, 255, 0.09);
-  --splash-text: rgba(255, 255, 255, 0.92);
-  --splash-text-sub: rgba(255, 255, 255, 0.58);
-  --splash-text-faint: rgba(255, 255, 255, 0.32);
-  --dot-ok: #5ec27e;
-  --dot-warn: #e0a64b;
-  --dot-info: #6aa6e6;
-  --dot-idle: rgba(255, 255, 255, 0.38);
+  /* 浅色系 token */
+  --splash-paper: #FAFAF9;       /* Stone 50 画布底 */
+  --splash-paper-raised: #FFFFFF; /* 白色卡片 */
+  --splash-line: #E7E5E4;        /* Stone 200 边框 */
+  --splash-line-strong: #D6D3D1; /* Stone 300 强边框 */
+  --splash-text: #1C1917;        /* Stone 800 主文字 */
+  --splash-text-sub: #78716C;    /* Stone 500 次级 */
+  --splash-text-faint: #A8A29E;  /* Stone 400 淡色 */
+  --splash-silver: #F5F5F4;      /* 微光银 */
+  --splash-silver-light: #FFFFFF; /* 高光银 */
+  --splash-silver-deep: #E7E5E4; /* 深银 */
+  --dot-ok: #22C55E;
+  --dot-warn: #F59E0B;
+  --dot-info: #3B82F6;
+  --dot-idle: #D6D3D1;
+  --dot-danger: #EF4444;
+
   position: fixed;
   inset: 0;
   z-index: 99999;
   background:
-    radial-gradient(120% 90% at 50% 18%, #161618 0%, var(--splash-ink) 58%, #060607 100%);
+    radial-gradient(140% 100% at 50% 0%, #FFFFFF 0%, var(--splash-paper) 50%, #F5F5F4 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -32,25 +39,137 @@
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
 }
 
-/* 暗角 vignette */
+/* 浅色暗角（极淡） */
 .splash::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(120% 120% at 50% 50%, transparent 60%, rgba(120, 113, 108, 0.06) 100%);
   pointer-events: none;
   z-index: 3;
 }
 
-/* 胶片颗粒（内联 SVG 噪点，极低透明度） */
+/* 银色流光海浪层 — 多层波浪渐变缓慢循环 */
+.splash-waves {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+.splash-wave {
+  position: absolute;
+  left: -50%;
+  width: 200%;
+  height: 200px;
+  border-radius: 40%;
+  opacity: 0.4;
+}
+.splash-wave-1 {
+  bottom: -80px;
+  background: linear-gradient(180deg, transparent 0%, rgba(231,229,228,0.3) 40%, rgba(214,211,209,0.15) 100%);
+  animation: waveFloat1 12s ease-in-out infinite;
+}
+.splash-wave-2 {
+  bottom: -120px;
+  background: linear-gradient(180deg, transparent 0%, rgba(245,245,244,0.5) 30%, rgba(231,229,228,0.2) 100%);
+  animation: waveFloat2 16s ease-in-out infinite;
+}
+.splash-wave-3 {
+  bottom: -60px;
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.6) 20%, rgba(245,245,244,0.3) 100%);
+  animation: waveFloat3 20s ease-in-out infinite;
+}
+@keyframes waveFloat1 {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(3%) rotate(1deg); }
+}
+@keyframes waveFloat2 {
+  0%, 100% { transform: translateX(2%) rotate(-1deg); }
+  50% { transform: translateX(-2%) rotate(1deg); }
+}
+@keyframes waveFloat3 {
+  0%, 100% { transform: translateX(-1%) rotate(0.5deg); }
+  50% { transform: translateX(2%) rotate(-0.5deg); }
+}
+
+/* 银色流光条 — 微光银横向流动 */
+.splash-shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.4) 45%,
+    rgba(245,245,244,0.6) 50%,
+    rgba(255,255,255,0.4) 55%,
+    transparent 70%
+  );
+  animation: shimmerSweep 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes shimmerSweep {
+  0% { left: -100%; }
+  60%, 100% { left: 100%; }
+}
+
+/* 浮动光斑 — 大彩色柔和光晕 */
+.splash-orbs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.splash-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.25;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+.splash-orb-1 {
+  width: 300px; height: 300px;
+  top: 10%; left: 15%;
+  background: radial-gradient(circle, #A5B4FC 0%, transparent 70%);
+  animation-delay: 0s;
+}
+.splash-orb-2 {
+  width: 250px; height: 250px;
+  top: 20%; right: 10%;
+  background: radial-gradient(circle, #FDE68A 0%, transparent 70%);
+  animation-delay: -2s;
+}
+.splash-orb-3 {
+  width: 280px; height: 280px;
+  bottom: 15%; left: 25%;
+  background: radial-gradient(circle, #BBF7D0 0%, transparent 70%);
+  animation-delay: -4s;
+}
+.splash-orb-4 {
+  width: 200px; height: 200px;
+  bottom: 25%; right: 20%;
+  background: radial-gradient(circle, #FECACA 0%, transparent 70%);
+  animation-delay: -6s;
+}
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, -30px) scale(1.05); }
+  66% { transform: translate(-15px, 20px) scale(0.95); }
+}
+
+/* 胶片颗粒（浅色版，极低透明度） */
 .splash-grain {
   position: absolute;
   inset: -50%;
   width: 200%;
   height: 200%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.045;
-  mix-blend-mode: screen;
+  opacity: 0.025;
+  mix-blend-mode: multiply;
   pointer-events: none;
   z-index: 2;
   animation: grainDrift 1.2s steps(3) infinite;
@@ -58,208 +177,214 @@
 @keyframes grainDrift {
   0% { transform: translate(0, 0); }
   33% { transform: translate(-1.5%, 1%); }
-  66% { transform: translate(1%, -1.5%); }
+  66% { transform: translate(1%, -1%); }
   100% { transform: translate(0, 0); }
 }
 
-/* 朦胧流动光斑（灰白色，重庆森林式 bokeh，克制不彩色） */
-.splash-atmos { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.splash-atmos .orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.5;
-}
-.splash-atmos .orb-1 {
-  width: 46vmin; height: 46vmin; left: 8%; top: 12%;
-  background: radial-gradient(circle, rgba(255,255,255,0.055), transparent 70%);
-  animation: orbDrift1 22s ease-in-out infinite;
-}
-.splash-atmos .orb-2 {
-  width: 40vmin; height: 40vmin; right: 6%; top: 30%;
-  background: radial-gradient(circle, rgba(200,208,222,0.05), transparent 70%);
-  animation: orbDrift2 27s ease-in-out infinite;
-}
-.splash-atmos .orb-3 {
-  width: 38vmin; height: 38vmin; left: 34%; bottom: 4%;
-  background: radial-gradient(circle, rgba(255,255,255,0.04), transparent 70%);
-  animation: orbDrift3 25s ease-in-out infinite;
-}
-@keyframes orbDrift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(4vmin,3vmin)} }
-@keyframes orbDrift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-3.5vmin,-2.5vmin)} }
-@keyframes orbDrift3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(2.5vmin,-3.5vmin)} }
-
-.splash.hide { opacity: 0; pointer-events: none; }
-
-/* ---------- 漂浮能力卡片 ---------- */
-.splash-orbit { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.float-card {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 15px;
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 1.5px;
-  color: var(--splash-text-sub);
-  background: var(--splash-paper);
-  border: 1px solid var(--splash-line);
-  border-radius: 12px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
-  white-space: nowrap;
-  opacity: 0;
-  animation: cardIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards, floatY 7s ease-in-out infinite;
-}
-.float-card .dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--dot-idle);
-  flex: none;
-}
-.float-card .dot-ok { background: var(--dot-ok); box-shadow: 0 0 8px rgba(94,194,126,0.5); }
-.float-card .dot-warn { background: var(--dot-warn); box-shadow: 0 0 8px rgba(224,166,75,0.5); }
-.float-card .dot-info { background: var(--dot-info); box-shadow: 0 0 8px rgba(106,166,230,0.5); }
-
-@keyframes cardIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; } }
-@keyframes floatY {
-  0%, 100% { margin-top: 0; }
-  50% { margin-top: -12px; }
-}
-
-/* 桌面外围布局（错相位、不同倾角） */
-.fc-1 { left: 11%; top: 20%; transform: rotate(-9deg);  animation-delay: 0.5s, 1.5s; }
-.fc-2 { right: 11%; top: 17%; transform: rotate(8deg);   animation-delay: 0.65s, 2.1s; }
-.fc-3 { left: 8%;  top: 47%; transform: rotate(6deg);    animation-delay: 0.8s, 1.8s; }
-.fc-4 { right: 8%; top: 45%; transform: rotate(-7deg);   animation-delay: 0.95s, 2.6s; }
-.fc-5 { left: 14%; bottom: 17%; transform: rotate(10deg);animation-delay: 1.1s, 2.0s; }
-.fc-6 { right: 13%;bottom: 19%; transform: rotate(-8deg);animation-delay: 1.25s, 2.9s; }
-/* floatY 需保留各自 rotate，用内层 margin 动效避免覆盖，这里给每卡不同漂浮幅度 */
-.fc-1 { animation-name: cardIn, floatY1; }
-.fc-2 { animation-name: cardIn, floatY2; }
-.fc-3 { animation-name: cardIn, floatY3; }
-.fc-4 { animation-name: cardIn, floatY4; }
-.fc-5 { animation-name: cardIn, floatY5; }
-.fc-6 { animation-name: cardIn, floatY6; }
-@keyframes floatY1 { 0%,100%{transform:rotate(-9deg) translateY(0)} 50%{transform:rotate(-9deg) translateY(-12px)} }
-@keyframes floatY2 { 0%,100%{transform:rotate(8deg) translateY(0)} 50%{transform:rotate(8deg) translateY(-15px)} }
-@keyframes floatY3 { 0%,100%{transform:rotate(6deg) translateY(0)} 50%{transform:rotate(6deg) translateY(-10px)} }
-@keyframes floatY4 { 0%,100%{transform:rotate(-7deg) translateY(0)} 50%{transform:rotate(-7deg) translateY(-14px)} }
-@keyframes floatY5 { 0%,100%{transform:rotate(10deg) translateY(0)} 50%{transform:rotate(10deg) translateY(-11px)} }
-@keyframes floatY6 { 0%,100%{transform:rotate(-8deg) translateY(0)} 50%{transform:rotate(-8deg) translateY(-13px)} }
-
-/* ---------- 中央内容 ---------- */
-.splash-content {
-  text-align: center;
-  position: relative;
-  z-index: 4;
-  animation: contentIn 1.1s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes contentIn {
-  from { opacity: 0; transform: translateY(16px); letter-spacing: 18px; }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.splash-abbr {
-  font-size: 66px;
-  font-weight: 200;
-  letter-spacing: 11px;
-  color: var(--splash-text);
-  margin-bottom: 26px;
-  text-indent: 11px; /* 视觉补偿 letter-spacing 右偏 */
-  animation: breathe 5s ease-in-out infinite 1.2s;
-}
-@keyframes breathe {
-  0%, 100% { opacity: 1; text-shadow: 0 0 38px rgba(255,255,255,0.06); }
-  50% { opacity: 0.9; text-shadow: 0 0 54px rgba(255,255,255,0.12); }
-}
-
-.splash-divider {
-  width: 46px; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
-  margin: 0 auto 26px;
-}
-
-.splash-zh {
-  font-size: 22px;
-  font-weight: 400;
-  color: var(--splash-text-sub);
-  margin-bottom: 13px;
-  letter-spacing: 4px;
-  text-indent: 4px;
-  animation: fadeUp 0.9s ease-out 0.5s both;
-}
-.splash-en {
-  font-size: 12px;
-  font-weight: 300;
-  color: var(--splash-text-faint);
-  max-width: 560px;
-  margin: 0 auto;
-  line-height: 1.7;
-  letter-spacing: 0.6px;
-  animation: fadeUp 0.9s ease-out 0.7s both;
-}
-@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-.splash-footer {
-  position: absolute;
-  bottom: 34px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.24);
-  letter-spacing: 2.5px;
-  font-weight: 300;
-  z-index: 4;
-  animation: fadeUp 1s ease-out 1s both;
-}
-
+/* 跳过提示 */
 .splash-skip {
   position: absolute;
-  top: 24px; right: 24px;
+  bottom: 32px;
+  right: 32px;
+  font-size: 12px;
+  color: var(--splash-text-faint);
+  letter-spacing: 0.5px;
+  z-index: 10;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+.splash-skip:hover { opacity: 1; }
+
+/* 轨道环 */
+.splash-orbit {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border: 1px solid var(--splash-line);
+  border-radius: 50%;
+  z-index: 4;
+  animation: orbitSpin 30s linear infinite;
+}
+.splash-orbit::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--dot-info);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(59,130,246,0.5);
+}
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 主内容区 */
+.splash-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 480px;
+  padding: 0 32px;
+}
+
+/* 品牌标识 */
+.splash-brandmark {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+.splash-brandmark span {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--splash-text);
+  opacity: 0.6;
+}
+.splash-brandmark span:nth-child(2) { opacity: 0.4; }
+.splash-brandmark span:nth-child(3) { opacity: 0.25; }
+
+.splash-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--splash-text);
+  letter-spacing: -0.5px;
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+}
+.splash-subtitle {
+  font-size: 15px;
+  color: var(--splash-text-sub);
+  margin: 0 0 36px 0;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* 状态卡片组 — 大彩色 icon */
+.splash-status-grid {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+.splash-status-card {
+  background: var(--splash-paper-raised);
+  border: 1px solid var(--splash-line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  min-width: 110px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(28,25,23,0.04);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.splash-status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(28,25,23,0.08);
+}
+.splash-status-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  font-size: 18px;
+}
+.splash-status-icon.ok { background: rgba(34,197,94,0.1); }
+.splash-status-icon.warn { background: rgba(245,158,11,0.1); }
+.splash-status-icon.info { background: rgba(59,130,246,0.1); }
+.splash-status-icon.idle { background: rgba(214,211,209,0.3); }
+.splash-status-label {
+  font-size: 12px;
+  color: var(--splash-text-sub);
+  margin-bottom: 4px;
+}
+.splash-status-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--splash-text);
+}
+.splash-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.splash-status-dot.ok { background: var(--dot-ok); box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+.splash-status-dot.warn { background: var(--dot-warn); box-shadow: 0 0 8px rgba(245,158,11,0.4); }
+.splash-status-dot.info { background: var(--dot-info); box-shadow: 0 0 8px rgba(59,130,246,0.4); }
+.splash-status-dot.idle { background: var(--dot-idle); }
+
+/* 加载进度 */
+.splash-progress {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 20px;
+}
+.splash-progress-bar {
+  height: 3px;
+  background: var(--splash-line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.splash-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--splash-silver-deep), var(--splash-text));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.5s ease;
+  animation: progressFill 3s ease-out forwards;
+}
+@keyframes progressFill {
+  0% { width: 0%; }
+  30% { width: 45%; }
+  60% { width: 70%; }
+  100% { width: 92%; }
+}
+.splash-progress-text {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.28);
-  letter-spacing: 1.5px;
-  z-index: 5;
-  transition: color 0.25s;
-  animation: fadeUp 0.8s ease-out 0.3s both;
-}
-.splash:hover .splash-skip { color: rgba(255, 255, 255, 0.62); }
-
-/* ZBMP 变体：极淡冷蓝微光，依然黑白灰为主 */
-.splash.zbmp { --splash-ink: #0b0c0e; }
-.splash.zbmp .splash-atmos .orb-1 { background: radial-gradient(circle, rgba(120,150,210,0.07), transparent 70%); }
-
-/* ---------- 平板 ---------- */
-@media (max-width: 1024px) {
-  .fc-1 { left: 5%; } .fc-2 { right: 5%; }
-  .fc-3 { left: 3%; } .fc-4 { right: 3%; }
-  .fc-5 { left: 7%; } .fc-6 { right: 7%; }
+  color: var(--splash-text-faint);
+  margin-top: 8px;
+  letter-spacing: 0.3px;
 }
 
-/* ---------- 移动端 ---------- */
-@media (max-width: 768px) {
-  .splash-abbr { font-size: 40px; letter-spacing: 6px; text-indent: 6px; margin-bottom: 18px; }
-  .splash-divider { width: 34px; margin-bottom: 18px; }
-  .splash-zh { font-size: 17px; letter-spacing: 2.5px; text-indent: 2.5px; margin-bottom: 10px; padding: 0 24px; }
-  .splash-en { font-size: 10px; max-width: 320px; padding: 0 22px; line-height: 1.6; }
-  .splash-footer { bottom: 22px; font-size: 10px; }
-  .float-card { padding: 7px 12px; font-size: 11.5px; letter-spacing: 1px; border-radius: 10px; gap: 6px; }
-  /* 手机端只保留 4 张卡片，避免拥挤，贴四角内缩 */
-  .fc-1 { left: 5%; top: 13%; }
-  .fc-2 { right: 5%; top: 13%; }
-  .fc-3, .fc-4 { display: none; }
-  .fc-5 { left: 6%; bottom: 13%; }
-  .fc-6 { right: 6%; bottom: 13%; }
-  .splash-atmos .orb { filter: blur(50px); }
+/* 底部信息 */
+.splash-footer {
+  position: absolute;
+  bottom: 32px;
+  left: 32px;
+  z-index: 10;
+}
+.splash-footer-version {
+  font-size: 11px;
+  color: var(--splash-text-faint);
+  letter-spacing: 0.5px;
+}
+.splash-footer-product {
+  font-size: 13px;
+  color: var(--splash-text-sub);
+  font-weight: 500;
+  margin-top: 2px;
 }
 
-@media (max-width: 380px) {
-  .float-card { padding: 6px 10px; font-size: 10.5px; }
+/* 淡出 */
+.splash.fade-out {
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* 尊重“减少动态效果”系统设置 */
-@media (prefers-reduced-motion: reduce) {
-  .splash-grain, .splash-atmos .orb, .splash-abbr,
-  .float-card, .splash-content { animation: none !important; }
-  .float-card { opacity: 1; }
+/* 响应式 */
+@media (max-width: 640px) {
+  .splash-title { font-size: 24px; }
+  .splash-subtitle { font-size: 13px; }
+  .splash-status-grid { gap: 10px; }
+  .splash-status-card { min-width: 90px; padding: 14px 12px; }
+  .splash-orbit { width: 300px; height: 300px; }
+  .splash-orb { filter: blur(40px); }
 }

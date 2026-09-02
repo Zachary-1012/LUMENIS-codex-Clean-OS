@@ -55,37 +55,64 @@
   <link rel="stylesheet" href="/static/css/zbip-refine.css?v=1.0.0">
 
 <body>
-<!-- 产品启动海报 Splash Screen (CTH-POMS) -->
+<!-- 产品启动海报 Splash Screen (CTH-POMS) v3 浅色系 -->
 <div id="splash" class="splash" data-product="cth">
-  <div class="splash-atmos" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="orb orb-3"></span></div>
+  <div class="splash-waves" aria-hidden="true">
+    <div class="splash-wave splash-wave-1"></div>
+    <div class="splash-wave splash-wave-2"></div>
+    <div class="splash-wave splash-wave-3"></div>
+  </div>
+  <div class="splash-shimmer" aria-hidden="true"></div>
+  <div class="splash-orbs" aria-hidden="true">
+    <div class="splash-orb splash-orb-1"></div>
+    <div class="splash-orb splash-orb-2"></div>
+    <div class="splash-orb splash-orb-3"></div>
+    <div class="splash-orb splash-orb-4"></div>
+  </div>
   <div class="splash-grain" aria-hidden="true"></div>
   <span class="splash-skip">点击跳过</span>
-  <div class="splash-orbit" aria-hidden="true">
-    <span class="float-card fc-1"><i class="dot dot-info"></i>舆情监测</span>
-    <span class="float-card fc-2"><i class="dot dot-warn"></i>风险预警</span>
-    <span class="float-card fc-3"><i class="dot"></i>事件图谱</span>
-    <span class="float-card fc-4"><i class="dot"></i>品牌知识库</span>
-    <span class="float-card fc-5"><i class="dot dot-ok"></i>智能报告</span>
-    <span class="float-card fc-6"><i class="dot"></i>AI 洞察</span>
-  </div>
+  <div class="splash-orbit" aria-hidden="true"></div>
   <div class="splash-content">
-    <div class="splash-abbr">CTH-POMS</div>
-    <div class="splash-divider"></div>
-    <div class="splash-zh">广州太古汇舆情监测系统</div>
-    <div class="splash-en">CorTech Lab · Guangzhou Taikoo Hui Public Opinion Monitoring System</div>
+    <div class="splash-brandmark"><span></span><span></span><span></span></div>
+    <div class="splash-title">广州太古汇舆情监测系统</div>
+    <div class="splash-subtitle">CTH-POMS · Z-Brand Intelligence Platform<br>实时舆情 · 风险预警 · 智能报告</div>
+    <div class="splash-status-grid">
+      <div class="splash-status-card">
+        <div class="splash-status-icon ok">📡</div>
+        <div class="splash-status-label">采集状态</div>
+        <div class="splash-status-value"><span class="splash-status-dot ok"></span>运行中</div>
+      </div>
+      <div class="splash-status-card">
+        <div class="splash-status-icon warn">⚠️</div>
+        <div class="splash-status-label">风险预警</div>
+        <div class="splash-status-value"><span class="splash-status-dot warn"></span>监测中</div>
+      </div>
+      <div class="splash-status-card">
+        <div class="splash-status-icon info">🤖</div>
+        <div class="splash-status-label">AI 引擎</div>
+        <div class="splash-status-value"><span class="splash-status-dot info"></span>就绪</div>
+      </div>
+    </div>
+    <div class="splash-progress">
+      <div class="splash-progress-bar"><div class="splash-progress-fill"></div></div>
+      <div class="splash-progress-text">正在加载系统模块…</div>
+    </div>
   </div>
-  <div class="splash-footer">v5.9.9 · Z-Brand Core</div>
+  <div class="splash-footer">
+    <div class="splash-footer-product">Z-Brand Core</div>
+    <div class="splash-footer-version">v5.9.9 · Production</div>
+  </div>
 </div>
 <script>
 (function(){
   var splash=document.getElementById('splash');
   if(!splash)return;
   function hideSplash(){
-    splash.classList.add('hide');
+    splash.classList.add('fade-out');
     setTimeout(function(){if(splash.parentNode)splash.parentNode.removeChild(splash);},800);
   }
   splash.addEventListener('click',hideSplash);
-  setTimeout(hideSplash,3400);
+  setTimeout(hideSplash,3800);
 })();
 </script>
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
