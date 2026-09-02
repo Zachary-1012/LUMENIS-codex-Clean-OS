@@ -281,8 +281,13 @@
     nav.addEventListener('click', function (e) {
       var it = e.target.closest('.side-item'); if (!it) return;
       if (!e.isTrusted) return;
-      if (it.getAttribute('data-page')) { userNavigated = true; hideHome(); }
-    });
+      // 捕获阶段：旧 side-item onclick stopPropagation 截断冒泡导致 Home 不收起，改 capture 先于其执行
+      if (it.getAttribute('data-page')) {
+        userNavigated = true; hideHome();
+        // 移动端抽屉：选中后自动收起，露出目标页
+        document.body.classList.remove('zb-nav-open');
+      }
+    }, true);
     // 点工作区名 → 回 Home
     wsBtn.addEventListener('dblclick', showHome);
 
