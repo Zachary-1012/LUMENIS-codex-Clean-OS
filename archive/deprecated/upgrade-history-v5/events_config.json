@@ -1,0 +1,186 @@
+{
+  "events": [
+    {
+      "id": "hanzo_harassment_2026",
+      "name": "半藏寿司性骚扰事件",
+      "date": "2026-03-14",
+      "type": "negative",
+      "severity": "high",
+      "keywords": [
+        "广州太古汇半藏事件",
+        "太古汇半藏骚扰",
+        "半藏寿司性骚扰",
+        "广州日料店骚扰",
+        "太古汇日料店咸猪手"
+      ],
+      "description": "2026年3月14日，女顾客在太古汇半藏寿司店遭邻座男子性骚扰，店员未及时介入，引发广泛热议，半藏创始人公开道歉",
+      "brand": "半藏寿司",
+      "region": "广州天河"
+    },
+    {
+      "id": "cuiguan_water_fee_2025",
+      "name": "翠园白开水收费争议",
+      "date": "2025-06-30",
+      "type": "negative",
+      "severity": "medium",
+      "keywords": [
+        "太古汇翠园白开水费",
+        "广州翠园茶水费",
+        "太古汇餐厅乱收费"
+      ],
+      "description": "2025年6月，顾客在太古汇翠园餐厅被收取11元白开水费及10%服务费，引发重复收费争议",
+      "brand": "翠园",
+      "region": "广州天河"
+    },
+    {
+      "id": "toilet_glass_2024",
+      "name": "女厕所玻璃可透视事件",
+      "date": "2024-10-09",
+      "type": "negative",
+      "severity": "high",
+      "keywords": [
+        "太古汇厕所玻璃透视",
+        "广州太古汇女厕所",
+        "太古汇洗手间透明"
+      ],
+      "description": "2024年10月，网友反映太古汇女厕所玻璃可透视，商场回应已进行改造",
+      "brand": "太古汇物业",
+      "region": "广州天河"
+    },
+    {
+      "id": "lv_quality_2026",
+      "name": "LV帽子质量问题拒退",
+      "date": "2026-01-21",
+      "type": "negative",
+      "severity": "medium",
+      "keywords": [
+        "太古汇LV拒退",
+        "广州太古汇LV质量",
+        "LV太古汇售后"
+      ],
+      "description": "2026年1月，消费者反映太古汇LV门店3600元帽子佩戴7天出现面料剥离，门店拒退",
+      "brand": "LV",
+      "region": "广州天河"
+    },
+    {
+      "id": "bvlgari_repair_2026",
+      "name": "宝格丽眼镜维修争议",
+      "date": "2026-08-18",
+      "type": "negative",
+      "severity": "medium",
+      "keywords": [
+        "太古汇宝格丽维修",
+        "广州太古汇宝格丽眼镜",
+        "宝格丽成对换腿"
+      ],
+      "description": "2026年8月，消费者反映太古汇宝格丽精品店眼镜一颗螺丝脱落需998元成对换腿，旧配件收回",
+      "brand": "宝格丽",
+      "region": "广州天河"
+    },
+    {
+      "id": "ralph_lauren_defamation_2026",
+      "name": "拉夫劳伦污蔑客户事件",
+      "date": "2026-08-20",
+      "type": "negative",
+      "severity": "medium",
+      "keywords": [
+        "太古汇拉夫劳伦道歉",
+        "拉夫劳伦污蔑客户",
+        "太古汇专柜污蔑"
+      ],
+      "description": "2026年8月，太古汇拉夫劳伦专柜污蔑客户事件，后续专柜已公开道歉",
+      "brand": "拉夫劳伦",
+      "region": "广州天河"
+    },
+    {
+      "id": "security_photo_ban",
+      "name": "保安禁止拍照事件",
+      "date": "2026-03-08",
+      "type": "negative",
+      "severity": "medium",
+      "keywords": [
+        "太古汇保安不让拍照",
+        "广州太古汇禁止拍摄",
+        "太古汇保安官威"
+      ],
+      "description": "消费者反映太古汇保安以无规定理由禁止顾客拍照，态度强硬",
+      "brand": "太古汇物业",
+      "region": "广州天河"
+    },
+    {
+      "id": "parking_disable_2026",
+      "name": "停车预约功能禁用",
+      "date": "2026-06-08",
+      "type": "negative",
+      "severity": "low",
+      "keywords": [
+        "太古汇禁用停车预约",
+        "太古汇停车场问题",
+        "太古汇停车难"
+      ],
+      "description": "2026年6月，网友反映太古汇胡乱禁用停车预约功能，引发不便",
+      "brand": "太古汇物业",
+      "region": "广州天河"
+    },
+    {
+      "id": "fangsuo_closing_2026",
+      "name": "方所书店闭店",
+      "date": "2026-08-31",
+      "type": "neutral",
+      "severity": "medium",
+      "keywords": [
+        "太古汇方所闭店",
+        "广州方所停业",
+        "方所清仓"
+      ],
+      "description": "2026年8月，太古汇方所书店宣布闭店清仓，引发文化地标消逝讨论",
+      "brand": "方所",
+      "region": "广州天河"
+    },
+    {
+      "id": "midknight_criminal_2026",
+      "name": "midknight员工刑案",
+      "date": "2026-01-27",
+      "type": "negative",
+      "severity": "high",
+      "keywords": [
+        "太古汇midknight",
+        "midknight工作人员qj犯",
+        "太古汇酒吧员工"
+      ],
+      "description": "2026年1月，网友曝光太古汇midknight工作人员有刑事犯罪记录",
+      "brand": "midknight",
+      "region": "广州天河"
+    }
+  ],
+  "default_keywords": [
+    "广州太古汇"
+  ],
+  "negative_comment_keywords": [
+    "差评",
+    "投诉",
+    "避雷",
+    "垃圾",
+    "恶心",
+    "失望",
+    "态度差",
+    "服务差",
+    "骗",
+    "坑",
+    "黑",
+    "维权",
+    "曝光",
+    "翻车",
+    "离谱",
+    "无语",
+    "生气",
+    "愤怒",
+    "拒绝",
+    "纠纷",
+    "强制",
+    "骚扰",
+    "乱收费",
+    "天价",
+    "宰客"
+  ]
+}
