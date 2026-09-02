@@ -23,15 +23,20 @@ class PlaywrightAdapter(BrowserContract):
                  timeout_ms: int = 15000,
                  user_data_dir: Optional[str] = None,
                  storage_state: Optional[str] = None,
+                 cdp_url: Optional[str] = None,
                  **kw):
         """P0-BR-06 Session/Profile 隔离：user_data_dir 提供时用持久化 context，
         否则保持默认 launch()+new_page()。storage_state 可用于恢复登录态。
+        cdp_url 提供时用 connect_over_cdp 连接已运行的 CDP 浏览器（接入生产采集链），
+        不启动新浏览器，close() 只断开连接不关闭外部浏览器。
         默认行为不变，仅新增可选参数。"""
         self.headless = headless
         self.browser_type = browser_type
         self.timeout_ms = timeout_ms
         self.user_data_dir = user_data_dir
         self.storage_state = storage_state
+        self.cdp_url = cdp_url
+        self._cdp_connected = False
         self.beep = BEEPExecutor()
         self._pw = None
         self._browser = None
@@ -44,21 +49,30 @@ class PlaywrightAdapter(BrowserContract):
         try:
             from playwright.sync_api import sync_playwright
             self._pw = sync_playwright().start()
-            launcher = getattr(self._pw, self.browser_type)
-            if self.user_data_dir:
-                # P0-BR-06: 持久化 context，profile 隔离
-                self._context = launcher.launch_persistent_context(
-                    user_data_dir=self.user_data_dir,
-                    headless=self.headless,
-                    storage_state=self.storage_state,
-                )
-                self._browser = None  # persistent context 自带 browser
-                self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
+            if self.cdp_url:
+                # 接入生产采集链：connect_over_cdp 连接已运行的 CDP 浏览器
+                self._browser = self._pw.chromium.connect_over_cdp(self.cdp_url)
+                ctxs = self._browser.contexts
+                self._context = ctxs[0] if ctxs else self._browser.new_context()
+                pages = self._context.pages
+                self._page = pages[0] if pages else self._context.new_page()
+                self._cdp_connected = True
             else:
-                # 默认行为：launch + new_page（无 profile 隔离）
-                self._browser = launcher.launch(headless=self.headless)
-                self._context = self._browser.new_context(storage_state=self.storage_state)
-                self._page = self._context.new_page()
+                launcher = getattr(self._pw, self.browser_type)
+                if self.user_data_dir:
+                    # P0-BR-06: 持久化 context，profile 隔离
+                    self._context = launcher.launch_persistent_context(
+                        user_data_dir=self.user_data_dir,
+                        headless=self.headless,
+                        storage_state=self.storage_state,
+                    )
+                    self._browser = None  # persistent context 自带 browser
+                    self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
+                else:
+                    # 默认行为：launch + new_page（无 profile 隔离）
+                    self._browser = launcher.launch(headless=self.headless)
+                    self._context = self._browser.new_context(storage_state=self.storage_state)
+                    self._page = self._context.new_page()
             self._page.set_default_timeout(self.timeout_ms)
         except Exception as e:
             self._load_error = str(e)
@@ -138,19 +152,26 @@ class PlaywrightAdapter(BrowserContract):
                 "profile_isolated": self.user_data_dir is not None,
                 "user_data_dir": self.user_data_dir,
                 "storage_state": bool(self.storage_state),
+                "cdp_connected": self._cdp_connected,
+                "cdp_url": self.cdp_url,
             }
         except Exception as e:
             return {"status": "degraded", "error": str(e)[:200]}
 
     def close(self, **kw) -> None:
         try:
-            if self._context is not None:
+            if self._context is not None and not self._cdp_connected:
+                # cdp 连接时不关闭外部 context（属于外部浏览器）
                 self._context.close()
         except Exception:
             pass
         try:
             if self._browser is not None:
-                self._browser.close()
+                if self._cdp_connected:
+                    # cdp 连接时只断开，不关闭外部浏览器
+                    self._browser.close()  # disconnect
+                else:
+                    self._browser.close()
         except Exception:
             pass
         try:
