@@ -5,13 +5,15 @@
 |---|---|---|---|
 | 批1 | `data_query_api.py` | stats/notes/risk-alerts/hot-notes/comments/events/web-mentions/feedback-keywords/hot-topics（9 个纯只读） | ✅ 完成，6013→5966 行，362 回归全过，x-route-count 405 不变 |
 | 批2a | `collection_api.py` | collector status/schedule-status/start/stop/history（5 个，仅依赖可 import 模块） | ✅ 完成，5966→5851 行，362 回归全过，鉴权 before_request 仍生效 |
-| 批2b | collection_api.py 续 | browser/xhs runtime/cookie/账号等（涉及运行时状态，逐个梳理闭包） | ⏳ 待施工 |
+| 批2b | collection_api.py 续 | /api/xhs/cookie/status·sync·sync/<id>·collect-pause·resume·pause-state·collect-health（7 条纯 xhs_cookie_bridge 封装，闭包审计 SAFE） | ✅ 完成，5302 行，E2E 8/8 过 |
 | 批3 | report_api.py | 报告 | ⏳ 待施工 |
 | 批4 | ai_api.py | AI | ⏳ 待施工 |
 | 批5 | ops_api.py | 系统/运维/代码执行（含权限敏感） | ⏳ 待施工 |
 | 批6 | page_routes.py | 页面渲染 | ⏳ 待施工 |
 | 批7 | workers/ | 后台线程 | ⏳ 待施工 |
 
+> 批2b 依据 scripts/app_closure_audit.py 闭包审计决策（172 个 api_ 函数：90 SAFE / 82 BLOCKED；
+> 静态 SAFE 仍需人工排除模块级可变状态依赖，如 api_collect 依赖 _collect_lock/_run_collect_task 保留在 app.py）。
 > 现状：app.py 5851 行 / 224 路由。已拆分蓝图 9 个（原 7 + data_query + collection）：
 > system_health_api / architecture_api / settings_module / export_report / pr_case_integration /
 > system_features_api / auth_recovery_api / data_query_api / collection_api。

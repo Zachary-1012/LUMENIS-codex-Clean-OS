@@ -157,5 +157,52 @@ def register_collection_api(app):
         except Exception as e:
             return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+
+    @bp.route('/api/xhs/cookie/status')
+    def api_xhs_cookie_status():
+        status = xhs_cookie_bridge.get_account_status()
+        return jsonify({'ok':True, **status})
+
+    @bp.route('/api/xhs/cookie/sync',methods=['POST'])
+    def api_xhs_cookie_sync():
+        data=request.get_json(silent=True) or {}
+        keywords=data.get('keywords') or xhs_cookie_bridge.DEFAULT_KEYWORDS
+        if isinstance(keywords,str): keywords=[x.strip() for x in keywords.split(',') if x.strip()]
+        try: max_scroll=max(1,min(20,int(data.get('max_scroll',6))))
+        except (TypeError,ValueError): return jsonify({'ok':False,'error':'max_scroll 必须为整数'}),400
+        run_type = data.get('run_type', 'manual')  # manual: 一键实时更新, auto: 定时自动采集
+        if run_type not in ['manual', 'auto']:
+            return jsonify({'ok':False,'error':'run_type 必须为 manual 或 auto'}),400
+        try: task_id=xhs_cookie_bridge.create_task(keywords,max_scroll,run_type)
+        except RuntimeError as e: return jsonify({'ok':False,'error':str(e)}),409
+        type_label = '手动触发（一键实时更新）' if run_type == 'manual' else '定时自动采集'
+        return jsonify({'ok':True,'task_id':task_id,'run_type':run_type,'message':f'已创建{type_label}任务'})
+
+    @bp.route('/api/xhs/collect-pause',methods=['POST'])
+    def api_xhs_collect_pause():
+        """用户主动暂停小红书采集（手动/自动一律不发起请求，直到 resume）；区别于风控熔断。"""
+        data=request.get_json(silent=True) or {}
+        reason=(data.get('reason') or '用户手动暂停')[:120]
+        ok=xhs_cookie_bridge.set_user_paused(reason)
+        return jsonify({'ok':ok,'paused':True,'reason':reason,'message':'小红书采集已暂停，自动/手动均不会发起请求，恢复后继续'})
+
+    @bp.route('/api/xhs/collect-resume',methods=['POST'])
+    def api_xhs_collect_resume():
+        """恢复小红书采集（仅解除用户暂停开关；风控熔断按其自身健康检查恢复）。"""
+        ok=xhs_cookie_bridge.resume_user_paused()
+        return jsonify({'ok':ok,'paused':False,'message':'已解除手动暂停；如仍处风控熔断，需先完成验证与健康检查'})
+
+    @bp.route('/api/xhs/collect-pause-state',methods=['GET'])
+    def api_xhs_collect_pause_state():
+        _p=xhs_cookie_bridge.is_user_paused()
+        _c=xhs_cookie_bridge.get_circuit_state()
+        return jsonify({'ok':True,'user_paused':bool(_p),'pause_info':_p,'circuit':_c})
+
+    @bp.route('/api/xhs/cookie/sync/<task_id>')
+    def api_xhs_cookie_sync_status(task_id):
+        task=xhs_cookie_bridge.get_task(task_id)
+        return (jsonify({'ok':True,'task':task}),200) if task else (jsonify({'ok':False,'error':'任务不存在'}),404)
+
     app.register_blueprint(bp)
     return bp
