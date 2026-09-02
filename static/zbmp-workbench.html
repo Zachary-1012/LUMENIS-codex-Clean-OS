@@ -429,7 +429,50 @@ input{font-family:inherit}
           +'<div style="padding:0">'+(rows || '<div style="padding:24px;text-align:center;color:var(--text-3)">暂无事件</div>')+'</div></div>';
       }catch(e){ contentArea.innerHTML = '<div class="page-head"><h1>事件中心</h1></div><div class="welcome"><p>加载异常: '+e.message+'</p></div>'; }
     },
-    ai: ()=> placeholder('AI 洞察','本地 Ollama 驱动的语义分析、趋势解释、报告润色（AI 仅增强层）'),
+    ai: async ()=>{
+      contentArea.innerHTML = '<div class="page-head"><h1>AI 洞察</h1><span class="meta"><span class="dot-s ok"></span> 接入 AI 状态</span></div><div class="welcome"><div class="ft-loading">加载中…</div></div>';
+      try{
+        const [stR, pvR] = await Promise.allSettled([
+          Promise.race([api('/api/ai/status'), new Promise(r=>setTimeout(()=>r({json:{}}),4000))]),
+          Promise.race([api('/api/ai/providers'), new Promise(r=>setTimeout(()=>r({json:{}}),4000))])
+        ]);
+        const s = (stR.value&&stR.value.json)||{};
+        const p = (pvR.value&&pvR.value.json)||{};
+        const runtimeColor = s.runtime==='cloud'?'warn':'ok';
+        const runtimeLabel = s.runtime==='cloud'?'云端':'本地';
+        const kpis = [
+          {label:'AI 引擎', val:s.running?'运行中':'未运行', sub:s.provider+' · '+s.model, c:s.running?'ok':'danger'},
+          {label:'运行时', val:runtimeLabel, sub:s.base_url||'local', c:runtimeColor},
+          {label:'本地 Ollama', val:(s.hints&&s.hints[0]&&s.hints[0].running)?'运行中':'未运行', sub:(s.hints&&s.hints[0]&&s.hints[0].installed)?'已安装':'未安装', c:(s.hints&&s.hints[0]&&s.hints[0].running)?'ok':'gray'},
+          {label:'可用 Provider', val:(s.providers||[]).length, sub:'ollama/lmstudio/qwen/openai等', c:'text'},
+        ];
+        const kpiHtml = kpis.map(k=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+          <div style="font-size:11px;color:var(--text-3);font-weight:600">${k.label}</div>
+          <div style="font-size:20px;font-weight:700;color:var(--${k.c==='text'?'text':k.c})">${k.val}</div>
+          <div style="font-size:10.5px;color:var(--text-3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k.sub||''}</div></div>`).join('');
+        const caps = [
+          {name:'舆情分类', desc:'正面/中性/负面自动分类', status:'active'},
+          {name:'智能摘要', desc:'笔记/事件内容自动摘要', status:'active'},
+          {name:'事件聚类', desc:'相近笔记聚合成舆情事件', status:'active'},
+          {name:'趋势解释', desc:'14天舆情趋势自然语言解释', status:'active'},
+          {name:'报告润色', desc:'日报/专报文字AI润色', status:'dev'},
+          {name:'消费者需求', desc:'从评论中提取消费者需求点', status:'dev'},
+        ];
+        const capHtml = caps.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <span class="dot-s ${c.status==='active'?'ok':'warn'}"></span>
+          <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${c.name}</div><div style="font-size:11px;color:var(--text-3);margin-top:1px">${c.desc}</div></div>
+          <span style="font-size:11px;font-weight:650;color:${c.status==='active'?'var(--ok)':'var(--warn)'}">${c.status==='active'?'可用':'开发中'}</span></div>`).join('');
+        const remoteHtml = (p.remote||[]).map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0"><span class="dot-s ${r.status==='configured'?'ok':'gray'}"></span><span style="font-size:12px;color:var(--text-2);flex:1">${r.name}</span><span style="font-size:11px;color:var(--text-3);font-family:var(--mono)">${r.model}</span></div>`).join('');
+        contentArea.innerHTML = '<div class="page-head"><h1>AI 洞察</h1><span class="meta"><span class="dot-s ok"></span> AI 仅增强层 · 不覆盖生产事实</span></div>'
+          +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'+kpiHtml+'</div>'
+          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
+          +'<div class="file-preview" style="max-height:none"><div class="fp-head"><span class="fp-path">AI 能力</span><span class="fp-meta">/api/ai/* · 只读</span></div><div style="padding:6px 14px">'+capHtml+'</div></div>'
+          +'<div class="file-preview" style="max-height:none"><div class="fp-head"><span class="fp-path">云端 Provider</span><span class="fp-meta">/api/ai/providers</span></div><div style="padding:6px 14px">'+(remoteHtml||'<div style="padding:16px;color:var(--text-3)">无配置</div>')+'</div></div></div>'
+          +'<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:11.5px;color:var(--text-2);line-height:1.7">'
+          +'<b style="color:var(--text)">AI 定位说明：</b>AI 是增强层，不是生产事实 Owner。生产口径由规则+数据+事件+风险+统计负责。AI 可辅助分类/语义分析/趋势解释/报告润色，但不能独自决定原始事实、统计数字、主体最终口径、风险最终事实。客户敏感数据默认不过云。'
+          +'</div>';
+      }catch(e){ contentArea.innerHTML = '<div class="page-head"><h1>AI 洞察</h1></div><div class="welcome"><p>加载异常: '+e.message+'</p></div>'; }
+    },
     reports: async ()=>{
       contentArea.innerHTML = '<div class="page-head"><h1>报告中心</h1><span class="meta"><span class="dot-s ok"></span> 接入 CTH 生产数据</span></div><div class="welcome"><div class="ft-loading">加载中…</div></div>';
       try{
