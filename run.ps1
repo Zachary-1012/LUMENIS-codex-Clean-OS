@@ -27,7 +27,7 @@
 # =====================================================================
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('prod', 'dev', 'staging', 'status')]
+    [ValidateSet('prod', 'dev', 'staging', 'status', 'test')]
     [string]$Mode = 'prod'
 )
 
@@ -53,6 +53,13 @@ function Show-Status {
 switch ($Mode) {
     'status' {
         Show-Status
+    }
+    'test' {
+        if (-not (Test-Path $Py)) { throw "venv python not found: $Py" }
+        $testScript = Join-Path $Root 'scripts\run_tests.ps1'
+        Write-Output '[run] test -> unified test entrypoint (L0 Syntax -> L1-L8 pytest -> L9 Health -> L10 API Smoke)'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $testScript
+        exit $LASTEXITCODE
     }
     'prod' {
         if (-not (Test-Path $Py)) { throw "venv python not found: $Py" }
