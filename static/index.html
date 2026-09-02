@@ -1583,7 +1583,7 @@ function openApiKeyManager(){
   // 系统内打开API Key管理（iframe弹窗）
   const modal = document.createElement('div');
   modal.className = 'api-key-modal';
-  modal.innerHTML = '<div class="api-key-overlay" onclick="this.parentElement.remove()"></div><div class="api-key-dialog"><div class="api-key-header"><span>API Key 管理</span><button onclick="this.closest('.api-key-modal').remove()">✕</button></div><iframe src="/static/api-keys.html" class="api-key-iframe"></iframe></div>';
+  modal.innerHTML = `<div class="api-key-overlay" onclick="this.parentElement.remove()"></div><div class="api-key-dialog"><div class="api-key-header"><span>API Key 管理</span><button onclick="this.closest('.api-key-modal').remove()">✕</button></div><iframe src="/static/api-keys.html" class="api-key-iframe"></iframe></div>`;
   document.body.appendChild(modal);
 }
 function toggleSearchEnhance(){
