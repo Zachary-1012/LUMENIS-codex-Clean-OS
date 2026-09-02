@@ -1,0 +1,159 @@
+/* ============================================================================
+ * ZBIP Refine Layer v1.0  —  侘寂黑白灰 · 最终精修层（最后加载，优先级最高）
+ * 只收敛与修复，不重写业务结构、不改 DOM。回滚 = 删本文件及其 <link>。
+ * 分块：
+ *  R1 Home 覆盖层层叠（修手机透出下层旧页面“幽灵字”）
+ *  R2 Ask 输入框去原生滚动箭头 + placeholder 不被切
+ *  R3 风险类型彩色填充块 → 语义小圆点 + 文字
+ *  R4 旧蓝链 / 蓝文字收敛 stone
+ *  R5 侧栏数字 badge 克制化
+ *  R6 弹窗微光（用户要求：弹窗边缘有极淡光）
+ *  R7 页面四周窄留白（内容区与外壳底色分层）
+ *  M  ≤760 移动端：风险行重排、标题不截断、按钮不被浮动 badge 遮挡、顶栏不重叠
+ * ========================================================================== */
+
+:root{
+  --zbr-ease:cubic-bezier(.16,1,.3,1);
+  --zbr-dot-danger:#DC2626;
+  --zbr-dot-warn:#D97706;
+  --zbr-dot-info:#2563EB;
+  --zbr-dot-ok:#16A34A;
+}
+
+/* ---- R1 Home 覆盖层：实底 + 高层级，压过旧 page 的层叠上下文，杜绝透字 ---- */
+body.zb-shell-on #zbHome{
+  z-index:300;
+  background:var(--zb-stone-50,#FAFAF9);
+}
+
+/* ---- R2 Ask textarea：隐藏原生滚动条上下箭头，placeholder 换行不被遮挡 ---- */
+.zb-ask textarea{ overflow:hidden; line-height:1.55; }
+.zb-ask textarea::-webkit-scrollbar{ width:0; height:0; }
+
+/* ---- R3 风险类型：去彩色填充块，改为「语义小圆点 + 文字」 ---- */
+body.zb-shell-on .alert-type{
+  background:transparent !important;
+  border:0 !important;
+  padding:0 !important;
+  border-radius:0 !important;
+  font-size:12px; font-weight:600; letter-spacing:.01em;
+  display:inline-flex; align-items:center; gap:7px;
+  white-space:nowrap; flex:none;
+}
+body.zb-shell-on .alert-type::before{
+  content:""; width:7px; height:7px; border-radius:999px; flex:none;
+  background:var(--zb-stone-400,#A8A29E);
+}
+body.zb-shell-on .alert-type.risk{ color:#B91C1C !important; }
+body.zb-shell-on .alert-type.risk::before{ background:var(--zbr-dot-danger); box-shadow:0 0 0 3px rgba(220,38,38,.12); }
+body.zb-shell-on .alert-type.rising{ color:#B45309 !important; }
+body.zb-shell-on .alert-type.rising::before{ background:var(--zbr-dot-warn); box-shadow:0 0 0 3px rgba(217,119,6,.12); }
+body.zb-shell-on .alert-type.influence{ color:#1D4ED8 !important; }
+body.zb-shell-on .alert-type.influence::before{ background:var(--zbr-dot-info); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+
+/* ---- R4 旧蓝链 / 返回 / 文字按钮收敛为近黑 stone（保留可点性，去廉价蓝） ---- */
+body.zb-shell-on .back-btn{
+  color:var(--zb-stone-600,#57534E) !important;
+  background:transparent !important;
+  font-weight:500;
+}
+body.zb-shell-on .back-btn:hover{ color:var(--zb-stone-900,#1C1917) !important; }
+body.zb-shell-on .page-actions .action.secondary,
+body.zb-shell-on .page-actions .action.tertiary{
+  background:#fff !important;
+  color:var(--zb-stone-700,#44403C) !important;
+  border:1px solid var(--zb-stone-300,#D6D3D1) !important;
+  box-shadow:none !important;
+}
+body.zb-shell-on .page-actions .action.secondary:hover,
+body.zb-shell-on .page-actions .action.tertiary:hover{ background:var(--zb-stone-100,#F5F5F4) !important; }
+/* “全部已读 / 未读”这类蓝色文字统一为 stone，语义交给状态点 */
+body.zb-shell-on .alert-status{ font-size:11.5px; font-weight:600; }
+body.zb-shell-on .alert-status.unread{ color:var(--zb-stone-500,#78716C) !important; }
+body.zb-shell-on .alert-status.read{ color:var(--zb-stone-400,#A8A29E) !important; }
+
+/* ---- R5 侧栏数字 badge：更克制的小胶囊（保留计数，不抢视觉） ---- */
+body.zb-shell-on .nav-badge{
+  min-width:17px; height:17px; padding:0 5px;
+  font-size:9.5px; font-weight:650;
+  background:var(--zb-stone-900,#1C1917) !important;
+  box-shadow:none !important;
+}
+/* 风险预警这类需要警示的项：用小红点而非整块红底（由 .has-alert 父级控制时） */
+body.zb-shell-on .side-item .nav-badge.danger,
+body.zb-shell-on .side-item[data-page="alerts"] .nav-badge{
+  background:var(--zbr-dot-danger) !important;
+}
+
+/* ---- R6 弹窗边缘极淡微光（有意义的层级光，非发光特效） ---- */
+@media(min-width:761px){
+  body.zb-shell-on #modal .modal-panel{
+    box-shadow:0 16px 48px rgba(28,25,23,.18),
+               0 0 0 1px rgba(255,255,255,.6) inset,
+               0 1px 0 rgba(255,255,255,.9) !important;
+  }
+}
+
+/* ---- R7 页面标题居中规范（桌面），返回居左、操作居右 ---- */
+@media(min-width:761px){
+  body.zb-shell-on .page-header{ gap:12px; }
+  body.zb-shell-on .page-header h2{ margin:0 auto 0 0; letter-spacing:-.01em; }
+}
+
+/* ============================================================================
+ * M 移动端 ≤760
+ * ========================================================================== */
+@media(max-width:760px){
+  /* 风险行由单行横排改为两行栅格，标题完整换行、不再省略号截断 */
+  body.zb-shell-on .alert-row{
+    display:grid !important;
+    grid-template-columns:auto 1fr auto;
+    grid-template-areas:"type status mark" "info info info";
+    column-gap:10px; row-gap:8px;
+    align-items:center;
+    padding:13px 12px !important;
+  }
+  body.zb-shell-on .alert-row .alert-type{ grid-area:type; }
+  body.zb-shell-on .alert-row .alert-status{ grid-area:status; justify-self:end; }
+  body.zb-shell-on .alert-row .alert-mark-read{ grid-area:mark; justify-self:end; }
+  body.zb-shell-on .alert-row .alert-info{ grid-area:info; min-width:0; }
+  body.zb-shell-on .alert-row-title{
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    word-break:break-word; line-height:1.45;
+  }
+  body.zb-shell-on .alert-row-meta{
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    margin-top:3px; line-height:1.5;
+  }
+  body.zb-shell-on .alert-mark-read{
+    padding:5px 11px !important; font-size:11.5px;
+    border-radius:8px;
+  }
+
+  /* 内容底部预留空间，避免最后一行被右下浮动“采集健康/需处理”badge 遮挡 */
+  body.zb-shell-on .content{ padding-bottom:88px !important; }
+
+  /* Home 顶栏：汉堡与被搬到左上的“采集数据”不重叠（手机只留汉堡，采集收入抽屉/页内） */
+  body.zb-shell-on .zb-top-left #refreshBtn{ display:none !important; }
+
+  /* Ask 输入框手机端足够高度，placeholder 两行完整可见 */
+  .zb-ask textarea{ min-height:48px; }
+  .zb-home-title{ margin-bottom:20px; }
+
+  /* 页面标题手机左对齐，与返回同列更自然 */
+  body.zb-shell-on .page-header{ flex-wrap:wrap; row-gap:8px; }
+}
+
+/* ---- R8 旧侧栏折叠按钮在新 Shell 下隐藏（固定分组导航不使用旧折叠，不删源码） ---- */
+body.zb-shell-on .sidebar-toggle{ display:none !important; }
+
+/* ---- R9 侧栏内部滚动时分组之间更克制的节奏 ---- */
+body.zb-shell-on .zb-nav-group + .zb-nav-group{ margin-top:14px; }
+body.zb-shell-on .zb-nav-title{ letter-spacing:.06em; }
+
+/* ---- R10 隐藏旧 ZACHARY OS AI 空分组标签（新 Shell 已重新分组，其下无项，不删源码） ---- */
+body.zb-shell-on .side-nav > .side-group-label{ display:none !important; }

@@ -31,7 +31,7 @@
     { title: '分析', items: ['analysis', 'events', 'event-graph', 'calendar'] },
     { title: '品牌资产', items: ['brands', 'swire', 'cases', 'case-analysis', 'knowledge-base', 'brand-report', 'app-evidence'] },
     { title: '产出', items: ['reports'] },
-    { title: '系统', items: ['settings'] }
+    { title: '系统', items: ['resident-health', 'internal-browser', 'evidence', 'settings', 'kbShortcutsEntry'] }
   ];
 
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
