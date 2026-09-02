@@ -893,3 +893,16 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 ### 测试
 - 新增 tests/test_safe_collection_contract.py 10 测全过；统一入口 177 passed（167→177）。
 - 边界：本层不替代 collector_guard 在线熔断（互补：在线熔断 vs 离线合规/证据）；当前为旁路，真实采集链接管须先旁路验证 + Release Gate；详情/评论级与大批量稳定性仍 NOT_VERIFIED。DB 零变更、生产 8201 未碰。
+
+
+---
+
+## 2026-09-02 13:58 · P1-5 单一权威 DB Schema 源建立（只读反射，零 DDL/零迁移/不改库）
+
+### 只读盘点事实（生产库 mode=ro）
+- 实际 **52 表 / 0 视图**（旧基线口径 51/53 以本次实测 52 为准）；database.py 直接 CREATE 15 表，其余分散在各模块/database_migrations，bi_* 16 表为 Global BIL migration009 隔离（生产当前不建，设计如此）。
+- 唯一无 CREATE 声明的实际表 `industry_stats`（8 行旧数据）：现役 /api/brand-industry/* 真正查的是 brand_industry_monitor，web_monitor_v570 为旧文件 → 定性 LEGACY 遗留，**保留不删**，登记待人工确认。
+### 落地（不重写 database.py、不动建表逻辑）
+- 新增 schema_registry.py：mode=ro 只读反射表/列/索引/行数 + 全仓 CREATE 声明来源映射 + 状态分类（DECLARED/LEGACY_NO_DECL/MIGRATION_ISOLATED/MISSING_SOURCE），生成 docs/DATABASE-SCHEMA-REGISTRY.md（52 表：51 DECLARED + 1 LEGACY，**无主未登记=0**，含 publish_datetime/captured_at 红线列核对）。
+- 新增 tests/test_schema_registry.py 5 测：临时库验证反射结构与只读、声明来源定位、四类分类、已生成清单 0 无主且红线时间列齐备（未来新增无主表测试即红）。
+- 结果：182 passed（177→182）。**未执行任何 DDL/DML、无迁移、生产库与 8201 全程未碰**；industry_stats 清理与 Alembic 正式迁移另列 BACKLOG，不在本轮做破坏性动作。
