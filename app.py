@@ -3538,6 +3538,9 @@ def api_run_code():
     resp, status = dev_exec_core.execute_dev_code_safe(
         code, 'python', backup=False, app=app, db=db, guard_func=_dev_exec_guard
     )
+    # GAP-04 修复: guard 返回 (Flask Response, status) 时不可再 jsonify
+    if hasattr(resp, 'get_data'):
+        return resp, status
     return jsonify(resp), status
 
 @app.route('/api/config/brand-directory')
@@ -5125,6 +5128,9 @@ def api_dev_run_code():
     resp, status = dev_exec_core.execute_dev_code_safe(
         code, code_type, backup=True, app=app, db=db, guard_func=_dev_exec_guard
     )
+    # GAP-04 修复: guard 返回 (Flask Response, status) 时不可再 jsonify
+    if hasattr(resp, 'get_data'):
+        return resp, status
     return jsonify(resp), status
 
 
@@ -5362,6 +5368,10 @@ def api_pr_check_trigger():
 from v4_upgrade import create_v4_blueprint, init_v4_modules
 init_v4_modules()
 app.register_blueprint(create_v4_blueprint())
+
+# GAP-10 report_center 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
+from v4_upgrade.report_center.api import report_center_bp
+app.register_blueprint(report_center_bp)
 
 # ===== 系统启动入口 =====
 if __name__ == '__main__':
