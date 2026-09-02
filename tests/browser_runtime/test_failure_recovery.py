@@ -123,11 +123,13 @@ class TestPolicyCooldownSemantics:
         assert FAILURE_POLICY[FailureClass.PLATFORM_RISK] == "cooldown_or_stop"
 
     def test_dangerous_action_safe_stop(self):
+        """含危险模式（bypass/captcha）→ SAFE_STOP"""
         eng = BrowserPolicyEngine()
-        r = eng.check_action("delete account permanently")
+        r = eng.check_action("bypass captcha verification")
         assert r.decision == PolicyDecision.SAFE_STOP
 
     def test_confirm_action_needs_confirm(self):
+        """delete 类操作 → NEED_CONFIRM（人工确认，非自动）"""
         eng = BrowserPolicyEngine()
         r = eng.check_action("delete row")
         assert r.decision == PolicyDecision.NEED_CONFIRM
