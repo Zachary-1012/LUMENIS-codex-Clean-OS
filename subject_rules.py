@@ -1,4 +1,4 @@
-"""广州太古汇主体口径：全系统唯一、可审计的硬过滤规则。
+﻿"""广州太古汇主体口径：全系统唯一、可审计的硬过滤规则。
 
 原则：
 1. SUBJECT_EXCLUDE_WORDS 一票否决。
@@ -95,3 +95,11 @@ subject_sql_and_values = _subject_sql_and_values
 
 def canonical_text(note: dict) -> str:
     return ' '.join(_text(note.get(k, '')) for k in SUBJECT_FIELDS).strip()
+
+
+def subject_hit_text(text: str) -> bool:
+    """单文本适配入口：兼容历史调用点（persist_rednote_data / persist_live）拼接后的全文。
+    语义与 subject_hit 一致：排除词一票否决 + 任一正向主体词命中。
+    将拼接文本整体作为 title 字段判定；若需按五字段精确判定请直接调用 subject_hit。
+    """
+    return subject_hit(title=text)
