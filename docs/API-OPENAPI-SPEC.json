@@ -1566,6 +1566,195 @@
         ]
       }
     },
+    "/api/stats": {
+      "get": {
+        "operationId": "data_query.api_stats",
+        "tags": [
+          "api/stats"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/notes": {
+      "get": {
+        "operationId": "data_query.api_notes",
+        "tags": [
+          "api/notes"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/risk-alerts": {
+      "get": {
+        "operationId": "data_query.api_risk_alerts",
+        "tags": [
+          "api/risk-alerts"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/hot-notes": {
+      "get": {
+        "operationId": "data_query.api_hot_notes",
+        "tags": [
+          "api/hot-notes"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/comments": {
+      "get": {
+        "operationId": "data_query.api_comments",
+        "tags": [
+          "api/comments"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "data_query.api_events",
+        "tags": [
+          "api/events"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web-mentions": {
+      "get": {
+        "operationId": "data_query.api_web_mentions",
+        "tags": [
+          "api/web-mentions"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback-keywords": {
+      "get": {
+        "operationId": "data_query.api_feedback_keywords",
+        "tags": [
+          "api/feedback-keywords"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/hot-topics": {
+      "get": {
+        "operationId": "data_query.api_hot_topics",
+        "tags": [
+          "api/hot-topics"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
     "/api/internal-browser/accounts": {
       "get": {
         "operationId": "internal_browser.api_accounts",
@@ -3322,132 +3511,6 @@
         ]
       }
     },
-    "/api/stats": {
-      "get": {
-        "operationId": "api_stats",
-        "tags": [
-          "api/stats"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/notes": {
-      "get": {
-        "operationId": "api_notes",
-        "tags": [
-          "api/notes"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/risk-alerts": {
-      "get": {
-        "operationId": "api_risk_alerts",
-        "tags": [
-          "api/risk-alerts"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/hot-notes": {
-      "get": {
-        "operationId": "api_hot_notes",
-        "tags": [
-          "api/hot-notes"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/comments": {
-      "get": {
-        "operationId": "api_comments",
-        "tags": [
-          "api/comments"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/events": {
-      "get": {
-        "operationId": "api_events",
-        "tags": [
-          "api/events"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
     "/api/report/daily": {
       "get": {
         "operationId": "api_report_daily",
@@ -3456,69 +3519,6 @@
         ],
         "parameters": [],
         "summary": "日报弹窗：只含“昨天+当天发布”的有效舆情笔记（过期笔记不弹窗，仅入库做案例）。",
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/web-mentions": {
-      "get": {
-        "operationId": "api_web_mentions",
-        "tags": [
-          "api/web-mentions"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/feedback-keywords": {
-      "get": {
-        "operationId": "api_feedback_keywords",
-        "tags": [
-          "api/feedback-keywords"
-        ],
-        "parameters": [],
-        "security": [
-          [
-            {
-              "httpBasic": []
-            }
-          ],
-          [
-            {
-              "v4Auth": []
-            }
-          ]
-        ]
-      }
-    },
-    "/api/hot-topics": {
-      "get": {
-        "operationId": "api_hot_topics",
-        "tags": [
-          "api/hot-topics"
-        ],
-        "parameters": [],
         "security": [
           [
             {

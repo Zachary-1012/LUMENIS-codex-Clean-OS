@@ -112,7 +112,7 @@
 | `/api/collector/status` | GET | api_collector_status | basic/v4 | api/collector |
 | `/api/collector/stop` | POST | api_collector_stop | basic/v4 | api/collector |
 | `/api/collector/stop-cdp` | POST | system_features.collector_stop_cdp | basic/v4 | api/collector |
-| `/api/comments` | GET | api_comments | basic/v4 | api/comments |
+| `/api/comments` | GET | data_query.api_comments | basic/v4 | api/comments |
 | `/api/config/brand-directory` | GET | api_brand_directory | basic/v4 | api/config |
 | `/api/config/company-domain` | GET | api_company_domain | basic/v4 | api/config |
 | `/api/config/company-domain` | POST | api_company_domain | basic/v4 | api/config |
@@ -147,7 +147,7 @@
 | `/api/event-review/stats` | GET | api_event_review_stats | basic/v4 | api/event-review |
 | `/api/event-review/{event_id}/confirm` | POST | api_event_review_confirm | basic/v4 | api/event-review |
 | `/api/event-review/{event_id}/reject` | POST | api_event_review_reject | basic/v4 | api/event-review |
-| `/api/events` | GET | api_events | basic/v4 | api/events |
+| `/api/events` | GET | data_query.api_events | basic/v4 | api/events |
 | `/api/events/{event_id}/notes` | GET | api_event_notes | basic/v4 | api/events |
 | `/api/evidence/list` | GET | evidence_api.evidence_list | basic/v4 | api/evidence |
 | `/api/evidence/stats` | GET | evidence_api.evidence_stats | basic/v4 | api/evidence |
@@ -161,7 +161,7 @@
 | `/api/export/preview` | GET | export.export_preview | basic/v4 | api/export |
 | `/api/export/report` | GET | export.export_unified | basic/v4 | api/export |
 | `/api/export/word` | GET | export.export_word | basic/v4 | api/export |
-| `/api/feedback-keywords` | GET | api_feedback_keywords | basic/v4 | api/feedback-keywords |
+| `/api/feedback-keywords` | GET | data_query.api_feedback_keywords | basic/v4 | api/feedback-keywords |
 | `/api/feedback/analyze` | GET | architecture.feedback_analyze | basic/v4 | api/feedback |
 | `/api/feedback/history` | GET | architecture.feedback_history | basic/v4 | api/feedback |
 | `/api/feedback/pending` | GET | architecture.feedback_pending | basic/v4 | api/feedback |
@@ -170,8 +170,8 @@
 | `/api/feedback/suggestions` | GET | architecture.feedback_suggestions | basic/v4 | api/feedback |
 | `/api/function-map` | GET | api_function_map | basic/v4 | api/function-map |
 | `/api/historical-notes` | GET | api_historical_notes | basic/v4 | api/historical-notes |
-| `/api/hot-notes` | GET | api_hot_notes | basic/v4 | api/hot-notes |
-| `/api/hot-topics` | GET | api_hot_topics | basic/v4 | api/hot-topics |
+| `/api/hot-notes` | GET | data_query.api_hot_notes | basic/v4 | api/hot-notes |
+| `/api/hot-topics` | GET | data_query.api_hot_topics | basic/v4 | api/hot-topics |
 | `/api/intelligence/refresh` | POST | api_intelligence_refresh | basic/v4 | api/intelligence |
 | `/api/internal-browser/accounts` | GET | internal_browser.api_accounts | basic/v4 | api/internal-browser |
 | `/api/internal-browser/click` | POST | internal_browser.api_click | basic/v4 | api/internal-browser |
@@ -197,7 +197,7 @@
 | `/api/network/reset` | POST | api_network_reset | basic/v4 | api/network |
 | `/api/network/status` | GET | api_network_status | basic/v4 | api/network |
 | `/api/note/{note_id}` | GET | api_note_detail | basic/v4 | api/note |
-| `/api/notes` | GET | api_notes | basic/v4 | api/notes |
+| `/api/notes` | GET | data_query.api_notes | basic/v4 | api/notes |
 | `/api/notes/historical` | GET | api_notes_historical_v2 | basic/v4 | api/notes |
 | `/api/notes/library` | GET | api_notes_library_v571 | basic/v4 | api/notes |
 | `/api/notes/publish-buckets` | GET | api_publish_buckets_v570 | basic/v4 | api/notes |
@@ -240,7 +240,7 @@
 | `/api/reports/{report_id}/file` | GET | api_report_file | basic/v4 | api/reports |
 | `/api/resident/health` | GET | api_resident_health | basic/v4 | api/resident |
 | `/api/resident/recover` | POST | api_resident_recover | basic/v4 | api/resident |
-| `/api/risk-alerts` | GET | api_risk_alerts | basic/v4 | api/risk-alerts |
+| `/api/risk-alerts` | GET | data_query.api_risk_alerts | basic/v4 | api/risk-alerts |
 | `/api/search` | GET | api_unified_search | basic/v4 | api/search |
 | `/api/search` | POST | api_unified_search | basic/v4 | api/search |
 | `/api/search/enhance` | POST | api_search_enhance | basic/v4 | api/search |
@@ -263,7 +263,7 @@
 | `/api/stability/crash-log` | GET | api_stability_crash_log | basic/v4 | api/stability |
 | `/api/stability/heartbeat` | GET | api_stability_heartbeat | basic/v4 | api/stability |
 | `/api/stability/status` | GET | api_stability_status | basic/v4 | api/stability |
-| `/api/stats` | GET | api_stats | basic/v4 | api/stats |
+| `/api/stats` | GET | data_query.api_stats | basic/v4 | api/stats |
 | `/api/status` | GET | api_status | basic/v4 | api/status |
 | `/api/subject-classifier/classify` | POST | subject_classify | basic/v4 | api/subject-classifier |
 | `/api/subject-classifier/types` | GET | subject_types | basic/v4 | api/subject-classifier |
@@ -306,7 +306,7 @@
 | `/api/v4/api-keys` | GET | api_v4_api_keys_list | basic/v4 | api/v4 |
 | `/api/v4/api-keys/generate` | POST | api_v4_api_keys_generate | basic/v4 | api/v4 |
 | `/api/v4/api-keys/revoke` | POST | api_v4_api_keys_revoke | basic/v4 | api/v4 |
-| `/api/web-mentions` | GET | api_web_mentions | basic/v4 | api/web-mentions |
+| `/api/web-mentions` | GET | data_query.api_web_mentions | basic/v4 | api/web-mentions |
 | `/api/web-sentiment/history` | GET | api_web_sentiment_history | basic/v4 | api/web-sentiment |
 | `/api/web-sentiment/search` | POST | api_web_sentiment_search | basic/v4 | api/web-sentiment |
 | `/api/web-topics` | GET | api_web_topics | basic/v4 | api/web-topics |

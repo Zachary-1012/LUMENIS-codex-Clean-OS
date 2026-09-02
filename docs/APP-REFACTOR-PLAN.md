@@ -1,8 +1,19 @@
 # app.py 拆分规划（P1-10）· 2026-09-03
 
-> 现状：app.py 6013 行 / 306KB / 224 路由。已拆分出 7 个蓝图：
+## 施工进度
+| 批次 | 蓝图 | 路由 | 状态 |
+|---|---|---|---|
+| 批1 | `data_query_api.py` | stats/notes/risk-alerts/hot-notes/comments/events/web-mentions/feedback-keywords/hot-topics（9 个纯只读） | ✅ 2026-09-03 完成，app.py 6013→5966 行，362 回归全过，x-route-count 405 不变 |
+| 批2 | collection_api.py | 采集控制 | ⏳ 待施工 |
+| 批3 | report_api.py | 报告 | ⏳ 待施工 |
+| 批4 | ai_api.py | AI | ⏳ 待施工 |
+| 批5 | ops_api.py | 系统/运维/代码执行（含权限敏感） | ⏳ 待施工 |
+| 批6 | page_routes.py | 页面渲染 | ⏳ 待施工 |
+| 批7 | workers/ | 后台线程 | ⏳ 待施工 |
+
+> 现状：app.py 5966 行 / 224 路由。已拆分蓝图 8 个（原 7 + data_query）：
 > system_health_api / architecture_api / settings_module / export_report / pr_case_integration /
-> system_features_api / auth_recovery_api。
+> system_features_api / auth_recovery_api / data_query_api。
 > 目标：把剩余单体按功能域拆分为 Flask Blueprint，消除巨石，保持路由与行为零变更。
 > 原则：**只搬不移逻辑**，每个蓝图独立文件，注册点不变，拆分后全量回归必须通过。
 

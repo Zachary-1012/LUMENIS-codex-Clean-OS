@@ -122,6 +122,8 @@ app.register_blueprint(pr_case_integration.pr_case_bp)
 app.register_blueprint(system_features_api.system_features_bp)
 # V3.0 P0: Auth Recovery Center（认证恢复中心）
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
+import data_query_api
+data_query_api.register_data_query_api(app)  # P1-10 拆分批1: 数据只读查询
 
 # Zachary OS AI：系统内置浏览器（小红书/rednote 不跳转外部，系统内完成）
 try:
@@ -1232,43 +1234,6 @@ def index(): return send_from_directory('static','index.html')
 def favicon():
     # 消除浏览器自动请求 favicon 产生的 404 控制台报错
     return Response(status=204)
-@app.route('/api/stats')
-def api_stats(): return jsonify({'ok':True,'stats':db.get_stats(),'top_topics':[{'topic':t,'count':c} for t,c in db.get_top_topics(12)],'categories':db.get_category_distribution()})
-@app.route('/api/notes')
-def api_notes():
-    try: page=max(1,int(request.args.get('page',1))); per_page=max(1,min(100,int(request.args.get('per_page',20))))
-    except ValueError: return jsonify({'ok':False,'error':'page/per_page 必须为整数'}),400
-    filters={};
-    for key in ('sentiment','risk_level','category','keyword','date_start','date_end'): 
-        v=request.args.get(key,'');
-        if v: filters[key]=v
-    if request.args.get('is_official') in ('0','1'): filters['is_official']=request.args.get('is_official')=='1'
-    if request.args.get('verified') in ('0','1'): filters['verified']=request.args.get('verified')=='1'
-    # GAP-06 双维度筛选透传（非法枚举在 _apply_filters 白名单内被忽略）
-    for _dim in ('subject_type','content_type'):
-        _dv=request.args.get(_dim,'')
-        if _dv: filters[_dim]=_dv
-    offset=(page-1)*per_page; notes=db.get_notes(filters,per_page,offset); total=db.get_note_count(filters)
-    return jsonify({'ok':True,'notes':notes,'total':total,'page':page,'per_page':per_page,'total_pages':(total+per_page-1)//per_page})
-
-@app.route('/api/risk-alerts')
-def api_risk_alerts(): return jsonify({'ok':True,'notes':db.get_high_risk_notes(30)})
-@app.route('/api/hot-notes')
-def api_hot_notes(): return jsonify({'ok':True,'notes':db.get_hot_notes(10)})
-@app.route('/api/comments')
-def api_comments():
-    limit=max(1,min(200,request.args.get('limit',50,type=int))); c=db.get_negative_comments(limit); return jsonify({'comments':c,'total':len(c)})
-@app.route('/api/events')
-def api_events():
-    # 默认质量分级：重点事件进主列表，单篇泛化“相关讨论”只回传折叠计数，占位备注隐藏；?include=all 可看全部
-    if request.args.get('include') == 'all':
-        events = db.get_events(200)
-        return jsonify({'ok': True, 'events': events, 'total': len(events), 'mode': 'all'})
-    cur = db.get_events_curated(50)
-    return jsonify({'ok': True, 'events': cur['featured'], 'total': cur['total'],
-                    'generic_count': cur['generic_count'], 'noise_count': cur['noise_count'],
-                    'scope': 'cross-platform discovery + Xiaohongshu follow-up', 'mode': 'curated'})
-
 @app.route('/api/report/daily')
 def api_report_daily():
     """日报弹窗：只含“昨天+当天发布”的有效舆情笔记（过期笔记不弹窗，仅入库做案例）。
@@ -1322,20 +1287,6 @@ def api_report_daily():
     return jsonify({'ok': True, 'date': today_s, 'window': window,
                     'report': {'date_range': f'{yesterday_s} 至 {today_s}', 'stats': stats,
                                'conclusion': conclusion, 'notes': brief}})
-
-@app.route('/api/web-mentions')
-def api_web_mentions():
-    limit=max(1,min(200,request.args.get('limit',50,type=int)))
-    return jsonify({'ok':True,'mentions':db.get_web_mentions(limit,True)})
-
-@app.route('/api/feedback-keywords')
-def api_feedback_keywords():
-    return jsonify({'ok':True,'keywords':db.get_feedback_keywords(30)})
-
-@app.route('/api/hot-topics')
-def api_hot_topics():
-    limit=max(1,min(30,request.args.get('limit',12,type=int)))
-    return jsonify({'ok':True,'topics':db.get_hot_topics(limit)})
 
 @app.route('/api/intelligence/refresh',methods=['POST'])
 def api_intelligence_refresh():
