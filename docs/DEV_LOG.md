@@ -826,3 +826,19 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 2. **最新真人频率实测数值**未定位/未取得，当前为保守占位（NOT_VERIFIED），需按真人测试结果覆盖 HUMAN_CADENCE；
 3. **每日登录保活的自动调度**未接线（默认关），需在 9222 会话与登录态确认后、经一次手动成功保活再开自动。
 以上三项具备真实窗口后按「先旁路验证再切换」推进；国内熔断维持不撞不绕。
+
+
+---
+
+## 2026-09-02 13:05 · P0-1 事件聚合唯一权威收口（对账 GAP-P0-01，不重写、零口径变更）
+
+### 只读调用链定位（先证据后改）
+- 全仓无 def aggregate_events（对账据此判 MISSING）；events 写入=database.upsert_event，唯一上游聚合实现是 reprocess.build_cross_platform_events()：生产采集后由 xhs_cookie_bridge 异步调用、app.py 两端点（采集主任务 L701/手动分析 L2379）、full_refresh 共用，无第二套实现。
+- 口径核对（健康，未弱化）：只取 db.get_notes(verified=True)+已验证 web；_event_key 语义+14 天窗分组；risk_score 取组内 max、负面计数定 risk_level；intelligence.summarize_event 仅摘要/翻译增强（ai_enabled=False 照样聚合）；first/last_seen 发布时间优先、采集时间兜底，未混淆 publish_datetime/captured_at。
+- 结论：能力完好，是旧名 aggregate_events 重构更名迁走、基线未回写导致的误判，非真实缺失。
+
+### 最小收口
+- reprocess.py 恢复受保护兼容名 aggregate_events(limit=100) → 转发 build_cross_platform_events（同一实现，docstring 钉死唯一 Owner 与三条口径红线，严禁另写一套）。
+- 新增 tests/test_event_aggregation_authority.py 3 测：兼容名转发同一权威并透传 limit；静态扫描全仓两处定义均只在 reprocess.py（单一 Owner）；monkeypatch 隔离 db/intelligence 验证风险来自数据（max=70→high、mention_count=2）、AI 关闭仍聚合、上游只取 verified。
+- 结果：3 测全过；统一入口 161 passed（158→161）。运行旁证：回归日志见 [Gate:shadow][TopicCampaign] allow=True，GAP-05 门控 shadow 真实在线。
+- DB：零变更；生产 8201 未重启未碰。

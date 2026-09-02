@@ -136,6 +136,20 @@ def build_cross_platform_events(limit=100):
     return made
 
 
+# === P0-1 最高保护层：事件聚合唯一权威（受保护兼容名恢复）=======================
+# 历史受保护函数 aggregate_events() 在重构中更名为 build_cross_platform_events() 并迁入
+# 本模块，导致基线/最高保护层清单 grep 旧名误判为 MISSING（对账 GAP-P0-01）。
+# 现恢复受保护名作为【权威兼容入口】：与 build_cross_platform_events 是同一实现，
+# 严禁在此另写一套聚合口径（全仓事件聚合只此一个 Owner）。
+# 口径红线（不得弱化）：
+#   1) 只消费 is_taikoo_verified=1 的笔记与已验证 web mention（主体硬过滤后的输入）；
+#   2) risk_level/risk_score 来自数据（risk_score 取 max、负面计数），AI 仅 summarize/translate 增强，绝不改写风险事实；
+#   3) 发布时间(publish_*/published_at)与采集时间(collected_*/fetched_at)分别用于 first/last_seen，不得混淆。
+def aggregate_events(limit: int = 100):
+    """事件聚合受保护兼容名 → 唯一权威 build_cross_platform_events（零口径分叉）。"""
+    return build_cross_platform_events(limit=limit)
+
+
 def full_refresh(limit=5000, web_limit=120, translate=False):
     backup=None
     try:
