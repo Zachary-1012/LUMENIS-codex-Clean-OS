@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import database as db
 from flask import Blueprint, jsonify, request
+from collector_guard.resource_guard import ResourceGuard
+
+_resource_guard = ResourceGuard()  # P0-G 统一资源守卫（只读决策，无共享状态）
 
 
 def register_data_query_api(app):
@@ -98,6 +101,19 @@ def register_data_query_api(app):
         rows = db.get_metric_trend(entity_type, entity_key, limit)
         return jsonify({'ok': True, 'entity_type': entity_type, 'entity_key': entity_key,
                         'points': len(rows), 'trend': rows})
+
+    @bp.route('/api/resource-guard', endpoint='api_resource_guard')
+    def api_resource_guard():
+        """P0-G 最大效率统一资源守卫：消费 lifecycle_action + 资源指标，输出四态调度建议（只读）。"""
+        action = request.args.get('action', 'schedule_normal')
+        if action not in ('schedule_normal', 'backoff_interval', 'pause_until_cooldown',
+                          'freeze_and_recover', 'probe_only', 'ramp_up'):
+            return jsonify({'ok': False, 'error': 'invalid action'}), 400
+        cpu = request.args.get('cpu', type=float)
+        ram = request.args.get('ram', type=float)
+        lag = request.args.get('queue_lag', 0, type=int)
+        snap = _resource_guard.snapshot(action, cpu_pct=cpu, ram_pct=ram, queue_lag=lag)
+        return jsonify({'ok': True, **snap})
 
     app.register_blueprint(bp)
     return bp

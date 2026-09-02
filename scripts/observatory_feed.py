@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Observatory 数据源（P0-D 最小可运行版）。
+"""Observatory 数据源（P0-D 最小可运行版，P0-F 已并入 Lean 段）。
 
-聚合 AI Budget + ZELL Trace + 生产基线 Evidence + Git 状态 + 测试汇总，
+聚合 AI Budget + ZELL Trace + 生产基线 Evidence + Git 状态 + 测试汇总 + Lean Footprint，
 输出统一 JSON，供 Observatory UI 消费。所有数据来自真实 Runtime/Evidence，禁止硬编码。
 
 用法：
@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
@@ -48,13 +49,24 @@ def _zell():
     return [json.loads(l) for l in open(p, encoding="utf-8") if l.strip()]
 
 
+def _lean():
+    p = os.path.join(ROOT, "staging", "lean-metrics.json")
+    if not os.path.exists(p):
+        return {"note": "运行 python scripts/lean_footprint.py --out staging/lean-metrics.json"}
+    try:
+        return json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return {"note": "lean-metrics.json 解析失败"}
+
+
 def main():
     feed = {
-        "generated_at": __import__("time").strftime("%Y-%m-%dT%H:%M:%S"),
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "git_head": _git_head(),
         "ai_budget": ai_budget.summary(),
         "zell_phases": {},
         "baseline": _latest_baseline(),
+        "lean": _lean(),
     }
     zell = _zell()
     for r in zell:
