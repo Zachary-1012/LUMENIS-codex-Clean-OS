@@ -78,14 +78,23 @@ def _check_cdp_ws(port: int, timeout: float = 2.0) -> bool:
 
 
 def _cdp_get_cookies(port: int, timeout: float = 3.0) -> list[dict]:
-    """L3：通过 CDP Browser-level WebSocket 调用 Network.getAllCookies，返回 cookie 列表（不打印值）。"""
+    """L3：通过 CDP page-level WebSocket（先 Network.enable）调用 Network.getAllCookies，返回 cookie 列表（不打印值）。
+
+    Network domain 是 page-level，必须连 page target 的 WS 并先启用；Browser-level WS 不支持 Network domain。
+    """
     try:
         import websocket
-        ver = _check_cdp_http(port, timeout=1.0)
-        if not ver:
+        # 取 page targets
+        with ur.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=1.0) as r:
+            targets = json.loads(r.read().decode("utf-8", "replace"))
+        pages = [t for t in targets if t.get("type") == "page" and t.get("webSocketDebuggerUrl")]
+        if not pages:
             return []
-        ws = websocket.create_connection(ver["webSocketDebuggerUrl"], timeout=timeout)
-        ws.send(json.dumps({"id": 1, "method": "Network.getAllCookies"}))
+        ws = websocket.create_connection(pages[0]["webSocketDebuggerUrl"], timeout=timeout)
+        # page-level：先启用 Network domain
+        ws.send(json.dumps({"id": 1, "method": "Network.enable"}))
+        json.loads(ws.recv())  # 吞掉 enable 响应
+        ws.send(json.dumps({"id": 2, "method": "Network.getAllCookies"}))
         resp = json.loads(ws.recv())
         ws.close()
         return resp.get("result", {}).get("cookies", [])
