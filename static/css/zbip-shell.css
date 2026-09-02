@@ -272,3 +272,40 @@ body.zb-shell-on .brandmark { background: var(--zb-stone-900,#1C1917) !important
 }
 /* 日报速览弹窗收编：黑白灰/小状态点/内联统计/模态按钮统一 */
 #modalContent h3{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:16px} #modalContent .dr-sub{font-weight:400;color:var(--zb-stone-500,#78716C);font-size:12px} #modalContent .dr-level{display:flex;align-items:center;gap:8px;padding:4px 0 12px;margin-bottom:12px;border-bottom:1px solid var(--zb-stone-200,#E7E5E4)} #modalContent .dr-dot{width:8px;height:8px;border-radius:99px;background:var(--zb-stone-500,#78716C);flex:none} #modalContent .dr-dot-danger{background:#DC2626} #modalContent .dr-dot-warn{background:#D97706} #modalContent .dr-dot-ok{background:#16A34A} #modalContent .dr-level-txt{font-weight:650;font-size:14px;color:var(--zb-stone-900,#1C1917)} #modalContent .dr-range{margin-left:auto;color:var(--zb-stone-500,#78716C);font-size:12px} #modalContent .dr-stats{display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:12px} #modalContent .dr-stat{text-align:center;border-right:1px solid var(--zb-stone-200,#E7E5E4)} #modalContent .dr-stat:last-child{border-right:0} #modalContent .dr-stat b{display:block;font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;color:var(--zb-stone-900,#1C1917)} #modalContent .dr-stat span{display:block;color:var(--zb-stone-500,#78716C);font-size:11px;margin-top:2px} #modalContent .dr-concl{background:var(--zb-stone-100,#F5F5F4);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--zb-stone-700,#44403C)} #modalContent .dr-concl b{color:var(--zb-stone-900,#1C1917);margin-right:6px} #modalContent .dr-notes{max-height:220px;overflow:auto;margin-bottom:14px} #modalContent .dr-notes ul{list-style:none;margin:0;padding:0;font-size:13px} #modalContent .dr-notes li{padding:7px 0;border-bottom:1px solid var(--zb-stone-200,#E7E5E4);display:flex;justify-content:space-between;gap:8px} #modalContent .dr-notes .dr-note-t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--zb-stone-900,#1C1917);font-weight:550} #modalContent .dr-notes .dr-note-m{color:var(--zb-stone-500,#78716C);font-size:12px;white-space:nowrap} #modalContent .dr-empty{color:var(--zb-stone-500,#78716C)!important} body.zb-shell-on .modal .action.primary{background:var(--zb-stone-900,#1C1917)!important;color:#fff!important;border:1px solid var(--zb-stone-900,#1C1917)!important;box-shadow:none!important} body.zb-shell-on .modal .action.secondary,body.zb-shell-on .modal .action.tertiary{background:transparent!important;color:var(--zb-stone-700,#44403C)!important;border:1px solid var(--zb-stone-300,#D6D3D1)!important;box-shadow:none!important} body.zb-shell-on #modal.modal{background:transparent!important;border:0!important;border-radius:0!important;max-width:none!important;max-height:none!important;width:100%!important;height:100%!important;padding:0!important;overflow:hidden!important} body.zb-shell-on #modal .modal-mask{position:fixed!important;inset:0!important;background:rgba(28,25,23,.40)!important;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);border-radius:0!important} body.zb-shell-on #modal .modal-close{color:var(--zb-stone-500,#78716C)!important;background:transparent!important;border:0!important;font-size:20px!important;top:12px!important;right:14px!important} @media(min-width:761px){body.zb-shell-on #modal .modal-panel{position:relative!important;background:#fff!important;border-radius:12px!important;box-shadow:0 16px 48px rgba(28,25,23,.20)!important;padding:22px 24px!important;max-width:560px!important;width:calc(100% - 48px)!important;max-height:84vh!important;overflow-y:auto!important;animation:zbPop .22s cubic-bezier(.16,1,.3,1)!important}} @media(max-width:760px){body.zb-shell-on #modal .modal-panel{background:#fff!important;border-radius:12px!important;padding:20px 16px!important;width:calc(100vw - 32px)!important;max-width:520px!important;max-height:82vh!important}} @keyframes zbPop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
+
+
+/* ---------- 4.1 Home 错峰入场（Emil：emil-out 曲线 / stagger 45ms / 不从 scale(0)） LRN-UI-20260903-01 ---------- */
+body.zb-shell-on #zbHome.show .zb-home-inner > *{
+  opacity:0;
+  transform:translateY(12px) scale(.985);
+  animation:zb-home-in 340ms cubic-bezier(.23,1,.32,1) both;
+}
+body.zb-shell-on #zbHome.show .zb-home-title{ animation-delay:0ms }
+body.zb-shell-on #zbHome.show .zb-ask{ animation-delay:55ms }
+body.zb-shell-on #zbHome.show .zb-chips{ animation-delay:110ms }
+body.zb-shell-on #zbHome.show .zb-home-sub{ animation-delay:165ms }
+@keyframes zb-home-in{ to{ opacity:1; transform:translateY(0) scale(1); } }
+/* chips 内部再轻微错峰，chips 容器自身落位后其子按钮依次浮现 */
+body.zb-shell-on #zbHome.show .zb-chips .zb-chip{
+  opacity:0; transform:translateY(8px);
+  animation:zb-home-in 260ms cubic-bezier(.23,1,.32,1) both;
+}
+body.zb-shell-on #zbHome.show .zb-chips .zb-chip:nth-child(1){ animation-delay:150ms }
+body.zb-shell-on #zbHome.show .zb-chips .zb-chip:nth-child(2){ animation-delay:185ms }
+body.zb-shell-on #zbHome.show .zb-chips .zb-chip:nth-child(3){ animation-delay:220ms }
+body.zb-shell-on #zbHome.show .zb-chips .zb-chip:nth-child(4){ animation-delay:255ms }
+
+/* 按压反馈（Emil：可点元素 scale .95-.98，100-160ms） */
+.zb-send{ transition:transform 130ms cubic-bezier(.23,1,.32,1), background-color .14s ease; }
+.zb-send:active{ transform:scale(.92); }
+.zb-chip{ transition:background .14s ease, border-color .14s ease, transform 130ms cubic-bezier(.23,1,.32,1); }
+.zb-chip:active{ transform:scale(.96); }
+/* 输入框聚焦：近黑细边 + 柔和聚焦环（glm-4.6v 建议，Stone 暖灰） */
+.zb-ask:focus-within{ border-color:var(--zb-stone-500,#78716C); box-shadow:0 6px 22px rgba(28,25,23,.10), 0 0 0 3px rgba(120,113,108,.12); }
+
+/* reduced-motion：只保留淡入，移除位移与按压 */
+@media (prefers-reduced-motion:reduce){
+  body.zb-shell-on #zbHome.show .zb-home-inner > *,
+  body.zb-shell-on #zbHome.show .zb-chips .zb-chip{ animation-duration:1ms !important; animation-delay:0ms !important; opacity:1; transform:none; }
+  .zb-send:active,.zb-chip:active{ transform:none; }
+}

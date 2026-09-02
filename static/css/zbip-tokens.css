@@ -133,6 +133,21 @@
   --zb-dur-sheet: 360ms;  /* Sheet / Drawer / 大面板转场 */
   --zb-ease-spring: cubic-bezier(.34,1.32,.5,1); /* 轻物理弹簧：toggle/sheet/panel/drag，不超调过多 */
 
+  /* ---- 10.5 Emil Kowalski 权威曲线（emilkowalski/skills；只新增，旧变量保留兼容） ----
+   * 进/出场→out(快速起,响应感)；屏内移动/变形→in-out(自然加减速)；抽屉→drawer；恒速→linear。
+   * UI 绝不用 ease-in(起手慢=迟钝)。 */
+  --zb-ease-emil-out:    cubic-bezier(0.23, 1, 0.32, 1);
+  --zb-ease-emil-inout:  cubic-bezier(0.77, 0, 0.175, 1);
+  --zb-ease-drawer:      cubic-bezier(0.32, 0.72, 0, 1);
+  /* Stagger 错峰：只对一组相关项(3-7个)，间隔 30-80ms，不阻塞交互；末项不再累加 */
+  --zb-stagger-step: 45ms;
+  --zb-stagger-max:  270ms;
+  /* Float 落位后轻微漂浮（仅装饰，非数据区），不同相位/周期避免整齐划一 */
+  --zb-float-dur: 3.6s;
+  --zb-float-y: 2px;
+  /* 按压（Emil：0.95-0.98），入场起始缩放（绝不从 scale(0)，从 .95+opacity:0） */
+  --zb-enter-scale: .96;
+
   /* ---- 11. Linear Icon Token（单色/currentColor/统一描边） ---- */
   --zb-icon-stroke: 1.75px;
   --zb-icon-size-sm: 14px;
@@ -153,7 +168,7 @@
 
 /* ---- 10.3 动效无障碍：用户偏好减少动态时，一键关闭非必要过渡 ---- */
 @media (prefers-reduced-motion: reduce) {
-  :root { --zb-dur-micro: 1ms; --zb-dur-state: 1ms; --zb-dur-page: 1ms; --zb-dur-quick: 1ms; --zb-dur-sheet: 1ms; }
+  :root { --zb-dur-micro: 1ms; --zb-dur-state: 1ms; --zb-dur-page: 1ms; --zb-dur-quick: 1ms; --zb-dur-sheet: 1ms; --zb-stagger-step: 0ms; --zb-stagger-max: 0ms; --zb-float-dur: 0s; }
 }
 
 /* =============================================================================

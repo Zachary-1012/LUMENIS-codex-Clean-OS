@@ -168,3 +168,62 @@
   .zb-status-dot.is-danger, .zb-spinner, .zb-skeleton { animation: none !important; }
   .zb-btn:active { transform: none; }
 }
+
+
+/* =============================================================================
+ * Emil Kowalski 动效工具类（LRN-UI-20260903-01）
+ * 只动 transform/opacity(GPU)；入场用 emil-out 曲线；不从 scale(0) 起；
+ * stagger 仅用于一组相关项(3-7)；reduced-motion 兜底。纯 CSS，无依赖。
+ * ========================================================================== */
+
+/* 错峰滑入：父容器加 .stagger-in，子项自动级联。方向修饰：.from-left/.from-right/.from-scale */
+.stagger-in > *{
+  opacity:0;
+  transform:translateY(10px) scale(var(--zb-enter-scale,.96));
+  animation:zb-in var(--zb-dur-page,320ms) var(--zb-ease-emil-out,cubic-bezier(.23,1,.32,1)) both;
+}
+.stagger-in.from-left  > *{ transform:translateX(-14px) scale(var(--zb-enter-scale,.96)); }
+.stagger-in.from-right > *{ transform:translateX(14px)  scale(var(--zb-enter-scale,.96)); }
+.stagger-in.from-scale > *{ transform:scale(.94); }
+.stagger-in > *:nth-child(1){animation-delay:0ms}
+.stagger-in > *:nth-child(2){animation-delay:calc(var(--zb-stagger-step,45ms) * 1)}
+.stagger-in > *:nth-child(3){animation-delay:calc(var(--zb-stagger-step,45ms) * 2)}
+.stagger-in > *:nth-child(4){animation-delay:calc(var(--zb-stagger-step,45ms) * 3)}
+.stagger-in > *:nth-child(5){animation-delay:calc(var(--zb-stagger-step,45ms) * 4)}
+.stagger-in > *:nth-child(6){animation-delay:calc(var(--zb-stagger-step,45ms) * 5)}
+.stagger-in > *:nth-child(n+7){animation-delay:var(--zb-stagger-max,270ms)}
+@keyframes zb-in{ to{ opacity:1; transform:translate(0,0) scale(1); } }
+
+/* 落位后轻微漂浮：仅装饰性徽标/状态卡，非数据区；nth 错相位避免整齐划一 */
+.zb-float{ animation:zb-float var(--zb-float-dur,3.6s) ease-in-out infinite; }
+.zb-float:nth-child(2n){ animation-duration:4.2s; animation-delay:-1.2s; }
+.zb-float:nth-child(3n){ animation-duration:4.8s; animation-delay:-2.1s; }
+@keyframes zb-float{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(calc(var(--zb-float-y,2px) * -1))} }
+
+/* 按压反馈：任何可点元素加 .zb-pressable（Emil：scale .95-.98，100-160ms emil-out） */
+.zb-pressable{
+  transition:transform var(--zb-dur-quick,140ms) var(--zb-ease-emil-out,cubic-bezier(.23,1,.32,1)),
+             background-color var(--zb-dur-micro,120ms) ease,
+             box-shadow var(--zb-dur-state,220ms) ease,
+             border-color var(--zb-dur-micro,120ms) ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.zb-pressable:active{ transform:scale(var(--zb-press-scale,.98)); }
+@media (hover:hover) and (pointer:fine){
+  .zb-pressable:hover{ /* hover 抬升由具体组件给背景，这里只保证可中断 */ }
+}
+
+/* 通用入场（单个元素，非组）：加 .zb-enter 即播一次 */
+.zb-enter{
+  opacity:0;
+  transform:translateY(8px) scale(var(--zb-enter-scale,.96));
+  animation:zb-in var(--zb-dur-state,220ms) var(--zb-ease-emil-out,cubic-bezier(.23,1,.32,1)) both;
+}
+
+/* reduced-motion：保留透明度，移除位移/漂浮/按压 */
+@media (prefers-reduced-motion:reduce){
+  .stagger-in > *,.zb-enter{ animation-duration:1ms !important; animation-delay:0ms !important; opacity:1; transform:none; }
+  .zb-float{ animation:none !important; }
+  .zb-pressable{ transition:none !important; }
+  .zb-pressable:active{ transform:none; }
+}
