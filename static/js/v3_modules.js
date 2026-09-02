@@ -5,7 +5,7 @@
  */
 
 const V3Modules = {
-    auth: 'Basic ' + btoa('Zachary:ID082610'),
+    auth: window.__Z_AUTH,
 
     // ========== 品牌知识库模块 ==========
     knowledge: {

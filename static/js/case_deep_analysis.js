@@ -6,7 +6,7 @@
 
 const CaseDeepAnalysis = {
     // 认证信息（与系统一致）
-    auth: 'Basic ' + btoa('Zachary:ID082610'),
+    auth: window.__Z_AUTH,
     
     // 状态
     state: {

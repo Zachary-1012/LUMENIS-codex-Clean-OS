@@ -15,7 +15,7 @@ window.addEventListener('unhandledrejection',function(e){
 /* ===== 全局fetch拦截器：自动添加Basic Auth认证头 ===== */
 (function(){
   const _origFetch = window.fetch;
-  const _auth = 'Basic ' + btoa('Zachary:ID082610');
+  const _auth = window.__Z_AUTH;
   window.fetch = function(input, init){
     try {
       if (input instanceof Request) {
@@ -62,7 +62,7 @@ const $=id=>document.getElementById(id);
 let trend=[];let calendarCursor=new Date();  // 默认当前月（不再写死年月，避免跨月失准）
 let pageHistory=['overview'];
 
-async function api(u,o){o=o||{};o.headers=Object.assign({'Authorization':'Basic '+btoa('Zachary:ID082610')},o.headers||{});const r=await fetch(u,o);const d=await r.json();if(!r.ok||d.ok===false)throw Error(d.error||`HTTP ${r.status}`);return d}
+async function api(u,o){o=o||{};o.headers=Object.assign({'Authorization':window.__Z_AUTH},o.headers||{});const r=await fetch(u,o);const d=await r.json();if(!r.ok||d.ok===false)throw Error(d.error||`HTTP ${r.status}`);return d}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2600)}
 function fmt(n){return Number(n||0).toLocaleString('zh-CN')}
@@ -1345,7 +1345,7 @@ async function exportReportWithVerify(type,format){
   toast('正在生成'+(type==='daily'?'日报':type==='weekly'?'周报':type==='monthly'?'月报':'年报')+'...');
   try{
     const url='/api/export/report?type='+type+'&format='+format;
-    const resp=await fetch(url,{headers:{'Authorization':'Basic '+btoa('Zachary:ID082610')}});
+    const resp=await fetch(url,{headers:{'Authorization':window.__Z_AUTH}});
     if(!resp.ok){
       const err=await resp.json().catch(()=>({error:'导出失败'}));
       toast(err.error||'导出失败');

@@ -64,7 +64,7 @@ const BadgeManager = {
     async refreshAlertBadge() {
         try {
             const response = await fetch('/api/alerts?unread=1', {
-                headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+                headers: { 'Authorization': window.__Z_AUTH }
             });
             const data = await response.json();
             if (data.ok) {
@@ -82,7 +82,7 @@ const BadgeManager = {
     async refreshNegativeBadge() {
         try {
             const response = await fetch('/api/negative/pending?page=1&page_size=1', {
-                headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+                headers: { 'Authorization': window.__Z_AUTH }
             });
             const data = await response.json();
             if (data.ok) {
@@ -152,7 +152,7 @@ const BadgeManager = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Basic ' + btoa('Zachary:ID082610')
+                    'Authorization': window.__Z_AUTH
                 },
                 body: JSON.stringify({ alert_id: alertId || noteId })
             });
@@ -175,7 +175,7 @@ const BadgeManager = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Basic ' + btoa('Zachary:ID082610')
+                    'Authorization': window.__Z_AUTH
                 },
                 body: JSON.stringify({ all: true })
             });
@@ -198,7 +198,7 @@ const BadgeManager = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Basic ' + btoa('Zachary:ID082610')
+                    'Authorization': window.__Z_AUTH
                 }
             });
             const data = await response.json();
@@ -222,7 +222,7 @@ const BadgeManager = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Basic ' + btoa('Zachary:ID082610')
+                    'Authorization': window.__Z_AUTH
                 },
                 body: JSON.stringify({ note_id: noteId })
             });
@@ -246,7 +246,7 @@ const BadgeManager = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Basic ' + btoa('Zachary:ID082610')
+                    'Authorization': window.__Z_AUTH
                 },
                 body: JSON.stringify({ note_id: noteId })
             });

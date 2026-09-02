@@ -592,6 +592,11 @@ def generate_daily_digest(date_str=None):
     if not ai_summary:
         ai_summary = executive
 
+    # 9. P1-E 智谱增强：管理层洞察 + 趋势预警 + 风险预警
+    executive_insight = _ai_generate_executive_insight(summary, insights, event_insights)
+    trend_alerts = _generate_trend_alerts(summary)
+    risk_alerts = _generate_risk_alerts(event_insights)
+
     # 组装完整数据
     digest = {
         'digest_date': date_str,
@@ -604,6 +609,9 @@ def generate_daily_digest(date_str=None):
         'brand_health_score': summary['brand_health_score'],
         'ai_summary': ai_summary,
         'executive_summary': executive,
+        'executive_insight': executive_insight,
+        'trend_alerts': trend_alerts,
+        'risk_alerts': risk_alerts,
         'key_insights': insights,
         'action_items': actions,
         'top_events': event_insights,
@@ -636,6 +644,109 @@ def _ai_generate_daily_summary(summary, insights, events):
     if raw:
         return raw.strip()[:200]
     return ''
+
+
+# ============== P1-E 智谱增强：管理层洞察 + 趋势预警 + 风险预警 ==============
+
+def _ai_generate_executive_insight(summary, insights, events):
+    """P1-E(2026-09-02): AI生成管理层一句话洞察（高层视角核心结论）。
+    智谱驱动，输出严格JSON：executive_insight + priority + focus_area
+    """
+    system = '你是广州太古汇品牌公关总监。基于今日舆情数据，给出管理层一句话洞察。\n\n输出严格JSON：\n{\n  "executive_insight": "不超过80字，高层视角的核心结论，要有具体数据支撑",\n  "priority": "high|medium|low",\n  "focus_area": "需要管理层关注的具体领域",\n  "key_metric": "最关键的一个数据指标"\n}\n\n要求：必须有具体数据，不能说"整体平稳"这种空话；priority=high时必须说明为什么紧急；focus_area要具体到业务领域。'
+    user = json.dumps({
+        'summary': {k: summary[k] for k in ['total_found','effective_count','positive_count','neutral_count','negative_count','risk_count','risk_index','brand_health_score'] if k in summary},
+        'top_insights': insights[:3],
+        'top_events': [{'title': e.get('event_title',''), 'risk': e.get('risk_level',''), 'mentions': e.get('mention_count',0)} for e in events[:3]]
+    }, ensure_ascii=False)
+
+    raw, provider = intelligence._chat(system, user, 0.2, 500)
+    data = intelligence._json_from_text(raw)
+    if data:
+        data['provider'] = provider
+        return data
+    # 规则兜底
+    neg_pct = round(summary.get('negative_count',0) / max(summary.get('effective_count',1),1) * 100, 1)
+    high_risk = sum(1 for e in events if e.get('risk_level') == 'high')
+    priority = 'high' if (neg_pct > 30 or high_risk >= 2) else ('medium' if (neg_pct > 15 or high_risk >= 1) else 'low')
+    return {
+        'executive_insight': f"今日有效舆情{summary.get('effective_count',0)}条，负面占比{neg_pct}%，高风险事件{high_risk}起，品牌健康分{summary.get('brand_health_score','N/A')}。",
+        'priority': priority,
+        'focus_area': '综合舆情',
+        'key_metric': f"负面占比{neg_pct}%",
+        'provider': 'rule_fallback'
+    }
+
+
+def _generate_trend_alerts(summary):
+    """P1-E(2026-09-02): 规则引擎生成趋势预警（不依赖AI，实时计算）。"""
+    alerts = []
+    effective = summary.get('effective_count', 0)
+    if effective == 0:
+        return [{'type': 'data_gap', 'severity': 'high', 'message': '今日无有效舆情数据，建议检查采集任务是否正常运行', 'metric': 'effective_count=0'}]
+
+    neg = summary.get('negative_count', 0)
+    neg_pct = round(neg / effective * 100, 1)
+    risk = summary.get('risk_count', 0)
+    risk_index = summary.get('risk_index', 0)
+    health = summary.get('brand_health_score', 100)
+
+    if neg_pct > 40:
+        alerts.append({'type': 'negative_surge', 'severity': 'high', 'message': f'负面占比{neg_pct}%，超过40%警戒线，需立即关注负面舆情来源', 'metric': f'negative_pct={neg_pct}%'})
+    elif neg_pct > 25:
+        alerts.append({'type': 'negative_elevated', 'severity': 'medium', 'message': f'负面占比{neg_pct}%，处于偏高区间，建议跟踪负面话题演化', 'metric': f'negative_pct={neg_pct}%'})
+
+    if risk >= 3:
+        alerts.append({'type': 'high_risk_cluster', 'severity': 'high', 'message': f'今日高风险事件{risk}起，达到集群预警阈值，建议启动应急响应流程', 'metric': f'risk_count={risk}'})
+    elif risk >= 1:
+        alerts.append({'type': 'high_risk_present', 'severity': 'medium', 'message': f'今日高风险事件{risk}起，需持续跟踪处置进展', 'metric': f'risk_count={risk}'})
+
+    if risk_index >= 70:
+        alerts.append({'type': 'risk_index_critical', 'severity': 'high', 'message': f'风险指数{risk_index}，处于危急区间，建议管理层立即介入', 'metric': f'risk_index={risk_index}'})
+    elif risk_index >= 50:
+        alerts.append({'type': 'risk_index_elevated', 'severity': 'medium', 'message': f'风险指数{risk_index}，处于偏高区间，建议加强监控频次', 'metric': f'risk_index={risk_index}'})
+
+    if health < 60:
+        alerts.append({'type': 'brand_health_critical', 'severity': 'high', 'message': f'品牌健康分{health}，低于60分警戒线，品牌声誉面临较大压力', 'metric': f'brand_health={health}'})
+    elif health < 75:
+        alerts.append({'type': 'brand_health_declining', 'severity': 'medium', 'message': f'品牌健康分{health}，处于下行区间，建议关注品牌声誉修复', 'metric': f'brand_health={health}'})
+
+    if effective < 5:
+        alerts.append({'type': 'low_volume', 'severity': 'low', 'message': f'今日有效舆情仅{effective}条，数据量偏低，可能影响分析准确性', 'metric': f'effective_count={effective}'})
+
+    return alerts if alerts else [{'type': 'stable', 'severity': 'low', 'message': '今日舆情整体平稳，各项指标处于正常区间', 'metric': 'all_normal'}]
+
+
+def _generate_risk_alerts(events):
+    """P1-E(2026-09-02): 规则引擎生成风险事件预警（不依赖AI，基于事件风险等级）。"""
+    high_risk = [e for e in events if e.get('risk_level') == 'high']
+    medium_risk = [e for e in events if e.get('risk_level') == 'medium']
+
+    alerts = []
+    for e in high_risk[:5]:
+        alerts.append({
+            'event_id': e.get('id'),
+            'title': e.get('event_title', '未知事件'),
+            'risk_level': 'high',
+            'risk_score': e.get('risk_score', 0),
+            'mention_count': e.get('mention_count', 0),
+            'ai_summary': (e.get('ai_summary') or '')[:100],
+            'recommended_action': '立即启动应急响应，2小时内完成初步评估并上报管理层',
+            'urgency': 'immediate'
+        })
+
+    for e in medium_risk[:3]:
+        alerts.append({
+            'event_id': e.get('id'),
+            'title': e.get('event_title', '未知事件'),
+            'risk_level': 'medium',
+            'risk_score': e.get('risk_score', 0),
+            'mention_count': e.get('mention_count', 0),
+            'ai_summary': (e.get('ai_summary') or '')[:100],
+            'recommended_action': '24小时内完成评估，制定处置方案并跟踪进展',
+            'urgency': 'within_24h'
+        })
+
+    return alerts
 
 
 if __name__ == '__main__':

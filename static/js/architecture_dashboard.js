@@ -28,7 +28,7 @@ const ArchitectureDashboard = {
 async function loadArchitectureStatus() {
     try {
         const response = await fetch('/api/architecture/status', {
-            headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+            headers: { 'Authorization': window.__Z_AUTH }
         });
         const data = await response.json();
         if (data.ok) {
@@ -144,7 +144,7 @@ function createArchitecturePanel() {
 async function loadHealthStatus() {
     try {
         const response = await fetch('/api/system/health/detailed', {
-            headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+            headers: { 'Authorization': window.__Z_AUTH }
         });
         const data = await response.json();
         if (data.ok) {
@@ -286,7 +286,7 @@ function toggleHealthPanel() {
 async function loadPendingNegative() {
     try {
         const response = await fetch('/api/negative/pending?page=1&page_size=20', {
-            headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+            headers: { 'Authorization': window.__Z_AUTH }
         });
         const data = await response.json();
         if (data.ok) {
@@ -336,7 +336,7 @@ async function confirmNegative(noteId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Basic ' + btoa('Zachary:ID082610')
+                'Authorization': window.__Z_AUTH
             },
             body: JSON.stringify({ note_id: noteId, confirmed_by: 'admin' })
         });
@@ -361,7 +361,7 @@ async function rejectNegative(noteId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Basic ' + btoa('Zachary:ID082610')
+                'Authorization': window.__Z_AUTH
             },
             body: JSON.stringify({ note_id: noteId, rejected_by: 'admin', reason: '人工审核驳回' })
         });
@@ -428,7 +428,7 @@ function closeNegativeModal() {
 async function loadNegativeStats() {
     try {
         const response = await fetch('/api/negative/stats', {
-            headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+            headers: { 'Authorization': window.__Z_AUTH }
         });
         const data = await response.json();
         if (data.ok) {
@@ -453,7 +453,7 @@ async function showDailyReportModal(dateStr) {
 
     try {
         const response = await fetch(`/api/notes/publish-buckets?date=${dateStr}`, {
-            headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+            headers: { 'Authorization': window.__Z_AUTH }
         });
         const data = await response.json();
 
@@ -596,7 +596,7 @@ async function runRecoveryCycle() {
     try {
         const response = await fetch('/api/recovery/run-cycle', {
             method: 'POST',
-            headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+            headers: { 'Authorization': window.__Z_AUTH }
         });
         const data = await response.json();
         if (data.ok) {

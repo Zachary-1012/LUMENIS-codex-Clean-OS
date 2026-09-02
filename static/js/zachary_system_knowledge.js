@@ -121,7 +121,7 @@ const ZacharySystemKnowledge = {
     async getSystemStatus() {
         try {
             const response = await fetch('/api/architecture/status', {
-                headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+                headers: { 'Authorization': window.__Z_AUTH }
             });
             const data = await response.json();
             return data.ok ? data : null;
@@ -134,7 +134,7 @@ const ZacharySystemKnowledge = {
     async getHealthStatus() {
         try {
             const response = await fetch('/api/system/health/detailed', {
-                headers: { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') }
+                headers: { 'Authorization': window.__Z_AUTH }
             });
             const data = await response.json();
             return data.ok ? data : null;

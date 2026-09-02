@@ -1355,8 +1355,26 @@ def api_ai_status():
 def api_ai_test():
     data = request.get_json(silent=True) or {}
     text = str(data.get('text') or '请用一句话说明广州太古汇舆情监测系统正在监测什么。').strip()[:1200]
-    result = intelligence.test_connection(text)
-    return jsonify({'ok': True, **result})
+    # AI 治理：额度检查
+    allowed, quota = ai_governance._usage_tracker.check_quota()
+    if not allowed:
+        return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota}), 429
+    # AI 治理：脱敏
+    desensitized_text, mapping = ai_governance.desensitize_text(text)
+    result = intelligence.test_connection(desensitized_text)
+    # AI 治理：回传补回实体
+    if isinstance(result, dict) and 'reply' in result:
+        result['reply'] = ai_governance.restore_text(str(result['reply']), mapping)
+    # AI 治理：记录使用统计
+    ai_governance.record_ai_call('ai/test', prompt_tokens=len(text)//2,
+                                   completion_tokens=len(str(result.get('reply','')))//2 if isinstance(result, dict) else 0,
+                                   total_tokens=len(text)//2, provider=result.get('provider','zhipu') if isinstance(result, dict) else 'zhipu',
+                                   success=True)
+    # AI 治理：输出标记
+    marked = ai_governance.mark_ai_output(result if isinstance(result, dict) else {'result': result},
+                                             provider=result.get('provider','zhipu') if isinstance(result, dict) else 'zhipu',
+                                             endpoint='ai/test')
+    return jsonify(marked)
 
 # ========== 豆包AI API（ark_llm）- 可选辅助功能 ==========
 # 【S1 2026-09-02】云智(ARK)已停用，改用智谱(zhipu)驱动（intelligence 网关）。
@@ -1374,32 +1392,70 @@ def api_ark_status():
 
 @app.route('/api/ark/chat', methods=['POST'])
 def api_ark_chat():
-    """AI通用聊天（智谱驱动，不可用时回退本地AI）"""
+    """AI通用聊天（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
     try:
         data = request.get_json(silent=True) or {}
         message = str(data.get('message') or data.get('text') or '').strip()
         if not message:
             return jsonify({'ok': False, 'error': '消息不能为空'}), 400
         system_prompt = data.get('system_prompt')
-        raw, provider = intelligence._chat(system_prompt or '你是广州太古汇舆情监测系统的智能助手', message, 0.15, 1800)
-        return jsonify({'ok': True, 'reply': raw.strip() if raw else 'AI引擎已就绪',
-                        'provider': provider or 'local_rule', 'fallback': provider in ('rule', 'local_rule')})
+        # AI 治理：额度检查
+        allowed, quota = ai_governance._usage_tracker.check_quota()
+        if not allowed:
+            return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota, 'fallback': 'local'}), 429
+        # AI 治理：脱敏
+        desensitized_msg, mapping = ai_governance.desensitize_text(message)
+        raw, provider = intelligence._chat(system_prompt or '你是广州太古汇舆情监测系统的智能助手', desensitized_msg, 0.15, 1800)
+        # AI 治理：回传补回实体
+        reply = ai_governance.restore_text(raw.strip() if raw else 'AI引擎已就绪', mapping)
+        # AI 治理：记录使用统计
+        ai_governance.record_ai_call('ark/chat', prompt_tokens=len(message)//2,
+                                       completion_tokens=len(reply)//2,
+                                       total_tokens=(len(message)+len(reply))//2,
+                                       provider=provider or 'local_rule', success=True)
+        # AI 治理：输出标记
+        result = ai_governance.mark_ai_output(
+            {'ok': True, 'reply': reply, 'provider': provider or 'local_rule',
+             'fallback': provider in ('rule', 'local_rule'), 'desensitized': bool(mapping)},
+            provider=provider or 'local_rule', endpoint='ark/chat')
+        return jsonify(result)
     except Exception as e:
+        ai_governance.record_ai_call('ark/chat', provider='zhipu', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/api/ark/sentiment', methods=['POST'])
 def api_ark_sentiment():
-    """AI舆情分析（智谱驱动，不可用时回退本地规则分析）"""
+    """AI舆情分析（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
         if not text:
             return jsonify({'ok': False, 'error': '文本不能为空'}), 400
-        result = intelligence.analyze_sentiment(text)
-        return jsonify({'ok': True, 'sentiment': result.get('sentiment'), 'label': result.get('label'),
-                        'summary': result.get('summary'), 'keywords': result.get('keywords'),
-                        'provider': result.get('provider'), 'fallback': result.get('provider') == 'rule'})
+        # AI 治理：额度检查
+        allowed, quota = ai_governance._usage_tracker.check_quota()
+        if not allowed:
+            return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota}), 429
+        # AI 治理：脱敏
+        desensitized_text, mapping = ai_governance.desensitize_text(text)
+        result = intelligence.analyze_sentiment(desensitized_text)
+        # AI 治理：回传补回实体
+        if result.get('summary'):
+            result['summary'] = ai_governance.restore_text(str(result['summary']), mapping)
+        # AI 治理：记录使用统计
+        ai_governance.record_ai_call('ark/sentiment', prompt_tokens=len(text)//2,
+                                       completion_tokens=len(str(result.get('summary','')))//2,
+                                       total_tokens=len(text)//2,
+                                       provider=result.get('provider','zhipu'), success=True)
+        # AI 治理：输出标记
+        marked = ai_governance.mark_ai_output(
+            {'ok': True, 'sentiment': result.get('sentiment'), 'label': result.get('label'),
+             'summary': result.get('summary'), 'keywords': result.get('keywords'),
+             'provider': result.get('provider'), 'fallback': result.get('provider') == 'rule',
+             'desensitized': bool(mapping)},
+            provider=result.get('provider','zhipu'), endpoint='ark/sentiment')
+        return jsonify(marked)
     except Exception as e:
+        ai_governance.record_ai_call('ark/sentiment', provider='zhipu', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/api/ark/summary', methods=['POST'])

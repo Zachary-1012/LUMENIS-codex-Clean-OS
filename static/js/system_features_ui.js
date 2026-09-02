@@ -323,7 +323,7 @@ const SystemFeaturesUI = {
     },
 
     getAuthHeader() {
-        return { 'Authorization': 'Basic ' + btoa('Zachary:ID082610') };
+        return { 'Authorization': window.__Z_AUTH };
     }
 };
 

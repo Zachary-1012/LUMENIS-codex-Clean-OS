@@ -7,7 +7,7 @@
     'use strict';
 
     // 认证信息（与app.js保持一致）
-    const AUTH = 'Basic ' + btoa('Zachary:ID082610');
+    const AUTH = window.__Z_AUTH;
 
     // API请求封装
     async function api(url, options = {}) {
