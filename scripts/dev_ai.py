@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """Zachary AI 研发辅助 CLI（智谱算力优先，豆包最低辅助）。
 
+默认使用智谱旗舰 glm-4.7（config/ai-quota.json 实证），失败自动回退 glm-4.5-air。
 每次智谱调用自动记录到 AI Budget（staging/ai-budget.jsonl，gitignore）。
 
 用法：
-  python scripts/dev_ai.py health-capabilities        # P0-B：健康/监控模块 Capability 收敛分析
-  python scripts/dev_ai.py summarize <file> <prompt>  # 用智谱总结/分析指定文件
+  python scripts/dev_ai.py health-capabilities [--model glm-4.7]
+  python scripts/dev_ai.py summarize <file> <prompt> [--model glm-4.7]
 
 智谱 key 仅从 .env 读取，绝不打印/入库。
 """
@@ -19,6 +20,9 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 import ai_budget  # noqa: E402
 
+DEFAULT_MODEL = "glm-4.7"   # 旗舰（500万 tokens 资源包，2026-09-03 生效）
+FALLBACK_MODEL = "glm-4.5-air"
+
 
 def _load_dotenv():
     p = os.path.join(ROOT, ".env")
@@ -30,29 +34,46 @@ def _load_dotenv():
                 os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 
-def _chat_budgeted(system, user, task, max_tokens=1200):
+def _chat_budgeted(system, user, task, model=None, max_tokens=1200):
     import intelligence
+    chosen = model or DEFAULT_MODEL
     t0 = time.time()
-    out, provider = intelligence._chat(system, user, max_tokens=max_tokens)
+    try:
+        out, provider = intelligence._chat(system, user, max_tokens=max_tokens, model=chosen)
+    except TypeError:
+        # 旧签名无 model 参数（巡检未合入时）回退
+        out, provider = intelligence._chat(system, user, max_tokens=max_tokens)
+        chosen = None
+    if not out and provider != "zhipu":
+        out, provider = intelligence._chat(system, user, max_tokens=max_tokens, model=FALLBACK_MODEL)
+        chosen = FALLBACK_MODEL
     elapsed = round(time.time() - t0, 2)
-    model = "glm-4.5-air" if provider == "zhipu" else provider
+    model_name = chosen or ("glm-4.5-air" if provider == "zhipu" else provider)
     ai_budget.record(
         provider=provider or "local",
-        model=model,
+        model=model_name,
         task=task,
         ok=bool(out),
         elapsed_s=elapsed,
         tokens_est=(len(out or "") * 2) if out else 0,
+        note=f"requested={chosen or 'default'}",
     )
-    return out, provider
+    return out, provider, model_name
 
 
 def main():
     _load_dotenv()
-    if len(sys.argv) < 2:
-        print("usage: dev_ai.py <task>")
+    args = sys.argv[1:]
+    if not args:
+        print(__doc__)
         return 1
-    task = sys.argv[1]
+    model = None
+    if "--model" in args:
+        i = args.index("--model")
+        if i + 1 < len(args):
+            model = args[i + 1]
+            args = args[:i] + args[i + 2:]
+    task = args[0]
 
     if task == "health-capabilities":
         files = [
@@ -71,24 +92,24 @@ def main():
             if os.path.exists(p):
                 head = open(p, encoding="utf-8", errors="replace").read(1200)
                 user += f"\n--- {f} ---\n{head}\n"
-        out, provider = _chat_budgeted(system, user, task, max_tokens=1500)
+        out, provider, mname = _chat_budgeted(system, user, task, model=model, max_tokens=1500)
         if not out:
             print("[dev_ai] zhipu 不可用，降级本地规则结论（见矩阵 P0-B）")
             return 1
-        print(f"[provider={provider}]")
+        print(f"[provider={provider} model={mname}]")
         print(out)
         return 0
 
-    if task == "summarize" and len(sys.argv) >= 4:
-        path = sys.argv[2]
-        prompt = sys.argv[3]
+    if task == "summarize" and len(args) >= 3:
+        path = args[1]
+        prompt = args[2]
         content = open(path, encoding="utf-8", errors="replace").read(6000)
         system = "你是 Zachary AI 研发助理，输出精简中文结论。"
-        out, provider = _chat_budgeted(system, prompt + "\n\n" + content, task, max_tokens=1000)
+        out, provider, mname = _chat_budgeted(system, prompt + "\n\n" + content, task, model=model, max_tokens=1000)
         if not out:
             print("[dev_ai] zhipu 不可用")
             return 1
-        print(f"[provider={provider}]")
+        print(f"[provider={provider} model={mname}]")
         print(out)
         return 0
 

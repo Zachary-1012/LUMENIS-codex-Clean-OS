@@ -2,12 +2,13 @@
 """AI Budget Manager（MAX-EFFICIENCY / LOW-Doubao-COST MODE 治理件）。
 
 自动记录每次 AI 调用（provider/model/task/成功失败/耗时/估算token），
-落盘 staging/ai-budget.jsonl（gitignore）。提供汇总 CLI 供 Observatory 消费。
+落盘 staging/ai-budget.jsonl（gitignore）。读取 config/ai-quota.json（智谱额度快照）。
+提供汇总 CLI 供 Observatory 消费。
 
 用法：
   python scripts/ai_budget.py record <provider> <model> <task> <ok> <elapsed> <tokens> [note]
   python scripts/ai_budget.py summary [--last N]
-  python scripts/ai_budget.py status            # 输出 JSON（Observatory 数据源）
+  python scripts/ai_budget.py status            # 输出 JSON（Observatory 数据源，含 quota）
 """
 import json
 import os
@@ -16,6 +17,7 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(ROOT, "staging", "ai-budget.jsonl")
+QUOTA = os.path.join(ROOT, "config", "ai-quota.json")
 
 # 豆包预算治理阈值：豆包占比上限，超出自动提示降级
 DOUBAO_MAX_SHARE = 0.15
@@ -23,6 +25,15 @@ DOUBAO_MAX_SHARE = 0.15
 
 def _ensure():
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
+
+
+def read_quota():
+    if not os.path.exists(QUOTA):
+        return {"provider": "zhipu", "note": "config/ai-quota.json 缺失", "resources": []}
+    try:
+        return json.load(open(QUOTA, encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001
+        return {"provider": "zhipu", "note": f"quota parse error: {e!r}", "resources": []}
 
 
 def record(provider, model, task, ok, elapsed_s, tokens_est, note=""):
@@ -83,6 +94,7 @@ def summary(last=None):
         "doubao_share": round(doubao_share, 3),
         "doubao_over_threshold": doubao_share > DOUBAO_MAX_SHARE,
         "by_provider": by_provider,
+        "quota": read_quota(),
     }
 
 
