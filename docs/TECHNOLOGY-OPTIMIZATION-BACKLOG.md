@@ -65,7 +65,8 @@
 - 为什么：熔断是风控最后防线，跨重启必须连续。性能：无。稳定性：高。复杂度：低（可选参数+落盘）。迁移：低（生产仅 collector.py:90 一处实例化）。风险：需避免恢复后误判时间窗。**状态：✅ 已落地（3c9bf4c，2026-09-03）。**
 ### T-P0A-2 SQLite 备份与写放大治理
 - 当前：单库 54 表 + 时序快照同库，无定期 VACUUM INTO 备份，RPO/RTO 未定义；Windows 文件锁下拷贝不可靠。
-- 候选：每日 VACUUM INTO 到异盘/NAS + 恢复演练；metric 时序考虑独立 DB(attach)。**现在做：否（登记）。**
+- 候选：每日 VACUUM INTO 到异盘/NAS + 恢复演练；metric 时序考虑独立 DB(attach)。
+- 已落地（部分）：scripts/backup_db.py 增强——sqlite backup API 在线一致性备份 + quick_check 完整性校验（校验失败删除假备份）+ 锁定异常才 fallback 文件拷贝 + 保留策略；新增 tests/test_backup_db.py 5 用例。**状态：✅ 备份校验已落地；VACUUM INTO/异盘/恢复演练仍为待办（P2 观察）。**
 ### T-P0A-3 CDP/沙箱/绑定攻击面收敛
 - 当前：9222/9223 CDP 无鉴权、dev_exec 沙箱弱、8201 若绑 0.0.0.0 可远程触达。
 - 候选：确认全部绑 127.0.0.1 + 防火墙规则 + dev_exec 白名单。**现在做：否（先核验实际绑定，再登记结论）。**
