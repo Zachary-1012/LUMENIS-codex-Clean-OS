@@ -192,10 +192,42 @@ def check_account(account: str) -> dict[str, Any]:
     return result
 
 
+def check_account_with_evidence(account: str) -> dict[str, Any]:
+    """执行健康检查并写入 Evidence 记录。失败也落证据（禁止只存状态不存证据）。"""
+    result = check_account(account)
+    try:
+        from evidence_store import record_health_evidence
+        # 状态映射：HEALTHY→PASS，其他→FAIL
+        ev_result = "PASS" if result["status"] == "HEALTHY" else "FAIL"
+        # 级别映射：DOWN→L1, CDP_DEGRADED→L2, 其他→L3
+        if result["status"] == "DOWN":
+            ev_level = "L1"
+        elif result["status"] == "CDP_DEGRADED":
+            ev_level = "L2"
+        else:
+            ev_level = "L3"
+        record_health_evidence(
+            account=account,
+            level=ev_level,
+            port=result.get("cdp_port", 0),
+            port_alive=result.get("port_alive", False),
+            cdp_ws_ok=result.get("cdp_ws_ok", False),
+            login_state=result.get("login_state", ""),
+            cookie_count=result.get("cookie_count", 0),
+            result=ev_result,
+            detail=result.get("detail", ""),
+            started_at=result.get("checked_at", ""),
+        )
+    except Exception as e:
+        # Evidence 写入失败不影响健康检查主流程
+        result["evidence_error"] = str(e)
+    return result
+
+
 def check_all() -> dict[str, Any]:
     """检查所有双身份，返回汇总结果。"""
     accounts = [bridge.XHS_CN_PRIMARY_NAME, bridge.XHS_RETINAUT_NAME]
-    results = {a: check_account(a) for a in accounts}
+    results = {a: check_account_with_evidence(a) for a in accounts}
     summary = {
         "checked_at": _now_iso(),
         "total": len(accounts),
