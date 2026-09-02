@@ -232,7 +232,7 @@ class BrowserContract:
     def classify_failure(error: str) -> FailureClass:
         """根据错误信息粗分类失败（可被 Adapter 覆盖）。"""
         e = (error or "").lower()
-        if any(k in e for k in ("timeout", "connection reset", "network", "socket")):
+        if any(k in e for k in ("timeout", "timed out", "connection reset", "network", "socket")):
             return FailureClass.TRANSIENT
         if any(k in e for k in ("login", "session", "auth", "unauthorized", "logged out")):
             return FailureClass.SESSION
@@ -240,6 +240,9 @@ class BrowserContract:
             return FailureClass.PAGE_CHANGED
         if any(k in e for k in ("permission", "forbidden", "denied", "captcha", "risk", "blocked")):
             return FailureClass.PERMISSION if "permission" in e or "forbidden" in e else FailureClass.PLATFORM_RISK
+        # Policy Gate 拒绝（domain 白名单 / safe_stop）→ 平台风控级处理（Cooldown/Stop），不允许重试
+        if any(k in e for k in ("safe_stop", "whitelist", "policy block", "policy reject")):
+            return FailureClass.PLATFORM_RISK
         return FailureClass.UNKNOWN
 
     @staticmethod

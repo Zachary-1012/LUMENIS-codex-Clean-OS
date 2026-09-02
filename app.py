@@ -136,6 +136,13 @@ try:
 except Exception as _ev_e:
     print(f"[evidence_api] blueprint register failed: {_ev_e}")
 
+# Zachary OS AI：Browser Runtime API（只读，对齐 CTR-BROWSER-RUNTIME-P0-01）
+try:
+    import browser_runtime_api
+    browser_runtime_api.register_browser_runtime_api(app)
+except Exception as _br_e:
+    print(f"[browser_runtime_api] blueprint register failed: {_br_e}")
+
 # V3.0 影子板块：品牌营销知识库API
 @app.route('/api/brand-knowledge/stats')
 def brand_knowledge_stats():

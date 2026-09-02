@@ -157,3 +157,17 @@ body.zb-shell-on .zb-nav-title{ letter-spacing:.06em; }
 
 /* ---- R10 隐藏旧 ZACHARY OS AI 空分组标签（新 Shell 已重新分组，其下无项，不删源码） ---- */
 body.zb-shell-on .side-nav > .side-group-label{ display:none !important; }
+
+/* ---- R11 平板竖屏抽屉死区修复（761–1023）：原断点混乱导致侧栏隐藏但汉堡也隐藏，无法导航 ---- */
+@media(max-width:1023px){
+  body.zb-shell-on #menuToggle{ display:flex !important; }
+  body.zb-shell-on .sidebar{ transform:translateX(-100%) !important; transition:transform .26s var(--zbr-ease); }
+  body.zb-shell-on.zb-nav-open .sidebar{ transform:translateX(0) !important; }
+  body.zb-shell-on .content{ margin-left:0 !important; }
+  body.zb-shell-on .topbar{ left:0 !important; }
+  body.zb-shell-on #zbHome{ left:0 !important; }
+  body.zb-shell-on .right-panel{ display:none !important; }
+}
+@media(min-width:1024px){
+  body.zb-shell-on #menuToggle{ display:none !important; }
+}
