@@ -39,6 +39,7 @@
 <link rel="stylesheet" href="/static/css/splash.css?v=2.0.0">
   <link rel="stylesheet" href="/static/css/resident_health.css?v=5.9.9">
   <link rel="stylesheet" href="/static/css/internal_browser.css?v=5.9.9">
+  <link rel="stylesheet" href="/static/css/evidence_dashboard.css?v=5.9.9">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) -->
@@ -239,6 +240,40 @@
             <span class="ib-title-text" id="ib-title-text"></span>
             <span>截图流 · 点击画面可交互</span>
           </div>
+        </div>
+      </section>
+
+      <!-- Zachary OS AI Evidence 证据看板 -->
+      <section class="page-view active" id="evidence-dashboard-section" style="margin-top:24px;">
+        <div class="section-intro" style="margin-bottom:14px;">
+          <div>
+            <span class="eyebrow">ZACHARY OS AI · EVIDENCE</span>
+            <h2 style="font-size:20px;margin:4px 0;">证据看板</h2>
+            <p style="font-size:12px;color:#86868b;margin:4px 0 0;">每个完成/失败都有可回放证据，禁止"写完=完成"</p>
+          </div>
+          <button class="action secondary" id="ev-refresh-btn">刷新</button>
+        </div>
+        <div class="ev-stats">
+          <div class="ev-stat-card"><div class="ev-stat-label">证据总数</div><div class="ev-stat-value" id="ev-stat-total">0</div></div>
+          <div class="ev-stat-card pass"><div class="ev-stat-label">通过 PASS</div><div class="ev-stat-value" id="ev-stat-pass">0</div></div>
+          <div class="ev-stat-card fail"><div class="ev-stat-label">失败 FAIL</div><div class="ev-stat-value" id="ev-stat-fail">0</div></div>
+          <div class="ev-stat-card acct"><div class="ev-stat-label">按账号分布</div><div class="ev-stat-value" id="ev-stat-account">—</div></div>
+        </div>
+        <div class="ev-filters">
+          <button class="ev-chip active" data-type="feature" data-filter="all">全部</button>
+          <button class="ev-chip" data-type="feature" data-filter="RESIDENT_HEALTH">驻场健康</button>
+          <button class="ev-chip" data-type="feature" data-filter="XHS_COLLECT">采集任务</button>
+          <span style="width:10px;"></span>
+          <button class="ev-chip active" data-type="result" data-filter="all">所有结果</button>
+          <button class="ev-chip" data-type="result" data-filter="PASS">仅 PASS</button>
+          <button class="ev-chip" data-type="result" data-filter="FAIL">仅 FAIL</button>
+          <span class="ev-spacer"></span>
+          <button class="ev-chip active" data-type="account" data-filter="all">双账号</button>
+          <button class="ev-chip" data-type="account" data-filter="XHS_CN_PRIMARY">大陆主号</button>
+          <button class="ev-chip" data-type="account" data-filter="XHS_RETINAUT">香港号</button>
+        </div>
+        <div class="ev-timeline" id="ev-timeline">
+          <div class="ev-empty">正在加载证据…</div>
         </div>
       </section>
 
@@ -977,7 +1012,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS安全；依赖style.css .ar-badge 样式；所有动态DOM=createElement+textContent） -->
 <script src="/static/js/auth_recovery_poller.js?v=5.8.9">
   <script src="/static/js/resident_health.js?v=5.9.9"></script>
-  <script src="/static/js/internal_browser.js?v=5.9.9"></script></script>
+  <script src="/static/js/internal_browser.js?v=5.9.9"></script>
+  <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script></script>
 <script>
   // ── 双子星库 Contract：全局 HTTP Basic Auth 头（auth_global.js / auth_recovery_poller.js / 其他 JS 共享同一凭证，401 修复）
   // 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框；v4 bearer 会话路径不变）

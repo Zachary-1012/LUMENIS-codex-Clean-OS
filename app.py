@@ -129,6 +129,13 @@ try:
 except Exception as _ib_e:
     print(f"[internal_browser] blueprint register failed: {_ib_e}")
 
+# Zachary OS AI：Evidence 查询 API（只读证据接口）
+try:
+    import evidence_api
+    evidence_api.register_evidence_api(app)
+except Exception as _ev_e:
+    print(f"[evidence_api] blueprint register failed: {_ev_e}")
+
 # V3.0 影子板块：品牌营销知识库API
 @app.route('/api/brand-knowledge/stats')
 def brand_knowledge_stats():
