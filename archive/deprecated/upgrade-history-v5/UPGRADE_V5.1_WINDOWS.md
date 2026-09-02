@@ -2,7 +2,7 @@
 
 ## 这版的核心变化
 
-1. **零 Key 本地 AI**：`AI_PROVIDER=auto`。启动时自动探测本机 Ollama、LM Studio、llama.cpp；发现可用模型就直接接入。没有本地模型时自动使用内置 `Taikoo Local Intelligence`，系统不因没有 Key 停摆。
+1. **零 Key 本地 AI**：`AI_PROVIDER=<REDACTED> Ollama、LM Studio、llama.cpp；发现可用模型就直接接入。没有本地模型时自动使用内置 `Taikoo Local Intelligence`，系统不因没有 Key 停摆。
 2. **历史库 AI/规则复核**：501 条旧笔记先经过主体硬过滤，再经过智能复核；不相关内容不删除，只标记为 `irrelevant` 并保留审计历史。
 3. **公开互联网发现层**：Google News RSS、Bing News RSS、GDELT、自定义 RSS、微博/知乎/B站/抖音等平台的公开索引定向查询。它是“公开互联网发现”，不是承诺穷尽所有登录平台。
 4. **反哺小红书**：公开来源提取事件词/品牌词，加入下一轮小红书搜索关键词。
@@ -105,7 +105,7 @@ notepad .env
 
 ```text
 TAIKOO_AUTH_USER=admin
-TAIKOO_AUTH_PASSWORD=你的强密码
+TAIKOO_AUTH_PASSWORD=<REDACTED>
 ```
 
 然后双击：

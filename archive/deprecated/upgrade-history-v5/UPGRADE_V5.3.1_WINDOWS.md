@@ -68,11 +68,11 @@ v5.3.1 默认 Adapter：Google News RSS、GDELT、自定义 RSS。它们只是�
 `.env` 至少配置：
 ```env
 TAIKOO_AUTH_USER=admin
-TAIKOO_AUTH_PASSWORD=请设置强密码
+TAIKOO_AUTH_PASSWORD=<REDACTED>
 TAIKOO_HOST=127.0.0.1
 TAIKOO_PORT=8200
 AUTO_INTERVAL_MINUTES=90
-AI_PROVIDER=auto
+AI_PROVIDER=<REDACTED>
 ```
 
 双击 `start_remote_5g.bat`，看到 `https://xxxxx.trycloudflare.com` 后，手机关闭 Wi-Fi、切换 5G 打开。
