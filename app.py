@@ -3676,7 +3676,8 @@ def api_run_code():
     if not code or len(code.strip()) < 5:
         return jsonify({'ok': False, 'error': '请输入有效的Python代码'}), 400
     resp, status = dev_exec_core.execute_dev_code_safe(
-        code, 'python', backup=False, app=app, db=db, guard_func=_dev_exec_guard
+        code, 'python', backup=False, app=app, db=db, guard_func=_dev_exec_guard,
+        endpoint='/api/config/run-code'
     )
     # GAP-04 修复: guard 返回 (Flask Response, status) 时不可再 jsonify
     if hasattr(resp, 'get_data'):
@@ -5266,7 +5267,8 @@ def api_dev_run_code():
     if not code:
         return jsonify({'ok': False, 'error': '代码不能为空'}), 400
     resp, status = dev_exec_core.execute_dev_code_safe(
-        code, code_type, backup=True, app=app, db=db, guard_func=_dev_exec_guard
+        code, code_type, backup=True, app=app, db=db, guard_func=_dev_exec_guard,
+        endpoint='/api/dev/run-code'
     )
     # GAP-04 修复: guard 返回 (Flask Response, status) 时不可再 jsonify
     if hasattr(resp, 'get_data'):

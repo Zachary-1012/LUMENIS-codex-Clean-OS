@@ -16,10 +16,64 @@ GAP-04 三 run-code 统一收口核心
 """
 from __future__ import annotations
 
+import hashlib
+import json as _json_mod
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+
+
+# 代码执行审计日志（本地 JSONL；.gitignore 的 data/* 已整体排除，不进远端，符合安全资料本地保留）
+_AUDIT_PATH = Path("data/audit/dev_exec_audit.jsonl")
+
+
+def _code_fingerprint(code: str) -> dict:
+    """代码指纹：只存长度与 SHA256 前 12 位，绝不存全文（避免密钥/敏感逻辑落审计文件）。"""
+    text = code or ""
+    digest = hashlib.sha256(text.encode("utf-8", "ignore")).hexdigest()[:12]
+    return {"code_len": len(text), "code_fp": digest}
+
+
+def audit_dev_execution(decision, outcome, *, code_type="python", code="",
+                        reason="", status=0, backup=False, endpoint=""):
+    """追加一条代码执行审计记录（学习 memkeeper-warden：每次 allow/deny 都可审计）。
+
+    decision: allow / deny；outcome: blocked / success / error / bad_request。
+    旁路设计：任何审计异常都不得影响主执行流程。
+    """
+    try:
+        _AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "decision": str(decision),
+            "outcome": str(outcome),
+            "code_type": str(code_type),
+            "reason": str(reason)[:120],
+            "http_status": int(status or 0),
+            "backup": bool(backup),
+            "endpoint": str(endpoint),
+        }
+        rec.update(_code_fingerprint(code))
+        with open(_AUDIT_PATH, "a", encoding="utf-8") as f:
+            f.write(_json_mod.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass  # 审计为旁路，绝不阻塞/改变执行结果
+
+
+def _guard_reason(guarded) -> tuple[str, int]:
+    """从 guard 返回的 (response, status) 尽力提取拒绝 code 与状态码，失败则给兜底值。"""
+    status = 0
+    reason = "guard_blocked"
+    try:
+        if isinstance(guarded, tuple):
+            resp, status = guarded[0], int(guarded[1]) if len(guarded) > 1 else 0
+            payload = resp.get_json(silent=True) if hasattr(resp, "get_json") else resp
+            if isinstance(payload, dict):
+                reason = payload.get("code") or payload.get("error") or reason
+    except Exception:
+        pass
+    return reason, status
 
 
 def execute_dev_code_safe(
@@ -30,6 +84,7 @@ def execute_dev_code_safe(
     app: Any = None,
     db: Any = None,
     guard_func: Any = None,
+    endpoint: str = "",
 ) -> tuple[dict, int]:
     """
     统一代码执行核心（GAP-04 收口）。
@@ -41,6 +96,7 @@ def execute_dev_code_safe(
         app: Flask app 实例（注入执行命名空间）
         db: 数据库实例（注入执行命名空间）
         guard_func: 安全闸门函数 _dev_exec_guard（从 app.py 注入，避免循环 import）
+        endpoint: 调用端点标识（仅用于审计溯源）
 
     Returns:
         (response_dict, http_status_code)
@@ -53,18 +109,33 @@ def execute_dev_code_safe(
     if guard_func is not None:
         guarded = guard_func(code)
         if guarded is not None:
+            reason, gstatus = _guard_reason(guarded)
+            audit_dev_execution("deny", "blocked", code_type=code_type, code=code,
+                                reason=reason, status=gstatus, endpoint=endpoint)
             return guarded
 
     code = (code or "").strip()
     if not code:
+        audit_dev_execution("deny", "bad_request", code_type=code_type, code=code,
+                            reason="empty_code", status=400, endpoint=endpoint)
         return {"ok": False, "error": "代码不能为空"}, 400
 
     if code_type == "python":
-        return _execute_python(code, backup=backup, app=app, db=db)
+        resp, status = _execute_python(code, backup=backup, app=app, db=db)
     elif code_type == "javascript":
-        return _execute_javascript(code)
+        resp, status = _execute_javascript(code)
     else:
+        audit_dev_execution("deny", "bad_request", code_type=code_type, code=code,
+                            reason=f"unsupported_type:{code_type}", status=400, endpoint=endpoint)
         return {"ok": False, "error": f"不支持的代码类型: {code_type}"}, 400
+
+    # 执行结果审计（allow 路径：success / error）
+    outcome = "success" if (status == 200 and resp.get("ok")) else (
+        "error" if status >= 500 else "bad_request")
+    audit_dev_execution("allow", outcome, code_type=code_type, code=code,
+                        reason=str(resp.get("error", ""))[:80], status=status,
+                        backup=backup, endpoint=endpoint)
+    return resp, status
 
 
 def _execute_python(code: str, *, backup: bool, app: Any, db: Any) -> tuple[dict, int]:
