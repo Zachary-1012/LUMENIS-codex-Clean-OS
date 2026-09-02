@@ -1350,84 +1350,52 @@ def api_ai_test():
     return jsonify({'ok': True, **result})
 
 # ========== 豆包AI API（ark_llm）- 可选辅助功能 ==========
+# 【S1 2026-09-02】云智(ARK)已停用，改用智谱(zhipu)驱动（intelligence 网关）。
+# 保留路由名/响应结构与前端兼容；provider 字段标记真实来源（zhipu/local/rule）。
 @app.route('/api/ark/status')
 def api_ark_status():
-    """豆包AI API状态查询"""
-    if not ARK_LLM_AVAILABLE:
-        return jsonify({'ok': False, 'error': 'ark_llm模块未加载，使用本地AI引擎', 'provider': 'local_rule', 'enabled': False})
+    """AI API状态查询（智谱驱动）"""
     try:
-        status = ark_llm.get_api_status()
-        return jsonify({'ok': True, **status})
+        st = intelligence.ai_status()
+        return jsonify({'ok': True, 'enabled': st.get('enabled'), 'provider': st.get('provider'),
+                        'model': st.get('model'), 'runtime': st.get('runtime'),
+                        'detail': st.get('detail', '')})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'error': str(e), 'provider': 'local_rule', 'enabled': False}), 500
 
 @app.route('/api/ark/chat', methods=['POST'])
 def api_ark_chat():
-    """豆包AI通用聊天（辅助功能，不可用时回退本地AI）"""
-    if not ARK_LLM_AVAILABLE:
-        # 回退到本地AI
-        try:
-            data = request.get_json(silent=True) or {}
-            message = str(data.get('message') or data.get('text') or '').strip()
-            if not message:
-                return jsonify({'ok': False, 'error': '消息不能为空'}), 400
-            raw, provider = intelligence._chat('你是广州太古汇舆情监测系统的智能助手', message, 0.15, 1800)
-            return jsonify({'ok': True, 'reply': raw.strip() if raw else '本地AI引擎已就绪', 'provider': provider or 'local_rule', 'fallback': True})
-        except Exception as e:
-            return jsonify({'ok': False, 'error': f'本地AI也不可用: {str(e)}'}), 500
+    """AI通用聊天（智谱驱动，不可用时回退本地AI）"""
     try:
         data = request.get_json(silent=True) or {}
         message = str(data.get('message') or data.get('text') or '').strip()
         if not message:
             return jsonify({'ok': False, 'error': '消息不能为空'}), 400
         system_prompt = data.get('system_prompt')
-        history = data.get('history') or []
-        if not isinstance(history, list):
-            history = []
-        reply = ark_llm.chat(message, system_prompt=system_prompt, history=history)
-        status = ark_llm.get_api_status()
-        return jsonify({'ok': True, 'reply': reply, 'ai_status': status})
+        raw, provider = intelligence._chat(system_prompt or '你是广州太古汇舆情监测系统的智能助手', message, 0.15, 1800)
+        return jsonify({'ok': True, 'reply': raw.strip() if raw else 'AI引擎已就绪',
+                        'provider': provider or 'local_rule', 'fallback': provider in ('rule', 'local_rule')})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/api/ark/sentiment', methods=['POST'])
 def api_ark_sentiment():
-    """豆包AI舆情分析（辅助功能，不可用时回退本地分析）"""
-    if not ARK_LLM_AVAILABLE:
-        # 回退到本地AI分析
-        try:
-            data = request.get_json(silent=True) or {}
-            text = str(data.get('text') or data.get('content') or '').strip()
-            if not text:
-                return jsonify({'ok': False, 'error': '文本不能为空'}), 400
-            result = ai_analyzer.analyze_sentiment(text, '')
-            return jsonify({'ok': True, **result, 'provider': 'local', 'fallback': True})
-        except Exception as e:
-            return jsonify({'ok': False, 'error': f'本地分析也失败: {str(e)}'}), 500
+    """AI舆情分析（智谱驱动，不可用时回退本地规则分析）"""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
         if not text:
             return jsonify({'ok': False, 'error': '文本不能为空'}), 400
-        result = ark_llm.sentiment_analyse(text)
-        return jsonify({'ok': True, **result})
+        result = intelligence.analyze_sentiment(text)
+        return jsonify({'ok': True, 'sentiment': result.get('sentiment'), 'label': result.get('label'),
+                        'summary': result.get('summary'), 'keywords': result.get('keywords'),
+                        'provider': result.get('provider'), 'fallback': result.get('provider') == 'rule'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/api/ark/summary', methods=['POST'])
 def api_ark_summary():
-    """豆包AI摘要生成（辅助功能，不可用时回退本地摘要）"""
-    if not ARK_LLM_AVAILABLE:
-        try:
-            data = request.get_json(silent=True) or {}
-            text = str(data.get('text') or data.get('content') or '').strip()
-            if not text:
-                return jsonify({'ok': False, 'error': '文本不能为空'}), 400
-            # 本地简单摘要：取前200字
-            summary = text[:200] + '...' if len(text) > 200 else text
-            return jsonify({'ok': True, 'summary': summary, 'provider': 'local', 'fallback': True})
-        except Exception as e:
-            return jsonify({'ok': False, 'error': str(e)}), 500
+    """AI摘要生成（智谱驱动，不可用时回退截断摘要）"""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
@@ -1438,25 +1406,14 @@ def api_ark_summary():
             max_length = int(max_length)
         except Exception:
             max_length = 200
-        summary = ark_llm.generate_summary(text, max_length=max_length)
-        return jsonify({'ok': True, 'summary': summary})
+        summary = intelligence.generate_summary(text, max_length=max_length)
+        return jsonify({'ok': True, 'summary': summary, 'provider': 'zhipu'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/api/ark/keywords', methods=['POST'])
 def api_ark_keywords():
-    """豆包AI关键词提取（辅助功能，不可用时回退本地提取）"""
-    if not ARK_LLM_AVAILABLE:
-        try:
-            data = request.get_json(silent=True) or {}
-            text = str(data.get('text') or data.get('content') or '').strip()
-            if not text:
-                return jsonify({'ok': False, 'error': '文本不能为空'}), 400
-            # 本地关键词提取：使用ai_analyzer
-            topics = ai_analyzer.extract_topics(text, '')
-            return jsonify({'ok': True, 'keywords': topics, 'provider': 'local', 'fallback': True})
-        except Exception as e:
-            return jsonify({'ok': False, 'error': str(e)}), 500
+    """AI关键词提取（智谱驱动，不可用时回退本地提取）"""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
@@ -1467,8 +1424,12 @@ def api_ark_keywords():
             num_keywords = int(num_keywords)
         except Exception:
             num_keywords = 10
-        keywords = ark_llm.extract_keywords(text, num_keywords=num_keywords)
-        return jsonify({'ok': True, 'keywords': keywords})
+        keywords = intelligence.extract_keywords(text, num_keywords=num_keywords)
+        if keywords:
+            return jsonify({'ok': True, 'keywords': keywords, 'provider': 'zhipu'})
+        # 回退本地规则提取
+        topics = ai_analyzer.extract_topics(text, '')
+        return jsonify({'ok': True, 'keywords': topics, 'provider': 'local', 'fallback': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
