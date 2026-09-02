@@ -38,6 +38,7 @@ def _thread_excepthook(args):
 threading.excepthook = _thread_excepthook
 
 from datetime import datetime, timedelta
+import dev_exec_core
 from flask import Flask, jsonify, request, send_from_directory, send_file, Response, redirect
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # === v5.9.9 统一日志增强：yyds-logger补丁模式，一行启用，不影响现有logging调用 ===
@@ -3529,30 +3530,15 @@ def api_push_emails():
 
 @app.route('/api/config/run-code', methods=['POST'])
 def api_run_code():
-    """运行代码热更新：复制Python代码进去自动运行，测试OK直接更新系统"""
+    """GAP-04 统一收口点②：运行代码热更新（调用 dev_exec_core 统一执行核心）。"""
     data = request.get_json(silent=True) or {}
     code = data.get('code', '')
     if not code or len(code.strip()) < 5:
         return jsonify({'ok': False, 'error': '请输入有效的Python代码'}), 400
-    if len(code) > 50000:
-        return jsonify({'ok': False, 'error': '代码过长（超过50000字符）'}), 400
-    # GAP-04：统一安全闸门（生产 403；开发态 ZBC_DEV_EXEC=1 仍拦危险构造），移除 allow_dangerous 绕过
-    _guarded = _dev_exec_guard(code)
-    if _guarded:
-        return _guarded
-    try:
-        # 在受限命名空间中执行
-        exec_globals = {
-            '__builtins__': __builtins__,
-            'app': app, 'db': db, 'json': json, 'os': os,
-            'Path': Path, 'datetime': datetime, 'timedelta': timedelta,
-            'request': request, 'jsonify': jsonify,
-        }
-        exec(code, exec_globals)
-        result = exec_globals.get('result', '代码执行成功，无返回值')
-        return jsonify({'ok': True, 'message': '代码执行成功', 'result': str(result)[:2000]})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': f'代码执行失败: {str(e)}'}), 500
+    resp, status = dev_exec_core.execute_dev_code_safe(
+        code, 'python', backup=False, app=app, db=db, guard_func=_dev_exec_guard
+    )
+    return jsonify(resp), status
 
 @app.route('/api/config/brand-directory')
 def api_brand_directory():
@@ -5130,45 +5116,16 @@ import importlib.util
 
 @app.route('/api/dev/run-code', methods=['POST'])
 def api_dev_run_code():
-    """开发者工具：运行升级代码，测试通过后自动部署"""
+    """GAP-04 统一收口点③：开发者工具运行升级代码（调用 dev_exec_core 统一执行核心）。"""
     data = request.get_json(silent=True) or {}
     code = data.get('code', '').strip()
     code_type = data.get('type', 'python')  # python / javascript
     if not code:
         return jsonify({'ok': False, 'error': '代码不能为空'}), 400
-    # GAP-04：统一闸门。生产禁用 exec 与写 static/js（防 RCE/持久化注入）
-    _guarded = _dev_exec_guard(code)
-    if _guarded:
-        return _guarded
-    try:
-        if code_type == 'python':
-            # 1. 语法检查
-            compile(code, '<string>', 'exec')
-            # 2. 备份当前文件
-            backup_dir = Path('data/backups/dev')
-            backup_dir.mkdir(parents=True, exist_ok=True)
-            backup_file = backup_dir / f'app_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.py'
-            shutil.copy('app.py', backup_file)
-            # 3. 执行代码（在沙箱中测试）
-            exec_globals = {'__name__': '__main__', 'app': app, 'db': db, 'datetime': datetime}
-            try:
-                exec(code, exec_globals)
-                return jsonify({'ok': True, 'message': '代码执行成功，已部署到运行时', 'backup': str(backup_file)})
-            except Exception as e:
-                return jsonify({'ok': False, 'error': f'执行失败: {str(e)}', 'backup': str(backup_file)}), 500
-        elif code_type == 'javascript':
-            # JS代码直接保存到前端文件
-            js_file = Path('static/js/dev_custom.js')
-            js_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(js_file, 'a', encoding='utf-8') as f:
-                f.write(f'\n// ===== Dev Code {datetime.now().isoformat()} =====\n{code}\n')
-            return jsonify({'ok': True, 'message': 'JS代码已添加到static/js/dev_custom.js，刷新页面生效'})
-        else:
-            return jsonify({'ok': False, 'error': '不支持的代码类型'}), 400
-    except SyntaxError as e:
-        return jsonify({'ok': False, 'error': f'语法错误: 第{e.lineno}行 - {e.msg}'}), 400
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    resp, status = dev_exec_core.execute_dev_code_safe(
+        code, code_type, backup=True, app=app, db=db, guard_func=_dev_exec_guard
+    )
+    return jsonify(resp), status
 
 
 # ===== ZBIP Workspace 只读面板（文件树 / 只读终端）——Staging 旁路，纯只读、过滤敏感、防路径穿越 =====
