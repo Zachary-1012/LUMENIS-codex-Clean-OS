@@ -1,5 +1,5 @@
 # Z-Brand Core / CTH-POMS production idempotent launcher (safe to run repeatedly).
-# Starts 8201 supervisor and 9222 Edge CDP only when not already healthy AND not already starting.
+# Starts 8201 supervisor and the 9222/9223 dual Resident Browsers (idempotent).
 # Triple idempotency: global mutex (no concurrent launchers) + existing-process guard + healthz.
 # Does NOT touch 8200. All ASCII-safe for Windows PowerShell 5.1.
 #
@@ -26,7 +26,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 Write-Output ''
 Write-Output '============================================================'
 Write-Output ' Zachary-OS-AI  Z-Brand-Core production launcher'
-Write-Output '   8201 Flask supervisor  +  9222 Edge CDP'
+Write-Output '   8201 Flask supervisor  +  9222/9223 Resident Browsers'
 Write-Output '============================================================'
 Write-Output "Root: $Root"
 
@@ -90,29 +90,24 @@ if ($httpOk) {
     }
 }
 
-# --------------- 9222 Edge CDP ---------------
-$edgeHttpOk = Test-Http 'http://127.0.0.1:9222/json/version'
-$edgeProcOk = Test-ProcExists 'remote-debugging-port=9222'
-if ($edgeHttpOk) {
-    Write-Output '[ZBC-9222] 9222 already online, skip'
-} elseif ($edgeProcOk) {
-    Write-Output '[ZBC-9222] 9222 Edge starting, skip'
+# --------------- 9222/9223 Resident Browsers (dual identity) ---------------
+# Delegated to scripts/start_resident_browsers.py (single source of truth = xhs_cookie_bridge):
+#   9222 XHS_CN_PRIMARY  profile edge-cdp-newaccount  direct connection (no system proxy)
+#   9223 XHS_RETINAUT    profile edge-cdp-retinaut    inherits system/overseas proxy
+# The launcher is idempotent: an online port is reused and its platform login tab is ensured.
+$resident = Join-Path $Root 'scripts\start_resident_browsers.py'
+if (Test-Path $resident) {
+    Write-Output '[ZBC-Resident] ensuring 9222/9223 dual resident browsers ...'
+    & $Py $resident
 } else {
-    if (-not (Test-Path $Edge)) {
-        Write-Error "9222 Edge not found at: $Edge  (manual launch possible)"
-    } else {
-        $Profile = Join-Path $Root 'edge-cdp-profile'
-        $EdgeArgs = @('--remote-debugging-port=9222',"--user-data-dir=$Profile",'--no-first-run','--no-default-browser-check','--disable-popup-blocking','--disable-extensions','--disable-gpu','--disable-dev-shm-usage','--disable-background-networking','--disable-component-update','--remote-allow-origins=*','--no-proxy-server','about:blank')
-        Start-Process -FilePath $Edge -ArgumentList $EdgeArgs -WorkingDirectory $Root
-        Write-Output '[ZBC-9222] started (about:blank, for human XHS/Weibo login)'
-    }
+    Write-Output "[ZBC-Resident] launcher missing: $resident"
 }
 
 Write-Output ''
 Write-Output '============================================================'
 Write-Output '  UP  ->  http://127.0.0.1:8201/'
 Write-Output '  HZ  ->  http://127.0.0.1:8201/healthz'
-Write-Output '  CDP ->  http://127.0.0.1:9222/json/version'
+Write-Output '  CDP ->  9222 XHS_CN_PRIMARY | 9223 XHS_RETINAUT'
 Write-Output '============================================================'
 
 } finally {

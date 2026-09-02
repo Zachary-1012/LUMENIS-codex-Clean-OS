@@ -44,6 +44,39 @@ ACCOUNT_PROFILES = {
         os.path.join(ROOT, "edge-cdp-retinaut"),
     ),
 }
+
+# ── 双子星库 Contract：逻辑身份 → 独立驻场浏览器（Resident Browser）端口 / 平台首页 ──
+# 双身份物理隔离：大陆主号 9222 直连 xiaohongshu.com；香港 rednote 9223 独立 profile（海外链路）。
+# 两个实例各自长期驻场、人工登录一次后 profile 长期复用；采集时只做 CDP 附着，不关闭驻场窗口。
+ACCOUNT_CDP_PORTS = {
+    XHS_CN_PRIMARY_NAME: 9222,
+    XHS_RETINAUT_NAME: 9223,
+}
+DEFAULT_CDP_PORT = 9222
+
+ACCOUNT_HOME_URLS = {
+    XHS_CN_PRIMARY_NAME: 'https://www.xiaohongshu.com',
+    XHS_RETINAUT_NAME: 'https://www.rednote.com',
+}
+
+def _canonical_account_name(account=None):
+    """default/None/空 → 具体逻辑身份名（优先当前激活身份，回退大陆主号）。"""
+    if account in (None, '', 'default'):
+        return _ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME
+    return account
+
+def cdp_port_for(account=None):
+    """逻辑身份 → 驻场 CDP 端口；未知身份回退 9222（不抛异常，保证主号链路稳定）。"""
+    return int(ACCOUNT_CDP_PORTS.get(_canonical_account_name(account), DEFAULT_CDP_PORT))
+
+def cdp_url_for(account=None):
+    """逻辑身份 → 驻场 CDP 连接 URL。"""
+    return f'http://127.0.0.1:{cdp_port_for(account)}'
+
+def home_url_for(account=None):
+    """逻辑身份 → 平台首页（驻场窗口起始页 / CDP 热身页）。"""
+    return ACCOUNT_HOME_URLS.get(_canonical_account_name(account), ACCOUNT_HOME_URLS[XHS_CN_PRIMARY_NAME])
+
 # 配置一致性断言：逻辑身份在 ACCOUNT_PROFILES 中存在 / 白名单数量匹配
 assert XHS_CN_PRIMARY_NAME in ACCOUNT_PROFILES and XHS_RETINAUT_NAME in ACCOUNT_PROFILES, \
     "ACCOUNT_PROFILES 必须覆盖所有双身份逻辑名"

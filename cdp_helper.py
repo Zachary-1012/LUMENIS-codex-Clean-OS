@@ -123,7 +123,7 @@ def default_profile_for(browser="edge"):
 
 def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=False,
                       proxy_server=None, launch_url="https://www.xiaohongshu.com",
-                      anti_automation=True, browser="edge"):
+                      anti_automation=True, browser="edge", direct_connection=False):
     """
     启动带CDP调试端口的Edge浏览器
     
@@ -171,6 +171,10 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=False,
         args.append("--disable-blink-features=AutomationControlled")
     if proxy_server:
         args.append(f"--proxy-server=http://{proxy_server}")
+    if direct_connection:
+        # 大陆主采集强制直连：不跟随系统代理，代理核心未连/切节点时国内站仍可稳定加载；
+        # 海外身份(香港 rednote)不传此开关，继承系统/海外代理链路。
+        args.append("--no-proxy-server")
     if headless:
         args.append("--headless=new")
     

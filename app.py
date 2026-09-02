@@ -1608,7 +1608,8 @@ def api_xhs_runtime_check():
             data = request.get_json(silent=True) or {}
         account = (request.args.get('account') or data.get('account') or '').strip() or None
         quick = str(request.args.get('quick', '') or data.get('quick', '')).lower() in ('1', 'true', 'yes', 'on')
-        cdp_url = os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9222')
+        # 按逻辑身份解析驻场端口（大陆9222/香港9223）；显式 XHS_CDP_URL 仍最优先
+        cdp_url = os.getenv('XHS_CDP_URL') or xhs_cookie_bridge.cdp_url_for(account)
         result = xhs_cookie_bridge.runtime_preflight_check(account=account, cdp_url=cdp_url, quick=quick)
         # overall_state 对应 Auth Recovery Center：
         #   no_cookie / need_account / blocked → 需要前端弹扫码 / 验证入口
@@ -1681,6 +1682,14 @@ def api_xhs_accounts():
             except Exception:
                 current_uid = None
             id_match = bool(current_uid and current_uid in xhs_cookie_bridge.ALLOWED_USER_IDS)
+            _cdp_port = xhs_cookie_bridge.cdp_port_for(name)
+            _cdp_online = False
+            try:
+                import socket as _sock
+                with _sock.create_connection(('127.0.0.1', _cdp_port), timeout=0.4):
+                    _cdp_online = True
+            except Exception:
+                _cdp_online = False
             accounts.append({
                 'account': name,
                 'active': (name == active),
@@ -1688,6 +1697,8 @@ def api_xhs_accounts():
                 'user_id_match': id_match,
                 'user_id_preview': (current_uid[:12] + '...') if current_uid else None,
                 'can_use': (c_ready and id_match),
+                'cdp_port': _cdp_port,
+                'cdp_online': _cdp_online,
                 'cdp_profile_dir_exist': bool(cdp_profile_dir and _os.path.isdir(cdp_profile_dir)),
             })
         return jsonify({
@@ -2716,25 +2727,27 @@ def api_rednote_collect():
     keyword = data.get('keyword', '广州太古汇')
     max_scroll = max(1, min(10, int(data.get('max_scroll', 3))))
     max_details = max(1, min(50, int(data.get('max_details', 10))))
-    cdp_url = data.get('cdp_url') or os.getenv('XHS_CDP_URL')
+    account = data.get('account', 'default')
+    # 按逻辑身份解析驻场端口（大陆9222/香港9223）；显式传入/环境变量优先
+    cdp_url = data.get('cdp_url') or os.getenv('XHS_CDP_URL') or xhs_cookie_bridge.cdp_url_for(account)
     persist = bool(data.get('persist', True))
-    
-    # 自动启动CDP浏览器（如果未配置cdp_url）
+
+    # Resident Browser：对应身份驻场实例不在线才拉起；在线直接附着复用
     auto_started_browser = False
-    if not cdp_url:
-        try:
-            import collector_automation
-            ca = collector_automation.get_collector_automation()
-            account = data.get('account', 'default')
+    try:
+        import collector_automation
+        ca = collector_automation.get_collector_automation()
+        _port = xhs_cookie_bridge.cdp_port_for(account)
+        if not ca._is_browser_running(_port):
             start_result = ca.start_browser(account=account)
             if start_result:
-                cdp_url = f'http://127.0.0.1:{ca.cdp_port}'
+                cdp_url = f'http://127.0.0.1:{ca._port_for(account)}'
                 auto_started_browser = True
-                app.logger.info(f'CDP浏览器已自动启动: {cdp_url}')
+                app.logger.info(f'CDP驻场浏览器已启动: account={account} {cdp_url}')
             else:
-                return jsonify({'ok': False, 'error': 'CDP浏览器自动启动失败，请手动启动Edge调试模式'}), 500
-        except Exception as e:
-            return jsonify({'ok': False, 'error': f'CDP浏览器启动异常: {str(e)}'}), 500
+                return jsonify({'ok': False, 'error': 'CDP驻场浏览器启动失败，请用统一驻场启动器或手动启动 Edge 调试模式'}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'CDP浏览器启动异常: {str(e)}'}), 500
     
     def worker():
         try:
@@ -2752,15 +2765,10 @@ def api_rednote_collect():
                 check_and_create_alerts()
             return result
         finally:
-            # 自动关闭浏览器（如果是我们自动启动的）
+            # Resident Browser 驻场策略：采集结束后保留登录窗口长期驻留（不关闭），
+            # 生命周期交由统一驻场启动器 / start_production.ps1 管理，此处仅断开 CDP 附着。
             if auto_started_browser:
-                try:
-                    import collector_automation
-                    ca = collector_automation.get_collector_automation()
-                    ca.stop_browser()
-                    app.logger.info('CDP浏览器已自动关闭')
-                except Exception as e:
-                    app.logger.error(f'自动关闭浏览器失败: {e}')
+                app.logger.info('CDP驻场浏览器保留在线（Resident Browser，采集后不关闭）')
     if data.get('async', True):
         task_id = f"rednote-{datetime.now():%Y%m%d%H%M%S}"
         with _task_lock:

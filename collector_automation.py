@@ -24,6 +24,7 @@ class CollectorAutomation:
         self.data_dir = os.path.join(self.base_dir, 'data')
         self.logs_dir = os.path.join(self.base_dir, 'logs')
         self.cdp_port = 9222
+        self._task_cdp_port = 9222  # 当前任务实际驻场端口（按逻辑身份解析：大陆9222/香港9223）
         self.edge_path = self._find_edge_browser()
         self.is_running = False
         self.current_task = None
@@ -99,14 +100,25 @@ class CollectorAutomation:
         os.makedirs(profile_dir, exist_ok=True)
         return profile_dir
     
+    def _port_for(self, account=None):
+        """按逻辑身份解析驻场 CDP 端口（委托 xhs_cookie_bridge 单一事实源；异常回退默认 9222）。"""
+        try:
+            import xhs_cookie_bridge as _xcb
+            _a = None if account in (None, '', 'default') else account
+            return int(_xcb.cdp_port_for(_a))
+        except Exception:
+            return self.cdp_port
+
     def start_browser(self, account='default', headless=False):
-        """启动Edge浏览器（CDP模式）"""
+        """启动Edge浏览器（CDP模式：按账号选独立驻场端口/profile；端口已在线则直接附着复用）"""
         if not self.edge_path:
             raise RuntimeError("未找到Edge浏览器，请先安装Microsoft Edge")
         
         # 检查浏览器是否已经在运行
-        if self._is_browser_running():
-            logger.info("浏览器已在运行，无需重复启动")
+        port = self._port_for(account)
+        self._task_cdp_port = port
+        if self._is_browser_running(port):
+            logger.info(f"驻场浏览器已在线（port={port}），直接附着复用，不重复启动、不关闭驻场窗口")
             return True
         
         profile_dir = self._get_cdp_profile_dir(account)
@@ -114,7 +126,7 @@ class CollectorAutomation:
         # 构建启动参数
         args = [
             self.edge_path,
-            f'--remote-debugging-port={self.cdp_port}',
+            f'--remote-debugging-port={port}',
             f'--user-data-dir={profile_dir}',
             '--no-first-run',
             '--no-default-browser-check',
@@ -125,9 +137,8 @@ class CollectorAutomation:
             '--disable-background-networking',
             '--disable-component-update',
             '--remote-allow-origins=*',
-            # 国内主采集强制直连：不跟随系统代理(v2rayN 10808)，代理核心未连/切节点时国内站也能采；
-            # 海外平台(Google/Instagram)走 9223 独立代理 profile，互不影响。
-            '--no-proxy-server',
+            # 大陆 9222 强制直连（不跟随系统代理，保证国内站稳定）；香港 9223 继承系统/海外代理
+            *(['--no-proxy-server'] if port == self.cdp_port else []),
             # 起始页固定 about:blank：避免默认 MSN 新标签页的 service-worker/worker target，
             # 那会让 Playwright connect_over_cdp 在枚举 target 时握手挂起（ws 已连却 30s 超时）。
             'about:blank',
@@ -148,10 +159,10 @@ class CollectorAutomation:
             self.browser_process = process
             self._cdp_profile_dir = profile_dir
 
-            logger.info(f"Edge浏览器已启动，PID: {process.pid} (profile={os.path.basename(profile_dir)})")
+            logger.info(f"Edge浏览器已启动，PID: {process.pid} (port={port}, profile={os.path.basename(profile_dir)})")
             
             # 等待CDP端口就绪
-            if self._wait_for_cdp_ready(timeout=30):
+            if self._wait_for_cdp_ready(timeout=30, port=port):
                 logger.info("CDP调试端口已就绪")
                 return True
             else:
@@ -162,20 +173,21 @@ class CollectorAutomation:
             logger.error(f"启动浏览器失败: {e}")
             raise
     
-    def _is_browser_running(self):
-        """检查浏览器是否在运行"""
+    def _is_browser_running(self, port=None):
+        """检查浏览器是否在运行（可指定端口；默认用当前任务驻场端口）"""
         try:
             import urllib.request
-            response = urllib.request.urlopen(f'http://127.0.0.1:{self.cdp_port}/json/version', timeout=3)
+            _p = port or self._task_cdp_port or self.cdp_port
+            response = urllib.request.urlopen(f'http://127.0.0.1:{_p}/json/version', timeout=3)
             return response.status == 200
         except Exception:
             return False
     
-    def _wait_for_cdp_ready(self, timeout=30):
+    def _wait_for_cdp_ready(self, timeout=30, port=None):
         """等待CDP端口就绪"""
         start_time = time.time()
         while time.time() - start_time < timeout:
-            if self._is_browser_running():
+            if self._is_browser_running(port):
                 return True
             time.sleep(1)
         return False
@@ -237,8 +249,10 @@ class CollectorAutomation:
                 # 归一化：'default' 传 None → runtime_preflight 使用默认 XHS_CN_PRIMARY_NAME
                 _account_for_check = None if account in (None, '', 'default') else account
                 # force=True 预检仍跑（保留真实报告），但只在严重 P0 阻断（身份/白名单/熔断）时才拦截
+                # 按逻辑身份解析驻场端口（大陆9222/香港9223）；显式 XHS_CDP_URL 环境变量仍最优先
+                _cdp_url = os.getenv('XHS_CDP_URL') or _xcb.cdp_url_for(_account_for_check)
                 preflight = _xcb.runtime_preflight_check(account=_account_for_check,
-                                                          cdp_url=os.getenv('XHS_CDP_URL', f'http://127.0.0.1:{self.cdp_port}'),
+                                                          cdp_url=_cdp_url,
                                                           quick=False)
                 pre_detail = {'overall_state': preflight.get('overall_state'),
                               'evidence': preflight.get('evidence'),
@@ -420,19 +434,24 @@ class CollectorAutomation:
             logger.error(f"执行采集失败: {e}")
             raise
 
-    def _warmup_cdp(self):
-        """采集前让 CDP 浏览器先进入小红书域（建连 + 带验证 cookie），
+    def _warmup_cdp(self, account=None):
+        """采集前让 CDP 浏览器先进入目标平台域（建连 + 带验证 cookie），
         避免从 about:blank 冷启动、在慢网络/热点下 goto 搜索页 45s 超时。"""
         try:
+            import xhs_cookie_bridge as _xcb
+            port = self._port_for(account)
+            home = _xcb.home_url_for(account)
+            host_key = 'rednote.com' if 'rednote' in home else 'xiaohongshu.com'
+            warm_url = home + ('/explore' if host_key == 'xiaohongshu.com' else '')
             from playwright.sync_api import sync_playwright
             with sync_playwright() as pw:
-                b = pw.chromium.connect_over_cdp(f'http://127.0.0.1:{self.cdp_port}', timeout=15000)
+                b = pw.chromium.connect_over_cdp(f'http://127.0.0.1:{port}', timeout=15000)
                 ctx = b.contexts[0]
-                pg = next((x for x in ctx.pages if 'xiaohongshu.com' in x.url), None)
+                pg = next((x for x in ctx.pages if host_key in x.url), None)
                 if pg is None:
                     pg = ctx.pages[0] if ctx.pages else ctx.new_page()
                 try:
-                    pg.goto('https://www.xiaohongshu.com/explore', wait_until='commit', timeout=60000)
+                    pg.goto(warm_url, wait_until='commit', timeout=60000)
                     time.sleep(5)
                     logger.info(f'[CDP热身] 已进入小红书域 url={pg.url[:60]}')
                 except Exception as e:
@@ -453,11 +472,13 @@ class CollectorAutomation:
         cjs = os.path.join(self.base_dir, 'rednote_collector.cjs')
         if not os.path.exists(cjs):
             raise RuntimeError(f'CDP 兜底采集缺少 rednote_collector.cjs: {cjs}')
+        account = task.get('account')
+        port = self._port_for(account)
         env = os.environ.copy()
-        env['XHS_CDP_URL'] = f'http://127.0.0.1:{self.cdp_port}'
+        env['XHS_CDP_URL'] = f'http://127.0.0.1:{port}'
         max_details = 6
         total_new = 0; blocked_any = False; loadfail_any = False; attempted = 0
-        self._warmup_cdp()
+        self._warmup_cdp(account)
         for kw in (task.get('keywords') or []):
             attempted += 1
             out = os.path.join(self.data_dir, f'rednote_cdp_{datetime.now():%Y%m%d_%H%M%S}_{abs(hash(kw))%10000}.json')
@@ -541,6 +562,7 @@ class CollectorAutomation:
             'current_task': self.current_task,
             'browser_running': self._is_browser_running(),
             'cdp_port': self.cdp_port,
+            'active_cdp_port': self._task_cdp_port,
             'edge_path': self.edge_path,
             'history_count': len(self.task_history),
             'today_count': len([t for t in self.task_history if t.get('start_time', '').startswith(datetime.now().strftime('%Y-%m-%d'))]),
