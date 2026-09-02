@@ -58,3 +58,27 @@ def should_stop_schedule(lifecycle_action):
 def schedule_state(lifecycle_action):
     """六态 -> ResourceGuard 四态字符串（监控/日志用）。"""
     return advice(lifecycle_action)["resource_guard_state"]
+
+
+# DLQ 恢复重放触发态：RECOVERING(probe_only 半开) / RECOVERED(ramp_up 恢复) 后才补采失败任务
+_REPLAY_ACTIONS = {"probe_only", "ramp_up"}
+
+
+def maybe_replay_dlq(lifecycle_action, handler=None, dlq=None, max_items=50):
+    """恢复期自动触发 DLQ 失败任务重放（生产接线点，供采集调度在 RECOVERING/RECOVERED 调用）。
+
+    - 非恢复态（NORMAL/ADAPTIVE/COOLDOWN/FROZEN）返回 None，不触发。
+    - handler 为空：dry 模式，返回待重放 pending 数量（供调度决策/监控），不实际重放。
+    - handler 提供：实际重放，返回 replayed/failed/pending_after。
+    - 对齐 baldur 范式：只重放基础设施类失败；业务拒绝永不入队（已在 dlq_replay 保证）。
+    """
+    if lifecycle_action not in _REPLAY_ACTIONS:
+        return None
+    if dlq is None:
+        from collector_guard.dlq_replay import DeadLetterQueue
+        dlq = DeadLetterQueue()
+    if handler is None:
+        pending = dlq.list_pending()[:max_items]
+        return {"replayed": 0, "failed": 0, "pending": len(pending), "dry": True}
+    ok, fail = dlq.replay(handler, max_items=max_items)
+    return {"replayed": ok, "failed": fail, "pending": dlq.stats()["pending"], "dry": False}
