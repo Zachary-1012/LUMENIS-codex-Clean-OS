@@ -145,6 +145,162 @@
     .profile-name { font-size: 18px; }
     .settings-container { padding: 0 12px; }
   }
+
+:root{
+  --zb-bg:#FAFAF9; --zb-surface:#FFFFFF; --zb-surface-raised:#F5F5F4;
+  --zb-border:#E7E5E4; --zb-border-strong:#D6D3D1;
+  --zb-text:#1C1917; --zb-text-secondary:#57534E; --zb-text-muted:#A8A29E;
+}
+body{ background:var(--zb-bg) !important; color:var(--zb-text) !important; }
+/* 头部：蓝紫渐变 → 近黑柔和渐变 */
+.profile-header, .header-hero, [class*="hero"], [class*="profile-header"]{
+  background:linear-gradient(135deg,#1C1917 0%,#44403C 100%) !important;
+}
+.avatar, [class*="avatar"]{
+  background:rgba(255,255,255,.15) !important;
+  border:2px solid rgba(255,255,255,.25) !important;
+}
+/* 分组卡片 */
+.group, .settings-group, [class*="group-card"]{
+  background:var(--zb-surface) !important;
+  border:1px solid var(--zb-border) !important;
+  border-radius:14px !important;
+  box-shadow:0 1px 3px rgba(28,25,23,.04) !important;
+}
+.group-title, .group-label, [class*="group-title"]{
+  color:var(--zb-text-muted) !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  text-transform:uppercase !important;
+  letter-spacing:.05em !important;
+}
+/* 列表项 */
+.group-item, .setting-item, [class*="group-item"]{
+  border-bottom:1px solid var(--zb-border) !important;
+  transition:background .15s !important;
+}
+.group-item:last-child{ border-bottom:none !important; }
+.group-item:hover{ background:var(--zb-surface-raised) !important; }
+.group-item .item-title, [class*="item-title"]{ color:var(--zb-text) !important; font-weight:500 !important; }
+.group-item .item-desc, [class*="item-desc"], .group-item .arrow{ color:var(--zb-text-muted) !important; }
+/* 图标容器：彩色 → 中性灰 */
+.group-item .icon, .item-icon, [class*="item-icon"]{
+  background:var(--zb-surface-raised) !important;
+  color:var(--zb-text-secondary) !important;
+  border-radius:9px !important;
+}
+/* 按钮 */
+.btn-primary{
+  background:linear-gradient(135deg,#1C1917,#44403C) !important;
+  color:#fff !important; border:none !important; border-radius:10px !important;
+  font-weight:600 !important;
+}
+.btn-secondary{ background:var(--zb-surface-raised) !important; color:var(--zb-text) !important; border:1px solid var(--zb-border) !important; border-radius:10px !important; }
+.btn-danger{ background:#DC2626 !important; color:#fff !important; border:none !important; border-radius:10px !important; }
+/* 表单 */
+.form-group input, .form-group select, .form-group textarea{
+  border:1px solid var(--zb-border) !important;
+  border-radius:10px !important;
+  background:var(--zb-surface-raised) !important;
+  color:var(--zb-text) !important;
+}
+.form-group input:focus{
+  border-color:var(--zb-text-muted) !important;
+  box-shadow:0 0 0 3px rgba(120,113,108,.12) !important;
+  background:var(--zb-surface) !important;
+}
+/* 角色徽章：彩色 → 中性 */
+.role-owner{ background:#1C1917 !important; color:#fff !important; }
+.role-admin{ background:var(--zb-border-strong) !important; color:var(--zb-text) !important; }
+.role-user{ background:var(--zb-surface-raised) !important; color:var(--zb-text-secondary) !important; }
+/* 弹窗 */
+.modal-content, [class*="modal-content"]{
+  border-radius:16px !important;
+  border:1px solid var(--zb-border) !important;
+  box-shadow:0 24px 64px rgba(28,25,23,.2) !important;
+}
+/* 开关 */
+.toggle, [class*="switch"]{ accent-color:var(--zb-text) !important; }
+/* 状态点统一 */
+[class*="status-dot"], .dot{ border-radius:50% !important; }
+
+
+/* ===== ZBIP 黑白灰侘寂 override（强化版） ===== */
+body{ background:#FAFAF9 !important; color:#1C1917 !important; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif !important; }
+.settings-container{ max-width:760px !important; margin:0 auto !important; padding:0 16px 40px !important; }
+/* 头部：蓝紫渐变 → 近黑柔和渐变 */
+.profile-header{
+  background:linear-gradient(135deg,#1C1917 0%,#44403C 100%) !important;
+  border-radius:0 0 20px 20px !important;
+  padding:36px 20px 30px !important;
+  box-shadow:0 4px 20px rgba(28,25,23,.12) !important;
+}
+.avatar{
+  background:rgba(255,255,255,.12) !important;
+  border:2px solid rgba(255,255,255,.2) !important;
+  color:#fff !important;
+  width:64px !important; height:64px !important; border-radius:50% !important;
+  font-size:26px !important; font-weight:600 !important;
+}
+.profile-name{ color:#fff !important; font-size:20px !important; font-weight:650 !important; }
+.profile-header div, .profile-header span{ color:rgba(255,255,255,.85) !important; }
+.profile-role{
+  background:rgba(255,255,255,.15) !important;
+  color:#fff !important;
+  border-radius:10px !important; padding:3px 12px !important; font-size:11.5px !important;
+}
+/* 分组标题 */
+.group-title{
+  color:#A8A29E !important; font-size:12px !important; font-weight:600 !important;
+  text-transform:uppercase !important; letter-spacing:.06em !important;
+  margin:24px 4px 10px !important;
+}
+/* 分组卡片 */
+.group{
+  background:#fff !important; border:1px solid #E7E5E4 !important;
+  border-radius:14px !important; overflow:hidden !important;
+  box-shadow:0 1px 3px rgba(28,25,23,.04) !important;
+}
+/* 列表项 */
+.group-item{
+  border-bottom:1px solid #F0EEEC !important;
+  padding:14px 16px !important; transition:background .15s !important;
+  display:flex !important; align-items:center !important; gap:12px !important;
+}
+.group-item:last-child{ border-bottom:none !important; }
+.group-item:hover{ background:#FAFAF9 !important; }
+.item-label{ color:#1C1917 !important; font-size:14.5px !important; font-weight:500 !important; flex:1 !important; }
+.item-value{ color:#A8A29E !important; font-size:13px !important; }
+.item-arrow{ color:#D6D3D1 !important; font-size:18px !important; }
+/* 图标：全部统一为中性灰底线性风格 */
+.item-icon{
+  background:#F5F5F4 !important;
+  color:#57534E !important;
+  width:36px !important; height:36px !important; border-radius:10px !important;
+  display:flex !important; align-items:center !important; justify-content:center !important;
+  font-size:17px !important; flex-shrink:0 !important;
+}
+/* 按钮 */
+.btn-primary{ background:linear-gradient(135deg,#1C1917,#44403C) !important; color:#fff !important; border:none !important; border-radius:10px !important; font-weight:600 !important; }
+.btn-secondary{ background:#F5F5F4 !important; color:#1C1917 !important; border:1px solid #E7E5E4 !important; border-radius:10px !important; }
+.btn-danger{ background:#DC2626 !important; color:#fff !important; border:none !important; border-radius:10px !important; }
+/* 表单 */
+.form-group input, .form-group select, .form-group textarea{
+  border:1px solid #E7E5E4 !important; border-radius:10px !important;
+  background:#FAFAF9 !important; color:#1C1917 !important; padding:11px 13px !important;
+}
+.form-group input:focus{ border-color:#A8A29E !important; box-shadow:0 0 0 3px rgba(120,113,108,.12) !important; background:#fff !important; }
+/* 角色徽章 */
+.role-owner{ background:#1C1917 !important; color:#fff !important; border-radius:8px !important; }
+.role-admin{ background:#D6D3D1 !important; color:#1C1917 !important; border-radius:8px !important; }
+.role-user{ background:#F5F5F4 !important; color:#57534E !important; border-radius:8px !important; }
+/* 弹窗 */
+.modal{ background:rgba(28,25,23,.45) !important; backdrop-filter:blur(4px) !important; }
+.modal-content{ background:#fff !important; border-radius:16px !important; border:1px solid #E7E5E4 !important; box-shadow:0 24px 64px rgba(28,25,23,.2) !important; }
+.modal-title{ color:#1C1917 !important; }
+/* 开关 */
+.toggle, input[type=checkbox], input[type=radio]{ accent-color:#1C1917 !important; }
+
 </style>
 </head>
 <body>
@@ -167,19 +323,19 @@
   <div class="group-title">账号管理</div>
   <div class="group">
     <div class="group-item" onclick="openUserManager()">
-      <div class="item-icon" style="background:#007aff;">👥</div>
+      <div class="item-icon">👥</div>
       <div class="item-label">账号与权限</div>
       <div class="item-value" id="userCount">加载中...</div>
       <div class="item-arrow">›</div>
     </div>
     <div class="group-item" onclick="openChangePassword()">
-      <div class="item-icon" style="background:#34c759;">🔑</div>
+      <div class="item-icon">🔑</div>
       <div class="item-label">修改密码</div>
       <div class="item-arrow">›</div>
     </div>
     {% if current_user.role == 'owner' %}
     <div class="group-item" onclick="openSecurityQuestions()">
-      <div class="item-icon" style="background:#ff9500;">🛡️</div>
+      <div class="item-icon">🛡️</div>
       <div class="item-label">安全验证问题</div>
       <div class="item-arrow">›</div>
     </div>
@@ -190,23 +346,23 @@
   <div class="group-title">系统设置</div>
   <div class="group">
     <div class="group-item" onclick="openSystemConfig()">
-      <div class="item-icon" style="background:#5856d6;">⚙️</div>
+      <div class="item-icon">⚙️</div>
       <div class="item-label">系统参数</div>
       <div class="item-arrow">›</div>
     </div>
     <div class="group-item" onclick="location.href='/v4/collect/'">
-      <div class="item-icon" style="background:#007aff;">🌐</div>
+      <div class="item-icon">🌐</div>
       <div class="item-label">全网采集中心</div>
       <div class="item-value">健康状态 / 手动采集</div>
       <div class="item-arrow">›</div>
     </div>
     <div class="group-item" onclick="openModuleManager()">
-      <div class="item-icon" style="background:#af52de;">🧩</div>
+      <div class="item-icon">🧩</div>
       <div class="item-label">模块管理</div>
       <div class="item-arrow">›</div>
     </div>
     <div class="group-item" onclick="location.href='/v4/version-center/'">
-      <div class="item-icon" style="background:#5856d6;">
+      <div class="item-icon">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="6" cy="6.5" r="2.2"/><circle cx="18" cy="6.5" r="2.2"/><path d="M6 8.8v2.4a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8.8M12 15.2V18"/></svg>
       </div>
       <div class="item-label">版本中心</div>
@@ -215,7 +371,7 @@
     </div>
     {% if current_user.role == 'owner' %}
     <div class="group-item" onclick="openAuditLogs()">
-      <div class="item-icon" style="background:#ff3b30;">📋</div>
+      <div class="item-icon">📋</div>
       <div class="item-label">操作审计日志</div>
       <div class="item-arrow">›</div>
     </div>
@@ -226,12 +382,12 @@
   <div class="group-title">关于</div>
   <div class="group">
     <div class="group-item">
-      <div class="item-icon" style="background:#8e8e93;">ℹ️</div>
+      <div class="item-icon">ℹ️</div>
       <div class="item-label">版本</div>
       <div class="item-value">V4.0.0</div>
     </div>
     <div class="group-item">
-      <div class="item-icon" style="background:#34c759;">🏢</div>
+      <div class="item-icon">🏢</div>
       <div class="item-label">CTH-POMS</div>
       <div class="item-value">太古汇舆情监控</div>
     </div>

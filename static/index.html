@@ -1,6 +1,47 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<script>
+/* ===== 全局fetch凭证修复：剥离URL中的Basic Auth凭证，解决"Request cannot be constructed from a URL that includes credentials" ===== */
+(function(){
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(input, init){
+    try{
+      if(typeof input === 'string'){
+        // 相对路径：用干净的origin构建（location.origin不含凭证）
+        if(input.startsWith('/') && !input.startsWith('//')){
+          input = location.origin + input;
+        }
+        // 完整URL：剥离user:password@凭证
+        else if(input.includes('@') && /^https?:\/\//.test(input)){
+          input = input.replace(/^(https?:\/\/)[^@/]+@/, '$1');
+        }
+      } else if(input && input.url && input.url.includes('@')){
+        // Request对象：重建干净URL
+        const cleanUrl = input.url.replace(/^(https?:\/\/)[^@/]+@/, '$1');
+        input = new Request(cleanUrl, input);
+      }
+    }catch(e){ console.warn('[fetch-fix]', e); }
+    return _origFetch(input, init);
+  };
+  // 同样修复XMLHttpRequest
+  const _origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url){
+    try{
+      if(typeof url === 'string'){
+        if(url.startsWith('/') && !url.startsWith('//')){
+          url = location.origin + url;
+        } else if(url.includes('@') && /^https?:\/\//.test(url)){
+          url = url.replace(/^(https?:\/\/)[^@/]+@/, '$1');
+        }
+        arguments[1] = url;
+      }
+    }catch(e){}
+    return _origOpen.apply(this, arguments);
+  };
+})();
+</script>
+
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7">
 <link rel="stylesheet" href="/static/css/tokens.css?v=1.0.0">
@@ -430,6 +471,7 @@
             <input id="ib-nav-input" placeholder="输入关键词搜索 / 网址"
                    style="flex:1;min-width:120px;height:34px;padding:0 12px;border:1px solid rgba(120,110,180,0.16);background:rgba(255,255,255,0.85);border-radius:10px;font-size:12.5px;">
             <button class="ib-btn primary" id="ib-btn-nav"><span class="ib-btn-label">前往</span></button>
+            <button class="ib-btn-external" id="ib-btn-external" title="在外部浏览器打开当前页面"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>
             <label class="ib-live-toggle"><input type="checkbox" id="ib-live-checkbox" checked><span class="lbl" id="ib-live-text">实时</span></label>
           </div>
           <div class="ib-viewport-wrap" id="ib-viewport">
@@ -1629,6 +1671,25 @@ document.addEventListener('click', function(e){
   if(a && a.href && !a.href.startsWith('javascript:') && !a.classList.contains('no-link-selector')){
     e.preventDefault();
     openLinkSelector(a.href);
+  }
+});
+</script>
+
+
+<script>
+// 内置浏览器：外部打开当前页面
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('ib-btn-external');
+  if(btn){
+    btn.onclick = function(){
+      var urlEl = document.getElementById('ib-url');
+      var url = urlEl ? urlEl.textContent.trim() : '';
+      if(url && url !== '正在连接…' && url.startsWith('http')){
+        openLinkSelector(url);  // 复用链接选择器
+      } else {
+        if(typeof toast === 'function') toast('当前没有可打开的页面');
+      }
+    };
   }
 });
 </script>
