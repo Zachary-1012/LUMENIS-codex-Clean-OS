@@ -952,3 +952,13 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - **scheduler_loop 自适应门控**：去掉固定时间点（auto_collect_hours）硬触发，改为每 20 秒循环问 ShadowPlanner「此刻是否该采」；gate_should_run enforce 模式（只收紧不放松，异常 fail-open）；max_scroll 由 adaptive_engine.get_current_params() 动态决定（当前 normal=6，风险升高会自动降）；账号频率保护 check_rate_limit（60 分钟最小间隔）和熔断全部保留在上游。
 - **生产验证**：8201 已重启（pid 16428→29168），healthz ok v5.9.9；日志确认 gate=enforce should_run=True code=RUN_DUE，频率保护合理拦截（距上次运行不足 60 分钟，约 14:51 自动触发）；9222/9223 CDP 双驻场在线。
 - **测试**：test_rednote_policy 期望同步更新（cn_paused=False）；全量 exit=0。DB/主体口径/红线函数零变更。
+
+
+---
+
+## 2026-09-02 14:55 · adaptive_engine 采集结果回写闭环 + 熔断冻结时长动态化
+
+- **回写闭环**：xhs_cookie_bridge worker 完成/异常双路径接入 adaptive_engine.report_collection_result（成功/失败、notes_count、duration、error），滑动窗口最近10次成功率经 update_metrics→_evaluate_risk_and_strategy 自动升降级（normal/cautious/conservative/suspended），采集参数（delay/并发/max_scroll）随之动态变化；任何回写异常 fail-open 不阻断采集。
+- **动态冻结**：新增 _adaptive_cool_minutes()，熔断冷却时长随策略递增 normal60→cautious90→conservative180→suspended360 分钟（越失败冻结越久），异常回退60；_trip_circuit 调用点改为动态 cool_minutes。
+- **与既有 network_adaptive 区别**：L555/576/743/779/787 的 network_adaptive 是单次请求网络层自适应，本闭环是任务级策略自适应，两者互补。
+- **测试**：新增 tests/test_adaptive_feedback.py 4 测（策略→冷却映射/fail-open/连续失败升级/连续成功保持normal）；全量 exit=0。DB/红线零变更。

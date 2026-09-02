@@ -654,6 +654,16 @@ def clear_circuit():
         if os.path.exists(CIRCUIT_FILE): os.remove(CIRCUIT_FILE)
     except OSError: pass
 
+
+def _adaptive_cool_minutes():
+    # 熔断冷却时长随 adaptive_engine 策略动态递增（越失败冻结越久），异常回退60分钟
+    try:
+        import adaptive_engine as _ae
+        return {'normal': 60, 'cautious': 90, 'conservative': 180, 'suspended': 360}.get(
+            _ae.adaptive_engine.get_current_strategy(), 60)
+    except Exception:
+        return 60
+
 def is_test_mode():
     """测试模式：环境变量 XHS_TEST_MODE=1 时跳过冷却/新账号保护/熔断拦截，端到端测试期使用"""
     return os.environ.get('XHS_TEST_MODE','').strip() in ('1','true','TRUE','yes')
@@ -794,7 +804,7 @@ def sync(keywords=None, max_scroll=6, account=None):
     # 半数以上关键词被拦截/失败：熔断自动调度（测试模式不熔断，便于端到端验证）
     if not is_test_mode() and (n_block+n_neterr) >= max(1, n//2):
         top=blocked_summary or task_state
-        _trip_circuit(task_state, top)
+        _trip_circuit(task_state, top, cool_minutes=_adaptive_cool_minutes())
     elif task_state=='SUCCESS':
         clear_circuit()
 
@@ -871,6 +881,7 @@ def create_task(keywords=None,max_scroll=6,run_type='manual'):
     task_id=f"xhs-{datetime.now():%Y%m%d%H%M%S}-{int(time.time()*1000)%1000:03d}"
     _tasks[task_id]={'task_id':task_id,'status':'running','progress':5,'run_type':run_type,'message':f'[{type_label}]正在使用本机登录态检索小红书…{guard_msg}','created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     def worker():
+        _w_start=time.time()
         try:
             record_run(run_type)  # 记录运行（区分手动/自动）
             _tasks[task_id].update(progress=20,message=f'[{type_label}]搜索广州太古汇关键词…{guard_msg}')
@@ -891,8 +902,25 @@ def create_task(keywords=None,max_scroll=6,run_type='manual'):
                                       result.get('blocked') or '', run_type)
             except Exception as _be:
                 print('[xhs-bridge] shadow feedback non-blocking:', _be, flush=True)
+            # adaptive_engine 结果回写：滑动窗口成功率自动调整策略/参数
+            try:
+                import adaptive_engine as _ae
+                _ae.adaptive_engine.report_collection_result(
+                    success=(ts == 'SUCCESS'),
+                    notes_count=int(result.get('inserted',0))+int(result.get('updated',0)),
+                    duration=round(time.time()-_w_start, 1),
+                    error=result.get('blocked') or (None if ts=='SUCCESS' else ts))
+            except Exception as _ae_e:
+                print('[xhs-bridge] adaptive feedback non-blocking:', _ae_e, flush=True)
         except Exception as e:
             _tasks[task_id].update(status='error',progress=100,message=str(e),error=str(e))
+            try:
+                import adaptive_engine as _ae
+                _ae.adaptive_engine.report_collection_result(
+                    success=False, notes_count=0,
+                    duration=round(time.time()-_w_start, 1), error=str(e))
+            except Exception:
+                pass
         finally: _lock.release()
     threading.Thread(target=worker,daemon=True,name='xhs-cookie-sync').start()
     return task_id
