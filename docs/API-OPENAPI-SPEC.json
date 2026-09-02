@@ -1,0 +1,7979 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Z-Brand-Core API",
+    "version": "1.0.0",
+    "description": "Auto-generated from Flask url_map (P1-2). Do not edit by hand."
+  },
+  "components": {
+    "securitySchemes": {
+      "httpBasic": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "v4Auth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "v4 独立 token/会话（Bearer 或同名 session cookie）"
+      }
+    }
+  },
+  "x-route-count": 364,
+  "paths": {
+    "/api/system/health/detailed": {
+      "get": {
+        "operationId": "system_health.system_health",
+        "tags": [
+          "api/system"
+        ],
+        "parameters": [],
+        "summary": "系统控制中心 - 完整健康状态（详细版）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/system/health/summary": {
+      "get": {
+        "operationId": "system_health.system_health_summary",
+        "tags": [
+          "api/system"
+        ],
+        "parameters": [],
+        "summary": "系统健康状态摘要（精简版） — P0 红绿灯增强版：4 子灯 + critical 区分 + ok 不误报。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/system/health/module/{module_name}": {
+      "get": {
+        "operationId": "system_health.system_health_module",
+        "tags": [
+          "api/system"
+        ],
+        "parameters": [
+          {
+            "name": "module_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "单个模块健康状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/adaptive/status": {
+      "get": {
+        "operationId": "architecture.adaptive_status",
+        "tags": [
+          "api/adaptive"
+        ],
+        "parameters": [],
+        "summary": "获取自动调节引擎状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/adaptive/can-collect": {
+      "get": {
+        "operationId": "architecture.adaptive_can_collect",
+        "tags": [
+          "api/adaptive"
+        ],
+        "parameters": [],
+        "summary": "判断是否可以采集",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/adaptive/report-result": {
+      "post": {
+        "operationId": "architecture.adaptive_report_result",
+        "tags": [
+          "api/adaptive"
+        ],
+        "parameters": [],
+        "summary": "报告采集结果，用于动态调整策略",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/adaptive/reset": {
+      "post": {
+        "operationId": "architecture.adaptive_reset",
+        "tags": [
+          "api/adaptive"
+        ],
+        "parameters": [],
+        "summary": "重置为正常策略（人工确认后使用）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/recovery/health-check": {
+      "get": {
+        "operationId": "architecture.recovery_health_check",
+        "tags": [
+          "api/recovery"
+        ],
+        "parameters": [],
+        "summary": "执行健康检查",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/recovery/run-cycle": {
+      "post": {
+        "operationId": "architecture.recovery_run_cycle",
+        "tags": [
+          "api/recovery"
+        ],
+        "parameters": [],
+        "summary": "运行一次完整的修复周期",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/recovery/stats": {
+      "get": {
+        "operationId": "architecture.recovery_stats",
+        "tags": [
+          "api/recovery"
+        ],
+        "parameters": [],
+        "summary": "获取修复统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/recovery/alerts": {
+      "get": {
+        "operationId": "architecture.recovery_alerts",
+        "tags": [
+          "api/recovery"
+        ],
+        "parameters": [],
+        "summary": "获取活跃告警",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback/analyze": {
+      "get": {
+        "operationId": "architecture.feedback_analyze",
+        "tags": [
+          "api/feedback"
+        ],
+        "parameters": [],
+        "summary": "分析报告异常",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback/suggestions": {
+      "get": {
+        "operationId": "architecture.feedback_suggestions",
+        "tags": [
+          "api/feedback"
+        ],
+        "parameters": [],
+        "summary": "获取策略建议",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback/run-cycle": {
+      "post": {
+        "operationId": "architecture.feedback_run_cycle",
+        "tags": [
+          "api/feedback"
+        ],
+        "parameters": [],
+        "summary": "运行一次完整的反馈周期",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback/history": {
+      "get": {
+        "operationId": "architecture.feedback_history",
+        "tags": [
+          "api/feedback"
+        ],
+        "parameters": [],
+        "summary": "获取反馈历史",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback/pending": {
+      "get": {
+        "operationId": "architecture.feedback_pending",
+        "tags": [
+          "api/feedback"
+        ],
+        "parameters": [],
+        "summary": "获取待处理反馈",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback/stats": {
+      "get": {
+        "operationId": "architecture.feedback_stats",
+        "tags": [
+          "api/feedback"
+        ],
+        "parameters": [],
+        "summary": "获取反馈统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/boundary/safety-level/{operation_type}": {
+      "get": {
+        "operationId": "architecture.boundary_safety_level",
+        "tags": [
+          "api/boundary"
+        ],
+        "parameters": [
+          {
+            "name": "operation_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "获取操作的安全级别",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/boundary/pending-confirmations": {
+      "get": {
+        "operationId": "architecture.boundary_pending_confirmations",
+        "tags": [
+          "api/boundary"
+        ],
+        "parameters": [],
+        "summary": "获取待确认操作",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/boundary/approve/{confirmation_id}": {
+      "post": {
+        "operationId": "architecture.boundary_approve",
+        "tags": [
+          "api/boundary"
+        ],
+        "parameters": [
+          {
+            "name": "confirmation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "批准确认",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/boundary/reject/{confirmation_id}": {
+      "post": {
+        "operationId": "architecture.boundary_reject",
+        "tags": [
+          "api/boundary"
+        ],
+        "parameters": [
+          {
+            "name": "confirmation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "拒绝确认",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/boundary/file-integrity/check": {
+      "get": {
+        "operationId": "architecture.boundary_file_integrity_check",
+        "tags": [
+          "api/boundary"
+        ],
+        "parameters": [],
+        "summary": "检查文件完整性",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/boundary/file-integrity/baseline": {
+      "post": {
+        "operationId": "architecture.boundary_file_integrity_baseline",
+        "tags": [
+          "api/boundary"
+        ],
+        "parameters": [],
+        "summary": "建立文件完整性基线",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/boundary/stats": {
+      "get": {
+        "operationId": "architecture.boundary_stats",
+        "tags": [
+          "api/boundary"
+        ],
+        "parameters": [],
+        "summary": "获取边界控制统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/architecture/status": {
+      "get": {
+        "operationId": "architecture.architecture_status",
+        "tags": [
+          "api/architecture"
+        ],
+        "parameters": [],
+        "summary": "获取5层架构整体状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/settings/config": {
+      "get": {
+        "operationId": "settings.get_config",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "获取系统配置",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "settings.update_config",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "更新系统配置",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/settings/system-info": {
+      "get": {
+        "operationId": "settings.system_info",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "获取系统信息",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/settings/developer/execute": {
+      "post": {
+        "operationId": "settings.developer_execute",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "开发者工具 - 执行代码（需开发者模式）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/settings/developer/logs": {
+      "get": {
+        "operationId": "settings.developer_logs",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "获取开发者日志",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/settings/domain": {
+      "get": {
+        "operationId": "settings.get_domain_config",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "获取域名配置",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "settings.update_domain_config",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "更新域名配置",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/settings/domain/delete": {
+      "post": {
+        "operationId": "settings.delete_domain_config",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "删除域名配置",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/export/preview": {
+      "get": {
+        "operationId": "export.export_preview",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [],
+        "summary": "预览报告数据",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/export/excel": {
+      "get": {
+        "operationId": "export.export_excel",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/export/word": {
+      "get": {
+        "operationId": "export.export_word",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/export/list": {
+      "get": {
+        "operationId": "export.export_list",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [],
+        "summary": "获取已导出的报告列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/export/report": {
+      "get": {
+        "operationId": "export.export_unified",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [],
+        "summary": "统一导出入口，兼容前端 exportReportWithVerify(type, format)",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/export/generate": {
+      "get": {
+        "operationId": "export.export_generate",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [],
+        "summary": "报告中心-生成报告：落盘并返回下载链接（前端 result.download_url 契约）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "export.export_generate",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [],
+        "summary": "报告中心-生成报告：落盘并返回下载链接（前端 result.download_url 契约）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/export/file/{filename}": {
+      "get": {
+        "operationId": "export.export_file",
+        "tags": [
+          "api/export"
+        ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "下载已生成的导出文件（basename 防路径穿越）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/cases/{case_id}": {
+      "get": {
+        "operationId": "api_pr_case_detail",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "获取单个公关案例详情",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/act-principle": {
+      "get": {
+        "operationId": "pr_case.get_act_principle",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "获取ACT法则",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/triggers": {
+      "get": {
+        "operationId": "pr_case.get_special_report_triggers",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "获取专报触发条件",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/security/scan": {
+      "get": {
+        "operationId": "system_features.security_scan",
+        "tags": [
+          "api/security"
+        ],
+        "parameters": [],
+        "summary": "执行完整安全扫描",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/security/baseline": {
+      "post": {
+        "operationId": "system_features.security_create_baseline",
+        "tags": [
+          "api/security"
+        ],
+        "parameters": [],
+        "summary": "创建文件完整性基线",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/security/integrity": {
+      "get": {
+        "operationId": "system_features.security_check_integrity",
+        "tags": [
+          "api/security"
+        ],
+        "parameters": [],
+        "summary": "校验文件完整性",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/security/dangerous-code": {
+      "get": {
+        "operationId": "system_features.security_dangerous_code",
+        "tags": [
+          "api/security"
+        ],
+        "parameters": [],
+        "summary": "扫描危险代码",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/security/sensitive-info": {
+      "get": {
+        "operationId": "system_features.security_sensitive_info",
+        "tags": [
+          "api/security"
+        ],
+        "parameters": [],
+        "summary": "扫描敏感信息",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evaluation/run": {
+      "get": {
+        "operationId": "system_features.evaluation_run",
+        "tags": [
+          "api/evaluation"
+        ],
+        "parameters": [],
+        "summary": "运行完整评测",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evaluation/collection": {
+      "get": {
+        "operationId": "system_features.evaluation_collection",
+        "tags": [
+          "api/evaluation"
+        ],
+        "parameters": [],
+        "summary": "采集质量评测",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evaluation/analysis": {
+      "get": {
+        "operationId": "system_features.evaluation_analysis",
+        "tags": [
+          "api/evaluation"
+        ],
+        "parameters": [],
+        "summary": "分析质量评测",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evaluation/stability": {
+      "get": {
+        "operationId": "system_features.evaluation_stability",
+        "tags": [
+          "api/evaluation"
+        ],
+        "parameters": [],
+        "summary": "系统稳定性评测",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evaluation/badcases": {
+      "get": {
+        "operationId": "system_features.evaluation_badcases",
+        "tags": [
+          "api/evaluation"
+        ],
+        "parameters": [],
+        "summary": "获取Badcase列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/evaluation/golden-cases": {
+      "get": {
+        "operationId": "system_features.evaluation_golden_cases",
+        "tags": [
+          "api/evaluation"
+        ],
+        "parameters": [],
+        "summary": "获取Golden Case列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/local-ai/status": {
+      "get": {
+        "operationId": "system_features.local_ai_status",
+        "tags": [
+          "api/local-ai"
+        ],
+        "parameters": [],
+        "summary": "获取本地AI状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/local-ai/analyze": {
+      "post": {
+        "operationId": "system_features.local_ai_analyze",
+        "tags": [
+          "api/local-ai"
+        ],
+        "parameters": [],
+        "summary": "本地AI分析",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/local-ai/chat": {
+      "post": {
+        "operationId": "system_features.local_ai_chat",
+        "tags": [
+          "api/local-ai"
+        ],
+        "parameters": [],
+        "summary": "本地AI聊天",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/start-cdp": {
+      "post": {
+        "operationId": "system_features.collector_start_cdp",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "启动CDP浏览器",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/stop-cdp": {
+      "post": {
+        "operationId": "system_features.collector_stop_cdp",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "停止CDP浏览器",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/auth-recovery/summary": {
+      "get": {
+        "operationId": "auth_recovery.get_summary",
+        "tags": [
+          "api/auth-recovery"
+        ],
+        "parameters": [],
+        "summary": "获取恢复中心摘要（前端轮询用，判断是否需要弹窗）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/auth-recovery/tasks": {
+      "get": {
+        "operationId": "auth_recovery.list_tasks",
+        "tags": [
+          "api/auth-recovery"
+        ],
+        "parameters": [],
+        "summary": "获取恢复任务列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "auth_recovery.create_task",
+        "tags": [
+          "api/auth-recovery"
+        ],
+        "parameters": [],
+        "summary": "手动创建恢复任务（管理员用）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/auth-recovery/tasks/{task_id}/start": {
+      "post": {
+        "operationId": "auth_recovery.start_task",
+        "tags": [
+          "api/auth-recovery"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "标记任务为进行中（用户开始扫码/验证）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/auth-recovery/tasks/{task_id}/complete": {
+      "post": {
+        "operationId": "auth_recovery.complete_task",
+        "tags": [
+          "api/auth-recovery"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "标记任务为已完成（用户验证成功）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/auth-recovery/tasks/{task_id}/fail": {
+      "post": {
+        "operationId": "auth_recovery.fail_task",
+        "tags": [
+          "api/auth-recovery"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "标记任务为失败",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/auth-recovery/health": {
+      "get": {
+        "operationId": "auth_recovery.health",
+        "tags": [
+          "api/auth-recovery"
+        ],
+        "parameters": [],
+        "summary": "恢复中心健康检查",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-knowledge/stats": {
+      "get": {
+        "operationId": "brand_knowledge_stats",
+        "tags": [
+          "api/brand-knowledge"
+        ],
+        "parameters": [],
+        "summary": "品牌知识库统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-knowledge/search": {
+      "get": {
+        "operationId": "brand_knowledge_search",
+        "tags": [
+          "api/brand-knowledge"
+        ],
+        "parameters": [],
+        "summary": "品牌知识库搜索",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/case-analysis/stats": {
+      "get": {
+        "operationId": "case_analysis_stats",
+        "tags": [
+          "api/case-analysis"
+        ],
+        "parameters": [],
+        "summary": "案例深度拆解库统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/case-analysis/list": {
+      "get": {
+        "operationId": "case_analysis_list",
+        "tags": [
+          "api/case-analysis"
+        ],
+        "parameters": [],
+        "summary": "案例深度拆解列表（支持筛选）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/case-analysis/detail": {
+      "get": {
+        "operationId": "case_analysis_detail",
+        "tags": [
+          "api/case-analysis"
+        ],
+        "parameters": [],
+        "summary": "案例深度拆解详情",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/case-analysis/search": {
+      "get": {
+        "operationId": "case_analysis_search",
+        "tags": [
+          "api/case-analysis"
+        ],
+        "parameters": [],
+        "summary": "案例深度拆解搜索",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/case-analysis/methodology": {
+      "get": {
+        "operationId": "case_analysis_methodology",
+        "tags": [
+          "api/case-analysis"
+        ],
+        "parameters": [],
+        "summary": "获取所有可复用方法论",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/case-analysis/system-insights": {
+      "get": {
+        "operationId": "case_analysis_system_insights",
+        "tags": [
+          "api/case-analysis"
+        ],
+        "parameters": [],
+        "summary": "获取所有对Z-Brand系统的启示",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/subject-classifier/classify": {
+      "post": {
+        "operationId": "subject_classify",
+        "tags": [
+          "api/subject-classifier"
+        ],
+        "parameters": [],
+        "summary": "传播主体分类",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/subject-classifier/types": {
+      "get": {
+        "operationId": "subject_types",
+        "tags": [
+          "api/subject-classifier"
+        ],
+        "parameters": [],
+        "summary": "获取所有主体类型",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/stats": {
+      "get": {
+        "operationId": "event_graph_stats",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [],
+        "summary": "事件图谱统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/events": {
+      "get": {
+        "operationId": "event_graph_events",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [],
+        "summary": "获取所有事件",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "event_graph_create_event",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [],
+        "summary": "创建新事件",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/chain/{event_id}": {
+      "get": {
+        "operationId": "event_graph_chain",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "获取事件链",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/types": {
+      "get": {
+        "operationId": "event_graph_types",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [],
+        "summary": "获取所有事件类型和关系类型",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/relations": {
+      "post": {
+        "operationId": "event_graph_add_relation",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [],
+        "summary": "添加事件关系",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/import": {
+      "post": {
+        "operationId": "event_graph_import_existing",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [],
+        "summary": "从现有events表导入事件",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/rebuild-relations": {
+      "post": {
+        "operationId": "event_graph_rebuild_relations",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [],
+        "summary": "GAP-07：基于时间+主题词双证据保守重算 follow/derive/parallel；",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/v2/report-center/preview": {
+      "get": {
+        "operationId": "report_center_preview",
+        "tags": [
+          "api/v2"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/v2/global-bil/{resource}": {
+      "get": {
+        "operationId": "global_bil_read",
+        "tags": [
+          "api/v2"
+        ],
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/v2/global-bil/overview": {
+      "get": {
+        "operationId": "global_bil_read",
+        "tags": [
+          "api/v2"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-graph/events/{event_id}": {
+      "delete": {
+        "operationId": "event_graph_delete_event",
+        "tags": [
+          "api/event-graph"
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "删除事件（同时删除关联关系）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-report/generate": {
+      "post": {
+        "operationId": "brand_report_generate",
+        "tags": [
+          "api/brand-report"
+        ],
+        "parameters": [],
+        "summary": "生成品牌分析报告",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-report/export/{report_id}": {
+      "get": {
+        "operationId": "brand_report_export",
+        "tags": [
+          "api/brand-report"
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "导出品牌分析报告（JSON/Markdown）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/proxy/status": {
+      "get": {
+        "operationId": "proxy_status_api",
+        "tags": [
+          "api/proxy"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/proxy/check": {
+      "post": {
+        "operationId": "proxy_check_api",
+        "tags": [
+          "api/proxy"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/topic-campaign": {
+      "get": {
+        "operationId": "topic_campaign_page",
+        "tags": [
+          "topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/status": {
+      "get": {
+        "operationId": "topic_status",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/topics": {
+      "get": {
+        "operationId": "topic_list",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/run": {
+      "post": {
+        "operationId": "topic_run",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/recover": {
+      "post": {
+        "operationId": "topic_recover",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/runtime-state": {
+      "get": {
+        "operationId": "topic_runtime_state",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "summary": "V2.0 P0-1：返回统一六态运行时状态（前端全局健康小点/Auth Modal 共用）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/half-open-probe": {
+      "post": {
+        "operationId": "topic_half_open_probe",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "summary": "V2.0 P0-3：IP_RISK 冷却结束后的半开探测（小流量单话题验证，成功才完全解除）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/note/{note_id}": {
+      "get": {
+        "operationId": "topic_note_detail",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "V2.0 P0-7：获取单条笔记完整详情（正文/媒体/评论/主体/分类/情绪/风险），用于 Note Detail 下钻。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/backfill-detail": {
+      "post": {
+        "operationId": "topic_backfill_detail",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "summary": "V2.0 P0-5：触发笔记详情补抓（单条 note_id 或批量 limit）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/timeline": {
+      "get": {
+        "operationId": "topic_timeline",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/stats": {
+      "get": {
+        "operationId": "topic_stats",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "summary": "V2.0 P0-8：话题聚合统计（Unique/New/Runs口径统一 + 主体/风险/分类分布）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/notes": {
+      "get": {
+        "operationId": "topic_notes",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/export": {
+      "get": {
+        "operationId": "topic_export",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/campaigns": {
+      "get": {
+        "operationId": "tc_campaign_list",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/campaign-save": {
+      "post": {
+        "operationId": "tc_campaign_save",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/topic-campaign/campaign-toggle": {
+      "post": {
+        "operationId": "tc_campaign_toggle",
+        "tags": [
+          "api/topic-campaign"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/app_evidence/stats": {
+      "get": {
+        "operationId": "api_evidence_stats",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/app_evidence/list": {
+      "get": {
+        "operationId": "api_evidence_list",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/app_evidence/{record_id}": {
+      "get": {
+        "operationId": "api_evidence_get",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "delete": {
+        "operationId": "api_evidence_delete",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "删除证据",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/app_evidence/upload": {
+      "post": {
+        "operationId": "api_evidence_upload",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [],
+        "summary": "上传证据（截图+手动填写字段）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/app_evidence/{record_id}/confirm": {
+      "post": {
+        "operationId": "api_evidence_confirm",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "确认证据（人工确认后进入Shadow）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/app_evidence/{record_id}/reject": {
+      "post": {
+        "operationId": "api_evidence_reject",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "拒绝证据",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/app_evidence/{record_id}/shadow": {
+      "post": {
+        "operationId": "api_evidence_shadow",
+        "tags": [
+          "api/app_evidence"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "标记为Shadow（已确认但仅作影子数据，不进入生产）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/overview": {
+      "get": {
+        "operationId": "swire_overview",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/events": {
+      "get": {
+        "operationId": "swire_events",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/notes": {
+      "get": {
+        "operationId": "swire_notes",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/event": {
+      "post": {
+        "operationId": "swire_event_add",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "summary": "人工/采集补充一条营销或品牌事件。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/brand-detail": {
+      "get": {
+        "operationId": "swire_brand_detail",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "summary": "二级下钻：单个品牌主体的事件库 + 笔记库 + 统计（与品牌/太古舆情同逻辑）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/brand-remove": {
+      "post": {
+        "operationId": "swire_brand_remove",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "summary": "软删除品牌：仅置 is_active=0 前端隐藏，事件/笔记数据完整保留，重新添加即恢复。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/brand-save": {
+      "post": {
+        "operationId": "swire_brand_save",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "summary": "添加品牌；同名（含曾软删）品牌则重新激活并更新资料，随后异步采集补齐。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/swire/brand-collect": {
+      "post": {
+        "operationId": "swire_brand_collect",
+        "tags": [
+          "api/swire"
+        ],
+        "parameters": [],
+        "summary": "对已存在品牌手动再触发一次采集补齐。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-stats": {
+      "get": {
+        "operationId": "api_brand_stats",
+        "tags": [
+          "api/brand-stats"
+        ],
+        "parameters": [],
+        "summary": "场内品牌及9大业态统计，对应rednote笔记数量",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/": {
+      "get": {
+        "operationId": "index",
+        "tags": [
+          "root"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/favicon.ico": {
+      "get": {
+        "operationId": "favicon",
+        "tags": [
+          "favicon.ico"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "operationId": "api_stats",
+        "tags": [
+          "api/stats"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/notes": {
+      "get": {
+        "operationId": "api_notes",
+        "tags": [
+          "api/notes"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/risk-alerts": {
+      "get": {
+        "operationId": "api_risk_alerts",
+        "tags": [
+          "api/risk-alerts"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/hot-notes": {
+      "get": {
+        "operationId": "api_hot_notes",
+        "tags": [
+          "api/hot-notes"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/comments": {
+      "get": {
+        "operationId": "api_comments",
+        "tags": [
+          "api/comments"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "api_events",
+        "tags": [
+          "api/events"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/daily": {
+      "get": {
+        "operationId": "api_report_daily",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [],
+        "summary": "日报弹窗：只含“昨天+当天发布”的有效舆情笔记（过期笔记不弹窗，仅入库做案例）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web-mentions": {
+      "get": {
+        "operationId": "api_web_mentions",
+        "tags": [
+          "api/web-mentions"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/feedback-keywords": {
+      "get": {
+        "operationId": "api_feedback_keywords",
+        "tags": [
+          "api/feedback-keywords"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/hot-topics": {
+      "get": {
+        "operationId": "api_hot_topics",
+        "tags": [
+          "api/hot-topics"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/intelligence/refresh": {
+      "post": {
+        "operationId": "api_intelligence_refresh",
+        "tags": [
+          "api/intelligence"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai/status": {
+      "get": {
+        "operationId": "api_ai_status",
+        "tags": [
+          "api/ai"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai/test": {
+      "post": {
+        "operationId": "api_ai_test",
+        "tags": [
+          "api/ai"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ark/status": {
+      "get": {
+        "operationId": "api_ark_status",
+        "tags": [
+          "api/ark"
+        ],
+        "parameters": [],
+        "summary": "豆包AI API状态查询",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ark/chat": {
+      "post": {
+        "operationId": "api_ark_chat",
+        "tags": [
+          "api/ark"
+        ],
+        "parameters": [],
+        "summary": "豆包AI通用聊天（辅助功能，不可用时回退本地AI）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ark/sentiment": {
+      "post": {
+        "operationId": "api_ark_sentiment",
+        "tags": [
+          "api/ark"
+        ],
+        "parameters": [],
+        "summary": "豆包AI舆情分析（辅助功能，不可用时回退本地分析）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ark/summary": {
+      "post": {
+        "operationId": "api_ark_summary",
+        "tags": [
+          "api/ark"
+        ],
+        "parameters": [],
+        "summary": "豆包AI摘要生成（辅助功能，不可用时回退本地摘要）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ark/keywords": {
+      "post": {
+        "operationId": "api_ark_keywords",
+        "tags": [
+          "api/ark"
+        ],
+        "parameters": [],
+        "summary": "豆包AI关键词提取（辅助功能，不可用时回退本地提取）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/status": {
+      "get": {
+        "operationId": "api_collector_status",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "采集器状态查询",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collect/schedule-status": {
+      "get": {
+        "operationId": "api_collect_schedule_status",
+        "tags": [
+          "api/collect"
+        ],
+        "parameters": [],
+        "summary": "数据更新卡片真实状态：聚合额度/熔断/运行任务/今日入库/下次计划，区分",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/start": {
+      "post": {
+        "operationId": "api_collector_start",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "启动采集任务",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/stop": {
+      "post": {
+        "operationId": "api_collector_stop",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "停止采集任务",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/history": {
+      "get": {
+        "operationId": "api_collector_history",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "采集历史记录",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/browser/start": {
+      "post": {
+        "operationId": "api_collector_browser_start",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "手动启动浏览器",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collector/browser/stop": {
+      "post": {
+        "operationId": "api_collector_browser_stop",
+        "tags": [
+          "api/collector"
+        ],
+        "parameters": [],
+        "summary": "手动关闭浏览器",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/runtime-check": {
+      "get": {
+        "operationId": "api_xhs_runtime_check",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "XHS 运行时七态预检（前端轮询用）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_xhs_runtime_check",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "XHS 运行时七态预检（前端轮询用）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/switch-account": {
+      "post": {
+        "operationId": "api_xhs_switch_account",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "双子星库 Contract：切换采集身份（硬白名单）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/accounts": {
+      "get": {
+        "operationId": "api_xhs_accounts",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "双子星库 Contract：双身份白名单列表（前端身份切换 UI 源）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-learning/status": {
+      "get": {
+        "operationId": "api_ai_learning_status",
+        "tags": [
+          "api/ai-learning"
+        ],
+        "parameters": [],
+        "summary": "AI学习状态查询",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-learning/optimization/{operation_type}": {
+      "get": {
+        "operationId": "api_ai_learning_optimization",
+        "tags": [
+          "api/ai-learning"
+        ],
+        "parameters": [
+          {
+            "name": "operation_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "获取操作优化建议",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web-sentiment/search": {
+      "post": {
+        "operationId": "api_web_sentiment_search",
+        "tags": [
+          "api/web-sentiment"
+        ],
+        "parameters": [],
+        "summary": "全网舆情检索（使用豆包AI）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web-sentiment/history": {
+      "get": {
+        "operationId": "api_web_sentiment_history",
+        "tags": [
+          "api/web-sentiment"
+        ],
+        "parameters": [],
+        "summary": "全网舆情检索历史",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/stats": {
+      "get": {
+        "operationId": "api_cases_stats",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "舆情案例统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/list": {
+      "get": {
+        "operationId": "api_public_cases_list",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "舆情案例列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/import": {
+      "post": {
+        "operationId": "api_cases_import",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "导入舆情案例（重新导入所有案例）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/taikoo-hui": {
+      "get": {
+        "operationId": "api_cases_taikoo_hui",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "广州太古汇舆情案例",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/other-malls": {
+      "get": {
+        "operationId": "api_cases_other_malls",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "其他商业地产舆情案例",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/brands": {
+      "get": {
+        "operationId": "api_cases_brands",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "品牌业态舆情案例",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-industry/brands": {
+      "get": {
+        "operationId": "api_brand_industry_brands_alias",
+        "tags": [
+          "api/brand-industry"
+        ],
+        "parameters": [],
+        "summary": "品牌业态-品牌列表（前端兼容）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-industry/brands/{name}": {
+      "get": {
+        "operationId": "api_brand_industry_brand_detail",
+        "tags": [
+          "api/brand-industry"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "品牌业态-单品牌详情：基础信息 + 实时匹配该品牌的笔记统计与最近笔记",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-industry/stats": {
+      "get": {
+        "operationId": "api_brand_industry_stats_alias",
+        "tags": [
+          "api/brand-industry"
+        ],
+        "parameters": [],
+        "summary": "品牌业态-统计（前端兼容）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brand-industry/recompute": {
+      "post": {
+        "operationId": "api_brand_industry_recompute",
+        "tags": [
+          "api/brand-industry"
+        ],
+        "parameters": [],
+        "summary": "品牌业态统计一键重算：用实时 LIKE 口径刷新预聚合字段，修复历史统计污染",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/negative-review/stats": {
+      "get": {
+        "operationId": "api_negative_review_stats",
+        "tags": [
+          "api/negative-review"
+        ],
+        "parameters": [],
+        "summary": "负面审核统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "operationId": "api_reports_list",
+        "tags": [
+          "api/reports"
+        ],
+        "parameters": [],
+        "summary": "报告列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/reports/{report_id}/download": {
+      "get": {
+        "operationId": "api_report_download",
+        "tags": [
+          "api/reports"
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "报告下载-取下载链接（前端 downloadReport 契约：返回 download_url）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/reports/{report_id}/file": {
+      "get": {
+        "operationId": "api_report_file",
+        "tags": [
+          "api/reports"
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "报告文件实际下载",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/developer/run": {
+      "post": {
+        "operationId": "api_developer_run",
+        "tags": [
+          "api/developer"
+        ],
+        "parameters": [],
+        "summary": "GAP-04 统一收口点①（兼容保留）：生产永久禁用，开发态走统一闸门。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "api_settings_get",
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "summary": "系统设置（前端兼容）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/search": {
+      "get": {
+        "operationId": "api_unified_search",
+        "tags": [
+          "api/search"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_unified_search",
+        "tags": [
+          "api/search"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/function-map": {
+      "get": {
+        "operationId": "api_function_map",
+        "tags": [
+          "api/function-map"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai/chat": {
+      "post": {
+        "operationId": "api_ai_chat",
+        "tags": [
+          "api/ai"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/translate": {
+      "post": {
+        "operationId": "api_translate",
+        "tags": [
+          "api/translate"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/{report_type}": {
+      "get": {
+        "operationId": "api_report",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [
+          {
+            "name": "report_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/generate": {
+      "post": {
+        "operationId": "api_generate_report",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/v2/{report_type}": {
+      "get": {
+        "operationId": "api_report_v2",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [
+          {
+            "name": "report_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "优化版报告API",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/v2/stats": {
+      "get": {
+        "operationId": "api_report_v2_stats",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [],
+        "summary": "报告筛选统计API",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/notes/historical": {
+      "get": {
+        "operationId": "api_notes_historical_v2",
+        "tags": [
+          "api/notes"
+        ],
+        "parameters": [],
+        "summary": "历史案例笔记API v2（过期笔记，发布时间超过7天）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/cookie/status": {
+      "get": {
+        "operationId": "api_xhs_cookie_status",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/cookie/sync": {
+      "post": {
+        "operationId": "api_xhs_cookie_sync",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/collect-pause": {
+      "post": {
+        "operationId": "api_xhs_collect_pause",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "用户主动暂停小红书采集（手动/自动一律不发起请求，直到 resume）；区别于风控熔断。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/collect-resume": {
+      "post": {
+        "operationId": "api_xhs_collect_resume",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "恢复小红书采集（仅解除用户暂停开关；风控熔断按其自身健康检查恢复）。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/collect-pause-state": {
+      "get": {
+        "operationId": "api_xhs_collect_pause_state",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/cookie/sync/{task_id}": {
+      "get": {
+        "operationId": "api_xhs_cookie_sync_status",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/collect-health": {
+      "get": {
+        "operationId": "api_xhs_collect_health",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "采集六态状态中心：熔断状态 + 今日各状态计数 + 最近批次日志（BLOCKED 绝不伪装成 0 条）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/platform-health": {
+      "get": {
+        "operationId": "api_platform_health",
+        "tags": [
+          "api/platform-health"
+        ],
+        "parameters": [],
+        "summary": "全局采集健康状态中心（只读）：逐平台状态 + 三类分清 + 动态调度，供首页健康小点与统一 Auth Modal。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/network/status": {
+      "get": {
+        "operationId": "api_network_status",
+        "tags": [
+          "api/network"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/network/reset": {
+      "post": {
+        "operationId": "api_network_reset",
+        "tags": [
+          "api/network"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cache/status": {
+      "get": {
+        "operationId": "api_cache_status",
+        "tags": [
+          "api/cache"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cache/data": {
+      "get": {
+        "operationId": "api_cache_data",
+        "tags": [
+          "api/cache"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cache/create": {
+      "post": {
+        "operationId": "api_cache_create",
+        "tags": [
+          "api/cache"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cache/snapshots": {
+      "get": {
+        "operationId": "api_cache_snapshots",
+        "tags": [
+          "api/cache"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collect": {
+      "post": {
+        "operationId": "api_collect",
+        "tags": [
+          "api/collect"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collect/status/{task_id}": {
+      "get": {
+        "operationId": "api_collect_status",
+        "tags": [
+          "api/collect"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collect/tasks": {
+      "get": {
+        "operationId": "api_collect_tasks",
+        "tags": [
+          "api/collect"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/analyze": {
+      "post": {
+        "operationId": "api_analyze",
+        "tags": [
+          "api/analyze"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/notes/{note_id}": {
+      "get": {
+        "operationId": "api_note_detail",
+        "tags": [
+          "api/notes"
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/note/{note_id}": {
+      "get": {
+        "operationId": "api_note_detail",
+        "tags": [
+          "api/note"
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/historical-notes": {
+      "get": {
+        "operationId": "api_historical_notes",
+        "tags": [
+          "api/historical-notes"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/backup": {
+      "post": {
+        "operationId": "api_backup",
+        "tags": [
+          "api/backup"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/weekly/events": {
+      "get": {
+        "operationId": "api_weekly_events_v570",
+        "tags": [
+          "api/weekly"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/browser-discovery": {
+      "post": {
+        "operationId": "api_browser_discovery_v570",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/brand-industry/plan": {
+      "get": {
+        "operationId": "api_brand_industry_plan_v570",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/brand-industry/run": {
+      "post": {
+        "operationId": "api_brand_industry_run_v570",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/notes/publish-buckets": {
+      "get": {
+        "operationId": "api_publish_buckets_v570",
+        "tags": [
+          "api/notes"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai/providers": {
+      "get": {
+        "operationId": "api_ai_providers_v570",
+        "tags": [
+          "api/ai"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai/analyze-v570": {
+      "post": {
+        "operationId": "api_ai_analyze_v570",
+        "tags": [
+          "api/ai"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/trends/global": {
+      "get": {
+        "operationId": "api_global_trends_v570",
+        "tags": [
+          "api/trends"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/dashboard/changes": {
+      "get": {
+        "operationId": "api_dashboard_changes_v570",
+        "tags": [
+          "api/dashboard"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/notes/library": {
+      "get": {
+        "operationId": "api_notes_library_v571",
+        "tags": [
+          "api/notes"
+        ],
+        "parameters": [],
+        "summary": "笔记库查询：支持按发布日期、采集日期、关键词、情感、风险等级筛选",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/verify": {
+      "get": {
+        "operationId": "api_report_verify_v571",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [],
+        "summary": "周期报告核对：检查指定周期内的报告数据准确性",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/remote": {
+      "get": {
+        "operationId": "remote_access",
+        "tags": [
+          "remote"
+        ],
+        "parameters": [],
+        "summary": "本地固定入口：自动跳转到当前Cloudflare隧道公网URL",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthz",
+        "tags": [
+          "healthz"
+        ],
+        "parameters": []
+      }
+    },
+    "/api/system/health": {
+      "get": {
+        "operationId": "api_system_health",
+        "tags": [
+          "api/system"
+        ],
+        "parameters": [],
+        "summary": "产品级健康状态：区分‘系统正常’与‘数据源没有数据’。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/digest/today": {
+      "get": {
+        "operationId": "api_digest_today",
+        "tags": [
+          "api/digest"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/digest/generate": {
+      "post": {
+        "operationId": "api_digest_generate",
+        "tags": [
+          "api/digest"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-filter/stats": {
+      "get": {
+        "operationId": "api_ai_filter_stats",
+        "tags": [
+          "api/ai-filter"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-filter/run": {
+      "post": {
+        "operationId": "api_ai_filter_run",
+        "tags": [
+          "api/ai-filter"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai-filter/cleanup": {
+      "post": {
+        "operationId": "api_ai_filter_cleanup",
+        "tags": [
+          "api/ai-filter"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "operationId": "api_overview",
+        "tags": [
+          "api/overview"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/status": {
+      "get": {
+        "operationId": "api_status",
+        "tags": [
+          "api/status"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/rednote/collect": {
+      "post": {
+        "operationId": "api_rednote_collect",
+        "tags": [
+          "api/rednote"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/alerts": {
+      "get": {
+        "operationId": "api_alerts",
+        "tags": [
+          "api/alerts"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/alerts/read": {
+      "post": {
+        "operationId": "api_alerts_read",
+        "tags": [
+          "api/alerts"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/alerts/refresh": {
+      "post": {
+        "operationId": "api_alerts_refresh",
+        "tags": [
+          "api/alerts"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/test/export": {
+      "get": {
+        "operationId": "api_test_export",
+        "tags": [
+          "api/test"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/negative/pending": {
+      "get": {
+        "operationId": "api_negative_pending",
+        "tags": [
+          "api/negative"
+        ],
+        "parameters": [],
+        "summary": "获取负面笔记列表，支持status参数: pending/confirmed/rejected",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/negative/confirm": {
+      "post": {
+        "operationId": "api_negative_confirm",
+        "tags": [
+          "api/negative"
+        ],
+        "parameters": [],
+        "summary": "确认负面笔记（核准为负面）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/negative/reject": {
+      "post": {
+        "operationId": "api_negative_reject",
+        "tags": [
+          "api/negative"
+        ],
+        "parameters": [],
+        "summary": "驳回负面笔记（不是负面）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/negative-review/{note_id}/confirm": {
+      "post": {
+        "operationId": "api_negative_review_confirm",
+        "tags": [
+          "api/negative-review"
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "负面审核-确认（RESTful 路径参数，兼容前端 NegativeReview.confirmItem）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/negative-review/{note_id}/reject": {
+      "post": {
+        "operationId": "api_negative_review_reject",
+        "tags": [
+          "api/negative-review"
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "负面审核-驳回（RESTful 路径参数，兼容前端 NegativeReview.rejectItem）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-review/{event_id}/confirm": {
+      "post": {
+        "operationId": "api_event_review_confirm",
+        "tags": [
+          "api/event-review"
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "确认事件负面（核准）——人工确认后该事件从待核实/待确认列表移除，并联动确认其关联负面笔记",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-review/{event_id}/reject": {
+      "post": {
+        "operationId": "api_event_review_reject",
+        "tags": [
+          "api/event-review"
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "驳回事件（非负面/误报）——人工处理后不再出现在待确认列表（不联动改笔记，保留分别研判）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-review/pending": {
+      "get": {
+        "operationId": "api_event_review_pending",
+        "tags": [
+          "api/event-review"
+        ],
+        "parameters": [],
+        "summary": "待人工确认的事件：风险事件且未二次确认（negative_confirmed=0），按风险/时间倒序",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/event-review/stats": {
+      "get": {
+        "operationId": "api_event_review_stats",
+        "tags": [
+          "api/event-review"
+        ],
+        "parameters": [],
+        "summary": "事件负面确认统计：待确认/已确认/已驳回",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/events/{event_id}/notes": {
+      "get": {
+        "operationId": "api_event_notes",
+        "tags": [
+          "api/events"
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "事件关联的真实笔记：优先 event_mentions 关联表（event_id→note_id），",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/negative/stats": {
+      "get": {
+        "operationId": "api_negative_stats",
+        "tags": [
+          "api/negative"
+        ],
+        "parameters": [],
+        "summary": "获取负面舆情统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/reports/export": {
+      "get": {
+        "operationId": "api_reports_export_v532",
+        "tags": [
+          "api/reports"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/reports/export-all": {
+      "get": {
+        "operationId": "api_reports_export_all_v532",
+        "tags": [
+          "api/reports"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/export": {
+      "get": {
+        "operationId": "api_report_export",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/v2/report/export": {
+      "get": {
+        "operationId": "api_report_export",
+        "tags": [
+          "api/v2"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/system/config": {
+      "get": {
+        "operationId": "api_system_config",
+        "tags": [
+          "api/system"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_system_config_update",
+        "tags": [
+          "api/system"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/config/company-domain": {
+      "get": {
+        "operationId": "api_company_domain",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_company_domain",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/config/emails": {
+      "delete": {
+        "operationId": "api_push_emails",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "get": {
+        "operationId": "api_push_emails",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_push_emails",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/config/run-code": {
+      "post": {
+        "operationId": "api_run_code",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "summary": "运行代码热更新：复制Python代码进去自动运行，测试OK直接更新系统",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/config/brand-directory": {
+      "get": {
+        "operationId": "api_brand_directory",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "summary": "场内品牌目录查询",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brands": {
+      "get": {
+        "operationId": "api_brands_list",
+        "tags": [
+          "api/brands"
+        ],
+        "parameters": [],
+        "summary": "品牌列表查询，支持搜索、业态筛选、分页",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_brand_add",
+        "tags": [
+          "api/brands"
+        ],
+        "parameters": [],
+        "summary": "添加新品牌（进场）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/brands/{brand_en}": {
+      "put": {
+        "operationId": "api_brand_update",
+        "tags": [
+          "api/brands"
+        ],
+        "parameters": [
+          {
+            "name": "brand_en",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "更新品牌信息",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "delete": {
+        "operationId": "api_brand_delete",
+        "tags": [
+          "api/brands"
+        ],
+        "parameters": [
+          {
+            "name": "brand_en",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "删除品牌（退场）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/official-info": {
+      "get": {
+        "operationId": "api_official_info",
+        "tags": [
+          "api/official-info"
+        ],
+        "parameters": [],
+        "summary": "官方动态信息查询（官网活动、微博、微信）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/official-info/collect": {
+      "post": {
+        "operationId": "api_official_collect",
+        "tags": [
+          "api/official-info"
+        ],
+        "parameters": [],
+        "summary": "触发官方信息采集",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases": {
+      "get": {
+        "operationId": "api_cases_list",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "案例库列表查询，支持搜索、分类筛选、分页",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_case_add",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "添加新案例（重大事件收录）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/{case_id}": {
+      "get": {
+        "operationId": "api_case_detail",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "案例详情查询",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/cases/match": {
+      "get": {
+        "operationId": "api_case_match",
+        "tags": [
+          "api/cases"
+        ],
+        "parameters": [],
+        "summary": "根据关键词/场景匹配同类案例（专报案例对标用）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/special-report/generate": {
+      "post": {
+        "operationId": "api_generate_special_report",
+        "tags": [
+          "api/special-report"
+        ],
+        "parameters": [],
+        "summary": "自动生成舆情事件专报，自动匹配案例库",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/config/email-settings": {
+      "get": {
+        "operationId": "api_email_settings",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      },
+      "post": {
+        "operationId": "api_email_settings",
+        "tags": [
+          "api/config"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/weekly/send-email": {
+      "post": {
+        "operationId": "api_send_weekly_email",
+        "tags": [
+          "api/weekly"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/report/special/export": {
+      "post": {
+        "operationId": "api_special_report_export",
+        "tags": [
+          "api/report"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/special-report/check-trigger": {
+      "get": {
+        "operationId": "api_check_special_report_trigger",
+        "tags": [
+          "api/special-report"
+        ],
+        "parameters": [],
+        "summary": "检查是否触发专报条件",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/p0/status": {
+      "get": {
+        "operationId": "api_xhs_p0_status",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "前端轮询：小红书 P0 驻场/会话/恢复状态聚合",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/p0/recovery/complete": {
+      "post": {
+        "operationId": "api_xhs_p0_recovery_complete",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "人工扫码后触发：关闭恢复任务，标记 Session 已恢复",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/xhs/p0/collection": {
+      "post": {
+        "operationId": "api_xhs_p0_collection",
+        "tags": [
+          "api/xhs"
+        ],
+        "parameters": [],
+        "summary": "手动触发采集：身份硬白名单门控后进入采集链",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/stability/status": {
+      "get": {
+        "operationId": "api_stability_status",
+        "tags": [
+          "api/stability"
+        ],
+        "parameters": [],
+        "summary": "获取稳定性监控状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/stability/heartbeat": {
+      "get": {
+        "operationId": "api_stability_heartbeat",
+        "tags": [
+          "api/stability"
+        ],
+        "parameters": [],
+        "summary": "获取最近的心跳记录",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/stability/crash-log": {
+      "get": {
+        "operationId": "api_stability_crash_log",
+        "tags": [
+          "api/stability"
+        ],
+        "parameters": [],
+        "summary": "获取崩溃日志",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/dashboard/all": {
+      "get": {
+        "operationId": "api_dashboard_all",
+        "tags": [
+          "api/dashboard"
+        ],
+        "parameters": [],
+        "summary": "合并仪表盘API：一次性返回所有前端需要的数据",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/weibo/login-status": {
+      "get": {
+        "operationId": "api_weibo_login_status",
+        "tags": [
+          "api/weibo"
+        ],
+        "parameters": [],
+        "summary": "获取微博登录状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/weibo/start-login": {
+      "post": {
+        "operationId": "api_weibo_start_login",
+        "tags": [
+          "api/weibo"
+        ],
+        "parameters": [],
+        "summary": "启动微博扫码登录（异步）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/weibo/clear-login": {
+      "post": {
+        "operationId": "api_weibo_clear_login",
+        "tags": [
+          "api/weibo"
+        ],
+        "parameters": [],
+        "summary": "清除微博登录数据",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/weibo/cookies": {
+      "get": {
+        "operationId": "api_weibo_cookies",
+        "tags": [
+          "api/weibo"
+        ],
+        "parameters": [],
+        "summary": "获取微博cookies（用于采集）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/bilibili/login-status": {
+      "get": {
+        "operationId": "api_bilibili_login_status",
+        "tags": [
+          "api/bilibili"
+        ],
+        "parameters": [],
+        "summary": "获取B站登录状态",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/bilibili/search": {
+      "get": {
+        "operationId": "api_bilibili_search",
+        "tags": [
+          "api/bilibili"
+        ],
+        "parameters": [],
+        "summary": "搜索B站视频",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/bilibili/clear-login": {
+      "post": {
+        "operationId": "api_bilibili_clear_login",
+        "tags": [
+          "api/bilibili"
+        ],
+        "parameters": [],
+        "summary": "清除B站登录数据",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/collect": {
+      "post": {
+        "operationId": "api_web_collect",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "summary": "触发全网话题搜集（微博+B站）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/topics": {
+      "get": {
+        "operationId": "api_web_topics_v580",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "summary": "获取全网话题列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/topics/refresh": {
+      "post": {
+        "operationId": "api_web_topics_refresh_v580",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "summary": "刷新全网话题（从浏览器搜索，不占用小红书次数）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/events": {
+      "get": {
+        "operationId": "api_web_events_v580",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "summary": "获取全网事件列表",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web/brand-industry": {
+      "get": {
+        "operationId": "api_web_brand_industry_v580",
+        "tags": [
+          "api/web"
+        ],
+        "parameters": [],
+        "summary": "品牌业态全网监测",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/ai/analyze": {
+      "post": {
+        "operationId": "api_ai_analyze_v580",
+        "tags": [
+          "api/ai"
+        ],
+        "parameters": [],
+        "summary": "AI分析舆情",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/collection/counter": {
+      "get": {
+        "operationId": "api_collection_counter_v580",
+        "tags": [
+          "api/collection"
+        ],
+        "parameters": [],
+        "summary": "获取今日采集计数",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web-topics": {
+      "get": {
+        "operationId": "api_web_topics",
+        "tags": [
+          "api/web-topics"
+        ],
+        "parameters": [],
+        "summary": "v5.9.0 优先读 web_topics 表真实数据并映射前端字段，为空回退内存缓存",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/web-topics/refresh": {
+      "post": {
+        "operationId": "api_web_topics_refresh",
+        "tags": [
+          "api/web-topics"
+        ],
+        "parameters": [],
+        "summary": "手动刷新全网话题",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/dev/run-code": {
+      "post": {
+        "operationId": "api_dev_run_code",
+        "tags": [
+          "api/dev"
+        ],
+        "parameters": [],
+        "summary": "开发者工具：运行升级代码，测试通过后自动部署",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/workspace/file-tree": {
+      "get": {
+        "operationId": "api_workspace_file_tree",
+        "tags": [
+          "api/workspace"
+        ],
+        "parameters": [],
+        "summary": "只读列目录：限定项目根、过滤敏感文件/目录、防路径穿越，返回真实文件数。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/workspace/term": {
+      "post": {
+        "operationId": "api_workspace_term",
+        "tags": [
+          "api/workspace"
+        ],
+        "parameters": [],
+        "summary": "只读 Web 终端：白名单命令、shell=False、cwd 锁定项目根、超时；拒绝一切写/管道/重定向。",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/cases": {
+      "get": {
+        "operationId": "api_pr_cases",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "获取所有公关案例",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/match": {
+      "post": {
+        "operationId": "api_pr_match",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "为笔记匹配同类案例（专报触发时调用）",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/recommend": {
+      "post": {
+        "operationId": "api_pr_recommend",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "为笔记推荐公关话术",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/templates": {
+      "get": {
+        "operationId": "api_pr_templates",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "获取公关话术模板",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/statistics": {
+      "get": {
+        "operationId": "api_pr_statistics",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "获取案例库统计",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/api/pr/check-trigger": {
+      "post": {
+        "operationId": "api_pr_check_trigger",
+        "tags": [
+          "api/pr"
+        ],
+        "parameters": [],
+        "summary": "检查是否触发专报条件",
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ]
+      }
+    },
+    "/v4/static/{filename}": {
+      "get": {
+        "operationId": "v4.static",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "The view function used to serve files from",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/login": {
+      "post": {
+        "operationId": "v4.api_login",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "登录接口",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/login-by-key": {
+      "post": {
+        "operationId": "v4.api_login_by_key",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "密钥登录（第二登录方式，替代短信验证码）：密钥正确即以主账号身份登录",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/logout": {
+      "post": {
+        "operationId": "v4.api_logout",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "登出接口",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/me": {
+      "get": {
+        "operationId": "v4.api_me",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "获取当前用户信息",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/workspace/unlock": {
+      "post": {
+        "operationId": "v4.api_workspace_unlock",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/workspace/status": {
+      "get": {
+        "operationId": "v4.api_workspace_status",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/workspace/keys": {
+      "get": {
+        "operationId": "v4.api_workspace_keys_list",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "v4.api_workspace_keys_issue",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/auth/workspace/keys/revoke": {
+      "post": {
+        "operationId": "v4.api_workspace_keys_revoke",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/platforms": {
+      "get": {
+        "operationId": "v4.api_list_platforms",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "列出所有采集平台",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/search": {
+      "post": {
+        "operationId": "v4.api_adapter_search",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "多平台搜索采集",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/search-merged": {
+      "post": {
+        "operationId": "v4.api_adapter_search_merged",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "多平台搜索合并去重",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/collect": {
+      "post": {
+        "operationId": "v4.api_adapter_collect",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "启动一次后台采集任务（立即返回 task_id，前端轮询进度，结果直接入库）。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/task/{task_id}": {
+      "get": {
+        "operationId": "v4.api_adapter_task",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "查询后台采集任务进度与每平台六态。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/health": {
+      "get": {
+        "operationId": "v4.api_adapter_health",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "全局采集健康状态中心：每平台最近六态/数量/时间/熔断态。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/recovery/start": {
+      "post": {
+        "operationId": "v4.api_recovery_start",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "打开指定平台登录页并启动后台恢复探测（统一 Auth Recovery Center）。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/recovery/platforms": {
+      "get": {
+        "operationId": "v4.api_recovery_platforms",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "可恢复真人平台清单（新增平台只改后端配置，前端自动列出）。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/recovery/health/{platform}": {
+      "get": {
+        "operationId": "v4.api_recovery_health",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "主动探测某平台登录态：AUTH_VALID/EXPIRED/UNKNOWN（不改风险状态）。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/recovery/check": {
+      "post": {
+        "operationId": "v4.api_recovery_check",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "立即探测一次某平台登录态是否已恢复。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/recovery/cancel": {
+      "post": {
+        "operationId": "v4.api_recovery_cancel",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/recovery/status": {
+      "get": {
+        "operationId": "v4.api_recovery_status",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "当前所有登录恢复任务状态。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/recovery/shot/{platform}": {
+      "get": {
+        "operationId": "v4.api_recovery_shot",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "登录截图：优先返回裁剪二维码，无则回退整页登录截图。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/adapters/risk": {
+      "get": {
+        "operationId": "v4.api_risk_snapshot",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "动态风控状态机快照。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/data/fix-publish-date": {
+      "post": {
+        "operationId": "v4.api_fix_publish_date",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "修复publish_date脏数据",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/data/empty-content": {
+      "get": {
+        "operationId": "v4.api_empty_content",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "查询空正文笔记",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/data/backfill-tasks": {
+      "get": {
+        "operationId": "v4.api_backfill_tasks",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "生成补抓任务批次",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/health": {
+      "get": {
+        "operationId": "v4.api_health",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "V4模块健康检查",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/login": {
+      "get": {
+        "operationId": "v4.v4_settings.v4_login_page",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "V4 自带登录页（不鉴权）：账密 / 密钥 两种方式滑动切换。已登录则直接进设置页。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/": {
+      "get": {
+        "operationId": "v4.v4_settings.settings_page",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "设置页主页面：未登录跳转到 V4 登录页（页面壳不返回 401 白屏，数据接口仍由 @require_auth 拦截）",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/users": {
+      "get": {
+        "operationId": "v4.v4_settings.api_list_users",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "获取用户列表",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "v4.v4_settings.api_create_user",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "创建用户（需安全验证）",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/users/{user_id}/status": {
+      "post": {
+        "operationId": "v4.v4_settings.api_toggle_user_status",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "启用/禁用用户",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/users/{user_id}/reset-password": {
+      "post": {
+        "operationId": "v4.v4_settings.api_reset_password",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "重置子账号密码",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/change-password": {
+      "post": {
+        "operationId": "v4.v4_settings.api_change_password",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "修改自己的密码",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/security-questions": {
+      "get": {
+        "operationId": "v4.v4_settings.api_get_security_questions",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "获取安全问答列表（不返回答案）",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "v4.v4_settings.api_add_security_question",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "添加安全问答",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/security-questions/{qid}": {
+      "delete": {
+        "operationId": "v4.v4_settings.api_delete_security_question",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "qid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "删除安全问答（至少保留2个）",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/audit-logs": {
+      "get": {
+        "operationId": "v4.v4_settings.api_audit_logs",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "查询审计日志",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/audit-stats": {
+      "get": {
+        "operationId": "v4.v4_settings.api_audit_stats",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "审计统计",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/settings/api/system-config": {
+      "get": {
+        "operationId": "v4.v4_settings.api_get_system_config",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "获取系统配置",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "v4.v4_settings.api_update_system_config",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "更新系统配置",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/collect/": {
+      "get": {
+        "operationId": "v4.v4_collect.collect_center",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/importer/upload": {
+      "post": {
+        "operationId": "v4.v4_importer.upload_file",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "上传文件并解析预览",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/importer/confirm": {
+      "post": {
+        "operationId": "v4.v4_importer.confirm_import",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "确认导入，将选中的笔记入库",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/ai/status": {
+      "get": {
+        "operationId": "v4.v4_ai.ai_status",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/ai/chat": {
+      "post": {
+        "operationId": "v4.v4_ai.ai_chat",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/ai/analyze": {
+      "post": {
+        "operationId": "v4.v4_ai.ai_analyze",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/ai/learn": {
+      "get": {
+        "operationId": "v4.v4_ai.ai_learn",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/ai/shadow": {
+      "get": {
+        "operationId": "v4.v4_ai.ai_shadow",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "v4.v4_ai.ai_shadow",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/ai/shadow/{sid}/decide": {
+      "post": {
+        "operationId": "v4.v4_ai.ai_shadow_decide",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/ai/shadow/stats": {
+      "get": {
+        "operationId": "v4.v4_ai.ai_shadow_stats",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/": {
+      "get": {
+        "operationId": "v4.v4_console.v4_root",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/console/": {
+      "get": {
+        "operationId": "v4.v4_console.console_home",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/": {
+      "get": {
+        "operationId": "v4.v4_version.version_center_page",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "版本中心页面（未登录跳 V4 登录页，避免白屏）。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/status": {
+      "get": {
+        "operationId": "v4.v4_version.api_status",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/history": {
+      "get": {
+        "operationId": "v4.v4_version.api_history",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/save": {
+      "post": {
+        "operationId": "v4.v4_version.api_save",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "立即保存版本：源码变化→安全闸→commit→（可选）push。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/push": {
+      "post": {
+        "operationId": "v4.v4_version.api_push",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/check": {
+      "post": {
+        "operationId": "v4.v4_version.api_check",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/pull": {
+      "post": {
+        "operationId": "v4.v4_version.api_pull",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/rollback": {
+      "post": {
+        "operationId": "v4.v4_version.api_rollback",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "summary": "回滚版本：默认 revert（保留历史）；hard 需 confirm=true 二次确认。",
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    },
+    "/v4/version-center/api/config": {
+      "get": {
+        "operationId": "v4.v4_version.api_config",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "v4.v4_version.api_config",
+        "tags": [
+          "v4"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "v4Auth": []
+          }
+        ]
+      }
+    }
+  }
+}

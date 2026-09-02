@@ -906,3 +906,13 @@ bi_* 关系表仅在 ZBC_DB_PATH 隔离库经 009 建表、不触碰生产 monit
 - 新增 schema_registry.py：mode=ro 只读反射表/列/索引/行数 + 全仓 CREATE 声明来源映射 + 状态分类（DECLARED/LEGACY_NO_DECL/MIGRATION_ISOLATED/MISSING_SOURCE），生成 docs/DATABASE-SCHEMA-REGISTRY.md（52 表：51 DECLARED + 1 LEGACY，**无主未登记=0**，含 publish_datetime/captured_at 红线列核对）。
 - 新增 tests/test_schema_registry.py 5 测：临时库验证反射结构与只读、声明来源定位、四类分类、已生成清单 0 无主且红线时间列齐备（未来新增无主表测试即红）。
 - 结果：182 passed（177→182）。**未执行任何 DDL/DML、无迁移、生产库与 8201 全程未碰**；industry_stats 清理与 Alembic 正式迁移另列 BACKLOG，不在本轮做破坏性动作。
+
+
+---
+
+## 2026-09-02 14:09 · P1-2 357→364 路由 OpenAPI 单一清单（url_map 自动反射，零端点改动）
+
+- 只读 import app（Staging 副本库，不起服务、不碰生产）反射 url_map：非 static **364 规则 / 350 去重 path**（对账时 357，另一窗口新增至 364）；/api 296、/v4 63；GET 226/POST 141/DELETE 5/PUT 1；含路径参数 46。
+- 新增 openapi_spec.py：Flask `<conv:name>`→OpenAPI `{name}`，operation 带 operationId/tags/path 参数；认证标注严格对齐 app.before_request：/healthz public(1)、/v4/* 独立 v4Auth(65)、其余 httpBasic 或 v4 会话(306)。
+- 产物：docs/API-OPENAPI-SPEC.json（标准 OpenAPI 3.0.3 + securitySchemes）、docs/API-ROUTE-MATRIX.md（人类可读矩阵）。新增 tests/test_openapi_spec.py 5 测：最小 Flask 验证转换/认证映射、真实 app spec 与 url_map 完全一致（一条不漏）、产物合法。
+- 结果：187 passed（182→187）。未新增/修改/删除任何端点，DB 零变更、生产 8201 未碰；请求/响应 schema 细化与 12 旧报告路由收敛另列 BACKLOG。
