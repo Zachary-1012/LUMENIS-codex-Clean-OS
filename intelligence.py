@@ -182,6 +182,63 @@ def _chat(system,user,temperature=0.1,max_tokens=1200):
         print('[AI] local/provider failed:',exc)
         return None,'rule'
 
+def vision_chat(system, user_text, image_base64, model='glm-4.6v', temperature=0.2, max_tokens=2000):
+    """视觉模型对话（glm-4.6v），支持图片输入。
+    Args:
+        system: 系统提示词
+        user_text: 用户文本
+        image_base64: 图片 base64 编码（不含 data:image/... 前缀）
+        model: 模型名称，默认 glm-4.6v
+        temperature: 温度
+        max_tokens: 最大输出 tokens
+    Returns:
+        (content, provider) 元组
+    """
+    api_key = _env('ZHIPU_API_KEY', '')
+    base = _env('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')
+    if not api_key:
+        return None, 'no_key'
+    # 智谱视觉模型输入格式：content 为数组，包含 text 和 image_url
+    messages = []
+    if system:
+        messages.append({'role': 'system', 'content': system})
+    user_content = [{'type': 'text', 'text': user_text}]
+    if image_base64:
+        # 自动判断图片格式
+        img_format = 'png'
+        if image_base64.startswith('/9j/'):
+            img_format = 'jpeg'
+        elif image_base64.startswith('R0lGOD'):
+            img_format = 'gif'
+        elif image_base64.startswith('UklGR'):
+            img_format = 'webp'
+        user_content.append({
+            'type': 'image_url',
+            'image_url': {'url': f'data:image/{img_format};base64,{image_base64}'}
+        })
+    messages.append({'role': 'user', 'content': user_content})
+    payload_obj = {
+        'model': model,
+        'temperature': temperature,
+        'max_tokens': max_tokens,
+        'messages': messages,
+        'thinking': {'type': 'disabled'}
+    }
+    payload = json.dumps(payload_obj, ensure_ascii=False).encode('utf-8')
+    try:
+        req = urllib.request.Request(
+            base.rstrip('/') + '/chat/completions',
+            data=payload,
+            headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=int(_env('AI_TIMEOUT_SECONDS', '120'))) as resp:
+            data = json.loads(resp.read().decode('utf-8', 'replace'))
+        return data['choices'][0]['message']['content'], model
+    except Exception as exc:
+        print(f'[AI-Vision] {model} failed:', exc)
+        return None, 'error'
+
 def _json_from_text(text):
     if not text:return None
     text=text.strip()
