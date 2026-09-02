@@ -110,3 +110,13 @@
 - **观察项（登记，未改）**：①动效三套曲线（basic/spring/emil）并存有开发者混用风险，建议后续收敛到 emil 权威+旧变量标记 deprecated；②语义色 fg 对比度 #16A34A≈3.3:1 对正文临界，图标/状态点可用、正文建议用深一档；③`--zb-ease-in` 定义但禁用，后续可移除或标注 exit-only。
 - **沉淀**：`docs/learning/P0C-UI-DESIGN-REVIEW-20260903.md`
 - **状态**：✅ 已收敛；观察项登记。**现在做：完成。**
+
+### T-P0C-3 RedNote 三端策略 SoT 未接入生产采集器（策略孤岛）
+- **发现**：`rednote_policy.py` 定义了三端 kind 策略（topic/舆情/event + 香港保活 + 真人频率），
+  但 grep 证实**只有它自身和单测引用**；生产采集器（topic_campaign/collector_v2/xhs）均未消费 `can_run_kind`。
+  用户拍板的"话题开/舆情开/事件关"当前只停留在策略文档层，未真正控制采集行为。
+- **风险**：用户后续"事件笔记推进 / 话题舆情端开放"在代码层无门控生效，属"文档完成、代码未接"。
+- **建议（最小可回滚）**：采集入口接入 `can_run_kind(kind)` 硬门控（默认值=现状，行为不变）；
+  采集入口加 kind 策略审计日志；`REDNOTE_DAILY_LOGIN_KEEPALIVE` 接入保活线程。
+- **状态**：✅ 审计完成（docs/learning/P0C-REDNOTE-POLICY-AUDIT-20260903.md）；
+  接入施工需用户拍板（涉及生产采集行为，即使默认收紧）。
