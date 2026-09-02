@@ -155,3 +155,7 @@ staging/
 !docs/reference/ui-research/source-videos/*.mp4
 !docs/reference/ui-research/source-videos/*.mov
 !docs/reference/ui-research/source-videos/*.webm
+
+# P0 local backups (never commit)
+app.py.bak_*
+*.bak_p0_*
