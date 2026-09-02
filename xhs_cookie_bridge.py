@@ -29,7 +29,7 @@ XHS_CN_PRIMARY_NAME = "XHS_CN_PRIMARY"   # 主账号：日常采集/驻场
 XHS_RETINAUT_NAME  = "XHS_RETINAUT"      # Retinaut 账号：备用身份/隔离采集
 # 物理 user_id 白名单（与逻辑身份一一绑定）
 XHS_CN_PRIMARY = "61d58d560000000010005a8a"   # 现有主账号（100% 向后兼容原 ALLOWED_USER_ID）
-XHS_RETINAUT  = None                            # Retinaut：用户提供真实 x-user-id-pro 后填入；None=暂不启用
+XHS_RETINAUT  = "6a3cef27000000000e03b800"          # Retinaut 香港 rednote 账号真实 user_id（来自个人主页 URL，24位）
 ALLOWED_USER_IDS = tuple(x for x in (XHS_CN_PRIMARY, XHS_RETINAUT) if x)
 # 向后兼容别名：防止其它 import ALLOWED_USER_ID 的代码失效
 ALLOWED_USER_ID = XHS_CN_PRIMARY  # LEGACY ALIAS（只读）
