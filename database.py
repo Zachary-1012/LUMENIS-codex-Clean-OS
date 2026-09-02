@@ -160,7 +160,7 @@ NOTE_MIGRATIONS = {
 }
 
 NOTE_MIGRATIONS.update({
-    'source_platform': "ALTER TABLE notes ADD COLUMN source_platform TEXT DEFAULT 'xiaohongshu'",
+    'source_platform': "ALTER TABLE notes ADD COLUMN source_platform TEXT DEFAULT 'xhs'",
     'relevance_status': "ALTER TABLE notes ADD COLUMN relevance_status TEXT DEFAULT 'relevant'",
     'verification_status': "ALTER TABLE notes ADD COLUMN verification_status TEXT DEFAULT 'review'",
     'verification_confidence': "ALTER TABLE notes ADD COLUMN verification_confidence REAL DEFAULT 0",
@@ -253,7 +253,7 @@ def init_db():
         conn.execute("UPDATE notes SET status='active' WHERE status IS NULL OR status=''")
         conn.execute("UPDATE notes SET last_seen_at=COALESCE(NULLIF(last_seen_at,''), collected_at, datetime('now','localtime'))")
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_type_date ON daily_reports(report_type, report_date)")
-        conn.execute("UPDATE notes SET source_platform='xiaohongshu' WHERE source_platform IS NULL OR source_platform=''")
+        conn.execute("UPDATE notes SET source_platform='xhs' WHERE source_platform IS NULL OR source_platform=''")
         conn.execute("UPDATE notes SET relevance_status='relevant' WHERE relevance_status IS NULL OR relevance_status=''")
         conn.execute("UPDATE notes SET body=content WHERE (body IS NULL OR body='') AND content<>''")
         # v5.8.5 事件发生日期兜底：缺省以首次发现日为发生下限（可被关联笔记最早发布日校正）
@@ -310,7 +310,7 @@ def insert_note(note_data):
         existing = conn.execute('SELECT * FROM notes WHERE note_id=?', (nid,)).fetchone()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         vals = {
-            'title': note_data.get('title','') or '', 'source_platform': note_data.get('source_platform','xiaohongshu') or 'xiaohongshu', 'content': note_data.get('content','') or '',
+            'title': note_data.get('title','') or '', 'source_platform': note_data.get('source_platform','xhs') or 'xhs', 'content': note_data.get('content','') or '',
             'url': note_data.get('url','') or '', 'cover': note_data.get('cover','') or '',
             'author_id': note_data.get('author_id','') or '', 'author_nickname': note_data.get('author_nickname','') or '',
             'author_avatar': note_data.get('author_avatar','') or '',
@@ -809,7 +809,7 @@ def link_event_mentions(event_id, mentions):
         for m in mentions:
             sid=m.get('source_id') or m.get('note_id') or m.get('url') or ''
             if not sid: continue
-            st=m.get('source_platform','xiaohongshu')
+            st=m.get('source_platform','xhs')
             conn.execute('INSERT OR REPLACE INTO event_mentions(event_id,source_type,source_id,match_score) VALUES (?,?,?,?)',(event_id,st,sid,float(m.get('_match_score',1.0) or 1.0)))
 
 # ===================== v5.3.2 AI过滤层 & 日报增强 数据操作 =====================

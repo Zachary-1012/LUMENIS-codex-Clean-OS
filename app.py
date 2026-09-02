@@ -670,7 +670,7 @@ def _run_collect_task(task_id,keywords,max_scroll):
         verified=[]; rejected=0
         for n in notes:
             ok,reason=ai_analyzer.verify_taikoo_location(n.get('title',''),n.get('content',''))
-            n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xiaohongshu'
+            n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
             if ok: verified.append(n)
             else: rejected+=1
         with _task_lock: collect_tasks[task_id].update(status='saving',message=f'采集 {len(notes)} 条，通过主体硬过滤 {len(verified)} 条',progress=45,collected=len(notes),verified=len(verified),rejected=rejected)
@@ -773,7 +773,7 @@ def persist_rednote_data(data, subject_hit_fn=None):
                 'xsec_token': n.get('xsec_token',''),
                 'publish_date': n.get('detail_publish_time') or n.get('publish_time',''),
                 'publish_datetime': n.get('detail_publish_time') or n.get('publish_time',''),
-                'source_platform': 'rednote',
+                'source_platform': 'xhs',
                 'is_taikoo_verified': 1,
                 'verify_reason': 'rednote采集主体命中',
                 'data_quality_status': n.get('quality_status','unknown'),
@@ -3850,7 +3850,7 @@ def api_generate_special_report():
     main_note = notes[0]
     event_name = event_title or main_note.get('title', '')[:50] or keyword or '广州太古汇舆情事件'
     first_date = main_note.get('publish_date', datetime.now().strftime('%Y-%m-%d'))
-    platform = main_note.get('source_platform', '小红书')
+    platform = main_note.get('source_platform', 'xhs')
 
     # 传播路径分析
     spread_path = f'{platform}素人发帖 → 评论区共鸣 → 本地KOC/号转发 → 跨平台扩散 → 媒体关注 → 集团问询'
