@@ -16,13 +16,31 @@
 <!-- Zachary 3D 机器人 Three.js（本地化，避免外网 CDN 失效导致 3D 不加载） -->
 <script src="/static/js/vendor/three.min.js"></script>
 <script>
-// P0安全修复(2026-09-02): 全局Auth唯一注入点 — 所有JS文件从此读取，不再各自硬编码
-// 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框）
-// 后续可改为从后端 /api/auth/config 动态注入
+// P0-B(2026-09-02): 前端 Auth 动态注入 — 凭证从后端 /api/auth/config 获取，前端代码库不再硬编码任何凭证
+// 逻辑：①先用 sessionStorage 缓存恢复（避免首屏请求无凭证）②异步从后端拉取最新凭证覆盖
+// 后端不可用/认证关闭时回退缓存或空（空=浏览器原生弹登录框兜底）
 (function(){ try {
-  window.__Z_AUTH = 'Basic ' + btoa('Zachary:ID082610');
-  // sessionStorage兜底（关闭浏览器即清除，非持久化）
-  try { sessionStorage.setItem('Z_AUTH_B64', btoa('Zachary:ID082610')); } catch(e){}
+  function _restoreCached() {
+    var cached = '';
+    try { cached = sessionStorage.getItem('Z_AUTH_B64') || ''; } catch(e){}
+    window.__Z_AUTH = cached ? ('Basic ' + cached) : '';
+    return cached;
+  }
+  // 首屏立即用缓存恢复（同步，避免 JS 加载后首个请求无凭证）
+  _restoreCached();
+  // 异步从后端获取最新凭证（单一来源，可动态轮换/环境分离）
+  try {
+    fetch('/api/auth/config', {cache: 'no-store'})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d && d.auth_enabled && d.auth_header) {
+          window.__Z_AUTH = d.auth_header;
+          var b64 = d.auth_header.replace(/^Basic\s+/i, '');
+          try { sessionStorage.setItem('Z_AUTH_B64', b64); } catch(e){}
+        }
+      })
+      .catch(function(){ /* 后端不可用：保留缓存/空，浏览器弹窗兜底 */ });
+  } catch(e){}
 } catch(e){} })();
 </script>
 <link rel="stylesheet" href="/static/css/case_deep_analysis.css?v=8.0.0">
@@ -1198,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ============ AI 资源包管理 ============
 function fetchAiPackStatus(){
-  fetch('/api/ai-resource-packs/status',{headers:{'Authorization':'Basic '+btoa('Zachary:ID082610')}})
+  fetch('/api/ai-resource-packs/status',{headers:{'Authorization':window.__Z_AUTH}})
   .then(r=>r.json()).then(d=>{
     if(!d.ok) return;
     // 更新 icon
@@ -1263,11 +1281,11 @@ function renderAiPackPanel(d){
   body.innerHTML = html;
 }
 function pauseAiPack(){
-  fetch('/api/ai-resource-packs/pause',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('Zachary:ID082610')},body:JSON.stringify({reason:'用户手动暂停'})})
+  fetch('/api/ai-resource-packs/pause',{method:'POST',headers:{'Content-Type':'application/json','Authorization':window.__Z_AUTH},body:JSON.stringify({reason:'用户手动暂停'})})
   .then(r=>r.json()).then(d=>{ fetchAiPackStatus(); }).catch(e=>alert('暂停失败:'+e));
 }
 function resumeAiPack(){
-  fetch('/api/ai-resource-packs/resume',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('Zachary:ID082610')}})
+  fetch('/api/ai-resource-packs/resume',{method:'POST',headers:{'Content-Type':'application/json','Authorization':window.__Z_AUTH}})
   .then(r=>r.json()).then(d=>{ fetchAiPackStatus(); }).catch(e=>alert('恢复失败:'+e));
 }
 function executePerCallRequest(){
@@ -1277,7 +1295,7 @@ function executePerCallRequest(){
   var result = document.getElementById('aiPackResult');
   result.style.display = 'block';
   result.innerHTML = '<div class="ai-pack-loading">执行中…</div>';
-  fetch('/api/ai-resource-packs/per-call-execute',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('Zachary:ID082610')},body:JSON.stringify({request:req})})
+  fetch('/api/ai-resource-packs/per-call-execute',{method:'POST',headers:{'Content-Type':'application/json','Authorization':window.__Z_AUTH},body:JSON.stringify({request:req})})
   .then(r=>r.json()).then(d=>{
     if(d.ok){
       result.innerHTML = '<div class="ai-pack-result-title">执行结果</div><div class="ai-pack-result-content">'+(d.result||'无结果')+'</div><div class="ai-pack-result-meta">Provider: '+(d.provider||'')+' · 剩余: '+(d.quota_remaining||0)+'次</div>';
