@@ -57,6 +57,19 @@
 - **circuitbreaker 库（523★）**：现有 collector_guard 已实现三态，命名对齐即可，不新增依赖 → 不采用。
 - **gunicorn/supervisor**：Windows 不可用 → 本机不采用（Linux 云再议）。
 
+## P0-A 补充：智谱旗舰工程评审（2026-09-03，glm-5.3，per_call 1 次）
+> 来源：docs/learning/ZHIPU-ENGINEERING-REVIEW-20260903.md。以下为「登记不施工」项，落地前需回归通过、生产窗口可控、走最小补丁。
+### T-P0A-1 熔断状态崩溃持久化（生产安全基线）
+- 当前：RiskEngine 全部状态内存态（score/opened_at/half_open/recovered_at），进程重启即丢→冷却契约违约（重启即恢复全速采集），风控风险。
+- 候选：可选 state_file 持久化（同 checkpoint.py 模式，构造传参默认关闭），恢复时重建 opened_at/剩余冷却。
+- 为什么：熔断是风控最后防线，跨重启必须连续。性能：无。稳定性：高。复杂度：低（可选参数+落盘）。迁移：低（生产仅 collector.py:90 一处实例化）。风险：需避免恢复后误判时间窗。**现在做：否（登记，排 P0-A 待办）。**
+### T-P0A-2 SQLite 备份与写放大治理
+- 当前：单库 54 表 + 时序快照同库，无定期 VACUUM INTO 备份，RPO/RTO 未定义；Windows 文件锁下拷贝不可靠。
+- 候选：每日 VACUUM INTO 到异盘/NAS + 恢复演练；metric 时序考虑独立 DB(attach)。**现在做：否（登记）。**
+### T-P0A-3 CDP/沙箱/绑定攻击面收敛
+- 当前：9222/9223 CDP 无鉴权、dev_exec 沙箱弱、8201 若绑 0.0.0.0 可远程触达。
+- 候选：确认全部绑 127.0.0.1 + 防火墙规则 + dev_exec 白名单。**现在做：否（先核验实际绑定，再登记结论）。**
+
 ## 结论
 - 当前**没有任何一项要求更换核心技术栈**；P0 全部是「测试/证据/红线」底座，P1 是低风险增强，且都可在不动生产主链前提下旁路→Staging→灰度。
 - 推荐落地顺序：T-P0-1/2 → T-P1-1(waitress,Staging) → T-P1-2(tenacity) → T-P1-3(Alembic Staging baseline) → 其余随 Release 节奏。

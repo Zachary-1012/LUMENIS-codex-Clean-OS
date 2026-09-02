@@ -61,3 +61,8 @@
 - **只学思想不引依赖**：Backstage、in-toto/SLSA、Crawlee、Style Dictionary、Nx 治理、circuitbreaker、tree-sitter。
 - **明确不采用**：Nx、Celery、Scrapy（过重/路线不符）；gunicorn、supervisor（Windows 不支持，仅未来 Linux 云部署备选）。
 - 详见 `CASE-STUDIES.md`（逐案例字段）、`TECHNOLOGY-COMPARISON.md`（择优评分）、各 PATTERNS 文件。
+
+## 三、智谱旗舰工程第二意见（2026-09-03，per_call 1 次）
+| 来源 | 资产 | 结论 | 状态 | 关联 |
+|---|---|---|---|---|
+| 智谱 glm-5.3 架构评审（ZHIPU-ENGINEERING-REVIEW-20260903.md） | 1.CTF: risk_engine 熔断状态为内存态，重启即丢→冷却违约/风控风险，需崩溃持久化；2.SQLite 单写+54表+时序快照，需 VACUUM INTO 定期备份+metric 独立DB；3.CDP 端口/代码沙箱/Flask 绑定=攻击面，须绑 127.0.0.1；4.统一时间源(utcnow)+单一snapshot写入；5.browser_lifecycle 统一CDP生命周期 | ADOPT（逐项最小落地） | P0-A / P0-G / 备份 / 安全 |
