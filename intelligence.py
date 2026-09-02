@@ -116,7 +116,7 @@ def ai_enabled(): return bool(_provider_config())
 # 配合 AI_REDACT_NAMES=名称1,名称2 做软脱敏。
 # ============================================================
 _REDACT_PATTERNS = [
-    (re.compile(r'(?i)(api[_-]?key|access[_-]?key|secret|password|passwd|pwd|cookie|authorization|bearer|session[_-]?id)\s*[:=]\s*[^\s,;"\']+'), r'\1=[REDACTED]'),
+    (re.compile(r'(?i)(api[_-]?key|access[_-]?key|secret|password|passwd|pwd|cookie|authorization|bearer|session[_-]?id)\s*[:=]\s*(?:Bearer\s+)?[^\s,;"\']+'), r'\1=[REDACTED]'),
     (re.compile(r'(?i)(xsec_token|access_token|refresh_token|web_session|web_session_v2|sig|sign|ticket)=[A-Za-z0-9%._\-]+'), r'\1=[REDACTED]'),
     (re.compile(r'Bearer\s+[A-Za-z0-9._\-]{8,}'), 'Bearer [REDACTED]'),
     (re.compile(r'(?<!\d)[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dXx](?!\d)'), '[身份证]'),
