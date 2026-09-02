@@ -36,6 +36,20 @@ except Exception as _e:
     _SCHEDULER_AVAILABLE = False
     _SCHEDULER_IMPORT_ERROR = str(_e)
 
+# 统一 Node 运行时解析：优先 PATH，兜底项目内置 nodejs/，避免常驻进程 PATH 缺 node 抛 WinError 2
+try:
+    from runtime_bin import resolve_node as _resolve_node
+except Exception:
+    def _resolve_node():
+        return 'node'
+
+def _node_bin():
+    """返回可用 node 路径；解析不到时返回 None，由调用方产出结构化错误（不进 subprocess）。"""
+    try:
+        return _resolve_node() or None
+    except Exception:
+        return 'node'
+
 # ========== 专题配置 ==========
 DEFAULT_TOPICS = [
     '#广州太古汇十五周年',
@@ -291,13 +305,18 @@ def _run_collector(topic):
     if not os.path.exists(script):
         return {'ok': False, 'error': f'采集脚本不存在: {script}', 'topic': topic}
 
+    node = _node_bin()
+    if not node:
+        # 不进 subprocess（避免裸 'node' 在常驻进程 PATH 缺失时抛 WinError 2），产出结构化错误快照
+        return {'ok': False, 'error': 'Node 运行时不可用：未在 PATH、项目 nodejs/ 或 NODE_EXE 中找到 node', 'topic': topic}
+
     # 默认连 9222 已登录采集浏览器（app 主进程自身未必注入该 env，这里补缺省，避免误走 headless 未登录 profile）；
     # 仍可用 XHS_CDP_URL 环境变量覆盖
     cdp = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222').strip()
     profile_dir = os.getenv('XHS_PROFILE_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'taikoo_browser_profile'))
 
     # 中频率充分采集：滚动6次，单次最长50分钟
-    cmd = ['node', script, '--topic', topic, '--max-scroll', str(CAMPAIGN_MAX_SCROLL)]
+    cmd = [node, script, '--topic', topic, '--max-scroll', str(CAMPAIGN_MAX_SCROLL)]
     if cdp:
         cmd.extend(['--cdp', cdp])
     elif os.path.isdir(profile_dir):
@@ -503,7 +522,10 @@ def _half_open_probe():
                 'SELECT topic FROM topic_campaign_topics WHERE campaign_key=? AND enabled=1 LIMIT 1',
                 (CAMPAIGN_KEY,)).fetchone()
         probe_topic = row['topic'] if row else '#广州太古汇'
-        cmd = ['node', script, '--topic', probe_topic, '--max-scroll', '1', '--cdp', cdp]
+        node = _node_bin()
+        if not node:
+            return False, '半开探测中止：Node 运行时不可用（PATH/项目 nodejs/NODE_EXE 均未找到），保持熔断'
+        cmd = [node, script, '--topic', probe_topic, '--max-scroll', '1', '--cdp', cdp]
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
         out = (p.stdout or '').strip()
         idx = out.find('{')
