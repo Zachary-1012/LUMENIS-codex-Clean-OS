@@ -5788,6 +5788,77 @@ def api_search_enhance():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+
+# ============ 学习采集 + 小红书优化 API ============
+@app.route('/api/learning/scan', methods=['POST'])
+def api_learning_scan():
+    """运行学习采集扫描（全量代码库学习，可选AI深度分析）"""
+    try:
+        data = request.get_json(silent=True) or {}
+        use_ai = bool(data.get('use_ai', False))
+        import learning_collector
+        result = learning_collector.run_learning_scan(use_ai=use_ai)
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/learning/history')
+def api_learning_history():
+    """获取学习历史"""
+    try:
+        import learning_collector
+        result = learning_collector.get_learning_history()
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/optimizer/config')
+def api_xhs_optimizer_config():
+    """获取小红书采集分类配置"""
+    try:
+        import xhs_collection_optimizer
+        note_type = request.args.get('type', 'all')
+        config = xhs_collection_optimizer.get_collection_config(note_type)
+        return jsonify({'ok': True, 'note_type': note_type, 'config': config})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/optimizer/classify', methods=['POST'])
+def api_xhs_optimizer_classify():
+    """分类笔记（topic/opinion/event）"""
+    try:
+        data = request.get_json(silent=True) or {}
+        title = str(data.get('title', ''))
+        content = str(data.get('content', ''))
+        keywords = data.get('keywords', [])
+        import xhs_collection_optimizer
+        note_type = xhs_collection_optimizer.classify_note(title, content, keywords)
+        return jsonify({'ok': True, 'note_type': note_type, 'title': title[:50]})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/rednote/keepalive')
+def api_xhs_rednote_keepalive():
+    """获取香港RedNote登录保活状态"""
+    try:
+        import xhs_collection_optimizer
+        status = xhs_collection_optimizer.get_rednote_keepalive_status()
+        return jsonify({'ok': True, **status})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/xhs/rednote/check-login', methods=['POST'])
+def api_xhs_rednote_check_login():
+    """检查香港RedNote登录状态（通过CDP 9223）"""
+    try:
+        import xhs_collection_optimizer
+        cdp_url = request.json.get('cdp_url', 'http://127.0.0.1:9223') if request.is_json else 'http://127.0.0.1:9223'
+        result = xhs_collection_optimizer.check_rednote_login(cdp_url)
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     import logging
     from logging.handlers import RotatingFileHandler

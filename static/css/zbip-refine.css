@@ -425,3 +425,48 @@ body::after{
   .smart-grid{grid-template-columns:1fr}
   .api-key-dialog{width:95vw;height:85vh}
 }
+
+
+/* ===== 链接系统内打开选择器 ===== */
+.link-selector-modal{position:fixed;inset:0;z-index:10003;display:flex;align-items:center;justify-content:center}
+.link-selector-modal.hidden{display:none}
+.link-selector-overlay{position:absolute;inset:0;background:rgba(28,25,23,0.5);backdrop-filter:blur(4px)}
+.link-selector-dialog{position:relative;background:var(--zb-surface,#FFFFFF);border-radius:16px;box-shadow:0 24px 64px rgba(28,25,23,0.2);width:90vw;max-width:480px;overflow:hidden;animation:linkSelectorIn 0.25s ease-out}
+@keyframes linkSelectorIn{from{opacity:0;transform:scale(0.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.link-selector-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--zb-border,#E7E5E4);background:var(--zb-surface-raised,#FAFAF9)}
+.link-selector-title{font-size:15px;font-weight:600;color:var(--zb-text,#1C1917)}
+.link-selector-close{background:none;border:none;font-size:16px;color:var(--zb-text-muted,#A8A29E);cursor:pointer;padding:4px 8px;border-radius:6px}
+.link-selector-close:hover{background:var(--zb-surface,#F5F5F4)}
+.link-selector-url{padding:10px 20px;font-size:11px;color:var(--zb-text-muted,#A8A29E);word-break:break-all;background:var(--zb-surface-raised,#FAFAF9);border-bottom:1px solid var(--zb-border,#E7E5E4);font-family:monospace}
+.link-selector-options{padding:12px}
+.link-option{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;cursor:pointer;transition:all 0.15s;margin-bottom:8px;border:1px solid transparent}
+.link-option:hover{background:var(--zb-surface-raised,#FAFAF9);border-color:var(--zb-border,#E7E5E4);transform:translateX(4px)}
+.link-option:last-child{margin-bottom:0}
+.link-option-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.link-option-icon svg{width:20px;height:20px}
+.link-option-icon.system{background:linear-gradient(135deg,#DBEAFE,#BFDBFE);color:#1E40AF}
+.link-option-icon.external{background:linear-gradient(135deg,#FEF3C7,#FDE68A);color:#92400E}
+.link-option-icon.zachary{background:linear-gradient(135deg,#FCE7F3,#FBCFE8);color:#9D174D}
+.link-option-info{flex:1;min-width:0}
+.link-option-info h4{font-size:13px;font-weight:600;color:var(--zb-text,#1C1917);margin-bottom:2px}
+.link-option-info p{font-size:11px;color:var(--zb-text-muted,#A8A29E);line-height:1.4}
+.link-option-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:#DCFCE7;color:#166534;font-weight:500;flex-shrink:0}
+.link-option-badge.beta{background:#FEF3C7;color:#92400E}
+
+/* 系统内链接预览iframe弹窗 */
+.link-preview-modal{position:fixed;inset:0;z-index:10004;display:flex;align-items:center;justify-content:center}
+.link-preview-modal.hidden{display:none}
+.link-preview-overlay{position:absolute;inset:0;background:rgba(28,25,23,0.6);backdrop-filter:blur(6px)}
+.link-preview-dialog{position:relative;background:var(--zb-surface,#FFFFFF);border-radius:16px;box-shadow:0 32px 80px rgba(28,25,23,0.3);width:95vw;height:90vh;max-width:1200px;display:flex;flex-direction:column;overflow:hidden;animation:linkPreviewIn 0.3s ease-out}
+@keyframes linkPreviewIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+.link-preview-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--zb-border,#E7E5E4);background:var(--zb-surface-raised,#FAFAF9)}
+.link-preview-title{font-size:13px;font-weight:500;color:var(--zb-text,#1C1917);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link-preview-actions{display:flex;gap:8px}
+.link-preview-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--zb-border,#E7E5E4);background:var(--zb-surface,#FFFFFF);color:var(--zb-text-secondary,#57534E);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.link-preview-btn:hover{background:var(--zb-surface-raised,#F5F5F4);border-color:var(--zb-border-strong,#D6D3D1)}
+.link-preview-btn svg{width:16px;height:16px}
+.link-preview-iframe{flex:1;border:none;width:100%;background:#fff}
+
+@media(max-width:640px){
+  .link-preview-dialog{width:100vw;height:100vh;border-radius:0}
+}

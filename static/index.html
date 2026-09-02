@@ -229,6 +229,50 @@
     </div>
   </div>
 
+  
+  <!-- 链接打开选择器：系统内 / 外部浏览器 / ZacharyOSAI -->
+  <div class="link-selector-modal hidden" id="linkSelectorModal">
+    <div class="link-selector-overlay" onclick="closeLinkSelector()"></div>
+    <div class="link-selector-dialog">
+      <div class="link-selector-header">
+        <span class="link-selector-title">选择打开方式</span>
+        <button class="link-selector-close" onclick="closeLinkSelector()">✕</button>
+      </div>
+      <div class="link-selector-url" id="linkSelectorUrl"></div>
+      <div class="link-selector-options">
+        <div class="link-option" onclick="openLinkInSystem()">
+          <div class="link-option-icon system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+          <div class="link-option-info"><h4>系统内打开</h4><p>在系统内iframe中预览，不离开当前页面</p></div>
+          <span class="link-option-badge">推荐</span>
+        </div>
+        <div class="link-option" onclick="openLinkExternal()">
+          <div class="link-option-icon external"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></div>
+          <div class="link-option-info"><h4>外部浏览器</h4><p>在系统默认浏览器中打开</p></div>
+        </div>
+        <div class="link-option" onclick="openLinkZacharyOS()">
+          <div class="link-option-icon zachary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6m-10 0H1m15.5-7.5l-4.24 4.24m-6.52 6.52l-4.24 4.24m0-15l4.24 4.24m6.52 6.52l4.24 4.24"/></svg></div>
+          <div class="link-option-info"><h4>ZacharyOS AI 浏览器</h4><p>在ZacharyOS AI浏览器中打开，支持AI分析</p></div>
+          <span class="link-option-badge beta">Beta</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 系统内链接预览iframe弹窗 -->
+  <div class="link-preview-modal hidden" id="linkPreviewModal">
+    <div class="link-preview-overlay" onclick="closeLinkPreview()"></div>
+    <div class="link-preview-dialog">
+      <div class="link-preview-header">
+        <span class="link-preview-title" id="linkPreviewTitle">系统内预览</span>
+        <div class="link-preview-actions">
+          <button class="link-preview-btn" onclick="openCurrentLinkExternal()" title="外部浏览器打开"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>
+          <button class="link-preview-btn" onclick="closeLinkPreview()" title="关闭">✕</button>
+        </div>
+      </div>
+      <iframe class="link-preview-iframe" id="linkPreviewIframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    </div>
+  </div>
+
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 <div class="layout">
     <aside class="sidebar glass">
@@ -1540,6 +1584,52 @@ document.addEventListener('DOMContentLoaded',function(){
     const badge = document.getElementById('smartXhsBadge');
     if(badge) badge.textContent = d.is_logged_in ? '已登录' : '待登录';
   }).catch(()=>{});
+});
+</script>
+
+
+<script>
+// ============ 链接系统内打开选择器 ============
+let _currentLinkUrl = '';
+function openLinkSelector(url){
+  if(!url) return;
+  _currentLinkUrl = url;
+  document.getElementById('linkSelectorUrl').textContent = url;
+  document.getElementById('linkSelectorModal').classList.remove('hidden');
+}
+function closeLinkSelector(){
+  document.getElementById('linkSelectorModal').classList.add('hidden');
+}
+function openLinkInSystem(){
+  closeLinkSelector();
+  if(!_currentLinkUrl) return;
+  document.getElementById('linkPreviewIframe').src = _currentLinkUrl;
+  document.getElementById('linkPreviewTitle').textContent = '系统内预览 · ' + (_currentLinkUrl.length>50?_currentLinkUrl.substring(0,50)+'...':_currentLinkUrl);
+  document.getElementById('linkPreviewModal').classList.remove('hidden');
+}
+function openLinkExternal(){
+  closeLinkSelector();
+  if(_currentLinkUrl) window.open(_currentLinkUrl, '_blank', 'noopener');
+}
+function openLinkZacharyOS(){
+  closeLinkSelector();
+  // ZacharyOS AI 浏览器打开（预留接口，当前降级为外部浏览器）
+  if(_currentLinkUrl) window.open(_currentLinkUrl, '_blank', 'noopener');
+}
+function closeLinkPreview(){
+  document.getElementById('linkPreviewModal').classList.add('hidden');
+  document.getElementById('linkPreviewIframe').src = 'about:blank';
+}
+function openCurrentLinkExternal(){
+  if(_currentLinkUrl) window.open(_currentLinkUrl, '_blank', 'noopener');
+}
+// 全局拦截：所有target="_blank"的链接改为选择器
+document.addEventListener('click', function(e){
+  const a = e.target.closest('a[target="_blank"]');
+  if(a && a.href && !a.href.startsWith('javascript:') && !a.classList.contains('no-link-selector')){
+    e.preventDefault();
+    openLinkSelector(a.href);
+  }
 });
 </script>
 
