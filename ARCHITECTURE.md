@@ -36,7 +36,7 @@
 │                                                                   │
 │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐  │
 │  │  风险引擎   │ │  事件聚合   │ │  主体过滤   │ │  缓存管理   │  │
-│  │risk_engine │ │intelligence│ │subject_rules│ │cache_manager│  │
+│  │risk_engine │ │event_graph │ │subject_rules│ │cache_manager│  │
 │  └────────────┘ └────────────┘ └────────────┘ └────────────┘  │
 └─────────────────────────────┬───────────────────────────────────┘
                               │
@@ -95,6 +95,8 @@
 - 情绪分析（正面/中性/负面）
 - 风险等级评估（高/中/低）
 - 事件聚合（相关笔记自动聚合）
+
+> **事件聚合权威入口声明（P0-01）**：历史 `aggregate_events()` 已废弃，当前事件聚合由模块化聚合替代——权威入口为 `event_graph.py`（`EventGraph` / `infer_and_persist_relations`），辅以 `weekly_events.py`（`weekly_payload`）与 `daily_report.py`（`generate_daily_digest`）。`intelligence` 模块不再作为事件聚合权威入口；不得再以 `aggregate_events()` 作为口径依据。
 - 本地AI支持（Ollama）
 - 云端AI支持（豆包/GPT/Trae）
 - AI过滤日志
