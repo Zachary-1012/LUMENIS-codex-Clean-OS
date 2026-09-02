@@ -22,7 +22,7 @@ contract:
     - name: publish_date_format
       type: date_format
       field: publish_date
-      format: "%Y-%m-%d %H:%M:%S"
+      format: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
       severity: error
     - name: title_length
       type: max_length

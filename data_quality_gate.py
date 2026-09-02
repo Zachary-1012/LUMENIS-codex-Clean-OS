@@ -74,11 +74,18 @@ def _rule_allowed_values(v, p):
 def _rule_date_format(v, p):
     if v is None:
         return False, "字段缺失"
-    try:
-        datetime.datetime.strptime(str(v), p.get("format", "%Y-%m-%d %H:%M:%S"))
-        return True, ""
-    except ValueError:
-        return False, "日期格式不符"
+    fmts = p.get("format")
+    if isinstance(fmts, str):
+        fmts = [fmts]
+    if not fmts:
+        fmts = ["%Y-%m-%d %H:%M:%S"]
+    for f in fmts:
+        try:
+            datetime.datetime.strptime(str(v), f)
+            return True, ""
+        except ValueError:
+            continue
+    return False, "日期格式不符（支持 %s）" % fmts
 
 
 _RULES = {

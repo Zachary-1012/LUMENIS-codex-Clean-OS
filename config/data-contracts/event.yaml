@@ -18,5 +18,5 @@ contract:
     - name: event_time_format
       type: date_format
       field: event_time
-      format: "%Y-%m-%d"
+      format: ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S"]
       severity: warning
