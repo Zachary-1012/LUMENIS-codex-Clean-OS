@@ -1048,8 +1048,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // ── 双子星库 Contract：全局 HTTP Basic Auth 头（auth_global.js / auth_recovery_poller.js / 其他 JS 共享同一凭证，401 修复）
   // 仅在生产 Basic Auth 启用时填入非空（空字符串=不注入=回退浏览器原生弹登录框；v4 bearer 会话路径不变）
   (function(){ try { window.__Z_AUTH = 'Basic ' + btoa('Zachary:ID082610');
-    // 给子 iframe / 其他域脚本一个 localStorage 兜底（多页面入口互用）
-    try { localStorage.setItem('Z_AUTH_B64', btoa('Zachary:ID082610')); } catch(e){} } catch(e){} })();
+    // P0安全缓解(2026-09-02): localStorage→sessionStorage，关闭浏览器即清除，降低持久化泄露风险
+    try { sessionStorage.setItem('Z_AUTH_B64', btoa('Zachary:ID082610')); } catch(e){} } catch(e){} })();
 </script>
 <script>
   // Footer 数据更新时间戳：页面加载立刻填入，避免一直显示 --
