@@ -131,6 +131,12 @@
         <span class="ai-gov-dot" id="aiGovDot" style="background:#22c55e"></span>
         <span class="ai-gov-count" id="aiGovCount">0</span>
       </button>
+      <!-- AI 资源包状态：glm-4.5-air用量/暂停连接/按次执行 -->
+      <button class="action icon-only tip ai-pack-btn" id="aiPackBtn" data-tip="AI 资源包：用量/暂停/按次需求执行" onclick="toggleAiPackPanel()">
+        <span class="svgicon">⚡</span>
+        <span class="ai-pack-dot" id="aiPackDot" style="background:#22c55e"></span>
+        <span class="ai-pack-count" id="aiPackCount">0%</span>
+      </button>
       <a class="action secondary tip" id="zbmpWorkbenchBtn" data-tip="ZBMP 工作台：品牌概览/实时监测/事件中心/报告中心 + 只读终端 + 文件树" href="/static/zbmp-workbench.html" style="text-decoration:none"><span class="svgicon">▦</span><span class="btn-label">ZBMP 工作台</span></a>
       <button class="action icon-only tip" id="alertBellBtn" data-tip="舆情预警：高风险/高影响力/上升过快时弹窗通知" onclick="navigateTo('alerts')"><span class="svgicon">🔔</span><span class="nav-badge" id="alertBadge" style="display:none">0</span></button>
       <button class="action primary tip" id="refreshBtn" data-tip="立即更新：手动采集最新数据，每日3次机会，冷却15分钟"><span class="svgicon">↻</span><span class="btn-label">采集数据</span></button>
@@ -153,6 +159,20 @@
     </div>
     <div class="ai-gov-footer">
       <span class="ai-gov-note">余额查询：<a href="https://open.bigmodel.cn/usercenter/finance" target="_blank">智谱控制台</a></span>
+    </div>
+  </div>
+
+  <!-- AI 资源包弹出面板：用量/暂停/按次需求执行 -->
+  <div class="ai-pack-panel hidden" id="aiPackPanel">
+    <div class="ai-pack-header">
+      <span class="ai-pack-title">⚡ AI 资源包 · 智谱额度</span>
+      <button class="ai-pack-close" onclick="toggleAiPackPanel()">✕</button>
+    </div>
+    <div class="ai-pack-body" id="aiPackBody">
+      <div class="ai-pack-loading">加载中…</div>
+    </div>
+    <div class="ai-pack-footer">
+      <span class="ai-pack-note">按次计费需求执行：输入需求→消耗1次→AI执行</span>
     </div>
   </div>
 
@@ -1175,5 +1195,104 @@ document.addEventListener('DOMContentLoaded', function() {
     // 每 5 分钟刷新一次
     setInterval(fetchAiGovStatus, 300000);
   })();
+
+// ============ AI 资源包管理 ============
+function fetchAiPackStatus(){
+  fetch('/api/ai-resource-packs/status',{headers:{'Authorization':'Basic '+btoa('Zachary:ID082610')}})
+  .then(r=>r.json()).then(d=>{
+    if(!d.ok) return;
+    // 更新 icon
+    var glm = d.packs && d.packs.glm_4_5_air ? d.packs.glm_4_5_air : null;
+    if(glm){
+      var pct = glm.daily_used && glm.config.daily_limit ? Math.round(glm.daily_used/glm.config.daily_limit*100) : 0;
+      document.getElementById('aiPackCount').textContent = pct+'%';
+      var dot = document.getElementById('aiPackDot');
+      if(d.paused){ dot.style.background='#EF4444'; }
+      else if(pct>=80){ dot.style.background='#F59E0B'; }
+      else { dot.style.background='#22C55E'; }
+    }
+    // 渲染面板
+    renderAiPackPanel(d);
+  }).catch(e=>console.error('AI pack status error:',e));
+}
+function renderAiPackPanel(d){
+  var body = document.getElementById('aiPackBody');
+  if(!body) return;
+  var html = '';
+  // 暂停/恢复按钮
+  html += '<div class="ai-pack-section">';
+  html += '<div class="ai-pack-row"><span class="ai-pack-label">连接状态</span>';
+  if(d.paused){
+    html += '<span class="ai-pack-value danger"><span class="ai-pack-status-dot" style="background:#EF4444"></span>已暂停</span>';
+    html += '<button class="ai-pack-btn-action" onclick="resumeAiPack()">恢复连接</button>';
+  } else {
+    html += '<span class="ai-pack-value ok"><span class="ai-pack-status-dot" style="background:#22C55E"></span>运行中</span>';
+    html += '<button class="ai-pack-btn-action danger" onclick="pauseAiPack()">暂停连接</button>';
+  }
+  html += '</div></div>';
+  // 各资源包
+  if(d.packs){
+    for(var pid in d.packs){
+      var p = d.packs[pid];
+      var cfg = p.config || {};
+      var total = cfg.total || 0;
+      var used = p.total_used || 0;
+      var remain = total - used;
+      var pct = total ? Math.round(used/total*100) : 0;
+      var dailyPct = cfg.daily_limit && p.daily_used ? Math.round(p.daily_used/cfg.daily_limit*100) : 0;
+      html += '<div class="ai-pack-section">';
+      html += '<div class="ai-pack-pack-header">';
+      html += '<span class="ai-pack-pack-name">'+(cfg.name||pid)+'</span>';
+      html += '<span class="ai-pack-pack-remain">剩余 '+remain.toLocaleString()+' '+(cfg.unit||'')+'</span>';
+      html += '</div>';
+      html += '<div class="ai-pack-progress"><div class="ai-pack-progress-fill" style="width:'+pct+'%"></div></div>';
+      html += '<div class="ai-pack-meta">总量 '+used.toLocaleString()+'/'+total.toLocaleString()+' ('+pct+'%)';
+      if(cfg.daily_limit){ html += ' · 今日 '+p.daily_used.toLocaleString()+'/'+cfg.daily_limit.toLocaleString()+' ('+dailyPct+'%)'; }
+      html += '</div>';
+      if(cfg.description){ html += '<div class="ai-pack-desc">'+cfg.description+'</div>'; }
+      html += '</div>';
+    }
+  }
+  // 按次计费需求执行
+  html += '<div class="ai-pack-section">';
+  html += '<div class="ai-pack-pack-header"><span class="ai-pack-pack-name">按次需求执行</span><span class="ai-pack-pack-remain">消耗1次/次</span></div>';
+  html += '<textarea class="ai-pack-input" id="aiPackRequestInput" placeholder="输入你的需求，AI将执行并返回结果（消耗1次按次计费额度）…" rows="3"></textarea>';
+  html += '<button class="ai-pack-btn-action primary" onclick="executePerCallRequest()">执行需求</button>';
+  html += '<div class="ai-pack-result" id="aiPackResult" style="display:none"></div>';
+  html += '</div>';
+  body.innerHTML = html;
+}
+function pauseAiPack(){
+  fetch('/api/ai-resource-packs/pause',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('Zachary:ID082610')},body:JSON.stringify({reason:'用户手动暂停'})})
+  .then(r=>r.json()).then(d=>{ fetchAiPackStatus(); }).catch(e=>alert('暂停失败:'+e));
+}
+function resumeAiPack(){
+  fetch('/api/ai-resource-packs/resume',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('Zachary:ID082610')}})
+  .then(r=>r.json()).then(d=>{ fetchAiPackStatus(); }).catch(e=>alert('恢复失败:'+e));
+}
+function executePerCallRequest(){
+  var input = document.getElementById('aiPackRequestInput');
+  var req = input.value.trim();
+  if(!req){ alert('请输入需求'); return; }
+  var result = document.getElementById('aiPackResult');
+  result.style.display = 'block';
+  result.innerHTML = '<div class="ai-pack-loading">执行中…</div>';
+  fetch('/api/ai-resource-packs/per-call-execute',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('Zachary:ID082610')},body:JSON.stringify({request:req})})
+  .then(r=>r.json()).then(d=>{
+    if(d.ok){
+      result.innerHTML = '<div class="ai-pack-result-title">执行结果</div><div class="ai-pack-result-content">'+(d.result||'无结果')+'</div><div class="ai-pack-result-meta">Provider: '+(d.provider||'')+' · 剩余: '+(d.quota_remaining||0)+'次</div>';
+    } else {
+      result.innerHTML = '<div class="ai-pack-result-title error">执行失败</div><div class="ai-pack-result-content">'+(d.error||'未知错误')+'</div>';
+    }
+  }).catch(e=>{ result.innerHTML = '<div class="ai-pack-result-title error">请求失败</div><div>'+e+'</div>'; });
+}
+function toggleAiPackPanel(){
+  var p = document.getElementById('aiPackPanel');
+  if(p.classList.contains('hidden')){ p.classList.remove('hidden'); fetchAiPackStatus(); }
+  else { p.classList.add('hidden'); }
+}
+// 页面加载自动获取 + 每5分钟刷新
+document.addEventListener('DOMContentLoaded',function(){ fetchAiPackStatus(); setInterval(fetchAiPackStatus,300000); });
+
 </script>
 </body></html>

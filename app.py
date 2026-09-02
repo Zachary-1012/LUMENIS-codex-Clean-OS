@@ -5498,8 +5498,65 @@ app.register_blueprint(report_center_bp)
 
 # AI Governance — 脱敏回传+额度控制+使用统计+输出标记（云端 zhipu 内置系统）
 import ai_governance
+import ai_resource_packs
 
 # ===== 系统启动入口 =====
+
+
+# ============ AI 资源包管理 API（智谱多资源包额度） ============
+@app.route('/api/ai-resource-packs/status')
+def api_ai_resource_packs_status():
+    """所有资源包状态查询"""
+    try:
+        status = ai_resource_packs.get_all_packs_status()
+        return jsonify({'ok': True, **status})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/ai-resource-packs/glm-4-5-air')
+def api_ai_resource_packs_glm_status():
+    """glm-4.5-air 实时状态（小 icon 用）"""
+    try:
+        status = ai_resource_packs.get_glm_4_5_air_status()
+        return jsonify({'ok': True, **status})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/ai-resource-packs/pause', methods=['POST'])
+def api_ai_resource_packs_pause():
+    """暂停 AI 连接"""
+    try:
+        data = request.get_json(silent=True) or {}
+        reason = data.get('reason', '用户手动暂停')
+        result = ai_resource_packs.pause_connection(reason)
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/ai-resource-packs/resume', methods=['POST'])
+def api_ai_resource_packs_resume():
+    """恢复 AI 连接"""
+    try:
+        result = ai_resource_packs.resume_connection()
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/ai-resource-packs/per-call-execute', methods=['POST'])
+def api_ai_resource_packs_per_call_execute():
+    """按次计费需求执行接口（用户输入需求，消耗1次按次额度）"""
+    try:
+        data = request.get_json(silent=True) or {}
+        user_request = str(data.get('request') or data.get('prompt') or '').strip()
+        if not user_request:
+            return jsonify({'ok': False, 'error': '需求不能为空'}), 400
+        model = data.get('model', 'glm-4-plus')
+        result = ai_resource_packs.execute_per_call_request(user_request, model)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     import logging
     from logging.handlers import RotatingFileHandler
