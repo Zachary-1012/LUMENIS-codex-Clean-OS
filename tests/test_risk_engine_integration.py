@@ -119,3 +119,65 @@ class TestFeedRiskEngineHardSignals:
         stop = collector._feed_risk_engine(risk, error="", guard_state="COOLDOWN", count=0,
                                            kw="太古汇", is_core=True, results=results)
         assert stop is True
+
+
+class TestRiskEngineHalfOpenRecovery:
+    """熔断恢复闭环（学习 pybreaker：OPEN→冷却→HALF_OPEN 试探→成功闭合/失败重熔）。"""
+
+    def test_tripped_blocks_before_cooldown(self):
+        risk = RiskEngine(reset_timeout=300)
+        risk.record_failure("security_page")  # 硬信号一次熔断
+        snap = risk.snapshot()
+        assert snap["band"] == "CIRCUIT_OPEN"
+        assert snap["should_stop_request"] is True
+        assert snap["half_open"] is False
+        assert snap["cooldown_remaining_s"] > 0
+
+    def test_half_open_after_cooldown_elapsed(self):
+        import time as _t
+        risk = RiskEngine(reset_timeout=10)
+        risk.record_failure("security_page")
+        # 模拟冷却时间已过：把熔断时刻回拨
+        risk.opened_at = _t.time() - 11
+        snap = risk.snapshot()
+        assert snap["half_open"] is True
+        assert snap["band"] == "HALF_OPEN"
+        assert snap["should_stop_request"] is False  # 放行一次探测
+
+    def test_half_open_success_fully_closes(self):
+        import time as _t
+        risk = RiskEngine(reset_timeout=10)
+        risk.record_failure("security_page")
+        risk.opened_at = _t.time() - 11
+        assert risk.snapshot()["half_open"] is True
+        score, band, _ = risk.record_success()  # 探测成功
+        assert band == "NORMAL"
+        assert score == 0
+        assert risk.opened_at is None
+        assert risk.half_open is False
+        assert risk.snapshot()["should_stop_request"] is False
+
+    def test_half_open_failure_retrips(self):
+        import time as _t
+        risk = RiskEngine(reset_timeout=10)
+        risk.record_failure("security_page")
+        first_opened = risk.opened_at
+        risk.opened_at = _t.time() - 11
+        assert risk.snapshot()["half_open"] is True
+        # 半开期探测又失败 -> 重新熔断，冷却计时刷新
+        risk.record_failure("http_error")
+        assert risk.half_open is False
+        assert risk._last_band in ("COOLDOWN", "CIRCUIT_OPEN")
+        assert risk.opened_at >= first_opened
+        assert risk.snapshot()["should_stop_request"] is True
+
+    def test_half_open_requires_threshold_successes(self):
+        import time as _t
+        risk = RiskEngine(reset_timeout=10, half_open_success_threshold=2)
+        risk.record_failure("security_page")
+        risk.opened_at = _t.time() - 11
+        assert risk.snapshot()["half_open"] is True
+        _, band1, _ = risk.record_success()
+        assert band1 == "HALF_OPEN"  # 第一次成功仍半开
+        _, band2, _ = risk.record_success()
+        assert band2 == "NORMAL"     # 达阈值才完全闭合

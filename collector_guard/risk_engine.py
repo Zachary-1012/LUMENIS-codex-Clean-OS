@@ -45,6 +45,7 @@ BAND_TO_STATE = {
     'THROTTLED': CollectState.WARNING,   # 降速
     'COOLDOWN': CollectState.COOLDOWN,   # 冷却
     'CIRCUIT_OPEN': CollectState.PAUSED, # 熔断停任务，等待恢复检测
+    'HALF_OPEN': CollectState.HEALTHY,   # 半开试探：冷却结束后放行一次探测请求（对齐 pybreaker）
 }
 
 # 命中即直接熔断/冷却/认证的“硬信号”（不依赖累加分），与三类分清口径一致
@@ -54,12 +55,22 @@ HARD_SIGNAL_BAND = {
     'rate_limited': 'COOLDOWN',
 }
 
+# 熔断/冷却档集合：进入即记录 opened_at，冷却结束后转半开试探
+_TRIPPED_BANDS = ('COOLDOWN', 'CIRCUIT_OPEN')
+
 
 class RiskEngine:
-    """单平台单任务的滚动采集风险评分。线程内使用；多平台请各建一个实例。"""
+    """单平台单任务的滚动采集风险评分。线程内使用；多平台请各建一个实例。
+
+    恢复闭环（学习 pybreaker 三态 CLOSED→OPEN→HALF_OPEN→CLOSED）：
+    连续风险分升高 → 熔断/冷却（记录 opened_at）→ 冷却 reset_timeout 结束 →
+    HALF_OPEN 放行一次探测 → 成功（达阈值）完全恢复 / 失败重新熔断并刷新冷却。
+    避免“熔断后采集停止、单例跨轮复用导致永不恢复”的死锁。
+    """
 
     def __init__(self, weights=None, decay_per_success=12, decay_per_10s=3,
-                 max_score=100, bands=None):
+                 max_score=100, bands=None, reset_timeout=300,
+                 half_open_success_threshold=1):
         self.weights = dict(DEFAULT_FACTOR_WEIGHTS)
         if weights:
             self.weights.update(weights)
@@ -67,11 +78,16 @@ class RiskEngine:
         self.decay_per_10s = decay_per_10s          # 每经过 10 秒自然回落
         self.max_score = max_score
         self.bands = bands or DEFAULT_BANDS
+        self.reset_timeout = reset_timeout                # 熔断冷却秒数，到点转半开试探
+        self.half_open_success_threshold = half_open_success_threshold  # 半开期连续成功几次才完全恢复
         self.score = 0
         self.consecutive_failures = 0
         self.last_update = time.time()
         self.last_factors = []
         self._last_band = 'NORMAL'  # 最近一次操作的档位（硬信号优先，供 snapshot 反映）
+        self.opened_at = None       # 进入熔断/冷却档的时刻（time.time），None 表示未熔断
+        self.half_open = False      # 是否处于半开试探期
+        self.half_open_successes = 0  # 半开期累计连续成功数
 
     def _time_decay(self, now):
         elapsed = max(0.0, now - self.last_update)
@@ -87,10 +103,30 @@ class RiskEngine:
                 return name
         return self.bands[-1][1]
 
+    def _trip(self, band, now):
+        """进入熔断/冷却：记录熔断时刻、退出半开（半开期失败也走这里重熔）。"""
+        if band in _TRIPPED_BANDS:
+            self.opened_at = now
+            self.half_open = False
+            self.half_open_successes = 0
+
+    def _maybe_enter_half_open(self, now):
+        """冷却时间已过则进入半开试探，返回当前是否半开。"""
+        if (not self.half_open and self._last_band in _TRIPPED_BANDS
+                and self.opened_at is not None
+                and (now - self.opened_at) >= self.reset_timeout):
+            self.half_open = True
+            self.half_open_successes = 0
+        return self.half_open
+
     def record_failure(self, factor, times=1):
         """登记一次风险因子，返回 (score, band, state)。factor 见 DEFAULT_FACTOR_WEIGHTS 的 key。"""
         now = time.time()
         self._time_decay(now)
+        # 半开试探期再次失败：立即重新熔断并刷新冷却计时
+        if self.half_open:
+            self.half_open = False
+            self.half_open_successes = 0
         self.consecutive_failures += 1
         w = self.weights.get(factor, 10)
         # 连续失败按补丁口径：第一次用因子分，后续连续失败叠加 continuous_failure
@@ -102,28 +138,62 @@ class RiskEngine:
         self.last_factors.append((now, factor))
         band = HARD_SIGNAL_BAND.get(factor) or self.band_of()
         self._last_band = band
+        self._trip(band, now)
         return self.score, band, BAND_TO_STATE[band]
 
     def record_success(self):
-        """登记一次健康成功响应：清零连续失败、风险分衰减，返回 (score, band, state)。"""
+        """登记一次健康成功响应：清零连续失败、风险分衰减，返回 (score, band, state)。
+
+        半开试探期：累计连续成功，达阈值完全恢复；未达阈值保持半开谨慎放行。
+        """
         now = time.time()
         self._time_decay(now)
         self.consecutive_failures = 0
+        if self.half_open:
+            self.half_open_successes += 1
+            if self.half_open_successes >= self.half_open_success_threshold:
+                # 试探通过：完全闭合
+                self.score = 0
+                self._last_band = 'NORMAL'
+                self.opened_at = None
+                self.half_open = False
+                self.half_open_successes = 0
+                self.last_update = now
+                return self.score, 'NORMAL', BAND_TO_STATE['NORMAL']
+            self.last_update = now
+            return self.score, 'HALF_OPEN', BAND_TO_STATE['HALF_OPEN']
         self.score = max(0, self.score - self.decay_per_success)
         self.last_update = now
         band = self.band_of()
         self._last_band = band
+        if band == 'NORMAL':
+            # 风险分已回落正常：清除熔断痕迹
+            self.opened_at = None
         return self.score, band, BAND_TO_STATE[band]
 
     def snapshot(self):
-        self._time_decay(time.time())
-        # 以最近一次操作的档位为准：硬信号（安全页/登录失效/限流）即使分数不高也必须持续反映，
-        # 直到一次 record_success 重算（成功/健康响应代表风险解除）。
-        band = self._last_band
+        now = time.time()
+        self._time_decay(now)
+        # 冷却结束 -> 半开试探（放行一次探测请求）
+        is_half_open = self._maybe_enter_half_open(now)
+        if is_half_open:
+            cooldown_remaining = 0
+            band = 'HALF_OPEN'
+            should_stop = False  # 半开期放行探测
+        else:
+            # 以最近一次操作的档位为准：硬信号（安全页/登录失效/限流）即使分数不高也必须持续反映，
+            # 直到冷却结束进入半开、或一次 record_success 重算。
+            band = self._last_band
+            should_stop = band in _TRIPPED_BANDS
+            cooldown_remaining = (max(0.0, self.reset_timeout - (now - self.opened_at))
+                                  if (band in _TRIPPED_BANDS and self.opened_at is not None)
+                                  else 0.0)
         return {
             'risk_score': self.score,
             'band': band,
             'state': BAND_TO_STATE[band],
             'consecutive_failures': self.consecutive_failures,
-            'should_stop_request': band in ('COOLDOWN', 'CIRCUIT_OPEN'),
+            'should_stop_request': should_stop,
+            'half_open': is_half_open,
+            'cooldown_remaining_s': round(cooldown_remaining, 1),
         }
