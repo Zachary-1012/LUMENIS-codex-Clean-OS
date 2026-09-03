@@ -53,7 +53,7 @@ echo.
 echo   主系统 : http://127.0.0.1:8200
 echo   V4设置 : http://127.0.0.1:8200/v4/settings/
 echo   健康检 : http://127.0.0.1:8200/v4/health
-echo   主账号 : Zachary / ID082610
+echo   主账号 : Zachary / Zachary01
 echo   按 Ctrl+C 停止
 echo.
 %PY% app.py

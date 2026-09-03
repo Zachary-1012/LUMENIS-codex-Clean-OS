@@ -18,7 +18,7 @@ def call(path, method='GET', token=None, body=None):
     except Exception as e:
         return None, {'err': str(e)}
 
-st, login = call('/v4/auth/login', 'POST', body={'username':'Zachary','password':'ID082610'})
+st, login = call('/v4/auth/login', 'POST', body={'username':'Zachary','password':'Zachary01'})
 token = login.get('token') or (login.get('data') or {}).get('token')
 print('登录=', bool(token), 'status', st)
 if not token:

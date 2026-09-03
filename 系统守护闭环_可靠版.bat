@@ -24,7 +24,7 @@ set LAST_RESTART=0
     netstat -ano | findstr ":8200" | findstr "LISTENING" >nul
     if %errorlevel%==0 (
         :: 端口在监听，检测API是否响应
-        powershell -Command "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8200/api/architecture/status' -Headers @{Authorization='Basic '+[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('Zachary:ID082610'))} -UseBasicParsing -TimeoutSec 3; exit 0 } catch { exit 1 }" >nul 2>&1
+        powershell -Command "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8200/api/architecture/status' -Headers @{Authorization='Basic '+[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('Zachary:Zachary01'))} -UseBasicParsing -TimeoutSec 3; exit 0 } catch { exit 1 }" >nul 2>&1
         if !errorlevel!==0 (
             :: 系统正常运行
             echo [%date% %time%] ✅ 系统正常运行

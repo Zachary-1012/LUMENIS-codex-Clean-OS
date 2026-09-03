@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 @pytest.fixture
 def auth_headers():
     """认证请求头"""
-    auth = base64.b64encode(b"Zachary:ID082610").decode()
+    auth = base64.b64encode(b"Zachary:Zachary01").decode()
     return {'Authorization': f'Basic {auth}'}
 
 class TestDashboardAPI:

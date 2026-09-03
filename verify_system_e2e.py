@@ -11,7 +11,7 @@ import base64
 from datetime import datetime
 
 BASE_URL = "http://127.0.0.1:8200"
-AUTH = base64.b64encode(b'Zachary:ID082610').decode()
+AUTH = base64.b64encode(b'Zachary:Zachary01').decode()
 HEADERS = {'Authorization': f'Basic {AUTH}'}
 
 results = {"passed": [], "failed": [], "warnings": []}

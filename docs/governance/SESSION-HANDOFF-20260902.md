@@ -6,7 +6,7 @@
 ## 1. 此刻运行态（实测）
 | 对象 | 状态 | 说明 |
 |---|---|---|
-| 8201 | UP，**生产 v5.9.9**（run_supervised 看门狗，约10s 自动拉起） | 主生产，Basic Auth Zachary/ID082610 |
+| 8201 | UP，**生产 v5.9.9**（run_supervised 看门狗，约10s 自动拉起） | 主生产，Basic Auth Zachary/Zachary01 |
 | 8200 | UP | 旧直跑实例（双实例技术债，见 LAUNCHERS.md） |
 | 9222 | UP | Edge CDP 真人采集通道（小红书本轮已重新扫码登录，登录态有效） |
 | 11434 | UP | Ollama 服务（已改走 127.0.0.1:10808 代理，qwen2.5:7b 下载中 3.3MB/s） |

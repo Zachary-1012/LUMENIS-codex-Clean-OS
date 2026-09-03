@@ -43,7 +43,7 @@ for t in tracked:
     if not t.endswith('.py') or not os.path.exists(t):
         continue
     txt = io.open(t, 'r', encoding='utf-8', errors='ignore').read()
-    if re.search(r"(AUTH_PASSWORD|PASSWORD)\s*=\s*['\"]ID082610['\"]", txt):
+    if re.search(r"(AUTH_PASSWORD|PASSWORD)\s*=\s*['\"]Zachary01['\"]", txt):
         pwd_hits.append(t)
 print('硬编码超管密码命中 =', pwd_hits or 'NONE')
 if pwd_hits: fail.append('hardcoded_pwd:' + ','.join(pwd_hits))

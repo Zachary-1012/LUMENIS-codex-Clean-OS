@@ -84,7 +84,7 @@ def init_auth_db():
     try:
         conn.executescript(V4_TABLES_SQL)
         conn.commit()
-        # 确保主账号存在（默认 Zachary/ID082610，首次启动时创建）
+        # 确保主账号存在（默认 Zachary/Zachary01，首次启动时创建）
         _ensure_owner_account(conn)
         _ensure_default_security_questions(conn)
     finally:
@@ -96,7 +96,7 @@ def _ensure_owner_account(conn):
     from .security import hash_password
     cur = conn.execute("SELECT COUNT(*) as cnt FROM v4_users WHERE role='owner'")
     if cur.fetchone()["cnt"] == 0:
-        pwd_hash = hash_password("ID082610")
+        pwd_hash = hash_password("Zachary01")
         conn.execute(
             "INSERT INTO v4_users (username, password_hash, role, display_name, status) VALUES (?,?,?,?,?)",
             ("Zachary", pwd_hash, "owner", "超级主账号", "active")

@@ -45,7 +45,7 @@ function Test-SystemRunning {
 
 function Test-ApiResponding {
     try {
-        $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("Zachary:ID082610"))
+        $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("Zachary:Zachary01"))
         $headers = @{Authorization = "Basic $auth"}
         $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/api/architecture/status" -Headers $headers -UseBasicParsing -TimeoutSec 5
         return $response.StatusCode -eq 200

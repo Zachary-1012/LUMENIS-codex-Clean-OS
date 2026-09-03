@@ -14,7 +14,7 @@ TEST_CONFIG = {
     'test_port': 8201,
     'test_host': '127.0.0.1',
     'auth_user': 'Zachary',
-    'auth_pass': 'ID082610',
+    'auth_pass': 'Zachary01',
 }
 
 # 测试鉴权隔离（P1-9 权限审计修复）：

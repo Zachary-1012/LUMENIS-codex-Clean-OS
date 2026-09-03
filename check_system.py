@@ -16,7 +16,7 @@ for t in tables:
 conn.close()
 
 print("\n=== 关键API测试 ===")
-auth = base64.b64encode(b'Zachary:ID082610').decode()
+auth = base64.b64encode(b'Zachary:Zachary01').decode()
 headers = {'Authorization': f'Basic {auth}'}
 
 apis = [

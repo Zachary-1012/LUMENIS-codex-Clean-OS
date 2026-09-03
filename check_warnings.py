@@ -2,7 +2,7 @@ import urllib.request
 import json
 import base64
 
-auth = base64.b64encode(b'Zachary:ID082610').decode()
+auth = base64.b64encode(b'Zachary:Zachary01').decode()
 headers = {'Authorization': f'Basic {auth}'}
 
 print("=== 检查warning模块具体状态 ===")

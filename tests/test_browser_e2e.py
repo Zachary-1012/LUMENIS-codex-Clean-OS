@@ -21,7 +21,7 @@ try:
     auto.start_browser(account="default")
     time.sleep(6)
     from playwright.sync_api import sync_playwright
-    auth = "Basic " + base64.b64encode(b"Zachary:ID082610").decode()
+    auth = "Basic " + base64.b64encode(b"Zachary:Zachary01").decode()
     with sync_playwright() as p:
         browser = p.chromium.connect_over_cdp("http://127.0.0.1:9222")
         ctx = browser.contexts[0] if browser.contexts else browser.new_context()
