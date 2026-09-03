@@ -2304,6 +2304,148 @@ def api_kos_ownership_overrides():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+
+# ===== KOS 运营模块端点（kos_ops.py：留资/合作/邮件邀约/运营闭环） =====
+@kos_bp.route("/lead", methods=["GET", "POST"])
+def api_kos_lead():
+    """留资管理：POST 保存/更新留资；GET 查询单条。"""
+    import kos_ops as ko
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        aid = str(data.get("author_id", "")).strip()
+        if not aid:
+            return jsonify({"ok": False, "error": "author_id 必填"}), 400
+        return jsonify(ko.save_lead(
+            aid,
+            contact_name=str(data.get("contact_name", "")),
+            phone=str(data.get("phone", "")),
+            wechat=str(data.get("wechat", "")),
+            email=str(data.get("email", "")),
+            mcn=str(data.get("mcn", "")),
+            company=str(data.get("company", "")),
+            actor=str(data.get("actor", "AI")),
+        ))
+    aid = str(request.args.get("author_id", "")).strip()
+    if not aid:
+        return jsonify({"ok": False, "error": "author_id 必填"}), 400
+    return jsonify(ko.get_lead(aid))
+
+
+@kos_bp.route("/cooperation", methods=["GET", "POST"])
+def api_kos_cooperation():
+    """合作状态：POST 更新草稿；GET 查询。"""
+    import kos_ops as ko
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        aid = str(data.get("author_id", "")).strip()
+        if not aid:
+            return jsonify({"ok": False, "error": "author_id 必填"}), 400
+        return jsonify(ko.update_cooperation(
+            aid,
+            cooperation_status=str(data.get("cooperation_status", "NONE")),
+            quote=float(data.get("quote", 0) or 0),
+            budget=float(data.get("budget", 0) or 0),
+            note=str(data.get("note", "")),
+            actor=str(data.get("actor", "AI")),
+        ))
+    aid = str(request.args.get("author_id", "")).strip()
+    if not aid:
+        return jsonify({"ok": False, "error": "author_id 必填"}), 400
+    r = ko.get_lead(aid)
+    return jsonify({**r, "cooperation_status": _kos_profile_field(aid, "cooperation_status"),
+                    "quote": _kos_profile_field(aid, "quote"), "budget": _kos_profile_field(aid, "budget")})
+
+
+@kos_bp.route("/cooperation/confirm", methods=["POST"])
+def api_kos_cooperation_confirm():
+    """商务合作确认（HCG cooperation_confirm 门控）：登记 execution，待人工审批。"""
+    import kos_ops as ko
+    data = request.get_json(silent=True) or {}
+    aid = str(data.get("author_id", "")).strip()
+    if not aid:
+        return jsonify({"ok": False, "error": "author_id 必填"}), 400
+    return jsonify(ko.confirm_cooperation(
+        aid, confirmed_by=str(data.get("confirmed_by", "zachary")),
+        quote=float(data.get("quote", 0) or 0), budget=float(data.get("budget", 0) or 0)))
+
+
+@kos_bp.route("/cooperation/execute", methods=["POST"])
+def api_kos_cooperation_execute():
+    """人工审批后执行合作确认（HCG EXECUTING -> SUCCESS）。"""
+    import kos_ops as ko
+    data = request.get_json(silent=True) or {}
+    eid = str(data.get("execution_id", "")).strip()
+    actor = str(data.get("actor", "")).strip()
+    if not eid or not actor:
+        return jsonify({"ok": False, "error": "execution_id 与 actor 必填"}), 400
+    return jsonify(ko.execute_cooperation(eid, actor))
+
+
+@kos_bp.route("/email/invitation", methods=["POST"])
+def api_kos_email_invitation():
+    """创建邮件邀约（HCG email_send 门控：AI_GENERATED，不发送）。"""
+    import kos_ops as ko
+    data = request.get_json(silent=True) or {}
+    aid = str(data.get("author_id", "")).strip()
+    if not aid:
+        return jsonify({"ok": False, "error": "author_id 必填"}), 400
+    return jsonify(ko.create_invitation_email(
+        aid, subject=str(data.get("subject", "")), body=str(data.get("body", "")),
+        actor=str(data.get("actor", "AI"))))
+
+
+@kos_bp.route("/email/send", methods=["POST"])
+def api_kos_email_send():
+    """人工审批后发送邮件（HCG EXECUTING -> SUCCESS/FAILED）。"""
+    import kos_ops as ko
+    data = request.get_json(silent=True) or {}
+    eid = str(data.get("execution_id", "")).strip()
+    actor = str(data.get("actor", "")).strip()
+    if not eid or not actor:
+        return jsonify({"ok": False, "error": "execution_id 与 actor 必填"}), 400
+    return jsonify(ko.send_invitation_email(eid, actor))
+
+
+@kos_bp.route("/operations", methods=["GET"])
+def api_kos_operations():
+    """运营动作台账（按 author_id 或全局）。"""
+    import kos_ops as ko
+    aid = str(request.args.get("author_id", "")).strip()
+    limit = int(request.args.get("limit", 50))
+    return jsonify({"ok": True, "operations": ko.operation_log(aid, limit=limit)})
+
+
+@kos_bp.route("/operation", methods=["POST"])
+def api_kos_record_operation():
+    """记录运营动作并推进生命周期。"""
+    import kos_ops as ko
+    data = request.get_json(silent=True) or {}
+    aid = str(data.get("author_id", "")).strip()
+    action = str(data.get("action", "")).strip()
+    if not aid or not action:
+        return jsonify({"ok": False, "error": "author_id 与 action 必填"}), 400
+    return jsonify(ko.record_operation(aid, action, note=str(data.get("note", "")),
+                                       actor=str(data.get("actor", "AI"))))
+
+
+def _kos_profile_field(author_id: str, field: str):
+    """辅助：读取 kos_profiles 单字段。"""
+    import sqlite3
+    conn = sqlite3.connect(_DB())
+    try:
+        r = conn.execute(f"SELECT {field} FROM kos_profiles WHERE author_id = ?", (author_id,)).fetchone()
+        return r[0] if r else None
+    finally:
+        conn.close()
+
+
+def _DB():
+    import os
+    from pathlib import Path
+    return os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+
+
+
 def register_kos_api(app):
 
 
