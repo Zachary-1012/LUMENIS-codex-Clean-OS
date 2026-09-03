@@ -39,3 +39,17 @@
 `grep/reference scan → import scan → runtime scan → test → diff review → delete → test → commit`
 
 如果任何一步无法证明安全，标记 `HUMAN_REVIEW`，不要删除。
+
+---
+
+## 六、遗留多页面版 templates/（LEGACY · 不删除）
+
+> 运行时主入口为 SPA `static/index.html`（序境）。`templates/` 为历史多页面版（base/events/notes/report），被 git 追踪但不被 app.py 渲染（无 render_template 引用）。**LEGACY 保留**，不改不删（git 历史锚点），命名不迁移。
+
+| Path | 判定 | 依据 |
+|---|---|---|
+| templates/base.html | LEGACY | 历史版基模板，SPA 替代 |
+| templates/index.html | LEGACY | 历史版首页 |
+| templates/events.html | LEGACY | 历史版事件页 |
+| templates/notes.html | LEGACY | 历史版笔记页 |
+| templates/report.html | LEGACY | 历史版报告页 |

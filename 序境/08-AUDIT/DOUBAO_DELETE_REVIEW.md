@@ -1,6 +1,7 @@
 # 序境｜DOUBAO_DELETE_REVIEW.md（豆包待人工删除清单）
 
-> 状态：PENDING_HUMAN_REVIEW · NO-BLIND-DELETE
+> 状态：ARCHIVED-20260904 · NO-BLIND-DELETE
+> 2026-09-04 执行：`_reanalyze.py`（git mv）与 `_pitch_dump.py`（本地移入）已归档至 `99-ARCHIVE/`，均未删除、git 历史保留。
 > 依据：《序境｜双子库全量收敛与产品研发总执行指令》第二十七/二十八/四十五节
 > 日期：2026-09-04
 > 规则：无法证明安全的文件一律不删除，进入本清单等待人工确认。删除前必须通过引用扫描 → 运行时依赖 → 测试 → Git 历史 → 确认无依赖。
@@ -11,8 +12,8 @@
 
 | Path | Type | Reason | Reference Check | Runtime Dependency | Recommendation |
 |---|---|---|---|---|---|
-| `_reanalyze.py`（2.0KB, 2026-08-29） | Python 诊断脚本 | 一次性 ai_analyzer 数据诊断 | 无任何 .py 引用（grep 仅自引用） | 无（独立脚本） | ARCHIVE（git 已追踪）→ 人工确认后移入 99-ARCHIVE |
-| `_pitch_dump.py`（3.3KB, 2026-09-03） | Python 诊断脚本 | 一次性 pitch dump 输出脚本 | 无任何 .py 引用 | 无（独立脚本） | ARCHIVE（未追踪）→ 人工确认后删除 |
+| `_reanalyze.py`（2.0KB, 2026-08-29） | Python 诊断脚本 | 一次性 ai_analyzer 数据诊断 | 无任何 .py 引用（grep 仅自引用） | 无（独立脚本） | ✅ ARCHIVED → 已 git mv 至 99-ARCHIVE/（2026-09-04） |
+| `_pitch_dump.py`（3.3KB, 2026-09-03） | Python 诊断脚本 | 一次性 pitch dump 输出脚本 | 无任何 .py 引用 | 无（独立脚本） | ✅ ARCHIVED → 已移入 99-ARCHIVE/（2026-09-04） |
 
 ## 二、根目录 .env 备份（含真实密钥，绝不可入库/外发）
 
