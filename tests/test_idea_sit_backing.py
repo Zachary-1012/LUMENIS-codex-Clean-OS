@@ -128,3 +128,56 @@ def test_sit_idea_carries_constraint_translation():
     sit_hits = [i for i in r["ideas"] if i["mechanism"] == "六模板转译"]
     assert sit_hits, "应产出六模板转译 idea"
     assert any(i["provenance"].get("sit_translation") for i in sit_hits)
+
+
+# ============================================================
+# 5) 圈层↔案例双向背书 + 美奢人群画像 + 报告消费新圈层
+# ============================================================
+
+def test_circle_backing_hits_new_circles():
+    """4 个新圈层均命中真实案例背书（圈层↔案例双向）。"""
+    for c in ("高奢珠宝腕表", "新中式国潮", "精致养宠", "艺术收藏潮玩"):
+        r = ig._circle_backing(c)
+        assert r and r.get("title") and r.get("source"), f"{c} 圈层背书缺失"
+
+
+def test_circle_backing_unknown_circle_degrades():
+    """未知圈层/无数据时圈层背书返回 None，不阻断生成。"""
+    assert ig._circle_backing("不存在的圈层") is None
+    assert ig._circle_backing(None) is None
+
+
+def test_luxe_profiles_seven():
+    """美奢人群画像 7 类齐全（B站×凯度 2026 报告）。"""
+    assert len(ig.LUXE_PROFILES) == 7
+    for name in ("菁英自驱家", "优雅人生践行者", "先锋冒险玩家", "人间社牛种草机",
+                 "文化叙事研究者", "小众圈寻乐家", "理想生活预演家"):
+        assert name in ig.LUXE_PROFILES
+        p = ig.LUXE_PROFILES[name]
+        assert p["trigger"] and p["content_pref"] and p["circle"]
+
+
+def test_luxe_profile_pick():
+    """人群→触发点/映射圈层正确。"""
+    p = ig._profile_pick("先锋冒险玩家")
+    assert p and p["trigger"] and p["circle"] == "高奢珠宝腕表"
+    assert ig._profile_pick("不存在人群") is None
+    assert ig._profile_pick(None) is None
+
+
+def test_provenance_circle_and_luxe():
+    """高奢圈层 + profile 时 provenance 携带 circle_reference + luxe_profile。"""
+    r = ig.generate_ideas("某珠宝品牌", "零售", {"topics": ["上新"], "sentiment": "positive",
+                           "circle": "高奢珠宝腕表", "profile": "菁英自驱家"},
+                          n=3, tonality="luxury", budget="high", seed=7)
+    p = r["ideas"][0]["provenance"]
+    assert p.get("circle_reference") and p["circle_reference"].get("title")
+    assert p.get("luxe_profile") and p["luxe_profile"].get("trigger")
+
+
+def test_report_payload_consumes_circles():
+    """报告引擎 payload 消费圈层资产（case_circles + 16 圈层符号表）。"""
+    from report_export.report_engine import payload
+    p = payload("daily")
+    assert isinstance(p.get("case_circles"), dict)
+    assert len(p.get("circle_symbols", {})) == 16

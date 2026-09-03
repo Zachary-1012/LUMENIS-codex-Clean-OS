@@ -613,6 +613,74 @@ def _case_backing(mech):
     return None
 
 
+# 美奢人群画像（B站×凯度《2026 美奢人群消费洞察报告》，7 类特色人群，公开可查证）
+LUXE_PROFILES = {
+    "菁英自驱家": {"size": "1200万", "desc": "懂货有品位，买奢品不纠结", "trigger": "专业测评/硬核参数/渠道溯源",
+                   "content_pref": "深度测评、参数对比、工艺拆解", "circle": "高奢珠宝腕表"},
+    "优雅人生践行者": {"size": "1100万", "desc": "优雅生活极致体验，品牌存量 VIC", "trigger": "私享体验/身份认同/专属服务",
+                   "content_pref": "生活方式、质感叙事、体验分享", "circle": "高奢珠宝腕表"},
+    "先锋冒险玩家": {"size": "1300万", "desc": "求知探索尝新冒险，奢品理想破冰人群", "trigger": "新品首发/跨界尝鲜/限量破冰",
+                   "content_pref": "新品开箱、限量资讯、先锋文化", "circle": "高奢珠宝腕表"},
+    "人间社牛种草机": {"size": "1380万", "desc": "哪里有活动哪里就有 TA，场景化种草完美受众", "trigger": "线下活动/体验场域/打卡热点",
+                   "content_pref": "活动预告、场景种草、社交分享", "circle": "高奢小众"},
+    "文化叙事研究者": {"size": "1100万", "desc": "认可深度长内容，品牌深度叙事", "trigger": "品牌溯源/工艺叙事/文化母题",
+                   "content_pref": "中长视频、文化深度、品牌史", "circle": "新中式国潮"},
+    "小众圈寻乐家": {"size": "—", "desc": "追求小众文化兴趣圈层，圈层归属强", "trigger": "圈层同好/亚文化/垂类共创",
+                   "content_pref": "圈层内容、小众文化、同好社群", "circle": "艺术收藏潮玩"},
+    "理想生活预演家": {"size": "—", "desc": "把理想生活先预演一遍，场景先行", "trigger": "场景预演/生活提案/体验先行",
+                   "content_pref": "生活方式提案、场景想象、体验预告", "circle": "都市高净值"},
+}
+
+_CIRCLE_BACKING = None
+
+
+def _load_circle_backing():
+    """懒加载 case_study 按圈层索引：{圈层名: [真实案例...]}，DB 缺失降级空 dict（不阻断）。"""
+    global _CIRCLE_BACKING
+    if _CIRCLE_BACKING is not None:
+        return _CIRCLE_BACKING
+    idx = {}
+    try:
+        import os, sqlite3
+        _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "monitor.db")
+        _c = sqlite3.connect(_db, timeout=5)
+        _rows = _c.execute(
+            "SELECT title,brand,url,tags FROM swire_events WHERE project_key='case_study'").fetchall()
+        _c.close()
+        for _title, _brand, _url, _tags in _rows:
+            for _tag in (str(_tags or "").split(",")):
+                _tag = _tag.strip()
+                if _tag in CIRCLE_SYMBOLS:
+                    idx.setdefault(_tag, []).append({
+                        "title": _title, "brand": _brand or "", "source": _url or ""})
+    except Exception:
+        idx = {}
+    _CIRCLE_BACKING = idx
+    return idx
+
+
+def _circle_backing(circle):
+    """按圈层取首条真实案例背书（与机制背书互补：圈层↔案例双向）。"""
+    if not circle:
+        return None
+    rows = _load_circle_backing().get(circle) or []
+    if not rows:
+        return None
+    r = rows[0]
+    return {"title": r["title"], "brand": r["brand"], "source": r["source"]}
+
+
+def _profile_pick(profile):
+    """按美奢人群取画像要点（trigger/内容偏好/映射圈层）。"""
+    if not profile:
+        return None
+    p = LUXE_PROFILES.get(profile)
+    if not p:
+        return None
+    return {"profile": profile, "size": p["size"], "desc": p["desc"],
+            "trigger": p["trigger"], "content_pref": p["content_pref"], "circle": p["circle"]}
+
+
 def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
     """上下文指纹（不变，新增 angle 维度）：芥子→须弥→再生产，证据分级如实标注。"""
     n_notes = int(signals.get("volume_notes", 0) or 0)
@@ -633,6 +701,8 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
         "counter_example_check": "pending（负样本库为 P2 能力，晋升 L1 前须补 3 个反例，当前未校验）",
         "case_reference": _case_backing(mech),
         "sit_translation": (_sit_translation(signals) if mech == "sit" else None),
+        "circle_reference": _circle_backing(circle),
+        "luxe_profile": (_profile_pick(signals.get("profile")) if circle in ("高奢珠宝腕表", "高奢小众", "都市高净值") else None),
         "trace": "芥子(真实信号) → 须弥(机制/角度抽象) → idea(多维再生产) → FEEDBACK 回流",
     }
 

@@ -113,6 +113,21 @@ def payload(kind="daily",start=None,end=None):
     high_risk_notes = [x for x in n if str(x.get("risk_level","")).lower()=="high"]
     # 负面笔记（已二次确认）
     confirmed_negative = [x for x in n if str(x.get("sentiment","")).lower()=="negative" and x.get("negative_confirmed")==1]
+    # 圈层研究资产：case_study 按圈层分布 + 创意引擎 16 圈层符号表（报告消费新圈层）
+    case_circles = {}
+    circle_symbols = {}
+    try:
+        from scripts.idea_generator import CIRCLE_SYMBOLS
+        circle_symbols = {k: v.get("symbols", []) for k, v in CIRCLE_SYMBOLS.items()}
+        _cc = _conn(); _cu = _cc.cursor()
+        _cu.execute("SELECT tags FROM swire_events WHERE project_key='case_study'")
+        for (_t,) in _cu.fetchall():
+            for _tag in (str(_t or "").split(",")):
+                _tag = _tag.strip()
+                if _tag and _tag in circle_symbols:
+                    case_circles[_tag] = case_circles.get(_tag, 0) + 1
+    except Exception:
+        case_circles, circle_symbols = {}, {}
     return {
         "report_type":kind,"period_start":start,"period_end":end,
         "notes":n,"events":e,
@@ -126,6 +141,8 @@ def payload(kind="daily",start=None,end=None):
         "low_risk_count":cnt("risk_level","low"),
         "event_analysis":event_analysis,
         "high_risk_notes":high_risk_notes[:10],
+        "case_circles": case_circles,
+        "circle_symbols": circle_symbols,
         "only_confirmed_negative":only_confirmed
     }
 
@@ -169,6 +186,7 @@ def export_xlsx(p,out):
         ["生成时间",datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
         ["",""],
         ["核心指标","数值"],
+        ["圈层资产",f'{len(p.get("case_circles", {}))} 圈层 / {sum(p.get("case_circles", {}).values())} 案例' ],
         ["监测笔记总数",p["total_notes"]],
         ["正面笔记",p["positive_count"]],
         ["中性笔记",p["neutral_count"]],
