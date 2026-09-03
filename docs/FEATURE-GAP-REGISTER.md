@@ -34,7 +34,7 @@
 | GAP-18 ✅RESOLVED(2026-09-03) | 测试体系 | ~~31 个脚本式文件命名 test_ 但无 def test_~~ **conftest pytest_ignore_collect 已实现：无 def test_ 的 test_*.py 不收集（不 INTERNALERROR），仍可 python tests/xxx.py 手动跑；命名误导已消除** | P3 | 假覆盖错觉 | 同 GAP-01 | 已随 GAP-01 解决 | 否 | 否 | 否 | 是 | 是 |
 | GAP-19 🔶部分RESOLVED(2026-09-03) | Runtime/依赖 | ~~Selenium 0 引用依赖待退~~ **已从 requirements.txt 移除 selenium（全仓 0 import，Playwright 已全面替代 app.py/collector_automation/browser_runtime）；Browser/Scheduler 重复调用部分仍待审计** | P3 | 死依赖 footprint | 历史用 Selenium 后迁移 Playwright 未清依赖 | Selenium 部分已清 | 否 | 否 | 是 | 是 | 是 |
 | GAP-20 ✅RESOLVED(2026-09-03) | 工程清理 | ~~.trae-cn IDE 目录忽略确认；根目录 start_*.bat/.bak/日志收敛~~ **.trae-cn 已 gitignore；*.log/*.bak/app.py.bak_* 已 gitignore（运行时产物自动排除）；2 个被跟踪的废弃历史备份（style.css.bak_011101/app.js.bak_20260827）已 git rm（文档已标注"应删除"、无引用）；16 个 start_*.bat/ps1 为在用启动脚本保留** | P3 | 仓库噪声 | 长期堆积 | 已完成可清理部分 | 否 | 否 | 是 | 是 | 是 |
-| GAP-21 | ZBMP-IMP-001 | importer 3 个 py 存在，但无前端入口/API/专表 | P2 | 有代码易被误判完成 | 后端先行 | UI 占位；补 API/专表后再升 DEVELOPING | 否 | 是(占位) | 是 | 是 | 是 |
+| GAP-21 🔶升DEVELOPING(2026-09-03) | ZBMP-IMP-001 | ~~importer 3 个 py 存在，但无前端入口/API/专表~~ **补受保护 API：POST /api/cookies/import（触发从 data/ 源文件重导入微博/B站/小红书，不接收/不返回 Cookie 明文）+ GET /api/cookies/import/status（仅元信息）；Basic Auth 保护、写 data/(gitignore)、Evidence 记录；4 单测通过（401/200结构/无泄漏/405）** | P2 | 有代码易被误判完成 | 后端先行 | API 已补，UI 占位待前端接入 | 否 | 是(占位) | 是 | 是 | 是 |
 | GAP-22 | ZBMP-BRAND-003 | swire_notes 空表，专题在建 | P2 | 功能无数据 | 尚未灌数 | 保留 UI 占位与空态 | 否 | 是(空态) | 否 | 是 | 是 |
 
 ## 汇总

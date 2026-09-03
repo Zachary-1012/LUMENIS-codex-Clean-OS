@@ -5677,6 +5677,123 @@ def api_xhs_rednote_check_login():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+# ============ GAP-21 Cookie 导入 API（受 Basic Auth 保护，不接收/不返回 Cookie 明文）============
+@app.route('/api/cookies/import', methods=['POST'])
+def api_cookies_import():
+    """触发从本地 data/ 源文件重新导入平台 Cookie（微博/B站/小红书）。
+
+    安全约束：
+      - 受全局 _basic_auth 保护（无凭证 401）
+      - 不接收任何 Cookie 明文（请求体忽略）
+      - 不返回 Cookie 值，只返回平台/数量/是否成功等元信息
+      - 只写 data/（已被 .gitignore 整体忽略，凭证不入库）
+      - 记录 Evidence（evidence_store）
+    """
+    import json as _json
+    from pathlib import Path as _Path
+    _base = _Path(__file__).resolve().parent
+    _data = _base / 'data'
+    _data.mkdir(exist_ok=True)
+    results = {}
+
+    # --- 微博（.env: ZBC_WEIBO_COOKIE_JSON）---
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_base / '.env')
+    except Exception:
+        pass
+    import os as _os
+    wb_raw = _os.environ.get('ZBC_WEIBO_COOKIE_JSON', '').strip()
+    wb_n = 0
+    if wb_raw:
+        try:
+            wb = _json.loads(wb_raw)
+            if isinstance(wb, list):
+                (_data / 'weibo_cookies.json').write_text(_json.dumps(wb, ensure_ascii=False, indent=2), encoding='utf-8')
+                (_data / 'weibo_login_status.json').write_text(_json.dumps({
+                    'logged_in': True,
+                    'last_login': __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'cookie_count': len(wb), 'login_method': 'cookie_import_api'}, ensure_ascii=False, indent=2), encoding='utf-8')
+                wb_n = len(wb)
+        except Exception as _e:
+            results['weibo'] = {'ok': False, 'error': str(_e)}
+    results.setdefault('weibo', {'ok': True, 'count': wb_n} if wb_n else {'ok': False, 'note': '未配置 ZBC_WEIBO_COOKIE_JSON'})
+
+    # --- B站（.env: ZBC_BILI_COOKIE_JSON）---
+    bl_raw = _os.environ.get('ZBC_BILI_COOKIE_JSON', '').strip()
+    bl_n = 0
+    if bl_raw:
+        try:
+            bl = _json.loads(bl_raw)
+            if isinstance(bl, list):
+                uid = next((str(c.get('value','')) for c in bl if c.get('name')=='DedeUserID'), '')
+                (_data / 'bilibili_cookies.json').write_text(_json.dumps(bl, ensure_ascii=False, indent=2), encoding='utf-8')
+                (_data / 'bilibili_login_status.json').write_text(_json.dumps({
+                    'logged_in': True,
+                    'last_login': __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'cookie_count': len(bl), 'user_id': uid or 'unknown', 'login_method': 'cookie_import_api'}, ensure_ascii=False, indent=2), encoding='utf-8')
+                bl_n = len(bl)
+        except Exception as _e:
+            results['bilibili'] = {'ok': False, 'error': str(_e)}
+    results.setdefault('bilibili', {'ok': True, 'count': bl_n} if bl_n else {'ok': False, 'note': '未配置 ZBC_BILI_COOKIE_JSON'})
+
+    # --- 小红书（本地源 data/xhs_cookies.source.json，凭证不入库）---
+    xhs_src = _data / 'xhs_cookies.source.json'
+    xhs_n = 0
+    if xhs_src.exists():
+        try:
+            xhs = _json.loads(xhs_src.read_text(encoding='utf-8'))
+            if isinstance(xhs, dict):
+                xhs = xhs.get('cookies', [])
+            if isinstance(xhs, list) and xhs:
+                (_data / 'xhs_cookies.json').write_text(_json.dumps(xhs, ensure_ascii=False, indent=2), encoding='utf-8')
+                parts = [f"{c.get('name','')}={c.get('value','')}" for c in xhs
+                         if c.get('domain','').endswith('xiaohongshu.com') and c.get('name') and not c.get('name','').startswith('x-user-id-')]
+                (_data / 'xhs_cookie_string.txt').write_text('; '.join(parts), encoding='utf-8')
+                (_data / 'xhs_login_status.json').write_text(_json.dumps({
+                    'logged_in': True,
+                    'last_login': __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'cookie_count': len(xhs), 'login_method': 'cookie_import_api', 'platform': 'xiaohongshu'}, ensure_ascii=False, indent=2), encoding='utf-8')
+                xhs_n = len(xhs)
+        except Exception as _e:
+            results['xhs'] = {'ok': False, 'error': str(_e)}
+    results.setdefault('xhs', {'ok': True, 'count': xhs_n} if xhs_n else {'ok': False, 'note': '未找到 data/xhs_cookies.source.json'})
+
+    # Evidence 记录（不记录 Cookie 值，只记录元信息）
+    try:
+        from evidence_store import record_evidence
+        record_evidence(source='zbc', project='ZBC', product='CTH', feature_id='GAP21_COOKIE_IMPORT',
+                        env='prod', level='L4', test_name='cookie_import_api', result='PASS' if any(r.get('ok') for r in results.values()) else 'GAP',
+                        outputs={'weibo': results.get('weibo',{}).get('count',0), 'bilibili': results.get('bilibili',{}).get('count',0), 'xhs': results.get('xhs',{}).get('count',0)},
+                        actual=_json.dumps(results, ensure_ascii=False))
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'results': results})
+
+@app.route('/api/cookies/import/status', methods=['GET'])
+def api_cookies_import_status():
+    """查看各平台 Cookie 导入状态（仅元信息，不返回 Cookie 值）。"""
+    from pathlib import Path as _Path
+    import os as _os, json as _json
+    _base = _Path(__file__).resolve().parent
+    _data = _base / 'data'
+    def _stat(platform):
+        p = _data / f'{platform}_login_status.json'
+        if p.exists():
+            try:
+                d = _json.loads(p.read_text(encoding='utf-8'))
+                return {'configured': True, 'logged_in': bool(d.get('logged_in')), 'cookie_count': d.get('cookie_count', 0), 'last_login': d.get('last_login','')}
+            except Exception:
+                return {'configured': True, 'error': 'parse_error'}
+        return {'configured': False}
+    return jsonify({'ok': True, 'status': {
+        'weibo': _stat('weibo'),
+        'bilibili': _stat('bilibili'),
+        'xhs': _stat('xhs'),
+        'xhs_source_exists': (_data / 'xhs_cookies.source.json').exists(),
+    }})
+
 if __name__ == '__main__':
     import logging
     from logging.handlers import RotatingFileHandler
