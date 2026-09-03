@@ -4481,7 +4481,10 @@ def _get_shadow_planner():
 def scheduler_loop():
     """自动采集调度器：固定时间点作为唤醒检查点，叠加账号频率保护；
     v5.8.6 起由统一动态决策器做影子对照(动态间隔/状态驱动/next_run_at)，门控后续灰度。"""
-    auto_collect_hours = [8, 10, 12, 14, 16, 18, 20, 22, 23]
+    auto_collect_hours = [8, 10, 12, 14, 16, 18, 20, 22, 23]  # 历史参考（v5.8.6 起由 ShadowPlanner 动态决策）
+    # 序境采集安全规则（2026-09-04 最高基线）：自动采集固定每日 00:00 / 12:00，每窗口最多一次
+    xujing_auto_hours = (0, 12)
+    xujing_done_hours = set()  # 本日已完成自动采集的窗口小时（防 0:00-0:59 重复触发）
     today_auto_hours = set()  # 今天已执行的自动采集小时
     last_report_date = ''
     last_email_date = ''
@@ -4503,6 +4506,7 @@ def scheduler_loop():
             # 跨天重置已执行小时记录
             if last_date_check != today_str:
                 today_auto_hours = set()
+                xujing_done_hours = set()
                 last_date_check = today_str
                 print(f'[Scheduler] 新的一天 {today_str}，自动采集次数已重置')
 
@@ -4541,6 +4545,16 @@ def scheduler_loop():
                 except Exception as _e:
                     _should_run, _gate_mode = True, 'fallback'
                     print(f'[Scheduler] gate eval fail-open: {_e}')
+
+            # 序境采集安全窗口（2026-09-04 最高基线）：仅 00:00 / 12:00 允许自动采集，且每窗口当日只一次
+            if _should_run and now.hour not in xujing_auto_hours:
+                _should_run = False
+                _gate_mode = 'xujing-window-off'
+            elif _should_run and now.hour in xujing_done_hours:
+                _should_run = False
+                _gate_mode = 'xujing-window-done'
+            if _should_run:
+                xujing_done_hours.add(now.hour)
 
             if _should_run:
                 # 账号频率保护（生产既有逻辑，保留）
