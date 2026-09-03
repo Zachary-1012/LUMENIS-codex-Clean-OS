@@ -93,7 +93,7 @@ class NotePersister:
             'publish_date': note.get('publish_date', ''),
             'url': note.get('url', ''),
             'xsec_token': note.get('xsec_token', ''),
-            'source_platform': note.get('source_platform', 'xiaohongshu'),
+            'source_platform': note.get('source_platform', 'xhs'),
             'sentiment': note.get('sentiment', 'neutral'),
             'risk_level': note.get('risk_level', 'low'),
             'keywords': note.get('keywords', ''),

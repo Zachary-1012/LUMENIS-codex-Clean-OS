@@ -5,7 +5,7 @@
  */
 
 const V3Modules = {
-    auth: window.__Z_AUTH,
+    get auth() { return window.__Z_AUTH; },  // 动态获取，避免加载时快照为undefined导致401
 
     // ========== 品牌知识库模块 ==========
     knowledge: {
@@ -20,8 +20,8 @@ const V3Modules = {
             try {
                 const resp = await fetch('/api/brand-knowledge/stats', { headers: { 'Authorization': this.auth } });
                 const data = await resp.json();
-                if (data.ok) {
-                    this.state.stats = data.data;
+                if (data.data || data.ok) {
+                    this.state.stats = data.data || data;
                     this.renderStats();
                 }
             } catch (e) { console.error('知识库统计加载失败', e); }

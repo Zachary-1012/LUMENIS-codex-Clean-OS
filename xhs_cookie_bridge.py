@@ -795,7 +795,7 @@ def sync(keywords=None, max_scroll=6, account=None):
     inserted=updated=rejected=0
     for n in raw.values():
         ok,reason=ai_analyzer.verify_taikoo_location(n.get('title',''),n.get('content',''))
-        n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xiaohongshu'
+        n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
         if not ok: rejected+=1; continue
         _,new=db.insert_note(n); inserted+=int(new); updated+=int(not new)
     analyzed=0

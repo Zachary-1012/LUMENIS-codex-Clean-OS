@@ -9,7 +9,7 @@ from ..base import RawNote, RawComment
 @dataclass
 class XHSNote(RawNote):
     """小红书笔记（扩展原始笔记模型）"""
-    source_platform: str = 'xiaohongshu'
+    source_platform: str = 'xhs'
     note_type: str = 'normal'  # normal / video / image
     xsec_token: str = ''
     image_list: List[str] = field(default_factory=list)

@@ -110,7 +110,7 @@ def build_cross_platform_events(limit=100):
         hint=n.get('event_hint') or ''
         topics=n.get('topics') or ['其他']
         key=_event_key(hint,n.get('title',''),topics,n.get('publish_date') or n.get('collected_at') or '')
-        groups.setdefault(key,[]).append({**n,'source_platform':'xiaohongshu'})
+        groups.setdefault(key,[]).append({**n,'source_platform':'xhs'})
     for w in web:
         key=_event_key(w.get('event_hint',''),w.get('title',''),w.get('topics') or ['其他'],w.get('published_at') or w.get('fetched_at') or '')
         groups.setdefault(key,[]).append(w)

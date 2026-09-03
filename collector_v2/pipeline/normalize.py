@@ -164,7 +164,7 @@ class NoteNormalizer:
         
         # 确保source_platform存在
         if not normalized.get('source_platform'):
-            normalized['source_platform'] = 'xiaohongshu'
+            normalized['source_platform'] = 'xhs'
         
         return normalized
     
@@ -174,9 +174,9 @@ class NoteNormalizer:
     
     def is_valid_note(self, note: Dict) -> bool:
         """检查笔记是否有效（非空、有内容）"""
-        title = note.get('title', '').strip()
-        content = note.get('content', '').strip()
-        note_id = note.get('note_id', '').strip()
+        title = (note.get('title') or '').strip()
+        content = (note.get('content') or '').strip()
+        note_id = (note.get('note_id') or '').strip()
         
         # 必须有note_id
         if not note_id:
