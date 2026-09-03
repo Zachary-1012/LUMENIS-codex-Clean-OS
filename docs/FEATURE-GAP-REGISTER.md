@@ -33,7 +33,7 @@
 | GAP-17 ✅RESOLVED(2026-09-03) | Runtime | ~~8200 两个重复 app.py 实例~~ **只读核实：当前 8200 端口 0 个 python 实例，历史重复实例已清理，生产仅 8201 单实例** | P3 | 端口/资源重复 | 历史启动残留 | 已自然解决 | 否 | 否 | 否 | 是 | 是 |
 | GAP-18 ✅RESOLVED(2026-09-03) | 测试体系 | ~~31 个脚本式文件命名 test_ 但无 def test_~~ **conftest pytest_ignore_collect 已实现：无 def test_ 的 test_*.py 不收集（不 INTERNALERROR），仍可 python tests/xxx.py 手动跑；命名误导已消除** | P3 | 假覆盖错觉 | 同 GAP-01 | 已随 GAP-01 解决 | 否 | 否 | 否 | 是 | 是 |
 | GAP-19 🔶部分RESOLVED(2026-09-03) | Runtime/依赖 | ~~Selenium 0 引用依赖待退~~ **已从 requirements.txt 移除 selenium（全仓 0 import，Playwright 已全面替代 app.py/collector_automation/browser_runtime）；Browser/Scheduler 重复调用部分仍待审计** | P3 | 死依赖 footprint | 历史用 Selenium 后迁移 Playwright 未清依赖 | Selenium 部分已清 | 否 | 否 | 是 | 是 | 是 |
-| GAP-20 | 工程清理 | .trae-cn IDE 目录忽略确认；根目录 start_*.bat/.bak/日志收敛 | P3 | 仓库噪声 | 长期堆积 | 分批登记后清理，不边开发边删 | 否 | 否 | 否 | 否 | 否 |
+| GAP-20 ✅RESOLVED(2026-09-03) | 工程清理 | ~~.trae-cn IDE 目录忽略确认；根目录 start_*.bat/.bak/日志收敛~~ **.trae-cn 已 gitignore；*.log/*.bak/app.py.bak_* 已 gitignore（运行时产物自动排除）；2 个被跟踪的废弃历史备份（style.css.bak_011101/app.js.bak_20260827）已 git rm（文档已标注"应删除"、无引用）；16 个 start_*.bat/ps1 为在用启动脚本保留** | P3 | 仓库噪声 | 长期堆积 | 已完成可清理部分 | 否 | 否 | 是 | 是 | 是 |
 | GAP-21 | ZBMP-IMP-001 | importer 3 个 py 存在，但无前端入口/API/专表 | P2 | 有代码易被误判完成 | 后端先行 | UI 占位；补 API/专表后再升 DEVELOPING | 否 | 是(占位) | 是 | 是 | 是 |
 | GAP-22 | ZBMP-BRAND-003 | swire_notes 空表，专题在建 | P2 | 功能无数据 | 尚未灌数 | 保留 UI 占位与空态 | 否 | 是(空态) | 否 | 是 | 是 |
 
