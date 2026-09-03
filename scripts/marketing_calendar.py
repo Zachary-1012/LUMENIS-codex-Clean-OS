@@ -308,6 +308,27 @@ def cross_industry_season(industry, date_str=""):
     return {"industry": industry, "month": m, "industry_nodes": inds,
             "season_nodes": season, "advice": advice}
 
+
+def cross_global(month=None, date_str=""):
+    """三维交叉：海外节点 x 当月节气（面向出海/高端商业体，补充国际叙事时机）。
+    返回 {"month", "global_nodes":[...], "season_nodes":[...], "advice":[...]}
+    """
+    import datetime as _dt
+    try:
+        if len(date_str) == 5:
+            m = int(date_str[:2])
+        else:
+            m = int((date_str or _dt.date.today().strftime("%Y-%m-%d"))[5:7])
+    except Exception:
+        m = _dt.date.today().month
+    gns = global_nodes(m)
+    season = [n for n in nodes_for_month(m) if n["kind"] == K_SOLAR]
+    advice = []
+    for g in gns[:2]:
+        for s in season[:1]:
+            advice.append("%s遇%s：%s x %s" % (g["name"], s["name"], g["theme"], s["theme"]))
+    return {"month": m, "global_nodes": gns, "season_nodes": season, "advice": advice}
+
 # 情感主题 → 调性偏好（须弥层：节点主题映射创意气质）
 _THEME_TO_TONALITY = {
     "狂欢": "mass", "实惠": "mass", "玩梗": "mass", "变装": "mass", "热闹": "mass",

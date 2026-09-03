@@ -66,16 +66,19 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
     })
     # 报告体系消费营销节点（芥子→须弥）：当月节点/主题/建议调性进报告，供排期与决策
     try:
-        from scripts.marketing_calendar import suggest_hotspot, cross_industry_season
+        from scripts.marketing_calendar import suggest_hotspot, cross_industry_season, cross_global, global_nodes
         _mc = suggest_hotspot(end, "商业地产")
         report['marketing_nodes'] = {
             "nodes": [n["name"] for n in _mc.get("nodes", [])],
             "themes": _mc.get("themes", []),
             "tonality_advice": _mc.get("tonality_advice", ""),
             "cross": cross_industry_season("商业地产", end[:7]).get("advice", []),
+            "global": cross_global(date_str=end[:7]).get("advice", []),
+            "global_nodes": [n["name"] for n in global_nodes(int(end[5:7]))],
         }
     except Exception:
-        report['marketing_nodes'] = {"nodes": [], "themes": [], "tonality_advice": "", "cross": []}
+        report['marketing_nodes'] = {"nodes": [], "themes": [], "tonality_advice": "",
+                                     "cross": [], "global": [], "global_nodes": []}
     db.save_daily_report(report)
 
     digest = None

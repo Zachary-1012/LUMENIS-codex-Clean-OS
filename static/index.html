@@ -943,6 +943,10 @@
               <option value="教育">教育</option><option value="宠物">宠物</option>
               <option value="咖啡茶饮">咖啡茶饮</option>
             </select>
+            <label style="font-size:12px;display:flex;gap:4px;align-items:center">
+              <input type="checkbox" id="mkGlobal" onchange="loadMk()"> 海外节点
+            </label>
+            <button class="action tertiary" style="padding:6px 10px;font-size:12px" onclick="exportMkCsv()">⬇ 全年排期CSV</button>
           </div>
           <div id="mkNodesBody" class="metric-sub" style="white-space:normal;line-height:1.7">加载中…</div>
         </article>
@@ -1851,18 +1855,31 @@ document.addEventListener('DOMContentLoaded', function(){
     var el=document.getElementById('mkNodesBody');
     if(!el) return;
     var ind=(document.getElementById('mkIndustry')||{}).value||'';
-    fetch('/api/v2/marketing/overview?industry='+encodeURIComponent(ind),{headers:{'Authorization':window.__Z_AUTH||''}})
+    var gb=(document.getElementById('mkGlobal')||{}).checked?'1':'0';
+    fetch('/api/v2/marketing/overview?industry='+encodeURIComponent(ind)+'&global='+gb,{headers:{'Authorization':window.__Z_AUTH||''}})
       .then(function(r){return r.json();})
       .then(function(j){
         if(!j.ok){ el.textContent='加载失败：'+(j.error||'未知'); return; }
         var s=[]; s.push('本月节点：'+(j.month_nodes||[]).map(function(n){return n.name+'·'+n.theme;}).join('、'));
         if(j.hotspot && j.hotspot.nodes && j.hotspot.nodes.length){ s.push('当期绑定：'+j.hotspot.nodes.map(function(n){return n.name;}).join('、')+'｜建议调性：'+(j.hotspot.tonality_advice||'-')); }
         if(j.cross){ s.push('行业交叉：「'+j.cross.industry+'」'+(j.cross.advice||[]).join('；')); }
+        if(j.global_cross){ s.push('海外×节气：'+(j.global_cross.advice||[]).join('；')); }
+        if(j.global_nodes){ s.push('本月海外节点：'+j.global_nodes.map(function(n){return n.name+'('+n.date+')';}).join('、')); }
         el.textContent=s.join('\n');
       })
       .catch(function(e){ el.textContent='加载失败：'+e; });
   }
   window.loadMk = loadMk;
+  function exportMkCsv(){
+    fetch('/api/v2/marketing/overview?export=csv',{headers:{'Authorization':window.__Z_AUTH||''}})
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); })
+      .then(function(b){
+        var u=URL.createObjectURL(b), a=document.createElement('a');
+        a.href=u; a.download='marketing_calendar.csv'; document.body.appendChild(a); a.click();
+        setTimeout(function(){ URL.revokeObjectURL(u); }, 1000);
+      })
+      .catch(function(e){ if(typeof toast==='function') toast('CSV导出失败：'+e); });
+  }
   if(document.readyState!=='loading'){ loadMk(); }
   else{ document.addEventListener('DOMContentLoaded', loadMk); }
 })();

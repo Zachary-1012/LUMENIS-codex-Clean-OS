@@ -637,19 +637,40 @@ def marketing_overview():
     """营销节点速览：当月节气/节日 + 垂直行业交叉建议 + 创意引擎当前绑定节点。
     报告体系消费营销节点（芥子→须弥）的前端闭环。"""
     try:
-        from scripts.marketing_calendar import suggest_hotspot, nodes_for_month, cross_industry_season
+        from scripts.marketing_calendar import (suggest_hotspot, nodes_for_month,
+                                                cross_industry_season, cross_global, global_nodes)
         import datetime as _dt
+        import io, csv as _csv
         industry = (request.args.get('industry') or '').strip()
         month = (request.args.get('month') or '').strip()
         if len(month) != 2:
             month = _dt.date.today().strftime("%m")
         today = _dt.date.today().strftime("%Y-%m-%d")
+        gflag = (request.args.get('global') or '0') == '1'
+        export = (request.args.get('export') or '')
         mc = suggest_hotspot(today, "商业地产")
         nodes = nodes_for_month(int(month))
         cross = cross_industry_season(industry, month) if industry else None
+        gcross = cross_global(int(month), month) if gflag else None
+        gns = global_nodes() if gflag else None
+        if export == 'csv':
+            # 全年+海外节点 CSV 排期导出（排期工作流）
+            buf = io.StringIO()
+            w = _csv.writer(buf)
+            w.writerow(["月", "名称", "日期", "类型", "主题", "品类", "来源"])
+            for m in range(1, 13):
+                for n in nodes_for_month(m):
+                    w.writerow([m, n["name"], n.get("date", ""), n.get("kind", ""),
+                                n.get("theme", ""), "、".join(n.get("cats", [])), "国内"])
+                for n in global_nodes(m):
+                    w.writerow([m, n["name"], n.get("date", ""), n.get("kind", ""),
+                                n.get("theme", ""), "、".join(n.get("cats", [])), "海外"])
+            return Response(buf.getvalue(), mimetype="text/csv; charset=utf-8",
+                            headers={"Content-Disposition":
+                                     "attachment; filename=marketing_calendar_%s.csv" % month})
         return jsonify({'ok': True, 'month_nodes': nodes, 'hotspot': mc,
-                        'cross': cross,
-                        'advice': "本月先借节气/节日天然情绪，再叠加垂直行业节点做专属心智。"})
+                        'cross': cross, 'global_cross': gcross, 'global_nodes': gns,
+                        'advice': "本月先借节气/节日天然情绪，再叠加垂直行业节点做专属心智；出海场景另叠海外节点时机。"})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
