@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"zbc://podcast/topic-intelligence/v1",
+  "title":"Podcast Topic Intelligence v1",
+  "type":"object",
+  "required":["topic_id","title","signals","score","status"],
+  "properties":{
+    "topic_id":{"type":"string"},
+    "title":{"type":"string"},
+    "problem_statement":{"type":["string","null"]},
+    "signals":{"type":"array","items":{"type":"object","required":["type","evidence_id"],"properties":{"type":{"type":"string","enum":["trend","news","search","social","person","industry","comment","research"]},"evidence_id":{"type":"string"},"observed_at":{"type":"string","format":"date-time"}},"additionalProperties":false}},
+    "score":{"type":"object","required":["demand","timeliness","novelty","human_relevance","guest_fit","evidence","content_yield","distribution","risk","cost"],"properties":{"demand":{"type":"number"},"timeliness":{"type":"number"},"novelty":{"type":"number"},"human_relevance":{"type":"number"},"guest_fit":{"type":"number"},"evidence":{"type":"number"},"content_yield":{"type":"number"},"distribution":{"type":"number"},"risk":{"type":"number"},"cost":{"type":"number"}},"additionalProperties":false},
+    "status":{"type":"string","enum":["now","soon","evergreen","archive","watch","rejected"]},
+    "evidence_status":{"type":"string","enum":["observed","derived","ai_suggested","human_verified","unverified"]}
+  },
+  "additionalProperties":true
+}
