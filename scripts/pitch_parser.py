@@ -73,24 +73,24 @@ GOAL_KEYWORDS = {
     "舆情风险": ["舆情", "公关", "危机", "负面", "口碑", "恢复"],
 }
 
-# ---- 品类全球标杆打法库（对标国际公司/品牌公司）----
+# ---- 品类全球标杆打法库（对标国际公司/品牌公司 + 2026 最新案例）----
 BENCHMARKS = {
-    "美妆个护": ("Aesop / 欧莱雅 / eos", "Aesop 以实验室棕瓶+文学艺术构筑小众审美定义者；eos 用持续成功塑造女性剃须话语权；Vaseline 把用户 hack 变成产品线(UGC→产品飞轮)。"),
-    "餐饮": ("太二 / McDonald's / Lay's", "造节(太二运动会/高考)+符号化(麦当劳金拱门=可复制的符号)+幽默梗(Lay's 玩球星纸条)。体验事件化+符号化是核心。"),
-    "汽车": ("Tesla / Porsche / 小米SU7", "Tesla 事件化(发布即热搜)；保时捷克制与赛道故事；国产新势力用极致参数发布会造文化时刻。"),
+    "美妆个护": ("Aesop / 欧莱雅 / eos / Dove", "Aesop 以实验室棕瓶+文学艺术构筑小众审美定义者；eos 用持续成功塑造女性剃须话语权；Vaseline 把用户 hack 变成产品线(UGC→产品飞轮)；Dove 2026『Unfiltered Feed』把账号交给22位微创作者30天=约束本身即故事(3.4亿曝光+28%购买意向)。"),
+    "餐饮": ("太二 / McDonald's / Lay's / Wendy's", "造节(太二运动会)+符号化(麦当劳金拱门)+幽默梗(Lay's 玩球星纸条)；Wendy's 2026 CTV 实时比分广告(API驱动90s更新一次,游戏夜订单+9%)——实时创意在直播环境即竞争力。"),
+    "汽车": ("Tesla / Porsche / Hyundai", "Tesla 事件化(发布即热搜)；保时捷克制与赛道故事；Hyundai 2026 用虚拟人 Kenza Layli(跨文化多语言)做新品发布,ROI 20x。"),
     "文旅": ("阿那亚 / Disney / 环球影城", "阿那亚用社群与精神地标打造生活方式共同体；Disney 用世界观(world-building)让游客进入叙事。体验+世界观是核心。"),
-    "科技数码": ("Apple / Nike×Lisa / Samsung", "Apple 极简仪式+发布会即文化事件；Nike 用文化碰撞(体育×音乐×时尚)打破品类边界。"),
-    "金融": ("AXA / 招商银行", "AXA 把家暴条款植入保险合同=产品即创意(创造新品类责任)；招行用私域+温度叙事做客户经营。"),
-    "服装鞋包": ("Hermès / Goyard / Brunello Cucinelli", "Hermès 计算型稀缺(供<求,不广告)；Goyard 全球仅30店、不线上不标价；Brunello 信任小圈层、克制营销。"),
-    "家居": ("IKEA / 观夏 / Aesop", "IKEA 超级碗二屏互动；观夏以东方叙事+节气仪式感做香氛；家居=生活方式提案。"),
-    "母婴": ("balabala / 帮宝适", "情感成长刻度(第一次/成长曲线)+科学背书+达人共创。"),
-    "运动": ("Nike / lululemon / On昂跑", "Nike 用运动员/文化碰撞造世界；lululemon 社群(门店即社区)；On 用故事+精英共鸣。"),
-    "酒水": ("茅台 / 可口可乐JUMP", "茅台高端宴请符号化；可乐用怀旧版权(JUMP)跨代共鸣。白酒=圈层+仪式。"),
+    "科技数码": ("Apple / Claude(Anthropic) / Nike×Lisa", "Apple 2026『Designed by Humans』全AI时代反着只做印刷长文(稀缺媒介即定向)；Claude by Mother 用两个简单问题(『能快速六块腹肌吗』『怎么和妈妈沟通』)讲AI的角色——Film GP;Nike 用文化碰撞破圈。"),
+    "金融": ("AXA / BCP(SOS POS) / 招商银行", "AXA 把家暴条款植入保险=产品即创意；BCP 2026『SOS POS』把POS终端变紧急保护点(用投诉+位置数据)→Creative Data GP,触达3400万人；招行用私域+温度叙事。"),
+    "服装鞋包": ("Hermès / Goyard / Brunello Cucinelli / adidas", "Hermès 计算型稀缺；Goyard 全球仅30店不线上不标价；Brunello 信任小圈层；adidas 2026『Original Forever』(Johannes Leonardo)用音乐+文化记忆拿双 GP。"),
+    "家居": ("IKEA / 观夏 / Aesop", "IKEA 超级碗二屏互动+2026 Hope/Mornings/Picky 电影级短片；观夏以东方叙事+节气仪式感做香氛；家居=生活方式提案。"),
+    "母婴": ("balabala / 帮宝适 / Slurrp Farm", "情感成长刻度+科学背书；Slurrp Farm(印度婴食)用 lo-fi 厨房视频(真实父母做饭)替代棚拍,IG互动3x——不完美=真实信号。"),
+    "运动": ("Nike / lululemon / On昂跑", "Nike 2026『Unwitnessed』关停付费社媒6周转超本地OOH(零运动员,城市环境音QR解锁歌单,情绪+14点)——品牌出乎意料即earned media；lululemon 社群；On 精英共鸣。"),
+    "酒水": ("茅台 / 可口可乐JUMP / Heineken", "茅台高端宴请符号化；可乐怀旧版权跨代共鸣；Heineken 2026『Could Have Been a Heineken』(错失即话题)Social&Creator GP。"),
     "商业地产": ("太古里 / SKP / 阿那亚", "太古里街区感+首店经济；SKP 高奢矩阵+私域；阿那亚社群运营。体验+圈层运营是核心。"),
     "医疗健康": ("汤臣倍健 / 东阿阿胶", "科学背书+场景化(节日送礼)+信任资产。"),
     "教育培训": ("得到 / Duolingo", "Duolingo 用玩梗与病毒机制做参与式学习；得到用知识IP社群。"),
-    "B2B企服": ("Salesforce / HubSpot", "内容即产品(案例库+思想领导力)+客户成功故事+行业峰会。"),
-    "烟草酒水礼品": ("小罐茶 / 观夏", "礼品=仪式感+身份符号；小罐茶用标准化+大师背书；观夏用节气东方叙事。"),
+    "B2B企服": ("Salesforce / HubSpot / Spotify", "内容即产品+客户成功故事；Spotify 2026『Listening Proof』向CMO自嘲式广告自己的广告平台(『是的,这广告正跑在Spotify上』)→Cannes Media Lion——平台自我营销即创意。"),
+    "烟草酒水礼品": ("小罐茶 / 观夏", "礼品=仪式感+身份符号；小罐茶标准化+大师背书；观夏节气东方叙事。"),
 }
 
 # ---- 方案模板脉络（借鉴 ZBC 产品架构分层）----

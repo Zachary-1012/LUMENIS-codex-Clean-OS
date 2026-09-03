@@ -46,6 +46,13 @@ VIDEO_TYPES = {
                       ("内容快进", "8-20s", "快节奏信息/转场/多机位，保持完播"),
                       ("反转/CTA", "3-5s", "反转或行动号召，引导互动")],
     },
+    "tiktok": {
+        "name": "TikTok(海外抖音)",
+        "ratio": "9:16 竖屏", "duration": "15-45s", "purpose": "全球破圈 / 原生声效挑战",
+        "structure": [("有机开头", "1-3s", "前3秒必须像organic内容(无logo无片头)，贴合原生信息流"),
+                      ("声效/挑战钩子", "5-15s", "借平台Trending声效/挑战/duet参与机制放大"),
+                      ("完播CTA", "3-8s", "引导评论/合拍/挑战赛参与，制造UGC")],
+    },
 }
 
 # ---- 品类场景库（每镜头画面描述的素材）----
@@ -69,6 +76,7 @@ CATEGORY_SCENES = {
 TITLE_TEMPLATES = {
     "xhs": ["「%s」%s，%s的人都在看", "发现%s｜%s的正确打开方式", "谁懂啊，%s竟然可以%s"],
     "douyin": ["%s挑战，%s直接破防，%s都顶不住", "3秒带你认识%s的%s", "别再问了，%s就是%s，%s"],
+    "tiktok": ["POV: %s meets %s #%s", "Is %s the new %s? #%s", "%s × %s — creators are going wild #%s"],
     "tvc": ["%s：%s——%s", "%s，%s｜%s"],
     "concept": ["%s｜%s，%s", "%s：%s（%s）"],
 }
@@ -89,7 +97,7 @@ def generate_video_script(brand, category="通用", circle="都市职场", tonal
     tone = TONALITIES.get(tonality, TONALITIES["premium"])["name"]
     cs = CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])
     # 镜头数：TVC 4-6 / 概念 6-8 / xhs 5-7 / douyin 4-6
-    default_n = {"tvc": 5, "concept": 7, "xhs": 6, "douyin": 5}[video_type]
+    default_n = {"tvc": 5, "concept": 7, "xhs": 6, "douyin": 5, "tiktok": 6}[video_type]
     n = n_shots or default_n
 
     shots = []
@@ -104,7 +112,7 @@ def generate_video_script(brand, category="通用", circle="都市职场", tonal
             si += 1
             s_meta = struct[si]
             part, dur, purpose = s_meta
-        tone_hint = "克制·静谧" if tonality == "luxury" else ("快节奏·高能" if video_type == "douyin" else "氛围感·质感")
+        tone_hint = "克制·静谧" if tonality == "luxury" else ("快节奏·高能" if video_type in ("douyin", "tiktok") else "氛围感·质感")
         shots.append({
             "shot": i + 1,
             "part": part,
@@ -148,6 +156,7 @@ def _publish_advice(video_type, tonality):
         "concept": "投放：发布会/首映+社媒矩阵首发；内容长尾运营，搜索占位",
         "xhs": "投放：KFS模型（达人种草+聚光投流+搜索品专）；封面前置利益点",
         "douyin": "投放：信息流+达人共创；前3秒完播率是核心指标，24h内互动超20+再放大",
+        "tiktok": "投放：Spark Ads(原生创作者内容加热)+Smart Performance；借Trending声效/挑战，AI-UGC低成本多版本测钩子",
     }.get(video_type, "")
     if tonality == "luxury":
         base += "；高奢调性：首发圈层私享+邀请制，不铺量"
