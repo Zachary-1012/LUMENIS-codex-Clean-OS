@@ -7,23 +7,23 @@
 /* ============================================
    全局变量
    ============================================ */
-:root {
-    --primary-color: #0969da;
-    --primary-hover: #0860c7;
+:root{
+    --primary-color: #2A2622;
+    --primary-hover: #3A342C;
     --success-color: #1a7f37;
     --warning-color: #9a6700;
     --danger-color: #cf222e;
-    --text-primary: #1d1d1f;
-    --text-secondary: #57606a;
-    --text-tertiary: #6e7781;
-    --bg-primary: #ffffff;
-    --bg-secondary: #f6f8fa;
-    --bg-tertiary: #f0f2f5;
-    --border-color: #eaeef2;
-    --border-light: rgba(0, 0, 0, 0.06);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --text-primary: #1B1917;
+    --text-secondary: #5E584F;
+    --text-tertiary: #6F6860;
+    --bg-primary: #FCFBF9;
+    --bg-secondary: #F4F1EC;
+    --bg-tertiary: #ECE8E1;
+    --border-color: #E4E0D8;
+    --border-light: rgba(30,27,22,.08);
+    --shadow-sm: 0 1px 3px rgba(35,30,25,.08);
+    --shadow-md: 0 4px 12px rgba(35,30,25,.10);
+    --shadow-lg: 0 8px 24px rgba(35,30,25,.12);
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;
