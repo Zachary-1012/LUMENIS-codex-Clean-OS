@@ -507,7 +507,9 @@ _LEVEL_CONFIG = {
     'critical': {'timeout': 120, 'max_tokens': 4000, 'temperature': 0.2},
 }
 # 强模型分层：HIGH/CRITICAL 用 ZHIPU_STRONG_MODEL（如 glm-4.7）；未配置则沿用默认模型（不强求）
-_STRONG_MODEL = _env('ZHIPU_STRONG_MODEL', '')
+def _strong_model():
+    """动态读强模型配置（HIGH/CRITICAL 用），避免模块 import 时序问题。"""
+    return _env('ZHIPU_STRONG_MODEL', '')
 
 _CACHE_LOCK = threading.Lock()
 _CHAT_CACHE = {}          # md5 -> (output, provider)
@@ -520,7 +522,7 @@ def _level_params(level, temperature=None, max_tokens=None, model=None):
     return {
         'temperature': cfg['temperature'] if temperature is None else temperature,
         'max_tokens': cfg['max_tokens'] if max_tokens is None else max_tokens,
-        'model': model or (_STRONG_MODEL if (level or '').lower() in ('high', 'critical') else None),
+        'model': model or (_strong_model() if (level or '').lower() in ('high', 'critical') else None),
         'timeout': cfg['timeout'],
     }
 
