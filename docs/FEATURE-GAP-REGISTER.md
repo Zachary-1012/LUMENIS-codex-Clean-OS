@@ -26,7 +26,7 @@
 | GAP-10 🚧部分推进(2026-09-01) | RPT | 报告多路由（12）+report_center 无路由 **→ 已挂只读旁路 GET /api/v2/report-center/preview（period/brand_mode/日期白名单校验、复用 database 尊重 ZBC_DB_PATH、不写库/不导出/不自动发送、不抢 RPT-001/002 Owner）；Staging cth/zbmp 双模式实测各18节、7测试过**；Word/PDF 导出与自动发送仍旁路未接管、12 旧路由收敛仍待做 | P2 | 标准化报告可读 | 导出接管/旧路由收敛有Owner冲突风险 | 导出(ReportExporter)挂路由前先与 RPT Owner 对齐 | 否 | 否 | 是(7✓) | 是 | 是 |
 | GAP-11 | 跨仓/DCC | DCC 本地 77dd1e4 落后远程 023e2ba 27 提交，且脏 package.json/learning-store.js/persistence.js | P2 | 跨仓基线分叉 | 多窗口并行 | 需授权：先审本地 3 处去留→rebase→回 ZBC 升子模块指针 | 否 | 否 | 否 | 否 | 是 |
 | GAP-12 | 治理/文档 | 多份并行基线（两份 PRODUCTION_BASELINE、PHASE1 与 UPA-PHASE1、consolidation-001/002） | P2 | 权威顺序易混 | 阶段叠加 | ADR 标注 Superseded，留一份权威 | 否 | 否 | 否 | 否 | 否 |
-| GAP-13 | 数据库 | 51 表无可回滚迁移体系（Alembic 未引入） | P2 | schema 变更缺 Gate/回滚 | 一直 create-if-not-exist | Staging 副本先 baseline，再向后兼容迁移 | 否 | 否 | 是 | 是 | 是 |
+| GAP-13 ✅RESOLVED(2026-09-03) | 数据库 | ~~51 表无可回滚迁移体系~~ **Alembic 1.19.1 baseline 已落地：staging 副本 stamp=e4278c4d1d79 验证 up/down 可回滚；生产库已备份+stamp（alembic_version=e4278c4d1d79，仅加元数据表零业务变化，notes=1049/events=463 完整，8201 全 API 200）** | P2 | schema 变更缺 Gate/回滚 | 一直 create-if-not-exist | 生产接入完成（DB-MIGRATION-PLAYBOOK Gate） | 否 | 否 | 是 | 是 | 是 |
 | GAP-14 | MON-003/RISK-002/SYS-002/SETT | Feature 登记 API 前缀不精确（schedule/circuit/v4 前缀挂载），功能真实存在 | P3 | 文档与路由表对不上 | 蓝图 url_prefix 嵌套 | 校正 Registry 路径表述 | 否 | 否 | 否 | 否 | 否 |
 | GAP-15 ✅RESOLVED(2026-09-03) | CTH-SYS-002 | ~~daily_git_sync.py:72 current_version 漏括号~~ **只读核实：现为 `gm.current_version()` 已带括号正确调用，无漏括号，GAP 已随版本中心重构自然解决** | P3 | 版本标题不准(不影响运行) | 调用方笔误 | 无需修改（已修复） | 否 | 否 | 否 | 是 | 是 |
 | GAP-16 | CTH-SYS-003 | cloudflared 临时域名，未固化固定域名/HTTPS/断线自愈证据 | P3 | 公网地址会变 | 尚未上固定服务器 | 固定域名/隧道开机自启+健康探针 | 否 | 否 | 是 | 否 | 是 |
