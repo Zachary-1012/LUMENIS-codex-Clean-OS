@@ -63,6 +63,7 @@
     <div class="tab on" data-tab="ideas">创意卡</div>
     <div class="tab" data-tab="video">视频脚本</div>
     <div class="tab" data-tab="social">社媒矩阵</div>
+    <div class="tab" data-tab="pitch">方案拆解</div>
   </div>
 
   <div class="err" id="errBox"></div>
@@ -140,6 +141,28 @@
       </div>
       <div class="panel output" id="out_social"><div class="empty">输入参数后点「生成社媒矩阵」</div></div>
     </div>
+  <!-- ===== 方案拆解 ===== -->
+  <div class="tabpane" id="pane-pitch" style="display:none">
+    <div class="grid">
+      <div class="panel inputs">
+        <div class="f">
+          <div class="field"><label>品牌（兜底）</label><input id="p_brand" placeholder="如 广州太古汇"></div>
+          <div class="field"><label>热点</label><input id="p_hot" placeholder="如 15周年"></div>
+          <div class="field"><label>创意数量 (≤5)</label><input id="p_n" type="number" value="3" min="1" max="5"></div>
+        </div>
+        <div class="field" style="margin-top:10px"><label>方案需求文本</label>
+          <textarea id="p_text" placeholder="粘贴方案需求：品牌、品类、预算、目标人群、渠道、核心诉求…"></textarea>
+        </div>
+        <div class="field" style="margin-top:10px"><label>或上传方案文件（txt/md/json/csv/pptx 文本）</label>
+          <input type="file" id="p_file" accept=".txt,.md,.json,.csv"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn" id="b_pitch" style="flex:2">拆解方案</button>
+          <button class="btn" id="b_export" style="flex:1;background:#2F8F5B">导出 Word</button>
+        </div>
+        <div class="hint">对标全球 4A：提取品牌/品类/预算/圈层/调性/渠道/目标/创意线索 → 对标基准 → 原创创意方向 → 方案脉络。导出为可直接交付的 Word 提案材料（仅本地）。</div>
+      </div>
+      <div class="panel output" id="out_pitch"><div class="empty">粘贴方案需求或上传文件后点「拆解方案」</div></div>
+    </div>
   </div>
 </div>
 
@@ -171,7 +194,7 @@
   tabs.forEach(function(t){t.addEventListener('click',function(){
     tabs.forEach(function(x){x.classList.remove('on')}); t.classList.add('on');
     var name=t.getAttribute('data-tab');
-    ['ideas','video','social'].forEach(function(p){$('pane-'+p).style.display=(p===name)?'':'none'});
+    ['ideas','video','social','pitch'].forEach(function(p){$('pane-'+p).style.display=(p===name)?'':'none'});
   });});
 
   function ideasCard(i){
@@ -230,6 +253,57 @@
       });
       $('out_social').innerHTML=html||'<div class="empty">无输出</div>';
     });
+  });
+
+  // ---- 方案拆解 ----
+  function pitchBody(){
+    return {brand:$('p_brand').value.trim(),hotspot:$('p_hot').value.trim(),
+      n:Math.min(Math.max(parseInt($('p_n').value||'3',10),1),5),text:$('p_text').value.trim()};
+  }
+  function renderPitch(d){
+    var ex=d.extracted||{};
+    var kv=[['品牌',ex.brand],['品类',ex.category],['预算',ex.budget?(ex.budget.value+''+(ex.budget.unit||'')):'—'],
+      ['圈层',ex.circle],['调性',ex.tonality],['渠道',(ex.channels||[]).join('、')||'—'],
+      ['目标',(ex.goals||[]).join('、')||'—'],['创意线索',(ex.creative_leads||[]).join('；')||'—']];
+    var bm=d.benchmark||{};
+    var ideas=(d.ideas&&d.ideas.ideas)||[];
+    var toc=d.pitch_toc||{};
+    var html='<div class="bar"><h2>方案拆解 · '+esc(ex.brand||'品牌')+'</h2><div class="meta">'+esc(ex.tonality||'')+' / '+esc(ex.circle||'')+'</div></div>';
+    html+='<div class="card"><div class="tag">需求要素</div><div class="detail">'+kv.map(function(r){return '<b>'+esc(r[0])+'</b> '+esc(r[1])}).join('<br>')+'</div></div>';
+    html+='<div class="card"><div class="tag">对标基准</div><div class="kv"><b>'+esc(bm.benchmark||'')+'</b><br>'+esc(bm.playbook||'')+'</div></div>';
+    html+='<div class="cards">'+ideas.map(function(i,idx){
+      return '<div class="card"><div class="tag">方向'+(idx+1)+' · '+esc(i.mechanism)+'</div>'
+        +'<div class="idea">'+esc(i.big_idea)+'</div>'
+        +'<div class="kv"><b>角度</b> '+esc(i.angle)+'<br><b>张力</b> '+esc(i.tension_type)+'<br><b>预算</b> '+esc(i.budget)+'<br><b>时效</b> '+esc(i.timeliness)+'</div>'
+        +'<div class="src">'+esc(i.provenance||'')+'</div></div>';
+    }).join('')+'</div>';
+    html+='<div class="card"><div class="tag">方案脉络</div><div class="detail">'+Object.keys(toc).map(function(k){return '<b>'+esc(k)+'</b> '+esc(toc[k])}).join('<br>')+'</div></div>';
+    $('out_pitch').innerHTML=html;
+  }
+  $('b_pitch').addEventListener('click',function(){
+    $('out_pitch').innerHTML='<div class="loading">正在拆解方案…</div>';
+    post('/api/creative/pitch-analyze',pitchBody(),renderPitch);
+  });
+  $('b_export').addEventListener('click',function(){
+    $('out_pitch').innerHTML='<div class="loading">正在导出 Word 提案材料…</div>';
+    var fd=new FormData(); var f=$('p_file').files[0];
+    var body=pitchBody();
+    var headers={};
+    if(authHeader)headers['Authorization']=authHeader;
+    if(f){fd.append('file',f);fd.append('brand',body.brand);fd.append('hotspot',body.hotspot);fd.append('n',body.n);
+      fetch(BASE+'/api/creative/pitch-export',{method:'POST',headers:headers,body:fd})
+        .then(function(r){if(!r.ok)return r.json().then(function(j){throw new Error(j.error||'导出失败')});return r.blob()})
+        .then(function(blob){var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+          a.download='方案拆解.docx';a.click();$('out_pitch').innerHTML='<div class="empty">已导出 Word，请查收下载。</div>';})
+        .catch(function(e){showErr(e.message);$('out_pitch').innerHTML='<div class="empty">导出失败</div>';});
+    }else{
+      if(!body.text){showErr('请粘贴方案文本或上传文件');return;}
+      fetch(BASE+'/api/creative/pitch-export',{method:'POST',headers:{'Content-Type':'application/json',...(authHeader?{'Authorization':authHeader}:{})},body:JSON.stringify(body)})
+        .then(function(r){if(!r.ok)return r.json().then(function(j){throw new Error(j.error||'导出失败')});return r.blob()})
+        .then(function(blob){var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+          a.download='方案拆解.docx';a.click();$('out_pitch').innerHTML='<div class="empty">已导出 Word，请查收下载。</div>';})
+        .catch(function(e){showErr(e.message);$('out_pitch').innerHTML='<div class="empty">导出失败</div>';});
+    }
   });
 })();
 </script>

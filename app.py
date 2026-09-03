@@ -564,6 +564,40 @@ def creative_pitch_analyze():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+@app.route('/api/creative/pitch-export', methods=['POST'])
+def creative_pitch_export():
+    """方案拆解结果导出 Word：接收 text/文件（同 pitch-analyze），返回 .docx 下载。
+    用于把方案需求拆解成可交付的 Word 提案材料。个人业务资料仅本地导出，不上传。"""
+    try:
+        from scripts.pitch_parser import analyze_pitch, analyze_pitch_file
+        from scripts.pitch_export import export_pitch_docx
+        try:
+            data = request.get_json(silent=True) or {}
+        except Exception:
+            data = {}
+        text = data.get('text', '')
+        brand_hint = data.get('brand', '')
+        hotspot = data.get('hotspot', '')
+        n = min(int(data.get('n', 3)), 5)
+        file = request.files.get('file') if hasattr(request, 'files') else None
+        if file and file.filename:
+            import os, tempfile
+            tmp = os.path.join(tempfile.gettempdir(), 'pitch_%s' % file.filename)
+            file.save(tmp)
+            result = analyze_pitch_file(tmp, brand_hint, n, hotspot)
+            os.remove(tmp)
+        elif text.strip():
+            result = analyze_pitch(text, brand_hint, n, hotspot)
+        else:
+            return jsonify({'ok': False, 'error': '需要 text 或上传文件'}), 400
+        out_path = export_pitch_docx(result)
+        from flask import send_file
+        return send_file(out_path, as_attachment=True,
+                         download_name='%s_方案拆解.docx' % (result.get('extracted', {}).get('brand') or 'pitch'))
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/api/event-graph/import', methods=['POST'])
 def event_graph_import_existing():
     """从现有events表导入事件"""

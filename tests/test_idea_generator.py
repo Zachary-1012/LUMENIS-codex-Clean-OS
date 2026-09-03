@@ -152,8 +152,31 @@ def test_resonate_appears_in_rotation():
     emo = [i for i in r["ideas"] if i["mechanism"] == "情感共鸣"]
     _ALL_TECH = {"以小写大", "时间具象", "朴素真话", "越界张力", "不说破的深情", "条件预言",
                  "悖论并置", "反问推理", "首语重复", "交错配列", "留白斜说", "季语物候",
-                 "魔幻现实", "轻描淡写", "材质细语", "传承物语", "沉默留白", "仪式时刻"}
+                 "魔幻现实", "轻描淡写", "材质细语", "传承物语", "沉默留白", "仪式时刻",
+                 "感官通感", "悦己和解", "自然对白", "共同生长"}
     assert emo and all(i["tension_type"] in _ALL_TECH for i in emo)
+
+
+def test_category_emotion_hooks_appear():
+    """品类情感手法（感官通感/悦己和解/自然对白/共同生长）进入共鸣候选并真实可产出。"""
+    import random
+    from scripts.idea_generator import _pick_hook
+    rng = random.Random(2)
+    used = set()
+    seen = set()
+    for _ in range(260):
+        tpl, hk, _k = _pick_hook({}, "resonate", "premium", rng, used)
+        seen.add(hk)
+    for need in ("emo_sensory", "emo_self", "emo_nature", "emo_grow"):
+        assert need in seen, "%s 未进入共鸣候选" % need
+    # 集成抽样：premium 调性出现品类手法
+    s = {"topics": ["面包", "展览", "美妆"], "sentiment": "positive", "negative_rate": 0.03,
+         "risk_events": 0, "circle": "生活方式家", "hotspot": "", "volume_notes": 200}
+    types = set()
+    for seed in range(6):
+        r = generate_ideas("广州太古汇", "商业地产", s, n=24, tonality="premium", budget="mid", seed=seed)
+        types |= {i["tension_type"] for i in r["ideas"] if i["mechanism"] == "情感共鸣"}
+    assert types & {"感官通感", "悦己和解", "自然对白", "共同生长"}, "品类手法未在集成输出出现，实际=%s" % types
 
 
 def test_lux_extra_hooks_appear_in_luxury():

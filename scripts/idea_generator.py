@@ -295,6 +295,28 @@ _HOOK_EMO = {
         "没什么特别的，{brand}的{topic}就是{img}——{c0}都这么说",
         "{topic}不难，{brand}只是替{c0}多走了几步——{img}，而已",
     ],
+    # —— 品类情感手法（2026 智谱 web_search 研究落地：美妆疗愈/母婴/户外/酒类）——
+    # 原则：克制比浓烈更治愈，拒绝宏大词，用微小细节写真实情绪
+    "emo_sensory": [  # 感官通感（触觉/嗅觉/听觉具象承载情绪）
+        "{topic}的质感，像{img}落在指腹——{brand}，替{c0}记得那种触感",
+        "闻见{topic}的气息，就像回到某个下午——{brand}的{img}，是记忆的开关",
+        "{topic}的声音很轻，轻得像{img}——{brand}，{c0}听了就知道",
+    ],
+    "emo_self": [  # 悦己和解（不是想变成谁，只是更真实一点）
+        "不是想躲开{topic}，只是想对自己真实一点——{brand}，{img}，为自己",
+        "{c0}不必把{topic}过成标准答案——{brand}，{img}，做自己就好",
+        "把{topic}留一点给{img}——{brand}相信，{c0}值得被好好对待",
+    ],
+    "emo_nature": [  # 自然对白（自然元素×身体感知，自由留白）
+        "{topic}的风一吹，{c0}就松开了——{brand}的{img}，在远处等你",
+        "走到{topic}那里，山会替你回答——{brand}，{img}，不必赶路",
+        "{topic}在路尽头，{brand}把{img}铺到脚下——{c0}，出发就是答案",
+    ],
+    "emo_grow": [  # 共同生长（不刻意、日常仪式、一起慢慢来）
+        "{topic}不是赶出来的，是{brand}和{c0}一起慢慢长成的——{img}，不急",
+        "每天一点点，{topic}就和{img}一起长大了——{brand}，陪着{c0}",
+        "{brand}相信：{topic}最好的样子，是{c0}一起{img}的样子",
+    ],
 }
 
 # 高奢版情感共鸣：安静克制，不煽情
@@ -363,6 +385,23 @@ _HOOK_EMO_LUX = {
         "{topic}的时刻，{brand}备好{img}——{c0}，慢一点，像某种仪式",
         "把{topic}过成仪式——{brand}的{img}，专为值得的人",
     ],
+    # —— 品类情感手法·高奢版（克制更甚：感官/悦己/自然/共生）——
+    "emo_sensory": [
+        "{topic}的触感，只有{brand}知道怎么形容——{img}，留在指尖",
+        "让{topic}的气味替你开口——{brand}，{img}，不言而喻",
+    ],
+    "emo_self": [
+        "{topic}，不必为谁而美——{brand}，{img}，只对{c0}自己",
+        "不追赶{topic}，{brand}只在意{c0}是否自在——{img}，足矣",
+    ],
+    "emo_nature": [
+        "{topic}在山的那一头——{brand}，{img}，安静地等{c0}",
+        "{c0}走向{topic}，{brand}的{img}一路相随，不多话",
+    ],
+    "emo_grow": [
+        "{topic}与{brand}，都经得起时间——{img}，与{c0}一起慢慢来",
+        "{brand}的{topic}，是一点一点长出来的——{img}，如你",
+    ],
 }
 
 _EMO_LUX_EXTRA = ["emo_material", "emo_heirloom", "emo_silence", "emo_ritual"]
@@ -371,14 +410,20 @@ _EMO_LUX_EXTRA = ["emo_material", "emo_heirloom", "emo_silence", "emo_ritual"]
 # 功能性/低语境主题词（如 停车/排队/投诉 → service）收敛到写实手法，避免"越界张力/魔幻现实"
 # 等需要浪漫语境的手法与之组合出戏；高语境角色放开手法面。
 _EMO_ROLE_COMPAT = {
-    "space":  ["emo_time", "emo_unspoken", "emo_omen", "emo_paradox", "emo_slant", "emo_surreal", "emo_season"],
-    "food":   ["emo_heart", "emo_truth", "emo_time", "emo_unspoken", "emo_season", "emo_slant", "emo_understate"],
+    "space":  ["emo_time", "emo_unspoken", "emo_omen", "emo_paradox", "emo_slant", "emo_surreal", "emo_season",
+               "emo_sensory", "emo_nature"],
+    "food":   ["emo_heart", "emo_truth", "emo_time", "emo_unspoken", "emo_season", "emo_slant", "emo_understate",
+               "emo_sensory", "emo_self", "emo_grow"],
     "service":["emo_truth", "emo_heart", "emo_time", "emo_repeat", "emo_understate", "emo_season"],
-    "event":  ["emo_omen", "emo_heart", "emo_edge", "emo_unspoken", "emo_query", "emo_repeat", "emo_understate"],
-    "ip":     ["emo_edge", "emo_unspoken", "emo_omen", "emo_mirror", "emo_query", "emo_surreal", "emo_repeat"],
-    "aesthetic": ["emo_unspoken", "emo_paradox", "emo_omen", "emo_slant", "emo_season", "emo_surreal", "emo_mirror"],
+    "event":  ["emo_omen", "emo_heart", "emo_edge", "emo_unspoken", "emo_query", "emo_repeat", "emo_understate",
+               "emo_grow", "emo_self"],
+    "ip":     ["emo_edge", "emo_unspoken", "emo_omen", "emo_mirror", "emo_query", "emo_surreal", "emo_repeat",
+               "emo_nature", "emo_sensory"],
+    "aesthetic": ["emo_unspoken", "emo_paradox", "emo_omen", "emo_slant", "emo_season", "emo_surreal", "emo_mirror",
+                  "emo_sensory", "emo_self", "emo_nature"],
     "general": ["emo_truth", "emo_omen", "emo_paradox", "emo_query", "emo_repeat", "emo_heart",
-                "emo_time", "emo_slant", "emo_season", "emo_surreal", "emo_understate", "emo_mirror"],
+                "emo_time", "emo_slant", "emo_season", "emo_surreal", "emo_understate", "emo_mirror",
+                "emo_sensory", "emo_self", "emo_nature", "emo_grow"],
 }
 
 # 机制 → 张力句式类型（可多选）
@@ -391,7 +436,8 @@ MECH_TO_HOOK = {
     "culture": ["culture", "assert"],
     "resonate": ["emo_heart", "emo_time", "emo_truth", "emo_edge", "emo_unspoken", "emo_omen",
                  "emo_paradox", "emo_query", "emo_repeat", "emo_mirror", "emo_slant",
-                 "emo_season", "emo_surreal", "emo_understate"],
+                 "emo_season", "emo_surreal", "emo_understate",
+                 "emo_sensory", "emo_self", "emo_nature", "emo_grow"],
 }
 
 # ---- 预算感知（同一创意不同预算的落地档位）----
@@ -588,7 +634,9 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
                       "emo_query": "反问推理", "emo_repeat": "首语重复", "emo_mirror": "交错配列",
                       "emo_slant": "留白斜说", "emo_season": "季语物候", "emo_surreal": "魔幻现实",
                       "emo_understate": "轻描淡写", "emo_material": "材质细语",
-                      "emo_heirloom": "传承物语", "emo_silence": "沉默留白", "emo_ritual": "仪式时刻"}
+                      "emo_heirloom": "传承物语", "emo_silence": "沉默留白", "emo_ritual": "仪式时刻",
+                      "emo_sensory": "感官通感", "emo_self": "悦己和解", "emo_nature": "自然对白",
+                      "emo_grow": "共同生长"}
         ideas.append({
             "big_idea": slogan,
             "mechanism": mech_name,
