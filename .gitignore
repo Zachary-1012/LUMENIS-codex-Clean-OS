@@ -171,3 +171,5 @@ app.py.bak_*
 # local source backups (never commit)
 *.prev*_bak
 *.prev2_bak
+
+# DCC 已废弃迁移至 Zachary-OS-AI（2026-09-03），tools/development-command-console 为历史资产留存，不再纳入版本控制
