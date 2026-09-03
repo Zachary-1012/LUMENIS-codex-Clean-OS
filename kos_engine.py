@@ -321,7 +321,7 @@ def analyze_comments(author_id: str = "", note_id: str = "", limit: int = 50) ->
         d["cooperation_signal"] = _cooperation_signal(content)
         d["needs_review"] = risk_level == "high"
         # 真实回复模板（复用 generate_reply 单一事实源；高风险→NO_REPLY 空建议）
-        _r = generate_reply(content, risk_level=risk_level)
+        _r = generate_reply(content, risk_level=risk_level, ai_enhance=False)
         d["reply_suggestion"] = _r.get("suggested_reply", "") if _r.get("action") == "SUGGEST_REPLY" else ""
         comments.append(d)
     cat_stats = {}
@@ -457,7 +457,8 @@ __all__ = ["refresh_profiles", "get_stats", "list_profiles", "get_profile",
 # ============== P1: 评论回复AI生成 + 内容基因提取 ==============
 
 def generate_reply(comment_text: str, brand_name: str = "广州太古汇",
-                   reply_style: str = "professional", risk_level: str = "low") -> dict:
+                   reply_style: str = "professional", risk_level: str = "low",
+                   ai_enhance: bool = True) -> dict:
     """生成评论回复建议（AI辅助，高风险NO_REPLY不自动回复）。
 
     原则：
@@ -508,7 +509,8 @@ def generate_reply(comment_text: str, brand_name: str = "广州太古汇",
 
     # 智谱 AI 生成建议（仅建议，不自动回复；HIGH/CRITICAL 已在上方 NO_REPLY 拦截）。
     # 分层：negative_feedback / purchase_intent 走强模型 ZHIPU_STRONG_MODEL（glm-5.3），其余默认 glm-4.5-air。
-    _ai_reply = _ai_generate_reply(comment_text, brand_name, category, reply_style)
+    # 批量列表场景 ai_enhance=False 走确定性规则模板（0网络）；单条按需生成才调AI
+    _ai_reply = _ai_generate_reply(comment_text, brand_name, category, reply_style) if ai_enhance else ""
     _suggested = _ai_reply or templates.get(category, templates["general_interaction"])
 
     return {

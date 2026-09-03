@@ -85,6 +85,66 @@
     }).catch(function () {});
   }
 
+  // KOS 生命周期分布（overview.by_lifecycle：发现/活跃/成长/稳定/爆发/沉寂）
+  function loadKosLifecycle() {
+    api("/api/kos/overview").then(function (d) {
+      if (!d.ok || !d.data) return;
+      var lc = d.data.by_lifecycle || {};
+      ensureKosPanel("kosLifecyclePanel", "KOS 生命周期分布");
+      var body = document.getElementById("kosLifecyclePanelBody");
+      if (!body) return;
+      var stages = [["discovered","发现"],["growing","成长"],["active","活跃"],["stable","稳定"]];
+      var total = 0; stages.forEach(function(st){ total += (lc[st[0]]||0); });
+      body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">' +
+        stages.map(function(st){
+          var v = lc[st[0]]||0; var pct = total? Math.round(v*100/total):0;
+          return '<div style="background:#f9f9f9;padding:10px;border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:600">'+v+'</div><div style="font-size:11px;color:#999">'+st[1]+' · '+pct+'%</div></div>';
+        }).join('') + '</div>';
+    }).catch(function () {});
+  }
+
+  // 投流候选：自然表现→投流评分；无真实转化/成本数据时不生成ROI
+  function loadKosAdCandidates() {
+    ensureKosPanel("kosAdPanel", "投流候选（自然表现 → 投流评分，无真实转化不生成 ROI）");
+    api("/api/kos/ad-candidates").then(function (d) {
+      var body = document.getElementById("kosAdPanelBody");
+      if (!body) return;
+      var cands = d.candidates || [];
+      if (!cands.length) { body.innerHTML = '<span style="color:#999">暂无候选</span>'; return; }
+      var groups = {"推荐投流":[], "建议观察":[], "不建议投流":[]};
+      cands.forEach(function(c){ (groups[c.recommendation]||groups["建议观察"]).push(c); });
+      body.innerHTML = Object.keys(groups).map(function(g){
+        var list = groups[g]; if(!list.length) return "";
+        var color = g==="推荐投流"?"#16a34a":(g==="建议观察"?"#d97706":"#9ca3af");
+        return '<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:'+color+';margin-bottom:6px">'+g+'（'+list.length+'）</div>' +
+          list.slice(0,8).map(function(c){
+            var eng = (c.engagement||0);
+            return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:12px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.title||"")+' <span style="color:#999">@'+(c.author||"")+'</span></span><b style="flex-shrink:0">'+(c.ad_score||0)+'分 · 互动'+(eng?eng.toLocaleString():"0")+'</b></div>';
+          }).join('') + '</div>';
+      }).join('');
+    }).catch(function () {});
+  }
+
+  // 评论回复中心：分类/情绪/风险/是否回复；高风险 NO_REPLY 禁止AI自动回复
+  function loadKosComments() {
+    ensureKosPanel("kosCommentsPanel", "评论回复中心（自动分类 · 情绪 · 风险 · 高风险 NO_REPLY 转人工）");
+    api("/api/kos/comments?limit=50").then(function (d) {
+      var body = document.getElementById("kosCommentsPanelBody");
+      if (!body) return;
+      var cs = d.comments || [];
+      if (!cs.length) { body.innerHTML = '<span style="color:#999">暂无评论</span>'; return; }
+      var cat = d.by_category || {};
+      var catBar = Object.keys(cat).map(function(k){ return '<span style="display:inline-block;padding:2px 8px;background:#f0f0f0;border-radius:10px;font-size:11px;margin:0 4px 4px 0">'+k+' '+cat[k]+'</span>'; }).join('');
+      body.innerHTML = '<div style="margin-bottom:10px">'+catBar+'</div>' +
+        cs.slice(0,15).map(function(c){
+          var risk = c.risk_level || "";
+          var noReply = (c.should_reply===false || c.should_reply==="false" || c.should_reply==="False" || c.should_reply===0);
+          var replyTag = noReply ? '<span style="color:#dc2626;font-size:10px">NO_REPLY</span>' : (c.should_reply?'<span style="color:#16a34a;font-size:10px">建议回复</span>':'');
+          return '<div style="padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:12px"><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:2px"><b>@'+(c.author_nickname||"匿名")+'</b><span style="color:#999;font-size:10px">'+(c.category||"")+' · '+(c.sentiment||"")+' '+replyTag+'</span></div><div style="color:#444">'+(c.content||"")+'</div>'+(c.reply_suggestion?'<div style="margin-top:4px;padding:6px 8px;background:#f7f7f5;border-radius:6px;color:#666">回复建议: '+c.reply_suggestion+'</div>':"")+'</div>';
+        }).join('');
+    }).catch(function () {});
+  }
+
   // KM-02/04：手动回填入口（WeCom / Sales / Boosting / 进线 / 点击）→ /api/kos/manual
   function loadKosManualFill() {
     ensureKosPanel("kosManualPanel", "手动回填（KM-02：WeCom / Sales / Boosting / 进线）");
@@ -353,6 +413,9 @@
       loadKosList("");
       loadKosFunnel();
       loadKosRoi();
+      loadKosLifecycle();
+      loadKosAdCandidates();
+      loadKosComments();
       loadKosManualFill();
     }
     // 独立 /kos 页面：存在 #page-kos 容器则立即加载

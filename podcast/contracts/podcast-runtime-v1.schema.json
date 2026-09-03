@@ -1,0 +1,23 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"zbc://podcast/runtime/v1",
+  "title":"ZBC Podcast Runtime Record v1",
+  "type":"object",
+  "required":["run_id","pipeline_version","started_at","status"],
+  "properties":{
+    "run_id":{"type":"string"},
+    "pipeline_version":{"type":"string"},
+    "model_name":{"type":["string","null"]},
+    "model_version":{"type":["string","null"]},
+    "prompt_version":{"type":["string","null"]},
+    "input_hash":{"type":["string","null"]},
+    "started_at":{"type":"string","format":"date-time"},
+    "completed_at":{"type":["string","null"],"format":"date-time"},
+    "duration_ms":{"type":["integer","null"],"minimum":0},
+    "status":{"type":"string","enum":["queued","running","succeeded","failed","cancelled","shadow"]},
+    "evidence_ids":{"type":"array","items":{"type":"string"}},
+    "error_class":{"type":["string","null"]},
+    "metadata":{"type":"object","additionalProperties":true}
+  },
+  "additionalProperties":false
+}

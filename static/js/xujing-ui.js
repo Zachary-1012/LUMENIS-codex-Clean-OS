@@ -69,6 +69,14 @@
     if (pageEl.querySelector('.xj-page-header')) return;
     // 检查是否有旧的 page-hero / page-title
     var oldHero = pageEl.querySelector('.page-hero, .page-title, .page-head');
+    // 页面已有原生 .page-header（含返回按钮+h2+右侧操作）：只注入面包屑条，不重复注入 h1，保留原生按钮
+    var nativeHeader = pageEl.querySelector('.page-header');
+    if (nativeHeader) {
+      if (!pageEl.querySelector('.xj-breadcrumb')) {
+        nativeHeader.insertAdjacentHTML('beforebegin', '<div class="xj-page-header xj-header-breadcrumb-only" data-auto-injected="1">' + buildBreadcrumb(pageKey) + '</div>');
+      }
+      return;
+    }
     var headerHTML = '<div class="xj-page-header" data-auto-injected="1">' +
       buildBreadcrumb(pageKey) +
       '<div class="xj-page-header-inner">' +

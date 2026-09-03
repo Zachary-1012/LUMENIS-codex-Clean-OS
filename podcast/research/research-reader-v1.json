@@ -1,0 +1,11 @@
+{
+  "schema_version":"1.0",
+  "reader_id":"podcast-research-reader",
+  "title":"Podcast Deep Research Reader",
+  "navigation":["executive_summary","ip_positioning","person","topic","episode_structure","runtime","breakout","platform_matrix","ip_matrix","ui_ux","transferability","evidence","hypotheses","learning"],
+  "display_rules":{"default_density":"comfortable","progressive_disclosure":true,"show_secondary_metrics_on_expand":true,"evidence_as_drawer":true,"avoid_dashboard_card_wall":true},
+  "research_levels":["fact","observation","pattern","hypothesis","validation","transfer","dont_copy"],
+  "evidence_states":["observed","derived","ai_suggested","human_verified","unverified"],
+  "runtime_fields":["observed_at","published_at","retrieved_at","analysis_run_id"],
+  "case_benchmark":{"case_id":"liangzi-interview-record","status":"benchmark","note":"Initial benchmark; quantitative claims require source evidence before promotion."}
+}

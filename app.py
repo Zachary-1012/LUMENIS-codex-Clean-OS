@@ -201,6 +201,13 @@ try:
 except Exception as _kos_e:
     print(f"[kos_routes] blueprint register failed: {_kos_e}")
 
+# 序境 · 播客情报 API（实体图 + 确定性智能算法，独立于品牌舆情链路）
+try:
+    import podcast_routes
+    podcast_routes.register_podcast_api(app)
+except Exception as _pc_e:
+    print(f"[podcast_routes] blueprint register failed: {_pc_e}")
+
 # Zachary OS AI：Browser Runtime API（只读，对齐 CTR-BROWSER-RUNTIME-P0-01）
 try:
     import browser_runtime_api

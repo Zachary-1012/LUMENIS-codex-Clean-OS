@@ -29,8 +29,8 @@
     { title: '总览', items: ['overview'], rename: { overview: '智能问答' } },
     { title: '监测', items: ['monitor', 'alerts', 'negative', 'notes', 'official', 'topic-campaign', 'topics'] },
     { title: '分析', items: ['analysis', 'events', 'event-graph', 'calendar'] },
-    { title: '品牌资产', items: ['brands', 'swire', 'cases', 'case-analysis', 'knowledge-base', 'brand-report', 'app-evidence'] },
-    { title: '产出', items: ['reports'] },
+    { title: '品牌资产', items: ['brands', 'swire', 'cases', 'case-analysis', 'knowledge-base', 'brand-report', 'app-evidence', 'kos'] },
+    { title: '产出', items: ['reports', 'podcast'] },
     { title: '系统', items: ['resident-health', 'internal-browser', 'evidence', 'settings', 'kbShortcutsEntry'] }
   ];
 

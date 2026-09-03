@@ -149,7 +149,7 @@
   <link rel="stylesheet" href="/static/css/ui_polish.css?v=1.0.3">
   <link rel="stylesheet" href="/static/css/zbip-motion.css?v=1.0.0">
   <!-- 序境 Xujing · Unified Design System v1.0 — 权威令牌/组件/布局/交互层，最高优先级，统一全部历史皮肤 -->
-  <link rel="stylesheet" href="/static/css/xujing-design-system.css?v=1.2.0">
+  <link rel="stylesheet" href="/static/css/xujing-design-system.css?v=1.5.0">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) v3 浅色系 -->
@@ -403,6 +403,7 @@
         <button class="side-item" data-page="kos" data-desc="KOS传播主体智能：S/A/B/C分层、潜力/风险识别、评论分析、博主触达、投流候选"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>KOS 传播主体</span></button>
         <div class="side-group-label">产出</div>
         <button class="side-item" data-page="reports" data-desc="日报/周报/月报/年报导出，Word/Excel/CSV格式"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span><span>报告中心</span></button>
+        <button class="side-item" data-page="podcast" data-desc="播客内容情报与生产工作台：选题打分、故事节点、运行时校验、破圈分类、实体图"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span><span>播客工作台</span></button>
         <div class="side-group-label">系统</div>
         <button class="side-item" data-page="resident-health" data-desc="双身份驻场浏览器三层健康检测、登录态监控、失效扫码恢复"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="7 11 9.5 11 11 8.5 13 13.5 14.5 11 17 11"/></svg></span><span>系统健康</span></button>
         <button class="side-item" data-page="internal-browser" data-desc="系统内置浏览器，小红书/rednote 双账号系统内完成，不跳转外部浏览器"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16 8 13.5 10.5 10.5 13.5 8 16 10.5 13.5 13.5 10.5 16 8"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span><span>内部浏览器</span></button>
@@ -631,6 +632,7 @@
               <button class="filter-btn" onclick="kosFilterTier(this,'S')">S</button>
               <button class="filter-btn" onclick="kosFilterTier(this,'A')">A</button>
               <button class="filter-btn" onclick="kosFilterTier(this,'B')">B</button>
+              <button class="filter-btn" onclick="kosFilterTier(this,'C')">C</button>
             </div>
           </div>
           <div class="kos-list" id="kosList"></div>
@@ -1163,7 +1165,48 @@
         </div>
       </section>
 
-      
+      <!-- 播客情报工作台 Podcast Intelligence -->
+      <section class="page-view" id="page-podcast">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>播客情报工作台</h2></div>
+        <div class="pc-stats" id="pcStats"></div>
+        <div class="pc-grid">
+          <div class="panel glass-card">
+            <div class="panel-head"><div><span class="eyebrow">TOPIC SCORING</span><h3>选题十维打分</h3><p>确定性加权 · 结果可复现 · AI 不参与最终判定</p></div></div>
+            <div class="pc-dims" id="pcTopicDims"></div>
+            <div class="pc-score-row"><button class="action primary tip" id="pcScoreBtn" style="padding:8px 18px">计算选题分</button><div id="pcScoreOut" class="pc-score-out"></div></div>
+          </div>
+          <div class="panel glass-card">
+            <div class="panel-head"><div><span class="eyebrow">BREAKOUT</span><h3>破圈分类</h3><p>当前表现 vs 基线，阈值可配</p></div></div>
+            <div class="pc-bo-row">
+              <label>当前值<input type="number" id="pcBoCurrent" value="50000" style="width:110px;padding:7px 9px;border:1px solid rgba(0,0,0,.12);border-radius:8px"></label>
+              <label>基线值<input type="number" id="pcBoBaseline" value="10000" style="width:110px;padding:7px 9px;border:1px solid rgba(0,0,0,.12);border-radius:8px"></label>
+              <button class="action tip" id="pcBreakoutBtn" style="padding:8px 16px">判定</button>
+            </div>
+            <div id="pcBreakoutOut" style="font-size:13px;margin-top:10px"></div>
+          </div>
+        </div>
+        <div class="panel glass-card" style="margin-top:14px">
+          <div class="panel-head"><div><span class="eyebrow">ENTITY GRAPH</span><h3>播客实体库</h3><p>人物→采访→故事节点→问题→内容资产→平台数据，与品牌舆情物理隔离</p></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="pcEntityFilter" style="padding:7px 9px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:12px">
+                <option value="">全部类型</option><option value="show">节目</option><option value="episode">单集</option>
+                <option value="segment">分段</option><option value="story_node">故事节点</option><option value="topic">选题</option>
+                <option value="question">问题</option><option value="content_asset">内容资产</option><option value="person">人物</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06)">
+            <select id="pcNewType" style="padding:7px 9px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:12px">
+              <option value="show">节目</option><option value="episode">单集</option><option value="topic">选题</option>
+              <option value="person">人物</option><option value="content_asset">内容资产</option>
+            </select>
+            <input id="pcNewTitle" placeholder="实体标题" style="flex:1;min-width:200px;padding:7px 9px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:12px">
+            <button class="action primary tip" id="pcAddEntity" style="padding:7px 16px">手动录入</button>
+          </div>
+          <div id="pcEntityList" style="padding:6px 16px"></div>
+        </div>
+      </section>
+
         <!-- 智能能力中心 -->
         <div class="panel glass-card smart-center">
           <div class="panel-head"><div><span class="eyebrow">SMART CAPABILITIES</span><h3>智能能力中心</h3><p>API密钥管理 · AI资源包 · 小红书登录 · 搜索增强</p></div></div>
@@ -1384,7 +1427,7 @@
 <!-- 舆情预警浮动通知容器 -->
 <div class="alert-container" id="alertContainer"></div>
 <script src="/static/js/app.js?v=8.0.4"></script>
-<script src="/static/js/xujing-ui.js?v=1.0.0"></script>
+<script src="/static/js/xujing-ui.js?v=1.0.1"></script>
 <!-- v5.9.9 弹窗精简补丁：核心信息一眼看懂，次要信息折叠展开（覆盖app.js三个详情弹窗，不改源文件） -->
 <script src="/static/js/modal_simplify.js?v=5.9.9"></script>
 <!-- v5.8.4 太古集团全域事件/笔记库 -->
@@ -1498,7 +1541,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- GAP-03 全局 Auth Recovery：任何页面登录失效/人机验证/IP风控即在当前页弹统一恢复窗，不跳页；与 v4 子页同一实现 -->
 <script src="/v4/static/auth_global.js?v=zbip1" defer></script>
 <!-- [STAGING ONLY] ZBIP App Shell 运行时（分组/工作区切换/搜索/账户/Home） -->
-<script src="/static/js/zbip-shell.js?v=1.3.2" defer></script>
+<script src="/static/js/zbip-shell.js?v=1.4.0" defer></script>
 <!-- [STAGING ONLY] ZBMP 工作台运行时（双工作区/模块IA/连接器/设置/密钥Sheet），须在 shell 之后，回滚=删此 script -->
 <script src="/static/js/zbmp-workbench.js?v=1.1.0" defer></script>
 <script src="/static/js/zbip-panels.js?v=1.0.0" defer></script>
@@ -1508,7 +1551,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <script src="/static/js/internal_browser.js?v=8.0.2"></script>
   <script src="/static/js/local_import.js?v=5.9.9"></script>
   <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script>
-  <script src="/static/js/kos_dashboard.js?v=1.1.0"></script>
+  <script src="/static/js/kos_dashboard.js?v=1.3.0"></script>
+<script src="/static/js/podcast.js?v=1.0.0"></script>
   <script src="/static/js/brand_hub.js?v=1.1"></script>
 <script>
   // P0安全修复(2026-09-02): window.__Z_AUTH 定义已移至 <head>（three.min.js之后），确保所有JS文件加载前已定义
