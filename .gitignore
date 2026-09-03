@@ -177,3 +177,7 @@ app.py.bak_*
 # 个人业务交付物（比稿方案等）仅本地保存，不入线上仓库
 # personal business deliverables: local only, never commit
 deliverables/
+
+# 本地业务资料（脱敏后仅本地保存，禁止上线）
+_pitch_dump*
+_pitch_dump/
