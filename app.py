@@ -5767,83 +5767,173 @@ def api_v4_api_keys_revoke():
 
 
 # ============ 小红书系统内二维码登录（Auth Recovery） ============
+def _xhs_ensure_login_panel(page, login_texts):
+    """未登录且停在首页时，仅点击一次“登录”入口唤起二维码面板。
+    只点登录入口本身，绝不点击关注/赞藏/发布/退出/切号等任何账号操作。"""
+    try:
+        if page.locator('canvas, [class*="qrcode"], [class*="qr-code"], [class*="login-qr"]').count() > 0:
+            return
+        for txt in (login_texts or ('登录', 'Log in')):
+            try:
+                loc = page.get_by_text(txt, exact=True)
+                for i in range(min(loc.count(), 4)):
+                    el = loc.nth(i)
+                    if not el.is_visible():
+                        continue
+                    box = el.bounding_box() or {}
+                    if 20 <= box.get('width', 0) <= 200 and 16 <= box.get('height', 0) <= 80:
+                        el.click(timeout=2000)
+                        page.wait_for_timeout(1200)
+                        return
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+
+def _xhs_shot_qr_element(page):
+    """找“可见、近似方形、尺寸合理”的二维码元素并截图(base64)；找不到返回 None。"""
+    import base64 as _b64
+    candidates = [
+        'canvas', '[class*="qrcode"] canvas', '[class*="qr-code"]',
+        '[class*="login-qr"] img', '[class*="qrcode"] img',
+        'img[src*="qrcode"]', 'div[class*="qr"]',
+    ]
+    best = None
+    for sel in candidates:
+        try:
+            loc = page.locator(sel)
+            for i in range(min(loc.count(), 4)):
+                el = loc.nth(i)
+                if not el.is_visible():
+                    continue
+                box = el.bounding_box() or {}
+                w, h = box.get('width', 0), box.get('height', 0)
+                if not (80 <= w <= 360 and 80 <= h <= 360):
+                    continue
+                if not (0.65 <= (w / h if h else 0) <= 1.55):
+                    continue
+                area = w * h
+                if best is None or area > best[0]:
+                    best = (area, el)
+        except Exception:
+            continue
+    if not best:
+        return None
+    try:
+        return _b64.b64encode(best[1].screenshot(type='png')).decode()
+    except Exception:
+        return None
+
+
+def _xhs_login_capture(ep):
+    """连接平台常驻 CDP：在线→('logged_in',None)；未登录→打开登录页/唤起面板并截取二维码。
+    全程只读 + 至多点击一次“登录”入口；不发布/不关注/不退出/不切号。
+    返回 (stage, qr_dataurl_or_None, msg)。"""
+    import base64 as _b64
+    from playwright.sync_api import sync_playwright
+    cdp = ep['cdp_url']
+    home = ep['home_url']
+    login = ep.get('login_url') or home
+    want = set(ep.get('session_cookies') or ())
+    with sync_playwright() as pw:
+        browser = pw.chromium.connect_over_cdp(cdp, timeout=10000)
+        try:
+            ctx = browser.contexts[0] if browser.contexts else None
+            if ctx is None:
+                return 'error', None, '浏览器无可用上下文，请确认对应 CDP 浏览器已启动'
+            names = {c.get('name') for c in (ctx.cookies(home) or [])}
+            if want and (names & want):
+                return 'logged_in', None, '检测到登录态，无需扫码'
+            page = None  # 复用已打开的本站 tab，避免重复弹窗
+            for pg in ctx.pages:
+                try:
+                    if ep.get('domain', '') in (pg.url or ''):
+                        page = pg
+                        break
+                except Exception:
+                    continue
+            if page is None:
+                page = ctx.new_page()
+                page.goto(login, wait_until='domcontentloaded', timeout=25000)
+                page.wait_for_timeout(2500)
+            _xhs_ensure_login_panel(page, ep.get('login_texts'))
+            page.wait_for_timeout(1000)
+            qr = _xhs_shot_qr_element(page)
+            if qr:
+                return 'qr_ready', 'data:image/png;base64,' + qr, '请使用小红书 App 扫描二维码'
+            png = page.screenshot(type='png')  # 回退整页视口，便于人工排查而非空白
+            return 'no_qr', 'data:image/png;base64,' + _b64.b64encode(png).decode(), '暂未定位到二维码（可能加载中），已回传当前页面'
+        finally:
+            try:
+                browser.close()
+            except Exception:
+                pass
+
+
 @app.route('/api/xhs/login/start', methods=['POST'])
 def api_xhs_login_start():
-    """启动小红书登录：通过CDP浏览器打开登录页，返回登录会话ID"""
+    """启动小红书登录：创建登录会话（大陆9222/香港9223 归一）。
+    打开登录页与截取二维码由 /status 轮询幂等完成，避免一次性线程泄漏/重复 tab。"""
     try:
-        import json, time, uuid
-        # 平台参数（任意别名归一化）：xhs_cn=国内 xiaohongshu.com/CDP9222 | rednote_hk=香港 rednote.com/CDP9223
+        import time
+        import uuid
         import xhs_collection_optimizer as _xco_start
         _body = request.get_json(silent=True) or {}
         _ep = _xco_start.get_platform_endpoint(_body.get('platform') or 'xhs_cn')
-        _platform = _ep['key']          # 标准 key：xhs_cn / rednote_hk
-        _cdp_url = _ep['cdp_url']
-        _login_url = _ep['login_url']
-        _label = _ep['label']
         session_id = 'xhs_login_' + uuid.uuid4().hex[:8]
-        # 记录登录会话
         login_sessions = getattr(app, '_xhs_login_sessions', {})
         login_sessions[session_id] = {
             'status': 'pending',
             'created_at': time.time(),
-            'platform': _platform,
+            'platform': _ep['key'],
         }
         app._xhs_login_sessions = login_sessions
-        # 通过CDP浏览器打开登录页（异步，不阻塞）
-        try:
-            from playwright.sync_api import sync_playwright
-            import threading
-            def _open_login_page():
-                try:
-                    with sync_playwright() as p:
-                        browser = p.chromium.connect_over_cdp(_cdp_url, timeout=15000)
-                        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
-                        page = ctx.new_page()
-                        page.goto(_login_url, wait_until='domcontentloaded', timeout=30000)
-                        login_sessions[session_id]['status'] = 'page_opened'
-                        login_sessions[session_id]['url'] = page.url
-                except Exception as e:
-                    login_sessions[session_id]['status'] = 'error'
-                    login_sessions[session_id]['error'] = str(e)
-            threading.Thread(target=_open_login_page, daemon=True).start()
-        except Exception as e:
-            login_sessions[session_id]['status'] = 'browser_unavailable'
-            login_sessions[session_id]['error'] = str(e)
-        return jsonify({'ok': True, 'session_id': session_id, 'status': 'pending', 'message': '请在弹出的浏览器窗口中扫码登录' + _label})
+        return jsonify({'ok': True, 'session_id': session_id,
+                        'platform': _ep['key'], 'label': _ep['label'], 'status': 'pending'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/api/xhs/login/status')
 def api_xhs_login_status():
-    """检查小红书登录状态"""
+    """检查小红书登录状态：在线直接判定；未登录回传系统内二维码截图(qr_image)。"""
     try:
+        import time as _time
         session_id = request.args.get('session_id', '')
         login_sessions = getattr(app, '_xhs_login_sessions', {})
         session = login_sessions.get(session_id, {'status': 'not_found'})
         # 按本次登录会话的平台选对应 CDP/域名/会话 cookie（大陆9222 / 香港9223 各自独立）
         import xhs_collection_optimizer as _xco_st
         _ep = _xco_st.get_platform_endpoint(session.get('platform') or 'xhs_cn')
+        stage, qr_image, msg = 'unknown', None, ''
         is_logged_in = False
         try:
-            from playwright.sync_api import sync_playwright
-            with sync_playwright() as p:
-                browser = p.chromium.connect_over_cdp(_ep['cdp_url'], timeout=10000)
-                ctx = browser.contexts[0] if browser.contexts else None
-                if ctx:
-                    cookies = ctx.cookies(_ep['home_url'])
-                    _names = {c.get('name') for c in (cookies or [])}
-                    is_logged_in = bool(_names & set(_ep['session_cookies']))
-                browser.close()
-        except Exception:
-            pass
+            # 轻节流：二维码 2.5s 内复用，避免 3s 轮询频繁截图；在线判定每次实时查 cookie
+            _now = _time.time()
+            cached = (session.get('qr_image') and _now - session.get('last_cap', 0) < 2.5
+                      and session.get('status') in ('qr_ready', 'no_qr'))
+            if cached:
+                stage = session.get('status')
+                qr_image = session.get('qr_image')
+                msg = '请使用小红书 App 扫描二维码' if stage == 'qr_ready' else '二维码加载中…'
+            else:
+                stage, qr_image, msg = _xhs_login_capture(_ep)
+                session['status'] = stage
+                session['last_cap'] = _now
+                session['qr_image'] = qr_image
+            is_logged_in = (stage == 'logged_in')
+        except Exception as ce:
+            stage, msg = 'error', f'登录页探测失败：{ce}'
         return jsonify({
             'ok': True,
             'session_id': session_id,
             'platform': _ep['key'],
             'label': _ep['label'],
-            'status': session.get('status', 'unknown'),
+            'stage': stage,
+            'status': stage,
             'is_logged_in': is_logged_in,
-            'message': '已登录' if is_logged_in else f'等待{_ep["label"]}扫码登录',
+            'qr_image': qr_image,
+            'message': '已登录' if is_logged_in else msg,
         })
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500

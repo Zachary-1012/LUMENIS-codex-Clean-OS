@@ -881,6 +881,35 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 ### 文件
 - 改：xhs_cookie_bridge.py（+7）；新增：tests/test_adaptive_exception_feedback.py；本日志。备份 xhs_cookie_bridge.py.bak-d2（不提交）。数据库无变化、无迁移。
 
+---
+
+## 2026-09-03 第十二批｜D3 系统内扫码登录弹窗：在线直判保活 + 未登录真实回传二维码（大陆/香港对等）
+
+### 用户痛点与真实根因（先真实 CDP 探测，不猜）
+现象：系统内登录弹窗"未弹出/没有二维码"。用常驻 CDP（9222 大陆 / 9223 香港，均在线）做**只读**探测（只 goto/读 DOM/截图，不点击账号操作）后确认三层根因：
+1. 两台 CDP 浏览器当前**都已登录**：rednote `/login` 被服务端重定向到首页 `/`、国内首页跳 `/explore`，页面是 feed 流、无可见"登录"入口，自然没有二维码（命中的 `img[src*=qr]` 实为 xhscdn 头像/内容图与 logo，非登录码）。
+2. 旧 `/api/xhs/login/start` 只在外部 CDP 窗口 `goto` 登录页，返回前端的 JSON **从不包含任何二维码截图/数据**；`/status` 只回 is_logged_in 布尔——系统内弹窗从源头无图可显。
+3. 国内 `login_url` 是**首页**（非专门登录页），未登录时需先点"登录"入口才弹出二维码面板；rednote 是专门 `/login`。两平台出码路径不同，不能用单一写死选择器。
+
+### 后端改动（app.py，本批提交核心）
+- 新增三个模块级辅助：`_xhs_ensure_login_panel`（未登录且停首页时**仅点一次"登录"入口**唤起面板，按可见+尺寸过滤，绝不碰关注/赞藏/发布/退出/切号）、`_xhs_shot_qr_element`（多候选选择器 + 可见/近方形(80–360px,比例0.65–1.55)/取最大面积，元素截图 base64）、`_xhs_login_capture`（在线→`logged_in` 直接返回不截图；未登录→复用已开本平台 tab 或新开→唤面板→元素截图，失败回退整页视口截图，保证前端永不空白）。
+- `/start` 精简为只建会话（移除一次性开页线程，避免线程泄漏/重复 tab）；`/status` 改为幂等调用 capture，返回 `stage(logged_in|qr_ready|no_qr|error)/qr_image(dataURL)/is_logged_in/message`，并对二维码做 2.5s 会话级节流（在线判定每次实时查 cookie）。
+- 大陆 9222 / 香港 9223 完全对等（platform 经 get_platform_endpoint 归一，cookie 分别落 xhs_cookies.json / rednote_cookies.json，互不覆盖）。
+
+### 前端改动（static/index.html，已随并行提交 5e1cf23 入库）
+- Step2 增系统内二维码容器（侘寂：Stone 底、细 border、圆角10、弱阴影）+ `<img id=xhsLoginQr>`；`checkXhsLoginStatus` 按 `qr_image/stage` 渲染：有码显码、no_qr/加载显 spinner、error 显原因、在线自动 Step3→save→当日保活 mark→关窗。
+
+### 测试与真实结果（已实测）
+- API 双平台：start 返回会话；status 对 xhs_cn / rednote_hk 均正确 `stage=logged_in, is_logged_in=true, 无 qr_image`（在线不截图、直接保活，不再卡空扫码窗）。
+- Playwright(msedge headless) E2E：二维码 DOM 就位；open→Step1→start 后 8s 内正确经 Step3 自动关窗（在线路径），无 PAGEERROR；唯一 console 502 为页面既有外部资源加载、非登录 API、非本次引入，已登记。
+- py_compile app.py exit0；healthcheck exit0，subject_guard gz_hit/sh_excluded=true、has_publish_datetime=true（主体与时间口径未动）。
+
+### 边界 / 遗留登记（不造假）
+- **未登录态的"二维码元素精确截图"当前无法当场 E2E**：两平台在线，且红线禁止退出/切换广州太古汇官方账号；已用多候选+几何过滤保证鲁棒，并回退整页视口截图，待某次真实掉登录时补一次出码 E2E。
+- 前端文件被并行 marketing 提交 5e1cf23 的批量 add 一并入库（内容即本批前端版本、与后端字段匹配）；后端 app.py 由本批提交补齐，在此之前旧后端缺 qr_image 字段时前端 fail-soft（只显示 loading 不报错）。
+- 备份 app.py.bak-d3 / static/index.html.bak-d3（不提交）。数据库无变化、无迁移；采集红线、五条主体函数未触碰。
+
+
 
 
 
