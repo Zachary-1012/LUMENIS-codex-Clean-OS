@@ -41,6 +41,19 @@ Web, App and Mini Program are presentation surfaces over the same canonical capa
 
 Use the shared Design Language: restrained typography, small line icons, clear hierarchy, responsive layout, accessible states and data-first visualization. No oversized logo/icon or poster-like module dominates a page.
 
+## Agent orchestration decision（编排模式判据，2026-09-04, from P0 research Round 3）
+
+Current production orchestration = **Supervisor / hub-and-spoke** (ShadowPlanner gate), which matches the 2026 industry consensus for deterministic workflows with 3-8 agents (70% of production use-cases).
+
+Do NOT upgrade to Hierarchical (tree) orchestration unless at least one trigger fires:
+1. coordinated agent count exceeds 6 (hierarchical avoids polluting the top-level supervisor state when same-domain workers need shared context);
+2. clearly separated heterogeneous domains appear (e.g. public-opinion / marketing / compliance / engineering) each requiring its own specialized tools and reasoning, where per-domain sub-supervisors provide isolation (Microsoft: the key benefit of hierarchy is isolation);
+3. workflow steps become genuinely dependent on prior step results across domains.
+
+Until a trigger fires, keep the Supervisor pattern; adding hierarchy prematurely adds orchestration-logic complexity with no measured benefit. Any upgrade requires owner sign-off + Release Gate + regression.
+
+Source: P0-AGENT-ORG Research Map T1 (OSAI), E2/E3 (MetaCTO/QubitTool/Microsoft Learn orchestration guidance 2026).
+
 ## Change rule
 
 Zero Sequence is the governing change-control rule. Changes to product identity, twin-repository boundary, production-truth ownership, security rules or canonical naming require explicit authorization before execution.
