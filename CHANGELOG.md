@@ -1,5 +1,22 @@
 # 变更日志
 
+## [5.9.9-t3] - 2026-09-04（KOS 评论回复 / 私信触达接入智谱 AI 生成建议）
+
+### 【P0 施工记录】（AGENTS §16 交付 10 要素）
+| # | 要素 | 内容 |
+|---|---|---|
+| 1 | 修改了什么 | `kos_engine.py`：`generate_reply` / `generate_outreach` 由纯规则模板升级为「智谱 AI 生成建议 + 规则兜底」。新增 `_ai_generate_reply` / `_ai_generate_outreach`；分层：negative_feedback / purchase_intent 走强模型 ZHIPU_STRONG_MODEL（glm-5.3），其余默认 ZHIPU_MODEL（glm-4.5-air）；返回新增 `ai_source` 标记 |
+| 2 | 为什么修改 | 用户指令「继续加速推进，别忘了智谱设定好的模式」→ 智谱(ZHIPU) 为 ZBC 唯一外接 AI provider（云智 ARK 已删除）；KOS 评论/私信留资是当前中免主线的关键 AI 生成点 |
+| 3 | 修改了哪些文件 | `kos_engine.py`（+71/-2）；`CHANGELOG.md`；未触碰用户未提交的 static/index.html、static/js/app.js |
+| 4 | 数据库是否变化 | 零数据库变更 |
+| 5 | 测试了什么 | py_compile + 5 单测：正面评论 AI 命中（glm-4.5-air）、购买意向 AI 命中（强模型分层）、高风险 NO_REPLY、空输入、触达 DRAFT（glm-4.5-air 个性化邀约）；含智谱真实调用链路 |
+| 6 | 测试结果 | 全部 PASS；ai_source=True 命中；高风险仍 NO_REPLY（AI 不越权）；测试数据已清理 |
+| 7 | 未完成项 | 前端评论回复面板「AI 生成」按钮触发可后续接（kos_routes.py 已暴露 generate_reply 端点）；聚光 Boosting/私信自动归因待用户提供 JUGUANG_* 凭证 |
+| 8 | 风险/已知限制 | AI 只生成建议不自动发送（auto_reply=False / DRAFT）；不虚构事实/不承诺未确认权益；官方账号只读红线不受影响；智谱网关依赖 app.py 启动时 `_load_dotenv` 注入 .env |
+| 9 | Git commit | `8ede00f`（kos_engine.py 智谱接入） |
+| 10 | 下一步建议 | 中免首采回填后启用真实评论批量建议；接入前端回填 UI；聚光 Phase B 凭证到位后激活自动归因 |
+
+
 ## [5.9.9-t2] - 2026-09-02（双子星库 Contract：小红书 P0 采集链生产编排落地 + 白名单门控 + 驻场心跳 + 扫码恢复）
 
 ### 【P0 施工记录】（AGENTS §16 交付 10 要素）
