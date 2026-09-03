@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS notes (
     topics TEXT DEFAULT '[]', ai_provider TEXT DEFAULT 'rule', ai_analyzed_at TEXT DEFAULT '',
     is_official INTEGER DEFAULT 0, category TEXT DEFAULT 'other',
     status TEXT DEFAULT 'active', last_seen_at TEXT DEFAULT '',
-    is_taikoo_verified INTEGER DEFAULT 0, verify_reason TEXT DEFAULT ''
+    is_taikoo_verified INTEGER DEFAULT 0, verify_reason TEXT DEFAULT '',
+    negative_confirmed INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS daily_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT, report_type TEXT DEFAULT 'daily', report_date TEXT NOT NULL,
