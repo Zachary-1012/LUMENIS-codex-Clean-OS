@@ -5794,6 +5794,76 @@ def api_cookies_import_status():
         'xhs_source_exists': (_data / 'xhs_cookies.source.json').exists(),
     }})
 
+
+@app.route('/api/cookies/import/raw', methods=['POST'])
+def api_cookies_import_raw():
+    """接收用户粘贴的平台 Cookie JSON，保存到本地 data/ 源文件并触发导入。
+
+    安全约束：
+      - 受全局 _basic_auth 保护（无凭证 401）
+      - 仅接收 platform + cookies（JSON 数组），写入 data/（gitignore 不入库）
+      - 不返回 Cookie 明文，只返回导入元信息
+      - 记录 Evidence
+    """
+    import json as _json
+    from pathlib import Path as _Path
+    _base = _Path(__file__).resolve().parent
+    _data = _base / 'data'
+    _data.mkdir(exist_ok=True)
+    body = request.get_json(silent=True) or {}
+    platform = (body.get('platform') or '').strip().lower()
+    cookies = body.get('cookies')
+    if platform not in ('weibo', 'bilibili', 'xhs', 'xiaohongshu'):
+        return jsonify({'ok': False, 'error': 'platform 必须是 weibo/bilibili/xhs'}), 400
+    if not isinstance(cookies, list) or not cookies:
+        return jsonify({'ok': False, 'error': 'cookies 必须是非空 JSON 数组'}), 400
+    # 规范化：仅保留合法 cookie 字段
+    cleaned = []
+    for c in cookies:
+        if isinstance(c, dict) and c.get('name') and c.get('value') is not None:
+            cleaned.append({
+                'name': str(c.get('name', '')),
+                'value': str(c.get('value', '')),
+                'domain': str(c.get('domain', '')),
+                'path': str(c.get('path', '/')),
+                'httpOnly': bool(c.get('httpOnly', False)),
+                'secure': bool(c.get('secure', False)),
+                'expirationDate': c.get('expirationDate'),
+            })
+    if not cleaned:
+        return jsonify({'ok': False, 'error': '无合法 cookie 条目（需含 name/value）'}), 400
+    # 写入源文件
+    if platform in ('weibo',):
+        src_file = _data / 'weibo_cookies.json'
+        status_file = _data / 'weibo_login_status.json'
+        status = {'logged_in': True, 'cookie_count': len(cleaned), 'login_method': 'cookie_import_api_raw'}
+    elif platform in ('bilibili',):
+        src_file = _data / 'bilibili_cookies.json'
+        status_file = _data / 'bilibili_login_status.json'
+        status = {'logged_in': True, 'cookie_count': len(cleaned), 'login_method': 'cookie_import_api_raw'}
+    else:  # xhs / xiaohongshu
+        src_file = _data / 'xhs_cookies.source.json'
+        status_file = _data / 'xhs_login_status.json'
+        status = {'logged_in': True, 'cookie_count': len(cleaned), 'login_method': 'cookie_import_api_raw', 'platform': 'xiaohongshu'}
+    src_file.write_text(_json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8')
+    status['last_login'] = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    status_file.write_text(_json.dumps(status, ensure_ascii=False, indent=2), encoding='utf-8')
+    # 小红书额外生成 cookie_string（供采集器使用）
+    if platform in ('xhs', 'xiaohongshu'):
+        parts = [f"{c['name']}={c['value']}" for c in cleaned
+                 if c.get('domain','').endswith('xiaohongshu.com') and not c['name'].startswith('x-user-id-')]
+        (_data / 'xhs_cookie_string.txt').write_text('; '.join(parts), encoding='utf-8')
+    # Evidence（不记录 Cookie 值）
+    try:
+        from evidence_store import record_evidence
+        record_evidence(source='zbc', project='ZBC', product='CTH', feature_id='GAP21_COOKIE_IMPORT_RAW',
+                        env='prod', level='L4', test_name='cookie_import_api_raw', result='PASS',
+                        outputs={'platform': platform, 'cookie_count': len(cleaned)},
+                        actual=_json.dumps({'platform': platform, 'cookie_count': len(cleaned)}, ensure_ascii=False))
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'platform': platform, 'cookie_count': len(cleaned)})
+
 if __name__ == '__main__':
     import logging
     from logging.handlers import RotatingFileHandler

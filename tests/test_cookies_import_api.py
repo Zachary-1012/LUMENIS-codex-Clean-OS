@@ -76,3 +76,28 @@ def test_import_200_no_leak(client):
 
 def test_import_method_not_allowed(client):
     assert client.get('/api/cookies/import', headers=_headers()).status_code == 405
+
+def test_raw_import_ok(client):
+    r = client.post('/api/cookies/import/raw', headers=_headers(), json={
+        'platform': 'xhs',
+        'cookies': [{'name': 'a1', 'value': 's', 'domain': '.xiaohongshu.com'},
+                    {'name': 'web_session', 'value': 'x', 'domain': '.xiaohongshu.com'}]
+    })
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d.get('ok') is True
+    assert d.get('cookie_count') == 2
+    raw = r.data.decode()
+    assert 'web_session' not in raw  # 不泄漏 Cookie 名值
+
+
+def test_raw_import_no_auth_401(client):
+    assert client.post('/api/cookies/import/raw', json={'platform': 'xhs', 'cookies': [{'name': 'a', 'value': 'b'}]}).status_code == 401
+
+
+def test_raw_import_bad_platform_400(client):
+    assert client.post('/api/cookies/import/raw', headers=_headers(), json={'platform': 'bad', 'cookies': [{'name': 'a', 'value': 'b'}]}).status_code == 400
+
+
+def test_raw_import_empty_cookies_400(client):
+    assert client.post('/api/cookies/import/raw', headers=_headers(), json={'platform': 'xhs', 'cookies': []}).status_code == 400

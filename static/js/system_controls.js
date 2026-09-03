@@ -253,6 +253,21 @@
                     </div>
                 </div>
                 
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee;">
+                    <h4 style="margin: 0 0 8px 0; color: #333; font-size: 14px;">平台 Cookie 导入</h4>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 10px;">粘贴平台 Cookie（JSON 数组），保存后自运行导入，供采集器使用。凭证仅存本地 data/，不入库。</div>
+                    <select id="setting-cookie-platform" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px;">
+                        <option value="xhs">小红书（xiaohongshu.com）</option>
+                        <option value="weibo">微博（weibo.com）</option>
+                        <option value="bilibili">B站（bilibili.com）</option>
+                    </select>
+                    <textarea id="setting-cookie-input" rows="5" placeholder='[{"name":"a1","value":"xxx","domain":".xiaohongshu.com"}]' style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+                        <button id="setting-cookie-import" style="padding: 8px 16px; background: #0a84ff; color: white; border: none; border-radius: 6px; cursor: pointer;">导入并运行</button>
+                        <span id="setting-cookie-result" style="font-size: 12px; color: #999;"></span>
+                    </div>
+                </div>
+                
                 <div style="margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end;">
                     <button id="settings-reset" style="padding: 10px 20px; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer;">重置默认</button>
                     <button id="settings-save" style="padding: 10px 20px; background: #0a84ff; color: white; border: none; border-radius: 8px; cursor: pointer;">保存设置</button>
@@ -294,6 +309,36 @@
             document.getElementById('setting-ai-provider').value = 'auto';
             document.getElementById('setting-auto-collect').checked = true;
             document.getElementById('setting-risk-threshold').value = 5;
+        
+        // Cookie 导入
+        document.getElementById('setting-cookie-import').onclick = async () => {
+            const platform = document.getElementById('setting-cookie-platform').value;
+            const raw = document.getElementById('setting-cookie-input').value.trim();
+            const resultEl = document.getElementById('setting-cookie-result');
+            if (!raw) { resultEl.textContent = '请先粘贴 Cookie JSON'; resultEl.style.color = '#d33'; return; }
+            let cookies;
+            try {
+                cookies = JSON.parse(raw);
+                if (!Array.isArray(cookies)) throw new Error('需为数组');
+            } catch (e) {
+                resultEl.textContent = 'JSON 解析失败: ' + e.message;
+                resultEl.style.color = '#d33';
+                return;
+            }
+            try {
+                const res = await api('/api/cookies/import/raw', {
+                    method: 'POST',
+                    body: { platform: platform, cookies: cookies }
+                });
+                resultEl.textContent = '导入成功: ' + platform + ' / ' + res.cookie_count + ' 条';
+                resultEl.style.color = '#1a7f37';
+                document.getElementById('setting-cookie-input').value = '';
+            } catch (error) {
+                resultEl.textContent = '导入失败: ' + error.message;
+                resultEl.style.color = '#d33';
+            }
+        };
+
             document.getElementById('threshold-value').textContent = '5';
             toast('已重置为默认值');
         };
