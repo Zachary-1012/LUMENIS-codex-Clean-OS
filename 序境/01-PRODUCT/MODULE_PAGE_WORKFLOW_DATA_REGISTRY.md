@@ -46,7 +46,7 @@
 | MOD-REL-01 | 关系·品牌 | 品牌知识库 | brand_knowledge_base.py | 品牌/竞品知识 | PASS |
 | MOD-REL-02 | 关系·创作者 | KOL 分析 | kol_analysis.py | KOL 画像与关系 | PASS |
 | MOD-ACT-01 | 行动·KOS | KOS 引擎 | kos_engine.py / kos_attribution.py | KOS 发现、归属、评分、分层 | PASS |
-| MOD-ACT-02 | 行动·KOS | KOS 运营 | kos_execution.py / kos_ops.py / kos_paid.py | KOS 运营、留资、邀约、投流 | PARTIAL |
+| MOD-ACT-02 | 行动·KOS | KOS 运营 | kos_execution.py / kos_ops.py / kos_paid.py | KOS 运营、留资、合作、邮件邀约、投流、奖励（HCG 门控） | PASS |
 | MOD-ACT-03 | 行动·KOS | KOS 报告 | kos_report.py / kos_routes.py | KOS 报告与路由 | PASS |
 | MOD-ACT-04 | 行动·处置 | 舆情处置 | review_workflow.py / pr_case_engine.py | 案例、处置工作流 | PASS |
 | MOD-CRE-01 | 创作·报告 | 报告引擎 | report_engine.py / report_filter.py / export_report.py | 日报/周报/月报/专题 + 导出 | PASS |
@@ -71,7 +71,7 @@
 |---|---|---|---|---|
 | PAGE-OBS-01-01 | MOD-OBS-01 | 采集工作台 | static/collector*.html | 采集启停、状态、参数 |
 | PAGE-INS-01-01 | MOD-INS-01 | 舆情驾驶舱 | static/*dashboard* | 风险/趋势/事件总览 |
-| PAGE-ACT-01-01 | MOD-ACT-01 | KOS 工作台 | static/kos*.html | KOS 池、归属、分层 |
+| PAGE-ACT-01-01 | MOD-ACT-01 | KOS 工作台 | static/kos*.html / static/index.html#page-kos | KOS 池、归属、分层、运营操作（留资/合作/邀约/投流/奖励） |
 | PAGE-CRE-01-01 | MOD-CRE-01 | 报告中心 | static/report*.html | 报告查看/生成/导出 |
 | PAGE-INT-01-01 | MOD-INT-01 | AI 资源面板 | static/*（topbar ⚡） | 资源用量、暂停、按次执行 |
 | PAGE-SYS-01-01 | MOD-SYS-01 | 系统健康 | static/*health* | Runtime/Health/Recovery |
@@ -86,7 +86,7 @@
 | WF-COLLECT-01 | 小红书定时采集 | 自动 00:00 / 12:00（≤60min） | 调度→预热→采集→入库→关闭 | PASS |
 | WF-COLLECT-02 | 小红书手动采集 | 手动（≤30min） | 手动触发→采集→入库 | PASS |
 | WF-RISK-01 | 日报生成 | 每日 | 聚合事件→风险评分→主体过滤→日报 | PASS |
-| WF-KOS-01 | KOS 闭环 | 手动/计划 | 采集→归属 Gate→评分→分层→运营→报告 | PARTIAL |
+| WF-KOS-01 | KOS 闭环 | 手动/计划 | 采集→归属 Gate→评分→分层→运营(留资/合作/邀约)→投流→奖励→报告 | PASS |
 | WF-AI-01 | AI 增强分析 | 按需 | 分级→预算→缓存→调用→证据 | PASS |
 
 ---
