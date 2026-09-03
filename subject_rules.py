@@ -37,6 +37,9 @@ BRAND_PROFILES = {
     },
     "hainan_cdf": {
         "display_name": "海南中免/CDF",
+        "region": "海南",
+        "country": "中国",
+        "store_type": "免税城",
         "subject_words": [
             "海南中免", "中免", "CDF", "cdf", "中国免税",
             "三亚国际免税城", "海口国际免税城", "三亚免税", "海口免税",
@@ -47,6 +50,65 @@ BRAND_PROFILES = {
             "日上免税", "海旅免税", "深免", "中出服", "珠海免税",
         ],
         "collect_keywords": ["海南中免", "CDF 免税", "三亚国际免税城", "海口国际免税城", "离岛免税"],
+    },
+    "hongkong_dfs": {
+        "display_name": "香港DFS免税店",
+        "region": "香港",
+        "country": "中国",
+        "store_type": "DFS免税店",
+        "subject_words": [
+            "香港DFS", "DFS香港", "DFS免税", "香港免税店",
+            "尖沙咀DFS", "铜锣湾DFS", "DFS T广场", "DFS Galleria",
+            "香港免税", "DFS香港店",
+        ],
+        "exclude_words": [
+            "澳门DFS", "首尔DFS", "东京DFS", "新加坡DFS", "冲绳DFS",
+        ],
+        "collect_keywords": ["香港DFS", "DFS免税店 香港", "尖沙咀DFS", "香港免税购物"],
+    },
+    "macau_dfs": {
+        "display_name": "澳门DFS免税店",
+        "region": "澳门",
+        "country": "中国",
+        "store_type": "DFS免税店",
+        "subject_words": [
+            "澳门DFS", "DFS澳门", "澳门免税店", "澳门免税",
+            "路氹DFS", "新濠天地DFS", "澳门T广场", "澳门DFS Galleria",
+        ],
+        "exclude_words": [
+            "香港DFS", "首尔DFS", "东京DFS", "新加坡DFS",
+        ],
+        "collect_keywords": ["澳门DFS", "DFS免税店 澳门", "澳门免税购物", "路氹DFS"],
+    },
+    "seoul_dfs": {
+        "display_name": "首尔DFS免税店",
+        "region": "首尔",
+        "country": "韩国",
+        "store_type": "DFS免税店",
+        "subject_words": [
+            "首尔DFS", "DFS首尔", "韩国DFS", "首尔免税店",
+            "明洞DFS", "乐天免税", "新罗免税", "韩国免税店",
+            "首尔免税", "DFS Korea", "Seoul DFS",
+        ],
+        "exclude_words": [
+            "香港DFS", "澳门DFS", "东京DFS", "济州DFS", "釜山DFS",
+        ],
+        "collect_keywords": ["首尔DFS", "韩国免税店", "明洞免税", "首尔免税购物"],
+    },
+    "tokyo_dfs": {
+        "display_name": "东京DFS免税店",
+        "region": "东京",
+        "country": "日本",
+        "store_type": "DFS免税店",
+        "subject_words": [
+            "东京DFS", "DFS东京", "日本DFS", "东京免税店",
+            "银座DFS", "新宿DFS", "冲绳DFS", "日本免税店",
+            "东京免税", "DFS Japan", "Tokyo DFS", "DFS旗下",
+        ],
+        "exclude_words": [
+            "香港DFS", "澳门DFS", "首尔DFS", "大阪DFS", "京都DFS",
+        ],
+        "collect_keywords": ["东京DFS", "日本免税店", "银座免税", "东京免税购物"],
     },
 }
 

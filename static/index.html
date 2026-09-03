@@ -148,6 +148,7 @@
   <link rel="stylesheet" href="/static/css/internal_browser.css?v=8.0.2">
   <link rel="stylesheet" href="/static/css/evidence_dashboard.css?v=5.9.9">
   <link rel="stylesheet" href="/static/css/osai-shell.css?v=5.9.9">
+  <link rel="stylesheet" href="/static/css/brand_hub.css?v=1.0">
   <!-- [STAGING ONLY] ZBIP 最终精修层（侘寂黑白灰/语义小圆点/移动重排），最高优先级，回滚=删此行 -->
   <link rel="stylesheet" href="/static/css/zbip-refine.css?v=1.0.0">
   <!-- Zachary 机器人/对话面板侘寂覆盖层（黑白灰，去蓝紫青），回滚=删此行 -->
@@ -239,6 +240,7 @@
       <a class="action secondary tip" id="zbmpWorkbenchBtn" data-tip="ZBMP 工作台：品牌概览/实时监测/事件中心/报告中心 + 只读终端 + 文件树" href="/static/zbmp-workbench.html" style="text-decoration:none"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="btn-label">ZBMP 工作台</span></a>
       <button class="action icon-only tip" id="alertBellBtn" data-tip="舆情预警：高风险/高影响力/上升过快时弹窗通知" onclick="navigateTo('alerts')"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><span class="nav-badge" id="alertBadge" style="display:none">0</span></button>
       <!-- 统一本地导入入口：参考 GPT 文件夹 icon，点击浏览本地文件 -->
+      <div class="brand-switcher" id="brandSwitcher" style="margin-right:8px"></div>
       <button class="action secondary tip" id="localImportBtn" data-tip="导入文件：知识库/案例/证据资料，支持图片/文档/视频，单文件最大500MB" onclick="document.getElementById('localImportInput').click()">
         <span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
         <span class="btn-label">导入</span>
@@ -391,6 +393,7 @@
         <div class="side-group-label">ZACHARY OS AI</div>
         <button class="side-item" data-page="resident-health" data-desc="双身份驻场浏览器三层健康检测、登录态监控、失效扫码恢复"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="7 11 9.5 11 11 8.5 13 13.5 14.5 11 17 11"/></svg></span><span>驻场浏览器</span></button>
         <button class="side-item" data-page="internal-browser" data-desc="系统内置浏览器，小红书/rednote 双账号系统内完成，不跳转外部浏览器"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16 8 13.5 10.5 10.5 13.5 8 16 10.5 13.5 13.5 10.5 16 8"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span><span>内置浏览器</span></button>
+        <button class="side-item" data-page="brand-hub" data-desc="多品牌中心：6大品牌矩阵，品牌→地区→门店层级导航，统一KOS引擎"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span>多品牌中心</span></button>
         <button class="side-item" data-page="kos" data-desc="KOS传播主体智能：S/A/B/C分层、潜力/风险识别、评论分析、博主触达、投流候选、动态HTML报告"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>KOS 传播主体</span></button>
         <button class="side-item" data-page="evidence" data-desc="健康与采集全程证据看板，每个完成/失败都可回放"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 9 4-1 7-4.5 7-9V6z"/><polyline points="9 12 11 14 15 10"/></svg></span><span>证据看板</span></button>
         <button class="side-item" data-page="calendar" data-desc="舆情日历、每日舆情概览、点击查看详情"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>舆情日历</span></button>
@@ -618,6 +621,58 @@
             </div>
           </div>
           <div class="kos-list" id="kosList"></div>
+        </div>
+      </section>
+
+      <!-- 多品牌中心 Brand Hub -->
+      <section class="page-view" id="page-brand-hub">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>多品牌中心</h2></div>
+        <div class="brand-hub-container">
+          <div class="brand-hub-header">
+            <div>
+              <h2 class="brand-hub-title">品牌矩阵 / Brand Matrix</h2>
+              <p class="brand-hub-subtitle">6大品牌 · 品牌→地区→门店 三级层级 · 统一KOS引擎</p>
+            </div>
+          </div>
+          <div class="brand-grid" id="brandGrid"></div>
+        </div>
+      </section>
+
+      <!-- 品牌Dashboard -->
+      <section class="page-view" id="page-brand-dashboard">
+        <div class="brand-breadcrumb" id="brandBreadcrumb"></div>
+        <div class="brand-dashboard">
+          <div class="brand-dashboard-header">
+            <div class="brand-dashboard-icon" id="brandDashboardIcon">太</div>
+            <div class="brand-dashboard-title" id="brandDashboardTitle"></div>
+          </div>
+          <div id="brandDashboardContent">
+            <div class="brand-dashboard-grid">
+              <div class="brand-dashboard-panel">
+                <h3>KOS 传播主体概览 <span class="panel-tag">品牌级</span></h3>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+                  <div style="text-align:center;padding:12px;background:#f7f7f5;border-radius:8px"><div style="font-size:24px;font-weight:600" id="brandKosTotal">—</div><div style="font-size:11px;color:#999">KOS总数</div></div>
+                  <div style="text-align:center;padding:12px;background:#f7f7f5;border-radius:8px"><div style="font-size:24px;font-weight:600;color:#e74c3c" id="brandKosS">—</div><div style="font-size:11px;color:#999">S级核心</div></div>
+                  <div style="text-align:center;padding:12px;background:#f7f7f5;border-radius:8px"><div style="font-size:24px;font-weight:600;color:#3498db" id="brandKosPotential">—</div><div style="font-size:11px;color:#999">潜力KOS</div></div>
+                  <div style="text-align:center;padding:12px;background:#f7f7f5;border-radius:8px"><div style="font-size:24px;font-weight:600" id="brandNoteTotal">—</div><div style="font-size:11px;color:#999">笔记总数</div></div>
+                </div>
+                <h4 style="margin:0 0 8px;font-size:14px">TOP KOS</h4>
+                <div id="brandTopKos"></div>
+              </div>
+              <div class="brand-dashboard-panel">
+                <h3>层级导航 <span class="panel-tag">品牌→地区→门店</span></h3>
+                <ul class="brand-hierarchy" id="brandHierarchy"></ul>
+              </div>
+            </div>
+            <div class="brand-dashboard-panel">
+              <h3>品牌操作 <span class="panel-tag">Actions</span></h3>
+              <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <button style="padding:10px 20px;background:#171717;color:#fff;border:none;border-radius:8px;cursor:pointer" onclick="BrandHub.activateBrand(BrandHub.BRANDS && Object.keys(BrandHub.BRANDS).find(k=>BrandHub.BRANDS[k].active)||'guangzhou_taikoo_hui')">启动/刷新采集</button>
+                <button style="padding:10px 20px;background:#fff;border:1px solid #e5e5e5;border-radius:8px;cursor:pointer" onclick="navigateTo('kos')">查看KOS详情</button>
+                <button style="padding:10px 20px;background:#fff;border:1px solid #e5e5e5;border-radius:8px;cursor:pointer" onclick="window.open('/api/kos/report/view','_blank')">生成动态报告</button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1422,7 +1477,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <script src="/static/js/internal_browser.js?v=8.0.2"></script>
   <script src="/static/js/local_import.js?v=5.9.9"></script>
   <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script>
-  <script src="/static/js/kos_dashboard.js?v=1.0.0"></script></script>
+  <script src="/static/js/kos_dashboard.js?v=1.0.0"></script>
+  <script src="/static/js/brand_hub.js?v=1.0"></script></script>
 <script>
   // P0安全修复(2026-09-02): window.__Z_AUTH 定义已移至 <head>（three.min.js之后），确保所有JS文件加载前已定义
   // 此处不再重复定义，避免执行顺序问题

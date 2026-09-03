@@ -1,0 +1,101 @@
+/* Z-Brand-Core 多品牌中心 Brand Hub
+ * 品牌→地区→门店 层级导航
+ * 侘寂黑白灰设计基线
+ */
+.brand-hub-container { padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+.brand-hub-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.brand-hub-title { font-size: 24px; font-weight: 600; margin: 0; }
+.brand-hub-subtitle { font-size: 13px; color: #999; margin-top: 4px; }
+
+/* 品牌切换器 */
+.brand-switcher { position: relative; display: inline-block; }
+.brand-switcher-btn { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+.brand-switcher-btn:hover { border-color: #171717; }
+.brand-switcher-btn .brand-dot { width: 10px; height: 10px; border-radius: 50%; }
+.brand-switcher-btn .brand-name { font-weight: 500; }
+.brand-switcher-btn .brand-region { color: #999; font-size: 12px; }
+.brand-switcher-btn .chevron { transition: transform 0.2s; }
+.brand-switcher.open .brand-switcher-btn .chevron { transform: rotate(180deg); }
+
+.brand-dropdown { position: absolute; top: 100%; right: 0; margin-top: 8px; background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); min-width: 280px; z-index: 1000; display: none; overflow: hidden; }
+.brand-switcher.open .brand-dropdown { display: block; }
+.brand-dropdown-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+.brand-dropdown-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; }
+.brand-dropdown-item:hover { background: #f7f7f5; }
+.brand-dropdown-item.active { background: #f0f0f0; }
+.brand-dropdown-item .brand-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.brand-dropdown-item .brand-info { flex: 1; min-width: 0; }
+.brand-dropdown-item .brand-info-name { font-size: 14px; font-weight: 500; }
+.brand-dropdown-item .brand-info-meta { font-size: 11px; color: #999; margin-top: 2px; }
+.brand-dropdown-item .brand-check { color: #171717; opacity: 0; }
+.brand-dropdown-item.active .brand-check { opacity: 1; }
+
+/* 品牌网格 */
+.brand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.brand-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden; }
+.brand-card:hover { border-color: #171717; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.brand-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.brand-card[data-brand="guangzhou_taikoo_hui"]::before { background: #171717; }
+.brand-card[data-brand="hainan_cdf"]::before { background: #c0392b; }
+.brand-card[data-brand="hongkong_dfs"]::before { background: #e74c3c; }
+.brand-card[data-brand="macau_dfs"]::before { background: #f39c12; }
+.brand-card[data-brand="seoul_dfs"]::before { background: #3498db; }
+.brand-card[data-brand="tokyo_dfs"]::before { background: #9b59b6; }
+
+.brand-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.brand-card-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; }
+.brand-card-badge { font-size: 11px; padding: 4px 8px; border-radius: 4px; background: #f7f7f5; color: #666; }
+.brand-card-name { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+.brand-card-meta { font-size: 12px; color: #999; display: flex; gap: 12px; margin-bottom: 16px; }
+.brand-card-meta span { display: flex; align-items: center; gap: 4px; }
+
+.brand-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 16px; border-top: 1px solid #f0f0f0; }
+.brand-card-stat { text-align: center; }
+.brand-card-stat-value { font-size: 20px; font-weight: 600; }
+.brand-card-stat-label { font-size: 11px; color: #999; margin-top: 2px; }
+
+.brand-card-cta { margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; color: #171717; font-weight: 500; }
+
+/* 层级面包屑 */
+.brand-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666; margin-bottom: 20px; }
+.brand-breadcrumb a { color: #171717; text-decoration: none; cursor: pointer; }
+.brand-breadcrumb a:hover { text-decoration: underline; }
+.brand-breadcrumb .separator { color: #ccc; }
+.brand-breadcrumb .current { color: #171717; font-weight: 500; }
+
+/* 品牌Dashboard */
+.brand-dashboard { padding: 20px; max-width: 1400px; margin: 0 auto; }
+.brand-dashboard-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.brand-dashboard-icon { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #fff; }
+.brand-dashboard-title h2 { margin: 0; font-size: 22px; }
+.brand-dashboard-title p { margin: 4px 0 0; font-size: 13px; color: #999; }
+
+.brand-dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+.brand-dashboard-panel { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 20px; }
+.brand-dashboard-panel h3 { margin: 0 0 16px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.brand-dashboard-panel h3 .panel-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #f7f7f5; color: #999; font-weight: 400; }
+
+/* 地区/门店层级树 */
+.brand-hierarchy { list-style: none; padding: 0; margin: 0; }
+.brand-hierarchy li { padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 10px; }
+.brand-hierarchy li:hover { background: #f7f7f5; }
+.brand-hierarchy li .hier-icon { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.brand-hierarchy li .hier-name { flex: 1; font-size: 14px; }
+.brand-hierarchy li .hier-count { font-size: 12px; color: #999; }
+.brand-hierarchy .region-level { padding-left: 12px; }
+.brand-hierarchy .store-level { padding-left: 36px; font-size: 13px; }
+.brand-hierarchy .store-level .hier-name { color: #666; }
+
+/* 空状态 */
+.brand-empty { text-align: center; padding: 60px 20px; color: #999; }
+.brand-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+.brand-empty h3 { color: #666; margin: 0 0 8px; }
+.brand-empty p { font-size: 13px; margin: 0; }
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .brand-grid { grid-template-columns: 1fr; }
+  .brand-dashboard-grid { grid-template-columns: 1fr; }
+  .brand-hub-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
