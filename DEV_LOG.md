@@ -488,3 +488,32 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 **F. 剩余 GAP 状态**
 - 已 RESOLVED：GAP-01~15, 17, 18, 19(Selenium), 20, 23~30
 - 待决策：GAP-16（固定域名）、GAP-21 UI 占位（API 已补，前端待接入）
+
+---
+
+## 2026-09-03 推进批次（search-std 案例库增强 + UI 线条icon + 视觉审计 + RedNote 保活核验）
+
+### 已完成
+1. **事件三类四关系补全（GAP-07）**：调 /api/event-graph/rebuild-relations（时间+主题词双证据保守重算）→ 16 事件三类（传播13/舆情2/营销1）+ 4 关系（并行3/触发1）。event_graph_relations 1→4 行。
+2. **search-std 案例库/RAG 增强接入**：
+   - static/index.html 加"⚡ 增强搜索"按钮 + #caseEnhanceResults 容器
+   - case_deep_analysis.js 加 CaseDeepAnalysis.enhanceSearch()（POST /api/search/enhance，query/max_results=5，渲染综合摘要+带来源结果+链接）
+   - 真实验证（glm 搜索）：输入"商业地产 舆情危机 公关处置 案例" → 返回西安赛格购物中心商户坠楼事件等真实外部案例（来源：智谱搜索）。search-std 已用 3/100。
+3. **UI 全局精修（视觉模型适配第一批）**：
+   - 用智谱 glm-4.6v 视觉模型（vision_chat）审计生产主页，产出专业建议（顶栏 icon 不统一/快捷按钮无层级/通知缺语义）
+   - 落地：顶栏 6 个 emoji icon（🔍✦⚡▦🔔↻）全部替换为线条 SVG（复用 zbip-shell.js 的 SVG 库，stroke=currentColor），顶栏现 9 个 SVG 无 emoji 残留
+   - 保存 docs/UI/evidence/UI-VISUAL-AUDIT-20260903.md + ui-review-home-20260903.png
+4. **RedNote 登录保活核验**：
+   - CDP 9222/9223 在线；/api/xhs/rednote/check-login → is_logged_in=true（香港 RedNote 真实在线）
+   - 保活机制已存在（RedNoteLoginKeepalive: should_login_today/check_login_status/mark_login_success）+ /api/xhs/rednote/keepalive 正常；今日 should_login_today=true、last_login_at=null（待执行当日登录保活，走系统内弹窗扫码）
+
+### 未完成
+- UI 快捷按钮视觉层级（核心按钮深色背景）待施工（视觉模型建议）
+- 状态点语义扩展 + 顶栏留白微调待施工
+- RedNote 当日登录保活执行动作（需用户扫码，走 #xhsLoginModal 系统内弹窗）
+- staging→main UI 合并回归待执行
+
+### 实测结论
+- 增强搜索全链路（前端按钮→/api/search/enhance→web-search-pro→带来源结果渲染）通过
+- 顶栏线条 SVG 渲染通过（bu.js 断言 9 SVG / 无 emoji）
+- glm-4.6v 视觉模型调用成功（vision_chat，需先注入 .env 到 os.environ，_env 只读环境变量）
