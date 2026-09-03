@@ -968,6 +968,12 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - 尚未等到下一次 scheduler 自动调度真实入库（60min 冷却主导）；已用生产函数直调等价验证 worker 内部调用链。下一次自动/手动任务后复查 collection_logs 六态与 notes 新增。
 - Node playwright(sandbox_runtime) connectOverCDP 对冷导航较敏感，已用 explore 预热规避；若仍偶发，CDP 不可达会自动回退 headless，不会卡死调度（process.exit 兜底 + bridge 30min 高限）。
 
+### 补登：完整 worker 链路真实落库证据（6af4b5c 之后实测）
+- 进程外同步调用 `xhs_cookie_bridge.sync(['广州太古汇'], 2)`（即 create_task 内 worker 的同一核心函数，含逐词搜索→主体过滤→去重→写 notes→写 collection_logs→回写 planner/adaptive）：**45.4s、task_state=SUCCESS、updated=13、inserted=0、blocked 空**。
+- collection_logs **#626：keyword=广州太古汇 / status=SUCCESS / notes_count=19 / error_msg 空 / 17:28**，与修复前同链路 #620–#625（16:54–16:58）全部 BLOCKED/IP_RISK_OR_CAPTCHA 形成直接对照。
+- inserted=0 属正确幂等：搜索返回的近期热门笔记（十五周年等）上午已入库，去重命中后只 UPDATE 刷新（updated=13）、不重复插入，notes 总量稳定不丢不重；要出现 inserted>0 取决于平台出现新笔记，非缺陷。
+- 结论：自动调度主链路（scheduler_loop→create_task→worker→sync→_run_search→Node 走常驻 CDP）已端到端恢复，下一次自然调度（动态间隔 + 60min 冷却）将持续产出 SUCCESS。
+
 
 
 
