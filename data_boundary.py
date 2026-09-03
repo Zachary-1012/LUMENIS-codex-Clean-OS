@@ -73,6 +73,7 @@ _CRED_PATH_WHITELIST = [
     r"(^|/)docs/",                  # 文档中的示例
     r"example|sample|fixture|dummy|fake",
     r"design[_-]?token|tokens?\.css|tokens?\.js",  # 设计 Token（CSS 变量），与凭证无关
+    r"kos[_-]?monitor[_-]?profiles?",               # KOS 监控配置档案（品牌/关键词业务配置），非浏览器登录 Profile
 ]
 
 
