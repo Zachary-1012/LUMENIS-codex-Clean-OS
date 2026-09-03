@@ -294,7 +294,7 @@ class BrandReportGenerator:
                 lines.append(f"")
 
         lines.append(f"---")
-        lines.append(f"*本报告由 Z-Brand Core 品牌智能系统自动生成，数据来源可追溯。*")
+        lines.append(f"*本报告由序境 品牌智能系统自动生成，数据来源可追溯。*")
 
         return '\n'.join(lines)
 
