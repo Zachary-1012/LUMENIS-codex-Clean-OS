@@ -1,0 +1,95 @@
+{
+  "profile_id": "KOS_HAINAN_CDF_V1",
+  "status": "ACTIVE_TEST_PROFILE",
+  "brand_display_name": "中国旅游集团中免 / cdf 海南免税",
+  "scope": "海南区域中免相关公开传播内容与传播主体监测",
+  "platform_priority": ["xiaohongshu"],
+  "subject_terms": [
+    "中免", "中国免税", "中国旅游集团中免", "cdf", "CDF", "中免集团",
+    "三亚国际免税城", "海口国际免税城", "中免海南", "中免海南免税购物节",
+    "三亚免税", "海口免税", "海南免税"
+  ],
+  "subject_exclude_terms": [
+    "韩国免税", "日本免税", "机场免税店攻略（非中免）"
+  ],
+  "entity_disambiguation": {
+    "parent_brand": "中国旅游集团中免股份有限公司 / 中免集团",
+    "important_hainan_entities": [
+      "三亚国际免税城",
+      "海口国际免税城",
+      "中免集团三亚市内免税店"
+    ],
+    "do_not_merge_without_evidence": [
+      "海免",
+      "海旅免税",
+      "深免",
+      "中服免税",
+      "海南控股相关免税主体"
+    ]
+  },
+  "kos_candidate_rules": {
+    "required": ["author_or_account_identity", "at_least_one_relevant_content"],
+    "signals": [
+      "brand_related_content",
+      "professional_or_sales_context",
+      "repeated_brand_content",
+      "store_or_product_experience",
+      "consumer_advice",
+      "event_participation"
+    ],
+    "identity_labels": ["KOS", "KOL", "KOC", "UGC", "MEDIA", "OFFICIAL", "UNKNOWN"],
+    "important": "KOS classification is a candidate classification and must not invent employment/affiliation without evidence."
+  },
+  "tiering": {
+    "method": "SABC",
+    "dimensions": ["content_quality", "engagement", "brand_relevance", "consistency", "event_contribution", "risk"],
+    "weights": {
+      "content_quality": 0.20,
+      "engagement": 0.20,
+      "brand_relevance": 0.20,
+      "consistency": 0.15,
+      "event_contribution": 0.15,
+      "risk": 0.10
+    },
+    "tiers": {
+      "S": "核心标杆/重点观察",
+      "A": "重点培养/优质传播主体",
+      "B": "稳定运营/持续观察",
+      "C": "基础候选/待激活或低优先级"
+    },
+    "rule": "Scores are comparative within the monitored sample; do not present thresholds as industry facts unless calibrated against real data."
+  },
+  "content_to_action": {
+    "natural_validation": "优先识别自然表现优质内容，再进入投流候选",
+    "boost_candidate_signals": ["high_engagement", "high_relevance", "low_risk", "clear_consumer_intent"],
+    "do_not_claim": "系统不得宣称已投流、已转化或已产生ROI，除非存在对应真实数据。"
+  },
+  "incentive_model": {
+    "mode": "simulation_until_real_business_rules_are_supplied",
+    "points": {
+      "valid_publish": 10,
+      "brand_relevance": 10,
+      "quality_content": 20,
+      "high_engagement": 20,
+      "high_reach": 30,
+      "event_contribution": 30,
+      "benchmark_case": 50
+    },
+    "negative_signals": ["policy_violation", "misleading_claim", "unverified_affiliation", "high_risk_content"],
+    "note": "Points are an internal analytical model, not a real compensation promise."
+  },
+  "output_requirements": [
+    "kos_total",
+    "tier_distribution",
+    "top_subjects",
+    "top_content",
+    "emerging_subjects",
+    "risk_subjects",
+    "content_topics",
+    "consumer_needs",
+    "event_links",
+    "brand_links",
+    "recommended_actions",
+    "source_traceability"
+  ]
+}
