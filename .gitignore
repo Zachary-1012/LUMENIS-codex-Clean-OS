@@ -3,14 +3,12 @@
 # 原则：只入库“源码 + 启动脚本 + 文档 + 业务种子配置”；
 #      凭证 / Cookie / 数据库 / 浏览器登录态 / 模型 / 依赖 / 运行产物 一律不入库。
 # ============================================================
-
 # ---------- Python ----------
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
 .ipynb_checkpoints/
-
 # ---------- 虚拟环境 / 前端依赖 / 自带运行时（用 requirements、package.json 重建） ----------
 .venv/
 venv/
@@ -18,23 +16,19 @@ env/
 node_modules/
 nodejs/
 dependencies/
-
 # ---------- 本地大模型与 AI 运行时（数 GB，绝不入库） ----------
 .ollama/
 models/
 *.gguf
 *.safetensors
 *.onnx
-
 # ---------- IDE / 编辑器 / 工具缓存 ----------
 .vscode/
 .idea/
-.trae-cn/
 .skills-router/
 .skills/
 .DS_Store
 Thumbs.db
-
 # ---------- 密钥 / 环境变量 / 凭证（最高优先级，绝不入库） ----------
 .env
 .env.*
@@ -54,12 +48,9 @@ Thumbs.db
 data/cookies/
 data/private/
 data/security/
-
 # 临时审计脚本产物（Zachary-OS-AI 工具生成，不入仓库）
 scripts/_zachary_t0*.py
 scripts/_zachary_t0*.json
-
-
 # ---------- 数据库（私有业务数据，不入库） ----------
 *.db
 *.sqlite
@@ -70,14 +61,12 @@ scripts/_zachary_t0*.json
 backups/
 data/backups/
 data/cache/
-
 # ---------- 浏览器持久化 Profile（含登录态 Cookie，且体积巨大） ----------
 edge-cdp-*/
 chrome-cdp-*/
 data/taikoo_browser_profile/
 data/weibo_profile/
 data/*profile*/
-
 # ---------- 运行日志 / 临时输出 ----------
 *.log
 logs/
@@ -96,7 +85,6 @@ data/collector_*
 data/*_stats.json
 data/ai_learning_log.jsonl
 data/alerts.json
-
 # ---------- 可执行 / 压缩包 / 大体积素材（不入库） ----------
 *.exe
 *.dll
@@ -109,7 +97,6 @@ tools/
 监测系统-ui架构&互动视频参考案例/
 *.mp4
 *.mov
-
 # ---------- 开发期临时截图与诊断脚本（tests 下正式 test 保留） ----------
 /eval_image*.png
 /screenshot_ui.png
@@ -124,7 +111,6 @@ tests/_*.json
 tests/_*.csv
 *.bak
 *.tmp
-
 # ---------- data 默认整体忽略，仅白名单保留业务种子/配置 ----------
 data/*
 !data/_zbmp_docs/
@@ -132,7 +118,6 @@ data/*
 !data/brand_websites.json
 !data/case_library.json
 !data/.gitkeep
-
 # === 本地敏感/运行态（不入版本库，Z-Brand Core 安全闸）===
 config/proxy_nodes.json
 edge-cdp-profile/
@@ -146,40 +131,34 @@ data/supervisor_state.json
 data/stability/
 faulthandler.log
 *.pyc
-
 # ---------- cloudflared 运行时产物（临时公网地址/日志，不入库） ----------
 tunnel_url.txt
 tests/_*.cjs
 tests/_*.bin
-
 # ---------- 视频抽帧 / 测试媒体产物（不入库，可由源重新生成） ----------
 video_frames/
-
 # ---------- 轻量 Staging 运行时（独立库副本/日志，不入库） ----------
 staging/
-
 # ---------- 例外：UI/交互研究源视频（统一走 Git LFS，见 .gitattributes） ----------
 !docs/reference/ui-research/source-videos/
 !docs/reference/ui-research/source-videos/*.mp4
 !docs/reference/ui-research/source-videos/*.mov
 !docs/reference/ui-research/source-videos/*.webm
-
 # P0 local backups (never commit)
 app.py.bak_*
 *.bak_p0_*
-
 # local source backups (never commit)
 *.prev*_bak
 *.prev2_bak
-
 # DCC 已废弃迁移至 Zachary-OS-AI（2026-09-03），tools/development-command-console 为历史资产留存，不再纳入版本控制
-
 # 个人业务交付物（比稿方案等）仅本地保存，不入线上仓库
 # personal business deliverables: local only, never commit
 deliverables/
-
 # 本地业务资料（脱敏后仅本地保存，禁止上线）
-_pitch_dump*
-_pitch_dump/
 
-# 本地业务审计（含客户名/商业数据，仅本地保存，禁止上线）.trae/
+# 本地业务资料/审计/临时备份：仅本地保存，禁止上线
+_pitch_dump*
+.trae/
+.trae-cn/
+*.bak-*
+*.bak
