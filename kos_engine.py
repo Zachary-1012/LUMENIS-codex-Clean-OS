@@ -231,6 +231,45 @@ def get_profile(author_id: str) -> Optional[dict]:
     return d
 
 
+def _comment_sentiment(content: str) -> str:
+    """评论情感三维：positive/neutral/negative/mixed（确定性关键词，AI 仅增强不越权）。"""
+    c = (content or "").strip()
+    if not c:
+        return "neutral"
+    neg = ["不好", "垃圾", "投诉", "骗", "假", "差评", "失望", "坑", "差", "曝光", "维权", "退款", "欺诈", "假货", "别买", "踩雷"]
+    pos = ["好用", "推荐", "不错", "喜欢", "赞", "很棒", "满意", "回购", "种草", "爱了", "好评", "yyds", "高级", "值得"]
+    has_neg = any(k in c for k in neg)
+    has_pos = any(k in c for k in pos)
+    if has_neg and has_pos:
+        return "mixed"
+    if has_neg:
+        return "negative"
+    if has_pos:
+        return "positive"
+    return "neutral"
+
+
+def _purchase_signal(content: str) -> str:
+    """购买信号强度：strong/weak/none（KOS 评论承接价值）。"""
+    c = (content or "").strip()
+    strong = ["怎么买", "多少钱", "价格", "链接", "购买", "哪里买", "求购", "下单", "已买", "付款", "优惠券", "多少钱啊"]
+    weak = ["想买", "考虑", "了解一下", "有兴趣", "贵吗", "值得买吗", "活动价", "划算吗"]
+    if any(k in c for k in strong):
+        return "strong"
+    if any(k in c for k in weak):
+        return "weak"
+    return "none"
+
+
+def _cooperation_signal(content: str) -> str:
+    """合作意图：发现潜在 KOS / 商务合作机会（KOS 评论智能核心信号）。"""
+    c = (content or "").strip()
+    coop = ["合作", "商务", "求合作", "可以合作", "联系合作", "推广", "报备", "档期", "博主合作", "kol", "koc", "mcn"]
+    if any(k in c for k in coop):
+        return "yes"
+    return "no"
+
+
 def analyze_comments(author_id: str = "", note_id: str = "", limit: int = 50) -> dict:
     """评论分析（复用 note_comments 表，AI 分类+回复建议+NO_REPLY 规则）。"""
     conn = _get_conn()
@@ -276,7 +315,14 @@ def analyze_comments(author_id: str = "", note_id: str = "", limit: int = 50) ->
         d["category"] = category
         d["should_reply"] = should_reply
         d["risk_level"] = risk_level
-        d["reply_suggestion"] = "" if not should_reply else "建议回复（待 AI 生成）"
+        # 情感-专业度二维 + 意图识别（确定性规则，AI 仅增强不越权）
+        d["sentiment"] = _comment_sentiment(content)
+        d["purchase_signal"] = _purchase_signal(content)
+        d["cooperation_signal"] = _cooperation_signal(content)
+        d["needs_review"] = risk_level == "high"
+        # 真实回复模板（复用 generate_reply 单一事实源；高风险→NO_REPLY 空建议）
+        _r = generate_reply(content, risk_level=risk_level)
+        d["reply_suggestion"] = _r.get("suggested_reply", "") if _r.get("action") == "SUGGEST_REPLY" else ""
         comments.append(d)
     cat_stats = {}
     for c in comments:

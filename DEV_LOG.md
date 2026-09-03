@@ -1150,3 +1150,31 @@ KOS MASTER EXECUTION CONTRACT v1 已入双子库（ZBC d292c9f / OSAI bd088f6）
 - 前端「归属确认」UI 未做（当前 API 可调用，界面待接入 KOS 页面）。
 - override 文件为 data/private/（gitignore，不提交），属运行期业务数据。
 - 备份：kos_engine.py.bak-verify、kos_routes.py.bak-verify（不提交）。
+
+
+---
+
+## 第二十批：评论智能增强（情感三维 + 购买/合作信号 + 真实回复模板）
+
+### 背景
+守住基线推进 KOS 评论智能（KOS Master Contract 第十节）：在现有 analyze_comments 规则分类基础上，补齐智谱设计的情感-专业度二维与意图识别。纯增量字段、确定性规则、不碰 DB、可回滚。
+
+### 改动（kos_engine.py，仅 analyze_comments + 3 个新辅助函数）
+1. 新增确定性辅助函数：
+   - _comment_sentiment(content)：positive/neutral/negative/mixed（正负关键词 + 混合判定）。
+   - _purchase_signal(content)：strong/weak/none（KOS 评论承接价值）。
+   - _cooperation_signal(content)：yes/no（发现潜在 KOS / 商务合作机会）。
+2. analyze_comments 每条评论新增：sentiment / purchase_signal / cooperation_signal / needs_review；reply_suggestion 从"待 AI 生成"占位改为调用 generate_reply 拿真实模板（单一事实源，高风险→NO_REPLY 空建议）。
+- 保留现有 category / should_reply / risk_level 结构，调用方不受影响。
+
+### 实测（真实结果）
+- py_compile 全过。
+- 单元：情感（好用推荐=positive / 太垃圾=negative / 一般吧=neutral）、购买（怎么买多少钱=strong / 考虑一下=weak / 还不错=none）、合作（求合作商务=yes / 随便看看=no）。
+- HTTP 实测：GET /api/kos/comments → total=141，每条带 sentiment/purchase_signal/cooperation_signal + 真实回复模板（广州太古汇口吻）。
+- 平滑重启 8201（worker 28912），healthz v5.9.9 OK。
+- 红线：五条红线函数未改；广州口径未动；官方账号只读；publish_datetime/captured_at 未混；采集仍用户暂停。
+
+### 未实测 / 登记
+- 评论智能的 AI 增强（语义情感/复杂意图）未启用（当前确定性规则已够生产，AI 可选通道后续）。
+- 前端评论面板展示新字段 UI 待接入。
+- 备份：kos_engine.py.bak-comment（不提交）。
