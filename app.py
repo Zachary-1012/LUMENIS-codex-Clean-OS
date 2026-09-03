@@ -852,7 +852,7 @@ def auth_config_api():
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
-    if not _auth_enabled() or request.path in ('/healthz', '/api/auth/config') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/auth/config', '/favicon.ico') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -866,6 +866,15 @@ def _basic_auth():
             return None
     except Exception:
         pass
+    # 仅顶层 HTML 文档导航回 WWW-Authenticate（触发浏览器原生登录框）。
+    # API/XHR/fetch 等子请求回纯 401 JSON、不带挑战头：避免文档弹框期间 favicon/轮询等
+    # 并发 401 同 realm 挑战反复重置原生登录框（“账号密码输到一半弹窗跳没又出现”的根因）。
+    # 安全等级不变——子请求依旧 401 拒绝，只是不触发浏览器原生弹框，改由前端 401 流程处理。
+    _accept = request.headers.get('Accept', '')
+    _is_xhr = request.headers.get('X-Requested-With', '').lower() == 'xmlhttprequest'
+    _is_api_like = request.path.startswith('/api/') or _is_xhr or ('application/json' in _accept and 'text/html' not in _accept)
+    if _is_api_like:
+        return jsonify({'ok': False, 'error': '需要登录', 'auth_required': True}), 401
     return ('需要登录', 401, {'WWW-Authenticate':'Basic realm=TaikooMonitor'})
 class ProxyPrefixMiddleware:
     def __init__(self,wsgi_app): self.wsgi_app=wsgi_app

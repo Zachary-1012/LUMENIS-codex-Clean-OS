@@ -8,6 +8,9 @@ if os.path.exists(TMP):
     os.remove(TMP)
 os.environ["MONITOR_DB_PATH"] = TMP  # 必须在 import v4_upgrade 之前
 os.environ["V4_TOKEN_SECRET"] = "smoke-test-secret"
+# D7: 密钥登录走与生产一致的“环境变量注入”路径（生产由 .env V4_ACCESS_KEY 提供），
+# 测试用固定假密钥自洽验证，不再硬编码历史默认值、也不依赖真实 .env / 真实密钥。
+os.environ["V4_ACCESS_KEY"] = "smoke-test-access-key"
 
 PASS, FAIL = [], []
 def check(name, cond, extra=""):
@@ -91,9 +94,9 @@ r = jget("/v4/auth/me", owner_token); check("Bearer /v4/auth/me=owner", r.get_js
 # 9.5) 密钥登录（替代短信验证码的第二登录方式）
 r = jpost("/v4/auth/login-by-key", {"access_key": "wrong"})
 check("错误密钥被拒且非500", r.status_code == 200 and r.get_json().get("success") is False, str(r.status_code))
-r = jpost("/v4/auth/login-by-key", {"access_key": "张志宏"})
+r = jpost("/v4/auth/login-by-key", {"access_key": os.environ["V4_ACCESS_KEY"]})
 kd = r.get_json()
-check("正确密钥(张志宏)->owner登录", kd.get("success") is True and kd["user"]["role"] == "owner", str(kd.get("user")))
+check("正确密钥(env注入)->owner登录", kd.get("success") is True and kd["user"]["role"] == "owner", str(kd.get("user")))
 anon = app.test_client()  # 全新匿名 client，避免前面登录的 cookie 污染“未登录”断言
 r = anon.get("/v4/settings/")
 check("未登录访问设置页302到登录页", r.status_code == 302 and "/login" in (r.headers.get("Location") or ""), str(r.status_code))

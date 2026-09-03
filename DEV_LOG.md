@@ -815,6 +815,44 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - 后端 capture 多 page target 时固定取 pages[0]，可能选到 about:blank（应优先选非 blank 的活跃可见 target）；CDP ws 偶发超时可加一次快速重连。属后端健壮性优化，本轮不动采集主链。
 - 侧栏"内置浏览器"入口位于 Zachary OS AI 分组（分组较多需滚动），其信息架构层级在 UI 精修批次统一优化。
 
+---
+
+## 2026-09-03 第十批｜D7 登录体系收口：原生登录框闪断根因 + v4 owner 凭证对齐 + 旧凭证残留全盘排查
+
+### 问题（用户痛点 + 源码/运行时判定）
+1. 浏览器原生登录框"账号密码输到一半自己跳没、又出现"。
+2. "v4 设置页登录按钮点击无响应"（历史登记）。
+3. 用户要求全盘排查 ID082610 等旧凭证残留，"旧数据残留不得影响最新系统"。
+
+### 根因一：多个并发 401 同 realm 挑战反复重置原生登录框（真实机制修复）
+- 修复前无凭证探测：`/favicon.ico`、`/api/*`、文档导航 `/` **全部**回 `WWW-Authenticate: Basic` 且 `Connection: close`。浏览器为顶层文档弹原生框的同时，favicon 等并发请求的第二个同 realm 401 挑战到达，会重置正在输入的原生框——即"输一半跳没又出现"。
+- 修复（app.py `_basic_auth`，最小增量，留 .bak-auth，安全等级不降）：
+  - 白名单新增 `/favicon.ico`（无凭证探测由 401 变 **204**，不再产生挑战）；
+  - **仅顶层 HTML 文档导航**回 `WWW-Authenticate`（需要浏览器弹框）；`/api/`、XHR(X-Requested-With)、Accept 仅 application/json 的子请求回**纯 401 JSON（不带挑战头）**，不触发原生弹框、不打断输入，改由前端 401 流程（含 D1 的同源凭证 + 统一 Auth 恢复弹窗）处理。子请求依旧 401 拒绝，只是不弹浏览器原生框。
+- 修复后实测：favicon 无凭证=204 无挑战头；API 无凭证=401 无 WWW-Authenticate；文档导航无凭证=401 且保留 WWW-Authenticate（正常弹唯一框）；正确凭证=200。
+
+### 根因二：v4 owner 密码与 Basic Auth 没同步（"按钮无响应"实为密码不符，且差 1 次锁定）
+- Playwright 实测证伪"按钮无响应"：/v4/settings/ 未登录正常 302 到 /v4/settings/login，btnPwd 点击真实发出 POST /v4/auth/login 并渲染返回，**无 JS 错误**（仅一个 password 未包 form 的 verbose 提示，无害）——旧"无响应"已被此前 fetch 凭证修复覆盖。
+- 真实问题：Basic Auth(.env TAIKOO_AUTH_PASSWORD，即当前 Basic 新密码)，但 v4 独立用户库 `v4_users` 的 owner 哈希对该新密码 / 旧密码 / ZBMP 密钥 **均不匹配**（历史另一密码），且排查时 failed_attempts 已累加到 **4/5**（再错 1 次即锁 15 分钟）。这是"两套独立凭证、改了 .env 不会同步 v4 owner"的旧残留。
+- 处置（用户已授权"v4 owner 密码与 Basic 对齐为同一新密码"，真实值只存 .env、不入仓）：
+  - 新增可复用正式脚本 **scripts/sync_v4_owner_password.py**：从 .env 单一来源读 TAIKOO_AUTH_USER/PASSWORD（不硬编码密码），写入前用 sqlite 在线 backup API **一致性整库备份**到 data/backups/，只 UPDATE v4_users 中 role='owner' 这一行的认证字段（password_hash/failed_attempts=0/locked_until=NULL/status=active/must_change_password=0），默认 dry-run、--apply 才写，写后本地 verify_password + service.login 双重验证；**不触碰任何业务表/舆情数据**。
+  - 实跑：备份 data/backups/pre_v4ownersync_20260903_153525.db；owner failed 4→0、pw_verify=True、service.login success role=owner；HTTP 复验密码登录 success/owner/token=True。
+- 第二处凭证不一致：v4 密钥登录 master_access_key 默认是历史值"张志宏"，.env 未设 V4_ACCESS_KEY，故用户指定的 ZBMP 密钥 **并未生效**。已在 .env 补 `V4_ACCESS_KEY=<用户指定密钥>`（真实值只存本地、永不提交，先备 .env.bak-d7），重启后实测：该密钥→owner 成功、错钥被拒（只锁 __access_key__ 计数器不影响 owner）。
+
+### 旧凭证残留全盘排查结论
+- tracked 源码 ID082610（已废弃旧密码，仅历史对照）= 0 生效命中（仅 DEV_LOG/CHANGELOG 历史叙述，正常）；.env Basic 用户/密码与当前一致（正确；存在两行重复 AUTH，值一致无害，登记不擅改）。
+- 默认密钥"张志宏"仅余：v4_upgrade/config.py 默认值（已被 .env V4_ACCESS_KEY 覆盖，生产实际生效为用户指定密钥、值仅存 .env 不入仓）、docs 历史文档（不改历史）、tests/v4_smoke.py 硬编码——**已修测试**：改为测试启动时注入固定假密钥 os.environ["V4_ACCESS_KEY"]，走与生产一致的"环境变量注入"路径，不再硬编码历史默认值、不依赖真实 .env/真实密钥。
+
+### 验证（真实）
+- tests/healthcheck.py 退出码 0：9 模块 ok、notes 1052/今日95、双时间字段齐备、**subject_guard gz_hit=true / sh_excluded=true（主体红线未受影响）**。
+- tests/v4_smoke.py：认证/密钥/会话/权限/设置页相关 **22 项全 PASS**（含新"正确密钥(env注入)->owner"）；仅 2 个 FAIL（"8 个采集适配器"期望 8 实际 11、适配器平台状态列表）与 1 处临时库缺 publish_datetime 列 traceback，经 git diff 自证**均在适配器/notes 区、与本批改动无关，属 pre-existing**（适配器枚举增长未更新断言 + 临时库未建业务列），登记另线处理，不混入本 commit。
+- 生产 8201 两次平滑重启（仅结束 app 主/子、supervisor 自动拉起，8200 未碰），healthz v5.9.9；401 挑战分流重启后复检仍生效。
+
+### 边界 / 遗留登记
+- 只改认证层，未碰采集主链、五条红线函数、业务数据；.env / data/backups / *.bak / 临时库均不提交。
+- v4_smoke 2 个适配器断言过时 + 临时库 schema 缺列导致脚本 exit1（pre-existing）：另开小线把断言改为动态读取已注册适配器、临时库补业务列或跳过业务查询。
+- .env 两行重复 TAIKOO_AUTH_*（值一致、无害）；docs 20260830 密钥清单仍写历史默认值（历史文档，需要时加注"以 .env V4_ACCESS_KEY 为准"）。
+
 
 
 
