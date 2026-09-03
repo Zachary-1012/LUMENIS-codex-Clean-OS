@@ -1123,3 +1123,30 @@ KOS MASTER EXECUTION CONTRACT v1 已入双子库（ZBC d292c9f / OSAI bd088f6）
 - AI_SUGGESTED 的人工复核 UI/持久化未做（当前机制字段就位，人工确认端点为后续）；AI 建议调用本身不自动发生（不越权），需人工显式触发。
 - relevance/interaction 在品牌真实采集数据上的校准待恢复采集后观察（当前双暂停）。
 - 备份：kos_engine.py.bak-enhance、kos_routes.py.bak-account（不提交）。
+
+
+---
+
+## 第十九批：AI_SUGGESTED 人工复核闭环（归属 VERIFIED override）
+
+### 背景
+守住基线后推进：完成 KOS 主体归属 Gate 的最后一步——AI 只给建议（AI_SUGGESTED），人工确认后转 VERIFIED 正式归属。全程不碰数据库、不改广州口径、可回滚。
+
+### 改动（kos_engine.py + kos_routes.py，纯增量）
+1. kos_engine.py：
+   - ownership_confirm(brand, author_id, ownership_class, confirmed_by)：人工确认归属，写入 data/private/kos_ownership_overrides.json（不碰 DB 表；AI 不越权，确认后才生效）。
+   - _ownership_override(author_id, brand)：按 (brand,author_id) 或全局查已确认归属。
+   - ownership_for 开头加 override 检查：有人工确认 → 直接返回 VERIFIED（confidence 0.9, needs_manual_review=False, 带 confirmed_by/confirmed_at）；规则路径输出 ai_status=RULE（结构统一）。
+2. kos_routes.py：新增 POST /api/kos/ownership/confirm + GET /api/kos/ownership/overrides。
+
+### 实测（真实结果）
+- py_compile 全过。
+- 单元：normal_user 确认前 UGC_CONSUMER → ownership_confirm('hainan_cdf','A-OVR','TARGET_ENTITY_KOS') → 确认后 TARGET_ENTITY_KOS/VERIFIED/0.9/confirmed_by=zachary；测试 override 已清理。
+- HTTP 实测（Basic Auth）：POST /api/kos/ownership/confirm → ok=True class=TARGET_ENTITY_KOS by=zachary；GET /api/kos/ownership/overrides → count=1；测试数据已清理（count=0）。
+- 平滑重启 8201（worker 24812），healthz v5.9.9 OK。
+- 红线复测：active_brand=guangzhou_taikoo_hui，广州=True/成都=False；五条红线函数未改；官方账号只读；publish_datetime/captured_at 未混；采集仍用户暂停（未误动）。
+
+### 未实测 / 登记
+- 前端「归属确认」UI 未做（当前 API 可调用，界面待接入 KOS 页面）。
+- override 文件为 data/private/（gitignore，不提交），属运行期业务数据。
+- 备份：kos_engine.py.bak-verify、kos_routes.py.bak-verify（不提交）。

@@ -2272,6 +2272,38 @@ def api_kos_account():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@kos_bp.route("/ownership/confirm", methods=["POST"])
+def api_kos_ownership_confirm():
+    """人工确认 KOS 主体归属（AI 只建议不越权，确认后 VERIFIED；写 override 文件，不碰 DB）。"""
+    try:
+        ke = _engine()
+        body = request.get_json(silent=True) or {}
+        brand = (body.get("brand") or "").strip()
+        author_id = (body.get("author_id") or "").strip()
+        ownership_class = (body.get("ownership_class") or "").strip()
+        confirmed_by = (body.get("confirmed_by") or "zachary").strip()
+        if not author_id or not ownership_class:
+            return jsonify({"ok": False, "error": "author_id and ownership_class required"}), 400
+        rec = ke.ownership_confirm(brand, author_id, ownership_class, confirmed_by=confirmed_by)
+        return jsonify({"ok": True, "confirmed": rec}), 200
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@kos_bp.route("/ownership/overrides", methods=["GET"])
+def api_kos_ownership_overrides():
+    """查看已人工确认的归属 override 列表。"""
+    try:
+        ke = _engine()
+        data = ke._load_overrides()
+        rows = list(data.values())
+        return jsonify({"ok": True, "count": len(rows), "overrides": rows}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 def register_kos_api(app):
 
 

@@ -633,11 +633,73 @@ _OWNERSHIP_REASON = {
 }
 
 
+OVERRIDE_PATH = Path(DB_PATH).parent / "private" / "kos_ownership_overrides.json"
+
+
+def _load_overrides() -> dict:
+    """读取人工确认的归属 override（幂等，损坏返回空）。"""
+    try:
+        if OVERRIDE_PATH.exists():
+            return json.loads(OVERRIDE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _save_overrides(data: dict) -> None:
+    OVERRIDE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OVERRIDE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def ownership_confirm(brand, author_id, ownership_class, confirmed_by="zachary") -> dict:
+    """人工确认 KOS 主体归属（VERIFIED）。写入 override 文件，不碰数据库表。
+    AI 只给建议（AI_SUGGESTED），人工确认后才生效；广州口径/官方账号只读不受影响。"""
+    if ownership_class not in OWNERSHIP_CLASSES:
+        raise ValueError(f"ownership_class 必须在: {OWNERSHIP_CLASSES}")
+    if not author_id:
+        raise ValueError("author_id required")
+    data = _load_overrides()
+    key = f"{brand or ''}::{author_id}"
+    rec = {"brand": brand or "", "author_id": author_id, "ownership_class": ownership_class,
+           "confirmed_by": confirmed_by, "confirmed_at": datetime.now().isoformat()}
+    data[key] = rec
+    _save_overrides(data)
+    return rec
+
+
+def _ownership_override(author_id, brand=""):
+    """按 (brand, author_id) 或全局 author_id 查人工确认归属；无则 None。"""
+    if not author_id:
+        return None
+    data = _load_overrides()
+    if brand:
+        r = data.get(f"{brand}::{author_id}")
+        if r:
+            return r
+    return data.get(f"::{author_id}")
+
+
 def ownership_for(profile, brand="", subject_type="", identity_label="", is_kos=None) -> dict:
     """主体归属判定（确定性规则，AI 不越权）。
     返回 ownership_class / state / confidence / needs_manual_review / reason / evidence_hint。
     仅判定视图，不写任何表；广州历史数据不受影响。
     """
+    # 人工确认优先（VERIFIED override；AI 只建议不越权，确认后作为正式归属）
+    _ov = _ownership_override((profile or {}).get("author_id") or "", brand)
+    if _ov:
+        owner = _ov.get("ownership_class", "UNKNOWN")
+        return {
+            "target_entity": brand or "",
+            "ownership_class": owner,
+            "ownership_state": _OWNERSHIP_STATE.get(owner, "UNKNOWN"),
+            "ownership_confidence": 0.9,
+            "needs_manual_review": False,
+            "reason": f"人工确认归属（{_ov.get('confirmed_by','')} @ {_ov.get('confirmed_at','')}）",
+            "evidence_hint": "override:" + json.dumps(_ov, ensure_ascii=False),
+            "ai_status": "VERIFIED",
+            "confirmed_by": _ov.get("confirmed_by", ""),
+            "confirmed_at": _ov.get("confirmed_at", ""),
+        }
     st = subject_type or (profile or {}).get("subject_type") or ""
     label = identity_label or (profile or {}).get("identity_label") or ""
     if is_kos is None:
@@ -654,6 +716,7 @@ def ownership_for(profile, brand="", subject_type="", identity_label="", is_kos=
         "ownership_confidence": _OWNERSHIP_CONFIDENCE.get(owner, 0.5),
         "needs_manual_review": needs_review,
         "reason": _OWNERSHIP_REASON.get(owner, "待人工判定"),
+        "ai_status": "RULE",
         "evidence_hint": "subject_type=" + (st or "空")
                          + (("; identity_label=" + label) if label else "")
                          + ("; is_kos=1" if is_kos else ""),
