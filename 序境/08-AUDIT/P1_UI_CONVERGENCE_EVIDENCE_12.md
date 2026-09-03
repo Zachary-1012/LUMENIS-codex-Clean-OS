@@ -36,6 +36,7 @@
 
 - `tests/test_idea_sit_backing.py` 17 项（+6 新：圈层背书命中/降级/7 类画像/画像映射/provenance/报告消费）
 - 相关回归（idea_generator + brand_report_master_model）exit=0
+- 全量回归 **reg68 EXIT=0**
 
 ## 六、结论
 
