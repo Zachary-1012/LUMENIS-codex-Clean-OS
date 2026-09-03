@@ -82,3 +82,49 @@ def test_case_backing_matches_mechanism():
     if cr is not None:
         assert cr["case_title"]
         assert cr["case_source"]
+
+
+# ============================================================
+# 4) 圈层扩充（16）+ SIT×约束矩阵（约束→转译显式映射）
+# ============================================================
+
+def test_circle_expanded_to_16():
+    """CIRCLE_SYMBOLS 扩充至 16 个圈层（+高奢珠宝腕表/新中式国潮/精致养宠/艺术收藏潮玩）。"""
+    for name in ("高奢珠宝腕表", "新中式国潮", "精致养宠", "艺术收藏潮玩"):
+        assert name in ig.CIRCLE_SYMBOLS, f"缺圈层 {name}"
+        assert len(ig.CIRCLE_SYMBOLS[name]["symbols"]) >= 3
+        assert ig.CIRCLE_SYMBOLS[name]["examples"]
+
+
+def test_new_circle_actual_output():
+    """新圈层可真实产出 idea（圈层字段正确命中）。"""
+    for circle in ("新中式国潮", "精致养宠", "艺术收藏潮玩"):
+        r = ig.generate_ideas("测试品牌", "零售", {"topics": ["上新"], "sentiment": "positive", "circle": circle},
+                              n=2, tonality="premium", budget="mid", seed=5)
+        assert len(r["ideas"]) >= 1
+        assert all(i["circle"] == circle for i in r["ideas"])
+
+
+def test_sit_constraint_map_has_six_templates():
+    """SIT_CONSTRAINT_MAP 六模板齐全：类比/极端/后果/竞争/换维/实效。"""
+    assert set(ig.SIT_CONSTRAINT_MAP.keys()) == {"类比", "极端", "后果", "竞争", "换维", "实效"}
+    for meta in ig.SIT_CONSTRAINT_MAP.values():
+        assert meta["constraints"] and meta["translate"]
+
+
+def test_sit_translation_mapping():
+    """约束类型→SIT 转译映射正确：预算→极端/同质化→竞争/媒介→换维/信任→实效。"""
+    cases = {"预算": "极端", "同质化": "竞争", "媒介": "换维", "信任": "实效"}
+    for ct, tpl in cases.items():
+        t = ig._sit_translation({"constraint_type": ct})
+        assert t and t["template"] == tpl, f"{ct} 应映射到 {tpl}"
+
+
+def test_sit_idea_carries_constraint_translation():
+    """sit 机制 idea 带 constraint_type 时，provenance 携带 sit_translation（约束感知）。"""
+    r = ig.generate_ideas("商业体", "零售", {"topics": ["周年"], "sentiment": "positive",
+                           "circle": "新中式国潮", "constraint_type": "预算"},
+                          n=8, tonality="premium", budget="low", seed=3)
+    sit_hits = [i for i in r["ideas"] if i["mechanism"] == "六模板转译"]
+    assert sit_hits, "应产出六模板转译 idea"
+    assert any(i["provenance"].get("sit_translation") for i in sit_hits)

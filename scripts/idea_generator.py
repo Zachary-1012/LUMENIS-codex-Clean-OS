@@ -54,6 +54,14 @@ CIRCLE_SYMBOLS = {
                  "examples": "Snow Peak 露营节 / 城市青年一夜出逃"},
     "夜生活": {"lang": "松弛/微醺/社交暗语", "symbols": ["微醺", "bistro", "夜猫子", "局", "氛围感酒馆"],
                "examples": "夜经济街区 / 精酿厂牌社群"},
+    "高奢珠宝腕表": {"lang": "品鉴/传承/低调奢华", "symbols": ["工艺", "传承", "品鉴", "低调", "收藏级"],
+               "examples": "蒂芙尼蓝色礼盒社交货币 / 文博金古法金文化引流 / HUAWEI非凡大师"},
+    "新中式国潮": {"lang": "东方美学/文化自信/日常国风", "symbols": ["盘扣", "缠枝纹", "古法金", "节气", "东方留白"],
+               "examples": "新中式服饰2500亿 / 古法金设计留人 / 汉服通勤日常"},
+    "精致养宠": {"lang": "毛孩子/人宠一体/精细化养护", "symbols": ["毛孩子", "人宠同款", "陪伴", "老年养护", "仪式感"],
+               "examples": "人宠OOTD / 老年犬粮搜索+920% / 宠物年夜饭"},
+    "艺术收藏潮玩": {"lang": "收藏/绝版/溢价/轻资产配置", "symbols": ["绝版", "联名", "溢价", "收藏家", "保真"],
+               "examples": "潮玩限量溢价10倍+ / 国风积木收藏 / 二手保值80%+"},
 }
 
 # 调性（影响创意气质与机制）：大众狂欢 vs 中端种草 vs 高奢克制
@@ -572,6 +580,28 @@ def _load_case_backing():
     return _CASE_BACKING_CACHE
 
 
+# SIT × 约束矩阵：六模板各对应最适配的约束类型与转译要点（限制→转译手法显式映射）
+SIT_CONSTRAINT_MAP = {
+    "类比": {"constraints": ("陌生", "新品类"), "translate": "把新限制说成熟悉之物：新品类≠陌生，而是旧熟悉的另一面"},
+    "极端": {"constraints": ("预算", "产能"), "translate": "预算少就做到极致单点：不撒胡椒面，极端=资源集中"},
+    "后果": {"constraints": ("低频", "错过"), "translate": "把价值说成失去：稀缺/节点限定→错过即不可得"},
+    "竞争": {"constraints": ("同质化", "红海"), "translate": "反向定义：不做别人都在做的，换赛道"},
+    "换维": {"constraints": ("媒介", "场景"), "translate": "换维度重做：换个载体/圈层既有玩法"},
+    "实效": {"constraints": ("信任", "转化"), "translate": "只对结果负责：少承诺、做足一件、诚实即张力"},
+}
+
+
+def _sit_translation(signals):
+    """约束→SIT 转译：读 signals 的 constraint_type（如'预算'），返回匹配的六模板与转译要点。"""
+    ct = (signals or {}).get("constraint_type", "")
+    if not ct:
+        return None
+    for _tpl, _meta in SIT_CONSTRAINT_MAP.items():
+        if any(_k in ct for _k in _meta["constraints"]):
+            return {"template": _tpl, "constraint": ct, "translate": _meta["translate"]}
+    return None
+
+
 def _case_backing(mech):
     """按机制取匹配的真实案例背书（无则 None）。"""
     for _tag in _MECH_CASE_TAGS.get(mech, ()):
@@ -602,6 +632,7 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
         "confidence": confidence,
         "counter_example_check": "pending（负样本库为 P2 能力，晋升 L1 前须补 3 个反例，当前未校验）",
         "case_reference": _case_backing(mech),
+        "sit_translation": (_sit_translation(signals) if mech == "sit" else None),
         "trace": "芥子(真实信号) → 须弥(机制/角度抽象) → idea(多维再生产) → FEEDBACK 回流",
     }
 
