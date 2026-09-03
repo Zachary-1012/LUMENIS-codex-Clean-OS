@@ -736,3 +736,36 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - 未触碰采集主链、五条红线函数、data/monitor.db；事件笔记端仍按令暂不开放。
 - 登录态 cookie 命中后仍会每 30 分钟只读 recheck；真实掉线才弹扫码（双平台对等）。
 
+---
+
+## 2026-09-03 第七批｜Zachary 对话面板 A1–A4：接真 AI + 意图顺序修复 + 实时版本 + 侘寂重构
+
+### 背景（用户痛点）
+问"今日发布的负面舆情"两次都返回相同"今日舆情概览"模板（答非所问）；面板是"壳+真实统计数字+if-else 假问答"，未接真 AI；蓝白旧风与已确认的 ZBIP 黑白灰侘寂不一致；系统状态硬编码 v5.7.0（实际 v5.9.9）。
+
+### 源码审计（以现状为准，纠正一处旧结论）
+- 后端 `/api/ai/chat`（app.py:2233）本就具备 `function_registry.build_context` 结构化检索 + `intelligence._chat` 模型 + local_rule 兜底，返回 `{ok,reply,provider,ai_status,context}`；前端从未调用它。
+- `/api/notes` 在 data_query_api.py（blueprint），支持 sentiment/date_start/date_end/per_page；database._apply_filters 的 date_start/end 过滤的是 **publish_date（发布日期）**，符合"发布≠采集"时间红线；旧前端误用 `limit`（被忽略，实际默认 per_page=20）且不带日期。
+- trace 曾记"313 行单引号致模板不解析"——现状该行已是反引号、`${}` 正常，**该 bug 不存在，不修假 bug**。
+- 健康检查真实路径是根 `/healthz`（返回 {ok,version:"5.9.9"}），`/api/healthz` 为 404；旧代码若按 apiBase 拼会 404。
+
+### 修复（最小增量，留 .bak-aifix，未碰后端业务/红线函数/生产库）
+**static/js/zachary_robot_enhanced.js（generateAnswer 重写）**
+- A1 接真 AI：新增 askAiChat() 调 POST /api/ai/chat；分析/建议/解释类问题与兜底都走真 AI，后端自带检索，AI 仅增强、数字仍由规则权威给出（不把 AI 当 System Truth）。
+- A2 意图顺序：系统状态 → 分析建议类(走AI) → 负面 → 正面 → 风险清单 → 数量 → 概览 → 报告 → AI 兜底；把"负面/正面"等具体意图提到"概览(今日/今天)"宽泛词之前，根治"今日负面被概览拦截"；新增 ANALYTIC_RE/LIST_RE，"有什么风险+处置建议"走 AI、"有哪些风险"走清单。
+- 时间：resolveDateScope 识别今日/昨日/前日，负面/正面按 publish_date 传 date_start/date_end（严格发布时间，非 captured_at）；指定时间窗为 0 时如实告知并附带最近 3 条（明确标注"不限今日"），不伪造。
+- A3 去硬编码：系统状态改实时 `/healthz`(根路径 getHealthz 单独请求)+`/api/ai/status`，显示真实 v5.9.9、在线状态、真实 provider/model；删除 v5.7.0/数据库v8 假文案。
+- apiCall 补 credentials:'same-origin'；帽子色/动态面板青光改中性。
+**static/css/zachary-zbip.css（新增 Strangler 覆盖层，最后加载，回滚=删一个 link）**：浮子去紫青霓虹改中性投影；面板白纸细边弱阴影圆角 14；header 近黑 #1C1917 + 语义绿在线点；bot 浅灰气泡 / 用户近黑气泡；快捷钮白底描边 hover 反色；输入与发送近黑；移动端全屏化。**static/index.html**：引入该 css、脚本版本号 8.0.0→8.0.1 防缓存。
+
+### 验证（Playwright msedge headless 真实加载 + 网络拦截 + DOM 断言）
+- CASE1 "今日发布的负面舆情"：请求 `/api/notes?sentiment=negative&per_page=6&date_start=2026-09-03&date_end=2026-09-03`（按发布日期），今日为 0 如实返回并补拉最近 3 条（2026-08-30，标注不限今日）——不再误回概览。
+- CASE2 "系统运行状态"：版本 **v5.9.9**（实时）、服务在线、AI zhipu/glm-4.5-air；不再 404、无 v5.7.0。
+- CASE3 "方所闭店…给处置建议"：命中分析类，仅请求 `/api/ai/chat`，AI 基于系统检索（696 条/负面55/高风险23/互动302,543）输出"判断→依据→动作→责任方时限→复盘指标"。
+- **CONSOLE_ERRORS=[]**（首轮发现的 /api/healthz 404 已随根路径修复消除）。证据截图 docs/UI/evidence/zachary-panel-zbip-20260903.png（近黑 header+绿点/浅灰气泡/描边快捷钮/近黑发送，无蓝紫青）。
+
+### 边界 / 未做
+- 未改后端 /api/ai/chat 与任何业务规则、红线函数、生产库；AI 输出不回写数据库事实。
+- 侘寂覆盖层仅作用于 Zachary 面板；其余页面精修在后续 UI 批次。
+
+
