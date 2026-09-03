@@ -1,495 +1,194 @@
-# 序境-Core｜Production Truth
+# 序境-Core · Xujing Core
 
-> **序境 · 芥子纳须弥**
->
-> 正式产品名：**序境 / Xujing / 서경**
->
-> 本仓库是序境双子库中的**生产核心**，负责生产业务、数据、运行时、UI/API、测试与发布。
->
-> `Z Brand Core` / `Zachary` 仅作为仓库与历史研发标识，不作为产品展示名。
->
-> **当前唯一有效双库：序境-Core + 序境-Intelligence。**
->
-> 基线：2026-09-04。版本事实以 `VERSION` 为准。
+> **序境（Xujing）** — 生产核心系统  
+> **品牌哲学：芥子纳须弥**
 
----
+## 1. 产品定位
 
-## 1. 双库架构
+序境-Core 是序境双子库中的生产核心，负责承载可验证的业务事实、生产数据、采集、分析、风险、任务、报告与运行时能力。
+
+它不是通用舆情 SaaS 模板，也不是 AI 实验场。生产规则、数据真相、安全约束和发布质量必须在本库内可验证。
+
+## 2. 双子库边界
 
 ```text
-                         序境
-                   芥子纳须弥
-                         │
-            ┌────────────┴────────────┐
-            │                         │
-      序境-Core                 序境-Intelligence
-    Production Truth          Research & Intelligence
-            │                         │
-      Code / Data / UI          Research / AI / Contract
-      Runtime / Test             Benchmark / Knowledge
-            │                         │
-            └──── Contract / Evidence ────┘
+序境
+├── 序境-Core
+│   └── Production Truth
+└── 序境-Intelligence
+    └── Research & Intelligence
 ```
 
-**序境-Core** 是唯一生产业务真相源。Core 不依赖 Intelligence 才能运行。
+### 序境-Core
 
-**序境-Intelligence** 负责研究、AI、技术研发、Benchmark、知识与施工规格。研究结果必须经过 Contract → Implementation → Test → Evidence 才能进入生产。
+负责：
+- 生产代码与生产数据库
+- 数据采集与来源适配
+- 主体过滤与数据质量
+- 舆情、事件、风险与分析
+- KOS / Campaign 等生产能力
+- 报告与数据导出
+- API、Runtime、Health、Recovery
+- 测试、证据与发布
 
-不得建立第三/第四生产核心库。
+### 序境-Intelligence
 
----
+负责研究、AI、知识、Benchmark、技术验证与研发建议。研究结果不得绕过 Contract → Implementation → Test → Evidence 直接改变生产真相。
 
-## 2. 当前产品
+## 3. Canonical 层级
 
-### CTH-POMS
-
-广州太古汇舆情监测与品牌传播情报生产入口。
-
-- 舆情监测
-- 风险预警
-- 事件中心
-- 负面确认
-- 热点 / 话题
-- 笔记搜索
-- 数据分析
-- 品牌 / 业态
-- 官方动态
-- 营销案例库
-- 舆情日历
-- 报告中心
-- 系统设置
-- AI 辅助
-
-当前主平台为小红书；其他平台必须通过受控 Adapter 接入。
-
-### ZBMP
-
-Core 内母平台能力，不建立第二套 Core。
-
-- 客户 / 品牌 / 竞品 / 项目
-- Brand Profile / Monitoring Config
-- KOS / KOL / KOC / 普通用户 / 媒体 / 官方
-- 内容类型
-- 营销 / 传播 / 舆情事件
-- 事件关系与生命周期
-- 消费者需求
-- 品牌对标
-- 多平台 Adapter
-- AI Shadow / 样本 / 评测
-- 客户 Release
-
----
-
-## 3. Canonical Registry
-
-所有资产统一遵循：
+所有生产资产必须能够映射到：
 
 ```text
 Product
- ↓
+  ↓
 Subsystem
- ↓
+  ↓
 Module
- ↓
+  ↓
 Page
- ↓
+  ↓
 Function
- ↓
+  ↓
 Data
- ↓
+  ↓
 API
- ↓
+  ↓
 Runtime
- ↓
+  ↓
 File
- ↓
+  ↓
 Class / Function
 ```
 
-所有名称进入 Canonical Registry：
+治理横向贯穿全部层级：Policy / Permission / Safety / Evidence / Audit。
 
-- Product Registry
-- Module Registry
-- Page Registry
-- Function Registry
-- Data Registry
-- Terminology Registry
-- File Registry
-- API / Runtime Registry
+## 4. 核心功能域
 
-同一概念只能有一个 Canonical ID。中 / 英 / 韩是同一 ID 的语言表现，不得形成三套功能。
+| 域 | Canonical | 职责 |
+|---|---|---|
+| 观测 | Observation | 采集、来源、舆情、事件、热点 |
+| 洞察 | Insight | 分析、趋势、品牌、竞品、风险 |
+| 行动 | Action | KOS、Campaign、任务、执行 |
+| 报告 | Reporting | 日报、周报、月报、专报、导出 |
+| 系统 | System | 数据源、账号、AI、权限、安全、设置 |
 
----
+## 5. 采集安全规则
 
-## 4. 标准命名
+自动采集默认受控，仅保留合规来源与合法账号/API 接口。
 
-| 层级 | 中文 | English | 한국어 |
-|---|---|---|---|
-| Brand | 序境 | Xujing | 서경 |
-| Philosophy | 芥子纳须弥 | Seed to Infinity | 개자납수미 |
-| Product | 序境-Core | Xujing Core | 서경 Core |
-| Product | 序境-Intelligence | Xujing Intelligence | 서경 Intelligence |
-| Module | 观测 | Observation | 관측 |
-| Module | 洞察 | Insight | 인사이트 |
-| Module | 行动 | Action | 실행 |
-| Module | 研究 | Research | 연구 |
-| Module | 智能 | Intelligence | 지능 |
-| Module | 知识 | Knowledge | 지식 |
-| Module | 系统 | System | 시스템 |
-
-韩文为界面本地化基线；正式商标、版权及法律名称使用前必须进行专业语言与法律审查。
-
----
-
-## 5. 生产真相保护｜P0
-
-以下内容不可被 AI、研究、外部工具或新模块绕过：
-
-### 太古汇主体边界
-
-保护：
-
-- `SUBJECT_WORDS`
-- `SUBJECT_EXCLUDE_WORDS`
-- `subject_hit()`
-- `_subject_sql_and_values()`
-- `aggregate_events()` 主体边界
-- `build_daily_report()` 主体边界
-- Dashboard / Statistics / Reports 主体口径
-
-不得为了增加数据量弱化主体过滤。
-
-### 时间口径
-
-- `publish_datetime`：内容真实发布时间
-- `captured_at`：系统采集时间
-
-正式报告默认使用 `publish_datetime`。无法可靠归一化的相对时间必须标记不确定。
-
-### 数据库
-
-生产数据库为最高保护资产。未经明确 Change Plan 与验证，不得删除、清空、重建或覆盖。新增字段/表优先采用向后兼容迁移；生产、测试、实验数据隔离。
-
----
+- 自动窗口：每日 00:00、12:00
+- 自动采集：可开启 / 关闭，默认隐藏入口
+- 其他采集：默认手动，每次最长 30 分钟
+- 合法专业号、授权账号、官方 API 可作为合规来源
+- 所有任务必须经过 Preflight / Policy / Identity / Session / Risk 检查
+- 风险触发 STOP → COOLDOWN → HUMAN REVIEW
+- 不通过换账号、换 Cookie、换 IP 或提高频率规避平台安全限制
+- 数据进入生产前必须经过 Validate / Normalize / Filter / Evidence
 
 ## 6. AI 边界
 
-AI 是增强层，不是生产生命线。
+AI 是生产能力的增强层，不得绕过核心规则成为生产真相的最终裁决者。
 
-即使没有 AI，核心链路必须能够运行：
+生产 AI 结果必须记录必要的模型、提示词、输入、输出、置信度、最终结果及人工修正信息；重要结论必须可追溯至证据。
 
-```text
-采集 → 标准化 → 过滤 → 去重 → 事件 → 风险 → 统计 → 报告
-```
+## 7. UI / UX 原则
 
-AI 可以辅助情绪、主题、诉求、摘要、风险解释、评论总结、趋势解释、语义识别、聚类建议与报告润色。
+序境采用克制、高密度、操作优先的信息设计：
 
-AI 不得单独决定：
+- 细线 Icon 与小型功能图标
+- 清晰的导航层级
+- 数据优先，视觉服务于判断
+- 图表可下钻至数据与证据
+- 禁止巨型 Logo、巨型 Icon、大字报式布局
+- 禁止为了装饰牺牲操作效率
+- 中 / 英 / 韩共用稳定 Canonical ID，语言仅改变展示层
+- 响应式布局必须保持信息层级，不允许多语言导致组件失控
 
-- 主体归属
-- 真实发布时间
-- 统计数量
-- 报告周期
-- 原始数据真实性
-- 最终核心风险口径
+## 8. 数据与报告
 
-AI 输出必须可追溯至原始输入、模型版本、提示版本，并支持人工修正。
-
----
-
-## 7. 小红书采集安全｜P0
-
-目标：**稳定、低风险、可解释、可恢复、可观察、可审计。**
-
-### 自动采集
-
-仅保留两个自动窗口：
+标准数据链路：
 
 ```text
-00:00
-12:00
+Source → Collection → Raw → Normalize → Analyze → Evidence → Insight → Report
 ```
 
-- 每日各一次
-- 自动采集可开启 / 关闭
-- 自动能力存在但默认隐藏
-- 每窗口执行去重与安全检查
-- ShadowPlanner 只能收紧限制，不得放松限制
-
-### 手动采集
-
-其他采集任务默认仅允许手动触发，每次最长 30 分钟，并受同一安全策略约束。
-
-### 合法来源
-
-保留合法账号、合法 API、官方开放能力、授权专业号等合规 Adapter 入口。
-
-不得通过账号、Cookie、IP、代理、验证码规避或提高频率绕过平台安全机制。
-
-### 安全状态
+标准报告骨架：
 
 ```text
-SCHEDULE
- ↓
-PREFLIGHT
- ↓
-POLICY CHECK
- ↓
-IDENTITY / SESSION CHECK
- ↓
-COLLECT
- ↓
-VALIDATE
- ↓
-EVIDENCE
+Executive Summary
+→ Key Findings
+→ Event / Issue
+→ Impact
+→ Risk
+→ Evidence
+→ Trend
+→ Recommendation
+→ Appendix / Data
 ```
 
-安全信号：`STOP → COOLDOWN → HUMAN REVIEW`。
+内容创作不是固定报告模板，而是根据需求、受众、场景和目标动态选择结构。
 
-失败不得伪装成“0 条数据”。
+## 9. 文件治理
 
----
+正式文件必须归属于明确模块，不允许长期堆积在根目录。
 
-## 8. Resident Browser Runtime
+推荐治理结构：
 
 ```text
-Resident Browser Runtime
- ├─ Browser Profile
- ├─ Identity Manager
- ├─ Session Manager
- ├─ Auth Lifecycle
- ├─ Task Scheduler
- ├─ Collector
- ├─ Health / Heartbeat
- ├─ Circuit Breaker
- ├─ Recovery
- └─ Evidence
+00-GOVERNANCE/
+01-PRODUCT/
+02-ARCHITECTURE/
+03-DESIGN/
+04-DATA/
+05-RUNTIME/
+06-REPORT/
+07-RESEARCH/
+08-AUDIT/
+99-ARCHIVE/
 ```
 
-Session 失效：
+资产状态统一使用：`KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE`。
+
+删除前必须完成引用、依赖和运行验证。历史资产如仍具证据价值，应进入 `99-ARCHIVE`，而不是污染生产目录。
+
+## 10. Canonical 命名
+
+正式产品名：**序境 / Xujing / 서경**  
+品牌哲学：**芥子纳须弥**
+
+`Zachary` 仅作为历史仓库、研发身份或必要技术标识，不再作为对外产品品牌。
+
+功能名称应体现职责，不以品牌词重复污染文件、类和函数命名。
+
+## 11. 质量 Gate
+
+任何新增或修改必须经过：
 
 ```text
-AUTH_REQUIRED
- ↓
-系统内 Auth Modal
- ↓
-正常扫码 / 登录
- ↓
-Session Verify
- ↓
-READY
- ↓
-Resume Task
+Plan
+→ Contract
+→ Implementation
+→ Test
+→ Evidence
+→ Audit
+→ Release
 ```
 
-身份必须显式白名单、与任务强绑定；未知身份拒绝执行。
+涉及破坏性 Rename / Migration / Delete 时，必须先完成依赖扫描和回归验证。
 
----
+## 12. 当前原则
 
-## 9. Platform Adapter
+- 不重新建立第三核心库
+- 不重复建设已经存在的 Core 能力
+- 不绕过生产规则
+- 不以 AI 替代确定性安全规则
+- 不以 UI 重构解决本应由信息架构解决的问题
+- 不删除未经审计的历史资产
+- 不让新模块脱离 Canonical Registry 独立生长
 
-```text
-BasePlatformAdapter
- ├─ XiaohongshuAdapter
- ├─ WeiboAdapter
- ├─ BilibiliAdapter
- └─ FutureAdapter
-```
+## 13. 研发入口
 
-Adapter 负责平台差异；Core 负责标准化、主体过滤、去重、事件、风险、统计与报告。
+本 README 是当前生产核心的产品与工程入口说明。详细架构、策略、审计和运行文档应以仓库内当前有效文件及最新基线为准；历史方案不作为新开发依据。
 
-不得为了新增平台复制整套系统。
-
----
-
-## 10. Health / Recovery / Evidence
-
-至少维护：
-
-- browser_alive
-- page_alive
-- session_valid
-- runtime_last_heartbeat
-- collector_last_start
-- collector_last_success
-- collector_last_error
-- pending_auth
-- circuit_state
-- last_evidence_id
-
-重要运行形成非敏感 Evidence。Cookie、Token、Session、API Key、Password 不得进入 Git 或 Evidence。
-
----
-
-## 11. UI / UX 信息架构
-
-```text
-工作台
-├─ 观测
-│  ├─ 舆情
-│  ├─ 事件
-│  ├─ 热点
-│  └─ 采集
-├─ 洞察
-│  ├─ 数据分析
-│  ├─ 趋势
-│  ├─ 品牌
-│  ├─ 竞品
-│  └─ 风险
-├─ 行动
-│  ├─ KOS
-│  ├─ Campaign
-│  ├─ 任务
-│  └─ 执行
-├─ 报告
-│  ├─ 日报
-│  ├─ 周报
-│  ├─ 月报
-│  ├─ 专报
-│  └─ 导出
-└─ 系统
-   ├─ 数据源
-   ├─ 账号
-   ├─ AI
-   ├─ 权限
-   ├─ 安全
-   └─ 设置
-```
-
-视觉原则：
-
-- 侘寂、克制、清晰
-- 线性 Icon / 小型功能 Icon
-- 操作优先，美感服务效率
-- 禁止巨大 Logo
-- 禁止巨大 Icon
-- 禁止大字报
-- 禁止无限套卡片
-- 不允许模组破坏合理信息密度
-- 动态可视化必须服务数据理解
-- 图表 → 数据 → 记录 → Evidence 可追溯
-- 中 / 英 / 韩响应式适配，禁止翻译造成布局溢出
-
----
-
-## 12. 数据、报告与导出
-
-有数据页面统一：
-
-```text
-Header
- ↓
-KPI / Summary
- ↓
-Filter / Search / Scope
- ↓
-Visualization
- ↓
-Data Table
- ↓
-Detail / Evidence / Provenance
-```
-
-标准决策报告：
-
-```text
-问题 → 事件 → 影响 → 风险 → 证据 → 建议
-```
-
-日报 / 周报 / 月报 / 专报使用统一数据母模型；内容稿件不固定死模板，根据目标、受众、场景动态生成。
-
----
-
-## 13. 文件治理
-
-目标结构：
-
-```text
-序境/
-├─ 00-GOVERNANCE
-├─ 01-PRODUCT
-├─ 02-ARCHITECTURE
-├─ 03-DESIGN
-├─ 04-DATA
-├─ 05-RUNTIME
-├─ 06-REPORT
-├─ 07-RESEARCH
-├─ 08-AUDIT
-└─ 99-ARCHIVE
-```
-
-文件处理状态：`KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE`。
-
-历史资产先审计再处理，不得为了整洁误删生产能力、数据或有效知识。
-
-正式文件名体现职责，不堆砌品牌词。
-
-注释统一：**短、准、必要；优先说明约束、原因或风险。**
-
----
-
-## 14. 已废止架构
-
-以下不属于当前开发架构：
-
-- 四库架构
-- 三仓架构
-- 独立思库
-- Research Hub 作为第三核心库
-- SICI-Core 作为第三核心库
-- DCC 作为第三生产核心库
-- 新建第三 / 第四生产仓
-
-历史资产是否删除必须逐项 Audit。
-
----
-
-## 15. 研发与发布协议
-
-```text
-Audit
- → Research
- → Architecture Review
- → Dev Plan
- → Implement
- → Test
- → Evidence
- → Review
- → Promotion
-```
-
-原则：
-
-1. 先审计，再修改。
-2. 先兼容，再重构。
-3. 先旁路，再切换。
-4. 先验证，再交付。
-5. 最小变更优先。
-6. 已验证生产能力不得无证据重写。
-7. Evidence 优先于主观判断。
-8. 新模块必须先进入 Canonical Registry。
-9. 破坏性 Rename / Migration / Delete 必须经过确认与验证。
-
----
-
-## 16. 零号序列
-
-零号序列是最高级研发治理基线。
-
-任何产品、架构、规则、权限、数据、安全与命名变更必须遵循零号序列。
-
-未经明确授权与二次确认，不得改变零号序列。
-
----
-
-## 17. 当前状态
-
-本 README 只保留**当前有效事实、执行边界与开发入口**。历史过程、旧架构和重复说明不作为当前开发依据，应进入对应 Archive / Audit 文档。
-
-开始任务前：
-
-1. 阅读 `序境/` Canonical Registry。
-2. 阅读 `00-GOVERNANCE/`。
-3. 阅读本 README。
-4. 阅读对应 Contract / Specification。
-5. 阅读相关 Test / Evidence。
+**Status: Active · Production Core · Governed by Zero Sequence**
