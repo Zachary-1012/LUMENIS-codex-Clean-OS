@@ -226,6 +226,37 @@ def test_emotion_hook_function():
     assert len(h1) > 8
 
 
+def test_constraint_mechanism_present_and_clean():
+    """创意生于限制（戛纳233范式）：constraint 机制进入轮转，约束句式可渲染、无占位符、含品牌。"""
+    from scripts.idea_generator import _HOOK, _HOOK_LUX, _render, generate_ideas
+    # 句库直测：全部约束句式可渲染且无残留
+    for tpl in _HOOK["constraint"] + _HOOK_LUX["constraint"]:
+        out = _render(tpl, "广州太古汇", "日常", "都市高净值", "质感新体验·限量", "圈层", "15周年")
+        assert "{" not in out and "}" not in out, "未填充槽位: %s" % out
+        assert "#" not in out, "占位符残留: %s" % out
+        assert len(out) > 8
+    # 集成：premium 调性多轮轮转，constraint 机制出现且 slogan 含品牌、无残留
+    s = {"topics": ["方所", "周年", "面包"], "sentiment": "positive", "negative_rate": 0.05,
+         "risk_events": 0, "circle": "都市高净值", "hotspot": "15周年", "volume_notes": 200}
+    mechs = set()
+    clean = True
+    for seed in range(4):
+        r = generate_ideas("广州太古汇", "商业地产", s, n=12, tonality="premium", budget="mid", seed=seed)
+        for i in r["ideas"]:
+            mechs.add(i["mechanism"])
+            if i["mechanism"] == "约束即创意":
+                if "{" in i["big_idea"] or "}" in i["big_idea"]:
+                    clean = False
+    assert "约束即创意" in mechs, "constraint 机制未在轮转中出现，实际=%s" % mechs
+    assert clean, "约束机制 slogans 存在占位符残留"
+    # LUX 调性也应命中约束即创意（克制即约束）
+    mechs_lux = set()
+    for seed in range(3):
+        r = generate_ideas("广州太古汇", "商业地产", s, n=12, tonality="luxury", budget="high", seed=seed)
+        mechs_lux |= {i["mechanism"] for i in r["ideas"]}
+    assert "约束即创意" in mechs_lux, "LUX 未命中约束机制，实际=%s" % mechs_lux
+
+
 def test_emo_role_compat_filters_high_context():
     """手法×主题词适配：功能性词(service)不得配高语境手法（越界张力/魔幻现实/交错配列）。"""
     assert "service" in _EMO_ROLE_COMPAT

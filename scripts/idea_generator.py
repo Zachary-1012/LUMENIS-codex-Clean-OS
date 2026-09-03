@@ -79,6 +79,7 @@ MECHANISMS = {
     "cocreate": {"name": "共创式", "desc": "把用户自发行为变成产品/内容飞轮"},
     "culture": {"name": "文化共识", "desc": "借势已有文化共识/圈层暗语自然绑定"},
     "resonate": {"name": "情感共鸣", "desc": "韩剧×文学式表达：以小写大/时间具象/朴素真话/边界/悖论，直击人心非信息传递"},
+    "constraint": {"name": "约束即创意", "desc": "创意生于限制（戛纳233范式）：短板/预算/场景限制是创意原点，少即是多、克制即高级"},
 }
 
 MECH_TO_L1 = {
@@ -89,6 +90,7 @@ MECH_TO_L1 = {
     "cocreate": "UGC 共创飞轮公式",
     "culture": "文化共识借势公式",
     "resonate": "情感共鸣公式（以小写大·具象抒情·悖论并置）",
+    "constraint": "约束即创意公式（限制→原点：少即是多，克制即高级，诚实即张力）",
 }
 
 # ---- 角度：同一主题的不同切入人设（防止"主题换了，创意没换"）----
@@ -194,6 +196,15 @@ _HOOK = {
         "「人生得意须尽欢」——{topic}，就该在{brand}过成{img}",
         "「来都来了」——{topic}当然要过成{img}，{brand}都替{c0}想好了",
     ],
+    # 约束即创意型（戛纳233范式：限制/短板/预算/场景危机是创意原点；少即是多，诚实即张力）
+    "constraint": [
+        "「{brand}没做豪华，只把{topic}做成了{img}」——{c0}，少即是多",
+        "「预算不多，{topic}照样值得来」——{brand}，把力气都花在{img}上",
+        "「{brand}不追{hot}，只做{topic}该有的样子」——{img}，克制即高级",
+        "「做不到的，{brand}不假装」——{topic}，诚实就是{img}",
+        "「{brand}的{topic}，没有花哨，只有{img}」——{c0}，够了",
+        "「别人都在做{topic}，{brand}只肯做{img}」——{c0}，这才是稀缺",
+    ],
 }
 
 # 高奢专属：克制叙事句库（不玩梗、不狂欢）
@@ -225,6 +236,12 @@ _HOOK_LUX = {
         # 高奢名句重构 remix（大隐隐于市 / 陋室铭）
         "「大隐隐于市」——{brand}的{topic}，{img}，只给懂的人",
         "「无丝竹之乱耳，无案牍之劳形」——{brand}的{topic}，是{c0}的{img}",
+    ],
+    # 高奢约束即创意（克制即约束：只做一件事、不铺张、专注即奢侈）
+    "constraint": [
+        "「{brand}只做{topic}，其余一概不做」——{img}，专注即奢侈",
+        "「不铺张的{topic}，才是{brand}的{img}」——{c0}，心照不宣",
+        "「{brand}的{topic}不多，恰好都是{img}」——{c0}，留白即分量",
     ],
 }
 
@@ -462,6 +479,7 @@ MECH_TO_HOOK = {
                  "emo_paradox", "emo_query", "emo_repeat", "emo_mirror", "emo_slant",
                  "emo_season", "emo_surreal", "emo_understate",
                  "emo_sensory", "emo_self", "emo_nature", "emo_grow"],
+    "constraint": ["constraint", "reversal", "assert"],
 }
 
 # ---- 预算感知（同一创意不同预算的落地档位）----
@@ -617,13 +635,13 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
     bd = BUDGETS.get(budget, BUDGETS["mid"])
 
     if tonality == "luxury":
-        mech_order = ["symbolize", "reverse", "culture", "eventify", "resonate"]
+        mech_order = ["symbolize", "constraint", "reverse", "culture", "eventify", "resonate"]
     elif sentiment == "negative":
-        mech_order = ["reverse", "cocreate", "eventify", "resonate"]
+        mech_order = ["constraint", "reverse", "cocreate", "eventify", "resonate"]
     elif sentiment == "positive":
-        mech_order = ["eventify", "participate", "cocreate", "resonate"]
+        mech_order = ["eventify", "participate", "cocreate", "resonate", "constraint"]
     else:
-        mech_order = ["symbolize", "participate", "eventify", "resonate"]
+        mech_order = ["symbolize", "constraint", "participate", "eventify", "resonate"]
 
     angles_order = ["consumer", "introspect", "coded", "scene", "rebel", "cocreate"]
     rng.shuffle(angles_order)
@@ -671,7 +689,7 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
                       "emo_understate": "轻描淡写", "emo_material": "材质细语",
                       "emo_heirloom": "传承物语", "emo_silence": "沉默留白", "emo_ritual": "仪式时刻",
                       "emo_sensory": "感官通感", "emo_self": "悦己和解", "emo_nature": "自然对白",
-                      "emo_grow": "共同生长"}
+                      "emo_grow": "共同生长", "constraint": "约束即创意"}
         ideas.append({
             "big_idea": slogan,
             "mechanism": mech_name,
