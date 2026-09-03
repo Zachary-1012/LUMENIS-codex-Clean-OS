@@ -124,37 +124,81 @@ def main():
     ap.add_argument('--port', default='8201')
     args = ap.parse_args()
 
-    # ===== 单实例保护：同一目标端口只允许一个监督器（原子创建锁，消除并发竞争窗口）=====
+    # ===== 单实例保护：同一目标端口只允许一个监督器（OS 级文件锁，进程退出自动释放，杜绝双 supervisor 竞态）=====
     _lock = ROOT / 'data' / f'supervisor_{args.port}.lock'
+    _lock_handle = None
     try:
         _lock.parent.mkdir(parents=True, exist_ok=True)
-        _acquired = False
+        import msvcrt  # Windows 专属：进程级排他锁
+        # 打开(不删除)锁文件并加非阻塞排他锁；持锁进程退出后 OS 自动释放锁
+        _lock_handle = open(str(_lock), 'a+', encoding='utf-8')
         try:
-            _fd = os.open(str(_lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            os.write(_fd, str(os.getpid()).encode('ascii'))
-            os.close(_fd)
+            # 关键: 文件必须至少 1 字节, 否则 Windows 锁文件尾部之外区域不生效(导致双 supervisor 都能拿到锁)
+            if _lock_handle.seek(0, 2) == 0:
+                _lock_handle.write(' ')
+                _lock_handle.flush()
+            _lock_handle.seek(0)
+            msvcrt.locking(_lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
             _acquired = True
-        except FileExistsError:
+        except OSError:
+            _acquired = False
             try:
-                _old = int(_lock.read_text().strip())
-            except Exception:
-                _old = -1
-            if _pid_alive(_old):
-                log(f'Supervisor 已存在(PID={_old}，端口 {args.port})，退出避免重复守护')
-                sys.exit(0)
-            log(f'发现失效 lock(PID={_old})，强制接管端口 {args.port}')
-            try:
-                _lock.unlink()
+                _lock_handle.close()
             except Exception:
                 pass
-            _fd = os.open(str(_lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            os.write(_fd, str(os.getpid()).encode('ascii'))
-            os.close(_fd)
-            _acquired = True
+            _lock_handle = None
         if _acquired:
+            _lock_handle.seek(0)
+            _lock_handle.truncate()
+            _lock_handle.write(str(os.getpid()))
+            _lock_handle.flush()
             log(f'Supervisor 单实例锁写入 PID={os.getpid()} (port {args.port})')
+        else:
+            try:
+                _old = _lock.read_text().strip()
+            except Exception:
+                _old = ''
+            log(f'Supervisor 已存在(PID={_old or "?"}，端口 {args.port})，退出避免重复守护')
+            sys.exit(0)
     except Exception as _e:
         log(f'单实例保护检查失败(继续启动): {_e}')
+        if _lock_handle is not None:
+            try:
+                _lock_handle.close()
+            except Exception:
+                pass
+            _lock_handle = None
+
+    # ===== 双重防线: 端口已被健康实例监听则退出（跨权限/跨进程可靠，防 HealthGuard 与手动启动时序错开产生双 supervisor）=====
+    try:
+        import socket as _socket
+        import urllib.request as _urllib
+        _probe = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        _probe.settimeout(2)
+        _can_bind = True
+        try:
+            _probe.bind(('127.0.0.1', int(args.port)))
+        except OSError:
+            _can_bind = False
+        finally:
+            _probe.close()
+        def _probe_health():
+            try:
+                with _urllib.urlopen(f'http://127.0.0.1:{args.port}/healthz', timeout=2) as _r:
+                    return _r.status == 200
+            except Exception:
+                return False
+        if not _can_bind:
+            # 端口已被监听 = 已有实例在跑(可能 app 仍在启动中), 一律退出避免双实例; 僵尸场景由 HealthGuard ps1 清理
+            log(f'端口 {args.port} 已被占用, 退出避免重复守护(既有实例由 supervisor/HealthGuard 管理)')
+            if _lock_handle is not None:
+                try:
+                    _lock_handle.close()
+                except Exception:
+                    pass
+            sys.exit(0)
+    except Exception as _e:
+        log(f'端口健康检查异常(继续启动): {_e}')
 
     stopping = False
 
@@ -237,12 +281,13 @@ def main():
         time.sleep(POLL_INTERVAL)
 
     log('Supervisor 收到停止信号，关闭子进程 ...')
-    kill_tree(proc.pid)
-    write_state(status='stopped', pid=proc.pid)
     try:
-        if _lock.exists():
-            _lock.unlink()
-            log('Supervisor 已释放单实例锁')
+        if _lock_handle is not None:
+            try:
+                _lock_handle.close()
+            except Exception:
+                pass
+        log('Supervisor 已释放单实例锁(OS 自动回收文件锁)')
     except Exception as _e:
         log(f'释放锁失败: {_e}')
     log('Supervisor 已退出')

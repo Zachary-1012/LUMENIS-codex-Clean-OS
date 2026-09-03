@@ -6086,7 +6086,25 @@ def api_cookies_import_raw():
 
 if __name__ == '__main__':
     import logging
+    # 加固:Windows 下多进程共写 system.log 时轮转可能因文件占用失败,绝不允许 logging 内部异常崩溃主进程(此前 PermissionError 致 app.py 退出码=1、话题采集被中断)
+    logging.raiseExceptions = False
     from logging.handlers import RotatingFileHandler
+
+    class _SafeRotatingFileHandler(RotatingFileHandler):
+        # 轮转失败时安全降级为直接追加,绝不向上抛异常(多进程共写同一日志的 Windows 场景)
+        def doRollover(self):
+            try:
+                super().doRollover()
+            except Exception:
+                try:
+                    if self.stream:
+                        self.stream.close()
+                except Exception:
+                    pass
+                try:
+                    self.stream = open(self.baseFilename, 'a', encoding=self.encoding)
+                except Exception:
+                    pass
     
     # 配置详细日志
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
@@ -6098,7 +6116,7 @@ if __name__ == '__main__':
         root_logger.removeHandler(handler)
     
     # 文件日志（详细）
-    file_handler = RotatingFileHandler(
+    file_handler = _SafeRotatingFileHandler(
         os.path.join(log_dir, 'system.log'),
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5,

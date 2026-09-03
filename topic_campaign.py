@@ -277,7 +277,7 @@ def _save_notes(conn, campaign_key, topic, notes):
         else:
             conn.execute(
                 """INSERT INTO topic_campaign_notes(campaign_key,topic,note_id,title,content,author,publish_datetime,likes,comments,collects,shares,note_url,first_seen_at,last_seen_at,raw_json,media_json,comments_json,subject_hit,content_type,sentiment,risk_level,evidence_quality,detail_captured_at)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     campaign_key, topic, nid,
                     n.get('title', ''), n.get('content', n.get('desc', '')),
@@ -330,6 +330,11 @@ def _run_collector(topic):
         out = (p.stdout or '').strip()
         idx = out.find('{')
         data = json.loads(out[idx:]) if idx >= 0 else {}
+        if not data:
+            # stdout 为空或非 JSON：脚本可能 CDP 连接失败/页面异常无输出，绝不静默成"空错误"
+            data = {'ok': False,
+                    'error': (p.stderr or out or '采集脚本无结构化输出（CDP 连接失败或页面异常），未伪造数据')[-1500:],
+                    'topic': topic}
         if p.returncode != 0:
             if data.get('risk_status'):
                 # node 风控退出码（3=NEED_VERIFY / 4=IP_RISK）：结构化状态已在 stdout，保留 risk_status，不用整段输出覆盖

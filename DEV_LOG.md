@@ -669,3 +669,38 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 
 ### 结论
 日报弹窗与全局状态点已全面符合 ZBIP 黑白灰侘寂 + 低饱和语义色 + 彩色小圆点状态签名设计语言。
+
+
+---
+
+## 2026-09-03 第五批补录（话题检测端采集恢复：INSERT 列数修复 + 日志加固 + 单实例防线）
+
+### 背景
+话题专题采集（topic_campaign_snapshots）近 1 天 36 条全部 error（note/browse/discussion 全 0），用户要求"话题检测端的问题也要解决，要正常采集"。
+
+### 根因链（源码>运行时>测试 判定）
+1. **INSERT 列数不匹配（直接落库失败主因）**：topic_campaign.py _save_notes 的 INSERT VALUES 有 24 个占位符，但 INSERT 列名 + 实际参数只有 23 个 → sqlite OperationalError "24 values for 23 columns" → 采集线程 CRITICAL 异常中断 → notes 永不落库、快照不写。生产库 topic_campaign_notes 实际 24 列（16 基础 + 8 新增字段），代码 DDL 只建 16 列（由迁移补齐）。
+2. **多实例并存抢占 8201（采集被杀的间接主因）**：HealthGuard（每 5 分钟）与手动 ps1 并发启动 + ps1 watchdog 删 lock 文件，导致 2 个 run_supervised + 4 个 app.py 并存；后者 Flask app.run 绑定 8201 失败退出码=1，崩溃时正在跑的采集线程被杀 → 快照空 error。
+3. **多进程共写 system.log 轮转 PermissionError 噪音**：RotatingFileHandler doRollover os.rename WinError 32，产生 33700 次日志噪音（不崩主线程但污染日志）。
+
+### 修复（均 py_compile 通过、留 .bak 备份、未提交）
+- **topic_campaign.py**：① INSERT VALUES 24→23（与列名/参数对齐）；② 采集脚本无结构化输出时兜底 `if not data:` 记 error，绝不伪造数据。
+- **app.py**：`logging.raiseExceptions=False` + 自定义 `_SafeRotatingFileHandler`（doRollover 失败安全降级追加打开，绝不抛异常）。
+- **run_supervised.py**：msvcrt LK_NBLCK 进程级排他锁（含空文件锁 bug 修复）+ 端口占用即退出（双重单实例防线）。
+
+### 验证（真实测试）
+- **SQL 级单测**（内存库，不动生产库）：修复后 INSERT 23 值插入成功、UPDATE 20 值（19 SET + WHERE id）更新成功。
+- **生产 8201 真实采集**（重启加载新代码后 POST /api/topic-campaign/run）：
+  - 4 个话题全部 success：'#广州太古汇十五周年' 40 条 / '#广州太古汇15周年' 40 条 / '#一方五境' 60 条 / '#广州太古汇' 40 条
+  - 本轮新增 notes 151 条落库（first_seen_at >= 13:54）
+  - 13:54+ 日志 0 条 CRITICAL / 0 Traceback（INSERT 修复 + 日志加固双生效）
+  - browse_count/discussion_count 恒 0 为平台限制（小红书网页版不提供话题浏览/讨论指标，实测确认），note_count 为话题端有效产出
+- **单实例防线**：手动起第 2 个 supervisor → 日志"Supervisor 已存在(PID=?，端口8201)，退出避免重复守护"，被成功挡退。
+
+### 已知未决（登记）
+- 计数双轨不一致：/api/collection/counter 读 DB collection_counters（今日 0）vs check_collection 读 JSON（今日 9 次/95 条），前端展示误报，非采集问题，后续对齐。
+- ps1 watchdog 删 lock 与 msvcrt 锁的并发竞态仍可能产生冗余 supervisor 残留（不影响功能，已用端口防线兜底）。
+- 话题"浏览/讨论"指标平台不提供，接受以 note_count 为话题端主要产出指标（待用户认知确认）。
+
+### 结论
+话题检测端采集已恢复正常（快照 success + notes 落库 + 无异常），生产 8201 由新代码稳定运行。
