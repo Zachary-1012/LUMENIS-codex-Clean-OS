@@ -341,6 +341,21 @@ def insert_note(note_data):
             'source_keyword': note_data.get('source_keyword','') or '',
             'matched_keywords': note_data.get('matched_keywords','') or '',
         }
+        # 数据质量软门（写入门接线，enrich 标记不丢弃=数据零丢失）：
+        # 调用方未显式传 data_quality_status 时，自动用 DataQualityGate(note 契约) 校验并标记。
+        # INSERT/UPDATE 分支已消费 note_data 的这两个字段，此处统一填充，零侵入各采集入口。
+        if not (note_data.get('data_quality_status') or ''):
+            try:
+                from data_quality_gate import DataQualityGate
+                _q = DataQualityGate().enrich_quality_record('note', {
+                    'title': vals['title'], 'url': vals['url'],
+                    'publish_date': vals['publish_date'],
+                    'risk_level': note_data.get('risk_level', '') or 'unconfirmed',
+                })
+                note_data['data_quality_status'] = _q['data_quality_status']
+                note_data['data_quality_score'] = _q['data_quality_score']
+            except Exception:
+                pass  # 软门失败绝不影响写入（数据零丢失红线）
         # 标题兜底：标题缺失时用正文首句(去空白/截24)补，再退作者昵称；保证列表不出现空标题(新增/更新均覆盖)
         if not (vals['title'] or '').strip():
             _t = ''

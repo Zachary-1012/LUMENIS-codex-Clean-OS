@@ -88,3 +88,33 @@ def test_enrich_quality_record(gate):
     assert r2["data_quality_status"] == "error"
     assert r2["data_quality_score"] < 100
     assert "title" in r2["data_quality_errors"]
+
+
+def test_insert_note_quality_soft_gate(tmp_path, monkeypatch):
+    """写入门软门：未传 status 时自动标记；有显式 status 时保留。"""
+    import os
+    import database
+    db = str(tmp_path / "qgate.db")
+    monkeypatch.setenv("ZBC_DB_PATH", db)
+    database.init_db()
+    # 合法记录 -> 自动 ok 标记
+    nid1 = "qgate_ok_001"
+    database.insert_note({"note_id": nid1, "title": "测试笔记", "url": "https://x.com/1",
+                          "publish_date": "2026-08-31", "risk_level": "low"})
+    with database.get_db() as c:
+        r1 = c.execute("SELECT data_quality_status, data_quality_score FROM notes WHERE note_id=?", (nid1,)).fetchone()
+    assert r1[0] == "ok" and r1[1] == 100
+    # 缺字段 -> warning/error 标记（软门不拒绝写入）
+    nid2 = "qgate_warn_001"
+    database.insert_note({"note_id": nid2, "title": "缺url", "publish_date": ""})
+    with database.get_db() as c:
+        r2 = c.execute("SELECT data_quality_status, data_quality_score FROM notes WHERE note_id=?", (nid2,)).fetchone()
+    assert r2[0] in ("warning", "error") and r2[1] < 100
+    # 显式传 status 保留（调用方覆盖）
+    nid3 = "qgate_explicit_001"
+    database.insert_note({"note_id": nid3, "title": "explicit", "url": "https://x.com/3",
+                          "publish_date": "2026-08-31", "risk_level": "low",
+                          "data_quality_status": "custom", "data_quality_score": 55})
+    with database.get_db() as c:
+        r3 = c.execute("SELECT data_quality_status, data_quality_score FROM notes WHERE note_id=?", (nid3,)).fetchone()
+    assert r3[0] == "custom" and r3[1] == 55
