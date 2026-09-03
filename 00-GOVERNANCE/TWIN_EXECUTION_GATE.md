@@ -41,18 +41,33 @@ Web, App and Mini Program are presentation surfaces over the same canonical capa
 
 Use the shared Design Language: restrained typography, small line icons, clear hierarchy, responsive layout, accessible states and data-first visualization. No oversized logo/icon or poster-like module dominates a page.
 
-## Agent orchestration decision（编排模式判据，2026-09-04, from P0 research Round 3）
+## Agent orchestration decision（编排模式判据，2026-09-04, from P0 research Round 3, updated Round 4）
 
-Current production orchestration = **Supervisor / hub-and-spoke** (ShadowPlanner gate), which matches the 2026 industry consensus for deterministic workflows with 3-8 agents (70% of production use-cases).
+**当前基线（Round 4 源码审计确认）**：ZBC 当前处于**任务调度层，非多 Agent 编排**——
+- `PlatformSchedulePlanner`（platform_adapters/scheduling/planner.py）：per-platform `ScheduleDecider` + `shadow_evaluate` 影子评估
+- `v4_upgrade/ai_hub/shadow.py`：ShadowPlanner 建议表（add_suggestion → human decide），AI 建议门控，非编排器
+- `Scheduler` / `TaskQueue` / `RecoveryTask`：任务调度/队列/恢复
 
-Do NOT upgrade to Hierarchical (tree) orchestration unless at least one trigger fires:
-1. coordinated agent count exceeds 6 (hierarchical avoids polluting the top-level supervisor state when same-domain workers need shared context);
-2. clearly separated heterogeneous domains appear (e.g. public-opinion / marketing / compliance / engineering) each requiring its own specialized tools and reasoning, where per-domain sub-supervisors provide isolation (Microsoft: the key benefit of hierarchy is isolation);
-3. workflow steps become genuinely dependent on prior step results across domains.
+即：单进程多任务调度 + AI 建议门控。本判据是**未来 Agent Council（多 Agent 编排层）的演进路线图**，不是当前状态描述。
 
-Until a trigger fires, keep the Supervisor pattern; adding hierarchy prematurely adds orchestration-logic complexity with no measured benefit. Any upgrade requires owner sign-off + Release Gate + regression.
+**演进阶梯（不跳级）**：
+1. **任务调度层（当前）**：多任务调度 + 建议门控，无需编排器
+2. **Supervisor 编排（建立 Agent Council 时）**：hub-and-spoke，3-8 agent 确定性工作流，70% 生产首选；序境若建 Agent Council 从此起步
+3. **Hierarchical（触发任一条件才升级）**：
+   - agent 数量 > 6；
+   - 出现需隔离的异质域（舆情 / 营销 / 合规 / 工程），每域独立 sub-orchestrator（Microsoft：层级核心价值=隔离，避免同域 worker 共享上下文污染顶层状态）；
+   - 工作流跨域依赖上一步结果。
 
-Source: P0-AGENT-ORG Research Map T1 (OSAI), E2/E3 (MetaCTO/QubitTool/Microsoft Learn orchestration guidance 2026).
+**Hierarchical 落地要点（Round 4 深化，E2/E3）**：
+- **有向树 + 状态隔离**：通信仅 parent↔child；每个域 supervisor 拥有自己子树的 state（分层作用域状态隔离，Augment Code）；root orchestrator 路由到域 supervisor（如舆情/营销/合规/工程），每域 3-5 specialist workers
+- **域自治闭环**：每个自治域保留独立闭环管理（IETF cross-domain agent architecture），Orchestrator 只做跨域任务分发/状态同步/进程调度，不干预域内执行
+- **subagent 严格隔离**：subagent 仅 local memory/state、mission-scoped、用完即弃（SubAgenticAI FLA），防上下文污染父级
+- **健康指标（可监控）**：supervisor 输出 token / workers 输出 token 比值健康区 **0.2-0.3**；>0.4 说明 supervisor 在做 worker 该做的推理（router 退化），需下放任务（channel.tel 2026）
+- **实现参考**：LangGraph 多级=compile supervisor 嵌套 / subagents 模式（flatten 或 nest tool calls）；CrewAI hierarchical=manager 动态分配
+
+未触发不升级；升级需 owner 签字 + Release Gate + 回归。当前 agent 化模块数量 ≈ 0（无自治多 Agent），距离阈值尚远，**不得提前引入编排复杂度**。
+
+Source: P0-AGENT-ORG Research Map T1 (OSAI), E2/E3 (MetaCTO/QubitTool/Microsoft Learn/Augment Code/IETF/SubAgenticAI/channel.tel orchestration guidance 2026).
 
 ## Change rule
 
