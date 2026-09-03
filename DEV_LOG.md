@@ -1178,3 +1178,27 @@ KOS MASTER EXECUTION CONTRACT v1 已入双子库（ZBC d292c9f / OSAI bd088f6）
 - 评论智能的 AI 增强（语义情感/复杂意图）未启用（当前确定性规则已够生产，AI 可选通道后续）。
 - 前端评论面板展示新字段 UI 待接入。
 - 备份：kos_engine.py.bak-comment（不提交）。
+
+
+---
+
+## 第二十一批：KOS 品牌中心 UI 接入（归属确认 modal + TOP KOS 增强渲染）
+
+### 背景
+把已落地的后端能力（归属 Gate / relevance / interaction / AI_SUGGESTED 复核）在前端品牌中心显性化。纯前端增量，广州数据口径/采集逻辑零改动。
+
+### 改动（static/js/brand_hub.js）
+1. 共享 renderKosRows(profiles, brandKey, el)：TOP KOS 行渲染增强——归属类徽标 + 互动彩色点（active绿/emerging黄/quiet灰）+ relevance 分数 + 待复核标记 + 「归属」确认按钮（UNKNOWN/待复核时显示）。
+2. 新增 window.KOSConfirmOwnership(brand, authorId, nickname)：黑白灰极简 modal，7 类归属选项（独立KOL/KOC/媒体/普通用户/主体官方/商户/合作方/未知），人工确认 → POST /api/kos/ownership/confirm → 成功后刷新。
+3. 广州品牌 TOP KOS 改用 /api/kos/ownership?brand=guangzhou_taikoo_hui 渲染（带归属/互动信号）；refreshBrandData（非广州）复用 renderKosRows。
+
+### 实测（真实浏览器验证）
+- node --check 通过（node=0）。
+- 浏览器真实加载 8201：进入品牌中心→广州品牌 Dashboard，TOP KOS 列表显示 5 个真实 KOS，每条带归属类（UNKNOWN）+待复核+relevance（low/medium）+互动点（active 绿）+「归属」按钮。
+- 归属确认 modal 弹出正常（黑白灰居中，7 选项+取消）；关闭后 console 零报错。
+- 后端红线不受影响：只改了前端 JS；广州数据口径/采集/五条红线函数未动。
+
+### 未实测 / 登记
+- 确认按钮端到端（点归属→选类型→confirm→VERIFIED）未在浏览器点实际业务数据（避免误改），后端端点已单独实测通过。
+- 非广州品牌（香港DFS等）采集暂停无数据，增强列表暂以广州展示验证。
+- 备份：brand_hub.js.bak-ui / .bak-refactor（不提交）。
