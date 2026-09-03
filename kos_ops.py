@@ -24,7 +24,9 @@ def _now() -> str:
 
 
 def _conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    # 每次现取 env：避免其他测试模块级污染 ZBC_DB_PATH 导致的连接错库（回归隔离）
+    path = os.environ.get("ZBC_DB_PATH") or DB_PATH
+    conn = sqlite3.connect(path, timeout=10)
     conn.row_factory = sqlite3.Row
     # 运营动作台账（KOS 运营闭环）
     conn.execute("""

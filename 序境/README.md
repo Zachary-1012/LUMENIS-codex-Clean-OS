@@ -3,6 +3,16 @@
 > 品牌哲学：**芥子纳须弥**
 >
 > 双子星生产侧｜Canonical Product Baseline · 2026-09-04
+>
+> 总执行基线：《序境｜双子库全量收敛与产品研发总执行指令》（2026-09-04）
+
+## 0. Canonical 索引
+
+```text
+00-GOVERNANCE/   000-ZERO-SEQUENCE.md · PRODUCT_NAMING_AND_TERMINOLOGY.md
+01-PRODUCT/      MODULE_PAGE_WORKFLOW_DATA_REGISTRY.md（Module/Page/Workflow/Data Registry）
+08-AUDIT/        FILE_CLEANUP_MANIFEST_20260904.md · DOUBAO_DELETE_REVIEW.md
+```
 
 ## 1. 产品体系
 

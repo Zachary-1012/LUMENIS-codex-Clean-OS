@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
-"""平台独立采集调度策略（配置驱动，不写死固定时钟/固定次数）。
+"""平台独立采集调度策略（配置驱动，同时锁定序境自动采集硬边界）。
 
-对齐《采集调度与风控最终执行指令》：
-- 保留“固定单次运行时长”（自动约30min / 手动约20min），取消“固定几点、每天几次”的永久硬编码；
-- 每个平台自带 minimum/maximum 间隔、退避、冷却、恢复、热点上限等策略，统一 Scheduler 只读取策略做决策；
-- 下列数值是**初始策略**，可由配置/构造覆盖，不是永久真理；平台硬上限在任何状态（含热点）下都不得突破。
+对齐《序境｜双子库全量收敛与产品研发总执行指令》第十三条 + 《采集调度与风控最终执行指令》：
+- 自动采集：默认关闭 / UI 隐藏（enabled=False），可开关；固定每日 00:00、12:00 最多两次；
+  单次工作流最长 60 分钟（run_duration_auto 上限默认 1800s = 30min，绝不超过 3600s）。
+- 手动采集：单次最长 30 分钟（run_duration_manual 默认 1200s = 20min，绝不超过 1800s）。
+- 每个平台自带 minimum/maximum 间隔、退避、冷却、恢复、热点上限等动态策略，统一 Scheduler 读取策略做决策。
+- 下列数值是**初始策略**，可由配置/构造覆盖，但平台硬上限（时长/频率）在任何状态（含热点）下都不得突破。
 
 AI 不参与本层任何决策：这里只有确定性规则。
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict, field
-from typing import Dict
+from typing import Dict, Tuple
 
 
 @dataclass
@@ -22,8 +24,22 @@ class PlatformSchedulePolicy:
     priority: str = "event"            # primary / secondary / event
 
     # —— 固定单次运行时长（保留，单位秒）——
-    run_duration_auto: int = 1800      # 自动任务单次约 30 分钟
-    run_duration_manual: int = 1200    # 手动任务单次约 20 分钟
+    run_duration_auto: int = 1800      # 自动任务单次最长（默认 30min，硬上限 3600s=60min）
+    run_duration_manual: int = 1200    # 手动任务单次最长（默认 20min，硬上限 1800s=30min）
+
+    # —— 序境自动采集固定时间槽（每日最多两次）——
+    auto_slots: Tuple[str, ...] = ("00:00", "12:00")
+
+    # —— 序境硬边界常量（不可被热点/动态策略突破）——
+    MAX_AUTO_DURATION: int = 3600      # 自动单次工作流硬上限 60 分钟
+    MAX_MANUAL_DURATION: int = 1800    # 手动单次工作流硬上限 30 分钟
+
+    def __post_init__(self) -> None:
+        # 构造时即夹紧时长硬上限，杜绝任何调用方传入超限值
+        if self.run_duration_auto > self.MAX_AUTO_DURATION:
+            self.run_duration_auto = self.MAX_AUTO_DURATION
+        if self.run_duration_manual > self.MAX_MANUAL_DURATION:
+            self.run_duration_manual = self.MAX_MANUAL_DURATION
 
     # —— 动态频率（单位秒）——
     normal_interval: int = 3600        # 健康时两次运行的基准间隔

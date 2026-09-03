@@ -133,6 +133,14 @@ pl2 = PlatformSchedulePlanner()
 r = pl2.decide("douyin", now=t0)
 check("12 未启用平台拒绝", not r.allow and r.reason_code == "PLATFORM_DISABLED")
 
+# 12b. 序境采集硬边界：自动<=60min / 手动<=30min 构造夹紧；自动时间槽固定 00:00/12:00
+p_cap = PlatformSchedulePolicy(platform="xhs", name="小红书", enabled=True,
+                               run_duration_auto=99999, run_duration_manual=99999)
+check("12b 自动时长夹紧60min", p_cap.run_duration_auto == 3600)
+check("12b 手动时长夹紧30min", p_cap.run_duration_manual == 1800)
+check("12b 自动时间槽固定", p_cap.auto_slots == ("00:00", "12:00"))
+check("12b 默认关闭(UI隐藏)", PlatformSchedulePolicy(platform="xhs").enabled is False)
+
 # 13. 状态映射统一 + 三类分清
 check("13a 小写success兼容", sm.to_canonical("success", items=3) == sm.CS.SUCCESS)
 check("13b 空结果区分NO_NEW", sm.to_canonical("success", items=0) == sm.CS.NO_NEW_DATA)

@@ -7,9 +7,21 @@ import sys, os, json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-os.environ.setdefault("ZBC_DB_PATH", str(Path(__file__).parent.parent / "data" / "monitor.db"))
+# 强制指向生产库：防止其他测试模块级污染 ZBC_DB_PATH 导致连接错库
+os.environ["ZBC_DB_PATH"] = str(Path(__file__).parent.parent / "data" / "monitor.db")
 
 import pytest
+import pytest
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _fix_kos_db():
+    """执行阶段强制重置 ZBC_DB_PATH 到生产库：
+    防止 test_workspace_keys/test_cookies_import_api 的模块级/函数级污染跨文件泄漏，
+    导致本模块连接错库（no such table: kos_profiles/kos_paid_plans）。"""
+    os.environ["ZBC_DB_PATH"] = str(Path(__file__).parent.parent / "data" / "monitor.db")
+    yield
+
 import sqlite3
 
 import kos_paid
