@@ -302,6 +302,26 @@ def case_analysis_crisis_sop():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+@app.route('/api/case-analysis/ai-evaluate', methods=['POST'])
+def case_analysis_ai_evaluate():
+    """案例库 AI 评估：4维评分(影响/创新/可复制/风险) + 推荐处置模板 + 建议（智谱增强层）"""
+    try:
+        data = request.get_json(silent=True) or {}
+        case_id = str(data.get('case_id') or '')
+        if not case_id:
+            return jsonify({'ok': False, 'error': '缺少 case_id'}), 400
+        from case_deep_analysis import get_case_analysis
+        from case_ai_evaluate import evaluate_case
+        case = get_case_analysis().get_case(case_id)
+        if not case:
+            return jsonify({'ok': False, 'error': '案例不存在'}), 404
+        result = evaluate_case(case)
+        result['case_id'] = case_id
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 # V3.0 传播主体分类器API
 @app.route('/api/subject-classifier/classify', methods=['POST'])
 def subject_classify():
@@ -515,6 +535,8 @@ def creative_social_ops():
         return jsonify({'ok': True, 'data': result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/creative/pitch-analyze', methods=['POST'])
 def creative_pitch_analyze():
     """方案需求拆解：接受 text 或上传文件(multipart file) → 要素提取+对标拆解+创意+方案脉络。"""
     try:
