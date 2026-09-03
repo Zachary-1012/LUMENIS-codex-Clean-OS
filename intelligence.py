@@ -146,7 +146,8 @@ def redact_for_cloud(text):
             out = out.replace(name, '[客户]')
     return out
 
-def _chat(system,user,temperature=0.1,max_tokens=1200,model=None):
+def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
+    _to = timeout or int(_env("AI_TIMEOUT_SECONDS", "90"))
     d=_provider_config()
     if not d: return None,'rule'
     provider,model_default,base=d
@@ -158,7 +159,7 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None):
     try:
         if provider=='ollama':
             req=urllib.request.Request(base+'/api/chat',data=json.dumps({'model':model,'messages':[{'role':'system','content':system},{'role':'user','content':user}],'stream':False,'options':{'temperature':temperature,'num_predict':max_tokens}},ensure_ascii=False).encode('utf-8'),headers={'Content-Type':'application/json'},method='POST')
-            with urllib.request.urlopen(req,timeout=int(_env('AI_TIMEOUT_SECONDS','90'))) as resp:
+            with urllib.request.urlopen(req,timeout=_to) as resp:
                 data=json.loads(resp.read().decode('utf-8','replace'))
             return data.get('message',{}).get('content'),'ollama'
         # 云端提供商：base已包含/v1或/v3，直接拼接/chat/completions
@@ -181,7 +182,7 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None):
                 payload_obj['thinking'] = {'type': 'disabled'}
             payload = json.dumps(payload_obj, ensure_ascii=False).encode('utf-8')
         req = urllib.request.Request(base.rstrip('/') + '/chat/completions', data=payload, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key}, method='POST')
-        with opener.open(req,timeout=int(_env('AI_TIMEOUT_SECONDS','90'))) as resp:
+        with opener.open(req,timeout=_to) as resp:
             data=json.loads(resp.read().decode('utf-8','replace'))
         _msg = data['choices'][0]['message']
         # 优先正式 content；glm-5.3 思考模型若 content 为空，回退 reasoning_content 兜底
@@ -489,3 +490,149 @@ def generate_report(title, data, report_type="daily"):
         for k, v in list(data.items())[:20]:
             lines.append(f'- {k}: {v}')
     return '\n'.join(lines)
+
+
+# ============================================================
+# 高效智谱使用层（2026-09-04）——五层优化：并发 / 缓存 / 模型分层 / 任务分级 / 预算护栏。
+# 全部为新增独立入口，现有 _chat / vision_chat / 业务函数零改动（_chat 仅新增可选 timeout 参数）。
+# ============================================================
+import threading, hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# 任务复杂度分级：LOW 简单快 / MEDIUM 常规 / HIGH 深度 / CRITICAL 最重要
+_LEVEL_CONFIG = {
+    'low':      {'timeout': 30,  'max_tokens': 200,  'temperature': 0.0},
+    'medium':   {'timeout': 60,  'max_tokens': 800,  'temperature': 0.1},
+    'high':     {'timeout': 90,  'max_tokens': 2000, 'temperature': 0.2},
+    'critical': {'timeout': 120, 'max_tokens': 4000, 'temperature': 0.2},
+}
+# 强模型分层：HIGH/CRITICAL 用 ZHIPU_STRONG_MODEL（如 glm-4.7）；未配置则沿用默认模型（不强求）
+_STRONG_MODEL = _env('ZHIPU_STRONG_MODEL', '')
+
+_CACHE_LOCK = threading.Lock()
+_CHAT_CACHE = {}          # md5 -> (output, provider)
+_CHAT_CACHE_MAX = 512     # 内存缓存上限，防无限增长
+
+
+def _level_params(level, temperature=None, max_tokens=None, model=None):
+    """按任务复杂度解析分级参数（timeout/max_tokens/temperature/model）。"""
+    cfg = _LEVEL_CONFIG.get((level or 'medium').lower(), _LEVEL_CONFIG['medium'])
+    return {
+        'temperature': cfg['temperature'] if temperature is None else temperature,
+        'max_tokens': cfg['max_tokens'] if max_tokens is None else max_tokens,
+        'model': model or (_STRONG_MODEL if (level or '').lower() in ('high', 'critical') else None),
+        'timeout': cfg['timeout'],
+    }
+
+
+def _cache_key(system, user, temperature, max_tokens, model):
+    h = hashlib.md5()
+    h.update((str(system) + '\x00' + str(user) + '\x00' + repr(temperature) + '\x00' + str(max_tokens) + '\x00' + str(model)).encode('utf-8'))
+    return h.hexdigest()
+
+
+def _chat_cache_get(key):
+    with _CACHE_LOCK:
+        return _CHAT_CACHE.get(key)
+
+
+def _chat_cache_set(key, out, provider):
+    if out is None:
+        return
+    with _CACHE_LOCK:
+        if len(_CHAT_CACHE) >= _CHAT_CACHE_MAX:
+            _CHAT_CACHE.clear()
+        _CHAT_CACHE[key] = (out, provider)
+
+
+def _budget_check(pack_id='per_call', amount=1):
+    """预算护栏：超额返回 False（调用方降级到规则，不硬崩）。配额系统不可用时放行。"""
+    try:
+        import ai_resource_packs
+        q = ai_resource_packs.check_quota(pack_id, amount)
+        return bool(q.get('allowed'))
+    except Exception:
+        return True
+
+
+def _budget_record(pack_id='per_call', amount=1, endpoint='', detail=''):
+    try:
+        import ai_resource_packs
+        ai_resource_packs.record_usage(pack_id, amount, endpoint=endpoint, detail=detail)
+    except Exception:
+        pass
+
+
+def chat(system, user, level='medium', use_cache=False, temperature=None, max_tokens=None, model=None, pack_id='per_call', track=True):
+    """增强版智谱调用：任务分级 + 模型分层 + 确定性缓存 + 预算护栏。
+    Args:
+        level: low/medium/high/critical（决定 timeout/max_tokens/temperature，HIGH 用强模型）
+        use_cache: 确定性任务（同输入同输出）开启缓存，命中省 token + 省时间
+        temperature/max_tokens/model: 显式覆盖分级默认
+        pack_id: 资源包配额（默认 per_call 按次）
+        track: 成功调用是否计入预算
+    Returns:
+        (output, provider, meta)；失败/降级 (None, 'rule'/'budget_blocked', meta)。
+    现有 _chat 行为不变；本函数为独立新入口。"""
+    p = _level_params(level, temperature, max_tokens, model)
+    key = _cache_key(system, user, p['temperature'], p['max_tokens'], p['model']) if use_cache else None
+    if use_cache:
+        hit = _chat_cache_get(key)
+        if hit:
+            return hit[0], hit[1], {'cache': True, 'level': level, 'model': p['model']}
+    if not _budget_check(pack_id, 1):
+        return None, 'budget_blocked', {'cache': False, 'level': level, 'budget_blocked': True}
+    t0 = time.time()
+    out, provider = _chat(system, user, temperature=p['temperature'], max_tokens=p['max_tokens'], model=p['model'], timeout=p['timeout'])
+    meta = {'cache': False, 'level': level, 'model': p['model'] or _env('ZHIPU_MODEL', ''),
+            'elapsed_ms': int((time.time() - t0) * 1000), 'provider': provider}
+    if provider not in ('rule', None) and out:
+        if use_cache:
+            _chat_cache_set(key, out, provider)
+        if track:
+            _budget_record(pack_id, 1, endpoint='chat', detail=(str(system) or '')[:60])
+    return out, provider, meta
+
+
+def chat_batch(items, level='medium', max_workers=4, use_cache=False, pack_id='per_call'):
+    """并发批处理智谱调用（ThreadPoolExecutor；独立任务并发 → 批处理时间从'串行和'变'取最大'）。
+    items: 每个元素为 dict{system, user, level?, use_cache?, temperature?, max_tokens?, model?} 或 (system, user) 元组。
+    预算护栏：batch 总次数超限 → 整体降级（每项返回 budget_blocked，不硬崩）。
+    Returns:
+        [{index, ok, output, provider, error, elapsed_ms, cache}]
+    """
+    if not items:
+        return []
+    if not _budget_check(pack_id, len(items)):
+        return [{'index': i, 'ok': False, 'output': None, 'provider': 'budget_blocked',
+                 'error': 'per_call 额度不足', 'elapsed_ms': 0, 'cache': False} for i in range(len(items))]
+    results = [None] * len(items)
+
+    def work(idx, item):
+        if isinstance(item, dict):
+            system = item.get('system', '')
+            user = item.get('user', '')
+            lv = item.get('level', level)
+            uc = item.get('use_cache', use_cache)
+            tmp = item.get('temperature')
+            mt = item.get('max_tokens')
+            md = item.get('model')
+        else:
+            system, user = item[0], item[1]
+            lv, uc, tmp, mt, md = level, use_cache, None, None, None
+        t0 = time.time()
+        try:
+            out, provider, meta = chat(system, user, level=lv, use_cache=uc, temperature=tmp, max_tokens=mt, model=md, pack_id=pack_id)
+            results[idx] = {'index': idx, 'ok': provider not in ('rule', 'budget_blocked') and out is not None,
+                            'output': out, 'provider': provider, 'error': None,
+                            'elapsed_ms': meta.get('elapsed_ms', int((time.time() - t0) * 1000)),
+                            'cache': meta.get('cache', False)}
+        except Exception as e:
+            results[idx] = {'index': idx, 'ok': False, 'output': None, 'provider': 'error',
+                            'error': str(e), 'elapsed_ms': int((time.time() - t0) * 1000), 'cache': False}
+
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = [ex.submit(work, i, it) for i, it in enumerate(items)]
+        for f in as_completed(futs):
+            f.result()
+    return results

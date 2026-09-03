@@ -1202,3 +1202,35 @@ KOS MASTER EXECUTION CONTRACT v1 已入双子库（ZBC d292c9f / OSAI bd088f6）
 - 确认按钮端到端（点归属→选类型→confirm→VERIFIED）未在浏览器点实际业务数据（避免误改），后端端点已单独实测通过。
 - 非广州品牌（香港DFS等）采集暂停无数据，增强列表暂以广州展示验证。
 - 备份：brand_hub.js.bak-ui / .bak-refactor（不提交）。
+
+
+---
+
+## 第二十二批：智谱高效使用五层优化（并发 / 缓存 / 模型分层 / 任务分级 / 预算护栏）
+
+### 背景
+用户指令："研究如何更高效不浪费地使用智谱，算力最大化但效果更好，目前太慢了"。先测基线：智谱单次调用 600ms（不慢），慢的根因=串行排队+无连接复用+简单任务也走智谱+固定 max_tokens。据此实施五层优化，全部为新增独立入口，现有调用零破坏。
+
+### 改动（intelligence.py）
+PartA（_chat 向后兼容）：`_chat(..., timeout=None)`，默认沿用 AI_TIMEOUT_SECONDS，现有调用行为零变化；ollama/云端两处超时改用 _to。
+PartB（高效层追加）：
+1. 任务分级 `_LEVEL_CONFIG`：low(30s/200tok/0.0) / medium(60s/800/0.1) / high(90s/2000/0.2) / critical(120s/4000/0.2)。
+2. 模型分层：HIGH/CRITICAL 用 ZHIPU_STRONG_MODEL（如 glm-4.7，未配置则沿用默认，不强求）。
+3. `chat(system, user, level=, use_cache=, ...)`：分级参数 + 确定性缓存（MD5，上限 512）+ 预算护栏 + 成功计数。
+4. `chat_batch(items, max_workers=4, ...)`：ThreadPoolExecutor 并发批处理，独立任务并行。
+5. 预算护栏：复用 ai_resource_packs.check_quota('per_call')/record_usage；超额降级 budget_blocked（不硬崩）。
+
+### 实测（真实结果）
+- py_compile 全过。
+- _chat 无 timeout 调用正常（provider=zhipu）——现有业务零影响。
+- chat() 缓存：第 1 次 383ms cache=False，第 2 次 cache=True（同输入省 100% token+时间）。
+- chat_batch：4 独立任务并发总耗时 **624ms**（对照串行 ~2.4s，快约 4 倍）。
+- 预算护栏：per_call check(1)/(5) 均通过；分级参数四档正确。
+- 平滑重启 8201（worker 32424），healthz v5.9.9 OK。
+- 红线：只改 intelligence.py 新增层 + _chat 可选参数；五条红线函数/数据/采集未动。
+
+### 未做 / 登记
+- ZHIPU_STRONG_MODEL 未配置（当前 HIGH 沿用默认 glm-4.5-air）。建议设置 .env: ZHIPU_STRONG_MODEL=glm-4.7 使 HIGH/CRITICAL 真正用强模型（效果更好），待用户确认后启用。
+- 现有业务函数（review_note/summarize_event/analyze_sentiment 等）仍走 _chat 未切到 chat()，属保守策略；后续可逐个切到 chat(level=...) 获得分级/缓存收益。
+- 连接复用（keep-alive）未做（需换 requests 依赖，暂不引入新依赖）。
+- 备份：intelligence.py.bak-efficient（不提交）。
