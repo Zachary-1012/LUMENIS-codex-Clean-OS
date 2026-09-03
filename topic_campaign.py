@@ -41,7 +41,20 @@ try:
     from runtime_bin import resolve_node as _resolve_node
 except Exception:
     def _resolve_node():
-        return 'node'
+        import shutil
+        # 1. NODE_EXE 环境变量
+        exe = os.getenv('NODE_EXE', '').strip()
+        if exe and os.path.isfile(exe):
+            return exe
+        # 2. 项目 nodejs/ 目录
+        proj_node = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nodejs', 'node.exe')
+        if os.path.isfile(proj_node):
+            return proj_node
+        # 3. PATH 中查找（app.py 启动时已注入沙箱 node）
+        found = shutil.which('node')
+        if found:
+            return found
+        return None
 
 def _node_bin():
     """返回可用 node 路径；解析不到时返回 None，由调用方产出结构化错误（不进 subprocess）。"""

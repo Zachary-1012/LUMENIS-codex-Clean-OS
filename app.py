@@ -6339,6 +6339,29 @@ def api_cookies_import_raw():
     return jsonify({'ok': True, 'platform': platform, 'cookie_count': len(cleaned), 'applied': apply and platform in ('xhs', 'xiaohongshu')})
 
 if __name__ == '__main__':
+    # 启动前注入 node 运行时 PATH（话题监测/采集脚本依赖 node，8201 worker 进程 PATH 可能不含沙箱 node）
+    def _ensure_node_on_path():
+        import shutil
+        if shutil.which('node'):
+            return True
+        candidates = [
+            os.getenv('NODE_EXE', ''),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nodejs', 'node.exe'),
+        ]
+        # 豆包沙箱常见 node 路径
+        for base in [os.path.expanduser(r'~\AppData\Local\DoubaoWork\User Data\sandbox_runtime\bases')]:
+            if os.path.isdir(base):
+                for d in os.listdir(base):
+                    n = os.path.join(base, d, 'node', 'node.exe')
+                    if os.path.isfile(n):
+                        candidates.append(n)
+        for c in candidates:
+            if c and os.path.isfile(c):
+                os.environ['PATH'] = os.path.dirname(c) + os.pathsep + os.environ.get('PATH', '')
+                return True
+        return False
+    _ensure_node_on_path()
+
     import logging
     # 加固:Windows 下多进程共写 system.log 时轮转可能因文件占用失败,绝不允许 logging 内部异常崩溃主进程(此前 PermissionError 致 app.py 退出码=1、话题采集被中断)
     logging.raiseExceptions = False

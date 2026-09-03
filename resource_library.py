@@ -4,10 +4,12 @@
 Contract：OSAI 研究侧 → ZBC 生产侧。
 对齐 AUDIT_HANDOFF："资源共享，真相隔离；能力共享，产品边界不共享"。
 
-把三张平行知识表统一为 Resource 视图：
-  - brand_knowledge       → resource_category = brand_theory（品牌理论）
-  - case_deep_analysis    → resource_category = case_study（深度案例）
-  - brand_industry_monitor→ resource_category = industry_monitor（行业监控）
+物理并表后统一查询 resources 表：
+  - resource_category = brand_theory（品牌理论，原 brand_knowledge）
+  - resource_category = case_study（深度案例，原 case_deep_analysis）
+  - resource_category = industry_monitor（行业监控，原 brand_industry_monitor）
+
+原表保留为 _legacy 兼容旧代码写入；sync_from_legacy_tables() 做增量同步。
 
 核心原则：
   1. 资源作为参考，不直接成为生产规则（is_production_rule=0 的才是参考资源）
@@ -25,32 +27,22 @@ from datetime import datetime
 
 DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
 
-# 资源类别注册表：表名 → 类别配置
+# 资源类别元数据（物理并表后不再关联表名，仅作类别配置）
 RESOURCE_REGISTRY = {
     "brand_theory": {
-        "table": "brand_knowledge",
+        "label": "品牌理论",
+        "legacy_table": "brand_knowledge",
         "title_col": "title",
-        "summary_cols": ["content"],
-        "tag_col": "tags",
-        "time_col": "created_at",
-        "extra_cols": ["category", "source", "url", "relevance_score"],
     },
     "case_study": {
-        "table": "case_deep_analysis",
+        "label": "深度案例",
+        "legacy_table": "case_deep_analysis",
         "title_col": "case_title",
-        "summary_cols": ["big_idea", "challenge"],
-        "tag_col": "industry",
-        "time_col": "created_at",
-        "extra_cols": ["case_id", "brand", "agency", "industry", "year", "case_type", "quality_score"],
     },
     "industry_monitor": {
-        "table": "brand_industry_monitor",
+        "label": "行业监控",
+        "legacy_table": "brand_industry_monitor",
         "title_col": "brand_name",
-        "summary_cols": ["industry", "floor"],
-        "tag_col": "industry",
-        "time_col": "last_updated",
-        "extra_cols": ["brand_name_cn", "note_count", "negative_count", "positive_count",
-                       "total_engagement", "risk_level"],
     },
 }
 
@@ -61,23 +53,18 @@ def _get_conn() -> sqlite3.Connection:
     return conn
 
 
-def _row_to_resource(row: sqlite3.Row, category: str, cfg: dict) -> dict:
-    """把表行统一转换为 Resource 输出格式。"""
+def _row_to_resource(row: sqlite3.Row) -> dict:
+    """把 resources 表行统一转换为 Resource 输出格式。"""
     d = dict(row)
-    # 摘要：拼接 summary_cols，截断
-    summary_parts = []
-    for col in cfg["summary_cols"]:
-        val = d.get(col, "")
-        if val:
-            summary_parts.append(str(val))
-    summary = " ".join(summary_parts)[:500]
-
     resource = {
         "resource_uid": d.get("resource_uid", ""),
-        "resource_category": category,
-        "title": d.get(cfg["title_col"], ""),
-        "summary": summary,
-        "tags": d.get(cfg["tag_col"], ""),
+        "resource_category": d.get("resource_category", ""),
+        "title": d.get("title", ""),
+        "summary": (d.get("content", "") or "")[:500],
+        "content": d.get("content", ""),
+        "tags": d.get("tags", ""),
+        "source": d.get("source", ""),
+        "url": d.get("url", ""),
         "provenance": _safe_json(d.get("provenance")),
         "dedup_hash": d.get("dedup_hash", ""),
         "evidence_id": d.get("evidence_id"),
@@ -85,15 +72,11 @@ def _row_to_resource(row: sqlite3.Row, category: str, cfg: dict) -> dict:
         "is_production_rule": bool(d.get("is_production_rule", 0)),
         "product_context": d.get("product_context", "CTH"),
         "normalized_at": d.get("normalized_at", ""),
-        "created_at": d.get(cfg["time_col"], ""),
+        "created_at": d.get("created_at", ""),
+        "updated_at": d.get("updated_at", ""),
         "raw_id": d.get("id"),
+        "extras": _safe_json(d.get("extra_json")),
     }
-    # 附加类别特有字段
-    extras = {}
-    for col in cfg["extra_cols"]:
-        if col in d:
-            extras[col] = d[col]
-    resource["extras"] = extras
     return resource
 
 
@@ -116,7 +99,7 @@ def search_resources(
     limit: int = 20,
     offset: int = 0,
 ) -> dict:
-    """统一搜索三张知识表，返回标准化 Resource 列表。
+    """统一搜索 resources 表，返回标准化 Resource 列表。
 
     Args:
       query: 标题/内容关键词（模糊匹配）
@@ -127,110 +110,84 @@ def search_resources(
       limit/offset: 分页
 
     Returns:
-      {total, resources: [...], categories: {...}}
+      {total, returned, limit, offset, resources: [...]}
     """
-    categories = [category] if category else list(RESOURCE_REGISTRY.keys())
-    all_resources = []
+    conditions = []
+    params = []
+
+    if query:
+        conditions.append("(title LIKE ? OR content LIKE ? OR tags LIKE ?)")
+        params.extend([f"%{query}%"] * 3)
+
+    if category:
+        conditions.append("resource_category = ?")
+        params.append(category)
+
+    if tags:
+        conditions.append("tags LIKE ?")
+        params.append(f"%{tags}%")
+
+    if product_context:
+        conditions.append("product_context = ?")
+        params.append(product_context)
+
+    if reference_only:
+        conditions.append("(is_production_rule = 0 OR is_production_rule IS NULL)")
+
+    where = " WHERE " + " AND ".join(conditions) if conditions else ""
 
     conn = _get_conn()
     try:
-        for cat in categories:
-            if cat not in RESOURCE_REGISTRY:
-                continue
-            cfg = RESOURCE_REGISTRY[cat]
-            table = cfg["table"]
-            title_col = cfg["title_col"]
-
-            conditions = []
-            params = []
-
-            if query:
-                # 标题或摘要列模糊匹配
-                like_cols = [title_col] + cfg["summary_cols"]
-                like_clause = " OR ".join([f"{col} LIKE ?" for col in like_cols])
-                conditions.append(f"({like_clause})")
-                params.extend([f"%{query}%"] * len(like_cols))
-
-            if tags:
-                tag_col = cfg["tag_col"]
-                if tag_col:
-                    conditions.append(f"{tag_col} LIKE ?")
-                    params.append(f"%{tags}%")
-
-            if product_context:
-                conditions.append("product_context = ?")
-                params.append(product_context)
-
-            if reference_only:
-                conditions.append("(is_production_rule = 0 OR is_production_rule IS NULL)")
-
-            where = " WHERE " + " AND ".join(conditions) if conditions else ""
-            sql = f"SELECT * FROM [{table}]{where} ORDER BY id DESC"
-            rows = conn.execute(sql, params).fetchall()
-            for row in rows:
-                all_resources.append(_row_to_resource(row, cat, cfg))
-
-        # 统一按时间排序（新的在前）
-        all_resources.sort(key=lambda r: r.get("created_at", ""), reverse=True)
-        total = len(all_resources)
-        page = all_resources[offset:offset + limit]
+        total = conn.execute(f"SELECT COUNT(*) as cnt FROM resources{where}", params).fetchone()["cnt"]
+        sql = f"SELECT * FROM resources{where} ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ? OFFSET ?"
+        rows = conn.execute(sql, params + [limit, offset]).fetchall()
+        resources = [_row_to_resource(row) for row in rows]
         return {
             "total": total,
-            "returned": len(page),
+            "returned": len(resources),
             "limit": limit,
             "offset": offset,
-            "resources": page,
+            "resources": resources,
         }
     finally:
         conn.close()
 
 
 def get_resource(resource_uid: str) -> Optional[dict]:
-    """按 resource_uid 获取单条 Resource（跨表查找）。"""
+    """按 resource_uid 获取单条 Resource。"""
     if not resource_uid:
         return None
-    # uid 格式：category_id
-    category = resource_uid.rsplit("_", 1)[0] if "_" in resource_uid else ""
     conn = _get_conn()
     try:
-        for cat, cfg in RESOURCE_REGISTRY.items():
-            if category and cat != category:
-                continue
-            table = cfg["table"]
-            row = conn.execute(
-                f"SELECT * FROM [{table}] WHERE resource_uid = ?", (resource_uid,)
-            ).fetchone()
-            if row:
-                return _row_to_resource(row, cat, cfg)
+        row = conn.execute("SELECT * FROM resources WHERE resource_uid = ?", (resource_uid,)).fetchone()
+        if row:
+            return _row_to_resource(row)
         return None
     finally:
         conn.close()
 
 
 def get_resource_stats() -> dict:
-    """统一资源库统计。"""
+    """统一资源库统计（直接查 resources 表）。"""
     conn = _get_conn()
     stats = {"total": 0, "by_category": {}, "reference_vs_rule": {"reference": 0, "production_rule": 0},
              "by_product_context": {}}
     try:
-        for cat, cfg in RESOURCE_REGISTRY.items():
-            table = cfg["table"]
-            cnt = conn.execute(f"SELECT COUNT(*) FROM [{table}]").fetchone()[0]
-            stats["by_category"][cat] = cnt
-            stats["total"] += cnt
+        stats["total"] = conn.execute("SELECT COUNT(*) FROM resources").fetchone()[0]
 
-            ref = conn.execute(
-                f"SELECT COUNT(*) FROM [{table}] WHERE is_production_rule = 0 OR is_production_rule IS NULL"
-            ).fetchone()[0]
-            rule = cnt - ref
-            stats["reference_vs_rule"]["reference"] += ref
-            stats["reference_vs_rule"]["production_rule"] += rule
+        for row in conn.execute("SELECT resource_category, COUNT(*) as cnt FROM resources GROUP BY resource_category"):
+            stats["by_category"][row["resource_category"]] = row["cnt"]
 
-            for row in conn.execute(
-                f"SELECT COALESCE(product_context,'CTH') as pc, COUNT(*) as cnt FROM [{table}] GROUP BY pc"
-            ):
-                pc = row["pc"]
-                stats["by_product_context"][pc] = stats["by_product_context"].get(pc, 0) + row["cnt"]
+        ref = conn.execute(
+            "SELECT COUNT(*) FROM resources WHERE is_production_rule = 0 OR is_production_rule IS NULL"
+        ).fetchone()[0]
+        stats["reference_vs_rule"]["reference"] = ref
+        stats["reference_vs_rule"]["production_rule"] = stats["total"] - ref
+
+        for row in conn.execute(
+            "SELECT COALESCE(product_context,'CTH') as pc, COUNT(*) as cnt FROM resources GROUP BY pc"
+        ):
+            stats["by_product_context"][row["pc"]] = row["cnt"]
         return stats
     finally:
         conn.close()
@@ -239,9 +196,98 @@ def get_resource_stats() -> dict:
 def list_categories() -> list[dict]:
     """列出所有资源类别及其配置。"""
     return [
-        {"category": cat, "table": cfg["table"], "title_field": cfg["title_col"]}
+        {"category": cat, "label": cfg["label"], "legacy_table": cfg["legacy_table"]}
         for cat, cfg in RESOURCE_REGISTRY.items()
     ]
+
+
+def sync_from_legacy_tables() -> dict:
+    """从原三张表增量同步到 resources 表（物理并表后的兼容同步）。
+
+    原表保留供旧代码写入；每次查询前可调用此函数确保 resources 表数据最新。
+    返回同步统计。
+    """
+    conn = _get_conn()
+    synced = {"brand_theory": 0, "case_study": 0, "industry_monitor": 0, "total": 0}
+    try:
+        # brand_knowledge → brand_theory
+        for row in conn.execute("SELECT * FROM brand_knowledge"):
+            d = dict(row)
+            extra = json.dumps({"relevance_score": d.get("relevance_score"), "content_hash": d.get("content_hash"),
+                                 "category_original": d.get("category")}, ensure_ascii=False)
+            conn.execute("""INSERT OR IGNORE INTO resources
+                (resource_uid, resource_category, title, content, tags, source, url,
+                 provenance, pipeline_stage, evidence_id, normalized_at, dedup_hash,
+                 is_production_rule, product_context, extra_json, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (d.get("resource_uid") or f"brand_theory_{d['id']}", "brand_theory",
+                 d.get("title"), d.get("content"), d.get("tags"), d.get("source"), d.get("url"),
+                 d.get("provenance"), d.get("pipeline_stage"), d.get("evidence_id"), d.get("normalized_at"),
+                 d.get("dedup_hash") or d.get("content_hash"), d.get("is_production_rule") or 0,
+                 d.get("product_context") or "CTH", extra, d.get("created_at"), d.get("updated_at")))
+            if conn.total_changes > 0:
+                synced["brand_theory"] += 1
+
+        # case_deep_analysis → case_study
+        for row in conn.execute("SELECT * FROM case_deep_analysis"):
+            d = dict(row)
+            content_parts = [f"[{k}]\n{d[k]}" for k in
+                             ["basic_info", "challenge", "strategy", "big_idea", "execution", "results",
+                              "success_factors", "system_insights"] if d.get(k)]
+            content = "\n\n".join(content_parts)
+            tags = ",".join(filter(None, [d.get("case_type") or "", d.get("industry") or "", d.get("brand") or ""]))
+            extra_keys = set(d.keys()) - {"id", "resource_uid", "resource_category", "pipeline_stage",
+                "provenance", "evidence_id", "normalized_at", "dedup_hash", "is_production_rule",
+                "product_context", "case_title", "basic_info", "challenge", "strategy", "big_idea",
+                "execution", "results", "success_factors", "system_insights", "case_type", "industry",
+                "brand", "created_at", "updated_at"}
+            extra = json.dumps({k: d[k] for k in extra_keys}, ensure_ascii=False)
+            conn.execute("""INSERT OR IGNORE INTO resources
+                (resource_uid, resource_category, title, content, tags, source, url,
+                 provenance, pipeline_stage, evidence_id, normalized_at, dedup_hash,
+                 is_production_rule, product_context, extra_json, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (d.get("resource_uid") or f"case_study_{d['id']}", "case_study",
+                 d.get("case_title"), content, tags, d.get("brand") or "", "",
+                 d.get("provenance"), d.get("pipeline_stage"), d.get("evidence_id"), d.get("normalized_at"),
+                 d.get("dedup_hash") or f"case_{d.get('case_id') or d['id']}", d.get("is_production_rule") or 0,
+                 d.get("product_context") or "CTH", extra, d.get("created_at"), d.get("updated_at")))
+            if conn.total_changes > 0:
+                synced["case_study"] += 1
+
+        # brand_industry_monitor → industry_monitor
+        for row in conn.execute("SELECT * FROM brand_industry_monitor"):
+            d = dict(row)
+            title = d.get("brand_name_cn") or d.get("brand_name") or f"brand_{d['id']}"
+            content = f"行业: {d.get('industry') or ''}\n楼层: {d.get('floor') or ''}\n铺位: {d.get('shop_number') or ''}\n风险等级: {d.get('risk_level') or ''}"
+            tags = ",".join(filter(None, [d.get("industry") or "", d.get("risk_level") or ""]))
+            extra_keys = set(d.keys()) - {"id", "resource_uid", "resource_category", "pipeline_stage",
+                "provenance", "evidence_id", "normalized_at", "dedup_hash", "is_production_rule",
+                "product_context", "brand_name", "brand_name_cn", "industry", "floor", "shop_number",
+                "risk_level", "last_updated", "created_at", "updated_at"}
+            extra = json.dumps({k: d[k] for k in extra_keys}, ensure_ascii=False)
+            conn.execute("""INSERT OR IGNORE INTO resources
+                (resource_uid, resource_category, title, content, tags, source, url,
+                 provenance, pipeline_stage, evidence_id, normalized_at, dedup_hash,
+                 is_production_rule, product_context, extra_json, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (d.get("resource_uid") or f"industry_monitor_{d['id']}", "industry_monitor",
+                 title, content, tags, "", "",
+                 d.get("provenance"), d.get("pipeline_stage"), d.get("evidence_id"), d.get("normalized_at"),
+                 d.get("dedup_hash") or f"brand_{d.get('brand_name') or d['id']}", d.get("is_production_rule") or 0,
+                 d.get("product_context") or "CTH", extra, d.get("last_updated") or d.get("created_at"),
+                 d.get("last_updated") or d.get("updated_at")))
+            if conn.total_changes > 0:
+                synced["industry_monitor"] += 1
+
+        conn.commit()
+        synced["total"] = sum(synced.values())
+        return synced
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e), "total": 0}
+    finally:
+        conn.close()
 
 
 __all__ = [
@@ -249,5 +295,6 @@ __all__ = [
     "get_resource",
     "get_resource_stats",
     "list_categories",
+    "sync_from_legacy_tables",
     "RESOURCE_REGISTRY",
 ]
