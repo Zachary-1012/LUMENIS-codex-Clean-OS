@@ -1,3 +1,22 @@
+## 2026-09-03｜GAP-09 负面评审写路径收敛唯一 Owner + GAP-15 核实 + 并行巡检入库
+> 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
+
+**A. GAP-09 负面评审写路径收敛（RESOLVED）**
+- 根因：笔记级负面评审新旧 4 入口（/api/negative/confirm|reject + /api/negative-review/<id>/confirm|reject）SQL 完全重复（写同一 notes.negative_confirmed 字段），代码重复维护风险
+- 收敛：抽唯一写路径 `_note_set_review(note_id, state)`（state=1 确认/2 驳回），4 入口统一调用，行为零变化
+- 事件评审 /api/event-review/*（_event_set_review 联动笔记）为独立能力，保留不动
+- 验证：5 单测（test_note_review_unified.py）+ API 级验证（临时库 4 入口真实 Flask 请求，A1=1/A2=2 一致）+ 生产 8201 重启后 stats/pending 200
+- Commit：e0c9959
+
+**B. GAP-15 核实（RESOLVED，无需修改）**
+- daily_git_sync.py:72 现为 `gm.current_version()` 已带括号，无漏括号 bug，GAP 已自然解决
+
+**C. 并行巡检成果入库**
+- database.py DataQualityGate 写入门软门（enrich 标记不丢弃=数据零丢失）+ scripts/ai_gateway.py 新模块
+- 测试 13 项全过，独立提交 eae0587
+
+**Commit 链**：e0c9959 → eae0587（HEAD，已 push，本地=origin）
+
 ## 2026-09-03｜双子库密码适配 + 登录弹窗闪烁根因修复 + GAP-10 生产上线
 > 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
 
