@@ -26,6 +26,56 @@ SUBJECT_EXCLUDE_WORDS = [
 
 SUBJECT_FIELDS = ('title', 'body', 'content', 'source_keyword', 'matched_keywords')
 
+# ============== 多品牌配置（KOS P1：海南中免/CDF 第一验证品牌）==============
+# 原则：不破坏广州太古汇核心过滤；新增品牌独立配置，按需切换。
+BRAND_PROFILES = {
+    "guangzhou_taikoo_hui": {
+        "display_name": "广州太古汇",
+        "subject_words": SUBJECT_WORDS,
+        "exclude_words": SUBJECT_EXCLUDE_WORDS,
+        "collect_keywords": ["广州太古汇", "太古汇", "太古汇 探店", "太古汇 活动"],
+    },
+    "hainan_cdf": {
+        "display_name": "海南中免/CDF",
+        "subject_words": [
+            "海南中免", "中免", "CDF", "cdf", "中国免税",
+            "三亚国际免税城", "海口国际免税城", "三亚免税", "海口免税",
+            "中免集团", "海南免税", "离岛免税",
+        ],
+        "exclude_words": [
+            "中免集团总部", "北京中免", "上海中免", "深圳中免",
+            "日上免税", "海旅免税", "深免", "中出服", "珠海免税",
+        ],
+        "collect_keywords": ["海南中免", "CDF 免税", "三亚国际免税城", "海口国际免税城", "离岛免税"],
+    },
+}
+
+ACTIVE_BRAND = "guangzhou_taikoo_hui"  # 当前激活品牌，可通过环境变量或API切换
+
+
+def get_active_brand() -> str:
+    """获取当前激活品牌key。"""
+    import os
+    return os.environ.get("ZBC_ACTIVE_BRAND", ACTIVE_BRAND)
+
+
+def get_brand_config(brand_key: str = "") -> dict:
+    """获取指定品牌配置，默认当前激活品牌。"""
+    key = brand_key or get_active_brand()
+    return BRAND_PROFILES.get(key, BRAND_PROFILES["guangzhou_taikoo_hui"])
+
+
+def subject_hit_for_brand(title="", body="", content="", source_keyword="", matched_keywords="", brand_key="") -> bool:
+    """指定品牌的主体判断（不修改默认 subject_hit，保持广州太古汇硬过滤不变）。"""
+    cfg = get_brand_config(brand_key)
+    fields = [str(x or "") for x in (title, body, content, source_keyword, matched_keywords)]
+    joined = " ".join(fields).lower()
+    for word in cfg["exclude_words"]:
+        if word.lower() in joined:
+            return False
+    return any(word.lower() in f.lower() for f in fields for word in cfg["subject_words"])
+
+
 
 def _text(value: object) -> str:
     if value is None:

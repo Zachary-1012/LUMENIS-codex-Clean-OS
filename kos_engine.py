@@ -319,3 +319,182 @@ def reward_calculate(author_id: str, period: str = "month") -> dict:
 __all__ = ["refresh_profiles", "get_stats", "list_profiles", "get_profile",
            "analyze_comments", "generate_outreach", "ad_candidate_score", "reward_calculate",
            "TIER_THRESHOLDS", "LIFECYCLE_STAGES", "COMMENT_CATEGORIES"]
+
+
+# ============== P1: 评论回复AI生成 + 内容基因提取 ==============
+
+def generate_reply(comment_text: str, brand_name: str = "广州太古汇",
+                   reply_style: str = "professional", risk_level: str = "low") -> dict:
+    """生成评论回复建议（AI辅助，高风险NO_REPLY不自动回复）。
+
+    原则：
+    1. 高风险/投诉/法律问题 = NO_REPLY，禁止AI自动发言。
+    2. 仅生成建议，不自动执行回复。
+    3. 品牌口吻可配置。
+    """
+    if not comment_text:
+        return {"ok": False, "error": "empty comment"}
+
+    text_lower = comment_text.lower()
+    # 高风险关键词检测
+    high_risk_keywords = ["投诉", "起诉", "律师", "报警", "12315", "消协", "曝光", "维权",
+                           "退款", "赔偿", "欺诈", "假货", "安全", "事故", "受伤", "法律"]
+    is_high_risk = any(kw in text_lower for kw in high_risk_keywords) or risk_level in ("high", "critical")
+
+    if is_high_risk:
+        return {
+            "ok": True,
+            "action": "NO_REPLY",
+            "reason": "高风险评论，禁止AI自动回复，需人工处理",
+            "risk_level": "high",
+            "suggested_action": "转人工客服/法务审核",
+        }
+
+    # 评论分类
+    category = "general_interaction"
+    if any(kw in text_lower for kw in ["多少钱", "价格", "怎么买", "哪里买", "链接", "购买"]):
+        category = "purchase_intent"
+    elif any(kw in text_lower for kw in ["活动", "时间", "什么时候", "地址", "在哪"]):
+        category = "event_inquiry"
+    elif any(kw in text_lower for kw in ["好用", "推荐", "不错", "喜欢", "赞"]):
+        category = "positive_feedback"
+    elif any(kw in text_lower for kw in ["不好", "差", "失望", "坑", "垃圾"]):
+        category = "negative_feedback"
+    elif any(kw in text_lower for kw in ["怎么用", "使用", "教程", "说明"]):
+        category = "product_consult"
+
+    # 基于规则的回复模板（AI Gateway 可用时可替换为真实AI生成）
+    templates = {
+        "purchase_intent": f"感谢关注{brand_name}！您可以通过官方渠道了解详情，我们的客服会为您提供专业咨询。",
+        "event_inquiry": f"感谢关注{brand_name}活动！具体活动信息请以官方公告为准，我们会及时更新最新动态。",
+        "positive_feedback": f"感谢您的认可与支持！{brand_name}会继续努力，为您带来更好的体验。",
+        "negative_feedback": f"非常抱歉给您带来不好的体验，我们非常重视您的反馈，会认真改进。如需进一步沟通，请联系客服。",
+        "product_consult": f"感谢咨询！关于产品使用，建议您查看官方说明或联系客服获取详细指导。",
+        "general_interaction": f"感谢您的关注与互动！{brand_name}期待与您有更多交流。",
+    }
+
+    return {
+        "ok": True,
+        "action": "SUGGEST_REPLY",
+        "category": category,
+        "risk_level": risk_level,
+        "reply_style": reply_style,
+        "suggested_reply": templates.get(category, templates["general_interaction"]),
+        "auto_reply": False,  # 默认不自动回复，需人工确认
+        "requires_approval": category in ("negative_feedback", "purchase_intent"),
+    }
+
+
+def extract_content_dna(author_id: str, limit: int = 20) -> dict:
+    """提取KOS内容基因：选题/标题结构/内容主题/场景/品牌/产品/情绪/用户需求。
+
+    从现有notes数据提取，不调用AI（AI可用时可增强语义标签）。
+    """
+    import sqlite3
+    from pathlib import Path
+    db = Path(__file__).parent / "data" / "monitor.db"
+    conn = sqlite3.connect(str(db))
+    conn.row_factory = sqlite3.Row
+    try:
+        notes = conn.execute(
+            "SELECT note_id, title, body, content, likes, comments, collects, shares, sentiment, content_type, publish_datetime FROM notes WHERE author_id=? ORDER BY publish_datetime DESC LIMIT ?",
+            (author_id, limit)
+        ).fetchall()
+
+        if not notes:
+            return {"ok": False, "error": "no notes for this KOS"}
+
+        # 标题结构分析
+        title_patterns = {"question": 0, "exclamation": 0, "number": 0, "guide": 0, "plain": 0}
+        topics = {}
+        scenes = {"shopping": 0, "food": 0, "beauty": 0, "fashion": 0, "travel": 0, "lifestyle": 0, "other": 0}
+        emotions = {"positive": 0, "neutral": 0, "negative": 0}
+        products = set()
+        brands_mentioned = set()
+
+        scene_keywords = {
+            "shopping": ["购物", "买", "商场", "店", "专柜", "品牌"],
+            "food": ["吃", "美食", "餐厅", "咖啡", "甜品", "日料"],
+            "beauty": ["美妆", "护肤", "化妆", "口红", "面膜", "精华"],
+            "fashion": ["穿搭", "衣服", "时尚", "搭配", "包包", "鞋"],
+            "travel": ["旅行", "旅游", "打卡", "探店", "攻略", "出行"],
+            "lifestyle": ["生活", "日常", "vlog", "分享", "体验"],
+        }
+        product_keywords = ["LV", "香奈儿", "迪奥", "Dior", "Gucci", "Prada", "Hermes", "爱马仕",
+                            "苹果", "华为", "小米", "耐克", "阿迪", "星巴克", "喜茶", "奈雪"]
+        brand_keywords = ["太古汇", "中免", "CDF", "海南", "广州", "三亚", "海口"]
+
+        for n in notes:
+            title = n["title"] or ""
+            body = (n["body"] or n["content"] or "")[:500]
+            full = title + " " + body
+
+            # 标题结构
+            if "?" in title or "？" in title:
+                title_patterns["question"] += 1
+            elif "!" in title or "！" in title:
+                title_patterns["exclamation"] += 1
+            elif any(c.isdigit() for c in title):
+                title_patterns["number"] += 1
+            elif any(kw in title for kw in ["攻略", "指南", "教程", "怎么", "如何"]):
+                title_patterns["guide"] += 1
+            else:
+                title_patterns["plain"] += 1
+
+            # 场景
+            for scene, kws in scene_keywords.items():
+                if any(kw in full for kw in kws):
+                    scenes[scene] += 1
+                    break
+            else:
+                scenes["other"] += 1
+
+            # 情绪
+            sent = (n["sentiment"] or "neutral").lower()
+            if sent in emotions:
+                emotions[sent] += 1
+            else:
+                emotions["neutral"] += 1
+
+            # 产品/品牌
+            for p in product_keywords:
+                if p.lower() in full.lower():
+                    products.add(p)
+            for b in brand_keywords:
+                if b.lower() in full.lower():
+                    brands_mentioned.add(b)
+
+            # 主题（简化：高频词）
+            for kw in ["探店", "打卡", "测评", "分享", "推荐", "攻略", "活动", "优惠", "新品", "限定"]:
+                if kw in full:
+                    topics[kw] = topics.get(kw, 0) + 1
+
+        total = len(notes)
+        dominant_scene = max(scenes, key=scenes.get)
+        dominant_emotion = max(emotions, key=emotions.get)
+        dominant_title_style = max(title_patterns, key=title_patterns.get)
+
+        return {
+            "ok": True,
+            "author_id": author_id,
+            "sample_size": total,
+            "content_dna": {
+                "dominant_scene": dominant_scene,
+                "scene_distribution": {k: round(v / total * 100, 1) for k, v in scenes.items() if v > 0},
+                "dominant_emotion": dominant_emotion,
+                "emotion_distribution": {k: round(v / total * 100, 1) for k, v in emotions.items() if v > 0},
+                "dominant_title_style": dominant_title_style,
+                "title_style_distribution": {k: round(v / total * 100, 1) for k, v in title_patterns.items() if v > 0},
+                "top_topics": sorted(topics.items(), key=lambda x: x[1], reverse=True)[:5],
+                "products_mentioned": list(products)[:10],
+                "brands_mentioned": list(brands_mentioned),
+            },
+            "user_demand_signals": {
+                "purchase_intent": topics.get("推荐", 0) + topics.get("测评", 0),
+                "information_demand": topics.get("攻略", 0) + topics.get("分享", 0),
+                "experience_demand": topics.get("探店", 0) + topics.get("打卡", 0),
+                "promotion_sensitivity": topics.get("优惠", 0) + topics.get("活动", 0),
+            }
+        }
+    finally:
+        conn.close()

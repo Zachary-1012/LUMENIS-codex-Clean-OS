@@ -166,6 +166,106 @@ def api_report_view():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+
+
+@kos_bp.route("/reply/generate", methods=["POST"])
+def api_reply_generate():
+    """生成评论回复建议（高风险NO_REPLY）。"""
+    try:
+        ke = _engine()
+        data = request.get_json(silent=True) or {}
+        result = ke.generate_reply(
+            comment_text=data.get("comment_text", ""),
+            brand_name=data.get("brand_name", "广州太古汇"),
+            reply_style=data.get("reply_style", "professional"),
+            risk_level=data.get("risk_level", "low"),
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@kos_bp.route("/content-dna", methods=["GET"])
+def api_content_dna():
+    """提取KOS内容基因。"""
+    try:
+        ke = _engine()
+        author_id = request.args.get("author_id", "")
+        limit = min(int(request.args.get("limit", 20)), 50)
+        if not author_id:
+            return jsonify({"ok": False, "error": "author_id required"}), 400
+        result = ke.extract_content_dna(author_id, limit=limit)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@kos_bp.route("/attribution", methods=["GET"])
+def api_attribution():
+    """KOS多触点归因（单KOS或多触点）。"""
+    try:
+        import kos_attribution
+        author_id = request.args.get("author_id", "")
+        note_ids = request.args.get("note_ids", "")
+        brand_name = request.args.get("brand_name", "广州太古汇")
+        if author_id:
+            result = kos_attribution.calculate_attribution(author_id, brand_name=brand_name)
+        elif note_ids:
+            nids = [n.strip() for n in note_ids.split(",") if n.strip()]
+            result = kos_attribution.calculate_multi_touch_attribution(nids, brand_name=brand_name)
+        else:
+            return jsonify({"ok": False, "error": "author_id or note_ids required"}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+def _intel():
+    """延迟导入 KOS Intel 增量模块（意向分层 / KOS号识别 / 竞品对标）。"""
+    if "kos_intel" not in sys.modules:
+        import kos_intel
+    return sys.modules["kos_intel"]
+
+
+@kos_bp.route("/intent-analysis", methods=["GET"])
+def api_intent_analysis():
+    """意向评论分层分析。参数：note_id / author_id / limit。"""
+    try:
+        ki = _intel()
+        note_id = request.args.get("note_id", "")
+        author_id = request.args.get("author_id", "")
+        limit = min(int(request.args.get("limit", 50)), 200)
+        return jsonify({"ok": True, "data": ki.analyze_comments_intent(
+            note_id=note_id, author_id=author_id, limit=limit)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@kos_bp.route("/kos-identity", methods=["GET", "POST"])
+def api_kos_identity():
+    """KOS 号识别。GET: 单作者识别 author_id；POST: 全量刷新 limit。"""
+    try:
+        ki = _intel()
+        if request.method == "POST":
+            limit = min(int(request.args.get("limit", 500)), 2000)
+            return jsonify({"ok": True, "data": ki.refresh_kos_identity(limit=limit)})
+        author_id = request.args.get("author_id", "")
+        if not author_id:
+            return jsonify({"ok": False, "error": "author_id required"}), 400
+        return jsonify({"ok": True, "data": ki.recognize_kos_identity(author_id)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@kos_bp.route("/competitor-benchmark", methods=["GET"])
+def api_competitor_benchmark():
+    """竞品对标（主品牌 vs 竞品实体，复用 hainan_cdf.json 消歧）。"""
+    try:
+        ki = _intel()
+        return jsonify({"ok": True, "data": ki.competitor_benchmark()})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 def register_kos_api(app):
     """注册 KOS Blueprint 到 Flask app。"""
     app.register_blueprint(kos_bp)
