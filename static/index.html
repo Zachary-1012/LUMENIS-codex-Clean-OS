@@ -221,27 +221,27 @@
     </div>
     <div class="top-center"><div class="system-state"><i></i><span id="systemState">系统运行中</span></div><span class="clock" id="clock">—</span></div>
     <div class="top-actions">
-      <button class="action icon-only tip" id="commandPaletteBtn" data-tip="搜索页面、功能或操作（Ctrl+K）" onclick="toggleCommandPalette()"><span class="svgicon">🔍</span></button>
+      <button class="action icon-only tip" id="commandPaletteBtn" data-tip="搜索页面、功能或操作（Ctrl+K）" onclick="toggleCommandPalette()"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span></button>
       <!-- AI 治理状态：用量/额度/余额可控（数据可控 icon） -->
       <button class="action icon-only tip ai-gov-btn" id="aiGovBtn" data-tip="AI 治理：今日用量/每日额度/余额/脱敏状态" onclick="toggleAiGovPanel()">
-        <span class="svgicon">✦</span>
+        <span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.7L19 20l-.7-1.8L16.5 17.5l1.8-.7z"/></svg></span>
         <span class="ai-gov-dot" id="aiGovDot" style="background:#22c55e"></span>
         <span class="ai-gov-count" id="aiGovCount">0</span>
       </button>
       <!-- AI 资源包状态：glm-4.5-air用量/暂停连接/按次执行 -->
       <button class="action icon-only tip ai-pack-btn" id="aiPackBtn" data-tip="AI 资源包：用量/暂停/按次需求执行" onclick="toggleAiPackPanel()">
-        <span class="svgicon">⚡</span>
+        <span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
         <span class="ai-pack-dot" id="aiPackDot" style="background:#22c55e"></span>
         <span class="ai-pack-count" id="aiPackCount">0%</span>
       </button>
-      <a class="action secondary tip" id="zbmpWorkbenchBtn" data-tip="ZBMP 工作台：品牌概览/实时监测/事件中心/报告中心 + 只读终端 + 文件树" href="/static/zbmp-workbench.html" style="text-decoration:none"><span class="svgicon">▦</span><span class="btn-label">ZBMP 工作台</span></a>
-      <button class="action icon-only tip" id="alertBellBtn" data-tip="舆情预警：高风险/高影响力/上升过快时弹窗通知" onclick="navigateTo('alerts')"><span class="svgicon">🔔</span><span class="nav-badge" id="alertBadge" style="display:none">0</span></button>
-      <button class="action primary tip" id="refreshBtn" data-tip="立即更新：手动采集最新数据，每日3次机会，冷却15分钟"><span class="svgicon">↻</span><span class="btn-label">采集数据</span></button>
+      <a class="action secondary tip" id="zbmpWorkbenchBtn" data-tip="ZBMP 工作台：品牌概览/实时监测/事件中心/报告中心 + 只读终端 + 文件树" href="/static/zbmp-workbench.html" style="text-decoration:none"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="btn-label">ZBMP 工作台</span></a>
+      <button class="action icon-only tip" id="alertBellBtn" data-tip="舆情预警：高风险/高影响力/上升过快时弹窗通知" onclick="navigateTo('alerts')"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><span class="nav-badge" id="alertBadge" style="display:none">0</span></button>
+      <button class="action primary tip" id="refreshBtn" data-tip="立即更新：手动采集最新数据，每日3次机会，冷却15分钟"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></span><span class="btn-label">采集数据</span></button>
       <button class="action secondary tip" id="rednoteBtn" style="display:none" data-tip="备选采集（rednote/CDP）：通过CDP连接已登录浏览器采集，入口已收至系统设置，计入每日次数"><span class="svgicon">◎</span><span class="btn-label">rednote采集</span></button>
-      <button class="action secondary tip" id="reviewBtn" data-tip="AI分析：复核历史笔记的相关性、情感、风险和摘要"><span class="svgicon">✦</span><span class="btn-label">AI 分析</span></button>
+      <button class="action secondary tip" id="reviewBtn" data-tip="AI分析：复核历史笔记的相关性、情感、风险和摘要"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.7L19 20l-.7-1.8L16.5 17.5l1.8-.7z"/></svg></span><span class="btn-label">AI 分析</span></button>
       <button class="action tertiary tip" id="reportBtn" data-tip="导出报告：进入日报、周报、月报和年报"><span class="svgicon">▣</span><span class="btn-label">导出报告</span></button>
       <!-- AGENTS §7.2 Auth Recovery 徽章（系统内可见；0 时 hidden） -->
-      <span id="ar-badge" class="ar-badge hidden" title="存在需要人工处理的认证恢复任务"><span class="svgicon">🔔</span> <span id="ar-count">0</span></span>
+      <span id="ar-badge" class="ar-badge hidden" title="存在需要人工处理的认证恢复任务"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> <span id="ar-count">0</span></span>
     </div>
   </header>
 
@@ -722,6 +722,11 @@
           </div>
           <div id="templateMatchResults" style="margin-top:10px"></div>
         </div>
+        <div style="display:flex;gap:8px;margin:8px 0;align-items:center;flex-wrap:wrap">
+          <button class="action primary" onclick="CaseDeepAnalysis.enhanceSearch()" style="white-space:nowrap">⚡ 增强搜索</button>
+          <span style="font-size:11px;color:var(--muted)">用当前关键词搜外部商业案例/舆情处置资料（search-std · 消耗1次额度 · 带来源）</span>
+        </div>
+        <div id="caseEnhanceResults" style="margin-bottom:10px"></div>
         <div class="case-list-grid" id="caseAnalysisList"></div>
       </section>
 

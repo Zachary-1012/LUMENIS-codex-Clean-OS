@@ -482,6 +482,43 @@ const CaseDeepAnalysis = {
     /**
      * 重置筛选
      */
+    /**
+     * 增强搜索（search-std）：用当前关键词搜外部商业案例/舆情资料，展示带来源结果
+     */
+    async enhanceSearch() {
+        const box = document.getElementById('caseEnhanceResults');
+        if (!box) return;
+        const input = document.getElementById('caseAnalysisSearch');
+        const kw = (input ? input.value : '').trim();
+        if (!kw) { box.innerHTML = '<div style="font-size:12px;color:var(--muted)">请先在搜索框输入关键词（如：商业地产 舆情危机 公关 案例）</div>'; return; }
+        box.innerHTML = '<div style="font-size:12px;color:var(--muted)">增强搜索中…（search-std · 消耗1次额度）</div>';
+        try {
+            const r = await fetch('/api/search/enhance', {
+                method: 'POST',
+                headers: { 'Authorization': window.__Z_AUTH || '', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: kw, max_results: 5 })
+            });
+            const d = await r.json();
+            if (!d.ok) { box.innerHTML = '<div style="font-size:12px;color:#c0392b">增强搜索失败: ' + (d.error || '') + '</div>'; return; }
+            let html = '<div style="border:1px solid var(--border,#eee);border-radius:8px;padding:10px;background:var(--surface,#fff)">';
+            html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px">⚡ 外部增强结果（search-std）</div>';
+            if (d.summary) html += '<div style="font-size:12px;color:#333;margin-bottom:6px"><b>综合摘要：</b>' + d.summary + '</div>';
+            if (d.results && d.results.length) {
+                d.results.forEach((r2, i) => {
+                    html += '<div style="font-size:12px;border-top:1px solid #f0f0f0;padding:6px 0"><b>' + (i + 1) + '. ' + r2.title + '</b><br>'
+                        + '<span style="color:#555">' + (r2.content || '').substring(0, 120) + '</span><br>'
+                        + '<span style="color:var(--muted)">来源: ' + (r2.source || '') + (r2.url ? ' · <a href="' + r2.url + '" target="_blank" rel="noopener">链接</a>' : '') + '</span></div>';
+                });
+            } else {
+                html += '<div style="font-size:12px;color:var(--muted)">无外部结果</div>';
+            }
+            html += '</div>';
+            box.innerHTML = html;
+        } catch (e) {
+            box.innerHTML = '<div style="font-size:12px;color:#c0392b">请求失败: ' + (e.message || e) + '</div>';
+        }
+    },
+
     resetFilters() {
         this.state.filterType = '';
         this.state.filterIndustry = '';
