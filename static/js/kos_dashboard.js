@@ -500,6 +500,7 @@
       loadKosList("");
       loadKosFunnel();
       loadKosCost();
+      ensureKosPanel("kosHealthPanel", "高 / 低产出 KOS 健康画像");
       loadKosKoc();
       loadKosRoi();
       loadKosLifecycle();
