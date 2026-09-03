@@ -1,3 +1,17 @@
+## 2026-09-03｜AI资源包「按次需求执行」端到端验证通过（真实扣减）
+> 目标：确认 topbar ⚡ 面板的按次执行功能真实可用（输入需求→消耗1次→AI执行→返回结果）
+
+**验证过程（全部真实）**：
+1. 智谱连通性：glm-4.5-air 0.5s / glm-5.3 3.2s 均返回 OK（provider=zhipu，key 有效）
+2. 真实端到端调用生产 POST /api/ai-resource-packs/per-call-execute：
+   - 请求：{"request":"请用一句话介绍Z-Brand Intelligence Platform的定位","model":"glm-4.5-air"}
+   - 结果：ok=true, provider=zhipu, result="Z-Brand Intelligence Platform：品牌智能决策助手。", 0.7s
+   - 额度：per_call 已用 2 → 3（真实扣减 1 次），剩余 17 次
+3. 浏览器真实打开 ⚡ AI资源包面板（380x543）：连接状态运行中/GLM-4.5-Air剩余11915296/GLM-4.6V剩余6000000/按次剩余17次/Search-STD 100次，渲染正常
+4. 前端 per-call UI 结构确认：aiPackRequestInput 输入框 + executePerCallRequest() 执行按钮 + aiPackResult 结果区，调用链完整
+**结论**：「按次需求执行」功能已完整可用（后端额度检查+预留学习保护+智谱调用+扣减+前端输入/执行/结果展示全通），无需代码改动
+**注意**：本次验证真实消耗 1 次按次额度（2→3/20）；per_call 默认模型 glm-5.3（旗舰），前端不传 model 时走默认；glm-5.3 已验证连通
+
 ## 2026-09-03｜修复 GAP-21 Cookie 测试污染生产数据 + raw API 加固（真实性校验/apply 开关/数据隔离）
 > 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
 
