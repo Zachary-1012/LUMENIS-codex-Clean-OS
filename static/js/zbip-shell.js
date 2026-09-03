@@ -246,7 +246,7 @@
         chip('event', SVG.sparkle, '最新事件') +
         chip('report', SVG.gear, '生成日报') +
         '</div>' +
-        '<div class="zb-home-sub">Z-Brand Core · CTH-POMS 生产工作区 · 数据来自本地采集与分析管线</div>' +
+        '<div class="zb-home-sub">序境 · CTH-POMS 生产工作区 · 数据来自本地采集与分析管线</div>' +
         '</div>';
       content.insertBefore(home, content.firstChild);
       requestAnimationFrame(function () { if (!userNavigated) home.classList.add('show'); });
