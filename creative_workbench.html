@@ -178,7 +178,16 @@
              '<span class="mech">'+esc(x.mechanism)+'</span><span class="badge">'+esc(x.circle)+'</span>' +
              '<div class="why">'+esc(x.why)+'</div>' +
              '<div class="tags">⏱ '+esc(x.timeliness)+'</div>' +
-             '<div class="tags">📣 '+esc(x.virality)+'</div></div>';
+             '<div class="tags">📣 '+esc(x.virality)+'</div>' +
+             (x.provenance ? '<details style="margin-top:6px;font-size:12px;color:#374151"><summary style="cursor:pointer;min-height:32px;display:list-item;color:#059669;font-weight:600">🔍 溯源 / 证据链（芥子→须弥）</summary>'
+               +'<div style="margin-top:6px;line-height:1.6;background:#FBFDFC;border-left:3px solid #059669;padding:6px 8px;border-radius:4px">'
+               +'<div><b>芥子·真实信号：</b>'+esc(x.provenance.seed_signal)+'</div>'
+               +'<div><b>须弥·L1公式：</b>'+esc(x.provenance.parent_L1_formula)+' ｜ 调性：'+esc(x.provenance.parent_L2_tone)+'</div>'
+               +'<div><b>证据强度：</b>'+esc(x.provenance.evidence_level)+' ｜ 置信度：'+esc(x.provenance.confidence)+' ｜ <b>性质：</b>'+esc(x.provenance.causal_type)+'</div>'
+               +'<div style="color:#B45309"><b>反例校验：</b>'+esc(x.provenance.counter_example_check)+'</div>'
+               +'<div style="color:#6B7280;font-size:11px">'+esc(x.provenance.trace)+'</div>'
+               +'</div></details>' : '') +
+             '</div>';
       });
       show(h);
     }).catch(e=>showErr(e));

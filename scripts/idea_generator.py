@@ -60,6 +60,46 @@ MECHANISMS = {
     "culture": {"name": "文化共识", "desc": "借势已有文化共识/梗自然绑定（玩梗球星/Oreo Cows）"},
 }
 
+# L1 公式归属（芥子→须弥 抽象层）：机制 → 所属可复用公式
+MECH_TO_L1 = {
+    "eventify": "事件化体验公式（造事-造势-造市）",
+    "participate": "参与式传播公式（用户即媒介）",
+    "symbolize": "符号化记忆公式（可复制图腾）",
+    "reverse": "反差断言公式（反常识破圈）",
+    "cocreate": "UGC 共创飞轮公式",
+    "culture": "文化共识借势公式",
+}
+
+
+def _provenance(topic, sentiment, mech, tonality, circle, signals):
+    """上下文指纹（采纳 glm-4.7 第二意见 P0）：每个 idea 可追溯到真实信号与抽象层。
+
+    - seed_signal：芥子（来源真实信号，无 DB 时如实标注为示例，不伪造）；
+    - parent_L1 / parent_L2_tone：须弥（所属公式与调性坐标），禁止孤立 L0；
+    - causal_type：诚实区分「相关性」与「因果性」（平台机制多为相关，防算法变迁失效）；
+    - evidence_level：single_case(孤例) < repeated(复现 N>=10) < validated(含反例校验)，
+      数据不足时如实标 single_case，绝不虚高；
+    - counter_example_check：负样本/反事实校验状态（P2 能力，先留接口，未做即 pending）。
+    """
+    n_notes = int(signals.get("volume_notes", 0) or 0)
+    has_db = bool(signals.get("keyword")) and n_notes > 0
+    evidence_level = "repeated" if n_notes >= 10 else ("single_case" if n_notes > 0 else "assumption")
+    # 置信度：有真实数据且样本越多越高；无数据仅为结构化假设，封顶 0.4（不假装确定）
+    confidence = round(min(0.4 + min(n_notes, 50) / 100.0, 0.9), 2) if has_db else 0.35
+    return {
+        "seed_signal": ("ZBC 真实信号：主题「%s」、情绪=%s、样本笔记=%d、风险事件=%d"
+                        % (topic, sentiment, n_notes, int(signals.get("risk_events", 0) or 0)))
+                       if has_db else "结构化假设：未接入 ZBC 真实样本（keyword/DB 缺失），信号为占位，需真实数据回填",
+        "parent_L1_formula": MECH_TO_L1.get(mech, "未归类公式"),
+        "parent_L2_tone": TONALITIES.get(tonality, TONALITIES["premium"])["name"],
+        "parent_circle": circle,
+        "causal_type": "相关性（平台/人群偏好，算法或人群变化需复核，非因果机制）",
+        "evidence_level": evidence_level,
+        "confidence": confidence,
+        "counter_example_check": "pending（负样本库为 P2 能力，晋升 L1 前须补 3 个反例，当前未校验）",
+        "trace": "芥子(真实信号) → 须弥(机制抽象/L1公式) → idea(再生产) → FEEDBACK 回流",
+    }
+
 
 def signals_from_db(db_path, keyword, circle="都市职场", hotspot=""):
     """从 ZBC 舆情数据提取创意信号（主题词/情绪/风险），叠加圈层与热点时效。"""
@@ -152,9 +192,12 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium"):
             "timeliness": hotspot_bind,
             "touchpoints": ["内容种草", "圈层互动", "线下体验", "私域沉淀"],
             "virality": "参与机制让用户拉用户（互动即传播）+ 符号可复制（remix/梗/打卡）",
+            "provenance": _provenance(topic, sentiment, m, tonality, circle, signals),
         })
     return {"meta": {"brand": brand, "category": category, "signals": signals,
-                     "tonality": tone}, "ideas": ideas}
+                     "tonality": tone,
+                     "framework": "Seed-Sumeru×Taiji：芥子(真实信号)→须弥(机制抽象)→Contract→再生产；形可变道不可移"},
+            "ideas": ideas}
 
 
 def main():
