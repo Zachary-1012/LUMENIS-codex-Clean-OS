@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zbc://podcast/contracts/v1",
+  "title": "ZBC Podcast Intelligence Contract v1",
+  "type": "object",
+  "required": ["entity_type", "entity_id", "source", "observed_at", "evidence_status"],
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "enum": ["show", "episode", "person", "transcript", "segment", "story_node", "question", "topic", "content_asset", "platform_observation", "audience_signal", "ai_run"]
+    },
+    "entity_id": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "required": ["type", "locator"],
+      "properties": {
+        "type": {"type": "string", "enum": ["rss", "platform", "audio", "video", "transcript", "manual", "github_research"]},
+        "locator": {"type": "string"},
+        "platform": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "observed_at": {"type": "string", "format": "date-time"},
+    "evidence_status": {"type": "string", "enum": ["observed", "derived", "ai_suggested", "human_verified", "unverified"]},
+    "runtime_seconds": {"type": ["number", "null"], "minimum": 0},
+    "published_at": {"type": ["string", "null"], "format": "date-time"},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {"type": ["number", "string", "null"]}
+    },
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["relation", "target_id"],
+        "properties": {
+          "relation": {"type": "string"},
+          "target_id": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": true
+}
