@@ -176,7 +176,7 @@
           rowBtn('key', 'ZBMP 访问密钥', '签发 / 查看 / 吊销工作区 API Key', 'openKeys') +
           rowStatic('shield', '安全与登录', '会话 12 小时工作区授权', '<span class="rv">' + I.chev + '</span>')) +
         group('关于',
-          rowStatic('info', '版本', 'Z-Brand Core v5.9.9 · ZBMP Workbench v1.0（Staging）', '') +
+          rowStatic('info', '版本', '序境 v5.9.9 · ZBMP Workbench v1.0（Staging）', '') +
           '<button class="zb-row" id="zbExitWs" type="button"><span class="ri">' + I.grid + '</span><span class="rt"><b>返回 CTH-POMS 工作区</b></span><span class="chev">' + I.chev + '</span></button>') +
         '</div></div>';
       bindBack();
