@@ -32,6 +32,15 @@ CIRCLE_SYMBOLS = {
                 "examples": "小方同学卯发：卯时新生"},
     "粉丝经济": {"lang": "应援/共创/身份认同", "symbols": ["应援色", "舞台", "pick", "打call"],
                 "examples": "Uva Uva Bombón：Bad Bunny 唱名即解锁"},
+    "高奢小众": {"lang": "克制/稀缺/工艺/安静奢华", "symbols": ["限量", "稀缺", "手作", "仪式感", "私密"],
+                 "examples": "Hermès 计算型稀缺 / Goyard 不广告不代言 / Ffern 四季限量"},
+}
+
+# 调性（影响创意气质与机制）：大众狂欢 vs 中端种草 vs 高奢克制
+TONALITIES = {
+    "mass": {"name": "大众", "style": "狂欢放大、参与机制、玩梗破圈"},
+    "premium": {"name": "中高端", "style": "场景种草、质感叙事、圈层认同"},
+    "luxury": {"name": "高奢", "style": "克制叙事、稀缺仪式、工艺故事、不参与流量狂欢"},
 }
 
 # ---- 情绪基调 → 创意风格 ----
@@ -71,10 +80,20 @@ def signals_from_db(db_path, keyword, circle="都市职场", hotspot=""):
     }
 
 
-def _slogan(brand, topic, mechanism, circle):
-    """符号化口号构造：机制 × 主题词 × 圈层语言 → 可记忆口号。"""
+def _slogan(brand, topic, mechanism, circle, tonality="premium"):
+    """符号化口号构造：机制 × 主题词 × 圈层语言 × 调性 → 可记忆口号。"""
     cs = CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])
     lang = cs["lang"]
+    # 高奢调性：克制叙事，不玩梗不狂欢
+    if tonality == "luxury":
+        return {
+            "eventify": "「%s·%s季」——一年只做一次的事，值得等" % (brand, topic),
+            "participate": "「%s邀请函」——不公开、不喧哗，只为懂的人" % (brand,),
+            "symbolize": "「%s，%s」——%s，本身就是%s" % (brand, topic, topic, "稀缺"),
+            "reverse": "「我们不上热搜」——%s，把时间留给%s" % (brand, topic),
+            "cocreate": "「%s×%s」——%s由藏家与匠人共同定义" % (brand, topic, topic),
+            "culture": "「%s：%s」——%s的%sg，不追赶" % (brand, topic, circle.split("/")[0], topic),
+        }.get(mechanism, "「%s，%s」" % (brand, topic))
     if mechanism == "symbolize":
         return "「%s%s」——%s，%s的人都在%s" % (brand, topic, topic, circle.split("/")[0], topic)
     if mechanism == "eventify":
@@ -88,17 +107,20 @@ def _slogan(brand, topic, mechanism, circle):
     return "「%s×%s」——%s，%s" % (brand, topic, lang.split("/")[0], topic)
 
 
-def generate_ideas(brand, category, signals, n=3):
-    """生成 n 个原创创意 idea（数据信号 × 机制 × 圈层符号）。"""
+def generate_ideas(brand, category, signals, n=3, tonality="premium"):
+    """生成 n 个原创创意 idea（数据信号 × 机制 × 圈层符号 × 调性）。"""
     topics = signals.get("topics", []) or ["#趋势词#"]
     sentiment = signals.get("sentiment", "neutral")
     circle = signals.get("circle", "都市职场")
     hotspot = signals.get("hotspot", "")
     style = EMOTION_STYLES.get(sentiment, EMOTION_STYLES["neutral"])
     cs = CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])
+    tone = TONALITIES.get(tonality, TONALITIES["premium"])["name"]
 
-    # 机制选择：负面→先诚实解决；正面→狂欢/共创；中性→认知/参与
-    if sentiment == "negative":
+    # 机制选择：负面→先诚实解决；正面→狂欢/共创；中性→认知/参与；高奢→克制/稀缺/工艺
+    if tonality == "luxury":
+        mech_order = ["symbolize", "reverse", "culture", "eventify"]
+    elif sentiment == "negative":
         mech_order = ["reverse", "cocreate", "eventify"]
     elif sentiment == "positive":
         mech_order = ["eventify", "participate", "cocreate"]
@@ -114,22 +136,25 @@ def generate_ideas(brand, category, signals, n=3):
         if key in used:
             topic = topic + "新解"
         used.add(key)
-        slogan = _slogan(brand, topic, m, circle)
+        slogan = _slogan(brand, topic, m, circle, tonality)
         hotspot_bind = ("绑定热点「%s」，踩准文化时机（Cultural Timing）" % hotspot) if hotspot else \
-            "择机踩文化时机（趋势/节日/赛事），时效是传播第一变量"
+            ("克制不追热点（高奢调性：稀缺与工艺即传播，不参与流量狂欢）" if tonality == "luxury"
+             else "择机踩文化时机（趋势/节日/赛事），时效是传播第一变量")
         ideas.append({
             "big_idea": slogan,
             "mechanism": MECHANISMS[m]["name"],
             "concept": "%s——%s" % (MECHANISMS[m]["desc"], slogan),
-            "why": "数据信号：主题「%s」+ 情绪基调「%s」→ %s；圈层「%s」用%s沟通。" % (
-                topic, sentiment, style, circle, cs["lang"]),
+            "why": "数据信号：主题「%s」+ 情绪基调「%s」→ %s；调性「%s」；圈层「%s」用%s沟通。" % (
+                topic, sentiment, style, tone, circle, cs["lang"]),
             "circle": circle,
             "circle_symbols": cs["symbols"],
+            "tonality": tone,
             "timeliness": hotspot_bind,
             "touchpoints": ["内容种草", "圈层互动", "线下体验", "私域沉淀"],
             "virality": "参与机制让用户拉用户（互动即传播）+ 符号可复制（remix/梗/打卡）",
         })
-    return {"meta": {"brand": brand, "category": category, "signals": signals}, "ideas": ideas}
+    return {"meta": {"brand": brand, "category": category, "signals": signals,
+                     "tonality": tone}, "ideas": ideas}
 
 
 def main():
@@ -140,6 +165,7 @@ def main():
     ap.add_argument("--keyword", default="", help="ZBC 舆情关键词(从 DB 提信号)")
     ap.add_argument("--db", default="data/monitor.db")
     ap.add_argument("--circle", default="都市职场", choices=list(CIRCLE_SYMBOLS.keys()))
+    ap.add_argument("--tonality", default="premium", choices=list(TONALITIES.keys()))
     ap.add_argument("--hotspot", default="", help="时效热点(如 世界杯/618/春节)")
     ap.add_argument("--n", type=int, default=3)
     a = ap.parse_args()
@@ -148,7 +174,7 @@ def main():
     else:
         s = {"topics": [], "sentiment": "neutral", "negative_rate": 0.0,
              "risk_events": 0, "circle": a.circle, "hotspot": a.hotspot, "volume_notes": 0}
-    r = generate_ideas(a.brand, a.category, s, a.n)
+    r = generate_ideas(a.brand, a.category, s, a.n, a.tonality)
     print(json.dumps(r, ensure_ascii=False, indent=2))
 
 

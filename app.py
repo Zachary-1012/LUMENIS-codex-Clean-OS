@@ -414,6 +414,60 @@ def event_graph_add_relation():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/api/creative/ideas', methods=['POST'])
+def creative_ideas():
+    """创意卡生成：输入品牌/品类/圈层/热点/调性(可选关键词从DB提信号)→ 原创创意方向。"""
+    try:
+        from scripts.idea_generator import generate_ideas, signals_from_db
+        data = request.get_json() or {}
+        brand = data.get('brand', '')
+        category = data.get('category', '通用')
+        circle = data.get('circle', '都市职场')
+        tonality = data.get('tonality', 'premium')
+        hotspot = data.get('hotspot', '')
+        n = min(int(data.get('n', 3)), 5)
+        keyword = data.get('keyword', '')
+        if not brand:
+            return jsonify({'ok': False, 'error': 'brand 不能为空'}), 400
+        if keyword:
+            signals = signals_from_db(data.get('db', 'data/monitor.db'), keyword, circle, hotspot)
+        else:
+            signals = {'topics': data.get('topics', []), 'sentiment': data.get('sentiment', 'neutral'),
+                       'negative_rate': data.get('negative_rate', 0.0), 'risk_events': data.get('risk_events', 0),
+                       'circle': circle, 'hotspot': hotspot, 'volume_notes': data.get('volume_notes', 0)}
+        result = generate_ideas(brand, category, signals, n, tonality)
+        return jsonify({'ok': True, 'data': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/creative/pitch-analyze', methods=['POST'])
+def creative_pitch_analyze():
+    """方案需求拆解：接受 text 或上传文件(multipart file) → 要素提取+对标拆解+创意+方案脉络。"""
+    try:
+        from scripts.pitch_parser import analyze_pitch, analyze_pitch_file
+        try:
+            data = request.get_json(silent=True) or {}
+        except Exception:
+            data = {}
+        text = data.get('text', '')
+        brand_hint = data.get('brand', '')
+        hotspot = data.get('hotspot', '')
+        n = min(int(data.get('n', 3)), 5)
+        file = request.files.get('file') if hasattr(request, 'files') else None
+        if file and file.filename:
+            import os, tempfile
+            tmp = os.path.join(tempfile.gettempdir(), 'pitch_%s' % file.filename)
+            file.save(tmp)
+            result = analyze_pitch_file(tmp, brand_hint, n, hotspot)
+            os.remove(tmp)
+        elif text.strip():
+            result = analyze_pitch(text, brand_hint, n, hotspot)
+        else:
+            return jsonify({'ok': False, 'error': '需要 text 或上传文件'}), 400
+        return jsonify({'ok': True, 'data': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/api/event-graph/import', methods=['POST'])
 def event_graph_import_existing():
     """从现有events表导入事件"""
