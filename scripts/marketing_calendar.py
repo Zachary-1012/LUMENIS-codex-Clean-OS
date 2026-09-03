@@ -336,6 +336,13 @@ def suggest_hotspot(date_str, category=""):
             "tonality_advice": advice}
 
 
+def yearly_summary():
+    """全年营销节点概览（芥子→须弥聚合）：节点总数/每月分布/垂直行业数。"""
+    total = sum(len(v) for v in _NODES.values())
+    monthly = {m: len(v) for m, v in _NODES.items()}
+    return {"total_nodes": total, "monthly": monthly, "industries": len(_V_NODES)}
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser(description="营销节点日历与品类适配")
