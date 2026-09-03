@@ -47,6 +47,19 @@ Research
 → Release
 ```
 
+## Parent / Child Product Architecture
+
+```text
+ZBP = eventual parent system
+CTH = child system/domain + current first development/validation environment
+```
+
+CTH-first development is intentional: implement and stabilize capabilities in CTH first, then absorb proven capabilities into ZBP through audited contracts/adapters/extraction. Final capability ownership is determined by dependency, reuse, data authority, runtime importance, business coverage, stability and measured benefit—not naming alone.
+
+## Architecture Evolution Gate
+
+Architecture is allowed to change when the replacement is demonstrably better in correctness, stability, performance, maintainability, reuse, security or interaction quality. No rewrite-by-fashion. Stable collection and authoritative subject filtering must not be weakened merely for modernization.
+
 ## Rename / Migration Gate
 
 任何 Canonical Rename / Migration 必须按以下顺序执行：
@@ -65,15 +78,11 @@ Inventory
 → Legacy Mapping
 ```
 
-不得因为品牌候选出现而进行未经依赖分析的全局替换。旧名称如因 Git 历史、不可变标识、兼容性或审计需要保留，必须明确标记为 `LEGACY`。
-
 ## Product / System Naming Standard
 
 生产产品的中文 Canonical 名称为 **序境**，韩文标准表达为 **서경**，英文 Canonical Brand 暂为 **TBD**。
 
 不要使用 `Core` 作为中文正式产品名称。`Z-Brand-Core` 仅为现有 GitHub Repository identifier，不等同于中文产品品牌。
-
-涉及产品、子系统、模块、页面、功能、数据、API、Runtime、文件、类和函数的命名，应映射到 Canonical Registry；技术标识与品牌名称必须分层管理。
 
 ## Core Responsibilities
 
@@ -90,35 +99,32 @@ Inventory
 
 AI 是生产能力增强层，不得绕过核心规则成为 Production Truth 的最终裁决者。重要 AI 结论必须能够追溯至证据，并记录必要的模型、提示词、输入、输出、置信度、最终结果及人工修正信息。
 
-## Philosophy & Life-Level Research
+## Data Truth
 
 ```text
-Life → Worldview → Philosophy → Brand → Methodology
-→ Ecosystem → Architecture → Product → Experience
-→ Feedback → Evolution ↺
+External Input
+→ Ingestion
+→ Raw / Evidence
+→ Parse
+→ Validate
+→ Normalize
+→ Function / Formula
+→ Canonical Dataset / Table
+→ Metric / Time Window
+→ View Model
+→ Visualization
+→ UI / Report / Export
 ```
 
-`Living System`、`Living Intelligence`、`Embedded Wholeness`、`Relational Becoming` 属于研究语义/概念层，不自动构成当前生产功能或 Canonical 产品名称。
+Business metrics are calculated once. Table is the numerical truth surface; charts, UI, reports and exports consume canonical outputs and must not independently recalculate business metrics.
 
-## Data & Reporting
+## UI / Interaction
 
 ```text
-Source → Collection → Raw → Normalize → Analyze → Evidence → Insight → Report
+Shell → Workspace → Product / Domain → Module → Page → Section → Component → Window / Action
 ```
 
-标准报告骨架：
-
-```text
-Executive Summary
-→ Key Findings
-→ Event / Issue
-→ Impact
-→ Risk
-→ Evidence
-→ Trend
-→ Recommendation
-→ Appendix / Data
-```
+Window and route state preserve parent context, target, child context and return context. Dynamic interaction and visualization follow the same hierarchy.
 
 ## File Governance
 
@@ -139,17 +145,30 @@ Executive Summary
 
 资产状态统一使用：`KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE`。
 
-删除或迁移前必须完成 Reference / Dependency / Runtime 验证。历史资产若具有证据或审计价值，应归档而不是直接删除。
+**Obsolete, conflicting, superseded or duplicated active rules/files MUST be removed after Reference / Dependency / Runtime verification, migration and regression tests.** Historical assets with audit/evidence value may remain only as explicitly marked `LEGACY` or `ARCHIVE` and must not participate in active implementation.
+
+## Philosophy & Life-Level Research
+
+```text
+Life → Worldview → Philosophy → Brand → Methodology
+→ Ecosystem → Architecture → Product → Experience
+→ Feedback → Evolution ↺
+```
+
+`Living System`、`Living Intelligence`、`Embedded Wholeness`、`Relational Becoming` 属于研究语义/概念层，不自动构成当前生产功能或 Canonical 产品名称。
 
 ## Current Principle
 
-- 架构保持稳定
-- 不建立第三核心库
-- 不重复建设已有 Core 能力
-- Research 不直接写入 Production Truth
-- AI 不替代确定性安全规则
-- 不把未来生命层构想写成当前已实现能力
-- 不因英文品牌研究提前修改仓库或生产架构
-- 所有 Canonical 命名变更遵循治理 Gate
+- ZBP is the eventual parent; CTH is the child and current first implementation/validation environment.
+- CTH capabilities are developed, stabilized and audited first; proven capabilities may later be absorbed into ZBP.
+- Architecture may improve when evidence proves the replacement is better.
+- No third core repository.
+- No duplicate construction of proven core capabilities.
+- Research does not directly write Production Truth.
+- AI does not replace deterministic safety rules or human decision gates.
+- No future concept is presented as an implemented production capability.
+- Canonical naming changes follow governance gates.
+- Every new research update carries forward the cumulative baseline.
+- Obsolete/conflicting active rules and files are deleted after safe migration and regression verification.
 
-**Status: Active · Production Truth · Governed by Canonical Naming & Twin Repository Synchronization**
+**Status: Active · Production Truth · Governed by Canonical Naming, Cumulative Architecture Baseline & Twin Repository Synchronization**
