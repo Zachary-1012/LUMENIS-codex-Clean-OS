@@ -531,6 +531,8 @@ def _run_search(keyword,max_scroll=6):
     env=os.environ.copy()
     # 双子星库 Contract：传 select_account() 选择的身份对应 Cookie 文件（Node 进程读取一致）
     env['XHS_COOKIE_FILE'] = _effective_cookie_file()
+    # 搜索优先复用当前身份的常驻 CDP（大陆9222/香港9223，已登录保活）；JS 侧 CDP 不可达会自动回退 headless+cookie
+    env['XHS_CDP_URL'] = cdp_url_for()
     cmd=[_NODE_BIN,SEARCH_JS,'--keyword',keyword,'--output',out,'--max-scroll',str(effective_scroll)]
     try:
         # 使用Popen+轮询，避免Flask线程中subprocess阻塞

@@ -935,6 +935,39 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - 恢复触发后任务真实执行但：collection_logs#613 `page.goto Timeout 45000ms`、#614 `NETWORK_ERROR/EMPTY_NO_API`。
 - 只读 CDP(9222) 诊断（不开代理、不点击）：搜索页 `status=200 / domcontentloaded 4.1s / title=广州太古汇-小红书搜索 / 无验证滑块 / 无登录遮罩`，但 `bodyLen=18、note-item=0`——**网络层通畅、不依赖 VPN**；页面框架到达而搜索数据 XHR 未渲染/未拦截。结合手动 domcontentloaded 仅 4.1s，判生产 goto 疑用 networkidle/load 等待策略，撞上小红书搜索页长连接导致 45s 超时；EMPTY_NO_API 为搜索 XHR（sns/web/v1/search/notes）未捕获。下一批修：goto 等待策略改 domcontentloaded+主动等待搜索 XHR/结果选择器、排查搜索接口签名与拦截时序。
 
+---
+
+## 第十四批（2026-09-03）：采集执行层修复——搜索改走已登录常驻 CDP，根治 goto 超时 / EMPTY_NO_API
+
+### 真实根因（比第十三批预判更深，已坐实）
+- 第十三批曾预判是"goto 等待策略撞上长连接"。逐层读穿生产链路后修正：生产搜索 `xhs_cookie_bridge._run_search` 用 Popen 跑 Node 脚本 `xhs_cookie_search.js`，而该脚本**每次 `chromium.launchPersistentContext` 冷启动一个全新 headless 浏览器 + 注入 cookie 文件获得会话，根本没有连接已登录保活的常驻 CDP（大陆 9222 / 香港 9223）**。于是"系统内登录保活显示在线、搜索子进程却没有有效会话"两条路径割裂：
+  1. 全新 headless 冷启动慢、独立指纹易被风控 → `page.goto` 45s 超时（collection_logs #613）；
+  2. 独立 headless 的搜索 XHR `/api/sns/web/v1/search/notes` 在反自动化下根本未发出（apiCalls=0）→ EMPTY_NO_API（#614）。
+- 对照实验（同一时刻、同一 9222，只读不操作账号）：Python `connect_over_cdp(9222)` 复用已登录会话 → goto 1.2~1.9s、search/notes XHR 200、稳定返回 22 条真实笔记；而 Node 直冷导航 `search_result` 首次 ERR_TIMED_OUT、第二次卡死 150s。进一步对照成熟采集器 `xhs_cdp_collector.collect_human` 既有实践（其注释明确："无 keyword 的 search_result 冷导航易挂起；先稳落 explore 再进搜索"），确认第二个诱因是**冷导航直挂搜索页易挂起，需 explore 预热**。
+- 结论：搜索应复用已登录的常驻浏览器（真实会话/指纹、快、稳、与保活统一），并在进搜索页前先落 explore 预热。功能不依赖 VPN（直连 9222 已实测 1.2s 可达，无 HTTP_PROXY、Edge 启动参数无 --proxy-server）。
+
+### 修复（最小、可逆、旧能力保留为兜底）
+- `xhs_cookie_search.js`：
+  - 新增浏览器后端选择：环境变量 `XHS_CDP_URL` 可达时优先 `chromium.connectOverCDP` 复用常驻浏览器默认 context、开独立 page；连接失败自动回退原 `launchPersistentContext + addCookies` 独立 headless 路径（旧能力不删）。
+  - CDP 模式进搜索页前先 goto `/explore` 预热（domcontentloaded，20s 超时，失败仅告警不中断），对齐 Python CDP 采集实践，解决冷导航挂起。
+  - CDP 模式开启前自愈关闭此前异常残留的 `search_result` 标签页（不触碰 explore 等用户/保活页面）。
+  - 安全清理：CDP 模式只 `page.close()` + `browser.disconnect()`，**绝不关闭常驻浏览器**；独立模式才 `context.close()`。
+  - 正常路径结尾显式 `process.exit(0)`：connectOverCDP 可能残留连接句柄使 Node 事件循环不空、进程不退出（会导致 bridge 按 poll 等进程白等到 30min 超时），写完结果即干净退出。
+- `xhs_cookie_bridge.py`：`_run_search` 子进程 env 增加 `XHS_CDP_URL = cdp_url_for()`（按当前激活身份自动解析大陆 9222 / 香港 9223），+2 行；其余六态判定、熔断、自适应逻辑不变。
+- 备份 xhs_cookie_search.js.bak-cdp（不提交）。未改数据库、未改五条红线、未改任何业务口径。
+
+### 测试与真实结果（已实测）
+- `node --check` 语法 exit0；Python 补丁脚本每处替换均断言唯一匹配。
+- 纯 Node 端到端（Popen 同款方式、XHS_CDP_URL=9222、max-scroll=2）：预热前首次 ERR_TIMED_OUT/二次卡死；加 explore 预热 + process.exit(0) 后 **exit=0、16.2s 干净退出、state=SUCCESS、total=20、api_calls=1、无 blocked/error**，笔记含作者/点赞/发布日期（2026-09-01 等，publish_date 与采集时间分离正确）。
+- 生产函数直调 `xhs_cookie_bridge._run_search('广州太古汇',2)`：**45s 返回 state=SUCCESS、total=20、api_calls=1**，样例"一方五境·广州太古汇十五周年再出发"，主体全部命中广州太古汇、无其他城市同名污染。
+- 红线 canonical 回归：subject_rules.subject_hit 广州太古汇=True、成都太古里=False；reprocess.aggregate_events / risk_engine.build_daily_report 均可调用；本次改动文件仅 xhs_cookie_search.js、xhs_cookie_bridge.py(+2)。
+- 平滑重启 8201（只停 `-u app.py --port 8201` reloader 父子，supervisor 自拉起新 PID 23888），/healthz ok v5.9.9；8200/9222/9223 未动。
+
+### 遗留与下一步（如实登记）
+- 独立 headless 兜底路径的 cookie 文件时效本次未改（仅作 CDP 不可达时兜底）；主路径已切常驻 CDP。
+- 尚未等到下一次 scheduler 自动调度真实入库（60min 冷却主导）；已用生产函数直调等价验证 worker 内部调用链。下一次自动/手动任务后复查 collection_logs 六态与 notes 新增。
+- Node playwright(sandbox_runtime) connectOverCDP 对冷导航较敏感，已用 explore 预热规避；若仍偶发，CDP 不可达会自动回退 headless，不会卡死调度（process.exit 兜底 + bridge 30min 高限）。
+
 
 
 

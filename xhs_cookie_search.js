@@ -75,9 +75,27 @@ async function main() {
   const {keyword,output,maxScroll}=args();
   if (!keyword) throw new Error('--keyword 必填');
   const raw=cookieHeader();
-  const context=await chromium.launchPersistentContext(PROFILE,{headless:true,args:['--disable-blink-features=AutomationControlled']});
-  if (raw) await context.addCookies(parseCookieHeader(raw));
-  const page=context.pages()[0] || await context.newPage();
+  const cdpUrl=process.env.XHS_CDP_URL||'';
+  let browser=null, context=null, page=null, isCdp=false;
+  if (cdpUrl) {
+    try {
+      browser=await chromium.connectOverCDP(cdpUrl,{timeout:12000});
+      context=browser.contexts()[0] || await browser.newContext();
+      // 自愈：关闭此前异常残留的搜索结果 tab（不触碰 explore 等用户/保活页面）
+      for (const op of context.pages()) { try { if (op.url().includes('search_result')) await op.close(); } catch {} }
+      page=await context.newPage();
+      isCdp=true;
+    } catch(e) {
+      process.stderr.write('[xhs-cookie-search] CDP connect fail, fallback headless: '+String(e&&e.message).slice(0,120)+'\n');
+      try{ if(browser) await browser.close(); }catch{}
+      browser=null; context=null; page=null; isCdp=false;
+    }
+  }
+  if(!isCdp){
+    context=await chromium.launchPersistentContext(PROFILE,{headless:true,args:['--disable-blink-features=AutomationControlled']});
+    if (raw) await context.addCookies(parseCookieHeader(raw));
+    page=context.pages()[0] || await context.newPage();
+  }
   const notes=new Map(); let apiCalls=0; let apiErrorCode='', apiErrorMsg='';
   page.on('response', async response=>{
     try {
@@ -95,6 +113,11 @@ async function main() {
       }
     } catch {}
   });
+  // 冷导航预热（对齐 Python CDP 采集实践）：直冷导航 search_result 易挂起，先稳落 explore 再进搜索页
+  if (isCdp) {
+    try { await page.goto('https://www.xiaohongshu.com/explore',{waitUntil:'domcontentloaded',timeout:20000}); await page.waitForTimeout(1500); }
+    catch(e){ process.stderr.write('[xhs-cookie-search] explore warmup fail: '+String(e&&e.message).slice(0,100)+'\n'); }
+  }
   const url=`https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(keyword)}&source=web_explore_feed`;
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForTimeout(3500);
@@ -121,13 +144,18 @@ async function main() {
     else if (notes.size===0) { state='EMPTY'; blockedReason=''; }  // 接口正常返回，确实 0 条
     else { state='SUCCESS'; }
   } catch {}
-  await context.close();
+  // CDP 模式只关闭本任务打开的标签页并断开调试连接，绝不关闭常驻浏览器；独立模式才关闭整个 context
+  try { await page.close(); } catch {}
+  if (isCdp) { try { await browser.disconnect(); } catch {} }
+  else { try { await context.close(); } catch {} }
   const result={keyword,fetched_at:new Date().toISOString(),state,total:notes.size,api_calls:apiCalls,
     error_code:apiErrorCode,error_msg:apiErrorMsg,
     blocked_reason:blockedReason, page_hint:pageHint,
     notes:[...notes.values()]};
   if (output) { fs.mkdirSync(path.dirname(output),{recursive:true}); fs.writeFileSync(output,JSON.stringify(result,null,2),'utf8'); }
   process.stdout.write(JSON.stringify(result));
+  // connectOverCDP 可能残留连接句柄使事件循环不空，写完即干净退出（catch 路径已 process.exit(1)）
+  process.exit(0);
 }
 main().catch(e=>{ // 导航/网络层失败：结构化输出 NETWORK_ERROR，不抛裸异常
   const result={keyword:'',fetched_at:new Date().toISOString(),state:'NETWORK_ERROR',total:0,api_calls:0,
