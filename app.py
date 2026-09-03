@@ -686,6 +686,47 @@ class ProxyPrefixMiddleware:
 app.wsgi_app=ProxyPrefixMiddleware(app.wsgi_app)
 db.init_db()
 
+# ===== GAP-10 报告路由收敛 P0：RFC 8594/9745 弃用信号（纯增量，不改任何业务逻辑，可一键回滚删除本块）=====
+# 行业标准（Stripe/GitHub/Google）：Deprecation(宣布日期, RFC 9745) + Sunset(移除日期, RFC 8594)
+#   + Link(替代端点, rel=successor-version)。仅对已确认的"重复实现"路由打标，
+#   特殊报告/列表/验证/旁路预览绝不误标。当前 Sunset 为占位远期日期，实际退役需用户签字后另定。
+_DEPRECATED_EXACT = {
+    '/api/brand-report/generate',
+    '/api/report/daily',
+    '/api/report/generate',
+    '/api/report/export',
+    '/api/v2/report/export',
+}
+_DEPRECATED_PREFIX = ('/api/brand-report/export/', '/api/reports/')
+_REPORT_SUNSET = 'Wed, 31 Dec 2026 23:59:59 GMT'
+
+def _is_deprecated_report_path(path):
+    if path in _DEPRECATED_EXACT:
+        return True
+    for p in _DEPRECATED_PREFIX:
+        if path.startswith(p):
+            return True
+    # /api/report/v2/<type> 已弃用，但 /api/report/v2/stats 保留
+    if path.startswith('/api/report/v2/') and not path.startswith('/api/report/v2/stats'):
+        return True
+    return False
+
+@app.after_request
+def _report_deprecation_headers(resp):
+    try:
+        path = request.path
+        if _is_deprecated_report_path(path):
+            resp.headers['Deprecation'] = 'Wed, 03 Sep 2026 00:00:00 GMT'
+            resp.headers['Sunset'] = _REPORT_SUNSET
+            resp.headers['X-Deprecated'] = 'true'
+            if path.startswith('/api/brand-report/'):
+                resp.headers['Link'] = '</api/report-center/generate>; rel="successor-version"'
+            elif path.startswith('/api/report/') or path.startswith('/api/v2/report/') or path.startswith('/api/reports/'):
+                resp.headers['Link'] = '</api/report-center/generate>; rel="successor-version"'
+    except Exception:
+        pass  # 绝不因标记失败影响响应
+    return resp
+
 collect_tasks={}; _task_lock=threading.Lock(); _collect_lock=threading.Lock()
 topic_campaign.register_topic_campaign(app, _collect_lock)
 app_evidence.register_app_evidence(app)
