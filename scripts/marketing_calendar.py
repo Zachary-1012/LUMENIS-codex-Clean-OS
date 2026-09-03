@@ -283,6 +283,21 @@ _REGION_NODES = {
         {"name": "Christmas Market 圣诞市集", "month": 12, "theme": "暖冬、礼赠、仪式", "cats": ["礼品", "食品", "家居"]},
         {"name": "Epiphany 主显节", "month": 1, "theme": "新年、礼赠、传统", "cats": ["礼品", "食品"]},
     ],
+    "中东": [
+        {"name": "Ramadan 斋月", "month": 3, "theme": "克制、家庭、夜晚、礼赠", "cats": ["食品", "礼品", "服饰"]},
+        {"name": "Eid al-Fitr 开斋节", "month": 4, "theme": "庆祝、礼赠、团聚", "cats": ["礼品", "食品", "美妆"]},
+        {"name": "National Day (UAE)", "month": 12, "theme": "爱国、庆典、购物季", "cats": ["服饰", "礼品"]},
+    ],
+    "拉美": [
+        {"name": "Carnaval 狂欢节", "month": 2, "theme": "狂欢、色彩、音乐、社群", "cats": ["服饰", "美妆", "餐饮"]},
+        {"name": "Dia de los Muertos 亡灵节", "month": 11, "theme": "记忆、色彩、生命致敬", "cats": ["美妆", "食品", "文化"]},
+        {"name": "Cyber Week 大促周", "month": 11, "theme": "大促、补货、年货", "cats": ["电商", "全品类"]},
+    ],
+    "北美": [
+        {"name": "Canada Day", "month": 7, "theme": "爱国、夏日、庆典", "cats": ["户外", "餐饮"]},
+        {"name": "US Election Year Buzz", "month": 11, "theme": "话题、民调、社会议题", "cats": ["品牌", "媒体"]},
+        {"name": "Sephora/Beauty Restock (惯例)", "month": 11, "theme": "美妆补货、礼赠", "cats": ["美妆"]},
+    ],
 }
 
 

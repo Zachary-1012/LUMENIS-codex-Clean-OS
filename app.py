@@ -479,10 +479,13 @@ def creative_ideas():
             return jsonify({'ok': False, 'error': 'brand 不能为空'}), 400
         if keyword:
             signals = signals_from_db(data.get('db', 'data/monitor.db'), keyword, circle, hotspot)
+            signals['overseas'] = bool(data.get('overseas'))
+            signals['region'] = data.get('region', '')
         else:
             signals = {'topics': data.get('topics', []), 'sentiment': data.get('sentiment', 'neutral'),
                        'negative_rate': data.get('negative_rate', 0.0), 'risk_events': data.get('risk_events', 0),
-                       'circle': circle, 'hotspot': hotspot, 'volume_notes': data.get('volume_notes', 0)}
+                       'circle': circle, 'hotspot': hotspot, 'volume_notes': data.get('volume_notes', 0),
+                       'overseas': bool(data.get('overseas')), 'region': data.get('region', '')}
         result = generate_ideas(brand, category, signals, n, tonality)
         return jsonify({'ok': True, 'data': result})
     except Exception as e:
@@ -668,6 +671,10 @@ def marketing_overview():
                 for n in global_nodes(m):
                     w.writerow([m, n["name"], n.get("date", ""), n.get("kind", ""),
                                 n.get("theme", ""), "、".join(n.get("cats", [])), "海外"])
+                for r in ["东南亚", "欧洲", "中东", "拉美", "北美"]:
+                    for n in region_nodes(r, m):
+                        w.writerow([m, n["name"], "区域节点", "区域", n.get("theme", ""),
+                                    "、".join(n.get("cats", [])), "区域-" + r])
             return Response(buf.getvalue(), mimetype="text/csv; charset=utf-8",
                             headers={"Content-Disposition":
                                      "attachment; filename=marketing_calendar_%s.csv" % month})

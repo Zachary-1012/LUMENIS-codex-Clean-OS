@@ -950,6 +950,7 @@
               <option value="">区域：全部</option>
               <option value="东南亚">东南亚</option><option value="欧洲">欧洲</option>
             </select>
+            <button class="action tertiary" style="padding:6px 10px;font-size:12px" onclick="openMkModal()">📋 节点详情</button>
             <button class="action tertiary" style="padding:6px 10px;font-size:12px" onclick="loadMkMatrix()">🧩 三维矩阵</button>
             <button class="action tertiary" style="padding:6px 10px;font-size:12px" onclick="exportMkCsv()">⬇ 全年排期CSV</button>
           </div>
@@ -1878,6 +1879,27 @@ document.addEventListener('DOMContentLoaded', function(){
       .catch(function(e){ el.textContent='加载失败：'+e; });
   }
   window.loadMk = loadMk;
+  function openMkModal(){
+    fetch('/api/v2/marketing/overview?global=1',{headers:{'Authorization':window.__Z_AUTH||''}})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(!j.ok) throw new Error(j.error||'');
+        var s=['<div style="font-size:13px;line-height:1.9">'];
+        s.push('<b>当月节点</b><br>');
+        (j.month_nodes||[]).forEach(function(n){ s.push('· '+n.name+'（'+n.kind+' '+n.date+'）｜'+n.theme+'<br>'); });
+        if(j.hotspot && j.hotspot.nodes && j.hotspot.nodes.length){ s.push('<br><b>当期绑定</b>：'+j.hotspot.nodes.map(function(n){return n.name;}).join('、')+'｜建议调性 '+(j.hotspot.tonality_advice||'-')+'<br>'); }
+        s.push('<br><b>行业交叉建议</b><br>');
+        var c=j.cross; if(c && c.advice && c.advice.length){ c.advice.forEach(function(a){ s.push('· '+a+'<br>'); }); } else { s.push('· （本月无垂直行业专属节点）<br>'); }
+        s.push('<br><b>海外×节气</b><br>');
+        if(j.global_cross && j.global_cross.advice){ j.global_cross.advice.forEach(function(a){ s.push('· '+a+'<br>'); }); }
+        s.push('<br><b>本月海外节点</b><br>');
+        (j.global_nodes||[]).forEach(function(n){ s.push('· '+n.name+'（'+n.date+'）｜'+n.theme+'<br>'); });
+        s.push('</div>');
+        var mc=document.getElementById('modalContent'); if(mc) mc.innerHTML=s.join('');
+        if(typeof openModal==='function') openModal();
+      })
+      .catch(function(e){ if(typeof toast==='function') toast('节点详情加载失败：'+e); });
+  }
   function loadMkMatrix(){
     var el=document.getElementById('mkMatrixBody');
     if(!el) return;

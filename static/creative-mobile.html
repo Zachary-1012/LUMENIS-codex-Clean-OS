@@ -60,6 +60,14 @@
     </div>
   </div>
   <div id="out"><div class="empty">输入品牌与品类，生成数据驱动的原创创意卡</div></div>
+  <div class="card">
+    <div class="tag">营销日历 · 实时</div>
+    <div id="mkMobile" style="font-size:12px;color:#4B5563;line-height:1.8">加载中…</div>
+    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <button style="flex:1;min-width:88px;padding:8px;border:none;border-radius:10px;background:#EEF0F8;color:#2F3B66;font-size:12px" id="mkMobGlobal">海外节点</button>
+      <button style="flex:1;min-width:88px;padding:8px;border:none;border-radius:10px;background:#EEF0F8;color:#2F3B66;font-size:12px" id="mkMobMatrix">三维矩阵</button>
+    </div>
+  </div>
   <div id="auth"></div>
 <script>
 (function(){
@@ -73,6 +81,35 @@
     else{$('auth').textContent='· 免鉴权 ·';}
   }).catch(function(){});
   function showErr(m){var e=$('err');if(!m){e.style.display='none';return;}e.textContent=m;e.style.display='block';}
+  var mkG=false;
+  function loadMkMob(){
+    var el=$('mkMobile'); if(!el) return;
+    var h={}; if(authHeader)h['Authorization']=authHeader;
+    fetch(BASE+'/api/v2/marketing/overview?global='+(mkG?'1':'0'),{headers:h})
+      .then(function(r){return r.json()})
+      .then(function(j){
+        if(!j.ok){el.textContent='加载失败：'+(j.error||'');return;}
+        var s=[]; s.push('本月：'+(j.month_nodes||[]).map(function(n){return n.name;}).join('、'));
+        if(j.hotspot&&j.hotspot.nodes){s.push('当期：'+j.hotspot.nodes.map(function(n){return n.name;}).join('、')+'｜'+ (j.hotspot.tonality_advice||''));}
+        if(j.global_cross&&j.global_cross.advice){s.push('海外×节气：'+j.global_cross.advice.join('；'));}
+        if(j.global_nodes&&j.global_nodes.length){s.push('海外：'+j.global_nodes.map(function(n){return n.name;}).join('、'));}
+        el.textContent=s.join('\n');
+      }).catch(function(e){el.textContent='加载失败：'+e;});
+  }
+  function loadMkMobMatrix(){
+    var el=$('mkMobile'); if(!el) return;
+    var h={}; if(authHeader)h['Authorization']=authHeader;
+    fetch(BASE+'/api/v2/marketing/overview?matrix=1',{headers:h})
+      .then(function(r){return r.json()})
+      .then(function(j){
+        if(!j.ok){el.textContent='加载失败：'+(j.error||'');return;}
+        var m=j.matrix||[]; el.innerHTML='<div style="font-weight:600;margin-bottom:4px">全年密度（可借力节点数）</div>'+
+          m.map(function(x){return x.month+'月 '+x.density+'：'+[].concat(x.domestic,x.overseas).slice(0,3).join('、')+(x.domestic.length+x.overseas.length>3?'…':'');}).join('<br>');
+      }).catch(function(e){el.textContent='加载失败：'+e;});
+  }
+  $('mkMobGlobal').addEventListener('click',function(){mkG=!mkG;this.style.background=mkG?'#2F3B66':'#EEF0F8';this.style.color=mkG?'#fff':'#2F3B66';loadMkMob();});
+  $('mkMobMatrix').addEventListener('click',loadMkMobMatrix);
+  setTimeout(function(){loadMkMob();},600);
   $('go').addEventListener('click',function(){
     var body={brand:$('brand').value.trim(),category:$('cat').value.trim()||'商业地产',
       circle:$('circle').value,tonality:$('tonality').value,hotspot:$('hotspot').value.trim(),

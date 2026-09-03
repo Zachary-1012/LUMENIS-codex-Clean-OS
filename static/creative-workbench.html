@@ -85,9 +85,13 @@
           <div class="field"><label>数量 (≤5)</label><input id="i_n" type="number" value="3" min="1" max="5"></div>
           <div class="field"><label>主题词（逗号分隔，留空走关键词信号）</label><textarea id="i_topics">方所,15周年,面包</textarea></div>
           <div class="field"><label>DB 关键词（非空则从真实舆情取信号）</label><input id="i_keyword" placeholder="如 太古汇"></div>
+          <div class="field"><label>🌏 出海模式</label>
+            <select id="i_region"><option value="">关闭（国内）</option><option value="东南亚">东南亚</option><option value="欧洲">欧洲</option><option value="中东">中东</option><option value="拉美">拉美</option><option value="北美">北美</option></select>
+          </div>
+          <div class="field" id="i_region_hint" style="display:none;font-size:11px;color:#2F3B66;background:#EEF0F8;border-radius:8px;padding:8px"></div>
         </div>
         <button class="btn" id="b_ideas">生成创意卡</button>
-        <div class="hint">创意卡 = 机制×角度×情感句法（文学/戏剧/高奢克制叙事）×真实信号，反模板化输出。情感手法自动按主题语义收敛。</div>
+        <div class="hint">创意卡 = 机制×角度×情感句法（文学/戏剧/高奢克制叙事）×真实信号，反模板化输出。出海模式自动叠加 TikTok/IG 原生分发与区域节点时机。</div>
       </div>
       <div class="panel output" id="out_ideas"><div class="empty">输入参数后点「生成创意卡」</div></div>
     </div>
@@ -210,18 +214,35 @@
   }
 
   $('b_ideas').addEventListener('click',function(){
+    var region=$('i_region').value;
     var body={brand:$('i_brand').value.trim(),category:$('i_cat').value.trim(),circle:$('i_circle').value,
       tonality:$('i_tonality').value,hotspot:$('i_hot').value.trim(),n:Math.min(Math.max(parseInt($('i_n').value||'3',10),1),5),
       keyword:$('i_keyword').value.trim()};
+    if(region){body.overseas=true;body.region=region;}
     var t=$('i_topics').value.split(/[,，\n]/).map(function(s){return s.trim()}).filter(Boolean);
     if(!body.keyword){body.topics=t; body.sentiment='positive'; body.negative_rate=0.0; body.risk_events=0; body.volume_notes=100;}
     $('out_ideas').innerHTML='<div class="loading">正在从真实信号生成原创创意…</div>';
     post('/api/creative/ideas',body,function(d){
       var ideas=(d&&d.ideas)||[];
       if(!ideas.length){$('out_ideas').innerHTML='<div class="empty">无输出</div>';return;}
-      $('out_ideas').innerHTML='<div class="bar"><h2>创意卡 ×'+ideas.length+'</h2><div class="meta">'+(d.meta?esc(d.meta.framework):'')+'</div></div>'
+      var extra=(region?' <span class="chip" style="background:#2F3B66;color:#fff">🌏 出海·'+esc(region)+'</span>':'');
+      $('out_ideas').innerHTML='<div class="bar"><h2>创意卡 ×'+ideas.length+'</h2><div class="meta">'+(d.meta?esc(d.meta.framework):'')+extra+'</div></div>'
         +'<div class="cards">'+ideas.map(ideasCard).join('')+'</div>';
     });
+  });
+
+  // 出海模式：切换地区时展示该区域当月节点（真实营销日历数据，GET）
+  $('i_region').addEventListener('change',function(){
+    var r=this.value, hint=$('i_region_hint');
+    if(!r){hint.style.display='none';return;}
+    var h={}; if(authHeader)h['Authorization']=authHeader;
+    fetch(BASE+'/api/v2/marketing/overview?region='+encodeURIComponent(r),{headers:h})
+      .then(function(res){return res.json();})
+      .then(function(j){
+        var ns=(j&&j.region_nodes)||[];
+        hint.innerHTML='区域节点：'+(ns.length?ns.map(function(n){return n.name;}).join('、'):'当月无')+'<br>海外策略：TikTok Spark Ads 原生分发 · IG Reels/Stories · KOC 金字塔 · 小店站内闭环';
+        hint.style.display='block';
+      }).catch(function(){hint.style.display='none';});
   });
 
   $('b_video').addEventListener('click',function(){
