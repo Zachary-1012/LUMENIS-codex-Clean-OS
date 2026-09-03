@@ -279,12 +279,12 @@
   font-weight: 400;
   color: var(--splash-text-faint);
   letter-spacing: 2.5px;
-  margin: 0 0 16px 0;
+  margin: 0 0 18px 0;
 }
 .splash-subtitle {
   font-size: 13.5px;
   color: var(--splash-text-sub);
-  margin: 0 0 34px 0;
+  margin: 0 0 36px 0;
   line-height: 1.6;
   font-weight: 400;
   letter-spacing: 0.5px;
@@ -299,7 +299,7 @@
   margin-bottom: 36px;
 }
 .splash-status-card {
-  background: var(--splash-paper-raised);
+  background: #FDFCFA;
   border: 1px solid var(--splash-line);
   border-radius: 14px;
   padding: 18px 20px;
@@ -363,7 +363,7 @@
 }
 .splash-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--splash-silver-deep), var(--splash-text));
+  background: linear-gradient(90deg, var(--splash-line-strong), #57534E);
   border-radius: 2px;
   width: 0%;
   transition: width 0.5s ease;
