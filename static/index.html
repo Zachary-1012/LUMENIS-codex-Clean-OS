@@ -175,25 +175,25 @@
   <span class="splash-skip">点击跳过</span>
   <div class="splash-orbit" aria-hidden="true"></div>
   <div class="splash-content">
-    <div class="splash-philosophy"><span class="ph-line"></span>芥子纳须弥<span class="ph-line"></span></div>
-    <h1 class="splash-title">序境</h1>
+    <div class="splash-philosophy"><span class="ph-line"></span><span data-xujing-i18n="brand.tagline">芥子纳须弥</span><span class="ph-line"></span></div>
+    <h1 class="splash-title" data-xujing-i18n="brand.name">序境</h1>
     <div class="splash-en">XUJING · Z-BRAND INTELLIGENCE PLATFORM</div>
-    <div class="splash-subtitle">CTH-POMS · 实时舆情 · 风险预警 · 智能报告</div>
+    <div class="splash-subtitle" data-xujing-i18n="brand.subtitle">CTH-POMS · 实时舆情 · 风险预警 · 智能报告</div>
     <div class="splash-status-grid">
       <div class="splash-status-card">
         <div class="splash-status-icon ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17.5a7 7 0 0 1 14 0"/><path d="M8.2 17.5a3.8 3.8 0 0 1 7.6 0"/><circle cx="12" cy="17.5" r="1.1" fill="currentColor" stroke="none"/></svg></div>
-        <div class="splash-status-label">采集状态</div>
-        <div class="splash-status-value"><span class="splash-status-dot ok"></span>运行中</div>
+        <div class="splash-status-label" data-xujing-i18n="status.collecting">采集状态</div>
+        <div class="splash-status-value"><span class="splash-status-dot ok"></span><span data-xujing-i18n="status.running">运行中</span></div>
       </div>
       <div class="splash-status-card">
         <div class="splash-status-icon warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.2 20.8 19H3.2 Z"/><line x1="12" y1="10.6" x2="12" y2="14.2"/><circle cx="12" cy="16.6" r="0.7" fill="currentColor" stroke="none"/></svg></div>
-        <div class="splash-status-label">风险预警</div>
-        <div class="splash-status-value"><span class="splash-status-dot warn"></span>监测中</div>
+        <div class="splash-status-label" data-xujing-i18n="status.warning">风险预警</div>
+        <div class="splash-status-value"><span class="splash-status-dot warn"></span><span data-xujing-i18n="status.monitoring">监测中</span></div>
       </div>
       <div class="splash-status-card">
         <div class="splash-status-icon info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7.2" y="7.2" width="9.6" height="9.6" rx="2"/><rect x="10.4" y="10.4" width="3.2" height="3.2" rx="0.6"/><path d="M9.4 7.2V4.6M12 7.2V4.6M14.6 7.2V4.6M9.4 19.4v-2.6M12 19.4v-2.6M14.6 19.4v-2.6M7.2 9.4H4.6M7.2 12H4.6M7.2 14.6H4.6M19.4 9.4h-2.6M19.4 12h-2.6M19.4 14.6h-2.6"/></svg></div>
-        <div class="splash-status-label">AI 引擎</div>
-        <div class="splash-status-value"><span class="splash-status-dot info"></span>就绪</div>
+        <div class="splash-status-label" data-xujing-i18n="status.ai">AI 引擎</div>
+        <div class="splash-status-value"><span class="splash-status-dot info"></span><span data-xujing-i18n="status.ready">就绪</span></div>
       </div>
     </div>
     <div class="splash-progress">
@@ -223,10 +223,18 @@
   <header class="topbar glass">
     <div class="brand">
       <div class="brandmark" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div><h1 id="topbarTitle">序境</h1><p id="topbarSubtitle">小红书舆情监测 · AI辅助分析</p></div>
+      <div><h1 id="topbarTitle" data-xujing-i18n="brand.name">序境</h1><p id="topbarSubtitle">小红书舆情监测 · AI辅助分析</p></div>
     </div>
     <div class="top-center"><div class="system-state"><i></i><span id="systemState">系统运行中</span></div><span class="clock" id="clock">—</span></div>
     <div class="top-actions">
+            <div class="xujing-lang-switch" style="display:inline-flex;align-items:center;gap:2px;margin-right:6px;font-size:12px;">
+        <span data-xujing-i18n="lang.label" style="color:var(--w-ink-3,#8a857d);margin-right:2px;">语言</span>
+        <button data-xujing-lang="zh" class="xujing-lang-btn" style="padding:2px 6px;border:1px solid var(--w-border,#e7e5e4);border-radius:6px;background:transparent;cursor:pointer;color:var(--w-ink,#1c1917);">中</button>
+        <button data-xujing-lang="en" class="xujing-lang-btn" style="padding:2px 6px;border:1px solid var(--w-border,#e7e5e4);border-radius:6px;background:transparent;cursor:pointer;color:var(--w-ink,#1c1917);">EN</button>
+        <button data-xujing-lang="ko" class="xujing-lang-btn" style="padding:2px 6px;border:1px solid var(--w-border,#e7e5e4);border-radius:6px;background:transparent;cursor:pointer;color:var(--w-ink,#1c1917);">한</button>
+        <style>.xujing-lang-active{background:var(--w-accent,#1c1917)!important;color:#fff!important;border-color:var(--w-accent,#1c1917)!important;}</style>
+      </div>
+
       <button class="action icon-only tip" id="commandPaletteBtn" data-tip="搜索页面、功能或操作（Ctrl+K）" onclick="toggleCommandPalette()"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span></button>
       <!-- AI 治理状态：用量/额度/余额可控（数据可控 icon） -->
       <button class="action icon-only tip ai-gov-btn" id="aiGovBtn" data-tip="AI 治理：今日用量/每日额度/余额/脱敏状态" onclick="toggleAiGovPanel()">
@@ -2061,4 +2069,5 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
+<script src="/static/js/xujing-i18n.js"></script>
 </body></html>
