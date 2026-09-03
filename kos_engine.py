@@ -354,9 +354,42 @@ def generate_outreach(author_id: str, brand_name: str = "广州太古汇", campa
 如您感兴趣，欢迎回复与我们沟通具体合作方式。期待与您合作。
 
 {brand_name}品牌团队"""
+    # 智谱 AI 个性化邀约（DRAFT 不发送；失败回退模板）
+    _ai_text = _ai_generate_outreach(name, tier, top_topic, brand_name, campaign_name)
+    _content = _ai_text or template
     return {"ok": True, "status": "DRAFT", "author_id": author_id, "author_name": name,
             "tier": tier, "brand_name": brand_name, "campaign_name": campaign_name,
-            "content": template, "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+            "content": _content, "ai_source": bool(_ai_text),
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+
+def _ai_generate_outreach(name: str, tier: str, top_topic: str,
+                          brand_name: str, campaign_name: str) -> str:
+    """智谱 AI 生成博主触达邀约文案（DRAFT，不发送）。失败/不可用返回空串。
+
+    边界：不承诺未确认的报酬金额；不伪造已发送；官方账号只读红线不受影响。
+    """
+    try:
+        import intelligence
+        if not intelligence.ai_enabled():
+            return ""
+        _sys = (
+            "你是品牌方商务合作负责人，请基于博主信息生成一条个性化、真诚的站内邀约文案（DRAFT，不发送）。"
+            "硬性要求：1) 中文、礼貌、自然；2) 突出合作方向与合作权益，简洁（≤200字）；"
+            "3) 不得承诺未确认的报酬金额、不得虚构合作事实、不得泄露内部信息；"
+            "4) 只输出文案正文，不要解释或前缀。"
+        )
+        _user = (
+            f"博主昵称：{name}\n分层：{tier}\n代表内容：{top_topic}\n"
+            f"品牌：{brand_name}\n活动：{campaign_name or '品牌内容合作'}\n请只输出邀约文案正文："
+        )
+        _content, _provider = intelligence._chat(_sys, _user, temperature=0.4, max_tokens=400)
+        _text = (_content or "").strip()
+        if not _text or _provider == "rule":
+            return ""
+        return _text[:600]
+    except Exception:
+        return ""
 
 
 def ad_candidate_score(note_id: str = "", author_id: str = "") -> dict:
@@ -473,16 +506,52 @@ def generate_reply(comment_text: str, brand_name: str = "广州太古汇",
         "general_interaction": f"感谢您的关注与互动！{brand_name}期待与您有更多交流。",
     }
 
+    # 智谱 AI 生成建议（仅建议，不自动回复；HIGH/CRITICAL 已在上方 NO_REPLY 拦截）。
+    # 分层：negative_feedback / purchase_intent 走强模型 ZHIPU_STRONG_MODEL（glm-5.3），其余默认 glm-4.5-air。
+    _ai_reply = _ai_generate_reply(comment_text, brand_name, category, reply_style)
+    _suggested = _ai_reply or templates.get(category, templates["general_interaction"])
+
     return {
         "ok": True,
         "action": "SUGGEST_REPLY",
         "category": category,
         "risk_level": risk_level,
         "reply_style": reply_style,
-        "suggested_reply": templates.get(category, templates["general_interaction"]),
+        "suggested_reply": _suggested,
+        "ai_source": bool(_ai_reply),
         "auto_reply": False,  # 默认不自动回复，需人工确认
         "requires_approval": category in ("negative_feedback", "purchase_intent"),
     }
+
+
+def _ai_generate_reply(comment_text: str, brand_name: str, category: str, reply_style: str) -> str:
+    """智谱 AI 生成评论回复建议（DRAFT）。失败/不可用时返回空串，调用方回退规则模板。
+
+    边界：只生成建议文本，不发送；不虚构事实、不承诺未确认权益；官方账号只读红线不受影响。
+    """
+    try:
+        import intelligence
+        if not intelligence.ai_enabled():
+            return ""
+        # 分层：负面/购买意向等需谨慎的复杂分类走强模型 glm-5.3，其余默认 glm-4.5-air
+        _strong = category in ("negative_feedback", "purchase_intent")
+        _model = intelligence._strong_model() if _strong else None
+        _sys = (
+            "你是品牌方专业客服，请基于用户评论生成一条自然、真诚、专业的中文回复建议。"
+            "硬性要求：1) 简洁（≤80字）一句话即可；2) 有针对性，贴合评论内容；"
+            "3) 不得虚构事实、不得承诺未经确认的优惠/权益/赔偿、不得泄露内部信息；"
+            "4) 只输出回复正文，不要任何解释或前缀。"
+            f"品牌：{brand_name}。回复风格：{reply_style}。评论分类：{category}。"
+        )
+        _user = f"用户评论：{comment_text[:300]}\n请只输出回复建议正文："
+        _content, _provider = intelligence._chat(_sys, _user, temperature=0.3, max_tokens=300, model=_model)
+        _text = (_content or "").strip()
+        if not _text or _provider == "rule":
+            return ""
+        # 去掉模型可能输出的引号包裹
+        return _text.strip('“”"\' ')[:160]
+    except Exception:
+        return ""
 
 
 def extract_content_dna(author_id: str, limit: int = 20) -> dict:
