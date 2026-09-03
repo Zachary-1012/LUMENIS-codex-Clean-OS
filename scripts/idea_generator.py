@@ -238,6 +238,12 @@ _HOOK_LUX = {
 #   ⑥ 条件句预言/希望：自然意象+条件句（如雪莱「如果冬天来了，春天还会远吗」）
 #   ⑦ 悖论并置：让相反真理共存（如托尔斯泰「幸福的家庭都是相似的，不幸的各有各的不幸」）
 #   ⑧ 刺破本质的陈述：表面共识、实则反讽（如《傲慢与偏见》开篇）
+# 海外策略层（2026 海外社媒算法研究）：signals["overseas"]=True 时替换 touchpoints/virality
+_OVERSEAS_TOUCH = ["TikTok Spark Ads 原生分发", "IG Reels/Stories 双链路", "KOC 金字塔共创",
+                   "独立站/小店站内闭环", "搜索关键词内容卡位"]
+_OVERSEAS_VIRAL = ("海外算法：收藏/分享权重>点赞——内容可收藏化（教程/攻略/避坑）激发长尾；"
+                   "First-Party 原创素材权重加成；前3秒直击痛点避免标题党；"
+                   "真人出镜/原生UGC建立信任；把卖点埋进用户主动搜索词")
 _HOOK_EMO = {
     "emo_heart": [  # 以小写大
         "{c0}说「不就是{topic}吗」——{brand}说，正因为是{topic}，才值得{img}",
@@ -679,8 +685,10 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
             "tonality": tone,
             "budget": bd,
             "timeliness": hotspot_bind,
-            "touchpoints": ["内容种草", "圈层互动", "线下体验", "私域沉淀"],
-            "virality": "参与机制让用户拉用户（互动即传播）+ 张力句式可记忆可复制（打卡/接话/二创）",
+            "touchpoints": (_OVERSEAS_TOUCH if signals.get("overseas") else
+                            ["内容种草", "圈层互动", "线下体验", "私域沉淀"]),
+            "virality": (_OVERSEAS_VIRAL if signals.get("overseas") else
+                         "参与机制让用户拉用户（互动即传播）+ 张力句式可记忆可复制（打卡/接话/二创）"),
             "provenance": _provenance(topic, sentiment, m, tonality, circle, signals, angle),
         })
     return {"meta": {"brand": brand, "category": category, "signals": signals,

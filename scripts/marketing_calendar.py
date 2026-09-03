@@ -268,6 +268,40 @@ def industry_nodes(industry="", month=None):
     return hits
 
 
+# 区域本地节点（2026 研究：东南亚/欧洲——中国出海重点市场）
+# 结构：区域 → [{name, month, theme, cats}]
+_REGION_NODES = {
+    "东南亚": [
+        {"name": "Songkran 泼水节", "month": 4, "theme": "狂欢、清凉、新生", "cats": ["旅游", "美妆", "户外"]},
+        {"name": "Hari Raya 开斋节", "month": 5, "theme": "团聚、礼赠、感恩", "cats": ["食品", "礼品", "服饰"]},
+        {"name": "Deepavali 排灯节", "month": 11, "theme": "光明、庆祝、家庭", "cats": ["珠宝", "家居", "食品"]},
+        {"name": "Double 12 双十二", "month": 12, "theme": "大促、补货、年货", "cats": ["电商", "全品类"]},
+    ],
+    "欧洲": [
+        {"name": "Carnival 狂欢节", "month": 2, "theme": "狂欢、变装、社群", "cats": ["服饰", "餐饮", "美妆"]},
+        {"name": "Oktoberfest 十月节", "month": 9, "theme": "狂欢、啤酒、社群", "cats": ["酒饮", "餐饮"]},
+        {"name": "Christmas Market 圣诞市集", "month": 12, "theme": "暖冬、礼赠、仪式", "cats": ["礼品", "食品", "家居"]},
+        {"name": "Epiphany 主显节", "month": 1, "theme": "新年、礼赠、传统", "cats": ["礼品", "食品"]},
+    ],
+}
+
+
+def region_nodes(region=None, month=None):
+    """区域本地节点：东南亚/欧洲（可按区域与月过滤）。"""
+    if region:
+        rs = [dict(n, region=region, month_0=n["month"]) for n in _REGION_NODES.get(region, [])]
+        if month is not None:
+            rs = [n for n in rs if n["month_0"] == int(month)]
+        return rs
+    out = []
+    for r, ns in _REGION_NODES.items():
+        for n in ns:
+            if month is not None and n["month"] != int(month):
+                continue
+            out.append(dict(n, region=r))
+    return out
+
+
 # 垂直行业 → 情感主题 → 调性映射（并入 _THEME_TO_TONALITY 判断）
 _V_THEME_TONALITY = {
     "陪伴": "premium", "治愈": "premium", "松弛": "premium", "微醺": "premium",
@@ -307,6 +341,24 @@ def cross_industry_season(industry, date_str=""):
             advice.append("%s遇%s：%s × %s" % (n["name"], s["name"], n["theme"], s["theme"]))
     return {"industry": industry, "month": m, "industry_nodes": inds,
             "season_nodes": season, "advice": advice}
+
+
+def marketing_matrix(month=None):
+    """三维营销矩阵（12 月）：国内节点 × 海外节点 × 区域节点 密度与主题。
+    返回 [{"month":m, "domestic":[名称], "overseas":[名称], "regions":{区域:[名称]}, "density":n}]
+    """
+    out = []
+    for m in range(1, 13):
+        dom = [n["name"] for n in nodes_for_month(m)]
+        ove = [n["name"] for n in global_nodes(m)]
+        reg = {}
+        for r in _REGION_NODES:
+            rn = [n["name"] for n in region_nodes(r, m)]
+            if rn:
+                reg[r] = rn
+        out.append({"month": m, "domestic": dom, "overseas": ove,
+                    "regions": reg, "density": len(dom) + len(ove) + sum(len(v) for v in reg.values())})
+    return out
 
 
 def cross_global(month=None, date_str=""):

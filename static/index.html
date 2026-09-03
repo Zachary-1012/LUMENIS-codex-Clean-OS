@@ -946,9 +946,15 @@
             <label style="font-size:12px;display:flex;gap:4px;align-items:center">
               <input type="checkbox" id="mkGlobal" onchange="loadMk()"> 海外节点
             </label>
+            <select id="mkRegion" onchange="loadMk()" style="padding:6px 8px;border-radius:8px;font-size:12px">
+              <option value="">区域：全部</option>
+              <option value="东南亚">东南亚</option><option value="欧洲">欧洲</option>
+            </select>
+            <button class="action tertiary" style="padding:6px 10px;font-size:12px" onclick="loadMkMatrix()">🧩 三维矩阵</button>
             <button class="action tertiary" style="padding:6px 10px;font-size:12px" onclick="exportMkCsv()">⬇ 全年排期CSV</button>
           </div>
           <div id="mkNodesBody" class="metric-sub" style="white-space:normal;line-height:1.7">加载中…</div>
+          <div id="mkMatrixBody" style="display:none;margin-top:8px"></div>
         </article>
         <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
           <article class="metric-card glass-card">
@@ -1856,7 +1862,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!el) return;
     var ind=(document.getElementById('mkIndustry')||{}).value||'';
     var gb=(document.getElementById('mkGlobal')||{}).checked?'1':'0';
-    fetch('/api/v2/marketing/overview?industry='+encodeURIComponent(ind)+'&global='+gb,{headers:{'Authorization':window.__Z_AUTH||''}})
+    var rg=(document.getElementById('mkRegion')||{}).value||'';
+    fetch('/api/v2/marketing/overview?industry='+encodeURIComponent(ind)+'&global='+gb+'&region='+encodeURIComponent(rg),{headers:{'Authorization':window.__Z_AUTH||''}})
       .then(function(r){return r.json();})
       .then(function(j){
         if(!j.ok){ el.textContent='加载失败：'+(j.error||'未知'); return; }
@@ -1865,11 +1872,33 @@ document.addEventListener('DOMContentLoaded', function(){
         if(j.cross){ s.push('行业交叉：「'+j.cross.industry+'」'+(j.cross.advice||[]).join('；')); }
         if(j.global_cross){ s.push('海外×节气：'+(j.global_cross.advice||[]).join('；')); }
         if(j.global_nodes){ s.push('本月海外节点：'+j.global_nodes.map(function(n){return n.name+'('+n.date+')';}).join('、')); }
+        if(j.region_nodes){ s.push('区域节点：'+j.region_nodes.map(function(n){return n.name+'('+n.theme+')';}).join('、')); }
         el.textContent=s.join('\n');
       })
       .catch(function(e){ el.textContent='加载失败：'+e; });
   }
   window.loadMk = loadMk;
+  function loadMkMatrix(){
+    var el=document.getElementById('mkMatrixBody');
+    if(!el) return;
+    fetch('/api/v2/marketing/overview?matrix=1',{headers:{'Authorization':window.__Z_AUTH||''}})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(!j.ok){ el.textContent='加载失败：'+(j.error||''); return; }
+        var m=j.matrix||[]; var s=['<div style="font-size:12px;margin-bottom:6px">三维营销矩阵（国内×海外×区域，密度=当月可借力节点数）：</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px">'];
+        m.forEach(function(x){
+          var bg=x.density>=6?'rgba(234,102,104,0.18)':x.density>=4?'rgba(250,173,20,0.16)':'rgba(139,200,234,0.15)';
+          s.push('<div style="background:'+bg+';border-radius:8px;padding:8px;min-width:0">');
+          s.push('<div style="font-weight:600">'+x.month+'月 <span style="font-weight:400;color:#6B7280">('+x.density+')</span></div>');
+          s.push('<div style="font-size:11px;color:#444;margin-top:3px">国内：'+(x.domestic.join('、')||'-')+'</div>');
+          s.push('<div style="font-size:11px;color:#444">海外：'+(x.overseas.join('、')||'-')+'</div>');
+          var ks=Object.keys(x.regions||{}); if(ks.length){ s.push('<div style="font-size:11px;color:#666">'+ks.map(function(k){return k+':'+x.regions[k].join('、');}).join('；')+'</div>'); }
+          s.push('</div>');
+        });
+        s.push('</div>'); el.innerHTML=s.join(''); el.style.display='block';
+      })
+      .catch(function(e){ el.textContent='加载失败：'+e; });
+  }
   function exportMkCsv(){
     fetch('/api/v2/marketing/overview?export=csv',{headers:{'Authorization':window.__Z_AUTH||''}})
       .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); })

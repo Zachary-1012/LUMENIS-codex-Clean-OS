@@ -638,7 +638,8 @@ def marketing_overview():
     报告体系消费营销节点（芥子→须弥）的前端闭环。"""
     try:
         from scripts.marketing_calendar import (suggest_hotspot, nodes_for_month,
-                                                cross_industry_season, cross_global, global_nodes)
+                                                cross_industry_season, cross_global, global_nodes,
+                                                region_nodes, marketing_matrix)
         import datetime as _dt
         import io, csv as _csv
         industry = (request.args.get('industry') or '').strip()
@@ -648,6 +649,8 @@ def marketing_overview():
         today = _dt.date.today().strftime("%Y-%m-%d")
         gflag = (request.args.get('global') or '0') == '1'
         export = (request.args.get('export') or '')
+        mxflag = (request.args.get('matrix') or '0') == '1'
+        region = (request.args.get('region') or '').strip()
         mc = suggest_hotspot(today, "商业地产")
         nodes = nodes_for_month(int(month))
         cross = cross_industry_season(industry, month) if industry else None
@@ -670,6 +673,8 @@ def marketing_overview():
                                      "attachment; filename=marketing_calendar_%s.csv" % month})
         return jsonify({'ok': True, 'month_nodes': nodes, 'hotspot': mc,
                         'cross': cross, 'global_cross': gcross, 'global_nodes': gns,
+                        'region_nodes': region_nodes(region) if region else None,
+                        'matrix': marketing_matrix() if mxflag else None,
                         'advice': "本月先借节气/节日天然情绪，再叠加垂直行业节点做专属心智；出海场景另叠海外节点时机。"})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
