@@ -91,16 +91,24 @@ assert len(ALLOWED_USER_IDS) == (1 if XHS_RETINAUT is None else 2), \
 # 运行时当前激活的身份（select_account 设置；None=默认 XHS_CN_PRIMARY_NAME + 未 override）
 _ACTIVE_ACCOUNT: str | None = None
 
-MAX_DAILY_RUNS = 12  # 每日最大运行次数（保护账号）
-MAX_MANUAL_RUNS = 3  # 每日手动触发（一键实时更新）最大次数
-MAX_AUTO_RUNS = 9  # 每日自动定时采集最大次数
-COOLDOWN_MINUTES = 60  # 连续运行后的冷却时间（分钟）- 调整为1小时
+# ── 每日次数上限：已改为“动态调度下的防失控兜底”，不再是固定配额 ──────────────
+# 采集节奏由 platform_adapters.scheduling 的动态间隔主导（基准 3600s；NO_NEW_DATA
+# ×1.5 指数延长至上限 6h；风控/网络退避、熔断、恢复试探），并由下方 COOLDOWN_MINUTES
+# 做“任意两次运行至少间隔 60min”的账号安全硬地板。因此这里的每日次数只用于防止
+# 死循环/失控刷量的高兜底，不再承担调度节奏：理论最快 1h 一次≈24 次/天，无新数据会
+# 自动拉长，实际远少于此。提高日上限不会让单次间隔变密（仍受 60min 硬冷却约束），
+# 只是允许采集持续全天、不再“午后用满固定次数即停摆到次日”。
+MAX_DAILY_RUNS = 30  # 每日总次数兜底（=自动26 + 手动3 + 1 余量），仅防失控
+MAX_MANUAL_RUNS = 3  # 每日手动触发（一键实时更新）最大次数（保持不变）
+MAX_AUTO_RUNS = 26  # 每日自动采集兜底上限（动态间隔主导，基准1h理论≤24，留余量）
+COOLDOWN_MINUTES = 60  # 连续运行后的冷却时间（分钟）- 账号安全硬地板，不随动态调度放宽
 NEW_ACCOUNT_GUARD_RUNS = 3  # 新账号前N次强制极轻量模式
 # 采集时长配置（秒）
 AUTO_COLLECT_DURATION = 1800  # 自动采集每次30分钟
 MANUAL_COLLECT_DURATION = 1200  # 手动采集每次20分钟
 NODE_PROCESS_TIMEOUT = 1800  # Node进程超时时间（秒）- 调整为30分钟，给足时间完成
-# 自动采集时间分配（9次/天，合理覆盖高峰时段）
+# 固定钟点表：仅用于状态展示（get_account_status），生产调度已由 ShadowPlanner
+# 动态间隔门控（app.py scheduler_loop），不再按此固定钟点触发；保留为历史参考。
 AUTO_COLLECT_HOURS = [8, 10, 12, 14, 16, 18, 20, 22, 23]
 _daily_runs = []  # 今日运行时间戳列表
 _daily_manual_runs = 0  # 今日手动触发次数

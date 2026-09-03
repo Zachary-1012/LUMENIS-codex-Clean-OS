@@ -909,6 +909,33 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - 前端文件被并行 marketing 提交 5e1cf23 的批量 add 一并入库（内容即本批前端版本、与后端字段匹配）；后端 app.py 由本批提交补齐，在此之前旧后端缺 qr_image 字段时前端 fail-soft（只显示 loading 不报错）。
 - 备份 app.py.bak-d3 / static/index.html.bak-d3（不提交）。数据库无变化、无迁移；采集红线、五条主体函数未触碰。
 
+---
+
+## 2026-09-03 第十三批｜修复主笔记自动采集"午后停摆"：固定日配额 → 动态调度兜底（执行层问题另立）
+
+### 现象（运行态只读体检发现，非猜测）
+- notes 最后 captured_at 停在 11:49 左右、之后主笔记不再入库；但 schedule_decisions 每 20s 一条 `allow=1 / RUN_DUE / 到达动态间隔允许采集`，schedule_state.last_run_at 冻结 15:14（该时间点是话题端独立链路回写）。即"决策一直放行、实际不采集、last_run 不回写"的空转。
+
+### 根因（源码+数据双证）
+1. 旧固定日配额钳制：`xhs_cookie_bridge.MAX_AUTO_RUNS=9 / MAX_DAILY_RUNS=12`，今日 collector_stats `auto_runs=9` 于 11:49:37 用满，此后 scheduler_loop 每 20s 经 gate 放行（hard_allow=True 且 planner RUN_DUE），但被第二道旧门 `check_rate_limit('auto')` 以"今日自动采集已达9次上限"硬挡 → 不 create_task、也不回写 planner（planner 无该配额知识，故持续判 overdue 空转）。跨天 00:00 才重置。
+2. 该固定配额是动态调度（GAP-05）上线前的老策略，与用户"不定时、按状态动态决定采集量、持续运行"指令冲突，实际把动态调度架空。
+3. 旁证：`AUTO_COLLECT_HOURS` 固定钟点表在生产唯一调度 scheduler_loop 中已不参与决策（仅 get_account_status 展示）；collector_v2 的固定钟点 Scheduler 未被 app.py init（旁路，未启用），无需改。
+
+### 修复（最小、可逆、不放松账号安全）
+- `MAX_AUTO_RUNS 9→26`、`MAX_DAILY_RUNS 12→30`，定位从"固定配额"改为"动态调度下的防失控高兜底"；`MAX_MANUAL_RUNS=3`、`COOLDOWN_MINUTES=60` 保持不变。
+- 安全论证：采集节奏仍由 planner 动态间隔（基准 3600s、NO_NEW_DATA ×1.5 指数至上限 6h、风控/网络退避、熔断）+ 60min 硬冷却主导，任意两次运行间隔不会因本次改动而变密（理论最快仍 ≥60min、≈24 次/天，26 为兜底余量）；本次只是允许采集持续全天、不再"用满 9 次即停到次日"。
+- 更正 AUTO_COLLECT_HOURS 过时注释（标注仅历史展示）。备份 xhs_cookie_bridge.py.bak-quota（不提交）。
+
+### 测试与真实结果（已实测）
+- py_compile exit0；进程外只读 import：旧逻辑 `check_rate_limit('auto')` 今日应为 False，改后为 `(True,'频率检查通过')`，manual 亦 True。
+- 平滑重启 8201 后，16:47:53 scheduler 真实 create_task（collector_stats auto_runs 9→10、新增 run@16:47:53），其后连续 5+ 个 20s tick auto_runs 不再增长（60min 硬冷却正确挡住重复创建，未失控）。
+- healthz exit0、主体 gz_hit/sh_excluded 未触碰；无数据库结构变更。
+
+### 新发现并登记（采集执行层，下一批独立修，不混入本提交）
+- 恢复触发后任务真实执行但：collection_logs#613 `page.goto Timeout 45000ms`、#614 `NETWORK_ERROR/EMPTY_NO_API`。
+- 只读 CDP(9222) 诊断（不开代理、不点击）：搜索页 `status=200 / domcontentloaded 4.1s / title=广州太古汇-小红书搜索 / 无验证滑块 / 无登录遮罩`，但 `bodyLen=18、note-item=0`——**网络层通畅、不依赖 VPN**；页面框架到达而搜索数据 XHR 未渲染/未拦截。结合手动 domcontentloaded 仅 4.1s，判生产 goto 疑用 networkidle/load 等待策略，撞上小红书搜索页长连接导致 45s 超时；EMPTY_NO_API 为搜索 XHR（sns/web/v1/search/notes）未捕获。下一批修：goto 等待策略改 domcontentloaded+主动等待搜索 XHR/结果选择器、排查搜索接口签名与拦截时序。
+
+
 
 
 
