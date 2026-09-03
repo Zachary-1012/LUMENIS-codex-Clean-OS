@@ -67,8 +67,95 @@
         return kosBar(pair[0], share + "%", Math.min(100, share), "#171717");
       }).join("");
       body.innerHTML += bars;
+      renderKosHealth(d.data);
     }).catch(function () {});
   }
+
+  // KM-02 成本指标表（DFS 口径：CPL=预算/进线、CPC=预算/点击、Cost-per-WeCom=预算/WeCom；缺失显式待回填，不造假）
+  function loadKosCost() {
+    ensureKosPanel("kosCostPanel", "KOS 成本指标（CPL / CPC / Cost-per-WeCom）");
+    api("/api/kos/cost?period=month").then(function (d) {
+      var body = document.getElementById("kosCostPanelBody");
+      if (!body) return;
+      if (!d.ok || !d.data) { body.innerHTML = '<span style="color:#999">加载失败</span>'; return; }
+      var c = d.data;
+      function money(v) { return v != null ? "¥" + Number(v).toLocaleString() : '<span style="color:#A8A29E">待回填</span>'; }
+      function row(k, v) { return '<tr><td style="padding:6px 10px;color:#57534E;border-bottom:1px solid #E7E5E4">' + k + '</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #E7E5E4;font-variant-numeric:tabular-nums">' + v + '</td></tr>'; }
+      var html = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid #E7E5E4;border-radius:8px;overflow:hidden">'
+        + row("Boosting 预算", money(c.boosting_budget))
+        + row("进线 Inquiry", (c.inquiry || 0).toLocaleString())
+        + row("点击 Clicks", (c.clicks || 0).toLocaleString())
+        + row("WeCom 新增", (c.wecom_add || 0).toLocaleString())
+        + row("CPL（预算/进线）", money(c.cpl))
+        + row("CPC（预算/点击）", money(c.cpc))
+        + row("Cost-per-WeCom", money(c.cost_per_wecom))
+        + '</table>';
+      if ((c.manual_pending || []).length) {
+        html += '<div style="font-size:11px;color:#A8A29E;margin-top:8px">口径：DFS Y26 H1；' + c.manual_pending.join("、") + ' 待手动回填（下方手动回填面板），未填不估 0</div>';
+      }
+      body.innerHTML = html;
+    }).catch(function () {});
+  }
+
+  // KM-03 高/低产出 KOS 健康画像（复用 /api/kos/tier 返回，不新增请求；无 manual 数据时显式待回填）
+  function renderKosHealth(tierData) {
+    if (!tierData) return;
+    ensureKosPanel("kosHealthPanel", "高 / 低产出 KOS 健康画像");
+    var body = document.getElementById("kosHealthPanelBody");
+    if (!body) return;
+    var p = tierData.profile || {};
+    var hi = p.high_avg || {}, lo = p.low_avg || {};
+    function cell(v) { return v != null ? v : "--"; }
+    function head(t) { return '<th style="padding:6px 10px;text-align:left;color:#78716C;font-weight:500;border-bottom:1px solid #E7E5E4;font-size:11.5px">' + t + '</th>'; }
+    function trR(label, a, b) { return '<tr><td style="padding:6px 10px;color:#57534E;border-bottom:1px solid #E7E5E4">' + label + '</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #E7E5E4;font-variant-numeric:tabular-nums">' + cell(a) + '</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #E7E5E4;font-variant-numeric:tabular-nums">' + cell(b) + '</td></tr>'; }
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid #E7E5E4;border-radius:8px;overflow:hidden">'
+      + '<tr>' + head("均值指标") + head("高产出") + head("低产出") + '</tr>'
+      + trR("月均笔记数", hi.note_count, lo.note_count)
+      + trR("WeCom 新增", hi.wecom, lo.wecom)
+      + trR("Boosting 投入(¥)", hi.boosting, lo.boosting)
+      + '</table>';
+    html += '<div style="font-size:11px;color:#A8A29E;margin-top:8px">含手动 Sales/WeCom 数据的 KOS：' + (p.manual_data_kos || 0) + ' 个' + ((p.manual_data_kos || 0) === 0 ? '；回填后生成画像对比（Sales≥1万为高产出，DFS 口径）' : '') + '</div>';
+    body.innerHTML = html;
+  }
+
+  // KM-04/05 KOC 分层（Gold/Silver/Bronze 阈值对齐 DFS；判定实时调 /api/kos/koc-tier，不前端硬算）
+  function loadKosKoc() {
+    ensureKosPanel("kosKocPanel", "KOC 分层激励（Gold / Silver / Bronze）");
+    var body = document.getElementById("kosKocPanelBody");
+    if (!body) return;
+    function tierTag(t) {
+      var map = { gold: "#1C1917", silver: "#44403C", bronze: "#78716C", none: "#A8A29E" };
+      var label = { gold: "Gold", silver: "Silver", bronze: "Bronze", none: "未达标" };
+      return '<span style="display:inline-block;padding:2px 10px;border-radius:999px;background:' + (map[t] || "#A8A29E") + ';color:#fff;font-size:11px">' + (label[t] || t) + '</span>';
+    }
+    body.innerHTML =
+      '<table style="width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid #E7E5E4;border-radius:8px;overflow:hidden;margin-bottom:12px">'
+      + '<tr><th style="padding:6px 10px;text-align:left;color:#78716C;font-weight:500;border-bottom:1px solid #E7E5E4;font-size:11.5px">层级</th><th style="padding:6px 10px;text-align:left;color:#78716C;font-weight:500;border-bottom:1px solid #E7E5E4;font-size:11.5px">达标（24h / 7d 任一）</th></tr>'
+      + '<tr><td style="padding:6px 10px;border-bottom:1px solid #E7E5E4">' + tierTag("gold") + '</td><td style="padding:6px 10px;border-bottom:1px solid #E7E5E4;color:#57534E">24h ≥100 互动 或 7d ≥500</td></tr>'
+      + '<tr><td style="padding:6px 10px;border-bottom:1px solid #E7E5E4">' + tierTag("silver") + '</td><td style="padding:6px 10px;border-bottom:1px solid #E7E5E4;color:#57534E">24h ≥50 或 7d ≥100</td></tr>'
+      + '<tr><td style="padding:6px 10px">' + tierTag("bronze") + '</td><td style="padding:6px 10px;color:#57534E">达标参与（防流失参与奖）</td></tr>'
+      + '</table>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px">'
+      + '<span>实时判定：</span>'
+      + '<input id="kocI24" type="number" min="0" placeholder="24h互动" style="width:90px;padding:5px 8px;border:1px solid #D6D3D1;border-radius:6px">'
+      + '<input id="kocI7d" type="number" min="0" placeholder="7d互动" style="width:90px;padding:5px 8px;border:1px solid #D6D3D1;border-radius:6px">'
+      + '<button onclick="kosJudgeTier()" style="padding:5px 14px;background:#1C1917;color:#fff;border:none;border-radius:6px;font-size:12.5px;cursor:pointer">判定</button>'
+      + '<span id="kocJudgeOut"></span></div>'
+      + '<div style="font-size:11px;color:#A8A29E;margin-top:8px">Campaign 复盘聚合（KOC数/曝光/High-intent）在选定活动 KOC 数据后接入，不做无数据聚合</div>';
+  }
+  window.kosJudgeTier = function () {
+    var i24 = document.getElementById("kocI24").value || 0;
+    var i7d = document.getElementById("kocI7d").value || 0;
+    var out = document.getElementById("kocJudgeOut");
+    if (out) out.textContent = "判定中…";
+    api("/api/kos/koc-tier?interactions_24h=" + encodeURIComponent(i24) + "&interactions_7d=" + encodeURIComponent(i7d)).then(function (d) {
+      if (!out) return;
+      if (!d.ok || !d.data) { out.textContent = "判定失败"; return; }
+      var t = d.data.tier;
+      var labels = { gold: "Gold（金牌）", silver: "Silver（银牌）", bronze: "Bronze（参与）", none: "未达标 none" };
+      out.innerHTML = '<b style="color:#1C1917">' + (labels[t] || t) + '</b>';
+    }).catch(function () { if (out) out.textContent = "判定失败"; });
+  };
 
   function loadKosRoi() {
     ensureKosPanel("kosRoiPanel", "多渠道 ROI 对比");
@@ -412,6 +499,8 @@
       loadKosStats();
       loadKosList("");
       loadKosFunnel();
+      loadKosCost();
+      loadKosKoc();
       loadKosRoi();
       loadKosLifecycle();
       loadKosAdCandidates();
