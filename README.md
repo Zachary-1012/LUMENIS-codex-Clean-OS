@@ -1,26 +1,28 @@
-# 序境-Core
+# 序境
 
-> **序境** — 生产核心系统  
+> **序境** — 生产系统  
 > **品牌哲学：芥子纳须弥**  
 > **哲学定义：微小之中本身就包含通向整体的结构。**
 
+> Repository identifier: `Z-Brand-Core`（仅为现有 GitHub 仓库标识，不是中文产品名称）
+
 ## 1. 产品定位
 
-序境-Core 是序境双子库中的生产核心，负责承载可验证的业务事实、生产数据、采集、分析、风险、任务、报告与运行时能力。
+序境是序境双子库中的生产系统，负责承载可验证的业务事实、生产数据、采集、分析、风险、任务、报告与运行时能力。
 
-它不是通用舆情 SaaS 模板，也不是 AI 实验场。生产规则、数据真相、安全约束和发布质量必须在本库内可验证。
+它不是通用舆情 SaaS 模板，也不是 AI 实验场。生产规则、数据真相、安全约束和发布质量必须在生产系统内可验证。
 
 ## 2. 双子库边界
 
 ```text
 序境
-├── 序境-Core
+├── 序境
 │   └── Production Truth
-└── 序境-Intelligence
+└── 序境-智能
     └── Research & Intelligence
 ```
 
-### 序境-Core
+### 序境
 
 负责：
 - 生产代码与生产数据库
@@ -32,22 +34,23 @@
 - API、Runtime、Health、Recovery
 - 测试、证据与发布
 
-### 序境-Intelligence
+### 序境-智能
 
 负责研究、AI、知识、Benchmark、技术验证与研发建议。研究结果不得绕过 Contract → Implementation → Test → Evidence 直接改变生产真相。
 
-## 3. 品牌与哲学 Canonical
+## 3. 三语 Canonical 命名
 
-| 层级 | 当前规范 |
-|---|---|
-| 中文品牌 | **序境** |
-| 韩文品牌 | **서경** |
-| 英文 Canonical Brand | **TBD** |
-| 历史英文写法 | `Xujing` / `Xujing Core`，仅作 Legacy，不得作为新的 Canonical 命名 |
-| 核心哲学 | **芥子纳须弥** |
-| 哲学定义 | **微小之中本身就包含通向整体的结构。** |
+| 对象 | 中文 Canonical | English Standard | 한국어 Standard | 状态 |
+|---|---|---|---|---|
+| 品牌 | **序境** | **TBD** | **서경** | CANONICAL |
+| 生产系统 | **序境** | **TBD Production** | **서경** | CANONICAL |
+| 智能与研发系统 | **序境-智能** | **TBD Intelligence** | **서경 Intelligence** | CANONICAL / English pending |
+| 品牌哲学 | **芥子纳须弥** | **Embedded Wholeness**（研究表达，非英文品牌） | **임자나수미**（仅研究性转写，非品牌名） | Concept |
+| 历史英文写法 | 不适用 | `Xujing` / `Xujing Core`，仅作 Legacy | 不适用 | LEGACY |
 
-英文 Canonical Brand 在最终命名通过现实世界冲突、商标初筛、数字资产与架构适配审查并获得明确授权前保持 `TBD`。
+英文 Canonical Brand 在最终命名通过全球语言、现实世界冲突、商标初筛、数字资产、韩国语境与未来生态适配审查并获得明确授权前保持 `TBD`。
+
+**重要：`Core` 不再作为中文产品名称。** `Z-Brand-Core` 仅保留为现有 GitHub Repository identifier，不能据此反向生成“序境-Core”这一中文产品名。
 
 ## 4. 生命层与生态边界
 
@@ -66,7 +69,7 @@ Perception → Relation → Structure → Meaning → Understanding
 → Intelligence → Action → Feedback → Learning → Evolution ↺
 ```
 
-`Living System`、`Living Intelligence`、`Embedded Wholeness`、`Relational Becoming` 属于研究语义/概念层，不自动构成 Core 产品名称或生产能力。
+`Living System`、`Living Intelligence`、`Embedded Wholeness`、`Relational Becoming` 属于研究语义/概念层，不自动构成生产产品名称或生产能力。
 
 ## 5. Canonical 层级
 
@@ -125,14 +128,14 @@ AI 是生产能力的增强层，不得绕过核心规则成为生产真相的�
 
 生产 AI 结果必须记录必要的模型、提示词、输入、输出、置信度、最终结果及人工修正信息；重要结论必须可追溯至证据。
 
-## 9. Intelligence → Core 治理接口
+## 9. Intelligence → Production 工作流
 
 ```text
 Research → Evidence → Contract → Implementation Specification
-→ Core Implementation → Test → Evidence → Audit → Release
+→ Production Implementation → Test → Evidence → Audit → Release
 ```
 
-Core 只接受经过明确 Contract、证据和质量 Gate 的研发变更。Research、Agent 或外部模型不得直接写入 Production Truth。
+生产系统只接受经过明确 Contract、证据和质量 Gate 的研发变更。Research、Agent 或外部模型不得直接写入 Production Truth。
 
 ## 10. 数据与报告
 
@@ -183,19 +186,7 @@ Executive Summary
 
 文件、目录、模块、接口和数据字段命名必须服从 Canonical Registry；涉及 Rename / Migration / Delete 必须先完成依赖扫描和回归验证。
 
-## 12. Canonical 命名
-
-正式品牌名：**序境 / 서경**  
-英文 Canonical Brand：**TBD**  
-品牌哲学：**芥子纳须弥**
-
-`Xujing` / `Xujing Core` 仅作为历史兼容记录，不得作为新正式品牌命名继续扩散。
-
-`Zachary` 仅作为历史仓库、研发身份或必要技术标识，不再作为对外产品品牌。
-
-功能名称应体现职责，不以品牌词重复污染文件、类和函数命名。
-
-## 13. 质量 Gate
+## 12. 质量 Gate
 
 任何新增或修改必须经过：
 
@@ -211,10 +202,10 @@ Plan
 
 涉及破坏性 Rename / Migration / Delete 时，必须先完成依赖扫描和回归验证。
 
-## 14. 当前原则
+## 13. 当前原则
 
 - 不重新建立第三核心库
-- 不重复建设已经存在的 Core 能力
+- 不重复建设已经存在的生产能力
 - 不绕过生产规则
 - 不以 AI 替代确定性安全规则
 - 不以 UI 重构解决本应由信息架构解决的问题
@@ -223,9 +214,10 @@ Plan
 - 不因语言、UI 或研究需要改变生产规则
 - 不把未来生命层构想写成当前已实现能力
 - 不因英文品牌研究提前修改仓库名或生产架构
+- **不再使用 `序境-Core` 作为中文产品名称**
 
-## 15. 研发入口
+## 14. 研发入口
 
-本 README 是当前生产核心的产品与工程入口说明。详细架构、策略、审计和运行文档应以仓库内当前有效文件及最新基线为准；历史方案不作为新开发依据。
+本 README 是当前生产系统的产品与工程入口说明。详细架构、策略、审计和运行文档应以仓库内当前有效文件及最新基线为准；历史方案不作为新开发依据。
 
-**Status: Active · Production Core · Governed by Zero Sequence**
+**Status: Active · Production · Governed by Zero Sequence**
