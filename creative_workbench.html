@@ -68,7 +68,7 @@
   <div class="panel">
     <h2>API 连接（Basic 认证，凭证仅存本地浏览器）</h2>
     <div id="authbar">
-      <div class="field big"><label>API 地址</label><input id="api_base" placeholder="http://localhost:5000"></div>
+      <div class="field big"><label>API 地址</label><input id="api_base" placeholder="http://localhost:8201"></div>
       <div class="field"><label>账号</label><input id="api_user" placeholder="admin"></div>
       <div class="field"><label>密码</label><input id="api_pass" type="password" placeholder="••••••"></div>
     </div>
@@ -153,7 +153,7 @@
   function v(id){ return document.getElementById(id).value.trim(); }
   function api(path, body){
     saveCfg();
-    const base = (v('api_base')||'http://localhost:5000').replace(/\/$/,'');
+    const base = (v('api_base')||'http://localhost:8201').replace(/\/$/,'');
     const user = v('api_user'), pass = v('api_pass');
     const h = {'Content-Type':'application/json'};
     if(user || pass) h['Authorization'] = 'Basic ' + btoa(user + ':' + pass);
@@ -242,7 +242,7 @@
     const f = document.getElementById('pitch_file').files[0];
     if(!f){ showErr(new Error('请先选择文件(.txt/.md/.json/.csv)')); return; }
     saveCfg();
-    const base = (v('api_base')||'http://localhost:5000').replace(/\/$/,'');
+    const base = (v('api_base')||'http://localhost:8201').replace(/\/$/,'');
     const user = v('api_user'), pass = v('api_pass');
     const fd = new FormData(); fd.append('file', f); fd.append('brand', v('brand'));
     const h = {}; if(user||pass) h['Authorization'] = 'Basic ' + btoa(user+':'+pass);
