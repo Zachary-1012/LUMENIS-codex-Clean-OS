@@ -426,12 +426,17 @@
     <main class="content">
       <!-- 首页概览 -->
       <section class="page-view active" id="page-overview">
-        <div class="page-hero">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
-            <div>
-              <span class="eyebrow">序境 · CTH-POMS</span>
-              <h2>智能问答</h2>
-              <p>序境 · 广州太古汇舆情监测系统（CTH-POMS）— 广州太古汇 · 小红书舆情健康度实时监测；首页仅呈现需优先关注的信息，点击卡片进入详情。</p>
+        <div class="xj-page-header">
+          <div class="xj-breadcrumb" id="overviewBreadcrumb">
+            <a href="#" onclick="navigateTo('overview');return false;">序境</a>
+            <span class="xj-breadcrumb-sep">/</span>
+            <span class="xj-breadcrumb-current">首页概览</span>
+          </div>
+          <div class="xj-page-header-inner">
+            <div class="xj-page-header-left">
+              <span class="xj-page-header-eyebrow">序境 · CTH-POMS · 实时舆情监测</span>
+              <h1 class="xj-page-header-title">首页概览</h1>
+              <p class="xj-page-header-subtitle">广州太古汇 · 小红书舆情健康度实时监测；首页仅呈现需优先关注的信息，点击卡片进入详情。</p>
             </div>
             <div class="export-dropdown">
               <button class="action primary" onclick="toggleExportMenu()"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>导出日报</button>
@@ -441,7 +446,6 @@
                 <button onclick="exportReportWithVerify('daily','docx')">Word 文档 (.docx)</button>
                 <button onclick="exportReportWithVerify('daily','csv')">CSV 数据 (.csv)</button>
               </div>
-            </div>
           </div>
         </div>
         <div class="metric-grid">
@@ -1377,6 +1381,7 @@
 <!-- 舆情预警浮动通知容器 -->
 <div class="alert-container" id="alertContainer"></div>
 <script src="/static/js/app.js?v=8.0.4"></script>
+<script src="/static/js/xujing-ui.js?v=1.0.0"></script>
 <!-- v5.9.9 弹窗精简补丁：核心信息一眼看懂，次要信息折叠展开（覆盖app.js三个详情弹窗，不改源文件） -->
 <script src="/static/js/modal_simplify.js?v=5.9.9"></script>
 <!-- v5.8.4 太古集团全域事件/笔记库 -->

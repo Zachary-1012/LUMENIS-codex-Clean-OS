@@ -626,3 +626,56 @@ h1.page-title, .page-view > h1:first-child {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* ---------- 11. 统一页面头部与面包屑（xj-前缀，避免历史冲突） ---------- */
+.xj-page-header {
+  margin-bottom: var(--xj-space-4);
+  padding-bottom: var(--xj-space-3);
+  border-bottom: 1px solid var(--xj-border);
+}
+.xj-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--xj-space-2);
+  font-size: var(--xj-font-size-xs);
+  color: var(--xj-text-tertiary);
+  margin-bottom: var(--xj-space-2);
+}
+.xj-breadcrumb a { color: var(--xj-text-tertiary); text-decoration: none; transition: color var(--xj-transition-fast); }
+.xj-breadcrumb a:hover { color: var(--xj-text-primary); }
+.xj-breadcrumb-sep { color: var(--xj-border-strong); font-size: 10px; }
+.xj-breadcrumb-current { color: var(--xj-text-secondary); font-weight: 500; }
+.xj-page-header-inner { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--xj-space-4); flex-wrap: wrap; }
+.xj-page-header-left { display: flex; flex-direction: column; gap: var(--xj-space-1); min-width: 0; flex: 1; }
+.xj-page-header-eyebrow { font-size: var(--xj-font-size-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--xj-text-tertiary); }
+.xj-page-header-title { font-size: var(--xj-font-size-xl); font-weight: 600; color: var(--xj-text-primary); margin: 0; line-height: 1.3; }
+.xj-page-header-subtitle { font-size: var(--xj-font-size-sm); color: var(--xj-text-tertiary); line-height: 1.5; margin: 0; }
+.xj-page-header-actions { display: flex; align-items: center; gap: var(--xj-space-2); flex-shrink: 0; }
+
+/* 统一指标网格 */
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--xj-space-3); margin-bottom: var(--xj-space-4); }
+.home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--xj-space-3); margin-bottom: var(--xj-space-4); }
+.osai-module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--xj-space-3); }
+
+/* 功能卡头部统一 */
+.home-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--xj-space-2); margin-bottom: var(--xj-space-3); }
+.home-card-head h3 { font-size: var(--xj-font-size-md); font-weight: 600; color: var(--xj-text-primary); margin: 0; }
+.home-card-head .eyebrow { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--xj-text-tertiary); }
+
+/* 智能模块卡统一 */
+.osai-module-card { display: flex !important; align-items: center !important; gap: var(--xj-space-3) !important; cursor: pointer; }
+.osai-module-card:hover { border-color: var(--xj-brand) !important; }
+.osai-module-icon { width: 36px; height: 36px; border-radius: var(--xj-radius-sm); background: var(--xj-brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.osai-module-icon svg { width: 18px; height: 18px; stroke-width: 1.6; }
+.osai-module-text { flex: 1; min-width: 0; }
+.osai-module-text h3 { font-size: var(--xj-font-size-sm); font-weight: 600; color: var(--xj-text-primary); margin: 0 0 2px 0; }
+.osai-module-text p { font-size: var(--xj-font-size-xs); color: var(--xj-text-tertiary); margin: 0; line-height: 1.4; }
+
+/* 导出下拉统一 */
+.export-dropdown { position: relative; }
+.export-menu { position: absolute; top: calc(100% + 4px); right: 0; background: var(--xj-bg-elevated); border: 1px solid var(--xj-border); border-radius: var(--xj-radius-md); box-shadow: var(--xj-shadow-lg); padding: var(--xj-space-2); min-width: 180px; z-index: var(--xj-z-modal); display: none; }
+.export-menu.show { display: block; }
+.export-menu-title { font-size: var(--xj-font-size-xs); font-weight: 600; color: var(--xj-text-tertiary); padding: var(--xj-space-1) var(--xj-space-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.export-menu button { display: block; width: 100%; text-align: left; padding: var(--xj-space-2) var(--xj-space-3); font-size: var(--xj-font-size-sm); color: var(--xj-text-primary); border-radius: var(--xj-radius-sm); background: transparent; border: none; cursor: pointer; transition: background var(--xj-transition-fast); }
+.export-menu button:hover { background: var(--xj-brand-soft); }
