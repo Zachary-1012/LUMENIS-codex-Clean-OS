@@ -137,7 +137,7 @@
 <!-- ZBIP 基础组件层（.zb-* 新组件 + Emil 动效工具类 stagger/float/pressable；不覆盖旧 class） -->
 <link rel="stylesheet" href="/static/css/zbip-components.css?v=1.1.0">
 <link rel="stylesheet" href="/static/css/zbip-panels.css?v=1.0.3">
-<link rel="stylesheet" href="/static/css/splash.css?v=2.0.0">
+<link rel="stylesheet" href="/static/css/splash.css?v=3.0.0">
 <link rel="stylesheet" href="/static/css/xujing-crossfilter.css?v=1.0.0">
   <link rel="stylesheet" href="/static/css/resident_health.css?v=5.9.9">
   <link rel="stylesheet" href="/static/css/internal_browser.css?v=8.0.2">
@@ -149,7 +149,7 @@
   <link rel="stylesheet" href="/static/css/ui_polish.css?v=1.0.3">
   <link rel="stylesheet" href="/static/css/zbip-motion.css?v=1.0.0">
   <!-- 序境 Xujing · Unified Design System v1.0 — 权威令牌/组件/布局/交互层，最高优先级，统一全部历史皮肤 -->
-  <link rel="stylesheet" href="/static/css/xujing-design-system.css?v=1.1.0">
+  <link rel="stylesheet" href="/static/css/xujing-design-system.css?v=1.2.0">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) v3 浅色系 -->
@@ -207,10 +207,10 @@
   if(!splash)return;
   function hideSplash(){
     splash.classList.add('fade-out');
-    setTimeout(function(){if(splash.parentNode)splash.parentNode.removeChild(splash);},800);
+    setTimeout(function(){if(splash.parentNode)splash.parentNode.removeChild(splash);},300);
   }
   splash.addEventListener('click',hideSplash);
-  setTimeout(hideSplash,3800);
+  setTimeout(hideSplash,1200);
 })();
 </script>
 <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>

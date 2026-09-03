@@ -1018,3 +1018,78 @@ button svg, .btn svg, .icon-button svg {
   .zb-chip { padding: 5px 10px !important; font-size: 11px !important; }
   .side-item { padding: 6px 10px !important; font-size: 12px !important; }
 }
+
+/* ============================================================
+   第14层：全局标题/文字尺寸上限 · 禁止大字报
+   任何页面的标题不得超过合理尺寸
+   ============================================================ */
+
+/* 页面主标题 —— 最大24px */
+.page-header h1, .page-title, .module-title, .section-main-title {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.01em !important;
+}
+/* 面板/卡片标题 —— 最大15px */
+.panel-head h3, .card-head h3, .panel h3, .card h3 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+/* eyebrow小标签 —— 最大11px */
+.eyebrow {
+  font-size: 10px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+/* 统计数字 —— 最大28px（不是巨型数字） */
+.metric-card strong, .stat-number, .metric-value {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums !important;
+  line-height: 1.2 !important;
+}
+/* 全局h1-h6尺寸上限 */
+.content h1 { font-size: 22px !important; }
+.content h2 { font-size: 18px !important; }
+.content h3 { font-size: 15px !important; }
+.content h4 { font-size: 13px !important; }
+.content h5, .content h6 { font-size: 12px !important; }
+
+/* 顶栏标题 —— 15px */
+.topbar .brand h1, #topbarTitle {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
+/* 禁止任何元素字号超过32px（splash已单独处理） */
+#splash .splash-title { font-size: 18px !important; }
+
+/* 卡片padding紧凑化 */
+.metric-card, .glass-card {
+  padding: 14px 16px !important;
+  border-radius: 8px !important;
+}
+.panel, .panel.glass-card {
+  border-radius: 8px !important;
+}
+.panel-head {
+  padding: 12px 16px !important;
+  margin-bottom: 0 !important;
+}
+.panel-body, .panel > div:not(.panel-head) {
+  padding: 12px 16px !important;
+}
+
+/* 全局间距紧凑 */
+.content { padding: 16px 20px !important; }
+.grid { gap: 12px !important; }
+
+/* 移动端 */
+@media (max-width: 768px) {
+  .page-header h1, .page-title { font-size: 18px !important; }
+  .metric-card strong, .stat-number { font-size: 20px !important; }
+  .content { padding: 12px !important; }
+  .metric-card, .glass-card { padding: 10px 12px !important; }
+}

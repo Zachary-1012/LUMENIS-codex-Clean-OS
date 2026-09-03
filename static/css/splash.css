@@ -1,421 +1,101 @@
 /* ============================================================
-   Z-Brand Core 产品启动海报 (Splash Screen) v3 — 浅色系
-   设计语言：侘寂浅灰白 + 银色流光海浪 + 微光银浮动 + 大彩色状态icon
-   参考：Prada/MiuMiu 极简时尚 + LeLabo/观夏 留白架构
-   产品：CTH-POMS / ZBMP；纯 CSS，零外部资源、零依赖
+   序境 Splash · 克制加载态 v3.0
+   禁止大字报/巨型Logo/无意义装饰 · 操作优先 · 快速进入
    ============================================================ */
-
 .splash {
-  /* 浅色系 token */
-  --splash-paper: #FAFAF9;       /* Stone 50 画布底 */
-  --splash-paper-raised: #FFFFFF; /* 白色卡片 */
-  --splash-line: #E7E5E4;        /* Stone 200 边框 */
-  --splash-line-strong: #D6D3D1; /* Stone 300 强边框 */
-  --splash-text: #1C1917;        /* Stone 800 主文字 */
-  --splash-text-sub: #78716C;    /* Stone 500 次级 */
-  --splash-text-faint: #A8A29E;  /* Stone 400 淡色 */
-  --splash-silver: #F5F5F4;      /* 微光银 */
-  --splash-silver-light: #FFFFFF; /* 高光银 */
-  --splash-silver-deep: #E7E5E4; /* 深银 */
-  --dot-ok: #16A34A;
-  --dot-warn: #D97706;
-  --dot-info: #2563EB;
-  --dot-idle: #D6D3D1;
-  --dot-danger: #EF4444;
+  position: fixed; inset: 0; z-index: 9999;
+  background: #faf9f7;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.3s ease;
+}
+.splash.fade-out { opacity: 0; pointer-events: none; }
 
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  background:
-    radial-gradient(140% 100% at 50% 0%, #FFFFFF 0%, var(--splash-paper) 50%, #F5F5F4 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  opacity: 1;
-  transition: opacity 0.75s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
-}
+/* 隐藏所有旧装饰层 */
+.splash-waves, .splash-shimmer, .splash-orbs, .splash-grain,
+.splash-orbit, .splash-skip { display: none !important; }
 
-/* 浅色暗角（极淡） */
-.splash::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(120% 120% at 50% 50%, transparent 60%, rgba(120, 113, 108, 0.06) 100%);
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* 银色流光海浪层 — 多层波浪渐变缓慢循环 */
-.splash-waves {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 1;
-}
-.splash-wave {
-  position: absolute;
-  left: -50%;
-  width: 200%;
-  height: 200px;
-  border-radius: 40%;
-  opacity: 0.4;
-}
-.splash-wave-1 {
-  bottom: -80px;
-  background: linear-gradient(180deg, transparent 0%, rgba(231,229,228,0.3) 40%, rgba(214,211,209,0.15) 100%);
-  animation: waveFloat1 12s ease-in-out infinite;
-}
-.splash-wave-2 {
-  bottom: -120px;
-  background: linear-gradient(180deg, transparent 0%, rgba(245,245,244,0.5) 30%, rgba(231,229,228,0.2) 100%);
-  animation: waveFloat2 16s ease-in-out infinite;
-}
-.splash-wave-3 {
-  bottom: -60px;
-  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.6) 20%, rgba(245,245,244,0.3) 100%);
-  animation: waveFloat3 20s ease-in-out infinite;
-}
-@keyframes waveFloat1 {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  50% { transform: translateX(3%) rotate(1deg); }
-}
-@keyframes waveFloat2 {
-  0%, 100% { transform: translateX(2%) rotate(-1deg); }
-  50% { transform: translateX(-2%) rotate(1deg); }
-}
-@keyframes waveFloat3 {
-  0%, 100% { transform: translateX(-1%) rotate(0.5deg); }
-  50% { transform: translateX(2%) rotate(-0.5deg); }
-}
-
-/* 银色流光条 — 微光银横向流动 */
-.splash-shimmer {
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    rgba(255,255,255,0.22) 45%,
-    rgba(245,245,244,0.34) 50%,
-    rgba(255,255,255,0.22) 55%,
-    transparent 70%
-  );
-  animation: shimmerSweep 6s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 2;
-}
-@keyframes shimmerSweep {
-  0% { left: -100%; }
-  60%, 100% { left: 100%; }
-}
-
-/* 浮动光斑 — 大彩色柔和光晕 */
-.splash-orbs {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-.splash-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(64px);
-  opacity: 0.14;
-  animation: orbFloat 8s ease-in-out infinite;
-}
-.splash-orb-1 {
-  width: 300px; height: 300px;
-  top: 10%; left: 15%;
-  background: radial-gradient(circle, #A5B4FC 0%, transparent 70%);
-  animation-delay: 0s;
-}
-.splash-orb-2 {
-  width: 250px; height: 250px;
-  top: 20%; right: 10%;
-  background: radial-gradient(circle, #FDE68A 0%, transparent 70%);
-  animation-delay: -2s;
-}
-.splash-orb-3 {
-  width: 280px; height: 280px;
-  bottom: 15%; left: 25%;
-  background: radial-gradient(circle, #BBF7D0 0%, transparent 70%);
-  animation-delay: -4s;
-}
-.splash-orb-4 {
-  width: 200px; height: 200px;
-  bottom: 25%; right: 20%;
-  background: radial-gradient(circle, #FECACA 0%, transparent 70%);
-  animation-delay: -6s;
-}
-@keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(20px, -30px) scale(1.05); }
-  66% { transform: translate(-15px, 20px) scale(0.95); }
-}
-
-/* 胶片颗粒（浅色版，极低透明度） */
-.splash-grain {
-  position: absolute;
-  inset: -50%;
-  width: 200%;
-  height: 200%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.025;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  z-index: 2;
-  animation: grainDrift 1.2s steps(3) infinite;
-}
-@keyframes grainDrift {
-  0% { transform: translate(0, 0); }
-  33% { transform: translate(-1.5%, 1%); }
-  66% { transform: translate(1%, -1%); }
-  100% { transform: translate(0, 0); }
-}
-
-/* 跳过提示 */
-.splash-skip {
-  position: absolute;
-  bottom: 32px;
-  right: 32px;
-  font-size: 12px;
-  color: var(--splash-text-faint);
-  letter-spacing: 0.5px;
-  z-index: 10;
-  opacity: 0.7;
-  transition: opacity 0.3s;
-}
-.splash-skip:hover { opacity: 1; }
-
-/* 轨道环 */
-.splash-orbit {
-  position: absolute;
-  width: 420px;
-  height: 420px;
-  border: 1px solid var(--splash-line);
-  border-radius: 50%;
-  z-index: 4;
-  opacity: 0.55;
-  animation: orbitSpin 36s linear infinite;
-}
-.splash-orbit::before {
-  content: '';
-  position: absolute;
-  top: -3px;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  background: var(--dot-info);
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(37,99,235,0.35);
-}
-@keyframes orbitSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* 主内容区 */
+/* 紧凑居中内容 */
 .splash-content {
-  position: relative;
-  z-index: 10;
-  text-align: center;
-  max-width: 480px;
-  padding: 0 32px;
+  display: flex; flex-direction: column; align-items: center;
+  max-width: 300px; width: 100%; padding: 24px; text-align: center;
 }
 
-/* 品牌标识 */
-.splash-brandmark {
-  display: inline-flex;
-  gap: 6px;
-  margin-bottom: 28px;
-}
-.splash-brandmark span {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--splash-text);
-  opacity: 0.6;
-}
-.splash-brandmark span:nth-child(2) { opacity: 0.4; }
-.splash-brandmark span:nth-child(3) { opacity: 0.25; }
-
+/* 品牌行：小logo + 18px标题横排，不再巨型竖排 */
 .splash-philosophy {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--splash-text-sub);
-  letter-spacing: 5px;
-  text-indent: 5px;
-  margin-bottom: 22px;
+  font-size: 10px; color: #a8a29e; letter-spacing: 2px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
 }
-.splash-philosophy .ph-line {
-  display: inline-block;
-  width: 28px;
-  height: 1px;
-  background: var(--splash-line-strong);
-  opacity: 0.7;
-}
+.splash-philosophy .ph-line { width: 16px; height: 1px; background: #d6d3d1; }
 .splash-title {
-  font-size: 46px;
-  font-weight: 600;
-  color: var(--splash-text);
-  letter-spacing: 6px;
-  text-indent: 6px;
-  margin: 0 0 12px 0;
-  line-height: 1.15;
+  font-size: 18px !important; font-weight: 600; color: #1c1917;
+  letter-spacing: 2px; margin: 0 0 4px 0 !important; line-height: 1.3;
 }
 .splash-en {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--splash-text-faint);
-  letter-spacing: 2.5px;
-  margin: 0 0 18px 0;
+  font-size: 10px; color: #a8a29e; letter-spacing: 1.5px; margin: 0 0 6px 0;
 }
 .splash-subtitle {
-  font-size: 13.5px;
-  color: var(--splash-text-sub);
-  margin: 0 0 36px 0;
-  line-height: 1.6;
-  font-weight: 400;
-  letter-spacing: 0.5px;
+  font-size: 11px; color: #78716c; margin: 0 0 18px 0; line-height: 1.5;
 }
 
-/* 状态卡片组 — 大彩色 icon */
+/* 状态行：3个状态横排小字，不再是大卡片 */
 .splash-status-grid {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 36px;
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 .splash-status-card {
-  background: #FDFCFA;
-  border: 1px solid var(--splash-line);
-  border-radius: 14px;
-  padding: 18px 20px;
-  min-width: 110px;
-  text-align: center;
-  box-shadow: 0 2px 12px rgba(28,25,23,0.04);
-  transition: transform 0.3s, box-shadow 0.3s;
+  background: transparent; border: none; border-radius: 0;
+  padding: 4px 8px; min-width: 0; box-shadow: none;
+  display: flex; align-items: center; gap: 5px;
+  transition: none;
 }
-.splash-status-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(28,25,23,0.08);
-}
+.splash-status-card:hover { transform: none; box-shadow: none; }
 .splash-status-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 10px;
+  width: 16px !important; height: 16px !important; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 !important;
 }
-.splash-status-icon svg { width: 21px; height: 21px; display: block; }
+.splash-status-icon svg { width: 12px !important; height: 12px !important; }
 .splash-status-icon.ok { background: rgba(22,163,74,0.08); color: #16A34A; }
 .splash-status-icon.warn { background: rgba(217,119,6,0.08); color: #D97706; }
 .splash-status-icon.info { background: rgba(37,99,235,0.08); color: #2563EB; }
 .splash-status-icon.idle { background: rgba(214,211,209,0.3); color: #A8A29E; }
-.splash-status-label {
-  font-size: 12px;
-  color: var(--splash-text-sub);
-  margin-bottom: 4px;
-}
+.splash-status-label { display: none; }
 .splash-status-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--splash-text);
+  font-size: 11px !important; color: #57534e; display: flex;
+  align-items: center; gap: 4px; font-weight: 500;
 }
-.splash-status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-.splash-status-dot.ok { background: var(--dot-ok); box-shadow: 0 0 8px rgba(22,163,74,0.35); }
-.splash-status-dot.warn { background: var(--dot-warn); box-shadow: 0 0 8px rgba(217,119,6,0.35); }
-.splash-status-dot.info { background: var(--dot-info); box-shadow: 0 0 8px rgba(37,99,235,0.35); }
-.splash-status-dot.idle { background: var(--dot-idle); }
+.splash-status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.splash-status-dot.ok { background: #16A34A; }
+.splash-status-dot.warn { background: #D97706; }
+.splash-status-dot.info { background: #2563EB; }
+.splash-status-dot.idle { background: #A8A29E; }
 
-/* 加载进度 */
-.splash-progress {
-  width: 100%;
-  max-width: 320px;
-  margin: 0 auto 20px;
-}
+/* 细进度条 */
+.splash-progress { width: 100%; max-width: 220px; }
 .splash-progress-bar {
-  height: 3px;
-  background: var(--splash-line);
-  border-radius: 2px;
-  overflow: hidden;
+  height: 2px; background: #e7e5e4; border-radius: 1px; overflow: hidden;
 }
 .splash-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--splash-line-strong), #57534E);
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.5s ease;
-  animation: progressFill 3s ease-out forwards;
+  height: 100%; background: #1c1917; border-radius: 1px;
+  animation: splashLoad 1s ease-out forwards;
 }
-@keyframes progressFill {
-  0% { width: 0%; }
-  30% { width: 45%; }
-  60% { width: 70%; }
-  100% { width: 92%; }
-}
+@keyframes splashLoad { 0%{width:0%} 100%{width:100%} }
 .splash-progress-text {
-  font-size: 11px;
-  color: var(--splash-text-faint);
-  margin-top: 8px;
-  letter-spacing: 0.3px;
+  font-size: 10px; color: #a8a29e; margin-top: 6px; text-align: center;
 }
 
-/* 底部信息 */
+/* 底部版本 */
 .splash-footer {
-  position: absolute;
-  bottom: 32px;
-  left: 32px;
-  z-index: 10;
+  position: absolute; bottom: 16px; left: 0; right: 0;
+  display: flex; justify-content: space-between; padding: 0 20px;
 }
-.splash-footer-version {
-  font-size: 11px;
-  color: var(--splash-text-faint);
-  letter-spacing: 0.5px;
-}
-.splash-footer-product {
-  font-size: 13px;
-  color: var(--splash-text-sub);
-  font-weight: 500;
-  margin-top: 2px;
-}
+.splash-footer-product { font-size: 11px; color: #a8a29e; font-weight: 500; }
+.splash-footer-version { font-size: 10px; color: #d6d3d1; }
 
-/* 淡出 */
-.splash.fade-out {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* 响应式 */
+/* 移动端 */
 @media (max-width: 640px) {
-  .splash-title { font-size: 34px; letter-spacing: 4px; text-indent: 4px; }
-  .splash-philosophy { font-size: 11px; letter-spacing: 3px; text-indent: 3px; gap: 10px; }
-  .splash-philosophy .ph-line { width: 20px; }
-  .splash-en { font-size: 10px; letter-spacing: 1.8px; }
-  .splash-subtitle { font-size: 12px; }
-  .splash-status-grid { gap: 10px; }
-  .splash-status-card { min-width: 90px; padding: 14px 12px; }
-  .splash-orbit { width: 300px; height: 300px; }
-  .splash-orb { filter: blur(40px); }
+  .splash-title { font-size: 16px !important; letter-spacing: 1px; }
+  .splash-content { padding: 16px; }
+  .splash-status-grid { gap: 8px; }
+  .splash-status-value { font-size: 10px !important; }
 }
