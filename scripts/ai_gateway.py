@@ -61,3 +61,53 @@ def chat(role, user_content, temperature=0.3, max_tokens=None, model=None):
         "role": role, "elapsed_s": round(elapsed, 2),
         "in_tokens": in_tok, "out_tokens": out_tok, "cache_hit": None,
     }
+
+
+def chat_json(role, user_content, temperature=0.1, max_tokens=1200, model=None, max_retries=1):
+    """结构化输出统一入口（对齐 outputguard guarded_generate 理念：校验->修复->重试）。
+
+    调 _chat（固定 system 前缀）→ repair_json 解析（8 策略修复）→ 失败生成重试提示再试。
+
+    返回 (data, provider, meta)：
+      data      修复/解析后的 Python 对象（成功）或 None（失败，调用方降级）
+      meta      {role, attempts, strategies, elapsed_s}
+    """
+    from intelligence import _chat
+    from scripts.prompt_registry import load_system_prompt
+    from scripts.json_repair import repair_json
+
+    system = load_system_prompt(role)
+    prompt = user_content
+    attempts = 0
+    strategies = []
+    t0 = time.time()
+    provider = "unknown"
+    for _ in range(max_retries + 1):
+        attempts += 1
+        try:
+            content, provider = _chat(system, prompt, temperature=temperature,
+                                      max_tokens=max_tokens, model=model)
+        except Exception:
+            content = None
+        if not content:
+            continue
+        data, applied = repair_json(content)
+        if data is not None:
+            strategies.extend(applied)
+            break
+        # 修复失败 -> 重试提示（告诉模型上次数值 JSON 损坏，要求只输出合法 JSON）
+        if _ < max_retries:
+            prompt = ("上一次输出不是合法 JSON，请只返回一个合法的 JSON 对象（不要代码块、不要解释文字）。"
+                      "\n原始要求：" + user_content)
+    elapsed = time.time() - t0
+    try:
+        from scripts.ai_budget import record
+        in_tok = _estimate_tokens(system) + _estimate_tokens(user_content)
+        out_tok = _estimate_tokens(content or "")
+        record(provider, model or provider, "gateway:" + role + ":json", data is not None,
+               elapsed, in_tok + out_tok, note="", in_tokens=in_tok, out_tokens=out_tok,
+               cache_hit=None)
+    except Exception:
+        pass
+    return data, provider, {"role": role, "attempts": attempts,
+                            "strategies": strategies, "elapsed_s": round(elapsed, 2)}

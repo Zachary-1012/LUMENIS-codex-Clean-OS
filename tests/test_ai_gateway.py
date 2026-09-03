@@ -54,3 +54,58 @@ def test_chat_unknown_role_raises_keyerror():
     _sys.modules["intelligence"] = fake_intel
     with pytest.raises(KeyError):
         chat("no_such_role", "hi")
+
+
+def test_chat_json_repairs_broken_output(tmp_path, monkeypatch):
+    import scripts.ai_gateway as g
+    import scripts.ai_budget as ab
+    import json
+    monkeypatch.setattr(ab, "LOG", str(tmp_path / "ai-budget.jsonl"))
+    monkeypatch.setattr(ab, "QUOTA", str(tmp_path / "quota.json"))
+    json.dump({"provider": "zhipu", "resources": []},
+              open(str(tmp_path / "quota.json"), "w", encoding="utf-8"))
+    import types, sys as _sys
+    captured = {}
+
+    def fake_chat(system, user, temperature=0.1, max_tokens=1200, model=None):
+        captured.setdefault("calls", 0)
+        captured["calls"] += 1
+        if captured["calls"] == 1:
+            return "`json\n{'name': 'Alice', 'age': 30,}\n`", "zhipu"
+        return '{"name": "Alice", "age": 30}', "zhipu"
+
+    fake_intel = types.ModuleType("intelligence")
+    fake_intel._chat = fake_chat
+    _sys.modules["intelligence"] = fake_intel
+
+    data, provider, meta = g.chat_json("summarizer", "返回用户 JSON", max_retries=0)
+    assert data == {"name": "Alice", "age": 30}
+    assert provider == "zhipu"
+    assert "fix_quotes" in meta["strategies"] or "fix_commas" in meta["strategies"]
+    assert meta["attempts"] == 1
+    assert ab.summary()["total_calls"] == 1
+
+
+def test_chat_json_retries_on_failure(tmp_path, monkeypatch):
+    import scripts.ai_gateway as g
+    import scripts.ai_budget as ab
+    import json
+    monkeypatch.setattr(ab, "LOG", str(tmp_path / "b.jsonl"))
+    monkeypatch.setattr(ab, "QUOTA", str(tmp_path / "q.json"))
+    json.dump({"provider": "zhipu", "resources": []},
+              open(str(tmp_path / "q.json"), "w", encoding="utf-8"))
+    import types, sys as _sys
+
+    def fake_chat(system, user, temperature=0.1, max_tokens=1200, model=None):
+        # 第一次坏，第二次好
+        if "不是合法 JSON" in user:
+            return '{"name": "Bob", "age": 25}', "zhipu"
+        return "完全不是JSON", "zhipu"
+
+    fake_intel = types.ModuleType("intelligence")
+    fake_intel._chat = fake_chat
+    _sys.modules["intelligence"] = fake_intel
+
+    data, provider, meta = g.chat_json("summarizer", "返回用户 JSON", max_retries=1)
+    assert data == {"name": "Bob", "age": 25}
+    assert meta["attempts"] == 2
