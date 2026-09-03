@@ -359,7 +359,7 @@ def extract_keywords(text, num_keywords=10):
     return []
 
 
-def search_enhance(query, context='', max_results=5, model='web-search-pro'):
+def search_enhance(query, context='', max_results=5, model=None, level='medium'):
     """
     搜索增强（智谱 web-search-pro 联网搜索模型，真实返回带来源的搜索结果）。
     用于案例库搜索增强、品牌知识库 RAG、产品全局架构检索。
@@ -369,7 +369,8 @@ def search_enhance(query, context='', max_results=5, model='web-search-pro'):
         query: 搜索查询
         context: 上下文信息（可选）
         max_results: 最大结果数
-        model: 模型名称，默认 web-search-pro（智谱官方联网搜索）
+        model: 模型名称，None → ZHIPU_SEARCH_MODEL（默认 web-search-pro 官方联网搜索）
+        level: low/medium/high/critical 任务分级（决定超时 30/60/90/120s；默认 medium=60s 与旧行为一致）
 
     Returns:
         dict: {ok, results: [{title, content, source, url}], summary, provider}
@@ -385,6 +386,11 @@ def search_enhance(query, context='', max_results=5, model='web-search-pro'):
             return {'ok': False, 'error': f'search-std 额度不足: {quota["reason"]}', 'results': []}
     except Exception:
         pass  # 额度检查失败不阻塞
+
+    # 分级：level 决定超时（low/medium/high/critical）；model 默认读 ZHIPU_SEARCH_MODEL
+    if model is None:
+        model = _env('ZHIPU_SEARCH_MODEL', 'web-search-pro')
+    _to = _LEVEL_CONFIG.get((level or 'medium').lower(), _LEVEL_CONFIG['medium'])['timeout']
 
     system_prompt = f'''你是一个联网搜索助手。请围绕用户查询联网搜索，返回最多{max_results}条真实、相关的结果。
 要求：
@@ -421,7 +427,7 @@ def search_enhance(query, context='', max_results=5, model='web-search-pro'):
             headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key},
             method='POST',
         )
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=_to) as resp:
             data = json.loads(resp.read().decode('utf-8', 'replace'))
 
         # 记录 search-std 使用（100次增强搜索配额）

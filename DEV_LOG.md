@@ -1263,3 +1263,22 @@ PartB（高效层追加）：
 - 预算护栏：成功调用自动记 per_call；超额自动降级 rule（不硬崩）。
 - 备份：intelligence.py.bak-bizchat（可回滚）。
 - 红线：五条红线函数/数据/采集未动；仅替换 AI 网关调用层。
+
+
+---
+
+## 第二十四批：search_enhance（联网搜索）接入分级
+
+### 改动（intelligence.py）
+- `search_enhance(query, context='', max_results=5, model=None, level='medium')`：
+  - 新增 `level` 参数：low/medium/high/critical 决定联网搜索超时（30/60/90/120s），默认 medium=60s 与旧行为一致。
+  - `model` 默认改 None → 动态读 `ZHIPU_SEARCH_MODEL`（默认 web-search-pro，可环境变量覆盖搜索模型）。
+  - timeout 固定 60 → 分级 `_to`。
+
+### 实测（真实结果）
+- 签名：`(query, context='', max_results=5, model=None, level='medium')` ✓
+- timeout=_to 分级生效 + ZHIPU_SEARCH_MODEL 动态读取 ✓
+- 端到端真实搜索：level='low'，**1175ms**，ok=True，web-search-pro，3 条带来源结果（30s 超时足够）。
+- 消耗 search_std 1 次（100 次增强搜索配额，合理验证）。
+- search-std 配额检查/记录保持不变（额度不足仍返回 ok=False 不硬崩）。
+- 红线：仅 search_enhance 参数化；搜索仍不写生产库、仅参考。
