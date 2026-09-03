@@ -275,8 +275,8 @@
         else if (q === 'report') gotoPage('reports');
       });
     }
-    function hideHome() { var h = document.getElementById('zbHome'); if (h) h.classList.remove('show'); }
-    function showHome() { var h = document.getElementById('zbHome'); if (h) h.classList.add('show'); }
+    function hideHome() { var h = document.getElementById('zbHome'); if (h) h.classList.remove('show'); var ov = document.getElementById('page-overview'); if (ov) ov.style.display = ''; }
+    function showHome() { var h = document.getElementById('zbHome'); if (h) h.classList.add('show'); var ov = document.getElementById('page-overview'); if (ov) ov.style.display = 'none'; }
 
     // 点任意侧栏功能 → 进入具体页，收起 Home（只认真实用户点击，屏蔽初始化程序 click）
     nav.addEventListener('click', function (e) {
