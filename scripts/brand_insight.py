@@ -79,6 +79,9 @@ def diagnose(db_path, keyword, top_k=6):
     if docs:
         try:
             topics = extract_topic_words(docs, top_k=top_k)
+            _noise = {"数据", "风险", "标题", "内容", "相关", "进行", "以及", "通过"}
+            topics = [t for t in topics
+                      if not (t[0] if isinstance(t, (tuple, list)) else str(t)) in _noise][:top_k]
         except Exception:
             topics = []
     sentiment = {"positive": _cnt(notes, "sentiment", "positive"),
