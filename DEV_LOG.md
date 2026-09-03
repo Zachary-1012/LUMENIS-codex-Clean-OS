@@ -853,6 +853,35 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - v4_smoke 2 个适配器断言过时 + 临时库 schema 缺列导致脚本 exit1（pre-existing）：另开小线把断言改为动态读取已注册适配器、临时库补业务列或跳过业务查询。
 - .env 两行重复 TAIKOO_AUTH_*（值一致、无害）；docs 20260830 密钥清单仍写历史默认值（历史文档，需要时加注"以 .env V4_ACCESS_KEY 为准"）。
 
+---
+
+## 2026-09-03 第十一批｜D2 小红书动态采集/动态冻结闭环补齐（审计先行，最小增量）
+
+### 结论：动态调度三闭环经源码逐行核实已存在，本轮只补 1 处真实缺口（+7 行，零删除）
+按"源码事实优先"先把生产调度主路径完整读穿，再决定改不改，避免重复造轮子：
+- 生产链 = `app.py scheduler_loop`(每20s) → `gate.gate_should_run`（app 启动 `setdefault ZBC_SCHED_GATE_MODE=enforce`，GAP-05 已从影子转真门控，**只收紧不放松**、自身异常 fail-open）→ `xhs_cookie_bridge.create_task`。
+- **动态间隔（不定时）已闭环**：`platform_adapters/scheduling/decision.py` 按六态（SUCCESS/NO_NEW_DATA/RISK_WARNING/BLOCKED·COOLING_DOWN/SESSION·NEED_VERIFY/NETWORK）算 current_interval——无新数据 ×1.5 指数延长(上限6h)、风控冷却 900s×2^n(上限1800s)、网络退避 60s×2^n(上限900s，连续3次进冷却)、恢复先低频试探、连续3次成功回正；xhs 基线 1h、硬上限 20min。
+- **动态冻结时长已闭环**：`xhs_cookie_bridge._adaptive_cool_minutes()` 随 adaptive 策略返回 60/90/180/360min，`_trip_circuit(...,cool_minutes=_adaptive_cool_minutes())` 熔断时长随风险递增（异常 fail-open 回 60）。
+- **动态采集量已闭环**：生产路径 `sync→_run_search` 的采集量唯一旋钮是 max_scroll（无独立详情层），它被**双重动态**收紧——scheduler 取 adaptive_engine 的 max_scroll(NORMAL6/CAUTIOUS4/CONSERVATIVE2/SUSPENDED0)，`_run_search` 内再与 network_adaptive.current_scroll_limit 取 min。
+- 任务完成 worker 已**双回写**：`_shadow_record_result`→planner 六态、`adaptive_engine.report_collection_result`→7指标滑窗；state_map 状态归一安全（未知态/None→COLLECT_ERROR，绝不误判成功；AUTH_FAILED→SESSION_EXPIRED、CAPTCHA→NEED_VERIFY、PARTIAL_BLOCKED→RISK_WARNING）。
+
+### 本轮唯一补丁：worker 未预期异常分支补回写统一规划器
+- 问题：worker `except Exception`（sync 未兜住的异常）此前只回写 adaptive_engine，没回写 planner，导致 planner 的 last_run_at/动态间隔不更新，enforce 门控可能在异常后仍按原间隔高频重试。
+- 改动：xhs_cookie_bridge.py 异常分支补 `_shadow_record_result('NETWORK_ERROR',0,str(e),run_type)`（归一 NETWORK_ERROR 走网络退避），fail-open，与成功/受控失败路径一致；**+7 行、零删除、零红线改动**。
+
+### 经核实"不改"的两处（避免过度施工，记录决策）
+- `COOLDOWN_MINUTES=60` 保持静态：它是 create_task 内"任何情况下两次运行至少隔 60min"的账号安全硬地板（恰=planner 正常基线 1h），动态间隔由 planner 在其上层门控，二者正交；若把它改动态反而可能在风控时缩短间隔，危险。
+- adaptive_engine 的 `max_details/request_delay/max_concurrent/next_collect_hours/pause_minutes` 在当前 xhs_cookie_bridge 路径无消费者：当前采集量由 max_scroll 决定、间隔由 planner 决定，两套分工已清晰；**不硬造一层详情抓取循环去"用上参数"**（违反最小增量）。登记为预留参数，未来若引入独立详情阶段再消费。request_delay NORMAL55>CAUTIOUS5 的反序疑点随之搁置（该字段当前无人读取，非生产行为）。
+
+### 测试与真实结果（已实测）
+- 新增 tests/test_adaptive_exception_feedback.py（3 例，内存态 planner state_file=None/store=None，不触网、不连浏览器、不碰生产 data/）：①异常回写后立即决策被 WAIT_INTERVAL 拦下；②连续3次网络失败进 IN_COOLDOWN；③planner 自身故障时回写 fail-open 不冒泡。
+- `pytest test_adaptive_exception_feedback + test_adaptive_feedback + test_adaptive_engine -q` = **7 passed**；`py_compile` exit0。
+- tests/healthcheck.py exit0：9 模块全 ok、notes_total 1052/今日95、subject_guard gz_hit=true & sh_excluded=true（广州主体口径未动）、has_publish_datetime=true（publish/captured 双时间字段在）。
+
+### 文件
+- 改：xhs_cookie_bridge.py（+7）；新增：tests/test_adaptive_exception_feedback.py；本日志。备份 xhs_cookie_bridge.py.bak-d2（不提交）。数据库无变化、无迁移。
+
+
 
 
 

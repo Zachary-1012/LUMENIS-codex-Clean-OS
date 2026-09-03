@@ -920,6 +920,13 @@ def create_task(keywords=None,max_scroll=6,run_type='manual'):
                 print('[xhs-bridge] adaptive feedback non-blocking:', _ae_e, flush=True)
         except Exception as e:
             _tasks[task_id].update(status='error',progress=100,message=str(e),error=str(e))
+            # D2 动态调度闭环补齐：sync 未兜住的异常也要回写统一规划器（归一 NETWORK_ERROR 走退避），
+            # 否则 planner 的 last_run/动态间隔不更新，enforce 门控可能在异常后仍按原间隔高频重试。
+            # 与成功/受控失败路径(905-910)一致，fail-open，AI 不参与此决策。
+            try:
+                _shadow_record_result('NETWORK_ERROR', 0, str(e), run_type)
+            except Exception:
+                pass
             try:
                 import adaptive_engine as _ae
                 _ae.adaptive_engine.report_collection_result(
