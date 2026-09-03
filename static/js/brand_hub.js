@@ -77,6 +77,11 @@
     if (el) el.classList.toggle("open");
   }
 
+  function closeDropdown() {
+    var el = document.getElementById("brandSwitcher");
+    if (el) el.classList.remove("open");
+  }
+
   // 点击外部关闭下拉
   document.addEventListener("click", function (e) {
     var el = document.getElementById("brandSwitcher");
@@ -201,9 +206,8 @@
   function switchBrand(key) {
     currentBrand = key;
     currentLevel = "brand";
+    closeDropdown();
     renderSwitcher();
-    var dropdown = document.querySelector("#brandSwitcher");
-    if (dropdown) dropdown.classList.remove("open");
     // 如果在品牌中心，刷新网格；如果在Dashboard，刷新Dashboard
     if (document.getElementById("brandHubSection") && document.getElementById("brandHubSection").classList.contains("active")) {
       renderBrandGrid();
@@ -216,6 +220,7 @@
   function openBrand(key) {
     currentBrand = key;
     currentLevel = "brand";
+    closeDropdown();
     renderSwitcher();
     // 导航到品牌Dashboard
     if (typeof navigateTo === "function") {
@@ -225,6 +230,7 @@
   }
 
   function goHub() {
+    closeDropdown();
     if (typeof navigateTo === "function") navigateTo("brand-hub");
     setTimeout(renderBrandGrid, 100);
   }
@@ -261,6 +267,7 @@
   // 暴露全局
   window.BrandHub = {
     toggleDropdown: toggleDropdown,
+    closeDropdown: closeDropdown,
     switchBrand: switchBrand,
     openBrand: openBrand,
     goHub: goHub,
