@@ -2182,7 +2182,15 @@ def api_kos_ownership():
             profiles = ke.brand_profiles(brand, limit=limit)
             rows = []
             for p in profiles:
-                rows.append({**p, "ownership": ke.ownership_for(p, brand=brand)})
+                own = ke.ownership_for(p, brand=brand)
+                # 增强：relevance + interaction（确定性视图，不写库）
+                try:
+                    acc = ke.brand_kos_account(brand, p["author_id"], limit=20)
+                    rel = {"avg_relevance": acc["avg_relevance"], "relevance_segment": acc["relevance_segment"]} if acc else {}
+                    inter = acc["interaction"] if acc and acc.get("interaction") else {}
+                except Exception:
+                    rel, inter = {}, {}
+                rows.append({**p, "ownership": own, "relevance": rel, "interaction": inter})
             return jsonify({"ok": True, "brand": brand, "count": len(rows),
                             "needs_review": sum(1 for r in rows if r["ownership"]["needs_manual_review"]),
                             "profiles": rows}), 200
@@ -2243,6 +2251,23 @@ def api_kos_executions():
                                    target_author_id=request.args.get("author_id", ""),
                                    limit=int(request.args.get("limit", 50) or 50))
         return jsonify({"ok": True, "count": len(rows), "executions": rows}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@kos_bp.route("/account", methods=["GET"])
+def api_kos_account():
+    """品牌 KOS 单账号 360° 视图（ownership + relevance + interaction，纯视图不写库）。"""
+    try:
+        ke = _engine()
+        brand = (request.args.get("brand") or "").strip()
+        author_id = (request.args.get("author_id") or "").strip()
+        if not brand or not author_id:
+            return jsonify({"ok": False, "error": "brand and author_id required"}), 400
+        acc = ke.brand_kos_account(brand, author_id, limit=20)
+        if not acc:
+            return jsonify({"ok": False, "error": "account not found in brand scope"}), 404
+        return jsonify({"ok": True, "account": acc}), 200
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

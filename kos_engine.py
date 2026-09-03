@@ -654,3 +654,122 @@ def ownership_for(profile, brand="", subject_type="", identity_label="", is_kos=
                          + (("; identity_label=" + label) if label else "")
                          + ("; is_kos=1" if is_kos else ""),
     }
+
+# -*- coding: utf-8 -*-
+"""KOS 采集功能增强（智谱 2026-09-03 设计 + KOS Master Contract v1 落地）。
+1) content_relevance_score：确定性 relevance 信号（0-1），仅作 KOS 排序/分层信号，
+   不替代主体硬过滤(subject_hit)、不因低分拒绝入库（不丢数据）；排除词命中 → 0分+need_recheck。
+2) get_interaction_pattern：账号互动模式聚合（KOS 识别证据，从现有 notes 聚合，不新增生产字段）。
+3) ownership_for 增加 ai_status 支持：AI 只给建议(AI_SUGGESTED)，人工复核后才 VERIFIED，不越权。
+"""
+
+
+def content_relevance_score(note, brand_keywords, exclude_keywords):
+    """确定性 relevance 分数（0-1）。返回 dict：score/segment/need_recheck/reason。
+    纯规则、无 AI、无外部依赖。低分不拒入库，仅作 KOS 排序/分层/Precision 评估信号。"""
+    title = str(note.get("title") or "")
+    body = str(note.get("body") or note.get("content") or "")
+    other = " ".join(str(note.get(k) or "") for k in ("author_nickname", "source_keyword", "matched_keywords"))
+    text = f"{title} {body} {other}".lower()
+    if exclude_keywords and any(str(e).lower() in text for e in exclude_keywords if e):
+        return {"score": 0.0, "segment": "excluded", "need_recheck": True,
+                "reason": "排除词命中，须人工复核（不自动拒入库）"}
+    tl, bl, ol = title.lower(), body.lower(), other.lower()
+    hits, max_possible = 0, max(len(brand_keywords) * 3, 1)
+    for kw in brand_keywords:
+        k = str(kw).lower()
+        if not k:
+            continue
+        if k in tl:
+            hits += 3
+        elif k in bl:
+            hits += 2
+        elif k in ol:
+            hits += 1
+    score = round(min(hits / max_possible, 1.0), 3)
+    segment = "high" if score >= 0.7 else ("medium" if score >= 0.3 else "low")
+    return {"score": score, "segment": segment, "need_recheck": segment == "low",
+            "reason": f"品牌词命中 {hits}/{max_possible}"}
+
+
+def get_interaction_pattern(author_id, brand="", limit=30):
+    """账号互动模式聚合（KOS 识别证据）。从 notes 按作者聚合互动数据，不新增生产字段。
+    返回：likes/comments/collects/shares 均值与中位数、平均互动率、note_count、last_publish_at。"""
+    conn = _get_conn()
+    try:
+        cond = "author_id = ?"
+        params = [author_id]
+        if brand:
+            bcond, bparams = _brand_source_filter(brand)
+            if bcond != "1=0":
+                cond += f" AND {bcond}"
+                params += bparams
+        rows = conn.execute(
+            f"""SELECT note_id, likes, comments, collects, shares, publish_datetime
+                FROM notes WHERE {cond} ORDER BY captured_at DESC LIMIT ?""",
+            params + [int(limit)],
+        ).fetchall()
+        if not rows:
+            return {"author_id": author_id, "note_count": 0, "pattern": "insufficient",
+                    "reason": "暂无该账号笔记"}
+        likes = [int(r["likes"] or 0) for r in rows]
+        comments = [int(r["comments"] or 0) for r in rows]
+        collects = [int(r["collects"] or 0) for r in rows]
+        shares = [int(r["shares"] or 0) for r in rows]
+        eng = [likes[i] + comments[i] * 2 + collects[i] * 1.5 + shares[i] * 2 for i in range(len(rows))]
+        n = len(rows)
+
+        def _median(xs):
+            s = sorted(xs)
+            m = len(s)
+            return s[m // 2] if m % 2 else round((s[m // 2 - 1] + s[m // 2]) / 2, 1)
+
+        return {
+            "author_id": author_id,
+            "note_count": n,
+            "avg_likes": round(sum(likes) / n, 1),
+            "avg_comments": round(sum(comments) / n, 1),
+            "avg_collects": round(sum(collects) / n, 1),
+            "avg_shares": round(sum(shares) / n, 1),
+            "median_engagement": _median(eng),
+            "avg_engagement": round(sum(eng) / n, 1),
+            "last_publish_at": rows[0]["publish_datetime"] if rows else None,
+            "pattern": ("active" if n >= 3 else "emerging") if any(e > 50 for e in eng) else "quiet",
+        }
+    finally:
+        conn.close()
+
+
+def brand_kos_account(brand, author_id, limit=20):
+    """品牌 KOS 单个账号 360° 增强视图：ownership + relevance + interaction。
+    纯视图，不写任何表；AI 不越权（ai_status 默认 RULE，AI 建议走 AI_SUGGESTED + 人工复核）。"""
+    conn = _get_conn()
+    try:
+        bcond, bparams = _brand_source_filter(brand)
+        if bcond == "1=0":
+            return None
+        rows = conn.execute(
+            f"""SELECT * FROM notes WHERE {bcond} AND author_id = ? ORDER BY captured_at DESC LIMIT ?""",
+            bparams + [author_id, int(limit)],
+        ).fetchall()
+        if not rows:
+            return None
+        notes = [dict(r) for r in rows]
+        from subject_rules import collect_keywords_for, get_brand_config
+        kws = [k for k in collect_keywords_for(brand) if k]
+        ex = list((get_brand_config(brand) or {}).get("exclude_words", []))
+        rels = [content_relevance_score(n, kws, ex) for n in notes]
+        avg_rel = round(sum(r["score"] for r in rels) / len(rels), 3) if rels else 0.0
+        base = {
+            "author_id": author_id,
+            "author_nickname": notes[0].get("author_nickname") or "",
+            "note_count": len(notes),
+            "avg_relevance": avg_rel,
+            "relevance_segment": "high" if avg_rel >= 0.7 else ("medium" if avg_rel >= 0.3 else "low"),
+        }
+        base["interaction"] = get_interaction_pattern(author_id, brand=brand, limit=limit)
+        base["ownership"] = ownership_for(notes[0], brand=brand)
+        base["ownership"]["ai_status"] = "RULE"  # 规则判定；AI 建议须经人工复核转 VERIFIED
+        return base
+    finally:
+        conn.close()

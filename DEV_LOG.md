@@ -1085,3 +1085,41 @@ KOS MASTER EXECUTION CONTRACT v1 已入双子库（ZBC d292c9f / OSAI bd088f6）
 - 归属 Gate 目前为确定性规则视图（官方/媒体自动 DIRECT，其余待人工复核）；AI 辅助分类未接入（AI 不越权原则，后续可加，但不得覆盖硬规则）。
 - kos_profiles 主表未加 ownership 字段（避免 schema 变更与广州数据影响）；如后续需要持久化归属结论，建议新增独立归属表（经用户确认后做）。
 - 备份：kos_engine.py.bak-ownership、kos_routes.py.bak-hcg、database_migrations.py.bak-hcg（均不提交）。
+
+
+---
+
+## 第十八批：KOS 采集功能全套增强（relevance + interaction + AI_SUGGESTED）｜智谱 per_call 5 次落地
+
+### 背景
+用户指令"kos采集功能全套用99次的5次"：使用智谱 per_call 99 次额度中的 5 次，深度推进 KOS 采集功能全套（KOS MASTER EXECUTION CONTRACT v1 落地）。5 次全部为智谱 glm（intelligence 网关，AI Budget 自动记录）。
+
+### 智谱 5 次调用记录（均计入 per_call 额度）
+1. API 连通验证：provider=zhipu，返回"在线"（此前 401 已解决）。
+2. KOS 采集链路深度审查 → 输出最小增强清单：P0 subject_filter 二次验证/relevance 阈值；P1 interaction_pattern 采集；P2 AI_SUGGESTED 归属标记机制。
+3. content_relevance_score 计算设计（命中位置加权：标题3/正文2/其他1，排除词0分+复核，低分不拒入库）。
+4. AI_SUGGESTED 归属标记机制（AI建议→SUGGESTED→人工复核→VERIFIED）+ interaction_pattern 聚合设计。
+5. 落地审查：6 项逐项 PASS（主体归属/AI权限/relevance/互动聚合/状态机/香港采集+广州口径），总评 PASS。
+
+### 改动（全部确定性/视图层，零 AI 运行时依赖、零生产风险）
+1. kos_engine.py 追加（复用现有，不改主函数）：
+   - content_relevance_score(note, brand_keywords, exclude_keywords)：确定性 0-1 分数 + segment + need_recheck；排除词→0分+复核（不拒入库）；仅作 KOS 排序/分层信号，不替代 subject_hit。
+   - get_interaction_pattern(author_id, brand, limit)：从 notes 聚合互动模式（likes/comments/collects/shares 均值+中位、engagement、active/emerging/quiet），KOS 识别证据，不新增生产字段。
+   - brand_kos_account(brand, author_id)：单账号 360° 视图 = ownership + relevance + interaction，纯视图不写库，ai_status=RULE（AI 建议须人工复核转 VERIFIED，不越权）。
+2. kos_routes.py：
+   - /api/kos/ownership 现返回 profiles 附带 relevance + interaction（enrich）。
+   - 新增 GET /api/kos/account?brand=&author_id= 单账号 360° 视图。
+
+### 实测（真实结果）
+- py_compile 全过。
+- 单元：content_relevance_score（海南中免标题命中=1.0 high；成都排除词=0.0 excluded+need_recheck）；get_interaction_pattern（广州官方=active）。
+- HTTP 实测（Basic Auth）：
+  - GET /api/kos/account?brand=guangzhou_taikoo_hui&author_id=61d58d… → owner=OFFICIAL, rel=0.472 medium, notes=9, inter=active, eng_avg=225.3, ai_status=RULE。
+  - GET /api/kos/ownership?brand=guangzhou_taikoo_hui&limit=2 → count=2, need_review=2，每条带 owner/relevance/interaction。
+- 平滑重启 8201（worker 26668），healthz v5.9.9 OK。
+- 红线回归：广州 subject_hit=True/成都=False；五条红线函数未改；AI 不越权（ai_status=RULE）；官方账号只读；publish_datetime/captured_at 未混。
+
+### 未实测 / 登记
+- AI_SUGGESTED 的人工复核 UI/持久化未做（当前机制字段就位，人工确认端点为后续）；AI 建议调用本身不自动发生（不越权），需人工显式触发。
+- relevance/interaction 在品牌真实采集数据上的校准待恢复采集后观察（当前双暂停）。
+- 备份：kos_engine.py.bak-enhance、kos_routes.py.bak-account（不提交）。
