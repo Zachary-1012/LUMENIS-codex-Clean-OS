@@ -1,4 +1,4 @@
-# 序境双子库 · Twin Execution Gate
+﻿# 序境双子库 · Twin Execution Gate
 
 ## Purpose
 
@@ -30,6 +30,10 @@ Automatic collection is limited to the approved schedule: 00:00 and 12:00 daily,
 Any risk signal requires `STOP → COOLDOWN → HUMAN REVIEW`.
 
 No new module may silently start a collector, create a new collection schedule, bypass an adapter/policy, or alter account/session safety controls.
+
+### Authorized exception — TopicCampaign independent quota (2026-09-03, owner sign-off)
+
+By explicit owner authorization (2026-09-03), the TopicCampaign module (topic_campaign.py) maintains an independent collection schedule as an approved exception to the daily 2-run limit above: fixed hours [9, 11, 13, 15, 17, 19] (6 runs/day, staggered 5-10 min), daily cap of 8 runs including manual, counted on its own counter and NOT consuming the main public-opinion quota. This exception applies only to TopicCampaign; the main public-opinion collector remains governed by the ShadowPlanner gate (dynamic decision, GAP-05 sign-off 2026-09-02). Any future change to this exception requires re-authorization by the owner.
 
 ## UI gate
 
