@@ -86,7 +86,7 @@
           <div class="field"><label>主题词（逗号分隔，留空走关键词信号）</label><textarea id="i_topics">方所,15周年,面包</textarea></div>
           <div class="field"><label>DB 关键词（非空则从真实舆情取信号）</label><input id="i_keyword" placeholder="如 太古汇"></div>
           <div class="field"><label>🌏 出海模式</label>
-            <select id="i_region"><option value="">关闭（国内）</option><option value="东南亚">东南亚</option><option value="欧洲">欧洲</option><option value="中东">中东</option><option value="拉美">拉美</option><option value="北美">北美</option></select>
+            <select id="i_region"><option value="">关闭（国内）</option><option value="东南亚">东南亚</option><option value="欧洲">欧洲</option><option value="中东">中东</option><option value="拉美">拉美</option><option value="北美">北美</option><option value="东亚">东亚</option><option value="澳新">澳新</option></select>
           </div>
           <div class="field" id="i_region_hint" style="display:none;font-size:11px;color:#2F3B66;background:#EEF0F8;border-radius:8px;padding:8px"></div>
         </div>
@@ -115,9 +115,13 @@
           </div>
           <div class="field"><label>产品/主题点</label><input id="v_point" placeholder="如 15周年限时"></div>
           <div class="field"><label>热点</label><input id="v_hot" placeholder="如 15周年"></div>
+          <div class="field"><label>🌏 出海模式</label>
+            <select id="v_region"><option value="">关闭（国内）</option><option value="东南亚">东南亚</option><option value="欧洲">欧洲</option><option value="中东">中东</option><option value="拉美">拉美</option><option value="北美">北美</option><option value="东亚">东亚</option><option value="澳新">澳新</option><option value="东亚">东亚</option><option value="澳新">澳新</option></select>
+          </div>
+          <div class="field" id="v_region_hint" style="display:none;font-size:11px;color:#2F3B66;background:#EEF0F8;border-radius:8px;padding:8px"></div>
         </div>
         <button class="btn" id="b_video">生成视频脚本</button>
-        <div class="hint">TVC/概念片/小红书/抖音/TikTok 分镜脚本，含情感钩子（emotion_hook）。</div>
+        <div class="hint">TVC/概念片/小红书/抖音/TikTok 分镜脚本，含情感钩子（emotion_hook）。出海模式自动叠加 TikTok/IG/YT 社媒矩阵与区域节点时机。</div>
       </div>
       <div class="panel output" id="out_video"><div class="empty">输入参数后点「生成视频脚本」</div></div>
     </div>
@@ -231,26 +235,33 @@
     });
   });
 
-  // 出海模式：切换地区时展示该区域当月节点（真实营销日历数据，GET）
-  $('i_region').addEventListener('change',function(){
-    var r=this.value, hint=$('i_region_hint');
-    if(!r){hint.style.display='none';return;}
-    var h={}; if(authHeader)h['Authorization']=authHeader;
-    fetch(BASE+'/api/v2/marketing/overview?region='+encodeURIComponent(r),{headers:h})
-      .then(function(res){return res.json();})
-      .then(function(j){
-        var ns=(j&&j.region_nodes)||[];
-        hint.innerHTML='区域节点：'+(ns.length?ns.map(function(n){return n.name;}).join('、'):'当月无')+'<br>海外策略：TikTok Spark Ads 原生分发 · IG Reels/Stories · KOC 金字塔 · 小店站内闭环';
-        hint.style.display='block';
-      }).catch(function(){hint.style.display='none';});
-  });
+  function bindRegionHint(selId,hintId){
+    var el=$(selId); if(!el) return;
+    el.addEventListener('change',function(){
+      var r=this.value, hint=$(hintId);
+      if(!r){hint.style.display='none';return;}
+      var h={}; if(authHeader)h['Authorization']=authHeader;
+      fetch(BASE+'/api/v2/marketing/overview?region='+encodeURIComponent(r),{headers:h})
+        .then(function(res){return res.json();})
+        .then(function(j){
+          var ns=(j&&j.region_nodes)||[];
+          hint.innerHTML='区域节点：'+(ns.length?ns.map(function(n){return n.name;}).join('、'):'当月无')+'<br>海外策略：TikTok Spark Ads 原生分发 · IG Reels/Stories · KOC 金字塔 · 小店站内闭环';
+          hint.style.display='block';
+        }).catch(function(){hint.style.display='none';});
+    });
+  }
+  bindRegionHint('i_region','i_region_hint');
+  bindRegionHint('v_region','v_region_hint');
 
   $('b_video').addEventListener('click',function(){
+    var vreg=$('v_region').value;
     var body={brand:$('v_brand').value.trim(),category:$('v_cat').value.trim(),circle:$('v_circle').value,
       tonality:$('v_tonality').value,video_type:$('v_type').value,product_point:$('v_point').value.trim(),hotspot:$('v_hot').value.trim()};
+    if(vreg){body.overseas=true;body.region=vreg;}
     $('out_video').innerHTML='<div class="loading">正在生成分镜脚本…</div>';
     post('/api/creative/video-script',body,function(d){
       var html='<div class="bar"><h2>'+esc(d.big_idea)+'</h2></div>';
+      if(vreg)html+='<div class="card"><div class="tag">🌏 出海·'+esc(vreg)+'</div><div class="kv"><b>时机</b> '+esc((d.overseas_timing&&d.overseas_timing.advice)||'')+'</div><div class="kv">'+((d.overseas_social_matrix&&Object.keys(d.overseas_social_matrix).map(function(k){return '<b>'+k+'</b> '+esc(d.overseas_social_matrix[k]);}).join('<br>'))||'')+'</div></div>';
       if(d.emotion_hook)html+='<div class="card"><div class="tag">情感钩子</div><div class="idea">'+esc(d.emotion_hook)+'</div></div>';
       var out={结构:d.structure,标题候选:d.title_candidates,分镜:d.shots,投放建议:d.publish_advice,制作流程:d.production_workflow};
       Object.keys(out).forEach(function(k){var v=out[k]; if(!v)return;

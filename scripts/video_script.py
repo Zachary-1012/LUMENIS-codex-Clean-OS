@@ -117,9 +117,20 @@ def _emotion_hook(brand, topic, circle, tonality):
                         rng=random.Random())
 
 
+# 海外社媒矩阵（出海模式：TikTok/IG Reels/YouTube Shorts + KOC 金字塔 + 区域节点时机）
+OVERSEAS_SOCIAL_MATRIX = {
+    "tiktok": "TikTok 主阵地：Spark Ads(原生创作者加热)+Smart Performance；AI-UGC 低成本多版本测钩子；借平台 Trending 声效/挑战机制放大；前3秒 organic 化无 logo",
+    "ig_reels": "Instagram Reels：视觉高质感+Reel 搜索关键词埋词；配合 Stories 双链路(曝光→私域)；KOC 探店/开箱 UGC 共创",
+    "youtube_shorts": "YouTube Shorts：长尾搜索占位+订阅沉淀；教程/开箱/对比类内容可收藏化，延长内容生命周期",
+    "koc_pyramid": "KOC 金字塔：头部(品牌背书)+腰部(专业种草)+素人(真实口碑)三层共创；数据信号：收藏/分享权重>点赞，First-Party 原创内容权重高",
+    "store_loop": "独立站/小店站内闭环：内容→小店→复购；大促节点(黑五/区域购物节)前后 3-4 天预热",
+}
+
+
 def generate_video_script(brand, category="通用", circle="都市职场", tonality="premium",
-                          video_type="tvc", product_point="", hotspot="", n_shots=None):
-    """生成视频创意分析脚本。返回结构化脚本（可 JSON 输出）。"""
+                          video_type="tvc", product_point="", hotspot="", n_shots=None,
+                          overseas=False, region=""):
+    """生成视频创意分析脚本。返回结构化脚本（可 JSON 输出）。overseas=True 时叠加海外社媒矩阵与区域节点时机。"""
     vtype = VIDEO_TYPES.get(video_type, VIDEO_TYPES["tvc"])
     scenes = CATEGORY_SCENES.get(category, CATEGORY_SCENES["通用"])
     tone = TONALITIES.get(tonality, TONALITIES["premium"])["name"]
@@ -164,7 +175,7 @@ def generate_video_script(brand, category="通用", circle="都市职场", tonal
             title_candidates.append(tpl % (brand, product_point or "上新"))
     hotspot_bind = "绑定热点「%s」" % hotspot if hotspot else ("克制不追热点" if tonality == "luxury" else "择机踩文化时机")
 
-    return {
+    out = {
         "meta": {
             "brand": brand, "category": category, "circle": circle, "tonality": tone,
             "video_type": vtype["name"], "ratio": vtype["ratio"], "duration": vtype["duration"],
@@ -179,6 +190,18 @@ def generate_video_script(brand, category="通用", circle="都市职场", tonal
         "production_workflow": PRODUCTION_WORKFLOW,
         "shot_language": SHOT_LANGUAGE,
     }
+    if overseas:
+        from scripts.marketing_calendar import region_nodes
+        out["meta"]["overseas"] = True
+        out["meta"]["region"] = region
+        rn = region_nodes(region) if region else []
+        out["overseas_social_matrix"] = OVERSEAS_SOCIAL_MATRIX
+        out["overseas_timing"] = {
+            "region": region or "全球",
+            "region_nodes": [n["name"] for n in rn],
+            "advice": ("借势区域节点「%s」踩准文化时机" % "、".join(n["name"] for n in rn)) if rn else "择机结合海外大促节点(黑五/Cyber Monday/Boxing Day)",
+        }
+    return out
 
 
 def _publish_advice(video_type, tonality):

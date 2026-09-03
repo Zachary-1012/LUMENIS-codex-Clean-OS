@@ -509,7 +509,8 @@ def creative_video_script():
         result = generate_video_script(
             brand, data.get('category', '通用'), data.get('circle', '都市职场'),
             data.get('tonality', 'premium'), vt, data.get('product_point', ''),
-            data.get('hotspot', ''), data.get('n_shots') or None)
+            data.get('hotspot', ''), data.get('n_shots') or None,
+            overseas=bool(data.get('overseas')), region=data.get('region', ''))
         return jsonify({'ok': True, 'data': result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -671,7 +672,7 @@ def marketing_overview():
                 for n in global_nodes(m):
                     w.writerow([m, n["name"], n.get("date", ""), n.get("kind", ""),
                                 n.get("theme", ""), "、".join(n.get("cats", [])), "海外"])
-                for r in ["东南亚", "欧洲", "中东", "拉美", "北美"]:
+                for r in ["东南亚", "欧洲", "中东", "拉美", "北美", "东亚", "澳新"]:
                     for n in region_nodes(r, m):
                         w.writerow([m, n["name"], "区域节点", "区域", n.get("theme", ""),
                                     "、".join(n.get("cats", [])), "区域-" + r])

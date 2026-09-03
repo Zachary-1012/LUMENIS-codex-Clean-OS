@@ -77,7 +77,7 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
             "global": cross_global(date_str=end[:7]).get("advice", []),
             "global_nodes": [n["name"] for n in global_nodes(int(end[5:7]))],
             "region": {r: [n["name"] for n in region_nodes(r, int(end[5:7]))]
-                       for r in ["东南亚", "欧洲", "中东", "拉美", "北美"]},
+                       for r in ["东南亚", "欧洲", "中东", "拉美", "北美", "东亚", "澳新"]},
         }
     except Exception:
         report['marketing_nodes'] = {"nodes": [], "themes": [], "tonality_advice": "",
