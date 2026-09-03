@@ -145,7 +145,7 @@
 <link rel="stylesheet" href="/static/css/zbip-panels.css?v=1.0.3">
 <link rel="stylesheet" href="/static/css/splash.css?v=2.0.0">
   <link rel="stylesheet" href="/static/css/resident_health.css?v=5.9.9">
-  <link rel="stylesheet" href="/static/css/internal_browser.css?v=5.9.9">
+  <link rel="stylesheet" href="/static/css/internal_browser.css?v=8.0.2">
   <link rel="stylesheet" href="/static/css/evidence_dashboard.css?v=5.9.9">
   <link rel="stylesheet" href="/static/css/osai-shell.css?v=5.9.9">
   <!-- [STAGING ONLY] ZBIP 最终精修层（侘寂黑白灰/语义小圆点/移动重排），最高优先级，回滚=删此行 -->
@@ -516,7 +516,7 @@
             <button class="ib-btn" id="ib-btn-home" title="回到主页">⌂</button>
             <div class="ib-address"><span class="ib-lock">●</span><span class="ib-url" id="ib-url">正在连接…</span></div>
             <input id="ib-nav-input" placeholder="输入关键词搜索 / 网址"
-                   style="flex:1;min-width:120px;height:34px;padding:0 12px;border:1px solid rgba(120,110,180,0.16);background:rgba(255,255,255,0.85);border-radius:10px;font-size:12.5px;">
+                   style="flex:1;min-width:120px;height:34px;padding:0 12px;border:1px solid #E7E5E4;background:#fff;border-radius:8px;font-size:12.5px;color:#1C1917;">
             <button class="ib-btn primary" id="ib-btn-nav"><span class="ib-btn-label">前往</span></button>
             <button class="ib-btn-external" id="ib-btn-external" title="在外部浏览器打开当前页面"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>
             <label class="ib-live-toggle"><input type="checkbox" id="ib-live-checkbox" checked><span class="lbl" id="ib-live-text">实时</span></label>
@@ -1359,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- AGENTS §7.2 Auth Recovery 系统内弹窗轮询（XSS安全；依赖style.css .ar-badge 样式；所有动态DOM=createElement+textContent） -->
 <script src="/static/js/auth_recovery_poller.js?v=5.8.9">
   <script src="/static/js/resident_health.js?v=5.9.9"></script>
-  <script src="/static/js/internal_browser.js?v=5.9.9"></script>
+  <script src="/static/js/internal_browser.js?v=8.0.2"></script>
   <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script></script>
 <script>
   // P0安全修复(2026-09-02): window.__Z_AUTH 定义已移至 <head>（three.min.js之后），确保所有JS文件加载前已定义

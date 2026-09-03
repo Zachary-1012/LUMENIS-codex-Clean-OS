@@ -1,7 +1,7 @@
 /* ============================================================
- * Zachary OS AI · Internal Browser（系统内置浏览器）
- * 适配 ZBIP workbench 紫色渐变 + Apple 风，含移动端响应式
- * ============================================================ */
+   Zachary OS AI · Internal Browser（系统内置浏览器）
+   ZBIP 侘寂：Stone 黑白灰 + 近黑主操作 + 语义状态点，含移动端响应式
+   ============================================================ */
 
 .ib-section {
     margin: 24px 0;
@@ -9,58 +9,56 @@
 }
 
 .ib-container {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 18px;
-    border: 1px solid rgba(120, 110, 180, 0.14);
-    box-shadow: 0 8px 32px rgba(80, 70, 140, 0.08);
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #E7E5E4;
+    box-shadow: 0 4px 18px rgba(28, 25, 23, 0.05);
     overflow: hidden;
 }
 
 /* ── 账号标签切换 ── */
 .ib-tabs {
     display: flex;
-    gap: 6px;
-    padding: 12px 14px 0;
-    border-bottom: 1px solid rgba(120, 110, 180, 0.1);
+    gap: 4px;
+    padding: 10px 14px 0;
+    border-bottom: 1px solid #EDECEA;
 }
 .ib-tab {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 16px;
+    padding: 9px 14px;
     border: none;
     background: transparent;
-    border-radius: 12px 12px 0 0;
-    font-size: 13.5px;
+    border-radius: 8px 8px 0 0;
+    font-size: 13px;
     font-weight: 600;
-    color: #6b6880;
+    color: #78716C;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: color .15s ease, background .15s ease;
     position: relative;
 }
-.ib-tab:hover { background: rgba(120, 110, 180, 0.06); }
+.ib-tab:hover { background: rgba(28, 25, 23, 0.04); color: #44403C; }
 .ib-tab.active {
-    color: #5b4fc4;
-    background: rgba(91, 79, 196, 0.08);
+    color: #1C1917;
+    background: rgba(28, 25, 23, 0.045);
 }
 .ib-tab.active::after {
     content: '';
     position: absolute;
     bottom: -1px; left: 12px; right: 12px;
     height: 2px;
-    background: linear-gradient(90deg, #6d5df0, #9b8cff);
+    background: #1C1917;
     border-radius: 2px;
 }
 .ib-tab-dot {
     width: 7px; height: 7px;
     border-radius: 50%;
-    background: #c8c5d6;
-    transition: background 0.2s;
+    background: #D6D3D1;
+    transition: background .2s, box-shadow .2s;
 }
-.ib-tab-dot.online { background: #34c759; box-shadow: 0 0 0 3px rgba(52,199,89,0.15); }
-.ib-tab-dot.offline { background: #ff3b30; }
+.ib-tab-dot.online { background: #16A34A; box-shadow: 0 0 0 3px rgba(22,163,74,0.14); }
+.ib-tab-dot.offline { background: #DC2626; }
 
 /* ── 工具栏 ── */
 .ib-toolbar {
@@ -68,8 +66,8 @@
     align-items: center;
     gap: 8px;
     padding: 10px 14px;
-    background: rgba(120, 110, 180, 0.04);
-    border-bottom: 1px solid rgba(120, 110, 180, 0.08);
+    background: #FAFAF9;
+    border-bottom: 1px solid #EDECEA;
 }
 .ib-btn {
     display: inline-flex;
@@ -78,46 +76,62 @@
     min-width: 34px;
     height: 34px;
     padding: 0 10px;
-    border: 1px solid rgba(120, 110, 180, 0.16);
-    background: rgba(255,255,255,0.8);
-    border-radius: 10px;
-    color: #4a4660;
-    font-size: 13px;
+    border: 1px solid #E7E5E4;
+    background: #fff;
+    border-radius: 8px;
+    color: #44403C;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.14s ease;
+    transition: background .14s ease, border-color .14s ease;
     white-space: nowrap;
 }
-.ib-btn:hover { background: #fff; border-color: rgba(91,79,196,0.35); transform: translateY(-1px); }
-.ib-btn:active { transform: translateY(0); }
+.ib-btn:hover { background: #F5F5F4; border-color: #A8A29E; }
+.ib-btn:active { background: #EDECEA; }
 .ib-btn.primary {
-    background: linear-gradient(135deg, #6d5df0, #8b7bff);
-    color: #fff;
-    border-color: transparent;
+    background: #1C1917;
+    color: #FAFAF9;
+    border-color: #1C1917;
 }
-.ib-btn.primary:hover { filter: brightness(1.06); }
-.ib-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.ib-btn.primary:hover { background: #292524; border-color: #292524; }
+.ib-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ib-btn-external {
+    width: 34px; padding: 0; color: #57534E;
+}
+.ib-btn-external svg { width: 16px; height: 16px; }
 
 .ib-address {
     flex: 1;
     min-width: 0;
     height: 34px;
     padding: 0 12px;
-    border: 1px solid rgba(120, 110, 180, 0.16);
-    background: rgba(255,255,255,0.85);
-    border-radius: 10px;
+    border: 1px solid #E7E5E4;
+    background: #fff;
+    border-radius: 8px;
     font-size: 12.5px;
-    color: #4a4660;
+    color: #44403C;
     display: flex;
     align-items: center;
     gap: 8px;
     overflow: hidden;
 }
-.ib-address .ib-lock { color: #34c759; font-size: 11px; flex-shrink: 0; }
+.ib-address .ib-lock { color: #16A34A; font-size: 9px; flex-shrink: 0; }
 .ib-address .ib-url {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+#ib-nav-input {
+    border-color: #E7E5E4 !important;
+    background: #fff !important;
+    color: #1C1917;
+    border-radius: 8px !important;
+    transition: border-color .14s ease, box-shadow .14s ease;
+}
+#ib-nav-input:focus {
+    outline: none;
+    border-color: #1C1917 !important;
+    box-shadow: 0 0 0 3px rgba(28,25,23,0.08);
 }
 
 .ib-live-toggle {
@@ -125,16 +139,16 @@
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: #6b6880;
+    color: #78716C;
     cursor: pointer;
     user-select: none;
 }
-.ib-live-toggle input { cursor: pointer; }
+.ib-live-toggle input { cursor: pointer; accent-color: #1C1917; }
 
-/* ── 视口 ── */
+/* ── 视口（侘寂近黑衬底，如 Safari/Chrome 画面区） ── */
 .ib-viewport-wrap {
     position: relative;
-    background: #1a1825;
+    background: #1C1917;
     min-height: 420px;
     max-height: 70vh;
     overflow: auto;
@@ -157,15 +171,17 @@
     justify-content: center;
     gap: 12px;
     min-height: 420px;
-    color: rgba(255,255,255,0.5);
+    color: rgba(250, 250, 249, 0.55);
     font-size: 13.5px;
+    line-height: 1.7;
     text-align: center;
     padding: 40px 20px;
 }
+.ib-placeholder small { color: rgba(250,250,249,0.38); font-size: 11.5px; }
 .ib-spinner {
     width: 30px; height: 30px;
-    border: 2.5px solid rgba(255,255,255,0.15);
-    border-top-color: #9b8cff;
+    border: 2.5px solid rgba(255,255,255,0.16);
+    border-top-color: #FAFAF9;
     border-radius: 50%;
     animation: ib-spin 0.8s linear infinite;
 }
@@ -179,19 +195,22 @@
     align-items: center;
     gap: 10px;
     padding: 6px 12px;
-    background: rgba(20, 18, 35, 0.72);
+    background: rgba(28, 25, 23, 0.72);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(250,250,249,0.12);
     border-radius: 20px;
-    color: rgba(255,255,255,0.85);
+    color: rgba(250,250,249,0.88);
     font-size: 11.5px;
     pointer-events: none;
 }
 .ib-statusbar .ib-pulse {
     width: 6px; height: 6px; border-radius: 50%;
-    background: #34c759;
+    background: #16A34A;
     animation: ib-pulse 1.6s ease-in-out infinite;
 }
-.ib-statusbar.paused .ib-pulse { background: #ff9500; animation: none; }
+.ib-statusbar.is-offline .ib-pulse { background: #DC2626; }
+.ib-statusbar.paused .ib-pulse { background: #D97706; animation: none; }
 @keyframes ib-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
 /* ── 底部信息 ── */
@@ -202,10 +221,11 @@
     gap: 12px;
     padding: 10px 14px;
     font-size: 12px;
-    color: #6b6880;
-    background: rgba(255,255,255,0.5);
+    color: #78716C;
+    background: #FAFAF9;
+    border-top: 1px solid #EDECEA;
 }
-.ib-footer .ib-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ib-footer .ib-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color:#44403C; }
 
 /* ── 移动端适配 ── */
 @media (max-width: 768px) {

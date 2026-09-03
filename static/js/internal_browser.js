@@ -18,9 +18,12 @@
 
     function api(path, opts) {
         opts = opts || {};
-        var fetchOpts = { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json' } };
+        var fetchOpts = { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
         if (opts.body) fetchOpts.body = JSON.stringify(opts.body);
-        return fetch(path, fetchOpts).then(function (r) { return r.json(); });
+        return fetch(path, fetchOpts).then(function (r) {
+            if (r.status === 401) return { ok: false, error: '登录凭证失效，请在系统登录弹窗重新输入账号密码后刷新' };
+            return r.json();
+        });
     }
     function el(id) { return document.getElementById(id); }
 
@@ -45,6 +48,13 @@
         on('ib-btn-home', function () { historyAct('home'); });
         on('ib-btn-refresh', function () { restartStream(); });
         on('ib-btn-nav', doNavigate);
+        on('ib-btn-external', function (btn) {
+            // 用户主动选择：在系统外部浏览器打开当前页（不自动跳转、不代操作账号）
+            btn.addEventListener('click', function () {
+                var u = (el('ib-url') || {}).textContent || '';
+                if (u && /^https?:\/\//.test(u)) window.open(u, '_blank', 'noopener');
+            });
+        });
         on('ib-nav-input', function (input) {
             input.addEventListener('keydown', function (e) { if (e.key === 'Enter') doNavigate(); });
         });
@@ -97,7 +107,7 @@
         // 优先 SSE 实时流
         if (window.EventSource) {
             try {
-                es = new EventSource('/api/internal-browser/stream?account=' + encodeURIComponent(currentAccount) + '&quality=55');
+                es = new EventSource('/api/internal-browser/stream?account=' + encodeURIComponent(currentAccount) + '&quality=55', { withCredentials: true });
                 var downgraded = false;
                 es.onmessage = function (ev) {
                     var m; try { m = JSON.parse(ev.data); } catch (e) { return; }

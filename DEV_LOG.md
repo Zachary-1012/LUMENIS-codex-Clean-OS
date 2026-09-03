@@ -794,5 +794,27 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - scripts/collect_now.py:33 仍读死表 collection_counters 判断配额 → 实际配额闸恒放行；collector_v2 另有内存计数。三套计数的"采集决策层"统一放到 D2 动态调度/熔断线（adaptive_engine）一起做，本轮只对齐展示/查询口径，不改采集规则与业务逻辑。
 - 主 SPA 当前未消费该接口；真实字段已就绪，供后续"采集状态卡 / UI 精修"直接绑定，不造假数据。
 
+---
+
+## 2026-09-03 第九批｜D1 系统内置浏览器前端打通：同源凭证修复 + SSE 实时画面 + 侘寂化（系统内可见、不跳外部）
+
+### 源码审计（纠正"缺前端"的旧判断）
+前端并不缺：static/js/internal_browser.js（SSE 优先+轮询降级/双账号 tab/导航/点击/滚轮/fps）、internal_browser.css、index.html#page-internal-browser 容器与侧栏入口均已存在，DOM id 与 JS 全部对得上。真实断点：① **api() 的 fetch 未带 credentials**——页面以 URL 内嵌 Basic Auth（Zachary:***@127.0.0.1）打开时，同源 fetch 不自动带 Authorization，/api/internal-browser/history 等被浏览器安全策略拦截，画面一直"连接中"；② ib-btn-external 在 DOM 里但未绑事件；③ CSS 仍是旧紫渐变（#6d5df0/#9b8cff、rgba(120,110,180)、iOS 绿）。后端蓝图（accounts/state/screenshot/navigate/evaluate/click/type/scroll/history + SSE stream + browser-runtime）齐全。
+
+### 修复（最小增量，留 .bak-ibrowser，未改后端、未碰采集与官方账号）
+- static/js/internal_browser.js：fetch 增加 `credentials:'same-origin''`，并对 401 返回明确"重新登录"提示（不再静默卡住）；EventSource 增加 `{withCredentials:true}`；补绑 ib-btn-external（用户主动才在外部浏览器打开当前 URL，不自动跳转）；本就无任何自动导航/自动写操作，符合"官方账号只读、登录仅本人扫码"红线。
+- static/css/internal_browser.css 整体侘寂化（保留全部布局/响应式）：容器白底细边 #E7E5E4 弱阴影圆角14；tab 未选 Stone-500/选中近黑 #1C1917 实心下划线（去紫渐变）；主按钮近黑实心；视口近黑 #1C1917 衬底（类 Safari/Chrome）；在线点语义绿 #16A34A、离线 #DC2626、暂停橙 #D97706；补 .ib-btn-external 图标钮样式。
+- index.html：地址输入框内联紫边改 Stone；internal_browser.css/js 版本号 →v=8.0.2 防缓存。
+
+### 验证（真实，Playwright msedge + Basic 头）
+- 运行时：CDP 9222/9223 均 Listen；accounts 双号 online（大陆 2 target、香港 rednote 首页）；browser-runtime/status ok。
+- E2E：切到内置浏览器页后 accounts/stream/screenshot/history **全部 200、has401=False**（修复前 history 被拦）；SSE 建立并显示"实时流·1-2fps"；在线点 .online；img 真实填入 data:image/jpeg；**导出的实时帧 docs/UI/evidence/internal-browser-live-20260903.png 为真实小红书 explore 画面**（频道 tab/双列瀑布流/点赞/底部导航），证明 前端→Flask→CDP→驻场浏览器→系统内回传 全链路通；CONSOLE 无脚本错误。
+- 故障诚实性：某轮 CDP captureScreenshot 返回 502 Connection timed out（驻场页面忙/香港走代理的运行时抖动），前端如实显示"无法连接驻场浏览器 + 错误"并由 SSE/轮询自动续帧，**不伪造画面**。
+
+### 遗留登记（不阻塞，后续优化）
+- 后端 capture 多 page target 时固定取 pages[0]，可能选到 about:blank（应优先选非 blank 的活跃可见 target）；CDP ws 偶发超时可加一次快速重连。属后端健壮性优化，本轮不动采集主链。
+- 侧栏"内置浏览器"入口位于 Zachary OS AI 分组（分组较多需滚动），其信息架构层级在 UI 精修批次统一优化。
+
+
 
 
