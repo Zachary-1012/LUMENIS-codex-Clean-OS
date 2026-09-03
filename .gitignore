@@ -173,3 +173,7 @@ app.py.bak_*
 *.prev2_bak
 
 # DCC 已废弃迁移至 Zachary-OS-AI（2026-09-03），tools/development-command-console 为历史资产留存，不再纳入版本控制
+
+# 个人业务交付物（比稿方案等）仅本地保存，不入线上仓库
+# personal business deliverables: local only, never commit
+deliverables/

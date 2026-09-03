@@ -71,15 +71,32 @@ def diagnose(db_path, keyword, top_k=6):
     e = len(events)
     # 主题词：合并标题+正文喂 c-TF-IDF
     docs = []
+    # 系统生成摘要的模板标记（含这些说明 body/content 不是用户原文，剔除防污染）
+    _SYS_MARK = ("系统根据标题", "此内容为系统", "情绪分析", "风险等级", "互动数据",
+                 "作者：", "发布时间：", "非原文正文")
+    def _clean_body(x):
+        b = str(x.get("body", "") or x.get("content", "") or "")
+        if any(m in b for m in _SYS_MARK):
+            return ""  # 是系统拼装摘要，非用户原文
+        return b
     for x in notes:
         t = str(x.get("title", "") or "")
-        body = str(x.get("content", "") or x.get("summary", "") or "")
-        docs.append((t + " " + body).strip())
+        body = _clean_body(x)
+        # 标题是用户原话、主题信号最纯，重复一次加权；正文仅用真实原文
+        docs.append(((t + " ") * 2 + body).strip())
     topics = []
     if docs:
         try:
-            topics = extract_topic_words(docs, top_k=top_k)
-            _noise = {"数据", "风险", "标题", "内容", "相关", "进行", "以及", "通过"}
+            # 剔除查询主体词本身（品牌专名 2-gram），避免主体词高频污染主题：
+            # 主题应是"关于主体的什么事"，而非主体名。
+            from scripts.topic_words import ngrams_of
+            stop_terms = ngrams_of(keyword)
+            topics = extract_topic_words(docs, top_k=top_k, stop_terms=stop_terms)
+            # 系统分析/平台度量类词，不是用户主题
+            _noise = {"数据", "风险", "标题", "内容", "相关", "进行", "以及", "通过",
+                      "低风", "中风", "高风", "中性", "情绪", "正向", "负向", "互动",
+                      "点赞", "收藏", "评论", "转发", "粉丝", "浏览", "笔记", "作者",
+                      "发布", "采集", "来源", "平台", "账号", "用户", "评分", "置信"}
             topics = [t for t in topics
                       if not (t[0] if isinstance(t, (tuple, list)) else str(t)) in _noise][:top_k]
         except Exception:

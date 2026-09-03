@@ -57,8 +57,32 @@ def tokenize(text):
     return out
 
 
-def extract_topic_words(docs, top_k=8):
-    """对同一聚类的文档列表做 c-TF-IDF，返回 [(word, score)] 降序前 top_k。"""
+def ngrams_of(text):
+    """把一段中文专名拆成 2-gram 集合（用于把查询主体词从主题候选里剔除）。
+
+    例："广州太古汇" -> {广州,州太,太古,古汇}；英文整词保留。
+    """
+    out = set()
+    for chunk in _CN_RE.findall((text or "").lower()):
+        for i in range(len(chunk) - 1):
+            g = chunk[i:i + 2]
+            if g[0] not in WEAK_EDGE and g[1] not in WEAK_EDGE:
+                out.add(g)
+        if len(chunk) >= 2:
+            out.add(chunk)
+    for w in _EN_RE.findall((text or "").lower()):
+        out.add(w)
+    return out
+
+
+def extract_topic_words(docs, top_k=8, stop_terms=None):
+    """对同一聚类的文档列表做 c-TF-IDF，返回 [(word, score)] 降序前 top_k。
+
+    stop_terms: 需要从主题候选剔除的词集合（典型为查询主体词，如品牌专名
+    "广州太古汇"的 2-gram）——主体词在每篇都高频，会污染主题，真正的主题应是
+    "关于主体的什么事"（美食/服务/周年…），故剔除主体词本身。
+    """
+    stop = set(stop_terms or ())
     docs = [d for d in (docs or []) if d]
     if not docs:
         return []
@@ -69,6 +93,8 @@ def extract_topic_words(docs, top_k=8):
     for doc in docs:
         seen = set()
         for w in tokenize(doc):
+            if w in stop:
+                continue
             tf[w] = tf.get(w, 0) + 1
             total_words += 1
             if w not in seen:
@@ -86,7 +112,7 @@ def extract_topic_words(docs, top_k=8):
     return scored[:top_k]
 
 
-def topic_label(docs, top_k=5, sep=" / "):
+def topic_label(docs, top_k=5, sep=" / ", stop_terms=None):
     """生成可读 Topic 标签：取 top_k 高分词拼接（供 Topic 展示/摘要）。"""
-    words = extract_topic_words(docs, top_k=top_k)
+    words = extract_topic_words(docs, top_k=top_k, stop_terms=stop_terms)
     return sep.join(w for w, _ in words) if words else "未命名主题"
