@@ -5661,13 +5661,14 @@ def api_xhs_login_start():
     """启动小红书登录：通过CDP浏览器打开登录页，返回登录会话ID"""
     try:
         import json, time, uuid
-        # 平台参数：xhs（国内 xiaohongshu.com / CDP 9222）| rednote（香港 rednote.com / CDP 9223）
+        # 平台参数（任意别名归一化）：xhs_cn=国内 xiaohongshu.com/CDP9222 | rednote_hk=香港 rednote.com/CDP9223
+        import xhs_collection_optimizer as _xco_start
         _body = request.get_json(silent=True) or {}
-        _platform = (_body.get('platform') or 'xhs').strip().lower()
-        if _platform == 'rednote':
-            _cdp_url, _login_url, _label = 'http://127.0.0.1:9223', 'https://www.rednote.com/login', '小红书（香港 RedNote）'
-        else:
-            _cdp_url, _login_url, _label = 'http://127.0.0.1:9222', 'https://www.xiaohongshu.com', '小红书'
+        _ep = _xco_start.get_platform_endpoint(_body.get('platform') or 'xhs_cn')
+        _platform = _ep['key']          # 标准 key：xhs_cn / rednote_hk
+        _cdp_url = _ep['cdp_url']
+        _login_url = _ep['login_url']
+        _label = _ep['label']
         session_id = 'xhs_login_' + uuid.uuid4().hex[:8]
         # 记录登录会话
         login_sessions = getattr(app, '_xhs_login_sessions', {})
@@ -5708,24 +5709,30 @@ def api_xhs_login_status():
         session_id = request.args.get('session_id', '')
         login_sessions = getattr(app, '_xhs_login_sessions', {})
         session = login_sessions.get(session_id, {'status': 'not_found'})
-        # 尝试通过CDP检查是否已登录
+        # 按本次登录会话的平台选对应 CDP/域名/会话 cookie（大陆9222 / 香港9223 各自独立）
+        import xhs_collection_optimizer as _xco_st
+        _ep = _xco_st.get_platform_endpoint(session.get('platform') or 'xhs_cn')
         is_logged_in = False
         try:
             from playwright.sync_api import sync_playwright
             with sync_playwright() as p:
-                browser = p.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=10000)
+                browser = p.chromium.connect_over_cdp(_ep['cdp_url'], timeout=10000)
                 ctx = browser.contexts[0] if browser.contexts else None
                 if ctx:
-                    cookies = ctx.cookies('https://www.xiaohongshu.com')
-                    is_logged_in = any(c.get('name') == 'web_session' for c in cookies)
+                    cookies = ctx.cookies(_ep['home_url'])
+                    _names = {c.get('name') for c in (cookies or [])}
+                    is_logged_in = bool(_names & set(_ep['session_cookies']))
+                browser.close()
         except Exception:
             pass
         return jsonify({
             'ok': True,
             'session_id': session_id,
+            'platform': _ep['key'],
+            'label': _ep['label'],
             'status': session.get('status', 'unknown'),
             'is_logged_in': is_logged_in,
-            'message': '已登录' if is_logged_in else '等待扫码登录',
+            'message': '已登录' if is_logged_in else f'等待{_ep["label"]}扫码登录',
         })
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -5735,31 +5742,43 @@ def api_xhs_login_save():
     """保存小红书登录态（cookies）"""
     try:
         import json
-        # 从CDP浏览器获取cookies并保存
+        # 平台（任意别名归一化）：大陆→xhs_cookies.json，香港 RedNote→rednote_cookies.json，互不覆盖
+        import xhs_collection_optimizer as _xco_sv
+        _b = request.get_json(silent=True) or {}
+        _ep = _xco_sv.get_platform_endpoint(_b.get('platform') or request.args.get('platform') or 'xhs_cn')
+        _pf = _ep['key']
+        _cookie_name = 'rednote_cookies.json' if _pf == 'rednote_hk' else 'xhs_cookies.json'
+        # 从对应平台 CDP 浏览器获取 cookies 并保存
         cookies_saved = False
+        cookie_count = 0
         try:
             from playwright.sync_api import sync_playwright
             with sync_playwright() as p:
-                browser = p.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=15000)
+                browser = p.chromium.connect_over_cdp(_ep['cdp_url'], timeout=15000)
                 ctx = browser.contexts[0] if browser.contexts else None
                 if ctx:
-                    cookies = ctx.cookies('https://www.xiaohongshu.com')
+                    cookies = ctx.cookies(_ep['home_url'])
+                    cookie_count = len(cookies or [])
                     # 保存到文件
-                    cookie_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'xhs_cookies.json')
+                    cookie_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', _cookie_name)
                     with open(cookie_path, 'w', encoding='utf-8') as f:
                         json.dump(cookies, f, ensure_ascii=False, indent=2)
-                    cookies_saved = True
+                    cookies_saved = cookie_count > 0
+                browser.close()
         except Exception as e:
             return jsonify({'ok': False, 'error': f'保存cookies失败: {str(e)}'}), 500
-        # 标记auth_recovery任务完成
+        # 标记auth_recovery任务完成（按平台身份）
         try:
             from auth_recovery_center import auth_recovery_center
-            pending = auth_recovery_center.get_pending_tasks('xhs')
+            _acct = 'rednote' if _pf == 'rednote_hk' else 'xhs'
+            pending = auth_recovery_center.get_pending_tasks(_acct)
             for task in pending:
-                auth_recovery_center.mark_completed(task.id, '系统内二维码登录成功')
+                auth_recovery_center.mark_completed(task.id, f'{_ep["label"]}系统内扫码登录成功')
         except Exception:
             pass
-        return jsonify({'ok': True, 'cookies_saved': cookies_saved, 'message': '小红书登录态已保存'})
+        return jsonify({'ok': True, 'platform': _pf, 'label': _ep['label'],
+                        'cookies_saved': cookies_saved, 'cookie_count': cookie_count,
+                        'message': f'{_ep["label"]}登录态已保存'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

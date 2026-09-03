@@ -4,9 +4,17 @@ XHS Collection Compliance Optimizer
 小红书采集合规优化模块
 【功能】
 1. 按 note_type 三级分类采集（topic话题/opinion舆情/event事件）
-2. 香港 RedNote 每天登录保活机制
+2. 香港 RedNote + 国内小红书 双平台每天登录保活机制（对等）
 3. 采集结果按分类存储和展示
 【原则】合规采集，不破解不绕风控，失败真实记录，不伪装0条
+
+【硬红线 · 广州太古汇官方账号只读保护（用户 2026-09-03 明令）】
+- 无论页面登录的是哪个账号（含广州太古汇官方账号），本模块及一切自动采集/保活/内置浏览器自动流程，
+  对账号一律【只读】：只允许 打开页面(goto)、读取 cookie/会话、读取公开内容、探测登录态。
+- 严禁任何写操作/交互动作作用于账号：关注/取关、点赞、收藏、评论、私信、发布、转发、
+  改资料/设置、退出登录、切换账号、点击任何社交动作按钮（follow/like/collect/comment/publish/logout 等）。
+- 登录仅由用户本人在系统内浏览器手动扫码完成；自动流程不得替用户点击任何账号操作。
+- 采集“展开评论/滚动浏览”属只读，允许；“发表评论/点赞”属写操作，永久禁止。
 """
 import os
 import re
@@ -26,17 +34,46 @@ _DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 KEEPALIVE_PLATFORMS = {
     'rednote_hk': {
         'label': '香港 RedNote',
-        'cdp_url': os.environ.get('XHS_CDP_URL', 'http://127.0.0.1:9223'),
+        'cdp_url': os.environ.get('XHS_HK_CDP_URL', 'http://127.0.0.1:9223'),
         'domain': 'rednote.com',
+        'login_url': 'https://www.rednote.com/login',
+        'home_url': 'https://www.rednote.com',
+        # 登录态 cookie 候选名（国际站 web_session / webBuild 不同版本可能不同，任一命中即视为已登录）
+        'session_cookies': ('web_session', 'web_session_v2', 'access-token'),
+        # 未登录时页面可见的登录入口文案（中文/英文，cookie 判断失败时回退）
+        'login_texts': ('登录', '登 录', 'Log in', 'Sign in', 'Login'),
         'file': LOGIN_KEEPALIVE_FILE,
     },
     'xhs_cn': {
         'label': '国内小红书',
         'cdp_url': os.environ.get('XHS_CN_CDP_URL', 'http://127.0.0.1:9222'),
         'domain': 'xiaohongshu.com',
+        'login_url': 'https://www.xiaohongshu.com',
+        'home_url': 'https://www.xiaohongshu.com',
+        'session_cookies': ('web_session', 'web_session_v2'),
+        'login_texts': ('登录', '登 录', 'Log in', 'Sign in'),
         'file': os.path.join(_DATA_DIR, 'data', 'xhs_cn_login_keepalive.json'),
     },
 }
+
+# 平台名归一化：前端/历史调用存在两套命名（登录用 xhs/rednote，保活用 xhs_cn/rednote_hk），
+# 统一收敛到 KEEPALIVE_PLATFORMS 的两个标准 key，杜绝大陆被错标到香港。
+_PLATFORM_ALIASES = {
+    'xhs_cn': 'xhs_cn', 'xhs': 'xhs_cn', 'cn': 'xhs_cn', 'china': 'xhs_cn',
+    'domestic': 'xhs_cn', 'mainland': 'xhs_cn', '国内': 'xhs_cn', '大陆': 'xhs_cn',
+    '国内小红书': 'xhs_cn', '大陆小红书': 'xhs_cn', 'xhs-cn': 'xhs_cn',
+    'rednote_hk': 'rednote_hk', 'rednote': 'rednote_hk', 'hk': 'rednote_hk',
+    'hongkong': 'rednote_hk', '香港': 'rednote_hk', '香港rednote': 'rednote_hk',
+    'rednote-hk': 'rednote_hk', 'retinaut': 'rednote_hk', 'xhs_retinaut': 'rednote_hk',
+}
+
+
+def normalize_platform(platform: str = 'rednote_hk') -> str:
+    """把任意平台别名归一化为 'xhs_cn' / 'rednote_hk'；无法识别回退 rednote_hk（向后兼容）。"""
+    if not platform:
+        return 'rednote_hk'
+    key = str(platform).strip().lower().replace(' ', '')
+    return _PLATFORM_ALIASES.get(key, 'rednote_hk' if key not in ('xhs_cn',) else 'xhs_cn')
 
 # note_type 分类规则
 NOTE_TYPE_RULES = {
@@ -141,15 +178,16 @@ class RedNoteLoginKeepalive:
     """
 
     def __init__(self, keepalive_file: str = None, platform: str = 'rednote_hk'):
-        # 平台配置（未知 platform 回退 rednote_hk，保持向后兼容）
-        self.platform = platform
-        _cfg = KEEPALIVE_PLATFORMS.get(platform)
-        if _cfg is None:
-            _cfg = KEEPALIVE_PLATFORMS['rednote_hk']
-            self.platform = 'rednote_hk'
+        # 平台配置：任意别名统一归一化到 rednote_hk / xhs_cn，两个平台完全对等
+        self.platform = normalize_platform(platform)
+        _cfg = KEEPALIVE_PLATFORMS[self.platform]
         self.cdp_url = _cfg['cdp_url']
         self.domain = _cfg['domain']
         self.label = _cfg['label']
+        self.login_url = _cfg.get('login_url', _cfg['home_url'])
+        self.home_url = _cfg.get('home_url', f'https://{_cfg["domain"]}')
+        self.session_cookies = tuple(_cfg.get('session_cookies', ('web_session',)))
+        self.login_texts = tuple(_cfg.get('login_texts', ('登录', 'Log in')))
         if keepalive_file is None:
             keepalive_file = _cfg['file']
         self.keepalive_file = keepalive_file
@@ -190,11 +228,13 @@ class RedNoteLoginKeepalive:
         except Exception:
             return True
 
-    def check_login_status(self, cdp_url: str = 'http://127.0.0.1:9223') -> Dict[str, Any]:
+    def check_login_status(self, cdp_url: str = None) -> Dict[str, Any]:
         """
-        检查香港 RedNote 登录状态（通过 CDP 浏览器）。
+        检查当前平台登录状态（通过对应 CDP 浏览器，大陆 9222 / 香港 9223 各自独立）。
+        判定优先级：会话 cookie（web_session 等，跨语言最可靠）→ 页面是否存在登录入口文案。
         返回: {status, is_logged_in, checked_at, error}
         """
+        cdp_url = cdp_url or self.cdp_url
         result = {
             'status': 'unknown',
             'is_logged_in': False,
@@ -206,14 +246,31 @@ class RedNoteLoginKeepalive:
             with sync_playwright() as p:
                 browser = p.chromium.connect_over_cdp(cdp_url, timeout=15000)
                 ctx = browser.contexts[0] if browser.contexts else browser.new_context()
-                page = ctx.new_page()
-                page.goto('https://www.xiaohongshu.com', wait_until='domcontentloaded', timeout=30000)
-                # 检查是否有登录按钮（未登录状态）
-                time.sleep(2)
-                login_btn = page.query_selector('text=登录')
-                result['is_logged_in'] = login_btn is None
+                # 1) cookie 优先：按本平台域名取 cookie，命中会话 cookie 即已登录
+                try:
+                    cookies = ctx.cookies(self.home_url)
+                    names = {c.get('name') for c in (cookies or [])}
+                    if names & set(self.session_cookies):
+                        result['is_logged_in'] = True
+                except Exception:
+                    cookies = None
+                # 2) cookie 未命中时回退到页面登录入口探测（打开本平台首页）
+                if not result['is_logged_in']:
+                    page = ctx.new_page()
+                    page.goto(self.home_url, wait_until='domcontentloaded', timeout=30000)
+                    time.sleep(2)
+                    login_present = False
+                    for txt in self.login_texts:
+                        try:
+                            if page.query_selector(f'text={txt}'):
+                                login_present = True
+                                break
+                        except Exception:
+                            continue
+                    result['is_logged_in'] = not login_present
+                    page.close()
+                browser.close()
                 result['status'] = 'logged_in' if result['is_logged_in'] else 'not_logged_in'
-                page.close()
         except Exception as e:
             result['error'] = str(e)
             result['status'] = 'check_failed'
@@ -222,6 +279,7 @@ class RedNoteLoginKeepalive:
         data = self._load()
         data['last_check_at'] = result['checked_at']
         data['login_status'] = result['status']
+        data['platform'] = self.platform
         data['history'].append(result)
         data['history'] = data['history'][-50:]  # 只保留最近50条
         self._save(data)
@@ -324,10 +382,10 @@ class RedNoteLoginKeepalive:
         return result
 
     def get_status(self) -> Dict[str, Any]:
-        """获取保活状态。"""
+        """获取保活状态。platform 以实例身份为权威（不读历史文件残留，避免旧数据把大陆错标成香港）。"""
         data = self._load()
         return {
-            'platform': data.get('platform', self.platform),
+            'platform': self.platform,
             'label': self.label,
             'domain': self.domain,
             'cdp_url': self.cdp_url,
@@ -345,10 +403,8 @@ _keepalive_cn = RedNoteLoginKeepalive(platform='xhs_cn')
 
 
 def _get_keepalive(platform: str = 'rednote_hk'):
-    """按平台取保活实例（未知回退 rednote_hk）。"""
-    if platform == 'xhs_cn':
-        return _keepalive_cn
-    return _keepalive
+    """按平台取保活实例（任意别名归一化后分派，大陆/香港对等）。"""
+    return _keepalive_cn if normalize_platform(platform) == 'xhs_cn' else _keepalive
 
 
 def check_rednote_login(cdp_url: str = 'http://127.0.0.1:9223') -> Dict:
@@ -383,6 +439,22 @@ def recheck_keepalive(platform: str = 'rednote_hk', cdp_url: str = None) -> Dict
     """按平台执行保活检查并给出决策（掉线自动再弹核心）。"""
     inst = _get_keepalive(platform)
     return inst.recheck_and_decide(cdp_url or inst.cdp_url)
+
+
+def get_platform_endpoint(platform: str = 'xhs_cn') -> Dict[str, Any]:
+    """供登录路由统一解析平台端点：返回标准 key + cdp_url + domain + 各 URL + 会话 cookie 名 + label。
+    兼容登录侧命名 xhs/rednote 与保活侧命名 xhs_cn/rednote_hk。"""
+    key = normalize_platform(platform)
+    cfg = KEEPALIVE_PLATFORMS[key]
+    return {
+        'key': key,
+        'label': cfg['label'],
+        'cdp_url': cfg['cdp_url'],
+        'domain': cfg['domain'],
+        'login_url': cfg.get('login_url', cfg.get('home_url')),
+        'home_url': cfg.get('home_url', f'https://{cfg["domain"]}'),
+        'session_cookies': tuple(cfg.get('session_cookies', ('web_session',))),
+    }
 
 
 # ============ 3. 采集合规优化 ============

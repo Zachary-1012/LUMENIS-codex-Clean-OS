@@ -704,3 +704,35 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 
 ### 结论
 话题检测端采集已恢复正常（快照 success + notes 落库 + 无异常），生产 8201 由新代码稳定运行。
+
+---
+
+## 2026-09-03 第六批｜小红书双平台（大陆9222/香港9223）每日登录保活对等 + 官方账号只读红线
+
+### 背景
+用户指令：大陆小红书也要和香港 RedNote 一样做每日登录保活（优先执行）；并明令"不要动广州太古汇官方账号，即使页面登录了也不允许动"。
+
+### 源码审计发现（修复前真实缺陷）
+后台 30 分钟 recheck 与前端轮询虽已循环双平台，但链路有 4 处断裂，导致大陆实际不被对等对待：
+1. **两套平台命名断裂（核心）**：登录侧用 `xhs/rednote`，保活用 `xhs_cn/rednote_hk`；前端登录成功后 mark 传 `xhs`，后端 `_get_keepalive` 只认 `xhs_cn`、其余全部回退 rednote_hk → 大陆登录被错标到香港头上。实测旧接口 `?platform=xhs_cn` 竟返回 `"platform":"rednote_hk"`（文件历史残留覆盖实例身份）。
+2. **login/status 写死大陆**：固定连 9222 + xiaohongshu.com，香港登录永远判定"未登录"。
+3. **login/save 写死大陆**：固定连 9222 且只存 xhs_cookies.json，香港 cookie 无法落盘。
+4. **check_login_status 写死 xiaohongshu.com + 仅中文"登录"文案**：香港 rednote.com / 英文界面判定不准；前端缺 `keepalive-*` 状态占位元素（双平台状态无处显示）。
+
+### 修复（最小增量，留 .bak-dualkeep 备份，未碰采集主链/红线函数/生产库）
+- **xhs_collection_optimizer.py**：① 新增 `normalize_platform()` 统一 16 种别名到 `xhs_cn/rednote_hk`；② 平台配置补 login_url/home_url/session_cookies/login_texts，香港环境变量与歧义的 XHS_CDP_URL 解耦为独立 XHS_HK_CDP_URL（全局 XHS_CDP_URL 默认 9222 服务大陆采集，未动）；③ `check_login_status` 改为按本平台域名、cookie 优先（web_session 等）+ 多语言登录文案回退；④ `get_status` 的 platform 以实例身份为权威，不再被历史文件残留覆盖；⑤ 新增 `get_platform_endpoint()` 供登录路由统一解析。
+- **app.py**：`/api/xhs/login/start|status|save` 三个路由全部改为按平台归一化分派——大陆 9222/xiaohongshu.com/xhs_cookies.json，香港 9223/rednote.com/rednote_cookies.json，互不覆盖；auth_recovery 按平台身份标记。
+- **static/index.html**：统一前端平台标准名（`_xhsNormPf` 兼容旧别名）；登录弹窗标题/说明按平台显示（国内小红书 9222 / 香港 RedNote 9223）；save 带 platform；内置浏览器页新增"每日登录保活"状态条（双平台状态徽章 + 大陆/香港各自扫码登录按钮）；修复 1 个我引入的 `_xhsLoginSessionId` 重复声明（会导致整段脚本语法错误、函数全不挂载）。
+- **官方账号只读红线固化**：xhs_collection_optimizer 模块 docstring + AGENTS.md 7 章新增"官方账号只读保护"硬红线（自动流程禁止关注/点赞/收藏/评论/私信/发布/退出等一切账号写操作，登录仅用户本人扫码）。
+
+### 验证（真实测试，非推断）
+- 归一化单测 11 组别名全部正确；endpoint 分派大陆 9222/xiaohongshu.com、香港 9223/rednote.com；双实例独立 keepalive 文件。
+- 生产 8201 平滑重启（仅结束 app 进程链、supervisor 19440 自动拉起，新 PID 22404，healthz 200 v5.9.9）。
+- 重启后 curl 实测：`?platform=xhs_cn` 与别名 `xhs` 均返回 platform=xhs_cn/9222/国内小红书/今日已保活；`rednote_hk` 与别名 `rednote` 均返回 rednote_hk/9223/香港 RedNote/今日已保活——旧错标消除。
+- Playwright（msedge headless）真实加载：保活条 innerText="每日登录保活 | 国内小红书: 今日已保活 | 大陆扫码登录 | 香港 RedNote: 今日已保活 | 香港扫码登录"；大陆/香港弹窗标题正确切换；openXhsLogin/startXhsLogin 均为 function；**控制台 0 错误**。
+- 自动写操作审计：采集/保活脚本中"社交写操作（follow/like/collect/comment/publish 等）自动点击"命中 0；保活模块零 click/type/fill，纯只读。证据 docs/UI/evidence/dual-keepalive-*.png。
+
+### 未做 / 边界
+- 未触碰采集主链、五条红线函数、data/monitor.db；事件笔记端仍按令暂不开放。
+- 登录态 cookie 命中后仍会每 30 分钟只读 recheck；真实掉线才弹扫码（双平台对等）。
+

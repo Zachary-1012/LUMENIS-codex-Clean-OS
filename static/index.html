@@ -279,13 +279,13 @@
     <div class="xhs-login-overlay" onclick="closeXhsLogin()"></div>
     <div class="xhs-login-dialog">
       <div class="xhs-login-header">
-        <span class="xhs-login-title">📱 小红书登录</span>
+        <span class="xhs-login-title" id="xhsLoginTitle">📱 小红书登录</span>
         <button class="xhs-login-close" onclick="closeXhsLogin()">✕</button>
       </div>
       <div class="xhs-login-body" id="xhsLoginBody">
         <div class="xhs-login-step" id="xhsLoginStep1">
           <div class="xhs-login-icon">🔐</div>
-          <div class="xhs-login-text">系统将通过内置浏览器打开小红书登录页<br>请使用手机小红书 App 扫码登录</div>
+          <div class="xhs-login-text" id="xhsLoginStep1Text">系统将通过内置浏览器打开小红书登录页<br>请使用手机小红书 App 扫码登录</div>
           <button class="xhs-login-btn primary" onclick="startXhsLogin()">开始登录</button>
         </div>
         <div class="xhs-login-step hidden" id="xhsLoginStep2">
@@ -499,6 +499,13 @@
           <div class="ib-tabs">
             <button class="ib-tab active" data-account="XHS_CN_PRIMARY"><span class="ib-tab-dot"></span>大陆主号 9222</button>
             <button class="ib-tab" data-account="XHS_RETINAUT"><span class="ib-tab-dot"></span>香港 Retinaut 9223</button>
+          </div>
+          <div class="ib-keepalive-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:2px 0 10px;padding:9px 12px;border:1px solid rgba(120,113,108,0.18);border-radius:8px;background:rgba(250,250,249,0.7);">
+            <span style="font-size:11.5px;color:#78716C;letter-spacing:.04em;">每日登录保活</span>
+            <span id="keepalive-xhs_cn" data-status="unknown" style="font-size:12px;color:#44403C;display:inline-flex;align-items:center;gap:6px;">国内小红书: 检测中…</span>
+            <button onclick="openXhsLogin('xhs_cn')" style="height:26px;padding:0 10px;font-size:11.5px;border:1px solid rgba(28,25,23,.18);background:#fff;border-radius:6px;color:#1C1917;cursor:pointer;">大陆扫码登录</button>
+            <span id="keepalive-rednote_hk" data-status="unknown" style="font-size:12px;color:#44403C;display:inline-flex;align-items:center;gap:6px;margin-left:6px;">香港 RedNote: 检测中…</span>
+            <button onclick="openXhsLogin('rednote_hk')" style="height:26px;padding:0 10px;font-size:11.5px;border:1px solid rgba(28,25,23,.18);background:#fff;border-radius:6px;color:#1C1917;cursor:pointer;">香港扫码登录</button>
           </div>
           <div class="ib-toolbar">
             <button class="ib-btn" id="ib-btn-back" title="后退">‹</button>
@@ -1583,9 +1590,26 @@ document.addEventListener('DOMContentLoaded', function(){
 // ============ 小红书系统内登录 ============
 let _xhsLoginSessionId = null;
 let _xhsLoginPollTimer = null;
-let _xhsLoginPlatform = 'rednote';
+let _xhsLoginPlatform = 'xhs_cn';
+// 双平台标准身份（与后端 xhs_collection_optimizer 完全对齐）
+const XHS_PLATFORM_META = {
+  xhs_cn:     { label: '国内小红书', app: '小红书',       cdp: '9222' },
+  rednote_hk: { label: '香港 RedNote', app: '小红书 / RedNote', cdp: '9223' }
+};
+function _xhsPfMeta(pf){ return XHS_PLATFORM_META[pf] || XHS_PLATFORM_META.xhs_cn; }
+// 兼容历史别名（xhs/rednote/cn/hk）→ 标准 key
+function _xhsNormPf(pf){
+  const p=(pf||'xhs_cn')+'';
+  if(p==='rednote'||p==='rednote_hk'||p==='hk'||p==='retinaut') return 'rednote_hk';
+  return 'xhs_cn';
+}
 function openXhsLogin(platform){
-  _xhsLoginPlatform = platform || 'rednote';
+  _xhsLoginPlatform = _xhsNormPf(platform);
+  const m=_xhsPfMeta(_xhsLoginPlatform);
+  const title=document.getElementById('xhsLoginTitle');
+  const t1=document.getElementById('xhsLoginStep1Text');
+  if(title) title.textContent='📱 '+m.label+'登录';
+  if(t1) t1.innerHTML='系统将通过内置浏览器打开'+m.label+'登录页（驻场浏览器 '+m.cdp+'）<br>请使用手机'+m.app+' App 扫码登录';
   document.getElementById('xhsLoginModal').classList.remove('hidden');
   document.getElementById('xhsLoginStep1').classList.remove('hidden');
   document.getElementById('xhsLoginStep2').classList.add('hidden');
@@ -1596,17 +1620,18 @@ function closeXhsLogin(){
   if(_xhsLoginPollTimer){ clearInterval(_xhsLoginPollTimer); _xhsLoginPollTimer=null; }
 }
 async function startXhsLogin(platform){
-  const pf = platform || _xhsLoginPlatform || 'rednote';
+  const pf = _xhsNormPf(platform || _xhsLoginPlatform);
+  _xhsLoginPlatform=pf;
+  const m=_xhsPfMeta(pf);
   const auth='Basic '+btoa('Zachary:Zachary01');
   try{
     const r=await fetch('/api/xhs/login/start',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:pf})});
     const d=await r.json();
     if(!d.ok) throw new Error(d.error);
     _xhsLoginSessionId=d.session_id;
-    _xhsLoginPlatform=pf;
     document.getElementById('xhsLoginStep1').classList.add('hidden');
     document.getElementById('xhsLoginStep2').classList.remove('hidden');
-    document.getElementById('xhsLoginStatus').textContent='已打开浏览器，请扫码…';
+    document.getElementById('xhsLoginStatus').textContent='已打开'+m.label+'登录页，请扫码…';
     // 开始轮询状态
     _xhsLoginPollTimer=setInterval(checkXhsLoginStatus,3000);
   }catch(e){
@@ -1615,19 +1640,19 @@ async function startXhsLogin(platform){
 }
 async function checkXhsLoginStatus(){
   if(!_xhsLoginSessionId) return;
+  const pf=_xhsLoginPlatform;
   const auth='Basic '+btoa('Zachary:Zachary01');
   try{
     const r=await fetch('/api/xhs/login/status?session_id='+_xhsLoginSessionId,{headers:{Authorization:auth}});
     const d=await r.json();
     if(d.is_logged_in){
-      // 登录成功，保存cookies
+      // 登录成功，保存对应平台 cookies（带 platform，后端分别落盘）
       document.getElementById('xhsLoginStep2').classList.add('hidden');
       document.getElementById('xhsLoginStep3').classList.remove('hidden');
       if(_xhsLoginPollTimer){ clearInterval(_xhsLoginPollTimer); _xhsLoginPollTimer=null; }
-      // 保存cookies
-      await fetch('/api/xhs/login/save',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth}});
-      // 标记对应平台当日保活完成（避免每天重复弹登录）
-      try{ await fetch('/api/xhs/keepalive/mark',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:_xhsLoginPlatform})}); }catch(_e){}
+      await fetch('/api/xhs/login/save',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:pf})});
+      // 标记对应平台当日保活完成（标准 key，避免每天重复弹登录）
+      try{ await fetch('/api/xhs/keepalive/mark',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:pf})}); }catch(_e){}
       setTimeout(closeXhsLogin,2000);
     } else {
       document.getElementById('xhsLoginStatus').textContent=d.message||'等待扫码…';
@@ -1636,11 +1661,11 @@ async function checkXhsLoginStatus(){
     document.getElementById('xhsLoginStatus').textContent='状态检查失败: '+e.message;
   }
 }
-// ============ 小红书双平台登录保活监控（掉线自动再弹） ============
+// ============ 小红书双平台登录保活监控（大陆/香港对等，掉线自动再弹） ============
 async function keepaliveMonitorTick(){
   const auth='Basic '+btoa('Zachary:Zachary01');
   // 双平台状态展示到界面（若存在占位元素）
-  for(const pf of ['rednote_hk','xhs_cn']){
+  for(const pf of ['xhs_cn','rednote_hk']){
     try{
       const r=await fetch('/api/xhs/rednote/keepalive?platform='+pf,{headers:{Authorization:auth}});
       const d=await r.json();
@@ -1655,12 +1680,12 @@ async function keepaliveMonitorTick(){
   const modal=document.getElementById('xhsLoginModal');
   const busy=modal && !modal.classList.contains('hidden');
   if(!busy){
-    for(const pf of ['rednote_hk','xhs_cn']){
+    for(const pf of ['xhs_cn','rednote_hk']){
       try{
         const r=await fetch('/api/xhs/keepalive/recheck',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:pf})});
         const d=await r.json();
         if(d && d.need_relogin){
-          openXhsLogin(pf==='xhs_cn'?'xhs':'rednote');
+          openXhsLogin(pf);   // 直接传标准 key，弹窗标题即对应平台
           break;
         }
       }catch(e){}
