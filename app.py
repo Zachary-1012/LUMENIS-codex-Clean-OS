@@ -2880,76 +2880,56 @@ def api_negative_pending():
     except Exception as e:
         import traceback
         return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+def _note_set_review(note_id, state, by='admin'):
+    """GAP-09 笔记负面评审统一写路径（唯一 Owner）：新旧入口共用，消除重复 SQL。
+    state=1 确认负面；state=2 驳回。写 notes.negative_confirmed 同一字段。"""
+    if not note_id:
+        return {'ok': False, 'error': '缺少note_id'}, 400, None
+    conn = sqlite3.connect(db.DB_PATH)
+    try:
+        cur = conn.cursor()
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cur.execute("UPDATE notes SET negative_confirmed=?, negative_confirmed_at=?, negative_confirmed_by=? WHERE note_id=?", (state, now, by, note_id))
+        conn.commit()
+        affected = cur.rowcount
+        return {'ok': True, 'note_id': note_id, 'affected': affected}, 200, None
+    except Exception as e:
+        import traceback
+        return {'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}, 500, None
+    finally:
+        conn.close()
+
+
 
 @app.route('/api/negative/confirm', methods=['POST'])
 def api_negative_confirm():
-    """确认负面笔记（核准为负面）"""
-    try:
-        data = request.get_json() or {}
-        note_id = data.get('note_id')
-        if not note_id:
-            return jsonify({'ok': False, 'error': '缺少note_id'}), 400
-        conn = sqlite3.connect(db.DB_PATH)
-        cursor = conn.cursor()
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        cursor.execute("""
-            UPDATE notes SET negative_confirmed=1, negative_confirmed_at=?, negative_confirmed_by='admin'
-            WHERE note_id=?
-        """, (now, note_id))
-        conn.commit()
-        affected = cursor.rowcount
-        conn.close()
-        return jsonify({'ok': True, 'note_id': note_id, 'confirmed': True, 'affected': affected})
-    except Exception as e:
-        import traceback
-        return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+    """确认负面笔记（核准为负面）——GAP-09 收敛：走统一写路径 _note_set_review"""
+    data = request.get_json() or {}
+    resp, status, _ = _note_set_review(data.get('note_id'), 1)
+    resp['confirmed'] = True
+    return jsonify(resp), status
 
 @app.route('/api/negative/reject', methods=['POST'])
 def api_negative_reject():
-    """驳回负面笔记（不是负面）"""
-    try:
-        data = request.get_json() or {}
-        note_id = data.get('note_id')
-        if not note_id:
-            return jsonify({'ok': False, 'error': '缺少note_id'}), 400
-        conn = sqlite3.connect(db.DB_PATH)
-        cursor = conn.cursor()
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        cursor.execute("""
-            UPDATE notes SET negative_confirmed=2, negative_confirmed_at=?, negative_confirmed_by='admin'
-            WHERE note_id=?
-        """, (now, note_id))
-        conn.commit()
-        affected = cursor.rowcount
-        conn.close()
-        return jsonify({'ok': True, 'note_id': note_id, 'rejected': True, 'affected': affected})
-    except Exception as e:
-        import traceback
-        return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+    """驳回负面笔记（不是负面）——GAP-09 收敛：走统一写路径 _note_set_review"""
+    data = request.get_json() or {}
+    resp, status, _ = _note_set_review(data.get('note_id'), 2)
+    resp['rejected'] = True
+    return jsonify(resp), status
 
 @app.route('/api/negative-review/<note_id>/confirm', methods=['POST'])
 def api_negative_review_confirm(note_id):
-    """负面审核-确认（RESTful 路径参数，兼容前端 NegativeReview.confirmItem）"""
-    try:
-        conn = sqlite3.connect(db.DB_PATH); cursor = conn.cursor()
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        cursor.execute("UPDATE notes SET negative_confirmed=1, negative_confirmed_at=?, negative_confirmed_by='admin' WHERE note_id=?", (now, note_id))
-        conn.commit(); affected = cursor.rowcount; conn.close()
-        return jsonify({'ok': True, 'note_id': note_id, 'confirmed': True, 'affected': affected})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    """负面审核-确认（RESTful 路径参数，兼容前端 NegativeReview.confirmItem）——GAP-09 收敛：走统一写路径"""
+    resp, status, _ = _note_set_review(note_id, 1)
+    resp['confirmed'] = True
+    return jsonify(resp), status
 
 @app.route('/api/negative-review/<note_id>/reject', methods=['POST'])
 def api_negative_review_reject(note_id):
-    """负面审核-驳回（RESTful 路径参数，兼容前端 NegativeReview.rejectItem）"""
-    try:
-        conn = sqlite3.connect(db.DB_PATH); cursor = conn.cursor()
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        cursor.execute("UPDATE notes SET negative_confirmed=2, negative_confirmed_at=?, negative_confirmed_by='admin' WHERE note_id=?", (now, note_id))
-        conn.commit(); affected = cursor.rowcount; conn.close()
-        return jsonify({'ok': True, 'note_id': note_id, 'rejected': True, 'affected': affected})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    """负面审核-驳回（RESTful 路径参数，兼容前端 NegativeReview.rejectItem）——GAP-09 收敛：走统一写路径"""
+    resp, status, _ = _note_set_review(note_id, 2)
+    resp['rejected'] = True
+    return jsonify(resp), status
 
 # ================= v5.8.2 事件负面二次确认（与笔记同口径，事件中心联动）=================
 def _event_set_review(event_id, state, by='admin'):
