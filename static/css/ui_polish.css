@@ -1,0 +1,84 @@
+/* ============================================================
+ * Z-Brand-Core UI Polish v1.0
+ * 1) 侧边栏抽屉隐藏时脱离布局（修复主内容区左侧大片留白）
+ * 2) 全局信息密度收紧（标题/指标卡/面板/弹窗）
+ * 本文件最后加载，作为视觉观感统一兜底
+ * ============================================================ */
+
+/* ---- 1. 侧边栏隐藏脱流 ----
+ * 平板区间（768-1023）侧边栏是 sticky flex item，关闭时仅用
+ * translateX(-100%) 视觉隐藏，仍占 248px，导致 .content 左侧留白。
+ * 两套显隐机制都要覆盖：
+ *   A) zb-shell：body.zb-shell-on 且无 .zb-nav-open
+ *   B) menu-toggle：.sidebar.open（>=768 区间为隐藏态）
+ * 手机端（<=767）sidebar 为 position:fixed 已脱流，无需处理，故 min-width 隔离。 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  body.zb-shell-on:not(.zb-nav-open) .layout > .sidebar {
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    border-right: 0 !important;
+    overflow: hidden !important;
+  }
+}
+@media (min-width: 768px) {
+  .layout > .sidebar.open {
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    border-right: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+/* ---- 2. 主内容区密度 ---- */
+.content { padding: 18px 20px; }
+@media (max-width: 768px) { .content { padding: 14px; } }
+
+/* 页面标题统一收紧，避免超大标题挤占一屏 */
+.page-header { gap: 10px; margin-bottom: 14px; }
+.page-header h2 { font-size: 18px !important; letter-spacing: -0.01em; margin: 0; white-space: nowrap; }
+.page-header .back-btn { font-size: 13px; padding: 5px 10px; }
+
+/* ---- 3. 指标卡收紧 ---- */
+.metric-grid { gap: 10px; }
+.metric-card { padding: 10px 12px; border-radius: 10px; }
+.metric-icon { width: 24px; height: 24px; font-size: 13px; margin-bottom: 5px; }
+.metric-card strong { font-size: 19px; }
+.metric-label { font-size: 11px; }
+.metric-sub { font-size: 10px; margin-top: 2px; }
+@media (max-width: 768px) {
+  .metric-card strong { font-size: 17px; }
+}
+
+/* ---- 4. 面板收紧 ---- */
+.panel { border-radius: 10px; }
+.panel-head { margin-bottom: 10px; }
+.panel-head h3 { font-size: 14px; }
+.panel-head p { font-size: 11px; margin: 2px 0 0; }
+.eyebrow { font-size: 10px; letter-spacing: 0.06em; }
+
+/* ---- 5. 筛选/小按钮统一 ---- */
+.filter-btn { padding: 5px 11px; font-size: 12px; border-radius: 6px; }
+
+/* ---- 6. KOS 列表行收紧 ---- */
+.kos-list { gap: 8px; }
+.kos-row, .kos-item { padding: 9px 12px; border-radius: 8px; }
+
+/* ---- 7. 通用居中弹窗收紧（showModal 动态创建的浮层）---- */
+div[style*="position: fixed"] > div[style*="border-radius: 12px"],
+div[style*="position:fixed"] > div[style*="border-radius:12px"] {
+  max-width: 540px !important;
+  border-radius: 12px;
+}
+
+/* ---- 8. 顶栏品牌切换器与其他操作按钮对齐，不被压缩竖排 ---- */
+.topbar, .topbar.glass { gap: 8px; }
+.topbar .brand-switcher { margin-right: 2px; }
+
+/* ---- 9. 滚动条更克制 ---- */
+.content::-webkit-scrollbar { width: 6px; }

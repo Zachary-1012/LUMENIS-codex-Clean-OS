@@ -148,11 +148,13 @@
   <link rel="stylesheet" href="/static/css/internal_browser.css?v=8.0.2">
   <link rel="stylesheet" href="/static/css/evidence_dashboard.css?v=5.9.9">
   <link rel="stylesheet" href="/static/css/osai-shell.css?v=5.9.9">
-  <link rel="stylesheet" href="/static/css/brand_hub.css?v=1.0">
+  <link rel="stylesheet" href="/static/css/brand_hub.css?v=1.1">
   <!-- [STAGING ONLY] ZBIP 最终精修层（侘寂黑白灰/语义小圆点/移动重排），最高优先级，回滚=删此行 -->
   <link rel="stylesheet" href="/static/css/zbip-refine.css?v=1.0.0">
   <!-- Zachary 机器人/对话面板侘寂覆盖层（黑白灰，去蓝紫青），回滚=删此行 -->
   <link rel="stylesheet" href="/static/css/zachary-zbip.css?v=1.0.0">
+  <!-- UI 密度/布局兜底：侧边栏脱流、标题/指标卡/弹窗收紧，回滚=删此行 -->
+  <link rel="stylesheet" href="/static/css/ui_polish.css?v=1.0.1">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) v3 浅色系 -->
@@ -1477,8 +1479,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <script src="/static/js/internal_browser.js?v=8.0.2"></script>
   <script src="/static/js/local_import.js?v=5.9.9"></script>
   <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script>
-  <script src="/static/js/kos_dashboard.js?v=1.0.0"></script>
-  <script src="/static/js/brand_hub.js?v=1.0"></script></script>
+  <script src="/static/js/kos_dashboard.js?v=1.1.0"></script>
+  <script src="/static/js/brand_hub.js?v=1.1"></script>
 <script>
   // P0安全修复(2026-09-02): window.__Z_AUTH 定义已移至 <head>（three.min.js之后），确保所有JS文件加载前已定义
   // 此处不再重复定义，避免执行顺序问题

@@ -291,3 +291,71 @@ def koc_campaign_review(campaign: str, kocs: List[dict]) -> dict:
         tier_cnt[t["tier"]] = tier_cnt.get(t["tier"], 0) + 1
     return {"campaign": campaign, "koc_count": len(kocs), "viewership": view,
             "engagement": eng, "high_intent_comments": hi, "tiers": tier_cnt}
+
+
+# ---------------------------------------------------------------------------
+# 5. 多渠道 ROI 对比
+# ---------------------------------------------------------------------------
+# 内置渠道基准（DFS Y26 H1 真实标杆实测 CPL；可被 channels 覆盖）
+CHANNEL_BENCHMARKS = {
+    "xhs_boosting": {"label": "小红书 Boosting", "reference_cpl": 57.32},
+    "wechat_oa": {"label": "微信 OA", "reference_cpl": 9.36},
+    "private_domain": {"label": "私域 WeCom", "reference_cpl": None},
+}
+
+
+def channel_roi(channels: Optional[dict] = None) -> dict:
+    """多渠道 ROI 对比：各渠道 CPL/CPC/Cost-per-WeCom/预算，并给出 vs 基准差异。
+
+    channels（可选，覆盖/追加）：{name: {budget, inquiry, clicks, wecom, reference_cpl}}
+    默认输出内置基准（DFS 实测：小红书 CPL 57.32 / 微信 OA CPL 9.36）+ 当前系统小红书成本
+    （来自 cost_metrics 手动回填）。缺失输入显式标注 manual_pending。
+    """
+    manual = _load_manual()
+    # 当前系统小红书成本（手动回填汇总）
+    cur_cost = cost_metrics(period="month")
+    builtin = {
+        "xhs_boosting": {
+            "budget": cur_cost.get("boosting_budget", 0) or 0,
+            "inquiry": cur_cost.get("inquiry", 0) or 0,
+            "clicks": cur_cost.get("clicks", 0) or 0,
+            "wecom": cur_cost.get("wecom_add", 0) or 0,
+        },
+        "wechat_oa": {"budget": 0, "inquiry": 0, "clicks": 0, "wecom": 0},
+        "private_domain": {"budget": 0, "inquiry": 0, "clicks": 0, "wecom": 0},
+    }
+    if channels:
+        for name, cfg in channels.items():
+            merged = builtin.setdefault(name, {"budget": 0, "inquiry": 0, "clicks": 0, "wecom": 0})
+            for k in ("budget", "inquiry", "clicks", "wecom"):
+                if k in cfg:
+                    merged[k] = cfg[k]
+            if "reference_cpl" in cfg:
+                CHANNEL_BENCHMARKS.setdefault(name, {"label": name, "reference_cpl": None})
+                CHANNEL_BENCHMARKS[name]["reference_cpl"] = cfg["reference_cpl"]
+
+    out = {"channels": [], "generated_at": None}
+    for name, cfg in builtin.items():
+        bench = CHANNEL_BENCHMARKS.get(name, {"label": name, "reference_cpl": None})
+        budget = float(cfg.get("budget", 0) or 0)
+        inquiry = int(cfg.get("inquiry", 0) or 0)
+        clicks = int(cfg.get("clicks", 0) or 0)
+        wecom = int(cfg.get("wecom", 0) or 0)
+        row = {
+            "name": name,
+            "label": bench.get("label", name),
+            "budget": round(budget, 2),
+            "inquiry": inquiry,
+            "clicks": clicks,
+            "wecom": wecom,
+            "cpl": round(budget / inquiry, 2) if inquiry else None,
+            "cpc": round(budget / clicks, 2) if clicks else None,
+            "cost_per_wecom": round(budget / wecom, 2) if wecom else None,
+            "reference_cpl": bench.get("reference_cpl"),
+        }
+        if row["cpl"] is not None and row["reference_cpl"]:
+            row["vs_reference_pct"] = round((row["cpl"] - row["reference_cpl"]) / row["reference_cpl"] * 100, 1)
+        else:
+            row["vs_reference_pct"] = None
+        out["channels"].append(row)
+    return out
