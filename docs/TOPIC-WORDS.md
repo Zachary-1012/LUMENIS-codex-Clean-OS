@@ -23,3 +23,8 @@ c-TF-IDF(w, C) = (tf_w / total_words_C) * log(1 + n_docs_C / df_w)
 - 单测 3/3（停用词过滤 + 高频词居前 + 区分性词保留 + 空输入）
 - 演示：防晒/感肌/敏感/晒霜/spf（正确识别主题词）
 - 零重依赖：纯标准库（re/math）
+
+
+## 四、事件落地（2026-09-03）
+- scripts/topic_cluster.py：按 risk_level 分组提取主题词 + 每事件生成 topic_label（只读、不改 DB）。
+- 真实 DB 演示：high 组主题词「相关/投诉/古汇/太古/州太」——正确识别广州太古汇舆情投诉主题。

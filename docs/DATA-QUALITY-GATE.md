@@ -46,3 +46,8 @@ gate.validate_batch("topic_snapshot", records)   # 批内 unique 生效
 - 单测 8/8 过
 - 全量回归 EXIT=0
 - Evidence：staging/baseline-evidence/、git commit、OSAI learning-feed
+
+
+## 写入门接线（2026-09-03）
+- insert_note 内部已接入 enrich_quality_record 软门：调用方未显式传 data_quality_status 时自动校验并标记（ok/warning/error + score），**标记不丢弃、失败不阻断写入（数据零丢失）**。零侵入各采集入口（app/collector_automation/monitor_pipeline）。
+- AI 调用统一入口 scripts/ai_gateway.py：固定 system 前缀（prompt_registry）+ budget 记录（含 in/out token 估算），cache 可观测字段预留。
