@@ -97,3 +97,17 @@
 - 结论: Primary单CTA深色按钮 + 六语义状态点 + 保活"只读检查+登出通知"
 - 落地: zbip-shell.css (chip primary + .zb-dot 体系)
 - 日期: 2026-09-03
+
+## Skill 版本化 / 回滚规则（2026-09-04，P0 研究 Round 3 → IC-009 同步 ZBC）
+
+> 依据：Microsoft Foundry skills（每次更新建不可变版本 → 测试 → promote default_version）+ agent-skills/skill-mcp（versions/rollback CLI）；E3。
+> 范围：本 registry 中 ADOPTED 的技能 / 能力 / 方法，以及未来所有进入生产的可复用技能。
+
+1. **版本锚点**：每个 ADOPTED 技能登记 semver 版本（Research ID 即注册锚点；首个 ADOPTED 视为 v1.0.0）。
+2. **不可变版本**：任何更新先建新版本，测试通过后 promote 为当前默认；不得原地覆盖已发布版本。
+3. **可回滚**：支持回滚到历史版本（含内容哈希防重复存储）；改坏了能退回。
+4. **审计**：每次版本变更留痕（who / when / why / test result / commit）。
+5. **防负迁移（核心）**：模型生成 / 提取 / 自动沉淀的技能**必须经测试与评价后才成为正式能力**；复用前验证，不得直接 ADOPT 未经验证的自动技能（负迁移警示：生成技能平均提升性能但造成非平凡负迁移）。
+
+状态：ACTIVE（随 P0 研究持续演进）
+
