@@ -17,8 +17,10 @@
   'use strict';
   var state = {}; // { dim: value }
   var subs = {};  // { dim: [fn] }
+  var knownDims = {}; // 出现过的维度（用于清空后仍刷新 UI）
 
   function publish(dim, value) {
+    knownDims[dim] = true;
     var prev = state[dim];
     // 同一值再点 → 清除（toggle）
     if (prev === value) {
@@ -31,6 +33,7 @@
 
   function clear(dim) {
     delete state[dim];
+    knownDims[dim] = true;
     emit(dim);
   }
 
@@ -107,7 +110,7 @@
   ['click'].forEach(function () {});
   // 订阅一个全局刷新器（供 bind 后新渲染的元素）
   function bindAllDim() {
-    Object.keys(state).forEach(function (dim) { refreshDim(dim); });
+    Object.keys(knownDims).forEach(function (dim) { refreshDim(dim); });
   }
 
   window.XJ_CrossFilter = {
