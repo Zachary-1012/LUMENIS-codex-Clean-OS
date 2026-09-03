@@ -18,7 +18,7 @@ const V3Modules = {
 
         async loadStats() {
             try {
-                const resp = await fetch('/api/brand-knowledge/stats', { headers: { 'Authorization': this.auth } });
+                const resp = await fetch('/api/brand-knowledge/stats', { headers: { 'Authorization': window.__Z_AUTH } });
                 const data = await resp.json();
                 if (data.data || data.ok) {
                     this.state.stats = data.data || data;
@@ -35,7 +35,7 @@ const V3Modules = {
             try {
                 let url = '/api/brand-knowledge/search?limit=50';
                 if (keyword) url += '&q=' + encodeURIComponent(keyword);
-                const resp = await fetch(url, { headers: { 'Authorization': this.auth } });
+                const resp = await fetch(url, { headers: { 'Authorization': window.__Z_AUTH } });
                 const data = await resp.json();
                 this.state.results = data.results || [];
                 this.renderResults();
@@ -110,7 +110,7 @@ const V3Modules = {
 
         async showDetail(id) {
             try {
-                const resp = await fetch('/api/brand-knowledge/search?q=&limit=100', { headers: { 'Authorization': this.auth } });
+                const resp = await fetch('/api/brand-knowledge/search?q=&limit=100', { headers: { 'Authorization': window.__Z_AUTH } });
                 const data = await resp.json();
                 const item = (data.results || []).find(i => i.id === id);
                 if (!item) return;
@@ -152,7 +152,7 @@ const V3Modules = {
 
         async loadStats() {
             try {
-                const resp = await fetch('/api/event-graph/stats', { headers: { 'Authorization': this.auth } });
+                const resp = await fetch('/api/event-graph/stats', { headers: { 'Authorization': window.__Z_AUTH } });
                 const data = await resp.json();
                 if (data.ok) {
                     this.state.stats = data.data;
@@ -164,7 +164,7 @@ const V3Modules = {
         async loadEvents() {
             this.state.loading = true;
             try {
-                const resp = await fetch('/api/event-graph/events?limit=50', { headers: { 'Authorization': this.auth } });
+                const resp = await fetch('/api/event-graph/events?limit=50', { headers: { 'Authorization': window.__Z_AUTH } });
                 const data = await resp.json();
                 this.state.events = data.events || [];
                 this.renderEvents();
@@ -306,7 +306,7 @@ const V3Modules = {
             try {
                 const resp = await fetch('/api/brand-report/generate', {
                     method: 'POST',
-                    headers: { 'Authorization': this.auth, 'Content-Type': 'application/json' },
+                    headers: { 'Authorization': window.__Z_AUTH, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ brand, days: parseInt(days) })
                 });
                 const data = await resp.json();
