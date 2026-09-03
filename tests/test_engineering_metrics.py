@@ -81,6 +81,54 @@ class FullSnapshotTest(unittest.TestCase):
         self.assertIn("system_health", s)
 
 
+
+class HealthAlertTest(unittest.TestCase):
+    """v4 告警分级：OK / WARN / CRIT 边界与自定义阈值。"""
+
+    def _snap(self, recovery, collector, sched_ok=True, sysh="ok"):
+        return {
+            "task_closed_loop": {"recovery_rate": recovery, "failed_tasks": 0},
+            "collector_performance": {"window_success_rate": collector},
+            "scheduling_health": {"platforms": {"xhs": {}} if sched_ok else {}, "degraded": not sched_ok},
+            "system_health": {"health": {"status": sysh}},
+        }
+
+    def test_ok_level(self):
+        a = em.health_alert(snapshot=self._snap(1.0, 1.0))
+        self.assertEqual(a["level"], "OK")
+        self.assertTrue(all(c["level"] == "OK" for c in a["checks"]))
+
+    def test_warn_recovery(self):
+        a = em.health_alert(snapshot=self._snap(0.4, 1.0))
+        self.assertEqual(a["level"], "WARN")
+        rec = next(c for c in a["checks"] if c["name"] == "recovery_rate")
+        self.assertEqual(rec["level"], "WARN")
+
+    def test_crit_recovery(self):
+        a = em.health_alert(snapshot=self._snap(0.2, 1.0))
+        self.assertEqual(a["level"], "CRIT")
+
+    def test_crit_collector(self):
+        a = em.health_alert(snapshot=self._snap(1.0, 0.4))
+        self.assertEqual(a["level"], "CRIT")
+
+    def test_warn_scheduling_degraded(self):
+        a = em.health_alert(snapshot=self._snap(1.0, 1.0, sched_ok=False))
+        self.assertEqual(a["level"], "WARN")
+        s = next(c for c in a["checks"] if c["name"] == "scheduling")
+        self.assertEqual(s["level"], "WARN")
+
+    def test_custom_thresholds(self):
+        a = em.health_alert(snapshot=self._snap(0.6, 1.0),
+                            thresholds={"recovery_warn": 0.7, "recovery_crit": 0.5})
+        self.assertEqual(a["level"], "WARN")  # 0.6 < 0.7(warn) 且 >= 0.5(crit)
+
+    def test_none_value_conservative_warn(self):
+        a = em.health_alert(snapshot=self._snap(None, None))
+        rec = next(c for c in a["checks"] if c["name"] == "recovery_rate")
+        self.assertEqual(rec["level"], "WARN")
+
+
 if __name__ == "__main__":
     unittest.main()
 

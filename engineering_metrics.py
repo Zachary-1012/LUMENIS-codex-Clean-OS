@@ -35,7 +35,7 @@ from __future__ import annotations
 # {
 #   "ok": true,
 #   "data": {
-#     "engineered_metrics_version": 3,   # v3 新增 scheduling_health + failed/recovery
+#     "engineered_metrics_version": 4,   # v4 新增 alert 健康告警分级
 #     "generated_ts": "<ISO8601>",
 #     "task_closed_loop": {
 #       "total_tasks": int,            # 已 begin 的唯一任务数
@@ -68,12 +68,24 @@ from __future__ import annotations
 #       "engineered": "system_health",
 #       "health": { status/子灯... },  # 复用 system_health_summary
 #       "source": str
+#     },
+#     "alert": {                       # v4：健康告警分级（只读，无副作用）
+#       "level": "OK|WARN|CRIT",       # 按最严重 check 取级
+#       "checks": [{
+#         "name": "recovery_rate|collector_success_rate|scheduling|system_health",
+#         "level": "OK|WARN|CRIT",
+#         "value": number|null,
+#         "warn_threshold": number|null,
+#         "crit_threshold": number|null,
+#         "message": str
+#       }],
+#       "generated_ts": str
 #     }
 #   }
 # }
-# 契约版本：v1（2026-09-04）→ v2（+collector_performance）→ v3（+scheduling_health/failed/recovery）。
-# 任何口径变更须 bump engineered_metrics_version 并同步 OSAI 契约文档，禁止静默改字段。
-API_CONTRACT_VERSION = 3
+# 契约版本：v1（2026-09-04）→ v2（+collector_performance）→ v3（+scheduling_health/failed/recovery）
+#   → v4（+alert 健康告警分级）。任何口径变更须 bump engineered_metrics_version 并同步 OSAI 契约文档。
+API_CONTRACT_VERSION = 4
 
 import io
 import json
@@ -293,8 +305,8 @@ def system_health_metrics() -> Dict[str, Any]:
 
 
 def full_snapshot(trace_path: Optional[str] = None) -> Dict[str, Any]:
-    """统一工程度量快照：任务闭环 + 采集性能 + 调度健康 + 系统健康 + 元信息（API 契约 schema v3）。"""
-    return {
+    """统一工程度量快照：任务闭环 + 采集性能 + 调度健康 + 系统健康 + 告警 + 元信息（API 契约 schema v4）。"""
+    data = {
         "engineered_metrics_version": API_CONTRACT_VERSION,
         "generated_ts": datetime.now().isoformat(timespec="seconds"),
         "task_closed_loop": task_closed_loop_metrics(trace_path),
@@ -302,6 +314,69 @@ def full_snapshot(trace_path: Optional[str] = None) -> Dict[str, Any]:
         "scheduling_health": scheduling_health(),
         "system_health": system_health_metrics(),
     }
+    data["alert"] = health_alert(snapshot=data)
+    return data
+
+
+# ---- 告警阈值（v4 新增：健康分级 OK/WARN/CRIT）----
+DEFAULT_ALERT_THRESHOLDS: Dict[str, float] = {
+    "recovery_warn": 0.5,      # 恢复率低于 WARN
+    "recovery_crit": 0.3,      # 恢复率低于 CRIT
+    "collector_warn": 0.8,     # 采集窗口成功率低于 WARN
+    "collector_crit": 0.5,     # 采集窗口成功率低于 CRIT
+}
+
+
+def health_alert(snapshot: Optional[Dict[str, Any]] = None,
+                 thresholds: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
+    """健康告警分级（v4 新增）：基于快照关键指标计算 OK/WARN/CRIT。
+
+    - recovery_rate：成功恢复率低于阈值告警（失败堆积信号）
+    - collector_success_rate：采集窗口成功率低于阈值告警（采集链路劣化）
+    - scheduling：planner degraded 或无平台 → WARN（调度不可观测）
+    - system_health：非 ok → WARN
+    - 阈值可传入 thresholds 覆盖默认；只读，不触发任何副作用
+    - 证据下钻：每条 check 带 name/value/warn/crit，可回查对应聚合源
+    """
+    snap = snapshot or full_snapshot()
+    th = {**DEFAULT_ALERT_THRESHOLDS, **(thresholds or {})}
+    checks: List[Dict[str, Any]] = []
+    levels = {"OK": 0, "WARN": 1, "CRIT": 2}
+
+    def _check(name, value, warn, crit, msg):
+        if value is None:
+            level = "WARN"  # 无数据不可判，保守 WARN
+        elif value < crit:
+            level = "CRIT"
+        elif value < warn:
+            level = "WARN"
+        else:
+            level = "OK"
+        checks.append({"name": name, "level": level, "value": value,
+                       "warn_threshold": warn, "crit_threshold": crit, "message": msg})
+        return level
+
+    _check("recovery_rate", snap["task_closed_loop"].get("recovery_rate"),
+           th["recovery_warn"], th["recovery_crit"], "成功恢复率 closed/(closed+failed)")
+    _check("collector_success_rate", snap["collector_performance"].get("window_success_rate"),
+           th["collector_warn"], th["collector_crit"], "采集窗口成功率均值")
+
+    sched = snap["scheduling_health"]
+    sched_ok = bool(sched.get("platforms")) and not sched.get("degraded")
+    checks.append({"name": "scheduling", "level": "OK" if sched_ok else "WARN",
+                   "value": len(sched.get("platforms") or {}), "warn_threshold": None,
+                   "crit_threshold": None,
+                   "message": "调度健康" if sched_ok else "调度 degraded 或无平台可观测"})
+
+    sysh = snap["system_health"].get("health", {}).get("status")
+    checks.append({"name": "system_health", "level": "OK" if sysh == "ok" else "WARN",
+                   "value": sysh, "warn_threshold": None, "crit_threshold": None,
+                   "message": f"系统健康状态={sysh}"})
+
+    rank = max(levels[c["level"]] for c in checks)
+    level = {0: "OK", 1: "WARN", 2: "CRIT"}[rank]
+    return {"engineered": "health_alert", "level": level, "checks": checks,
+            "generated_ts": datetime.now().isoformat(timespec="seconds")}
 
 
 def _main() -> None:
