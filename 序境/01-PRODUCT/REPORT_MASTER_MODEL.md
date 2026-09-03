@@ -53,3 +53,10 @@
 - 报告 JSON 必须含 `decision_model` 完整 6 节点。
 - Markdown 报告首屏为「问题中心」章节。
 - 关键结论必须有 `evidence` 引用。
+
+## 五、三语支持（序境中英韩）
+
+- `language` 字段：`zh` / `en` / `ko`，默认 `zh`。
+- 报告标题、母模型 6 节点章节名、短期/中期/长期标签、页脚按语言输出（`BrandReportGenerator(language=...)`）。
+- 报告正文（AI 生成内容）语言由生成模型决定，模板层语言由本字段控制。
+- 前端 `xujing-i18n.js` 的 `XUJING_I18N` 字典与 `xujing:lang` 事件可与报告语言联动。

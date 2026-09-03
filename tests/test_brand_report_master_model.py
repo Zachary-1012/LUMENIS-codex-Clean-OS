@@ -71,3 +71,40 @@ def test_export_json_with_decision_model(tmp_path):
     import json
     data = json.load(open(fp, encoding="utf-8"))
     assert "decision_model" in data
+
+
+def test_report_trilingual_zh_en_ko():
+    """序境中英韩：报告标题/母模型章节按 language 输出"""
+    from brand_report_generator import BrandReportGenerator
+    expect = {
+        "zh": "品牌传播与市场情报报告",
+        "en": "Brand Communication & Market Intelligence Report",
+        "ko": "브랜드 커뮤니케이션",
+    }
+    for lang, key in expect.items():
+        g = BrandReportGenerator(brand_name="B", report_period="2026年9月", language=lang)
+        g.set_decision_model(
+            problem_center={"question": "Q"},
+            events=[{"date": "2026-09-02", "subject": "S", "title": "T", "summary": "M"}],
+            impacts=[{"dimension": "D", "direction": "down", "detail": "x"}],
+            risks=[{"level": "high", "topic": "R", "trigger": "T", "trend": "rising"}],
+            evidence=[{"evidence_id": "E1", "kind": "note", "summary": "s"}],
+            decisions={"short_term": ["a"], "medium_term": [], "long_term": []},
+        )
+        rep = g.generate_report()
+        assert rep["language"] == lang
+        md = g._to_markdown(rep)
+        assert key in md
+        if lang != "zh":
+            assert "问题中心" not in md  # 非中文时无中文章节标题
+        else:
+            assert "问题中心" in md
+
+
+def test_report_language_default_zh():
+    g = BrandReportGenerator()
+    assert g.language == "zh"
+    assert g.generate_report()["language"] == "zh"
+    # 非法语言回退 zh
+    g2 = BrandReportGenerator(language="xx")
+    assert g2.language == "zh"
