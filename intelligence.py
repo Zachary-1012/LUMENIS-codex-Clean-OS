@@ -192,22 +192,53 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
         print('[AI] local/provider failed:',exc)
         return None,'rule'
 
-def vision_chat(system, user_text, image_base64, model='glm-4.6v', temperature=0.2, max_tokens=2000):
+def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium'):
     """视觉模型对话（glm-4.6v），支持图片输入。
+    分级：level 决定超时（low 60s / medium 90s / high 120s / critical 180s，视觉较慢分档更大）。
+    预算：检查并记录 glm_4_6v 视觉资源包（600万 tokens；require_confirmation=True 由调用方/UI 确认）。
     Args:
         system: 系统提示词
         user_text: 用户文本
         image_base64: 图片 base64 编码（不含 data:image/... 前缀）
-        model: 模型名称，默认 glm-4.6v
+        model: 模型名称，None → ZHIPU_VISION_MODEL（默认 glm-4.6v）
         temperature: 温度
         max_tokens: 最大输出 tokens
+        level: low/medium/high/critical 任务分级（决定超时）
     Returns:
         (content, provider) 元组
     """
+    if model is None:
+        model = _env('ZHIPU_VISION_MODEL', 'glm-4.6v')
     api_key = _env('ZHIPU_API_KEY', '')
     base = _env('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')
     if not api_key:
         return None, 'no_key'
+    # 分级超时：视觉模型较慢，比文本分档更大
+    _VISION_TIMEOUT = {'low': 60, 'medium': 90, 'high': 120, 'critical': 180}
+    _to = _VISION_TIMEOUT.get((level or 'medium').lower(), 90)
+    # 预算估算：图片大小分档（每张图约 1k-10k tokens）；纯文本 500
+    est_tokens = 500
+    if image_base64:
+        try:
+            img_bytes = len(image_base64) * 3 // 4
+            if img_bytes < 200 * 1024:
+                est_tokens = 1500
+            elif img_bytes < 1024 * 1024:
+                est_tokens = 3000
+            elif img_bytes < 3 * 1024 * 1024:
+                est_tokens = 6000
+            else:
+                est_tokens = 10000
+        except Exception:
+            est_tokens = 1500
+    # 预算检查（glm_4_6v 600万 tokens；require_confirmation=True 由调用方/UI 确认，函数内不重复确认）
+    try:
+        import ai_resource_packs
+        q = ai_resource_packs.check_quota('glm_4_6v', est_tokens)
+        if not q.get('allowed'):
+            return None, 'budget_blocked'
+    except Exception:
+        pass
     # 智谱视觉模型输入格式：content 为数组，包含 text 和 image_url
     messages = []
     if system:
@@ -242,12 +273,25 @@ def vision_chat(system, user_text, image_base64, model='glm-4.6v', temperature=0
             headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key},
             method='POST'
         )
-        with urllib.request.urlopen(req, timeout=int(_env('AI_TIMEOUT_SECONDS', '120'))) as resp:
+        with urllib.request.urlopen(req, timeout=_to) as resp:
             data = json.loads(resp.read().decode('utf-8', 'replace'))
+        # 预算记录：优先 API 真实 usage.total_tokens，拿不到用估算
+        used_tokens = est_tokens
+        try:
+            _u = data.get('usage', {}) or {}
+            used_tokens = int(_u.get('total_tokens', 0) or 0) or est_tokens
+        except Exception:
+            pass
+        try:
+            import ai_resource_packs
+            ai_resource_packs.record_usage('glm_4_6v', used_tokens, endpoint='vision_chat', detail=(system or '')[:40])
+        except Exception:
+            pass
         return data['choices'][0]['message']['content'], model
     except Exception as exc:
         print(f'[AI-Vision] {model} failed:', exc)
         return None, 'error'
+
 
 def _json_from_text(text):
     if not text:return None

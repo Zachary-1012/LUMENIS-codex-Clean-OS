@@ -1282,3 +1282,27 @@ PartB（高效层追加）：
 - 消耗 search_std 1 次（100 次增强搜索配额，合理验证）。
 - search-std 配额检查/记录保持不变（额度不足仍返回 ok=False 不硬崩）。
 - 红线：仅 search_enhance 参数化；搜索仍不写生产库、仅参考。
+
+
+---
+
+## 第二十五批：vision_chat（视觉模型 glm-4.6v）分级 + 预算接入
+
+### 改动（intelligence.py）
+- `vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium')`：
+  - `level` 分级超时（视觉较慢分档更大）：low 60s / medium 90s / high 120s / critical 180s。
+  - `model` 默认 None → `ZHIPU_VISION_MODEL`（默认 glm-4.6v，可环境变量切换）。
+  - 预算检查：调用前估算图片 tokens（<200KB→1500，<1MB→3000，<3MB→6000，≥3MB→10000；纯文本 500）检查 `glm_4_6v`（600万 tokens）配额，不足返回 budget_blocked。
+  - 预算记录：成功后优先记录 API 真实 `usage.total_tokens`（拿不到用估算）。
+  - require_confirmation=True 由调用方/UI 确认（函数内不重复确认）。
+  - 返回 (content, provider) 2 元组保持不变。
+
+### 实测（真实结果）
+- 签名：`(..., model=None, ..., level='medium')` ✓
+- 无 key → no_key；估算分档 1500/3000/6000/10000 ✓
+- 预算拦截（mock 配额不足）→ budget_blocked ✓
+- 真实最小视觉调用（1x1 PNG，level=low）：**947ms，glm-4.6v**，返回"纯色粉红图" ✓
+- **用量真实记录：glm_4_6v total_used=60（API 真实 usage.total_tokens，比估算更准确），remaining 5,999,940** ✓
+- AI 资源包面板 ⚡ 自动显示 glm_4_6v（后端 get_all_packs_status 已含、前端通用渲染，无需改前端）。
+- 备份：intelligence.py.bak-vision（可回滚）。
+- 红线：仅 vision_chat 参数化 + 预算；视觉使用仍需用户确认（require_confirmation）。
