@@ -57,9 +57,9 @@ RESOURCE_PACKS = {
         "total": 6000000,             # 600万 tokens
         "daily_limit": None,
         "unit": "tokens",
-        "description": "视觉多模态模型，每次使用前需用户确认",
+        "description": "视觉多模态模型，效率优先不省用（一次分析到位），但不可滥用（不重复/无价值调用）",
         "enabled": True,
-        "require_confirmation": True,  # 每次使用前需确认
+        "require_confirmation": False,  # 2026-09-04 用户取消每次确认；保留"不可滥用"使用纪律
     },
 }
 
