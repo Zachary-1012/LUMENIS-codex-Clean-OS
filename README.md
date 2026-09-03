@@ -1,7 +1,8 @@
-# 序境-Core · Xujing Core
+# 序境-Core
 
-> **序境（Xujing）** — 生产核心系统  
-> **品牌哲学：芥子纳须弥**
+> **序境** — 生产核心系统  
+> **品牌哲学：芥子纳须弥**  
+> **哲学定义：微小之中本身就包含通向整体的结构。**
 
 ## 1. 产品定位
 
@@ -35,7 +36,39 @@
 
 负责研究、AI、知识、Benchmark、技术验证与研发建议。研究结果不得绕过 Contract → Implementation → Test → Evidence 直接改变生产真相。
 
-## 3. Canonical 层级
+## 3. 品牌与哲学 Canonical
+
+| 层级 | 当前规范 |
+|---|---|
+| 中文品牌 | **序境** |
+| 韩文品牌 | **서경** |
+| 英文 Canonical Brand | **TBD** |
+| 历史英文写法 | `Xujing` / `Xujing Core`，仅作 Legacy，不得作为新的 Canonical 命名 |
+| 核心哲学 | **芥子纳须弥** |
+| 哲学定义 | **微小之中本身就包含通向整体的结构。** |
+
+英文 Canonical Brand 在最终命名通过现实世界冲突、商标初筛、数字资产与架构适配审查并获得明确授权前保持 `TBD`。
+
+## 4. 生命层与生态边界
+
+品牌哲学可向生命层和生态层进行研究抽象，但研究概念不得被当作当前已实现生产功能：
+
+```text
+Life → Worldview → Philosophy → Brand → Methodology
+→ Ecosystem → Architecture → Product → Experience
+→ Feedback → Evolution ↺
+```
+
+核心概念循环：
+
+```text
+Perception → Relation → Structure → Meaning → Understanding
+→ Intelligence → Action → Feedback → Learning → Evolution ↺
+```
+
+`Living System`、`Living Intelligence`、`Embedded Wholeness`、`Relational Becoming` 属于研究语义/概念层，不自动构成 Core 产品名称或生产能力。
+
+## 5. Canonical 层级
 
 所有生产资产必须能够映射到：
 
@@ -63,7 +96,7 @@ Class / Function
 
 治理横向贯穿全部层级：Policy / Permission / Safety / Evidence / Audit。
 
-## 4. 核心功能域
+## 6. 核心功能域
 
 | 域 | Canonical | 职责 |
 |---|---|---|
@@ -73,7 +106,7 @@ Class / Function
 | 报告 | Reporting | 日报、周报、月报、专报、导出 |
 | 系统 | System | 数据源、账号、AI、权限、安全、设置 |
 
-## 5. 采集安全规则
+## 7. 采集安全规则
 
 自动采集默认受控，仅保留合规来源与合法账号/API 接口。
 
@@ -86,26 +119,22 @@ Class / Function
 - 不通过换账号、换 Cookie、换 IP 或提高频率规避平台安全限制
 - 数据进入生产前必须经过 Validate / Normalize / Filter / Evidence
 
-## 6. AI 边界
+## 8. AI 边界
 
 AI 是生产能力的增强层，不得绕过核心规则成为生产真相的最终裁决者。
 
 生产 AI 结果必须记录必要的模型、提示词、输入、输出、置信度、最终结果及人工修正信息；重要结论必须可追溯至证据。
 
-## 7. UI / UX 原则
+## 9. Intelligence → Core 治理接口
 
-序境采用克制、高密度、操作优先的信息设计：
+```text
+Research → Evidence → Contract → Implementation Specification
+→ Core Implementation → Test → Evidence → Audit → Release
+```
 
-- 细线 Icon 与小型功能图标
-- 清晰的导航层级
-- 数据优先，视觉服务于判断
-- 图表可下钻至数据与证据
-- 禁止巨型 Logo、巨型 Icon、大字报式布局
-- 禁止为了装饰牺牲操作效率
-- 中 / 英 / 韩共用稳定 Canonical ID，语言仅改变展示层
-- 响应式布局必须保持信息层级，不允许多语言导致组件失控
+Core 只接受经过明确 Contract、证据和质量 Gate 的研发变更。Research、Agent 或外部模型不得直接写入 Production Truth。
 
-## 8. 数据与报告
+## 10. 数据与报告
 
 标准数据链路：
 
@@ -129,7 +158,7 @@ Executive Summary
 
 内容创作不是固定报告模板，而是根据需求、受众、场景和目标动态选择结构。
 
-## 9. 文件治理
+## 11. 文件治理与命名
 
 正式文件必须归属于明确模块，不允许长期堆积在根目录。
 
@@ -152,16 +181,21 @@ Executive Summary
 
 删除前必须完成引用、依赖和运行验证。历史资产如仍具证据价值，应进入 `99-ARCHIVE`，而不是污染生产目录。
 
-## 10. Canonical 命名
+文件、目录、模块、接口和数据字段命名必须服从 Canonical Registry；涉及 Rename / Migration / Delete 必须先完成依赖扫描和回归验证。
 
-正式产品名：**序境 / Xujing / 서경**  
+## 12. Canonical 命名
+
+正式品牌名：**序境 / 서경**  
+英文 Canonical Brand：**TBD**  
 品牌哲学：**芥子纳须弥**
+
+`Xujing` / `Xujing Core` 仅作为历史兼容记录，不得作为新正式品牌命名继续扩散。
 
 `Zachary` 仅作为历史仓库、研发身份或必要技术标识，不再作为对外产品品牌。
 
 功能名称应体现职责，不以品牌词重复污染文件、类和函数命名。
 
-## 11. 质量 Gate
+## 13. 质量 Gate
 
 任何新增或修改必须经过：
 
@@ -177,7 +211,7 @@ Plan
 
 涉及破坏性 Rename / Migration / Delete 时，必须先完成依赖扫描和回归验证。
 
-## 12. 当前原则
+## 14. 当前原则
 
 - 不重新建立第三核心库
 - 不重复建设已经存在的 Core 能力
@@ -186,8 +220,11 @@ Plan
 - 不以 UI 重构解决本应由信息架构解决的问题
 - 不删除未经审计的历史资产
 - 不让新模块脱离 Canonical Registry 独立生长
+- 不因语言、UI 或研究需要改变生产规则
+- 不把未来生命层构想写成当前已实现能力
+- 不因英文品牌研究提前修改仓库名或生产架构
 
-## 13. 研发入口
+## 15. 研发入口
 
 本 README 是当前生产核心的产品与工程入口说明。详细架构、策略、审计和运行文档应以仓库内当前有效文件及最新基线为准；历史方案不作为新开发依据。
 
