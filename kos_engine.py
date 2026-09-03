@@ -63,6 +63,11 @@ def refresh_profiles() -> dict:
     profiles = []
     for a in authors:
         d = dict(a)
+        # 主体归属 Gate（Contract 第六条）：只保留通过当前品牌 subject_hit 的作者
+        # 商业体本身不建 KOS；normal_user/media/institution 已在 SQL 层排除
+        note_titles = d.get('note_titles') or ''
+        if not sr.subject_hit(title=note_titles, body='', content='', source_keyword=''):
+            continue
         nc = d['note_count'] or 0
         tl = d['total_likes'] or 0
         tc = d['total_comments'] or 0
@@ -111,7 +116,7 @@ def refresh_profiles() -> dict:
              negative_count, risk_count, first_publish_at, last_publish_at, active_days, growth_trend,
              kos_tier, kos_score, lifecycle_stage, is_potential, is_risk, is_top, content_tags,
              top_topics, ai_insight, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (p['author_id'], p.get('author_nickname') or '', p.get('author_avatar') or '', p['note_count'],
              p['total_likes'], p['total_comments'], p['total_collects'], p['total_shares'], p['total_engagement'],
              round(p['total_likes'] / max(p['note_count'], 1), 1), round(p['total_comments'] / max(p['note_count'], 1), 1),
