@@ -104,6 +104,12 @@ function navigateTo(pageId){
   if(pageId==='calendar') refreshCalendar();
   if(pageId==='notes') explorer('notes');
   if(pageId==='swire' && window.renderSwirePage) window.renderSwirePage();
+  // V3 / AppEvidence 模块权威懒加载：所有 navigateTo 包装最终都回到本函数，
+  // 在此触发可避免 index.html 延时包装被后续 navigateTo 重赋值绕过而出现空壳页
+  if(pageId==='knowledge-base' && typeof V3Modules!=='undefined' && V3Modules.knowledge) V3Modules.knowledge.init();
+  if(pageId==='event-graph' && typeof V3Modules!=='undefined' && V3Modules.eventGraph) V3Modules.eventGraph.init();
+  if(pageId==='brand-report' && typeof V3Modules!=='undefined' && V3Modules.brandReport) V3Modules.brandReport.init();
+  if(pageId==='app-evidence' && typeof AppEvidence!=='undefined') AppEvidence.init();
 }
 function goBack(){
   if(pageHistory.length>1){pageHistory.pop();const prev=pageHistory[pageHistory.length-1];navigateTo(prev);pageHistory.pop()}

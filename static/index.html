@@ -1383,7 +1383,7 @@
 <div class="toast" id="toast"></div>
 <!-- 舆情预警浮动通知容器 -->
 <div class="alert-container" id="alertContainer"></div>
-<script src="/static/js/app.js?v=8.0.2"></script>
+<script src="/static/js/app.js?v=8.0.4"></script>
 <!-- v5.9.9 弹窗精简补丁：核心信息一眼看懂，次要信息折叠展开（覆盖app.js三个详情弹窗，不改源文件） -->
 <script src="/static/js/modal_simplify.js?v=5.9.9"></script>
 <!-- v5.8.4 太古集团全域事件/笔记库 -->
@@ -1433,25 +1433,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script src="/static/js/v3_modules.js?v=8.0.0"></script>
 <script src="/static/js/app_evidence.js?v=1.0.0"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        if (window.V3Modules) {
-            // 页面切换时初始化对应模块
-            const origNav = window.navigateTo;
-            if (origNav) {
-                window.navigateTo = function(pageId) {
-                    origNav(pageId);
-                    if (pageId === 'knowledge-base') V3Modules.knowledge.init();
-                    if (pageId === 'event-graph') V3Modules.eventGraph.init();
-                    if (pageId === 'brand-report') V3Modules.brandReport.init();
-                    if (pageId === 'app-evidence') AppEvidence.init();
-                };
-            }
-        }
-    }, 800);
-});
-</script>
+<!-- V3 / AppEvidence 进入时初始化已统一收敛到 app.js navigateTo 权威懒加载分支，
+     不再在此用 DOMContentLoaded+setTimeout 包装 navigateTo（会被 app.js 后续重赋值绕过导致空壳页） -->
 
 <!-- 手机端底部导航（APP式交互） -->
 <nav class="mobile-tab-bar" id="mobileTabBar">
