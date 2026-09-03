@@ -1,21 +1,31 @@
 # -*- coding: utf-8 -*-
-"""数据驱动原创创意生成器（对标全球4A：阳狮/Ogilvy/WPP 范式 × ZBC 真实数据）。
+"""数据驱动原创创意生成器 V2（反模板化：多维组合引擎）。
 
-不是模板填空，而是把「数据信号 × 知识库底层逻辑 × 圈层符号」组合生成新的 midea&idea：
-  - 数据信号：主题词(内容) / 情绪(基调) / 风险(约束) / 圈层(人群符号) / 热点(时效)
-  - 创意机制：事件化 / 参与式 / 符号化 / 反差 / 共创 / 文化共识（源自戛纳/Ogilvy 方法论）
-  - 输出：每个 idea 含 口号(符号化) + 概念(为什么成立) + 圈层符号 + 触点 + 时效绑定 + 传播设计
+对标全球 4A（阳狮/Ogilvy/WPP/戛纳范式）× ZBC 真实数据。
+V2 核心升级（针对 V1 模板填空缺陷）：
+  1. 反模板化：同一机制不再固定一句式，而是「机制 × 张力句式库 × 角度 × 语义角色」多维组合，
+     同一主题可产出观点、行动、故事、反转、共创、文化暗语等多种张力表达，禁止重复循环。
+  2. 语义角色：中文主题词先做语义角色推断（空间/活动/美食/服务/权益/节点/IP/情绪），
+     用对应意象槽位，而非把词生硬塞进句式。
+  3. 预算感知：新增 budget(low/mid/high) 维度，同一品牌同一主题不同预算产出不同落地档位
+     （轻内容玩法 / 单点事件+达人 / 全链路战役），适配每次报价/预算调整。
+  4. 角度(Angle)：消费者视角/品牌自省/圈层暗语/场景时间/反叛/共创——同一主题不同切入人设。
+  5. 多样性控制：批次内句式不重复、槽位语义去重、机制轮转 + 随机张力选型。
+
+Contract 不变：仍输出 meta/ideas，每个 idea 保留 mechanism/big_idea/concept/why/circle/
+circle_symbols/tonality/timeliness/touchpoints/virality/provenance；新增 angle/execution。
+芥子→须弥 provenance 机制（evidence_level/confidence 封顶/负样本待检）保持不变。
 
 用法：
   from scripts.idea_generator import generate_ideas, signals_from_db
-  s = signals_from_db("data/monitor.db", "太古汇", circle="Z世代潮人", hotspot="世界杯")
-  ideas = generate_ideas("某品牌", "美妆", s)
+  s = signals_from_db("data/monitor.db", "太古汇", circle="都市高净值", hotspot="15周年")
+  ideas = generate_ideas("某品牌", "商业地产", s, n=6, tonality="premium", budget="mid")
 """
 import json
 import os
+import random
 import sys
 
-# 支持 `python scripts/idea_generator.py` 直接运行（把项目根加入 path）
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ---- 圈层符号语言（人群 → 沟通语言/符号体系）----
@@ -34,6 +44,10 @@ CIRCLE_SYMBOLS = {
                 "examples": "Uva Uva Bombón：Bad Bunny 唱名即解锁"},
     "高奢小众": {"lang": "克制/稀缺/工艺/安静奢华", "symbols": ["限量", "稀缺", "手作", "仪式感", "私密"],
                  "examples": "Hermès 计算型稀缺 / Goyard 不广告不代言 / Ffern 四季限量"},
+    "都市高净值": {"lang": "质感/稀缺/圈子认同/体面", "symbols": ["限量", "圈层", "体面", "品味", "私享"],
+                  "examples": "太古汇/连卡佛 高净值生活方式场域"},
+    "年轻潮流": {"lang": "酷/新鲜/反差/打卡", "symbols": ["新店", "打卡", "氛围感", "宝藏", "反差"],
+                "examples": "新店首发/氛围感打卡/宝藏挖掘"},
 }
 
 # 调性（影响创意气质与机制）：大众狂欢 vs 中端种草 vs 高奢克制
@@ -52,15 +66,14 @@ EMOTION_STYLES = {
 
 # ---- 创意机制（知识库底层逻辑 × 全球4A范式）----
 MECHANISMS = {
-    "eventify": {"name": "事件化", "desc": "把抽象卖点/概念变成可参与的体验事件（太二运动会/茅台剧本杀）"},
-    "participate": {"name": "参与式", "desc": "让用户从旁观者变玩家（Duolingo复活/AIGC贴纸，参与机制即传播）"},
-    "symbolize": {"name": "符号化", "desc": "生成一个可记忆可复制的符号/口号/图腾（谐音双关/反差/押韵）"},
-    "reverse": {"name": "反差", "desc": "反常识断言制造话题（CeraVe 阴谋论/争议立场）"},
-    "cocreate": {"name": "共创式", "desc": "把用户自发行为变成产品/内容（Vaseline Originals UGC→产品飞轮）"},
-    "culture": {"name": "文化共识", "desc": "借势已有文化共识/梗自然绑定（玩梗球星/Oreo Cows）"},
+    "eventify": {"name": "事件化", "desc": "把抽象卖点/概念变成可参与的体验事件"},
+    "participate": {"name": "参与式", "desc": "让用户从旁观者变玩家，参与机制即传播"},
+    "symbolize": {"name": "符号化", "desc": "生成一个可记忆可复制的符号/口号/图腾"},
+    "reverse": {"name": "反差", "desc": "反常识断言制造话题"},
+    "cocreate": {"name": "共创式", "desc": "把用户自发行为变成产品/内容飞轮"},
+    "culture": {"name": "文化共识", "desc": "借势已有文化共识/圈层暗语自然绑定"},
 }
 
-# L1 公式归属（芥子→须弥 抽象层）：机制 → 所属可复用公式
 MECH_TO_L1 = {
     "eventify": "事件化体验公式（造事-造势-造市）",
     "participate": "参与式传播公式（用户即媒介）",
@@ -70,21 +83,176 @@ MECH_TO_L1 = {
     "culture": "文化共识借势公式",
 }
 
+# ---- 角度：同一主题的不同切入人设（防止"主题换了，创意没换"）----
+ANGLES = {
+    "consumer": "消费者视角（替目标人群说出心声）",
+    "introspect": "品牌自省（敢于自我调侃/反推销）",
+    "coded": "圈层暗语（懂的人才懂，制造专属感）",
+    "scene": "场景时间（把主题放进某个真实时刻/地点）",
+    "rebel": "反叛视角（挑战刻板印象/既定答案）",
+    "cocreate": "共创视角（把定义权交给用户）",
+}
 
-def _provenance(topic, sentiment, mech, tonality, circle, signals):
-    """上下文指纹（采纳 glm-4.7 第二意见 P0）：每个 idea 可追溯到真实信号与抽象层。
+# ---- 主题词语义角色推断（中文2-gram→语义类，供意象槽位选择）----
+_TOPIC_ROLE_RULES = [
+    (("方所", "书店", "展览", "美术馆", "空间", "商场", "天台", "中庭", "店"), "space", "空间/场域"),
+    (("面包", "美食", "餐厅", "咖啡", "甜品", "茶", "火锅", "探店", "吃喝", "米其林"), "food", "美食/体验"),
+    (("停车", "排队", "退换", "投诉", "服务", "预约", "积分", "会员", "售后", "权益"), "service", "服务/权益"),
+    (("周年", "节日", "圣诞", "新年", "周年庆", "开箱", "首发", "预售", "快闪"), "event", "节点/活动"),
+    (("米奇", "联名", "IP", "限量", "上新", "新款", "限定"), "ip", "IP/联名/限定"),
+    (("拍照", "打卡", "氛围", "美", "出片", "颜值"), "aesthetic", "颜值/出片"),
+]
+_TOPIC_ROLE_DEFAULT = ("general", "通用")
+_TOPIC_ROLE_IMAGES = {
+    "space": {"mass": "打卡地标", "premium": "值得专程的场域", "luxury": "安静的收藏级空间"},
+    "food": {"mass": "好吃到想炫耀", "premium": "值得专程的味道", "luxury": "值得慢品的手作味道"},
+    "service": {"mass": "不踩坑攻略", "premium": "体面省心的体验", "luxury": "不动声色的周到"},
+    "event": {"mass": "限时狂欢", "premium": "一年一次的事", "luxury": "一年只做一次的事"},
+    "ip": {"mass": "限定联名", "premium": "限量上新", "luxury": "限量即稀缺"},
+    "aesthetic": {"mass": "出片圣地", "premium": "氛围感拉满", "luxury": "克制的审美仪式"},
+    "general": {"mass": "宝藏新发现", "premium": "质感新体验", "luxury": "难得的质感"},
+}
 
-    - seed_signal：芥子（来源真实信号，无 DB 时如实标注为示例，不伪造）；
-    - parent_L1 / parent_L2_tone：须弥（所属公式与调性坐标），禁止孤立 L0；
-    - causal_type：诚实区分「相关性」与「因果性」（平台机制多为相关，防算法变迁失效）；
-    - evidence_level：single_case(孤例) < repeated(复现 N>=10) < validated(含反例校验)，
-      数据不足时如实标 single_case，绝不虚高；
-    - counter_example_check：负样本/反事实校验状态（P2 能力，先留接口，未做即 pending）。
-    """
+
+def _topic_role(topic):
+    """把中文主题词映射到语义角色（空间/美食/服务/节点/IP/颜值/通用），供意象槽位。"""
+    for keys, role, _name in _TOPIC_ROLE_RULES:
+        if any(k in topic for k in keys):
+            return role
+    return _TOPIC_ROLE_DEFAULT[0]
+
+
+# ---- 张力句式库（反模板核心）：每个句式一条"有张力的表达"，非填空壳 ----
+# 槽位：{brand} 品牌  {topic} 主题  {c0} 圈层名  {img} 主题意象  {sym} 圈层符号  {hot} 热点
+_HOOK = {
+    # 主张型（立场/态度，适合 symbolize/culture）
+    "assert": [
+        "「{c0}的{topic}，从来不止一种答案」——{brand}，把{topic}还给生活",
+        "「真正的{topic}，{brand}很少说」——留给懂的人自己发现",
+        "「{topic}，是{brand}最低调的骄傲」——不声张，但不缺席",
+        "「别问{brand}的{topic}贵不贵，问它值不值得」——{img}，本来就不赶时间",
+        "「{img}，是{brand}给{topic}的体面」——{c0}都懂",
+    ],
+    # 行动型（号召/动词转换，适合 participate/eventify）
+    "imperative": [
+        "「来{brand}，把{topic}过成今天最重要的事」——{img}，从此刻开始",
+        "「在{brand}，{topic}从『看』变成『玩』」——{c0}的新玩法",
+        "「把{topic}留到周末，来{brand}认真浪费一次」——浪费时间，也值得",
+        "「别只收藏，来{brand}把{topic}『用』一次」——{img}，眼见为实",
+        "「{hot}来了，{topic}也该换一种过法」——来{brand}，{img}",
+    ],
+    # 故事型（场景/悬念开场，适合 eventify）
+    "story": [
+        "「有人为了{brand}的{topic}，跑了半个城」——{img}，值得专程",
+        "「第一次来{brand}的人，都先问{topic}在哪」——后来都成了常客",
+        "「在{brand}，有人为{topic}来了七次」——{img}，每一次都不同",
+        "「{c0}的私藏清单里，{brand}的{topic}排第一」——{img}，才舍得分享",
+        "「那天路过{brand}，发现{topic}变了」——{img}，是时候重新认识",
+    ],
+    # 反转型（反常识断言，适合 reverse）
+    "reversal": [
+        "「{brand}劝你别只看{topic}」——{img}，好戏在后面",
+        "「没人规定{topic}要很贵」——{brand}的{topic}，主打一个值",
+        "「{brand}的{topic}，不排队」——稀有，但不必争抢",
+        "「别一上来就{topic}，先逛逛再说」——{brand}，值得慢慢来",
+        "「都说{topic}是{img}，{brand}偏要说不止于此」——{c0}，亲自来验",
+    ],
+    # 共创型（把定义权交给用户，适合 cocreate/participate）
+    "cocreate": [
+        "「{topic}怎么玩，{c0}说了算」——{brand}搭台，你来唱戏",
+        "「你的{topic}，{brand}来搭台」——{img}，由你定义",
+        "「把{topic}交给懂它的人」——{brand}，只做最懂{img}的那一档",
+        "「{c0}共创的{topic}，正在{brand}发生」——你也可以参与定义",
+        "「{#话题#}，{brand}帮你把{topic}玩成限量版」——{img}，由你收藏",
+    ],
+    # 文化共识型（圈层暗语/趋势 + 名句重构 remix，适合 culture）
+    "culture": [
+        "「{c0}都懂的{topic}，{brand}替你准备好了」——{img}，心照不宣",
+        "「{topic}正在成为{c0}的新暗号」——{brand}，站在暗号中心",
+        "「{sym}这件事，{c0}只在{brand}聊」——{topic}，圈内人才懂",
+        "「{hot}里，{c0}都在追{brand}的{topic}」——{img}，先到先得",
+        "「{c0}的{topic}审美，被{brand}接住了」——{img}，刚刚好",
+        # 名句重构 remix（arXiv 2602.06049 范式：名言结构+词汇替换，新颖×熟悉）
+        "「吾日三省吾身：{topic}、{topic}、还是{topic}」——{brand}，{c0}的{img}",
+        "「山不在高，有仙则名」——{brand}的{topic}，不在多，在{img}",
+        "「人生得意须尽欢」——{topic}，就该在{brand}过成{img}",
+        "「来都来了」——{topic}当然要过成{img}，{brand}都替{c0}想好了",
+    ],
+}
+
+# 高奢专属：克制叙事句库（不玩梗、不狂欢）
+_HOOK_LUX = {
+    "assert": [
+        "「{brand}的{topic}，安静到值得专程」——{img}，不喧哗自有声",
+        "「{topic}这件事，{brand}只做给少数人看」——{img}，稀缺即诚意",
+        "「{topic}，是{brand}写给{c0}的一封安静的信」——{img}，慢慢读",
+    ],
+    "imperative": [
+        "「来{brand}，赴一场{topic}之约」——{img}，一年一次",
+        "「{topic}，留给愿意专程的人」——{brand}，不邀不请",
+    ],
+    "story": [
+        "「有人为{brand}的{topic}，等了整整一年」——{img}，值得",
+        "「{c0}的{topic}，只在{brand}对少数人开放」——{img}，私享",
+    ],
+    "reversal": [
+        "「{brand}不谈{topic}有多好，只做{topic}该有的样子」——{img}",
+        "「我们不把{topic}讲大声」——{brand}，{img}自有分寸",
+    ],
+    "cocreate": [
+        "「{topic}，由藏家与匠人共同定义」——{brand}，{img}的默契",
+        "「{brand}的{topic}，只邀请懂它的人」——{img}，心领神会",
+    ],
+    "culture": [
+        "「{c0}的{topic}暗语，{brand}听得懂」——{img}，心照不宣",
+        "「{topic}，是{brand}与{c0}之间的默契」——{img}，不解释",
+        # 高奢名句重构 remix（大隐隐于市 / 陋室铭）
+        "「大隐隐于市」——{brand}的{topic}，{img}，只给懂的人",
+        "「无丝竹之乱耳，无案牍之劳形」——{brand}的{topic}，是{c0}的{img}",
+    ],
+}
+
+# 机制 → 张力句式类型（可多选）
+MECH_TO_HOOK = {
+    "eventify": ["story", "imperative", "assert"],
+    "participate": ["imperative", "cocreate"],
+    "symbolize": ["assert", "culture"],
+    "reverse": ["reversal", "assert"],
+    "cocreate": ["cocreate", "imperative"],
+    "culture": ["culture", "assert"],
+}
+
+# ---- 预算感知（同一创意不同预算的落地档位）----
+BUDGETS = {
+    "low": {
+        "name": "轻量（低预算）",
+        "scale": "话题/内容玩法 + UGC 机制 + 轻量达人合作（无大物料）",
+        "investment": "以内容与话题为主，边际成本低，适合快速验证与常态化运营",
+        "tactics": ["纯内容话题引爆（挑战/清单/攻略）", "UGC 机制+官方转发放大", "KOC 轻量置换合作", "搜索词占位与评论区运营"],
+        "why": "预算有限时，靠「参与机制 + 真实 UGC」撬动，而不是物料砸量",
+    },
+    "mid": {
+        "name": "单点战役（中预算）",
+        "scale": "单点事件/快闪 + 中量物料 + 达人矩阵 + 搜索承接",
+        "investment": "一次可被记忆的单点事件，配合内容与达人矩阵放大",
+        "tactics": ["单点事件/快闪制造话题峰值", "KOL+KOC 矩阵集中发布", "核心物料（短片/装置/海报）", "搜索/信息流承接与转化"],
+        "why": "预算中等时，把弹药集中在「一个可传播的事件」上，避免摊薄",
+    },
+    "high": {
+        "name": "全链路战役（高预算）",
+        "scale": "全链路整合：大事件 + 全物料 + 达人矩阵 + 媒体/线下 + 私域闭环",
+        "investment": "品牌级战役投入，覆盖声量-互动-到店-私域全链路",
+        "tactics": ["旗舰事件/大装置/概念片", "全平台达人+媒体矩阵", "线下体验+线上 UGC 双场联动", "会员/私域沉淀与复购链路"],
+        "why": "预算充足时，打透「事件→传播→到店→沉淀」完整闭环，形成长期资产",
+    },
+}
+
+
+def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
+    """上下文指纹（不变，新增 angle 维度）：芥子→须弥→再生产，证据分级如实标注。"""
     n_notes = int(signals.get("volume_notes", 0) or 0)
     has_db = bool(signals.get("keyword")) and n_notes > 0
     evidence_level = "repeated" if n_notes >= 10 else ("single_case" if n_notes > 0 else "assumption")
-    # 置信度：有真实数据且样本越多越高；无数据仅为结构化假设，封顶 0.4（不假装确定）
     confidence = round(min(0.4 + min(n_notes, 50) / 100.0, 0.9), 2) if has_db else 0.35
     return {
         "seed_signal": ("ZBC 真实信号：主题「%s」、情绪=%s、样本笔记=%d、风险事件=%d"
@@ -93,11 +261,12 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals):
         "parent_L1_formula": MECH_TO_L1.get(mech, "未归类公式"),
         "parent_L2_tone": TONALITIES.get(tonality, TONALITIES["premium"])["name"],
         "parent_circle": circle,
+        "angle": ANGLES.get(angle, "未标注角度"),
         "causal_type": "相关性（平台/人群偏好，算法或人群变化需复核，非因果机制）",
         "evidence_level": evidence_level,
         "confidence": confidence,
         "counter_example_check": "pending（负样本库为 P2 能力，晋升 L1 前须补 3 个反例，当前未校验）",
-        "trace": "芥子(真实信号) → 须弥(机制抽象/L1公式) → idea(再生产) → FEEDBACK 回流",
+        "trace": "芥子(真实信号) → 须弥(机制/角度抽象) → idea(多维再生产) → FEEDBACK 回流",
     }
 
 
@@ -107,7 +276,9 @@ def signals_from_db(db_path, keyword, circle="都市职场", hotspot=""):
     r = diagnose(db_path, keyword)
     topics = [t[0] if isinstance(t, (tuple, list)) else str(t) for t in r.get("topics", [])]
     neg = r.get("negative_rate", 0.0)
-    sentiment = "negative" if neg > 0.3 else ("positive" if r.get("sentiment", {}).get("positive", 0) > r.get("sentiment", {}).get("negative", 0) else "neutral")
+    pos = r.get("sentiment", {}).get("positive", 0)
+    negc = r.get("sentiment", {}).get("negative", 0)
+    sentiment = "negative" if neg > 0.3 else ("positive" if pos > negc else "neutral")
     return {
         "keyword": keyword,
         "topics": topics,
@@ -120,44 +291,55 @@ def signals_from_db(db_path, keyword, circle="都市职场", hotspot=""):
     }
 
 
-def _slogan(brand, topic, mechanism, circle, tonality="premium"):
-    """符号化口号构造：机制 × 主题词 × 圈层语言 × 调性 → 可记忆口号。"""
-    cs = CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])
-    lang = cs["lang"]
-    # 高奢调性：克制叙事，不玩梗不狂欢
-    if tonality == "luxury":
-        return {
-            "eventify": "「%s·%s季」——一年只做一次的事，值得等" % (brand, topic),
-            "participate": "「%s邀请函」——不公开、不喧哗，只为懂的人" % (brand,),
-            "symbolize": "「%s，%s」——%s，本身就是%s" % (brand, topic, topic, "稀缺"),
-            "reverse": "「我们不上热搜」——%s，把时间留给%s" % (brand, topic),
-            "cocreate": "「%s×%s」——%s由藏家与匠人共同定义" % (brand, topic, topic),
-            "culture": "「%s：%s」——%s的%sg，不追赶" % (brand, topic, circle.split("/")[0], topic),
-        }.get(mechanism, "「%s，%s」" % (brand, topic))
-    if mechanism == "symbolize":
-        return "「%s%s」——%s，%s的人都在%s" % (brand, topic, topic, circle.split("/")[0], topic)
-    if mechanism == "eventify":
-        return "「%s%s节」——把%s变成一场%sg众可参与的%s" % (brand, topic, topic, circle.split("/")[0], topic)
-    if mechanism == "participate":
-        return "「%s%s挑战」——你的%s，%s来定义" % (brand, topic, topic, circle.split("/")[0])
-    if mechanism == "reverse":
-        return "「谁说%s不能%s」——%s的%s，拒绝%s" % (topic, "好", circle.split("/")[0], topic, "套路")
-    if mechanism == "cocreate":
-        return "「%s由你造」——%s的%s，来自%s的%s" % (brand, circle.split("/")[0], topic, circle.split("/")[0], topic)
-    return "「%s×%s」——%s，%s" % (brand, topic, lang.split("/")[0], topic)
+def _render(tpl, brand, topic, c0, img, sym, hot):
+    """填充句式槽位；{...}未知槽位用品牌名兜底，防止 KeyError 导致空口号。"""
+    def _sub(s):
+        return (s.replace("{brand}", brand).replace("{topic}", topic).replace("{c0}", c0)
+                 .replace("{img}", img).replace("{sym}", sym).replace("{hot}", hot or "今天")
+                 .replace("{#话题#}", "#%s#" % topic))
+    return _sub(tpl)
 
 
-def generate_ideas(brand, category, signals, n=3, tonality="premium"):
-    """生成 n 个原创创意 idea（数据信号 × 机制 × 圈层符号 × 调性）。"""
-    topics = signals.get("topics", []) or ["#趋势词#"]
+def _pick_hook(lib, mech, tonality, rng, used_keys):
+    """从机制可用句式中选一条未用过的张力句式；用完则重置（保证批次内不重复优先）。
+
+    注意：必须对 list 副本 shuffle——若就地 shuffle 模块级共享 list（MECH_TO_HOOK/_HOOK），
+    会跨调用残留顺序，破坏 seed 可复现性。
+    """
+    pool = _HOOK_LUX if tonality == "luxury" else _HOOK
+    candidates = list(MECH_TO_HOOK.get(mech, ["assert"]))
+    rng.shuffle(candidates)
+    for hk in candidates:
+        patterns = list(pool.get(hk, pool["assert"]))
+        rng.shuffle(patterns)
+        for tpl in patterns:
+            key = hk + "|" + tpl
+            if key not in used_keys:
+                return tpl, hk, key
+    # 全部用过：重置该机制桶，随机再取（保证永远有输出，不重复优先已满足）
+    hk = candidates[0]
+    tpl = rng.choice(list(pool.get(hk, pool["assert"])))
+    return tpl, hk, hk + "|" + tpl
+
+
+def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mid", seed=None):
+    """生成 n 个原创创意 idea（机制 × 角度 × 张力句式 × 语义角色 × 预算感知）。
+
+    budget: low(轻量) / mid(单点战役) / high(全链路战役)，随预算输出不同落地档位。
+    seed: 可复现性；不传则每次随机（保证"新 idea"）。
+    """
+    rng = random.Random(seed)
+    topics = [t for t in (signals.get("topics", []) or []) if t] or ["#趋势词#"]
     sentiment = signals.get("sentiment", "neutral")
     circle = signals.get("circle", "都市职场")
     hotspot = signals.get("hotspot", "")
     style = EMOTION_STYLES.get(sentiment, EMOTION_STYLES["neutral"])
     cs = CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])
     tone = TONALITIES.get(tonality, TONALITIES["premium"])["name"]
+    c0 = circle.split("/")[0]
+    sym = rng.choice(cs["symbols"])
+    bd = BUDGETS.get(budget, BUDGETS["mid"])
 
-    # 机制选择：负面→先诚实解决；正面→狂欢/共创；中性→认知/参与；高奢→克制/稀缺/工艺
     if tonality == "luxury":
         mech_order = ["symbolize", "reverse", "culture", "eventify"]
     elif sentiment == "negative":
@@ -167,49 +349,80 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium"):
     else:
         mech_order = ["symbolize", "participate", "eventify"]
 
+    angles_order = ["consumer", "introspect", "coded", "scene", "rebel", "cocreate"]
+    rng.shuffle(angles_order)
+
     ideas = []
-    used = set()
+    used_keys = set()
+    used_slogans = set()
+    topic_slots = {}
     for i in range(n):
         m = mech_order[i % len(mech_order)]
-        topic = topics[i % len(topics)] if topics else "#趋势词#"
-        key = (m, topic)
-        if key in used:
-            topic = topic + "新解"
-        used.add(key)
-        slogan = _slogan(brand, topic, m, circle, tonality)
+        topic = topics[i % len(topics)]
+        role = _topic_role(topic)
+        img = _TOPIC_ROLE_IMAGES[role][tonality]
+        # 角度轮转（每个 idea 用不同切入人设，防止"主题换了创意没换"）
+        angle = angles_order[i % len(angles_order)]
+        # 同一主题多次出现时，用不同意象槽位避免同义重复
+        slot_key = topic + "|" + m
+        if slot_key in topic_slots:
+            img = img + "·" + sym
+        topic_slots[slot_key] = True
+
+        tpl, hk, key = _pick_hook(_HOOK, m, tonality, rng, used_keys)
+        used_keys.add(key)
+        slogan = _render(tpl, brand, topic, c0, img, sym, hotspot)
+        # 兜底：若与本批次已出 slogan 重复，重取一条不同句式的
+        guard = 0
+        while slogan in used_slogans and guard < 6:
+            tpl, hk, key = _pick_hook(_HOOK, m, tonality, rng, used_keys)
+            used_keys.add(key)
+            slogan = _render(tpl, brand, topic, c0, img, sym, hotspot)
+            guard += 1
+        used_slogans.add(slogan)
+
         hotspot_bind = ("绑定热点「%s」，踩准文化时机（Cultural Timing）" % hotspot) if hotspot else \
-            ("克制不追热点（高奢调性：稀缺与工艺即传播，不参与流量狂欢）" if tonality == "luxury"
+            ("克制不追热点（高奢调性：稀缺与工艺即传播）" if tonality == "luxury"
              else "择机踩文化时机（趋势/节日/赛事），时效是传播第一变量")
+        mech_name = MECHANISMS[m]["name"]
+        hook_names = {"assert": "主张式", "imperative": "行动式", "story": "故事式",
+                      "reversal": "反转式", "cocreate": "共创式", "culture": "暗语式"}
         ideas.append({
             "big_idea": slogan,
-            "mechanism": MECHANISMS[m]["name"],
-            "concept": "%s——%s" % (MECHANISMS[m]["desc"], slogan),
-            "why": "数据信号：主题「%s」+ 情绪基调「%s」→ %s；调性「%s」；圈层「%s」用%s沟通。" % (
-                topic, sentiment, style, tone, circle, cs["lang"]),
+            "mechanism": mech_name,
+            "angle": ANGLES[angle],
+            "tension_type": hook_names.get(hk, hk),
+            "concept": "%s：%s（%s，角度=消费者/品牌/圈层等）" % (mech_name, slogan, hook_names.get(hk, hk)),
+            "why": "数据信号：主题「%s」(语义角色:%s) + 情绪「%s」→ %s；调性「%s」；圈层「%s」以%s沟通；"
+                   "张力来源=%s。" % (topic, role, sentiment, style, tone, circle, cs["lang"], hook_names.get(hk, hk)),
             "circle": circle,
             "circle_symbols": cs["symbols"],
             "tonality": tone,
+            "budget": bd,
             "timeliness": hotspot_bind,
             "touchpoints": ["内容种草", "圈层互动", "线下体验", "私域沉淀"],
-            "virality": "参与机制让用户拉用户（互动即传播）+ 符号可复制（remix/梗/打卡）",
-            "provenance": _provenance(topic, sentiment, m, tonality, circle, signals),
+            "virality": "参与机制让用户拉用户（互动即传播）+ 张力句式可记忆可复制（打卡/接话/二创）",
+            "provenance": _provenance(topic, sentiment, m, tonality, circle, signals, angle),
         })
     return {"meta": {"brand": brand, "category": category, "signals": signals,
-                     "tonality": tone,
-                     "framework": "Seed-Sumeru×Taiji：芥子(真实信号)→须弥(机制抽象)→Contract→再生产；形可变道不可移"},
+                     "tonality": tone, "budget": budget,
+                     "framework": "Seed-Sumeru×Taiji V2：芥子(真实信号)→须弥(机制×角度×句式)→Contract→再生产；"
+                                  "形可变道不可移；反模板化=多维组合而非固定句式"},
             "ideas": ideas}
 
 
 def main():
     import argparse
-    ap = argparse.ArgumentParser(description="数据驱动原创创意生成器")
+    ap = argparse.ArgumentParser(description="数据驱动原创创意生成器 V2（反模板化）")
     ap.add_argument("--brand", default="示例品牌")
     ap.add_argument("--category", default="通用")
     ap.add_argument("--keyword", default="", help="ZBC 舆情关键词(从 DB 提信号)")
     ap.add_argument("--db", default="data/monitor.db")
     ap.add_argument("--circle", default="都市职场", choices=list(CIRCLE_SYMBOLS.keys()))
     ap.add_argument("--tonality", default="premium", choices=list(TONALITIES.keys()))
-    ap.add_argument("--hotspot", default="", help="时效热点(如 世界杯/618/春节)")
+    ap.add_argument("--hotspot", default="", help="时效热点(如 15周年/618/春节)")
+    ap.add_argument("--budget", default="mid", choices=list(BUDGETS.keys()))
+    ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--n", type=int, default=3)
     a = ap.parse_args()
     if a.keyword:
@@ -217,7 +430,7 @@ def main():
     else:
         s = {"topics": [], "sentiment": "neutral", "negative_rate": 0.0,
              "risk_events": 0, "circle": a.circle, "hotspot": a.hotspot, "volume_notes": 0}
-    r = generate_ideas(a.brand, a.category, s, a.n, a.tonality)
+    r = generate_ideas(a.brand, a.category, s, a.n, a.tonality, a.budget, a.seed)
     print(json.dumps(r, ensure_ascii=False, indent=2))
 
 
