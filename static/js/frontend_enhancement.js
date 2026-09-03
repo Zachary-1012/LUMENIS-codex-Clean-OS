@@ -39,7 +39,7 @@
         toast.style.cssText = `
             position: fixed; top: 20px; right: 20px; z-index: 10001;
             padding: 12px 20px; border-radius: 8px; color: white;
-            background: ${type === 'error' ? '#ff3b30' : type === 'success' ? '#34c759' : '#0a84ff'};
+            background: ${type === 'error' ? '#ff3b30' : type === 'success' ? '#34c759' : '#1C1917'};
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px;
             animation: slideIn 0.3s ease;
         `;
@@ -134,7 +134,7 @@
                                     <option value="yearly">自然年报</option>
                                 </select>
                                 <input type="date" id="rpDate" onchange="loadReportPreview()" style="padding:6px 10px;border-radius:8px;border:1px solid #d8dde8"/>
-                                <button onclick="loadReportPreview()" style="padding:6px 12px;border:none;border-radius:8px;background:#0a84ff;color:#fff;cursor:pointer">↻ 刷新</button>
+                                <button onclick="loadReportPreview()" style="padding:6px 12px;border:1px solid #E7E5E4;border-radius:8px;background:#F5F5F4;color:#292524;cursor:pointer">↻ 刷新</button>
                             </div>
                         </div>
                         <div id="reportPreviewBody" style="font-size:13px">正在加载报告预览…</div>
@@ -190,7 +190,7 @@
                 </div>
                 <div style="margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end;">
                     <button id="report-cancel-btn" style="padding: 10px 20px; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer;">取消</button>
-                    <button id="report-generate-btn" style="padding: 10px 20px; background: #0a84ff; color: white; border: none; border-radius: 8px; cursor: pointer;">生成报告</button>
+                    <button id="report-generate-btn" style="padding: 10px 20px; background: #1C1917; color: #fff; border: none; border-radius: 8px; cursor: pointer;">生成报告</button>
                 </div>
             `;
             
@@ -265,7 +265,7 @@
                             <strong>${r.title || r.type + '报告'}</strong>
                             <span style="color: #999; margin-left: 12px; font-size: 12px;">${r.created_at || ''}</span>
                         </div>
-                        <button style="padding: 4px 12px; background: #0a84ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="ReportCenter.downloadReport('${r.id}')">下载</button>
+                        <button style="padding: 4px 12px; background: #1C1917; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="ReportCenter.downloadReport('${r.id}')">下载</button>
                     </div>
                 `).join('');
             } catch (error) {
@@ -301,8 +301,8 @@
                     </div>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                        <div style="padding: 16px; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #0a84ff;">
-                            <div style="font-size: 24px; font-weight: bold; color: #0a84ff;" id="brand-total">--</div>
+                        <div style="padding: 16px; background: #F5F5F4; border-radius: 8px; border-left: 4px solid #78716C;">
+                            <div style="font-size: 24px; font-weight: bold; color: #1C1917;" id="brand-total">--</div>
                             <div style="color: #666; font-size: 13px;">品牌总数</div>
                         </div>
                         <div style="padding: 16px; background: #fff0f0; border-radius: 8px; border-left: 4px solid #ff3b30;">
@@ -370,7 +370,7 @@
                     + industries.map(i => {
                         const k=i.industry, a=indAgg[k]||{cnt:i.cnt||0,withNote:0,neg:0,engage:0};
                         const danger=a.neg>0;
-                        return `<div data-ind-card="${k.replace(/"/g,'&quot;')}" style="padding:12px 14px;background:#fff;border:1px solid ${danger?'#ffd4d2':'#e8ebf0'};border-left:4px solid ${danger?'#ff3b30':'#0a84ff'};border-radius:10px;cursor:pointer;transition:.15s" onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
+                        return `<div data-ind-card="${k.replace(/"/g,'&quot;')}" style="padding:12px 14px;background:#fff;border:1px solid ${danger?'#ffd4d2':'#e8ebf0'};border-left:4px solid ${danger?'#ff3b30':'#78716C'};border-radius:10px;cursor:pointer;transition:.15s" onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
                             <div style="font-weight:600;font-size:14px">${indCn(k)}</div>
                             <div style="font-size:12px;color:#888;margin-top:4px">${a.cnt} 个品牌 · ${a.withNote} 个有舆情${danger?` · <b style="color:#ff3b30">${a.neg} 负面</b>`:''}</div>
                         </div>`;
@@ -378,7 +378,7 @@
                 const chips = ['全部'].concat(industries.map(i => i.industry));
                 const chipBar = `<div id="brand-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">`
                     + chips.map((c,idx)=>{const n = c==='全部'?allBrands.length:(industries.find(i=>i.industry===c)?.cnt||0);
-                        return `<button data-ind="${c.replace(/"/g,'&quot;')}" class="brand-filter-chip ${idx===0?'active':''}" style="padding:5px 12px;font-size:12px;border-radius:16px;border:1px solid #d8dde8;background:${idx===0?'#0a84ff':'#fff'};color:${idx===0?'#fff':'#333'};cursor:pointer">${c==='全部'?'全部品牌':indCn(c)} ${n}</button>`;}).join('')
+                        return `<button data-ind="${c.replace(/"/g,'&quot;')}" class="brand-filter-chip ${idx===0?'active':''}" style="padding:5px 12px;font-size:12px;border-radius:16px;border:1px solid #d8dde8;background:${idx===0?'#1C1917':'#fff'};color:${idx===0?'#fff':'#333'};cursor:pointer">${c==='全部'?'全部品牌':indCn(c)} ${n}</button>`;}).join('')
                     + `</div>`;
                 listEl.innerHTML = indCards + chipBar + `<div id="brand-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;"></div>`;
                 // 业态卡片点击 → 一级下钻弹窗
@@ -398,7 +398,7 @@
                     }).join('');
                 };
                 listEl.querySelectorAll('.brand-filter-chip').forEach(btn=>{
-                    btn.onclick=()=>{listEl.querySelectorAll('.brand-filter-chip').forEach(x=>{x.style.background='#fff';x.style.color='#333';x.classList.remove('active')});btn.style.background='#0a84ff';btn.style.color='#fff';btn.classList.add('active');renderGrid(btn.dataset.ind);};
+                    btn.onclick=()=>{listEl.querySelectorAll('.brand-filter-chip').forEach(x=>{x.style.background='#fff';x.style.color='#333';x.classList.remove('active')});btn.style.background='#1C1917';btn.style.color='#fff';btn.classList.add('active');renderGrid(btn.dataset.ind);};
                 });
                 renderGrid('全部');
             } catch (error) {
@@ -472,7 +472,7 @@
                         <h4 style="margin: 0 0 8px 0;">舆情统计 <span style="font-size:11px;color:#999;font-weight:normal;">按标题/正文实时匹配该品牌笔记</span></h4>
                         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
                             <div style="padding: 12px; background: #f0f8ff; border-radius: 6px; text-align: center;">
-                                <div style="font-size: 20px; font-weight: bold; color: #0a84ff;">${brand.total_notes || 0}</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #1C1917;">${brand.total_notes || 0}</div>
                                 <div style="font-size: 12px; color: #666;">总笔记</div>
                             </div>
                             <div style="padding: 12px; background: #f0fff0; border-radius: 6px; text-align: center;">
@@ -623,8 +623,8 @@
                     </div>
                     <h3 style="margin: 0 0 12px 0;">${title}</h3>
                     ${block('📋', '事件概述', eventText || '暂无概述', '#f7f7f7', '#999')}
-                    ${block('🌐', '传播路径', spread, '#f5f8ff', '#0a84ff')}
-                    ${block('💬', '公关回应', resp, '#f9f9f9', '#0a84ff')}
+                    ${block('🌐', '传播路径', spread, '#F5F5F4', '#57534E')}
+                    ${block('💬', '公关回应', resp, '#F5F5F4', '#57534E')}
                     ${block('📈', '处置效果', effect, '#fafaff', '#5856d6')}
                     ${block('🎯', '经验教训', insight, '#fffdf5', '#ff9500')}
                     ${block('📝', '话术模板', tpl, '#f0fff0', '#34c759')}
@@ -677,7 +677,7 @@
                             <option value="rejected">已驳回</option>
                             <option value="">全部</option>
                         </select>
-                        <button id="refresh-review" style="padding: 8px 16px; background: #0a84ff; color: white; border: none; border-radius: 6px; cursor: pointer;">刷新</button>
+                        <button id="refresh-review" style="padding: 8px 16px; background: #F5F5F4; color: #292524; border: 1px solid #E7E5E4; border-radius: 6px; cursor: pointer;">刷新</button>
                     </div>
                     
                     <div id="review-list" style="background: #f9f9f9; padding: 16px; border-radius: 8px;">
@@ -812,7 +812,7 @@
                             </div>
                         </div>
                     </div>
-                    ${note.url ? `<div><a href="${note.url}" target="_blank" style="color: #0a84ff;">🔗 查看原文</a></div>` : ''}
+                    ${note.url ? `<div><a href="${note.url}" target="_blank" style="color: #44403C; text-decoration: underline; text-underline-offset: 2px;">🔗 查看原文</a></div>` : ''}
                 `;
                 
                 createModal('笔记详情', content, '700px');

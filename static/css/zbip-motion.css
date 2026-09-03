@@ -1,0 +1,74 @@
+/* =============================================================================
+ * ZBIP Motion — 数据驱动动效层 v1.0
+ * 只保留三类「有真实来源」的动效：
+ *   1) 数据真实变化 → 一次性微光（zbip_motion.js 引擎按 diff 触发，不循环）
+ *   2) 真实持续状态 → 呼吸（.is-live，仅真实在线/运行时由引擎挂载，状态消失即移除）
+ *   3) 真实交互反馈 → 按压涟漪 / hover 轻反馈 / 首挂载一次性入场 / 真实加载骨架
+ * 不提供任何「无数据也一直转」的装饰循环。全部引用 token，reduced-motion 可关。
+ * ========================================================================== */
+
+/* 绑定数据的数字：等宽数字，更新时不左右抖动 */
+[data-k] { font-variant-numeric: tabular-nums; }
+
+/* ---- 1) 数据变化一次性微光（引擎 add → animationend 自动移除）---- */
+@keyframes zb-value-flash {
+  0%   { background-color: transparent; }
+  28%  { background-color: color-mix(in srgb, var(--zb-stone-400, #A8A29E) 15%, transparent); }
+  100% { background-color: transparent; }
+}
+.zb-value-flash {
+  animation: zb-value-flash .6s var(--zb-ease-out, ease-out) 1;
+  border-radius: var(--zb-r-sm, 4px);
+}
+
+/* ---- 2) 真实状态呼吸（只动透明度/光晕，不改语义颜色；引擎按真实状态挂 .is-live）---- */
+@keyframes zb-breathe {
+  0%, 100% { opacity: .72; box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 14%, transparent); }
+  50%      { opacity: 1;   box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 9%, transparent); }
+}
+.is-live { animation: zb-breathe 2.8s ease-in-out infinite; }
+
+/* ---- 3a) 真实按压涟漪 ---- */
+@keyframes zb-ripple {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--zb-stone-500, #78716C) 22%, transparent); }
+  100% { box-shadow: 0 0 0 6px transparent; }
+}
+.zb-ripple:active { animation: zb-ripple .42s var(--zb-ease-out, ease-out) 1; }
+
+/* ---- 3b) 卡片 hover 轻反馈：只补当前无 hover 反馈的卡片，避免与既有 hover 叠加 ---- */
+.ai-insight-card, .report-card, .settings-grid > div, .integration-list > div, .kos-row {
+  transition: transform var(--zb-dur-state, 220ms) var(--zb-ease-emil-out, ease),
+              box-shadow var(--zb-dur-state, 220ms) var(--zb-ease-emil-out, ease),
+              border-color var(--zb-dur-state, 220ms) var(--zb-ease-emil-out, ease);
+}
+.ai-insight-card:hover, .report-card:hover, .settings-grid > div:hover, .integration-list > div:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--zb-shadow-1, 0 1px 2px rgba(28,25,23,.06));
+}
+
+/* ---- 3c) 首挂载一次性入场（从 .96 + 透明，绝不从 scale(0)）---- */
+@keyframes zb-rise {
+  from { opacity: 0; transform: translateY(6px) scale(var(--zb-enter-scale, .96)); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.zb-rise { animation: zb-rise var(--zb-dur-sheet, 360ms) var(--zb-ease-emil-out, ease) both; }
+
+/* ---- 3d) 真实加载骨架（仅在真实 loading 期间由逻辑挂载，加载结束移除）---- */
+@keyframes zb-skeleton-sweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--zb-stone-100, #F5F5F4) 25%,
+    color-mix(in srgb, var(--zb-stone-300, #D6D3D1) 32%, var(--zb-stone-100, #F5F5F4)) 37%,
+    var(--zb-stone-100, #F5F5F4) 63%);
+  background-size: 200% 100%;
+  animation: zb-skeleton-sweep 1.3s linear infinite;
+}
+
+/* ---- 无障碍：减少动态偏好下，关闭一切动效，保留即时状态 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .zb-value-flash, .is-live, .zb-ripple:active, .zb-rise, .skeleton { animation: none !important; }
+  .ai-insight-card, .report-card, .settings-grid > div, .integration-list > div, .kos-row { transition: none !important; }
+}

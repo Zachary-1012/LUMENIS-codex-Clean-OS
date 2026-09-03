@@ -501,7 +501,7 @@ const CaseDeepAnalysis = {
             const d = await r.json();
             if (!d.ok) { box.innerHTML = '<div style="font-size:12px;color:#c0392b">增强搜索失败: ' + (d.error || '') + '</div>'; return; }
             let html = '<div style="border:1px solid var(--border,#eee);border-radius:8px;padding:10px;background:var(--surface,#fff)">';
-            html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>外部增强结果（search-std）</div>';
+            html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>外部增强结果（search-std）</div>';
             if (d.summary) html += '<div style="font-size:12px;color:#333;margin-bottom:6px"><b>综合摘要：</b>' + d.summary + '</div>';
             if (d.results && d.results.length) {
                 d.results.forEach((r2, i) => {

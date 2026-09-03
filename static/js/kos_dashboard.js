@@ -145,11 +145,11 @@
       el.innerHTML = '<div style="padding:24px;text-align:center;color:#999">暂无数据</div>';
       return;
     }
-    var tierColor = { S: "#e74c3c", A: "#f39c12", B: "#3498db", C: "#95a5a6" };
+    var tierColor = { S: "#1C1917", A: "#44403C", B: "#78716C", C: "#A8A29E" };
     var html = profiles.map(function (p, i) {
       var score = (p.kos_score || 0).toFixed(1);
       var tier = p.kos_tier || "C";
-      var color = tierColor[tier] || "#95a5a6";
+      var color = tierColor[tier] || "#A8A29E";
       var pct = Math.min(100, (p.kos_score || 0));
       return '<div class="kos-row" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer" onclick="kosShowDetail(\'' + (p.author_id || "") + '\')">'
         + '<span style="width:24px;text-align:center;font-weight:600;color:#666">' + (i + 1) + '</span>'
