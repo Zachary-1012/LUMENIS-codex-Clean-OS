@@ -8,7 +8,7 @@
 5. Cookie 只从本机读取，不进入源码、日志、JSON 数据快照。
 """
 from __future__ import annotations
-import json, os, subprocess, threading, time
+import json, os, subprocess, threading, time, random
 from datetime import datetime
 import database as db
 import ai_analyzer
@@ -102,6 +102,10 @@ MAX_DAILY_RUNS = 30  # 每日总次数兜底（=自动26 + 手动3 + 1 余量）
 MAX_MANUAL_RUNS = 3  # 每日手动触发（一键实时更新）最大次数（保持不变）
 MAX_AUTO_RUNS = 26  # 每日自动采集兜底上限（动态间隔主导，基准1h理论≤24，留余量）
 COOLDOWN_MINUTES = 60  # 连续运行后的冷却时间（分钟）- 账号安全硬地板，不随动态调度放宽
+# ── 单轮内频率保护（所有采集路径在 sync 汇聚点统一遵循，降低单轮请求密度、防风控）──
+KEYWORD_GAP_MIN_SEC = 12      # 同一轮相邻两次关键词搜索的最小拟人间隔下限（再叠加 _run_search 自身 delay）
+KEYWORD_GAP_JITTER_SEC = 6    # 额外随机抖动上限，避免固定节奏被识别
+EARLY_STOP_CONSECUTIVE = 3    # 一轮内连续这么多个关键词被拦截/网络失败即提前结束本轮，不再硬撞风控
 NEW_ACCOUNT_GUARD_RUNS = 3  # 新账号前N次强制极轻量模式
 # 采集时长配置（秒）
 AUTO_COLLECT_DURATION = 1800  # 自动采集每次30分钟
@@ -720,6 +724,21 @@ def select_account(account_name: str):
                   f"| cdp_profile={os.path.basename(cdp_profile_dir) if cdp_profile_dir else 'N/A'}")
 
 def sync(keywords=None, max_scroll=6, account=None):
+    # ── 统一采集前置门：自动 create_task / collector_automation / p0_orchestrator 三条生产路径
+    #     最终都汇聚到本函数，在此一处收口，确保“用户暂停”对所有采集一视同仁、零平台请求（测试模式旁路）──
+    if not is_test_mode():
+        _p = is_user_paused()
+        if _p:
+            _msg = f"采集已由用户暂停（{_p.get('reason','')}），本轮不发起任何平台请求"
+            return {'ok':True,'task_state':'USER_PAUSED','state_counts':{},
+                    'keywords':list(dict.fromkeys(keywords or DEFAULT_KEYWORDS)),
+                    'raw_unique':0,'verified':0,'rejected':0,'inserted':0,'updated':0,'analyzed':0,'events':0,
+                    'results':[{'stage':'user_paused','message':_msg}],
+                    'network_status':network_adaptive.get_network_status(),
+                    'cache_status':cache_manager.get_cache_status(),'blocked':_msg,
+                    'active_account':(_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME),'active_user_id':None,
+                    'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                    'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     # ── 双子星库 Contract 身份门控（最先执行，防止未授权身份进入采集）──
     if account is not None:
         ok_sel, msg_sel = select_account(account)
@@ -735,7 +754,8 @@ def sync(keywords=None, max_scroll=6, account=None):
         raise RuntimeError('未配置本机 XHS Cookie。请在 data/private/xhs_cookie_header.txt 配置，或使用已登录的 Playwright profile。')
     keywords=list(dict.fromkeys(keywords or DEFAULT_KEYWORDS))[:32]
     raw={}; results=[]; blocked={}; state_counts={}
-    for kw in keywords:
+    _consec_bad=0  # 连续被拦截/失败计数（成功或空结果清零），达到阈值即提前结束本轮保护账号
+    for _ki, kw in enumerate(keywords):
         r=_run_search(kw,max_scroll)
         st=r.get('state') or ('SUCCESS' if r.get('total',0)>0 else 'NETWORK_ERROR')
         state_counts[st]=state_counts.get(st,0)+1
@@ -743,12 +763,24 @@ def sync(keywords=None, max_scroll=6, account=None):
         _write_collection_log(kw, r.get('total',0), st, (r.get('blocked_reason') or r.get('error_code') or r.get('error') or '')[:200])
         br=r.get('blocked_reason')
         if br: blocked[br]=blocked.get(br,0)+1
+        # 连续拦截/网络失败早停：已在被风控时继续打只会加重，立即结束本轮（半数熔断仍在下方统一判定）
+        if st in ('SUCCESS','EMPTY'):
+            _consec_bad=0
+        else:
+            _consec_bad+=1
+            if _consec_bad>=EARLY_STOP_CONSECUTIVE and not is_test_mode():
+                results.append({'stage':'early_stop','reason':f'连续{_consec_bad}个关键词被拦截/失败，提前结束本轮以保护账号'})
+                break
         # 仅在真正成功/空结果态收集笔记；被拦截态 notes 必为空，双保险防止把故障当数据
         if st in ('SUCCESS','EMPTY'):
             for n in r.get('notes',[]):
                 nid=str(n.get('note_id') or '').strip()
                 if nid:
                     n['source_keyword']=kw; raw.setdefault(nid,n)
+        # 词间最小拟人间隔（末词不等）：复用 network_adaptive 延迟并设下限 + 随机抖动，避免固定节奏/过密
+        if _ki < len(keywords)-1 and not is_test_mode():
+            _gap=max(KEYWORD_GAP_MIN_SEC, int(network_adaptive.get_adaptive_settings().get('current_delay_seconds',2)))
+            time.sleep(_gap+random.randint(0,KEYWORD_GAP_JITTER_SEC))
     # 若多数关键词被风控/登录墙拦截，上报网络自适应并在结果中明确标注（不再伪装成“0 条新笔记”）
     blocked_summary = ''
     if blocked:
@@ -903,6 +935,10 @@ def create_task(keywords=None,max_scroll=6,run_type='manual'):
             _tasks[task_id].update(progress=20,message=f'[{type_label}]搜索广州太古汇关键词…{guard_msg}')
             result=sync(keywords,max_scroll)
             ts=result.get('task_state','SUCCESS')
+            if ts=='USER_PAUSED':
+                # 用户主动暂停：不回写 planner/adaptive（非网络成败、不触发退避），直接收尾且零请求
+                _tasks[task_id].update(status='done',progress=100,message='采集处于用户暂停态，本轮未发起任何请求',result=result,finished_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                return
             if ts in ('BLOCKED','PARTIAL_BLOCKED','NETWORK_ERROR','AUTH_FAILED','CAPTCHA'):
                 done_msg=f'[{type_label}]采集未完成（{STATE_LABEL.get(ts,ts)}）：{result.get("blocked") or "多数关键词未取得响应"}。本次不计为0条，自动任务已按策略熔断/降频'
             elif ts=='EMPTY':

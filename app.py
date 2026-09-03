@@ -1042,6 +1042,15 @@ def _strict_verify(note):
 def _run_collect_task(task_id,keywords,max_scroll):
     started=time.time()
     try:
+        # 统一采集前置门：用户暂停时全网发现+小红书回搜一律不发起（与 bridge.sync 同一暂停信号，所有采集遵循同一规则）
+        try:
+            if xhs_cookie_bridge.is_user_paused():
+                with _task_lock: collect_tasks[task_id].update(status='done',progress=100,
+                    message='采集已由用户暂停，本次全网发现/回搜不发起',
+                    finished_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                return
+        except Exception:
+            pass
         with _task_lock: collect_tasks[task_id].update(status='web-discovery',message='正在检索公开网页舆情并提取事件关键词…',progress=5)
         # 全网发现是辅助能力，不能阻塞小红书主采集链。
         web_result={'fetched':0,'keywords':[],'error':'disabled_or_timeout'}

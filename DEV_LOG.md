@@ -974,6 +974,33 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - inserted=0 属正确幂等：搜索返回的近期热门笔记（十五周年等）上午已入库，去重命中后只 UPDATE 刷新（updated=13）、不重复插入，notes 总量稳定不丢不重；要出现 inserted>0 取决于平台出现新笔记，非缺陷。
 - 结论：自动调度主链路（scheduler_loop→create_task→worker→sync→_run_search→Node 走常驻 CDP）已端到端恢复，下一次自然调度（动态间隔 + 60min 冷却）将持续产出 SUCCESS。
 
+## 第十五批（2026-09-03 晚）：所有采集统一暂停门 + 单轮频率收敛 + 主体默认品牌红线修复
+
+### 背景（事实）
+- 用户指令：暂停采集、控制采集频率、能复用绝不新造、**所有采集都要遵循采集器规则**。
+- 暂停时审计 collection_logs：17 时 1 SUCCESS（#626 修复验证），19 时一轮 9 SUCCESS/10 EMPTY/4 NETWORK_ERROR/3 BLOCKED，20 时一轮 **17 BLOCKED/9 NETWORK_ERROR/仅 1 SUCCESS**，20:39:57 触发风控熔断（detail“RISK 17/20 关键词被拦截”，hold 到 21:39:57）。单轮 20 个关键词以约 45s/个连续搜索（20:30:56→20:39:57），单轮请求密度过高是直接诱因。
+- 入口审计：三条生产采集路径（自动 create_task、collector_automation、xhs_p0_orchestrator）最终都汇聚到 `xhs_cookie_bridge.sync`；但 `/api/collect` 的全网发现+回搜走 app `_run_collect_task → collector.collect_all`，不经 sync；且 sync/_run_search 入口本身无统一暂停门（仅 create_task 顶层有），存在旁路。
+- **红线发现**：subject_rules.py:115 模块默认 `ACTIVE_BRAND` 在并行 KOS 提交 f85d3ea 被改成 `"hainan_cdf"`，全仓无 ZBC_ACTIVE_BRAND 环境变量覆盖 → 不设环境变量时全局 `subject_hit/subject_reason` 用海南中免词表，广州太古汇词全部不命中（裸测“广州太古汇”=False）。生产 8201 进程 20:16 启动、正运行该口径，等同广州生产主体过滤被切换，触碰最高红线。
+
+### 改动（最小、可回滚、只复用现成能力，不新造调度）
+1. 红线修复 `subject_rules.py`：默认 `ACTIVE_BRAND` 改回 `"guangzhou_taikoo_hui"`（广州生产安全默认）。多品牌能力全部保留——海南中免/DFS 等改由环境变量 `ZBC_ACTIVE_BRAND` 或 `subject_hit_for_brand(brand_key=)` / `_subject_sql_and_values_for` 显式激活，禁止改全局默认。SUBJECT_WORDS/EXCLUDE/五字段逻辑一字未动。
+2. 统一采集暂停门 `xhs_cookie_bridge.py`：在唯一汇聚点 `sync()` 入口加门——非测试模式且 `is_user_paused()` 为真时立即返回 task_state=USER_PAUSED、零平台请求；create_task worker 对 USER_PAUSED 直接收尾且不回写 planner/adaptive（用户暂停非网络成败、不触发退避）。
+3. 单轮频率收敛（同文件，复用 network_adaptive，不新建控制器）：新增常量 KEYWORD_GAP_MIN_SEC=12 / KEYWORD_GAP_JITTER_SEC=6 / EARLY_STOP_CONSECUTIVE=3；关键词循环内①相邻词间保证 ≥12s 并叠加 0–6s 随机拟人间隔（末词不等）②连续 3 个关键词被拦截/网络失败即提前结束本轮（early_stop），不再硬撞风控，半数熔断仍在下方统一判定。
+4. `/api/collect` 通道补门 `app.py _run_collect_task`：入口检查同一 `xhs_cookie_bridge.is_user_paused()`，暂停时全网发现+回搜一律不发起、任务标记 done 后 return（finally 仍正常释放采集锁）。
+
+### 测试与真实结果（已实测）
+- 三文件 `py_compile` 全部 exit0。
+- 统一门：当前 user_paused=true 下进程外调 `sync(['广州太古汇'],1)` **0.00s 返回 USER_PAUSED**、inserted=0、调用前后 xhs_cookie_search node 进程均为 0，证明任何采集路径零平台请求。
+- 红线：默认激活品牌=guangzhou_taikoo_hui；subject_hit('广州太古汇活动')=True、('成都太古里逛街')=False；subject_hit_for_brand('海南中免离岛免税',brand_key='hainan_cdf')=True 且海南口径不命中广州（多品牌隔离正确）；`_subject_sql_and_values()` 仍为广州口径、175 个绑定参数。
+- 平滑重启 8201（只停 `-u app.py --port 8201` reloader 父子 1456/10600，supervisor 自拉起新 PID 22792/19180，20:59:24），/healthz ok v5.9.9；重启后 user_paused=True、circuit_open=True 经 data/private 文件持久化完整保持、未自动开采集、node 搜索进程=0；8200/9222/9223 未动。
+
+### 未实测 / 遗留（如实登记，当前用户暂停不真发请求）
+- 连续拦截早停、词间 12–18s 拟人间隔的实际防风控效果，需用户恢复采集且熔断解除后小流量观察 collection_logs 六态验证。
+- “每轮关键词限量 + 跨轮轮转覆盖”（进一步降单轮密度）本轮未做，登记 backlog，下一步与用户确认目标节奏后落地（仍复用现有常量，不新造）。
+- 恢复探测间隔在 schedule_state 曾被压到 current_interval=60s（policy recovery_probe=1800），原因待查，列入下一步。
+- 当前采集为双暂停：用户暂停（20:44:28，恢复时间用户定，POST /api/xhs/collect-resume）+ 风控熔断（hold 到 21:39:57，由其自身健康检查恢复）。
+- 备份：subject_rules.py.bak-brand、xhs_cookie_bridge.py.bak-guard、app.py.bak-guard（均不提交）。
+
 
 
 
