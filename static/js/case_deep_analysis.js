@@ -362,6 +362,13 @@ const CaseDeepAnalysis = {
                         <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#ff2d55">🤖</span>对Z-Brand系统的启示（${(c.system_insights || []).length}条）</h3>
                         <div class="detail-insights-list">${insightsHtml}</div>
                     </section>
+
+                    <!-- AI 智能评估（智谱增强层） -->
+                    <section class="detail-section">
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#8e8e93">🧠</span>AI 智能评估（智谱增强层）</h3>
+                        <button class="action primary" onclick="CaseDeepAnalysis.aiEvaluate('${c.case_id}')" style="margin-bottom:8px">开始 AI 评估</button>
+                        <div id="aiEvaluateResult-${c.case_id}" style="font-size:13px;color:var(--muted)">对本案做 4 维评分（影响力/创新/可复制/风险）+ 推荐处置模板</div>
+                    </section>
                 </div>
             </div>
         `;
@@ -423,6 +430,52 @@ const CaseDeepAnalysis = {
             box.innerHTML = html;
         } catch (e) {
             box.innerHTML = '<div style="font-size:12px;color:#c0392b">请求失败: ' + (e.message || e) + '</div>';
+        }
+    },
+
+    /**
+     * AI 评估当前案例（智谱增强层）：4维评分 + 推荐处置模板 + 建议
+     */
+    async aiEvaluate(caseId) {
+        const box = document.getElementById('aiEvaluateResult-' + caseId);
+        if (!box) return;
+        box.innerHTML = 'AI 评估中…（调用智谱，约需数秒）';
+        try {
+            const r = await fetch('/api/case-analysis/ai-evaluate', {
+                method: 'POST',
+                headers: { 'Authorization': window.__Z_AUTH || '', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ case_id: caseId })
+            });
+            const d = await r.json();
+            if (!d.ok) { box.innerHTML = '<span style="color:#c0392b">评估失败: ' + (d.error || '') + '</span>'; return; }
+            const ai = d.ai || {};
+            const sc = ai.score || {};
+            const tpls = d.templates || [];
+            let html = '';
+            if (ai.enabled) {
+                html += '<div style="border:1px solid var(--border,#eee);border-radius:8px;padding:10px;background:var(--surface,#fff)">'
+                    + '<div style="font-weight:600;margin-bottom:6px">综合评分: <span style="font-size:20px">' + (sc.overall != null ? sc.overall : '-') + '</span>/10</div>'
+                    + '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px">'
+                    + '<span>影响力 <b>' + (sc.impact != null ? sc.impact : '-') + '</b></span>'
+                    + '<span>创新性 <b>' + (sc.innovation != null ? sc.innovation : '-') + '</b></span>'
+                    + '<span>可复制性 <b>' + (sc.replicability != null ? sc.replicability : '-') + '</b></span>'
+                    + '<span>风险系数 <b>' + (sc.risk != null ? sc.risk : '-') + '</b></span>'
+                    + '</div>';
+                if (ai.advice) html += '<div style="font-size:12px;margin-top:6px;color:#333"><b>AI 建议：</b>' + ai.advice + '</div>';
+                html += '</div>';
+            } else {
+                html += '<div style="font-size:12px;color:#c0392b">AI 评估暂不可用' + (ai.error ? '：' + ai.error : '') + '，已回退本地模板匹配</div>';
+            }
+            if (tpls.length) {
+                html += '<div style="margin-top:8px"><div style="font-weight:600;font-size:13px;margin-bottom:4px">推荐处置模板</div>';
+                tpls.forEach(t => {
+                    html += '<div style="font-size:12px;border:1px solid var(--border,#eee);border-radius:6px;padding:6px;margin-bottom:4px;background:var(--surface,#fff)"><b>' + t.template_name + '</b> · ' + (t.category || '') + '<br>' + (t.scenario || '') + '</div>';
+                });
+                html += '</div>';
+            }
+            box.innerHTML = html;
+        } catch (e) {
+            box.innerHTML = '<span style="color:#c0392b">请求失败: ' + (e.message || e) + '</span>';
         }
     },
 
