@@ -72,6 +72,10 @@ setInterval(updateClock,1000);updateClock();
 
 /* ===== 页面路由 ===== */
 function navigateTo(pageId){
+  // 任何来源（侧栏/首页卡片/快捷按钮/命令面板/返回）切换页面都统一收起 Home 欢迎层，
+  // 避免非侧栏入口切换后被 #zbHome 启动层遮挡，表现为“点了不跳转”
+  var _zbHome=document.getElementById('zbHome'); if(_zbHome)_zbHome.classList.remove('show');
+  if(typeof window.__markUserNavigated==='function'){try{window.__markUserNavigated()}catch(e){}}
   document.querySelectorAll('.page-view').forEach(p=>p.classList.remove('active'));
   const target=$('page-'+pageId);
   if(target){
