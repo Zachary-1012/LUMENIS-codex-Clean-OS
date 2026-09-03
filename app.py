@@ -329,7 +329,14 @@ def event_graph_events():
             events = graph.get_events_by_type(event_type)
         else:
             events = list(graph.events.values())
-        return jsonify({'ok': True, 'events': [e.to_dict() for e in events], 'count': len(events)})
+        evs = [e.to_dict() for e in events]
+        # Topic 标签增强（c-TF-IDF 只读，内存增强不改 DB）：为每事件生成 topic_label 供前端/报告
+        try:
+            from scripts.topic_cluster import enrich_events_with_labels
+            evs = enrich_events_with_labels(evs, top_k=4)
+        except Exception:
+            pass
+        return jsonify({'ok': True, 'events': evs, 'count': len(evs)})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
