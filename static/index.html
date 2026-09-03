@@ -1583,7 +1583,9 @@ document.addEventListener('DOMContentLoaded', function(){
 // ============ 小红书系统内登录 ============
 let _xhsLoginSessionId = null;
 let _xhsLoginPollTimer = null;
-function openXhsLogin(){
+let _xhsLoginPlatform = 'rednote';
+function openXhsLogin(platform){
+  _xhsLoginPlatform = platform || 'rednote';
   document.getElementById('xhsLoginModal').classList.remove('hidden');
   document.getElementById('xhsLoginStep1').classList.remove('hidden');
   document.getElementById('xhsLoginStep2').classList.add('hidden');
@@ -1593,13 +1595,15 @@ function closeXhsLogin(){
   document.getElementById('xhsLoginModal').classList.add('hidden');
   if(_xhsLoginPollTimer){ clearInterval(_xhsLoginPollTimer); _xhsLoginPollTimer=null; }
 }
-async function startXhsLogin(){
+async function startXhsLogin(platform){
+  const pf = platform || _xhsLoginPlatform || 'rednote';
   const auth='Basic '+btoa('Zachary:Zachary01');
   try{
-    const r=await fetch('/api/xhs/login/start',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:'rednote'})});
+    const r=await fetch('/api/xhs/login/start',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:pf})});
     const d=await r.json();
     if(!d.ok) throw new Error(d.error);
     _xhsLoginSessionId=d.session_id;
+    _xhsLoginPlatform=pf;
     document.getElementById('xhsLoginStep1').classList.add('hidden');
     document.getElementById('xhsLoginStep2').classList.remove('hidden');
     document.getElementById('xhsLoginStatus').textContent='已打开浏览器，请扫码…';
@@ -1622,6 +1626,8 @@ async function checkXhsLoginStatus(){
       if(_xhsLoginPollTimer){ clearInterval(_xhsLoginPollTimer); _xhsLoginPollTimer=null; }
       // 保存cookies
       await fetch('/api/xhs/login/save',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth}});
+      // 标记对应平台当日保活完成（避免每天重复弹登录）
+      try{ await fetch('/api/xhs/keepalive/mark',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:_xhsLoginPlatform})}); }catch(_e){}
       setTimeout(closeXhsLogin,2000);
     } else {
       document.getElementById('xhsLoginStatus').textContent=d.message||'等待扫码…';
@@ -1630,6 +1636,39 @@ async function checkXhsLoginStatus(){
     document.getElementById('xhsLoginStatus').textContent='状态检查失败: '+e.message;
   }
 }
+// ============ 小红书双平台登录保活监控（掉线自动再弹） ============
+async function keepaliveMonitorTick(){
+  const auth='Basic '+btoa('Zachary:Zachary01');
+  // 双平台状态展示到界面（若存在占位元素）
+  for(const pf of ['rednote_hk','xhs_cn']){
+    try{
+      const r=await fetch('/api/xhs/rednote/keepalive?platform='+pf,{headers:{Authorization:auth}});
+      const d=await r.json();
+      const el=document.getElementById('keepalive-'+pf);
+      if(el && d && !d.error){
+        el.setAttribute('data-status', d.login_status||'unknown');
+        el.textContent=(d.label||pf)+': '+(d.last_login_at?'今日已保活':(d.login_status==='logged_in'?'已登录':'待登录'));
+      }
+    }catch(e){}
+  }
+  // 掉线检测 → 自动再弹（若登录弹窗已打开则跳过，避免轰炸）
+  const modal=document.getElementById('xhsLoginModal');
+  const busy=modal && !modal.classList.contains('hidden');
+  if(!busy){
+    for(const pf of ['rednote_hk','xhs_cn']){
+      try{
+        const r=await fetch('/api/xhs/keepalive/recheck',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:pf})});
+        const d=await r.json();
+        if(d && d.need_relogin){
+          openXhsLogin(pf==='xhs_cn'?'xhs':'rednote');
+          break;
+        }
+      }catch(e){}
+    }
+  }
+}
+setTimeout(keepaliveMonitorTick, 3000);
+setInterval(keepaliveMonitorTick, 5*60*1000);
 </script>
 
 

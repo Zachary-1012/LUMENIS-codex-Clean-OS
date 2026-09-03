@@ -549,3 +549,44 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 - login/start platform 双分支验证通过（rednote→香港 RedNote / xhs→小红书），连续调用稳定
 - 快捷按钮 Primary + 六语义状态点 CSS 渲染验证通过（bu.js computed style）
 - 守护清理后 8201 单实例稳定
+
+---
+
+## 2026-09-03 第三批（双平台登录保活完整闭环 + 守护稳定性修复）
+
+### 已完成
+1. **小红书双平台统一保活机制（核心）**：xhs_collection_optimizer.py 平台化 RedNoteLoginKeepalive：
+   - rednote_hk（香港 RedNote，CDP 9223/rednote.com）+ xhs_cn（国内小红书，CDP 9222/xiaohongshu.com）
+   - 各平台独立 keepalive 文件（xhs_login_keepalive.json / xhs_cn_login_keepalive.json）
+   - 新增 `recheck_and_decide()`：已登录→自动标记当日保活完成（不重复弹）；CDP 不可达→cdp_down（等恢复不误判）；会话登出→重置当日标记+need_relogin（前端自动再弹）
+   - 新增 `_mark_login_reset()`：掉线重置当日标记
+2. **保活 API 三件套（app.py）**：
+   - `/api/xhs/rednote/keepalive?platform=`（增强，双平台状态）
+   - `/api/xhs/keepalive/mark`（标记当日完成）
+   - `/api/xhs/keepalive/recheck`（检查+决策，need_relogin）
+3. **定时自动检查**：scheduler_loop 每 30 分钟对双平台 recheck（已登录自动确认；掉线自动再弹，审计不阻断采集）
+4. **前端完整闭环（index.html）**：
+   - 登录弹窗平台参数化（openXhsLogin/startXhsLogin 支持 rednote/xhs）
+   - 登录成功后自动 mark 对应平台当日保活
+   - keepaliveMonitorTick：每 5 分钟轮询双平台 recheck，掉线自动弹登录（弹窗已开则跳过避免轰炸），已登录显示"今日已保活"
+5. **守护稳定性修复（关键根因）**：
+   - 发现 8201 存在 run_supervised 递归链（run_supervised→run_supervised→app→app）多进程竞争
+   - run_supervised.py 增加**单实例保护**（PID lock + 存活检测 + 退出清理）防重复守护
+   - 递归链根因未完全定位，当前生产**改用 app.py 直跑**（Flask reloader 父子，无递归，稳定）
+6. **真实验证（实测）**：
+   - rednote_hk recheck：会话已在线→"当日保活已确认" need_relogin=false ✓
+   - xhs_cn recheck：会话已在线→自动确认 ✓
+   - 假 CDP 9999 → cdp_online=false（掉线不误判）✓
+   - mark API：双平台标记成功 ✓
+   - 前端：console 无错误，keepaliveMonitorTick 执行 tick-ok ✓
+   - 进程：单套 app.py（Flask 父子 2 进程）稳定
+
+### 未完成 / 登记
+- run_supervised.py 递归链根因待排查（单实例保护已加防重复；当前生产用 app.py 直跑，不阻塞）
+- 前端保活状态占位元素（keepalive-rednote_hk / keepalive-xhs_cn）可选，自动再弹逻辑独立于 DOM 已生效
+- 其余非本轮改动（taiji-state 等）仍登记未擅动
+
+### 实测结论
+- 双平台保活状态机 + recheck 决策 + mark 闭环全部实测通过
+- 前端 JS 无错误，自动再弹监控运行正常
+- 8201 单套 app.py 稳定运行

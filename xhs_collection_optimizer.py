@@ -21,6 +21,23 @@ DB_PATH = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abs
 LOGIN_KEEPALIVE_FILE = os.environ.get('XHS_LOGIN_KEEPALIVE_FILE',
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'xhs_login_keepalive.json'))
 
+# ============ 双平台登录保活统一配置（香港 RedNote / 国内小红书）============
+_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+KEEPALIVE_PLATFORMS = {
+    'rednote_hk': {
+        'label': '香港 RedNote',
+        'cdp_url': os.environ.get('XHS_CDP_URL', 'http://127.0.0.1:9223'),
+        'domain': 'rednote.com',
+        'file': LOGIN_KEEPALIVE_FILE,
+    },
+    'xhs_cn': {
+        'label': '国内小红书',
+        'cdp_url': os.environ.get('XHS_CN_CDP_URL', 'http://127.0.0.1:9222'),
+        'domain': 'xiaohongshu.com',
+        'file': os.path.join(_DATA_DIR, 'data', 'xhs_cn_login_keepalive.json'),
+    },
+}
+
 # note_type 分类规则
 NOTE_TYPE_RULES = {
     'topic': {
@@ -113,9 +130,28 @@ def classify_note(title: str = '', content: str = '', keywords: List[str] = None
 
 # ============ 2. 香港 RedNote 登录保活 ============
 class RedNoteLoginKeepalive:
-    """香港 RedNote 每天登录保活机制。"""
+    """小红书 / 香港 RedNote 每日登录保活机制（双平台统一）。
 
-    def __init__(self, keepalive_file: str = LOGIN_KEEPALIVE_FILE):
+    platform 支持：
+      - rednote_hk: 香港 RedNote（CDP 9223 / rednote.com）
+      - xhs_cn:     国内小红书（CDP 9222 / xiaohongshu.com）
+    核心能力：
+      - 当日保活标记（last_login_at，每天一次，避免重复弹登录）
+      - 会话掉线自动检测（recheck_and_decide：CDP 掉线/登出 → need_relogin，前端自动再弹）
+    """
+
+    def __init__(self, keepalive_file: str = None, platform: str = 'rednote_hk'):
+        # 平台配置（未知 platform 回退 rednote_hk，保持向后兼容）
+        self.platform = platform
+        _cfg = KEEPALIVE_PLATFORMS.get(platform)
+        if _cfg is None:
+            _cfg = KEEPALIVE_PLATFORMS['rednote_hk']
+            self.platform = 'rednote_hk'
+        self.cdp_url = _cfg['cdp_url']
+        self.domain = _cfg['domain']
+        self.label = _cfg['label']
+        if keepalive_file is None:
+            keepalive_file = _cfg['file']
         self.keepalive_file = keepalive_file
         self._ensure_dir()
 
@@ -204,11 +240,97 @@ class RedNoteLoginKeepalive:
         })
         self._save(data)
 
+    def _mark_login_reset(self, reason: str = ''):
+        """会话掉线时重置当日保活标记（使 should_login_today 重新为 True，前端可再次弹登录）。"""
+        data = self._load()
+        data['last_login_at'] = None
+        data['login_status'] = 'logged_out'
+        data['history'].append({
+            'status': 'login_reset',
+            'is_logged_in': False,
+            'checked_at': datetime.now().isoformat(),
+            'error': reason or '会话掉线，当日保活标记已重置',
+        })
+        data['history'] = data['history'][-50:]
+        self._save(data)
+
+    def recheck_and_decide(self, cdp_url: str = None) -> Dict[str, Any]:
+        """检查 CDP 会话并给出保活决策（掉线自动再弹的核心）。
+
+        决策逻辑：
+          - CDP 端口不可达/无法连接 → status=cdp_down, need_relogin=False（浏览器都没在线，弹窗无意义，等 CDP 恢复）
+          - CDP 可达但已登出/会话失效 → status=logged_out, need_relogin=True + 重置当日标记（前端自动弹登录）
+          - CDP 可达且已登录 → 若当日未标记则自动标记当日完成；status=logged_in, need_relogin=False
+        返回: {status, is_logged_in, need_relogin, cdp_online, checked_at, error, message}
+        """
+        cdp_url = cdp_url or self.cdp_url
+        result = {
+            'platform': self.platform,
+            'label': self.label,
+            'domain': self.domain,
+            'cdp_url': cdp_url,
+            'status': 'unknown',
+            'is_logged_in': False,
+            'need_relogin': False,
+            'cdp_online': False,
+            'checked_at': datetime.now().isoformat(),
+            'error': None,
+            'message': '',
+        }
+        # 1) CDP 可达性检查
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.connect_over_cdp(cdp_url, timeout=8000)
+                result['cdp_online'] = True
+                browser.close()
+        except Exception as e:
+            result['status'] = 'cdp_down'
+            result['cdp_online'] = False
+            result['need_relogin'] = False
+            result['error'] = str(e)[:120]
+            result['message'] = f'[{self.label}] 浏览器未在线（CDP {cdp_url}），无法检查会话'
+            # 记录检查（仅记录，不重置当日标记：CDP 掉线不等于账号登出）
+            try:
+                data = self._load()
+                data['last_check_at'] = result['checked_at']
+                data['login_status'] = 'cdp_down'
+                data['history'].append(result)
+                data['history'] = data['history'][-50:]
+                self._save(data)
+            except Exception:
+                pass
+            return result
+
+        # 2) 会话登录态检查
+        chk = self.check_login_status(cdp_url)
+        result['checked_at'] = chk.get('checked_at', result['checked_at'])
+        result['error'] = chk.get('error')
+        if chk.get('is_logged_in'):
+            result['status'] = 'logged_in'
+            result['is_logged_in'] = True
+            result['need_relogin'] = False
+            # 已登录 → 若当日未标记则自动标记当日完成（保活达成，避免重复弹登录）
+            if self.should_login_today():
+                self.mark_login_success()
+            result['message'] = f'[{self.label}] 会话已在线，当日保活已确认'
+        else:
+            result['status'] = 'logged_out'
+            result['is_logged_in'] = False
+            result['need_relogin'] = True
+            # 已登出 → 重置当日标记，前端将自动弹出登录
+            self._mark_login_reset(reason=f'[{self.label}] 会话已掉线，需要重新扫码登录')
+            result['message'] = f'[{self.label}] 会话已掉线，请重新扫码登录'
+        return result
+
     def get_status(self) -> Dict[str, Any]:
         """获取保活状态。"""
         data = self._load()
         return {
-            'platform': data.get('platform', 'rednote_hk'),
+            'platform': data.get('platform', self.platform),
+            'label': self.label,
+            'domain': self.domain,
+            'cdp_url': self.cdp_url,
             'last_login_at': data.get('last_login_at'),
             'last_check_at': data.get('last_check_at'),
             'login_status': data.get('login_status', 'unknown'),
@@ -217,8 +339,16 @@ class RedNoteLoginKeepalive:
         }
 
 
-# 全局保活实例
-_keepalive = RedNoteLoginKeepalive()
+# 全局保活实例（双平台）
+_keepalive = RedNoteLoginKeepalive(platform='rednote_hk')
+_keepalive_cn = RedNoteLoginKeepalive(platform='xhs_cn')
+
+
+def _get_keepalive(platform: str = 'rednote_hk'):
+    """按平台取保活实例（未知回退 rednote_hk）。"""
+    if platform == 'xhs_cn':
+        return _keepalive_cn
+    return _keepalive
 
 
 def check_rednote_login(cdp_url: str = 'http://127.0.0.1:9223') -> Dict:
@@ -227,8 +357,32 @@ def check_rednote_login(cdp_url: str = 'http://127.0.0.1:9223') -> Dict:
 
 
 def get_rednote_keepalive_status() -> Dict:
-    """便捷函数：获取香港 RedNote 保活状态。"""
+    """便捷函数：获取香港 RedNote 保活状态（兼容旧调用）。"""
     return _keepalive.get_status()
+
+
+def get_keepalive_status(platform: str = 'rednote_hk') -> Dict:
+    """按平台获取保活状态。platform: rednote_hk / xhs_cn。"""
+    return _get_keepalive(platform).get_status()
+
+
+def check_keepalive_login(platform: str = 'rednote_hk', cdp_url: str = None) -> Dict:
+    """按平台检查登录状态。"""
+    inst = _get_keepalive(platform)
+    return inst.check_login_status(cdp_url or inst.cdp_url)
+
+
+def mark_keepalive_success(platform: str = 'rednote_hk') -> Dict:
+    """按平台标记当日保活完成（用户确认 / 登录成功回调调用）。"""
+    inst = _get_keepalive(platform)
+    inst.mark_login_success()
+    return {'ok': True, 'platform': platform, **inst.get_status()}
+
+
+def recheck_keepalive(platform: str = 'rednote_hk', cdp_url: str = None) -> Dict:
+    """按平台执行保活检查并给出决策（掉线自动再弹核心）。"""
+    inst = _get_keepalive(platform)
+    return inst.recheck_and_decide(cdp_url or inst.cdp_url)
 
 
 # ============ 3. 采集合规优化 ============

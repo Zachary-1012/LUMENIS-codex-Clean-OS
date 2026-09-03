@@ -4334,6 +4334,7 @@ def scheduler_loop():
     last_midnight_report_date = ''  # 00:00日报生成记录
     last_morning_report_date = ''   # 09:00日报生成记录
     last_evening_report_date = ''   # 23:30日报生成记录
+    _last_keepalive_min = -1        # 小红书双平台保活检查（每 30 分钟一次）
     
     import os as _os
     _os.environ.setdefault('ZBC_SCHED_GATE_MODE', 'enforce')
@@ -4349,6 +4350,24 @@ def scheduler_loop():
                 today_auto_hours = set()
                 last_date_check = today_str
                 print(f'[Scheduler] 新的一天 {today_str}，自动采集次数已重置')
+
+            # ===== 小红书双平台登录保活定时检查（掉线自动再弹核心） =====
+            # 每 30 分钟对 rednote_hk（9223）/ xhs_cn（9222）recheck：
+            #   已登录 → 自动标记当日保活完成；掉线 → 重置当日标记 + need_relogin，
+            #   前端轮询到 need_relogin=true 自动弹登录窗。仅审计/标记，不阻断采集。
+            _kbucket = (now.hour * 60 + now.minute) // 30
+            if _kbucket != _last_keepalive_min:
+                _last_keepalive_min = _kbucket
+                try:
+                    import xhs_collection_optimizer as _xco
+                    for _kpf in ('rednote_hk', 'xhs_cn'):
+                        try:
+                            _kd = _xco.recheck_keepalive(_kpf)
+                            print(f'[Keepalive] {_kpf} -> {_kd.get("status")} need_relogin={_kd.get("need_relogin")} {_kd.get("message", "")}')
+                        except Exception as _ke2:
+                            print(f'[Keepalive] {_kpf} check fail: {_ke2}')
+                except Exception as _ke1:
+                    print(f'[Keepalive] 双平台保活检查失败: {_ke1}')
             
             # 自适应调度（GAP-05 门控，2026-09-02 用户签字）：不再用固定时间点，
             # 由 ShadowPlanner 根据状态（上次采集/成功率/熔断/频率）决定此刻是否采集；
@@ -5815,11 +5834,43 @@ def api_xhs_optimizer_classify():
 
 @app.route('/api/xhs/rednote/keepalive')
 def api_xhs_rednote_keepalive():
-    """获取香港RedNote登录保活状态"""
+    """获取香港RedNote登录保活状态（支持 ?platform=rednote_hk|xhs_cn，默认 rednote_hk）"""
     try:
         import xhs_collection_optimizer
-        status = xhs_collection_optimizer.get_rednote_keepalive_status()
+        platform = (request.args.get('platform') or 'rednote_hk').strip() or 'rednote_hk'
+        status = xhs_collection_optimizer.get_keepalive_status(platform)
         return jsonify({'ok': True, **status})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/xhs/keepalive/mark', methods=['POST'])
+def api_xhs_keepalive_mark():
+    """标记当日保活完成（用户确认 / 登录成功回调）。body: {platform: rednote_hk|xhs_cn}"""
+    try:
+        import xhs_collection_optimizer
+        platform = 'rednote_hk'
+        if request.is_json:
+            platform = (request.json.get('platform') or 'rednote_hk').strip() or 'rednote_hk'
+        result = xhs_collection_optimizer.mark_keepalive_success(platform)
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/xhs/keepalive/recheck', methods=['POST'])
+def api_xhs_keepalive_recheck():
+    """执行保活检查并给出决策（掉线自动再弹核心）。body: {platform, cdp_url?}
+    返回 need_relogin=true 时前端应自动弹出登录弹窗。"""
+    try:
+        import xhs_collection_optimizer
+        platform = 'rednote_hk'
+        cdp_url = None
+        if request.is_json:
+            platform = (request.json.get('platform') or 'rednote_hk').strip() or 'rednote_hk'
+            cdp_url = request.json.get('cdp_url')
+        result = xhs_collection_optimizer.recheck_keepalive(platform, cdp_url)
+        return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

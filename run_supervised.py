@@ -43,6 +43,20 @@ FAST_CRASH_COOLDOWN = 60
 MAX_BACKOFF = 300
 
 
+def _pid_alive(pid):
+    """检查 Windows 进程是否存活（ctypes，无重依赖）。"""
+    try:
+        import ctypes
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        h = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+        if not h:
+            return False
+        ctypes.windll.kernel32.CloseHandle(h)
+        return True
+    except Exception:
+        return False
+
+
 def log(msg):
     line = f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {msg}'
     print(line, flush=True)
@@ -109,6 +123,21 @@ def main():
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', default='8201')
     args = ap.parse_args()
+
+    # ===== 单实例保护：同一目标端口只允许一个监督器（避免多守护拉起多 app.py 抢 8201）=====
+    _lock = ROOT / 'data' / f'supervisor_{args.port}.lock'
+    try:
+        if _lock.exists():
+            _old = int(_lock.read_text().strip())
+            if _pid_alive(_old):
+                log(f'Supervisor 已存在(PID={_old}，端口 {args.port})，退出避免重复守护')
+                sys.exit(0)
+            else:
+                log(f'发现失效 lock(PID={_old})，接管端口 {args.port}')
+        _lock.write_text(str(os.getpid()))
+        log(f'Supervisor 单实例锁写入 PID={os.getpid()} (port {args.port})')
+    except Exception as _e:
+        log(f'单实例保护检查失败(继续启动): {_e}')
 
     stopping = False
 
@@ -193,6 +222,12 @@ def main():
     log('Supervisor 收到停止信号，关闭子进程 ...')
     kill_tree(proc.pid)
     write_state(status='stopped', pid=proc.pid)
+    try:
+        if _lock.exists():
+            _lock.unlink()
+            log('Supervisor 已释放单实例锁')
+    except Exception as _e:
+        log(f'释放锁失败: {_e}')
     log('Supervisor 已退出')
 
 
