@@ -498,3 +498,77 @@ def extract_content_dna(author_id: str, limit: int = 20) -> dict:
         }
     finally:
         conn.close()
+
+# -*- coding: utf-8 -*-
+"""KOS 品牌隔离聚合（方案 A：source_keyword 品牌隔离，不写 kos_profiles 主表，不污染广州）。
+由施工追加到 kos_engine.py 末尾。
+"""
+
+
+def _brand_source_filter(brand: str) -> tuple:
+    """品牌笔记过滤条件：source_keyword ∈ 品牌采集词（品牌隔离标记，复用 collect_keywords_for）。"""
+    from subject_rules import collect_keywords_for
+    kws = [k for k in collect_keywords_for(brand) if k]
+    if not kws:
+        return "1=0", []
+    ph = ",".join("?" for _ in kws)
+    return f"source_keyword IN ({ph})", list(kws)
+
+
+def brand_collection_stats(brand: str) -> dict:
+    """品牌采集状态：笔记数 / 作者数 / 最新采集时间。"""
+    conn = _get_conn()
+    try:
+        cond, params = _brand_source_filter(brand)
+        row = conn.execute(
+            f"SELECT COUNT(*) AS note_count, COUNT(DISTINCT author_id) AS author_count, "
+            f"MAX(captured_at) AS last_captured_at FROM notes WHERE {cond}",
+            params,
+        ).fetchone()
+        return {
+            "brand": brand,
+            "note_count": int(row["note_count"] or 0),
+            "author_count": int(row["author_count"] or 0),
+            "last_captured_at": row["last_captured_at"],
+        }
+    finally:
+        conn.close()
+
+
+def brand_profiles(brand: str, limit: int = 20) -> list:
+    """品牌 KOS 作者实时聚合（不写 kos_profiles，与广州主链隔离）。"""
+    conn = _get_conn()
+    try:
+        cond, params = _brand_source_filter(brand)
+        rows = conn.execute(
+            f"""
+            SELECT author_id, MAX(author_nickname) AS author_nickname, COUNT(*) AS note_count,
+                   COALESCE(SUM(likes),0) AS total_likes, COALESCE(SUM(comments),0) AS total_comments,
+                   COALESCE(SUM(collects),0) AS total_collects, COALESCE(SUM(shares),0) AS total_shares,
+                   SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) AS negative_count
+            FROM notes
+            WHERE {cond} AND author_id IS NOT NULL AND author_id != ''
+            GROUP BY author_id
+            ORDER BY (COALESCE(SUM(likes),0) + COALESCE(SUM(comments),0) * 2) DESC
+            LIMIT ?
+            """,
+            params + [int(limit)],
+        ).fetchall()
+        n = len(rows)
+        profiles = []
+        for i, r in enumerate(rows):
+            eng = (r["total_likes"] or 0) + (r["total_comments"] or 0) * 2 \
+                + (r["total_collects"] or 0) * 1.5 + (r["total_shares"] or 0) * 2
+            pct = (i + 1) / n if n else 1
+            tier = "S" if pct <= 0.05 else "A" if pct <= 0.20 else "B" if pct <= 0.50 else "C"
+            profiles.append({
+                "author_id": r["author_id"],
+                "author_nickname": r["author_nickname"] or "",
+                "note_count": int(r["note_count"] or 0),
+                "total_engagement": round(eng, 1),
+                "kos_tier": tier,
+                "risk": 1 if (r["negative_count"] or 0) > 0 else 0,
+            })
+        return profiles
+    finally:
+        conn.close()

@@ -388,6 +388,73 @@ def api_kos_profile():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@kos_bp.route("/collect", methods=["POST"])
+def api_kos_collect():
+    """品牌采集：统一暂停门 + 品牌主体过滤 + CDP 复用（链路复用 live_engine，不重写采集逻辑）。
+
+    遵循统一采集规则：is_user_paused() 暂停门（与主链同一规则）；主体过滤用 subject_hit_for_brand
+    （品牌词/排除词，不修改全局激活品牌口径）；CDP 复用常驻浏览器（不 new browser）。
+    数据隔离：笔记落库 source_keyword=品牌采集词（方案 A），KOS 聚合按品牌实时计算，不污染广州。
+    """
+    try:
+        from subject_rules import collect_keywords_for, subject_hit_for_brand
+        from xhs_cookie_bridge import is_user_paused, cdp_url_for
+        body = request.get_json(silent=True) or {}
+        brand = (body.get("brand") or request.args.get("brand") or "").strip()
+        if not brand:
+            return jsonify({"ok": False, "error": "brand required"}), 400
+        kws = collect_keywords_for(brand)
+        if not kws:
+            return jsonify({"ok": False, "error": f"no collect keywords for brand: {brand}"}), 400
+        # 统一暂停门（与主链同一规则；测试模式豁免）
+        paused = is_user_paused()
+        if paused and not os.environ.get("ZBC_TEST_MODE"):
+            return jsonify({"ok": False, "status": "USER_PAUSED",
+                            "reason": paused.get("reason", "采集已暂停"), "brand": brand}), 200
+        cdp_url = (body.get("cdp_url") or "").strip() or cdp_url_for()
+        comments = bool(body.get("comments", True))
+        from collector_v2.xhs.live_engine import run_live, persist_live
+
+        def brand_hit(text):
+            try:
+                return subject_hit_for_brand(title=str(text or ""), brand_key=brand)
+            except Exception:
+                return False
+
+        max_scroll = int(body.get("max_scroll", 5) or 5)
+        max_details = int(body.get("max_details", 20) or 20)
+        max_comment_pages = int(body.get("max_comment_pages", 5) or 5)
+        results, accepted_total = [], 0
+        for kw in kws:
+            data = run_live(kw, max_scroll=max_scroll, max_details=max_details,
+                            max_comment_pages=max_comment_pages, comments=comments, cdp_url=cdp_url)
+            stats = persist_live(data, brand_hit)
+            accepted_total += int(stats.get("persisted", 0))
+            results.append({"keyword": kw, "stats": stats,
+                            "verification_required": data.get("verification_required", False)})
+        ke = _engine()
+        return jsonify({"ok": True, "brand": brand, "accepted_total": accepted_total,
+                        "collection": ke.brand_collection_stats(brand), "results": results}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@kos_bp.route("/brand", methods=["GET"])
+def api_kos_brand():
+    """品牌采集状态 + KOS 实时聚合（不写 kos_profiles，与广州主链隔离）。"""
+    try:
+        brand = (request.args.get("brand") or "").strip()
+        if not brand:
+            return jsonify({"ok": False, "error": "brand required"}), 400
+        ke = _engine()
+        limit = int(request.args.get("limit", 20) or 20)
+        return jsonify({"ok": True, "brand": brand,
+                        "stats": ke.brand_collection_stats(brand),
+                        "profiles": ke.brand_profiles(brand, limit=limit)}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 def register_kos_api(app):
     """注册 KOS Blueprint 到 Flask app。"""
     app.register_blueprint(kos_bp)

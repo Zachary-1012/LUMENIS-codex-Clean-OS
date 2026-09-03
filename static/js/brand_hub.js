@@ -169,32 +169,39 @@
     renderBreadcrumb();
     renderHierarchy();
 
-    // 如果是已激活品牌，加载真实KOS数据
-    if (b.active && currentBrand === "guangzhou_taikoo_hui") {
-      api("/api/kos/overview").then(function (d) {
-        if (d.ok && d.data) {
-          var stats = d.data;
-          document.getElementById("brandKosTotal").textContent = stats.total || 0;
-          document.getElementById("brandKosS").textContent = (stats.by_tier && stats.by_tier.S) || 0;
-          document.getElementById("brandKosPotential").textContent = stats.potential || 0;
-          document.getElementById("brandNoteTotal").textContent = "1052";
-        }
-      }).catch(function () {});
-      // 加载TOP KOS
-      api("/api/kos/list?limit=5&sort_by=kos_score").then(function (d) {
-        if (d.ok && d.profiles) {
-          var html = d.profiles.map(function (p, i) {
-            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">' +
-              '<span style="width:20px;text-align:center;font-weight:600;color:#999">' + (i + 1) + '</span>' +
-              '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">' + (p.author_nickname || "") + '</span>' +
-              '<span style="font-size:11px;padding:2px 6px;border-radius:3px;background:#f7f7f5;color:#666">' + (p.kos_tier || "") + '</span>' +
-              '<span style="font-weight:600;font-size:13px;width:36px;text-align:right">' + ((p.kos_score || 0).toFixed(1)) + '</span>' +
-            '</div>';
-          }).join('');
-          var el = document.getElementById("brandTopKos");
-          if (el) el.innerHTML = html;
-        }
-      }).catch(function () {});
+    // 已激活品牌：广州走原 KOS 全局链路（红线不动）；其他品牌走品牌隔离链路
+    if (b.active) {
+      if (currentBrand === "guangzhou_taikoo_hui") {
+        api("/api/kos/overview").then(function (d) {
+          if (d.ok && d.data) {
+            var stats = d.data;
+            document.getElementById("brandKosTotal").textContent = stats.total || 0;
+            document.getElementById("brandKosS").textContent = (stats.by_tier && stats.by_tier.S) || 0;
+            document.getElementById("brandKosPotential").textContent = stats.potential || 0;
+            document.getElementById("brandNoteTotal").textContent = "1052";
+          }
+        }).catch(function () {});
+        // 加载TOP KOS
+        api("/api/kos/list?limit=5&sort_by=kos_score").then(function (d) {
+          if (d.ok && d.profiles) {
+            var html = d.profiles.map(function (p, i) {
+              return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">' +
+                '<span style="width:20px;text-align:center;font-weight:600;color:#999">' + (i + 1) + '</span>' +
+                '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">' + (p.author_nickname || "") + '</span>' +
+                '<span style="font-size:11px;padding:2px 6px;border-radius:3px;background:#f7f7f5;color:#666">' + (p.kos_tier || "") + '</span>' +
+                '<span style="font-weight:600;font-size:13px;width:36px;text-align:right">' + ((p.kos_score || 0).toFixed(1)) + '</span>' +
+              '</div>';
+            }).join('');
+            var el = document.getElementById("brandTopKos");
+            if (el) el.innerHTML = html;
+          }
+        }).catch(function () {});
+      } else {
+        // 非广州品牌：品牌隔离链路（实时聚合，不写 kos_profiles 主表）
+        var bd = document.getElementById("brandDashboardContent");
+        if (bd) bd.innerHTML = '<div class="brand-empty"><div class="brand-empty-icon">✅</div><h3>该品牌已激活采集</h3><p>品牌数据已按主体口径隔离入库，KOS 聚合见右栏统计与下方列表。</p></div>';
+        refreshBrandData(currentBrand);
+      }
     } else {
       // 未激活品牌显示空状态
       var emptyHtml = '<div class="brand-empty"><div class="brand-empty-icon">📡</div><h3>该品牌尚未激活采集</h3><p>点击下方按钮启动采集，数据将自动流入KOS引擎</p><button style="margin-top:16px;padding:10px 24px;background:#171717;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px" onclick="BrandHub.activateBrand(\'' + currentBrand + '\')">启动采集</button></div>';
@@ -249,7 +256,65 @@
 
   function activateBrand(key) {
     var b = BRANDS[key];
-    alert("即将启动「" + b.name + "」采集任务\n\n采集关键词：" + (b.collect_keywords || b.name) + "\n采集完成后KOS数据将自动流入品牌Dashboard。\n\n（此功能需在采集配置中启用对应品牌关键词）");
+    var btn = document.querySelector("#brandDashboardContent .brand-empty button");
+    if (btn) { btn.disabled = true; btn.textContent = "采集中…"; }
+    fetch("/api/kos/collect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brand: key })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var msg;
+      if (d.ok === false && d.status === "USER_PAUSED") {
+        msg = "「" + b.name + "」采集暂未启动：当前处于统一暂停状态（" + (d.reason || "用户暂停") + "）。\n\n请先恢复采集（设置页/采集控制），再重新启动品牌采集。";
+      } else if (d.ok === true) {
+        msg = "「" + b.name + "」采集完成：本次新增 " + (d.accepted_total || 0) + " 条笔记，品牌累计 " + ((d.collection && d.collection.note_count) || 0) + " 条。\n\n数据已按品牌隔离入库，KOS 聚合将自动刷新。";
+      } else {
+        msg = "「" + b.name + "」采集启动失败：" + (d.error || "未知错误");
+      }
+      alert(msg);
+      if (btn) { btn.disabled = false; btn.textContent = "启动采集"; }
+      if (d.ok === true) {
+        b.active = true;
+        b.kos_count = (d.collection && d.collection.author_count) || 0;
+        b.note_count = (d.collection && d.collection.note_count) || 0;
+        renderDashboard();
+      } else {
+        refreshBrandData(key);
+      }
+    }).catch(function (e) {
+      alert("「" + b.name + "」采集请求失败：" + e);
+      if (btn) { btn.disabled = false; btn.textContent = "启动采集"; }
+    });
+  }
+
+  // 品牌隔离 KOS 数据（实时聚合，广州不动）
+  function refreshBrandData(key) {
+    var b = BRANDS[key];
+    if (!b || key === "guangzhou_taikoo_hui") return;
+    fetch("/api/kos/brand?brand=" + encodeURIComponent(key) + "&limit=5").then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok || !d.stats) return;
+      var st = d.stats;
+      var kt = document.getElementById("brandKosTotal");
+      var nt = document.getElementById("brandNoteTotal");
+      if (kt) kt.textContent = st.author_count || 0;
+      if (nt) nt.textContent = st.note_count || 0;
+      if ((st.note_count || 0) > 0) {
+        var el = document.getElementById("brandTopKos");
+        if (el && d.profiles && d.profiles.length) {
+          el.innerHTML = d.profiles.map(function (p, i) {
+            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">' +
+              '<span style="width:20px;text-align:center;font-weight:600;color:#999">' + (i + 1) + '</span>' +
+              '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">' + (p.author_nickname || "") + '</span>' +
+              '<span style="font-size:11px;padding:2px 6px;border-radius:3px;background:#f7f7f5;color:#666">' + (p.kos_tier || "") + '</span>' +
+              '<span style="font-weight:600;font-size:13px;width:36px;text-align:right">' + p.total_engagement + '</span>' +
+            '</div>';
+          }).join('');
+        }
+        b.active = true;
+        b.kos_count = st.author_count || 0;
+        b.note_count = st.note_count || 0;
+      }
+    }).catch(function () {});
   }
 
   // 初始化

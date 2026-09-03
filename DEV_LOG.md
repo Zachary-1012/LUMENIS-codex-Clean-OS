@@ -1007,3 +1007,39 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 
 
 
+
+## 第十六批：KOS 品牌采集闭环（方案 A：source_keyword 品牌隔离）
+
+### 背景事实
+- KOS 多品牌中心（brand_hub.js）已有品牌→地区→门店层级导航与品牌 Dashboard，但"启动采集"按钮仅 alert 占位，无任何采集调用；后端 /api/kos/* 无品牌采集端点（api_refresh 仅 refresh_profiles 聚合）；collector_v2/run_profile.py 为纯 CLI 入口。
+- 数据隔离现状：notes 表无 brand 字段（subject_type 已被 KOS 用作身份分类 kos/official/media，不可占用）；kos_engine.refresh_profiles 全局聚合所有 notes，直接入库会稀释污染广州 KOS。
+
+### 改动（最小可回滚，三文件 + 备份 .bak-koscollect）
+1. kos_engine.py 末尾新增品牌隔离聚合（方案 A：不新增 DB 表、不写 kos_profiles 主表、不动 schema）：
+   - _brand_source_filter(brand)：source_keyword ∈ 品牌采集词（复用 collect_keywords_for，品牌隔离天然标记）
+   - brand_collection_stats(brand)：品牌采集状态（笔记/作者/最新采集时间）
+   - brand_profiles(brand, limit)：品牌 KOS 作者实时聚合（S/A/B/C 分层，不写主表）
+2. kos_routes.py 新增两端点（/api/kos/ 前缀）：
+   - POST /api/kos/collect：统一暂停门（is_user_paused，与主链同一规则，测试模式豁免）→ CDP 复用（body.cdp_url 或 cdp_url_for()）→ run_live 逐词 + persist_live(brand_hit 闭包，subject_hit_for_brand 品牌主体过滤，不修改全局激活品牌) → brand_collection_stats 返回
+   - GET /api/kos/brand：品牌采集状态 + 实时 KOS 聚合（广州零影响）
+3. static/js/brand_hub.js：
+   - activateBrand 从假 alert 改为真实 POST /api/kos/collect（USER_PAUSED 提示/成功统计/失败报错）
+   - 新增 refreshBrandData(key)：GET /api/kos/brand 刷新品牌 KPI + TOP KOS；note_count>0 自动标记 active
+   - renderDashboard 已激活分支：广州走原 KOS 全局链路（红线不动）；非广州品牌走品牌隔离链路
+
+### 实测结果（已实测）
+- py_compile：kos_engine/kos_routes 全过；node --check brand_hub.js 语法 OK
+- 直连只读：hongkong_dfs stats=0/0；guangzhou_taikoo_hui stats=175 笔记/152 作者（隔离标记有效，DFS 不混入广州）
+- 平滑重启 8201（只停 app.py reloader 父子，supervisor 自拉起新 PID 5700/18192，healthz ok v5.9.9）
+- HTTP 实测（Basic Auth）：
+  - POST /api/kos/collect {hongkong_dfs} → {"ok":false,"status":"USER_PAUSED","reason":"用户指令暂停：先控频率，恢复时间待定"}（统一暂停门生效，品牌采集不绕过主链规则）
+  - GET /api/kos/brand?brand=hongkong_dfs → ok:true, note_count:0（尚未采集）
+  - GET /api/kos/brand?brand=guangzhou_taikoo_hui → ok:true, note_count:175, author_count:152, 20 个 KOS profile（含"广州太古汇"官方账号只读聚合，无写操作）
+- 前端 DOM 匹配：index.html 的 brandDashboardContent/brandKosTotal/brandKosS/brandKosPotential/brandNoteTotal/brandTopKos 均存在
+- 红线复测：subject_rules.py 未改动（广州主体口径不变）；官方账号只读；notes/monitor.db 无 schema 变更；diff 敏感扫描干净（仅 xhs_cookie_bridge 模块名命中，非真实密钥）
+
+### 未实测 / 登记
+- 真实品牌采集执行被统一暂停门正确拦截（当前用户暂停+风控熔断双暂停中），未触发平台请求；恢复采集后（POST /api/xhs/collect-resume + 熔断健康检查恢复）即可通过 /api/kos/collect 启动 DFS 等品牌采集，本链路无需改代码。
+- 品牌→CDP 身份映射（香港品牌应走 rednote 香港 9223）当前用 body.cdp_url 显式指定，未自动按品牌地区解析（登记，下一步增强）。
+- 采集频率/词间隔沿用主链规则（本轮未在 collect 内额外限频，靠统一暂停门+主链调度约束；品牌采集批量场景待真实运行观察后校准）。
+- 备份：kos_engine.py.bak-koscollect、kos_routes.py.bak-koscollect、brand_hub.js.bak-koscollect（均不提交）。
