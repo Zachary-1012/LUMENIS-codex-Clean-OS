@@ -1,0 +1,26 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"zbc://podcast/ingestion/v1",
+  "title":"ZBC Podcast Ingestion Record v1",
+  "type":"object",
+  "required":["ingest_id","source_type","source_locator","observed_at","evidence_status"],
+  "properties":{
+    "ingest_id":{"type":"string"},
+    "source_type":{"type":"string","enum":["rss","web","audio","video","transcript","platform","news","social","research","manual"]},
+    "source_locator":{"type":"string","minLength":1},
+    "publisher":{"type":["string","null"]},
+    "author":{"type":["string","null"]},
+    "published_at":{"type":["string","null"],"format":"date-time"},
+    "observed_at":{"type":"string","format":"date-time"},
+    "retrieved_at":{"type":["string","null"],"format":"date-time"},
+    "content_hash":{"type":["string","null"]},
+    "entity_ids":{"type":"array","items":{"type":"string"}},
+    "topic_ids":{"type":"array","items":{"type":"string"}},
+    "claim_ids":{"type":"array","items":{"type":"string"}},
+    "evidence_status":{"type":"string","enum":["observed","derived","ai_suggested","human_verified","unverified"]},
+    "freshness":{"type":"string","enum":["breaking","current","recent","background","evergreen","unknown"]},
+    "confidence":{"type":"number","minimum":0,"maximum":1},
+    "metadata":{"type":"object","additionalProperties":true}
+  },
+  "additionalProperties":false
+}
