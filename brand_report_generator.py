@@ -59,12 +59,33 @@ class BrandReportGenerator:
         self.generated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # 报告各部分数据
+        # 序境报告母模型（Decision Information First）：问题中心→事件→影响→风险→证据→建议
+        self.decision_model = {}
         self.executive_summary = {}
         self.communication_analysis = {}
         self.market_intelligence = {}
         self.public_opinion_analysis = {}
         self.event_graph_analysis = {}
         self.recommendations = {}
+
+    def set_decision_model(self, problem_center: Dict[str, Any],
+                            events: List[Dict[str, Any]] = None,
+                            impacts: List[Dict[str, Any]] = None,
+                            risks: List[Dict[str, Any]] = None,
+                            evidence: List[Dict[str, Any]] = None,
+                            decisions: Dict[str, List[str]] = None):
+        """设置序境报告母模型（Decision Information First：问题中心→事件→影响→风险→证据→建议）
+
+        序境母模型契约见 序境/01-PRODUCT/REPORT_MASTER_MODEL.md。向后兼容 v3.0 结构。
+        """
+        self.decision_model = {
+            'problem_center': problem_center,
+            'events': events or [],
+            'impacts': impacts or [],
+            'risks': risks or [],
+            'evidence': evidence or [],
+            'decisions': decisions or {'short_term': [], 'medium_term': [], 'long_term': []},
+        }
 
     def set_executive_summary(self, core_findings: List[str], key_metrics: Dict[str, Any],
                                action_items: List[str]):
@@ -140,6 +161,7 @@ class BrandReportGenerator:
             'generated_at': self.generated_at,
             'report_version': 'v3.0',
             'report_type': '品牌传播与市场情报报告',
+            'decision_model': self.decision_model,
             'executive_summary': self.executive_summary,
             'communication_analysis': self.communication_analysis,
             'market_intelligence': self.market_intelligence,
@@ -181,6 +203,56 @@ class BrandReportGenerator:
         lines.append(f"")
         lines.append(f"---")
         lines.append(f"")
+
+        # 序境母模型（Decision Information First：首屏决策信息）
+        dm = report.get('decision_model', {})
+        if dm and dm.get('problem_center'):
+            pc = dm['problem_center']
+            lines.append(f"## 0. 问题中心（Decision Information First）")
+            lines.append(f"")
+            if pc.get('question'):
+                lines.append(f"**核心问题**：{pc['question']}")
+                lines.append(f"")
+            if pc.get('context'):
+                lines.append(f"**背景**：{pc['context']}")
+                lines.append(f"")
+            if dm.get('events'):
+                lines.append(f"### 关键事件")
+                for ev in dm['events']:
+                    lines.append(f"- [{ev.get('date', '')}] **{ev.get('title', '')}**（{ev.get('subject', '')}）：{ev.get('summary', '')}")
+                lines.append(f"")
+            if dm.get('impacts'):
+                lines.append(f"### 影响")
+                for imp in dm['impacts']:
+                    d = imp.get('direction', '')
+                    mark = '▲' if d == 'up' else ('▼' if d == 'down' else '■')
+                    lines.append(f"- {mark} **{imp.get('dimension', '')}**：{imp.get('detail', '')}")
+                lines.append(f"")
+            if dm.get('risks'):
+                lines.append(f"### 风险")
+                for rk in dm['risks']:
+                    lv = rk.get('level', '')
+                    badge = {'high': '🔴 高', 'medium': '🟠 中', 'low': '🟢 低'}.get(lv, lv)
+                    trend = {'rising': '（上升）', 'stable': '（平稳）', 'falling': '（下降）'}.get(rk.get('trend', ''), '')
+                    lines.append(f"- {badge} **{rk.get('topic', '')}**{trend}：{rk.get('trigger', '')}")
+                lines.append(f"")
+            if dm.get('evidence'):
+                lines.append(f"### 证据")
+                for ev in dm['evidence']:
+                    lines.append(f"- [{ev.get('evidence_id', '')}]（{ev.get('kind', '')}）：{ev.get('summary', '')}")
+                lines.append(f"")
+            if dm.get('decisions'):
+                dc = dm['decisions']
+                lines.append(f"### 建议")
+                if dc.get('short_term'):
+                    lines.append(f"短期（1-2周）：" + "；".join(dc['short_term']))
+                if dc.get('medium_term'):
+                    lines.append(f"中期（1-3月）：" + "；".join(dc['medium_term']))
+                if dc.get('long_term'):
+                    lines.append(f"长期（3-12月）：" + "；".join(dc['long_term']))
+                lines.append(f"")
+            lines.append(f"---")
+            lines.append(f"")
 
         # 执行摘要
         es = report.get('executive_summary', {})

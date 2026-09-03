@@ -49,7 +49,7 @@
 | MOD-ACT-02 | 行动·KOS | KOS 运营 | kos_execution.py / kos_ops.py / kos_paid.py | KOS 运营、留资、合作、邮件邀约、投流、奖励（HCG 门控） | PASS |
 | MOD-ACT-03 | 行动·KOS | KOS 报告 | kos_report.py / kos_routes.py | KOS 报告与路由 | PASS |
 | MOD-ACT-04 | 行动·处置 | 舆情处置 | review_workflow.py / pr_case_engine.py | 案例、处置工作流 | PASS |
-| MOD-CRE-01 | 创作·报告 | 报告引擎 | report_engine.py / report_filter.py / export_report.py | 日报/周报/月报/专题 + 导出 | PASS |
+| MOD-CRE-01 | 创作·报告 | 报告引擎 | report_engine.py / report_filter.py / export_report.py / brand_report_generator.py | 日报/周报/月报/专题 + 导出；含报告母模型（Decision Information First：问题中心→事件→影响→风险→证据→建议）| PASS |
 | MOD-INT-01 | 智能·AI | 智谱 AI 网关 | intelligence.py / ark_llm.py | chat/search/vision 分级 + 预算 + 缓存 | PASS |
 | MOD-INT-02 | 智能·AI | AI 资源包 | ai_resource_packs.py | 资源配额、用量、暂停 | PASS |
 | MOD-INT-03 | 智能·AI | AI 分析 | ai_analyzer.py / ai_filter.py / ai_governance.py | AI 增强分析（非事实源） | PASS |

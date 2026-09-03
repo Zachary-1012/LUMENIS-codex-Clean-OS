@@ -17,9 +17,9 @@
   --splash-silver: #F5F5F4;      /* 微光银 */
   --splash-silver-light: #FFFFFF; /* 高光银 */
   --splash-silver-deep: #E7E5E4; /* 深银 */
-  --dot-ok: #22C55E;
-  --dot-warn: #F59E0B;
-  --dot-info: #3B82F6;
+  --dot-ok: #16A34A;
+  --dot-warn: #D97706;
+  --dot-info: #2563EB;
   --dot-idle: #D6D3D1;
   --dot-danger: #EF4444;
 
@@ -103,9 +103,9 @@
   background: linear-gradient(
     105deg,
     transparent 30%,
-    rgba(255,255,255,0.4) 45%,
-    rgba(245,245,244,0.6) 50%,
-    rgba(255,255,255,0.4) 55%,
+    rgba(255,255,255,0.22) 45%,
+    rgba(245,245,244,0.34) 50%,
+    rgba(255,255,255,0.22) 55%,
     transparent 70%
   );
   animation: shimmerSweep 6s ease-in-out infinite;
@@ -127,8 +127,8 @@
 .splash-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.25;
+  filter: blur(64px);
+  opacity: 0.14;
   animation: orbFloat 8s ease-in-out infinite;
 }
 .splash-orb-1 {
@@ -203,18 +203,19 @@
   border: 1px solid var(--splash-line);
   border-radius: 50%;
   z-index: 4;
-  animation: orbitSpin 30s linear infinite;
+  opacity: 0.55;
+  animation: orbitSpin 36s linear infinite;
 }
 .splash-orbit::before {
   content: '';
   position: absolute;
-  top: -4px;
+  top: -3px;
   left: 50%;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   background: var(--dot-info);
   border-radius: 50%;
-  box-shadow: 0 0 12px rgba(59,130,246,0.5);
+  box-shadow: 0 0 8px rgba(37,99,235,0.35);
 }
 @keyframes orbitSpin {
   from { transform: rotate(0deg); }
@@ -246,20 +247,47 @@
 .splash-brandmark span:nth-child(2) { opacity: 0.4; }
 .splash-brandmark span:nth-child(3) { opacity: 0.25; }
 
+.splash-philosophy {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--splash-text-sub);
+  letter-spacing: 5px;
+  text-indent: 5px;
+  margin-bottom: 22px;
+}
+.splash-philosophy .ph-line {
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  background: var(--splash-line-strong);
+  opacity: 0.7;
+}
 .splash-title {
-  font-size: 32px;
+  font-size: 46px;
   font-weight: 600;
   color: var(--splash-text);
-  letter-spacing: -0.5px;
+  letter-spacing: 6px;
+  text-indent: 6px;
   margin: 0 0 12px 0;
-  line-height: 1.2;
+  line-height: 1.15;
+}
+.splash-en {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--splash-text-faint);
+  letter-spacing: 2.5px;
+  margin: 0 0 16px 0;
 }
 .splash-subtitle {
-  font-size: 15px;
+  font-size: 13.5px;
   color: var(--splash-text-sub);
-  margin: 0 0 36px 0;
+  margin: 0 0 34px 0;
   line-height: 1.6;
   font-weight: 400;
+  letter-spacing: 0.5px;
 }
 
 /* 状态卡片组 — 大彩色 icon */
@@ -285,19 +313,19 @@
   box-shadow: 0 8px 24px rgba(28,25,23,0.08);
 }
 .splash-status-icon {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 10px;
-  font-size: 18px;
 }
-.splash-status-icon.ok { background: rgba(34,197,94,0.1); }
-.splash-status-icon.warn { background: rgba(245,158,11,0.1); }
-.splash-status-icon.info { background: rgba(59,130,246,0.1); }
-.splash-status-icon.idle { background: rgba(214,211,209,0.3); }
+.splash-status-icon svg { width: 21px; height: 21px; display: block; }
+.splash-status-icon.ok { background: rgba(22,163,74,0.08); color: #16A34A; }
+.splash-status-icon.warn { background: rgba(217,119,6,0.08); color: #D97706; }
+.splash-status-icon.info { background: rgba(37,99,235,0.08); color: #2563EB; }
+.splash-status-icon.idle { background: rgba(214,211,209,0.3); color: #A8A29E; }
 .splash-status-label {
   font-size: 12px;
   color: var(--splash-text-sub);
@@ -316,9 +344,9 @@
   margin-right: 6px;
   vertical-align: middle;
 }
-.splash-status-dot.ok { background: var(--dot-ok); box-shadow: 0 0 8px rgba(34,197,94,0.4); }
-.splash-status-dot.warn { background: var(--dot-warn); box-shadow: 0 0 8px rgba(245,158,11,0.4); }
-.splash-status-dot.info { background: var(--dot-info); box-shadow: 0 0 8px rgba(59,130,246,0.4); }
+.splash-status-dot.ok { background: var(--dot-ok); box-shadow: 0 0 8px rgba(22,163,74,0.35); }
+.splash-status-dot.warn { background: var(--dot-warn); box-shadow: 0 0 8px rgba(217,119,6,0.35); }
+.splash-status-dot.info { background: var(--dot-info); box-shadow: 0 0 8px rgba(37,99,235,0.35); }
 .splash-status-dot.idle { background: var(--dot-idle); }
 
 /* 加载进度 */
@@ -381,8 +409,11 @@
 
 /* 响应式 */
 @media (max-width: 640px) {
-  .splash-title { font-size: 24px; }
-  .splash-subtitle { font-size: 13px; }
+  .splash-title { font-size: 34px; letter-spacing: 4px; text-indent: 4px; }
+  .splash-philosophy { font-size: 11px; letter-spacing: 3px; text-indent: 3px; gap: 10px; }
+  .splash-philosophy .ph-line { width: 20px; }
+  .splash-en { font-size: 10px; letter-spacing: 1.8px; }
+  .splash-subtitle { font-size: 12px; }
   .splash-status-grid { gap: 10px; }
   .splash-status-card { min-width: 90px; padding: 14px 12px; }
   .splash-orbit { width: 300px; height: 300px; }
