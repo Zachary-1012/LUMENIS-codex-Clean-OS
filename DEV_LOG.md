@@ -324,3 +324,35 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 
 ### 待用户授权 / 遗留
 - 【需拍板】8200 现网 5 套重复实例的清理：授权后保留唯一健康实例、其余连同父 cmd 优雅退出，并确认现网是否从 v5.8.4 升到已回归通过的 v5.8.5（属“切换”动作，按约定由用户决定）。
+
+## 2026-09-03｜GAP-08/13/17/18/19 批量核对收尾 + Alembic 生产接入 + Selenium 死依赖移除
+> 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
+
+**A. GAP-08 Evidence 层核实（RESOLVED，并行巡检已闭环）**
+- evidence_store.py 统一写入层（record_evidence/collection/health + query + stats）已实现
+- 采集链接线：collector_automation.py:361/389 调 record_collection_evidence
+- 健康链接线：resident_health.py:221 调 record_health_evidence
+- Evidence API：evidence_api.py stats/list/<id>/timeline 4 端点，生产全部 200
+- 生产 app_evidence_records 32 条真实健康证据（18FAIL+14PASS，最新 09-03 03:47）
+
+**B. GAP-13 Alembic 生产接入（RESOLVED，本轮实际施工）**
+- 生产库 data/monitor.db 备份（monitor_pre_alembic_stamp_20260903_092723.db）→ ZBC_DB_PATH=生产库 alembic stamp e4278c4d1d79
+- 结果：alembic_version=e4278c4d1d79，仅加元数据表（53→54），业务表零变化
+- 验证：notes=1049/events=463 完整，8201 全 API 200（healthz/brand-knowledge/negative/evidence）
+- 今后生产 schema 变更走 DB-MIGRATION-PLAYBOOK Gate（迁移→staging 验证→备份→upgrade→验证）
+
+**C. GAP-17/18 核实（RESOLVED，无需施工）**
+- GAP-17：8200 端口当前 0 实例（历史重复已清理）
+- GAP-18：conftest pytest_ignore_collect 已忽略无 def test_ 的脚本式文件（28 个不再被误收集，仍可手动跑）
+
+**D. GAP-19 部分（Selenium 死依赖移除）**
+- 全仓 0 selenium import，Playwright 已全面替代（app.py/collector_automation/browser_runtime）
+- requirements.txt 移除 selenium>=4.0.0，保留 playwright
+- Browser/Scheduler 重复调用部分仍待审计
+
+**E. Commit**
+- c14e91a（GAP-08/17/18 注册表）、af4d590（GAP-13 生产接入）、1066b15（Selenium 移除 + GAP-19）
+- 已 push，本地=origin/main
+
+**F. 剩余开放 GAP（需决策）**
+- GAP-11 DCC 跨仓落后（跨仓 rebase 高风险）、GAP-14 P3 文档级、GAP-16 固定域名（部署项）、GAP-20 工程清理、GAP-21 ZBMP importer API（涉及 Cookie 敏感数据安全面）
