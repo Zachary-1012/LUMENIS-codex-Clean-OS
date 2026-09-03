@@ -47,7 +47,7 @@
 
 - 新增 `tests/test_idea_sit_backing.py` **7 项**（SIT 注册/四分支含 sit/premium+luxury 产出/案例背书读取/DB 缺失降级/provenance 字段/机制匹配）
 - 相关回归：idea_generator 18 + internal_browser 10 + 新 7 = **36 项通过**
-- 全量回归 reg66（后台）待出结果
+- 全量回归 **reg67 EXIT=0**（`-m "not online" --ignore=tests/test_browser_e2e.py -k "not alembic"`）
 
 ## 4. 提交
 
