@@ -182,18 +182,9 @@
           }
         }).catch(function () {});
         // 加载TOP KOS
-        api("/api/kos/list?limit=5&sort_by=kos_score").then(function (d) {
+        api("/api/kos/ownership?brand=guangzhou_taikoo_hui&limit=5").then(function (d) {
           if (d.ok && d.profiles) {
-            var html = d.profiles.map(function (p, i) {
-              return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">' +
-                '<span style="width:20px;text-align:center;font-weight:600;color:#999">' + (i + 1) + '</span>' +
-                '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">' + (p.author_nickname || "") + '</span>' +
-                '<span style="font-size:11px;padding:2px 6px;border-radius:3px;background:#f7f7f5;color:#666">' + (p.kos_tier || "") + '</span>' +
-                '<span style="font-weight:600;font-size:13px;width:36px;text-align:right">' + ((p.kos_score || 0).toFixed(1)) + '</span>' +
-              '</div>';
-            }).join('');
-            var el = document.getElementById("brandTopKos");
-            if (el) el.innerHTML = html;
+            renderKosRows(d.profiles, "guangzhou_taikoo_hui", document.getElementById("brandTopKos"));
           }
         }).catch(function () {});
       } else {
@@ -287,6 +278,38 @@
     });
   }
 
+  // 共享 KOS 行渲染：归属徽标 + 互动点 + relevance + 确认归属按钮（纯展示）
+  function renderKosRows(profiles, brandKey, el) {
+    if (!el || !profiles || !profiles.length) return;
+    el.innerHTML = profiles.map(function (p, i) {
+      var own = p.ownership || {};
+      var rel = p.relevance || {};
+      var inter = p.interaction || {};
+      var ownLabel = own.ownership_class || "—";
+      var ownState = own.ai_status === "VERIFIED"
+        ? '<span style="font-size:10px;color:#15803d">✓人工</span>'
+        : (own.needs_manual_review ? '<span style="font-size:10px;color:#b45309">待复核</span>' : "");
+      var relTxt = rel.relevance_segment || (rel.avg_relevance !== undefined && rel.avg_relevance !== null ? rel.avg_relevance.toFixed(2) : "");
+      var interDot = inter.pattern
+        ? '<span title="' + inter.pattern + '" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' +
+          (inter.pattern === "active" ? "#16a34a" : inter.pattern === "emerging" ? "#d97706" : "#a8a29e") + '"></span>'
+        : "";
+      var needConfirm = own.needs_manual_review || own.ownership_class === "UNKNOWN" || !own.ai_status;
+      var confirmBtn = needConfirm
+        ? '<button style="font-size:11px;padding:2px 8px;border:1px solid #d6d3d1;border-radius:6px;background:#fff;color:#44403c;cursor:pointer" onclick="window.KOSConfirmOwnership(\'' + brandKey + '\',\'' + String(p.author_id || "").replace(/[\'"]/g, "") + '\',\'' + String(p.author_nickname || "").replace(/[\'"]/g, "") + '\')">归属</button>'
+        : "";
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f5f5">' +
+        '<span style="width:18px;text-align:center;font-weight:600;color:#999;font-size:12px">' + (i + 1) + '</span>' +
+        '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">' + (p.author_nickname || "") + '</span>' +
+        '<span style="font-size:11px;padding:2px 6px;border-radius:3px;background:#f7f7f5;color:#666">' + (p.kos_tier || "") + '</span>' +
+        interDot +
+        (relTxt ? '<span style="font-size:10px;color:#78716c" title="relevance">' + relTxt + '</span>' : "") +
+        '<span style="font-size:10px;color:#78716c">' + ownLabel + '</span>' + ownState +
+        '<span style="font-weight:600;font-size:12px;width:30px;text-align:right">' + (p.total_engagement || p.kos_score || "") + '</span>' +
+        confirmBtn + '</div>';
+    }).join('');
+  }
+
   // 品牌隔离 KOS 数据（实时聚合，广州不动）
   function refreshBrandData(key) {
     var b = BRANDS[key];
@@ -301,14 +324,7 @@
       if ((st.note_count || 0) > 0) {
         var el = document.getElementById("brandTopKos");
         if (el && d.profiles && d.profiles.length) {
-          el.innerHTML = d.profiles.map(function (p, i) {
-            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">' +
-              '<span style="width:20px;text-align:center;font-weight:600;color:#999">' + (i + 1) + '</span>' +
-              '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">' + (p.author_nickname || "") + '</span>' +
-              '<span style="font-size:11px;padding:2px 6px;border-radius:3px;background:#f7f7f5;color:#666">' + (p.kos_tier || "") + '</span>' +
-              '<span style="font-weight:600;font-size:13px;width:36px;text-align:right">' + p.total_engagement + '</span>' +
-            '</div>';
-          }).join('');
+          renderKosRows(d.profiles, key, el);
         }
         b.active = true;
         b.kos_count = st.author_count || 0;
@@ -316,6 +332,52 @@
       }
     }).catch(function () {});
   }
+
+  // KOS 主体归属人工确认（AI 只建议，人工确认后 VERIFIED；黑白灰极简 modal）
+  window.KOSConfirmOwnership = function (brand, authorId, nickname) {
+    var mask = document.createElement("div");
+    mask.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:flex;align-items:center;justify-content:center";
+    var box = document.createElement("div");
+    box.style.cssText = "background:#fff;border:1px solid #e7e5e4;border-radius:12px;padding:20px 24px;width:340px;box-shadow:0 12px 40px rgba(0,0,0,.12);font-family:system-ui,sans-serif;color:#1c1917";
+    var types = [
+      ["INDEPENDENT_KOL_KOC", "独立KOL/KOC"], ["MEDIA", "媒体/机构"], ["UGC_CONSUMER", "普通用户UGC"],
+      ["TARGET_ENTITY_KOS", "主体官方KOS"], ["MERCHANT", "商户"], ["PARTNER", "合作方"], ["UNKNOWN", "未知/待定"]
+    ];
+    var title = document.createElement("div");
+    title.style.cssText = "font-size:15px;font-weight:600;margin-bottom:4px";
+    title.textContent = "确认主体归属";
+    var sub = document.createElement("div");
+    sub.style.cssText = "font-size:12px;color:#78716c;margin-bottom:14px";
+    sub.textContent = (nickname || "") + " \u00b7 人工确认后即 VERIFIED（AI 不越权）";
+    box.appendChild(title); box.appendChild(sub);
+    types.forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.style.cssText = "display:block;width:100%;text-align:left;padding:9px 12px;margin:4px 0;border:1px solid #e7e5e4;border-radius:8px;background:#fff;color:#1c1917;font-size:13px;cursor:pointer";
+      b.textContent = t[1] + "（" + t[0] + "）";
+      b.onclick = function () {
+        fetch("/api/kos/ownership/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brand: brand, author_id: authorId, ownership_class: t[0], confirmed_by: "zachary" })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          document.body.removeChild(mask);
+          if (d.ok) { alert("已确认：" + t[1] + "（VERIFIED）"); BrandHub.renderDashboard(); }
+          else { alert("确认失败：" + (d.error || "未知错误")); }
+        }).catch(function (e) { document.body.removeChild(mask); alert("请求失败：" + e); });
+      };
+      box.appendChild(b);
+    });
+    var cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "取消";
+    cancel.style.cssText = "margin-top:10px;padding:8px 0;width:100%;border:none;background:#f5f5f4;border-radius:8px;font-size:13px;color:#44403c;cursor:pointer";
+    cancel.onclick = function () { document.body.removeChild(mask); };
+    box.appendChild(cancel);
+    mask.appendChild(box);
+    document.body.appendChild(mask);
+  };
+
 
   // 初始化
   function init() {
