@@ -109,6 +109,14 @@ def _scene(brand, category, circle, product_point, scenes):
     return "%s（%s）· 融入%s" % (scene, product_point or brand, cs["symbols"][0])
 
 
+def _emotion_hook(brand, topic, circle, tonality):
+    """视频情感钩子：复用情感共鸣句库（韩剧×文学手法），一句话直击人心。"""
+    from scripts.idea_generator import emotion_hook
+    import random
+    return emotion_hook(brand, topic=topic or brand, circle=circle, tonality=tonality,
+                        rng=random.Random())
+
+
 def generate_video_script(brand, category="通用", circle="都市职场", tonality="premium",
                           video_type="tvc", product_point="", hotspot="", n_shots=None):
     """生成视频创意分析脚本。返回结构化脚本（可 JSON 输出）。"""
@@ -163,6 +171,7 @@ def generate_video_script(brand, category="通用", circle="都市职场", tonal
             "purpose": vtype["purpose"], "product_point": product_point, "hotspot_bind": hotspot_bind,
         },
         "big_idea": "%s：%s" % (brand, product_point or "品牌主张"),
+        "emotion_hook": _emotion_hook(brand, product_point, circle, tonality),
         "structure": struct,
         "title_candidates": title_candidates,
         "shots": shots,

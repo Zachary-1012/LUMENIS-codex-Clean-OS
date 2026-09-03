@@ -260,6 +260,41 @@ _HOOK_EMO = {
         "我们用{img}把{topic}变简单，却让{c0}的日子复杂了一点——{brand}，故意的",
         "越热闹的{topic}越像{img}，越安静的{brand}越值得——{c0}，慢慢品",
     ],
+    "emo_query": [  # 反问推理（莎士比亚 "What's in a name?"：把犹豫变成提问，答案自现）
+        "{topic}是什么？{brand}说，是{img}——{c0}心里，其实早有答案",
+        "谁规定{topic}必须是这样？——{brand}，{img}，不信这一套",
+        "如果没有{brand}，{c0}的{topic}会少点什么？——{img}，答案在来的路上",
+    ],
+    "emo_repeat": [  # 首语重复/无连词排比（anaphora/asyndeton：重复即强调，排比即气势）
+        "不赶路，不将就，不解释——{brand}的{topic}，{img}",
+        "今天不追{topic}，今天不敷衍，今天只做{img}——{brand}，{c0}都懂",
+        "好的{topic}，慢一点；好的{img}，等一会；好的{brand}，不急",
+    ],
+    "emo_mirror": [  # 交错配列（chiasmus："Fair is foul, and foul is fair" 两轴对仗，制造闭环）
+        "{topic}是{c0}的日常，{c0}的日常里有{img}——{brand}，把这两件事做成一件",
+        "你在找{topic}，{topic}也在找你——{brand}，{img}，双向奔赴",
+        "{c0}离不开{topic}，{topic}离不开{img}，{img}离不开{brand}——一圈，刚好",
+    ],
+    "emo_slant": [  # 留白/斜着说（俳句×狄金森：不点破，用画面+停顿，把余味留给读者）
+        "雨停的时候，{topic}刚好。{brand}，{img}——剩下的话，不说了",
+        "{topic}的事，说一半，留一半——{brand}的{img}，另一半你自己来",
+        "暮色四合，{topic}还没有走。{brand}的{img}，也在等——等一个不赶时间的人",
+    ],
+    "emo_season": [  # 季语/物候（俳句 kigo：季节意象触发集体记忆，一年一季的限定感）
+        "桂花开的月份，{topic}正好——{brand}的{img}，一年一季",
+        "第一场雨落下来的时候，{topic}就换了样子——{brand}，{img}，应季而至",
+        "这个季节的{topic}，是{brand}留给{c0}的{img}——过了，就要再等一年",
+    ],
+    "emo_surreal": [  # 魔幻现实（日常中的超现实：马尔克斯式，让平凡长出魔法）
+        "如果{topic}会说话，它会说：{img}——{brand}，{c0}的魔法日常",
+        "在{brand}，{topic}会迷路，会等一整个黄昏，然后把自己变成{img}——{c0}都见过",
+        "据说{topic}每年来{brand}一次，来时带着{img}——{c0}，别问真假，来了就知道",
+    ],
+    "emo_understate": [  # 轻描淡写（understatement：把大事说小，反衬更大张力）
+        "{topic}嘛，{brand}只是把它做得刚刚好——{img}，不值一提",
+        "没什么特别的，{brand}的{topic}就是{img}——{c0}都这么说",
+        "{topic}不难，{brand}只是替{c0}多走了几步——{img}，而已",
+    ],
 }
 
 # 高奢版情感共鸣：安静克制，不煽情
@@ -285,6 +320,41 @@ _HOOK_EMO_LUX = {
     "emo_paradox": [
         "我们少说一点{topic}，多留一点{img}——{brand}，与{c0}心照不宣",
     ],
+    "emo_query": [
+        "{topic}是什么，{brand}不急着回答——{img}，慢慢品，答案自会来",
+    ],
+    "emo_repeat": [
+        "不声张，不示弱，不追赶——{brand}的{topic}，{img}，自有章法",
+    ],
+    "emo_mirror": [
+        "你在找{topic}，{topic}也在等你——{brand}，{img}，隔着一整个城市的安静",
+    ],
+    "emo_slant": [
+        "灯亮起来的时候，{topic}刚好。{brand}，{img}——余下的，各自体会",
+    ],
+    "emo_season": [
+        "这个季节的{topic}，一年只有一次——{brand}，{img}，如约而至",
+    ],
+    "emo_surreal": [
+        "在{brand}，{topic}会放慢脚步，把自己藏进{img}——{c0}，心照不宣",
+    ],
+    "emo_understate": [
+        "{topic}，{brand}只是做得安静些——{img}，不必多言",
+    ],
+}
+
+# 语义角色 → 情感手法适配约束（手法×主题词适配）
+# 功能性/低语境主题词（如 停车/排队/投诉 → service）收敛到写实手法，避免"越界张力/魔幻现实"
+# 等需要浪漫语境的手法与之组合出戏；高语境角色放开手法面。
+_EMO_ROLE_COMPAT = {
+    "space":  ["emo_time", "emo_unspoken", "emo_omen", "emo_paradox", "emo_slant", "emo_surreal", "emo_season"],
+    "food":   ["emo_heart", "emo_truth", "emo_time", "emo_unspoken", "emo_season", "emo_slant", "emo_understate"],
+    "service":["emo_truth", "emo_heart", "emo_time", "emo_repeat", "emo_understate", "emo_season"],
+    "event":  ["emo_omen", "emo_heart", "emo_edge", "emo_unspoken", "emo_query", "emo_repeat", "emo_understate"],
+    "ip":     ["emo_edge", "emo_unspoken", "emo_omen", "emo_mirror", "emo_query", "emo_surreal", "emo_repeat"],
+    "aesthetic": ["emo_unspoken", "emo_paradox", "emo_omen", "emo_slant", "emo_season", "emo_surreal", "emo_mirror"],
+    "general": ["emo_truth", "emo_omen", "emo_paradox", "emo_query", "emo_repeat", "emo_heart",
+                "emo_time", "emo_slant", "emo_season", "emo_surreal", "emo_understate", "emo_mirror"],
 }
 
 # 机制 → 张力句式类型（可多选）
@@ -295,7 +365,9 @@ MECH_TO_HOOK = {
     "reverse": ["reversal", "assert"],
     "cocreate": ["cocreate", "imperative"],
     "culture": ["culture", "assert"],
-    "resonate": ["emo_heart", "emo_time", "emo_truth", "emo_edge", "emo_unspoken", "emo_omen", "emo_paradox"],
+    "resonate": ["emo_heart", "emo_time", "emo_truth", "emo_edge", "emo_unspoken", "emo_omen",
+                 "emo_paradox", "emo_query", "emo_repeat", "emo_mirror", "emo_slant",
+                 "emo_season", "emo_surreal", "emo_understate"],
 }
 
 # ---- 预算感知（同一创意不同预算的落地档位）----
@@ -376,8 +448,11 @@ def _render(tpl, brand, topic, c0, img, sym, hot):
     return _sub(tpl)
 
 
-def _pick_hook(lib, mech, tonality, rng, used_keys):
+def _pick_hook(lib, mech, tonality, rng, used_keys, role=None):
     """从机制可用句式中选一条未用过的张力句式；用完则重置（保证批次内不重复优先）。
+
+    role: 主题词语义角色（space/food/service/...）。resonate 时按 _EMO_ROLE_COMPAT 过滤
+    候选手法——功能性/低语境主题词（service）收敛到写实手法，避免高语境手法出戏。
 
     注意：必须对 list 副本 shuffle——若就地 shuffle 模块级共享 list（MECH_TO_HOOK/_HOOK），
     会跨调用残留顺序，破坏 seed 可复现性。
@@ -385,6 +460,13 @@ def _pick_hook(lib, mech, tonality, rng, used_keys):
     pool = (_HOOK_EMO_LUX if tonality == "luxury" else _HOOK_EMO) if mech == "resonate" \
         else (_HOOK_LUX if tonality == "luxury" else _HOOK)
     candidates = list(MECH_TO_HOOK.get(mech, ["assert"]))
+    # 手法×主题词适配：resonate 时按语义角色收敛可用手法（高语境手法不匹配功能性词）
+    if mech == "resonate" and role:
+        allowed = set(_EMO_ROLE_COMPAT.get(role, _EMO_ROLE_COMPAT["general"]))
+        if allowed:
+            candidates = [c for c in candidates if c in allowed]
+    if not candidates:
+        candidates = list(MECH_TO_HOOK.get(mech, ["assert"]))
     rng.shuffle(candidates)
     for hk in candidates:
         patterns = list(pool.get(hk) or pool.get("assert") or [])
@@ -452,13 +534,13 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
             img = img + "·" + sym
         topic_slots[slot_key] = True
 
-        tpl, hk, key = _pick_hook(_HOOK, m, tonality, rng, used_keys)
+        tpl, hk, key = _pick_hook(_HOOK, m, tonality, rng, used_keys, role)
         used_keys.add(key)
         slogan = _render(tpl, brand, topic, c0, img, sym, hotspot)
         # 兜底：若与本批次已出 slogan 重复，重取一条不同句式的
         guard = 0
         while slogan in used_slogans and guard < 6:
-            tpl, hk, key = _pick_hook(_HOOK, m, tonality, rng, used_keys)
+            tpl, hk, key = _pick_hook(_HOOK, m, tonality, rng, used_keys, role)
             used_keys.add(key)
             slogan = _render(tpl, brand, topic, c0, img, sym, hotspot)
             guard += 1
@@ -472,7 +554,10 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
                       "reversal": "反转式", "cocreate": "共创式", "culture": "暗语式",
                       "emo_heart": "以小写大", "emo_time": "时间具象", "emo_truth": "朴素真话",
                       "emo_edge": "越界张力", "emo_unspoken": "不说破的深情",
-                      "emo_omen": "条件预言", "emo_paradox": "悖论并置"}
+                      "emo_omen": "条件预言", "emo_paradox": "悖论并置",
+                      "emo_query": "反问推理", "emo_repeat": "首语重复", "emo_mirror": "交错配列",
+                      "emo_slant": "留白斜说", "emo_season": "季语物候", "emo_surreal": "魔幻现实",
+                      "emo_understate": "轻描淡写"}
         ideas.append({
             "big_idea": slogan,
             "mechanism": mech_name,
@@ -495,6 +580,24 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
                      "framework": "Seed-Sumeru×Taiji V2：芥子(真实信号)→须弥(机制×角度×句式)→Contract→再生产；"
                                   "形可变道不可移；反模板化=多维组合而非固定句式"},
             "ideas": ideas}
+
+
+def emotion_hook(brand, topic=None, circle="都市职场", tonality="premium", img=None, rng=None):
+    """渲染一条情感共鸣钩子（供视频脚本/社媒矩阵复用，跨产物统一表达力）。
+
+    情感手法句库随机取一条，槽位用品牌/主题/圈层/意象填充。rng 可传固定 seed 保证可复现。
+    """
+    r = rng or random.Random()
+    lib = _HOOK_EMO_LUX if tonality == "luxury" else _HOOK_EMO
+    groups = list(lib.values())
+    tpl = r.choice(r.choice(groups))
+    t = topic or brand or "日常"
+    role = _topic_role(t)
+    if img is None:
+        img = _TOPIC_ROLE_IMAGES[role][tonality]
+    c0 = circle.split("/")[0]
+    sym = r.choice(CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])["symbols"])
+    return _render(tpl, brand, t, c0, img, sym, "")
 
 
 def main():

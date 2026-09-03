@@ -163,7 +163,16 @@ def generate_social_ops(brand, platform, circle="都市职场", tonality="premiu
         "algo_meta": ALGO_META_2026,
         "tone_advice": {"mass": "玩梗破圈、参与机制、狂欢放大", "premium": "质感叙事、场景种草、圈层认同",
                         "luxury": "克制稀缺、工艺故事、私域仪式"}.get(tonality, ""),
+        "emotion_hook": _emotion_hook(brand, circle, tonality),
     }
+
+
+def _emotion_hook(brand, circle, tonality):
+    """平台情感钩子：复用情感共鸣句库，一句话直击人心（跨产物统一表达力）。"""
+    from scripts.idea_generator import emotion_hook
+    import random
+    return emotion_hook(brand, topic=None, circle=circle, tonality=tonality,
+                        rng=random.Random())
 
 
 def generate_social_matrix(brand, platforms=None, circle="都市职场", tonality="premium", hotspot=""):

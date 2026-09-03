@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """数据驱动原创创意生成器测试。"""
-from scripts.idea_generator import CIRCLE_SYMBOLS, EMOTION_STYLES, generate_ideas, signals_from_db
+from scripts.idea_generator import (CIRCLE_SYMBOLS, EMOTION_STYLES, _EMO_ROLE_COMPAT, _HOOK_EMO,
+                                    _HOOK_EMO_LUX, _topic_role, emotion_hook, generate_ideas,
+                                    signals_from_db)
 
 
 def test_generate_ideas_structure():
@@ -146,9 +148,55 @@ def test_resonate_appears_in_rotation():
     r = generate_ideas("广州太古汇", "商业地产", s, n=12, tonality="premium", budget="mid", seed=7)
     mechs = {i["mechanism"] for i in r["ideas"]}
     assert "情感共鸣" in mechs, "轮转 12 次未出现情感共鸣，实际机制=%s" % mechs
-    # 情感共鸣 slogan 应含情感句库手法特征（以小写大/时间具象/朴素真话等标签在 tension_type）
+    # 情感共鸣 slogan 应含情感句库手法特征（tension_type 为 14 种手法之一）
     emo = [i for i in r["ideas"] if i["mechanism"] == "情感共鸣"]
-    assert emo and all(i["tension_type"] in
-                       ("以小写大", "时间具象", "朴素真话", "越界张力", "不说破的深情",
-                        "条件预言", "悖论并置") for i in emo)
+    _ALL_TECH = {"以小写大", "时间具象", "朴素真话", "越界张力", "不说破的深情", "条件预言",
+                 "悖论并置", "反问推理", "首语重复", "交错配列", "留白斜说", "季语物候",
+                 "魔幻现实", "轻描淡写"}
+    assert emo and all(i["tension_type"] in _ALL_TECH for i in emo)
+
+
+def test_emotion_hook_function():
+    """emotion_hook 复用函数：跨产物情感钩子，可复现、无占位符、无品牌复读。"""
+    h1 = emotion_hook("广州太古汇", topic="方所", circle="都市高净值", tonality="premium",
+                      rng=__import__("random").Random(3))
+    h2 = emotion_hook("广州太古汇", topic="方所", circle="都市高净值", tonality="premium",
+                      rng=__import__("random").Random(3))
+    assert h1 == h2, "固定 rng 应可复现"
+    assert "{" not in h1 and "}" not in h1 and "#" not in h1
+    assert "广州太古汇的广州太古汇" not in h1
+    assert len(h1) > 8
+
+
+def test_emo_role_compat_filters_high_context():
+    """手法×主题词适配：功能性词(service)不得配高语境手法（越界张力/魔幻现实/交错配列）。"""
+    assert "service" in _EMO_ROLE_COMPAT
+    allowed = set(_EMO_ROLE_COMPAT["service"])
+    for high in ("emo_edge", "emo_surreal", "emo_mirror", "emo_query"):
+        assert high not in allowed, "%s 不应出现在 service 角色适配集" % high
+    # 写实手法必须在列（朴素真话/轻描淡写/时间具象）
+    for real in ("emo_truth", "emo_understate", "emo_time"):
+        assert real in allowed
+    # 高语境角色（ip/aesthetic）放开手法面
+    assert "emo_edge" in _EMO_ROLE_COMPAT["ip"]
+    assert "emo_surreal" in _EMO_ROLE_COMPAT["aesthetic"]
+
+
+def test_resonate_service_topic_uses_realistic():
+    """service 主题词（停车/投诉）产出情感共鸣时，tension_type 反查手法必须落在写实适配集内。"""
+    _HK_BY_NAME = {"以小写大": "emo_heart", "时间具象": "emo_time", "朴素真话": "emo_truth",
+                   "越界张力": "emo_edge", "不说破的深情": "emo_unspoken", "条件预言": "emo_omen",
+                   "悖论并置": "emo_paradox", "反问推理": "emo_query", "首语重复": "emo_repeat",
+                   "交错配列": "emo_mirror", "留白斜说": "emo_slant", "季语物候": "emo_season",
+                   "魔幻现实": "emo_surreal", "轻描淡写": "emo_understate"}
+    s = {"topics": ["停车", "投诉"], "sentiment": "neutral", "negative_rate": 0.2, "risk_events": 0,
+         "circle": "都市高净值", "hotspot": "", "volume_notes": 100}
+    r = generate_ideas("广州太古汇", "商业地产", s, n=16, tonality="premium", budget="mid", seed=5)
+    emo = [i for i in r["ideas"] if i["mechanism"] == "情感共鸣"]
+    allowed = set(_EMO_ROLE_COMPAT["service"])
+    for i in emo:
+        hk = _HK_BY_NAME.get(i["tension_type"])
+        assert hk, "未知手法: %s" % i["tension_type"]
+        assert hk in allowed, "service 主题词命中了高语境手法 %s" % i["tension_type"]
+
 
