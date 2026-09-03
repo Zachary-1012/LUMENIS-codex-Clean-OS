@@ -1,3 +1,23 @@
+## 2026-09-03｜双子库密码适配 + 登录弹窗闪烁根因修复 + GAP-10 生产上线
+> 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
+
+**A. 全仓库旧密码 ID082610 → Zachary01 适配（21 文件）**
+- 13 个 .py：v4_upgrade/auth/models.py（首次建号默认密码 2 处）+ tests/ 8 个 + 根目录运维脚本 4 个
+- 4 个 .md：V4升级模块旁路测试报告 / V4接入密钥登录清单 / SESSION-HANDOFF / v4_upgrade集成指南
+- 4 个 .bat/.ps1：start_v4 / 一键启动系统 / 系统守护闭环.ps1（真实 Basic 探测）/ 系统守护闭环_可靠版.bat
+- 验证：tracked 残留 ID082610 = 全清零；生产 8201 用新密码 200；test_security_scan 硬编码密码 NONE
+
+**B. 登录弹窗闪烁根因修复（RFC7617 静态资源认证）**
+- 根因：/static/* 静态资源全部 401（CSS/JS 并发触发浏览器原生 Basic 登录框反复弹）
+- 修复：_basic_auth 白名单加 /static/ 前缀放行；业务 API 仍严格 401
+- 验证（staging 8301 + 生产 8201）：静态 HTML/CSS/JS 200、真实 API 带凭证 200、无凭证 401
+
+**C. GAP-10 报告路由 Deprecation 头生产上线**
+- after_request 拦截器：8 个重复路由打 Deprecation+Sunset+Link 头
+- 验证：report/daily 有头、report-center/preview 与 reports 列表无误伤
+
+**Commit**：44caa8d → 65855dc → 3eb65ba（HEAD，已 push，本地=origin）
+
 # Z-Brand-Core 开发协作日志
 
 ## 2026-09-02｜Zachary-OS-AI 总工程执行师 T0 基线锚定（四层 E2E 实跑 · SEC HIGH 清零 · 启动收口 · Git Push 同步）
