@@ -685,6 +685,7 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
         })
     return {"meta": {"brand": brand, "category": category, "signals": signals,
                      "tonality": tone, "budget": budget,
+                     "bound_hotspot": hotspot if hotspot else "（未绑定节点）",
                      "framework": "Seed-Sumeru×Taiji V2：芥子(真实信号)→须弥(机制×角度×句式)→Contract→再生产；"
                                   "形可变道不可移；反模板化=多维组合而非固定句式"},
             "ideas": ideas}

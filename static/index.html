@@ -928,6 +928,11 @@
       <!-- 报告中心 -->
       <section class="page-view" id="page-reports">
         <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>报告中心</h2></div>
+        <article class="metric-card glass-card" style="margin-bottom:14px">
+          <div class="metric-icon amber">🎯</div>
+          <div class="metric-label">本月营销节点速览</div>
+          <div id="mkNodesBody" class="metric-sub" style="white-space:normal;line-height:1.7">加载中…</div>
+        </article>
         <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
           <article class="metric-card glass-card">
             <div class="metric-icon blue">📅</div>
@@ -1814,6 +1819,27 @@ document.addEventListener('DOMContentLoaded', function(){
     };
   }
 });
+</script>
+<script>
+/* 营销节点速览：报告体系消费营销节点（芥子→须弥前端闭环） */
+(function(){
+  function loadMk(){
+    var el=document.getElementById('mkNodesBody');
+    if(!el) return;
+    fetch('/api/v2/marketing/overview',{headers:{'Authorization':window.__Z_AUTH||''}})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(!j.ok){ el.textContent='加载失败：'+(j.error||'未知'); return; }
+        var s=[]; s.push('本月节点：'+(j.month_nodes||[]).map(function(n){return n.name+'·'+n.theme;}).join('、'));
+        if(j.hotspot && j.hotspot.nodes && j.hotspot.nodes.length){ s.push('当期绑定：'+j.hotspot.nodes.map(function(n){return n.name;}).join('、')+'｜建议调性：'+(j.hotspot.tonality_advice||'-')); }
+        if(j.cross){ s.push('行业交叉：「'+j.cross.industry+'」'+j.cross.advice.join('；')); }
+        el.textContent=s.join('\n');
+      })
+      .catch(function(e){ el.textContent='加载失败：'+e; });
+  }
+  if(document.readyState!=='loading'){ loadMk(); }
+  else{ document.addEventListener('DOMContentLoaded', loadMk); }
+})();
 </script>
 
 </body></html>

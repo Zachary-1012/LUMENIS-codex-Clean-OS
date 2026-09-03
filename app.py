@@ -632,6 +632,28 @@ def event_graph_rebuild_relations():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ===== v4 report_center 标准化报告：只读旁路预览（不改既有 daily/brand 报告路由、不抢 RPT Owner、不写库/不导出/不自动发送）=====
+@app.route('/api/v2/marketing/overview')
+def marketing_overview():
+    """营销节点速览：当月节气/节日 + 垂直行业交叉建议 + 创意引擎当前绑定节点。
+    报告体系消费营销节点（芥子→须弥）的前端闭环。"""
+    try:
+        from scripts.marketing_calendar import suggest_hotspot, nodes_for_month, cross_industry_season
+        import datetime as _dt
+        industry = (request.args.get('industry') or '').strip()
+        month = (request.args.get('month') or '').strip()
+        if len(month) != 2:
+            month = _dt.date.today().strftime("%m")
+        today = _dt.date.today().strftime("%Y-%m-%d")
+        mc = suggest_hotspot(today, "商业地产")
+        nodes = nodes_for_month(int(month))
+        cross = cross_industry_season(industry, month) if industry else None
+        return jsonify({'ok': True, 'month_nodes': nodes, 'hotspot': mc,
+                        'cross': cross,
+                        'advice': "本月先借节气/节日天然情绪，再叠加垂直行业节点做专属心智。"})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 @app.route('/api/v2/report-center/preview')
 def report_center_preview():
     import re as _re

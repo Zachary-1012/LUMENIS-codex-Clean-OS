@@ -244,6 +244,29 @@ _V_THEME_TONALITY = {
     "狂欢": "mass", "松弛感": "premium",
 }
 
+
+def cross_industry_season(industry, date_str=""):
+    """垂直行业 × 当月节气 交叉建议（触类旁通：行业节点与通用节点叠加）。
+    返回 {"industry", "industry_nodes":[...], "month":m, "season_nodes":[...], "advice":[...]}
+    """
+    import datetime as _dt
+    try:
+        if len(date_str) == 5:
+            m = int(date_str[:2])
+        else:
+            m = int((date_str or _dt.date.today().strftime("%Y-%m-%d"))[5:7])
+    except Exception:
+        m = _dt.date.today().month
+    inds = industry_nodes(industry, m) or industry_nodes(industry)
+    # 当月节气（通用节点中 kind==节气）
+    season = [n for n in nodes_for_month(m) if n["kind"] == K_SOLAR]
+    advice = []
+    for n in inds[:2]:
+        for s in season[:1]:
+            advice.append("%s遇%s：%s × %s" % (n["name"], s["name"], n["theme"], s["theme"]))
+    return {"industry": industry, "month": m, "industry_nodes": inds,
+            "season_nodes": season, "advice": advice}
+
 # 情感主题 → 调性偏好（须弥层：节点主题映射创意气质）
 _THEME_TO_TONALITY = {
     "狂欢": "mass", "实惠": "mass", "玩梗": "mass", "变装": "mass", "热闹": "mass",
@@ -320,7 +343,16 @@ def main():
     ap.add_argument("--category", default="", help="品类，如 商业地产/美妆/母婴")
     ap.add_argument("--month", type=int, default=0, help="只看某月节点")
     ap.add_argument("--industry", default="", help="垂直行业节点，如 母婴/美妆/酒饮/文旅/教育/宠物/咖啡茶饮")
+    ap.add_argument("--cross", default="", help="行业×节气交叉，如 --cross 母婴")
     a = ap.parse_args()
+    if a.cross:
+        c = cross_industry_season(a.cross, a.date or "")
+        print("[%s %d月] 行业节点: %s" % (c["industry"], c["month"],
+                                       "、".join(n["name"] for n in c["industry_nodes"])))
+        print("当月节气: %s" % "、".join(n["name"] for n in c["season_nodes"]))
+        for t in c["advice"]:
+            print("  交叉建议:", t)
+        return
     if a.industry:
         for n in industry_nodes(a.industry, a.month or None):
             print("[%s] %s（%s月）｜%s" % (n["industry"], n["name"], n.get("month", "全年"), n["theme"]))
