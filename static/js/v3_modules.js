@@ -335,7 +335,7 @@ const V3Modules = {
                 </div>
                 ${sectionsHtml}
                 <div class="br-report-footer">
-                    <p>📌 本报告由 Z-Brand Core V3.0 自动生成，数据来源于系统舆情监测库。部分维度数据待后续版本填充。</p>
+                    <p>📌 本报告由序境 自动生成，数据来源于系统舆情监测库。部分维度数据待后续版本填充。</p>
                 </div>`;
         },
 
