@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CTH-MON-001 | 关键词笔记采集(真人CDP) | CTH | Y | collector.py/xhs_cdp_collector | Y /api/collect* | notes,collection_logs | Y collect | 主链 | 脚(collect_state/collection_full/browser_e2e) | 缺(不能在CI打真实平台,需mock) | ACTIVE | 采集链无规范pytest；当前 BLOCKED 熔断 | 账号/IP 风控(非代码缺陷) |
 | CTH-MON-002 | 15周年专题监测 | CTH | Y | topic_campaign.py | Y | topic_campaign_notes(120) | Y 专题页 | 主链 | 脚(test_topic_port) | 缺 | ACTIVE | 缺规范用例 | 窗口至 10-07 |
-| CTH-MON-003 | 采集调度(固定→动态) | CTH | Y | platform_adapters/scheduling | 前缀*(实际 /api/collect/schedule-status) | schedule_decisions | Y console | 旁路(影子) | 脚(test_scheduling) | 影子日志 | ACTIVE(默认shadow) | **GAP-05 已落地(ea3143d)：scheduling/gate.py 三态 shadow/canary/enforce，默认 shadow 零行为变化、只收紧不放松、fail-open、env 回滚；6 测**；灰度时点为运维开关；GAP-14 | enforce 全量门控待逐步开 |
+| CTH-MON-003 | 采集调度(固定→动态) | CTH | Y | platform_adapters/scheduling | 前缀 /api/collect|/api/collect/status/<id>|/api/collect/tasks|/api/collector/browser/start|stop | schedule_decisions | Y console | 旁路(影子) | 脚(test_scheduling) | 影子日志 | ACTIVE(默认shadow) | **GAP-05 已落地(ea3143d)：scheduling/gate.py 三态 shadow/canary/enforce，默认 shadow 零行为变化、只收紧不放松、fail-open、env 回滚；6 测**；灰度时点为运维开关；GAP-14 | enforce 全量门控待逐步开 |
 | CTH-MON-004 | 采集健康/六态 | CTH | Y | health_center.py | Y /api/platform-health | collection_logs | Y 健康点 | 主链 | 脚(test_health_center) | 缺 | ACTIVE | 缺规范用例 | 低 |
 | CTH-MON-005 | 全网搜索采集 | CTH | Y | web_monitor/v4 adapters | Y /api/web-* | web_*(5表) | Y | 旁路 | 无 | 缺 | EXPERIMENTAL | 无测试 | 中转链稳定性 |
 | CTH-SUBJ-001 | 广州太古汇主体过滤🔴 | CTH | Y | subject_rules.py | 内部 | notes.subject_hit | Y | 主链 | **50✓** test_e2e::subject_filter + 脚 redline | **本轮 PASS** | ACTIVE | 可补函数级边界用例 | 红线，禁弱化 |
@@ -27,7 +27,7 @@
 | CTH-EVT-002 | 事件关系图谱 | CTH | Y | event_graph.py | Y /api/event-graph/* | event_graph_events(16)/relations(1) | Y | 主链 | 无 | 缺 | ACTIVE | **GAP-07 已补(f413548)：infer_and_link_relations 时间+标题双证据保守推断(无证据不连边、trigger 不自动造)+POST rebuild-relations；Staging 16 事件得 3 条有证据并行、117 对不连；5 测** | derive/follow 待真实跨天数据 |
 | CTH-EVT-003 | 负面确认/评审 | CTH | Y | events 评审流 | Y negative/event-review | note_review_history(8327) | Y | 主链 | 脚(negative_event_api) | 缺 | ACTIVE | GAP-09 两套并存 DUPLICATE_CANDIDATE | 双写状态不一致 |
 | CTH-RISK-001 | 风险判定/等级🔴 | CTH | Y | 根 risk_engine.py | Y /api/risk* | events | Y | 主链 | **50✓** test_e2e::risk_level | **本轮 PASS(集成级)** | ACTIVE | GAP-02 test_risk_engine 实参测 collector_guard，根 risk_engine 无直接单测 | 红线 |
-| CTH-RISK-002 | 熔断/冷却/300012 | CTH | Y | collector_guard/xhs_cookie_bridge | 前缀*(无独立 /api/circuit*) | xhs_circuit(json) | Y | 主链 | 脚(guard_wiring/risk_engine) | 缺 | ACTIVE | GAP-14 登记口径；只识别不破解 | 合规红线 |
+| CTH-RISK-002 | 熔断/冷却/300012 | CTH | Y | collector_guard/xhs_cookie_bridge | 前缀 无独立API(熔断在collector_guard内部, 状态文件xhs_circuit.json) | xhs_circuit(json) | Y | 主链 | 脚(guard_wiring/risk_engine) | 缺 | ACTIVE | GAP-14 登记口径；只识别不破解 | 合规红线 |
 | CTH-NOTE-001 | 笔记库/详情/评论/去重 | CTH | Y | database.py+collector | Y notes*/comments* | notes(957) | Y | 主链 | **50✓** test_database 6 用例 | **本轮 PASS** | ACTIVE | — | 低 |
 | CTH-NOTE-002 | 空正文 CDP 回填 | CTH | Y | backfill_detail_cdp | - | notes | 预留 | 旁路 | 脚(title_fallback) | 缺 | PLANNED | 253 条待稳定网络 | PLANNED 正确 |
 | CTH-RPT-001 | 日/周/月/专题报告🔴 | CTH | Y | daily_report.build_daily_report | Y /api/report* | events,notes | Y | 主链 | **50✓** test_e2e::daily_reports | **本轮 PASS(集成级)** | ACTIVE | GAP-02 build_daily_report 无直接单测(test_report_periods 测 export) | 红线/publish 时间口径 |
@@ -35,7 +35,7 @@
 | CTH-AUTH-001 | 统一 Auth 恢复弹窗 | CTH | Y | auth_recovery_center+auth_global.js | Y /api/auth-recovery/*(蓝图) | auth_recovery_tasks | **Y(Step1 已挂主 SPA 并合 main,8301 实测)** | 主链(后端+主SPA) | 脚(auth_api) | 8301 实测弹窗 | DEVELOPING | **GAP-03 主 SPA 挂载已解(随 580c2cf 合 main)**；仍欠 A/B/C 场景 E2E 与规范 pytest | 不跳页红线 |
 | CTH-AUTH-002 | 登录/权限/安全问答 | CTH | Y | v4 auth + Basic | Y /v4/auth/* | v4_users/sessions/security_questions | Y | 主链 | **50✓** test_api::TestAuthAPI×2 | **本轮 PASS** | ACTIVE | 三级权限仅 1 owner | 安全 |
 | CTH-SYS-001 | 系统健康/看门狗/自愈 | CTH | Y | system_health_api/guardian | Y /healthz,/api/system/health | - | Y | 主链 | **50✓** test_api::System×2 +脚 auto_recovery | **本轮 PASS** | ACTIVE | — | 低 |
-| CTH-SYS-002 | 版本中心/Git 自动同步 | CTH | Y | version_center/git_manager | 前缀*(页面在,API 口径) | - | Y | 主链 | 脚(version_api) | 缺 | ACTIVE | GAP-15 标题括号 bug | 低(不影响运行) |
+| CTH-SYS-002 | 版本中心/Git 自动同步 | CTH | Y | version_center/git_manager | 前缀 /v4/api/status|/v4/api/history|/v4/api/save|/v4/api/push|/v4/api/check|/v4/api/pull|/v4/api/rollback | - | Y | 主链 | 脚(version_api) | 缺 | ACTIVE | GAP-15 标题括号 bug | 低(不影响运行) |
 | CTH-SYS-003 | 临时公网隧道 | CTH | Y | tunnel_guardian(cloudflared) | - | - | 无 | 进程 | 无 | 缺 | ACTIVE | GAP-16 域名未固化/无测试 | 公网暴露面 |
 | ZBMP-BRAND-001 | 品牌增删/管理 | ZBMP | Y | brand_knowledge_base | Y /api/brand* | brand_knowledge | Y | 主链 | 脚(brand_library,偏 swire) | 缺 | ACTIVE | 缺直接用例 | 低 |
 | ZBMP-BRAND-002 | 品牌营销案例库 | ZBMP | Y | case_deep_analysis | Y /api/cases* | case_deep_analysis | Y | 主链 | 脚(brand_library) | 缺 | ACTIVE | 更新/下钻待完善 | 低 |
@@ -47,7 +47,7 @@
 | ZBMP-AI-001 | Zachary 机器人/AI 抽屉 | ZBMP | Y | intelligence+ai_analyzer | Y /api/ai* | ai_*/v4_ai_shadow | Y | 主链 | **50✓** test_ai+llm_gateway(兜底/安全/优先级) | **本轮 PASS** | ACTIVE | Ollama-only,规则兜底✓ | AI 仅增强 |
 | ZBMP-AI-002 | AI Web Worker | ZBMP | 研究稿 | 研究稿 | - | - | 预留 | 无 | 无 | 无 | PLANNED | 仅架构 Cookie≠API | PLANNED 正确 |
 | ZBMP-IMP-001 | 外部数据导入 | ZBMP | 部分(3py) | v4_upgrade/importer | - | 无专表 | 无 | 旁路 | 无 | 缺 | PLANNED | GAP-21 无前端/API/专表 | 已有部分代码,勿误判完成 |
-| ZBMP-SETT-001 | 苹果风设置/密钥解锁 | ZBMP | Y | settings_module | 前缀*(/api/settings/*+v4页面) | system_config | Y | 主链 | 脚/smoke | 缺 | ACTIVE | GAP-04 高危 run-code 在本域；GAP-14 | **安全 P1** |
+| ZBMP-SETT-001 | 苹果风设置/密钥解锁 | ZBMP | Y | settings_module | 前缀 /api/settings/*|/v4/* | system_config | Y | 主链 | 脚/smoke | 缺 | ACTIVE | GAP-04 高危 run-code 在本域；GAP-14 | **安全 P1** |
 | ZBMP-WS-001 | 工作区/项目/活动层级 | ZBMP | Y(外壳) | zbip-shell.js/zbmp-workbench.js | 内部切换 | - | Y CTH/ZBMP 切换器 | 主链(外壳) | 8301 实测 | 8301 实测 | DEVELOPING | Step4/5 已建工作台外壳+CTH/ZBMP 切换+Home；项目/活动完整层级未建 | IA 演进中 |
 | ZBMP-FUT-001 | 微博/B站/快手/贴吧/知乎 | ZBMP | 占位 | platform_adapters(enabled=false) | registry | - | 预留 | 不运行 | 脚(bilibili_login) | 缺 | RESERVED | RESERVED 正确 | 不启用 |
 | ZBMP-AUTH-002 | ZBMP 正式 API Key+用户体系(方案②) | ZBMP | Y | v4_upgrade/auth/workspace.py+blueprint | Y /v4/auth/workspace/{status,unlock,keys,revoke} | workspace_keys/grants(2幂等表) | Y 密钥门弹窗 | 主链 | **6✓** test_workspace_keys | **80 用例 PASS+8301 解锁实测** | ACTIVE | 12h grant；三级权限仍仅 1 owner | 凭证安全/合 main |
