@@ -267,9 +267,10 @@
       ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } });
       home.addEventListener('click', function (e) {
         var c = e.target.closest('.zb-chip'); if (!c) return;
-        var q = c.getAttribute('data-q'); userNavigated = true; hideHome();
-        if (q === 'cockpit') gotoPage('overview');
-        else if (q === 'risk') gotoPage('alerts');
+        var q = c.getAttribute('data-q'); userNavigated = true;
+        if (q === 'cockpit') { showHome(); return; }
+        hideHome();
+        if (q === 'risk') gotoPage('alerts');
         else if (q === 'event') gotoPage('events');
         else if (q === 'report') gotoPage('reports');
       });
@@ -283,7 +284,10 @@
       if (!e.isTrusted) return;
       // 捕获阶段：旧 side-item onclick stopPropagation 截断冒泡导致 Home 不收起，改 capture 先于其执行
       if (it.getAttribute('data-page')) {
-        userNavigated = true; hideHome();
+        userNavigated = true;
+        // 智能问答(overview) → 显示Home层；其他页面 → 收起Home
+        if (it.getAttribute('data-page') === 'overview') { showHome(); }
+        else { hideHome(); }
         // 移动端抽屉：选中后自动收起，露出目标页
         document.body.classList.remove('zb-nav-open');
       }
