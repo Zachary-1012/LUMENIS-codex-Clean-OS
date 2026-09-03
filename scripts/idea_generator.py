@@ -72,6 +72,7 @@ MECHANISMS = {
     "reverse": {"name": "反差", "desc": "反常识断言制造话题"},
     "cocreate": {"name": "共创式", "desc": "把用户自发行为变成产品/内容飞轮"},
     "culture": {"name": "文化共识", "desc": "借势已有文化共识/圈层暗语自然绑定"},
+    "resonate": {"name": "情感共鸣", "desc": "韩剧×文学式表达：以小写大/时间具象/朴素真话/边界/悖论，直击人心非信息传递"},
 }
 
 MECH_TO_L1 = {
@@ -81,6 +82,7 @@ MECH_TO_L1 = {
     "reverse": "反差断言公式（反常识破圈）",
     "cocreate": "UGC 共创飞轮公式",
     "culture": "文化共识借势公式",
+    "resonate": "情感共鸣公式（以小写大·具象抒情·悖论并置）",
 }
 
 # ---- 角度：同一主题的不同切入人设（防止"主题换了，创意没换"）----
@@ -212,6 +214,79 @@ _HOOK_LUX = {
     ],
 }
 
+# ---- 情感共鸣句库（韩剧×全球文学表达手法：直击人心，非信息传递）----
+# 手法来源（研究沉淀）：
+#   ① 以小写大：日常细节承载大情感（如「因为你是我妈妈，所以我喜欢你，这不是应该的吗」）
+#   ② 时间/天气具象化：用天气季节写抽象感受（如《鬼怪》「无论天气好/坏/适宜，每一天都很美好」）
+#   ③ 朴素真话：平民视角戳破伪装的反常识真话（如《我的出走日记》）
+#   ④ 越界即张力：边界与危险感制造情感张力（如《爱的迫降》「越过这条线，你真的会变得危险」）
+#   ⑤ 不说破的深情：用行为/限定词替代直白告白（Tatler: lines that sound better than 'I love you'）
+#   ⑥ 条件句预言/希望：自然意象+条件句（如雪莱「如果冬天来了，春天还会远吗」）
+#   ⑦ 悖论并置：让相反真理共存（如托尔斯泰「幸福的家庭都是相似的，不幸的各有各的不幸」）
+#   ⑧ 刺破本质的陈述：表面共识、实则反讽（如《傲慢与偏见》开篇）
+_HOOK_EMO = {
+    "emo_heart": [  # 以小写大
+        "{c0}说「不就是{topic}吗」——{brand}说，正因为是{topic}，才值得{img}",
+        "因为{topic}是日常，所以{brand}值得，这不是应该的吗——{c0}，都懂",
+        "「把{topic}过好，是{c0}给自己的生活交代」——{brand}，只做{img}这一件小事",
+    ],
+    "emo_time": [  # 时间/天气具象化
+        "天气好的日子、天气坏的日子、天气刚刚好的日子——与{topic}有关的每一天，{brand}都在，{img}",
+        "{topic}的日子有晴天也有雨天，但来{brand}的这一天，都值得好好过——{c0}，{img}",
+        "四季会换，{topic}会变——{brand}的{img}，一年只等一次",
+    ],
+    "emo_truth": [  # 朴素真话 / 戳破伪装
+        "{c0}不说的实话：{topic}，其实是你给自己的交代——{brand}，替你把{img}准备好",
+        "别再假装不需要{topic}了——{c0}都会在某个瞬间，想被{brand}的{img}接住",
+        "生活已经够忙了，{topic}就该简单点——{brand}，把{img}留给你",
+    ],
+    "emo_edge": [  # 越界即张力
+        "跨过这条线，你就真的离{topic}近了——{brand}的{img}，在等你",
+        "别靠{topic}太近——{brand}的{img}，会上瘾",
+        "「就试这一次」——{c0}每次这么想，都走不出{brand}的{topic}",
+    ],
+    "emo_unspoken": [  # 不说破的深情
+        "不必说{topic}有多好——{brand}替你记住值得来的那天，{img}",
+        "我们不谈{topic}，只把{img}准备好，等你来{brand}",
+        "{c0}最懂：有些{topic}，不用说出口，{brand}已经做了",
+    ],
+    "emo_omen": [  # 条件句预言 / 希望
+        "如果今天不够好，就来{brand}——{topic}之后，总有{img}",
+        "等{topic}的那天，{brand}把{img}也一起等来了——{c0}，别错过",
+        "只要你还愿意来，{brand}的{topic}就永远是{img}——风雨无阻",
+    ],
+    "emo_paradox": [  # 悖论并置
+        "好的{topic}都是相似的，值得专程的{img}却各有各的不同——{brand}，{c0}都懂",
+        "我们用{img}把{topic}变简单，却让{c0}的日子复杂了一点——{brand}，故意的",
+        "越热闹的{topic}越像{img}，越安静的{brand}越值得——{c0}，慢慢品",
+    ],
+}
+
+# 高奢版情感共鸣：安静克制，不煽情
+_HOOK_EMO_LUX = {
+    "emo_heart": [
+        "「{topic}最好的样子，是留给愿意慢下来的人」——{brand}，{img}不催",
+    ],
+    "emo_time": [
+        "一年里总有几天，值得为{topic}专程——{brand}，{img}只在对的时刻",
+    ],
+    "emo_truth": [
+        "{c0}都明白：真正的{topic}，不必说给所有人听——{brand}，{img}自有分量",
+    ],
+    "emo_edge": [
+        "「别惊动它」——{brand}的{topic}，{img}，只可静观",
+    ],
+    "emo_unspoken": [
+        "不必开口，{brand}的{topic}自会说话——{img}，安静自有分量",
+    ],
+    "emo_omen": [
+        "若你愿意等，{brand}的{topic}会以{img}的方式到来——{c0}，不失约",
+    ],
+    "emo_paradox": [
+        "我们少说一点{topic}，多留一点{img}——{brand}，与{c0}心照不宣",
+    ],
+}
+
 # 机制 → 张力句式类型（可多选）
 MECH_TO_HOOK = {
     "eventify": ["story", "imperative", "assert"],
@@ -220,6 +295,7 @@ MECH_TO_HOOK = {
     "reverse": ["reversal", "assert"],
     "cocreate": ["cocreate", "imperative"],
     "culture": ["culture", "assert"],
+    "resonate": ["emo_heart", "emo_time", "emo_truth", "emo_edge", "emo_unspoken", "emo_omen", "emo_paradox"],
 }
 
 # ---- 预算感知（同一创意不同预算的落地档位）----
@@ -306,11 +382,15 @@ def _pick_hook(lib, mech, tonality, rng, used_keys):
     注意：必须对 list 副本 shuffle——若就地 shuffle 模块级共享 list（MECH_TO_HOOK/_HOOK），
     会跨调用残留顺序，破坏 seed 可复现性。
     """
-    pool = _HOOK_LUX if tonality == "luxury" else _HOOK
+    pool = (_HOOK_EMO_LUX if tonality == "luxury" else _HOOK_EMO) if mech == "resonate" \
+        else (_HOOK_LUX if tonality == "luxury" else _HOOK)
     candidates = list(MECH_TO_HOOK.get(mech, ["assert"]))
     rng.shuffle(candidates)
     for hk in candidates:
-        patterns = list(pool.get(hk, pool["assert"]))
+        patterns = list(pool.get(hk) or pool.get("assert") or [])
+        if not patterns:
+            # 兜底：任取第一组模板，保证永远有输出（不依赖 assert 键存在）
+            patterns = list(next(iter(pool.values())))
         rng.shuffle(patterns)
         for tpl in patterns:
             key = hk + "|" + tpl
@@ -318,7 +398,8 @@ def _pick_hook(lib, mech, tonality, rng, used_keys):
                 return tpl, hk, key
     # 全部用过：重置该机制桶，随机再取（保证永远有输出，不重复优先已满足）
     hk = candidates[0]
-    tpl = rng.choice(list(pool.get(hk, pool["assert"])))
+    pool_clean = list(pool.get(hk) or pool.get("assert") or list(next(iter(pool.values()))))
+    tpl = rng.choice(pool_clean)
     return tpl, hk, hk + "|" + tpl
 
 
@@ -329,7 +410,9 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
     seed: 可复现性；不传则每次随机（保证"新 idea"）。
     """
     rng = random.Random(seed)
-    topics = [t for t in (signals.get("topics", []) or []) if t] or ["#趋势词#"]
+    # 无主题词时不得输出占位符（#趋势词# 属模板残留）；以「日常」为兜底主题——
+    # 真实中文词、全品类语义成立（商场=日常逛、餐饮=一日三餐），并与 general 意象「质感新体验」契合
+    topics = [t for t in (signals.get("topics", []) or []) if t] or ["日常"]
     sentiment = signals.get("sentiment", "neutral")
     circle = signals.get("circle", "都市职场")
     hotspot = signals.get("hotspot", "")
@@ -341,13 +424,13 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
     bd = BUDGETS.get(budget, BUDGETS["mid"])
 
     if tonality == "luxury":
-        mech_order = ["symbolize", "reverse", "culture", "eventify"]
+        mech_order = ["symbolize", "reverse", "culture", "eventify", "resonate"]
     elif sentiment == "negative":
-        mech_order = ["reverse", "cocreate", "eventify"]
+        mech_order = ["reverse", "cocreate", "eventify", "resonate"]
     elif sentiment == "positive":
-        mech_order = ["eventify", "participate", "cocreate"]
+        mech_order = ["eventify", "participate", "cocreate", "resonate"]
     else:
-        mech_order = ["symbolize", "participate", "eventify"]
+        mech_order = ["symbolize", "participate", "eventify", "resonate"]
 
     angles_order = ["consumer", "introspect", "coded", "scene", "rebel", "cocreate"]
     rng.shuffle(angles_order)
@@ -386,7 +469,10 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
              else "择机踩文化时机（趋势/节日/赛事），时效是传播第一变量")
         mech_name = MECHANISMS[m]["name"]
         hook_names = {"assert": "主张式", "imperative": "行动式", "story": "故事式",
-                      "reversal": "反转式", "cocreate": "共创式", "culture": "暗语式"}
+                      "reversal": "反转式", "cocreate": "共创式", "culture": "暗语式",
+                      "emo_heart": "以小写大", "emo_time": "时间具象", "emo_truth": "朴素真话",
+                      "emo_edge": "越界张力", "emo_unspoken": "不说破的深情",
+                      "emo_omen": "条件预言", "emo_paradox": "悖论并置"}
         ideas.append({
             "big_idea": slogan,
             "mechanism": mech_name,

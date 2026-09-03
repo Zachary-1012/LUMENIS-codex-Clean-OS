@@ -9,6 +9,7 @@
 """
 import argparse
 import json
+import re
 import sqlite3
 import sys
 from collections import Counter
@@ -90,7 +91,17 @@ def diagnose(db_path, keyword, top_k=6):
             # 剔除查询主体词本身（品牌专名 2-gram），避免主体词高频污染主题：
             # 主题应是"关于主体的什么事"，而非主体名。
             from scripts.topic_words import ngrams_of
-            stop_terms = ngrams_of(keyword)
+            # 自动扩展：找出 docs 中包含 keyword 的最高频完整品牌名（如 keyword=太古汇 → "广州太古汇"），
+            # 对其全名 ngram 剔除，避免"广州/州太"等残片漏网成为主题。
+            brand_full = keyword
+            cnt = Counter()
+            for d in docs:
+                for seg in re.findall(r"[\u4e00-\u9fa5]{2,12}", d):
+                    if keyword in seg:
+                        cnt[seg] += 1
+            if cnt:
+                brand_full = max(cnt, key=lambda k: (len(k), cnt[k]))
+            stop_terms = ngrams_of(brand_full)
             topics = extract_topic_words(docs, top_k=top_k, stop_terms=stop_terms)
             # 系统分析/平台度量类词，不是用户主题
             _noise = {"数据", "风险", "标题", "内容", "相关", "进行", "以及", "通过",
