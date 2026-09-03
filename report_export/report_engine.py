@@ -90,9 +90,15 @@ def payload(kind="daily",start=None,end=None):
     n=_notes(start,end,kind,only_confirmed_negative=only_confirmed)
     e=_events(start,end)
     def cnt(k,v):return sum(str(x.get(k,"")).lower()==v for x in n)
-    # 事件分析
+    # 事件分析（Topic 聚类主题词增强：c-TF-IDF 只读内存，不改 DB）
     event_analysis = []
-    for ev in e[:5]:  # 最多分析5个事件
+    evs = e[:5]
+    try:
+        from scripts.topic_cluster import enrich_events_with_labels
+        evs = enrich_events_with_labels(evs, top_k=4)
+    except Exception:
+        pass
+    for ev in evs:  # 最多分析5个事件
         event_analysis.append({
             "title": ev.get("title","未知事件"),
             "type": ev.get("event_type","-"),
@@ -101,6 +107,7 @@ def payload(kind="daily",start=None,end=None):
             "summary": ev.get("summary","-"),
             "first_seen": ev.get("first_seen","-"),
             "last_seen": ev.get("last_seen","-"),
+            "topic": ev.get("topic_label",""),
         })
     # 高风险笔记
     high_risk_notes = [x for x in n if str(x.get("risk_level","")).lower()=="high"]
