@@ -4,6 +4,7 @@
 统一闭环：受控状态判断 -> 动态限速等待 -> 调用原采集 -> 响应分类 -> 更新限速/指标/断点 -> 返回 GuardResult。
 任何内部异常都被捕获并降级为 NETWORK_ERROR，绝不向上拖垮 Flask 主系统。
 """
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
@@ -51,7 +52,9 @@ class CollectorGuard:
         self.enabled = enabled
         self.analyzer = ResponseAnalyzer()
         self.limiter = AdaptiveRateLimiter(base_interval=base_interval, enabled=enabled)
-        self.metrics = GuardMetrics()
+        _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.metrics = GuardMetrics(
+            persist_path=os.path.join(_base, 'data', 'metrics', 'collector-metrics.jsonl'))
         self.checkpoint = Checkpoint(platform, checkpoint_dir)
 
     def run(self, collect_fn, keyword, **kwargs):
@@ -130,5 +133,6 @@ class CollectorGuard:
         return []
 
     def status(self):
+        self.metrics.persist()  # 非热路径：限频落盘采集性能快照（P0-E）
         return {'platform': self.platform, 'enabled': self.enabled,
                 'limiter': self.limiter.snapshot(), 'metrics': self.metrics.snapshot()}

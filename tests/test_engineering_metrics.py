@@ -71,8 +71,29 @@ class FullSnapshotTest(unittest.TestCase):
         self.assertIn("engineered_metrics_version", s)
         self.assertIn("generated_ts", s)
         self.assertIn("task_closed_loop", s)
+        self.assertIn("collector_performance", s)
         self.assertIn("system_health", s)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CollectorPerformanceTest(unittest.TestCase):
+    def test_empty_file(self):
+        m = em.collector_performance_metrics(r"Z:\\no\\such\\metrics.jsonl")
+        self.assertEqual(m["samples"], 0)
+        self.assertIsNone(m["latest"])
+
+    def test_aggregation(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "cm.jsonl")
+            with open(p, "w", encoding="utf-8") as f:
+                for r in ({"ts":"2026-09-04T00:00:01","success_rate":1.0,"avg_latency":0.5,"total":1},
+                          {"ts":"2026-09-04T00:00:02","success_rate":0.5,"avg_latency":1.5,"total":2}):
+                    f.write(json.dumps(r) + "\n")
+            m = em.collector_performance_metrics(p, window=10)
+            self.assertEqual(m["samples"], 2)
+            self.assertAlmostEqual(m["window_success_rate"], 0.75)
+            self.assertAlmostEqual(m["window_avg_latency"], 1.0)

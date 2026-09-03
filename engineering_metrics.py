@@ -30,12 +30,12 @@ engineering_metrics.py — 序境工程度量能力（P0-E，可观测性标准 
 
 from __future__ import annotations
 
-# ---- API 契约（schema v1，Web/App/Mini 通用）----
+# ---- API 契约（schema v2，Web/App/Mini 通用）----
 # GET /api/engineering-metrics
 # {
 #   "ok": true,
 #   "data": {
-#     "engineered_metrics_version": 1,
+#     "engineered_metrics_version": 2,   # v2 新增 collector_performance
 #     "generated_ts": "<ISO8601>",
 #     "task_closed_loop": {
 #       "total_tasks": int,            # 已 begin 的唯一任务数
@@ -49,6 +49,13 @@ from __future__ import annotations
 #       "avg_duration_min": float|null,               # 已闭合平均耗时
 #       "source": str                 # 证据源：staging/zell-trace.jsonl
 #     },
+#     "collector_performance": {       # v2 新增：采集性能趋势（GuardMetrics 落盘）
+#       "samples": int,                # 已落盘快照数
+#       "latest": {total/success/failure/success_rate/avg_latency/p95/last_error/ts},
+#       "window_success_rate": float,  # 近 N 条快照成功率均值（默认 20）
+#       "window_avg_latency": float,   # 近 N 条快照平均延迟均值
+#       "source": str                  # data/metrics/collector-metrics.jsonl
+#     },
 #     "system_health": {
 #       "engineered": "system_health",
 #       "health": { status/子灯... },  # 复用 system_health_summary
@@ -56,9 +63,9 @@ from __future__ import annotations
 #     }
 #   }
 # }
-# 契约版本：version 1（2026-09-04）。任何口径变更须 bump engineered_metrics_version
+# 契约版本：v1（2026-09-04）→ v2（+collector_performance）。任何口径变更须 bump engineered_metrics_version
 # 并同步 OSAI 契约文档，禁止静默改字段。
-API_CONTRACT_VERSION = 1
+API_CONTRACT_VERSION = 2
 
 import io
 import json
@@ -181,6 +188,48 @@ def task_closed_loop_metrics(trace_path: Optional[str] = None) -> Dict[str, Any]
     }
 
 
+DEFAULT_COLLECTOR_METRICS_PATH = os.path.join(_REPO_ROOT, "data", "metrics", "collector-metrics.jsonl")
+
+
+def collector_performance_metrics(metrics_path: Optional[str] = None, window: int = 20) -> Dict[str, Any]:
+    """采集性能趋势（v2 新增）：读 GuardMetrics 落盘 jsonl 聚合。
+
+    - latest：最近一次快照（total/success/failure/success_rate/avg_latency/p95/last_error/ts）
+    - window_success_rate / window_avg_latency：近 N 条快照均值（默认 20）
+    - 证据下钻：每条快照带 ts，可回查原始 jsonl 行
+    """
+    p = metrics_path or DEFAULT_COLLECTOR_METRICS_PATH
+    rows: List[Dict[str, Any]] = []
+    if os.path.exists(p):
+        try:
+            with open(p, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rows.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        except OSError:
+            pass
+    if not rows:
+        return {"engineered": "collector_performance", "samples": 0, "latest": None,
+                "window_success_rate": None, "window_avg_latency": None,
+                "source": "data/metrics/collector-metrics.jsonl"}
+    recent = rows[-window:]
+    rates = [r["success_rate"] for r in recent if isinstance(r.get("success_rate"), (int, float))]
+    lats = [r["avg_latency"] for r in recent if isinstance(r.get("avg_latency"), (int, float))]
+    return {
+        "engineered": "collector_performance",
+        "samples": len(rows),
+        "latest": rows[-1],
+        "window_success_rate": round(sum(rates) / len(rates), 4) if rates else None,
+        "window_avg_latency": round(sum(lats) / len(lats), 3) if lats else None,
+        "source": "data/metrics/collector-metrics.jsonl",
+    }
+
+
 def system_health_metrics() -> Dict[str, Any]:
     """复用 system_health_api 红绿灯摘要（不重写）；失败时给 degraded 占位而非抛异常。"""
     try:
@@ -201,11 +250,12 @@ def system_health_metrics() -> Dict[str, Any]:
 
 
 def full_snapshot(trace_path: Optional[str] = None) -> Dict[str, Any]:
-    """统一工程度量快照：任务闭环 + 系统健康 + 元信息（API 契约 schema v1）。"""
+    """统一工程度量快照：任务闭环 + 采集性能 + 系统健康 + 元信息（API 契约 schema v2）。"""
     return {
         "engineered_metrics_version": API_CONTRACT_VERSION,
         "generated_ts": datetime.now().isoformat(timespec="seconds"),
         "task_closed_loop": task_closed_loop_metrics(trace_path),
+        "collector_performance": collector_performance_metrics(),
         "system_health": system_health_metrics(),
     }
 
