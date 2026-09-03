@@ -1596,7 +1596,7 @@ function closeXhsLogin(){
 async function startXhsLogin(){
   const auth='Basic '+btoa('Zachary:Zachary01');
   try{
-    const r=await fetch('/api/xhs/login/start',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth}});
+    const r=await fetch('/api/xhs/login/start',{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({platform:'rednote'})});
     const d=await r.json();
     if(!d.ok) throw new Error(d.error);
     _xhsLoginSessionId=d.session_id;

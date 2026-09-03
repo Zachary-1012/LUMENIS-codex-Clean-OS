@@ -91,3 +91,9 @@
 | LR-20260903-007 | AI 路由 | vLLM Semantic Router | vllm-project/semantic-router | Apache-2.0 | CANDIDATE（Signal/Decision 分离设计值得借鉴；任务量足够前不引入 embedding 分类器；登记 BACKLOG T-P1G-01） | AI Task Router |
 | LR-20260903-008 | 观测/自愈 | TraceRoot | traceroot-ai/traceroot | 开源 | REFERENCE-ONLY（生产发现→golden dataset→离线 eval 循环 = Observatory+ZELL 成熟对标；登记 BACKLOG T-P0D-03） | zell_trace / observatory_feed |
 | LR-20260903-009 | 观测/采样 | Tail-based Sampling | AgentOps/OTel | 文 | ADOPT-思想（指标全保/审计结构保/内容抽样保；ai_budget 记账分层） | ai_budget.py |
+
+## LR-20260903-005 UI按钮层级+状态点+会话保活
+- 来源: GitHub (Oxi/fission/ByteCap/x-session-keeper/sessionkeeper/agent-browser/claude-browser-crawl-cdp)
+- 结论: Primary单CTA深色按钮 + 六语义状态点 + 保活"只读检查+登出通知"
+- 落地: zbip-shell.css (chip primary + .zb-dot 体系)
+- 日期: 2026-09-03

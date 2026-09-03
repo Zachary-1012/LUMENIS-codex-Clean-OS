@@ -204,6 +204,17 @@ body.zb-shell-on #zbHome.show { display: flex; }
   transition: background .14s, border-color .14s;
 }
 .zb-chip:hover { background: var(--zb-stone-100,#F5F5F4); border-color: var(--zb-stone-300,#D6D3D1); }
+/* 核心 CTA：进入智能问答 → Primary 深色（Oxi Design System "Single CTA per screen" 原则） */
+.zb-chip[data-q="cockpit"] {
+  background: var(--zb-stone-900,#1C1917); border-color: var(--zb-stone-900,#1C1917); color: #fff;
+  box-shadow: 0 1px 2px rgba(28,25,23,.18);
+}
+.zb-chip[data-q="cockpit"] svg { color: #fff; }
+.zb-chip[data-q="cockpit"]:hover {
+  background: var(--zb-stone-800,#292524); border-color: var(--zb-stone-800,#292524);
+  transform: scale(0.98); box-shadow: 0 2px 6px rgba(28,25,23,.22);
+}
+.zb-chip[data-q="cockpit"]:active { transform: scale(0.96); }
 .zb-chip svg { width: 14px; height: 14px; color: var(--zb-stone-500,#78716C); }
 .zb-home-sub { margin-top: 22px; font-size: 11.5px; color: var(--zb-stone-400,#A8A29E); }
 
@@ -309,3 +320,22 @@ body.zb-shell-on #zbHome.show .zb-chips .zb-chip:nth-child(4){ animation-delay:2
   body.zb-shell-on #zbHome.show .zb-chips .zb-chip{ animation-duration:1ms !important; animation-delay:0ms !important; opacity:1; transform:none; }
   .zb-send:active,.zb-chip:active{ transform:none; }
 }
+
+/* =============================================================================
+ * ZBIP 六语义状态点体系（彩色小圆点 = 状态视觉签名）
+ * ● ok(绿/正常)  ● warn(黄/关注)  ● risk(橙/风险)  ● crit(红/严重)
+ * ● info(蓝/信息)  ● unknown(灰/未知)
+ * 复用：任意需要表达状态的位置加 <span class="zb-dot zb-dot-ok"></span>
+ * 参考：Oxi Design System 语义色 + 用户"彩色小圆点标识重要程度"设计需求
+ * ========================================================================== */
+.zb-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+.zb-dot-sm{ width:6px; height:6px; }
+.zb-dot-lg{ width:11px; height:11px; }
+.zb-dot-ok{ background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.10); }
+.zb-dot-warn{ background:#eab308; box-shadow:0 0 0 4px rgba(234,179,8,.12); }
+.zb-dot-risk{ background:#f97316; box-shadow:0 0 0 4px rgba(249,115,22,.12); }
+.zb-dot-crit{ background:#ef4444; box-shadow:0 0 0 4px rgba(239,68,68,.12); }
+.zb-dot-info{ background:#3b82f6; box-shadow:0 0 0 4px rgba(59,130,246,.10); }
+.zb-dot-unknown{ background:#a8a29e; box-shadow:0 0 0 4px rgba(168,162,158,.12); }
+.zb-dot-pulse{ animation: zb-dot-pulse 1.6s ease-in-out infinite; }
+@keyframes zb-dot-pulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(0,0,0,.06);} 50%{ box-shadow:0 0 0 6px rgba(0,0,0,.03);} }

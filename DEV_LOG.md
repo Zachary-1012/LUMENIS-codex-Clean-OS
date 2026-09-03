@@ -517,3 +517,35 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 - 增强搜索全链路（前端按钮→/api/search/enhance→web-search-pro→带来源结果渲染）通过
 - 顶栏线条 SVG 渲染通过（bu.js 断言 9 SVG / 无 emoji）
 - glm-4.6v 视觉模型调用成功（vision_chat，需先注入 .env 到 os.environ，_env 只读环境变量）
+
+---
+
+## 2026-09-03 第二批（守护稳定 + 登录平台修复 + 采集巩固）
+
+### 已完成
+1. **守护稳定性修复（关键）**：发现 8201 存在**多套守护进程竞争**（老 run_supervised 17592 + 多套 app.py 抢端口，PID 轮换导致响应不确定）→ 清理全部冗余，单套 run_supervised.py 干净重启。当前单守护+单 app.py，连续调用接口 message 稳定一致。
+2. **香港 RedNote 登录平台修复**：`/api/xhs/login/start` 原来硬编码 CDP 9222 + xiaohongshu.com（国内），香港保活却走 rednote.com/9223 → 新增 platform 参数：
+   - platform=rednote → CDP 9223 + rednote.com/login（message"香港 RedNote"）
+   - platform=xhs → CDP 9222 + xiaohongshu.com（原逻辑保留）
+   - 前端 startXhsLogin 默认传 platform=rednote
+   - 真实验证：rednote 返回"小红书（香港 RedNote）"、xhs 返回"小红书"
+3. **RedNote 保活核验**：CDP 9222/9223 在线；rednote.com/login 打开即显示**已登录首页**（会话有效）——已登录用户无二维码属正常；当日保活状态 should_login_today=true、last_login_at=null（待标记）
+4. **采集巩固核验**：
+   - 三端配置完整（topic 话题/opinion 舆情/event 事件，keywords+description）
+   - 自适应调度已启用（GAP-05 用户已签字）：ShadowPlanner 门控 gate_should_run 决定是否采集，不再固定时间点；当前判定 RUN_DUE
+   - 结果回写闭环已接入：network_adaptive.report_collection_result 覆盖风控/拦截/成功/无数据；冷却时长随策略递增（normal60/cautious90/conservative180/suspended360 分钟）
+   - 触发真实采集验证：/api/collect 任务 20260903115937217，web-discovery 完成 → 小红书回搜 collecting 阶段（真实链路可跑）
+5. **UI 精修（视觉模型第二批落地）**：
+   - 快捷按钮视觉层级：核心"进入智能问答"设为 Primary 深色 #1C1917+白字+hover #292524+scale0.98（Oxi Design System Single CTA 原则），其余保持白底——实测生效
+   - 六语义状态点体系：.zb-dot-ok/warn/risk/crit/info/unknown（彩色小圆点+外圈光晕+可选 pulse）——实测 zb-dot-risk=#f97316
+   - GitHub 研究沉淀：docs/learning/UI-KEEPALIVE-RESEARCH-20260903.md + LR-20260903-005
+
+### 未完成
+- RedNote 当日保活 last_login_at 标记（当前会话已在线，无二维码；可标记当日成功，避免重复触发）
+- 采集任务最终入库结果待查（异步进行中）
+- 其他未提交改动登记：taiji-state.css/js/demo.html（未跟踪）、config/prompts/zbc-prompts.yaml、creative_workbench.html、scripts/idea_generator.py（M，非本轮改动，未擅动）
+
+### 实测结论
+- login/start platform 双分支验证通过（rednote→香港 RedNote / xhs→小红书），连续调用稳定
+- 快捷按钮 Primary + 六语义状态点 CSS 渲染验证通过（bu.js computed style）
+- 守护清理后 8201 单实例稳定
