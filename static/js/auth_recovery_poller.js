@@ -169,7 +169,7 @@
     });
     // Header
     var header = h('div', null, { 'id': 'ar-modal-header',
-      'style': 'padding:18px 20px;background:linear-gradient(135deg,#7c3aed 0%,#4f46e5 100%);color:#fff;display:flex;align-items:center;gap:10px;' });
+      'style': 'padding:18px 20px;background:#1C1917;color:#fff;display:flex;align-items:center;gap:10px;' });
     header.appendChild(h('span', '⚠️', { 'style': 'font-size:22px;' }));
     header.appendChild(h('div', null, { 'style': 'flex:1;' }, [
       h('div', null, { 'id': 'ar-modal-title', 'style': 'font-size:16px;font-weight:600;' }),
@@ -195,7 +195,7 @@
     var laterBtn = h('button', '稍后处理（30分钟）', { 'id': 'ar-btn-later', 'type': 'button',
       'style': 'height:40px;padding:0 16px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#334155;cursor:pointer;font-size:14px;' });
     var doneBtn = h('button', '我已完成验证', { 'id': 'ar-btn-done', 'type': 'button',
-      'style': 'height:40px;padding:0 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;cursor:pointer;font-size:14px;font-weight:500;' });
+      'style': 'height:40px;padding:0 20px;border-radius:8px;border:none;background:#1C1917;color:#fff;cursor:pointer;font-size:14px;font-weight:500;' });
     actions.appendChild(laterBtn);
     actions.appendChild(doneBtn);
 

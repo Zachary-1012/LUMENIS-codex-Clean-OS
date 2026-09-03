@@ -136,6 +136,18 @@ const V3Modules = {
         async init() {
             await this.loadStats();
             await this.loadEvents();
+            // 序境 Cross-filter：绑定事件类型/关系类型筛选源
+            if (window.XJ_CrossFilter) {
+                window.XJ_CrossFilter.bind(document.getElementById('page-event-graph'));
+                var self = this;
+                window.XJ_CrossFilter._on('event_type', function () { self.refreshEventsHighlight(); });
+            }
+        },
+
+        refreshEventsHighlight() {
+            // Cross-highlight：匹配当前筛选的事件卡片高亮，其余淡化
+            if (!window.XJ_CrossFilter) return;
+            window.XJ_CrossFilter.refresh();
         },
 
         async loadStats() {
@@ -169,19 +181,27 @@ const V3Modules = {
             document.getElementById('egStats').innerHTML = `
                 <div class="eg-stats-grid">
                     <div class="eg-stat-card"><div class="eg-stat-icon">📊</div><div class="eg-stat-info"><strong>${stats.total_events || 0}</strong><span>事件总数</span></div></div>
+                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="营销事件" title="点击筛选营销事件"><div class="eg-stat-icon">📢</div><div class="eg-stat-info"><strong>${byType['营销事件'] || 0}</strong><span>营销事件</span></div></div>
+                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="传播事件" title="点击筛选传播事件"><div class="eg-stat-icon">📡</div><div class="eg-stat-info"><strong>${byType['传播事件'] || 0}</strong><span>传播事件</span></div></div>
+                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="舆情事件" title="点击筛选舆情事件"><div class="eg-stat-icon">⚠️</div><div class="eg-stat-info"><strong>${byType['舆情事件'] || 0}</strong><span>舆情事件</span></div></div>
                     <div class="eg-stat-card"><div class="eg-stat-icon">🔗</div><div class="eg-stat-info"><strong>${stats.total_relations || 0}</strong><span>关系总数</span></div></div>
-                    <div class="eg-stat-card"><div class="eg-stat-icon">📢</div><div class="eg-stat-info"><strong>${byType['营销事件'] || 0}</strong><span>营销事件</span></div></div>
-                    <div class="eg-stat-card"><div class="eg-stat-icon">📡</div><div class="eg-stat-info"><strong>${byType['传播事件'] || 0}</strong><span>传播事件</span></div></div>
-                    <div class="eg-stat-card"><div class="eg-stat-icon">⚠️</div><div class="eg-stat-info"><strong>${byType['舆情事件'] || 0}</strong><span>舆情事件</span></div></div>
-                    <div class="eg-stat-card"><div class="eg-stat-icon">🎯</div><div class="eg-stat-info"><strong>4种</strong><span>关系类型</span></div></div>
+                    <div class="eg-stat-card xf-clear" data-xf-clear="event_type" title="清除筛选" style="cursor:pointer"><div class="eg-stat-icon">✕</div><div class="eg-stat-info"><strong>清除</strong><span>筛选</span></div></div>
                 </div>
                 <div class="eg-legend">
                     <span><b>关系类型：</b></span>
-                    <span class="eg-rel-tag" style="background:#007aff">触发 trigger</span>
-                    <span class="eg-rel-tag" style="background:#34c759">衍生 derive</span>
-                    <span class="eg-rel-tag" style="background:#ff9500">继发 follow</span>
-                    <span class="eg-rel-tag" style="background:#af52de">并行 parallel</span>
+                    <span class="eg-rel-tag xf-filter" data-xf-dim="relation" data-xf-value="trigger" style="background:#007aff;cursor:pointer">触发 trigger</span>
+                    <span class="eg-rel-tag xf-filter" data-xf-dim="relation" data-xf-value="derive" style="background:#34c759;cursor:pointer">衍生 derive</span>
+                    <span class="eg-rel-tag xf-filter" data-xf-dim="relation" data-xf-value="follow" style="background:#ff9500;cursor:pointer">继发 follow</span>
+                    <span class="eg-rel-tag xf-filter" data-xf-dim="relation" data-xf-value="parallel" style="background:#af52de;cursor:pointer">并行 parallel</span>
                 </div>`;
+            // 清除筛选按钮
+            var clearBtn = document.querySelector('[data-xf-clear="event_type"]');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function (e) {
+                    e.preventDefault(); e.stopPropagation();
+                    if (window.XJ_CrossFilter) window.XJ_CrossFilter.clear('event_type');
+                });
+            }
         },
 
         renderEvents() {
@@ -204,8 +224,10 @@ const V3Modules = {
             }
             const typeColors = { '营销事件': '#007aff', '传播事件': '#34c759', '舆情事件': '#ff3b30' };
             container.innerHTML = events.map(ev => {
-                const color = typeColors[ev.event_type] || '#8e8e93';
-                return `<div class="eg-event-card glass-card" style="border-left:4px solid ${color}">
+                const color = typeColors[ev.event_type_name] || typeColors[ev.event_type] || '#8e8e93';
+                const xfType = ev.event_type_name || ev.event_type || '';
+                const xf = xfType ? ` data-xf-dim="event_type" data-xf-value="${xfType}"` : '';
+                return `<div class="eg-event-card glass-card" style="border-left:4px solid ${color}"${xf}>
                     <div class="eg-event-header">
                         <span class="eg-type-badge" style="background:${color}">${ev.event_type || '未分类'}</span>
                         <h3>${ev.title || ev.name || '未命名事件'}</h3>

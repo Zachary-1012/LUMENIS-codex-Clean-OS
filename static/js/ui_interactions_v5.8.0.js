@@ -119,7 +119,7 @@
             transition: all 0.2s;
         }
         .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: #1C1917;
             color: #fff;
         }
         .btn-primary:hover { opacity: 0.9; }
@@ -165,7 +165,7 @@
             position: absolute;
             bottom: 0;
             width: 8%;
-            background: linear-gradient(to top, #667eea, #764ba2);
+            background: #57534E;
             border-radius: 4px 4px 0 0;
             cursor: pointer;
             transition: all 0.2s;

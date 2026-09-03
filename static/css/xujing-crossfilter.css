@@ -1,0 +1,27 @@
+/* 序境 · Cross-Filter 联动样式（XUJING Cross-Filter）
+ * 侘寂适配：墨黑描边高亮 + 淡化，状态不只依赖颜色（配合不透明度） */
+[data-xf-dim][data-xf-value] {
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.xf-filter {
+  cursor: pointer;
+}
+.xf-filter:hover {
+  filter: brightness(1.1);
+}
+.xf-on {
+  box-shadow: 0 0 0 2px #1C1917 !important;
+}
+.xf-dimmed {
+  opacity: 0.28 !important;
+  filter: grayscale(0.4);
+}
+.xf-clear:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+/* 移动端：淡化不可过弱，保持可读 */
+@media (max-width: 480px) {
+  .xf-dimmed {
+    opacity: 0.45 !important;
+  }
+}

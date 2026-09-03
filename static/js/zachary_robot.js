@@ -535,7 +535,7 @@
                 flex-shrink: 0;
             }
             .zachary-message-user .zachary-message-avatar {
-                background: linear-gradient(135deg, #667eea, #764ba2);
+                background: #1C1917;
             }
             
             .zachary-message-content {
@@ -547,7 +547,7 @@
                 box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
             .zachary-message-user .zachary-message-content {
-                background: linear-gradient(135deg, #667eea, #764ba2);
+                background: #1C1917;
                 color: #fff;
             }
             
@@ -592,11 +592,11 @@
                 transition: border-color 0.2s;
             }
             .zachary-chat-input input:focus {
-                border-color: #667eea;
+                border-color: #1C1917;
             }
             .zachary-chat-input button {
                 padding: 8px 16px;
-                background: linear-gradient(135deg, #667eea, #764ba2);
+                background: #1C1917;
                 color: #fff;
                 border: none;
                 border-radius: 20px;
