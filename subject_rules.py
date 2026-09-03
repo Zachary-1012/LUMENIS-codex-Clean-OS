@@ -112,7 +112,9 @@ BRAND_PROFILES = {
     },
 }
 
-ACTIVE_BRAND = "hainan_cdf"  # 当前激活品牌：海南中免/CDF（优先监测导入），可通过环境变量或API切换
+ACTIVE_BRAND = "guangzhou_taikoo_hui"  # 生产安全默认=广州太古汇（CTH-POMS 生产主体，红线口径不得被弱化/切换）；
+# 其他品牌（海南中免/DFS 等 KOS 多品牌）必须通过环境变量 ZBC_ACTIVE_BRAND 或 subject_hit_for_brand(brand_key=)
+# 显式激活，禁止把全局默认改成非广州品牌，以免并行品牌线改变广州生产主体口径。
 
 
 def get_active_brand() -> str:
