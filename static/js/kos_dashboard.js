@@ -23,6 +23,68 @@
     }).catch(function (e) { console.error("[KOS] stats error", e); });
   }
 
+  // KM-03/06：漏斗 + 分层 + 多渠道 ROI 卡片（动态注入 #page-kos，不依赖静态模板）
+  function ensureKosPanel(id, title) {
+    var el = document.getElementById(id);
+    if (el) return el;
+    var page = document.getElementById("page-kos");
+    if (!page) return null;
+    var panel = document.createElement("div");
+    panel.id = id;
+    panel.style.cssText = "margin-top:14px";
+    panel.innerHTML = '<div class="glass-card" style="padding:16px"><h4 style="margin:0 0 10px;font-size:14px">' + title + '</h4><div id="' + id + 'Body" style="font-size:13px;color:#999">加载中...</div></div>';
+    page.appendChild(panel);
+    return panel;
+  }
+
+  function kosBar(label, val, pct, color) {
+    return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>' + label + '</span><b>' + val + '</b></div><div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + (color || "#171717") + ';border-radius:3px"></div></div></div>';
+  }
+
+  function loadKosFunnel() {
+    ensureKosPanel("kosFunnelPanel", "KOS 三阶漏斗 & 分层集中度");
+    api("/api/kos/funnel?entity=all&limit=5").then(function (d) {
+      if (!d.ok || !d.data) return;
+      var f = d.data.funnel || {};
+      var body = document.getElementById("kosFunnelPanelBody");
+      if (!body) return;
+      body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'
+        + '<div style="background:#f9f9f9;padding:10px;border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:600">' + (f.kos_cnt || 0) + '</div><div style="font-size:11px;color:#999">KOS 数</div></div>'
+        + '<div style="background:#f9f9f9;padding:10px;border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:600">' + (f.viewership != null ? f.viewership.toLocaleString() : "--") + '</div><div style="font-size:11px;color:#999">曝光</div></div>'
+        + '<div style="background:#f9f9f9;padding:10px;border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:600">' + (f.wecom_add || 0) + '</div><div style="font-size:11px;color:#999">WeCom</div></div>'
+        + '<div style="background:#f9f9f9;padding:10px;border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:600">' + (f.sales_amount || 0) + '</div><div style="font-size:11px;color:#999">销售(¥)</div></div>'
+        + '</div><div style="font-size:11px;color:#999">分层集中度：</div>';
+    }).catch(function () {});
+    api("/api/kos/tier?limit=20").then(function (d) {
+      if (!d.ok || !d.data) return;
+      var body = document.getElementById("kosFunnelPanelBody");
+      if (!body) return;
+      var t = d.data.tiers || {};
+      var map = [["Top5", t.top5], ["Top6-10", t.top6_10], ["Top11-20", t.top11_20], ["其他", t.others]];
+      var bars = map.map(function (pair) {
+        var v = pair[1] || {};
+        var share = v.engagement_share || 0;
+        return kosBar(pair[0], share + "%", Math.min(100, share), "#171717");
+      }).join("");
+      body.innerHTML += bars;
+    }).catch(function () {});
+  }
+
+  function loadKosRoi() {
+    ensureKosPanel("kosRoiPanel", "多渠道 ROI 对比");
+    api("/api/kos/channel-roi").then(function (d) {
+      if (!d.ok || !d.data) return;
+      var body = document.getElementById("kosRoiPanelBody");
+      if (!body) return;
+      var rows = (d.data.channels || []).map(function (c) {
+        var cpl = c.cpl != null ? "¥" + c.cpl : "--";
+        var ref = c.reference_cpl ? "基准 ¥" + c.reference_cpl + (c.vs_reference_pct != null ? " · " + c.vs_reference_pct + "%" : "") : "待回填";
+        return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px"><span>' + (c.label || c.name) + '</span><b>CPL ' + cpl + '</b></div><div style="font-size:11px;color:#999">预算 ¥' + (c.budget || 0) + ' · 进线 ' + (c.inquiry || 0) + ' · ' + ref + '</div></div>';
+      }).join("");
+      body.innerHTML = rows || '<span style="color:#999">暂无数据（请回填 Boosting/进线）</span>';
+    }).catch(function () {});
+  }
+
   function loadKosList(tier) {
     currentTier = tier || "";
     var url = "/api/kos/list?limit=30&sort_by=kos_score" + (currentTier ? "&tier=" + currentTier : "");
@@ -251,6 +313,8 @@
         if (page === "kos") {
           loadKosStats();
           loadKosList("");
+          loadKosFunnel();
+          loadKosRoi();
         }
       };
     }
