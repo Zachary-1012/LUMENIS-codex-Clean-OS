@@ -1,3 +1,27 @@
+## 2026-09-03｜GAP-21 UI 接入闭环 + 响应式逐档验证证据 + AI 资源包/治理面板生产确认
+> 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
+
+**A. GAP-21 Cookie 导入 UI 接入（RESOLVED，生产上线）**
+- 后端新增 POST /api/cookies/import/raw：接收 {platform, cookies(JSON数组)}，规范化后写入 data/ 源文件（weibo_cookies.json/bilibili_cookies.json/xhs_cookies.source.json + status + 小红书额外生成 cookie_string.txt 供采集器），Basic Auth 保护、凭证仅存本地不入库、Evidence 记录（不记录 Cookie 值）
+- 前端设置弹窗（openSettings）新增"平台 Cookie 导入"区块：平台选择(小红书/微博/B站) + textarea 粘贴 JSON + "导入并运行"按钮 + 状态反馈，调 POST /api/cookies/import/raw
+- 测试：tests/test_cookies_import_api.py 扩到 8 用例（401/200结构/400非法平台/400空cookies/405/无明文泄漏），全过
+- 生产 8201 重启上线验证：healthz 200 / raw导入 200 / status 200 / 静态JS含Cookie导入UI / 无凭证 401，全 PASS
+- Commit：acd746e
+
+**B. 响应式逐档验证（证据入库）**
+- Playwright+Edge 对生产 8201 五断点（430/768/1024/1280/1440）真实加载截图：启动页三状态卡(采集/风险/AI)正常；主界面 GPT 工作台 430 移动单列2x2按钮/768 平板单行4按钮/1024-1440 桌面完整侧栏+顶栏+问答区
+- 结论：响应式适配无布局 bug，层级清晰，符合"GPT 工作台外壳 + 黑白灰侘寂"方向
+- 证据：docs/UI/evidence/main-*.png + responsive-*.png + responsive-check.json；Commit：582ed46
+
+**C. AI 资源包/治理面板生产确认（已工作）**
+- /api/ai-resource-packs/status：glm-4.5-air 已用0/总额1191.5万/日限20万；glm-4.6v 0/600万；per_call 已用2/20次；search_std 0/100；paused=false
+- /api/ai-governance/status：provider=zhipu，日调用限500/已用0、日token限20万/已用0
+- 前端 topbar ⚡ AI资源包面板 + ✦ AI治理面板均接真实 API 每5分钟刷新，无需额外施工
+
+**Commit 链**：acd746e → 582ed46（HEAD，本地=origin）
+
+（注：期间并行窗口新增 8077fdf 报告topic_label+QueueWorker、1162434 报告docx/xlsx主题标签+调度入队，与 GAP-21/UI 无冲突，已同步）
+
 ## 2026-09-03｜GAP-09 负面评审写路径收敛唯一 Owner + GAP-15 核实 + 并行巡检入库
 > 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
 
