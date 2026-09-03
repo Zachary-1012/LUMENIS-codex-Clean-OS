@@ -148,6 +148,7 @@ def execute_cooperation(execution_id: str, actor: str) -> dict:
         return {"ok": False, "error": "execution 不存在"}
     payload = json.loads(e.get("payload") or "{}")
     try:
+        kx.transition(execution_id, "PENDING_HUMAN_REVIEW", actor=actor)
         e2 = kx.transition(execution_id, "EXECUTING", actor=actor)
         conn = _conn()
         try:
@@ -202,6 +203,7 @@ def send_invitation_email(execution_id: str, actor: str) -> dict:
     if e.get("status") not in ("PENDING_HUMAN_REVIEW", "HUMAN_APPROVED", "EXECUTING"):
         return {"ok": False, "error": f"状态不允许发送: {e.get('status')}"}
     try:
+        e = kx.transition(execution_id, "PENDING_HUMAN_REVIEW", actor=actor)
         e = kx.transition(execution_id, "HUMAN_APPROVED", actor=actor)
         e = kx.transition(execution_id, "EXECUTING", actor=actor)
         payload = json.loads(e.get("payload") or "{}")

@@ -2428,6 +2428,81 @@ def api_kos_record_operation():
                                        actor=str(data.get("actor", "AI"))))
 
 
+
+# ===== KOS P2 投流与奖励端点（kos_paid.py） =====
+@kos_bp.route("/paid/plan", methods=["POST"])
+def api_kos_paid_plan():
+    """创建投流计划（HCG paid_media 门控：AI_GENERATED，不实际投放）。"""
+    import kos_paid as kp
+    data = request.get_json(silent=True) or {}
+    return jsonify(kp.create_paid_plan(
+        author_id=str(data.get("author_id", "")),
+        note_id=str(data.get("note_id", "")),
+        budget=float(data.get("budget", 0) or 0),
+        channel=str(data.get("channel", "xhs")),
+        expected_reach=int(data.get("expected_reach", 0) or 0),
+        actor=str(data.get("actor", "AI"))))
+
+
+@kos_bp.route("/paid/execute", methods=["POST"])
+def api_kos_paid_execute():
+    """人工审批后执行投流计划。"""
+    import kos_paid as kp
+    data = request.get_json(silent=True) or {}
+    eid, actor = str(data.get("execution_id", "")).strip(), str(data.get("actor", "")).strip()
+    if not eid or not actor:
+        return jsonify({"ok": False, "error": "execution_id 与 actor 必填"}), 400
+    return jsonify(kp.execute_paid_plan(eid, actor))
+
+
+@kos_bp.route("/paid/result", methods=["POST"])
+def api_kos_paid_result():
+    """记录投流效果反馈（真实投放数据，ROI 可测算不伪造）。"""
+    import kos_paid as kp
+    data = request.get_json(silent=True) or {}
+    return jsonify(kp.record_paid_result(
+        str(data.get("plan_id", "")), spend=float(data.get("spend", 0) or 0),
+        impressions=int(data.get("impressions", 0) or 0), clicks=int(data.get("clicks", 0) or 0),
+        conversions=int(data.get("conversions", 0) or 0)))
+
+
+@kos_bp.route("/paid/plans", methods=["GET"])
+def api_kos_paid_plans():
+    import kos_paid as kp
+    aid = str(request.args.get("author_id", "")).strip()
+    return jsonify({"ok": True, "plans": kp.paid_plans(aid)})
+
+
+@kos_bp.route("/reward/issue", methods=["POST"])
+def api_kos_reward_issue():
+    """创建奖励发放（HCG reward_issue 门控：AI_GENERATED，不实际发放）。"""
+    import kos_paid as kp
+    data = request.get_json(silent=True) or {}
+    return jsonify(kp.issue_reward(
+        str(data.get("author_id", "")), points=float(data.get("points", 0) or 0),
+        amount=float(data.get("amount", 0) or 0), reason=str(data.get("reason", "")),
+        actor=str(data.get("actor", "AI"))))
+
+
+@kos_bp.route("/reward/execute", methods=["POST"])
+def api_kos_reward_execute():
+    """人工审批后发放奖励。"""
+    import kos_paid as kp
+    data = request.get_json(silent=True) or {}
+    eid, actor = str(data.get("execution_id", "")).strip(), str(data.get("actor", "")).strip()
+    if not eid or not actor:
+        return jsonify({"ok": False, "error": "execution_id 与 actor 必填"}), 400
+    return jsonify(kp.execute_reward(eid, actor))
+
+
+@kos_bp.route("/rewards", methods=["GET"])
+def api_kos_rewards():
+    import kos_paid as kp
+    aid = str(request.args.get("author_id", "")).strip()
+    return jsonify({"ok": True, "rewards": kp.reward_ledger(aid)})
+
+
+
 def _kos_profile_field(author_id: str, field: str):
     """辅助：读取 kos_profiles 单字段。"""
     import sqlite3
