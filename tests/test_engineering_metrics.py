@@ -34,15 +34,20 @@ class TaskClosedLoopMetricsTest(unittest.TestCase):
                 json.dumps({"ts": "2026-09-03T02:30:00", "task": "A", "event": "done", "outcome": "ok"}),
                 json.dumps({"ts": "2026-09-03T02:05:00", "task": "B", "event": "begin"}),
                 json.dumps({"ts": "2026-09-03T02:06:00", "task": "B", "event": "test"}),
+                json.dumps({"ts": "2026-09-03T02:40:00", "task": "B", "event": "fail", "reason": "API timeout"}),
+                json.dumps({"ts": "2026-09-03T02:09:00", "task": "C", "event": "begin"}),
                 # 坏行应被跳过
                 "{not json",
             ])
             m = em.task_closed_loop_metrics(p)
-            self.assertEqual(m["total_tasks"], 2)
+            self.assertEqual(m["total_tasks"], 3)
             self.assertEqual(m["closed_tasks"], 1)
-            self.assertAlmostEqual(m["task_completion_rate"], 0.5)
+            self.assertAlmostEqual(m["task_completion_rate"], round(1/3, 3))
             self.assertEqual(m["in_progress_tasks"], 1)
-            self.assertEqual(m["open_tasks"], ["B"])
+            self.assertEqual(m["open_tasks"], ["C"])
+            self.assertEqual(m["failed_tasks"], 1)
+            self.assertEqual(m["failed_task_list"][0]["task"], "B")
+            self.assertEqual(m["recovery_rate"], 0.5)
             self.assertEqual(m["phase_distribution"], {"code": 1, "test": 1})
             # A 从 02:00 → 02:30 = 30 min
             dur = {d["task"]: d["duration_min"] for d in m["task_durations_min"]}
@@ -72,6 +77,7 @@ class FullSnapshotTest(unittest.TestCase):
         self.assertIn("generated_ts", s)
         self.assertIn("task_closed_loop", s)
         self.assertIn("collector_performance", s)
+        self.assertIn("scheduling_health", s)
         self.assertIn("system_health", s)
 
 

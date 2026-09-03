@@ -30,31 +30,39 @@ engineering_metrics.py — 序境工程度量能力（P0-E，可观测性标准 
 
 from __future__ import annotations
 
-# ---- API 契约（schema v2，Web/App/Mini 通用）----
+# ---- API 契约（schema v3，Web/App/Mini 通用）----
 # GET /api/engineering-metrics
 # {
 #   "ok": true,
 #   "data": {
-#     "engineered_metrics_version": 2,   # v2 新增 collector_performance
+#     "engineered_metrics_version": 3,   # v3 新增 scheduling_health + failed/recovery
 #     "generated_ts": "<ISO8601>",
 #     "task_closed_loop": {
 #       "total_tasks": int,            # 已 begin 的唯一任务数
 #       "closed_tasks": int,           # 已 done 的任务数
+#       "failed_tasks": int,           # v3：显式 fail 且未 done 的任务数
 #       "task_completion_rate": float, # 0.0-1.0，closed/total
-#       "in_progress_tasks": int,      # total-closed
-#       "open_tasks": [str],           # 未闭合任务（失败/挂起可见性）
+#       "recovery_rate": float|null,   # v3：closed/(closed+failed)，成功恢复率
+#       "in_progress_tasks": int,      # total-closed-failed
+#       "open_tasks": [str],           # 挂起任务（begin 无 done 无 fail）
+#       "failed_task_list": [{task,reason}],  # v3：失败明细（可下钻）
 #       "phase_distribution": {str:int},# 阶段事件计数（architecture/code/test/runtime/evaluation/research）
 #       "task_durations_min": [{task,duration_min}],  # 已闭合任务耗时（可下钻）
 #       "recent_closed": [{task,done_ts}],            # 最近闭合（可下钻）
 #       "avg_duration_min": float|null,               # 已闭合平均耗时
 #       "source": str                 # 证据源：staging/zell-trace.jsonl
 #     },
-#     "collector_performance": {       # v2 新增：采集性能趋势（GuardMetrics 落盘）
+#     "collector_performance": {       # v2：采集性能趋势（GuardMetrics 落盘）
 #       "samples": int,                # 已落盘快照数
 #       "latest": {total/success/failure/success_rate/avg_latency/p95/last_error/ts},
 #       "window_success_rate": float,  # 近 N 条快照成功率均值（默认 20）
 #       "window_avg_latency": float,   # 近 N 条快照平均延迟均值
 #       "source": str                  # data/metrics/collector-metrics.jsonl
+#     },
+#     "scheduling_health": {           # v3：调度健康（PlatformSchedulePlanner）
+#       "platforms": {platform: state},# 各平台调度状态（可下钻）
+#       "degraded": bool|null,         # planner 不可用时为 true
+#       "source": str
 #     },
 #     "system_health": {
 #       "engineered": "system_health",
@@ -63,9 +71,9 @@ from __future__ import annotations
 #     }
 #   }
 # }
-# 契约版本：v1（2026-09-04）→ v2（+collector_performance）。任何口径变更须 bump engineered_metrics_version
-# 并同步 OSAI 契约文档，禁止静默改字段。
-API_CONTRACT_VERSION = 2
+# 契约版本：v1（2026-09-04）→ v2（+collector_performance）→ v3（+scheduling_health/failed/recovery）。
+# 任何口径变更须 bump engineered_metrics_version 并同步 OSAI 契约文档，禁止静默改字段。
+API_CONTRACT_VERSION = 3
 
 import io
 import json
@@ -85,9 +93,10 @@ except Exception:
 _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_TRACE_PATH = os.path.join(_REPO_ROOT, "staging", "zell-trace.jsonl")
 
-# ZELL 闭环：begin=任务开启，done=任务闭合；phase 事件用业务阶段名（architecture/code/test/runtime/evaluation/research）
+# ZELL 闭环：begin=任务开启，done=任务闭合，fail=显式失败（P0-E 失败可见性）；phase 事件用业务阶段名
 BEGIN_EVENT = "begin"
 DONE_EVENT = "done"
+FAIL_EVENT = "fail"
 PHASE_EVENTS = {"architecture", "code", "test", "runtime", "evaluation", "research"}
 
 
@@ -135,12 +144,16 @@ def task_closed_loop_metrics(trace_path: Optional[str] = None) -> Dict[str, Any]
     for r in recs:
         task = (r.get("task") or "unknown").strip()
         ev = (r.get("event") or "").strip()
-        t = tasks.setdefault(task, {"begin": None, "done": None, "phases": [], "outcomes": []})
+        t = tasks.setdefault(task, {"begin": None, "done": None, "failed": None,
+                                    "fail_reason": "", "phases": [], "outcomes": []})
         ts = _parse_ts(r.get("ts"))
         if ev == BEGIN_EVENT and t["begin"] is None:
             t["begin"] = ts
         elif ev == DONE_EVENT and t["done"] is None:
             t["done"] = ts
+        elif ev == FAIL_EVENT and t["failed"] is None:
+            t["failed"] = ts
+            t["fail_reason"] = str(r.get("reason") or r.get("outcome") or "")[:160]
         if ev in PHASE_EVENTS:
             t["phases"].append({"phase": ev, "ts": _parse_ts(r.get("ts"))})
         if r.get("outcome"):
@@ -148,7 +161,8 @@ def task_closed_loop_metrics(trace_path: Optional[str] = None) -> Dict[str, Any]
 
     total = len(tasks)
     closed = sum(1 for t in tasks.values() if t["done"] is not None)
-    in_progress = total - closed
+    failed = sum(1 for t in tasks.values() if t["failed"] is not None and t["done"] is None)
+    in_progress = total - closed - failed
 
     # 阶段分布：所有 phase 事件按阶段计数
     phase_counter = Counter(p["phase"] for t in tasks.values() for p in t["phases"])
@@ -160,8 +174,13 @@ def task_closed_loop_metrics(trace_path: Optional[str] = None) -> Dict[str, Any]
             secs = (t["done"] - t["begin"]).total_seconds()
             durations.append({"task": task, "duration_min": round(secs / 60.0, 1)})
 
-    # 未闭合任务清单（begin 无 done）——失败/挂起可见性
-    open_tasks = [task for task, t in tasks.items() if t["done"] is None]
+    # 未闭合任务清单（begin 无 done 且无 fail）——挂起可见性
+    open_tasks = [task for task, t in tasks.items()
+                  if t["done"] is None and t["failed"] is None]
+
+    # 显式失败任务清单（fail 事件且未 done）——失败可见性
+    failed_tasks = [{"task": task, "reason": t["fail_reason"]} for task, t in tasks.items()
+                    if t["failed"] is not None and t["done"] is None]
 
     # 最近闭合
     closed_tasks_sorted = sorted(
@@ -175,9 +194,12 @@ def task_closed_loop_metrics(trace_path: Optional[str] = None) -> Dict[str, Any]
         "engineered": "task_closed_loop",
         "total_tasks": total,
         "closed_tasks": closed,
+        "failed_tasks": failed,
         "task_completion_rate": round(closed / total, 3) if total else 0.0,
+        "recovery_rate": round(closed / (closed + failed), 3) if (closed + failed) else None,
         "in_progress_tasks": in_progress,
         "open_tasks": open_tasks[:20],  # 截断防爆
+        "failed_task_list": failed_tasks[:20],  # 失败明细（可下钻至 reason）
         "phase_distribution": dict(phase_counter),
         "task_durations_min": durations,
         "recent_closed": closed_tasks_sorted[:10],
@@ -230,6 +252,27 @@ def collector_performance_metrics(metrics_path: Optional[str] = None, window: in
     }
 
 
+def scheduling_health() -> Dict[str, Any]:
+    """调度健康（v3 新增）：聚合 PlatformSchedulePlanner 各平台调度状态。
+
+    仅做只读聚合；Planner 不可用/未初始化时给 degraded 占位，不抛异常。
+    证据下钻：platform 名即状态 key，可回查 platform_adapters/scheduling/planner.py。
+    """
+    try:
+        from platform_adapters.scheduling.planner import PlatformSchedulePlanner
+
+        # 无参数实例化（默认 policies/state_file），若需要参数则退化
+        planner = PlatformSchedulePlanner()
+        snap = planner.snapshot() if hasattr(planner, "snapshot") else {}
+        if isinstance(snap, dict):
+            return {"engineered": "scheduling", "platforms": snap,
+                    "source": "platform_adapters.scheduling.planner.PlatformSchedulePlanner.snapshot()"}
+        return {"engineered": "scheduling", "platforms": {}, "source": "planner.snapshot"}
+    except Exception as e:  # noqa: BLE001 — 兜底
+        return {"engineered": "scheduling", "platforms": {}, "degraded": True,
+                "error": str(e)[:120], "source": "platform_adapters.scheduling.planner (fallback)"}
+
+
 def system_health_metrics() -> Dict[str, Any]:
     """复用 system_health_api 红绿灯摘要（不重写）；失败时给 degraded 占位而非抛异常。"""
     try:
@@ -250,12 +293,13 @@ def system_health_metrics() -> Dict[str, Any]:
 
 
 def full_snapshot(trace_path: Optional[str] = None) -> Dict[str, Any]:
-    """统一工程度量快照：任务闭环 + 采集性能 + 系统健康 + 元信息（API 契约 schema v2）。"""
+    """统一工程度量快照：任务闭环 + 采集性能 + 调度健康 + 系统健康 + 元信息（API 契约 schema v3）。"""
     return {
         "engineered_metrics_version": API_CONTRACT_VERSION,
         "generated_ts": datetime.now().isoformat(timespec="seconds"),
         "task_closed_loop": task_closed_loop_metrics(trace_path),
         "collector_performance": collector_performance_metrics(),
+        "scheduling_health": scheduling_health(),
         "system_health": system_health_metrics(),
     }
 

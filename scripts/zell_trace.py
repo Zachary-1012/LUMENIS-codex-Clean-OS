@@ -48,6 +48,12 @@ def done(task, outcome):
     print(f"[zell] done {task}: {outcome[:80]}")
 
 
+def fail(task, reason, note=""):
+    """显式失败事件（P0-E 失败可见性）：event=fail, reason=失败原因, note=补充。"""
+    _append({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "task": task, "event": "fail", "reason": reason, "note": note})
+    print(f"[zell] FAIL {task}: {reason[:80]}")
+
+
 def show(last=None):
     if not os.path.exists(LOG):
         print("[]")
@@ -70,6 +76,8 @@ def main():
         phase(args[1], args[2], args[3])
     elif c == "done" and len(args) >= 3:
         done(args[1], args[2])
+    elif c == "fail" and len(args) >= 3:
+        fail(args[1], args[2], args[3] if len(args) > 3 else "")
     elif c == "show":
         show(args[1] if len(args) > 1 else None)
     else:
