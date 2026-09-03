@@ -292,8 +292,12 @@
         </div>
         <div class="xhs-login-step hidden" id="xhsLoginStep2">
           <div class="xhs-login-icon">📱</div>
-          <div class="xhs-login-text">已打开浏览器登录页<br>请在弹出的浏览器窗口中扫码登录</div>
-          <div class="xhs-login-status" id="xhsLoginStatus">等待扫码…</div>
+          <div class="xhs-login-text" id="xhsLoginStep2Text">正在调取登录二维码<br>请使用小红书 App 扫码完成登录</div>
+          <div id="xhsLoginQrWrap" style="margin:6px auto 10px;width:220px;min-height:220px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(120,113,108,.22);border-radius:10px;background:#FAFAF9;padding:10px;box-shadow:0 1px 3px rgba(28,25,23,.05);">
+            <img id="xhsLoginQr" alt="登录二维码" style="display:none;width:196px;height:196px;border-radius:6px;object-fit:contain;">
+            <div id="xhsLoginQrLoading" style="font-size:12px;color:#78716C;display:flex;flex-direction:column;align-items:center;gap:8px;"><span class="spinner"></span><span id="xhsLoginQrHint">正在调取登录二维码…</span></div>
+          </div>
+          <div class="xhs-login-status" id="xhsLoginStatus">正在检测登录状态…</div>
           <div class="xhs-login-actions">
             <button class="xhs-login-btn" onclick="checkXhsLoginStatus()">刷新状态</button>
             <button class="xhs-login-btn danger" onclick="closeXhsLogin()">取消</button>
@@ -931,6 +935,15 @@
         <article class="metric-card glass-card" style="margin-bottom:14px">
           <div class="metric-icon amber">🎯</div>
           <div class="metric-label">本月营销节点速览</div>
+          <div style="margin:6px 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="mkIndustry" onchange="loadMk()" style="padding:6px 8px;border-radius:8px;font-size:12px">
+              <option value="">商业地产（全行业交叉）</option>
+              <option value="母婴">母婴</option><option value="美妆">美妆</option>
+              <option value="酒饮">酒饮</option><option value="文旅">文旅</option>
+              <option value="教育">教育</option><option value="宠物">宠物</option>
+              <option value="咖啡茶饮">咖啡茶饮</option>
+            </select>
+          </div>
           <div id="mkNodesBody" class="metric-sub" style="white-space:normal;line-height:1.7">加载中…</div>
         </article>
         <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
@@ -1663,6 +1676,17 @@ async function checkXhsLoginStatus(){
       setTimeout(closeXhsLogin,2000);
     } else {
       document.getElementById('xhsLoginStatus').textContent=d.message||'等待扫码…';
+      // 系统内二维码：后端回传二维码元素截图（找不到时回传整页视口，绝不空白）
+      const qr=document.getElementById('xhsLoginQr'),
+            ld=document.getElementById('xhsLoginQrLoading'),
+            hint=document.getElementById('xhsLoginQrHint');
+      if(d.qr_image){
+        qr.src=d.qr_image; qr.style.display='block'; ld.style.display='none';
+      } else {
+        qr.style.display='none'; ld.style.display='flex';
+        if(hint) hint.textContent=(d.stage==='error') ? (d.message||'二维码调取失败，可点下方刷新')
+          : (d.stage==='no_qr' ? '未定位到二维码，正在重试…' : '正在调取登录二维码…');
+      }
     }
   }catch(e){
     document.getElementById('xhsLoginStatus').textContent='状态检查失败: '+e.message;
@@ -1826,17 +1850,19 @@ document.addEventListener('DOMContentLoaded', function(){
   function loadMk(){
     var el=document.getElementById('mkNodesBody');
     if(!el) return;
-    fetch('/api/v2/marketing/overview',{headers:{'Authorization':window.__Z_AUTH||''}})
+    var ind=(document.getElementById('mkIndustry')||{}).value||'';
+    fetch('/api/v2/marketing/overview?industry='+encodeURIComponent(ind),{headers:{'Authorization':window.__Z_AUTH||''}})
       .then(function(r){return r.json();})
       .then(function(j){
         if(!j.ok){ el.textContent='加载失败：'+(j.error||'未知'); return; }
         var s=[]; s.push('本月节点：'+(j.month_nodes||[]).map(function(n){return n.name+'·'+n.theme;}).join('、'));
         if(j.hotspot && j.hotspot.nodes && j.hotspot.nodes.length){ s.push('当期绑定：'+j.hotspot.nodes.map(function(n){return n.name;}).join('、')+'｜建议调性：'+(j.hotspot.tonality_advice||'-')); }
-        if(j.cross){ s.push('行业交叉：「'+j.cross.industry+'」'+j.cross.advice.join('；')); }
+        if(j.cross){ s.push('行业交叉：「'+j.cross.industry+'」'+(j.cross.advice||[]).join('；')); }
         el.textContent=s.join('\n');
       })
       .catch(function(e){ el.textContent='加载失败：'+e; });
   }
+  window.loadMk = loadMk;
   if(document.readyState!=='loading'){ loadMk(); }
   else{ document.addEventListener('DOMContentLoaded', loadMk); }
 })();

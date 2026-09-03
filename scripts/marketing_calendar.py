@@ -186,6 +186,37 @@ _CAT_ALIAS = {
     "旅游": ["旅游", "出行", "度假"],
 }
 
+# 海外营销节点（2026 研究：公历固定/惯例日期，面向海外市场与出海品牌）
+# 结构：月 → [{name, date(MM-DD 或说明), kind, theme, cats}]
+_GLOBAL_NODES = {
+    1: [{"name": "New Year", "date": "01-01", "kind": "节日", "theme": "新起点、焕新、目标", "cats": ["出海", "生活方式"]},
+        {"name": "Super Bowl", "date": "02 月初（惯例）", "kind": "体育", "theme": "狂欢、广告盛宴、社交话题", "cats": ["食品", "电子", "广告"]}],
+    2: [{"name": "Valentine's Day", "date": "02-14", "kind": "节日", "theme": "爱、浪漫、礼物", "cats": ["美妆", "珠宝", "鲜花"]},
+        {"name": "Black History Month", "date": "2 月全月", "kind": "文化", "theme": "致敬、包容、身份", "cats": ["文化", "品牌"]}],
+    3: [{"name": "International Women's Day", "date": "03-08", "kind": "节日", "theme": "她力量、平等、致敬", "cats": ["美妆", "职场", "品牌"]},
+        {"name": "St. Patrick's Day", "date": "03-17", "kind": "节日", "theme": "绿、狂欢、好运", "cats": ["酒饮", "餐饮"]}],
+    4: [{"name": "Earth Day", "date": "04-22", "kind": "环保", "theme": "可持续、地球、行动", "cats": ["环保", "品牌"]},
+        {"name": "Easter", "date": "春分后首个周日（惯例）", "kind": "节日", "theme": "新生、家庭、彩蛋", "cats": ["食品", "亲子"]}],
+    5: [{"name": "Mother's Day", "date": "5 月第二个周日", "kind": "节日", "theme": "感恩、母爱、陪伴", "cats": ["美妆", "珠宝", "鲜花"]},
+        {"name": "Cannes Film Festival", "date": "5 月中旬", "kind": "文化", "theme": "电影、高光、全球叙事", "cats": ["娱乐", "奢侈品"]}],
+    6: [{"name": "Father's Day", "date": "6 月第三个周日", "kind": "节日", "theme": "父爱、礼物、陪伴", "cats": ["数码", "男装"]},
+        {"name": "Pride Month", "date": "6 月全月", "kind": "文化", "theme": "多元、包容、身份表达", "cats": ["品牌", "服饰"]}],
+    7: [{"name": "Independence Day (US)", "date": "07-04", "kind": "节日", "theme": "自由、烟火、夏日", "cats": ["餐饮", "户外"]},
+        {"name": "Prime Day (惯例)", "date": "7 月中旬", "kind": "电商", "theme": "大促、折扣、囤货", "cats": ["电商", "全品类"]}],
+    8: [{"name": "Back to School", "date": "8 月", "kind": "教育", "theme": "开学、新装备、成长", "cats": ["文具", "数码", "童装"]},
+        {"name": "Met Gala（惯例）", "date": "5 月初（补充）", "kind": "时尚", "theme": "高定、话题、红毯", "cats": ["奢侈品", "时尚"]}],
+    9: [{"name": "Labor Day (US)", "date": "9 月第一个周一", "kind": "节日", "theme": "劳动、假期、夏末", "cats": ["户外", "餐饮"]},
+        {"name": "NY Fashion Week", "date": "9 月上旬", "kind": "时尚", "theme": "新季、趋势、秀场", "cats": ["时尚", "美妆"]}],
+    10: [{"name": "Halloween", "date": "10-31", "kind": "节日", "theme": "变装、神秘、创意", "cats": ["食品", "彩妆", "娱乐"]},
+         {"name": "Oktoberfest（惯例）", "date": "10 月", "kind": "节庆", "theme": "狂欢、啤酒、社群", "cats": ["酒饮", "餐饮"]}],
+    11: [{"name": "Thanksgiving", "date": "11 月第四个周四", "kind": "节日", "theme": "感恩、团聚、盛宴", "cats": ["食品", "家居"]},
+         {"name": "Black Friday", "date": "11 月第四个周五", "kind": "电商", "theme": "大促、抢购、声量峰值", "cats": ["电商", "全品类"]},
+         {"name": "Cyber Monday", "date": "黑五后首个周一", "kind": "电商", "theme": "线上大促、转化", "cats": ["电商", "数码"]}],
+    12: [{"name": "Christmas", "date": "12-25", "kind": "节日", "theme": "礼赠、温暖、年终", "cats": ["礼品", "全品类"]},
+         {"name": "Boxing Day", "date": "12-26", "kind": "电商", "theme": "清仓、折扣", "cats": ["电商", "全品类"]},
+         {"name": "New Year's Eve", "date": "12-31", "kind": "节日", "theme": "跨年、倒计时、新愿", "cats": ["餐饮", "酒饮", "活动"]}],
+}
+
 # 垂直行业专属节点（2026 研究：母婴/美妆/酒饮/文旅/教育/宠物/咖啡茶饮）
 # 结构：行业 → [{name, month(可空=全年), theme, cats}]
 _V_NODES = {
@@ -245,6 +276,13 @@ _V_THEME_TONALITY = {
 }
 
 
+def global_nodes(month=None):
+    """海外营销节点：可按月过滤（面向出海品牌/海外市场排期）。"""
+    if month is None:
+        return [dict(n, month=m) for m, ns in _GLOBAL_NODES.items() for n in ns]
+    return [dict(n, month=int(month)) for n in _GLOBAL_NODES.get(int(month), [])]
+
+
 def cross_industry_season(industry, date_str=""):
     """垂直行业 × 当月节气 交叉建议（触类旁通：行业节点与通用节点叠加）。
     返回 {"industry", "industry_nodes":[...], "month":m, "season_nodes":[...], "advice":[...]}
@@ -258,6 +296,9 @@ def cross_industry_season(industry, date_str=""):
     except Exception:
         m = _dt.date.today().month
     inds = industry_nodes(industry, m) or industry_nodes(industry)
+    if not inds:
+        # 未知行业（如"商业地产"）：回退到当月全行业节点，保证有交叉建议
+        inds = industry_nodes("", m)
     # 当月节气（通用节点中 kind==节气）
     season = [n for n in nodes_for_month(m) if n["kind"] == K_SOLAR]
     advice = []
@@ -351,7 +392,14 @@ def main():
     ap.add_argument("--month", type=int, default=0, help="只看某月节点")
     ap.add_argument("--industry", default="", help="垂直行业节点，如 母婴/美妆/酒饮/文旅/教育/宠物/咖啡茶饮")
     ap.add_argument("--cross", default="", help="行业×节气交叉，如 --cross 母婴")
+    ap.add_argument("--global", dest="gbl", action="store_true", help="海外营销节点")
     a = ap.parse_args()
+    if a.gbl:
+        g = global_nodes()
+        print("海外营销节点共 %d 个：" % len(g))
+        for n in g:
+            print("  %02d月 %s(%s)｜%s｜%s" % (n["month"], n["name"], n["date"], n["kind"], n["theme"]))
+        return
     if a.cross:
         c = cross_industry_season(a.cross, a.date or "")
         print("[%s %d月] 行业节点: %s" % (c["industry"], c["month"],
