@@ -198,6 +198,14 @@
              '<td>'+esc(s.audio)+'<br><span class="col">'+esc(s.subtitle)+'</span></td></tr>';
       });
       h += '</table><div class="kv" style="margin-top:10px"><b>投放建议：</b>'+esc(d.publish_advice)+'</div>';
+      if(d.production_workflow){
+        h += '<div class="idea" style="margin-top:10px"><div class="title">🎬 制作流程（8段）</div>';
+        (d.production_workflow||[]).forEach(w => { h += '<div class="kv"><b>'+esc(w[0])+'：</b>'+esc(w[1])+'</div>'; });
+        if(d.shot_language){ h += '<div class="tags" style="margin-top:6px">镜头语言：';
+          for(var k in d.shot_language){ h += '<div class="kv" style="font-size:12px"><b>'+esc(k)+'：</b>'+esc(d.shot_language[k])+'</div>'; }
+          h += '</div>'; }
+        h += '</div>';
+      }
       show(h);
     }).catch(e=>showErr(e));
   }
@@ -217,6 +225,7 @@
              '<div class="kv"><b>人群分层：</b>'+esc(p.crowd_layers)+'</div>' +
              '<div class="kv"><b>UGC机制：</b>'+esc(p.ugc)+'</div>' +
              '<div class="kv"><b>度量：</b>'+esc(p.metrics)+'</div>' +
+             (p.algo_2026 ? '<div class="kv" style="background:#FBF9F4;border-radius:6px;padding:6px 8px;margin-top:6px"><b>📈 2026算法：</b>'+esc(p.algo_2026)+'</div>' : '') +
              '<div class="tags">栏目：'+(p.content_columns||[]).map(esc).join(' ｜ ')+'</div></div>';
       });
       show(h);
