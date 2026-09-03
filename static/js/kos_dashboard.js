@@ -348,19 +348,67 @@
 
   // 页面进入 KOS 时加载
   document.addEventListener("DOMContentLoaded", function () {
+    function loadAllKos() {
+      loadKosStats();
+      loadKosList("");
+      loadKosFunnel();
+      loadKosRoi();
+      loadKosManualFill();
+    }
+    // 独立 /kos 页面：存在 #page-kos 容器则立即加载
+    if (document.getElementById("page-kos")) {
+      loadAllKos();
+    }
     // 监听 navigateTo 进入 kos 页面
     var origNavigate = window.navigateTo;
     if (origNavigate) {
       window.navigateTo = function (page) {
         origNavigate(page);
         if (page === "kos") {
-          loadKosStats();
-          loadKosList("");
-          loadKosFunnel();
-          loadKosRoi();
-          loadKosManualFill();
+          loadAllKos();
         }
       };
     }
   });
+
+// KOS 运营操作辅助（kos_ops/kos_paid API · HCG 门控）——挂到 window 供 SPA 面板调用
+window.recordKosOp = function () {
+  var aid = document.getElementById("opAuthorId").value.trim();
+  var action = document.getElementById("opAction").value;
+  var out = document.getElementById("opResult");
+  if (!aid) { out.textContent = "请输入 author_id"; return; }
+  api("/api/kos/operation", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ author_id: aid, action: action, actor: "zachary" }) })
+    .then(function (d) { out.textContent = d.ok ? ("已记录: " + action + " → " + d.lifecycle_stage) : (d.error || "失败"); })
+    .catch(function (e) { out.textContent = "错误: " + e.message; });
+};
+window.saveKosLead = function () {
+  var aid = document.getElementById("leadAuthorId").value.trim();
+  var email = document.getElementById("leadEmail").value.trim();
+  var out = document.getElementById("leadResult");
+  if (!aid) { out.textContent = "请输入 author_id"; return; }
+  api("/api/kos/lead", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ author_id: aid, email: email, actor: "zachary" }) })
+    .then(function (d) { out.textContent = d.ok ? "留资已保存" : (d.error || "失败"); })
+    .catch(function (e) { out.textContent = "错误: " + e.message; });
+};
+window.confirmKosCoop = function () {
+  var aid = document.getElementById("leadAuthorId").value.trim();
+  var out = document.getElementById("leadResult");
+  if (!aid) { out.textContent = "请输入 author_id"; return; }
+  api("/api/kos/cooperation/confirm", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ author_id: aid, confirmed_by: "zachary", quote: 0, budget: 0 }) })
+    .then(function (d) { var h = d.hcg || {}; out.textContent = d.ok ? ("合作确认已登记(HCG " + h.status + " 待人工审批)") : (d.error || "失败"); })
+    .catch(function (e) { out.textContent = "错误: " + e.message; });
+};
+window.inviteKosEmail = function () {
+  var aid = document.getElementById("leadAuthorId").value.trim();
+  var out = document.getElementById("leadResult");
+  if (!aid) { out.textContent = "请输入 author_id"; return; }
+  api("/api/kos/email/invitation", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ author_id: aid, subject: "KOS 合作邀约", body: "您好，邀请合作", actor: "zachary" }) })
+    .then(function (d) { var h = d.hcg || {}; out.textContent = d.ok ? ("邀约已创建(HCG " + h.status + "，未发送)") : (d.error || "失败"); })
+    .catch(function (e) { out.textContent = "错误: " + e.message; });
+};
+
 })();

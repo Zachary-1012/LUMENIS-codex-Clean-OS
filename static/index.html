@@ -624,6 +624,39 @@
           </div>
           <div class="kos-list" id="kosList"></div>
         </div>
+
+        <!-- KOS 运营操作区（kos_ops/kos_paid API · HCG 门控） -->
+        <div class="panel glass-card" style="margin-top:14px">
+          <div class="panel-head"><div><span class="eyebrow">OPERATIONS</span><h3>KOS 运营操作</h3><p>留资 / 合作 / 邀约 / 运营动作 · 敏感动作走 HCG 人工审批</p></div></div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;padding:12px 16px">
+            <div style="flex:1 1 320px;min-width:0">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px">运营动作（推进生命周期）</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input id="opAuthorId" placeholder="author_id" style="flex:1 1 140px;min-width:0;padding:7px 9px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:12px;background:#fff">
+                <select id="opAction" style="padding:7px 9px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:12px;background:#fff">
+                  <option value="outreach">触达</option><option value="lead_captured">留资</option>
+                  <option value="cooperation">合作</option><option value="content_published">内容发布</option>
+                  <option value="viral">爆款</option><option value="core_partner">核心伙伴</option>
+                </select>
+                <button class="action primary tip" onclick="recordKosOp()" style="padding:7px 14px">记录</button>
+              </div>
+              <div id="opResult" style="font-size:12px;color:#888;margin-top:8px"></div>
+            </div>
+            <div style="flex:1 1 320px;min-width:0">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px">留资 / 合作 / 邮件邀约（HCG）</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input id="leadAuthorId" placeholder="author_id" style="flex:1 1 140px;min-width:0;padding:7px 9px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:12px;background:#fff">
+                <input id="leadEmail" placeholder="email" style="flex:1 1 140px;min-width:0;padding:7px 9px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:12px;background:#fff">
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                <button class="action tip" onclick="saveKosLead()" style="padding:7px 14px">存留资</button>
+                <button class="action tip" onclick="confirmKosCoop()" style="padding:7px 14px">合作确认</button>
+                <button class="action tip" onclick="inviteKosEmail()" style="padding:7px 14px">邮件邀约</button>
+              </div>
+              <div id="leadResult" style="font-size:12px;color:#888;margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- 多品牌中心 Brand Hub -->
