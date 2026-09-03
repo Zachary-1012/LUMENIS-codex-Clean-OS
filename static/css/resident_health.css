@@ -1,6 +1,6 @@
 /* ================================================================
    Zachary OS AI · Resident Browser Health Monitor 前端样式
-   适配现有系统：紫色主色 #6d28d9/#4f46e5 + Apple 风卡片
+   序境 Stone 暖灰主色(Stone-900) + 语义状态色 + Apple 风卡片
    加载顺序：在 style.css 之后，可被后续 CSS 覆盖
    ================================================================ */
 
@@ -28,8 +28,8 @@
     gap: 16px;
     padding: 12px 16px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #f8f7ff 0%, #f0efff 100%);
-    border: 1px solid #e0dfff;
+    background: #FAFAF9;
+    border: 1px solid #E7E5E4;
     margin-bottom: 4px;
 }
 .rh-overview-stat {
@@ -47,7 +47,7 @@
 }
 .rh-overview-stat.healthy b { color: #10b981; }
 .rh-overview-stat.needs-login b { color: #f59e0b; }
-.rh-overview-stat.degraded b { color: #6366f1; }
+.rh-overview-stat.degraded b { color: #2563EB; }
 .rh-overview-stat.down b { color: #ef4444; }
 .rh-overview-time {
     margin-left: auto;
@@ -87,10 +87,10 @@
     width: 4px;
     background: #cbd5e1;
 }
-.rh-card.status-healthy::before { background: linear-gradient(180deg, #10b981, #059669); }
-.rh-card.status-needs_login::before { background: linear-gradient(180deg, #f59e0b, #d97706); }
-.rh-card.status-cdp_degraded::before { background: linear-gradient(180deg, #6366f1, #4f46e5); }
-.rh-card.status-down::before { background: linear-gradient(180deg, #ef4444, #dc2626); }
+.rh-card.status-healthy::before { background: #16A34A; }
+.rh-card.status-needs_login::before { background: #D97706; }
+.rh-card.status-cdp_degraded::before { background: #2563EB; }
+.rh-card.status-down::before { background: #DC2626; }
 
 /* ---- 卡片头部 ---- */
 .rh-card-head {
@@ -147,7 +147,7 @@
 .rh-status-badge.needs_login { background: #fffbeb; color: #b45309; }
 .rh-status-badge.needs_login .pulse { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
 .rh-status-badge.cdp_degraded { background: #eef2ff; color: #4338ca; }
-.rh-status-badge.cdp_degraded .pulse { background: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.rh-status-badge.cdp_degraded .pulse { background: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
 .rh-status-badge.down { background: #fef2f2; color: #dc2626; }
 .rh-status-badge.down .pulse { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.15); }
 @keyframes rh-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: .7; } }
@@ -199,7 +199,7 @@
 }
 .rh-detail.healthy { border-left-color: #10b981; }
 .rh-detail.needs_login { border-left-color: #f59e0b; }
-.rh-detail.cdp_degraded { border-left-color: #6366f1; }
+.rh-detail.cdp_degraded { border-left-color: #2563EB; }
 .rh-detail.down { border-left-color: #ef4444; }
 
 /* ---- 卡片操作按钮 ---- */
@@ -225,9 +225,9 @@
     white-space: nowrap;
 }
 .rh-btn-primary {
-    background: linear-gradient(135deg, #6d28d9, #4f46e5);
+    background: #1C1917;
     color: #fff;
-    box-shadow: 0 2px 6px rgba(79,70,229,.2);
+    box-shadow: 0 2px 6px rgba(28,25,23,.12);
 }
 .rh-btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
 .rh-btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
@@ -257,7 +257,7 @@
 .rh-loading .spinner {
     width: 18px; height: 18px;
     border: 2px solid #e2e8f0;
-    border-top-color: #6366f1;
+    border-top-color: #2563EB;
     border-radius: 50%;
     animation: rh-spin .8s linear infinite;
 }
@@ -303,7 +303,7 @@
     justify-content: space-between;
     padding: 18px 22px;
     border-bottom: 1px solid #f1f5f9;
-    background: linear-gradient(135deg, #faf9ff 0%, #f5f3ff 100%);
+    background: #FAFAF9;
 }
 .rh-qr-modal-head h3 {
     margin: 0;
@@ -382,7 +382,7 @@
 .rh-qr-placeholder .qr-icon {
     width: 64px; height: 64px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #6d28d9, #4f46e5);
+    background: #1C1917;
     display: grid;
     place-items: center;
     color: #fff;
