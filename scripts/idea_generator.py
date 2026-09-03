@@ -80,6 +80,7 @@ MECHANISMS = {
     "culture": {"name": "文化共识", "desc": "借势已有文化共识/圈层暗语自然绑定"},
     "resonate": {"name": "情感共鸣", "desc": "韩剧×文学式表达：以小写大/时间具象/朴素真话/边界/悖论，直击人心非信息传递"},
     "constraint": {"name": "约束即创意", "desc": "创意生于限制（戛纳233范式）：短板/预算/场景限制是创意原点，少即是多、克制即高级"},
+    "sit": {"name": "六模板转译", "desc": "Goldenberg SIT 六模板（类比/极端/后果/竞争/换维/实效）：把限制/卖点转译成可传播结构"},
 }
 
 MECH_TO_L1 = {
@@ -91,6 +92,7 @@ MECH_TO_L1 = {
     "culture": "文化共识借势公式",
     "resonate": "情感共鸣公式（以小写大·具象抒情·悖论并置）",
     "constraint": "约束即创意公式（限制→原点：少即是多，克制即高级，诚实即张力）",
+    "sit": "六模板转译公式（类比/极端/后果/竞争/换维/实效：限制×转译手法）",
 }
 
 # ---- 角度：同一主题的不同切入人设（防止"主题换了，创意没换"）----
@@ -205,6 +207,15 @@ _HOOK = {
         "「{brand}的{topic}，没有花哨，只有{img}」——{c0}，够了",
         "「别人都在做{topic}，{brand}只肯做{img}」——{c0}，这才是稀缺",
     ],
+    # 六模板转译型（Goldenberg SIT：类比/极端/后果/竞争/换维/实效）
+    "sit": [
+        "「{topic}之于{brand}，就像{img}之于{c0}」——类比，把陌生说成熟悉",
+        "「别处把{topic}做到八分，{brand}做到{img}」——极端，把事做到头",
+        "「如果没有{topic}，{c0}会错过{img}」——后果，把价值说成失去",
+        "「当所有人都在做{topic}，{brand}选择做{img}」——竞争，反向定义",
+        "「{topic}不止是{topic}，更是{img}」——换维，换个维度重新做",
+        "「{brand}的{topic}，只为{img}，不为热闹」——实效，只对结果负责",
+    ],
 }
 
 # 高奢专属：克制叙事句库（不玩梗、不狂欢）
@@ -242,6 +253,15 @@ _HOOK_LUX = {
         "「{brand}只做{topic}，其余一概不做」——{img}，专注即奢侈",
         "「不铺张的{topic}，才是{brand}的{img}」——{c0}，心照不宣",
         "「{brand}的{topic}不多，恰好都是{img}」——{c0}，留白即分量",
+    ],
+    # 高奢六模板转译（克制版：类比/极端/后果/竞争/换维/实效）
+    "sit": [
+        "「{brand}的{topic}，宁可少做，也要做对」——类比，克制即奢侈",
+        "「{topic}做到极致，就是{img}」——极端，不留余地",
+        "「真正的{topic}，错过即不可得」——后果，稀缺即价值",
+        "「{brand}不与谁争{topic}，只与时间争」——竞争，定义自己的赛道",
+        "「{topic}不只是{img}，更是{img}」——换维，重新定义",
+        "「{brand}只做一件{topic}，做足十年」——实效，专注即分量",
     ],
 }
 
@@ -480,6 +500,7 @@ MECH_TO_HOOK = {
                  "emo_season", "emo_surreal", "emo_understate",
                  "emo_sensory", "emo_self", "emo_nature", "emo_grow"],
     "constraint": ["constraint", "reversal", "assert"],
+    "sit": ["story", "assert", "imperative"],
 }
 
 # ---- 预算感知（同一创意不同预算的落地档位）----
@@ -508,6 +529,60 @@ BUDGETS = {
 }
 
 
+# 案例背书：读 case_study 真实案例（来源公开可查证），按机制匹配挂到 provenance
+_MECH_CASE_TAGS = {
+    "constraint": ("约束即创意", "预算受限", "危机转机"),
+    "culture": ("文化转译", "传统焕新"),
+    "symbolize": ("洞察驱动", "符号资产"),
+    "eventify": ("行为设计", "品牌即基础设施"),
+    "participate": ("用户共创", "真实证据"),
+    "cocreate": ("用户共创", "真实证据"),
+    "reverse": ("对比",),
+    "resonate": ("洞察驱动", "仪式感"),
+    "sit": ("行为设计", "洞察驱动", "跨媒介"),
+}
+_CASE_BACKING_CACHE = None
+
+
+def _load_case_backing():
+    """读取案例库 case_study 真实案例（懒加载+缓存；DB 失败降级空 dict，不阻断生成）。"""
+    global _CASE_BACKING_CACHE
+    if _CASE_BACKING_CACHE is not None:
+        return _CASE_BACKING_CACHE
+    _CASE_BACKING_CACHE = {}
+    try:
+        import os, sqlite3
+        _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "monitor.db")
+        _c = sqlite3.connect(_db, timeout=5)
+        _rows = _c.execute(
+            "SELECT brand,title,summary,source,url,tags FROM swire_events WHERE project_key='case_study'"
+        ).fetchall()
+        _c.close()
+        for _brand, _title, _summary, _source, _url, _tags in _rows:
+            for _tag in (_tags or "").split(","):
+                _tag = _tag.strip()
+                if _tag:
+                    _CASE_BACKING_CACHE.setdefault(_tag, []).append({
+                        "brand": _brand, "title": _title,
+                        "source": _source, "url": _url,
+                        "summary": (_summary or "")[:120],
+                    })
+    except Exception:
+        _CASE_BACKING_CACHE = {}
+    return _CASE_BACKING_CACHE
+
+
+def _case_backing(mech):
+    """按机制取匹配的真实案例背书（无则 None）。"""
+    for _tag in _MECH_CASE_TAGS.get(mech, ()):
+        _cases = _load_case_backing().get(_tag)
+        if _cases:
+            _c = _cases[0]
+            return {"case_title": _c["title"], "case_brand": _c["brand"],
+                    "case_source": _c["source"], "case_url": _c["url"], "case_note": _c["summary"]}
+    return None
+
+
 def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
     """上下文指纹（不变，新增 angle 维度）：芥子→须弥→再生产，证据分级如实标注。"""
     n_notes = int(signals.get("volume_notes", 0) or 0)
@@ -526,6 +601,7 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
         "evidence_level": evidence_level,
         "confidence": confidence,
         "counter_example_check": "pending（负样本库为 P2 能力，晋升 L1 前须补 3 个反例，当前未校验）",
+        "case_reference": _case_backing(mech),
         "trace": "芥子(真实信号) → 须弥(机制/角度抽象) → idea(多维再生产) → FEEDBACK 回流",
     }
 
@@ -635,13 +711,13 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
     bd = BUDGETS.get(budget, BUDGETS["mid"])
 
     if tonality == "luxury":
-        mech_order = ["symbolize", "constraint", "reverse", "culture", "eventify", "resonate"]
+        mech_order = ["symbolize", "constraint", "sit", "reverse", "culture", "eventify", "resonate"]
     elif sentiment == "negative":
-        mech_order = ["constraint", "reverse", "cocreate", "eventify", "resonate"]
+        mech_order = ["constraint", "sit", "reverse", "cocreate", "eventify", "resonate"]
     elif sentiment == "positive":
-        mech_order = ["eventify", "participate", "cocreate", "resonate", "constraint"]
+        mech_order = ["eventify", "participate", "cocreate", "resonate", "constraint", "sit"]
     else:
-        mech_order = ["symbolize", "constraint", "participate", "eventify", "resonate"]
+        mech_order = ["symbolize", "constraint", "sit", "participate", "eventify", "resonate"]
 
     angles_order = ["consumer", "introspect", "coded", "scene", "rebel", "cocreate"]
     rng.shuffle(angles_order)
