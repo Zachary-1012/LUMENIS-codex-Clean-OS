@@ -171,7 +171,7 @@ def refresh_profiles() -> dict:
              round(p.get('content_quality_avg') or 0, 2), p.get('positive_count') or 0, p.get('neutral_count') or 0,
              p.get('negative_count') or 0, p.get('risk_count') or 0, p.get('first_publish_at'),
              p.get('last_publish_at'), p['active_days'], 'stable', tier, p['kos_score'], p['lifecycle_stage'],
-             p['is_potential'], p['is_risk'], 1 if tier == 'S' else 0, '', '', '', now_str, now_str, sr.get_active_brand(), 1, ownership_type, ownership_confidence, '', '', '', 'UNVERIFIED'))
+             p['is_potential'], p['is_risk'], 1 if tier == 'S' else 0, '', '', '', now_str, now_str, sr.get_active_brand(), 1, ownership_type, ownership_confidence, '', '', sr.get_active_brand(), 'UNVERIFIED'))
     conn.commit()
     stats = get_stats()
     conn.close()
