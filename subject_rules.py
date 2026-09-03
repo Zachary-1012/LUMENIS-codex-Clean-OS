@@ -207,6 +207,41 @@ def _subject_sql_and_values(alias: str = '') -> tuple[str, list[str]]:
 subject_sql_and_values = _subject_sql_and_values
 
 
+def _subject_sql_and_values_for(brand_key: str, alias: str = '') -> tuple[str, list[str]]:
+    """品牌化主体 SQL：按品牌配置的 subject_words/exclude_words 生成 WHERE 子句。
+    不修改 _subject_sql_and_values（保留广州太古汇历史口径），新增品牌链路（如海南中免）使用本函数。
+    """
+    cfg = get_brand_config(brand_key)
+    sw = cfg.get("subject_words", SUBJECT_WORDS)
+    ew = cfg.get("exclude_words", SUBJECT_EXCLUDE_WORDS)
+    positives = []
+    values: list[str] = []
+    for field in SUBJECT_FIELDS:
+        for word in sw:
+            positives.append(f"{_column(alias, field)} LIKE ?")
+            values.append(f'%{word.lower()}%')
+    excludes = []
+    for field in SUBJECT_FIELDS:
+        for word in ew:
+            excludes.append(f"{_column(alias, field)} LIKE ?")
+            values.append(f'%{word.lower()}%')
+    return f"({' OR '.join(positives)}) AND NOT ({' OR '.join(excludes)})", values
+
+
+def subject_sql_and_values_for(brand_key: str = "", alias: str = '') -> tuple[str, list[str]]:
+    """品牌化主体 SQL（默认当前激活品牌）。供 KOS/中免等品牌链路聚合查询使用。"""
+    return _subject_sql_and_values_for(brand_key or get_active_brand(), alias)
+
+
+def collect_keywords_for(brand_key: str = "") -> list[str]:
+    """品牌采集关键词：优先 collect_keywords，其次取 subject_words。供 profile 采集任务生成。"""
+    cfg = get_brand_config(brand_key)
+    kws = cfg.get("collect_keywords") or []
+    if not kws:
+        kws = list(cfg.get("subject_words", []))
+    return [k for k in kws if k]
+
+
 def canonical_text(note: dict) -> str:
     return ' '.join(_text(note.get(k, '')) for k in SUBJECT_FIELDS).strip()
 

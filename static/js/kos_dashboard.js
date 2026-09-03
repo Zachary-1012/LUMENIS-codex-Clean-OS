@@ -85,6 +85,49 @@
     }).catch(function () {});
   }
 
+  // KM-02/04：手动回填入口（WeCom / Sales / Boosting / 进线 / 点击）→ /api/kos/manual
+  function loadKosManualFill() {
+    ensureKosPanel("kosManualPanel", "手动回填（KM-02：WeCom / Sales / Boosting / 进线）");
+    api("/api/kos/list?limit=200&sort_by=kos_score").then(function (d) {
+      if (!d.ok) return;
+      var body = document.getElementById("kosManualPanelBody");
+      if (!body) return;
+      var opts = (d.profiles || []).map(function (p) {
+        return '<option value="' + (p.author_id || "") + '">' + (p.author_nickname || p.author_id || "未知") + '</option>';
+      }).join("");
+      body.innerHTML =
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">'
+        + '<select id="kosManualId" style="flex:1;min-width:160px;padding:8px;border:1px solid #e5e5e5;border-radius:6px">' + opts + '</select>'
+        + '<input id="kosManualWecom" type="number" placeholder="WeCom新增" style="width:100px;padding:8px;border:1px solid #e5e5e5;border-radius:6px">'
+        + '<input id="kosManualSales" type="number" placeholder="销售(¥)" style="width:110px;padding:8px;border:1px solid #e5e5e5;border-radius:6px">'
+        + '<input id="kosManualBudget" type="number" placeholder="Boosting(¥)" style="width:110px;padding:8px;border:1px solid #e5e5e5;border-radius:6px">'
+        + '<input id="kosManualInquiry" type="number" placeholder="进线" style="width:76px;padding:8px;border:1px solid #e5e5e5;border-radius:6px">'
+        + '<input id="kosManualClicks" type="number" placeholder="点击" style="width:76px;padding:8px;border:1px solid #e5e5e5;border-radius:6px">'
+        + '<button onclick="kosSubmitManual()" style="padding:8px 16px;background:#171717;color:#fff;border:none;border-radius:6px;cursor:pointer">保存回填</button>'
+        + '</div>'
+        + '<div id="kosManualResult" style="margin-top:8px;font-size:12px;color:#27ae60"></div>';
+    }).catch(function () {});
+  }
+
+  function kosSubmitManual() {
+    var id = document.getElementById("kosManualId");
+    if (!id || !id.value) { alert("请先选择 KOS"); return; }
+    function num(x) { var v = document.getElementById(x); return v && v.value !== "" ? Number(v.value) : undefined; }
+    var payload = { kos_id: id.value };
+    var w = num("kosManualWecom"), s = num("kosManualSales"), b = num("kosManualBudget"), i = num("kosManualInquiry"), c = num("kosManualClicks");
+    if (w !== undefined) payload.wecom_add = w;
+    if (s !== undefined) payload.sales_amount = s;
+    if (b !== undefined) payload.boosting_budget = b;
+    if (i !== undefined) payload.inquiry = i;
+    if (c !== undefined) payload.clicks = c;
+    fetch("/api/kos/manual", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var el = document.getElementById("kosManualResult");
+      if (el) el.innerHTML = d.ok ? ("已保存：" + JSON.stringify(d.data.entry)) : ("保存失败：" + (d.error || ""));
+    }).catch(function (e) { var el = document.getElementById("kosManualResult"); if (el) el.innerHTML = "保存失败：" + e; });
+  }
+
   function loadKosList(tier) {
     currentTier = tier || "";
     var url = "/api/kos/list?limit=30&sort_by=kos_score" + (currentTier ? "&tier=" + currentTier : "");
@@ -315,6 +358,7 @@
           loadKosList("");
           loadKosFunnel();
           loadKosRoi();
+          loadKosManualFill();
         }
       };
     }
