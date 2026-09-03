@@ -1043,3 +1043,45 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - 品牌→CDP 身份映射（香港品牌应走 rednote 香港 9223）当前用 body.cdp_url 显式指定，未自动按品牌地区解析（登记，下一步增强）。
 - 采集频率/词间隔沿用主链规则（本轮未在 collect 内额外限频，靠统一暂停门+主链调度约束；品牌采集批量场景待真实运行观察后校准）。
 - 备份：kos_engine.py.bak-koscollect、kos_routes.py.bak-koscollect、brand_hub.js.bak-koscollect（均不提交）。
+
+
+---
+
+## 第十七批：KOS 主体归属 Gate + HUMAN_CONTROL_GATE 执行状态机 + KOS 统一香港账号采集
+
+### 背景
+KOS MASTER EXECUTION CONTRACT v1 已入双子库（ZBC d292c9f / OSAI bd088f6）。核心 P0：采集准确度、主体归属 Gate、KOS 识别、账号资产、真实运行闭环；禁止"生成=已发送"、禁止 AI 幻觉充当业务事实。本批落地 Contract 的合规底座：**内容相关 ≠ 主体归属** 的确定性判定 + **敏感动作人工确认** 的状态机审计。
+
+### 改动
+1. **主体归属 Gate（kos_engine.ownership_for）**
+   - 确定性规则映射 subject_type → ownership_class（official→OFFICIAL 0.95；media→MEDIA 0.85；kos→INDEPENDENT_KOL_KOC 0.6 需复核；normal_user→UGC_CONSUMER 0.6 需复核；空→UNKNOWN 0.3 需复核）。
+   - 返回 ownership_class / state / confidence / needs_manual_review / reason / evidence_hint。
+   - 纯判定视图，不写回 kos_profiles、不改广州口径、AI 不越权。
+   - GET /api/kos/brand 现返回 profiles 附加 ownership；新增 GET /api/kos/ownership?brand=|author_id=。
+2. **HUMAN_CONTROL_GATE 执行状态机（kos_execution.py + migration v8→v9）**
+   - 状态机锁定：AI_GENERATED → PENDING_HUMAN_REVIEW → HUMAN_APPROVED → EXECUTING → SUCCESS/FAILED（REJECTED 支持）；非法转移/终态/无 actor 人工批准一律拦截。
+   - 门控动作集 GATED_ACTIONS：reply_send / outreach_send / email_send / lead_export / cooperation_confirm / contract_confirm / paid_media / publish / reward_issue。
+   - 审计表 kos_executions（migration_8_to_9 建，DB 已备份 before_migration_v8_to_v9.db 9.79MB 后升级到 v9）；含 execution_id/action_type/target/actor/created/approved/executed/result/evidence_ref/failure_reason。
+   - 新增端点：POST /api/kos/execution、POST /api/kos/execution/<id>/transition、GET /api/kos/executions。
+   - reply/generate 与 outreach 接入：生成建议后自动登记 AI_GENERATED 执行（返回 hcg.execution_id + "生成≠已发送"），不再是无审计的纯文本。
+3. **KOS 统一香港账号采集（用户指令 2026-09-03）**
+   - POST /api/kos/collect 默认 CDP 由 cdp_url_for() 改为 cdp_url_for(XHS_RETINAUT_NAME)（香港 RedNote 9223）；body.cdp_url 仍可显式覆盖。
+
+### 实测（真实结果）
+- py_compile：kos_engine.py / kos_routes.py / kos_execution.py / database_migrations.py 全通过。
+- 状态机单测（test_hcg.py）：创建 AI_GENERATED → 拦截 AI_GENERATED→SUCCESS → PENDING → 拦截无 actor 批准 → HUMAN_APPROVED(approved_at) → EXECUTING → SUCCESS(evidence) → 终态拦截 → 非门控动作拦截，全部通过。
+- 迁移：database_migrations.py migrate v8→v9 成功（自动备份 9.79MB + 建表），当前 DB v9。
+- HTTP 实测（HTTP Basic Auth（账户见设置页））：
+  - POST /api/kos/reply/generate（"多少钱？想买"）→ hcg.status=AI_GENERATED, execution_id=KX-*（生成≠已发送）。
+  - POST /api/kos/outreach（真实 author 61d58d…）→ ok=True, hcg=AI_GENERATED。
+  - POST /api/kos/execution + transition 全流程（paid_media 示例）：AI_GENERATED→PENDING_HUMAN_REVIEW→HUMAN_APPROVED→EXECUTING→SUCCESS；GET /api/kos/executions?status=SUCCESS 审计可见。非法跳步 HUMAN_APPROVED→SUCCESS 被正确 400 拦截。
+  - GET /api/kos/brand?brand=guangzhou_taikoo_hui → profiles 附加 ownership（新采集账号判 UNKNOWN/需复核，符合"内容相关≠KOS"契约）。
+- 红线回归：active_brand=guangzhou_taikoo_hui；subject_hit('广州太古汇')=True、('成都太古里')=False；subject_hit_for_brand(title='海南中免', brand_key='hainan_cdf')=True、（三亚国际免税城/DFS尖沙咀）=True。五条红线函数未改、publish_datetime/captured_at 未混、官方账号只读。
+- 香港 CDP：cdp_url_for(XHS_RETINAUT_NAME)=http://127.0.0.1:9223。
+- 系统干净重启 8201（清残留进程后 supervisor 拉起，worker 19196），healthz v5.9.9 OK。
+
+### 未实测 / 登记
+- 真实品牌采集仍被统一暂停门拦截（用户暂停+风控熔断双暂停中）；恢复后 KOS 采集将默认走香港 RedNote 9223，可 body.cdp_url 覆盖。
+- 归属 Gate 目前为确定性规则视图（官方/媒体自动 DIRECT，其余待人工复核）；AI 辅助分类未接入（AI 不越权原则，后续可加，但不得覆盖硬规则）。
+- kos_profiles 主表未加 ownership 字段（避免 schema 变更与广州数据影响）；如后续需要持久化归属结论，建议新增独立归属表（经用户确认后做）。
+- 备份：kos_engine.py.bak-ownership、kos_routes.py.bak-hcg、database_migrations.py.bak-hcg（均不提交）。

@@ -13,6 +13,7 @@ import sqlite3, os, math, json, io
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+import subject_rules as sr  # KOS 主体归属硬规则（Contract 第六条）
 
 DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
 
@@ -50,12 +51,13 @@ def refresh_profiles() -> dict:
             COALESCE(SUM(comments),0) as total_comments, COALESCE(SUM(collects),0) as total_collects,
             COALESCE(SUM(shares),0) as total_shares, COALESCE(AVG(content_quality_score),0) as content_quality_avg,
             MAX(subject_type) as subject_type,
+            GROUP_CONCAT(title, ' || ') as note_titles,
             SUM(CASE WHEN sentiment='positive' THEN 1 ELSE 0 END) as positive_count,
             SUM(CASE WHEN sentiment='neutral' THEN 1 ELSE 0 END) as neutral_count,
             SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) as negative_count,
             SUM(CASE WHEN risk_level IN ('high','medium') THEN 1 ELSE 0 END) as risk_count,
             MIN(publish_datetime) as first_publish_at, MAX(publish_datetime) as last_publish_at
-        FROM notes WHERE author_id IS NOT NULL AND author_id != '' GROUP BY author_id
+        FROM notes WHERE author_id IS NOT NULL AND author_id != '' AND subject_type IN ('kos', 'official') GROUP BY author_id
     """)
     authors = cur.fetchall()
     profiles = []
@@ -572,3 +574,78 @@ def brand_profiles(brand: str, limit: int = 20) -> list:
         return profiles
     finally:
         conn.close()
+
+# -*- coding: utf-8 -*-
+"""KOS 主体归属 Gate（KOS_ENTITY_OWNERSHIP_CONTRACT_v1 / KOS MASTER EXECUTION CONTRACT v1）。
+内容相关 ≠ 主体归属；商户/品牌 KOS ≠ 目标主体 KOS；AI 不越权、规则优先。
+本模块只做确定性判定视图，不写回 kos_profiles，不改广州现有口径。
+由施工追加到 kos_engine.py 末尾。
+"""
+
+# 归属类别（契约固定）
+OWNERSHIP_CLASSES = [
+    "TARGET_ENTITY_KOS", "BRAND_KOS", "MERCHANT_KOS", "PARTNER_KOS",
+    "INDEPENDENT_KOL_KOC", "UGC_CONSUMER", "MEDIA", "OFFICIAL", "UNKNOWN",
+]
+
+# 现有身份信号 → 归属类别（确定性映射；仅基于真实字段，不推测）
+_OWNERSHIP_BY_SUBJECT_TYPE = {
+    "official": "OFFICIAL",
+    "media": "MEDIA",
+    "institution": "MEDIA",
+    "kos": "INDEPENDENT_KOL_KOC",      # 现有 kos 仅表示"内容相关且有传播力"，不构成目标主体归属
+    "normal_user": "UGC_CONSUMER",
+}
+
+_OWNERSHIP_STATE = {
+    "OFFICIAL": "DIRECT",
+    "MEDIA": "DIRECT",
+    "BRAND_KOS": "INDIRECT",
+    "MERCHANT_KOS": "MERCHANT",
+    "PARTNER_KOS": "PARTNER",
+    "INDEPENDENT_KOL_KOC": "INDEPENDENT",
+    "UGC_CONSUMER": "UGC",
+    "TARGET_ENTITY_KOS": "DIRECT",
+    "UNKNOWN": "UNKNOWN",
+}
+
+_OWNERSHIP_CONFIDENCE = {
+    "OFFICIAL": 0.95, "MEDIA": 0.85, "BRAND_KOS": 0.7, "MERCHANT_KOS": 0.7,
+    "PARTNER_KOS": 0.7, "TARGET_ENTITY_KOS": 0.8,
+    "INDEPENDENT_KOL_KOC": 0.6, "UGC_CONSUMER": 0.6, "UNKNOWN": 0.3,
+}
+
+_OWNERSHIP_REASON = {
+    "OFFICIAL": "官方账号（subject_type=official）",
+    "MEDIA": "媒体/机构身份（subject_type=media/institution）",
+    "INDEPENDENT_KOL_KOC": "内容相关但无目标主体归属证据（内容相关≠KOS归属），须人工复核",
+    "UGC_CONSUMER": "普通消费者内容（subject_type=normal_user），非目标主体KOS",
+    "UNKNOWN": "身份信号不足，归属未知",
+}
+
+
+def ownership_for(profile, brand="", subject_type="", identity_label="", is_kos=None) -> dict:
+    """主体归属判定（确定性规则，AI 不越权）。
+    返回 ownership_class / state / confidence / needs_manual_review / reason / evidence_hint。
+    仅判定视图，不写任何表；广州历史数据不受影响。
+    """
+    st = subject_type or (profile or {}).get("subject_type") or ""
+    label = identity_label or (profile or {}).get("identity_label") or ""
+    if is_kos is None:
+        is_kos = bool((profile or {}).get("is_kos"))
+    owner = _OWNERSHIP_BY_SUBJECT_TYPE.get(st, "UNKNOWN")
+    # 品牌采集来源（方案A：source_keyword 品牌词）默认内容相关，无归属证据 → INDEPENDENT/UNKNOWN，须人工复核
+    if not st:
+        owner = "INDEPENDENT_KOL_KOC" if is_kos else "UNKNOWN"
+    needs_review = owner in ("INDEPENDENT_KOL_KOC", "UNKNOWN", "UGC_CONSUMER", "BRAND_KOS", "MERCHANT_KOS")
+    return {
+        "target_entity": brand or "",
+        "ownership_class": owner,
+        "ownership_state": _OWNERSHIP_STATE.get(owner, "UNKNOWN"),
+        "ownership_confidence": _OWNERSHIP_CONFIDENCE.get(owner, 0.5),
+        "needs_manual_review": needs_review,
+        "reason": _OWNERSHIP_REASON.get(owner, "待人工判定"),
+        "evidence_hint": "subject_type=" + (st or "空")
+                         + (("; identity_label=" + label) if label else "")
+                         + ("; is_kos=1" if is_kos else ""),
+    }

@@ -22,7 +22,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'monitor.db')
 BACKUP_DIR = os.path.join(os.path.dirname(__file__), 'data', 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 8
+CURRENT_VERSION = 9
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -34,6 +34,7 @@ MIGRATION_HISTORY = {
     6: "添加 collector_quality_log, note_comments 表",
     7: "添加负面舆情二次确认字段(negative_confirmed, negative_confirmed_at, negative_confirmed_by)",
     8: "添加数据质量字段(publish_datetime, captured_at, detail_fetched_at, comments_fetched_at, data_quality_status, data_quality_score, collector_version)",
+    9: "添加 HUMAN_CONTROL_GATE 执行审计表 kos_executions(AI_GENERATED->PENDING_HUMAN_REVIEW->HUMAN_APPROVED->EXECUTING->SUCCESS/FAILED)",
 }
 
 
@@ -334,6 +335,33 @@ def migration_7_to_8(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE notes ADD COLUMN {col_name} {col_type}")
 
 
+def migration_8_to_9(conn):
+    """迁移8→9：新建 HUMAN_CONTROL_GATE 执行审计表（AI_GENERATED->PENDING_HUMAN_REVIEW->HUMAN_APPROVED->EXECUTING->SUCCESS/FAILED）。
+    敏感动作（外联/邮件/留资/合作/投流/预算/发布等）执行必须经人工确认并留审计。
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS kos_executions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            execution_id TEXT UNIQUE,
+            action_type TEXT NOT NULL,
+            target_author_id TEXT DEFAULT '',
+            target_brand TEXT DEFAULT '',
+            payload TEXT DEFAULT '{}',
+            status TEXT DEFAULT 'AI_GENERATED',
+            actor TEXT DEFAULT '',
+            created_at TEXT,
+            approved_at TEXT,
+            executed_at TEXT,
+            result TEXT DEFAULT '',
+            evidence_ref TEXT DEFAULT '',
+            failure_reason TEXT DEFAULT '',
+            version TEXT DEFAULT 'v1'
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_kos_exec_status ON kos_executions(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_kos_exec_author ON kos_executions(target_author_id)")
+
+
 # 迁移函数映射
 MIGRATIONS = {
     1: migration_1_to_2,
@@ -343,6 +371,7 @@ MIGRATIONS = {
     5: migration_5_to_6,
     6: migration_6_to_7,
     7: migration_7_to_8,
+    8: migration_8_to_9,
 }
 
 
