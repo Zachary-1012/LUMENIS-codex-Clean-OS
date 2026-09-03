@@ -64,6 +64,17 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
         'total_comments': stats.get('total_comments', 0),
         'total_engagements': stats.get('total_engagements', 0),
     })
+    # 报告体系消费营销节点（芥子→须弥）：当月节点/主题/建议调性进报告，供排期与决策
+    try:
+        from scripts.marketing_calendar import suggest_hotspot
+        _mc = suggest_hotspot(end, "商业地产")
+        report['marketing_nodes'] = {
+            "nodes": [n["name"] for n in _mc.get("nodes", [])],
+            "themes": _mc.get("themes", []),
+            "tonality_advice": _mc.get("tonality_advice", ""),
+        }
+    except Exception:
+        report['marketing_nodes'] = {"nodes": [], "themes": [], "tonality_advice": ""}
     db.save_daily_report(report)
 
     digest = None

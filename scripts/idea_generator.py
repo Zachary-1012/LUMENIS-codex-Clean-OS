@@ -592,6 +592,17 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
     sentiment = signals.get("sentiment", "neutral")
     circle = signals.get("circle", "都市职场")
     hotspot = signals.get("hotspot", "")
+    # 芥子→须弥：未显式指定热点时，自动绑定当下营销节点（时效自动增强）。
+    # 仅非 luxury 调性启用——高奢克制叙事原则：不参与流量狂欢、不追热点。
+    if not hotspot and tonality != "luxury":
+        try:
+            import datetime as _dt
+            from scripts.marketing_calendar import suggest_hotspot
+            _mc = suggest_hotspot(_dt.date.today().strftime("%Y-%m-%d"), category)
+            if _mc and _mc.get("nodes"):
+                hotspot = _mc["nodes"][0]["name"]
+        except Exception:
+            pass
     style = EMOTION_STYLES.get(sentiment, EMOTION_STYLES["neutral"])
     cs = CIRCLE_SYMBOLS.get(circle, CIRCLE_SYMBOLS["都市职场"])
     tone = TONALITIES.get(tonality, TONALITIES["premium"])["name"]

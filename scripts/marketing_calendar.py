@@ -186,6 +186,64 @@ _CAT_ALIAS = {
     "旅游": ["旅游", "出行", "度假"],
 }
 
+# 垂直行业专属节点（2026 研究：母婴/美妆/酒饮/文旅/教育/宠物/咖啡茶饮）
+# 结构：行业 → [{name, month(可空=全年), theme, cats}]
+_V_NODES = {
+    "母婴": [
+        {"name": "爱婴节", "month": 5, "theme": "更轻松的妈妈、高质量带娃", "cats": ["育儿", "亲子"]},
+        {"name": "童装节", "month": 6, "theme": "快乐童年、成长刻度", "cats": ["童装", "亲子"]},
+        {"name": "亲子嘉年华", "month": 10, "theme": "陪伴、做回自己、亲情", "cats": ["亲子", "乐园", "文娱"]},
+    ],
+    "美妆": [
+        {"name": "美妆节", "month": 3, "theme": "悦己、女性力量、焕新", "cats": ["美妆", "护肤"]},
+        {"name": "香水节", "month": 11, "theme": "浪漫、听见声音、情感优先", "cats": ["香水", "礼盒"]},
+    ],
+    "酒饮": [
+        {"name": "精酿节", "month": 9, "theme": "微醺、情绪消费、松弛", "cats": ["精酿", "酒水"]},
+        {"name": "威士忌节", "month": 11, "theme": "仪式感、文化感、浓情", "cats": ["威士忌", "洋酒"]},
+        {"name": "品酒季", "month": 12, "theme": "家、团圆、微醺慢聊", "cats": ["红酒", "酒水"]},
+    ],
+    "文旅": [
+        {"name": "旅游节", "month": 5, "theme": "悦己、美好生活在当下", "cats": ["旅游", "文旅"]},
+        {"name": "非遗文化季", "month": 6, "theme": "文化感、寻迹、深耕", "cats": ["非遗", "文化体验"]},
+    ],
+    "教育": [
+        {"name": "开学季", "month": 9, "theme": "新起点、成长、焕新", "cats": ["教育", "文具", "数码"]},
+        {"name": "考试季", "month": 6, "theme": "加油助力、青春、规划", "cats": ["教育", "学习"]},
+    ],
+    "宠物": [
+        {"name": "国际宠物日", "month": 4, "theme": "陪伴、治愈、家庭成员", "cats": ["宠物"]},
+        {"name": "宠物节", "month": 8, "theme": "社交货币、分享、关爱", "cats": ["宠物"]},
+    ],
+    "咖啡茶饮": [
+        {"name": "世界咖啡日", "month": 10, "theme": "松弛感、第三空间、社交", "cats": ["咖啡", "咖啡豆"]},
+        {"name": "茶文化节", "month": 5, "theme": "新中式、生活仪式、探索", "cats": ["茶叶", "茶饮"]},
+    ],
+}
+
+
+def industry_nodes(industry="", month=None):
+    """垂直行业节点：industry 关键词 → 节点列表（可按月过滤）。
+    未指定行业时返回全部行业节点。
+    """
+    hits = []
+    for ind, nodes in _V_NODES.items():
+        if industry and ind not in industry and industry not in ind:
+            # 允许用品类别名匹配（如"美妆"命中"美妆"）
+            continue
+        for n in nodes:
+            if month is None or n.get("month") == month:
+                hits.append(dict(n, industry=ind))
+    return hits
+
+
+# 垂直行业 → 情感主题 → 调性映射（并入 _THEME_TO_TONALITY 判断）
+_V_THEME_TONALITY = {
+    "陪伴": "premium", "治愈": "premium", "松弛": "premium", "微醺": "premium",
+    "悦己": "premium", "仪式": "luxury", "文化": "premium", "成长": "premium",
+    "狂欢": "mass", "松弛感": "premium",
+}
+
 # 情感主题 → 调性偏好（须弥层：节点主题映射创意气质）
 _THEME_TO_TONALITY = {
     "狂欢": "mass", "实惠": "mass", "玩梗": "mass", "变装": "mass", "热闹": "mass",
@@ -261,7 +319,12 @@ def main():
     ap.add_argument("date", nargs="?", default="", help="日期 YYYY-MM-DD 或 MM-DD（默认今天）")
     ap.add_argument("--category", default="", help="品类，如 商业地产/美妆/母婴")
     ap.add_argument("--month", type=int, default=0, help="只看某月节点")
+    ap.add_argument("--industry", default="", help="垂直行业节点，如 母婴/美妆/酒饮/文旅/教育/宠物/咖啡茶饮")
     a = ap.parse_args()
+    if a.industry:
+        for n in industry_nodes(a.industry, a.month or None):
+            print("[%s] %s（%s月）｜%s" % (n["industry"], n["name"], n.get("month", "全年"), n["theme"]))
+        return
     if a.month:
         for n in nodes_for_month(a.month):
             print("[%s %s] %s｜%s" % (n["date"], n["kind"], n["name"], n["theme"]))

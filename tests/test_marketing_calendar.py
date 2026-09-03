@@ -40,3 +40,14 @@ def test_all_nodes_have_required_fields():
         for n in nodes:
             assert {"name", "date", "kind", "theme", "cats"} <= set(n), n
             assert len(n["date"]) == 5
+
+
+def test_vertical_industry_nodes():
+    from scripts.marketing_calendar import industry_nodes, _V_NODES
+    assert len(_V_NODES) >= 6, "垂直行业覆盖不足"
+    moms = industry_nodes("母婴")
+    assert moms and all(n["industry"] == "母婴" for n in moms), moms
+    june = industry_nodes("美妆", month=3)
+    assert any("美妆节" == n["name"] for n in june), june
+    coffee = industry_nodes("咖啡")
+    assert any("咖啡" in n["name"] for n in coffee), coffee
