@@ -5691,9 +5691,10 @@ def api_cookies_import():
       - 记录 Evidence（evidence_store）
     """
     import json as _json
+    import os as _os
     from pathlib import Path as _Path
     _base = _Path(__file__).resolve().parent
-    _data = _base / 'data'
+    _data = _Path(_os.environ.get('ZBC_DATA_DIR', str(_base / 'data')))
     _data.mkdir(exist_ok=True)
     results = {}
 
@@ -5806,9 +5807,10 @@ def api_cookies_import_raw():
       - 记录 Evidence
     """
     import json as _json
+    import os as _os
     from pathlib import Path as _Path
     _base = _Path(__file__).resolve().parent
-    _data = _base / 'data'
+    _data = _Path(_os.environ.get('ZBC_DATA_DIR', str(_base / 'data')))
     _data.mkdir(exist_ok=True)
     body = request.get_json(silent=True) or {}
     platform = (body.get('platform') or '').strip().lower()
@@ -5832,6 +5834,13 @@ def api_cookies_import_raw():
             })
     if not cleaned:
         return jsonify({'ok': False, 'error': '无合法 cookie 条目（需含 name/value）'}), 400
+    # 真实性校验：小红书必须包含非占位 web_session，防止测试/误操作污染生产 cookie
+    if platform in ('xhs', 'xiaohongshu'):
+        ws = [c.get('value', '') for c in cleaned if c.get('name') == 'web_session']
+        if not ws:
+            return jsonify({'ok': False, 'error': '小红书 Cookie 缺少 web_session（真实登录凭证），已拒绝导入'}), 400
+        if len(ws[0]) < 6 or ws[0].lower() in ('x', 'test', 'placeholder', 's', 'token', '123456', 'true'):
+            return jsonify({'ok': False, 'error': 'web_session 疑似测试/占位值，已拒绝导入（请提供真实登录 Cookie）'}), 400
     # 写入源文件
     if platform in ('weibo',):
         src_file = _data / 'weibo_cookies.json'
@@ -5846,13 +5855,16 @@ def api_cookies_import_raw():
         status_file = _data / 'xhs_login_status.json'
         status = {'logged_in': True, 'cookie_count': len(cleaned), 'login_method': 'cookie_import_api_raw', 'platform': 'xiaohongshu'}
     src_file.write_text(_json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8')
-    status['last_login'] = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    status_file.write_text(_json.dumps(status, ensure_ascii=False, indent=2), encoding='utf-8')
-    # 小红书额外生成 cookie_string（供采集器使用）
-    if platform in ('xhs', 'xiaohongshu'):
+    # 仅当 apply=true 才同步生产 cookie 文件（防止测试污染；默认只写 source 待确认）
+    apply = bool(body.get('apply', False))
+    if apply and platform in ('xhs', 'xiaohongshu'):
+        (_data / 'xhs_cookies.json').write_text(_json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8')
         parts = [f"{c['name']}={c['value']}" for c in cleaned
                  if c.get('domain','').endswith('xiaohongshu.com') and not c['name'].startswith('x-user-id-')]
         (_data / 'xhs_cookie_string.txt').write_text('; '.join(parts), encoding='utf-8')
+        status['applied'] = True
+    status['last_login'] = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    status_file.write_text(_json.dumps(status, ensure_ascii=False, indent=2), encoding='utf-8')
     # Evidence（不记录 Cookie 值）
     try:
         from evidence_store import record_evidence
@@ -5862,7 +5874,7 @@ def api_cookies_import_raw():
                         actual=_json.dumps({'platform': platform, 'cookie_count': len(cleaned)}, ensure_ascii=False))
     except Exception:
         pass
-    return jsonify({'ok': True, 'platform': platform, 'cookie_count': len(cleaned)})
+    return jsonify({'ok': True, 'platform': platform, 'cookie_count': len(cleaned), 'applied': apply and platform in ('xhs', 'xiaohongshu')})
 
 if __name__ == '__main__':
     import logging

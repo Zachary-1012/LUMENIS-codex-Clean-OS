@@ -255,14 +255,17 @@
                 
                 <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee;">
                     <h4 style="margin: 0 0 8px 0; color: #333; font-size: 14px;">平台 Cookie 导入</h4>
-                    <div style="font-size: 12px; color: #999; margin-bottom: 10px;">粘贴平台 Cookie（JSON 数组），保存后自运行导入，供采集器使用。凭证仅存本地 data/，不入库。</div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 10px;">粘贴平台 Cookie（JSON 数组，小红书需含真实 web_session 凭证）。默认仅保存源文件不覆盖生产，需真实凭证才应用。凭证仅存本地 data/，不入库。</div>
                     <select id="setting-cookie-platform" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px;">
                         <option value="xhs">小红书（xiaohongshu.com）</option>
                         <option value="weibo">微博（weibo.com）</option>
                         <option value="bilibili">B站（bilibili.com）</option>
                     </select>
                     <textarea id="setting-cookie-input" rows="5" placeholder='[{"name":"a1","value":"xxx","domain":".xiaohongshu.com"}]' style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
-                    <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+                    <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap;">
+                        <label style="font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                            <input type="checkbox" id="setting-cookie-apply" style="margin: 0;"> 应用到生产（覆盖当前采集 Cookie）
+                        </label>
                         <button id="setting-cookie-import" style="padding: 8px 16px; background: #0a84ff; color: white; border: none; border-radius: 6px; cursor: pointer;">导入并运行</button>
                         <span id="setting-cookie-result" style="font-size: 12px; color: #999;"></span>
                     </div>
@@ -326,9 +329,10 @@
                 return;
             }
             try {
+                const apply = document.getElementById('setting-cookie-apply').checked;
                 const res = await api('/api/cookies/import/raw', {
                     method: 'POST',
-                    body: { platform: platform, cookies: cookies }
+                    body: { platform: platform, cookies: cookies, apply: apply }
                 });
                 resultEl.textContent = '导入成功: ' + platform + ' / ' + res.cookie_count + ' 条';
                 resultEl.style.color = '#1a7f37';

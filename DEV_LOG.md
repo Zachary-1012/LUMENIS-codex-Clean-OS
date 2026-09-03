@@ -1,3 +1,15 @@
+## 2026-09-03｜修复 GAP-21 Cookie 测试污染生产数据 + raw API 加固（真实性校验/apply 开关/数据隔离）
+> 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
+
+**问题**：GAP-21 raw 导入 API 验证时，测试 cookie（a1=s/web_session=x 等）写入生产 data/ 的 xhs_cookies.json/source/cookie_string/login_status，导致生产误判小红书已登录，真实 cookie 被覆盖（用户红线：任何测试残留不得影响最新系统）
+**修复**：
+1. 清理全部测试污染文件（备份到 data/backups/cookie_test_pollution_20260903/），生产 data/ 恢复干净
+2. raw API 加真实性校验：小红书必须含非占位 web_session（值长度≥6 且非 x/test/placeholder 等），否则 400 拒绝
+3. raw API 加 apply 开关：默认只写 source.json 不覆盖生产 xhs_cookies.json（防止测试/误操作污染），apply=true 才同步生产
+4. 两个 cookie 导入端点支持 ZBC_DATA_DIR 环境变量，测试 fixture 指向临时目录，彻底隔离测试对生产 data/ 的写入
+**验证**：12 单测全过（含假 web_session 拒绝/缺 web_session 拒绝/apply 语义/数据隔离）；测试后生产 data/ 无 cookie 文件；生产 8201 重启后 healthz 200/import-status 200/假 session 400
+**Commit**：待提交（app.py + static/js/system_controls.js + tests/test_cookies_import_api.py）
+
 ## 2026-09-03｜GAP-21 UI 接入闭环 + 响应式逐档验证证据 + AI 资源包/治理面板生产确认
 > 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
 

@@ -23,6 +23,9 @@ TEST_PASS = 'Zachary01'
 def client():
     fd, path = tempfile.mkstemp(suffix='.db')
     os.close(fd)
+    # 数据目录隔离：临时 data/ 避免 raw 导入测试污染生产 data/
+    tmp_data = tempfile.mkdtemp(prefix='zbip_test_data_')
+    os.environ['ZBC_DATA_DIR'] = tmp_data
     os.environ['ZBC_DB_PATH'] = path
     os.environ['TAIKOO_AUTH_USER'] = TEST_USER
     os.environ['TAIKOO_AUTH_PASSWORD'] = TEST_PASS
@@ -42,6 +45,11 @@ def client():
     try:
         os.unlink(path)
     except OSError:
+        pass
+    try:
+        import shutil
+        shutil.rmtree(tmp_data, ignore_errors=True)
+    except Exception:
         pass
 
 
@@ -80,8 +88,8 @@ def test_import_method_not_allowed(client):
 def test_raw_import_ok(client):
     r = client.post('/api/cookies/import/raw', headers=_headers(), json={
         'platform': 'xhs',
-        'cookies': [{'name': 'a1', 'value': 's', 'domain': '.xiaohongshu.com'},
-                    {'name': 'web_session', 'value': 'x', 'domain': '.xiaohongshu.com'}]
+        'cookies': [{'name': 'a1', 'value': 'ab12cd34ef56', 'domain': '.xiaohongshu.com'},
+                    {'name': 'web_session', 'value': 'sessionreal123456789', 'domain': '.xiaohongshu.com'}]
     })
     assert r.status_code == 200
     d = r.get_json()
@@ -101,3 +109,42 @@ def test_raw_import_bad_platform_400(client):
 
 def test_raw_import_empty_cookies_400(client):
     assert client.post('/api/cookies/import/raw', headers=_headers(), json={'platform': 'xhs', 'cookies': []}).status_code == 400
+
+def test_raw_import_reject_fake_websession(client):
+    # 测试占位 web_session 必须被拒绝，防止污染生产
+    r = client.post('/api/cookies/import/raw', headers=_headers(), json={
+        'platform': 'xhs',
+        'cookies': [{'name': 'a1', 'value': 's', 'domain': '.xiaohongshu.com'},
+                    {'name': 'web_session', 'value': 'x', 'domain': '.xiaohongshu.com'}]
+    })
+    assert r.status_code == 400
+    assert '拒绝' in (r.get_json().get('error') or '')
+
+
+def test_raw_import_missing_websession_400(client):
+    r = client.post('/api/cookies/import/raw', headers=_headers(), json={
+        'platform': 'xhs',
+        'cookies': [{'name': 'a1', 'value': 'realvalue', 'domain': '.xiaohongshu.com'}]
+    })
+    assert r.status_code == 400
+
+
+def test_raw_import_real_default_not_applied(client):
+    # 真实 web_session + 默认 apply=false：写 source 但不覆盖生产 xhs_cookies.json
+    r = client.post('/api/cookies/import/raw', headers=_headers(), json={
+        'platform': 'xhs',
+        'cookies': [{'name': 'web_session', 'value': 'abcdefg123456789', 'domain': '.xiaohongshu.com'}]
+    })
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d.get('applied') is False
+
+
+def test_raw_import_real_apply_true(client):
+    r = client.post('/api/cookies/import/raw', headers=_headers(), json={
+        'platform': 'xhs',
+        'apply': True,
+        'cookies': [{'name': 'web_session', 'value': 'abcdefg123456789', 'domain': '.xiaohongshu.com'}]
+    })
+    assert r.status_code == 200
+    assert r.get_json().get('applied') is True
