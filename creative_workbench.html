@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>创意引擎工作台 · Creative Engine Workbench</title>
+<style>
+  :root{
+    --bg:#F4F1EC; --card:#FFFFFF; --ink:#1A1B1C; --sub:#6B7280;
+    --line:#E4E1DA; --accent:#9A8C6F; --accent2:#C9A227;
+    --good:#52C41A; --warn:#FAAD14; --bad:#EA6668;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Roboto','PingFang SC','Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.6}
+  header{background:linear-gradient(135deg,#2C2A26,#3E3A33);color:#fff;padding:22px 28px}
+  header h1{font-size:20px;font-weight:600;letter-spacing:1px}
+  header p{font-size:12px;color:#C9C4BA;margin-top:4px}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+  .panel h2{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink);border-left:3px solid var(--accent);padding-left:10px}
+  .grid{display:flex;gap:14px;flex-wrap:wrap}
+  .field{flex:1 1 180px;min-width:160px}
+  label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  button{padding:10px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;transition:.15s}
+  button:hover{opacity:.9;transform:translateY(-1px)}
+  button.alt{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  button.alt:hover{background:#F4F1EC}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;border:1px solid var(--line);color:var(--sub)}
+  .tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .result{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;min-height:120px}
+  .empty{color:var(--sub);font-size:13px;text-align:center;padding:40px 0}
+  .idea{background:#FBF9F4;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+  .idea .title{font-size:16px;font-weight:600;color:var(--ink)}
+  .idea .mech{display:inline-block;font-size:11px;background:var(--accent);color:#fff;border-radius:4px;padding:2px 8px;margin:6px 4px 6px 0}
+  .idea .why{font-size:13px;color:var(--sub);margin-top:6px}
+  .idea .tags{font-size:12px;color:var(--accent2);margin-top:6px}
+  .shot{border-left:3px solid var(--accent);padding:8px 10px;margin-bottom:8px;background:#FBF9F4;border-radius:6px}
+  .shot .h{font-weight:600;font-size:13px}
+  .shot .m{font-size:12px;color:var(--sub);margin-top:2px}
+  .col{font-size:12px;color:var(--sub)}
+  .kv{font-size:13px;margin:4px 0}
+  .kv b{color:var(--ink)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#F4F1EC;font-weight:600}
+  .badge{display:inline-block;font-size:11px;border-radius:4px;padding:2px 7px;margin:2px;background:#F4F1EC;color:var(--ink)}
+  .file{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .file input[type=file]{flex:1 1 220px}
+  .err{color:var(--bad);font-size:13px;padding:10px;background:#FDF2F2;border-radius:8px;margin-top:8px}
+  .ok{color:var(--good);font-size:13px}
+  #authbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  #authbar .field{flex:1 1 140px}
+  #authbar .field.big{flex:2 1 240px}
+  @media(max-width:640px){.grid{flex-direction:column}.field{flex:1 1 100%}}
+</style>
+</head>
+<body>
+<header>
+  <h1>创意引擎工作台 · Zachary Creative Engine</h1>
+  <p>数据驱动原创创意 · 视频脚本 · 多平台社媒运营 · 方案拆解对标</p>
+</header>
+<div class="wrap">
+
+  <div class="panel">
+    <h2>API 连接（Basic 认证，凭证仅存本地浏览器）</h2>
+    <div id="authbar">
+      <div class="field big"><label>API 地址</label><input id="api_base" placeholder="http://localhost:5000"></div>
+      <div class="field"><label>账号</label><input id="api_user" placeholder="admin"></div>
+      <div class="field"><label>密码</label><input id="api_pass" type="password" placeholder="••••••"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>输入参数</h2>
+    <div class="grid">
+      <div class="field"><label>品牌</label><input id="brand" placeholder="太古汇 / 岚序 / 拾味"></div>
+      <div class="field"><label>品类</label>
+        <select id="category">
+          <option>美妆个护</option><option>餐饮</option><option>汽车</option><option>文旅</option>
+          <option>科技数码</option><option>金融</option><option>服装鞋包</option><option>家居</option>
+          <option>母婴</option><option>运动</option><option>酒水</option><option>商业地产</option>
+          <option>医疗健康</option><option>教育培训</option><option>B2B企服</option><option>通用</option>
+        </select>
+      </div>
+      <div class="field"><label>圈层</label>
+        <select id="circle">
+          <option>Z世代潮人</option><option>都市职场</option><option>母婴家庭</option><option>户外运动</option>
+          <option>银发健康</option><option>粉丝经济</option><option>高奢小众</option>
+        </select>
+      </div>
+      <div class="field"><label>调性</label>
+        <select id="tonality"><option value="mass">大众</option><option value="premium" selected>中高端</option><option value="luxury">高奢</option></select>
+      </div>
+      <div class="field"><label>时效热点</label><input id="hotspot" placeholder="世界杯 / 618 / 中秋"></div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div class="field"><label>舆情关键词(创意卡-数据信号)</label><input id="keyword" placeholder="太古汇(留空则用下方主题词)"></div>
+      <div class="field"><label>产品卖点/概念(视频)</label><input id="point" placeholder="东方节气香氛 / 艺术展览"></div>
+      <div class="field"><label>视频类型</label>
+        <select id="vtype"><option value="tvc">TVC 电视广告</option><option value="concept">品牌概念片</option><option value="xhs">小红书视频</option><option value="douyin">抖音视频</option></select>
+      </div>
+      <div class="field"><label>社媒平台(空=全矩阵)</label>
+        <select id="platform"><option value="">全矩阵</option><option>小红书</option><option>抖音</option><option>Instagram</option><option>Facebook</option><option>X</option><option>公众号</option></select>
+      </div>
+    </div>
+    <div class="btns">
+      <button onclick="genIdeas()">⚡ 生成创意卡</button>
+      <button onclick="genVideo()">🎬 生成视频脚本</button>
+      <button onclick="genSocial()">📣 生成社媒运营</button>
+      <button class="alt" onclick="analyzePitch()">🧩 拆解方案</button>
+    </div>
+    <div class="file" style="margin-top:12px">
+      <input type="file" id="pitch_file" accept=".txt,.md,.json,.csv">
+      <button class="alt" onclick="analyzeFile()">上传方案文件拆解</button>
+      <textarea id="pitch_text" rows="2" style="flex:1 1 100%" placeholder="或直接粘贴方案需求文本…（品牌/品类/预算/人群/渠道/目标/创意方向）"></textarea>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <span class="tab on" onclick="switchTab(this,'ideas')">创意卡</span>
+    <span class="tab" onclick="switchTab(this,'video')">视频脚本</span>
+    <span class="tab" onclick="switchTab(this,'social')">社媒运营</span>
+    <span class="tab" onclick="switchTab(this,'pitch')">方案拆解</span>
+  </div>
+  <div class="result" id="result"><div class="empty">输入参数后点击上方按钮生成…</div></div>
+</div>
+
+<script>
+  // API 配置持久化
+  function loadCfg(){
+    const g = k => localStorage.getItem('ce_'+k);
+    if(g('base')) document.getElementById('api_base').value = g('base');
+    if(g('user')) document.getElementById('api_user').value = g('user');
+    if(g('pass')) document.getElementById('api_pass').value = g('pass');
+  }
+  function saveCfg(){
+    localStorage.setItem('ce_base', document.getElementById('api_base').value);
+    localStorage.setItem('ce_user', document.getElementById('api_user').value);
+    localStorage.setItem('ce_pass', document.getElementById('api_pass').value);
+  }
+  function params(){
+    return {
+      brand: v('brand'), category: v('category'), circle: v('circle'),
+      tonality: v('tonality'), hotspot: v('hotspot'),
+      keyword: v('keyword'), product_point: v('point'),
+      video_type: v('vtype'), platform: v('platform')
+    };
+  }
+  function v(id){ return document.getElementById(id).value.trim(); }
+  function api(path, body){
+    saveCfg();
+    const base = (v('api_base')||'http://localhost:5000').replace(/\/$/,'');
+    const user = v('api_user'), pass = v('api_pass');
+    const h = {'Content-Type':'application/json'};
+    if(user || pass) h['Authorization'] = 'Basic ' + btoa(user + ':' + pass);
+    return fetch(base + path, {method:'POST', headers:h, body: JSON.stringify(body)})
+      .then(r => r.json()).then(j => { if(!j.ok) throw new Error(j.error||'请求失败'); return j.data; });
+  }
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function switchTab(el, name){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    el.classList.add('on'); currentTab = name;
+  }
+  let currentTab = 'ideas';
+
+  function genIdeas(){
+    api('/api/creative/ideas', {brand:v('brand'),category:v('category'),circle:v('circle'),
+      tonality:v('tonality'),hotspot:v('hotspot'),keyword:v('keyword'),n:3})
+    .then(d => {
+      const ideas = d.ideas||[];
+      let h = '<div style="margin-bottom:10px;font-size:12px;color:#6B7280">调性：'+esc(d.meta.tonality)+'｜圈层：'+esc(d.meta.signals.circle)+'</div>';
+      ideas.forEach(x => {
+        h += '<div class="idea"><div class="title">'+esc(x.big_idea)+'</div>' +
+             '<span class="mech">'+esc(x.mechanism)+'</span><span class="badge">'+esc(x.circle)+'</span>' +
+             '<div class="why">'+esc(x.why)+'</div>' +
+             '<div class="tags">⏱ '+esc(x.timeliness)+'</div>' +
+             '<div class="tags">📣 '+esc(x.virality)+'</div></div>';
+      });
+      show(h);
+    }).catch(e=>showErr(e));
+  }
+
+  function genVideo(){
+    api('/api/creative/video-script', {brand:v('brand'),category:v('category'),circle:v('circle'),
+      tonality:v('tonality'),hotspot:v('hotspot'),video_type:v('vtype'),product_point:v('point'),n_shots:6})
+    .then(d => {
+      let h = '<div class="kv"><b>'+esc(d.meta.video_type)+'</b>｜'+esc(d.meta.ratio)+'｜'+esc(d.meta.duration)+'</div>' +
+             '<div class="kv"><b>Big Idea：</b>'+esc(d.big_idea)+'</div>' +
+             '<div class="kv" style="margin-bottom:10px"><b>标题候选：</b>'+(d.title_candidates||[]).map(esc).join(' ｜ ')+'</div>' +
+             '<table><tr><th>#</th><th>段落</th><th>景别</th><th>时长</th><th>画面内容</th><th>音频/字幕</th></tr>';
+      (d.shots||[]).forEach(s => {
+        h += '<tr><td>'+s.shot+'</td><td>'+esc(s.part)+'</td><td>'+esc(s.shot_size)+'</td><td>'+esc(s.duration)+
+             '</td><td>'+esc(s.scene)+'<br><span class="col">'+esc(s.content)+'</span></td>'+
+             '<td>'+esc(s.audio)+'<br><span class="col">'+esc(s.subtitle)+'</span></td></tr>';
+      });
+      h += '</table><div class="kv" style="margin-top:10px"><b>投放建议：</b>'+esc(d.publish_advice)+'</div>';
+      show(h);
+    }).catch(e=>showErr(e));
+  }
+
+  function genSocial(){
+    api('/api/creative/social-ops', {brand:v('brand'),circle:v('circle'),tonality:v('tonality'),
+      hotspot:v('hotspot'),platform:v('platform')})
+    .then(d => {
+      const list = d.platform ? [d] : Object.values(d);
+      let h = '';
+      list.forEach(p => {
+        h += '<div class="idea"><div class="title">'+esc(p.meta.platform)+'（'+esc(p.meta.tonality)+'）</div>' +
+             '<div class="why">🌐 '+esc(p.ecosystem)+'</div>' +
+             '<div class="kv" style="margin-top:6px"><b>爆款公式：</b>'+esc(p.viral_formula)+'</div>' +
+             '<div class="kv"><b>发布节奏：</b>'+esc(p.publish_rhythm)+'</div>' +
+             '<div class="kv"><b>投放：</b>'+esc(p.invest)+'</div>' +
+             '<div class="kv"><b>人群分层：</b>'+esc(p.crowd_layers)+'</div>' +
+             '<div class="kv"><b>UGC机制：</b>'+esc(p.ugc)+'</div>' +
+             '<div class="kv"><b>度量：</b>'+esc(p.metrics)+'</div>' +
+             '<div class="tags">栏目：'+(p.content_columns||[]).map(esc).join(' ｜ ')+'</div></div>';
+      });
+      show(h);
+    }).catch(e=>showErr(e));
+  }
+
+  function analyzePitch(){
+    const text = v('pitch_text');
+    if(!text){ showErr(new Error('请先粘贴方案需求文本')); return; }
+    api('/api/creative/pitch-analyze', {text, brand:v('brand'), hotspot:v('hotspot'), n:3})
+    .then(d => renderPitch(d)).catch(e=>showErr(e));
+  }
+  function analyzeFile(){
+    const f = document.getElementById('pitch_file').files[0];
+    if(!f){ showErr(new Error('请先选择文件(.txt/.md/.json/.csv)')); return; }
+    saveCfg();
+    const base = (v('api_base')||'http://localhost:5000').replace(/\/$/,'');
+    const user = v('api_user'), pass = v('api_pass');
+    const fd = new FormData(); fd.append('file', f); fd.append('brand', v('brand'));
+    const h = {}; if(user||pass) h['Authorization'] = 'Basic ' + btoa(user+':'+pass);
+    fetch(base + '/api/creative/pitch-analyze', {method:'POST', headers:h, body:fd})
+      .then(r=>r.json()).then(j=>{ if(!j.ok) throw new Error(j.error||'失败'); renderPitch(j.data); })
+      .catch(e=>showErr(e));
+  }
+  function renderPitch(d){
+    const ex = d.extracted||{};
+    let h = '<div class="kv"><b>品牌：</b>'+esc(ex.brand)+'　<b>品类：</b>'+esc(ex.category)+
+            '　<b>圈层：</b>'+esc(ex.circle)+'　<b>调性：</b>'+esc(ex.tonality)+'</div>' +
+            '<div class="kv"><b>预算：</b>'+esc(ex.budget?ex.budget.value+ex.budget.unit:'未提及')+
+            '　<b>渠道：</b>'+esc((ex.channels||[]).join('/')||'未提及')+
+            '　<b>目标：</b>'+esc((ex.goals||[]).join('/')||'未提及')+'</div>';
+    if(ex.creative_leads && ex.creative_leads.length)
+      h += '<div class="kv"><b>创意线索：</b>'+esc(ex.creative_leads.join(' ｜ '))+'</div>';
+    h += '<div class="idea" style="margin-top:10px"><div class="title">对标：'+esc((d.benchmark||{}).benchmark||'')+'</div>'+
+         '<div class="why">'+esc((d.benchmark||{}).playbook||'')+'</div>'+
+         '<div class="tags">Gap 检查：'+(d.benchmark||{}).gap_questions.map(esc).join(' ｜ ')+'</div></div>';
+    (d.ideas||{}).ideas && (d.ideas.ideas).forEach(x => {
+      h += '<div class="idea"><div class="title">'+esc(x.big_idea)+'</div><span class="mech">'+esc(x.mechanism)+'</span><div class="why">'+esc(x.why)+'</div></div>';
+    });
+    h += '<table style="margin-top:10px"><tr><th>章节</th><th>ZBC层</th><th>内容要求</th></tr>';
+    (d.pitch_toc||[]).forEach(s=>{
+      h += '<tr><td>'+esc(s.sec)+'</td><td>'+esc(s.layer)+'</td><td>'+esc(s.desc)+'</td></tr>';
+    });
+    h += '</table>';
+    show(h);
+  }
+
+  function show(h){ document.getElementById('result').innerHTML = '<div>'+h+'</div>'; }
+  function showErr(e){
+    document.getElementById('result').innerHTML = '<div class="err">⚠ '+esc(e.message||e)+
+      '<br><span style="font-size:12px">请检查 API 地址与账号密码是否正确，且 ZBC 服务已启动。</span></div>';
+  }
+  loadCfg();
+</script>
+</body>
+</html>

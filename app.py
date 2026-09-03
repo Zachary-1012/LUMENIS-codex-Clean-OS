@@ -440,7 +440,53 @@ def creative_ideas():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-@app.route('/api/creative/pitch-analyze', methods=['POST'])
+@app.route('/api/creative/video-script', methods=['POST'])
+def creative_video_script():
+    """视频创意脚本生成：TVC/概念片/小红书/抖音 → 分镜头脚本+标题候选+投放建议。"""
+    try:
+        from scripts.video_script import generate_video_script, VIDEO_TYPES
+        try:
+            data = request.get_json(silent=True) or {}
+        except Exception:
+            data = {}
+        brand = data.get('brand', '')
+        if not brand:
+            return jsonify({'ok': False, 'error': 'brand 不能为空'}), 400
+        vt = data.get('video_type', 'tvc')
+        if vt not in VIDEO_TYPES:
+            return jsonify({'ok': False, 'error': 'video_type 仅支持: %s' % list(VIDEO_TYPES.keys())}), 400
+        result = generate_video_script(
+            brand, data.get('category', '通用'), data.get('circle', '都市职场'),
+            data.get('tonality', 'premium'), vt, data.get('product_point', ''),
+            data.get('hotspot', ''), data.get('n_shots') or None)
+        return jsonify({'ok': True, 'data': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/creative/social-ops', methods=['POST'])
+def creative_social_ops():
+    """多平台社媒运营策略：小红书/抖音/IG/FB/X/公众号 → 生态/栏目/爆款公式/投放/度量。"""
+    try:
+        from scripts.social_ops import generate_social_ops, generate_social_matrix, PLATFORMS
+        try:
+            data = request.get_json(silent=True) or {}
+        except Exception:
+            data = {}
+        brand = data.get('brand', '')
+        if not brand:
+            return jsonify({'ok': False, 'error': 'brand 不能为空'}), 400
+        platform = data.get('platform', '')
+        if platform and platform not in PLATFORMS:
+            return jsonify({'ok': False, 'error': 'platform 仅支持: %s' % list(PLATFORMS.keys())}), 400
+        if platform:
+            result = generate_social_ops(brand, platform, data.get('circle', '都市职场'),
+                                         data.get('tonality', 'premium'), data.get('hotspot', ''))
+        else:
+            result = generate_social_matrix(brand, None, data.get('circle', '都市职场'),
+                                            data.get('tonality', 'premium'), data.get('hotspot', ''))
+        return jsonify({'ok': True, 'data': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 def creative_pitch_analyze():
     """方案需求拆解：接受 text 或上传文件(multipart file) → 要素提取+对标拆解+创意+方案脉络。"""
     try:
