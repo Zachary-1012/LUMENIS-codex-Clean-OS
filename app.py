@@ -3452,6 +3452,17 @@ def api_reports_export_all_v532():
         import traceback
         return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
+# ===== 工程度量 API（P0-E 落地，engineering_metrics.py）=====
+@app.get("/api/engineering-metrics")
+def api_engineering_metrics():
+    """统一工程度量快照：任务闭环（ZELL trace 完成率/进行中/耗时）+ 系统健康红绿灯。"""
+    try:
+        from engineering_metrics import full_snapshot
+        return jsonify({"ok": True, "data": full_snapshot()})
+    except Exception as e:
+        import traceback
+        return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
 # ===== v5.6.4 报告导出 API（支持Word/Excel/CSV + 精确时间维度） =====
 @app.route('/api/v2/report/export')
 @app.route('/api/report/export')
