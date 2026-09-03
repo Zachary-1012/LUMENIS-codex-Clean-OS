@@ -284,6 +284,130 @@ def list_accounts() -> list[dict]:
     return [get_state(a) for a in accounts]
 
 
+# ─────────────────────────── 执行恢复回路（Page Agent/browser-use 可借鉴点落地）───
+# 对照：失败→重新定位→重试→降级；受采集安全 Gate（手动≤30min）约束；trace 供 Evidence 可追溯
+
+def find_element(account, selector):
+    """通过 JS 定位元素并返回可视坐标；找不到返回 {ok:False}。selector 限定简单 CSS（防注入）。"""
+    import re as _re
+    if not selector or len(selector) > 200:
+        return {"ok": False, "error": "selector 为空或超长"}
+    if not _re.fullmatch(r"[A-Za-z0-9_#.\[\]='\": -]+", selector):
+        return {"ok": False, "error": "selector 含非法字符"}
+    expr = ("(()=>{const el=document.querySelector(%r);if(!el)return JSON.stringify({found:false});"
+            "const r=el.getBoundingClientRect();return JSON.stringify({found:true,x:r.x+r.width/2,"
+            "y:r.y+r.height/2,visible:!!(r.width&&r.height)});})()" % selector)
+    try:
+        val = evaluate(account, expr).get("value")
+        data = json.loads(val) if isinstance(val, str) else {}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+    if not data.get("found") or not data.get("visible"):
+        return {"ok": False, "error": "元素未找到或不可见"}
+    return {"ok": True, "x": float(data["x"]), "y": float(data["y"])}
+
+
+def click_selector(account, selector, retry=2, retry_delay=1.0):
+    """定位→点击，带失败重试（重新定位→重试→报告），对齐恢复回路。"""
+    acct = _canonical_account(account)
+    trace = []
+    for attempt in range(retry + 1):
+        t0 = time.time()
+        loc = find_element(acct, selector)
+        if loc.get("ok"):
+            try:
+                click_at(acct, loc["x"], loc["y"])
+                trace.append({"action": "click_selector", "selector": selector, "ok": True,
+                              "attempt": attempt + 1, "elapsed_ms": int((time.time() - t0) * 1000)})
+                return {"ok": True, "account": acct, "trace": trace}
+            except Exception as e:
+                trace.append({"action": "click_selector", "selector": selector, "ok": False,
+                              "attempt": attempt + 1, "error": str(e)})
+        else:
+            trace.append({"action": "click_selector", "selector": selector, "ok": False,
+                          "attempt": attempt + 1, "error": loc.get("error", "定位失败")})
+        if attempt < retry:
+            time.sleep(retry_delay)
+    return {"ok": False, "account": acct, "trace": trace, "error": trace[-1].get("error", "重试后仍失败")}
+
+
+def type_into(account, selector, text, retry=2, retry_delay=1.0):
+    """定位→聚焦→输入，带失败重试。"""
+    acct = _canonical_account(account)
+    trace = []
+    for attempt in range(retry + 1):
+        t0 = time.time()
+        loc = find_element(acct, selector)
+        if loc.get("ok"):
+            try:
+                click_at(acct, loc["x"], loc["y"])
+                time.sleep(0.2)
+                type_text(acct, text)
+                trace.append({"action": "type_into", "selector": selector, "ok": True,
+                              "attempt": attempt + 1, "elapsed_ms": int((time.time() - t0) * 1000)})
+                return {"ok": True, "account": acct, "trace": trace}
+            except Exception as e:
+                trace.append({"action": "type_into", "selector": selector, "ok": False,
+                              "attempt": attempt + 1, "error": str(e)})
+        else:
+            trace.append({"action": "type_into", "selector": selector, "ok": False,
+                          "attempt": attempt + 1, "error": loc.get("error", "定位失败")})
+        if attempt < retry:
+            time.sleep(retry_delay)
+    return {"ok": False, "account": acct, "trace": trace, "error": trace[-1].get("error", "重试后仍失败")}
+
+
+def browser_task(account, steps, max_steps=10, total_timeout=60.0):
+    """按步骤顺序执行浏览器任务，带 trace + 预算（步骤上限/总超时），失败重试后继续。
+    steps: [{"action": "navigate|click|type|scroll|wait|eval", ...}, ...]
+    返回全 trace，供 Evidence 可追溯；默认预算远小于采集安全 Gate 上限。
+    """
+    acct = _canonical_account(account)
+    t0 = time.time()
+    trace = []
+    executed = 0
+    for idx, step in enumerate(steps):
+        if executed >= max_steps:
+            trace.append({"idx": idx, "action": step.get("action"), "ok": False,
+                          "skipped": True, "reason": "步骤预算超限"})
+            break
+        if time.time() - t0 > total_timeout:
+            trace.append({"idx": idx, "action": step.get("action"), "ok": False,
+                          "skipped": True, "reason": "总超时"})
+            break
+        action = step.get("action")
+        st = time.time()
+        try:
+            if action == "navigate":
+                r = navigate(acct, step.get("url", ""))
+            elif action == "click":
+                r = click_selector(acct, step.get("selector"), retry=step.get("retry", 2))
+            elif action == "type":
+                r = type_into(acct, step.get("selector"), step.get("text", ""),
+                              retry=step.get("retry", 2))
+            elif action == "scroll":
+                r = scroll_page(acct, float(step.get("delta_y", 400)))
+            elif action == "wait":
+                time.sleep(float(step.get("seconds", 1)))
+                r = {"ok": True}
+            elif action == "eval":
+                r = evaluate(acct, step.get("expression", ""))
+            else:
+                r = {"ok": False, "error": "未知 action: %s" % action}
+        except Exception as e:
+            r = {"ok": False, "error": str(e)}
+        executed += 1
+        trace.append({"idx": idx, "action": action, "ok": bool(r.get("ok")),
+                      "elapsed_ms": int((time.time() - st) * 1000),
+                      "detail": r.get("error") or r.get("url") or r.get("length")
+                                or r.get("scroll_y") or ""})
+    ok_steps = sum(1 for t in trace if t.get("ok"))
+    skipped = sum(1 for t in trace if t.get("skipped"))
+    return {"ok": ok_steps + skipped == len(trace) and len(trace) > 0,
+            "account": acct, "executed": executed, "ok_steps": ok_steps,
+            "total_ms": int((time.time() - t0) * 1000), "trace": trace}
+
+
 # ─────────────────────────── Flask Blueprint ───────────────────────────
 
 def register_internal_browser(app):
@@ -347,6 +471,44 @@ def register_internal_browser(app):
         if action not in ("back", "forward", "reload", "home"):
             return jsonify({"ok": False, "error": f"未知 action: {action}"}), 400
         return jsonify(history_action(data.get("account"), action))
+
+    @bp.route("/api/internal-browser/find", methods=["POST"])
+    def api_find():
+        data = request.get_json(force=True, silent=True) or {}
+        return jsonify(find_element(data.get("account"), data.get("selector", "")))
+
+    @bp.route("/api/internal-browser/click-selector", methods=["POST"])
+    def api_click_selector():
+        data = request.get_json(force=True, silent=True) or {}
+        try:
+            return jsonify(click_selector(data.get("account"), data.get("selector", ""),
+                                          retry=int(data.get("retry", 2))))
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 400
+
+    @bp.route("/api/internal-browser/type-into", methods=["POST"])
+    def api_type_into():
+        data = request.get_json(force=True, silent=True) or {}
+        try:
+            return jsonify(type_into(data.get("account"), data.get("selector", ""),
+                                     data.get("text", ""), retry=int(data.get("retry", 2))))
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 400
+
+    @bp.route("/api/internal-browser/task", methods=["POST"])
+    def api_task():
+        data = request.get_json(force=True, silent=True) or {}
+        steps = data.get("steps") or []
+        if not isinstance(steps, list) or len(steps) > 20:
+            return jsonify({"ok": False, "error": "steps 必须为非空数组且≤20"}), 400
+        try:
+            return jsonify(browser_task(data.get("account"), steps,
+                                        max_steps=int(data.get("max_steps", 10)),
+                                        total_timeout=float(data.get("total_timeout", 60))))
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 400
+
+
 
     app.register_blueprint(bp)
     return bp
