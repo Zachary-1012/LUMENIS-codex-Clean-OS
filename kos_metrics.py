@@ -56,8 +56,10 @@ def _save_manual(data: dict) -> None:
 
 def set_manual(kos_id: str, *, wecom_add: Optional[int] = None,
                sales_amount: Optional[float] = None,
-               boosting_budget: Optional[float] = None) -> dict:
-    """登记/更新单个 KOS 的手动回填指标（WeCom/Sales/Boosting 预算）。"""
+               boosting_budget: Optional[float] = None,
+               inquiry: Optional[int] = None,
+               clicks: Optional[int] = None) -> dict:
+    """登记/更新单个 KOS 的手动回填指标（WeCom/Sales/Boosting 预算/进线/点击）。"""
     data = _load_manual()
     entry = data.setdefault(kos_id, {})
     if wecom_add is not None:
@@ -66,6 +68,10 @@ def set_manual(kos_id: str, *, wecom_add: Optional[int] = None,
         entry["sales_amount"] = float(sales_amount)
     if boosting_budget is not None:
         entry["boosting_budget"] = float(boosting_budget)
+    if inquiry is not None:
+        entry["inquiry"] = int(inquiry)
+    if clicks is not None:
+        entry["clicks"] = int(clicks)
     _save_manual(data)
     return {"ok": True, "kos_id": kos_id, "entry": entry}
 
