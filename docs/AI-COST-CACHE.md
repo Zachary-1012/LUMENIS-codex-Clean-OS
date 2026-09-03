@@ -22,12 +22,17 @@ ZBC 以智谱为主力（配额约 44.3M token）、豆包最低。若智谱支�
 python scripts/ai_budget.py record zhipu glm-4.7 summarize 1 1.2 1000 --in 800 --out 200 --cache 1
 python scripts/ai_budget.py summary        # 含 cache 统计
 
-## 四、优化指引（评估后执行）
+## 四、优化指引（2026-09-03 已落地）
 
-1. 确认智谱 glm-4.7 是否支持 prompt cache（bigmodel API 文档）。
-2. 若支持：把 AI 调用 system prompt 收敛为**固定前缀模板 + 动态追加**，前缀保持逐字符稳定（缓存命中前提）。
-3. 观测 cache.hit_rate：从 None/低 → 稳定高，即缓存生效。
-4. 未支持前：保持"固定前缀"编码纪律，为未来命中做准备，零成本。
+✅ **已确认智谱上下文缓存为隐式自动**（docs.bigmodel.cn/cn/guide/capabilities/cache：自动识别重复前缀，
+缓存命中 token 按优惠价计费、缓存存储限时免费；响应返回 usage.prompt_tokens_details.cached_tokens）。
+
+✅ **固定前缀收敛已落地**：config/prompts/zbc-prompts.yaml（4 角色版本化前缀）+ scripts/prompt_registry.py（强制加载、禁内联），
+	ests/test_prompt_registry.py 强制逐字符稳定（改前缀必须 bump version）。缓存命中前提达成。
+
+1. 调用方改用 prompt_registry.load_system_prompt(role) 加载前缀（禁止内联复制）。
+2. 观测 ai_budget summary.cache：hit_rate 从 None/低 → 稳定高，即缓存生效。
+3. 注意：缓存优惠计费仅适用标准 API，资源包/GLM Coding Plan 套餐不适用（文档明示）；机制本身仍加速响应。
 
 ## 五、验证
 
