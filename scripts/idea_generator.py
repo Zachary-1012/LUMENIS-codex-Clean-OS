@@ -670,6 +670,27 @@ def _circle_backing(circle):
     return {"title": r["title"], "brand": r["brand"], "source": r["source"]}
 
 
+def _node_circles(hotspot):
+    """营销节点×圈层联动：读 marketing_nodes 按节点名匹配，返回建议适配圈层（hotspot 增强）。"""
+    if not hotspot:
+        return None
+    try:
+        import os, sqlite3
+        _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "monitor.db")
+        _c = sqlite3.connect(_db, timeout=5)
+        _rows = _c.execute(
+            "SELECT name,date,category,circles,note FROM marketing_nodes").fetchall()
+        _c.close()
+        for _name, _date, _cat, _circles, _note in _rows:
+            if _name and (_name in hotspot or hotspot in _name):
+                cs = [x.strip() for x in (_circles or "").split(",") if x.strip()]
+                return {"node": _name, "date": _date, "category": _cat,
+                        "circles": cs, "note": _note or ""}
+    except Exception:
+        pass
+    return None
+
+
 def _profile_pick(profile):
     """按美奢人群取画像要点（trigger/内容偏好/映射圈层）。"""
     if not profile:
@@ -703,6 +724,7 @@ def _provenance(topic, sentiment, mech, tonality, circle, signals, angle):
         "sit_translation": (_sit_translation(signals) if mech == "sit" else None),
         "circle_reference": _circle_backing(circle),
         "luxe_profile": (_profile_pick(signals.get("profile")) if circle in ("高奢珠宝腕表", "高奢小众", "都市高净值") else None),
+        "node_circles": _node_circles(signals.get("hotspot", "")),
         "trace": "芥子(真实信号) → 须弥(机制/角度抽象) → idea(多维再生产) → FEEDBACK 回流",
     }
 

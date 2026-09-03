@@ -181,3 +181,44 @@ def test_report_payload_consumes_circles():
     p = payload("daily")
     assert isinstance(p.get("case_circles"), dict)
     assert len(p.get("circle_symbols", {})) == 16
+
+
+# ============================================================
+# 6) 国际 4A 案例背书 + 营销节点×圈层联动
+# ============================================================
+
+def test_intl_case_backing_hits():
+    """国际 4A 案例（2026 戛纳）作为机制背书命中。"""
+    for mech, keyword in (("eventify", "草坪"), ("participate", "Supernova"), ("constraint", "Therabody")):
+        b = ig._case_backing(mech)
+        assert b and b.get("case_title"), f"{mech} 无案例背书"
+        assert keyword in b["case_title"] or keyword in b["case_brand"]
+
+
+def test_node_circles_link():
+    """营销节点×圈层联动：中秋节→新中式国潮/母婴/高奢，双十一→都市高净值。"""
+    r = ig._node_circles("中秋节")
+    assert r and "新中式国潮" in r["circles"] and "母婴家庭" in r["circles"]
+    r2 = ig._node_circles("双十一")
+    assert r2 and "都市高净值" in r2["circles"]
+    assert ig._node_circles("") is None
+    assert ig._node_circles("不存在的节点") is None
+
+
+def test_hotspot_node_in_provenance():
+    """generate_ideas 带 hotspot 时 provenance 携带 node_circles（节点联动可追溯）。"""
+    r = ig.generate_ideas("某商业体", "零售", {"topics": ["中秋礼"], "sentiment": "positive",
+                           "circle": "新中式国潮", "hotspot": "中秋节"},
+                          n=3, tonality="premium", budget="low", seed=9)
+    p = r["ideas"][0]["provenance"]
+    assert p.get("node_circles") and "新中式国潮" in p["node_circles"]["circles"]
+
+
+def test_intl_case_flows_into_production():
+    """国际案例进入真实生产产出（机制背书 + 节点 + 约束转译可同时携带）。"""
+    r = ig.generate_ideas("某商业体", "零售", {"topics": ["中秋礼"], "sentiment": "positive",
+                           "circle": "新中式国潮", "hotspot": "中秋节", "constraint_type": "预算"},
+                          n=8, tonality="premium", budget="low", seed=9)
+    any_cb = any(i["provenance"].get("case_reference") for i in r["ideas"])
+    any_node = any(i["provenance"].get("node_circles") for i in r["ideas"])
+    assert any_cb and any_node

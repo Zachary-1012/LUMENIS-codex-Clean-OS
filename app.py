@@ -522,18 +522,26 @@ def creative_ideas():
         hotspot = data.get('hotspot', '')
         n = min(int(data.get('n', 3)), 5)
         keyword = data.get('keyword', '')
+        profile = data.get('profile', '')      # 美奢人群画像（B站x凯度 7 类）
+        constraint_type = data.get('constraint_type', '')  # 约束类型（SIT 转译感知）
+        budget = data.get('budget', 'mid')     # 预算档 low/mid/high
         if not brand:
             return jsonify({'ok': False, 'error': 'brand 不能为空'}), 400
         if keyword:
             signals = signals_from_db(data.get('db', 'data/monitor.db'), keyword, circle, hotspot)
             signals['overseas'] = bool(data.get('overseas'))
             signals['region'] = data.get('region', '')
+            if profile:
+                signals['profile'] = profile
+            if constraint_type:
+                signals['constraint_type'] = constraint_type
         else:
             signals = {'topics': data.get('topics', []), 'sentiment': data.get('sentiment', 'neutral'),
                        'negative_rate': data.get('negative_rate', 0.0), 'risk_events': data.get('risk_events', 0),
                        'circle': circle, 'hotspot': hotspot, 'volume_notes': data.get('volume_notes', 0),
-                       'overseas': bool(data.get('overseas')), 'region': data.get('region', '')}
-        result = generate_ideas(brand, category, signals, n, tonality)
+                       'overseas': bool(data.get('overseas')), 'region': data.get('region', ''),
+                       'profile': profile, 'constraint_type': constraint_type}
+        result = generate_ideas(brand, category, signals, n, tonality, budget=budget)
         return jsonify({'ok': True, 'data': result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
