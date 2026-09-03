@@ -1,3 +1,16 @@
+## 2026-09-03｜Search-STD 增强搜索修复：search-std 模型不可用 → 改智谱 web-search-pro 真实联网搜索
+> 目标：让 /api/search/enhance（100次 Search-STD 配额）真正返回真实可追溯的搜索结果
+
+**问题根因（真实探测）**：
+1. 原实现 model="search-std" 调智谱返回 HTTP 200 但 message 只有 role 无 content（空壳响应，usage 全 0）→ 解析 KeyError("content")，功能实际不可用
+2. 探测确认智谱官方联网搜索模型 web-search-pro 可用：返回 message.role="tool" + tool_calls[].search_result[]（含 title/content/refer 真实来源资讯）
+**修复（intelligence.search_enhance）**：
+1. 默认模型 search-std → web-search-pro（真实联网搜索）
+2. 解析逻辑：从 message.tool_calls 提取 type="search_result" 的条目，映射 title/content/source（从正文提取来源）/url；无结果时兜底读 content
+3. summary 由前 3 条标题自动生成；保留 search_std 100 次配额扣减 + 来源标注，不写入生产数据库（仅参考）
+**真实验证**：POST /api/search/enhance（query=2025年广州太古汇高端购物中心营销活动）→ ok=true, 3 条真实搜索结果（太古汇品牌专区40.6万㎡/兴业太古汇零售额回正增长41% 2025-11-07/广州购物中心天花板），search_std 已用 0→1（剩99次）
+**回归测试**：tests/test_ai_channel_flag.py 新增 2 用例（默认模型断言 + tool_calls 解析断言），全文件 10 用例通过
+
 ## 2026-09-03｜AI资源包「按次需求执行」端到端验证通过（真实扣减）
 > 目标：确认 topbar ⚡ 面板的按次执行功能真实可用（输入需求→消耗1次→AI执行→返回结果）
 

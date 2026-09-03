@@ -144,3 +144,48 @@ def test_glm53_flash_variant_no_thinking(monkeypatch):
                         lambda *a, **k: types.SimpleNamespace(open=fake_urlopen))
     res, prov = intelligence._chat('s', 'u', model='glm-5.3-flash')
     assert sent['has_thinking'] is False, 'glm-5.3-flash 不应传 thinking'
+
+
+# ---------- Search-STD 增强搜索修复回归（2026-09-03）----------
+def test_search_enhance_default_model_is_web_search_pro():
+    """search_enhance 默认应使用智谱联网搜索 web-search-pro（原 search-std 返回空壳不可用）。"""
+    import intelligence, inspect
+    sig = inspect.signature(intelligence.search_enhance)
+    assert sig.parameters['model'].default == 'web-search-pro', '默认应为智谱联网搜索 web-search-pro'
+
+
+def test_search_enhance_parses_tool_calls(monkeypatch):
+    """web-search-pro 返回 message.tool_calls[].search_result 时应正确解析为 results（真实联网搜索）。"""
+    import intelligence, sys, types
+    monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-abc')
+    monkeypatch.setenv('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')
+    # mock ai_resource_packs 额度
+    fake_arp = types.ModuleType('ai_resource_packs')
+    fake_arp.check_quota = lambda *a, **k: {'allowed': True}
+    fake_arp.record_usage = lambda *a, **k: None
+    monkeypatch.setitem(sys.modules, 'ai_resource_packs', fake_arp)
+    class FakeResp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self):
+            return ('{"choices":[{"message":{"role":"tool","tool_calls":['
+                    '{"type":"search_result","search_result":['
+                    '{"title":"太古汇品牌专区","content":"广州天河核心地段总建筑面积406000平","refer":"ref_1","index":0}'
+                    ']}]}}]}').encode('utf-8')
+    sent = {}
+    def fake_urlopen(req, timeout=None):
+        import json
+        sent['model'] = json.loads(req.data.decode('utf-8'))['model']
+        return FakeResp()
+    monkeypatch.setattr(intelligence.urllib.request, 'urlopen', fake_urlopen)
+    monkeypatch.setattr(intelligence.urllib.request, 'build_opener',
+                        lambda *a, **k: types.SimpleNamespace(open=fake_urlopen))
+    res = intelligence.search_enhance('广州太古汇')
+    assert sent['model'] == 'web-search-pro', f'应使用 web-search-pro，实际 {sent["model"]}'
+    if not res.get('ok'):
+        print('DEBUG res:', res)
+    assert res['ok'] is True
+    assert len(res['results']) == 1, f'应解析出 1 条结果，实际 {len(res.get("results", []))}'
+    assert res['results'][0]['title'] == '太古汇品牌专区'
+    assert res['results'][0]['content'].startswith('广州天河')
+    assert res['model'] == 'web-search-pro'

@@ -358,17 +358,17 @@ def extract_keywords(text, num_keywords=10):
     return []
 
 
-def search_enhance(query, context='', max_results=5, model='search-std'):
+def search_enhance(query, context='', max_results=5, model='web-search-pro'):
     """
-    搜索增强（智谱 search-std 模型）。
+    搜索增强（智谱 web-search-pro 联网搜索模型，真实返回带来源的搜索结果）。
     用于案例库搜索增强、品牌知识库 RAG、产品全局架构检索。
-    【安全原则】搜索结果必须有来源标注，不直接写入生产数据库，仅作为参考。
+    【安全原则】搜索结果来自智谱真实联网检索且带来源(refer)，不直接写入生产数据库，仅作为参考。
 
     Args:
         query: 搜索查询
         context: 上下文信息（可选）
         max_results: 最大结果数
-        model: 模型名称，默认 search-std
+        model: 模型名称，默认 web-search-pro（智谱官方联网搜索）
 
     Returns:
         dict: {ok, results: [{title, content, source, url}], summary, provider}
@@ -385,23 +385,20 @@ def search_enhance(query, context='', max_results=5, model='search-std'):
     except Exception:
         pass  # 额度检查失败不阻塞
 
-    system_prompt = f'''你是搜索增强助手。根据用户查询和上下文，返回{max_results}条最相关的搜索结果。
+    system_prompt = f'''你是一个联网搜索助手。请围绕用户查询联网搜索，返回最多{max_results}条真实、相关的结果。
 要求：
-1. 每条结果必须包含：title(标题)、content(内容摘要)、source(来源)、url(链接，如无可为空)
-2. 结果必须真实可查，不得编造
-3. 优先返回权威来源（官方网站、权威媒体、学术论文）
-4. 只输出严格JSON格式：{{"results":[{{"title":"","content":"","source":"","url":""}}],"summary":""}}
-5. summary 是对所有结果的综合摘要，不超过200字'''
+1. 搜索并返回真实存在的网页内容，不得编造
+2. 优先权威来源（官方网站、权威媒体）
+3. 综合搜索结果给出简短摘要'''
 
     user_prompt = f'查询: {query}\n'
     if context:
         user_prompt += f'上下文: {context[:2000]}\n'
-    user_prompt += '请返回搜索结果。'
+    user_prompt += '请执行联网搜索。'
 
     try:
-        # 使用 search-std 模型（通过 _chat 调用，但模型名需要临时替换）
-        # 由于 _chat 使用默认模型，这里直接调用智谱 API
-        import os, json, urllib.request
+        # 使用 web-search-pro 联网搜索模型，直接调用智谱 API
+        import os, json, urllib.request, re as _re
         api_key = os.environ.get('ZHIPU_API_KEY', '')
         base_url = os.environ.get('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')
         if not api_key:
@@ -425,35 +422,51 @@ def search_enhance(query, context='', max_results=5, model='search-std'):
         )
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read().decode('utf-8', 'replace'))
-        raw = data['choices'][0]['message']['content']
 
-        # 记录 search-std 使用
+        # 记录 search-std 使用（100次增强搜索配额）
         try:
             import ai_resource_packs
             ai_resource_packs.record_usage('search_std', 1, endpoint='search_enhance', detail=query[:100])
         except Exception:
             pass
 
-        # 解析结果
-        result_data = _json_from_text(raw) or {}
-        results = result_data.get('results', [])
-        if not isinstance(results, list):
-            results = []
-        # 过滤无效结果
+        # 解析 web-search-pro 返回：message.tool_calls[].search_result
+        message = data.get('choices', [{}])[0].get('message', {})
+        raw_results = []
+        for tc in message.get('tool_calls', []):
+            if tc.get('type') == 'search_result':
+                raw_results.extend(tc.get('search_result') or [])
+        if not raw_results:
+            # 兜底：content 里可能是纯文本（非联网场景）
+            content = message.get('content') or ''
+            if content.strip():
+                raw_results = [{'title': '搜索结果', 'content': content.strip(), 'refer': '', 'index': 0}]
+
+        # 过滤有效结果
         valid_results = []
-        for r in results[:max_results]:
+        for r in raw_results[:max_results]:
             if isinstance(r, dict) and r.get('title') and r.get('content'):
+                title = str(r.get('title', ''))[:100]
+                content = str(r.get('content', ''))[:500]
+                # 从标题/正文提取来源，如「来源:XXX」「（发布时间：…）」
+                source = '智谱搜索'
+                m = _re.search(r'来源[:：]\s*([^\s，。；;]+)', content)
+                if m:
+                    source = m.group(1)[:30]
                 valid_results.append({
-                    'title': str(r.get('title', ''))[:100],
-                    'content': str(r.get('content', ''))[:500],
-                    'source': str(r.get('source', '未知'))[:50],
+                    'title': title,
+                    'content': content,
+                    'source': source,
                     'url': str(r.get('url', ''))[:200],
                 })
+
+        # 综合摘要：取前 3 条标题
+        summary = '；'.join(str(r.get('title', ''))[:60] for r in raw_results[:3])[:200]
 
         return {
             'ok': True,
             'results': valid_results,
-            'summary': str(result_data.get('summary', ''))[:200],
+            'summary': summary,
             'provider': 'zhipu',
             'model': model,
             'query': query,
