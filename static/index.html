@@ -284,7 +284,7 @@
   <!-- AI 资源包弹出面板：用量/暂停/按次需求执行 -->
   <div class="ai-pack-panel hidden" id="aiPackPanel">
     <div class="ai-pack-header">
-      <span class="ai-pack-title">⚡ AI 资源包 · 智谱额度</span>
+      <span class="ai-pack-title"><svg style="width:13px;height:13px;vertical-align:-2px;margin-right:5px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>AI 资源包 · 智谱额度</span>
       <button class="ai-pack-close" onclick="toggleAiPackPanel()">✕</button>
     </div>
     <div class="ai-pack-body" id="aiPackBody">
@@ -618,10 +618,10 @@
           <button class="action primary tip" style="margin-left:auto" onclick="window.open('/api/kos/report/view','_blank')"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span class="btn-label">动态报告</span></button>
         </div>
         <div class="metric-grid" id="kosStats" style="grid-template-columns:repeat(4,1fr)">
-          <article class="metric-card glass-card"><div class="metric-icon">👥</div><div class="metric-label">KOS 总数</div><strong id="kosTotal">—</strong><div class="metric-sub">传播主体</div></article>
-          <article class="metric-card glass-card"><div class="metric-icon" style="color:#e74c3c">⭐</div><div class="metric-label">S级核心</div><strong class="positive" id="kosS">—</strong><div class="metric-sub">优先合作</div></article>
-          <article class="metric-card glass-card"><div class="metric-icon" style="color:#f39c12">📈</div><div class="metric-label">A级重点</div><strong id="kosA">—</strong><div class="metric-sub">重点培养</div></article>
-          <article class="metric-card glass-card"><div class="metric-icon" style="color:#3498db">💎</div><div class="metric-label">潜力KOS</div><strong id="kosPotential">—</strong><div class="metric-sub">高互动低篇数</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon gray"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="metric-label">KOS 总数</div><strong id="kosTotal">—</strong><div class="metric-sub">传播主体</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon gray"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="metric-label">S级核心</div><strong class="positive" id="kosS">—</strong><div class="metric-sub">优先合作</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon gray"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="metric-label">A级重点</div><strong id="kosA">—</strong><div class="metric-sub">重点培养</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon gray"><svg viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/><path d="M2 9h20"/><path d="m12 21-4-12 4-6 4 6-4 12z"/></svg></div><div class="metric-label">潜力KOS</div><strong id="kosPotential">—</strong><div class="metric-sub">高互动低篇数</div></article>
         </div>
         <div class="panel glass-card">
           <div class="panel-head"><div><span class="eyebrow">TOP KOS</span><h3>TOP KOS 排名（按综合评分）</h3><p>S/A/B/C 分层 · 可筛选 · 点击查看详情</p></div>
@@ -867,7 +867,7 @@
           <div id="templateMatchResults" style="margin-top:10px"></div>
         </div>
         <div style="display:flex;gap:8px;margin:8px 0;align-items:center;flex-wrap:wrap">
-          <button class="action primary" onclick="CaseDeepAnalysis.enhanceSearch()" style="white-space:nowrap">⚡ 增强搜索</button>
+          <button class="action primary" onclick="CaseDeepAnalysis.enhanceSearch()" style="white-space:nowrap"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>增强搜索</button>
           <span style="font-size:11px;color:var(--muted)">用当前关键词搜外部商业案例/舆情处置资料（search-std · 消耗1次额度 · 带来源）</span>
         </div>
         <div id="caseEnhanceResults" style="margin-bottom:10px"></div>
@@ -1064,7 +1064,7 @@
       <section class="page-view" id="page-reports">
         <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>报告中心</h2></div>
         <article class="metric-card glass-card" style="margin-bottom:14px">
-          <div class="metric-icon amber">🎯</div>
+          <div class="metric-icon amber"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></div>
           <div class="metric-label">本月营销节点速览</div>
           <div style="margin:6px 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select id="mkIndustry" onchange="loadMk()" style="padding:6px 8px;border-radius:8px;font-size:12px">
@@ -1090,7 +1090,7 @@
         </article>
         <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
           <article class="metric-card glass-card">
-            <div class="metric-icon blue">📅</div>
+            <div class="metric-icon blue"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
             <div class="metric-label">舆情日报</div>
             <strong>每日 00:00-24:00</strong>
             <div class="metric-sub">当天采集的全部舆情事件</div>
@@ -1101,7 +1101,7 @@
             </div>
           </article>
           <article class="metric-card glass-card">
-            <div class="metric-icon green">📆</div>
+            <div class="metric-icon green"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg></div>
             <div class="metric-label">舆情周报</div>
             <strong>周一至周日</strong>
             <div class="metric-sub">自然周舆情汇总分析</div>
@@ -1109,11 +1109,11 @@
               <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('weekly','xlsx')">Excel</button>
               <button class="action secondary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('weekly','docx')">Word</button>
               <button class="action tertiary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="exportReportWithVerify('weekly','csv')">CSV</button>
-              <button class="action primary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="sendWeeklyEmail()">📧 发邮件</button>
+              <button class="action primary" style="flex:1;min-width:70px;padding:8px;font-size:12px" onclick="sendWeeklyEmail()"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>发邮件</button>
             </div>
           </article>
           <article class="metric-card glass-card">
-            <div class="metric-icon amber">📊</div>
+            <div class="metric-icon amber"><svg viewBox="0 0 24 24"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="11"/></svg></div>
             <div class="metric-label">舆情月报</div>
             <strong>1号至月末</strong>
             <div class="metric-sub">自然月舆情深度分析</div>
@@ -1124,7 +1124,7 @@
             </div>
           </article>
           <article class="metric-card glass-card">
-            <div class="metric-icon purple">📈</div>
+            <div class="metric-icon purple"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
             <div class="metric-label">舆情年报</div>
             <strong>1.1至12.31</strong>
             <div class="metric-sub">自然年全年舆情总结</div>
@@ -1207,25 +1207,25 @@
           <div class="panel-head"><div><span class="eyebrow">INTEGRATION</span><h3>增项接口配置</h3><p>公司域名、推送邮箱等可扩展接口，点击单项可跳转配置，也可删除</p></div></div>
           <div class="integration-list" id="integrationList">
             <div class="integration-item" onclick="openConfigModal('company_domain')">
-              <div class="integration-icon blue">🌐</div>
+              <div class="integration-icon blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
               <div class="integration-info"><h4>公司域名接入</h4><p>配置公司域名，后期一键可用，系统自动适配</p></div>
               <span class="integration-status" id="companyDomainStatus">未配置</span>
               <span class="chev">›</span>
             </div>
             <div class="integration-item" onclick="openConfigModal('email_push')">
-              <div class="integration-icon green">📧</div>
+              <div class="integration-icon green"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg></div>
               <div class="integration-info"><h4>推送邮箱管理</h4><p>添加/删除日报推送邮箱，支持多邮箱</p></div>
               <span class="integration-status" id="emailPushStatus">0个邮箱</span>
               <span class="chev">›</span>
             </div>
             <div class="integration-item" onclick="openConfigModal('run_code')">
-              <div class="integration-icon purple">⚡</div>
+              <div class="integration-icon purple"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
               <div class="integration-info"><h4>运行代码（热更新）</h4><p>复制代码进去自动运行，测试OK直接更新系统</p></div>
               <span class="integration-status">开发者功能</span>
               <span class="chev">›</span>
             </div>
             <div class="integration-item" onclick="openBrandManager()">
-              <div class="integration-icon amber">🏪</div>
+              <div class="integration-icon amber"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg></div>
               <div class="integration-info"><h4>场内品牌管理（进场/退场）</h4><p>198个品牌，8大业态，支持添加进场、删除退场、修改信息</p></div>
               <span class="integration-status" id="brandManagerStatus">198个品牌</span>
               <span class="chev">›</span>

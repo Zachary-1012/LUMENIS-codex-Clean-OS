@@ -319,11 +319,9 @@ html,body{overflow-x:hidden}
 .integration-list{display:flex;flex-direction:column;gap:10px}
 .integration-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:12px;border:1px solid var(--border);cursor:pointer;transition:all 0.2s}
 .integration-item:hover{border-color:var(--primary);transform:translateX(4px)}
-.integration-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.integration-icon.blue{background:#e3f2fd;color:#1976d2}
-.integration-icon.green{background:#e8f5e9;color:#388e3c}
-.integration-icon.purple{background:#f3e5f5;color:#7b1fa2}
-.integration-icon.amber{background:#fff8e1;color:#f57c00}
+.integration-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:#F5F5F4;color:#57534E}
+.integration-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.integration-icon.blue,.integration-icon.green,.integration-icon.purple,.integration-icon.amber{background:#F5F5F4;color:#57534E}
 .integration-info{flex:1;min-width:0}
 .integration-info h4{margin:0 0 2px;font-size:14px}
 .integration-info p{margin:0;font-size:12px;color:var(--muted)}
