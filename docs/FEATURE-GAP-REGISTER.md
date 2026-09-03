@@ -21,7 +21,7 @@
 | GAP-28 ✅RESOLVED(2026-09-02) | 对账P1-2/OpenAPI | openapi_spec.py 从 url_map 自动反射生成 OpenAPI3.0.3（实测364规则/350path，认证标注对齐before_request），5测锁定全覆盖；零端点改动。请求/响应schema细化、旧报告路由收敛另列BACKLOG | P1→已闭(清单层) | 路由无统一契约 | 只生成文档不改端点 | 否 | 否 | 否 | 是(5✓) | 是 |
 | GAP-29 ✅RESOLVED(2026-09-02) | 对账P1-1/25契约 | docs/CONTRACT-DECISION-LEDGER.md 逐项决策（CLOSED/ADOPT-BYPASS/REVISE-SCOPE/NOT-APPLICABLE/ZBC-OWNS/BACKLOG），无悬挂；models.py版本注释对齐5.9.9，2测锁版本单一权威 | P1→已闭(决策层) | 契约无ZBC侧落地结论 | 只登记决策+版本注释，不改主链 | 否 | 否 | 否 | 是(2✓) | 是 |
 | GAP-30 ✅RESOLVED(2026-09-02) | 对账P1-8/证据流转 | platform_adapters/evidence_exporter.py 只读导出（mode=ro/只导核准/白名单脱敏/增量水位/manifest+sha256+production_unchanged），3测+Staging真实冒烟644条；未接调度(BACKLOG) | P1→已闭(旁路层) | ZBC→OSAI无证据通道 | 只读导出不改生产 | 否 | 否 | 否 | 是(3✓) | 是 |
-| GAP-08 | 全局/Evidence | app_evidence_records 为外部抓取表且 0 行；测试/运行 Evidence 无统一存储与 L0-L10 归档 | P2 | 「跑过/通过」无版本化证据可追 | 未建 Evidence 层 | 建 Evidence 记录(commit/version/result/artifact) | 否 | 否 | 是 | 是 | 是 |
+| GAP-08 ✅RESOLVED(2026-09-03) | 全局/Evidence | ~~Evidence 无统一存储~~ **evidence_store.py 统一写入层 + 采集/健康链接线（collector_automation 调 record_collection_evidence、resident_health 调 record_health_evidence）+ Evidence API（stats/list/<id>/timeline）全落地；生产 app_evidence_records 已有 32 条真实健康证据（18FAIL+14PASS，最新 09-03 03:47），API 三端点 200** | P2 | ~~「跑过/通过」无版本化证据可追~~ 已消除 | 代码未接线 | 闭环完成（并行巡检） | 否 | 否 | 否 | 是 | 是 |
 | GAP-09 ✅RESOLVED(2026-09-03) | CTH-EVT-003 | ~~负面评审两套 API 并存~~ **写路径收敛为唯一 Owner `_note_set_review`（state=1确认/2驳回写同一字段）：新旧 4 入口（/api/negative/* + /api/negative-review/*）统一调用，消除重复 SQL；事件评审 /api/event-review/* 为独立能力保留。5 单测 + API 级验证 4 入口行为一致（A1=1/A2=2），生产零变化** | P2 | ~~状态可能双写不一致~~ 已消除（同字段同值） | 代码重复维护 | 唯一写路径收敛完成 | 否 | 否 | 否 | 是 | 是 |
 | GAP-10 🚧部分推进(2026-09-01) | RPT | 报告多路由（12）+report_center 无路由 **→ 已挂只读旁路 GET /api/v2/report-center/preview（period/brand_mode/日期白名单校验、复用 database 尊重 ZBC_DB_PATH、不写库/不导出/不自动发送、不抢 RPT-001/002 Owner）；Staging cth/zbmp 双模式实测各18节、7测试过**；Word/PDF 导出与自动发送仍旁路未接管、12 旧路由收敛仍待做 | P2 | 标准化报告可读 | 导出接管/旧路由收敛有Owner冲突风险 | 导出(ReportExporter)挂路由前先与 RPT Owner 对齐 | 否 | 否 | 是(7✓) | 是 | 是 |
 | GAP-11 | 跨仓/DCC | DCC 本地 77dd1e4 落后远程 023e2ba 27 提交，且脏 package.json/learning-store.js/persistence.js | P2 | 跨仓基线分叉 | 多窗口并行 | 需授权：先审本地 3 处去留→rebase→回 ZBC 升子模块指针 | 否 | 否 | 否 | 否 | 是 |
@@ -30,8 +30,8 @@
 | GAP-14 | MON-003/RISK-002/SYS-002/SETT | Feature 登记 API 前缀不精确（schedule/circuit/v4 前缀挂载），功能真实存在 | P3 | 文档与路由表对不上 | 蓝图 url_prefix 嵌套 | 校正 Registry 路径表述 | 否 | 否 | 否 | 否 | 否 |
 | GAP-15 ✅RESOLVED(2026-09-03) | CTH-SYS-002 | ~~daily_git_sync.py:72 current_version 漏括号~~ **只读核实：现为 `gm.current_version()` 已带括号正确调用，无漏括号，GAP 已随版本中心重构自然解决** | P3 | 版本标题不准(不影响运行) | 调用方笔误 | 无需修改（已修复） | 否 | 否 | 否 | 是 | 是 |
 | GAP-16 | CTH-SYS-003 | cloudflared 临时域名，未固化固定域名/HTTPS/断线自愈证据 | P3 | 公网地址会变 | 尚未上固定服务器 | 固定域名/隧道开机自启+健康探针 | 否 | 否 | 是 | 否 | 是 |
-| GAP-17 | Runtime | 8200 两个重复 app.py 实例（pid 18852/19916） | P3 | 端口/资源重复 | 历史启动残留 | 授权后保留单一实例 | 否 | 否 | 否 | 是 | 是 |
-| GAP-18 | 测试体系 | 31 个脚本式文件命名 test_ 但无 def test_，易被误读为「有测试」 | P3 | 假覆盖错觉 | 同 GAP-01 | 与 GAP-01 一并迁移/改名 | 否 | 否 | 是 | 是 | 是 |
+| GAP-17 ✅RESOLVED(2026-09-03) | Runtime | ~~8200 两个重复 app.py 实例~~ **只读核实：当前 8200 端口 0 个 python 实例，历史重复实例已清理，生产仅 8201 单实例** | P3 | 端口/资源重复 | 历史启动残留 | 已自然解决 | 否 | 否 | 否 | 是 | 是 |
+| GAP-18 ✅RESOLVED(2026-09-03) | 测试体系 | ~~31 个脚本式文件命名 test_ 但无 def test_~~ **conftest pytest_ignore_collect 已实现：无 def test_ 的 test_*.py 不收集（不 INTERNALERROR），仍可 python tests/xxx.py 手动跑；命名误导已消除** | P3 | 假覆盖错觉 | 同 GAP-01 | 已随 GAP-01 解决 | 否 | 否 | 否 | 是 | 是 |
 | GAP-19 | Runtime/Browser | Selenium 0 真 import 待回归后退；Browser/Scheduler/Collector/AI 重复调用待按需启动验证（只审计不重构） | P2 | 运行时冗余 | 历史并存 | 引用/运行依赖分析→替代验证→回归→退 | 否 | 否 | 是 | 是 | 是 |
 | GAP-20 | 工程清理 | .trae-cn IDE 目录忽略确认；根目录 start_*.bat/.bak/日志收敛 | P3 | 仓库噪声 | 长期堆积 | 分批登记后清理，不边开发边删 | 否 | 否 | 否 | 否 | 否 |
 | GAP-21 | ZBMP-IMP-001 | importer 3 个 py 存在，但无前端入口/API/专表 | P2 | 有代码易被误判完成 | 后端先行 | UI 占位；补 API/专表后再升 DEVELOPING | 否 | 是(占位) | 是 | 是 | 是 |
