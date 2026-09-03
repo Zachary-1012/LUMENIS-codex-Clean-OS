@@ -109,14 +109,18 @@ def refresh_profiles() -> dict:
     for i, p in enumerate(profiles):
         pct = (i + 1) / n * 100
         tier = 'S' if pct <= 5 else 'A' if pct <= 20 else 'B' if pct <= 50 else 'C'
+        # 主体归属类型映射（KOS_ACCOUNT_ASSET_TEMPLATE_v1）
+        _st = p.get('subject_type') or ''
+        ownership_type = {'official': 'OFFICIAL', 'kos': 'INDEPENDENT_KOL_KOC', 'media': 'MEDIA'}.get(_st, 'UNKNOWN')
+        ownership_confidence = 0.8 if _st in ('official', 'kos') else 0.5
         cur.execute("""INSERT OR REPLACE INTO kos_profiles
             (author_id, author_nickname, author_avatar, note_count, total_likes, total_comments,
              total_collects, total_shares, total_engagement, avg_likes, avg_comments, avg_engagement,
              subject_type, brand_relevance_score, content_quality_avg, positive_count, neutral_count,
              negative_count, risk_count, first_publish_at, last_publish_at, active_days, growth_trend,
              kos_tier, kos_score, lifecycle_stage, is_potential, is_risk, is_top, content_tags,
-             top_topics, ai_insight, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             top_topics, ai_insight, created_at, updated_at, identity_label, is_kos, ownership_type, ownership_confidence, ownership_evidence_ids, merchant_entity, brand_entity, relationship_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (p['author_id'], p.get('author_nickname') or '', p.get('author_avatar') or '', p['note_count'],
              p['total_likes'], p['total_comments'], p['total_collects'], p['total_shares'], p['total_engagement'],
              round(p['total_likes'] / max(p['note_count'], 1), 1), round(p['total_comments'] / max(p['note_count'], 1), 1),
@@ -124,7 +128,7 @@ def refresh_profiles() -> dict:
              round(p.get('content_quality_avg') or 0, 2), p.get('positive_count') or 0, p.get('neutral_count') or 0,
              p.get('negative_count') or 0, p.get('risk_count') or 0, p.get('first_publish_at'),
              p.get('last_publish_at'), p['active_days'], 'stable', tier, p['kos_score'], p['lifecycle_stage'],
-             p['is_potential'], p['is_risk'], 1 if tier == 'S' else 0, '', '', '', now_str, now_str))
+             p['is_potential'], p['is_risk'], 1 if tier == 'S' else 0, '', '', '', now_str, now_str, sr.get_active_brand(), 1, ownership_type, ownership_confidence, '', '', '', 'UNVERIFIED'))
     conn.commit()
     stats = get_stats()
     conn.close()
