@@ -642,3 +642,30 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 ### 未完成 / 下一步
 - 视觉审计意见落地到 UI 精修（第二批/第三批融合：弹窗层级、配色饱和度收敛、微交互）
 - 案例库增强：search-std 结果灌入案例库 + AI 评估接入
+
+---
+
+## 2026-09-03 第四批补录（视觉审计落地：zb-dot 六语义色收敛 + 弹窗纸感 + 按压反馈）
+
+### 背景
+glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用 zb-dot 状态点体系仍用高饱和 Tailwind 色（#22c55e 等），与设计系统低饱和语义色不一致。
+
+### 落地（zbip-shell.css）
+1. **zb-dot 六语义色降饱和对齐 ZBIP Design Tokens**：
+   - ok: #22c55e → #16A34A（success）
+   - warn: #eab308 → #D97706（attention）
+   - risk: #f97316 → #EA580C（risk）
+   - crit: #ef4444 → #DC2626（danger）
+   - info: #3b82f6 → #2563EB（info）
+   - unknown: #a8a29e → #78716C
+2. **弹窗面板浅灰纸感**：modal-panel 背景 #fff → #FAFAF9（+!important 覆盖旧规则）+ 柔和阴影（内高光 + 更透的投影）
+3. **主按钮按压反馈**：action.primary hover 背景加深（#1C1917→#292524）+ active scale(.98) + 轻投影；tertiary active scale(.98)
+4. **版本号**：zbip-shell.css v1.1.0 → v1.1.1（确保浏览器刷新加载）
+
+### 验证（实测）
+- 服务端返回 6 个新语义色全部生效
+- modal-panel 计算背景 = rgb(250,250,249) = #FAFAF9 ✓
+- 日报弹窗其余元素（dr-dot #16A34A / 主按钮 #1C1917 / 结论块 #F5F5F4 / 12px 圆角 / 柔和阴影）此前已验证全部符合设计系统
+
+### 结论
+日报弹窗与全局状态点已全面符合 ZBIP 黑白灰侘寂 + 低饱和语义色 + 彩色小圆点状态签名设计语言。
