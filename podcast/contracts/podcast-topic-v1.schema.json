@@ -1,0 +1,22 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"zbc://podcast/topic/v1",
+  "title":"ZBC Podcast Topic Intelligence v1",
+  "type":"object",
+  "required":["topic_id","title","stage","signals","score","evidence_status"],
+  "properties":{
+    "topic_id":{"type":"string"},
+    "title":{"type":"string","minLength":1},
+    "problem_statement":{"type":["string","null"]},
+    "stage":{"type":"string","enum":["now","soon","evergreen","archive","watch","rejected"]},
+    "signals":{"type":"object","properties":{"demand":{"type":"number","minimum":0,"maximum":1},"timeliness":{"type":"number","minimum":0,"maximum":1},"novelty":{"type":"number","minimum":0,"maximum":1},"human_relevance":{"type":"number","minimum":0,"maximum":1},"guest_fit":{"type":"number","minimum":0,"maximum":1},"evidence":{"type":"number","minimum":0,"maximum":1},"content_yield":{"type":"number","minimum":0,"maximum":1},"distribution":{"type":"number","minimum":0,"maximum":1},"risk":{"type":"number","minimum":0,"maximum":1},"cost":{"type":"number","minimum":0,"maximum":1}},"additionalProperties":false},
+    "score":{"type":"number","minimum":0,"maximum":100},
+    "questions":{"type":"array","items":{"type":"string"}},
+    "guest_ids":{"type":"array","items":{"type":"string"}},
+    "source_ids":{"type":"array","items":{"type":"string"}},
+    "evidence_status":{"type":"string","enum":["observed","derived","ai_suggested","human_verified","unverified"]},
+    "confidence":{"type":"number","minimum":0,"maximum":1},
+    "updated_at":{"type":"string","format":"date-time"}
+  },
+  "additionalProperties":false
+}
