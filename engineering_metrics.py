@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-engineering_metrics.py — 工程度量聚合器（P0-E 工程度量落地）
+engineering_metrics.py — 序境工程度量能力（P0-E，可观测性标准 Capability）
 
 职责（分工明确，不重复现有体系）：
 - system_health_api.py 负责「组件健康红绿灯」——本模块直接复用 system_health_summary()，不重写
 - collector_guard/metrics.py 负责「采集器性能窗口」——内存态，本模块不接管
 - 本模块新增「任务级闭环度量」：从 staging/zell-trace.jsonl 计算
   Task Completion Rate / in-progress / 阶段分布 / 任务耗时 / 未闭合清单
-  ——这是 P0 评价体系（Task Completion Rate / Recovery Rate）的核心落地，
-    当前 ZBC 完全缺失。
+  ——这是 P0 评价体系（Task Completion Rate / Recovery Rate）的核心落地。
 
-数据源（Source → Evidence → Insight 原则，全部可下钻至原始行）：
+终端适配（零号序列：Web/App/Mini 共用同一业务逻辑/数据，仅做终端适配）：
+- 本模块输出**纯结构化 JSON**（不绑任何 HTML/终端），Web 表格/Chart、App Card、
+  Mini 简化视图消费同一数据源；各终端只做展示层适配，不复制口径。
+- API 端点：GET /api/engineering-metrics  →  {ok, data: full_snapshot()}
+
+证据下钻（零号序列：任何指标必须可下钻至来源/原始数据/Evidence）：
+- 每条 task 名即 ZELL trace 的证据 key（task 字段）；done_ts/open_tasks 可直接
+  回查 staging/zell-trace.jsonl 原始行；system_health 带 source 函数名。
+
+数据源（Source → Evidence → Insight 原则）：
 - staging/zell-trace.jsonl：ZELL 闭环事件（begin / phase / done，task + ts + outcome）
 - system_health_api.system_health_summary()：4 子灯健康摘要
 
@@ -19,7 +27,38 @@ engineering_metrics.py — 工程度量聚合器（P0-E 工程度量落地）
 - 独立运行：python engineering_metrics.py  （打印统一快照 JSON）
 - 仅计算闭环：python engineering_metrics.py --closed-loop
 """
+
 from __future__ import annotations
+
+# ---- API 契约（schema v1，Web/App/Mini 通用）----
+# GET /api/engineering-metrics
+# {
+#   "ok": true,
+#   "data": {
+#     "engineered_metrics_version": 1,
+#     "generated_ts": "<ISO8601>",
+#     "task_closed_loop": {
+#       "total_tasks": int,            # 已 begin 的唯一任务数
+#       "closed_tasks": int,           # 已 done 的任务数
+#       "task_completion_rate": float, # 0.0-1.0，closed/total
+#       "in_progress_tasks": int,      # total-closed
+#       "open_tasks": [str],           # 未闭合任务（失败/挂起可见性）
+#       "phase_distribution": {str:int},# 阶段事件计数（architecture/code/test/runtime/evaluation/research）
+#       "task_durations_min": [{task,duration_min}],  # 已闭合任务耗时（可下钻）
+#       "recent_closed": [{task,done_ts}],            # 最近闭合（可下钻）
+#       "avg_duration_min": float|null,               # 已闭合平均耗时
+#       "source": str                 # 证据源：staging/zell-trace.jsonl
+#     },
+#     "system_health": {
+#       "engineered": "system_health",
+#       "health": { status/子灯... },  # 复用 system_health_summary
+#       "source": str
+#     }
+#   }
+# }
+# 契约版本：version 1（2026-09-04）。任何口径变更须 bump engineered_metrics_version
+# 并同步 OSAI 契约文档，禁止静默改字段。
+API_CONTRACT_VERSION = 1
 
 import io
 import json
@@ -162,9 +201,9 @@ def system_health_metrics() -> Dict[str, Any]:
 
 
 def full_snapshot(trace_path: Optional[str] = None) -> Dict[str, Any]:
-    """统一工程度量快照：任务闭环 + 系统健康 + 元信息。"""
+    """统一工程度量快照：任务闭环 + 系统健康 + 元信息（API 契约 schema v1）。"""
     return {
-        "engineered_metrics_version": 1,
+        "engineered_metrics_version": API_CONTRACT_VERSION,
         "generated_ts": datetime.now().isoformat(timespec="seconds"),
         "task_closed_loop": task_closed_loop_metrics(trace_path),
         "system_health": system_health_metrics(),
