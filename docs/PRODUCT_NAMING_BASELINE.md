@@ -1,5 +1,10 @@
 # 产品命名基线
 
+> ⚠️ **LEGACY**：本文档为旧命名基线（2026-08 时期），其中「Z-Brand Intelligence Platform」为历史名称。
+> 最新 Canonical 命名以 [`00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md`](../00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md) 为准：
+> 中文品牌=**序境**，韩文=**서경**，英文 Canonical Brand=**TBD**，品牌哲学=**芥子纳须弥**。
+> 本文档保留作为历史证据，不得作为新开发的命名依据。
+
 > 本文件只负责产品正式命名与层级关系，不定义功能、不修改架构、不改变代码行为。
 
 ## 0. 统一平台层（最顶层）

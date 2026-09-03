@@ -71,7 +71,7 @@ class BrandReportGenerator:
                'footer': '序境 브랜드 인텔리전스 시스템 자동 생성. 데이터 출처 추적 가능.'},
     }
 
-    def __init__(self, brand_name: str = 'Z-Brand', report_period: str = '', language: str = 'zh'):
+    def __init__(self, brand_name: str = '序境', report_period: str = '', language: str = 'zh'):
         self.brand_name = brand_name
         self.report_period = report_period or f"{datetime.now().strftime('%Y年%m月')}"
         self.language = language if language in self.REPORT_LANG_LABELS else 'zh'
@@ -396,7 +396,7 @@ class BrandReportGenerator:
 # 全局单例
 _generator_instance: Optional[BrandReportGenerator] = None
 
-def get_report_generator(brand_name: str = 'Z-Brand', report_period: str = '') -> BrandReportGenerator:
+def get_report_generator(brand_name: str = '序境', report_period: str = '') -> BrandReportGenerator:
     global _generator_instance
     if _generator_instance is None:
         _generator_instance = BrandReportGenerator(brand_name, report_period)

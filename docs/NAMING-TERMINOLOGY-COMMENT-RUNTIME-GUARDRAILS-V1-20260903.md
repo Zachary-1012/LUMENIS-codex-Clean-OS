@@ -1,6 +1,8 @@
 # ZBC × Zachary OS AI Naming / Terminology / Comment / Runtime Guardrails V1
 
-Date: 2026-09-03
+Date: 2026-09-03（2026-09-04 按序境 Canonical 基线更新）
+> 📌 最新治理基线：Canonical 命名以 [`00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md`](../00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md) 为唯一权威源。Zachary 仅保留为研发身份/仓库标识，不作为产品品牌。
+
 Status: normative baseline
 Scope: Z Brand Core, Zachary OS AI, DCC, all future modules and all Web/App/PWA/Mini Program surfaces.
 
@@ -13,15 +15,15 @@ No new module may introduce uncontrolled terminology, duplicate names, long comm
 ## 1. Canonical System Names
 
 ### Product family
-- Canonical display name: Zachary OS
-- Short form: ZOS
+- Canonical display name: **序境**（中文）/ **TBD**（英文，待最终命名确认）
+- 研发身份标识（LEGACY，保留）：Zachary OS / ZOS
 - Role: product family / umbrella system
 
 ### AI research system
-- Canonical display name: Zachary OS AI
-- Short form: ZOSAI
+- Canonical display name: **序境-智能**（中文）/ **TBD Intelligence**（英文，待确认）
+- 研发身份标识（LEGACY，保留）：Zachary OS AI / ZOSAI
 - Role: research, knowledge, AI, architecture, decisions and development intelligence
-- Repository: Zachary-1012/Zachary-OS-AI
+- Repository identifier（技术标识，保留）: Zachary-1012/Zachary-OS-AI
 
 ### Production business system
 - Canonical display name: Z Brand Core

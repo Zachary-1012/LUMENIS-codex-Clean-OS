@@ -818,7 +818,7 @@ def brand_report_generate():
         from brand_report_generator import BrandReportGenerator
         data = request.get_json() or {}
         generator = BrandReportGenerator(
-            brand_name=data.get('brand_name', 'Z-Brand'),
+            brand_name=data.get('brand_name', '序境'),
             report_period=data.get('report_period', ''),
         )
         # 设置各部分数据
