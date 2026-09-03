@@ -48,3 +48,17 @@ def test_recovered_replays_with_handler(dlq):
 def test_empty_dlq_recovered(dlq):
     r = maybe_replay_dlq("ramp_up", handler=lambda kw, ctx: kw, dlq=dlq)
     assert r["replayed"] == 0 and r["pending"] == 0
+
+
+def test_schedule_sleep_seconds():
+    from collector_guard.schedule_adapter import schedule_sleep_seconds
+    # NORMAL -> 1.0x
+    assert schedule_sleep_seconds("schedule_normal", 6.0) == 6.0
+    # ADAPTIVE -> 1.8x 降频
+    assert schedule_sleep_seconds("backoff_interval", 6.0) == 10.8
+    # COOLDOWN/FROZEN -> 深度降频
+    assert schedule_sleep_seconds("pause_until_cooldown", 6.0) == 24.0
+    assert schedule_sleep_seconds("freeze_and_recover", 6.0) == 30.0
+    # None -> 默认 NORMAL 1x；下限保护
+    assert schedule_sleep_seconds(None, 6.0) == 6.0
+    assert schedule_sleep_seconds("schedule_normal", 0.1) >= 0.5

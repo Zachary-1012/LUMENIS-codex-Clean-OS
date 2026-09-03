@@ -379,6 +379,21 @@ def collect_all(keywords=None, max_scroll=4):
         collection_results.append({'keyword': kw, 'count': count, 'error': error, 'tier': 'core' if is_core else 'expand'})
         print(f"[Collector]   -> {count} 条 {'(错误: '+error+')' if error else ''}")
 
+        # P1-A 动态调度间隔（生产接线）：关键词间按 RiskEngine 六态动态降频/恢复。
+        # base × interval_multiplier（NORMAL=1x / ADAPTIVE=1.8x / COOLDOWN=4x / FROZEN=5x），
+        # 服务基线 §9/§10「动态熔断联动」：降频不停止，资源恢复后自动回升。
+        try:
+            import time as _sched_time
+            from collector_guard.schedule_adapter import schedule_sleep_seconds
+            _life = _get_xhs_risk_engine().snapshot().get('lifecycle_action')
+            _interval = schedule_sleep_seconds(_life, base_interval=base)
+            if _interval > 0.5:
+                print(f"[Collector]   调度间隔 {_interval:.1f}s (lifecycle={_life})")
+                _sched_time.sleep(_interval)
+        except Exception as _sched_err:
+            print(f"[Collector]   调度间隔计算失败(忽略): {_sched_err}")
+
+
         for note in result.get('notes', []):
             nid = note.get('note_id')
             if nid and nid not in all_notes:

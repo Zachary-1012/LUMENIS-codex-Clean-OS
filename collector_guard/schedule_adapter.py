@@ -60,6 +60,19 @@ def schedule_state(lifecycle_action):
     return advice(lifecycle_action)["resource_guard_state"]
 
 
+def schedule_sleep_seconds(lifecycle_action=None, base_interval=6.0):
+    """动态调度间隔（生产接线）：base × interval_multiplier（ResourceGuard 降频/恢复语义）。
+
+    - schedule_normal(NORMAL)          -> 1.0x（常规频率）
+    - backoff_interval(ADAPTIVE)       -> 1.8x（间隔拉长控压，降低采集频率）
+    - pause_until_cooldown(COOLDOWN)   -> 4.0x（深度降频，配合 should_stop 排队）
+    - freeze_and_recover(FROZEN)       -> 5.0x（冻结深度降频）
+    纯函数、无共享状态，供采集主循环在关键词间动态 sleep，服务基线 §9/§10「动态熔断联动」。
+    """
+    mult = advice(lifecycle_action or "schedule_normal")["interval_multiplier"]
+    return max(0.5, float(base_interval) * float(mult))
+
+
 # DLQ 恢复重放触发态：RECOVERING(probe_only 半开) / RECOVERED(ramp_up 恢复) 后才补采失败任务
 _REPLAY_ACTIONS = {"probe_only", "ramp_up"}
 
