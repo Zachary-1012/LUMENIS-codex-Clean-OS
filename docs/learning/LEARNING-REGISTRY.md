@@ -12,6 +12,7 @@
 | LR-20260903-001 | 数据库可回滚迁移 | Alembic (stamp-only baseline) | sqlalchemy/alembic | MIT | 4357 | ADOPT（已落地 T-P1-3，stamp-only baseline + batch 模式，生产接入走 Gate） | schema_version / DB-MIGRATION-PLAYBOOK |
 | LR-20260903-002 | 学习资产-案例模板 | 智谱glm-4.5-air深度分析本库 | — | — | ADOPTED（案例资料库整合吃透→可复用方案模板，危机公关SOP/品牌营销模板/产品接入） | CASE-TEMPLATE-REUSE-20260903 |
 | LR-20260903-003 | 学习资产-代码库 | 智谱glm-4.5-air深度分析本库627文件/94979行 | — | — | ADOPTED（架构分层评估/耦合点/可复用组件/ChatGPT·Codex编程设计借鉴/可进化板块） | CODEBASE-ARCHITECTURE-LEARNING-20260903 |
+| LR-20260903-004 | 学习资产-架构处置方案 | 智谱glm-4.5-air（只给建议不施工） | — | — | ADOPTED-建议（app.py/采集/AI接口/DAO/资源管理/认证适配6项处置方案+落地顺序） | ARCHITECTURE-REMEDIATION-20260903 |
 | LR-20260831-001 | A 能力/服务目录 | Backstage | backstage/backstage | Apache-2.0 | 34283 | REFERENCE-ONLY（学 Catalog 模型，不引重型平台） | FEATURE-REGISTRY / ASSET-REGISTRY |
 | LR-20260831-002 | B 架构治理 | ADR（Architecture Decision Records） | joelparkerhenderson/architecture-decision-record | 见仓库 LICENSE | 16778 | ADOPT-思想（轻量 Markdown ADR，已存在 ARCHITECTURE_DECISION_RECORD_20260830） | docs/governance |
 | LR-20260831-003 | C 来源/证据 | in-toto | in-toto/in-toto | Apache-2.0（以仓库为准） | 1035 | REFERENCE-ONLY（学 Attestation/链路证据结构） | app_evidence_records / Evidence |
