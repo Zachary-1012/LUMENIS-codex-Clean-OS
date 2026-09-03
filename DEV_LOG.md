@@ -356,3 +356,35 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 
 **F. 剩余开放 GAP（需决策）**
 - GAP-11 DCC 跨仓落后（跨仓 rebase 高风险）、GAP-14 P3 文档级、GAP-16 固定域名（部署项）、GAP-20 工程清理、GAP-21 ZBMP importer API（涉及 Cookie 敏感数据安全面）
+
+## 2026-09-03｜GAP-11/14/20/21 全面推进 + 生产上线
+> 协议：WORK → VERIFY → LOG → COMMIT → PUSH → REMOTE VERIFY
+
+**A. GAP-11 DCC 跨仓（RESOLVED）**
+- DCC 仓库已被并行巡检废弃（远程 b0448d3/551d17f/27f6baf 标记"内容已迁移至 Zachary-OS-AI"）
+- ZBC 内 tools/development-command-console submodule 解除（git rm --cached + .gitmodules 移除 DCC 段），目录内容保留为历史资产（tools/ 已 gitignore）
+- 跨仓分叉消除；commit ac9c15f
+
+**B. GAP-20 工程清理（RESOLVED）**
+- .trae-cn 已 gitignore；*.log/*.bak/app.py.bak_* 已 gitignore
+- 2 个被跟踪的废弃历史备份（style.css.bak_011101/app.js.bak_20260827）已 git rm（文档标注"应删除"、无引用）
+- 16 个 start_*.bat/ps1 为在用启动脚本保留；commit 455a510
+
+**C. GAP-14 文档校正（RESOLVED）**
+- FEATURE-FINAL-VERIFICATION-MATRIX.md 4 处 API 前缀校正对照真实路由表：
+  MON-003=/api/collect|status/<id>|tasks|browser/start|stop；RISK-002=无独立API(内部+状态文件)；SYS-002=/v4/api/status|history|save|push|check|pull|rollback；SETT-001=/api/settings/*|/v4/*
+- commit 742a135
+
+**D. GAP-21 Cookie 导入 API（升 DEVELOPING，生产上线）**
+- 补受 Basic Auth 保护的 API：POST /api/cookies/import（触发从 data/ 源文件重导入微博/B站/小红书，不接收/不返回 Cookie 明文）+ GET /api/cookies/import/status（仅元信息）
+- 安全：写 data/(gitignore 不入库)、Evidence 记录、无凭证 401
+- 4 单测通过（401/200结构/无泄漏/405）：tests/test_cookies_import_api.py
+- 生产 8201 重启加载，GAP-21 status/import 200 + 既有 API 无回归 + 无凭证 401；commit b46d384
+
+**E. GAP-16 固定域名（登记待决策）**
+- 登记方案选项：A) Cloudflare Named Tunnel（固定域名免费断线自愈）/ B) 云服务器反向代理 / C) 保持本机内网
+- 涉及公网暴露，待用户拍板
+
+**F. 剩余 GAP 状态**
+- 已 RESOLVED：GAP-01~15, 17, 18, 19(Selenium), 20, 23~30
+- 待决策：GAP-16（固定域名）、GAP-21 UI 占位（API 已补，前端待接入）
