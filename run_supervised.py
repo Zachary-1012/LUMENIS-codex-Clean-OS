@@ -124,18 +124,35 @@ def main():
     ap.add_argument('--port', default='8201')
     args = ap.parse_args()
 
-    # ===== 单实例保护：同一目标端口只允许一个监督器（避免多守护拉起多 app.py 抢 8201）=====
+    # ===== 单实例保护：同一目标端口只允许一个监督器（原子创建锁，消除并发竞争窗口）=====
     _lock = ROOT / 'data' / f'supervisor_{args.port}.lock'
     try:
-        if _lock.exists():
-            _old = int(_lock.read_text().strip())
+        _lock.parent.mkdir(parents=True, exist_ok=True)
+        _acquired = False
+        try:
+            _fd = os.open(str(_lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(_fd, str(os.getpid()).encode('ascii'))
+            os.close(_fd)
+            _acquired = True
+        except FileExistsError:
+            try:
+                _old = int(_lock.read_text().strip())
+            except Exception:
+                _old = -1
             if _pid_alive(_old):
                 log(f'Supervisor 已存在(PID={_old}，端口 {args.port})，退出避免重复守护')
                 sys.exit(0)
-            else:
-                log(f'发现失效 lock(PID={_old})，接管端口 {args.port}')
-        _lock.write_text(str(os.getpid()))
-        log(f'Supervisor 单实例锁写入 PID={os.getpid()} (port {args.port})')
+            log(f'发现失效 lock(PID={_old})，强制接管端口 {args.port}')
+            try:
+                _lock.unlink()
+            except Exception:
+                pass
+            _fd = os.open(str(_lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(_fd, str(os.getpid()).encode('ascii'))
+            os.close(_fd)
+            _acquired = True
+        if _acquired:
+            log(f'Supervisor 单实例锁写入 PID={os.getpid()} (port {args.port})')
     except Exception as _e:
         log(f'单实例保护检查失败(继续启动): {_e}')
 

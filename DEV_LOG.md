@@ -590,3 +590,31 @@ P2：移动端完整交互、版本统一、collector_v2 切换、临时诊断�
 - 双平台保活状态机 + recheck 决策 + mark 闭环全部实测通过
 - 前端 JS 无错误，自动再弹监控运行正常
 - 8201 单套 app.py 稳定运行
+
+---
+
+## 2026-09-03 第三批补录（8201 守护稳定性根因澄清与修复 + 上线保障）
+
+### 根因澄清（重要）
+排查发现之前的"run_supervised→run_supervised 递归链"是**误判**：
+- Windows venv 的 `.venv\Scripts\python.exe` 是 launcher 壳，它会启动 base Python（Python313\python.exe）并转发命令行，launcher 壳保留为父进程
+- 所以 6424(venv launcher)→27844(base main)→28084(venv launcher)→15168(base app) 是**正常的父子结构**，不是递归
+- 真正的问题一直是：**HealthGuard 计划任务每 5 分钟触发 + 旧 start_production.ps1 的 wait 分支在 app.py 慢启动/卡死时不清理残留**，导致**多次独立启动叠加**（每次一套完整链），多套 app.py 竞争 8201 → PID 轮换、旧代码响应
+
+### 修复（已落地 + 连续验证）
+1. **start_production.ps1 8201 watchdog 改确定性**：
+   - healthz OK → skip（不叠加）
+   - healthz 不 OK → 先精准清理残留 8201 python（run_supervised.py|app.py）+ 删失效锁 → 唯一启动一个 supervisor
+2. **run_supervised.py 单实例锁改原子创建**（os.O_CREAT|O_EXCL）：
+   - 消除"检查-写入"非原子的并发竞争窗口，杜绝两个 supervisor 同时写锁
+3. **验证（实测）**：连续 3 次模拟 HealthGuard 触发 → 全部 "already healthy, skip"，进程链保持唯一一套（6424→27844→28084→15168），lock=27844 唯一，healthz 200
+
+### 上线保障
+- 8201 守护逻辑确定化：任何时刻要么健康跳过，要么清理后单实例启动，不再叠加
+- 自动恢复能力保留：HealthGuard 仍会检测 8201 并拉起
+- CDP 9222/9223 双平台保活在线，recheck 自动确认当日保活（已验证）
+
+### 本轮提交文件
+- run_supervised.py（原子锁）
+- scripts/start_production.ps1（确定性 watchdog）
+- DEV_LOG.md

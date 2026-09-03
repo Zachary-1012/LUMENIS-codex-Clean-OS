@@ -63,20 +63,26 @@ function Wait-Healthz([string]$Url, [int]$Seconds=15) {
     return $false
 }
 
-# --------------- 8201 watchdog ---------------
+# --------------- 8201 watchdog (deterministic: healthy -> skip; unhealthy -> clean stale then single start) ---------------
+# Root cause fixed 2026-09-03: HealthGuard fires every 5min; old branch waited on an alive-but-broken
+# run_supervised forever and never cleaned, so repeated firings stacked run_supervised->run_supervised
+# and app.py -> app.py competing for 8201. Now unhealthy always means: kill stale 8201 python, drop
+# stale lock, then start exactly ONE supervisor (whose own lock is atomic-create).
 $httpOk = Test-Http 'http://127.0.0.1:8201/healthz'
-$procOk = Test-ProcExists 'run_supervised\.py.*8201'
 if ($httpOk) {
     Write-Output '[ZBC-8201] already healthy, skip'
-} elseif ($procOk) {
-    Write-Output '[ZBC-8201] supervisor already starting, wait...'
-    $up = Wait-Healthz 'http://127.0.0.1:8201/healthz' 15
-    if (-not $up) { Write-Error '8201 not ready after 15s. Check logs/supervisor_console.err' }
 } else {
+    $stale = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -and ($_.CommandLine -match '8201') -and ($_.CommandLine -match 'run_supervised\.py|app\.py') }
+    if ($stale) {
+        Write-Output ("[ZBC-8201] cleaning stale pids: " + (($stale | ForEach-Object { $_.ProcessId }) -join ','))
+        $stale | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+        Start-Sleep -Seconds 3
+    }
+    Remove-Item (Join-Path $Root 'data\supervisor_8201.lock') -Force -ErrorAction SilentlyContinue
     $supOut = Join-Path $LogDir 'supervisor_console.log'
     $supErr = Join-Path $LogDir 'supervisor_console.err'
     Start-Process -FilePath $Py -ArgumentList @('run_supervised.py','--host','0.0.0.0','--port','8201') -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $supOut -RedirectStandardError $supErr
-    Write-Output '[ZBC-8201] starting supervisor (run_supervised.py --port 8201)'
+    Write-Output '[ZBC-8201] starting single supervisor (run_supervised.py --port 8201)'
     Write-Output '[ZBC-8201] waiting healthz (max 15s)...'
     $up = Wait-Healthz 'http://127.0.0.1:8201/healthz' 15
     if ($up) {
