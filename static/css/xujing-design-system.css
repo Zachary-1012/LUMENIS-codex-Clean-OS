@@ -858,3 +858,163 @@ input:focus, textarea:focus, select:focus {
 [style*="font-size: 64px"], [style*="font-size: 72px"], [style*="font-size: 80px"] {
   font-size: var(--xj-font-size-2xl) !important;
 }
+
+/* ============================================================
+   第13层：Icon Size Registry · 全局图标尺寸权威源
+   禁止巨型Icon · 小尺度线性Icon · 侘寂克制
+   ============================================================ */
+
+/* 全局SVG图标最大尺寸限制 —— 任何无宽高的SVG不得超过24px */
+svg:not([width]):not([height]) { max-width: 24px; max-height: 24px; }
+
+/* 首页快捷入口 chip —— 紧凑小尺度 */
+.zb-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border: 1px solid var(--xj-border, #e5e5e5) !important;
+  border-radius: 6px !important;
+  background: var(--xj-surface, #fff) !important;
+  color: var(--xj-text, #1a1a1a) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  line-height: 1.4 !important;
+}
+.zb-chip:hover {
+  border-color: var(--xj-text, #1a1a1a) !important;
+  background: var(--xj-bg-alt, #fafafa) !important;
+}
+.zb-chip svg {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+  stroke-width: 1.8 !important;
+}
+
+/* 首页标题 —— 禁止巨型标题 */
+.zb-home-title {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  margin: 0 0 16px 0 !important;
+  line-height: 1.3 !important;
+}
+
+/* 首页整体布局 —— 紧凑高密度 */
+#zbHome { padding: 20px 24px !important; }
+.zb-home-inner { max-width: 720px !important; margin: 0 auto !important; }
+.zb-chips {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-top: 14px !important;
+  justify-content: flex-start !important;
+}
+.zb-home-sub {
+  margin-top: 14px !important;
+  font-size: 11px !important;
+  color: var(--xj-text-muted, #999) !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* 首页搜索框 —— 紧凑 */
+.zb-ask {
+  border: 1px solid var(--xj-border, #e5e5e5) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  background: var(--xj-surface, #fff) !important;
+}
+.zb-ask textarea {
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  min-height: 40px !important;
+  border: none !important;
+  resize: none !important;
+}
+.zb-ask-bar {
+  padding: 6px 10px !important;
+  border-top: 1px solid var(--xj-border, #f0f0f0) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.zb-ask-model { font-size: 11px !important; color: var(--xj-text-muted, #999) !important; }
+.zb-send {
+  width: 28px !important; height: 28px !important;
+  border: none !important; background: var(--xj-text, #1a1a1a) !important;
+  color: #fff !important; border-radius: 4px !important; cursor: pointer !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+}
+.zb-send svg { width: 14px !important; height: 14px !important; }
+
+/* 左侧边栏图标 —— 小尺度统一 */
+.side-item svg, .side-item i, .nav-icon svg, .nav-icon i {
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0 !important;
+}
+.side-item {
+  padding: 7px 12px !important;
+  font-size: 12.5px !important;
+  gap: 10px !important;
+}
+
+/* 统计卡片图标 —— 小尺度 */
+.metric-icon {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.metric-icon svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* 全局按钮内图标 */
+button svg, .btn svg, .icon-button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+.icon-button {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+}
+
+/* 面板/卡片头部图标 */
+.panel-head svg, .card-head svg, .section-head svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* 禁止任何元素内的SVG超过合理尺寸 */
+.card svg, .panel svg, .metric-card svg {
+  max-width: 24px !important;
+  max-height: 24px !important;
+}
+
+/* 浮动机器人图标 —— 合理尺寸 */
+.zachary-float svg, .zachary-robot svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+.zachary-float {
+  width: 44px !important;
+  height: 44px !important;
+  bottom: 20px !important;
+  right: 20px !important;
+}
+
+/* 响应式：移动端进一步紧凑 */
+@media (max-width: 768px) {
+  .zb-home-title { font-size: 17px !important; }
+  #zbHome { padding: 16px !important; }
+  .zb-chip { padding: 5px 10px !important; font-size: 11px !important; }
+  .side-item { padding: 6px 10px !important; font-size: 12px !important; }
+}
