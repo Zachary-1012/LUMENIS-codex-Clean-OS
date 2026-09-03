@@ -511,7 +511,7 @@ def _build_event_summary(notes, period_type, period_start, period_end):
             if t and t != '其他':
                 topic_count[t] = topic_count.get(t, 0) + 1
     sorted_topics = sorted(topic_count.items(), key=lambda x: x[1], reverse=True)
-    period_label = {'daily': '当日', 'weekly': '本周', 'monthly': '本月', 'yearly': '本年'}[period_type]
+    period_label = {'daily': '当日', 'weekly': '本周', 'monthly': '本月', 'yearly': '本年', 'special': '近30日'}.get(period_type, '本周期')
     parts = [f"【{period_label}事件汇总】数据覆盖 {period_start} 至 {period_end}，共采集 {len(notes)} 条真实笔记。"]
     if sorted_topics:
         parts.append(f"主要事件话题集中在：{'、'.join([f'{t}({c}条)' for t, c in sorted_topics[:5]])}。")
@@ -549,7 +549,7 @@ def _build_sentiment_analysis(notes, stats, period_type):
     pos_pct = round(pos / total * 100, 1) if total else 0
     neg_pct = round(neg / total * 100, 1) if total else 0
     neu_pct = round(neu / total * 100, 1) if total else 0
-    period_label = {'daily': '当日', 'weekly': '本周', 'monthly': '本月', 'yearly': '本年'}[period_type]
+    period_label = {'daily': '当日', 'weekly': '本周', 'monthly': '本月', 'yearly': '本年', 'special': '近30日'}.get(period_type, '本周期')
     parts = [f"【{period_label}舆情分析】"]
     # 情感格局
     parts.append(f"一、情感格局：正面{pos}条({pos_pct}%)、中性{neu}条({neu_pct}%)、负面{neg}条({neg_pct}%)。")
@@ -625,7 +625,7 @@ def generate_period_report(notes, stats, report_type='daily', period_start='', p
     total = len(notes)
     neg_count = stats.get('negative', 0)
     high_count = stats.get('high_risk', 0)
-    period_label = {'daily': '日报', 'weekly': '周报', 'monthly': '月报', 'yearly': '年报'}[report_type]
+    period_label = {'daily': '日报', 'weekly': '周报', 'monthly': '月报', 'yearly': '年报', 'special': '专报'}.get(report_type, '专报')
     summary_parts = [f"{period_start} 至 {period_end} {period_label}：共监测 {total} 条笔记"]
     if total > 0:
         summary_parts.append(f"正面{round(stats.get('positive', 0)/total*100,1)}% / 负面{round(neg_count/total*100,1)}%")

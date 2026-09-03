@@ -8,10 +8,11 @@
 /* ---- 1. 侧边栏隐藏脱流 ----
  * 平板区间（768-1023）侧边栏是 sticky flex item，关闭时仅用
  * translateX(-100%) 视觉隐藏，仍占 248px，导致 .content 左侧留白。
- * 两套显隐机制都要覆盖：
- *   A) zb-shell：body.zb-shell-on 且无 .zb-nav-open
- *   B) menu-toggle：.sidebar.open（>=768 区间为隐藏态）
- * 手机端（<=767）sidebar 为 position:fixed 已脱流，无需处理，故 min-width 隔离。 */
+ * 权威显隐状态是 body.zb-nav-open（zb-shell 机制，!important 控制 transform）：
+ * 无 zb-nav-open = 抽屉关闭 → 收回 flex 占位，让主内容占满全宽。
+ * 注意：不能用 .sidebar.open 判断——打开抽屉时它也带 .open，会误伤。
+ * 手机端（<=767）sidebar 为 position:fixed 已脱流；桌面（>=1024）抽屉常显，
+ * 均无需处理，故用 768-1023 区间精确隔离。 */
 @media (min-width: 768px) and (max-width: 1023px) {
   body.zb-shell-on:not(.zb-nav-open) .layout > .sidebar {
     flex: 0 0 0 !important;
@@ -22,16 +23,11 @@
     border-right: 0 !important;
     overflow: hidden !important;
   }
-}
-@media (min-width: 768px) {
-  .layout > .sidebar.open {
-    flex: 0 0 0 !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    border-right: 0 !important;
-    overflow: hidden !important;
+  /* 抽屉打开时恢复占位（覆盖任何冲突的宽度规则） */
+  body.zb-shell-on.zb-nav-open .layout > .sidebar {
+    flex: 0 0 248px !important;
+    width: 248px !important;
+    min-width: 248px !important;
   }
 }
 
@@ -46,13 +42,16 @@
 
 /* ---- 3. 指标卡收紧 ---- */
 .metric-grid { gap: 10px; }
-.metric-card { padding: 10px 12px; border-radius: 10px; }
+.metric-card { padding: 10px 12px; border-radius: 10px; min-height: 0 !important; }
 .metric-icon { width: 24px; height: 24px; font-size: 13px; margin-bottom: 5px; }
 .metric-card strong { font-size: 19px; }
 .metric-label { font-size: 11px; }
 .metric-sub { font-size: 10px; margin-top: 2px; }
+/* KOS 4 指标卡：内容区足够宽时锁定一行 4 列（覆盖旧样式 ≤1250 强制 3 列） */
+#kosStats { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 @media (max-width: 768px) {
   .metric-card strong { font-size: 17px; }
+  #kosStats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
 
 /* ---- 4. 面板收紧 ---- */
