@@ -62,3 +62,21 @@ def test_schedule_sleep_seconds():
     # None -> 默认 NORMAL 1x；下限保护
     assert schedule_sleep_seconds(None, 6.0) == 6.0
     assert schedule_sleep_seconds("schedule_normal", 0.1) >= 0.5
+
+
+def test_enqueue_next_round_async_production(tmp_path):
+    """调度器 -> 队列 生产接线：入队多任务，TaskQueue 可被 Worker 消费（异步生产路径）。"""
+    from collector_guard.task_queue import TaskQueue
+    from collector_guard.queue_worker import QueueWorker
+    from collector_guard.schedule_adapter import enqueue_next_round
+    q = TaskQueue(str(tmp_path / "sched.db"))
+    tasks = [
+        {"task_type": "collect_keyword", "payload": {"keyword": "太古汇"}},
+        {"task_type": "collect_keyword", "payload": {"keyword": "天环广场"}, "priority": 1},
+    ]
+    assert enqueue_next_round(q, tasks) == 2
+    got = []
+    w = QueueWorker(q, lambda t: (got.append(t["payload"]["keyword"]), True)[1])
+    w.drain()
+    assert sorted(got) == ["天环广场", "太古汇"]
+    assert q.stats().get("pending", 0) + q.stats().get("running", 0) == 0

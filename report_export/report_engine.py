@@ -196,7 +196,7 @@ def export_xlsx(p,out):
     # Sheet2: 事件分析
     if p["event_analysis"]:
         ws2=wb.create_sheet("事件分析")
-        event_headers=["事件标题","事件类型","风险等级","关联笔记数","首次发现","最后更新","事件摘要"]
+        event_headers=["事件标题","事件类型","风险等级","主题标签","关联笔记数","首次发现","最后更新","事件摘要"]
         ws2.append(event_headers)
         for cell in ws2[1]:
             cell.font=header_font
@@ -205,7 +205,7 @@ def export_xlsx(p,out):
             cell.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True)
         for ev in p["event_analysis"]:
             ws2.append([
-                ev.get("title",""),ev.get("type",""),ev.get("risk",""),
+                ev.get("title",""),ev.get("type",""),ev.get("risk",""),ev.get("topic",""),
                 ev.get("notes",0),ev.get("first_seen",""),ev.get("last_seen",""),
                 ev.get("summary","")
             ])
@@ -215,7 +215,7 @@ def export_xlsx(p,out):
                 cell.border=thin_border
                 cell.alignment=Alignment(vertical='center',wrap_text=True)
         ws2.freeze_panes="A2"
-        widths=[30,15,12,12,18,18,50]
+        widths=[30,15,12,18,12,18,18,50]
         for i,w in enumerate(widths,start=1):
             ws2.column_dimensions[get_column_letter(i)].width=w
     
@@ -328,6 +328,7 @@ def export_docx(p,out):
             d.add_heading(f"事件{i}：{ev.get('title','未知')}",2)
             d.add_paragraph(f"事件类型：{ev.get('type','-')}")
             d.add_paragraph(f"风险等级：{ev.get('risk','-')}")
+            d.add_paragraph(f"主题标签：{ev.get('topic','-')}")
             d.add_paragraph(f"关联笔记数：{ev.get('notes',0)}")
             d.add_paragraph(f"首次发现：{ev.get('first_seen','-')}")
             d.add_paragraph(f"最后更新：{ev.get('last_seen','-')}")

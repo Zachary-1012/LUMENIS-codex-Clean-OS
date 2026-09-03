@@ -95,3 +95,18 @@ def maybe_replay_dlq(lifecycle_action, handler=None, dlq=None, max_items=50):
         return {"replayed": 0, "failed": 0, "pending": len(pending), "dry": True}
     ok, fail = dlq.replay(handler, max_items=max_items)
     return {"replayed": ok, "failed": fail, "pending": dlq.stats()["pending"], "dry": False}
+
+
+def enqueue_next_round(queue, tasks, priority=5, delay=0):
+    """采集调度生产接线：把下一轮采集任务入队（异步生产路径，默认与同步采集互补）。
+
+    tasks: [{task_type, payload}, ...]；入队失败异常向上抛（由调用方决定降级为同步）。
+    与 TaskQueue + QueueWorker 构成「Scheduler -> Queue -> Worker」可选异步链路；
+    不改变现有同步调度（collect_all），生产接入时按 collect 任务类型注册 processor。
+    """
+    for t in tasks:
+        queue.enqueue(t.get("task_type", "collect"),
+                      t.get("payload", {}),
+                      priority=t.get("priority", priority),
+                      delay=t.get("delay", delay))
+    return len(tasks)
