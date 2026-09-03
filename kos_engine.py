@@ -41,9 +41,52 @@ def _get_conn() -> sqlite3.Connection:
     return conn
 
 
+# KOS 账号资产字段（KOS_ACCOUNT_ASSET_TEMPLATE_v1）：幂等 ALTER，不破坏既有数据
+_ASSET_COLUMNS = [
+    # 主体归属（P0）
+    ("ownership_type", "TEXT", "'UNKNOWN'"),
+    ("ownership_confidence", "REAL", "0.0"),
+    ("ownership_evidence_ids", "TEXT", "''"),
+    ("merchant_entity", "TEXT", "''"),
+    ("brand_entity", "TEXT", "''"),
+    ("relationship_status", "TEXT", "'UNVERIFIED'"),
+    # 留资（P1）
+    ("contact_name", "TEXT", "''"),
+    ("phone", "TEXT", "''"),
+    ("wechat", "TEXT", "''"),
+    ("email", "TEXT", "''"),
+    ("mcn", "TEXT", "''"),
+    ("company", "TEXT", "''"),
+    # 合作（P1）
+    ("budget", "REAL", "0.0"),
+    ("quote", "REAL", "0.0"),
+    ("cooperation_status", "TEXT", "'NONE'"),
+    ("cooperation_history", "TEXT", "''"),
+    # 高级表现（P2）
+    ("follower_count", "INTEGER", "0"),
+    ("follower_growth_rate", "REAL", "0.0"),
+    ("engagement_rate", "REAL", "0.0"),
+    ("content_match_score", "REAL", "0.0"),
+    ("expertise_score", "REAL", "0.0"),
+    ("consistency_score", "REAL", "0.0"),
+    # 身份标签（与 kos_intel._ensure_identity_columns 对齐）
+    ("identity_label", "TEXT", "'UNKNOWN'"),
+    ("is_kos", "INTEGER", "0"),
+]
+
+
+def _ensure_asset_columns(conn):
+    """幂等补齐 kos_profiles 账号资产列（KOS_ACCOUNT_ASSET_TEMPLATE_v1）。"""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(kos_profiles)").fetchall()}
+    for name, typ, default in _ASSET_COLUMNS:
+        if name not in cols:
+            conn.execute(f"ALTER TABLE kos_profiles ADD COLUMN {name} {typ} DEFAULT {default}")
+
+
 def refresh_profiles() -> dict:
     """从 notes 重新聚合作者数据，刷新 kos_profiles 表。"""
     conn = _get_conn()
+    _ensure_asset_columns(conn)  # 幂等补齐账号资产字段（KOS_ACCOUNT_ASSET_TEMPLATE_v1）
     cur = conn.cursor()
     cur.execute("""
         SELECT author_id, MAX(author_nickname) as author_nickname, MAX(author_avatar) as author_avatar,
