@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>创意引擎工作台 · Zachary Creative</title>
+<style>
+  :root{
+    --bg:#F4F3EE; --card:#FFFFFF; --ink:#1A1B1C; --sub:#6B7280;
+    --line:#E4E3DD; --accent:#9EACEA; --accent-deep:#5A66C4;
+    --ok:#2F8F5B; --warn:#C98A00; --err:#C44A4C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'PingFang SC','Microsoft YaHei',system-ui,sans-serif;line-height:1.55;padding:16px}
+  .wrap{max-width:1180px;margin:0 auto}
+  header{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  header h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+  header h1 b{color:var(--accent-deep)}
+  header .sub{font-size:12px;color:var(--sub)}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{padding:8px 18px;border:1px solid var(--line);background:var(--card);border-radius:999px;font-size:13px;cursor:pointer;color:var(--sub);transition:.15s}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .grid{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .inputs{flex:1 1 300px;min-width:0}
+  .output{flex:2 1 560px;min-width:0}
+  .f{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;color:var(--sub);font-weight:600}
+  .field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;background:#fff;color:var(--ink);width:100%}
+  .field textarea{min-height:64px;resize:vertical}
+  .btn{margin-top:12px;padding:10px 18px;background:var(--accent-deep);color:#fff;border:0;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+  .btn:disabled{opacity:.5;cursor:wait}
+  .hint{font-size:11px;color:var(--sub);margin-top:8px;line-height:1.5}
+  .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+  .bar h2{font-size:15px;font-weight:600}
+  .bar .meta{font-size:11px;color:var(--sub)}
+  .err{background:#FDF0F0;color:var(--err);border:1px solid #F2D0D0;border-radius:9px;padding:10px;font-size:12px;margin-bottom:12px;display:none}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .card{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff;display:flex;flex-direction:column;gap:8px;transition:.15s}
+  .card:hover{box-shadow:0 4px 16px rgba(26,27,28,.07)}
+  .card .tag{font-size:10px;color:var(--accent-deep);font-weight:700;letter-spacing:.5px}
+  .card .idea{font-size:15px;font-weight:600;line-height:1.45}
+  .card .kv{font-size:11px;color:var(--sub);line-height:1.6}
+  .card .kv b{color:var(--ink);font-weight:600}
+  .card .src{font-size:10px;color:#9AA0A6;border-top:1px dashed var(--line);padding-top:6px;line-height:1.5}
+  .detail{white-space:pre-wrap;font-size:12px;line-height:1.65;color:#333}
+  .kchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .chip{font-size:11px;background:#EFEFF7;color:var(--accent-deep);border-radius:999px;padding:3px 10px}
+  .empty{color:var(--sub);font-size:13px;text-align:center;padding:36px 0;border:1px dashed var(--line);border-radius:12px}
+  .loading{color:var(--sub);font-size:13px;text-align:center;padding:24px}
+  @media(max-width:600px){body{padding:10px}.f{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>创意引擎工作台 · <b>Zachary Creative</b></h1>
+    <div class="sub" id="authState">凭证读取中…</div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab on" data-tab="ideas">创意卡</div>
+    <div class="tab" data-tab="video">视频脚本</div>
+    <div class="tab" data-tab="social">社媒矩阵</div>
+  </div>
+
+  <div class="err" id="errBox"></div>
+
+  <!-- ===== 创意卡 ===== -->
+  <div class="tabpane" id="pane-ideas">
+    <div class="grid">
+      <div class="panel inputs">
+        <div class="f">
+          <div class="field"><label>品牌 *</label><input id="i_brand" value="广州太古汇"></div>
+          <div class="field"><label>品类</label><input id="i_cat" value="商业地产"></div>
+          <div class="field"><label>圈层</label>
+            <select id="i_circle"><option>都市职场</option><option>都市高净值</option><option>Z世代潮人</option><option>生活方式家</option><option>亲子家庭</option><option>旅行者</option></select>
+          </div>
+          <div class="field"><label>调性</label>
+            <select id="i_tonality"><option value="premium">质感</option><option value="luxury">高奢</option><option value="mass">大众</option></select>
+          </div>
+          <div class="field"><label>热点</label><input id="i_hot" placeholder="如 15周年"></div>
+          <div class="field"><label>数量 (≤5)</label><input id="i_n" type="number" value="3" min="1" max="5"></div>
+          <div class="field"><label>主题词（逗号分隔，留空走关键词信号）</label><textarea id="i_topics">方所,15周年,面包</textarea></div>
+          <div class="field"><label>DB 关键词（非空则从真实舆情取信号）</label><input id="i_keyword" placeholder="如 太古汇"></div>
+        </div>
+        <button class="btn" id="b_ideas">生成创意卡</button>
+        <div class="hint">创意卡 = 机制×角度×情感句法（文学/戏剧/高奢克制叙事）×真实信号，反模板化输出。情感手法自动按主题语义收敛。</div>
+      </div>
+      <div class="panel output" id="out_ideas"><div class="empty">输入参数后点「生成创意卡」</div></div>
+    </div>
+  </div>
+
+  <!-- ===== 视频脚本 ===== -->
+  <div class="tabpane" id="pane-video" style="display:none">
+    <div class="grid">
+      <div class="panel inputs">
+        <div class="f">
+          <div class="field"><label>品牌 *</label><input id="v_brand" value="广州太古汇"></div>
+          <div class="field"><label>品类</label><input id="v_cat" value="商业地产"></div>
+          <div class="field"><label>圈层</label>
+            <select id="v_circle"><option>都市职场</option><option>都市高净值</option><option>Z世代潮人</option><option>生活方式家</option><option>亲子家庭</option><option>旅行者</option></select>
+          </div>
+          <div class="field"><label>调性</label>
+            <select id="v_tonality"><option value="premium">质感</option><option value="luxury">高奢</option><option value="mass">大众</option></select>
+          </div>
+          <div class="field"><label>视频类型</label>
+            <select id="v_type"><option value="tvc">TVC</option><option value="concept">概念片</option><option value="xhs">小红书</option><option value="douyin">抖音</option><option value="tiktok">TikTok</option></select>
+          </div>
+          <div class="field"><label>产品/主题点</label><input id="v_point" placeholder="如 15周年限时"></div>
+          <div class="field"><label>热点</label><input id="v_hot" placeholder="如 15周年"></div>
+        </div>
+        <button class="btn" id="b_video">生成视频脚本</button>
+        <div class="hint">TVC/概念片/小红书/抖音/TikTok 分镜脚本，含情感钩子（emotion_hook）。</div>
+      </div>
+      <div class="panel output" id="out_video"><div class="empty">输入参数后点「生成视频脚本」</div></div>
+    </div>
+  </div>
+
+  <!-- ===== 社媒矩阵 ===== -->
+  <div class="tabpane" id="pane-social" style="display:none">
+    <div class="grid">
+      <div class="panel inputs">
+        <div class="f">
+          <div class="field"><label>品牌 *</label><input id="s_brand" value="广州太古汇"></div>
+          <div class="field"><label>平台</label>
+            <select id="s_platform"><option value="">全平台矩阵</option><option>小红书</option><option>抖音</option><option>Instagram</option><option>Facebook</option><option>X</option><option>公众号</option></select>
+          </div>
+          <div class="field"><label>圈层</label>
+            <select id="s_circle"><option>都市职场</option><option>都市高净值</option><option>Z世代潮人</option><option>生活方式家</option><option>亲子家庭</option><option>旅行者</option></select>
+          </div>
+          <div class="field"><label>调性</label>
+            <select id="s_tonality"><option value="premium">质感</option><option value="luxury">高奢</option><option value="mass">大众</option></select>
+          </div>
+          <div class="field"><label>热点</label><input id="s_hot" placeholder="如 15周年"></div>
+        </div>
+        <button class="btn" id="b_social">生成社媒矩阵</button>
+        <div class="hint">小红书/抖音/IG/FB/X/公众号 平台生态+栏目+爆款公式+投放节奏+情感钩子。</div>
+      </div>
+      <div class="panel output" id="out_social"><div class="empty">输入参数后点「生成社媒矩阵」</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var authHeader = '';
+  var BASE = '';
+  function $(id){return document.getElementById(id)}
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+  // P0-B 前端凭证动态注入：不硬编码任何凭证
+  fetch(BASE+'/api/auth/config').then(function(r){return r.json()}).then(function(d){
+    if(d && d.auth_enabled && d.auth_header){authHeader=d.auth_header; $('authState').textContent='已连接（安全鉴权）';}
+    else{$('authState').textContent='已连接（免鉴权）';}
+  }).catch(function(e){$('authState').textContent='连接失败，请确认服务已启动';});
+
+  function showErr(msg){var e=$('errBox'); if(!msg){e.style.display='none';return;} e.textContent=msg; e.style.display='block';}
+  function post(path,body,cb){
+    showErr(''); var headers={'Content-Type':'application/json'};
+    if(authHeader)headers['Authorization']=authHeader;
+    fetch(BASE+path,{method:'POST',headers:headers,body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})})
+      .then(function(x){ if(!x.ok||x.j.ok===false){showErr((x.j&&x.j.error)||('请求失败 '+path)); return;} cb(x.j.data); })
+      .catch(function(e){showErr('网络/服务错误：'+e.message);});
+  }
+
+  // ---- Tab 切换 ----
+  var tabs=document.querySelectorAll('.tab');
+  tabs.forEach(function(t){t.addEventListener('click',function(){
+    tabs.forEach(function(x){x.classList.remove('on')}); t.classList.add('on');
+    var name=t.getAttribute('data-tab');
+    ['ideas','video','social'].forEach(function(p){$('pane-'+p).style.display=(p===name)?'':'none'});
+  });});
+
+  function ideasCard(i){
+    var tags = [i.tonality, i.budget, i.tension_type].filter(Boolean).join(' · ');
+    return '<div class="card">'
+      +'<div class="tag">'+esc(i.mechanism)+'</div>'
+      +'<div class="idea">'+esc(i.big_idea)+'</div>'
+      +'<div class="kv"><b>角度</b> '+esc(i.angle)+'<br><b>张力</b> '+esc(i.tension_type)+'<br><b>信号</b> '+esc(i.why)+'</div>'
+      +'<div class="kv"><b>预算</b> '+esc(i.budget)+' &nbsp;<b>时效</b> '+esc(i.timeliness)+'</div>'
+      +'<div class="kchips">'+(i.circle_symbols||[]).map(function(s){return '<span class="chip">'+esc(s)+'</span>'}).join('')+'</div>'
+      +'<div class="src">'+esc(i.provenance||'')+'</div>'
+      +'</div>';
+  }
+
+  $('b_ideas').addEventListener('click',function(){
+    var body={brand:$('i_brand').value.trim(),category:$('i_cat').value.trim(),circle:$('i_circle').value,
+      tonality:$('i_tonality').value,hotspot:$('i_hot').value.trim(),n:Math.min(Math.max(parseInt($('i_n').value||'3',10),1),5),
+      keyword:$('i_keyword').value.trim()};
+    var t=$('i_topics').value.split(/[,，\n]/).map(function(s){return s.trim()}).filter(Boolean);
+    if(!body.keyword){body.topics=t; body.sentiment='positive'; body.negative_rate=0.0; body.risk_events=0; body.volume_notes=100;}
+    $('out_ideas').innerHTML='<div class="loading">正在从真实信号生成原创创意…</div>';
+    post('/api/creative/ideas',body,function(d){
+      var ideas=(d&&d.ideas)||[];
+      if(!ideas.length){$('out_ideas').innerHTML='<div class="empty">无输出</div>';return;}
+      $('out_ideas').innerHTML='<div class="bar"><h2>创意卡 ×'+ideas.length+'</h2><div class="meta">'+(d.meta?esc(d.meta.framework):'')+'</div></div>'
+        +'<div class="cards">'+ideas.map(ideasCard).join('')+'</div>';
+    });
+  });
+
+  $('b_video').addEventListener('click',function(){
+    var body={brand:$('v_brand').value.trim(),category:$('v_cat').value.trim(),circle:$('v_circle').value,
+      tonality:$('v_tonality').value,video_type:$('v_type').value,product_point:$('v_point').value.trim(),hotspot:$('v_hot').value.trim()};
+    $('out_video').innerHTML='<div class="loading">正在生成分镜脚本…</div>';
+    post('/api/creative/video-script',body,function(d){
+      var html='<div class="bar"><h2>'+esc(d.big_idea)+'</h2></div>';
+      if(d.emotion_hook)html+='<div class="card"><div class="tag">情感钩子</div><div class="idea">'+esc(d.emotion_hook)+'</div></div>';
+      var out={结构:d.structure,标题候选:d.title_candidates,分镜:d.shots,投放建议:d.publish_advice,制作流程:d.production_workflow};
+      Object.keys(out).forEach(function(k){var v=out[k]; if(!v)return;
+        var txt=typeof v==='string'?v:JSON.stringify(v,null,1);
+        html+='<div class="card"><div class="tag">'+k+'</div><div class="detail">'+esc(txt)+'</div></div>';});
+      $('out_video').innerHTML=html;
+    });
+  });
+
+  $('b_social').addEventListener('click',function(){
+    var body={brand:$('s_brand').value.trim(),platform:$('s_platform').value,circle:$('s_circle').value,
+      tonality:$('s_tonality').value,hotspot:$('s_hot').value.trim()};
+    $('out_social').innerHTML='<div class="loading">正在生成平台矩阵…</div>';
+    post('/api/creative/social-ops',body,function(d){
+      var html='';
+      Object.keys(d).forEach(function(p){
+        var o=d[p]; var txt=JSON.stringify(o,null,1);
+        html+='<div class="card"><div class="tag">'+esc(p)+(o&&o.emotion_hook?' · 情感钩子':'')+'</div>'
+          +(o&&o.emotion_hook?'<div class="idea">'+esc(o.emotion_hook)+'</div>':'')
+          +'<div class="detail">'+esc(txt)+'</div></div>';
+      });
+      $('out_social').innerHTML=html||'<div class="empty">无输出</div>';
+    });
+  });
+})();
+</script>
+</body>
+</html>

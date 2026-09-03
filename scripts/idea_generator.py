@@ -341,7 +341,31 @@ _HOOK_EMO_LUX = {
     "emo_understate": [
         "{topic}，{brand}只是做得安静些——{img}，不必多言",
     ],
+    # —— LUX 专属：2026 全球高奢/低调小众"去噪"叙事（智谱 web_search 研究 2026-09-03 落地）——
+    # 法则：名词优于形容词 / 过程重于结果 / 传承与时间 / 留白不煽动 / 仪式与私密 / 懂的门槛
+    "emo_material": [
+        "{brand}的{topic}，不说奢华，只说能穿过戒指的绒——{img}，足矣",
+        "六微米的{topic}，替{c0}说尽了一切——{brand}，{img}，安静如初",
+        "{topic}，用一百道工序换一句话：{brand}的{img}，不解释",
+    ],
+    "emo_heirloom": [
+        "有些{topic}，值得交给下一个人——{brand}，{img}，与时间同行",
+        "父辈走过的晨路，{topic}还在——{brand}，{img}，替你记得",
+        "{brand}的{topic}，不是一次相遇，是{img}里的一辈子",
+    ],
+    "emo_silence": [
+        "{topic}，{brand}只说一句，剩下的是{img}——{c0}，懂的人自懂",
+        "不声张的{topic}，最接近{img}——{brand}，静默成金",
+        "{brand}不喊{topic}，{img}替它说——{c0}，听完就够了",
+    ],
+    "emo_ritual": [
+        "为{topic}留一个傍晚——{brand}，{img}，只此一刻，只为你",
+        "{topic}的时刻，{brand}备好{img}——{c0}，慢一点，像某种仪式",
+        "把{topic}过成仪式——{brand}的{img}，专为值得的人",
+    ],
 }
+
+_EMO_LUX_EXTRA = ["emo_material", "emo_heirloom", "emo_silence", "emo_ritual"]
 
 # 语义角色 → 情感手法适配约束（手法×主题词适配）
 # 功能性/低语境主题词（如 停车/排队/投诉 → service）收敛到写实手法，避免"越界张力/魔幻现实"
@@ -461,10 +485,16 @@ def _pick_hook(lib, mech, tonality, rng, used_keys, role=None):
         else (_HOOK_LUX if tonality == "luxury" else _HOOK)
     candidates = list(MECH_TO_HOOK.get(mech, ["assert"]))
     # 手法×主题词适配：resonate 时按语义角色收敛可用手法（高语境手法不匹配功能性词）
-    if mech == "resonate" and role:
-        allowed = set(_EMO_ROLE_COMPAT.get(role, _EMO_ROLE_COMPAT["general"]))
-        if allowed:
-            candidates = [c for c in candidates if c in allowed]
+    if mech == "resonate":
+        # LUX 专属手法仅在高奢调性启用
+        if tonality == "luxury":
+            candidates = candidates + _EMO_LUX_EXTRA
+        if role:
+            allowed = set(_EMO_ROLE_COMPAT.get(role, _EMO_ROLE_COMPAT["general"]))
+            if allowed:
+                candidates = [c for c in candidates
+                              if c in allowed or (tonality == "luxury" and c in _EMO_LUX_EXTRA
+                                                  and role != "service")]
     if not candidates:
         candidates = list(MECH_TO_HOOK.get(mech, ["assert"]))
     rng.shuffle(candidates)
@@ -557,7 +587,8 @@ def generate_ideas(brand, category, signals, n=3, tonality="premium", budget="mi
                       "emo_omen": "条件预言", "emo_paradox": "悖论并置",
                       "emo_query": "反问推理", "emo_repeat": "首语重复", "emo_mirror": "交错配列",
                       "emo_slant": "留白斜说", "emo_season": "季语物候", "emo_surreal": "魔幻现实",
-                      "emo_understate": "轻描淡写"}
+                      "emo_understate": "轻描淡写", "emo_material": "材质细语",
+                      "emo_heirloom": "传承物语", "emo_silence": "沉默留白", "emo_ritual": "仪式时刻"}
         ideas.append({
             "big_idea": slogan,
             "mechanism": mech_name,

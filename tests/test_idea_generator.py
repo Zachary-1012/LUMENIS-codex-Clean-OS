@@ -152,8 +152,43 @@ def test_resonate_appears_in_rotation():
     emo = [i for i in r["ideas"] if i["mechanism"] == "情感共鸣"]
     _ALL_TECH = {"以小写大", "时间具象", "朴素真话", "越界张力", "不说破的深情", "条件预言",
                  "悖论并置", "反问推理", "首语重复", "交错配列", "留白斜说", "季语物候",
-                 "魔幻现实", "轻描淡写"}
+                 "魔幻现实", "轻描淡写", "材质细语", "传承物语", "沉默留白", "仪式时刻"}
     assert emo and all(i["tension_type"] in _ALL_TECH for i in emo)
+
+
+def test_lux_extra_hooks_appear_in_luxury():
+    """高奢调性：LUX 专属手法（材质细语/传承物语/沉默留白/仪式时刻）进入共鸣候选并真实可产出。"""
+    import random
+    from scripts.idea_generator import _EMO_LUX_EXTRA, _pick_hook
+    # 候选池直测（确定性）：200 次 LUX 共鸣采样必须覆盖全部 LUX 专属手法
+    rng = random.Random(0)
+    used = set()
+    seen = set()
+    for _ in range(240):
+        tpl, hk, _k = _pick_hook({}, "resonate", "luxury", rng, used)
+        seen.add(hk)
+    assert set(_EMO_LUX_EXTRA) <= seen, "LUX 候选未覆盖 %s，实际=%s" % (
+        set(_EMO_LUX_EXTRA) - seen, seen)
+    # 集成抽样：真实 generate_ideas 高奢输出中出现 LUX 专属 tension_type
+    s = {"topics": ["15周年", "方所", "展览"], "sentiment": "positive", "negative_rate": 0.02,
+         "risk_events": 0, "circle": "都市高净值", "hotspot": "15周年", "volume_notes": 300}
+    types = set()
+    for seed in range(5):
+        r = generate_ideas("广州太古汇", "商业地产", s, n=24, tonality="luxury", budget="high", seed=seed)
+        types |= {i["tension_type"] for i in r["ideas"] if i["mechanism"] == "情感共鸣"}
+    lux = {"材质细语", "传承物语", "沉默留白", "仪式时刻"}
+    assert types & lux, "高奢共鸣未出现 LUX 专属手法，实际=%s" % types
+
+
+def test_lux_extra_excluded_for_service():
+    """高奢+功能性主题词（停车/积分）：LUX 专属手法与高语境手法均不得出现。"""
+    s = {"topics": ["停车", "积分"], "sentiment": "neutral", "negative_rate": 0.2, "risk_events": 0,
+         "circle": "都市高净值", "hotspot": "", "volume_notes": 100}
+    r = generate_ideas("广州太古汇", "商业地产", s, n=20, tonality="luxury", budget="high", seed=9)
+    emo = [i for i in r["ideas"] if i["mechanism"] == "情感共鸣"]
+    banned = {"材质细语", "传承物语", "沉默留白", "仪式时刻", "魔幻现实", "越界张力", "交错配列"}
+    for i in emo:
+        assert i["tension_type"] not in banned, "service×luxury 命中了 %s" % i["tension_type"]
 
 
 def test_emotion_hook_function():
