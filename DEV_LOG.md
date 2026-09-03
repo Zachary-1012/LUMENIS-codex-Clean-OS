@@ -1234,3 +1234,32 @@ PartB（高效层追加）：
 - 现有业务函数（review_note/summarize_event/analyze_sentiment 等）仍走 _chat 未切到 chat()，属保守策略；后续可逐个切到 chat(level=...) 获得分级/缓存收益。
 - 连接复用（keep-alive）未做（需换 requests 依赖，暂不引入新依赖）。
 - 备份：intelligence.py.bak-efficient（不提交）。
+
+
+---
+
+## 第二十三批：高频业务函数接入智谱高效层（分级 + 缓存 + 强模型 + 预算护栏）
+
+### 改动（intelligence.py，8 个业务函数从 _chat → chat()）
+| 函数 | 分级 | 缓存 | 温度/max_tokens | 说明 |
+|---|---|---|---|---|
+| review_note | medium | ✅ | 0.0 / 700 | 确定性规则核验，重复笔记命中缓存 |
+| summarize_event | medium | ✅ | 0.0 / 700 | 事件摘要确定性 |
+| test_connection | low | ✅ | 0.0 / 120 | 轻量连通测试 |
+| translate_text | medium | ✅ | 0 / 700 | 翻译确定性 |
+| analyze_sentiment | medium | ✅ | 0.1 / 800 | 情感分析，高频→缓存收益最大 |
+| extract_keywords | medium | ✅ | 0.2 / 400 | 关键词提取 |
+| generate_summary | medium | ❌ | 0.3 / max+100 | 内容生成不缓存（保多样性） |
+| generate_report | **high** | ❌ | 0.4 / 1500 | **深度任务→glm-4.7 强模型** |
+
+全部保持返回结构与 fallback 逻辑不变（raw 为空走原规则兜底）。
+
+### 实测（真实结果）
+- 8/8 替换，py_compile 过，无残留 _chat 业务调用。
+- review_note：规则未验证→rule 分支（不调 AI）；已验证→zhipu 2.4s 返回完整 dict。
+- **analyze_sentiment 缓存：第 1 次 2279ms → 第 2 次 0ms**（缓存命中，省 100% token，结果一致）。
+- generate_report：level=high → glm-4.7，5.5s 返回 markdown 报告。
+- extract_keywords/summarize_event/generate_summary/translate_text/test_connection 全 PASS。
+- 预算护栏：成功调用自动记 per_call；超额自动降级 rule（不硬崩）。
+- 备份：intelligence.py.bak-bizchat（可回滚）。
+- 红线：五条红线函数/数据/采集未动；仅替换 AI 网关调用层。

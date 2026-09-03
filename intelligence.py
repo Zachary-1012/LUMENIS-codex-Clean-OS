@@ -267,7 +267,7 @@ def review_note(note, rule_analysis):
     title=note.get('title','') or ''; content=note.get('content','') or ''
     system='''你是广州太古汇舆情分析员。只根据文本判断，不补造事实。输出严格JSON：{"relevance":"relevant|noise|suspicious","verification":"verified|review|suspicious_fake","sentiment":"positive|neutral|negative","confidence":0-1,"fact_basis":"text|mixed|none","summary":"不超过45字","risk_reason":"不超过60字","event_hint":"不超过30字","topics":["最多5个"]}。positive=明确正向体验/认可；negative=明确投诉/争议/负面体验；neutral=事实、攻略、普通分享；noise=虽然出现主体词但主题并非广州太古汇；suspicious=营销、搬运、讽刺、信息不足。单一用户指控必须保持未证实。'''
     user=f'标题：{title}\n正文：{content[:6000]}\n规则初判：{json.dumps(rule_analysis,ensure_ascii=False)}'
-    raw,provider=_chat(system,user,0.0,700)
+    raw,provider,_=chat(system,user,level='medium',use_cache=True,temperature=0.0,max_tokens=700)
     data=_json_from_text(raw)
     if not data:
         return {'relevance':'relevant','verification':'review','confidence':0.55,'fact_basis':'text','summary':rule_analysis.get('summary',''),'risk_reason':rule_analysis.get('summary','规则引擎结果，待核验'),'event_hint':'','topics':rule_analysis.get('topics',[]),'provider':'rule'}
@@ -280,7 +280,7 @@ def review_note(note, rule_analysis):
 def summarize_event(event,notes):
     sample=[{'title':n.get('title',''),'summary':n.get('summary',''),'sentiment':n.get('sentiment','neutral'),'risk':n.get('risk_level','low'),'platform':n.get('source_platform','xiaohongshu')} for n in notes[:15]]
     system='''你是品牌舆情事件分析员。把同一事件的多平台提及凝练成管理层摘要。只输出JSON：{"title":"不超过24字","summary":"不超过90字","fact_status":"confirmed|partially_confirmed|unconfirmed","impact":"positive|neutral|negative","risk_reason":"不超过60字","recommended_action":"不超过70字"}。单一用户指控不得写成已证实事实；没有独立来源必须unconfirmed。'''
-    raw,provider=_chat(system,json.dumps({'event':event,'mentions':sample},ensure_ascii=False),0.0,700)
+    raw,provider,_=chat(system,json.dumps({'event':event,'mentions':sample},ensure_ascii=False),level='medium',use_cache=True,temperature=0.0,max_tokens=700)
     data=_json_from_text(raw)
     if data:data['provider']=provider;return data
     neg=sum(1 for n in notes if n.get('sentiment')=='negative'); high=sum(1 for n in notes if n.get('risk_level')=='high')
@@ -290,7 +290,7 @@ def test_connection(text):
     status=ai_status()
     if not status.get('enabled'):
         return {'enabled':False,'provider':'local_rule','model':status.get('model'),'message':'当前没有可调用的本地模型，系统仍可使用本地规则引擎。','reply':'本地规则引擎已就绪。'}
-    raw,provider=_chat('你是广州太古汇舆情监测系统的本地AI测试助手。只回答一句简短中文。', text, 0.0, 120)
+    raw,provider,_=chat('你是广州太古汇舆情监测系统的本地AI测试助手。只回答一句简短中文。', text, level='low', use_cache=True, temperature=0.0, max_tokens=120)
     if raw:
         return {'enabled':True,'provider':provider,'model':status.get('model'),'message':'AI接口连接正常。','reply':raw.strip()}
     return {'enabled':False,'provider':status.get('provider'),'model':status.get('model'),'message':'发现本地AI但调用失败，系统已自动回退本地规则。','reply':'本地规则引擎已接管。'}
@@ -299,7 +299,7 @@ def translate_text(text,target='en'):
     if not text:return ''
     if target=='zh':return text
     labels={'en':'English','ko':'Korean'}
-    raw,_=_chat(f'Translate the following Chinese public-opinion text into {labels.get(target,target)}. Preserve Guangzhou Taikoo Hui and brand names. Return translation only.',text[:3000],0,700)
+    raw,_,_=chat(f'Translate the following Chinese public-opinion text into {labels.get(target,target)}. Preserve Guangzhou Taikoo Hui and brand names. Return translation only.',text[:3000],level='medium',use_cache=True,temperature=0,max_tokens=700)
     return (raw or '').strip() or text
 
 
@@ -316,7 +316,7 @@ def analyze_sentiment(text, max_len=2000):
     system = ('你是专业舆情分析助手，只输出严格JSON，不要其他文字。字段：'
               'sentiment(-1负面,0中性,1正面),label(positive/neutral/negative),'
               f'summary(不超过{max_len}字的简要总结),keywords(关键词数组最多10个)。')
-    raw, provider = _chat(system, str(text)[:6000], 0.1, 800)
+    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.1, max_tokens=800)
     data = _json_from_text(raw) or {}
     try:
         s = int(data.get('sentiment', 0))
@@ -337,7 +337,7 @@ def generate_summary(text, max_length=200):
     if not text or not text.strip():
         return ''
     system = f'你是专业文本摘要助手，生成简洁准确的中文摘要，不超过{max_length}字。只输出摘要内容。'
-    raw, provider = _chat(system, str(text)[:6000], 0.3, max_length + 100)
+    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=False, temperature=0.3, max_tokens=max_length + 100)
     out = (raw or '').strip()
     if not out:
         return str(text)[:max_length] + ('...' if len(str(text)) > max_length else '')
@@ -351,7 +351,7 @@ def extract_keywords(text, num_keywords=10):
     if not text or not text.strip():
         return []
     system = f'你是关键词提取助手，提取{num_keywords}个最重要的关键词。只输出严格JSON：{{"keywords":[...]}}。'
-    raw, provider = _chat(system, str(text)[:6000], 0.2, 400)
+    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.2, max_tokens=400)
     data = _json_from_text(raw) or {}
     kws = data.get('keywords', [])
     if isinstance(kws, list):
@@ -480,7 +480,7 @@ def generate_report(title, data, report_type="daily"):
     """舆情报告生成（智谱驱动）。返回 markdown 报告字符串；失败回退规则拼装。"""
     system = (f'你是品牌舆情报告撰写助手，根据数据生成{report_type}报告正文（markdown），'
               f'标题围绕「{title}」，结论可追溯到数据，不编造事实。只输出报告正文。')
-    raw, provider = _chat(system, json.dumps(data, ensure_ascii=False)[:8000], 0.4, 1500)
+    raw, provider, _ = chat(system, json.dumps(data, ensure_ascii=False)[:8000], level='high', use_cache=False, temperature=0.4, max_tokens=1500)
     out = (raw or '').strip()
     if out:
         return out
