@@ -147,12 +147,14 @@ def test_glm53_flash_variant_no_thinking(monkeypatch):
 
 
 # ---------- Search-STD 增强搜索修复回归（2026-09-03）----------
-def test_search_enhance_default_model_is_web_search_pro():
-    """search_enhance 默认应使用智谱联网搜索 web-search-pro（原 search-std 返回空壳不可用）。"""
+def test_search_enhance_default_model_is_web_search_pro(monkeypatch):
+    """search_enhance 默认运行时使用智谱联网搜索 web-search-pro。
+    签名 model=None 为动态路由（自 ZHIPU_SEARCH_MODEL 获取），无环境覆盖时回退官方联网搜索 web-search-pro。"""
     import intelligence, inspect
     sig = inspect.signature(intelligence.search_enhance)
-    assert sig.parameters['model'].default == 'web-search-pro', '默认应为智谱联网搜索 web-search-pro'
-
+    assert sig.parameters['model'].default is None, '签名默认应为 None（动态读 ZHIPU_SEARCH_MODEL）'
+    monkeypatch.delenv('ZHIPU_SEARCH_MODEL', raising=False)
+    assert intelligence._env('ZHIPU_SEARCH_MODEL', 'web-search-pro') == 'web-search-pro', '无覆盖时应回退智谱联网搜索 web-search-pro'
 
 def test_search_enhance_parses_tool_calls(monkeypatch):
     """web-search-pro 返回 message.tool_calls[].search_result 时应正确解析为 results（真实联网搜索）。"""
