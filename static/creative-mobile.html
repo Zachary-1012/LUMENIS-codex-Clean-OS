@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Zachary 创意引擎 · 移动端</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:'PingFang SC','Helvetica Neue',Arial,sans-serif;background:#F4F3EE;color:#1A1B1C;padding:16px 14px 40px}
+  .logo{font-size:15px;font-weight:600;color:#2F3B66;margin-bottom:2px}
+  .sub{font-size:11px;color:#6B7280;margin-bottom:14px}
+  .card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .fld{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+  label{font-size:11px;color:#6B7280}
+  input,select{width:100%;padding:12px;border:1px solid #E4E3DD;border-radius:10px;font-size:14px;background:#fff}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1;min-width:0}
+  .btn{width:100%;padding:14px;border:none;border-radius:12px;background:#2F3B66;color:#fff;font-size:15px;font-weight:600}
+  .btn:active{opacity:.85}
+  .tag{display:inline-block;font-size:10px;color:#2F3B66;background:#EEF0F8;padding:2px 8px;border-radius:20px;margin-bottom:6px}
+  .idea{font-size:15px;line-height:1.6;font-weight:600;margin:4px 0 8px}
+  .kv{font-size:12px;color:#4B5563;line-height:1.7}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{font-size:10px;background:#F4F3EE;padding:2px 8px;border-radius:20px;color:#6B7280}
+  .src{font-size:10px;color:#9CA3AF;margin-top:8px}
+  .empty{text-align:center;color:#9CA3AF;font-size:13px;padding:30px 0}
+  .loading{text-align:center;color:#2F3B66;font-size:13px;padding:30px 0}
+  #err{display:none;background:#FDECEC;color:#C0392B;font-size:12px;border-radius:10px;padding:10px;margin-bottom:12px}
+  #auth{font-size:10px;color:#9CA3AF;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+  <div class="logo">Zachary 创意引擎</div>
+  <div class="sub">移动端 · 数据驱动原创创意（对标全球 4A × ZBC 真实信号）</div>
+  <div id="err"></div>
+  <div class="card">
+    <div class="fld">
+      <div class="row">
+        <div><label>品牌</label><input id="brand" placeholder="如 广州太古汇"></div>
+        <div><label>品类</label><input id="cat" placeholder="如 商业地产"></div>
+      </div>
+      <div class="row">
+        <div><label>圈层</label><select id="circle">
+          <option value="都市高净值">都市高净值</option><option value="都市职场">都市职场</option>
+          <option value="Z世代潮人">Z世代潮人</option><option value="年轻潮流">年轻潮流</option>
+          <option value="疗愈系">疗愈系</option><option value="露营旷野">露营旷野</option>
+          <option value="夜生活">夜生活</option><option value="母婴家庭">母婴家庭</option>
+          <option value="户外运动">户外运动</option><option value="银发健康">银发健康</option>
+          <option value="粉丝经济">粉丝经济</option><option value="高奢小众">高奢小众</option>
+        </select></div>
+        <div><label>调性</label><select id="tonality">
+          <option value="premium">中高端</option><option value="mass">大众</option><option value="luxury">高奢</option>
+        </select></div>
+      </div>
+      <label>热点（如 中秋/15周年）</label><input id="hotspot" placeholder="可选">
+      <div class="row">
+        <div><label>创意数</label><input id="n" type="number" value="4" min="1" max="6"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn" id="go">生成创意</button></div>
+      </div>
+    </div>
+  </div>
+  <div id="out"><div class="empty">输入品牌与品类，生成数据驱动的原创创意卡</div></div>
+  <div id="auth"></div>
+<script>
+(function(){
+  var BASE='';
+  var authHeader='';
+  var $=function(id){return document.getElementById(id)};
+  var esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};
+  // 凭证动态注入，零硬编码
+  fetch(BASE+'/api/auth/config').then(function(r){return r.json()}).then(function(d){
+    if(d&&d.auth_enabled&&d.auth_header){authHeader=d.auth_header;$('auth').textContent='· 安全连接 ·';}
+    else{$('auth').textContent='· 免鉴权 ·';}
+  }).catch(function(){});
+  function showErr(m){var e=$('err');if(!m){e.style.display='none';return;}e.textContent=m;e.style.display='block';}
+  $('go').addEventListener('click',function(){
+    var body={brand:$('brand').value.trim(),category:$('cat').value.trim()||'商业地产',
+      circle:$('circle').value,tonality:$('tonality').value,hotspot:$('hotspot').value.trim(),
+      n:Math.min(Math.max(parseInt($('n').value||'4',10),1),6)};
+    $('out').innerHTML='<div class="loading">正在生成创意…</div>';showErr('');
+    var headers={'Content-Type':'application/json'};
+    if(authHeader)headers['Authorization']=authHeader;
+    fetch(BASE+'/api/creative/ideas',{method:'POST',headers:headers,body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})})
+      .then(function(x){
+        if(!x.ok||x.j.ok===false){showErr((x.j&&x.j.error)||'请求失败');$('out').innerHTML='<div class="empty">生成失败</div>';return;}
+        var ideas=(x.j.data&&x.j.data.ideas)||[];
+        var html='';
+        ideas.forEach(function(i){
+          html+='<div class="card"><div class="tag">'+esc(i.mechanism)+'</div>'
+            +'<div class="idea">'+esc(i.big_idea)+'</div>'
+            +'<div class="kv"><b>角度</b> '+esc(i.angle)+'<br><b>张力</b> '+esc(i.tension_type)+'<br><b>信号</b> '+esc(i.why)+'</div>'
+            +'<div class="kv"><b>预算</b> '+esc(i.budget)+' · <b>时效</b> '+esc(i.timeliness)+'</div>'
+            +'<div class="chips">'+(i.circle_symbols||[]).map(function(s){return '<span class="chip">'+esc(s)+'</span>'}).join('')+'</div>'
+            +'<div class="src">'+esc(i.provenance||'')+'</div></div>';
+        });
+        $('out').innerHTML=html||'<div class="empty">无创意输出</div>';
+      })
+      .catch(function(e){showErr('网络/服务错误：'+e.message);$('out').innerHTML='<div class="empty">生成失败</div>';});
+  });
+})();
+</script>
+</body>
+</html>

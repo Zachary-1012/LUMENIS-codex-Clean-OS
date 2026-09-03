@@ -48,6 +48,12 @@ CIRCLE_SYMBOLS = {
                   "examples": "太古汇/连卡佛 高净值生活方式场域"},
     "年轻潮流": {"lang": "酷/新鲜/反差/打卡", "symbols": ["新店", "打卡", "氛围感", "宝藏", "反差"],
                 "examples": "新店首发/氛围感打卡/宝藏挖掘"},
+    "疗愈系": {"lang": "悦己/情绪出口/慢疗愈", "symbols": ["治愈", "情绪出口", "慢下来", "自我关怀", "松弛感"],
+               "examples": "Aesop 感官疗愈门店 / 颂钵声疗体验"},
+    "露营旷野": {"lang": "自由/回归自然/临时社群", "symbols": ["营地", "篝火", "野趣", "逃离", "星空"],
+                 "examples": "Snow Peak 露营节 / 城市青年一夜出逃"},
+    "夜生活": {"lang": "松弛/微醺/社交暗语", "symbols": ["微醺", "bistro", "夜猫子", "局", "氛围感酒馆"],
+               "examples": "夜经济街区 / 精酿厂牌社群"},
 }
 
 # 调性（影响创意气质与机制）：大众狂欢 vs 中端种草 vs 高奢克制
@@ -103,6 +109,10 @@ _TOPIC_ROLE_RULES = [
     (("周年", "节日", "圣诞", "新年", "周年庆", "开箱", "首发", "预售", "快闪"), "event", "节点/活动"),
     (("米奇", "联名", "IP", "限量", "上新", "新款", "限定"), "ip", "IP/联名/限定"),
     (("拍照", "打卡", "氛围", "美", "出片", "颜值"), "aesthetic", "颜值/出片"),
+    (("美妆", "护肤", "香水", "面膜", "彩妆", "口红", "洗护", "面霜", "精华"), "beauty", "美妆/悦己"),
+    (("母婴", "亲子", "宝宝", "育儿", "童装", "玩具", "纸尿裤"), "family", "母婴/家庭"),
+    (("户外", "露营", "徒步", "山野", "骑行", "跑步", "越野", "运动"), "sport", "户外/运动"),
+    (("酒", "威士忌", "精酿", "鸡尾酒", "红酒", "咖啡豆", "烘焙"), "wine", "酒饮/社交"),
 ]
 _TOPIC_ROLE_DEFAULT = ("general", "通用")
 _TOPIC_ROLE_IMAGES = {
@@ -112,6 +122,10 @@ _TOPIC_ROLE_IMAGES = {
     "event": {"mass": "限时狂欢", "premium": "一年一次的事", "luxury": "一年只做一次的事"},
     "ip": {"mass": "限定联名", "premium": "限量上新", "luxury": "限量即稀缺"},
     "aesthetic": {"mass": "出片圣地", "premium": "氛围感拉满", "luxury": "克制的审美仪式"},
+    "beauty": {"mass": "变美打卡", "premium": "悦己的仪式感", "luxury": "不动声色的精致"},
+    "family": {"mass": "亲子欢乐场", "premium": "有温度的共同成长", "luxury": "珍藏的成长时刻"},
+    "sport": {"mass": "燃起来", "premium": "自在山野的松弛", "luxury": "克制而有力的远行"},
+    "wine": {"mass": "一起喝一杯", "premium": "值得慢品的味道", "luxury": "陈年后的分享"},
     "general": {"mass": "宝藏新发现", "premium": "质感新体验", "luxury": "难得的质感"},
 }
 
@@ -424,6 +438,10 @@ _EMO_ROLE_COMPAT = {
     "general": ["emo_truth", "emo_omen", "emo_paradox", "emo_query", "emo_repeat", "emo_heart",
                 "emo_time", "emo_slant", "emo_season", "emo_surreal", "emo_understate", "emo_mirror",
                 "emo_sensory", "emo_self", "emo_nature", "emo_grow"],
+    "beauty":  ["emo_sensory", "emo_self", "emo_time", "emo_season", "emo_unspoken", "emo_mirror"],
+    "family":  ["emo_grow", "emo_heart", "emo_time", "emo_season", "emo_understate", "emo_self"],
+    "sport":   ["emo_nature", "emo_self", "emo_edge", "emo_repeat", "emo_truth", "emo_time"],
+    "wine":    ["emo_sensory", "emo_grow", "emo_ritual", "emo_season", "emo_slant", "emo_truth"],
 }
 
 # 机制 → 张力句式类型（可多选）

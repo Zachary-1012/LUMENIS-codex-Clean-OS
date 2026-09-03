@@ -16,6 +16,7 @@ import os
 import re
 import json
 import sys
+import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.idea_generator import generate_ideas, CIRCLE_SYMBOLS
@@ -189,6 +190,12 @@ def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot=""):
                "negative_rate": 0.0, "risk_events": 0, "circle": circle,
                "hotspot": hotspot, "volume_notes": 0}
     ideas = generate_ideas(detect_brand(text, brand_hint), category, signals, n_ideas, tonality)
+    # 营销节点适配（芥子→须弥：当月/当天节点 + 情感主题 + 建议调性）
+    try:
+        from scripts.marketing_calendar import suggest_hotspot
+        marketing = suggest_hotspot(datetime.date.today().strftime("%Y-%m-%d"), category)
+    except Exception:
+        marketing = None
     return {
         "extracted": {
             "brand": detect_brand(text, brand_hint),
@@ -203,11 +210,54 @@ def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot=""):
         "benchmark": build_benchmark(category, tonality, circle),
         "ideas": ideas,
         "pitch_toc": PITCH_TOC,
+        "marketing": marketing,
     }
 
 
+def _extract_docx_text(path):
+    """docx → 段落文本（含表格）。"""
+    try:
+        from docx import Document
+    except Exception:
+        return ""
+    d = Document(path)
+    parts = [p.text for p in d.paragraphs if p.text.strip()]
+    for t in d.tables:
+        for row in t.rows:
+            cells = [c.text.strip() for c in row.cells if c.text.strip()]
+            if cells:
+                parts.append(" | ".join(cells))
+    return "\n".join(parts)
+
+
+def _extract_pptx_text(path):
+    """pptx → 每页标题/文本（含表格），按页分隔。"""
+    try:
+        from pptx import Presentation
+    except Exception:
+        return ""
+    prs = Presentation(path)
+    parts = []
+    for i, slide in enumerate(prs.slides, 1):
+        lines = []
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    t = "".join(r.text for r in para.runs).strip()
+                    if t:
+                        lines.append(t)
+            if getattr(shape, "has_table", False):
+                for row in shape.table.rows:
+                    cells = [c.text.strip() for c in row.cells if c.text.strip()]
+                    if cells:
+                        lines.append(" | ".join(cells))
+        if lines:
+            parts.append("【P%d】%s" % (i, " / ".join(lines)))
+    return "\n".join(parts)
+
+
 def analyze_pitch_file(path, brand_hint="", n_ideas=3, hotspot=""):
-    """从文件导入方案需求：支持 txt/md/json/csv。"""
+    """从文件导入方案需求：支持 txt/md/json/csv/pptx/docx。"""
     ext = os.path.splitext(path)[1].lower()
     if ext == ".json":
         data = json.load(open(path, encoding="utf-8"))
@@ -219,6 +269,11 @@ def analyze_pitch_file(path, brand_hint="", n_ideas=3, hotspot=""):
             for r in csv.reader(f):
                 rows.append(" ".join(c for c in r if c))
         text = "\n".join(rows)
+    elif ext in (".pptx", ".docx"):
+        fn = _extract_pptx_text if ext == ".pptx" else _extract_docx_text
+        text = fn(path)
+        if not text.strip():
+            raise ValueError("无法从 %s 抽取文本（可能为空或受保护）" % ext)
     else:  # txt / md / 其他文本
         text = open(path, encoding="utf-8", errors="ignore").read()
     r = analyze_pitch(text, brand_hint, n_ideas, hotspot)

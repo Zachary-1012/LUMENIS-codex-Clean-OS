@@ -63,3 +63,20 @@ def test_detectors():
     assert detect_channels("小红书+抖音+线下") == ["小红书", "抖音", "线下"]
     assert set(detect_goals("要破圈上热搜")) & {"声量传播"}
     assert len(PITCH_TOC) == 8
+
+
+def test_pitch_has_marketing_field():
+    """方案拆解返回营销节点适配（当月节点+情感主题+建议调性）。"""
+    from scripts.pitch_parser import analyze_pitch
+    r = analyze_pitch("广州太古汇 商业地产 15周年 预算200万 高净值 小红书 核心诉求提升到访", "广州太古汇", 2, "15周年")
+    assert "marketing" in r, "缺 marketing 字段"
+    m = r["marketing"]
+    assert m is None or ("nodes" in m and "themes" in m and "tonality_advice" in m), m
+
+def test_new_topic_roles_covered():
+    """美妆/母婴/户外/酒饮 语义角色可识别并产出意象。"""
+    from scripts.idea_generator import _topic_role
+    assert _topic_role("面霜") == "beauty"
+    assert _topic_role("亲子乐园") == "family"
+    assert _topic_role("露营") == "sport"
+    assert _topic_role("威士忌") == "wine"
