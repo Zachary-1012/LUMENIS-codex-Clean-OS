@@ -9,6 +9,7 @@
 
 | Research ID | 方向 | 项目 | GitHub | License | star(08-31) | 结论 | 关联 Feature/Asset |
 |---|---|---|---|---|---|---|---|
+| LR-20260903-001 | 数据库可回滚迁移 | Alembic (stamp-only baseline) | sqlalchemy/alembic | MIT | 4357 | ADOPT（已落地 T-P1-3，stamp-only baseline + batch 模式，生产接入走 Gate） | schema_version / DB-MIGRATION-PLAYBOOK |
 | LR-20260831-001 | A 能力/服务目录 | Backstage | backstage/backstage | Apache-2.0 | 34283 | REFERENCE-ONLY（学 Catalog 模型，不引重型平台） | FEATURE-REGISTRY / ASSET-REGISTRY |
 | LR-20260831-002 | B 架构治理 | ADR（Architecture Decision Records） | joelparkerhenderson/architecture-decision-record | 见仓库 LICENSE | 16778 | ADOPT-思想（轻量 Markdown ADR，已存在 ARCHITECTURE_DECISION_RECORD_20260830） | docs/governance |
 | LR-20260831-003 | C 来源/证据 | in-toto | in-toto/in-toto | Apache-2.0（以仓库为准） | 1035 | REFERENCE-ONLY（学 Attestation/链路证据结构） | app_evidence_records / Evidence |
