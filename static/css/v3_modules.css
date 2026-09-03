@@ -102,20 +102,20 @@
     padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--bg-card); color: var(--text); font-size: 13px; outline: none;
 }
-.br-form-field input:focus, .br-form-field select:focus { border-color: #007aff; }
+.br-form-field input:focus, .br-form-field select:focus { border-color: #1C1917; }
 .br-dimensions { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .br-dimensions label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); font-weight: 400; cursor: pointer; }
 .br-dimensions input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
 .br-generate-btn {
     width: 100%; padding: 12px; border-radius: 8px; border: none;
-    background: linear-gradient(135deg, #007aff, #5856d6); color: #fff;
+    background: #1C1917; color: #fff;
     font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
 }
 .br-generate-btn:hover { opacity: 0.9; }
 .br-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .br-report-header { padding: 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
-.br-report-badge { display: inline-block; padding: 4px 12px; background: linear-gradient(135deg, #5856d6, #007aff); color: #fff; border-radius: 12px; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+.br-report-badge { display: inline-block; padding: 4px 12px; background: #1C1917; color: #fff; border-radius: 12px; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
 .br-report-title h2 { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
 .br-report-meta { display: flex; gap: 20px; }
 .br-report-meta > div { display: flex; flex-direction: column; gap: 2px; }

@@ -55,9 +55,9 @@
     cursor: pointer;
     transition: all 0.14s ease;
 }
-.ev-chip:hover { border-color: rgba(91,79,196,0.4); }
+.ev-chip:hover { border-color: rgba(120,113,108,0.45); }
 .ev-chip.active {
-    background: linear-gradient(135deg,#6d5df0,#8b7bff);
+    background: #1C1917;
     color: #fff;
     border-color: transparent;
 }
