@@ -181,3 +181,5 @@ deliverables/
 # 本地业务资料（脱敏后仅本地保存，禁止上线）
 _pitch_dump*
 _pitch_dump/
+
+# 本地业务审计（含客户名/商业数据，仅本地保存，禁止上线）.trae/
