@@ -395,6 +395,38 @@ const CaseDeepAnalysis = {
     },
 
     /**
+     * 处置模板推荐（学习资产：9模板 + 危机SOP）
+     * 调用 /api/case-analysis/template-match
+     */
+    async matchTemplate() {
+        const input = document.getElementById('templateMatchInput');
+        const box = document.getElementById('templateMatchResults');
+        if (!input || !box) return;
+        const kw = (input.value || '').trim();
+        if (!kw) { box.innerHTML = '<div style="font-size:12px;color:var(--muted)">请输入事件/场景关键词（如：商场商户坠楼事件舆情危机 / 品牌营销活动效果）</div>'; return; }
+        box.innerHTML = '<div style="font-size:12px;color:var(--muted)">匹配中…</div>';
+        try {
+            const r = await fetch('/api/case-analysis/template-match?keyword=' + encodeURIComponent(kw), { headers: { 'Authorization': window.__Z_AUTH || '' } });
+            const d = await r.json();
+            if (!d.ok) { box.innerHTML = '<div style="font-size:12px;color:#c0392b">匹配失败: ' + (d.error || '') + '</div>'; return; }
+            if (!d.templates || !d.templates.length) { box.innerHTML = '<div style="font-size:12px;color:var(--muted)">未匹配到模板，试试：危机 / 投诉 / 营销 / 活动 / 认知 / 口碑 等关键词</div>'; return; }
+            let html = '';
+            d.templates.forEach(t => {
+                html += '<div style="border:1px solid var(--border,#eaeaea);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--surface,#fff)">'
+                    + '<div style="font-weight:600;font-size:13px">' + t.template_name
+                    + ' <span style="color:var(--muted);font-weight:400;font-size:11px">' + (t.category || '') + ' · ' + (t.module || '') + '</span></div>'
+                    + '<div style="font-size:12px;color:var(--muted);margin-top:4px">' + (t.scenario || '') + '</div>'
+                    + '<div style="font-size:12px;margin-top:6px"><b>关键步骤：</b>' + (t.steps || []).join(' → ') + '</div>'
+                    + '<div style="font-size:12px;margin-top:4px"><b>可量化指标：</b>' + (t.metrics || []).join('、') + '</div>'
+                    + '</div>';
+            });
+            box.innerHTML = html;
+        } catch (e) {
+            box.innerHTML = '<div style="font-size:12px;color:#c0392b">请求失败: ' + (e.message || e) + '</div>';
+        }
+    },
+
+    /**
      * 重置筛选
      */
     resetFilters() {

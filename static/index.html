@@ -709,6 +709,19 @@
           <button onclick="CaseDeepAnalysis.search(document.getElementById('caseAnalysisSearch').value)">🔍 搜索</button>
           <button class="tertiary" onclick="CaseDeepAnalysis.resetFilters()">↺ 重置</button>
         </div>
+        <div style="margin:10px 0;border:1px solid var(--border,#e5e5e5);border-radius:10px;padding:12px;background:var(--surface,#fff)">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:13px;font-weight:600">🧩 处置模板推荐</span>
+            <span style="font-size:11px;color:var(--muted)">输入事件/场景，匹配可复用处置模板（AI 学习资产 · 9 模板 + 危机 SOP）</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="text" id="templateMatchInput" placeholder="例如：商场商户坠楼事件舆情危机 / 品牌营销活动效果 / 消费者认知度…"
+              style="flex:1;padding:8px 10px;border:1px solid var(--border,#ddd);border-radius:8px;font-size:13px;background:var(--surface,#fff);color:var(--text,#111)"
+              onkeydown="if(event.key==='Enter')CaseDeepAnalysis.matchTemplate()">
+            <button class="action primary" onclick="CaseDeepAnalysis.matchTemplate()" style="white-space:nowrap">匹配模板</button>
+          </div>
+          <div id="templateMatchResults" style="margin-top:10px"></div>
+        </div>
         <div class="case-list-grid" id="caseAnalysisList"></div>
       </section>
 

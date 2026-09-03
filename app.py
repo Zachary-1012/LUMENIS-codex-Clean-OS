@@ -274,6 +274,34 @@ def case_analysis_system_insights():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/api/case-analysis/template-match', methods=['GET', 'POST'])
+def case_analysis_template_match():
+    """按事件/场景匹配可复用处置模板（学习资产：9模板 + 危机SOP）"""
+    try:
+        from case_templates import match_templates
+        if request.method == 'POST':
+            d = request.get_json(silent=True) or {}
+            kw = str(d.get('keyword') or d.get('query') or '')
+            cat = str(d.get('category') or '')
+        else:
+            kw = request.args.get('keyword', '')
+            cat = request.args.get('category', '')
+        results = match_templates(kw, cat)
+        return jsonify({'ok': True, 'total': len(results), 'templates': results})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/case-analysis/crisis-sop')
+def case_analysis_crisis_sop():
+    """危机公关处置SOP（结构化阶段 + KPI）"""
+    try:
+        from case_templates import get_crisis_sop
+        return jsonify({'ok': True, 'sop': get_crisis_sop()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 # V3.0 传播主体分类器API
 @app.route('/api/subject-classifier/classify', methods=['POST'])
 def subject_classify():
