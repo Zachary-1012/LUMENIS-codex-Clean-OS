@@ -5137,33 +5137,79 @@ def api_ai_analyze_v580():
 
 @app.route('/api/collection/counter', methods=['GET'])
 def api_collection_counter_v580():
-    """获取今日采集计数"""
+    """今日采集计数（B1 双轨对齐）：以真实落库/运行记录为准，只读计算，不再读写恒为 0 的 collection_counters 死表。
+    口径区分：daily_count=今日最终入库 notes 条数（主体过滤/去重后的生产事实）；
+    raw_collected=采集器原始抓取量（collection_logs SUCCESS 的 notes_count 合计，未去重）；
+    runs=今日关键词任务数 / collector_stats 为调度轮次与 manual/auto 拆分；blocked=熔断/受限任务数（如实展示）。"""
     today = datetime.now().strftime('%Y-%m-%d')
-    
+
     conn = sqlite3.connect(db.DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM collection_counters WHERE date = ?", (today,))
-    row = cursor.fetchone()
-    
-    if not row:
-        cursor.execute("INSERT INTO collection_counters (date, daily_count, manual_count, auto_count) VALUES (?, 0, 0, 0)", (today,))
-        conn.commit()
-        cursor.execute("SELECT * FROM collection_counters WHERE date = ?", (today,))
-        row = cursor.fetchone()
-    
+    # 1) 今日真实入库条数（采集时刻：captured_at 优先、回退 collected_at）
+    cursor.execute("SELECT COUNT(*), MAX(COALESCE(NULLIF(captured_at,''),collected_at)) FROM notes "
+                   "WHERE date(COALESCE(NULLIF(captured_at,''),collected_at))=date('now','localtime')")
+    _r = cursor.fetchone()
+    notes_today = _r[0] or 0
+    last_collect_at = _r[1]
+    # 2) collection_logs 今日任务实况（status 大小写枚举兼容：SUCCESS/success）
+    cursor.execute("SELECT COUNT(*), "
+                   "SUM(CASE WHEN UPPER(status)='SUCCESS' THEN 1 ELSE 0 END), "
+                   "SUM(CASE WHEN status='BLOCKED' THEN 1 ELSE 0 END), "
+                   "SUM(CASE WHEN status IN ('NETWORK_ERROR','error','ERROR') THEN 1 ELSE 0 END), "
+                   "COALESCE(SUM(CASE WHEN UPPER(status)='SUCCESS' THEN notes_count ELSE 0 END),0) "
+                   "FROM collection_logs WHERE date(started_at)=date('now','localtime')")
+    _l = cursor.fetchone()
+    logs_today, success_runs, blocked_runs, error_runs, raw_collected = (_l[i] or 0 for i in range(5))
+    # 当前熔断态以“最近一次任务”与“最近一次成功”先后判定（今日累计多不代表当前正常）
+    cursor.execute("SELECT UPPER(COALESCE(status,'')), COALESCE(started_at,'') FROM collection_logs ORDER BY id DESC LIMIT 1")
+    _last = cursor.fetchone(); last_status, last_at = (_last[0], _last[1]) if _last else ('', '')
+    cursor.execute("SELECT COALESCE(MAX(started_at),'') FROM collection_logs WHERE UPPER(status)='SUCCESS'")
+    last_success_at = cursor.fetchone()[0]
     conn.close()
-    
+    if last_status in ('BLOCKED', 'NETWORK_ERROR', 'ERROR') and (not last_success_at or last_at >= last_success_at):
+        circuit = 'blocked'
+    elif last_status == 'NO_NEW_DATA':
+        circuit = 'idle'
+    else:
+        circuit = 'normal'
+
+    # 3) 调度轮次与 manual/auto 拆分（唯一来源：采集器自记 collector_stats.json，仅当日有效）
+    manual_count = auto_count = 0
+    try:
+        _sp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'collector_stats.json')
+        if os.path.exists(_sp):
+            with open(_sp, 'r', encoding='utf-8') as _f:
+                _st = json.load(_f)
+            if str(_st.get('date')) == today:
+                manual_count = int(_st.get('manual_runs', 0) or 0)
+                auto_count = int(_st.get('auto_runs', 0) or 0)
+                if not last_collect_at and _st.get('updated_at'):
+                    last_collect_at = _st.get('updated_at')
+    except Exception as _e:
+        print('[collection-counter] collector_stats parse failed:', _e)
+    runs_today = manual_count + auto_count or logs_today
+
     return jsonify({
         'ok': True,
         'date': today,
-        'daily_count': row['daily_count'],
-        'manual_count': row['manual_count'],
-        'auto_count': row['auto_count'],
+        'daily_count': notes_today,          # 今日最终入库条数（生产事实）
+        'manual_count': manual_count,
+        'auto_count': auto_count,
+        'runs_today': runs_today,            # 今日调度轮次
+        'logs_today': logs_today,            # 今日关键词任务数
+        'success_runs': success_runs,
+        'blocked_runs': blocked_runs,
+        'error_runs': error_runs,
+        'raw_collected': raw_collected,      # 原始抓取量（未去重）
+        'circuit_state': circuit,
+        'last_task_status': last_status,
+        'last_success_at': last_success_at,
         'daily_limit': 12,
         'manual_limit': 3,
         'auto_limit': 9,
-        'last_collect_at': row['last_collect_at']
+        'last_collect_at': last_collect_at,
+        'source': 'live:notes+collection_logs+collector_stats'
     })
 
 # ===== v5.6.6 全网话题事件搜集（普通浏览器搜索，不占用小红书检索次数） =====

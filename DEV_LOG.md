@@ -768,4 +768,31 @@ glm-4.6v 视觉审计指出"高饱和绿色状态点刺眼"——根因是通用
 - 未改后端 /api/ai/chat 与任何业务规则、红线函数、生产库；AI 输出不回写数据库事实。
 - 侘寂覆盖层仅作用于 Zachary 面板；其余页面精修在后续 UI 批次。
 
+---
+
+## 2026-09-03 第八批｜B1 采集计数双轨对齐：/api/collection/counter 真实化（消除"今日 0"误报）
+
+### 问题（源码>运行时判定）
+前端/运维看到"今日采集 0 次 0 条"，但 check_collection 实际为 9 轮 / 95 条。根因：`collection_counters` 是**死表**——全仓只有 counter 路由"读不到就 INSERT 一行 0,0,0"，**没有任何采集流程 UPDATE 它**，故恒为 0。真实事实分散在三处：notes（今日落库）、collection_logs（每关键词任务日志）、data/collector_stats.json（调度轮次自记）。另存在第三套 collector_v2 内存计数（重启清零）。
+
+### 真实口径（只读核查 monitor.db，未写库）
+2026-09-03：notes 今日入库 **95 条**（collected_at/captured_at 一致，去重主体过滤后的生产事实）；collection_logs 今日 81 个关键词任务 = SUCCESS 50（原始抓取合计 3640，未去重）+ BLOCKED 30 + NETWORK_ERROR 1；collector_stats.json auto=9/manual=0（9 个调度轮次，一轮多关键词）；最近任务 11:54 BLOCKED、最近成功 10:40 → **当前确处熔断**。注意 status 枚举大小写混用（SUCCESS 主、旧 success、BLOCKED/error/NETWORK_ERROR/NO_NEW_DATA）。
+
+### 修复（只改 app.py 一个路由，纯只读计算，留 .bak-counter）
+- 删除"读时插 0 行"的无意义写操作；不再依赖死表数值。
+- daily_count = notes 今日按**采集时刻**（captured_at 优先回退 collected_at）COUNT = 95（统计"今天采到多少"用采集时刻，正确区别于发布日期）。
+- 新增 runs_today/logs_today/success_runs/blocked_runs/error_runs/raw_collected（3640 原始量）/last_task_status/last_success_at，口径全部标注；manual/auto 仅来自当日 collector_stats.json。
+- circuit_state 按"最近一次任务 vs 最近一次成功的先后"判定（不用今日累计对比）：最近 BLOCKED/NETWORK_ERROR 且晚于最近成功 → blocked；NO_NEW_DATA → idle；否则 normal。
+- 保留原字段名与 daily_limit/manual_limit/auto_limit 配额，不破坏任何调用方；返回 source 标明实时来源。
+
+### 验证（真实）
+- 平滑重启 8201（仅结束 app 主/子、supervisor 自动拉起，8200 未碰），healthz v5.9.9。
+- 接口实测：daily_count=95、runs=9(0/9)、logs 81=50成功/30熔断/1错、raw=3640、**circuit_state=blocked（last BLOCKED，last_success 10:40）**、last_collect_at=10:49:19。
+- tests/healthcheck.py 退出码 0：9 模块全 ok、notes_today=95 与接口一致、**subject_guard gz_hit=true / sh_excluded=true（主体口径红线未受影响）**、双时间字段齐备。
+
+### 遗留登记（本轮不动，避免改采集主链）
+- scripts/collect_now.py:33 仍读死表 collection_counters 判断配额 → 实际配额闸恒放行；collector_v2 另有内存计数。三套计数的"采集决策层"统一放到 D2 动态调度/熔断线（adaptive_engine）一起做，本轮只对齐展示/查询口径，不改采集规则与业务逻辑。
+- 主 SPA 当前未消费该接口；真实字段已就绪，供后续"采集状态卡 / UI 精修"直接绑定，不造假数据。
+
+
 
