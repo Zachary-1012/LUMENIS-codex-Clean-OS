@@ -193,6 +193,14 @@ try:
 except Exception as _li_e:
     print(f"[local_import] API register failed: {_li_e}")
 
+# Zachary OS AI：KOS 传播主体 API（复用 kos_engine/kos_report，不重复建设）
+try:
+    import kos_routes
+    kos_routes.register_kos_api(app)
+    print("[kos_routes] KOS API registered: /api/kos/*")
+except Exception as _kos_e:
+    print(f"[kos_routes] blueprint register failed: {_kos_e}")
+
 # Zachary OS AI：Browser Runtime API（只读，对齐 CTR-BROWSER-RUNTIME-P0-01）
 try:
     import browser_runtime_api
@@ -947,7 +955,7 @@ def auth_config_api():
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
-    if not _auth_enabled() or request.path in ('/healthz', '/api/auth/config', '/favicon.ico') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/auth/config', '/favicon.ico', '/api/kos/report/view') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):

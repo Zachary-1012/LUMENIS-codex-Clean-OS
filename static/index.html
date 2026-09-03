@@ -391,6 +391,7 @@
         <div class="side-group-label">ZACHARY OS AI</div>
         <button class="side-item" data-page="resident-health" data-desc="双身份驻场浏览器三层健康检测、登录态监控、失效扫码恢复"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="7 11 9.5 11 11 8.5 13 13.5 14.5 11 17 11"/></svg></span><span>驻场浏览器</span></button>
         <button class="side-item" data-page="internal-browser" data-desc="系统内置浏览器，小红书/rednote 双账号系统内完成，不跳转外部浏览器"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16 8 13.5 10.5 10.5 13.5 8 16 10.5 13.5 13.5 10.5 16 8"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span><span>内置浏览器</span></button>
+        <button class="side-item" data-page="kos" data-desc="KOS传播主体智能：S/A/B/C分层、潜力/风险识别、评论分析、博主触达、投流候选、动态HTML报告"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>KOS 传播主体</span></button>
         <button class="side-item" data-page="evidence" data-desc="健康与采集全程证据看板，每个完成/失败都可回放"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 9 4-1 7-4.5 7-9V6z"/><polyline points="9 12 11 14 15 10"/></svg></span><span>证据看板</span></button>
         <button class="side-item" data-page="calendar" data-desc="舆情日历、每日舆情概览、点击查看详情"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>舆情日历</span></button>
         <button class="side-item" data-page="reports" data-desc="日报/周报/月报/年报导出，Word/Excel/CSV格式"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span><span>报告中心</span></button>
@@ -594,6 +595,30 @@
         <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>风险预警</h2><div class="page-actions"><button class="action secondary" onclick="refreshAlerts()">↻ 刷新预警</button><button class="action tertiary" onclick="markAllAlertsRead()">✓ 全部已读</button></div></div>
         <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">ALERT CENTER</span><h3>舆情预警通知</h3><p>实时监测高风险、高影响力、上升过快的舆情，弹窗通知，已读可去除红点</p></div></div><div class="alert-list" id="alertsPageList"></div></div>
         <div class="panel glass-card"><div class="panel-head"><div><span class="eyebrow">ATTENTION</span><h3>高 / 中风险内容</h3></div></div><div class="risk-table" id="riskList"></div></div>
+      </section>
+
+      <!-- KOS 传播主体智能 -->
+      <section class="page-view" id="page-kos">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>KOS 传播主体智能</h2>
+          <button class="action primary tip" style="margin-left:auto" onclick="window.open('/api/kos/report/view','_blank')"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span class="btn-label">动态报告</span></button>
+        </div>
+        <div class="metric-grid" id="kosStats" style="grid-template-columns:repeat(4,1fr)">
+          <article class="metric-card glass-card"><div class="metric-icon">👥</div><div class="metric-label">KOS 总数</div><strong id="kosTotal">—</strong><div class="metric-sub">传播主体</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon" style="color:#e74c3c">⭐</div><div class="metric-label">S级核心</div><strong class="positive" id="kosS">—</strong><div class="metric-sub">优先合作</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon" style="color:#f39c12">📈</div><div class="metric-label">A级重点</div><strong id="kosA">—</strong><div class="metric-sub">重点培养</div></article>
+          <article class="metric-card glass-card"><div class="metric-icon" style="color:#3498db">💎</div><div class="metric-label">潜力KOS</div><strong id="kosPotential">—</strong><div class="metric-sub">高互动低篇数</div></article>
+        </div>
+        <div class="panel glass-card">
+          <div class="panel-head"><div><span class="eyebrow">TOP KOS</span><h3>TOP KOS 排名（按综合评分）</h3><p>S/A/B/C 分层 · 可筛选 · 点击查看详情</p></div>
+            <div style="display:flex;gap:6px">
+              <button class="filter-btn active" onclick="kosFilterTier(this,'')">全部</button>
+              <button class="filter-btn" onclick="kosFilterTier(this,'S')">S</button>
+              <button class="filter-btn" onclick="kosFilterTier(this,'A')">A</button>
+              <button class="filter-btn" onclick="kosFilterTier(this,'B')">B</button>
+            </div>
+          </div>
+          <div class="kos-list" id="kosList"></div>
+        </div>
       </section>
 
       <!-- 事件中心 -->
@@ -1396,7 +1421,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <script src="/static/js/resident_health.js?v=5.9.9"></script>
   <script src="/static/js/internal_browser.js?v=8.0.2"></script>
   <script src="/static/js/local_import.js?v=5.9.9"></script>
-  <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script></script>
+  <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script>
+  <script src="/static/js/kos_dashboard.js?v=1.0.0"></script></script>
 <script>
   // P0安全修复(2026-09-02): window.__Z_AUTH 定义已移至 <head>（three.min.js之后），确保所有JS文件加载前已定义
   // 此处不再重复定义，避免执行顺序问题
