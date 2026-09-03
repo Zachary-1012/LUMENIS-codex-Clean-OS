@@ -112,7 +112,7 @@ BRAND_PROFILES = {
     },
 }
 
-ACTIVE_BRAND = "guangzhou_taikoo_hui"  # 当前激活品牌，可通过环境变量或API切换
+ACTIVE_BRAND = "hainan_cdf"  # 当前激活品牌：海南中免/CDF（优先监测导入），可通过环境变量或API切换
 
 
 def get_active_brand() -> str:
@@ -154,13 +154,14 @@ def subject_hit(
     source_keyword: object = '',
     matched_keywords: object = '',
 ) -> bool:
-    """严格主体判断：排除词优先，一票否决；随后检查正向主体词。"""
+    """严格主体判断：使用当前激活品牌配置，排除词优先一票否决，随后检查正向主体词。"""
+    cfg = get_brand_config()
     fields = [_text(x) for x in (title, body, content, source_keyword, matched_keywords)]
     joined = ' '.join(fields).lower()
-    for word in SUBJECT_EXCLUDE_WORDS:
+    for word in cfg.get("exclude_words", SUBJECT_EXCLUDE_WORDS):
         if word.lower() in joined:
             return False
-    return any(word.lower() in field.lower() for field in fields for word in SUBJECT_WORDS)
+    return any(word.lower() in field.lower() for field in fields for word in cfg.get("subject_words", SUBJECT_WORDS))
 
 
 def subject_hit_note(note: dict) -> bool:
@@ -168,15 +169,16 @@ def subject_hit_note(note: dict) -> bool:
 
 
 def subject_reason(note: dict) -> str:
+    cfg = get_brand_config()
     fields = [_text(note.get(k, '')) for k in SUBJECT_FIELDS]
     joined = ' '.join(fields).lower()
-    for word in SUBJECT_EXCLUDE_WORDS:
+    for word in cfg.get("exclude_words", SUBJECT_EXCLUDE_WORDS):
         if word.lower() in joined:
             return f'主体排除词一票否决:{word}'
-    for word in SUBJECT_WORDS:
+    for word in cfg.get("subject_words", SUBJECT_WORDS):
         if any(word.lower() in field.lower() for field in fields):
             return f'命中主体词:{word}'
-    return '未命中广州太古汇主体词'
+    return f'未命中{cfg.get("display_name", "品牌")}主体词'
 
 
 def _column(alias: str, field: str) -> str:
