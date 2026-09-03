@@ -120,7 +120,7 @@
     /* ---- C. 底部：账户槽 ---- */
     var accSlot = el('div', 'zb-account-slot');
     var accBtn = el('button', 'zb-account-btn',
-      '<span class="zb-avatar">Z</span><span class="zb-account-meta"><b>Zachary</b><small>本地账户 · CTH-POMS</small></span>' + SVG.chevron);
+      '<span class="zb-avatar">Z</span><span class="zb-account-meta"><b>序境</b><small>本地账户 · CTH-POMS</small></span>' + SVG.chevron);
     accBtn.type = 'button';
     accSlot.appendChild(accBtn); sidebar.appendChild(accSlot);
 
@@ -149,7 +149,7 @@
     var accPop = el('div', 'zb-pop');
     accPop.innerHTML =
       popRow('mail', SVG.mail, '邮箱通知', '推送邮箱配置') +
-      popRow('zachary', SVG.chat, 'Zachary 助手', '打开 AI 分析') +
+      popRow('zachary', SVG.chat, '序境 助手', '打开 AI 分析') +
       '<div class="zb-pop-sep"></div>' +
       popRow('settings', SVG.gear, '设置', '', 'Ctrl+,') +
       popRow('logout', SVG.logout, '退出登录', '');
@@ -237,8 +237,8 @@
         '<div class="zb-home-inner">' +
         '<h1 class="zb-home-title">你今天想知道什么？</h1>' +
         '<div class="zb-ask">' +
-        '<textarea id="zbHomeInput" rows="1" placeholder="问 Zachary：例如 今天太古汇有哪些高风险舆情？"></textarea>' +
-        '<div class="zb-ask-bar"><span class="zb-ask-model">Zachary · 本地 AI（Ollama）</span><span class="spacer"></span>' +
+        '<textarea id="zbHomeInput" rows="1" placeholder="问序境：例如 今天太古汇有哪些高风险舆情？"></textarea>' +
+        '<div class="zb-ask-bar"><span class="zb-ask-model">序境 · 本地 AI（Ollama）</span><span class="spacer"></span>' +
         '<button class="zb-send" id="zbHomeSend" type="button" title="发送">' + SVG.send + '</button></div></div>' +
         '<div class="zb-chips">' +
         chip('cockpit', SVG.grid, '进入智能问答') +

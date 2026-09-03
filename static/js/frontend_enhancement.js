@@ -98,25 +98,25 @@
                     </div>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                        <div class="report-card" style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; cursor: pointer;" onclick="ReportCenter.generateReport('daily')">
-                            <div style="font-size: 32px; margin-bottom: 8px;">📅</div>
-                            <h3 style="margin: 0 0 4px 0;">日报</h3>
-                            <p style="margin: 0; opacity: 0.9; font-size: 13px;">每日舆情汇总</p>
+                        <div class="report-card" style="padding: 20px; background: var(--zb-stone-0,#FFFFFF); border:1px solid var(--zb-stone-200,#E7E5E4); border-radius: 12px; cursor: pointer; transition: border-color .18s, box-shadow .18s;" onclick="ReportCenter.generateReport('daily')" onmouseover="this.style.borderColor='var(--zb-stone-400,#A8A29E)';this.style.boxShadow='0 1px 4px rgba(0,0,0,.05)'" onmouseout="this.style.borderColor='var(--zb-stone-200,#E7E5E4)';this.style.boxShadow='none'">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--zb-info,#2563EB);display:inline-block;"></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--zb-stone-600,#57534E)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                            <h3 style="margin: 0 0 4px 0; color: var(--zb-stone-900,#1C1917); font-size: 15px; font-weight: 600;">日报</h3>
+                            <p style="margin: 0; color: var(--zb-stone-500,#78716C); font-size: 13px;">每日舆情汇总</p>
                         </div>
-                        <div class="report-card" style="padding: 20px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; color: white; cursor: pointer;" onclick="ReportCenter.generateReport('weekly')">
-                            <div style="font-size: 32px; margin-bottom: 8px;">📆</div>
-                            <h3 style="margin: 0 0 4px 0;">周报</h3>
-                            <p style="margin: 0; opacity: 0.9; font-size: 13px;">每周舆情分析</p>
+                        <div class="report-card" style="padding: 20px; background: var(--zb-stone-0,#FFFFFF); border:1px solid var(--zb-stone-200,#E7E5E4); border-radius: 12px; cursor: pointer; transition: border-color .18s, box-shadow .18s;" onclick="ReportCenter.generateReport('weekly')" onmouseover="this.style.borderColor='var(--zb-stone-400,#A8A29E)';this.style.boxShadow='0 1px 4px rgba(0,0,0,.05)'" onmouseout="this.style.borderColor='var(--zb-stone-200,#E7E5E4)';this.style.boxShadow='none'">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--zb-attention,#D97706);display:inline-block;"></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--zb-stone-600,#57534E)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="17" x2="13" y2="17"/></svg></div>
+                            <h3 style="margin: 0 0 4px 0; color: var(--zb-stone-900,#1C1917); font-size: 15px; font-weight: 600;">周报</h3>
+                            <p style="margin: 0; color: var(--zb-stone-500,#78716C); font-size: 13px;">每周舆情分析</p>
                         </div>
-                        <div class="report-card" style="padding: 20px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 12px; color: white; cursor: pointer;" onclick="ReportCenter.generateReport('monthly')">
-                            <div style="font-size: 32px; margin-bottom: 8px;">📈</div>
-                            <h3 style="margin: 0 0 4px 0;">月报</h3>
-                            <p style="margin: 0; opacity: 0.9; font-size: 13px;">月度趋势分析</p>
+                        <div class="report-card" style="padding: 20px; background: var(--zb-stone-0,#FFFFFF); border:1px solid var(--zb-stone-200,#E7E5E4); border-radius: 12px; cursor: pointer; transition: border-color .18s, box-shadow .18s;" onclick="ReportCenter.generateReport('monthly')" onmouseover="this.style.borderColor='var(--zb-stone-400,#A8A29E)';this.style.boxShadow='0 1px 4px rgba(0,0,0,.05)'" onmouseout="this.style.borderColor='var(--zb-stone-200,#E7E5E4)';this.style.boxShadow='none'">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--zb-success,#16A34A);display:inline-block;"></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--zb-stone-600,#57534E)"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                            <h3 style="margin: 0 0 4px 0; color: var(--zb-stone-900,#1C1917); font-size: 15px; font-weight: 600;">月报</h3>
+                            <p style="margin: 0; color: var(--zb-stone-500,#78716C); font-size: 13px;">月度趋势分析</p>
                         </div>
-                        <div class="report-card" style="padding: 20px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 12px; color: white; cursor: pointer;" onclick="ReportCenter.generateReport('custom')">
-                            <div style="font-size: 32px; margin-bottom: 8px;">⚙️</div>
-                            <h3 style="margin: 0 0 4px 0;">自定义</h3>
-                            <p style="margin: 0; opacity: 0.9; font-size: 13px;">自定义时间范围</p>
+                        <div class="report-card" style="padding: 20px; background: var(--zb-stone-0,#FFFFFF); border:1px solid var(--zb-stone-200,#E7E5E4); border-radius: 12px; cursor: pointer; transition: border-color .18s, box-shadow .18s;" onclick="ReportCenter.generateReport('custom')" onmouseover="this.style.borderColor='var(--zb-stone-400,#A8A29E)';this.style.boxShadow='0 1px 4px rgba(0,0,0,.05)'" onmouseout="this.style.borderColor='var(--zb-stone-200,#E7E5E4)';this.style.boxShadow='none'">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--zb-stone-400,#A8A29E);display:inline-block;"></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--zb-stone-600,#57534E)"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+                            <h3 style="margin: 0 0 4px 0; color: var(--zb-stone-900,#1C1917); font-size: 15px; font-weight: 600;">自定义</h3>
+                            <p style="margin: 0; color: var(--zb-stone-500,#78716C); font-size: 13px;">自定义时间范围</p>
                         </div>
                     </div>
                     
