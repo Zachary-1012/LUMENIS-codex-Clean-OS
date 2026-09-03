@@ -238,10 +238,16 @@
       </button>
       <a class="action secondary tip" id="zbmpWorkbenchBtn" data-tip="ZBMP 工作台：品牌概览/实时监测/事件中心/报告中心 + 只读终端 + 文件树" href="/static/zbmp-workbench.html" style="text-decoration:none"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="btn-label">ZBMP 工作台</span></a>
       <button class="action icon-only tip" id="alertBellBtn" data-tip="舆情预警：高风险/高影响力/上升过快时弹窗通知" onclick="navigateTo('alerts')"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><span class="nav-badge" id="alertBadge" style="display:none">0</span></button>
+      <!-- 统一本地导入入口：参考 GPT 文件夹 icon，点击浏览本地文件 -->
+      <button class="action secondary tip" id="localImportBtn" data-tip="导入文件：知识库/案例/证据资料，支持图片/文档/视频，单文件最大500MB" onclick="document.getElementById('localImportInput').click()">
+        <span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="btn-label">导入</span>
+      </button>
+      <input type="file" id="localImportInput" style="display:none" accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.pdf,.txt,.csv,.mp4,.mov,.webm,.md,.doc,.docx" multiple>
       <button class="action primary tip" id="refreshBtn" data-tip="立即更新：手动采集最新数据，每日3次机会，冷却15分钟"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></span><span class="btn-label">采集数据</span></button>
-      <button class="action secondary tip" id="rednoteBtn" style="display:none" data-tip="备选采集（rednote/CDP）：通过CDP连接已登录浏览器采集，入口已收至系统设置，计入每日次数"><span class="svgicon">◎</span><span class="btn-label">rednote采集</span></button>
+      <button class="action secondary tip" id="rednoteBtn" style="display:none" data-tip="备选采集（rednote/CDP）：通过CDP连接已登录浏览器采集，入口已收至系统设置，计入每日次数"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></span><span class="btn-label">rednote采集</span></button>
       <button class="action secondary tip" id="reviewBtn" data-tip="AI分析：复核历史笔记的相关性、情感、风险和摘要"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.7L19 20l-.7-1.8L16.5 17.5l1.8-.7z"/></svg></span><span class="btn-label">AI 分析</span></button>
-      <button class="action tertiary tip" id="reportBtn" data-tip="导出报告：进入日报、周报、月报和年报"><span class="svgicon">▣</span><span class="btn-label">导出报告</span></button>
+      <button class="action tertiary tip" id="reportBtn" data-tip="导出报告：进入日报、周报、月报和年报"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span class="btn-label">导出报告</span></button>
       <!-- AGENTS §7.2 Auth Recovery 徽章（系统内可见；0 时 hidden） -->
       <span id="ar-badge" class="ar-badge hidden" title="存在需要人工处理的认证恢复任务"><span class="svgicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> <span id="ar-count">0</span></span>
     </div>
@@ -1389,6 +1395,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/static/js/auth_recovery_poller.js?v=5.8.9">
   <script src="/static/js/resident_health.js?v=5.9.9"></script>
   <script src="/static/js/internal_browser.js?v=8.0.2"></script>
+  <script src="/static/js/local_import.js?v=5.9.9"></script>
   <script src="/static/js/evidence_dashboard.js?v=5.9.9"></script></script>
 <script>
   // P0安全修复(2026-09-02): window.__Z_AUTH 定义已移至 <head>（three.min.js之后），确保所有JS文件加载前已定义

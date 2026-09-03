@@ -154,6 +154,45 @@ try:
 except Exception as _ev_e:
     print(f"[evidence_api] blueprint register failed: {_ev_e}")
 
+# 统一本地文件导入 API（参考 GPT 文件夹 icon，点击浏览本地；复用 app_evidence 扩展名+500MB 校验）
+try:
+    from app_evidence import EVIDENCE_ALLOWED_EXTENSIONS, EVIDENCE_MAX_FILE_SIZE_BYTES
+    _IMPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'imports')
+    os.makedirs(_IMPORT_DIR, exist_ok=True)
+
+    @app.route('/api/local-import', methods=['POST'])
+    def api_local_import():
+        """统一本地文件导入：支持图片/文档/视频，单文件最大500MB，保存到 data/imports/。"""
+        try:
+            if 'files' not in request.files:
+                return jsonify({'ok': False, 'error': '未选择文件'}), 400
+            files = request.files.getlist('files')
+            if not files:
+                return jsonify({'ok': False, 'error': '文件列表为空'}), 400
+            results = []
+            for f in files:
+                if not f or not f.filename:
+                    continue
+                ext = os.path.splitext(f.filename)[1].lower()
+                if ext not in EVIDENCE_ALLOWED_EXTENSIONS:
+                    results.append({'filename': f.filename, 'ok': False, 'error': f'不支持的格式: {ext}'})
+                    continue
+                safe_name = f"import_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.urandom(4).hex()}{ext}"
+                save_path = os.path.join(_IMPORT_DIR, safe_name)
+                f.save(save_path)
+                size = os.path.getsize(save_path)
+                if size > EVIDENCE_MAX_FILE_SIZE_BYTES:
+                    os.remove(save_path)
+                    results.append({'filename': f.filename, 'ok': False, 'error': f'文件过大: {size//1024//1024}MB > 500MB'})
+                    continue
+                results.append({'filename': f.filename, 'saved_as': safe_name, 'size': size, 'ok': True})
+            ok_count = sum(1 for r in results if r.get('ok'))
+            return jsonify({'ok': ok_count > 0, 'total': len(files), 'imported': ok_count, 'results': results})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+except Exception as _li_e:
+    print(f"[local_import] API register failed: {_li_e}")
+
 # Zachary OS AI：Browser Runtime API（只读，对齐 CTR-BROWSER-RUNTIME-P0-01）
 try:
     import browser_runtime_api
