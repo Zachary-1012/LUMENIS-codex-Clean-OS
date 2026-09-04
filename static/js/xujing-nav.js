@@ -60,9 +60,8 @@
       domainIcon: 'hanger',
       items: [
         { page: 'kos', label: 'KOS 矩阵', icon: 'users', desc: 'KOS矩阵管理与分级、账号资产盘点' },
-        { page: 'brands', label: '品牌管理', icon: 'building', desc: '品牌档案、业态对比、竞品策略分析' },
-        { page: 'official', label: '销售线索', icon: 'news', desc: '销售线索追踪、官方动态采集' },
-        { page: 'cases', label: '案例库', icon: 'trophy', desc: '营销案例卡片、详情下钻与复盘' }
+        { page: 'cases', label: '品牌案例库', icon: 'trophy', desc: '品牌档案、业态对比、营销案例卡片、详情下钻与复盘' },
+        { page: 'official', label: '销售线索', icon: 'news', desc: '销售线索追踪、官方动态采集' }
       ]
     },
     /* ===== 域 6：系统 System ===== */
