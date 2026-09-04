@@ -44,6 +44,7 @@
 ## AI Capability Registry（2026-09-04 智谱 glm-5.3 聚类分析）
 - **传输入口已收敛**：全仓 13 处业务 AI 调用统一走唯一权威 `intelligence._chat/chat`（ai_gateway_v570 已废弃统一、scripts/ai_gateway.py 仅测试脚本），无第二套 AI Gateway → 已收敛 ✓
 - **search_enhance 已收口 ai_channel（2026-09-04 补充）**：唯一残留直接 urllib 调智谱 API 的调用点（L477-484）已改走 `ai_channel.post_with_retry`（统一重试/熔断/退避，max_attempts 读 AI_HTTP_MAX_RETRIES 默认3，超时走 level 分级）；保持 payload/模型/解析/配额(search_std)不变；真实验证 ok=True 0.9s 5条、熔断器 succ=1 → 全仓 AI HTTP 传输入口无第二套直连 ✓
+- **后台分析/生成 5 处调用点已收口 chat 预算（2026-09-04，commit a952455）**：app.py:2876 舆情分析 / daily_report:650 日报总结 / daily_report:669 高管洞察 / kos_engine:386 邀约文案 / kos_engine:549 评论回复 —— 从 `_chat` 直连（无预算记账/无分级超时）收口到 `chat(level='medium', pack_id='glm_4_5_air')`，统一 token 包记账+分级超时，temp/max_tokens/model 保持零变化；测试 fake 同步提供 chat 接口（mod.chat 注册）；KOS+报告 76 回归 PASS + 生产 analyze-v570 新版验证 ok=True。保留：心跳探活(4782 刻意不占预算)/用户对话(1800/2472 per_call 设计)/按次执行(235)/学习采集(373 按次计费专属通道)
 - **智谱聚类结论（三大模式，各调用点业务语义独立、已工作正确 → KEEP，不强行重构）**：
   - Cluster A 问答/对话：app.py:1800 通用对话、app.py:2472 诺米 RAG(检索优先/不编造)、ai_hub:142 数据限定QA、ai_resource_packs:235 按次执行
   - Cluster B 分析/评分/分类：app.py:2876 舆情情感风险、ai_filter:254 质量过滤、kos_engine:386 KOS评分、ai_hub:179 模块分析
