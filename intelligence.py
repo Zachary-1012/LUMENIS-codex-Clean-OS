@@ -1,4 +1,4 @@
-"""广州太古汇本地智能层。
+﻿"""广州太古汇本地智能层。
 
 设计目标：无预算也能工作；如果电脑本地已经运行 Ollama / LM Studio / llama.cpp，自动发现并调用本地模型；
 否则自动退回可审计的本地规则智能引擎。外部 API Key 永远不是必需项。
@@ -203,7 +203,7 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
 def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium'):
     """视觉模型对话（glm-4.6v），支持图片输入。
     分级：level 决定超时（low 60s / medium 90s / high 120s / critical 180s，视觉较慢分档更大）。
-    预算：检查并记录 glm_4_6v 视觉资源包（600万 tokens；require_confirmation=True 由调用方/UI 确认）。
+    预算：检查并记录 glm_4_6v 视觉资源包（600万 tokens；require_confirmation=False（2026-09-04 用户放开，视觉模型随便用））。
     Args:
         system: 系统提示词
         user_text: 用户文本
@@ -239,7 +239,7 @@ def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, ma
                 est_tokens = 10000
         except Exception:
             est_tokens = 1500
-    # 预算检查（glm_4_6v 600万 tokens；require_confirmation=True 由调用方/UI 确认，函数内不重复确认）
+    # 预算检查（glm_4_6v 600万 tokens；require_confirmation=False（2026-09-04 用户放开，视觉模型随便用），函数内不重复确认）
     try:
         import ai_resource_packs
         q = ai_resource_packs.check_quota('glm_4_6v', est_tokens)
@@ -332,7 +332,7 @@ def review_note(note, rule_analysis):
 def summarize_event(event,notes):
     sample=[{'title':n.get('title',''),'summary':n.get('summary',''),'sentiment':n.get('sentiment','neutral'),'risk':n.get('risk_level','low'),'platform':n.get('source_platform','xiaohongshu')} for n in notes[:15]]
     system='''你是品牌舆情事件分析员。把同一事件的多平台提及凝练成管理层摘要。只输出JSON：{"title":"不超过24字","summary":"不超过90字","fact_status":"confirmed|partially_confirmed|unconfirmed","impact":"positive|neutral|negative","risk_reason":"不超过60字","recommended_action":"不超过70字"}。单一用户指控不得写成已证实事实；没有独立来源必须unconfirmed。'''
-    raw,provider,_=chat(system,json.dumps({'event':event,'mentions':sample},ensure_ascii=False),level='medium',use_cache=True,temperature=0.0,max_tokens=700)
+    raw,provider,_=chat(system,json.dumps({'event':event,'mentions':sample},ensure_ascii=False),level='medium',use_cache=True,temperature=0.0,max_tokens=700,pack_id='glm_4_5_air')
     data=_json_from_text(raw)
     if data:data['provider']=provider;return data
     from canonical_metrics import sentiment_count as _scf, risk_count as _rcf
@@ -352,7 +352,7 @@ def translate_text(text,target='en'):
     if not text:return ''
     if target=='zh':return text
     labels={'en':'English','ko':'Korean'}
-    raw,_,_=chat(f'Translate the following Chinese public-opinion text into {labels.get(target,target)}. Preserve Guangzhou Taikoo Hui and brand names. Return translation only.',text[:3000],level='medium',use_cache=True,temperature=0,max_tokens=700)
+    raw,_,_=chat(f'Translate the following Chinese public-opinion text into {labels.get(target,target)}. Preserve Guangzhou Taikoo Hui and brand names. Return translation only.',text[:3000],level='medium',use_cache=True,temperature=0,max_tokens=700,pack_id='glm_4_5_air')
     return (raw or '').strip() or text
 
 
@@ -369,7 +369,7 @@ def analyze_sentiment(text, max_len=2000):
     system = ('你是专业舆情分析助手，只输出严格JSON，不要其他文字。字段：'
               'sentiment(-1负面,0中性,1正面),label(positive/neutral/negative),'
               f'summary(不超过{max_len}字的简要总结),keywords(关键词数组最多10个)。')
-    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.1, max_tokens=800)
+    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.1, max_tokens=800, pack_id='glm_4_5_air')
     data = _json_from_text(raw) or {}
     try:
         s = int(data.get('sentiment', 0))
@@ -390,7 +390,7 @@ def generate_summary(text, max_length=200):
     if not text or not text.strip():
         return ''
     system = f'你是专业文本摘要助手，生成简洁准确的中文摘要，不超过{max_length}字。只输出摘要内容。'
-    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=False, temperature=0.3, max_tokens=max_length + 100)
+    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=False, temperature=0.3, max_tokens=max_length + 100, pack_id='glm_4_5_air')
     out = (raw or '').strip()
     if not out:
         return str(text)[:max_length] + ('...' if len(str(text)) > max_length else '')
@@ -404,7 +404,7 @@ def extract_keywords(text, num_keywords=10):
     if not text or not text.strip():
         return []
     system = f'你是关键词提取助手，提取{num_keywords}个最重要的关键词。只输出严格JSON：{{"keywords":[...]}}。'
-    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.2, max_tokens=400)
+    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.2, max_tokens=400, pack_id='glm_4_5_air')
     data = _json_from_text(raw) or {}
     kws = data.get('keywords', [])
     if isinstance(kws, list):
@@ -540,7 +540,7 @@ def generate_report(title, data, report_type="daily"):
     """舆情报告生成（智谱驱动）。返回 markdown 报告字符串；失败回退规则拼装。"""
     system = (f'你是品牌舆情报告撰写助手，根据数据生成{report_type}报告正文（markdown），'
               f'标题围绕「{title}」，结论可追溯到数据，不编造事实。只输出报告正文。')
-    raw, provider, _ = chat(system, json.dumps(data, ensure_ascii=False)[:8000], level='high', use_cache=False, temperature=0.4, max_tokens=1500)
+    raw, provider, _ = chat(system, json.dumps(data, ensure_ascii=False)[:8000], level='high', use_cache=False, temperature=0.4, max_tokens=1500, pack_id='glm_4_5_air')
     out = (raw or '').strip()
     if out:
         return out
