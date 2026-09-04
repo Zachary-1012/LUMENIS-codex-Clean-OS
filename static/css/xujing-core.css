@@ -2456,3 +2456,46 @@ body::after {
   .lc-detail-wrap { position: static; }
   .lc-note-row { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* ================================================================
+   zbHome 品牌哲学三语诠释（芥子纳须弥）
+   ================================================================ */
+.zb-home-philosophy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.zb-philo-zh {
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  color: var(--xj-ink, #1d1d1f);
+  padding-left: 0.4em; /* 抵消letter-spacing导致的视觉偏移 */
+}
+.zb-philo-en {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--xj-ink-3, #86868b);
+  font-style: italic;
+  max-width: 480px;
+  line-height: 1.6;
+}
+.zb-philo-ko {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: var(--xj-ink-3, #86868b);
+  opacity: 0.7;
+  max-width: 480px;
+  line-height: 1.5;
+}
+.zb-home-title.silver-shimmer {
+  font-size: 42px;
+  font-weight: 200;
+  letter-spacing: 0.15em;
+  margin-bottom: 28px;
+}

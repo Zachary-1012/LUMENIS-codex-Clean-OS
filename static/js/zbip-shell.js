@@ -238,10 +238,15 @@
       var home = el('div'); home.id = 'zbHome';
       home.innerHTML =
         '<div class="zb-home-inner">' +
-        '<h1 class="zb-home-title">你今天想知道什么？</h1>' +
+        '<div class="zb-home-philosophy">' +
+        '<span class="zb-philo-zh">芥子纳须弥</span>' +
+        '<span class="zb-philo-en">In the minutest seed, the cosmos is already structured.</span>' +
+        '<span class="zb-philo-ko">\uac00\uc7a5 \uc791\uc740 \uc528\uc557 \uc18d\uc5d0 \uc6b0\uc8fc\uac00 \uc774\ubbf8 \uad6c\uc870\ud654\ub418\uc5b4 \uc788\ub2e4.</span>' +
+        '</div>' +
+        '<h1 class="zb-home-title silver-shimmer">序境 · XUJING</h1>' +
         '<div class="zb-ask">' +
         '<textarea id="zbHomeInput" rows="1" placeholder="问序境：例如 今天太古汇有哪些高风险舆情？"></textarea>' +
-        '<div class="zb-ask-bar"><span class="zb-ask-model">序境 · 本地 AI（Ollama）</span><span class="spacer"></span>' +
+        '<div class="zb-ask-bar"><span class="zb-ask-model">序境 · 智谱 AI（glm-4.5-air）</span><span class="spacer"></span>' +
         '<button class="zb-send" id="zbHomeSend" type="button" title="发送">' + SVG.send + '</button></div></div>' +
         '<div class="zb-chips">' +
         chip('cockpit', SVG.grid, '进入智能问答') +
@@ -249,7 +254,7 @@
         chip('event', SVG.sparkle, '最新事件') +
         chip('report', SVG.gear, '生成日报') +
         '</div>' +
-        '<div class="zb-home-sub">序境 · CTH-POMS 生产工作区 · 数据来自本地采集与分析管线</div>' +
+        '<div class="zb-home-sub">实时舆情 · 风险预警 · 智能报告 · 数据来自本地采集与分析管线</div>' +
         '</div>';
       content.insertBefore(home, content.firstChild);
       requestAnimationFrame(function () { if (!userNavigated) home.classList.add('show'); });
