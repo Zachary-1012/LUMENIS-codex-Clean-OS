@@ -1671,6 +1671,45 @@ def api_report_daily():
                     'report': {'date_range': f'{yesterday_s} 至 {today_s}', 'stats': stats,
                                'conclusion': conclusion, 'notes': brief}})
 
+@app.route('/api/metrics/canonical')
+def api_metrics_canonical():
+    """Unified Data Intelligence Pipeline: Canonical Metric API (UDIP P2)
+    Consumption surface for Dashboard / Table / Chart / Report / Export / AI.
+    All values computed once by daily_report.generate_today_summary (FUNC-RISK-01/02).
+    No page/chart/report/AI should recompute these metrics."""
+    date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
+    try:
+        datetime.strptime(date_str, '%Y-%m-%d')
+    except Exception:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+    try:
+        summary = daily_report.generate_today_summary(date_str=date_str)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    return jsonify({
+        'ok': True,
+        'metric_version': 'UDIP-V1.0',
+        'date': date_str,
+        'metrics': {
+            'MET-RISK-01': {'name': 'risk_index', 'value': summary.get('risk_index'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-01'},
+            'MET-RISK-02': {'name': 'brand_health_score', 'value': summary.get('brand_health_score'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-02'},
+        },
+        'context': {
+            'total_found': summary.get('total_found'),
+            'effective_count': summary.get('effective_count'),
+            'positive_count': summary.get('positive_count'),
+            'neutral_count': summary.get('neutral_count'),
+            'risk_count': summary.get('risk_count'),
+            'events_count': summary.get('events_count'),
+            'collection_health': summary.get('collection_health'),
+        },
+        'lineage': {
+            'source': 'notes + events (data/monitor.db)',
+            'function': 'daily_report.generate_today_summary',
+            'registry': 'FUNCTION_REGISTRY.md FUNC-RISK-01/02 / METRIC_REGISTRY.md MET-RISK-01/02',
+        },
+    })
+
 @app.route('/api/intelligence/refresh',methods=['POST'])
 def api_intelligence_refresh():
     if not _collect_lock.acquire(blocking=False): return jsonify({'ok':False,'error':'已有任务运行中'}),409

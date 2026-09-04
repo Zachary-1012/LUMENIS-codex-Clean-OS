@@ -1,0 +1,37 @@
+# Web 话题数据契约（DataQualityGate）
+# 对齐 web_topics 表（Web 监测 Truth Surface）
+contract:
+  name: web_topic
+  version: "1.0"
+  owner: "ZBC Web Monitor"
+  status: active
+  rules:
+    - name: topic_not_empty
+      type: not_empty
+      field: topic
+      severity: error
+    - name: source_not_empty
+      type: not_empty
+      field: source
+      severity: error
+    - name: sentiment_valid
+      type: allowed_values
+      field: sentiment
+      allowed_values: [positive, neutral, negative, unknown]
+      severity: warning
+    - name: relevance_score_range
+      type: range
+      field: relevance_score
+      min: 0
+      max: 100
+      severity: warning
+    - name: mention_count_min
+      type: min
+      field: mention_count
+      min: 0
+      severity: error
+    - name: first_seen_format
+      type: date_format
+      field: first_seen
+      format: ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
+      severity: warning

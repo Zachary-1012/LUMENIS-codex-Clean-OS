@@ -1,0 +1,45 @@
+# Topic Campaign 笔记数据契约（DataQualityGate）
+# 对齐 topic_campaign_notes 表（Campaign Truth Surface）
+contract:
+  name: topic_campaign_note
+  version: "1.0"
+  owner: "ZBC Topic Campaign"
+  status: active
+  rules:
+    - name: campaign_key_not_empty
+      type: not_empty
+      field: campaign_key
+      severity: error
+    - name: topic_not_empty
+      type: not_empty
+      field: topic
+      severity: error
+    - name: note_id_not_empty
+      type: not_empty
+      field: note_id
+      severity: error
+    - name: publish_datetime_format
+      type: date_format
+      field: publish_datetime
+      format: ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S"]
+      severity: warning
+    - name: likes_min
+      type: min
+      field: likes
+      min: 0
+      severity: error
+    - name: comments_min
+      type: min
+      field: comments
+      min: 0
+      severity: error
+    - name: subject_hit_valid
+      type: allowed_values
+      field: subject_hit
+      allowed_values: [true, false, 1, 0, "1", "0"]
+      severity: warning
+    - name: risk_level_valid
+      type: allowed_values
+      field: risk_level
+      allowed_values: [low, medium, high, critical, unconfirmed]
+      severity: warning
