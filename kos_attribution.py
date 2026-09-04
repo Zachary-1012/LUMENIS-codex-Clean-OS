@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 import sqlite3
+from canonical_metrics import engagement_stats as _canon_es, engagement_of as _canon_eo
 from typing import Optional
 from pathlib import Path
 
@@ -37,11 +38,11 @@ def calculate_attribution(author_id: str, brand_name: str = "广州太古汇") -
             return {"ok": False, "error": "KOS has no notes", "author_id": author_id}
 
         note_count = len(notes)
-        total_likes = sum(n["likes"] or 0 for n in notes)
-        total_comments = sum(n["comments"] or 0 for n in notes)
-        total_collects = sum(n["collects"] or 0 for n in notes)
-        total_shares = sum(n["shares"] or 0 for n in notes)
-        total_interactions = total_likes + total_comments + total_collects + total_shares
+        # [Canonical WRAP-09] 等权四字段互动统一走 engagement_stats；per_field 供 reach_score 复用
+        _es = _canon_es([dict(n) for n in notes])
+        total_likes, total_comments = _es["per_field"]["likes"], _es["per_field"]["comments"]
+        total_collects, total_shares = _es["per_field"]["collects"], _es["per_field"]["shares"]
+        total_interactions = _es["sum"]
 
         # 内容贡献：笔记数 + 平均质量
         avg_quality = sum(n["content_quality_score"] or 0 for n in notes) / note_count
@@ -146,7 +147,7 @@ def calculate_multi_touch_attribution(note_ids: list, brand_name: str = "广州�
             return {"ok": False, "error": "notes not found"}
 
         # 按时间衰减权重（越早的笔记权重越低，最近的越高，但不全归最后一个）
-        total_interactions = sum((n["likes"] or 0) + (n["comments"] or 0) + (n["collects"] or 0) + (n["shares"] or 0) for n in notes)
+        total_interactions = _canon_es([dict(n) for n in notes])["sum"]  # [Canonical WRAP-09] 等权四字段
         if total_interactions == 0:
             total_interactions = 1
 
@@ -156,7 +157,7 @@ def calculate_multi_touch_attribution(note_ids: list, brand_name: str = "广州�
             aid = n["author_id"]
             if aid not in kos_contrib:
                 kos_contrib[aid] = {"author_nickname": n["author_nickname"], "notes": 0, "interactions": 0, "weighted_score": 0}
-            interactions = (n["likes"] or 0) + (n["comments"] or 0) + (n["collects"] or 0) + (n["shares"] or 0)
+            interactions = _canon_eo(dict(n))  # [Canonical WRAP-09] 单条等权四字段
             # 时间衰减：位置越靠后权重越高（线性 0.5-1.5），但不全归最后一个
             time_weight = 0.5 + (i / max(1, len(notes) - 1)) * 1.0
             kos_contrib[aid]["notes"] += 1

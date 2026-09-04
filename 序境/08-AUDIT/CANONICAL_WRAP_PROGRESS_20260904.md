@@ -12,7 +12,8 @@
 | 05 | intelligence.py `summarize_event` 兜底 | neg/high | analyze_sentiment AI 链路、sample 不动 | oracle+14 回归 | PRODUCTION-VERIFIED | 2aa5e0b |
 | 06 | reprocess.py `aggregate_events`（红线内） | 仅 neg 计数 | risk_score 阈值→risk_level 规则一字不动 | 29 测试+event_curation 脚本 | PRODUCTION-VERIFIED | 5e48944 |
 | 07 | report_export/report_engine.py `payload` | 六桶（6 次 cnt→一次） | cnt 通用兜底、二次确认、发布日期过滤 | 四周期六桶全等 | PRODUCTION-VERIFIED | 5e48944 |
-| 08 | app.py 三处：`/api/report/v2`、品牌详情、`/api/report/daily` | 情感三桶+high | v2 的 negative_count 取二次确认集合、品牌 neutral=total-pos-neg 差额法、daily 的 high 在负面子集计 | 表达式等价+34 回归+生产三路由 HTTP(stats 正常) | PRODUCTION-VERIFIED | 本次 |
+| 08 | app.py 三处：`/api/report/v2`、品牌详情、`/api/report/daily` | 情感三桶+high | v2 的 negative_count 取二次确认集合、品牌 neutral=total-pos-neg 差额法、daily 的 high 在负面子集计 | 表达式等价+34 回归+生产三路由 HTTP(stats 正常) | PRODUCTION-VERIFIED | c195c05 |
+| 09 | kos_attribution.py 两处 | 等权四字段聚合/per_field/单条（FN-ENGAGEMENT） | 时间衰减权重、reach_score、KOS 业务评分不动 | Top5 真实 KOS 等价(9895/6397/3343/10272/543)+70 KOS 测试 | PRODUCTION-VERIFIED(待重载) | 本次 |
 | — | brand_stats_recompute.py | 巡检已先行 WRAP（含 Canonical==旧口径前置断言） | — | 复核一致 | 已完成（巡检） | 巡检 |
 
 ## 审计后判定 KEEP（不是漏做，是无需/不应改）
@@ -23,7 +24,7 @@
 - app.py L1415 趋势点单值、L2625-2627 负面二次确认复合计数、L3603-3609 品类循环/fallback：结构特殊或复合业务，单点收益低，暂 KEEP（如需统一走 group_count 另开小批）。
 
 ## 待 WRAP
-- [x] 族 C KOS（审计判定 KEEP，见下）：
+- [x] 族 C KOS：kos_attribution.py 两处 Python 等权聚合已 WRAP-09 接入 FN-ENGAGEMENT（per_field/单条）；其余 SQL 等权/专属加权审计判定 KEEP，见下：
   - kol_analysis.py L62 `SUM(likes+comments+collects+shares)`：**SQL 层等权四字段，与 FN-ENGAGEMENT 数学等价**；SQL 聚合性能最优，改内存聚合降性能 → KEEP
   - kos_metrics.py L93 `SUM(n.likes+n.comments+n.collects+n.shares) AS exposure`：SQL 层等权，语义为 viewership 曝光（漏斗）→ KEEP（口径一致，非重复）
   - kos_engine.py L119 加权 `eng=tl+tc*2+tcol*1.5+ts*2`：不同 Metric（KOS 加权互动）→ KEEP；total_likes 为独立字段（FN-LIKES 语义）不并入互动 → KEEP
