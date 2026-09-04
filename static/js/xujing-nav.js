@@ -1,10 +1,9 @@
 /* ============================================================
- * 序境 · 导航函数化 v2.0（六大场景主导）
+ * 序境 · 导航函数化 v2.1（六大场景主导 + 设置入口）
  * 依据产品白皮书 P24-P30 六大应用场景：
  *   品牌健康 / Campaign / KOS运营 / 舆情事件 / 危机预警 / 专题研究
- * 其他功能均为六大场景的下一层级
+ * 系统级功能（状态/更新/浏览器/设置）放在设置页面，不占主导航
  * NAV_IA 数据表 → xnav() 纯函数 → 渲染 side-nav
- * icon 复用 xujing-icons.js 注册表（xicon）
  * ============================================================ */
 (function (global) {
   'use strict';
@@ -20,9 +19,7 @@
       items: [
         { page: 'overview', label: '智能问答', icon: 'chat', desc: 'AI驱动的舆情查询、风险判断、品牌分析' },
         { page: 'brands', label: '品牌声量', icon: 'building', desc: '品牌声量与趋势追踪、品牌健康度评分' },
-        { page: 'monitor', label: '口碑情感', icon: 'search', desc: '口碑与情感分析、情感分布、内容分类' },
-        { page: 'analysis', label: '竞品对比', icon: 'chart', desc: '竞品品牌对比、近14天舆情变化趋势' },
-        { page: 'topics', label: '品牌资产', icon: 'tag', desc: '热门话题、正向体验、消费热度、品牌资产预警' }
+        { page: 'monitor', label: '口碑情感', icon: 'search', desc: '口碑与情感分析、情感分布、内容分类' }
       ]
     },
     /* ===== 场景 2：Campaign ===== */
@@ -32,8 +29,7 @@
       items: [
         { kind: 'link', id: 'topic-campaign-entry-v573', href: '/topic-campaign', label: '活动追踪', icon: 'megaphone', desc: 'Campaign 全周期追踪、话题活动入口' },
         { page: 'events', label: '内容表现', icon: 'trend', desc: '内容表现对比、事件聚合、传播路径' },
-        { page: 'event-graph', label: '渠道效能', icon: 'link', desc: '渠道效能评估、事件关系图谱、触发/衍生/继发/并行' },
-        { page: 'calendar', label: '复盘归因', icon: 'calendar', desc: 'Campaign 复盘与归因、舆情日历、每日概览' }
+        { page: 'calendar', label: '复盘归因', icon: 'calendar', desc: 'Campaign 复盘与归因、舆情日历' }
       ]
     },
     /* ===== 场景 3：KOS 运营 ===== */
@@ -42,9 +38,8 @@
       domainIcon: 'users',
       items: [
         { page: 'kos', label: 'KOS 矩阵', icon: 'users', desc: 'KOS 矩阵管理与分级、账号资产' },
-        { page: 'notes', label: '内容质量', icon: 'list', desc: '内容质量与转化评估、笔记搜索、详情查看' },
-        { page: 'official', label: '销售线索', icon: 'news', desc: '销售线索追踪、官方动态采集' },
-        { page: 'internal-browser', label: '效能排名', icon: 'globe', desc: 'KOS 效能排名、系统内置浏览器、双账号系统' }
+        { page: 'notes', label: '内容质量', icon: 'list', desc: '内容质量与转化评估、笔记搜索' },
+        { page: 'official', label: '销售线索', icon: 'news', desc: '销售线索追踪、官方动态采集' }
       ]
     },
     /* ===== 场景 4：舆情事件 ===== */
@@ -52,10 +47,9 @@
       domain: '舆情事件',
       domainIcon: 'trend',
       items: [
-        { page: 'events', label: '事件检测', icon: 'trend', desc: '突发事件实时检测、事件热度与传播速度' },
-        { page: 'event-graph', label: '生命周期', icon: 'link', desc: '事件生命周期追踪、关键节点与转折点' },
-        { page: 'calendar', label: '影响评估', icon: 'calendar', desc: '事件影响范围评估、舆情日历' },
-        { page: 'notes', label: '案例对标', icon: 'list', desc: '案例对标、笔记详情、复核记录' }
+        { page: 'events', label: '事件检测', icon: 'trend', desc: '突发事件实时检测、事件热度' },
+        { page: 'event-graph', label: '生命周期', icon: 'link', desc: '事件生命周期追踪、关键节点' },
+        { page: 'calendar', label: '影响评估', icon: 'calendar', desc: '事件影响范围评估、舆情日历' }
       ]
     },
     /* ===== 场景 5：危机预警 ===== */
@@ -63,10 +57,9 @@
       domain: '危机预警',
       domainIcon: 'warn',
       items: [
-        { page: 'alerts', label: '实时监测', icon: 'warn', desc: '负面舆情实时监测、高风险预警通知', badgeId: 'sideRisk' },
-        { page: 'negative', label: '风险评估', icon: 'shield', desc: '风险等级自动评估、负面舆情二次确认', badgeId: 'sideNegative' },
-        { page: 'monitor', label: '传播路径', icon: 'search', desc: '风险传播路径追踪、情感分布、风险等级' },
-        { page: 'analysis', label: '处置复盘', icon: 'chart', desc: '处置建议与复盘、近14天舆情变化趋势' }
+        { page: 'alerts', label: '实时监测', icon: 'warn', desc: '负面舆情实时监测、高风险预警', badgeId: 'sideRisk' },
+        { page: 'negative', label: '风险评估', icon: 'shield', desc: '风险等级自动评估、负面二次确认', badgeId: 'sideNegative' },
+        { page: 'analysis', label: '处置复盘', icon: 'chart', desc: '处置建议与复盘、近14天趋势' }
       ]
     },
     /* ===== 场景 6：专题研究 ===== */
@@ -74,12 +67,16 @@
       domain: '专题研究',
       domainIcon: 'bulb',
       items: [
-        { page: 'analysis', label: '深度研究', icon: 'chart', desc: '自定义主题深度研究、行业趋势与洞察' },
+        { page: 'analysis', label: '深度研究', icon: 'chart', desc: '自定义主题深度研究、行业趋势' },
         { page: 'brands', label: '竞品策略', icon: 'building', desc: '竞品策略分析、品牌业态对比' },
-        { page: 'monitor', label: '消费者洞察', icon: 'search', desc: '消费者洞察研究、内容分类统计' },
-        { kind: 'link', id: 'report-export', href: '#', label: '报告生成', icon: 'doc', desc: '研究报告自动生成、日报/周报/月报' }
+        { page: 'reports', label: '报告生成', icon: 'doc', desc: '研究报告自动生成、日报/周报/月报' }
       ]
     }
+  ];
+
+  /* ---- 设置入口（导航底部，系统级功能） ---- */
+  var SETTINGS_ENTRY = [
+    { page: 'settings', label: '设置', icon: 'gear', desc: '系统状态、数据更新、内部浏览器、外观主题、关于序境' }
   ];
 
   /* ---- xnav() 纯函数：渲染导航 ---- */
@@ -88,6 +85,8 @@
     if (!container) return;
 
     var html = '';
+
+    // 六大场景
     NAV_IA.forEach(function (domain) {
       html += '<div class="nav-domain">';
       html += '<div class="nav-domain-title">';
@@ -120,6 +119,23 @@
       html += '</div>';
     });
 
+    // 分隔线
+    html += '<div class="nav-divider"></div>';
+
+    // 设置入口
+    html += '<div class="nav-domain nav-settings">';
+    html += '<div class="nav-domain-items">';
+    SETTINGS_ENTRY.forEach(function (item) {
+      var active = (item.page && item.page === XNAV_DEFAULT_PAGE) ? ' active' : '';
+      var iconHtml = (item.icon && typeof xicon === 'function') ? xicon(item.icon, 16, 'nav-item-icon') : '';
+      html += '<div class="nav-item' + active + '" data-page="' + item.page + '" title="' + (item.desc || '') + '">';
+      html += iconHtml;
+      html += '<span class="nav-item-label">' + item.label + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '</div>';
+
     container.innerHTML = html;
 
     // 绑定点击事件
@@ -131,7 +147,7 @@
         } else if (page && typeof switchPage === 'function') {
           switchPage(page);
         }
-        // 更新 active 状态（同时更新 .nav-item 和 .side-item）
+        // 更新 active 状态
         container.querySelectorAll('.nav-item').forEach(function (n) { n.classList.remove('active'); });
         el.classList.add('active');
         document.querySelectorAll('.side-item').forEach(function (s) {
@@ -155,7 +171,7 @@
 
   /* ---- 获取导航数据 ---- */
   function xnavGetData() {
-    return NAV_IA;
+    return { scenes: NAV_IA, settings: SETTINGS_ENTRY };
   }
 
   /* ---- 导出 ---- */
