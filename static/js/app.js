@@ -486,7 +486,7 @@ async function checkDailyReportPopup(){
       </div>`;
     // v5.8.9 移动端不直接弹全屏日报遮挡首屏，收进底部轻提示，点击查看
     if (window.matchMedia && window.matchMedia('(max-width:768px)').matches && window.showMobileNotice) {
-      window.showMobileNotice(`📊 日报速览：合计 ${s.total||0} 条 · 负面 ${s.negative||0} 条`, openModal);
+      window.showMobileNotice(`${xicon('chart')} 日报速览：合计 ${s.total||0} 条 · 负面 ${s.negative||0} 条`, openModal);
     } else {
       openModal();
     }
@@ -509,7 +509,7 @@ setTimeout(loadConfigStatus, 2000);
 
 /* ===== v5.4 品牌业态统计模块 ===== */
 const CATEGORY_COLORS = {'女装':'#E91E63','男装':'#2196F3','餐饮':'#FF9800','珠宝钟表':'#9C27B0','美容护理':'#00BCD4','运动休闲':'#4CAF50','鞋包皮具':'#795548','童装玩具':'#FF5722','生活时尚':'#607D8B'};
-const CATEGORY_ICONS = {'女装':'👗','男装':'👔','餐饮':'🍽️','珠宝钟表':'💎','美容护理':'💄','运动休闲':'🏃','鞋包皮具':'👜','童装玩具':'🧸','生活时尚':'🏠'};
+const CATEGORY_ICONS = {'女装':'hanger','男装':'hanger','餐饮':'dining','珠宝钟表':'jewelry','美容护理':'beauty','运动休闲':'sport','鞋包皮具':'bag','童装玩具':'toy','生活时尚':'home'};
 
 async function renderBrandStatsPage(){
   // 品牌页已由 BrandIndustry 统一渲染（业态卡片→品牌两级下钻）；旧统计容器不存在时直接跳过，避免冗余请求
@@ -521,9 +521,9 @@ async function renderBrandStatsPage(){
     if(grid){
       grid.innerHTML = Object.entries(d.categories||{}).map(([cat,cs])=>{
         const color = CATEGORY_COLORS[cat]||'#666';
-        const icon = CATEGORY_ICONS[cat]||'📦';
+        const icon = CATEGORY_ICONS[cat]||'box';
         const pct = d.pie_data?.find(p=>p.category===cat)?.percentage||0;
-        return `<article class="metric-card glass-card" onclick="showCategoryCases('${esc(cat)}')" style="cursor:pointer;border-left:3px solid ${color}"><div class="metric-icon" style="background:${color}20;color:${color}">${icon}</div><div class="metric-label">${esc(cat)}</div><strong>${cs.note_count||0}</strong><div class="metric-sub">${cs.brand_count||0}个品牌 · ${pct}%</div></article>`;
+        return `<article class="metric-card glass-card" onclick="showCategoryCases('${esc(cat)}')" style="cursor:pointer;border-left:3px solid ${color}"><div class="metric-icon" style="background:${color}20;color:${color}">${xicon(icon)}</div><div class="metric-label">${esc(cat)}</div><strong>${cs.note_count||0}</strong><div class="metric-sub">${cs.brand_count||0}个品牌 · ${pct}%</div></article>`;
       }).join('');
     }
     // 动态扇形图
@@ -685,22 +685,22 @@ async function renderOfficialPage(){
     const sourceList = $('officialSourceList');
     if(sourceList){
       const sources = [
-        {key:'taikoo_official', name:'广州太古汇官网', icon:'🌐', color:'blue', desc:'官网活动、新闻、促销信息'},
-        {key:'weibo_official', name:'官方微博', icon:'📱', color:'red', desc:'@太古汇TaiKooHui-广州 微博动态'},
-        {key:'wechat_service', name:'微信服务号', icon:'💬', color:'green', desc:'TaikooHui-Guangzhou 服务号'},
-        {key:'wechat_subscribe', name:'微信订阅号', icon:'📰', color:'amber', desc:'TaikooHui-GZ 订阅号'},
+        {key:'taikoo_official', name:'广州太古汇官网', icon:'globe', color:'blue', desc:'官网活动、新闻、促销信息'},
+        {key:'weibo_official', name:'官方微博', icon:'phone', color:'red', desc:'@太古汇TaiKooHui-广州 微博动态'},
+        {key:'wechat_service', name:'微信服务号', icon:'chat', color:'green', desc:'TaikooHui-Guangzhou 服务号'},
+        {key:'wechat_subscribe', name:'微信订阅号', icon:'news', color:'amber', desc:'TaikooHui-GZ 订阅号'},
       ];
       sourceList.innerHTML = sources.map(s=>{
         const count = (d.items||[]).filter(i=>i.source===s.key).length;
-        return `<div class="integration-item" onclick="filterOfficialSource('${s.key}')"><div class="integration-icon ${s.color}">${s.icon}</div><div class="integration-info"><h4>${s.name}</h4><p>${s.desc}</p></div><span class="integration-status">${count}条</span><span class="chev">›</span></div>`;
+        return `<div class="integration-item" onclick="filterOfficialSource('${s.key}')"><div class="integration-icon ${s.color}">${xicon(s.icon)}</div><div class="integration-info"><h4>${s.name}</h4><p>${s.desc}</p></div><span class="integration-status">${count}条</span><span class="chev">›</span></div>`;
       }).join('');
     }
     const list = $('officialList');
     if(list){
       list.innerHTML = (d.items||[]).map(item=>{
         const sourceName = item.source_name || item.source;
-        const sourceIcon = item.source==='taikoo_official'?'🌐':item.source==='weibo_official'?'📱':'💬';
-        return `<div class="official-item" onclick="window.open('${item.url||'#'}','_blank')"><div class="official-source"><span class="official-icon">${sourceIcon}</span><span class="official-source-name">${esc(sourceName)}</span><span class="official-date">${esc(item.publish_date||item.collected_at||'')}</span></div><div class="official-title">${esc(item.title||'')}</div>${item.description?`<div class="official-desc">${esc(item.description.slice(0,150))}</div>`:''}</div>`;
+        const sourceIcon = item.source==='taikoo_official'?'globe':item.source==='weibo_official'?'phone':'chat';
+        return `<div class="official-item" onclick="window.open('${item.url||'#'}','_blank')"><div class="official-source"><span class="official-icon">${xicon(sourceIcon)}</span><span class="official-source-name">${esc(sourceName)}</span><span class="official-date">${esc(item.publish_date||item.collected_at||'')}</span></div><div class="official-title">${esc(item.title||'')}</div>${item.description?`<div class="official-desc">${esc(item.description.slice(0,150))}</div>`:''}</div>`;
       }).join('') || '<div class="muted" style="text-align:center;padding:40px">暂无官方动态，点击右上角"采集官方动态"按钮获取</div>';
     }
     document.querySelectorAll('#officialFilterTabs .filter-tab').forEach(tab=>{
@@ -900,13 +900,13 @@ async function openCaseDetail(case_id){
       </div>
       <h3 style="margin:0 0 8px">${esc(c.title||'')}</h3>
       <div style="color:var(--muted);font-size:13px;margin-bottom:16px">${esc(c.location||'')} · ${esc(c.time||'')}</div>
-      <div class="case-detail-section"><h4>📌 事件经过</h4><p>${esc(c.event||'')}</p></div>
-      <div class="case-detail-section"><h4>📈 传播路径</h4><p>${esc(c.spread_path||'')}</p></div>
-      <div class="case-detail-section"><h4>💬 官方回应</h4><p>${esc(c.response||'')}</p></div>
-      <div class="case-detail-section"><h4>📊 处理效果</h4><p>${esc(c.effect||'')}</p></div>
-      <div class="case-detail-section" style="background:var(--bg);padding:12px;border-radius:8px;border-left:3px solid var(--primary)"><h4 style="color:var(--primary)">💡 对太古汇启示</h4><p>${esc(c.taikoo_insight||'')}</p></div>
-      ${c.reply_formula?`<div class="case-detail-section"><h4>📝 回复公式</h4><p>${esc(c.reply_formula)}</p></div>`:''}
-      ${c.taboo?`<div class="case-detail-section" style="color:var(--danger)"><h4>⚠️ 禁忌</h4><p>${esc(c.taboo)}</p></div>`:''}
+      <div class="case-detail-section"><h4>${xicon('pin')} 事件经过</h4><p>${esc(c.event||'')}</p></div>
+      <div class="case-detail-section"><h4>${xicon('trend')} 传播路径</h4><p>${esc(c.spread_path||'')}</p></div>
+      <div class="case-detail-section"><h4>${xicon('reply')} 官方回应</h4><p>${esc(c.response||'')}</p></div>
+      <div class="case-detail-section"><h4>${xicon('chart')} 处理效果</h4><p>${esc(c.effect||'')}</p></div>
+      <div class="case-detail-section" style="background:var(--bg);padding:12px;border-radius:8px;border-left:3px solid var(--primary)"><h4 style="color:var(--primary)">${xicon('bulb')} 对太古汇启示</h4><p>${esc(c.taikoo_insight||'')}</p></div>
+      ${c.reply_formula?`<div class="case-detail-section"><h4>${xicon('doc')} 回复公式</h4><p>${esc(c.reply_formula)}</p></div>`:''}
+      ${c.taboo?`<div class="case-detail-section" style="color:var(--danger)"><h4>${xicon('warn')} 禁忌</h4><p>${esc(c.taboo)}</p></div>`:''}
       <div style="margin-top:16px;display:flex;gap:8px"><button class="action primary" onclick="closeModal()">关闭</button></div>`;
     openModal();
   }catch(e){toast(e.message||'加载失败')}
@@ -964,14 +964,14 @@ function showSpecialReportModal(report){
       <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px"><div style="font-size:20px;font-weight:700;color:var(--danger)">${report.negative_count}</div><div style="font-size:11px;color:var(--muted)">负面笔记</div></div>
       <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px"><div style="font-size:20px;font-weight:700">${report.max_engagement}</div><div style="font-size:11px;color:var(--muted)">最高互动</div></div>
     </div>
-    <div class="case-detail-section"><h4>📌 一、事件概述</h4><p><b>事件名称：</b>${esc(report.event_name)}</p><p><b>首发平台：</b>${esc(report.first_platform)} · <b>首发时间：</b>${esc(report.first_date)}</p><p><b>当前声量：</b>${report.current_volume}条 · <b>最高互动：</b>${report.max_engagement}</p></div>
-    <div class="case-detail-section"><h4>📈 二、传播路径</h4><p>${esc(report.spread_path)}</p></div>
+    <div class="case-detail-section"><h4>${xicon('pin')} 一、事件概述</h4><p><b>事件名称：</b>${esc(report.event_name)}</p><p><b>首发平台：</b>${esc(report.first_platform)} · <b>首发时间：</b>${esc(report.first_date)}</p><p><b>当前声量：</b>${report.current_volume}条 · <b>最高互动：</b>${report.max_engagement}</p></div>
+    <div class="case-detail-section"><h4>${xicon('trend')} 二、传播路径</h4><p>${esc(report.spread_path)}</p></div>
     <div class="case-detail-section" style="background:var(--bg);padding:12px;border-radius:8px;border-left:3px solid var(--primary)"><h4 style="color:var(--primary)">⭐ 三、案例对标（点击跳转案例库）</h4>${(report.matched_cases||[]).map(c=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>{navigateTo('cases');setTimeout(()=>openCaseDetail('${esc(c.id)}'),300)},200)"><span class="case-id" style="font-size:11px">${esc(c.id)}</span> <span class="case-level">${esc(c.level)}</span> <span style="font-weight:600">${esc(c.title)}</span><div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(c.insight||'')}</div></div>`).join('') || '<p style="color:var(--muted)">暂无匹配案例</p>'}</div>
-    <div class="case-detail-section"><h4>👥 四、toC影响</h4><p><b>影响程度：</b>${esc(report.toc_impact)}</p><p>${esc(report.toc_detail)}</p></div>
-    <div class="case-detail-section"><h4>🏢 五、toB影响</h4><p><b>影响程度：</b>${esc(report.tob_impact)}</p><p>${esc(report.tob_detail)}</p></div>
-    <div class="case-detail-section"><h4>🎯 六、综合评级</h4><p style="font-size:18px;font-weight:700">${esc(report.comprehensive_level)}</p></div>
-    <div class="case-detail-section"><h4>💡 七、应对策略（参考案例库启示）</h4><ol style="margin:0;padding-left:20px">${(report.strategies||[]).map(s=>`<li style="margin-bottom:6px">${esc(s)}</li>`).join('')}</ol></div>
-    <div class="case-detail-section" style="color:var(--danger)"><h4>⚠️ 八、风险预警</h4><ul style="margin:0;padding-left:20px">${(report.risk_warnings||[]).map(w=>`<li style="margin-bottom:4px">${esc(w)}</li>`).join('')}</ul></div>
+    <div class="case-detail-section"><h4>${xicon('users')} 四、toC影响</h4><p><b>影响程度：</b>${esc(report.toc_impact)}</p><p>${esc(report.toc_detail)}</p></div>
+    <div class="case-detail-section"><h4>${xicon('building')} 五、toB影响</h4><p><b>影响程度：</b>${esc(report.tob_impact)}</p><p>${esc(report.tob_detail)}</p></div>
+    <div class="case-detail-section"><h4>${xicon('target')} 六、综合评级</h4><p style="font-size:18px;font-weight:700">${esc(report.comprehensive_level)}</p></div>
+    <div class="case-detail-section"><h4>${xicon('bulb')} 七、应对策略（参考案例库启示）</h4><ol style="margin:0;padding-left:20px">${(report.strategies||[]).map(s=>`<li style="margin-bottom:6px">${esc(s)}</li>`).join('')}</ol></div>
+    <div class="case-detail-section" style="color:var(--danger)"><h4>${xicon('warn')} 八、风险预警</h4><ul style="margin:0;padding-left:20px">${(report.risk_warnings||[]).map(w=>`<li style="margin-bottom:4px">${esc(w)}</li>`).join('')}</ul></div>
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="action primary" onclick="closeModal()">关闭</button><button class="action tertiary" onclick="exportSpecialReport()">导出专报</button></div>`;
   openModal();
 }
