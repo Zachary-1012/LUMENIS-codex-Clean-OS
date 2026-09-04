@@ -372,3 +372,8 @@
 | V | 2026-09-04 | 推理效率/模型压缩 | EdgeRazor 混合精度量化+Layer-Adaptive Feature Distillation（1.88-bit 超 2-bit 基线 11.27/解码 15.16×/KV cache 量化）+ Muon 蒸馏抗量化掉点 | arXiv 2601.09865/NextGenTechInsider | ADAPT | ai_channel 轻任务降本候选（IC-032） | 先 Benchmark 验证再决策，不直接换生产模型 | E2 |
 | W | 2026-09-04 | 情绪与传播底层机制 | 情绪唤醒度决定传播（愤怒+0.38/敬畏+0.34/焦虑+0.24/悲伤-0.17）+ 弱关系桥梁 + 传播即自我表达 + 损失厌恶/蔡格尼克 + 负面传播快6倍 | Mental Momentum/大圆镜/人人都是产品经理/北理工学报 | ADOPT | KOS/内容情绪唤醒度评估与舆情风险（IC-033） | 做真实监测分析，不做情绪操控 | E2 |
 | X | 2026-09-04 | 多模态/视觉理解 | VLM-2026 OmniEval 能力分层（静态强/时序因果与开放泛化差 10-25pt）+ MindTopo 静态强于交互规划 | CSDN(VLM-Bench)/微软 Research | ADAPT | 视觉分级模型选型评估（IC-034） | 序境以静态识别为主，勿过度投入时序/规划能力 | E2 |
+
+
+| Y | 2026-09-04 | AI 安全/对齐/Agent 治理 | 对齐三层演进+Agent 分层安全架构（输入→身份→沙箱→输出→审计）+ OWASP Agentic Top10 + EU AI Act 2026 + Reflect/COCOA 新一代对齐 | CSDN/AIF or Anything | ADOPT | AI 治理审计清单（IC-035） | 序境用系统级护栏+人工门控，原则借鉴不训练模型 | E2 |
+| Z | 2026-09-04 | 品牌命名学与语言音义 | 声义学（K/T 硬音=精密、S/M 软音=亲和）+ 文化母体/品类锚定/语义对冲 + 全球语感审计 + 商标强度谱 + AI 发散人类筛选 | Marteker/NAMERS/Identity Makers/Marketful | ADAPT | 英文 Canonical Brand TBD 评估管线（IC-036） | 命名决策权在用户，只作筛选工具 | E2 |
+| AA | 2026-09-04 | 认知科学/记忆机制 | Nemori 事件分割 episode + 预测-校准学习；SYNAPSE 扩散激活图 + fan effect + 侧抑制（结构精度>堆上下文） | arXiv 2508.03341/2601.02744 | ADAPT | 自进化 Agent 记忆参考（IC-037） | 仅研究侧沉淀，不引入重型记忆系统 | E2 |
