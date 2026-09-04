@@ -156,7 +156,7 @@
         <h2 class="modal-title" style="font-size:18px">${esc(c.title || '')}</h2>
         <div class="ms-quick-meta" style="margin:6px 0 12px"><span>${xicon('pin')} ${esc(c.location || '')}</span><span>${xicon('clock')} ${esc(c.time || '')}</span></div>
         <div class="case-detail-section"><h4>${xicon('pin')} 事件经过</h4><p>${esc(c.event || '')}</p></div>
-        <div class="case-detail-section" style="background:var(--bg);padding:12px;border-radius:8px;border-left:3px solid var(--primary)"><h4 style="color:var(--primary)">💡 对太古汇启示</h4><p>${esc(c.taikoo_insight || '')}</p></div>`;
+        <div class="case-detail-section" style="background:var(--bg);padding:12px;border-radius:8px;border-left:3px solid var(--primary)"><h4 style="color:var(--primary)">${xicon('bulb')} 对太古汇启示</h4><p>${esc(c.taikoo_insight || '')}</p></div>`;
 
       // 次要信息折叠
       const secondary =
