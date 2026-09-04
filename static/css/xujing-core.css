@@ -2257,3 +2257,50 @@ body::after {
   color: #c7c7cc;
   font-size: 14px;
 }
+
+/* ================================================================
+   Pure-CSS Status Glyphs（替代emoji状态符号，函数驱动渲染）
+   规则：JS只挂class，视觉由CSS ::before绘制，禁止emoji字符
+   ================================================================ */
+
+/* resident_health: 在线/异常状态点（文字已有"在线/异常"，圆点辅助） */
+.rh-metric-value .check {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+  font-size: 0;
+}
+.rh-metric-value .check::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.6);
+}
+.rh-metric-value.ok .check::before { background: var(--xj-ok, #34c759); }
+.rh-metric-value.fail .check::before { background: var(--xj-err, #ff3b30); }
+
+/* taiji-state: 完成态对勾（纯CSS border绘制，替代✓字符） */
+.tj-glyph-done {
+  display: none;
+  width: 10px;
+  height: 6px;
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg) translateY(-1px);
+}
+.tj-stage.tj-is-done .tj-node .tj-glyph-done { display: inline-block; }
+
+/* zbip-shell: 工作区切换选中对勾 */
+.zb-check::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 5px;
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  color: var(--xj-ok, #34c759);
+}

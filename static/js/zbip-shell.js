@@ -130,7 +130,7 @@
     /* ---- D. 浮层：工作区切换 ---- */
     var wsPop = el('div', 'zb-pop');
     wsPop.innerHTML =
-      popItem('cth', SVG.grid, 'CTH-POMS', '广州太古汇舆情监测系统 · 生产', '<span class="trail zb-check">✓</span>') +
+      popItem('cth', SVG.grid, 'CTH-POMS', '广州太古汇舆情监测系统 · 生产', '<span class="trail zb-check"></span>') +
       popItem('zbmp', SVG.lock, 'ZBMP 品牌监测平台', 'Z-Brand Monitoring Platform · 需密钥', '<span class="trail">密钥</span>');
     document.body.appendChild(wsPop);
     function popItem(key, ico, name, desc, trail) {

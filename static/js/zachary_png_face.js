@@ -30,7 +30,7 @@
       current = current === 'open' ? 'close' : 'open';
       swap(current, false);
     }, INTERVAL);
-    console.log('%c[ZacharyRobot] PNG形象组件加载完成 ✨', 'color:#b86bff;font-weight:bold;');
+    console.log('%c[ZacharyRobot] PNG component loaded', 'color:#b86bff;font-weight:bold;');
   }
 
   function swap(which, instant) {

@@ -10,7 +10,7 @@
  * 交互链路:
  *   GET /api/auth-recovery/summary → {pending_count, tasks:[{id,platform,issue_type,title,description,qr_code_url,recovery_url,expires_at,created_at}]}
  *     → pending_count > 0 && !snoozed(id)
- *     → Modal 弹出: [Header ⚠️ 需要人工验证 (平台)] [Body 任务详情 + recovery_url 外链] [Actions 我已完成验证 | 稍后处理(30min)]
+ *     → Modal 弹出: [Header 需要人工验证 (平台)] [Body 任务详情 + recovery_url 外链] [Actions 我已完成验证 | 稍后处理(30min)]
  *     → 完成: POST /api/auth-recovery/tasks/{id}/complete → 刷新 4 个健康端点 → 关 modal + toast
  *     → 稍后: localStorage ar_snooze_{id}=now+1800 → 关 modal
  * ------------------------------------------------------------------ */

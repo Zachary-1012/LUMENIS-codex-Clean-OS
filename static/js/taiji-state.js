@@ -54,7 +54,7 @@
       node.setAttribute('aria-label', s.label + '，' + ({done:'已完成',active:'进行中',risk:'需关注',todo:'未开始'}[state] || state));
       if (state === 'active') node.setAttribute('aria-current', 'step');
       var idx = el('span', 'tj-idx', String(i + 1));
-      var done = el('span', 'tj-glyph-done', '✓'); // 形状/符号编码，不仅靠颜色
+      var done = el('span', 'tj-glyph-done', ''); // 纯CSS对勾，不仅靠颜色
       node.appendChild(idx); node.appendChild(done);
 
       var label = el('span', 'tj-label', s.label);

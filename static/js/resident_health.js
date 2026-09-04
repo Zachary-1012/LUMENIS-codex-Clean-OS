@@ -118,7 +118,7 @@
         var m2 = el('div', { class: 'rh-metric' });
         m2.appendChild(el('div', { class: 'rh-metric-label', text: 'CDP控制面' }));
         var wsVal = el('div', { class: 'rh-metric-value ' + (info.cdp_ws_ok ? 'ok' : 'fail') });
-        wsVal.appendChild(el('span', { class: 'check', text: info.cdp_ws_ok ? '✓' : '✗' }));
+        wsVal.appendChild(el('span', { class: 'check', text: '' }));
         wsVal.appendChild(document.createTextNode(info.cdp_ws_ok ? '在线' : '异常'));
         m2.appendChild(wsVal);
         metrics.appendChild(m2);
@@ -127,7 +127,7 @@
         m3.appendChild(el('div', { class: 'rh-metric-label', text: '登录态' }));
         var loginOk = info.login_state === 'logged_in';
         var loginVal = el('div', { class: 'rh-metric-value ' + (loginOk ? 'ok' : 'fail') });
-        loginVal.appendChild(el('span', { class: 'check', text: loginOk ? '✓' : '✗' }));
+        loginVal.appendChild(el('span', { class: 'check', text: '' }));
         loginVal.appendChild(document.createTextNode(loginOk ? '已登录' : '未登录'));
         m3.appendChild(loginVal);
         metrics.appendChild(m3);
