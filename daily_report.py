@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 import database as db
 import ai_analyzer
 import intelligence
+import canonical_metrics as cm
 
 
 # ============== 风险指数计算 ==============
@@ -42,9 +43,11 @@ def calculate_risk_index(notes, events, period_days=1):
         return 0.0
 
     total = len(notes)
-    negative = sum(1 for n in notes if n.get('sentiment') == 'negative')
-    high_risk = sum(1 for n in notes if n.get('risk_level') == 'high')
-    medium_risk = sum(1 for n in notes if n.get('risk_level') == 'medium')
+    _sc = cm.sentiment_count(notes)
+    _rc = cm.risk_count(notes)
+    negative = _sc['negative']
+    high_risk = _rc['high']      # Canonical FN-RISK-COUNT：high 不含 critical
+    medium_risk = _rc['medium']
     total_engagement = sum(int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0) * 2
                            for n in notes)
 
@@ -99,8 +102,9 @@ def calculate_brand_health_score(notes, risk_index):
         return 50.0  # 无数据时中性
 
     total = len(notes)
-    positive = sum(1 for n in notes if n.get('sentiment') == 'positive')
-    negative = sum(1 for n in notes if n.get('sentiment') == 'negative')
+    _scb = cm.sentiment_count(notes)
+    positive = _scb['positive']
+    negative = _scb['negative']
     official = sum(1 for n in notes if n.get('is_official') == 1)
 
     # 1. 正面占比 (0-40)
@@ -192,9 +196,11 @@ def generate_today_summary(date_str=None):
     total_found = len(today_notes)
     effective_count = len(effective_notes)
 
-    positive = sum(1 for n in effective_notes if n.get('sentiment') == 'positive')
-    neutral = sum(1 for n in effective_notes if n.get('sentiment') == 'neutral')
-    risk = sum(1 for n in effective_notes if n.get('risk_level') in ('high', 'medium'))
+    _sce = cm.sentiment_count(effective_notes)
+    _rce = cm.risk_count(effective_notes)
+    positive = _sce['positive']
+    neutral = _sce['neutral']
+    risk = _rce['high'] + _rce['medium']   # 风险数=中+高(口径不变;critical独立不计入)
 
     # 今日事件
     events = db.get_events(20)
