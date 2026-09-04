@@ -57,3 +57,15 @@
 
 ## Cross-Surface 一致性目标
 同一(时间/维度/过滤/权限)：首页=表=图=日报/周报/报告=导出=AI 答询，数字必须一致；差异回溯 Function/Metric/Dataset，禁止改展示层凑齐。
+
+## 阶段七：HTTP 跨面一致性测试（2026-09-04 已落地）
+新增 `tests/test_cross_surface_consistency.py`（online）：
+- **a) 同窗口同口径**：`/api/metrics/canonical?date=D` 情感计数 == canonical 直算（复现 `generate_today_summary` 的 effective 口径：主体过滤 accepted 笔记，未跑 AI 过滤时退化为当日全部）。
+- **b) MET-RISK-01/02 存在性**：canonical 出口必须含 `function=FUNC-RISK-*` 与 registry lineage 引用，取值 0-100。
+- **c) 空窗口**：当日无数据返回 0 且 `ok=true`（不伪装、不报错）。
+执行中发现并核实：
+- **口径事实**：`/api/metrics/canonical` 计数基于 **effective 口径**（主体过滤后有效舆情），非全量；全量 vs effective 是 Filter 差异而非算法分叉（指令原则确认）。
+- **API 与 daily_report 同源**：`api_metrics_canonical` 直接消费 `generate_today_summary`（FUNC-RISK-01/02），无第二套业务计算。
+- **测试断言修复**：计数在 JSON `context` 子对象（非顶层）；修正测试读取路径后 3 项全过。
+Evidence：`tests/test_cross_surface_consistency.py` 3 项 online 通过；同文件组回归 26 项 EXIT=0。
+
