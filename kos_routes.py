@@ -2521,6 +2521,112 @@ def _DB():
 
 
 
+
+
+# ============ 专业号接入口（每品牌可选，默认关闭，熔断保护） ============
+
+def _professional():
+    try:
+        import kos_professional as kp
+        return kp
+    except Exception as e:
+        print(f"[KOS] professional module unavailable: {e}")
+        return None
+
+
+@kos_bp.route("/professional/status", methods=["GET"])
+def api_professional_status():
+    """查询某品牌专业号接入状态。未开启返回 disabled。"""
+    try:
+        brand_id = request.args.get("brand_id", "default")
+        platform = request.args.get("platform", "xiaohongshu")
+        kp = _professional()
+        if not kp:
+            return jsonify({"ok": True, "enabled": False, "accounts": [], "module": "unavailable"})
+        accounts = kp.list_accounts(brand_id)
+        enabled = kp.is_enabled(brand_id, platform)
+        return jsonify({"ok": True, "enabled": enabled, "brand_id": brand_id,
+                        "platform": platform, "accounts": accounts})
+    except Exception as e:
+        return jsonify({"ok": False, "enabled": False, "error": str(e)})
+
+
+@kos_bp.route("/professional/enable", methods=["POST"])
+def api_professional_enable():
+    """开启某品牌专业号接入（按钮触发）。"""
+    try:
+        data = request.get_json(silent=True) or {}
+        brand_id = data.get("brand_id", "default")
+        platform = data.get("platform", "xiaohongshu")
+        account_id = data.get("account_id", "")
+        account_name = data.get("account_name", "")
+        verified_type = data.get("verified_type", "")
+        if not account_id:
+            return jsonify({"ok": False, "error": "account_id required"})
+        kp = _professional()
+        if not kp:
+            return jsonify({"ok": False, "error": "module unavailable"})
+        result = kp.enable(brand_id, platform, account_id, account_name, verified_type)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@kos_bp.route("/professional/disable", methods=["POST"])
+def api_professional_disable():
+    """关闭某品牌专业号接入。"""
+    try:
+        data = request.get_json(silent=True) or {}
+        brand_id = data.get("brand_id", "default")
+        platform = data.get("platform", "xiaohongshu")
+        account_id = data.get("account_id", "")
+        kp = _professional()
+        if not kp:
+            return jsonify({"ok": False, "error": "module unavailable"})
+        result = kp.disable(brand_id, platform, account_id)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@kos_bp.route("/professional/import", methods=["POST"])
+def api_professional_import():
+    """导入专业号后台数据（仅开启后可用）。"""
+    try:
+        data = request.get_json(silent=True) or {}
+        brand_id = data.get("brand_id", "default")
+        account_id = data.get("account_id", "")
+        metrics = data.get("metrics", [])
+        source = data.get("source", "import")
+        if not account_id or not metrics:
+            return jsonify({"ok": False, "error": "account_id and metrics required"})
+        kp = _professional()
+        if not kp:
+            return jsonify({"ok": False, "error": "module unavailable"})
+        result = kp.import_metrics(brand_id, account_id, metrics, source)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@kos_bp.route("/professional/metrics", methods=["GET"])
+def api_professional_metrics():
+    """查询专业号指标。未开启返回空列表。"""
+    try:
+        brand_id = request.args.get("brand_id", "default")
+        account_id = request.args.get("account_id", "")
+        start_date = request.args.get("start_date", "")
+        end_date = request.args.get("end_date", "")
+        kp = _professional()
+        if not kp:
+            return jsonify({"ok": True, "metrics": [], "enabled": False})
+        metrics = kp.get_metrics(brand_id, account_id, start_date, end_date)
+        return jsonify({"ok": True, "brand_id": brand_id, "metrics": metrics,
+                        "enabled": kp.is_enabled(brand_id)})
+    except Exception as e:
+        return jsonify({"ok": False, "metrics": [], "error": str(e)})
+
+
 def register_kos_api(app):
 
 

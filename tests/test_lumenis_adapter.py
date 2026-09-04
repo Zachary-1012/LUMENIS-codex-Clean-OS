@@ -80,3 +80,48 @@ def test_no_db_write():
     forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "commit()", "execute("]
     for token in forbidden:
         assert token not in source, "forbidden write token found in adapter: %r" % token
+
+
+def test_repository_registry_snapshot():
+    """ZBC Repository Registry 只读快照：跨平台、不硬编码路径。"""
+    r = lumenis_adapter.repository_registry_snapshot()
+    assert isinstance(r, dict)
+    for k in ("repository_id", "name", "role", "root_path", "git_remote",
+              "default_branch", "current_branch", "current_sha", "runtime",
+              "permissions", "status"):
+        assert k in r, "registry snapshot missing key: %s" % k
+    assert r["repository_id"] == "zbc-production-core"
+    assert r["name"] == "Z-Brand-Core"
+    assert r["role"] == "production"
+    assert r["default_branch"] == "main"
+    assert r["status"] == "active"
+    # root_path 必须是真实存在的目录（不硬编码 D:\）
+    assert os.path.isdir(r["root_path"])
+    assert "permissions" in r
+    assert r["permissions"]["subject_rules"] == "locked_not_bypassable"
+
+
+def test_permission_gate_snapshot():
+    """ZBC Permission Gate 只读快照：11 级权限 + 生产真值保护清单。"""
+    p = lumenis_adapter.permission_gate_snapshot()
+    assert isinstance(p, dict)
+    assert "levels" in p
+    assert "defaults" in p
+    assert "production_truth_protected" in p
+    assert "agent_may_not" in p
+    # 11 级权限
+    expected_levels = ["READ", "AUDIT", "ANALYZE", "RESEARCH", "PLAN",
+                       "PATCH_PREVIEW", "TEST", "VERIFY",
+                       "HUMAN_APPROVAL", "COMMIT", "PUSH"]
+    assert p["levels"] == expected_levels
+    # 默认策略
+    assert p["defaults"]["READ"] == "ALLOW"
+    assert p["defaults"]["HUMAN_APPROVAL"] == "REQUIRED"
+    assert p["defaults"]["COMMIT"] == "BLOCKED_UNTIL_APPROVED"
+    assert p["defaults"]["PUSH"] == "BLOCKED_UNTIL_APPROVED"
+    # 生产真值保护
+    assert "subject_hit()" in p["production_truth_protected"]
+    assert "data/monitor.db" in p["production_truth_protected"]
+    # Agent 禁止清单
+    assert "modify_subject_rules" in p["agent_may_not"]
+    assert "auto_push_main" in p["agent_may_not"]

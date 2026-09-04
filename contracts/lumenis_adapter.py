@@ -125,3 +125,82 @@ def get_production_facts():
         "cwd": os.getcwd(),
         "adapter_version": _ADAPTER_VERSION,
     }
+
+
+def repository_registry_snapshot():
+    """ZBC Repository Registry 只读快照（供 OSAI 双核联调）。
+
+    不硬编码路径，通过 __file__ 动态定位 repo root。
+    跨 Windows/macOS 兼容。
+    """
+    import subprocess
+    repo_root = _ZBC_ROOT
+    def _git(args):
+        try:
+            r = subprocess.run(["git"] + args, cwd=repo_root,
+                               capture_output=True, text=True, timeout=10)
+            return r.stdout.strip() if r.returncode == 0 else ""
+        except Exception:
+            return ""
+    return {
+        "repository_id": "zbc-production-core",
+        "name": "Z-Brand-Core",
+        "role": "production",
+        "root_path": repo_root,
+        "git_remote": _git(["config", "--get", "remote.origin.url"]),
+        "default_branch": "main",
+        "current_branch": _git(["branch", "--show-current"]),
+        "current_sha": _git(["rev-parse", "HEAD"]),
+        "runtime": "python-flask-sqlite",
+        "permissions": {
+            "db_write": "production_only",
+            "subject_rules": "locked_not_bypassable",
+            "agent_commit": "requires_human_approval",
+        },
+        "status": "active",
+    }
+
+
+def permission_gate_snapshot():
+    """ZBC Permission Gate 只读快照。
+
+    声明 ZBC 侧的权限等级与默认策略，供 OSAI Permission Gate 对齐。
+    不实际修改权限，只暴露事实。
+    """
+    return {
+        "levels": [
+            "READ", "AUDIT", "ANALYZE", "RESEARCH", "PLAN",
+            "PATCH_PREVIEW", "TEST", "VERIFY",
+            "HUMAN_APPROVAL", "COMMIT", "PUSH",
+        ],
+        "defaults": {
+            "READ": "ALLOW",
+            "AUDIT": "ALLOW",
+            "ANALYZE": "ALLOW",
+            "RESEARCH": "ALLOW",
+            "PLAN": "ALLOW",
+            "PATCH_PREVIEW": "ALLOW",
+            "TEST": "ALLOW",
+            "VERIFY": "ALLOW",
+            "HUMAN_APPROVAL": "REQUIRED",
+            "COMMIT": "BLOCKED_UNTIL_APPROVED",
+            "PUSH": "BLOCKED_UNTIL_APPROVED",
+        },
+        "production_truth_protected": [
+            "subject_hit()",
+            "SUBJECT_WORDS",
+            "SUBJECT_EXCLUDE_WORDS",
+            "CollectorGuard",
+            "aggregate_events()",
+            "build_daily_report()",
+            "data/monitor.db",
+        ],
+        "agent_may_not": [
+            "modify_subject_rules",
+            "bypass_subject_filter",
+            "delete_production_data",
+            "auto_commit_main",
+            "auto_push_main",
+            "auto_merge",
+        ],
+    }

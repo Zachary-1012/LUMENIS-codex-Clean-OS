@@ -1,9 +1,10 @@
 """Platform capability configuration.
 
 Current production release keeps only the existing XHS collector active through the
-adapter boundary. Douyin is a planned secondary platform and remains disabled until a
-verified, compliant backend is implemented and regression-tested. Other platforms are
-event-monitoring extension points only.
+adapter boundary. Secondary platforms (douyin/instagram/bilibili/weibo/zhihu) have
+v4 engines and main-chain thin wrappers, but remain disabled by default pending
+cookie/proxy verification and E2E validation. Other platforms are event-monitoring
+extension points only.
 """
 
 PLATFORM_CAPABILITIES = {
@@ -24,23 +25,52 @@ PLATFORM_CAPABILITIES = {
         "name": "抖音",
         "enabled": False,
         "priority": "secondary",
-        "planned_capabilities": [
-            "search",
-            "detail",
-            "comments",
-            "replies",
-            "creator",
-            "session_cache",
-            "proxy_pool",
-            "comment_wordcloud",
-        ],
-        "enable_gate": "verified_compliant_backend_plus_regression_tests",
+        "search": True,
+        "detail": False,
+        "comments": False,
+        "creator": False,
+        "session_cache": True,
+        "proxy_pool": True,
+        "enable_gate": "cookie_plus_browser_engine_verified",
     },
     "kuaishou": {"name": "快手", "enabled": False, "priority": "event"},
-    "bilibili": {"name": "B站", "enabled": False, "priority": "event"},
-    "weibo": {"name": "微博", "enabled": False, "priority": "event"},
+    "bilibili": {
+        "name": "B站",
+        "enabled": False,
+        "priority": "secondary",
+        "search": True,
+        "detail": False,
+        "comments": False,
+        "creator": False,
+        "session_cache": True,
+        "proxy_pool": False,
+        "enable_gate": "cookie_plus_engine_verified",
+    },
+    "weibo": {
+        "name": "微博",
+        "enabled": False,
+        "priority": "secondary",
+        "search": True,
+        "detail": False,
+        "comments": False,
+        "creator": False,
+        "session_cache": True,
+        "proxy_pool": False,
+        "enable_gate": "cookie_plus_engine_verified",
+    },
     "tieba": {"name": "贴吧", "enabled": False, "priority": "event"},
-    "zhihu": {"name": "知乎", "enabled": False, "priority": "event"},
+    "zhihu": {
+        "name": "知乎",
+        "enabled": False,
+        "priority": "secondary",
+        "search": True,
+        "detail": False,
+        "comments": False,
+        "creator": False,
+        "session_cache": False,
+        "proxy_pool": False,
+        "enable_gate": "engine_verified_no_cookie_required",
+    },
     "instagram": {
         "name": "Instagram",
         "enabled": False,
