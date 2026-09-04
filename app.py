@@ -4772,9 +4772,37 @@ if __name__=='__main__':
         stab_mon.start_monitoring()
     except Exception as e:
         print(f'[Stability] 稳定性监控启动失败: {e}')
+
+    # 云端 AI 通道 24h 心跳保活（ai_channel；探活走底层传输、不占按次预算）
+    try:
+        import ai_channel as _aic
+        import intelligence as _intel
+        def _ai_channel_ping():
+            try:
+                _out, _prov = _intel._chat('你是序境AI通道心跳探活。只回ok。', 'ping', temperature=0.0, max_tokens=10, timeout=30)
+                return _prov != 'rule'
+            except Exception:
+                return False
+        _aic.start_health_monitor(_ai_channel_ping, interval_sec=int(os.getenv('AI_CHANNEL_HEARTBEAT_SEC', '300') or '300'))
+        print('[AIC] 云端 AI 通道 24h 心跳保活已启动')
+    except Exception as _e:
+        print(f'[AIC] 云端 AI 通道心跳保活启动失败: {_e}')
     
     auth_state='开启' if _auth_enabled() else '关闭（仅建议本机访问）'
     print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{not args.no_scheduler} | HTTP认证：{auth_state}')
+
+# ===== 云端 AI 通道健康（ai_channel） =====
+@app.route('/api/ai/channel-health', methods=['GET'])
+def api_ai_channel_health():
+    """云端 AI 通道多层稳固层健康快照（熔断/心跳/可用性），供前端小 icon 与 24h 监控"""
+    try:
+        import ai_channel as _aic
+        import intelligence as _intel
+        _st = _intel.ai_status()
+        _h = _aic.channel_health(provider=_st.get('provider',''), model=_st.get('model',''))
+        return jsonify({'ok': True, 'enabled': bool(_st.get('enabled')), **{'health': _h}})
+    except Exception as _e:
+        return jsonify({'ok': False, 'error': str(_e)}), 500
 
 # ===== v5.8.0 新增API =====
 

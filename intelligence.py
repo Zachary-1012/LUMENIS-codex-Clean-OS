@@ -4,6 +4,7 @@
 否则自动退回可审计的本地规则智能引擎。外部 API Key 永远不是必需项。
 """
 import json, os, re, urllib.request, urllib.error, time, shutil, platform
+import ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+心跳保活）
 
 _CACHE = {'ts': 0, 'provider': None, 'model': None, 'base': None}
 
@@ -181,9 +182,16 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             if not str(model).lower().startswith('glm-5.3'):
                 payload_obj['thinking'] = {'type': 'disabled'}
             payload = json.dumps(payload_obj, ensure_ascii=False).encode('utf-8')
-        req = urllib.request.Request(base.rstrip('/') + '/chat/completions', data=payload, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key}, method='POST')
-        with opener.open(req,timeout=_to) as resp:
-            data=json.loads(resp.read().decode('utf-8','replace'))
+        # [StableChannel] 云端调用统一走 ai_channel 多层稳固通道（编码转换+重试+熔断+心跳保活）
+        _hdrs = {'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'}
+        try:
+            _body = ai_channel.post_with_retry(
+                base.rstrip('/') + '/chat/completions', payload, _hdrs,
+                timeout=_to, max_attempts=3, opener=opener)
+            data = json.loads(_body[0].decode('utf-8', 'replace'))
+        except Exception as _cexc:
+            print('[AI][StableChannel] request failed:', _cexc)
+            return None, 'rule'
         _msg = data['choices'][0]['message']
         # 优先正式 content；glm-5.3 思考模型若 content 为空，回退 reasoning_content 兜底
         _content = (_msg.get('content') or '').strip() or (_msg.get('reasoning_content') or '').strip()
