@@ -39,5 +39,19 @@
 | report_export.report_engine.py `payload` | 六桶一次 canonical（WRAP-07），保留二次确认/发布日期过滤 | 独立实现，已接入 canonical |
 三套计数均消费 canonical；差异仅在**过滤条件**（严格日期/二次确认），属业务口径而非算法分叉 → 判定同源已收敛，不改数字。
 
+## AI Capability Registry（2026-09-04 智谱 glm-5.3 聚类分析）
+- **传输入口已收敛**：全仓 13 处业务 AI 调用统一走唯一权威 `intelligence._chat/chat`（ai_gateway_v570 已废弃统一、scripts/ai_gateway.py 仅测试脚本），无第二套 AI Gateway → 已收敛 ✓
+- **智谱聚类结论（三大模式，各调用点业务语义独立、已工作正确 → KEEP，不强行重构）**：
+  - Cluster A 问答/对话：app.py:1800 通用对话、app.py:2472 诺米 RAG(检索优先/不编造)、ai_hub:142 数据限定QA、ai_resource_packs:235 按次执行
+  - Cluster B 分析/评分/分类：app.py:2876 舆情情感风险、ai_filter:254 质量过滤、kos_engine:386 KOS评分、ai_hub:179 模块分析
+  - Cluster C 摘要/生成：daily_report 355/649/668、kos_engine:549 回复、learning_collector:373
+- **Pattern 1 Grounded QA（唯一值得关注的共享模式）**：app.py:2472 与 ai_hub:142 共享"仅据给定数据/不编造/检索优先"约束，但各自含特有模板（诺米处置建议模板、ai_hub 模块 hint），收敛收益低、风险中 → 登记 KEEP
+- **参数域**：temperature 0.0~0.4（确定性任务≤0.0 正确）、max_tokens 300~3000（按任务），无高风险不一致 → 归一不作为本轮动作
+- **待办（非本轮）**：高频确定性调用（ai_filter/daily_report 摘要分析）可评估改走 `chat(use_cache=True, pack_id='glm_4_5_air')` 拿分级+缓存收益；per_call 已用尽，glm_4_5_air token 包充足（1191万 token）时再启
+- **Evidence**：调用点清单与智谱分析见本轮 AI 调用点扫描脚本与 `STABLECHANNEL_ZHIPU_20260904.md`
+
+## 已知测试隔离缺陷（登记，不掩盖）
+- `test_ai_channel_flag.py` 与 `test_ai_gateway.py` 同进程共跑会失败：`config.py` 的 `load_dotenv(ENV_FILE, override=True)` 在测试共享进程强灌真实 .env 到 os.environ，破坏 flag 测试对"未配置 Key"场景的模拟。**既有缺陷，非本轮引入**；单跑各自全过。修法需动 config override 行为或给 flag 测试加 autouse 清 Key fixture（影响面较大），暂登记 Backlog，不强行改。
+
 ## Cross-Surface 一致性目标
 同一(时间/维度/过滤/权限)：首页=表=图=日报/周报/报告=导出=AI 答询，数字必须一致；差异回溯 Function/Metric/Dataset，禁止改展示层凑齐。
