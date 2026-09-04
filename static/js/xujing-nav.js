@@ -76,6 +76,7 @@
 
   /* ---- 设置入口（导航底部，系统级功能） ---- */
   var SETTINGS_ENTRY = [
+    { page: 'lifecycle', label: '生命周期', icon: 'refresh', desc: '需求/研究/决策/任务/证据/提交全链路追溯中心' },
     { page: 'settings', label: '设置', icon: 'gear', desc: '系统状态、数据更新、内部浏览器、外观主题、关于序境' }
   ];
 

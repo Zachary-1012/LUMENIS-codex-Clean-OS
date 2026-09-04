@@ -110,6 +110,7 @@ function navigateTo(pageId){
   if(pageId==='event-graph' && typeof V3Modules!=='undefined' && V3Modules.eventGraph) V3Modules.eventGraph.init();
   if(pageId==='brand-report' && typeof V3Modules!=='undefined' && V3Modules.brandReport) V3Modules.brandReport.init();
   if(pageId==='app-evidence' && typeof AppEvidence!=='undefined') AppEvidence.init();
+  if(pageId==='lifecycle' && typeof renderLifecyclePage==='function') renderLifecyclePage();
 }
 function goBack(){
   if(pageHistory.length>1){pageHistory.pop();const prev=pageHistory[pageHistory.length-1];navigateTo(prev);pageHistory.pop()}

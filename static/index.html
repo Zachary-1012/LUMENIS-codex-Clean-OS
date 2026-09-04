@@ -141,7 +141,7 @@
   <!-- 序境 Xujing · Unified Design System v1.0 — 权威令牌/组件/布局/交互层，最高优先级，统一全部历史皮肤 -->
 <style>.xj-ic{display:inline-block;vertical-align:-2px;margin-right:4px;flex:none}</style>
 <!-- 序境 Xujing · 唯一视觉权威层（最后加载，覆盖所有历史皮肤，v5.0.0） -->
-<link rel="stylesheet" href="/static/css/xujing-core.css?v=5.1.0">
+<link rel="stylesheet" href="/static/css/xujing-core.css?v=5.2.0">
 
 <body>
 <!-- 产品启动海报 Splash Screen (CTH-POMS) v3 浅色系 -->
@@ -1202,6 +1202,15 @@
           </div>
         </div>
 
+        <!-- Lifecycle Center 生命周期中心（V3 §21，独立页面，不重构首页） -->
+      <section class="page-view" id="page-lifecycle">
+        <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>生命周期中心</h2><span class="page-header-sub">Requirement → Evidence → Commit 全链路追溯</span></div>
+        <div class="lc-shell">
+          <aside class="lc-cats" aria-label="生命周期分类"></aside>
+          <div class="lc-body"></div>
+        </div>
+      </section>
+
         <!-- 系统设置 -->
       <section class="page-view" id="page-settings">
         <div class="page-header"><button class="back-btn" onclick="goBack()">‹ 返回</button><h2>系统设置</h2></div>
@@ -1387,10 +1396,11 @@
 <!-- 舆情预警浮动通知容器 -->
 <div class="alert-container" id="alertContainer"></div>
 <script src="/static/js/xujing-icons.js?v=1.0.0"></script>
-<script src="/static/js/xujing-nav.js?v=2.1.0"></script>
+<script src="/static/js/xujing-nav.js?v=2.2.0"></script>
 <script src="/static/js/xujing-viz.js?v=2.0.0"></script>
 <script src="/static/js/xj-chat.js?v=2.1.0"></script>
-<script src="/static/js/app.js?v=8.0.5"></script>
+<script src="/static/js/lifecycle-center.js?v=1.0.0"></script>
+<script src="/static/js/app.js?v=8.0.6"></script>
 <script src="/static/js/xujing-ui.js?v=1.0.1"></script>
 <script src="/static/js/xj-reveal.js?v=1.0.0"></script>
 <script src="/static/js/xj-shine.js?v=1.0.0"></script>

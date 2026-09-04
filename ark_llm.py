@@ -28,6 +28,11 @@ MAX_RETRIES = int(os.getenv('ARK_MAX_RETRIES', '3'))
 RETRY_DELAY = int(os.getenv('ARK_RETRY_DELAY', '2'))
 TIMEOUT = int(os.getenv('ARK_TIMEOUT', '60'))
 
+# AI_PROVIDER 主开关守卫：非豆包主力时禁用豆包通道（豆包最小输出硬边界）
+AI_PROVIDER = os.getenv('AI_PROVIDER', 'zhipu').strip().lower()
+PROVIDER_ACTIVE = AI_PROVIDER in ('ark', 'doubao', 'volc', 'doubao-ark')
+
+
 # 数据库路径（使用绝对路径）
 BASE_DIR = Path(__file__).parent
 TOKEN_DB = str(BASE_DIR / 'data' / 'monitor.db')
@@ -86,6 +91,10 @@ def call_ark_api(messages, temperature=0.7, max_tokens=None):
     :return: 响应内容字符串
     """
     # 安全：无 API_KEY 立即明确报错（调用方可见），禁止发空 Bearer 请求
+    if not PROVIDER_ACTIVE:
+        raise RuntimeError(
+            f"ark_channel_disabled: AI_PROVIDER={AI_PROVIDER} (zhipu 主力模式豆包通道禁用，仅 zhipu/glm 走智谱)")
+
     if not API_KEY:
         raise RuntimeError("ARK_API_KEY not configured: set in .env (gitignore-protected) and restart")
 

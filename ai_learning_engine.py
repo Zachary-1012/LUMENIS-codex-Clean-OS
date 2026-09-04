@@ -219,11 +219,16 @@ class WebSentimentSearch:
         self.data_dir = os.path.join(self.base_dir, 'data')
         self.learning_engine = AILearningEngine(base_dir)
         
-        # 尝试导入ark_llm
+        # 尝试导入ark_llm（受 AI_PROVIDER 主开关约束：仅豆包主力模式启用）
+        self.ai_provider = os.getenv('AI_PROVIDER', 'zhipu').strip().lower()
+        self.ark_channel_enabled = self.ai_provider in ('ark', 'doubao', 'volc', 'doubao-ark')
         try:
             import ark_llm
             self.ark_llm = ark_llm
-            self.ai_available = True
+            self.ai_available = self.ark_channel_enabled
+            if not self.ark_channel_enabled:
+                logger.warning(
+                    f"豆包通道已禁用：AI_PROVIDER={self.ai_provider}（智谱主力模式，豆包最小输出）")
         except ImportError:
             self.ark_llm = None
             self.ai_available = False
