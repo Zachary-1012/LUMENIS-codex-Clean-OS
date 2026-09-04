@@ -1,104 +1,83 @@
-# 序境
+# 序境 / LUMENIS
 
-> **序境**  
-> **한국어: 서경**  
-> **English Canonical Brand: TBD**  
-> **品牌哲学：芥子纳须弥· 微小之中本身就包含通向整体的结构。**
+> **中文品牌：序境**  
+> **English Canonical Brand：LUMENIS**  
+> **한국어：서경**  
+> **品牌哲学：芥子纳须弥 · 微小之中本身就包含通向整体的结构。**
 
-## Canonical Naming
+## 1. Product Identity
 
-| Layer | Canonical |
-|---|---|
-| 中文品牌 | **序境** |
-| 韩文品牌 | **서경** |
-| English Canonical Brand | **TBD** |
-| 品牌哲学 | **芥子纳须弥· 微小之中本身就包含通向整体的结构。** |
+**序境智能平台 / LUMENIS Intelligence Platform**  
+**序境智能操作系统 / LUMENIS Intelligence OS**
 
-历史英文名称 `Xujing` / `Xujing Core` / `Xujing Intelligence` 统一标记为 **LEGACY**，仅用于历史兼容、Git 历史、审计或必要技术追溯，不得作为新的 Canonical Brand。
+本仓库 `Z-Brand-Core` 仅为 GitHub Repository identifier，不是产品品牌。
 
-英文 Canonical Brand 在完成命名、全球冲突、语言/文化、商标初筛、数字身份和架构适配审查并获得明确确认前，始终保持 `TBD`。
-
-`Z-Brand-Core` 仅为 GitHub Repository identifier，不等同于中文产品品牌；`Core` 不作为中文正式产品名称。
-
-## Twin Repository
+## 2. Dual-Core Architecture
 
 ```text
-Zachary-OS-AI
-Research & Intelligence
-        │
-        │ Evidence / Contract / Implementation Specification
-        ↓
-Z-Brand-Core
-Production Truth
+LUMENIS Intelligence OS
+│
+├── Intelligence Core
+│   └── Zachary-OS-AI
+│       Research · Intelligence · Agent · Skill · Evaluation · Learning
+│
+├── Production Core
+│   └── Z-Brand-Core
+│       Production · Data · Collection · Domain · Risk · Report · Runtime
+│
+└── Shared Governance
+    Contract · Evidence · Trace · Permission · Lifecycle · AI Gateway · Skill Interface
 ```
 
-本仓库承担 Production Truth：生产代码、生产数据、采集、业务规则、风险、报告、Runtime、测试与发布。Research、Agent 或外部模型输出不得直接改变生产真相。
+两个 Git Repository **保持物理分离**。逻辑上通过明确 Contract、Evidence、Trace、Permission、Lifecycle 与 Adapter 协作；不得复制第三核心，不得为了融合而重写生产核心。
 
-## Integration, Not Rewrite
-
-本基线是对既有产品、架构、功能和规则的**融合升级**，不是推倒重做，不因新研究或新技术随意改版。
+## 3. Canonical Layering
 
 ```text
-Existing Production
-      ↓
-Inventory / Reference Scan / Dependency Scan
-      ↓
-Evaluate New Capability
-      ↓
-KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE
-      ↓
-Regression Test
-      ↓
-Evidence / Audit
-      ↓
-Release
+L0 Experience
+L1 Intelligence
+L2 Capability
+L3 Domain
+L4 Foundation
 ```
 
-处理原则：
-- 已稳定且仍有效的能力 **KEEP**，不重复建设。
-- 新能力只有在正确性、稳定性、性能、维护性、复用、安全或交互质量上有明确收益时才 **MERGE / MIGRATE**。
-- 可融合的旧能力优先改造，不另起一套平行实现。
-- 已被替代、冲突、重复且确认无运行依赖的规则或文件，完成引用/依赖扫描、迁移和回归验证后 **DELETE**。
-- 有审计或证据价值的历史资产仅保留为 **LEGACY / ARCHIVE**，不得继续参与 active implementation。
-- 不以“现代化”或“新技术”作为删除既有生产能力的理由。
+ZBC 主要承担 L3 Domain + L4 Foundation 中的生产能力；OSAI 主要承担 L1 Intelligence + L2 Capability 中的智能与研发能力；共享边界由 Contract 定义。
 
-## Research → Core Gate
+## 4. Production Truth
+
+ZBC 是 Production Truth 的权威持有方，负责：
+
+- 生产数据与数据库
+- 数据采集与来源适配
+- 主体过滤与数据质量
+- 舆情、事件、风险与分析
+- KOS / Campaign 等生产能力
+- 报告与导出
+- API / Runtime / Health / Recovery
+- 生产测试、证据与发布
+
+AI、Agent、Research 或外部模型输出不得直接成为生产真相。
+
+## 5. Protected Production Rules
+
+以下能力为融合升级保护项：
 
 ```text
-Research
-→ Evidence
-→ Contract
-→ Implementation Specification
-→ Core Implementation
-→ Test
-→ Evidence
-→ Audit
-→ Release
+SUBJECT_WORDS
+SUBJECT_EXCLUDE_WORDS
+subject_hit()
+CollectorGuard
 ```
 
-研究成果先验证，再决定是否进入生产；未通过 Gate 的研究成果不得标记为生产能力。
+规则优先于 AI。AI 只能增强分析、分类、摘要、推理与建议，不得绕过主体过滤、安全边界或确定性业务规则。
 
-## Parent / Child Product Architecture
+采集遇到验证码、安全验证、IP 风险或平台限制时，只能按合法平台流程停止、记录、冷却和恢复；不得破解或绕过平台安全机制。
 
-```text
-ZBP = eventual parent system
-CTH = child system/domain + current first development/validation environment
-```
-
-CTH-first development is intentional: implement and stabilize capabilities in CTH first, then absorb proven capabilities into ZBP through audited contracts/adapters/extraction. Final capability ownership is determined by dependency, reuse, data authority, runtime importance, business coverage, stability and measured benefit—not naming alone.
-
-## Architecture Evolution Gate
-
-Architecture may evolve only when evidence demonstrates a material improvement in correctness, stability, performance, maintainability, reuse, security or interaction quality. No rewrite-by-fashion. Stable collection and authoritative subject filtering must not be weakened merely for modernization.
-
-## Data Intelligence Pipeline
-
-所有外部数据和生产分析遵循统一链路：
+## 6. Data Truth Chain
 
 ```text
 External Data
-→ Ingestion
-→ Raw / Evidence
+→ Evidence / Raw
 → Parse
 → Validate
 → Normalize
@@ -107,57 +86,78 @@ External Data
 → Metric
 → Canonical Table / Truth Surface
 → View Model
-→ Visualization
-→ UI / Report / Export / AI
+→ Visualization / Report / Export / AI
 ```
 
-核心规则：
-- 外部输入先进入 Evidence / Data 层，不直接成为生产真相。
-- 一个业务计算只允许一个 Canonical Function / Formula。
-- 核心 Metric 统一口径、版本和时间窗口。
-- Canonical Table 是数字 Truth Surface。
-- Chart、UI、Report、Export、AI 消费 Canonical 输出，不自行重新计算业务指标。
-- 核心数据必须具备来源、Evidence、Lineage、Freshness 与异常状态。
-- `0`、`NULL/UNKNOWN`、`NOT_AVAILABLE`、`STALE`、`ERROR` 不得混用。
+一个业务计算只允许一个 Canonical Function / Formula；UI、Chart、Report、Export 与 AI 不得自行重算核心业务指标。`0`、`NULL/UNKNOWN`、`NOT_AVAILABLE`、`STALE`、`ERROR` 必须区分。
 
-## Product / System Naming Standard
+## 7. Intelligence Boundary
 
-生产产品的中文 Canonical 名称为 **序境**，韩文标准表达为 **서경**，英文 Canonical Brand 暂为 **TBD**。
+Research → Evidence → Contract → Implementation Specification → Production Implementation → Test → Evidence → Audit → Release
 
-产品、子系统、模块、工作流与功能名称必须服从 Canonical Registry；不得自行创造第三套品牌命名。
+禁止 `AI / Agent → 直接修改 Production Truth`。
 
-## Core Responsibilities
+重要 AI 结论应保留模型、提示词、输入、输出、置信度、最终结果及人工修正等必要追踪信息。
 
-- 生产代码与生产数据库
-- 数据采集与来源适配
-- 主体过滤与数据质量
-- 舆情、事件、风险与分析
-- KOS / Campaign 等生产能力
-- 报告与数据导出
-- API、Runtime、Health、Recovery
-- 测试、证据与发布
+## 8. Engineering Governance
 
-## KOS / Production Intelligence
-
-KOS 属于正式生产能力，沿用现有业务口径、数据表、指标和判定规则。新增研究或计算能力必须接入 Canonical Function / Metric / Table 链路，不得建立平行 KOS 真相。
-
-## AI Boundary
-
-AI 是生产能力增强层，不得绕过核心规则成为 Production Truth 的最终裁决者。重要 AI 结论必须能够追溯至证据，并记录必要的模型、提示词、输入、输出、置信度、最终结果及人工修正信息。
-
-## UI / Interaction
+统一研发生命周期：
 
 ```text
-Shell → Workspace → Product / Domain → Module → Page → Section → Component → Window / Action
+DISCOVER → REQUIREMENT → RESEARCH → EVIDENCE → DECISION
+→ ARCHITECTURE → IMPLEMENT → TEST → VERIFY → RELEASE
+→ OPERATE → MONITOR → LEARN → IMPROVE → RETIRE
 ```
 
-Window 和 route state 保留必要的 parent context、target、child context 与 return context。动态交互与可视化遵循同一层级。
+Agent 执行闭环：
 
-统一 UI/UX 标准继续沿用既有 Design Language；新能力必须融入现有系统，而不是另建视觉或交互体系。
+```text
+READ → AUDIT → ANALYZE → PLAN → PATCH PREVIEW
+→ TEST → VERIFY → HUMAN APPROVAL → COMMIT → PUSH
+```
 
-## File Governance
+内部工程循环必须有边界：
 
-正式文件必须归属于明确模块：
+```text
+INSPECT → PLAN → EXECUTE → VERIFY → REPAIR → VERIFY → EVIDENCE → EVALUATE
+```
+
+必须具备最大迭代次数、最大运行时间、checkpoint、failure / blocked / budget 状态。禁止无限循环、自动绕过审批、自动 Merge 或未经授权 Push。
+
+## 9. Repository / Permission Governance
+
+Repository 必须通过 Registry / Resolver 发现，不得依赖个人机器固定路径，例如 `D:\Taikoo-monitor-new`。
+
+标准权限：
+
+`READ / AUDIT / ANALYZE / RESEARCH / PLAN / PATCH_PREVIEW / TEST / VERIFY / HUMAN_APPROVAL / COMMIT / PUSH`
+
+默认可分析和测试；生产写入、Commit、Push 必须经过明确人工批准。
+
+## 10. Skill Governance
+
+Skill 通过统一 Skill Contract / Registry / Router 管理。Skill 必须定义输入、输出、权限、副作用、Evidence、Evaluation 与 Lifecycle。
+
+第一阶段优先建设真实可运行的基础 Skill，而不是制造大量空壳；目标能力规模可逐步扩展至完整 Skill Registry。
+
+## 11. UI / UX
+
+统一采用 LUMENIS Design Language：专业、克制、高信息密度、清晰层级、数据/证据优先。
+
+```text
+Intelligence
+Production
+Research
+Operations
+```
+
+为主 Workspace 信息架构。UI 遵循 Design Token、Component Contract、真实 API / State Contract，不使用假数据证明功能完成。
+
+视觉基线：Apple-inspired、微光银 Signature、克制 Liquid Glass；Glass-on-Glass 禁止；正式图标使用线性图标，不使用 Emoji；支持 Light / Dark、Reduce Motion / Transparency；数据动效仅响应真实数据变化。
+
+## 12. File Governance
+
+正式资产按职责归类：
 
 ```text
 00-GOVERNANCE/
@@ -172,59 +172,22 @@ Window 和 route state 保留必要的 parent context、target、child context �
 99-ARCHIVE/
 ```
 
-资产状态统一使用：`KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE`。
+资产状态：`KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE`。
 
-任何 Rename / Migration / Delete 必须先做 Reference / Dependency / Runtime verification，再进行迁移、回归测试与 Audit。无用、冲突、重复、已被替代且无生产依赖的 active 规则和文件不得继续保留为当前规范。
+任何 Rename / Migration / Delete 必须先完成 Reference / Dependency / Runtime verification、迁移与回归测试。旧规则、旧代码、旧 UI 或旧文档**不得因为新架构出现就直接删除**；只有完成替代、依赖迁移、验证和明确批准后才能 DELETE。
 
-## Protected Production Rules
+## 13. README / Governance Authority
 
-以下既有生产能力为保护项，不得因融合升级而削弱：
+本 README 是仓库入口说明，不替代详细治理规则。
 
-```text
-SUBJECT_WORDS
-SUBJECT_EXCLUDE_WORDS
-subject_hit()
-```
+最高治理文件：
 
-采集遇到风控、验证码、平台安全限制或异常状态时，遵守现有安全边界，不以绕过平台安全机制换取采集结果。
+`00-GOVERNANCE/LUMENIS-ENGINEERING-GOVERNANCE-V1.0.md`
 
-## Release & Acceptance Gate
+若历史文档与当前 Governance 冲突，以最新实际源码 + 最新 Governance + Contract 为准；历史资产保留时必须明确 `LEGACY / ARCHIVE` 状态。
 
-```text
-Function
-→ Data
-→ Metric
-→ UI / Table / Chart
-→ Report / Export
-→ AI
-→ Stability / Recovery
-→ Security
-→ Regression
-→ Evidence
-→ Audit
-→ Release
-```
+## 14. Current Status
 
-上线硬门槛：
-- P0 核心流程 100% 通过
-- 核心数据 Schema / Function / Metric 验证通过
-- 核心 UI / Table / Chart / Report 数值一致
-- 核心数据 Evidence / Lineage 可追溯
-- Critical / Blocker = 0
-- 核心故障可发现、可记录、可恢复或升级处理
-- 发布前必须具备回滚路径
+当前属于 **LUMENIS Dual-Core Convergence** 阶段。文档、Contract、Skill、Frontend、Runtime 等状态必须以实际源码和测试证据为准；规划项不得写成已完成能力。
 
-## Current Principle
-
-- 序境是 Production Truth；序境-智能是 Research & Intelligence。
-- 不建立第三核心库，不复制生产真相。
-- 新能力采用融合、改造、迁移优先，不进行无依据的重写。
-- 研究不直接写 Production Truth；AI 不替代确定性安全规则和人工决策 Gate。
-- 不把未来概念写成当前已实现能力。
-- 不让新模块脱离 Canonical Registry 独立生长。
-- 不以英文品牌研究提前修改仓库名或生产架构。
-- 英文 Canonical Brand 未确认前始终为 `TBD`。
-- 每次更新都必须继承累计基线，先扫描既有依赖，再处理新增能力。
-- 无用、冲突、重复、已被替代的 active 规则和文件，在安全迁移及回归验证后删除。
-
-**Status: Active · Production Truth · Governed by Canonical Naming, Cumulative Architecture Baseline & Twin Repository Synchronization**
+**Status: Active · Production Core · LUMENIS Dual-Core Architecture**
