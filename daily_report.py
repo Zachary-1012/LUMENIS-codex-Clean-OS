@@ -352,7 +352,8 @@ def _ai_summarize_event(event, notes):
 '''
     user = json.dumps({'event': event.get('title', ''), 'mentions': sample}, ensure_ascii=False)
 
-    raw, provider = intelligence._chat(system, user, 0.0, 600)
+    raw, provider, _ = intelligence.chat(system, user, level='low', use_cache=True,
+                                         temperature=0.0, max_tokens=600, pack_id='glm_4_5_air')
     data = intelligence._json_from_text(raw)
     if data:
         data['provider'] = provider

@@ -251,7 +251,8 @@ def _ai_deep_review(note, quality_score):
 '''
     user = f'标题：{title}\n正文：{content[:3000]}\n内容质量分：{quality_score}'
 
-    raw, provider = intelligence._chat(system, user, 0.0, 500)
+    raw, provider, _ = intelligence.chat(system, user, level='low', use_cache=True,
+                                        temperature=0.0, max_tokens=500, pack_id='glm_4_5_air')
     data = intelligence._json_from_text(raw)
     if not data:
         return None

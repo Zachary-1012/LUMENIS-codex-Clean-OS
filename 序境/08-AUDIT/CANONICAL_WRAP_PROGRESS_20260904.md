@@ -14,6 +14,7 @@
 | 07 | report_export/report_engine.py `payload` | 六桶（6 次 cnt→一次） | cnt 通用兜底、二次确认、发布日期过滤 | 四周期六桶全等 | PRODUCTION-VERIFIED | 5e48944 |
 | 08 | app.py 三处：`/api/report/v2`、品牌详情、`/api/report/daily` | 情感三桶+high | v2 的 negative_count 取二次确认集合、品牌 neutral=total-pos-neg 差额法、daily 的 high 在负面子集计 | 表达式等价+34 回归+生产三路由 HTTP(stats 正常) | PRODUCTION-VERIFIED | c195c05 |
 | 09 | kos_attribution.py 两处 | 等权四字段聚合/per_field/单条（FN-ENGAGEMENT） | 时间衰减权重、reach_score、KOS 业务评分不动 | Top5 真实 KOS 等价(9895/6397/3343/10272/543)+70 KOS 测试 | PRODUCTION-VERIFIED(待重载) | 本次 |
+| 10 | ai_filter `_ai_deep_review` + daily_report 事件摘要 | 高频确定性 AI 调用接 chat(level='low', use_cache=True, pack_id='glm_4_5_air')（分级超时+缓存命中省 token） | temp=0.0/max_tokens 500/600 口径不变;per_call 不占、token 包记账;review_note 仍走默认 per_call(既有) | 24 报告测试+真实两级验证(cache 命中 0.00s、zhipu 2.75s→0.00s) | PRODUCTION-VERIFIED(待重载) | 本次 |
 | — | brand_stats_recompute.py | 巡检已先行 WRAP（含 Canonical==旧口径前置断言） | — | 复核一致 | 已完成（巡检） | 巡检 |
 
 ## 审计后判定 KEEP（不是漏做，是无需/不应改）
