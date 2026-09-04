@@ -10,73 +10,77 @@
 
   var XNAV_DEFAULT_PAGE = 'overview';
 
-  /* ---- 六大场景 IA 数据表（唯一权威） ---- */
+  /* ---- 六大域 IA 数据表（唯一权威，依据 UI-FINAL-CAPABILITY-MAP.md） ---- */
   var NAV_IA = [
-    /* ===== 场景 1：品牌健康 ===== */
+    /* ===== 域 1：工作台 Console ===== */
     {
-      domain: '品牌健康',
-      domainIcon: 'heart',
+      domain: '工作台',
+      domainIcon: 'chat',
       items: [
         { page: 'overview', label: '智能问答', icon: 'chat', desc: 'AI驱动的舆情查询、风险判断、品牌分析' },
-        { page: 'brands', label: '品牌声量', icon: 'building', desc: '品牌声量与趋势追踪、品牌健康度评分' },
-        { page: 'monitor', label: '口碑情感', icon: 'search', desc: '口碑与情感分析、情感分布、内容分类' }
+        { page: 'brand-dashboard', label: '品牌声量', icon: 'building', desc: '品牌声量与趋势追踪、品牌健康度评分' },
+        { page: 'monitor', label: '监测概览', icon: 'search', desc: '口碑与情感分析、情感分布、内容分类' }
       ]
     },
-    /* ===== 场景 2：Campaign ===== */
+    /* ===== 域 2：监测采集 Collect ===== */
     {
-      domain: 'Campaign',
-      domainIcon: 'megaphone',
-      items: [
-        { kind: 'link', id: 'topic-campaign-entry-v573', href: '/topic-campaign', label: '活动追踪', icon: 'megaphone', desc: 'Campaign 全周期追踪、话题活动入口' },
-        { page: 'events', label: '内容表现', icon: 'trend', desc: '内容表现对比、事件聚合、传播路径' },
-        { page: 'calendar', label: '复盘归因', icon: 'calendar', desc: 'Campaign 复盘与归因、舆情日历' }
-      ]
-    },
-    /* ===== 场景 3：KOS 运营 ===== */
-    {
-      domain: 'KOS 运营',
-      domainIcon: 'users',
-      items: [
-        { page: 'kos', label: 'KOS 矩阵', icon: 'users', desc: 'KOS 矩阵管理与分级、账号资产' },
-        { page: 'notes', label: '内容质量', icon: 'list', desc: '内容质量与转化评估、笔记搜索' },
-        { page: 'official', label: '销售线索', icon: 'news', desc: '销售线索追踪、官方动态采集' }
-      ]
-    },
-    /* ===== 场景 4：舆情事件 ===== */
-    {
-      domain: '舆情事件',
-      domainIcon: 'trend',
-      items: [
-        { page: 'events', label: '事件检测', icon: 'trend', desc: '突发事件实时检测、事件热度' },
-        { page: 'event-graph', label: '生命周期', icon: 'link', desc: '事件生命周期追踪、关键节点' },
-        { page: 'calendar', label: '影响评估', icon: 'calendar', desc: '事件影响范围评估、舆情日历' }
-      ]
-    },
-    /* ===== 场景 5：危机预警 ===== */
-    {
-      domain: '危机预警',
-      domainIcon: 'warn',
+      domain: '监测采集',
+      domainIcon: 'satellite',
       items: [
         { page: 'alerts', label: '实时监测', icon: 'warn', desc: '负面舆情实时监测、高风险预警', badgeId: 'sideRisk' },
         { page: 'negative', label: '风险评估', icon: 'shield', desc: '风险等级自动评估、负面二次确认', badgeId: 'sideNegative' },
-        { page: 'analysis', label: '处置复盘', icon: 'chart', desc: '处置建议与复盘、近14天趋势' }
+        { page: 'resident-health', label: '采集状态', icon: 'refresh', desc: '采集器健康、调度状态、最后成功时间' }
       ]
     },
-    /* ===== 场景 6：专题研究 ===== */
+    /* ===== 域 3：事件/笔记/报告 Insights ===== */
     {
-      domain: '专题研究',
-      domainIcon: 'bulb',
+      domain: '事件笔记报告',
+      domainIcon: 'doc',
       items: [
-        { page: 'analysis', label: '深度研究', icon: 'chart', desc: '自定义主题深度研究、行业趋势' },
-        { page: 'brands', label: '竞品策略', icon: 'building', desc: '竞品策略分析、品牌业态对比' },
-        { page: 'reports', label: '报告生成', icon: 'doc', desc: '研究报告自动生成、日报/周报/月报' }
+        { page: 'events', label: '事件检测', icon: 'trend', desc: '突发事件实时检测、事件热度与聚合' },
+        { page: 'event-graph', label: '事件图谱', icon: 'link', desc: '事件生命周期追踪、传播路径与关键节点' },
+        { page: 'notes', label: '笔记库', icon: 'list', desc: '内容质量与转化评估、笔记搜索与筛选' },
+        { page: 'reports', label: '报告生成', icon: 'doc', desc: '日/周/月/专题报告自动生成与导出' },
+        { page: 'calendar', label: '舆情日历', icon: 'calendar', desc: 'Campaign复盘与归因、舆情时间线' }
+      ]
+    },
+    /* ===== 域 4：Zachary AI ===== */
+    {
+      domain: 'Zachary AI',
+      domainIcon: 'bot',
+      items: [
+        { page: 'analysis', label: '深度研究', icon: 'chart', desc: '自定义主题深度研究、行业趋势分析' },
+        { page: 'knowledge-base', label: '知识库', icon: 'book', desc: '品牌知识、案例库、研究成果沉淀' },
+        { page: 'case-analysis', label: '案例分析', icon: 'bulb', desc: '典型案例深度拆解、方法论提炼' }
+      ]
+    },
+    /* ===== 域 5：品牌库 Brand(ZBMP) ===== */
+    {
+      domain: '品牌库',
+      domainIcon: 'hanger',
+      items: [
+        { page: 'kos', label: 'KOS 矩阵', icon: 'users', desc: 'KOS矩阵管理与分级、账号资产盘点' },
+        { page: 'brands', label: '品牌管理', icon: 'building', desc: '品牌档案、业态对比、竞品策略分析' },
+        { page: 'official', label: '销售线索', icon: 'news', desc: '销售线索追踪、官方动态采集' },
+        { page: 'cases', label: '案例库', icon: 'trophy', desc: '营销案例卡片、详情下钻与复盘' }
+      ]
+    },
+    /* ===== 域 6：系统 System ===== */
+    {
+      domain: '系统',
+      domainIcon: 'gear',
+      items: [
+        { page: 'evidence', label: '证据看板', icon: 'shield', desc: '采集证据、审计日志、操作追溯' },
+        { page: 'lifecycle', label: '生命周期', icon: 'refresh', desc: '需求/研究/决策/任务/证据/提交全链路追溯' },
+        { page: 'settings', label: '设置', icon: 'gear', desc: '系统状态、数据更新、内部浏览器、外观主题' }
       ]
     }
   ];
 
+  /* ---- 设置入口  ];
+
   /* ---- 设置入口（导航底部，系统级功能） ---- */
   var SETTINGS_ENTRY = [
-    { page: 'lifecycle', label: '生命周期', icon: 'refresh', desc: '需求/研究/决策/任务/证据/提交全链路追溯中心' },
     { page: 'settings', label: '设置', icon: 'gear', desc: '系统状态、数据更新、内部浏览器、外观主题、关于序境' }
   ];
 
@@ -119,23 +123,6 @@
       html += '</div>';
       html += '</div>';
     });
-
-    // 分隔线
-    html += '<div class="nav-divider"></div>';
-
-    // 设置入口
-    html += '<div class="nav-domain nav-settings">';
-    html += '<div class="nav-domain-items">';
-    SETTINGS_ENTRY.forEach(function (item) {
-      var active = (item.page && item.page === XNAV_DEFAULT_PAGE) ? ' active' : '';
-      var iconHtml = (item.icon && typeof xicon === 'function') ? xicon(item.icon, 16, 'nav-item-icon') : '';
-      html += '<div class="nav-item' + active + '" data-page="' + item.page + '" title="' + (item.desc || '') + '">';
-      html += iconHtml;
-      html += '<span class="nav-item-label">' + item.label + '</span>';
-      html += '</div>';
-    });
-    html += '</div>';
-    html += '</div>';
 
     container.innerHTML = html;
 
