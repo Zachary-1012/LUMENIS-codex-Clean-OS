@@ -16,7 +16,7 @@
   --xj-border-strong: #d1d1d6;
   --xj-text-primary: #18181b;
   --xj-text-secondary: #52525b;
-  --xj-text-tertiary: #a1a1aa;
+  --xj-text-tertiary: #8a8a93; /* 对比度修正 on 白≥3:1 (WCAG 1.4.3) */
   --xj-text-inverse: #fafafa;
 
   /* 语义色 — 仅用于状态标识，不大面积铺色 */

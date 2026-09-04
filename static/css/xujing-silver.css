@@ -20,7 +20,7 @@
   --xj-ink-mute:   #84909c;   /* 弱化文字 */
   /* ---- 状态语义 token（细线体系统一状态色） ---- */
   --xj-ok:   #3e7c5b;
-  --xj-warn: #c8a24b;
+  --xj-warn: #b08a30; /* 对比度修正 on 白≥3:1 (WCAG 1.4.3) */
   --xj-err:  #c94f4f;
   --xj-unk:  #9aa5b3;
   /* ---- 微光银流光带（斜向，银灰，不深） ---- */
@@ -153,4 +153,43 @@
     opacity: 1 !important; transform: none !important;
     transition: none !important;
   }
+}
+
+/* =============================================================================
+ * v1.2 · 微光银增强（用户 2026-09：更亮白/银 + 海浪波纹划过 + 方向随机表驱动）
+ *  - 光带更亮、更白（海浪波峰线排成浪涌），沿 --xj-shine-x0/y0→x1/y1 随机方向扫过
+ *  - 方向/时长由 xj-shine.js 数据表驱动（每卡随机），禁写死单一方向
+ * ========================================================================== */
+.xj-card-silver::after {
+  inset: -90%;
+  background: repeating-linear-gradient(102deg,
+      transparent 0 30px,
+      rgba(255,255,255,.14) 30px 38px,
+      rgba(255,255,255,.46) 38px 46px,
+      rgba(255,255,255,.85) 46px 50px,
+      rgba(255,255,255,.46) 50px 58px,
+      rgba(255,255,255,.14) 58px 66px,
+      transparent 66px 122px);
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+.xj-card-silver.is-live::after {
+  animation: xj-wave-move 6.8s cubic-bezier(.4,0,.2,1) infinite;
+}
+@keyframes xj-wave-move {
+  0%, 5%    { opacity: 0; transform: translate(var(--xj-shine-x0, -70%), var(--xj-shine-y0, 0)); }
+  14%, 40%  { opacity: .82; }
+  52%, 100% { opacity: 0; transform: translate(var(--xj-shine-x1, 30%), var(--xj-shine-y1, 0)); }
+}
+
+/* ---- Touch Target 应用：图标按钮/关闭符扩命中区（WCAG 2.5.8，视觉保持小图标） ---- */
+.modal-close, .icon-button, .zachary-chat-close, .btn-icon,
+.alert-close, .health-close-btn, .negative-close-btn, .negative-close-btn2,
+.daily-close-btn, .daily-close-btn2, .modal-close-btn, .zb-sheet-close,
+.ai-gov-close, .ai-pack-close, .xhs-login-close, .link-selector-close {
+  min-width: var(--xj-touch-target);
+  min-height: var(--xj-touch-target);
+}
+@media (prefers-reduced-motion: reduce) {
+  .xj-card-silver::after { animation: none !important; opacity: 0 !important; }
 }
