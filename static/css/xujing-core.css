@@ -508,3 +508,92 @@ button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-vis
   .sidebar .side-item.active { background: #f0f2f5; color: #1a1d23; }
   .xj-metal-card { background: linear-gradient(180deg, #2a2f38, #22262e); border-color: rgba(255,255,255,.1); }
 }
+
+
+/* ============================================================
+ * 16. 可视化组件样式（xujing-viz.js 配套）
+ * KPI 卡片 / 趋势图 / 环形图 / 数据表格
+ * ============================================================ */
+
+/* KPI 卡片行 */
+.xj-kpi-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px; margin-bottom: 14px;
+}
+.xj-kpi-card {
+  background: linear-gradient(180deg, #ffffff, #f8f9fb);
+  border: 1px solid rgba(180,188,200,.3);
+  border-radius: 12px; padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(20,24,32,.04);
+  transition: box-shadow .25s ease, transform .25s ease;
+}
+.xj-kpi-card:hover {
+  box-shadow: 0 4px 14px rgba(20,24,32,.08);
+  transform: translateY(-1px);
+}
+.xj-kpi-label {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .5px;
+  text-transform: uppercase; color: #8b91a0; margin-bottom: 4px;
+}
+.xj-kpi-value {
+  font-size: 24px; font-weight: 700; color: #1a1d23;
+  letter-spacing: -.5px; line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.xj-kpi-value.xj-kpi-pos { color: #2f9e6e; }
+.xj-kpi-value.xj-kpi-neg { color: #c0463a; }
+.xj-kpi-value.xj-kpi-warn { color: #c98a1f; }
+.xj-kpi-sub { font-size: 11px; color: #aeb4bf; margin-top: 2px; }
+
+/* 趋势图容器 */
+.xj-trend-container {
+  background: rgba(255,255,255,.7);
+  border: 1px solid rgba(180,188,200,.25);
+  border-radius: 12px; padding: 10px 12px; margin-bottom: 14px;
+  overflow: hidden;
+}
+.xj-trend-svg { display: block; width: 100%; height: auto; }
+
+/* 环形图容器 */
+.xj-donut-container {
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.7);
+  border: 1px solid rgba(180,188,200,.25);
+  border-radius: 12px; padding: 12px; margin-bottom: 14px;
+}
+.xj-donut-svg { display: block; }
+
+/* 数据表格 */
+.xj-data-table {
+  width: 100%; border-collapse: collapse; font-size: 12.5px;
+  background: rgba(255,255,255,.8); border-radius: 10px; overflow: hidden;
+}
+.xj-data-table thead th {
+  text-align: left; padding: 9px 12px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .5px;
+  text-transform: uppercase; color: #8b91a0;
+  background: #f4f5f7; border-bottom: 1px solid #e8eaee;
+}
+.xj-data-table tbody td {
+  padding: 9px 12px; border-bottom: 1px solid #f0f2f5; color: #3a3f48;
+}
+.xj-data-table tbody tr:last-child td { border-bottom: none; }
+.xj-data-table tbody tr:hover { background: #f8f9fb; }
+
+/* 空状态 */
+.xj-empty {
+  text-align: center; padding: 24px; color: #aeb4bf; font-size: 13px;
+}
+
+/* 可视化面板整体 */
+.xj-viz-panel {
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(180,188,200,.2);
+  border-radius: 14px; padding: 14px;
+  backdrop-filter: blur(8px);
+}
+.xj-viz-panel-title {
+  font-size: 13px; font-weight: 700; color: #1a1d23;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.xj-viz-panel-title .xj-dot { width: 6px; height: 6px; }

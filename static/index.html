@@ -1386,6 +1386,7 @@
 <div class="alert-container" id="alertContainer"></div>
 <script src="/static/js/xujing-icons.js?v=1.0.0"></script>
 <script src="/static/js/xujing-nav.js?v=1.0.0"></script>
+<script src="/static/js/xujing-viz.js?v=1.0.0"></script>
 <script src="/static/js/app.js?v=8.0.5"></script>
 <script src="/static/js/xujing-ui.js?v=1.0.1"></script>
 <script src="/static/js/xj-reveal.js?v=1.0.0"></script>
@@ -2064,4 +2065,32 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script src="/static/js/xujing-i18n.js"></script>
     <script src="/static/js/xujing-crossfilter.js?v=1.0.0"></script>
+
+<!-- 序境实时可视化初始化（xujing-viz.js） -->
+<script>
+(function(){
+  function initXjViz(){
+    if(!window.xjViz){setTimeout(initXjViz,200);return;}
+    var body=document.querySelector('.right-panel-body');
+    if(!body){setTimeout(initXjViz,300);return;}
+    // 注入可视化面板容器
+    var panel=document.getElementById('xjVizPanel');
+    if(!panel){
+      panel=document.createElement('div');
+      panel.id='xjVizPanel';
+      panel.className='xj-viz-panel';
+      panel.innerHTML='<div class="xj-viz-panel-title"><span class="xj-dot xj-dot-ok"></span>实时数据看板</div><div id="xjVizContent"></div>';
+      body.insertBefore(panel,body.firstChild);
+    }
+    var content=document.getElementById('xjVizContent');
+    // 首次渲染 + 30s 实时更新
+    xjViz.realtime(content,'/dashboard/all',30000,function(el,data){
+      xjViz.renderAIPanel(el,data);
+    });
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initXjViz);}
+  else{initXjViz();}
+})();
+</script>
+
 </body></html>
