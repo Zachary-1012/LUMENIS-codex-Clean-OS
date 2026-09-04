@@ -367,3 +367,8 @@
 | S | 2026-09-04 | 商业可成长性与品牌理论 | 库克/苹果 15 年增长（定品类-追需求-放大心智/供应链极致/第二曲线/生态护城河/价值观/NPS+DRI/接班人体系） | 36氪/虎嗅/Apple Newsroom/新浪 | ADAPT | KOS运营评价维度（IC-029） | 不照搬体量，取心智复利/推荐/责任化机制 | E2 |
 | T | 2026-09-04 | 深度访谈方法论 | 凉子访谈录八步 SOP/故事-情绪-观点/受访者三标准/奇真原则/教练式三层聆听 | 混沌学园/腾讯新闻/群智教练 | ADOPT | 播客生产流程与嘉宾甄选（IC-030） | 真实靠人工现场，不模板化套路 | E2 |
 | U | 2026-09-04 | 数据治理/数据工程 | Canonical Data Mesh（data as product/治理内建/lineage 全链路）+ Agentic 时代 Unity AI Gateway + OpenSharing | Canonical/Zenodo(Databricks 2026) | ADAPT | AI Semantic Layer 运行时裁决（IC-031） | 不引入重型数据平台，取核心机制 | E2 |
+
+
+| V | 2026-09-04 | 推理效率/模型压缩 | EdgeRazor 混合精度量化+Layer-Adaptive Feature Distillation（1.88-bit 超 2-bit 基线 11.27/解码 15.16×/KV cache 量化）+ Muon 蒸馏抗量化掉点 | arXiv 2601.09865/NextGenTechInsider | ADAPT | ai_channel 轻任务降本候选（IC-032） | 先 Benchmark 验证再决策，不直接换生产模型 | E2 |
+| W | 2026-09-04 | 情绪与传播底层机制 | 情绪唤醒度决定传播（愤怒+0.38/敬畏+0.34/焦虑+0.24/悲伤-0.17）+ 弱关系桥梁 + 传播即自我表达 + 损失厌恶/蔡格尼克 + 负面传播快6倍 | Mental Momentum/大圆镜/人人都是产品经理/北理工学报 | ADOPT | KOS/内容情绪唤醒度评估与舆情风险（IC-033） | 做真实监测分析，不做情绪操控 | E2 |
+| X | 2026-09-04 | 多模态/视觉理解 | VLM-2026 OmniEval 能力分层（静态强/时序因果与开放泛化差 10-25pt）+ MindTopo 静态强于交互规划 | CSDN(VLM-Bench)/微软 Research | ADAPT | 视觉分级模型选型评估（IC-034） | 序境以静态识别为主，勿过度投入时序/规划能力 | E2 |
