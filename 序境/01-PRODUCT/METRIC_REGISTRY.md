@@ -36,6 +36,7 @@
 | MET-CONTENT-01 | 情感分布 | pos/neu/neg 计数与占比 | FUNC-CONTENT-02 | 数/% | 日/周 | 舆情 | CANDIDATE(口径待统一) |
 | MET-CONTENT-02 | 笔记互动量 | likes/comments/collects/shares | FUNC-CONTENT-01 后直读 notes | 数 | 实时 | 内容 | CANONICAL |
 | MET-CONTENT-03 | 数据质量分 | quality_status/score | FUNC-CONTENT-01 | 0-100/枚举 | 实时 | 系统 | CANONICAL |
+| MET-CONTENT-04 | EMV 媒体价值 | 曝光×CPM 加权互动修正（估算口径，显式标注 CPM 来源） | FUNC-CONTENT-04 (emv.py) | 元/周期 | 日/周/月 | 内容 | CANONICAL(估算口径登记) |
 
 ## 4. 工程与运营（域 OPS）
 
