@@ -987,10 +987,14 @@ button svg, .btn svg, .icon-button svg {
   height: 16px !important;
 }
 .icon-button {
-  width: 30px !important;
-  height: 30px !important;
-  min-width: 30px !important;
-  min-height: 30px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* 面板/卡片头部图标 */
