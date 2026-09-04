@@ -1076,7 +1076,7 @@ async function renderReportsPage(){
         <div class="panel-head"><div><span class="eyebrow">REPORT TEMPLATE</span><h3>汇报模板说明</h3><p>严格按照太古汇客户汇报模板输出，不是网站内容一股脑导出</p></div></div>
         <div style="font-size:13px;line-height:1.8;color:var(--text)">
           <p><b>报告结构：</b>核心结论 → 数据概览（含环比） → 分业态舆情分布 → 重点负面帖清单 → 舆情归因 → 应对动作&下一步</p>
-          <p><b>舆情等级：</b>🔴重大 / 🟡关注 / 🟢平稳，根据负面量、互动量、扩散速度自动判定</p>
+          <p><b>舆情等级：</b><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#B91C1C;margin:0 4px 0 2px;vertical-align:1px"></span>重大 / <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D97706;margin:0 4px 0 2px;vertical-align:1px"></span>关注 / <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#047857;margin:0 4px 0 2px;vertical-align:1px"></span>平稳，根据负面量、互动量、扩散速度自动判定</p>
           <p><b>推送配置：</b>在「系统设置 → 推送邮箱管理」中添加邮箱，报告生成后自动推送</p>
         </div>
       </div>`;
@@ -1135,17 +1135,17 @@ async function renderMonitorPage(){
       <div class="panel glass-card">
         <div class="panel-head"><div><span class="eyebrow">COLLECTION PIPELINE</span><h3>采集链路</h3><p>搜索发现 → 详情补全 → 互动数据 → 评论采集 → 数据质量评分 → 主体校验 → 入库</p></div></div>
         <div class="pipeline">
-          <div class="pipeline-step"><div class="pipeline-num">1</div><div class="pipeline-info"><h5>搜索发现</h5><p>固定账号关键词检索（rednote/CDP 备选）</p></div><div class="pipeline-status ok">✓</div></div>
+          <div class="pipeline-step"><div class="pipeline-num">1</div><div class="pipeline-info"><h5>搜索发现</h5><p>固定账号关键词检索（rednote/CDP 备选）</p></div><div class="pipeline-status ok">${xicon('check',12)}</div></div>
           <div class="pipeline-arrow">→</div>
-          <div class="pipeline-step"><div class="pipeline-num">2</div><div class="pipeline-info"><h5>详情补全</h5><p>正文/发布时间/作者</p></div><div class="pipeline-status ok">✓</div></div>
+          <div class="pipeline-step"><div class="pipeline-num">2</div><div class="pipeline-info"><h5>详情补全</h5><p>正文/发布时间/作者</p></div><div class="pipeline-status ok">${xicon('check',12)}</div></div>
           <div class="pipeline-arrow">→</div>
-          <div class="pipeline-step"><div class="pipeline-num">3</div><div class="pipeline-info"><h5>互动数据</h5><p>点赞/收藏/评论/分享</p></div><div class="pipeline-status ok">✓</div></div>
+          <div class="pipeline-step"><div class="pipeline-num">3</div><div class="pipeline-info"><h5>互动数据</h5><p>点赞/收藏/评论/分享</p></div><div class="pipeline-status ok">${xicon('check',12)}</div></div>
           <div class="pipeline-arrow">→</div>
-          <div class="pipeline-step"><div class="pipeline-num">4</div><div class="pipeline-info"><h5>评论采集</h5><p>cursor分页抓取</p></div><div class="pipeline-status ok">✓</div></div>
+          <div class="pipeline-step"><div class="pipeline-num">4</div><div class="pipeline-info"><h5>评论采集</h5><p>cursor分页抓取</p></div><div class="pipeline-status ok">${xicon('check',12)}</div></div>
           <div class="pipeline-arrow">→</div>
-          <div class="pipeline-step"><div class="pipeline-num">5</div><div class="pipeline-info"><h5>质量评分</h5><p>完整度/主体校验</p></div><div class="pipeline-status ok">✓</div></div>
+          <div class="pipeline-step"><div class="pipeline-num">5</div><div class="pipeline-info"><h5>质量评分</h5><p>完整度/主体校验</p></div><div class="pipeline-status ok">${xicon('check',12)}</div></div>
           <div class="pipeline-arrow">→</div>
-          <div class="pipeline-step"><div class="pipeline-num">6</div><div class="pipeline-info"><h5>入库分析</h5><p>SQLite + AI情感分析</p></div><div class="pipeline-status ok">✓</div></div>
+          <div class="pipeline-step"><div class="pipeline-num">6</div><div class="pipeline-info"><h5>入库分析</h5><p>SQLite + AI情感分析</p></div><div class="pipeline-status ok">${xicon('check',12)}</div></div>
         </div>
       </div>`;
     el.innerHTML = html;
