@@ -102,3 +102,74 @@ def marketing_calendar():
 def register_ic_api(app):
     app.register_blueprint(ic_bp)
     print("[ic_routes] IC API registered: /api/ic/*")
+
+
+# ---------- IC-021 EMV（MET-CONTENT-04）----------
+@ic_bp.route("/emv", methods=["GET"])
+def ic_emv():
+    """EMV 估算（估算口径，显式标注，非官方投放成本）。
+    GET ?start=&end=&cpm=&limit= 基于真实 notes 互动数据汇总。"""
+    import database as db
+    import emv as _emv
+    start = request.args.get("start", "")
+    end = request.args.get("end", "")
+    cpm = request.args.get("cpm", type=float)
+    limit = min(int(request.args.get("limit", 200)), 500)
+    try:
+        with db.get_db() as conn:
+            if start and end:
+                rows = conn.execute(
+                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment "
+                    "FROM notes WHERE publish_date BETWEEN ? AND ? ORDER BY captured_at DESC LIMIT ?",
+                    (start, end, limit)).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT note_id, title, author_nickname, likes, comments, collects, shares, sentiment "
+                    "FROM notes ORDER BY captured_at DESC LIMIT ?", (limit,)).fetchall()
+            notes = [dict(r) for r in rows]
+        r = _emv.aggregate_emv(notes, cpm=cpm)
+        return jsonify({"ok": True, **r})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+
+# ---------- IC-039 跨文化本地化守卫 ----------
+@ic_bp.route("/localization/check", methods=["POST"])
+def localization_check():
+    """本地化禁忌/合规检查（中英韩）。契约红线：命中 HOLD/BLOCK 须人工复核。
+    POST {"text": "...", "lang": "zh|en|ko|multi", "platform": "..."}"""
+    import sys
+    if "scripts" not in sys.path:
+        sys.path.insert(0, "scripts")
+    import localization_guard as lg
+    data = request.get_json(silent=True) or {}
+    text = data.get("text", "")
+    lang = data.get("lang", "zh")
+    platform = data.get("platform", "")
+    if not text:
+        return jsonify({"ok": False, "error": "text 必填"}), 400
+    try:
+        if lang == "multi":
+            r = lg.check_multi(text, platform=platform)
+        else:
+            r = lg.check(text, lang=lang, platform=platform)
+        return jsonify({"ok": True, **r})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+
+# ---------- IC-040 KOS 兴趣图谱信号 ----------
+@ic_bp.route("/kos/interest-signal", methods=["GET"])
+def kos_interest_signal():
+    """KOS 账号兴趣图谱信号（附加维度，代理指标，不改变 kos_score）。"""
+    import kos_engine as ke
+    author_id = request.args.get("author_id", "")
+    brand = request.args.get("brand", "")
+    limit = min(int(request.args.get("limit", 30)), 100)
+    if not author_id:
+        return jsonify({"ok": False, "error": "author_id 必填"}), 400
+    try:
+        r = ke.interest_signal(author_id, brand=brand, limit=limit)
+        return jsonify({"ok": True, **r})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400

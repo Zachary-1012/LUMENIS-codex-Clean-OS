@@ -1000,3 +1000,106 @@ def brand_kos_account(brand, author_id, limit=20):
         return base
     finally:
         conn.close()
+
+
+# ===== IC-040 · KOS/内容运营兴趣图谱信号（附加评估维度，不改 kos_score 主计算）=====
+# 依据：PCCC IC-040 §5。从"粉丝数导向"转向"兴趣图谱信号"：
+#   完播/停留、DM 分享、搜索命中、内容资产化（长尾）。
+# 口径红线：所有信号必须标注来源与可得性；不可得信号不编造，用现有代理指标（engagement_rate 等）
+# 标注"代理指标"；禁止刷量/模拟点击/绕过平台风控获取信号（采集安全红线）。
+# 本函数为纯只读聚合，不写 kos_profiles，不改变既有 kos_score 与分层。
+
+
+# 信号源与可得性标注（来源契约：真实可得 vs 代理指标 vs 暂不可得）
+SIGNAL_AVAILABILITY = {
+    "watch_completion": {"source": "platform_api", "available": False,
+                         "proxy": "avg_engagement/avg_likes", "note": "视频平台完播率 API 如可得"},
+    "dm_share": {"source": "platform_api", "available": False,
+                 "proxy": "avg_shares", "note": "私信分享/关系传播 API 如可得"},
+    "search_hit": {"source": "platform_search_index", "available": False,
+                   "proxy": "collects_ratio", "note": "小红书搜索索引化内容（长尾资产信号）"},
+    "content_asset": {"source": "content_lifecycle", "available": False,
+                      "proxy": "content_retention_window", "note": "中腰部内容长尾价值（12-18 个月窗口）"},
+}
+
+
+def interest_signal(author_id: str, brand: str = "", limit: int = 30) -> dict:
+    """KOS 账号兴趣图谱信号（附加维度）。
+
+    返回：
+      {
+        "author_id", "note_count", "signal_status",   # 数据可得性
+        "signals": { 完播代理 / DM分享代理 / 搜索命中代理 / 内容资产化代理 },
+        "proxies": 使用代理指标的显式标注（契约红线：不可得不编造）,
+        "source_availability": SIGNAL_AVAILABILITY 的可读版本,
+        "no_blackhat": True,   # 采集安全红线声明
+      }
+    """
+    conn = _get_conn()
+    try:
+        cond = "author_id = ?"
+        params = [author_id]
+        if brand:
+            bcond, bparams = _brand_source_filter(brand)
+            if bcond != "1=0":
+                cond += f" AND {bcond}"
+                params += bparams
+        rows = conn.execute(
+            f"""SELECT note_id, likes, comments, collects, shares, publish_datetime
+                FROM notes WHERE {cond} ORDER BY captured_at DESC LIMIT ?""",
+            params + [int(limit)],
+        ).fetchall()
+        if not rows:
+            return {"author_id": author_id, "note_count": 0, "signal_status": "insufficient",
+                    "reason": "暂无该账号笔记", "signals": {}, "proxies": [],
+                    "source_availability": SIGNAL_AVAILABILITY, "no_blackhat": True}
+        n = len(rows)
+        likes = [int(r["likes"] or 0) for r in rows]
+        comments = [int(r["comments"] or 0) for r in rows]
+        collects = [int(r["collects"] or 0) for r in rows]
+        shares = [int(r["shares"] or 0) for r in rows]
+        avg_likes = round(sum(likes) / n, 1)
+        avg_comments = round(sum(comments) / n, 1)
+        avg_collects = round(sum(collects) / n, 1)
+        avg_shares = round(sum(shares) / n, 1)
+        total_eng = sum(likes) + sum(comments) + sum(collects) + sum(shares)
+        eng_rate = round(total_eng / n, 1) if n else 0.0
+
+        # 兴趣图谱代理信号（契约：明确标注"代理指标"）
+        signals = {
+            # 完播/停留深度：平均互动量越高 → 内容深度代理
+            "watch_depth_proxy": {
+                "value": eng_rate, "unit": "avg_engagement/note",
+                "proxy_of": "watch_completion", "label": "完播/停留深度（代理）",
+            },
+            # DM 分享/关系传播：平均分享量（分享是主动关系传播最强信号）
+            "dm_share_proxy": {
+                "value": avg_shares, "unit": "avg_shares/note",
+                "proxy_of": "dm_share", "label": "私信/关系分享（代理）",
+            },
+            # 搜索命中/资产化：收藏率（收藏 = 长尾搜索索引与复看信号）
+            "search_asset_proxy": {
+                "value": round(avg_collects / avg_likes, 3) if avg_likes else 0.0,
+                "unit": "collects/likes_ratio",
+                "proxy_of": "search_hit", "label": "搜索索引/内容资产化（代理）",
+            },
+        }
+        # 信号强度分级（附加评估，不进 kos_score）
+        strength = "high" if (eng_rate >= 100 and avg_shares >= 10) else (
+            "medium" if (eng_rate >= 30 and avg_shares >= 3) else "low")
+        return {
+            "author_id": author_id,
+            "note_count": n,
+            "signal_status": "proxy_estimated",  # 契约：代理指标，非平台原生信号
+            "signals": signals,
+            "strength": strength,
+            "proxies": [
+                "完播率/停留时长/DM分享/搜索命中为平台原生信号，当前 API 未接入，使用现有互动数据代理（明确标注，不编造）",
+                "avg_engagement 代理完播/停留；avg_shares 代理 DM 分享；collects/likes 代理搜索资产化",
+            ],
+            "source_availability": SIGNAL_AVAILABILITY,
+            "no_blackhat": True,
+            "note": "附加评估维度，未计入 kos_score 主计算（防数字真相漂移）",
+        }
+    finally:
+        conn.close()

@@ -83,6 +83,15 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
         report['marketing_nodes'] = {"nodes": [], "themes": [], "tonality_advice": "",
                                      "cross": [], "global": [], "global_nodes": [],
                                      "region": {}}
+    # 报告消费 EMV（芥子→须弥）：MET-CONTENT-04 估算媒体价值，独立开关、失败不阻塞报告生成
+    try:
+        import emv as _emv
+        report['emv'] = _emv.aggregate_emv(notes)
+    except Exception:
+        report['emv'] = {"status": "NOT_AVAILABLE", "emv_total_yuan": None,
+                         "note_count": len(notes), "available_count": 0,
+                         "is_estimate": True,
+                         "disclaimer": "EMV 引擎不可用，未估算"}
     db.save_daily_report(report)
 
     digest = None
