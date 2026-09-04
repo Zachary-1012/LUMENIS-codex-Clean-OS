@@ -1,6 +1,6 @@
 # 序境-Core · IC-035/044/048 实施 Evidence（2026-09-04）
 
-> 状态：**IMPLEMENTED**（代码+测试+审计落盘；生产 API 待服务加载后 PRODUCTION-VERIFIED）
+> 状态：**PRODUCTION-VERIFIED**（2026-09-04，服务已重启加载新代码，三 IC API 线上 200）
 > 依据：`CONTRACT_IC035_044_048_20260904.md`（IC-035 Cycle Y / IC-044 Cycle HH / IC-048 Cycle LL）
 > 红线遵守：增量、向后兼容、能复用优先、不建重复能力、不伪造状态（IMPLEMENTED ≠ PRODUCTION-VERIFIED）
 
@@ -69,11 +69,11 @@
 | 新增测试 | **14 passed**（IC-035×3 + IC-044×6 + IC-048×5） |
 | 语法检查 | alert_engine / ic_routes 均 OK |
 | 向后兼容 | evaluate_alerts 不传新参行为不变（测试验证） |
-| 生产 API | 待服务加载后冒烟（当前进程为旧版，需重启后 PRODUCTION-VERIFIED） |
+| 生产 API | 服务已重启，synthetic/scan + vis/quality-gate + vis/quality-check 均 200 |
 | 双库同步 | 待推送 |
 
 ## 五、真实状态声明
 
 - 本 Evidence 仅证明：契约已建、代码已实现、14 项测试通过、审计已落盘。
-- **未做**：服务重启后的线上 API 冒烟（PRODUCTION-VERIFIED 待完成）。
+- [x] **已做**：服务重启（新 app.py PID 38660 监听 8201），三新端点线上 200。
 - **未做**：IC-035 的 GAP-1/GAP-2 实施（仅登记，走下一轮契约）。
