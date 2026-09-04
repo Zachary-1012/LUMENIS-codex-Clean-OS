@@ -41,7 +41,7 @@
 
     <div class="lm-nav-group">
       <div class="lm-nav-group__label">Intelligence</div>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='ai' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='ai' }}" href="{{ url_for('lumenis.intelligence_workspace') }}">
         <span data-icon="intelligence"></span><span class="lm-nav-item__label">Intelligence Workspace</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='agents' }}" href="#">
@@ -64,13 +64,13 @@
 
     <div class="lm-nav-group">
       <div class="lm-nav-group__label">Production</div>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='production' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='production' }}" href="{{ url_for('lumenis.production_overview') }}">
         <span data-icon="production"></span><span class="lm-nav-item__label">Production Workspace</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='opinion' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='opinion' }}" href="{{ url_for('lumenis.public_opinion') }}">
         <span data-icon="content"></span><span class="lm-nav-item__label">Public Opinion</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='risk' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='risk' }}" href="{{ url_for('lumenis.risk') }}">
         <span data-icon="risk"></span><span class="lm-nav-item__label">Risk</span>
         <span class="lm-badge lm-nav-item__badge" id="lm-risk-badge">–</span>
       </a>
@@ -87,7 +87,7 @@
       <a class="lm-nav-item {{ 'is-active' if active_nav=='research' }}" href="#">
         <span data-icon="research"></span><span class="lm-nav-item__label">Research Workspace</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='operations' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='operations' }}" href="{{ url_for('lumenis.operations') }}">
         <span data-icon="operations"></span><span class="lm-nav-item__label">Operations</span>
       </a>
     </div>
@@ -113,6 +113,7 @@
 
 <script src="{{ url_for('static', filename='js/lumenis-icons.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/lumenis-data.js') }}"></script>
 <script>
   // 注入所有 data-icon 占位（线框图标，禁 emoji）
   document.querySelectorAll("[data-icon]").forEach(function (el) {

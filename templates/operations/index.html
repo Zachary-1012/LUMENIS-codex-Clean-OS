@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Operations · 序境 LUMENIS{% endblock %}
+{% block page_title %}Operations{% endblock %}
+
+{% block content %}
+<!-- 系统健康四灯 -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="operations" data-component="ops-health" style="margin-bottom:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">System Health</h3>
+    <span class="lm-status"><span class="lm-dot lm-dot--unknown"></span><span data-field="overall">–</span></span>
+  </div>
+  <div class="lm-card__body">
+    <div class="lm-grid lm-grid--metrics" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+      <div class="lm-metric"><span class="lm-metric__label">Database</span>
+        <span class="lm-metric__value--md"><span class="lm-dot lm-dot--unknown" data-field="db-dot"></span> <span data-field="db">–</span></span></div>
+      <div class="lm-metric"><span class="lm-metric__label">Collector</span>
+        <span class="lm-metric__value--md"><span class="lm-dot lm-dot--unknown" data-field="col-dot"></span> <span data-field="col">–</span></span></div>
+      <div class="lm-metric"><span class="lm-metric__label">Auth</span>
+        <span class="lm-metric__value--md"><span class="lm-dot lm-dot--unknown" data-field="auth-dot"></span> <span data-field="auth">–</span></span></div>
+      <div class="lm-metric"><span class="lm-metric__label">XHS Platform</span>
+        <span class="lm-metric__value--md"><span class="lm-dot lm-dot--unknown" data-field="xhs-dot"></span> <span data-field="xhs">–</span></span></div>
+    </div>
+    <div data-field="diagnostic" style="margin-top:var(--lm-space-md);font-size:12px;color:var(--lm-text-tertiary);"></div>
+  </div>
+</section>
+
+<div class="lm-grid lm-grid--cards">
+  <!-- 采集调度 -->
+  <article class="lm-card" data-state="loading" data-page="operations" data-component="ops-collector">
+    <div class="lm-card__head"><h3 class="lm-card__title">Collector Schedule</h3>
+      <span class="lm-badge" data-field="state">–</span></div>
+    <div class="lm-card__body lm-stack" data-state-slot>
+      <div class="lm-metric"><span class="lm-metric__label">今日运行</span><span class="lm-metric__value lm-count" data-field="today-runs">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">今日入库</span><span class="lm-metric__value lm-count" data-field="today-inserted">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">自动剩余</span><span class="lm-metric__value--md" data-field="auto-left">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">下次采集</span><span class="lm-metric__value--md" data-field="next">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">熔断</span><span class="lm-metric__value--md" data-field="circuit">–</span></div>
+    </div>
+  </article>
+
+  <!-- AI 通道 -->
+  <article class="lm-card" data-state="loading" data-page="operations" data-component="ops-ai">
+    <div class="lm-card__head"><h3 class="lm-card__title">AI Gateway</h3>
+      <span class="lm-badge" data-field="provider">–</span></div>
+    <div class="lm-card__body lm-stack" data-state-slot>
+      <div class="lm-metric"><span class="lm-metric__label">Provider</span><span class="lm-metric__value--md" data-field="ai-provider">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">Model</span><span class="lm-metric__value--md" data-field="ai-model">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">通道健康</span><span class="lm-metric__value--md" data-field="channel">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">兜底</span><span class="lm-metric__value--md">Ollama / 规则</span></div>
+    </div>
+  </article>
+
+  <!-- 运行时 -->
+  <article class="lm-card" data-state="loading" data-page="operations" data-component="ops-runtime">
+    <div class="lm-card__head"><h3 class="lm-card__title">Runtime</h3></div>
+    <div class="lm-card__body lm-stack" data-state-slot>
+      <div class="lm-metric"><span class="lm-metric__label">笔记总数</span><span class="lm-metric__value lm-count" data-field="notes">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">CDP 运行</span><span class="lm-metric__value--md" data-field="cdp">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">需人工介入</span><span class="lm-metric__value--md" data-field="intervention">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">Foundation</span><span class="lm-metric__value--md" data-field="foundation">–</span></div>
+    </div>
+  </article>
+</div>
+{% endblock %}
+
+{% block scripts %}
+(function(){
+  var D=LUMENIS.Data;
+  // 健康四灯
+  LUMENIS.bindState(document.querySelector('[data-component="ops-health"]'),{
+    page:"operations",component:"ops-health",url:"/api/system/health/summary",
+    isEmpty:function(d){return !d||!d.sub_lights;},emptyText:"健康状态暂不可用",
+    render:function(d){
+      var root=document.querySelector('[data-component="ops-health"]');
+      var f=function(s,v){var n=root.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("overall",d.overall_status||"–");
+      var sl=d.sub_lights||{};
+      var dot=function(key,light){var n=root.querySelector('[data-field="'+key+'-dot"]');if(n)n.className="lm-dot lm-dot--"+({green:"success",yellow:"warning",red:"danger"}[light]||"unknown");};
+      var db=sl.database||{},col=sl.collector||{},au=sl.auth||{},xhs=sl.xhs_platform||{};
+      dot("db",db.light);f("db",db.light||"–");
+      dot("col",col.light);f("col",col.cdp_running?"运行中":(col.light||"–"));
+      dot("auth",au.light);f("auth",au.light||"–");
+      dot("xhs",xhs.light);f("xhs",xhs.light||"–");
+      var diag=(d.diagnostic_hints||[]).join("；");
+      f("diagnostic",diag?"诊断提示："+diag:"");
+    }
+  });
+  // 采集调度
+  LUMENIS.bindState(document.querySelector('[data-component="ops-collector"]'),{
+    page:"operations",component:"ops-collector",url:"/api/collect/schedule-status",
+    isEmpty:function(d){return !d;},emptyText:"采集状态暂不可用",
+    render:function(d){
+      var root=document.querySelector('[data-component="ops-collector"]');
+      var f=function(s,v){var n=root.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("state",d.state_cn||d.state||"–");
+      f("today-runs",D.fmtNum(d.today_runs));
+      f("today-inserted",D.fmtNum(d.today_inserted));
+      f("auto-left",(d.auto_left||0)+" / "+(d.auto_total||9));
+      f("next",d.next_collect||"–");
+      f("circuit",(d.circuit&&d.circuit.open)?("熔断·"+(d.circuit.state||"")):"正常");
+    }
+  });
+  // AI 通道
+  Promise.all([
+    fetch("/api/ai/status").then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch("/api/ai/channel-health").then(function(r){return r.json();}).catch(function(){return null;})
+  ]).then(function(res){
+    var st=res[0],ch=res[1];
+    var root=document.querySelector('[data-component="ops-ai"]');
+    if(!st){root.setAttribute("data-state","error");return;}
+    root.setAttribute("data-state","success");
+    var f=function(s,v){var n=root.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+    f("provider",st.provider||"–");
+    f("ai-provider",st.provider||"–");
+    f("ai-model",st.model||"–");
+    f("channel",(ch&&ch.health)?(ch.health.available?"正常":"降级"):"–");
+  });
+  // Runtime
+  LUMENIS.bindState(document.querySelector('[data-component="ops-runtime"]'),{
+    page:"operations",component:"ops-runtime",url:"/api/system/health/summary",
+    isEmpty:function(d){return !d;},emptyText:"运行时暂不可用",
+    render:function(d){
+      var root=document.querySelector('[data-component="ops-runtime"]');
+      var f=function(s,v){var n=root.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("notes",D.fmtNum(d.notes_count));
+      f("cdp",d.cdp_running?"是":"否");
+      f("intervention",d.need_manual_intervention?"是":"否");
+      f("foundation","L0 Experience");
+    }
+  });
+})();
+{% endblock %}

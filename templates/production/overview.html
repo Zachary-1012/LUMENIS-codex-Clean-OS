@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Production Overview · 序境 LUMENIS{% endblock %}
+{% block page_title %}Production Workspace{% endblock %}
+
+{% block content %}
+<!-- 核心指标（/api/stats，主体口径过滤） -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="production" data-component="core-metrics" style="margin-bottom:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Core Metrics</h3>
+    <span class="lm-badge lm-badge--ghost">主体口径过滤</span>
+  </div>
+  <div class="lm-card__body">
+    <div class="lm-grid lm-grid--metrics" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+      <div class="lm-metric"><span class="lm-metric__label">笔记总数</span><span class="lm-metric__value lm-count" data-field="total">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">正面</span><span class="lm-metric__value lm-count" data-field="positive" style="color:var(--lm-color-success);">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">中性</span><span class="lm-metric__value lm-count" data-field="neutral">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">负面</span><span class="lm-metric__value lm-count" data-field="negative" style="color:var(--lm-color-danger);">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">高风险</span><span class="lm-metric__value lm-count" data-field="high-risk" style="color:var(--lm-color-danger);">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">互动总量</span><span class="lm-metric__value lm-count" data-field="engagements">–</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 生产健康 + 采集状态 -->
+<div class="lm-grid lm-grid--cards">
+  <article class="lm-card" data-state="loading" data-page="production" data-component="prod-health">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Production Health</h3>
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown"></span><span data-field="overall">–</span></span>
+    </div>
+    <div class="lm-card__body lm-stack" data-state-slot>
+      <div class="lm-metric"><span class="lm-metric__label">数据库</span><span class="lm-metric__value--md" data-field="db">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">采集器</span><span class="lm-metric__value--md" data-field="collector">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">Auth</span><span class="lm-metric__value--md" data-field="auth">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">小红书平台</span><span class="lm-metric__value--md" data-field="xhs">–</span></div>
+    </div>
+  </article>
+
+  <article class="lm-card" data-state="loading" data-page="production" data-component="collector">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Collector Status</h3>
+      <span class="lm-badge" data-field="state">–</span>
+    </div>
+    <div class="lm-card__body lm-stack" data-state-slot>
+      <div class="lm-metric"><span class="lm-metric__label">今日采集</span><span class="lm-metric__value lm-count" data-field="today-runs">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">今日入库</span><span class="lm-metric__value lm-count" data-field="today-inserted">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">手动剩余</span><span class="lm-metric__value--md" data-field="manual-left">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">下次采集</span><span class="lm-metric__value--md" data-field="next-collect">–</span></div>
+    </div>
+  </article>
+
+  <!-- 生产子域导航 -->
+  <article class="lm-card lm-card--nav">
+    <div class="lm-card__head"><h3 class="lm-card__title">Production Domains</h3></div>
+    <div class="lm-card__body lm-stack">
+      <a class="lm-nav-item lm-nav-item--inline" href="{{ url_for('lumenis.public_opinion') }}"><span data-icon="content"></span>Public Opinion</a>
+      <a class="lm-nav-item lm-nav-item--inline" href="{{ url_for('lumenis.risk') }}"><span data-icon="risk"></span>Risk</a>
+      <a class="lm-nav-item lm-nav-item--inline" href="#"><span data-icon="event"></span>Events</a>
+      <a class="lm-nav-item lm-nav-item--inline" href="#"><span data-icon="report"></span>Reports</a>
+    </div>
+  </article>
+</div>
+{% endblock %}
+
+{% block scripts %}
+(function(){
+  var D=LUMENIS.Data;
+  // 核心指标
+  var cm=document.querySelector('[data-component="core-metrics"]');
+  if(cm) D.bindCoreMetrics(cm);
+  // 生产健康
+  LUMENIS.bindState(document.querySelector('[data-component="prod-health"]'),{
+    page:"production",component:"prod-health",url:"/api/system/health/summary",
+    isEmpty:function(d){return !d||!d.sub_lights;},emptyText:"健康状态暂不可用",
+    render:function(d){
+      var f=function(s,v){var n=document.querySelector('[data-component="prod-health"] [data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("overall",d.overall_status||"–");
+      var sl=d.sub_lights||{};
+      f("db",(sl.database&&sl.database.light)||"–");
+      f("collector",(sl.collector&&(sl.collector.cdp_running?"运行中":sl.collector.light))||"–");
+      f("auth",(sl.auth&&sl.auth.light)||"–");
+      f("xhs",(sl.xhs_platform&&sl.xhs_platform.light)||"–");
+    }
+  });
+  // 采集器
+  LUMENIS.bindState(document.querySelector('[data-component="collector"]'),{
+    page:"production",component:"collector",url:"/api/collect/schedule-status",
+    isEmpty:function(d){return !d;},emptyText:"采集状态暂不可用",
+    render:function(d){
+      var root=document.querySelector('[data-component="collector"]');
+      var f=function(s,v){var n=root.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("state",d.state_cn||d.state||"–");
+      f("today-runs",D.fmtNum(d.today_runs));
+      f("today-inserted",D.fmtNum(d.today_inserted));
+      f("manual-left",(d.manual_left||0)+" / "+(d.manual_total||3));
+      f("next-collect",d.next_collect||"–");
+    }
+  });
+})();
+{% endblock %}

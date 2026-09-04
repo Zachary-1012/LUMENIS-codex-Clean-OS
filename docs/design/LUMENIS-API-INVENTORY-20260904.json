@@ -1,0 +1,2718 @@
+{
+ "total": 300,
+ "readonly": [
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_status",
+   "path": "/api/ai/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 26
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ark_status",
+   "path": "/api/ark/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 60
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_learning_status",
+   "path": "/api/ai-learning/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 223
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_web_sentiment_history",
+   "path": "/api/web-sentiment/history",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 248
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_providers_v570",
+   "path": "/api/ai/providers",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 295
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_filter_stats",
+   "path": "/api/ai-filter/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 331
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_channel_health",
+   "path": "/api/ai/channel-health",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 354
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_learning_optimization",
+   "path": "/api/ai-learning/optimization/<operation_type>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 393
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_stats",
+   "path": "/api/app_evidence/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 291
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_list",
+   "path": "/api/app_evidence/list",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 295
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_get",
+   "path": "/api/app_evidence/<int:record_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 305
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_notes",
+   "path": "/",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 55
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_note_detail",
+   "path": "/<note_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 61
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "search_notes",
+   "path": "/search",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 66
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_events",
+   "path": "/",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 76
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_event_detail",
+   "path": "/<event_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 81
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "export_report",
+   "path": "/export",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 90
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_daily_report",
+   "path": "/daily",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 96
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_providers",
+   "path": "/providers",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 111
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_collection_status",
+   "path": "/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 125
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_settings",
+   "path": "/",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 134
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "get_web_topics",
+   "path": "/topics",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 149
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "browser_discovery",
+   "path": "/browser-discovery",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 154
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "health_check",
+   "path": "/api/health",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 195
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "adaptive_status",
+   "path": "/api/adaptive/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 34
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "adaptive_can_collect",
+   "path": "/api/adaptive/can-collect",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 53
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "recovery_health_check",
+   "path": "/api/recovery/health-check",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 114
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "recovery_stats",
+   "path": "/api/recovery/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 140
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "recovery_alerts",
+   "path": "/api/recovery/alerts",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 152
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "feedback_analyze",
+   "path": "/api/feedback/analyze",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 170
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "feedback_suggestions",
+   "path": "/api/feedback/suggestions",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 185
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "feedback_history",
+   "path": "/api/feedback/history",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 216
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "feedback_pending",
+   "path": "/api/feedback/pending",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 231
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "feedback_stats",
+   "path": "/api/feedback/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 245
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "boundary_safety_level",
+   "path": "/api/boundary/safety-level/<operation_type>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 261
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "boundary_pending_confirmations",
+   "path": "/api/boundary/pending-confirmations",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 278
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "boundary_file_integrity_check",
+   "path": "/api/boundary/file-integrity/check",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 323
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "boundary_stats",
+   "path": "/api/boundary/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 352
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "architecture_status",
+   "path": "/api/architecture/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 368
+  },
+  {
+   "file": "auth_recovery_api.py",
+   "function": "get_summary",
+   "path": "/summary",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 12
+  },
+  {
+   "file": "auth_recovery_api.py",
+   "function": "list_tasks",
+   "path": "/tasks",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 22
+  },
+  {
+   "file": "auth_recovery_api.py",
+   "function": "health",
+   "path": "/health",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 121
+  },
+  {
+   "file": "browser_runtime_api.py",
+   "function": "browser_runtime_status",
+   "path": "/api/browser-runtime/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 23
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_capabilities",
+   "path": "/api/browser-surface/capabilities",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 38
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_policy",
+   "path": "/api/browser-surface/policy",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 42
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_tabs",
+   "path": "/api/browser-surface/tabs",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 57
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_general_status",
+   "path": "/api/browser-surface/general-browser/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 171
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_downloads_list",
+   "path": "/api/browser-surface/downloads",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 210
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_download_monitor_status",
+   "path": "/api/browser-surface/downloads/monitor/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 243
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_download_active",
+   "path": "/api/browser-surface/downloads/active",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 247
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_collector_status",
+   "path": "/api/collector/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 23
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_collect_schedule_status",
+   "path": "/api/collect/schedule-status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 33
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_collector_history",
+   "path": "/api/collector/history",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 129
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_xhs_collect_health",
+   "path": "/api/xhs/collect-health",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 141
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_xhs_cookie_status",
+   "path": "/api/xhs/cookie/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 163
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_xhs_collect_pause_state",
+   "path": "/api/xhs/collect-pause-state",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 197
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_xhs_cookie_sync_status",
+   "path": "/api/xhs/cookie/sync/<task_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 203
+  },
+  {
+   "file": "collector_v2_integration.py",
+   "function": "collector_v2_status",
+   "path": "/api/collector-v2/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 106
+  },
+  {
+   "file": "collector_v2_integration.py",
+   "function": "collector_v2_scheduler_status",
+   "path": "/api/collector-v2/scheduler/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 135
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_stats",
+   "path": "/api/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 22
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_notes",
+   "path": "/api/notes",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 28
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_risk_alerts",
+   "path": "/api/risk-alerts",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 55
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_hot_notes",
+   "path": "/api/hot-notes",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 59
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_comments",
+   "path": "/api/comments",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 63
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_events",
+   "path": "/api/events",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 69
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_web_mentions",
+   "path": "/api/web-mentions",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 80
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_feedback_keywords",
+   "path": "/api/feedback-keywords",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 85
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_hot_topics",
+   "path": "/api/hot-topics",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 89
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_metric_trend",
+   "path": "/api/metric-trend",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 94
+  },
+  {
+   "file": "data_query_api.py",
+   "function": "api_resource_guard",
+   "path": "/api/resource-guard",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 106
+  },
+  {
+   "file": "evidence_api.py",
+   "function": "evidence_stats",
+   "path": "/api/evidence/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 18
+  },
+  {
+   "file": "evidence_api.py",
+   "function": "evidence_list",
+   "path": "/api/evidence/list",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 26
+  },
+  {
+   "file": "evidence_api.py",
+   "function": "evidence_detail",
+   "path": "/api/evidence/<int:record_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 46
+  },
+  {
+   "file": "evidence_api.py",
+   "function": "evidence_timeline",
+   "path": "/api/evidence/timeline",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 58
+  },
+  {
+   "file": "export_report.py",
+   "function": "export_preview",
+   "path": "/api/export/preview",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 281
+  },
+  {
+   "file": "export_report.py",
+   "function": "export_excel",
+   "path": "/api/export/excel",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 294
+  },
+  {
+   "file": "export_report.py",
+   "function": "export_word",
+   "path": "/api/export/word",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 445
+  },
+  {
+   "file": "export_report.py",
+   "function": "export_list",
+   "path": "/api/export/list",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 662
+  },
+  {
+   "file": "export_report.py",
+   "function": "export_unified",
+   "path": "/api/export/report",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 687
+  },
+  {
+   "file": "export_report.py",
+   "function": "export_file",
+   "path": "/api/export/file/<path:filename>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 723
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "alert_records",
+   "path": "/alert/records",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 24
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "kos_scenario",
+   "path": "/kos-scenario",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 71
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "marketing_calendar",
+   "path": "/marketing/calendar",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 85
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "ic_emv",
+   "path": "/emv",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 109
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "kos_interest_signal",
+   "path": "/kos/interest-signal",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 163
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "vis_quality_gate",
+   "path": "/vis/quality-gate",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 196
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_accounts",
+   "path": "/api/internal-browser/accounts",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 420
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_state",
+   "path": "/api/internal-browser/state",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 424
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_screenshot",
+   "path": "/api/internal-browser/screenshot",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 429
+  },
+  {
+   "file": "internal_browser_stream.py",
+   "function": "api_stream",
+   "path": "/api/internal-browser/stream",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 242
+  },
+  {
+   "file": "internal_browser_stream.py",
+   "function": "api_stream_state",
+   "path": "/api/internal-browser/stream-state",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 286
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_overview",
+   "path": "/overview",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 151
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_list",
+   "path": "/list",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 211
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_detail",
+   "path": "/detail",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 331
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_comments",
+   "path": "/comments",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 493
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_ad_candidates",
+   "path": "/ad-candidates",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 694
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_reward",
+   "path": "/reward",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 772
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_report_view",
+   "path": "/report/view",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 940
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_content_dna",
+   "path": "/content-dna",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1160
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_attribution",
+   "path": "/attribution",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1250
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_intent_analysis",
+   "path": "/intent-analysis",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1406
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_competitor_benchmark",
+   "path": "/competitor-benchmark",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1586
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_funnel",
+   "path": "/funnel",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1695
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_cost",
+   "path": "/cost",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1755
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_tier",
+   "path": "/tier",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1810
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_koc_tier",
+   "path": "/koc-tier",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1865
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_channel_roi",
+   "path": "/channel-roi",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2056
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_profile",
+   "path": "/profile",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2075
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_brand",
+   "path": "/brand",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2148
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_ownership",
+   "path": "/ownership",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2168
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_executions",
+   "path": "/executions",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2245
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_account",
+   "path": "/account",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2259
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_ownership_overrides",
+   "path": "/ownership/overrides",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2296
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_operations",
+   "path": "/operations",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2410
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_paid_plans",
+   "path": "/paid/plans",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2470
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_rewards",
+   "path": "/rewards",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 2499
+  },
+  {
+   "file": "lumenis_frontend.py",
+   "function": "command_home",
+   "path": "/",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 24
+  },
+  {
+   "file": "lumenis_frontend.py",
+   "function": "foundation_healthz",
+   "path": "/healthz",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 31
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_overview",
+   "path": "/overview",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 44
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_entities",
+   "path": "/entities",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 62
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_get_entity",
+   "path": "/entity",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 77
+  },
+  {
+   "file": "pr_case_integration.py",
+   "function": "get_pr_case_detail",
+   "path": "/api/pr/cases/<int:case_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 545
+  },
+  {
+   "file": "pr_case_integration.py",
+   "function": "get_act_principle",
+   "path": "/api/pr/act-principle",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 559
+  },
+  {
+   "file": "pr_case_integration.py",
+   "function": "get_special_report_triggers",
+   "path": "/api/pr/triggers",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 568
+  },
+  {
+   "file": "settings_module.py",
+   "function": "get_config",
+   "path": "/api/settings/config",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 125
+  },
+  {
+   "file": "settings_module.py",
+   "function": "system_info",
+   "path": "/api/settings/system-info",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 172
+  },
+  {
+   "file": "settings_module.py",
+   "function": "developer_logs",
+   "path": "/api/settings/developer/logs",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 262
+  },
+  {
+   "file": "settings_module.py",
+   "function": "get_domain_config",
+   "path": "/api/settings/domain",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 279
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_overview",
+   "path": "/api/swire/overview",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 224
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_events",
+   "path": "/api/swire/events",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 261
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_notes",
+   "path": "/api/swire/notes",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 290
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_brand_detail",
+   "path": "/api/swire/brand-detail",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 342
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "security_scan",
+   "path": "/api/security/scan",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 28
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "security_check_integrity",
+   "path": "/api/security/integrity",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 48
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "security_dangerous_code",
+   "path": "/api/security/dangerous-code",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 58
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "security_sensitive_info",
+   "path": "/api/security/sensitive-info",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 68
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "evaluation_run",
+   "path": "/api/evaluation/run",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 82
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "evaluation_collection",
+   "path": "/api/evaluation/collection",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 92
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "evaluation_analysis",
+   "path": "/api/evaluation/analysis",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 102
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "evaluation_stability",
+   "path": "/api/evaluation/stability",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 112
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "evaluation_badcases",
+   "path": "/api/evaluation/badcases",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 122
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "evaluation_golden_cases",
+   "path": "/api/evaluation/golden-cases",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 133
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "local_ai_status",
+   "path": "/api/local-ai/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 147
+  },
+  {
+   "file": "system_health_api.py",
+   "function": "system_health",
+   "path": "/api/system/health/detailed",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 441
+  },
+  {
+   "file": "system_health_api.py",
+   "function": "system_health_summary",
+   "path": "/api/system/health/summary",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 511
+  },
+  {
+   "file": "system_health_api.py",
+   "function": "system_health_module",
+   "path": "/api/system/health/module/<module_name>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 614
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_campaign_page",
+   "path": "/topic-campaign",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 872
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_status",
+   "path": "/api/topic-campaign/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 876
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_list",
+   "path": "/api/topic-campaign/topics",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 911
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_runtime_state",
+   "path": "/api/topic-campaign/runtime-state",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 971
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_note_detail",
+   "path": "/api/topic-campaign/note/<note_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 990
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_timeline",
+   "path": "/api/topic-campaign/timeline",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1048
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_stats",
+   "path": "/api/topic-campaign/stats",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1065
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_notes",
+   "path": "/api/topic-campaign/notes",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1154
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_export",
+   "path": "/api/topic-campaign/export",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1171
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "tc_campaign_list",
+   "path": "/api/topic-campaign/campaigns",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 1196
+  },
+  {
+   "file": "tests\\test_openapi_spec.py",
+   "function": "hz",
+   "path": "/healthz",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 19
+  },
+  {
+   "file": "tests\\test_openapi_spec.py",
+   "function": "v4_console",
+   "path": "/v4/console/<path:sub>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 27
+  },
+  {
+   "file": "tests\\_v4_live.py",
+   "function": "index",
+   "path": "/",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 18
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_me",
+   "path": "/auth/me",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 104
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_workspace_status",
+   "path": "/auth/workspace/status",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 140
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_workspace_keys_list",
+   "path": "/auth/workspace/keys",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 150
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_list_platforms",
+   "path": "/adapters/platforms",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 180
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_adapter_task",
+   "path": "/adapters/task/<task_id>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 274
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_adapter_health",
+   "path": "/adapters/health",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 283
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_recovery_platforms",
+   "path": "/adapters/recovery/platforms",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 305
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_recovery_health",
+   "path": "/adapters/recovery/health/<platform>",
+   "methods": [
+    "GET"
+   ],
+   "lineno": 311
+  }
+ ],
+ "mutating": [
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_test",
+   "path": "/api/ai/test",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 31
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ark_chat",
+   "path": "/api/ark/chat",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 71
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ark_sentiment",
+   "path": "/api/ark/sentiment",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 104
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ark_summary",
+   "path": "/api/ark/summary",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 139
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ark_keywords",
+   "path": "/api/ark/keywords",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 177
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_web_sentiment_search",
+   "path": "/api/web-sentiment/search",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 233
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_chat",
+   "path": "/api/ai/chat",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 261
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_analyze_v570",
+   "path": "/api/ai/analyze-v570",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 315
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_filter_run",
+   "path": "/api/ai-filter/run",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 335
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_filter_cleanup",
+   "path": "/api/ai-filter/cleanup",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 347
+  },
+  {
+   "file": "ai_api.py",
+   "function": "api_ai_analyze_v580",
+   "path": "/api/ai/analyze",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 370
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_upload",
+   "path": "/api/app_evidence/upload",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 312
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_confirm",
+   "path": "/api/app_evidence/<int:record_id>/confirm",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 360
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_reject",
+   "path": "/api/app_evidence/<int:record_id>/reject",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 370
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_shadow",
+   "path": "/api/app_evidence/<int:record_id>/shadow",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 379
+  },
+  {
+   "file": "app_evidence.py",
+   "function": "api_evidence_delete",
+   "path": "/api/app_evidence/<int:record_id>",
+   "methods": [
+    "DELETE"
+   ],
+   "lineno": 388
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "analyze",
+   "path": "/analyze",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 105
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "trigger_collection",
+   "path": "/trigger",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 120
+  },
+  {
+   "file": "app_refactor_blueprint.py",
+   "function": "update_settings",
+   "path": "/",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 139
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "adaptive_report_result",
+   "path": "/api/adaptive/report-result",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 67
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "adaptive_reset",
+   "path": "/api/adaptive/reset",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 95
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "recovery_run_cycle",
+   "path": "/api/recovery/run-cycle",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 127
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "feedback_run_cycle",
+   "path": "/api/feedback/run-cycle",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 201
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "boundary_approve",
+   "path": "/api/boundary/approve/<int:confirmation_id>",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 292
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "boundary_reject",
+   "path": "/api/boundary/reject/<int:confirmation_id>",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 307
+  },
+  {
+   "file": "architecture_api.py",
+   "function": "boundary_file_integrity_baseline",
+   "path": "/api/boundary/file-integrity/baseline",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 336
+  },
+  {
+   "file": "auth_recovery_api.py",
+   "function": "create_task",
+   "path": "/tasks",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 41
+  },
+  {
+   "file": "auth_recovery_api.py",
+   "function": "start_task",
+   "path": "/tasks/<int:task_id>/start",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 65
+  },
+  {
+   "file": "auth_recovery_api.py",
+   "function": "complete_task",
+   "path": "/tasks/<int:task_id>/complete",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 75
+  },
+  {
+   "file": "auth_recovery_api.py",
+   "function": "fail_task",
+   "path": "/tasks/<int:task_id>/fail",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 108
+  },
+  {
+   "file": "browser_runtime_api.py",
+   "function": "browser_runtime_probe",
+   "path": "/api/browser-runtime/probe",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 37
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_tab_new",
+   "path": "/api/browser-surface/tab/new",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 61
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_tab_close",
+   "path": "/api/browser-surface/tab/close",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 71
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_tab_activate",
+   "path": "/api/browser-surface/tab/activate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 75
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_tab_navigate",
+   "path": "/api/browser-surface/tab/navigate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 79
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_extract",
+   "path": "/api/browser-surface/extract",
+   "methods": [
+    "POST",
+    "GET"
+   ],
+   "lineno": 94
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_search",
+   "path": "/api/browser-surface/search",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 107
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_bookmarks",
+   "path": "/api/browser-surface/bookmarks",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 129
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_bookmark_remove",
+   "path": "/api/browser-surface/bookmark/remove",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 136
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_history",
+   "path": "/api/browser-surface/history",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 142
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_history_clear",
+   "path": "/api/browser-surface/history/clear",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 153
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_nav_config",
+   "path": "/api/browser-surface/nav-config",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 158
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_general_ensure",
+   "path": "/api/browser-surface/general-browser/ensure",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 177
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_general_stop",
+   "path": "/api/browser-surface/general-browser/stop",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 182
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_find",
+   "path": "/api/browser-surface/find",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 187
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_find_stop",
+   "path": "/api/browser-surface/find/stop",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 197
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_downloads_config",
+   "path": "/api/browser-surface/downloads/config",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 202
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_hybrid_analyze",
+   "path": "/api/browser-surface/hybrid/analyze",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 215
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_download_monitor_start",
+   "path": "/api/browser-surface/downloads/monitor/start",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 235
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_download_monitor_stop",
+   "path": "/api/browser-surface/downloads/monitor/stop",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 239
+  },
+  {
+   "file": "browser_surface_api.py",
+   "function": "api_download_cancel",
+   "path": "/api/browser-surface/downloads/cancel",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 251
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_collector_start",
+   "path": "/api/collector/start",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 103
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_collector_stop",
+   "path": "/api/collector/stop",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 119
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_xhs_cookie_sync",
+   "path": "/api/xhs/cookie/sync",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 168
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_xhs_collect_pause",
+   "path": "/api/xhs/collect-pause",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 183
+  },
+  {
+   "file": "collection_api.py",
+   "function": "api_xhs_collect_resume",
+   "path": "/api/xhs/collect-resume",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 191
+  },
+  {
+   "file": "collector_v2_integration.py",
+   "function": "collector_v2_collect",
+   "path": "/api/collector-v2/collect",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 118
+  },
+  {
+   "file": "export_report.py",
+   "function": "export_generate",
+   "path": "/api/export/generate",
+   "methods": [
+    "POST",
+    "GET"
+   ],
+   "lineno": 703
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "alert_config",
+   "path": "/alert/config",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 10
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "alert_transition",
+   "path": "/alert/<int:alert_id>/state",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 35
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "alert_evaluate",
+   "path": "/alert/evaluate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 50
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "localization_check",
+   "path": "/localization/check",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 138
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "synthetic_scan",
+   "path": "/synthetic/scan",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 180
+  },
+  {
+   "file": "ic_routes.py",
+   "function": "vis_quality_check",
+   "path": "/vis/quality-check",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 204
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_navigate",
+   "path": "/api/internal-browser/navigate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 439
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_evaluate",
+   "path": "/api/internal-browser/evaluate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 444
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_click",
+   "path": "/api/internal-browser/click",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 449
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_type",
+   "path": "/api/internal-browser/type",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 458
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_scroll",
+   "path": "/api/internal-browser/scroll",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 463
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_history",
+   "path": "/api/internal-browser/history",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 468
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_find",
+   "path": "/api/internal-browser/find",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 476
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_click_selector",
+   "path": "/api/internal-browser/click-selector",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 481
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_type_into",
+   "path": "/api/internal-browser/type-into",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 490
+  },
+  {
+   "file": "internal_browser.py",
+   "function": "api_task",
+   "path": "/api/internal-browser/task",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 499
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_refresh",
+   "path": "/refresh",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 427
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_outreach",
+   "path": "/outreach",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 577
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_report_generate",
+   "path": "/report/generate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 862
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_reply_generate",
+   "path": "/reply/generate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 1042
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_identity",
+   "path": "/kos-identity",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 1490
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_manual",
+   "path": "/manual",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 1924
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_campaign",
+   "path": "/campaign",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2006
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_collect",
+   "path": "/collect",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2097
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_execution_create",
+   "path": "/execution",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2203
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_execution_transition",
+   "path": "/execution/<execution_id>/transition",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2225
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_ownership_confirm",
+   "path": "/ownership/confirm",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2276
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_lead",
+   "path": "/lead",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 2310
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_cooperation",
+   "path": "/cooperation",
+   "methods": [
+    "GET",
+    "POST"
+   ],
+   "lineno": 2335
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_cooperation_confirm",
+   "path": "/cooperation/confirm",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2360
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_cooperation_execute",
+   "path": "/cooperation/execute",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2373
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_email_invitation",
+   "path": "/email/invitation",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2385
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_email_send",
+   "path": "/email/send",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2398
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_record_operation",
+   "path": "/operation",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2419
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_paid_plan",
+   "path": "/paid/plan",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2434
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_paid_execute",
+   "path": "/paid/execute",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2448
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_paid_result",
+   "path": "/paid/result",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2459
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_reward_issue",
+   "path": "/reward/issue",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2477
+  },
+  {
+   "file": "kos_routes.py",
+   "function": "api_kos_reward_execute",
+   "path": "/reward/execute",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 2488
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_create_entity",
+   "path": "/entity",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 88
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_topic_score",
+   "path": "/topic-score",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 115
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_story_nodes",
+   "path": "/story-nodes",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 135
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_runtime_validate",
+   "path": "/runtime/validate",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 159
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_breakout",
+   "path": "/breakout",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 183
+  },
+  {
+   "file": "podcast_routes.py",
+   "function": "api_content_yield",
+   "path": "/content-yield",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 199
+  },
+  {
+   "file": "settings_module.py",
+   "function": "update_config",
+   "path": "/api/settings/config",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 140
+  },
+  {
+   "file": "settings_module.py",
+   "function": "developer_execute",
+   "path": "/api/settings/developer/execute",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 231
+  },
+  {
+   "file": "settings_module.py",
+   "function": "update_domain_config",
+   "path": "/api/settings/domain",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 289
+  },
+  {
+   "file": "settings_module.py",
+   "function": "delete_domain_config",
+   "path": "/api/settings/domain/delete",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 305
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_event_add",
+   "path": "/api/swire/event",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 320
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_brand_remove",
+   "path": "/api/swire/brand-remove",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 378
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_brand_save",
+   "path": "/api/swire/brand-save",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 397
+  },
+  {
+   "file": "swire_group.py",
+   "function": "swire_brand_collect",
+   "path": "/api/swire/brand-collect",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 436
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "security_create_baseline",
+   "path": "/api/security/baseline",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 38
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "local_ai_analyze",
+   "path": "/api/local-ai/analyze",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 157
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "local_ai_chat",
+   "path": "/api/local-ai/chat",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 182
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "collector_start_cdp",
+   "path": "/api/collector/start-cdp",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 200
+  },
+  {
+   "file": "system_features_api.py",
+   "function": "collector_stop_cdp",
+   "path": "/api/collector/stop-cdp",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 210
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_run",
+   "path": "/api/topic-campaign/run",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 921
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_recover",
+   "path": "/api/topic-campaign/recover",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 937
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_half_open_probe",
+   "path": "/api/topic-campaign/half-open-probe",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 979
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "topic_backfill_detail",
+   "path": "/api/topic-campaign/backfill-detail",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 1014
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "tc_campaign_save",
+   "path": "/api/topic-campaign/campaign-save",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 1213
+  },
+  {
+   "file": "topic_campaign.py",
+   "function": "tc_campaign_toggle",
+   "path": "/api/topic-campaign/campaign-toggle",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 1256
+  },
+  {
+   "file": "tests\\test_openapi_spec.py",
+   "function": "note_detail",
+   "path": "/api/note/<int:note_id>",
+   "methods": [
+    "GET",
+    "DELETE"
+   ],
+   "lineno": 23
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_login",
+   "path": "/auth/login",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 47
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_login_by_key",
+   "path": "/auth/login-by-key",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 70
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_logout",
+   "path": "/auth/logout",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 91
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_workspace_unlock",
+   "path": "/auth/workspace/unlock",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 111
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_workspace_keys_issue",
+   "path": "/auth/workspace/keys",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 156
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_workspace_keys_revoke",
+   "path": "/auth/workspace/keys/revoke",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 167
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_adapter_search",
+   "path": "/adapters/search",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 192
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_adapter_search_merged",
+   "path": "/adapters/search-merged",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 228
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_adapter_collect",
+   "path": "/adapters/collect",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 259
+  },
+  {
+   "file": "v4_upgrade\\blueprint.py",
+   "function": "api_recovery_start",
+   "path": "/adapters/recovery/start",
+   "methods": [
+    "POST"
+   ],
+   "lineno": 289
+  }
+ ]
+}

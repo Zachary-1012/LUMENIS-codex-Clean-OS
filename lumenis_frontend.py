@@ -31,3 +31,40 @@ def command_home():
 def foundation_healthz():
     """Foundation 层存活探针（不触达业务/数据库）。"""
     return {"status": "ok", "layer": "L0-experience", "component": "lumenis-frontend-foundation"}
+
+
+# ========== P0 页面（真实只读 API 绑定，零业务写操作） ==========
+
+@lumenis_bp.route("/intelligence")
+def intelligence_workspace():
+    """Intelligence Workspace — AI 工作区（Input→Context→Retrieval→Reasoning→Evidence→Action）。"""
+    return render_template("intelligence/workspace.html", active_nav="ai",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production")
+def production_overview():
+    """Production Overview — 生产总览（核心指标 + 采集健康 + 主体口径）。"""
+    return render_template("production/overview.html", active_nav="production",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/public-opinion")
+def public_opinion():
+    """Public Opinion — 舆情总览（情感分布 + 风险笔记 + 话题）。"""
+    return render_template("production/public_opinion.html", active_nav="opinion",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/risk")
+def risk():
+    """Risk — 风险预警中心（高/中风险笔记全量 + 风险等级分布）。"""
+    return render_template("production/risk.html", active_nav="risk",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/operations")
+def operations():
+    """Operations — 系统运维（健康四灯 + 采集状态 + AI 通道 + 运行时）。"""
+    return render_template("operations/index.html", active_nav="operations",
+                           home_url="/lumenis/")

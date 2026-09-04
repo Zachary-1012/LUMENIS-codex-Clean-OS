@@ -167,6 +167,14 @@ try:
 except Exception as _ev_e:
     print(f"[evidence_api] blueprint register failed: {_ev_e}")
 
+# 序境 LUMENIS 体验层（L0）前端 Foundation — 隔离 Blueprint，零业务逻辑/零写库
+try:
+    from lumenis_frontend import lumenis_bp
+    app.register_blueprint(lumenis_bp)
+    print("[lumenis] frontend registered: /lumenis/*")
+except Exception as _lm_e:
+    print(f"[lumenis] blueprint register failed: {_lm_e}")
+
 # 统一本地文件导入 API（参考 GPT 文件夹 icon，点击浏览本地；复用 app_evidence 扩展名+500MB 校验）
 try:
     from app_evidence import EVIDENCE_ALLOWED_EXTENSIONS, EVIDENCE_MAX_FILE_SIZE_BYTES

@@ -121,13 +121,19 @@
 {% endblock %}
 
 {% block scripts %}
-// Command Home：各卡片真实 API 绑定在后端路由就绪后启用（当前显式 loading，不造假数据）
-LUMENIS.store.set("home", "system-state", "loading");
-LUMENIS.store.set("home", "intelligence-pulse", "loading");
-LUMENIS.store.set("home", "active-risks", "loading");
-LUMENIS.store.set("home", "active-tasks", "loading");
-LUMENIS.store.set("home", "recent-evidence", "loading");
-LUMENIS.store.set("home", "recommended-actions", "loading");
-// 后端就绪后示例：LUMENIS.bindState(cardEl, {page:'home',component:'active-risks',url:'/api/risks/active',render:...});
-console.log("[LUMENIS] Command Home mounted; state snapshot:", LUMENIS.store.snapshot().total, "components tracked");
+// Command Home：六区真实 API 绑定（端点均经 S07 源码审计，字段映射以 handler 为准）
+if (window.LUMENIS && LUMENIS.Data) {
+  LUMENIS.Data.bindCommandHome();
+  // 全局状态灯：取 System State 的 overall_status
+  fetch("/api/system/health/summary").then(function(r){return r.json();}).then(function(d){
+    var dot = document.getElementById("lm-global-dot"), txt = document.getElementById("lm-global-status-text");
+    if (!dot || !txt || !d) return;
+    var map = {ok:"success",warning:"warning",critical:"danger"};
+    dot.className = "lm-dot lm-dot--" + (map[d.overall_status]||"unknown");
+    txt.textContent = d.overall_status === "ok" ? "系统正常" : (d.overall_status || "未知");
+    var rb = document.getElementById("lm-risk-badge");
+    if (rb && d.active_alerts != null) rb.textContent = d.active_alerts;
+  }).catch(function(){});
+}
+console.log("[LUMENIS] Command Home mounted; real API binding active");
 {% endblock %}
