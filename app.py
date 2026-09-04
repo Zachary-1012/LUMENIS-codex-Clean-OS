@@ -2447,6 +2447,14 @@ def api_ai_chat():
     context=function_registry.build_context(text, db)
     try: stats=db.get_stats()
     except Exception: stats={}
+    # UDIP V1.0 (P5): AI 语义层——业务指标走 Canonical，不自行计算/推断
+    # MET-RISK-01/02 由 daily_report.generate_today_summary 权威计算，AI 只消费、不重算
+    try:
+        _canonical_ai = _canonical_report_metrics('daily', None)
+        _canonical_str = 'Canonical 指标(权威,AI只引用不重算): ' + json.dumps(_canonical_ai, ensure_ascii=False, default=str)[:1200]
+    except Exception:
+        _canonical_ai = {}
+        _canonical_str = 'Canonical 指标暂不可用'
     history=data.get('history') or []
     if not isinstance(history,list): history=[]
     history_text=[]
@@ -2456,7 +2464,7 @@ def api_ai_chat():
             content=str(item.get('content') or '')[:800]
             if content: history_text.append(f'{role}：{content}')
     system='你是广州太古汇舆情监测系统的智能助手“诺米”。你拥有系统结构化检索能力。必须优先依据检索结果回答，不编造数据库事实；涉及舆情事实时明确区分“系统已监测”“用户描述”“待核验”。可以回答系统操作、品牌/业态、品牌官网、案例、公关回复、风险分析、报告、事件与架构问题。需要处置建议时使用：判断→依据→动作→责任方/时限→复盘指标。若没有足够数据，明确告诉用户缺什么，不要用常识冒充系统数据。'
-    user=f'用户问题：{text}\n\n函数与数据检索结果：\n{context}\n\n当前统计：{json.dumps(stats,ensure_ascii=False,default=str)[:5000]}'
+    user=f'用户问题：{text}\n\n函数与数据检索结果：\n{context}\n\n当前统计：{json.dumps(stats,ensure_ascii=False,default=str)[:5000]}\n\n{_canonical_str}'
     if history_text: user += '\n\n最近对话：\n' + '\n'.join(history_text)
     try: raw,provider=intelligence._chat(system,user,0.15,1800)
     except Exception as exc: raw,provider=None,'rule'; print('[Nomi] chat failed:',exc)
@@ -2499,8 +2507,38 @@ def api_generate_report():
         return jsonify({'ok':False,'error':str(exc)}),500
 
 # ===== 优化版报告API（v2）：按发布日期筛选，周期报告负面必须二次确认 =====
+
+def _canonical_report_metrics(report_type, date_str):
+    """UDIP V1.0: 报告统一消费 Canonical Metric（MET-RISK-01/02）。
+    不重复计算业务 Truth：风险指数/品牌健康度仅由 daily_report.generate_today_summary 权威计算。
+    报告展示层从此消费该字段；如与 stats 的原始计数并存，两者语义不同（聚合风险 vs 计数）。"""
+    try:
+        import daily_report as _dr
+        from datetime import datetime as _dt
+        d = date_str or _dt.now().strftime('%Y-%m-%d')
+        try:
+            _dt.strptime(d, '%Y-%m-%d')
+        except Exception:
+            d = _dt.now().strftime('%Y-%m-%d')
+        summary = _dr.generate_today_summary(date_str=d)
+        return {
+            'metric_version': 'UDIP-V1.0',
+            'date': d,
+            'MET-RISK-01': {'name': 'risk_index', 'value': summary.get('risk_index'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-01'},
+            'MET-RISK-02': {'name': 'brand_health_score', 'value': summary.get('brand_health_score'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-02'},
+            'context': {
+                'total_found': summary.get('total_found'),
+                'effective_count': summary.get('effective_count'),
+                'risk_count': summary.get('risk_count'),
+                'events_count': summary.get('events_count'),
+            },
+        }
+    except Exception as e:
+        return {'metric_version': 'UDIP-V1.0', 'error': str(e)}
+
 @app.route('/api/report/v2/<report_type>')
 def api_report_v2(report_type):
+
     """优化版报告API
     - 日报：只包含当日或前一日发布的笔记（按publish_date筛选）
     - 周报/月报/年报：负面笔记必须是二次确认的（negative_confirmed=1）
@@ -2559,6 +2597,7 @@ def api_report_v2(report_type):
                 'negative_confirmed_required': report_type != 'daily',
                 'high_risk': high_risk
             },
+            'canonical': _canonical_report_metrics(report_type, date_str),
             'notes': filtered_notes[:100],  # 最多返回100条
             'negative_notes': negative_notes[:50],  # 二次确认的负面笔记
             'historical_notes': age_classification['historical'][:50]  # 历史案例笔记
