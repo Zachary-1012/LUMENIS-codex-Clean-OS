@@ -362,12 +362,14 @@
       body.innerHTML = '<div class="lc-section-list">' + list.map(function (r) {
         return '<div class="lc-note-row"><span class="lc-id">' + esc(r.id) + '</span><div class="lc-note-body">' + esc(r.research) + '</div></div>';
       }).join('') + '</div>';
+      bindCards();
       return;
     }
     if (state.category === 'decisions') {
       body.innerHTML = '<div class="lc-section-list">' + list.map(function (r) {
         return '<div class="lc-note-row"><span class="lc-id">' + esc(r.id) + '</span><div class="lc-note-body">' + esc(r.decision) + '</div></div>';
       }).join('') + '</div>';
+      bindCards();
       return;
     }
 
