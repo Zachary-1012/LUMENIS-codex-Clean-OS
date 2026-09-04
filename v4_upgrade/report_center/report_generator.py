@@ -125,11 +125,12 @@ class ReportGenerator:
     def _calculate_stats(self, notes: List[dict], events: List[dict]) -> dict:
         """计算统计数据"""
         total = len(notes)
-        positive = sum(1 for n in notes if n.get("sentiment") == "positive")
-        negative = sum(1 for n in notes if n.get("sentiment") == "negative")
-        neutral = sum(1 for n in notes if n.get("sentiment") == "neutral")
-        high_risk = sum(1 for n in notes if n.get("risk_level") in ("high", "critical"))
-        medium_risk = sum(1 for n in notes if n.get("risk_level") == "medium")
+        # [Canonical P0] 情感/风险分桶统一走 canonical_metrics；方案甲 high 不含 critical(critical 独立)
+        from canonical_metrics import sentiment_count as _sc_fn, risk_count as _rc_fn
+        _sc = _sc_fn(notes); _rc = _rc_fn(notes)
+        positive, negative, neutral = _sc["positive"], _sc["negative"], _sc["neutral"]
+        high_risk = _rc["high"]
+        medium_risk = _rc["medium"]
         total_engagement = sum(
             int(n.get("likes", 0) or 0) + int(n.get("comments", 0) or 0) * 2
             for n in notes
