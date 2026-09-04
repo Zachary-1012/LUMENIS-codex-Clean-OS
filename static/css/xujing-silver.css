@@ -178,7 +178,7 @@
 }
 @keyframes xj-wave-move {
   0%, 5%    { opacity: 0; transform: translate(var(--xj-shine-x0, -70%), var(--xj-shine-y0, 0)); }
-  14%, 40%  { opacity: .82; }
+  14%, 40%  { opacity: .22; }
   52%, 100% { opacity: 0; transform: translate(var(--xj-shine-x1, 30%), var(--xj-shine-y1, 0)); }
 }
 
@@ -215,11 +215,11 @@ body {
 
 /* ---- 2) 全局微风拂海面微光层（大面积柔银光斑缓慢漂移） ---- */
 body::before {
-  content: ''; position: fixed; inset: -30%; z-index: 0; pointer-events: none;
+  content: ''; position: fixed; inset: -30%; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(38% 34% at 28% 30%, rgba(255,255,255,.95), rgba(226,231,240,.5) 45%, transparent 70%),
-    radial-gradient(30% 26% at 72% 62%, rgba(214,222,233,.6), transparent 65%),
-    radial-gradient(26% 30% at 55% 10%, rgba(244,247,250,.85), transparent 60%);
+    radial-gradient(40% 36% at 26% 28%, rgba(255,255,255,1), rgba(232,238,246,.65) 45%, transparent 72%),
+    radial-gradient(32% 28% at 70% 60%, rgba(224,232,242,.75), transparent 66%),
+    radial-gradient(28% 32% at 52% 8%, rgba(248,250,253,.95), transparent 62%);
   filter: blur(2px);
   animation: xj-sea-breeze 46s ease-in-out infinite alternate;
 }
