@@ -70,3 +70,62 @@
 - **影响范围**：AI 通道（预算/早停）；Observability（trace）；成本治理（看板）
 - **风险**：低——研究侧沉淀
 - **Evidence**：OSAI 推送（雷达+队列）；本登记簿双库同步
+---
+
+## Cycle D — LLM-as-a-Judge / 轨迹级评测体系（2026-09-04）
+
+- **主题**：Evaluation / Benchmark / LLM-as-a-Judge（指令十一方向补充）
+- **研究对象**：MOBILEJUDGEBENCH（arXiv 2608.11434）、Vertex AI Agent-as-a-Judge、智能体质量飞轮
+- **来源**：arXiv、Google Discuss（E2），URL 见 OSAI 技术雷达 §9
+- **核心发现**：
+  1. 简单 baseline judge + 强 backbone 优于复杂 judge pipeline（LLM 主干是主要驱动）
+  2. 评估从最终 Output 扩展到轨迹级（计划/工具选择/权限/中间状态/成本延迟）
+  3. 不同后端失败画像相反（保守 vs 宽松），源于 precision-recall 特性
+- **适用能力**：自建 Eval 基线；ai_channel 输出质检
+- **与代码库关系**：与 IC-011（trace 三层）联动——评估消费 trace
+- **实验**：无（研究侧）
+- **决策**：ADAPT
+- **采用位置**：雷达 §9；队列 IC-012
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
+
+---
+
+## Cycle E — 代码库理解 / 意图检索 / Capability Discovery（2026-09-04）
+
+- **主题**：Repository Understanding / Code Search / Capability Discovery（指令十一方向补充）
+- **研究对象**：Codebase Insights（MCP）、CocoIndex Code / SymDex / GitNexus
+- **来源**：GitHub、Codex CLI 深度文（E2），URL 见 OSAI 技术雷达 §10
+- **核心发现**：
+  1. 文本搜索在知道名字时有效，但智能体通常不知道——需按职责/意图搜索
+  2. 四层索引：LSP 导航 + SQLite 持久符号/引用 + LLM 摘要 + 意图向量检索
+  3. AST-aware chunking 降 70% token；增量 re-index 秒级
+  4. MCP schema bloat tax：每 server 每轮 2000-4000 token
+- **适用能力**：Reference Scan / Capability Discovery / 复用判定（Canonical Capability）
+- **与代码库关系**：直接支撑"先盘点再映射、能复用不重建"；双库可建轻量索引
+- **实验**：无（研究侧）
+- **决策**：ADAPT
+- **采用位置**：雷达 §10；队列 IC-013/IC-015
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
+
+---
+
+## Cycle F — 自进化 Agent / 持久记忆 / 技能沉淀（2026-09-04）
+
+- **主题**：Self-Evolving Agent / Self-Correction / Memory / Skill（指令十一方向补充）
+- **研究对象**：Hermes Agent（Nous Research）、Self-Evolving AI Agents Survey
+- **来源**：Hermes 官方中文站、HundredTabs、Survey（E2），URL 见 OSAI 技术雷达 §11
+- **核心发现**：
+  1. GEPA 自我进化：类反向传播优化 prompt，100-500 次策略迭代（vs 传统 RL 上万次）
+  2. 持久记忆：MEMORY.md（事实+教训）+ USER.md（偏好），SQLite FTS5 + LLM 摘要 + 注入安全扫描
+  3. 技能自动沉淀：完成复杂任务自动提炼技能文件，渐进式披露 Level 0/1/2
+  4. 进化三定律：Endure（稳）→ Excel（优）→ Evolve（自主）
+  5. 安全：指令审批/Docker 沙箱/路径防护/SSRF 缓解/凭证管理，0 CVE
+- **适用能力**：我们的"学习→沉淀→反哺"闭环（已同构）；Prompt/策略版本管理；知识资产披露
+- **与代码库关系**：技术雷达/改进队列/Cycle 登记簿即持久记忆+技能沉淀；与 Contract/Gate 体系同构
+- **实验**：无（研究侧）
+- **决策**：ADOPT（方法论确认：三定律、学习闭环）；ADAPT（渐进披露、GEPA 迭代思路）
+- **采用位置**：雷达 §11；队列 IC-014
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
