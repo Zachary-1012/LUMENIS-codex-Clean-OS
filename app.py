@@ -151,6 +151,14 @@ try:
 except Exception as _ibs_e:
     print(f"[internal_browser_stream] blueprint register failed: {_ibs_e}")
 
+# 序境 · 平台内置浏览器能力层（对标 Safari/Chrome：Tabs/Reader/书签/历史/多源搜索，平台内不跳站外）
+try:
+    import browser_surface_api
+    browser_surface_api.register_browser_surface_api(app)
+    print("[browser_surface_api] registered: /api/browser-surface/*")
+except Exception as _bsf_e:
+    print(f"[browser_surface_api] blueprint register failed: {_bsf_e}")
+
 # Zachary OS AI：Evidence 查询 API（只读证据接口）
 try:
     import evidence_api
