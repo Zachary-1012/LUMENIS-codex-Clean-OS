@@ -50,7 +50,10 @@
 ## 双真相登记（待收敛，不删除）
 
 - MET-RISK-01（聚合风险） vs MET-RISK-03（笔记级风险）：**不同层级口径**，各自有效，但须在 Lineage 中显式标注关系，禁止混用为同一指标。
-- MET-CONTENT-01 情感：ai_analyzer 与 topic_campaign 两处计算，**登记 CANDIDATE**，下一阶段统一为单一 Canonical。
+- MET-CONTENT-01 情感（2026-09-04 已判定，CANDIDATE→RESOLVED）：
+  - `ai_analyzer.analyze_sentiment`（L170）= 深度 AI 情感分析（标题+正文加权、话题印证、澄清/褒义抵消），定位=完整情感分析 → **CANONICAL（深度）**
+  - `topic_campaign._classify_note`（L215）= 轻量规则分类（关键词计数，明确"不依赖AI、可解释"），定位=话题监测快速标注 → **CANONICAL（轻量规则）**
+  - **判定：指令四节 C（分别对应不同业务含义）**，非重复。两者均产出 `sentiment` 字段，消费方必须按定位选择（深度分析用 ai_analyzer，话题实时标注用 _classify_note），禁止混用为同一指标口径。
 - 任何页面若出现同一 MET-xxx 但算法不同 → 判定违规，走 V1.0 收敛流程。
 
 ## 追踪要求

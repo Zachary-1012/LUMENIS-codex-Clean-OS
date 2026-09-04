@@ -41,6 +41,28 @@
 ### 2.4 结论
 全仓未发现需立即 REPLACE 的重复计算。当前重复率处于低位（WRAP 系列已收敛核心口径）。本次第一阶段 = Contract 落库 + Reference Scan 判定记录。后续阶段（Capability Registry 更新、Cross-Surface 一致性、Legacy 清理）按指令十阶段渐进推进。
 
+## 二B、第二阶段深度 Reference Scan（2026-09-04，加大算力）
+
+### 2B.1 已登记 CANDIDATE 判定：MET-CONTENT-01 情感
+- `ai_analyzer.analyze_sentiment`（L170）= 深度 AI 情感分析（标题+正文加权、话题印证、澄清/褒义抵消）→ **CANONICAL（深度）**
+- `topic_campaign._classify_note`（L215）= 轻量规则分类（关键词计数，明确"不依赖AI、可解释"）→ **CANONICAL（轻量规则）**
+- **判定：指令四节 C（分别对应不同业务含义）**，非重复。消费方必须按定位选择，禁止混用为同一指标口径。→ METRIC_REGISTRY 已更新（CANDIDATE→RESOLVED）
+
+### 2B.2 前端 14 个 JS 文件全量审计
+扫描 app.js/architecture_dashboard/brand_hub/kos_dashboard/podcast/swire_group 等 14 个文件：
+- `reduce`（app.js L548）：求展示用总数，消费后端 note_count，非业务重算
+- `手写占比`（L154-171 donut / L1024-1025 brand-bar）：均消费后端已算 pos/neu/neg/count/total，环形图角度+条形图宽度属 UI 表现
+- `length` 计数：多数为数组长度做展示控制（空态/分页/分页总数）
+- **结论：全部为 UI 展示层格式转换，无第二套业务 Truth**，符合"UI 不建立第二套业务 Truth"
+
+### 2B.3 metric_snapshots 数据完整性
+- 表存在，250 行（entity_type=note），全部带 snapshot_at → 指标历史 Truth 完整可用作下钻
+
+### 2B.4 本阶段结论
+- 深度 Reference Scan 覆盖后端全模块 + 前端 14 JS 文件 + Registry CANDIDATE，无第二套业务 Truth
+- 唯一实质性收敛 = MET-CONTENT-01 判定 RESOLVED（非重复，分层定位防混用）
+- 未改动生产代码（仅 Registry 记录 + 审计判定），零回归风险
+
 ## 三、与 UDIP V1.0 的关系
 - UDIP V1.0 = 数据管线收敛（一次采集/一次标准化/一次计算/多处消费）
 - Canonical Capability V1 = Capability 级总纲（覆盖 Data/Function/Metric/UI/AI 全层）
