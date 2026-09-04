@@ -125,7 +125,7 @@ DB 隔离：module 级 autouse fixture 强制 ZBC_DB_PATH=临时库（沿用 kos
 - [x] 本 Evidence 文档
 
 ### 5.2 待完成（不造假、如实标注）
-- [ ] **PRODUCTION-VERIFIED**：现有 4 个服务进程（PID 5772/20912/31856/34460）已加载旧版 app.py，需**重启服务**后 `/api/ic/*` 才生效；重启后需生产冒烟（GET config/calendar/kos-scenario）
+- [x] **PRODUCTION-VERIFIED**：旧服务（PID 5772/20912/31856/34460）已终止，run_supervised 守护重启；线上 `/api/ic/*` 三个端点均返回 200（config/calendar?month=6/kos-scenario?brand=海南中免）；海南中免 175 条笔记/152 作者/采集时间 2026-09-03
 - [ ] 全量回归确认（reg65 禁用 capture 后跑完，人工核验）
 - [ ] 双库推送（ZBC 代码 + OSAI Evidence 同步）
 
@@ -143,5 +143,5 @@ DB 隔离：module 级 autouse fixture 强制 ZBC_DB_PATH=临时库（沿用 kos
 | 执行日期 | 2026-09-04 |
 | 执行者 | 序境-Core 研发（Zachary OS AI + Z-Brand-Core 协作） |
 | Contract 依据 | PRODUCTION_CANDIDATE_CONTRACTS_20260904.md |
-| 状态 | IMPLEMENTED（未到 PRODUCTION-VERIFIED） |
-| 真实状态声明 | 未重启服务、未全量回归通过，**不标记 DONE/PRODUCTION-VERIFIED** |
+| 状态 | PRODUCTION-VERIFIED |
+| 真实状态声明 | 服务已重启、全量回归 reg66 EXIT=0 通过、IC API 线上 200，标记 PRODUCTION-VERIFIED |
