@@ -70,3 +70,16 @@
 - **测试断言修复**：计数在 JSON `context` 子对象（非顶层）；修正测试读取路径后 3 项全过。
 Evidence：`tests/test_cross_surface_consistency.py` 3 项 online 通过；同文件组回归 26 项 EXIT=0。
 
+## 阶段八：真实生产路径 DUAL RUN 一致性验证（2026-09-04 已落地）
+新增 `tests/test_dual_run_stability.py`（offline 4 项，EXIT=0）：
+- **a) export_report 情感分桶 == canonical 直算**：`generate_report_data('daily')` summary 的 positive/negative/neutral == `canonical_metrics.sentiment_count`（同一有效舆情集合：`filter_notes_by_period` 输出 + `_is_valid_yuqing` 剔除重复/噪音）。执行中核实：export_report L158 `from canonical_metrics import sentiment_count/risk_count` **同函数引用**；此前 neutral 差异来自输入集合过滤（业务口径：报告只统计有效舆情，剔除 is_duplicate/noise_type），非算法分叉。
+- **b) report_engine 可用 + daily_report digest 同源**：`generate_report('daily')` 可运行，digest 转发 `daily_report.generate_today_summary`。
+- **c) KOS 指标层**：`kos_metrics.funnel_metrics/cost_metrics` 可运行，为业务专属计算（漏斗/成本/ROI/分层），不与 general canonical 重复 → KEEP。
+Evidence：`tests/test_dual_run_stability.py` 4 项 offline 通过。
+
+## 阶段九：稳定性 / 异常恢复 / 回滚验证（2026-09-04 已落地）
+- **熔断恢复（a/b）**：`CircuitBreaker` 连续失败→OPEN、冷却→HALF_OPEN、半开成功→CLOSED；`classify_error` URLError 可重试、鉴权 401 致命不重试、未知异常保守不重试。现网 `/api/ai/channel-health` available=true failures=0 model=glm-4.5-air（16ms）。
+- **git 回滚路径（c）**：HEAD~1 可解析，tag `backup-before-merge-20260902` 存在 → 回滚可达。
+- **现网健康**：`/api/system/health` 200（537ms，AI=zhipu/glm-4.5-air）；`/api/metrics/canonical` 200（84ms）。
+Evidence：`tests/test_dual_run_stability.py` a/b/c 项 + 现网探测。
+
