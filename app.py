@@ -2374,6 +2374,16 @@ def api_system_health():
     result['web_discovery_enabled']=os.getenv('TAIKOO_WEB_DISCOVERY','1').lower() not in ('0','false','no','off')
     return jsonify({'ok':result.get('database')=='ok','health':result})
 
+# ===== Collector Guard 状态 API（旁路模式，只读）=====
+@app.route('/api/collector-guard/status')
+def api_collector_guard_status():
+    """采集守护系统状态：各平台限速器/熔断/指标快照。旁路模式，不改变采集行为。"""
+    try:
+        from collector_guard_integration import get_all_status, is_enabled
+        return jsonify({'ok': True, 'enabled': is_enabled(), 'guards': get_all_status()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # ===== v5.3.2 智能日报 API =====
 @app.route('/api/overview')
 def api_overview():

@@ -41,6 +41,18 @@ PLATFORM_CAPABILITIES = {
     "weibo": {"name": "微博", "enabled": False, "priority": "event"},
     "tieba": {"name": "贴吧", "enabled": False, "priority": "event"},
     "zhihu": {"name": "知乎", "enabled": False, "priority": "event"},
+    "instagram": {
+        "name": "Instagram",
+        "enabled": False,
+        "priority": "secondary",
+        "search": True,
+        "detail": True,
+        "comments": True,
+        "creator": True,
+        "session_cache": True,
+        "proxy_pool": True,
+        "enable_gate": "proxy_plus_cookie_configured",
+    },
 }
 
 
