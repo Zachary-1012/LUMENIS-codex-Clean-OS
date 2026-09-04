@@ -27,13 +27,37 @@
     if (!el.classList.contains('is-live')) { el.classList.add('is-live'); }
   }
 
-  var PANEL_SELECTOR = '.panel.glass-card, .metric-card, .home-card, .smart-card, ' +
-    '.osai-module-card, .ev-stat-card, .case-card, .brand-card, .smart-center';
+  /* ---- 玻璃质感参数表（函数驱动：数据表 → 函数计算 → 运行时应用）---- */
+  var GLASS = {
+    bgTop: 'rgba(255,255,255,.82)',
+    bgBottom: 'rgba(255,255,255,.52)',
+    blur: 14,
+    sat: 1.35,
+    border: 'rgba(255,255,255,.72)',
+    radius: '10px'
+  };
+
+  /* 玻璃纯函数：由参数表计算并应用为内联 !important（绕开历史皮肤 CSS 级联，保证统一质感） */
+  function glassify(el) {
+    el.style.setProperty('background',
+      'linear-gradient(180deg, ' + GLASS.bgTop + ', ' + GLASS.bgBottom + ')', 'important');
+    el.style.setProperty('-webkit-backdrop-filter',
+      'blur(' + GLASS.blur + 'px) saturate(' + GLASS.sat + ')', 'important');
+    el.style.setProperty('backdrop-filter',
+      'blur(' + GLASS.blur + 'px) saturate(' + GLASS.sat + ')', 'important');
+    el.style.setProperty('border', '1px solid ' + GLASS.border, 'important');
+    el.style.setProperty('border-radius', GLASS.radius, 'important');
+  }
+
+  var PANEL_SELECTOR = '.panel.glass-card, .panel, .glass-card, .metric-card, .home-card, ' +
+    '.smart-card, .osai-module-card, .ev-stat-card, .case-card, .brand-card, .smart-center, ' +
+    '.report-card, .event-card';
 
   function markAll() {
     document.querySelectorAll(PANEL_SELECTOR).forEach(function (el) {
       if (!el.classList.contains('xj-card-silver')) { el.classList.add('xj-card-silver'); }
       if (!el.classList.contains('is-live')) { live(el); }
+      glassify(el);
     });
   }
 

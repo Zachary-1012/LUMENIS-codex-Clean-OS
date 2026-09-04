@@ -1070,7 +1070,7 @@ button svg, .btn svg, .icon-button svg {
 }
 
 /* 禁止任何元素字号超过32px（splash已单独处理） */
-#splash .splash-title { font-size: 18px !important; }
+#splash .splash-title { font-size: 34px !important; letter-spacing: 4px !important; font-weight: 650 !important; }
 
 /* 卡片padding紧凑化 */
 .metric-card, .glass-card {
