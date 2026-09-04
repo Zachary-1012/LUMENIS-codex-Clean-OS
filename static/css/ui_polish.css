@@ -102,3 +102,14 @@ body[data-workspace="zbmp"] .side-nav .side-group-label { display: none !importa
   body .sidebar .side-footer { flex: 0 1 auto !important; max-height: 96px !important; overflow-y: auto !important; }
   body .sidebar .architecture-panel { flex: 0 1 auto !important; max-height: 96px !important; overflow-y: auto !important; }
 }
+
+/* ---- 12. 主内容区与右侧面板宽度均衡（移除旧主题层后 right-panel 膨胀兜底） ---- */
+.layout > .content { flex: 1 1 auto !important; min-width: 0 !important; width: auto !important; }
+.layout > .right-panel { flex: 0 0 auto !important; width: 320px !important; max-width: 340px !important; }
+@media (max-width: 1023px) {
+  .layout > .right-panel { width: 300px !important; max-width: 300px !important; }
+}
+
+/* ---- 13. 弹窗默认隐藏协议（xujing-design-system 的 .modal{display:flex} 覆盖了 style.css 的默认 none，导致空弹窗常显） ---- */
+#modal { display: none !important; }
+#modal.open { display: flex !important; }
