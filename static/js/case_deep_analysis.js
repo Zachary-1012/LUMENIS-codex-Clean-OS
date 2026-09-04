@@ -124,7 +124,7 @@ const CaseDeepAnalysis = {
                     </div>
                 </div>
                 <div class="case-stat-card">
-                    <div class="case-stat-icon">⭐</div>
+                    <div class="case-stat-icon">${xicon('star')}</div>
                     <div class="case-stat-info">
                         <strong>${stats.avg_quality || 0}</strong>
                         <span>平均质量分</span>
@@ -174,7 +174,7 @@ const CaseDeepAnalysis = {
                     <div class="case-card-meta">
                         <span class="case-brand">${c.brand || ''}</span>
                         <span class="case-year">${c.year || ''}</span>
-                        <span class="case-quality" title="质量分">⭐ ${c.quality_score || 0}</span>
+                        <span class="case-quality" title="质量分">${xicon('star', 12)} ${c.quality_score || 0}</span>
                     </div>
                 </div>
                 <div class="case-card-body">
@@ -347,7 +347,7 @@ const CaseDeepAnalysis = {
 
                     <!-- 成功要素 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:${color}">⭐</span>成功要素分析（带权重）</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:${color}">${xicon('star', 12)}</span>成功要素分析（带权重）</h3>
                         <div class="detail-factors-list">${factorsHtml}</div>
                     </section>
 

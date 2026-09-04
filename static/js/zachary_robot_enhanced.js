@@ -333,7 +333,7 @@
             const ver = hz && hz.version ? 'v' + hz.version : '版本未知';
             const online = hz && hz.ok === true;
             const aiTxt = ai ? [ai.provider, ai.model].filter(Boolean).join(' / ') || '已配置' : '未知';
-            return `🖥️ 系统运行状态：\n• 版本：${ver}\n• 服务：${online ? '在线' : (hz ? '异常' : '健康接口未响应')}\n• AI：${aiTxt}\n• 数据：本地实时库\n\n（以上来自实时接口，非静态文案）`;
+            return `系统运行状态：\n• 版本：${ver}\n• 服务：${online ? '在线' : (hz ? '异常' : '健康接口未响应')}\n• AI：${aiTxt}\n• 数据：本地实时库\n\n（以上来自实时接口，非静态文案）`;
         }
 
         // 1) 分析/建议/解释类 → 真 AI（纯清单提问除外，清单数字必须由规则权威给出）
@@ -412,7 +412,7 @@
             const data = await apiCall('/dashboard/all');
             if (data && data.stats) {
                 const s = data.stats;
-                return `📊 舆情概览${scope ? '（' + scope.label + '）' : ''}：\n• 总笔记：${s.total || 0}条\n• 正面：${s.positive || 0}条\n• 中性：${s.neutral || 0}条\n• 负面：${s.negative || 0}条\n• 高风险：${s.high_risk || 0}条\n• 总互动量：${s.total_engagements || 0}\n• 活跃事件：${(data.events || []).length}个`;
+                return `舆情概览${scope ? '（' + scope.label + '）' : ''}：\n• 总笔记：${s.total || 0}条\n• 正面：${s.positive || 0}条\n• 中性：${s.neutral || 0}条\n• 负面：${s.negative || 0}条\n• 高风险：${s.high_risk || 0}条\n• 总互动量：${s.total_engagements || 0}\n• 活跃事件：${(data.events || []).length}个`;
             }
             return '正在获取舆情概览…';
         }

@@ -69,7 +69,7 @@
                     </div>
                     ${c.category ? '<p style="margin:4px 0;font-size:12px;color:#6b7280;">分类: ' + c.category + '</p>' : ''}
                     ${c.summary ? '<p style="margin:4px 0;font-size:12px;color:#4b5563;line-height:1.5;">' + c.summary.substring(0, 150) + (c.summary.length > 150 ? '...' : '') + '</p>' : ''}
-                    ${c.lesson ? '<p style="margin:6px 0 0 0;font-size:12px;color:#059669;background:#ecfdf5;padding:6px 8px;border-radius:4px;">💡 启示: ' + c.lesson.substring(0, 100) + '</p>' : ''}
+                    ${c.lesson ? '<p style="margin:6px 0 0 0;font-size:12px;color:#059669;background:#ecfdf5;padding:6px 8px;border-radius:4px;">启示: ' + c.lesson.substring(0, 100) + '</p>' : ''}
                 </div>
             `;
         });
@@ -87,9 +87,9 @@
             html += `
                 <div style="padding:10px 12px;background:#fff;border-radius:8px;margin-bottom:8px;border:1px solid #e5e7eb;">
                     <strong style="font-size:13px;color:#1f2937;">${idx + 1}. ${t.scene || t.name || '话术模板'}</strong>
-                    ${t.formula ? '<p style="margin:6px 0;font-size:12px;color:#4b5563;line-height:1.6;background:#f9fafb;padding:8px;border-radius:6px;">📝 ' + t.formula + '</p>' : ''}
+                    ${t.formula ? '<p style="margin:6px 0;font-size:12px;color:#4b5563;line-height:1.6;background:#f9fafb;padding:8px;border-radius:6px;"> ' + t.formula + '</p>' : ''}
                     ${t.example ? '<p style="margin:6px 0 0 0;font-size:12px;color:#6b7280;line-height:1.5;">示例: ' + t.example.substring(0, 120) + '</p>' : ''}
-                    ${t.taboo ? '<p style="margin:6px 0 0 0;font-size:12px;color:#dc2626;background:#fef2f2;padding:6px 8px;border-radius:4px;">⚠️ 禁忌: ' + t.taboo.substring(0, 100) + '</p>' : ''}
+                    ${t.taboo ? '<p style="margin:6px 0 0 0;font-size:12px;color:#dc2626;background:#fef2f2;padding:6px 8px;border-radius:4px;">禁忌: ' + t.taboo.substring(0, 100) + '</p>' : ''}
                 </div>
             `;
         });

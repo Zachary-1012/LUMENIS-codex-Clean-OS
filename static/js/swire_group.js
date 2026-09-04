@@ -192,7 +192,7 @@
         <div style="display:flex;gap:7px;align-items:flex-start">
           <span style="flex-shrink:0;font-size:9px;color:${s[1]};background:${s[2]};padding:2px 7px;border-radius:999px;margin-top:2px">${s[0]}</span>
           <div style="min-width:0;flex:1">${url ? `<a href="${esc(url)}" target="_blank" style="color:inherit;text-decoration:none">${title}</a>` : title}
-            <div style="font-size:10px;color:#999;margin-top:3px">${esc(n.author || '匿名')} · ${esc((n.publish_date || '').slice(0, 10))} · ♥${num(n.likes)} 💬${num(n.comments)} ⭐${num(n.collects)}</div>
+            <div style="font-size:10px;color:#999;margin-top:3px">${esc(n.author || '匿名')} · ${esc((n.publish_date || '').slice(0, 10))} · 赞${num(n.likes)} 评${num(n.comments)} 藏${num(n.collects)}</div>
           </div></div></div>`;
     }).join('');
   }

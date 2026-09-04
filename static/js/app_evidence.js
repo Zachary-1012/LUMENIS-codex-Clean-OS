@@ -111,7 +111,7 @@ const AppEvidence = {
         } else {
             preview.innerHTML = `
                 <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--bg-secondary);border-radius:8px">
-                    <div style="width:48px;height:48px;background:var(--bg-tertiary);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px">📄</div>
+                    <div style="width:48px;height:48px;background:var(--bg-tertiary);border-radius:6px;display:flex;align-items:center;justify-content:center">${xicon('doc', 22)}</div>
                     <div style="flex:1;min-width:0">
                         <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${file.name}</div>
                         <div style="font-size:11px;color:var(--text-tertiary)">${(file.size / 1024).toFixed(1)} KB</div>
@@ -224,7 +224,7 @@ const AppEvidence = {
                 if (records.length === 0) {
                     document.getElementById('aeList').innerHTML = `
                         <div style="text-align:center;padding:48px;color:var(--text-tertiary)">
-                            <div style="font-size:48px;margin-bottom:16px">📋</div>
+                            <div style="margin-bottom:16px">${xicon('list', 42)}</div>
                             <div style="font-size:15px;font-weight:500;margin-bottom:6px">暂无证据记录</div>
                             <div style="font-size:12px">选择平台，上传截图，填写字段，人工确认后进入Shadow</div>
                         </div>
@@ -239,12 +239,12 @@ const AppEvidence = {
                     shadow: { label: 'Shadow', color: 'var(--apple-purple)' }
                 };
                 const sourceMap = {
-                    xhs_app: { label: '小红书App', icon: '📕' },
-                    wechat_mini: { label: '微信小程序', icon: '💬' },
-                    wechat_mp: { label: '微信公众号', icon: '📢' },
-                    douyin_app: { label: '抖音App', icon: '🎵' },
-                    weibo_app: { label: '微博App', icon: '🔴' },
-                    other: { label: '其他', icon: '📱' }
+                    xhs_app: { label: '小红书App', icon: 'book' },
+                    wechat_mini: { label: '微信小程序', icon: 'chat' },
+                    wechat_mp: { label: '微信公众号', icon: 'megaphone' },
+                    douyin_app: { label: '抖音App', icon: 'music' },
+                    weibo_app: { label: '微博App', icon: 'globe' },
+                    other: { label: '其他', icon: 'phone' }
                 };
                 const metricMap = {
                     browse_count: '浏览量', visit_count: '访问次数', uv_count: '独立访客',
@@ -258,14 +258,14 @@ const AppEvidence = {
                     <div style="display:flex;flex-direction:column;gap:10px">
                         ${records.map(r => {
                             const st = statusMap[r.status] || { label: r.status, color: '#6b7280' };
-                            const src = sourceMap[r.source] || { label: r.source, icon: '📱' };
+                            const src = sourceMap[r.source] || { label: r.source, icon: 'phone' };
                             return `
                             <div class="panel" style="padding:14px;margin-bottom:0">
                                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
                                     <div style="flex:1;min-width:200px">
                                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
                                             <span style="background:${st.color}15;color:${st.color};padding:3px 10px;border-radius:var(--radius-full);font-size:11px;font-weight:600">${st.label}</span>
-                                            <span style="font-size:12px;color:var(--text-secondary)">${src.icon} ${src.label}</span>
+                                            <span style="font-size:12px;color:var(--text-secondary)">${xicon(src.icon, 14)} ${src.label}</span>
                                             <span style="font-size:11px;color:var(--text-tertiary)">#${r.id}</span>
                                         </div>
                                         <div style="font-size:14px;font-weight:600;margin-bottom:4px">
@@ -278,9 +278,9 @@ const AppEvidence = {
                                     </div>
                                     <div style="display:flex;gap:6px;flex-wrap:wrap">
                                         ${r.status === 'pending' ? `
-                                            <button class="action secondary" style="padding:5px 10px;font-size:11px" onclick="AppEvidence.confirm(${r.id})">✓ 确认</button>
+                                            <button class="action secondary" style="padding:5px 10px;font-size:11px" onclick="AppEvidence.confirm(${r.id})">确认</button>
                                             <button class="action secondary" style="padding:5px 10px;font-size:11px;color:var(--apple-purple)" onclick="AppEvidence.shadow(${r.id})">◐ Shadow</button>
-                                            <button class="action secondary" style="padding:5px 10px;font-size:11px;color:var(--apple-red)" onclick="AppEvidence.reject(${r.id})">✗ 拒绝</button>
+                                            <button class="action secondary" style="padding:5px 10px;font-size:11px;color:var(--apple-red)" onclick="AppEvidence.reject(${r.id})">拒绝</button>
                                         ` : ''}
                                         <button class="action tertiary" style="padding:5px 10px;font-size:11px;color:var(--apple-red)" onclick="AppEvidence.remove(${r.id})">删除</button>
                                     </div>
@@ -342,7 +342,7 @@ const AppEvidence = {
             });
             const data = await res.json();
             if (data.ok) {
-                statusEl.textContent = '✓ 上传成功（待人工确认）';
+                statusEl.textContent = '上传成功（待人工确认）';
                 statusEl.style.color = 'var(--apple-green)';
                 setTimeout(() => { statusEl.textContent = ''; }, 3000);
                 this.resetForm();

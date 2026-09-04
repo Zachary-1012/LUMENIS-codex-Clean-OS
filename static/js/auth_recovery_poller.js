@@ -170,7 +170,7 @@
     // Header
     var header = h('div', null, { 'id': 'ar-modal-header',
       'style': 'padding:18px 20px;background:#1C1917;color:#fff;display:flex;align-items:center;gap:10px;' });
-    header.appendChild(h('span', '⚠️', { 'style': 'font-size:22px;' }));
+    header.appendChild(h('span', '', { 'class': 'xj-dot xj-dot-warning', 'style': 'width:10px;height:10px;' }));
     header.appendChild(h('div', null, { 'style': 'flex:1;' }, [
       h('div', null, { 'id': 'ar-modal-title', 'style': 'font-size:16px;font-weight:600;' }),
       h('div', null, { 'id': 'ar-modal-subtitle', 'style': 'font-size:12px;opacity:.9;margin-top:2px;' })

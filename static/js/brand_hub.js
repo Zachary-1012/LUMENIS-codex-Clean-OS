@@ -287,7 +287,7 @@
       var inter = p.interaction || {};
       var ownLabel = own.ownership_class || "—";
       var ownState = own.ai_status === "VERIFIED"
-        ? '<span style="font-size:10px;color:#15803d">✓人工</span>'
+        ? '<span style="font-size:10px;color:#15803d">人工</span>'
         : (own.needs_manual_review ? '<span style="font-size:10px;color:#b45309">待复核</span>' : "");
       var relTxt = rel.relevance_segment || (rel.avg_relevance !== undefined && rel.avg_relevance !== null ? rel.avg_relevance.toFixed(2) : "");
       var interDot = inter.pattern

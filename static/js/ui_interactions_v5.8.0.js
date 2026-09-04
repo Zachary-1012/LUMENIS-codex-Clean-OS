@@ -267,7 +267,7 @@
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <div class="modal-title">⚠️ 待确认负面舆情提醒</div>
+                    <div class="modal-title">${xicon('warn')} 待确认负面舆情提醒</div>
                     <button class="modal-close">&times;</button>
                 </div>
                 <div style="margin-bottom: 16px;">
@@ -308,7 +308,7 @@
             if (e.target === modal) modal.remove();
         };
         if (window.matchMedia && window.matchMedia('(max-width:768px)').matches) {
-            window.showMobileNotice(`⚠️ 您有 <b>${stats.pending}</b> 条负面舆情待确认`, () => document.body.appendChild(modal));
+            window.showMobileNotice(`您有 <b>${stats.pending}</b> 条负面舆情待确认`, () => document.body.appendChild(modal));
         } else {
             document.body.appendChild(modal);
         }
@@ -342,7 +342,7 @@
                                     <span class="badge badge-danger">${note.risk_level || '未知'}</span>
                                     作者：${escapeHtml(note.author_nickname || '未知')}
                                     · 发布：${note.publish_date || '未知'}
-                                    · 👍${note.likes || 0} 💬${note.comments || 0}
+                                    · 赞${note.likes || 0} 评${note.comments || 0}
                                 </div>
                             </div>
                             <div class="negative-item-actions">
@@ -633,7 +633,7 @@
                             </span>
                             作者：${escapeHtml(note.author_nickname || '未知')}
                             · 发布：${note.publish_date}
-                            · 👍${note.likes || 0}
+                            · 赞${note.likes || 0}
                         </div>
                     </div>
                 </div>
@@ -905,7 +905,7 @@
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h3 class="modal-title">🛠️ 开发者工具 - 运行升级代码</h3>
+                    <h3 class="modal-title">${xicon('wrench')} 开发者工具 - 运行升级代码</h3>
                     <button class="modal-close">×</button>
                 </div>
                 <div class="modal-body">

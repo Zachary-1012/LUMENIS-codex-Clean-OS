@@ -495,7 +495,7 @@
                             ${recent.map(n => `
                                 <div style="padding: 8px; background: #f9f9f9; border-radius: 4px; margin-bottom: 6px; ${n.url?'cursor:pointer;':''}" ${n.url?`onclick="window.open('${n.url}','_blank')"`:''}>
                                     <div style="font-weight: 500; line-height:1.4;">${n.title || '（无标题）'}</div>
-                                    <div style="font-size: 11px; color: #999; margin-top:3px;">${n.author_nickname||''} ${n.publish_date || ''} · <b style="color:${sentColor(n.sentiment)}">${sentTxt(n.sentiment)}</b>${n.risk_level?(' · '+n.risk_level):''}${n.likes?(' · ♥'+n.likes):''}</div>
+                                    <div style="font-size: 11px; color: #999; margin-top:3px;">${n.author_nickname||''} ${n.publish_date || ''} · <b style="color:${sentColor(n.sentiment)}">${sentTxt(n.sentiment)}</b>${n.risk_level?(' · '+n.risk_level):''}${n.likes?(' · 赞'+n.likes):''}</div>
                                 </div>
                             `).join('') || '<div style="color: #999; padding:12px 0;">暂未检索到明确提及该品牌的笔记（笔记多以“广州太古汇”整体为主）</div>'}
                         </div>
@@ -741,7 +741,7 @@
                         </div>
                         <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; line-height: 1.5;">${item.summary || item.content || '暂无摘要'}</p>
                         <div style="display: flex; gap: 8px;">
-                            <button style="padding: 6px 14px; background: #34c759; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.confirmItem('${itemId}')">✓ 确认负面</button>
+                            <button style="padding: 6px 14px; background: #34c759; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.confirmItem('${itemId}')">确认负面</button>
                             <button style="padding: 6px 14px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.viewDetail('${itemId}')">查看详情</button>
                             <button style="padding: 6px 14px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.rejectItem('${itemId}')">驳回</button>
                         </div>

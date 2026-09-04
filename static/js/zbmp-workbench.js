@@ -240,7 +240,7 @@
       fetch('/v4/auth/workspace/keys', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspace: 'ZBMP', label: label }) })
         .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
         .then(function (res) {
-          if (res.ok && res.j.key) { out.innerHTML = '✅ 新密钥（只显示一次，请立即复制保存）：<br><b style="font-family:var(--zb-font-mono)">' + res.j.key + '</b>'; loadKeys(); }
+          if (res.ok && res.j.key) { out.innerHTML = '新密钥（只显示一次，请立即复制保存）：<br><b style="font-family:var(--zb-font-mono)">' + res.j.key + '</b>'; loadKeys(); }
           else out.textContent = '签发失败：' + ((res.j && res.j.error) || '需要 owner 权限');
         })
         .catch(function () { out.textContent = '网络错误'; });
