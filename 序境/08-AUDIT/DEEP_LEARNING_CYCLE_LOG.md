@@ -442,3 +442,7 @@
 | EE | 2026-09-04 | 红人营销/达人经济 | 全球红人营销 2025 ~$32.55B；86% 营销者使用红人营销；67% 品牌 2026 加预算（10-30% 社交预算）；nano IG 互动 ~4.5% vs mega 1.2%；micro 评论/赞比高 60%；创作者经济 2027 超 $480B | Influencer Marketing Hub/HubSpot/高盛/Coherent | ADOPT | KOS 分层/达人合作（IC-041，衔接 IC-040） | 行业口径仅策略参考，不作生产指标输入 | E2 |
 | FF | 2026-09-04 | 生成式 AI 品牌创意 | 百度一镜数字人（罗永浩 GMV 5500 万/转化+29%）；帕梅拉案例=定制说服故事线非模板；Publicis Leona agentic 创意引擎（1/3 创意收入/Coke 未竟标转投）；Papa Johns 实时个性化 | Morketing/Leonardo M | ADAPT | 创意引擎定制故事线/agentic 生产参考（IC-042） | 不引框架不建平台；数字人走 HCG 门控；落地前合规评审 | E2 |
 | GG | 2026-09-04 | Agent 长程评测 | AgencyBench（138 任务/90 工具调用/1M tokens，闭源 48.4% vs 开源 32.1%）；LHTB（SOTA pass@1 15.2%）；YC-Bench（scratchpad=最强预测器/恶意客户占破产 47%）；METR 时界每 123 天翻倍至 14.5h；AMA-Bench 多 judge 偏差 | ACL 2026/arXiv 2601.11044/2604.01212/METR | ADOPT | 自研 AI 长任务收敛/评测方法论（IC-043） | 只学方法不引框架；多步成功率评测 | E2 |
+
+| HH | 2026-09-04 | 舆情传播动力学/危机沟通 | 灾后假消息泛滥（旧素材重发/AI 合成/诈骗码）；算法放大耸动>事实；处置分级；官方源核验+分级响应 | DISA/IT之家 | ADAPT | 舆情耸动/合成信号纳入告警（IC-044） | 只作监测方法参考，不涉平台治理立场 | E2 |
+| II | 2026-09-04 | 跨媒介叙事/AI 品牌漂移 | AI 从多源合成品牌叙事（AI Brand Drift 四层）；ChatGPT 2B 日询/维基 47.9%；Transmedia Bible 成基础设施；播客 2026 广告近 $2.6B；Core→Hero→Derivatives 栈 | iloveseo/Hijab/Cue/IAB-PwC | ADOPT | 品牌叙事世界/内容矩阵栈（IC-045） | 权威源+结构化数据+一致语料，不承诺排名 | E2 |
+| JJ | 2026-09-04 | 复杂系统/涌现/自组织 | 涌现=整体大于部分；CAS 无中心秩序；临界态幂律/最大信息；复杂度凝聚（中间适应强度最优）；ABM 简单规则→涌现 | arXiv 2607.04660/Agentica | ADOPT | 产品哲学学理支撑/健康级联视角（IC-046） | 仅思维框架，不改变生产架构 | E2 |

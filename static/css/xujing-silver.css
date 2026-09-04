@@ -82,6 +82,25 @@
   100%  { background-position: -110% 50%; opacity: 0; }
 }
 
+/* ---- 动效组合（用户参考：Stagger 级联 / 多向冲入 / Float 漂移 / Continue-through 落地聚合）
+   原则：真实数据/真实状态触发；禁止写死循环动画；prefers-reduced-motion 关闭 ---- */
+/* 级联进入：容器内元素逐个延迟入场（stagger，由 JS 计算延迟表驱动） */
+.xj-stagger > * { opacity: 0; animation: xj-in-up .5s cubic-bezier(.22,.61,.36,1) forwards; }
+@keyframes xj-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+/* 多向冲入（multi-translate keyframes）：不规则的斜向飞入 */
+.xj-in-pop { animation: xj-pop .55s cubic-bezier(.22,.61,.36,1) forwards; }
+@keyframes xj-pop {
+  0%   { opacity: 0; transform: translate(14px, -10px) scale(.96); }
+  60%  { opacity: 1; transform: translate(-3px, 2px) scale(1.005); }
+  100% { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+/* Float 漂移：轻柔持续漂移，让静态元素灵动轻盈（仅用于徽标/状态装饰，极低频） */
+.xj-float { animation: xj-float 6s ease-in-out infinite; }
+@keyframes xj-float {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-6px); }
+}
+
 /* ---- 无障碍：用户偏好减少动效时全部关闭 ---- */
 @media (prefers-reduced-motion: reduce) {
   .silver-shimmer, .xj-card-silver::after { animation: none !important; }

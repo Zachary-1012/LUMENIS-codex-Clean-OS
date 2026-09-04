@@ -93,7 +93,7 @@
             container.innerHTML = `
                 <div class="report-center">
                     <div style="margin-bottom: 20px;">
-                        <h2 style="margin: 0 0 12px 0;">📊 报告中心</h2>
+                        <h2 style="margin: 0 0 12px 0;">报告中心</h2>
                         <p style="color: #666; margin: 0;">生成和管理舆情报告，支持日报、周报、月报和自定义报告</p>
                     </div>
                     
@@ -123,7 +123,7 @@
                     <div style="background: #ffffff; border:1px solid #eef0f4; padding: 16px; border-radius: 12px; margin-bottom:24px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
                             <div>
-                                <h4 style="margin:0 0 2px 0;">📑 报告预览</h4>
+                                <h4 style="margin:0 0 2px 0;">报告预览</h4>
                                 <p style="margin:0;color:#888;font-size:12px;">默认展示最近一个自然周（周一至周日），可切换周期与基准日期，非滚动近 7 天</p>
                             </div>
                             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -141,7 +141,7 @@
                     </div>
 
                     <div style="background: #f9f9f9; padding: 16px; border-radius: 8px;">
-                        <h4 style="margin: 0 0 12px 0;">📋 历史报告</h4>
+                        <h4 style="margin: 0 0 12px 0;">历史报告</h4>
                         <div id="report-history-list" style="font-size: 14px; color: #666;">
                             加载中...
                         </div>
@@ -172,11 +172,11 @@
                     <div style="display: flex; gap: 12px;">
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                             <input type="radio" name="report-format" value="word" checked />
-                            <span>📄 Word文档</span>
+                            <span>${xicon('doc', 14)} Word文档</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                             <input type="radio" name="report-format" value="excel" />
-                            <span>📊 Excel表格</span>
+                            <span>${xicon('chart', 14)} Excel表格</span>
                         </label>
                     </div>
                 </div>
@@ -296,7 +296,7 @@
             container.innerHTML = `
                 <div class="brand-industry">
                     <div style="margin-bottom: 20px;">
-                        <h2 style="margin: 0 0 12px 0;">🏢 品牌业态监测</h2>
+                        <h2 style="margin: 0 0 12px 0;">品牌业态监测</h2>
                         <p style="color: #666; margin: 0;">监测场内品牌动态和业态分布</p>
                     </div>
                     
@@ -320,7 +320,7 @@
                     </div>
                     
                     <div style="background: #f9f9f9; padding: 16px; border-radius: 8px;">
-                        <h4 style="margin: 0 0 12px 0;">📋 品牌列表</h4>
+                        <h4 style="margin: 0 0 12px 0;">品牌列表</h4>
                         <div id="brand-list" style="font-size: 14px; color: #666;">
                             加载中...
                         </div>
@@ -516,7 +516,7 @@
         service_attitude: '服务态度', food_safety: '食品安全', activity_safety: '活动安全',
         content_audit: '内容审核', price_rule: '价格规范', false_info: '不实信息',
         benchmark: '标杆应对', negative_example: '反面教材',
-        critical: '🔴重大', medium: '🟡关注', low: '🟢一般'
+        critical: '重大', medium: '关注', low: '一般'
     };
     const caseCatLabel = k => CASE_CAT_MAP[k] || k || '未分类';
     window.CaseLibrary = {
@@ -528,7 +528,7 @@
             container.innerHTML = `
                 <div class="case-library">
                     <div style="margin-bottom: 20px;">
-                        <h2 style="margin: 0 0 12px 0;">📚 案例库</h2>
+                        <h2 style="margin: 0 0 12px 0;">案例库</h2>
                         <p style="color: #666; margin: 0;">全网舆情案例和公关话术模板</p>
                     </div>
                     
@@ -622,12 +622,12 @@
                         <span style="margin-left: 12px; font-size: 12px; color: #999;">${c0.date || ''}</span>
                     </div>
                     <h3 style="margin: 0 0 12px 0;">${title}</h3>
-                    ${block('📋', '事件概述', eventText || '暂无概述', '#f7f7f7', '#999')}
-                    ${block('🌐', '传播路径', spread, '#F5F5F4', '#57534E')}
-                    ${block('💬', '公关回应', resp, '#F5F5F4', '#57534E')}
-                    ${block('📈', '处置效果', effect, '#fafaff', '#5856d6')}
-                    ${block('🎯', '经验教训', insight, '#fffdf5', '#ff9500')}
-                    ${block('📝', '话术模板', tpl, '#f0fff0', '#34c759')}
+                    ${block(xicon('list', 14), '事件概述', eventText || '暂无概述', '#f7f7f7', '#999')}
+                    ${block(xicon('globe', 14), '传播路径', spread, '#F5F5F4', '#57534E')}
+                    ${block(xicon('chat', 14), '公关回应', resp, '#F5F5F4', '#57534E')}
+                    ${block(xicon('trend', 14), '处置效果', effect, '#fafaff', '#5856d6')}
+                    ${block(xicon('target', 14), '经验教训', insight, '#fffdf5', '#ff9500')}
+                    ${block(xicon('edit', 14), '话术模板', tpl, '#f0fff0', '#34c759')}
                 `;
 
                 createModal('案例详情', content, '700px');
@@ -647,7 +647,7 @@
             container.innerHTML = `
                 <div class="negative-review">
                     <div style="margin-bottom: 20px;">
-                        <h2 style="margin: 0 0 12px 0;">⚠️ 负面审核</h2>
+                        <h2 style="margin: 0 0 12px 0;">负面审核</h2>
                         <p style="color: #666; margin: 0;">审核和确认负面舆情，确保报告准确性</p>
                     </div>
                     
@@ -742,8 +742,8 @@
                         <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; line-height: 1.5;">${item.summary || item.content || '暂无摘要'}</p>
                         <div style="display: flex; gap: 8px;">
                             <button style="padding: 6px 14px; background: #34c759; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.confirmItem('${itemId}')">✓ 确认负面</button>
-                            <button style="padding: 6px 14px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.viewDetail('${itemId}')">👁 查看详情</button>
-                            <button style="padding: 6px 14px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.rejectItem('${itemId}')">✗ 驳回</button>
+                            <button style="padding: 6px 14px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.viewDetail('${itemId}')">查看详情</button>
+                            <button style="padding: 6px 14px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="NegativeReview.rejectItem('${itemId}')">驳回</button>
                         </div>
                     </div>
                 `}).join('');
@@ -788,11 +788,11 @@
                         <div style="font-size: 12px; color: #999;">${note.author_nickname || '匿名'} | ${note.publish_date || ''} | ${note.sentiment || ''} | 风险: ${note.risk_level || ''}</div>
                     </div>
                     <div style="margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 8px 0;">📝 内容</h4>
+                        <h4 style="margin: 0 0 8px 0;">内容</h4>
                         <p style="color: #333; line-height: 1.6; margin: 0; white-space: pre-wrap;">${note.content || note.summary || '暂无内容'}</p>
                     </div>
                     <div style="margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 8px 0;">📊 互动数据</h4>
+                        <h4 style="margin: 0 0 8px 0;">互动数据</h4>
                         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
                             <div style="text-align: center; padding: 8px; background: #f9f9f9; border-radius: 6px;">
                                 <div style="font-size: 18px; font-weight: bold;">${note.likes || 0}</div>
@@ -812,7 +812,7 @@
                             </div>
                         </div>
                     </div>
-                    ${note.url ? `<div><a href="${note.url}" target="_blank" style="color: #44403C; text-decoration: underline; text-underline-offset: 2px;">🔗 查看原文</a></div>` : ''}
+                    ${note.url ? `<div><a href="${note.url}" target="_blank" style="color: #44403C; text-decoration: underline; text-underline-offset: 2px;">${xicon('link', 12)} 查看原文</a></div>` : ''}
                 `;
                 
                 createModal('笔记详情', content, '700px');
