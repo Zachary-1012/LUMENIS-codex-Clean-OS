@@ -2030,3 +2030,81 @@ body::after {
   .xj-chat-suggestions-v2 { max-width: 100%; }
   .xj-chat-v2 .xj-chat-msg { max-width: 92%; }
 }
+
+
+/* AI 洞察面板趋势图 */
+.xj-chat-trend-wrap {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+
+.xj-chat-trend-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b91a0;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+
+.xj-chat-trend {
+  width: 100%;
+  height: 100px;
+  overflow: hidden;
+}
+
+.xj-chat-trend .xj-trend-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+
+/* ============================================================
+ * 20. 网页版布局修复（占满全屏，隐藏重复右侧面板）
+ * ============================================================ */
+.layout {
+  max-width: none !important;
+  margin: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+}
+
+/* 隐藏右侧重复的 AI 洞察面板（聊天界面顶部已有） */
+.right-panel {
+  display: none !important;
+}
+
+/* 中栏占满剩余空间 */
+.content {
+  flex: 1 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+/* 聊天界面占满中栏 */
+.xj-chat-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.xj-chat-v2 {
+  max-width: none;
+  width: 100%;
+}
+
+/* 输入框和建议居中，但最大宽度放宽 */
+.xj-chat-input-wrap-v2 {
+  max-width: 760px;
+}
+
+.xj-chat-suggestions-v2 {
+  max-width: 760px;
+}
+
+/* 消息气泡最大宽度放宽 */
+.xj-chat-v2 .xj-chat-msg {
+  max-width: 85%;
+}

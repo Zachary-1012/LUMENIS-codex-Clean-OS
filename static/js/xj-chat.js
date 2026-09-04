@@ -78,6 +78,10 @@
               <div class="xj-chat-kpi"><span class="xj-chat-kpi-label">高风险</span><span class="xj-chat-kpi-value warn" id="xjKpiRisk">--</span></div>
               <div class="xj-chat-kpi"><span class="xj-chat-kpi-label">互动</span><span class="xj-chat-kpi-value" id="xjKpiEng">--</span></div>
             </div>
+            <div class="xj-chat-trend-wrap">
+              <div class="xj-chat-trend-title">近7天舆情趋势</div>
+              <div class="xj-chat-trend" id="xjChatTrend"></div>
+            </div>
           </div>
         </div>
         <!-- 消息列表 -->
@@ -169,6 +173,18 @@
       animateNumber('xjKpiNeg', neg);
       animateNumber('xjKpiRisk', risk);
       document.getElementById('xjKpiEng').textContent = formatEngagement(eng);
+
+      // 渲染近7天趋势图（复用 xujing-viz.js）
+      const trendEl = document.getElementById('xjChatTrend');
+      if (trendEl && global.xjViz && global.xjViz.trend) {
+        const trendData = (resp.overview && resp.overview.trend) || [];
+        const last7 = trendData.slice(-7).map(function(d) {
+          return { value: d.total || 0, label: d.label || d.date || '' };
+        });
+        if (last7.length > 0) {
+          global.xjViz.trend(trendEl, last7, { height: 100, width: trendEl.clientWidth || 280 });
+        }
+      }
     } catch (e) {
       // 数据加载失败，保持 --
     }
