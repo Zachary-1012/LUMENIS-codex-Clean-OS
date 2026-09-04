@@ -327,7 +327,8 @@ def summarize_event(event,notes):
     raw,provider,_=chat(system,json.dumps({'event':event,'mentions':sample},ensure_ascii=False),level='medium',use_cache=True,temperature=0.0,max_tokens=700)
     data=_json_from_text(raw)
     if data:data['provider']=provider;return data
-    neg=sum(1 for n in notes if n.get('sentiment')=='negative'); high=sum(1 for n in notes if n.get('risk_level')=='high')
+    from canonical_metrics import sentiment_count as _scf, risk_count as _rcf
+    _sci=_scf(notes); _rci=_rcf(notes); neg=_sci['negative']; high=_rci['high']  # Canonical; high不含critical
     return {'title':event.get('title','事件')[:24],'summary':f'相关提及{len(notes)}条，负面{neg}条，高风险{high}条；目前仅能确认存在相关讨论，事实仍需核验。','fact_status':'unconfirmed','impact':'negative' if neg else 'neutral','risk_reason':'存在负面讨论' if neg else '暂未发现明显风险','recommended_action':'核查原始来源并持续观察传播变化。','provider':'rule'}
 
 def test_connection(text):
