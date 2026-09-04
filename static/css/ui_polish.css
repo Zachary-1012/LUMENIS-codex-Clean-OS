@@ -86,3 +86,19 @@ div[style*="position:fixed"] > div[style*="border-radius:12px"] {
 
 /* ---- 9. 滚动条更克制 ---- */
 .content::-webkit-scrollbar { width: 6px; }
+
+
+/* ---- 10. 工作区导航互斥显隐（CTH/ZBMP 双工作区）----
+ * data-workspace 由 zbmp-workbench.js 维护；CTH=显示 6 大域(工作台/监测/事件/洞察/资产/系统)，
+ * 隐藏 ZBMP 导航；ZBMP=反之。此前缺失该规则导致两套导航同时显示（导航叠 bug）。 */
+body[data-workspace="cth"] .zbmp-nav,
+body[data-workspace="cth"] .zbmp-nav .zb-nav-group { display: none !important; }
+body[data-workspace="zbmp"] .side-nav,
+body[data-workspace="zbmp"] .side-nav .side-group-label { display: none !important; }
+
+/* ---- 11. 侧栏导航优先（6 大域导航撑满，底部架构面板压缩不挤占） ---- */
+@media (min-width: 768px) {
+  body .sidebar .side-nav { flex: 1 1 auto !important; min-height: 0 !important; }
+  body .sidebar .side-footer { flex: 0 1 auto !important; max-height: 96px !important; overflow-y: auto !important; }
+  body .sidebar .architecture-panel { flex: 0 1 auto !important; max-height: 96px !important; overflow-y: auto !important; }
+}
