@@ -154,12 +154,13 @@ def generate_report_data(period, date_str=None, start_date=None, end_date=None):
 
     # 统计
     total = len(notes)
-    positive = sum(1 for n in notes if n.get('sentiment') == 'positive')
-    negative = sum(1 for n in notes if n.get('sentiment') == 'negative')
-    neutral = sum(1 for n in notes if n.get('sentiment') == 'neutral')
+    # [Canonical P0] 情感/风险分桶统一走 canonical_metrics（方案甲 high 不含 critical）
+    from canonical_metrics import sentiment_count as _sc_fn, risk_count as _rc_fn
+    _sc = _sc_fn(notes); _rc = _rc_fn(notes)
+    positive, negative, neutral = _sc['positive'], _sc['negative'], _sc['neutral']
 
     # 高风险
-    high_risk = sum(1 for n in notes if n.get('risk_level') == 'high')
+    high_risk = _rc['high']
 
     # 品牌分布
     brand_dist = {}
