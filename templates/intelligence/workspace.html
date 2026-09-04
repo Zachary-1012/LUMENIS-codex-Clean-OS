@@ -96,7 +96,7 @@
     if(!msg) return;
     card.setAttribute("data-state","processing");
     out.textContent="思考中…";
-    fetch("/api/ai/chat",{method:"POST",headers:{"Content-Type":"application/json"},
+    LUMENIS.fetch("/api/ai/chat",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({message:msg})})
       .then(function(r){return r.json();})
       .then(function(d){

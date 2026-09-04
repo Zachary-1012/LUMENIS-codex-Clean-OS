@@ -43,8 +43,8 @@
   var D=LUMENIS.Data;
   // 并行拉 risk-alerts + health
   Promise.all([
-    fetch("/api/risk-alerts").then(function(r){return r.json();}).catch(function(){return null;}),
-    fetch("/api/system/health/summary").then(function(r){return r.json();}).catch(function(){return null;})
+    LUMENIS.fetch("/api/risk-alerts").then(function(r){return r.json();}).catch(function(){return null;}),
+    LUMENIS.fetch("/api/system/health/summary").then(function(r){return r.json();}).catch(function(){return null;})
   ]).then(function(res){
     var risks=res[0], health=res[1];
     var ov=document.querySelector('[data-component="risk-overview"]');

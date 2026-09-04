@@ -84,7 +84,7 @@
         var badge = root.querySelector(".lm-ai-badge");
         if (badge) badge.classList.toggle("lm-ai-badge--online", !!d.enabled);
         // 通道健康（次级，失败不影响主卡）
-        fetch("/api/ai/channel-health").then(function (r) { return r.json(); })
+        LUMENIS.fetch("/api/ai/channel-health").then(function (r) { return r.json(); })
           .then(function (h) {
             if (h && h.health) {
               setField(root, "channel", (h.health.available ? "通道正常" : "通道降级"));
@@ -200,8 +200,8 @@
     store.set("home", "recommended-actions", "loading");
     root.setAttribute("data-state", "loading");
     Promise.all([
-      fetch("/api/system/health/summary").then(function (r) { return r.json(); }).catch(function () { return null; }),
-      fetch("/api/collect/schedule-status").then(function (r) { return r.json(); }).catch(function () { return null; })
+      LUMENIS.fetch("/api/system/health/summary").then(function (r) { return r.json(); }).catch(function () { return null; }),
+      LUMENIS.fetch("/api/collect/schedule-status").then(function (r) { return r.json(); }).catch(function () { return null; })
     ]).then(function (results) {
       var health = results[0], sched = results[1];
       var actions = [];

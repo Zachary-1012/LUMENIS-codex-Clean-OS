@@ -73,6 +73,34 @@
     return { total: list.length, byState: byState, fakeStateCount: fake, components: list };
   };
 
+  /* ---------- Auth：对齐 ZBC /api/auth/config 动态注入，fetch 自动带凭证 ---------- */
+  var Auth = {
+    _header: null, _promise: null,
+    getHeader: function () {
+      if (this._header) return Promise.resolve(this._header);
+      if (this._promise) return this._promise;
+      var self = this;
+      this._promise = fetch("/api/auth/config").then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.auth_enabled && d.auth_header) self._header = d.auth_header;
+          return self._header;
+        }).catch(function () { return null; });
+      return this._promise;
+    },
+    fetch: function (url, opts) {
+      opts = opts || {};
+      var headers = opts.headers || {};
+      return Auth.getHeader().then(function (h) {
+        if (h && !headers.Authorization && !headers.authorization) {
+          headers.Authorization = h;
+          opts.headers = headers;
+        }
+        opts.credentials = opts.credentials || "include";
+        return fetch(url, opts);
+      });
+    }
+  };
+
   /* ---------- 真实数据获取（统一走 fetch，显式状态，禁止静默成 0） ---------- */
   // 用法：LUMENIS.bindState(el, { page, component, url, render(resp) })
   function bindState(el, cfg) {
@@ -85,7 +113,7 @@
     }
     store.set(cfg.page, cfg.component, "loading");
     paint("loading");
-    return fetch(cfg.url, cfg.fetchOpts || {})
+    return LUMENIS.fetch(cfg.url, cfg.fetchOpts || {})
       .then(function (r) {
         if (!r.ok) throw { code: "HTTP_" + r.status, status: r.status };
         return r.json();
@@ -155,6 +183,8 @@
   var LUMENIS = {
     UI_STATES: UI_STATES,
     Theme: Theme,
+    Auth: Auth,
+    fetch: Auth.fetch.bind(Auth),
     store: new StateStore(),
     bindState: bindState,
     toast: toast,

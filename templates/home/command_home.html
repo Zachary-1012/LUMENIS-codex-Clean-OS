@@ -125,7 +125,7 @@
 if (window.LUMENIS && LUMENIS.Data) {
   LUMENIS.Data.bindCommandHome();
   // 全局状态灯：取 System State 的 overall_status
-  fetch("/api/system/health/summary").then(function(r){return r.json();}).then(function(d){
+  LUMENIS.fetch("/api/system/health/summary").then(function(r){return r.json();}).then(function(d){
     var dot = document.getElementById("lm-global-dot"), txt = document.getElementById("lm-global-status-text");
     if (!dot || !txt || !d) return;
     var map = {ok:"success",warning:"warning",critical:"danger"};

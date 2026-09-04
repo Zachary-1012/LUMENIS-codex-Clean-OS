@@ -102,8 +102,8 @@
   });
   // AI 通道
   Promise.all([
-    fetch("/api/ai/status").then(function(r){return r.json();}).catch(function(){return null;}),
-    fetch("/api/ai/channel-health").then(function(r){return r.json();}).catch(function(){return null;})
+    LUMENIS.fetch("/api/ai/status").then(function(r){return r.json();}).catch(function(){return null;}),
+    LUMENIS.fetch("/api/ai/channel-health").then(function(r){return r.json();}).catch(function(){return null;})
   ]).then(function(res){
     var st=res[0],ch=res[1];
     var root=document.querySelector('[data-component="ops-ai"]');

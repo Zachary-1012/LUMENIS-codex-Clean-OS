@@ -227,3 +227,16 @@
 .lm-ai-badge--verifying, .lm-ai-badge--review { color: var(--lm-status-warning); }
 .lm-ai-badge--completed { color: var(--lm-status-success); }
 .lm-ai-badge--failed { color: var(--lm-status-danger); }
+.lm-ai-badge--online { color: var(--lm-status-success); }
+
+/* 导航卡片（Production Domains 等子域入口） */
+.lm-card--nav .lm-card__body { gap: var(--lm-space-xs); }
+.lm-nav-item--inline {
+  display: flex; align-items: center; gap: var(--lm-space-sm);
+  padding: var(--lm-space-sm) var(--lm-space-md);
+  border-radius: var(--lm-radius-md);
+  color: var(--lm-text-primary); text-decoration: none;
+  font-size: var(--lm-text-body); transition: background var(--lm-motion-hover) var(--lm-ease);
+}
+.lm-nav-item--inline:hover { background: var(--lm-surface-input); }
+.lm-nav-item--inline [data-icon] { display: inline-flex; color: var(--lm-text-secondary); }
