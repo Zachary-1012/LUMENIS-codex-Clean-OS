@@ -246,3 +246,60 @@
 - **采用位置**：雷达 §17；队列 IC-022
 - **风险**：低
 - **Evidence**：OSAI 推送；本登记簿双库同步
+---
+
+## Cycle M — 多 Agent 编排与协作（2026-09-04）
+
+- **主题**：Multi-Agent Orchestration / Collaboration（指令十一方向补充）
+- **研究对象**：LangGraph / CrewAI / AutoGen / OpenAI Agents SDK、MCP/A2A
+- **来源**：JATIR 论文、MetaCTO（E2），URL 见 OSAI 技术雷达 §18
+- **核心发现**：
+  1. LangGraph=有状态图+故障韧性；CrewAI=角色协作；AutoGen=分布式长跑；OpenAI SDK=Swarm/supervisor
+  2. 心理模型：event-driven actors vs role-based crews vs stateful graphs vs agents+handoffs
+  3. MCP+A2A 是保持多 Agent 可维护的最大架构杠杆
+- **适用能力**：未来多 Agent 编排（有状态图+checkpoint 与 HCG 状态机同构）
+- **与代码库关系**：现有单 Agent 编排已够；不引框架/不建第三库
+- **实验**：无（研究侧）
+- **决策**：ADAPT（模式借鉴，不引框架）
+- **采用位置**：雷达 §18；队列 IC-023
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
+
+---
+
+## Cycle N — 推理时计算 / 推理模型前沿（2026-09-04）
+
+- **主题**：Test-time Compute / Reasoning Models（指令十一方向补充）
+- **研究对象**：o1→R1→Qwen3→GPT-5.6 演进、测试时计算分配
+- **来源**：DeepSeek 社区、AI Reasoning Models 2026（E2），URL 见 OSAI 技术雷达 §19
+- **核心发现**：
+  1. 推理模型演进：o1 内化 CoT → R1 纯 RL 开源 → GPT-5.6 max reasoning + ultra 多子 Agent
+  2. 测试时计算最优分配是热点；Overthinking 问题（已答对还继续想浪费算力）
+  3. 混合架构=简单查询快模型+复杂任务推理模型
+- **适用能力**：分级路由验证；推理预算分配（与 IC-010 联动）
+- **与代码库关系**：智谱强模型已配复杂任务；验证"简单/复杂分级"正确
+- **实验**：无（研究侧）
+- **决策**：ADOPT（策略确认）+ ADAPT（预算内推理深度）
+- **采用位置**：雷达 §19；队列 IC-024
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
+
+---
+
+## Cycle O — 播客行业 2026（2026-09-04）
+
+- **主题**：Podcast Industry / Audio Content / Interview（业务向，对接播客项目）
+- **研究对象**：NEWMEDIA 150+ 播客统计、DailyStory 播客运营
+- **来源**：NEWMEDIA、DailyStory（E2），URL 见 OSAI 技术雷达 §20
+- **核心发现**：
+  1. 视频播客是最快增长形态（受众份额 2-3 年升 5-15pt）
+  2. 推荐流平台占新节目发现 30-60%
+  3. 收听时长增长快于听众人数（5-20%/年）；广告收入年增 5-15%
+  4. 核心指标：听众留存/地理/跨平台订阅；社区+每集互动（提问/语音留言）
+- **适用能力**：播客项目视频化+分发+指标+运营 SOP
+- **与代码库关系**：Content Intelligence / Podcast（业务向，研究侧）
+- **实验**：无（研究侧）
+- **决策**：ADAPT（业务向高价值）
+- **采用位置**：雷达 §20；队列 IC-025
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
