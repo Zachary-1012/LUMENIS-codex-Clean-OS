@@ -35,9 +35,64 @@ COMMENT_CATEGORIES = [
 ]
 
 
+_KOS_SCHEMA_ENSURED = False
+
+
+def _ensure_table(conn):
+    """幂等创建 kos_profiles 表（KOS_PROFILES_SCHEMA_v1）。
+    基础列在此创建，账号资产扩展列由 _ensure_asset_columns 幂等 ALTER 补齐。
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS kos_profiles (
+            author_id TEXT PRIMARY KEY,
+            author_nickname TEXT DEFAULT '',
+            author_avatar TEXT DEFAULT '',
+            note_count INTEGER DEFAULT 0,
+            total_likes INTEGER DEFAULT 0,
+            total_comments INTEGER DEFAULT 0,
+            total_collects INTEGER DEFAULT 0,
+            total_shares INTEGER DEFAULT 0,
+            total_engagement REAL DEFAULT 0,
+            avg_likes REAL DEFAULT 0,
+            avg_comments REAL DEFAULT 0,
+            avg_engagement REAL DEFAULT 0,
+            subject_type TEXT DEFAULT '',
+            brand_relevance_score REAL DEFAULT 0,
+            content_quality_avg REAL DEFAULT 0,
+            positive_count INTEGER DEFAULT 0,
+            neutral_count INTEGER DEFAULT 0,
+            negative_count INTEGER DEFAULT 0,
+            risk_count INTEGER DEFAULT 0,
+            first_publish_at TEXT DEFAULT '',
+            last_publish_at TEXT DEFAULT '',
+            active_days INTEGER DEFAULT 0,
+            growth_trend TEXT DEFAULT 'stable',
+            kos_tier TEXT DEFAULT 'C',
+            kos_score REAL DEFAULT 0,
+            lifecycle_stage TEXT DEFAULT 'discovered',
+            is_potential INTEGER DEFAULT 0,
+            is_risk INTEGER DEFAULT 0,
+            is_top INTEGER DEFAULT 0,
+            content_tags TEXT DEFAULT '',
+            top_topics TEXT DEFAULT '',
+            ai_insight TEXT DEFAULT '',
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT '',
+            identity_label TEXT DEFAULT 'UNKNOWN',
+            is_kos INTEGER DEFAULT 0
+        )
+    """)
+    conn.commit()
+
+
 def _get_conn() -> sqlite3.Connection:
+    global _KOS_SCHEMA_ENSURED
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    if not _KOS_SCHEMA_ENSURED:
+        _ensure_table(conn)
+        _ensure_asset_columns(conn)
+        _KOS_SCHEMA_ENSURED = True
     return conn
 
 
@@ -77,6 +132,7 @@ _ASSET_COLUMNS = [
 
 def _ensure_asset_columns(conn):
     """幂等补齐 kos_profiles 账号资产列（KOS_ACCOUNT_ASSET_TEMPLATE_v1）。"""
+    _ensure_table(conn)  # 先确保基础表存在
     cols = {r[1] for r in conn.execute("PRAGMA table_info(kos_profiles)").fetchall()}
     for name, typ, default in _ASSET_COLUMNS:
         if name not in cols:

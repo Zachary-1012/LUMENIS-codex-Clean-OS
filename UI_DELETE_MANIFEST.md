@@ -14,7 +14,8 @@
 | path | type | reason | dependency | replacement |
 |---|---|---|---|---|
 | creative_workbench.html | html | 旧 UI 实现：创意工作台单页应用 | 无生产依赖 | 新 UI 统一重建 |
-| v4_upgrade | directory | 旧版本 UI 实现：collect/console/settings/version_center 模板 + auth_global.js | 无生产依赖（v4 已废弃） | 新 UI 统一重建 |
+| v4_upgrade/*/templates/ | directory | 旧 UI 模板：collect.html/console.html/login.html/settings.html/version_center.html | 模板已删，路由改为 JSON 响应 | 新 UI 统一重建 |
+| v4_upgrade/static/ | directory | 旧 UI 静态资源：auth_global.js | 仅服务旧 UI | 新 UI 统一重建 |
 | podcast/ui | directory | Podcast UI 实现：episode_workspace.html + podcast-table.css + model/view JS | podcast 业务逻辑保留在 podcast/ 其他模块 | 新 UI 统一重建 |
 
 ### OSAI (序境-Intelligence 研究)
@@ -38,6 +39,9 @@
 | components/SICI-Core/js/research-learning.js | frontend-js | 浏览器端 Research Learning Store（localStorage） | 仅服务 SICI UI | 新 UI 统一重建 |
 | components/SICI-Core/js/three-repository-verifier.js | frontend-js | 前端三仓库验证 helper（client-side） | 仅服务 SICI UI | 新 UI 统一重建 |
 | resources/html-templates | directory | 设计模板实现：80+ widget-code.html / single-page 模板 | 设计实现而非设计思想 | 设计思想保留在 md 文档中 |
+| components/Development-Command-Console/ZBIP_DESIGN_TOKENS.css | css | 设计 token CSS 实现 | 设计实现而非思想 | 设计思想保留在 md 文档中 |
+| components/SICI-Core/ZBIP_DESIGN_TOKENS.css | css | 设计 token CSS 实现 | 设计实现而非思想 | 设计思想保留在 md 文档中 |
+| components/SICI-Core/manifest.json | pwa-config | PWA 配置（UI 相关） | 仅服务旧 UI | 新 UI 统一重建 |
 
 ## RETAIN（核心能力，不得删除）
 
@@ -57,6 +61,16 @@
 | docs/ | documentation | 文档/研究资产 |
 | tests/ | tests | 测试 |
 | static/ | empty-dir | 空目录（UI 已不存在，保留目录结构） |
+| v4_upgrade/ (核心业务逻辑) | retained | 保留：unified_logger/global_bil/auth/adapters/report_center/ai_hub/data_cleanup/importer/zbmp/blueprint/config + 各模块 routes.py |
+
+## POST-DELETE FIXES（删除后修复）
+
+| file | fix | reason |
+|---|---|---|
+| v4_upgrade/collect/routes.py | render_template→jsonify | 模板 collect.html 已删，路由返回 JSON 状态 |
+| v4_upgrade/console/routes.py | render_template→jsonify | 模板 console.html 已删，路由返回 JSON 状态 |
+| v4_upgrade/settings/routes.py | render_template→jsonify (2处) | 模板 login.html/settings.html 已删，路由返回 JSON 状态 |
+| v4_upgrade/version_center/routes.py | render_template→jsonify | 模板 version_center.html 已删，路由返回 JSON 状态 |
 
 ### OSAI
 
