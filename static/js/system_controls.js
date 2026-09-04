@@ -621,7 +621,7 @@
         addButton('btn-export', '导出', xicon('export'), openExport);
         
         // 添加采集器控制按钮
-        addButton('btn-collector', '采集', xicon('search'), openCollectorControl);
+        addButton('btn-collector', '采集', xicon('refresh'), openCollectorControl);
     }
 
     // DOM加载完成后初始化
