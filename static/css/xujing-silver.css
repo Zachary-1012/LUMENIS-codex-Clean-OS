@@ -1,0 +1,88 @@
+/* =============================================================================
+ * 序境 Xujing · 微光银视觉层 v1.0
+ * 品牌哲学：芥子纳须弥。风格：黑白米灰侘寂 + 微光银（浅色、克制、高信息密度）。
+ * 方法学（GitHub 前沿研究 2026-09）：
+ *   - Design Token 语义层：组件只消费 semantic token，不硬编码（W3C DTCG / Style Dictionary 路径）
+ *   - 银色流光：纯 CSS `background-clip:text` + `background-size:280%` + 位移动画（hero-shine-text 浅色变体）
+ *   - 微光扫过：::after 渐变带 + background-position 动画（shimmer 经典实现），服务焦点不喧宾夺主
+ * 原则：动效由真实状态驱动；持续状态按真实数据呼吸；禁用无数据写死循环；尊重 prefers-reduced-motion。
+ * ========================================================================== */
+:root {
+  /* ---- 银灰语义 token（浅色系，勿用深底） ---- */
+  --xj-silver-50:  #fafbfc;
+  --xj-silver-100: #f4f6f8;
+  --xj-silver-200: #e8ecf0;
+  --xj-silver-300: #d5dbe3;
+  --xj-silver-400: #b9c2cd;
+  --xj-silver-500: #9aa5b3;
+  --xj-ink:        #1f242b;   /* 主文字 */
+  --xj-ink-soft:   #4a5560;   /* 次级文字 */
+  --xj-ink-mute:   #84909c;   /* 弱化文字 */
+  /* ---- 状态语义 token（细线体系统一状态色） ---- */
+  --xj-ok:   #3e7c5b;
+  --xj-warn: #c8a24b;
+  --xj-err:  #c94f4f;
+  --xj-unk:  #9aa5b3;
+  /* ---- 微光银流光带（斜向，银灰，不深） ---- */
+  --xj-shine-band: linear-gradient(100deg,
+      rgba(186,196,208,0) 0%,
+      rgba(255,255,255,.85) 44%,
+      rgba(255,255,255,1) 50%,
+      rgba(214,222,232,.85) 56%,
+      rgba(186,196,208,0) 100%);
+}
+
+/* ---- 状态点（替代状态 emoji ✅❌⚠🔴🟢🟡，细线体系） ---- */
+.xj-dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+          flex:none; vertical-align:middle; }
+.xj-dot-ok      { background:var(--xj-ok); }
+.xj-dot-warning { background:var(--xj-warn); }
+.xj-dot-error   { background:var(--xj-err); }
+.xj-dot-unknown { background:var(--xj-unk); }
+.xj-dot-pos     { background:var(--xj-ok); }
+.xj-dot-neg     { background:var(--xj-err); }
+.xj-dot-neu     { background:var(--xj-warn); }
+
+/* ---- 品牌标题银色流光（斜向扫过，浅色，微光银） ---- */
+.silver-shimmer {
+  background-image: linear-gradient(100deg,
+      #5a6472 0%, #2f3640 34%,
+      #6b7686 44%, #eef1f5 50%,
+      #8a95a5 56%, #2f3640 66%, #5a6472 100%);
+  background-size: 280% 100%;
+  background-position: 120% 50%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: xj-silver-sweep 5.6s cubic-bezier(.55,.05,.25,1) infinite;
+}
+@keyframes xj-silver-sweep {
+  0%   { background-position: 120% 50%; }
+  55%  { background-position: -80% 50%; }
+  100% { background-position: -80% 50%; }
+}
+
+/* ---- 卡片微光扫过（全局循环浮动，克制：银光每 8s 极淡扫过一次） ---- */
+.xj-card-silver { position: relative; overflow: hidden; }
+.xj-card-silver::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--xj-shine-band);
+  background-size: 240% 100%;
+  background-position: 140% 50%;
+  opacity: 0; pointer-events: none;
+}
+.xj-card-silver.is-live::after {
+  animation: xj-card-shine 8s linear infinite;
+}
+@keyframes xj-card-shine {
+  0%    { background-position: 140% 50%; opacity: 0; }
+  5%    { opacity: .45; }
+  14%   { background-position: -110% 50%; opacity: 0; }
+  100%  { background-position: -110% 50%; opacity: 0; }
+}
+
+/* ---- 无障碍：用户偏好减少动效时全部关闭 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .silver-shimmer, .xj-card-silver::after { animation: none !important; }
+}

@@ -62,11 +62,11 @@ function renderArchitectureStatus(data) {
 
     // 更新各层状态
     const layerConfigs = [
-        { id: 'layer1_adaptive', name: '自动调节引擎', icon: '⚙️' },
-        { id: 'layer2_recovery', name: '自动修复引擎', icon: '🔧' },
-        { id: 'layer3_feedback', name: '数据闭环引擎', icon: '🔄' },
-        { id: 'layer4_health', name: '系统控制中心', icon: '📊' },
-        { id: 'layer5_boundary', name: '边界控制引擎', icon: '🛡️' }
+        { id: 'layer1_adaptive', name: '自动调节引擎', icon: 'gear' },
+        { id: 'layer2_recovery', name: '自动修复引擎', icon: 'wrench' },
+        { id: 'layer3_feedback', name: '数据闭环引擎', icon: 'refresh' },
+        { id: 'layer4_health', name: '系统控制中心', icon: 'chart' },
+        { id: 'layer5_boundary', name: '边界控制引擎', icon: 'shield' }
     ];
 
     layerConfigs.forEach(config => {
@@ -89,39 +89,39 @@ function createArchitecturePanel() {
     panel.className = 'architecture-panel glass';
     panel.innerHTML = `
         <div class="arch-panel-header">
-            <h3>🏗️ 5层闭环架构状态</h3>
+            <h3>${xicon('building')} 5层闭环架构状态</h3>
             <span id="archOverallStatus" class="arch-status">加载中...</span>
         </div>
         <div class="arch-layers">
             <div class="arch-layer" id="arch-layer1_adaptive">
-                <span class="arch-layer-icon">⚙️</span>
+                <span class="arch-layer-icon">${xicon('gear')}</span>
                 <span class="arch-layer-name">自动调节引擎</span>
                 <span class="arch-layer-status">未知</span>
             </div>
             <div class="arch-layer" id="arch-layer2_recovery">
-                <span class="arch-layer-icon">🔧</span>
+                <span class="arch-layer-icon">${xicon('wrench')}</span>
                 <span class="arch-layer-name">自动修复引擎</span>
                 <span class="arch-layer-status">未知</span>
             </div>
             <div class="arch-layer" id="arch-layer3_feedback">
-                <span class="arch-layer-icon">🔄</span>
+                <span class="arch-layer-icon">${xicon('refresh')}</span>
                 <span class="arch-layer-name">数据闭环引擎</span>
                 <span class="arch-layer-status">未知</span>
             </div>
             <div class="arch-layer" id="arch-layer4_health">
-                <span class="arch-layer-icon">📊</span>
+                <span class="arch-layer-icon">${xicon('chart')}</span>
                 <span class="arch-layer-name">系统控制中心</span>
                 <span class="arch-layer-status">未知</span>
             </div>
             <div class="arch-layer" id="arch-layer5_boundary">
-                <span class="arch-layer-icon">🛡️</span>
+                <span class="arch-layer-icon">${xicon('shield')}</span>
                 <span class="arch-layer-name">边界控制引擎</span>
                 <span class="arch-layer-status">未知</span>
             </div>
         </div>
         <div class="arch-panel-footer">
-            <button onclick="loadArchitectureStatus()" class="arch-refresh-btn">🔄 刷新状态</button>
-            <button onclick="toggleHealthPanel()" class="arch-health-btn">📋 系统健康详情</button>
+            <button onclick="loadArchitectureStatus()" class="arch-refresh-btn">${xicon('refresh')} 刷新状态</button>
+            <button onclick="toggleHealthPanel()" class="arch-health-btn">${xicon('list')} 系统健康详情</button>
         </div>
     `;
 
@@ -172,9 +172,9 @@ function renderHealthStatus(data) {
     const countsEl = document.getElementById('healthCounts');
     if (countsEl) {
         countsEl.innerHTML = `
-            <span class="health-count ok">✅ ${statusCounts.ok || 0}</span>
-            <span class="health-count warning">⚠️ ${statusCounts.warning || 0}</span>
-            <span class="health-count error">❌ ${statusCounts.error || 0}</span>
+            <span class="health-count ok">${statusCounts.ok || 0}</span>
+            <span class="health-count warning">${statusCounts.warning || 0}</span>
+            <span class="health-count error">${statusCounts.error || 0}</span>
         `;
     }
 
@@ -197,9 +197,9 @@ function renderHealthStatus(data) {
         modulesList.innerHTML = moduleConfigs.map(config => {
             const module = modules[config.key] || {};
             const status = module.status || 'unknown';
-            const statusIcon = status === 'ok' ? '✅' : status === 'warning' ? '⚠️' : status === 'error' ? '❌' : '❓';
+            const statusIcon = status === 'ok' ? 'ok' : status === 'warning' ? 'warning' : status === 'error' ? 'error' : 'unknown';
             return `<div class="health-module">
-                <span class="health-module-icon">${statusIcon}</span>
+                <span class="health-module-icon xj-dot xj-dot-${statusIcon}"></span>
                 <span class="health-module-name">${config.name}</span>
                 <span class="health-module-status status-${status}">${getStatusText(status)}</span>
             </div>`;
@@ -230,7 +230,7 @@ function createHealthPanel() {
     panel.innerHTML = `
         <div class="health-panel-content glass">
             <div class="health-panel-header">
-                <h3>📊 系统健康状态</h3>
+                <h3>${xicon('chart')} 系统健康状态</h3>
                 <button onclick="toggleHealthPanel()" class="health-close-btn">✕</button>
             </div>
             <div class="health-panel-body">
@@ -252,8 +252,8 @@ function createHealthPanel() {
                 </div>
             </div>
             <div class="health-panel-footer">
-                <button onclick="loadHealthStatus()" class="health-refresh-btn">🔄 刷新</button>
-                <button onclick="runRecoveryCycle()" class="health-recovery-btn">🔧 执行自动修复</button>
+                <button onclick="loadHealthStatus()" class="health-refresh-btn">${xicon('refresh')} 刷新</button>
+                <button onclick="runRecoveryCycle()" class="health-recovery-btn">${xicon('wrench')} 执行自动修复</button>
             </div>
         </div>
     `;
@@ -307,7 +307,7 @@ function renderNegativePending() {
 
     const notes = ArchitectureDashboard.negativePending;
     if (notes.length === 0) {
-        container.innerHTML = '<div class="negative-empty">✅ 暂无待确认的负面笔记</div>';
+        container.innerHTML = '<div class="negative-empty">暂无待确认的负面笔记</div>';
         return;
     }
 
@@ -319,9 +319,9 @@ function renderNegativePending() {
             </div>
             <div class="negative-note-content">${(note.content || '').substring(0, 100)}...</div>
             <div class="negative-note-actions">
-                <button onclick="confirmNegative('${note.id || note.note_id}')" class="negative-confirm-btn">✅ 确认负面</button>
-                <button onclick="rejectNegative('${note.id || note.note_id}')" class="negative-reject-btn">❌ 驳回</button>
-                <button onclick="viewNoteDetail('${note.id || note.note_id}')" class="negative-view-btn">👁️ 查看详情</button>
+                <button onclick="confirmNegative('${note.id || note.note_id}')" class="negative-confirm-btn">${xicon('check')} 确认负面</button>
+                <button onclick="rejectNegative('${note.id || note.note_id}')" class="negative-reject-btn">${xicon('close')} 驳回</button>
+                <button onclick="viewNoteDetail('${note.id || note.note_id}')" class="negative-view-btn">${xicon('eye')} 查看详情</button>
             </div>
         </div>
     `).join('');
@@ -342,13 +342,13 @@ async function confirmNegative(noteId) {
         });
         const data = await response.json();
         if (data.ok) {
-            showToast('✅ 已确认负面笔记');
+            showToast('已确认负面笔记');
             loadPendingNegative();
         } else {
-            showToast('❌ 确认失败: ' + (data.error || '未知错误'));
+            showToast('确认失败: ' + (data.error || '未知错误'));
         }
     } catch (e) {
-        showToast('❌ 确认失败: ' + e.message);
+        showToast('确认失败: ' + e.message);
     }
 }
 
@@ -367,13 +367,13 @@ async function rejectNegative(noteId) {
         });
         const data = await response.json();
         if (data.ok) {
-            showToast('✅ 已驳回负面笔记');
+            showToast('已驳回负面笔记');
             loadPendingNegative();
         } else {
-            showToast('❌ 驳回失败: ' + (data.error || '未知错误'));
+            showToast('驳回失败: ' + (data.error || '未知错误'));
         }
     } catch (e) {
-        showToast('❌ 驳回失败: ' + e.message);
+        showToast('驳回失败: ' + e.message);
     }
 }
 
@@ -390,7 +390,7 @@ function showNegativeModal() {
         modal.innerHTML = `
             <div class="negative-modal-content glass">
                 <div class="negative-modal-header">
-                    <h3>⚠️ 负面舆情二次确认</h3>
+                    <h3>${xicon('warn')} 负面舆情二次确认</h3>
                     <button onclick="closeNegativeModal()" class="negative-close-btn">✕</button>
                 </div>
                 <div class="negative-modal-body">
@@ -402,7 +402,7 @@ function showNegativeModal() {
                     <div id="negativePendingList" class="negative-pending-list">加载中...</div>
                 </div>
                 <div class="negative-modal-footer">
-                    <button onclick="loadPendingNegative()" class="negative-refresh-btn">🔄 刷新</button>
+                    <button onclick="loadPendingNegative()" class="negative-refresh-btn">${xicon('refresh')} 刷新</button>
                     <button onclick="closeNegativeModal()" class="negative-close-btn2">关闭</button>
                 </div>
             </div>
@@ -484,7 +484,7 @@ async function showDailyReportModal(dateStr) {
         modal.style.display = 'flex';
     } catch (e) {
         console.error('加载日报弹窗失败:', e);
-        showToast('❌ 加载日报失败: ' + e.message);
+        showToast('加载日报失败: ' + e.message);
     }
 }
 
@@ -493,10 +493,10 @@ async function showDailyReportModal(dateStr) {
  */
 function renderDailyNoteItem(note) {
     const sentiment = note.sentiment || 'neutral';
-    const sentimentIcon = sentiment === 'negative' ? '🔴' : sentiment === 'positive' ? '🟢' : '🟡';
+    const sentimentIcon = sentiment === 'negative' ? 'neg' : sentiment === 'positive' ? 'pos' : 'neu';
     return `
         <div class="daily-note-item">
-            <span class="daily-note-sentiment">${sentimentIcon}</span>
+            <span class="daily-note-sentiment xj-dot xj-dot-${sentimentIcon}"></span>
             <div class="daily-note-info">
                 <div class="daily-note-title">${note.title || '无标题'}</div>
                 <div class="daily-note-meta">发布: ${note.publish_date || '未知'} | 采集: ${note.collected_at || '未知'}</div>
@@ -516,27 +516,27 @@ function createDailyReportModal() {
     modal.innerHTML = `
         <div class="daily-report-content glass">
             <div class="daily-report-header">
-                <h3>📋 舆情日报 - <span id="dailyReportDate">加载中...</span></h3>
+                <h3>${xicon('list')} 舆情日报 - <span id="dailyReportDate">加载中...</span></h3>
                 <button onclick="closeDailyReportModal()" class="daily-close-btn">✕</button>
             </div>
             <div class="daily-report-body">
                 <div class="daily-section">
                     <div class="daily-section-header">
-                        <h4>🆕 当日发布笔记</h4>
+                        <h4>${xicon('plus')} 当日发布笔记</h4>
                         <span class="daily-count" id="dailyTodayCount">0</span>
                     </div>
                     <div id="dailyTodayList" class="daily-notes-list">加载中...</div>
                 </div>
                 <div class="daily-section">
                     <div class="daily-section-header">
-                        <h4>📚 过往采集笔记（历史案例）</h4>
+                        <h4>${xicon('book')} 过往采集笔记（历史案例）</h4>
                         <span class="daily-count" id="dailyHistoricalCount">0</span>
                     </div>
                     <div id="dailyHistoricalList" class="daily-notes-list">加载中...</div>
                 </div>
             </div>
             <div class="daily-report-footer">
-                <button onclick="exportDailyReport()" class="daily-export-btn">📥 导出日报</button>
+                <button onclick="exportDailyReport()" class="daily-export-btn">${xicon('export')} 导出日报</button>
                 <button onclick="closeDailyReportModal()" class="daily-close-btn2">关闭</button>
             </div>
         </div>
@@ -592,7 +592,7 @@ function showToast(message) {
  * 执行自动修复周期
  */
 async function runRecoveryCycle() {
-    showToast('🔧 正在执行自动修复...');
+    showToast('正在执行自动修复...');
     try {
         const response = await fetch('/api/recovery/run-cycle', {
             method: 'POST',
@@ -600,13 +600,13 @@ async function runRecoveryCycle() {
         });
         const data = await response.json();
         if (data.ok) {
-            showToast('✅ 自动修复完成');
+            showToast('自动修复完成');
             loadHealthStatus();
         } else {
-            showToast('❌ 自动修复失败');
+            showToast('自动修复失败');
         }
     } catch (e) {
-        showToast('❌ 自动修复失败: ' + e.message);
+        showToast('自动修复失败: ' + e.message);
     }
 }
 
@@ -615,14 +615,14 @@ async function runRecoveryCycle() {
  */
 function viewNoteDetail(noteId) {
     // 跳转到笔记详情页或显示详情弹窗
-    showToast('📖 查看笔记详情: ' + noteId);
+    showToast('查看笔记详情: ' + noteId);
 }
 
 /**
  * 导出日报
  */
 function exportDailyReport() {
-    showToast('📥 正在导出日报...');
+    showToast('正在导出日报...');
     // 调用导出API
     window.open('/api/report/export?type=daily&date=' + new Date().toISOString().split('T')[0], '_blank');
 }
