@@ -137,7 +137,8 @@ body {
   min-height: 100vh;
 }
 
-/* 微光银底层（iPod 银色金属质感，z-index 0 不覆盖文字） */
+/* 微光银底层（iPod 银色金属质感，z-index 0 不覆盖文字）
+   芥子纳须弥：微光如海面，银色波纹自然扩散，不喧宾夺主 */
 body::before {
   content: '';
   position: fixed;
@@ -145,27 +146,63 @@ body::before {
   z-index: var(--xj-z-base);
   pointer-events: none;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(220,225,235,.35) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(200,210,225,.25) 0%, transparent 55%),
-    linear-gradient(180deg, #fafbfc 0%, #f4f5f7 50%, #f0f2f5 100%);
+    radial-gradient(ellipse 90% 60% at 15% -10%, rgba(235,240,248,.55) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 110%, rgba(215,225,240,.45) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(245,247,250,.3) 0%, transparent 60%),
+    linear-gradient(180deg, #fbfcfe 0%, #f5f6f9 40%, #f0f2f6 70%, #eef0f4 100%);
 }
 
-/* 微光扫描（横向银波，微风浮过海面） */
+/* 微光银海浪波纹（微风浮过海面，多层波纹自然扩散，z-index 0 不覆盖文字）
+   三层波纹：主波横向缓慢扫过 + 次波斜向扩散 + 微波纵向起伏，形成海面波光粼粼的质感 */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: var(--xj-z-base);
   pointer-events: none;
-  background: var(--xj-shine);
-  background-size: 250% 100%;
-  animation: xj-silver-sweep 9s var(--xj-ease-standard) infinite;
-  opacity: .35;
+  background:
+    /* 主波：横向银色光带，缓慢扫过 */
+    linear-gradient(100deg,
+      transparent 0%,
+      rgba(255,255,255,.15) 20%,
+      rgba(230,235,245,.4) 35%,
+      rgba(255,255,255,.6) 50%,
+      rgba(230,235,245,.4) 65%,
+      rgba(255,255,255,.15) 80%,
+      transparent 100%),
+    /* 次波：斜向扩散波纹 */
+    radial-gradient(ellipse 60% 30% at 30% 40%, rgba(220,228,240,.25) 0%, transparent 70%),
+    /* 微波：纵向起伏 */
+    repeating-linear-gradient(180deg,
+      transparent 0px,
+      rgba(255,255,255,.03) 1px,
+      transparent 2px,
+      transparent 40px);
+  background-size: 280% 100%, 100% 100%, 100% 100%;
+  animation:
+    xj-wave-main 12s var(--xj-ease-standard) infinite,
+    xj-wave-sub 18s ease-in-out infinite alternate,
+    xj-wave-micro 8s ease-in-out infinite;
+  opacity: .7;
 }
 
-@keyframes xj-silver-sweep {
-  0% { background-position: 150% 0; }
-  100% { background-position: -150% 0; }
+/* 主波：横向缓慢扫过，如海面波光 */
+@keyframes xj-wave-main {
+  0% { background-position: 150% 0, 0 0, 0 0; }
+  100% { background-position: -150% 0, 0 0, 0 0; }
+}
+
+/* 次波：斜向扩散，如涟漪蔓延 */
+@keyframes xj-wave-sub {
+  0% { background-position: 150% 0, -10% 20%, 0 0; opacity: .5; }
+  50% { background-position: 150% 0, 50% 50%, 0 0; opacity: .8; }
+  100% { background-position: 150% 0, 110% 80%, 0 0; opacity: .5; }
+}
+
+/* 微波：纵向起伏，如水面细纹 */
+@keyframes xj-wave-micro {
+  0%, 100% { background-position: 150% 0, 0 0, 0 0; }
+  50% { background-position: 150% 0, 0 0, 0 10px; }
 }
 
 /* 内容层在微光之上 */

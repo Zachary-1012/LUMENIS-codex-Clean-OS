@@ -70,9 +70,14 @@ class CollectorGuard:
                                True, time.time() - t, self.metrics.snapshot(), raw)
 
         # 熔断/暂停/验证/登录态：停止危险请求，直接返回受控状态（不伪装成 0 条）
+        # COOLDOWN 冷却到期后允许 half-open 探测（避免死锁：否则永远不发请求→永远不触发on_success→永久COOLDOWN）
         if self.limiter.state in CollectState.STOP_REQUEST:
-            snap = self.limiter.snapshot()
-            return GuardResult(self.limiter.state, snap['state'], [],
+            if self.limiter.state == CollectState.COOLDOWN and self.limiter.can_run():
+                # 冷却已到期：放行一次 half-open 探测，成功则 on_success 恢复 HEALTHY，失败则重新冷却
+                pass
+            else:
+                snap = self.limiter.snapshot()
+                return GuardResult(self.limiter.state, snap['state'], [],
                                f"受控状态 {CollectState.label(self.limiter.state)}，剩余冷却 "
                                f"{self.limiter.remaining_cooldown():.0f}s",
                                False, 0.0, self.metrics.snapshot())
@@ -106,6 +111,11 @@ class CollectorGuard:
             ok = False
         else:
             self.limiter.on_success()
+            # 采集准确度质量门：统计本次采集结果的9项完整性指标（COLLECTION_ACCURACY_GATE_v1）
+            try:
+                self.metrics.record_quality(notes)
+            except Exception as _q_err:
+                pass  # 质量门统计失败不阻断采集主流程
             self.metrics.record(True, lat)
             ids = [n.get('note_id') for n in notes if isinstance(n, dict) and n.get('note_id')]
             if ids:

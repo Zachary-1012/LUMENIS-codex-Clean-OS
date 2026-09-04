@@ -117,10 +117,21 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
     factor = _RISK_FACTOR_BY_STATE.get(state)
     if factor:
         score, band, st = risk.record_failure(factor)
+    elif state == 'EMPTY':
+        # EMPTY 不衰减风险分：无法区分"真无内容"与"软风控空响应"，保持当前风险分不变
+        # （智谱采集链审查 P0-C 加固：避免空结果被视为成功而提前解除熔断）
+        score, band, st = risk.score, risk._last_band, risk.lifecycle_state()
     else:
         score, band, st = risk.record_success()
     snap = risk.snapshot()
     if snap['should_stop_request']:
+        # RiskEngine熔断联动guard.limiter.force_pause（P0-C加固：避免两套熔断系统脱节）
+        try:
+            _guard = _get_xhs_guard()
+            if _guard and hasattr(_guard, 'limiter'):
+                _guard.limiter.force_pause(CollectState.PAUSED, cooldown_seconds=max(300, risk.reset_timeout))
+        except Exception as _link_err:
+            print(f"[Collector]   RiskEngine联动limiter失败(忽略): {_link_err}")
         results.append({
             'keyword': kw, 'count': count,
             'error': error or '', 'guard_state': guard_state or '',
@@ -397,6 +408,12 @@ def collect_all(keywords=None, max_scroll=4):
         for note in result.get('notes', []):
             nid = note.get('note_id')
             if nid and nid not in all_notes:
+                # 主体硬过滤（P0-C加固）：CDP详情采集已判定subject_hit=False的记录，collector层入库前直接排除
+                # 不依赖下游insert层过滤，避免漏过滤路径污染正式KOS/舆情池
+                # subject_hit_cdp为None（standalone通道未判定）时不排除，保持向后兼容
+                _subj_hit = note.get('subject_hit_cdp')
+                if _subj_hit is False:
+                    continue
                 # 标记来源关键词
                 note['source_keyword'] = kw
                 all_notes[nid] = note
