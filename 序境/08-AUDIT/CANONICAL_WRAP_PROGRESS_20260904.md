@@ -28,7 +28,7 @@
   - kol_analysis.py L62 `SUM(likes+comments+collects+shares)`：**SQL 层等权四字段，与 FN-ENGAGEMENT 数学等价**；SQL 聚合性能最优，改内存聚合降性能 → KEEP
   - kos_metrics.py L93 `SUM(n.likes+n.comments+n.collects+n.shares) AS exposure`：SQL 层等权，语义为 viewership 曝光（漏斗）→ KEEP（口径一致，非重复）
   - kos_engine.py L119 加权 `eng=tl+tc*2+tcol*1.5+ts*2`：不同 Metric（KOS 加权互动）→ KEEP；total_likes 为独立字段（FN-LIKES 语义）不并入互动 → KEEP
-- [ ] 多端点 Reference Scan：/api/stats、/api/brand-stats、/api/brand-industry/stats 同源；evidence 两组；event-graph 两组
+- [x] 多端点 Reference Scan（2026-09-04 完成，见 CANONICAL_CAPABILITY_AUDIT_20260904.md）：/api/brand-stats（业态维度）、/api/brand-industry/stats（行业维度，REFSCAN 已修复实体 id 计数）、/api/negative-review/stats（负面审核口径）——三者**不同业务语义，非重复计算** → 判定不强行统一；/api/brand-stats 内联等权 engagement 两处符合 FN-ENGAGEMENT 语义，遍历内联非独立函数，按"不重写已正确代码"暂 KEEP
 - [x] 三套报告实现口径差异 Reference Scan（结论见下）
 
 ## 三套报告实现口径 Reference Scan（2026-09-04 已执行）
