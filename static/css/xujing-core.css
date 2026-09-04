@@ -125,6 +125,7 @@ body::after {
 
 /* 右侧面板：固定 320px */
 .layout > .right-panel {
+  display: block !important;
   flex: 0 0 auto !important; width: 320px !important; max-width: 340px !important;
   padding: var(--xj-space-4);
   border-left: 1px solid rgba(20,24,32,.06);
@@ -135,8 +136,9 @@ body::after {
 /* ---------- 4. 6 大域导航（工作台/监测/事件/洞察/资产/系统） ---------- */
 .sidebar .side-nav {
   flex: 1 1 auto !important; min-height: 0 !important;
-  display: flex; flex-direction: column; gap: 2px;
-  padding: var(--xj-space-2) 0;
+  display: flex !important; flex-direction: column !important; gap: 2px !important;
+  padding: var(--xj-space-2) 0 !important;
+  overflow-y: auto !important; overflow-x: hidden !important;
 }
 .sidebar .side-group-label {
   display: flex !important; align-items: center;
@@ -147,7 +149,9 @@ body::after {
 }
 .sidebar .side-item {
   display: flex !important; align-items: center; gap: 10px;
-  height: 36px; padding: 0 10px;
+  height: 38px !important; min-height: 38px !important; max-height: 38px !important;
+  flex-shrink: 0 !important; flex-grow: 0 !important;
+  padding: 0 10px !important;
   border-radius: var(--xj-radius-md);
   color: var(--xj-ink-700); font-size: 13px; font-weight: 500;
   cursor: pointer; transition: all var(--xj-dur) var(--xj-ease);
@@ -357,4 +361,150 @@ button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-vis
 /* 减少动效偏好 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+
+/* ---------- 14. 侧栏装饰与图标尺寸收敛（修复大放大镜遮挡导航、卡片图标失控） ---------- */
+.sidebar .search-icon, .sidebar [class*="search"] svg, .sidebar .big-icon,
+.sidebar .decoration, .sidebar .sidebar-icon {
+  max-width: 48px !important; max-height: 48px !important;
+  width: auto !important; height: auto !important;
+}
+/* 导航文字确保可见（覆盖历史淡色规则） */
+.sidebar .side-item { color: var(--xj-ink-700) !important; opacity: 1 !important; }
+.sidebar .side-item span { display: inline-flex !important; align-items: center; opacity: 1 !important; flex-shrink: 0; }
+.sidebar .side-item .navicon { display: inline-flex !important; align-items: center; justify-content: center; width: 18px; height: 18px; flex-shrink: 0; }
+.sidebar .side-group-label { color: var(--xj-ink-300) !important; opacity: 1 !important; }
+/* 卡片内图标尺寸限制（API Key 等卡片图标不放大） */
+.card svg, [class*="card"] svg, .kpi-card svg {
+  max-width: 24px !important; max-height: 24px !important;
+  width: 24px !important; height: 24px !important;
+}
+.card .big-icon, [class*="card"] .big-icon, .capability-icon {
+  max-width: 40px !important; max-height: 40px !important;
+  width: 40px !important; height: 40px !important;
+}
+
+
+/* ============================================================
+ * 15. iPod / Apple 金属质感风格（参考视频逐帧分析）
+ * 银色金属、圆形控制、毛玻璃、物理光泽、极简留白
+ * ============================================================ */
+
+/* 银色金属卡片：金属渐变边框 + 顶部高光 + 底部阴影 */
+.xj-metal-card {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 50%, #f0f2f5 100%);
+  border: 1px solid rgba(180,188,200,.4);
+  border-radius: var(--xj-radius-xl);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 -1px 0 rgba(0,0,0,.04) inset,
+    0 4px 16px rgba(20,24,32,.06),
+    0 1px 3px rgba(20,24,32,.04);
+  overflow: hidden;
+}
+/* 金属顶部高光条 */
+.xj-metal-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent);
+}
+/* 金属微光扫描 */
+.xj-metal-card::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.4) 48%, rgba(220,225,235,.2) 52%, transparent 70%);
+  background-size: 250% 100%;
+  animation: xj-metal-shine 6s ease-in-out infinite;
+}
+@keyframes xj-metal-shine {
+  0%, 100% { background-position: 130% 0; }
+  50% { background-position: -30% 0; }
+}
+
+/* 圆形控制按钮（iPod Click Wheel 风格） */
+.xj-circle-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #ffffff, #e8eaee);
+  border: 1px solid rgba(180,188,200,.5);
+  box-shadow: 0 2px 6px rgba(20,24,32,.08), 0 1px 0 rgba(255,255,255,.9) inset;
+  color: var(--xj-ink-700); cursor: pointer; transition: all .2s var(--xj-ease);
+}
+.xj-circle-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 12px rgba(20,24,32,.12), 0 1px 0 rgba(255,255,255,.9) inset;
+  color: var(--xj-ink-900);
+}
+.xj-circle-btn:active { transform: scale(.96); }
+
+/* 毛玻璃面板增强 */
+.xj-glass {
+  background: rgba(255,255,255,.72) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+  border: 1px solid rgba(255,255,255,.6) !important;
+  box-shadow: 0 8px 32px rgba(20,24,32,.08) !important;
+}
+.xj-glass-dark {
+  background: rgba(26,29,35,.72) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  color: #fff !important;
+}
+
+/* 极简分组列表（iOS 风格分组） */
+.xj-group-list {
+  background: rgba(255,255,255,.8);
+  border-radius: var(--xj-radius-lg);
+  border: 1px solid rgba(20,24,32,.06);
+  overflow: hidden;
+}
+.xj-group-list .xj-group-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; min-height: 44px;
+  border-bottom: 1px solid rgba(20,24,32,.05);
+  transition: background .15s;
+}
+.xj-group-list .xj-group-item:last-child { border-bottom: none; }
+.xj-group-list .xj-group-item:hover { background: rgba(20,24,32,.03); }
+.xj-group-list .xj-group-item .xj-item-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #f0f2f5, #e4e7ec);
+  color: var(--xj-ink-700); flex-shrink: 0;
+}
+
+/* 银色金属分隔线 */
+.xj-metal-divider {
+  height: 1px; border: none;
+  background: linear-gradient(90deg, transparent, rgba(180,188,200,.4), transparent);
+  margin: var(--xj-space-4) 0;
+}
+
+/* 物理深度阴影层级 */
+.xj-depth-1 { box-shadow: 0 1px 3px rgba(20,24,32,.06); }
+.xj-depth-2 { box-shadow: 0 4px 12px rgba(20,24,32,.08); }
+.xj-depth-3 { box-shadow: 0 12px 32px rgba(20,24,32,.12); }
+.xj-depth-4 { box-shadow: 0 24px 64px rgba(20,24,32,.16); }
+
+/* 深色模式支持（视频中深色界面） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --xj-silver-50: #1a1d23; --xj-silver-100: #22262e;
+    --xj-silver-200: #2a2f38; --xj-silver-300: #3a3f48;
+    --xj-ink-900: #f0f2f5; --xj-ink-700: #d5d9e0;
+    --xj-ink-500: #aeb4bf; --xj-ink-300: #7d8491;
+  }
+  body { background: #0f1115; color: #f0f2f5; }
+  body::before { background: linear-gradient(135deg, #1a1d23, #15181d, #1a1d23); }
+  .card, [class*="card"] { background: rgba(34,38,46,.85); border-color: rgba(255,255,255,.08); }
+  .sidebar { background: rgba(26,29,35,.8); border-right-color: rgba(255,255,255,.08); }
+  .right-panel { background: rgba(26,29,35,.6); border-left-color: rgba(255,255,255,.08); }
+  .sidebar .side-item { color: #d5d9e0; }
+  .sidebar .side-item:hover { background: rgba(255,255,255,.08); }
+  .sidebar .side-item.active { background: #f0f2f5; color: #1a1d23; }
+  .xj-metal-card { background: linear-gradient(180deg, #2a2f38, #22262e); border-color: rgba(255,255,255,.1); }
 }
