@@ -446,3 +446,7 @@
 | HH | 2026-09-04 | 舆情传播动力学/危机沟通 | 灾后假消息泛滥（旧素材重发/AI 合成/诈骗码）；算法放大耸动>事实；处置分级；官方源核验+分级响应 | DISA/IT之家 | ADAPT | 舆情耸动/合成信号纳入告警（IC-044） | 只作监测方法参考，不涉平台治理立场 | E2 |
 | II | 2026-09-04 | 跨媒介叙事/AI 品牌漂移 | AI 从多源合成品牌叙事（AI Brand Drift 四层）；ChatGPT 2B 日询/维基 47.9%；Transmedia Bible 成基础设施；播客 2026 广告近 $2.6B；Core→Hero→Derivatives 栈 | iloveseo/Hijab/Cue/IAB-PwC | ADOPT | 品牌叙事世界/内容矩阵栈（IC-045） | 权威源+结构化数据+一致语料，不承诺排名 | E2 |
 | JJ | 2026-09-04 | 复杂系统/涌现/自组织 | 涌现=整体大于部分；CAS 无中心秩序；临界态幂律/最大信息；复杂度凝聚（中间适应强度最优）；ABM 简单规则→涌现 | arXiv 2607.04660/Agentica | ADOPT | 产品哲学学理支撑/健康级联视角（IC-046） | 仅思维框架，不改变生产架构 | E2 |
+
+| KK | 2026-09-04 | 奢侈品牌中国市场策略 | 2026 转向老客复购/全域数字化；LV 云看秀直播破 2 亿/Tiffany AR +35%/Gucci 私域复购 +28%；VIC+年轻入门双轨；免税即时零售深度绑定中免 | 新浪/贝恩/Slingshot | ADOPT | KOS/海南中免/留资（IC-047） | 市场口径仅策略参考，不作生产指标 | E2 |
+| LL | 2026-09-04 | 数据可视化/设计系统 | 图表=解释数据非展示；data-ink ratio/零基线防误导；CVD-safe 色彩+多通道；role-based 信息架构；empty/error 状态同等设计 | Friedman/Wandr | ADOPT | 可视化 Registry/UI 基线（IC-048） | 沉淀检查清单，不引新框架 | E2 |
+| MM | 2026-09-04 | RAG/知识图谱 | AKG 递归爬取+有效性图谱 CFR +70%；Pinecone Nexus 编译知识层；多跳引用+时效优先级；reason over knowledge | arXiv 2604.14220/ragaboutit | ADAPT | 自研 AI 知识体系（IC-049） | 需先 Benchmark，不建第三库 | E2 |
