@@ -1,4 +1,4 @@
-﻿# LUMENIS Engineering Governance V1.0
+# LUMENIS Engineering Governance V1.0
 
 ## 1. Authority
 
