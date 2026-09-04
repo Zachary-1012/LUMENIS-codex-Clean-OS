@@ -105,3 +105,52 @@
 @media (prefers-reduced-motion: reduce) {
   .silver-shimmer, .xj-card-silver::after { animation: none !important; }
 }
+
+/* =============================================================================
+ * v1.1 · UI 规范落地（GitHub 前沿研究 2026-09）：
+ *   - 间距刻度补齐（4px 基准：--xj-space-10/12/16）
+ *   - Touch Target 规范（WCAG 2.5.8 AA 24px / 增强 44px，EAA 2025 已强制）
+ *   - 表驱动 Reveal 进入动效（IntersectionObserver + --xj-delay 级联，fire-once）
+ * 原则：动效真实状态驱动、禁写死循环、reduced-motion 强制显示、触控命中区优先。
+ * ========================================================================== */
+:root {
+  --xj-space-10: 40px;
+  --xj-space-12: 48px;
+  --xj-space-16: 64px;
+  --xj-touch-min:   24px;  /* WCAG 2.5.8 AA 最小 */
+  --xj-touch-target: 44px; /* WCAG 2.5.5 增强 / iOS HIG / Android 48dp */
+}
+
+/* ---- 触摸目标规范 ----
+ * .xj-touch      : 交互控件最小 44×44（含图标按钮）
+ * .xj-touch-icon : 视觉小、命中区大（spacing exception：用 padding 扩展 hit area，保持 24px 视觉图标）
+ * 相邻控件间距 ≥8px（--xj-space-2） */
+.xj-touch { min-width: var(--xj-touch-target); min-height: var(--xj-touch-target); }
+.xj-touch-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: var(--xj-touch-target); min-height: var(--xj-touch-target);
+  padding: 10px; background: transparent; border: 0; cursor: pointer;
+  color: inherit; border-radius: var(--xj-radius-md);
+}
+.xj-touch-icon svg { width: 24px; height: 24px; }
+
+/* ---- 表驱动 Reveal 进入动效 ----
+ * 用法：容器加 data-xj-reveal="pop"（可选值 pop/slide），进入视口时直接子元素按 75ms 阶梯依次入场（单组 ≤400ms）。
+ * --xj-delay 由 xj-reveal.js 依据子元素索引计算（数据表驱动），禁硬编码动画。 */
+[data-xj-reveal] > * {
+  opacity: 0; transform: translateY(12px);
+  transition:
+    opacity .5s cubic-bezier(.22,.61,.36,1) var(--xj-delay, 0ms),
+    transform .5s cubic-bezier(.22,.61,.36,1) var(--xj-delay, 0ms);
+  will-change: opacity, transform;
+}
+[data-xj-reveal].is-visible > * { opacity: 1; transform: translateY(0); }
+[data-xj-reveal="pop"] > * { transform: translate(10px, -8px) scale(.98); }
+[data-xj-reveal="pop"].is-visible > * { transform: translate(0, 0) scale(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-xj-reveal] > * {
+    opacity: 1 !important; transform: none !important;
+    transition: none !important;
+  }
+}
