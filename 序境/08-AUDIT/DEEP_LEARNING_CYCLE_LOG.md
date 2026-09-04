@@ -129,3 +129,61 @@
 - **采用位置**：雷达 §11；队列 IC-014
 - **风险**：低
 - **Evidence**：OSAI 推送；本登记簿双库同步
+---
+
+## Cycle G — RAG / 动态记忆管理 / Context Management（2026-09-04）
+
+- **主题**：RAG / Memory / Context（指令十一方向补充）
+- **研究对象**：State-Aware RAG（arXiv 2510.08958）、火山引擎检索实战
+- **来源**：arXiv、火山引擎（E2），URL 见 OSAI 技术雷达 §12
+- **核心发现**：
+  1. 显式 working memory 动态过滤/合并/更新是多跳 RAG 关键（+8.6%/+9.3%）
+  2. retriever/generator 冻结即插即用（记忆层独立演进）
+  3. 口语化查询需查询重写；长对话需记忆摘要持久化关键输入
+- **适用能力**：研究区知识资产整理（过滤-合并-更新）；舆情/评论文本理解
+- **与代码库关系**：知识资产为结构化文件非向量库——不新建向量体系
+- **实验**：无（研究侧）
+- **决策**：ADAPT（思路借鉴）
+- **采用位置**：雷达 §12；队列 IC-018
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
+
+---
+
+## Cycle H — AI 自动化测试 / 回归生成（2026-09-04）
+
+- **主题**：Automated Testing / Regression / Self-verification（指令十一方向补充）
+- **研究对象**：Diffblue Testing Agent、Munk AI、Gemma 4
+- **来源**：Diffblue 官方、掘金工程实践（E2），URL 见 OSAI 技术雷达 §13
+- **核心发现**：
+  1. 人工写回归测试 50% 覆盖率后收益递减，AI 自主达 80%+
+  2. Vibe Coding 时代人类 Review/手动测试成瓶颈——"用魔法打败魔法"
+  3. Gemma 4 26B-A4B 便宜 200 倍/本地免费运行——AI 测试算力壁垒被打破
+  4. 多智能体测试：CV 理解 UI + LLM 理解自然语言 Test Case
+- **适用能力**：回归测试自动生成；低成本视觉断言
+- **与代码库关系**：tests/ 已有 regNN 全量回归 + ai_channel/kos/udip 测试
+- **实验**：无（研究侧）
+- **决策**：ADAPT（研究侧评估）
+- **采用位置**：雷达 §13；队列 IC-017
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
+
+---
+
+## Cycle I — 多模型路由 / LLM Gateway（2026-09-04）
+
+- **主题**：Model Routing / Multi-model / Cost Optimization（指令十一方向补充）
+- **研究对象**：LiteLLM Gateway、Azure Model Router
+- **来源**：CSDN LiteLLM 实战、Microsoft Learn（E2），URL 见 OSAI 技术雷达 §14
+- **核心发现**：
+  1. 智能路由（usage-based）+ 缓存 + 用量管控，单月成本降 70%
+  2. 87% 企业调用成本浪费（核心/非核心同用顶级模型、长系统提示重复计费、无用量管控）
+  3. least-cost routing：自动选能满足任务的最便宜模型
+  4. 三种路由模式 Balanced/Cost/Quality + 自动 failover + prompt caching
+- **适用能力**：ai_channel 分级路由增强（least-cost/缓存/配额）
+- **与代码库关系**：ai_channel.py 权威实现 + 智谱/搜索/视觉分级路由已落地——验证设计正确
+- **实验**：无（研究侧）
+- **决策**：ADOPT（策略确认）+ ADAPT（补 least-cost/cache/配额）
+- **采用位置**：雷达 §14；队列 IC-016
+- **风险**：低
+- **Evidence**：OSAI 推送；本登记簿双库同步
