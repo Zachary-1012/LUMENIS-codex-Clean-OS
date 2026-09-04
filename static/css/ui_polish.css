@@ -5,29 +5,34 @@
  * 本文件最后加载，作为视觉观感统一兜底
  * ============================================================ */
 
-/* ---- 1. 侧边栏隐藏脱流 ----
- * 平板区间（768-1023）侧边栏是 sticky flex item，关闭时仅用
- * translateX(-100%) 视觉隐藏，仍占 248px，导致 .content 左侧留白。
- * 权威显隐状态是 body.zb-nav-open（zb-shell 机制，!important 控制 transform）：
- * 无 zb-nav-open = 抽屉关闭 → 收回 flex 占位，让主内容占满全宽。
- * 注意：不能用 .sidebar.open 判断——打开抽屉时它也带 .open，会误伤。
- * 手机端（<=767）sidebar 为 position:fixed 已脱流；桌面（>=1024）抽屉常显，
- * 均无需处理，故用 768-1023 区间精确隔离。 */
-@media (min-width: 768px) and (max-width: 1023px) {
-  body.zb-shell-on:not(.zb-nav-open) .layout > .sidebar {
-    flex: 0 0 0 !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    border-right: 0 !important;
-    overflow: hidden !important;
-  }
-  /* 抽屉打开时恢复占位（覆盖任何冲突的宽度规则） */
-  body.zb-shell-on.zb-nav-open .layout > .sidebar {
+/* ---- 1. 侧边栏恒显（桌面端） ----
+ * 按 UI-IA-INTERACTION-DESIGN-BASELINE-20260903：工作台桌面端必须始终可见
+ * 6 大域层级导航（工作台/监测/事件/洞察/资产/系统），禁止抽屉式隐藏导致导航丢失。
+ * 本文件最后加载作为兜底层，用 !important 覆盖所有历史抽屉/折叠层
+ * （ui_polish 旧 768-1023 隐藏、xujing-design-system max-width:1023 fixed 抽屉、
+ *  layout-minimal/layout 768-1199 collapsed 等），确保 ≥768px 侧栏恒显完整导航。
+ * 移动端（<=767）保留抽屉（menuToggle 触发）。 */
+@media (min-width: 768px) {
+  body .layout > .sidebar,
+  body .sidebar {
+    position: relative !important;
+    transform: none !important;
     flex: 0 0 248px !important;
     width: 248px !important;
     min-width: 248px !important;
+    max-width: 248px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    border-right: 1px solid rgba(0,0,0,.06) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  /* 侧栏内部导航标签与文本恒显（覆盖 collapsed 只显图标的折叠规则） */
+  body .sidebar .side-item span,
+  body .sidebar .side-group-label,
+  body .sidebar .sidebar-brand-text,
+  body .sidebar .sidebar-footer {
+    display: flex !important;
   }
 }
 
