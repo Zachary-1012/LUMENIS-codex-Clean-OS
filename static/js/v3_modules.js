@@ -64,10 +64,10 @@ const V3Modules = {
 
             document.getElementById('kbStats').innerHTML = `
                 <div class="kb-stats-grid">
-                    <div class="kb-stat-card"><div class="kb-stat-icon">📚</div><div class="kb-stat-info"><strong>${stats.total || 0}</strong><span>知识条目</span></div></div>
-                    <div class="kb-stat-card"><div class="kb-stat-icon">🏷️</div><div class="kb-stat-info"><strong>${Object.keys(byCat).length}</strong><span>知识分类</span></div></div>
-                    <div class="kb-stat-card"><div class="kb-stat-icon">🎯</div><div class="kb-stat-info"><strong>影子板块</strong><span>AI学习知识库</span></div></div>
-                    <div class="kb-stat-card"><div class="kb-stat-icon">🤖</div><div class="kb-stat-info"><strong>脱离AI</strong><span>自主分析基础</span></div></div>
+                    <div class="kb-stat-card"><div class="kb-stat-icon">${xicon('book',22)}</div><div class="kb-stat-info"><strong>${stats.total || 0}</strong><span>知识条目</span></div></div>
+                    <div class="kb-stat-card"><div class="kb-stat-icon">${xicon('tag',22)}</div><div class="kb-stat-info"><strong>${Object.keys(byCat).length}</strong><span>知识分类</span></div></div>
+                    <div class="kb-stat-card"><div class="kb-stat-icon">${xicon('target',22)}</div><div class="kb-stat-info"><strong>影子板块</strong><span>AI学习知识库</span></div></div>
+                    <div class="kb-stat-card"><div class="kb-stat-icon">${xicon('bot',22)}</div><div class="kb-stat-info"><strong>脱离AI</strong><span>自主分析基础</span></div></div>
                 </div>
                 <div class="kb-cat-filters">
                     <span class="kb-filter-label">按分类：</span>
@@ -100,8 +100,8 @@ const V3Modules = {
                         <p>${(item.content || '').substring(0, 150)}${(item.content || '').length > 150 ? '...' : ''}</p>
                     </div>
                     <div class="kb-item-footer">
-                        ${item.source ? `<span>📖 ${item.source}</span>` : ''}
-                        ${item.tags ? `<span>🏷️ ${(item.tags || '').split(',').slice(0,3).join(' / ')}</span>` : ''}
+                        ${item.source ? `<span>${xicon('book')} ${item.source}</span>` : ''}
+                        ${item.tags ? `<span>${xicon('tag')} ${(item.tags || '').split(',').slice(0,3).join(' / ')}</span>` : ''}
                         <span class="kb-detail-link">查看详情 →</span>
                     </div>
                 </article>`;
@@ -119,8 +119,8 @@ const V3Modules = {
                     <div class="kb-detail-hero">
                         <span class="kb-type-badge large">${catName}</span>
                         <h2>${item.title || ''}</h2>
-                        ${item.source ? `<div class="kb-detail-meta">📖 来源：${item.source}</div>` : ''}
-                        ${item.tags ? `<div class="kb-detail-meta">🏷️ 标签：${item.tags}</div>` : ''}
+                        ${item.source ? `<div class="kb-detail-meta">${xicon('book')} 来源：${item.source}</div>` : ''}
+                        ${item.tags ? `<div class="kb-detail-meta">${xicon('tag')} 标签：${item.tags}</div>` : ''}
                     </div>
                     <div class="kb-detail-content">${(item.content || '').replace(/\n/g, '<br>')}</div>
                 </div>`;
@@ -180,11 +180,11 @@ const V3Modules = {
             const byRel = stats.relations_by_type || {};
             document.getElementById('egStats').innerHTML = `
                 <div class="eg-stats-grid">
-                    <div class="eg-stat-card"><div class="eg-stat-icon">📊</div><div class="eg-stat-info"><strong>${stats.total_events || 0}</strong><span>事件总数</span></div></div>
-                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="营销事件" title="点击筛选营销事件"><div class="eg-stat-icon">📢</div><div class="eg-stat-info"><strong>${byType['营销事件'] || 0}</strong><span>营销事件</span></div></div>
-                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="传播事件" title="点击筛选传播事件"><div class="eg-stat-icon">📡</div><div class="eg-stat-info"><strong>${byType['传播事件'] || 0}</strong><span>传播事件</span></div></div>
-                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="舆情事件" title="点击筛选舆情事件"><div class="eg-stat-icon">⚠️</div><div class="eg-stat-info"><strong>${byType['舆情事件'] || 0}</strong><span>舆情事件</span></div></div>
-                    <div class="eg-stat-card"><div class="eg-stat-icon">🔗</div><div class="eg-stat-info"><strong>${stats.total_relations || 0}</strong><span>关系总数</span></div></div>
+                    <div class="eg-stat-card"><div class="eg-stat-icon">${xicon('chart',20)}</div><div class="eg-stat-info"><strong>${stats.total_events || 0}</strong><span>事件总数</span></div></div>
+                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="营销事件" title="点击筛选营销事件"><div class="eg-stat-icon">${xicon('megaphone',20)}</div><div class="eg-stat-info"><strong>${byType['营销事件'] || 0}</strong><span>营销事件</span></div></div>
+                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="传播事件" title="点击筛选传播事件"><div class="eg-stat-icon">${xicon('satellite',20)}</div><div class="eg-stat-info"><strong>${byType['传播事件'] || 0}</strong><span>传播事件</span></div></div>
+                    <div class="eg-stat-card" data-xf-dim="event_type" data-xf-value="舆情事件" title="点击筛选舆情事件"><div class="eg-stat-icon">${xicon('warn',20)}</div><div class="eg-stat-info"><strong>${byType['舆情事件'] || 0}</strong><span>舆情事件</span></div></div>
+                    <div class="eg-stat-card"><div class="eg-stat-icon">${xicon('link',20)}</div><div class="eg-stat-info"><strong>${stats.total_relations || 0}</strong><span>关系总数</span></div></div>
                     <div class="eg-stat-card xf-clear" data-xf-clear="event_type" title="清除筛选" style="cursor:pointer"><div class="eg-stat-icon">✕</div><div class="eg-stat-info"><strong>清除</strong><span>筛选</span></div></div>
                 </div>
                 <div class="eg-legend">
@@ -210,7 +210,7 @@ const V3Modules = {
             if (events.length === 0) {
                 container.innerHTML = `
                 <div class="eg-empty glass-card">
-                    <div class="eg-empty-icon">🕸️</div>
+                    <div class="eg-empty-icon">${xicon('web',32)}</div>
                     <h3>事件关系图谱暂无数据</h3>
                     <p>当前系统已具备事件关系图谱的后端架构和API，事件数据将在后续版本中逐步填充。</p>
                     <div class="eg-empty-info">
@@ -218,7 +218,7 @@ const V3Modules = {
                         <div class="eg-empty-item"><b>四种关系：</b>触发(trigger) / 衍生(derive) / 继发(follow) / 并行(parallel)</div>
                         <div class="eg-empty-item"><b>API就绪：</b>GET /api/event-graph/stats、GET /api/event-graph/events</div>
                     </div>
-                    <p style="color:var(--muted);font-size:13px;margin-top:16px">💡 后续可从舆情事件、营销活动中自动提取并构建事件关系图谱</p>
+                    <p style="color:var(--muted);font-size:13px;margin-top:16px">${xicon('bulb')} 后续可从舆情事件、营销活动中自动提取并构建事件关系图谱</p>
                 </div>`;
                 return;
             }
@@ -234,7 +234,7 @@ const V3Modules = {
                     </div>
                     <div class="eg-event-body">
                         <p>${ev.description || ''}</p>
-                        ${ev.event_date ? `<div class="eg-event-meta">📅 ${ev.event_date}</div>` : ''}
+                        ${ev.event_date ? `<div class="eg-event-meta">${xicon('calendar')} ${ev.event_date}</div>` : ''}
                         ${ev.relations && ev.relations.length > 0 ? `<div class="eg-event-relations"><b>关联事件：</b>${ev.relations.map(r => `<span class="eg-rel-mini" style="background:${typeColors[r.type]||'#8e8e93'}">${r.relation || r.type}</span>`).join('')}</div>` : ''}
                     </div>
                 </div>`;
@@ -254,7 +254,7 @@ const V3Modules = {
             document.getElementById('brForm').innerHTML = `
                 <div class="br-form-card glass-card">
                     <div class="br-form-header">
-                        <h3>📊 生成品牌传播与市场情报报告</h3>
+                        <h3>${xicon('chart')} 生成品牌传播与市场情报报告</h3>
                         <p>从舆情监测数据自动生成多维度品牌分析报告（V3.0升级版）</p>
                     </div>
                     <div class="br-form-body">
@@ -288,7 +288,7 @@ const V3Modules = {
                             </div>
                         </div>
                         <button class="br-generate-btn" onclick="V3Modules.brandReport.generate()" id="brGenerateBtn">
-                            🚀 生成报告
+                            ${xicon('rocket')} 生成报告
                         </button>
                     </div>
                 </div>
@@ -320,24 +320,24 @@ const V3Modules = {
                 document.getElementById('brResult').innerHTML = '<div class="br-error">报告生成异常：' + e.message + '</div>';
             }
             btn.disabled = false;
-            btn.innerHTML = '🚀 生成报告';
+            btn.innerHTML = "${xicon('rocket')} 生成报告";
             this.state.generating = false;
         },
 
         renderReport(report) {
             const sections = [
-                { key: 'executive_summary', title: '📋 执行摘要', icon: '📋' },
-                { key: 'communication_analysis', title: '📡 传播分析', icon: '📡' },
-                { key: 'event_graph_analysis', title: '🕸️ 事件图谱分析', icon: '🕸️' },
-                { key: 'market_intelligence', title: '📊 市场情报', icon: '📊' },
-                { key: 'public_opinion_analysis', title: '💬 舆情分析', icon: '💬' },
-                { key: 'recommendations', title: '💡 策略建议', icon: '💡' },
+                { key: 'executive_summary', title: '执行摘要', icon: 'list' },
+                { key: 'communication_analysis', title: '传播分析', icon: 'satellite' },
+                { key: 'event_graph_analysis', title: '事件图谱分析', icon: 'web' },
+                { key: 'market_intelligence', title: '市场情报', icon: 'chart' },
+                { key: 'public_opinion_analysis', title: '舆情分析', icon: 'chat' },
+                { key: 'recommendations', title: '策略建议', icon: 'bulb' },
             ];
             const sectionsHtml = sections.map(s => {
                 const content = report[s.key];
                 const isEmpty = !content || Object.keys(content).length === 0;
                 return `<div class="br-section glass-card">
-                    <h3 class="br-section-title">${s.icon} ${s.title}</h3>
+                    <h3 class="br-section-title">${xicon(s.icon)} ${s.title}</h3>
                     ${isEmpty ? '<div class="br-section-empty">该维度数据待填充（V3.0后续版本将接入真实舆情数据）</div>' :
                       `<div class="br-section-content">${this.renderObject(content)}</div>`}
                 </div>`;
@@ -357,7 +357,7 @@ const V3Modules = {
                 </div>
                 ${sectionsHtml}
                 <div class="br-report-footer">
-                    <p>📌 本报告由序境 自动生成，数据来源于系统舆情监测库。部分维度数据待后续版本填充。</p>
+                    <p>${xicon('pin')} 本报告由序境 自动生成，数据来源于系统舆情监测库。部分维度数据待后续版本填充。</p>
                 </div>`;
         },
 
