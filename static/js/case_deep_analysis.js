@@ -110,14 +110,14 @@ const CaseDeepAnalysis = {
         document.getElementById('caseAnalysisStats').innerHTML = `
             <div class="case-stats-grid">
                 <div class="case-stat-card">
-                    <div class="case-stat-icon">📚</div>
+                    <div class="case-stat-icon">${xicon('book',26)}</div>
                     <div class="case-stat-info">
                         <strong>${stats.total || 0}</strong>
                         <span>深度拆解案例</span>
                     </div>
                 </div>
                 <div class="case-stat-card">
-                    <div class="case-stat-icon">🎯</div>
+                    <div class="case-stat-icon">${xicon('target',26)}</div>
                     <div class="case-stat-info">
                         <strong>${Object.keys(byType).length}</strong>
                         <span>案例类型</span>
@@ -131,7 +131,7 @@ const CaseDeepAnalysis = {
                     </div>
                 </div>
                 <div class="case-stat-card">
-                    <div class="case-stat-icon">🏢</div>
+                    <div class="case-stat-icon">${xicon('building',26)}</div>
                     <div class="case-stat-info">
                         <strong>${Object.keys(stats.by_industry || {}).length}</strong>
                         <span>覆盖行业</span>
@@ -192,9 +192,9 @@ const CaseDeepAnalysis = {
                     </div>` : ''}
                 </div>
                 <div class="case-card-footer">
-                    <span class="case-metric">📋 ${(c.execution || []).length} 阶段执行</span>
-                    <span class="case-metric">📊 ${(c.channels || []).length} 传播渠道</span>
-                    <span class="case-metric">🎯 ${(c.methodology || []).length} 方法论</span>
+                    <span class="case-metric">${xicon('list')} ${(c.execution || []).length} 阶段执行</span>
+                    <span class="case-metric">${xicon('chart')} ${(c.channels || []).length} 传播渠道</span>
+                    <span class="case-metric">${xicon('target')} ${(c.methodology || []).length} 方法论</span>
                     <span class="case-detail-link">查看详情 →</span>
                 </div>
             </article>`;
@@ -263,7 +263,7 @@ const CaseDeepAnalysis = {
 
         const methodologyHtml = (c.methodology || []).map((m, i) => `
             <div class="detail-methodology-item">
-                <div class="detail-methodology-name">📐 ${m.name || `方法论${i + 1}`}</div>
+                <div class="detail-methodology-name">${xicon('ruler')} ${m.name || `方法论${i + 1}`}</div>
                 <div class="detail-methodology-formula"><code>${m.formula || ''}</code></div>
                 <div class="detail-methodology-applicability">适用：${m.applicability || ''}</div>
             </div>`).join('');
@@ -284,7 +284,7 @@ const CaseDeepAnalysis = {
             </div>`).join('') : '';
 
         const awardsHtml = (c.awards || []).map(a => `
-            <span class="detail-award-badge">🏆 ${a.award || ''} ${a.year ? `(${a.year})` : ''}</span>
+            <span class="detail-award-badge">${xicon('trophy')} ${a.award || ''} ${a.year ? `(${a.year})` : ''}</span>
         `).join('');
 
         const modalContent = `
@@ -296,10 +296,10 @@ const CaseDeepAnalysis = {
                     </div>
                     <h2 class="case-detail-title">${c.case_title || ''}</h2>
                     <div class="case-detail-subtitle">
-                        <span>🏢 ${c.brand || ''}</span>
-                        <span>📅 ${c.year || ''}</span>
-                        <span>🏭 ${c.industry || ''}</span>
-                        ${c.agency ? `<span>✂️ ${c.agency}</span>` : ''}
+                        <span>${xicon('building')} ${c.brand || ''}</span>
+                        <span>${xicon('calendar')} ${c.year || ''}</span>
+                        <span>${xicon('factory')} ${c.industry || ''}</span>
+                        ${c.agency ? `<span>${xicon('scissor')} ${c.agency}</span>` : ''}
                     </div>
                 </div>
 
@@ -312,7 +312,7 @@ const CaseDeepAnalysis = {
 
                     <!-- 策略目标 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#007aff">🎯</span>策略目标</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#007aff">${xicon('target',16)}</span>策略目标</h3>
                         <div class="detail-section-content">
                             ${c.strategy ? Object.entries(c.strategy).map(([k, v]) => 
                                 `<div class="detail-strategy-item"><b>${k}：</b>${v}</div>`
@@ -322,25 +322,25 @@ const CaseDeepAnalysis = {
 
                     <!-- 核心创意 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#af52de">💡</span>核心创意 Big Idea</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#af52de">${xicon('bulb',16)}</span>核心创意 Big Idea</h3>
                         <div class="detail-section-content big-idea-box">${c.big_idea || ''}</div>
                     </section>
 
                     <!-- 执行细节 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#34c759">⚙️</span>执行细节（${(c.execution || []).length}个阶段）</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#34c759">${xicon('gear',16)}</span>执行细节（${(c.execution || []).length}个阶段）</h3>
                         <div class="detail-timeline">${executionHtml}</div>
                     </section>
 
                     <!-- 传播渠道 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#ff9500">📡</span>传播渠道整合（${(c.channels || []).length}个渠道）</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#ff9500">${xicon('satellite',16)}</span>传播渠道整合（${(c.channels || []).length}个渠道）</h3>
                         <div class="detail-channels-grid">${channelsHtml}</div>
                     </section>
 
                     <!-- 数据成果 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#5ac8fa">📊</span>数据成果</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#5ac8fa">${xicon('chart',16)}</span>数据成果</h3>
                         <div class="detail-results-grid">${resultsHtml}</div>
                         ${awardsHtml ? `<div class="detail-awards">${awardsHtml}</div>` : ''}
                     </section>
@@ -353,19 +353,19 @@ const CaseDeepAnalysis = {
 
                     <!-- 可复用方法论 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#5856d6">📐</span>可复用方法论（${(c.methodology || []).length}个）</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#5856d6">${xicon('ruler',16)}</span>可复用方法论（${(c.methodology || []).length}个）</h3>
                         <div class="detail-methodology-list">${methodologyHtml}</div>
                     </section>
 
                     <!-- 系统启示 -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#ff2d55">🤖</span>对Z-Brand系统的启示（${(c.system_insights || []).length}条）</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#ff2d55">${xicon('bot',16)}</span>对Z-Brand系统的启示（${(c.system_insights || []).length}条）</h3>
                         <div class="detail-insights-list">${insightsHtml}</div>
                     </section>
 
                     <!-- AI 智能评估（智谱增强层） -->
                     <section class="detail-section">
-                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#8e8e93">🧠</span>AI 智能评估（智谱增强层）</h3>
+                        <h3 class="detail-section-title"><span class="detail-section-icon" style="background:#8e8e93">${xicon('brain',16)}</span>AI 智能评估（智谱增强层）</h3>>
                         <button class="action primary" onclick="CaseDeepAnalysis.aiEvaluate('${c.case_id}')" style="margin-bottom:8px">开始 AI 评估</button>
                         <div id="aiEvaluateResult-${c.case_id}" style="font-size:13px;color:var(--muted)">对本案做 4 维评分（影响力/创新/可复制/风险）+ 推荐处置模板</div>
                     </section>

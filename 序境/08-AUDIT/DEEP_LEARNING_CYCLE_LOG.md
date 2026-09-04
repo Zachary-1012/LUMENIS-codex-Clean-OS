@@ -362,3 +362,8 @@
 - **采用位置**：雷达 §23；队列 IC-028
 - **风险**：低（研究侧）；生产落地走 Gate
 - **Evidence**：OSAI 推送；本登记簿双库同步
+
+
+| S | 2026-09-04 | 商业可成长性与品牌理论 | 库克/苹果 15 年增长（定品类-追需求-放大心智/供应链极致/第二曲线/生态护城河/价值观/NPS+DRI/接班人体系） | 36氪/虎嗅/Apple Newsroom/新浪 | ADAPT | KOS运营评价维度（IC-029） | 不照搬体量，取心智复利/推荐/责任化机制 | E2 |
+| T | 2026-09-04 | 深度访谈方法论 | 凉子访谈录八步 SOP/故事-情绪-观点/受访者三标准/奇真原则/教练式三层聆听 | 混沌学园/腾讯新闻/群智教练 | ADOPT | 播客生产流程与嘉宾甄选（IC-030） | 真实靠人工现场，不模板化套路 | E2 |
+| U | 2026-09-04 | 数据治理/数据工程 | Canonical Data Mesh（data as product/治理内建/lineage 全链路）+ Agentic 时代 Unity AI Gateway + OpenSharing | Canonical/Zenodo(Databricks 2026) | ADAPT | AI Semantic Layer 运行时裁决（IC-031） | 不引入重型数据平台，取核心机制 | E2 |

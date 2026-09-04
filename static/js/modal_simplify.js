@@ -49,9 +49,9 @@
         ? `<div class="note-body-block"><div class="modal-eyebrow" style="margin:10px 0 6px">笔记正文</div><div class="note-body-text">${esc(bodyText)}</div></div>`
         : '<p class="muted" style="font-size:12px;margin:6px 0">正文尚未抓取（详情页补抓后展示）</p>'}
       <div class="ms-quick-meta">
-        <span>👤 ${esc(n.author_nickname || '匿名')}</span>
-        <span>📅 ${esc(pub || '未知')}</span>
-        <span>❤️ ${fmt(n.likes)} · 💬 ${fmt(n.comments)} · ⭐ ${fmt(n.collects)}</span>
+        <span>${xicon('user')} ${esc(n.author_nickname || '匿名')}</span>
+        <span>${xicon('calendar')} ${esc(pub || '未知')}</span>
+        <span>${xicon('heart')} ${fmt(n.likes)} · ${xicon('chat')} ${fmt(n.comments)} · ${xicon('star')} ${fmt(n.collects)}</span>
       </div>`;
 
     // —— 次要信息折叠区 ——
@@ -95,9 +95,9 @@
         <div>${esc(e.recommended_action || '持续观察，等待更多事实核验')}</div>
       </div>
       <div class="ms-quick-meta">
-        <span>📊 ${e.source_count || 1} 类来源</span>
-        <span>📝 ${e.mention_count || 1} 条提及</span>
-        <span>🕐 ${esc((e.first_seen || '—').substring(0, 16))}</span>
+        <span>${xicon('chart')} ${e.source_count || 1} 类来源</span>
+        <span>${xicon('doc')} ${e.mention_count || 1} 条提及</span>
+        <span>${xicon('clock')} ${esc((e.first_seen || '—').substring(0, 16))}</span>
       </div>`;
 
     // —— 次要研判信息折叠 ——
@@ -154,17 +154,17 @@
           <span class="case-category">${esc(c.category || '')}</span>
         </div>
         <h2 class="modal-title" style="font-size:18px">${esc(c.title || '')}</h2>
-        <div class="ms-quick-meta" style="margin:6px 0 12px"><span>📍 ${esc(c.location || '')}</span><span>🕐 ${esc(c.time || '')}</span></div>
-        <div class="case-detail-section"><h4>📌 事件经过</h4><p>${esc(c.event || '')}</p></div>
+        <div class="ms-quick-meta" style="margin:6px 0 12px"><span>${xicon('pin')} ${esc(c.location || '')}</span><span>${xicon('clock')} ${esc(c.time || '')}</span></div>
+        <div class="case-detail-section"><h4>${xicon('pin')} 事件经过</h4><p>${esc(c.event || '')}</p></div>
         <div class="case-detail-section" style="background:var(--bg);padding:12px;border-radius:8px;border-left:3px solid var(--primary)"><h4 style="color:var(--primary)">💡 对太古汇启示</h4><p>${esc(c.taikoo_insight || '')}</p></div>`;
 
       // 次要信息折叠
       const secondary =
-        (c.spread_path ? `<div class="case-detail-section"><h4>📈 传播路径</h4><p>${esc(c.spread_path)}</p></div>` : '') +
-        (c.response ? `<div class="case-detail-section"><h4>💬 官方回应</h4><p>${esc(c.response)}</p></div>` : '') +
-        (c.effect ? `<div class="case-detail-section"><h4>📊 处理效果</h4><p>${esc(c.effect)}</p></div>` : '') +
-        (c.reply_formula ? `<div class="case-detail-section"><h4>📝 回复公式</h4><p>${esc(c.reply_formula)}</p></div>` : '') +
-        (c.taboo ? `<div class="case-detail-section" style="color:var(--danger)"><h4>⚠️ 禁忌</h4><p>${esc(c.taboo)}</p></div>` : '');
+        (c.spread_path ? `<div class="case-detail-section"><h4>${xicon('trend')} 传播路径</h4><p>${esc(c.spread_path)}</p></div>` : '') +
+        (c.response ? `<div class="case-detail-section"><h4>${xicon('reply')} 官方回应</h4><p>${esc(c.response)}</p></div>` : '') +
+        (c.effect ? `<div class="case-detail-section"><h4>${xicon('chart')} 处理效果</h4><p>${esc(c.effect)}</p></div>` : '') +
+        (c.reply_formula ? `<div class="case-detail-section"><h4>${xicon('doc')} 回复公式</h4><p>${esc(c.reply_formula)}</p></div>` : '') +
+        (c.taboo ? `<div class="case-detail-section" style="color:var(--danger)"><h4>${xicon('warn')} 禁忌</h4><p>${esc(c.taboo)}</p></div>` : '');
 
       $('modalContent').innerHTML = core + (secondary ? detailToggle(secondary, '传播路径 / 回应 / 处理细节') : '') +
         '<div style="margin-top:14px"><button class="action primary" onclick="closeModal()">关闭</button></div>';
