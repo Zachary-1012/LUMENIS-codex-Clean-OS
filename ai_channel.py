@@ -60,7 +60,8 @@ def ensure_env_loaded(path=None):
 
 
 def _env(name, default=''):
-    ensure_env_loaded()
+    # 只读环境变量，不在 import 时触发 .env 自动加载（避免全局副作用污染测试/进程隔离）；
+    # 独立上下文需要 .env 时显式调用 ensure_env_loaded()。
     return os.environ.get(name, default)
 
 
