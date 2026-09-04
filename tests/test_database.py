@@ -33,10 +33,9 @@ class TestDatabase:
         conn.close()
 
         required_tables = [
-            'notes', 'events', 'comments', 'daily_reports',
-            'web_topics', 'web_events', 'weekly_events',
-            'brand_industry_monitor', 'notification_logs',
-            'system_config', 'token_stat'
+            'notes', 'note_comments', 'events', 'daily_reports',
+            'kos_profiles', 'kos_paid_plans', 'kos_operations',
+            'podcast_entities', 'token_stat', 'auth_recovery_tasks'
         ]
 
         for table in required_tables:

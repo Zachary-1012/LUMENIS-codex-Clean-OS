@@ -92,6 +92,7 @@ import collector_automation
 import ai_learning_engine
 import public_opinion_cases
 import report_api  # P1-10 拆分批3: 报告/摘要/品牌报告 API
+from report_api import _DEV_EXEC_ENABLED, _DEV_EXEC_BLOCK_RE  # GAP-04 开发执行闸门共享变量
 # ProxyPool 可插拔代理池（可选；导入失败不影响系统启动；总开关默认关闭，关闭时等同直连原版）
 try:
     from proxy_pool import proxy_manager as _proxy_mgr
@@ -1780,15 +1781,7 @@ def api_resident_recover():
 
 
 # ========== AI学习引擎与全网舆情检索 API ==========
-@app.route('/api/ai-learning/optimization/<operation_type>')
-def api_ai_learning_optimization(operation_type):
-    """获取操作优化建议"""
-    try:
-        engine = ai_learning_engine.get_ai_learning_engine()
-        suggestion = engine.get_optimization_suggestion(operation_type)
-        return jsonify({'ok': True, 'operation_type': operation_type, 'suggestion': suggestion})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+# 【拆分收尾 2026-09-05】/api/ai-learning/optimization/<operation_type> 已迁入 ai_api.py
 
 @app.route('/api/cases/stats')
 def api_cases_stats():

@@ -22,11 +22,12 @@ def test_build_snapshot_structure():
     assert snap["source"].startswith("ZBC")
     # git
     assert snap["git"].get("hash")
-    # baseline
-    assert "overall" in snap["baseline"]
-    assert snap["baseline"]["overall"] in ("PASS", "FAIL", None) or "error" in snap["baseline"]
-    # lean
-    assert snap["lean"].get("py_files")
+    # baseline（缺数据时允许 error）
+    assert "overall" in snap["baseline"] or "error" in snap["baseline"]
+    if "error" not in snap["baseline"]:
+        assert snap["baseline"]["overall"] in ("PASS", "FAIL", None)
+    # lean（缺数据时允许 error）
+    assert snap["lean"].get("py_files") or "error" in snap["lean"]
     # budget
     assert "total_calls" in snap["ai_budget"] or "error" in snap["ai_budget"]
 

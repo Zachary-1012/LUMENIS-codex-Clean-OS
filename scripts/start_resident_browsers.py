@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Zachary OS AI · Z-Brand-Core 双身份驻场浏览器（Resident Browser）统一启动器
+Zachary OS AI · Z-Brand-Core 驻场浏览器（Resident Browser）统一启动器
 ================================================================================
-按双子星库 Contract（xhs_cookie_bridge 单一事实源）幂等拉起两个物理隔离的
+按双子星库 Contract（xhs_cookie_bridge 单一事实源）幂等拉起三个物理隔离的
 Edge CDP 驻场实例，人工在各自窗口登录一次后 profile 长期复用、长期驻场：
 
   XHS_CN_PRIMARY  端口 9222  profile edge-cdp-newaccount  xiaohongshu.com  直连(不走系统代理)
   XHS_RETINAUT    端口 9223  profile edge-cdp-retinaut    rednote.com      继承系统/海外代理
+  GENERAL_BROWSE  端口 9224  profile edge-cdp-general     bing.com         直连(平台内置通用浏览)
 
 采集链只通过 CDP 附着到对应端口，采集结束不关闭驻场窗口。
+通用浏览实例与采集物理隔离（独立 cookie jar），不混入采集双身份。
 
 用法（用项目 .venv 的 python 运行）：
   python scripts/start_resident_browsers.py            # 拉起全部驻场实例并确保平台页打开
   python scripts/start_resident_browsers.py --status   # 只看在线状态，不启动
   python scripts/start_resident_browsers.py --account XHS_RETINAUT   # 只起指定身份
+  python scripts/start_resident_browsers.py --account GENERAL_BROWSE # 只起通用浏览
 """
 import argparse
 import io
@@ -41,6 +44,15 @@ RESIDENT_PLAN = [
     (bridge.XHS_CN_PRIMARY_NAME, True),
     (bridge.XHS_RETINAUT_NAME, False),
 ]
+
+# 通用浏览实例（平台内置浏览器，与采集物理隔离，独立 cookie jar）
+GENERAL_BROWSER = {
+    "account": "GENERAL_BROWSE",
+    "port": 9224,
+    "profile": os.path.join(_ROOT, "edge-cdp-general"),
+    "home": "https://www.bing.com",
+    "direct": True,
+}
 
 
 def _http_json(url, method="GET", timeout=5):
@@ -119,6 +131,30 @@ def launch_one(account, direct, status_only=False):
     return row
 
 
+def launch_general(status_only=False):
+    """通用浏览实例（9224）：独立 profile、直连、与采集物理隔离。幂等复用。"""
+    g = GENERAL_BROWSER
+    row = {"account": g["account"], "port": g["port"], "profile": g["profile"],
+           "home": g["home"], "online": port_online(g["port"]),
+           "direct": g["direct"], "action": "", "pages": []}
+    if row["online"]:
+        row["action"] = "already_online"
+        row["pages"] = list_page_hosts(g["port"])
+        return row
+    if status_only:
+        row["action"] = "offline"
+        return row
+    os.makedirs(g["profile"], exist_ok=True)
+    res = cdp_helper.start_cdp_browser(
+        port=g["port"], profile_dir=g["profile"],
+        launch_url=g["home"], direct_connection=g["direct"], browser="edge",
+    )
+    row["online"] = port_online(g["port"])
+    row["action"] = "started" if res.get("success") else f"failed: {res.get('message')}"
+    row["pages"] = list_page_hosts(g["port"])
+    return row
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--account", default=None, help="只拉起指定逻辑身份；默认全部")
@@ -126,12 +162,12 @@ def main():
     args = ap.parse_args()
 
     plan = [(a, d) for (a, d) in RESIDENT_PLAN if (not args.account or a == args.account)]
-    if args.account and not plan:
-        print(f"[FATAL] 未知身份 {args.account}；可选：{[a for a,_ in RESIDENT_PLAN]}")
+    if args.account and args.account != "GENERAL_BROWSE" and not plan:
+        print(f"[FATAL] 未知身份 {args.account}；可选：{[a for a,_ in RESIDENT_PLAN] + ['GENERAL_BROWSE']}")
         return 2
 
     print("=" * 72)
-    print(" Zachary OS AI · Resident Browser 双身份驻场启动器")
+    print(" Zachary OS AI · Resident Browser 驻场启动器（双采集 + 通用浏览）")
     print("=" * 72)
     rows = []
     for account, direct in plan:
@@ -139,6 +175,19 @@ def main():
         rows.append(row)
         mode = "直连" if direct else "继承系统代理"
         print(f"\n● {account}")
+        print(f"   port={row['port']}  online={row['online']}  网络={mode}")
+        print(f"   profile = {row['profile']}")
+        print(f"   home    = {row['home']}")
+        print(f"   action  = {row['action']}")
+        for u in row["pages"][:4]:
+            print(f"   page    = {u[:80]}")
+
+    # 通用浏览实例（默认全部启动，或 --account GENERAL_BROWSE 单独启动）
+    if not args.account or args.account == "GENERAL_BROWSE":
+        row = launch_general(status_only=args.status)
+        rows.append(row)
+        mode = "直连" if row["direct"] else "继承系统代理"
+        print(f"\n● {row['account']}（平台内置通用浏览）")
         print(f"   port={row['port']}  online={row['online']}  网络={mode}")
         print(f"   profile = {row['profile']}")
         print(f"   home    = {row['home']}")

@@ -2,9 +2,16 @@
 """创意引擎 SIT 六模板机制 + 案例背书测试。"""
 import os
 import sys
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 import idea_generator as ig
+
+# 案例库真实数据可用性检查：生产库 case_study 表为空时跳过数据依赖测试
+_CASE_BACKING_EMPTY = len(ig._load_case_backing()) == 0
+require_case_backing = pytest.mark.skipif(
+    _CASE_BACKING_EMPTY,
+    reason="案例库为空（生产库无 case_study 数据），跳过数据依赖测试")
 
 
 def test_sit_mechanism_registered():
@@ -41,6 +48,7 @@ def test_sit_produces_idea_luxury():
     assert "六模板转译" in mechs
 
 
+@require_case_backing
 def test_case_backing_loads_from_db():
     """案例背书能从 case_study 真实案例库读取（生产库存在时非空）。"""
     back = ig._load_case_backing()
@@ -134,6 +142,7 @@ def test_sit_idea_carries_constraint_translation():
 # 5) 圈层↔案例双向背书 + 美奢人群画像 + 报告消费新圈层
 # ============================================================
 
+@require_case_backing
 def test_circle_backing_hits_new_circles():
     """4 个新圈层均命中真实案例背书（圈层↔案例双向）。"""
     for c in ("高奢珠宝腕表", "新中式国潮", "精致养宠", "艺术收藏潮玩"):
@@ -165,6 +174,7 @@ def test_luxe_profile_pick():
     assert ig._profile_pick(None) is None
 
 
+@require_case_backing
 def test_provenance_circle_and_luxe():
     """高奢圈层 + profile 时 provenance 携带 circle_reference + luxe_profile。"""
     r = ig.generate_ideas("某珠宝品牌", "零售", {"topics": ["上新"], "sentiment": "positive",
@@ -187,6 +197,7 @@ def test_report_payload_consumes_circles():
 # 6) 国际 4A 案例背书 + 营销节点×圈层联动
 # ============================================================
 
+@require_case_backing
 def test_intl_case_backing_hits():
     """国际 4A 案例（2026 戛纳）作为机制背书命中。"""
     for mech, keyword in (("eventify", "草坪"), ("participate", "Supernova"), ("constraint", "Therabody")):
@@ -195,6 +206,7 @@ def test_intl_case_backing_hits():
         assert keyword in b["case_title"] or keyword in b["case_brand"]
 
 
+@require_case_backing
 def test_node_circles_link():
     """营销节点×圈层联动：中秋节→新中式国潮/母婴/高奢，双十一→都市高净值。"""
     r = ig._node_circles("中秋节")
@@ -205,6 +217,7 @@ def test_node_circles_link():
     assert ig._node_circles("不存在的节点") is None
 
 
+@require_case_backing
 def test_hotspot_node_in_provenance():
     """generate_ideas 带 hotspot 时 provenance 携带 node_circles（节点联动可追溯）。"""
     r = ig.generate_ideas("某商业体", "零售", {"topics": ["中秋礼"], "sentiment": "positive",
@@ -214,6 +227,7 @@ def test_hotspot_node_in_provenance():
     assert p.get("node_circles") and "新中式国潮" in p["node_circles"]["circles"]
 
 
+@require_case_backing
 def test_intl_case_flows_into_production():
     """国际案例进入真实生产产出（机制背书 + 节点 + 约束转译可同时携带）。"""
     r = ig.generate_ideas("某商业体", "零售", {"topics": ["中秋礼"], "sentiment": "positive",

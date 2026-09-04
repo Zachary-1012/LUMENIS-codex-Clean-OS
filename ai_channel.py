@@ -282,3 +282,146 @@ def stop_health_monitor():
     with _MONITOR_LOCK:
         _MONITOR['stop'] = True
         return True
+
+
+# ============================================================
+# 7) 多 Provider 故障转移层（智谱主 + 豆包备 + 本地规则兜底）
+#    每个 Provider 独立熔断；主通道失败/熔断时自动切备用；备用也失败才降 rule。
+#    设计目标：24h 连接不断——主通道抖动时业务无感切换，不打爆任一通道。
+# ============================================================
+class ProviderBreaker:
+    """单个 Provider 的独立熔断 + 健康快照（线程安全）。"""
+
+    def __init__(self, name, fail_threshold=3, cooldown_sec=20.0):
+        self.name = name
+        self.breaker = CircuitBreaker(fail_threshold=fail_threshold, cooldown_sec=cooldown_sec)
+
+    def allow(self):
+        return self.breaker.allow_request()
+
+    def record_success(self, latency_ms=None):
+        self.breaker.record_success(latency_ms)
+
+    def record_failure(self, kind='unknown'):
+        self.breaker.record_failure(kind)
+
+    def snapshot(self):
+        s = self.breaker.snapshot()
+        s['provider'] = self.name
+        return s
+
+    @property
+    def state(self):
+        return self.breaker.state
+
+
+# 进程级 Provider 独立熔断（智谱主、豆包备；其他 provider 按需注册）
+_PROVIDER_BREAKERS = {}
+_PROVIDER_LOCK = threading.Lock()
+
+
+def get_provider_breaker(name, fail_threshold=3, cooldown_sec=20.0):
+    """获取或创建指定 Provider 的独立熔断器。"""
+    with _PROVIDER_LOCK:
+        if name not in _PROVIDER_BREAKERS:
+            _PROVIDER_BREAKERS[name] = ProviderBreaker(name, fail_threshold, cooldown_sec)
+        return _PROVIDER_BREAKERS[name]
+
+
+def all_provider_snapshots():
+    """所有已注册 Provider 的健康快照（可观测）。"""
+    with _PROVIDER_LOCK:
+        return {name: pb.snapshot() for name, pb in _PROVIDER_BREAKERS.items()}
+
+
+# Provider 优先级配置（环境变量可覆盖）
+# 主通道智谱（最大算力），备用豆包（最小输出兜底），最后本地规则
+def provider_chain():
+    """返回 Provider 优先级列表 [主, 备...]。环境变量 AI_PROVIDER_CHAIN 可覆盖（逗号分隔）。"""
+    raw = _env('AI_PROVIDER_CHAIN', '').strip()
+    if raw:
+        return [p.strip() for p in raw.split(',') if p.strip()]
+    return ['zhipu', 'ark']  # ark = 豆包（火山引擎）
+
+
+def route_with_fallback(call_fn, providers=None, on_result=None):
+    """
+    多 Provider 故障转移执行器。
+    call_fn(provider_name) -> (result, provider_used) 或抛异常。
+    按 provider_chain() 顺序尝试；每个 Provider 独立熔断；全部失败返回 (None, 'rule')。
+    on_result(provider, result, ok) 用于审计/额度记录。
+    """
+    chain = providers or provider_chain()
+    last_exc = None
+    for prov in chain:
+        pb = get_provider_breaker(prov)
+        if not pb.allow():
+            continue  # 该 Provider 熔断中，跳过
+        try:
+            result, used = call_fn(prov)
+            pb.record_success()
+            if on_result:
+                try:
+                    on_result(prov, result, True)
+                except Exception:
+                    pass
+            return result, used
+        except Exception as exc:
+            kind, retryable = classify_error(exc)
+            pb.record_failure(kind)
+            last_exc = exc
+            if on_result:
+                try:
+                    on_result(prov, None, False)
+                except Exception:
+                    pass
+            # 不可重试错误（auth/bad_request）不切下一个（配置问题，切了也没用）
+            if not retryable and kind in ('auth', 'bad_request'):
+                break
+            continue
+    # 全部 Provider 失败/熔断 → 本地规则兜底
+    return None, 'rule'
+
+
+# ============================================================
+# 8) 24h 保活心跳增强：默认 60s 间隔（原 300s 太长），支持多 Provider 分别探活
+# ============================================================
+def start_24h_heartbeat(ping_funcs, interval_sec=60):
+    """
+    启动 24h 保活心跳（默认 60s，最小 30s）。
+    ping_funcs: dict {provider_name: ping_fn}，每个 Provider 独立探活、独立熔断。
+    幂等：已在运行则不重复启动。
+    """
+    interval_sec = max(30, int(interval_sec))
+    with _MONITOR_LOCK:
+        if _MONITOR['thread'] and _MONITOR['thread'].is_alive():
+            return False
+        _MONITOR['stop'] = False
+        _MONITOR['interval'] = interval_sec
+
+        def _loop():
+            time.sleep(min(10, interval_sec // 6 + 1))
+            while not _MONITOR['stop']:
+                for prov, ping_fn in ping_funcs.items():
+                    try:
+                        ok = bool(ping_fn())
+                        pb = get_provider_breaker(prov)
+                        if ok:
+                            pb.record_success()
+                        else:
+                            pb.record_failure('heartbeat')
+                    except Exception:
+                        try:
+                            get_provider_breaker(prov).record_failure('heartbeat')
+                        except Exception:
+                            pass
+                slept = 0
+                while slept < interval_sec and not _MONITOR['stop']:
+                    step = min(5, interval_sec - slept)
+                    time.sleep(step)
+                    slept += step
+
+        t = threading.Thread(target=_loop, daemon=True, name='ai-channel-24h-heartbeat')
+        _MONITOR['thread'] = t
+        t.start()
+        return True

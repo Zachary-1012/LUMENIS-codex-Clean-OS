@@ -148,57 +148,69 @@ def redact_for_cloud(text):
     return out
 
 def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
+    """AI 对话核心。云端走多 Provider 故障转移（智谱主→豆包备最小输出→本地规则）。
+    24h 稳固：每个 Provider 独立熔断+重试+心跳，主通道抖动时业务无感切换。"""
     _to = timeout or int(_env("AI_TIMEOUT_SECONDS", "90"))
     d=_provider_config()
-    if not d: return None,'rule'
-    provider,model_default,base=d
-    model = model or model_default
-    if provider != 'ollama':  # 仅云端脱敏，本地模型保留原文
-        system, user = redact_for_cloud(system), redact_for_cloud(user)
-    payload_obj={'model':model,'temperature':temperature,'max_tokens':max_tokens,'messages':[{'role':'system','content':system},{'role':'user','content':user}]}
-    payload=json.dumps(payload_obj,ensure_ascii=False).encode('utf-8')
-    try:
-        if provider=='ollama':
+    # 本地模型（ollama/lmstudio/llama_cpp）保持原逻辑，不走云端故障转移
+    if d and d[0] in ('ollama','lmstudio','llama_cpp'):
+        provider,model_default,base=d
+        model = model or model_default
+        try:
             req=urllib.request.Request(base+'/api/chat',data=json.dumps({'model':model,'messages':[{'role':'system','content':system},{'role':'user','content':user}],'stream':False,'options':{'temperature':temperature,'num_predict':max_tokens}},ensure_ascii=False).encode('utf-8'),headers={'Content-Type':'application/json'},method='POST')
             with urllib.request.urlopen(req,timeout=_to) as resp:
                 data=json.loads(resp.read().decode('utf-8','replace'))
-            return data.get('message',{}).get('content'),'ollama'
-        # 云端提供商：base已包含/v1或/v3，直接拼接/chat/completions
-        api_key_map = {
-            'zhipu': _env('ZHIPU_API_KEY', ''),
-            'ark': _env('ARK_API_KEY', ''),
-            'qwen': _env('DASHSCOPE_API_KEY', ''),
-            'openai': _env('OPENAI_API_KEY', ''),
-            'deepseek': _env('DEEPSEEK_API_KEY', ''),
+            return data.get('message',{}).get('content'),provider
+        except Exception as exc:
+            print('[AI] local failed:',exc)
+            return None,'rule'
+
+    # 云端：多 Provider 故障转移（智谱主 → 豆包备 → rule）
+    system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
+    chain = ai_channel.provider_chain()
+    primary = chain[0] if chain else 'zhipu'
+
+    def _call_cloud(prov):
+        """对单个云端 Provider 构造请求并调用（复用 StableChannel 重试+熔断+UTF-8）。"""
+        cfg_map = {
+            'zhipu': (_env('ZHIPU_API_KEY',''), _env('ZHIPU_BASE_URL','https://open.bigmodel.cn/api/paas/v4'), _env('ZHIPU_MODEL','glm-4.5-air')),
+            'ark': (_env('ARK_API_KEY',''), _env('ARK_BASE_URL','https://ark.cn-beijing.volces.com/api/v3'), _env('ARK_MODEL','doubao-pro-32k')),
+            'qwen': (_env('DASHSCOPE_API_KEY',''), _env('DASHSCOPE_BASE_URL','https://dashscope.aliyuncs.com/compatible-mode/v1'), _env('DASHSCOPE_MODEL','qwen-turbo')),
+            'openai': (_env('OPENAI_API_KEY',''), _env('OPENAI_BASE_URL','https://api.openai.com/v1'), _env('OPENAI_MODEL','gpt-4o-mini')),
+            'deepseek': (_env('DEEPSEEK_API_KEY',''), _env('DEEPSEEK_BASE_URL','https://api.deepseek.com/v1'), _env('DEEPSEEK_MODEL','deepseek-chat')),
         }
-        api_key = api_key_map.get(provider, _env('LOCAL_AI_DUMMY_KEY', 'local'))
-        # 仅海外 OpenAI 走可配置本地代理(OPENAI_PROXY)；ark/qwen/deepseek 国内端点显式直连，互不影响
-        proxy_url = {'openai': _env('OPENAI_PROXY', '')}.get(provider, '')
-        opener = (urllib.request.build_opener(urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url}))
+        if prov not in cfg_map:
+            raise ValueError(f'provider {prov} not configured')
+        api_key, base, model_default = cfg_map[prov]
+        if not api_key:
+            raise ValueError(f'provider {prov} no api key')
+        m = model or model_default
+        # 备用 Provider 用最小输出（豆包兜底，省额度）；主通道用完整 max_tokens
+        max_tokens_eff = max_tokens if prov == primary else min(max_tokens, 300)
+        payload_obj={'model':m,'temperature':temperature,'max_tokens':max_tokens_eff,'messages':[{'role':'system','content':system_r},{'role':'user','content':user_r}]}
+        if prov == 'zhipu' and not str(m).lower().startswith('glm-5.3'):
+            payload_obj['thinking'] = {'type': 'disabled'}
+        payload=json.dumps(payload_obj,ensure_ascii=False).encode('utf-8')
+        proxy_url = {'openai': _env('OPENAI_PROXY','')}.get(prov, '')
+        opener = (urllib.request.build_opener(urllib.request.ProxyHandler({'http':proxy_url,'https':proxy_url}))
                   if proxy_url else urllib.request.build_opener(urllib.request.ProxyHandler({})))
-        if provider == 'zhipu':
-            # GLM 思考模型默认先输出 reasoning_content 会挤空正式结果；关闭思考，直接出最终 JSON。
-            # glm-5.3 系列为"始终思考"模型，任何 thinking 参数都会 400，必须完全不传（思考结果在 reasoning_content）。
-            if not str(model).lower().startswith('glm-5.3'):
-                payload_obj['thinking'] = {'type': 'disabled'}
-            payload = json.dumps(payload_obj, ensure_ascii=False).encode('utf-8')
-        # [StableChannel] 云端调用统一走 ai_channel 多层稳固通道（编码转换+重试+熔断+心跳保活）
-        _hdrs = {'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'}
-        try:
-            _body = ai_channel.post_with_retry(
-                base.rstrip('/') + '/chat/completions', payload, _hdrs,
-                timeout=_to, max_attempts=3, opener=opener)
-            data = json.loads(_body[0].decode('utf-8', 'replace'))
-        except Exception as _cexc:
-            print('[AI][StableChannel] request failed:', _cexc)
-            return None, 'rule'
+        _hdrs = {'Content-Type':'application/json','Authorization':f'Bearer {api_key}'}
+        _body = ai_channel.post_with_retry(
+            base.rstrip('/') + '/chat/completions', payload, _hdrs,
+            timeout=_to, max_attempts=3, opener=opener)
+        data = json.loads(_body[0].decode('utf-8','replace'))
         _msg = data['choices'][0]['message']
-        # 优先正式 content；glm-5.3 思考模型若 content 为空，回退 reasoning_content 兜底
         _content = (_msg.get('content') or '').strip() or (_msg.get('reasoning_content') or '').strip()
-        return _content, provider
+        if not _content:
+            raise ValueError('empty response content')
+        return _content, prov
+
+    try:
+        result, used = ai_channel.route_with_fallback(_call_cloud, providers=chain)
+        return result, used
     except Exception as exc:
-        print('[AI] local/provider failed:',exc)
-        return None,'rule'
+        print('[AI] all providers failed:', exc)
+        return None, 'rule'
 
 def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium'):
     """视觉模型对话（glm-4.6v），支持图片输入。

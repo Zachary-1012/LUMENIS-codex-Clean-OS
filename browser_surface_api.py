@@ -210,5 +210,50 @@ def register_browser_surface_api(app):
     def api_downloads_list():
         return jsonify(bs.list_downloads())
 
+    # ── Vision+DOM Hybrid 分析（IC-053，受 AI Gate 治理）──────────────
+    @bp.route("/api/browser-surface/hybrid/analyze", methods=["POST"])
+    def api_hybrid_analyze():
+        data = request.get_json(silent=True) or {}
+        query = (data.get("query") or "").strip()
+        prefer = (data.get("prefer") or "auto").lower()
+        if prefer not in ("auto", "dom", "vision"):
+            return jsonify({"ok": False, "error": "prefer 必须是 auto/dom/vision"}), 400
+        try:
+            max_dom = int(data.get("max_dom_nodes") or bs.MAX_DOM_NODES)
+        except (TypeError, ValueError):
+            max_dom = bs.MAX_DOM_NODES
+        try:
+            quality = int(data.get("screenshot_quality") or 60)
+        except (TypeError, ValueError):
+            quality = 60
+        return jsonify(bs.hybrid_analyze(
+            query=query, target_id=_target_id(), account=_acct(), port=_port(),
+            prefer=prefer, max_dom_nodes=max_dom, screenshot_quality=quality))
+
+    # ── 下载实时进度监听（持久 WS + Browser.downloadProgress 事件）──────────
+    @bp.route("/api/browser-surface/downloads/monitor/start", methods=["POST"])
+    def api_download_monitor_start():
+        return jsonify(bs.download_monitor_start(account=_acct(), port=_port()))
+
+    @bp.route("/api/browser-surface/downloads/monitor/stop", methods=["POST"])
+    def api_download_monitor_stop():
+        return jsonify(bs.download_monitor_stop(account=_acct(), port=_port()))
+
+    @bp.route("/api/browser-surface/downloads/monitor/status", methods=["GET"])
+    def api_download_monitor_status():
+        return jsonify(bs.download_monitor_status(account=_acct(), port=_port()))
+
+    @bp.route("/api/browser-surface/downloads/active", methods=["GET"])
+    def api_download_active():
+        return jsonify(bs.download_active(account=_acct(), port=_port()))
+
+    @bp.route("/api/browser-surface/downloads/cancel", methods=["POST"])
+    def api_download_cancel():
+        data = request.get_json(silent=True) or {}
+        guid = (data.get("guid") or "").strip()
+        if not guid:
+            return jsonify({"ok": False, "error": "guid 不能为空"}), 400
+        return jsonify(bs.download_cancel(guid, account=_acct(), port=_port()))
+
     app.register_blueprint(bp)
     return bp

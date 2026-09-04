@@ -30,7 +30,14 @@ import kos_paid
 @pytest.fixture()
 def author_id():
     c = sqlite3.connect(os.environ["ZBC_DB_PATH"])
-    aid = c.execute("SELECT author_id FROM kos_profiles LIMIT 1").fetchone()[0]
+    row = c.execute("SELECT author_id FROM kos_profiles LIMIT 1").fetchone()
+    if not row:
+        # 表为空时插入测试数据，使测试自洽（不依赖生产数据）
+        c.execute("INSERT OR IGNORE INTO kos_profiles (author_id, author_nickname, kos_tier) VALUES (?, ?, ?)",
+                  ("test_author_kos_001", "测试KOS作者", "C"))
+        c.commit()
+        row = ("test_author_kos_001",)
+    aid = row[0]
     c.close()
     return aid
 

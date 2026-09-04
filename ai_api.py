@@ -389,6 +389,17 @@ def api_ai_analyze_v580():
     })
 
 
+@bp.route('/api/ai-learning/optimization/<operation_type>')
+def api_ai_learning_optimization(operation_type):
+    """获取操作优化建议（从 app.py 迁入 ai_api.py，拆分收尾）"""
+    try:
+        engine = ai_learning_engine.get_ai_learning_engine()
+        suggestion = engine.get_optimization_suggestion(operation_type)
+        return jsonify({'ok': True, 'operation_type': operation_type, 'suggestion': suggestion})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 def register_ai_api(app):
     """注册 AI API 蓝图。"""
     app.register_blueprint(bp)
