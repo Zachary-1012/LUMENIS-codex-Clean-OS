@@ -1647,9 +1647,11 @@ def api_report_daily():
     rows.sort(key=lambda n: (_rl_order.get(n.get('risk_level'), 3),
                              -_num(n.get('risk_score')),
                              -(_num(n.get('likes')) + _num(n.get('comments')) + _num(n.get('collects')) + _num(n.get('shares')))))
-    def cnt(rs, s): return sum(1 for n in rs if n.get('sentiment') == s)
-    total = len(rows_all); neg = cnt(rows_all, 'negative'); pos = cnt(rows_all, 'positive'); neu = cnt(rows_all, 'neutral')
-    high = sum(1 for n in rows if n.get('risk_level') == 'high')
+    # [Canonical WRAP-08] rows_all 情感三桶一次计算；high 在已过滤负面子集 rows 上计(输入集不变)
+    import canonical_metrics as _cmC
+    _sC = _cmC.sentiment_count(rows_all)
+    total = len(rows_all); neg, pos, neu = _sC['negative'], _sC['positive'], _sC['neutral']
+    high = _cmC.risk_count(rows)['high']
     today_cnt = sum(1 for n in rows_all if (n.get('publish_date') or n.get('publish_datetime') or '')[:10] == today_s)
     yest_cnt = total - today_cnt
     brief = []
@@ -2278,8 +2280,9 @@ def api_brand_industry_brand_detail(name):
                     params).fetchall()
                 notes = [dict(r) for r in rows]
                 total = len(notes)
-                pos = sum(1 for n in notes if n['sentiment'] == 'positive')
-                neg = sum(1 for n in notes if n['sentiment'] == 'negative')
+                import canonical_metrics as _cmB
+                _sB = _cmB.sentiment_count(notes)
+                pos, neg = _sB['positive'], _sB['negative']  # neutral 仍用下方 total-pos-neg 差额法(既有口径)
             # 字段对齐前端 viewBrand
             brand.update({
                 'name': cn or en or name,
@@ -2573,10 +2576,12 @@ def api_report_v2(report_type):
         
         # 生成统计
         total = len(filtered_notes)
-        positive = sum(1 for n in filtered_notes if n.get('sentiment') == 'positive')
-        neutral = sum(1 for n in filtered_notes if n.get('sentiment') == 'neutral')
+        # [Canonical WRAP-08] 情感/风险分桶统一；negative_count 仍取二次确认过滤后的 negative_notes(业务口径不重算)
+        import canonical_metrics as _cmA
+        _sA = _cmA.sentiment_count(filtered_notes); _rA = _cmA.risk_count(filtered_notes)
+        positive, neutral = _sA['positive'], _sA['neutral']
         negative_count = len(negative_notes)
-        high_risk = sum(1 for n in filtered_notes if n.get('risk_level') == 'high')
+        high_risk = _rA['high']
         
         return jsonify({
             'ok': True,
