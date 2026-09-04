@@ -22,6 +22,9 @@ _MATCH_COLS = ('title', 'content', 'summary', 'body')
 # 互动量列
 _ENGAGE_COLS = ('likes', 'comments', 'collects', 'shares')
 
+# UDIP V1.0 (WRAP-02): 统计统一走 canonical_metrics 唯一实现（FN-SENTIMENT/RISK/ENGAGEMENT），不另造算法
+from canonical_metrics import sentiment_count as _canon_sentiment_count, risk_count as _canon_risk_count, engagement_stats as _canon_engagement_stats
+
 
 def _to_int(v):
     """安全转整数，空值/非数字一律按 0 处理"""
@@ -73,15 +76,28 @@ def recompute_brand_stats(db_path=DB_PATH, verbose=True):
             f"SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes WHERE {where}",
             params).fetchall()
 
-        total = len(rows)
-        pos = sum(1 for r in rows if r['sentiment'] == 'positive')
-        neg = sum(1 for r in rows if r['sentiment'] == 'negative')
-        engagement = sum(sum(_to_int(r[c]) for c in _ENGAGE_COLS) for r in rows)
+        # WRAP-02: 统一走 Canonical 唯一实现（结果语义与旧手写统计完全一致）
+        rows_dicts = [dict(r) for r in rows]
+        _sent = _canon_sentiment_count(rows_dicts)
+        _risk = _canon_risk_count(rows_dicts)
+        _eng = _canon_engagement_stats(rows_dicts)
+        total = _sent['total']
+        pos = _sent.get('positive', 0)
+        neg = _sent.get('negative', 0)
+        engagement = _eng['sum']
+        # 前置断言：Canonical == 旧手写口径（任一处不等即抛错，禁止静默写入不一致数字）
+        _old_pos = sum(1 for r in rows if r['sentiment'] == 'positive')
+        _old_neg = sum(1 for r in rows if r['sentiment'] == 'negative')
+        _old_eng = sum(sum(_to_int(r[c]) for c in _ENGAGE_COLS) for r in rows)
+        _old_total = len(rows)
+        if not (pos == _old_pos and neg == _old_neg and engagement == _old_eng and total == _old_total):
+            raise AssertionError(
+                f"[WRAP-02] 品牌 {b.get('brand_name_cn') or b.get('brand_name')} Canonical!=旧口径 "
+                f"total {total}/{_old_total} pos {pos}/{_old_pos} neg {neg}/{_old_neg} eng {engagement}/{_old_eng}")
 
-        # 风险等级取该品牌匹配笔记中的最高级
+        # 风险等级取该品牌匹配笔记中的最高级（基于 Canonical risk_count 分层）
         risk = 'none'
-        rlevels = [r['risk_level'] for r in rows]
-        if neg and any(x == 'high' for x in rlevels):
+        if neg and (_risk.get('high', 0) or _risk.get('critical', 0)):
             risk = 'high'
         elif neg:
             risk = 'medium'
