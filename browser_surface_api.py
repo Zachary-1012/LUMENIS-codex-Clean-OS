@@ -153,5 +153,62 @@ def register_browser_surface_api(app):
     def api_history_clear():
         return jsonify(bs.clear_history())
 
+    # ── 导航配置（open 开关后台通道，对标浏览器站点设置）──────────
+    @bp.route("/api/browser-surface/nav-config", methods=["GET", "POST"])
+    def api_nav_config():
+        if request.method == "GET":
+            return jsonify(bs.get_nav_config())
+        data = request.get_json(silent=True) or {}
+        mode = data.get("mode")
+        extra = data.get("extra_domains")
+        append = data.get("append", True)
+        if mode is None and extra is None:
+            return jsonify({"ok": False, "error": "需提供 mode 或 extra_domains"}), 400
+        return jsonify(bs.set_nav_config(mode=mode, extra_domains=extra, append=bool(append)))
+
+    # ── 通用浏览实例（9224，按需，与采集 9222/9223 物理隔离）─────
+    @bp.route("/api/browser-surface/general-browser/status", methods=["GET"])
+    def api_general_status():
+        return jsonify({"ok": True, "port": bs.GENERAL_CDP_PORT,
+                        "online": bs.general_browser_online(),
+                        "profile": bs.GENERAL_PROFILE_DIR})
+
+    @bp.route("/api/browser-surface/general-browser/ensure", methods=["POST"])
+    def api_general_ensure():
+        data = request.get_json(silent=True) or {}
+        return jsonify(bs.ensure_general_browser(force=bool(data.get("force"))))
+
+    @bp.route("/api/browser-surface/general-browser/stop", methods=["POST"])
+    def api_general_stop():
+        return jsonify(bs.stop_general_browser())
+
+    # ── 页内查找（对标 Safari/Chrome find-in-page）──────────────
+    @bp.route("/api/browser-surface/find", methods=["POST"])
+    def api_find():
+        data = request.get_json(silent=True) or {}
+        query = (data.get("query") or "").strip()
+        if not query:
+            return jsonify({"ok": False, "error": "query 不能为空"}), 400
+        return jsonify(bs.find_in_page(query, target_id=_target_id(), account=_acct(),
+                                       port=_port(),
+                                       case_sensitive=bool(data.get("case_sensitive"))))
+
+    @bp.route("/api/browser-surface/find/stop", methods=["POST"])
+    def api_find_stop():
+        return jsonify(bs.stop_find_in_page(target_id=_target_id(), account=_acct(), port=_port()))
+
+    # ── 下载管理（对标 Chrome 下载，平台内目录）─────────────────
+    @bp.route("/api/browser-surface/downloads/config", methods=["POST"])
+    def api_downloads_config():
+        data = request.get_json(silent=True) or {}
+        enabled = data.get("enabled", True)
+        return jsonify(bs.set_download_behavior(enabled=bool(enabled),
+                                                download_path=data.get("download_path"),
+                                                account=_acct(), port=_port()))
+
+    @bp.route("/api/browser-surface/downloads", methods=["GET"])
+    def api_downloads_list():
+        return jsonify(bs.list_downloads())
+
     app.register_blueprint(bp)
     return bp

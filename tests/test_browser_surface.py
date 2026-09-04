@@ -210,3 +210,85 @@ def test_api_bookmark_roundtrip(client, tmp_path, monkeypatch):
     monkeypatch.setattr(bs, "_BOOKMARK_FILE", str(tmp_path / "b.json"))
     r = client.get("/api/browser-surface/bookmarks")
     assert r.status_code == 200 and r.get_json()["bookmarks"] == []
+
+
+# ─────────────────────────── 增量能力：导航配置 / 通用实例 / 页内查找 / 下载 ─────────────
+
+def test_nav_config_roundtrip(tmp_path, monkeypatch):
+    cfg_file = str(tmp_path / "nav.json")
+    monkeypatch.setattr(bs, "_ALLOWLIST_FILE", cfg_file)
+    monkeypatch.delenv("INTERNAL_BROWSER_NAV_MODE", raising=False)
+    monkeypatch.delenv("INTERNAL_BROWSER_EXTRA_DOMAINS", raising=False)
+    # 默认
+    g = bs.get_nav_config()
+    assert g["ok"] and g["nav_mode"] == "allowlist" and g["nav_mode_source"] == "default"
+    # 写 open 模式 + 追加域
+    r = bs.set_nav_config(mode="open", extra_domains=["Example.com", "bing.com"])
+    assert r["ok"] and r["nav_mode"] == "open"
+    assert "example.com" in r["extra_domains"] and "bing.com" in r["extra_domains"]
+    # 再追加去重
+    r2 = bs.set_nav_config(extra_domains=["example.com", "zhihu.com"], append=True)
+    assert r2["extra_domains"].count("example.com") == 1
+    assert "zhihu.com" in r2["extra_domains"]
+    # 非法模式拒绝
+    bad = bs.set_nav_config(mode="uber")
+    assert bad["ok"] is False
+
+
+def test_nav_config_invalid_mode_rejected(tmp_path, monkeypatch):
+    monkeypatch.setattr(bs, "_ALLOWLIST_FILE", str(tmp_path / "n.json"))
+    assert bs.set_nav_config(mode="hack")["ok"] is False
+
+
+def test_general_browser_online_mock(monkeypatch):
+    import types
+    fake = types.SimpleNamespace(is_cdp_port_open=lambda port: port == 9224)
+    monkeypatch.setitem(sys.modules, "cdp_helper", fake)
+    assert bs.general_browser_online() is True
+
+
+def test_find_in_page_offline_graceful(monkeypatch):
+    # 9222 可能在线也可能不在线；强制让 _find_tab_ws 抛异常，验证不崩
+    monkeypatch.setattr(bs, "_find_tab_ws", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")))
+    r = bs.find_in_page("test", port=9222)
+    assert r["ok"] is False and "offline" in r["error"]
+
+
+def test_stop_find_offline_graceful(monkeypatch):
+    monkeypatch.setattr(bs, "_find_tab_ws", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")))
+    r = bs.stop_find_in_page(port=9222)
+    assert r["ok"] is False
+
+
+def test_set_download_behavior_offline(monkeypatch):
+    monkeypatch.setattr(bs, "_find_tab_ws", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")))
+    r = bs.set_download_behavior(enabled=True, port=9222)
+    assert r["ok"] is False
+
+
+def test_list_downloads_empty(tmp_path, monkeypatch):
+    monkeypatch.setattr(bs, "_DOWNLOAD_DIR", str(tmp_path / "dl"))
+    r = bs.list_downloads()
+    assert r["ok"] and r["files"] == []
+
+
+def test_api_nav_config_endpoint(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(bs, "_ALLOWLIST_FILE", str(tmp_path / "n.json"))
+    monkeypatch.delenv("INTERNAL_BROWSER_NAV_MODE", raising=False)
+    monkeypatch.delenv("INTERNAL_BROWSER_EXTRA_DOMAINS", raising=False)
+    g = client.get("/api/browser-surface/nav-config").get_json()
+    assert g["ok"] and g["nav_mode"] == "allowlist"
+    p = client.post("/api/browser-surface/nav-config", json={"mode": "open"}).get_json()
+    assert p["ok"] and p["nav_mode"] == "open"
+    bad = client.post("/api/browser-surface/nav-config", json={})
+    assert bad.status_code == 400
+
+
+def test_api_general_status(client):
+    r = client.get("/api/browser-surface/general-browser/status").get_json()
+    assert r["ok"] and r["port"] == 9224 and "online" in r
+
+
+def test_api_find_requires_query(client):
+    r = client.post("/api/browser-surface/find", json={"query": ""})
+    assert r.status_code == 400

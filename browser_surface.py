@@ -494,10 +494,236 @@ def capability_report() -> dict:
         "blocked_schemes": list(_BLOCKED_SCHEMES),
         "websocket_available": websocket is not None,
         "residents": accounts,
+        "general_browser": {"port": GENERAL_CDP_PORT, "online": general_browser_online(),
+                            "profile": GENERAL_PROFILE_DIR, "mode": "on_demand"},
         "capabilities": [
             "tabs.list", "tabs.new", "tabs.close", "tabs.activate", "tabs.navigate",
             "extract.meta", "extract.text", "extract.dom",
             "bookmarks", "history", "screencast(internal_browser_stream)",
+            "find_in_page", "download_behavior", "nav_config", "general_browser(9224,on_demand)",
         ],
         "reported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
+
+
+# ─────────────────────────── 通用浏览实例（按需，与采集物理隔离）───────────────────────────
+# 采集双账号 9222/9223 保持不动（双身份登录态物理隔离，Chrome profile 硬限制，不可合并）。
+# 通用浏览用独立第 3 实例 9224 + 独立 profile，按需拉起、不自动常驻，与采集互不污染。
+GENERAL_CDP_PORT = 9224
+GENERAL_PROFILE_DIR = os.path.join(ROOT, "edge-cdp-general")
+GENERAL_HOME_URL = "https://www.bing.com"
+
+
+def general_browser_online() -> bool:
+    try:
+        import cdp_helper
+        return cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT)
+    except Exception:
+        return False
+
+
+def ensure_general_browser(force: bool = False) -> dict:
+    """按需拉起通用浏览实例（9224，独立 profile）。幂等：已在线则复用。"""
+    try:
+        import cdp_helper
+    except Exception as e:
+        return {"ok": False, "error": f"cdp_helper 不可用: {e}", "port": GENERAL_CDP_PORT}
+    if not force and cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT):
+        return {"ok": True, "port": GENERAL_CDP_PORT, "action": "already_online",
+                "profile": GENERAL_PROFILE_DIR, "online": True}
+    os.makedirs(GENERAL_PROFILE_DIR, exist_ok=True)
+    res = cdp_helper.start_cdp_browser(
+        port=GENERAL_CDP_PORT, profile_dir=GENERAL_PROFILE_DIR,
+        launch_url=GENERAL_HOME_URL, direct_connection=True, browser="edge",
+    )
+    online = cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT)
+    return {"ok": bool(res.get("success") or online), "port": GENERAL_CDP_PORT,
+            "action": "started" if online else f"failed: {res.get('message')}",
+            "profile": GENERAL_PROFILE_DIR, "online": online}
+
+
+def stop_general_browser() -> dict:
+    """关闭通用浏览实例（仅 9224，不动采集 9222/9223）。best-effort。"""
+    try:
+        import cdp_helper
+        if not cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT):
+            return {"ok": True, "port": GENERAL_CDP_PORT, "action": "not_running"}
+        ws_url = None
+        try:
+            ver = _http_json(f"http://127.0.0.1:{GENERAL_CDP_PORT}/json/version", timeout=3.0)
+            ws_url = ver.get("webSocketDebuggerUrl")
+        except Exception:
+            pass
+        if ws_url and websocket:
+            ws = websocket.create_connection(ws_url, timeout=5.0)
+            try:
+                ib._cdp(ws, "Browser.close", {}, msg_id=1, timeout=5.0)
+            finally:
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+            return {"ok": True, "port": GENERAL_CDP_PORT, "action": "closed_via_cdp"}
+        return {"ok": False, "port": GENERAL_CDP_PORT, "error": "无法获取 browser WS"}
+    except Exception as e:
+        return {"ok": False, "port": GENERAL_CDP_PORT, "error": str(e)}
+
+
+# ─────────────────────────── 导航配置持久化（open 开关后台通道）───────────────────────────
+def get_nav_config() -> dict:
+    """读取当前导航配置（模式 + 追加白名单），标注 env/file/default 来源。"""
+    env_mode = (os.getenv("INTERNAL_BROWSER_NAV_MODE", "") or "").strip().lower()
+    env_extra = os.getenv("INTERNAL_BROWSER_EXTRA_DOMAINS", "")
+    file_cfg = {}
+    try:
+        if os.path.exists(_ALLOWLIST_FILE):
+            file_cfg = json.load(open(_ALLOWLIST_FILE, encoding="utf-8"))
+    except Exception:
+        pass
+    return {
+        "ok": True,
+        "nav_mode": current_nav_mode(),
+        "nav_mode_source": "env" if env_mode in NAV_MODES else ("file" if file_cfg.get("nav_mode") else "default"),
+        "extra_domains": _extra_domains(),
+        "extra_domains_source": "env+file" if (env_extra or file_cfg.get("extra_domains")) else "default",
+        "file_path": _ALLOWLIST_FILE,
+        "modes": list(NAV_MODES),
+    }
+
+
+def set_nav_config(mode=None, extra_domains=None, append: bool = True) -> dict:
+    """写入本地导航配置文件。环境变量若存在仍优先（返回时提示）。"""
+    cfg = {}
+    try:
+        if os.path.exists(_ALLOWLIST_FILE):
+            cfg = json.load(open(_ALLOWLIST_FILE, encoding="utf-8"))
+            if not isinstance(cfg, dict):
+                cfg = {}
+    except Exception:
+        cfg = {}
+    if mode is not None:
+        mode = str(mode).strip().lower()
+        if mode not in NAV_MODES:
+            return {"ok": False, "error": f"非法模式: {mode}，允许: {list(NAV_MODES)}"}
+        cfg["nav_mode"] = mode
+    if extra_domains is not None:
+        cleaned = []
+        for d in extra_domains:
+            if isinstance(d, str) and d.strip():
+                host = d.strip().lower().replace("https://", "").replace("http://", "").strip("/")
+                if host:
+                    cleaned.append(host)
+        if append:
+            existing = [d for d in cfg.get("extra_domains", []) if isinstance(d, str)]
+            seen = set(existing)
+            for d in cleaned:
+                if d not in seen:
+                    existing.append(d)
+                    seen.add(d)
+            cfg["extra_domains"] = existing
+        else:
+            cfg["extra_domains"] = cleaned
+    os.makedirs(os.path.dirname(_ALLOWLIST_FILE), exist_ok=True)
+    tmp = _ALLOWLIST_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, _ALLOWLIST_FILE)
+    return {"ok": True, "nav_mode": current_nav_mode(), "extra_domains": _extra_domains(),
+            "file_path": _ALLOWLIST_FILE,
+            "note": "环境变量 INTERNAL_BROWSER_NAV_MODE/EXTRA_DOMAINS 若存在仍优先于文件"}
+
+
+# ─────────────────────────── 页内查找（CDP Page.find，对标 Safari/Chrome find-in-page）─────────
+def find_in_page(query, target_id=None, account=None, port=None, case_sensitive: bool = False) -> dict:
+    """在指定标签页内查找文本，返回匹配数与首个匹配位置。CDP Page.find。"""
+    query = (query or "").strip()
+    if not query:
+        return {"ok": False, "error": "查询词为空"}
+    p = _resolve_port(account, port)
+    try:
+        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0)
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "error": str(e)}
+    try:
+        resp = ib._cdp(ws, "Page.find", {
+            "searchText": query, "includeCommandLineAPI": False,
+            "isCaseSensitive": bool(case_sensitive),
+        }, msg_id=1, timeout=8.0)
+        result = resp.get("result", {})
+        return {"ok": True, "cdp_port": p, "target_id": chosen["target_id"],
+                "query": query, "case_sensitive": case_sensitive,
+                "match_count": result.get("matchCount", 0),
+                "current_ordinal": result.get("currentMatchOrdinal", 0),
+                "first_rect": (result.get("firstMatchResult") or {}).get("rect")}
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "error": str(e)}
+    finally:
+        try:
+            ws.close()
+        except Exception:
+            pass
+
+
+def stop_find_in_page(target_id=None, account=None, port=None) -> dict:
+    """清除页内查找高亮。CDP Page.stopFinding。"""
+    p = _resolve_port(account, port)
+    try:
+        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0)
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "error": str(e)}
+    try:
+        ib._cdp(ws, "Page.stopFinding", {"keepSelection": False}, msg_id=1, timeout=5.0)
+        return {"ok": True, "cdp_port": p, "target_id": chosen["target_id"]}
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "error": str(e)}
+    finally:
+        try:
+            ws.close()
+        except Exception:
+            pass
+
+
+# ─────────────────────────── 下载管理（CDP Browser.setDownloadBehavior）────────────────────
+_DOWNLOAD_DIR = os.path.join(ROOT, "data", "private", "browser_downloads")
+
+
+def set_download_behavior(enabled: bool = True, download_path=None,
+                          account=None, port=None) -> dict:
+    """配置下载行为：允许/禁止 + 指定目录（默认平台内 data/private/browser_downloads）。"""
+    p = _resolve_port(account, port)
+    path = download_path or _DOWNLOAD_DIR
+    if enabled:
+        os.makedirs(path, exist_ok=True)
+    try:
+        ws, chosen = _find_tab_ws(p, None, timeout=5.0)
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "error": str(e)}
+    try:
+        params = {"behavior": "allow" if enabled else "deny", "downloadPath": path}
+        ib._cdp(ws, "Browser.setDownloadBehavior", params, msg_id=1, timeout=5.0)
+        return {"ok": True, "cdp_port": p, "enabled": enabled,
+                "download_path": path if enabled else None,
+                "target_id": chosen["target_id"]}
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "error": str(e)}
+    finally:
+        try:
+            ws.close()
+        except Exception:
+            pass
+
+
+def list_downloads() -> dict:
+    """列出平台内下载目录文件（轻量；实时 downloadProgress 事件后续接入）。"""
+    if not os.path.isdir(_DOWNLOAD_DIR):
+        return {"ok": True, "download_dir": _DOWNLOAD_DIR, "files": []}
+    files = []
+    for name in sorted(os.listdir(_DOWNLOAD_DIR), reverse=True):
+        fp = os.path.join(_DOWNLOAD_DIR, name)
+        try:
+            st = os.stat(fp)
+            files.append({"name": name, "size": st.st_size,
+                          "modified": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))})
+        except Exception:
+            continue
+    return {"ok": True, "download_dir": _DOWNLOAD_DIR, "files": files[:100]}
