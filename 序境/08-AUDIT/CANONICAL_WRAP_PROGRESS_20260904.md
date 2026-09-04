@@ -19,12 +19,24 @@
 - **SQL CASE WHEN 趋势聚合**（app.py L2883/L3106/L4898/L4985，按 publish_date GROUP BY）：等值口径已与 Canonical 精确一致（='negative'、='high'，high 不含 critical）；改内存聚合反而降性能，KEEP。
 - **风险关注列表筛选** `risk_level in ('high','critical')`（app.py L1555/L4175/L4178）：这是"待关注风险笔记集合"宁不漏，非 high 分桶计数，语义不同，KEEP。
 - **根 report_engine.py**（112 行薄编排）：自身不计数，统计全部转发 daily_report（已 WRAP-02），自动继承，KEEP。
+- **event-graph 图谱模块**（event_graph.py，app.py L413-799 多端点）：关系图谱（event_graph_events/relations 表），通过 source_event_id 关联 events 表，**不重复计算情感/风险/互动计数**，属语义网络非计数层 → KEEP
 - app.py L1415 趋势点单值、L2625-2627 负面二次确认复合计数、L3603-3609 品类循环/fallback：结构特殊或复合业务，单点收益低，暂 KEEP（如需统一走 group_count 另开小批）。
 
 ## 待 WRAP
-- [ ] 族 C KOS：kos_metrics / kol_analysis 四字段互动收敛 FN-ENGAGEMENT；kos_engine total_likes 仅 likes 归独立 FN-LIKES（不并入互动）
+- [x] 族 C KOS（审计判定 KEEP，见下）：
+  - kol_analysis.py L62 `SUM(likes+comments+collects+shares)`：**SQL 层等权四字段，与 FN-ENGAGEMENT 数学等价**；SQL 聚合性能最优，改内存聚合降性能 → KEEP
+  - kos_metrics.py L93 `SUM(n.likes+n.comments+n.collects+n.shares) AS exposure`：SQL 层等权，语义为 viewership 曝光（漏斗）→ KEEP（口径一致，非重复）
+  - kos_engine.py L119 加权 `eng=tl+tc*2+tcol*1.5+ts*2`：不同 Metric（KOS 加权互动）→ KEEP；total_likes 为独立字段（FN-LIKES 语义）不并入互动 → KEEP
 - [ ] 多端点 Reference Scan：/api/stats、/api/brand-stats、/api/brand-industry/stats 同源；evidence 两组；event-graph 两组
-- [ ] 三套报告实现（export_report / 根 report_engine→daily_report / report_export.report_engine）口径差异 Reference Scan，只判同源收敛，不改数字
+- [x] 三套报告实现口径差异 Reference Scan（结论见下）
+
+## 三套报告实现口径 Reference Scan（2026-09-04 已执行）
+| 实现 | 取数/口径 | 关系 |
+|---|---|---|
+| export_report.py `generate_report_data` | 自有 notes 过滤 + canonical（WRAP-04） | 独立实现，已接入 canonical 计数 |
+| 根 report_engine.py | 薄编排，统计全部转发 daily_report（WRAP-02） | 自动继承 canonical |
+| report_export.report_engine.py `payload` | 六桶一次 canonical（WRAP-07），保留二次确认/发布日期过滤 | 独立实现，已接入 canonical |
+三套计数均消费 canonical；差异仅在**过滤条件**（严格日期/二次确认），属业务口径而非算法分叉 → 判定同源已收敛，不改数字。
 
 ## Cross-Surface 一致性目标
 同一(时间/维度/过滤/权限)：首页=表=图=日报/周报/报告=导出=AI 答询，数字必须一致；差异回溯 Function/Metric/Dataset，禁止改展示层凑齐。
