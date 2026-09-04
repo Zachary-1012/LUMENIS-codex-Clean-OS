@@ -101,9 +101,9 @@
         '</div>' +
         '<h3 class="brand-card-name">' + b.name + '</h3>' +
         '<div class="brand-card-meta">' +
-          '<span>📍 ' + b.region + '</span>' +
-          '<span>🏢 ' + b.store_type + '</span>' +
-          '<span>🌍 ' + b.country + '</span>' +
+          '<span>' + xicon('pin') + b.region + '</span>' +
+          '<span>' + xicon('building') + b.store_type + '</span>' +
+          '<span>' + xicon('globe') + b.country + '</span>' +
         '</div>' +
         '<div class="brand-card-stats">' +
           '<div class="brand-card-stat"><div class="brand-card-stat-value">' + b.kos_count + '</div><div class="brand-card-stat-label">KOS</div></div>' +
@@ -126,14 +126,14 @@
       '<span class="hier-count">' + b.kos_count + ' KOS</span>' +
     '</li>';
     html += '<li class="region-level" onclick="BrandHub.setLevel(\'region\')">' +
-      '<span class="hier-icon" style="background:#f0f0f0">📍</span>' +
+      '<span class="hier-icon" style="background:#f0f0f0">' + xicon('pin',12) + '</span>' +
       '<span class="hier-name">' + b.region + '（地区级）</span>' +
       '<span class="hier-count">' + (b.stores ? b.stores.length : 1) + ' 门店</span>' +
     '</li>';
     if (b.stores) {
       b.stores.forEach(function (store, i) {
         html += '<li class="store-level" onclick="BrandHub.setLevel(\'store\',\'' + i + '\')">' +
-          '<span class="hier-icon" style="background:#f7f7f5">🏢</span>' +
+          '<span class="hier-icon" style="background:#f7f7f5">' + xicon('building',12) + '</span>' +
           '<span class="hier-name">' + store + '</span>' +
           '<span class="hier-count">待采集</span>' +
         '</li>';
@@ -190,12 +190,12 @@
       } else {
         // 非广州品牌：品牌隔离链路（实时聚合，不写 kos_profiles 主表）
         var bd = document.getElementById("brandDashboardContent");
-        if (bd) bd.innerHTML = '<div class="brand-empty"><div class="brand-empty-icon">✅</div><h3>该品牌已激活采集</h3><p>品牌数据已按主体口径隔离入库，KOS 聚合见右栏统计与下方列表。</p></div>';
+        if (bd) bd.innerHTML = '<div class="brand-empty"><div class="brand-empty-icon">' + xicon('check',30) + '</div><h3>该品牌已激活采集</h3><p>品牌数据已按主体口径隔离入库，KOS 聚合见右栏统计与下方列表。</p></div>';
         refreshBrandData(currentBrand);
       }
     } else {
       // 未激活品牌显示空状态
-      var emptyHtml = '<div class="brand-empty"><div class="brand-empty-icon">📡</div><h3>该品牌尚未激活采集</h3><p>点击下方按钮启动采集，数据将自动流入KOS引擎</p><button style="margin-top:16px;padding:10px 24px;background:#171717;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px" onclick="BrandHub.activateBrand(\'' + currentBrand + '\')">启动采集</button></div>';
+      var emptyHtml = '<div class="brand-empty"><div class="brand-empty-icon">' + xicon('satellite',30) + '</div><h3>该品牌尚未激活采集</h3><p>点击下方按钮启动采集，数据将自动流入KOS引擎</p><button style="margin-top:16px;padding:10px 24px;background:#171717;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px" onclick="BrandHub.activateBrand(\'' + currentBrand + '\')">启动采集</button></div>';
       var el = document.getElementById("brandDashboardContent");
       if (el) el.innerHTML = emptyHtml;
     }

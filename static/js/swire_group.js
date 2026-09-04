@@ -71,8 +71,8 @@
         <div style="font-size:14px;font-weight:700;padding-right:18px">${esc(p.name)}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">${esc([p.city, p.line].filter(Boolean).join(' · ') || '品牌主体')}</div>
         <div style="display:flex;gap:8px;margin-top:9px;font-size:11px;flex-wrap:wrap">
-          <span style="color:var(--muted)">📁 ${p.event_count} 事件</span>
-          <span style="color:var(--muted)">📝 ${num(p.note_count)} 笔记</span>
+          <span style="color:var(--muted)">${xicon('folder')} ${p.event_count} 事件</span>
+          <span style="color:var(--muted)">${xicon('doc')} ${num(p.note_count)} 笔记</span>
         </div>
         <div style="margin-top:8px;font-size:10px;color:${st[1]};display:flex;align-items:center;gap:5px">
           <span style="width:7px;height:7px;border-radius:50%;background:${st[1]};display:inline-block"></span>${st[0]} · 点击进入事件库 ›
@@ -171,8 +171,8 @@
         </div>
         <div style="font-size:11px;color:#666;line-height:1.6">${esc(e.summary || '（暂无分析摘要，待补全）')}</div>
         <div style="display:flex;gap:10px;margin-top:6px;font-size:10px;color:#999;flex-wrap:wrap">
-          <span>🗓 ${esc(e.event_date || '')}</span><span>📎 ${esc(e.source || '')}</span>
-          ${e.brand ? `<span>🏷 ${esc(e.brand)}</span>` : ''}
+          <span>${xicon('calendar')} ${esc(e.event_date || '')}</span><span>${xicon('link')} ${esc(e.source || '')}</span>
+          ${e.brand ? `<span>${xicon('tag')} ${esc(e.brand)}</span>` : ''}
           ${e.url ? `<a href="${esc(e.url)}" target="_blank">链接</a>` : ''}
         </div></div>`;
     }).join('');

@@ -37,10 +37,10 @@
         panel.innerHTML = `
             <div class="pr-panel-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                 <h4 style="margin:0;font-size:15px;color:#4338ca;display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:18px;">📋</span> 公关案例对标 & 话术推荐
+                    <span style="font-size:18px;">${xicon('list',18)}</span> 公关案例对标 & 话术推荐
                 </h4>
                 <button id="prRefreshBtn" style="padding:4px 12px;border:1px solid #c7d2fe;background:#fff;border-radius:6px;cursor:pointer;font-size:12px;color:#4338ca;">
-                    🔄 刷新
+                    ${xicon('refresh')} 刷新
                 </button>
             </div>
             <div id="prLoading" style="text-align:center;padding:20px;color:#6b7280;">
@@ -58,7 +58,7 @@
         if (!cases || cases.length === 0) {
             return '<p style="color:#6b7280;font-size:13px;margin:8px 0;">暂无匹配的公关案例</p>';
         }
-        let html = '<div style="margin-bottom:16px;"><h5 style="margin:0 0 8px 0;font-size:14px;color:#374151;">📚 匹配案例（' + cases.length + '个）</h5>';
+        let html = '<div style="margin-bottom:16px;"><h5 style="margin:0 0 8px 0;font-size:14px;color:#374151;">' + xicon('book') + ' 匹配案例（' + cases.length + '个）</h5>';
         cases.forEach(function(c, idx) {
             const severityColor = c.severity === 'high' ? '#dc2626' : c.severity === 'medium' ? '#f59e0b' : '#10b981';
             html += `
@@ -82,7 +82,7 @@
         if (!templates || templates.length === 0) {
             return '<p style="color:#6b7280;font-size:13px;margin:8px 0;">暂无推荐话术</p>';
         }
-        let html = '<div><h5 style="margin:0 0 8px 0;font-size:14px;color:#374151;">💬 推荐话术（' + templates.length + '个）</h5>';
+        let html = '<div><h5 style="margin:0 0 8px 0;font-size:14px;color:#374151;">' + xicon('chat') + ' 推荐话术（' + templates.length + '个）</h5>';
         templates.forEach(function(t, idx) {
             html += `
                 <div style="padding:10px 12px;background:#fff;border-radius:8px;margin-bottom:8px;border:1px solid #e5e7eb;">
@@ -144,7 +144,7 @@
                 const tc = data.trigger_check;
                 if (tc.should_trigger) {
                     html += `<div style="margin-top:12px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;">
-                        <strong style="color:#dc2626;font-size:13px;">🚨 专报触发: ${tc.reason || '符合专报条件'}</strong>
+                        <strong style="color:#dc2626;font-size:13px;">${xicon('warn')} 专报触发: ${tc.reason || '符合专报条件'}</strong>
                     </div>`;
                 }
             }

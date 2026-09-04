@@ -102,7 +102,7 @@
             <div id="ai-chat-container" style="display: flex; flex-direction: column; height: 500px;">
                 <div id="ai-chat-messages" style="flex: 1; overflow-y: auto; padding: 10px; background: #f9f9f9; border-radius: 8px; margin-bottom: 10px;">
                     <div style="text-align: center; color: #999; padding: 20px;">
-                        <div style="font-size: 40px; margin-bottom: 10px;">🤖</div>
+                        <div style="font-size: 40px; margin-bottom: 10px;">${xicon('bot',40)}</div>
                         <div>AI助手已就绪，请问有什么可以帮您？</div>
                         <div style="font-size: 12px; margin-top: 8px; color: #bbb;">支持舆情分析、报告解读、系统操作咨询等</div>
                     </div>
@@ -374,11 +374,11 @@
                     <div style="display: flex; gap: 12px;">
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                             <input type="radio" name="export-format" value="word" checked />
-                            <span>📄 Word文档</span>
+                            <span>${xicon('doc')} Word文档</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                             <input type="radio" name="export-format" value="excel" />
-                            <span>📊 Excel表格</span>
+                            <span>${xicon('chart')} Excel表格</span>
                         </label>
                     </div>
                 </div>
@@ -609,7 +609,7 @@
         };
         
         // 添加AI聊天按钮
-        addButton('btn-ai-chat', 'AI助手', '🤖', openAIChat);
+        addButton('btn-ai-chat', 'AI助手', xicon('bot'), openAIChat);
         
         // 添加设置按钮（如果已存在则绑定事件）
         const settingsBtn = document.getElementById('btn-settings');
@@ -618,10 +618,10 @@
         }
         
         // 添加导出按钮
-        addButton('btn-export', '导出', '📤', openExport);
+        addButton('btn-export', '导出', xicon('export'), openExport);
         
         // 添加采集器控制按钮
-        addButton('btn-collector', '采集', '🔍', openCollectorControl);
+        addButton('btn-collector', '采集', xicon('search'), openCollectorControl);
     }
 
     // DOM加载完成后初始化
