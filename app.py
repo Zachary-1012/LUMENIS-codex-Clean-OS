@@ -881,7 +881,7 @@ def auth_config_api():
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
-    if not _auth_enabled() or request.path in ('/healthz', '/api/auth/config', '/favicon.ico', '/api/kos/report/view') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/auth/config', '/favicon.ico', '/api/kos/report/view') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -2307,6 +2307,46 @@ def remote_access():
 @app.route('/healthz')
 def healthz():
     return jsonify({'ok':True,'version':APP_VERSION,'service':'taikoo-monitor'})
+
+@app.route('/api/health')
+def api_health():
+    """P1-1 只读健康端点：无认证、不写库、不触发采集，供负载均衡/监控探活。"""
+    _port = None
+    try:
+        _host = request.host or ''
+        if ':' in _host:
+            _port = int(_host.rsplit(':', 1)[1])
+    except Exception:
+        _port = None
+    if _port is None:
+        for _env_key in ('PORT', 'FLASK_RUN_PORT', 'TAIKOO_PORT'):
+            _v = os.getenv(_env_key)
+            if _v:
+                try:
+                    _port = int(_v)
+                    break
+                except Exception:
+                    pass
+    _db_status = 'ok'
+    _db_error = None
+    try:
+        with db.get_db() as _conn:
+            _conn.execute('SELECT 1').fetchone()
+    except Exception as _e:
+        _db_status = 'error'
+        _db_error = str(_e)
+    _payload = {
+        'ok': _db_status == 'ok',
+        'service': 'taikoo-monitor',
+        'version': APP_VERSION,
+        'pid': os.getpid(),
+        'port': _port,
+        'database': _db_status,
+        'time': datetime.now().isoformat(),
+    }
+    if _db_error:
+        _payload['database_error'] = _db_error
+    return jsonify(_payload)
 
 @app.route('/api/system/health')
 def api_system_health():
