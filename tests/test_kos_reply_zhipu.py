@@ -37,9 +37,14 @@ def _fake_intelligence(ai_enabled=True, chat_result=("这是一条AI回复建议
     def _chat(system, user, **kw):
         return chat_result
 
+    def chat(system, user, **kw):
+        # production interface converged: _chat -> chat (returns 3-tuple)
+        return (chat_result[0], chat_result[1], {})
+
     mod.ai_enabled = _ai_enabled
     mod._strong_model = _strong_model
     mod._chat = _chat
+    mod.chat = chat
     return mod
 
 

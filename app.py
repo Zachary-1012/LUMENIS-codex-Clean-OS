@@ -2873,7 +2873,7 @@ def api_ai_analyze_v570():
     try:
         system_prompt = "你是广州太古汇舆情分析助手。请分析以下内容的情感倾向、风险等级和关键要点。"
         user_prompt = f"内容：{text}\n上下文：{context or '无'}\n请给出：1)情感倾向 2)风险等级 3)关键要点 4)建议"
-        raw, provider = intelligence._chat(system_prompt, user_prompt, 0.3, 800)
+        raw, provider, _ = intelligence.chat(system_prompt, user_prompt, level='medium', temperature=0.3, max_tokens=800, pack_id='glm_4_5_air')
         return jsonify({'ok': True, 'text': text, 'context': context, 'provider': provider, 'analysis': raw or '', 'error': ''})
     except Exception as e:
         return jsonify({'ok': False, 'text': text, 'context': context, 'provider': 'none', 'analysis': '', 'error': str(e)})

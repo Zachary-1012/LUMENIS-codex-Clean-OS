@@ -383,7 +383,7 @@ def _ai_generate_outreach(name: str, tier: str, top_topic: str,
             f"博主昵称：{name}\n分层：{tier}\n代表内容：{top_topic}\n"
             f"品牌：{brand_name}\n活动：{campaign_name or '品牌内容合作'}\n请只输出邀约文案正文："
         )
-        _content, _provider = intelligence._chat(_sys, _user, temperature=0.4, max_tokens=400)
+        _content, _provider, _ = intelligence.chat(_sys, _user, level='medium', temperature=0.4, max_tokens=400, pack_id='glm_4_5_air')
         _text = (_content or "").strip()
         if not _text or _provider == "rule":
             return ""
@@ -546,7 +546,7 @@ def _ai_generate_reply(comment_text: str, brand_name: str, category: str, reply_
             f"品牌：{brand_name}。回复风格：{reply_style}。评论分类：{category}。"
         )
         _user = f"用户评论：{comment_text[:300]}\n请只输出回复建议正文："
-        _content, _provider = intelligence._chat(_sys, _user, temperature=0.3, max_tokens=300, model=_model)
+        _content, _provider, _ = intelligence.chat(_sys, _user, level='medium', temperature=0.3, max_tokens=300, model=_model, pack_id='glm_4_5_air')
         _text = (_content or "").strip()
         if not _text or _provider == "rule":
             return ""

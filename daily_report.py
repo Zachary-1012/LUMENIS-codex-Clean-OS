@@ -647,7 +647,7 @@ def _ai_generate_daily_summary(summary, insights, events):
         'top_events': [{'title': e['event_title'], 'risk': e['risk_level'], 'summary': e['ai_summary'][:60]} for e in events[:3]]
     }, ensure_ascii=False)
 
-    raw, provider = intelligence._chat(system, user, 0.3, 400)
+    raw, provider, _ = intelligence.chat(system, user, level='medium', temperature=0.3, max_tokens=400, pack_id='glm_4_5_air')
     if raw:
         return raw.strip()[:200]
     return ''
@@ -666,7 +666,7 @@ def _ai_generate_executive_insight(summary, insights, events):
         'top_events': [{'title': e.get('event_title',''), 'risk': e.get('risk_level',''), 'mentions': e.get('mention_count',0)} for e in events[:3]]
     }, ensure_ascii=False)
 
-    raw, provider = intelligence._chat(system, user, 0.2, 500)
+    raw, provider, _ = intelligence.chat(system, user, level='medium', temperature=0.2, max_tokens=500, pack_id='glm_4_5_air')
     data = intelligence._json_from_text(raw)
     if data:
         data['provider'] = provider
