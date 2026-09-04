@@ -173,3 +173,52 @@ def kos_interest_signal():
         return jsonify({"ok": True, **r})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
+
+
+# ---------- IC-044 耸动/合成内容风险信号检查 ----------
+@ic_bp.route("/synthetic/scan", methods=["POST"])
+def synthetic_scan():
+    """耸动/合成内容风险信号扫描（与 IC-020 告警联动；代理信号，非平台原生能力）。"""
+    import alert_engine as ae
+    data = request.get_json(silent=True) or {}
+    signals = data.get("signals") or []
+    if not isinstance(signals, list):
+        return jsonify({"ok": False, "error": "signals 需为列表"}), 400
+    try:
+        r = ae.synthetic_risk_scan(signals, config=data.get("config"))
+        return jsonify({"ok": True, **r})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+
+# ---------- IC-048 可视化质量门检查 ----------
+@ic_bp.route("/vis/quality-gate", methods=["GET"])
+def vis_quality_gate():
+    """可视化质量门清单（VISQ；新图上线前验收，不引框架）。"""
+    from scripts.visualization_quality_gate import checklist_md, QUALITY_CHECKS
+    return jsonify({"ok": True, "checks": QUALITY_CHECKS, "checklist_md": checklist_md()})
+
+
+# ---------- IC-048 可视化质量门单图检查 ----------
+@ic_bp.route("/vis/quality-check", methods=["POST"])
+def vis_quality_check():
+    """对一张图执行质量门检查（结构化 PASS/FAIL）。"""
+    from scripts.visualization_quality_gate import check
+    data = request.get_json(silent=True) or {}
+    try:
+        r = check(
+            vis_id=data.get("vis_id", ""),
+            question=data.get("question", ""),
+            has_zero_baseline=bool(data.get("has_zero_baseline", True)),
+            uses_cvd_safe=bool(data.get("uses_cvd_safe", True)),
+            multi_channel=bool(data.get("multi_channel", True)),
+            role_arch=bool(data.get("role_arch", True)),
+            has_empty_state=bool(data.get("has_empty_state", True)),
+            canonical_source=data.get("canonical_source", ""),
+            data_source_note=data.get("data_source_note", ""),
+            mobile_ok=bool(data.get("mobile_ok", True)),
+            motion_ok=bool(data.get("motion_ok", True)),
+        )
+        return jsonify({"ok": True, **r})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400

@@ -17,13 +17,15 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ---- 强制隔离 DB（module 级，防污染 ZBC 生产库）----
+# 注意：不在 import 时设置 env（会污染 pytest 收集阶段其他模块）；改在 fixture 内设置并恢复。
 _TEST_DB = os.path.join(tempfile.gettempdir(), "zbc_ic_p1_test.db")
-os.environ["ZBC_DB_PATH"] = _TEST_DB
 
 
 @pytest.fixture(autouse=True, scope="module")
 def _isolated_db():
-    """module 级 fixture：清理临时库、建全 schema、跑完再清理。"""
+    """module 级 fixture：设隔离 env、清理临时库、建全 schema、跑完恢复原 env 并清理。"""
+    _old = os.environ.get("ZBC_DB_PATH")
+    os.environ["ZBC_DB_PATH"] = _TEST_DB
     if os.path.exists(_TEST_DB):
         os.remove(_TEST_DB)
     # 建全 schema（database.init_db 读 ZBC_DB_PATH）
@@ -32,6 +34,11 @@ def _isolated_db():
     yield
     if os.path.exists(_TEST_DB):
         os.remove(_TEST_DB)
+    # 恢复原 env（防污染后续模块的测试隔离）
+    if _old is None:
+        os.environ.pop("ZBC_DB_PATH", None)
+    else:
+        os.environ["ZBC_DB_PATH"] = _old
 
 
 # ===================== IC-021 EMV =====================

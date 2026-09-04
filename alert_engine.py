@@ -51,6 +51,7 @@ DEFAULT_ALERT_CONFIG = {
     "mention_surge_pct": 200.0, # 提及量环比暴涨≥200%（AI Brand Monitoring 2026 参考）
     "sentiment_drop_pt": 20.0,  # 情绪得分骤降≥20pt
     "cooldown_hours": 6,        # 同类告警冷却时间（防刷屏）
+    "crisis_threshold_factor": 0.8,  # IC-044 危机期阈值收紧系数（<1 表示收紧；对既有阈值×系数）
 }
 
 
@@ -237,11 +238,15 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
                     brand_health: Optional[float] = None,
                     event_high_count: Optional[int] = None,
                     mention_baseline: Optional[float] = None,
+                    synthetic_signals: Optional[list] = None,
+                    crisis_mode: bool = False,
                     conn: Optional[sqlite3.Connection] = None) -> Dict[str, Any]:
     """
     核心评估：消费 canonical_metrics（cm.sentiment_count / cm.risk_count）+ 已算好的 risk_index。
     生成告警记录（状态 DETECTED），返回本次评估摘要。
     禁止在此重新计算业务指标——输入必须来自调用方（daily_report / canonical）。
+    IC-044（增量）：synthetic_signals 耸动/合成内容风险信号；crisis_mode 危机期阈值收紧（对既有阈值×系数）。
+    两者均为可选参数，不传则行为与 IC-020 完全一致（向后兼容）。
     """
     own = conn is None
     c = conn or _conn()
@@ -315,6 +320,41 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
                                     f"{surge_ratio:.1f}", f"提及量环比暴涨 {surge_ratio:.1f}%（≥{surge}%），警惕舆情爆发")
                 if aid: alerts.append({"id": aid, "type": "mention_surge", "severity": "high", "metric": f"mention_surge_pct={surge_ratio:.1f}"})
 
+        # IC-044 耸动/合成内容风险信号（危机期联动；代理信号，明确标注，不编造平台原生能力）
+        if synthetic_signals:
+            _syn = synthetic_risk_scan(synthetic_signals)
+            if _syn["blocked"]:
+                for sig in _syn["blocked"]:
+                    _key = f"synthetic_blk_{sig.get('id', '') or sig.get('type', 'x')}"
+                    aid = _record_alert(c, _key, "synthetic_content_risk", "high", "synthetic_signal",
+                                        sig.get("id", ""), f"耸动/合成内容风险：{sig.get('reason', '')}（建议官方源核验+分级响应）")
+                    if aid: alerts.append({"id": aid, "type": "synthetic_content", "severity": "high",
+                                           "metric": f"synthetic_signal={sig.get('id', '')}"})
+            if _syn["suspicious"]:
+                for sig in _syn["suspicious"]:
+                    _key = f"synthetic_sus_{sig.get('id', '') or sig.get('type', 'x')}"
+                    aid = _record_alert(c, _key, "synthetic_content_suspicious", "medium", "synthetic_signal",
+                                        sig.get("id", ""), f"耸动/合成内容疑似：{sig.get('reason', '')}（建议关注）")
+                    if aid: alerts.append({"id": aid, "type": "synthetic_content", "severity": "medium",
+                                           "metric": f"synthetic_signal={sig.get('id', '')}"})
+
+        # IC-044 危机期阈值收紧：已触发任何 high 告警 或 显式 crisis_mode → 后续评估阈值×收紧系数
+        crisis_factor = _cfg_num(c, "crisis_threshold_factor", 0.8)
+        if crisis_mode or any(a["severity"] == "high" for a in alerts):
+            # 危机期收紧：已达收紧 high 阈值则强制升级 high（用独立类型避免与常规告警冷却互斥）
+            if risk_index is not None and risk_index >= ri_h * crisis_factor:
+                aid = _record_alert(c, "risk_index_crisis", "risk_index_crisis", "high", "risk_index",
+                                    f"{risk_index}", f"[危机期收紧] 风险指数 {risk_index} 达收紧阈值（≥{ri_h*crisis_factor:.1f}），原常规阈值{ri_h:.0f}")
+                if aid: alerts.append({"id": aid, "type": "risk_index_crisis", "severity": "high", "metric": f"risk_index={risk_index}"})
+            if risk_index is not None and risk_index >= ri_m * crisis_factor and risk_index < ri_h * crisis_factor:
+                aid = _record_alert(c, "risk_index_crisis_med", "risk_index_crisis_med", "medium", "risk_index",
+                                    f"{risk_index}", f"[危机期收紧] 风险指数 {risk_index} 达收紧中阈值（≥{ri_m*crisis_factor:.1f}）")
+                if aid: alerts.append({"id": aid, "type": "risk_index_crisis", "severity": "medium", "metric": f"risk_index={risk_index}"})
+            if neg_ratio >= nr_h * crisis_factor:
+                aid = _record_alert(c, "negative_crisis", "negative_crisis", "high", "negative_pct",
+                                    f"{neg_ratio:.2%}", f"[危机期收紧] 负面占比 {neg_ratio:.2%} 达收紧阈值（≥{nr_h*crisis_factor:.0%}），原常规阈值{nr_h:.0%}")
+                if aid: alerts.append({"id": aid, "type": "negative_surge", "severity": "high", "metric": f"negative_pct={neg_ratio:.2%}"})
+
         return {"enabled": True, "alerts": alerts, "message": f"评估完成，触发 {len(alerts)} 条新告警"}
     finally:
         if own:
@@ -352,3 +392,46 @@ if __name__ == "__main__":
         print(json.dumps(get_config(), ensure_ascii=False, indent=2))
     if a.records:
         print(json.dumps(list_records(a.state), ensure_ascii=False, indent=2))
+
+
+# ===== IC-044 · 耸动/合成内容风险信号扫描（代理信号，与 IC-020 告警联动）=====
+# 依据：CONTRACT_IC035_044_048_20260904.md §二（Cycle HH）。
+# 原则：信号为代理/标记，不编造平台原生能力；处置走官方源核验+分级响应；
+#       与 IC-020 共用告警状态机，不新建第二条告警链。
+
+
+def synthetic_risk_scan(signals: list, config: Optional[dict] = None) -> dict:
+    """扫描耸动/合成内容风险信号。
+
+    signals：每条 {id, type, evidence} 结构（type 建议：ai_generated/synthetic/old_republish/
+             emotion_excitation/conflict_fact；调用方从内容分析/采集证据传入）。
+    config：可选 {block_types:[...], suspicious_types:[...]} 覆盖默认分类。
+
+    返回：{blocked:[...], suspicious:[...], clean:[...], message}
+    """
+    cfg = config or {}
+    block_types = set(cfg.get("block_types") or ["ai_generated", "synthetic"])
+    suspicious_types = set(cfg.get("suspicious_types") or ["old_republish", "emotion_excitation", "conflict_fact"])
+    blocked, suspicious, clean = [], [], []
+    for sig in signals or []:
+        if not isinstance(sig, dict):
+            continue
+        st = (sig.get("type") or "unknown").lower()
+        entry = {
+            "id": sig.get("id", ""),
+            "type": st,
+            "evidence": sig.get("evidence", ""),
+            "reason": sig.get("reason", f"耸动/合成信号类型[{st}]，建议官方源核验"),
+        }
+        if st in block_types:
+            blocked.append(entry)
+        elif st in suspicious_types:
+            suspicious.append(entry)
+        else:
+            clean.append(entry)
+    return {
+        "blocked": blocked,
+        "suspicious": suspicious,
+        "clean": clean,
+        "message": f"扫描 {len(signals or [])} 条信号：BLOCK {len(blocked)} / SUSPICIOUS {len(suspicious)} / CLEAN {len(clean)}",
+    }
