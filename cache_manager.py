@@ -214,7 +214,7 @@ def get_cached_data(query_type: str = "stats", limit: int = 50) -> Dict:
             negative = conn.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative'").fetchone()[0]
             positive = conn.execute("SELECT COUNT(*) FROM notes WHERE sentiment='positive'").fetchone()[0]
             high_risk = conn.execute("SELECT COUNT(*) FROM alerts WHERE level='high'").fetchone()[0]
-            total_engagements = conn.execute("SELECT COALESCE(SUM(likes+collects+comments),0) FROM notes").fetchone()[0]
+            total_engagements = conn.execute("SELECT COALESCE(SUM(likes+comments+collects+shares),0) FROM notes").fetchone()[0]
             
             result["data"] = {
                 "total": total,

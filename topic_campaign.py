@@ -687,6 +687,7 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
                         int((n.get('likes', n.get('liked_count', 0)) or 0))
                         + int((n.get('comments', n.get('comment_count', 0)) or 0))
                         + int((n.get('collects', n.get('collected_count', 0)) or 0))
+                        + int((n.get('shares', n.get('share_count', 0)) or 0))
                         for n in data.get('notes', [])
                     )
                     _insert_snapshot(conn, campaign_key, topic, data)
