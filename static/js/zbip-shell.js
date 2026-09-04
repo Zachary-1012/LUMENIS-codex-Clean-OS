@@ -77,7 +77,8 @@
       });
     }
 
-    /* ---- A. 导航分组（运行时包裹，不改源 DOM 顺序之外的结构） ---- */
+    /* ---- A. 导航分组（运行时包裹；xnav 已按 6 大域函数渲染时跳过，避免重复叠加） ---- */
+    if (!(nav.getAttribute && nav.getAttribute('data-xnav-mounted'))) {
     var itemMap = {};
     nav.querySelectorAll('.side-item').forEach(function (it) {
       var key = it.getAttribute('data-page') || (it.id || '').replace('topic-campaign-entry-v573', 'topic-campaign');
@@ -94,7 +95,9 @@
         group.appendChild(node);
       });
       nav.appendChild(group);
+
     });
+    }
 
     /* ---- B. 顶部：工作区切换器 + 搜索 + 通知 ---- */
     var bar = el('div', 'zb-workspace-bar');
