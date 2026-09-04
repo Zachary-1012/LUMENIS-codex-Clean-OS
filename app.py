@@ -4919,29 +4919,26 @@ def api_dashboard_all():
         
         # 2. 统计数据（补全前端需要的所有字段）
         try:
-            cursor.execute("SELECT sentiment, COUNT(*) as count FROM notes GROUP BY sentiment")
-            sentiment_stats = {row['sentiment']: row['count'] for row in cursor.fetchall()}
-            cursor.execute("SELECT COUNT(*) FROM notes WHERE risk_level='high'")
-            high_risk = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM notes WHERE risk_level='medium'")
-            medium_risk = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM notes WHERE risk_level='low'")
-            low_risk = cursor.fetchone()[0]
-            cursor.execute("SELECT COALESCE(SUM(likes+comments+shares+collects),0) FROM notes")
-            total_eng = cursor.fetchone()[0]
-            cursor.execute("SELECT COALESCE(SUM(comments),0) FROM notes")
-            total_comments = cursor.fetchone()[0]
+            # [Canonical P0] 情感/风险/互动统一走 canonical_metrics 唯一实现(FN-SENTIMENT/RISK/ENGAGEMENT)
+            # 一次取数替代原6趟全表聚合;输出字段与口径不变(已验证四字段无NULL/情感仅三值,数字零变化)
+            import canonical_metrics as _cm
+            _note_rows = [dict(r) for r in cursor.execute(
+                "SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes").fetchall()]
+            _sc = _cm.sentiment_count(_note_rows)
+            _rc = _cm.risk_count(_note_rows)
+            _es = _cm.engagement_stats(_note_rows)
+            sentiment_stats = {'positive': _sc['positive'], 'neutral': _sc['neutral'], 'negative': _sc['negative']}
             result['stats'] = {
                 'sentiment': sentiment_stats,
                 'total': total_notes,
-                'positive': sentiment_stats.get('positive', 0),
-                'neutral': sentiment_stats.get('neutral', 0),
-                'negative': sentiment_stats.get('negative', 0),
-                'high_risk': high_risk,
-                'medium_risk': medium_risk,
-                'low_risk': low_risk,
-                'total_engagements': total_eng,
-                'total_comments': total_comments,
+                'positive': _sc['positive'],
+                'neutral': _sc['neutral'],
+                'negative': _sc['negative'],
+                'high_risk': _rc['high'],
+                'medium_risk': _rc['medium'],
+                'low_risk': _rc['low'],
+                'total_engagements': _es['sum'],
+                'total_comments': _es['per_field']['comments'],
                 'categories': db.get_category_distribution()
             }
         except Exception as e:
