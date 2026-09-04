@@ -9,7 +9,7 @@ Prevent rule proliferation, priority collisions, stale instructions and AI conte
 ## Authority order
 1. Safety / security / legal / platform restrictions
 2. ZBC Production Truth / protected production rules
-3. `CANONICAL-AI-EXECUTION-BASELINE-V1-20260904.md` — sole cross-repository AI execution authority
+3. `CANONICAL-EXECUTION-V3-20260904.md` — sole cross-repository AI execution authority (V3; supersedes V1 baseline which was referenced but absent on disk)
 4. Current approved domain contracts
 5. Task-specific requirements / acceptance criteria
 6. Research recommendations
@@ -18,8 +18,9 @@ Prevent rule proliferation, priority collisions, stale instructions and AI conte
 ## Current classes
 
 ### CANONICAL
-`CANONICAL-AI-EXECUTION-BASELINE-V1-20260904.md`
-Sole cross-repository AI execution authority.
+`CANONICAL-EXECUTION-V3-20260904.md`
+Sole cross-repository AI execution authority (V3, 2026-09-04).
+Opening gate: `AI-EXECUTION-MASTER-COMMAND-V2-20260904.md` (开工口令 V2, read-before-execute).
 
 ### DOMAIN
 `CANONICAL-NAMING-AND-TWIN-SYNC.md` — naming/sync.
@@ -43,3 +44,10 @@ Read this map, then the canonical baseline, then the applicable domain contract,
 
 ## Conflict rule
 If documents conflict: classify them, apply authority order, trace evidence, make one recorded decision, and update the map. Never silently obey conflicting rules simultaneously.
+
+
+## V3 promotion record (2026-09-04)
+- `CANONICAL-AI-EXECUTION-BASELINE-V1-20260904.md` was referenced by this map but **absent on disk** (broken link). Classified SUPERSEDED / LEGACY — V3 supersedes it as the sole execution authority.
+- `CANONICAL-EXECUTION-V3-20260904.md` (V3) is now the sole cross-repository AI execution authority. Status: ACTIVE / CANONICAL.
+- `AI-EXECUTION-MASTER-COMMAND-V2-20260904.md` (V2) is the opening gate (read-before-execute). Status: ACTIVE / DOMAIN (opening procedure).
+- Both files exist in ZBC and OSAI `00-GOVERNANCE/`. Authority order now: Safety/Legal/Security → ZBC Production Truth → V3 → V2 (opening gate) → Domain Contracts → Task Requirements → Research → Legacy Records.
