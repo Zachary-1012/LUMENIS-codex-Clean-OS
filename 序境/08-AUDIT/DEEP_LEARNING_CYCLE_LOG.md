@@ -48,3 +48,25 @@
 - **影响范围**：研发流程（复用判定红线）；Evidence/回归（失败沉淀）
 - **风险**：低——研究侧沉淀
 - **Evidence**：OSAI 推送（雷达+队列）；本登记簿双库同步
+---
+
+## Cycle C — Agent Tool Use / 死循环防护 / 可观测性 / 成本治理（2026-09-04）
+
+- **主题**：Agent / Tool Use / Context / Long-horizon Execution（指令五方向三）
+- **研究对象**：Agent 死循环根因与防护（OpenHands/LangGraph/OpenAI Guardrails）、Token 成本爆炸治理（火山引擎）、Agent 可观测性三支柱、零信任 Agent（OWASP）、AI 成本治理（Tokenomics）、Agent 审计玻璃箱（NIST AI RMF）
+- **来源**：InfoQ、51CTO、掘金、腾讯 2026 深度文（E2 多源），来源 URL 见 OSAI 技术雷达 §8
+- **核心发现**：
+  1. 死循环 5 种防护：Max Iteration（RemainingSteps 优雅收尾）/ Loop Detection / Human Approval / Guardrails / 预算早停
+  2. Token 成本爆炸：generate_summary 无限循环案例——修复=终止指令+最大迭代围栏+预算早停+失败案例入回归集
+  3. 可观测性三支柱：日志（JSON）/ 追踪（Trace session→step→event）/ 指标；动态采样
+  4. 零信任 Agent：不信任模型输出/不允许无限循环/不依赖模型自我验收
+  5. Tokenomics：总成本=固定前缀+会话历史+检索+工具往返+输出；无效 Token 30-50%；模型分层路由降 18-20%
+  6. Agent 审计：唯一身份+最小权限+委托链+统一 trace_id
+- **适用能力**：ai_channel 预算早停；采集/报告 Observability trace；成本看板
+- **与代码库关系**：ai_channel 已有熔断+HALF_OPEN；HCG 人工门控+采集安全 Gate 已符合零信任共识；智谱/搜索/视觉分层路由已落地（验证策略正确）
+- **实验**：无（研究侧，未改生产代码）
+- **决策**：ADOPT（零信任/Tokenomics——策略确认）；ADAPT（预算早停、trace 三层、死循环围栏）
+- **采用位置**：OSAI 技术雷达 §8（6 项）；改进队列 IC-010/IC-011
+- **影响范围**：AI 通道（预算/早停）；Observability（trace）；成本治理（看板）
+- **风险**：低——研究侧沉淀
+- **Evidence**：OSAI 推送（雷达+队列）；本登记簿双库同步
