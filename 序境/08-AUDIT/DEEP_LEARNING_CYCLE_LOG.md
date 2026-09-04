@@ -26,3 +26,25 @@
 - **影响范围**：研发流程（Context 治理）；未来采集/分析任务（Checkpoint）
 - **风险**：低——研究侧沉淀，未触碰生产 Truth
 - **Evidence**：OSAI 推送 `8cc2df2`（雷达+队列 42 行）；本登记簿 ZBC 推送
+---
+
+## Cycle B — Spec 驱动 / 自动修复 / 复用判定（2026-09-04）
+
+- **主题**：Coding / Code Generation / Debugging（指令五方向二）
+- **研究对象**：Spec-Driven Development、Harness 三层反馈闭环（OpenAI）、复用判定（代码知识库+RAG）、系统化 Debug 方法论、失败案例→eval dataset、多模型互审
+- **来源**：51CTO、腾讯、掘金 2026 深度文（E2 多源），来源 URL 见 OSAI 技术雷达 §7
+- **核心发现**：
+  1. SDD：No Spec No Code / Spec is Truth / Reverse Sync；精炼规格降低代码错误率 50%
+  2. 复用判定：开发前先探索已有实现，防重复造轮子——直接支撑 Canonical Capability 的 Reference Scan
+  3. Harness 三层反馈闭环：死规矩机器判 / 运行判 / 软标准 AI 判 + 后台 GC 式清理
+  4. Debug 铁律：复现→最小化→单变量→回归测试；禁止未确认根因直接改码
+  5. 失败案例→eval/回归用例沉淀闭环
+  6. 多模型互审规避单模型盲区
+- **适用能力**：Canonical Capability Registry（复用判定）；Evidence/回归体系（失败案例沉淀）；AI 层（第二模型 review）
+- **与代码库关系**：序境已有 Contract/Gate/Evidence 体系与 SDD 同构；Capability Registry + Reference Scan 已落地；本 Cycle 确认方向正确并补 eval 沉淀/互审
+- **实验**：无（研究侧，未改生产代码）
+- **决策**：ADOPT（复用判定/失败沉淀——方法论确认）；ADAPT（SDD Reverse Sync、Debug 红线、互审）
+- **采用位置**：OSAI 技术雷达 §7（6 项）；改进队列 IC-008/IC-009
+- **影响范围**：研发流程（复用判定红线）；Evidence/回归（失败沉淀）
+- **风险**：低——研究侧沉淀
+- **Evidence**：OSAI 推送（雷达+队列）；本登记簿双库同步
