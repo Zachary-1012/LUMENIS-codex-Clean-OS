@@ -1410,20 +1410,8 @@
 <!-- v5.8.4 太古集团全域事件/笔记库 -->
 <script src="/static/js/swire_group.js?v=8.0.0"></script>
 
-<!-- v5.8.0 Zachary机器人模块（增强版） -->
-<script src="/static/js/zachary_robot_enhanced.js?v=8.0.1"></script>
-<!-- v8.0.0 Zachary 3D(Three.js) 已停用，改用设计稿PNG形象，避免双外观叠加；保留文件备查
-<script src="/static/js/zachary_3d.js?v=8.0.0"></script> -->
-<!-- v8.0.0 Zachary PNG双表情切换（睁眼↔闭眼微笑，淡入淡出） -->
-<script src="/static/js/zachary_png_face.js?v=8.0.0"></script>
-<!-- v5.8.0 前端交互补丁 -->
-<script src="/static/js/ui_interactions_v5.8.0.js?v=8.0.1"></script>
-
 <!-- v5.9.0 5层闭环架构状态面板 -->
 <script src="/static/js/architecture_dashboard.js?v=8.0.0"></script>
-
-<!-- v5.9.0 Zachary系统知识增强 -->
-<script src="/static/js/zachary_system_knowledge.js?v=8.0.0"></script>
 
 <!-- v5.9.0 红点提醒管理 -->
 <script src="/static/js/badge_manager.js?v=8.0.0"></script>
@@ -1886,7 +1874,7 @@ function openApiKeyManager(){
   // 系统内打开API Key管理（iframe弹窗）
   const modal = document.createElement('div');
   modal.className = 'api-key-modal';
-  modal.innerHTML = `<div class="api-key-overlay" onclick="this.parentElement.remove()"></div><div class="api-key-dialog"><div class="api-key-header"><span>API Key 管理</span><button onclick="this.closest('.api-key-modal').remove()">✕</button></div><iframe src="/static/api-keys.html" class="api-key-iframe"></iframe></div>`;
+  modal.innerHTML = `<div class="api-key-overlay" onclick="this.parentElement.remove()"></div><div class="api-key-dialog"><div class="api-key-header"><span>API Key 管理</span><button onclick="this.closest('.api-key-modal').remove()">✕</button></div><div style="padding:20px;color:#86868b;text-align:center;">API Key 管理功能已迁移至系统设置</div></div>`;
   document.body.appendChild(modal);
 }
 function toggleSearchEnhance(){
