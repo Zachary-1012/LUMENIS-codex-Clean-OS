@@ -287,3 +287,12 @@ body::before {
 .splash-progress-text { font-size: 11px; margin-top: 8px; }
 .splash-footer-product { font-size: 12px; }
 .splash-footer-version { font-size: 11px; }
+
+
+/* ============================================================
+ * v1.4 · 流光层叠修正（用户 2026-09：银色流光应在底层，禁止覆盖文字）
+ *  - ::after 流光置底（z-index:0），卡片内容置顶（z-index:1）
+ *  - 流光 = 底层氛围光，文字/数据永远清晰
+ * ============================================================ */
+.xj-card-silver::after { z-index: 0 !important; }
+.xj-card-silver > * { position: relative; z-index: 1; }

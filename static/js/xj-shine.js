@@ -49,6 +49,18 @@
     el.style.setProperty('border-radius', GLASS.radius, 'important');
   }
 
+  /* ---- 触摸目标数据表（WCAG 2.5.8：图标按钮/关闭符统一 44×44 命中区）---- */
+  var TOUCH_SELECTOR = '.modal-close, .icon-button, .btn-icon, .close-btn, .modal-close-btn, ' +
+    '.zachary-chat-close, .alert-close, .health-close-btn, .negative-close-btn, .daily-close-btn, ' +
+    '.zb-sheet-close, .ai-gov-close, .ai-pack-close, .xhs-login-close, .link-selector-close';
+
+  /* touchify：给图标按钮/关闭符统一加 xj-touch-icon（视觉小、命中区大），函数驱动免逐处手改 */
+  function touchify() {
+    document.querySelectorAll(TOUCH_SELECTOR).forEach(function (el) {
+      if (!el.classList.contains('xj-touch-icon')) { el.classList.add('xj-touch-icon'); }
+    });
+  }
+
   var PANEL_SELECTOR = '.panel.glass-card, .panel, .glass-card, .metric-card, .home-card, ' +
     '.smart-card, .osai-module-card, .ev-stat-card, .case-card, .brand-card, .smart-center, ' +
     '.report-card, .event-card, .sidenav, .content-area, .terminal, .filetree';
@@ -59,6 +71,7 @@
       if (!el.classList.contains('is-live')) { live(el); }
       glassify(el);
     });
+    touchify();
   }
 
   function init() {
