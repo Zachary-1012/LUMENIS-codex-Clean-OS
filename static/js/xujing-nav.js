@@ -126,12 +126,17 @@
     container.querySelectorAll('.nav-item').forEach(function (el) {
       el.addEventListener('click', function (e) {
         var page = el.getAttribute('data-page');
-        if (page && typeof switchPage === 'function') {
+        if (page && typeof navigateTo === 'function') {
+          navigateTo(page);
+        } else if (page && typeof switchPage === 'function') {
           switchPage(page);
         }
-        // 更新 active 状态
+        // 更新 active 状态（同时更新 .nav-item 和 .side-item）
         container.querySelectorAll('.nav-item').forEach(function (n) { n.classList.remove('active'); });
         el.classList.add('active');
+        document.querySelectorAll('.side-item').forEach(function (s) {
+          s.classList.toggle('active', s.dataset.page === page);
+        });
       });
     });
   }
