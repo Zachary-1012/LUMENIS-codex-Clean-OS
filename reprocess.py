@@ -4,6 +4,7 @@ from datetime import datetime
 import database as db
 import ai_analyzer
 import intelligence
+import canonical_metrics as cm
 import web_monitor
 
 
@@ -121,7 +122,7 @@ def build_cross_platform_events(limit=100):
         topic='、'.join((first.get('topics') or ['其他'])[:2])
         title=first.get('event_hint') or (f'广州太古汇｜{topic}相关讨论' if topic!='其他' else (first.get('title') or '未命名事件'))
         dates=[m.get('publish_date') or m.get('published_at') or m.get('collected_at') or m.get('fetched_at') or '' for m in mentions]
-        neg=sum(1 for m in mentions if m.get('sentiment')=='negative')
+        neg=cm.sentiment_count(mentions)['negative']  # [Canonical] 纯计数; 下方 risk_score 阈值推导规则保持不变
         risk=max([int(m.get('risk_score',0) or 0) for m in mentions] or [0])
         risk_level='high' if risk>=60 or neg>=3 else ('medium' if risk>=30 or neg else 'low')
         event={'event_key':key,'title':title[:40],'first_seen':min(dates) if dates else '', 'last_seen':max(dates) if dates else '', 'mention_count':len(mentions), 'source_count':len(set(m.get('source_platform','unknown') for m in mentions)), 'risk_level':risk_level,'risk_score':risk,'keywords':list(dict.fromkeys([t for m in mentions for t in (m.get('topics') or [])]))[:8]}

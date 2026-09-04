@@ -89,7 +89,9 @@ def payload(kind="daily",start=None,end=None):
     only_confirmed = kind in ("weekly","monthly","yearly")
     n=_notes(start,end,kind,only_confirmed_negative=only_confirmed)
     e=_events(start,end)
-    def cnt(k,v):return sum(str(x.get(k,"")).lower()==v for x in n)
+    def cnt(k,v):return sum(str(x.get(k,"")).lower()==v for x in n)  # 通用兜底保留
+    from canonical_metrics import sentiment_count as _scf, risk_count as _rcf  # [Canonical]
+    _sc, _rc = _scf(n), _rcf(n)
     # 事件分析（Topic 聚类主题词增强：c-TF-IDF 只读内存，不改 DB）
     event_analysis = []
     evs = e[:5]
@@ -132,13 +134,13 @@ def payload(kind="daily",start=None,end=None):
         "report_type":kind,"period_start":start,"period_end":end,
         "notes":n,"events":e,
         "total_notes":len(n),
-        "positive_count":cnt("sentiment","positive"),
-        "neutral_count":cnt("sentiment","neutral"),
-        "negative_count":cnt("sentiment","negative"),
+        "positive_count":_sc["positive"],
+        "neutral_count":_sc["neutral"],
+        "negative_count":_sc["negative"],
         "confirmed_negative_count":len(confirmed_negative),
-        "high_risk_count":cnt("risk_level","high"),
-        "medium_risk_count":cnt("risk_level","medium"),
-        "low_risk_count":cnt("risk_level","low"),
+        "high_risk_count":_rc["high"],
+        "medium_risk_count":_rc["medium"],
+        "low_risk_count":_rc["low"],
         "event_analysis":event_analysis,
         "high_risk_notes":high_risk_notes[:10],
         "case_circles": case_circles,
