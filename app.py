@@ -1,4 +1,4 @@
-"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
 from pathlib import Path
 
@@ -91,6 +91,7 @@ import xhs_p0_orchestrator
 import collector_automation
 import ai_learning_engine
 import public_opinion_cases
+import report_api  # P1-10 拆分批3: 报告/摘要/品牌报告 API
 # ProxyPool 可插拔代理池（可选；导入失败不影响系统启动；总开关默认关闭，关闭时等同直连原版）
 try:
     from proxy_pool import proxy_manager as _proxy_mgr
@@ -128,6 +129,7 @@ app.register_blueprint(pr_case_integration.pr_case_bp)
 app.register_blueprint(system_features_api.system_features_bp)
 # V3.0 P0: Auth Recovery Center（认证恢复中心）
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
+app.register_blueprint(report_api.report_bp)  # P1-10 拆分批3: 报告 API
 import data_query_api
 data_query_api.register_data_query_api(app)  # P1-10 拆分批1: 数据只读查询
 import collection_api
@@ -758,35 +760,6 @@ def marketing_overview():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
-@app.route('/api/v2/report-center/preview')
-def report_center_preview():
-    import re as _re
-    period = (request.args.get('period') or 'daily').strip().lower()
-    brand_mode = (request.args.get('brand_mode') or 'cth').strip().lower()
-    if period not in ('daily', 'weekly', 'monthly', 'yearly', 'event'):
-        return jsonify({'ok': False, 'error': 'period 非法，仅 daily/weekly/monthly/yearly/event'}), 400
-    if brand_mode not in ('cth', 'zbmp'):
-        return jsonify({'ok': False, 'error': 'brand_mode 仅支持 cth/zbmp'}), 400
-    sd = (request.args.get('start_date') or '').strip()
-    ed = (request.args.get('end_date') or '').strip()
-    _dr = _re.compile(r'^\d{4}-\d{2}-\d{2}$')
-    if sd and not _dr.match(sd):
-        return jsonify({'ok': False, 'error': 'start_date 需 YYYY-MM-DD'}), 400
-    if ed and not _dr.match(ed):
-        return jsonify({'ok': False, 'error': 'end_date 需 YYYY-MM-DD'}), 400
-    try:
-        from v4_upgrade.report_center import ReportGenerator
-        rep = ReportGenerator(brand_mode=brand_mode).generate(
-            period, start_date=sd or None, end_date=ed or None)
-        return jsonify({'ok': True, 'report': rep,
-                        'note': '只读旁路预览，不替代既有报告 Owner（GAP-10 边界）'})
-    except ValueError as ve:
-        return jsonify({'ok': False, 'error': str(ve)}), 400
-    except Exception:
-        app.logger.exception('report_center preview failed')
-        return jsonify({'ok': False, 'error': '报告生成失败，请查看服务端日志'}), 500
-
-# ===== Global BIL 全球品牌智能：research-stage 只读（从 seed JSON 读，不建表/不写库/不联网，不参与生产口径）=====
 @app.route('/api/v2/global-bil/overview')
 @app.route('/api/v2/global-bil/<resource>')
 def global_bil_read(resource='overview'):
@@ -826,87 +799,6 @@ def event_graph_delete_event(event_id):
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # V3.0 品牌分析报告API
-@app.route('/api/brand-report/generate', methods=['POST'])
-def brand_report_generate():
-    """生成品牌分析报告"""
-    try:
-        from brand_report_generator import BrandReportGenerator
-        data = request.get_json() or {}
-        generator = BrandReportGenerator(
-            brand_name=data.get('brand_name', '序境'),
-            report_period=data.get('report_period', ''),
-        )
-        # 设置各部分数据
-        if 'executive_summary' in data:
-            es = data['executive_summary']
-            generator.set_executive_summary(
-                core_findings=es.get('core_findings', []),
-                key_metrics=es.get('key_metrics', {}),
-                action_items=es.get('action_items', []),
-            )
-        if 'communication_analysis' in data:
-            ca = data['communication_analysis']
-            generator.set_communication_analysis(
-                subject_distribution=ca.get('subject_distribution', {}),
-                channel_analysis=ca.get('channel_analysis', {}),
-                effect_evaluation=ca.get('effect_evaluation', {}),
-                content_type_distribution=ca.get('content_type_distribution', {}),
-            )
-        if 'market_intelligence' in data:
-            mi = data['market_intelligence']
-            generator.set_market_intelligence(
-                competitor_updates=mi.get('competitor_updates', []),
-                industry_trends=mi.get('industry_trends', []),
-                opportunities=mi.get('opportunities', []),
-                threats=mi.get('threats', []),
-            )
-        if 'public_opinion_analysis' in data:
-            po = data['public_opinion_analysis']
-            generator.set_public_opinion_analysis(
-                sentiment_distribution=po.get('sentiment_distribution', {}),
-                hot_topics=po.get('hot_topics', []),
-                key_influencers=po.get('key_influencers', []),
-                risk_warnings=po.get('risk_warnings', []),
-            )
-        if 'event_graph_analysis' in data:
-            eg = data['event_graph_analysis']
-            generator.set_event_graph_analysis(
-                marketing_events=eg.get('marketing_events', []),
-                propagation_events=eg.get('propagation_events', []),
-                opinion_events=eg.get('opinion_events', []),
-                event_chains=eg.get('event_chains', []),
-            )
-        if 'recommendations' in data:
-            rec = data['recommendations']
-            generator.set_recommendations(
-                short_term=rec.get('short_term', []),
-                medium_term=rec.get('medium_term', []),
-                long_term=rec.get('long_term', []),
-            )
-        report = generator.generate_report()
-        return jsonify({'ok': True, 'report': report, 'report_id': report['report_id']})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-@app.route('/api/brand-report/export/<report_id>')
-def brand_report_export(report_id):
-    """导出品牌分析报告（JSON/Markdown）"""
-    try:
-        from brand_report_generator import BrandReportGenerator
-        format_type = request.args.get('format', 'json')
-        # 这里简化处理，实际应从存储中读取报告
-        generator = BrandReportGenerator()
-        if format_type == 'markdown':
-            filepath = f'data/brand_report_{report_id}.md'
-            generator.export_markdown(filepath)
-            return jsonify({'ok': True, 'format': 'markdown', 'filepath': filepath})
-        else:
-            filepath = f'data/brand_report_{report_id}.json'
-            generator.export_json(filepath)
-            return jsonify({'ok': True, 'format': 'json', 'filepath': filepath})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
 APP_VERSION='5.9.9'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
@@ -1625,62 +1517,6 @@ def index(): return send_from_directory('static','index.html')
 def favicon():
     # 消除浏览器自动请求 favicon 产生的 404 控制台报错
     return Response(status=204)
-@app.route('/api/report/daily')
-def api_report_daily():
-    """日报弹窗：只含“昨天+当天发布”的有效舆情笔记（过期笔记不弹窗，仅入库做案例）。
-    一天两窗口（凌晨/晚间），是否已看过由前端按 日期+窗口 归档。"""
-    def _num(v):
-        try: return int(v or 0)
-        except (TypeError,ValueError): return 0
-    date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
-    try:
-        today_d = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except Exception:
-        today_d = datetime.now().date()
-    yesterday_s = (today_d - timedelta(days=1)).strftime('%Y-%m-%d')
-    today_s = today_d.strftime('%Y-%m-%d')
-    now_h = datetime.now().hour
-    window = 'morning' if now_h < 15 else 'evening'  # 15点前=早间窗口，之后=晚间窗口
-    clause, sp = _subject_sql_and_values()
-    sql = ("SELECT * FROM notes WHERE COALESCE(is_duplicate,0)=0 AND COALESCE(noise_type,'')='' "
-           "AND substr(COALESCE(publish_date,publish_datetime,collected_at,''),1,10) IN (?,?) "
-           f"AND {clause} ORDER BY substr(COALESCE(publish_date,publish_datetime,''),1,10) DESC, "
-           "COALESCE(likes,0) DESC LIMIT 200")
-    with db.get_db() as conn:
-        rows_all = [dict(r) for r in conn.execute(sql, tuple([yesterday_s, today_s] + list(sp))).fetchall()]
-    # 日报推送口径：只推送负面笔记（正面/中性仅作背景统计，不进推送列表）
-    rows = [n for n in rows_all if n.get('sentiment') == 'negative']
-    # 负面按 风险等级→风险分→互动量 排序，高风险优先推送
-    _rl_order = {'high': 0, 'medium': 1, 'low': 2}
-    rows.sort(key=lambda n: (_rl_order.get(n.get('risk_level'), 3),
-                             -_num(n.get('risk_score')),
-                             -(_num(n.get('likes')) + _num(n.get('comments')) + _num(n.get('collects')) + _num(n.get('shares')))))
-    # [Canonical WRAP-08] rows_all 情感三桶一次计算；high 在已过滤负面子集 rows 上计(输入集不变)
-    import canonical_metrics as _cmC
-    _sC = _cmC.sentiment_count(rows_all)
-    total = len(rows_all); neg, pos, neu = _sC['negative'], _sC['positive'], _sC['neutral']
-    high = _cmC.risk_count(rows)['high']
-    today_cnt = sum(1 for n in rows_all if (n.get('publish_date') or n.get('publish_datetime') or '')[:10] == today_s)
-    yest_cnt = total - today_cnt
-    brief = []
-    for n in rows[:30]:
-        eng = _num(n.get('likes')) + _num(n.get('comments')) + _num(n.get('collects')) + _num(n.get('shares'))
-        brief.append({'note_id': n.get('note_id'), 'title': n.get('title'), 'author': n.get('author_nickname'),
-                      'sentiment': n.get('sentiment'), 'risk_level': n.get('risk_level'),
-                      'risk_score': n.get('risk_score'), 'ai_reason': n.get('ai_reason') or '',
-                      'publish_date': (n.get('publish_date') or n.get('publish_datetime') or '')[:10], 'engagement': eng})
-    stats = {'total': total, 'negative': neg, 'positive': pos, 'neutral': neu, 'high_risk': high,
-             'pushed': len(rows), 'today_count': today_cnt, 'yesterday_count': yest_cnt}
-    if neg == 0:
-        conclusion = (f"昨日与今日共收录有效笔记 {total} 篇（昨日 {yest_cnt}、今日 {today_cnt}；"
-                      f"正面 {pos}、中性 {neu}），未发现负面舆情笔记。")
-    else:
-        conclusion = (f"昨日与今日共收录 {total} 篇，发现负面笔记 {neg} 篇（高风险 {high}），"
-                      f"日报仅推送以下负面内容，按风险高低排序；正面 {pos}、中性 {neu} 篇不进推送。")
-    return jsonify({'ok': True, 'date': today_s, 'window': window,
-                    'report': {'date_range': f'{yesterday_s} 至 {today_s}', 'stats': stats,
-                               'conclusion': conclusion, 'notes': brief}})
-
 @app.route('/api/metrics/canonical')
 def api_metrics_canonical():
     """Unified Data Intelligence Pipeline: Canonical Metric API (UDIP P2)
@@ -2351,53 +2187,6 @@ def api_negative_review_stats():
     except Exception as e:
         return jsonify({'ok': True, 'total': 0, 'confirmed': 0, 'rejected': 0, 'pending': 0, 'high_risk': 0, 'error': str(e)})
 
-@app.route('/api/reports')
-def api_reports_list():
-    """报告列表"""
-    try:
-        limit = request.args.get('limit', 10, type=int)
-        report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reports')
-        reports = []
-        if os.path.exists(report_dir):
-            for f in sorted(os.listdir(report_dir), reverse=True)[:limit]:
-                fpath = os.path.join(report_dir, f)
-                if os.path.isfile(fpath):
-                    stat = os.stat(fpath)
-                    reports.append({'name': f, 'size': stat.st_size, 'date': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M')})
-        return jsonify({'ok': True, 'reports': reports, 'count': len(reports)})
-    except Exception as e:
-        return jsonify({'ok': True, 'reports': [], 'count': 0, 'error': str(e)})
-
-@app.route('/api/reports/<path:report_id>/download')
-def api_report_download(report_id):
-    """报告下载-取下载链接（前端 downloadReport 契约：返回 download_url）"""
-    safe = os.path.basename(report_id)
-    report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reports')
-    if not os.path.isfile(os.path.join(report_dir, safe)):
-        return jsonify({'ok': False, 'error': '报告不存在'}), 404
-    from urllib.parse import quote
-    return jsonify({'ok': True, 'download_url': f'/api/reports/{quote(safe)}/file', 'name': safe})
-
-@app.route('/api/reports/<path:report_id>/file')
-def api_report_file(report_id):
-    """报告文件实际下载"""
-    safe = os.path.basename(report_id)
-    report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reports')
-    if not os.path.isfile(os.path.join(report_dir, safe)):
-        return jsonify({'ok': False, 'error': '报告不存在'}), 404
-    return send_from_directory(report_dir, safe, as_attachment=True)
-
-# ===== GAP-04 三套 run-code 统一安全收口（单一安全策略，2026-09-01）=====
-# 生产默认禁用服务端任意代码执行/写静态文件，消除 RCE 与持久化注入面；
-# 仅本地开发显式 ZBC_DEV_EXEC=1 放行，且仍拦截危险构造并打印审计行。三入口统一走此闸门，
-# 路由保留（前端得到明确 403 契约而非 404），不删除历史能力。
-_DEV_EXEC_ENABLED = os.environ.get('ZBC_DEV_EXEC', '0') == '1'
-_DEV_EXEC_BLOCK_RE = re.compile(
-    r'(__[\w_]+__|\b(?:import|exec|eval|compile|open|globals|locals|vars|getattr|setattr|delattr|breakpoint)\b'
-    r'|os\.|sys\.|subprocess|socket|shutil|pathlib|\.write(?:_text|_bytes)?\s*\(|rmtree|(?:unlink|remove)\s*\('
-    r'|environ|urllib|requests\.|http\.client|pickle)',
-    re.I)
-
 def _dev_exec_guard(code):
     """统一代码执行闸门：None=放行(仅开发态)；否则返回 (response,403/400)。"""
     if not _DEV_EXEC_ENABLED:
@@ -2493,176 +2282,6 @@ def api_translate():
     if not intelligence.ai_enabled(): return jsonify({'ok':False,'error':'未配置AI provider/API Key'}),503
     return jsonify({'ok':True,'target':target,'text':intelligence.translate_text(text,target)})
 
-@app.route('/api/report/<report_type>')
-def api_report(report_type):
-    # 避免与 /api/report/export 路由冲突
-    if report_type == 'export':
-        try:
-            return api_report_export()
-        except Exception as e:
-            import traceback
-            return jsonify({'ok': False, 'error': '导出函数调用失败: ' + str(e), 'traceback': traceback.format_exc()}), 500
-    if report_type not in report_engine.REPORT_TYPES: return jsonify({'ok':False,'error':'无效报告类型'}),400
-    try:
-        bundle=report_engine.get_bundle(report_type, request.args.get('date') or None)
-        return jsonify({'ok':bool(bundle.get('report')),'report':bundle.get('report'),'digest':bundle.get('digest'),'report_type':report_type})
-    except Exception as exc:
-        return jsonify({'ok':False,'error':str(exc)}),500
-
-@app.route('/api/report/generate',methods=['POST'])
-def api_generate_report():
-    try:
-        result=_generate_all_reports()
-        return jsonify({'ok':True,'message':'日报/周报/月报/年报已生成','reports':result})
-    except Exception as exc:
-        return jsonify({'ok':False,'error':str(exc)}),500
-
-# ===== 优化版报告API（v2）：按发布日期筛选，周期报告负面必须二次确认 =====
-
-def _canonical_report_metrics(report_type, date_str):
-    """UDIP V1.0: 报告统一消费 Canonical Metric（MET-RISK-01/02）。
-    不重复计算业务 Truth：风险指数/品牌健康度仅由 daily_report.generate_today_summary 权威计算。
-    报告展示层从此消费该字段；如与 stats 的原始计数并存，两者语义不同（聚合风险 vs 计数）。"""
-    try:
-        import daily_report as _dr
-        from datetime import datetime as _dt
-        d = date_str or _dt.now().strftime('%Y-%m-%d')
-        try:
-            _dt.strptime(d, '%Y-%m-%d')
-        except Exception:
-            d = _dt.now().strftime('%Y-%m-%d')
-        summary = _dr.generate_today_summary(date_str=d)
-        return {
-            'metric_version': 'UDIP-V1.0',
-            'date': d,
-            'MET-RISK-01': {'name': 'risk_index', 'value': summary.get('risk_index'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-01'},
-            'MET-RISK-02': {'name': 'brand_health_score', 'value': summary.get('brand_health_score'), 'unit': 'score 0-100', 'function': 'FUNC-RISK-02'},
-            'context': {
-                'total_found': summary.get('total_found'),
-                'effective_count': summary.get('effective_count'),
-                'risk_count': summary.get('risk_count'),
-                'events_count': summary.get('events_count'),
-            },
-        }
-    except Exception as e:
-        return {'metric_version': 'UDIP-V1.0', 'error': str(e)}
-
-@app.route('/api/report/v2/<report_type>')
-def api_report_v2(report_type):
-
-    """优化版报告API
-    - 日报：只包含当日或前一日发布的笔记（按publish_date筛选）
-    - 周报/月报/年报：负面笔记必须是二次确认的（negative_confirmed=1）
-    - 过期笔记：标记为历史案例，不进入日报
-    """
-    if report_type not in ('daily', 'weekly', 'monthly', 'yearly'):
-        return jsonify({'ok': False, 'error': '无效报告类型'}), 400
-    
-    try:
-        from report_filter import get_report_period, filter_notes_for_daily_report, filter_negative_for_period_report, classify_notes_by_age, get_daily_report_filter_stats
-        
-        date_str = request.args.get('date')
-        start, end = get_report_period(report_type)
-        
-        # 获取该时间段内的所有笔记（按采集时间）
-        all_notes = db.get_notes_by_date_range(start, end)
-        
-        if report_type == 'daily':
-            # 日报：按发布日期筛选，只包含当日或前一日发布的笔记
-            filtered_notes = filter_notes_for_daily_report(all_notes, include_yesterday=True)
-            filter_stats = get_daily_report_filter_stats(all_notes)
-            # 日报的负面笔记不要求二次确认（因为日报需要及时推送）
-            _, negative_notes = filter_negative_for_period_report(filtered_notes, require_confirmed=False)
-        else:
-            # 周报/月报/年报：负面笔记必须是二次确认的
-            filtered_notes = all_notes  # 周期报告不按发布日期筛选，按采集时间
-            filter_stats = {'total_collected': len(all_notes)}
-            _, negative_notes = filter_negative_for_period_report(filtered_notes, require_confirmed=True)
-        
-        # 按发布时间分类
-        age_classification = classify_notes_by_age(all_notes)
-        
-        # 生成统计
-        total = len(filtered_notes)
-        # [Canonical WRAP-08] 情感/风险分桶统一；negative_count 仍取二次确认过滤后的 negative_notes(业务口径不重算)
-        import canonical_metrics as _cmA
-        _sA = _cmA.sentiment_count(filtered_notes); _rA = _cmA.risk_count(filtered_notes)
-        positive, neutral = _sA['positive'], _sA['neutral']
-        negative_count = len(negative_notes)
-        high_risk = _rA['high']
-        
-        return jsonify({
-            'ok': True,
-            'report_type': report_type,
-            'period': {'start': start, 'end': end},
-            'filter_stats': filter_stats,
-            'age_classification': {
-                'recent': len(age_classification['recent']),
-                'weekly': len(age_classification['weekly']),
-                'monthly': len(age_classification['monthly']),
-                'historical': len(age_classification['historical'])
-            },
-            'stats': {
-                'total': total,
-                'positive': positive,
-                'neutral': neutral,
-                'negative': negative_count,
-                'negative_confirmed_required': report_type != 'daily',
-                'high_risk': high_risk
-            },
-            'canonical': _canonical_report_metrics(report_type, date_str),
-            'notes': filtered_notes[:100],  # 最多返回100条
-            'negative_notes': negative_notes[:50],  # 二次确认的负面笔记
-            'historical_notes': age_classification['historical'][:50]  # 历史案例笔记
-        })
-    except Exception as e:
-        import traceback
-        return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
-
-@app.route('/api/report/v2/stats')
-def api_report_v2_stats():
-    """报告筛选统计API"""
-    try:
-        from report_filter import get_daily_report_filter_stats, classify_notes_by_age
-        
-        # 获取最近7天的笔记
-        from datetime import datetime, timedelta
-        end = datetime.now().strftime('%Y-%m-%d')
-        start = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-        all_notes = db.get_notes_by_date_range(start, end)
-        
-        daily_stats = get_daily_report_filter_stats(all_notes)
-        age_classification = classify_notes_by_age(all_notes)
-        
-        # 负面确认统计
-        negative_total = sum(1 for n in all_notes if n.get('sentiment') == 'negative')
-        negative_confirmed = sum(1 for n in all_notes if n.get('sentiment') == 'negative' and n.get('negative_confirmed') == 1)
-        negative_pending = sum(1 for n in all_notes if n.get('sentiment') == 'negative' and (n.get('negative_confirmed') == 0 or n.get('negative_confirmed') is None))
-        
-        return jsonify({
-            'ok': True,
-            'daily_filter': daily_stats,
-            'age_classification': {
-                'recent_2days': len(age_classification['recent']),
-                'within_7days': len(age_classification['weekly']),
-                'within_30days': len(age_classification['monthly']),
-                'historical_over_30days': len(age_classification['historical'])
-            },
-            'negative_confirmation': {
-                'total': negative_total,
-                'confirmed': negative_confirmed,
-                'pending': negative_pending,
-                'confirmation_rate': round(negative_confirmed / negative_total * 100, 1) if negative_total > 0 else 0
-            },
-            'logic_explanation': {
-                'daily_report': '只包含当日或前一日发布的笔记，过期笔记放入历史案例库',
-                'weekly_monthly_yearly': '负面笔记必须是二次确认的（negative_confirmed=1）才能进入报告',
-                'historical_notes': '发布时间超过7天的笔记标记为历史案例，不进入日报，但可在笔记库查看'
-            }
-        })
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
 @app.route('/api/notes/historical')
 def api_notes_historical_v2():
     """历史案例笔记API v2（过期笔记，发布时间超过7天）"""
@@ -2692,9 +2311,6 @@ def api_notes_historical_v2():
         })
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
-
-
-
 
 
 @app.route('/api/platform-health')
@@ -2962,60 +2578,6 @@ def api_notes_library_v571():
     
     return jsonify({'ok':True,'notes':notes,'total':total,'page':page,'per_page':per_page,'total_pages':(total+per_page-1)//per_page})
 
-@app.route('/api/report/verify')
-def api_report_verify_v571():
-    """周期报告核对：检查指定周期内的报告数据准确性"""
-    report_type=request.args.get('type','daily').strip()
-    date=request.args.get('date','').strip() or datetime.now().strftime('%Y-%m-%d')
-    
-    # 计算周期
-    if report_type=='daily':
-        start=end=date
-    elif report_type=='weekly':
-        d=datetime.strptime(date,'%Y-%m-%d')
-        start=(d-timedelta(days=d.weekday())).strftime('%Y-%m-%d')
-        end=(d+timedelta(days=6-d.weekday())).strftime('%Y-%m-%d')
-    elif report_type=='monthly':
-        d=datetime.strptime(date,'%Y-%m-%d')
-        start=d.replace(day=1).strftime('%Y-%m-%d')
-        if d.month==12:
-            end=d.replace(year=d.year+1,month=1,day=1)-timedelta(days=1)
-        else:
-            end=d.replace(month=d.month+1,day=1)-timedelta(days=1)
-        end=end.strftime('%Y-%m-%d')
-    else:
-        return jsonify({'ok':False,'error':'type仅支持daily/weekly/monthly'}),400
-    
-    with db.get_db() as conn:
-        # 按发布日期统计
-        published=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        # 按采集日期统计
-        collected=conn.execute("SELECT COUNT(*) FROM notes WHERE date(collected_at) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        # 负面笔记（已二次确认）
-        confirmed_negative=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND sentiment='negative' AND negative_confirmed=1",(start,end)).fetchone()[0]
-        # 待确认负面
-        pending_negative=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND sentiment='negative' AND negative_confirmed=0",(start,end)).fetchone()[0]
-        # 高风险
-        high_risk=conn.execute("SELECT COUNT(*) FROM notes WHERE date(publish_date) BETWEEN ? AND ? AND risk_level='high'",(start,end)).fetchone()[0]
-        # 事件数
-        try:
-            events=conn.execute("SELECT COUNT(*) FROM events WHERE date(first_seen) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        except: events=0
-    
-    return jsonify({
-        'ok':True,
-        'report_type':report_type,
-        'period_start':start,
-        'period_end':end,
-        'published_in_period':published,
-        'collected_in_period':collected,
-        'confirmed_negative':confirmed_negative,
-        'pending_negative':pending_negative,
-        'high_risk':high_risk,
-        'events':events,
-        'warning': '报告应基于发布日期统计，采集日期仅作参考' if published!=collected else None
-    })
-
 @app.route('/remote')
 def remote_access():
     """本地固定入口：自动跳转到当前Cloudflare隧道公网URL
@@ -3064,29 +2626,6 @@ def api_system_health():
     return jsonify({'ok':result.get('database')=='ok','health':result})
 
 # ===== v5.3.2 智能日报 API =====
-@app.route('/api/digest/today')
-def api_digest_today():
-    date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
-    digest = db.get_latest_digest(date_str)
-    if not digest:
-        # 尝试自动生成
-        try:
-            digest = daily_report.generate_daily_digest(date_str)
-        except Exception as e:
-            return jsonify({'ok':False,'error':str(e)}),500
-    return jsonify({'ok':True,'digest':digest})
-
-@app.route('/api/digest/generate', methods=['POST'])
-def api_digest_generate():
-    data = request.get_json(silent=True) or {}
-    date_str = data.get('date') or datetime.now().strftime('%Y-%m-%d')
-    try:
-        digest = daily_report.generate_daily_digest(date_str)
-        return jsonify({'ok':True,'digest':digest,'message':'日报生成完成'})
-    except Exception as e:
-        return jsonify({'ok':False,'error':str(e)}),500
-
-# ===== v5.3.2 AI过滤层 API =====
 @app.route('/api/ai-filter/stats')
 def api_ai_filter_stats():
     return jsonify({'ok':True,'stats':db.get_filter_stats()})
@@ -3316,7 +2855,6 @@ def _note_set_review(note_id, state, by='admin'):
         return {'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}, 500, None
     finally:
         conn.close()
-
 
 
 @app.route('/api/negative/confirm', methods=['POST'])
@@ -3562,255 +3100,6 @@ def api_engineering_metrics():
         return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
 # ===== v5.6.4 报告导出 API（支持Word/Excel/CSV + 精确时间维度） =====
-@app.route('/api/v2/report/export')
-@app.route('/api/report/export')
-def api_report_export():
-    report_type = request.args.get('type', 'daily')
-    date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
-    fmt = request.args.get('format', 'xlsx').lower()
-    if report_type not in ('daily', 'weekly', 'monthly', 'yearly'):
-        return jsonify({'ok': False, 'error': 'type 必须是 daily/weekly/monthly/yearly'}), 400
-    if fmt not in ('xlsx', 'docx', 'csv'):
-        return jsonify({'ok': False, 'error': 'format 仅支持 xlsx/docx/csv'}), 400
-    # 精确时间维度计算
-    now = datetime.now()
-    ref_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else now
-    if report_type == 'daily':
-        start = end = ref_date.strftime('%Y-%m-%d')
-        period_label = ref_date.strftime('%Y.%m.%d')
-    elif report_type == 'weekly':
-        # 自然周：周一到周日
-        week_start = ref_date - timedelta(days=ref_date.weekday())
-        week_end = week_start + timedelta(days=6)
-        start = week_start.strftime('%Y-%m-%d')
-        end = week_end.strftime('%Y-%m-%d')
-        period_label = f'{week_start.strftime("%Y.%m.%d")} – {week_end.strftime("%Y.%m.%d")}'
-    elif report_type == 'monthly':
-        # 自然月：1号到月末
-        month_start = ref_date.replace(day=1)
-        if month_start.month == 12:
-            next_month = month_start.replace(year=month_start.year+1, month=1)
-        else:
-            next_month = month_start.replace(month=month_start.month+1)
-        month_end = next_month - timedelta(days=1)
-        start = month_start.strftime('%Y-%m-%d')
-        end = month_end.strftime('%Y-%m-%d')
-        period_label = f'{month_start.strftime("%Y.%m.%d")} – {month_end.strftime("%Y.%m.%d")}'
-    elif report_type == 'yearly':
-        # 自然年：1.1到12.31
-        year_start = ref_date.replace(month=1, day=1)
-        year_end = ref_date.replace(month=12, day=31)
-        start = year_start.strftime('%Y-%m-%d')
-        end = year_end.strftime('%Y-%m-%d')
-        period_label = f'{year_start.strftime("%Y.%m.%d")} – {year_end.strftime("%Y.%m.%d")}'
-    # 生成报告数据
-    notes = db.get_notes_by_date_range(start, end)
-    stats = db.get_stats_by_date_range(start, end) or {}
-    category_stats = {}
-    category_order = ['零售品牌', '餐饮', '商场服务', '活动/展览', '环境/设施', '安全/突发事件', '其他']
-    for n in notes:
-        cat = _classify_category(n)
-        if cat not in category_stats:
-            category_stats[cat] = {'total': 0, 'negative': 0, 'positive': 0, 'engagement': 0}
-        category_stats[cat]['total'] += 1
-        if n.get('sentiment') == 'negative': category_stats[cat]['negative'] += 1
-        elif n.get('sentiment') == 'positive': category_stats[cat]['positive'] += 1
-        category_stats[cat]['engagement'] += int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3
-    alert_level, alert_desc = _calc_alert_level(stats, notes)
-    total = stats.get('total', len(notes))
-    negative = stats.get('negative', sum(1 for n in notes if n.get('sentiment')=='negative'))
-    positive = stats.get('positive', sum(1 for n in notes if n.get('sentiment')=='positive'))
-    max_engage = max([int(n.get('likes',0) or 0)+int(n.get('comments',0) or 0)*3 for n in notes], default=0)
-    report_title = {'daily':'daily','weekly':'weekly','monthly':'monthly','yearly':'yearly'}[report_type]
-    safe_name = re.sub(r'[^0-9A-Za-z_-]+','_',f'Taikoo_{report_title}_{start}')[:80]
-    # 确保文件名完全ASCII
-    from urllib.parse import quote
-    ascii_filename = safe_name
-    # 按格式导出
-    if fmt == 'csv':
-        csv_content, _ = export_report_to_csv(report_type, date_str)
-        from flask import Response
-        resp = Response(csv_content, mimetype='text/csv; charset=utf-8-sig')
-        resp.headers['Content-Disposition'] = f'attachment; filename="{ascii_filename}.csv"'
-        return resp
-    elif fmt == 'xlsx':
-        try:
-            import openpyxl
-            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            ws.title = report_title
-            # 样式
-            title_font = Font(name='微软雅黑', size=16, bold=True, color='FFFFFF')
-            header_font = Font(name='微软雅黑', size=11, bold=True, color='FFFFFF')
-            normal_font = Font(name='微软雅黑', size=10)
-            title_fill = PatternFill(start_color='1a1a2e', end_color='1a1a2e', fill_type='solid')
-            header_fill = PatternFill(start_color='2563eb', end_color='2563eb', fill_type='solid')
-            center = Alignment(horizontal='center', vertical='center', wrap_text=True)
-            left = Alignment(horizontal='left', vertical='center', wrap_text=True)
-            thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-            row = 1
-            # 标题
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = f'【广州太古汇{report_title}】'
-            ws[f'A{row}'].font = title_font
-            ws[f'A{row}'].fill = title_fill
-            ws[f'A{row}'].alignment = center
-            ws.row_dimensions[row].height = 35
-            row += 1
-            # 基本信息
-            info = [('汇报周期', period_label), ('汇报人', '舆情监测系统'), ('舆情等级', f'{alert_level} — {alert_desc}')]
-            for k, v in info:
-                ws[f'A{row}'] = k; ws[f'A{row}'].font = Font(name='微软雅黑', size=10, bold=True)
-                ws.merge_cells(f'B{row}:F{row}'); ws[f'B{row}'] = v; ws[f'B{row}'].font = normal_font
-                row += 1
-            row += 1
-            # 1. 核心结论
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '1. 核心结论'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill; ws[f'A{row}'].alignment = left
-            row += 1
-            core = f'本期共监测小红书舆情{total}条，负面{negative}条，主要集中在【{max(category_stats, key=lambda k: category_stats[k]["total"]) if category_stats else "综合"}】，最高互动{max_engage}，{"已出现扩散" if negative > 5 else "暂无扩散"}。'
-            ws.merge_cells(f'A{row}:F{row}'); ws[f'A{row}'] = core; ws[f'A{row}'].font = normal_font; ws[f'A{row}'].alignment = left
-            ws.row_dimensions[row].height = 40
-            row += 2
-            # 2. 数据概览
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '2. 数据概览'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill
-            row += 1
-            data_headers = ['指标', '本期', '环比', '指标', '本期', '环比']
-            for c, h in enumerate(data_headers, 1):
-                cell = ws.cell(row=row, column=c, value=h)
-                cell.font = Font(name='微软雅黑', size=10, bold=True); cell.alignment = center; cell.border = thin_border
-            row += 1
-            data_rows = [
-                ('总提及量', total, '—', '负面量', negative, '—'),
-                ('负面占比', f'{round(negative/total*100,1) if total else 0}%', '—', '最高单条互动', max_engage, '—'),
-                ('正面量', positive, '—', '有效舆情', total, '—'),
-            ]
-            for dr in data_rows:
-                for c, v in enumerate(dr, 1):
-                    cell = ws.cell(row=row, column=c, value=v)
-                    cell.font = normal_font; cell.alignment = center; cell.border = thin_border
-                row += 1
-            row += 1
-            # 3. 分业态舆情分布
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '3. 分业态舆情分布'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill
-            row += 1
-            cat_headers = ['业态/模块', '提及量', '负面量', '正面量', '互动量', '等级']
-            for c, h in enumerate(cat_headers, 1):
-                cell = ws.cell(row=row, column=c, value=h)
-                cell.font = Font(name='微软雅黑', size=10, bold=True); cell.alignment = center; cell.border = thin_border
-            row += 1
-            for cat in category_order:
-                if cat in category_stats:
-                    cs = category_stats[cat]
-                    level = '🔴' if cs['negative'] > 3 else ('🟡' if cs['negative'] > 0 else '🟢')
-                    vals = [cat, cs['total'], cs['negative'], cs['positive'], cs['engagement'], level]
-                    for c, v in enumerate(vals, 1):
-                        cell = ws.cell(row=row, column=c, value=v)
-                        cell.font = normal_font; cell.alignment = center; cell.border = thin_border
-                    row += 1
-            row += 1
-            # 4. 重点笔记清单
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '4. 重点笔记清单'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill
-            row += 1
-            note_headers = ['序号', '标题', '作者', '发布时间', '互动量', '情感']
-            for c, h in enumerate(note_headers, 1):
-                cell = ws.cell(row=row, column=c, value=h)
-                cell.font = Font(name='微软雅黑', size=10, bold=True); cell.alignment = center; cell.border = thin_border
-            row += 1
-            for i, n in enumerate(notes[:20], 1):
-                engage = int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3
-                vals = [i, (n.get('title') or '无标题')[:40], n.get('author_nickname') or '未知', n.get('publish_date') or '—', engage, n.get('sentiment') or '中性']
-                for c, v in enumerate(vals, 1):
-                    cell = ws.cell(row=row, column=c, value=v)
-                    cell.font = normal_font; cell.alignment = center if c != 2 else left; cell.border = thin_border
-                row += 1
-            # 列宽
-            ws.column_dimensions['A'].width = 18
-            ws.column_dimensions['B'].width = 35
-            ws.column_dimensions['C'].width = 15
-            ws.column_dimensions['D'].width = 15
-            ws.column_dimensions['E'].width = 12
-            ws.column_dimensions['F'].width = 10
-            # 使用BytesIO在内存中创建文件，避免磁盘IO问题
-            output = io.BytesIO()
-            wb.save(output)
-            output.seek(0)
-            file_data = output.getvalue()
-            resp = Response(file_data, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            resp.headers['Content-Disposition'] = f'attachment; filename="{ascii_filename}.xlsx"'
-            resp.headers['Content-Length'] = str(len(file_data))
-            return resp
-        except Exception as exc:
-            import traceback
-            tb = traceback.format_exc()
-            return jsonify({'ok': False, 'error': 'Excel导出失败：' + str(exc), 'traceback': tb}), 500
-    elif fmt == 'docx':
-        try:
-            from docx import Document
-            from docx.shared import Pt, Inches, RGBColor
-            from docx.enum.text import WD_ALIGN_PARAGRAPH
-            doc = Document()
-            # 标题
-            title = doc.add_heading(f'广州太古汇{report_title}', 0)
-            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            # 基本信息
-            doc.add_paragraph(f'汇报周期：{period_label}')
-            doc.add_paragraph(f'汇报人：舆情监测系统')
-            doc.add_paragraph(f'舆情等级：{alert_level} — {alert_desc}')
-            doc.add_paragraph()
-            # 1. 核心结论
-            doc.add_heading('1. 核心结论', level=1)
-            core = f'本期共监测小红书舆情{total}条，负面{negative}条，主要集中在【{max(category_stats, key=lambda k: category_stats[k]["total"]) if category_stats else "综合"}】，最高互动{max_engage}，{"已出现扩散" if negative > 5 else "暂无扩散"}。'
-            doc.add_paragraph(core)
-            # 2. 数据概览
-            doc.add_heading('2. 数据概览', level=1)
-            table = doc.add_table(rows=1, cols=4)
-            table.style = 'Table Grid'
-            hdr = table.rows[0].cells
-            hdr[0].text = '指标'; hdr[1].text = '本期'; hdr[2].text = '指标'; hdr[3].text = '本期'
-            data_pairs = [('总提及量', str(total), '负面量', str(negative)), ('负面占比', f'{round(negative/total*100,1) if total else 0}%', '最高互动', str(max_engage)), ('正面量', str(positive), '有效舆情', str(total))]
-            for dp in data_pairs:
-                row = table.add_row().cells
-                for i, v in enumerate(dp): row[i].text = v
-            # 3. 分业态分布
-            doc.add_heading('3. 分业态舆情分布', level=1)
-            table2 = doc.add_table(rows=1, cols=5)
-            table2.style = 'Table Grid'
-            hdr2 = table2.rows[0].cells
-            for i, h in enumerate(['业态', '提及量', '负面量', '正面量', '互动量']): hdr2[i].text = h
-            for cat in category_order:
-                if cat in category_stats:
-                    cs = category_stats[cat]
-                    row = table2.add_row().cells
-                    row[0].text = cat; row[1].text = str(cs['total']); row[2].text = str(cs['negative']); row[3].text = str(cs['positive']); row[4].text = str(cs['engagement'])
-            # 4. 重点笔记
-            doc.add_heading('4. 重点笔记清单', level=1)
-            for i, n in enumerate(notes[:15], 1):
-                engage = int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3
-                p = doc.add_paragraph()
-                p.add_run(f'{i}. {n.get("title") or "无标题"}').bold = True
-                doc.add_paragraph(f'   作者：{n.get("author_nickname") or "未知"} | 发布：{n.get("publish_date") or "—"} | 互动：{engage} | 情感：{n.get("sentiment") or "中性"}')
-            # 使用BytesIO在内存中创建文件
-            output = io.BytesIO()
-            doc.save(output)
-            output.seek(0)
-            file_data = output.getvalue()
-            resp = Response(file_data, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-            resp.headers['Content-Disposition'] = f'attachment; filename="{ascii_filename}.docx"'
-            resp.headers['Content-Length'] = str(len(file_data))
-            return resp
-        except Exception as exc:
-            return jsonify({'ok': False, 'error': 'Word导出失败：' + str(exc)}), 500
-
-# ===== v5.4 系统配置 API =====
 @app.route('/api/system/config')
 def api_system_config():
     return jsonify({
@@ -4507,53 +3796,6 @@ def _weekly_scheduler():
         except Exception as e:
             print('[Scheduler] 周报定时任务错误:', e)
         time.sleep(60)
-
-@app.route('/api/report/special/export', methods=['POST'])
-def api_special_report_export():
-    data=request.get_json(silent=True) or {}
-    report=data.get('report') or {}
-    fmt=str(data.get('format','docx')).lower()
-    if fmt not in ('docx','pdf','html'): return jsonify({'ok':False,'error':'format仅支持docx/pdf/html'}),400
-    title=str(report.get('event_name') or report.get('title') or '广州太古汇舆情专报')
-    safe=re.sub(r'[^0-9A-Za-z\u4e00-\u9fff_-]+','_',title)[:80]
-    sections=[('一、事件概述',report.get('event_overview','')),('二、传播路径',report.get('spread_path','')),
-              ('三、案例对标','\n'.join(f"{c.get('id')}｜{c.get('title')}：{c.get('taikoo_insight','')}" for c in report.get('matched_cases',[]))),
-              ('四、toC影响',report.get('toc_detail','')),('五、toB影响',report.get('tob_detail','')),
-              ('六、综合评级',report.get('comprehensive_level') or report.get('level','')),
-              ('七、应对策略','\n'.join(map(str,report.get('strategies',[])))),
-              ('八、风险预警','\n'.join(map(str,report.get('risk_warnings',[]))))]
-    if fmt=='html':
-        h='<html><head><meta charset="utf-8"><title>'+title+'</title></head><body><h1>'+title+'</h1>'
-        for a,b in sections: h+=f'<h2>{a}</h2><div>{str(b).replace(chr(10),"<br>")}</div>'
-        h+='</body></html>'
-        path=Path(tempfile.gettempdir())/(safe+'.html'); path.write_text(h,encoding='utf-8')
-        return send_file(path,as_attachment=True,download_name=path.name,mimetype='text/html')
-    if fmt=='docx':
-        try:
-            from docx import Document
-            doc=Document(); doc.add_heading(title,0)
-            for a,b in sections:
-                doc.add_heading(a,1)
-                for line in str(b).splitlines() or ['—']: doc.add_paragraph(line)
-            path=Path(tempfile.gettempdir())/(safe+'.docx'); doc.save(path)
-            return send_file(path,as_attachment=True,download_name=path.name,mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        except Exception as exc: return jsonify({'ok':False,'error':'DOCX导出依赖未安装：'+str(exc)}),503
-    try:
-        from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-        pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
-        path=Path(tempfile.gettempdir())/(safe+'.pdf'); styles=getSampleStyleSheet()
-        cn=ParagraphStyle('CN', parent=styles['Normal'], fontName='STSong-Light', fontSize=10, leading=16)
-        h1=ParagraphStyle('CNH1', parent=styles['Heading1'], fontName='STSong-Light', fontSize=15, leading=20)
-        story=[Paragraph(re.sub(r'([&<>])',lambda m:{'&':'&amp;','<':'&lt;','>':'&gt;'}[m.group(1)],title),ParagraphStyle('CNT',parent=styles['Title'],fontName='STSong-Light')),Spacer(1,12)]
-        for a,b in sections:
-            txt=str(b).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br/>')
-            story += [Paragraph(str(a),h1),Paragraph(txt or '—',cn),Spacer(1,8)]
-        SimpleDocTemplate(str(path)).build(story)
-        return send_file(path,as_attachment=True,download_name=path.name,mimetype='application/pdf')
-    except Exception as exc: return jsonify({'ok':False,'error':'PDF导出依赖未安装：'+str(exc)}),503
 
 @app.route('/api/special-report/check-trigger')
 def api_check_special_report_trigger():
@@ -5918,8 +5160,6 @@ def api_ai_resource_packs_per_call_execute():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
-
-
 # ============ API Key 管理（v4_workspace_keys 前端接入） ============
 @app.route('/api/v4/api-keys')
 def api_v4_api_keys_list():
@@ -6008,8 +5248,6 @@ def api_v4_api_keys_revoke():
         return jsonify({'ok': True, 'key_id': key_id, 'status': 'revoked'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
-
-
 
 
 # ============ 小红书系统内二维码登录（Auth Recovery） ============
@@ -6230,7 +5468,6 @@ def api_xhs_login_save():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
-
 # ============ Search-STD 搜索增强（案例库/知识库/RAG） ============
 @app.route('/api/search/enhance', methods=['POST'])
 def api_search_enhance():
@@ -6247,7 +5484,6 @@ def api_search_enhance():
         return jsonify(result)
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
-
 
 
 # ============ 学习采集 + 小红书优化 API ============
