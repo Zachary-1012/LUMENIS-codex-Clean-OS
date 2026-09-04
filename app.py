@@ -2302,8 +2302,8 @@ def api_brand_industry_stats_alias():
             total = conn.execute("SELECT COUNT(*) FROM brand_industry_monitor").fetchone()[0]
             industries = conn.execute("SELECT industry, COUNT(*) as cnt FROM brand_industry_monitor GROUP BY industry ORDER BY cnt DESC").fetchall()
             # 统计有负面/正面笔记的品牌数
-            neg_brands = conn.execute("SELECT COUNT(DISTINCT brand_name_cn) FROM brand_industry_monitor WHERE negative_count > 0").fetchone()[0]
-            pos_brands = conn.execute("SELECT COUNT(DISTINCT brand_name_cn) FROM brand_industry_monitor WHERE positive_count > 0").fetchone()[0]
+            neg_brands = conn.execute("SELECT COUNT(*) FROM brand_industry_monitor WHERE negative_count > 0").fetchone()[0]
+            pos_brands = conn.execute("SELECT COUNT(*) FROM brand_industry_monitor WHERE positive_count > 0").fetchone()[0]
             cat_count = len(industries)
         return jsonify({'ok': True, 'total': total, 'total_brands': total,
                         'negative': neg_brands, 'negative_brands': neg_brands,

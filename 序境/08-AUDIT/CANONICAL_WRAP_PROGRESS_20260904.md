@@ -19,5 +19,15 @@
 - [ ] 多端点 Reference Scan：/api/stats、/api/brand-stats、/api/brand-industry/stats 同源关系；evidence 两组；event-graph 两组
 - [ ] 两套报告引擎口径差异（export_report 与 report_export/report_engine 的 notes 过滤口径不同）登记 Reference Scan，只判同源/收敛，不在 WRAP 中改数字
 
+## 多端点 Reference Scan 结果（2026-09-04，已执行）
+三端点时间窗/口径不同，非同源冲突；数字差异均可归因：
+| 端点 | 关键数字 | 口径 | 结论 |
+|---|---|---|---|
+| `/api/stats` | total=672 / negative=56 / positive=317 / high_risk=23 | 默认时间窗全量笔记 | 独立取数（与 brand 无关） |
+| `/api/brand-industry/stats` | total=198 / negative_brands=12 / positive_brands=32 | **消费 brand_industry_monitor 预聚合表（=brand_stats_recompute=canonical WRAP-02 写入）** | ✅ 已间接走 Canonical 链路 |
+| `/api/brand-stats` | total_notes=235（近30天）/ total_brands=199 | 30 天窗口 | 不同时间窗，独立 |
+
+**发现的真实数据质量项**（非代码 bug）：`/api/brand-industry/stats` 用 `COUNT(DISTINCT brand_name_cn)` 计数负面/正面品牌，而 PRADA(id=11)、i.t(id=71) 的 `brand_name_cn=''`（缺中文名）→ 空字符串被 distinct 合并，导致 negative_brands=12 < recompute 按 id 口径的 13。**recompute(canonical) 的 13 是正确实体口径**；端点 distinct-cn 在缺中文名时低估。修复需补齐品牌中文名（业务数据，非改代码），已登记数据质量待办。
+
 ## Cross-Surface 一致性目标
 同一(时间/维度/过滤/权限)下：首页 = 表 = 图 = 日报/周报/报告 = 导出 = AI 答询，数字必须一致；差异回溯 Function/Metric/Dataset，禁止改展示层凑齐。
