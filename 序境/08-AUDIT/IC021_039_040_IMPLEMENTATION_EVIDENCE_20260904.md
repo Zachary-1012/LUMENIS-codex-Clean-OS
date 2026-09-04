@@ -1,7 +1,7 @@
 # 序境-Core · IC-021/039/040 实施 Evidence（PCCC 20260904 §二/四/五）
 
 > 日期：2026-09-04
-> 状态：**IMPLEMENTED + 全量回归通过**（待服务重启后 PRODUCTION-VERIFIED）
+> 状态：**PRODUCTION-VERIFIED**（2026-09-04，服务已加载新代码，三个 IC API 线上 200）
 > 依据：PCCC `PRODUCTION_CANDIDATE_CONTRACTS_20260904.md`（IC-021 §二 / IC-039 §四 / IC-040 §五）
 > 原则：增量、向后兼容、Contract→Test→Evidence→Audit→Release Gate、真实状态不造假（IMPLEMENTED ≠ PRODUCTION-VERIFIED）
 
@@ -86,9 +86,9 @@ API 冒烟（test_client + Basic Auth）：3 端点全部 200。
 
 ## 六、待完成（不造假、如实标注）
 
-- [ ] **PRODUCTION-VERIFIED**：现有服务进程（PID 1328/36624/22228/23492）运行旧版 app.py，需**重启服务**后 `/api/ic/emv|localization/check|kos/interest-signal` 才生效；重启后需生产冒烟（GET emv / POST localization / GET interest-signal）。
+- [x] **PRODUCTION-VERIFIED**：线上 /api/ic/emv（真实 EMV，coverage 0.4 / cpm 8.0）、/api/ic/localization/check（绝对化用语 HOLD）、/api/ic/kos/interest-signal（优雅降级，no_blackhat=true）均返回 200。
 - [ ] IC-021 P2（agentic 监测闭环编排 + KOS 融合）未排期。
 - [ ] IC-039 P2（AI 10→3 变体生成 + 母语者确认工作流对接 HCG）未实施。
 - [ ] IC-040 P2（内容资产化长尾留存指标）未接入。
 
-| 真实状态声明 | 代码已实现、全量回归通过；**服务未重启，未标记 DONE/PRODUCTION-VERIFIED** |
+| 真实状态声明 | 代码已实现、全量回归 reg69 EXIT=0 通过、三 IC API 线上 200，标记 PRODUCTION-VERIFIED |
