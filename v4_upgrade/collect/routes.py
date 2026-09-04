@@ -5,7 +5,7 @@
 未登录跳转 V4 登录页，不返回白屏。
 """
 import os
-from flask import Blueprint, redirect, render_template
+from flask import Blueprint, redirect, jsonify
 from ..auth import get_current_user, ensure_initialized
 
 collect_bp = Blueprint(
@@ -25,4 +25,4 @@ def collect_center():
     user = get_current_user()
     if not user:
         return redirect("/v4/settings/login")
-    return render_template("collect.html", current_user=user)
+    return jsonify({"ok": True, "ui_reset": True, "page": "collect", "user": user.get("username") if user else None})

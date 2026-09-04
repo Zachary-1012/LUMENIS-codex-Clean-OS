@@ -28,7 +28,7 @@ def v4_login_page():
     """V4 自带登录页（不鉴权）：账密 / 密钥 两种方式滑动切换。已登录则直接进设置页。"""
     if get_current_user():
         return redirect("/v4/settings/")
-    return render_template("login.html")
+    return jsonify({"ok": True, "ui_reset": True, "page": "login"})
 
 
 @settings_bp.route("/")
@@ -37,7 +37,7 @@ def settings_page():
     user = get_current_user()
     if not user:
         return redirect("/v4/settings/login")
-    return render_template("settings.html", current_user=user)
+    return jsonify({"ok": True, "ui_reset": True, "page": "settings", "user": user.get("username") if user else None})
 
 
 # ============ 账号管理 ============
