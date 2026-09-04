@@ -343,7 +343,7 @@ def test_connection(text):
     status=ai_status()
     if not status.get('enabled'):
         return {'enabled':False,'provider':'local_rule','model':status.get('model'),'message':'当前没有可调用的本地模型，系统仍可使用本地规则引擎。','reply':'本地规则引擎已就绪。'}
-    raw,provider,_=chat('你是广州太古汇舆情监测系统的本地AI测试助手。只回答一句简短中文。', text, level='low', use_cache=True, temperature=0.0, max_tokens=120)
+    raw,provider,_=chat('你是广州太古汇舆情监测系统的本地AI测试助手。只回答一句简短中文。', text, level='low', use_cache=True, temperature=0.0, max_tokens=120, pack_id='glm_4_5_air')
     if raw:
         return {'enabled':True,'provider':provider,'model':status.get('model'),'message':'AI接口连接正常。','reply':raw.strip()}
     return {'enabled':False,'provider':status.get('provider'),'model':status.get('model'),'message':'发现本地AI但调用失败，系统已自动回退本地规则。','reply':'本地规则引擎已接管。'}
