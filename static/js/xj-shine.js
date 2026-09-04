@@ -51,7 +51,7 @@
 
   var PANEL_SELECTOR = '.panel.glass-card, .panel, .glass-card, .metric-card, .home-card, ' +
     '.smart-card, .osai-module-card, .ev-stat-card, .case-card, .brand-card, .smart-center, ' +
-    '.report-card, .event-card';
+    '.report-card, .event-card, .sidenav, .content-area, .terminal, .filetree';
 
   function markAll() {
     document.querySelectorAll(PANEL_SELECTOR).forEach(function (el) {
