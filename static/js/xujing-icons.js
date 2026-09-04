@@ -91,7 +91,8 @@
       return '<path d="' + d + '"/>';
     }).join('');
     return '<svg class="xj-ic' + (cls ? ' ' + cls : '') + '" width="' + size + '" height="' + size +
-      '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
+      '" style="width:' + size + 'px;height:' + size + 'px;display:inline-block;flex:none;overflow:visible" ' +
+      'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
   }
 
   global.XJ_ICONS = { R: R, CAT: CAT, CH: CH, xicon: xicon };

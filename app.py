@@ -201,6 +201,14 @@ try:
 except Exception as _kos_e:
     print(f"[kos_routes] blueprint register failed: {_kos_e}")
 
+# 序境 · 已就绪契约 IC-020/028/047 API（告警配置+状态机 / 营销节点分级 / 免税KOS场景）
+try:
+    import ic_routes
+    ic_routes.register_ic_api(app)
+    print("[ic_routes] IC API registered: /api/ic/*")
+except Exception as _ic_e:
+    print(f"[ic_routes] blueprint register failed: {_ic_e}")
+
 # 序境 · 播客情报 API（实体图 + 确定性智能算法，独立于品牌舆情链路）
 try:
     import podcast_routes

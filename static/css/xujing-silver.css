@@ -193,3 +193,97 @@
 @media (prefers-reduced-motion: reduce) {
   .xj-card-silver::after { animation: none !important; opacity: 0 !important; }
 }
+
+/* =============================================================================
+ * v1.3 · 苹果银质感层（用户 2026-09：去纸感 · 真正质感 · Apple/特斯拉级）
+ *  - 底色：银灰细腻渐变（非死白/死灰），玻璃级层次
+ *  - 全局微光：微风拂过海面 —— 大面积柔银光斑缓慢漂移（46s 大周期，非接触不良式小光带）
+ *  - 卡片：磨砂玻璃（backdrop blur + 半透明 + 银边 + 顶部细银高光），银光呼吸
+ *  - icon：.xj-ic 保护（防全局 svg 规则压缩致比例错/显示不全）
+ *  - splash：整体放大、银灰玻璃、比例协调（芥子纳须弥居中哲学）
+ * ========================================================================== */
+
+/* ---- 1) 底色：银灰渐变（去纸感） ---- */
+body {
+  background:
+    radial-gradient(1200px 820px at 12% -8%, rgba(255,255,255,.95), transparent 62%),
+    radial-gradient(1000px 720px at 108% 18%, rgba(214,221,232,.6), transparent 56%),
+    radial-gradient(900px 640px at 50% 118%, rgba(226,230,238,.55), transparent 60%),
+    linear-gradient(162deg, #f8f9fb 0%, #f1f2f5 42%, #e8eaef 100%) !important;
+  background-attachment: fixed;
+}
+
+/* ---- 2) 全局微风拂海面微光层（大面积柔银光斑缓慢漂移） ---- */
+body::before {
+  content: ''; position: fixed; inset: -30%; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(38% 34% at 28% 30%, rgba(255,255,255,.95), rgba(226,231,240,.5) 45%, transparent 70%),
+    radial-gradient(30% 26% at 72% 62%, rgba(214,222,233,.6), transparent 65%),
+    radial-gradient(26% 30% at 55% 10%, rgba(244,247,250,.85), transparent 60%);
+  filter: blur(2px);
+  animation: xj-sea-breeze 46s ease-in-out infinite alternate;
+}
+@keyframes xj-sea-breeze {
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1); }
+  50%  { transform: translate3d(3%, 2%, 0) scale(1.06); }
+  100% { transform: translate3d(-1%, 3%, 0) scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none !important; }
+}
+
+/* ---- 3) 卡片：磨砂玻璃 + 银边 + 顶部细银高光 ---- */
+.card, .glass-card, .metric-card, .home-card, .osai-module-card, .panel, .smart-card, .ev-stat-card, .case-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.50)) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  backdrop-filter: blur(14px) saturate(1.35);
+  border: 1px solid rgba(255,255,255,.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 1px 2px rgba(20,30,50,.03),
+    0 8px 28px rgba(20,30,50,.05) !important;
+}
+
+/* ---- 4) 卡片微光：极淡银色呼吸（替代扫过感，避免接触不良感） ---- */
+.xj-card-silver::after {
+  inset: 0;
+  background: linear-gradient(160deg, rgba(255,255,255,0), rgba(255,255,255,.55) 30%, rgba(214,222,233,.4) 55%, rgba(255,255,255,0));
+  mix-blend-mode: normal;
+  animation: xj-silver-breathe 7s ease-in-out infinite;
+  opacity: .35;
+}
+@keyframes xj-silver-breathe {
+  0%, 100% { opacity: .16; }
+  50%      { opacity: .5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xj-card-silver::after { animation: none !important; opacity: .25 !important; }
+}
+
+/* ---- 5) icon 保护：防全局 svg 规则压缩导致比例错/显示不全 ---- */
+.xj-ic {
+  flex: none;
+  flex-shrink: 0;
+  vertical-align: middle;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* ---- 6) splash：银灰玻璃 + 放大 + 比例协调 ---- */
+.splash { background: linear-gradient(165deg, #f6f7f9 0%, #eef0f3 55%, #e6e9ee 100%); }
+.splash-content { max-width: 460px; padding: 36px 28px; }
+.splash-title {
+  font-size: 34px !important; letter-spacing: 4px; font-weight: 650;
+  color: #1f242b; margin: 0 0 8px 0 !important;
+}
+.splash-philosophy { font-size: 13px; letter-spacing: 3px; margin-bottom: 14px; color: #6b7686; }
+.splash-en { font-size: 12px; letter-spacing: 2px; margin: 0 0 10px 0; color: #84909c; }
+.splash-subtitle { font-size: 13px; color: #4a5560; margin: 0 0 26px 0; }
+.splash-status-card { padding: 6px 12px; gap: 6px; }
+.splash-status-icon { width: 18px !important; height: 18px !important; border-radius: 5px; }
+.splash-status-icon svg { width: 13px !important; height: 13px !important; }
+.splash-status-value { font-size: 12px !important; }
+.splash-progress { max-width: 260px; }
+.splash-progress-text { font-size: 11px; margin-top: 8px; }
+.splash-footer-product { font-size: 12px; }
+.splash-footer-version { font-size: 11px; }

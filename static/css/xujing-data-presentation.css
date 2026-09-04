@@ -36,8 +36,10 @@ table.data-table th.num, .data-table th.num {
 
 /* ---------- 2. 事件卡：内联散色 → 语义 Token ---------- */
 .event-card {
-  background: var(--xj-bg-elevated, #ffffff) !important;
-  border: 1px solid var(--xj-border, #e4e4e7) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.52)) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  backdrop-filter: blur(14px) saturate(1.35);
+  border: 1px solid rgba(255,255,255,.72) !important;
   border-radius: 10px !important;
   box-shadow: none !important;
 }
@@ -131,8 +133,10 @@ table.data-table th.num, .data-table th.num {
 
 /* ---------- 5. 指标卡：克制层级 ---------- */
 .metric-card {
-  background: var(--xj-bg-elevated, #ffffff) !important;
-  border: 1px solid var(--xj-border, #e4e4e7) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.52)) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  backdrop-filter: blur(14px) saturate(1.35);
+  border: 1px solid rgba(255,255,255,.72) !important;
   border-radius: 10px !important;
   box-shadow: none !important;
 }
@@ -180,3 +184,23 @@ table.data-table th.num, .data-table th.num {
 /* ============================================================
    收敛层结束 · 与 xujing-design-system.css 同源 Token
    ============================================================ */
+
+
+/* ============================================================
+   序境 · 微光银玻璃统一层（芥子纳须弥：浅银、半透明、克制）
+   归属：数据呈现收敛层（最后加载，覆盖历史皮肤白底/禁用 backdrop）
+   原则：同一套玻璃语法覆盖全部卡片面板，禁止各页面各自定义。
+   ============================================================ */
+.panel, .glass-card, .card, .metric-card, .home-card, .event-card,
+.osai-module-card, .smart-card, .ev-stat-card, .case-card, .report-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.52)) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.35) !important;
+  backdrop-filter: blur(14px) saturate(1.35) !important;
+  border: 1px solid rgba(255,255,255,.72) !important;
+  border-radius: 10px !important;
+}
+.panel:hover, .glass-card:hover, .card:hover, .metric-card:hover,
+.home-card:hover, .event-card:hover {
+  border-color: rgba(255,255,255,.9) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 22px rgba(20,30,50,.05) !important;
+}

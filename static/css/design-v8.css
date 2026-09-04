@@ -628,7 +628,7 @@ html, body {
 #page-overview article.glass-card:not(.metric-card) {
     display: flex !important;
     flex-direction: column !important;
-    background: var(--bg-primary, #ffffff) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,.80), rgba(255,255,255,.54)) !important;
     border: 1px solid var(--border, #e5e5ea) !important;
     border-radius: var(--radius-lg, 10px) !important;
     padding: 10px 12px !important;

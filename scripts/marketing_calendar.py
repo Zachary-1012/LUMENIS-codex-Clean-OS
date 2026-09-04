@@ -23,6 +23,42 @@ K_EMC = "电商大促"    # 618/双11 等
 K_INTL = "国际节点"   # 地球日/读书日等
 K_MARK = "营销节点"   # 开学季/跨年等
 
+# ===== IC-028 节点分级 + 传播周期（增量规则表，契约 §三；2026-09-04） =====
+# 分级 priority：core(核心大促/节日) / solar(节气) / emerging(新兴高增长)
+# 传播周期：lead_days(长线预热天数,0=短期即时) + burst(True=短期爆发型/False=长线温养型)
+_PRIORITY_OVERRIDES = {  # 按节点名覆盖（未命中走 kind 默认）
+    "618 大促": ("core", 14, True), "双11": ("core", 21, True), "双十二": ("core", 14, True),
+    "年货节": ("core", 14, True), "春节": ("core", 14, True), "中秋节": ("core", 10, True),
+    "七夕": ("core", 7, True), "情人节": ("core", 5, True), "母亲节": ("core", 5, True),
+    "父亲节": ("core", 5, True), "妇女节": ("core", 4, True), "520": ("core", 3, True),
+    "元旦": ("core", 4, True), "圣诞": ("core", 10, True),
+    "万圣节": ("emerging", 7, True), "二月二": ("emerging", 3, True), "世界小狗日": ("emerging", 3, True),
+    "开学季": ("emerging", 10, False), "暑期档": ("emerging", 14, False),
+}
+_KIND_DEFAULT_PRIORITY = {  # kind → (priority, lead_days, burst) 默认
+    K_EMC: ("core", 14, True),
+    K_FEST: ("core", 5, True),
+    K_SOLAR: ("solar", 3, False),
+    K_INTL: ("emerging", 3, False),
+    K_MARK: ("emerging", 7, False),
+}
+
+
+def _enrich(n):
+    """增量注入 IC-028 字段（priority/lead_days/burst），默认值兜底，向后兼容。"""
+    n = dict(n)  # 不修改原字典
+    if "priority" in n and "lead_days" in n and "burst" in n:
+        return n
+    key = n.get("name", "")
+    if key in _PRIORITY_OVERRIDES:
+        pr, lead, burst = _PRIORITY_OVERRIDES[key]
+    else:
+        pr, lead, burst = _KIND_DEFAULT_PRIORITY.get(n.get("kind", ""), ("emerging", 0, False))
+    n.setdefault("priority", pr)
+    n.setdefault("lead_days", lead)
+    n.setdefault("burst", burst)
+    return n
+
 # 月 → 节点列表：name/date(mm-dd)/kind/theme(情感主题)/cats(适合品类关键词)
 _NODES = {
     1: [
@@ -421,8 +457,8 @@ def _norm(cat):
 
 
 def nodes_for_month(month):
-    """返回某月（1-12）全部节点。"""
-    return list(_NODES.get(int(month), []))
+    """返回某月（1-12）全部节点（IC-028 注入 priority/lead_days/burst）。"""
+    return [_enrich(n) for n in _NODES.get(int(month), [])]
 
 
 def node_on(date_str):
@@ -436,7 +472,7 @@ def node_on(date_str):
         for nodes in _NODES.values():
             for n in nodes:
                 if n["date"] == d:
-                    hits.append(n)
+                    hits.append(_enrich(n))
         return hits
     except Exception:
         return []
@@ -461,13 +497,13 @@ def suggest_hotspot(date_str, category=""):
     matched, themes = [], []
     for n in nodes:
         if d and n["date"] == d:
-            matched.append(n)
+            matched.append(_enrich(n))
         elif alias and any(a in n["cats"] for a in alias):
-            matched.append(n)
+            matched.append(_enrich(n))
         if n["name"] in ("中秋节", "春节", "跨年", "双11", "618 大促"):
             themes.append(n["theme"])
     if not matched:
-        matched = nodes[:2]
+        matched = [_enrich(n) for n in nodes[:2]]
     themes += [n["theme"] for n in matched[:3]]
     themes = list(dict.fromkeys(themes))[:4]
     to = [_THEME_TO_TONALITY[t] for t in themes if t in _THEME_TO_TONALITY]

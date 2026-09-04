@@ -285,7 +285,7 @@ input, textarea, select { font-family: inherit; font-size: var(--xj-font-size-ba
 
 /* Card — 极轻阴影，细线边框，紧凑内边距 */
 .card, .glass-card, .metric-card, .home-card, .osai-module-card {
-  background: var(--xj-bg-elevated) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.80), rgba(255,255,255,.54)) !important;
   border: 1px solid var(--xj-border) !important;
   border-radius: var(--xj-radius-md) !important;
   box-shadow: var(--xj-shadow-sm) !important;
