@@ -474,14 +474,15 @@ def search_enhance(query, context='', max_results=5, model=None, level='medium')
             'max_tokens': 2000,
             'thinking': {'type': 'disabled'},
         }
-        req = urllib.request.Request(
+        import ai_channel
+        resp_bytes, _attempts = ai_channel.post_with_retry(
             base_url.rstrip('/') + '/chat/completions',
-            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
-            headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key},
-            method='POST',
+            json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+            {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key},
+            timeout=_to,
+            max_attempts=int(_env('AI_HTTP_MAX_RETRIES', '3') or 3),
         )
-        with urllib.request.urlopen(req, timeout=_to) as resp:
-            data = json.loads(resp.read().decode('utf-8', 'replace'))
+        data = json.loads(resp_bytes.decode('utf-8', 'replace'))
 
         # 记录 search-std 使用（100次增强搜索配额）
         try:
