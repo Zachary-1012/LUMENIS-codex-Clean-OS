@@ -93,29 +93,31 @@ class ZhihuAdapter(BasePlatformAdapter):
                 message=str(exc),
             )
 
+    def _delegate_v4(self, method: str, *args, **kwargs) -> CollectionResult:
+        try:
+            backend = self._load_backend()
+            fn = getattr(backend, method)
+            result = fn(*args, **kwargs)
+            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            items = self._v4_notes_to_items(result.notes)
+            return CollectionResult(
+                status=status, platform=self.platform, items=items,
+                raw_count=result.raw_count, new_count=len(items),
+                message=result.error or "",
+                metadata={"engine": f"v4_zhihu_{method}", "duration_s": result.duration_seconds},
+            )
+        except Exception as exc:
+            logger.exception("知乎主链路 %s 异常", method)
+            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, platform=self.platform, message=str(exc))
+
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
-        return CollectionResult(
-            status=CollectionStatus.COLLECT_ERROR,
-            platform=self.platform,
-            message="知乎 detail 待 v4 引擎补全后接入",
-            metadata={"content_id": content_id},
-        )
+        return self._delegate_v4("detail", content_id=content_id, content_type=kwargs.get("content_type", "answer"))
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
-        return CollectionResult(
-            status=CollectionStatus.COLLECT_ERROR,
-            platform=self.platform,
-            message="知乎 comments 待 v4 引擎补全后接入",
-            metadata={"content_id": content_id},
-        )
+        return self._delegate_v4("comments", content_id=content_id, content_type=kwargs.get("content_type", "answer"), max_comments=kwargs.get("max_comments", 20))
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
-        return CollectionResult(
-            status=CollectionStatus.COLLECT_ERROR,
-            platform=self.platform,
-            message="知乎 creator 待 v4 引擎补全后接入",
-            metadata={"creator_id": creator_id},
-        )
+        return self._delegate_v4("creator", user_id=creator_id)
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         try:

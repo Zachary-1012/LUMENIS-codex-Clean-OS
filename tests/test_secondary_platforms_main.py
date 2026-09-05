@@ -136,9 +136,14 @@ class TestZhihuMainAdapter:
         assert r.status == CollectionStatus.COLLECT_ERROR
         assert "引擎崩溃" in r.message
 
-    def test_creator_not_implemented(self):
+    @patch("platform_adapters.zhihu.ZhihuAdapter._load_backend")
+    def test_creator_delegates_v4(self, mock_load):
+        from v4_upgrade.adapters.base import AdapterResult
+        mock_load.return_value.creator.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         from platform_adapters.zhihu import ZhihuAdapter
-        assert ZhihuAdapter().creator("1").status == CollectionStatus.COLLECT_ERROR
+        r = ZhihuAdapter().creator("user123")
+        assert r.status == CollectionStatus.NO_NEW_DATA
+        mock_load.return_value.creator.assert_called_once_with(user_id="user123")
 
     def test_health_no_cookie_required(self):
         from platform_adapters.zhihu import ZhihuAdapter

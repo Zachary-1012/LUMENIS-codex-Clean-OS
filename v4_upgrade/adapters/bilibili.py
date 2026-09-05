@@ -153,3 +153,186 @@ class BilibiliAdapter(BaseAdapter):
             return datetime.fromtimestamp(int(ts), tz=timezone.utc).isoformat()
         except (ValueError, TypeError, OSError):
             return ""
+
+    # ── detail: 视频详情（B站 view API，补全搜索API缺失的点赞/评论/UP主mid）──
+    def detail(self, bvid: str, **kwargs) -> AdapterResult:
+        if not bvid or not str(bvid).strip():
+            return AdapterResult(success=False, error="bvid 为空")
+        try:
+            import json as _json, requests as _req
+            cookies = self._load_cookies()
+            if not cookies:
+                return AdapterResult(success=False, error="B站 cookie 不存在，无法获取详情")
+            resp = _req.get(
+                "https://api.bilibili.com/x/web-interface/view",
+                params={"bvid": str(bvid).strip()},
+                cookies=cookies,
+                headers=self._api_headers(),
+                timeout=15,
+            )
+            data = resp.json()
+            if data.get("code") != 0:
+                code = data.get("code")
+                msg = data.get("message", "详情获取失败")
+                if code == -101:
+                    return AdapterResult(success=False, error=f"B站 cookie 失效: {msg}")
+                if code in (-352, -509, 412):
+                    return AdapterResult(success=False, error=f"B站风控/频控: {msg}")
+                return AdapterResult(success=False, error=f"B站详情失败: {msg} (code={code})")
+            v = data.get("data", {}) or {}
+            stat = v.get("stat", {}) or {}
+            owner = v.get("owner", {}) or {}
+            note = self._make_note(
+                title=v.get("title", ""),
+                content=(v.get("desc") or "").strip(),
+                url=f"https://www.bilibili.com/video/{v.get('bvid', bvid)}",
+                author=owner.get("name", ""),
+                author_id=str(owner.get("mid", "")),
+                publish_date=self._ts_to_iso(v.get("pubdate")),
+                likes=int(stat.get("like", 0) or 0),
+                comments=int(stat.get("reply", 0) or 0),
+                collects=int(stat.get("favorite", 0) or 0),
+                shares=int(stat.get("share", 0) or 0),
+                cover=v.get("pic", ""),
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "bilibili_view_api",
+                    "aid": v.get("aid"),
+                    "bvid": v.get("bvid"),
+                    "view": stat.get("view"),
+                    "danmaku": stat.get("danmaku"),
+                    "coin": stat.get("coin"),
+                    "duration": v.get("duration"),
+                    "tname": v.get("tname"),
+                    "pubdate_ts": v.get("pubdate"),
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+        except Exception as exc:
+            logger.exception("B站详情采集异常")
+            return AdapterResult(success=False, error=f"B站详情异常: {exc}")
+
+    # ── comments: 视频评论（B站 reply API，只读）──
+    def comments(self, bvid: str, max_comments: int = 20, **kwargs) -> AdapterResult:
+        if not bvid or not str(bvid).strip():
+            return AdapterResult(success=False, error="bvid 为空")
+        try:
+            import requests as _req
+            cookies = self._load_cookies()
+            if not cookies:
+                return AdapterResult(success=False, error="B站 cookie 不存在，无法获取评论")
+            # 先取详情拿 aid（评论API需要oid=aid）
+            aid = kwargs.get("aid")
+            if not aid:
+                det = self.detail(bvid)
+                if det.success and det.notes:
+                    aid = det.notes[0].raw_data.get("aid")
+            if not aid:
+                return AdapterResult(success=False, error="无法获取 aid，评论需 aid 参数")
+            resp = _req.get(
+                "https://api.bilibili.com/x/v2/reply",
+                params={"type": 1, "oid": aid, "pn": 1, "ps": max_comments, "sort": 1},
+                cookies=cookies,
+                headers=self._api_headers(),
+                timeout=15,
+            )
+            data = resp.json()
+            if data.get("code") != 0:
+                return AdapterResult(success=False, error=f"B站评论失败: {data.get('message')} (code={data.get('code')})")
+            replies = (data.get("data", {}) or {}).get("replies", []) or []
+            notes = []
+            for r in replies[:max_comments]:
+                member = r.get("member", {}) or {}
+                content = r.get("content", {}) or {}
+                notes.append(self._make_note(
+                    title="",
+                    content=(content.get("message") or "").strip(),
+                    url=f"https://www.bilibili.com/video/{bvid}#reply{r.get('rpid')}",
+                    author=member.get("uname", ""),
+                    author_id=str(member.get("mid", "")),
+                    publish_date=self._ts_to_iso(r.get("ctime")),
+                    likes=int(r.get("like", 0) or 0),
+                    comments=0,
+                    collects=0,
+                    shares=0,
+                    cover="",
+                    source_platform=self.platform_name,
+                    raw_data={"engine": "bilibili_reply_api", "rpid": r.get("rpid"), "type": "comment"},
+                ))
+            return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+        except Exception as exc:
+            logger.exception("B站评论采集异常")
+            return AdapterResult(success=False, error=f"B站评论异常: {exc}")
+
+    # ── creator: UP主信息（B站 space API）──
+    def creator(self, mid: str, **kwargs) -> AdapterResult:
+        if not mid or not str(mid).strip():
+            return AdapterResult(success=False, error="mid 为空")
+        try:
+            import requests as _req
+            cookies = self._load_cookies()
+            if not cookies:
+                return AdapterResult(success=False, error="B站 cookie 不存在，无法获取UP主信息")
+            resp = _req.get(
+                "https://api.bilibili.com/x/space/acc/info",
+                params={"mid": str(mid).strip()},
+                cookies=cookies,
+                headers=self._api_headers(),
+                timeout=15,
+            )
+            data = resp.json()
+            if data.get("code") != 0:
+                return AdapterResult(success=False, error=f"B站UP主信息失败: {data.get('message')} (code={data.get('code')})")
+            u = data.get("data", {}) or {}
+            note = self._make_note(
+                title=u.get("name", ""),
+                content=(u.get("sign") or "").strip(),
+                url=f"https://space.bilibili.com/{u.get('mid', mid)}",
+                author=u.get("name", ""),
+                author_id=str(u.get("mid", "")),
+                publish_date="",
+                likes=0,
+                comments=0,
+                collects=0,
+                shares=0,
+                cover=u.get("face", ""),
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "bilibili_space_api",
+                    "mid": u.get("mid"),
+                    "level": u.get("level"),
+                    "sex": u.get("sex"),
+                    "silence": u.get("silence"),
+                    "vip_type": (u.get("vip") or {}).get("type"),
+                    "type": "creator",
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+        except Exception as exc:
+            logger.exception("B站UP主采集异常")
+            return AdapterResult(success=False, error=f"B站UP主异常: {exc}")
+
+    def _load_cookies(self):
+        """从 data/bilibili_cookies.json 读取 cookie dict；失败返回 None。"""
+        try:
+            import json as _json
+            from pathlib import Path
+            p = Path(__file__).parent.parent.parent / "data" / "bilibili_cookies.json"
+            if not p.exists():
+                return None
+            raw = _json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                return raw.get("cookies", raw)
+            if isinstance(raw, list):
+                return {c["name"]: c["value"] for c in raw if "name" in c}
+            return None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _api_headers():
+        return {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://www.bilibili.com/",
+            "Accept": "application/json, text/plain, */*",
+        }

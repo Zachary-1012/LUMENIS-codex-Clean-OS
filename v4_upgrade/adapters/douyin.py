@@ -288,3 +288,177 @@ class DouyinAdapter(BaseAdapter):
         elif unit == "亿":
             v *= 1e8
         return int(v)
+
+    # ── detail: 视频详情（浏览器打开视频页，拦截 aweme/detail 接口）──
+    def detail(self, aweme_id: str, **kwargs) -> AdapterResult:
+        if not aweme_id or not str(aweme_id).strip():
+            return AdapterResult(success=False, error="aweme_id 为空")
+        try:
+            return self._detail_browser(str(aweme_id).strip())
+        except Exception as e:
+            logger.exception("抖音详情采集异常")
+            return AdapterResult(success=False, error=f"抖音详情异常: {e}")
+
+    def _detail_browser(self, aweme_id) -> AdapterResult:
+        hb = HumanBrowser(port=self.CDP_PORT, launch_url="about:blank")
+        hb.connect()
+        inject_into_context(hb._context, "douyin")
+        detail_bags = []
+        page = None
+        try:
+            page = hb.new_page()
+            page.on("response", lambda resp: self._capture(resp, "aweme/detail", detail_bags))
+            page.goto(f"https://www.douyin.com/video/{aweme_id}", wait_until="domcontentloaded", timeout=30000)
+            hb.pause(2.0, 3.5)
+            for bag in detail_bags:
+                ai = (bag.get("aweme_detail") or bag.get("aweme") or {})
+                if not ai:
+                    continue
+                st = ai.get("statistics") or {}
+                au = ai.get("author") or {}
+                desc = re.sub(r"\s+", " ", (ai.get("desc") or "").strip())
+                note = self._make_note(
+                    title=desc[:80] or f"抖音 {aweme_id}",
+                    content=desc,
+                    url=f"https://www.douyin.com/video/{aweme_id}",
+                    author=(au.get("nickname") or "抖音用户").strip(),
+                    author_id=str(au.get("uid") or au.get("short_id") or ""),
+                    publish_date=self._ts_to_date(ai.get("create_time")),
+                    likes=self._to_int(st.get("digg_count")),
+                    comments=self._to_int(st.get("comment_count")),
+                    collects=self._to_int(st.get("collect_count")),
+                    shares=self._to_int(st.get("share_count")),
+                    cover="",
+                    source_platform=self.platform_name,
+                    raw_data={"engine": "douyin_detail_api", "aweme_id": aweme_id, "create_time": ai.get("create_time")},
+                )
+                return AdapterResult(success=True, notes=[note], raw_count=1)
+            return AdapterResult(success=False, error="抖音详情接口未返回数据（可能需登录或风控）")
+        finally:
+            if page:
+                try: page.close()
+                except Exception: pass
+            hb.close()
+
+    # ── comments: 视频评论（浏览器打开视频页，滚动加载，拦截 comment/list 接口）──
+    def comments(self, aweme_id: str, max_comments: int = 20, **kwargs) -> AdapterResult:
+        if not aweme_id or not str(aweme_id).strip():
+            return AdapterResult(success=False, error="aweme_id 为空")
+        try:
+            return self._comments_browser(str(aweme_id).strip(), max_comments)
+        except Exception as e:
+            logger.exception("抖音评论采集异常")
+            return AdapterResult(success=False, error=f"抖音评论异常: {e}")
+
+    def _comments_browser(self, aweme_id, max_comments) -> AdapterResult:
+        hb = HumanBrowser(port=self.CDP_PORT, launch_url="about:blank")
+        hb.connect()
+        inject_into_context(hb._context, "douyin")
+        cmt_bags = []
+        page = None
+        try:
+            page = hb.new_page()
+            page.on("response", lambda resp: self._capture(resp, "comment/list", cmt_bags))
+            page.goto(f"https://www.douyin.com/video/{aweme_id}", wait_until="domcontentloaded", timeout=30000)
+            hb.pause(2.0, 3.0)
+            for _ in range(3):
+                hb.human_scroll(page, total_px=600, rounds=1)
+                hb.pause(1.2, 2.0)
+                if sum(len(b.get("comments", [])) for b in cmt_bags) >= max_comments:
+                    break
+            notes, seen = [], set()
+            for bag in cmt_bags:
+                for c in bag.get("comments", []) or []:
+                    cid = str(c.get("cid") or c.get("id") or "")
+                    if not cid or cid in seen:
+                        continue
+                    seen.add(cid)
+                    user = c.get("user") or {}
+                    notes.append(self._make_note(
+                        title="",
+                        content=re.sub(r"\s+", " ", (c.get("text") or "").strip()),
+                        url=f"https://www.douyin.com/video/{aweme_id}#cmt{cid}",
+                        author=(user.get("nickname") or "抖音用户").strip(),
+                        author_id=str(user.get("uid") or user.get("short_id") or ""),
+                        publish_date=self._ts_to_date(c.get("create_time")),
+                        likes=self._to_int(c.get("digg_count")),
+                        comments=self._to_int(c.get("reply_comment_total")),
+                        source_platform=self.platform_name,
+                        raw_data={"engine": "douyin_comments_api", "cid": cid, "type": "comment"},
+                    ))
+                    if len(notes) >= max_comments:
+                        break
+                if len(notes) >= max_comments:
+                    break
+            return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+        finally:
+            if page:
+                try: page.close()
+                except Exception: pass
+            hb.close()
+
+    # ── creator: 用户主页（浏览器打开 user 页，拦截 user/profile 接口）──
+    def creator(self, sec_uid: str, **kwargs) -> AdapterResult:
+        if not sec_uid or not str(sec_uid).strip():
+            return AdapterResult(success=False, error="sec_uid 为空")
+        try:
+            return self._creator_browser(str(sec_uid).strip())
+        except Exception as e:
+            logger.exception("抖音用户采集异常")
+            return AdapterResult(success=False, error=f"抖音用户异常: {e}")
+
+    def _creator_browser(self, sec_uid) -> AdapterResult:
+        hb = HumanBrowser(port=self.CDP_PORT, launch_url="about:blank")
+        hb.connect()
+        inject_into_context(hb._context, "douyin")
+        profile_bags = []
+        page = None
+        try:
+            page = hb.new_page()
+            page.on("response", lambda resp: self._capture(resp, "user/profile", profile_bags))
+            page.goto(f"https://www.douyin.com/user/{sec_uid}", wait_until="domcontentloaded", timeout=30000)
+            hb.pause(2.5, 4.0)
+            for bag in profile_bags:
+                u = bag.get("user") or {}
+                if not u:
+                    continue
+                note = self._make_note(
+                    title=u.get("nickname", ""),
+                    content=(u.get("signature") or "").strip(),
+                    url=f"https://www.douyin.com/user/{sec_uid}",
+                    author=u.get("nickname", ""),
+                    author_id=str(u.get("uid") or u.get("short_id") or ""),
+                    publish_date="",
+                    likes=self._to_int(u.get("total_favorited")),
+                    comments=0,
+                    collects=0,
+                    shares=self._to_int(u.get("aweme_count")),
+                    cover="",
+                    source_platform=self.platform_name,
+                    raw_data={
+                        "engine": "douyin_user_profile_api",
+                        "sec_uid": sec_uid,
+                        "follower_count": u.get("follower_count"),
+                        "following_count": u.get("following_count"),
+                        "type": "creator",
+                    },
+                )
+                return AdapterResult(success=True, notes=[note], raw_count=1)
+            return AdapterResult(success=False, error="抖音用户主页接口未返回（可能需登录或风控）")
+        finally:
+            if page:
+                try: page.close()
+                except Exception: pass
+            hb.close()
+
+    @staticmethod
+    def _capture(resp, key, bags):
+        """CDP response 回调：拦截含 key 的 XHR/Fetch 响应并解析 JSON。"""
+        try:
+            if key not in resp.url:
+                return
+            if resp.request.resource_type not in ("xhr", "fetch"):
+                return
+            bags.append(resp.json())
+        except Exception:
+            pass

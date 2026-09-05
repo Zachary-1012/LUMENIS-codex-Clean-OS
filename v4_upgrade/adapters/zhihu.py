@@ -188,3 +188,105 @@ class ZhihuAdapter(BaseAdapter):
             return datetime.fromtimestamp(int(ts), tz=timezone.utc).isoformat()
         except (ValueError, TypeError, OSError):
             return ""
+
+    # ── detail: 内容详情（支持 answer/article/question 三类）──
+    def detail(self, content_id: str, content_type: str = "answer", **kwargs) -> AdapterResult:
+        if not content_id or not str(content_id).strip():
+            return AdapterResult(success=False, error="content_id 为空")
+        ctype = (content_type or "answer").strip().lower()
+        try:
+            if ctype == "answer":
+                url = f"https://www.zhihu.com/api/v4/answers/{content_id}"
+            elif ctype == "article":
+                url = f"https://www.zhihu.com/api/v4/articles/{content_id}"
+            elif ctype == "question":
+                url = f"https://www.zhihu.com/api/v4/questions/{content_id}"
+            else:
+                return AdapterResult(success=False, error=f"不支持的知乎内容类型: {ctype}")
+            resp = requests.get(url, headers=self._get_headers(),
+                                params={"include": "content,voteup_count,comment_count"}, timeout=15)
+            data = resp.json()
+            if isinstance(data, dict) and data.get("error"):
+                return AdapterResult(success=False, error=f"知乎详情失败: {data['error'].get('message', str(data['error']))}")
+            note = self._object_to_note({**data, "type": ctype})
+            if note:
+                return AdapterResult(success=True, notes=[note], raw_count=1)
+            return AdapterResult(success=True, notes=[], raw_count=0)
+        except Exception as exc:
+            logger.exception("知乎详情采集异常")
+            return AdapterResult(success=False, error=f"知乎详情异常: {exc}")
+
+    # ── comments: 内容评论（知乎 root_comments API，只读）──
+    def comments(self, content_id: str, content_type: str = "answer", max_comments: int = 20, **kwargs) -> AdapterResult:
+        if not content_id or not str(content_id).strip():
+            return AdapterResult(success=False, error="content_id 为空")
+        ctype = (content_type or "answer").strip().lower()
+        try:
+            resource = "answers" if ctype == "answer" else ("articles" if ctype == "article" else "questions")
+            url = f"https://www.zhihu.com/api/v4/{resource}/{content_id}/root_comments"
+            resp = requests.get(url, headers=self._get_headers(),
+                                params={"order": "normal", "limit": min(max_comments, 20)}, timeout=15)
+            data = resp.json()
+            if isinstance(data, dict) and data.get("error"):
+                return AdapterResult(success=False, error=f"知乎评论失败: {data['error'].get('message', str(data['error']))}")
+            items = data.get("data", []) if isinstance(data, dict) else []
+            notes = []
+            for c in items[:max_comments]:
+                author = c.get("author") or {}
+                notes.append(self._make_note(
+                    title="",
+                    content=self._clean_html(c.get("content", "")),
+                    url=f"https://www.zhihu.com/{resource[:-1]}/{content_id}#cmt{c.get('id')}",
+                    author=author.get("name", ""),
+                    author_id=str(author.get("id", "")),
+                    publish_date=self._ts_to_iso(c.get("created_time")),
+                    likes=int(c.get("vote_count", 0) or 0),
+                    comments=int(c.get("child_comment_count", 0) or 0),
+                    collects=0,
+                    shares=0,
+                    cover="",
+                    source_platform=self.platform_name,
+                    raw_data={"engine": "zhihu_comments_api", "cid": c.get("id"), "type": "comment"},
+                ))
+            return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+        except Exception as exc:
+            logger.exception("知乎评论采集异常")
+            return AdapterResult(success=False, error=f"知乎评论异常: {exc}")
+
+    # ── creator: 知乎用户信息（members API）──
+    def creator(self, user_id: str, **kwargs) -> AdapterResult:
+        if not user_id or not str(user_id).strip():
+            return AdapterResult(success=False, error="user_id 为空")
+        try:
+            url = f"https://www.zhihu.com/api/v4/members/{user_id}"
+            resp = requests.get(url, headers=self._get_headers(),
+                                params={"include": "allow_message,is_followed,is_following,is_org,is_blocking,employments,answer_count,follower_count,articles_count,gender,badge[?(type=best_answerer)].topics"},
+                                timeout=15)
+            data = resp.json()
+            if isinstance(data, dict) and data.get("error"):
+                return AdapterResult(success=False, error=f"知乎用户信息失败: {data['error'].get('message', str(data['error']))}")
+            note = self._make_note(
+                title=data.get("name", ""),
+                content=(data.get("headline") or "").strip(),
+                url=data.get("url") or f"https://www.zhihu.com/people/{data.get('id', user_id)}",
+                author=data.get("name", ""),
+                author_id=str(data.get("id", "")),
+                publish_date="",
+                likes=int(data.get("follower_count", 0) or 0),
+                comments=int(data.get("answer_count", 0) or 0),
+                collects=int(data.get("articles_count", 0) or 0),
+                shares=0,
+                cover=data.get("avatar_url", ""),
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "zhihu_members_api",
+                    "uid": data.get("id"),
+                    "gender": data.get("gender"),
+                    "is_org": data.get("is_org"),
+                    "type": "creator",
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+        except Exception as exc:
+            logger.exception("知乎用户采集异常")
+            return AdapterResult(success=False, error=f"知乎用户异常: {exc}")

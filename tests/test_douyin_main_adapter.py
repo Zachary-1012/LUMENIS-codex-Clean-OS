@@ -112,21 +112,32 @@ class TestDouyinMainAdapterSearch:
 
 class TestDouyinMainAdapterDetailCommentsCreator:
 
-    def test_detail_not_implemented(self):
+    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    def test_detail_delegates_v4(self, mock_load):
+        from v4_upgrade.adapters.base import AdapterResult
+        mock_load.return_value.detail.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         ad = DouyinAdapter()
-        result = ad.detail("123")
-        assert result.status == CollectionStatus.COLLECT_ERROR
-        assert "detail" in result.message
+        result = ad.detail("aweme123")
+        assert result.status == CollectionStatus.NO_NEW_DATA
+        mock_load.return_value.detail.assert_called_once_with(aweme_id="aweme123")
 
-    def test_comments_not_implemented(self):
+    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    def test_comments_delegates_v4(self, mock_load):
+        from v4_upgrade.adapters.base import AdapterResult
+        mock_load.return_value.comments.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         ad = DouyinAdapter()
-        result = ad.comments("123")
-        assert result.status == CollectionStatus.COLLECT_ERROR
+        result = ad.comments("aweme123")
+        assert result.status == CollectionStatus.NO_NEW_DATA
+        mock_load.return_value.comments.assert_called_once()
 
-    def test_creator_not_implemented(self):
+    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    def test_creator_delegates_v4(self, mock_load):
+        from v4_upgrade.adapters.base import AdapterResult
+        mock_load.return_value.creator.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         ad = DouyinAdapter()
-        result = ad.creator("456")
-        assert result.status == CollectionStatus.COLLECT_ERROR
+        result = ad.creator("sec123")
+        assert result.status == CollectionStatus.NO_NEW_DATA
+        mock_load.return_value.creator.assert_called_once_with(sec_uid="sec123")
 
 
 class TestDouyinMainAdapterHealth:

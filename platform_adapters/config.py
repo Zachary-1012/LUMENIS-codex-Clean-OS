@@ -2,9 +2,9 @@
 
 Current production release keeps only the existing XHS collector active through the
 adapter boundary. Secondary platforms (douyin/instagram/bilibili/weibo/zhihu) have
-v4 engines and main-chain thin wrappers, but remain disabled by default pending
-cookie/proxy verification and E2E validation. Other platforms are event-monitoring
-extension points only.
+complete v4 engines (search/detail/comments/creator) and main-chain thin wrappers,
+but remain disabled by default pending cookie/proxy verification and E2E validation.
+Other platforms are event-monitoring extension points only.
 """
 
 PLATFORM_CAPABILITIES = {
@@ -26,9 +26,9 @@ PLATFORM_CAPABILITIES = {
         "enabled": False,
         "priority": "secondary",
         "search": True,
-        "detail": False,
-        "comments": False,
-        "creator": False,
+        "detail": True,
+        "comments": True,
+        "creator": True,
         "session_cache": True,
         "proxy_pool": True,
         "enable_gate": "cookie_plus_browser_engine_verified",
@@ -39,9 +39,9 @@ PLATFORM_CAPABILITIES = {
         "enabled": False,
         "priority": "secondary",
         "search": True,
-        "detail": False,
-        "comments": False,
-        "creator": False,
+        "detail": True,
+        "comments": True,
+        "creator": True,
         "session_cache": True,
         "proxy_pool": False,
         "enable_gate": "cookie_plus_engine_verified",
@@ -51,9 +51,9 @@ PLATFORM_CAPABILITIES = {
         "enabled": False,
         "priority": "secondary",
         "search": True,
-        "detail": False,
-        "comments": False,
-        "creator": False,
+        "detail": True,
+        "comments": True,
+        "creator": True,
         "session_cache": True,
         "proxy_pool": False,
         "enable_gate": "cookie_plus_engine_verified",
@@ -64,9 +64,9 @@ PLATFORM_CAPABILITIES = {
         "enabled": False,
         "priority": "secondary",
         "search": True,
-        "detail": False,
-        "comments": False,
-        "creator": False,
+        "detail": True,
+        "comments": True,
+        "creator": True,
         "session_cache": False,
         "proxy_pool": False,
         "enable_gate": "engine_verified_no_cookie_required",

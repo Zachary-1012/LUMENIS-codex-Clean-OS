@@ -201,3 +201,137 @@ class WeiboAdapter(BaseAdapter):
                 continue
         # 微博有时返回 "刚刚" / "x分钟前" / "x小时前" / "昨天 HH:MM"
         return ""
+
+    # ── detail: 单条微博详情（statuses/show API）──
+    def detail(self, mid: str, **kwargs) -> AdapterResult:
+        if not mid or not str(mid).strip():
+            return AdapterResult(success=False, error="mid 为空")
+        try:
+            manager = self._get_manager()
+            cookie_string = manager.get_cookie_string()
+            if not cookie_string:
+                return AdapterResult(success=False, error="微博 cookie 为空")
+            resp = requests.get(
+                "https://m.weibo.cn/statuses/show",
+                params={"id": str(mid).strip()},
+                headers=self._get_headers(cookie_string),
+                timeout=15,
+            )
+            data = resp.json()
+            if data.get("ok") != 1:
+                msg = data.get("msg", "") or str(data)
+                if "登录" in msg or "login" in msg.lower():
+                    return AdapterResult(success=False, error=f"微博登录失效: {msg}")
+                return AdapterResult(success=False, error=f"微博详情失败: {msg}")
+            mblog = data.get("data") or {}
+            note = self._mblog_to_note(mblog)
+            if note:
+                return AdapterResult(success=True, notes=[note], raw_count=1)
+            return AdapterResult(success=True, notes=[], raw_count=0)
+        except Exception as exc:
+            logger.exception("微博详情采集异常")
+            return AdapterResult(success=False, error=f"微博详情异常: {exc}")
+
+    # ── comments: 微博评论（comments/show API，只读）──
+    def comments(self, mid: str, max_comments: int = 20, **kwargs) -> AdapterResult:
+        if not mid or not str(mid).strip():
+            return AdapterResult(success=False, error="mid 为空")
+        try:
+            manager = self._get_manager()
+            cookie_string = manager.get_cookie_string()
+            if not cookie_string:
+                return AdapterResult(success=False, error="微博 cookie 为空")
+            resp = requests.get(
+                "https://m.weibo.cn/api/comments/show",
+                params={"id": str(mid).strip(), "page": 1},
+                headers=self._get_headers(cookie_string),
+                timeout=15,
+            )
+            data = resp.json()
+            if data.get("ok") != 1:
+                return AdapterResult(success=False, error=f"微博评论失败: {data.get('msg', str(data))}")
+            hot = (data.get("data") or {}).get("hot_data") or []
+            normal = (data.get("data") or {}).get("data") or []
+            all_comments = (hot + normal)[:max_comments]
+            notes = []
+            for c in all_comments:
+                user = c.get("user") or {}
+                notes.append(self._make_note(
+                    title="",
+                    content=self._clean_html(c.get("text", "")),
+                    url=f"https://m.weibo.cn/status/{mid}#cmt{c.get('id')}",
+                    author=user.get("screen_name", ""),
+                    author_id=str(user.get("id", "")),
+                    publish_date=self._parse_weibo_date(c.get("created_at")),
+                    likes=int(c.get("like_count", 0) or 0),
+                    comments=0,
+                    collects=0,
+                    shares=0,
+                    cover="",
+                    source_platform=self.platform_name,
+                    raw_data={"engine": "weibo_comments_api", "cid": c.get("id"), "type": "comment"},
+                ))
+            return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+        except Exception as exc:
+            logger.exception("微博评论采集异常")
+            return AdapterResult(success=False, error=f"微博评论异常: {exc}")
+
+    # ── creator: 微博用户信息（container/getIndex INFO tab）──
+    def creator(self, uid: str, **kwargs) -> AdapterResult:
+        if not uid or not str(uid).strip():
+            return AdapterResult(success=False, error="uid 为空")
+        try:
+            manager = self._get_manager()
+            cookie_string = manager.get_cookie_string()
+            if not cookie_string:
+                return AdapterResult(success=False, error="微博 cookie 为空")
+            containerid = f"230283{uid}_-_INFO"
+            resp = requests.get(
+                self.SEARCH_URL,
+                params={"containerid": containerid},
+                headers=self._get_headers(cookie_string),
+                timeout=15,
+            )
+            data = resp.json()
+            if data.get("ok") != 1:
+                return AdapterResult(success=False, error=f"微博用户信息失败: {data.get('msg', str(data))}")
+            cards = (data.get("data") or {}).get("cards") or []
+            user_info = {}
+            for card in cards:
+                if card.get("card_type") == 11 and card.get("card_group"):
+                    for item in card["card_group"]:
+                        if item.get("card_type") == 10:
+                            user_info = item.get("user") or {}
+                            break
+                if card.get("card_type") == 10:
+                    user_info = card.get("user") or {}
+                    break
+            if not user_info:
+                return AdapterResult(success=True, notes=[], raw_count=0)
+            note = self._make_note(
+                title=user_info.get("screen_name", ""),
+                content=(user_info.get("description") or "").strip(),
+                url=f"https://m.weibo.cn/u/{user_info.get('id', uid)}",
+                author=user_info.get("screen_name", ""),
+                author_id=str(user_info.get("id", "")),
+                publish_date="",
+                likes=int(user_info.get("followers_count", 0) or 0),
+                comments=0,
+                collects=0,
+                shares=int(user_info.get("statuses_count", 0) or 0),
+                cover=user_info.get("avatar_hd", ""),
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "weibo_user_info_api",
+                    "uid": user_info.get("id"),
+                    "followers": user_info.get("followers_count"),
+                    "follow_count": user_info.get("follow_count"),
+                    "verified": user_info.get("verified"),
+                    "verified_reason": user_info.get("verified_reason"),
+                    "type": "creator",
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+        except Exception as exc:
+            logger.exception("微博用户采集异常")
+            return AdapterResult(success=False, error=f"微博用户异常: {exc}")
