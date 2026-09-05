@@ -315,3 +315,42 @@ def skill_sync():
             else "OSAI unavailable. Cannot verify sync."
         ),
     })
+
+@lumenis_bp.route("/api/intelligence/evidence")
+def api_intelligence_evidence():
+    """Intelligence Evidence — 读取 OSAI 持久化 Evidence Chain。
+
+    Cross-Core: 通过 subprocess 调用 OSAI evidence reader，
+    不直接访问 OSAI 内部模块。
+    """
+    import subprocess
+    import json
+    import os
+
+    osai_root = os.environ.get("OSAI_ROOT", r"D:\Zachary OS AI")
+    reader_script = os.path.join(osai_root, "scripts", "list_evidence.py")
+
+    # Fallback: direct file read if script not available
+    evidence_dir = os.path.join(osai_root, "evidence", "chains")
+    chains = []
+    try:
+        if os.path.exists(evidence_dir):
+            for fname in sorted(os.listdir(evidence_dir), reverse=True)[:50]:
+                if fname.endswith(".json"):
+                    fpath = os.path.join(evidence_dir, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8") as fh:
+                            chains.append(json.load(fh))
+                    except Exception:
+                        pass
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e), "count": 0, "chains": []}), 500
+
+    return jsonify({
+        "ok": True,
+        "count": len(chains),
+        "chains": chains,
+        "source": "osai_evidence_chains",
+        "persistence": "file_based"
+    })
+
