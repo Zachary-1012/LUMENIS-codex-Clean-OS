@@ -2,6 +2,8 @@
 Auth Recovery Center
 认证恢复中心：检测登录/Cookie异常 → 创建恢复任务 → 用户人工恢复 → 健康探活后解除熔断。
 不破解验证码、不绕过平台安全机制。
+
+设计约束：模块 import 不执行数据库 I/O；数据库访问统一走 database.DB_PATH。
 """
 from __future__ import annotations
 
@@ -68,10 +70,10 @@ class AuthRecoveryCenter:
         return cls._instance
 
     def __init__(self) -> None:
+        # 关键：import 时不做 DB I/O，避免静态审计/测试导入副作用。
         if self._initialized:
             return
         self._initialized = True
-        self._ensure_table()
 
     def _ensure_table(self) -> None:
         try:
@@ -101,6 +103,7 @@ class AuthRecoveryCenter:
             print(f"[AuthRecoveryCenter] 创建表失败: {e}")
 
     def _get_conn(self) -> sqlite3.Connection:
+        self._ensure_table()
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         return conn
@@ -208,4 +211,5 @@ class AuthRecoveryCenter:
                 'has_issue': bool(pending), 'ttl_seconds': self.TASK_TTL_SECONDS}
 
 
+# Lazy-safe object: construction no longer performs DB I/O.
 recovery_center = AuthRecoveryCenter()
