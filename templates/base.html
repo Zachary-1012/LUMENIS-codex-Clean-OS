@@ -24,7 +24,7 @@
     <div class="lm-header__actions">
       <span class="lm-status" id="lm-global-status">
         <span class="lm-dot lm-dot--unknown" id="lm-global-dot"></span>
-        <span id="lm-global-status-text">连接中…</span>
+        <span id="lm-global-status-text" data-i18n="status.connecting">连接中…</span>
       </span>
       <button class="lm-btn lm-btn--icon" id="lm-theme-toggle" aria-label="切换主题"></button>
     </div>
@@ -33,80 +33,80 @@
   <!-- ============ Sidebar（Regular Glass 浮层 2，左导航） ============ -->
   <nav class="lm-sidebar" id="lm-sidebar" aria-label="主导航">
     <div class="lm-nav-group">
-      <div class="lm-nav-group__label">Home</div>
+      <div class="lm-nav-group__label" data-i18n="nav.home">Home</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='home' }}" href="{{ home_url|default('/lumenis/') }}">
-        <span data-icon="home"></span><span class="lm-nav-item__label">Command Home</span>
+        <span data-icon="home"></span><span class="lm-nav-item__label" data-i18n="nav.home">Command Home</span>
       </a>
     </div>
 
     <div class="lm-nav-group">
-      <div class="lm-nav-group__label">Intelligence</div>
+      <div class="lm-nav-group__label" data-i18n="nav.intelligence">Intelligence</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='ai' }}" href="{{ url_for('lumenis.intelligence_workspace') }}">
-        <span data-icon="intelligence"></span><span class="lm-nav-item__label">Workspace</span>
+        <span data-icon="intelligence"></span><span class="lm-nav-item__label" data-i18n="nav.workspace">Workspace</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='agents' }}" href="{{ url_for('lumenis.agent_center') }}">
-        <span data-icon="agent"></span><span class="lm-nav-item__label">Agents</span>
+        <span data-icon="agent"></span><span class="lm-nav-item__label" data-i18n="nav.agents">Agents</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='skills' }}" href="{{ url_for('lumenis.skill_hub') }}">
-        <span data-icon="skill"></span><span class="lm-nav-item__label">Skills</span>
+        <span data-icon="skill"></span><span class="lm-nav-item__label" data-i18n="nav.skills">Skills</span>
         <span class="lm-badge lm-nav-item__badge">S01-S12</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='models' }}" href="{{ url_for('lumenis.models') }}">
-        <span data-icon="learning"></span><span class="lm-nav-item__label">Models</span>
+        <span data-icon="learning"></span><span class="lm-nav-item__label" data-i18n="nav.models">Models</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='evidence' }}" href="{{ url_for('lumenis.evidence') }}">
-        <span data-icon="evidence"></span><span class="lm-nav-item__label">Evidence</span>
+        <span data-icon="evidence"></span><span class="lm-nav-item__label" data-i18n="nav.evidence">Evidence</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='evaluation' }}" href="{{ url_for('lumenis.evaluation_center') }}">
-        <span data-icon="evaluation"></span><span class="lm-nav-item__label">Evaluation</span>
+        <span data-icon="evaluation"></span><span class="lm-nav-item__label" data-i18n="nav.evaluation">Evaluation</span>
       </a>
     </div>
 
     <div class="lm-nav-group">
-      <div class="lm-nav-group__label">Production</div>
+      <div class="lm-nav-group__label" data-i18n="nav.production">Production</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='production' }}" href="{{ url_for('lumenis.production_overview') }}">
-        <span data-icon="production"></span><span class="lm-nav-item__label">Overview</span>
+        <span data-icon="production"></span><span class="lm-nav-item__label" data-i18n="nav.overview">Overview</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='monitoring' }}" href="{{ url_for('lumenis.monitoring') }}">
-        <span data-icon="risk"></span><span class="lm-nav-item__label">Monitoring</span>
+        <span data-icon="risk"></span><span class="lm-nav-item__label" data-i18n="nav.monitoring">Monitoring</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='cases' }}" href="{{ url_for('lumenis.cases') }}">
-        <span data-icon="content"></span><span class="lm-nav-item__label">Cases</span>
+        <span data-icon="content"></span><span class="lm-nav-item__label" data-i18n="nav.cases">Cases</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='opinion' }}" href="{{ url_for('lumenis.public_opinion') }}">
-        <span data-icon="content"></span><span class="lm-nav-item__label">Public Opinion</span>
+        <span data-icon="content"></span><span class="lm-nav-item__label" data-i18n="nav.opinion">Public Opinion</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='risk' }}" href="{{ url_for('lumenis.risk') }}">
-        <span data-icon="risk"></span><span class="lm-nav-item__label">Risk</span>
+        <span data-icon="risk"></span><span class="lm-nav-item__label" data-i18n="nav.risk">Risk</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='reports' }}" href="{{ url_for('lumenis.reports') }}">
-        <span data-icon="report"></span><span class="lm-nav-item__label">Reports</span>
+        <span data-icon="report"></span><span class="lm-nav-item__label" data-i18n="nav.reports">Reports</span>
       </a>
     </div>
 
     <div class="lm-nav-group">
-      <div class="lm-nav-group__label">Research</div>
+      <div class="lm-nav-group__label" data-i18n="nav.research">Research</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='research' }}" href="{{ url_for('lumenis.research_workspace') }}">
-        <span data-icon="research"></span><span class="lm-nav-item__label">Workspace</span>
+        <span data-icon="research"></span><span class="lm-nav-item__label" data-i18n="nav.workspace">Workspace</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='findings' }}" href="{{ url_for('lumenis.findings') }}">
-        <span data-icon="evidence"></span><span class="lm-nav-item__label">Findings</span>
+        <span data-icon="evidence"></span><span class="lm-nav-item__label" data-i18n="nav.findings">Findings</span>
       </a>
     </div>
 
     <div class="lm-nav-group">
-      <div class="lm-nav-group__label">Operations</div>
+      <div class="lm-nav-group__label" data-i18n="nav.operations">Operations</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='operations' }}" href="{{ url_for('lumenis.operations') }}">
-        <span data-icon="operations"></span><span class="lm-nav-item__label">System</span>
+        <span data-icon="operations"></span><span class="lm-nav-item__label" data-i18n="nav.system">System</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='runtime' }}" href="{{ url_for('lumenis.runtime') }}">
-        <span data-icon="learning"></span><span class="lm-nav-item__label">Runtime</span>
+        <span data-icon="learning"></span><span class="lm-nav-item__label" data-i18n="nav.runtime">Runtime</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='permissions' }}" href="{{ url_for('lumenis.permissions') }}">
-        <span data-icon="agent"></span><span class="lm-nav-item__label">Permissions</span>
+        <span data-icon="agent"></span><span class="lm-nav-item__label" data-i18n="nav.permissions">Permissions</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='repository' }}" href="{{ url_for('lumenis.repository') }}">
-        <span data-icon="skill"></span><span class="lm-nav-item__label">Repository</span>
+        <span data-icon="skill"></span><span class="lm-nav-item__label" data-i18n="nav.repository">Repository</span>
       </a>
     </div>
   </nav>
@@ -133,6 +133,49 @@
 <script src="{{ url_for('static', filename='js/lumenis-core.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-data.js') }}"></script>
 <script>
+  // ===== Global i18n (system-level language switch) =====
+  LUMENIS.i18n = {
+    dict: {
+      zh: {
+        'nav.home':'首页','nav.intelligence':'智能','nav.production':'生产','nav.research':'研究','nav.operations':'运维',
+        'nav.workspace':'工作台','nav.agents':'Agent','nav.skills':'Skills','nav.models':'模型','nav.evidence':'证据','nav.evaluation':'评估',
+        'nav.overview':'概览','nav.monitoring':'监控','nav.cases':'案例','nav.opinion':'舆情','nav.risk':'风险','nav.reports':'报告',
+        'nav.findings':'发现','nav.system':'系统','nav.runtime':'运行时','nav.permissions':'权限','nav.repository':'仓库',
+        'status.connecting':'连接中…','status.ok':'运行中','status.warning':'警告','status.critical':'异常','status.unknown':'未知',
+        'settings.language':'语言','settings.language_desc':'系统显示语言，影响所有页面','settings.lang_zh':'中文','settings.lang_en':'English','settings.lang_ko':'한국어'
+      },
+      en: {
+        'nav.home':'Home','nav.intelligence':'Intelligence','nav.production':'Production','nav.research':'Research','nav.operations':'Operations',
+        'nav.workspace':'Workspace','nav.agents':'Agents','nav.skills':'Skills','nav.models':'Models','nav.evidence':'Evidence','nav.evaluation':'Evaluation',
+        'nav.overview':'Overview','nav.monitoring':'Monitoring','nav.cases':'Cases','nav.opinion':'Public Opinion','nav.risk':'Risk','nav.reports':'Reports',
+        'nav.findings':'Findings','nav.system':'System','nav.runtime':'Runtime','nav.permissions':'Permissions','nav.repository':'Repository',
+        'status.connecting':'Connecting…','status.ok':'Online','status.warning':'Warning','status.critical':'Critical','status.unknown':'Unknown',
+        'settings.language':'Language','settings.language_desc':'System display language, affects all pages','settings.lang_zh':'中文','settings.lang_en':'English','settings.lang_ko':'한국어'
+      },
+      ko: {
+        'nav.home':'홈','nav.intelligence':'인텔리전스','nav.production':'프로덕션','nav.research':'리서치','nav.operations':'운영',
+        'nav.workspace':'워크스페이스','nav.agents':'에이전트','nav.skills':'스킬','nav.models':'모델','nav.evidence':'증거','nav.evaluation':'평가',
+        'nav.overview':'개요','nav.monitoring':'모니터링','nav.cases':'케이스','nav.opinion':'여론','nav.risk':'리스크','nav.reports':'보고서',
+        'nav.findings':'발견','nav.system':'시스템','nav.runtime':'런타임','nav.permissions':'권한','nav.repository':'리포지토리',
+        'status.connecting':'연결 중…','status.ok':'정상','status.warning':'경고','status.critical':'심각','status.unknown':'알 수 없음',
+        'settings.language':'언어','settings.language_desc':'시스템 표시 언어, 모든 페이지에 적용','settings.lang_zh':'中文','settings.lang_en':'English','settings.lang_ko':'한국어'
+      }
+    },
+    current:'zh',
+    setLang:function(lang){
+      if(!this.dict[lang]) lang='zh';
+      this.current=lang;
+      var d=this.dict[lang];
+      document.querySelectorAll('[data-i18n]').forEach(function(el){var k=el.getAttribute('data-i18n');if(d[k])el.textContent=d[k];});
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){var k=el.getAttribute('data-i18n-placeholder');if(d[k])el.placeholder=d[k];});
+      document.documentElement.lang=(lang==='zh'?'zh-CN':lang==='ko'?'ko-KR':'en-US');
+      try{localStorage.setItem('lumenis_lang',lang);}catch(e){}
+      if(typeof window.setLang==='function') window.setLang(lang);
+    },
+    init:function(){try{var s=localStorage.getItem('lumenis_lang');if(s&&this.dict[s])this.setLang(s);}catch(e){}}
+  };
+  LUMENIS.i18n.init();
+
   // 注入所有 data-icon 占位（线框图标，禁 emoji）
   document.querySelectorAll("[data-icon]").forEach(function (el) {
     el.innerHTML = licon(el.getAttribute("data-icon"), 24);

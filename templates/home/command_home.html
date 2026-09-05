@@ -3,17 +3,18 @@
 {% block page_title %}Home{% endblock %}
 
 {% block content %}
-<!-- ===== 前置页：芥子纳须弥 ===== -->
-<section style="max-width:720px;margin:0 auto;padding:48px 0 32px;text-align:center;">
-  <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--lm-text-tertiary);margin-bottom:16px;font-weight:500;">芥子纳须弥 · Complexity → Simplicity</div>
-  <h1 style="font-size:32px;font-weight:700;line-height:1.25;margin:0 0 8px;letter-spacing:-0.5px;">现在发生了什么，下一步做什么？</h1>
-  <p style="font-size:14px;color:var(--lm-text-secondary);margin:0 0 32px;">向序境提问或下达任务，系统将基于真实数据与证据链响应。</p>
+<!-- ===== 前置页：芥子纳须弥 · 三语 ===== -->
+<section style="max-width:760px;margin:0 auto;padding:48px 0 32px;text-align:center;">
+<div class="lm-eyebrow" data-i18n="eyebrow">芥子纳须弥 · Complexity → Simplicity</div>
+
+  <h1 class="lm-hero-title" data-i18n="title">复杂归于序，万象入一境</h1>
+  <p class="lm-hero-sub" data-i18n="subtitle">ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯</p>
 
   <!-- 大 pill 输入框 -->
   <div style="position:relative;max-width:640px;margin:0 auto;">
-    <div style="display:flex;align-items:center;background:var(--lm-surface);border:1px solid var(--lm-border);border-radius:9999px;padding:6px 6px 6px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.06);transition:border-color 0.2s,box-shadow 0.2s;" id="lm-cmd-wrap">
+    <div style="display:flex;align-items:center;background:var(--lm-surface);border:1px solid var(--lm-border);border-radius:9999px;padding:6px 6px 6px 20px;box-shadow:0 2px 16px rgba(0,0,0,0.07);transition:border-color 0.2s,box-shadow 0.2s;" id="lm-cmd-wrap">
       <span style="color:var(--lm-text-tertiary);font-size:18px;margin-right:12px;flex-shrink:0;">+</span>
-      <input type="text" id="lm-command-input" placeholder="输入任务、问题或指令…" style="flex:1;border:none;outline:none;background:transparent;font-size:15px;color:var(--lm-text);padding:10px 0;" aria-label="AI 指令输入">
+      <input type="text" id="lm-command-input" data-i18n-placeholder="input_placeholder" placeholder="输入任务、问题或指令…" style="flex:1;border:none;outline:none;background:transparent;font-size:15px;color:var(--lm-text);padding:10px 0;" aria-label="AI 指令输入">
       <button id="lm-command-send" style="width:36px;height:36px;border-radius:50%;background:var(--lm-text);color:var(--lm-bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.2s;" aria-label="发送">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       </button>
@@ -22,42 +23,42 @@
 
   <!-- 快捷操作 -->
   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
-    <button class="lm-quick-action" data-task="审计当前系统状态" style="padding:8px 16px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s;">系统审计</button>
-    <button class="lm-quick-action" data-task="运行采集任务" style="padding:8px 16px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s;">启动采集</button>
-    <button class="lm-quick-action" data-task="生成今日舆情报告" style="padding:8px 16px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s;">生成报告</button>
-    <button class="lm-quick-action" data-task="查看 Skill 能力" style="padding:8px 16px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s;">浏览 Skills</button>
+    <button class="lm-quick-action" data-task="审计当前系统状态" data-i18n="qa_audit">系统审计</button>
+    <button class="lm-quick-action" data-task="运行采集任务" data-i18n="qa_collect">启动采集</button>
+    <button class="lm-quick-action" data-task="生成今日舆情报告" data-i18n="qa_report">生成报告</button>
+    <button class="lm-quick-action" data-task="查看 Skill 能力" data-i18n="qa_skills">浏览 Skills</button>
   </div>
 
   <!-- 状态行 -->
   <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px;">
-    <span class="lm-badge"><span class="lm-dot lm-dot--success"></span>AI Ready</span>
+    <span class="lm-badge"><span class="lm-dot lm-dot--success"></span><span data-i18n="badge_ready">AI Ready</span></span>
     <span class="lm-badge" id="lm-provider-badge">Provider: zhipu / glm-4.5-air</span>
-    <span class="lm-badge">Evidence-backed</span>
+    <span class="lm-badge" data-i18n="badge_evidence">Evidence-backed</span>
   </div>
 </section>
 
-<!-- ===== 紧凑状态条（替代大卡片） ===== -->
+<!-- ===== 紧凑状态条 ===== -->
 <section style="max-width:960px;margin:0 auto;padding:24px 0;border-top:1px solid var(--lm-border);">
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;">
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;">System</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_system">System</div>
       <div style="font-size:20px;font-weight:600;" id="hm-system-status">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" id="hm-system-fresh">数据新鲜度 –</div>
+      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" id="hm-system-fresh" data-i18n="card_fresh">数据新鲜度 –</div>
     </div>
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;">Intelligence</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_intel">Intelligence</div>
       <div style="font-size:20px;font-weight:600;" id="hm-ai-tasks">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" id="hm-ai-pulse">进行中任务 –</div>
+      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_tasks">进行中任务 –</div>
     </div>
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;">Risks</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_risks">Risks</div>
       <div style="font-size:20px;font-weight:600;" id="hm-risk-count">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;">活跃风险</div>
+      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_active_risk">活跃风险</div>
     </div>
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;">Tasks</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_tasks_label">Tasks</div>
       <div style="font-size:20px;font-weight:600;" id="hm-task-count">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;">运行中</div>
+      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_running">运行中</div>
     </div>
   </div>
 
@@ -65,37 +66,58 @@
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
     <a href="/lumenis/intelligence/workspace" class="hm-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1h-1v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7H3v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/></svg>
-      Intelligence
+      <span data-i18n="nav_intel">Intelligence</span>
     </a>
     <a href="/lumenis/intelligence/skills" class="hm-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-      Skill Hub
+      <span data-i18n="nav_skills">Skill Hub</span>
     </a>
     <a href="/lumenis/production/overview" class="hm-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
-      Production
+      <span data-i18n="nav_prod">Production</span>
     </a>
     <a href="/lumenis/research/workspace" class="hm-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      Research
+      <span data-i18n="nav_research">Research</span>
     </a>
     <a href="/lumenis/operations" class="hm-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Operations
+      <span data-i18n="nav_ops">Operations</span>
     </a>
   </div>
 </section>
 
 <style>
+.lm-eyebrow { font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:var(--lm-text-tertiary);margin-bottom:20px;font-weight:500; }
+.lm-hero-title { font-size:34px;font-weight:700;line-height:1.3;margin:0 0 10px;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--lm-text) 0%,var(--lm-text-secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+.lm-hero-sub { font-size:14px;color:var(--lm-text-secondary);margin:0 0 32px;line-height:1.6; }
+.lm-lang-btn { padding:6px 14px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:12px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s;font-weight:500; }
+.lm-lang-btn:hover { border-color:var(--lm-accent);color:var(--lm-text); }
+.lm-lang-btn.active { background:var(--lm-text);color:var(--lm-bg);border-color:var(--lm-text); }
 .hm-nav-chip { display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:var(--lm-surface);border:1px solid var(--lm-border);text-decoration:none;color:var(--lm-text);font-size:13px;transition:all 0.2s; }
-.hm-nav-chip:hover { border-color:var(--lm-accent); }
-.lm-quick-action:hover { border-color:var(--lm-accent); color:var(--lm-text); }
-#lm-cmd-wrap:focus-within { border-color:var(--lm-accent); box-shadow:0 4px 20px rgba(0,0,0,0.1); }
+.hm-nav-chip:hover { border-color:var(--lm-accent);transform:translateY(-1px); }
+.lm-quick-action { padding:8px 16px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s; }
+.lm-quick-action:hover { border-color:var(--lm-accent);color:var(--lm-text); }
+#lm-cmd-wrap:focus-within { border-color:var(--lm-accent);box-shadow:0 4px 24px rgba(0,0,0,0.1); }
+@media (max-width:640px) {
+  .lm-hero-title { font-size:26px; }
+  .lm-hero-sub { font-size:13px; }
+}
 </style>
 {% endblock %}
 
 {% block scripts %}
 (function(){
+  // Extend global i18n with home-specific strings
+  var homeDict = {
+    zh: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'复杂归于序，万象入一境',subtitle:'ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯',input_placeholder:'输入任务、问题或指令…',qa_audit:'系统审计',qa_collect:'启动采集',qa_report:'生成报告',qa_skills:'浏览 Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_fresh:'数据新鲜度 –',card_intel:'Intelligence',card_tasks:'进行中任务 –',card_risks:'Risks',card_active_risk:'活跃风险',card_tasks_label:'Tasks',card_running:'运行中',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
+    en: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'Complexity into Order, All into One',subtitle:'ZBC Production Truth × OSAI Intelligence · Unified evidence chain, every step traceable',input_placeholder:'Enter a task, question, or command…',qa_audit:'System Audit',qa_collect:'Start Collection',qa_report:'Generate Report',qa_skills:'Browse Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_fresh:'Data freshness –',card_intel:'Intelligence',card_tasks:'Active tasks –',card_risks:'Risks',card_active_risk:'Active risks',card_tasks_label:'Tasks',card_running:'Running',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
+    ko: {eyebrow:'계자나수미 · Complexity → Simplicity',title:'복잡함을 질서로, 만상을 하나의 경계로',subtitle:'ZBC 생산 진실 × OSAI 지능 추론 · 통합 증거 체인, 모든 단계 추적 가능',input_placeholder:'작업, 질문 또는 명령을 입력하세요…',qa_audit:'시스템 감사',qa_collect:'수집 시작',qa_report:'보고서 생성',qa_skills:'스킬 탐색',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_fresh:'데이터 신선도 –',card_intel:'Intelligence',card_tasks:'진행 중 작업 –',card_risks:'Risks',card_active_risk:'활성 위험',card_tasks_label:'Tasks',card_running:'실행 중',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'}
+  };
+  for (var lang in homeDict) { if (LUMENIS.i18n.dict[lang]) Object.assign(LUMENIS.i18n.dict[lang], homeDict[lang]); }
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+
+  // Quick actions
   document.querySelectorAll('.lm-quick-action').forEach(function(btn){
     btn.addEventListener('click', function(){
       var input = document.getElementById('lm-command-input');
@@ -111,6 +133,8 @@
   }
   if(sendBtn) sendBtn.addEventListener('click', doSend);
   if(input) input.addEventListener('keydown', function(e){ if(e.key==='Enter') doSend(); });
+
+  // System health
   fetch('/api/system/health/summary').then(function(r){return r.json();}).then(function(d){
     if(!d) return;
     var map = {ok:'运行中',warning:'警告',critical:'异常'};
@@ -121,10 +145,13 @@
     var dot = document.getElementById('lm-global-dot'), txt = document.getElementById('lm-global-status-text');
     if(dot && txt){ var cmap = {ok:'success',warning:'warning',critical:'danger'}; dot.className='lm-dot lm-dot--'+(cmap[d.overall_status]||'unknown'); txt.textContent=map[d.overall_status]||'未知'; }
   }).catch(function(){});
+
+  // Evidence count
   fetch('/lumenis/api/intelligence/evidence').then(function(r){return r.json();}).then(function(d){
     var el = document.getElementById('hm-ai-tasks');
     if(el && d.count != null) el.textContent = d.count;
   }).catch(function(){});
-  console.log('[LUMENIS] Home v2 compact loaded');
+
+  console.log('[LUMENIS] Home v3 trilingual loaded');
 })();
 {% endblock %}

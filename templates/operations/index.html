@@ -3,6 +3,21 @@
 {% block page_title %}Operations{% endblock %}
 
 {% block content %}
+<!-- 设置：语言切换 -->
+<section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title" data-i18n="settings.language">语言</h3>
+    <span class="lm-badge" data-i18n="settings.language_desc">系统显示语言，影响所有页面</span>
+  </div>
+  <div class="lm-card__body">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="lm-lang-btn" data-lang="zh" onclick="LUMENIS.i18n.setLang('zh')" style="padding:8px 20px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;cursor:pointer;transition:all 0.2s;" data-i18n="settings.lang_zh">中文</button>
+      <button class="lm-lang-btn" data-lang="en" onclick="LUMENIS.i18n.setLang('en')" style="padding:8px 20px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;cursor:pointer;transition:all 0.2s;" data-i18n="settings.lang_en">English</button>
+      <button class="lm-lang-btn" data-lang="ko" onclick="LUMENIS.i18n.setLang('ko')" style="padding:8px 20px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;cursor:pointer;transition:all 0.2s;" data-i18n="settings.lang_ko">한국어</button>
+    </div>
+  </div>
+</section>
+
 <!-- 系统健康四灯 -->
 <section class="lm-card lm-card--flat" data-state="loading" data-page="operations" data-component="ops-health" style="margin-bottom:var(--lm-space-lg);">
   <div class="lm-card__head">
@@ -66,6 +81,19 @@
 {% block scripts %}
 (function(){
   var D=LUMENIS.Data;
+  // Highlight active language button
+  function paintLangBtns(){
+    document.querySelectorAll('.lm-lang-btn').forEach(function(b){
+      if(b.dataset.lang === LUMENIS.i18n.current){
+        b.style.background='var(--lm-text)';b.style.color='var(--lm-bg)';b.style.borderColor='var(--lm-text)';
+      } else {
+        b.style.background='var(--lm-surface)';b.style.color='var(--lm-text-secondary)';b.style.borderColor='var(--lm-border)';
+      }
+    });
+  }
+  paintLangBtns();
+  var origSetLang = LUMENIS.i18n.setLang.bind(LUMENIS.i18n);
+  LUMENIS.i18n.setLang = function(lang){ origSetLang(lang); paintLangBtns(); };
   // 健康四灯
   LUMENIS.bindState(document.querySelector('[data-component="ops-health"]'),{
     page:"operations",component:"ops-health",url:"/api/system/health/summary",
