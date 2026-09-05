@@ -816,7 +816,8 @@ def self_check(db_path: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import sys
-    db = r"D:\Taikoo-monitor-new\data\monitor.db"
+    from core.repository_registry import get_db_path
+    db = get_db_path()
     if len(sys.argv) > 1:
         db = sys.argv[1]
 
