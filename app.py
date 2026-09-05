@@ -2368,8 +2368,10 @@ def api_brand_industry_run_v570():
 def api_publish_buckets_v570():
     date=request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
     with db.get_db() as conn:
-        same=[dict(r) for r in conn.execute("SELECT * FROM notes WHERE is_taikoo_verified=1 AND substr(COALESCE(publish_datetime,publish_date),1,10)=? ORDER BY collected_at DESC",(date,)).fetchall()]
-        historical=[dict(r) for r in conn.execute("SELECT * FROM notes WHERE is_taikoo_verified=1 AND substr(COALESCE(publish_datetime,publish_date),1,10)<? AND substr(collected_at,1,10)=? ORDER BY collected_at DESC",(date,date)).fetchall()]
+        _pb_clause, _pb_params = _subject_sql_and_values()
+        _pb_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_pb_clause}"
+        same=[dict(r) for r in conn.execute(f"SELECT * FROM notes WHERE {_pb_base} AND substr(COALESCE(publish_datetime,publish_date),1,10)=? ORDER BY collected_at DESC", tuple(_pb_params)+(date,)).fetchall()]
+        historical=[dict(r) for r in conn.execute(f"SELECT * FROM notes WHERE {_pb_base} AND substr(COALESCE(publish_datetime,publish_date),1,10)<? AND substr(collected_at,1,10)=? ORDER BY collected_at DESC", tuple(_pb_params)+(date,date)).fetchall()]
     return jsonify({'ok':True,'date':date,'published_today':same,'historical_collected_today':historical,'counts':{'published_today':len(same),'historical_collected_today':len(historical)}})
 
 @app.route('/api/trends/global')
@@ -2379,7 +2381,9 @@ def api_global_trends_v570():
     start=(now-timedelta(days=days-1)).strftime('%Y-%m-%d')
     end=now.strftime('%Y-%m-%d')
     with db.get_db() as conn:
-        rows=conn.execute("SELECT publish_date,COUNT(*) total,SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) negative,SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) high FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND publish_date BETWEEN ? AND ? GROUP BY publish_date ORDER BY publish_date",(start,end)).fetchall()
+        _tg_clause, _tg_params = _subject_sql_and_values()
+        _tg_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_tg_clause}"
+        rows=conn.execute(f"SELECT publish_date,COUNT(*) total,SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) negative,SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) high FROM notes WHERE {_tg_base} AND publish_date BETWEEN ? AND ? GROUP BY publish_date ORDER BY publish_date", tuple(_tg_params)+(start,end)).fetchall()
     data=[]
     for r in rows:
         total=r['total'] or 0
@@ -2410,8 +2414,9 @@ def api_notes_library_v571():
         cols=[r[1] for r in conn.execute('PRAGMA table_info(notes)').fetchall()]
         select_cols=[c for c in ['note_id','title','author_nickname','publish_date','collected_at','url','sentiment','risk_level','risk_score','summary','likes','comments','collects','shares','source_platform','negative_confirmed'] if c in cols]
         
-        sql=f"SELECT {','.join(select_cols)} FROM notes WHERE 1=1"
-        params=[]
+        _subj_clause, _subj_params = _subject_sql_and_values()
+        sql=f"SELECT {','.join(select_cols)} FROM notes WHERE is_taikoo_verified=1 AND {_subj_clause}"
+        params=list(_subj_params)
         
         if keyword:
             sql+=" AND (title LIKE ? OR summary LIKE ? OR author_nickname LIKE ?)"
@@ -2923,17 +2928,19 @@ def api_negative_stats():
     try:
         conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
+        _nc, _np = _subject_sql_and_values()
+        _base = f"is_taikoo_verified=1 AND {_nc}"
         # 待确认
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)", tuple(_np))
         pending = cursor.fetchone()[0]
         # 已确认
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE negative_confirmed=1")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND negative_confirmed=1", tuple(_np))
         confirmed = cursor.fetchone()[0]
         # 已驳回
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE negative_confirmed=2")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND negative_confirmed=2", tuple(_np))
         rejected = cursor.fetchone()[0]
         # 总负面
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative'")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND sentiment='negative'", tuple(_np))
         total = cursor.fetchone()[0]
         conn.close()
         return jsonify({
@@ -4050,11 +4057,13 @@ def api_dashboard_all():
         try:
             cursor.execute("SELECT COUNT(*) as total FROM notes")
             total_notes = cursor.fetchone()['total']
-            cursor.execute("SELECT COUNT(*) as verified FROM notes WHERE is_taikoo_verified=1")
+            _ov_clause, _ov_params = _subject_sql_and_values()
+            _ov_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_ov_clause}"
+            cursor.execute(f"SELECT COUNT(*) as verified FROM notes WHERE {_ov_base}", tuple(_ov_params))
             verified_notes = cursor.fetchone()['verified']
-            cursor.execute("SELECT COUNT(*) as negative FROM notes WHERE sentiment='negative'")
+            cursor.execute(f"SELECT COUNT(*) as negative FROM notes WHERE {_ov_base} AND sentiment='negative'", tuple(_ov_params))
             negative_notes = cursor.fetchone()['negative']
-            cursor.execute("SELECT COUNT(*) as today FROM notes WHERE DATE(publish_date)=DATE('now','localtime')")
+            cursor.execute(f"SELECT COUNT(*) as today FROM notes WHERE {_ov_base} AND DATE(publish_date)=DATE('now','localtime')", tuple(_ov_params))
             today_notes = cursor.fetchone()['today']
             # 近14天趋势（与 /api/overview 同口径），补齐主轮询 renderTrend 所需，避免“暂无趋势数据”
             _now = datetime.now(); _start = (_now - timedelta(days=13)).strftime('%Y-%m-%d'); _end = _now.strftime('%Y-%m-%d')
@@ -4087,8 +4096,10 @@ def api_dashboard_all():
             # [Canonical P0] 情感/风险/互动统一走 canonical_metrics 唯一实现(FN-SENTIMENT/RISK/ENGAGEMENT)
             # 一次取数替代原6趟全表聚合;输出字段与口径不变(已验证四字段无NULL/情感仅三值,数字零变化)
             import canonical_metrics as _cm
+            _st_clause, _st_params = _subject_sql_and_values()
+            _st_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_st_clause}"
             _note_rows = [dict(r) for r in cursor.execute(
-                "SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes").fetchall()]
+                f"SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes WHERE {_st_base}", tuple(_st_params)).fetchall()]
             _sc = _cm.sentiment_count(_note_rows)
             _rc = _cm.risk_count(_note_rows)
             _es = _cm.engagement_stats(_note_rows)
@@ -4130,32 +4141,36 @@ def api_dashboard_all():
         
         # 5. 风险告警（从notes表查询高/中风险笔记，risk_alerts表不存在）
         try:
-            cursor.execute("""
+            _ra_clause, _ra_params = _subject_sql_and_values()
+            _ra_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_ra_clause}"
+            cursor.execute(f"""
                 SELECT id, note_id, title, author_nickname, sentiment, risk_level, risk_score,
                        likes, comments, shares, collects, collected_at, publish_date, url,
                        category, summary, event_hint
                 FROM notes 
-                WHERE risk_level IN ('high','medium') 
+                WHERE {_ra_base} AND risk_level IN ('high','medium') 
                 ORDER BY risk_score DESC, collected_at DESC 
                 LIMIT 20
-            """)
+            """, tuple(_ra_params))
             result['risk_alerts'] = [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             result['risk_alerts'] = []
         
         # 6. 热门话题（使用category字段分组）
         try:
-            cursor.execute("""
+            _ht_clause, _ht_params = _subject_sql_and_values()
+            _ht_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_ht_clause}"
+            cursor.execute(f"""
                 SELECT category as topic, COUNT(*) as count,
                        SUM(CASE WHEN sentiment='positive' THEN 1 ELSE 0 END) as positive,
                        SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) as negative,
                        SUM(CASE WHEN sentiment='neutral' THEN 1 ELSE 0 END) as neutral
                 FROM notes 
-                WHERE category IS NOT NULL AND category != ''
+                WHERE {_ht_base} AND category IS NOT NULL AND category != ''
                 GROUP BY category 
                 ORDER BY count DESC 
                 LIMIT 14
-            """)
+            """, tuple(_ht_params))
             result['hot_topics'] = [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             result['hot_topics'] = []
@@ -4181,7 +4196,9 @@ def api_dashboard_all():
         try:
             cur2 = conn.cursor()
             # 待审核负面数（口径与 /api/negative/pending 一致）
-            cur2.execute("SELECT COUNT(*) AS c FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
+            _pn_clause, _pn_params = _subject_sql_and_values()
+            _pn_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_pn_clause}"
+            cur2.execute(f"SELECT COUNT(*) AS c FROM notes WHERE {_pn_base} AND sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)", tuple(_pn_params))
             result['pending_negative'] = cur2.fetchone()['c']
             # 未读预警数（口径与 /api/alerts?unread=1 一致；无 is_read 列时回退为 alerts 长度）
             try:
