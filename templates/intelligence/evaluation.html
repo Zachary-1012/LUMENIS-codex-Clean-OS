@@ -3,105 +3,99 @@
 {% block page_title %}Evaluation Center{% endblock %}
 
 {% block content %}
-<!-- Evaluation 状态条 -->
 <section class="lm-card lm-card--flat" data-state="loading" data-page="evaluation" data-component="eval-status" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);">
     <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
-      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="ev-dot"></span><span data-field="ev-state">加载中…</span></span>
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="ev-dot"></span><span data-field="ev-state" data-i18n="common.loading">加载中…</span></span>
       <span class="lm-badge" data-field="ev-total">Total: –</span>
-      <span class="lm-badge" data-field="ev-pass">Pass: –</span>
-      <span class="lm-badge" data-field="ev-fail">Fail: –</span>
+      <span class="lm-badge lm-badge--success" data-field="ev-pass">Pass: –</span>
+      <span class="lm-badge lm-badge--danger" data-field="ev-fail">Fail: –</span>
     </div>
-    <span class="lm-badge lm-badge--ghost">Result ≠ Success · 必须有 Evidence + Evaluation</span>
+    <span class="lm-badge lm-badge--ghost" data-i18n="ev.principle">Result ≠ Success · 必须有 Evidence + Evaluation</span>
   </div>
 </section>
 
-<!-- 评估指标 -->
 <div class="lm-grid lm-grid--cards">
   <article class="lm-card">
     <div class="lm-card__head"><h3 class="lm-card__title">Correctness</h3></div>
     <div class="lm-card__body lm-stack">
-      <div class="lm-metric"><span class="lm-metric__label">正确率</span><span class="lm-metric__value" data-field="ev-correctness">–</span></div>
-      <div style="font-size:12px;color:var(--lm-text-tertiary);">结果与预期一致的比例</div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ev.correctness">正确率</span><span class="lm-metric__value" data-field="ev-correctness">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);" data-i18n="ev.correctness_d">结果与预期一致的比例</div>
     </div>
   </article>
   <article class="lm-card">
     <div class="lm-card__head"><h3 class="lm-card__title">Completeness</h3></div>
     <div class="lm-card__body lm-stack">
-      <div class="lm-metric"><span class="lm-metric__label">完整度</span><span class="lm-metric__value" data-field="ev-completeness">–</span></div>
-      <div style="font-size:12px;color:var(--lm-text-tertiary);">覆盖所有要求的比例</div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ev.completeness">完整度</span><span class="lm-metric__value" data-field="ev-completeness">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);" data-i18n="ev.completeness_d">覆盖所有要求的比例</div>
     </div>
   </article>
   <article class="lm-card">
     <div class="lm-card__head"><h3 class="lm-card__title">Regression</h3></div>
     <div class="lm-card__body lm-stack">
-      <div class="lm-metric"><span class="lm-metric__label">回归数</span><span class="lm-metric__value" data-field="ev-regression">–</span></div>
-      <div style="font-size:12px;color:var(--lm-text-tertiary);">引入的新失败数</div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ev.regression">回归数</span><span class="lm-metric__value" data-field="ev-regression">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);" data-i18n="ev.regression_d">引入的新失败数</div>
     </div>
   </article>
   <article class="lm-card">
     <div class="lm-card__head"><h3 class="lm-card__title">Safety</h3></div>
     <div class="lm-card__body lm-stack">
-      <div class="lm-metric"><span class="lm-metric__label">安全分</span><span class="lm-metric__value" data-field="ev-safety">–</span></div>
-      <div style="font-size:12px;color:var(--lm-text-tertiary);">无危险操作的比例</div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ev.safety">安全分</span><span class="lm-metric__value" data-field="ev-safety">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);" data-i18n="ev.safety_d">无危险操作的比例</div>
     </div>
   </article>
   <article class="lm-card">
     <div class="lm-card__head"><h3 class="lm-card__title">Latency</h3></div>
     <div class="lm-card__body lm-stack">
-      <div class="lm-metric"><span class="lm-metric__label">平均延迟</span><span class="lm-metric__value" data-field="ev-latency">–</span></div>
-      <div style="font-size:12px;color:var(--lm-text-tertiary);">端到端执行时间</div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ev.latency">平均延迟</span><span class="lm-metric__value" data-field="ev-latency">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);" data-i18n="ev.latency_d">端到端执行时间</div>
     </div>
   </article>
   <article class="lm-card">
     <div class="lm-card__head"><h3 class="lm-card__title">Cost</h3></div>
     <div class="lm-card__body lm-stack">
-      <div class="lm-metric"><span class="lm-metric__label">Token 消耗</span><span class="lm-metric__value" data-field="ev-cost">–</span></div>
-      <div style="font-size:12px;color:var(--lm-text-tertiary);">累计输入+输出 token</div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ev.cost">Token 消耗</span><span class="lm-metric__value" data-field="ev-cost">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);" data-i18n="ev.cost_d">累计输入+输出 token</div>
     </div>
   </article>
 </div>
 
-<!-- 评估记录 -->
 <article class="lm-card" data-state="empty" data-page="evaluation" data-component="eval-records" style="margin-top:var(--lm-space-lg);">
   <div class="lm-card__head">
     <h3 class="lm-card__title">Evaluation Records</h3>
-    <span class="lm-badge" data-field="eval-record-count">0 条</span>
+    <span class="lm-badge" data-field="eval-record-count">0</span>
   </div>
   <div class="lm-card__body" data-state-slot>
     <div class="lm-table-wrap">
       <table class="lm-table">
-        <thead><tr><th>Task</th><th>Result</th><th>Evidence</th><th>Score</th><th>Status</th><th>Human Review</th></tr></thead>
+        <thead><tr><th>Task</th><th>Result</th><th>Evidence</th><th>Score</th><th data-i18n="common.status">状态</th><th>Human Review</th></tr></thead>
         <tbody id="lm-eval-records-body">
-          <tr><td colspan="6" style="text-align:center;color:var(--lm-text-tertiary);padding:var(--lm-space-md);">暂无评估记录</td></tr>
+          <tr><td colspan="6" style="text-align:center;color:var(--lm-text-tertiary);padding:var(--lm-space-md);" data-i18n="ev.no_records">暂无评估记录</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </article>
 
-<!-- 评估标准 -->
 <article class="lm-card lm-card--flat" style="margin-top:var(--lm-space-lg);">
-  <div class="lm-card__head">
-    <h3 class="lm-card__title">Evaluation Criteria</h3>
-  </div>
+  <div class="lm-card__head"><h3 class="lm-card__title">Evaluation Criteria</h3></div>
   <div class="lm-card__body lm-stack">
     <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;align-items:flex-start;">
       <div style="flex:1;min-width:200px;">
         <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Requirement → Expected</div>
-        <div style="font-size:13px;color:var(--lm-text-secondary);">每个任务必须有明确的预期结果</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);" data-i18n="ev.c1">每个任务必须有明确的预期结果</div>
       </div>
       <div style="flex:1;min-width:200px;">
         <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Actual → Test</div>
-        <div style="font-size:13px;color:var(--lm-text-secondary);">实际结果必须通过测试验证</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);" data-i18n="ev.c2">实际结果必须通过测试验证</div>
       </div>
       <div style="flex:1;min-width:200px;">
         <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Evidence → Result</div>
-        <div style="font-size:13px;color:var(--lm-text-secondary);">没有 Evidence 不得标记完成</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);" data-i18n="ev.c3">没有 Evidence 不得标记完成</div>
       </div>
       <div style="flex:1;min-width:200px;">
         <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Human Approval</div>
-        <div style="font-size:13px;color:var(--lm-text-secondary);">生产变更必须人工批准</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);" data-i18n="ev.c4">生产变更必须人工批准</div>
       </div>
     </div>
   </div>
@@ -109,17 +103,42 @@
 {% endblock %}
 
 {% block scripts %}
-// Evaluation Center：状态绑定
 (function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'ev.principle':'Result ≠ Success · 必须有 Evidence + Evaluation',
+    'ev.correctness':'正确率','ev.correctness_d':'结果与预期一致的比例','ev.completeness':'完整度','ev.completeness_d':'覆盖所有要求的比例',
+    'ev.regression':'回归数','ev.regression_d':'引入的新失败数','ev.safety':'安全分','ev.safety_d':'无危险操作的比例',
+    'ev.latency':'平均延迟','ev.latency_d':'端到端执行时间','ev.cost':'Token 消耗','ev.cost_d':'累计输入+输出 token',
+    'ev.no_records':'暂无评估记录','ev.no_eval':'无评估记录','ev.loaded':'已加载','ev.no_data':'无数据',
+    'ev.c1':'每个任务必须有明确的预期结果','ev.c2':'实际结果必须通过测试验证','ev.c3':'没有 Evidence 不得标记完成','ev.c4':'生产变更必须人工批准'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'ev.principle':'Result ≠ Success · Evidence + Evaluation required',
+    'ev.correctness':'Correctness','ev.correctness_d':'Share matching expected outcome','ev.completeness':'Completeness','ev.completeness_d':'Share of requirements covered',
+    'ev.regression':'Regressions','ev.regression_d':'New failures introduced','ev.safety':'Safety','ev.safety_d':'Share without unsafe actions',
+    'ev.latency':'Avg latency','ev.latency_d':'End-to-end time','ev.cost':'Tokens','ev.cost_d':'Cumulative input+output tokens',
+    'ev.no_records':'No evaluation records','ev.no_eval':'No evaluations','ev.loaded':'Loaded','ev.no_data':'No data',
+    'ev.c1':'Every task must have a clear expected outcome','ev.c2':'Actual results must pass tests','ev.c3':'No completion without Evidence','ev.c4':'Production changes require human approval'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'ev.principle':'Result ≠ Success · Evidence + Evaluation 필수',
+    'ev.correctness':'정확률','ev.correctness_d':'예상 결과와 일치하는 비율','ev.completeness':'완성도','ev.completeness_d':'요구사항 커버 비율',
+    'ev.regression':'회귀 수','ev.regression_d':'새로 유입된 실패 수','ev.safety':'안전 점수','ev.safety_d':'위험 작업이 없는 비율',
+    'ev.latency':'평균 지연','ev.latency_d':'엔드투엔드 실행 시간','ev.cost':'토큰 소비','ev.cost_d':'누적 입력+출력 토큰',
+    'ev.no_records':'평가 기록 없음','ev.no_eval':'평가 없음','ev.loaded':'로드됨','ev.no_data':'데이터 없음',
+    'ev.c1':'모든 작업은 명확한 예상 결과를 가져야 함','ev.c2':'실제 결과는 테스트를 통과해야 함','ev.c3':'Evidence 없이 완료 표시 금지','ev.c4':'프로덕션 변경은 인간 승인 필요'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function tr(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
   LUMENIS.bindState(document.querySelector('[data-component="eval-status"]'), {
     page:"evaluation", component:"eval-status", url:"/api/evaluation/status",
     isEmpty:function(d){return !d || d.total===0;},
-    emptyText:"无评估记录",
+    emptyText:tr('ev.no_eval'),
     render:function(d){
       var dot=document.querySelector('[data-field="ev-dot"]');
       if(dot) dot.className="lm-dot lm-dot--"+(d.total>0?"ai":"unknown");
       var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
-      f("ev-state", d.total>0?"已加载":"无数据");
+      f("ev-state", d.total>0?tr('ev.loaded'):tr('ev.no_data'));
       f("ev-total","Total: "+(d.total||0));
       f("ev-pass","Pass: "+(d.pass||0));
       f("ev-fail","Fail: "+(d.fail||0));

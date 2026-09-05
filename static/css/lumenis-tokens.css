@@ -157,3 +157,12 @@
     --lm-glass-bg-clear: rgba(28,28,30,0.6);
   }
 }
+
+/* ---- Semantic color aliases (map to status tokens) ---- */
+:root{
+  --lm-color-success: var(--lm-status-success);
+  --lm-color-info: var(--lm-status-info);
+  --lm-color-warning: var(--lm-status-warning);
+  --lm-color-danger: var(--lm-status-danger);
+  --lm-color-ai: var(--lm-status-ai);
+}

@@ -3,11 +3,10 @@
 {% block page_title %}Intelligence Workspace{% endblock %}
 
 {% block content %}
-<!-- AI 状态条 -->
 <section class="lm-card lm-card--flat" data-state="loading" data-page="intelligence" data-component="ai-status" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);">
     <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
-      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="ai-dot"></span><span data-field="ai-state">连接中…</span></span>
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="ai-dot"></span><span data-field="ai-state" data-i18n="status.connecting">连接中…</span></span>
       <span class="lm-badge" data-field="ai-provider">Provider: –</span>
       <span class="lm-badge" data-field="ai-model">Model: –</span>
     </div>
@@ -15,51 +14,46 @@
   </div>
 </section>
 
-<!-- 输入区 -->
 <section class="lm-glass lm-glass--identity" style="border-radius:var(--lm-radius-xl);padding:var(--lm-space-xl);margin-bottom:var(--lm-space-lg);">
   <div class="section-label">Intelligence Workspace · Input → Context → Reasoning → Evidence → Action</div>
-  <div style="font-size:var(--lm-text-h2);font-weight:700;line-height:1.3;margin:var(--lm-space-sm) 0 var(--lm-space-md);">
+  <div style="font-size:var(--lm-text-h2);font-weight:700;line-height:1.3;margin:var(--lm-space-sm) 0 var(--lm-space-md);" data-i18n="ws.heading">
     向序境提问，结果必须可追溯到证据
   </div>
   <div style="display:flex;gap:var(--lm-space-sm);">
     <input class="lm-search lm-search--command" type="text" id="lm-ai-input"
+           data-i18n-placeholder="ws.placeholder"
            placeholder="输入任务 / 问题 / 指令…（AI 输出必须回到 结果→依据→数据→来源）"
            aria-label="AI 指令输入">
-    <button class="lm-btn lm-btn--primary" id="lm-ai-send">发送</button>
+    <button class="lm-btn lm-btn--primary" id="lm-ai-send" data-i18n="ws.send">发送</button>
   </div>
   <div class="lm-row" style="gap:var(--lm-space-sm);margin-top:var(--lm-space-md);flex-wrap:wrap;">
-    <span class="lm-badge"><span class="lm-dot lm-dot--ai"></span>智谱主力</span>
-    <span class="lm-badge">ARK / 千问备用</span>
-    <span class="lm-badge">Ollama 本地兜底</span>
-    <span class="lm-badge">规则最终兜底</span>
+    <span class="lm-badge"><span class="lm-dot lm-dot--ai"></span><span data-i18n="ws.primary">智谱主力</span></span>
+    <span class="lm-badge" data-i18n="ws.backup">ARK / 千问备用</span>
+    <span class="lm-badge" data-i18n="ws.local">Ollama 本地兜底</span>
+    <span class="lm-badge" data-i18n="ws.rule">规则最终兜底</span>
   </div>
 </section>
 
-<!-- 上下文 Tab + 结果区 -->
 <div class="lm-grid lm-grid--cards">
-  <!-- 结果区 -->
   <article class="lm-card" data-state="empty" data-page="intelligence" data-component="ai-result" style="grid-column:span 2;">
     <div class="lm-card__head">
       <h3 class="lm-card__title">AI Result</h3>
       <span class="lm-badge" data-field="ai-result-provider">–</span>
     </div>
     <div class="lm-card__body" data-state-slot style="min-height:200px;">
-      <div id="lm-ai-output" style="font-size:14px;line-height:1.7;white-space:pre-wrap;color:var(--lm-text-primary);">
+      <div id="lm-ai-output" style="font-size:14px;line-height:1.7;white-space:pre-wrap;color:var(--lm-text-primary);" data-i18n="ws.result_hint">
         输入问题后，AI 结果将在此显示，并附带证据来源与置信度。
       </div>
     </div>
   </article>
 
-  <!-- 上下文 / 证据 -->
   <article class="lm-card" data-state="empty" data-page="intelligence" data-component="ai-context">
-    <div class="lm-card__head">
-      <h3 class="lm-card__title">Context &amp; Evidence</h3>
-    </div>
+    <div class="lm-card__head"><h3 class="lm-card__title">Context &amp; Evidence</h3></div>
     <div class="lm-card__body lm-stack" data-state-slot>
-      <div class="lm-metric"><span class="lm-metric__label">检索来源</span><span class="lm-metric__value--md" data-field="ctx-sources">–</span></div>
-      <div class="lm-metric"><span class="lm-metric__label">数据引用</span><span class="lm-metric__value--md" data-field="ctx-data">–</span></div>
-      <div class="lm-metric"><span class="lm-metric__label">案例引用</span><span class="lm-metric__value--md" data-field="ctx-cases">–</span></div>
-      <div style="font-size:12px;color:var(--lm-text-tertiary);margin-top:var(--lm-space-sm);">
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ws.ctx_src">检索来源</span><span class="lm-metric__value--md" data-field="ctx-sources">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ws.ctx_data">数据引用</span><span class="lm-metric__value--md" data-field="ctx-data">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="ws.ctx_case">案例引用</span><span class="lm-metric__value--md" data-field="ctx-cases">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);margin-top:var(--lm-space-sm);" data-i18n="ws.trace">
         AI 输出必须可追溯：结果 → 依据 → 数据 → 案例 → 来源
       </div>
     </div>
@@ -68,58 +62,82 @@
 {% endblock %}
 
 {% block scripts %}
-// Intelligence Workspace：AI 状态 + 对话（POST /api/ai/chat，真实端点）
 (function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'ws.heading':'向序境提问，结果必须可追溯到证据',
+    'ws.placeholder':'输入任务 / 问题 / 指令…（AI 输出必须回到 结果→依据→数据→来源）',
+    'ws.send':'发送','ws.primary':'智谱主力','ws.backup':'ARK / 千问备用','ws.local':'Ollama 本地兜底','ws.rule':'规则最终兜底',
+    'ws.result_hint':'输入问题后，AI 结果将在此显示，并附带证据来源与置信度。',
+    'ws.ctx_src':'检索来源','ws.ctx_data':'数据引用','ws.ctx_case':'案例引用','ws.trace':'AI 输出必须可追溯：结果 → 依据 → 数据 → 案例 → 来源',
+    'ws.off':'AI 未启用','ws.online':'在线','ws.offline':'离线','ws.thinking':'思考中…','ws.no_reply':'(无回复)',
+    'ws.err':'错误：','ws.req_fail':'请求失败：','ws.unknown':'未知','ws.kinds':'类'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'ws.heading':'Ask LUMENIS — every result must trace back to evidence',
+    'ws.placeholder':'Enter a task / question / instruction… (output must return result → basis → data → source)',
+    'ws.send':'Send','ws.primary':'Zhipu primary','ws.backup':'ARK / Qwen backup','ws.local':'Ollama local fallback','ws.rule':'Rules final fallback',
+    'ws.result_hint':'After you ask, the AI result appears here with evidence sources and confidence.',
+    'ws.ctx_src':'Sources','ws.ctx_data':'Data refs','ws.ctx_case':'Case refs','ws.trace':'Traceable: result → basis → data → case → source',
+    'ws.off':'AI disabled','ws.online':'Online','ws.offline':'Offline','ws.thinking':'Thinking…','ws.no_reply':'(no reply)',
+    'ws.err':'Error: ','ws.req_fail':'Request failed: ','ws.unknown':'unknown','ws.kinds':''
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'ws.heading':'서경에 질문하세요 — 모든 결과는 증거로 추적 가능해야 합니다',
+    'ws.placeholder':'작업 / 질문 / 지시 입력…(결과 → 근거 → 데이터 → 출처로 회귀)',
+    'ws.send':'전송','ws.primary':'즈푸 주력','ws.backup':'ARK / 큐웬 예비','ws.local':'Ollama 로컬 폴백','ws.rule':'규칙 최종 폴백',
+    'ws.result_hint':'질문을 입력하면 AI 결과가 증거 출처 및 신뢰도와 함께 여기에 표시됩니다.',
+    'ws.ctx_src':'검색 출처','ws.ctx_data':'데이터 참조','ws.ctx_case':'케이스 참조','ws.trace':'추적 가능: 결과 → 근거 → 데이터 → 케이스 → 출처',
+    'ws.off':'AI 비활성화','ws.online':'온라인','ws.offline':'오프라인','ws.thinking':'생각 중…','ws.no_reply':'(응답 없음)',
+    'ws.err':'오류: ','ws.req_fail':'요청 실패: ','ws.unknown':'알 수 없음','ws.kinds':'유형'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function tr(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
   var D = LUMENIS.Data;
-  // AI 状态
   LUMENIS.bindState(document.querySelector('[data-component="ai-status"]'), {
     page:"intelligence", component:"ai-status", url:"/api/ai/status",
     isEmpty:function(d){return !d || d.enabled===false;},
-    emptyText:"AI 未启用",
+    emptyText:tr('ws.off'),
     render:function(d){
       var dot=document.querySelector('[data-field="ai-dot"]');
       if(dot) dot.className="lm-dot lm-dot--"+(d.enabled?"ai":"unknown");
-      D.pick && (function(){
-        var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
-        f("ai-state", d.enabled?"在线":"离线");
-        f("ai-provider","Provider: "+(d.provider||"–"));
-        f("ai-model","Model: "+(d.model||"–"));
-        f("ai-runtime","Runtime: "+(d.runtime||"–"));
-      })();
+      var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("ai-state", d.enabled?tr('ws.online'):tr('ws.offline'));
+      f("ai-provider","Provider: "+(d.provider||"–"));
+      f("ai-model","Model: "+(d.model||"–"));
+      f("ai-runtime","Runtime: "+(d.runtime||"–"));
     }
   });
-  // 发送
   var input=document.getElementById("lm-ai-input"), btn=document.getElementById("lm-ai-send");
   var out=document.getElementById("lm-ai-output"), card=document.querySelector('[data-component="ai-result"]');
   function send(){
     var msg=(input.value||"").trim();
     if(!msg) return;
     card.setAttribute("data-state","processing");
-    out.textContent="思考中…";
+    out.textContent=tr('ws.thinking');
     LUMENIS.fetch("/api/ai/chat",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({message:msg})})
       .then(function(r){return r.json();})
       .then(function(d){
         if(d && d.ok){
           card.setAttribute("data-state","success");
-          out.textContent=d.reply||"(无回复)";
+          out.textContent=d.reply||tr('ws.no_reply');
           var p=document.querySelector('[data-field="ai-result-provider"]');
           if(p) p.textContent=d.provider||"–";
           var ctx=document.querySelector('[data-component="ai-context"]');
           ctx.setAttribute("data-state","success");
           var c=d.context||{};
           var keys=Object.keys(c);
-          document.querySelector('[data-field="ctx-sources"]').textContent=keys.length+" 类";
+          document.querySelector('[data-field="ctx-sources"]').textContent=keys.length+" "+tr('ws.kinds');
           document.querySelector('[data-field="ctx-data"]').textContent=typeof c==="object"?JSON.stringify(c).slice(0,80):"–";
           document.querySelector('[data-field="ctx-cases"]').textContent="–";
         } else {
           card.setAttribute("data-state","error");
-          out.textContent="错误："+(d&&d.error?d.error:"未知");
+          out.textContent=tr('ws.err')+(d&&d.error?d.error:tr('ws.unknown'));
         }
       })
       .catch(function(e){
         card.setAttribute("data-state","error");
-        out.textContent="请求失败："+(e&&e.message?e.message:e);
+        out.textContent=tr('ws.req_fail')+(e&&e.message?e.message:e);
       });
   }
   if(btn) btn.addEventListener("click",send);

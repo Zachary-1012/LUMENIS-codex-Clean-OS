@@ -64,3 +64,22 @@
 @media (min-width: 1440px) {
   .lm-workspace__inner { max-width: 1560px; }
 }
+
+
+/* ---- P1 细粒度收敛：顶栏不挤压、Skill Grid 窄屏不裁切 ---- */
+@media (max-width: 767px) {
+  .lm-header { padding: 0 var(--lm-space-md); gap: var(--lm-space-sm); }
+  .lm-header__brand { min-width: 0; font-size: var(--lm-text-body); }
+  .lm-header__title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lm-skill-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
+}
+@media (max-width: 480px) {
+  .lm-header__brand-mark { width: 20px; height: 20px; }
+  .lm-header__actions { gap: var(--lm-space-sm); }
+  /* 窄屏顶栏只保留状态圆点，文字隐藏避免换行挤压 */
+  #lm-global-status-text { display: none; }
+  /* Skill 网格单列，推荐行卡片收窄，搜索全宽 */
+  .lm-skill-grid { grid-template-columns: 1fr !important; }
+  #lm-skill-search { width: 100% !important; flex: 1 1 100%; }
+  .lm-skill-row .lm-skill-tile { min-width: 160px !important; }
+}

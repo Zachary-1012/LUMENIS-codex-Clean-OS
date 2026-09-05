@@ -1,48 +1,64 @@
 {% extends "base.html" %}
-{% block title %}Repository Registry - LUMENIS{% endblock %}
+{% block title %}Repository Registry · 序境 LUMENIS{% endblock %}
 {% block page_title %}Repository Registry{% endblock %}
 
 {% block content %}
-<!-- Page Status: CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Repository Registry</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="rp.title">仓库注册中心</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="rp.subtitle">物理独立 · 通过 Contract 逻辑融合，禁止物理合并</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="rp-refresh" data-i18n="common.refresh">刷新</button>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">ZBC (Production Core)</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Z-Brand-Core. 当前分支: main. 职责: Production / Collection / Data / Public Opinion / Event / Risk / Report / Runtime.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">OSAI (Intelligence Core)</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Zachary-OS-AI. 当前分支: main. 职责: Intelligence / Agent / Research / Orchestration / Skill / Evaluation / Learning / AI Gateway.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Repository Registry</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">消除硬编码路径. repository_id / name / role / root_path / git_remote / default_branch / current_sha / runtime / permissions / status.</div>
-      </div>
-    </section>
+<section class="lm-card" data-state="loading" data-component="repo-list">
+  <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="rp.repos">仓库状态</h3></div>
+  <div class="lm-card__body lm-stack" id="rp-list"></div>
+</section>
 {% endblock %}
 
 {% block scripts %}
-// Repository Registry page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'rp.title':'仓库注册中心','rp.subtitle':'物理独立 · 通过 Contract 逻辑融合，禁止物理合并',
+    'rp.repos':'仓库状态','rp.branch':'分支','rp.dirty':'未提交变更','rp.clean':'工作区干净','rp.unavailable':'不可用',
+    'rp.role_prod':'生产核心','rp.role_intel':'智能核心','rp.role_research':'独立研究产品'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'rp.title':'Repository Registry','rp.subtitle':'Physically independent · logical fusion via contracts; no physical merge',
+    'rp.repos':'Repositories','rp.branch':'Branch','rp.dirty':'Uncommitted','rp.clean':'Clean tree','rp.unavailable':'Unavailable',
+    'rp.role_prod':'Production Core','rp.role_intel':'Intelligence Core','rp.role_research':'Independent Research'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'rp.title':'리포지토리 레지스트리','rp.subtitle':'물리적으로 독립 · Contract를 통한 논리 통합, 물리 병합 금지',
+    'rp.repos':'리포지토리 상태','rp.branch':'브랜치','rp.dirty':'커밋되지 않은 변경','rp.clean':'깨끗한 작업트리','rp.unavailable':'사용 불가',
+    'rp.role_prod':'프로덕션 코어','rp.role_intel':'인텔리전스 코어','rp.role_research':'독립 연구 제품'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  var card=document.querySelector('[data-component="repo-list"]');
+  var box=document.getElementById('rp-list');
+  function load(){
+    card.setAttribute('data-state','loading');
+    LUMENIS.fetch('/api/system/repository').then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.ok){card.setAttribute('data-state','error');box.textContent=t('rp.unavailable');return;}
+      card.setAttribute('data-state','success');
+      box.innerHTML=(d.repos||[]).map(function(r){
+        var g=r.git||{};
+        var clean=g.clean;
+        var badge=clean?'<span class="lm-badge lm-badge--success">'+t('rp.clean')+'</span>':'<span class="lm-badge lm-badge--warning">'+t('rp.dirty')+': '+g.dirty_files+'</span>';
+        return '<div class="lm-card lm-card--flat" style="padding:var(--lm-space-md);margin-bottom:var(--lm-space-sm);">'+
+          '<div class="lm-row" style="justify-content:space-between;"><strong>'+r.repository_id+' · '+r.name+'</strong>'+badge+'</div>'+
+          '<div style="font-size:12.5px;color:var(--lm-text-secondary);margin-top:6px;line-height:1.8;">'+
+          '<div>'+r.role+'</div>'+
+          '<div style="font-family:var(--lm-font-mono,monospace);">HEAD '+ (g.head_sha||'–')+' · '+t('rp.branch')+': '+(g.branch||'–')+'</div>'+
+          '<div style="color:var(--lm-text-tertiary);word-break:break-all;">'+r.path+'</div></div></div>';
+      }).join('');
+    }).catch(function(){card.setAttribute('data-state','error');box.textContent=t('rp.unavailable');});
+  }
+  document.getElementById('rp-refresh').addEventListener('click',load);
+  load();
+})();
 {% endblock %}

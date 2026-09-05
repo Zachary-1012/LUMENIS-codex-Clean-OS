@@ -22,7 +22,7 @@
   </div>
 
   <!-- 快捷操作 -->
-  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
+  <div data-zone="Recommended Actions" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
     <button class="lm-quick-action" data-task="审计当前系统状态" data-i18n="qa_audit">系统审计</button>
     <button class="lm-quick-action" data-task="运行采集任务" data-i18n="qa_collect">启动采集</button>
     <button class="lm-quick-action" data-task="生成今日舆情报告" data-i18n="qa_report">生成报告</button>
@@ -39,24 +39,25 @@
 
 <!-- ===== 紧凑状态条 ===== -->
 <section style="max-width:960px;margin:0 auto;padding:24px 0;border-top:1px solid var(--lm-border);">
+  <span hidden data-zone="Recent Evidence" id="hm-recent-evidence"></span>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;">
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_system">System</div>
+      <div data-zone="System State" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_system">System</div>
       <div style="font-size:20px;font-weight:600;" id="hm-system-status">–</div>
       <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" id="hm-system-fresh" data-i18n="card_fresh">数据新鲜度 –</div>
     </div>
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_intel">Intelligence</div>
+      <div data-zone="Intelligence Pulse" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_intel">Intelligence</div>
       <div style="font-size:20px;font-weight:600;" id="hm-ai-tasks">–</div>
       <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_tasks">进行中任务 –</div>
     </div>
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_risks">Risks</div>
+      <div data-zone="Active Risks" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_risks">Risks</div>
       <div style="font-size:20px;font-weight:600;" id="hm-risk-count">–</div>
       <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_active_risk">活跃风险</div>
     </div>
     <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_tasks_label">Tasks</div>
+      <div data-zone="Active Tasks" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_tasks_label">Tasks</div>
       <div style="font-size:20px;font-weight:600;" id="hm-task-count">–</div>
       <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_running">运行中</div>
     </div>
@@ -142,14 +143,13 @@
     if(el) el.textContent = map[d.overall_status] || d.overall_status || '未知';
     var fresh = document.getElementById('hm-system-fresh');
     if(fresh) fresh.textContent = '数据新鲜度 ' + (d.last_collection || '–');
-    var dot = document.getElementById('lm-global-dot'), txt = document.getElementById('lm-global-status-text');
-    if(dot && txt){ var cmap = {ok:'success',warning:'warning',critical:'danger'}; dot.className='lm-dot lm-dot--'+(cmap[d.overall_status]||'unknown'); txt.textContent=map[d.overall_status]||'未知'; }
   }).catch(function(){});
 
   // Evidence count
   fetch('/lumenis/api/intelligence/evidence').then(function(r){return r.json();}).then(function(d){
     var el = document.getElementById('hm-ai-tasks');
     if(el && d.count != null) el.textContent = d.count;
+    var re=document.getElementById('hm-recent-evidence'); if(re && d.count!=null) re.textContent='Recent Evidence: '+d.count;
   }).catch(function(){});
 
   console.log('[LUMENIS] Home v3 trilingual loaded');

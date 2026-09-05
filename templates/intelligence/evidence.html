@@ -1,48 +1,87 @@
 {% extends "base.html" %}
-{% block title %}Evidence Center - LUMENIS{% endblock %}
+{% block title %}Evidence Center · 序境 LUMENIS{% endblock %}
 {% block page_title %}Evidence Center{% endblock %}
 
 {% block content %}
-<!-- Page Status: PARTIALLY_CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Evidence Center</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="ev.title">证据中心</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="ev.subtitle">Task → Skill → Engine → Provider → Evidence → Evaluation → Trace</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>PARTIALLY_CONNECTED</span></span>
+    <span class="lm-status"><span class="lm-dot lm-dot--unknown" id="ev-dot"></span><span id="ev-count">–</span></span>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Evidence Chain</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Task -> Repository -> File -> Module -> Function -> Change -> Test -> Result -> Evidence -> Lifecycle -> SHA.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Recent Evidence</h3>
-        <span class="lm-badge lm-badge--ghost">NO_DATA</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">所有 AI / Skill / Agent / Research / Engineering 行为最终进入 Evidence Chain.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Trace View</h3>
-        <span class="lm-badge lm-badge--ghost">NO_DATA</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">完整追踪：为什么系统做了这个动作，可以一路查回来.</div>
-      </div>
-    </section>
+<section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title" data-i18n="ev.chain">证据链模型</h3>
+    <span class="lm-badge lm-badge--ghost" data-i18n="ev.persisted">文件持久化</span>
+  </div>
+  <div class="lm-card__body">
+    <div style="font-size:12.5px;color:var(--lm-text-secondary);line-height:1.8;font-family:var(--lm-font-mono,monospace);">Task → Repository → File → Module → Function → Change → Test → Result → Evidence → Lifecycle → SHA</div>
+  </div>
+</section>
+
+<section class="lm-card" data-state="loading" data-component="evidence-list">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title" data-i18n="ev.recent">最近证据</h3>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="ev-refresh" data-i18n="common.refresh">刷新</button>
+  </div>
+  <div class="lm-card__body">
+    <div class="lm-stack" id="ev-list"></div>
+  </div>
+</section>
 {% endblock %}
 
 {% block scripts %}
-// Evidence Center page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'ev.title':'证据中心','ev.subtitle':'Task → Skill → Engine → Provider → Evidence → Evaluation → Trace',
+    'ev.chain':'证据链模型','ev.persisted':'文件持久化','ev.recent':'最近证据','ev.nodes':'节点','ev.status':'状态',
+    'ev.empty':'暂无持久化证据。执行 Skill / Agent 后将在此生成可追溯证据链。','ev.unavailable':'OSAI Evidence 不可用'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'ev.title':'Evidence Center','ev.subtitle':'Task → Skill → Engine → Provider → Evidence → Evaluation → Trace',
+    'ev.chain':'Evidence Chain Model','ev.persisted':'File-persisted','ev.recent':'Recent Evidence','ev.nodes':'Nodes','ev.status':'Status',
+    'ev.empty':'No persisted evidence yet. Running a Skill / Agent produces a traceable evidence chain here.','ev.unavailable':'OSAI Evidence unavailable'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'ev.title':'증거 센터','ev.subtitle':'Task → Skill → Engine → Provider → Evidence → Evaluation → Trace',
+    'ev.chain':'증거 체인 모델','ev.persisted':'파일 영속화','ev.recent':'최근 증거','ev.nodes':'노드','ev.status':'상태',
+    'ev.empty':'영속화된 증거가 없습니다. Skill / Agent 실행 시 추적 가능한 증거 체인이 여기에 생성됩니다.','ev.unavailable':'OSAI 증거를 사용할 수 없습니다'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  var card=document.querySelector('[data-component="evidence-list"]');
+  var list=document.getElementById('ev-list');
+  function load(){
+    card.setAttribute('data-state','loading');
+    LUMENIS.fetch('/lumenis/api/intelligence/evidence').then(function(r){return r.json();}).then(function(d){
+      var chains=(d&&d.chains)||[];
+      document.getElementById('ev-count').textContent=(d?d.count:0)+' chains';
+      var dot=document.getElementById('ev-dot');
+      if(!d||!d.ok){card.setAttribute('data-state','error');list.innerHTML='<div style="color:var(--lm-color-danger);font-size:13px;">'+t('ev.unavailable')+'</div>';dot.className='lm-dot lm-dot--danger';return;}
+      dot.className='lm-dot '+(chains.length?'lm-dot--success':'lm-dot--warning');
+      if(!chains.length){card.setAttribute('data-state','empty');list.innerHTML='<div style="color:var(--lm-text-tertiary);font-size:13px;line-height:1.7;">'+t('ev.empty')+'</div>';return;}
+      card.setAttribute('data-state','success');
+      list.innerHTML=chains.slice(0,30).map(function(c){
+        var cid=c.chain_id||c.id||'–';
+        var nodes=c.nodes||c.steps||[];
+        var st=c.status||'UNKNOWN';
+        var cls=st==='COMPLETED'||st==='VERIFIED'?'lm-badge--success':(st==='FAILED'?'lm-badge--danger':'lm-badge--ghost');
+        return '<div class="lm-card lm-card--flat" style="padding:var(--lm-space-sm);margin-bottom:var(--lm-space-sm);">'+
+          '<div class="lm-row" style="justify-content:space-between;"><strong style="font-size:13px;font-family:var(--lm-font-mono,monospace);">'+cid+'</strong>'+
+          '<span class="lm-badge '+cls+'">'+st+'</span></div>'+
+          '<div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;">'+t('ev.nodes')+': '+(nodes.length||'–')+
+          (c.skill_id?' · '+c.skill_id:'')+(c.created_at?' · '+c.created_at:'')+'</div></div>';
+      }).join('');
+    }).catch(function(){
+      card.setAttribute('data-state','error');
+      list.innerHTML='<div style="color:var(--lm-color-danger);font-size:13px;">'+t('ev.unavailable')+'</div>';
+    });
+  }
+  document.getElementById('ev-refresh').addEventListener('click',load);
+  load();
+})();
 {% endblock %}

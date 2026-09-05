@@ -1,57 +1,106 @@
 {% extends "base.html" %}
-{% block title %}Models / AI Gateway - LUMENIS{% endblock %}
+{% block title %}Models / AI Gateway · 序境 LUMENIS{% endblock %}
 {% block page_title %}Models / AI Gateway{% endblock %}
 
 {% block content %}
-<!-- Page Status: CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Models / AI Gateway</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="models.title">模型与 AI Gateway</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="models.subtitle">Provider-agnostic · Skill 与 Model 解耦</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+    <span class="lm-status"><span class="lm-dot lm-dot--unknown" id="mg-dot"></span><span id="mg-active">–</span></span>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">AI Gateway</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Provider-agnostic AI Gateway. 当前 Provider: zhipu (glm-4.5-air), Ollama (local fallback), ARK (备用).</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Model Router</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">根据 task_type / quality / latency / cost / context / privacy 自动选择 Engine / Model.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Engine Layer</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">LocalEngine / CloudEngine / CodingEngine. Skill 与 Model 解耦，通过 Capability Requirement 路由.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Provider Status</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Zhipu: ACTIVE | Ollama: STANDBY | ARK: STANDBY | Qwen: STANDBY</div>
-      </div>
-    </section>
+<section class="lm-card" style="margin-bottom:var(--lm-space-md);" data-state="loading" data-component="provider-matrix">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title" data-i18n="models.providers">Provider 矩阵</h3>
+    <span class="lm-badge lm-badge--ghost" id="mg-count">–</span>
+  </div>
+  <div class="lm-card__body">
+    <div class="lm-table-wrap">
+      <table class="lm-table">
+        <thead>
+          <tr>
+            <th data-i18n="models.col_provider">Provider</th>
+            <th data-i18n="common.type">类型</th>
+            <th data-i18n="models.col_model">模型</th>
+            <th data-i18n="models.col_credential">凭证</th>
+            <th data-i18n="common.status">状态</th>
+          </tr>
+        </thead>
+        <tbody id="mg-tbody"><tr><td colspan="5" style="color:var(--lm-text-tertiary);" data-i18n="common.loading">加载中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="lm-grid lm-grid--cards">
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="models.fallback">降级链路</h3></div>
+    <div class="lm-card__body lm-stack" id="mg-fallback"></div>
+  </article>
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="models.boundary">真值边界</h3></div>
+    <div class="lm-card__body">
+      <p style="font-size:13px;line-height:1.7;color:var(--lm-text-secondary);" data-i18n="models.boundary_text">AI 仅做分析、分类、摘要、推理与建议；ZBC 规则与数据库始终是 Production Truth。断网或无 Key 时自动降级到本地模型与确定性规则，主链路不中断。</p>
+    </div>
+  </article>
+</div>
 {% endblock %}
 
 {% block scripts %}
-// Models / AI Gateway page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'models.title':'模型与 AI Gateway','models.subtitle':'Provider-agnostic · Skill 与 Model 解耦',
+    'models.providers':'Provider 矩阵','models.col_provider':'Provider','models.col_model':'模型',
+    'models.col_credential':'凭证','models.fallback':'降级链路','models.boundary':'真值边界',
+    'models.boundary_text':'AI 仅做分析、分类、摘要、推理与建议；ZBC 规则与数据库始终是 Production Truth。断网或无 Key 时自动降级到本地模型与确定性规则，主链路不中断。',
+    'models.cloud':'云端','models.local':'本地','models.configured':'已配置','models.not_configured':'未配置',
+    'models.active':'主力','models.standby':'备用'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'models.title':'Models / AI Gateway','models.subtitle':'Provider-agnostic · Skill–Model decoupled',
+    'models.providers':'Provider Matrix','models.col_provider':'Provider','models.col_model':'Model',
+    'models.col_credential':'Credential','models.fallback':'Fallback Chain','models.boundary':'Truth Boundary',
+    'models.boundary_text':'AI only analyzes, classifies, summarizes, reasons and recommends; ZBC rules and database remain the Production Truth. On outage or missing key it degrades to local models and deterministic rules without breaking the main pipeline.',
+    'models.cloud':'Cloud','models.local':'Local','models.configured':'Configured','models.not_configured':'Not configured',
+    'models.active':'Active','models.standby':'Standby'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'models.title':'모델 / AI 게이트웨이','models.subtitle':'Provider-agnostic · Skill–Model 분리',
+    'models.providers':'Provider 매트릭스','models.col_provider':'Provider','models.col_model':'모델',
+    'models.col_credential':'자격 증명','models.fallback':'폴백 체인','models.boundary':'진실 경계',
+    'models.boundary_text':'AI는 분석·분류·요약·추론·제안만 수행하며, ZBC 규칙과 데이터베이스가 항상 Production Truth입니다. 네트워크 장애나 키 부족 시 로컬 모델과 결정론적 규칙으로 자동 다운그레이드되어 주요 흐름이 끊기지 않습니다.',
+    'models.cloud':'클라우드','models.local':'로컬','models.configured':'구성됨','models.not_configured':'미구성',
+    'models.active':'주력','models.standby':'예비'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+
+  var card=document.querySelector('[data-component="provider-matrix"]');
+  var tbody=document.getElementById('mg-tbody');
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  LUMENIS.fetch('/api/intelligence/models').then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok){card.setAttribute('data-state','error');tbody.innerHTML='<tr><td colspan="5" style="color:var(--lm-color-danger);">'+t('common.error')+'</td></tr>';return;}
+    card.setAttribute('data-state','success');
+    document.getElementById('mg-active').textContent=d.active_provider;
+    document.getElementById('mg-count').textContent=(d.providers||[]).length;
+    var dot=document.getElementById('mg-dot');
+    dot.className='lm-dot '+(d.active_provider&&d.active_provider!=='NOT_CONFIGURED'?'lm-dot--success':'lm-dot--warning');
+    var rows=(d.providers||[]).map(function(p){
+      var stCls=p.active?'lm-badge--primary':(p.configured?'lm-badge--ghost':'lm-badge--warning');
+      var stTxt=p.active?t('models.active'):(p.configured?t('models.standby'):t('models.not_configured'));
+      var kind=p.kind==='local'?t('models.local'):t('models.cloud');
+      var cred=p.credential_present?'✓':'–';
+      return '<tr><td><strong>'+p.provider+'</strong></td><td>'+kind+'</td><td>'+p.model+'</td><td>'+cred+'</td><td><span class="lm-badge '+stCls+'">'+stTxt+'</span></td></tr>';
+    });
+    tbody.innerHTML=rows.join('')||('<tr><td colspan="5" style="color:var(--lm-text-tertiary);">'+t('common.no_data')+'</td></tr>');
+    var fb=document.getElementById('mg-fallback');
+    fb.innerHTML=(d.fallback_chain||[]).map(function(x,i){return '<div class="lm-metric"><span class="lm-metric__label">'+(i+1)+'</span><span class="lm-metric__value--md">'+x+'</span></div>';}).join('');
+  }).catch(function(){
+    card.setAttribute('data-state','error');
+    tbody.innerHTML='<tr><td colspan="5" style="color:var(--lm-color-danger);">'+t('common.unavailable')+'</td></tr>';
+  });
+})();
 {% endblock %}

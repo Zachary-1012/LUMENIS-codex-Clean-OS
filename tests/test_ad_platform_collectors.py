@@ -53,6 +53,16 @@ class TestJiguangCollector:
 
 class TestMetaAdsCollector:
 
+    # 测试隔离：这两个用例断言“无代理”前提，全量运行时 .env 可能注入代理变量，
+    # 显式清除以保证确定性行为（不改变任何断言强度）。
+    _PROXY_VARS = ("OPENAI_PROXY", "HTTPS_PROXY", "HTTP_PROXY",
+                   "https_proxy", "http_proxy", "ALL_PROXY", "all_proxy")
+
+    @pytest.fixture(autouse=True)
+    def _isolate_no_proxy(self, monkeypatch):
+        for var in self._PROXY_VARS:
+            monkeypatch.delenv(var, raising=False)
+
     def test_health_check_no_api_no_proxy(self):
         from ad_intelligence.platforms.meta_ads import MetaAdsCollector
         c = MetaAdsCollector()

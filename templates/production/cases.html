@@ -1,48 +1,89 @@
 {% extends "base.html" %}
-{% block title %}Case Library - LUMENIS{% endblock %}
+{% block title %}Case Library · 序境 LUMENIS{% endblock %}
 {% block page_title %}Case Library{% endblock %}
 
 {% block content %}
-<!-- Page Status: PARTIALLY_CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Case Library</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="cs.title">案例库</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="cs.subtitle">案例深度拆解 · 事件关系图谱 · 品牌知识库（统一入口，底层库独立）</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>PARTIALLY_CONNECTED</span></span>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="cs-refresh" data-i18n="common.refresh">刷新</button>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Case Intelligence</h3>
-        <span class="lm-badge lm-badge--ghost">PARTIALLY_CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">统一入口: Cases / Brands / Accounts / Events / Content / Public Opinion / KOL/KOS/KOC / Relations / Tags / Classification.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Brand Cases</h3>
-        <span class="lm-badge lm-badge--ghost">NO_DATA</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">品牌营销案例库.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Event Relations</h3>
-        <span class="lm-badge lm-badge--ghost">NO_DATA</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">营销事件 -> 传播事件 -> 舆情事件 -> 品牌影响 因果链.</div>
-      </div>
-    </section>
+<div class="lm-grid lm-grid--metrics" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:var(--lm-space-md);">
+  <div class="lm-metric lm-card"><span class="lm-metric__label" data-i18n="cs.cases">拆解案例</span><span class="lm-metric__value" id="cs-total">–</span></div>
+  <div class="lm-metric lm-card"><span class="lm-metric__label" data-i18n="cs.avg_q">平均质量分</span><span class="lm-metric__value" id="cs-quality">–</span></div>
+  <div class="lm-metric lm-card"><span class="lm-metric__label" data-i18n="cs.events">事件</span><span class="lm-metric__value" id="cs-events">–</span></div>
+  <div class="lm-metric lm-card"><span class="lm-metric__label" data-i18n="cs.relations">事件关系</span><span class="lm-metric__value" id="cs-relations">–</span></div>
+  <div class="lm-metric lm-card"><span class="lm-metric__label" data-i18n="cs.knowledge">知识条目</span><span class="lm-metric__value" id="cs-knowledge">–</span></div>
+</div>
+
+<div class="lm-grid lm-grid--cards">
+  <article class="lm-card" data-state="loading" data-component="cs-type">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="cs.by_type">按案例类型</h3></div>
+    <div class="lm-card__body lm-stack" id="cs-type-body"></div>
+  </article>
+  <article class="lm-card" data-state="loading" data-component="cs-industry">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="cs.by_industry">按行业</h3></div>
+    <div class="lm-card__body lm-stack" id="cs-industry-body"></div>
+  </article>
+  <article class="lm-card" data-state="loading" data-component="cs-eventtype">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="cs.by_event">按事件类型</h3></div>
+    <div class="lm-card__body lm-stack" id="cs-eventtype-body"></div>
+  </article>
+</div>
 {% endblock %}
 
 {% block scripts %}
-// Case Library page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'cs.title':'案例库','cs.subtitle':'案例深度拆解 · 事件关系图谱 · 品牌知识库（统一入口，底层库独立）',
+    'cs.cases':'拆解案例','cs.avg_q':'平均质量分','cs.events':'事件','cs.relations':'事件关系','cs.knowledge':'知识条目',
+    'cs.by_type':'按案例类型','cs.by_industry':'按行业','cs.by_event':'按事件类型'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'cs.title':'Case Library','cs.subtitle':'Deep-dive cases · Event graph · Brand knowledge (unified entry, independent stores)',
+    'cs.cases':'Cases','cs.avg_q':'Avg Quality','cs.events':'Events','cs.relations':'Relations','cs.knowledge':'Knowledge',
+    'cs.by_type':'By Case Type','cs.by_industry':'By Industry','cs.by_event':'By Event Type'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'cs.title':'케이스 라이브러리','cs.subtitle':'케이스 심층 분석 · 이벤트 관계 그래프 · 브랜드 지식(통합 진입, 하위 DB 독립)',
+    'cs.cases':'케이스','cs.avg_q':'평균 품질 점수','cs.events':'이벤트','cs.relations':'관계','cs.knowledge':'지식 항목',
+    'cs.by_type':'케이스 유형별','cs.by_industry':'산업별','cs.by_event':'이벤트 유형별'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  function pairs(obj){var a=[];for(var k in obj){if(obj.hasOwnProperty(k))a.push([k,obj[k]]);}return a;}
+  function renderStack(id,obj,card){
+    var el=document.getElementById(id);var cardEl=document.querySelector(card);
+    var arr=pairs(obj||{});
+    if(!arr.length){cardEl.setAttribute('data-state','empty');el.innerHTML='<div style="color:var(--lm-text-tertiary);font-size:13px;">'+t('common.no_data')+'</div>';return;}
+    cardEl.setAttribute('data-state','success');
+    el.innerHTML=arr.map(function(p){return '<div class="lm-metric"><span class="lm-metric__label">'+p[0]+'</span><span class="lm-metric__value--md">'+p[1]+'</span></div>';}).join('');
+  }
+  function load(){
+    LUMENIS.fetch('/api/case-analysis/stats').then(function(r){return r.json();}).then(function(d){
+      var s=(d&&d.data)||{};
+      document.getElementById('cs-total').textContent=s.total||0;
+      document.getElementById('cs-quality').textContent=s.avg_quality||0;
+      renderStack('cs-type-body',s.by_type,'[data-component="cs-type"]');
+      renderStack('cs-industry-body',s.by_industry,'[data-component="cs-industry"]');
+    }).catch(function(){document.querySelector('[data-component="cs-type"]').setAttribute('data-state','error');});
+    LUMENIS.fetch('/api/event-graph/stats').then(function(r){return r.json();}).then(function(d){
+      var s=(d&&d.data)||{};
+      document.getElementById('cs-events').textContent=s.total_events||0;
+      document.getElementById('cs-relations').textContent=s.total_relations||0;
+      renderStack('cs-eventtype-body',s.events_by_type,'[data-component="cs-eventtype"]');
+    }).catch(function(){document.querySelector('[data-component="cs-eventtype"]').setAttribute('data-state','error');});
+    LUMENIS.fetch('/api/brand-knowledge/stats').then(function(r){return r.json();}).then(function(d){
+      var s=(d&&d.data)||{};
+      document.getElementById('cs-knowledge').textContent=s.total||0;
+    }).catch(function(){});
+  }
+  document.getElementById('cs-refresh').addEventListener('click',load);
+  load();
+})();
 {% endblock %}

@@ -3,27 +3,23 @@
 {% block page_title %}Skill Hub{% endblock %}
 
 {% block content %}
-<!-- Skill Hub GPT-style: 小方块 + 前置推荐区 -->
-
-<!-- 顶部状态 + 搜索 -->
 <section class="lm-card lm-card--flat" data-state="loading" data-page="skillhub" data-component="skillhub-status" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-md);align-items:center;">
     <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;align-items:center;">
-      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="sh-dot"></span><span data-field="sh-state">加载中…</span></span>
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="sh-dot"></span><span data-field="sh-state" data-i18n="common.loading">加载中…</span></span>
       <span class="lm-badge" data-field="sh-total">Total: –</span>
       <span class="lm-badge lm-badge--ghost" data-field="sh-sync">Sync: –</span>
     </div>
     <div class="lm-row" style="gap:var(--lm-space-sm);">
-      <input type="text" class="lm-input lm-input--sm" id="lm-skill-search" placeholder="搜索 Skill…" style="width:220px;">
+      <input type="text" class="lm-input lm-input--sm" id="lm-skill-search" data-i18n-placeholder="sh.search" placeholder="搜索 Skill…" style="width:220px;">
       <button class="lm-btn lm-btn--ghost lm-btn--sm" id="lm-btn-create-skill">+ Create</button>
       <button class="lm-btn lm-btn--ghost lm-btn--sm" id="lm-btn-sync">Sync</button>
     </div>
   </div>
 </section>
 
-<!-- 分类标签（横向滚动） -->
 <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;margin-bottom:var(--lm-space-md);" id="lm-category-bar">
-  <button class="lm-btn lm-btn--ghost lm-btn--sm lm-btn--active lm-cat-btn" data-category="all">全部</button>
+  <button class="lm-btn lm-btn--ghost lm-btn--sm lm-btn--active lm-cat-btn" data-category="all" data-i18n="sh.all">全部</button>
   <button class="lm-btn lm-btn--ghost lm-btn--sm lm-cat-btn" data-category="engineering">Engineering</button>
   <button class="lm-btn lm-btn--ghost lm-btn--sm lm-cat-btn" data-category="research">Research</button>
   <button class="lm-btn lm-btn--ghost lm-btn--sm lm-cat-btn" data-category="analysis">Analysis</button>
@@ -37,289 +33,200 @@
   <button class="lm-btn lm-btn--ghost lm-btn--sm lm-cat-btn" data-category="system">System</button>
 </div>
 
-<!-- 推荐 Skill（前置区，横向滚动小卡片） -->
 <section id="lm-recommended-section" style="margin-bottom:var(--lm-space-lg);">
   <div class="lm-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--lm-space-sm);">
-    <h3 style="font-size:14px;font-weight:600;color:var(--lm-text-secondary);letter-spacing:0.3px;">推荐</h3>
-    <span style="font-size:12px;color:var(--lm-text-tertiary);">基于当前任务上下文</span>
+    <h3 style="font-size:14px;font-weight:600;color:var(--lm-text-secondary);letter-spacing:0.3px;" data-i18n="sh.recommended">推荐</h3>
+    <span style="font-size:12px;color:var(--lm-text-tertiary);" data-i18n="sh.rec_hint">基于当前任务上下文</span>
   </div>
-  <div class="lm-skill-row" id="lm-recommended-row" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin;">
-    <!-- 推荐卡片由 JS 动态填充，默认显示 S01/S03/S07/S12 -->
-  </div>
+  <div class="lm-skill-row" id="lm-recommended-row" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin;"></div>
 </section>
 
-<!-- 全部 Skill（GPT 风格小方块网格） -->
 <section id="lm-all-section">
-  <h3 style="font-size:14px;font-weight:600;color:var(--lm-text-secondary);letter-spacing:0.3px;margin-bottom:var(--lm-space-sm);">全部 Skill</h3>
+  <h3 style="font-size:14px;font-weight:600;color:var(--lm-text-secondary);letter-spacing:0.3px;margin-bottom:var(--lm-space-sm);" data-i18n="sh.all_skills">全部 Skill</h3>
   <div class="lm-skill-grid" id="lm-skill-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
-    <!-- S01 -->
-    <article class="lm-skill-tile" data-skill="S01" data-category="engineering" data-name="Source Fact Scanner" data-version="1.0.0" data-type="SYSTEM" data-perm="READ" data-desc="扫描源码事实，建立 Source Fact Baseline">
-      <div class="lm-skill-tile__icon" class="lm-icon--blue">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">Source Fact Scanner</div>
-        <div class="lm-skill-tile__desc">扫描源码事实，建立 Source Fact Baseline</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S01" data-category="engineering" data-name="Source Fact Scanner" data-version="v1.0.0" data-type="SYSTEM" data-perm="READ" data-desc="扫描源码事实，建立 Source Fact Baseline">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">Source Fact Scanner</div><div class="lm-skill-tile__desc">扫描源码事实，建立 Source Fact Baseline</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S02 -->
-    <article class="lm-skill-tile" data-skill="S02" data-category="engineering" data-name="SHA Verifier" data-version="1.0.0" data-type="SYSTEM" data-perm="VERIFY" data-desc="验证 Git SHA 与分支状态，防止使用旧版本">
-      <div class="lm-skill-tile__icon" class="lm-icon--green">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">SHA Verifier</div>
-        <div class="lm-skill-tile__desc">验证 Git SHA 与分支状态</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S02" data-category="engineering" data-name="SHA Verifier" data-version="v1.0.0" data-type="SYSTEM" data-perm="VERIFY" data-desc="验证 Git SHA 与分支状态，防止使用旧版本">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">SHA Verifier</div><div class="lm-skill-tile__desc">验证 Git SHA 与分支状态</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S03 -->
-    <article class="lm-skill-tile" data-skill="S03" data-category="engineering" data-name="Git State Auditor" data-version="1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="审计 Git 工作区状态、未提交变更、冲突检测">
-      <div class="lm-skill-tile__icon" class="lm-icon--yellow">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">Git State Auditor</div>
-        <div class="lm-skill-tile__desc">审计 Git 工作区状态与冲突</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S03" data-category="engineering" data-name="Git State Auditor" data-version="v1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="审计 Git 工作区状态、未提交变更、冲突检测">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">Git State Auditor</div><div class="lm-skill-tile__desc">审计 Git 工作区状态与冲突</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S04 -->
-    <article class="lm-skill-tile" data-skill="S04" data-category="engineering" data-name="File Inventory" data-version="1.0.0" data-type="SYSTEM" data-perm="ANALYZE" data-desc="文件清单与依赖分析，识别孤儿文件和重复代码">
-      <div class="lm-skill-tile__icon" class="lm-icon--red">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">File Inventory</div>
-        <div class="lm-skill-tile__desc">文件清单与依赖分析</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S04" data-category="engineering" data-name="File Inventory" data-version="v1.0.0" data-type="SYSTEM" data-perm="ANALYZE" data-desc="文件清单与依赖分析，识别孤儿文件和重复代码">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">File Inventory</div><div class="lm-skill-tile__desc">文件清单与依赖分析</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S05 -->
-    <article class="lm-skill-tile" data-skill="S05" data-category="engineering" data-name="Module Mapper" data-version="1.0.0" data-type="SYSTEM" data-perm="ANALYZE" data-desc="模块依赖图谱，识别耦合度与循环依赖">
-      <div class="lm-skill-tile__icon" class="lm-icon--blue">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">Module Mapper</div>
-        <div class="lm-skill-tile__desc">模块依赖图谱与耦合分析</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S05" data-category="engineering" data-name="Module Mapper" data-version="v1.0.0" data-type="SYSTEM" data-perm="ANALYZE" data-desc="模块依赖图谱，识别耦合度与循环依赖">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">Module Mapper</div><div class="lm-skill-tile__desc">模块依赖图谱与耦合分析</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S06 -->
-    <article class="lm-skill-tile" data-skill="S06" data-category="engineering" data-name="Function Call Mapper" data-version="1.0.0" data-type="SYSTEM" data-perm="ANALYZE" data-desc="函数调用链追踪，定位关键路径与影响范围">
-      <div class="lm-skill-tile__icon" class="lm-icon--purple">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">Function Call Mapper</div>
-        <div class="lm-skill-tile__desc">函数调用链追踪与影响范围</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S06" data-category="engineering" data-name="Function Call Mapper" data-version="v1.0.0" data-type="SYSTEM" data-perm="ANALYZE" data-desc="函数调用链追踪，定位关键路径与影响范围">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">Function Call Mapper</div><div class="lm-skill-tile__desc">函数调用链追踪与影响范围</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S07 -->
-    <article class="lm-skill-tile" data-skill="S07" data-category="engineering" data-name="API Mapper" data-version="1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="全量 API 路由清单，含方法、权限、认证要求">
-      <div class="lm-skill-tile__icon" class="lm-icon--cyan">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">API Mapper</div>
-        <div class="lm-skill-tile__desc">全量 API 路由清单与权限</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S07" data-category="engineering" data-name="API Mapper" data-version="v1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="全量 API 路由清单，含方法、权限、认证要求">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">API Mapper</div><div class="lm-skill-tile__desc">全量 API 路由清单与权限</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S08 -->
-    <article class="lm-skill-tile" data-skill="S08" data-category="engineering" data-name="Dependency Auditor" data-version="1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="依赖版本审计，识别漏洞与过期包">
-      <div class="lm-skill-tile__icon" class="lm-icon--orange">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">Dependency Auditor</div>
-        <div class="lm-skill-tile__desc">依赖版本审计与漏洞识别</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S08" data-category="engineering" data-name="Dependency Auditor" data-version="v1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="依赖版本审计，识别漏洞与过期包">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">Dependency Auditor</div><div class="lm-skill-tile__desc">依赖版本审计与漏洞识别</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S09 -->
-    <article class="lm-skill-tile" data-skill="S09" data-category="governance" data-name="Config Auditor" data-version="1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="配置文件审计，识别硬编码路径与密钥泄露">
-      <div class="lm-skill-tile__icon" class="lm-icon--pink">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">Config Auditor</div>
-        <div class="lm-skill-tile__desc">配置审计与密钥泄露检测</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S09" data-category="governance" data-name="Config Auditor" data-version="v1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="配置文件审计，识别硬编码路径与密钥泄露">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">Config Auditor</div><div class="lm-skill-tile__desc">配置审计与密钥泄露检测</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S10 -->
-    <article class="lm-skill-tile" data-skill="S10" data-category="data" data-name="DB Schema Auditor" data-version="1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="数据库 Schema 审计，识别表结构与索引问题">
-      <div class="lm-skill-tile__icon" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">DB Schema Auditor</div>
-        <div class="lm-skill-tile__desc">数据库 Schema 与索引审计</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S10" data-category="data" data-name="DB Schema Auditor" data-version="v1.0.0" data-type="SYSTEM" data-perm="AUDIT" data-desc="数据库 Schema 审计，识别表结构与索引问题">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">DB Schema Auditor</div><div class="lm-skill-tile__desc">数据库 Schema 与索引审计</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S11 -->
-    <article class="lm-skill-tile" data-skill="S11" data-category="data" data-name="DB Integrity Checker" data-version="1.0.0" data-type="SYSTEM" data-perm="VERIFY" data-desc="数据完整性检查，识别孤儿记录与不一致">
-      <div class="lm-skill-tile__icon" class="lm-icon--teal">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">DB Integrity Checker</div>
-        <div class="lm-skill-tile__desc">数据完整性与一致性检查</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S11" data-category="data" data-name="DB Integrity Checker" data-version="v1.0.0" data-type="SYSTEM" data-perm="VERIFY" data-desc="数据完整性检查，识别孤儿记录与不一致">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">DB Integrity Checker</div><div class="lm-skill-tile__desc">数据完整性与一致性检查</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
-
-    <!-- S12 -->
-    <article class="lm-skill-tile" data-skill="S12" data-category="monitoring" data-name="Runtime Health" data-version="1.0.0" data-type="SYSTEM" data-perm="MONITOR" data-desc="运行时健康检查，含进程、端口、资源、依赖">
-      <div class="lm-skill-tile__icon" class="lm-icon--amber">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      </div>
-      <div class="lm-skill-tile__info">
-        <div class="lm-skill-tile__name">Runtime Health</div>
-        <div class="lm-skill-tile__desc">运行时健康检查与资源监控</div>
-      </div>
+    <article class="lm-skill-tile" data-skill="S12" data-category="monitoring" data-name="Runtime Health" data-version="v1.0.0" data-type="SYSTEM" data-perm="MONITOR" data-desc="运行时健康检查，含进程、端口、资源、依赖">
+      <div class="lm-skill-tile__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+      <div class="lm-skill-tile__info"><div class="lm-skill-tile__name">Runtime Health</div><div class="lm-skill-tile__desc">运行时健康检查与资源监控</div></div>
       <div class="lm-skill-tile__status"><span class="lm-dot lm-dot--success"></span></div>
-      <div class="lm-skill-tile__actions">
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
-        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
-        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
-      </div>
+      <div class="lm-skill-tile__actions"><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button><button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button><button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button></div>
     </article>
   </div>
 </section>
 
-<!-- S13-S72 提示 -->
-<div style="margin-top:var(--lm-space-lg);padding:var(--lm-space-md);text-align:center;color:var(--lm-text-tertiary);font-size:12px;border-top:1px solid var(--lm-border);">
+<div style="margin-top:var(--lm-space-lg);padding:var(--lm-space-md);text-align:center;color:var(--lm-text-tertiary);font-size:12px;border-top:1px solid var(--lm-border);" data-i18n="sh.planned">
   S13–S72 为规划总量，将按优先级逐步落地。当前真实可用 Skill 为 S01–S12。
 </div>
 
-<!-- Skill Detail Drawer -->
-<div class="lm-drawer" id="lm-skill-drawer" style="display:none;position:fixed;top:0;right:0;width:440px;height:100vh;background:var(--lm-surface);border-left:1px solid var(--lm-border);z-index:var(--lm-z-drawer);transform:translateX(100%);transition:transform var(--lm-motion-fast);overflow-y:auto;padding:var(--lm-space-lg);box-shadow:var(--lm-shadow-lg);">
+<div class="lm-drawer" id="lm-skill-drawer" style="display:none;position:fixed;top:0;right:0;width:440px;max-width:92vw;height:100vh;background:var(--lm-surface);border-left:1px solid var(--lm-border);z-index:var(--lm-z-drawer);transform:translateX(100%);transition:transform var(--lm-motion-fast);overflow-y:auto;padding:var(--lm-space-lg);box-shadow:var(--lm-shadow-lg);">
   <div class="lm-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--lm-space-md);">
     <h2 style="font-size:17px;font-weight:600;" id="lm-drawer-title">Skill Detail</h2>
-    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="lm-drawer-close" style="font-size:18px;line-height:1;">×</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="lm-drawer-close" aria-label="close" style="font-size:18px;line-height:1;">×</button>
   </div>
-  <div id="lm-drawer-content" class="lm-stack" style="gap:var(--lm-space-md);">
-  </div>
+  <div id="lm-drawer-content" class="lm-stack" style="gap:var(--lm-space-md);"></div>
 </div>
 <div class="lm-overlay" id="lm-drawer-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:calc(var(--lm-z-drawer) - 1);"></div>
 {% endblock %}
 
 {% block scripts %}
 (function(){
+  var DESC={
+    zh:{S01:'扫描源码事实，建立 Source Fact Baseline',S02:'验证 Git SHA 与分支状态，防止使用旧版本',S03:'审计 Git 工作区状态、未提交变更、冲突检测',S04:'文件清单与依赖分析，识别孤儿文件和重复代码',S05:'模块依赖图谱，识别耦合度与循环依赖',S06:'函数调用链追踪，定位关键路径与影响范围',S07:'全量 API 路由清单，含方法、权限、认证要求',S08:'依赖版本审计，识别漏洞与过期包',S09:'配置文件审计，识别硬编码路径与密钥泄露',S10:'数据库 Schema 审计，识别表结构与索引问题',S11:'数据完整性检查，识别孤儿记录与不一致',S12:'运行时健康检查，含进程、端口、资源、依赖'},
+    en:{S01:'Scan source facts and build the Source Fact Baseline',S02:'Verify Git SHA and branch state to avoid stale versions',S03:'Audit Git worktree, uncommitted changes and conflicts',S04:'File inventory and dependency analysis; find orphans and duplicates',S05:'Module dependency graph; detect coupling and cycles',S06:'Trace function call chains; locate critical paths and blast radius',S07:'Full API route inventory with methods, permissions and auth',S08:'Audit dependency versions; find vulnerabilities and stale packages',S09:'Audit config files; find hardcoded paths and secret leakage',S10:'Audit DB schema; find table and index issues',S11:'Check data integrity; find orphan records and inconsistency',S12:'Runtime health: process, port, resource and dependency checks'},
+    ko:{S01:'소스 팩트를 스캔해 Source Fact Baseline 구축',S02:'Git SHA와 브랜치 상태를 검증해 구버전 사용 방지',S03:'Git 작업트리, 미커밋 변경, 충돌을 감사',S04:'파일 목록과 의존성 분석, 고아/중복 코드 식별',S05:'모듈 의존성 그래프, 결합도와 순환 의존 식별',S06:'함수 호출 체인 추적, 핵심 경로와 영향 범위 파악',S07:'전체 API 라우트 목록(메서드/권한/인증)',S08:'의존성 버전 감사, 취약점과 만료 패키지 식별',S09:'설정 파일 감사, 하드코딩 경로와 키 유출 식별',S10:'DB 스키마 감사, 테이블/인덱스 문제 식별',S11:'데이터 무결성 검사, 고아 레코드와 불일치 식별',S12:'런타임 헬스: 프로세스/포트/자원/의존성 점검'}
+  };
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'sh.search':'搜索 Skill…','sh.all':'全部','sh.recommended':'推荐','sh.rec_hint':'基于当前任务上下文','sh.all_skills':'全部 Skill',
+    'sh.planned':'S13–S72 为规划总量，将按优先级逐步落地。当前真实可用 Skill 为 S01–S12。',
+    'sh.reg_na':'Skill Registry 未加载','sh.connected':'已连接','sh.disconnected':'未连接',
+    'sh.overview':'概述','sh.inputs':'输入','sh.outputs':'输出','sh.version':'版本','sh.identity':'身份策略','sh.permissions':'权限','sh.evidence':'证据','sh.recent':'最近运行',
+    'sh.inputs_v':'repository_path, branch, sha（可选）','sh.outputs_v':'结构化 JSON 报告 + evidence_id',
+    'sh.identity_v':'Agent → Skill → Tool 委托链，最小权限。','sh.perm_v':'（只读，不写生产）','sh.evidence_v':'每次执行产生 evidence_id，可追溯至文件/函数/测试',
+    'sh.no_runs':'暂无执行记录','sh.loading_runs':'加载执行记录…','sh.run_skill':'运行 Skill','sh.disable':'停用','sh.enabled':'已启用','sh.no_desc':'无描述',
+    'sh.invoking':'正在调用 ','sh.invoke_na':' 调用：API 不可用','sh.syncing':'正在同步 GitHub Manifest…','sh.sync_na':'Sync API 不可用','sh.create_hint':'创建自定义 Skill — 即将上线','sh.skills_unit':' 个 Skill'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'sh.search':'Search skills…','sh.all':'All','sh.recommended':'Recommended','sh.rec_hint':'Based on current task context','sh.all_skills':'All skills',
+    'sh.planned':'S13–S72 are the planned total and will land by priority. Currently usable: S01–S12.',
+    'sh.reg_na':'Skill registry not loaded','sh.connected':'Connected','sh.disconnected':'Disconnected',
+    'sh.overview':'Overview','sh.inputs':'Inputs','sh.outputs':'Outputs','sh.version':'Version','sh.identity':'Identity Policy','sh.permissions':'Permissions','sh.evidence':'Evidence','sh.recent':'Recent Runs',
+    'sh.inputs_v':'repository_path, branch, sha (optional)','sh.outputs_v':'structured JSON report + evidence_id',
+    'sh.identity_v':'Agent → Skill → Tool delegation chain, least privilege.','sh.perm_v':'(read-only, no production write)','sh.evidence_v':'Each run emits an evidence_id traceable to file/function/test',
+    'sh.no_runs':'No execution record yet','sh.loading_runs':'Loading runs…','sh.run_skill':'Run Skill','sh.disable':'Disable','sh.enabled':'Enabled','sh.no_desc':'No description',
+    'sh.invoking':'Invoking ','sh.invoke_na':' invoke: API not available','sh.syncing':'Syncing GitHub manifests…','sh.sync_na':'Sync API not available','sh.create_hint':'Create custom skill — coming soon','sh.skills_unit':' skills'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'sh.search':'스킬 검색…','sh.all':'전체','sh.recommended':'추천','sh.rec_hint':'현재 작업 컨텍스트 기반','sh.all_skills':'전체 스킬',
+    'sh.planned':'S13–S72는 계획된 총량이며 우선순위에 따라 점진 적용. 현재 실사용 가능: S01–S12.',
+    'sh.reg_na':'Skill 레지스트리 미로드','sh.connected':'연결됨','sh.disconnected':'미연결',
+    'sh.overview':'개요','sh.inputs':'입력','sh.outputs':'출력','sh.version':'버전','sh.identity':'아이덴티티 정책','sh.permissions':'권한','sh.evidence':'증거','sh.recent':'최근 실행',
+    'sh.inputs_v':'repository_path, branch, sha(선택)','sh.outputs_v':'구조화 JSON 보고서 + evidence_id',
+    'sh.identity_v':'Agent → Skill → Tool 위임 체인, 최소 권한.','sh.perm_v':'(읽기 전용, 프로덕션 쓰기 없음)','sh.evidence_v':'매 실행이 파일/함수/테스트로 추적 가능한 evidence_id 생성',
+    'sh.no_runs':'실행 기록 없음','sh.loading_runs':'실행 기록 불러오는 중…','sh.run_skill':'스킬 실행','sh.disable':'비활성화','sh.enabled':'활성화됨','sh.no_desc':'설명 없음',
+    'sh.invoking':'호출 중 ','sh.invoke_na':' 호출: API 사용 불가','sh.syncing':'GitHub 매니페스트 동기화 중…','sh.sync_na':'Sync API 사용 불가','sh.create_hint':'커스텀 스킬 생성 — 준비 중','sh.skills_unit':'개 스킬'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function tr(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  function descOf(sid){var m=DESC[LUMENIS.i18n.current]||DESC.zh;return m[sid]||'';}
   var tiles = document.querySelectorAll('.lm-skill-tile');
   var currentCategory = 'all';
   var currentSearch = '';
 
-  // 状态绑定
+  function paintTiles(){
+    tiles.forEach(function(tile){
+      var sid=tile.getAttribute('data-skill');
+      var d=tile.querySelector('.lm-skill-tile__desc');
+      if(d){var txt=descOf(sid);if(txt)d.textContent=txt;}
+    });
+  }
+  paintTiles();
+  var _origSetLang=LUMENIS.i18n.setLang.bind(LUMENIS.i18n);
+  // repaint after language switch (base setLang runs first via page dict mechanism)
+
   LUMENIS.bindState(document.querySelector('[data-component="skillhub-status"]'), {
     page:"skillhub", component:"skillhub-status", url:"/lumenis/api/skills/status",
     isEmpty:function(d){return !d || d.total===0;},
-    emptyText:"Skill Registry 未加载",
+    emptyText:tr('sh.reg_na'),
     render:function(d){
       var dot=document.querySelector('[data-field="sh-dot"]');
       if(dot) dot.className="lm-dot lm-dot--"+(d.total>0?"success":"unknown");
       var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
-      f("sh-state", d.total>0?"已连接":"未连接");
+      f("sh-state", d.total>0?tr('sh.connected'):tr('sh.disconnected'));
       f("sh-total","Total: "+(d.total||12));
       f("sh-sync","Sync: "+(d.sync_status||"SYNCED"));
     }
   });
 
-  // 推荐区：默认显示 S01/S03/S07/S12
   var recommendedIds = ['S01','S03','S07','S12'];
   var recRow = document.getElementById('lm-recommended-row');
   if(recRow){
     tiles.forEach(function(tile){
       if(recommendedIds.indexOf(tile.getAttribute('data-skill')) >= 0){
         var clone = tile.cloneNode(true);
-        clone.style.minWidth = '200px';
-        clone.style.flex = '0 0 auto';
+        clone.style.minWidth = '200px';clone.style.flex = '0 0 auto';
         recRow.appendChild(clone);
       }
     });
-    // 绑定推荐区的事件
     recRow.querySelectorAll('.lm-skill-detail').forEach(function(btn){
       btn.addEventListener('click', function(e){ e.stopPropagation(); openDrawer(this.closest('.lm-skill-tile')); });
     });
     recRow.querySelectorAll('.lm-skill-run').forEach(function(btn){
       btn.addEventListener('click', function(e){ e.stopPropagation(); invokeSkill(this.closest('.lm-skill-tile')); });
     });
+    // 克隆的推荐卡片本身也可点击打开详情（cloneNode 不会复制 addEventListener）
+    recRow.querySelectorAll('.lm-skill-tile').forEach(function(c){
+      c.style.cursor='pointer';
+      c.addEventListener('click', function(){ openDrawer(c); });
+    });
   }
 
-  // 过滤
   function applyFilters(){
-    tiles.forEach(function(tile){
+    document.querySelectorAll('.lm-skill-tile').forEach(function(tile){
       var cat=tile.getAttribute('data-category');
       var name=(tile.getAttribute('data-name')||'').toLowerCase();
       var sid=(tile.getAttribute('data-skill')||'').toLowerCase();
@@ -329,20 +236,17 @@
     });
   }
 
-  // 分类
   document.querySelectorAll('.lm-cat-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
       document.querySelectorAll('.lm-cat-btn').forEach(function(b){b.classList.remove('lm-btn--active');});
       btn.classList.add('lm-btn--active');
       currentCategory = btn.getAttribute('data-category');
       applyFilters();
-      // 推荐区在非全部时隐藏
       var recSec = document.getElementById('lm-recommended-section');
       if(recSec) recSec.style.display = (currentCategory==='all' && !currentSearch)?'block':'none';
     });
   });
 
-  // 搜索
   var searchInput = document.getElementById('lm-skill-search');
   if(searchInput){
     searchInput.addEventListener('input',function(){
@@ -353,7 +257,6 @@
     });
   }
 
-  // Detail Drawer
   var drawer = document.getElementById('lm-skill-drawer');
   var overlay = document.getElementById('lm-drawer-overlay');
 
@@ -363,107 +266,90 @@
     var version = tile.getAttribute('data-version');
     var type = tile.getAttribute('data-type');
     var perm = tile.getAttribute('data-perm');
-    var desc = tile.getAttribute('data-desc');
+    var desc = descOf(sid) || tile.getAttribute('data-desc') || tr('sh.no_desc');
     var cat = tile.getAttribute('data-category');
-
     document.getElementById('lm-drawer-title').textContent = sid + ' · ' + name;
     var content = document.getElementById('lm-drawer-content');
+    function sec(t,b){return '<div style="font-size:13px;"><div style="font-weight:600;margin-bottom:8px;">'+t+'</div><div style="color:var(--lm-text-secondary);line-height:1.7;">'+b+'</div></div>';}
     content.innerHTML =
       '<div style="padding:16px;background:var(--lm-surface-elevated);border-radius:12px;">' +
-        '<div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.7;margin-bottom:12px;">' + (desc||'No description') + '</div>' +
+        '<div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.7;margin-bottom:12px;">' + desc + '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-          '<span class="lm-badge lm-badge--ghost">v' + version + '</span>' +
-          '<span class="lm-badge lm-badge--ghost">' + type + '</span>' +
-          '<span class="lm-badge lm-badge--ghost">' + perm + '</span>' +
-          '<span class="lm-badge lm-badge--ghost">' + cat + '</span>' +
-          '<span class="lm-badge lm-badge--success">Enabled</span>' +
-        '</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Overview</div>' +
-        '<div style="color:var(--lm-text-secondary);line-height:1.7;">' + (desc||'No description') + '</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Inputs</div>' +
-        '<div style="color:var(--lm-text-secondary);">repository_path, branch, sha (optional)</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Outputs</div>' +
-        '<div style="color:var(--lm-text-secondary);">structured JSON report + evidence_id</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Version</div>' +
-        '<div style="color:var(--lm-text-secondary);">v1.0.0</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Identity Policy</div>' +
-        '<div style="color:var(--lm-text-secondary);">Agent -> Skill -> Tool delegation chain. Least privilege enforced.</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Permissions</div>' +
-        '<div style="color:var(--lm-text-secondary);">' + perm + ' (read-only, no production write)</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Evidence</div>' +
-        '<div style="color:var(--lm-text-secondary);">每一次执行产生 evidence_id，可追溯至文件/函数/测试</div>' +
-      '</div>' +
-      '<div style="font-size:13px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">Recent Runs</div>' +
-        '<div style="color:var(--lm-text-tertiary);">No execution record yet</div>' +
-      '</div>' +
+          '<span class="lm-badge lm-badge--ghost">' + version + '</span><span class="lm-badge lm-badge--ghost">' + type + '</span><span class="lm-badge lm-badge--ghost">' + perm + '</span><span class="lm-badge lm-badge--ghost">' + cat + '</span><span class="lm-badge lm-badge--success">'+tr('sh.enabled')+'</span>' +
+        '</div></div>' +
+      sec(tr('sh.overview'),desc) +
+      sec(tr('sh.inputs'),tr('sh.inputs_v')) +
+      sec(tr('sh.outputs'),tr('sh.outputs_v')) +
+      sec(tr('sh.version'),version) +
+      sec(tr('sh.identity'),tr('sh.identity_v')) +
+      sec(tr('sh.permissions'),perm+' '+tr('sh.perm_v')) +
+      sec(tr('sh.evidence'),tr('sh.evidence_v')) +
+      sec(tr('sh.recent'),'<div id="lm-drawer-runs" style="color:var(--lm-text-tertiary);">'+tr('sh.loading_runs')+'</div>') +
       '<div style="display:flex;gap:8px;margin-top:8px;">' +
-        '<button class="lm-btn lm-btn--primary lm-btn--sm" onclick="window.__invokeSkill(\'' + sid + '\')">Run Skill</button>' +
-        '<button class="lm-btn lm-btn--ghost lm-btn--sm">Disable</button>' +
-      '</div>';
-
+        '<button class="lm-btn lm-btn--primary lm-btn--sm" onclick="window.__invokeSkill(\'' + sid + '\')">'+tr('sh.run_skill')+'</button>' +
+        '<button class="lm-btn lm-btn--ghost lm-btn--sm">'+tr('sh.disable')+'</button></div>';
     drawer.style.display = 'block';
     overlay.style.display = 'block';
     requestAnimationFrame(function(){ drawer.style.transform = 'translateX(0)'; });
+    loadRuns(sid);
+  }
+
+  function loadRuns(sid){
+    var box=document.getElementById('lm-drawer-runs');
+    if(!box) return;
+    fetch('/lumenis/api/skills/invocations?limit=10&skill_id='+encodeURIComponent(sid))
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var recs=d.records||[];
+        if(!recs.length){ box.style.color='var(--lm-text-tertiary)'; box.textContent=tr('sh.no_runs'); return; }
+        box.innerHTML=recs.map(function(r){
+          var lat=(r.result&&r.result.latency_ms)?Math.round(r.result.latency_ms)+'ms':'';
+          var model=r.model_id||'';
+          return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--lm-border);font-size:12px;">'
+            +'<span>'+(r.timestamp||'')+'</span>'
+            +'<span style="font-weight:600;">'+(r.status||'')+'</span>'
+            +'<span style="color:var(--lm-text-tertiary);">'+model+' '+lat+'</span></div>';
+        }).join('');
+      })
+      .catch(function(){ box.style.color='var(--lm-text-tertiary)'; box.textContent=tr('sh.no_runs'); });
   }
 
   function closeDrawer(){
     drawer.style.transform = 'translateX(100%)';
     setTimeout(function(){ drawer.style.display='none'; overlay.style.display='none'; }, 200);
   }
-
   document.getElementById('lm-drawer-close').addEventListener('click', closeDrawer);
   overlay.addEventListener('click', closeDrawer);
 
-  // 主网格 Detail 按钮 + 整卡点击打开 Detail（按钮 stopPropagation 优先）
   tiles.forEach(function(tile){
     tile.querySelector('.lm-skill-detail').addEventListener('click', function(e){ e.stopPropagation(); openDrawer(tile); });
     tile.querySelector('.lm-skill-run').addEventListener('click', function(e){ e.stopPropagation(); invokeSkill(tile); });
     var toggleBtn = tile.querySelector('.lm-skill-toggle');
     if(toggleBtn){ toggleBtn.addEventListener('click', function(e){ e.stopPropagation(); }); }
-    // 点击卡片空白区域也打开 Detail（GPT Store 交互）
     tile.addEventListener('click', function(){ openDrawer(tile); });
     tile.style.cursor = 'pointer';
   });
 
-  // Invoke
   function invokeSkill(tile){
-    var sid = tile.getAttribute('data-skill');
-    LUMENIS.toast('info', 'Invoking ' + sid + '…');
+    var sid = (typeof tile==='string')?tile:tile.getAttribute('data-skill');
+    LUMENIS.toast(tr('sh.invoking') + sid + '…','info');
     fetch('/lumenis/api/skills/invoke', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({skill_id:sid, task:'manual invoke from Skill Hub'})
     }).then(function(r){return r.json();}).then(function(d){
-      LUMENIS.toast(d.status==='ACCEPTED'||d.status==='SUCCESS'?'success':'error', sid + ': ' + (d.status||'done') + ' (' + (d.invocation_id||'') + ')');
-    }).catch(function(){ LUMENIS.toast('warning', sid + ' invoke: API not available'); });
+      LUMENIS.toast(sid + ': ' + (d.status||'done') + ' (' + (d.invocation_id||'') + ')', (d.status==='ACCEPTED'||d.status==='SUCCESS'||d.status==='COMPLETED')?'success':(d.status==='BLOCKED'?'warning':'error'));
+    }).catch(function(){ LUMENIS.toast(sid + tr('sh.invoke_na'),'warning'); });
   }
   window.__invokeSkill = invokeSkill;
 
-  // Sync
   document.getElementById('lm-btn-sync').addEventListener('click',function(){
-    LUMENIS.toast('info', 'Syncing GitHub manifests…');
+    LUMENIS.toast(tr('sh.syncing'),'info');
     fetch('/lumenis/api/skills/sync', {method:'POST'}).then(function(r){return r.json();}).then(function(d){
-      LUMENIS.toast(d.status==='SYNCED'?'success':'warning', 'Sync: ' + (d.status||'done') + ' (' + (d.synced_count||0) + ' skills)');
-    }).catch(function(){ LUMENIS.toast('warning', 'Sync API not available'); });
+      LUMENIS.toast('Sync: ' + (d.status||'done') + ' (' + (d.synced_count||0) + tr('sh.skills_unit')+')', d.status==='SYNCED'?'success':'warning');
+    }).catch(function(){ LUMENIS.toast(tr('sh.sync_na'),'warning'); });
   });
-
-  // Create
   document.getElementById('lm-btn-create-skill').addEventListener('click',function(){
-    LUMENIS.toast('info', 'Create Custom Skill — coming soon');
+    LUMENIS.toast(tr('sh.create_hint'),'info');
   });
 })();
 {% endblock %}

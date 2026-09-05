@@ -344,3 +344,22 @@
 .lm-icon--lime { background: linear-gradient(135deg,#f1f8e9,#dcedc8); color: #558b2f; }
 .lm-icon--indigo { background: linear-gradient(135deg,#e8eaf6,#c5cae9); color: #303f9f; }
 .lm-icon--amber { background: linear-gradient(135deg,#fff8e1,#ffecb3); color: #f57f17; }
+
+/* ============ P1 supplement: semantic badges / drawer / table ============ */
+.lm-badge--primary{background:color-mix(in srgb,var(--lm-status-info) 14%,transparent);color:var(--lm-status-info);}
+.lm-badge--success{background:color-mix(in srgb,var(--lm-status-success) 14%,transparent);color:var(--lm-status-success);}
+.lm-badge--warning{background:color-mix(in srgb,var(--lm-status-warning) 16%,transparent);color:var(--lm-status-warning);}
+.lm-badge--danger{background:color-mix(in srgb,var(--lm-status-danger) 14%,transparent);color:var(--lm-status-danger);}
+.lm-badge--ai{background:color-mix(in srgb,var(--lm-status-ai) 14%,transparent);color:var(--lm-status-ai);}
+.lm-badge--ghost{background:var(--lm-surface-input);color:var(--lm-text-secondary);border:var(--lm-border-width) solid var(--lm-border);}
+
+.lm-drawer[hidden]{display:none;}
+.lm-drawer__head{display:flex;align-items:center;justify-content:space-between;padding:var(--lm-space-md) var(--lm-space-lg);border-bottom:var(--lm-border-width) solid var(--lm-border);}
+.lm-drawer__body{padding:var(--lm-space-lg);overflow-y:auto;flex:1;min-height:0;}
+
+.lm-table{width:100%;border-collapse:collapse;}
+.lm-table th,.lm-table td{padding:10px 12px;border-bottom:var(--lm-border-width) solid var(--lm-border);text-align:left;vertical-align:middle;}
+.lm-table tbody tr{transition:background var(--lm-motion-hover) var(--lm-ease);}
+.lm-table tbody tr:hover{background:var(--lm-surface-input);}
+select.lm-input{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:var(--lm-space-lg);background-image:linear-gradient(45deg,transparent 50%,var(--lm-text-tertiary) 50%),linear-gradient(135deg,var(--lm-text-tertiary) 50%,transparent 50%);background-position:calc(100% - 16px) center,calc(100% - 11px) center;background-size:5px 5px;background-repeat:no-repeat;}
+.lm-btn--xs{min-height:24px;padding:0 8px;font-size:var(--lm-text-label);}

@@ -1,57 +1,106 @@
 {% extends "base.html" %}
-{% block title %}Monitoring - LUMENIS{% endblock %}
+{% block title %}Monitoring · 序境 LUMENIS{% endblock %}
 {% block page_title %}Monitoring{% endblock %}
 
 {% block content %}
-<!-- Page Status: CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Monitoring</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="mo.title">生产监控</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="mo.subtitle">Collector · CollectorGuard · Runtime · Risk（数据失败显式，不静默为 0）</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="mo-refresh" data-i18n="common.refresh">刷新</button>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Collector Status</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Collector + CollectorGuard. 小红书主平台采集状态.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Runtime Health</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">进程、端口、资源、依赖健康检查.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Collection Status</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">SUCCESS / NO_NEW_DATA / RISK_WARNING / NEED_VERIFY / BLOCKED / SESSION_EXPIRED / COLLECT_ERROR / COOLING_DOWN</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Risk Monitor</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">风险判断逻辑保持规则优先，AI 只做增强.</div>
-      </div>
-    </section>
+<section class="lm-card" style="margin-bottom:var(--lm-space-md);" data-state="loading" data-component="mo-health">
+  <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="mo.health">系统健康四灯</h3><span class="lm-status"><span class="lm-dot lm-dot--unknown"></span><span data-field="overall">–</span></span></div>
+  <div class="lm-card__body">
+    <div class="lm-grid lm-grid--metrics" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="mo.db">数据库</span><span class="lm-metric__value--md" data-field="database">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="mo.collector">采集器</span><span class="lm-metric__value--md" data-field="collector">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">Auth</span><span class="lm-metric__value--md" data-field="auth">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="mo.xhs">小红书平台</span><span class="lm-metric__value--md" data-field="xhs">–</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="lm-grid lm-grid--cards">
+  <article class="lm-card" data-state="loading" data-component="mo-guard">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="mo.guard">CollectorGuard</h3><span class="lm-badge" data-field="guard-state">–</span></div>
+    <div class="lm-card__body lm-stack" id="mo-guard-body"><div style="color:var(--lm-text-tertiary);font-size:13px;" data-i18n="common.loading">加载中…</div></div>
+  </article>
+  <article class="lm-card" data-state="loading" data-component="mo-sched">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="mo.sched">采集调度</h3><span class="lm-badge" data-field="sched-state">–</span></div>
+    <div class="lm-card__body lm-stack" id="mo-sched-body"><div style="color:var(--lm-text-tertiary);font-size:13px;" data-i18n="common.loading">加载中…</div></div>
+  </article>
+</div>
 {% endblock %}
 
 {% block scripts %}
-// Monitoring page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'mo.title':'生产监控','mo.subtitle':'Collector · CollectorGuard · Runtime · Risk（数据失败显式，不静默为 0）',
+    'mo.health':'系统健康四灯','mo.db':'数据库','mo.collector':'采集器','mo.xhs':'小红书平台',
+    'mo.guard':'CollectorGuard','mo.sched':'采集调度','mo.today_runs':'今日运行','mo.today_ins':'今日入库',
+    'mo.manual':'手动额度','mo.next':'下次采集','mo.unavailable':'暂不可用'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'mo.title':'Production Monitoring','mo.subtitle':'Collector · CollectorGuard · Runtime · Risk (failures are explicit, never silent 0)',
+    'mo.health':'Health Lights','mo.db':'Database','mo.collector':'Collector','mo.xhs':'Xiaohongshu',
+    'mo.guard':'CollectorGuard','mo.sched':'Schedule','mo.today_runs':'Runs today','mo.today_ins':'Inserted today',
+    'mo.manual':'Manual quota','mo.next':'Next collect','mo.unavailable':'Unavailable'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'mo.title':'프로덕션 모니터링','mo.subtitle':'Collector · CollectorGuard · Runtime · Risk(실패는 명시적으로, 0으로 숨기지 않음)',
+    'mo.health':'헬스 표시등','mo.db':'데이터베이스','mo.collector':'수집기','mo.xhs':'샤오홍슈',
+    'mo.guard':'CollectorGuard','mo.sched':'수집 스케줄','mo.today_runs':'오늘 실행','mo.today_ins':'오늘 적재',
+    'mo.manual':'수동 할당량','mo.next':'다음 수집','mo.unavailable':'사용 불가'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  function f(root,k,v){var n=root.querySelector('[data-field="'+k+'"]');if(n)n.textContent=v;}
+  function kv(id,k,v){var h='<div class="lm-metric"><span class="lm-metric__label">'+k+'</span><span class="lm-metric__value--md">'+(v===undefined||v===null||v===''?'–':v)+'</span></div>';var el=document.getElementById(id);if(el)el.innerHTML=h;}
+  function addkv(id,k,v){var el=document.getElementById(id);if(!el)return;el.insertAdjacentHTML('beforeend','<div class="lm-metric"><span class="lm-metric__label">'+k+'</span><span class="lm-metric__value--md">'+(v===undefined||v===null||v===''?'–':v)+'</span></div>');}
+
+  // health
+  var hc=document.querySelector('[data-component="mo-health"]');
+  LUMENIS.bindState(hc,{page:'monitoring',component:'mo-health',url:'/api/system/health/summary',
+    isEmpty:function(d){return !d;},emptyText:t('mo.unavailable'),
+    render:function(d){
+      f(hc,'overall',d.overall_status||'–');
+      var sl=d.sub_lights||{};
+      f(hc,'database',(sl.database&&sl.database.light)||'–');
+      f(hc,'collector',(sl.collector&&(sl.collector.cdp_running?'RUN':sl.collector.light))||'–');
+      f(hc,'auth',(sl.auth&&sl.auth.light)||'–');
+      f(hc,'xhs',(sl.xhs_platform&&sl.xhs_platform.light)||'–');
+    }});
+
+  // guard
+  var gc=document.querySelector('[data-component="mo-guard"]');
+  LUMENIS.fetch('/api/collector-guard/status').then(function(r){return r.json();}).then(function(d){
+    gc.setAttribute('data-state',d?'success':'empty');
+    var body=document.getElementById('mo-guard-body');body.innerHTML='';
+    if(!d){body.textContent=t('common.no_data');return;}
+    f(gc,'guard-state',d.state||d.status||'–');
+    kv('mo-guard-body',t('mo.today_runs'),d.total_today??d.runs_today??'–');
+    addkv('mo-guard-body',t('common.status'),d.state_cn||d.state||'–');
+    if(d.last_block_reason)addkv('mo-guard-body','Last block',d.last_block_reason);
+  }).catch(function(){gc.setAttribute('data-state','error');document.getElementById('mo-guard-body').textContent=t('mo.unavailable');});
+
+  // schedule
+  var sc=document.querySelector('[data-component="mo-sched"]');
+  LUMENIS.fetch('/api/collect/schedule-status').then(function(r){return r.json();}).then(function(d){
+    sc.setAttribute('data-state',d?'success':'empty');
+    var body=document.getElementById('mo-sched-body');body.innerHTML='';
+    if(!d){body.textContent=t('common.no_data');return;}
+    f(sc,'sched-state',d.state_cn||d.state||'–');
+    kv('mo-sched-body',t('mo.today_runs'),d.today_runs??'–');
+    addkv('mo-sched-body',t('mo.today_ins'),d.today_inserted??'–');
+    addkv('mo-sched-body',t('mo.manual'),(d.manual_left??'–')+' / '+(d.manual_total??3));
+    addkv('mo-sched-body',t('mo.next'),d.next_collect||'–');
+  }).catch(function(){sc.setAttribute('data-state','error');document.getElementById('mo-sched-body').textContent=t('mo.unavailable');});
+
+  document.getElementById('mo-refresh').addEventListener('click',function(){location.reload();});
+})();
 {% endblock %}
