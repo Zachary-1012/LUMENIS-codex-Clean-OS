@@ -175,6 +175,14 @@ try:
 except Exception as _lm_e:
     print(f"[lumenis] blueprint register failed: {_lm_e}")
 
+# 序境 LUMENIS 聚合只读 API（全局 /api：模型/Agent/评估/研究/权限/仓库/运行时/报告/KOS专业号）
+try:
+    from lumenis_agg_api import register_agg_api
+    register_agg_api(app)
+    print("[lumenis-agg] aggregation API registered")
+except Exception as _lag_e:
+    print(f"[lumenis-agg] aggregation API register failed: {_lag_e}")
+
 # 统一本地文件导入 API（参考 GPT 文件夹 icon，点击浏览本地；复用 app_evidence 扩展名+500MB 校验）
 try:
     from app_evidence import EVIDENCE_ALLOWED_EXTENSIONS, EVIDENCE_MAX_FILE_SIZE_BYTES

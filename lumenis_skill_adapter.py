@@ -67,18 +67,25 @@ class CrossCoreSkillAdapter:
     def available(self) -> bool:
         return self._osai_root is not None
 
-    def _run_osai(self, script: str) -> Optional[Dict[str, Any]]:
-        """通过 subprocess 调用 OSAI Python 执行脚本，返回 JSON。"""
+    def _run_osai(self, script: str, timeout: Optional[float] = None,
+                  argv: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+        """通过 subprocess 调用 OSAI Python 执行脚本，返回 JSON。
+
+        timeout: 本次独立超时（秒）；argv: 透传命令行参数（sys.argv[1:]）。
+        """
         if not self._osai_root:
             self._last_error = "OSAI_REPO_NOT_FOUND"
             return None
         try:
+            cmd = [_python_executable(), "-c", script]
+            if argv:
+                cmd.extend(argv)
             result = subprocess.run(
-                [_python_executable(), "-c", script],
+                cmd,
                 cwd=self._osai_root,
                 capture_output=True,
                 text=True,
-                timeout=self._timeout,
+                timeout=timeout if timeout is not None else self._timeout,
                 env={**os.environ, "PYTHONPATH": self._osai_root},
             )
             if result.returncode != 0:
@@ -198,6 +205,45 @@ class CrossCoreSkillAdapter:
             "implemented_count": len(implemented),
             "error": None,
         }
+
+    # OSAI SkillInvoker runner：参数经 argv(JSON) 传入，避免转义
+    _INVOKE_RUNNER = (
+        "import json,sys; sys.path.insert(0,'.'); "
+        "from osai_engine.skill_invocation import SkillInvoker; "
+        "args=json.loads(sys.argv[1]); "
+        "r=SkillInvoker().invoke(args['task'],args['skill_id'],"
+        "workspace=args.get('workspace','intelligence'),"
+        "skill_version=args.get('skill_version','0.1.0'),"
+        "user_permissions=args.get('user_permissions')); "
+        "print(json.dumps(r,ensure_ascii=False,default=str))"
+    )
+
+    def invoke_skill(self, task: str, skill_id: str, workspace: str = "intelligence",
+                     skill_version: str = "0.1.0",
+                     user_permissions: Optional[List[str]] = None,
+                     timeout: float = 90.0) -> Dict[str, Any]:
+        """真实执行：ZBC → subprocess → OSAI SkillInvoker。
+
+        走 OSAI 完整链 Permission(fail-close) → Context → Engine → Provider →
+        EvidenceChain(落盘) → Evaluation。返回统一映射，绝不伪造 COMPLETED：
+          - connected=False: OSAI 不可用/超时（调用方据此保留 ACCEPTED 兜底）
+          - OSAI status SUCCESS/FAILED/BLOCKED 原样透传 + evidence/evaluation
+        """
+        if user_permissions is None:
+            # 最小权限：只读/分析/测试/验证，不含 COMMIT/PUSH/HUMAN_APPROVAL
+            user_permissions = ["READ", "AUDIT", "ANALYZE", "RESEARCH",
+                                "PLAN", "PATCH_PREVIEW", "TEST", "VERIFY"]
+        payload = json.dumps({
+            "task": task, "skill_id": skill_id, "workspace": workspace,
+            "skill_version": skill_version, "user_permissions": user_permissions,
+        }, ensure_ascii=False)
+        data = self._run_osai(self._INVOKE_RUNNER, timeout=timeout, argv=[payload])
+        if data is None:
+            return {"connected": False, "status": "UNAVAILABLE",
+                    "error": self._last_error, "osai": None}
+        return {"connected": True, "status": "CONNECTED",
+                "error": None, "osai": data}
+
 
 
 # 进程级单例

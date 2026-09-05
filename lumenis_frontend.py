@@ -10,6 +10,7 @@
 不注册也不影响现有系统；模板与静态资源独立于旧前端。
 平台中立：无硬编码个人路径。
 """
+import json
 import time as _time
 import uuid as _uuid
 from flask import Blueprint, render_template, request, jsonify
@@ -253,32 +254,130 @@ def skill_invoke():
             "skill_status": skill["status"],
         }), 400
 
+    import os as _os
     invocation_id = "INV-" + _uuid.uuid4().hex[:10]
-    trace_id = "TRACE-" + _uuid.uuid4().hex[:10]
+    fallback_trace = "TRACE-" + _uuid.uuid4().hex[:10]
+    skill_version = skill.get("version", "0.0.0")
 
-    record = {
+    # 真实执行：ZBC → Cross-Core Adapter → OSAI SkillInvoker
+    # Permission(fail-close) → Context → Engine → Provider → Evidence(落盘) → Evaluation
+    exec_res = adapter.invoke_skill(
+        task=task, skill_id=skill_id, workspace=workspace,
+        skill_version=skill_version,
+    )
+
+    base = {
         "invocation_id": invocation_id,
-        "trace_id": trace_id,
         "skill_id": skill_id,
         "skill_name": skill.get("name", ""),
-        "skill_version": skill.get("version", "0.0.0"),
+        "skill_version": skill_version,
         "task": task,
         "workspace": workspace,
-        "status": "ACCEPTED",
-        "execution_status": "PARTIALLY_CONNECTED",
         "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%S"),
         "permissions_required": skill.get("permissions", []),
         "execution_core": "OSAI Intelligence Core",
         "canonical_source": "OSAI Canonical Registry",
-        "evidence_status": "NO_EVIDENCE",
-        "evaluation_status": "NO_DATA",
-        "note": "Invocation accepted by ZBC adapter. Full execution chain (Engine→Provider→Evidence→Evaluation) requires OSAI runtime integration.",
     }
+
+    if not exec_res.get("connected"):
+        # OSAI 不可用/超时：诚实兜底为已受理，绝不伪造 COMPLETED
+        record = dict(base, **{
+            "trace_id": fallback_trace,
+            "status": "ACCEPTED",
+            "execution_status": "PARTIALLY_CONNECTED",
+            "evidence_status": "NO_EVIDENCE",
+            "evaluation_status": "NO_DATA",
+            "error": exec_res.get("error"),
+            "note": "OSAI runtime unavailable; invocation accepted only, not executed.",
+        })
+    else:
+        osai = exec_res["osai"] or {}
+        ost = osai.get("status", "UNKNOWN")
+        trace_id = osai.get("trace_id", fallback_trace)
+        ev_id = osai.get("evidence_id")
+        eval_id = osai.get("evaluation_id")
+        perm = osai.get("permission_check")
+        result = osai.get("result") or {}
+        if ost == "SUCCESS":
+            record = dict(base, **{
+                "trace_id": trace_id, "status": "COMPLETED",
+                "execution_status": "CONNECTED",
+                "evidence_status": "EVIDENCE_CREATED" if ev_id else "NO_EVIDENCE",
+                "evaluation_status": "EVALUATION_CREATED" if eval_id else "NO_DATA",
+                "evidence_id": ev_id, "evaluation_id": eval_id,
+                "engine_id": osai.get("engine_id"), "model_id": osai.get("model_id"),
+                "result": result, "permission_check": perm,
+            })
+        elif ost == "BLOCKED":
+            record = dict(base, **{
+                "trace_id": trace_id, "status": "BLOCKED",
+                "execution_status": "CONNECTED",
+                "evidence_status": "NO_EVIDENCE",
+                "evaluation_status": "NO_DATA",
+                "permission_check": perm,
+                "error": osai.get("error", "PERMISSION_DENIED"),
+            })
+        else:  # FAILED / UNKNOWN —— 链路连通但执行失败，错误同样进 EvidenceChain
+            record = dict(base, **{
+                "trace_id": trace_id, "status": "FAILED",
+                "execution_status": "CONNECTED",
+                "evidence_status": "EVIDENCE_CREATED" if ev_id else "NO_EVIDENCE",
+                "evaluation_status": "NO_DATA",
+                "evidence_id": ev_id, "evaluation_id": eval_id,
+                "engine_id": osai.get("engine_id"), "model_id": osai.get("model_id"),
+                "permission_check": perm, "error": osai.get("error"),
+            })
+
+    # 持久化到独立 JSONL（不写生产 monitor.db，不改 DB schema）
+    try:
+        ddir = _os.environ.get("LUMENIS_RUNTIME_DIR") or _os.path.join(
+            _os.path.dirname(_os.path.abspath(__file__)), "data", "lumenis")
+        _os.makedirs(ddir, exist_ok=True)
+        with open(_os.path.join(ddir, "skill_invocations.jsonl"),
+                  "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    except Exception as persist_err:
+        record["persist_warning"] = str(persist_err)
+
     _skill_invocations.append(record)
     if len(_skill_invocations) > 100:
         _skill_invocations.pop(0)
 
     return jsonify(record)
+
+
+@lumenis_bp.route("/api/skills/invocations")
+def skill_invocations_history():
+    """Skill 调用历史 —— 读取持久化 JSONL（重启不丢），非内存假历史。"""
+    import os as _os
+    limit = request.args.get("limit", default=50, type=int)
+    skill_id = request.args.get("skill_id", default="")
+    ddir = _os.environ.get("LUMENIS_RUNTIME_DIR") or _os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)), "data", "lumenis")
+    fpath = _os.path.join(ddir, "skill_invocations.jsonl")
+    rows = []
+    try:
+        if _os.path.exists(fpath):
+            with open(fpath, "r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except Exception:
+                        continue
+                    if skill_id and rec.get("skill_id") != skill_id:
+                        continue
+                    rows.append(rec)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e), "records": []}), 500
+    rows = rows[-limit:]
+    rows.reverse()
+    return jsonify({
+        "ok": True, "count": len(rows), "records": rows,
+        "persistence": "file_based:data/lumenis/skill_invocations.jsonl",
+    })
 
 
 @lumenis_bp.route("/api/skills/sync", methods=["POST"])
@@ -327,8 +426,8 @@ def api_intelligence_evidence():
     import json
     import os
 
-    osai_root = os.environ.get("OSAI_ROOT", r"D:\Zachary OS AI")
-    reader_script = os.path.join(osai_root, "scripts", "list_evidence.py")
+    osai_root = os.environ.get("OSAI_ROOT") or get_skill_adapter()._osai_root or ""
+    reader_script = os.path.join(osai_root, "scripts", "list_evidence.py") if osai_root else ""
 
     # Fallback: direct file read if script not available
     evidence_dir = os.path.join(osai_root, "evidence", "chains")
