@@ -89,11 +89,28 @@ def run_foundation_checks():
         app.register_blueprint(lumenis_frontend.lumenis_bp)
         rules = [r.rule for r in app.url_map.iter_rules()]
         check("routes exposed", "/lumenis/" in rules and "/lumenis/healthz" in rules, str(sorted(rules)))
+        # PHASE 3 新页面路由
+        for route in ["/lumenis/intelligence/skills", "/lumenis/intelligence/agents",
+                      "/lumenis/intelligence/evaluation", "/lumenis/research"]:
+            check("PHASE3 route: " + route, route in rules)
         with app.test_client() as c:
             hz = c.get("/lumenis/healthz")
             check("healthz ok", hz.status_code == 200 and hz.get_json()["status"] == "ok")
             hm = c.get("/lumenis/")
             check("home renders", hm.status_code == 200 and b"Command Home" in hm.data)
+            # PHASE 3 页面渲染
+            for route, keyword in [
+                ("/lumenis/intelligence/skills", b"Skill Hub"),
+                ("/lumenis/intelligence/agents", b"Agent Center"),
+                ("/lumenis/intelligence/evaluation", b"Evaluation Center"),
+                ("/lumenis/research", b"Research Workspace"),
+            ]:
+                try:
+                    r = c.get(route)
+                    check("PHASE3 render: " + route, r.status_code == 200 and keyword in r.data,
+                          "status=%d" % r.status_code)
+                except Exception as e:
+                    check("PHASE3 render: " + route, False, repr(e))
     except Exception as e:
         check("blueprint route", False, repr(e))
 

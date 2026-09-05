@@ -44,17 +44,17 @@
       <a class="lm-nav-item {{ 'is-active' if active_nav=='ai' }}" href="{{ url_for('lumenis.intelligence_workspace') }}">
         <span data-icon="intelligence"></span><span class="lm-nav-item__label">Intelligence Workspace</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='agents' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='agents' }}" href="{{ url_for('lumenis.agent_center') }}">
         <span data-icon="agent"></span><span class="lm-nav-item__label">Agent Center</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='skills' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='skills' }}" href="{{ url_for('lumenis.skill_hub') }}">
         <span data-icon="skill"></span><span class="lm-nav-item__label">Skill Hub</span>
         <span class="lm-badge lm-nav-item__badge">S01–S12</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='evidence' }}" href="#">
         <span data-icon="evidence"></span><span class="lm-nav-item__label">Evidence</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='evaluation' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='evaluation' }}" href="{{ url_for('lumenis.evaluation_center') }}">
         <span data-icon="evaluation"></span><span class="lm-nav-item__label">Evaluation</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='learning' }}" href="#">
@@ -84,7 +84,7 @@
 
     <div class="lm-nav-group">
       <div class="lm-nav-group__label">Research · Operations</div>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='research' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='research' }}" href="{{ url_for('lumenis.research_workspace') }}">
         <span data-icon="research"></span><span class="lm-nav-item__label">Research Workspace</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='operations' }}" href="{{ url_for('lumenis.operations') }}">

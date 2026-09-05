@@ -68,3 +68,33 @@ def operations():
     """Operations — 系统运维（健康四灯 + 采集状态 + AI 通道 + 运行时）。"""
     return render_template("operations/index.html", active_nav="operations",
                            home_url="/lumenis/")
+
+
+# ========== PHASE 3 页面（Intelligence 子域 + Research） ==========
+
+@lumenis_bp.route("/intelligence/skills")
+def skill_hub():
+    """Skill Hub — 能力中心（S01-S12 已落地，S13-S72 规划中）。"""
+    return render_template("intelligence/skill_hub.html", active_nav="skills",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/intelligence/agents")
+def agent_center():
+    """Agent Center — 代理中心（Orchestrator/Research/Engineering/Evaluation）。"""
+    return render_template("intelligence/agent_center.html", active_nav="agents",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/intelligence/evaluation")
+def evaluation_center():
+    """Evaluation Center — 评估中心（Correctness/Completeness/Regression/Safety）。"""
+    return render_template("intelligence/evaluation.html", active_nav="evaluation",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/research")
+def research_workspace():
+    """Research Workspace — 研究工作区（Research→Finding→Evidence→Decision→Proposal）。"""
+    return render_template("research/workspace.html", active_nav="research",
+                           home_url="/lumenis/")

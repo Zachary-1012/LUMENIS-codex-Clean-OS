@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Research Workspace · 序境 LUMENIS{% endblock %}
+{% block page_title %}Research Workspace{% endblock %}
+
+{% block content %}
+<!-- 研究状态条 -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="research" data-component="research-status" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);">
+    <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="res-dot"></span><span data-field="res-state">初始化…</span></span>
+      <span class="lm-badge" data-field="res-active">Active: –</span>
+      <span class="lm-badge" data-field="res-findings">Findings: –</span>
+    </div>
+    <span class="lm-badge lm-badge--ghost">Research → Finding → Evidence → Decision → Proposal</span>
+  </div>
+</section>
+
+<!-- 研究输入区 -->
+<section class="lm-glass lm-glass--identity" style="border-radius:var(--lm-radius-xl);padding:var(--lm-space-xl);margin-bottom:var(--lm-space-lg);">
+  <div class="section-label">Research Workspace · 外部研究必须经过 Evidence 验证才能进入 Core</div>
+  <div style="font-size:var(--lm-text-h2);font-weight:700;line-height:1.3;margin:var(--lm-space-sm) 0 var(--lm-space-md);">
+    研究问题必须可追溯到证据
+  </div>
+  <div style="display:flex;gap:var(--lm-space-sm);">
+    <input class="lm-search lm-search--command" type="text" id="lm-res-input"
+           placeholder="输入研究问题 / 技术方向 / 竞品分析…（结果必须 Evidence-backed）"
+           aria-label="研究问题输入">
+    <button class="lm-btn lm-btn--primary" id="lm-res-start">开始研究</button>
+  </div>
+  <div class="lm-row" style="gap:var(--lm-space-sm);margin-top:var(--lm-space-md);flex-wrap:wrap;">
+    <span class="lm-badge">Web Research</span>
+    <span class="lm-badge">Literature</span>
+    <span class="lm-badge">Technology Scout</span>
+    <span class="lm-badge">Competitor</span>
+    <span class="lm-badge lm-badge--ghost">外部研究不直接写生产</span>
+  </div>
+</section>
+
+<!-- 研究流程 + 发现 -->
+<div class="lm-grid lm-grid--cards">
+  <!-- 研究流程 -->
+  <article class="lm-card" data-state="empty" data-page="research" data-component="research-pipeline">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Research Pipeline</h3>
+      <span class="lm-badge" data-field="pipe-stage">Stage: –</span>
+    </div>
+    <div class="lm-card__body lm-stack" data-state-slot>
+      <div class="lm-metric"><span class="lm-metric__label">阶段</span><span class="lm-metric__value--md" data-field="pipe-current">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">已收集来源</span><span class="lm-metric__value--md" data-field="pipe-sources">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">已提取证据</span><span class="lm-metric__value--md" data-field="pipe-evidence">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">待人工审核</span><span class="lm-metric__value--md" data-field="pipe-review">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);margin-top:var(--lm-space-sm);">
+        Research → Finding → Evidence → Internal Proposal → Human Review → Implementation
+      </div>
+    </div>
+  </article>
+
+  <!-- 最近发现 -->
+  <article class="lm-card" data-state="empty" data-page="research" data-component="research-findings" style="grid-column:span 2;">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Recent Findings</h3>
+      <span class="lm-badge lm-badge--ghost">Evidence-backed</span>
+    </div>
+    <div class="lm-card__body" data-state-slot style="min-height:200px;">
+      <div id="lm-res-findings" style="font-size:14px;line-height:1.7;color:var(--lm-text-primary);">
+        暂无研究发现。开始研究后，经过 Evidence 验证的发现将在此显示。
+      </div>
+    </div>
+  </article>
+</div>
+
+<!-- 研究历史 -->
+<article class="lm-card" data-state="empty" data-page="research" data-component="research-history" style="margin-top:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Research History</h3>
+    <span class="lm-badge" data-field="hist-count">0 项</span>
+  </div>
+  <div class="lm-card__body" data-state-slot>
+    <div class="lm-table-wrap">
+      <table class="lm-table">
+        <thead><tr><th>时间</th><th>研究问题</th><th>状态</th><th>证据数</th><th>决策</th></tr></thead>
+        <tbody id="lm-res-history-body">
+          <tr><td colspan="5" style="text-align:center;color:var(--lm-text-tertiary);padding:var(--lm-space-md);">暂无研究历史</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+// Research Workspace：研究状态 + 历史（绑定真实 API）
+(function(){
+  var D = LUMENIS.Data;
+  // 研究状态
+  LUMENIS.bindState(document.querySelector('[data-component="research-status"]'), {
+    page:"research", component:"research-status", url:"/api/research/status",
+    isEmpty:function(d){return !d || d.active===0;},
+    emptyText:"无活跃研究",
+    render:function(d){
+      var dot=document.querySelector('[data-field="res-dot"]');
+      if(dot) dot.className="lm-dot lm-dot--"+(d.active>0?"ai":"unknown");
+      var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("res-state", d.active>0?"研究中":"空闲");
+      f("res-active","Active: "+(d.active||0));
+      f("res-findings","Findings: "+(d.findings||0));
+    }
+  });
+  // 研究流程
+  LUMENIS.bindState(document.querySelector('[data-component="research-pipeline"]'), {
+    page:"research", component:"research-pipeline", url:"/api/research/pipeline",
+    isEmpty:function(d){return !d || !d.stage;},
+    emptyText:"无进行中研究",
+    render:function(d){
+      var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("pipe-stage","Stage: "+(d.stage||"–"));
+      f("pipe-current", d.stage||"–");
+      f("pipe-sources", d.sources||0);
+      f("pipe-evidence", d.evidence||0);
+      f("pipe-review", d.pending_review||0);
+    }
+  });
+  // 开始研究
+  var input=document.getElementById("lm-res-input"), btn=document.getElementById("lm-res-start");
+  if(btn) btn.addEventListener("click",function(){
+    var q=(input.value||"").trim();
+    if(!q) return;
+    LUMENIS.fetch("/api/research/start",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({query:q})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d && d.ok){
+          document.querySelector('[data-component="research-status"]').setAttribute("data-state","success");
+        }
+      })
+      .catch(function(){});
+  });
+  if(input) input.addEventListener("keydown",function(e){if(e.key==="Enter")btn&&btn.click();});
+})();
+{% endblock %}

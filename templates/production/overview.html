@@ -59,6 +59,29 @@
       <a class="lm-nav-item lm-nav-item--inline" href="#"><span data-icon="report"></span>Reports</a>
     </div>
   </article>
+
+  <!-- KOS 专业号接入口（每品牌可选，默认 disabled，绑定真实 API） -->
+  <article class="lm-card" data-state="loading" data-page="production" data-component="kos-professional">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">KOS 专业号接入</h3>
+      <span class="lm-badge" data-field="kos-status">–</span>
+    </div>
+    <div class="lm-card__body lm-stack" data-state-slot>
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">
+        专业号数据接入为可选模块，每品牌独立开关。默认关闭，开启后允许导入专业号数据。
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">专业号数</span><span class="lm-metric__value--md" data-field="kos-accounts">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">数据记录</span><span class="lm-metric__value--md" data-field="kos-records">–</span></div>
+      <div class="lm-row" style="gap:var(--lm-space-sm);margin-top:var(--lm-space-sm);">
+        <button class="lm-btn lm-btn--primary lm-btn--sm" id="kos-enable-btn" style="display:none;">开启接入</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--sm" id="kos-disable-btn" style="display:none;">关闭接入</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--sm" id="kos-import-btn" style="display:none;">导入数据</button>
+      </div>
+      <div style="font-size:11px;color:var(--lm-text-tertiary);margin-top:var(--lm-space-xs);">
+        熔断保护：超时自动降级，主链路零依赖
+      </div>
+    </div>
+  </article>
 </div>
 {% endblock %}
 
@@ -96,5 +119,39 @@
       f("next-collect",d.next_collect||"–");
     }
   });
+  // KOS 专业号接入口
+  var kosCard=document.querySelector('[data-component="kos-professional"]');
+  var kosEnable=document.getElementById("kos-enable-btn");
+  var kosDisable=document.getElementById("kos-disable-btn");
+  var kosImport=document.getElementById("kos-import-btn");
+  function refreshKos(){
+    LUMENIS.fetch("/api/kos/professional/status")
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d||d.error){kosCard.setAttribute("data-state","empty");return;}
+        kosCard.setAttribute("data-state","success");
+        var f=function(s,v){var n=kosCard.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+        f("kos-status",d.enabled?"已开启":"已关闭");
+        f("kos-accounts",d.accounts||0);
+        f("kos-records",d.records||0);
+        if(kosEnable)kosEnable.style.display=d.enabled?"none":"";
+        if(kosDisable)kosDisable.style.display=d.enabled?"":"none";
+        if(kosImport)kosImport.style.display=d.enabled?"":"none";
+      })
+      .catch(function(){kosCard.setAttribute("data-state","error");});
+  }
+  if(kosEnable)kosEnable.addEventListener("click",function(){
+    LUMENIS.fetch("/api/kos/professional/enable",{method:"POST"})
+      .then(function(){refreshKos();}).catch(function(){});
+  });
+  if(kosDisable)kosDisable.addEventListener("click",function(){
+    LUMENIS.fetch("/api/kos/professional/disable",{method:"POST"})
+      .then(function(){refreshKos();}).catch(function(){});
+  });
+  if(kosImport)kosImport.addEventListener("click",function(){
+    LUMENIS.fetch("/api/kos/professional/import",{method:"POST"})
+      .then(function(){refreshKos();}).catch(function(){});
+  });
+  refreshKos();
 })();
 {% endblock %}

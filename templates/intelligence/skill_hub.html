@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}Skill Hub · 序境 LUMENIS{% endblock %}
+{% block page_title %}Skill Hub{% endblock %}
+
+{% block content %}
+<!-- Skill Hub 状态条 -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="skillhub" data-component="skillhub-status" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);">
+    <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="sh-dot"></span><span data-field="sh-state">加载中…</span></span>
+      <span class="lm-badge" data-field="sh-total">Total: –</span>
+      <span class="lm-badge" data-field="sh-running">Running: –</span>
+    </div>
+    <span class="lm-badge lm-badge--ghost">S01–S12 已落地 · S13–S72 规划中</span>
+  </div>
+</section>
+
+<!-- Skill 分类导航 -->
+<section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="gap:var(--lm-space-sm);flex-wrap:wrap;">
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="all">全部</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="source">Source & Engineering</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="data">Data</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="ai">AI</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="research">Research</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="engineering">Engineering</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="governance">Governance</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="business">Business</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="operations">Operations</button>
+  </div>
+</section>
+
+<!-- Skill 列表 -->
+<div class="lm-grid lm-grid--cards" id="lm-skill-grid">
+  <!-- S01 Source Fact Scanner -->
+  <article class="lm-card lm-skill-card" data-skill="S01" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S01 Source Fact Scanner</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">扫描源码事实，建立 Source Fact Baseline。只读，不修改。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">成功率</span><span class="lm-metric__value--md" data-field="s01-success">–</span></div>
+    </div>
+  </article>
+
+  <!-- S02 SHA Verifier -->
+  <article class="lm-card lm-skill-card" data-skill="S02" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S02 SHA Verifier</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">验证 Git SHA 与分支状态，防止使用旧版本。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">VERIFY</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">验证次数</span><span class="lm-metric__value--md" data-field="s02-count">–</span></div>
+    </div>
+  </article>
+
+  <!-- S03 Git State Auditor -->
+  <article class="lm-card lm-skill-card" data-skill="S03" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S03 Git State Auditor</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">审计 Git 工作区状态、未提交变更、冲突检测。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">冲突检测</span><span class="lm-metric__value--md" data-field="s03-conflicts">–</span></div>
+    </div>
+  </article>
+
+  <!-- S04 File Inventory -->
+  <article class="lm-card lm-skill-card" data-skill="S04" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S04 File Inventory</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">文件清单与依赖分析，识别孤儿文件和重复代码。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">ANALYZE</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">文件数</span><span class="lm-metric__value--md" data-field="s04-files">–</span></div>
+    </div>
+  </article>
+
+  <!-- S05 Module Mapper -->
+  <article class="lm-card lm-skill-card" data-skill="S05" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S05 Module Mapper</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">模块依赖图谱，识别耦合度与循环依赖。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">ANALYZE</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">模块数</span><span class="lm-metric__value--md" data-field="s05-modules">–</span></div>
+    </div>
+  </article>
+
+  <!-- S06 Function Call Mapper -->
+  <article class="lm-card lm-skill-card" data-skill="S06" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S06 Function Call Mapper</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">函数调用链追踪，定位关键路径与影响范围。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">ANALYZE</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">调用数</span><span class="lm-metric__value--md" data-field="s06-calls">–</span></div>
+    </div>
+  </article>
+
+  <!-- S07 API Mapper -->
+  <article class="lm-card lm-skill-card" data-skill="S07" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S07 API Mapper</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">全量 API 路由清单，含方法、权限、认证要求。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">API 数</span><span class="lm-metric__value--md" data-field="s07-apis">–</span></div>
+    </div>
+  </article>
+
+  <!-- S08 Dependency Auditor -->
+  <article class="lm-card lm-skill-card" data-skill="S08" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S08 Dependency Auditor</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">依赖版本审计，识别漏洞与过期包。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">依赖数</span><span class="lm-metric__value--md" data-field="s08-deps">–</span></div>
+    </div>
+  </article>
+
+  <!-- S09 Config Auditor -->
+  <article class="lm-card lm-skill-card" data-skill="S09" data-category="source">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S09 Config Auditor</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">配置文件审计，识别硬编码路径与密钥泄露。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">SECURITY</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">配置项</span><span class="lm-metric__value--md" data-field="s09-configs">–</span></div>
+    </div>
+  </article>
+
+  <!-- S10 DB Schema Auditor -->
+  <article class="lm-card lm-skill-card" data-skill="S10" data-category="data">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S10 DB Schema Auditor</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">数据库 Schema 审计，识别表结构与索引问题。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">表数</span><span class="lm-metric__value--md" data-field="s10-tables">–</span></div>
+    </div>
+  </article>
+
+  <!-- S11 DB Integrity Checker -->
+  <article class="lm-card lm-skill-card" data-skill="S11" data-category="data">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S11 DB Integrity Checker</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">数据完整性检查，识别孤儿记录与不一致。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">VERIFY</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">完整性</span><span class="lm-metric__value--md" data-field="s11-integrity">–</span></div>
+    </div>
+  </article>
+
+  <!-- S12 Runtime Health -->
+  <article class="lm-card lm-skill-card" data-skill="S12" data-category="operations">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S12 Runtime Health</h3>
+      <span class="lm-badge lm-badge--success">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">运行时健康检查，含进程、端口、资源、依赖。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">READ</span>
+        <span class="lm-badge lm-badge--ghost">MONITOR</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">健康度</span><span class="lm-metric__value--md" data-field="s12-health">–</span></div>
+    </div>
+  </article>
+</div>
+
+<!-- S13-S72 规划提示 -->
+<article class="lm-card lm-card--flat" style="margin-top:var(--lm-space-lg);">
+  <div class="lm-card__body" style="text-align:center;color:var(--lm-text-tertiary);font-size:13px;padding:var(--lm-space-lg);">
+    S13–S72 为规划总量，将按优先级逐步落地。当前真实可用 Skill 为 S01–S12。
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+// Skill Hub：状态绑定 + 分类筛选
+(function(){
+  // 状态
+  LUMENIS.bindState(document.querySelector('[data-component="skillhub-status"]'), {
+    page:"skillhub", component:"skillhub-status", url:"/api/skills/status",
+    isEmpty:function(d){return !d || d.total===0;},
+    emptyText:"Skill Registry 未加载",
+    render:function(d){
+      var dot=document.querySelector('[data-field="sh-dot"]');
+      if(dot) dot.className="lm-dot lm-dot--"+(d.total>0?"ai":"unknown");
+      var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("sh-state", d.total>0?"已加载":"未加载");
+      f("sh-total","Total: "+(d.total||12));
+      f("sh-running","Running: "+(d.running||0));
+    }
+  });
+  // 分类筛选
+  var cards=document.querySelectorAll('.lm-skill-card');
+  document.querySelectorAll('[data-category]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var cat=btn.getAttribute('data-category');
+      cards.forEach(function(card){
+        var c=card.getAttribute('data-category');
+        card.style.display=(cat==='all'||c===cat)?'':'none';
+      });
+    });
+  });
+})();
+{% endblock %}

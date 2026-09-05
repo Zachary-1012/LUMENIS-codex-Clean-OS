@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Agent Center · 序境 LUMENIS{% endblock %}
+{% block page_title %}Agent Center{% endblock %}
+
+{% block content %}
+<!-- Agent Center 状态条 -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="agents" data-component="agent-status" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);">
+    <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="ag-dot"></span><span data-field="ag-state">加载中…</span></span>
+      <span class="lm-badge" data-field="ag-running">Running: –</span>
+      <span class="lm-badge" data-field="ag-total">Total: –</span>
+    </div>
+    <span class="lm-badge lm-badge--ghost">Agent → Mission → Skills → Permissions → Tasks → Evidence → Evaluation</span>
+  </div>
+</section>
+
+<!-- Agent 列表 -->
+<div class="lm-grid lm-grid--cards">
+  <!-- Orchestrator Agent -->
+  <article class="lm-card" data-agent="orchestrator">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Orchestrator</h3>
+      <span class="lm-badge lm-badge--success" data-field="orch-status">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">任务编排与调度，负责任务拆解、分配、汇总。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">PLAN</span>
+        <span class="lm-badge lm-badge--ghost">ASSIGN</span>
+        <span class="lm-badge lm-badge--ghost">AGGREGATE</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">活跃任务</span><span class="lm-metric__value--md" data-field="orch-tasks">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">成功率</span><span class="lm-metric__value--md" data-field="orch-success">–</span></div>
+    </div>
+  </article>
+
+  <!-- Research Agent -->
+  <article class="lm-card" data-agent="research">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Research Agent</h3>
+      <span class="lm-badge lm-badge--success" data-field="res-status">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">研究与知识获取，负责外部研究、证据提取、发现生成。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">RESEARCH</span>
+        <span class="lm-badge lm-badge--ghost">EVIDENCE</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">研究数</span><span class="lm-metric__value--md" data-field="res-count">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">证据数</span><span class="lm-metric__value--md" data-field="res-evidence">–</span></div>
+    </div>
+  </article>
+
+  <!-- Engineering Agent -->
+  <article class="lm-card" data-agent="engineering">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Engineering Agent</h3>
+      <span class="lm-badge lm-badge--success" data-field="eng-status">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">工程执行，负责代码审计、补丁生成、测试验证。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">INSPECT</span>
+        <span class="lm-badge lm-badge--ghost">PATCH</span>
+        <span class="lm-badge lm-badge--ghost">TEST</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">补丁数</span><span class="lm-metric__value--md" data-field="eng-patches">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">测试通过</span><span class="lm-metric__value--md" data-field="eng-tests">–</span></div>
+    </div>
+  </article>
+
+  <!-- Evaluation Agent -->
+  <article class="lm-card" data-agent="evaluation">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">Evaluation Agent</h3>
+      <span class="lm-badge lm-badge--success" data-field="eval-status">Active</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">评估与质量保证，负责结果验证、回归检测、评分。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">EVALUATE</span>
+        <span class="lm-badge lm-badge--ghost">VERIFY</span>
+      </div>
+      <div class="lm-metric"><span class="lm-metric__label">评估数</span><span class="lm-metric__value--md" data-field="eval-count">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">通过率</span><span class="lm-metric__value--md" data-field="eval-pass">–</span></div>
+    </div>
+  </article>
+</div>
+
+<!-- 任务队列 -->
+<article class="lm-card" data-state="empty" data-page="agents" data-component="agent-tasks" style="margin-top:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Active Tasks</h3>
+    <span class="lm-badge" data-field="task-count">0 项</span>
+  </div>
+  <div class="lm-card__body" data-state-slot>
+    <div class="lm-table-wrap">
+      <table class="lm-table">
+        <thead><tr><th>Task ID</th><th>Agent</th><th>Skill</th><th>状态</th><th>开始时间</th><th>Evidence</th></tr></thead>
+        <tbody id="lm-agent-tasks-body">
+          <tr><td colspan="6" style="text-align:center;color:var(--lm-text-tertiary);padding:var(--lm-space-md);">暂无活跃任务</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</article>
+
+<!-- 权限边界 -->
+<article class="lm-card lm-card--flat" style="margin-top:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Permission Boundary</h3>
+  </div>
+  <div class="lm-card__body lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
+    <div class="lm-metric"><span class="lm-metric__label">READ</span><span class="lm-badge lm-badge--success">ALLOW</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">AUDIT</span><span class="lm-badge lm-badge--success">ALLOW</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">ANALYZE</span><span class="lm-badge lm-badge--success">ALLOW</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">PLAN</span><span class="lm-badge lm-badge--success">ALLOW</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">PATCH_PREVIEW</span><span class="lm-badge lm-badge--success">ALLOW</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">TEST</span><span class="lm-badge lm-badge--success">ALLOW</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">HUMAN_APPROVAL</span><span class="lm-badge lm-badge--warning">REQUIRED</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">COMMIT</span><span class="lm-badge lm-badge--danger">BLOCKED</span></div>
+    <div class="lm-metric"><span class="lm-metric__label">PUSH</span><span class="lm-badge lm-badge--danger">BLOCKED</span></div>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+// Agent Center：状态绑定 + 任务队列
+(function(){
+  LUMENIS.bindState(document.querySelector('[data-component="agent-status"]'), {
+    page:"agents", component:"agent-status", url:"/api/agents/status",
+    isEmpty:function(d){return !d || d.total===0;},
+    emptyText:"Agent Registry 未加载",
+    render:function(d){
+      var dot=document.querySelector('[data-field="ag-dot"]');
+      if(dot) dot.className="lm-dot lm-dot--"+(d.running>0?"ai":"unknown");
+      var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("ag-state", d.running>0?"运行中":"空闲");
+      f("ag-running","Running: "+(d.running||0));
+      f("ag-total","Total: "+(d.total||4));
+    }
+  });
+})();
+{% endblock %}
