@@ -1,57 +1,85 @@
 {% extends "base.html" %}
-{% block title %}Permissions & Audit - LUMENIS{% endblock %}
+{% block title %}Permissions & Audit · 序境 LUMENIS{% endblock %}
 {% block page_title %}Permissions & Audit{% endblock %}
 
 {% block content %}
-<!-- Page Status: CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Permissions & Audit</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="pm.title">权限与审计</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="pm.subtitle">Identity → Delegation → Manifest Permissions → Gate → Agent Ceiling</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+    <span class="lm-status"><span class="lm-dot lm-dot--unknown" id="pm-dot"></span><span id="pm-policy">–</span></span>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Permission Gate</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">READ -> AUDIT -> ANALYZE -> RESEARCH -> PLAN -> PATCH_PREVIEW -> TEST -> VERIFY -> HUMAN_APPROVAL -> COMMIT -> PUSH.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Agent Identity</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">User -> Agent Identity -> Skill Identity -> Tool/API Identity -> Execution. 每级记录 identity/parent_identity/permission/scope/intent.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Delegation</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">用户授权 Agent 执行，禁止 Agent 直接冒充用户. Delegation Context + Identity Chain + Permission Scope.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Audit Trail</h3>
-        <span class="lm-badge lm-badge--ghost">NO_DATA</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">完整审计: 谁发起 -> 谁授权 -> 哪个 Agent -> 哪个 Skill -> 哪个 Tool -> 实际执行 -> 结果.</div>
-      </div>
-    </section>
+<div class="lm-grid lm-grid--cards" style="margin-bottom:var(--lm-space-md);">
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="pm.ceiling">Agent 默认权限上限</h3></div>
+    <div class="lm-card__body"><div class="lm-metric"><span class="lm-metric__value" id="pm-ceiling">–</span></div></div>
+  </article>
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="pm.human">仅人工权限</h3></div>
+    <div class="lm-card__body lm-stack" id="pm-human"></div>
+  </article>
+</div>
+
+<section class="lm-card" data-state="loading" data-component="perm-matrix">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title" data-i18n="pm.matrix">权限等级矩阵</h3>
+    <span class="lm-badge lm-badge--ghost" id="pm-count">–</span>
+  </div>
+  <div class="lm-card__body">
+    <div class="lm-table-wrap">
+      <table class="lm-table">
+        <thead><tr>
+          <th data-i18n="pm.col_level">等级</th><th data-i18n="pm.col_rank">序</th>
+          <th data-i18n="pm.col_auto">Agent 自动</th><th data-i18n="pm.col_human">需人工</th>
+        </tr></thead>
+        <tbody id="pm-tbody"><tr><td colspan="4" style="color:var(--lm-text-tertiary);" data-i18n="common.loading">加载中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 {% endblock %}
 
 {% block scripts %}
-// Permissions & Audit page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'pm.title':'权限与审计','pm.subtitle':'Identity → Delegation → Manifest Permissions → Gate → Agent Ceiling',
+    'pm.ceiling':'Agent 默认权限上限','pm.human':'仅人工权限','pm.matrix':'权限等级矩阵',
+    'pm.col_level':'等级','pm.col_rank':'序','pm.col_auto':'Agent 自动','pm.col_human':'需人工',
+    'pm.unavailable':'OSAI Permission Gate 不可用'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'pm.title':'Permissions & Audit','pm.subtitle':'Identity → Delegation → Manifest Permissions → Gate → Agent Ceiling',
+    'pm.ceiling':'Default Agent Ceiling','pm.human':'Human-only','pm.matrix':'Permission Level Matrix',
+    'pm.col_level':'Level','pm.col_rank':'Rank','pm.col_auto':'Agent Auto','pm.col_human':'Human Required',
+    'pm.unavailable':'OSAI Permission Gate unavailable'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'pm.title':'권한 및 감사','pm.subtitle':'Identity → Delegation → Manifest Permissions → Gate → Agent Ceiling',
+    'pm.ceiling':'Agent 기본 권한 상한','pm.human':'인간 전용 권한','pm.matrix':'권한 레벨 매트릭스',
+    'pm.col_level':'레벨','pm.col_rank':'순서','pm.col_auto':'Agent 자동','pm.col_human':'인간 필요',
+    'pm.unavailable':'OSAI 권한 게이트를 사용할 수 없습니다'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  var card=document.querySelector('[data-component="perm-matrix"]');
+  var tbody=document.getElementById('pm-tbody');
+  LUMENIS.fetch('/api/operations/permissions').then(function(r){return r.json();}).then(function(d){
+    var dot=document.getElementById('pm-dot');
+    if(!d||!d.ok){card.setAttribute('data-state','error');tbody.innerHTML='<tr><td colspan="4" style="color:var(--lm-color-danger);">'+t('pm.unavailable')+'</td></tr>';dot.className='lm-dot lm-dot--danger';return;}
+    card.setAttribute('data-state','success');dot.className='lm-dot lm-dot--success';
+    document.getElementById('pm-policy').textContent=d.fail_policy;
+    document.getElementById('pm-ceiling').textContent=d.default_agent_ceiling;
+    document.getElementById('pm-count').textContent=(d.levels||[]).length;
+    document.getElementById('pm-human').innerHTML=(d.human_only||[]).map(function(x){return '<div class="lm-badge lm-badge--warning" style="margin:2px;">'+x+'</div>';}).join('');
+    tbody.innerHTML=(d.levels||[]).map(function(r){
+      var auto=r.agent_auto_allowed?'<span class="lm-badge lm-badge--success">'+t('common.yes')+'</span>':'<span class="lm-badge lm-badge--ghost">'+t('common.no')+'</span>';
+      var human=r.requires_human?'<span class="lm-badge lm-badge--warning">'+t('common.yes')+'</span>':'<span class="lm-badge lm-badge--ghost">'+t('common.no')+'</span>';
+      return '<tr><td><strong>'+r.level+'</strong></td><td>'+r.rank+'</td><td>'+auto+'</td><td>'+human+'</td></tr>';
+    }).join('');
+  }).catch(function(){card.setAttribute('data-state','error');tbody.innerHTML='<tr><td colspan="4" style="color:var(--lm-color-danger);">'+t('pm.unavailable')+'</td></tr>';});
+})();
 {% endblock %}

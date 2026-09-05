@@ -1,48 +1,73 @@
 {% extends "base.html" %}
-{% block title %}Runtime - LUMENIS{% endblock %}
+{% block title %}Runtime · 序境 LUMENIS{% endblock %}
 {% block page_title %}Runtime{% endblock %}
 
 {% block content %}
-<!-- Page Status: CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Runtime</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="rt.title">本地运行时</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="rt.subtitle">Preflight · Health · Heartbeat · Recovery</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="rt-refresh" data-i18n="common.refresh">刷新</button>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Local Runtime</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Python / Node.js / Git / Ollama / Database / Runtime / Environment / Dependency / Local Service.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Health Check</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Preflight / Health Check / Heartbeat / Last Success / Crash Detection / Recovery / Cooldown / Circuit Breaker.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Platform Adapter</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Windows + macOS 跨平台支持，禁止硬编码路径.</div>
-      </div>
-    </section>
+<section class="lm-card" data-state="loading" data-component="runtime">
+  <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="rt.env">运行环境</h3></div>
+  <div class="lm-card__body">
+    <div class="lm-grid lm-grid--metrics" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="rt.python">Python</span><span class="lm-metric__value--md" data-field="python">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="rt.platform">平台</span><span class="lm-metric__value--md" data-field="platform">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="rt.arch">架构</span><span class="lm-metric__value--md" data-field="machine">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="rt.tables">数据表</span><span class="lm-metric__value--md" data-field="tables">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label" data-i18n="rt.server_time">服务器时间</span><span class="lm-metric__value--md" data-field="server_time" style="font-size:13px;">–</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="lm-card" style="margin-top:var(--lm-space-md);" data-state="loading" data-component="runtime-db">
+  <div class="lm-card__head"><h3 class="lm-card__title" data-i18n="rt.db">数据库行计数（只读）</h3><span class="lm-badge lm-badge--ghost">SQLite</span></div>
+  <div class="lm-card__body"><div class="lm-stack" id="rt-dbrows"></div></div>
+</section>
 {% endblock %}
 
 {% block scripts %}
-// Runtime page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'rt.title':'本地运行时','rt.subtitle':'Preflight · Health · Heartbeat · Recovery',
+    'rt.env':'运行环境','rt.python':'Python','rt.platform':'平台','rt.arch':'架构','rt.tables':'数据表','rt.server_time':'服务器时间',
+    'rt.db':'数据库行计数（只读）','rt.unavailable':'运行时信息不可用'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'rt.title':'Local Runtime','rt.subtitle':'Preflight · Health · Heartbeat · Recovery',
+    'rt.env':'Environment','rt.python':'Python','rt.platform':'Platform','rt.arch':'Arch','rt.tables':'Tables','rt.server_time':'Server Time',
+    'rt.db':'Database row counts (read-only)','rt.unavailable':'Runtime info unavailable'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'rt.title':'로컬 런타임','rt.subtitle':'Preflight · Health · Heartbeat · Recovery',
+    'rt.env':'실행 환경','rt.python':'Python','rt.platform':'플랫폼','rt.arch':'아키텍처','rt.tables':'테이블','rt.server_time':'서버 시간',
+    'rt.db':'데이터베이스 행 수(읽기 전용)','rt.unavailable':'런타임 정보를 사용할 수 없습니다'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  var card=document.querySelector('[data-component="runtime"]');
+  function f(root,k,v){var n=root.querySelector('[data-field="'+k+'"]');if(n)n.textContent=v;}
+  function load(){
+    LUMENIS.fetch('/api/system/runtime').then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.ok){card.setAttribute('data-state','error');return;}
+      card.setAttribute('data-state','success');
+      f(card,'python',d.python);f(card,'platform',d.platform);f(card,'machine',d.machine);
+      f(card,'tables',(d.database&&d.database.table_count)||'–');f(card,'server_time',d.server_time||'–');
+      var dbc=document.querySelector('[data-component="runtime-db"]');
+      dbc.setAttribute('data-state','success');
+      var rows=(d.database&&d.database.row_counts)||{};
+      document.getElementById('rt-dbrows').innerHTML=Object.keys(rows).map(function(k){
+        return '<div class="lm-metric"><span class="lm-metric__label">'+k+'</span><span class="lm-metric__value--md">'+rows[k]+'</span></div>';
+      }).join('')||('<div style="color:var(--lm-text-tertiary);font-size:13px;">'+t('common.no_data')+'</div>');
+    }).catch(function(){card.setAttribute('data-state','error');});
+  }
+  document.getElementById('rt-refresh').addEventListener('click',load);
+  load();
+})();
 {% endblock %}

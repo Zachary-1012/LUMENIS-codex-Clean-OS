@@ -1,39 +1,119 @@
 {% extends "base.html" %}
-{% block title %}Reports - LUMENIS{% endblock %}
+{% block title %}Reports · 序境 LUMENIS{% endblock %}
 {% block page_title %}Reports{% endblock %}
 
 {% block content %}
-<!-- Page Status: CONNECTED -->
 <section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
   <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:600;">Reports</div>
-      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+      <div class="lm-card__title" style="font-size:18px;" data-i18n="rp2.title">报告中心</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="rp2.subtitle">日报 / 周报 / 月报 / 专报 · 按发布时间口径</div>
     </div>
-    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+    <span class="lm-status"><span class="lm-dot lm-dot--unknown" id="r-dot"></span><span id="r-count">–</span></span>
   </div>
 </section>
 
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Report Pipeline</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">日报 / 周报 / 月报 / 营销传播综合报告 / 传播主体分析报告 / 事件因果溯源报告.</div>
-      </div>
-    </section>
-    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
-      <div class="lm-card__head">
-        <h3 class="lm-card__title">Daily Report</h3>
-        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
-      </div>
-      <div class="lm-card__body">
-        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">按 publish_datetime 统计，主体过滤保持 subject_hit() 口径.</div>
-      </div>
-    </section>
+<section class="lm-card" data-state="loading" data-component="report-list">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title" data-i18n="rp2.list">报告列表</h3>
+    <div class="lm-row" style="gap:var(--lm-space-sm);">
+      <select class="lm-input lm-input--sm" id="r-type" style="min-width:120px;">
+        <option value="" data-i18n="common.all">全部</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+        <option value="special">Special</option>
+      </select>
+      <button class="lm-btn lm-btn--ghost lm-btn--sm" id="r-refresh" data-i18n="common.refresh">刷新</button>
+    </div>
+  </div>
+  <div class="lm-card__body">
+    <div class="lm-table-wrap">
+      <table class="lm-table">
+        <thead><tr>
+          <th data-i18n="rp2.col_type">类型</th><th data-i18n="rp2.col_date">报告日期</th>
+          <th data-i18n="rp2.col_range">周期</th><th data-i18n="rp2.col_notes">笔记</th>
+          <th data-i18n="rp2.col_neg">负面</th><th data-i18n="rp2.col_high">高风险</th>
+          <th data-i18n="rp2.col_health">健康分</th><th data-i18n="common.detail">详情</th>
+        </tr></thead>
+        <tbody id="r-tbody"><tr><td colspan="8" style="color:var(--lm-text-tertiary);" data-i18n="common.loading">加载中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 详情 Drawer -->
+<div class="lm-drawer" id="r-drawer" hidden>
+  <div class="lm-drawer__head">
+    <strong id="r-drawer-title">Report</strong>
+    <button class="lm-btn lm-btn--icon lm-btn--sm" id="r-drawer-close">✕</button>
+  </div>
+  <div class="lm-drawer__body" id="r-drawer-body"></div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-// Reports page - runtime binding pending
+(function(){
+  Object.assign(LUMENIS.i18n.dict.zh,{
+    'rp2.title':'报告中心','rp2.subtitle':'日报 / 周报 / 月报 / 专报 · 按发布时间口径',
+    'rp2.list':'报告列表','rp2.col_type':'类型','rp2.col_date':'报告日期','rp2.col_range':'周期',
+    'rp2.col_notes':'笔记','rp2.col_neg':'负面','rp2.col_high':'高风险','rp2.col_health':'健康分',
+    'rp2.empty':'暂无报告','rp2.unavailable':'报告数据不可用','rp2.summary':'摘要','rp2.generated':'生成时间'
+  });
+  Object.assign(LUMENIS.i18n.dict.en,{
+    'rp2.title':'Reports','rp2.subtitle':'Daily / Weekly / Monthly / Special · by publish time',
+    'rp2.list':'Report List','rp2.col_type':'Type','rp2.col_date':'Date','rp2.col_range':'Period',
+    'rp2.col_notes':'Notes','rp2.col_neg':'Negative','rp2.col_high':'High Risk','rp2.col_health':'Health',
+    'rp2.empty':'No reports','rp2.unavailable':'Reports unavailable','rp2.summary':'Summary','rp2.generated':'Generated'
+  });
+  Object.assign(LUMENIS.i18n.dict.ko,{
+    'rp2.title':'보고서','rp2.subtitle':'일간 / 주간 / 월간 / 특별 · 게시 시간 기준',
+    'rp2.list':'보고서 목록','rp2.col_type':'유형','rp2.col_date':'날짜','rp2.col_range':'기간',
+    'rp2.col_notes':'노트','rp2.col_neg':'부정','rp2.col_high':'고위험','rp2.col_health':'건강 점수',
+    'rp2.empty':'보고서 없음','rp2.unavailable':'보고서를 사용할 수 없습니다','rp2.summary':'요약','rp2.generated':'생성 시간'
+  });
+  LUMENIS.i18n.setLang(LUMENIS.i18n.current);
+  function t(k){var d=LUMENIS.i18n.dict[LUMENIS.i18n.current]||{};return d[k]||k;}
+  var card=document.querySelector('[data-component="report-list"]');
+  var tbody=document.getElementById('r-tbody');
+  var reports=[];
+  function load(){
+    card.setAttribute('data-state','loading');
+    var ty=document.getElementById('r-type').value;
+    var url='/api/production/reports'+(ty?'?type='+encodeURIComponent(ty):'');
+    LUMENIS.fetch(url).then(function(r){return r.json();}).then(function(d){
+      var dot=document.getElementById('r-dot');
+      if(!d||!d.ok){card.setAttribute('data-state','error');tbody.innerHTML='<tr><td colspan="8" style="color:var(--lm-color-danger);">'+t('rp2.unavailable')+'</td></tr>';dot.className='lm-dot lm-dot--danger';return;}
+      reports=d.reports||[];
+      document.getElementById('r-count').textContent=d.total;
+      dot.className='lm-dot '+(reports.length?'lm-dot--success':'lm-dot--warning');
+      if(!reports.length){card.setAttribute('data-state','empty');tbody.innerHTML='<tr><td colspan="8" style="color:var(--lm-text-tertiary);">'+t('rp2.empty')+'</td></tr>';return;}
+      card.setAttribute('data-state','success');
+      tbody.innerHTML=reports.map(function(r,i){
+        var hs=r.brand_health_score||0;
+        return '<tr><td><span class="lm-badge lm-badge--ghost">'+r.report_type+'</span></td>'+
+          '<td>'+(r.report_date||'–')+'</td><td style="font-size:12px;">'+(r.period_start||'')+' ~ '+(r.period_end||'')+'</td>'+
+          '<td>'+(r.total_notes||0)+'</td><td style="color:var(--lm-color-danger);">'+(r.negative_count||0)+'</td>'+
+          '<td>'+(r.high_risk_count||0)+'</td><td>'+hs+'</td>'+
+          '<td><button class="lm-btn lm-btn--ghost lm-btn--sm" data-i="'+i+'">'+t('common.detail')+'</button></td></tr>';
+      }).join('');
+      tbody.querySelectorAll('button[data-i]').forEach(function(b){
+        b.addEventListener('click',function(){openReport(reports[+b.getAttribute('data-i')]);});
+      });
+    }).catch(function(){card.setAttribute('data-state','error');tbody.innerHTML='<tr><td colspan="8" style="color:var(--lm-color-danger);">'+t('rp2.unavailable')+'</td></tr>';});
+  }
+  function openReport(r){
+    document.getElementById('r-drawer-title').textContent=(r.report_type||'')+' · '+(r.report_date||'');
+    document.getElementById('r-drawer-body').innerHTML=
+      '<div style="font-size:13px;line-height:1.8;">'+
+      '<p><strong>'+t('rp2.summary')+'：</strong>'+(r.summary||r.event_summary||'–')+'</p>'+
+      '<p style="color:var(--lm-text-secondary);">'+t('rp2.generated')+'：'+(r.generated_at||'–')+'</p></div>';
+    document.getElementById('r-drawer').hidden=false;
+  }
+  document.getElementById('r-drawer-close').addEventListener('click',function(){document.getElementById('r-drawer').hidden=true;});
+  document.getElementById('r-refresh').addEventListener('click',load);
+  document.getElementById('r-type').addEventListener('change',load);
+  load();
+})();
 {% endblock %}
