@@ -429,10 +429,15 @@
   document.getElementById('lm-drawer-close').addEventListener('click', closeDrawer);
   overlay.addEventListener('click', closeDrawer);
 
-  // 主网格 Detail 按钮
+  // 主网格 Detail 按钮 + 整卡点击打开 Detail（按钮 stopPropagation 优先）
   tiles.forEach(function(tile){
     tile.querySelector('.lm-skill-detail').addEventListener('click', function(e){ e.stopPropagation(); openDrawer(tile); });
     tile.querySelector('.lm-skill-run').addEventListener('click', function(e){ e.stopPropagation(); invokeSkill(tile); });
+    var toggleBtn = tile.querySelector('.lm-skill-toggle');
+    if(toggleBtn){ toggleBtn.addEventListener('click', function(e){ e.stopPropagation(); }); }
+    // 点击卡片空白区域也打开 Detail（GPT Store 交互）
+    tile.addEventListener('click', function(){ openDrawer(tile); });
+    tile.style.cursor = 'pointer';
   });
 
   // Invoke
