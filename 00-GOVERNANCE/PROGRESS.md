@@ -13,7 +13,7 @@
 |------|------|--------|-----------|------------|-----------|---------|------|------|
 | T1 | 产品/域/主体+Registry | ShardD | 0 | - | - | - | 运行中 | - |
 | T2 | 采集+Source+Raw | Team2 | 4 | 8bba987/2885405 | 0 | 161 PASS/0 FAIL | 运行中 | - |
-| T3 | Subject Filter+Dedup+Quality | Team3 | 0 | - | 进行中 | - | 运行中 | - |
+| T3 | Subject Filter+Dedup+Quality | Team3 | 2 | 85f7138 | 负责文件0剩余 | 主体红线24+双维度10+KOS15+质量门10+事件3=62 PASS | 运行中 | - |
 | T4 | Canonical+Schema Registry | Team4 | 5 | 550d644 | 0剩余 | 21 passed | Raw→Canonical已打通,13条记录同步,时间分离0违规 | 无 |
 | T5 | Event+Case+Risk+Alert | ShardA | 2 | 0c4b4f5,00bb65e | 生产0剩余 | 58 passed | 核心链路已打通 | 无verified输入致events空(非bug) |
 | T6 | Metric+Dashboard+KOS/KOL/KOC+Search | Team6 | 1 | 8bba987 | 生产0剩余 | metric 6/6, KOS 47pass1skip, professional 12/12, 综合42PASS | 已完成验证+修复 | 无 |
