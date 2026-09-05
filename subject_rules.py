@@ -190,23 +190,27 @@ def _column(alias: str, field: str) -> str:
 
 
 def _subject_sql_and_values(alias: str = '') -> tuple[str, list[str]]:
-    """返回可直接拼接到 WHERE 的统一主体 SQL + 参数。"""
-    positives = []
-    values: list[str] = []
-    for field in SUBJECT_FIELDS:
-        for word in SUBJECT_WORDS:
-            positives.append(f"{_column(alias, field)} LIKE ?")
-            values.append(f'%{word.lower()}%')
-    excludes = []
-    for field in SUBJECT_FIELDS:
-        for word in SUBJECT_EXCLUDE_WORDS:
-            excludes.append(f"{_column(alias, field)} LIKE ?")
-            values.append(f'%{word.lower()}%')
-    return f"({' OR '.join(positives)}) AND NOT ({' OR '.join(excludes)})", values
+    """返回可直接拼接到 WHERE 的统一主体 SQL + 参数。
+    V4 P0-01：委托品牌化版本，确保 Python/SQL/采集/报告/统计口径统一。
+    旧调用点无需修改，自动走当前激活品牌配置。"""
+    return _subject_sql_and_values_for(get_active_brand(), alias)
 
 
 # 保留项目历史命名，避免旧模块/脚本调用断裂。
 subject_sql_and_values = _subject_sql_and_values
+
+
+def subject_policy_info(brand_key: str = "") -> dict:
+    """V4 P0-01：返回当前主体策略元信息（subject_id/policy_version/reason）。
+    所有主体判断结果应附带此信息，便于追溯口径。"""
+    cfg = get_brand_config(brand_key)
+    return {
+        "subject_id": cfg.get("brand_key", get_active_brand()),
+        "policy_version": cfg.get("policy_version", "1.0"),
+        "subject_words_count": len(cfg.get("subject_words", SUBJECT_WORDS)),
+        "exclude_words_count": len(cfg.get("exclude_words", SUBJECT_EXCLUDE_WORDS)),
+        "active_brand": get_active_brand(),
+    }
 
 
 def _subject_sql_and_values_for(brand_key: str, alias: str = '') -> tuple[str, list[str]]:

@@ -207,15 +207,22 @@ class EvaluationSystem:
             if os.path.exists(report_dir):
                 reports = [f for f in os.listdir(report_dir) if date_str in f or f.endswith(('.docx', '.xlsx', '.pdf'))]
 
-            # 报告完整率（检查是否包含必要字段）
-            # 这里简化处理，实际需要解析报告内容
+            # V4 P0-07：真实检查报告完整性，删除"文件存在=成功"假指标
             report_count = len(reports)
-            complete_count = report_count  # 假设生成的报告都是完整的
+            MIN_REPORT_BYTES = 100  # 低于此值视为空/损坏报告
+            complete_count = 0
+            export_success = 0
+            for rf in reports:
+                fpath = os.path.join(report_dir, rf)
+                try:
+                    fsize = os.path.getsize(fpath)
+                    if fsize >= MIN_REPORT_BYTES:
+                        complete_count += 1
+                        export_success += 1  # 文件存在且非空才算导出成功
+                except OSError:
+                    pass  # 无法读取的文件不计入完整/导出成功
             complete_rate = (complete_count / report_count * 100) if report_count > 0 else 0
-
-            # 导出成功率
-            export_success = report_count  # 能生成就算成功
-            export_rate = 100 if report_count > 0 else 0
+            export_rate = (export_success / report_count * 100) if report_count > 0 else 0
 
             return {
                 'date': date_str,
