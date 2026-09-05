@@ -151,3 +151,124 @@ def assert_cth_protection() -> None:
             f"CTH Protection Violation: expected {CTH_BRAND_KEY}, "
             f"got {ctx.brand_key} (product={ctx.product_id})"
         )
+
+
+# ---------------------------------------------------------------------------
+# Flask Request-Level Isolation (Shard D / Team 1)
+# ---------------------------------------------------------------------------
+
+def get_request_brand():
+    """从当前 Flask 请求中解析 brand_key（请求级，非全局）。
+
+    优先级：
+      1. 请求头 X-Brand-Key
+      2. Session 中的 brand_key
+      3. 查询参数 ?brand_key=
+      4. 环境变量 ZBC_ACTIVE_BRAND（兼容旧行为）
+      5. CTH 默认（guangzhou_taikoo_hui）
+
+    不在 Flask 请求上下文中时返回 None，调用方应回退到 get_subject_context()。
+    """
+    try:
+        from flask import request, session
+    except Exception:
+        return None
+
+    # 1. Header
+    brand = request.headers.get("X-Brand-Key", "").strip()
+    if brand:
+        return brand
+
+    # 2. Session
+    brand = session.get("brand_key", "")
+    if brand:
+        return brand
+
+    # 3. Query param
+    brand = request.args.get("brand_key", "").strip()
+    if brand:
+        return brand
+
+    return None
+
+
+def init_app(app):
+    """注册 Flask before_request / after_request 钩子，实现请求级主体隔离。
+
+    每个 HTTP 请求自动：
+      - 从请求上下文解析 brand_key
+      - 设置线程级 SubjectContext
+      - 请求结束后清除线程上下文（防止线程复用时的品牌泄漏）
+
+    CTH 保护：当 ZBC_PRODUCT_ID=CTH 时，强制 brand_key=guangzhou_taikoo_hui，
+    任何请求级 brand 切换都不允许覆盖 CTH 生产主体。
+
+    用法（在 app.py 中）：
+        from subject_context import init_app
+        init_app(app)
+    """
+    from flask import g
+
+    @app.before_request
+    def _set_subject_context():
+        brand = get_request_brand()
+        product_id = None
+
+        # CTH 强制保护
+        if os.environ.get("ZBC_PRODUCT_ID") == PRODUCT_CTH:
+            brand = CTH_BRAND_KEY
+            product_id = PRODUCT_CTH
+
+        ctx = get_subject_context(brand_key=brand, product_id=product_id)
+        set_thread_context(ctx)
+        g.subject_context = ctx
+
+    @app.after_request
+    def _clear_subject_context(response):
+        clear_thread_context()
+        return response
+
+    @app.teardown_request
+    def _teardown_subject_context(exc=None):
+        clear_thread_context()
+
+    return app
+
+
+class brand_scope:
+    """上下文管理器：在代码块内临时切换主体上下文，退出后自动恢复。
+
+    用法：
+        with brand_scope("hainan_cdf"):
+            # 此块内所有 get_active_brand() 返回 hainan_cdf
+            result = subject_hit("海南中免")
+        # 退出后恢复原上下文
+
+    这是显式的、局部的主体切换，不修改全局状态。
+    CTH 保护：当 ZBC_PRODUCT_ID=CTH 时，不允许切换到非 CTH 品牌。
+    """
+
+    def __init__(self, brand_key: str, product_id: Optional[str] = None):
+        self.brand_key = brand_key
+        self.product_id = product_id
+        self._previous = None
+
+    def __enter__(self):
+        # CTH 保护
+        if os.environ.get("ZBC_PRODUCT_ID") == PRODUCT_CTH:
+            if self.brand_key != CTH_BRAND_KEY:
+                raise PermissionError(
+                    f"CTH Protection: cannot switch brand to {self.brand_key} "
+                    f"when ZBC_PRODUCT_ID=CTH"
+                )
+        self._previous = get_thread_context()
+        ctx = get_subject_context(brand_key=self.brand_key, product_id=self.product_id)
+        set_thread_context(ctx)
+        return ctx
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._previous is not None:
+            set_thread_context(self._previous)
+        else:
+            clear_thread_context()
+        return False

@@ -123,9 +123,17 @@ def get_active_brand() -> str:
     V2 P0-19: 委托给 SubjectContext 管理主体边界。
     active_brand 不再承担系统数据边界职责，仅作为兼容层返回 brand_key。
     真实的主体边界由 subject_context.get_subject_context() 统一管理。
+
+    优先级（Shard D 请求级隔离）：
+      1. 线程级 SubjectContext（由 Flask before_request 或 brand_scope 设置）
+      2. 环境变量 ZBC_ACTIVE_BRAND
+      3. CTH 默认 guangzhou_taikoo_hui
     """
     try:
-        from subject_context import get_subject_context
+        from subject_context import get_thread_context, get_subject_context
+        ctx = get_thread_context()
+        if ctx is not None:
+            return ctx.brand_key
         return get_subject_context().brand_key
     except Exception:
         import os
