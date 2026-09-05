@@ -20,6 +20,12 @@ def _mock_response(json_data):
 
 class TestZhihuAdapterSearch:
 
+    @pytest.fixture(autouse=True)
+    def _disable_browser(self):
+        """测试环境禁用浏览器采集，走API路径（mock requests.get）。"""
+        with patch("v4_upgrade.adapters.zhihu.ZhihuAdapter._search_browser", return_value=None):
+            yield
+
     @patch("v4_upgrade.adapters.zhihu.requests.get")
     def test_search_answer_success(self, mock_get):
         mock_get.return_value = _mock_response({

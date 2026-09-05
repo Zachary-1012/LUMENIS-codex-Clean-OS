@@ -86,6 +86,116 @@ class ZhihuAdapter(BaseAdapter):
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
+        # 优先浏览器CDP采集（绕过API签名要求），失败则fallback到API
+        browser_result = self._search_browser(keyword, max_results)
+        if browser_result is not None:
+            return browser_result
+        return self._search_api(keyword, max_results)
+
+    def _search_browser(self, keyword: str, max_results: int) -> AdapterResult | None:
+        """浏览器CDP采集：打开知乎搜索页，解析DOM。失败返回None以触发API fallback。"""
+        try:
+            from .human_browser import HumanBrowser
+            from .cookie_vault import inject_into_context
+            from urllib.parse import quote
+
+            hb = HumanBrowser(port=9222, launch_url="about:blank")
+            hb.connect()
+            inject_into_context(hb._context, "zhihu")
+            page = hb.new_page()
+            url = f"https://www.zhihu.com/search?type=content&q={quote(keyword.strip())}"
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            hb.pause(4.0, 4.0)
+
+            # 解析搜索结果卡片
+            cards = page.query_selector_all(".SearchResult-Card, .List-item, .Card")
+            notes = []
+            for card in cards:
+                if len(notes) >= max_results:
+                    break
+                try:
+                    note = self._parse_zhihu_card(card)
+                    if note:
+                        notes.append(note)
+                except Exception:
+                    continue
+
+            page.close()
+            hb.close()
+
+            if notes:
+                return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+            # 浏览器无结果也返回成功空（不fallback，避免API签名错误）
+            return AdapterResult(success=True, notes=[], raw_count=0)
+        except Exception as e:
+            logger.warning(f"知乎浏览器采集失败，fallback到API: {e}")
+            return None
+
+    def _parse_zhihu_card(self, card) -> "CollectedNote | None":
+        """解析单个知乎搜索结果卡片为CollectedNote。"""
+        from .base import CollectedNote
+
+        # 标题
+        title_el = card.query_selector(".ContentItem-title a, h2 a, .SearchItem-title")
+        title = title_el.inner_text().strip() if title_el else ""
+
+        # 链接
+        url = ""
+        if title_el:
+            href = title_el.get_attribute("href") or ""
+            if href.startswith("//"):
+                url = "https:" + href
+            elif href.startswith("/"):
+                url = "https://www.zhihu.com" + href
+            elif href:
+                url = href
+
+        # 摘要
+        excerpt_el = card.query_selector(".RichContent-inner, .content, .SearchItem-excerpt")
+        content = excerpt_el.inner_text().strip() if excerpt_el else ""
+
+        # 作者
+        author_el = card.query_selector(".AuthorInfo-name, .author, .UserLink-link")
+        author = author_el.inner_text().strip() if author_el else ""
+
+        # 赞同数
+        vote_el = card.query_selector(".VoteButton--up, .like, .ContentItem-action button")
+        likes = 0
+        if vote_el:
+            vote_text = vote_el.inner_text().strip()
+            digits = "".join(c for c in vote_text if c.isdigit())
+            if digits:
+                likes = int(digits)
+
+        # 评论数
+        comment_el = card.query_selector(".ContentItem-action button:nth-child(2), .comment")
+        comments = 0
+        if comment_el:
+            ctext = comment_el.inner_text().strip()
+            digits = "".join(c for c in ctext if c.isdigit())
+            if digits:
+                comments = int(digits)
+
+        if not title and not content:
+            return None
+
+        return CollectedNote(
+            title=title[:200],
+            content=content[:500],
+            url=url,
+            author=author,
+            author_id="",
+            publish_date="",
+            likes=likes,
+            comments=comments,
+            collects=0,
+            shares=0,
+            cover="",
+            source_platform="zhihu",
+            raw_data={"title": title, "url": url},
+        )
+
+    def _search_api(self, keyword: str, max_results: int) -> AdapterResult:
         try:
             from urllib.parse import quote
             params = {
