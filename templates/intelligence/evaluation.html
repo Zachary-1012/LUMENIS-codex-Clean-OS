@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Evaluation Center · 序境 LUMENIS{% endblock %}
+{% block page_title %}Evaluation Center{% endblock %}
+
+{% block content %}
+<!-- Evaluation 状态条 -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="evaluation" data-component="eval-status" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);">
+    <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="ev-dot"></span><span data-field="ev-state">加载中…</span></span>
+      <span class="lm-badge" data-field="ev-total">Total: –</span>
+      <span class="lm-badge" data-field="ev-pass">Pass: –</span>
+      <span class="lm-badge" data-field="ev-fail">Fail: –</span>
+    </div>
+    <span class="lm-badge lm-badge--ghost">Result ≠ Success · 必须有 Evidence + Evaluation</span>
+  </div>
+</section>
+
+<!-- 评估指标 -->
+<div class="lm-grid lm-grid--cards">
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title">Correctness</h3></div>
+    <div class="lm-card__body lm-stack">
+      <div class="lm-metric"><span class="lm-metric__label">正确率</span><span class="lm-metric__value" data-field="ev-correctness">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);">结果与预期一致的比例</div>
+    </div>
+  </article>
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title">Completeness</h3></div>
+    <div class="lm-card__body lm-stack">
+      <div class="lm-metric"><span class="lm-metric__label">完整度</span><span class="lm-metric__value" data-field="ev-completeness">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);">覆盖所有要求的比例</div>
+    </div>
+  </article>
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title">Regression</h3></div>
+    <div class="lm-card__body lm-stack">
+      <div class="lm-metric"><span class="lm-metric__label">回归数</span><span class="lm-metric__value" data-field="ev-regression">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);">引入的新失败数</div>
+    </div>
+  </article>
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title">Safety</h3></div>
+    <div class="lm-card__body lm-stack">
+      <div class="lm-metric"><span class="lm-metric__label">安全分</span><span class="lm-metric__value" data-field="ev-safety">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);">无危险操作的比例</div>
+    </div>
+  </article>
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title">Latency</h3></div>
+    <div class="lm-card__body lm-stack">
+      <div class="lm-metric"><span class="lm-metric__label">平均延迟</span><span class="lm-metric__value" data-field="ev-latency">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);">端到端执行时间</div>
+    </div>
+  </article>
+  <article class="lm-card">
+    <div class="lm-card__head"><h3 class="lm-card__title">Cost</h3></div>
+    <div class="lm-card__body lm-stack">
+      <div class="lm-metric"><span class="lm-metric__label">Token 消耗</span><span class="lm-metric__value" data-field="ev-cost">–</span></div>
+      <div style="font-size:12px;color:var(--lm-text-tertiary);">累计输入+输出 token</div>
+    </div>
+  </article>
+</div>
+
+<!-- 评估记录 -->
+<article class="lm-card" data-state="empty" data-page="evaluation" data-component="eval-records" style="margin-top:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Evaluation Records</h3>
+    <span class="lm-badge" data-field="eval-record-count">0 条</span>
+  </div>
+  <div class="lm-card__body" data-state-slot>
+    <div class="lm-table-wrap">
+      <table class="lm-table">
+        <thead><tr><th>Task</th><th>Result</th><th>Evidence</th><th>Score</th><th>Status</th><th>Human Review</th></tr></thead>
+        <tbody id="lm-eval-records-body">
+          <tr><td colspan="6" style="text-align:center;color:var(--lm-text-tertiary);padding:var(--lm-space-md);">暂无评估记录</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</article>
+
+<!-- 评估标准 -->
+<article class="lm-card lm-card--flat" style="margin-top:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Evaluation Criteria</h3>
+  </div>
+  <div class="lm-card__body lm-stack">
+    <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;align-items:flex-start;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Requirement → Expected</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);">每个任务必须有明确的预期结果</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Actual → Test</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);">实际结果必须通过测试验证</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Evidence → Result</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);">没有 Evidence 不得标记完成</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:600;margin-bottom:var(--lm-space-xs);">Human Approval</div>
+        <div style="font-size:13px;color:var(--lm-text-secondary);">生产变更必须人工批准</div>
+      </div>
+    </div>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+// Evaluation Center：状态绑定
+(function(){
+  LUMENIS.bindState(document.querySelector('[data-component="eval-status"]'), {
+    page:"evaluation", component:"eval-status", url:"/api/evaluation/status",
+    isEmpty:function(d){return !d || d.total===0;},
+    emptyText:"无评估记录",
+    render:function(d){
+      var dot=document.querySelector('[data-field="ev-dot"]');
+      if(dot) dot.className="lm-dot lm-dot--"+(d.total>0?"ai":"unknown");
+      var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("ev-state", d.total>0?"已加载":"无数据");
+      f("ev-total","Total: "+(d.total||0));
+      f("ev-pass","Pass: "+(d.pass||0));
+      f("ev-fail","Fail: "+(d.fail||0));
+      f("ev-correctness", (d.correctness!=null?d.correctness+"%":"–"));
+      f("ev-completeness", (d.completeness!=null?d.completeness+"%":"–"));
+      f("ev-regression", d.regression||0);
+      f("ev-safety", (d.safety!=null?d.safety+"%":"–"));
+      f("ev-latency", (d.latency_ms!=null?d.latency_ms+"ms":"–"));
+      f("ev-cost", d.tokens||0);
+    }
+  });
+})();
+{% endblock %}

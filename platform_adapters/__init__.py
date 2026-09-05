@@ -13,6 +13,12 @@ from .registry import get_adapter, list_adapters, register_adapter
 from . import douyin as _douyin  # noqa: F401,E402
 from . import xhs as _xhs  # noqa: F401,E402
 from . import xhs_app_topic as _xhs_app_topic  # noqa: F401,E402  V3.0 P1: XHS App Topic Adapter
+from . import instagram as _instagram  # noqa: F401,E402
+from . import bilibili as _bilibili  # noqa: F401,E402
+from . import weibo as _weibo  # noqa: F401,E402
+from . import zhihu as _zhihu  # noqa: F401,E402
+from . import facebook as _facebook  # noqa: F401,E402
+from . import x_platform as _x_platform  # noqa: F401,E402
 
 __all__ = [
     "BasePlatformAdapter",

@@ -189,6 +189,395 @@ class InstagramAdapter(BaseAdapter):
                 break
         return notes
 
+    # ---------- 详情 ----------
+    def detail(self, shortcode: str, media_type: str = "post") -> AdapterResult:
+        """进帖子详情页补抓真实发布时间、完整 caption、评论数、位置。
+
+        时间口径：publish_date 必须从 <time datetime> 取真实 ISO，取不到留空
+        并标 needs_detail=True，绝不臆造。只读，不硬刚风控。
+        """
+        if not shortcode or not shortcode.strip():
+            return AdapterResult(success=False, error="shortcode 为空")
+        proxy = self._proxy_addr()
+        if not proxy:
+            return AdapterResult(
+                success=False,
+                error="Instagram 需经代理访问，未配置 GOOGLE_PROXY / OPENAI_PROXY",
+            )
+        try:
+            return self._detail_browser(shortcode.strip(), media_type, proxy)
+        except Exception as e:
+            logger.exception("Instagram 详情采集异常")
+            return AdapterResult(success=False, error=f"Instagram 详情采集异常: {e}")
+
+    def _detail_browser(self, shortcode, media_type, proxy) -> AdapterResult:
+        kind = "reel" if media_type == "reel" else "p"
+        url = f"https://www.instagram.com/{kind}/{shortcode}/"
+        hb = HumanBrowser(
+            port=self.PROXY_CDP_PORT,
+            profile_dir=self.PROXY_PROFILE_DIR,
+            proxy_server=proxy,
+            launch_url="about:blank",
+        )
+        hb.connect()
+        inject_into_context(hb._context, "instagram")
+        page = None
+        try:
+            page = hb.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=40000)
+
+            rendered = True
+            try:
+                page.wait_for_selector("time[datetime], article", timeout=18000)
+            except Exception:
+                rendered = False
+            hb.pause(1.0, 2.0)
+
+            data = page.evaluate(
+                r"""() => {
+                    const out = {publish_time:'', caption:'', comment_count:0, likes:0, location:'', media_type:'post', author:''};
+                    if (window.location.pathname.startsWith('/reel/')) out.media_type = 'reel';
+                    const t = document.querySelector('time[datetime]');
+                    if (t) out.publish_time = t.getAttribute('datetime') || '';
+                    const imgs = document.querySelectorAll('article img, img');
+                    for (const img of imgs) {
+                        const alt = (img.alt || '').trim();
+                        if (alt && !/头像|profile picture|头像照/i.test(alt) && alt.length > 3) {
+                            out.caption = alt; break;
+                        }
+                    }
+                    if (!out.caption) {
+                        const h1 = document.querySelector('article h1, h1');
+                        if (h1) out.caption = (h1.innerText || '').trim();
+                    }
+                    const authorLinks = document.querySelectorAll('a[href^="/"]');
+                    for (const a of authorLinks) {
+                        const href = a.getAttribute('href') || '';
+                        const m = href.match(/^\/([A-Za-z0-9._]{1,40})\/?$/);
+                        if (m && !['p','reel','explore','accounts','direct','stories','tags'].includes(m[1])) {
+                            out.author = m[1]; break;
+                        }
+                    }
+                    const body = document.body.innerText || '';
+                    const cm = body.match(/(\d[\d,.]*)\s*(comments?|条评论)/i);
+                    if (cm) out.comment_count = parseInt(cm[1].replace(/[,.]/g,'')) || 0;
+                    const lm = body.match(/(\d[\d,.]*)\s*(likes?|次赞)/i);
+                    if (lm) out.likes = parseInt(lm[1].replace(/[,.]/g,'')) || 0;
+                    const loc = document.querySelector('a[href*="/explore/locations/"]');
+                    if (loc) out.location = (loc.innerText || '').trim();
+                    return out;
+                }""")
+
+            publish_date = (data.get("publish_time") or "").strip()
+            needs_detail = not bool(publish_date)
+            caption = (data.get("caption") or "").strip()
+            author = (data.get("author") or "").strip() or "instagram_user"
+
+            if not caption and not publish_date and not rendered:
+                state = hb.detect_state(
+                    page,
+                    extra_markers={
+                        PageState.AUTH_FAILED: ["log in", "sign up", "登录", "create an account", "create new account"],
+                        PageState.CAPTCHA: ["confirm", "captcha", "验证", "suspicious"],
+                        PageState.BLOCKED: ["try again later", "请稍等", "unusual", "rate limit", "report a problem"],
+                    },
+                    success_selector="time[datetime], article",
+                )
+                hint = {
+                    PageState.AUTH_FAILED: "Instagram 登录态失效，请更新 Cookie 或在代理 Profile 重新登录",
+                    PageState.CAPTCHA: "Instagram 出现确认/人机验证，需人工通过后再采",
+                    PageState.BLOCKED: "Instagram 触发频控，按熔断退避不硬刚",
+                    PageState.NETWORK_ERROR: "代理连接异常或 Instagram 不可达",
+                }.get(state)
+                if hint:
+                    return AdapterResult(success=False, error=hint)
+
+            note = self._make_note(
+                title=caption[:80] or f"Instagram {shortcode}",
+                content=caption,
+                url=url,
+                author=author,
+                publish_date=publish_date,
+                likes=int(data.get("likes", 0) or 0),
+                comments=int(data.get("comment_count", 0) or 0),
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "instagram_detail_dom",
+                    "shortcode": shortcode,
+                    "media_type": data.get("media_type", "post"),
+                    "comment_count": int(data.get("comment_count", 0) or 0),
+                    "location": data.get("location", ""),
+                    "needs_detail": needs_detail,
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+        finally:
+            if page is not None:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+            hb.close()
+
+    # ---------- 评论 ----------
+    def comments(self, shortcode: str, max_comments: int = 20) -> AdapterResult:
+        """进详情页解析评论区（只读，绝不发表评论）。
+
+        评论列表放在返回 note 的 raw_data["comments"] 中，每条含
+        author / content / publish_time / likes。评论区需滚动加载。
+        """
+        if not shortcode or not shortcode.strip():
+            return AdapterResult(success=False, error="shortcode 为空")
+        proxy = self._proxy_addr()
+        if not proxy:
+            return AdapterResult(
+                success=False,
+                error="Instagram 需经代理访问，未配置 GOOGLE_PROXY / OPENAI_PROXY",
+            )
+        try:
+            return self._comments_browser(shortcode.strip(), max_comments, proxy)
+        except Exception as e:
+            logger.exception("Instagram 评论采集异常")
+            return AdapterResult(success=False, error=f"Instagram 评论采集异常: {e}")
+
+    def _comments_browser(self, shortcode, max_comments, proxy) -> AdapterResult:
+        url = f"https://www.instagram.com/p/{shortcode}/"
+        hb = HumanBrowser(
+            port=self.PROXY_CDP_PORT,
+            profile_dir=self.PROXY_PROFILE_DIR,
+            proxy_server=proxy,
+            launch_url="about:blank",
+        )
+        hb.connect()
+        inject_into_context(hb._context, "instagram")
+        page = None
+        try:
+            page = hb.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=40000)
+
+            rendered = True
+            try:
+                page.wait_for_selector("time[datetime], article", timeout=18000)
+            except Exception:
+                rendered = False
+            hb.pause(1.0, 2.0)
+
+            for _ in range(4):
+                hb.human_scroll(page, total_px=600, rounds=2)
+                hb.pause(1.0, 2.0)
+                cnt = page.evaluate(
+                    r"""() => {
+                        const candidates = document.querySelectorAll('ul li, div[role="button"]');
+                        let n = 0;
+                        for (const el of candidates) {
+                            if (el.querySelector('time[datetime]') && el.querySelector('a[href^="/"]')) n++;
+                        }
+                        return n;
+                    }""")
+                if cnt >= max_comments:
+                    break
+
+            raw_comments = page.evaluate(
+                r"""() => {
+                    const out = [];
+                    const seen = new Set();
+                    const all = document.querySelectorAll('*');
+                    for (const el of all) {
+                        const timeEl = el.querySelector(':scope > time[datetime], time[datetime]');
+                        if (!timeEl) continue;
+                        const authorLink = el.querySelector('a[href^="/"]');
+                        if (!authorLink) continue;
+                        const href = authorLink.getAttribute('href') || '';
+                        const m = href.match(/^\/([A-Za-z0-9._]{1,40})\/?$/);
+                        if (!m) continue;
+                        const author = m[1];
+                        if (['p','reel','explore','accounts','direct','stories','tags'].includes(author)) continue;
+                        const textNodes = [];
+                        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+                        let node;
+                        while ((node = walker.nextNode())) {
+                            const t = (node.textContent || '').trim();
+                            if (t && t !== author) textNodes.push(t);
+                        }
+                        const content = textNodes.join(' ').trim();
+                        const key = author + '|' + content.slice(0, 40);
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        let likes = 0;
+                        const likeText = el.innerText || '';
+                        const lm = likeText.match(/(\d[\d,.]*)\s*(likes?|次赞)/i);
+                        if (lm) likes = parseInt(lm[1].replace(/[,.]/g,'')) || 0;
+                        out.push({
+                            author: author,
+                            content: content,
+                            publish_time: timeEl.getAttribute('datetime') || '',
+                            likes: likes,
+                        });
+                    }
+                    return out;
+                }""")
+
+            comments_list = raw_comments or []
+            if len(comments_list) > max_comments:
+                comments_list = comments_list[:max_comments]
+
+            if not comments_list and not rendered:
+                state = hb.detect_state(
+                    page,
+                    extra_markers={
+                        PageState.AUTH_FAILED: ["log in", "sign up", "登录", "create an account"],
+                        PageState.CAPTCHA: ["confirm", "captcha", "验证", "suspicious"],
+                        PageState.BLOCKED: ["try again later", "请稍等", "unusual", "rate limit"],
+                    },
+                    success_selector="time[datetime], article",
+                )
+                hint = {
+                    PageState.AUTH_FAILED: "Instagram 登录态失效，请更新 Cookie 或在代理 Profile 重新登录",
+                    PageState.CAPTCHA: "Instagram 出现确认/人机验证，需人工通过后再采",
+                    PageState.BLOCKED: "Instagram 触发频控，按熔断退避不硬刚",
+                    PageState.NETWORK_ERROR: "代理连接异常或 Instagram 不可达",
+                }.get(state)
+                if hint:
+                    return AdapterResult(success=False, error=hint)
+
+            note = self._make_note(
+                title="comments",
+                content=f"{len(comments_list)} comments",
+                url=url,
+                author="instagram_user",
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "instagram_comments_dom",
+                    "shortcode": shortcode,
+                    "comments": comments_list,
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=len(comments_list))
+        finally:
+            if page is not None:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+            hb.close()
+
+    # ---------- 作者主页 ----------
+    def creator(self, username: str) -> AdapterResult:
+        """进作者主页解析粉丝/关注/帖子数、简介、是否认证（只读）。
+
+        遇到私有账号/风控如实返回，不硬刚。
+        """
+        if not username or not username.strip():
+            return AdapterResult(success=False, error="username 为空")
+        proxy = self._proxy_addr()
+        if not proxy:
+            return AdapterResult(
+                success=False,
+                error="Instagram 需经代理访问，未配置 GOOGLE_PROXY / OPENAI_PROXY",
+            )
+        try:
+            return self._creator_browser(username.strip().lstrip("@"), proxy)
+        except Exception as e:
+            logger.exception("Instagram 作者采集异常")
+            return AdapterResult(success=False, error=f"Instagram 作者采集异常: {e}")
+
+    def _creator_browser(self, username, proxy) -> AdapterResult:
+        url = f"https://www.instagram.com/{username}/"
+        hb = HumanBrowser(
+            port=self.PROXY_CDP_PORT,
+            profile_dir=self.PROXY_PROFILE_DIR,
+            proxy_server=proxy,
+            launch_url="about:blank",
+        )
+        hb.connect()
+        inject_into_context(hb._context, "instagram")
+        page = None
+        try:
+            page = hb.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=40000)
+
+            rendered = True
+            try:
+                page.wait_for_selector("header, section", timeout=18000)
+            except Exception:
+                rendered = False
+            hb.pause(1.0, 2.0)
+
+            data = page.evaluate(
+                r"""() => {
+                    const out = {followers_str:'', following_str:'', posts_str:'', bio:'', verified:false, is_private:false};
+                    const body = document.body.innerText || '';
+                    const fm = body.match(/(\d[\d,.]*[kKmM]?)\s*(followers|粉丝)/i);
+                    if (fm) out.followers_str = fm[1];
+                    const fg = body.match(/(\d[\d,.]*[kKmM]?)\s*(following|关注)/i);
+                    if (fg) out.following_str = fg[1];
+                    const pm = body.match(/(\d[\d,.]*[kKmM]?)\s*(posts|帖子)/i);
+                    if (pm) out.posts_str = pm[1];
+                    const header = document.querySelector('header');
+                    if (header) {
+                        const spans = header.querySelectorAll('span, h1');
+                        const texts = [];
+                        for (const s of spans) {
+                            const t = (s.innerText || '').trim();
+                            if (t && t.length > 2 && !/^\d/.test(t)) texts.push(t);
+                        }
+                        out.bio = texts.slice(-3).join(' ').trim();
+                    }
+                    const verifiedSvg = document.querySelector('svg[aria-label*="Verified"], svg[aria-label*="认证"]');
+                    out.verified = !!verifiedSvg || /Verified|已认证/.test(body);
+                    out.is_private = /This Account is Private|此账号为私密|私密账号/.test(body);
+                    return out;
+                }""")
+
+            if not rendered:
+                state = hb.detect_state(
+                    page,
+                    extra_markers={
+                        PageState.AUTH_FAILED: ["log in", "sign up", "登录", "create an account"],
+                        PageState.CAPTCHA: ["confirm", "captcha", "验证", "suspicious"],
+                        PageState.BLOCKED: ["try again later", "请稍等", "unusual", "rate limit"],
+                    },
+                    success_selector="header, section",
+                )
+                hint = {
+                    PageState.AUTH_FAILED: "Instagram 登录态失效，请更新 Cookie 或在代理 Profile 重新登录",
+                    PageState.CAPTCHA: "Instagram 出现确认/人机验证，需人工通过后再采",
+                    PageState.BLOCKED: "Instagram 触发频控，按熔断退避不硬刚",
+                    PageState.NETWORK_ERROR: "代理连接异常或 Instagram 不可达",
+                }.get(state)
+                if hint:
+                    return AdapterResult(success=False, error=hint)
+
+            bio = (data.get("bio") or "").strip()
+            note = self._make_note(
+                title=username,
+                content=bio,
+                url=url,
+                author=username,
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "instagram_creator_dom",
+                    "username": username,
+                    "followers_str": data.get("followers_str", ""),
+                    "following_str": data.get("following_str", ""),
+                    "posts_str": data.get("posts_str", ""),
+                    "followers": self._ig_num(data.get("followers_str", "")),
+                    "following": self._ig_num(data.get("following_str", "")),
+                    "posts": self._ig_num(data.get("posts_str", "")),
+                    "verified": bool(data.get("verified")),
+                    "is_private": bool(data.get("is_private")),
+                    "creator_type": "instagram_user",
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+        finally:
+            if page is not None:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+            hb.close()
+
     # ---------- 工具 ----------
     @staticmethod
     def _to_tag(keyword):

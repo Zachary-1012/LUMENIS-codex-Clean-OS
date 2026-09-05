@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}序境 · LUMENIS{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/lumenis.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="lm-app" id="lm-app">
+
+  <!-- ============ Global Header（Regular Glass 浮层 1） ============ -->
+  <header class="lm-header">
+    <button class="lm-btn lm-btn--icon lm-header__menu" id="lm-menu-toggle"
+            aria-label="打开导航" hidden>{{ '' }}</button>
+    <div class="lm-header__brand">
+      <span class="lm-header__brand-mark" aria-hidden="true"></span>
+      <span>序境 LUMENIS</span>
+    </div>
+    <span class="lm-header__title">{% block page_title %}Command Home{% endblock %}</span>
+    <span class="lm-header__spacer"></span>
+    <div class="lm-header__actions">
+      <span class="lm-status" id="lm-global-status">
+        <span class="lm-dot lm-dot--unknown" id="lm-global-dot"></span>
+        <span id="lm-global-status-text">连接中…</span>
+      </span>
+      <button class="lm-btn lm-btn--icon" id="lm-theme-toggle" aria-label="切换主题"></button>
+    </div>
+  </header>
+
+  <!-- ============ Sidebar（Regular Glass 浮层 2，左导航） ============ -->
+  <nav class="lm-sidebar" id="lm-sidebar" aria-label="主导航">
+    <div class="lm-nav-group">
+      <div class="lm-nav-group__label">Home</div>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='home' }}" href="{{ home_url|default('/lumenis/') }}">
+        <span data-icon="home"></span><span class="lm-nav-item__label">Command Home</span>
+      </a>
+    </div>
+
+    <div class="lm-nav-group">
+      <div class="lm-nav-group__label">Intelligence</div>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='ai' }}" href="{{ url_for('lumenis.intelligence_workspace') }}">
+        <span data-icon="intelligence"></span><span class="lm-nav-item__label">Intelligence Workspace</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='agents' }}" href="{{ url_for('lumenis.agent_center') }}">
+        <span data-icon="agent"></span><span class="lm-nav-item__label">Agent Center</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='skills' }}" href="{{ url_for('lumenis.skill_hub') }}">
+        <span data-icon="skill"></span><span class="lm-nav-item__label">Skill Hub</span>
+        <span class="lm-badge lm-nav-item__badge">S01–S12</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='evidence' }}" href="#">
+        <span data-icon="evidence"></span><span class="lm-nav-item__label">Evidence</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='evaluation' }}" href="{{ url_for('lumenis.evaluation_center') }}">
+        <span data-icon="evaluation"></span><span class="lm-nav-item__label">Evaluation</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='learning' }}" href="#">
+        <span data-icon="learning"></span><span class="lm-nav-item__label">Learning</span>
+      </a>
+    </div>
+
+    <div class="lm-nav-group">
+      <div class="lm-nav-group__label">Production</div>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='production' }}" href="{{ url_for('lumenis.production_overview') }}">
+        <span data-icon="production"></span><span class="lm-nav-item__label">Production Workspace</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='opinion' }}" href="{{ url_for('lumenis.public_opinion') }}">
+        <span data-icon="content"></span><span class="lm-nav-item__label">Public Opinion</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='risk' }}" href="{{ url_for('lumenis.risk') }}">
+        <span data-icon="risk"></span><span class="lm-nav-item__label">Risk</span>
+        <span class="lm-badge lm-nav-item__badge" id="lm-risk-badge">–</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='event' }}" href="#">
+        <span data-icon="event"></span><span class="lm-nav-item__label">Events</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='report' }}" href="#">
+        <span data-icon="report"></span><span class="lm-nav-item__label">Reports</span>
+      </a>
+    </div>
+
+    <div class="lm-nav-group">
+      <div class="lm-nav-group__label">Research · Operations</div>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='research' }}" href="{{ url_for('lumenis.research_workspace') }}">
+        <span data-icon="research"></span><span class="lm-nav-item__label">Research Workspace</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='operations' }}" href="{{ url_for('lumenis.operations') }}">
+        <span data-icon="operations"></span><span class="lm-nav-item__label">Operations</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ============ Main Workspace（中间工作区，内部滚动，不无限下拉） ============ -->
+  <main class="lm-workspace" id="lm-workspace">
+    <div class="lm-workspace__inner">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+
+<!-- 移动端底部 Tab Bar（≤480px 显示） -->
+<nav class="lm-tabbar" aria-label="移动端导航">
+  <a class="lm-tabbar__item is-active" href="#"><span data-icon="home"></span>Home</a>
+  <a class="lm-tabbar__item" href="#"><span data-icon="intelligence"></span>AI</a>
+  <a class="lm-tabbar__item" href="#"><span data-icon="production"></span>生产</a>
+  <a class="lm-tabbar__item" href="#"><span data-icon="research"></span>研究</a>
+  <a class="lm-tabbar__item" href="#"><span data-icon="operations"></span>运维</a>
+</nav>
+
+<script src="{{ url_for('static', filename='js/lumenis-icons.js') }}"></script>
+<script src="{{ url_for('static', filename='js/lumenis-core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/lumenis-data.js') }}"></script>
+<script>
+  // 注入所有 data-icon 占位（线框图标，禁 emoji）
+  document.querySelectorAll("[data-icon]").forEach(function (el) {
+    el.innerHTML = licon(el.getAttribute("data-icon"), 24);
+  });
+  // 主题切换
+  var tt = document.getElementById("lm-theme-toggle");
+  function paintThemeBtn() { tt.innerHTML = licon(LUMENIS.Theme.current() === "dark" ? "sun" : "moon", 22); }
+  paintThemeBtn();
+  tt.addEventListener("click", function () { LUMENIS.Theme.toggle(); paintThemeBtn(); });
+  // 移动端导航抽屉
+  var mt = document.getElementById("lm-menu-toggle"), sb = document.getElementById("lm-sidebar");
+  if (mt) { mt.hidden = false; mt.innerHTML = licon("menu", 22);
+    mt.addEventListener("click", function () { sb.classList.toggle("is-open"); }); }
+  {% block scripts %}{% endblock %}
+</script>
+</body>
+</html>

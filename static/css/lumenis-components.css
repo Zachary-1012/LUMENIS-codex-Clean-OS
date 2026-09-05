@@ -1,0 +1,251 @@
+/* ============================================================================
+   LUMENIS Component System — 组件只消费 semantic token，禁硬编码色值
+   ============================================================================ */
+
+/* ---------- Button ---------- */
+.lm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--lm-space-sm);
+  min-height: 40px; padding: 0 var(--lm-space-lg);
+  font-size: var(--lm-text-button); font-weight: var(--lm-weight-semibold);
+  border-radius: var(--lm-radius-md);
+  background: var(--lm-surface-input); color: var(--lm-text-primary);
+  transition: transform var(--lm-motion-hover) var(--lm-ease),
+              background var(--lm-motion-hover) var(--lm-ease),
+              opacity var(--lm-motion-hover) var(--lm-ease);
+  white-space: nowrap;
+}
+.lm-btn:hover { background: var(--lm-border); }
+.lm-btn:active { transform: scale(0.97); }
+.lm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.lm-btn--primary { background: var(--lm-text-primary); color: var(--lm-canvas); }
+.lm-btn--primary:hover { opacity: 0.88; background: var(--lm-text-primary); }
+.lm-btn--ghost { background: transparent; }
+.lm-btn--danger { background: var(--lm-status-danger); color: #fff; }
+.lm-btn--sm { min-height: 32px; padding: 0 var(--lm-space-md); font-size: var(--lm-text-caption); }
+.lm-btn--icon { min-height: 40px; width: 40px; padding: 0; }
+
+/* ---------- Input / Search ---------- */
+.lm-input, .lm-search {
+  width: 100%; min-height: 40px;
+  padding: 0 var(--lm-space-lg);
+  background: var(--lm-surface-input);
+  border: var(--lm-border-width) solid transparent;
+  border-radius: var(--lm-radius-md);
+  color: var(--lm-text-primary);
+  transition: border-color var(--lm-motion-hover) var(--lm-ease);
+}
+.lm-input::placeholder, .lm-search::placeholder { color: var(--lm-text-tertiary); }
+.lm-input:focus, .lm-search:focus {
+  outline: none; border-color: var(--lm-border-strong);
+  background: var(--lm-surface);
+}
+.lm-search--command {
+  min-height: 52px; font-size: var(--lm-text-body);
+  border-radius: var(--lm-radius-lg);
+}
+
+/* ---------- Card（实色 Surface，细边框，极淡阴影，内容有界） ---------- */
+.lm-card {
+  background: var(--lm-surface);
+  border: var(--lm-border-width) solid var(--lm-border);
+  border-radius: var(--lm-radius-lg);
+  box-shadow: var(--lm-shadow-sm);
+  padding: var(--lm-space-lg);
+  overflow: hidden;
+  display: flex; flex-direction: column; gap: var(--lm-space-md);
+  transition: box-shadow var(--lm-motion-panel) var(--lm-ease),
+              transform var(--lm-motion-panel) var(--lm-ease);
+}
+.lm-card:hover { box-shadow: var(--lm-shadow-md); }
+.lm-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--lm-space-md); }
+.lm-card__title { font-size: var(--lm-text-h3); font-weight: var(--lm-weight-semibold); }
+.lm-card__body { flex: 1; min-width: 0; }
+.lm-card--flat { box-shadow: none; }
+.lm-card--interactive { cursor: pointer; }
+.lm-card--interactive:active { transform: scale(0.99); }
+
+/* ---------- Badge / Tag ---------- */
+.lm-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 22px; padding: 0 var(--lm-space-sm);
+  font-size: var(--lm-text-label); font-weight: var(--lm-weight-semibold);
+  border-radius: var(--lm-radius-full);
+  background: var(--lm-surface-input); color: var(--lm-text-secondary);
+  white-space: nowrap;
+}
+
+/* ---------- Status（状态点 + 文字，双通道，不仅靠颜色） ---------- */
+.lm-status { display: inline-flex; align-items: center; gap: var(--lm-space-sm); font-size: var(--lm-text-caption); }
+.lm-dot { width: 8px; height: 8px; border-radius: var(--lm-radius-full); background: var(--lm-status-unknown); flex-shrink: 0; }
+.lm-dot--success { background: var(--lm-status-success); }
+.lm-dot--info { background: var(--lm-status-info); }
+.lm-dot--warning { background: var(--lm-status-warning); }
+.lm-dot--danger { background: var(--lm-status-danger); }
+.lm-dot--ai { background: var(--lm-status-ai); }
+.lm-dot--unknown { background: var(--lm-status-unknown); }
+/* 真实状态呼吸（仅持续状态，非假动画） */
+.lm-dot--pulse { animation: lm-pulse 2s var(--lm-ease) infinite; }
+@keyframes lm-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50% { box-shadow: 0 0 0 4px transparent; opacity: 0.65; }
+}
+
+/* ---------- Metric（单指标单卡：大数字+标签+趋势） ---------- */
+.lm-metric { display: flex; flex-direction: column; gap: var(--lm-space-xs); min-width: 0; }
+.lm-metric__label { font-size: var(--lm-text-caption); color: var(--lm-text-secondary); }
+.lm-metric__value {
+  font-size: var(--lm-text-metric-lg); font-weight: var(--lm-weight-bold);
+  line-height: var(--lm-leading-metric); font-variant-numeric: tabular-nums;
+}
+.lm-metric__value--md { font-size: var(--lm-text-metric); }
+.lm-metric__trend { font-size: var(--lm-text-caption); display: inline-flex; align-items: center; gap: 4px; }
+.lm-metric__trend--up { color: var(--lm-status-success); }
+.lm-metric__trend--down { color: var(--lm-status-danger); }
+
+/* ---------- Table（行高 44px，hover 高亮，固定表头） ---------- */
+.lm-table-wrap { overflow-x: auto; border-radius: var(--lm-radius-md); }
+.lm-table { font-size: var(--lm-text-caption); }
+.lm-table th {
+  text-align: left; font-size: var(--lm-text-label); font-weight: var(--lm-weight-bold);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--lm-text-tertiary); padding: var(--lm-space-sm) var(--lm-space-md);
+  border-bottom: var(--lm-border-width) solid var(--lm-border);
+  position: sticky; top: 0; background: var(--lm-surface); white-space: nowrap;
+}
+.lm-table td { padding: 0 var(--lm-space-md); height: 44px; border-bottom: var(--lm-border-width) solid var(--lm-border); white-space: nowrap; }
+.lm-table tbody tr { transition: background var(--lm-motion-hover) var(--lm-ease); }
+.lm-table tbody tr:hover { background: var(--lm-surface-input); }
+.lm-table tbody tr:last-child td { border-bottom: none; }
+
+/* ---------- Tabs（同级内容切换） ---------- */
+.lm-tabs { display: flex; gap: var(--lm-space-xs); border-bottom: var(--lm-border-width) solid var(--lm-border); }
+.lm-tab {
+  padding: var(--lm-space-sm) var(--lm-space-md);
+  font-size: var(--lm-text-body); color: var(--lm-text-secondary);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color var(--lm-motion-tab) var(--lm-ease), border-color var(--lm-motion-tab) var(--lm-ease);
+}
+.lm-tab:hover { color: var(--lm-text-primary); }
+.lm-tab.is-active { color: var(--lm-text-primary); font-weight: var(--lm-weight-semibold); border-bottom-color: var(--lm-text-primary); }
+
+/* ---------- List ---------- */
+.lm-list { display: flex; flex-direction: column; }
+.lm-list-item {
+  display: flex; align-items: center; gap: var(--lm-space-md);
+  min-height: 44px; padding: var(--lm-space-sm) 0;
+  border-bottom: var(--lm-border-width) solid var(--lm-border);
+}
+.lm-list-item:last-child { border-bottom: none; }
+
+/* ---------- Timeline ---------- */
+.lm-timeline { display: flex; flex-direction: column; gap: 0; }
+.lm-timeline-item { display: flex; gap: var(--lm-space-md); position: relative; padding-bottom: var(--lm-space-lg); }
+.lm-timeline-item::before {
+  content: ""; position: absolute; left: 5px; top: 16px; bottom: 0;
+  width: 1.5px; background: var(--lm-border);
+}
+.lm-timeline-item:last-child::before { display: none; }
+.lm-timeline-item__dot { width: 11px; height: 11px; border-radius: var(--lm-radius-full); background: var(--lm-silver-300); margin-top: 4px; z-index: 1; flex-shrink: 0; }
+
+/* ---------- Liquid Glass 三变体（仅导航/浮层/瞬态，禁 glass-on-glass） ---------- */
+.lm-glass {
+  background: var(--lm-glass-bg-regular);
+  backdrop-filter: var(--lm-glass-regular); -webkit-backdrop-filter: var(--lm-glass-regular);
+  border: var(--lm-border-width) solid var(--lm-border);
+}
+.lm-glass--clear {
+  background: var(--lm-glass-bg-clear);
+  backdrop-filter: var(--lm-glass-clear); -webkit-backdrop-filter: var(--lm-glass-clear);
+}
+.lm-glass--identity {
+  background: var(--lm-glass-bg-regular);
+  backdrop-filter: var(--lm-glass-identity); -webkit-backdrop-filter: var(--lm-glass-identity);
+  position: relative; overflow: hidden;
+}
+
+/* ---------- Drawer（右侧滑出，Clear Glass，不覆盖 Sidebar） ---------- */
+.lm-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 90vw;
+  z-index: var(--lm-z-drawer);
+  background: var(--lm-glass-bg-clear);
+  backdrop-filter: var(--lm-glass-clear); -webkit-backdrop-filter: var(--lm-glass-clear);
+  border-left: var(--lm-border-width) solid var(--lm-border);
+  transform: translateX(100%);
+  transition: transform var(--lm-motion-modal) var(--lm-ease);
+  display: flex; flex-direction: column;
+}
+.lm-drawer.is-open { transform: translateX(0); }
+
+/* ---------- Modal（居中，禁模态叠模态） ---------- */
+.lm-modal-overlay {
+  position: fixed; inset: 0; z-index: var(--lm-z-modal);
+  background: rgba(0,0,0,0.32);
+  display: none; align-items: center; justify-content: center; padding: var(--lm-space-xl);
+}
+.lm-modal-overlay.is-open { display: flex; }
+.lm-modal {
+  width: 100%; max-width: 480px;
+  background: var(--lm-surface); border-radius: var(--lm-radius-xl);
+  box-shadow: var(--lm-shadow-lg); padding: var(--lm-space-2xl);
+  animation: lm-modal-in var(--lm-motion-modal) var(--lm-ease);
+}
+@keyframes lm-modal-in { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Toast（z 最高业务层） ---------- */
+.lm-toast-stack { position: fixed; bottom: var(--lm-space-xl); left: 50%; transform: translateX(-50%); z-index: var(--lm-z-toast); display: flex; flex-direction: column; gap: var(--lm-space-sm); }
+.lm-toast {
+  display: flex; align-items: center; gap: var(--lm-space-sm);
+  padding: var(--lm-space-md) var(--lm-space-lg);
+  background: var(--lm-text-primary); color: var(--lm-canvas);
+  border-radius: var(--lm-radius-md); box-shadow: var(--lm-shadow-md);
+  font-size: var(--lm-text-caption);
+  animation: lm-toast-in var(--lm-motion-panel) var(--lm-ease);
+}
+@keyframes lm-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- 全局状态系统（9 态，真实反映 API/State Contract） ---------- */
+.lm-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--lm-space-md); padding: var(--lm-space-3xl) var(--lm-space-xl);
+  text-align: center; color: var(--lm-text-secondary);
+}
+.lm-state__icon { width: 40px; height: 40px; color: var(--lm-text-tertiary); }
+.lm-state__title { font-size: var(--lm-text-h3); font-weight: var(--lm-weight-semibold); color: var(--lm-text-primary); }
+.lm-state__desc { font-size: var(--lm-text-caption); max-width: 360px; }
+.lm-skeleton {
+  background: linear-gradient(90deg, var(--lm-surface-input) 25%, var(--lm-silver-100) 37%, var(--lm-surface-input) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--lm-radius-sm);
+  animation: lm-skeleton 1.4s ease infinite;
+}
+@keyframes lm-skeleton { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+/* ---------- AI 六态徽标 ---------- */
+.lm-ai-badge { display: inline-flex; align-items: center; gap: var(--lm-space-sm); font-size: var(--lm-text-caption); font-weight: var(--lm-weight-semibold); }
+.lm-ai-badge--processing { color: var(--lm-status-info); }
+.lm-ai-badge--researching { color: var(--lm-status-ai); }
+.lm-ai-badge--verifying, .lm-ai-badge--review { color: var(--lm-status-warning); }
+.lm-ai-badge--completed { color: var(--lm-status-success); }
+.lm-ai-badge--failed { color: var(--lm-status-danger); }
+.lm-ai-badge--online { color: var(--lm-status-success); }
+
+/* 导航卡片（Production Domains 等子域入口） */
+.lm-card--nav .lm-card__body { gap: var(--lm-space-xs); }
+.lm-nav-item--inline {
+  display: flex; align-items: center; gap: var(--lm-space-sm);
+  padding: var(--lm-space-sm) var(--lm-space-md);
+  border-radius: var(--lm-radius-md);
+  color: var(--lm-text-primary); text-decoration: none;
+  font-size: var(--lm-text-body); transition: background var(--lm-motion-hover) var(--lm-ease);
+}
+.lm-nav-item--inline:hover { background: var(--lm-surface-input); }
+.lm-nav-item--inline [data-icon] { display: inline-flex; color: var(--lm-text-secondary); }
+
+/* ---------- V3 Skill Hub 补充样式 ---------- */
+.lm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: calc(var(--lm-z-drawer) - 1); display: none; }
+.lm-btn--xs { padding: 4px 10px; font-size: 11px; border-radius: var(--lm-radius-sm); }
+.lm-btn--active { background: var(--lm-surface-input); color: var(--lm-text-primary); font-weight: 600; }
+.lm-input--sm { padding: 6px 12px; font-size: 13px; border-radius: var(--lm-radius-md); }
+.lm-skill-card { transition: transform var(--lm-motion-hover) var(--lm-ease), box-shadow var(--lm-motion-hover) var(--lm-ease); }
+.lm-skill-card:hover { transform: translateY(-2px); box-shadow: var(--lm-shadow-md); }
+

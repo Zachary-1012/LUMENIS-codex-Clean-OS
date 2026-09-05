@@ -1,50 +1,426 @@
-"""知乎采集适配器 - 搜索API+页面解析"""
+# -*- coding: utf-8 -*-
+"""
+知乎（Zhihu）内容采集适配器
+----------------------------
+定位：服务于 Z-Brand Core 多平台内容采集。
+调用知乎搜索 API v4（匿名/带 cookie 均可），薄封装为 v4 BaseAdapter 契约，
+接入熔断器/限流/重试/降级体系。
+
+数据主路径：知乎搜索 API
+  https://www.zhihu.com/api/v4/search_v3?t=general&q={keyword}&limit={n}
+返回 data[].object（type=answer/article/question 等）。
+
+状态映射：
+  - 有结果       → SUCCESS
+  - 正常空       → EMPTY (success=True, notes=[])
+  - API error    → COLLECT_ERROR
+  - 异常         → COLLECT_ERROR
+
+时间口径：created_time/updated_time 为 Unix 秒级时间戳，转 ISO 8601；
+采集时间由入库层写 captured_at，二者严格分离。
+
+只读红线：不点赞、不评论、不关注、不私信、不执行任何账号写操作。
+"""
 import re
-import urllib.parse
-from .base import BaseAdapter, AdapterResult, CollectedNote
+import logging
+from datetime import datetime, timezone
+
+import requests
+
+from .base import BaseAdapter, AdapterResult
+
+logger = logging.getLogger(__name__)
 
 
 class ZhihuAdapter(BaseAdapter):
+    """知乎搜索适配器（搜索 API v4，只读采集）"""
+
     platform_name = "zhihu"
     platform_display = "知乎"
 
-    def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
-        """知乎搜索采集"""
+    SEARCH_URL = "https://www.zhihu.com/api/v4/search_v3"
+
+    _DEFAULT_UA = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+
+    def __init__(self, cookie_string: str = "", **kwargs):
+        super().__init__(**kwargs)
+        self._cookie_string = cookie_string
+        if not self._cookie_string:
+            self._cookie_string = self._auto_load_cookie()
+
+    @staticmethod
+    def _auto_load_cookie() -> str:
+        """从 data/zhihu_cookies.json 自动加载 cookie 字符串；失败返回空串。"""
         try:
-            import requests
-            url = f"https://www.zhihu.com/api/v4/search_v3?t=general&q={urllib.parse.quote(keyword)}&limit={max_results}"
-            headers = {
-                "User-Agent": self.config["user_agent"],
-                "Referer": "https://www.zhihu.com/",
-            }
-            resp = requests.get(url, headers=headers, timeout=self.config["request_timeout"])
-            data = resp.json()
+            import json as _json
+            from pathlib import Path
+            p = Path(__file__).parent.parent.parent / "data" / "zhihu_cookies.json"
+            if not p.exists():
+                return ""
+            raw = _json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(raw, list):
+                return "; ".join(f"{c['name']}={c['value']}" for c in raw if "name" in c)
+            if isinstance(raw, dict):
+                cookies = raw.get("cookies", raw)
+                if isinstance(cookies, list):
+                    return "; ".join(f"{c['name']}={c['value']}" for c in cookies if "name" in c)
+                if isinstance(cookies, dict):
+                    return "; ".join(f"{k}={v}" for k, v in cookies.items())
+            return ""
+        except Exception:
+            return ""
+
+    def _get_headers(self) -> dict:
+        headers = {
+            "User-Agent": self._DEFAULT_UA,
+            "Referer": "https://www.zhihu.com/",
+            "Accept": "application/json, text/plain, */*",
+        }
+        if self._cookie_string:
+            headers["Cookie"] = self._cookie_string
+        return headers
+
+    def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
+        if not keyword or not keyword.strip():
+            return AdapterResult(success=False, error="关键词为空")
+        # 优先浏览器CDP采集（绕过API签名要求），失败则fallback到API
+        browser_result = self._search_browser(keyword, max_results)
+        if browser_result is not None:
+            return browser_result
+        return self._search_api(keyword, max_results)
+
+    def _search_browser(self, keyword: str, max_results: int) -> AdapterResult | None:
+        """浏览器CDP采集：打开知乎搜索页，解析DOM。失败返回None以触发API fallback。"""
+        try:
+            from .human_browser import HumanBrowser
+            from .cookie_vault import inject_into_context
+            from urllib.parse import quote
+
+            hb = HumanBrowser(port=9222, launch_url="about:blank")
+            hb.connect()
+            inject_into_context(hb._context, "zhihu")
+            page = hb.new_page()
+            url = f"https://www.zhihu.com/search?type=content&q={quote(keyword.strip())}"
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            hb.pause(4.0, 4.0)
+
+            # 解析搜索结果卡片
+            cards = page.query_selector_all(".SearchResult-Card, .List-item, .Card")
             notes = []
-            for item in data.get("data", []):
-                obj = item.get("object", {})
-                if obj.get("type") == "answer":
-                    question = obj.get("question", {})
-                    notes.append(self._make_note(
-                        title=question.get("title", ""),
-                        content=re.sub(r"<[^>]+>", "", obj.get("excerpt", "")),
-                        url=f"https://www.zhihu.com/question/{question.get('id')}/answer/{obj.get('id')}",
-                        author=obj.get("author", {}).get("name", ""),
-                        author_id=str(obj.get("author", {}).get("id", "")),
-                        likes=obj.get("voteup_count", 0),
-                        comments=obj.get("comment_count", 0),
-                        publish_date=obj.get("created_time", ""),
-                        raw_data=obj,
-                    ))
-                elif obj.get("type") == "article":
-                    notes.append(self._make_note(
-                        title=obj.get("title", ""),
-                        content=re.sub(r"<[^>]+>", "", obj.get("excerpt", "")),
-                        url=obj.get("url", ""),
-                        author=obj.get("author", {}).get("name", ""),
-                        likes=obj.get("voteup_count", 0),
-                        comments=obj.get("comment_count", 0),
-                        raw_data=obj,
-                    ))
-            return AdapterResult(success=True, notes=notes[:max_results], raw_count=len(notes))
+            for card in cards:
+                if len(notes) >= max_results:
+                    break
+                try:
+                    note = self._parse_zhihu_card(card)
+                    if note:
+                        notes.append(note)
+                except Exception:
+                    continue
+
+            page.close()
+            hb.close()
+
+            if notes:
+                return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+            # 浏览器无结果也返回成功空（不fallback，避免API签名错误）
+            return AdapterResult(success=True, notes=[], raw_count=0)
         except Exception as e:
-            return AdapterResult(success=False, error=str(e))
+            logger.warning(f"知乎浏览器采集失败，fallback到API: {e}")
+            return None
+
+    def _parse_zhihu_card(self, card) -> "CollectedNote | None":
+        """解析单个知乎搜索结果卡片为CollectedNote。"""
+        from .base import CollectedNote
+
+        # 标题
+        title_el = card.query_selector(".ContentItem-title a, h2 a, .SearchItem-title")
+        title = title_el.inner_text().strip() if title_el else ""
+
+        # 链接
+        url = ""
+        if title_el:
+            href = title_el.get_attribute("href") or ""
+            if href.startswith("//"):
+                url = "https:" + href
+            elif href.startswith("/"):
+                url = "https://www.zhihu.com" + href
+            elif href:
+                url = href
+
+        # 摘要
+        excerpt_el = card.query_selector(".RichContent-inner, .content, .SearchItem-excerpt")
+        content = excerpt_el.inner_text().strip() if excerpt_el else ""
+
+        # 作者
+        author_el = card.query_selector(".AuthorInfo-name, .author, .UserLink-link")
+        author = author_el.inner_text().strip() if author_el else ""
+
+        # 赞同数
+        vote_el = card.query_selector(".VoteButton--up, .like, .ContentItem-action button")
+        likes = 0
+        if vote_el:
+            vote_text = vote_el.inner_text().strip()
+            digits = "".join(c for c in vote_text if c.isdigit())
+            if digits:
+                likes = int(digits)
+
+        # 评论数
+        comment_el = card.query_selector(".ContentItem-action button:nth-child(2), .comment")
+        comments = 0
+        if comment_el:
+            ctext = comment_el.inner_text().strip()
+            digits = "".join(c for c in ctext if c.isdigit())
+            if digits:
+                comments = int(digits)
+
+        if not title and not content:
+            return None
+
+        return CollectedNote(
+            title=title[:200],
+            content=content[:500],
+            url=url,
+            author=author,
+            author_id="",
+            publish_date="",
+            likes=likes,
+            comments=comments,
+            collects=0,
+            shares=0,
+            cover="",
+            source_platform="zhihu",
+            raw_data={"title": title, "url": url},
+        )
+
+    def _search_api(self, keyword: str, max_results: int) -> AdapterResult:
+        try:
+            from urllib.parse import quote
+            params = {
+                "t": "general",
+                "q": keyword.strip(),
+                "limit": min(max_results, 20),
+                "correction": 1,
+            }
+            resp = requests.get(
+                self.SEARCH_URL,
+                headers=self._get_headers(),
+                params=params,
+                timeout=15,
+            )
+            data = resp.json()
+
+            # 知乎 API 错误响应
+            if isinstance(data, dict) and data.get("error"):
+                err = data["error"]
+                msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                return AdapterResult(success=False, error=f"知乎搜索API错误: {msg}")
+
+            items = data.get("data", []) if isinstance(data, dict) else []
+            notes = []
+            for item in items:
+                obj = item.get("object", {}) if isinstance(item, dict) else {}
+                note = self._object_to_note(obj)
+                if note:
+                    notes.append(note)
+                if len(notes) >= max_results:
+                    break
+
+            if notes:
+                return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+            # 正常无内容
+            return AdapterResult(success=True, notes=[], raw_count=0)
+
+        except Exception as exc:
+            logger.exception("知乎采集异常")
+            return AdapterResult(success=False, error=f"知乎采集异常: {exc}")
+
+    def _object_to_note(self, obj: dict):
+        """将知乎搜索结果 object 转为标准化 CollectedNote。"""
+        try:
+            obj_type = obj.get("type", "")
+            if obj_type == "answer":
+                question = obj.get("question", {}) or {}
+                qid = question.get("id", "")
+                aid = obj.get("id", "")
+                url = f"https://www.zhihu.com/question/{qid}/answer/{aid}" if qid and aid else ""
+                title = question.get("title", "") or f"知乎回答 {aid}"
+                content = self._clean_html(obj.get("excerpt", ""))
+                author = (obj.get("author") or {}).get("name", "")
+                author_id = str((obj.get("author") or {}).get("id", ""))
+                likes = int(obj.get("voteup_count", 0) or 0)
+                comments = int(obj.get("comment_count", 0) or 0)
+                publish_date = self._ts_to_iso(obj.get("created_time"))
+            elif obj_type == "article":
+                aid = obj.get("id", "")
+                url = obj.get("url", "") or f"https://zhuanlan.zhihu.com/p/{aid}"
+                title = obj.get("title", "") or f"知乎文章 {aid}"
+                content = self._clean_html(obj.get("excerpt", ""))
+                author = (obj.get("author") or {}).get("name", "")
+                author_id = str((obj.get("author") or {}).get("id", ""))
+                likes = int(obj.get("voteup_count", 0) or 0)
+                comments = int(obj.get("comment_count", 0) or 0)
+                publish_date = self._ts_to_iso(obj.get("created"))
+            elif obj_type == "question":
+                qid = obj.get("id", "")
+                url = f"https://www.zhihu.com/question/{qid}" if qid else ""
+                title = obj.get("title", "") or f"知乎问题 {qid}"
+                content = self._clean_html(obj.get("excerpt", ""))
+                author = (obj.get("author") or {}).get("name", "")
+                author_id = str((obj.get("author") or {}).get("id", ""))
+                likes = 0
+                comments = int(obj.get("answer_count", 0) or 0)
+                publish_date = self._ts_to_iso(obj.get("created"))
+            else:
+                # 其他类型（live/column 等）跳过，不臆造
+                return None
+
+            if not title and not content:
+                return None
+
+            return self._make_note(
+                title=title[:120],
+                content=content,
+                url=url,
+                author=author,
+                author_id=author_id,
+                publish_date=publish_date,
+                likes=likes,
+                comments=comments,
+                collects=0,
+                shares=0,
+                cover="",
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "zhihu_search_v3",
+                    "object_type": obj_type,
+                    "id": obj.get("id"),
+                    "updated_time": obj.get("updated_time"),
+                },
+            )
+        except Exception as exc:
+            logger.warning("知乎 object 解析失败: %s", exc)
+            return None
+
+    @staticmethod
+    def _clean_html(text: str) -> str:
+        """去除 HTML 标签及多余空白。"""
+        if not text:
+            return ""
+        text = re.sub(r"<[^>]+>", "", str(text))
+        text = text.replace("&nbsp;", " ").replace("&amp;", "&")
+        return re.sub(r"\s+", " ", text).strip()
+
+    @staticmethod
+    def _ts_to_iso(ts) -> str:
+        """Unix 秒级时间戳 → ISO 8601；无效返回空串（不臆造）。"""
+        if not ts:
+            return ""
+        try:
+            return datetime.fromtimestamp(int(ts), tz=timezone.utc).isoformat()
+        except (ValueError, TypeError, OSError):
+            return ""
+
+    # ── detail: 内容详情（支持 answer/article/question 三类）──
+    def detail(self, content_id: str, content_type: str = "answer", **kwargs) -> AdapterResult:
+        if not content_id or not str(content_id).strip():
+            return AdapterResult(success=False, error="content_id 为空")
+        ctype = (content_type or "answer").strip().lower()
+        try:
+            if ctype == "answer":
+                url = f"https://www.zhihu.com/api/v4/answers/{content_id}"
+            elif ctype == "article":
+                url = f"https://www.zhihu.com/api/v4/articles/{content_id}"
+            elif ctype == "question":
+                url = f"https://www.zhihu.com/api/v4/questions/{content_id}"
+            else:
+                return AdapterResult(success=False, error=f"不支持的知乎内容类型: {ctype}")
+            resp = requests.get(url, headers=self._get_headers(),
+                                params={"include": "content,voteup_count,comment_count"}, timeout=15)
+            data = resp.json()
+            if isinstance(data, dict) and data.get("error"):
+                return AdapterResult(success=False, error=f"知乎详情失败: {data['error'].get('message', str(data['error']))}")
+            note = self._object_to_note({**data, "type": ctype})
+            if note:
+                return AdapterResult(success=True, notes=[note], raw_count=1)
+            return AdapterResult(success=True, notes=[], raw_count=0)
+        except Exception as exc:
+            logger.exception("知乎详情采集异常")
+            return AdapterResult(success=False, error=f"知乎详情异常: {exc}")
+
+    # ── comments: 内容评论（知乎 root_comments API，只读）──
+    def comments(self, content_id: str, content_type: str = "answer", max_comments: int = 20, **kwargs) -> AdapterResult:
+        if not content_id or not str(content_id).strip():
+            return AdapterResult(success=False, error="content_id 为空")
+        ctype = (content_type or "answer").strip().lower()
+        try:
+            resource = "answers" if ctype == "answer" else ("articles" if ctype == "article" else "questions")
+            url = f"https://www.zhihu.com/api/v4/{resource}/{content_id}/root_comments"
+            resp = requests.get(url, headers=self._get_headers(),
+                                params={"order": "normal", "limit": min(max_comments, 20)}, timeout=15)
+            data = resp.json()
+            if isinstance(data, dict) and data.get("error"):
+                return AdapterResult(success=False, error=f"知乎评论失败: {data['error'].get('message', str(data['error']))}")
+            items = data.get("data", []) if isinstance(data, dict) else []
+            notes = []
+            for c in items[:max_comments]:
+                author = c.get("author") or {}
+                notes.append(self._make_note(
+                    title="",
+                    content=self._clean_html(c.get("content", "")),
+                    url=f"https://www.zhihu.com/{resource[:-1]}/{content_id}#cmt{c.get('id')}",
+                    author=author.get("name", ""),
+                    author_id=str(author.get("id", "")),
+                    publish_date=self._ts_to_iso(c.get("created_time")),
+                    likes=int(c.get("vote_count", 0) or 0),
+                    comments=int(c.get("child_comment_count", 0) or 0),
+                    collects=0,
+                    shares=0,
+                    cover="",
+                    source_platform=self.platform_name,
+                    raw_data={"engine": "zhihu_comments_api", "cid": c.get("id"), "type": "comment"},
+                ))
+            return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+        except Exception as exc:
+            logger.exception("知乎评论采集异常")
+            return AdapterResult(success=False, error=f"知乎评论异常: {exc}")
+
+    # ── creator: 知乎用户信息（members API）──
+    def creator(self, user_id: str, **kwargs) -> AdapterResult:
+        if not user_id or not str(user_id).strip():
+            return AdapterResult(success=False, error="user_id 为空")
+        try:
+            url = f"https://www.zhihu.com/api/v4/members/{user_id}"
+            resp = requests.get(url, headers=self._get_headers(),
+                                params={"include": "allow_message,is_followed,is_following,is_org,is_blocking,employments,answer_count,follower_count,articles_count,gender,badge[?(type=best_answerer)].topics"},
+                                timeout=15)
+            data = resp.json()
+            if isinstance(data, dict) and data.get("error"):
+                return AdapterResult(success=False, error=f"知乎用户信息失败: {data['error'].get('message', str(data['error']))}")
+            note = self._make_note(
+                title=data.get("name", ""),
+                content=(data.get("headline") or "").strip(),
+                url=data.get("url") or f"https://www.zhihu.com/people/{data.get('id', user_id)}",
+                author=data.get("name", ""),
+                author_id=str(data.get("id", "")),
+                publish_date="",
+                likes=int(data.get("follower_count", 0) or 0),
+                comments=int(data.get("answer_count", 0) or 0),
+                collects=int(data.get("articles_count", 0) or 0),
+                shares=0,
+                cover=data.get("avatar_url", ""),
+                source_platform=self.platform_name,
+                raw_data={
+                    "engine": "zhihu_members_api",
+                    "uid": data.get("id"),
+                    "gender": data.get("gender"),
+                    "is_org": data.get("is_org"),
+                    "type": "creator",
+                },
+            )
+            return AdapterResult(success=True, notes=[note], raw_count=1)
+        except Exception as exc:
+            logger.exception("知乎用户采集异常")
+            return AdapterResult(success=False, error=f"知乎用户异常: {exc}")

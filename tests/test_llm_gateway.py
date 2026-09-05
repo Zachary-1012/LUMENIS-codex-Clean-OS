@@ -21,10 +21,17 @@ def use(p):
     return intelligence.ai_status()
 
 def test_openai_failure_falls_back():
-    use("openai")  # 该 key 0 额度，应 429 -> rule
+    use("openai")  # 该 key 0 额度，应 429 -> 多 Provider 故障转移
     raw, prov = intelligence._chat("只输出OK", "测试", 0, 20)
-    assert (raw is None and prov == "rule") or (raw and prov == "openai")
-    print("[PASS] OpenAI：成功则出数，失败回退 rule ->", prov)
+    # 当前架构：多 Provider 故障转移（openai 失败 → zhipu/ark/qwen → rule）
+    # 不再是单 Provider 直接到 rule
+    valid_providers = ("rule", "zhipu", "ark", "qwen", "deepseek", "openai")
+    assert prov in valid_providers, f"unexpected provider: {prov}"
+    if prov == "rule":
+        assert raw is None
+    else:
+        assert raw  # 非 rule provider 必须有内容
+    print("[PASS] OpenAI：成功则出数，失败多 Provider 故障转移 ->", prov)
 
 def test_zhipu_wired_and_safe():
     st = use("zhipu")

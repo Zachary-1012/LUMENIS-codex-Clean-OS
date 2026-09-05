@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Risk · 序境 LUMENIS{% endblock %}
+{% block page_title %}Risk Center{% endblock %}
+
+{% block content %}
+<!-- 风险概览 -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="risk" data-component="risk-overview" style="margin-bottom:var(--lm-space-lg);">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Risk Overview</h3>
+    <span class="lm-badge" data-field="risk-total">–</span>
+  </div>
+  <div class="lm-card__body">
+    <div class="lm-grid lm-grid--metrics" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+      <div class="lm-metric"><span class="lm-metric__label">高风险</span><span class="lm-metric__value lm-count" data-field="high" style="color:var(--lm-color-danger);">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">中风险</span><span class="lm-metric__value lm-count" data-field="medium" style="color:var(--lm-color-warning);">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">低风险</span><span class="lm-metric__value lm-count" data-field="low">–</span></div>
+      <div class="lm-metric"><span class="lm-metric__label">系统告警</span><span class="lm-metric__value lm-count" data-field="alerts">–</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 风险笔记全量列表（/api/risk-alerts 返回 ≤30） -->
+<article class="lm-card" data-state="loading" data-page="risk" data-component="risk-list">
+  <div class="lm-card__head">
+    <h3 class="lm-card__title">Risk Notes（近 30 天高/中风险）</h3>
+    <span class="lm-badge lm-badge--ghost">排除 negative_confirmed=2</span>
+  </div>
+  <div class="lm-card__body" data-state-slot style="max-height:60vh;overflow-y:auto;">
+    <table class="lm-table" data-field="risk-table">
+      <thead>
+        <tr><th>等级</th><th>标题</th><th>风险分</th><th>发布时间</th><th>来源</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5" style="text-align:center;color:var(--lm-text-tertiary);">加载中…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+(function(){
+  var D=LUMENIS.Data;
+  // 并行拉 risk-alerts + health
+  Promise.all([
+    LUMENIS.fetch("/api/risk-alerts").then(function(r){return r.json();}).catch(function(){return null;}),
+    LUMENIS.fetch("/api/system/health/summary").then(function(r){return r.json();}).catch(function(){return null;})
+  ]).then(function(res){
+    var risks=res[0], health=res[1];
+    var ov=document.querySelector('[data-component="risk-overview"]');
+    var notes=(risks&&risks.notes)||[];
+    var high=0,medium=0,low=0;
+    notes.forEach(function(n){
+      var l=D.pick(n,"risk_level","level");
+      if(l==="high")high++;else if(l==="medium")medium++;else low++;
+    });
+    var f=function(k,v){var n=ov.querySelector('[data-field="'+k+'"]');if(n)n.textContent=D.fmtNum(v);};
+    f("risk-total",notes.length+" 条");
+    f("high",high);f("medium",medium);f("low",low);
+    f("alerts",(health&&health.active_alerts)||0);
+    ov.setAttribute("data-state",notes.length?"success":"empty");
+    // 表格
+    var card=document.querySelector('[data-component="risk-list"]');
+    var tbody=card.querySelector("tbody");
+    if(notes.length===0){
+      tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--lm-text-tertiary);padding:24px;">当前无高/中风险笔记</td></tr>';
+      card.setAttribute("data-state","empty");
+    } else {
+      tbody.innerHTML="";
+      notes.forEach(function(n){
+        var tr=document.createElement("tr");
+        var level=D.pick(n,"risk_level","level")||"medium";
+        var cls=level==="high"?"danger":(level==="medium"?"warning":"info");
+        var title=D.pick(n,"title","note_title","content")||"未命名";
+        var score=D.pick(n,"risk_score","score");
+        var at=D.pick(n,"publish_date","publish_datetime","captured_at","created_at");
+        var url=D.pick(n,"url","note_url","link");
+        tr.innerHTML=
+          '<td><span class="lm-dot lm-dot--'+cls+'"></span> '+level+'</td>'+
+          '<td style="max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+
+            (url?'<a href="'+D.escapeHtml(url)+'" target="_blank" rel="noopener" style="color:var(--lm-text-primary);text-decoration:none;">'+D.escapeHtml(title)+'</a>':D.escapeHtml(title))+'</td>'+
+          '<td>'+(score!=null?score:"–")+'</td>'+
+          '<td>'+D.fmtTime(at)+'</td>'+
+          '<td>'+D.escapeHtml(D.pick(n,"platform","source")||"小红书")+'</td>';
+        tbody.appendChild(tr);
+      });
+      card.setAttribute("data-state","success");
+    }
+  }).catch(function(){
+    document.querySelector('[data-component="risk-overview"]').setAttribute("data-state","error");
+    document.querySelector('[data-component="risk-list"]').setAttribute("data-state","error");
+  });
+})();
+{% endblock %}

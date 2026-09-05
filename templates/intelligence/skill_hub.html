@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+{% block title %}Skill Hub · 序境 LUMENIS{% endblock %}
+{% block page_title %}Skill Hub{% endblock %}
+
+{% block content %}
+<!-- Skill Hub 顶部工具栏 -->
+<section class="lm-card lm-card--flat" data-state="loading" data-page="skillhub" data-component="skillhub-status" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-md);">
+    <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;align-items:center;">
+      <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="sh-dot"></span><span data-field="sh-state">加载中…</span></span>
+      <span class="lm-badge" data-field="sh-total">Total: –</span>
+      <span class="lm-badge lm-badge--ghost" data-field="sh-sync">Sync: –</span>
+    </div>
+    <div class="lm-row" style="gap:var(--lm-space-sm);">
+      <input type="text" class="lm-input lm-input--sm" id="lm-skill-search" placeholder="搜索 Skill…" style="width:200px;">
+      <button class="lm-btn lm-btn--ghost lm-btn--sm" id="lm-btn-create-skill">+ Create Skill</button>
+      <button class="lm-btn lm-btn--ghost lm-btn--sm" id="lm-btn-sync">Sync GitHub</button>
+    </div>
+  </div>
+</section>
+
+<!-- Skill 分类导航（11类） -->
+<section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+    <button class="lm-btn lm-btn--ghost lm-btn--sm lm-btn--active" data-category="all">全部</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="engineering">Engineering</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="research">Research</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="analysis">Analysis</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="data">Data</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="intelligence">Intelligence</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="production">Production</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="kos">KOS</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="monitoring">Monitoring</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="evaluation">Evaluation</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="governance">Governance</button>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" data-category="system">System</button>
+  </div>
+</section>
+
+<!-- Skill 卡片网格 -->
+<div class="lm-grid lm-grid--cards" id="lm-skill-grid">
+  <!-- S01 -->
+  <article class="lm-card lm-skill-card" data-skill="S01" data-category="engineering" data-name="Source Fact Scanner" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S01 Source Fact Scanner</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">扫描源码事实，建立 Source Fact Baseline。只读，不修改。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">READ</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S02 -->
+  <article class="lm-card lm-skill-card" data-skill="S02" data-category="engineering" data-name="SHA Verifier" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S02 SHA Verifier</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">验证 Git SHA 与分支状态，防止使用旧版本。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">VERIFY</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S03 -->
+  <article class="lm-card lm-skill-card" data-skill="S03" data-category="engineering" data-name="Git State Auditor" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S03 Git State Auditor</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">审计 Git 工作区状态、未提交变更、冲突检测。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S04 -->
+  <article class="lm-card lm-skill-card" data-skill="S04" data-category="engineering" data-name="File Inventory" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S04 File Inventory</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">文件清单与依赖分析，识别孤儿文件和重复代码。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">ANALYZE</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S05 -->
+  <article class="lm-card lm-skill-card" data-skill="S05" data-category="engineering" data-name="Module Mapper" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S05 Module Mapper</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">模块依赖图谱，识别耦合度与循环依赖。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">ANALYZE</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S06 -->
+  <article class="lm-card lm-skill-card" data-skill="S06" data-category="engineering" data-name="Function Call Mapper" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S06 Function Call Mapper</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">函数调用链追踪，定位关键路径与影响范围。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">ANALYZE</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S07 -->
+  <article class="lm-card lm-skill-card" data-skill="S07" data-category="engineering" data-name="API Mapper" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S07 API Mapper</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">全量 API 路由清单，含方法、权限、认证要求。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S08 -->
+  <article class="lm-card lm-skill-card" data-skill="S08" data-category="engineering" data-name="Dependency Auditor" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S08 Dependency Auditor</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">依赖版本审计，识别漏洞与过期包。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S09 -->
+  <article class="lm-card lm-skill-card" data-skill="S09" data-category="governance" data-name="Config Auditor" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S09 Config Auditor</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">配置文件审计，识别硬编码路径与密钥泄露。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S10 -->
+  <article class="lm-card lm-skill-card" data-skill="S10" data-category="data" data-name="DB Schema Auditor" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S10 DB Schema Auditor</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">数据库 Schema 审计，识别表结构与索引问题。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">AUDIT</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S11 -->
+  <article class="lm-card lm-skill-card" data-skill="S11" data-category="data" data-name="DB Integrity Checker" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S11 DB Integrity Checker</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">数据完整性检查，识别孤儿记录与不一致。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">VERIFY</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- S12 -->
+  <article class="lm-card lm-skill-card" data-skill="S12" data-category="monitoring" data-name="Runtime Health" data-version="1.0.0" data-type="SYSTEM">
+    <div class="lm-card__head">
+      <h3 class="lm-card__title">S12 Runtime Health</h3>
+      <span class="lm-badge lm-badge--success">Enabled</span>
+    </div>
+    <div class="lm-card__body lm-stack">
+      <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;">运行时健康检查，含进程、端口、资源、依赖。</div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);flex-wrap:wrap;">
+        <span class="lm-badge lm-badge--ghost">v1.0.0</span>
+        <span class="lm-badge lm-badge--ghost">SYSTEM</span>
+        <span class="lm-badge lm-badge--ghost">MONITOR</span>
+      </div>
+      <div class="lm-row" style="gap:var(--lm-space-xs);">
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-detail">Detail</button>
+        <button class="lm-btn lm-btn--ghost lm-btn--xs lm-skill-toggle" data-action="disable">Disable</button>
+        <button class="lm-btn lm-btn--primary lm-btn--xs lm-skill-run">Run</button>
+      </div>
+    </div>
+  </article>
+</div>
+
+<!-- S13-S72 规划提示 -->
+<article class="lm-card lm-card--flat" style="margin-top:var(--lm-space-lg);">
+  <div class="lm-card__body" style="text-align:center;color:var(--lm-text-tertiary);font-size:13px;padding:var(--lm-space-lg);">
+    S13–S72 为规划总量，将按优先级逐步落地。当前真实可用 Skill 为 S01–S12。
+  </div>
+</article>
+
+<!-- Skill Detail Drawer（右侧滑出） -->
+<div class="lm-drawer" id="lm-skill-drawer" style="display:none;position:fixed;top:0;right:0;width:480px;height:100vh;background:var(--lm-surface);border-left:1px solid var(--lm-border);z-index:var(--lm-z-drawer);transform:translateX(100%);transition:transform var(--lm-motion-fast);overflow-y:auto;padding:var(--lm-space-lg);box-shadow:var(--lm-shadow-lg);">
+  <div class="lm-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--lm-space-md);">
+    <h2 style="font-size:18px;font-weight:600;" id="lm-drawer-title">Skill Detail</h2>
+    <button class="lm-btn lm-btn--ghost lm-btn--sm" id="lm-drawer-close">×</button>
+  </div>
+  <div id="lm-drawer-content" class="lm-stack" style="gap:var(--lm-space-md);">
+    <!-- 动态填充 -->
+  </div>
+</div>
+<div class="lm-overlay" id="lm-drawer-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:calc(var(--lm-z-drawer) - 1);"></div>
+{% endblock %}
+
+{% block scripts %}
+// Skill Hub V2：搜索 + 分类 + Detail Drawer + Enable/Disable + Sync
+(function(){
+  var cards = document.querySelectorAll('.lm-skill-card');
+  var currentCategory = 'all';
+  var currentSearch = '';
+
+  // 状态绑定
+  LUMENIS.bindState(document.querySelector('[data-component="skillhub-status"]'), {
+    page:"skillhub", component:"skillhub-status", url:"/api/skills/status",
+    isEmpty:function(d){return !d || d.total===0;},
+    emptyText:"Skill Registry 未加载",
+    render:function(d){
+      var dot=document.querySelector('[data-field="sh-dot"]');
+      if(dot) dot.className="lm-dot lm-dot--"+(d.total>0?"ai":"unknown");
+      var f=function(s,v){var n=document.querySelector('[data-field="'+s+'"]');if(n)n.textContent=v;};
+      f("sh-state", d.total>0?"已加载":"未加载");
+      f("sh-total","Total: "+(d.total||12));
+      f("sh-sync","Sync: "+(d.sync_status||"SYNCED"));
+    }
+  });
+
+  // 过滤函数
+  function applyFilters(){
+    cards.forEach(function(card){
+      var cat=card.getAttribute('data-category');
+      var name=(card.getAttribute('data-name')||'').toLowerCase();
+      var sid=(card.getAttribute('data-skill')||'').toLowerCase();
+      var catMatch = currentCategory==='all' || cat===currentCategory;
+      var searchMatch = !currentSearch || name.indexOf(currentSearch)>=0 || sid.indexOf(currentSearch)>=0;
+      card.style.display = (catMatch && searchMatch)?'':'none';
+    });
+  }
+
+  // 分类筛选
+  document.querySelectorAll('[data-category]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('[data-category]').forEach(function(b){b.classList.remove('lm-btn--active');});
+      btn.classList.add('lm-btn--active');
+      currentCategory = btn.getAttribute('data-category');
+      applyFilters();
+    });
+  });
+
+  // 搜索
+  var searchInput = document.getElementById('lm-skill-search');
+  if(searchInput){
+    searchInput.addEventListener('input',function(){
+      currentSearch = this.value.toLowerCase().trim();
+      applyFilters();
+    });
+  }
+
+  // Detail Drawer
+  var drawer = document.getElementById('lm-skill-drawer');
+  var overlay = document.getElementById('lm-drawer-overlay');
+  var drawerTitle = document.getElementById('lm-drawer-title');
+  var drawerContent = document.getElementById('lm-drawer-content');
+
+  function openDrawer(card){
+    var sid = card.getAttribute('data-skill');
+    var name = card.getAttribute('data-name');
+    var version = card.getAttribute('data-version');
+    var type = card.getAttribute('data-type');
+    var category = card.getAttribute('data-category');
+    var desc = card.querySelector('.lm-card__body > div').textContent;
+
+    drawerTitle.textContent = sid + ' · ' + name;
+    drawerContent.innerHTML =
+      '<div class="lm-card lm-card--flat"><div class="lm-card__body lm-stack" style="gap:var(--lm-space-sm);">' +
+      '<div><span style="color:var(--lm-text-secondary);font-size:12px;">Version</span><div style="font-size:15px;font-weight:500;">'+version+'</div></div>' +
+      '<div><span style="color:var(--lm-text-secondary);font-size:12px;">Type</span><div style="font-size:15px;font-weight:500;">'+type+'</div></div>' +
+      '<div><span style="color:var(--lm-text-secondary);font-size:12px;">Category</span><div style="font-size:15px;font-weight:500;text-transform:capitalize;">'+category+'</div></div>' +
+      '<div><span style="color:var(--lm-text-secondary);font-size:12px;">Description</span><div style="font-size:13px;line-height:1.6;color:var(--lm-text-primary);">'+desc+'</div></div>' +
+      '</div></div>' +
+      '<div class="lm-card lm-card--flat"><div class="lm-card__body lm-stack" style="gap:var(--lm-space-sm);">' +
+      '<div style="font-size:13px;font-weight:600;">Identity Policy</div>' +
+      '<div style="font-size:12px;color:var(--lm-text-secondary);">requires_delegation: true · impersonation_allowed: false · min_permission: READ</div>' +
+      '<div style="font-size:13px;font-weight:600;margin-top:var(--lm-space-sm);">Audit Policy</div>' +
+      '<div style="font-size:12px;color:var(--lm-text-secondary);">log_execution: true · retain_days: 90</div>' +
+      '</div></div>' +
+      '<div class="lm-row" style="gap:var(--lm-space-sm);">' +
+      '<button class="lm-btn lm-btn--primary lm-btn--sm" style="flex:1;">Run Skill</button>' +
+      '<button class="lm-btn lm-btn--ghost lm-btn--sm" style="flex:1;">View Manifest</button>' +
+      '</div>';
+
+    drawer.style.display = 'block';
+    overlay.style.display = 'block';
+    requestAnimationFrame(function(){
+      drawer.style.transform = 'translateX(0)';
+    });
+  }
+
+  function closeDrawer(){
+    drawer.style.transform = 'translateX(100%)';
+    overlay.style.display = 'none';
+    setTimeout(function(){ drawer.style.display='none'; }, 200);
+  }
+
+  document.querySelectorAll('.lm-skill-detail').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      openDrawer(this.closest('.lm-skill-card'));
+    });
+  });
+  document.getElementById('lm-drawer-close').addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', closeDrawer);
+
+  // Enable/Disable 切换
+  document.querySelectorAll('.lm-skill-toggle').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var card = this.closest('.lm-skill-card');
+      var badge = card.querySelector('.lm-badge--success, .lm-badge--warning');
+      var action = this.getAttribute('data-action');
+      if(action === 'disable'){
+        badge.className = 'lm-badge lm-badge--warning';
+        badge.textContent = 'Disabled';
+        this.textContent = 'Enable';
+        this.setAttribute('data-action','enable');
+      } else {
+        badge.className = 'lm-badge lm-badge--success';
+        badge.textContent = 'Enabled';
+        this.textContent = 'Disable';
+        this.setAttribute('data-action','disable');
+      }
+    });
+  });
+
+  // Run Skill（调用 Invocation API）
+  document.querySelectorAll('.lm-skill-run').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var card = this.closest('.lm-skill-card');
+      var sid = card.getAttribute('data-skill');
+      LUMENIS.toast('info', 'Invoking ' + sid + '…');
+      // 实际调用 /api/skills/invoke
+      fetch('/api/skills/invoke', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({skill_id:sid, task:'manual invoke from Skill Hub'})
+      }).then(function(r){return r.json();}).then(function(d){
+        LUMENIS.toast(d.status==='SUCCESS'?'success':'error', sid + ': ' + (d.status||'done'));
+      }).catch(function(){ LUMENIS.toast('warning', sid + ' invoke: API not available'); });
+    });
+  });
+
+  // Sync GitHub
+  document.getElementById('lm-btn-sync').addEventListener('click',function(){
+    LUMENIS.toast('info', 'Syncing GitHub manifests…');
+    fetch('/api/skills/sync', {method:'POST'}).then(function(r){return r.json();}).then(function(d){
+      LUMENIS.toast(d.status==='SYNCED'?'success':'warning', 'Sync: ' + (d.status||'done'));
+    }).catch(function(){ LUMENIS.toast('warning', 'Sync API not available'); });
+  });
+
+  // Create Skill
+  document.getElementById('lm-btn-create-skill').addEventListener('click',function(){
+    LUMENIS.toast('info', 'Create Custom Skill — coming soon');
+  });
+})();
+{% endblock %}

@@ -21,6 +21,12 @@ def test_no_key_ai_enabled_false(monkeypatch):
 
 def test_no_key_chat_fallback_no_throw(monkeypatch):
     monkeypatch.setattr(intelligence, "_provider_config", lambda: None)
+
+    def _all_providers_fail(func, providers=None):
+        raise Exception("simulated all providers down")
+
+    # 模拟所有云端 Provider 不可用：route_with_fallback 抛异常 → _chat 降级到 rule
+    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _all_providers_fail)
     text, tag = intelligence._chat("sys", "user")
     assert text is None
     assert tag in ("rule", "no_key")  # 优雅降级，不抛异常

@@ -1,0 +1,62 @@
+/* ============================================================================
+   LUMENIS Reset — 现代、克制、可预测
+   ============================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--lm-font-family);
+  font-size: var(--lm-text-body);
+  font-weight: var(--lm-weight-regular);
+  line-height: var(--lm-leading-body);
+  color: var(--lm-text-primary);
+  background: var(--lm-canvas);
+  overflow: hidden; /* 防覆盖 Contract：页面级禁无限滚动，内容区内部滚动 */
+  height: 100vh;
+}
+
+h1, h2, h3, h4 { line-height: var(--lm-leading-title); font-weight: var(--lm-weight-bold); }
+h1 { font-size: var(--lm-text-h1); }
+h2 { font-size: var(--lm-text-h2); }
+h3 { font-size: var(--lm-text-h3); font-weight: var(--lm-weight-semibold); }
+
+a { color: var(--lm-status-info); text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+ul, ol { list-style: none; }
+img, svg { display: block; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; }
+
+:focus-visible {
+  outline: var(--lm-border-width-focus) solid var(--lm-status-info);
+  outline-offset: 2px;
+}
+
+::selection { background: rgba(0,122,255,0.18); }
+
+/* 滚动条克制 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--lm-border-strong); border-radius: var(--lm-radius-full); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* 无障碍：尊重 reduced-motion / reduced-transparency */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .lm-glass, .lm-glass--clear, .lm-glass--identity {
+    backdrop-filter: none !important;
+    background: var(--lm-surface) !important;
+  }
+}

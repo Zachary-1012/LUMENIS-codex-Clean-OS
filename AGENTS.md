@@ -100,12 +100,17 @@ Ollama 是当前正式 AI Runtime。AI 是增强层，不是系统生命线。
 
 ---
 
-# 3. 当前 AI：Ollama-only
+# 3. AI 运行时：规则内循环优先，Provider-Agnostic（演进自 Ollama-only）
 
-正式生产运行时不得依赖：
-- 豆包 API
-- OpenAI API
-- 其他云端大模型 API
+> **演进注记（2026-09-04，用户批准 MERGE）**：本节早期表述为“正式生产 Ollama-only、不得使用任何云端大模型 API”。
+> 依据 `AI_PROVIDER_RUNTIME_POLICY_V1` 与 LUMENIS AI Gateway，现行口径升级为 **Provider-Agnostic**：
+> 智谱 GLM 为云端主力（日常 `glm-4.5-air` 关思考、强推理 `glm-5.3`、视觉 `glm-4.6v`、联网 `web-search-pro`），
+> ARK / 千问为云端备用，**Ollama / gpt-oss 本地模型为离线兜底，本地确定性规则为最终兜底**。
+> 以下三条硬红线不因本次演进而改变，且优先级高于任何模型选择：
+> 1. **系统生命线不绑定任何单一 AI Provider**：断网、无 key、任一云厂商不可用时，必须能自动降级到本地模型与确定性规则，主链路不中断；
+> 2. **规则与数据是业务最终真值，AI 永远只是增强层**（见本节末“AI 不得单独决定”清单）；
+> 3. **任何 API Key 只允许经本地 `.env` / 系统密钥注入，严禁写入源码、前端、Git、模板、DB 初始化脚本、日志、测试**。
+> 历史 Ollama 链路与历史外部 AI 代码均保留为兜底/Legacy，不删除。
 
 历史外部 AI 代码不得贸然删除：先审计调用链，标记 Legacy/Optional，默认关闭，确认不影响核心后再清理。
 

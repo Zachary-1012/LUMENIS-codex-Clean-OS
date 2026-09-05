@@ -93,7 +93,11 @@ def register_default_adapters():
     """注册所有默认适配器（按需导入，避免依赖缺失）"""
     from .douyin import DouyinAdapter
     from .instagram import InstagramAdapter
+    from .bilibili import BilibiliAdapter
+    from .weibo import WeiboAdapter
     from .zhihu import ZhihuAdapter
+    from .facebook import FacebookAdapter
+    from .x_platform import XAdapter
     from .baidu_search import BaiduSearchAdapter
     from .bing_search import BingSearchAdapter
     from .sogou_search import SogouSearchAdapter
@@ -103,7 +107,8 @@ def register_default_adapters():
     from .doubao_search import DoubaoSearchAdapter
     from .smzdm import SmzdmAdapter
 
-    for cls in [DouyinAdapter, InstagramAdapter, ZhihuAdapter, BaiduSearchAdapter,
+    for cls in [DouyinAdapter, InstagramAdapter, BilibiliAdapter, WeiboAdapter, ZhihuAdapter,
+                FacebookAdapter, XAdapter, BaiduSearchAdapter,
                 BingSearchAdapter, SogouSearchAdapter, GoogleAdapter, SogouWechatAdapter,
                 DianpingAdapter, DoubaoSearchAdapter, SmzdmAdapter]:
         try:

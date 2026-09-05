@@ -167,6 +167,14 @@ try:
 except Exception as _ev_e:
     print(f"[evidence_api] blueprint register failed: {_ev_e}")
 
+# 序境 LUMENIS 体验层（L0）前端 Foundation — 隔离 Blueprint，零业务逻辑/零写库
+try:
+    from lumenis_frontend import lumenis_bp
+    app.register_blueprint(lumenis_bp)
+    print("[lumenis] frontend registered: /lumenis/*")
+except Exception as _lm_e:
+    print(f"[lumenis] blueprint register failed: {_lm_e}")
+
 # 统一本地文件导入 API（参考 GPT 文件夹 icon，点击浏览本地；复用 app_evidence 扩展名+500MB 校验）
 try:
     from app_evidence import EVIDENCE_ALLOWED_EXTENSIONS, EVIDENCE_MAX_FILE_SIZE_BYTES
@@ -881,7 +889,7 @@ def auth_config_api():
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
-    if not _auth_enabled() or request.path in ('/healthz', '/api/auth/config', '/favicon.ico', '/api/kos/report/view') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view') or request.path.startswith('/v4/') or request.path.startswith('/static/'):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -2308,6 +2316,46 @@ def remote_access():
 def healthz():
     return jsonify({'ok':True,'version':APP_VERSION,'service':'taikoo-monitor'})
 
+@app.route('/api/health')
+def api_health():
+    """P1-1 只读健康端点：无认证、不写库、不触发采集，供负载均衡/监控探活。"""
+    _port = None
+    try:
+        _host = request.host or ''
+        if ':' in _host:
+            _port = int(_host.rsplit(':', 1)[1])
+    except Exception:
+        _port = None
+    if _port is None:
+        for _env_key in ('PORT', 'FLASK_RUN_PORT', 'TAIKOO_PORT'):
+            _v = os.getenv(_env_key)
+            if _v:
+                try:
+                    _port = int(_v)
+                    break
+                except Exception:
+                    pass
+    _db_status = 'ok'
+    _db_error = None
+    try:
+        with db.get_db() as _conn:
+            _conn.execute('SELECT 1').fetchone()
+    except Exception as _e:
+        _db_status = 'error'
+        _db_error = str(_e)
+    _payload = {
+        'ok': _db_status == 'ok',
+        'service': 'taikoo-monitor',
+        'version': APP_VERSION,
+        'pid': os.getpid(),
+        'port': _port,
+        'database': _db_status,
+        'time': datetime.now().isoformat(),
+    }
+    if _db_error:
+        _payload['database_error'] = _db_error
+    return jsonify(_payload)
+
 @app.route('/api/system/health')
 def api_system_health():
     """产品级健康状态：区分‘系统正常’与‘数据源没有数据’。"""
@@ -2325,6 +2373,16 @@ def api_system_health():
     result['ai']=intelligence.ai_status()
     result['web_discovery_enabled']=os.getenv('TAIKOO_WEB_DISCOVERY','1').lower() not in ('0','false','no','off')
     return jsonify({'ok':result.get('database')=='ok','health':result})
+
+# ===== Collector Guard 状态 API（旁路模式，只读）=====
+@app.route('/api/collector-guard/status')
+def api_collector_guard_status():
+    """采集守护系统状态：各平台限速器/熔断/指标快照。旁路模式，不改变采集行为。"""
+    try:
+        from collector_guard_integration import get_all_status, is_enabled
+        return jsonify({'ok': True, 'enabled': is_enabled(), 'guards': get_all_status()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ===== v5.3.2 智能日报 API =====
 @app.route('/api/overview')
