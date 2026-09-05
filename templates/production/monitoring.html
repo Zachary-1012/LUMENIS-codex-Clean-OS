@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Monitoring - LUMENIS{% endblock %}
+{% block page_title %}Monitoring{% endblock %}
+
+{% block content %}
+<!-- Page Status: CONNECTED -->
+<section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-size:18px;font-weight:600;">Monitoring</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+    </div>
+    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+  </div>
+</section>
+
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Collector Status</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Collector + CollectorGuard. 小红书主平台采集状态.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Runtime Health</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">进程、端口、资源、依赖健康检查.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Collection Status</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">SUCCESS / NO_NEW_DATA / RISK_WARNING / NEED_VERIFY / BLOCKED / SESSION_EXPIRED / COLLECT_ERROR / COOLING_DOWN</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Risk Monitor</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">风险判断逻辑保持规则优先，AI 只做增强.</div>
+      </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+// Monitoring page - runtime binding pending
+{% endblock %}

@@ -42,53 +42,71 @@
     <div class="lm-nav-group">
       <div class="lm-nav-group__label">Intelligence</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='ai' }}" href="{{ url_for('lumenis.intelligence_workspace') }}">
-        <span data-icon="intelligence"></span><span class="lm-nav-item__label">Intelligence Workspace</span>
+        <span data-icon="intelligence"></span><span class="lm-nav-item__label">Workspace</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='agents' }}" href="{{ url_for('lumenis.agent_center') }}">
-        <span data-icon="agent"></span><span class="lm-nav-item__label">Agent Center</span>
+        <span data-icon="agent"></span><span class="lm-nav-item__label">Agents</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='skills' }}" href="{{ url_for('lumenis.skill_hub') }}">
-        <span data-icon="skill"></span><span class="lm-nav-item__label">Skill Hub</span>
-        <span class="lm-badge lm-nav-item__badge">S01–S12</span>
+        <span data-icon="skill"></span><span class="lm-nav-item__label">Skills</span>
+        <span class="lm-badge lm-nav-item__badge">S01-S12</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='evidence' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='models' }}" href="{{ url_for('lumenis.models') }}">
+        <span data-icon="learning"></span><span class="lm-nav-item__label">Models</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='evidence' }}" href="{{ url_for('lumenis.evidence') }}">
         <span data-icon="evidence"></span><span class="lm-nav-item__label">Evidence</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='evaluation' }}" href="{{ url_for('lumenis.evaluation_center') }}">
         <span data-icon="evaluation"></span><span class="lm-nav-item__label">Evaluation</span>
-      </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='learning' }}" href="#">
-        <span data-icon="learning"></span><span class="lm-nav-item__label">Learning</span>
       </a>
     </div>
 
     <div class="lm-nav-group">
       <div class="lm-nav-group__label">Production</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='production' }}" href="{{ url_for('lumenis.production_overview') }}">
-        <span data-icon="production"></span><span class="lm-nav-item__label">Production Workspace</span>
+        <span data-icon="production"></span><span class="lm-nav-item__label">Overview</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='monitoring' }}" href="{{ url_for('lumenis.monitoring') }}">
+        <span data-icon="risk"></span><span class="lm-nav-item__label">Monitoring</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cases' }}" href="{{ url_for('lumenis.cases') }}">
+        <span data-icon="content"></span><span class="lm-nav-item__label">Cases</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='opinion' }}" href="{{ url_for('lumenis.public_opinion') }}">
         <span data-icon="content"></span><span class="lm-nav-item__label">Public Opinion</span>
       </a>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='risk' }}" href="{{ url_for('lumenis.risk') }}">
         <span data-icon="risk"></span><span class="lm-nav-item__label">Risk</span>
-        <span class="lm-badge lm-nav-item__badge" id="lm-risk-badge">–</span>
       </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='event' }}" href="#">
-        <span data-icon="event"></span><span class="lm-nav-item__label">Events</span>
-      </a>
-      <a class="lm-nav-item {{ 'is-active' if active_nav=='report' }}" href="#">
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='reports' }}" href="{{ url_for('lumenis.reports') }}">
         <span data-icon="report"></span><span class="lm-nav-item__label">Reports</span>
       </a>
     </div>
 
     <div class="lm-nav-group">
-      <div class="lm-nav-group__label">Research · Operations</div>
+      <div class="lm-nav-group__label">Research</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='research' }}" href="{{ url_for('lumenis.research_workspace') }}">
-        <span data-icon="research"></span><span class="lm-nav-item__label">Research Workspace</span>
+        <span data-icon="research"></span><span class="lm-nav-item__label">Workspace</span>
       </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='findings' }}" href="{{ url_for('lumenis.findings') }}">
+        <span data-icon="evidence"></span><span class="lm-nav-item__label">Findings</span>
+      </a>
+    </div>
+
+    <div class="lm-nav-group">
+      <div class="lm-nav-group__label">Operations</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='operations' }}" href="{{ url_for('lumenis.operations') }}">
-        <span data-icon="operations"></span><span class="lm-nav-item__label">Operations</span>
+        <span data-icon="operations"></span><span class="lm-nav-item__label">System</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='runtime' }}" href="{{ url_for('lumenis.runtime') }}">
+        <span data-icon="learning"></span><span class="lm-nav-item__label">Runtime</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='permissions' }}" href="{{ url_for('lumenis.permissions') }}">
+        <span data-icon="agent"></span><span class="lm-nav-item__label">Permissions</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='repository' }}" href="{{ url_for('lumenis.repository') }}">
+        <span data-icon="skill"></span><span class="lm-nav-item__label">Repository</span>
       </a>
     </div>
   </nav>

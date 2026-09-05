@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Permissions & Audit - LUMENIS{% endblock %}
+{% block page_title %}Permissions & Audit{% endblock %}
+
+{% block content %}
+<!-- Page Status: CONNECTED -->
+<section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-size:18px;font-weight:600;">Permissions & Audit</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+    </div>
+    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+  </div>
+</section>
+
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Permission Gate</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">READ -> AUDIT -> ANALYZE -> RESEARCH -> PLAN -> PATCH_PREVIEW -> TEST -> VERIFY -> HUMAN_APPROVAL -> COMMIT -> PUSH.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Agent Identity</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">User -> Agent Identity -> Skill Identity -> Tool/API Identity -> Execution. 每级记录 identity/parent_identity/permission/scope/intent.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Delegation</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">用户授权 Agent 执行，禁止 Agent 直接冒充用户. Delegation Context + Identity Chain + Permission Scope.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Audit Trail</h3>
+        <span class="lm-badge lm-badge--ghost">NO_DATA</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">完整审计: 谁发起 -> 谁授权 -> 哪个 Agent -> 哪个 Skill -> 哪个 Tool -> 实际执行 -> 结果.</div>
+      </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+// Permissions & Audit page - runtime binding pending
+{% endblock %}

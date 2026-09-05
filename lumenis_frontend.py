@@ -102,90 +102,177 @@ def research_workspace():
                            home_url="/lumenis/")
 
 
-# ========== Skill Hub API（真实端点，前端绑定用，零业务写操作） ==========
+# ========== P1 全产品页面（LUMENIS Full Product Visual Foundation） ==========
 
-# S01-S12 Canonical Skill 清单（与 OSAI Skill Registry 对齐）
-_LUMENIS_SKILLS = [
-    {"id": "S01", "name": "Source Fact Scanner", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "AUDIT"],
-     "description": "扫描源码事实，建立 Source Fact Baseline。只读，不修改。"},
-    {"id": "S02", "name": "SHA Verifier", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "VERIFY"],
-     "description": "验证 Git SHA 与分支状态，防止使用旧版本。"},
-    {"id": "S03", "name": "Git State Auditor", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "AUDIT"],
-     "description": "审计 Git 工作区状态、未提交变更、冲突检测。"},
-    {"id": "S04", "name": "File Inventory", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "ANALYZE"],
-     "description": "文件清单与依赖分析，识别孤儿文件和重复代码。"},
-    {"id": "S05", "name": "Module Mapper", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "ANALYZE"],
-     "description": "模块依赖图谱，识别耦合度与循环依赖。"},
-    {"id": "S06", "name": "Function Call Mapper", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "ANALYZE"],
-     "description": "函数调用链追踪，定位关键路径与影响范围。"},
-    {"id": "S07", "name": "API Mapper", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "AUDIT"],
-     "description": "全量 API 路由清单，含方法、权限、认证要求。"},
-    {"id": "S08", "name": "Dependency Auditor", "category": "engineering",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "AUDIT"],
-     "description": "依赖版本审计，识别漏洞与过期包。"},
-    {"id": "S09", "name": "Config Auditor", "category": "governance",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "AUDIT"],
-     "description": "配置文件审计，识别硬编码路径与密钥泄露。"},
-    {"id": "S10", "name": "DB Schema Auditor", "category": "data",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "AUDIT"],
-     "description": "数据库 Schema 审计，识别表结构与索引问题。"},
-    {"id": "S11", "name": "DB Integrity Checker", "category": "data",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "VERIFY"],
-     "description": "数据完整性检查，识别孤儿记录与不一致。"},
-    {"id": "S12", "name": "Runtime Health", "category": "monitoring",
-     "version": "1.0.0", "type": "SYSTEM", "permissions": ["READ", "MONITOR"],
-     "description": "运行时健康检查，含进程、端口、资源、依赖。"},
-]
+@lumenis_bp.route("/intelligence/models")
+def models():
+    """Models / AI Gateway — 模型与引擎管理（Provider-agnostic）。"""
+    return render_template("intelligence/models.html", active_nav="models",
+                           home_url="/lumenis/")
 
-# Skill 调用记录（内存级，不写数据库，保留最近 100 条）
+
+@lumenis_bp.route("/intelligence/evidence")
+def evidence():
+    """Evidence Center — 证据中心（Evidence Chain + Trace）。"""
+    return render_template("intelligence/evidence.html", active_nav="evidence",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/monitoring")
+def monitoring():
+    """Monitoring — 生产监控（Collector + Runtime + Risk）。"""
+    return render_template("production/monitoring.html", active_nav="monitoring",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/cases")
+def cases():
+    """Case Library — 案例库（统一 Case Intelligence 入口）。"""
+    return render_template("production/cases.html", active_nav="cases",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/reports")
+def reports():
+    """Reports — 报告中心（日报/周报/月报/综合报告）。"""
+    return render_template("production/reports.html", active_nav="reports",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/research/findings")
+def findings():
+    """Research Findings — 研究发现（Finding Pipeline）。"""
+    return render_template("research/findings.html", active_nav="findings",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/operations/runtime")
+def runtime():
+    """Runtime — 运行时（Local Runtime + Health Check）。"""
+    return render_template("operations/runtime.html", active_nav="runtime",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/operations/permissions")
+def permissions():
+    """Permissions & Audit — 权限与审计（Permission Gate + Identity + Delegation）。"""
+    return render_template("operations/permissions.html", active_nav="permissions",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/operations/repository")
+def repository():
+    """Repository Registry — 仓库注册（ZBC + OSAI 双核状态）。"""
+    return render_template("operations/repository.html", active_nav="repository",
+                           home_url="/lumenis/")
+
+
+# ========== Skill Hub API（Cross-Core Adapter，ZBC 不维护独立 Skill Truth） ==========
+
+from lumenis_skill_adapter import get_skill_adapter
+
+# Skill 调用记录（内存级 runtime cache，不写数据库，保留最近 100 条）
+# 注意：这不是永久历史，仅作 runtime trace。UI 无持久化证据时显示 NO_DATA。
 _skill_invocations = []
 
 
 @lumenis_bp.route("/api/skills/status")
 def skill_status():
-    """Skill Registry 状态 —— 只读，返回 S01-S12 清单与同步状态。"""
+    """Skill Registry 状态 —— 从 OSAI Canonical Registry 真实读取。
+
+    ZBC 不再维护独立 _LUMENIS_SKILLS 硬编码 Truth。
+    OSAI 不可用时返回 UNAVAILABLE，不造假数据。
+    """
+    adapter = get_skill_adapter()
+    snap = adapter.get_registry_snapshot()
+
+    if not snap["connected"]:
+        return jsonify({
+            "total": 0,
+            "running": 0,
+            "sync_status": "UNAVAILABLE",
+            "skills": [],
+            "canonical_source": "OSAI Canonical Registry",
+            "connection_status": "UNAVAILABLE",
+            "error": snap.get("error"),
+            "last_sync": _time.strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+
+    # 只返回 IMPLEMENTED + PARTIAL 的 Skill 给前端（PLANNED 不显示为可用）
+    visible_skills = [s for s in snap["skills"]
+                      if s["status"] in ("IMPLEMENTED", "PARTIAL")]
+
     return jsonify({
-        "total": len(_LUMENIS_SKILLS),
+        "total": snap.get("implemented_count", 0),
         "running": 0,
-        "sync_status": "SYNCED",
-        "skills": _LUMENIS_SKILLS,
-        "canonical_source": "OSAI Intelligence Core",
+        "sync_status": "CONNECTED",
+        "skills": visible_skills,
+        "canonical_source": "OSAI Canonical Registry",
+        "connection_status": "CONNECTED",
+        "implemented_count": snap.get("implemented_count", 0),
+        "partial_count": snap.get("partial_count", 0),
+        "planned_count": snap.get("planned_count", 0),
+        "registry_total": snap.get("total", 0),
         "last_sync": _time.strftime("%Y-%m-%dT%H:%M:%S"),
     })
 
 
 @lumenis_bp.route("/api/skills/invoke", methods=["POST"])
 def skill_invoke():
-    """Skill 调用 —— 记录调用请求，返回 invocation_id。
+    """Skill 调用 —— ZBC → Cross-Core Adapter → OSAI SkillInvoker。
 
-    实际执行由 OSAI Intelligence Core 完成；ZBC 侧记录调用轨迹并返回状态。
-    不修改生产数据，不绕过 subject_hit / Permission Gate。
+    完整链：Workspace → Task → Skill Selector → Manifest → Permission →
+    Context → Engine → Provider → Execution → Evidence → Evaluation → Trace → Result
+
+    当前层级：ZBC 记录调用请求（ACCEPTED），实际执行由 OSAI 完成。
+    任何一层不存在返回 PARTIALLY_CONNECTED，不伪造 COMPLETED。
     """
     data = request.get_json(silent=True) or {}
     skill_id = data.get("skill_id", "")
     task = data.get("task", "manual invoke")
+    workspace = data.get("workspace", "unknown")
 
-    skill = next((s for s in _LUMENIS_SKILLS if s["id"] == skill_id), None)
-    if not skill:
-        return jsonify({"status": "FAILED", "error": "Unknown skill: %s" % skill_id}), 404
+    # 从 OSAI Canonical Registry 获取 Skill 定义（唯一 Truth）
+    adapter = get_skill_adapter()
+    skill_info = adapter.get_skill(skill_id)
+
+    if not skill_info.get("found"):
+        return jsonify({
+            "status": "FAILED",
+            "error": "Unknown skill: %s" % skill_id,
+            "registry_status": skill_info.get("status", "UNKNOWN"),
+        }), 404
+
+    skill = skill_info["skill"]
+
+    # 检查 Skill 是否真实可执行
+    if skill["status"] != "IMPLEMENTED":
+        return jsonify({
+            "status": "BLOCKED",
+            "error": "Skill not implemented: %s (status=%s)" % (skill_id, skill["status"]),
+            "skill_status": skill["status"],
+        }), 400
 
     invocation_id = "INV-" + _uuid.uuid4().hex[:10]
+    trace_id = "TRACE-" + _uuid.uuid4().hex[:10]
+
     record = {
         "invocation_id": invocation_id,
+        "trace_id": trace_id,
         "skill_id": skill_id,
-        "skill_name": skill["name"],
+        "skill_name": skill.get("name", ""),
+        "skill_version": skill.get("version", "0.0.0"),
         "task": task,
+        "workspace": workspace,
         "status": "ACCEPTED",
+        "execution_status": "PARTIALLY_CONNECTED",
         "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "permissions_required": skill["permissions"],
+        "permissions_required": skill.get("permissions", []),
         "execution_core": "OSAI Intelligence Core",
+        "canonical_source": "OSAI Canonical Registry",
+        "evidence_status": "NO_EVIDENCE",
+        "evaluation_status": "NO_DATA",
+        "note": "Invocation accepted by ZBC adapter. Full execution chain (Engine→Provider→Evidence→Evaluation) requires OSAI runtime integration.",
     }
     _skill_invocations.append(record)
     if len(_skill_invocations) > 100:
@@ -196,16 +283,35 @@ def skill_invoke():
 
 @lumenis_bp.route("/api/skills/sync", methods=["POST"])
 def skill_sync():
-    """GitHub Skill Manifest 同步 —— 返回同步状态，不静默覆盖。
+    """GitHub Skill Manifest 同步 —— 真实检查 GitHub → Manifest → Registry。
 
-    实际同步由 OSAI Intelligence Core 的 skill_sync 模块完成；
-    ZBC 侧返回同步状态供前端显示。
+    不固定返回 SYNCED。实际检测：
+    1. OSAI Canonical Registry 是否可用
+    2. Manifest 文件是否存在
+    3. 已实现 Skill 与 Manifest 是否有冲突
+    发现 conflict 返回 CONFLICT。
     """
+    adapter = get_skill_adapter()
+    sync_result = adapter.check_sync_status()
+
     return jsonify({
-        "status": "SYNCED",
-        "synced_count": len(_LUMENIS_SKILLS),
-        "conflicts": 0,
+        "status": sync_result["sync_status"],
+        "synced_count": sync_result["synced_count"],
+        "conflicts": sync_result["conflict_count"],
+        "conflict_detail": {
+            "missing_manifest": sync_result.get("missing_manifest", []),
+            "unimplemented_manifest": sync_result.get("unimplemented_manifest", []),
+        },
+        "manifest_files": sync_result.get("manifest_files", 0),
+        "implemented_count": sync_result.get("implemented_count", 0),
         "last_sync": _time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "canonical_source": "OSAI Intelligence Core / skills/manifests/",
-        "message": "Manifest registry is in sync. No conflicts detected.",
+        "canonical_source": "OSAI Canonical Registry / skills/manifests/",
+        "error": sync_result.get("error"),
+        "message": (
+            "Sync verified. No conflicts."
+            if sync_result["sync_status"] == "SYNCED"
+            else "Conflicts detected. Manual review required."
+            if sync_result["sync_status"] == "CONFLICT"
+            else "OSAI unavailable. Cannot verify sync."
+        ),
     })
