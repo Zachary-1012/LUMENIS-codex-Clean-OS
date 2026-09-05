@@ -17,6 +17,8 @@ from . import instagram as _instagram  # noqa: F401,E402
 from . import bilibili as _bilibili  # noqa: F401,E402
 from . import weibo as _weibo  # noqa: F401,E402
 from . import zhihu as _zhihu  # noqa: F401,E402
+from . import facebook as _facebook  # noqa: F401,E402
+from . import x_platform as _x_platform  # noqa: F401,E402
 
 __all__ = [
     "BasePlatformAdapter",

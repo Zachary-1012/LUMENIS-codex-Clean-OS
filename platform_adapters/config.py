@@ -83,6 +83,30 @@ PLATFORM_CAPABILITIES = {
         "proxy_pool": True,
         "enable_gate": "proxy_plus_cookie_configured",
     },
+    "facebook": {
+        "name": "Facebook",
+        "enabled": False,
+        "priority": "secondary",
+        "search": True,
+        "detail": True,
+        "comments": True,
+        "creator": True,
+        "session_cache": True,
+        "proxy_pool": True,
+        "enable_gate": "proxy_plus_cookie_configured",
+    },
+    "x": {
+        "name": "X",
+        "enabled": False,
+        "priority": "secondary",
+        "search": True,
+        "detail": True,
+        "comments": True,
+        "creator": True,
+        "session_cache": True,
+        "proxy_pool": False,
+        "enable_gate": "cookie_plus_browser_engine_verified",
+    },
 }
 
 
