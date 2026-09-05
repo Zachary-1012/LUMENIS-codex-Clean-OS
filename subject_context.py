@@ -102,20 +102,13 @@ def get_subject_context(brand_key: Optional[str] = None,
     """获取主体上下文。
 
     优先级：显式 brand_key > 环境变量 ZBC_ACTIVE_BRAND > CTH 默认。
-    CTH 主体禁止被隐式切换（生产红线）。
+    CTH 保护由 domain_isolation 层在 SQL/执行边界强制执行，
+    不在此强制 brand_key，以支持多品牌 KOS 场景的环境变量切换。
+    不依赖 subject_rules，避免循环导入。
     """
-    from subject_rules import get_active_brand, get_brand_config
-
-    bk = brand_key or get_active_brand()
+    bk = brand_key or os.environ.get("ZBC_ACTIVE_BRAND", CTH_BRAND_KEY)
     product = get_product_context(product_id)
-
-    # CTH 保护：如果产品是 CTH，主体必须是 CTH
-    if product.product_id == PRODUCT_CTH:
-        bk = CTH_BRAND_KEY
-        subject_id = CTH_SUBJECT_ID
-    else:
-        cfg = get_brand_config(bk)
-        subject_id = cfg.get("subject_id", bk.upper()) if cfg else bk.upper()
+    subject_id = bk.upper().replace("-", "_").replace(" ", "_")
 
     return SubjectContext(
         subject_id=subject_id,
