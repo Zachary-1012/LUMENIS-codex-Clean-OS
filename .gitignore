@@ -162,3 +162,6 @@ _pitch_dump*
 .trae-cn/
 *.bak-*
 *.bak
+
+# 临时调试脚本
+_*.py
