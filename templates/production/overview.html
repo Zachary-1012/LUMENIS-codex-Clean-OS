@@ -3,13 +3,27 @@
 {% block page_title %}Production Workspace{% endblock %}
 
 {% block content %}
-<section class="lm-card lm-card--flat" data-state="loading" data-page="production" data-component="core-metrics" style="margin-bottom:var(--lm-space-lg);">
-  <div class="lm-card__head">
-    <h3 class="lm-card__title">Core Metrics</h3>
-    <span class="lm-badge lm-badge--ghost" data-i18n="ov.subject">主体口径过滤</span>
+<!-- Viewport: GlobalContext(time-dim) + DynamicData(metrics) + Evidence(health+collector) + Action(domains) -->
+<div class="lm-viewport">
+  <div class="lm-viewport__context">
+    <div class="lm-section-header" style="margin:0;">
+      <div class="lm-section-header__title">Production Overview</div>
+      <div class="lm-time-dimension" id="prod-time-dim">
+        <button class="lm-time-pill is-active" data-range="today">TODAY</button>
+        <button class="lm-time-pill" data-range="7d">7D</button>
+        <button class="lm-time-pill" data-range="30d">30D</button>
+        <button class="lm-time-pill" data-range="90d">90D</button>
+      </div>
+    </div>
   </div>
-  <div class="lm-card__body">
-    <div class="lm-grid lm-grid--metrics" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+
+<section class="lm-panel" data-state="loading" data-page="production" data-component="core-metrics">
+  <div class="lm-panel__header">
+    <span class="lm-panel__title">Core Metrics</span>
+    <span class="lm-status-badge lm-status-badge--info" data-i18n="ov.subject">主体口径过滤</span>
+  </div>
+  <div class="lm-panel__body">
+    <div class="lm-metric-grid">
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.total">笔记总数</span><span class="lm-metric__value lm-count" data-field="total">–</span></div>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.positive">正面</span><span class="lm-metric__value lm-count" data-field="positive" style="color:var(--lm-color-success);">–</span></div>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.neutral">中性</span><span class="lm-metric__value lm-count" data-field="neutral">–</span></div>
@@ -20,13 +34,14 @@
   </div>
 </section>
 
+<div class="lm-viewport__data">
 <div class="lm-grid lm-grid--cards">
-  <article class="lm-card" data-state="loading" data-page="production" data-component="prod-health">
-    <div class="lm-card__head">
-      <h3 class="lm-card__title">Production Health</h3>
+  <article class="lm-panel" data-state="loading" data-page="production" data-component="prod-health">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Production Health</span>
       <span class="lm-status"><span class="lm-dot lm-dot--unknown"></span><span data-field="overall">–</span></span>
     </div>
-    <div class="lm-card__body lm-stack" data-state-slot>
+    <div class="lm-panel__body lm-stack" data-state-slot>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.db">数据库</span><span class="lm-metric__value--md" data-field="db">–</span></div>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.collector">采集器</span><span class="lm-metric__value--md" data-field="collector">–</span></div>
       <div class="lm-metric"><span class="lm-metric__label">Auth</span><span class="lm-metric__value--md" data-field="auth">–</span></div>
@@ -34,12 +49,12 @@
     </div>
   </article>
 
-  <article class="lm-card" data-state="loading" data-page="production" data-component="collector">
-    <div class="lm-card__head">
-      <h3 class="lm-card__title">Collector Status</h3>
+  <article class="lm-panel" data-state="loading" data-page="production" data-component="collector">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Collector Status</span>
       <span class="lm-badge" data-field="state">–</span>
     </div>
-    <div class="lm-card__body lm-stack" data-state-slot>
+    <div class="lm-panel__body lm-stack" data-state-slot>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.today_runs">今日采集</span><span class="lm-metric__value lm-count" data-field="today-runs">–</span></div>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.today_ins">今日入库</span><span class="lm-metric__value lm-count" data-field="today-inserted">–</span></div>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ov.manual">手动剩余</span><span class="lm-metric__value--md" data-field="manual-left">–</span></div>
@@ -47,9 +62,9 @@
     </div>
   </article>
 
-  <article class="lm-card lm-card--nav">
-    <div class="lm-card__head"><h3 class="lm-card__title">Production Domains</h3></div>
-    <div class="lm-card__body lm-stack">
+  <article class="lm-panel lm-panel--nav">
+    <div class="lm-panel__header"><span class="lm-panel__title">Production Domains</span></div>
+    <div class="lm-panel__body lm-stack">
       <a class="lm-nav-item lm-nav-item--inline" href="{{ url_for('lumenis.public_opinion') }}"><span data-icon="content"></span>Public Opinion</a>
       <a class="lm-nav-item lm-nav-item--inline" href="{{ url_for('lumenis.risk') }}"><span data-icon="risk"></span>Risk</a>
       <a class="lm-nav-item lm-nav-item--inline" href="{{ url_for('lumenis.monitoring') }}"><span data-icon="risk"></span>Monitoring</a>
@@ -57,12 +72,12 @@
     </div>
   </article>
 
-  <article class="lm-card" data-state="loading" data-page="production" data-component="kos-professional">
-    <div class="lm-card__head">
-      <h3 class="lm-card__title" data-i18n="ov.kos_title">KOS 专业号接入</h3>
+  <article class="lm-panel" data-state="loading" data-page="production" data-component="kos-professional">
+    <div class="lm-panel__header">
+      <h3 class="lm-card__title" data-i18n="ov.kos_title">KOS 专业号接入</span>
       <span class="lm-badge" data-field="kos-status">–</span>
     </div>
-    <div class="lm-card__body lm-stack" data-state-slot>
+    <div class="lm-panel__body lm-stack" data-state-slot>
       <div style="font-size:13px;color:var(--lm-text-secondary);line-height:1.6;" data-i18n="ov.kos_desc">
         专业号数据接入为可选模块，每品牌独立开关。默认关闭，开启后允许导入专业号数据。
       </div>
@@ -167,4 +182,5 @@
   });
   refreshKos();
 })();
+</div>
 {% endblock %}

@@ -1,10 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Intelligence Workspace · 序境 LUMENIS{% endblock %}
+{% block title %}Intelligence Workspace · 序境 LUMENIS</article>
+    </div>
+  </div>
+</div>
+{% endblock %}
 {% block page_title %}Intelligence Workspace{% endblock %}
 
 {% block content %}
-<section class="lm-card lm-card--flat" data-state="loading" data-page="intelligence" data-component="ai-status" style="margin-bottom:var(--lm-space-md);">
-  <div class="lm-card__body lm-row" style="justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);">
+<!-- Viewport: GlobalContext(ai-status) + PrimaryIntelligence(command) + DynamicData(result) + Evidence(context+chain) -->
+<div class="lm-viewport">
+  <div class="lm-viewport__context">
+<section class="lm-panel" data-state="loading" data-page="intelligence" data-component="ai-status">
+  <div class="lm-panel__body" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--lm-space-sm);align-items:center;">
     <div class="lm-row" style="gap:var(--lm-space-md);flex-wrap:wrap;">
       <span class="lm-status"><span class="lm-dot lm-dot--unknown" data-field="ai-dot"></span><span data-field="ai-state" data-i18n="status.connecting">连接中…</span></span>
       <span class="lm-badge" data-field="ai-provider">Provider: –</span>
@@ -13,8 +20,10 @@
     <span class="lm-badge lm-badge--ghost" data-field="ai-runtime">Runtime: –</span>
   </div>
 </section>
+  </div>
 
-<section class="lm-glass lm-glass--identity" style="border-radius:var(--lm-radius-xl);padding:var(--lm-space-xl);margin-bottom:var(--lm-space-lg);">
+  <div class="lm-viewport__primary">
+<section class="lm-panel lm-panel--floating" >
   <div class="section-label">Intelligence Workspace · Input → Context → Reasoning → Evidence → Action</div>
   <div style="font-size:var(--lm-text-h2);font-weight:700;line-height:1.3;margin:var(--lm-space-sm) 0 var(--lm-space-md);" data-i18n="ws.heading">
     向序境提问，结果必须可追溯到证据
@@ -34,13 +43,16 @@
   </div>
 </section>
 
-<div class="lm-grid lm-grid--cards">
-  <article class="lm-card" data-state="empty" data-page="intelligence" data-component="ai-result" style="grid-column:span 2;">
-    <div class="lm-card__head">
-      <h3 class="lm-card__title">AI Result</h3>
+  </div>
+
+  <div class="lm-viewport__main-split">
+    <div class="lm-viewport__data">
+<article class="lm-panel" data-state="empty" data-page="intelligence" data-component="ai-result">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">AI Result</span>
       <span class="lm-badge" data-field="ai-result-provider">–</span>
     </div>
-    <div class="lm-card__body" data-state-slot style="min-height:200px;">
+    <div class="lm-panel__body" data-state-slot style="min-height:200px;">
       <div id="lm-ai-output" style="font-size:14px;line-height:1.7;white-space:pre-wrap;color:var(--lm-text-primary);" data-i18n="ws.result_hint">
         输入问题后，AI 结果将在此显示，并附带证据来源与置信度。
       </div>
@@ -48,7 +60,7 @@
   </article>
 
   <article class="lm-card" data-state="empty" data-page="intelligence" data-component="ai-context">
-    <div class="lm-card__head"><h3 class="lm-card__title">Context &amp; Evidence</h3></div>
+    <div class="lm-panel__header"><h3 class="lm-card__title">Context &amp; Evidence</h3></div>
     <div class="lm-card__body lm-stack" data-state-slot>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ws.ctx_src">检索来源</span><span class="lm-metric__value--md" data-field="ctx-sources">–</span></div>
       <div class="lm-metric"><span class="lm-metric__label" data-i18n="ws.ctx_data">数据引用</span><span class="lm-metric__value--md" data-field="ctx-data">–</span></div>
