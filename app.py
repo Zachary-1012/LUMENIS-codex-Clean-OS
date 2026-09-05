@@ -413,6 +413,66 @@ def case_analysis_ai_evaluate():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+@app.route('/api/case-analysis/create', methods=['POST'])
+def case_analysis_create():
+    """创建/更新案例深度拆解记录（写入 case_deep_analysis 表）。
+    Team5 修复：补齐 add_case() 写入链路断点——此前该方法存在但无任何路由调用。
+    """
+    try:
+        from case_deep_analysis import get_case_analysis
+        data = request.get_json(silent=True) or {}
+        if not data.get('case_title'):
+            return jsonify({'ok': False, 'error': '缺少必填字段 case_title'}), 400
+        analysis = get_case_analysis()
+        result = analysis.add_case(data)
+        if result.get('ok'):
+            return jsonify({'ok': True, **result})
+        return jsonify({'ok': False, 'error': result.get('error', '写入失败')}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/case-analysis/generate-from-event', methods=['POST'])
+def case_analysis_generate_from_event():
+    """从 events 表现有事件生成案例深度拆解（Event→Case 链路桥接）。"""
+    try:
+        import database as db
+        from case_deep_analysis import get_case_analysis
+        data = request.get_json(silent=True) or {}
+        event_id = data.get('event_id')
+        event_key = data.get('event_key')
+        if not event_id and not event_key:
+            return jsonify({'ok': False, 'error': '需提供 event_id 或 event_key'}), 400
+        with db.get_db() as conn:
+            if event_id:
+                row = conn.execute('SELECT * FROM events WHERE id=?', (event_id,)).fetchone()
+            else:
+                row = conn.execute('SELECT * FROM events WHERE event_key=?', (event_key,)).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': '事件不存在'}), 404
+        evt = dict(row)
+        case_data = {
+            'case_id': f"evt_{evt.get('event_key', evt.get('id', ''))}",
+            'case_title': evt.get('title', '未命名事件')[:200],
+            'brand': '广州太古汇',
+            'industry': '商业地产',
+            'year': int(str(evt.get('first_seen', ''))[:4]) if str(evt.get('first_seen', ''))[:4].isdigit() else 0,
+            'case_type': 'public_opinion' if evt.get('risk_level') in ('high', 'medium') else 'propagation',
+            'challenge': evt.get('summary', '')[:500],
+            'big_idea': evt.get('recommended_action', '')[:300],
+            'results': json.dumps({'mention_count': evt.get('mention_count', 0), 'source_count': evt.get('source_count', 0), 'risk_level': evt.get('risk_level', ''), 'risk_score': evt.get('risk_score', 0)}, ensure_ascii=False),
+            'methodology': json.dumps(['事件聚类', '风险分级', '主体过滤'], ensure_ascii=False),
+            'system_insights': json.dumps([f"风险等级={evt.get('risk_level', 'unknown')}", f"提及量={evt.get('mention_count', 0)}"], ensure_ascii=False),
+        }
+        analysis = get_case_analysis()
+        result = analysis.add_case(case_data)
+        if result.get('ok'):
+            return jsonify({'ok': True, **result, 'source_event': evt.get('event_key', '')})
+        return jsonify({'ok': False, 'error': result.get('error', '写入失败')}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 # V3.0 传播主体分类器API
 @app.route('/api/subject-classifier/classify', methods=['POST'])
 def subject_classify():
@@ -970,6 +1030,35 @@ def _report_deprecation_headers(resp):
                 resp.headers['Link'] = '</api/report-center/generate>; rel="successor-version"'
     except Exception:
         pass  # 绝不因标记失败影响响应
+    return resp
+
+
+# ===== Shard C: Security Headers (CSP / X-Frame-Options / X-Content-Type-Options) =====
+@app.after_request
+def _security_headers(resp):
+    try:
+        resp.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' ws: wss:; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "object-src 'none'; "
+            "upgrade-insecure-requests"
+        )
+        resp.headers['X-Frame-Options'] = 'DENY'
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        resp.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=(), payment=(), usb=()'
+        resp.headers['X-XSS-Protection'] = '1; mode=block'
+        resp.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+        resp.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+    except Exception:
+        pass
     return resp
 
 collect_tasks={}; _task_lock=threading.Lock(); _collect_lock=threading.Lock()

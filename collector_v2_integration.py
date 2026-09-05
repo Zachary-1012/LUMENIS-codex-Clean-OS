@@ -27,9 +27,10 @@ try:
     from collector_v2.pipeline.normalize import NoteNormalizer
     from collector_v2.pipeline.deduplicate import SimHashDeduplicator
     from collector_v2.pipeline.spam_filter import SpamFilter
-    from collector_v2.pipeline.subject_filter import SubjectFilter
+    from collector_v2.pipeline.subject_filter import SubjectFilter, filter_subject
     from collector_v2.pipeline.persist import NotePersister
     from collector_v2.scheduler.collector_job import Scheduler, CollectMode
+    from subject_rules import subject_hit_text
     V2_AVAILABLE = True
 except ImportError as e:
     V2_AVAILABLE = False
@@ -196,10 +197,10 @@ async def collect_with_v2(keywords: List[str], max_scroll: int = 3,
     stats['after_dedup'] = len(unique_notes)
     stats['duplicates_removed'] = len(valid_notes) - len(unique_notes)
     
-    # 5. 主体过滤
-    related_notes, excluded_notes = _subject_filter.filter_notes(unique_notes)
+    # 5. 主体过滤（T3修复：统一委托 subject_rules 权威口径，消除独立词表口径分叉）
+    related_notes = filter_subject(unique_notes, subject_hit_text)
     stats['after_subject_filter'] = len(related_notes)
-    stats['subject_excluded'] = len(excluded_notes)
+    stats['subject_excluded'] = len(unique_notes) - len(related_notes)
     
     # 6. 持久化
     if related_notes:
