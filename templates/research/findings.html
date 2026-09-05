@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Research Findings - LUMENIS{% endblock %}
+{% block page_title %}Research Findings{% endblock %}
+
+{% block content %}
+<!-- Page Status: PARTIALLY_CONNECTED -->
+<section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-size:18px;font-weight:600;">Research Findings</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+    </div>
+    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>PARTIALLY_CONNECTED</span></span>
+  </div>
+</section>
+
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Finding Pipeline</h3>
+        <span class="lm-badge lm-badge--ghost">PARTIALLY_CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">Research -> Finding -> Evidence -> Decision -> Product Improvement.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">External Research</h3>
+        <span class="lm-badge lm-badge--ghost">NO_DATA</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">外部研究必须经过 Evidence -> Finding -> Internal Proposal -> Human Review -> Implementation.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Research Pipeline</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">9阶段: DISCOVERY -> STUDY -> ABSTRACTION -> DESIGN -> IMPLEMENTATION -> TESTING -> REVIEW -> ACCEPTED/REJECTED.</div>
+      </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+// Research Findings page - runtime binding pending
+{% endblock %}

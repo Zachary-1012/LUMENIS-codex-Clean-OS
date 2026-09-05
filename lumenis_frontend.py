@@ -102,6 +102,71 @@ def research_workspace():
                            home_url="/lumenis/")
 
 
+# ========== P1 全产品页面（LUMENIS Full Product Visual Foundation） ==========
+
+@lumenis_bp.route("/intelligence/models")
+def models():
+    """Models / AI Gateway — 模型与引擎管理（Provider-agnostic）。"""
+    return render_template("intelligence/models.html", active_nav="models",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/intelligence/evidence")
+def evidence():
+    """Evidence Center — 证据中心（Evidence Chain + Trace）。"""
+    return render_template("intelligence/evidence.html", active_nav="evidence",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/monitoring")
+def monitoring():
+    """Monitoring — 生产监控（Collector + Runtime + Risk）。"""
+    return render_template("production/monitoring.html", active_nav="monitoring",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/cases")
+def cases():
+    """Case Library — 案例库（统一 Case Intelligence 入口）。"""
+    return render_template("production/cases.html", active_nav="cases",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/production/reports")
+def reports():
+    """Reports — 报告中心（日报/周报/月报/综合报告）。"""
+    return render_template("production/reports.html", active_nav="reports",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/research/findings")
+def findings():
+    """Research Findings — 研究发现（Finding Pipeline）。"""
+    return render_template("research/findings.html", active_nav="findings",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/operations/runtime")
+def runtime():
+    """Runtime — 运行时（Local Runtime + Health Check）。"""
+    return render_template("operations/runtime.html", active_nav="runtime",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/operations/permissions")
+def permissions():
+    """Permissions & Audit — 权限与审计（Permission Gate + Identity + Delegation）。"""
+    return render_template("operations/permissions.html", active_nav="permissions",
+                           home_url="/lumenis/")
+
+
+@lumenis_bp.route("/operations/repository")
+def repository():
+    """Repository Registry — 仓库注册（ZBC + OSAI 双核状态）。"""
+    return render_template("operations/repository.html", active_nav="repository",
+                           home_url="/lumenis/")
+
+
 # ========== Skill Hub API（真实端点，前端绑定用，零业务写操作） ==========
 
 # S01-S12 Canonical Skill 清单（与 OSAI Skill Registry 对齐）

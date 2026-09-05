@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Reports - LUMENIS{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<!-- Page Status: CONNECTED -->
+<section class="lm-card lm-card--flat" style="margin-bottom:var(--lm-space-md);">
+  <div class="lm-card__body lm-row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-size:18px;font-weight:600;">Reports</div>
+      <div style="font-size:13px;color:var(--lm-text-secondary);margin-top:4px;">LUMENIS Intelligence OS</div>
+    </div>
+    <span class="lm-status"><span class="lm-dot lm-dot--warning"></span><span>CONNECTED</span></span>
+  </div>
+</section>
+
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Report Pipeline</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">日报 / 周报 / 月报 / 营销传播综合报告 / 传播主体分析报告 / 事件因果溯源报告.</div>
+      </div>
+    </section>
+    <section class="lm-card" style="margin-bottom:var(--lm-space-md);">
+      <div class="lm-card__head">
+        <h3 class="lm-card__title">Daily Report</h3>
+        <span class="lm-badge lm-badge--ghost">CONNECTED</span>
+      </div>
+      <div class="lm-card__body">
+        <div style="color:var(--lm-text-secondary);font-size:13px;line-height:1.7;">按 publish_datetime 统计，主体过滤保持 subject_hit() 口径.</div>
+      </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+// Reports page - runtime binding pending
+{% endblock %}
