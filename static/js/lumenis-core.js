@@ -180,6 +180,25 @@
     requestAnimationFrame(frame);
   }
 
+  /* ---------- XSS 防护：HTML 转义（所有动态内容插入 innerHTML 前必须调用） ---------- */
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
+      .replace(/`/g, "&#96;")
+      .replace(/\//g, "&#x2F;");
+  }
+
+  /* ---------- 安全 innerHTML：trusted=true 才允许 HTML，否则 textContent ---------- */
+  function safeSetHTML(el, html, trusted) {
+    if (!el) return;
+    if (trusted) { el.innerHTML = html; } else { el.textContent = html; }
+  }
+
   var LUMENIS = {
     UI_STATES: UI_STATES,
     Theme: Theme,
@@ -188,7 +207,9 @@
     store: new StateStore(),
     bindState: bindState,
     toast: toast,
-    countUp: countUp
+    countUp: countUp,
+    escapeHtml: escapeHtml,
+    safeSetHTML: safeSetHTML
   };
   global.LUMENIS = LUMENIS;
 
