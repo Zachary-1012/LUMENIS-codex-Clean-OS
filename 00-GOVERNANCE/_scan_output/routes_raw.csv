@@ -1,0 +1,316 @@
+﻿file,line,path,content
+ai_api.py,25,/api/ai/status,@bp.route('/api/ai/status')
+ai_api.py,30,/api/ai/test,"@bp.route('/api/ai/test', methods=['POST'])"
+ai_api.py,59,/api/ark/status,@bp.route('/api/ark/status')
+ai_api.py,70,/api/ark/chat,"@bp.route('/api/ark/chat', methods=['POST'])"
+ai_api.py,103,/api/ark/sentiment,"@bp.route('/api/ark/sentiment', methods=['POST'])"
+ai_api.py,138,/api/ark/summary,"@bp.route('/api/ark/summary', methods=['POST'])"
+ai_api.py,176,/api/ark/keywords,"@bp.route('/api/ark/keywords', methods=['POST'])"
+ai_api.py,222,/api/ai-learning/status,@bp.route('/api/ai-learning/status')
+ai_api.py,232,/api/web-sentiment/search,"@bp.route('/api/web-sentiment/search', methods=['POST'])"
+ai_api.py,247,/api/web-sentiment/history,@bp.route('/api/web-sentiment/history')
+ai_api.py,260,/api/ai/chat,"@bp.route('/api/ai/chat', methods=['POST'])"
+ai_api.py,294,/api/ai/providers,@bp.route('/api/ai/providers')
+ai_api.py,314,/api/ai/analyze-v570,"@bp.route('/api/ai/analyze-v570',methods=['POST'])"
+ai_api.py,330,/api/ai-filter/stats,@bp.route('/api/ai-filter/stats')
+ai_api.py,334,/api/ai-filter/run,"@bp.route('/api/ai-filter/run', methods=['POST'])"
+ai_api.py,346,/api/ai-filter/cleanup,"@bp.route('/api/ai-filter/cleanup', methods=['POST'])"
+ai_api.py,353,/api/ai/channel-health,"@bp.route('/api/ai/channel-health', methods=['GET'])"
+ai_api.py,369,/api/ai/analyze,"@bp.route('/api/ai/analyze', methods=['POST'])"
+ai_api.py,392,/api/ai-learning/optimization/<operation_type>,@bp.route('/api/ai-learning/optimization/<operation_type>')
+app.py,192,/api/local-import,"@app.route('/api/local-import', methods=['POST'])"
+app.py,256,/api/brand-knowledge/stats,@app.route('/api/brand-knowledge/stats')
+app.py,266,/api/brand-knowledge/search,@app.route('/api/brand-knowledge/search')
+app.py,282,/api/case-analysis/stats,@app.route('/api/case-analysis/stats')
+app.py,292,/api/case-analysis/list,@app.route('/api/case-analysis/list')
+app.py,316,/api/case-analysis/detail,@app.route('/api/case-analysis/detail')
+app.py,332,/api/case-analysis/search,@app.route('/api/case-analysis/search')
+app.py,346,/api/case-analysis/methodology,@app.route('/api/case-analysis/methodology')
+app.py,357,/api/case-analysis/system-insights,@app.route('/api/case-analysis/system-insights')
+app.py,368,/api/case-analysis/template-match,"@app.route('/api/case-analysis/template-match', methods=['GET', 'POST'])"
+app.py,386,/api/case-analysis/crisis-sop,@app.route('/api/case-analysis/crisis-sop')
+app.py,396,/api/case-analysis/ai-evaluate,"@app.route('/api/case-analysis/ai-evaluate', methods=['POST'])"
+app.py,417,/api/subject-classifier/classify,"@app.route('/api/subject-classifier/classify', methods=['POST'])"
+app.py,436,/api/subject-classifier/types,@app.route('/api/subject-classifier/types')
+app.py,450,/api/event-graph/stats,@app.route('/api/event-graph/stats')
+app.py,460,/api/event-graph/events,@app.route('/api/event-graph/events')
+app.py,482,/api/event-graph/chain/<event_id>,@app.route('/api/event-graph/chain/<event_id>')
+app.py,494,/api/event-graph/types,@app.route('/api/event-graph/types')
+app.py,508,/api/event-graph/events,"@app.route('/api/event-graph/events', methods=['POST'])"
+app.py,532,/api/event-graph/relations,"@app.route('/api/event-graph/relations', methods=['POST'])"
+app.py,556,/api/creative/ideas,"@app.route('/api/creative/ideas', methods=['POST'])"
+app.py,593,/api/creative/video-script,"@app.route('/api/creative/video-script', methods=['POST'])"
+app.py,617,/api/creative/social-ops,"@app.route('/api/creative/social-ops', methods=['POST'])"
+app.py,642,/api/creative/pitch-analyze,"@app.route('/api/creative/pitch-analyze', methods=['POST'])"
+app.py,671,/api/creative/pitch-export,"@app.route('/api/creative/pitch-export', methods=['POST'])"
+app.py,704,/api/event-graph/import,"@app.route('/api/event-graph/import', methods=['POST'])"
+app.py,719,/api/event-graph/rebuild-relations,"@app.route('/api/event-graph/rebuild-relations', methods=['POST'])"
+app.py,738,/api/v2/marketing/overview,@app.route('/api/v2/marketing/overview')
+app.py,790,/api/v2/global-bil/overview,@app.route('/api/v2/global-bil/overview')
+app.py,791,/api/v2/global-bil/<resource>,@app.route('/api/v2/global-bil/<resource>')
+app.py,807,/api/event-graph/events/<event_id>,"@app.route('/api/event-graph/events/<event_id>', methods=['DELETE'])"
+app.py,857,/api/proxy/status,@app.route('/api/proxy/status')
+app.py,863,/api/proxy/check,"@app.route('/api/proxy/check', methods=['POST'])"
+app.py,880,/api/auth/config,@app.route('/api/auth/config')
+app.py,1291,/api/brand-stats,@app.route('/api/brand-stats')
+app.py,1541,/,@app.route('/')
+app.py,1543,/favicon.ico,@app.route('/favicon.ico')
+app.py,1547,/api/metrics/canonical,@app.route('/api/metrics/canonical')
+app.py,1586,/api/intelligence/refresh,"@app.route('/api/intelligence/refresh',methods=['POST'])"
+app.py,1604,/api/ai-governance/status,@app.route('/api/ai-governance/status')
+app.py,1612,/api/collector/browser/start,"@app.route('/api/collector/browser/start', methods=['POST'])"
+app.py,1626,/api/collector/browser/stop,"@app.route('/api/collector/browser/stop', methods=['POST'])"
+app.py,1637,/api/xhs/runtime-check,"@app.route('/api/xhs/runtime-check', methods=['GET', 'POST'])"
+app.py,1666,/api/xhs/switch-account,"@app.route('/api/xhs/switch-account', methods=['POST'])"
+app.py,1695,/api/xhs/accounts,"@app.route('/api/xhs/accounts', methods=['GET'])"
+app.py,1758,/api/resident/health,"@app.route('/api/resident/health', methods=['GET'])"
+app.py,1780,/api/resident/recover,"@app.route('/api/resident/recover', methods=['POST'])"
+app.py,1802,/api/cases/stats,@app.route('/api/cases/stats')
+app.py,1812,/api/cases/list,@app.route('/api/cases/list')
+app.py,1828,/api/cases/import,"@app.route('/api/cases/import', methods=['POST'])"
+app.py,1838,/api/cases/taikoo-hui,@app.route('/api/cases/taikoo-hui')
+app.py,1848,/api/cases/other-malls,@app.route('/api/cases/other-malls')
+app.py,1858,/api/cases/brands,@app.route('/api/cases/brands')
+app.py,1871,/api/brand-industry/brands,@app.route('/api/brand-industry/brands')
+app.py,1884,/api/brand-industry/brands/<path:name>,@app.route('/api/brand-industry/brands/<path:name>')
+app.py,1931,/api/brand-industry/stats,@app.route('/api/brand-industry/stats')
+app.py,1950,/api/brand-industry/recompute,"@app.route('/api/brand-industry/recompute', methods=['POST'])"
+app.py,1960,/api/negative-review/stats,@app.route('/api/negative-review/stats')
+app.py,1991,/api/developer/run,"@app.route('/api/developer/run', methods=['POST'])"
+app.py,2002,/api/settings,@app.route('/api/settings')
+app.py,2018,/api/search,"@app.route('/api/search', methods=['GET', 'POST'])"
+app.py,2025,/api/function-map,@app.route('/api/function-map')
+app.py,2029,/api/translate,"@app.route('/api/translate',methods=['POST'])"
+app.py,2038,/api/notes/historical,@app.route('/api/notes/historical')
+app.py,2069,/api/platform-health,@app.route('/api/platform-health')
+app.py,2079,/api/network/status,@app.route('/api/network/status')
+app.py,2084,/api/network/reset,"@app.route('/api/network/reset', methods=['POST'])"
+app.py,2090,/api/cache/status,@app.route('/api/cache/status')
+app.py,2095,/api/cache/data,@app.route('/api/cache/data')
+app.py,2103,/api/cache/create,"@app.route('/api/cache/create', methods=['POST'])"
+app.py,2109,/api/cache/snapshots,@app.route('/api/cache/snapshots')
+app.py,2114,/api/collect,"@app.route('/api/collect',methods=['POST'])"
+app.py,2127,/api/collect/status/<task_id>,@app.route('/api/collect/status/<task_id>')
+app.py,2131,/api/collect/tasks,@app.route('/api/collect/tasks')
+app.py,2135,/api/analyze,"@app.route('/api/analyze',methods=['POST'])"
+app.py,2154,/api/note/<note_id>,@app.route('/api/note/<note_id>')
+app.py,2155,/api/notes/<note_id>,@app.route('/api/notes/<note_id>')
+app.py,2161,/api/historical-notes,@app.route('/api/historical-notes')
+app.py,2166,/api/backup,"@app.route('/api/backup',methods=['POST'])"
+app.py,2179,/api/weekly/events,@app.route('/api/weekly/events')
+app.py,2185,/api/web/browser-discovery,"@app.route('/api/web/browser-discovery',methods=['POST'])"
+app.py,2193,/api/web/brand-industry/plan,@app.route('/api/web/brand-industry/plan')
+app.py,2200,/api/web/brand-industry/run,"@app.route('/api/web/brand-industry/run',methods=['POST'])"
+app.py,2214,/api/notes/publish-buckets,@app.route('/api/notes/publish-buckets')
+app.py,2222,/api/trends/global,@app.route('/api/trends/global')
+app.py,2236,/api/dashboard/changes,@app.route('/api/dashboard/changes')
+app.py,2243,/api/notes/library,@app.route('/api/notes/library')
+app.py,2298,/remote,@app.route('/remote')
+app.py,2323,/healthz,@app.route('/healthz')
+app.py,2327,/api/health,@app.route('/api/health')
+app.py,2367,/api/system/health,@app.route('/api/system/health')
+app.py,2386,/api/collector-guard/status,@app.route('/api/collector-guard/status')
+app.py,2396,/api/overview,@app.route('/api/overview')
+app.py,2413,/api/status,@app.route('/api/status')
+app.py,2421,/api/rednote/collect,"@app.route('/api/rednote/collect', methods=['POST'])"
+app.py,2488,/api/alerts,@app.route('/api/alerts')
+app.py,2498,/api/alerts/read,"@app.route('/api/alerts/read', methods=['POST'])"
+app.py,2513,/api/alerts/refresh,"@app.route('/api/alerts/refresh', methods=['POST'])"
+app.py,2519,/api/test/export,@app.route('/api/test/export')
+app.py,2539,/api/negative/pending,@app.route('/api/negative/pending')
+app.py,2604,/api/negative/confirm,"@app.route('/api/negative/confirm', methods=['POST'])"
+app.py,2612,/api/negative/reject,"@app.route('/api/negative/reject', methods=['POST'])"
+app.py,2620,/api/negative-review/<note_id>/confirm,"@app.route('/api/negative-review/<note_id>/confirm', methods=['POST'])"
+app.py,2627,/api/negative-review/<note_id>/reject,"@app.route('/api/negative-review/<note_id>/reject', methods=['POST'])"
+app.py,2680,/api/event-review/<event_id>/confirm,"@app.route('/api/event-review/<event_id>/confirm', methods=['POST'])"
+app.py,2690,/api/event-review/<event_id>/reject,"@app.route('/api/event-review/<event_id>/reject', methods=['POST'])"
+app.py,2699,/api/event-review/pending,@app.route('/api/event-review/pending')
+app.py,2714,/api/event-review/stats,@app.route('/api/event-review/stats')
+app.py,2727,/api/events/<event_id>/notes,@app.route('/api/events/<event_id>/notes')
+app.py,2767,/api/negative/stats,@app.route('/api/negative/stats')
+app.py,2800,/api/reports/export,"@app.get(""/api/reports/export"")"
+app.py,2826,/api/reports/export-all,"@app.get(""/api/reports/export-all"")"
+app.py,2836,/api/engineering-metrics,"@app.get(""/api/engineering-metrics"")"
+app.py,2847,/api/system/config,@app.route('/api/system/config')
+app.py,2863,/api/system/config,"@app.route('/api/system/config', methods=['POST'])"
+app.py,2896,/api/config/company-domain,"@app.route('/api/config/company-domain', methods=['GET', 'POST'])"
+app.py,2917,/api/config/emails,"@app.route('/api/config/emails', methods=['GET', 'POST', 'DELETE'])"
+app.py,2942,/api/config/run-code,"@app.route('/api/config/run-code', methods=['POST'])"
+app.py,2958,/api/config/brand-directory,@app.route('/api/config/brand-directory')
+app.py,2965,/api/brands,@app.route('/api/brands')
+app.py,2984,/api/brands,"@app.route('/api/brands', methods=['POST'])"
+app.py,3015,/api/brands/<brand_en>,"@app.route('/api/brands/<brand_en>', methods=['PUT'])"
+app.py,3035,/api/brands/<brand_en>,"@app.route('/api/brands/<brand_en>', methods=['DELETE'])"
+app.py,3065,/api/official-info,@app.route('/api/official-info')
+app.py,3082,/api/official-info/collect,"@app.route('/api/official-info/collect', methods=['POST'])"
+app.py,3115,/api/cases,@app.route('/api/cases')
+app.py,3137,/api/cases/<case_id>,@app.route('/api/cases/<case_id>')
+app.py,3146,/api/cases,"@app.route('/api/cases', methods=['POST'])"
+app.py,3177,/api/cases/match,@app.route('/api/cases/match')
+app.py,3194,/api/special-report/generate,"@app.route('/api/special-report/generate', methods=['POST'])"
+app.py,3342,/api/config/email-settings,"@app.route('/api/config/email-settings', methods=['GET','POST'])"
+app.py,3461,/api/weekly/send-email,"@app.route('/api/weekly/send-email', methods=['POST'])"
+app.py,3544,/api/special-report/check-trigger,@app.route('/api/special-report/check-trigger')
+app.py,3789,/api/xhs/p0/status,"@app.route('/api/xhs/p0/status', methods=['GET'])"
+app.py,3797,/api/xhs/p0/recovery/complete,"@app.route('/api/xhs/p0/recovery/complete', methods=['POST'])"
+app.py,3807,/api/xhs/p0/collection,"@app.route('/api/xhs/p0/collection', methods=['POST'])"
+app.py,3821,/api/stability/status,"@app.route('/api/stability/status', methods=['GET'])"
+app.py,3832,/api/stability/heartbeat,"@app.route('/api/stability/heartbeat', methods=['GET'])"
+app.py,3854,/api/stability/crash-log,"@app.route('/api/stability/crash-log', methods=['GET'])"
+app.py,3872,/api/dashboard/all,"@app.route('/api/dashboard/all', methods=['GET'])"
+app.py,4061,/api/weibo/login-status,"@app.route('/api/weibo/login-status', methods=['GET'])"
+app.py,4072,/api/weibo/start-login,"@app.route('/api/weibo/start-login', methods=['POST'])"
+app.py,4092,/api/weibo/clear-login,"@app.route('/api/weibo/clear-login', methods=['POST'])"
+app.py,4103,/api/weibo/cookies,"@app.route('/api/weibo/cookies', methods=['GET'])"
+app.py,4120,/api/bilibili/login-status,"@app.route('/api/bilibili/login-status', methods=['GET'])"
+app.py,4131,/api/bilibili/search,"@app.route('/api/bilibili/search', methods=['GET'])"
+app.py,4147,/api/bilibili/clear-login,"@app.route('/api/bilibili/clear-login', methods=['POST'])"
+app.py,4159,/api/web/collect,"@app.route('/api/web/collect', methods=['POST'])"
+app.py,4282,/api/web/topics,"@app.route('/api/web/topics', methods=['GET'])"
+app.py,4301,/api/web/topics/refresh,"@app.route('/api/web/topics/refresh', methods=['POST'])"
+app.py,4313,/api/web/events,"@app.route('/api/web/events', methods=['GET'])"
+app.py,4332,/api/web/brand-industry,"@app.route('/api/web/brand-industry', methods=['GET'])"
+app.py,4363,/api/collection/counter,"@app.route('/api/collection/counter', methods=['GET'])"
+app.py,4522,/api/web-topics,@app.route('/api/web-topics')
+app.py,4541,/api/web-topics/refresh,"@app.route('/api/web-topics/refresh', methods=['POST'])"
+app.py,4551,/api/dev/run-code,"@app.route('/api/dev/run-code', methods=['POST'])"
+app.py,4583,/api/workspace/file-tree,@app.route('/api/workspace/file-tree')
+app.py,4616,/api/workspace/term,"@app.route('/api/workspace/term', methods=['POST'])"
+app.py,4668,/api/workspace/file,@app.route('/api/workspace/file')
+app.py,4701,/api/pr/cases,@app.route('/api/pr/cases')
+app.py,4715,/api/pr/cases/<case_id>,@app.route('/api/pr/cases/<case_id>')
+app.py,4728,/api/pr/match,"@app.route('/api/pr/match', methods=['POST'])"
+app.py,4747,/api/pr/recommend,"@app.route('/api/pr/recommend', methods=['POST'])"
+app.py,4760,/api/pr/templates,@app.route('/api/pr/templates')
+app.py,4774,/api/pr/statistics,@app.route('/api/pr/statistics')
+app.py,4784,/api/pr/check-trigger,"@app.route('/api/pr/check-trigger', methods=['POST'])"
+app.py,4816,/api/ai-resource-packs/status,@app.route('/api/ai-resource-packs/status')
+app.py,4825,/api/ai-resource-packs/glm-4-5-air,@app.route('/api/ai-resource-packs/glm-4-5-air')
+app.py,4834,/api/ai-resource-packs/pause,"@app.route('/api/ai-resource-packs/pause', methods=['POST'])"
+app.py,4845,/api/ai-resource-packs/resume,"@app.route('/api/ai-resource-packs/resume', methods=['POST'])"
+app.py,4854,/api/ai-resource-packs/per-call-execute,"@app.route('/api/ai-resource-packs/per-call-execute', methods=['POST'])"
+app.py,4870,/api/v4/api-keys,@app.route('/api/v4/api-keys')
+app.py,4889,/api/v4/api-keys/generate,"@app.route('/api/v4/api-keys/generate', methods=['POST'])"
+app.py,4935,/api/v4/api-keys/revoke,"@app.route('/api/v4/api-keys/revoke', methods=['POST'])"
+app.py,5064,/api/xhs/login/start,"@app.route('/api/xhs/login/start', methods=['POST'])"
+app.py,5087,/api/xhs/login/status,@app.route('/api/xhs/login/status')
+app.py,5131,/api/xhs/login/save,"@app.route('/api/xhs/login/save', methods=['POST'])"
+app.py,5178,/api/search/enhance,"@app.route('/api/search/enhance', methods=['POST'])"
+app.py,5196,/api/learning/scan,"@app.route('/api/learning/scan', methods=['POST'])"
+app.py,5208,/api/learning/history,@app.route('/api/learning/history')
+app.py,5218,/api/xhs/optimizer/config,@app.route('/api/xhs/optimizer/config')
+app.py,5229,/api/xhs/optimizer/classify,"@app.route('/api/xhs/optimizer/classify', methods=['POST'])"
+app.py,5243,/api/xhs/rednote/keepalive,@app.route('/api/xhs/rednote/keepalive')
+app.py,5255,/api/xhs/keepalive/mark,"@app.route('/api/xhs/keepalive/mark', methods=['POST'])"
+app.py,5269,/api/xhs/keepalive/recheck,"@app.route('/api/xhs/keepalive/recheck', methods=['POST'])"
+app.py,5285,/api/xhs/rednote/check-login,"@app.route('/api/xhs/rednote/check-login', methods=['POST'])"
+app.py,5298,/api/cookies/import,"@app.route('/api/cookies/import', methods=['POST'])"
+app.py,5391,/api/cookies/import/status,"@app.route('/api/cookies/import/status', methods=['GET'])"
+app.py,5415,/api/cookies/import/raw,"@app.route('/api/cookies/import/raw', methods=['POST'])"
+app_evidence.py,290,/api/app_evidence/stats,"@app.route('/api/app_evidence/stats', methods=['GET'])"
+app_evidence.py,294,/api/app_evidence/list,"@app.route('/api/app_evidence/list', methods=['GET'])"
+app_evidence.py,304,/api/app_evidence/<int:record_id>,"@app.route('/api/app_evidence/<int:record_id>', methods=['GET'])"
+app_evidence.py,311,/api/app_evidence/upload,"@app.route('/api/app_evidence/upload', methods=['POST'])"
+app_evidence.py,359,/api/app_evidence/<int:record_id>/confirm,"@app.route('/api/app_evidence/<int:record_id>/confirm', methods=['POST'])"
+app_evidence.py,369,/api/app_evidence/<int:record_id>/reject,"@app.route('/api/app_evidence/<int:record_id>/reject', methods=['POST'])"
+app_evidence.py,378,/api/app_evidence/<int:record_id>/shadow,"@app.route('/api/app_evidence/<int:record_id>/shadow', methods=['POST'])"
+app_evidence.py,387,/api/app_evidence/<int:record_id>,"@app.route('/api/app_evidence/<int:record_id>', methods=['DELETE'])"
+app_refactor_blueprint.py,194,/api/health,@app.route('/api/health')
+browser_runtime_api.py,22,/api/browser-runtime/status,"@bp.route(""/api/browser-runtime/status"", methods=[""GET""])"
+browser_runtime_api.py,36,/api/browser-runtime/probe,"@bp.route(""/api/browser-runtime/probe"", methods=[""POST""])"
+browser_surface_api.py,37,/api/browser-surface/capabilities,"@bp.route(""/api/browser-surface/capabilities"", methods=[""GET""])"
+browser_surface_api.py,41,/api/browser-surface/policy,"@bp.route(""/api/browser-surface/policy"", methods=[""GET""])"
+browser_surface_api.py,56,/api/browser-surface/tabs,"@bp.route(""/api/browser-surface/tabs"", methods=[""GET""])"
+browser_surface_api.py,60,/api/browser-surface/tab/new,"@bp.route(""/api/browser-surface/tab/new"", methods=[""POST""])"
+browser_surface_api.py,70,/api/browser-surface/tab/close,"@bp.route(""/api/browser-surface/tab/close"", methods=[""POST""])"
+browser_surface_api.py,74,/api/browser-surface/tab/activate,"@bp.route(""/api/browser-surface/tab/activate"", methods=[""POST""])"
+browser_surface_api.py,78,/api/browser-surface/tab/navigate,"@bp.route(""/api/browser-surface/tab/navigate"", methods=[""POST""])"
+browser_surface_api.py,93,/api/browser-surface/extract,"@bp.route(""/api/browser-surface/extract"", methods=[""POST"", ""GET""])"
+browser_surface_api.py,106,/api/browser-surface/search,"@bp.route(""/api/browser-surface/search"", methods=[""GET"", ""POST""])"
+browser_surface_api.py,128,/api/browser-surface/bookmarks,"@bp.route(""/api/browser-surface/bookmarks"", methods=[""GET"", ""POST""])"
+browser_surface_api.py,135,/api/browser-surface/bookmark/remove,"@bp.route(""/api/browser-surface/bookmark/remove"", methods=[""POST""])"
+browser_surface_api.py,141,/api/browser-surface/history,"@bp.route(""/api/browser-surface/history"", methods=[""GET"", ""POST""])"
+browser_surface_api.py,152,/api/browser-surface/history/clear,"@bp.route(""/api/browser-surface/history/clear"", methods=[""POST""])"
+browser_surface_api.py,157,/api/browser-surface/nav-config,"@bp.route(""/api/browser-surface/nav-config"", methods=[""GET"", ""POST""])"
+browser_surface_api.py,170,/api/browser-surface/general-browser/status,"@bp.route(""/api/browser-surface/general-browser/status"", methods=[""GET""])"
+browser_surface_api.py,176,/api/browser-surface/general-browser/ensure,"@bp.route(""/api/browser-surface/general-browser/ensure"", methods=[""POST""])"
+browser_surface_api.py,181,/api/browser-surface/general-browser/stop,"@bp.route(""/api/browser-surface/general-browser/stop"", methods=[""POST""])"
+browser_surface_api.py,186,/api/browser-surface/find,"@bp.route(""/api/browser-surface/find"", methods=[""POST""])"
+browser_surface_api.py,196,/api/browser-surface/find/stop,"@bp.route(""/api/browser-surface/find/stop"", methods=[""POST""])"
+browser_surface_api.py,201,/api/browser-surface/downloads/config,"@bp.route(""/api/browser-surface/downloads/config"", methods=[""POST""])"
+browser_surface_api.py,209,/api/browser-surface/downloads,"@bp.route(""/api/browser-surface/downloads"", methods=[""GET""])"
+browser_surface_api.py,214,/api/browser-surface/hybrid/analyze,"@bp.route(""/api/browser-surface/hybrid/analyze"", methods=[""POST""])"
+browser_surface_api.py,234,/api/browser-surface/downloads/monitor/start,"@bp.route(""/api/browser-surface/downloads/monitor/start"", methods=[""POST""])"
+browser_surface_api.py,238,/api/browser-surface/downloads/monitor/stop,"@bp.route(""/api/browser-surface/downloads/monitor/stop"", methods=[""POST""])"
+browser_surface_api.py,242,/api/browser-surface/downloads/monitor/status,"@bp.route(""/api/browser-surface/downloads/monitor/status"", methods=[""GET""])"
+browser_surface_api.py,246,/api/browser-surface/downloads/active,"@bp.route(""/api/browser-surface/downloads/active"", methods=[""GET""])"
+browser_surface_api.py,250,/api/browser-surface/downloads/cancel,"@bp.route(""/api/browser-surface/downloads/cancel"", methods=[""POST""])"
+collection_api.py,22,/api/collector/status,"@bp.route('/api/collector/status', endpoint='api_collector_status')"
+collection_api.py,32,/api/collect/schedule-status,"@bp.route('/api/collect/schedule-status', endpoint='api_collect_schedule_status')"
+collection_api.py,102,/api/collector/start,"@bp.route('/api/collector/start', methods=['POST'], endpoint='api_collector_start')"
+collection_api.py,118,/api/collector/stop,"@bp.route('/api/collector/stop', methods=['POST'], endpoint='api_collector_stop')"
+collection_api.py,128,/api/collector/history,"@bp.route('/api/collector/history', endpoint='api_collector_history')"
+collection_api.py,140,/api/xhs/collect-health,"@bp.route('/api/xhs/collect-health', endpoint='api_xhs_collect_health')"
+collection_api.py,162,/api/xhs/cookie/status,@bp.route('/api/xhs/cookie/status')
+collection_api.py,167,/api/xhs/cookie/sync,"@bp.route('/api/xhs/cookie/sync',methods=['POST'])"
+collection_api.py,182,/api/xhs/collect-pause,"@bp.route('/api/xhs/collect-pause',methods=['POST'])"
+collection_api.py,190,/api/xhs/collect-resume,"@bp.route('/api/xhs/collect-resume',methods=['POST'])"
+collection_api.py,196,/api/xhs/collect-pause-state,"@bp.route('/api/xhs/collect-pause-state',methods=['GET'])"
+collection_api.py,202,/api/xhs/cookie/sync/<task_id>,@bp.route('/api/xhs/cookie/sync/<task_id>')
+collector_v2_integration.py,105,/api/collector-v2/status,@app.route('/api/collector-v2/status')
+collector_v2_integration.py,117,/api/collector-v2/collect,"@app.route('/api/collector-v2/collect', methods=['POST'])"
+collector_v2_integration.py,134,/api/collector-v2/scheduler/status,@app.route('/api/collector-v2/scheduler/status')
+data_query_api.py,21,/api/stats,"@bp.route('/api/stats', endpoint='api_stats')"
+data_query_api.py,27,/api/notes,"@bp.route('/api/notes', endpoint='api_notes')"
+data_query_api.py,54,/api/risk-alerts,"@bp.route('/api/risk-alerts', endpoint='api_risk_alerts')"
+data_query_api.py,58,/api/hot-notes,"@bp.route('/api/hot-notes', endpoint='api_hot_notes')"
+data_query_api.py,62,/api/comments,"@bp.route('/api/comments', endpoint='api_comments')"
+data_query_api.py,68,/api/events,"@bp.route('/api/events', endpoint='api_events')"
+data_query_api.py,79,/api/web-mentions,"@bp.route('/api/web-mentions', endpoint='api_web_mentions')"
+data_query_api.py,84,/api/feedback-keywords,"@bp.route('/api/feedback-keywords', endpoint='api_feedback_keywords')"
+data_query_api.py,88,/api/hot-topics,"@bp.route('/api/hot-topics', endpoint='api_hot_topics')"
+data_query_api.py,93,/api/metric-trend,"@bp.route('/api/metric-trend', endpoint='api_metric_trend')"
+data_query_api.py,105,/api/resource-guard,"@bp.route('/api/resource-guard', endpoint='api_resource_guard')"
+evidence_api.py,17,/api/evidence/stats,"@bp.route(""/api/evidence/stats"", methods=[""GET""])"
+evidence_api.py,25,/api/evidence/list,"@bp.route(""/api/evidence/list"", methods=[""GET""])"
+evidence_api.py,45,/api/evidence/<int:record_id>,"@bp.route(""/api/evidence/<int:record_id>"", methods=[""GET""])"
+evidence_api.py,57,/api/evidence/timeline,"@bp.route(""/api/evidence/timeline"", methods=[""GET""])"
+internal_browser.py,419,/api/internal-browser/accounts,"@bp.route(""/api/internal-browser/accounts"", methods=[""GET""])"
+internal_browser.py,423,/api/internal-browser/state,"@bp.route(""/api/internal-browser/state"", methods=[""GET""])"
+internal_browser.py,428,/api/internal-browser/screenshot,"@bp.route(""/api/internal-browser/screenshot"", methods=[""GET""])"
+internal_browser.py,438,/api/internal-browser/navigate,"@bp.route(""/api/internal-browser/navigate"", methods=[""POST""])"
+internal_browser.py,443,/api/internal-browser/evaluate,"@bp.route(""/api/internal-browser/evaluate"", methods=[""POST""])"
+internal_browser.py,448,/api/internal-browser/click,"@bp.route(""/api/internal-browser/click"", methods=[""POST""])"
+internal_browser.py,457,/api/internal-browser/type,"@bp.route(""/api/internal-browser/type"", methods=[""POST""])"
+internal_browser.py,462,/api/internal-browser/scroll,"@bp.route(""/api/internal-browser/scroll"", methods=[""POST""])"
+internal_browser.py,467,/api/internal-browser/history,"@bp.route(""/api/internal-browser/history"", methods=[""POST""])"
+internal_browser.py,475,/api/internal-browser/find,"@bp.route(""/api/internal-browser/find"", methods=[""POST""])"
+internal_browser.py,480,/api/internal-browser/click-selector,"@bp.route(""/api/internal-browser/click-selector"", methods=[""POST""])"
+internal_browser.py,489,/api/internal-browser/type-into,"@bp.route(""/api/internal-browser/type-into"", methods=[""POST""])"
+internal_browser.py,498,/api/internal-browser/task,"@bp.route(""/api/internal-browser/task"", methods=[""POST""])"
+internal_browser_stream.py,241,/api/internal-browser/stream,"@bp.route(""/api/internal-browser/stream"")"
+internal_browser_stream.py,285,/api/internal-browser/stream-state,"@bp.route(""/api/internal-browser/stream-state"")"
+swire_group.py,223,/api/swire/overview,@app.route('/api/swire/overview')
+swire_group.py,260,/api/swire/events,@app.route('/api/swire/events')
+swire_group.py,289,/api/swire/notes,@app.route('/api/swire/notes')
+swire_group.py,319,/api/swire/event,"@app.route('/api/swire/event', methods=['POST'])"
+swire_group.py,341,/api/swire/brand-detail,@app.route('/api/swire/brand-detail')
+swire_group.py,377,/api/swire/brand-remove,"@app.route('/api/swire/brand-remove', methods=['POST'])"
+swire_group.py,396,/api/swire/brand-save,"@app.route('/api/swire/brand-save', methods=['POST'])"
+swire_group.py,435,/api/swire/brand-collect,"@app.route('/api/swire/brand-collect', methods=['POST'])"
+topic_campaign.py,871,/topic-campaign,@app.route('/topic-campaign')
+topic_campaign.py,875,/api/topic-campaign/status,@app.route('/api/topic-campaign/status')
+topic_campaign.py,910,/api/topic-campaign/topics,@app.route('/api/topic-campaign/topics')
+topic_campaign.py,920,/api/topic-campaign/run,"@app.route('/api/topic-campaign/run', methods=['POST'])"
+topic_campaign.py,936,/api/topic-campaign/recover,"@app.route('/api/topic-campaign/recover', methods=['POST'])"
+topic_campaign.py,970,/api/topic-campaign/runtime-state,@app.route('/api/topic-campaign/runtime-state')
+topic_campaign.py,978,/api/topic-campaign/half-open-probe,"@app.route('/api/topic-campaign/half-open-probe', methods=['POST'])"
+topic_campaign.py,989,/api/topic-campaign/note/<note_id>,@app.route('/api/topic-campaign/note/<note_id>')
+topic_campaign.py,1013,/api/topic-campaign/backfill-detail,"@app.route('/api/topic-campaign/backfill-detail', methods=['POST'])"
+topic_campaign.py,1047,/api/topic-campaign/timeline,@app.route('/api/topic-campaign/timeline')
+topic_campaign.py,1064,/api/topic-campaign/stats,@app.route('/api/topic-campaign/stats')
+topic_campaign.py,1153,/api/topic-campaign/notes,@app.route('/api/topic-campaign/notes')
+topic_campaign.py,1170,/api/topic-campaign/export,@app.route('/api/topic-campaign/export')
+topic_campaign.py,1195,/api/topic-campaign/campaigns,@app.route('/api/topic-campaign/campaigns')
+topic_campaign.py,1212,/api/topic-campaign/campaign-save,"@app.route('/api/topic-campaign/campaign-save', methods=['POST'])"
+topic_campaign.py,1255,/api/topic-campaign/campaign-toggle,"@app.route('/api/topic-campaign/campaign-toggle', methods=['POST'])"
