@@ -2,7 +2,7 @@
 """
 知乎（Zhihu）内容采集适配器
 ----------------------------
-定位：服务于 Z-Brand Core 多平台内容采集。
+定位：服务于 Z-Brand Core 多平台内容采集（ZBMP层，全品牌使用）。
 调用知乎搜索 API v4（匿名/带 cookie 均可），薄封装为 v4 BaseAdapter 契约，
 接入熔断器/限流/重试/降级体系。
 
@@ -18,6 +18,8 @@
 
 时间口径：created_time/updated_time 为 Unix 秒级时间戳，转 ISO 8601；
 采集时间由入库层写 captured_at，二者严格分离。
+
+去重：浏览器采集模式按 URL + 标题/作者双键去重，避免同问题多回答重复标题。
 
 只读红线：不点赞、不评论、不关注、不私信、不执行任何账号写操作。
 """
@@ -107,16 +109,29 @@ class ZhihuAdapter(BaseAdapter):
             page.goto(url, wait_until="domcontentloaded", timeout=30000)
             hb.pause(4.0, 4.0)
 
-            # 解析搜索结果卡片
+            # 解析搜索结果卡片（URL去重 + 标题作者双键去重）
             cards = page.query_selector_all(".SearchResult-Card, .List-item, .Card")
             notes = []
+            seen_urls = set()
+            seen_title_authors = set()
             for card in cards:
                 if len(notes) >= max_results:
                     break
                 try:
                     note = self._parse_zhihu_card(card)
-                    if note:
-                        notes.append(note)
+                    if not note:
+                        continue
+                    # URL去重：同一个回答/文章只保留一次
+                    if note.url and note.url in seen_urls:
+                        continue
+                    # 标题+作者去重：同问题同作者的重复回答
+                    ta_key = (note.title[:30], note.author)
+                    if ta_key in seen_title_authors:
+                        continue
+                    if note.url:
+                        seen_urls.add(note.url)
+                    seen_title_authors.add(ta_key)
+                    notes.append(note)
                 except Exception:
                     continue
 
@@ -220,10 +235,15 @@ class ZhihuAdapter(BaseAdapter):
 
             items = data.get("data", []) if isinstance(data, dict) else []
             notes = []
+            seen_urls = set()
             for item in items:
                 obj = item.get("object", {}) if isinstance(item, dict) else {}
                 note = self._object_to_note(obj)
                 if note:
+                    if note.url and note.url in seen_urls:
+                        continue
+                    if note.url:
+                        seen_urls.add(note.url)
                     notes.append(note)
                 if len(notes) >= max_results:
                     break
