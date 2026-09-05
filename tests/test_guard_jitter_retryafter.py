@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """采集 Guard 合规增强：jitter + Retry-After 感知（对标 Scrapling AutoThrottle / polite scraper 五习惯）。
 纯增强、不改语义：默认 jitter=True（可关），retry_after 仅在调用方提供时生效。"""
 import random
