@@ -21,14 +21,19 @@
 | T8 | AI Gateway+Skill | ShardB | 0 | - | - | - | 运行中 | - |
 | T9 | Agent+Orchestrator+Identity | ShardB | 0 | - | - | - | 运行中 | - |
 | T10 | Evidence+Trace+Runtime+CI/CD | (待创建) | 0 | - | - | - | 待启动 | - |
-| UI | 前端个性化+Security | ShardC | 0 | - | - | - | 运行中 | - |
+| UI | 前端个性化+Security | ShardC | 10 | baa169f,557e96e | - | 20页面200OK,9项安全header验证通过,35API端点真实绑定,0UI_ONLY | 运行中 | 无 |
 
 ## 关键指标
 - Feature Registry行数：0
 - 硬编码路径剩余：0（生产模块）
 - DB空表处置：Event/Case/Alert链路已验证
 - AI OFF测试：未执行
-- 前端页面验收：0/未知
+- 前端页面验收：20/20（19 LUMENIS页面 + 1 healthz，全部200 OK）
+- UI_ONLY页面：0（全部已绑定真实API）
+- Design Token：static/css/lumenis-tokens-v2.css（16类Language）
+- 核心组件库：static/css/lumenis-core-components.css（10类可复用组件）
+- API端点：35个（前端实际调用，全部200 OK）
+- Security：9/9通过（CSP/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy/X-XSS-Protection/COOP/CORP）
 
 ## 阻塞项汇总
 （各Team遇到阻塞在此追加）
