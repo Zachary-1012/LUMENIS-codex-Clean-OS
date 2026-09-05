@@ -240,3 +240,12 @@
 }
 .lm-nav-item--inline:hover { background: var(--lm-surface-input); }
 .lm-nav-item--inline [data-icon] { display: inline-flex; color: var(--lm-text-secondary); }
+
+/* ---------- V3 Skill Hub 补充样式 ---------- */
+.lm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: calc(var(--lm-z-drawer) - 1); display: none; }
+.lm-btn--xs { padding: 4px 10px; font-size: 11px; border-radius: var(--lm-radius-sm); }
+.lm-btn--active { background: var(--lm-surface-input); color: var(--lm-text-primary); font-weight: 600; }
+.lm-input--sm { padding: 6px 12px; font-size: 13px; border-radius: var(--lm-radius-md); }
+.lm-skill-card { transition: transform var(--lm-motion-hover) var(--lm-ease), box-shadow var(--lm-motion-hover) var(--lm-ease); }
+.lm-skill-card:hover { transform: translateY(-2px); box-shadow: var(--lm-shadow-md); }
+

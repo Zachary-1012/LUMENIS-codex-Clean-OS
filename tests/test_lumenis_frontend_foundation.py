@@ -111,6 +111,27 @@ def run_foundation_checks():
                           "status=%d" % r.status_code)
                 except Exception as e:
                     check("PHASE3 render: " + route, False, repr(e))
+            # Skill Hub V2 功能断言
+            try:
+                r = c.get("/lumenis/intelligence/skills")
+                data = r.data
+                check("SkillHub V2: search input", b"lm-skill-search" in data)
+                check("SkillHub V2: create button", b"lm-btn-create-skill" in data)
+                check("SkillHub V2: sync button", b"lm-btn-sync" in data)
+                check("SkillHub V2: detail drawer", b"lm-skill-drawer" in data)
+                check("SkillHub V2: 11 categories",
+                      sum(1 for cat in [b"Engineering", b"Research", b"Analysis", b"Data",
+                                        b"Intelligence", b"Production", b"KOS", b"Monitoring",
+                                        b"Evaluation", b"Governance", b"System"]
+                          if cat in data) >= 11)
+                check("SkillHub V2: S01-S12 cards",
+                      all(b"data-skill=\"S%02d\"" % i in data for i in range(1, 13)))
+                check("SkillHub V2: enable/disable buttons", b"lm-skill-toggle" in data)
+                check("SkillHub V2: run buttons", b"lm-skill-run" in data)
+                check("SkillHub V2: identity policy in drawer", b"Identity Policy" in data)
+                check("SkillHub V2: version badges", b"v1.0.0" in data)
+            except Exception as e:
+                check("SkillHub V2 features", False, repr(e))
     except Exception as e:
         check("blueprint route", False, repr(e))
 
