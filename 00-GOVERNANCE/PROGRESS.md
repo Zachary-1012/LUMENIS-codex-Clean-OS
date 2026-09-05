@@ -14,7 +14,7 @@
 | T1 | 产品/域/主体+Registry | ShardD | 0 | - | - | - | 运行中 | - |
 | T2 | 采集+Source+Raw | (待创建) | 0 | - | - | - | 待启动 | - |
 | T3 | Subject Filter+Dedup+Quality | Team3 | 0 | - | 进行中 | - | 运行中 | - |
-| T4 | Canonical+Schema Registry | (待创建) | 0 | - | - | - | 待启动 | - |
+| T4 | Canonical+Schema Registry | Team4 | 5 | pending | 0剩余 | 21 passed | Raw→Canonical已打通,13条记录同步,时间分离0违规 | 无 |
 | T5 | Event+Case+Risk+Alert | ShardA | 2 | 0c4b4f5,00bb65e | 生产0剩余 | 58 passed | 核心链路已打通 | 无verified输入致events空(非bug) |
 | T6 | Metric+Dashboard+KOS | (待创建) | 0 | - | - | - | 待启动 | - |
 | T7 | Report+Import/Export+Campaign | (待创建) | 0 | - | - | - | 待启动 | - |
