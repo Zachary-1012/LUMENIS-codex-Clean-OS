@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """闭环 Runtime E2E：启动真实 app.py，验证关键 API 存活后停止。"""
 import base64
+from core.repository_registry import get_repo_root, get_db_path, get_osai_root
 import json
 import os
 import subprocess
@@ -8,7 +9,7 @@ import sys
 import time
 import urllib.request
 
-ROOT = r"D:\Taikoo-monitor-new"
+ROOT = get_repo_root()
 PORT = 8327
 BASE = "http://127.0.0.1:%d" % PORT
 AUTH = "Basic " + base64.b64encode(b"zbc_e2e:e2e_test_only_2026").decode()

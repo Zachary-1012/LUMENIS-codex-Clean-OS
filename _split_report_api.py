@@ -3,8 +3,9 @@
 精确提取函数体（基于缩进边界），生成蓝图文件，并从 app.py 中移除。
 备份已存：app.py.bak-report-split-*"""
 import io, re, os
+from core.repository_registry import get_repo_root, get_db_path, get_osai_root
 
-base = r"D:\Taikoo-monitor-new"
+base = get_repo_root()
 app_path = os.path.join(base, "app.py")
 out_path = os.path.join(base, "report_api.py")
 

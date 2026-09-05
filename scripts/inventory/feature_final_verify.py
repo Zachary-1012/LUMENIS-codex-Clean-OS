@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Feature Final Verification 2.0 只读核验：Asset/Owner/API(含蓝图前缀)/DB/UI/Runtime可达/Test/Evidence。不写库不改码。"""
 import os, re, sqlite3, io, sys, json
-ROOT = r"D:\Taikoo-monitor-new"
+from core.repository_registry import get_repo_root, get_db_path, get_osai_root
+ROOT = get_repo_root()
 sys.stdout.reconfigure(encoding="utf-8")
 SKIP_DIRS = {".git",".venv","venv","node_modules","__pycache__","ref_gpt_v2","edge-cdp-profile",
              "chrome-cdp-profile","staging",".trae-cn","development-command-console","repo-audit"}

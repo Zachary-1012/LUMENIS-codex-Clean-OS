@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """只读：FEATURE-REGISTRY 34条 vs 真实文件/路由/DB表/前端 全链路交叉验证。不写库不改码。"""
 import os, re, sqlite3, io, sys, json
-ROOT = r"D:\Taikoo-monitor-new"
+from core.repository_registry import get_repo_root, get_db_path, get_osai_root
+ROOT = get_repo_root()
 sys.stdout.reconfigure(encoding="utf-8")
 
 # ---------- 1. 真实路由集合（全仓静态扫描 route 装饰器/add_url_rule）----------

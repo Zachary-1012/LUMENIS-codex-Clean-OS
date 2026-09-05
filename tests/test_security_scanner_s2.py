@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """S2: security_scanner Agent/AI 供应链风险增强测试"""
 import sys, os, io, tempfile
-sys.path.insert(0, r"D:\Taikoo-monitor-new")
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.chdir(r"D:\Taikoo-monitor-new")
 
 from security_scanner import SecurityScanner
