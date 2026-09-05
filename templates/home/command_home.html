@@ -3,155 +3,499 @@
 {% block page_title %}Home{% endblock %}
 
 {% block content %}
-<!-- ===== 前置页：芥子纳须弥 · 三语 ===== -->
-<section style="max-width:760px;margin:0 auto;padding:48px 0 32px;text-align:center;">
-<div class="lm-eyebrow" data-i18n="eyebrow">芥子纳须弥 · Complexity → Simplicity</div>
+<!-- ===== 前置页：芥子纳须弥 · 序境 Command Home ===== -->
+<!-- Viewport: Global Context(hero) + Primary Intelligence(command) + Dynamic Data(status grid) + Evidence/Detail(quick nav) + Action(quick actions) -->
 
-  <h1 class="lm-hero-title" data-i18n="title">复杂归于序，万象入一境</h1>
-  <p class="lm-hero-sub" data-i18n="subtitle">ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯</p>
+<section class="ch-hero">
+  <div class="ch-eyebrow" data-i18n="eyebrow">芥子纳须弥 · Complexity → Simplicity</div>
+  <h1 class="ch-title" data-i18n="title">复杂归于序，万象入一境</h1>
+  <p class="ch-subtitle" data-i18n="subtitle">ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯</p>
 
-  <!-- 大 pill 输入框 -->
-  <div style="position:relative;max-width:640px;margin:0 auto;">
-    <div style="display:flex;align-items:center;background:var(--lm-surface);border:1px solid var(--lm-border);border-radius:9999px;padding:6px 6px 6px 20px;box-shadow:0 2px 16px rgba(0,0,0,0.07);transition:border-color 0.2s,box-shadow 0.2s;" id="lm-cmd-wrap">
-      <span style="color:var(--lm-text-tertiary);font-size:18px;margin-right:12px;flex-shrink:0;">+</span>
-      <input type="text" id="lm-command-input" data-i18n-placeholder="input_placeholder" placeholder="输入任务、问题或指令…" style="flex:1;border:none;outline:none;background:transparent;font-size:15px;color:var(--lm-text);padding:10px 0;" aria-label="AI 指令输入">
-      <button id="lm-command-send" style="width:36px;height:36px;border-radius:50%;background:var(--lm-text);color:var(--lm-bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.2s;" aria-label="发送">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-      </button>
-    </div>
+  <!-- Command Input — Primary Intelligence -->
+  <div class="ch-command" id="lm-cmd-wrap">
+    <span class="ch-command-icon" aria-hidden="true">+</span>
+    <input type="text" id="lm-command-input" class="ch-command-input"
+           data-i18n-placeholder="input_placeholder"
+           placeholder="输入任务、问题或指令…"
+           aria-label="AI 指令输入">
+    <button id="lm-command-send" class="ch-command-btn" aria-label="发送">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+      </svg>
+    </button>
   </div>
 
-  <!-- 快捷操作 -->
-  <div data-zone="Recommended Actions" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
-    <button class="lm-quick-action" data-task="审计当前系统状态" data-i18n="qa_audit">系统审计</button>
-    <button class="lm-quick-action" data-task="运行采集任务" data-i18n="qa_collect">启动采集</button>
-    <button class="lm-quick-action" data-task="生成今日舆情报告" data-i18n="qa_report">生成报告</button>
-    <button class="lm-quick-action" data-task="查看 Skill 能力" data-i18n="qa_skills">浏览 Skills</button>
+  <!-- Quick Actions — Action Layer -->
+  <div class="ch-quick-actions" data-zone="Recommended Actions">
+    <button class="ch-quick-btn" data-task="审计当前系统状态" data-i18n="qa_audit">系统审计</button>
+    <button class="ch-quick-btn" data-task="运行采集任务" data-i18n="qa_collect">启动采集</button>
+    <button class="ch-quick-btn" data-task="生成今日舆情报告" data-i18n="qa_report">生成报告</button>
+    <button class="ch-quick-btn" data-task="查看 Skill 能力" data-i18n="qa_skills">浏览 Skills</button>
   </div>
 
-  <!-- 状态行 -->
-  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px;">
-    <span class="lm-badge"><span class="lm-dot lm-dot--success"></span><span data-i18n="badge_ready">AI Ready</span></span>
-    <span class="lm-badge" id="lm-provider-badge">Provider: zhipu / glm-4.5-air</span>
-    <span class="lm-badge" data-i18n="badge_evidence">Evidence-backed</span>
+  <!-- Status Badges — Global Context -->
+  <div class="ch-badges">
+    <span class="ch-badge"><span class="lm-dot lm-dot--success"></span><span data-i18n="badge_ready">AI Ready</span></span>
+    <span class="ch-badge" id="lm-provider-badge">Provider: detecting…</span>
+    <span class="ch-badge" data-i18n="badge_evidence">Evidence-backed</span>
   </div>
 </section>
 
-<!-- ===== 紧凑状态条 ===== -->
-<section style="max-width:960px;margin:0 auto;padding:24px 0;border-top:1px solid var(--lm-border);">
-  <span hidden data-zone="Recent Evidence" id="hm-recent-evidence"></span>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;">
-    <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div data-zone="System State" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_system">System</div>
-      <div style="font-size:20px;font-weight:600;" id="hm-system-status">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" id="hm-system-fresh" data-i18n="card_fresh">数据新鲜度 –</div>
+<!-- ===== Dynamic Data Layer — Metric Cards (Current + Delta + Freshness + Confidence + Source) ===== -->
+<section class="ch-status-section">
+  <div class="ch-metric-grid">
+    <!-- System Health — source: /api/system/health/summary -->
+    <div class="ch-metric-card" data-metric="system" data-source="/api/system/health/summary">
+      <div class="ch-metric-label" data-i18n="card_system">System</div>
+      <div class="ch-metric-value" id="hm-system-status">
+        <span class="ch-skeleton"></span>
+      </div>
+      <div class="ch-metric-freshness" id="hm-system-fresh">
+        <span class="ch-metric-source">source: health/summary</span>
+      </div>
     </div>
-    <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div data-zone="Intelligence Pulse" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_intel">Intelligence</div>
-      <div style="font-size:20px;font-weight:600;" id="hm-ai-tasks">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_tasks">进行中任务 –</div>
+
+    <!-- Intelligence Evidence — source: /lumenis/api/intelligence/evidence -->
+    <div class="ch-metric-card" data-metric="intelligence" data-source="/lumenis/api/intelligence/evidence">
+      <div class="ch-metric-label" data-i18n="card_intel">Intelligence</div>
+      <div class="ch-metric-value" id="hm-ai-tasks">
+        <span class="ch-skeleton"></span>
+      </div>
+      <div class="ch-metric-freshness" id="hm-ai-fresh">
+        <span class="ch-metric-source">source: evidence chains</span>
+      </div>
     </div>
-    <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div data-zone="Active Risks" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_risks">Risks</div>
-      <div style="font-size:20px;font-weight:600;" id="hm-risk-count">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_active_risk">活跃风险</div>
+
+    <!-- Active Risks — source: /api/negative/stats -->
+    <div class="ch-metric-card" data-metric="risks" data-source="/api/negative/stats">
+      <div class="ch-metric-label" data-i18n="card_risks">Risks</div>
+      <div class="ch-metric-value" id="hm-risk-count">
+        <span class="ch-skeleton"></span>
+      </div>
+      <div class="ch-metric-freshness" id="hm-risk-fresh">
+        <span class="ch-metric-source">source: negative/stats</span>
+      </div>
     </div>
-    <div style="padding:16px;border-radius:12px;background:var(--lm-surface);border:1px solid var(--lm-border);">
-      <div data-zone="Active Tasks" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--lm-text-tertiary);margin-bottom:8px;" data-i18n="card_tasks_label">Tasks</div>
-      <div style="font-size:20px;font-weight:600;" id="hm-task-count">–</div>
-      <div style="font-size:12px;color:var(--lm-text-secondary);margin-top:4px;" data-i18n="card_running">运行中</div>
+
+    <!-- Running Tasks — source: /api/collect/tasks -->
+    <div class="ch-metric-card" data-metric="tasks" data-source="/api/collect/tasks">
+      <div class="ch-metric-label" data-i18n="card_tasks_label">Tasks</div>
+      <div class="ch-metric-value" id="hm-task-count">
+        <span class="ch-skeleton"></span>
+      </div>
+      <div class="ch-metric-freshness" id="hm-task-fresh">
+        <span class="ch-metric-source">source: collect/tasks</span>
+      </div>
     </div>
   </div>
 
-  <!-- 快捷入口小方块 -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
-    <a href="/lumenis/intelligence/workspace" class="hm-nav-chip">
+  <!-- Quick Navigation — Evidence/Detail Layer -->
+  <nav class="ch-nav-chips" aria-label="快捷入口">
+    <a href="/lumenis/intelligence" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1h-1v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7H3v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/></svg>
       <span data-i18n="nav_intel">Intelligence</span>
     </a>
-    <a href="/lumenis/intelligence/skills" class="hm-nav-chip">
+    <a href="/lumenis/intelligence/skills" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
       <span data-i18n="nav_skills">Skill Hub</span>
     </a>
-    <a href="/lumenis/production/overview" class="hm-nav-chip">
+    <a href="/lumenis/production" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
       <span data-i18n="nav_prod">Production</span>
     </a>
-    <a href="/lumenis/research/workspace" class="hm-nav-chip">
+    <a href="/lumenis/research" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <span data-i18n="nav_research">Research</span>
     </a>
-    <a href="/lumenis/operations" class="hm-nav-chip">
+    <a href="/lumenis/operations" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span data-i18n="nav_ops">Operations</span>
     </a>
-  </div>
+  </nav>
 </section>
 
 <style>
-.lm-eyebrow { font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:var(--lm-text-tertiary);margin-bottom:20px;font-weight:500; }
-.lm-hero-title { font-size:34px;font-weight:700;line-height:1.3;margin:0 0 10px;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--lm-text) 0%,var(--lm-text-secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
-.lm-hero-sub { font-size:14px;color:var(--lm-text-secondary);margin:0 0 32px;line-height:1.6; }
-.lm-lang-btn { padding:6px 14px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:12px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s;font-weight:500; }
-.lm-lang-btn:hover { border-color:var(--lm-accent);color:var(--lm-text); }
-.lm-lang-btn.active { background:var(--lm-text);color:var(--lm-bg);border-color:var(--lm-text); }
-.hm-nav-chip { display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:var(--lm-surface);border:1px solid var(--lm-border);text-decoration:none;color:var(--lm-text);font-size:13px;transition:all 0.2s; }
-.hm-nav-chip:hover { border-color:var(--lm-accent);transform:translateY(-1px); }
-.lm-quick-action { padding:8px 16px;border-radius:9999px;border:1px solid var(--lm-border);background:var(--lm-surface);font-size:13px;color:var(--lm-text-secondary);cursor:pointer;transition:all 0.2s; }
-.lm-quick-action:hover { border-color:var(--lm-accent);color:var(--lm-text); }
-#lm-cmd-wrap:focus-within { border-color:var(--lm-accent);box-shadow:0 4px 24px rgba(0,0,0,0.1); }
-@media (max-width:640px) {
-  .lm-hero-title { font-size:26px; }
-  .lm-hero-sub { font-size:13px; }
+/* ===== Command Home — 序境前置页 Design Language ===== */
+/* Typography */
+.ch-hero { max-width: 760px; margin: 0 auto; padding: 48px 0 32px; text-align: center; }
+.ch-eyebrow {
+  font-size: var(--lm-text-eyebrow);
+  letter-spacing: var(--lm-text-eyebrow-letter-spacing);
+  text-transform: uppercase;
+  color: var(--lm-text-tertiary);
+  margin-bottom: 20px;
+  font-weight: var(--lm-text-eyebrow-weight);
+}
+.ch-title {
+  font-size: var(--lm-text-hero);
+  font-weight: var(--lm-text-hero-weight);
+  line-height: var(--lm-leading-title);
+  margin: 0 0 10px;
+  letter-spacing: var(--lm-text-hero-letter-spacing);
+  background: linear-gradient(135deg, var(--lm-text-primary) 0%, var(--lm-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.ch-subtitle {
+  font-size: var(--lm-text-body);
+  color: var(--lm-text-secondary);
+  margin: 0 0 32px;
+  line-height: var(--lm-leading-body);
+}
+
+/* Command Input — Shape Language: pill */
+.ch-command {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  background: var(--lm-surface);
+  border: 1px solid var(--lm-border);
+  border-radius: var(--lm-pill-radius);
+  padding: 6px 6px 6px 20px;
+  box-shadow: var(--lm-shadow-sm);
+  transition: border-color var(--lm-motion-fast), box-shadow var(--lm-motion-fast);
+}
+.ch-command:focus-within {
+  border-color: var(--lm-status-info);
+  box-shadow: var(--lm-shadow-md);
+}
+.ch-command-icon {
+  color: var(--lm-text-tertiary);
+  font-size: 18px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+.ch-command-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--lm-text-body);
+  color: var(--lm-text-primary);
+  padding: 10px 0;
+  font-family: var(--lm-font-family);
+}
+.ch-command-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--lm-radius-full);
+  background: var(--lm-text-primary);
+  color: var(--lm-canvas);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity var(--lm-motion-fast);
+}
+.ch-command-btn:hover { opacity: 0.85; }
+
+/* Quick Actions */
+.ch-quick-actions {
+  display: flex;
+  gap: var(--lm-space-sm);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.ch-quick-btn {
+  padding: 8px 16px;
+  border-radius: var(--lm-pill-radius);
+  border: 1px solid var(--lm-border);
+  background: var(--lm-surface);
+  font-size: var(--lm-text-caption);
+  color: var(--lm-text-secondary);
+  cursor: pointer;
+  transition: all var(--lm-motion-fast);
+  font-family: var(--lm-font-family);
+}
+.ch-quick-btn:hover {
+  border-color: var(--lm-status-info);
+  color: var(--lm-text-primary);
+  background: var(--lm-nav-hover-bg);
+}
+
+/* Badges */
+.ch-badges {
+  display: flex;
+  gap: var(--lm-space-md);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.ch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--lm-status-badge-padding);
+  border-radius: var(--lm-status-badge-radius);
+  background: var(--lm-surface);
+  border: 1px solid var(--lm-border);
+  font-size: var(--lm-status-badge-font-size);
+  font-weight: var(--lm-status-badge-font-weight);
+  color: var(--lm-text-secondary);
+}
+
+/* Status Section — Dynamic Data */
+.ch-status-section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 0;
+  border-top: var(--lm-divider-weight) solid var(--lm-divider-color);
+}
+
+/* Metric Grid — Metric Card Language: Current + Delta + Freshness + Confidence + Source */
+.ch-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--lm-grid-gap);
+}
+.ch-metric-card {
+  padding: var(--lm-metric-card-padding);
+  border-radius: var(--lm-metric-card-radius);
+  background: var(--lm-metric-card-bg);
+  border: 1px solid var(--lm-metric-card-border);
+  transition: box-shadow var(--lm-motion-normal), transform var(--lm-motion-normal);
+}
+.ch-metric-card:hover {
+  box-shadow: var(--lm-metric-card-hover-shadow);
+  transform: var(--lm-metric-card-hover-transform);
+}
+.ch-metric-card.is-error {
+  border-color: var(--lm-status-danger);
+  background: var(--lm-status-danger-bg);
+}
+.ch-metric-card.is-empty {
+  opacity: 0.6;
+}
+.ch-metric-label {
+  font-size: var(--lm-metric-label-size);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--lm-metric-label-color);
+  margin-bottom: var(--lm-metric-gap);
+  font-weight: 500;
+}
+.ch-metric-value {
+  font-size: var(--lm-metric-value-size);
+  font-weight: var(--lm-metric-value-weight);
+  color: var(--lm-text-primary);
+  line-height: var(--lm-leading-metric);
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+}
+.ch-metric-freshness {
+  font-size: var(--lm-metric-freshness-size);
+  color: var(--lm-metric-freshness-color);
+  margin-top: var(--lm-metric-gap);
+}
+.ch-metric-source {
+  font-family: var(--lm-font-mono);
+  font-size: var(--lm-text-mono-label);
+  opacity: 0.7;
+}
+
+/* Skeleton loading */
+.ch-skeleton {
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+  border-radius: var(--lm-radius-sm);
+  background: linear-gradient(90deg, var(--lm-silver-100) 25%, var(--lm-silver-200) 50%, var(--lm-silver-100) 75%);
+  background-size: 200% 100%;
+  animation: ch-shimmer var(--lm-shimmer-duration) infinite;
+}
+@keyframes ch-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Nav Chips — Navigation Language: compact */
+.ch-nav-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.ch-nav-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--lm-radius-sm);
+  background: var(--lm-surface);
+  border: 1px solid var(--lm-border);
+  text-decoration: none;
+  color: var(--lm-text-primary);
+  font-size: var(--lm-text-caption);
+  transition: all var(--lm-motion-fast);
+}
+.ch-nav-chip:hover {
+  border-color: var(--lm-status-info);
+  transform: translateY(-1px);
+  box-shadow: var(--lm-shadow-sm);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .ch-hero { padding: 32px 0 24px; }
+  .ch-title { font-size: 26px; }
+  .ch-subtitle { font-size: 13px; }
+  .ch-metric-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 {% endblock %}
 
 {% block scripts %}
 (function(){
-  // Extend global i18n with home-specific strings
+  // ===== i18n extension =====
   var homeDict = {
-    zh: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'复杂归于序，万象入一境',subtitle:'ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯',input_placeholder:'输入任务、问题或指令…',qa_audit:'系统审计',qa_collect:'启动采集',qa_report:'生成报告',qa_skills:'浏览 Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_fresh:'数据新鲜度 –',card_intel:'Intelligence',card_tasks:'进行中任务 –',card_risks:'Risks',card_active_risk:'活跃风险',card_tasks_label:'Tasks',card_running:'运行中',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
-    en: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'Complexity into Order, All into One',subtitle:'ZBC Production Truth × OSAI Intelligence · Unified evidence chain, every step traceable',input_placeholder:'Enter a task, question, or command…',qa_audit:'System Audit',qa_collect:'Start Collection',qa_report:'Generate Report',qa_skills:'Browse Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_fresh:'Data freshness –',card_intel:'Intelligence',card_tasks:'Active tasks –',card_risks:'Risks',card_active_risk:'Active risks',card_tasks_label:'Tasks',card_running:'Running',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
-    ko: {eyebrow:'계자나수미 · Complexity → Simplicity',title:'복잡함을 질서로, 만상을 하나의 경계로',subtitle:'ZBC 생산 진실 × OSAI 지능 추론 · 통합 증거 체인, 모든 단계 추적 가능',input_placeholder:'작업, 질문 또는 명령을 입력하세요…',qa_audit:'시스템 감사',qa_collect:'수집 시작',qa_report:'보고서 생성',qa_skills:'스킬 탐색',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_fresh:'데이터 신선도 –',card_intel:'Intelligence',card_tasks:'진행 중 작업 –',card_risks:'Risks',card_active_risk:'활성 위험',card_tasks_label:'Tasks',card_running:'실행 중',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'}
+    zh: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'复杂归于序，万象入一境',subtitle:'ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯',input_placeholder:'输入任务、问题或指令…',qa_audit:'系统审计',qa_collect:'启动采集',qa_report:'生成报告',qa_skills:'浏览 Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_intel:'Intelligence',card_risks:'Risks',card_tasks_label:'Tasks',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
+    en: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'Complexity into Order, All into One',subtitle:'ZBC Production Truth × OSAI Intelligence · Unified evidence chain, every step traceable',input_placeholder:'Enter a task, question, or command…',qa_audit:'System Audit',qa_collect:'Start Collection',qa_report:'Generate Report',qa_skills:'Browse Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_intel:'Intelligence',card_risks:'Risks',card_tasks_label:'Tasks',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
+    ko: {eyebrow:'계자나수미 · Complexity → Simplicity',title:'복잡함을 질서로, 만상을 하나의 경계로',subtitle:'ZBC 생산 진실 × OSAI 지능 추론 · 통합 증거 체인, 모든 단계 추적 가능',input_placeholder:'작업, 질문 또는 명령을 입력하세요…',qa_audit:'시스템 감사',qa_collect:'수집 시작',qa_report:'보고서 생성',qa_skills:'스킬 탐색',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_intel:'Intelligence',card_risks:'Risks',card_tasks_label:'Tasks',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'}
   };
   for (var lang in homeDict) { if (LUMENIS.i18n.dict[lang]) Object.assign(LUMENIS.i18n.dict[lang], homeDict[lang]); }
   LUMENIS.i18n.setLang(LUMENIS.i18n.current);
 
-  // Quick actions
-  document.querySelectorAll('.lm-quick-action').forEach(function(btn){
+  // ===== Quick Actions =====
+  document.querySelectorAll('.ch-quick-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
       var input = document.getElementById('lm-command-input');
       if(input){ input.value = this.dataset.task || ''; input.focus(); }
     });
   });
+
+  // ===== Command Send =====
   var sendBtn = document.getElementById('lm-command-send');
   var input = document.getElementById('lm-command-input');
   function doSend(){
     var val = input.value.trim();
     if(!val) return;
-    window.location.href = '/lumenis/intelligence/workspace?task=' + encodeURIComponent(val);
+    window.location.href = '/lumenis/intelligence?task=' + encodeURIComponent(val);
   }
   if(sendBtn) sendBtn.addEventListener('click', doSend);
   if(input) input.addEventListener('keydown', function(e){ if(e.key==='Enter') doSend(); });
 
-  // System health
-  fetch('/api/system/health/summary').then(function(r){return r.json();}).then(function(d){
-    if(!d) return;
-    var map = {ok:'运行中',warning:'警告',critical:'异常'};
+  // ===== Metric Card Data Binding — Real API, no mock =====
+  // Helper: set metric value with error/empty handling
+  function setMetric(valueEl, freshEl, card, value, freshness, isError, isEmpty){
+    if (valueEl) {
+      valueEl.innerHTML = '';
+      if (isError) {
+        valueEl.textContent = '!';
+        valueEl.style.color = 'var(--lm-status-danger)';
+      } else if (isEmpty) {
+        valueEl.textContent = '0';
+        valueEl.style.color = 'var(--lm-text-tertiary)';
+      } else {
+        valueEl.textContent = value;
+        valueEl.style.color = '';
+      }
+    }
+    if (freshEl && freshness) {
+      freshEl.innerHTML = '<span class="ch-metric-source">' + freshness + '</span>';
+    }
+    if (card) {
+      card.classList.toggle('is-error', !!isError);
+      card.classList.toggle('is-empty', !!isEmpty);
+    }
+  }
+
+  // 1. System Health — /api/system/health/summary
+  (function(){
     var el = document.getElementById('hm-system-status');
-    if(el) el.textContent = map[d.overall_status] || d.overall_status || '未知';
     var fresh = document.getElementById('hm-system-fresh');
-    if(fresh) fresh.textContent = '数据新鲜度 ' + (d.last_collection || '–');
-  }).catch(function(){});
+    var card = document.querySelector('[data-metric="system"]');
+    var map = {ok:'运行中',warning:'警告',critical:'异常',unknown:'未知'};
+    fetch('/api/system/health/summary')
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(d){
+        if(!d){ setMetric(el,fresh,card,'–','no data',false,true); return; }
+        var status = map[d.overall_status] || d.overall_status || '未知';
+        var freshText = 'fresh: ' + (d.last_collection || '–');
+        setMetric(el,fresh,card,status,freshText,false,false);
+      })
+      .catch(function(){ setMetric(el,fresh,card,'ERR','API unavailable',true,false); });
+  })();
 
-  // Evidence count
-  fetch('/lumenis/api/intelligence/evidence').then(function(r){return r.json();}).then(function(d){
+  // 2. Intelligence Evidence — /lumenis/api/intelligence/evidence
+  (function(){
     var el = document.getElementById('hm-ai-tasks');
-    if(el && d.count != null) el.textContent = d.count;
-    var re=document.getElementById('hm-recent-evidence'); if(re && d.count!=null) re.textContent='Recent Evidence: '+d.count;
-  }).catch(function(){});
+    var fresh = document.getElementById('hm-ai-fresh');
+    var card = document.querySelector('[data-metric="intelligence"]');
+    fetch('/lumenis/api/intelligence/evidence')
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(d){
+        var count = (d && d.count != null) ? d.count : 0;
+        var freshText = 'chains: ' + count + ' · source: OSAI';
+        setMetric(el,fresh,card,count,freshText,false,count===0);
+      })
+      .catch(function(){ setMetric(el,fresh,card,'ERR','API unavailable',true,false); });
+  })();
 
-  console.log('[LUMENIS] Home v3 trilingual loaded');
+  // 3. Active Risks — /api/negative/stats (fallback: /api/dashboard/all)
+  (function(){
+    var el = document.getElementById('hm-risk-count');
+    var fresh = document.getElementById('hm-risk-fresh');
+    var card = document.querySelector('[data-metric="risks"]');
+    fetch('/api/negative/stats')
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(d){
+        var pending = (d && d.pending != null) ? d.pending : ((d && d.total) ? d.total : 0);
+        var freshText = 'pending: ' + pending + ' · source: negative/stats';
+        setMetric(el,fresh,card,pending,freshText,false,pending===0);
+      })
+      .catch(function(){
+        // fallback to dashboard/all
+        fetch('/api/dashboard/all')
+          .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+          .then(function(d){
+            var risk = (d && d.high_risk != null) ? d.high_risk : ((d && d.negative_count) ? d.negative_count : 0);
+            setMetric(el,fresh,card,risk,'source: dashboard/all',false,risk===0);
+          })
+          .catch(function(){ setMetric(el,fresh,card,'–','no risk API',false,true); });
+      });
+  })();
+
+  // 4. Running Tasks — /api/collect/tasks
+  (function(){
+    var el = document.getElementById('hm-task-count');
+    var fresh = document.getElementById('hm-task-fresh');
+    var card = document.querySelector('[data-metric="tasks"]');
+    fetch('/api/collect/tasks')
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(d){
+        var tasks = (d && d.tasks && d.tasks.length) ? d.tasks.length : 0;
+        var running = 0;
+        if (d && d.tasks) {
+          d.tasks.forEach(function(t){ if(t.status==='running'||t.status==='collecting') running++; });
+        }
+        var freshText = 'running: ' + running + '/' + tasks + ' · source: collect/tasks';
+        setMetric(el,fresh,card,running,freshText,false,tasks===0);
+      })
+      .catch(function(){ setMetric(el,fresh,card,'–','no task API',false,true); });
+  })();
+
+  // ===== Provider Badge — real detection =====
+  (function(){
+    var badge = document.getElementById('lm-provider-badge');
+    fetch('/api/ai-governance/status')
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(d){
+        if(badge && d){
+          var provider = d.active_provider || d.provider || d.current_provider || 'unknown';
+          var model = d.active_model || d.model || '';
+          badge.textContent = 'Provider: ' + provider + (model ? ' / ' + model : '');
+        }
+      })
+      .catch(function(){ if(badge) badge.textContent = 'Provider: local fallback'; });
+  })();
+
+  console.log('[LUMENIS] Command Home v4 — Shard C refactored, all metrics real-API bound');
 })();
 {% endblock %}
