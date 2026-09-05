@@ -1033,6 +1033,70 @@ def _report_deprecation_headers(resp):
     return resp
 
 
+
+# ===== Shard C: CSRF Protection (Bypass Mode — 先旁路、再切换) =====
+# 策略：生成 CSRF token + cookie，对 POST/PUT/DELETE 检查 token。
+# 旁路模式：token 缺失时记录警告但不拒绝（避免破坏现有无 token 表单）。
+# 后续逐步接入前端 token 后切换为强制模式。
+import hmac as _hmac
+import hashlib as _hashlib
+
+_CSRF_SECRET = os.environ.get('CSRF_SECRET', 'lumenis-csrf-secret-change-in-production')
+_CSRF_COOKIE_NAME = 'XSRF-TOKEN'
+_CSRF_HEADER_NAME = 'X-XSRF-TOKEN'
+
+def _generate_csrf_token(session_id=None):
+    """生成 HMAC-based CSRF token。"""
+    sid = session_id or request.cookies.get('session', 'anonymous')
+    raw = f"{sid}:{_CSRF_SECRET}:{int(time.time() // 3600)}"
+    return _hmac.new(_CSRF_SECRET.encode(), raw.encode(), _hashlib.sha256).hexdigest()[:32]
+
+def _verify_csrf_token(token, session_id=None):
+    """验证 CSRF token（接受当前小时和上一小时的 token）。"""
+    if not token:
+        return False
+    sid = session_id or request.cookies.get('session', 'anonymous')
+    for hour_offset in (0, 1):
+        raw = f"{sid}:{_CSRF_SECRET}:{int(time.time() // 3600) - hour_offset}"
+        expected = _hmac.new(_CSRF_SECRET.encode(), raw.encode(), _hashlib.sha256).hexdigest()[:32]
+        if _hmac.compare_digest(token, expected):
+            return True
+    return False
+
+@app.before_request
+def _csrf_protect():
+    """CSRF 旁路保护：对状态变更请求检查 token，缺失时记录警告但不拒绝。"""
+    if request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
+        return None
+    # 白名单：健康检查、auth 配置、webhook 等不需要 CSRF
+    path = request.path
+    whitelist = ('/healthz', '/api/health', '/api/auth/config', '/api/collector-guard/status')
+    if path in whitelist or path.startswith('/static/') or path.startswith('/v4/'):
+        return None
+    token = request.headers.get(_CSRF_HEADER_NAME) or request.form.get('csrf_token')
+    if not token:
+        # 旁路模式：记录警告，不拒绝
+        app.logger.warning('[CSRF] Missing token for %s %s (bypass mode, not rejected)', request.method, path)
+        return None
+    if not _verify_csrf_token(token):
+        app.logger.warning('[CSRF] Invalid token for %s %s (bypass mode, not rejected)', request.method, path)
+    return None
+
+@app.after_request
+def _csrf_cookie(resp):
+    """在响应中设置 CSRF cookie（供前端读取）。"""
+    try:
+        token = _generate_csrf_token()
+        resp.set_cookie(_CSRF_COOKIE_NAME, token, httponly=False, samesite='Lax', max_age=3600)
+    except Exception:
+        pass
+    return resp
+
+@app.route('/api/csrf-token', methods=['GET'])
+def csrf_token_endpoint():
+    """CSRF token 获取端点（供前端 AJAX 请求使用）。"""
+    return jsonify({'csrf_token': _generate_csrf_token(), 'header_name': _CSRF_HEADER_NAME})
+
 # ===== Shard C: Security Headers (CSP / X-Frame-Options / X-Content-Type-Options) =====
 @app.after_request
 def _security_headers(resp):
@@ -3990,7 +4054,7 @@ def api_dashboard_all():
             verified_notes = cursor.fetchone()['verified']
             cursor.execute("SELECT COUNT(*) as negative FROM notes WHERE sentiment='negative'")
             negative_notes = cursor.fetchone()['negative']
-            cursor.execute("SELECT COUNT(*) as today FROM notes WHERE DATE(collected_at)=DATE('now')")
+            cursor.execute("SELECT COUNT(*) as today FROM notes WHERE DATE(publish_date)=DATE('now','localtime')")
             today_notes = cursor.fetchone()['today']
             # 近14天趋势（与 /api/overview 同口径），补齐主轮询 renderTrend 所需，避免“暂无趋势数据”
             _now = datetime.now(); _start = (_now - timedelta(days=13)).strftime('%Y-%m-%d'); _end = _now.strftime('%Y-%m-%d')
