@@ -15,7 +15,7 @@
 | T2 | 采集+Source+Raw | (待创建) | 0 | - | - | - | 待启动 | - |
 | T3 | Subject Filter+Dedup+Quality | Team3 | 0 | - | 进行中 | - | 运行中 | - |
 | T4 | Canonical+Schema Registry | (待创建) | 0 | - | - | - | 待启动 | - |
-| T5 | Event+Case+Risk+Alert | ShardA | 3 | - | 进行中 | - | 运行中 | - |
+| T5 | Event+Case+Risk+Alert | ShardA | 2 | 0c4b4f5,00bb65e | 生产0剩余 | 58 passed | 核心链路已打通 | 无verified输入致events空(非bug) |
 | T6 | Metric+Dashboard+KOS | (待创建) | 0 | - | - | - | 待启动 | - |
 | T7 | Report+Import/Export+Campaign | (待创建) | 0 | - | - | - | 待启动 | - |
 | T8 | AI Gateway+Skill | ShardB | 0 | - | - | - | 运行中 | - |
@@ -25,8 +25,8 @@
 
 ## 关键指标
 - Feature Registry行数：0
-- 硬编码路径剩余：39（初始）
-- DB空表处置：0/25
+- 硬编码路径剩余：0（生产模块）
+- DB空表处置：Event/Case/Alert链路已验证
 - AI OFF测试：未执行
 - 前端页面验收：0/未知
 
