@@ -4885,6 +4885,23 @@ def api_pr_check_trigger():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+@app.route('/api/event-pipeline/run', methods=['POST'])
+def event_pipeline_run():
+    """Team5: Event→EventGraph→Alert 全链路一键编排。
+    1. aggregate_events() → events 表
+    2. import_to_event_graph → event_graph_events + relations
+    3. alert_engine.evaluate_alerts → alert_records
+    """
+    try:
+        import reprocess
+        data = request.get_json(silent=True) or {}
+        limit = int(data.get('limit', 100))
+        result = reprocess.run_event_pipeline(limit=limit)
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 # ===== V4 升级模块旁路接入：独立 /v4 蓝图、独立认证与 v4_ 建表，不改写现网业务、不挂自动调度 =====
 from v4_upgrade import create_v4_blueprint, init_v4_modules
 init_v4_modules()
