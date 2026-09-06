@@ -907,6 +907,31 @@ def _auth_enabled():
     return bool(AUTH_USER and AUTH_PASSWORD)
 
 
+# === P0-R6: CTH 免密浏览态只读 GET 白名单 ===
+_CTH_READONLY_GET_PREFIXES = (
+    '/api/stats', '/api/metric-trend', '/api/notes',
+    '/api/negative/', '/api/risks/', '/api/risk/',
+    '/api/event-graph/', '/api/cases/', '/api/case-analysis/',
+    '/api/domain/', '/api/hot-notes', '/api/xhs/',
+    '/api/cookies/import/status', '/api/collection/counter', '/api/collect/tasks',
+    '/api/weekly/', '/api/special-report/', '/api/reports/',
+    '/api/intelligence/evidence', '/api/alerts', '/api/platform-health',
+    '/api/subject/', '/api/trends/', '/api/overview',
+)
+
+def _is_cth_readonly_get(path, method):
+    if method != 'GET':
+        return False
+    for prefix in _CTH_READONLY_GET_PREFIXES:
+        if prefix.endswith('/'):
+            if path.startswith(prefix):
+                return True
+        else:
+            if path == prefix or path.startswith(prefix + '/') or path.startswith(prefix + '?'):
+                return True
+    return False
+
+
 def _subject_sql_and_values(alias=''):
     """系统历史兼容入口：所有 API 统计统一调用主体硬过滤。"""
     return subject_sql_and_values(alias)
@@ -931,7 +956,8 @@ def auth_config_api():
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
-    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health/summary', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or request.path.startswith('/api/zbmp/') or request.path.startswith('/api/cth/') or request.path.startswith('/api/system/') or request.path.startswith('/api/viz/'):
+    # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）
+    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health/summary', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or request.path.startswith('/api/zbmp/') or request.path.startswith('/api/cth/') or request.path.startswith('/api/system/') or request.path.startswith('/api/viz/') or _is_cth_readonly_get(request.path, request.method):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
