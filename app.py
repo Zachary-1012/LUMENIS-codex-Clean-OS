@@ -1,4 +1,4 @@
-﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
 from pathlib import Path
 
@@ -3111,6 +3111,42 @@ def api_system_config_update():
                 content += f'\n{k}={v}'
         env_path.write_text(content, encoding='utf-8')
     return jsonify({'ok': True, 'message': '配置已更新', 'updated': updates})
+
+
+# ========== 最终验收判定器（Acceptance Gate）：CI / Function / Evidence 三维分离 ==========
+@app.route('/api/system/acceptance/dimensions')
+def api_acceptance_dimensions():
+    """返回验收维度与状态枚举（供前端渲染状态语义）。"""
+    try:
+        import acceptance_gate as ag
+        return jsonify({
+            'ok': True,
+            'required_dimensions': ag.REQUIRED_DIMENSIONS,
+            'ci_status': [x.value for x in ag.CIStatus],
+            'functional_status': [x.value for x in ag.FunctionalStatus],
+            'partial_reasons': [x.value for x in ag.PartialReason],
+            'principle': 'CI PASS/代码存在/AI声称完成均不能单独推出VERIFIED；VERIFIED需源码+调用链+测试+真实运行+Evidence+Verification+Security+Regression全部成立',
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/system/acceptance/judge', methods=['POST'])
+def api_acceptance_judge():
+    """最终验收判定：body 可为单个 task 对象或 {tasks:[...]} 批量。纯逻辑判定不写库，缺证据显式标缺失。"""
+    try:
+        import acceptance_gate as ag
+        body = request.get_json(silent=True) or {}
+        if 'tasks' in body and isinstance(body['tasks'], list):
+            items = [ag.AcceptanceInput(**t) for t in body['tasks']]
+            return jsonify(ag.judge_batch(items))
+        item = ag.AcceptanceInput(**body)
+        return jsonify({'ok': True, 'verdict': ag.judge(item).to_dict()})
+    except TypeError as e:
+        return jsonify({'ok': False, 'error': f'验收输入字段错误: {e}'}), 400
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 
 # ========== v5.4 增项接口配置 ==========
 CONFIG_FILE = Path(__file__).parent / 'data' / 'system_config.json'
