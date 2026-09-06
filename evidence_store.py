@@ -157,6 +157,11 @@ EVIDENCE_CHAIN_NEW_COLUMNS = [
 
     ("publish_datetime", "TEXT", "NULL"),     # 内容真实发布时间（可空）
 
+
+    ("domain_id", "TEXT", "NULL"),            # 业务域ID（ZBMP/CTH/SYSTEM）
+
+    ("product_id", "TEXT", "NULL"),           # 产品ID（双域隔离）
+
 ]
 
 
