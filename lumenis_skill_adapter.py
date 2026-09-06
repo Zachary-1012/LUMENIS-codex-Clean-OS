@@ -21,6 +21,10 @@ from typing import Any, Dict, List, Optional
 _MODULE_STATUS = "ACTIVE"
 _PHASE13_COMPAT = "skill_registry.SkillMetadata via to_skill_metadata()"
 
+# Repository Registry 集成：Adapter 元数据可通过 repo_registry.json 注册到跨仓能力清单
+_REPO_REGISTRY_FILENAME = "repo_registry.json"
+_REPO_REGISTRY_CAPABILITY_ID = "zbc.cross_core_skill_adapter"
+
 
 # OSAI 仓库路径（通过环境变量或默认相对路径发现，不硬编码个人路径）
 def _osai_root() -> Optional[str]:

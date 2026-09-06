@@ -18,14 +18,16 @@ class TestOceanEngineCollector:
         assert h["api_access"] is False
         assert h["currency"] == "CNY"
         assert h["min_deposit"] == 10000
-        assert h["status"] == "need_credentials"
+        assert h["status"] == "blocked"
+        assert any("API未配置" in b for b in h.get("blockers", []))
 
     def test_get_balance_no_api(self):
         from ad_intelligence.platforms.ocean_engine import OceanEngineCollector
         c = OceanEngineCollector()
         r = c.get_balance()
         assert r["success"] is False
-        assert "API未配置" in r["error"]
+        assert r["status"] == "blocked"
+        assert "missing credentials" in r.get("reason", "")
 
     def test_actual_cost_with_rebate(self):
         from ad_intelligence.platforms.ocean_engine import OceanEngineCollector, OceanEngineConfig

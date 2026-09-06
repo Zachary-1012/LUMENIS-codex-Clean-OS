@@ -45,6 +45,11 @@ def make_session():
     return requests.Session()
 
 
+# 模块级session共享（pytest不传递前一个测试的返回值）
+_shared_session = None
+_shared_setup_data = None
+
+
 def test_cth_login():
     """测试1: CTH账号密码登录"""
     print('\n=== 1. CTH登录流程 ===')
@@ -59,15 +64,18 @@ def test_cth_login():
                f'success={data.get("success")}')
         record('CTH登录返回token', bool(data.get('token')),
                f'token_len={len(data.get("token", ""))}')
+        global _shared_session
+        _shared_session = s
         return s, data
     except Exception as e:
         record('CTH登录异常', False, str(e))
         return None, None
 
 
-def test_zbmp_entry_status(s):
+def test_zbmp_entry_status():
     """测试2: ZBMP entry status 端点"""
     print('\n=== 2. ZBMP Entry Status ===')
+    s = _shared_session
     if not s:
         record('ZBMP entry status', False, '无session')
         return
@@ -88,9 +96,10 @@ def test_zbmp_entry_status(s):
         return None
 
 
-def test_totp_setup(s):
+def test_totp_setup():
     """测试3: TOTP setup 生成二维码"""
     print('\n=== 3. TOTP Setup（生成二维码） ===')
+    s = _shared_session
     if not s:
         record('TOTP setup', False, '无session')
         return None
@@ -117,9 +126,11 @@ def test_totp_setup(s):
         return None
 
 
-def test_totp_confirm(s, setup_data):
+def test_totp_confirm():
     """测试4: TOTP confirm 绑定（用当前code验证）"""
     print('\n=== 4. TOTP Confirm（绑定） ===')
+    s = _shared_session
+    setup_data = _shared_setup_data
     if not s or not setup_data:
         record('TOTP confirm', False, '无setup数据')
         return False
@@ -169,7 +180,8 @@ def compute_totp(secret, period=30, digits=6):
         return None
 
 
-def test_domain_identity(s):
+def test_domain_identity():
+    s = _shared_session
     """测试5: 域身份获取"""
     print('\n=== 5. Domain Identity ===')
     if not s:
@@ -205,7 +217,8 @@ def test_zbmp_login_redirect():
         record('/zbmp/login异常', False, str(e))
 
 
-def test_settings_apis(s):
+def test_settings_apis():
+    s = _shared_session
     """测试7: 设置页API连通性"""
     print('\n=== 7. 设置页API连通性 ===')
     if not s:

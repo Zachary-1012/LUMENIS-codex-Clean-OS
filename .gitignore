@@ -166,3 +166,6 @@ _pitch_dump*
 # 临时调试脚本
 _*.py
 !__init__.py
+
+# 浏览行为session数据（含凭证，不入库）
+intelligence_library/09_Research-Hub/影子学习/*.json

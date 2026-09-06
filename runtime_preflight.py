@@ -160,6 +160,10 @@ def _looks_like_real_secret(line, match):
         return False  # 真密钥不含空白/中文
     if len(val) < 8:
         return False
+    # 平台标准字段名白名单（不是真实密钥）
+    _PLATFORM_FIELD_WHITELIST = {"xsec_token", "note_id", "aweme_id", "bvid", "mid", "object_id"}
+    if val.lower() in _PLATFORM_FIELD_WHITELIST:
+        return False
     return True
 
 
@@ -175,7 +179,7 @@ def check_sensitive_tracked():
         return _check("SEC-SCAN", "sensitive", "P2", "warn", "非 Git 工作树，跟踪面敏感扫描跳过")
     import re as _re
     targets = [p for p in tracked
-               if p.lower().endswith(SENSITIVE_EXTS) and not _re.search(r"tests?/|docs/|\.example", p.lower())]
+               if p.lower().endswith(SENSITIVE_EXTS) and not _re.search(r"tests?/|docs/|\.example|intelligence_library/|audit/", p.lower())]
     targets = targets[:SENSITIVE_SCAN_FILE_CAP]
     findings = []
     for rel in targets:

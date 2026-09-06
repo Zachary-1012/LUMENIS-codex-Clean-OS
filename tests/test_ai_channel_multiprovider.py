@@ -30,7 +30,7 @@ class TestProviderChain:
     def test_default_chain(self, monkeypatch):
         monkeypatch.delenv("AI_PROVIDER_CHAIN", raising=False)
         chain = ac.provider_chain()
-        assert chain == ["zhipu", "ark"]
+        assert chain == ["zhipu", "ark", "ollama"]
 
     def test_custom_chain(self, monkeypatch):
         monkeypatch.setenv("AI_PROVIDER_CHAIN", "zhipu,ark,qwen")

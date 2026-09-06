@@ -109,8 +109,8 @@ def run_ai_off_tests():
     try:
         from provider_registry import provider_status, is_provider_available, active_providers
         check("zhipu status=ACTIVE", provider_status("zhipu") == "ACTIVE", "")
-        check("ark status=LEGACY", provider_status("ark") == "LEGACY", "")
-        check("qwen status=DISABLED", provider_status("qwen") == "DISABLED", "")
+        check("ark status=ACTIVE_FALLBACK", provider_status("ark") == "ACTIVE_FALLBACK", "")
+        check("qwen status=NOT_CONFIGURED", provider_status("qwen") == "NOT_CONFIGURED", "")
         check("is_provider_available(qwen)=False", is_provider_available("qwen") == False, "")
         active = active_providers()
         check("active_providers includes zhipu", "zhipu" in active, f"active={active}")
