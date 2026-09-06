@@ -320,7 +320,7 @@ class TestVizApiEndpoints(unittest.TestCase):
 
     def test_system_runtime_endpoint(self):
         """system.runtime 返回真实系统数据。"""
-        resp = self.client.get("/api/viz/system.runtime")
+        resp = self.client.get("/api/viz/system.runtime?domain_id=system")
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
         self.assertTrue(data["success"])
@@ -328,7 +328,7 @@ class TestVizApiEndpoints(unittest.TestCase):
 
     def test_system_database_tables_endpoint(self):
         """system.database_tables 返回表列表。"""
-        resp = self.client.get("/api/viz/system.database_tables")
+        resp = self.client.get("/api/viz/system.database_tables?domain_id=system")
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
         self.assertTrue(data["success"])
@@ -336,7 +336,7 @@ class TestVizApiEndpoints(unittest.TestCase):
 
     def test_ai_call_logs_endpoint(self):
         """ai.call_logs 返回调用日志。"""
-        resp = self.client.get("/api/viz/ai.call_logs")
+        resp = self.client.get("/api/viz/ai.call_logs?domain_id=system")
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
         self.assertIn("success", data)

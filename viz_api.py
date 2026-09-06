@@ -126,17 +126,19 @@ def _transform_to_view(function_name: str, func_entry: Dict[str, Any],
     metrics = metric_layer.compute_all(filtered)
 
     # Step 4: 计算 current_value / delta / confidence / evidence_refs
+    # 硬约束：数据缺失（NO_DATA/ERROR）时 current_value 显式为 None，禁止用 0 填充
     current_value = None
-    if function_name in ("overview.stats", "overview.trend", "notes.realtime",
-                          "notes.search", "risk.active", "risk.trend", "events.list"):
-        total_metric = metrics.get("total")
-        current_value = total_metric.value if total_metric and total_metric.is_known else None
-    elif function_name in ("system.runtime", "system.workers", "system.database_tables",
-                            "system.health", "collector.status", "collector.quality_gate",
-                            "ai.call_logs", "kos.list", "kos.attribution",
-                            "brand.top10", "brand.growth", "overview.industry_dist",
-                            "events.propagation"):
-        current_value = len(filtered) if filtered else None
+    if data_result.status not in (DataStatus.NO_DATA, DataStatus.ERROR, DataStatus.UNAVAILABLE):
+        if function_name in ("overview.stats", "overview.trend", "notes.realtime",
+                              "notes.search", "risk.active", "risk.trend", "events.list"):
+            total_metric = metrics.get("total")
+            current_value = total_metric.value if total_metric and total_metric.is_known else None
+        elif function_name in ("system.runtime", "system.workers", "system.database_tables",
+                                "system.health", "collector.status", "collector.quality_gate",
+                                "ai.call_logs", "kos.list", "kos.attribution",
+                                "brand.top10", "brand.growth", "overview.industry_dist",
+                                "events.propagation"):
+            current_value = len(filtered) if filtered else None
 
     # Delta：如果有上一周期数据则计算，否则返回 null（不默认填充）
     delta = {
