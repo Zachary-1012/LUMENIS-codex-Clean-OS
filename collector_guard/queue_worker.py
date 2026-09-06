@@ -19,21 +19,25 @@ task_queue.fail 内置）。采集/事件分析/报告生成等批量任务可�
 """
 import threading
 import time
+import uuid
 
 
 class QueueWorker:
-    def __init__(self, queue, processor, max_drain=10):
+    def __init__(self, queue, processor, max_drain=10, worker_id=None, lease_owner=None):
         self.queue = queue
         self.processor = processor  # fn(task) -> bool（True=成功 ack；False/异常= fail 退避重试）
         self.max_drain = max_drain  # 单轮最多消费数（防长时间独占）
+        self.worker_id = worker_id or "worker-" + uuid.uuid4().hex[:12]
+        self.lease_owner = lease_owner or self.worker_id
 
     def process_once(self):
         """消费一个到期任务：成功 ack，失败 fail（task_queue 内部指数退避+上限转 failed）。
         无任务返回 None；有任务返回 (task_id, ok)。"""
-        task = self.queue.dequeue()
+        task = self.queue.dequeue(worker_id=self.worker_id, lease_owner=self.lease_owner, run_id=uuid.uuid4().hex)
         if task is None:
             return None
         task_id = task["id"]
+        self.queue.heartbeat(task_id, self.worker_id)
         try:
             ok = self.processor(task)
         except Exception:
@@ -74,5 +78,5 @@ def collect_processor_factory(collect_fn):
         if tt in ("collect", "collect_keyword"):
             payload = task.get("payload") or {}
             return bool(collect_fn(payload))
-        return True  # 未知类型视为成功（不阻塞队列）
+        return False  # Unknown work must use the failure/recovery path, never fake success.
     return processor

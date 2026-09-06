@@ -21,8 +21,9 @@ import os
 import threading
 import uuid
 
-DEFAULT_DLQ_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                "data", "collector_dlq.jsonl")
+from core.repository_registry import get_data_dir
+
+DEFAULT_DLQ_PATH = os.path.join(get_data_dir(), "collector_dlq.jsonl")
 
 
 class DeadLetterQueue:

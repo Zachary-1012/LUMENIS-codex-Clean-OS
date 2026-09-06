@@ -19,9 +19,10 @@ import sqlite3
 import threading
 import time
 
+from core.repository_registry import get_data_dir
+
 # 默认队列文件（可注入）
-DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "data", "task_queue.db")
+DEFAULT_PATH = os.path.join(get_data_dir(), "task_queue.db")
 
 _LOCK = threading.Lock()
 
@@ -48,8 +49,25 @@ class TaskQueue:
                     scheduled_at REAL,
                     attempts INTEGER DEFAULT 0,
                     last_error TEXT DEFAULT '',
-                    locked_at REAL DEFAULT 0
+                    locked_at REAL DEFAULT 0,
+                    run_id TEXT DEFAULT '',
+                    worker_id TEXT DEFAULT '',
+                    lease_owner TEXT DEFAULT '',
+                    started_at REAL DEFAULT 0,
+                    last_heartbeat_at REAL DEFAULT 0,
+                    last_success_at REAL DEFAULT 0,
+                    last_checkpoint_at REAL DEFAULT 0,
+                    checkpoint_id TEXT DEFAULT '',
+                    recovery_reason TEXT DEFAULT ''
                 )""")
+            columns = {row[1] for row in self._conn.execute("PRAGMA table_info(tasks)")}
+            for name, definition in (("run_id", "TEXT DEFAULT ''"), ("worker_id", "TEXT DEFAULT ''"),
+                ("lease_owner", "TEXT DEFAULT ''"), ("started_at", "REAL DEFAULT 0"),
+                ("last_heartbeat_at", "REAL DEFAULT 0"), ("last_success_at", "REAL DEFAULT 0"),
+                ("last_checkpoint_at", "REAL DEFAULT 0"), ("checkpoint_id", "TEXT DEFAULT ''"),
+                ("recovery_reason", "TEXT DEFAULT ''")):
+                if name not in columns:
+                    self._conn.execute("ALTER TABLE tasks ADD COLUMN %s %s" % (name, definition))
             self._conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_tasks_consume "
                 "ON tasks(status, scheduled_at, priority)")
@@ -65,7 +83,7 @@ class TaskQueue:
                  now, now + float(delay)))
             return cur.lastrowid
 
-    def dequeue(self):
+    def dequeue(self, worker_id="", lease_owner="", run_id=""):
         """取到期最高优先级任务并标记 running（原子，防多 worker 重复取）。
         无到期任务返回 None。"""
         with _LOCK, self._conn:
@@ -75,9 +93,11 @@ class TaskQueue:
                 (time.time(),)).fetchone()
             if row is None:
                 return None
+            now = time.time()
             self._conn.execute(
-                "UPDATE tasks SET status='running', locked_at=? WHERE id=?",
-                (time.time(), row["id"]))
+                "UPDATE tasks SET status='running', locked_at=?, worker_id=?, lease_owner=?, run_id=?, "
+                "started_at=?, last_heartbeat_at=? WHERE id=?",
+                (now, worker_id, lease_owner or worker_id, run_id, now, now, row["id"]))
             d = dict(row)
             try:
                 d["payload"] = json.loads(d["payload"])
@@ -88,7 +108,23 @@ class TaskQueue:
     def ack(self, task_id):
         """确认完成 -> done。"""
         with _LOCK, self._conn:
-            self._conn.execute("UPDATE tasks SET status='done' WHERE id=?", (task_id,))
+            self._conn.execute("UPDATE tasks SET status='done', last_success_at=?, lease_owner='' WHERE id=?",
+                               (time.time(), task_id))
+
+    def heartbeat(self, task_id, worker_id):
+        """Renew a running task lease; reject a stale/non-owner worker."""
+        with _LOCK, self._conn:
+            cur = self._conn.execute("UPDATE tasks SET last_heartbeat_at=? WHERE id=? AND status='running' AND worker_id=?",
+                                     (time.time(), task_id, worker_id))
+            return cur.rowcount == 1
+
+    def checkpoint(self, task_id, worker_id, checkpoint_id):
+        """Persist a resumable checkpoint only for the active lease owner."""
+        with _LOCK, self._conn:
+            now = time.time()
+            cur = self._conn.execute("UPDATE tasks SET checkpoint_id=?, last_checkpoint_at=? WHERE id=? AND status='running' AND worker_id=?",
+                                     (str(checkpoint_id), now, task_id, worker_id))
+            return cur.rowcount == 1
 
     def fail(self, task_id, error=""):
         """失败 -> attempts+1；未达上限回 pending 并指数退避重排（下次更晚），否则 failed。"""
@@ -99,15 +135,25 @@ class TaskQueue:
             attempts = row["attempts"] + 1
             if attempts >= self.max_attempts:
                 self._conn.execute(
-                    "UPDATE tasks SET status='failed', attempts=?, last_error=? WHERE id=?",
-                    (attempts, (error or "")[:500], task_id))
+                    "UPDATE tasks SET status='failed', attempts=?, last_error=?, lease_owner='', recovery_reason=? WHERE id=?",
+                    (attempts, (error or "")[:500], (error or "")[:500], task_id))
                 return
             # 指数退避：2^attempts 秒（首次失败 2s，二次 4s...）
             backoff = 2 ** attempts
             self._conn.execute(
                 "UPDATE tasks SET status='pending', attempts=?, last_error=?, "
-                "scheduled_at=?, locked_at=0 WHERE id=?",
-                (attempts, (error or "")[:500], time.time() + backoff, task_id))
+                "scheduled_at=?, locked_at=0, lease_owner='', recovery_reason=? WHERE id=?",
+                (attempts, (error or "")[:500], time.time() + backoff, (error or "")[:500], task_id))
+
+    def reap_stale(self, timeout_seconds, reason="heartbeat timeout"):
+        """Recover stale running leases through bounded retry, never leave them running."""
+        cutoff = time.time() - max(0, float(timeout_seconds))
+        with _LOCK, self._conn:
+            rows = self._conn.execute("SELECT id FROM tasks WHERE status='running' AND last_heartbeat_at < ?", (cutoff,)).fetchall()
+        ids = [row["id"] for row in rows]
+        for task_id in ids:
+            self.fail(task_id, reason)
+        return ids
 
     def stats(self):
         """各状态计数 + 汇总（Observatory/监控消费）。"""
@@ -122,7 +168,7 @@ class TaskQueue:
         """按状态列出任务（运维/调试）。"""
         with _LOCK, self._conn:
             rows = self._conn.execute(
-                "SELECT id, task_type, priority, attempts, status, last_error "
+                "SELECT id, task_type, priority, attempts, status, last_error, run_id, worker_id, lease_owner, started_at, last_heartbeat_at, last_success_at, last_checkpoint_at, checkpoint_id, recovery_reason "
                 "FROM tasks WHERE status=? ORDER BY id DESC LIMIT ?",
                 (status, limit)).fetchall()
             return [dict(r) for r in rows]
