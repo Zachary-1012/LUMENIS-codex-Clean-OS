@@ -513,16 +513,17 @@ def get_correction_stats(since: str = '') -> Dict[str, Any]:
 PROVIDER_STATUS = {
     'zhipu': 'ACTIVE',
     'glm': 'ACTIVE',          # zhipu 别名
-    'ark': 'LEGACY',
-    'doubao': 'LEGACY',
+    'ark': 'ACTIVE_FALLBACK',
+    'doubao': 'ACTIVE_FALLBACK',
     'ollama': 'ACTIVE_FALLBACK',    # Track3：本地兜底模型，运行时探测后 ACTIVE
     'lmstudio': 'AVAILABLE',
     'llama_cpp': 'AVAILABLE',
-    'qwen': 'DISABLED',
+    'qwen': 'NOT_CONFIGURED',
     'openai': 'DISABLED',
     'deepseek': 'NOT_CONFIGURED',
     'rule': 'RULE_FALLBACK',
     'local_rule': 'RULE_FALLBACK',
+    'deterministic_rule': 'RULE_FALLBACK',
 }
 
 

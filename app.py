@@ -157,6 +157,13 @@ app.register_blueprint(viz_api.viz_bp)  # Phase 14: 函数驱动可视化后端 
 app.register_blueprint(data_center_api.data_center_bp)  # V1.0: 全平台数据中心 /api/data-center/*
 app.register_blueprint(intelligence_library_api.intelligence_library_bp)
 
+# P1-Content: 统一内容生成引擎（AI+研究库+Evidence+Evaluation）
+try:
+    import content_generation
+    content_generation.register_content_api(app)
+except Exception as _cg_e:
+    print(f"[content_generation] blueprint register failed: {_cg_e}")
+
 # P1-C: Intelligence Library page (no-scroll, left tree + right list + detail drawer)
 @app.route('/intelligence/library')
 def intelligence_library_page():
@@ -1023,6 +1030,13 @@ _PG_BYPASS_PATHS = frozenset({
     '/api/developer/run', '/api/config/run-code', '/api/dev/run-code',
     # 验收判定 judge：纯内存函数计算，不读写 DB/文件/网络/外部状态，等同只读
     '/api/system/acceptance/judge',
+    # P1-Content: 统一内容生成AI增强（仅写content_generation_evidence/content_evaluation表，不碰生产数据）
+    '/api/content/generate', '/api/content/feedback', '/api/content/ad-strategy',
+    '/api/content/video-analyze', '/api/content/brand-report/generate',
+    '/api/content/podcast-research', '/api/content/topic-snapshot',
+    # P1-Podcast: 播客确定性算法端点（纯内存计算，不写生产数据）
+    '/api/podcast/topic-score', '/api/podcast/story-nodes', '/api/podcast/runtime/validate',
+    '/api/podcast/breakout', '/api/podcast/content-yield', '/api/podcast/entity',
 })
 
 
@@ -1085,7 +1099,7 @@ def _permission_gate_write_check():
     """
     if request.method not in _PG_WRITE_METHODS:
         return None
-    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/'):
+    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/') or request.path.startswith('/api/content/') or request.path.startswith('/api/podcast/'):
         return None
     try:
         if _pg is None:
@@ -2650,6 +2664,102 @@ def api_system_health():
     result['ai']=intelligence.ai_status()
     result['web_discovery_enabled']=os.getenv('TAIKOO_WEB_DISCOVERY','1').lower() not in ('0','false','no','off')
     return jsonify({'ok':result.get('database')=='ok','health':result})
+
+# ===== ZBC Lifecycle Contract V1.0: Runtime Worker API =====
+@app.route('/api/system/runtime')
+def api_system_runtime():
+    """统一生命周期运行时状态：按域返回 worker 列表/DLQ/熔断器/Guardian 健康状态。"""
+    try:
+        import runtime_guardian as _rg
+        g = _rg.get_guardian("system")
+        all_workers = g.list_lifecycle_workers()
+        dlq_stats = g.dlq.stats()
+        health = g.health_check()
+
+        # 按域组织
+        runtime_by_domain = {}
+        for dom in ("cth", "zbmp", "system"):
+            dom_workers = [w for w in all_workers if w.get("domain_id", "system") == dom]
+            running = sum(1 for w in dom_workers if w.get("status") in ("running", "resuming"))
+            failed = sum(1 for w in dom_workers if w.get("status") in ("failed", "dead", "stopping"))
+            paused = sum(1 for w in dom_workers if w.get("status") == "paused")
+            runtime_by_domain[dom] = {
+                "total_workers": len(dom_workers),
+                "running": running,
+                "failed": failed,
+                "paused": paused,
+                "dlq_count": dlq_stats.get("total", 0),
+                "guardian_health": health.get("overall", "unknown"),
+                "workers": [
+                    {
+                        "worker_id": w["worker_id"],
+                        "worker_name": w.get("worker_name", ""),
+                        "status": w.get("status", "unknown"),
+                        "last_heartbeat_at": w.get("last_heartbeat_at", ""),
+                        "last_checkpoint_at": w.get("last_checkpoint_at", ""),
+                        "failure_count": w.get("failure_count", 0),
+                        "retry_count": w.get("retry_count", 0),
+                        "lease_owner": w.get("lease_owner", ""),
+                        "recovery_reason": w.get("recovery_reason", ""),
+                        "created_at": w.get("created_at", ""),
+                    }
+                    for w in dom_workers
+                ],
+            }
+
+        return jsonify({
+            "ok": True,
+            "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "guardian_health": health.get("overall", "unknown"),
+            "runtime_by_domain": runtime_by_domain,
+            "guardian": {
+                "lease": {"status": "ACTIVE" if any(w.get("lease_owner") for w in all_workers) else "IDLE"},
+                "heartbeat": {"status": "ACTIVE" if running > 0 else "IDLE"},
+                "reaper": {"status": "RUNNING" if health.get("reaper_running") else "STOPPED",
+                           "last_run": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                "checkpoint": {"status": "ACTIVE"},
+            },
+            "dlq": dlq_stats,
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e), "runtime_by_domain": {}}), 500
+
+@app.route('/api/runtime/workers')
+def api_runtime_workers():
+    """列出所有 lifecycle worker（支持 ?status=running 过滤）。"""
+    try:
+        import runtime_guardian as _rg
+        g = _rg.get_guardian("system")
+        status_filter = request.args.get("status")
+        workers = g.list_lifecycle_workers()
+        if status_filter:
+            workers = [w for w in workers if w.get("status") == status_filter]
+        return jsonify({"ok": True, "count": len(workers), "workers": workers})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e), "workers": []}), 500
+
+@app.route('/api/runtime/workers/<worker_id>/archive', methods=['POST'])
+def api_runtime_archive_worker(worker_id):
+    """归档指定 worker（STOPPED/DEAD → ARCHIVED）。"""
+    try:
+        import runtime_guardian as _rg
+        g = _rg.get_guardian("system")
+        ok = g.lifecycle_archive(worker_id, reason="manual_archive")
+        return jsonify({"ok": ok, "worker_id": worker_id})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route('/api/runtime/archive-dead', methods=['POST'])
+def api_runtime_archive_dead():
+    """批量归档超过指定时长的 DEAD/STOPPED worker（默认24小时）。"""
+    try:
+        import runtime_guardian as _rg
+        g = _rg.get_guardian("system")
+        hours = float(request.args.get("hours", 24))
+        count = g.archive_dead_workers(older_than_hours=hours)
+        return jsonify({"ok": True, "archived": count, "hours": hours})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 # ===== Collector Guard 状态 API（旁路模式，只读）=====
 @app.route('/api/collector-guard/status')
@@ -5124,6 +5234,14 @@ except Exception as _acct_err:
 from v4_upgrade.report_center.api import report_center_bp
 app.register_blueprint(report_center_bp)
 
+# GAP-11 Evidence API 注册（修复 cth/evidence.html API断链）
+try:
+    from evidence_api import register_evidence_api
+    register_evidence_api(app)
+    print("[evidence_api] 证据查询API已注册 /api/evidence/*")
+except Exception as _ev_err:
+    print(f"[evidence_api] 注册失败（不阻断启动）: {_ev_err}")
+
 # ===== ZBC V2.0 双域核心扩展：请求级域上下文 + 双域 API 命名空间 =====
 # subject_context.init_app: 注册 before/after_request 钩子，
 # 从 X-Domain-Id / X-Product-Id / X-Brand-Key 解析域身份，设置线程 SubjectContext + DomainContext
@@ -5270,6 +5388,12 @@ def system_skills_page():
     """Skill 商店页（ChatGPT 插件商店风格）"""
     from flask import render_template
     return render_template('system/skill_store.html')
+
+@app.route('/system/runtime')
+def system_runtime_page():
+    """Runtime Control Center — 统一生命周期 Worker 状态展示（Lifecycle Contract V1.0）"""
+    from flask import render_template
+    return render_template('system/runtime.html')
 
 @app.route('/cth/login')
 def cth_login_page():

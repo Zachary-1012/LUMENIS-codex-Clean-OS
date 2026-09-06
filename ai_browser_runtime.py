@@ -61,6 +61,14 @@ EVIDENCE_SCREENSHOT_DIR = os.environ.get(
     str(Path(__file__).parent / "data" / "browser_evidence"),
 )
 
+# ZBC Lifecycle Contract V1.0 (bypass-mode)
+try:
+    from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
+    _LIFECYCLE_AVAILABLE = True
+except Exception:
+    _LifecycleMixin = None
+    _LIFECYCLE_AVAILABLE = False
+
 
 class BrowserActionType(str, Enum):
     """Browser Action 类型枚举。"""
@@ -1903,6 +1911,9 @@ class BrowserSessionManager:
     AI Browser Session 与用户日常浏览 Session 隔离（独立 profile）。
     """
 
+    # Lifecycle: session-level lifecycle workers (bypass-mode)
+    _lifecycle_sessions = {}
+
     def __init__(self):
         self._sessions: Dict[str, AIBrowserRuntime] = {}
         self._lock = threading.Lock()
@@ -1939,6 +1950,13 @@ class BrowserSessionManager:
 
     def close_session(self, session_id: str) -> bool:
         """关闭 Session。"""
+        # Lifecycle: cleanup session worker (bypass-mode)
+        _lc = BrowserSessionManager._lifecycle_sessions.pop(session_id, None)
+        if _lc:
+            try:
+                _lc.lifecycle_cleanup(reason="session_closed")
+            except Exception:
+                pass
         with self._lock:
             session = self._sessions.pop(session_id, None)
         if session:

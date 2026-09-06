@@ -182,7 +182,7 @@ class TestAICallLogger:
 
     def test_provider_status_registry(self):
         assert acl.get_provider_status('zhipu') == 'ACTIVE'
-        assert acl.get_provider_status('ark') == 'LEGACY'
+        assert acl.get_provider_status('ark') == 'ACTIVE_FALLBACK'
         assert acl.get_provider_status('ollama') == 'ACTIVE_FALLBACK'
         assert acl.get_provider_status('nonexistent') == 'UNKNOWN'
 
@@ -466,6 +466,7 @@ class TestProviderFallback:
     def test_route_with_fallback_primary_success(self):
         """主 Provider 成功时不应尝试备用。"""
         import ai_channel
+        ai_channel.get_provider_breaker('zhipu').breaker.record_success()
 
         call_order = []
 
@@ -481,6 +482,7 @@ class TestProviderFallback:
     def test_route_with_fallback_secondary_takes_over(self):
         """主 Provider 失败时应切到备用。"""
         import ai_channel
+        ai_channel.get_provider_breaker('zhipu').breaker.record_success()
 
         call_order = []
 

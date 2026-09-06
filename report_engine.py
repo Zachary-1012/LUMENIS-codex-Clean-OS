@@ -51,6 +51,14 @@ DUAL_DOMAIN_REPORTS = {
 }
 
 
+# ZBC Lifecycle Contract V1.0 (bypass-mode)
+try:
+    from lifecycle_mixin import lifecycle_task as _lifecycle_task
+    _LIFECYCLE_AVAILABLE = True
+except Exception:
+    _lifecycle_task = None
+    _LIFECYCLE_AVAILABLE = False
+
 
 def period_for(report_type: str, now: datetime | None = None):
     now = now or datetime.now()
@@ -249,6 +257,20 @@ def generate_domain_report(
             "report_data": {...},
         }
     """
+    # Lifecycle Contract V1.0 (bypass-mode, never breaks report generation)
+    _lc_worker = None
+    if _LIFECYCLE_AVAILABLE:
+        try:
+            from lifecycle_mixin import LifecycleMixin
+            _lc_worker = LifecycleMixin(
+                worker_name=f"report_{report_type}",
+                domain_id="system", product_id="SYSTEM",
+            )
+            _lc_worker.lifecycle_create()
+            _lc_worker.lifecycle_start(run_id=f"report_{report_type}_{int(__import__('time').time())}")
+        except Exception:
+            _lc_worker = None
+
     import json
     import os as _os
 

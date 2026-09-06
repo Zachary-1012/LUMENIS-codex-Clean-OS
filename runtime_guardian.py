@@ -96,6 +96,46 @@ class DLQStatus(Enum):
     ARCHIVED = "archived"
 
 
+class LifecycleState(Enum):
+    """ZBC unified lifecycle state machine V1.0.
+    CREATED -> STARTING -> RUNNING -> PAUSED -> RESUMING -> STOPPING -> STOPPED -> DEAD -> ARCHIVED
+    """
+    CREATED = "created"
+    STARTING = "starting"
+    RUNNING = "running"
+    PAUSED = "paused"
+    RESUMING = "resuming"
+    STOPPING = "stopping"
+    STOPPED = "stopped"
+    DEAD = "dead"
+    ARCHIVED = "archived"
+
+    @classmethod
+    def from_worker_status(cls, ws):
+        _MAP = {
+            WorkerStatus.IDLE: cls.CREATED,
+            WorkerStatus.RUNNING: cls.RUNNING,
+            WorkerStatus.RECOVERING: cls.RESUMING,
+            WorkerStatus.FAILED: cls.STOPPING,
+            WorkerStatus.STOPPED: cls.STOPPED,
+            WorkerStatus.DEAD: cls.DEAD,
+        }
+        return _MAP.get(ws, cls.CREATED)
+
+
+_LIFECYCLE_TRANSITIONS = {
+    LifecycleState.CREATED: {LifecycleState.STARTING, LifecycleState.STOPPING},
+    LifecycleState.STARTING: {LifecycleState.RUNNING, LifecycleState.STOPPING, LifecycleState.DEAD},
+    LifecycleState.RUNNING: {LifecycleState.PAUSED, LifecycleState.STOPPING, LifecycleState.DEAD},
+    LifecycleState.PAUSED: {LifecycleState.RESUMING, LifecycleState.STOPPING, LifecycleState.DEAD},
+    LifecycleState.RESUMING: {LifecycleState.RUNNING, LifecycleState.PAUSED, LifecycleState.STOPPING, LifecycleState.DEAD},
+    LifecycleState.STOPPING: {LifecycleState.STOPPED, LifecycleState.DEAD},
+    LifecycleState.STOPPED: {LifecycleState.STARTING, LifecycleState.ARCHIVED},
+    LifecycleState.DEAD: {LifecycleState.ARCHIVED, LifecycleState.STARTING},
+    LifecycleState.ARCHIVED: set(),
+}
+
+
 # ---------------------------------------------------------------------------
 # 数据类
 # ---------------------------------------------------------------------------
@@ -1162,6 +1202,154 @@ class RuntimeGuardian:
         if status:
             workers = [w for w in workers if w.get("status") == status]
         return workers
+
+    # ------------------------------------------------------------------
+    # 统一生命周期 V1.0 方法（create/start/pause/resume/stop/cleanup/archive）
+    # ------------------------------------------------------------------
+    def transition_state(self, worker_id: str, new_state: "LifecycleState",
+                         reason: str = "") -> bool:
+        """校验并执行生命周期状态转换。非法转换返回 False（不抛异常）。"""
+        worker = self.get_worker(worker_id)
+        if not worker:
+            return False
+        current_str = worker.get("status", "created")
+        try:
+            current = LifecycleState(current_str)
+        except ValueError:
+            # 历史 WorkerStatus 值映射
+            try:
+                current = LifecycleState.from_worker_status(WorkerStatus(current_str))
+            except ValueError:
+                current = LifecycleState.CREATED
+        if new_state not in _LIFECYCLE_TRANSITIONS.get(current, set()):
+            return False
+        meta = worker.get("metadata", {}) or {}
+        if new_state == LifecycleState.RUNNING and "started_at" not in meta:
+            meta["started_at"] = _now_iso()
+        if new_state in (LifecycleState.STOPPED, LifecycleState.DEAD):
+            meta["ended_at"] = _now_iso()
+        return self._update_worker_fields(
+            worker_id,
+            status=new_state.value,
+            recovery_reason=reason,
+            metadata=json.dumps(meta, ensure_ascii=False),
+        )
+
+    def lifecycle_create(self, worker_name: str, metadata: Optional[Dict[str, Any]] = None,
+                         domain_id: str = "system", product_id: str = "SYSTEM") -> str:
+        """生命周期 create：注册 worker，状态 CREATED。"""
+        wid = self.register_worker(worker_name, metadata=metadata,
+                                    domain_id=domain_id, product_id=product_id)
+        # register_worker 历史上设为 idle，统一生命周期覆盖为 created
+        self._update_worker_fields(wid, status=LifecycleState.CREATED.value)
+        return wid
+
+    def lifecycle_start(self, worker_id: str, owner: str = "",
+                        lease_ttl: float = DEFAULT_LEASE_TTL) -> bool:
+        """生命周期 start：CREATED/STOPPED → STARTING → 获取租约 → RUNNING。"""
+        self._update_worker_fields(worker_id, status=LifecycleState.STARTING.value,
+                                    recovery_reason="start")
+        owner = owner or f"pid-{os.getpid()}"
+        lease = self.acquire_lease(worker_id, owner, ttl_seconds=lease_ttl)
+        if not lease:
+            return False
+        self.heartbeat(worker_id)
+        # acquire_lease 已将 status 设为 running，确保元数据记录 started_at
+        worker = self.get_worker(worker_id)
+        if worker:
+            meta = worker.get("metadata", {}) or {}
+            if "started_at" not in meta:
+                meta["started_at"] = _now_iso()
+                self._update_worker_fields(worker_id, metadata=json.dumps(meta, ensure_ascii=False))
+        return True
+
+    def lifecycle_pause(self, worker_id: str, reason: str = "paused") -> bool:
+        """生命周期 pause：RUNNING → PAUSED。"""
+        return self.transition_state(worker_id, LifecycleState.PAUSED, reason=reason)
+
+    def lifecycle_resume(self, worker_id: str) -> bool:
+        """生命周期 resume：PAUSED → RESUMING → RUNNING。"""
+        if not self.transition_state(worker_id, LifecycleState.RESUMING, reason="resume"):
+            pass
+        self.heartbeat(worker_id)
+        return self.transition_state(worker_id, LifecycleState.RUNNING, reason="resumed")
+
+    def lifecycle_stop(self, worker_id: str, reason: str = "stopped") -> bool:
+        """生命周期 stop：→ STOPPING → 释放租约 → STOPPED。"""
+        self._update_worker_fields(worker_id, status=LifecycleState.STOPPING.value,
+                                    recovery_reason=reason)
+        worker = self.get_worker(worker_id)
+        if worker and worker.get("lease_owner"):
+            self.release_lease(worker_id, worker["lease_owner"])
+        # release_lease 会将 status 设为 idle，统一生命周期强制覆盖为 stopped
+        meta = {}
+        if worker:
+            meta = worker.get("metadata", {}) or {}
+        meta["ended_at"] = _now_iso()
+        return self._update_worker_fields(
+            worker_id, status=LifecycleState.STOPPED.value,
+            recovery_reason=reason, metadata=json.dumps(meta, ensure_ascii=False),
+        )
+
+    def lifecycle_cleanup(self, worker_id: str, reason: str = "cleanup") -> bool:
+        """生命周期 cleanup：释放租约 + 停止心跳引用 + 标记 STOPPED。"""
+        worker = self.get_worker(worker_id)
+        if worker and worker.get("lease_owner"):
+            self.release_lease(worker_id, worker["lease_owner"])
+        with self._lock:
+            self._heartbeats.pop(worker_id, None)
+        return self._update_worker_fields(
+            worker_id, status=LifecycleState.STOPPED.value, recovery_reason=reason,
+        )
+
+    def lifecycle_archive(self, worker_id: str, reason: str = "archived") -> bool:
+        """生命周期 archive：STOPPED/DEAD → ARCHIVED（终态，从活跃列表移除）。"""
+        return self._update_worker_fields(
+            worker_id, status=LifecycleState.ARCHIVED.value, recovery_reason=reason,
+        )
+
+    def archive_dead_workers(self, older_than_hours: float = 24.0) -> int:
+        """批量归档超过指定时长的 DEAD/STOPPED worker，返回归档数量。"""
+        cutoff_ts = _now_ts() - older_than_hours * 3600
+        cutoff_str = datetime.fromtimestamp(cutoff_ts).strftime("%Y-%m-%d %H:%M:%S")
+        count = 0
+        with _get_db(self._db_path) as conn:
+            rows = conn.execute(
+                """SELECT worker_id FROM runtime_guardian_workers
+                   WHERE status IN ('dead', 'stopped', 'failed')
+                   AND last_heartbeat_at != '' AND last_heartbeat_at < ?""",
+                (cutoff_str,),
+            ).fetchall()
+            for row in rows:
+                conn.execute(
+                    "UPDATE runtime_guardian_workers SET status = 'archived', recovery_reason = ?, updated_at = ? WHERE worker_id = ?",
+                    (f"auto_archive_{older_than_hours}h", _now_iso(), row["worker_id"]),
+                )
+                count += 1
+        return count
+
+    def list_lifecycle_workers(self, include_archived: bool = False) -> List[Dict[str, Any]]:
+        """列出所有 worker 的生命周期状态（默认排除 ARCHIVED）。"""
+        workers = self.list_workers()
+        if not include_archived:
+            workers = [w for w in workers if w.get("status") != LifecycleState.ARCHIVED.value]
+        return workers
+
+    def lifecycle_summary(self) -> Dict[str, Any]:
+        """生命周期状态汇总：各状态 worker 数量 + DLQ + 熔断器。"""
+        workers = self.list_lifecycle_workers()
+        by_state: Dict[str, int] = {}
+        for w in workers:
+            s = w.get("status", "unknown")
+            by_state[s] = by_state.get(s, 0) + 1
+        return {
+            "timestamp": _now_iso(),
+            "guardian_name": self.name,
+            "total_active": len(workers),
+            "by_state": by_state,
+            "dlq": self._dlq.stats(),
+            "reaper_running": self._reaper_running,
+        }
 
     # ------------------------------------------------------------------
     # 健康检查与状态

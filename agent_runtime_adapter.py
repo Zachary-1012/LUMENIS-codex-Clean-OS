@@ -65,6 +65,14 @@ def _python_executable() -> str:
         return venv_python
     return sys.executable
 
+# ZBC Lifecycle Contract V1.0 (bypass-mode)
+try:
+    from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
+    _LIFECYCLE_AVAILABLE = True
+except Exception:
+    _LifecycleMixin = None
+    _LIFECYCLE_AVAILABLE = False
+
 
 class AgentRuntimeAdapter:
     """ZBC → OSAI Agent Identity / Delegation / OBO / JIT 跨仓适配器。

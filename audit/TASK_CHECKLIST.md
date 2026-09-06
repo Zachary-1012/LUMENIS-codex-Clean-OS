@@ -455,3 +455,55 @@
 ---
 
 > 本清单由 AI Task Engine 建设任务自动维护，最后更新：2026-09-07
+
+---
+
+## 十三、智谱UI设计元素接入 ZBC 设计系统 ✅ VERIFIED
+
+> 任务日期：2026-09-07
+> 模块：AI 对话工作台 + 浮动 AI 助手 + 全局设计系统 CSS
+> 文档：`docs/ZHIPU_UI_DESIGN_INTEGRATION.md`
+
+| 项目 | 状态 | 实现位置 |
+|---|---|---|
+| AI模块专属蓝色 `#2f6bff` CSS变量 | ✅ | `lumenis-global-design.css` §20.1 `--ai-accent` |
+| 三栏布局（历史+对话+详情） | ✅ | `ai.html` `.ai-workspace` + `.ai-pane--left/center/right` |
+| AI消息底部操作栏（复制/重新生成） | ✅ | `.ai-msg-actions` + `.ai-msg-action` |
+| 打字机流式输出 + 闪烁光标 | ✅ | `AIChat._startTypewriter()` / ai-assistant.js `typewriter()` |
+| AI模块深色主题（容器级，不全局） | ✅ | `[data-ai-theme="dark"]` §20.12 |
+| 深色/浅色切换按钮 | ✅ | `#ai-theme-toggle` / `#zbc-ai-theme` |
+| AI状态监控看板（4 KPI） | ✅ | `.ai-monitor-grid` + `AIChat.loadMonitor()` |
+| 多模态输入预览（附件chip+删除） | ✅ | `.ai-attach-preview` + `AIChat._renderAttachPreview()` |
+| 侧栏可折叠（左/右独立） | ✅ | `data-left-collapsed` / `data-right-collapsed` |
+| Adaptive UI 接入（.ad-container） | ✅ | 940px→comfortable自动收起右栏 |
+| 动效统一走 LDMotion/ZBCMotion | ✅ | 无独立 @keyframes，光标JS驱动 |
+| B Shard AI Task Engine 功能保留 | ✅ | Provider/CallLog/OWASP/Eval/TaskEngine完整 |
+| 浮动AI助手升级 V2.1 | ✅ | 打字机+复制+深色+多模态+智谱蓝 |
+| 8201重启验证 | ✅ | healthz 200，页面渲染正常 |
+
+### 变更文件
+1. `static/css/lumenis-global-design.css` — 追加 §20（~280行）
+2. `templates/system/ai.html` — 插入监控看板+三栏工作台+AIChat JS（~350行）
+3. `static/js/ai-assistant.js` — 重写 V2.1
+4. `docs/ZHIPU_UI_DESIGN_INTEGRATION.md` — 新增
+
+### 未触碰
+- `ai_task_engine.py` / AI Core API 调用链
+- `SUBJECT_WORDS` / `SUBJECT_EXCLUDE_WORDS` / `subject_hit()`
+- 数据库（无迁移）
+- 其他页面设计语言（薄荷绿主色不变）
+
+## 2026-09-07 Content Production Activation
+- [x] 23项内容制作模块全部激活 (23 VERIFIED)
+- [x] 统一内容生成引擎 content_generation.py (8种内容类型)
+- [x] AI真实调用智谱zhipu (glm-4.5-air), 非模板填充
+- [x] 研究库接入 (DB 711资产 + 文件系统检索)
+- [x] Evidence链 (content_generation_evidence 26条)
+- [x] Evaluation 4维评分 (content_evaluation)
+- [x] 前端 content.html AI内容生成工作台
+- [x] 安全测试 10/10 PASS (audit/SECURITY_TEST_REPORT.md)
+- [x] E2E测试 18场景 VERIFIED (audit/CONTENT_PRODUCTION_E2E.md)
+- [x] 全量测试 30/30 PASS (100%)
+- [x] 8201重启 healthz 200
+- [x] PermissionGate白名单 (/api/content/* /api/podcast/*)
+- [x] 数据库128表完整无破坏

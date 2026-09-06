@@ -74,6 +74,14 @@ class SkillRuntimeInfo:
     def to_dict(self):
         d = asdict(self); d["state"] = self.state.value; return d
 
+# ZBC Lifecycle Contract V1.0 (bypass-mode)
+try:
+    from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
+    _LIFECYCLE_AVAILABLE = True
+except Exception:
+    _LifecycleMixin = None
+    _LIFECYCLE_AVAILABLE = False
+
 
 def check_permission(ctx, user_role="user", skill_info=None):
     if skill_info and not skill_info.enabled:

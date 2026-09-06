@@ -44,6 +44,14 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+# ZBC Lifecycle Contract V1.0 (bypass-mode, never breaks main chain)
+try:
+    from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
+    _LIFECYCLE_AVAILABLE = True
+except Exception:
+    _LifecycleMixin = None
+    _LIFECYCLE_AVAILABLE = False
+
 
 # ═══════════════════════════════════════════════════════════════
 # 1. 数据库配置（复用 database.py 的 DB_PATH，独立迁移）
@@ -321,6 +329,17 @@ class TaskEngine:
         self._lock = threading.Lock()
         self._running_tasks: Dict[str, threading.Thread] = {}
         self._cancelled: set = set()
+
+        # Lifecycle Contract V1.0 (bypass-mode)
+        self._lifecycle_worker = None
+        if _LIFECYCLE_AVAILABLE:
+            try:
+                self._lifecycle_worker = _LifecycleMixin(
+                    worker_name="ai_task_engine", domain_id="zbmp", product_id="ZBMP",
+                )
+                self._lifecycle_worker.lifecycle_create()
+            except Exception:
+                self._lifecycle_worker = None
 
         # 延迟导入，避免循环依赖
         self._parser = None
@@ -854,6 +873,13 @@ class TaskEngine:
 
     def execute_task(self, task_id: str) -> Dict[str, Any]:
         """执行任务。支持重试（最多 max_retries）、指数退避、熔断。"""
+        # Lifecycle: start worker for this task (bypass-mode)
+        _lc_started = False
+        if self._lifecycle_worker:
+            try:
+                _lc_started = self._lifecycle_worker.lifecycle_start(run_id=f"task_{task_id}")
+            except Exception:
+                pass
         task = self._db_get_task(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")

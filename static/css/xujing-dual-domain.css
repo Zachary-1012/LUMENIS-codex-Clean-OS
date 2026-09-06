@@ -1,0 +1,153 @@
+/* ============================================================
+   ZBC Xujing Dual-Domain Theme CSS
+   ZBMP (Brand Intelligence) × CTH (Taikoo Hui Intelligence)
+   双域视觉语义隔离 — 统一Design System，不同业务主题
+   ============================================================ */
+
+:root {
+  /* ZBMP 品牌智能域 — 蓝紫渐变，增长/竞争/市场语义 */
+  --zbmp-primary: #4f6ef7;
+  --zbmp-primary-light: #7b93ff;
+  --zbmp-primary-dark: #3a52d4;
+  --zbmp-accent: #8b5cf6;
+  --zbmp-bg: #f8f9ff;
+  --zbmp-surface: #ffffff;
+  --zbmp-text: #1a1d2e;
+  --zbmp-text-secondary: #5a6075;
+  --zbmp-border: #e2e6f5;
+  --zbmp-success: #10b981;
+  --zbmp-warning: #f59e0b;
+  --zbmp-danger: #ef4444;
+  --zbmp-gradient: linear-gradient(135deg, #4f6ef7 0%, #8b5cf6 100%);
+
+  /* CTH 太古汇专项域 — 薄荷绿/金，高端商业/舆情/风险语义 */
+  --cth-primary: #00d4aa;
+  --cth-primary-light: #33e0be;
+  --cth-primary-dark: #00a885;
+  --cth-accent: #f5c542;
+  --cth-bg: #f6fbf9;
+  --cth-surface: #ffffff;
+  --cth-text: #0f1f1a;
+  --cth-text-secondary: #4a5e57;
+  --cth-border: #dceae5;
+  --cth-success: #00d4aa;
+  --cth-warning: #f5c542;
+  --cth-danger: #ff6b6b;
+  --cth-gradient: linear-gradient(135deg, #00d4aa 0%, #f5c542 100%);
+
+  /* 共享 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* ===== ZBMP 域主题 ===== */
+body[data-domain="zbmp"] {
+  --domain-primary: var(--zbmp-primary);
+  --domain-primary-light: var(--zbmp-primary-light);
+  --domain-accent: var(--zbmp-accent);
+  --domain-bg: var(--zbmp-bg);
+  --domain-surface: var(--zbmp-surface);
+  --domain-text: var(--zbmp-text);
+  --domain-text-secondary: var(--zbmp-text-secondary);
+  --domain-border: var(--zbmp-border);
+  --domain-gradient: var(--zbmp-gradient);
+  --domain-success: var(--zbmp-success);
+  --domain-warning: var(--zbmp-warning);
+  --domain-danger: var(--zbmp-danger);
+}
+
+/* ===== CTH 域主题 ===== */
+body[data-domain="cth"] {
+  --domain-primary: var(--cth-primary);
+  --domain-primary-light: var(--cth-primary-light);
+  --domain-accent: var(--cth-accent);
+  --domain-bg: var(--cth-bg);
+  --domain-surface: var(--cth-surface);
+  --domain-text: var(--cth-text);
+  --domain-text-secondary: var(--cth-text-secondary);
+  --domain-border: var(--cth-border);
+  --domain-gradient: var(--cth-gradient);
+  --domain-success: var(--cth-success);
+  --domain-warning: var(--cth-warning);
+  --domain-danger: var(--cth-danger);
+}
+
+/* ===== 域标签 ===== */
+.domain-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.domain-tag--zbmp {
+  background: var(--zbmp-gradient);
+  color: #fff;
+}
+.domain-tag--cth {
+  background: var(--cth-gradient);
+  color: #0f1f1a;
+}
+
+/* ===== 域KPI卡片 ===== */
+.domain-kpi {
+  background: var(--domain-surface);
+  border: 1px solid var(--domain-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.domain-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.domain-kpi__value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--domain-text);
+  line-height: 1.1;
+}
+.domain-kpi__label {
+  font-size: 13px;
+  color: var(--domain-text-secondary);
+  margin-top: 4px;
+}
+.domain-kpi__delta {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+.domain-kpi__delta--up { color: var(--domain-success); }
+.domain-kpi__delta--down { color: var(--domain-danger); }
+
+/* ===== 域导航高亮 ===== */
+.zbc-nav-item.is-active {
+  background: var(--domain-gradient);
+  color: #fff !important;
+}
+
+/* ===== 域风险面板 ===== */
+.domain-risk-panel {
+  border-left: 4px solid var(--domain-danger);
+  background: linear-gradient(90deg, rgba(239,68,68,0.05) 0%, transparent 100%);
+  padding: 16px 20px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+/* ===== 域切换过渡 ===== */
+.domain-transition {
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .domain-kpi__value { font-size: 24px; }
+  .domain-kpi { padding: 16px; }
+}

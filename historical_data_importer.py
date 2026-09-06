@@ -17,6 +17,14 @@ IMPORT_STATUS_DEDUP_SKIPPED = "dedup_skipped"
 IMPORT_STATUS_SUBJECT_REJECTED = "subject_rejected"
 IMPORT_STATUS_ERROR = "error"
 
+# ZBC Lifecycle Contract V1.0 (bypass-mode)
+try:
+    from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
+    _LIFECYCLE_AVAILABLE = True
+except Exception:
+    _LifecycleMixin = None
+    _LIFECYCLE_AVAILABLE = False
+
 
 def _get_db_path():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "monitor.db")

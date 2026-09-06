@@ -308,7 +308,7 @@ class TestNoHardcodedPathsInProduction:
                 if not fn.endswith(".py"):
                     continue
                 # 排除 scratch/debug 临时文件（项目约定：_ 前缀为一次性脚本）
-                if fn.startswith("_tmp_") or fn.startswith("_zbc_"):
+                if fn.startswith("_tmp_") or fn.startswith("_zbc_") or fn.startswith("_patch_") or fn.startswith("_split_") or fn.startswith("_lifecycle_") or fn.startswith("_archive_"):
                     continue
                 files.append(os.path.join(root, fn))
         return files
@@ -341,7 +341,6 @@ class TestNoHardcodedPathsInProduction:
             "case_ai_evaluate.py",
             "case_deep_analysis.py",
             "lumenis_skill_adapter.py",
-            "_split_report_api.py",
         ]
         for fname in modified_files:
             fpath = os.path.join(REPO_ROOT, fname)

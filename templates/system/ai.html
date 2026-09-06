@@ -7,6 +7,124 @@
   <span>⚡</span><span id="degraded-msg">部分 AI Provider 数据延迟</span>
 </div>
 
+<!-- ===== AI 状态监控看板（ZCode 3.0 风格 · 大数字KPI+渐变） ===== -->
+<div class="ai-monitor-grid" id="ai-monitor-grid" ad-motion="stagger">
+  <div class="ai-monitor-card">
+    <div class="ai-monitor-card__label"><span class="ai-monitor-card__status-dot ai-monitor-card__status-dot--ok"></span>今日调用</div>
+    <div class="ai-monitor-card__value" id="mon-calls" ld-count-up ld-value="0">0</div>
+    <div class="ai-monitor-card__sub" id="mon-calls-sub">统计中…</div>
+  </div>
+  <div class="ai-monitor-card">
+    <div class="ai-monitor-card__label">成功率</div>
+    <div class="ai-monitor-card__value" id="mon-success" ld-count-up ld-value="0">0%</div>
+    <div class="ai-monitor-card__sub" id="mon-success-sub">近24h</div>
+  </div>
+  <div class="ai-monitor-card">
+    <div class="ai-monitor-card__label">平均响应</div>
+    <div class="ai-monitor-card__value" id="mon-latency" ld-count-up ld-value="0">0ms</div>
+    <div class="ai-monitor-card__sub" id="mon-latency-sub">P50 延迟</div>
+  </div>
+  <div class="ai-monitor-card">
+    <div class="ai-monitor-card__label">运行任务</div>
+    <div class="ai-monitor-card__value" id="mon-queue" ld-count-up ld-value="0">0</div>
+    <div class="ai-monitor-card__sub" id="mon-queue-sub">队列中 / 执行中</div>
+  </div>
+</div>
+
+<!-- ===== AI 对话工作台（智谱三栏结构 · 左侧历史+中间对话+右侧详情） ===== -->
+<div class="ai-card" id="ai-chat-workspace" data-ai-module="true" data-ai-theme="light" style="margin-bottom:16px;">
+  <div class="ai-card__header">
+    <span class="ai-card__title">AI 对话工作台 · Chat → Task → Evidence → Trace</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="ai-theme-toggle" id="ai-theme-toggle" onclick="AIChat.toggleTheme()" title="切换AI模块深色/浅色主题">
+        <span id="ai-theme-icon">🌙</span><span id="ai-theme-label">深色</span>
+      </button>
+      <button class="ai-btn ai-btn--ghost ai-btn--sm" onclick="AIChat.toggleLeft()" title="折叠/展开历史栏">⇤ 历史</button>
+      <button class="ai-btn ai-btn--ghost ai-btn--sm" onclick="AIChat.toggleRight()" title="折叠/展开详情栏">详情 ⇥</button>
+    </div>
+  </div>
+  <div class="ai-card__body" style="padding:0;">
+    <div class="ai-workspace ad-container" id="ai-workspace">
+      <!-- 左侧：历史对话记录 -->
+      <div class="ai-pane ai-pane--left">
+        <div class="ai-card" style="height:100%;border-radius:0;border:none;box-shadow:none;">
+          <div class="ai-card__body" style="padding:14px;">
+            <button class="ai-btn ai-btn--primary ai-history-new" onclick="AIChat.newChat()">+ 新建对话</button>
+            <div class="ai-history-list" id="ai-history-list">
+              <div style="color:var(--l-text-tertiary,#9ca3af);font-size:11px;padding:16px;text-align:center;">暂无历史对话</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 中间：主对话区 -->
+      <div class="ai-pane ai-pane--center">
+        <div class="ai-card" style="height:100%;border-radius:0;border:none;box-shadow:none;">
+          <div class="ai-chat-messages" id="ai-chat-messages">
+            <div class="ai-msg ai-msg--ai">
+              <div class="ai-msg__role">AI Assistant</div>
+              <div class="ai-msg__bubble">你好！我是序境 AI 对话工作台。输入自然语言任务，我会通过 AI Task Engine（Parser→Intent→Agent→Skill→Permission→Execution→Evidence→Verification→Trace）执行，并在右侧详情面板展示完整执行链路。</div>
+            </div>
+          </div>
+          <div class="ai-input-area">
+            <div class="ai-attach-preview" id="ai-attach-preview" style="display:none;"></div>
+            <div class="ai-input-row">
+              <textarea id="ai-chat-input" placeholder="输入任务或问题，Enter 发送，Shift+Enter 换行…" rows="1"></textarea>
+              <div class="ai-input-tools">
+                <label class="ai-btn ai-btn--ghost ai-btn--icon" title="上传图片/文件（UI预览）">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  <input type="file" id="ai-file-input" multiple accept="image/*,.pdf,.txt,.docx,.xlsx,.csv">
+                </label>
+                <button class="ai-btn ai-btn--primary" id="ai-send-btn" onclick="AIChat.send()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  发送
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 右侧：详情面板 -->
+      <div class="ai-pane ai-pane--right">
+        <div class="ai-card" style="height:100%;border-radius:0;border:none;box-shadow:none;">
+          <div class="ai-card__body" style="padding:14px;">
+            <div id="ai-detail-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--l-text-tertiary,#9ca3af);font-size:12px;text-align:center;gap:8px;">
+              <div style="font-size:28px;opacity:0.4;">◇</div>
+              <div>选择或发起一个任务<br>查看执行步骤、Evidence、权限与风险</div>
+            </div>
+            <div id="ai-detail-content" style="display:none;">
+              <div class="ai-detail-section">
+                <div class="ai-detail-label">任务状态</div>
+                <div id="ai-detail-task-status" style="font-size:13px;font-weight:700;margin-bottom:6px;">—</div>
+                <div id="ai-detail-task-input" style="font-size:11px;color:var(--l-text-secondary,#6b7280);word-break:break-all;">—</div>
+              </div>
+              <div class="ai-detail-section">
+                <div class="ai-detail-label">风险等级</div>
+                <div id="ai-detail-risk"><div class="ai-risk-bar ai-risk-bar--low">L0 · 低风险</div></div>
+              </div>
+              <div class="ai-detail-section">
+                <div class="ai-detail-label">执行步骤时间线</div>
+                <div class="ai-timeline" id="ai-detail-steps">
+                  <div style="color:var(--l-text-tertiary,#9ca3af);font-size:11px;">等待执行…</div>
+                </div>
+              </div>
+              <div class="ai-detail-section">
+                <div class="ai-detail-label">Evidence 证据链</div>
+                <div id="ai-detail-evidence">
+                  <div style="color:var(--l-text-tertiary,#9ca3af);font-size:11px;">暂无证据</div>
+                </div>
+              </div>
+              <div class="ai-detail-section">
+                <div class="ai-detail-label">权限 / 审批</div>
+                <div id="ai-detail-permission" style="font-size:11px;color:var(--l-text-secondary,#6b7280);">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Provider status cards (4) ===== -->
 <div class="zbc-kpi-grid" id="provider-grid">
   <div class="zbc-kpi-card">
@@ -247,7 +365,7 @@
   /* ---- Call log ---- */
   function loadCallLog() {
     showSection('calllog', 'loading');
-    xjViz.api('/viz/ai-logs').catch(function() { return xjViz.api('/ai/logs'); })
+    xjViz.api('/api/ai/logs')
       .then(function(d) {
         var data = d.data || d;
         var logs = data.logs || data.records || data.items || [];
@@ -506,6 +624,526 @@
   };
   window.TE = TE;
   document.addEventListener('DOMContentLoaded', TE.init);
+})();
+</script>
+
+<!-- ===== AI 对话工作台 JS（智谱UI：三栏/打字机/操作栏/深色/多模态） ===== -->
+<script>
+(function() {
+  'use strict';
+  var AIChat = {
+    sessions: [],
+    currentSessionId: null,
+    currentTaskId: null,
+    _pollTimer: null,
+    _typeTimer: null,
+    _cursorTimer: null,
+    _attachedFiles: [],
+    _leftCollapsed: false,
+    _rightCollapsed: false,
+    _dark: false,
+
+    api: function(url, opts) {
+      var f = (typeof LUMENIS !== 'undefined' && LUMENIS.fetch) ? LUMENIS.fetch : fetch;
+      return f(url, opts).then(function(r) { return r.json(); });
+    },
+    esc: function(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; },
+    trunc: function(s, n) { s = String(s || ''); return s.length > n ? s.substring(0, n) + '…' : s; },
+
+    _reduced: function() {
+      return (window.ZBCMotion && window.ZBCMotion._reduced) || (window.LDMotion && window.LDMotion._reduced) || false;
+    },
+
+    /* ---- 主题切换（仅限AI工作台容器，不影响全局） ---- */
+    toggleTheme: function() {
+      AIChat._dark = !AIChat._dark;
+      var ws = document.getElementById('ai-chat-workspace');
+      ws.setAttribute('data-ai-theme', AIChat._dark ? 'dark' : 'light');
+      document.getElementById('ai-theme-icon').textContent = AIChat._dark ? '☀️' : '🌙';
+      document.getElementById('ai-theme-label').textContent = AIChat._dark ? '浅色' : '深色';
+      try { localStorage.setItem('ai_chat_theme', AIChat._dark ? 'dark' : 'light'); } catch(e) {}
+    },
+    _initTheme: function() {
+      try {
+        var saved = localStorage.getItem('ai_chat_theme');
+        if (saved === 'dark') AIChat.toggleTheme();
+      } catch(e) {}
+    },
+
+    /* ---- 侧栏折叠 ---- */
+    toggleLeft: function() {
+      AIChat._leftCollapsed = !AIChat._leftCollapsed;
+      document.getElementById('ai-workspace').setAttribute('data-left-collapsed', AIChat._leftCollapsed);
+    },
+    toggleRight: function() {
+      AIChat._rightCollapsed = !AIChat._rightCollapsed;
+      document.getElementById('ai-workspace').setAttribute('data-right-collapsed', AIChat._rightCollapsed);
+    },
+
+    /* ---- 会话管理（localStorage） ---- */
+    _loadSessions: function() {
+      try {
+        var raw = localStorage.getItem('ai_chat_sessions');
+        AIChat.sessions = raw ? JSON.parse(raw) : [];
+      } catch(e) { AIChat.sessions = []; }
+    },
+    _saveSessions: function() {
+      try { localStorage.setItem('ai_chat_sessions', JSON.stringify(AIChat.sessions.slice(0, 30))); } catch(e) {}
+    },
+    newChat: function() {
+      var id = 'sess_' + Date.now();
+      AIChat.sessions.unshift({ id: id, title: '新对话', messages: [], created_at: Date.now() });
+      AIChat.currentSessionId = id;
+      AIChat.currentTaskId = null;
+      AIChat._saveSessions();
+      AIChat._renderHistory();
+      AIChat._renderMessages();
+      AIChat._clearDetail();
+    },
+    _getSession: function() {
+      return AIChat.sessions.find(function(s) { return s.id === AIChat.currentSessionId; });
+    },
+    _renderHistory: function() {
+      var list = document.getElementById('ai-history-list');
+      if (!AIChat.sessions.length) {
+        list.innerHTML = '<div style="color:var(--l-text-tertiary,#9ca3af);font-size:11px;padding:16px;text-align:center;">暂无历史对话</div>';
+        return;
+      }
+      list.innerHTML = AIChat.sessions.map(function(s) {
+        var active = s.id === AIChat.currentSessionId ? ' is-active' : '';
+        var d = new Date(s.created_at);
+        var ts = (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+        return '<div class="ai-history-item' + active + '" onclick="AIChat._selectSession(\'' + s.id + '\')">'
+          + '<div class="ai-history-item__title">' + AIChat.esc(AIChat.trunc(s.title, 24)) + '</div>'
+          + '<div class="ai-history-item__meta"><span>' + (s.messages ? s.messages.length : 0) + ' 条</span><span>' + ts + '</span></div></div>';
+      }).join('');
+    },
+    _selectSession: function(id) {
+      AIChat.currentSessionId = id;
+      AIChat.currentTaskId = null;
+      AIChat._renderHistory();
+      AIChat._renderMessages();
+    },
+
+    /* ---- 消息渲染 ---- */
+    _renderMessages: function() {
+      var container = document.getElementById('ai-chat-messages');
+      var sess = AIChat._getSession();
+      if (!sess || !sess.messages.length) {
+        container.innerHTML = '<div class="ai-msg ai-msg--ai"><div class="ai-msg__role">AI Assistant</div>'
+          + '<div class="ai-msg__bubble">你好！我是序境 AI 对话工作台。输入自然语言任务，我会通过 AI Task Engine 执行，并在右侧详情面板展示完整执行链路。</div></div>';
+        return;
+      }
+      container.innerHTML = sess.messages.map(function(m) {
+        if (m.role === 'system') {
+          return '<div class="ai-msg ai-msg--system"><div class="ai-msg__bubble">' + AIChat.esc(m.content) + '</div></div>';
+        }
+        var role = m.role === 'user' ? 'You' : 'AI Assistant';
+        var actions = '';
+        if (m.role === 'ai' && m.content) {
+          actions = '<div class="ai-msg-actions">'
+            + '<button class="ai-msg-action" onclick="AIChat.copyMsg(this)" title="复制"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制</button>'
+            + '<button class="ai-msg-action" onclick="AIChat.regenerate()" title="重新生成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>重新生成</button>'
+            + '</div>';
+        }
+        return '<div class="ai-msg ai-msg--' + m.role + '">'
+          + '<div class="ai-msg__role">' + role + '</div>'
+          + '<div class="ai-msg__bubble" data-msg-content>' + AIChat.esc(m.content) + '</div>'
+          + actions + '</div>';
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+      // 动效：最新消息 fade-in
+      var msgs = container.querySelectorAll('.ai-msg');
+      if (msgs.length && window.ZBCMotion && window.ZBCMotion.applyPreset) {
+        try { window.ZBCMotion.applyPreset(msgs[msgs.length - 1], 'enter'); } catch(e) {}
+      }
+    },
+
+    /* ---- 打字机流式输出 ---- */
+    _startTypewriter: function(bubbleEl, fullText, onDone) {
+      if (AIChat._typeTimer) { clearInterval(AIChat._typeTimer); AIChat._typeTimer = null; }
+      bubbleEl.innerHTML = '';
+      var cursor = document.createElement('span');
+      cursor.className = 'ai-cursor';
+      bubbleEl.appendChild(cursor);
+      // 光标闪烁（JS驱动，非CSS animation）
+      if (AIChat._cursorTimer) clearInterval(AIChat._cursorTimer);
+      AIChat._cursorTimer = setInterval(function() { cursor.classList.toggle('is-hidden'); }, 530);
+
+      if (AIChat._reduced() || !fullText) {
+        bubbleEl.textContent = fullText || '';
+        bubbleEl.appendChild(cursor);
+        AIChat._finishTypewriter(bubbleEl, cursor, onDone);
+        return;
+      }
+      var idx = 0;
+      var speed = Math.max(8, Math.min(30, Math.floor(1200 / Math.max(fullText.length, 1))));
+      AIChat._typeTimer = setInterval(function() {
+        if (idx >= fullText.length) {
+          AIChat._finishTypewriter(bubbleEl, cursor, onDone);
+          return;
+        }
+        var chunk = fullText.slice(idx, idx + 2);
+        idx += 2;
+        bubbleEl.insertBefore(document.createTextNode(chunk), cursor);
+        var container = document.getElementById('ai-chat-messages');
+        if (container) container.scrollTop = container.scrollHeight;
+      }, speed);
+    },
+    _finishTypewriter: function(bubbleEl, cursor, onDone) {
+      if (AIChat._typeTimer) { clearInterval(AIChat._typeTimer); AIChat._typeTimer = null; }
+      if (AIChat._cursorTimer) { clearInterval(AIChat._cursorTimer); AIChat._cursorTimer = null; }
+      if (cursor && cursor.parentNode) cursor.parentNode.removeChild(cursor);
+      if (onDone) onDone();
+    },
+    stopGeneration: function() {
+      if (AIChat._pollTimer) { clearInterval(AIChat._pollTimer); AIChat._pollTimer = null; }
+      if (AIChat._typeTimer) {
+        clearInterval(AIChat._typeTimer);
+        AIChat._typeTimer = null;
+        if (AIChat._cursorTimer) { clearInterval(AIChat._cursorTimer); AIChat._cursorTimer = null; }
+        var cursor = document.querySelector('#ai-chat-messages .ai-cursor');
+        if (cursor && cursor.parentNode) cursor.parentNode.removeChild(cursor);
+      }
+      AIChat._appendSystem('已停止生成');
+      var btn = document.getElementById('ai-send-btn');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> 发送'; }
+    },
+
+    /* ---- 消息操作栏 ---- */
+    copyMsg: function(btn) {
+      var bubble = btn.closest('.ai-msg').querySelector('[data-msg-content]');
+      var text = bubble ? bubble.textContent : '';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          AIChat._flashAction(btn, '已复制');
+        }).catch(function() { AIChat._flashAction(btn, '已复制'); });
+      } else {
+        var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(e) {}
+        document.body.removeChild(ta);
+        AIChat._flashAction(btn, '已复制');
+      }
+    },
+    _flashAction: function(btn, label) {
+      var original = btn.innerHTML;
+      btn.classList.add('is-success');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' + label;
+      setTimeout(function() { btn.classList.remove('is-success'); btn.innerHTML = original; }, 1500);
+    },
+    regenerate: function() {
+      var sess = AIChat._getSession();
+      if (!sess || !sess.messages.length) return;
+      // 找到最后一条用户消息
+      var lastUser = null;
+      for (var i = sess.messages.length - 1; i >= 0; i--) {
+        if (sess.messages[i].role === 'user') { lastUser = sess.messages[i].content; break; }
+      }
+      if (!lastUser) return;
+      // 移除最后一条AI回复
+      if (sess.messages[sess.messages.length - 1].role === 'ai') sess.messages.pop();
+      AIChat._saveSessions();
+      AIChat._renderMessages();
+      AIChat._executeTask(lastUser);
+    },
+
+    /* ---- 多模态文件预览（UI预览，实际上传后续接入） ---- */
+    _initFileInput: function() {
+      var input = document.getElementById('ai-file-input');
+      if (!input) return;
+      input.addEventListener('change', function(e) {
+        var files = Array.prototype.slice.call(e.target.files || []);
+        files.forEach(function(f) { AIChat._attachedFiles.push(f); });
+        AIChat._renderAttachPreview();
+        input.value = '';
+      });
+    },
+    _renderAttachPreview: function() {
+      var wrap = document.getElementById('ai-attach-preview');
+      if (!AIChat._attachedFiles.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+      wrap.style.display = '';
+      wrap.innerHTML = AIChat._attachedFiles.map(function(f, i) {
+        var isImg = f.type && f.type.indexOf('image/') === 0;
+        var size = f.size > 1048576 ? (f.size / 1048576).toFixed(1) + 'MB' : (f.size / 1024).toFixed(0) + 'KB';
+        var thumb = isImg ? '<div class="ai-attach-chip__thumb" id="attach-thumb-' + i + '">' + (f.name.split('.').pop().substring(0,3).toUpperCase()) + '</div>'
+          : '<div class="ai-attach-chip__thumb">' + (f.name.split('.').pop().substring(0,3).toUpperCase() || 'FILE') + '</div>';
+        return '<div class="ai-attach-chip">' + thumb
+          + '<div class="ai-attach-chip__info"><div class="ai-attach-chip__name" title="' + AIChat.esc(f.name) + '">' + AIChat.esc(AIChat.trunc(f.name, 18)) + '</div>'
+          + '<div class="ai-attach-chip__size">' + size + '</div></div>'
+          + '<button class="ai-attach-chip__remove" onclick="AIChat._removeAttach(' + i + ')">×</button></div>';
+      }).join('');
+      // 图片缩略图
+      AIChat._attachedFiles.forEach(function(f, i) {
+        if (f.type && f.type.indexOf('image/') === 0 && f.previewUrl) {
+          var el = document.getElementById('attach-thumb-' + i);
+          if (el) el.innerHTML = '<img src="' + f.previewUrl + '" alt="">';
+        }
+      });
+    },
+    _removeAttach: function(idx) {
+      var f = AIChat._attachedFiles[idx];
+      if (f && f.previewUrl) { try { URL.revokeObjectURL(f.previewUrl); } catch(e) {} }
+      AIChat._attachedFiles.splice(idx, 1);
+      AIChat._renderAttachPreview();
+    },
+
+    /* ---- 发送消息 ---- */
+    send: function() {
+      var input = document.getElementById('ai-chat-input');
+      var text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      input.style.height = 'auto';
+      // 附件信息附加到上下文（UI预览，实际上传后续接入）
+      var attachNote = AIChat._attachedFiles.length ? ' [附件:' + AIChat._attachedFiles.map(function(f){return f.name;}).join(',') + ']' : '';
+      AIChat._attachedFiles = [];
+      AIChat._renderAttachPreview();
+      AIChat._executeTask(text + attachNote);
+    },
+    _appendSystem: function(text) {
+      var sess = AIChat._getSession();
+      if (!sess) return;
+      sess.messages.push({ role: 'system', content: text });
+      AIChat._saveSessions();
+      AIChat._renderMessages();
+    },
+    _executeTask: function(userText) {
+      // 确保有会话
+      if (!AIChat.currentSessionId) AIChat.newChat();
+      var sess = AIChat._getSession();
+      if (!sess) return;
+      if (!sess.title || sess.title === '新对话') { sess.title = AIChat.trunc(userText, 18); }
+      sess.messages.push({ role: 'user', content: userText });
+      AIChat._saveSessions();
+      AIChat._renderHistory();
+      AIChat._renderMessages();
+
+      var btn = document.getElementById('ai-send-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> 停止';
+      btn.onclick = AIChat.stopGeneration;
+
+      // 创建AI消息占位（生成中）
+      var aiMsg = { role: 'ai', content: '', _generating: true };
+      sess.messages.push(aiMsg);
+      AIChat._renderMessages();
+      var container = document.getElementById('ai-chat-messages');
+      var bubbles = container.querySelectorAll('.ai-msg__bubble');
+      var bubbleEl = bubbles[bubbles.length - 1];
+      bubbleEl.innerHTML = '<span class="ai-msg__generating"><span class="ai-dot-loading"><i></i><i></i><i></i></span>正在生成…</span>';
+
+      var domain = document.body.getAttribute('data-domain') || 'system';
+      AIChat.api('/api/ai/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: '[' + domain.toUpperCase() + '域] ' + userText, context: { current_page: '/system/ai', domain: domain }, created_by: 'ai_chat_workspace' })
+      }).then(function(d) {
+        if (!d || !d.ok || !d.task) throw new Error(d && d.error ? d.error : 'task create failed');
+        AIChat.currentTaskId = d.task.task_id;
+        AIChat._loadDetail(d.task.task_id);
+        return AIChat.api('/api/ai/tasks/' + d.task.task_id + '/run', { method: 'POST' });
+      }).then(function(runResult) {
+        if (runResult && runResult.ok && runResult.task && ['succeeded','failed','cancelled','dlq','awaiting_approval'].indexOf(runResult.task.status) >= 0) {
+          AIChat._handleTaskResult(runResult.task, aiMsg, bubbleEl);
+        } else {
+          AIChat._startPolling(aiMsg, bubbleEl);
+        }
+      }).catch(function(err) {
+        aiMsg.content = '任务执行失败：' + (err.message || '未知错误');
+        aiMsg._generating = false;
+        AIChat._saveSessions();
+        AIChat._renderMessages();
+        AIChat._resetSendBtn();
+      });
+    },
+    _startPolling: function(aiMsg, bubbleEl) {
+      if (AIChat._pollTimer) clearInterval(AIChat._pollTimer);
+      var cnt = 0;
+      AIChat._pollTimer = setInterval(function() {
+        cnt++;
+        if (!AIChat.currentTaskId) return;
+        AIChat.api('/api/ai/tasks/' + AIChat.currentTaskId).then(function(d) {
+          if (!d || !d.ok || !d.task) return;
+          AIChat._loadDetail(AIChat.currentTaskId);
+          var st = d.task.status;
+          if (['succeeded','failed','cancelled','dlq','awaiting_approval'].indexOf(st) >= 0) {
+            clearInterval(AIChat._pollTimer); AIChat._pollTimer = null;
+            AIChat._handleTaskResult(d.task, aiMsg, bubbleEl);
+          }
+        }).catch(function(){});
+        if (cnt > 45) { clearInterval(AIChat._pollTimer); AIChat._pollTimer = null; AIChat._appendSystem('任务执行超时，请在下方 Task Engine 查看'); AIChat._resetSendBtn(); }
+      }, 2000);
+    },
+    _handleTaskResult: function(task, aiMsg, bubbleEl) {
+      var reply = AIChat._extractReply(task);
+      aiMsg.content = reply;
+      aiMsg._generating = false;
+      AIChat._saveSessions();
+      // 打字机输出
+      AIChat._startTypewriter(bubbleEl, reply, function() {
+        AIChat._renderMessages(); // 重新渲染以显示操作栏
+      });
+      AIChat._loadDetail(task.task_id);
+      AIChat._resetSendBtn();
+    },
+    _extractReply: function(task) {
+      if (!task) return '';
+      if (task.status === 'succeeded' && task.result_json) {
+        try {
+          var ro = typeof task.result_json === 'string' ? JSON.parse(task.result_json) : task.result_json;
+          if (ro.output) {
+            if (ro.output.ai_summary) return ro.output.ai_summary;
+            if (ro.output.ai_analysis) return JSON.stringify(ro.output.ai_analysis, null, 2);
+            if (ro.output.note) return ro.output.note;
+            return JSON.stringify(ro.output, null, 2);
+          }
+          if (ro.verification && ro.verification.result_summary) return ro.verification.result_summary;
+          return JSON.stringify(ro, null, 2);
+        } catch(e) { return String(task.result_json); }
+      }
+      if (task.status === 'awaiting_approval') return '⚠ 此任务需要人工审批：' + (task.risk_reason || '高风险操作') + '\n请在下方 Task Engine 面板点击「人工审批」后继续。\n任务ID: ' + task.task_id;
+      if (task.status === 'failed') return '任务执行失败：' + (task.error || '未知错误') + '\n任务ID: ' + task.task_id;
+      if (task.status === 'cancelled') return '任务已取消。';
+      if (task.status === 'dlq') return '任务进入死信队列（重试耗尽）：' + (task.error || '') + '\n请人工介入处理。';
+      return '任务状态：' + task.status + '（任务ID: ' + task.task_id + '）';
+    },
+    _resetSendBtn: function() {
+      var btn = document.getElementById('ai-send-btn');
+      btn.disabled = false;
+      btn.onclick = AIChat.send;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> 发送';
+    },
+
+    /* ---- 右侧详情面板 ---- */
+    _clearDetail: function() {
+      document.getElementById('ai-detail-empty').style.display = '';
+      document.getElementById('ai-detail-content').style.display = 'none';
+    },
+    _loadDetail: function(taskId) {
+      AIChat.api('/api/ai/tasks/' + taskId).then(function(d) {
+        if (!d || !d.ok || !d.task) return;
+        var t = d.task;
+        document.getElementById('ai-detail-empty').style.display = 'none';
+        document.getElementById('ai-detail-content').style.display = '';
+        document.getElementById('ai-detail-task-status').innerHTML = AIChat._statusTag(t.status);
+        document.getElementById('ai-detail-task-input').textContent = t.user_input || '—';
+        // 风险
+        var risk = t.risk_level || 'L0';
+        var riskClass = risk.indexOf('L0') === 0 || risk.indexOf('L1') === 0 ? 'low' : (risk.indexOf('L2') === 0 ? 'medium' : 'high');
+        document.getElementById('ai-detail-risk').innerHTML = '<div class="ai-risk-bar ai-risk-bar--' + riskClass + '">' + risk + ' · ' + (t.risk_reason || '风险评估中') + '</div>';
+        // 权限
+        var perm = t.permission_result || '自动通过';
+        document.getElementById('ai-detail-permission').textContent = perm + (t.confidence ? ' · 置信度 ' + (t.confidence * 100).toFixed(0) + '%' : '');
+        AIChat._loadSteps(taskId);
+        AIChat._loadEvidence(taskId);
+      }).catch(function(){});
+    },
+    _statusTag: function(s) {
+      var up = String(s || 'UNKNOWN').toUpperCase();
+      var c = { SUCCEEDED:'#10B981', READY:'#10B981', RUNNING:'#2f6bff', PARSING:'#2f6bff',
+        PENDING:'#6B7280', AWAITING_APPROVAL:'#F59E0B', FAILED:'#DC2626', DENIED:'#DC2626',
+        DLQ:'#DC2626', CANCELLED:'#6B7280' }[up] || '#6B7280';
+      return '<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:'+c+'1a;color:'+c+';border:1px solid '+c+'33;">'+up+'</span>';
+    },
+    _loadSteps: function(taskId) {
+      AIChat.api('/api/ai/tasks/' + taskId + '/steps').then(function(d) {
+        var c = document.getElementById('ai-detail-steps');
+        if (!d || !d.ok || !d.steps || !d.steps.length) { c.innerHTML = '<div style="color:var(--l-text-tertiary,#9ca3af);font-size:11px;">暂无步骤</div>'; return; }
+        c.innerHTML = d.steps.map(function(s, i) {
+          var last = i === d.steps.length - 1;
+          var cls = { succeeded:'is-done', running:'is-running', failed:'is-failed' }[s.status] || '';
+          return '<div class="ai-timeline__item ' + cls + '">'
+            + '<div class="ai-timeline__dot"></div>' + (last ? '' : '<div class="ai-timeline__line"></div>')
+            + '<div class="ai-timeline__content"><div class="ai-timeline__phase">' + AIChat.esc(s.phase) + '</div>'
+            + (s.detail ? '<div class="ai-timeline__detail">' + AIChat.esc(AIChat.trunc(s.detail, 60)) + '</div>' : '')
+            + (s.duration_ms ? '<div class="ai-timeline__detail" style="color:var(--ai-accent);">' + s.duration_ms + 'ms</div>' : '')
+            + '</div></div>';
+        }).join('');
+      }).catch(function(){});
+    },
+    _loadEvidence: function(taskId) {
+      AIChat.api('/api/ai/tasks/' + taskId + '/evidence').then(function(d) {
+        var c = document.getElementById('ai-detail-evidence');
+        if (!d || !d.ok || !d.evidence || !d.evidence.length) { c.innerHTML = '<div style="color:var(--l-text-tertiary,#9ca3af);font-size:11px;">暂无证据</div>'; return; }
+        c.innerHTML = d.evidence.map(function(ev) {
+          var hs = ev.current_hash ? AIChat.esc(ev.current_hash.substring(0, 10)) : '—';
+          return '<div class="ai-evidence-card"><span class="ai-evidence-card__type">' + AIChat.esc(ev.evidence_type || 'evidence') + '</span> <span class="ai-evidence-card__hash">#' + hs + '</span>'
+            + '<div style="margin-top:3px;">' + AIChat.esc(AIChat.trunc(ev.content || '', 80)) + '</div></div>';
+        }).join('');
+      }).catch(function(){});
+    },
+
+    /* ---- 状态监控看板 KPI ---- */
+    loadMonitor: function() {
+      // 调用统计：从日志接口计算
+      AIChat.api('/api/ai/logs')
+        .then(function(d) {
+          var data = d.data || d;
+          var logs = data.logs || data.records || data.items || [];
+          if (!Array.isArray(logs)) logs = [];
+          var total = logs.length;
+          var success = logs.filter(function(l) { return String(l.status || '').toLowerCase().indexOf('succ') >= 0 || String(l.status || '').toLowerCase().indexOf('ok') >= 0 || l.success === true; }).length;
+          // 如果日志无status字段，用非错误估算
+          if (success === 0 && total > 0) success = logs.filter(function(l) { return !l.error && String(l.status || 'success').toLowerCase().indexOf('fail') < 0; }).length;
+          var latencies = logs.map(function(l) { return Number(l.latency_ms || l.duration_ms || 0); }).filter(function(n) { return n > 0; });
+          var avgLat = latencies.length ? Math.round(latencies.reduce(function(a,b){return a+b;},0) / latencies.length) : 0;
+          var successRate = total ? Math.round(success / total * 100) : 0;
+          AIChat._setKPI('mon-calls', total, '近' + total + '条记录');
+          AIChat._setKPI('mon-success', successRate, successRate + '%', '%');
+          AIChat._setKPI('mon-latency', avgLat, avgLat + 'ms P50', 'ms');
+        }).catch(function() {
+          AIChat._setKPI('mon-calls', 0, '日志接口不可用');
+        });
+      // 队列/运行任务：从task-engine health或tasks列表
+      AIChat.api('/api/ai/task-engine/health').then(function(d) {
+        if (d && d.ok && d.health) {
+          var q = (d.health.queue_length != null ? d.health.queue_length : 0) + (d.health.running != null ? d.health.running : 0);
+          AIChat._setKPI('mon-queue', q, d.health.status || 'unknown');
+        } else {
+          return AIChat.api('/api/ai/tasks?limit=50').then(function(td) {
+            if (td && td.ok && td.tasks) {
+              var running = td.tasks.filter(function(t) { return ['running','pending','parsing'].indexOf(t.status) >= 0; }).length;
+              AIChat._setKPI('mon-queue', running, running + ' 个执行中');
+            }
+          });
+        }
+      }).catch(function(){});
+    },
+    _setKPI: function(id, value, sub, suffix) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var display = suffix ? value + suffix : value;
+      if (window.LDMotion && window.LDMotion.countUp) {
+        try { window.LDMotion.countUp(el, value, { suffix: suffix || '', duration: 900 }); } catch(e) { el.textContent = display; }
+      } else { el.textContent = display; }
+      if (sub) { var subEl = document.getElementById(id + '-sub'); if (subEl) subEl.textContent = sub; }
+    },
+
+    /* ---- 输入框自适应高度 ---- */
+    _initInput: function() {
+      var input = document.getElementById('ai-chat-input');
+      input.addEventListener('input', function() {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      });
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); AIChat.send(); }
+      });
+    },
+
+    init: function() {
+      AIChat._loadSessions();
+      AIChat._initTheme();
+      AIChat._initInput();
+      AIChat._initFileInput();
+      AIChat._renderHistory();
+      AIChat.loadMonitor();
+      setInterval(AIChat.loadMonitor, 30000);
+      console.log('[AIChat] 智谱UI对话工作台已初始化（三栏/打字机/操作栏/深色/多模态预览）');
+    }
+  };
+  window.AIChat = AIChat;
+  document.addEventListener('DOMContentLoaded', AIChat.init);
 })();
 </script>
 {% endblock %}

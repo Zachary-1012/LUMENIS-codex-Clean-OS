@@ -199,6 +199,8 @@ class AIUsageTracker:
     def check_quota(self) -> Tuple[bool, Dict]:
         """
         检查今日额度是否超限。
+        V1.0: 超限时不再直接拒绝，而是返回 quota_exceeded=True + fallback_to='ark'，
+        让调用方（ai_channel）触发 L2 ARK 故障转移，不阻塞生产链路。
         返回: (是否允许调用, 额度状态)
         """
         with _lock:
@@ -211,6 +213,9 @@ class AIUsageTracker:
             call_remaining = max(0, call_limit - call_used)
             token_remaining = max(0, token_limit - token_used)
             allowed = call_used < call_limit and token_used < token_limit
+            quota_exceeded = not allowed
+            # V1.0: 超限时建议 fallback 到 L2 ARK（调用方决定是否执行）
+            fallback_suggestion = "ark" if quota_exceeded else None
             return allowed, {
                 "date": today,
                 "call_used": call_used,
@@ -222,6 +227,8 @@ class AIUsageTracker:
                 "call_usage_pct": round(call_used / call_limit * 100, 1) if call_limit > 0 else 0,
                 "token_usage_pct": round(token_used / token_limit * 100, 1) if token_limit > 0 else 0,
                 "allowed": allowed,
+                "quota_exceeded": quota_exceeded,
+                "fallback_suggestion": fallback_suggestion,
             }
 
     def get_provider_stats(self) -> Dict[str, Dict]:
@@ -348,14 +355,19 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
             "domain_id": expected_domain,
         }, endpoint=endpoint, provider=provider)
 
-    # 1. 额度检查
+    # 1. 额度检查（V1.0: 超限时触发 fallback 信号，不直接拒绝）
     allowed, quota = _usage_tracker.check_quota()
     if not allowed:
+        # V1.0: 额度超限 → 建议切换到 L2 ARK，由 ai_channel 执行故障转移
+        # 不再硬拒绝，确保核心生产链路不阻塞
         return mark_ai_output({
             "ok": False,
-            "error": "AI 每日额度已超限",
+            "error": "AI 每日额度已超限，触发 fallback 到 L2 ARK",
             "quota": quota,
-            "fallback": "local_rule",
+            "quota_exceeded": True,
+            "fallback": "ark",
+            "fallback_chain": ["zhipu", "ark", "qwen", "ollama", "lmstudio", "rule"],
+            "should_failover": True,
         }, endpoint=endpoint, provider=provider)
 
     # 2. 脱敏

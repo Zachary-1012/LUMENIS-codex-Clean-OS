@@ -202,12 +202,22 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             _set_call_meta(provider=provider, model=model, prompt_tokens=_pt, completion_tokens=_ct, total_tokens=_tt)
             return data.get('message',{}).get('content'), provider
         except Exception as exc:
-            print('[AI] local failed:',exc)
-            return None,'rule'
+            print('[AI] local failed, trying cloud chain:',exc)
+            _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
+            # V1.0: 本地失败不直接到 rule，先尝试 cloud 链（L1→L2→L3）
+            # 落到下面的 cloud fallback 逻辑继续执行
 
-    # 云端：多 Provider 故障转移（智谱主 → 豆包备 → rule）
+    # 云端：多 Provider 故障转移（智谱 L1 → ark L2 → qwen L3 → rule L6）
     system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
-    chain = ai_channel.provider_chain()
+    # V1.0: 构建 cloud fallback 链（zhipu L1 → ark L2 → qwen L3）
+    # 本地 Provider（ollama/lmstudio）由 _provider_config 单独处理，不混入 cloud 链
+    chain = []
+    for _p in ('zhipu', 'ark', 'qwen'):
+        _key_env = {'zhipu': 'ZHIPU_API_KEY', 'ark': 'ARK_API_KEY', 'qwen': 'DASHSCOPE_API_KEY'}.get(_p, '')
+        if _key_env and _env(_key_env):
+            chain.append(_p)
+    if not chain:
+        chain = ['zhipu']  # 至少有 zhipu（无 key 时会在 _call_cloud 中报错并 fallback）
     primary = chain[0] if chain else 'zhipu'
 
     def _call_cloud(prov):

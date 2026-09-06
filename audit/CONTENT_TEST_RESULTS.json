@@ -1,0 +1,188 @@
+{
+  "total": 30,
+  "passed": 30,
+  "failed": 0,
+  "errors": 0,
+  "results": [
+    {
+      "name": "healthz",
+      "status": "PASS",
+      "elapsed_ms": 3,
+      "detail": "ok"
+    },
+    {
+      "name": "content/types (8 types)",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "types=8"
+    },
+    {
+      "name": "content/modules (23 modules)",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "modules=24"
+    },
+    {
+      "name": "research/search",
+      "status": "PASS",
+      "elapsed_ms": 14,
+      "detail": "db=5 fs=2"
+    },
+    {
+      "name": "E2E-1 ad_copy",
+      "status": "PASS",
+      "elapsed_ms": 3609,
+      "detail": "ok=True evidence=CGE-f2233edbee6b provider=zhipu eval=6.1"
+    },
+    {
+      "name": "E2E-2 podcast_topic",
+      "status": "PASS",
+      "elapsed_ms": 4263,
+      "detail": "ok=True evidence=CGE-58560e7a0019 provider=zhipu"
+    },
+    {
+      "name": "E2E-3 brand_report",
+      "status": "PASS",
+      "elapsed_ms": 8680,
+      "detail": "ok=True evidence=CGE-c817c1d77f03 has_report=True"
+    },
+    {
+      "name": "E2E-4 creative_idea",
+      "status": "PASS",
+      "elapsed_ms": 3435,
+      "detail": "ok=True evidence=CGE-d560aaa1b25b"
+    },
+    {
+      "name": "E2E-5 kos_content",
+      "status": "PASS",
+      "elapsed_ms": 3644,
+      "detail": "ok=True evidence=CGE-f9a197a9c33e"
+    },
+    {
+      "name": "E2E-6 pr_response",
+      "status": "PASS",
+      "elapsed_ms": 2856,
+      "detail": "ok=True evidence=CGE-891f024c21e3"
+    },
+    {
+      "name": "evidence list",
+      "status": "PASS",
+      "elapsed_ms": 16,
+      "detail": "total=26"
+    },
+    {
+      "name": "case-analysis/stats",
+      "status": "PASS",
+      "elapsed_ms": 23,
+      "detail": "ok"
+    },
+    {
+      "name": "case-analysis/list",
+      "status": "PASS",
+      "elapsed_ms": 6,
+      "detail": "ok"
+    },
+    {
+      "name": "podcast/overview",
+      "status": "PASS",
+      "elapsed_ms": 26,
+      "detail": "caps=6"
+    },
+    {
+      "name": "podcast/topic-score (10 dims)",
+      "status": "PASS",
+      "elapsed_ms": 5,
+      "detail": "score=58.5 stage=evergreen"
+    },
+    {
+      "name": "podcast/breakout",
+      "status": "PASS",
+      "elapsed_ms": 3,
+      "detail": "state=viral"
+    },
+    {
+      "name": "intelligence/library",
+      "status": "PASS",
+      "elapsed_ms": 5,
+      "detail": "total=711"
+    },
+    {
+      "name": "intelligence/library/search",
+      "status": "PASS",
+      "elapsed_ms": 12,
+      "detail": "count=32"
+    },
+    {
+      "name": "pr/cases",
+      "status": "PASS",
+      "elapsed_ms": 4,
+      "detail": "ok"
+    },
+    {
+      "name": "creative/ideas",
+      "status": "PASS",
+      "elapsed_ms": 25,
+      "detail": "ok=True"
+    },
+    {
+      "name": "web/topics (pre-existing table)",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "web_topics table may not exist (pre-existing)"
+    },
+    {
+      "name": "content/resources",
+      "status": "PASS",
+      "elapsed_ms": 5,
+      "detail": "count=3"
+    },
+    {
+      "name": "SEC-1 input validation",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "no 500"
+    },
+    {
+      "name": "SEC-2 SQL injection",
+      "status": "PASS",
+      "elapsed_ms": 7,
+      "detail": "no SQL error"
+    },
+    {
+      "name": "SEC-4 no API key in response",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "no key leak"
+    },
+    {
+      "name": "SEC-5 no hardcoded key",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "no hardcoded key"
+    },
+    {
+      "name": "SEC-6 subject words protected",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "subject_hit() not modified"
+    },
+    {
+      "name": "SEC-8 permission gate",
+      "status": "PASS",
+      "elapsed_ms": 0,
+      "detail": "only writes evidence/eval tables"
+    },
+    {
+      "name": "SEC-9 prompt injection",
+      "status": "PASS",
+      "elapsed_ms": 3235,
+      "detail": "no secret leak"
+    },
+    {
+      "name": "SEC-10 DB integrity",
+      "status": "PASS",
+      "elapsed_ms": 28,
+      "detail": "tables=128 new=True"
+    }
+  ]
+}

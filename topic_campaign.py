@@ -57,6 +57,14 @@ except Exception:
         return None
 
 logger = logging.getLogger(__name__)
+# ZBC Lifecycle Contract V1.0 (bypass-mode)
+try:
+    from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
+    _LIFECYCLE_AVAILABLE = True
+except Exception:
+    _LifecycleMixin = None
+    _LIFECYCLE_AVAILABLE = False
+
 
 def _node_bin():
     """返回可用 node 路径；解析不到时返回 None，由调用方产出结构化错误（不进 subprocess）。"""

@@ -136,21 +136,88 @@
 
 <!-- ===== Tab: 创意文案 ===== -->
 <div id="tab-creative" style="display:none;">
-  <div class="zbc-card">
-    <div class="zbc-card__header">
-      <span class="zbc-card__title">AI 创意文案</span>
-      <button class="zbc-btn zbc-btn--primary" id="btn-gen-creative" type="button">+ 生成文案</button>
+  <div class="zbc-grid-2-equal" style="gap:16px;">
+    <div class="zbc-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">AI 内容生成</span>
+        <span class="zbc-tag zbc-tag--info">智谱 glm-5.3 / glm-4.5-air</span>
+      </div>
+      <div class="zbc-card__body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">内容类型</label>
+            <select id="cg-type" class="zbc-btn" style="width:100%;cursor:pointer;">
+              <option value="ad_copy">广告文案</option>
+              <option value="podcast_topic">播客选题</option>
+              <option value="brand_report">品牌报告</option>
+              <option value="creative_idea">创意方向</option>
+              <option value="kos_content">KOS内容</option>
+              <option value="video_script">视频脚本</option>
+              <option value="social_ops">社媒策略</option>
+              <option value="pr_response">PR回应</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">平台</label>
+            <select id="cg-platform" class="zbc-btn" style="width:100%;cursor:pointer;">
+              <option value="xhs">小红书</option>
+              <option value="douyin">抖音</option>
+              <option value="weibo">微博</option>
+              <option value="podcast">播客</option>
+              <option value="report">报告</option>
+              <option value="pr">PR</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">品牌</label>
+          <input type="text" id="cg-brand" class="zbc-search__input" style="width:100%;" placeholder="如：广州太古汇" value="广州太古汇">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">目标受众</label>
+          <input type="text" id="cg-audience" class="zbc-search__input" style="width:100%;" placeholder="如：25-35岁都市女性">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">风格要求</label>
+          <input type="text" id="cg-style" class="zbc-search__input" style="width:100%;" placeholder="如：柔和优雅，符合品牌调性">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">参考/补充</label>
+          <textarea id="cg-reference" class="zbc-search__input" style="width:100%;min-height:50px;resize:vertical;" placeholder="可选：参考案例、活动主题"></textarea>
+        </div>
+        <button class="zbc-btn zbc-btn--primary" id="btn-cg-generate" type="button" style="width:100%;">生成内容（AI+研究库检索）</button>
+        <div id="cg-status" style="margin-top:8px;font-size:11px;color:var(--l-text-secondary,#6B7280);display:none;"></div>
+      </div>
     </div>
-    <div class="zbc-card__body">
-      <div class="zbc-state-loading" id="creative-loading">
-        <div class="zbc-skeleton" style="width:100%;height:80px;margin-bottom:12px;"></div>
-        <div class="zbc-skeleton" style="width:100%;height:80px;"></div>
+    <div class="zbc-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">生成结果</span>
+        <span id="cg-eval-badge" style="display:none;" class="zbc-tag zbc-tag--low"></span>
       </div>
-      <div class="zbc-state-empty" id="creative-empty" style="display:none;">
-        <div class="zbc-state-empty__icon">✨</div>
-        <div class="zbc-state-empty__text">暂无创意文案，点击右上角生成</div>
+      <div class="zbc-card__body" style="min-height:300px;">
+        <div class="zbc-state-loading" id="cg-loading" style="display:none;">
+          <div class="zbc-skeleton" style="width:100%;height:60px;margin-bottom:10px;"></div>
+          <div class="zbc-skeleton" style="width:100%;height:120px;margin-bottom:10px;"></div>
+          <div class="zbc-skeleton" style="width:60%;height:30px;"></div>
+        </div>
+        <div class="zbc-state-empty" id="cg-empty">
+          <div class="zbc-state-empty__icon">✨</div>
+          <div class="zbc-state-empty__text">填写左侧表单，点击生成</div>
+          <div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-top:6px;">AI检索研究库 → 生成 → Evidence → 4维评分</div>
+        </div>
+        <div id="cg-result" style="display:none;"></div>
       </div>
-      <div id="creative-list" style="display:none;"></div>
+    </div>
+  </div>
+  <div class="zbc-card" style="margin-top:16px;">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">生成历史（Evidence链）</span>
+      <button class="zbc-btn" id="btn-cg-history" type="button" style="padding:4px 10px;font-size:11px;">刷新</button>
+    </div>
+    <div class="zbc-card__body" style="padding:0;max-height:280px;overflow-y:auto;">
+      <div id="cg-history-list" style="padding:12px;">
+        <div style="font-size:12px;color:var(--l-text-secondary,#6B7280);text-align:center;padding:16px;">点击刷新查看历史记录</div>
+      </div>
     </div>
   </div>
 </div>
@@ -240,6 +307,7 @@
       if (rt) rt.addEventListener('click', function() { self.loadTopics(); });
 
       this.loadNotes();
+      this.initContentGen();
     },
 
     switchTab: function(tab) {
@@ -550,6 +618,176 @@
           '</div>';
         list.appendChild(card);
       }.bind(this));
+    },
+
+
+    // ===== 统一内容生成（AI+研究库+Evidence+Evaluation）=====
+    cgCurrentEvidence: null,
+    initContentGen: function() {
+      var btn = document.getElementById('btn-cg-generate');
+      if (btn) btn.addEventListener('click', this.generateContent.bind(this));
+      var histBtn = document.getElementById('btn-cg-history');
+      if (histBtn) histBtn.addEventListener('click', this.loadGenHistory.bind(this));
+    },
+    generateContent: function() {
+      var btn = document.getElementById('btn-cg-generate');
+      var type = document.getElementById('cg-type').value;
+      var platform = document.getElementById('cg-platform').value;
+      var brand = document.getElementById('cg-brand').value.trim();
+      var audience = document.getElementById('cg-audience').value.trim();
+      var style = document.getElementById('cg-style').value.trim();
+      var reference = document.getElementById('cg-reference').value.trim();
+      var statusEl = document.getElementById('cg-status');
+
+      if (btn) { btn.disabled = true; btn.textContent = '生成中…（AI检索研究库）'; }
+      document.getElementById('cg-loading').style.display = '';
+      document.getElementById('cg-empty').style.display = 'none';
+      document.getElementById('cg-result').style.display = 'none';
+      if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '正在检索研究库并调用AI生成…'; }
+
+      var payload = {
+        content_type: type, brand: brand, platform: platform,
+        target_audience: audience, style: style, reference_cases: reference
+      };
+
+      LUMENIS.fetch('/api/content/generate', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function(d) {
+        if (btn) { btn.disabled = false; btn.textContent = '生成内容（AI+研究库检索）'; }
+        document.getElementById('cg-loading').style.display = 'none';
+        if (statusEl) statusEl.style.display = 'none';
+        ZBMPContent.cgCurrentEvidence = d.evidence_id;
+        ZBMPContent.renderGenResult(d);
+      }).catch(function(e) {
+        if (btn) { btn.disabled = false; btn.textContent = '生成内容（AI+研究库检索）'; }
+        document.getElementById('cg-loading').style.display = 'none';
+        document.getElementById('cg-empty').style.display = '';
+        if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '生成失败：' + (e.message || '未知错误') + '，可重试'; }
+      });
+    },
+    renderGenResult: function(d) {
+      var resultEl = document.getElementById('cg-result');
+      var evalBadge = document.getElementById('cg-eval-badge');
+      if (!d.ok || !d.output) {
+        resultEl.style.display = '';
+        resultEl.innerHTML = '<div style="color:#DC2626;font-size:13px;">生成失败：' + (d.meta ? d.meta.error : '未知') + '</div>' +
+          (d.raw_output ? '<pre style="font-size:11px;white-space:pre-wrap;margin-top:8px;color:#6B7280;">' + this.escapeHtml(d.raw_output.substring(0,500)) + '</pre>' : '');
+        return;
+      }
+      resultEl.style.display = '';
+      var ev = d.evaluation || {};
+      var scores = ev.scores || {};
+      if (evalBadge) {
+        evalBadge.style.display = '';
+        evalBadge.textContent = '评分 ' + (ev.overall || '-') + '/10';
+      }
+      var html = '';
+      // Metadata
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      html += '<span class="zbc-tag zbc-tag--info">' + this.escapeHtml(d.content_label || d.content_type) + '</span>';
+      html += '<span class="zbc-tag">model: ' + this.escapeHtml(d.meta ? (d.meta.model || d.meta.provider) : '-') + '</span>';
+      html += '<span class="zbc-tag">' + (d.meta ? d.meta.latency_ms : 0) + 'ms</span>';
+      html += '<span class="zbc-tag zbc-tag--low">Evidence: ' + this.escapeHtml(d.evidence_id || '-') + '</span>';
+      html += '</div>';
+      // Evaluation bars
+      html += '<div style="margin-bottom:14px;padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;">';
+      html += '<div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--l-text-secondary,#6B7280);">4维质量评估</div>';
+      var dims = [{k:'relevance',l:'相关性'},{k:'creativity',l:'创意性'},{k:'brand_fit',l:'品牌契合'},{k:'platform_fit',l:'平台适配'}];
+      dims.forEach(function(dim) {
+        var v = scores[dim.k] || 0;
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
+        html += '<span style="font-size:11px;width:60px;color:var(--l-text-secondary,#6B7280);">' + dim.l + '</span>';
+        html += '<div style="flex:1;height:6px;background:var(--l-border,#E8E8E8);border-radius:3px;overflow:hidden;"><div style="width:' + (v*10) + '%;height:100%;background:linear-gradient(90deg,#0F766E,#14B8A6);border-radius:3px;"></div></div>';
+        html += '<span style="font-size:11px;font-weight:600;width:30px;text-align:right;">' + v + '</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+      // Content output
+      var out = d.output;
+      html += '<div style="font-size:13px;line-height:1.7;">';
+      for (var key in out) {
+        var val = out[key];
+        if (val === null || val === undefined) continue;
+        var label = key.replace(/_/g,' ').replace(/\b\w/g, function(c){return c.toUpperCase();});
+        html += '<div style="margin-bottom:8px;"><span style="font-weight:600;color:var(--l-text-secondary,#6B7280);font-size:11px;">' + label + '：</span>';
+        if (typeof val === 'object') {
+          html += '<pre style="font-size:12px;white-space:pre-wrap;margin:4px 0 0;padding:8px;background:var(--l-bg-secondary,#F7F7F8);border-radius:6px;">' + this.escapeHtml(JSON.stringify(val, null, 2)) + '</pre>';
+        } else {
+          html += '<span>' + this.escapeHtml(String(val)) + '</span>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+      // Feedback
+      html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--l-border-light,#F0F0F0);">';
+      html += '<div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--l-text-secondary,#6B7280);">人工反馈（修正再生成）</div>';
+      html += '<div style="display:flex;gap:8px;">';
+      html += '<input type="text" id="cg-feedback-input" class="zbc-search__input" style="flex:1;" placeholder="输入修改意见，如：标题更柔和一些">';
+      html += '<button class="zbc-btn zbc-btn--primary" id="btn-cg-feedback" type="button" style="white-space:nowrap;">修正</button>';
+      html += '</div></div>';
+      resultEl.innerHTML = html;
+      // Bind feedback
+      var fbBtn = document.getElementById('btn-cg-feedback');
+      if (fbBtn) fbBtn.addEventListener('click', this.submitFeedback.bind(this));
+    },
+    submitFeedback: function() {
+      var input = document.getElementById('cg-feedback-input');
+      var feedback = input ? input.value.trim() : '';
+      if (!feedback || !this.cgCurrentEvidence) return;
+      var btn = document.getElementById('btn-cg-feedback');
+      if (btn) { btn.disabled = true; btn.textContent = '修正中…'; }
+      LUMENIS.fetch('/api/content/feedback', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({evidence_id: this.cgCurrentEvidence, feedback: feedback})
+      }).then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (btn) { btn.disabled = false; btn.textContent = '修正'; }
+        ZBMPContent.cgCurrentEvidence = d.evidence_id;
+        ZBMPContent.renderGenResult(d);
+      }).catch(function(e) {
+        if (btn) { btn.disabled = false; btn.textContent = '修正'; }
+        alert('修正失败：' + (e.message || ''));
+      });
+    },
+    loadGenHistory: function() {
+      LUMENIS.fetch('/api/content/evidence?limit=10').then(function(r) { return r.json(); })
+      .then(function(d) {
+        var list = document.getElementById('cg-history-list');
+        if (!d.ok || !d.data || !d.data.items || d.data.items.length === 0) {
+          list.innerHTML = '<div style="font-size:12px;color:var(--l-text-secondary,#6B7280);text-align:center;padding:16px;">暂无生成记录</div>';
+          return;
+        }
+        list.innerHTML = '';
+        d.data.items.forEach(function(item) {
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--l-border-light,#F0F0F0);cursor:pointer;';
+          var statusCls = item.status === 'success' ? 'zbc-tag--low' : (item.status === 'partial' ? 'zbc-tag--medium' : 'zbc-tag--high');
+          row.innerHTML = '<div><span style="font-weight:500;font-size:12px;">' + ZBMPContent.escapeHtml(item.content_type) + '</span>' +
+            '<span style="font-size:11px;color:var(--l-text-secondary,#6B7280);margin-left:8px;">' + ZBMPContent.escapeHtml(item.created_at) + '</span></div>' +
+            '<div style="display:flex;gap:6px;align-items:center;">' +
+            '<span class="zbc-tag" style="font-size:10px;">' + ZBMPContent.escapeHtml(item.model || item.provider || '-') + '</span>' +
+            '<span class="zbc-tag ' + statusCls + '" style="font-size:10px;">' + item.status + '</span>' +
+            '</div>';
+          row.addEventListener('click', function() {
+            LUMENIS.fetch('/api/content/evidence/' + item.evidence_id).then(function(r){return r.json();}).then(function(det) {
+              if (det.ok && det.data) {
+                ZBMPContent.cgCurrentEvidence = det.data.evidence_id;
+                var sim = {ok: det.data.status==='success', content_type: det.data.content_type,
+                  output: det.data.output_json ? JSON.parse(det.data.output_json) : null,
+                  raw_output: det.data.output_text, evidence_id: det.data.evidence_id,
+                  evaluation: det.data.evaluations && det.data.evaluations[0] ? det.data.evaluations[0] : {},
+                  meta: {model: det.data.model, provider: det.data.provider, latency_ms: det.data.latency_ms, error: det.data.error}};
+                ZBMPContent.renderGenResult(sim);
+              }
+            });
+          });
+          list.appendChild(row);
+        });
+      }).catch(function() {});
     },
 
     escapeHtml: function(str) {
