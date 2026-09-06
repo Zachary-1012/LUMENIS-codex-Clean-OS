@@ -3,7 +3,7 @@
 import re
 import os
 
-BASE = r"D:\Taikoo-monitor-new"
+BASE = os.path.dirname(os.path.abspath(__file__))
 
 # ============================================================
 # 1. report_engine.py: 添加 logger, started_at/finished_at/status, 修复裸 except

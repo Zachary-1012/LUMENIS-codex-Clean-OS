@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
