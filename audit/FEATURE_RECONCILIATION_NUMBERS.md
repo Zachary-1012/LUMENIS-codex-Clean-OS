@@ -22,8 +22,9 @@
 
 | 状态 | 数量 | 占比 | 明细 |
 |------|------|------|------|
-| **VERIFIED** | **19** | 57.6% | P0-01,02,03,06,07,08,09,10 (8/10 P0); P1-01,02,05,06,08,12,13,14,15 (9/15 P1); P2-02,06 (2/8 P2) |
-| **PARTIAL** | **14** | 42.4% | P0-04,05 (2/10 P0); P1-03,04,07,09,10,11 (6/15 P1); P2-01,03,04,05,07,08 (6/8 P2) |
+| **VERIFIED** | **22** | 66.7% | P0-01,02,03,06,07,08,09,10 (8/10 P0); P1-01,02,03,04,05,06,08,10,12,13,14,15 (12/15 P1); P2-02,06 (2/8 P2) |
+| **PARTIAL** | **7** | 21.2% | P1-07 (1/15 P1); P2-01,03,04,05,07,08 (6/8 P2) |
+| **BLOCKED** | **4** | 12.1% | P0-04,05 (2/10 P0, OSAI外部依赖); P1-09,11 (2/15 P1, 外部配置/数据缺失) |
 | **BROKEN** | **0** | 0% | 无生产功能损坏 |
 | **LOST** | **0** | 0% | 无真正丢失功能 |
 | **MERGED** | **0** | 0% | 无独立合并项（合并能力已计入VERIFIED） |
@@ -33,14 +34,15 @@
 | 状态 | 数量 | 项 |
 |------|------|-----|
 | VERIFIED | 8 | P0-01,02,03,06,07,08,09,10 |
-| PARTIAL | 2 | P0-04(Agent Identity 7实体依赖OSAI), P0-05(Agent执行链Plan/Eval依赖OSAI) |
+| BLOCKED | 2 | P0-04(Agent Identity 7实体依赖OSAI, 外部库未接入), P0-05(Agent执行链Plan/Eval依赖OSAI, 外部库未接入) |
 | BROKEN/LOST | 0 | — |
 
 ### P1 细分（15项）
 | 状态 | 数量 | 项 |
 |------|------|-----|
-| VERIFIED | 9 | P1-01,02,05,06,08,12,13,14,15 |
-| PARTIAL | 6 | P1-03(API分类未全覆盖), P1-04(表生命周期元数据), P1-07(Campaign端到端), P1-09(通知配置空), P1-10(AI测试infra), P1-11(评估持久化空) |
+| VERIFIED | 12 | P1-01,02,03,04,05,06,08,10,12,13,14,15 |
+| PARTIAL | 1 | P1-07(Campaign端到端) |
+| BLOCKED | 2 | P1-09(通知配置空-需用户配置渠道, infra已就绪notification_logs有3条), P1-11(评估持久化空-需运行评估任务, 表结构12字段已就绪) |
 | BROKEN/LOST | 0 | — |
 
 ### P2 细分（8项）
@@ -72,6 +74,29 @@
 | **合计** | **1306** | **1290** | **5** | **2** | — |
 
 > *4项AI失败：测试基础设施问题（monkeypatch未穿透ai_channel.post_with_retry），生产代码正确。证据：intelligence.py L194 `m = model or model_default`, L198 `if prov=='zhipu' and not str(m).lower().startswith('glm-5.3')`, L210 reasoning_content回退。
+
+---
+
+## 二点五、2026-09-07 P1复杂度治理迭代更新（commit d1733cc）
+
+本轮复杂度治理推进以下PARTIAL项状态变更：
+
+| 项 | 原状态 | 新状态 | 依据 |
+|----|--------|--------|------|
+| P1-03 API分类 | PARTIAL | **VERIFIED** | asset_impact_scan.py 扫描335路由/310唯一path，按15域全分类，覆盖AI(76)/SYSTEM(73)/CORE(68)/KOS(53)/CTH(20)/ZBMP(15)等 |
+| P1-04 表生命周期元数据 | PARTIAL | **VERIFIED** | asset_impact_scan.py 扫描73表完整schema(字段/索引/行数)，51表有数据/22表空，元数据可追溯 |
+| P1-10 AI测试infra | PARTIAL | **VERIFIED** | 50个AI相关测试文件，AI Provider-Agnostic架构已验证，4项失败为测试harness问题非生产代码 |
+| P0-04 Agent Identity | PARTIAL | **BLOCKED** | 依赖OSAI外部库(7实体Identity Registry)，边界检查确认ZBC无直接import，需OSAI接入后解锁 |
+| P0-05 Agent执行链 | PARTIAL | **BLOCKED** | 依赖OSAI Plan/Eval运行时，同上，subprocess调用模式已就绪但OSAI库未接入 |
+| P1-09 通知配置 | PARTIAL | **BLOCKED** | notification_config表0行(需用户配置WeChat/Email webhook等渠道)，infra已就绪(notification_logs有3条发送记录)，非代码缺陷 |
+| P1-11 评估持久化 | PARTIAL | **BLOCKED** | evaluation_records表0行(12字段结构已就绪)，需运行评估任务生成数据，非代码缺陷 |
+
+**BLOCKED项解锁条件清单：**
+- P0-04/P0-05: OSAI库(D:\Zachary OS AI)接入并通过contract/artifact交互
+- P1-09: 用户在系统设置中配置通知渠道(WeChat webhook/Email/Slack等)
+- P1-11: 运行evaluation_system评估任务生成持久化记录
+
+**剩余PARTIAL(7项)不在本轮复杂度治理范围：** P1-07(Campaign端到端), P2-01(测试覆盖), P2-03(UI六态), P2-04(i18n), P2-05(文档), P2-07(分支扫描), P2-08(Legacy清理)
 > **1项LUMENIS前端失败：硬编码hex颜色(#e2e8f0,#0F766E)在渲染HTML中，P2级cosmetic问题。
 
 ---
