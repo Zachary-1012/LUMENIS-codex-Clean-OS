@@ -1,7 +1,9 @@
 {
   "_meta": {
     "note": "韩文词条阶段一地基。确认词条来自 intelligence_library/CANONICAL-NAMING（서경）。其余标 __missing__ 回退中文，严禁机翻硬凑。待母语校对后补全。",
-    "confirmed_terms": ["서경 (序境/LUMENIS)"],
+    "confirmed_terms": [
+      "서경 (序境/LUMENIS)"
+    ],
     "missing_count": "见 audit/I18N_COVERAGE_TRACKING.md"
   },
   "product": {
@@ -36,7 +38,12 @@
     "connected": "__missing__",
     "disconnected": "__missing__",
     "no_data": "__missing__",
-    "api_unavailable": "__missing__"
+    "api_unavailable": "__missing__",
+    "detail": "__missing__",
+    "source": "__missing__",
+    "status": "__missing__",
+    "time": "__missing__",
+    "type": "__missing__"
   },
   "nav": {
     "overview": "__missing__",
@@ -58,7 +65,8 @@
     "skill_hub": "__missing__",
     "production": "__missing__",
     "research": "__missing__",
-    "operations": "__missing__"
+    "operations": "__missing__",
+    "browser": "브라우저"
   },
   "status": {
     "running": "__missing__",
@@ -72,7 +80,8 @@
     "active": "__missing__",
     "disabled": "__missing__",
     "blocked": "__missing__",
-    "standby": "__missing__"
+    "standby": "__missing__",
+    "connecting": "__missing__"
   },
   "home": {
     "eyebrow": "__missing__",

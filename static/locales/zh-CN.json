@@ -31,7 +31,12 @@
     "connected": "已连接",
     "disconnected": "连接失败",
     "no_data": "暂无数据",
-    "api_unavailable": "接口不可用"
+    "api_unavailable": "接口不可用",
+    "detail": "详情",
+    "source": "来源",
+    "status": "状态",
+    "time": "时间",
+    "type": "类型"
   },
   "nav": {
     "overview": "概览",
@@ -53,7 +58,8 @@
     "skill_hub": "技能中心",
     "production": "生产",
     "research": "研究",
-    "operations": "运维"
+    "operations": "运维",
+    "browser": "浏览器"
   },
   "status": {
     "running": "运行中",
@@ -67,7 +73,8 @@
     "active": "活跃",
     "disabled": "已禁用",
     "blocked": "已阻断",
-    "standby": "待机"
+    "standby": "待机",
+    "connecting": "连接中"
   },
   "home": {
     "eyebrow": "芥子纳须弥 · Complexity → Simplicity",

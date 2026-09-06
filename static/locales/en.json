@@ -31,7 +31,12 @@
     "connected": "Connected",
     "disconnected": "Disconnected",
     "no_data": "No data",
-    "api_unavailable": "API unavailable"
+    "api_unavailable": "API unavailable",
+    "detail": "Detail",
+    "source": "Source",
+    "status": "Status",
+    "time": "Time",
+    "type": "Type"
   },
   "nav": {
     "overview": "Overview",
@@ -53,7 +58,8 @@
     "skill_hub": "Skill Hub",
     "production": "Production",
     "research": "Research",
-    "operations": "Operations"
+    "operations": "Operations",
+    "browser": "Browser"
   },
   "status": {
     "running": "Running",
@@ -67,7 +73,8 @@
     "active": "Active",
     "disabled": "Disabled",
     "blocked": "Blocked",
-    "standby": "Standby"
+    "standby": "Standby",
+    "connecting": "Connecting"
   },
   "home": {
     "eyebrow": "芥子纳须弥 · Complexity → Simplicity",
