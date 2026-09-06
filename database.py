@@ -369,7 +369,7 @@ def insert_note(note_data):
             'likes': int(note_data.get('likes',0) or 0), 'comments': int(note_data.get('comments',0) or 0),
             'collects': int(note_data.get('collects',0) or 0), 'shares': int(note_data.get('shares',0) or 0),
             'note_type': note_data.get('type','normal') or 'normal', 'xsec_token': note_data.get('xsec_token','') or '',
-            'publish_date': note_data.get('publish_date','') or '',
+            'publish_date': (note_data.get('publish_datetime','') or note_data.get('publish_date','') or '').strip(),
             'is_taikoo_verified': int(note_data.get('is_taikoo_verified',0) or 0),
             'verify_reason': note_data.get('verify_reason','') or '',
             'body': note_data.get('body', note_data.get('content','')) or '',
@@ -412,7 +412,8 @@ def insert_note(note_data):
                 note_data.get('verified_type', ''), (vals.get('title', '') + ' ' + vals.get('body', '')))
         except Exception:
             _stype = _ctype = ''
-        pub_dt = (note_data.get('publish_datetime', '') or vals.get('publish_date', '') or '').strip()
+        pub_dt = (note_data.get('publish_datetime', '') or note_data.get('publish_date', '') or '').strip()
+        coll_at = (note_data.get('collected_at', '') or note_data.get('captured_at', '') or '').strip()
         if existing:
             conn.execute("""UPDATE notes SET source_platform=?, title=?, content=CASE WHEN ?<>'' THEN ? ELSE content END,
                 url=CASE WHEN ?<>'' THEN ? ELSE url END, cover=CASE WHEN ?<>'' THEN ? ELSE cover END,
@@ -425,6 +426,7 @@ def insert_note(note_data):
                 is_taikoo_verified=CASE WHEN ?=1 THEN 1 ELSE is_taikoo_verified END,
                 verify_reason=CASE WHEN ?<>'' THEN ? ELSE verify_reason END,
                 publish_datetime=CASE WHEN ?<>'' THEN ? ELSE publish_datetime END,
+                collected_at=CASE WHEN ?<>'' THEN ? ELSE collected_at END,
                 captured_at=CASE WHEN ?<>'' THEN ? ELSE captured_at END,
                 detail_fetched_at=CASE WHEN ?<>'' THEN ? ELSE detail_fetched_at END,
                 comments_fetched_at=CASE WHEN ?<>'' THEN ? ELSE comments_fetched_at END,
@@ -439,7 +441,8 @@ def insert_note(note_data):
                 vals['author_avatar'], vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'],
                 vals['note_type'], vals['xsec_token'], vals['xsec_token'], vals['publish_date'], vals['publish_date'], vals['is_taikoo_verified'], vals['verify_reason'], vals['verify_reason'],
                 pub_dt, pub_dt,
-                note_data.get('captured_at','') or '', note_data.get('captured_at','') or '',
+                coll_at, coll_at,
+                coll_at, coll_at,
                 note_data.get('detail_fetched_at','') or '', note_data.get('detail_fetched_at','') or '',
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
                 int(note_data.get('comments_collected',0) or 0), int(note_data.get('comments_collected',0) or 0),
@@ -463,12 +466,12 @@ def insert_note(note_data):
             return existing['id'], False
         cur = conn.execute("""INSERT INTO notes
             (note_id,source_platform,title,content,url,cover,author_id,author_nickname,author_avatar,likes,comments,collects,shares,
-             note_type,xsec_token,publish_date,publish_datetime,captured_at,detail_fetched_at,comments_fetched_at,comments_collected,
+             note_type,xsec_token,publish_date,publish_datetime,collected_at,captured_at,detail_fetched_at,comments_fetched_at,comments_collected,
              data_quality_status,data_quality_score,collector_version,status,last_seen_at,is_official,is_taikoo_verified,verify_reason)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'active',?,?,?,?)""", (
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'active',?,?,?,?)""", (
             nid, vals['source_platform'], vals['title'], vals['content'], vals['url'], vals['cover'], vals['author_id'], vals['author_nickname'],
             vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'], vals['note_type'],
-            vals['xsec_token'], vals['publish_date'], pub_dt, note_data.get('captured_at','') or now,
+            vals['xsec_token'], vals['publish_date'], pub_dt, coll_at or now, coll_at or now,
             note_data.get('detail_fetched_at','') or '', note_data.get('comments_fetched_at','') or '', int(note_data.get('comments_collected',0) or 0),
             note_data.get('data_quality_status','unknown') or 'unknown', float(note_data.get('data_quality_score',0) or 0),
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))

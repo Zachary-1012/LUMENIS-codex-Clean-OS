@@ -712,7 +712,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                                        'dwell_sec': consume['dwell_sec'],
                                        'video_watched': is_video, 'images_swiped': img_swiped,
                                        'comments_seen': comment_seen},
-                        'detail_fetched': True, 'captured_at': datetime.now().isoformat(),
+                        'detail_fetched': True, 'collected_at': datetime.now().isoformat(),
                         'collector_version': 'xhs-cdp-py-human-2.1',
                     }
                     rec['subject_hit'] = _compute_subject_hit(rec.get('title'), rec.get('desc'))
@@ -858,7 +858,7 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         'likes': likes, 'collects': collects, 'comments': comments,
                         'comment_list': d.get('comment_list', []), 'comment_count': d.get('comment_count', 0),
                         'cover': c.get('cover', ''), 'url': c['url'],
-                        'detail_fetched': True, 'captured_at': datetime.now().isoformat(),
+                        'detail_fetched': True, 'collected_at': datetime.now().isoformat(),
                         'collector_version': 'xhs-cdp-py-1.0',
                     }
                     rec['subject_hit'] = _compute_subject_hit(rec.get('title'), rec.get('desc'))

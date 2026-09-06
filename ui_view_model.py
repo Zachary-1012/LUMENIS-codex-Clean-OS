@@ -117,7 +117,7 @@ class DataResult:
     """DataLayer 返回的原始数据包。"""
     query: DataQuery
     records: List[Dict[str, Any]] = field(default_factory=list)
-    total: int = 0                       # 符合条件的总数（不限于本页）
+    total: Optional[int] = None          # 符合条件的总数（不限于本页）；无数据时为 None（null），禁止用 0 填充
     status: DataStatus = DataStatus.OK
     error: Optional[str] = None
     source_timestamp: Optional[str] = None  # 数据生成/采集时间（ISO）
@@ -386,8 +386,8 @@ def build_truth_table(
         tt.confidence_reasons.append("data source error/unavailable")
         return tt
 
-    tt.record_count = data_result.total
-    tt.exists = data_result.total > 0 or len(data_result.records) > 0
+    tt.record_count = data_result.total if data_result.total is not None else len(data_result.records)
+    tt.exists = (data_result.total or 0) > 0 or len(data_result.records) > 0
     tt.status = data_result.status if data_result.status != DataStatus.OK else DataStatus.OK
     tt.source_timestamp = data_result.source_timestamp
 
@@ -730,7 +730,7 @@ class ViewModelBuilder:
                 title=str(r.get("title") or r.get("content") or "")[:80],
                 url=str(r.get("url") or r.get("note_url") or ""),
                 source=str(r.get("platform") or r.get("source") or ""),
-                timestamp=r.get("publish_datetime") or r.get("captured_at"),
+                timestamp=r.get("publish_datetime") or r.get("collected_at"),
             ))
         return refs
 
@@ -784,7 +784,7 @@ def filter_records_by_time(
     for r in records:
         if not isinstance(r, dict):
             continue
-        ts_str = r.get(time_field) or r.get("captured_at")
+        ts_str = r.get(time_field) or r.get("collected_at")
         if not ts_str:
             continue
         try:

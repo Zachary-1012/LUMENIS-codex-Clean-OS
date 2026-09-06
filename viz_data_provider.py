@@ -87,18 +87,27 @@ def _make_data_result(
     error: Optional[str] = None,
     source_timestamp: Optional[str] = None,
     time_range: TimeRange = TimeRange.TODAY,
+    data_status: Optional[DataStatus] = None,
 ) -> DataResult:
-    """构造标准化 DataResult。"""
+    """构造标准化 DataResult。
+
+    - data_status 显式传入时覆盖自动判定。
+    - total 为 None 且无 records 时保持 None（null），禁止 0 填充；有 records 时回退 len(records)。
+    """
     if error:
         status = DataStatus.ERROR
+    elif data_status is not None:
+        status = data_status
     elif not records:
         status = DataStatus.NO_DATA
     else:
         status = DataStatus.OK
+    if total is None and records:
+        total = len(records)
     return DataResult(
         query=DataQuery(source=source, time_range=time_range),
         records=records,
-        total=total if total is not None else len(records),
+        total=total,
         status=status,
         error=error,
         source_timestamp=source_timestamp,
@@ -130,11 +139,12 @@ def provide_overview_stats(params: Dict[str, Any]) -> DataResult:
     records, error = _safe_query(sql, cparams)
     if error:
         return _make_data_result("notes", [], error=error, time_range=tr)
-    # 数据缺失：聚合 total 为 0 时显式返回 NO_DATA，禁止用 0 填充
-    if not records or (records[0].get("total") or 0) == 0:
-        return _make_data_result("notes", [], total=0, source_timestamp=None, time_range=tr)
+    # 数据缺失：聚合 total 为 0/None 时显式返回 NO_DATA，total=None（null），禁止用 0 填充
+    if not records or not records[0].get("total"):
+        return _make_data_result("notes", [], total=None, source_timestamp=None,
+                                  time_range=tr, data_status=DataStatus.NO_DATA)
     ts = records[0].get("latest_collected")
-    return _make_data_result("notes", records, total=records[0].get("total", 0),
+    return _make_data_result("notes", records, total=records[0].get("total"),
                               source_timestamp=ts, time_range=tr)
 
 
