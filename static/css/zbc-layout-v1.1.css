@@ -87,7 +87,7 @@
 .zbc-domain-switch {
   display: flex;
   gap: 4px;
-  padding: 12px 16px;
+  padding: 12px 12px;
   border-bottom: 1px solid var(--l-border-light, #F0F0F0);
 }
 
@@ -100,18 +100,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 4px;
+  gap: 4px;
+  padding: 7px 2px;
+  min-width: 0;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: var(--l-text-secondary, #6B7280);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
 }
+.zbc-domain-tab > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 [data-theme="dark"] .zbc-domain-tab {
   color: var(--d-text-secondary, #A1A1AA);
@@ -368,6 +372,8 @@
 }
 
 .zbc-topbar__h1 {
+  /* 用户指令：业务页面不设大标题，层级由面包屑/页内 Tab 承载 */
+  display: none !important;
   font-size: 17px;
   font-weight: 600;
   color: var(--l-text, #0D0D0D);
@@ -786,7 +792,7 @@
   height: 56px;
   background: var(--l-bg, #FFFFFF);
   border-top: 1px solid var(--l-border, #E8E8E8);
-  display: flex;
+  /* PC hidden by default; flex only under max-width:768px (fix duplicate display showing mobile tabbar on PC) */
   z-index: 200;
 }
 
