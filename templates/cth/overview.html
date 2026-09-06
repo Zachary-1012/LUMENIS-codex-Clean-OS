@@ -213,10 +213,13 @@
   var INDUSTRY_COLORS = ['#2563EB','#0F766E','#7C3AED','#DC2626','#D97706','#0891B2','#DB2777','#65A30D','#4F46E5'];
   var INDUSTRY_NAMES = {
     'fashion':'时尚','beauty':'美妆','food':'餐饮','jewelry':'珠宝','lifestyle':'生活方式',
-    'tech':'数码','sports':'运动','kids':'亲子','entertainment':'娱乐','other':'其他',
+    'tech':'数码','sports':'运动','kids':'亲子','entertainment':'娱乐',
     '时尚':'时尚','美妆':'美妆','餐饮':'餐饮','珠宝':'珠宝','生活方式':'生活方式',
-    '数码':'数码','运动':'运动','亲子':'亲子','娱乐':'娱乐','其他':'其他'
+    '数码':'数码','运动':'运动','亲子':'亲子','娱乐':'娱乐'
   };
+  // P0-R6: 9业态白名单（数据红线：非9业态key不得渲染为业态分布）
+  var NINE_INDUSTRY_KEYS = {'fashion':1,'beauty':1,'food':1,'jewelry':1,'lifestyle':1,
+    'tech':1,'sports':1,'kids':1,'entertainment':1};
 
   // ========== Utils ==========
   function safeNum(v) {
@@ -399,24 +402,41 @@
       if (d && d.categories) cats = d.categories;
       else if (d && d.stats && d.stats.categories) cats = d.stats.categories;
 
-      if (!cats || (Array.isArray(cats) && cats.length === 0) ||
-          (typeof cats === 'object' && Object.keys(cats).length === 0)) {
-        // Fallback to cth overview by_platform
-        xjViz.api('/cth/overview').then(function(cth) {
-          if (cth && cth.data && cth.data.by_platform && Object.keys(cth.data.by_platform).length > 0) {
-            renderDonut(cth.data.by_platform);
-          } else {
-            showState('cth-industry', 'empty');
-          }
-        }).catch(function() { showState('cth-industry', 'empty'); });
+      // P0-R6 数据红线：只接受9业态白名单内的key，非9业态key过滤
+      // 拿不到真实9业态分类时必须显式empty，不得用平台/其他分类冒充业态
+      var filtered = filterNineIndustries(cats);
+      if (!filtered || filtered.length === 0) {
+        showState('cth-industry', 'empty');
         return;
       }
-      renderDonut(cats);
+      renderDonut(filtered);
     }).catch(function(e) {
       console.error('CTH industry error:', e);
       showState('cth-industry', 'error');
       markDegraded('industry', '业态数据加载失败');
     });
+  }
+
+  // P0-R6: 9业态白名单过滤 — 只保留fashion/beauty/food/jewelry/lifestyle/tech/sports/kids/entertainment
+  // 非9业态key（如xhs/xiaohongshu/探店/活动/其他等）一律过滤，不得渲染为业态分布
+  function filterNineIndustries(cats) {
+    if (!cats) return null;
+    var result = [];
+    if (Array.isArray(cats)) {
+      cats.forEach(function(item) {
+        var key = item.category || item.name || item.label;
+        if (key && NINE_INDUSTRY_KEYS[key]) {
+          result.push(item);
+        }
+      });
+    } else if (typeof cats === 'object') {
+      for (var key in cats) {
+        if (NINE_INDUSTRY_KEYS[key]) {
+          result.push({category: key, count: cats[key]});
+        }
+      }
+    }
+    return result;
   }
 
   function renderDonut(data) {

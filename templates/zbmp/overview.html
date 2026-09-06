@@ -527,14 +527,23 @@ var ZBMPOverview = (function () {
     if (!content) return;
 
     var industries = [];
+    // P0-R6 数据红线：只接受9业态白名单内的key，非9业态key过滤
+    var NINE_INDUSTRY_KEYS = {'fashion':1,'beauty':1,'food':1,'jewelry':1,'lifestyle':1,
+      'tech':1,'sports':1,'kids':1,'entertainment':1};
     if (biStats && biStats.industries && biStats.industries.length > 0) {
-      industries = biStats.industries.map(function (d) {
-        return { name: d.industry || d.name || '未知', count: Number(d.cnt || d.count || 0) };
+      industries = biStats.industries.filter(function (d) {
+        var k = d.industry || d.name;
+        return k && NINE_INDUSTRY_KEYS[k];
+      }).map(function (d) {
+        return { name: d.industry || d.name, count: Number(d.cnt || d.count || 0) };
       });
     } else if (statsCats && statsCats.length > 0) {
-      // Fallback: categories from /api/stats
-      industries = statsCats.map(function (d) {
-        return { name: d.category || d.name || '未知', count: Number(d.count || 0) };
+      // Fallback: categories from /api/stats — 仅保留9业态白名单内的key
+      industries = statsCats.filter(function (d) {
+        var k = d.category || d.name;
+        return k && NINE_INDUSTRY_KEYS[k];
+      }).map(function (d) {
+        return { name: d.category || d.name, count: Number(d.count || 0) };
       });
     }
 
