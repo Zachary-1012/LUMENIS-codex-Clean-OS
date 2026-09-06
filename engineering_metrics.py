@@ -87,19 +87,11 @@ from __future__ import annotations
 #   → v4（+alert 健康告警分级）。任何口径变更须 bump engineered_metrics_version 并同步 OSAI 契约文档。
 API_CONTRACT_VERSION = 4
 
-import io
 import json
 import os
-import sys
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
-
-try:
-    # 兼容 stdlib-only 运行（避免导入 app 体系）
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-except Exception:
-    pass
 
 # 仓库根目录定位（本文件位于仓库根）
 _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))

@@ -3,12 +3,9 @@
 任何一家云端失败都必须自动回退本地规则、绝不抛异常；结构字段必须合法。
 有真实 key 时对应 provider 会真实出数，无 key / 无额度时回退 rule，两种情况都覆盖。
 """
-import io, os, sys
+import os
+import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-for line in io.open(".env", encoding="utf-8"):
-    line = line.strip()
-    if line and not line.startswith("#") and "=" in line:
-        k, v = line.split("=", 1); os.environ.setdefault(k.strip(), v.strip())
 os.environ["AI_TIMEOUT_SECONDS"] = "20"
 import intelligence
 
@@ -35,7 +32,13 @@ def test_openai_failure_falls_back():
 
 def test_zhipu_wired_and_safe():
     st = use("zhipu")
-    assert st["base_url"].endswith("/paas/v4") and st["model"].startswith("glm-")
+    # Tests must not read .env or require a cloud credential.  With an
+    # explicitly injected key the configured GLM endpoint is exposed; without
+    # one the production contract is the deterministic local-rule fallback.
+    if st["enabled"]:
+        assert st["base_url"].endswith("/paas/v4") and st["model"].startswith("glm-")
+    else:
+        assert st["provider"] == "local_rule" and st["runtime"] == "rule"
     raw, prov = intelligence._chat("只输出JSON：{\"ok\":1}", "测试", 0, 300)
     assert prov in ("zhipu", "rule")
     if prov == "zhipu":

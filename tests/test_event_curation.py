@@ -2,11 +2,8 @@
 """事件中心质量分级与事件-笔记联动的单元测试（不依赖网络，直接读库/纯函数）。
 运行：.venv\\Scripts\\python.exe -m pytest tests\\test_event_curation.py
 """
-import os, sys, io
-try:
-    sys.stdout.reconfigure(encoding='utf-8')
-except Exception:
-    pass
+import os
+import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import classify_event_quality, _event_title_is_noise, get_events_curated
