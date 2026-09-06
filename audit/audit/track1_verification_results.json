@@ -1,0 +1,38 @@
+{
+  "config": {
+    "status": "FAIL",
+    "error": "No module named 'config'"
+  },
+  "database_init": {
+    "status": "FAIL",
+    "error": "No module named 'database'"
+  },
+  "crud_transaction": {
+    "status": "FAIL",
+    "error": "No module named 'database'"
+  },
+  "repository_registry": {
+    "status": "FAIL",
+    "error": "No module named 'repository_registry'"
+  },
+  "logger": {
+    "status": "FAIL",
+    "error": "No module named 'logger'"
+  },
+  "models": {
+    "status": "FAIL",
+    "error": "No module named 'models'"
+  },
+  "migrations": {
+    "status": "FAIL",
+    "error": "No module named 'database_migrations'"
+  },
+  "preflight": {
+    "status": "FAIL",
+    "error": "No module named 'runtime_preflight'"
+  },
+  "health_endpoint": {
+    "status": "FAIL",
+    "error": "No module named 'app'"
+  }
+}

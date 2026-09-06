@@ -1,4 +1,4 @@
-"""
+﻿"""
 舆情系统评测体系 v1.0
 基于e-commerce-agents评测体系启发，适配舆情监测系统
 
@@ -18,7 +18,16 @@
 - 线上回流集：从真实采集和分析中持续采样
 
 评测结构：机标明细→人标明细→结果分类→周度汇总
+
+LEGACY NOTICE (ZBC Phase 10, 2026-09-06): 本模块已标记为 Legacy，保留接口不删除。
+统一评估系统：evaluation_recorder.py + evaluation_dimensions.py + evaluation_runner.py
+已知局限：仅覆盖 collection/analysis/report/stability；stability 仅查端口连通性（近似200统计）；
+JSON 文件持久化；无 unknown 状态处理。
 """
+
+LEGACY = True
+LEGACY_SINCE = "2026-09-06"
+LEGACY_REPLACED_BY = "evaluation_recorder + evaluation_dimensions + evaluation_runner"
 
 import os
 import sys
@@ -464,3 +473,4 @@ import time
 evaluation_system = EvaluationSystem()
 
 print("[Evaluation] 舆情系统评测体系已加载", flush=True)
+

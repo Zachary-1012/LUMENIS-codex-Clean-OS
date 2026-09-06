@@ -18,6 +18,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger('ark_llm')
 
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'LEGACY'
+DEPRECATION_NOTE = 'ARK/doubao channel disabled since 2026-09-02 (AI_PROVIDER=zhipu). Routes migrated to intelligence.py (zhipu GLM). Retained for backward compatibility only.'
+AI_PROVIDER_GUARD = True  # PROVIDER_ACTIVE only true when AI_PROVIDER in (ark,doubao,volc,doubao-ark)
+
 # =========配置区========
 # 优先从环境变量读取，没有则使用默认值
 API_KEY = os.getenv('ARK_API_KEY', '').strip()

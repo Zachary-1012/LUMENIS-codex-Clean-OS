@@ -21,6 +21,10 @@ import threading
 from datetime import datetime, date
 from typing import Dict, List, Optional, Any
 
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'ACTIVE'
+AI_ROLE = 'BUDGET_AND_QUOTA'  # resource pack quota management, not business judgment
+
 # ============ 资源包配置 ============
 RESOURCE_PACKS = {
     "glm_4_5_air": {

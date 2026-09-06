@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Zachary OS AI · Agent Security Guard（AI Agent 安全防护层）
+"""[Legacy] Zachary OS AI · Agent Security Guard（AI Agent 安全防护层 · Legacy 保留）
+
+⚠️ Legacy 模块：Phase 3 后，全局权限控制由 permission_gate.py（PermissionGate）和 security_boundary.py（AIAgentLayer）统一编排。本模块保留 Prompt Injection 五层防御（输入净化/指令检测/参数校验/输出过滤/蜜罐），与全局 Gate 互补，不替代、不删除。
+
+Zachary OS AI · Agent Security Guard（AI Agent 安全防护层）
 
 Contract：OSAI 研究侧 → ZBC 生产侧。
 基于 2025-2026 最新 Prompt Injection 研究（分层防御流水线、ToolLeak 攻击、蜜罐动作）实现。
@@ -359,3 +363,9 @@ __all__ = [
     "HONEYPOT_ACTIONS",
     "INJECTION_PATTERNS",
 ]
+
+# Phase 13: module status (LEGACY - preserved, not deleted)
+_MODULE_STATUS = "LEGACY"
+_LEGACY_REASON = "Phase 3+ global permission controlled by permission_gate.py + security_boundary.py; this module retains prompt-injection 5-layer defense as complementary layer"
+_PHASE13_COMPAT = "agent_boundary.ActionFirewall supersedes tool whitelist for new code; ALLOWED_TOOLS preserved for backward compat"
+

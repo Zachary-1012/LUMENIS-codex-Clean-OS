@@ -47,17 +47,21 @@ def calculate_risk_index(notes, events, period_days=1):
     _rc = cm.risk_count(notes)
     negative = _sc['negative']
     high_risk = _rc['high']      # Canonical FN-RISK-COUNT：high 不含 critical
+    critical_risk = _rc['critical']  # 方案甲：critical 独立更高桶，风险指数中权重高于 high（Phase 6 审计修复）
     medium_risk = _rc['medium']
     total_engagement = sum(int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0) * 2
                            for n in notes)
 
     # 1. 负面占比得分 (0-30)
-    neg_ratio = negative / total if total > 0 else 0
+    # MET-NEG-RATIO：分母为 known(pos+neu+neg)，不含 unknown；分母为 0 返回 None（不可算）。
+    # 不可算时该维度得 0 分并显式标记，绝不把 unknown 当 negative 或 0 混入比率（Phase 6 审计修复）。
+    _nr = cm.neg_ratio(_sc)
+    neg_ratio = _nr if _nr is not None else 0.0
     neg_score = min(30, neg_ratio * 60)  # 50%负面即满分
 
     # 2. 高风险数量得分 (0-25)
-    # 单日高风险>=5条即满分
-    high_score = min(25, high_risk * 5 + medium_risk * 1.5)
+    # 单日高风险>=5条即满分；critical 权重为 high 的 2 倍（独立更高桶，不得被弱化）
+    high_score = min(25, high_risk * 5 + critical_risk * 10 + medium_risk * 1.5)
 
     # 3. 传播互动得分 (0-20)
     # 负面内容的互动量权重更高

@@ -26,6 +26,12 @@ DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or os.path.join(os.path.
 EXPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'exports')
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
+# ZBC Phase 9: artifact 真实性校验
+try:
+    import report_artifact as ra
+except Exception:
+    ra = None
+
 
 def get_db():
     """获取数据库连接"""
@@ -103,9 +109,16 @@ def filter_notes_by_period(period, date_str=None, require_negative_confirmed=Fal
     conn = get_db()
     c = conn.cursor()
 
-    # 基础查询
-    query = "SELECT * FROM notes WHERE 1=1"
-    params = []
+    # 基础查询（ZBC Phase 9: 强制主体过滤，与 database._verified_base 同口径）
+    try:
+        from subject_rules import subject_sql_and_values
+        _clause, _sp = subject_sql_and_values()
+        query = f"SELECT * FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_clause}"
+        params = list(_sp)
+    except Exception:
+        # subject_rules 不可用时退化为 verified 过滤（仍比全表扫描安全）
+        query = "SELECT * FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant'"
+        params = []
 
     # 显式自定义范围 或 非日报周期：按发布日期落在区间
     if start_date or end_date or period != 'daily':
@@ -419,6 +432,11 @@ def _export_excel(period, date_str=None, start_date=None, end_date=None):
 
             wb.save(filepath)
             print(f"[Export] Excel报告已生成: {filename}", flush=True)
+            # ZBC Phase 9: 保存后验证文件真实存在且非空
+            if ra:
+                _v = ra.verify_artifact_file(filepath)
+                if not _v['valid']:
+                    raise RuntimeError(f"Excel artifact 校验失败: {_v['reason']}")
 
         except ImportError:
             # 如果没有openpyxl，生成CSV
@@ -635,6 +653,11 @@ def _export_word(period, date_str=None, start_date=None, end_date=None):
 
             doc.save(filepath)
             print(f"[Export] Word报告已生成: {filename}", flush=True)
+            # ZBC Phase 9: 保存后验证文件真实存在且非空
+            if ra:
+                _v = ra.verify_artifact_file(filepath)
+                if not _v['valid']:
+                    raise RuntimeError(f"Word artifact 校验失败: {_v['reason']}")
 
         except ImportError:
             # 如果没有python-docx，生成TXT
@@ -712,9 +735,16 @@ def export_generate():
         r = _export_word(period, date_str, s, e) if fmt in ('docx', 'word') else _export_excel(period, date_str, s, e)
         if not isinstance(r, str):
             return r  # 内部错误 Response
+        # ZBC Phase 9: 返回前验证文件真实存在且非空，禁止假成功
+        if ra:
+            _v = ra.verify_artifact_file(r)
+            if not _v['valid']:
+                return jsonify({'ok': False, 'error': f'导出文件校验失败: {_v["reason"]}', 'filepath': r}), 500
         from urllib.parse import quote
         name = os.path.basename(r)
-        return jsonify({'ok': True, 'name': name, 'download_url': f'/api/export/file/{quote(name)}'})
+        return jsonify({'ok': True, 'name': name, 'download_url': f'/api/export/file/{quote(name)}',
+                        'size': _v['size'] if ra else os.path.getsize(r),
+                        'artifact_hash': _v['hash'] if ra else ''})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

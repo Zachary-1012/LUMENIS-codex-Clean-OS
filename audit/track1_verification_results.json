@@ -1,0 +1,171 @@
+{
+  "config": {
+    "status": "PASS",
+    "details": {
+      "APP_HOST": "0.0.0.0",
+      "APP_PORT": 8200,
+      "DATABASE_PATH": "data/monitor.db",
+      "AI_PROVIDER": "zhipu",
+      "AI_LOCAL_ENABLED": false,
+      "LOG_LEVEL": "INFO",
+      "ZBC_REPO_ROOT": null,
+      "ZBC_DATA_DIR": null,
+      "ZBC_LOG_DIR": null
+    },
+    "validation": {
+      "valid": true,
+      "missing": [],
+      "warnings": [
+        "AI_API_KEY 未设置且本地AI未启用，AI分析功能可能不可用",
+        "邮件配置不完整，日报推送功能可能不可用"
+      ],
+      "details": {
+        "total_keys": 110,
+        "configured_keys": 53
+      }
+    }
+  },
+  "database_init": {
+    "status": "PASS",
+    "db_path": "D:\\Taikoo-monitor-new\\data\\monitor.db",
+    "tables": {
+      "ai_call_logs": 18,
+      "ai_filter_log": 0,
+      "alert_configs": 13,
+      "alert_records": 0,
+      "app_evidence_records": 0,
+      "auth_recovery_tasks": 0,
+      "brand_knowledge": 0,
+      "canonical_data": 13,
+      "case_deep_analysis": 0,
+      "collection_logs": 0,
+      "collector_quality_log": 0,
+      "daily_digest": 3,
+      "daily_reports": 15,
+      "evaluation_records": 0,
+      "event_graph_events": 0,
+      "event_graph_relations": 0,
+      "event_insights": 0,
+      "event_mentions": 0,
+      "events": 0,
+      "feedback_keywords": 0,
+      "historical_import_log": 0,
+      "kos_executions": 442,
+      "kos_operations": 200,
+      "kos_paid_plans": 80,
+      "kos_profiles": 1,
+      "kos_rewards": 40,
+      "metric_snapshots": 3,
+      "note_comments": 0,
+      "note_review_history": 0,
+      "notes": 3,
+      "podcast_ai_runs": 0,
+      "podcast_entities": 0,
+      "professional_accounts": 0,
+      "professional_metrics": 0,
+      "rule_version_registry": 1,
+      "runtime_guardian_checkpoints": 1,
+      "runtime_guardian_dlq": 0,
+      "runtime_guardian_workers": 1,
+      "schedule_decisions": 9168,
+      "schema_version": 2,
+      "sqlite_sequence": 30,
+      "swire_events": 10,
+      "swire_notes": 0,
+      "swire_projects": 8,
+      "token_stat": 0,
+      "topic_campaign_notes": 0,
+      "topic_campaign_snapshots": 58,
+      "topic_campaign_topics": 7,
+      "topic_campaigns": 1,
+      "v4_audit_logs": 0,
+      "v4_login_attempts": 0,
+      "v4_security_questions": 2,
+      "v4_sessions": 49,
+      "v4_users": 1,
+      "v4_workspace_grants": 49,
+      "v4_workspace_keys": 245,
+      "web_mentions": 10,
+      "web_runs": 2,
+      "web_sources": 1
+    }
+  },
+  "crud_transaction": {
+    "status": "PASS",
+    "test_keyword": "__track1_audit_test_143142",
+    "row_id": 2
+  },
+  "repository_registry": {
+    "status": "PASS",
+    "repo_root": "D:\\Taikoo-monitor-new",
+    "dirs": {
+      "core": "D:\\Taikoo-monitor-new",
+      "data": "D:\\Taikoo-monitor-new\\data",
+      "runtime": "D:\\Taikoo-monitor-new\\browser_runtime",
+      "backup": "D:\\Taikoo-monitor-new\\backups",
+      "export": "D:\\Taikoo-monitor-new\\report_export",
+      "temp": "D:\\Taikoo-monitor-new\\staging",
+      "ai_runtime": "D:\\Taikoo-monitor-new\\.ollama",
+      "collector": "D:\\Taikoo-monitor-new\\collector_v2",
+      "log": "D:\\Taikoo-monitor-new\\logs",
+      "config": "D:\\Taikoo-monitor-new\\config"
+    },
+    "resolved_paths": {
+      "data/monitor.db": "D:\\Taikoo-monitor-new\\data\\monitor.db",
+      ".env": "D:\\Taikoo-monitor-new\\.env",
+      "logs/app.log": "D:\\Taikoo-monitor-new\\logs\\app.log",
+      "config/settings.json": "D:\\Taikoo-monitor-new\\config\\settings.json",
+      "backups/test.bak": "D:\\Taikoo-monitor-new\\backups\\test.bak"
+    }
+  },
+  "logger": {
+    "status": "PASS",
+    "log_dir": "D:\\Taikoo-monitor-new\\logs",
+    "total_files": 41,
+    "total_size_mb": 154.68
+  },
+  "models": {
+    "status": "PASS",
+    "count": 22,
+    "tables": [
+      "notes",
+      "events",
+      "comments",
+      "note_comments",
+      "daily_reports",
+      "daily_digest",
+      "weekly_events",
+      "web_topics",
+      "web_events",
+      "web_mentions",
+      "brand_industry_monitor",
+      "collection_counters",
+      "collection_logs",
+      "collector_quality_log",
+      "ai_filter_log",
+      "event_insights",
+      "event_mentions",
+      "note_review_history",
+      "feedback_keywords",
+      "system_config",
+      "web_sources",
+      "web_runs"
+    ]
+  },
+  "migrations": {
+    "status": "PASS",
+    "current_version": 10,
+    "latest": 10
+  },
+  "preflight": {
+    "status": "PASS",
+    "overall": "pass",
+    "blockers": 0,
+    "warnings": 0
+  },
+  "health_endpoint": {
+    "status": "PASS",
+    "endpoint": "/api/health",
+    "status_code": 200
+  }
+}

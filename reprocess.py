@@ -124,7 +124,8 @@ def build_cross_platform_events(limit=100):
         dates=[m.get('publish_date') or m.get('published_at') or m.get('collected_at') or m.get('fetched_at') or '' for m in mentions]
         neg=cm.sentiment_count(mentions)['negative']  # [Canonical] 纯计数; 下方 risk_score 阈值推导规则保持不变
         risk=max([int(m.get('risk_score',0) or 0) for m in mentions] or [0])
-        risk_level='high' if risk>=60 or neg>=3 else ('medium' if risk>=30 or neg else 'low')
+        # critical: independent higher bucket (risk>=85 and neg>=3), never merged into high (Phase 6)
+        risk_level='critical' if (risk>=85 and neg>=3) else ('high' if risk>=60 or neg>=3 else ('medium' if risk>=30 or neg else 'low'))
         event={'event_key':key,'title':title[:40],'first_seen':min(dates) if dates else '', 'last_seen':max(dates) if dates else '', 'mention_count':len(mentions), 'source_count':len(set(m.get('source_platform','unknown') for m in mentions)), 'risk_level':risk_level,'risk_score':risk,'keywords':list(dict.fromkeys([t for m in mentions for t in (m.get('topics') or [])]))[:8]}
         ai=intelligence.summarize_event(event,mentions)
         event.update(ai)

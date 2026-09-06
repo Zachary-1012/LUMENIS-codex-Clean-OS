@@ -116,17 +116,26 @@ def brand_report_export(report_id):
     """导出品牌分析报告（JSON/Markdown）"""
     try:
         from brand_report_generator import BrandReportGenerator
+        import report_artifact as ra
         format_type = request.args.get('format', 'json')
         # 这里简化处理，实际应从存储中读取报告
         generator = BrandReportGenerator()
         if format_type == 'markdown':
             filepath = f'data/brand_report_{report_id}.md'
-            generator.export_markdown(filepath)
-            return jsonify({'ok': True, 'format': 'markdown', 'filepath': filepath})
+            ok = generator.export_markdown(filepath)
+            if not ok:
+                return jsonify({'ok': False, 'error': 'Markdown 导出失败'}), 500
         else:
             filepath = f'data/brand_report_{report_id}.json'
-            generator.export_json(filepath)
-            return jsonify({'ok': True, 'format': 'json', 'filepath': filepath})
+            ok = generator.export_json(filepath)
+            if not ok:
+                return jsonify({'ok': False, 'error': 'JSON 导出失败'}), 500
+        # ZBC Phase 9: 导出后必须验证文件真实存在且非空
+        v = ra.verify_artifact_file(filepath)
+        if not v['valid']:
+            return jsonify({'ok': False, 'error': f'导出文件校验失败: {v["reason"]}', 'filepath': filepath}), 500
+        return jsonify({'ok': True, 'format': format_type, 'filepath': filepath,
+                        'size': v['size'], 'artifact_hash': v['hash']})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -209,7 +218,8 @@ def api_reports_list():
                     reports.append({'name': f, 'size': stat.st_size, 'date': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M')})
         return jsonify({'ok': True, 'reports': reports, 'count': len(reports)})
     except Exception as e:
-        return jsonify({'ok': True, 'reports': [], 'count': 0, 'error': str(e)})
+        # ZBC Phase 9: 异常不得伪装成 ok=True 空列表（假成功）
+        return jsonify({'ok': False, 'reports': [], 'count': 0, 'error': str(e)}), 500
 
 
 @report_bp.route('/api/reports/<path:report_id>/download')
@@ -256,7 +266,15 @@ def api_report(report_type):
     if report_type not in report_engine.REPORT_TYPES: return jsonify({'ok':False,'error':'无效报告类型'}),400
     try:
         bundle=report_engine.get_bundle(report_type, request.args.get('date') or None)
-        return jsonify({'ok':bool(bundle.get('report')),'report':bundle.get('report'),'digest':bundle.get('digest'),'report_type':report_type})
+        rpt = bundle.get('report') or {}
+        # ZBC Phase 9: ok 必须基于报告真实非空 + artifact 已验证，不能仅凭 dict 非空
+        import report_artifact as ra
+        vr = ra.verify_report_dict(rpt)
+        ok = bool(rpt) and vr['valid']
+        return jsonify({'ok':ok,'report':rpt,'digest':bundle.get('digest'),'report_type':report_type,
+                        'regenerated':bundle.get('regenerated',False),
+                        'artifact_verified':bundle.get('artifact_verified',False),
+                        'report_id':rpt.get('report_id',''),'artifact_hash':rpt.get('artifact_hash','')})
     except Exception as exc:
         return jsonify({'ok':False,'error':str(exc)}),500
 
@@ -265,7 +283,21 @@ def api_report(report_type):
 def api_generate_report():
     try:
         result=report_engine.generate_all()
-        return jsonify({'ok':True,'message':'日报/周报/月报/年报已生成','reports':result})
+        # ZBC Phase 9: 验证每个报告真实落库（有 _db_row_id 且 artifact_verified）
+        verified = {}
+        for typ, bundle in result.items():
+            rpt = bundle.get('report') or {}
+            verified[typ] = {
+                'row_id': rpt.get('_db_row_id'),
+                'report_id': rpt.get('report_id', ''),
+                'artifact_hash': rpt.get('artifact_hash', ''),
+                'artifact_verified': bool(rpt.get('_artifact_verified')),
+                'total_notes': rpt.get('total_notes', 0),
+            }
+        all_ok = all(v['artifact_verified'] and v['row_id'] for v in verified.values())
+        if not all_ok:
+            return jsonify({'ok': False, 'error': '部分报告未真实落库', 'verified': verified}), 500
+        return jsonify({'ok':True,'message':'日报/周报/月报/年报已生成','reports':result,'verified':verified})
     except Exception as exc:
         return jsonify({'ok':False,'error':str(exc)}),500
 
@@ -486,6 +518,9 @@ def api_digest_today():
             digest = daily_report.generate_daily_digest(date_str)
         except Exception as e:
             return jsonify({'ok':False,'error':str(e)}),500
+    # ZBC Phase 9: 验证 digest 非空且有日期
+    if not digest or not digest.get('digest_date'):
+        return jsonify({'ok':False,'error':'日报摘要生成失败或为空'}),500
     return jsonify({'ok':True,'digest':digest})
 
 

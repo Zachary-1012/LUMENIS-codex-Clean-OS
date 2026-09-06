@@ -11,6 +11,75 @@ import threading
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from enum import Enum
+
+
+class CollectorLifecycleState(Enum):
+    """采集器生命周期七态状态机（ZBC Track 2 审计要求）。
+
+    禁止"进程活着但实际停止采集"：每次状态转换必须显式记录，
+    DEGRADED 表示采集在跑但部分通道/关键词失败，不是假运行。
+    """
+    STARTING = "starting"
+    RUNNING = "running"
+    DEGRADED = "degraded"
+    FAILED = "failed"
+    STOPPING = "stopping"
+    STOPPED = "stopped"
+    RECOVERING = "recovering"
+
+    @classmethod
+    def can_transition(cls, from_state, to_state):
+        """检查状态转换是否合法。_VALID_TRANSITIONS 定义在模块级避免被 Enum 收编。"""
+        if not isinstance(from_state, cls):
+            try:
+                from_state = cls(str(from_state).lower())
+            except ValueError:
+                return False
+        if not isinstance(to_state, cls):
+            try:
+                to_state = cls(str(to_state).lower())
+            except ValueError:
+                return False
+        return to_state in _VALID_TRANSITIONS.get(from_state, set())
+
+
+# 合法状态转换表（模块级，避免被 Enum 元类收编为成员）
+_VALID_TRANSITIONS = {
+    CollectorLifecycleState.STARTING: {
+        CollectorLifecycleState.RUNNING, CollectorLifecycleState.DEGRADED,
+        CollectorLifecycleState.FAILED, CollectorLifecycleState.STOPPING,
+    },
+    CollectorLifecycleState.RUNNING: {
+        CollectorLifecycleState.DEGRADED, CollectorLifecycleState.FAILED,
+        CollectorLifecycleState.STOPPING, CollectorLifecycleState.RECOVERING,
+    },
+    CollectorLifecycleState.DEGRADED: {
+        CollectorLifecycleState.RUNNING, CollectorLifecycleState.FAILED,
+        CollectorLifecycleState.STOPPING, CollectorLifecycleState.RECOVERING,
+    },
+    CollectorLifecycleState.FAILED: {
+        CollectorLifecycleState.RECOVERING, CollectorLifecycleState.STOPPING,
+        CollectorLifecycleState.STOPPED,
+    },
+    CollectorLifecycleState.STOPPING: {CollectorLifecycleState.STOPPED},
+    CollectorLifecycleState.STOPPED: {CollectorLifecycleState.STARTING},
+    CollectorLifecycleState.RECOVERING: {
+        CollectorLifecycleState.RUNNING, CollectorLifecycleState.DEGRADED,
+        CollectorLifecycleState.FAILED, CollectorLifecycleState.STOPPING,
+    },
+}
+
+
+# Runtime Guardian 统一生命周期守护（ZBC-PHASE2-RUNTIME-GUARDIAN Shard B）
+# 旁路接入：import 失败不阻断采集主链路
+try:
+    import runtime_guardian as _runtime_guardian
+    _RG_AVAILABLE = True
+except Exception as _rg_import_err:
+    _runtime_guardian = None
+    _RG_AVAILABLE = False
+    logging.getLogger(__name__).warning('Runtime Guardian 不可用(旁路模式): %s', _rg_import_err)
 
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
 try:
@@ -43,11 +112,23 @@ class CollectorAutomation:
         # 冷却控制：手动一键 20min/冷却1h、自动 30min/冷却1h；force=True 可跳过（测试期）
         self._last_finish_at = {}   # {'manual': ts, 'auto': ts}
         self.cooldown_seconds = 3600
-        
+
+        # ── Runtime Guardian 生命周期守护（旁路接入，不影响原链路）──
+        self._guardian = None
+        self._worker_id = None
+        self._lease_owner = None
+        self._heartbeat_stop = threading.Event()
+        self._heartbeat_thread = None
+        self._task_start_ts = None
+        self._stop_event = threading.Event()  # 优雅关闭信号
+        self._lifecycle_state = CollectorLifecycleState.STOPPED
+        # 单次采集任务最大时长（秒），超时由心跳线程标记 worker FAILED；默认 40min
+        self._max_task_duration = float(os.getenv('COLLECTOR_MAX_TASK_SECONDS', '2400'))
+
         # 确保目录存在
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
-        
+
         # 加载历史记录
         self._load_history()
     
@@ -236,6 +317,116 @@ class CollectorAutomation:
             self.browser_process = None
             return False
     
+    # ------------------------------------------------------------------
+    # Runtime Guardian 生命周期守护方法（旁路接入）
+    # ------------------------------------------------------------------
+    def transition_state(self, new_state, reason=""):
+        """显式状态转换：校验合法性并记录，禁止"进程活着但实际停止采集"。"""
+        if not isinstance(new_state, CollectorLifecycleState):
+            try:
+                new_state = CollectorLifecycleState(str(new_state).lower())
+            except ValueError:
+                logger.warning('未知采集器状态: %s', new_state)
+                return False
+        old = self._lifecycle_state
+        if not CollectorLifecycleState.can_transition(old, new_state):
+            logger.warning('非法状态转换: %s -> %s (reason=%s)', old.value, new_state.value, reason)
+            # 仍允许转换但记录警告（避免阻断主流程），但 STOPPING/STOPPED 是终态必须尊重
+            if old in (CollectorLifecycleState.STOPPING, CollectorLifecycleState.STOPPED):
+                return False
+        self._lifecycle_state = new_state
+        if self.current_task:
+            self.current_task['lifecycle_state'] = new_state.value
+            if reason:
+                self.current_task['state_reason'] = reason
+        logger.info('采集器状态转换: %s -> %s%s', old.value, new_state.value,
+                    f' ({reason})' if reason else '')
+        return True
+
+    def _get_guardian(self):
+        """懒加载 Runtime Guardian 单例；不可用时返回 None（旁路模式）。"""
+        if not _RG_AVAILABLE:
+            return None
+        if self._guardian is None:
+            try:
+                self._guardian = _runtime_guardian.get_guardian('collector_automation')
+            except Exception as _e:
+                logger.warning('Runtime Guardian 初始化失败(旁路): %s', _e)
+                self._guardian = None
+        return self._guardian
+
+    def _start_heartbeat(self, worker_id):
+        """启动后台心跳线程：每 10s 发送心跳 + 续期租约 + 检测任务超时。"""
+        self._heartbeat_stop.clear()
+        self._heartbeat_thread = threading.Thread(
+            target=self._heartbeat_loop, args=(worker_id,),
+            daemon=True, name='collector-heartbeat',
+        )
+        self._heartbeat_thread.start()
+        logger.debug('心跳线程已启动 worker=%s', worker_id)
+
+    def _heartbeat_loop(self, worker_id):
+        """心跳主循环：每10s发送心跳+续期租约；每秒检测任务超时。"""
+        _hb_interval = 10.0
+        _tick = 0.0
+        while not self._heartbeat_stop.is_set():
+            try:
+                g = self._get_guardian()
+                if g:
+                    # 每 _hb_interval 秒发送心跳+续期租约
+                    if _tick <= 0:
+                        g.heartbeat(worker_id)
+                        if self._lease_owner:
+                            g.renew_lease(worker_id, self._lease_owner, ttl_seconds=120)
+                        _tick = _hb_interval
+                    # 每秒检测任务超时：超过 _max_task_duration 标记 FAILED
+                    if self._task_start_ts:
+                        elapsed = time.time() - self._task_start_ts
+                        if elapsed > self._max_task_duration:
+                            logger.warning(
+                                '采集任务超时 (%.0fs > %.0fs)，标记 worker FAILED',
+                                elapsed, self._max_task_duration,
+                            )
+                            g.update_worker_status(
+                                worker_id, _runtime_guardian.WorkerStatus.FAILED,
+                                reason=f'task_timeout_{elapsed:.0f}s',
+                            )
+            except Exception as _hb_err:
+                logger.debug('心跳循环异常(忽略): %s', _hb_err)
+            # 1秒粒度睡眠，stop 时快速退出
+            self._heartbeat_stop.wait(1.0)
+            _tick -= 1.0
+
+    def _stop_heartbeat(self):
+        """停止心跳线程。"""
+        self._heartbeat_stop.set()
+        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+            self._heartbeat_thread.join(timeout=5)
+        self._heartbeat_thread = None
+
+    def _rg_cleanup(self, task):
+        """采集结束时统一清理 Runtime Guardian 资源：停心跳、释放租约、更新 worker 状态。"""
+        self._stop_heartbeat()
+        wid = self._worker_id
+        if wid:
+            try:
+                g = self._get_guardian()
+                if g:
+                    if self._lease_owner:
+                        g.release_lease(wid, self._lease_owner)
+                    final_status = (
+                        _runtime_guardian.WorkerStatus.STOPPED
+                        if task.get('status') == 'completed'
+                        else _runtime_guardian.WorkerStatus.FAILED
+                    )
+                    g.update_worker_status(wid, final_status, reason=str(task.get('status', '')))
+                    logger.info('Runtime Guardian: worker %s 已清理 status=%s', wid, final_status.value)
+            except Exception as _clean_err:
+                logger.warning('Runtime Guardian 清理失败(不影响主流程): %s', _clean_err)
+        self._worker_id = None
+        self._lease_owner = None
+        self._task_start_ts = None
+
     def start_collection(self, keywords=None, mode='standard', account='default', force=False):
         """启动采集任务。force=True 跳过 1 小时冷却（测试期使用）。
 
@@ -321,7 +512,27 @@ class CollectorAutomation:
             }
             
             self.is_running = True
-            
+            self._stop_event.clear()
+            self.transition_state(CollectorLifecycleState.STARTING, reason='task_started')
+
+            # ── Runtime Guardian: 注册 worker + 获取租约（旁路，失败不阻断）──
+            try:
+                g = self._get_guardian()
+                if g:
+                    self._worker_id = g.register_worker(
+                        f'xhs_collector_{self.current_task["id"]}',
+                        metadata={'mode': mode, 'account': account, 'keywords': keywords},
+                    )
+                    self._lease_owner = f'pid-{os.getpid()}'
+                    lease = g.acquire_lease(self._worker_id, self._lease_owner, ttl_seconds=120)
+                    g.heartbeat(self._worker_id)
+                    self.current_task['worker_id'] = self._worker_id
+                    logger.info('Runtime Guardian: worker %s 已注册并获取租约', self._worker_id)
+            except Exception as _rg_err:
+                logger.warning('Runtime Guardian 接入失败(不阻断采集): %s', _rg_err)
+                self._worker_id = None
+                self._lease_owner = None
+
             # 在后台线程中执行采集
             thread = threading.Thread(target=self._run_collection, args=(self.current_task,), daemon=True)
             thread.start()
@@ -337,15 +548,20 @@ class CollectorAutomation:
     
     def _run_collection(self, task):
         """执行采集任务（后台线程）"""
+        # Runtime Guardian: 启动心跳 + 记录任务开始时间（超时检测基准）
+        self._task_start_ts = time.time()
+        if self._worker_id:
+            self._start_heartbeat(self._worker_id)
         try:
             task['status'] = 'starting_browser'
             logger.info(f"任务 {task['id']}: 启动浏览器...")
-            
+
             # 启动浏览器
             self.start_browser(account=task['account'])
             time.sleep(3)
             
             task['status'] = 'collecting'
+            self.transition_state(CollectorLifecycleState.RUNNING, reason='collecting')
             logger.info(f"任务 {task['id']}: 开始采集...")
             
             # 执行采集（调用现有的采集模块）
@@ -355,7 +571,20 @@ class CollectorAutomation:
             
             task['status'] = 'completed'
             task['end_time'] = datetime.now().isoformat()
+            self.transition_state(CollectorLifecycleState.STOPPED, reason='completed')
             logger.info(f"任务 {task['id']}: 采集完成，新增 {new_notes} 条笔记")
+            # Runtime Guardian: 保存完成检查点（可恢复/可审计）
+            try:
+                g = self._get_guardian()
+                if g and self._worker_id:
+                    g.save_checkpoint(
+                        run_id=task['id'], worker_id=self._worker_id,
+                        position=f'completed notes={new_notes}',
+                        state='completed',
+                        metadata={'new_notes': new_notes, 'mode': task.get('mode')},
+                    )
+            except Exception as _cp_err:
+                logger.warning('Checkpoint 保存失败(不影响主流程): %s', _cp_err)
             # Evidence：采集成功落证据（禁止只存状态不存证据）
             try:
                 from evidence_store import record_collection_evidence
@@ -381,6 +610,7 @@ class CollectorAutomation:
             
         except Exception as e:
             task['status'] = 'failed'
+            self.transition_state(CollectorLifecycleState.FAILED, reason=str(e)[:200])
             task['errors'].append(str(e))
             task['end_time'] = datetime.now().isoformat()
             logger.error(f"任务 {task['id']}: 采集失败: {e}", exc_info=True)
@@ -420,7 +650,10 @@ class CollectorAutomation:
                 self.stop_browser()
             except Exception as e:
                 logger.error(f"关闭浏览器失败: {e}")
-            
+
+            # Runtime Guardian: 统一清理（停心跳、释放租约、更新 worker 状态）
+            self._rg_cleanup(task)
+
             # 保存历史记录
             self._save_history(task)
             # 记录本次结束时间，作为 1 小时冷却起点
@@ -617,6 +850,8 @@ class CollectorAutomation:
         """获取采集器状态"""
         return {
             'is_running': self.is_running,
+            'lifecycle_state': self._lifecycle_state.value,
+            'stop_requested': self._stop_event.is_set(),
             'current_task': self.current_task,
             'browser_running': self._is_browser_running(),
             'cdp_port': self.cdp_port,
@@ -627,21 +862,26 @@ class CollectorAutomation:
         }
     
     def stop_collection(self):
-        """停止当前采集任务"""
+        """优雅停止当前采集任务：设置 STOPPING 状态 + stop_event，等待线程退出。"""
         with self._lock:
             if not self.is_running:
                 return {'ok': False, 'error': '没有正在运行的采集任务'}
-            
+
             if self.current_task:
                 self.current_task['status'] = 'stopping'
                 logger.info(f"正在停止采集任务: {self.current_task['id']}")
-            
+
+            # 设置停止信号（采集线程可检测此信号实现优雅退出）
+            self._stop_event.set()
+            self.transition_state(CollectorLifecycleState.STOPPING, reason='user_stop')
+
             # 停止浏览器会导致采集任务中断
             try:
                 self.stop_browser()
             except Exception as e:
                 logger.error(f"停止浏览器失败: {e}")
-            
+
+            self.transition_state(CollectorLifecycleState.STOPPED, reason='stopped')
             return {'ok': True, 'message': '采集任务已停止'}
     
     def _load_history(self):

@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-AI Governance — AI 治理模块
+AI Governance — AI 治理模块（Track3 审计修复版）
+
 【用户方案】废除 Ollama-only 红线，云端 zhipu 内置系统；脱敏回传保障数据安全；
 额度/余额可控；AI 输出标记为增强层，不直接成为 System Truth，用于喂 Zachary 学习。
 
 功能：
 1. 脱敏回传：敏感实体替换为占位符 → 云端 AI → 回传补回原实体，保证词义
 2. 额度控制：每日调用次数/token 限额，超额降级或拒绝
-3. 使用统计：调用次数、token 用量、按日统计
+3. 使用统计：调用次数、token 用量、按日统计、按 Provider 分别统计（zhipu / ark）
 4. 输出标记：所有 AI 输出标记 provider/ai_enhanced，不直接写核心生产字段
+
+Track3 修复（2026-09-06）：
+- get_status() 不再硬编码 provider=zhipu，改为 active_providers + per-provider stats。
+- 新增 get_provider_stats()：成本模型分别记录 zhipu 与 ark 两 provider。
+- 治理层完整链路：额度控制→脱敏→调用→回补→统计→标记。
 """
 import os
 import re
@@ -17,6 +23,10 @@ import time
 import threading
 from datetime import datetime, date
 from typing import Dict, List, Tuple, Optional, Any
+
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'ACTIVE'
+AI_ROLE = 'GOVERNANCE_LAYER'  # desensitization, quota, output marking - not business judgment
 
 # ============ 配置 ============
 AI_GOVERNANCE_ENV_PREFIX = "ZBC_AI_GOV_"
@@ -116,7 +126,10 @@ _desensitizer = AIDesensitizer()
 
 # ============ 额度控制 & 使用统计 ============
 class AIUsageTracker:
-    """AI 使用统计与额度控制。"""
+    """AI 使用统计与额度控制。
+
+    Track3：按 Provider 分别统计（zhipu / ark / local），成本模型不合并。
+    """
 
     def __init__(self, stats_file: str = STATS_FILE):
         self.stats_file = stats_file
@@ -144,13 +157,13 @@ class AIUsageTracker:
 
     def record_call(self, endpoint: str, prompt_tokens: int = 0, completion_tokens: int = 0,
                     total_tokens: int = 0, provider: str = "zhipu", success: bool = True):
-        """记录一次 AI 调用。"""
+        """记录一次 AI 调用。provider 参数区分 zhipu / ark / local。"""
         with _lock:
             today = self._today_key()
             if today not in self.stats["daily"]:
                 self.stats["daily"][today] = {
                     "calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
-                    "endpoints": {}, "providers": {}, "failures": 0,
+                    "endpoints": {}, "providers": {}, "provider_tokens": {}, "failures": 0,
                 }
             day = self.stats["daily"][today]
             day["calls"] += 1
@@ -159,8 +172,16 @@ class AIUsageTracker:
             day["total_tokens"] += total_tokens
             day["endpoints"][endpoint] = day["endpoints"].get(endpoint, 0) + 1
             day["providers"][provider] = day["providers"].get(provider, 0) + 1
+            # Track3：按 provider 分别记录 token（精确成本核算）
+            pt = day.setdefault("provider_tokens", {})
+            pstat = pt.setdefault(provider, {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "failures": 0})
+            pstat["calls"] += 1
+            pstat["prompt_tokens"] += prompt_tokens
+            pstat["completion_tokens"] += completion_tokens
+            pstat["total_tokens"] += total_tokens
             if not success:
                 day["failures"] += 1
+                pstat["failures"] += 1
 
             self.stats["total"]["calls"] += 1
             self.stats["total"]["prompt_tokens"] += prompt_tokens
@@ -202,23 +223,56 @@ class AIUsageTracker:
                 "allowed": allowed,
             }
 
+    def get_provider_stats(self) -> Dict[str, Dict]:
+        """Track3：按 Provider 分别统计今日调用量与 token（zhipu / ark / local 等）。
+
+        成本模型要求分别记录 zhipu 与 ark 两 provider，不得合并。
+        返回 {provider: {calls, prompt_tokens, completion_tokens, total_tokens, failures}}
+        """
+        with _lock:
+            today = self._today_key()
+            day = self.stats["daily"].get(today, {})
+            provider_tokens = day.get("provider_tokens", {})
+            result = {}
+            for prov, pstat in provider_tokens.items():
+                result[prov] = dict(pstat)
+            # 确保 zhipu 和 ark 至少有占位（即使今日未调用）
+            for prov in ("zhipu", "ark"):
+                if prov not in result:
+                    result[prov] = {
+                        "calls": 0, "prompt_tokens": 0,
+                        "completion_tokens": 0, "total_tokens": 0, "failures": 0,
+                    }
+            return result
+
     def get_status(self) -> Dict:
-        """获取 AI 治理状态（含额度、使用统计、配置）。"""
+        """获取 AI 治理状态（含额度、使用统计、按 Provider 拆分、配置）。
+
+        Track3 修复：不再硬编码 provider=zhipu，改为展示 active_provider + per-provider stats。
+        """
         allowed, quota = self.check_quota()
+        provider_stats = self.get_provider_stats()
+        # 判断当前主力 provider
+        try:
+            from provider_registry import active_providers
+            active = active_providers()
+        except Exception:
+            active = ["zhipu"]
         return {
             "ok": True,
-            "provider": "zhipu",
-            "provider_status": "active",
+            "active_providers": active,
+            "primary_provider": active[0] if active else "zhipu",
             "desensitization": "enabled",
             "quota": quota,
             "total_usage": self.stats["total"],
+            "provider_stats": provider_stats,
             "config": {
                 "daily_call_limit": DEFAULT_DAILY_CALL_LIMIT,
                 "daily_token_limit": DEFAULT_DAILY_TOKEN_LIMIT,
                 "balance_alert_threshold": DEFAULT_BALANCE_ALERT_THRESHOLD,
                 "stats_file": self.stats_file,
             },
-            "note": "余额需在智谱控制台查看: https://open.bigmodel.cn/usercenter/finance",
+            "note": "余额需在智谱控制台查看: https://open.bigmodel.cn/usercenter/finance；ark 成本需在火山引擎控制台查看",
         }
 
 
@@ -248,17 +302,16 @@ def mark_ai_output(data: Any, provider: str = "zhipu", endpoint: str = "") -> Di
 # ============ 统一 AI 调用封装 ============
 def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
                               model: str = None, max_tokens: int = 1024,
-                              temperature: float = 0.7, desensitize: bool = True) -> Dict:
+                              temperature: float = 0.7, desensitize: bool = True,
+                              provider: str = "zhipu") -> Dict:
     """
-    统一 AI 调用封装（带治理）：
-    1. 额度检查
-    2. 脱敏（可选）
-    3. 调用 zhipu
-    4. 回传补回实体
-    5. 记录使用统计
-    6. 标记 AI 输出
+    统一 AI 调用治理封装（额度→脱敏→准备调用→回补→统计→标记）。
 
-    返回: mark_ai_output 后的结果（含 ai_enhanced/provider/system_truth=False 等）
+    注意：本函数完成治理层的额度检查、脱敏、输出标记和统计记录；
+    实际 HTTP 调用由调用方（intelligence._chat / ai_api 路由）执行，
+    调用方应在拿到 AI 响应后调用 record_ai_call() 记录实际用量。
+
+    返回: {ok, desensitized, mapping_count, quota_remaining, messages_prepared, provider}
     """
     # 1. 额度检查
     allowed, quota = _usage_tracker.check_quota()
@@ -267,23 +320,26 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
             "ok": False,
             "error": "AI 每日额度已超限",
             "quota": quota,
-            "fallback": "local_ollama",
-        }, endpoint=endpoint)
+            "fallback": "local_rule",
+        }, endpoint=endpoint, provider=provider)
 
     # 2. 脱敏
     mapping = {}
     if desensitize:
         messages, mapping = _desensitizer.desensitize_messages(messages)
 
-    # 3. 调用 zhipu（通过现有 app 中的 zhipu 调用逻辑）
-    # 此处返回结构，实际调用在 app.py 端点中完成
-    # 这里只做治理封装，实际 HTTP 调用由调用方完成
+    # 3. 返回准备好的调用参数（实际 HTTP 调用由调用方执行）
     result = {
         "ok": True,
         "desensitized": desensitize,
         "mapping_count": len(mapping),
+        "mapping": mapping,
         "quota_remaining": quota["call_remaining"],
         "messages_prepared": messages,
+        "provider": provider,
+        "model": model,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
     }
     return result
 
@@ -296,7 +352,7 @@ def get_governance_status() -> Dict:
 
 def record_ai_call(endpoint: str, prompt_tokens: int = 0, completion_tokens: int = 0,
                     total_tokens: int = 0, provider: str = "zhipu", success: bool = True):
-    """记录一次 AI 调用（API 用）。"""
+    """记录一次 AI 调用（API 用）。provider 区分 zhipu / ark。"""
     _usage_tracker.record_call(endpoint, prompt_tokens, completion_tokens, total_tokens, provider, success)
 
 

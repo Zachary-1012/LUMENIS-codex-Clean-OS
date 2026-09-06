@@ -19,12 +19,20 @@ import socket
 import threading
 import urllib.request, urllib.error
 
+# Runtime Guardian 统一熔断器（收敛重复实现，ZBC-PHASE2-RUNTIME-GUARDIAN）
+from runtime_guardian import CircuitBreaker as _BaseCircuitBreaker
+from runtime_guardian import CircuitState as _RGCircuitState
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
 # 硬上限：即使配置写错也绝不超过该尝试次数（含首次），杜绝无限重试
 _HARD_MAX_ATTEMPTS = 5
 # 退避封顶（秒），避免长时间阻塞业务调用
 _MAX_BACKOFF = 4.0
+
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'ACTIVE'
+AI_ROLE = 'TRANSPORT_LAYER'  # retry, circuit breaker, heartbeat, multi-provider fallback - not business judgment
 
 
 # ============================================================
@@ -102,15 +110,30 @@ def classify_error(exc=None, status=None):
 # ============================================================
 # 3) 熔断状态机（线程安全，可注入时钟便于单测）
 # ============================================================
-class CircuitBreaker:
+class CircuitBreaker(_BaseCircuitBreaker):
+    """AI 通道熔断器：继承 runtime_guardian.CircuitBreaker 统一状态机，
+    额外追踪延迟/错误类型等传输层指标，保持原 ai_channel 接口不变。
+
+    收敛说明（ZBC-PHASE2-RUNTIME-GUARDIAN）：核心 CLOSED->OPEN->HALF_OPEN 状态机
+    委托给 runtime_guardian.CircuitBreaker，本类只加 AI 通道特有字段。
+    """
     CLOSED, OPEN, HALF_OPEN = 'CLOSED', 'OPEN', 'HALF_OPEN'
+    _STATE_MAP = {
+        _RGCircuitState.CLOSED: CLOSED,
+        _RGCircuitState.OPEN: OPEN,
+        _RGCircuitState.HALF_OPEN: HALF_OPEN,
+    }
 
     def __init__(self, fail_threshold=3, cooldown_sec=30.0, now_func=time.time):
-        self.fail_threshold = max(1, int(fail_threshold))
-        self.cooldown_sec = float(cooldown_sec)
-        self._now = now_func
-        self._lock = threading.RLock()
-        self.state = self.CLOSED
+        super().__init__(
+            name='ai_channel',
+            failure_threshold=max(1, int(fail_threshold)),
+            reset_timeout=float(cooldown_sec),
+            now_func=now_func,
+        )
+        self.fail_threshold = self.failure_threshold
+        self.cooldown_sec = self.reset_timeout
+        # AI 通道额外追踪字段
         self.consecutive_failures = 0
         self.opened_at = None
         self.last_success_at = None
@@ -120,52 +143,43 @@ class CircuitBreaker:
         self.failure_count = 0
         self.last_latency_ms = None
 
-    def allow_request(self):
-        """CLOSED 放行；OPEN 冷却到点转 HALF_OPEN 放一个探测，否则快速拒绝。"""
-        with self._lock:
-            if self.state == self.CLOSED:
-                return True
-            if self.state == self.OPEN and self._now() - (self.opened_at or 0) >= self.cooldown_sec:
-                self.state = self.HALF_OPEN
-                return True
-            return self.state == self.HALF_OPEN
+    @property
+    def state(self):
+        """返回字符串状态（兼容原 ai_channel 接口）"""
+        return self._STATE_MAP[super().state]
 
     def record_success(self, latency_ms=None):
-        with self._lock:
-            self.state = self.CLOSED
-            self.consecutive_failures = 0
-            self.opened_at = None
-            self.last_success_at = self._now()
-            self.success_count += 1
-            if latency_ms is not None:
-                self.last_latency_ms = int(latency_ms)
+        super().record_success()
+        self.consecutive_failures = 0
+        self.opened_at = None
+        self.last_success_at = self._now()
+        self.success_count += 1
+        if latency_ms is not None:
+            self.last_latency_ms = int(latency_ms)
 
     def record_failure(self, kind='unknown'):
-        with self._lock:
-            self.consecutive_failures += 1
-            self.failure_count += 1
-            self.last_failure_at = self._now()
-            self.last_error_kind = kind
-            # HALF_OPEN 探测失败 → 立即回到 OPEN 重新冷却
-            if self.state == self.HALF_OPEN or self.consecutive_failures >= self.fail_threshold:
-                self.state = self.OPEN
-                self.opened_at = self._now()
+        super().record_failure()
+        self.consecutive_failures = self._failure_count
+        self.failure_count += 1
+        self.last_failure_at = self._now()
+        self.last_error_kind = kind
+        if super().state == _RGCircuitState.OPEN:
+            self.opened_at = self._now()
 
     def snapshot(self):
-        with self._lock:
-            return {
-                'state': self.state,
-                'consecutive_failures': self.consecutive_failures,
-                'fail_threshold': self.fail_threshold,
-                'cooldown_sec': self.cooldown_sec,
-                'opened_at': self.opened_at,
-                'last_success_at': self.last_success_at,
-                'last_failure_at': self.last_failure_at,
-                'last_error_kind': self.last_error_kind,
-                'success_count': self.success_count,
-                'failure_count': self.failure_count,
-                'last_latency_ms': self.last_latency_ms,
-            }
+        return {
+            'state': self.state,
+            'consecutive_failures': self.consecutive_failures,
+            'fail_threshold': self.fail_threshold,
+            'cooldown_sec': self.cooldown_sec,
+            'opened_at': self.opened_at,
+            'last_success_at': self.last_success_at,
+            'last_failure_at': self.last_failure_at,
+            'last_error_kind': self.last_error_kind,
+            'success_count': self.success_count,
+            'failure_count': self.failure_count,
+            'last_latency_ms': self.last_latency_ms,
+        }
 
 
 # 进程级单例（云端通道共用一个熔断）

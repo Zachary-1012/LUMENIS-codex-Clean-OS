@@ -1,5 +1,11 @@
 """
 设置模块完善 v1.0
+
+[DEPRECATED - 2026-09-06 ZBC Phase 1]
+本模块与 config.py 在配置加载逻辑上存在功能重叠。
+演进方向：未来应将 load_config()/save_config() 重构为调用 config.get_config()。
+当前标记 DEPRECATE 但不删除。
+
 功能：
 1. 系统配置管理（采集/分析/报告/推送/AI/安全）
 2. 账号管理（小红书账号/AI账号/邮件账号）

@@ -1,0 +1,205 @@
+{
+  "frontend": {
+    "total": 6,
+    "passed": 5,
+    "results": [
+      {
+        "name": "Command Home",
+        "method": "GET",
+        "url": "/lumenis/",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "content_type=text/html; charset=utf-8, body_len=37761",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:49",
+        "is_html": true,
+        "body_length": 37761
+      },
+      {
+        "name": "Intelligence Workspace",
+        "method": "GET",
+        "url": "/lumenis/intelligence",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "content_type=text/html; charset=utf-8, body_len=26037",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:49",
+        "is_html": true,
+        "body_length": 26037
+      },
+      {
+        "name": "Production Overview",
+        "method": "GET",
+        "url": "/lumenis/production",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "content_type=text/html; charset=utf-8, body_len=29573",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:49",
+        "is_html": true,
+        "body_length": 29573
+      },
+      {
+        "name": "Operations",
+        "method": "GET",
+        "url": "/lumenis/operations",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "content_type=text/html; charset=utf-8, body_len=28715",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:49",
+        "is_html": true,
+        "body_length": 28715
+      },
+      {
+        "name": "Foundation Healthz",
+        "method": "GET",
+        "url": "/lumenis/healthz",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "content_type=application/json, body_len=82",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:49",
+        "is_html": false,
+        "body_length": 82
+      },
+      {
+        "name": "Root / Home",
+        "method": "GET",
+        "url": "/",
+        "status_code": 404,
+        "ok": false,
+        "body_preview": "content_type=text/html; charset=utf-8, body_len=207",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:49",
+        "is_html": true,
+        "body_length": 207
+      }
+    ]
+  },
+  "security": {
+    "total": 4,
+    "passed": 4,
+    "results": [
+      {
+        "name": "permission_gate: unregistered op + fail_closed -> DENY",
+        "method": "FUNC",
+        "url": "PermissionGate.check(unregistered, fail_closed=True)",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "allowed=False, reason=操作类型未注册且 fail_closed=True: unregistered_dangerous_op",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "allowed": false,
+        "reason": "操作类型未注册且 fail_closed=True: unregistered_dangerous_op",
+        "fail_closed": true
+      },
+      {
+        "name": "permission_gate: HIGH risk no approval -> DENY",
+        "method": "FUNC",
+        "url": "PermissionGate.check(CONFIG_MODIFY, HIGH, no_approval)",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "allowed=False, reason=权限等级不足: 需要 commit，当前启用 ['test', 'analyze', 'read', 'patch_preview', 'plan', 'verify', 'research', 'audit']",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "allowed": false,
+        "requires_approval": false
+      },
+      {
+        "name": "permission_gate: LOW risk read -> ALLOW",
+        "method": "FUNC",
+        "url": "PermissionGate.check(REPORT_GENERATE, LOW)",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "allowed=True, reason=权限检查通过: report_generate (risk=low)",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "allowed": true
+      },
+      {
+        "name": "permission_gate: DB_WRITE HIGH no approval -> DENY",
+        "method": "FUNC",
+        "url": "PermissionGate.check(DB_WRITE, HIGH, no_approval)",
+        "status_code": 200,
+        "ok": true,
+        "body_preview": "allowed=False, reason=权限等级不足: 需要 commit，当前启用 ['test', 'analyze', 'read', 'patch_preview', 'plan', 'verify', 'research', 'audit']",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "allowed": false,
+        "requires_approval": false
+      }
+    ]
+  },
+  "error_handling": {
+    "total": 5,
+    "passed": 5,
+    "results": [
+      {
+        "name": "GET /api/metric-trend (missing entity_key -> 400)",
+        "method": "GET",
+        "url": "/api/metric-trend?entity_type=note",
+        "status_code": 400,
+        "ok": true,
+        "body_preview": "{\"error\": \"entity_type must be note|topic and entity_key required\", \"ok\": false}",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "has_error_structure": true,
+        "is_client_error": true,
+        "not_500": true
+      },
+      {
+        "name": "GET /api/kos/detail (missing author_id -> 400)",
+        "method": "GET",
+        "url": "/api/kos/detail",
+        "status_code": 400,
+        "ok": true,
+        "body_preview": "{\"error\": \"author_id required\", \"ok\": false}",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "has_error_structure": true,
+        "is_client_error": true,
+        "not_500": true
+      },
+      {
+        "name": "POST /api/local-ai/analyze (empty text -> 400)",
+        "method": "POST",
+        "url": "/api/local-ai/analyze",
+        "status_code": 400,
+        "ok": true,
+        "body_preview": "{\"error\": \"text不能为空\", \"ok\": false}",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "has_error_structure": true,
+        "is_client_error": true,
+        "not_500": true
+      },
+      {
+        "name": "GET /api/notes (bad page -> 400)",
+        "method": "GET",
+        "url": "/api/notes?page=abc",
+        "status_code": 400,
+        "ok": true,
+        "body_preview": "{\"error\": \"page/per_page 必须为整数\", \"ok\": false}",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "has_error_structure": true,
+        "is_client_error": true,
+        "not_500": true
+      },
+      {
+        "name": "GET /api/browser-surface/tab/new (empty url -> 400)",
+        "method": "POST",
+        "url": "/api/browser-surface/tab/new",
+        "status_code": 400,
+        "ok": true,
+        "body_preview": "{\"error\": \"url 不能为空\", \"ok\": false}",
+        "error": "",
+        "timestamp": "2026-09-06T14:31:53",
+        "has_error_structure": true,
+        "is_client_error": true,
+        "not_500": true
+      }
+    ]
+  }
+}

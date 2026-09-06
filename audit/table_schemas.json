@@ -1,0 +1,2907 @@
+{
+  "ai_filter_log": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "note_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "filter_stage",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'secondary'",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "filter_result",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'pending'",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "filter_reason",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "noise_type",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "confidence",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "provider",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'rule'",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "filtered_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_ai_filter_result",
+        "unique": 0,
+        "columns": [
+          "filter_result"
+        ]
+      },
+      {
+        "name": "idx_ai_filter_note",
+        "unique": 0,
+        "columns": [
+          "note_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE ai_filter_log (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    note_id TEXT NOT NULL,\n    filter_stage TEXT DEFAULT 'secondary',\n    filter_result TEXT DEFAULT 'pending',\n    filter_reason TEXT DEFAULT '',\n    noise_type TEXT DEFAULT '',\n    confidence REAL DEFAULT 0,\n    provider TEXT DEFAULT 'rule',\n    filtered_at TEXT DEFAULT (datetime('now','localtime'))\n)"
+  },
+  "alert_records": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "alert_key",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "alert_type",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "severity",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "metric_key",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "metric_value",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "message",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "state",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'DETECTED'",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "audit_log",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_alert_records_created",
+        "unique": 0,
+        "columns": [
+          "created_at"
+        ]
+      },
+      {
+        "name": "idx_alert_records_state",
+        "unique": 0,
+        "columns": [
+          "state"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE alert_records (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            alert_key TEXT NOT NULL,\n            alert_type TEXT NOT NULL,\n            severity TEXT NOT NULL,\n            metric_key TEXT DEFAULT '',\n            metric_value TEXT DEFAULT '',\n            message TEXT DEFAULT '',\n            state TEXT DEFAULT 'DETECTED',\n            created_at TEXT DEFAULT (datetime('now','localtime')),\n            updated_at TEXT DEFAULT (datetime('now','localtime')),\n            audit_log TEXT DEFAULT '[]'\n        )"
+  },
+  "app_evidence_records": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'xhs_app'",
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "capture_mode",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'screenshot'",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "captured_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "topic",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "metric_name",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "metric_value",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "evidence_hash",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "evidence_path",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "parse_confidence",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "1.0",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "verified_by",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "verified_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "status",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'pending'",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "notes",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 14,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 15,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_app_evidence_hash",
+        "unique": 0,
+        "columns": [
+          "evidence_hash"
+        ]
+      },
+      {
+        "name": "idx_app_evidence_status",
+        "unique": 0,
+        "columns": [
+          "status"
+        ]
+      },
+      {
+        "name": "idx_app_evidence_topic",
+        "unique": 0,
+        "columns": [
+          "topic"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE app_evidence_records (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    source TEXT NOT NULL DEFAULT 'xhs_app',\n    capture_mode TEXT NOT NULL DEFAULT 'screenshot',\n    captured_at TEXT,\n    topic TEXT,\n    metric_name TEXT NOT NULL,\n    metric_value TEXT NOT NULL,\n    evidence_hash TEXT,\n    evidence_path TEXT,\n    parse_confidence REAL DEFAULT 1.0,\n    verified_by TEXT,\n    verified_at TEXT,\n    status TEXT NOT NULL DEFAULT 'pending',\n    notes TEXT,\n    created_at TEXT NOT NULL,\n    updated_at TEXT NOT NULL\n)"
+  },
+  "auth_recovery_tasks": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "platform",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "issue_type",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "status",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'pending'",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "title",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "description",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "qr_code_url",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "recovery_url",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "completed_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "expires_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "created_by",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'system'",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "error_message",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 14,
+        "name": "metadata",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_recovery_platform",
+        "unique": 0,
+        "columns": [
+          "platform"
+        ]
+      },
+      {
+        "name": "idx_recovery_status",
+        "unique": 0,
+        "columns": [
+          "status"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE auth_recovery_tasks (\n                    id INTEGER PRIMARY KEY AUTOINCREMENT,\n                    platform TEXT NOT NULL,\n                    issue_type TEXT NOT NULL,\n                    status TEXT NOT NULL DEFAULT 'pending',\n                    title TEXT,\n                    description TEXT,\n                    qr_code_url TEXT,\n                    recovery_url TEXT,\n                    created_at TEXT,\n                    updated_at TEXT,\n                    completed_at TEXT,\n                    expires_at TEXT,\n                    created_by TEXT DEFAULT 'system',\n                    error_message TEXT,\n                    metadata TEXT\n                )"
+  },
+  "brand_knowledge": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "category",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "title",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "content",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "url",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "tags",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "content_hash",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "relevance_score",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0.5",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_bk_created",
+        "unique": 0,
+        "columns": [
+          "created_at"
+        ]
+      },
+      {
+        "name": "idx_bk_tags",
+        "unique": 0,
+        "columns": [
+          "tags"
+        ]
+      },
+      {
+        "name": "idx_bk_category",
+        "unique": 0,
+        "columns": [
+          "category"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_brand_knowledge_1",
+        "unique": 1,
+        "columns": [
+          "content_hash"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE brand_knowledge(\n                    id INTEGER PRIMARY KEY AUTOINCREMENT,\n                    category TEXT NOT NULL,\n                    title TEXT NOT NULL,\n                    content TEXT NOT NULL,\n                    source TEXT DEFAULT '',\n                    url TEXT DEFAULT '',\n                    tags TEXT DEFAULT '',\n                    content_hash TEXT UNIQUE,\n                    relevance_score REAL DEFAULT 0.5,\n                    created_at TEXT,\n                    updated_at TEXT\n                )"
+  },
+  "case_deep_analysis": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "case_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "case_title",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "brand",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "agency",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "industry",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "year",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "case_type",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "basic_info",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "challenge",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "strategy",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "big_idea",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "execution",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "channels",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 14,
+        "name": "results",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 15,
+        "name": "awards",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 16,
+        "name": "success_factors",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 17,
+        "name": "methodology",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 18,
+        "name": "system_insights",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 19,
+        "name": "quality_score",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 20,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 21,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_cda_quality",
+        "unique": 0,
+        "columns": [
+          "quality_score"
+        ]
+      },
+      {
+        "name": "idx_cda_type",
+        "unique": 0,
+        "columns": [
+          "case_type"
+        ]
+      },
+      {
+        "name": "idx_cda_industry",
+        "unique": 0,
+        "columns": [
+          "industry"
+        ]
+      },
+      {
+        "name": "idx_cda_brand",
+        "unique": 0,
+        "columns": [
+          "brand"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_case_deep_analysis_1",
+        "unique": 1,
+        "columns": [
+          "case_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE case_deep_analysis(\n                    id INTEGER PRIMARY KEY AUTOINCREMENT,\n                    case_id TEXT UNIQUE NOT NULL,\n                    case_title TEXT NOT NULL,\n                    brand TEXT DEFAULT '',\n                    agency TEXT DEFAULT '',\n                    industry TEXT DEFAULT '',\n                    year INTEGER DEFAULT 0,\n                    case_type TEXT DEFAULT '',\n                    basic_info TEXT DEFAULT '{}',\n                    challenge TEXT DEFAULT '',\n                    strategy TEXT DEFAULT '{}',\n                    big_idea TEXT DEFAULT '',\n                    execution TEXT DEFAULT '[]',\n                    channels TEXT DEFAULT '[]',\n                    results TEXT DEFAULT '{}',\n                    awards TEXT DEFAULT '[]',\n                    success_factors TEXT DEFAULT '[]',\n                    methodology TEXT DEFAULT '[]',\n                    system_insights TEXT DEFAULT '[]',\n                    quality_score REAL DEFAULT 0,\n                    created_at TEXT,\n                    updated_at TEXT\n                )"
+  },
+  "collection_logs": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "keyword",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "notes_count",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'success'",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "error_msg",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "started_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "finished_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      }
+    ],
+    "indexes": [],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE collection_logs (\n    id INTEGER PRIMARY KEY AUTOINCREMENT, keyword TEXT NOT NULL, notes_count INTEGER DEFAULT 0,\n    status TEXT DEFAULT 'success', error_msg TEXT DEFAULT '',\n    started_at TEXT DEFAULT (datetime('now','localtime')), finished_at TEXT DEFAULT ''\n)"
+  },
+  "collector_quality_log": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "note_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'unknown'",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "score",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "detail_status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "comments_collected",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "collector_version",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "checked_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "reason",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_collector_quality_note",
+        "unique": 0,
+        "columns": [
+          "note_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE collector_quality_log (\n    id INTEGER PRIMARY KEY AUTOINCREMENT, note_id TEXT NOT NULL, status TEXT DEFAULT 'unknown', score REAL DEFAULT 0,\n    detail_status TEXT DEFAULT '', comments_collected INTEGER DEFAULT 0, collector_version TEXT DEFAULT '',\n    checked_at TEXT DEFAULT (datetime('now','localtime')), reason TEXT DEFAULT ''\n)"
+  },
+  "event_graph_events": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "event_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "event_type",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "title",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "event_time",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "description",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'ongoing'",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "metadata",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "source_event_id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_event_graph_events_source",
+        "unique": 0,
+        "columns": [
+          "source_event_id"
+        ]
+      },
+      {
+        "name": "idx_event_graph_events_status",
+        "unique": 0,
+        "columns": [
+          "status"
+        ]
+      },
+      {
+        "name": "idx_event_graph_events_type",
+        "unique": 0,
+        "columns": [
+          "event_type"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_event_graph_events_1",
+        "unique": 1,
+        "columns": [
+          "event_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE event_graph_events (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                event_id TEXT UNIQUE NOT NULL,\n                event_type TEXT NOT NULL,\n                title TEXT NOT NULL,\n                event_time TEXT,\n                source TEXT DEFAULT '',\n                description TEXT DEFAULT '',\n                status TEXT DEFAULT 'ongoing',\n                metadata TEXT DEFAULT '{}',\n                source_event_id INTEGER,\n                created_at TEXT NOT NULL,\n                updated_at TEXT NOT NULL\n            )"
+  },
+  "event_graph_relations": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "source_event_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "target_event_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "relation_type",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "evidence",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "confidence",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0.5",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_event_graph_relations_type",
+        "unique": 0,
+        "columns": [
+          "relation_type"
+        ]
+      },
+      {
+        "name": "idx_event_graph_relations_target",
+        "unique": 0,
+        "columns": [
+          "target_event_id"
+        ]
+      },
+      {
+        "name": "idx_event_graph_relations_source",
+        "unique": 0,
+        "columns": [
+          "source_event_id"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_event_graph_relations_1",
+        "unique": 1,
+        "columns": [
+          "source_event_id",
+          "target_event_id",
+          "relation_type"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE event_graph_relations (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                source_event_id TEXT NOT NULL,\n                target_event_id TEXT NOT NULL,\n                relation_type TEXT NOT NULL,\n                evidence TEXT DEFAULT '',\n                confidence REAL DEFAULT 0.5,\n                created_at TEXT NOT NULL,\n                UNIQUE(source_event_id, target_event_id, relation_type)\n            )"
+  },
+  "event_insights": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "event_id",
+        "type": "INTEGER",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "ai_summary",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "risk_assessment",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "recommended_action",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "sentiment_trend",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "propagation_analysis",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "key_voices",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "provider",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'rule'",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "generated_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_event_insights_event",
+        "unique": 0,
+        "columns": [
+          "event_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE event_insights (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    event_id INTEGER NOT NULL,\n    ai_summary TEXT DEFAULT '',\n    risk_assessment TEXT DEFAULT '',\n    recommended_action TEXT DEFAULT '',\n    sentiment_trend TEXT DEFAULT '',\n    propagation_analysis TEXT DEFAULT '',\n    key_voices TEXT DEFAULT '[]',\n    provider TEXT DEFAULT 'rule',\n    generated_at TEXT DEFAULT (datetime('now','localtime'))\n)"
+  },
+  "event_mentions": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "event_id",
+        "type": "INTEGER",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "source_type",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "source_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "match_score",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sqlite_autoindex_event_mentions_1",
+        "unique": 1,
+        "columns": [
+          "event_id",
+          "source_type",
+          "source_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE event_mentions (\n    id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, source_type TEXT DEFAULT '', source_id TEXT DEFAULT '', match_score REAL DEFAULT 0,\n    created_at TEXT DEFAULT (datetime('now','localtime')), UNIQUE(event_id,source_type,source_id)\n)"
+  },
+  "events": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "event_key",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "title",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "summary",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "fact_status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'unconfirmed'",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "impact",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'neutral'",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "risk_reason",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "recommended_action",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "first_seen",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "last_seen",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "mention_count",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "source_count",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "risk_level",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'low'",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "risk_score",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 14,
+        "name": "status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'active'",
+        "pk": 0
+      },
+      {
+        "cid": 15,
+        "name": "keywords",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 16,
+        "name": "translations",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 17,
+        "name": "ai_provider",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'rule'",
+        "pk": 0
+      },
+      {
+        "cid": 18,
+        "name": "event_date",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 19,
+        "name": "negative_confirmed",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 20,
+        "name": "negative_confirmed_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 21,
+        "name": "negative_confirmed_by",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_events_risk",
+        "unique": 0,
+        "columns": [
+          "risk_level"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_events_1",
+        "unique": 1,
+        "columns": [
+          "event_key"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE events (\n    id INTEGER PRIMARY KEY AUTOINCREMENT, event_key TEXT UNIQUE NOT NULL, title TEXT DEFAULT '', summary TEXT DEFAULT '',\n    fact_status TEXT DEFAULT 'unconfirmed', impact TEXT DEFAULT 'neutral', risk_reason TEXT DEFAULT '', recommended_action TEXT DEFAULT '',\n    first_seen TEXT DEFAULT '', last_seen TEXT DEFAULT '', mention_count INTEGER DEFAULT 0, source_count INTEGER DEFAULT 0,\n    risk_level TEXT DEFAULT 'low', risk_score INTEGER DEFAULT 0, status TEXT DEFAULT 'active',\n    keywords TEXT DEFAULT '[]', translations TEXT DEFAULT '{}', ai_provider TEXT DEFAULT 'rule', event_date TEXT DEFAULT ''\n, negative_confirmed INTEGER DEFAULT 0, negative_confirmed_at TEXT DEFAULT '', negative_confirmed_by TEXT DEFAULT '')"
+  },
+  "feedback_keywords": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "keyword",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'web'",
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "score",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "enabled",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "1",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "first_seen",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "last_seen",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "used_count",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sqlite_autoindex_feedback_keywords_1",
+        "unique": 1,
+        "columns": [
+          "keyword"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE feedback_keywords (\n    keyword TEXT PRIMARY KEY, source TEXT DEFAULT 'web', score REAL DEFAULT 0, enabled INTEGER DEFAULT 1,\n    first_seen TEXT DEFAULT '', last_seen TEXT DEFAULT '', used_count INTEGER DEFAULT 0\n)"
+  },
+  "note_comments": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "comment_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "note_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "content",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "author_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "author_nickname",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "likes",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "publish_time",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "parent_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "raw_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "fetched_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_note_comments_note",
+        "unique": 0,
+        "columns": [
+          "note_id"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_note_comments_1",
+        "unique": 1,
+        "columns": [
+          "comment_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE note_comments (\n    id INTEGER PRIMARY KEY AUTOINCREMENT, comment_id TEXT UNIQUE NOT NULL, note_id TEXT NOT NULL,\n    content TEXT DEFAULT '', author_id TEXT DEFAULT '', author_nickname TEXT DEFAULT '', likes INTEGER DEFAULT 0,\n    publish_time TEXT DEFAULT '', parent_id TEXT DEFAULT '', raw_json TEXT DEFAULT '{}',\n    fetched_at TEXT DEFAULT (datetime('now','localtime'))\n)"
+  },
+  "note_review_history": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "note_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "old_relevance",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "new_relevance",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "old_sentiment",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "new_sentiment",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "old_risk",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "new_risk",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "reason",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "provider",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'rule'",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "reviewed_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      }
+    ],
+    "indexes": [],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE note_review_history (\n    id INTEGER PRIMARY KEY AUTOINCREMENT, note_id TEXT NOT NULL, old_relevance TEXT DEFAULT '', new_relevance TEXT DEFAULT '', old_sentiment TEXT DEFAULT '', new_sentiment TEXT DEFAULT '',\n    old_risk TEXT DEFAULT '', new_risk TEXT DEFAULT '', reason TEXT DEFAULT '', provider TEXT DEFAULT 'rule', reviewed_at TEXT DEFAULT (datetime('now','localtime'))\n)"
+  },
+  "podcast_ai_runs": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "run_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "entity_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "model",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "prompt",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "input_hash",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "runtime_ms",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'pending'",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "output_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "error",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_podcast_airun_entity",
+        "unique": 0,
+        "columns": [
+          "entity_id"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_podcast_ai_runs_1",
+        "unique": 1,
+        "columns": [
+          "run_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE podcast_ai_runs (\n                run_id TEXT PRIMARY KEY,\n                entity_id TEXT,\n                model TEXT,\n                prompt TEXT,\n                input_hash TEXT,\n                runtime_ms INTEGER,\n                status TEXT DEFAULT 'pending',\n                output_json TEXT,\n                error TEXT,\n                created_at TEXT NOT NULL\n            )"
+  },
+  "podcast_entities": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "entity_type",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "entity_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "parent_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "title",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "start_ms",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "end_ms",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "speaker_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "attributes_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "relations_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "evidence_ids_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "evidence_status",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'unverified'",
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "confidence",
+        "type": "REAL",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "source_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 14,
+        "name": "observed_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 15,
+        "name": "runtime_seconds",
+        "type": "REAL",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 16,
+        "name": "published_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 17,
+        "name": "metrics_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      },
+      {
+        "cid": 18,
+        "name": "tags_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'[]'",
+        "pk": 0
+      },
+      {
+        "cid": 19,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 20,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_podcast_evidence",
+        "unique": 0,
+        "columns": [
+          "evidence_status"
+        ]
+      },
+      {
+        "name": "idx_podcast_parent",
+        "unique": 0,
+        "columns": [
+          "parent_id"
+        ]
+      },
+      {
+        "name": "idx_podcast_entity_type",
+        "unique": 0,
+        "columns": [
+          "entity_type"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_podcast_entities_1",
+        "unique": 1,
+        "columns": [
+          "entity_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE podcast_entities (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                entity_type TEXT NOT NULL,\n                entity_id TEXT NOT NULL UNIQUE,\n                parent_id TEXT,\n                title TEXT,\n                start_ms INTEGER,\n                end_ms INTEGER,\n                speaker_id TEXT,\n                attributes_json TEXT DEFAULT '{}',\n                relations_json TEXT DEFAULT '[]',\n                evidence_ids_json TEXT DEFAULT '[]',\n                evidence_status TEXT NOT NULL DEFAULT 'unverified',\n                confidence REAL,\n                source_json TEXT DEFAULT '{}',\n                observed_at TEXT,\n                runtime_seconds REAL,\n                published_at TEXT,\n                metrics_json TEXT DEFAULT '{}',\n                tags_json TEXT DEFAULT '[]',\n                created_at TEXT NOT NULL,\n                updated_at TEXT NOT NULL\n            )"
+  },
+  "professional_accounts": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "brand_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'default'",
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "platform",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'xiaohongshu'",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "account_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "account_name",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "verified_type",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "auth_status",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": "'disabled'",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "enabled",
+        "type": "INTEGER",
+        "notnull": 1,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "access_token",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "last_sync_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "sync_status",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'idle'",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "last_error",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sqlite_autoindex_professional_accounts_1",
+        "unique": 1,
+        "columns": [
+          "brand_id",
+          "platform",
+          "account_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE professional_accounts (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    brand_id TEXT NOT NULL DEFAULT 'default',\n    platform TEXT NOT NULL DEFAULT 'xiaohongshu',\n    account_id TEXT NOT NULL,\n    account_name TEXT,\n    verified_type TEXT,\n    auth_status TEXT NOT NULL DEFAULT 'disabled',  -- disabled / pending / authorized / revoked\n    enabled INTEGER NOT NULL DEFAULT 0,              -- 品牌开关\n    access_token TEXT,                               -- 加密存储，不写明文\n    last_sync_at TEXT,\n    sync_status TEXT DEFAULT 'idle',                 -- idle / syncing / success / failed\n    last_error TEXT,\n    created_at TEXT,\n    updated_at TEXT,\n    UNIQUE(brand_id, platform, account_id)\n)"
+  },
+  "professional_metrics": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "account_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "brand_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "metric_date",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "impressions",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "views",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "cover_ctr",
+        "type": "REAL",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "follower_gain",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "likes",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "comments",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "collects",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "shares",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'import'",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sqlite_autoindex_professional_metrics_1",
+        "unique": 1,
+        "columns": [
+          "account_id",
+          "metric_date"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE professional_metrics (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    account_id TEXT NOT NULL,\n    brand_id TEXT NOT NULL,\n    metric_date TEXT NOT NULL,\n    impressions INTEGER DEFAULT 0,       -- 曝光\n    views INTEGER DEFAULT 0,             -- 观看\n    cover_ctr REAL DEFAULT 0,            -- 封面点击率\n    follower_gain INTEGER DEFAULT 0,     -- 涨粉\n    likes INTEGER DEFAULT 0,\n    comments INTEGER DEFAULT 0,\n    collects INTEGER DEFAULT 0,\n    shares INTEGER DEFAULT 0,\n    source TEXT DEFAULT 'import',        -- import / api\n    created_at TEXT,\n    UNIQUE(account_id, metric_date)\n)"
+  },
+  "swire_notes": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "project_key",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "brand",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "note_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "title",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "author",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "likes",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "comments",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "collects",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "shares",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "sentiment",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'neutral'",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "note_url",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "publish_date",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "collected_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_swn_proj",
+        "unique": 0,
+        "columns": [
+          "project_key"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_swire_notes_1",
+        "unique": 1,
+        "columns": [
+          "project_key",
+          "note_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE swire_notes(\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                project_key TEXT, brand TEXT DEFAULT '', note_id TEXT,\n                title TEXT, author TEXT DEFAULT '', likes INTEGER DEFAULT 0,\n                comments INTEGER DEFAULT 0, collects INTEGER DEFAULT 0,\n                shares INTEGER DEFAULT 0, sentiment TEXT DEFAULT 'neutral',\n                note_url TEXT DEFAULT '', publish_date TEXT DEFAULT '',\n                collected_at TEXT, UNIQUE(project_key,note_id))"
+  },
+  "token_stat": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "day",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "used",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sqlite_autoindex_token_stat_1",
+        "unique": 1,
+        "columns": [
+          "day"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE token_stat (day TEXT PRIMARY KEY, used INTEGER)"
+  },
+  "topic_campaign_notes": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "campaign_key",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "topic",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "note_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "title",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "content",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "author",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "publish_datetime",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "likes",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "comments",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "collects",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "shares",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": "0",
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "note_url",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "''",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "first_seen_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 14,
+        "name": "last_seen_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 15,
+        "name": "raw_json",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "'{}'",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_tcn_campaign_topic_time",
+        "unique": 0,
+        "columns": [
+          "campaign_key",
+          "topic",
+          "last_seen_at"
+        ]
+      },
+      {
+        "name": "sqlite_autoindex_topic_campaign_notes_1",
+        "unique": 1,
+        "columns": [
+          "campaign_key",
+          "topic",
+          "note_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE topic_campaign_notes (\n id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_key TEXT NOT NULL, topic TEXT NOT NULL,\n note_id TEXT NOT NULL, title TEXT DEFAULT '', content TEXT DEFAULT '', author TEXT DEFAULT '',\n publish_datetime TEXT DEFAULT '', likes INTEGER DEFAULT 0, comments INTEGER DEFAULT 0,\n collects INTEGER DEFAULT 0, shares INTEGER DEFAULT 0, note_url TEXT DEFAULT '',\n first_seen_at TEXT NOT NULL, last_seen_at TEXT NOT NULL, raw_json TEXT DEFAULT '{}',\n UNIQUE(campaign_key, topic, note_id)\n)"
+  },
+  "v4_audit_logs": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "user_id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "username",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "action",
+        "type": "TEXT",
+        "notnull": 1,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "resource",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "resource_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "detail",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "ip",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_v4_audit_time",
+        "unique": 0,
+        "columns": [
+          "created_at"
+        ]
+      },
+      {
+        "name": "idx_v4_audit_user",
+        "unique": 0,
+        "columns": [
+          "user_id"
+        ]
+      }
+    ],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE v4_audit_logs (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER,\n    username TEXT,\n    action TEXT NOT NULL,\n    resource TEXT,\n    resource_id TEXT,\n    detail TEXT,\n    ip TEXT,\n    created_at TEXT DEFAULT (datetime('now','localtime'))\n)"
+  },
+  "v4_login_attempts": {
+    "columns": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "username",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "ip",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "success",
+        "type": "INTEGER",
+        "notnull": 0,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 0,
+        "default": "datetime('now','localtime')",
+        "pk": 0
+      }
+    ],
+    "indexes": [],
+    "foreign_keys": [],
+    "row_count": 0,
+    "create_sql": "CREATE TABLE v4_login_attempts (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    username TEXT,\n    ip TEXT,\n    success INTEGER,\n    created_at TEXT DEFAULT (datetime('now','localtime'))\n)"
+  }
+}

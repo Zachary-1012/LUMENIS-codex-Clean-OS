@@ -12,6 +12,11 @@ import hashlib
 from subject_rules import SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS, subject_hit
 from datetime import datetime
 
+# ZBC Phase 7: module status markers (audit / evaluation reference)
+MODULE_STATUS = 'RULES_ENGINE_PRIMARY'
+AI_ROLE = 'AUXILIARY_ONLY'
+SUBJECT_FILTER_BEFORE_AI = True  # subject_hit() always runs before AI
+
 # ============== 情感词典 ==============
 POSITIVE_WORDS = {
     # 真正的“用户评价性”正面词（词组优先，避免单字/营销词把中性内容误判为正面）
@@ -301,7 +306,10 @@ def assess_risk(title, content, likes, comments, author_nickname=''):
 
     risk_score = min(100, int(risk_score))
 
-    if risk_score >= 40:
+    # critical: independent higher bucket, never merged into high (Phase 6 audit fix)
+    if risk_score >= 80 and (high_hits > 0 or len(neg_topics) > 0):
+        risk_level = 'critical'
+    elif risk_score >= 40:
         risk_level = 'high'
     elif risk_score >= 15:
         risk_level = 'medium'

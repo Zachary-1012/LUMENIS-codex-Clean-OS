@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 engineering_metrics.py — 序境工程度量能力（P0-E，可观测性标准 Capability）
 
@@ -89,9 +89,18 @@ API_CONTRACT_VERSION = 4
 
 import json
 import os
+import sys
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
+
+try:
+    # 兼容 stdlib-only 运行（避免导入 app 体系）
+    # 使用 reconfigure 原地重配，不创建新 TextIOWrapper 接管 buffer
+    # （避免 pytest capture / 其他已包装 stdout 的 buffer 被意外关闭）
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 # 仓库根目录定位（本文件位于仓库根）
 _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -377,6 +386,117 @@ def _main() -> None:
         print(json.dumps(task_closed_loop_metrics(), ensure_ascii=False, indent=2))
     else:
         print(json.dumps(full_snapshot(), ensure_ascii=False, indent=2))
+
+
+# ============================================================
+# ZBC Phase 10 桥接：接入统一 Evaluation 系统（collector + runtime 维度）
+# ============================================================
+def engineering_to_evaluation(snapshot=None, db_path=None):
+    """将 engineering_metrics 快照接入统一 Evaluation 系统。
+
+    映射：
+    - task_closed_loop.task_completion_rate → collector.success_rate
+    - task_closed_loop.recovery_rate        → collector.recovery_rate
+    - collector_performance.window_success_rate → collector.success_rate（补充）
+    - collector_performance.window_avg_latency  → collector.latency_sec
+    - system_health.health.status          → runtime.heartbeat_rate（映射）
+    - alert.level                          → runtime 综合状态
+
+    Args:
+        snapshot: full_snapshot() 返回值（None 时自动计算）
+        db_path: 数据库路径
+
+    Returns:
+        EvaluationRecord 列表
+    """
+    try:
+        from evaluation_recorder import record_evaluation
+    except Exception:
+        return []
+
+    snap = snapshot or full_snapshot()
+    records = []
+
+    # Collector 维度
+    tcl = snap.get("task_closed_loop", {})
+    tcr = tcl.get("task_completion_rate")
+    if tcr is not None:
+        records.append(record_evaluation(
+            dimension="collector", metric_name="eng_task_completion_rate",
+            metric_value=round(float(tcr), 4),
+            pass_threshold=0.85, warn_threshold=0.60, higher_is_better=True,
+            source="engineering_metrics.task_closed_loop",
+            evidence_ref=f"closed={tcl.get('closed_tasks')}/{tcl.get('total_tasks')}",
+            metadata={"engineered": "task_closed_loop"},
+            db_path=db_path,
+        ))
+
+    rec_rate = tcl.get("recovery_rate")
+    if rec_rate is not None:
+        records.append(record_evaluation(
+            dimension="collector", metric_name="eng_recovery_rate",
+            metric_value=round(float(rec_rate), 4),
+            pass_threshold=0.70, warn_threshold=0.40, higher_is_better=True,
+            source="engineering_metrics.task_closed_loop",
+            evidence_ref=f"recovery={rec_rate}",
+            metadata={"engineered": "task_closed_loop"},
+            db_path=db_path,
+        ))
+
+    cp = snap.get("collector_performance", {})
+    wsr = cp.get("window_success_rate")
+    if wsr is not None:
+        records.append(record_evaluation(
+            dimension="collector", metric_name="eng_collector_success_rate",
+            metric_value=round(float(wsr), 4),
+            pass_threshold=0.85, warn_threshold=0.60, higher_is_better=True,
+            source="engineering_metrics.collector_performance",
+            evidence_ref=f"window_success_rate={wsr}",
+            metadata={"engineered": "collector_performance"},
+            db_path=db_path,
+        ))
+
+    wal = cp.get("window_avg_latency")
+    if wal is not None:
+        records.append(record_evaluation(
+            dimension="collector", metric_name="eng_collector_latency_sec",
+            metric_value=round(float(wal), 3),
+            pass_threshold=120.0, warn_threshold=300.0, higher_is_better=False,
+            source="engineering_metrics.collector_performance",
+            evidence_ref=f"window_avg_latency={wal}",
+            metadata={"engineered": "collector_performance"},
+            db_path=db_path,
+        ))
+
+    # Runtime 维度
+    sh = snap.get("system_health", {}).get("health", {})
+    sh_status = sh.get("status")
+    hb_rate = 1.0 if sh_status == "ok" else (0.5 if sh_status in ("degraded", "warn") else None)
+    if hb_rate is not None:
+        records.append(record_evaluation(
+            dimension="runtime", metric_name="eng_system_health",
+            metric_value=hb_rate,
+            pass_threshold=0.95, warn_threshold=0.80, higher_is_better=True,
+            source="engineering_metrics.system_health",
+            evidence_ref=f"status={sh_status}",
+            metadata={"engineered": "system_health"},
+            db_path=db_path,
+        ))
+
+    alert_level = snap.get("alert", {}).get("level")
+    if alert_level:
+        crash_equiv = 0 if alert_level == "OK" else (1 if alert_level == "WARN" else 3)
+        records.append(record_evaluation(
+            dimension="runtime", metric_name="eng_alert_level",
+            metric_value=float(crash_equiv),
+            pass_threshold=0.0, warn_threshold=3.0, higher_is_better=False,
+            source="engineering_metrics.alert",
+            evidence_ref=f"alert_level={alert_level}",
+            metadata={"engineered": "health_alert", "alert_level": alert_level},
+            db_path=db_path,
+        ))
+
+    return records
 
 
 if __name__ == "__main__":

@@ -174,7 +174,7 @@ def api_runtime_validate():
         total_ms = sum(s.end_ms - s.start_ms for s in segs)
         return _ok(valid=True, segment_count=len(segs), total_runtime_seconds=round(total_ms / 1000, 2))
     except ValueError as ve:
-        return jsonify({"ok": True, "valid": False, "reason": str(ve)})
+        return jsonify({"ok": False, "valid": False, "reason": str(ve), "code": "PODCAST_SEGMENT_INVALID"}), 400
     except Exception as e:
         return _err(f"运行时校验失败: {e}", 500)
 

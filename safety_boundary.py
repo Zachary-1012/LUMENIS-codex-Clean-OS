@@ -1,4 +1,8 @@
 """
+[Legacy] 边界控制引擎 v1.0（Legacy 保留）
+
+⚠️ Legacy 模块：Phase 3 后，统一安全边界由 security_boundary.py（四层架构）编排。本模块保留自动修复边界控制（自动/人工区分、备份、重试、确认流程），与全局 SecurityBoundary 互补，不替代、不删除。
+
 边界控制引擎 v1.0
 5层闭环架构 - 第五层：边界控制
 功能：

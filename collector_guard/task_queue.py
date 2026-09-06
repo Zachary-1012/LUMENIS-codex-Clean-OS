@@ -85,7 +85,7 @@ class TaskQueue:
 
     def dequeue(self, worker_id="", lease_owner="", run_id=""):
         """取到期最高优先级任务并标记 running（原子，防多 worker 重复取）。
-        无到期任务返回 None。"""
+        无到期任务返回 None。返回的 dict 反映 UPDATE 后的最新状态。"""
         with _LOCK, self._conn:
             row = self._conn.execute(
                 "SELECT * FROM tasks WHERE status='pending' AND scheduled_at <= ? "
@@ -94,11 +94,15 @@ class TaskQueue:
             if row is None:
                 return None
             now = time.time()
+            task_id = row["id"]
             self._conn.execute(
                 "UPDATE tasks SET status='running', locked_at=?, worker_id=?, lease_owner=?, run_id=?, "
                 "started_at=?, last_heartbeat_at=? WHERE id=?",
-                (now, worker_id, lease_owner or worker_id, run_id, now, now, row["id"]))
-            d = dict(row)
+                (now, worker_id, lease_owner or worker_id, run_id, now, now, task_id))
+            # 重新查询以返回 UPDATE 后的最新数据（避免返回旧的 status/pending）
+            updated = self._conn.execute(
+                "SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+            d = dict(updated)
             try:
                 d["payload"] = json.loads(d["payload"])
             except (json.JSONDecodeError, TypeError):
@@ -154,6 +158,13 @@ class TaskQueue:
         for task_id in ids:
             self.fail(task_id, reason)
         return ids
+
+    def close(self):
+        """关闭数据库连接（测试/清理用）。"""
+        try:
+            self._conn.close()
+        except Exception:
+            pass
 
     def stats(self):
         """各状态计数 + 汇总（Observatory/监控消费）。"""
