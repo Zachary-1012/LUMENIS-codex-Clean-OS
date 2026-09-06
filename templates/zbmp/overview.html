@@ -277,7 +277,7 @@ var ZBMPOverview = (function () {
 
   var _state = {
     range: '7d',
-    data: { overview: null, stats: null, biStats: null, biBrands: null, trend: null, brandStats: null },
+    data: { overview: null, stats: null, biStats: null, biBrands: null, trend: null, brandStats: null, vizTrend: null, vizStats: null },
     errors: {},
     degraded: false,
     pollTimer: null
@@ -404,6 +404,49 @@ var ZBMPOverview = (function () {
     });
   }
 
+  /* ----- VIZ API loaders (function-driven, direct DB query) ----- */
+  // Shard A: 接入 /api/viz/* 动态化可视化体系，作为趋势图与KPI卡片主数据源
+  function loadVizTrend() {
+    var days = getRangeDays();
+    var tr = days === 1 ? 'today' : (days === 30 ? '30d' : '7d');
+    return apiGet('/api/viz/overview.trend?time_range=' + tr).then(function (d) {
+      if (d && d.success === true && d.data && Array.isArray(d.data.items) && d.data.items.length > 0) {
+        var mapped = d.data.items.map(function (r) {
+          return {
+            date: r.day || '',
+            label: (r.day || '').slice(5),
+            total: Number(r.note_count || 0),
+            positive: 0,
+            negative: Number(r.negative_count || 0),
+            high: 0,
+            engagement: Number(r.engagement || 0)
+          };
+        });
+        _state.data.vizTrend = mapped.slice(-days);
+        return _state.data.vizTrend;
+      }
+      _state.data.vizTrend = null;
+      return null;
+    }).catch(function () {
+      _state.data.vizTrend = null;
+      return null;
+    });
+  }
+
+  function loadVizStats() {
+    return apiGet('/api/viz/overview.stats?time_range=today').then(function (d) {
+      if (d && d.success === true && d.data && Array.isArray(d.data.items) && d.data.items.length > 0) {
+        _state.data.vizStats = d.data.items[0];
+        return _state.data.vizStats;
+      }
+      _state.data.vizStats = null;
+      return null;
+    }).catch(function () {
+      _state.data.vizStats = null;
+      return null;
+    });
+  }
+
   /* ----- KPI render (xjViz.animateNumber driven) ----- */
   function renderKPIs() {
     var stats = _state.data.stats;
@@ -412,10 +455,14 @@ var ZBMPOverview = (function () {
     var container = $('zbmp-kpi-content');
     if (!container) return;
 
-    // 今日声量
+    // 今日声量 — Shard A: 优先 /api/viz/overview.stats (直查DB)，降级旧API
+    var vizStats = _state.data.vizStats;
     var todayVolume = null;
     var volumeChange = null;
-    if (trend && trend.length > 0) {
+    if (vizStats && vizStats.total != null && Number(vizStats.total) > 0) {
+      todayVolume = Number(vizStats.total);
+    }
+    if (todayVolume == null && trend && trend.length > 0) {
       var latest = trend[trend.length - 1];
       todayVolume = latest.total != null ? Number(latest.total) : null;
       if (trend.length > 1) {
@@ -425,7 +472,8 @@ var ZBMPOverview = (function () {
           volumeChange = ((todayVolume - prevTotal) / prevTotal * 100);
         }
       }
-    } else if (stats && stats.total != null) {
+    }
+    if (todayVolume == null && stats && stats.total != null) {
       todayVolume = Number(stats.total);
     }
 
@@ -440,9 +488,12 @@ var ZBMPOverview = (function () {
       activeBrands = Number(biStats.total);
     }
 
-    // KOS互动量 — xjViz.fn.FN_ENGAGEMENT canonical transform
+    // KOS互动量 — Shard A: 优先 /api/viz/overview.stats.total_engagements (直查DB)，降级旧API
     var engagement = null;
-    if (stats) {
+    if (vizStats && vizStats.total_engagements != null && Number(vizStats.total_engagements) > 0) {
+      engagement = Number(vizStats.total_engagements);
+    }
+    if (engagement == null && stats) {
       var eng = xjViz.fn.FN_ENGAGEMENT({ stats: stats });
       if (eng.total > 0) engagement = eng.total;
     }
@@ -512,7 +563,8 @@ var ZBMPOverview = (function () {
 
   /* ----- Trend chart (xjViz.trend area chart) ----- */
   function renderTrend() {
-    var trend = _state.data.trend;
+    // Shard A: 优先 vizTrend (/api/viz/overview.trend 直查DB)，降级旧 trend 数据
+    var trend = _state.data.vizTrend || _state.data.trend;
     var content = $('zbmp-trend-content');
     var rangeTag = $('zbmp-trend-range-tag');
     if (!content) return;
@@ -742,7 +794,9 @@ var ZBMPOverview = (function () {
       { key: 'biStats', fn: loadBrandIndustryStats },
       { key: 'biBrands', fn: loadBrandIndustryBrands },
       { key: 'brandStats', fn: loadBrandStats },
-      { key: 'trend', fn: loadTrend }
+      { key: 'trend', fn: loadTrend },
+      { key: 'vizTrend', fn: loadVizTrend },
+      { key: 'vizStats', fn: loadVizStats }
     ];
     var done = 0, total = tasks.length;
 
@@ -753,10 +807,10 @@ var ZBMPOverview = (function () {
       }).finally(function () {
         done++;
         if (done === total) {
-          if (_state.data.stats || _state.data.biStats || _state.data.trend) {
+          if (_state.data.stats || _state.data.biStats || _state.data.trend || _state.data.vizStats || _state.data.vizTrend) {
             try { renderKPIs(); setSectionState('zbmp-kpi-section', 'success'); } catch (e) { setSectionState('zbmp-kpi-section', 'error'); }
           }
-          if (_state.data.trend) { try { renderTrend(); } catch (e) { setSectionState('zbmp-trend-section', 'error'); } }
+          if (_state.data.vizTrend || _state.data.trend) { try { renderTrend(); } catch (e) { setSectionState('zbmp-trend-section', 'error'); } }
           if (_state.data.brandStats) { try { renderIndustry(); } catch (e) { setSectionState('zbmp-industry-section', 'error'); } } else { setSectionState('zbmp-industry-section', 'empty'); }
           if (_state.data.biBrands || _state.data.overview) { try { renderTop10(); } catch (e) { setSectionState('zbmp-top10-section', 'error'); } }
           if (_state.data.stats || _state.data.biStats || _state.data.biBrands || _state.data.overview) { try { renderOpportunities(); } catch (e) { setSectionState('zbmp-opportunity-section', 'error'); } }

@@ -299,13 +299,19 @@
     var p2 = xjViz.api('/stats').catch(function(e) { console.warn('stats fail:', e); return null; });
     var p3 = xjViz.api('/risks/active', {limit:100}).catch(function(e) { console.warn('risks fail:', e); return null; });
     var p4 = LUMENIS.fetch('/healthz').then(function(r){return r.json();}).catch(function(){return null;});
+    // Shard A: /api/viz/* 函数驱动直查DB，作为KPI主数据源
+    var p5 = xjViz.api('/viz/overview.stats?time_range=today').catch(function(e) { console.warn('viz/stats fail:', e); return null; });
+    var p6 = xjViz.api('/viz/risk.active?time_range=7d&level=high&limit=100').catch(function(e) { console.warn('viz/risk fail:', e); return null; });
 
-    Promise.all([p1,p2,p3,p4]).then(function(res) {
-      var cth = res[0], stats = res[1], risks = res[2], health = res[3];
+    Promise.all([p1,p2,p3,p4,p5,p6]).then(function(res) {
+      var cth = res[0], stats = res[1], risks = res[2], health = res[3], vizStats = res[4], vizRisk = res[5];
 
-      // KPI 1: 今日笔记数
+      // KPI 1: 今日笔记数 — Shard A: 优先 /api/viz/overview.stats (直查DB)，降级旧API
       var notes = null;
-      if (cth && cth.data) notes = safeNum(cth.data.total_notes);
+      if (vizStats && vizStats.success && vizStats.data && Array.isArray(vizStats.data.items) && vizStats.data.items.length > 0) {
+        notes = safeNum(vizStats.data.items[0].total);
+      }
+      if (notes === null && cth && cth.data) notes = safeNum(cth.data.total_notes);
       if (notes === null && stats && stats.stats) notes = safeNum(stats.stats.total) || safeNum(stats.stats.total_notes);
       renderKPI('kpi-notes', '今日笔记数', notes, 'CTH 主体保护', 'neutral');
 
@@ -319,10 +325,15 @@
         renderKPI('kpi-brands', '活跃品牌数', brands, brands !== null ? '/ 199 品牌' : null, 'neutral');
       });
 
-      // KPI 3: 风险事件
+      // KPI 3: 风险事件 — Shard A: 优先 /api/viz/risk.active (直查DB)，降级旧API
       var riskCnt = null;
-      if (risks && risks.total !== undefined) riskCnt = safeNum(risks.total);
-      else if (cth && cth.data && cth.data.by_risk) {
+      if (vizRisk && vizRisk.success && vizRisk.data) {
+        var vizRiskCount = safeNum(vizRisk.data.record_count);
+        if (vizRiskCount === null) vizRiskCount = safeNum(vizRisk.data.current_value);
+        if (vizRiskCount !== null && vizRiskCount > 0) riskCnt = vizRiskCount;
+      }
+      if (riskCnt === null && risks && risks.total !== undefined) riskCnt = safeNum(risks.total);
+      if (riskCnt === null && cth && cth.data && cth.data.by_risk) {
         var br = cth.data.by_risk;
         var sum = (safeNum(br.high)||0) + (safeNum(br.critical)||0) + (safeNum(br.medium)||0);
         riskCnt = sum > 0 ? sum : null;
@@ -368,22 +379,42 @@
   // ========== API: Trend (xjViz.trend) ==========
   function loadTrend() {
     showState('cth-trend', 'loading');
-    // 权威源：/api/brand-stats.trend_data，按 publish_datetime 发布日聚合（函数驱动，不依赖空快照表）
-    xjViz.api('/brand-stats').then(function(d) {
-      var pts = (d && d.trend_data) || [];
-      if (pts.length === 0) { showState('cth-trend', 'empty'); return; }
-      var series = pts.map(function(p) {
-        return { date: p.date, value: safeNum(p.note_count) || 0, negative: safeNum(p.negative_count) || 0 };
+    // Shard A: 主数据源 /api/viz/overview.trend（函数驱动直查DB），降级 /api/brand-stats.trend_data
+    xjViz.api('/viz/overview.trend?time_range=30d').then(function(d) {
+      var items = (d && d.success && d.data && d.data.items) || [];
+      if (items.length > 0) {
+        var series = items.map(function(p) {
+          return { date: p.day, value: safeNum(p.note_count) || 0, negative: safeNum(p.negative_count) || 0 };
+        });
+        var hasData = series.some(function(s) { return s.value > 0; });
+        if (hasData) {
+          showState('cth-trend', 'success');
+          var el = document.getElementById('cth-trend-chart');
+          el.innerHTML = '';
+          var vizSeries = (xjViz.fn && xjViz.fn.FN_TREND_SERIES)
+            ? xjViz.fn.FN_TREND_SERIES(series, 'value')
+            : series.map(function(s){return {label:s.date, value:s.value};});
+          xjViz.trend('#cth-trend-chart', vizSeries, {type:'area', color:'#2563EB', height:200});
+          return;
+        }
+      }
+      // Fallback: /api/brand-stats.trend_data
+      return xjViz.api('/brand-stats').then(function(d2) {
+        var pts = (d2 && d2.trend_data) || [];
+        if (pts.length === 0) { showState('cth-trend', 'empty'); return; }
+        var series2 = pts.map(function(p) {
+          return { date: p.date, value: safeNum(p.note_count) || 0, negative: safeNum(p.negative_count) || 0 };
+        });
+        var hasData2 = series2.some(function(s) { return s.value > 0; });
+        if (!hasData2) { showState('cth-trend', 'empty'); return; }
+        showState('cth-trend', 'success');
+        var el2 = document.getElementById('cth-trend-chart');
+        el2.innerHTML = '';
+        var vizSeries2 = (xjViz.fn && xjViz.fn.FN_TREND_SERIES)
+          ? xjViz.fn.FN_TREND_SERIES(series2, 'value')
+          : series2.map(function(s){return {label:s.date, value:s.value};});
+        xjViz.trend('#cth-trend-chart', vizSeries2, {type:'area', color:'#2563EB', height:200});
       });
-      var hasData = series.some(function(s) { return s.value > 0; });
-      if (!hasData) { showState('cth-trend', 'empty'); return; }
-      showState('cth-trend', 'success');
-      var el = document.getElementById('cth-trend-chart');
-      el.innerHTML = '';
-      var vizSeries = (xjViz.fn && xjViz.fn.FN_TREND_SERIES)
-        ? xjViz.fn.FN_TREND_SERIES(series, 'value')
-        : series.map(function(s){return {label:s.date, value:s.value};});
-      xjViz.trend('#cth-trend-chart', vizSeries, {type:'area', color:'#2563EB', height:200});
     }).catch(function(e) {
       console.error('CTH trend error:', e);
       showState('cth-trend', 'error');
