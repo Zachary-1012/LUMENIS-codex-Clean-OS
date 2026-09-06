@@ -174,12 +174,13 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
     return False
 
 
-def _cdp_online(timeout=2.0):
-    """探测 9222 CDP 是否在线（不启动浏览器，只探测）。"""
+def _cdp_online(timeout=2.0, cdp_url=None):
+    """探测 CDP 是否在线（默认9222大陆，可传9223港版；不启动浏览器，只探测）。"""
     import urllib.request
+    _url = (cdp_url or CDP_URL)
 
     def _probe():
-        with urllib.request.urlopen(CDP_URL + '/json/version', timeout=timeout) as r:
+        with urllib.request.urlopen(_url + '/json/version', timeout=timeout) as r:
             return getattr(r, 'status', 200) == 200
 
     # P1-2 tenacity 可选增强：CDP 探测偶发瞬断（瞬时抖动）时指数退避重试，
@@ -266,13 +267,15 @@ def _norm_cdp_note(rec):
     }
 
 
-def _search_via_cdp(keyword, max_scroll, output_path, max_details=10):
-    """走 9222 已登录 Edge 的 rednote_collector.cjs，返回与独立通道一致的 dict 结构。"""
-    env = os.environ.copy(); env['XHS_CDP_URL'] = CDP_URL
+def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None):
+    """走已登录 Edge 的 rednote_collector.cjs，返回与独立通道一致的 dict 结构。
+    cdp_url: 9222=大陆cn / 9223=港版intl，默认 CDP_URL(9222)。region 仅用于通道标记。"""
+    _cdp = cdp_url or CDP_URL
+    env = os.environ.copy(); env['XHS_CDP_URL'] = _cdp
     env['PYTHONIOENCODING'] = 'utf-8'; env['PYTHONUTF8'] = '1'  # 子进程强制 UTF-8，避免 Windows cp936 捕获中文乱码
     py = sys.executable or 'python'
     cmd = [py, CDP_SCRIPT, '--keyword', keyword, '--output', output_path,
-           '--max-scroll', str(max_scroll), '--max-details', str(max_details), '--cdp-url', CDP_URL]
+           '--max-scroll', str(max_scroll), '--max-details', str(max_details), '--cdp-url', _cdp]
     p = subprocess.run(cmd, cwd=SCRIPT_DIR, capture_output=True, text=True, encoding='utf-8', timeout=300, env=env)
     out = p.stdout or ''
     marker = '---RESULT_JSON---'
@@ -341,18 +344,32 @@ def _is_noise_keyword(k):
     return False
 
 
-def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10):
-    """多通道搜索小红书：9222 CDP 真人通道优先，独立 Chromium 兜底。
-    返回 dict: {keyword,total,notes,error,channel}。风控态(IP风险/验证码)显式返回，不当作普通0条。
-    max_details 控制 CDP 进入多少个详情页（核心词深采、扩展词浅采以提速降风控）。"""
+def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
+                        region=None, cdp_port=None, kos_only=False):
+    """多通道搜索小红书：CDP 真人通道优先（9222大陆/9223港版轮番），独立 Chromium 兜底。
+    返回 dict: {keyword,total,notes,error,channel,region}。风控态显式返回，不当作普通0条。
+    region: 'cn'=大陆9222 / 'intl'=港版9223；kos_only=True 强制 intl(RedNote)。"""
     if output_path is None:
         output_path = os.path.join(SCRIPT_DIR, 'data', f'search_{int(datetime.now().timestamp())}.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+    # 区域选择：KOS强制intl，否则用传入region或默认
+    if _REDNOTE_POLICY_AVAILABLE:
+        try:
+            sel = _rednote_policy.select_region(kos_only=kos_only, force_region=region)
+            region = sel['region']; cdp_port = sel['cdp_port']
+        except Exception:
+            region = region or 'cn'; cdp_port = cdp_port or 9222
+    else:
+        region = region or 'cn'; cdp_port = cdp_port or 9222
+    cdp_url = f'http://127.0.0.1:{cdp_port}'
+
     # 主路径：CDP 真人通道
     try:
-        if os.path.exists(CDP_SCRIPT) and (_cdp_online() or _ensure_cdp_online()):
-            res = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details)
+        if os.path.exists(CDP_SCRIPT) and (_cdp_online(cdp_url=cdp_url) or (cdp_port == 9222 and _ensure_cdp_online())):
+            res = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details,
+                                  cdp_url=cdp_url, region=region)
+            res['region'] = region; res['cdp_port'] = cdp_port
             if res.get('notes') or res.get('error') in _CDP_RISK_STATES:
                 return res  # 真出数 / 明确风控态都直接返回
             # CDP 非风控空结果，落兜底通道再试一次

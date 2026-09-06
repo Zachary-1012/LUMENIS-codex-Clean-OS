@@ -89,3 +89,75 @@ def effective_policy() -> RedNotePolicy:
         kind_enabled=kind,
         human_cadence=dict(HUMAN_CADENCE_PLACEHOLDER),
     )
+
+
+# ============================================================
+# 区域轮番（RedNote 港版 intl × 大陆 cn 安全交替）
+# ============================================================
+# CDP 端口映射（与 start_production.ps1 三浏览器对齐）：
+#   9222 = XHS_CN_PRIMARY  大陆 xiaohongshu.com
+#   9223 = XHS_RETINAUT    港版/国际 RedNote
+#   9224 = GENERAL_BROWSE  通用浏览（不用于采集主链路）
+REGION_CDP_PORT = {"cn": 9222, "intl": 9223}
+# 区域对应的站点 host（用于导航与日志，不做硬编码假设之外的用途）
+REGION_HOST = {
+    "cn": "www.xiaohongshu.com",
+    "intl": "www.rednote.com",
+}
+
+# 进程内轮番记忆（线程安全由 GIL 保证单写；跨进程由调度器持久化 last_region）
+_last_region_state = {"region": None, "count": 0}
+
+
+def get_cdp_port(region: str):
+    """区域 → CDP 端口。未知区域回落到 primary_region 对应端口。"""
+    region = (region or "").strip().lower()
+    if region in REGION_CDP_PORT:
+        return REGION_CDP_PORT[region]
+    pol = effective_policy()
+    return REGION_CDP_PORT.get(pol.primary_region, 9222)
+
+
+def select_region(*, kos_only: bool = False, last_region: str = None,
+                  force_region: str = None):
+    """选择下一次采集的区域。
+
+    规则（安全优先，不做高频纯随机）：
+    1. KOS 品牌采集：强制 intl（RedNote 港版），不走大陆通道；
+    2. force_region 显式指定时遵从（测试/手动指定）；
+    3. 普通采集：intl 与 cn 交替轮番（避免同一通道连续高频暴露），
+       以 last_region 为优先记忆，缺省用进程内状态，再缺省用 primary_region；
+    4. cn_paused=True 时全部回落 intl（熔断中不撞大陆）。
+
+    返回 dict: {region, cdp_port, host, rotated(bool), reason}
+    """
+    pol = effective_policy()
+    # KOS 强制 intl
+    if kos_only:
+        return {"region": "intl", "cdp_port": REGION_CDP_PORT["intl"],
+                "host": REGION_HOST["intl"], "rotated": False,
+                "reason": "kos_only: KOS品牌采集专用RedNote港版通道"}
+    # 显式指定
+    if force_region and force_region.strip().lower() in REGION_CDP_PORT:
+        r = force_region.strip().lower()
+        return {"region": r, "cdp_port": REGION_CDP_PORT[r],
+                "host": REGION_HOST[r], "rotated": False,
+                "reason": f"force_region={r}"}
+    # 大陆熔断 → 全部 intl
+    if pol.cn_paused:
+        return {"region": "intl", "cdp_port": REGION_CDP_PORT["intl"],
+                "host": REGION_HOST["intl"], "rotated": False,
+                "reason": "cn_paused: 大陆熔断回落intl"}
+    # 轮番交替：优先用外部传入的 last_region，其次进程内记忆
+    prev = (last_region or _last_region_state["region"] or "").strip().lower()
+    if prev == "intl":
+        nxt = "cn"
+    elif prev == "cn":
+        nxt = "intl"
+    else:
+        nxt = pol.primary_region  # 首次用策略主区域
+    _last_region_state["region"] = nxt
+    _last_region_state["count"] += 1
+    return {"region": nxt, "cdp_port": REGION_CDP_PORT[nxt],
+            "host": REGION_HOST[nxt], "rotated": prev is not None and prev != "",
+            "reason": f"rotation: {prev or 'init'} -> {nxt}"}
