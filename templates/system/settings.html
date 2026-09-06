@@ -329,6 +329,102 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .quota-grid{grid-template-columns:1fr 1fr 1fr;gap:8px}
   .quota-num{font-size:20px}
 }
+
+/* ===== Codex Design Pattern: New Components ===== */
+.theme-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.theme-card{border-radius:12px;border:1.5px solid #e2e8f0;overflow:hidden;cursor:pointer;transition:all .15s;background:#fff}
+.theme-card:hover{border-color:#94a3b8}
+.theme-card.selected{border-color:#0F766E;box-shadow:0 0 0 3px rgba(15,118,110,.12)}
+.theme-card-preview{height:80px;position:relative;overflow:hidden}
+.theme-card-preview.light{background:linear-gradient(135deg,#f8fafc,#fff)}
+.theme-card-preview.dark{background:linear-gradient(135deg,#0f172a,#1e293b)}
+.theme-card-preview.system{background:linear-gradient(135deg,#f8fafc 50%,#0f172a 50%)}
+.theme-card-preview .mock-sidebar{position:absolute;left:0;top:0;bottom:0;width:28px;background:rgba(15,118,110,.15)}
+.theme-card-preview.dark .mock-sidebar{background:rgba(20,184,166,.2)}
+.theme-card-preview .mock-bar{position:absolute;left:34px;right:8px;top:8px;height:6px;border-radius:3px;background:rgba(0,0,0,.08)}
+.theme-card-preview.dark .mock-bar{background:rgba(255,255,255,.12)}
+.theme-card-preview .mock-bar2{position:absolute;left:34px;right:20px;top:20px;height:4px;border-radius:2px;background:rgba(0,0,0,.05)}
+.theme-card-preview.dark .mock-bar2{background:rgba(255,255,255,.08)}
+.theme-card-label{padding:8px 10px;text-align:center;font-size:12px;font-weight:600;color:#475569}
+.theme-card.selected .theme-card-label{color:#0F766E}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-track{flex:1;height:4px;background:#e2e8f0;border-radius:2px;position:relative;cursor:pointer}
+.slider-fill{height:100%;background:#0F766E;border-radius:2px;position:absolute;left:0;top:0}
+.slider-thumb{width:16px;height:16px;background:#0F766E;border-radius:50%;position:absolute;top:50%;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:grab}
+.slider-value{font-size:13px;font-weight:600;color:#0F766E;min-width:32px;text-align:right;font-family:monospace}
+.color-capsule{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;font-family:monospace;border:1px solid #e2e8f0}
+.color-swatch{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.1)}
+.font-dual{display:flex;gap:6px}
+.font-dual select{padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;background:#fff;outline:none}
+.font-dual select:focus{border-color:#0F766E}
+.skill-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
+.skill-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid #e2e8f0}
+.skill-tab{padding:8px 14px;font-size:13px;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
+.skill-tab:hover{color:#0f172a}
+.skill-tab.active{color:#0F766E;border-bottom-color:#0F766E;font-weight:600}
+.skill-tab .tab-count{font-size:11px;color:#94a3b8;margin-left:4px;font-weight:400}
+.skill-search{flex:1;min-width:180px;padding:8px 12px 8px 34px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#f8fafc}
+.skill-search:focus{border-color:#0F766E;background:#fff;box-shadow:0 0 0 3px rgba(15,118,110,.1)}
+.skill-list{display:flex;flex-direction:column}
+.skill-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;transition:background .12s;position:relative}
+.skill-row:hover{background:#f8fafc}
+.skill-row:hover .skill-more{opacity:1}
+.skill-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:#fff}
+.skill-info{flex:1;min-width:0}
+.skill-name{font-size:13px;font-weight:600;color:#0f172a;display:flex;align-items:center;gap:6px}
+.skill-desc{font-size:11px;color:#94a3b8;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skill-more{position:absolute;right:12px;top:50%;transform:translateY(-50%);opacity:0;transition:opacity .15s;background:none;border:none;font-size:16px;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:6px}
+.skill-more:hover{background:#e2e8f0;color:#475569}
+.skill-toggle{flex-shrink:0;margin-right:28px}
+.skill-detail{display:none;padding:0 12px 12px 60px;border-bottom:1px solid #f1f5f9}
+.skill-detail.show{display:block}
+.skill-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.skill-detail-item{font-size:11px;color:#64748b}
+.skill-detail-item .dt-label{color:#94a3b8;margin-right:4px}
+.kb-search-wrap{position:relative;margin-bottom:14px}
+.kb-search-wrap input{width:100%;padding:9px 12px 9px 36px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#f8fafc}
+.kb-search-wrap input:focus{border-color:#0F766E;background:#fff}
+.kb-search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;width:16px;height:16px}
+.kb-group-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;padding:10px 4px 6px}
+.kb-row{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:8px;transition:background .12s}
+.kb-row:hover{background:#f8fafc}
+.kb-row-info{flex:1;min-width:0}
+.kb-row-name{font-size:13px;color:#0f172a;font-weight:500}
+.kb-row-desc{font-size:11px;color:#94a3b8;margin-top:1px}
+.kb-combo{display:inline-flex;gap:3px;align-items:center;flex-shrink:0}
+.kb-combo kbd{font-family:'JetBrains Mono',Consolas,monospace;font-size:11px;padding:3px 7px;border:1px solid #e2e8f0;border-bottom-width:2px;border-radius:6px;background:#f8fafc;color:#64748b;font-weight:500}
+.kb-unassigned{font-size:12px;color:#cbd5e1;font-style:italic;flex-shrink:0}
+.kb-actions{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .15s}
+.kb-row:hover .kb-actions{opacity:1}
+.kb-icon-btn{background:none;border:none;padding:5px;border-radius:6px;cursor:pointer;color:#94a3b8;display:flex;align-items:center;justify-content:center}
+.kb-icon-btn:hover{background:#e2e8f0;color:#475569}
+.kb-icon-btn.danger:hover{background:#fee2e2;color:#dc2626}
+.kb-capturing{background:#f0fdfa !important;border:1px dashed #0F766E}
+.browser-total-row{display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(135deg,#f0fdfa,#fff);border-radius:12px;border:1px solid rgba(15,118,110,.15);margin-bottom:16px}
+.browser-total-icon{width:32px;height:32px;border-radius:8px;background:rgba(15,118,110,.1);display:flex;align-items:center;justify-content:center;color:#0F766E;flex-shrink:0}
+.browser-total-info{flex:1}
+.browser-total-name{font-size:13px;font-weight:600;color:#0f172a}
+.browser-total-desc{font-size:11px;color:#94a3b8;margin-top:1px}
+.setting-group-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;padding:4px 0 8px;margin-top:8px}
+.integration-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;transition:background .12s}
+.integration-row:hover{background:#f8fafc}
+.integration-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff;font-weight:700}
+.integration-info{flex:1;min-width:0}
+.integration-name{font-size:13px;font-weight:600;color:#0f172a}
+.integration-desc{font-size:11px;color:#94a3b8;margin-top:1px}
+.integration-status{font-size:11px;padding:3px 10px;border-radius:8px;font-weight:600;flex-shrink:0}
+.integration-status.verified{background:#dcfce7;color:#166534}
+.integration-status.expired{background:#fee2e2;color:#991b1b}
+.integration-status.partial{background:#fef3c7;color:#92400e}
+.integration-status.blocked{background:#f1f5f9;color:#64748b}
+.integration-status.unknown{background:#f1f5f9;color:#64748b}
+.skeleton{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:skeleton-shimmer 1.5s infinite;border-radius:6px}
+@keyframes skeleton-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-line{height:14px;margin-bottom:8px}
+.skeleton-line.short{width:60%}
+.reduced-motion-segment{display:inline-flex;background:#f1f5f9;border-radius:8px;padding:2px}
+.reduced-motion-segment button{border:none;background:transparent;padding:5px 12px;font-size:12px;color:#64748b;cursor:pointer;border-radius:6px;transition:all .15s;font-weight:500}
+.reduced-motion-segment button.active{background:#fff;color:#0F766E;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 </style>
 </head>
 <body>
@@ -391,6 +487,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div class="nav-item" data-panel="appearance" onclick="switchPanel('appearance')">
         <span class="nav-icon"><span data-icon="palette" data-icon-size="16"></span></span>外观
+      </div>
+      <div class="nav-item" data-panel="config" onclick="switchPanel('config')">
+        <span class="nav-icon"><span data-icon="sliders" data-icon-size="16"></span></span>配置
+      </div>
+      <div class="nav-item" data-panel="keyboard" onclick="switchPanel('keyboard')">
+        <span class="nav-icon"><span data-icon="keyboard" data-icon-size="16"></span></span>键盘快捷键
+      </div>
+      <div class="nav-item" data-panel="browser" onclick="switchPanel('browser')">
+        <span class="nav-icon"><span data-icon="globe" data-icon-size="16"></span></span>浏览器
+      </div>
+      <div class="nav-item" data-panel="integrations" onclick="switchPanel('integrations')">
+        <span class="nav-icon"><span data-icon="plug" data-icon-size="16"></span></span>集成与连接
       </div>
       <div class="nav-item" data-panel="ai" onclick="switchPanel('ai')">
         <span class="nav-icon"><span data-icon="intelligence" data-icon-size="16"></span></span>AI
@@ -601,12 +709,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
 
-      <!-- Skills -->
+      <!-- Keyboard Shortcuts -->
+      <div class="panel" id="panel-keyboard">
+        <div class="setting-card">
+          <div class="kb-search-wrap">
+            <svg class="kb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="kbFilterInput" placeholder="搜索快捷键…" oninput="filterKeyboardShortcuts()" autocomplete="off">
+          </div>
+          <div id="keyboardShortcutsList"><div class="loading-spinner"></div></div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:#94a3b8">修改后自动保存到本地，Ctrl+/ 随时查看</span>
+            <button class="btn btn-secondary btn-sm" onclick="resetKeyboardShortcuts()">恢复默认</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills (Codex pattern: tabs + search + list with detail) -->
       <div class="panel" id="panel-skills">
         <div class="setting-card">
-          <h3><span class="card-icon">⚡</span>技能/Agent 管理</h3>
-          <p style="font-size:12px;color:#64748b;margin-bottom:12px">按需启用：启用后才在界面出现并运行，禁用即彻底不加载</p>
-          <div id="skillList"><div class="loading-spinner"></div></div>
+          <div class="skill-header-row">
+            <div class="skill-tabs">
+              <div class="skill-tab active" data-skill-tab="plugins" onclick="switchSkillTab('plugins')">插件 <span class="tab-count" id="pluginCount">0</span></div>
+              <div class="skill-tab" data-skill-tab="mcp" onclick="switchSkillTab('mcp')">MCP <span class="tab-count" id="mcpCount">0</span></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <a href="/system/skills" class="btn btn-secondary btn-sm" style="text-decoration:none">浏览目录</a>
+              <button class="btn btn-primary btn-sm" onclick="openAddSkillModal()">添加</button>
+            </div>
+          </div>
+          <div style="position:relative;margin-bottom:12px">
+            <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="skill-search" id="skillSearchInput" placeholder="搜索插件…" oninput="filterSkills()" style="padding-left:34px">
+          </div>
+          <div class="skill-list" id="skillList"><div class="loading-spinner"></div></div>
         </div>
       </div>
 
@@ -662,27 +797,124 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
 
-      <!-- Appearance -->
+      <!-- Appearance (Codex pattern: theme cards + full config) -->
       <div class="panel" id="panel-appearance">
         <div class="setting-card">
-          <h3><span class="card-icon">🎨</span>外观</h3>
-          <div class="form-row"><label>语言 / Language</label>
-            <select id="langSelect" onchange="applyLanguage()">
+          <div class="theme-cards" id="themeCards">
+            <div class="theme-card selected" data-theme="light" onclick="selectTheme('light')">
+              <div class="theme-card-preview light"><div class="mock-sidebar"></div><div class="mock-bar"></div><div class="mock-bar2"></div></div>
+              <div class="theme-card-label">浅色</div>
+            </div>
+            <div class="theme-card" data-theme="dark" onclick="selectTheme('dark')">
+              <div class="theme-card-preview dark"><div class="mock-sidebar"></div><div class="mock-bar"></div><div class="mock-bar2"></div></div>
+              <div class="theme-card-label">深色</div>
+            </div>
+            <div class="theme-card" data-theme="system" onclick="selectTheme('system')">
+              <div class="theme-card-preview system"><div class="mock-sidebar"></div><div class="mock-bar"></div><div class="mock-bar2"></div></div>
+              <div class="theme-card-label">跟随系统</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">强调色</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面主色调与选中态</div></div>
+            <div id="accentColorDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">背景 / 前景色</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">当前主题的基础色值</div></div>
+            <div style="display:flex;gap:8px">
+              <span class="color-capsule"><span class="color-swatch" id="bgSwatch" style="background:#FFFFFF"></span><span id="bgValue">#FFFFFF</span></span>
+              <span class="color-capsule"><span class="color-swatch" id="fgSwatch" style="background:#1A1C1F"></span><span id="fgValue">#1A1C1F</span></span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">UI 字体</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面文字字体与字重</div></div>
+            <div class="font-dual">
+              <select id="uiFontFamily" onchange="saveFontConfig()"><option value="Inter">Inter</option><option value="system-ui">系统默认</option><option value="Noto Sans SC">Noto Sans SC</option></select>
+              <select id="uiFontWeight" onchange="saveFontConfig()"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">内容字体</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">正文与长文本字体</div></div>
+            <div class="font-dual">
+              <select id="contentFontFamily" onchange="saveFontConfig()"><option value="Noto Sans SC">Noto Sans SC</option><option value="Inter">Inter</option><option value="system-ui">系统默认</option></select>
+              <select id="contentFontWeight" onchange="saveFontConfig()"><option value="400">常规</option><option value="500">中等</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">代码字体</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">等宽代码与数据显示</div></div>
+            <div class="font-dual">
+              <select id="codeFontFamily" onchange="saveFontConfig()"><option value="JetBrains Mono">JetBrains Mono</option><option value="Consolas">Consolas</option><option value="monospace">系统等宽</option></select>
+              <select id="codeFontWeight" onchange="saveFontConfig()"><option value="400">常规</option><option value="500">中等</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">半透明侧边栏</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">侧边栏使用毛玻璃效果</div></div>
+            <div class="toggle" id="translucentSidebarToggle" onclick="toggleTranslucentSidebar()"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">对比度</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">调整界面元素对比度</div></div>
+            <div class="slider-row" style="width:220px">
+              <div class="slider-track" id="contrastSlider" onclick="setContrast(event)">
+                <div class="slider-fill" id="contrastFill" style="width:45%"></div>
+                <div class="slider-thumb" id="contrastThumb" style="left:45%"></div>
+              </div>
+              <span class="slider-value" id="contrastValue">45</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">UI 字号</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面基础字号（px）</div></div>
+            <input type="number" id="uiFontSize" value="14" min="12" max="18" style="width:70px;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;text-align:center" onchange="saveFontSize()">
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">减少动态效果</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">降低动画与过渡效果</div></div>
+            <div class="reduced-motion-segment" id="reducedMotionSegment">
+              <button data-value="system" class="active" onclick="setReducedMotion('system')">跟随系统</button>
+              <button data-value="on" onclick="setReducedMotion('on')">开启</button>
+              <button data-value="off" onclick="setReducedMotion('off')">关闭</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">语言 / Language</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面显示语言</div></div>
+            <select id="langSelect" onchange="applyLanguage()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
               <option value="zh-CN">简体中文</option>
               <option value="en">English</option>
               <option value="ko">한국어</option>
             </select>
           </div>
-          <div class="form-row"><label>主题</label>
-            <select id="themeSelect" onchange="applyTheme()"><option value="light">浅色</option><option value="dark">深色</option></select>
+        </div>
+      </div>
+
+      <!-- Config (Codex pattern: unified dropdown rows) -->
+      <div class="panel" id="panel-config">
+        <div class="setting-card">
+          <div class="setting-group-title">AI 与推理</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">AI Provider 策略</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">选择主力模型与降级链路</div></div>
+            <div id="aiProviderDropdown"></div>
           </div>
-          <div class="form-row"><label>强调色</label>
-            <select><option>序境青绿 #0F766E</option><option>CTH蓝 #2563eb</option><option>SYSTEM紫 #7c3aed</option></select>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">输出详细程度</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">控制 AI 回复的篇幅与细节</div></div>
+            <div id="outputDetailDropdown"></div>
           </div>
-          <div class="form-row"><label>字号密度</label>
-            <select><option>紧凑</option><option selected>标准</option><option>宽松</option></select>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">推理摘要</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">推理过程的展示方式</div></div>
+            <div id="reasoningSummaryDropdown"></div>
           </div>
-          <p style="font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.6">语言设置持久化保存，切换后整页即时生效。韩文阶段一为地基版，部分词条回退中文，待母语校对后补全。</p>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">联网方式</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">AI 检索外部信息的策略</div></div>
+            <div id="webSearchDropdown"></div>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">采集与批准</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">采集批准策略</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">高风险采集操作是否需要审批</div></div>
+            <div id="approvalPolicyDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">AI 总开关</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">关闭后全部走本地规则引擎</div></div>
+            <div class="toggle" id="aiEnabledToggle" onclick="toggleAIEnabled()"></div>
+          </div>
+          <div id="configStatusArea" style="margin-top:12px"></div>
         </div>
       </div>
 
@@ -716,6 +948,87 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
 
+      <!-- Browser Settings -->
+      <div class="panel" id="panel-browser">
+        <div class="setting-card">
+          <div class="browser-total-row">
+            <div class="browser-total-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div class="browser-total-info">
+              <div class="browser-total-name">允许系统控制内置浏览器</div>
+              <div class="browser-total-desc">开启后系统可在采集与分析中自动操作内置浏览器</div>
+            </div>
+            <div class="toggle on" id="browserControlToggle" onclick="toggleBrowserControl()"></div>
+          </div>
+          <div class="setting-group-title">常规</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">链接打开位置</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">点击链接时的默认行为</div></div>
+            <div id="linkOpenDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">显示完整网址</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">地址栏显示完整 URL 而非简化域名</div></div>
+            <div class="toggle" id="showFullUrlToggle" onclick="toggleShowFullUrl()"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">浏览数据</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">清除缓存、Cookie 与历史记录</div></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="clearBrowserData()">清除浏览数据</button>
+              <button class="btn btn-secondary btn-sm" onclick="showBrowserHistory()">浏览历史管理</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">批注截图</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">页面截图的保存与批注方式</div></div>
+            <div id="screenshotDropdown"></div>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">自动填充和密码</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">密码管理器</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">查看与管理已保存的登录凭证</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('密码管理器：BLOCKED · 凭证在安全边界内不展示', 'error')">管理</button>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">联系信息</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">表单自动填充的地址与联系方式</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('联系信息：BLOCKED · 功能预留', 'error')">管理</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">下载</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">下载位置</label><div style="font-size:11px;color:#94a3b8;margin-top:2px" id="downloadPathLabel">data/private/browser_downloads</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('下载位置：BLOCKED · 目录固定在安全边界内', 'error')">更改</button>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">下载前询问</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">每次下载前确认保存位置</div></div>
+            <div class="toggle" id="downloadAskToggle" onclick="toggleDownloadAsk()"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">下载历史</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">查看已下载文件列表</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showDownloadHistory()">管理</button>
+          </div>
+        </div>
+        <div id="browserHistoryModal" class="modal-overlay">
+          <div class="modal" style="width:560px">
+            <h3>浏览历史</h3>
+            <div id="browserHistoryList" style="max-height:400px;overflow-y:auto"><div class="loading-spinner"></div></div>
+            <div class="modal-actions">
+              <button class="btn btn-danger btn-sm" onclick="clearBrowserHistory()">清除全部历史</button>
+              <button class="btn btn-secondary" onclick="closeModal('browserHistoryModal')">关闭</button>
+            </div>
+          </div>
+        </div>
+        <div id="downloadHistoryModal" class="modal-overlay">
+          <div class="modal" style="width:560px">
+            <h3>下载历史</h3>
+            <div id="downloadHistoryList" style="max-height:400px;overflow-y:auto"><div class="loading-spinner"></div></div>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" onclick="closeModal('downloadHistoryModal')">关闭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Backup -->
       <div class="panel" id="panel-backup">
         <div class="setting-card">
@@ -735,6 +1048,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <h3><span class="card-icon">📚</span>资料库 / 帮助</h3>
           <div class="form-row"><label>智能资料库</label><a href="/lumenis/intelligence" style="color:#0F766E;font-size:13px">进入 →</a></div>
           <div class="form-row"><label>使用文档</label><span class="form-value">内置帮助</span></div>
+        </div>
+      </div>
+
+      <!-- Integrations / Platform Connections -->
+      <div class="panel" id="panel-integrations">
+        <div class="setting-card">
+          <div class="setting-group-title">采集平台连接状态</div>
+          <p style="font-size:12px;color:#64748b;margin-bottom:12px">各平台 Cookie 与登录态只读展示，凭证在安全边界内不可见。状态实时取自采集器健康检查。</p>
+          <div id="integrationsList"><div class="loading-spinner"></div></div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:#94a3b8" id="integrationsSummary">加载中…</span>
+            <button class="btn btn-secondary btn-sm" onclick="loadIntegrations()">刷新状态</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">状态说明</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#64748b">
+            <span><span class="integration-status verified">VERIFIED</span> 凭证有效，可正常采集</span>
+            <span><span class="integration-status partial">PARTIAL</span> 部分功能受限</span>
+            <span><span class="integration-status expired">EXPIRED</span> 凭证已过期，需重新登录</span>
+            <span><span class="integration-status blocked">BLOCKED</span> 未配置或被平台限制</span>
+          </div>
         </div>
       </div>
 
@@ -801,6 +1136,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="toast" id="toast"></div>
 <script src="/static/js/lumenis-icons.js"></script>
 <script src="/static/js/i18n.js"></script>
+<script src="/static/js/settings-dropdown.js"></script>
+<script src="/static/js/settings-keyboard.js"></script>
 <script src="/static/js/settings.js"></script>
 <script>
 // 线性图标初始化

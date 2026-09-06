@@ -5100,6 +5100,12 @@ def system_settings_page():
     from flask import render_template
     return render_template('system/settings.html')
 
+@app.route('/system/skills')
+def system_skills_page():
+    """Skill 商店页（ChatGPT 插件商店风格）"""
+    from flask import render_template
+    return render_template('system/skill_store.html')
+
 @app.route('/cth/login')
 def cth_login_page():
     """CTH 登录页（账号+密码）"""

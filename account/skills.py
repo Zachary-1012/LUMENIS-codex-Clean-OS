@@ -130,3 +130,134 @@ def get_enabled_skills(product: str = None) -> list:
     skills = list_skills(product=product, status="enabled")
     return [{"skill_id": s["skill_id"], "name": s["name"], "product": s["product"],
              "domain": s["domain"]} for s in skills]
+
+
+# ═══════════════════════════════════════════════════════════════
+# Skill 执行链适配层（桥接 skill_execution_chain）
+# ═══════════════════════════════════════════════════════════════
+
+def get_skill_info(skill_id: str) -> dict:
+    """获取单个 Skill 完整信息（含运行时状态）"""
+    conn = get_db()
+    try:
+        cur = conn.execute("SELECT * FROM skills_registry WHERE skill_id=?", (skill_id,))
+        row = cur.fetchone()
+        if not row:
+            return {}
+        info = dict(row)
+        # 解析 config_json
+        if info.get("config_json"):
+            try:
+                info["config"] = json.loads(info["config_json"])
+            except Exception:
+                info["config"] = {}
+        else:
+            info["config"] = {}
+        # 最近执行状态
+        try:
+            from skill_execution_chain import query_executions
+            execs = query_executions(skill_id=skill_id, limit=1)
+            info["last_execution"] = execs[0] if execs else None
+        except Exception:
+            info["last_execution"] = None
+        return info
+    finally:
+        conn.close()
+
+
+def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
+                      action_type: str = "ANALYZE", user_id: int = None,
+                      user_role: str = "user", product: str = "SYSTEM") -> dict:
+    """执行 Skill（走完整执行链：Permission→Firewall→Effect Fence→Execute→Evidence→Evaluation→Trace）"""
+    from skill_execution_chain import (
+        run_execution_chain, ActionType, SkillRuntimeInfo,
+    )
+    # 获取 Skill 信息用于权限检查
+    info = get_skill_info(skill_id)
+    if not info:
+        return {"success": False, "error": f"skill '{skill_id}' not found", "code": "NOT_FOUND"}
+
+    skill_runtime = SkillRuntimeInfo(
+        skill_id=skill_id,
+        name=info.get("name", skill_id),
+        product=info.get("product", "SYSTEM"),
+        domain=info.get("domain", "global"),
+        enabled=info.get("status") == "enabled",
+        config=info.get("config", {}),
+    )
+
+    # 映射 action_type
+    try:
+        at = ActionType(action_type.upper())
+    except ValueError:
+        at = ActionType.ANALYZE
+
+    ctx = run_execution_chain(
+        skill_id=skill_id,
+        task=task,
+        input_payload=input_payload or {},
+        action_type=at,
+        user_id=user_id,
+        user_role=user_role,
+        product=product,
+        domain=info.get("domain", "global"),
+        skill_info=skill_runtime,
+    )
+
+    return {
+        "success": ctx.status.value == "completed",
+        "execution_id": ctx.execution_id,
+        "status": ctx.status.value,
+        "skill_id": skill_id,
+        "result": ctx.execute_result,
+        "evidence": ctx.evidence,
+        "evaluation": ctx.evaluation,
+        "permission": ctx.permission_result,
+        "firewall": ctx.firewall_result,
+        "effect_fence": ctx.effect_fence_result,
+        "error": ctx.error,
+    }
+
+
+def get_skill_executions(skill_id: str = None, limit: int = 50, status: str = None) -> list:
+    """获取 Skill 执行历史"""
+    from skill_execution_chain import query_executions
+    return query_executions(skill_id=skill_id, limit=limit, status=status)
+
+
+def get_skills_status_light(product: str = None) -> dict:
+    """轻量状态（主界面卡片用，只返回已启用+已注册）"""
+    from skill_execution_chain import get_skills_light_status
+    skills = get_skills_light_status(product=product)
+    # 按类别分组
+    categories = {}
+    for s in skills:
+        cat = _categorize_skill(s)
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(s)
+    return {
+        "total": len(skills),
+        "enabled_count": sum(1 for s in skills if s["status"] == "enabled"),
+        "categories": categories,
+        "skills": skills,
+    }
+
+
+def _categorize_skill(skill: dict) -> str:
+    """按 Skill 特征分类（采集类/分析类/报告类/运营类/开发者工具/系统）"""
+    sid = skill.get("skill_id", "").lower()
+    domain = skill.get("domain", "").lower()
+    name = skill.get("name", "").lower()
+
+    if any(k in sid or k in domain or k in name for k in ("collect", "crawl", "采集", "xhs", "weibo", "bilibili")):
+        return "采集类"
+    if any(k in sid or k in domain or k in name for k in ("analyze", "analysis", "分析", "risk", "ai", "kos", "brand")):
+        return "分析类"
+    if any(k in sid or k in domain or k in name for k in ("report", "报告", "viz", "visual", "可视化")):
+        return "报告类"
+    if any(k in sid or k in domain or k in name for k in ("alert", "告警", "operate", "运营", "library", "智能")):
+        return "运营类"
+    if any(k in sid or k in domain or k in name for k in ("browser", "developer", "开发", "registry", "agent", "boundary")):
+        return "开发者工具"
+    return "系统"

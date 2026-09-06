@@ -33,6 +33,13 @@
     <button class="ch-quick-btn" data-task="查看 Skill 能力" data-i18n="qa_skills">浏览 Skills</button>
   </div>
 
+  <!-- Skill Lightweight Entry — 已启用 Skill 横排小图标（点击展开） -->
+  <div class="ch-skill-strip" id="chSkillStrip" style="display:none">
+    <div class="ch-skill-strip-label">Skills</div>
+    <div class="ch-skill-strip-icons" id="chSkillIcons"></div>
+    <a class="ch-skill-strip-more" href="/system/skills">全部</a>
+  </div>
+
   <!-- Status Badges — Global Context -->
   <div class="ch-badges">
     <span class="ch-badge"><span class="lm-dot lm-dot--success"></span><span data-i18n="badge_ready">AI Ready</span></span>
@@ -348,6 +355,61 @@
   .ch-subtitle { font-size: 13px; }
   .ch-metric-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+  /* Skill 轻量入口 */
+  .ch-skill-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 14px;
+  }
+  [data-theme="dark"] .ch-skill-strip {
+    background: rgba(30,30,30,0.5);
+    border-color: rgba(255,255,255,0.06);
+  }
+  .ch-skill-strip-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6e6e80;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .ch-skill-strip-icons {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .ch-skill-strip-icons::-webkit-scrollbar { display: none; }
+  .ch-skill-mini {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .ch-skill-mini:hover { transform: scale(1.12); }
+  .ch-skill-strip-more {
+    font-size: 11px;
+    color: #10a37f;
+    text-decoration: none;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .ch-skill-strip-more:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 

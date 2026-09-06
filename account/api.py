@@ -38,6 +38,7 @@ from .nav_config import (
 )
 from .skills import (
     list_skills, set_skill_status, configure_skill, add_custom_skill, get_enabled_skills,
+    get_skill_info, execute_skill_api, get_skill_executions, get_skills_status_light,
 )
 
 account_bp = Blueprint("account", __name__, url_prefix="/api/system/account")
@@ -625,6 +626,54 @@ def api_add_skill():
         domain=data.get("domain", "global"),
     )
     return jsonify(result), 201 if result["success"] else 400
+
+
+@account_bp.route("/skills/<skill_id>/execute", methods=["POST"])
+@require_auth
+def api_execute_skill(skill_id):
+    """执行 Skill（走完整执行链：Permission→Firewall→Effect Fence→Execute→Evidence→Evaluation→Trace）"""
+    data = request.get_json(silent=True) or {}
+    user = g.current_user
+    result = execute_skill_api(
+        skill_id=skill_id,
+        task=data.get("task", ""),
+        input_payload=data.get("input", {}),
+        action_type=data.get("action_type", "ANALYZE"),
+        user_id=user.get("id"),
+        user_role=user.get("role", "user"),
+        product=data.get("product", "SYSTEM"),
+    )
+    status_code = 200 if result.get("success") else (404 if result.get("code") == "NOT_FOUND" else 400)
+    return jsonify(result), status_code
+
+
+@account_bp.route("/skills/<skill_id>/executions", methods=["GET"])
+@require_auth
+def api_skill_executions(skill_id):
+    """Skill 执行历史"""
+    limit = int(request.args.get("limit", 50))
+    status = request.args.get("status")
+    execs = get_skill_executions(skill_id=skill_id, limit=limit, status=status)
+    return jsonify({"ok": True, "skill_id": skill_id, "executions": execs, "total": len(execs)})
+
+
+@account_bp.route("/skills/status", methods=["GET"])
+@require_auth
+def api_skills_status():
+    """轻量状态（主界面小卡片用，函数驱动真实数据）"""
+    product = request.args.get("product")
+    status = get_skills_status_light(product=product)
+    return jsonify({"ok": True, **status})
+
+
+@account_bp.route("/skills/<skill_id>", methods=["GET"])
+@require_auth
+def api_get_skill_detail(skill_id):
+    """单个 Skill 详情（含配置+最近执行）"""
+    info = get_skill_info(skill_id)
+    if not info:
+        return jsonify({"ok": False, "error": "skill not found"}), 404
+    return jsonify({"ok": True, "skill": info})
 
 
 # ──────────────────────────────────────────────

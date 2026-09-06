@@ -71,6 +71,10 @@ class SkillMetadata:
     tags: List[str] = field(default_factory=list)
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     prohibited_actions: List[str] = field(default_factory=lambda: list(SKILL_PROHIBITIONS))
+    product: str = "SYSTEM"
+    domain: str = "global"
+    cross_domain_allowed: List[str] = field(default_factory=list)
+    category: str = "系统"
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -275,6 +279,7 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only subject authority status (counts only)",
             tags=["subject", "readonly", "authority"],
+            product="SYSTEM", domain="global", category="开发者工具",
         ),
         SkillMetadata(
             skill_id="zbc.skill_registry_snapshot",
@@ -289,6 +294,7 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only skill registry stats snapshot",
             tags=["registry", "readonly"],
+            product="SYSTEM", domain="global", category="开发者工具",
         ),
         SkillMetadata(
             skill_id="zbc.agent_boundary_audit",
@@ -303,6 +309,7 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only agent boundary and permission audit",
             tags=["agent", "audit", "boundary"],
+            product="SYSTEM", domain="global", category="开发者工具",
         ),
     ]
     for b in builtins:
