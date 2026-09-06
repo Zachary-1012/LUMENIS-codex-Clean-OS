@@ -400,6 +400,206 @@ def api_ai_learning_optimization(operation_type):
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+# ═══════════════════════════════════════════════════════════════
+# AI Task Engine API（Production-Ready）
+# 调用链：User → Task → Parser → Intent → Agent → Skill → Permission → Execution → Evidence → Verification → Trace
+# ═══════════════════════════════════════════════════════════════
+
+def _get_engine():
+    """延迟获取 TaskEngine 单例。"""
+    from ai_task_engine import get_task_engine
+    return get_task_engine()
+
+
+@bp.route('/api/ai/tasks', methods=['POST'])
+def api_ai_tasks_create():
+    """创建 AI Task。
+    Body: {"input": "用户自然语言", "context": {...}, "created_by": "user"}
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        user_input = data.get('input', '')
+        context = data.get('context', {})
+        created_by = data.get('created_by', 'system')
+        if not user_input or not user_input.strip():
+            return jsonify({'ok': False, 'error': 'input is required'}), 400
+        engine = _get_engine()
+        task = engine.create_task(user_input, context=context, created_by=created_by)
+        return jsonify({'ok': True, 'task': task})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/tasks/<task_id>', methods=['GET'])
+def api_ai_tasks_get(task_id):
+    """查询任务状态。"""
+    try:
+        engine = _get_engine()
+        task = engine.get_task(task_id)
+        if not task:
+            return jsonify({'ok': False, 'error': 'task not found'}), 404
+        return jsonify({'ok': True, 'task': task})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/tasks/<task_id>/run', methods=['POST'])
+def api_ai_tasks_run(task_id):
+    """执行任务（完整调用链：parse → agent → skill → permission → execute）。"""
+    try:
+        engine = _get_engine()
+        task = engine.get_task(task_id)
+        if not task:
+            return jsonify({'ok': False, 'error': 'task not found'}), 404
+        result = engine.run_task(task_id)
+        return jsonify({'ok': True, 'task': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/tasks/<task_id>/steps', methods=['GET'])
+def api_ai_tasks_steps(task_id):
+    """查询执行步骤时间线。"""
+    try:
+        engine = _get_engine()
+        steps = engine.get_steps(task_id)
+        return jsonify({'ok': True, 'steps': steps, 'count': len(steps)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/tasks/<task_id>/evidence', methods=['GET'])
+def api_ai_tasks_evidence(task_id):
+    """查询证据列表。"""
+    try:
+        engine = _get_engine()
+        evidence = engine.get_evidence(task_id)
+        return jsonify({'ok': True, 'evidence': evidence, 'count': len(evidence)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/tasks/<task_id>/approve', methods=['POST'])
+def api_ai_tasks_approve(task_id):
+    """人工审批通过。
+    Body: {"approved_by": "user", "note": "审批说明"}
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        approved_by = data.get('approved_by', 'human')
+        note = data.get('note', '')
+        engine = _get_engine()
+        result = engine.approve_task(task_id, approved_by=approved_by, approval_note=note)
+        return jsonify({'ok': True, 'task': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/tasks/<task_id>/cancel', methods=['POST'])
+def api_ai_tasks_cancel(task_id):
+    """取消任务。"""
+    try:
+        engine = _get_engine()
+        result = engine.cancel_task(task_id)
+        return jsonify({'ok': True, 'task': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/tasks', methods=['GET'])
+def api_ai_tasks_list():
+    """列出任务（支持 ?status=&limit=&offset=）。"""
+    try:
+        status = request.args.get('status')
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+        engine = _get_engine()
+        tasks = engine.list_tasks(status=status, limit=limit, offset=offset)
+        return jsonify({'ok': True, 'tasks': tasks, 'count': len(tasks)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/skills', methods=['GET'])
+def api_ai_skills():
+    """可用 Skill 列表。"""
+    try:
+        from skill_registry import get_skill_registry
+        reg = get_skill_registry()
+        skills = [s.to_dict() for s in reg.list_all()]
+        return jsonify({'ok': True, 'skills': skills, 'stats': reg.stats()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/agents', methods=['GET'])
+def api_ai_agents():
+    """可用 Agent 列表。"""
+    try:
+        from ai_agent_registry import get_agent_registry
+        reg = get_agent_registry()
+        agents = [a.to_dict() for a in reg.list_all()]
+        return jsonify({'ok': True, 'agents': agents, 'stats': reg.stats()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/capabilities', methods=['GET'])
+def api_ai_capabilities():
+    """能力清单（Intent + Agent + Skill + 熔断状态 + OSAI边界）。"""
+    try:
+        engine = _get_engine()
+        caps = engine.get_capabilities()
+        return jsonify({'ok': True, 'capabilities': caps})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/trace', methods=['GET'])
+def api_ai_trace():
+    """调用链查询（支持 ?task_id=&limit=）。"""
+    try:
+        task_id = request.args.get('task_id')
+        limit = int(request.args.get('limit', 100))
+        engine = _get_engine()
+        traces = engine.get_trace(task_id=task_id, limit=limit)
+        return jsonify({'ok': True, 'traces': traces, 'count': len(traces)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/permissions', methods=['GET'])
+def api_ai_permissions():
+    """当前用户权限矩阵。"""
+    try:
+        engine = _get_engine()
+        perms = engine.get_permissions()
+        return jsonify({'ok': True, 'permissions': perms})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/task-engine/health', methods=['GET'])
+def api_ai_task_engine_health():
+    """Task Engine 健康检查。"""
+    try:
+        engine = _get_engine()
+        return jsonify({'ok': True, 'health': engine.health_check()})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/ai/task-engine/dlq', methods=['GET'])
+def api_ai_task_engine_dlq():
+    """死信队列查询。"""
+    try:
+        engine = _get_engine()
+        dlq = engine.get_dlq()
+        return jsonify({'ok': True, 'dlq': dlq, 'count': len(dlq)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 def register_ai_api(app):
     """注册 AI API 蓝图。"""
     app.register_blueprint(bp)

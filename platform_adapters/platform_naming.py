@@ -45,6 +45,19 @@ PLATFORM_ALIASES: Dict[str, str] = {
     "facebook": "facebook", "fb": "facebook",
     # X / Twitter
     "x": "x", "twitter": "x", "tweet": "x",
+    # 视频号（微信视频号，无公开API，部分字段unavailable）
+    "channels": "channels", "wechat_channels": "channels", "shipinhao": "channels",
+    "weixin_channels": "channels", "视频号": "channels",
+    # YouTube
+    "youtube": "youtube", "yt": "youtube", "youtube_v3": "youtube",
+    # TikTok
+    "tiktok": "tiktok", "tt": "tiktok", "douyin_intl": "tiktok",
+    # Reddit
+    "reddit": "reddit", "rd": "reddit",
+    # LinkedIn
+    "linkedin": "linkedin", "ln": "linkedin",
+    # GitHub
+    "github": "github", "gh": "github",
 }
 
 # canonical → 标准展示名（中/英/韩三语由 i18n 层处理，这里给中文名）
@@ -52,6 +65,8 @@ PLATFORM_DISPLAY_NAME: Dict[str, str] = {
     "xiaohongshu": "小红书", "douyin": "抖音", "kuaishou": "快手", "weibo": "微博",
     "bilibili": "B站", "zhihu": "知乎", "tieba": "贴吧",
     "instagram": "Instagram", "facebook": "Facebook", "x": "X",
+    "channels": "视频号", "youtube": "YouTube", "tiktok": "TikTok",
+    "reddit": "Reddit", "linkedin": "LinkedIn", "github": "GitHub",
 }
 
 # 平台区域（小红书区分大陆/港版 RedNote，同源不同通道）
@@ -157,6 +172,49 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         published_at="create_time", like_field="agree_count", comment_field="reply_num",
         collect_field=None, share_field="share_count",
         url_template="https://tieba.baidu.com/p/{content_id}"),
+    # ---- V1.0 新增6平台 ----
+    "channels": PlatformFieldSpec(
+        content_id="object_id", author_id="author_id",
+        published_at="create_time", like_field="like_count", comment_field="comment_count",
+        collect_field="collect_count", share_field="share_count",
+        type_field="media_type",
+        url_template="",
+        notes="视频号无公开API，comment/share/collect/view等字段可能unavailable；object_id为平台原生对象ID"),
+    "youtube": PlatformFieldSpec(
+        content_id="video_id", author_id="channel_id",
+        published_at="published_at", like_field="like_count", comment_field="comment_count",
+        collect_field="favorite_count", share_field="share_count",
+        type_field="media_type",
+        url_template="https://www.youtube.com/watch?v={content_id}",
+        notes="YouTube Data API v3；duration为ISO 8601格式(PTxxMxxS)；view_count为观看数"),
+    "tiktok": PlatformFieldSpec(
+        content_id="video_id", author_id="author_id", id_is_bigint=True,
+        published_at="create_time", like_field="digg_count", comment_field="comment_count",
+        collect_field="collect_count", share_field="share_count",
+        type_field="media_type",
+        url_template="https://www.tiktok.com/@{author_username}/video/{content_id}",
+        notes="TikTok；digg_count=点赞；author_username为@用户名；video_id为BigInt字符串保精度"),
+    "reddit": PlatformFieldSpec(
+        content_id="post_id", author_id="author_fullname",
+        published_at="created_utc", like_field="score", comment_field="num_comments",
+        collect_field=None, share_field="num_crossposts",
+        type_field="post_hint",
+        url_template="https://www.reddit.com{permalink}",
+        notes="Reddit；score=upvotes-downvotes；created_utc为Unix时间戳(float)；upvote_ratio为点赞比例"),
+    "linkedin": PlatformFieldSpec(
+        content_id="post_id", author_id="author_id",
+        published_at="created_at", like_field="like_count", comment_field="comment_count",
+        collect_field=None, share_field="share_count",
+        type_field="share_type",
+        url_template="",
+        notes="LinkedIn；post_id为URN格式(urn:li:activity:xxx)；impression_count为展示数；需官方API权限"),
+    "github": PlatformFieldSpec(
+        content_id="repo_id", author_id="owner_id",
+        published_at="created_at", like_field="stargazers_count", comment_field="open_issues_count",
+        collect_field=None, share_field="forks_count",
+        type_field="object_type",
+        url_template="https://github.com/{full_name}",
+        notes="GitHub REST API v3；按原生对象模型分repositories/issues/pull_requests/releases四表；repo_id为INTEGER"),
 }
 
 
@@ -323,3 +381,338 @@ def get_platform_aliases(canonical_name: Optional[str]) -> List[str]:
         return []
     aliases = [alias for alias, target in PLATFORM_ALIASES.items() if target == canon]
     return aliases
+
+
+# ============================================================
+# 6. V1.0 新增：12平台 Raw 表 Schema 注册
+# ============================================================
+# 每个平台的 Raw 层表名清单（与数据库迁移脚本一一对应）
+PLATFORM_RAW_TABLES: Dict[str, Dict[str, str]] = {
+    "xiaohongshu": {"content": "xhs_notes", "comment": "xhs_note_comments", "user": "xhs_users"},
+    "douyin": {"content": "douyin_videos", "comment": "douyin_comments", "user": "douyin_users"},
+    "bilibili": {"content": "bilibili_videos", "comment": "bilibili_comments", "user": "bilibili_users"},
+    "channels": {"content": "channels_videos", "comment": "channels_comments", "user": None},
+    "youtube": {"content": "youtube_videos", "comment": "youtube_comments", "user": "youtube_channels"},
+    "tiktok": {"content": "tiktok_videos", "comment": "tiktok_comments", "user": "tiktok_users"},
+    "instagram": {"content": "instagram_media", "comment": "instagram_comments", "user": "instagram_users"},
+    "x": {"content": "x_posts", "comment": None, "user": "x_users"},
+    "reddit": {"content": "reddit_posts", "comment": "reddit_comments", "user": "reddit_subreddits"},
+    "linkedin": {"content": "linkedin_posts", "comment": None, "user": "linkedin_users"},
+    "github": {"content": "github_repositories", "comment": "github_issues", "user": None},
+    "zhihu": {"content": "zhihu_answers", "comment": "zhihu_comments", "user": None},
+}
+
+# 12平台标准清单（数据字典V1.0定义）
+V1_PLATFORMS: List[str] = [
+    "xiaohongshu", "douyin", "bilibili", "channels",
+    "youtube", "tiktok", "instagram", "x",
+    "reddit", "linkedin", "github", "zhihu",
+]
+
+
+def get_raw_table(platform: Optional[str], table_type: str = "content") -> Optional[str]:
+    """获取平台 Raw 层表名。table_type: content/comment/user。"""
+    canon = normalize_platform(platform)
+    if canon is None or canon not in PLATFORM_RAW_TABLES:
+        return None
+    return PLATFORM_RAW_TABLES[canon].get(table_type)
+
+
+# ============================================================
+# 7. V1.0 新增：全字段映射（Raw → Normalized platform_contents）
+# ============================================================
+# 每个平台 Raw 内容表字段 → platform_contents 统一字段的完整映射
+# 仅列需要映射的字段，raw_data 整体保留
+PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
+    "xiaohongshu": {
+        "platform_content_id": "note_id", "content_type": "type",
+        "author_id": "user_id", "author_name": "nickname",
+        "title": "title", "content": "desc",
+        "published_at": "time", "url": "url",
+        "like_count": "liked_count", "comment_count": "comment_count",
+        "share_count": "share_count", "collect_count": "collected_count",
+        "topic_list": "tag_list", "media_list": "image_list",
+    },
+    "douyin": {
+        "platform_content_id": "aweme_id", "content_type": "aweme_type",
+        "author_id": "author_id", "author_name": "nickname",
+        "title": "desc", "content": "desc",
+        "published_at": "create_time", "url": "url",
+        "like_count": "digg_count", "comment_count": "comment_count",
+        "share_count": "share_count", "collect_count": "collect_count",
+        "view_count": "play_count", "hashtag_list": "hashtag_list",
+        "location": "location",
+    },
+    "bilibili": {
+        "platform_content_id": "bvid", "content_type": "tname",
+        "author_id": "owner_mid", "author_name": "owner_name",
+        "title": "title", "content": "description",
+        "published_at": "pubdate", "url": "url",
+        "like_count": "like", "comment_count": "reply",
+        "share_count": "share", "collect_count": "favorite",
+        "view_count": "view",
+    },
+    "channels": {
+        "platform_content_id": "object_id",
+        "author_id": "author_id", "author_name": "author_name",
+        "title": "desc", "content": "desc",
+        "published_at": "create_time", "url": "url",
+        "like_count": "like_count", "comment_count": "comment_count",
+        "share_count": "share_count", "collect_count": "collect_count",
+        "view_count": "view_count", "location": "location",
+    },
+    "youtube": {
+        "platform_content_id": "video_id", "content_type": "media_type",
+        "author_id": "channel_id", "author_name": "channel_title",
+        "title": "title", "content": "description",
+        "published_at": "published_at", "url": "url",
+        "like_count": "like_count", "comment_count": "comment_count",
+        "collect_count": "favorite_count", "view_count": "view_count",
+        "hashtag_list": "tags", "language": "default_language",
+    },
+    "tiktok": {
+        "platform_content_id": "video_id",
+        "author_id": "author_id", "author_name": "author_username",
+        "title": "desc", "content": "desc",
+        "published_at": "create_time", "url": "url",
+        "like_count": "digg_count", "comment_count": "comment_count",
+        "share_count": "share_count", "collect_count": "collect_count",
+        "view_count": "play_count", "hashtag_list": "hashtag_list",
+    },
+    "instagram": {
+        "platform_content_id": "media_id", "content_type": "media_type",
+        "author_id": "author_id", "author_name": "author_username",
+        "title": "caption", "content": "caption",
+        "published_at": "taken_at", "url": "permalink",
+        "like_count": "like_count", "comment_count": "comment_count",
+        "hashtag_list": "hashtags", "mention_list": "mentions",
+        "media_list": "children", "location": "location",
+    },
+    "x": {
+        "platform_content_id": "tweet_id", "content_type": "tweet_type",
+        "author_id": "author_id", "author_name": "author_username",
+        "title": "text", "content": "text",
+        "published_at": "created_at", "url": "url",
+        "like_count": "like_count", "comment_count": "reply_count",
+        "share_count": "retweet_count", "view_count": "impression_count",
+        "hashtag_list": "hashtag_list", "mention_list": "mention_list",
+    },
+    "reddit": {
+        "platform_content_id": "post_id", "content_type": "post_hint",
+        "author_id": "author_fullname", "author_name": "author",
+        "title": "title", "content": "selftext",
+        "published_at": "created_utc", "url": "permalink",
+        "like_count": "score", "comment_count": "num_comments",
+        "share_count": "num_crossposts",
+    },
+    "linkedin": {
+        "platform_content_id": "post_id",
+        "author_id": "author_id", "author_name": "author_name",
+        "title": "commentary", "content": "commentary",
+        "published_at": "created_at", "url": "url",
+        "like_count": "like_count", "comment_count": "comment_count",
+        "share_count": "share_count", "view_count": "impression_count",
+    },
+    "github": {
+        "platform_content_id": "repo_id", "content_type": "object_type",
+        "author_id": "owner_id", "author_name": "owner",
+        "title": "name", "content": "description",
+        "published_at": "created_at", "url": "homepage",
+        "like_count": "stargazers_count", "comment_count": "open_issues_count",
+        "share_count": "forks_count", "view_count": "watchers_count",
+    },
+    "zhihu": {
+        "platform_content_id": "answer_id", "content_type": "answer_type",
+        "author_id": "author_id", "author_name": "author_name",
+        "title": "question_title", "content": "content",
+        "published_at": "created_time", "url": "url",
+        "like_count": "voteup_count", "comment_count": "comment_count",
+        "collect_count": "favlists_count",
+    },
+}
+
+
+def map_raw_to_normalized(raw_record: Dict[str, Any], platform: Optional[str] = None) -> Dict[str, Any]:
+    """V1.0：将平台 Raw 记录完整映射为 platform_contents 统一字段。
+
+    与 to_canonical_record() 的区别：
+    - to_canonical_record() 是早期轻量映射（仅核心字段）
+    - map_raw_to_normalized() 是 V1.0 完整映射（覆盖 platform_contents 全部字段）
+
+    缺失字段值为 None（显式缺失，不填0/未知），raw_data 整体保留。
+    """
+    plat = normalize_platform(platform or raw_record.get("source_platform") or raw_record.get("platform"))
+    # platform_contents 全部字段
+    normalized: Dict[str, Any] = {
+        "platform": plat, "platform_content_id": None, "content_type": None,
+        "author_id": None, "author_name": None, "title": None, "content": None,
+        "published_at": None, "url": None,
+        "like_count": None, "comment_count": None, "share_count": None,
+        "collect_count": None, "view_count": None,
+        "topic_list": None, "hashtag_list": None, "mention_list": None,
+        "media_list": None, "language": None, "location": None,
+        "raw_data": raw_record, "collected_at": raw_record.get("collected_at"),
+    }
+    if plat and plat in PLATFORM_FIELD_MAPPING:
+        mapping = PLATFORM_FIELD_MAPPING[plat]
+        for norm_key, raw_key in mapping.items():
+            if raw_key in raw_record:
+                normalized[norm_key] = raw_record[raw_key]
+    return normalized
+
+
+# ============================================================
+# 8. V1.0 新增：平台接入状态注册
+# ============================================================
+@dataclass(frozen=True)
+class PlatformConnectionStatus:
+    """平台接入状态（决定前端是否可见）。"""
+    status: str                    # ACTIVE / PARTIAL / PLANNED / PENDING_CONNECTION / DEPRECATED
+    ui_visible: bool               # 前端是否显示（status=ACTIVE时为true）
+    has_collector: bool            # 是否有真实采集器
+    has_api_routes: bool           # 是否有API路由
+    has_real_data: bool            # DB中是否有真实数据
+    raw_tables: List[str]          # Raw层表名列表
+    adapter_module: Optional[str]  # Adapter模块路径
+    notes: str = ""
+
+
+PLATFORM_CONNECTION: Dict[str, PlatformConnectionStatus] = {
+    "xiaohongshu": PlatformConnectionStatus(
+        status="ACTIVE", ui_visible=True, has_collector=True, has_api_routes=True,
+        has_real_data=True, raw_tables=["xhs_notes", "xhs_note_comments", "xhs_users"],
+        adapter_module="platform_adapters.xhs",
+        notes="主力采集平台，Playwright/CDP完整链路，963+条真实数据"),
+    "douyin": PlatformConnectionStatus(
+        status="PARTIAL", ui_visible=True, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["douyin_videos", "douyin_comments", "douyin_users"],
+        adapter_module="platform_adapters.douyin",
+        notes="有Adapter骨架引用v4引擎，enabled=False，无运行中采集管道"),
+    "bilibili": PlatformConnectionStatus(
+        status="PARTIAL", ui_visible=True, has_collector=False, has_api_routes=True,
+        has_real_data=False, raw_tables=["bilibili_videos", "bilibili_comments", "bilibili_users"],
+        adapter_module="platform_adapters.bilibili",
+        notes="有登录管理+搜索API，但搜索结果未入库，无完整采集管道"),
+    "channels": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["channels_videos", "channels_comments"],
+        adapter_module=None,
+        notes="视频号无公开API，需微信生态特殊入口，部分字段unavailable"),
+    "youtube": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["youtube_videos", "youtube_comments", "youtube_channels"],
+        adapter_module=None,
+        notes="有Data API v3可接入，待配置API Key"),
+    "tiktok": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["tiktok_videos", "tiktok_comments", "tiktok_users"],
+        adapter_module=None,
+        notes="待接入"),
+    "instagram": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["instagram_media", "instagram_comments", "instagram_users"],
+        adapter_module="platform_adapters.instagram",
+        notes="有较完整Adapter骨架(235行)，但无运行中采集"),
+    "x": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["x_posts", "x_users"],
+        adapter_module="platform_adapters.x_platform",
+        notes="有Adapter骨架(95行)，待接入API"),
+    "reddit": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["reddit_posts", "reddit_comments", "reddit_subreddits"],
+        adapter_module=None,
+        notes="有公开API，待接入"),
+    "linkedin": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["linkedin_posts", "linkedin_users"],
+        adapter_module=None,
+        notes="需官方API权限，待接入"),
+    "github": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["github_repositories", "github_issues", "github_pull_requests", "github_releases"],
+        adapter_module=None,
+        notes="有REST API v3可接入，按原生对象模型分4表"),
+    "zhihu": PlatformConnectionStatus(
+        status="PLANNED", ui_visible=False, has_collector=False, has_api_routes=False,
+        has_real_data=False, raw_tables=["zhihu_answers", "zhihu_questions", "zhihu_articles", "zhihu_comments"],
+        adapter_module="platform_adapters.zhihu",
+        notes="有Adapter骨架(124行)，待接入"),
+}
+
+
+def get_connection_status(platform: Optional[str]) -> Optional[PlatformConnectionStatus]:
+    """获取平台接入状态。"""
+    canon = normalize_platform(platform)
+    if canon is None:
+        return None
+    return PLATFORM_CONNECTION.get(canon)
+
+
+def get_ui_visible_platforms() -> List[str]:
+    """获取前端可见的平台列表（ui_visible=True）。"""
+    return [p for p, s in PLATFORM_CONNECTION.items() if s.ui_visible]
+
+
+def get_all_platforms_with_status() -> List[Dict[str, Any]]:
+    """获取所有平台及其接入状态（用于系统设置/运营管理页）。"""
+    result = []
+    for p in V1_PLATFORMS:
+        s = PLATFORM_CONNECTION.get(p)
+        if s:
+            result.append({
+                "platform": p,
+                "display_name": PLATFORM_DISPLAY_NAME.get(p, p),
+                "status": s.status,
+                "ui_visible": s.ui_visible,
+                "has_collector": s.has_collector,
+                "has_api_routes": s.has_api_routes,
+                "has_real_data": s.has_real_data,
+                "raw_tables": s.raw_tables,
+                "adapter_module": s.adapter_module,
+                "notes": s.notes,
+            })
+    return result
+
+
+# ============================================================
+# 9. V1.0 新增：互动量统一计算
+# ============================================================
+def calculate_engagement(
+    like_count: Optional[int] = None,
+    collect_count: Optional[int] = None,
+    comment_count: Optional[int] = None,
+    share_count: Optional[int] = None,
+) -> Optional[int]:
+    """统一互动量 = 点赞 + 收藏 + 评论 + 分享。
+
+    与现有笔记报告计算逻辑一致。
+    - view_count/play_count 不计入互动量（属于曝光指标）
+    - 所有输入为None时返回None（显式缺失，不返回0）
+    - 部分为None时，仅累加有值的字段
+    """
+    values = [v for v in (like_count, collect_count, comment_count, share_count) if v is not None]
+    if not values:
+        return None
+    return sum(values)
+
+
+def calculate_engagement_rate(engagement: Optional[int], follower_count: Optional[int]) -> Optional[float]:
+    """互动率 = 互动量 / 粉丝数。
+
+    - follower_count 为 None 或 <= 0 时返回 None
+    - engagement 为 None 时返回 None
+    """
+    if engagement is None or follower_count is None or follower_count <= 0:
+        return None
+    return round(engagement / follower_count, 6)
+
+
+def engagement_from_normalized(record: Dict[str, Any]) -> Optional[int]:
+    """从 platform_contents 统一记录计算互动量。"""
+    return calculate_engagement(
+        like_count=record.get("like_count"),
+        collect_count=record.get("collect_count"),
+        comment_count=record.get("comment_count"),
+        share_count=record.get("share_count"),
+    )

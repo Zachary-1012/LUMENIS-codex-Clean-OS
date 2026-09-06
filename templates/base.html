@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
   <meta charset="UTF-8">
@@ -10,6 +10,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-design-v1.1.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/xujing-core.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-layout-v1.1.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/lumenis-global-design.css') }}">
+  <!-- G Shard: Adaptive UI + Motion System（在lumenis设计系统之后加载，增量扩展不冲突） -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/adaptive-layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/adaptive-components.css') }}">
   {% block head %}{% endblock %}
   <style>
   /* Language Switcher */
@@ -97,6 +101,9 @@
         </a>
         <a class="zbc-nav-item {% if active_nav=='cth_reports' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_reports') }}">
           <span class="zbc-nav-item__icon" data-icon="report" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.reports">Reports</span>
+        </a>
+        <a class="zbc-nav-item {% if active_nav=='cth_data_center' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_data_center') }}">
+          <span class="zbc-nav-item__icon" data-icon="database" data-icon-size="18"></span><span class="zbc-nav-item__label">Data Center</span>
         </a>
         <!-- ZBMP 入口（CTH域内） -->
         <div class="zbc-nav-divider" style="height:1px;background:#e2e8f0;margin:8px 16px"></div>
@@ -193,6 +200,10 @@
 <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='js/terminology.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-core.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/lumenis-motion-engine.js') }}"></script>
+  <!-- G Shard: Adaptive Engine + Motion System -->
+  <script src="{{ url_for('static', filename='js/adaptive-engine.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/adaptive-motion.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-data.js') }}"></script>
 <script src="{{ url_for('static', filename='js/domain-context.js') }}"></script>
 <script src="{{ url_for('static', filename='js/zbmp-entry.js') }}"></script>

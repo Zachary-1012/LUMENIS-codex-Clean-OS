@@ -17,6 +17,32 @@
 {% endblock %}
 
 {% block content %}
+<!-- Platform Header with brand color -->
+<section class="ld-platform-header ld-platform-header--xhs" style="margin-bottom:20px;">
+  <div class="ld-platform-icon ld-platform-icon--xhs">RED</div>
+  <div style="flex:1;min-width:0;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <h2 style="font-size:20px;font-weight:700;margin:0;letter-spacing:-0.3px;">小红书 Xiaohongshu</h2>
+      <span class="zbc-tag zbc-tag--info" style="font-size:10px;">note_id + xsec_token</span>
+    </div>
+    <div style="font-size:12px;color:var(--l-text-secondary,#6B7280);">广州太古汇主体舆情采集 · 只读模式 · 官方账号保护中</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+    <div style="text-align:center;">
+      <div class="ld-kpi-value ld-kpi-value--sm" id="xhs-kpi-total" style="font-size:24px;" ld-count-up ld-value="0">—</div>
+      <div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">采集总数</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="ld-kpi-value ld-kpi-value--sm" id="xhs-kpi-canonical" style="font-size:24px;color:#8B5CF6;" ld-count-up ld-value="0">—</div>
+      <div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">入库笔记</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="ld-kpi-value ld-kpi-value--sm" id="xhs-kpi-comments" style="font-size:24px;color:#00D4AA;" ld-count-up ld-value="0">—</div>
+      <div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">评论数</div>
+    </div>
+  </div>
+</section>
+
 <div class="zbc-degraded-banner" id="xhs-degraded-banner" style="display:none;">
   <span>⚠</span><span id="xhs-degraded-msg">部分数据延迟，已加载数据正常显示</span>
 </div>
@@ -49,26 +75,35 @@
   <div class="xhs-tab-panel" id="xhs-tab-status">
     <div class="zbc-card__body">
       <!-- Dedup (xjViz.kpi driven) -->
-      <div style="margin-bottom:20px;">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">去重统计 (content_hash + platform_id)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-          <div style="background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;padding:14px;text-align:center;">
-            <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">采集前</div>
-            <div style="font-size:22px;font-weight:700;color:var(--l-text,#0D0D0D);font-variant-numeric:tabular-nums;" id="xhs-dedup-before">—</div>
+      <div style="margin-bottom:24px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          <span style="width:3px;height:14px;background:var(--ld-gradient-purple-blue);border-radius:2px;"></span>
+          去重统计 <span style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);font-weight:400;">content_hash + platform_id 复合键</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <div class="ld-kpi-card">
+            <div class="ld-kpi-label">采集前 Raw</div>
+            <div class="ld-kpi-value" id="xhs-dedup-before" ld-count-up ld-value="0">—</div>
+            <div class="ld-kpi-sub">原始采集量</div>
           </div>
-          <div style="background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;padding:14px;text-align:center;">
-            <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">去重后</div>
-            <div style="font-size:22px;font-weight:700;color:#2563EB;font-variant-numeric:tabular-nums;" id="xhs-dedup-after">—</div>
+          <div class="ld-kpi-card">
+            <div class="ld-kpi-label">去重后 Canonical</div>
+            <div class="ld-kpi-value" style="color:#8B5CF6;" id="xhs-dedup-after" ld-count-up ld-value="0">—</div>
+            <div class="ld-kpi-sub">规范化入库</div>
           </div>
-          <div style="background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.15);border-radius:8px;padding:14px;text-align:center;">
-            <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">去重率</div>
-            <div style="font-size:22px;font-weight:700;color:#2563EB;font-variant-numeric:tabular-nums;" id="xhs-dedup-rate">—</div>
+          <div class="ld-kpi-card" style="background:linear-gradient(135deg,rgba(139,92,246,0.04),rgba(59,130,246,0.04));border-color:rgba(139,92,246,0.15);">
+            <div class="ld-kpi-label">去重率 Dedup Rate</div>
+            <div class="ld-kpi-value" style="color:#6366F1;" id="xhs-dedup-rate">—</div>
+            <div class="ld-kpi-sub">去重 / 采集前</div>
           </div>
         </div>
       </div>
       <!-- Quality Gate 5 Steps -->
       <div style="margin-bottom:20px;">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">采集质量门禁 (5步)</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          <span style="width:3px;height:14px;background:var(--ld-gradient-mint);border-radius:2px;"></span>
+          采集质量门禁 <span style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);font-weight:400;">5步流水线</span>
+        </div>
         <div style="display:flex;flex-direction:column;gap:8px;" id="xhs-quality-gate"></div>
       </div>
       <!-- Recent Logs -->
@@ -84,6 +119,13 @@
   <!-- Tab: 笔记管理 (xjViz.table driven) -->
   <div class="xhs-tab-panel" id="xhs-tab-notes" style="display:none;">
     <div class="zbc-card__body" style="padding:0;overflow-x:auto;">
+      <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--l-border-light,#F0F0F0);">
+        <div style="font-size:13px;font-weight:600;">笔记列表</div>
+        <div class="ld-tabs" style="padding:3px;">
+          <button class="ld-tab is-active" onclick="xhsSetView('table')" style="padding:5px 12px;font-size:11px;">表格</button>
+          <button class="ld-tab" onclick="xhsSetView('card')" style="padding:5px 12px;font-size:11px;">卡片</button>
+        </div>
+      </div>
       <div class="zbc-state-loading" id="xhs-notes-loading" style="padding:24px;">
         <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
         <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
@@ -92,6 +134,7 @@
       <div class="zbc-state-empty" id="xhs-notes-empty" style="display:none;"><div class="zbc-state-empty__icon">📝</div><div class="zbc-state-empty__text">暂无笔记数据</div></div>
       <div class="zbc-state-error" id="xhs-notes-error" style="display:none;"><div class="zbc-state-error__text">笔记加载失败</div></div>
       <div id="xhs-notes-content" style="display:none;"></div>
+      <div id="xhs-notes-card-view" class="ld-content-grid" style="display:none;padding:20px;"></div>
     </div>
   </div>
 
@@ -249,6 +292,11 @@
       if(bEl)bEl.textContent=before!=null?Number(before).toLocaleString('zh-CN'):'—';
       if(aEl)aEl.textContent=after!=null?Number(after).toLocaleString('zh-CN'):'—';
       if(rEl)rEl.textContent=(before!=null&&after!=null&&before>0)?((before-after)/before*100).toFixed(1)+'%':'—';
+      // Trigger count-up animation
+      if (typeof LDMotion !== 'undefined') {
+        if (before != null) LDMotion.countUp(document.getElementById('xhs-dedup-before'), before);
+        if (after != null) LDMotion.countUp(document.getElementById('xhs-dedup-after'), after);
+      }
     }).catch(function(){markDegraded('collection-counter');});
   }
 
@@ -270,7 +318,7 @@
       html+='<div style="display:flex;align-items:center;gap:12px;">';
       html+='<div style="width:24px;height:24px;border-radius:50%;background:'+sc+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">'+(idx+1)+'</div>';
       html+='<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;font-weight:600;">'+step.label+'</span><span style="font-size:11px;font-variant-numeric:tabular-nums;color:'+sc+';">'+(passRate!=null?passRate+'%':'—')+'</span></div>';
-      html+='<div style="height:6px;background:var(--l-bg-secondary,#F7F7F8);border-radius:3px;overflow:hidden;"><div style="width:'+bw+'%;height:100%;background:'+sc+';border-radius:3px;transition:width 0.5s ease;"></div></div>';
+      html+='<div style="height:6px;background:var(--l-bg-secondary,#F7F7F8);border-radius:999px;overflow:hidden;"><div style="width:'+bw+'%;height:100%;background:'+sc+';border-radius:999px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1);"></div></div>';
       html+='<div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);margin-top:2px;">'+step.desc+'</div></div></div>';
     });
     container.innerHTML=html;
@@ -306,6 +354,17 @@
       if(loading)loading.style.display='none';
       var notes=(d&&d.notes)?d.notes:((d&&d.data)?d.data:[]);
       if(notes.length===0){if(empty)empty.style.display='';return;}
+      // Update platform header KPIs
+      var totalLikes = 0, totalComments = 0;
+      notes.forEach(function(n) {
+        totalLikes += Number(n.likes || n.like_count || 0);
+        totalComments += Number(n.comments || n.comment_count || 0);
+      });
+      if (typeof LDMotion !== 'undefined') {
+        LDMotion.updateValue(document.getElementById('xhs-kpi-total'), notes.length);
+        LDMotion.updateValue(document.getElementById('xhs-kpi-canonical'), notes.length);
+        LDMotion.updateValue(document.getElementById('xhs-kpi-comments'), totalComments);
+      }
       var tableData=notes.map(function(n){
         return{
           cover:n.cover_url||n.image_url||n.cover||'',
@@ -318,6 +377,7 @@
           captured_at:n.captured_at||n.capture_time||n.collected_at||n.created_at||''
         };
       });
+      window._xhsNotesData = notes;
       xjViz.table('#xhs-notes-content',tableData,[
         {key:'cover',label:'封面',render:function(v){return v?'<img src="'+escapeHtml(v)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;" onerror="this.style.display=\'none\'">':'<div style="width:36px;height:36px;background:var(--l-bg-secondary,#F7F7F8);border-radius:4px;"></div>';}},
         {key:'title',label:'标题',render:function(v){return'<span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;" title="'+escapeHtml(v)+'">'+escapeHtml(v)+'</span>';}},
@@ -429,6 +489,50 @@
     xjViz.api('/xhs/switch-account',{account_id:accountId}).then(function(d){loadAccounts();loadState();}).catch(function(e){console.error('Switch account error:',e);});
   }
 
+  // ===== View Toggle (Table/Card) =====
+  var xhsViewMode = 'table';
+  function xhsSetView(mode) {
+    xhsViewMode = mode;
+    document.querySelectorAll('#xhs-tab-notes .ld-tab').forEach(function(t) { t.classList.remove('is-active'); });
+    event.target.classList.add('is-active');
+    var tableEl = document.getElementById('xhs-notes-content');
+    var cardEl = document.getElementById('xhs-notes-card-view');
+    if (mode === 'card') {
+      if (tableEl) tableEl.style.display = 'none';
+      if (cardEl) { cardEl.style.display = 'grid'; renderNotesCardView(); }
+    } else {
+      if (tableEl) tableEl.style.display = '';
+      if (cardEl) cardEl.style.display = 'none';
+    }
+  }
+  function renderNotesCardView() {
+    var cardEl = document.getElementById('xhs-notes-card-view');
+    if (!cardEl || !window._xhsNotesData || window._xhsNotesData.length === 0) return;
+    var html = '';
+    window._xhsNotesData.slice(0, 24).forEach(function(n, idx) {
+      var cover = n.cover_url || n.image_url || n.cover || '';
+      var title = n.title || n.note_title || '无标题';
+      var author = n.author || n.user_name || '—';
+      var likes = n.likes != null ? n.likes : (n.like_count != null ? n.like_count : 0);
+      var comments = n.comments != null ? n.comments : (n.comment_count != null ? n.comment_count : 0);
+      html += '<div class="ld-content-card" style="animation-delay:' + (idx * 40) + 'ms;">';
+      if (cover) {
+        html += '<img class="ld-content-card__cover" src="' + escapeHtml(cover) + '" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">';
+      }
+      html += '<div style="height:120px;background:var(--l-bg-secondary,#F7F7F8);display:none;align-items:center;justify-content:center;color:var(--l-text-tertiary,#9CA3AF);font-size:24px;">📝</div>';
+      html += '<div class="ld-content-card__body">';
+      html += '<div class="ld-content-card__title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</div>';
+      html += '<div class="ld-content-card__meta">';
+      html += '<div class="ld-content-card__author"><span style="width:20px;height:20px;border-radius:50%;background:var(--ld-gradient-purple-blue);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;">' + escapeHtml(String(author).charAt(0)) + '</span><span class="ld-content-card__author-name">' + escapeHtml(author) + '</span></div>';
+      html += '<div class="ld-content-card__stats">';
+      html += '<span class="ld-content-card__stat" style="color:#FF2442;">♥ ' + Number(likes).toLocaleString('zh-CN') + '</span>';
+      html += '<span class="ld-content-card__stat" style="color:#6366F1;">💬 ' + Number(comments).toLocaleString('zh-CN') + '</span>';
+      html += '</div></div></div></div>';
+    });
+    cardEl.innerHTML = html;
+    if (typeof LDMotion !== 'undefined') LDMotion.staggerChildren(cardEl);
+  }
+
   // ===== Orchestrator =====
   function loadXHSAll(){
     loadState();loadCookieStatus();loadDedupStats();loadQualityGate();loadLogs();
@@ -442,7 +546,7 @@
     setInterval(function(){loadState();loadCookieStatus();},15000);
   });
 
-  window.switchTab=switchTab;window.xhsControl=xhsControl;window.loadXHSAll=loadXHSAll;window.xhsSwitchAccount=xhsSwitchAccount;
+  window.switchTab=switchTab;window.xhsControl=xhsControl;window.loadXHSAll=loadXHSAll;window.xhsSwitchAccount=xhsSwitchAccount;window.xhsSetView=xhsSetView;
 })();
 </script>
 {% endblock %}

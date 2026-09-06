@@ -22,6 +22,16 @@
   <span>⚠</span><span id="degraded-msg">部分数据延迟，已加载数据正常显示</span>
 </div>
 
+
+<!-- Platform Brand Indicator -->
+<div id="platform-indicator" style="display:none;margin-bottom:16px;padding:12px 20px;border-radius:16px;align-items:center;gap:12px;">
+  <div id="platform-indicator-icon" style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;"></div>
+  <div style="flex:1;">
+    <div id="platform-indicator-name" style="font-size:14px;font-weight:700;"></div>
+    <div id="platform-indicator-desc" style="font-size:11px;color:var(--l-text-secondary,#6B7280);"></div>
+  </div>
+  <div id="platform-indicator-field" style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);font-family:'JetBrains Mono',monospace;"></div>
+</div>
 <!-- In-page Tabs -->
 <div class="zbc-card" style="margin-bottom:16px;">
   <div class="zbc-card__body" style="padding:12px 20px;">
@@ -36,11 +46,27 @@
 <!-- ===== Tab: 笔记库 ===== -->
 <div id="tab-notes">
   <!-- KPI Row (xjViz.kpi 函数驱动) -->
-  <div class="zbc-kpi-grid">
-    <div class="zbc-kpi-card zbc-kpi-card--gradient-zbmp"><div id="kpi-total-notes"></div></div>
-    <div class="zbc-kpi-card"><div id="kpi-total-engagement"></div></div>
-    <div class="zbc-kpi-card"><div id="kpi-positive-rate"></div></div>
-    <div class="zbc-kpi-card"><div id="kpi-risk-notes"></div></div>
+  <div class="zbc-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+    <div class="ld-kpi-card" style="background:linear-gradient(135deg,rgba(15,118,110,0.04),rgba(20,184,166,0.04));border-color:rgba(15,118,110,0.15);">
+      <div class="ld-kpi-label">笔记总数</div>
+      <div class="ld-kpi-value" id="kpi-total-notes-value" ld-count-up ld-value="0">—</div>
+      <div class="ld-kpi-sub" id="kpi-total-notes-sub">全平台采集</div>
+    </div>
+    <div class="ld-kpi-card">
+      <div class="ld-kpi-label">总互动量</div>
+      <div class="ld-kpi-value" style="color:#8B5CF6;" id="kpi-total-engagement-value" ld-count-up ld-value="0">—</div>
+      <div class="ld-kpi-sub">点赞+评论+收藏</div>
+    </div>
+    <div class="ld-kpi-card">
+      <div class="ld-kpi-label">正面率</div>
+      <div class="ld-kpi-value" style="color:#00D4AA;" id="kpi-positive-rate-value">—</div>
+      <div class="ld-kpi-sub">情感分析</div>
+    </div>
+    <div class="ld-kpi-card" style="background:linear-gradient(135deg,rgba(220,38,38,0.03),rgba(217,119,6,0.03));">
+      <div class="ld-kpi-label">高风险笔记</div>
+      <div class="ld-kpi-value" style="color:#DC2626;" id="kpi-risk-notes-value" ld-count-up ld-value="0">—</div>
+      <div class="ld-kpi-sub">high/critical</div>
+    </div>
   </div>
 
   <!-- View Toggle + Table Card -->
@@ -186,7 +212,7 @@
       });
       // Platform filter
       var pf = document.getElementById('platform-filter');
-      if (pf) pf.addEventListener('change', function() { self.state.platform = pf.value; self.state.page = 1; self.loadNotes(); });
+      if (pf) pf.addEventListener('change', function() { self.state.platform = pf.value; self.state.page = 1; self._updatePlatformIndicator(); self.loadNotes(); });
       // Search
       var si = document.getElementById('content-search');
       if (si) {
@@ -319,6 +345,25 @@
       }});
       var risk = notes.filter(function(n){return n.risk_level==='high'||n.risk_level==='critical';}).length;
 
+      // Update new KPI cards with count-up
+      var totalNotes = this.state.total > 0 ? this.state.total : 0;
+      var totalEng = 0;
+      var riskCount = 0;
+      this.state.notes.forEach(function(n) {
+        totalEng += Number(n.likes || n.like_count || 0) + Number(n.comments || n.comment_count || 0) + Number(n.collects || n.collect_count || 0);
+        if (n.risk_level === 'high' || n.risk_level === 'critical') riskCount++;
+      });
+      if (typeof LDMotion !== 'undefined') {
+        LDMotion.updateValue(document.getElementById('kpi-total-notes-value'), totalNotes);
+        LDMotion.updateValue(document.getElementById('kpi-total-engagement-value'), totalEng);
+        LDMotion.updateValue(document.getElementById('kpi-risk-notes-value'), riskCount);
+      } else {
+        var el1 = document.getElementById('kpi-total-notes-value'); if (el1) el1.textContent = totalNotes;
+        var el2 = document.getElementById('kpi-total-engagement-value'); if (el2) el2.textContent = totalEng;
+        var el3 = document.getElementById('kpi-risk-notes-value'); if (el3) el3.textContent = riskCount;
+      }
+      // Show/hide platform indicator
+      this._updatePlatformIndicator();
       this._kpi('#kpi-total-notes', '笔记总数', this.state.total > 0 ? this.state.total : null, '全平台采集');
       this._kpi('#kpi-total-engagement', '总互动量', engStats.total > 0 ? engStats.total : null, '点赞+评论+收藏+分享');
       var posRate = sentStats.total > 0 ? parseFloat(((sentStats.positive / sentStats.total) * 100).toFixed(1)) : null;

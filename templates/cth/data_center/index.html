@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}数据中心 · ZBC{% endblock %}
+{% block head %}
+<style>
+  .dc-hero { padding: 32px 0 24px; }
+  .dc-hero h1 { font-size: 28px; font-weight: 700; margin: 0 0 8px; }
+  .dc-hero p { color: #6b7280; margin: 0; font-size: 14px; }
+  .dc-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0; }
+  .dc-kpi { background: #fff; border-radius: 20px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .dc-kpi__label { font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
+  .dc-kpi__value { font-size: 36px; font-weight: 700; margin-top: 4px; background: linear-gradient(135deg, #00D4AA, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .dc-section-title { font-size: 18px; font-weight: 600; margin: 32px 0 16px; }
+  .dc-platform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  .dc-platform-card { background: #fff; border-radius: 24px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border: 1px solid #f3f4f6; }
+  .dc-platform-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+  .dc-platform-card__header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .dc-platform-card__icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 16px; }
+  .dc-platform-card__name { font-size: 16px; font-weight: 600; }
+  .dc-platform-card__status { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .status-active { background: #d1fae5; color: #065f46; }
+  .status-partial { background: #fef3c7; color: #92400e; }
+  .status-planned { background: #f3f4f6; color: #6b7280; }
+  .dc-platform-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+  .dc-stat { text-align: center; }
+  .dc-stat__value { font-size: 20px; font-weight: 700; color: #111827; }
+  .dc-stat__label { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+  .dc-platform-card__tables { font-size: 12px; color: #6b7280; }
+  .dc-platform-card__tables span { display: inline-block; background: #f9fafb; padding: 2px 8px; border-radius: 8px; margin: 2px; font-size: 11px; }
+  .dc-note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 16px; padding: 16px 20px; margin-top: 24px; font-size: 13px; color: #166534; }
+  .dc-note strong { color: #14532d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dc-hero">
+  <h1>数据中心</h1>
+  <p>全平台采集数据统一管理 · Raw层 / Normalized层 / Canonical层 三层数据模型</p>
+</div>
+
+<div class="dc-kpi-row">
+  <div class="dc-kpi">
+    <div class="dc-kpi__label">接入平台</div>
+    <div class="dc-kpi__value" id="kpi-platforms">—</div>
+  </div>
+  <div class="dc-kpi">
+    <div class="dc-kpi__label">前端可见</div>
+    <div class="dc-kpi__value" id="kpi-visible">—</div>
+  </div>
+  <div class="dc-kpi">
+    <div class="dc-kpi__label">Raw表总数</div>
+    <div class="dc-kpi__value" id="kpi-tables">—</div>
+  </div>
+  <div class="dc-kpi">
+    <div class="dc-kpi__label">数据记录</div>
+    <div class="dc-kpi__value" id="kpi-records">—</div>
+  </div>
+</div>
+
+<div class="dc-section-title">已接入平台</div>
+<div class="dc-platform-grid" id="platform-grid">
+  <div style="grid-column: 1/-1; text-align:center; padding:40px; color:#9ca3af;">加载中...</div>
+</div>
+
+<div class="dc-note">
+  <strong>数据说明：</strong>未接入平台（PLANNED状态）不在前端导航显示，仅在系统设置中可见接入状态。
+  平台接入后 status 变为 ACTIVE，前端自动显示。所有缺失值显式标记 null/unknown/missing，不伪造数据。
+</div>
+
+<script>
+async function loadDataCenter() {
+  try {
+    const resp = await fetch('/api/data-center/stats/overview');
+    const data = await resp.json();
+    if (!data.ok) return;
+
+    document.getElementById('kpi-platforms').textContent = data.total_platforms;
+    document.getElementById('kpi-visible').textContent = data.ui_visible_count;
+    document.getElementById('kpi-records').textContent = data.total_records.toLocaleString();
+
+    const visiblePlatforms = data.platforms.filter(p => p.ui_visible);
+    let tableCount = 0;
+    visiblePlatforms.forEach(p => { tableCount += Object.keys(p.table_counts || {}).length; });
+    document.getElementById('kpi-tables').textContent = tableCount;
+
+    const grid = document.getElementById('platform-grid');
+    if (visiblePlatforms.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">暂无可显示平台</div>';
+      return;
+    }
+
+    grid.innerHTML = visiblePlatforms.map(p => {
+      const initial = p.display_name.charAt(0).toUpperCase();
+      const statusClass = p.status === 'ACTIVE' ? 'status-active' : (p.status === 'PARTIAL' ? 'status-partial' : 'status-planned');
+      const statusText = p.status === 'ACTIVE' ? '已接入' : (p.status === 'PARTIAL' ? '部分接入' : '待接入');
+      const tables = Object.keys(p.table_counts || {});
+      const totalRecords = p.total_records || 0;
+      return `
+        <a href="/lumenis/cth/data-center/${p.platform_id}" style="text-decoration:none;color:inherit;">
+          <div class="dc-platform-card">
+            <div class="dc-platform-card__header">
+              <div class="dc-platform-card__icon" style="background:${p.color}">${initial}</div>
+              <div>
+                <div class="dc-platform-card__name">${p.display_name}</div>
+                <span class="dc-platform-card__status ${statusClass}">${statusText}</span>
+              </div>
+            </div>
+            <div class="dc-platform-card__stats">
+              <div class="dc-stat"><div class="dc-stat__value">${tables.length}</div><div class="dc-stat__label">Raw表</div></div>
+              <div class="dc-stat"><div class="dc-stat__value">${totalRecords.toLocaleString()}</div><div class="dc-stat__label">数据量</div></div>
+              <div class="dc-stat"><div class="dc-stat__value">${p.has_collector ? '✓' : '—'}</div><div class="dc-stat__label">采集器</div></div>
+            </div>
+            <div class="dc-platform-card__tables">
+              ${tables.map(t => `<span>${t}</span>`).join('')}
+            </div>
+          </div>
+        </a>
+      `;
+    }).join('');
+  } catch (e) {
+    console.error('Data center load failed:', e);
+    document.getElementById('platform-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ef4444;">加载失败，请检查API</div>';
+  }
+}
+loadDataCenter();
+</script>
+{% endblock %}

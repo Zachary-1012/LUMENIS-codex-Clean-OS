@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""LUMENIS Frontend Foundation 验证：模板渲染 + Token 合规 + 状态系统。
+"""LUMENIS Global Design System 验证：新设计系统CSS + 双域模板 + 动效引擎 + 路由。
 不启动完整 Flask、不触达数据库/采集/业务逻辑。
-既可被 pytest 收集（test_frontend_foundation），也可独立运行（python 本文件）。
+UI清理后重写：旧lumenis-*.css和旧模板已删除，替换为lumenis-global-design.css + 双域模板。
 """
 import os
 import re
@@ -19,67 +19,86 @@ def run_foundation_checks():
     def check(name, ok, detail=""):
         results.append((name, bool(ok), detail))
 
-    # 1. CSS / JS 文件齐全
     css_dir = os.path.join(ZBC, "static", "css")
-    for f in ["lumenis.css", "lumenis-tokens.css", "lumenis-reset.css",
-              "lumenis-layout.css", "lumenis-components.css",
-              "lumenis-motion.css", "lumenis-responsive.css"]:
-        check("CSS exists: " + f, os.path.isfile(os.path.join(css_dir, f)))
     js_dir = os.path.join(ZBC, "static", "js")
-    for f in ["lumenis-core.js", "lumenis-icons.js"]:
+
+    # 1. 新设计系统 CSS 文件齐全
+    for f in ["lumenis-global-design.css", "zbc-design-v1.1.css",
+              "zbc-layout-v1.1.css", "xujing-core.css"]:
+        check("CSS exists: " + f, os.path.isfile(os.path.join(css_dir, f)))
+
+    # 2. 旧 lumenis CSS 已删除（确认清理完成）
+    for f in ["lumenis.css", "lumenis-tokens.css", "lumenis-tokens-v2.css",
+              "lumenis-reset.css", "lumenis-layout.css", "lumenis-components.css",
+              "lumenis-core-components.css", "lumenis-motion.css",
+              "lumenis-responsive.css", "xujing-dual-domain.css"]:
+        check("Old CSS removed: " + f, not os.path.isfile(os.path.join(css_dir, f)))
+
+    # 3. JS 文件齐全（新动效引擎 + 核心）
+    for f in ["lumenis-motion-engine.js", "lumenis-core.js", "lumenis-icons.js",
+              "i18n.js", "domain-context.js", "xujing-viz.js"]:
         check("JS exists: " + f, os.path.isfile(os.path.join(js_dir, f)))
 
-    # 2. Jinja 渲染 command_home
+    # 4. 新设计系统包含核心设计令牌
+    ds = open(os.path.join(css_dir, "lumenis-global-design.css"), encoding="utf-8").read()
+    check("Design: mint green primary", "--ld-mint" in ds and "#00D4AA" in ds)
+    check("Design: purple-blue gradient", "--ld-gradient-purple-blue" in ds)
+    check("Design: pink-purple-blue chart gradient", "--ld-gradient-pink-purple-blue" in ds)
+    check("Design: large card radius", "--ld-radius-card" in ds and "20px" in ds)
+    check("Design: glass blur", "--ld-glass-blur" in ds and "blur(20px)" in ds)
+    check("Design: KPI large font", "--ld-text-kpi" in ds and "36px" in ds)
+    check("Design: platform brand colors", all(x in ds for x in ["--ld-platform-xhs", "--ld-platform-douyin", "--ld-platform-bilibili", "--ld-platform-weibo"]))
+    check("Design: dark card variant", "--ld-dark-bg" in ds and "#0F172A" in ds)
+    check("Design: motion tokens", "--ld-motion-normal" in ds and "--ld-ease-out" in ds)
+    check("Design: reduced-motion support", "prefers-reduced-motion" in ds)
+
+    # 5. 动效引擎包含核心能力
+    me = open(os.path.join(js_dir, "lumenis-motion-engine.js"), encoding="utf-8").read()
+    check("Motion: countUp", "countUp" in me)
+    check("Motion: drawAreaChart", "drawAreaChart" in me)
+    check("Motion: fillProgress", "fillProgress" in me)
+    check("Motion: staggerChildren", "staggerChildren" in me)
+    check("Motion: pulse", "pulse" in me)
+    check("Motion: reduced-motion check", "_reduced" in me and "prefers-reduced-motion" in me)
+    check("Motion: LDMotion global", "window.LDMotion" in me)
+
+    # 6. 双域模板存在且可渲染
     env = Environment(loader=FileSystemLoader(os.path.join(ZBC, "templates")),
                       autoescape=select_autoescape(["html"]))
     env.globals["url_for"] = lambda endpoint, **kw: (
         "/static/" + kw.get("filename", "") if endpoint == "static" else "#")
-    html = ""
-    try:
-        html = env.get_template("home/command_home.html").render(
-            active_nav="home", home_url="/lumenis/")
-        check("command_home.html renders", len(html) > 500, "%d chars" % len(html))
-    except Exception as e:
-        check("command_home.html renders", False, repr(e))
+    env.globals["active_domain"] = "cth"
+    env.globals["active_nav"] = "cth_overview"
 
-    # 3. 六区 + AI 入口
-    for z in ["System State", "Intelligence Pulse", "Active Risks",
-              "Active Tasks", "Recent Evidence", "Recommended Actions"]:
-        check("zone: " + z, z in html)
-    check("AI command entry present", "lm-command-input" in html)
+    for tpl in ["base.html", "zbmp/overview.html", "cth/overview.html",
+                "cth/xiaohongshu.html", "zbmp/content.html", "system/ai.html",
+                "system/browser.html"]:
+        try:
+            html = env.get_template(tpl).render(active_domain="cth", active_nav="cth_overview")
+            check("Template renders: " + tpl, len(html) > 100, "%d chars" % len(html))
+        except Exception as e:
+            check("Template renders: " + tpl, False, repr(e))
 
-    # 4. 无 emoji icon；内联样式无硬编码 hex
-    emojis = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F600-\U0001F64F]").findall(html)
-    check("No emoji icons", len(emojis) == 0, str(emojis))
-    hardcoded = [m for s in re.findall(r'style="([^"]*)"', html)
-                 for m in re.findall(r"#[0-9A-Fa-f]{3,6}\b", s)]
-    check("No hardcoded hex inline", len(hardcoded) == 0, str(hardcoded))
+    # 7. base.html 引用新设计系统
+    base_html = env.get_template("base.html").render(active_domain="cth", active_nav="cth_overview")
+    check("base.html links global design CSS", "lumenis-global-design.css" in base_html)
+    check("base.html links motion engine JS", "lumenis-motion-engine.js" in base_html)
+    check("base.html does NOT link old lumenis.css", "lumenis.css" not in base_html)
 
-    # 5. Token 双主题 / z-index / 圆角 / 动效
-    tokens = open(os.path.join(css_dir, "lumenis-tokens.css"), encoding="utf-8").read()
-    check("Light tokens", "--lm-canvas: #F5F4F1" in tokens)
-    check("Dark tokens", '[data-theme="dark"]' in tokens and "#111111" in tokens)
-    check("Z-index 8 layers", tokens.count("--lm-z-") >= 8)
-    check("Radius scale", all(x in tokens for x in ["8px", "12px", "16px", "20px", "9999"]))
-    check("Motion scale", all(x in tokens for x in ["120ms", "180ms", "240ms", "320ms", "420ms"]))
+    # 8. 小红书页面包含新设计元素
+    xhs_html = env.get_template("cth/xiaohongshu.html").render(active_domain="cth", active_nav="cth_xhs")
+    check("XHS: platform header", "ld-platform-header--xhs" in xhs_html)
+    check("XHS: KPI cards", "ld-kpi-card" in xhs_html)
+    check("XHS: card view grid", "ld-content-grid" in xhs_html)
+    check("XHS: count-up attributes", "ld-count-up" in xhs_html)
+    check("XHS: pill tabs", "ld-tabs" in xhs_html or "ld-tab" in xhs_html)
 
-    # 6. JS 9 态 + 防假数据
-    core = open(os.path.join(js_dir, "lumenis-core.js"), encoding="utf-8").read()
-    for st in ["loading", "empty", "success", "warning", "error",
-               "blocked", "offline", "processing", "completed"]:
-        check("UI state: " + st, '"%s"' % st in core)
-    check("Fake-state guard", "dataRef" in core and "fakeStateCount" in core)
-    check("reduced-motion", "prefers-reduced-motion" in open(
-        os.path.join(css_dir, "lumenis-motion.css"), encoding="utf-8").read())
-    check("reduced-transparency", "prefers-reduced-transparency" in open(
-        os.path.join(css_dir, "lumenis-reset.css"), encoding="utf-8").read())
+    # 9. 旧模板目录已删除
+    for d in ["home", "intelligence", "production", "operations", "research", "_preview"]:
+        check("Old template dir removed: " + d,
+              not os.path.isdir(os.path.join(ZBC, "templates", d)))
 
-    # 7. 玻璃克制 + 实色卡
-    comp = open(os.path.join(css_dir, "lumenis-components.css"), encoding="utf-8").read()
-    check("Card solid surface", ".lm-card" in comp and "var(--lm-surface)" in comp)
-    check("Glass present", "backdrop-filter" in comp)
-
-    # 8. Blueprint 路由（临时 app，不触达业务）
+    # 10. Blueprint 路由（新双域 + API + healthz，旧遗留路由已移除）
     try:
         import flask
         import lumenis_frontend
@@ -88,50 +107,38 @@ def run_foundation_checks():
                           static_folder=os.path.join(ZBC, "static"))
         app.register_blueprint(lumenis_frontend.lumenis_bp)
         rules = [r.rule for r in app.url_map.iter_rules()]
-        check("routes exposed", "/lumenis/" in rules and "/lumenis/healthz" in rules, str(sorted(rules)))
-        # PHASE 3 新页面路由
-        for route in ["/lumenis/intelligence/skills", "/lumenis/intelligence/agents",
-                      "/lumenis/intelligence/evaluation", "/lumenis/research"]:
-            check("PHASE3 route: " + route, route in rules)
+
+        # 核心路由保留
+        check("route: /lumenis/ (root)", "/lumenis/" in rules)
+        check("route: /lumenis/healthz", "/lumenis/healthz" in rules)
+
+        # 双域路由保留
+        for route in ["/lumenis/zbmp/overview", "/lumenis/cth/overview",
+                      "/lumenis/cth/xiaohongshu", "/lumenis/system/runtime",
+                      "/lumenis/system/ai", "/lumenis/system/browser"]:
+            check("dual-domain route: " + route, route in rules)
+
+        # API 路由保留
+        for route in ["/lumenis/api/skills/status", "/lumenis/api/skills/invoke",
+                      "/lumenis/api/intelligence/evidence"]:
+            check("API route: " + route, route in rules)
+
+        # 旧遗留路由已移除
+        for route in ["/lumenis/intelligence", "/lumenis/production",
+                      "/lumenis/operations", "/lumenis/research",
+                      "/lumenis/production/risk", "/lumenis/intelligence/skills"]:
+            check("old route removed: " + route, route not in rules)
+
+        # healthz 正常
         with app.test_client() as c:
             hz = c.get("/lumenis/healthz")
             check("healthz ok", hz.status_code == 200 and hz.get_json()["status"] == "ok")
-            hm = c.get("/lumenis/")
-            check("home renders", hm.status_code == 200 and b"Command Home" in hm.data)
-            # PHASE 3 页面渲染
-            for route, keyword in [
-                ("/lumenis/intelligence/skills", b"Skill Hub"),
-                ("/lumenis/intelligence/agents", b"Agent Center"),
-                ("/lumenis/intelligence/evaluation", b"Evaluation Center"),
-                ("/lumenis/research", b"Research Workspace"),
-            ]:
-                try:
-                    r = c.get(route)
-                    check("PHASE3 render: " + route, r.status_code == 200 and keyword in r.data,
-                          "status=%d" % r.status_code)
-                except Exception as e:
-                    check("PHASE3 render: " + route, False, repr(e))
-            # Skill Hub V2 功能断言
-            try:
-                r = c.get("/lumenis/intelligence/skills")
-                data = r.data
-                check("SkillHub V2: search input", b"lm-skill-search" in data)
-                check("SkillHub V2: create button", b"lm-btn-create-skill" in data)
-                check("SkillHub V2: sync button", b"lm-btn-sync" in data)
-                check("SkillHub V2: detail drawer", b"lm-skill-drawer" in data)
-                check("SkillHub V2: 11 categories",
-                      sum(1 for cat in [b"Engineering", b"Research", b"Analysis", b"Data",
-                                        b"Intelligence", b"Production", b"KOS", b"Monitoring",
-                                        b"Evaluation", b"Governance", b"System"]
-                          if cat in data) >= 11)
-                check("SkillHub V2: S01-S12 cards",
-                      all(b"data-skill=\"S%02d\"" % i in data for i in range(1, 13)))
-                check("SkillHub V2: enable/disable buttons", b"lm-skill-toggle" in data)
-                check("SkillHub V2: run buttons", b"lm-skill-run" in data)
-                check("SkillHub V2: identity policy in drawer", b"Identity Policy" in data)
-                check("SkillHub V2: version badges", b"v1.0.0" in data)
-            except Exception as e:
-                check("SkillHub V2 features", False, repr(e))
+
+            # root 重定向到 cth/overview
+            root = c.get("/lumenis/", follow_redirects=False)
+            check("root redirects", root.status_code in (301, 302),
+                  "status=%d location=%s" % (root.status_code, root.headers.get("Location", "")))
+
     except Exception as e:
         check("blueprint route", False, repr(e))
 

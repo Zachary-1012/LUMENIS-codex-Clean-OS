@@ -113,7 +113,12 @@ def api_create_entity():
 # ---------- 确定性智能算法（不依赖外部模型，结果可复现） ----------
 @podcast_bp.route("/topic-score", methods=["POST"])
 def api_topic_score():
-    """选题十维打分：demand/timeliness/novelty/human_relevance/guest_fit/evidence/content_yield/distribution/risk/cost，每项0-10"""
+    """选题十维打分（信号均为 0..1 归一化；前端 0..10 滑块自行 /10）。
+
+    确定性权重：正向 0.90（demand .16/timeliness .12/novelty .10/human .14/
+    guest .12/evidence .10/yield .10/distribution .06），risk+cost 惩罚 0.10。
+    AI 只可建议输入信号，最终分必须由本确定性函数计算，规则是真值。
+    """
     try:
         import topic_scoring as ts
         b = request.get_json(force=True, silent=True) or {}
@@ -122,11 +127,15 @@ def api_topic_score():
         kwargs = {}
         for k in fields_def:
             if k in sig_in and sig_in[k] is not None:
-                kwargs[k] = float(sig_in[k])
+                kwargs[k] = max(0.0, min(1.0, float(sig_in[k])))  # 钳制 0..1
         sig = ts.TopicSignals(**kwargs)
         score = ts.score_topic(sig)
         stage = ts.classify_topic(score, float(getattr(sig, "timeliness", 0)))
-        return _ok(score=round(score, 2), stage=stage, weights=getattr(ts, "WEIGHTS", None))
+        return _ok(
+            score=round(score, 2), stage=stage,
+            signals={k: round(float(getattr(sig, k)), 3) for k in fields_def},
+            weights=getattr(ts, "WEIGHTS", None),
+        )
     except Exception as e:
         return _err(f"选题打分失败: {e}", 500)
 

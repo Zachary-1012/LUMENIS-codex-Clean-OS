@@ -853,5 +853,46 @@ var ZBMPOverview = (function () {
 
   return { reload: reload };
 })();
+
+// ===== G Shard: Module Registry 注册 — 自动获得自适应+动效能力 =====
+(function() {
+  function registerZBMPModules() {
+    if (typeof ZBCAdaptive === 'undefined') { setTimeout(registerZBMPModules, 200); return; }
+    var modules = [
+      { module_id: 'zbmp-kpi-volume', module_type: 'kpi', data_source: '/api/viz/overview.stats',
+        min_width: 140, preferred_width: 200, priority: 0, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'zbmp-kpi-brands', module_type: 'kpi', data_source: '/api/brand-stats',
+        min_width: 140, preferred_width: 200, priority: 1, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'zbmp-kpi-engagement', module_type: 'kpi', data_source: '/api/viz/overview.stats',
+        min_width: 140, preferred_width: 200, priority: 1, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'zbmp-kpi-risk', module_type: 'kpi', data_source: '/api/stats',
+        min_width: 140, preferred_width: 200, priority: 0, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'zbmp-trend', module_type: 'chart', data_source: '/api/viz/overview.trend',
+        min_width: 300, preferred_width: 600, priority: 0, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'zbmp-industry', module_type: 'panel', data_source: '/api/brand-stats',
+        min_width: 200, preferred_width: 350, priority: 2, responsive_mode: 'reflow', motion_mode: 'minimal' },
+      { module_id: 'zbmp-top10', module_type: 'table', data_source: '/api/brand-industry/brands',
+        min_width: 280, preferred_width: 500, priority: 1, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'zbmp-opportunity', module_type: 'panel', data_source: 'ai-insight',
+        min_width: 200, preferred_width: 350, priority: 2, responsive_mode: 'reflow', motion_mode: 'minimal' }
+    ];
+    modules.forEach(function(m) {
+      ZBCAdaptive.registerModule(m);
+      var el = document.querySelector('[data-kpi="' + m.module_id.replace('zbmp-kpi-', '') + '"]');
+      if (el) {
+        el.setAttribute('data-module-id', m.module_id);
+        ZBCAdaptive.bindModule(m.module_id, el.closest('.zbc-kpi-card') || el);
+      }
+    });
+    // Mark content as adaptive container
+    var content = document.getElementById('zbc-content');
+    if (content) content.classList.add('ad-container');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', registerZBMPModules);
+  } else {
+    registerZBMPModules();
+  }
+})();
 </script>
 {% endblock %}

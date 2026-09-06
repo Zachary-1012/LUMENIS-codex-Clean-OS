@@ -112,6 +112,7 @@ import public_opinion_cases
 import report_api  # P1-10 拆分批3: 报告/摘要/品牌报告 API
 from report_api import _DEV_EXEC_ENABLED, _DEV_EXEC_BLOCK_RE  # GAP-04 开发执行闸门共享变量
 import viz_api  # Phase 14: function-driven visualization backend /api/viz/*
+import data_center_api  # V1.0: 全平台数据中心API /api/data-center/*
 # ProxyPool 可插拔代理池（可选；导入失败不影响系统启动；总开关默认关闭，关闭时等同直连原版）
 try:
     from proxy_pool import proxy_manager as _proxy_mgr
@@ -153,6 +154,7 @@ app.register_blueprint(system_features_api.system_features_bp)
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
 app.register_blueprint(report_api.report_bp)  # P1-10 拆分批3: 报告 API
 app.register_blueprint(viz_api.viz_bp)  # Phase 14: 函数驱动可视化后端 /api/viz/*
+app.register_blueprint(data_center_api.data_center_bp)  # V1.0: 全平台数据中心 /api/data-center/*
 app.register_blueprint(intelligence_library_api.intelligence_library_bp)
 
 # P1-C: Intelligence Library page (no-scroll, left tree + right list + detail drawer)
@@ -303,6 +305,13 @@ try:
     browser_runtime_api.register_browser_runtime_api(app)
 except Exception as _br_e:
     print(f"[browser_runtime_api] blueprint register failed: {_br_e}")
+
+# ZBC AI Browser Runtime API（Production-Ready，带 Verification 闭环 + Evidence + Security）
+try:
+    import ai_browser_api
+    ai_browser_api.register_ai_browser_api(app)
+except Exception as _aibr_e:
+    print(f"[ai_browser_api] blueprint register failed: {_aibr_e}")
 
 # V3.0 影子板块：品牌营销知识库API
 @app.route('/api/brand-knowledge/stats')
@@ -1118,6 +1127,14 @@ class ProxyPrefixMiddleware:
         return self.wsgi_app(environ,start_response)
 app.wsgi_app=ProxyPrefixMiddleware(app.wsgi_app)
 db.init_db()
+
+# AI Task Engine 数据库迁移（向后兼容，只建表不改表）
+try:
+    from ai_task_engine import init_task_engine_db
+    init_task_engine_db()
+    print("[ai_task_engine] DB migration completed (ai_task/step/evidence/trace)")
+except Exception as _e:
+    print(f"[ai_task_engine] DB migration warning (non-fatal): {_e}")
 
 # ===== GAP-10 报告路由收敛 P0：RFC 8594/9745 弃用信号（纯增量，不改任何业务逻辑，可一键回滚删除本块）=====
 # 行业标准（Stripe/GitHub/Google）：Deprecation(宣布日期, RFC 9745) + Sunset(移除日期, RFC 8594)

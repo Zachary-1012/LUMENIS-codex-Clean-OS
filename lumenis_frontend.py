@@ -28,147 +28,15 @@ domain_api_bp = Blueprint("domain_api", __name__)
 
 @lumenis_bp.route("/")
 def command_home():
-    """Command Home —— 全局入口（非 Dashboard），六区结构。"""
-    return render_template("home/command_home.html", active_nav="home",
-                           home_url="/lumenis/")
+    """Root — redirect to CTH overview (dual-domain production UI)."""
+    from flask import redirect
+    return redirect("/lumenis/cth/overview")
 
 
 @lumenis_bp.route("/healthz")
 def foundation_healthz():
     """Foundation 层存活探针（不触达业务/数据库）。"""
     return {"status": "ok", "layer": "L0-experience", "component": "lumenis-frontend-foundation"}
-
-
-# ========== P0 页面（真实只读 API 绑定，零业务写操作） ==========
-
-@lumenis_bp.route("/intelligence")
-def intelligence_workspace():
-    """Intelligence Workspace — AI 工作区（Input→Context→Retrieval→Reasoning→Evidence→Action）。"""
-    return render_template("intelligence/workspace.html", active_nav="ai",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/production")
-def production_overview():
-    """Production Overview — 生产总览（核心指标 + 采集健康 + 主体口径）。"""
-    return render_template("production/overview.html", active_nav="production",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/production/public-opinion")
-def public_opinion():
-    """Public Opinion — 舆情总览（情感分布 + 风险笔记 + 话题）。"""
-    return render_template("production/public_opinion.html", active_nav="opinion",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/production/risk")
-def risk():
-    """Risk — 风险预警中心（高/中风险笔记全量 + 风险等级分布）。"""
-    return render_template("production/risk.html", active_nav="risk",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/operations")
-def operations():
-    """Operations — 系统运维（健康四灯 + 采集状态 + AI 通道 + 运行时）。"""
-    return render_template("operations/index.html", active_nav="operations",
-                           home_url="/lumenis/")
-
-
-# ========== PHASE 3 页面（Intelligence 子域 + Research） ==========
-
-@lumenis_bp.route("/intelligence/skills")
-def skill_hub():
-    """Skill Hub — 能力中心（S01-S12 已落地，S13-S72 规划中）。"""
-    return render_template("intelligence/skill_hub.html", active_nav="skills",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/intelligence/agents")
-def agent_center():
-    """Agent Center — 代理中心（Orchestrator/Research/Engineering/Evaluation）。"""
-    return render_template("intelligence/agent_center.html", active_nav="agents",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/intelligence/evaluation")
-def evaluation_center():
-    """Evaluation Center — 评估中心（Correctness/Completeness/Regression/Safety）。"""
-    return render_template("intelligence/evaluation.html", active_nav="evaluation",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/research")
-def research_workspace():
-    """Research Workspace — 研究工作区（Research→Finding→Evidence→Decision→Proposal）。"""
-    return render_template("research/workspace.html", active_nav="research",
-                           home_url="/lumenis/")
-
-
-# ========== P1 全产品页面（LUMENIS Full Product Visual Foundation） ==========
-
-@lumenis_bp.route("/intelligence/models")
-def models():
-    """Models / AI Gateway — 模型与引擎管理（Provider-agnostic）。"""
-    return render_template("intelligence/models.html", active_nav="models",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/intelligence/evidence")
-def evidence():
-    """Evidence Center — 证据中心（Evidence Chain + Trace）。"""
-    return render_template("intelligence/evidence.html", active_nav="evidence",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/production/monitoring")
-def monitoring():
-    """Monitoring — 生产监控（Collector + Runtime + Risk）。"""
-    return render_template("production/monitoring.html", active_nav="monitoring",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/production/cases")
-def cases():
-    """Case Library — 案例库（统一 Case Intelligence 入口）。"""
-    return render_template("production/cases.html", active_nav="cases",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/production/reports")
-def reports():
-    """Reports — 报告中心（日报/周报/月报/综合报告）。"""
-    return render_template("production/reports.html", active_nav="reports",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/research/findings")
-def findings():
-    """Research Findings — 研究发现（Finding Pipeline）。"""
-    return render_template("research/findings.html", active_nav="findings",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/operations/runtime")
-def runtime():
-    """Runtime — 运行时（Local Runtime + Health Check）。"""
-    return render_template("operations/runtime.html", active_nav="runtime",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/operations/permissions")
-def permissions():
-    """Permissions & Audit — 权限与审计（Permission Gate + Identity + Delegation）。"""
-    return render_template("operations/permissions.html", active_nav="permissions",
-                           home_url="/lumenis/")
-
-
-@lumenis_bp.route("/operations/repository")
-def repository():
-    """Repository Registry — 仓库注册（ZBC + OSAI 双核状态）。"""
-    return render_template("operations/repository.html", active_nav="repository",
-                           home_url="/lumenis/")
 
 
 # ========== Skill Hub API（Cross-Core Adapter，ZBC 不维护独立 Skill Truth） ==========
@@ -613,6 +481,19 @@ def cth_evidence():
                            **_domain_template_vars("cth_evidence", "cth", "Evidence"))
 
 
+@lumenis_bp.route("/cth/data-center")
+def cth_data_center():
+    return render_template("cth/data_center/index.html",
+                           **_domain_template_vars("cth_data_center", "cth", "Data Center"))
+
+
+@lumenis_bp.route("/cth/data-center/<platform_id>")
+def cth_data_center_platform(platform_id):
+    return render_template("cth/data_center/platform.html",
+                           platform_id=platform_id,
+                           **_domain_template_vars("cth_data_center", "cth", "Data Center"))
+
+
 @lumenis_bp.route("/cth/launch")
 def cth_launch():
     """CTH Launch Screen — 太古汇情报域启动屏。"""
@@ -663,6 +544,13 @@ def system_security():
 def system_evaluation():
     return render_template("system/evaluation.html",
                            **_domain_template_vars("sys_evaluation", "system", "Evaluation"))
+
+
+@lumenis_bp.route("/system/adaptive-demo")
+def system_adaptive_demo():
+    """G Shard: Adaptive UI + Motion System 演示页 — 新模块接入示例。"""
+    return render_template("system/adaptive_demo.html",
+                           **_domain_template_vars("sys_adaptive_demo", "system", "Adaptive Demo"))
 
 
 # ---------- Domain Data APIs (real data binding for xujing-viz.js) ----------

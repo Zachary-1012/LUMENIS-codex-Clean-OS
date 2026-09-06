@@ -695,3 +695,404 @@
   }
 
 })(window);
+
+/* ============================================================================
+   ZBC AI Browser Runtime — Frontend Controller
+   调用链：AI Agent → Browser Skill → Permission Gate → Browser Runtime
+          → Observe → Reason → Plan → Action → Verify → Evidence → Trace
+   每个 Action 必须经过 Verification 闭环，禁止 AI 说"点击成功"就认定成功。
+   ============================================================================ */
+(function (global) {
+  'use strict';
+
+  // ===== State =====
+  var aiState = {
+    sessionId: null,
+    sessionStatus: null,
+    currentUrl: '',
+    currentTitle: '',
+    riskLevel: 'medium',
+    circuitBreaker: 'closed',
+    pendingApproval: null,
+    evidenceCache: [],
+  };
+
+  // ===== DOM Helpers =====
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  // ===== API Helpers =====
+  function api(url, options) {
+    var opts = options || {};
+    opts.headers = opts.headers || {};
+    opts.headers['Content-Type'] = 'application/json';
+    if (opts.body && typeof opts.body !== 'string') {
+      opts.body = JSON.stringify(opts.body);
+    }
+    return fetch(url, opts).then(function (r) {
+      return r.json().then(function (d) {
+        if (!r.ok && !d) throw new Error('HTTP ' + r.status);
+        return d;
+      });
+    });
+  }
+  function apiPost(url, body) { return api(url, { method: 'POST', body: body }); }
+  function apiGet(url) { return api(url); }
+
+  // ===== Session Management =====
+  function createSession() {
+    setActionResult('正在创建 AI Browser Session...', 'info');
+    apiPost('/api/browser/sessions', {
+      cdp_port: 9222,
+      headless: true,
+      auto_start: true,
+      idle_timeout: 600,
+      max_lifetime: 3600,
+    }).then(function (resp) {
+      if (resp.ok) {
+        aiState.sessionId = resp.session_id;
+        aiState.sessionStatus = resp.status;
+        updateStatusUI();
+        setActionResult(
+          'Session 创建成功: ' + resp.session_id +
+          (resp.started ? ' (浏览器已启动)' : ' (启动失败: ' + (resp.start_error || 'unknown') + ')'),
+          'success'
+        );
+      } else {
+        setActionResult('Session 创建失败: ' + resp.error, 'error');
+      }
+    }).catch(function (e) {
+      setActionResult('Session 创建异常: ' + e.message, 'error');
+    });
+  }
+
+  function stopSession() {
+    if (!aiState.sessionId) {
+      setActionResult('没有活跃 Session', 'warn');
+      return;
+    }
+    apiPost('/api/browser/sessions/' + aiState.sessionId + '/stop', {}).then(function (resp) {
+      setActionResult('Session 已关闭: ' + aiState.sessionId, 'info');
+      aiState.sessionId = null;
+      aiState.sessionStatus = 'closed';
+      updateStatusUI();
+    }).catch(function (e) {
+      setActionResult('关闭异常: ' + e.message, 'error');
+    });
+  }
+
+  function refreshStatus() {
+    if (!aiState.sessionId) return;
+    apiGet('/api/browser/sessions/' + aiState.sessionId).then(function (resp) {
+      if (resp.ok) {
+        aiState.sessionStatus = resp.status;
+        aiState.currentUrl = resp.current_url || '';
+        aiState.currentTitle = resp.current_title || '';
+        aiState.circuitBreaker = (resp.circuit_breaker && resp.circuit_breaker.open) ? 'OPEN' : 'closed';
+        updateStatusUI();
+      }
+    }).catch(function () {});
+  }
+
+  function updateStatusUI() {
+    if ($('ai-session-id')) $('ai-session-id').textContent = aiState.sessionId || '未创建';
+    if ($('ai-session-status')) {
+      var el = $('ai-session-status');
+      el.textContent = aiState.sessionStatus || '—';
+      el.style.color = aiState.sessionStatus === 'running' ? '#059669' :
+                       aiState.sessionStatus === 'need_verify' ? '#D97706' :
+                       aiState.sessionStatus === 'error' ? '#DC2626' : '#6B7280';
+    }
+    if ($('ai-current-url')) $('ai-current-url').textContent = aiState.currentUrl || '—';
+    if ($('ai-risk-level')) $('ai-risk-level').textContent = aiState.riskLevel;
+    if ($('ai-circuit-breaker')) {
+      var cb = $('ai-circuit-breaker');
+      cb.textContent = aiState.circuitBreaker;
+      cb.style.color = aiState.circuitBreaker === 'OPEN' ? '#DC2626' : '#059669';
+    }
+  }
+
+  // ===== Observe =====
+  function observe() {
+    if (!requireSession()) return;
+    setActionResult('正在观察页面...', 'info');
+    apiPost('/api/browser/sessions/' + aiState.sessionId + '/observe', {
+      include_dom: true,
+      include_accessibility: false,
+      max_text_length: 1500,
+      screenshot: false,
+    }).then(function (resp) {
+      if (resp.ok && resp.state) {
+        var s = resp.state;
+        aiState.currentUrl = s.url || '';
+        aiState.currentTitle = s.title || '';
+        updateStatusUI();
+
+        var html = '<div style="margin-bottom:6px;"><strong>URL:</strong> ' + esc(s.url) + '</div>';
+        html += '<div style="margin-bottom:6px;"><strong>Title:</strong> ' + esc(s.title) + '</div>';
+        html += '<div style="margin-bottom:6px;"><strong>元素数:</strong> ' + (s.element_count || 0) + '</div>';
+        html += '<div style="margin-bottom:6px;"><strong>State Hash:</strong> ' + esc(resp.state_hash || '') + '</div>';
+        if (s.body_text) {
+          html += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #E5E7EB;"><strong>页面文本（脱敏）:</strong><br>' + esc(s.body_text.substring(0, 800)) + '</div>';
+        }
+        if (s.console_errors && s.console_errors.length > 0) {
+          html += '<div style="margin-top:6px;color:#DC2626;"><strong>控制台错误 (' + s.console_errors.length + '):</strong><br>' + esc(s.console_errors.slice(0, 3).join('; ')) + '</div>';
+        }
+        $('ai-observe-content').innerHTML = html;
+
+        // Injection warning
+        if (resp.injection_scan && resp.injection_scan.detected) {
+          $('ai-injection-warning').style.display = 'block';
+          $('ai-injection-warning').textContent = '⚠ 检测到 Prompt Injection 模式: ' +
+            (resp.injection_scan.patterns || []).join(', ') + '。网页内容已标记为不可信，不会改变Agent权限。';
+        } else {
+          $('ai-injection-warning').style.display = 'none';
+        }
+
+        setActionResult('观察完成', 'success');
+      } else {
+        setActionResult('观察失败: ' + (resp.error || 'unknown'), 'error');
+      }
+    }).catch(function (e) {
+      setActionResult('观察异常: ' + e.message, 'error');
+    });
+  }
+
+  // ===== Action Execution =====
+  function executeAction() {
+    if (!requireSession()) return;
+
+    var actionType = $('ai-action-type').value;
+    var selector = $('ai-action-selector').value.trim();
+    var value = $('ai-action-value').value.trim();
+    var expectedStr = $('ai-action-expected').value.trim();
+
+    // Parse expected state
+    var expected = null;
+    if (expectedStr) {
+      expected = {};
+      expectedStr.split(',').forEach(function (pair) {
+        var kv = pair.split('=');
+        if (kv.length === 2) {
+          expected[kv[0].trim()] = kv[1].trim();
+        }
+      });
+    }
+
+    var body = {
+      action: actionType,
+      selector: selector,
+      value: value,
+      text: value,
+      url: actionType === 'navigate' ? value : '',
+      expected: expected,
+      risk_level: 'medium',
+    };
+
+    setActionResult('正在执行 Action: ' + actionType + '...', 'info');
+
+    apiPost('/api/browser/sessions/' + aiState.sessionId + '/action', body).then(function (resp) {
+      handleActionResult(resp);
+    }).catch(function (e) {
+      setActionResult('Action 执行异常: ' + e.message, 'error');
+    });
+  }
+
+  function handleActionResult(resp) {
+    var html = '';
+    var status = 'info';
+
+    if (resp.ok || resp.success) {
+      status = 'success';
+      html = '<div style="color:#059669;font-weight:600;margin-bottom:6px;">✓ Action 执行成功</div>';
+    } else if (resp.needs_human_approval || resp.human_escalation_required) {
+      status = 'warn';
+      html = '<div style="color:#D97706;font-weight:600;margin-bottom:6px;">⚠ 需要人工审批</div>';
+      html += '<div>' + esc(resp.escalation_reason || resp.error || '') + '</div>';
+      showApprovalModal(resp);
+    } else {
+      status = 'error';
+      html = '<div style="color:#DC2626;font-weight:600;margin-bottom:6px;">✗ Action 执行失败</div>';
+      html += '<div>' + esc(resp.error || 'unknown error') + '</div>';
+    }
+
+    // Verification result
+    if (resp.verification) {
+      var v = resp.verification;
+      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E5E7EB;">';
+      html += '<div style="font-weight:600;margin-bottom:4px;">Verification: ' +
+        (v.passed ? '<span style="color:#059669;">PASS</span>' : '<span style="color:#DC2626;">FAIL</span>') + '</div>';
+      if (v.differences && v.differences.length > 0) {
+        html += '<div style="color:#DC2626;">差异:</div><ul style="margin:4px 0;padding-left:16px;">';
+        v.differences.forEach(function (d) {
+          html += '<li>' + esc(d) + '</li>';
+        });
+        html += '</ul>';
+      }
+      if (v.actual) {
+        html += '<div style="margin-top:4px;"><strong>Actual:</strong> URL=' + esc(v.actual.url || '') + '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Recovery attempts
+    if (resp.recovery_attempts && resp.recovery_attempts.length > 0) {
+      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E5E7EB;">';
+      html += '<div style="font-weight:600;margin-bottom:4px;">Recovery 尝试 (' + resp.recovery_attempts.length + '):</div>';
+      resp.recovery_attempts.forEach(function (r) {
+        html += '<div>• ' + esc(r.strategy) + ': ' + (r.success ? '<span style="color:#059669;">成功</span>' : '<span style="color:#DC2626;">失败</span>') + '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Evidence ID
+    if (resp.evidence_id && resp.evidence_id > 0) {
+      html += '<div style="margin-top:6px;font-size:10px;color:#9CA3AF;">Evidence ID: ' + resp.evidence_id + '</div>';
+    }
+
+    setActionResult(html, status);
+    refreshStatus();
+    refreshEvidence();
+  }
+
+  // ===== Human Approval Modal =====
+  function showApprovalModal(resp) {
+    aiState.pendingApproval = resp;
+    $('ai-approval-action').textContent = resp.action || 'unknown';
+    $('ai-approval-target').textContent = (resp.after_state && resp.after_state.url) || resp.target || '—';
+    $('ai-approval-expected').textContent = resp.verification ? JSON.stringify(resp.verification.expected || {}).substring(0, 100) : '—';
+    $('ai-approval-risk').textContent = 'HIGH - ' + (resp.escalation_reason || '需要人工确认');
+    $('ai-approval-reason').textContent = resp.escalation_reason || 'AI Browser Runtime 请求人工确认。';
+    $('ai-approval-modal').style.display = 'flex';
+  }
+
+  function approveAction() {
+    if (!aiState.pendingApproval || !aiState.sessionId) {
+      $('ai-approval-modal').style.display = 'none';
+      return;
+    }
+    var pending = aiState.pendingApproval;
+    apiPost('/api/browser/sessions/' + aiState.sessionId + '/human-approval', {
+      approved: true,
+      action: pending.action,
+      selector: pending.selector || '',
+      value: pending.value || '',
+      reason: 'human approved',
+    }).then(function (resp) {
+      $('ai-approval-modal').style.display = 'none';
+      aiState.pendingApproval = null;
+      handleActionResult(resp);
+    }).catch(function (e) {
+      $('ai-approval-modal').style.display = 'none';
+      setActionResult('审批执行异常: ' + e.message, 'error');
+    });
+  }
+
+  function rejectAction() {
+    if (aiState.sessionId) {
+      apiPost('/api/browser/sessions/' + aiState.sessionId + '/human-approval', {
+        approved: false,
+      }).catch(function () {});
+    }
+    $('ai-approval-modal').style.display = 'none';
+    aiState.pendingApproval = null;
+    setActionResult('操作已被人工拒绝', 'warn');
+  }
+
+  // ===== Evidence Timeline =====
+  function refreshEvidence() {
+    if (!aiState.sessionId) return;
+    apiGet('/api/browser/sessions/' + aiState.sessionId + '/evidence?limit=20').then(function (resp) {
+      if (resp.ok && resp.records && resp.records.length > 0) {
+        var html = '';
+        resp.records.forEach(function (r) {
+          var color = r.result === 'PASS' ? '#059669' :
+                      r.result === 'FAIL' ? '#DC2626' :
+                      r.result === 'RETRY' ? '#D97706' : '#7C3AED';
+          html += '<div style="padding:4px 0;border-bottom:1px solid #F3F4F6;">';
+          html += '<div style="display:flex;justify-content:space-between;">';
+          html += '<span style="font-weight:500;">' + esc(r.action) + '</span>';
+          html += '<span style="color:' + color + ';font-weight:600;">' + esc(r.result) + '</span>';
+          html += '</div>';
+          html += '<div style="font-size:10px;color:#9CA3AF;">' + esc(r.timestamp || '') +
+            (r.retry_count > 0 ? ' · retries=' + r.retry_count : '') + '</div>';
+          if (r.error) {
+            html += '<div style="font-size:10px;color:#DC2626;margin-top:2px;">' + esc(r.error.substring(0, 100)) + '</div>';
+          }
+          html += '</div>';
+        });
+        $('ai-evidence-timeline').innerHTML = html;
+        if (resp.stats) {
+          aiState.riskLevel = resp.stats.pass_rate && parseInt(resp.stats.pass_rate) < 50 ? 'high' : 'medium';
+          updateStatusUI();
+        }
+      } else {
+        $('ai-evidence-timeline').innerHTML = '<div style="color:#9CA3AF;">暂无 Evidence 记录</div>';
+      }
+    }).catch(function () {});
+  }
+
+  // ===== Utilities =====
+  function requireSession() {
+    if (!aiState.sessionId) {
+      setActionResult('请先创建 AI Browser Session', 'warn');
+      return false;
+    }
+    return true;
+  }
+
+  function setActionResult(html, type) {
+    var el = $('ai-action-result');
+    if (!el) return;
+    var colors = {
+      success: '#059669',
+      error: '#DC2626',
+      warn: '#D97706',
+      info: '#7C3AED',
+    };
+    var color = colors[type] || '#6B7280';
+    if (type === 'info' || type === 'success' || type === 'error' || type === 'warn') {
+      el.innerHTML = '<div style="color:' + color + ';">' + html + '</div>';
+    } else {
+      el.innerHTML = html;
+    }
+  }
+
+  // ===== Auto-refresh =====
+  var aiRefreshTimer = null;
+  function startAutoRefresh() {
+    if (aiRefreshTimer) return;
+    aiRefreshTimer = setInterval(function () {
+      if (aiState.sessionId) {
+        refreshStatus();
+      }
+    }, 10000);
+  }
+
+  // ===== Public API =====
+  var AIBrowser = {
+    createSession: createSession,
+    stopSession: stopSession,
+    refreshStatus: refreshStatus,
+    observe: observe,
+    executeAction: executeAction,
+    approveAction: approveAction,
+    rejectAction: rejectAction,
+    refreshEvidence: refreshEvidence,
+    getState: function () { return aiState; },
+  };
+
+  global.AIBrowser = AIBrowser;
+
+  // Auto-init when panel opened
+  if (document.readyState !== 'loading') {
+    startAutoRefresh();
+  } else {
+    document.addEventListener('DOMContentLoaded', startAutoRefresh);
+  }
+
+})(window);

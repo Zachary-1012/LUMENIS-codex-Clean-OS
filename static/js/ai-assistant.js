@@ -1,8 +1,8 @@
 /* ============================================================
- * ai-assistant.js — 轻量AI助手（A3最终决策，ZBC V1.1 架构）
- * 右下角浮动按钮 + 展开面板，对接 /api/ai/chat
- * 废弃3D/three.js/nomi拖拽，保留系统问答能力
- * 支持：系统问答、快捷指令、上下文感知（当前域）
+ * ai-assistant.js — 轻量AI助手（ZBC V2.0 AI Task Engine 对接）
+ * 右下角浮动按钮 + 展开面板，对接 /api/ai/tasks（Production-Ready）
+ * 降级链：Task Engine API → /api/ai/chat → 本地提示
+ * 支持：系统问答、快捷指令、上下文感知（当前域）、任务状态展示
  * ============================================================ */
 (function () {
   'use strict';
@@ -38,12 +38,13 @@
       '.zbc-ai-context{padding:6px 16px;background:var(--l-bg-secondary,#f7f7f8);font-size:11px;color:var(--l-text-tertiary,#9ca3af);border-bottom:1px solid var(--l-border-light,#f0f0f0);flex-shrink:0}',
       '[data-theme="dark"] .zbc-ai-context{background:var(--d-bg-secondary,#141414);border-color:var(--d-border-light,#262626)}',
       '.zbc-ai-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px}',
-      '.zbc-ai-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word;animation:zbc-ai-msg-in .2s ease}',
+      '.zbc-ai-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word;animation:zbc-ai-msg-in .2s ease;white-space:pre-wrap}',
       '@keyframes zbc-ai-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
       '.zbc-ai-msg--user{align-self:flex-end;background:var(--l-accent,#0f766e);color:#fff;border-bottom-right-radius:4px}',
       '.zbc-ai-msg--ai{align-self:flex-start;background:var(--l-bg-secondary,#f7f7f8);color:var(--l-text,#0d0d0d);border-bottom-left-radius:4px}',
       '[data-theme="dark"] .zbc-ai-msg--ai{background:var(--d-card,#1f1f1f);color:var(--d-text,#f5f5f5)}',
       '.zbc-ai-msg--error{background:var(--l-danger,#dc2626);color:#fff}',
+      '.zbc-ai-msg--task{background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);font-size:11px;color:var(--l-text-secondary,#6B7280)}',
       '.zbc-ai-typing{display:inline-flex;gap:4px;align-items:center;padding:4px 0}',
       '.zbc-ai-typing span{width:6px;height:6px;border-radius:50%;background:var(--l-text-tertiary,#9ca3af);animation:zbc-ai-typing 1.2s infinite}',
       '.zbc-ai-typing span:nth-child(2){animation-delay:.2s}',
@@ -67,9 +68,7 @@
       '.zbc-ai-send:active{transform:scale(.92)}',
       '.zbc-ai-send:disabled{opacity:.4;cursor:not-allowed}',
       '.zbc-ai-send svg{width:16px;height:16px}',
-      '/* P0-R6: A3浮球安全边距 — 主内容区右侧/底部留出安全区，避免浮球遮挡卡片内容/图例/横向叠层卡 */',
       '.zbc-content{padding-right:88px!important;padding-bottom:88px!important}',
-      '/* 移动端：浮球上移至Tab Bar上方，避免遮挡底部导航 */',
       '@media(max-width:768px){.zbc-content{padding-right:70px!important;padding-bottom:130px!important}#zbc-ai-fab{bottom:72px!important}}',
       '@media(max-width:600px){#zbc-ai-panel{right:12px;left:12px;width:auto;bottom:130px;height:calc(100vh - 150px)}#zbc-ai-fab{bottom:72px!important;right:16px;width:46px;height:46px}}'
     ].join('');
@@ -138,20 +137,19 @@
       '<div class="zbc-ai-head">' +
       '<div class="zbc-ai-head-title">' +
       '<div class="zbc-ai-head-avatar">◆</div>' +
-      '<div class="zbc-ai-head-text"><h3>序境 AI 助手</h3><span>系统问答 · 数据检索</span></div></div>' +
+      '<div class="zbc-ai-head-text"><h3>序境 AI 助手</h3><span>Task Engine · 数据检索 · 风险分析</span></div></div>' +
       '<button class="zbc-ai-head-close" id="zbc-ai-close" aria-label="关闭">×</button></div>' +
-      '<div class="zbc-ai-context">当前上下文：' + getDomainLabel() + ' 域</div>' +
+      '<div class="zbc-ai-context">当前上下文：' + getDomainLabel() + ' 域 · AI Task Engine V1.0</div>' +
       '<div class="zbc-ai-messages" id="zbc-ai-messages">' +
-      '<div class="zbc-ai-msg zbc-ai-msg--ai">你好！我是序境 AI 助手，可以帮你查询系统数据、解读风险事件、说明架构功能。当前在 ' + getDomainLabel() + ' 域，有什么可以帮你的？</div></div>' +
+      '<div class="zbc-ai-msg zbc-ai-msg--ai">你好！我是序境 AI 助手，已接入 AI Task Engine（Parser→Intent→Agent→Skill→Permission→Execution→Evidence→Verification→Trace）。当前在 ' + getDomainLabel() + ' 域，有什么可以帮你的？</div></div>' +
       '<div class="zbc-ai-quick"><div class="zbc-ai-quick-label">快捷指令</div><div class="zbc-ai-quick-chips">' + chipsHtml + '</div></div>' +
       '<div class="zbc-ai-input-wrap">' +
-      '<input type="text" class="zbc-ai-input" id="zbc-ai-input" placeholder="输入问题…" autocomplete="off">' +
+      '<input type="text" class="zbc-ai-input" id="zbc-ai-input" placeholder="输入问题或任务…" autocomplete="off">' +
       '<button class="zbc-ai-send" id="zbc-ai-send" aria-label="发送">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>';
 
     document.body.appendChild(panel);
 
-    // 事件绑定
     panel.querySelector('#zbc-ai-close').addEventListener('click', toggle);
     panel.querySelector('#zbc-ai-send').addEventListener('click', sendMessage);
     var input = panel.querySelector('#zbc-ai-input');
@@ -159,7 +157,6 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
-    // 快捷指令
     panel.querySelectorAll('.zbc-ai-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         var cmd = chip.getAttribute('data-cmd');
@@ -178,12 +175,7 @@
     if (!container) return;
     var msg = document.createElement('div');
     msg.className = 'zbc-ai-msg zbc-ai-msg--' + type;
-    if (type === 'ai' && text) {
-      // 简单的换行处理
-      msg.textContent = text;
-    } else {
-      msg.textContent = text;
-    }
+    msg.textContent = text;
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
     return msg;
@@ -205,6 +197,36 @@
     if (t) t.remove();
   }
 
+  function getFetchFn() {
+    return (typeof LUMENIS !== 'undefined' && LUMENIS.fetch) ? LUMENIS.fetch : fetch;
+  }
+
+  function extractTaskReply(task) {
+    if (!task) return '';
+    if (task.status === 'succeeded' && task.result_json) {
+      try {
+        var ro = typeof task.result_json === 'string' ? JSON.parse(task.result_json) : task.result_json;
+        if (ro.output) {
+          if (ro.output.ai_summary) return ro.output.ai_summary;
+          if (ro.output.ai_analysis) return JSON.stringify(ro.output.ai_analysis, null, 2);
+          if (ro.output.note) return ro.output.note;
+          return JSON.stringify(ro.output, null, 2);
+        }
+        if (ro.verification && ro.verification.result_summary) return ro.verification.result_summary;
+        return JSON.stringify(ro, null, 2);
+      } catch (e) { return String(task.result_json); }
+    }
+    if (task.status === 'awaiting_approval') {
+      return '⚠ 此任务需要人工审批：' + (task.risk_reason || '高风险操作') + '\n请前往 AI Gateway 页面（/system/ai）审批后执行。\n任务ID: ' + task.task_id;
+    }
+    if (task.status === 'failed') {
+      return '任务执行失败：' + (task.error || '未知错误') + '\n任务ID: ' + task.task_id;
+    }
+    if (task.status === 'cancelled') return '任务已取消。';
+    if (task.status === 'dlq') return '任务进入死信队列（重试耗尽）：' + (task.error || '') + '\n请人工介入处理。';
+    return '任务状态：' + task.status + '（任务ID: ' + task.task_id + '）';
+  }
+
   function sendMessage() {
     if (isLoading) return;
     var input = document.getElementById('zbc-ai-input');
@@ -215,37 +237,67 @@
     input.value = '';
     isLoading = true;
     updateSendButton();
-
     history.push({ role: 'user', content: text });
     addTyping();
 
     var domain = getCurrentDomain();
-    var payload = {
-      message: '[' + domain.toUpperCase() + '域] ' + text,
-      history: history.slice(-10)
+    var fetchFn = getFetchFn();
+
+    // 主链路：AI Task Engine API（Production-Ready）
+    var taskPayload = {
+      input: '[' + domain.toUpperCase() + '域] ' + text,
+      context: { current_page: window.location.pathname, domain: domain },
+      created_by: 'ai_assistant'
     };
 
-    var apiUrl = '/api/ai/chat';
-    var fetchFn = (typeof LUMENIS !== 'undefined' && LUMENIS.fetch) ? LUMENIS.fetch : fetch;
-
-    fetchFn(apiUrl, {
+    fetchFn('/api/ai/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(taskPayload)
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
-    }).then(function (data) {
-      removeTyping();
-      if (data && data.ok && data.reply) {
-        addMessage(data.reply, 'ai');
-        history.push({ role: 'assistant', content: data.reply });
-      } else {
-        addMessage('抱歉，AI 暂时无法回答。' + (data && data.error ? '错误：' + data.error : ''), 'error');
-      }
+    }).then(function (d) {
+      if (!d || !d.ok || !d.task) throw new Error('task create failed');
+      var taskId = d.task.task_id;
+      addMessage('任务已创建：' + taskId + '，正在执行…', 'task');
+      return fetchFn('/api/ai/tasks/' + taskId + '/run', { method: 'POST' })
+        .then(function (r2) { return r2.json(); })
+        .then(function (runResult) {
+          removeTyping();
+          if (runResult && runResult.ok && runResult.task) {
+            var reply = extractTaskReply(runResult.task);
+            addMessage(reply, 'ai');
+            history.push({ role: 'assistant', content: reply });
+          } else {
+            throw new Error('task run failed');
+          }
+        });
     }).catch(function (err) {
       removeTyping();
-      addMessage('连接失败：' + (err.message || '未知错误') + '。请检查服务是否运行。', 'error');
+      // 降级链路1：旧 /api/ai/chat 接口
+      var legacyPayload = {
+        message: '[' + domain.toUpperCase() + '域] ' + text,
+        history: history.slice(-10)
+      };
+      fetchFn('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(legacyPayload)
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (data) {
+        if (data && data.ok && data.reply) {
+          addMessage(data.reply, 'ai');
+          history.push({ role: 'assistant', content: data.reply });
+        } else {
+          addMessage('抱歉，AI 暂时无法回答。' + (data && data.error ? '错误：' + data.error : ''), 'error');
+        }
+      }).catch(function (err2) {
+        // 降级链路2：本地提示
+        addMessage('连接失败（Task Engine + Chat API 均不可用）：' + (err2.message || '未知错误') + '。请检查 8201 服务是否运行。', 'error');
+      });
     }).finally(function () {
       isLoading = false;
       updateSendButton();
@@ -278,7 +330,7 @@
       open: function () { if (!isOpen) toggle(); },
       close: function () { if (isOpen) toggle(); }
     };
-    console.log('[ai-assistant] 轻量AI助手已加载（右下角浮动按钮，Ctrl+J）');
+    console.log('[ai-assistant] AI助手已加载（对接 AI Task Engine，右下角浮动按钮，Ctrl+J）');
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

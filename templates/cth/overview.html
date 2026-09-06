@@ -712,5 +712,53 @@
     loadAll: loadAll
   };
 })();
+
+// ===== G Shard: Module Registry 注册 — 自动获得自适应+动效能力 =====
+(function() {
+  function registerCTHModules() {
+    if (typeof ZBCAdaptive === 'undefined') { setTimeout(registerCTHModules, 200); return; }
+    var modules = [
+      { module_id: 'cth-kpi-notes', module_type: 'kpi', data_source: '/api/viz/overview.stats',
+        min_width: 130, preferred_width: 180, priority: 0, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'cth-kpi-brands', module_type: 'kpi', data_source: '/api/brand-stats',
+        min_width: 130, preferred_width: 180, priority: 1, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'cth-kpi-risk', module_type: 'kpi', data_source: '/api/viz/risk.active',
+        min_width: 130, preferred_width: 180, priority: 0, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'cth-kpi-pending', module_type: 'kpi', data_source: '/api/negative/pending',
+        min_width: 130, preferred_width: 180, priority: 1, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'cth-kpi-collector', module_type: 'kpi', data_source: '/healthz',
+        min_width: 130, preferred_width: 180, priority: 0, responsive_mode: 'reflow', motion_mode: 'minimal' },
+      { module_id: 'cth-kpi-health', module_type: 'kpi', data_source: '/healthz',
+        min_width: 130, preferred_width: 180, priority: 0, responsive_mode: 'reflow', motion_mode: 'minimal' },
+      { module_id: 'cth-trend', module_type: 'chart', data_source: '/api/viz/overview.trend',
+        min_width: 300, preferred_width: 600, priority: 0, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'cth-industry', module_type: 'chart', data_source: '/api/brand-stats',
+        min_width: 200, preferred_width: 350, priority: 2, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'cth-feed', module_type: 'list', data_source: '/api/notes',
+        min_width: 280, preferred_width: 500, priority: 1, responsive_mode: 'reflow', motion_mode: 'full' },
+      { module_id: 'cth-risk-board', module_type: 'list', data_source: '/api/risks/active',
+        min_width: 280, preferred_width: 500, priority: 0, responsive_mode: 'reflow', motion_mode: 'full' }
+    ];
+    modules.forEach(function(m) {
+      ZBCAdaptive.registerModule(m);
+    });
+    // Mark content as adaptive container
+    var content = document.getElementById('zbc-content');
+    if (content) content.classList.add('ad-container');
+    // Bind KPI cards
+    ['kpi-notes','kpi-brands','kpi-risk','kpi-pending','kpi-collector','kpi-health'].forEach(function(id, i) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.setAttribute('data-module-id', modules[i].module_id);
+        ZBCAdaptive.bindModule(modules[i].module_id, el);
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', registerCTHModules);
+  } else {
+    registerCTHModules();
+  }
+})();
 </script>
 {% endblock %}

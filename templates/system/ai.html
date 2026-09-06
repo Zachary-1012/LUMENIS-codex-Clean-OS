@@ -103,6 +103,71 @@
   </div>
 </div>
 
+<!-- ===== Row 4: AI Task Engine (Production-Ready) ===== -->
+<div class="zbc-card" id="taskengine-card" style="margin-top:16px;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">AI Task Engine · Task→Parser→Intent→Agent→Skill→Permission→Execution→Evidence→Verification→Trace</span>
+    <span class="zbc-tag zbc-tag--info" id="te-health-tag">—</span>
+  </div>
+  <div class="zbc-card__body">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <input type="text" id="te-input" placeholder="输入自然语言任务，如：查一下今天太古汇舆情量 / 生成周报 / 解释当前风险…"
+        style="flex:1;min-width:280px;padding:10px 16px;border:1px solid var(--l-border,#e8e8e8);border-radius:12px;font-size:13px;outline:none;">
+      <button class="zbc-btn" id="te-run-btn" onclick="TE.runTask()" style="border-radius:12px;padding:10px 24px;">执行任务</button>
+      <button class="zbc-btn" onclick="TE.loadTasks()" style="border-radius:12px;padding:10px 16px;background:var(--l-bg-secondary,#f7f7f8);">刷新</button>
+    </div>
+    <div id="te-caps" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:16px;">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:8px;">任务列表</div>
+        <div id="te-task-list" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+          <div style="color:var(--l-text-tertiary,#9CA3AF);font-size:12px;padding:20px;text-align:center;">加载中…</div>
+        </div>
+      </div>
+      <div id="te-task-detail" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);font-family:JetBrains Mono,monospace;" id="te-detail-id">—</div>
+            <div style="font-size:14px;font-weight:600;margin-top:2px;" id="te-detail-input">—</div>
+          </div>
+          <div id="te-detail-status"></div>
+        </div>
+        <div id="te-detail-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:6px;text-transform:uppercase;">执行步骤</div>
+          <div id="te-detail-steps"></div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:6px;text-transform:uppercase;">Evidence 证据链（链式哈希）</div>
+          <div id="te-detail-evidence" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <div id="te-detail-result-wrap" style="display:none;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:6px;text-transform:uppercase;">执行结果</div>
+          <pre id="te-detail-result" style="background:var(--l-bg-secondary,#f7f7f8);border-radius:10px;padding:10px;font-size:11px;overflow-x:auto;max-height:180px;white-space:pre-wrap;word-break:break-all;"></pre>
+        </div>
+        <div id="te-detail-actions" style="display:flex;gap:8px;"></div>
+      </div>
+      <div id="te-detail-empty" style="display:flex;align-items:center;justify-content:center;color:var(--l-text-tertiary,#9CA3AF);font-size:13px;min-height:200px;">选择左侧任务查看详情</div>
+    </div>
+  </div>
+</div>
+
+<!-- Approval Modal -->
+<div id="te-approval-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:var(--l-bg,#fff);border-radius:16px;padding:24px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="font-size:16px;font-weight:600;margin-bottom:8px;">需人工审批</div>
+    <div style="font-size:13px;color:var(--l-text-secondary,#6B7280);margin-bottom:14px;" id="te-approval-reason">—</div>
+    <div style="background:var(--l-bg-secondary,#f7f7f8);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;">
+      <div style="color:var(--l-text-tertiary,#9CA3AF);margin-bottom:4px;">任务内容</div>
+      <div id="te-approval-input" style="font-weight:500;">—</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="zbc-btn" onclick="TE.rejectApproval()" style="border-radius:10px;padding:8px 20px;background:var(--l-bg-secondary,#f7f7f8);">拒绝</button>
+      <button class="zbc-btn" onclick="TE.approveApproval()" style="border-radius:10px;padding:8px 20px;background:var(--l-accent,#0f766e);color:#fff;">批准执行</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -147,32 +212,20 @@
     if (subEl) subEl.textContent = sub || '—';
   }
 
-  /* ---- Provider status (xjViz.api driven) ---- */
+  /* ---- Provider status ---- */
   function loadProviders() {
     xjViz.api('/viz/ai-providers').catch(function() { return xjViz.api('/system/ai'); })
       .then(function(d) {
         var data = d.data || d;
         var providers = data.providers || data.models || {};
-
         var glm53 = providers['glm-5.3'] || providers['zhipu-glm-5.3'] || {};
-        setProvider('prov-glm53', glm53.status || 'ACTIVE',
-          'latency: ' + disp(glm53.latency_ms) + 'ms · calls: ' + disp(glm53.call_count),
-          (glm53.status === 'active' || glm53.status === 'ACTIVE') ? '#10B981' : '');
-
+        setProvider('prov-glm53', glm53.status || 'ACTIVE', 'latency: ' + disp(glm53.latency_ms) + 'ms · calls: ' + disp(glm53.call_count), (glm53.status === 'active' || glm53.status === 'ACTIVE') ? '#10B981' : '');
         var glm45 = providers['glm-4.5-air'] || providers['zhipu-glm-4.5-air'] || {};
-        setProvider('prov-glm45', glm45.status || 'ACTIVE',
-          'latency: ' + disp(glm45.latency_ms) + 'ms · calls: ' + disp(glm45.call_count),
-          (glm45.status === 'active' || glm45.status === 'ACTIVE') ? '#10B981' : '');
-
+        setProvider('prov-glm45', glm45.status || 'ACTIVE', 'latency: ' + disp(glm45.latency_ms) + 'ms · calls: ' + disp(glm45.call_count), (glm45.status === 'active' || glm45.status === 'ACTIVE') ? '#10B981' : '');
         var ark = providers['ark'] || providers['doubao-lite'] || {};
-        setProvider('prov-ark', ark.status || 'ACTIVE',
-          'latency: ' + disp(ark.latency_ms) + 'ms · calls: ' + disp(ark.call_count),
-          (ark.status === 'active' || ark.status === 'ACTIVE') ? '#10B981' : '');
-
+        setProvider('prov-ark', ark.status || 'ACTIVE', 'latency: ' + disp(ark.latency_ms) + 'ms · calls: ' + disp(ark.call_count), (ark.status === 'active' || ark.status === 'ACTIVE') ? '#10B981' : '');
         var ollama = providers['ollama'] || {};
-        setProvider('prov-ollama', ollama.status || 'AVAILABLE',
-          'model: ' + disp(ollama.model) + ' · latency: ' + disp(ollama.latency_ms) + 'ms',
-          (ollama.status === 'available' || ollama.status === 'AVAILABLE') ? '#10B981' : '');
+        setProvider('prov-ollama', ollama.status || 'AVAILABLE', 'model: ' + disp(ollama.model) + ' · latency: ' + disp(ollama.latency_ms) + 'ms', (ollama.status === 'available' || ollama.status === 'AVAILABLE') ? '#10B981' : '');
       })
       .catch(function() {
         xjViz.api('/ai-resource-packs/status').then(function(d) {
@@ -191,7 +244,7 @@
       });
   }
 
-  /* ---- Call log (xjViz.api + xjViz.table) ---- */
+  /* ---- Call log ---- */
   function loadCallLog() {
     showSection('calllog', 'loading');
     xjViz.api('/viz/ai-logs').catch(function() { return xjViz.api('/ai/logs'); })
@@ -220,18 +273,13 @@
       });
   }
 
-  /* ---- OWASP Security Gate (xjViz.api driven) ---- */
+  /* ---- OWASP ---- */
   var OWASP_ITEMS = [
-    { id: 'LLM01', name: 'Prompt Injection' },
-    { id: 'LLM02', name: 'Insecure Output Handling' },
-    { id: 'LLM03', name: 'Training Data Poisoning' },
-    { id: 'LLM04', name: 'Model DoS' },
-    { id: 'LLM05', name: 'Supply Chain' },
-    { id: 'LLM06', name: 'Sensitive Info Disclosure' },
-    { id: 'LLM07', name: 'Insecure Plugin Design' },
-    { id: 'LLM08', name: 'Excessive Agency' },
-    { id: 'LLM09', name: 'Overreliance' },
-    { id: 'LLM10', name: 'Model Theft' }
+    { id: 'LLM01', name: 'Prompt Injection' }, { id: 'LLM02', name: 'Insecure Output Handling' },
+    { id: 'LLM03', name: 'Training Data Poisoning' }, { id: 'LLM04', name: 'Model DoS' },
+    { id: 'LLM05', name: 'Supply Chain' }, { id: 'LLM06', name: 'Sensitive Info Disclosure' },
+    { id: 'LLM07', name: 'Insecure Plugin Design' }, { id: 'LLM08', name: 'Excessive Agency' },
+    { id: 'LLM09', name: 'Overreliance' }, { id: 'LLM10', name: 'Model Theft' }
   ];
 
   function loadOWASP() {
@@ -248,15 +296,12 @@
           var st = g.status || g.state || 'PASS';
           return '<div style="padding:7px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;align-items:center;justify-content:space-between;">'
             + '<div><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--l-text-secondary,#6B7280);margin-right:8px;">' + item.id + '</span>'
-            + '<span style="font-size:13px;">' + item.name + '</span></div>'
-            + statusTag(st)
-            + '</div>';
+            + '<span style="font-size:13px;">' + item.name + '</span></div>' + statusTag(st) + '</div>';
         }).join('');
         document.getElementById('owasp-list').innerHTML = html;
         var blocked = data.blocked || data.interceptions || [];
         document.getElementById('owasp-blocked').textContent = blocked.length > 0
-          ? blocked.map(function(b) { return (b.timestamp || '') + ' [' + (b.rule || b.type || '') + '] ' + trunc(b.detail || b.reason || '', 40); }).join('\n')
-          : '—';
+          ? blocked.map(function(b) { return (b.timestamp || '') + ' [' + (b.rule || b.type || '') + '] ' + trunc(b.detail || b.reason || '', 40); }).join('\n') : '—';
       })
       .catch(function(e) {
         showSection('owasp', 'error');
@@ -264,7 +309,7 @@
       });
   }
 
-  /* ---- Evaluation panel (xjViz.api + xjViz.table) ---- */
+  /* ---- Evaluation ---- */
   function loadEval() {
     showSection('eval', 'loading');
     xjViz.api('/viz/ai-evaluations').catch(function() { return xjViz.api('/ai/evaluations'); })
@@ -297,12 +342,170 @@
   window.loadEval = loadEval;
 
   document.addEventListener('DOMContentLoaded', function() {
-    loadProviders();
-    loadCallLog();
-    loadOWASP();
-    loadEval();
+    loadProviders(); loadCallLog(); loadOWASP(); loadEval();
   });
   setInterval(loadProviders, 30000);
+})();
+</script>
+
+<!-- ===== AI Task Engine JS ===== -->
+<script>
+(function() {
+  'use strict';
+  var TE = {
+    currentTaskId: null, pendingApprovalId: null, _pollTimer: null,
+    api: function(url, opts) {
+      var f = (typeof LUMENIS !== 'undefined' && LUMENIS.fetch) ? LUMENIS.fetch : fetch;
+      return f(url, opts).then(function(r) { return r.json(); });
+    },
+    esc: function(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; },
+    trunc: function(s, n) { s = String(s || ''); return s.length > n ? s.substring(0, n) + '…' : s; },
+    statusTag: function(s) {
+      var up = String(s || 'UNKNOWN').toUpperCase();
+      var c = { SUCCEEDED:'#10B981', READY:'#10B981', RUNNING:'#3B82F6', PARSING:'#3B82F6',
+        PENDING:'#6B7280', AWAITING_APPROVAL:'#F59E0B', L0:'#10B981', L1:'#3B82F6',
+        L2:'#F59E0B', L3:'#EF4444', L4:'#DC2626', FAILED:'#DC2626', DENIED:'#DC2626',
+        DLQ:'#DC2626', CANCELLED:'#6B7280' }[up] || '#6B7280';
+      return '<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:'+c+'1a;color:'+c+';border:1px solid '+c+'33;">'+up+'</span>';
+    },
+    loadHealth: function() {
+      TE.api('/api/ai/task-engine/health').then(function(d) {
+        if (d && d.ok && d.health) {
+          var el = document.getElementById('te-health-tag');
+          el.textContent = d.health.status.toUpperCase();
+          el.style.background = 'rgba(16,185,129,0.1)'; el.style.color = '#10B981';
+        }
+      }).catch(function(){});
+    },
+    loadCapabilities: function() {
+      TE.api('/api/ai/capabilities').then(function(d) {
+        if (!d || !d.ok || !d.capabilities) return;
+        var caps = d.capabilities, html = '';
+        if (caps.intents) {
+          html += '<span style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);align-self:center;">Intents('+caps.intents.length+'):</span>';
+          caps.intents.slice(0,8).forEach(function(i) {
+            html += '<span style="padding:3px 8px;border-radius:10px;font-size:10px;background:rgba(59,130,246,0.08);color:#3B82F6;">'+TE.esc(i.intent)+'</span>';
+          });
+        }
+        if (caps.agents && caps.agents.stats) html += '<span style="padding:3px 8px;border-radius:10px;font-size:10px;background:rgba(16,185,129,0.08);color:#10B981;">Agents:'+caps.agents.stats.total+'</span>';
+        if (caps.circuit_breaker) html += '<span style="padding:3px 8px;border-radius:10px;font-size:10px;background:rgba(245,158,11,0.08);color:#F59E0B;">Circuit:'+TE.esc(caps.circuit_breaker.state)+'</span>';
+        html += '<span style="padding:3px 8px;border-radius:10px;font-size:10px;background:rgba(124,58,237,0.08);color:#7C3AED;">OSAI:independent</span>';
+        document.getElementById('te-caps').innerHTML = html;
+      }).catch(function(){});
+    },
+    loadTasks: function() {
+      TE.api('/api/ai/tasks?limit=20').then(function(d) {
+        var list = document.getElementById('te-task-list');
+        if (!d || !d.ok || !d.tasks || d.tasks.length === 0) {
+          list.innerHTML = '<div style="color:var(--l-text-tertiary,#9CA3AF);font-size:12px;padding:20px;text-align:center;">暂无任务</div>'; return;
+        }
+        list.innerHTML = d.tasks.map(function(t) {
+          var active = (t.task_id === TE.currentTaskId) ? 'border-color:var(--l-accent,#0f766e);background:rgba(15,118,110,0.04);' : '';
+          return '<div onclick="TE.selectTask(\''+t.task_id+'\')" style="cursor:pointer;padding:10px 14px;border:1px solid var(--l-border-light,#f0f0f0);border-radius:10px;transition:all .15s;'+active+'">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+            + '<span style="font-size:12px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+TE.esc(TE.trunc(t.user_input,40))+'</span>'
+            + TE.statusTag(t.status) + '</div>'
+            + '<div style="display:flex;gap:6px;margin-top:6px;align-items:center;">'
+            + '<span style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);font-family:JetBrains Mono,monospace;">'+TE.esc(TE.trunc(t.task_id,12))+'</span>'
+            + (t.intent ? '<span style="font-size:10px;padding:2px 6px;border-radius:6px;background:rgba(59,130,246,0.08);color:#3B82F6;">'+TE.esc(t.intent)+'</span>' : '')
+            + (t.risk_level ? TE.statusTag(t.risk_level) : '')
+            + '</div></div>';
+        }).join('');
+      }).catch(function(){ document.getElementById('te-task-list').innerHTML = '<div style="color:#DC2626;font-size:12px;padding:20px;text-align:center;">加载失败</div>'; });
+    },
+    selectTask: function(taskId) { TE.currentTaskId = taskId; TE.loadTasks(); TE.loadTaskDetail(taskId); },
+    loadTaskDetail: function(taskId) {
+      TE.api('/api/ai/tasks/'+taskId).then(function(d) {
+        if (!d || !d.ok || !d.task) return;
+        var t = d.task;
+        document.getElementById('te-detail-empty').style.display = 'none';
+        document.getElementById('te-task-detail').style.display = '';
+        document.getElementById('te-detail-id').textContent = t.task_id;
+        document.getElementById('te-detail-input').textContent = t.user_input;
+        document.getElementById('te-detail-status').innerHTML = TE.statusTag(t.status);
+        var meta = '';
+        if (t.intent) meta += '<span style="padding:4px 10px;border-radius:10px;font-size:11px;background:rgba(59,130,246,0.08);color:#3B82F6;">Intent:'+TE.esc(t.intent)+'</span>';
+        if (t.agent_id) meta += '<span style="padding:4px 10px;border-radius:10px;font-size:11px;background:rgba(16,185,129,0.08);color:#10B981;">Agent:'+TE.esc(t.agent_id)+'</span>';
+        if (t.skill_id) meta += '<span style="padding:4px 10px;border-radius:10px;font-size:11px;background:rgba(124,58,237,0.08);color:#7C3AED;">Skill:'+TE.esc(t.skill_id)+'</span>';
+        if (t.risk_level) meta += TE.statusTag(t.risk_level);
+        if (t.permission_result) meta += '<span style="padding:4px 10px;border-radius:10px;font-size:11px;background:rgba(245,158,11,0.08);color:#F59E0B;">Perm:'+TE.esc(t.permission_result)+'</span>';
+        if (t.confidence) meta += '<span style="padding:4px 10px;border-radius:10px;font-size:11px;background:rgba(0,0,0,0.04);color:var(--l-text-secondary,#6B7280);">Conf:'+(t.confidence*100).toFixed(0)+'%</span>';
+        document.getElementById('te-detail-meta').innerHTML = meta;
+        if (t.result_json) {
+          try { var ro = typeof t.result_json === 'string' ? JSON.parse(t.result_json) : t.result_json;
+            document.getElementById('te-detail-result').textContent = JSON.stringify(ro, null, 2); }
+          catch(e) { document.getElementById('te-detail-result').textContent = String(t.result_json); }
+          document.getElementById('te-detail-result-wrap').style.display = '';
+        } else { document.getElementById('te-detail-result-wrap').style.display = 'none'; }
+        if (t.error) { document.getElementById('te-detail-result-wrap').style.display = ''; document.getElementById('te-detail-result').textContent = 'ERROR: '+t.error; document.getElementById('te-detail-result').style.color = '#DC2626'; }
+        var actions = '';
+        if (t.status === 'awaiting_approval') actions += '<button class="zbc-btn" onclick="TE.showApproval(\''+t.task_id+'\')" style="border-radius:10px;padding:8px 20px;background:#F59E0B;color:#fff;">人工审批</button>';
+        if (t.status === 'ready' || t.status === 'awaiting_approval') actions += '<button class="zbc-btn" onclick="TE.runExisting(\''+t.task_id+'\')" style="border-radius:10px;padding:8px 20px;background:var(--l-accent,#0f766e);color:#fff;">执行</button>';
+        if (t.status === 'running' || t.status === 'pending' || t.status === 'parsing') actions += '<button class="zbc-btn" onclick="TE.cancelTask(\''+t.task_id+'\')" style="border-radius:10px;padding:8px 20px;background:var(--l-bg-secondary,#f7f7f8);">取消</button>';
+        document.getElementById('te-detail-actions').innerHTML = actions;
+        TE.loadSteps(taskId); TE.loadEvidence(taskId);
+      }).catch(function(){});
+    },
+    loadSteps: function(taskId) {
+      TE.api('/api/ai/tasks/'+taskId+'/steps').then(function(d) {
+        var c = document.getElementById('te-detail-steps');
+        if (!d || !d.ok || !d.steps || d.steps.length === 0) { c.innerHTML = '<div style="color:var(--l-text-tertiary,#9CA3AF);font-size:11px;padding:8px;">暂无步骤</div>'; return; }
+        c.innerHTML = d.steps.map(function(s, i) {
+          var last = i === d.steps.length - 1;
+          var sc = { succeeded:'#10B981', running:'#3B82F6', failed:'#DC2626', denied:'#DC2626', awaiting_approval:'#F59E0B', cancelled:'#6B7280' }[s.status] || '#6B7280';
+          return '<div style="display:flex;gap:10px;">'
+            + '<div style="display:flex;flex-direction:column;align-items:center;">'
+            + '<div style="width:8px;height:8px;border-radius:50%;background:'+sc+';margin-top:4px;"></div>'
+            + (last ? '' : '<div style="width:1px;flex:1;background:var(--l-border-light,#f0f0f0);"></div>')
+            + '</div>'
+            + '<div style="flex:1;padding-bottom:10px;">'
+            + '<div style="display:flex;align-items:center;gap:6px;">'
+            + '<span style="font-size:11px;font-weight:600;text-transform:uppercase;">'+TE.esc(s.phase)+'</span>'
+            + '<span style="font-size:9px;padding:1px 5px;border-radius:5px;background:'+sc+'1a;color:'+sc+';">'+TE.esc(s.status)+'</span>'
+            + (s.duration_ms ? '<span style="font-size:9px;color:var(--l-text-tertiary,#9CA3AF);">'+s.duration_ms+'ms</span>' : '')
+            + '</div>'
+            + (s.detail ? '<div style="font-size:10px;color:var(--l-text-secondary,#6B7280);margin-top:2px;">'+TE.esc(TE.trunc(s.detail,100))+'</div>' : '')
+            + (s.error ? '<div style="font-size:10px;color:#DC2626;margin-top:2px;">'+TE.esc(TE.trunc(s.error,100))+'</div>' : '')
+            + '</div></div>';
+        }).join('');
+      }).catch(function(){});
+    },
+    loadEvidence: function(taskId) {
+      TE.api('/api/ai/tasks/'+taskId+'/evidence').then(function(d) {
+        var c = document.getElementById('te-detail-evidence');
+        if (!d || !d.ok || !d.evidence || d.evidence.length === 0) { c.innerHTML = '<div style="color:var(--l-text-tertiary,#9CA3AF);font-size:11px;padding:8px;">暂无证据</div>'; return; }
+        c.innerHTML = d.evidence.map(function(ev) {
+          var hs = ev.current_hash ? TE.esc(ev.current_hash.substring(0,12)) : '—';
+          return '<div style="padding:8px 10px;border:1px solid var(--l-border-light,#f0f0f0);border-radius:8px;background:var(--l-bg-secondary,#f7f7f8);">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px;">'
+            + '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;background:rgba(124,58,237,0.1);color:#7C3AED;">'+TE.esc(ev.evidence_type)+'</span>'
+            + '<span style="font-size:9px;color:var(--l-text-tertiary,#9CA3AF);font-family:JetBrains Mono,monospace;">#'+hs+'</span></div>'
+            + '<div style="font-size:10px;color:var(--l-text-secondary,#6B7280);word-break:break-all;">'+TE.esc(TE.trunc(ev.content,120))+'</div>'
+            + '<div style="font-size:9px;color:var(--l-text-tertiary,#9CA3AF);margin-top:3px;">source:'+TE.esc(ev.source||'—')+' score:'+(ev.authenticity_score != null ? ev.authenticity_score : '—')+'</div>'
+            + '</div>';
+        }).join('');
+      }).catch(function(){});
+    },
+    runTask: function() {
+      var input = document.getElementById('te-input').value.trim();
+      if (!input) return;
+      var btn = document.getElementById('te-run-btn'); btn.disabled = true; btn.textContent = '执行中…';
+      TE.api('/api/ai/tasks', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ input:input, context:{current_page:'/system/ai'}, created_by:'web_ui' }) })
+        .then(function(d) { if (!d || !d.ok) throw new Error(d && d.error ? d.error : 'create failed'); return TE.api('/api/ai/tasks/'+d.task.task_id+'/run', {method:'POST'}); })
+        .then(function(d) { if (d && d.ok && d.task) { TE.currentTaskId = d.task.task_id; if (d.task.status === 'awaiting_approval') TE.showApproval(d.task.task_id); } TE.loadTasks(); if (TE.currentTaskId) TE.loadTaskDetail(TE.currentTaskId); TE.startPolling(); })
+        .catch(function(e) { alert('任务执行失败: '+e.message); })
+        .finally(function() { btn.disabled = false; btn.textContent = '执行任务'; document.getElementById('te-input').value = ''; });
+    },
+    runExisting: function(taskId) { TE.api('/api/ai/tasks/'+taskId+'/run',{method:'POST'}).then(function(){ TE.loadTasks(); TE.loadTaskDetail(taskId); TE.startPolling(); }).catch(function(e){alert('执行失败: '+e.message);}); },
+    cancelTask: function(taskId) { if (!confirm('确认取消此任务？')) return; TE.api('/api/ai/tasks/'+taskId+'/cancel',{method:'POST'}).then(function(){ TE.loadTasks(); TE.loadTaskDetail(taskId); }); },
+    showApproval: function(taskId) { TE.pendingApprovalId = taskId; TE.api('/api/ai/tasks/'+taskId).then(function(d) { if (d && d.ok && d.task) { document.getElementById('te-approval-reason').textContent = d.task.risk_reason || '此操作需要人工审批'; document.getElementById('te-approval-input').textContent = d.task.user_input; } document.getElementById('te-approval-modal').style.display = 'flex'; }); },
+    approveApproval: function() { if (!TE.pendingApprovalId) return; var tid = TE.pendingApprovalId; TE.api('/api/ai/tasks/'+tid+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approved_by:'web_ui',note:'approved via AI panel'})}).then(function(){ document.getElementById('te-approval-modal').style.display='none'; TE.pendingApprovalId=null; return TE.api('/api/ai/tasks/'+tid+'/run',{method:'POST'}); }).then(function(){ TE.loadTasks(); TE.loadTaskDetail(tid); TE.startPolling(); }).catch(function(e){alert('审批失败: '+e.message);}); },
+    rejectApproval: function() { document.getElementById('te-approval-modal').style.display='none'; if (TE.pendingApprovalId) TE.cancelTask(TE.pendingApprovalId); TE.pendingApprovalId=null; },
+    startPolling: function() { if (TE._pollTimer) clearInterval(TE._pollTimer); var cnt=0; TE._pollTimer=setInterval(function(){ cnt++; if (TE.currentTaskId) { TE.api('/api/ai/tasks/'+TE.currentTaskId).then(function(d){ if (d&&d.ok&&d.task){ var st=d.task.status; TE.loadTaskDetail(TE.currentTaskId); TE.loadTasks(); if (['succeeded','failed','cancelled','dlq','awaiting_approval'].indexOf(st)>=0){clearInterval(TE._pollTimer);TE._pollTimer=null;} } }); } if (cnt>30){clearInterval(TE._pollTimer);TE._pollTimer=null;} },2000); },
+    init: function() { TE.loadHealth(); TE.loadCapabilities(); TE.loadTasks(); document.getElementById('te-input').addEventListener('keydown', function(e){ if (e.key==='Enter') TE.runTask(); }); }
+  };
+  window.TE = TE;
+  document.addEventListener('DOMContentLoaded', TE.init);
 })();
 </script>
 {% endblock %}
