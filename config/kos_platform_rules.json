@@ -1,8 +1,17 @@
 {
   "_meta": {
-    "version": "1.0.0",
-    "description": "KOS 计算平台规则化配置。各平台互动率/影响力/得分公式权重独立可配，禁止硬编码系数。",
+    "version": "1.1.0",
+    "description": "KOS 计算平台规则化配置。各平台互动率/影响力/得分公式权重独立可配，禁止硬编码系数。v1.1.0 新增 attribution_weights 供 kos_attribution.py 消费。",
     "updated_at": "2026-09-06"
+  },
+  "attribution_weights": {
+    "_comment": "kos_attribution.py 归因模块专用阈值与系数（G1 配置化，禁止硬编码）",
+    "demand_threshold": 500,
+    "time_weight_coeff": 0.5,
+    "time_weight_range": 1.0,
+    "interaction_threshold": 5000,
+    "reach_threshold": 2000,
+    "commercial_threshold": 1000
   },
   "xiaohongshu": {
     "label": "小红书",

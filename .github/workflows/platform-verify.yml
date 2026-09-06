@@ -24,3 +24,23 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements.txt
       - name: Compile Python sources
         run: python -m compileall -q .
+      - name: Run pytest (non-browser subset)
+        # M1: CI 执行 pytest 子集。排除 Playwright/CDP 浏览器测试、e2e 测试、
+        # 需要真实网络/平台的 online 标记测试。continue-on-error 避免 CI 假失败阻塞。
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          python -m pytest tests/ \
+            -m "not online" \
+            --ignore=tests/test_e2e.py \
+            --ignore=tests/test_browser_e2e.py \
+            --ignore=tests/test_browser_hybrid.py \
+            --ignore=tests/test_browser_runtime_resident.py \
+            --ignore=tests/test_browser_surface.py \
+            --ignore=tests/test_browser_downloads.py \
+            --ignore=tests/test_internal_browser_recovery.py \
+            --ignore=tests/test_collector_e2e_four_layer.py \
+            --ignore=tests/test_dual_domain_e2e.py \
+            --ignore=tests/browser_runtime \
+            --continue-on-collection-errors \
+            -q --tb=line

@@ -7,6 +7,11 @@
 3. tier_benchmark()    — KOS 分层看板：Top5/Top6-10/Top11-20/Others 集中度 + 高/低产出画像
 4. koc_reward_tier()   — KOC 分层判定：Gold/Silver/Bronze（24h/7d 达标，阈值可配）
 
+G3 修复（2026-09-06）：
+- 配置缺失/损坏时显式 logging.warning，不再静默回退默认值导致口径漂移
+- 所有平台规则计算函数返回 config_status 字段（"configured"/"fallback_default"/"missing"）
+- 前端/API 可看到配置状态，不静默
+
 契约/边界（对齐 CTR-KOS-METRICS-P1-01 与 ZBC AGENTS）：
 - 只读现有 DB（notes / kos_profiles / note_comments），不写生产库、不建新表
 - Viewership 近似 = notes 聚合曝光（likes+comments+collects+shares 或 total_engagement）
@@ -16,11 +21,13 @@
 - 不 AI 自动评论 / 不托管养号 / 不绕过平台风控
 """
 from __future__ import annotations
-import os, json, math
+import os, json, math, logging
 from pathlib import Path
 from typing import Optional, List, Dict
 
 from kos_engine import DB_PATH, _get_conn
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # 配置
@@ -126,22 +133,48 @@ _DEFAULT_PLATFORM_RULES = {
     },
 }
 
+# G3: 配置加载状态（configured / fallback_default / missing）
+_platform_rules_status = "unloaded"
+
 
 def load_platform_rules() -> dict:
     """从 config/kos_platform_rules.json 加载平台规则；失败回退内置默认规则。
 
+    G3: 配置缺失/损坏时显式 WARNING，不再静默。
     返回的 dict 是副本，调用方可安全修改（用于测试覆盖）。
     """
+    global _platform_rules_status
     try:
         if PLATFORM_RULES_PATH.exists():
             data = json.loads(PLATFORM_RULES_PATH.read_text(encoding="utf-8"))
             # 去掉 _meta 等非平台键
-            return {k: v for k, v in data.items() if not k.startswith("_")}
-    except Exception:
-        pass
+            result = {k: v for k, v in data.items() if not k.startswith("_")}
+            if result:
+                _platform_rules_status = "configured"
+                return result
+            else:
+                logger.warning(
+                    "KOS配置缺失: %s 存在但无有效平台规则，使用默认值，可能导致口径漂移",
+                    PLATFORM_RULES_PATH)
+                _platform_rules_status = "fallback_default"
+        else:
+            logger.warning(
+                "KOS配置缺失: %s 不存在，使用默认值，可能导致口径漂移",
+                PLATFORM_RULES_PATH)
+            _platform_rules_status = "missing"
+    except Exception as e:
+        logger.warning(
+            "KOS配置损坏: 读取 %s 失败(%s)，使用默认值，可能导致口径漂移",
+            PLATFORM_RULES_PATH, e)
+        _platform_rules_status = "fallback_default"
     # 深拷贝默认规则，防止调用方修改污染全局
     import copy
     return copy.deepcopy(_DEFAULT_PLATFORM_RULES)
+
+
+def get_platform_rules_status() -> str:
+    """G3: 返回当前配置加载状态。"""
+    return _platform_rules_status
 
 
 # 模块级规则缓存（启动时加载一次；测试可通过 reload_platform_rules() 刷新）
@@ -158,11 +191,15 @@ def reload_platform_rules() -> dict:
 def get_platform_rule(platform: str) -> dict:
     """获取指定平台的规则。未知平台回退到 xiaohongshu（最常用基准）。
 
+    G3: 未知平台显式 WARNING，不再静默回退。
     P0 红线：所有计算函数必须通过本函数取参数，不得在函数体内硬编码系数。
     """
     if platform in PLATFORM_RULES:
         return PLATFORM_RULES[platform]
-    # 未知平台：回退默认（xiaohongshu 基准），但记录 label 为 unknown
+    # 未知平台：回退默认（xiaohongshu 基准），但记录 WARNING
+    logger.warning(
+        "KOS配置缺失: 未知平台 '%s'，回退 xiaohongshu 默认规则，可能导致口径漂移",
+        platform)
     fallback = PLATFORM_RULES.get("xiaohongshu", _DEFAULT_PLATFORM_RULES["xiaohongshu"])
     return fallback
 
@@ -171,6 +208,8 @@ def platform_engagement(platform: str, likes: float, comments: float,
                         collects: float, shares: float) -> float:
     """按平台规则计算加权互动量。
 
+    G3: 配置缺失时已在 load_platform_rules/get_platform_rule 中 WARNING。
+    保持返回 float 以兼容 kos_engine.py 及现有测试；config_status 见 get_platform_rules_status()。
     P0 红线：权重从 PLATFORM_RULES[platform].engagement_weights 读取，
     不得硬编码 0.3/0.5/2.0 等系数。
     """
@@ -190,8 +229,9 @@ def platform_kos_score(platform: str, *, engagement: float, note_count: int,
     """按平台规则计算 KOS 影响力得分（取代 kos_engine.py 中的硬编码公式）。
 
     返回 dict: {score, engagement_score, volume_score, brand_relevance,
-                 quality_score, risk_penalty, platform, rule_version}
+                 quality_score, risk_penalty, platform, rule_version, config_status}
 
+    G3: 新增 config_status 字段。
     P0 红线：所有系数从规则配置读取，函数体内无硬编码 0.3/0.5/100 等。
     """
     import math
@@ -246,6 +286,7 @@ def platform_kos_score(platform: str, *, engagement: float, note_count: int,
         "risk_penalty": round(risk_pen, 2),
         "platform": platform,
         "rule_label": rule.get("label", platform),
+        "config_status": _platform_rules_status,
     }
 
 
@@ -254,6 +295,7 @@ def platform_ad_score(platform: str, *, engagement: float, likes: float,
                       is_risk: bool = False, is_negative: bool = False) -> dict:
     """按平台规则计算投流候选评分（取代 kos_engine.ad_candidate_score 硬编码）。
 
+    G3: 新增 config_status 字段。
     P0 红线：所有系数从规则配置读取。
     """
     import math
@@ -285,6 +327,7 @@ def platform_ad_score(platform: str, *, engagement: float, likes: float,
         "quality_score": round(q_score, 2),
         "risk_penalty": risk_pen,
         "platform": platform,
+        "config_status": _platform_rules_status,
     }
 
 # KOC 分层阈值（对齐 DFS Gold/Silver/Bronze 可配置；24h 与 7d 双口径，取高者判定）

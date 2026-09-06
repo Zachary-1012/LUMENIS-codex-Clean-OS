@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ai_call_logger.py — AI 调用全链路追踪（ZBC Phase 7 + Track3 审计修复）
+ai_call_logger.py — AI 调用全链路追踪（ZBC Phase 7 + Track3 审计修复 + G2 字段补全）
 
 设计原则：
 1. 旁路记录：日志写入失败绝不阻断 AI 调用主链路（try/except 全包）。
@@ -16,6 +16,12 @@ Track3 修复（2026-09-06）：
 - 补齐 task_id / trace_id / input_text / final_decision / timestamp 字段。
 - 旧表自动迁移（ALTER TABLE ADD COLUMN，幂等）。
 - log_call 支持上述新参数；装饰器自动透传 task_id/trace_id。
+
+G2 修复（2026-09-06）：
+- 补齐审计字段：target_type / target_id / model_version / system_result / accepted。
+- ALTER TABLE 向后兼容加列（DEFAULT ''），不破坏历史数据。
+- log_call() 补可选参数，现有调用不传不受影响（None→空）。
+- 修复原 INSERT 列数与占位符不匹配 bug（18列名/21占位符）。
 
 数据库路径复用 database.py 的 ZBC_DB_PATH 环境变量约定，未设置时默认 data/monitor.db。
 """
@@ -68,7 +74,12 @@ CREATE TABLE IF NOT EXISTS ai_call_logs (
     token_usage INTEGER DEFAULT 0,
     failure_reason TEXT DEFAULT '',
     success INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT (datetime('now','localtime'))
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    target_type TEXT DEFAULT '',
+    target_id TEXT DEFAULT '',
+    model_version TEXT DEFAULT '',
+    system_result TEXT DEFAULT '',
+    accepted TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_ai_call_provider ON ai_call_logs(provider);
 CREATE INDEX IF NOT EXISTS idx_ai_call_created ON ai_call_logs(created_at);
@@ -87,6 +98,12 @@ _MIGRATION_COLUMNS = [
     ("domain_id", "TEXT DEFAULT ''"),
     ("product_id", "TEXT DEFAULT ''"),
     ("output_hash", "TEXT DEFAULT ''"),
+    # G2 (2026-09-06): 审计字段补全
+    ("target_type", "TEXT DEFAULT ''"),
+    ("target_id", "TEXT DEFAULT ''"),
+    ("model_version", "TEXT DEFAULT ''"),
+    ("system_result", "TEXT DEFAULT ''"),
+    ("accepted", "TEXT DEFAULT ''"),
 ]
 
 
@@ -198,11 +215,18 @@ def log_call(
     domain_id: str = '',
     product_id: str = '',
     output_hash: str = '',
+    # G2: 审计字段补全（可选，None→空，不破坏现有调用）
+    target_type: Optional[str] = None,
+    target_id: Optional[str] = None,
+    model_version: Optional[str] = None,
+    system_result: Optional[str] = None,
+    accepted: Optional[str] = None,
 ) -> Optional[int]:
     """
     记录一次 AI 调用。旁路写入：任何异常仅打印日志，不抛出。
 
     Track3：新增 input_text / final_decision / task_id / trace_id / timestamp。
+    G2：新增 target_type / target_id / model_version / system_result / accepted。
 
     Returns:
         插入行的 id；失败返回 None。
@@ -216,6 +240,12 @@ def log_call(
         fail_str = str(failure_reason)[:500] if failure_reason is not None else ''
         in_str = _sanitize_input(input_text)[:2000] if input_text else ''
         ts = timestamp or datetime.now().isoformat(timespec='seconds')
+        # G2: 新字段 None→空串
+        tt = str(target_type)[:100] if target_type is not None else ''
+        tid = str(target_id)[:200] if target_id is not None else ''
+        mv = str(model_version)[:100] if model_version is not None else ''
+        sr = str(system_result)[:2000] if system_result is not None else ''
+        acc = str(accepted)[:50] if accepted is not None else ''
 
         with _WRITE_LOCK:
             with _get_conn() as conn:
@@ -224,8 +254,10 @@ def log_call(
                        (provider, model, prompt_version, input_hash, input_text, output,
                         confidence, rule_result, final_result, final_decision,
                         task_id, trace_id, timestamp, human_correction,
-                        latency_ms, token_usage, failure_reason, success)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        latency_ms, token_usage, failure_reason, success,
+                        domain_id, product_id, output_hash,
+                        target_type, target_id, model_version, system_result, accepted)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         provider or '', model or '', prompt_version or '',
                         input_hash or '', in_str, out_str,
@@ -235,6 +267,7 @@ def log_call(
                         int(latency_ms or 0), int(token_usage or 0),
                         fail_str, 1 if success else 0,
                         domain_id or '', product_id or '', output_hash or '',
+                        tt, tid, mv, sr, acc,
                     ),
                 )
                 return cur.lastrowid
@@ -359,11 +392,13 @@ def query_calls(
     trace_id: str = '',
     domain_id: str = '',
     product_id: str = '',
+    target_type: str = '',
+    target_id: str = '',
     limit: int = 100,
     offset: int = 0,
     since: str = '',
 ) -> List[Dict[str, Any]]:
-    """查询 AI 调用日志。Track3：支持 task_id / trace_id 过滤。"""
+    """查询 AI 调用日志。Track3：支持 task_id / trace_id 过滤。G2：支持 target_type / target_id。"""
     try:
         sql = "SELECT * FROM ai_call_logs WHERE 1=1"
         params: List[Any] = []
@@ -385,6 +420,12 @@ def query_calls(
         if product_id:
             sql += " AND product_id = ?"
             params.append(product_id)
+        if target_type:
+            sql += " AND target_type = ?"
+            params.append(target_type)
+        if target_id:
+            sql += " AND target_id = ?"
+            params.append(target_id)
         if since:
             sql += " AND created_at >= ?"
             params.append(since)

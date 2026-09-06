@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""report_artifact.py — 报告 artifact 真实性校验模块（ZBC Phase 9）
+"""report_artifact.py — 报告 artifact 真实性校验模块（ZBC Phase 9 + G4 hash 验证）
 
 核心目标：报告必须是真实 artifact，禁止"假成功"。
 - 文件 artifact：存在 + 非空 + hash 可校验
 - DB artifact：行存在 + report_id 可追溯 + 关键字段非空
 - export 复用：同周期同格式已存在有效 artifact 时直接复用，避免重复生成导致数据漂移
+
+G4 (2026-09-06): 新增 verify_report_hash() 读取时 hash 一致性验证。
 
 本模块不依赖 Flask / app，可被 report_engine / export_report / report_api / 测试直接导入。
 """
@@ -147,7 +149,6 @@ def verify_report_dict(report: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     result["valid"] = True
     return result
 
-
 def build_artifact_metadata(report_type: str, period_start: str, period_end: str,
                             report_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """为报告构建 artifact 元数据字段（report_id / generated_at / generator_version / data_version）。
@@ -164,15 +165,78 @@ def build_artifact_metadata(report_type: str, period_start: str, period_end: str
         "data_version": data_version,
     }
     if report_data is not None:
-        # artifact_hash = 报告核心数据的 SHA-256（排除 hash 自身与 generated_at，保证可复算）
-        snapshot = {k: v for k, v in report_data.items()
-                    if k not in ("artifact_hash", "generated_at", "data_version")}
+        # artifact_hash = 报告核心数据的 SHA-256（排除 hash 自身与 meta 注入键，保证可复算）
+        _HASH_EXCLUDE = (
+            "artifact_hash", "generated_at", "data_version",
+            "report_id", "generator_version",
+            "_db_row_id", "_artifact_verified",
+            "started_at", "finished_at", "status", "error",
+        )
+        snapshot = {k: v for k, v in report_data.items() if k not in _HASH_EXCLUDE}
         try:
             meta["artifact_hash"] = compute_hash(
                 json.dumps(snapshot, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8"))
         except Exception:
             meta["artifact_hash"] = ""
     return meta
+
+
+def verify_report_hash(report: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """G4: 验证报告 dict 的 artifact_hash 一致性（读取时校验，不破坏现有流程）。
+
+    对报告内容（排除 artifact_hash/generated_at/data_version）重新计算 SHA-256，
+    与报告中存储的 artifact_hash 比对。历史报告 hash 为空时不报错，标记 historical。
+
+    Returns:
+        {valid, expected_hash, actual_hash, status, reason}
+        status: "verified" | "mismatch" | "historical_empty" | "error"
+    """
+    result = {
+        "valid": False,
+        "expected_hash": "",
+        "actual_hash": "",
+        "status": "error",
+        "reason": "",
+    }
+    if not report or not isinstance(report, dict):
+        result["reason"] = "报告为空或非 dict"
+        return result
+
+    stored_hash = report.get("artifact_hash", "") or ""
+    result["actual_hash"] = stored_hash
+
+    if not stored_hash:
+        # 历史报告 hash 为空：不报错，显式标记
+        result["status"] = "historical_empty"
+        result["valid"] = True  # 空 hash 不视为校验失败
+        result["reason"] = "历史报告无 artifact_hash（G4 前生成），不影响读取"
+        return result
+
+    # 重新计算 hash（与 build_artifact_metadata 相同逻辑）
+    # 排除 meta 注入的键：artifact_hash/generated_at/data_version/report_id/generator_version
+    # 以及运行时内部键：_db_row_id/_artifact_verified/started_at/finished_at/status/error
+    _HASH_EXCLUDE = (
+        "artifact_hash", "generated_at", "data_version",
+        "report_id", "generator_version",
+        "_db_row_id", "_artifact_verified",
+        "started_at", "finished_at", "status", "error",
+    )
+    try:
+        snapshot = {k: v for k, v in report.items() if k not in _HASH_EXCLUDE}
+        expected = compute_hash(
+            json.dumps(snapshot, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8"))
+        result["expected_hash"] = expected
+        if expected == stored_hash:
+            result["valid"] = True
+            result["status"] = "verified"
+            result["reason"] = "hash 一致"
+        else:
+            result["status"] = "mismatch"
+            result["reason"] = "hash 不一致：报告内容可能被修改或数据漂移"
+    except Exception as e:
+        result["status"] = "error"
+        result["reason"] = f"hash 计算失败: {e}"
+    return result
 
 
 def find_existing_artifact(export_dir: str, report_type: str, period_start: str,
