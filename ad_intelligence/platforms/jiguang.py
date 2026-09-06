@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-小红书聚光广告数据只读采集 【DEPRECATED 2026-09-06 用户指令：极光/聚光弃用】
-==========================================================================
-本模块已弃用，保留代码不删除（向后兼容/历史审计），但不再接入主链路、
-不参与广告智能平台选择、UI 不展示聚光入口。如需恢复须用户重新授权。
-
-真实商业现实（历史记录）：
+小红书聚光广告数据只读采集
+==========================
+真实商业现实：
 - API: 聚光平台API（需特批，配额严格）
 - 无API权限时：浏览器cookie只读采集广告后台（跳过OAuth认证）
 - 币种: CNY，预充值，最低充值5000元
@@ -20,8 +17,6 @@
 - 浏览器模式：缺少 web_session / id_token cookie
 - 无凭证时返回 status="blocked"，禁止返回空列表冒充成功
 """
-DEPRECATED = True
-DEPRECATED_REASON = "2026-09-06 用户指令：极光（聚光）广告平台弃用，保留代码不删除"
 from __future__ import annotations
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
