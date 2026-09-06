@@ -95,7 +95,7 @@ PLATFORM_COMMERCIAL_REGISTRY: Dict[str, PlatformCommercialProfile] = {
     "xhs": PlatformCommercialProfile(
         platform="xhs",
         display_name="小红书",
-        ad_system="聚光",
+        ad_system="聚光（DEPRECATED 2026-09-06 用户指令弃用）",
         primary_regions=[Region.MAINLAND_CHINA],
         accessible_from_china=True,
         requires_proxy=False,
