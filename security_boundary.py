@@ -954,7 +954,7 @@ class DataLayer:
 
         # Check 4: 脱敏功能可用（redact 不抛异常）
         try:
-            test_result = self.redact_sensitive_data("api_key=sk-12345678901234567890")
+            test_result = self.redact_sensitive_data("api_key=PLACEHOLDER_REDACTION_TEST_0123456789")
             if "REDACTED" in test_result:
                 checks_passed += 1
             else:

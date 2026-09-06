@@ -56,6 +56,8 @@ except Exception:
             return found
         return None
 
+logger = logging.getLogger(__name__)
+
 def _node_bin():
     """返回可用 node 路径；解析不到时返回 None，由调用方产出结构化错误（不进 subprocess）。"""
     try:
@@ -375,8 +377,7 @@ def _trip_campaign_circuit(status, reason=''):
         }
         with io.open(_CAMPAIGN_CIRCUIT, 'w', encoding='utf-8') as f:
             json.dump(obj, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
+    except Exception as e: logger.warning("Unhandled exception: %s", e)
 
 def _campaign_circuit_state():
     """仍生效返回熔断 dict；NEED_VERIFY 人工清除前一直阻断，IP_RISK 到 resume_at 后半开放行；无熔断返回 None。"""
@@ -403,8 +404,7 @@ def clear_campaign_circuit():
     try:
         if os.path.exists(_CAMPAIGN_CIRCUIT):
             os.remove(_CAMPAIGN_CIRCUIT)
-    except Exception:
-        pass
+    except Exception as e: logger.warning("Unhandled exception: %s", e)
 
 def _probe_xhs_health_via_cdp(test_search=False):
     """连 9222 已登录浏览器做一次轻量健康探活：访问 explore，判断是否仍被重定向到 captcha/登录页。
@@ -420,7 +420,7 @@ def _probe_xhs_health_via_cdp(test_search=False):
             from urllib.parse import urlparse
             _u = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222')
             try: reset_cdp_targets(urlparse(_u).port or 9222, timeout=6)
-            except Exception: pass
+            except Exception as e: logger.warning("Unhandled exception: %s", e)
         except Exception:
             _u = os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222'
         from playwright.sync_api import sync_playwright
@@ -434,14 +434,14 @@ def _probe_xhs_health_via_cdp(test_search=False):
             u = page.url or ''
             body = ''
             try: body = page.evaluate("() => document.body ? document.body.innerText.slice(0,600) : ''") or ''
-            except Exception: pass
+            except Exception as e: logger.warning("Unhandled exception: %s", e)
             bad_url = ('captcha' in u) or ('/website-login' in u) or ('/login' in u)
             bad_txt = any(k in body for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '验证码'))
             if bad_url or bad_txt:
                 try: page.goto('about:blank', timeout=4000)
-                except Exception: pass
+                except Exception as e: logger.warning("Unhandled exception: %s", e)
                 try: browser.close()
-                except Exception: pass
+                except Exception as e: logger.warning("Unhandled exception: %s", e)
                 return False, 'explore 仍停留在登录/安全验证页，请在已登录浏览器完成扫码验证后再检测'
             # 第二步：搜索测试（recover 时启用）——在同一个 page/browser 上做，不提前关闭
             if test_search:
@@ -450,29 +450,29 @@ def _probe_xhs_health_via_cdp(test_search=False):
                 su = page.url or ''
                 sbody = ''
                 try: sbody = page.evaluate("() => document.body ? document.body.innerText.slice(0,400) : ''") or ''
-                except Exception: pass
+                except Exception as e: logger.warning("Unhandled exception: %s", e)
                 s_bad_url = ('captcha' in su) or ('/website-login' in su) or ('/login' in su)
                 s_bad_txt = any(k in sbody for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '二维码1分钟失效'))
                 try: page.goto('about:blank', timeout=4000)
-                except Exception: pass
+                except Exception as e: logger.warning("Unhandled exception: %s", e)
                 try: browser.close()
-                except Exception: pass
+                except Exception as e: logger.warning("Unhandled exception: %s", e)
                 if s_bad_url or s_bad_txt:
                     return False, 'explore 正常，但搜索仍触发安全验证页（需小红书App扫码）。请在9222浏览器手动搜索一次并完成扫码，再点重新检测'
                 return True, 'explore + 搜索均正常，会话完全健康'
             # 非搜索测试模式：explore 通过即返回
             try: page.goto('about:blank', timeout=4000)
-            except Exception: pass
+            except Exception as e: logger.warning("Unhandled exception: %s", e)
             try: browser.close()
-            except Exception: pass
+            except Exception as e: logger.warning("Unhandled exception: %s", e)
         return True, '会话正常（explore 未跳验证页）'
     except Exception as e:
         try:
             if page: page.goto('about:blank', timeout=3000)
-        except Exception: pass
+        except Exception as e: logger.warning("Unhandled exception: %s", e)
         try:
             if browser: browser.close()
-        except Exception: pass
+        except Exception as e: logger.warning("Unhandled exception: %s", e)
         return False, f'健康探活失败：{str(e)[:120]}'
 
 # ========== V2.0 P0-1：统一 Runtime State 六态探活 ==========
@@ -757,8 +757,7 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
         if _app_lock is not None:
             try:
                 _app_lock.release()
-            except Exception:
-                pass
+            except Exception as e: logger.warning("Unhandled exception: %s", e)
         _lock.release()
 
 # ========== 固定时间点调度器（独立线程，独立配额） ==========

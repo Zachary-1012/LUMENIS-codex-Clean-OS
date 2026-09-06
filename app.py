@@ -2327,7 +2327,7 @@ def api_brand_industry_run_v570():
     saved=0
     for item in items:
         try: db.insert_web_mention(item); saved+=1
-        except Exception: pass
+        except Exception as e: logger.warning('Failed to insert web mention: %s', e)
     return jsonify({'ok':True,'fetched':len(items),'saved':saved,'total_targets':total,'next_offset':offset+batch if offset+batch<total else 0,'independent_budget':True})
 
 @app.route('/api/notes/publish-buckets')
@@ -3007,7 +3007,7 @@ CONFIG_FILE = Path(__file__).parent / 'data' / 'system_config.json'
 def _load_config():
     if CONFIG_FILE.exists():
         try: return json.loads(CONFIG_FILE.read_text(encoding='utf-8'))
-        except: pass
+        except Exception as e: logger.warning('Failed to load system config, using defaults: %s', e)
     return {'company_domain': '', 'company_name': '广州太古汇', 'push_emails': [], 'cdp_url': 'http://127.0.0.1:9222', 'auto_interval': 90, 'daily_push_hour': 9}
 
 def _save_config(config):
@@ -3480,7 +3480,7 @@ def _send_daily_email():
     cfg_path=Path(__file__).parent/'data'/'email_smtp.json'
     if cfg_path.exists():
         try: st.update(json.loads(cfg_path.read_text(encoding='utf-8')))
-        except Exception: pass
+        except Exception as e: logger.warning('Failed to load SMTP config: %s', e)
     recipients=[x for x in _load_config().get('push_emails',[]) if '@' in x]
     if not recipients or not (st.get('host') and st.get('user') and st.get('password')):
         return {'sent':0,'skipped':'SMTP未配置或未设置收件邮箱'}
@@ -3511,7 +3511,7 @@ def _send_weekly_email():
     cfg_path=Path(__file__).parent/'data'/'email_smtp.json'
     if cfg_path.exists():
         try: st.update(json.loads(cfg_path.read_text(encoding='utf-8')))
-        except Exception: pass
+        except Exception as e: logger.warning('Failed to load SMTP config: %s', e)
     recipients=[x for x in _load_config().get('push_emails',[]) if '@' in x]
     if not recipients or not (st.get('host') and st.get('user') and st.get('password')):
         return {'sent':0,'skipped':'SMTP未配置或未设置收件邮箱'}
