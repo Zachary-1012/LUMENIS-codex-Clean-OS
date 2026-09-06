@@ -55,6 +55,28 @@ def register_data_query_api(app):
     def api_risk_alerts():
         return jsonify({'ok': True, 'notes': db.get_high_risk_notes(30)})
 
+    # P0 断链修复：前端调用 /api/risks/active（复数），原路由为 /api/risk-alerts。
+    # 添加 /api/risks/active 和 /api/risk/active（单数）兼容路由，返回活跃风险（high/medium/critical，未驳回）。
+    @bp.route('/api/risks/active', endpoint='api_risks_active')
+    @bp.route('/api/risk/active', endpoint='api_risk_active')
+    def api_risks_active():
+        """活跃风险列表：high/medium/critical 风险且未人工驳回的笔记。"""
+        limit = max(1, min(200, request.args.get('limit', 50, type=int)))
+        notes = db.get_high_risk_notes(limit)
+        # 按风险等级分组统计
+        by_level = {}
+        for n in notes:
+            lvl = n.get('risk_level', 'unknown')
+            by_level[lvl] = by_level.get(lvl, 0) + 1
+        return jsonify({
+            'ok': True,
+            'risks': notes,
+            'total': len(notes),
+            'by_level': by_level,
+            'limit': limit,
+            'source': 'notes (risk_level IN critical/high/medium, negative_confirmed<>2)',
+        })
+
     @bp.route('/api/hot-notes', endpoint='api_hot_notes')
     def api_hot_notes():
         return jsonify({'ok': True, 'notes': db.get_hot_notes(10)})

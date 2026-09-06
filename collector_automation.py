@@ -500,8 +500,21 @@ class CollectorAutomation:
             
             config = mode_config.get(mode, mode_config['standard'])
             
+            import uuid as _uuid_for_domain
+            _task_id = f'collect_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+            _trace_id = _uuid_for_domain.uuid4().hex[:16]
+            # 双域核心：采集任务默认 CTH 域（广州太古汇生产采集），
+            # 可通过环境变量 ZBC_COLLECTOR_DOMAIN 覆盖为 zbmp
+            _collector_domain = os.environ.get('ZBC_COLLECTOR_DOMAIN', 'cth')
+            _collector_product = 'CTH' if _collector_domain == 'cth' else 'ZBMP'
             self.current_task = {
-                'id': f'collect_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
+                'id': _task_id,
+                'task_id': _task_id,
+                'trace_id': _trace_id,
+                'domain_id': _collector_domain,
+                'product_id': _collector_product,
+                'collector_id': 'xhs_collector_automation',
+                'source_id': 'xiaohongshu',
                 'keywords': keywords,
                 'mode': mode,
                 'account': account,
@@ -529,11 +542,17 @@ class CollectorAutomation:
                 if g:
                     self._worker_id = g.register_worker(
                         f'xhs_collector_{self.current_task["id"]}',
-                        metadata={'mode': mode, 'account': account, 'keywords': keywords},
+                        metadata={
+                            'mode': mode, 'account': account, 'keywords': keywords,
+                            'task_id': self.current_task.get('task_id'),
+                            'trace_id': self.current_task.get('trace_id'),
+                        },
+                        domain_id=self.current_task.get('domain_id', 'cth'),
+                        product_id=self.current_task.get('product_id', 'CTH'),
                     )
                     self._lease_owner = f'pid-{os.getpid()}'
                     lease = g.acquire_lease(self._worker_id, self._lease_owner, ttl_seconds=120)
-                    g.heartbeat(self._worker_id)
+                    g.heartbeat(self._worker_id, domain_id=self.current_task.get('domain_id', 'cth'))
                     self.current_task['worker_id'] = self._worker_id
                     logger.info('Runtime Guardian: worker %s 已注册并获取租约', self._worker_id)
             except Exception as _rg_err:

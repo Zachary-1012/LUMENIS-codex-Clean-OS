@@ -126,3 +126,93 @@ def check_multi(text: str, langs: list[str] | None = None,
         "all_hits": all_hits,
         "requires_human": any(r["requires_human"] for r in results.values()),
     }
+
+
+# ============================================================
+# IC-039: 本地化评分（与 canonical_data.CanonicalRecord 集成）
+# ============================================================
+
+def score_content(text: str, lang: str = "zh", platform: str = "") -> float:
+    """计算内容的跨文化本地化评分（0-1）。
+
+    评分规则：
+    - 1.0：无任何禁忌/合规问题，可直接发布
+    - 0.7-0.99：命中 HOLD 级规则（绝对化用语等），需人工复核
+    - 0.3-0.69：命中多条 HOLD 规则，需重点修改
+    - 0.0-0.29：命中 BLOCK 级规则（宗教/王室符号等），禁止发布
+    - None：内容为空或 guard 未启用
+
+    注意：评分仅为初筛参考，最终发布决策必须由人工确认（契约红线）。
+    """
+    if not ENABLED:
+        return 1.0  # guard 关闭时不扣分
+    if not text:
+        return None
+
+    result = check(text, lang=lang, platform=platform)
+    if result.get("blocked"):
+        # BLOCK 级命中：评分 0-0.3
+        block_count = sum(1 for h in result["hits"] if h["level"] == "BLOCK")
+        return max(0.0, 0.3 - block_count * 0.1)
+    if result.get("hold"):
+        # HOLD 级命中：每条扣 0.1，最低 0.3
+        hold_count = len(result["hits"])
+        return max(0.3, 1.0 - hold_count * 0.1)
+    return 1.0
+
+
+def score_multi(text: str, langs: list[str] | None = None,
+                platform: str = "") -> dict:
+    """多语言本地化评分（返回各语言评分及最低分）。"""
+    langs = langs or ["zh", "en", "ko"]
+    scores = {}
+    for lg in langs:
+        scores[lg] = score_content(text, lang=lg, platform=platform)
+    valid_scores = [s for s in scores.values() if s is not None]
+    return {
+        "scores": scores,
+        "min_score": min(valid_scores) if valid_scores else None,
+        "max_score": max(valid_scores) if valid_scores else None,
+        "avg_score": sum(valid_scores) / len(valid_scores) if valid_scores else None,
+    }
+
+
+def apply_to_record(record, text: str | None = None,
+                    lang: str = "zh", platform: str = "") -> float | None:
+    """将本地化评分应用到 CanonicalRecord。
+
+    设置 record.localization_score 字段。
+    如果 text 为 None，使用 record.title + record.content 拼接。
+
+    Returns:
+        评分值（0-1），或 None（内容为空/guard 关闭）
+    """
+    if text is None:
+        title = getattr(record, "title", "") or ""
+        content = getattr(record, "content", "") or ""
+        text = f"{title} {content}".strip()
+    score = score_content(text, lang=lang, platform=platform)
+    record.localization_score = score
+    return score
+
+
+def get_localization_advice(text: str, lang: str = "zh",
+                             platform: str = "") -> dict:
+    """获取本地化适配建议（含评分、命中规则、修改建议）。"""
+    result = check(text, lang=lang, platform=platform)
+    score = score_content(text, lang=lang, platform=platform)
+    suggestions = []
+    for hit in result.get("hits", []):
+        if hit["level"] == "BLOCK":
+            suggestions.append(f"[禁止] 移除/替换 '{hit['pattern']}': {hit['reason']}")
+        else:
+            suggestions.append(f"[复核] 检查 '{hit['pattern']}': {hit['reason']}")
+    return {
+        "score": score,
+        "hold": result.get("hold", False),
+        "blocked": result.get("blocked", False),
+        "hits": result.get("hits", []),
+        "suggestions": suggestions,
+        "platform_advice": result.get("platform_advice", []),
+        "requires_human": result.get("requires_human", False),
+    }

@@ -189,6 +189,7 @@ class PermissionResult:
     caller: Optional[str] = None
     operation_id: Optional[str] = None
     idempotent_hit: bool = False
+    domain_id: Optional[str] = None
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
@@ -380,6 +381,8 @@ class PermissionGate:
         risk_level: Optional[RiskLevel] = None,
         caller: Optional[str] = None,
         operation_id: Optional[str] = None,
+        domain_id: Optional[str] = None,
+        role: Optional[str] = None,
     ) -> PermissionResult:
         """执行权限检查。
 
@@ -389,10 +392,29 @@ class PermissionGate:
             risk_level: 显式风险等级（None 则使用操作注册表默认值）
             caller: 调用者标识
             operation_id: 幂等性 ID（相同 ID 重复调用返回缓存结果）
+            domain_id: 域身份（cth/zbmp），None 则从线程上下文读取
+            role: 调用者角色（如 zbmp_analyst, cth_admin），用于跨域权限检查
 
         Returns:
             PermissionResult
         """
+        # 0. 域身份解析（默认从线程上下文）
+        if domain_id is None:
+            try:
+                from ai_domain_context import get_current_domain
+                domain_id = get_current_domain()
+            except ImportError:
+                domain_id = "cth"
+
+        # 0b. 跨域权限检查：ZBMP 角色不天然拥有 CTH Admin 权限
+        if role and not self._check_role_domain_permission(role, domain_id, operation_type):
+            return self._deny(
+                operation_type, resource, risk_level or RiskLevel.HIGH,
+                PermissionLevel.VERIFY, caller or self.default_caller, operation_id,
+                reason=f"跨域权限拒绝: role={role} 不具备 domain={domain_id} 的 "
+                       f"{operation_type.value} 操作权限（ZBMP 角色不天然拥有 CTH 权限，反之亦然）",
+            )
+
         # 1. 幂等性检查
         if operation_id:
             with self._idempotency_lock:
@@ -401,6 +423,9 @@ class PermissionGate:
                     cached.idempotent_hit = True
                     logger.debug(f"[PermissionGate] 幂等命中: operation_id={operation_id}")
                     return cached
+
+        # 记录当前检查的域身份（用于结果标记）
+        self._current_check_domain = domain_id
 
         # 2. 操作注册检查（fail-closed）
         spec = self._registry.get(operation_type)
@@ -617,6 +642,7 @@ class PermissionGate:
             operation_type=operation_type.value, resource=resource,
             risk_level=risk_level.value, permission_required=permission.value,
             caller=caller, operation_id=operation_id,
+            domain_id=getattr(self, '_current_check_domain', None),
         )
         if operation_id:
             with self._idempotency_lock:
@@ -647,6 +673,7 @@ class PermissionGate:
             operation_type=operation_type.value, resource=resource,
             risk_level=risk_level.value, permission_required=permission.value,
             caller=caller, operation_id=operation_id,
+            domain_id=getattr(self, '_current_check_domain', None),
         )
         if operation_id:
             with self._idempotency_lock:
@@ -741,6 +768,81 @@ class PermissionGate:
             self._idempotency_cache.clear()
         return count
 
+
+    # ──────────────────────────────────────────────────────────
+    # ZBC V2.0 双域权限：角色-域权限映射
+    # ──────────────────────────────────────────────────────────
+
+    # 角色定义：每个角色拥有的域权限
+    # ZBMP Analyst 不天然拥有 CTH Admin 权限
+    ROLE_DOMAIN_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
+        "cth_admin": {
+            "cth": {"*"},  # CTH 域全部操作
+            "zbmp": {"read", "audit", "analyze"},  # 仅只读 ZBMP
+        },
+        "cth_analyst": {
+            "cth": {"read", "audit", "analyze", "research", "report_generate", "ai_call"},
+            "zbmp": {"read"},
+        },
+        "zbmp_admin": {
+            "zbmp": {"*"},  # ZBMP 域全部操作
+            "cth": {"read", "audit"},  # 仅只读 CTH（不能写/删/改配置）
+        },
+        "zbmp_analyst": {
+            "zbmp": {"read", "audit", "analyze", "research", "report_generate", "ai_call"},
+            "cth": set(),  # ZBMP Analyst 无 CTH 权限
+        },
+        "system": {
+            "cth": {"*"},
+            "zbmp": {"*"},
+        },
+    }
+
+    def _check_role_domain_permission(
+        self,
+        role: str,
+        domain_id: str,
+        operation_type: OperationType,
+    ) -> bool:
+        """检查角色是否拥有指定域的操作权限。
+
+        核心规则：
+        - ZBMP Analyst 不天然拥有 CTH Admin 权限
+        - 跨域写操作默认拒绝
+        - 同域操作按角色权限放行
+        - 未注册角色默认拒绝（fail-closed）
+        """
+        role_perms = self.ROLE_DOMAIN_PERMISSIONS.get(role)
+        if role_perms is None:
+            # 未注册角色：fail-closed
+            return False
+
+        domain_perms = role_perms.get(domain_id, set())
+        if "*" in domain_perms:
+            return True
+
+        op_value = operation_type.value
+        # 写操作类：跨域严格拒绝
+        write_ops = {"file_write", "config_modify", "db_write", "data_delete",
+                     "data_import", "collector_start", "collector_stop",
+                     "runtime_operation"}
+        if op_value in write_ops and op_value not in domain_perms:
+            return False
+
+        return op_value in domain_perms
+
+    def get_role_domain_matrix(self) -> Dict[str, Any]:
+        """获取角色-域权限矩阵（用于审计/状态接口）。"""
+        return {
+            "roles": list(self.ROLE_DOMAIN_PERMISSIONS.keys()),
+            "matrix": {
+                role: {domain: sorted(perms) for domain, perms in domains.items()}
+                for role, domains in self.ROLE_DOMAIN_PERMISSIONS.items()
+            },
+            "key_rule": "ZBMP Analyst does not inherently have CTH Admin permissions; cross-domain writes denied by default",
+            "fail_closed": True,
+        }
+
     # ──────────────────────────────────────────────────────────
     # 健康检查 / 状态
     # ──────────────────────────────────────────────────────────
@@ -787,6 +889,8 @@ def require_permission(
     gate: Optional[PermissionGate] = None,
     resource: Optional[str] = None,
     deny_return: Any = None,
+    domain_id: Optional[str] = None,
+    role: Optional[str] = None,
 ):
     """权限检查装饰器。
 
@@ -809,6 +913,8 @@ def require_permission(
         gate: PermissionGate 实例（None 则使用全局单例）
         resource: 资源标识（None 则使用函数名）
         deny_return: 权限拒绝时的返回值
+        domain_id: 域身份（cth/zbmp），None 则从线程上下文读取
+        role: 调用者角色，用于跨域权限检查
     """
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
@@ -820,6 +926,8 @@ def require_permission(
                 resource=_resource,
                 risk_level=risk_level,
                 caller=func.__qualname__,
+                domain_id=domain_id,
+                role=role,
             )
             if not result.allowed:
                 logger.warning(

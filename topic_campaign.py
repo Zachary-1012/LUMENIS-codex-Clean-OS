@@ -214,15 +214,13 @@ def _classify_note(n, subject_hit_flag):
     else:
         ct = 'UGC'
 
-    pos_words = ('好', '赞', '喜欢', '棒', '美', '优秀', '推荐', '满意', '开心', '惊喜', '值得', '完美', '用心')
-    neg_words = ('差', '烂', '坑', '失望', '垃圾', '投诉', '避雷', '维权', '退款', '生气', '不满', '糟糕', '骗')
-    pos_count = sum(1 for w in pos_words if w in title)
-    neg_count = sum(1 for w in neg_words if w in title)
-    if neg_count > pos_count and neg_count > 0:
-        st = 'negative'
-    elif pos_count > neg_count and pos_count > 0:
-        st = 'positive'
-    else:
+    # FUNC-CONTENT-02: 情感分析统一为单一真相源（canonical_data.unified_sentiment_analysis）
+    try:
+        from canonical_data import unified_sentiment_analysis
+        st = unified_sentiment_analysis(title, n.get('content') or n.get('desc') or '')
+        if isinstance(st, dict):
+            st = st.get('sentiment', 'neutral')
+    except Exception:
         st = 'neutral'
 
     if subject_hit_flag and ct == '投诉':

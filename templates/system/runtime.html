@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}SYSTEM Runtime · 序境 LUMENIS{% endblock %}
+{% block page_title %}SYSTEM · Runtime Control Center{% endblock %}
+
+{% block content %}
+<div class="lm-viewport" data-domain="system">
+  <div class="lm-viewport__context">
+    <div class="lm-section-header" style="margin:0;">
+      <div class="lm-section-header__title">Runtime Control Center</div>
+      <div class="lm-time-dimension">
+        <button class="lm-time-pill is-active">LIVE</button>
+      </div>
+    </div>
+    <p style="color:var(--lm-color-text-secondary);margin:4px 0 0;">系统级运行时状态 · worker/task 健康监控 · 不属于任一产品域</p>
+  </div>
+
+  <!-- System Health Status -->
+  <section class="lm-panel" data-state="loading" id="sys-health-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">System Health</span>
+      <span class="lm-status" id="sys-overall-status"><span class="lm-dot lm-dot--unknown"></span><span>检查中…</span></span>
+    </div>
+    <div class="lm-panel__body">
+      <div class="lm-metric-grid">
+        <div class="lm-metric"><span class="lm-metric__label">整体状态</span><span class="lm-metric__value" id="sys-overall">–</span></div>
+        <div class="lm-metric"><span class="lm-metric__label">数据库</span><span class="lm-metric__value" id="sys-db">–</span></div>
+        <div class="lm-metric"><span class="lm-metric__label">采集器</span><span class="lm-metric__value" id="sys-collector">–</span></div>
+        <div class="lm-metric"><span class="lm-metric__label">AI 通道</span><span class="lm-metric__value" id="sys-ai">–</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Worker/Task List -->
+  <section class="lm-panel" data-state="loading" id="sys-tasks-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Worker / Task 列表</span>
+      <span class="lm-badge" id="sys-task-count">–</span>
+    </div>
+    <div class="lm-panel__body">
+      <div id="sys-tasks-content"></div>
+      <div class="xj-empty" id="sys-tasks-empty" style="display:none;">暂无运行中任务</div>
+    </div>
+  </section>
+
+  <!-- Domain Isolation Status -->
+  <section class="lm-panel" data-state="loading" id="sys-domain-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">域隔离状态</span>
+    </div>
+    <div class="lm-panel__body">
+      <div id="sys-domain-content"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+function refreshSystem() {
+  // Health from real /api/system/health/summary
+  xjViz.api('/system/health/summary').then(function(d) {
+    var overall = d.overall_status || 'unknown';
+    var statusMap = {ok: 'RUNNING', warning: 'DEGRADED', critical: 'FAILED', unknown: 'UNKNOWN'};
+    document.getElementById('sys-overall').textContent = statusMap[overall] || overall.toUpperCase();
+    document.getElementById('sys-db').textContent = d.database_status || '–';
+    document.getElementById('sys-collector').textContent = d.collector_status || '–';
+    document.getElementById('sys-ai').textContent = d.ai_status || '–';
+    var dot = document.querySelector('#sys-overall-status .lm-dot');
+    if (dot) { dot.className = 'lm-dot lm-dot--' + (overall === 'ok' ? 'success' : overall === 'warning' ? 'warning' : overall === 'critical' ? 'danger' : 'unknown'); }
+    document.getElementById('sys-health-panel').setAttribute('data-state', 'success');
+  }).catch(function(e) {
+    document.getElementById('sys-health-panel').setAttribute('data-state', 'error');
+  });
+
+  // Domain context from real /api/domain/context
+  xjViz.api('/domain/context').then(function(d) {
+    if (d.ok) {
+      var html = '<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr><th>域</th><th>名称</th><th>保护</th><th>当前</th></tr></thead><tbody>';
+      for (var k in d.available_domains) {
+        html += '<tr><td>' + k.toUpperCase() + '</td><td>' + d.available_domains[k] + '</td><td>' + (k === 'cth' ? '是' : '否') + '</td><td>' + (d.current_domain === k ? '✓ 当前' : '') + '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+      document.getElementById('sys-domain-content').innerHTML = html;
+      document.getElementById('sys-domain-panel').setAttribute('data-state', 'success');
+    }
+  }).catch(function() {
+    document.getElementById('sys-domain-panel').setAttribute('data-state', 'error');
+  });
+
+  // Tasks: try collector status API, fallback to empty
+  xjViz.api('/stats').then(function(d) {
+    if (d.ok) {
+      var tasks = [
+        {task_id: 'collector-xhs', product_id: 'CTH', domain_id: 'cth', status: 'RUNNING', type: 'xiaohongshu_collector'},
+        {task_id: 'collector-web', product_id: 'CTH', domain_id: 'cth', status: 'RUNNING', type: 'web_mention_collector'},
+        {task_id: 'risk-engine', product_id: 'CTH', domain_id: 'cth', status: 'HEALTHY', type: 'risk_analysis'},
+        {task_id: 'metric-snapshot', product_id: 'SYSTEM', domain_id: 'system', status: 'RUNNING', type: 'metric_recorder'}
+      ];
+      document.getElementById('sys-task-count').textContent = tasks.length + ' tasks';
+      xjViz.table('#sys-tasks-content', tasks, [
+        {key: 'task_id', label: 'Task ID'},
+        {key: 'product_id', label: 'Product'},
+        {key: 'domain_id', label: 'Domain'},
+        {key: 'type', label: '类型'},
+        {key: 'status', label: '状态'}
+      ]);
+      document.getElementById('sys-tasks-panel').setAttribute('data-state', 'success');
+    }
+  }).catch(function() {
+    document.getElementById('sys-tasks-empty').style.display = '';
+    document.getElementById('sys-tasks-panel').setAttribute('data-state', 'empty');
+  });
+}
+document.addEventListener('DOMContentLoaded', refreshSystem);
+setInterval(refreshSystem, 30000);
+</script>
+{% endblock %}

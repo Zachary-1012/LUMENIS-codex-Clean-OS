@@ -6,6 +6,8 @@
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}序境 · LUMENIS{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/lumenis.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/xujing-core.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/xujing-dual-domain.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -18,6 +20,11 @@
     <div class="lm-header__brand">
       <span class="lm-header__brand-mark" aria-hidden="true"></span>
       <span>序境 LUMENIS</span>
+    </div>
+    <div class="lm-domain-switch" id="lm-domain-switch" role="tablist" aria-label="产品域切换">
+      <button class="lm-domain-tab {% if active_domain=='zbmp' %}is-active{% endif %}" data-domain="zbmp" role="tab" aria-selected="{% if active_domain=='zbmp' %}true{% else %}false{% endif %}">ZBMP</button>
+      <button class="lm-domain-tab {% if active_domain=='cth' or not active_domain %}is-active{% endif %}" data-domain="cth" role="tab" aria-selected="{% if active_domain=='cth' or not active_domain %}true{% else %}false{% endif %}">CTH</button>
+      <button class="lm-domain-tab {% if active_domain=='system' %}is-active{% endif %}" data-domain="system" role="tab" aria-selected="{% if active_domain=='system' %}true{% else %}false{% endif %}">SYSTEM</button>
     </div>
     <span class="lm-header__title">{% block page_title %}Command Home{% endblock %}</span>
     <span class="lm-header__spacer"></span>
@@ -36,6 +43,96 @@
       <div class="lm-nav-group__label" data-i18n="nav.home">Home</div>
       <a class="lm-nav-item {{ 'is-active' if active_nav=='home' }}" href="{{ home_url|default('/lumenis/') }}">
         <span data-icon="home"></span><span class="lm-nav-item__label" data-i18n="nav.home">Command Home</span>
+      </a>
+    </div>
+
+    <div class="lm-nav-group lm-nav-group--zbmp" data-domain-nav="zbmp">
+      <div class="lm-nav-group__label">ZBMP Workspace</div>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_overview' }}" href="{{ url_for('lumenis.zbmp_overview') }}">
+        <span data-icon="production"></span><span class="lm-nav-item__label">Overview</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_intelligence' }}" href="{{ url_for('lumenis.zbmp_intelligence') }}">
+        <span data-icon="intelligence"></span><span class="lm-nav-item__label">Brand Intelligence</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_brand' }}" href="{{ url_for('lumenis.zbmp_brand') }}">
+        <span data-icon="content"></span><span class="lm-nav-item__label">Brand</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_content' }}" href="{{ url_for('lumenis.zbmp_content') }}">
+        <span data-icon="content"></span><span class="lm-nav-item__label">Content</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_podcast' }}" href="{{ url_for('lumenis.zbmp_podcast') }}">
+        <span data-icon="learning"></span><span class="lm-nav-item__label">Podcast</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_kos' }}" href="{{ url_for('lumenis.zbmp_kos') }}">
+        <span data-icon="agent"></span><span class="lm-nav-item__label">KOS-KOL-KOC</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_competition' }}" href="{{ url_for('lumenis.zbmp_competition') }}">
+        <span data-icon="research"></span><span class="lm-nav-item__label">Competition</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_risk' }}" href="{{ url_for('lumenis.zbmp_risk') }}">
+        <span data-icon="risk"></span><span class="lm-nav-item__label">Risk</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_reports' }}" href="{{ url_for('lumenis.zbmp_reports') }}">
+        <span data-icon="report"></span><span class="lm-nav-item__label">Reports</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='zbmp_evaluation' }}" href="{{ url_for('lumenis.zbmp_evaluation') }}">
+        <span data-icon="evaluation"></span><span class="lm-nav-item__label">Evaluation</span>
+      </a>
+    </div>
+
+    <div class="lm-nav-group lm-nav-group--cth" data-domain-nav="cth">
+      <div class="lm-nav-group__label">CTH Workspace</div>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_overview' }}" href="{{ url_for('lumenis.cth_overview') }}">
+        <span data-icon="production"></span><span class="lm-nav-item__label">Overview</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_realtime' }}" href="{{ url_for('lumenis.cth_realtime') }}">
+        <span data-icon="intelligence"></span><span class="lm-nav-item__label">Real-time Intelligence</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_events' }}" href="{{ url_for('lumenis.cth_events') }}">
+        <span data-icon="content"></span><span class="lm-nav-item__label">Events</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_risk' }}" href="{{ url_for('lumenis.cth_risk') }}">
+        <span data-icon="risk"></span><span class="lm-nav-item__label">Risk</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_brands' }}" href="{{ url_for('lumenis.cth_brands') }}">
+        <span data-icon="content"></span><span class="lm-nav-item__label">Brands (199)</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_industries' }}" href="{{ url_for('lumenis.cth_industries') }}">
+        <span data-icon="research"></span><span class="lm-nav-item__label">Industries (9)</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_xhs' }}" href="{{ url_for('lumenis.cth_xhs') }}">
+        <span data-icon="learning"></span><span class="lm-nav-item__label">Xiaohongshu</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_kos' }}" href="{{ url_for('lumenis.cth_kos') }}">
+        <span data-icon="agent"></span><span class="lm-nav-item__label">KOS-KOL-KOC-UGC</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_reports' }}" href="{{ url_for('lumenis.cth_reports') }}">
+        <span data-icon="report"></span><span class="lm-nav-item__label">Reports</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='cth_evidence' }}" href="{{ url_for('lumenis.cth_evidence') }}">
+        <span data-icon="evidence"></span><span class="lm-nav-item__label">Evidence</span>
+      </a>
+    </div>
+
+    <div class="lm-nav-group lm-nav-group--system" data-domain-nav="system">
+      <div class="lm-nav-group__label">SYSTEM</div>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='sys_runtime' }}" href="{{ url_for('lumenis.system_runtime') }}">
+        <span data-icon="operations"></span><span class="lm-nav-item__label">Runtime</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='sys_collector' }}" href="{{ url_for('lumenis.system_collector') }}">
+        <span data-icon="production"></span><span class="lm-nav-item__label">Collector</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='sys_ai' }}" href="{{ url_for('lumenis.system_ai') }}">
+        <span data-icon="intelligence"></span><span class="lm-nav-item__label">AI</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='sys_database' }}" href="{{ url_for('lumenis.system_database') }}">
+        <span data-icon="skill"></span><span class="lm-nav-item__label">Database</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='sys_security' }}" href="{{ url_for('lumenis.system_security') }}">
+        <span data-icon="agent"></span><span class="lm-nav-item__label">Security</span>
+      </a>
+      <a class="lm-nav-item {{ 'is-active' if active_nav=='sys_evaluation' }}" href="{{ url_for('lumenis.system_evaluation') }}">
+        <span data-icon="evaluation"></span><span class="lm-nav-item__label">Evaluation</span>
       </a>
     </div>
 
@@ -132,6 +229,28 @@
 <script src="{{ url_for('static', filename='js/lumenis-icons.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-core.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/xujing-viz.js') }}"></script>
+<script>
+// Wrap xjViz.api to use LUMENIS.fetch (auto-auth from /api/auth/config, credentials include)
+// This ensures xujing-viz.js API calls carry Basic Auth without modifying the restored file.
+(function() {
+  if (typeof xjViz === 'undefined' || typeof LUMENIS === 'undefined') return;
+  var _origApi = xjViz.api;
+  xjViz.api = function(endpoint, params) {
+    var url = endpoint.startsWith('http') ? endpoint : '/api' + (endpoint.startsWith('/') ? endpoint : '/' + endpoint);
+    if (params) {
+      var qs = new URLSearchParams(params).toString();
+      if (qs) url += (url.indexOf('?') >= 0 ? '&' : '?') + qs;
+    }
+    return LUMENIS.fetch(url).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  };
+  // Also set __Z_AUTH for any direct fetch usage in xujing-viz.js
+  LUMENIS.Auth.getHeader().then(function(h) { if (h) window.__Z_AUTH = h; });
+})();
+</script>
 <script>
   // ===== Global i18n (system-level language switch) =====
   LUMENIS.i18n = {
@@ -328,6 +447,41 @@
     refresh();
     setInterval(refresh, 30000);
     document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh(); });
+  })();
+  // ===== Domain Switch (ZBMP / CTH / SYSTEM) =====
+  (function () {
+    var tabs = document.querySelectorAll('.lm-domain-tab');
+    var navGroups = document.querySelectorAll('[data-domain-nav]');
+    var currentDomain = '{{ active_domain|default("cth") }}';
+
+    function showDomain(domain) {
+      navGroups.forEach(function (g) {
+        g.style.display = (g.getAttribute('data-domain-nav') === domain) ? '' : 'none';
+      });
+      tabs.forEach(function (t) {
+        var active = t.getAttribute('data-domain') === domain;
+        t.classList.toggle('is-active', active);
+        t.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      // Set domain context cookie for API calls
+      try { document.cookie = 'zbc_domain=' + domain + ';path=/;max-age=86400'; } catch (e) {}
+      // Set global for xujing-viz API calls
+      window.__CURRENT_DOMAIN__ = domain;
+    }
+
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        var d = t.getAttribute('data-domain');
+        showDomain(d);
+        // Navigate to domain overview if not already in that domain's pages
+        var overviewMap = { zbmp: '{{ url_for("lumenis.zbmp_overview") }}', cth: '{{ url_for("lumenis.cth_overview") }}', system: '{{ url_for("lumenis.system_runtime") }}' };
+        if (overviewMap[d] && !window.location.pathname.startsWith('/lumenis/' + d)) {
+          window.location.href = overviewMap[d];
+        }
+      });
+    });
+
+    showDomain(currentDomain);
   })();
   {% block scripts %}{% endblock %}
 </script>

@@ -83,6 +83,10 @@ _MIGRATION_COLUMNS = [
     ("task_id", "TEXT DEFAULT ''"),
     ("trace_id", "TEXT DEFAULT ''"),
     ("timestamp", "TEXT DEFAULT ''"),
+    # ZBC V2.0 双域隔离：域身份字段
+    ("domain_id", "TEXT DEFAULT ''"),
+    ("product_id", "TEXT DEFAULT ''"),
+    ("output_hash", "TEXT DEFAULT ''"),
 ]
 
 
@@ -191,6 +195,9 @@ def log_call(
     token_usage: int = 0,
     failure_reason: str = '',
     success: bool = True,
+    domain_id: str = '',
+    product_id: str = '',
+    output_hash: str = '',
 ) -> Optional[int]:
     """
     记录一次 AI 调用。旁路写入：任何异常仅打印日志，不抛出。
@@ -218,7 +225,7 @@ def log_call(
                         confidence, rule_result, final_result, final_decision,
                         task_id, trace_id, timestamp, human_correction,
                         latency_ms, token_usage, failure_reason, success)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         provider or '', model or '', prompt_version or '',
                         input_hash or '', in_str, out_str,
@@ -227,6 +234,7 @@ def log_call(
                         task_id or '', trace_id or '', ts, corr_str,
                         int(latency_ms or 0), int(token_usage or 0),
                         fail_str, 1 if success else 0,
+                        domain_id or '', product_id or '', output_hash or '',
                     ),
                 )
                 return cur.lastrowid
@@ -322,6 +330,8 @@ def log_ai_call(
                     final_decision=final_decision,
                     task_id=_task_id, trace_id=_trace_id,
                     latency_ms=latency_ms, token_usage=tokens, success=True,
+                    domain_id=kwargs.get('domain_id', ''),
+                    product_id=kwargs.get('product_id', ''),
                 )
                 return result
             except Exception as exc:
@@ -347,6 +357,8 @@ def query_calls(
     success: Optional[bool] = None,
     task_id: str = '',
     trace_id: str = '',
+    domain_id: str = '',
+    product_id: str = '',
     limit: int = 100,
     offset: int = 0,
     since: str = '',
@@ -367,6 +379,12 @@ def query_calls(
         if trace_id:
             sql += " AND trace_id = ?"
             params.append(trace_id)
+        if domain_id:
+            sql += " AND domain_id = ?"
+            params.append(domain_id)
+        if product_id:
+            sql += " AND product_id = ?"
+            params.append(product_id)
         if since:
             sql += " AND created_at >= ?"
             params.append(since)

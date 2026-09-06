@@ -304,16 +304,50 @@ def mark_ai_output(data: Any, provider: str = "zhipu", endpoint: str = "") -> Di
 def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
                               model: str = None, max_tokens: int = 1024,
                               temperature: float = 0.7, desensitize: bool = True,
-                              provider: str = "zhipu") -> Dict:
+                              provider: str = "zhipu",
+                              domain_id: str = None) -> Dict:
     """
-    统一 AI 调用治理封装（额度→脱敏→准备调用→回补→统计→标记）。
+    统一 AI 调用治理封装（域校验→OWASP安全门→额度→脱敏→准备调用→回补→统计→标记）。
+
+    ZBC V2.0 双域隔离：入口校验 domain_id 与 prompt context 匹配，禁止串域。
+    IC-035 OWASP Agentic Top10：调用前执行安全检查（提示注入/敏感信息泄露/过度代理/
+    不安全输出处理/模型盗窃）。
 
     注意：本函数完成治理层的额度检查、脱敏、输出标记和统计记录；
     实际 HTTP 调用由调用方（intelligence._chat / ai_api 路由）执行，
     调用方应在拿到 AI 响应后调用 record_ai_call() 记录实际用量。
 
-    返回: {ok, desensitized, mapping_count, quota_remaining, messages_prepared, provider}
+    返回: {ok, desensitized, mapping_count, quota_remaining, messages_prepared, provider, domain_id}
     """
+    # 0a. 域身份校验（双域隔离：禁止 CTH prompt 流入 ZBMP 或反之）
+    try:
+        from ai_domain_context import (
+            get_current_domain, validate_prompt_domain_isolation, DomainMismatchError,
+        )
+        expected_domain = domain_id or get_current_domain()
+        prompt_domain = validate_prompt_domain_isolation(messages)
+        if prompt_domain and prompt_domain != expected_domain:
+            return mark_ai_output({
+                "ok": False,
+                "error": f"Domain isolation violation: prompt domain={prompt_domain} "
+                         f"does not match expected domain={expected_domain}",
+                "fallback": "domain_violation_blocked",
+                "domain_id": expected_domain,
+            }, endpoint=endpoint, provider=provider)
+    except ImportError:
+        expected_domain = domain_id or "cth"
+
+    # 0b. OWASP Agentic Top10 安全门（IC-035）
+    sec_check = owasp_agentic_security_check(messages, endpoint=endpoint)
+    if not sec_check["passed"]:
+        return mark_ai_output({
+            "ok": False,
+            "error": f"OWASP Agentic security check failed: {sec_check['reason']}",
+            "security_findings": sec_check["findings"],
+            "fallback": "security_blocked",
+            "domain_id": expected_domain,
+        }, endpoint=endpoint, provider=provider)
+
     # 1. 额度检查
     allowed, quota = _usage_tracker.check_quota()
     if not allowed:
@@ -341,6 +375,8 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
         "model": model,
         "max_tokens": max_tokens,
         "temperature": temperature,
+        "domain_id": expected_domain,
+        "owasp_security_passed": True,
     }
     return result
 
@@ -365,3 +401,157 @@ def desensitize_text(text: str) -> Tuple[str, Dict[str, str]]:
 def restore_text(text: str, mapping: Dict[str, str]) -> str:
     """回传补回实体（便捷函数）。"""
     return _desensitizer.restore(text, mapping)
+
+
+# ============================================================
+# IC-035 OWASP Agentic Top10 安全门
+# ============================================================
+# 参考 OWASP Top 10 for LLM Applications / Agentic AI 2025
+# 覆盖至少 5 项核心风险：提示注入、敏感信息泄露、过度代理、
+# 不安全输出处理、模型盗窃（模型/系统提示泄露）
+
+OWASP_AGENTIC_CHECKS = {
+    "LLM01_prompt_injection": {
+        "name": "提示注入 (Prompt Injection)",
+        "description": "检测用户输入中是否包含试图覆盖系统指令的注入模式",
+        "patterns": [
+            r"(?i)(ignore|disregard|forget)\s+(all\s+)?(previous|above|prior)\s+(instructions|rules|prompts)",
+            r"(?i)you\s+are\s+now\s+(a|an)\s+",
+            r"(?i)(system|developer)\s+(prompt|message|instruction)\s*[:=]",
+            r"(?i)<\|system\|>",
+            r"(?i)(act|pretend)\s+as\s+(if\s+)?you\s+(are|were)",
+            r"(?i)(new\s+)?instructions?\s*(override|replace|supersede)",
+        ],
+        "severity": "critical",
+    },
+    "LLM02_sensitive_info_leak": {
+        "name": "敏感信息泄露 (Sensitive Information Disclosure)",
+        "description": "检测输入中是否包含 API key、token、密码等敏感凭证",
+        "patterns": [
+            r"(?i)(api[_-]?key|secret|password|passwd|token|access[_-]?key)\s*[:=]\s*[A-Za-z0-9_\-]{8,}",
+            r"(?i)(sk-|AKIA|ghp_|gho_|xox[baprs]-)[A-Za-z0-9]{10,}",
+            r"(?i)(bearer|basic)\s+[A-Za-z0-9_\-\.=]{10,}",
+            r"(?i)(private\s+key|RSA\s+PRIVATE)",
+        ],
+        "severity": "critical",
+    },
+    "LLM06_excessive_agency": {
+        "name": "过度代理 (Excessive Agency)",
+        "description": "检测是否要求 AI 执行超出其授权范围的高风险操作",
+        "patterns": [
+            r"(?i)(delete|drop|truncate|remove)\s+(all|entire|whole)\s+(database|table|data|records)",
+            r"(?i)(send|transfer|wire)\s+(money|funds|payment)",
+            r"(?i)(grant|give)\s+(admin|root|sudo|full)\s+(access|permission|privilege)",
+            r"(?i)(modify|change|alter)\s+(system|kernel|registry)\s+(settings|config|files)",
+        ],
+        "severity": "high",
+    },
+    "LLM05_unsafe_output": {
+        "name": "不安全输出处理 (Improper Output Handling)",
+        "description": "检测 AI 输出中可能包含的可执行代码/脚本注入模式",
+        "patterns": [
+            r"(?i)<script[^>]*>",
+            r"(?i)javascript\s*:",
+            r"(?i)(eval|exec|system|os\.system|subprocess)\s*\(",
+            r"(?i);\s*(rm|del|format|mkfs)\s+",
+            r"(?i)(curl|wget)\s+.*\|\s*(bash|sh|python)",
+        ],
+        "severity": "high",
+        "scope": "output",  # 此项主要检查输出，但在输入预检中也检测用户要求生成恶意输出
+    },
+    "LLM08_model_theft": {
+        "name": "模型盗窃/系统提示泄露 (Model Theft / System Prompt Leak)",
+        "description": "检测是否试图诱使模型泄露系统提示、训练数据或内部配置",
+        "patterns": [
+            r"(?i)(reveal|show|print|output|repeat)\s+(your|the)\s+(system|initial|hidden)\s+(prompt|instructions|rules)",
+            r"(?i)(what\s+is|tell\s+me)\s+your\s+(system\s+)?prompt",
+            r"(?i)(dump|extract|leak)\s+(training|model)\s+(data|weights|parameters)",
+            r"(?i)(repeat|echo)\s+(the|your)\s+(first|initial)\s+(message|prompt|instruction)",
+        ],
+        "severity": "high",
+    },
+}
+
+
+def owasp_agentic_security_check(
+    messages: List[Dict],
+    endpoint: str = "generic",
+) -> Dict[str, Any]:
+    """OWASP Agentic Top10 安全检查（IC-035）。
+
+    在 AI 调用前对输入 messages 执行安全扫描。
+    覆盖：提示注入、敏感信息泄露、过度代理、不安全输出处理、模型盗窃。
+
+    Returns:
+        {
+            "passed": bool,
+            "reason": str,
+            "findings": [{"check_id", "name", "severity", "matched_pattern", "message"}],
+            "checks_run": int,
+        }
+    """
+    import re as _re
+    findings = []
+    checks_run = 0
+
+    # 合并所有 user 消息内容进行扫描
+    user_text = " ".join(
+        msg.get("content", "") for msg in messages
+        if isinstance(msg, dict) and msg.get("role") == "user"
+        and isinstance(msg.get("content"), str)
+    )
+
+    for check_id, check in OWASP_AGENTIC_CHECKS.items():
+        checks_run += 1
+        for pattern in check["patterns"]:
+            try:
+                match = _re.search(pattern, user_text)
+                if match:
+                    findings.append({
+                        "check_id": check_id,
+                        "name": check["name"],
+                        "severity": check["severity"],
+                        "matched_pattern": pattern[:80],
+                        "message": f"Detected {check['name']} in input (severity={check['severity']})",
+                    })
+                    break  # 每个检查项只记录首次命中
+            except _re.error:
+                continue
+
+    # critical 级别直接阻断；high 级别记录但放行（可配置为阻断）
+    critical_findings = [f for f in findings if f["severity"] == "critical"]
+    passed = len(critical_findings) == 0
+
+    reason = ""
+    if critical_findings:
+        reason = "; ".join(f["name"] for f in critical_findings)
+    elif findings:
+        reason = f"High-severity findings (allowed with warning): {'; '.join(f['name'] for f in findings)}"
+
+    return {
+        "passed": passed,
+        "reason": reason,
+        "findings": findings,
+        "checks_run": checks_run,
+        "checks_total": len(OWASP_AGENTIC_CHECKS),
+        "endpoint": endpoint,
+    }
+
+
+def get_owasp_security_status() -> Dict[str, Any]:
+    """获取 OWASP Agentic Top10 安全门状态（用于审计/健康检查）。"""
+    return {
+        "module": "owasp_agentic_top10",
+        "ic_reference": "IC-035",
+        "checks_enabled": list(OWASP_AGENTIC_CHECKS.keys()),
+        "checks_count": len(OWASP_AGENTIC_CHECKS),
+        "coverage": [
+            "LLM01 Prompt Injection",
+            "LLM02 Sensitive Information Disclosure",
+            "LLM06 Excessive Agency",
+            "LLM05 Improper Output Handling",
+            "LLM08 Model Theft / System Prompt Leak",
+        ],
+        "enforcement": "critical=block, high=log_and_warn",
+        "integration_point": "ai_governance.call_ai_with_governance (pre-call gate)",
+    }

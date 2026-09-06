@@ -11,15 +11,23 @@
 
 本模块只做只读数据采集，不做任何写操作。
 采集路径优先级：API（需特批） > 浏览器cookie（已登录态） > 不可用
+
+【BLOCKED 条件】
+- API模式：缺少 JIGUANG_ACCESS_TOKEN 或 JIGUANG_ADVERTISER_ID
+- 浏览器模式：缺少 web_session / id_token cookie
+- 无凭证时返回 status="blocked"，禁止返回空列表冒充成功
 """
 from __future__ import annotations
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+import hashlib
+import hmac
 import json
 import logging
 import os
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +40,8 @@ class JiguangEndpoint(str, Enum):
     ACCOUNT_INFO = "/api/jg/account/info"
     PLAN_LIST = "/api/jg/plan/list"
     BALANCE = "/api/jg/account/balance"
-    DASHBOARD = "/api/jg/dashboard"               # 仪表盘数据
-    CAMPAIGN_LIST = "/api/jg/campaign/list"       # 广告计划列表
+    DASHBOARD = "/api/jg/dashboard"
+    CAMPAIGN_LIST = "/api/jg/campaign/list"
 
 
 @dataclass
@@ -45,6 +53,20 @@ class JiguangConfig:
     use_browser_fallback: bool = True
     cookie_path: str = "data/cookies/jiguang.json"
     agency_rebate_rate: float = 0.0
+    # API签名密钥（聚光API特批后发放，用于HMAC-SHA256签名）
+    api_secret: str = ""
+
+
+def _blocked_response(reason: str, required: List[str], note: str = "") -> Dict[str, Any]:
+    """统一的 BLOCKED 响应格式（禁止伪造成功/空数据）。"""
+    return {
+        "success": False,
+        "status": "blocked",
+        "reason": reason,
+        "required_credentials": required,
+        "data": None,
+        "note": note,
+    }
 
 
 class JiguangCollector:
@@ -91,7 +113,6 @@ class JiguangCollector:
         if not self.config.use_browser_fallback:
             return False
         cookies = self._load_cookies()
-        # 聚光后台需要web_session或id_token
         return bool(cookies.get("web_session") or cookies.get("id_token"))
 
     def _get_collection_mode(self) -> str:
@@ -102,9 +123,109 @@ class JiguangCollector:
             return "browser_cookie"
         return "unavailable"
 
+    # ── API 签名（聚光平台 HMAC-SHA256）──────────────────────
+    def _build_api_signature(self, method: str, endpoint: str,
+                              params: Dict[str, Any], body: str = "") -> str:
+        """构建聚光API请求签名。
+
+        签名算法（聚光平台规范）：
+        1. 拼接签名字符串: method + endpoint + sorted(params) + body
+        2. 使用 api_secret 作为密钥，HMAC-SHA256 签名
+        3. 返回 hex 摘要
+
+        接入条件：聚光API特批后发放 api_secret；无 secret 时 API 模式不可用。
+        """
+        if not self.config.api_secret:
+            return ""
+        sorted_params = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+        sign_str = f"{method.upper()}{endpoint}{sorted_params}{body}"
+        return hmac.new(
+            self.config.api_secret.encode("utf-8"),
+            sign_str.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+    def _build_api_headers(self) -> Dict[str, str]:
+        """构建API请求头（含 access_token 和签名）。"""
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "access-token": self.config.access_token,
+            "advertiser-id": self.config.advertiser_id,
+            "User-Agent": "ZBC-AdIntelligence/2.0",
+        }
+        return headers
+
+    def _api_request(self, method: str, endpoint: str,
+                     params: Optional[Dict] = None,
+                     body: Optional[Dict] = None) -> Dict[str, Any]:
+        """执行聚光API请求（真实调用骨架）。
+
+        前置条件检查：
+        - access_token / advertiser_id 必须存在
+        - api_secret 用于签名（部分接口必需）
+
+        无凭证时返回 BLOCKED，不发起请求，不伪造数据。
+        """
+        if not self._has_api_access():
+            return _blocked_response(
+                reason="missing credentials: access_token or advertiser_id",
+                required=["JIGUANG_ACCESS_TOKEN", "JIGUANG_ADVERTISER_ID"],
+                note="聚光API需企业特批；无凭证时禁止返回空数据",
+            )
+
+        try:
+            import requests
+            params = params or {}
+            params.setdefault("advertiser_id", self.config.advertiser_id)
+            params.setdefault("timestamp", str(int(time.time())))
+
+            body_str = json.dumps(body, ensure_ascii=False) if body else ""
+            signature = self._build_api_signature(method, endpoint, params, body_str)
+            if signature:
+                params["signature"] = signature
+
+            url = f"{self.config.api_base}{endpoint}"
+            headers = self._build_api_headers()
+
+            if method.upper() == "GET":
+                resp = requests.get(url, headers=headers, params=params, timeout=20)
+            else:
+                resp = requests.post(url, headers=headers, params=params,
+                                     data=body_str.encode("utf-8"), timeout=20)
+
+            if resp.status_code == 200:
+                data = resp.json()
+                # 聚光API返回 code=0 表示成功
+                if data.get("code", 0) != 0:
+                    return {
+                        "success": False,
+                        "status": "api_error",
+                        "error": data.get("msg", f"API返回错误 code={data.get('code')}"),
+                        "data": None,
+                        "raw": data,
+                    }
+                return {"success": True, "status": "ok", "data": data.get("data", data), "mode": "api"}
+            return {
+                "success": False,
+                "status": "http_error",
+                "error": f"HTTP {resp.status_code}",
+                "data": None,
+            }
+        except ImportError:
+            return {"success": False, "status": "dependency_error", "error": "requests 未安装", "data": None}
+        except Exception as e:
+            logger.error(f"聚光API请求失败: {e}")
+            return {"success": False, "status": "request_error", "error": str(e), "data": None}
+
     def health_check(self) -> Dict[str, Any]:
         mode = self._get_collection_mode()
         cookies = self._load_cookies()
+        blockers = []
+        if mode == "unavailable":
+            blockers.append("无API凭证且无浏览器cookie")
+        if self._has_api_access() and not self.config.api_secret:
+            blockers.append("API签名密钥(api_secret)未配置，部分接口无法签名")
         return {
             "platform": "xhs",
             "ad_system": "jiguang",
@@ -117,7 +238,8 @@ class JiguangCollector:
             "currency": "CNY",
             "min_deposit": 5000,
             "agency_rebate_rate": self.config.agency_rebate_rate,
-            "status": "ready" if mode != "unavailable" else "need_credentials",
+            "status": "ready" if mode != "unavailable" else "blocked",
+            "blockers": blockers,
             "note": "聚光API需特批；无API时用浏览器cookie只读采集（跳过OAuth认证）",
         }
 
@@ -137,10 +259,14 @@ class JiguangCollector:
         """获取账户余额（只读）。"""
         mode = self._get_collection_mode()
         if mode == "unavailable":
-            return {"success": False, "error": "无API权限且无浏览器cookie", "data": None}
+            return _blocked_response(
+                reason="no collection access: API credentials and browser cookies both missing",
+                required=["JIGUANG_ACCESS_TOKEN+JIGUANG_ADVERTISER_ID", "或 web_session/id_token cookie"],
+                note="无凭证时禁止返回空余额数据",
+            )
 
         if mode == "api":
-            return {"success": True, "data": {"balance": None, "currency": "CNY", "note": "API调用待实现"}}
+            return self._api_request("GET", JiguangEndpoint.BALANCE.value)
 
         # 浏览器cookie模式
         try:
@@ -157,7 +283,11 @@ class JiguangCollector:
     def get_dashboard(self) -> Dict[str, Any]:
         """获取仪表盘数据（只读，浏览器cookie模式）。"""
         if not self._has_browser_access():
-            return {"success": False, "error": "无浏览器cookie，无法采集仪表盘", "data": None}
+            return _blocked_response(
+                reason="browser cookie access required for dashboard",
+                required=["web_session 或 id_token cookie (data/cookies/jiguang.json)"],
+                note="仪表盘接口仅支持浏览器cookie模式",
+            )
 
         try:
             import requests
@@ -173,18 +303,14 @@ class JiguangCollector:
         """获取广告主日报表（只读）。"""
         mode = self._get_collection_mode()
         if mode == "unavailable":
-            return {"success": False, "error": "无采集权限", "data": None}
+            return _blocked_response(
+                reason="no collection access",
+                required=["JIGUANG_ACCESS_TOKEN+JIGUANG_ADVERTISER_ID", "或浏览器cookie"],
+            )
 
         if mode == "api":
-            return {
-                "success": True,
-                "data": {
-                    "start_date": start_date,
-                    "end_date": end_date,
-                    "metrics": ["impressions", "clicks", "cost", "interactions", "follows"],
-                    "note": "API调用待实现",
-                },
-            }
+            return self._api_request("GET", JiguangEndpoint.REPORT_ACCOUNT.value,
+                                     params={"start_date": start_date, "end_date": end_date})
 
         # 浏览器cookie模式
         try:
@@ -200,9 +326,15 @@ class JiguangCollector:
 
     def get_campaign_list(self) -> Dict[str, Any]:
         """获取广告计划列表（只读）。"""
+        mode = self._get_collection_mode()
+        if mode == "api":
+            return self._api_request("GET", JiguangEndpoint.CAMPAIGN_LIST.value)
         if not self._has_browser_access():
-            return {"success": False, "error": "无浏览器cookie", "data": None}
-
+            return _blocked_response(
+                reason="no collection access for campaign list",
+                required=["API凭证 或 浏览器cookie"],
+                note="禁止返回空列表冒充成功",
+            )
         try:
             import requests
             url = f"{self.config.api_base}{JiguangEndpoint.CAMPAIGN_LIST.value}"

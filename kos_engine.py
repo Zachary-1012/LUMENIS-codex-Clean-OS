@@ -151,6 +151,7 @@ def refresh_profiles() -> dict:
             COALESCE(SUM(shares),0) as total_shares, COALESCE(AVG(content_quality_score),0) as content_quality_avg,
             MAX(subject_type) as subject_type,
             GROUP_CONCAT(title, ' || ') as note_titles,
+            GROUP_CONCAT(COALESCE(source_platform,'xiaohongshu'), ',') as platforms,
             SUM(CASE WHEN sentiment='positive' THEN 1 ELSE 0 END) as positive_count,
             SUM(CASE WHEN sentiment='neutral' THEN 1 ELSE 0 END) as neutral_count,
             SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) as negative_count,
@@ -172,17 +173,25 @@ def refresh_profiles() -> dict:
         tc = d['total_comments'] or 0
         tcol = d['total_collects'] or 0
         ts = d['total_shares'] or 0
-        eng = tl + tc * 2 + tcol * 1.5 + ts * 2
+        # P0 红线：互动量权重从平台规则读取，禁止硬编码 2/1.5/2 等系数
+        from kos_metrics import platform_engagement, platform_kos_score
+        platforms_str = d.get('platforms') or 'xiaohongshu'
+        platform_list = [p for p in str(platforms_str).split(',') if p]
+        author_platform = platform_list[0] if platform_list else 'xiaohongshu'
+        eng = platform_engagement(author_platform, tl, tc, tcol, ts)
         avg_eng = eng / nc if nc > 0 else 0
         st = d.get('subject_type') or ''
-        brand_rel = {'kos': 30, 'official': 20, 'media': 15, 'institution': 10, 'normal_user': 5}.get(st, 3)
-        brand_rel += min(nc * 2, 20)
         cq = d.get('content_quality_avg') or 0
-        risk_pen = min((d.get('risk_count') or 0) * 5 + (d.get('negative_count') or 0) * 2, 15)
-        eng_score = min(math.log10(eng + 1) * 15, 40) if eng > 0 else 0
-        vol_score = min(math.log10(nc + 1) * 12, 20) if nc > 0 else 0
-        q_score = min(cq * 10, 10) if cq > 0 else 0
-        score = max(0, min(100, round(eng_score + vol_score + brand_rel * 0.2 + q_score - risk_pen * 0.5, 2)))
+        risk_cnt = d.get('risk_count') or 0
+        neg_cnt = d.get('negative_count') or 0
+        # P0 红线：KOS 得分从平台规则计算，禁止硬编码系数
+        score_result = platform_kos_score(
+            author_platform, engagement=eng, note_count=nc,
+            subject_type=st, content_quality=cq,
+            risk_count=risk_cnt, negative_count=neg_cnt,
+        )
+        score = score_result['score']
+        brand_rel = score_result['brand_relevance']
         active_days = 0
         fp, lp = d.get('first_publish_at'), d.get('last_publish_at')
         if fp and lp:
@@ -467,16 +476,20 @@ def ad_candidate_score(note_id: str = "", author_id: str = "") -> dict:
         comments = n.get("comments") or 0
         collects = n.get("collects") or 0
         shares = n.get("shares") or 0
-        eng = likes + comments * 2 + collects * 1.5 + shares * 2
+        # P0 红线：互动量权重从平台规则读取
+        from kos_metrics import platform_engagement, platform_ad_score
+        note_platform = n.get("source_platform") or "xiaohongshu"
+        eng = platform_engagement(note_platform, likes, comments, collects, shares)
         quality = n.get("content_quality_score") or 0
         risk = 1 if n.get("risk_level") in ["high", "medium"] else 0
         neg = 1 if n.get("sentiment") == "negative" else 0
-        # 投流评分：自然表现 40% + 互动质量 30% + 内容质量 20% - 风险 10%
-        nat_score = min(math.log10(eng + 1) * 12, 40) if eng > 0 else 0
-        interact_quality = min((comments + collects) / max(likes, 1) * 30, 30) if likes > 0 else 0
-        q_score = min(quality * 20, 20) if quality > 0 else 0
-        risk_pen = (risk + neg) * 10
-        ad_score = max(0, min(100, round(nat_score + interact_quality + q_score - risk_pen, 1)))
+        # P0 红线：投流评分从平台规则计算，禁止硬编码系数
+        ad_result = platform_ad_score(
+            note_platform, engagement=eng, likes=likes,
+            comments=comments, collects=collects, quality=quality,
+            is_risk=bool(risk), is_negative=bool(neg),
+        )
+        ad_score = ad_result["ad_score"]
         if ad_score >= 70: recommendation = "推荐投流"
         elif ad_score >= 40: recommendation = "建议观察"
         else: recommendation = "不建议投流"
@@ -783,9 +796,14 @@ def brand_profiles(brand: str, limit: int = 20) -> list:
         ).fetchall()
         n = len(rows)
         profiles = []
+        from kos_metrics import platform_engagement
         for i, r in enumerate(rows):
-            eng = (r["total_likes"] or 0) + (r["total_comments"] or 0) * 2 \
-                + (r["total_collects"] or 0) * 1.5 + (r["total_shares"] or 0) * 2
+            # P0 红线：互动量权重从平台规则读取
+            eng = platform_engagement(
+                brand or "xiaohongshu",
+                r["total_likes"] or 0, r["total_comments"] or 0,
+                r["total_collects"] or 0, r["total_shares"] or 0,
+            )
             pct = (i + 1) / n if n else 1
             tier = "S" if pct <= 0.05 else "A" if pct <= 0.20 else "B" if pct <= 0.50 else "C"
             profiles.append({
@@ -999,7 +1017,10 @@ def get_interaction_pattern(author_id, brand="", limit=30):
         comments = [int(r["comments"] or 0) for r in rows]
         collects = [int(r["collects"] or 0) for r in rows]
         shares = [int(r["shares"] or 0) for r in rows]
-        eng = [likes[i] + comments[i] * 2 + collects[i] * 1.5 + shares[i] * 2 for i in range(len(rows))]
+        # P0 红线：互动量权重从平台规则读取
+        from kos_metrics import platform_engagement
+        eng = [platform_engagement(brand or "xiaohongshu", likes[i], comments[i], collects[i], shares[i])
+               for i in range(len(rows))]
         n = len(rows)
 
         def _median(xs):
@@ -1159,3 +1180,223 @@ def interest_signal(author_id: str, brand: str = "", limit: int = 30) -> dict:
         }
     finally:
         conn.close()
+
+
+# ===== IC-041 · 达人分层运营策略（头部/腰部/尾部/KOC）=====
+# 依据：PCCC IC-041。基于粉丝量+互动率可配置阈值的达人分层。
+# 与现有 S/A/B/C 分层（TIER_THRESHOLDS，按百分位）互补：
+#   S/A/B/C = 品牌相关性+内容质量分层（KOS 内部）
+#   head/waist/tail/KOC = 市场影响力分层（粉丝量+互动率，行业通用）
+# 口径红线：阈值可配置，不硬编码；缺失粉丝量显式标记 unknown，不伪造分层。
+
+# 默认分层阈值（可通过 config/kos_tier_config.json 覆盖）
+DEFAULT_KOL_TIER_CONFIG = {
+    "head": {
+        "label": "头部达人",
+        "min_followers": 500000,       # 粉丝 >= 50万
+        "min_engagement_rate": 0.01,    # 互动率 >= 1%
+        "actions": ["品牌代言", "重磅合作", "首发阵地", "长期框架"],
+        "priority": 1,
+    },
+    "waist": {
+        "label": "腰部达人",
+        "min_followers": 100000,        # 粉丝 10万-50万
+        "max_followers": 500000,
+        "min_engagement_rate": 0.02,     # 互动率 >= 2%
+        "actions": ["种草合作", "内容共创", "活动参与", "投流放大"],
+        "priority": 2,
+    },
+    "tail": {
+        "label": "尾部达人",
+        "min_followers": 10000,          # 粉丝 1万-10万
+        "max_followers": 100000,
+        "min_engagement_rate": 0.03,     # 互动率 >= 3%
+        "actions": ["批量种草", "内容铺量", "口碑建设", "长尾覆盖"],
+        "priority": 3,
+    },
+    "koc": {
+        "label": "KOC（关键意见消费者）",
+        "max_followers": 10000,          # 粉丝 < 1万
+        "min_engagement_rate": 0.05,     # 互动率 >= 5%
+        "actions": ["真实体验", "口碑扩散", "社群运营", "UGC激励"],
+        "priority": 4,
+    },
+    "unknown": {
+        "label": "数据不足/未分层",
+        "actions": ["补充粉丝量数据", "观察期", "暂不投入"],
+        "priority": 99,
+    },
+}
+
+
+def load_kol_tier_config(config_path: str = "") -> dict:
+    """加载达人分层配置（可配置，不硬编码）。"""
+    import copy
+    config = copy.deepcopy(DEFAULT_KOL_TIER_CONFIG)
+    if not config_path:
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    "config", "kol_tier_config.json")
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                custom = json.load(f)
+            for tier, params in custom.items():
+                if tier in config and isinstance(params, dict):
+                    config[tier].update(params)
+        except Exception as e:
+            print(f"[KOS-IC041] 加载分层配置失败，使用默认: {e}")
+    return config
+
+
+def classify_kol_tier(followers=None, engagement_rate=None,
+                       config: dict = None) -> dict:
+    """基于粉丝量+互动率对达人分层（IC-041）。
+
+    Args:
+        followers: 粉丝量（int，None=未知）
+        engagement_rate: 互动率（float 0-1，None=未知）
+        config: 分层配置（默认加载 DEFAULT_KOL_TIER_CONFIG）
+
+    Returns:
+        {
+            "tier": "head"/"waist"/"tail"/"koc"/"unknown",
+            "label": str,
+            "followers": int/None,
+            "engagement_rate": float/None,
+            "actions": list,
+            "priority": int,
+            "data_available": bool,   # 数据是否充足
+            "reason": str,            # 分层依据
+        }
+
+    硬红线：
+    - 粉丝量缺失 → unknown，不伪造分层
+    - 互动率缺失 → 仅按粉丝量分层，标记 engagement_unknown
+    - 阈值可配置，不硬编码
+    """
+    if config is None:
+        config = load_kol_tier_config()
+
+    # 数据可得性检查
+    followers_available = followers is not None and isinstance(followers, (int, float)) and followers >= 0
+    engagement_available = engagement_rate is not None and isinstance(engagement_rate, (int, float)) and engagement_rate >= 0
+
+    if not followers_available:
+        # 粉丝量缺失 → unknown（不伪造）
+        tier_cfg = config.get("unknown", {})
+        return {
+            "tier": "unknown",
+            "label": tier_cfg.get("label", "数据不足/未分层"),
+            "followers": None,
+            "engagement_rate": engagement_rate if engagement_available else None,
+            "actions": tier_cfg.get("actions", []),
+            "priority": tier_cfg.get("priority", 99),
+            "data_available": False,
+            "reason": "粉丝量数据缺失，无法分层（不伪造）",
+            "engagement_unknown": not engagement_available,
+        }
+
+    followers = int(followers)
+    eng_rate = float(engagement_rate) if engagement_available else None
+
+    # 按粉丝量+互动率分层
+    for tier_name in ["head", "waist", "tail", "koc"]:
+        tier_cfg = config.get(tier_name, {})
+        min_f = tier_cfg.get("min_followers", 0)
+        max_f = tier_cfg.get("max_followers", float("inf"))
+        min_er = tier_cfg.get("min_engagement_rate", 0)
+
+        # 粉丝量范围检查
+        if followers < min_f or followers > max_f:
+            continue
+
+        # 互动率检查（如果有数据）
+        if eng_rate is not None and eng_rate < min_er:
+            # 互动率不达标 → 降一级或标记 low_engagement
+            continue
+
+        # 命中分层
+        reason = f"粉丝量 {followers:,} 落在 {tier_name} 区间"
+        if eng_rate is not None:
+            reason += f"，互动率 {eng_rate:.2%} >= 阈值 {min_er:.2%}"
+        else:
+            reason += "（互动率未知，仅按粉丝量分层）"
+
+        return {
+            "tier": tier_name,
+            "label": tier_cfg.get("label", tier_name),
+            "followers": followers,
+            "engagement_rate": eng_rate,
+            "actions": tier_cfg.get("actions", []),
+            "priority": tier_cfg.get("priority", 99),
+            "data_available": True,
+            "reason": reason,
+            "engagement_unknown": eng_rate is None,
+        }
+
+    # 未命中任何分层（如粉丝量在区间但互动率不达标）
+    tier_cfg = config.get("unknown", {})
+    return {
+        "tier": "unknown",
+        "label": "互动率不达标/未分层",
+        "followers": followers,
+        "engagement_rate": eng_rate,
+        "actions": tier_cfg.get("actions", []),
+        "priority": tier_cfg.get("priority", 99),
+        "data_available": True,
+        "reason": f"粉丝量 {followers:,} 但互动率 {eng_rate:.2% if eng_rate else 'N/A'} 未达分层阈值",
+        "engagement_unknown": eng_rate is None,
+    }
+
+
+def batch_classify_kol_tiers(authors: list, config: dict = None) -> list:
+    """批量对达人列表分层（IC-041）。
+
+    Args:
+        authors: 达人列表，每项需含 author_id/followers/engagement_rate 字段
+        config: 分层配置
+
+    Returns:
+        分层结果列表（按 priority 排序）
+    """
+    if config is None:
+        config = load_kol_tier_config()
+
+    results = []
+    for author in authors:
+        author_id = author.get("author_id", author.get("id", ""))
+        followers = author.get("followers", author.get("follower_count"))
+        engagement_rate = author.get("engagement_rate", author.get("avg_engagement_rate"))
+        tier_result = classify_kol_tier(followers, engagement_rate, config)
+        tier_result["author_id"] = author_id
+        tier_result["author_nickname"] = author.get("author_nickname", author.get("nickname", ""))
+        results.append(tier_result)
+
+    # 按 priority 排序
+    results.sort(key=lambda x: x.get("priority", 99))
+    return results
+
+
+def get_kol_tier_summary(authors: list, config: dict = None) -> dict:
+    """获取达人分层统计摘要（看板用）。"""
+    if config is None:
+        config = load_kol_tier_config()
+
+    classified = batch_classify_kol_tiers(authors, config)
+    summary = {tier: 0 for tier in ["head", "waist", "tail", "koc", "unknown"]}
+    for item in classified:
+        tier = item.get("tier", "unknown")
+        summary[tier] = summary.get(tier, 0) + 1
+
+    total = len(classified)
+    return {
+        "total": total,
+        "distribution": summary,
+        "percentages": {t: round(c / total * 100, 1) if total > 0 else 0.0
+                         for t, c in summary.items()},
+        "classified_list": classified,
+        "config_used": {t: {"label": c.get("label"), "min_followers": c.get("min_followers"),
+                              "max_followers": c.get("max_followers"),
+                              "min_engagement_rate": c.get("min_engagement_rate")}
+                         for t, c in config.items() if t != "unknown"},
+    }

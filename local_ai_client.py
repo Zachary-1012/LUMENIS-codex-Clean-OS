@@ -229,6 +229,109 @@ class LocalAIClient:
             'checked_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 
+    # ============================================
+    # P0: Ollama 正式本地 AI Runtime（健康检查 + 降级逻辑）
+    # ============================================
+
+    RUNTIME_READY = "ready"
+    RUNTIME_DEGRADED = "degraded"
+    RUNTIME_BLOCKED = "blocked"
+
+    def health_check(self, retries=2, retry_interval=1.0):
+        """Ollama 本地 AI Runtime 健康检查（P0）。
+
+        多级检查：连接性 → 模型可用性 → 生成能力探测。
+        硬红线：Ollama 不可用时标记 BLOCKED，不静默回退云端，不伪造可用状态。
+        """
+        import time as _time
+        result = {
+            "runtime_status": self.RUNTIME_BLOCKED,
+            "ollama_reachable": False,
+            "model_available": False,
+            "available_models": [],
+            "default_model": self.default_model,
+            "blocked_reason": "",
+            "degradation_mode": "none",
+            "checked_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        }
+
+        last_error = None
+        for attempt in range(retries + 1):
+            try:
+                response = requests.get(f"{self.base_url}/api/tags", timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    self.available = True
+                    self.available_models = [m['name'] for m in data.get('models', [])]
+                    result["ollama_reachable"] = True
+                    result["available_models"] = self.available_models
+                    break
+                else:
+                    last_error = f"HTTP {response.status_code}"
+            except requests.exceptions.ConnectionError as e:
+                last_error = f"连接失败: {e}"
+            except requests.exceptions.Timeout:
+                last_error = "连接超时(5s)"
+            except Exception as e:
+                last_error = str(e)
+            if attempt < retries:
+                _time.sleep(retry_interval)
+
+        if not result["ollama_reachable"]:
+            self.available = False
+            result["runtime_status"] = self.RUNTIME_BLOCKED
+            result["blocked_reason"] = (
+                f"Ollama 服务不可达({self.base_url})。最后错误: {last_error}。"
+                f"启动条件: 1)安装 Ollama(https://ollama.com); "
+                f"2)ollama serve; 3)ollama pull {self.default_model}; "
+                f"4)确认端口11434可访问(或设置 OLLAMA_URL)。"
+            )
+            result["degradation_mode"] = (
+                "本地AI Runtime不可用，AI功能标记BLOCKED，"
+                "不静默回退云端大模型(云端不作为生产依赖)，需人工启动Ollama后恢复。"
+            )
+            return result
+
+        if self.default_model in self.available_models:
+            result["model_available"] = True
+        else:
+            if self.available_models:
+                result["runtime_status"] = self.RUNTIME_DEGRADED
+                result["degradation_mode"] = (
+                    f"默认模型{self.default_model}未安装，自动使用{self.available_models[0]}。"
+                    f"建议: ollama pull {self.default_model}"
+                )
+            else:
+                result["runtime_status"] = self.RUNTIME_BLOCKED
+                result["blocked_reason"] = f"Ollama运行中但无已安装模型。启动条件: ollama pull {self.default_model}"
+                result["degradation_mode"] = "无可用模型，AI功能BLOCKED"
+            return result
+
+        result["runtime_status"] = self.RUNTIME_READY
+        return result
+
+    def is_runtime_ready(self):
+        """检查本地AI Runtime是否就绪（P0生产依赖检查）。"""
+        health = self.health_check(retries=0)
+        return health["runtime_status"] == self.RUNTIME_READY
+
+    def generate_with_runtime_check(self, prompt, model=None, system_prompt=None, temperature=0.7):
+        """带Runtime检查的生成（P0：先检查健康状态，BLOCKED时明确返回阻塞信息）。"""
+        health = self.health_check(retries=1)
+        if health["runtime_status"] == self.RUNTIME_BLOCKED:
+            return {
+                "ok": False, "status": "blocked",
+                "error": health["blocked_reason"],
+                "degradation_mode": health["degradation_mode"],
+                "data": None,
+            }
+        if health["runtime_status"] == self.RUNTIME_DEGRADED and health["available_models"]:
+            model = health["available_models"][0]
+        result = self.generate(prompt, model=model, system_prompt=system_prompt, temperature=temperature)
+        if result.get("ok"):
+            result["runtime_status"] = health["runtime_status"]
+        return result
+
 
 # 全局实例
 local_ai = LocalAIClient()

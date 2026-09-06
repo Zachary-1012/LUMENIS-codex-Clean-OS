@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}ZBMP Overview · 序境 LUMENIS{% endblock %}
+{% block page_title %}ZBMP · Brand Management Platform{% endblock %}
+
+{% block content %}
+<div class="lm-viewport" data-domain="zbmp">
+  <div class="lm-viewport__context">
+    <div class="lm-section-header" style="margin:0;">
+      <div class="lm-section-header__title">ZBMP Overview</div>
+      <div class="lm-time-dimension" id="zbmp-time-dim">
+        <button class="lm-time-pill is-active" data-range="7d">7D</button>
+        <button class="lm-time-pill" data-range="30d">30D</button>
+        <button class="lm-time-pill" data-range="90d">90D</button>
+      </div>
+    </div>
+    <p style="color:var(--lm-color-text-secondary);margin:4px 0 0;">多主体品牌管理平台 · 跨品牌舆情与内容运营总览</p>
+  </div>
+
+  <!-- KPI Cards (xujing-viz kpi with number animation) -->
+  <section class="lm-panel" data-state="loading" id="zbmp-kpi-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Brand KPIs</span>
+      <span class="lm-status-badge lm-status-badge--info">ZBMP Domain</span>
+      <button class="lm-btn lm-btn--icon" onclick="refreshZBMP()" title="刷新"><span data-icon="learning"></span></button>
+    </div>
+    <div class="lm-panel__body">
+      <div class="xj-kpi-row xj-stagger" id="zbmp-kpi-row">
+        <div class="xj-kpi-card" id="kpi-total"></div>
+        <div class="xj-kpi-card" id="kpi-positive"></div>
+        <div class="xj-kpi-card" id="kpi-negative"></div>
+        <div class="xj-kpi-card" id="kpi-engagement"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Charts Row: Trend + Donut -->
+  <div class="lm-grid lm-grid--cards">
+    <section class="lm-panel" data-state="loading" id="zbmp-trend-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">舆情趋势</span>
+        <span class="lm-badge" id="zbmp-trend-range">7D</span>
+      </div>
+      <div class="lm-panel__body">
+        <div class="xj-trend-container" id="zbmp-trend-chart" style="min-height:180px;"></div>
+        <div class="xj-empty" id="zbmp-trend-empty" style="display:none;">暂无趋势数据</div>
+      </div>
+    </section>
+
+    <section class="lm-panel" data-state="loading" id="zbmp-donut-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">情感分布</span>
+      </div>
+      <div class="lm-panel__body" style="display:flex;align-items:center;justify-content:center;min-height:180px;">
+        <div class="xj-donut-container" id="zbmp-donut-chart"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Brand List -->
+  <section class="lm-panel" data-state="loading" id="zbmp-brands-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">品牌列表</span>
+      <span class="lm-badge" id="zbmp-brand-count">–</span>
+    </div>
+    <div class="lm-panel__body">
+      <div id="zbmp-brands-content"></div>
+      <div class="xj-empty" id="zbmp-brands-empty" style="display:none;">暂无品牌数据</div>
+    </div>
+  </section>
+</div>
+
+<script>
+function refreshZBMP() {
+  // KPI from real /api/domain/overview
+  xjViz.api('/domain/overview', {domain: 'zbmp'}).then(function(d) {
+    if (!d.ok) throw new Error(d.error || 'API error');
+    var stats = d.stats || {};
+    var sentiment = xjViz.fn.FN_SENTIMENT_COUNT(stats);
+    var engagement = xjViz.fn.FN_ENGAGEMENT(stats);
+    // Render KPIs with number animation
+    xjViz.kpi('#kpi-total', '笔记总数', sentiment.total, {color: ''});
+    xjViz.kpi('#kpi-positive', '正面舆情', sentiment.positive, {color: 'pos'});
+    xjViz.kpi('#kpi-negative', '负面舆情', sentiment.negative, {color: 'neg'});
+    xjViz.kpi('#kpi-engagement', '总互动量', engagement.total, {color: ''});
+    // Donut chart
+    xjViz.donut('#zbmp-donut-chart', [
+      {label: '正面', value: sentiment.positive, color: '#2f9e6e'},
+      {label: '中性', value: sentiment.neutral, color: '#aeb4bf'},
+      {label: '负面', value: sentiment.negative, color: '#c0463a'}
+    ], {centerLabel: '情感分布', size: 130, thickness: 10});
+    document.getElementById('zbmp-kpi-panel').setAttribute('data-state', 'success');
+    document.getElementById('zbmp-donut-panel').setAttribute('data-state', 'success');
+  }).catch(function(e) {
+    document.getElementById('zbmp-kpi-panel').setAttribute('data-state', 'error');
+    console.error('ZBMP KPI error:', e);
+  });
+
+  // Trend from real /api/metric-trend (entity_type=topic, entity_key=taikoo_hui)
+  xjViz.api('/metric-trend', {entity_type: 'topic', entity_key: 'guangzhou_taikoo_hui', limit: 30}).then(function(d) {
+    if (d.ok && d.trend && d.trend.length > 0) {
+      var series = xjViz.fn.FN_TREND_SERIES(d.trend, 'total');
+      xjViz.trend('#zbmp-trend-chart', series, {type: 'area', color: '#5b8def', height: 160});
+      document.getElementById('zbmp-trend-panel').setAttribute('data-state', 'success');
+    } else {
+      document.getElementById('zbmp-trend-empty').style.display = '';
+      document.getElementById('zbmp-trend-chart').style.display = 'none';
+      document.getElementById('zbmp-trend-panel').setAttribute('data-state', 'empty');
+    }
+  }).catch(function(e) {
+    document.getElementById('zbmp-trend-panel').setAttribute('data-state', 'error');
+    console.error('ZBMP trend error:', e);
+  });
+
+  // Brand list from real /api/domain/brands
+  xjViz.api('/domain/brands', {domain: 'zbmp'}).then(function(d) {
+    if (d.ok && d.brands && d.brands.length > 0) {
+      document.getElementById('zbmp-brand-count').textContent = d.brands.length + ' brands';
+      xjViz.table('#zbmp-brands-content', d.brands, [
+        {key: 'name', label: '品牌名称'},
+        {key: 'count', label: '笔记数'}
+      ]);
+      document.getElementById('zbmp-brands-panel').setAttribute('data-state', 'success');
+    } else {
+      document.getElementById('zbmp-brands-empty').style.display = '';
+      document.getElementById('zbmp-brands-panel').setAttribute('data-state', 'empty');
+    }
+  }).catch(function(e) {
+    document.getElementById('zbmp-brands-panel').setAttribute('data-state', 'error');
+    console.error('ZBMP brands error:', e);
+  });
+}
+document.addEventListener('DOMContentLoaded', refreshZBMP);
+// 30s realtime update
+setInterval(refreshZBMP, 30000);
+</script>
+{% endblock %}

@@ -193,15 +193,19 @@ def get_request_brand():
 
 
 def init_app(app):
-    """注册 Flask before_request / after_request 钩子，实现请求级主体隔离。
+    """注册 Flask before_request / after_request 钩子，实现请求级主体+域隔离。
 
     每个 HTTP 请求自动：
+      - 从请求头 X-Domain-Id / X-Product-Id 解析域身份
       - 从请求上下文解析 brand_key
-      - 设置线程级 SubjectContext
-      - 请求结束后清除线程上下文（防止线程复用时的品牌泄漏）
+      - 设置线程级 SubjectContext + DomainContext
+      - 请求结束后清除线程上下文（防止线程复用时的品牌/域泄漏）
 
-    CTH 保护：当 ZBC_PRODUCT_ID=CTH 时，强制 brand_key=guangzhou_taikoo_hui，
-    任何请求级 brand 切换都不允许覆盖 CTH 生产主体。
+    CTH 保护：当 domain_id=cth 或 ZBC_PRODUCT_ID=CTH 时，
+    强制 brand_key=guangzhou_taikoo_hui，任何请求级 brand 切换都不允许覆盖 CTH 生产主体。
+
+    双域核心扩展（V2.0）：除了 brand_key，还从 X-Domain-Id / X-Product-Id 解析域身份，
+    before_request 中设置线程 DomainContext（product_id + domain_id），after_request 中清除。
 
     用法（在 app.py 中）：
         from subject_context import init_app
@@ -211,26 +215,73 @@ def init_app(app):
 
     @app.before_request
     def _set_subject_context():
-        brand = get_request_brand()
+        # 双域核心：从请求头解析 domain_id / product_id
+        domain_id = ""
         product_id = None
+        try:
+            from flask import request as _req
+            domain_id = _req.headers.get("X-Domain-Id", "").strip().lower()
+            product_id_hdr = _req.headers.get("X-Product-Id", "").strip().upper()
+            if product_id_hdr:
+                product_id = product_id_hdr
+        except Exception:
+            pass
 
-        # CTH 强制保护
-        if os.environ.get("ZBC_PRODUCT_ID") == PRODUCT_CTH:
+        brand = get_request_brand()
+
+        # CTH 强制保护：domain_id=cth 或环境变量 ZBC_PRODUCT_ID=CTH
+        is_cth = (domain_id == "cth" or os.environ.get("ZBC_PRODUCT_ID") == PRODUCT_CTH)
+        if is_cth:
             brand = CTH_BRAND_KEY
             product_id = PRODUCT_CTH
+            domain_id = "cth"
+        elif domain_id == "zbmp":
+            # 双域核心：显式 X-Domain-Id: zbmp 时强制 product_id=ZBMP
+            # （否则 get_product_context 默认 CTH，导致域身份不一致）
+            product_id = PRODUCT_ZBMP
+        elif domain_id == "system":
+            product_id = "SYSTEM"
 
         ctx = get_subject_context(brand_key=brand, product_id=product_id)
         set_thread_context(ctx)
         g.subject_context = ctx
 
+        # 双域核心：设置线程 DomainContext（懒导入避免循环依赖）
+        try:
+            from domain_isolation import DomainContext, set_domain_context, domain_to_product
+            if not domain_id:
+                domain_id = "cth" if ctx.product_id == PRODUCT_CTH else "zbmp"
+            dctx = DomainContext(
+                domain_id=domain_id,
+                product_id=ctx.product_id,
+                brand_key=brand or CTH_BRAND_KEY,
+                subject_id=ctx.subject_id,
+            )
+            set_domain_context(dctx)
+            g.domain_context = dctx
+        except Exception as _dc_err:
+            # DomainContext 设置失败不阻断请求（SubjectContext 已设置）
+            g.domain_context = None
+
     @app.after_request
     def _clear_subject_context(response):
         clear_thread_context()
+        # 双域核心：清除 DomainContext
+        try:
+            from domain_isolation import clear_domain_context
+            clear_domain_context()
+        except Exception:
+            pass
         return response
 
     @app.teardown_request
     def _teardown_subject_context(exc=None):
         clear_thread_context()
+        try:
+            from domain_isolation import clear_domain_context
+            clear_domain_context()
+        except Exception:
+            pass
 
     return app
 

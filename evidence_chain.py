@@ -166,6 +166,12 @@ class Evidence:
     collection_metadata: Dict[str, Any] = field(default_factory=dict)
     provider: str = "rule"         # 采集提供者/适配器
     authenticity_score: float = 1.0  # 真实性评分 0-1
+    domain_id: str = "cth"           # ZBC V2.0 双域隔离：域身份
+    product_id: str = "CTH"          # 产品 ID（CTH/ZBMP）
+    evaluation_id: str = ""          # 关联评估 ID
+    final_decision: str = ""         # 最终判断（Rule→AI辅助→Evidence→Evaluation→Final Decision）
+    rule_id: str = ""                # 经过的规则 ID
+    ai_call_id: str = ""             # 关联的 AI 调用 ID
     created_at: str = ""
 
     def __post_init__(self):
@@ -288,11 +294,20 @@ CREATE TABLE IF NOT EXISTS zbc_evidence (
     collection_metadata TEXT NOT NULL DEFAULT '{}',
     provider           TEXT NOT NULL DEFAULT 'rule',
     authenticity_score REAL NOT NULL DEFAULT 1.0,
+    domain_id          TEXT NOT NULL DEFAULT 'cth',
+    product_id         TEXT NOT NULL DEFAULT 'CTH',
+    evaluation_id      TEXT NOT NULL DEFAULT '',
+    final_decision     TEXT NOT NULL DEFAULT '',
+    rule_id            TEXT NOT NULL DEFAULT '',
+    ai_call_id         TEXT NOT NULL DEFAULT '',
     created_at         TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_zbc_evidence_hash ON zbc_evidence(content_hash);
 CREATE INDEX IF NOT EXISTS idx_zbc_evidence_source ON zbc_evidence(source_type);
 CREATE INDEX IF NOT EXISTS idx_zbc_evidence_scope ON zbc_evidence(subject_scope);
+CREATE INDEX IF NOT EXISTS idx_zbc_evidence_domain ON zbc_evidence(domain_id);
+CREATE INDEX IF NOT EXISTS idx_zbc_evidence_product ON zbc_evidence(product_id);
+CREATE INDEX IF NOT EXISTS idx_zbc_evidence_trace ON zbc_evidence(trace_id);
 
 CREATE TABLE IF NOT EXISTS zbc_canonical_data (
     canonical_id       TEXT PRIMARY KEY,
@@ -362,6 +377,12 @@ _EVIDENCE_NEW_COLS = [
     ("source_id", "TEXT NOT NULL DEFAULT ''"),
     ("task_id", "TEXT NOT NULL DEFAULT ''"),
     ("trace_id", "TEXT NOT NULL DEFAULT ''"),
+    ("domain_id", "TEXT NOT NULL DEFAULT 'cth'"),
+    ("product_id", "TEXT NOT NULL DEFAULT 'CTH'"),
+    ("evaluation_id", "TEXT NOT NULL DEFAULT ''"),
+    ("final_decision", "TEXT NOT NULL DEFAULT ''"),
+    ("rule_id", "TEXT NOT NULL DEFAULT ''"),
+    ("ai_call_id", "TEXT NOT NULL DEFAULT ''"),
 ]
 _LIFECYCLE_NEW_COLS = [
     ("task_id", "TEXT NOT NULL DEFAULT ''"),
@@ -424,6 +445,12 @@ class EvidenceStore:
         collection_metadata: Optional[Dict[str, Any]] = None,
         provider: str = "rule",
         authenticity_score: float = 1.0,
+        domain_id: str = "",
+        product_id: str = "",
+        evaluation_id: str = "",
+        final_decision: str = "",
+        rule_id: str = "",
+        ai_call_id: str = "",
     ) -> Tuple[Evidence, bool]:
         """添加一条证据。
 
@@ -432,6 +459,19 @@ class EvidenceStore:
         """
         content_hash = compute_content_hash(raw_content)
         captured_at = captured_at or _now()
+        # ZBC V2.0 双域隔离：默认从线程上下文解析域身份
+        if not domain_id or not product_id:
+            try:
+                from ai_domain_context import get_current_domain, product_id_to_domain
+                from subject_context import get_subject_context
+                _ctx = get_subject_context()
+                if not domain_id:
+                    domain_id = get_current_domain()
+                if not product_id:
+                    product_id = _ctx.product_id
+            except ImportError:
+                domain_id = domain_id or "cth"
+                product_id = product_id or "CTH"
 
         conn = _get_conn(self.db_path)
         try:
@@ -459,6 +499,12 @@ class EvidenceStore:
                 collection_metadata=collection_metadata or {},
                 provider=provider,
                 authenticity_score=authenticity_score,
+                domain_id=domain_id,
+                product_id=product_id,
+                evaluation_id=evaluation_id,
+                final_decision=final_decision,
+                rule_id=rule_id,
+                ai_call_id=ai_call_id,
             )
             d = ev.to_dict()
             cols = ", ".join(d.keys())
@@ -499,6 +545,8 @@ class EvidenceStore:
         *,
         source_type: str = "",
         subject_scope: str = "",
+        domain_id: str = "",
+        product_id: str = "",
         limit: int = 50,
         offset: int = 0,
     ) -> List[Evidence]:
@@ -510,6 +558,12 @@ class EvidenceStore:
         if subject_scope:
             conditions.append("subject_scope = ?")
             params.append(subject_scope)
+        if domain_id:
+            conditions.append("domain_id = ?")
+            params.append(domain_id)
+        if product_id:
+            conditions.append("product_id = ?")
+            params.append(product_id)
         where = " WHERE " + " AND ".join(conditions) if conditions else ""
         sql = f"SELECT * FROM zbc_evidence{where} ORDER BY created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
@@ -903,6 +957,11 @@ class EvidenceChain:
         collection_metadata: Optional[Dict[str, Any]] = None,
         provider: str = "rule",
         rule_version: str = RULE_VERSION,
+        domain_id: str = "",
+        product_id: str = "",
+        final_decision: str = "",
+        rule_id: str = "",
+        ai_call_id: str = "",
     ) -> Dict[str, Any]:
         """端到端：采集证据 → hash 去重 → 创建规范数据 → 记录生命周期。
 
@@ -926,6 +985,12 @@ class EvidenceChain:
             trace_id=trace_id,
             collection_metadata=collection_metadata,
             provider=provider,
+            domain_id=domain_id,
+            product_id=product_id,
+            evaluation_id=evaluation_id,
+            final_decision=final_decision,
+            rule_id=rule_id,
+            ai_call_id=ai_call_id,
         )
         tracking_ids = []
         tracking_ids.append(self.lifecycle.record_stage(
@@ -1045,3 +1110,58 @@ __all__ = [
     "adapt_evidence_store_hash",
     "build_provenance_metadata",
 ]
+
+
+# ============================================================
+# ZBC V2.0 双域证据查询便捷函数
+# ============================================================
+def list_evidence_by_domain(
+    db_path: str = None,
+    domain_id: str = "cth",
+    limit: int = 50,
+    offset: int = 0,
+) -> List[Dict[str, Any]]:
+    """按域查询证据（CTH 和 ZBMP 证据存储在同一表但 domain_id 区分）。
+
+    默认按当前域过滤，禁止跨域混查。
+    """
+    store = EvidenceStore(db_path)
+    evidence_list = store.list_evidence(domain_id=domain_id, limit=limit, offset=offset)
+    return [
+        {
+            "evidence_id": ev.evidence_id,
+            "domain_id": ev.domain_id,
+            "product_id": ev.product_id,
+            "source_type": ev.source_type,
+            "source_id": ev.source_id,
+            "task_id": ev.task_id,
+            "trace_id": ev.trace_id,
+            "evaluation_id": ev.evaluation_id,
+            "final_decision": ev.final_decision,
+            "rule_id": ev.rule_id,
+            "ai_call_id": ev.ai_call_id,
+            "content_hash": ev.content_hash,
+            "captured_at": ev.captured_at,
+            "subject_scope": ev.subject_scope,
+        }
+        for ev in evidence_list
+    ]
+
+
+def get_evidence_domain_summary(db_path: str = None) -> Dict[str, Any]:
+    """获取证据按域分布的统计（用于审计验证域隔离）。"""
+    store = EvidenceStore(db_path)
+    conn = _get_conn(store.db_path)
+    try:
+        rows = conn.execute(
+            "SELECT domain_id, product_id, COUNT(*) as cnt FROM zbc_evidence "
+            "GROUP BY domain_id, product_id ORDER BY cnt DESC"
+        ).fetchall()
+        return {
+            "by_domain": [dict(r) for r in rows],
+            "total": store.count(),
+            "domains_present": sorted(set(r["domain_id"] for r in rows)),
+            "isolation_note": "CTH and ZBMP evidence share table but are separated by domain_id field",
+        }
+    finally:
+        conn.close()

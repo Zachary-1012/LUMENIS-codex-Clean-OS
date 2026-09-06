@@ -29,6 +29,11 @@ FUNCTION_MAP = [
     {"id":"reports.center","page":"reports","label":"报告中心","targets":["daily_reports","daily_digest"],"keywords":["日报","周报","月报","年报","专报","汇报","导出"]},
     {"id":"settings.system","page":"settings","label":"系统设置","targets":["config","brand_directory","email"],"keywords":["设置","邮箱","域名","频率","品牌管理","AI配置"]},
     {"id":"assistant.nomi","page":"nomi","label":"诺米AI助手","targets":["all"],"keywords":["诺米","助手","帮我分析","为什么","怎么处理","建议"]},
+    {"id":"FUNC-CONTENT-02","page":"analysis","label":"情感分析（统一真相源）","targets":["canonical_data","notes"],"keywords":["情感","sentiment","正负向","情感分析","情感分布","正面","负面","中性"],"single_truth":"canonical_data.sentiment","implementation":"canonical_data.unified_sentiment_analysis"},
+    {"id":"topics.heat","page":"topics","label":"话题热度（派生率）","targets":["topic_campaign_snapshots","topic_campaign_notes"],"keywords":["话题热度","热词","热度","派生率","话题趋势","topic heat"]},
+    {"id":"events.propagation","page":"events","label":"事件传播链","targets":["event_graph","events","event_mentions"],"keywords":["传播链","传播路径","事件传播","扩散路径","event graph","传播分析"]},
+    {"id":"campaign.effect","page":"topics","label":"Campaign效果聚合","targets":["topic_campaign_notes","topic_campaign_snapshots"],"keywords":["campaign效果","活动效果","专题效果","campaign","活动数据","专题数据"]},
+    {"id":"reports.aggregation","page":"reports","label":"报告聚合（日/周/月/年）","targets":["daily_reports","weekly_reports","monthly_reports","annual_reports"],"keywords":["日报","周报","月报","年报","报告聚合","daily report","weekly report","monthly report","annual report"]},
 ]
 
 def _load_json(path: Path, default):
