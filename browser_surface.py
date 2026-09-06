@@ -1076,6 +1076,91 @@ class DownloadManager:
         }
 
 
+
+def observe(target_id: Optional[str] = None, account=None, port: Optional[int] = None) -> dict:
+    """连接点b: AI Browser Runtime 标准化 Observe 函数。
+    提取当前页面 DOM/meta/text/links/forms/buttons/images 的标准化输出，
+    供 Observe→Reason→Plan→Act→Verify→Recover 循环使用。
+    对标 Safari 只读观察，不执行任何写操作。
+    """
+    p = _resolve_port(account, port)
+    try:
+        chosen, val = _eval_fixed(target_id, _JS_OBSERVE, p, timeout=8.0)
+        data = json.loads(val) if isinstance(val, str) else {}
+        return {
+            "ok": True,
+            "cdp_port": p,
+            "target_id": chosen.get("target_id"),
+            "observation": data,
+            "schema_version": "browser-observe-v1.0",
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e), "cdp_port": p}
+
+
+
+def verify_action(expected: dict, target_id: Optional[str] = None, account=None,
+                  port: Optional[int] = None) -> dict:
+    """连接点b: AI Browser Runtime 标准化 Verify 函数。
+    验证上一步动作结果是否符合预期。expected 可包含:
+      - url_contains: str  — 当前URL应包含的子串
+      - url_equals: str    — 当前URL应完全等于
+      - title_contains: str — 页面标题应包含的子串
+      - text_contains: str  — 页面正文应包含的文本
+      - element_exists: str — CSS选择器，元素应存在
+      - element_count: [selector, min_count] — 元素数量应>=min_count
+      - ready_state: str    — document.readyState 期望值
+    返回验证报告，不执行任何写操作。
+    """
+    p = _resolve_port(account, port)
+    if not expected:
+        return {"ok": False, "error": "expected conditions required"}
+    # Build JS verification expression
+    checks = []
+    js_parts = []
+    if "url_contains" in expected:
+        checks.append(("url_contains", expected["url_contains"]))
+        js_parts.append(f'url_contains: location.href.includes({json.dumps(expected["url_contains"])})')
+    if "url_equals" in expected:
+        checks.append(("url_equals", expected["url_equals"]))
+        js_parts.append(f'url_equals: location.href === {json.dumps(expected["url_equals"])}')
+    if "title_contains" in expected:
+        checks.append(("title_contains", expected["title_contains"]))
+        js_parts.append(f'title_contains: document.title.includes({json.dumps(expected["title_contains"])})')
+    if "text_contains" in expected:
+        checks.append(("text_contains", expected["text_contains"]))
+        js_parts.append(f'text_contains: (document.body?.innerText||"").includes({json.dumps(expected["text_contains"])})')
+    if "element_exists" in expected:
+        sel = expected["element_exists"]
+        checks.append(("element_exists", sel))
+        js_parts.append(f'element_exists: document.querySelectorAll({json.dumps(sel)}).length > 0')
+    if "element_count" in expected and isinstance(expected["element_count"], (list, tuple)) and len(expected["element_count"]) >= 2:
+        sel, min_cnt = expected["element_count"][0], int(expected["element_count"][1])
+        checks.append(("element_count", f"{sel}>={min_cnt}"))
+        js_parts.append(f'element_count: document.querySelectorAll({json.dumps(sel)}).length >= {min_cnt}')
+    if "ready_state" in expected:
+        checks.append(("ready_state", expected["ready_state"]))
+        js_parts.append(f'ready_state: document.readyState === {json.dumps(expected["ready_state"])}')
+    if not js_parts:
+        return {"ok": False, "error": "no valid expected conditions provided"}
+    js_expr = f'JSON.stringify({{url: location.href, title: document.title, {", ".join(js_parts)}}})'
+    try:
+        chosen, val = _eval_fixed(target_id, js_expr, p, timeout=6.0)
+        result = json.loads(val) if isinstance(val, str) else {}
+        all_passed = all(result.get(k, False) for k, _ in checks)
+        return {
+            "ok": True,
+            "cdp_port": p,
+            "target_id": chosen.get("target_id"),
+            "all_passed": all_passed,
+            "checks": [{"condition": k, "expected": v, "passed": result.get(k, False)} for k, v in checks],
+            "actual": {"url": result.get("url"), "title": result.get("title")},
+            "schema_version": "browser-verify-v1.0",
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e), "cdp_port": p}
+
+
 def download_monitor_start(port=None, account=None):
     """启动指定端口的下载进度监听。"""
     p = _resolve_port(account, port)

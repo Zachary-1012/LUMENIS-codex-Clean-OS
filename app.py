@@ -1767,6 +1767,70 @@ def api_intelligence_refresh():
     threading.Thread(target=worker,daemon=True).start()
     return jsonify({'ok':True,'task_id':task_id})
 
+
+# ========== Round 8 连接点c: AI Tasks + Browser Sessions 路由 ==========
+@app.route('/api/ai/tasks', methods=['GET', 'POST'])
+def api_ai_tasks():
+    """AI 任务管理：GET 列出任务，POST 创建任务。
+    走 Contract/Artifact 边界，任务状态可追溯。
+    """
+    try:
+        if request.method == 'GET':
+            status_filter = request.args.get('status', '')
+            limit = min(int(request.args.get('limit', 50)), 200)
+            try:
+                from skill_execution_chain import query_executions
+                tasks = query_executions(limit=limit, status=status_filter or None)
+                return jsonify({'ok': True, 'tasks': tasks, 'count': len(tasks)})
+            except Exception as e:
+                return jsonify({'ok': True, 'tasks': [], 'count': 0, 'note': f'query failed: {e}'})
+        else:  # POST
+            data = request.get_json(silent=True) or {}
+            task_desc = data.get('task', '')
+            skill_id = data.get('skill_id', '')
+            if not task_desc and not skill_id:
+                return jsonify({'ok': False, 'error': 'task or skill_id required'}), 400
+            try:
+                from skill_execution_chain import run_execution_chain, ActionType
+                action_type = ActionType(data.get('action_type', 'ANALYZE'))
+                ctx = run_execution_chain(
+                    skill_id=skill_id or 'zbc.generic_analysis',
+                    task=task_desc,
+                    input_payload=data.get('input', {}),
+                    action_type=action_type,
+                    user_id=data.get('user_id'),
+                    product=data.get('product', 'SYSTEM'),
+                    domain=data.get('domain', 'global'),
+                )
+                return jsonify({'ok': True, 'execution_id': ctx.execution_id, 'status': ctx.status.value,
+                                'evidence_recorded': getattr(ctx, 'evidence_record', {}).get('ok', False)})
+            except Exception as e:
+                return jsonify({'ok': False, 'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/browser/sessions')
+def api_browser_sessions():
+    """浏览器会话列表：列出当前 CDP 连接的 tab/会话状态。
+    只读接口，对标 Safari Web Inspector 会话观察。
+    """
+    try:
+        import browser_surface as bs
+        targets = bs.list_targets()
+        tabs = bs.list_tabs()
+        nav_config = bs.get_nav_config()
+        return jsonify({
+            'ok': True,
+            'targets': targets,
+            'tabs': tabs,
+            'nav_config': nav_config,
+            'session_count': len(tabs) if isinstance(tabs, list) else 0,
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 @app.route('/api/ai-governance/status')
 def api_ai_governance_status():
     """AI 治理状态：额度/使用统计/配置/脱敏状态（余额需在智谱控制台查看）"""

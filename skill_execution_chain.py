@@ -290,6 +290,52 @@ def transition_state(current, target):
     if target in allowed: return True, f"{current.value} -> {target.value}"
     return False, f"invalid transition: {current.value} -> {target.value}"
 
+
+def record_execution_evidence(ctx):
+    """连接点a: skill_execution_chain -> evidence_chain 桥接。
+    执行链完成后将执行证据写入 evidence_chain.EvidenceStore (zbc_evidence表)，
+    走 Contract/Artifact 边界。失败不阻断主链路（旁路记录）。
+    """
+    try:
+        from evidence_chain import EvidenceStore
+        store = EvidenceStore()
+        exec_res = ctx.execute_result or {}
+        raw_content = json.dumps({
+            "execution_id": ctx.execution_id,
+            "skill_id": ctx.skill_id,
+            "task": ctx.task,
+            "action_type": ctx.action_type.value,
+            "input_payload": ctx.input_payload,
+            "execute_result": exec_res,
+            "status": ctx.status.value,
+            "error": ctx.error,
+        }, ensure_ascii=False, default=str)
+        ev, is_new = store.add_evidence(
+            source_type="skill_execution",
+            source_url=f"skill://{ctx.skill_id}/{ctx.execution_id}",
+            source_id=ctx.execution_id,
+            raw_content=raw_content,
+            subject_scope=ctx.domain or "SYSTEM",
+            task_id=ctx.execution_id,
+            trace_id=ctx.execution_id,
+            collection_metadata={
+                "skill_id": ctx.skill_id,
+                "action_type": ctx.action_type.value,
+                "status": ctx.status.value,
+                "permission": ctx.permission_result,
+                "firewall": ctx.firewall_result,
+                "effect_fence": ctx.effect_fence_result,
+                "evaluation": ctx.evaluation,
+            },
+            provider="skill_execution_chain",
+            domain_id=ctx.domain or "system",
+            product_id=ctx.product or "SYSTEM",
+        )
+        return {"ok": True, "evidence_id": ev.evidence_id, "is_new": is_new}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "note": "evidence bridge failed, main chain unaffected"}
+
+
 def run_execution_chain(skill_id, task="", input_payload=None, action_type=ActionType.ANALYZE,
                         user_id=None, user_role="user", product="SYSTEM", domain="global",
                         skill_info=None, handler=None):
@@ -309,6 +355,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
     ctx.status = ExecutionStatus.RUNNING
     ctx.execute_result = execute_skill(ctx, handler=handler)
     ctx.evidence = build_evidence(ctx)
+    ctx.evidence_record = record_execution_evidence(ctx)
     ctx.evaluation = evaluate_execution(ctx)
     if ctx.execute_result.get("success"):
         ctx.status = ExecutionStatus.COMPLETED

@@ -277,7 +277,7 @@ var ZBMPOverview = (function () {
 
   var _state = {
     range: '7d',
-    data: { overview: null, stats: null, biStats: null, biBrands: null, trend: null },
+    data: { overview: null, stats: null, biStats: null, biBrands: null, trend: null, brandStats: null },
     errors: {},
     degraded: false,
     pollTimer: null
@@ -370,6 +370,17 @@ var ZBMPOverview = (function () {
     });
   }
 
+  // P0-R7: 权威业态数据源 /api/brand-stats（199品牌9业态，brand_directory.json）
+  function loadBrandStats() {
+    return apiGet('/api/brand-stats').then(function (d) {
+      if (d && d.ok === true) {
+        _state.data.brandStats = d;
+        return d;
+      }
+      throw new Error(d && d.error ? d.error : 'brand-stats error');
+    });
+  }
+
   function loadTrend() {
     var days = getRangeDays();
     var limit = Math.max(days, 7);
@@ -418,9 +429,12 @@ var ZBMPOverview = (function () {
       todayVolume = Number(stats.total);
     }
 
-    // 活跃品牌
+    // 活跃品牌：优先 /api/brand-stats（199品牌9业态权威源），降级 brand_industry_monitor（198品牌8业态）
     var activeBrands = null;
-    if (biStats && biStats.total_brands != null) {
+    var brandStats = _state.data.brandStats;
+    if (brandStats && brandStats.total_brands != null) {
+      activeBrands = Number(brandStats.total_brands);
+    } else if (biStats && biStats.total_brands != null) {
       activeBrands = Number(biStats.total_brands);
     } else if (biStats && biStats.total != null) {
       activeBrands = Number(biStats.total);
@@ -458,7 +472,7 @@ var ZBMPOverview = (function () {
       '<div class="zbc-kpi-card__label">活跃品牌</div>' +
       '<div class="zbc-kpi-card__value" data-kpi="brands">' + (activeBrands != null ? '0' : '—') + '</div>' +
       '<div class="zbc-kpi-card__change zbc-kpi-card__change--neutral">' +
-      (activeBrands != null ? '共 ' + fmt(activeBrands) + ' 个品牌在监测' : '数据采集中') +
+      (activeBrands != null ? '共 ' + fmt(activeBrands) + ' 个品牌在监测 · brand-stats' : '数据采集中') +
       '</div></div>';
     // Card 3: KOS互动量 (Slate Mist)
     html += '<div class="zbc-kpi-card zbc-kpi-card--gradient-slate">' +
@@ -518,49 +532,45 @@ var ZBMPOverview = (function () {
     xjViz.trend('#zbmp-trend-content', series, { type: 'area', color: '#0F766E', height: 200, width: content.clientWidth || 480 });
   }
 
-  /* ----- Industry distribution (horizontal bars from real API data) ----- */
+  /* ----- Industry distribution (horizontal bars from /api/brand-stats pie_data) ----- */
+  // P0-R7: 权威数据源 /api/brand-stats.pie_data（199品牌9业态，brand_directory.json）
+  // 禁止用 /api/stats.categories（内容分类）或 /api/brand-industry/stats（198品牌8业态）冒充
   function renderIndustry() {
-    var biStats = _state.data.biStats;
-    var statsCats = _state.data.statsCategories;
+    var brandStats = _state.data.brandStats;
     var content = $('zbmp-industry-content');
     var countTag = $('zbmp-industry-count-tag');
     if (!content) return;
 
+    // 9业态白名单（中文短名，与brand_directory.json categories一致）
+    var NINE_INDUSTRY_KEYS = {'女装':1,'男装':1,'餐饮':1,'珠宝钟表':1,'美容护理':1,
+      '运动休闲':1,'鞋包皮具':1,'童装玩具':1,'生活时尚':1};
+
     var industries = [];
-    // P0-R6 数据红线：只接受9业态白名单内的key，非9业态key过滤
-    var NINE_INDUSTRY_KEYS = {'fashion':1,'beauty':1,'food':1,'jewelry':1,'lifestyle':1,
-      'tech':1,'sports':1,'kids':1,'entertainment':1};
-    if (biStats && biStats.industries && biStats.industries.length > 0) {
-      industries = biStats.industries.filter(function (d) {
-        var k = d.industry || d.name;
-        return k && NINE_INDUSTRY_KEYS[k];
-      }).map(function (d) {
-        return { name: d.industry || d.name, count: Number(d.cnt || d.count || 0) };
-      });
-    } else if (statsCats && statsCats.length > 0) {
-      // Fallback: categories from /api/stats — 仅保留9业态白名单内的key
-      industries = statsCats.filter(function (d) {
+    if (brandStats && brandStats.pie_data && brandStats.pie_data.length > 0) {
+      industries = brandStats.pie_data.filter(function (d) {
         var k = d.category || d.name;
-        return k && NINE_INDUSTRY_KEYS[k];
+        return k && NINE_INDUSTRY_KEYS[k] && Number(d.note_count || d.count || 0) > 0;
       }).map(function (d) {
-        return { name: d.category || d.name, count: Number(d.count || 0) };
+        return { name: d.category || d.name, count: Number(d.note_count || d.count || 0), brand_count: Number(d.brand_count || 0) };
       });
     }
 
     if (industries.length === 0) {
+      // 显式empty：不得用内容分类/平台分类冒充
       setSectionState('zbmp-industry-section', 'empty');
       return;
     }
     setSectionState('zbmp-industry-section', 'success');
-    if (countTag) countTag.textContent = industries.length + ' 类业态';
+    if (countTag) countTag.textContent = industries.length + ' 类业态 · 数据来源 brand-stats';
     var maxVal = Math.max.apply(null, industries.map(function (d) { return d.count; }));
     if (maxVal <= 0) maxVal = 1;
 
     var html = '<div class="zbmp-hbar-list">';
-    industries.slice(0, 8).forEach(function (ind) {
+    industries.forEach(function (ind) {
       var pct = (ind.count / maxVal * 100).toFixed(1);
+      var label = ind.name + (ind.brand_count > 0 ? ' (' + ind.brand_count + '品牌)' : '');
       html += '<div class="zbmp-hbar-row">' +
-        '<div class="zbmp-hbar-label" title="' + escapeHtml(ind.name) + '">' + escapeHtml(ind.name) + '</div>' +
+        '<div class="zbmp-hbar-label" title="' + escapeHtml(label) + '" style="width:90px;">' + escapeHtml(label) + '</div>' +
         '<div class="zbmp-hbar-track"><div class="zbmp-hbar-fill" style="width:' + pct + '%;"></div></div>' +
         '<div class="zbmp-hbar-value">' + fmt(ind.count) + '</div></div>';
     });
@@ -731,6 +741,7 @@ var ZBMPOverview = (function () {
       { key: 'stats', fn: loadStats },
       { key: 'biStats', fn: loadBrandIndustryStats },
       { key: 'biBrands', fn: loadBrandIndustryBrands },
+      { key: 'brandStats', fn: loadBrandStats },
       { key: 'trend', fn: loadTrend }
     ];
     var done = 0, total = tasks.length;
@@ -746,7 +757,7 @@ var ZBMPOverview = (function () {
             try { renderKPIs(); setSectionState('zbmp-kpi-section', 'success'); } catch (e) { setSectionState('zbmp-kpi-section', 'error'); }
           }
           if (_state.data.trend) { try { renderTrend(); } catch (e) { setSectionState('zbmp-trend-section', 'error'); } }
-          if (_state.data.biStats || _state.data.statsCategories) { try { renderIndustry(); } catch (e) { setSectionState('zbmp-industry-section', 'error'); } }
+          if (_state.data.brandStats) { try { renderIndustry(); } catch (e) { setSectionState('zbmp-industry-section', 'error'); } } else { setSectionState('zbmp-industry-section', 'empty'); }
           if (_state.data.biBrands || _state.data.overview) { try { renderTop10(); } catch (e) { setSectionState('zbmp-top10-section', 'error'); } }
           if (_state.data.stats || _state.data.biStats || _state.data.biBrands || _state.data.overview) { try { renderOpportunities(); } catch (e) { setSectionState('zbmp-opportunity-section', 'error'); } }
           if (_state.degraded && (_state.data.stats || _state.data.biStats || _state.data.biBrands || _state.data.overview || _state.data.trend)) {
