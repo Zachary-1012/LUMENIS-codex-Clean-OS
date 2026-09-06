@@ -7,11 +7,9 @@
 4. 负面审核统计与列表同口径，数字一致。
 运行：.venv\\Scripts\\python.exe -m pytest tests\\test_negative_event_api.py
 """
-import os, sys, io, sqlite3
-try:
-    sys.stdout.reconfigure(encoding='utf-8')
-except Exception:
-    pass
+import os
+import sys
+import sqlite3
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from subject_rules import subject_sql_and_values, subject_hit

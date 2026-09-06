@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """S2: security_scanner Agent/AI 供应链风险增强测试"""
 import sys, os, io, tempfile
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.chdir(r"D:\Taikoo-monitor-new")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+os.chdir(ROOT)
 
 from security_scanner import SecurityScanner
 
@@ -21,7 +21,7 @@ def test_ark_key_detection():
     for pat, desc in sc.agent_risk_patterns:
         if "VolcanoARK" in desc:
             import re
-            assert re.search(pat, "key=ark-394752aa-15cb-4061-b6c2-b0d04f1c13b3-c83bd"), "ark key 未命中"
+            assert re.search(pat, "key=ark-00000000-0000-0000-0000-000000000000"), "ark key 未命中"
             print(f"[PASS] {desc}: 命中")
             break
 

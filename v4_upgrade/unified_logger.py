@@ -44,10 +44,12 @@ _request_id_var = None
 if _YYDS_AVAILABLE:
     try:
         from yyds_logger import YydsLogger as _Yyds
-        # yyds-logger内部有request_id_var，尝试获取
-        _probe = _Yyds(file_name="probe", log_dir=LOG_DIR)
-        _request_id_var = getattr(_probe, "request_id_var", None)
-        _probe.close()
+        # Do not create and close a probe logger at import time.  Some logger
+        # backends attach a handler to the active stdout/stderr stream; closing
+        # that handler closes pytest's capture stream and aborts the whole test
+        # run.  A class-level context variable is safe to inspect, while an
+        # instance can still expose one when a real logger is created.
+        _request_id_var = getattr(_Yyds, "request_id_var", None)
     except Exception:
         pass
 
@@ -56,6 +58,7 @@ class UnifiedLogger:
     """统一日志接口，兼容logging，底层用yyds-logger"""
 
     def __init__(self, name, log_dir=None, request_id=None):
+        global _request_id_var
         self.name = name
         self.log_dir = log_dir or LOG_DIR
         self._request_id = request_id
@@ -72,6 +75,8 @@ class UnifiedLogger:
                     file_level="DEBUG",
                     language="zh",
                 )
+                if _request_id_var is None:
+                    _request_id_var = getattr(self._yyds, "request_id_var", None)
                 if request_id and _request_id_var:
                     _request_id_var.set(request_id)
             except Exception as e:

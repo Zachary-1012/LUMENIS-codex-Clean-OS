@@ -1,5 +1,12 @@
 # 变更日志
 
+## [Unreleased] - 2026-09-06（测试运行安全与日志初始化修复）
+
+- 修复 `engineering_metrics` 在 import 时替换 `sys.stdout` 导致 pytest 捕获流被关闭的问题。
+- 移除三处规范 pytest 用例对 `sys.stdout` 的 import 时重配置，恢复全量测试收集。
+- `unified_logger` 不再在 import 时创建并关闭 yyds 探测 logger，避免关闭宿主输出流；真实 logger 创建后仍会获取其 request-id context。
+- 使 LLM 网关测试不再读取本地 `.env`，并将 S2 扫描测试的绝对 Windows 工作目录改为仓库相对目录；无数据库迁移或业务数据变更。
+
 ## [5.9.9-t3] - 2026-09-04（KOS 评论回复 / 私信触达接入智谱 AI 生成建议）
 
 ### 【P0 施工记录】（AGENTS §16 交付 10 要素）
@@ -562,5 +569,4 @@ git -C "D:\Taikoo-monitor-new" push --force-with-lease origin main
 - 统一控制台外壳新增“全局状态中心 + 不跳页统一恢复弹窗”：首页采集健康矩阵并入小红书主采集六态（v4 适配器 + 老链路合并，共 12 平台），修正平台中文名/数量字段；异常平台点击直接在当前页弹恢复窗而非跳陌生页。
 - 弹窗严格 A 登录失效 / B 人机验证 / C IP风控熔断三类分清：C 类只显示冷却倒计时、不显示扫码（扫码不可解）；三步状态机（打开登录页→扫码/验证→恢复续采）、二维码或登录页截图、“我已完成验证/重新检测”“稍后处理（保持暂停不伪装）”；恢复成功自动解除暂停续采。
 - 全局看门每 12s 巡检，任何子页（含 iframe）平台失效都在外壳弹同一弹窗，手机端底部卡片适配。后端复用既有 /v4/adapters/recovery/* 与 /api/xhs/collect-health，未重造。浏览器真机 E2E：12 平台矩阵、A/B/C/恢复四态渲染、无 JS 运行错误；小红书持久 Profile 登录态只读探测 AUTH_VALID。
-
 
