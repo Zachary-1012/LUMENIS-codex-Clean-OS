@@ -14,20 +14,6 @@ import sys
 ROOT = r"D:\Taikoo-monitor-new"
 sys.path.insert(0, ROOT)
 
-# 强制 AI OFF：指定云端 provider 但清空 key（阻止本地 auto-detect）
-# 关键：AI_PROVIDER 必须是已知云端 provider（zhipu），否则代码走 else 分支会 auto-detect 本地 Ollama
-os.environ["AI_PROVIDER"] = "zhipu"
-os.environ["ALLOW_CLOUD_AI"] = "false"
-os.environ["ZHIPU_API_KEY"] = ""
-os.environ["ARK_API_KEY"] = ""
-os.environ["DASHSCOPE_API_KEY"] = ""
-os.environ["OPENAI_API_KEY"] = ""
-os.environ["DEEPSEEK_API_KEY"] = ""
-# 阻止本地模型探测
-os.environ["OLLAMA_BASE_URL"] = "http://127.0.0.1:1"  # 不可达端口
-if "LOCAL_AI_PREFERRED" in os.environ:
-    del os.environ["LOCAL_AI_PREFERRED"]
-
 results = []
 
 def check(name, passed, detail=""):
@@ -35,93 +21,120 @@ def check(name, passed, detail=""):
     status = "PASS" if passed else "FAIL"
     print(f"  [{status}] {name}: {detail}")
 
-print("=" * 60)
-print("AI OFF Test — 模拟 AI 完全不可用")
-print("=" * 60)
 
-# 1. ai_status() should show disabled
-print("\n--- 1. AI Status ---")
-try:
-    import intelligence
-    # 清除缓存强制重新检测
-    intelligence._CACHE['ts'] = 0
-    intelligence._CACHE['provider'] = None
-    intelligence._CACHE['model'] = None
-    intelligence._CACHE['base'] = None
-    status = intelligence.ai_status()
-    check("ai_status.enabled=False", status.get("enabled") == False,
-          f"enabled={status.get('enabled')}, runtime={status.get('runtime')}")
-    check("ai_status.runtime=rule", status.get("runtime") == "rule",
-          f"runtime={status.get('runtime')}")
-except Exception as e:
-    check("ai_status()", False, f"exception: {e}")
+def run_ai_off_tests():
+    """AI OFF 测试（可被 pytest 收集，也可独立运行）"""
+    global results
+    results = []
 
-# 2. _chat() should return (None, 'rule')
-print("\n--- 2. _chat() Fallback ---")
-try:
-    content, provider = intelligence._chat("system", "user", max_tokens=100)
-    check("_chat returns None content", content is None, f"content={repr(content)[:80]}")
-    check("_chat provider=rule", provider == "rule", f"provider={provider}")
-except Exception as e:
-    check("_chat()", False, f"exception: {e}")
+    # 强制 AI OFF：指定云端 provider 但清空 key（阻止本地 auto-detect）
+    os.environ["AI_PROVIDER"] = "zhipu"
+    os.environ["ALLOW_CLOUD_AI"] = "false"
+    os.environ["ZHIPU_API_KEY"] = ""
+    os.environ["ARK_API_KEY"] = ""
+    os.environ["DASHSCOPE_API_KEY"] = ""
+    os.environ["OPENAI_API_KEY"] = ""
+    os.environ["DEEPSEEK_API_KEY"] = ""
+    os.environ["OLLAMA_BASE_URL"] = "http://127.0.0.1:1"
+    if "LOCAL_AI_PREFERRED" in os.environ:
+        del os.environ["LOCAL_AI_PREFERRED"]
 
-# 3. review_note() should fall back to rule engine
-print("\n--- 3. review_note() Rule Fallback ---")
-try:
-    from subject_rules import subject_hit
-    note = {"title": "广州太古汇探店", "content": "今天去了广州太古汇，环境很好", "source_platform": "xiaohongshu"}
-    rule_analysis = {"verified": True, "summary": "规则引擎初判", "topics": ["探店"]}
-    result = intelligence.review_note(note, rule_analysis)
-    check("review_note returns dict", isinstance(result, dict), f"type={type(result)}")
-    check("review_note provider=rule (AI off)", result.get("provider") == "rule",
-          f"provider={result.get('provider')}")
-    check("review_note has relevance", "relevance" in result, f"keys={list(result.keys())[:8]}")
-except Exception as e:
-    check("review_note()", False, f"exception: {e}")
+    print("=" * 60)
+    print("AI OFF Test — 模拟 AI 完全不可用")
+    print("=" * 60)
 
-# 4. subject_hit() works without AI
-print("\n--- 4. Subject Filter (No AI) ---")
-try:
-    from subject_rules import subject_hit, SUBJECT_WORDS
-    hit1 = subject_hit("广州太古汇今天有活动")
-    hit2 = subject_hit("上海恒隆广场很好")
-    check("subject_hit detects Taikoo Hui", hit1 == True, f"hit1={hit1}")
-    check("subject_hit excludes non-Taikoo", hit2 == False, f"hit2={hit2}")
-    check("SUBJECT_WORDS non-empty", len(SUBJECT_WORDS) > 0, f"count={len(SUBJECT_WORDS)}")
-except Exception as e:
-    check("subject_hit()", False, f"exception: {e}")
+    # 1. ai_status() should show disabled
+    print("\n--- 1. AI Status ---")
+    try:
+        import intelligence
+        intelligence._CACHE['ts'] = 0
+        intelligence._CACHE['provider'] = None
+        intelligence._CACHE['model'] = None
+        intelligence._CACHE['base'] = None
+        status = intelligence.ai_status()
+        check("ai_status.enabled=False", status.get("enabled") == False,
+              f"enabled={status.get('enabled')}, runtime={status.get('runtime')}")
+        check("ai_status.runtime=rule", status.get("runtime") == "rule",
+              f"runtime={status.get('runtime')}")
+    except Exception as e:
+        check("ai_status()", False, f"exception: {e}")
 
-# 5. AI Gateway chat() should fail gracefully
-print("\n--- 5. AI Gateway chat() Graceful Failure ---")
-try:
-    from scripts.ai_gateway import chat
-    content, provider, meta = chat("summarizer", "test content", max_tokens=50)
-    check("gateway chat returns None on AI off", content is None, f"content={repr(content)[:80]}")
-    check("gateway meta has role", meta.get("role") == "summarizer", f"meta={meta}")
-except Exception as e:
-    check("gateway chat()", False, f"exception: {e}")
+    # 2. _chat() should return (None, 'rule')
+    print("\n--- 2. _chat() Fallback ---")
+    try:
+        content, provider = intelligence._chat("system", "user", max_tokens=100)
+        check("_chat returns None content", content is None, f"content={repr(content)[:80]}")
+        check("_chat provider=rule", provider == "rule", f"provider={provider}")
+    except Exception as e:
+        check("_chat()", False, f"exception: {e}")
 
-# 6. Provider Registry still works
-print("\n--- 6. Provider Registry (No AI) ---")
-try:
-    from provider_registry import provider_status, is_provider_available, active_providers
-    check("zhipu status=ACTIVE", provider_status("zhipu") == "ACTIVE", "")
-    check("ark status=LEGACY", provider_status("ark") == "LEGACY", "")
-    check("qwen status=DISABLED", provider_status("qwen") == "DISABLED", "")
-    check("is_provider_available(qwen)=False", is_provider_available("qwen") == False, "")
-    active = active_providers()
-    check("active_providers includes zhipu", "zhipu" in active, f"active={active}")
-except Exception as e:
-    check("provider_registry", False, f"exception: {e}")
+    # 3. review_note() should fall back to rule engine
+    print("\n--- 3. review_note() Rule Fallback ---")
+    try:
+        from subject_rules import subject_hit
+        note = {"title": "广州太古汇探店", "content": "今天去了广州太古汇，环境很好", "source_platform": "xiaohongshu"}
+        rule_analysis = {"verified": True, "summary": "规则引擎初判", "topics": ["探店"]}
+        result = intelligence.review_note(note, rule_analysis)
+        check("review_note returns dict", isinstance(result, dict), f"type={type(result)}")
+        check("review_note provider=rule (AI off)", result.get("provider") == "rule",
+              f"provider={result.get('provider')}")
+        check("review_note has relevance", "relevance" in result, f"keys={list(result.keys())[:8]}")
+    except Exception as e:
+        check("review_note()", False, f"exception: {e}")
 
-# Summary
-print("\n" + "=" * 60)
-passed = sum(1 for r in results if r["passed"])
-total = len(results)
-print(f"AI OFF Test Summary: {passed}/{total} PASSED")
-print("=" * 60)
-for r in results:
-    if not r["passed"]:
-        print(f"  FAILED: {r['name']} — {r['detail']}")
+    # 4. subject_hit() works without AI
+    print("\n--- 4. Subject Filter (No AI) ---")
+    try:
+        from subject_rules import subject_hit, SUBJECT_WORDS
+        hit1 = subject_hit("广州太古汇今天有活动")
+        hit2 = subject_hit("上海恒隆广场很好")
+        check("subject_hit detects Taikoo Hui", hit1 == True, f"hit1={hit1}")
+        check("subject_hit excludes non-Taikoo", hit2 == False, f"hit2={hit2}")
+        check("SUBJECT_WORDS non-empty", len(SUBJECT_WORDS) > 0, f"count={len(SUBJECT_WORDS)}")
+    except Exception as e:
+        check("subject_hit()", False, f"exception: {e}")
 
-sys.exit(0 if passed == total else 1)
+    # 5. AI Gateway chat() should fail gracefully
+    print("\n--- 5. AI Gateway chat() Graceful Failure ---")
+    try:
+        from scripts.ai_gateway import chat
+        content, provider, meta = chat("summarizer", "test content", max_tokens=50)
+        check("gateway chat returns None on AI off", content is None, f"content={repr(content)[:80]}")
+        check("gateway meta has role", meta.get("role") == "summarizer", f"meta={meta}")
+    except Exception as e:
+        check("gateway chat()", False, f"exception: {e}")
+
+    # 6. Provider Registry still works
+    print("\n--- 6. Provider Registry (No AI) ---")
+    try:
+        from provider_registry import provider_status, is_provider_available, active_providers
+        check("zhipu status=ACTIVE", provider_status("zhipu") == "ACTIVE", "")
+        check("ark status=LEGACY", provider_status("ark") == "LEGACY", "")
+        check("qwen status=DISABLED", provider_status("qwen") == "DISABLED", "")
+        check("is_provider_available(qwen)=False", is_provider_available("qwen") == False, "")
+        active = active_providers()
+        check("active_providers includes zhipu", "zhipu" in active, f"active={active}")
+    except Exception as e:
+        check("provider_registry", False, f"exception: {e}")
+
+    # Summary
+    print("\n" + "=" * 60)
+    passed = sum(1 for r in results if r["passed"])
+    total = len(results)
+    print(f"AI OFF Test Summary: {passed}/{total} PASSED")
+    print("=" * 60)
+    for r in results:
+        if not r["passed"]:
+            print(f"  FAILED: {r['name']} — {r['detail']}")
+
+    return passed == total
+
+
+def test_ai_off_core_chain():
+    """pytest 入口：AI 关闭后核心链路仍可运行"""
+    assert run_ai_off_tests() is True
+
+
+if __name__ == "__main__":
+    ok = run_ai_off_tests()
+    sys.exit(0 if ok else 1)

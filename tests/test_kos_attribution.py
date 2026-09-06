@@ -38,7 +38,8 @@ def tmp_db(tmp_path, monkeypatch):
         sentiment TEXT,
         risk_level TEXT,
         content_quality_score REAL,
-        publish_datetime TEXT
+        publish_datetime TEXT,
+        source_platform TEXT DEFAULT 'xiaohongshu'
     )""")
     conn.execute("""CREATE TABLE events (
         id INTEGER PRIMARY KEY,
@@ -50,11 +51,11 @@ def tmp_db(tmp_path, monkeypatch):
         ("n2", "CDF三亚免税店测评", 300, 80, 150, 30, "positive", "low", 75, "2026-08-15 14:00:00"),
         ("n3", "免税店避雷指南", 100, 50, 30, 10, "negative", "medium", 60, "2026-08-20 09:00:00"),
     ]):
-        conn.execute("INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                     (nid, "kos_a", "KOS_A", title, likes, comments, collects, shares, sentiment, risk, quality, dt))
+        conn.execute("INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                     (nid, "kos_a", "KOS_A", title, likes, comments, collects, shares, sentiment, risk, quality, dt, "xiaohongshu"))
     # KOS B：1 篇笔记，低互动
-    conn.execute("INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                 ("n4", "kos_b", "KOS_B", "随便逛逛", 10, 2, 5, 1, "neutral", "low", 50, "2026-08-10 12:00:00"))
+    conn.execute("INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 ("n4", "kos_b", "KOS_B", "随便逛逛", 10, 2, 5, 1, "neutral", "low", 50, "2026-08-10 12:00:00", "xiaohongshu"))
     # 事件关键词
     conn.execute("INSERT INTO events (keywords) VALUES (?)", ("海南,中免,免税,购物节",))
     conn.commit()
@@ -100,7 +101,7 @@ class TestMultiTouchAttribution:
         assert r["ok"] is True
         assert r["total_notes"] == 4
         assert r["total_kos"] == 2
-        assert r["method"] == "time_decay_multi_touch (not last-touch)"
+        assert r["method"] == "time_decay_multi_touch (not last-touch, platform-weighted)"
         # KOS A 有 3 篇高互动，KOS B 只有 1 篇低互动 → A 贡献应显著大于 B
         contrib = {a["author_id"]: a["attribution_pct"] for a in r["attribution"]}
         assert contrib["kos_a"] > contrib["kos_b"]
