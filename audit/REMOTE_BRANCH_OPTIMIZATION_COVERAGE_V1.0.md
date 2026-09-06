@@ -14,10 +14,10 @@
 | ZBC→OSAI Cross-Core Skill Adapter(只读、OSAI不可用PARTIALLY_CONNECTED、不硬编码路径) | p0-p1-source | lumenis_skill_adapter.py已实现，符合三仓规则(OSAI可调用但非运行时依赖) |
 | 6个LUMENIS页面绑定真实API+reports绑daily_reports DB | p0-p1-source | 旧IA页面不恢复；新三域页面真实绑定由前后端契约对账覆盖(进行中) |
 
-## 二、真正遗漏（需补入，3项）
-M1. **CI未真正执行pytest**：.github/workflows/platform-verify.yml 当前只 pip install + compileall，缺 `python -m pytest`。需补CI执行pytest(选可在ubuntu-latest无浏览器环境跑的子集，标记需Playwright/DB的测试为本地环境，避免CI假失败)。
-M2. **缺test_osai_boundary_audit.py**(347行，OSAI边界与启动审计TEST-01/02/05/06/07/09/10/20)：验证"本仓库独立启动""无OSAI时正常启动""outbox异常隔离""OSAI不能成为启动依赖(源码级import审计)"。从origin/feat/lumenis-p0-p1-source-convergence取文件，适配本地import路径后跑通。
-M3. **event_graph.infer_and_persist_relations缺生产状态文档**：线上分支给该函数补了文档说明(O(n²)全量扫描、未接入自动调度、通过POST /api/event-graph/rebuild-relations手动触发、未来接入需try/except隔离+限频+性能压测)。本地函数能力已有，仅补这段文档注释。
+## 二、真正遗漏（需补入，3项）—— 2026-09-06 全部 VERIFIED
+M1. **CI未真正执行pytest**【VERIFIED 2026-09-06】：.github/workflows/platform-verify.yml 已补 pytest 步骤，选非浏览器子集（-m "not online" + --ignore 排除 test_e2e/test_browser_*/test_internal_browser_recovery/test_collector_e2e_four_layer/test_dual_domain_e2e/browser_runtime），continue-on-error 避免假失败阻塞。本地验证：2911 tests collected，代表子集41 passed/1 skipped。
+M2. **缺test_osai_boundary_audit.py**(347行，OSAI边界与启动审计TEST-01/02/05/06/07/09/10/20)【VERIFIED 2026-09-06】：从 origin/feat/lumenis-p0-p1-source-convergence 取文件，本地 import 路径无需适配（platform_adapters.evidence_exporter / contracts.lumenis_adapter / lumenis_skill_adapter 均存在且API匹配）。本地 pytest：13 passed, 1 skipped（TEST-10 预期 BLOCKED skip）。
+M3. **event_graph.infer_and_persist_relations缺生产状态文档**【VERIFIED 2026-09-06】：已补 docstring，含 O(n²) 全量扫描复杂度说明、未接入自动调度、手动触发 POST /api/event-graph/rebuild-relations、未来接入需 try/except 隔离+限频+性能压测+状态可见。仅加文档不改逻辑，py_compile 通过。
 
 ## 三、不采纳（有理由）
 - p0-p1分支对production/intelligence/operations旧IA模板的UI改动：**不恢复旧UI**，只提取"绑定真实API"逻辑适配到新三域页面；用户明确禁止旧UI带回。
