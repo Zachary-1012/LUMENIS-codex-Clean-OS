@@ -30,6 +30,7 @@ from datetime import datetime
 import requests
 
 from .base import BaseAdapter, AdapterResult
+from .cookie_vault import to_cookie_string, check_cookie_status
 
 logger = logging.getLogger(__name__)
 
@@ -52,17 +53,13 @@ class WeiboAdapter(BaseAdapter):
 
     def __init__(self, manager=None, **kwargs):
         super().__init__(**kwargs)
-        self._manager = manager
+        self._manager = manager  # 向后兼容：旧测试传入 manager，现统一走 cookie_vault
 
-    def _get_manager(self):
-        """懒加载微博登录管理器单例。"""
-        if self._manager is not None:
-            return self._manager
-        try:
-            from weibo_login_manager import get_weibo_manager
-            return get_weibo_manager()
-        except Exception as exc:
-            raise RuntimeError(f"无法加载微博登录管理器: {exc}") from exc
+    @staticmethod
+    def _cookie_ok() -> bool:
+        """经 cookie_vault 检查微博 cookie 是否存在且含关键认证 cookie。"""
+        s = check_cookie_status("weibo")
+        return s["status"] == "ACTIVE"
 
     def _get_headers(self, cookie_string: str) -> dict:
         return {
@@ -77,17 +74,14 @@ class WeiboAdapter(BaseAdapter):
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
         try:
-            manager = self._get_manager()
-
-            # 登录态前置检查
-            login_status = manager.check_login_status()
-            if not login_status.get("logged_in", False):
+            # 登录态前置检查（经 cookie_vault，不打印 cookie 内容）
+            if not self._cookie_ok():
                 return AdapterResult(
                     success=False,
-                    error="微博登录态失效，请更新 cookie 或重新扫码登录",
+                    error="微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json",
                 )
 
-            cookie_string = manager.get_cookie_string()
+            cookie_string = to_cookie_string("weibo")
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
 
@@ -109,8 +103,8 @@ class WeiboAdapter(BaseAdapter):
             # 微博 API ok=1 表示成功
             if data.get("ok") != 1:
                 msg = data.get("msg", "") or str(data)
-                # 登录失效/风控如实返回
-                if "登录" in msg or "login" in msg.lower():
+                # 登录失效/风控如实返回（ok=-100 为未登录跳转SSO）
+                if data.get("ok") == -100 or "登录" in msg or "login" in msg.lower() or "passport" in msg.lower():
                     return AdapterResult(success=False, error=f"微博登录失效: {msg}")
                 if "验证" in msg or "captcha" in msg.lower() or "风险" in msg:
                     return AdapterResult(success=False, error=f"微博风控/验证: {msg}")
@@ -207,8 +201,7 @@ class WeiboAdapter(BaseAdapter):
         if not mid or not str(mid).strip():
             return AdapterResult(success=False, error="mid 为空")
         try:
-            manager = self._get_manager()
-            cookie_string = manager.get_cookie_string()
+            cookie_string = to_cookie_string("weibo")
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
             resp = requests.get(
@@ -237,8 +230,7 @@ class WeiboAdapter(BaseAdapter):
         if not mid or not str(mid).strip():
             return AdapterResult(success=False, error="mid 为空")
         try:
-            manager = self._get_manager()
-            cookie_string = manager.get_cookie_string()
+            cookie_string = to_cookie_string("weibo")
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
             resp = requests.get(
@@ -281,8 +273,7 @@ class WeiboAdapter(BaseAdapter):
         if not uid or not str(uid).strip():
             return AdapterResult(success=False, error="uid 为空")
         try:
-            manager = self._get_manager()
-            cookie_string = manager.get_cookie_string()
+            cookie_string = to_cookie_string("weibo")
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
             containerid = f"230283{uid}_-_INFO"

@@ -543,6 +543,12 @@ def zbmp_evaluation():
                            **_domain_template_vars("zbmp_evaluation", "zbmp", "Evaluation"))
 
 
+@lumenis_bp.route("/zbmp/launch")
+def zbmp_launch():
+    """ZBMP Launch Screen — 品牌智能域启动屏。"""
+    return render_template("zbmp/launch.html")
+
+
 # ---------- CTH Domain Routes ----------
 
 @lumenis_bp.route("/cth/overview")
@@ -605,6 +611,12 @@ def cth_reports():
 def cth_evidence():
     return render_template("cth/evidence.html",
                            **_domain_template_vars("cth_evidence", "cth", "Evidence"))
+
+
+@lumenis_bp.route("/cth/launch")
+def cth_launch():
+    """CTH Launch Screen — 太古汇情报域启动屏。"""
+    return render_template("cth/launch.html")
 
 
 # ---------- SYSTEM Domain Routes ----------

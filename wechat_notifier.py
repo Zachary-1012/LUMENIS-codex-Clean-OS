@@ -21,7 +21,7 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Callable
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from enum import Enum
 
 # 项目根目录
@@ -512,6 +512,8 @@ class WeChatNotifier:
         self.channels: List[NotificationChannel] = []
         self.dedup_cache: Dict[str, datetime] = {}
         self.dedup_ttl = 300  # 去重时间窗口（秒），5分钟内相同消息不重复推送
+        self._status_registrations: Dict[str, StatusAlertRegistration] = {}
+        self._frontend_push_callback: Optional[FrontendPushCallback] = None
         
         self._init_database()
         self._load_channels()
@@ -582,8 +584,9 @@ class WeChatNotifier:
             self.channels.append(PushPlusChannel(pushplus_token, enabled=True))
         
         # 自定义微信公众号（模板消息推送）
-        wechat_app_id = env.get('WECHAT_APP_ID', '')
-        wechat_app_secret = env.get('WECHAT_APP_SECRET', '')
+        # 支持 WECHAT_APPID/WECHAT_SECRET（用户指定），兼容旧名 WECHAT_APP_ID/WECHAT_APP_SECRET
+        wechat_app_id = env.get('WECHAT_APPID', '') or env.get('WECHAT_APP_ID', '')
+        wechat_app_secret = env.get('WECHAT_SECRET', '') or env.get('WECHAT_APP_SECRET', '')
         wechat_template_id = env.get('WECHAT_TEMPLATE_ID', '')
         wechat_receiver_openids = env.get('WECHAT_RECEIVER_OPENIDS', '')
         
@@ -844,6 +847,233 @@ class WeChatNotifier:
             level=NotificationLevel.WEEKLY, dedup=False
         )
     
+    # ============================================================
+    # 状态变更告警注册与触发（补全 PARTIAL）
+    # ============================================================
+    def register_status_alert(self, event_types=None, min_level=None,
+                              channels=None, frontend_push=True,
+                              log_only=False, registration_id=None):
+        """注册状态变更告警通知规则。
+
+        状态变更时（risk_engine/告警系统调用 trigger_status_change），
+        匹配的注册项会触发：微信推送 + 日志记录 + 前端推送回调。
+
+        Args:
+            event_types: 事件类型列表，空表示所有事件
+            min_level: 最低触发级别，默认 WARNING
+            channels: 指定渠道名，空表示所有已启用渠道
+            frontend_push: 是否触发前端推送回调
+            log_only: True 时仅写日志不实际推送（降级/审计）
+            registration_id: 注册ID，None 时自动生成
+
+        Returns:
+            注册项 dict
+        """
+        import uuid as _uuid
+        rid = registration_id or 'reg_' + _uuid.uuid4().hex[:12]
+        reg = StatusAlertRegistration(
+            registration_id=rid,
+            event_types=list(event_types or []),
+            min_level=min_level or NotificationLevel.WARNING,
+            channels=list(channels or []),
+            frontend_push=frontend_push,
+            log_only=log_only,
+        )
+        self._status_registrations[rid] = reg
+        self._log_notification(
+            'general', NotificationLevel.INFO,
+            '告警注册', f'注册状态变更告警: {rid}, events={reg.event_types}, min_level={reg.min_level.value}',
+            'system', 'success', '', 0, ''
+        )
+        return asdict(reg)
+
+    def unregister_status_alert(self, registration_id):
+        """注销状态变更告警注册。返回是否成功。"""
+        if registration_id in self._status_registrations:
+            del self._status_registrations[registration_id]
+            return True
+        return False
+
+    def list_status_registrations(self):
+        """列出所有状态变更告警注册项。"""
+        return [asdict(r) for r in self._status_registrations.values()]
+
+    def set_frontend_push_callback(self, callback):
+        """设置前端推送回调（SSE/WebSocket 等）。
+
+        回调签名: (event_type, level, title, content, extra_dict) -> None
+        设置后，状态变更告警会同时推送到前端。
+        """
+        self._frontend_push_callback = callback
+
+    def trigger_status_change(self, event_type, title, content,
+                              level=None, extra=None):
+        """状态变更触发入口：由 risk_engine/告警系统在状态变更时调用。
+
+        匹配所有已注册的告警规则，执行：微信推送（如渠道可用）+
+        日志记录 + 前端推送回调。缺凭证时显式 BLOCKED，绝不伪造"已发送"。
+
+        Args:
+            event_type: 事件类型（如 'risk_level_change','collector_state_change','alert_triggered'）
+            title: 通知标题
+            content: 通知内容
+            level: 通知级别，默认 WARNING
+            extra: 附加信息 dict（如 note_id, risk_score, old_state, new_state）
+
+        Returns:
+            触发结果 dict，含各渠道真实状态（BLOCKED/成功/失败）
+        """
+        level = level or NotificationLevel.WARNING
+        extra = extra or {}
+        result = {
+            'event_type': event_type,
+            'level': level.value,
+            'title': title,
+            'matched_registrations': 0,
+            'wechat_push': {'attempted': False, 'success': False, 'status': '', 'channels': []},
+            'log_recorded': False,
+            'frontend_pushed': False,
+            'blocked_channels': [],
+        }
+
+        # 匹配注册项
+        matched = []
+        for reg in self._status_registrations.values():
+            if reg.event_types and event_type not in reg.event_types:
+                continue
+            # 级别比较：按枚举顺序
+            level_order = {NotificationLevel.INFO: 0, NotificationLevel.WARNING: 1,
+                           NotificationLevel.HIGH_RISK: 2, NotificationLevel.CRITICAL: 3,
+                           NotificationLevel.ERROR: 4, NotificationLevel.DAILY: 0,
+                           NotificationLevel.WEEKLY: 0}
+            if level_order.get(level, 0) < level_order.get(reg.min_level, 0):
+                continue
+            matched.append(reg)
+        result['matched_registrations'] = len(matched)
+
+        if not matched:
+            # 无匹配注册：仍记录日志（可审计），不推送
+            self._log_notification(
+                event_type, level, title, content,
+                'system', 'skipped', '无匹配的告警注册规则', 0, ''
+            )
+            result['log_recorded'] = True
+            return result
+
+        # 检查凭证状态
+        cred_status = self.get_credential_status()
+        wechat_blocked = [c for c in cred_status if c['status'] == CredentialStatus.BLOCKED]
+        result['blocked_channels'] = [c['channel'] for c in wechat_blocked]
+
+        # 微信推送（仅当有可用渠道且非 log_only）
+        has_push_reg = any(not r.log_only for r in matched)
+        enabled_channels = [c for c in self.channels if c.enabled]
+        if has_push_reg and enabled_channels:
+            result['wechat_push']['attempted'] = True
+            # 按注册项指定渠道过滤
+            specified = set()
+            for r in matched:
+                if r.channels:
+                    specified.update(r.channels)
+            target_channels = [c for c in enabled_channels
+                               if not specified or c.name in specified]
+            if target_channels:
+                push_result = self.send(
+                    NotificationType.GENERAL, title, content,
+                    level=level, dedup=True
+                )
+                result['wechat_push']['success'] = push_result['success']
+                result['wechat_push']['channels'] = push_result['channels']
+                result['wechat_push']['status'] = 'success' if push_result['success'] else 'partial_or_failed'
+                result['wechat_push']['failed_channels'] = push_result.get('failed_channels', [])
+            else:
+                result['wechat_push']['status'] = 'no_matching_channel'
+        elif has_push_reg and not enabled_channels:
+            # 有推送需求但无可用渠道 -> 显式 BLOCKED（attempted=True 表示尝试过但被凭证缺失阻塞）
+            result['wechat_push']['attempted'] = True
+            result['wechat_push']['status'] = CredentialStatus.BLOCKED
+            result['wechat_push']['status_detail'] = '无可用推送渠道（凭证缺失或全部禁用），保持BLOCKED不伪造发送'
+            self._log_notification(
+                event_type, level, title, content,
+                'all', CredentialStatus.BLOCKED,
+                '无可用推送渠道，状态变更告警未实际推送', 0, ''
+            )
+        else:
+            result['wechat_push']['status'] = 'log_only'
+
+        # 日志记录（始终执行，作为审计兜底）
+        self._log_notification(
+            event_type, level, title, content,
+            'system', 'success',
+            f'状态变更告警触发: event={event_type}, matched={len(matched)}', 0, ''
+        )
+        result['log_recorded'] = True
+
+        # 前端推送回调
+        if any(r.frontend_push for r in matched) and self._frontend_push_callback:
+            try:
+                self._frontend_push_callback(event_type, level, title, content, extra)
+                result['frontend_pushed'] = True
+            except Exception as e:
+                result['frontend_push_error'] = str(e)
+
+        return result
+
+    def get_credential_status(self):
+        """获取所有渠道凭证状态（显式 BLOCKED/READY/EXPIRED/DISABLED）。
+
+        不打印凭证值，只返回状态元信息。微信公众号缺 appid/secret -> BLOCKED。
+        """
+        env = self._load_env()
+        statuses = []
+
+        # 微信公众号
+        wx_status = _wechat_official_credential_status(env)
+        # 如果渠道已加载但 access_token 获取失败，标记 EXPIRED
+        for ch in self.channels:
+            if isinstance(ch, WeChatOfficialAccountChannel):
+                if not ch.app_id or not ch.app_secret:
+                    wx_status['status'] = CredentialStatus.BLOCKED
+                else:
+                    wx_status['status'] = CredentialStatus.READY if ch.enabled else CredentialStatus.DISABLED
+        statuses.append(wx_status)
+
+        # 企业微信
+        wecom_url = env.get('WECOM_WEBHOOK_URL', '')
+        statuses.append({
+            'channel': '企业微信群机器人',
+            'status': CredentialStatus.READY if wecom_url else CredentialStatus.BLOCKED,
+            'missing_fields': [] if wecom_url else ['WECOM_WEBHOOK_URL'],
+            'message': '凭证齐全' if wecom_url else '企业微信Webhook缺失，保持BLOCKED',
+        })
+
+        # Server酱
+        sc_key = env.get('SERVERCHAN_SEND_KEY', '')
+        statuses.append({
+            'channel': 'Server酱',
+            'status': CredentialStatus.READY if sc_key else CredentialStatus.BLOCKED,
+            'missing_fields': [] if sc_key else ['SERVERCHAN_SEND_KEY'],
+            'message': '凭证齐全' if sc_key else 'Server酱SendKey缺失，保持BLOCKED',
+        })
+
+        # PushPlus
+        pp_token = env.get('PUSHPLUS_TOKEN', '')
+        statuses.append({
+            'channel': 'PushPlus',
+            'status': CredentialStatus.READY if pp_token else CredentialStatus.BLOCKED,
+            'missing_fields': [] if pp_token else ['PUSHPLUS_TOKEN'],
+            'message': '凭证齐全' if pp_token else 'PushPlus Token缺失，保持BLOCKED',
+        })
+
+        return statuses
+
+    def is_wechat_blocked(self):
+        """微信公众号是否处于 BLOCKED 状态（缺凭证）。"""
+        for s in self.get_credential_status():
+            if s['channel'] == '微信公众号' and s['status'] == CredentialStatus.BLOCKED:
+                return True
+        return False
+
     def test_all_channels(self) -> List[Dict[str, Any]]:
         """测试所有渠道连通性"""
         results = []
@@ -915,6 +1145,72 @@ class WeChatNotifier:
         except Exception as e:
             print(f"[通知中心] 添加渠道失败: {e}")
             return False
+
+
+# ============================================================
+# 状态变更告警注册与触发链路（PARTIAL -> 补全）
+# ============================================================
+@dataclass
+class StatusAlertRegistration:
+    """状态变更告警注册项：当匹配的状态变更发生时触发通知。
+
+    匹配规则（任一为空表示不限制）：
+      - event_types: 匹配的事件类型列表（如 ['risk_level_change','collector_state_change']）
+      - min_level: 最低通知级别（含），低于此级别不触发
+      - channels: 指定推送渠道名列表；空表示所有已启用渠道
+      - frontend_push: 是否同时触发前端推送回调
+      - log_only: 仅写日志不实际推送（用于审计/降级）
+    """
+    registration_id: str
+    event_types: List[str] = field(default_factory=list)
+    min_level: NotificationLevel = NotificationLevel.WARNING
+    channels: List[str] = field(default_factory=list)
+    frontend_push: bool = True
+    log_only: bool = False
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+
+
+# 前端推送回调签名：(event_type, level, title, content, extra) -> None
+FrontendPushCallback = Callable[[str, NotificationLevel, str, str, Dict[str, Any]], None]
+
+
+class CredentialStatus:
+    """凭证状态常量（显式，绝不伪造"已发送"）"""
+    READY = "READY"           # 凭证齐全，可发送
+    BLOCKED = "BLOCKED"       # 凭证缺失，保持阻塞
+    EXPIRED = "EXPIRED"       # 凭证存在但失效（access_token 获取失败）
+    DISABLED = "DISABLED"     # 渠道被手动禁用
+
+
+def _wechat_official_credential_status(env):
+    """检查微信公众号模板消息凭证状态（不打印凭证值）。
+
+    支持 WECHAT_APPID/WECHAT_SECRET/WECHAT_TEMPLATE_ID（用户指定），
+    同时兼容旧名 WECHAT_APP_ID/WECHAT_APP_SECRET。
+    缺任一关键凭证 -> BLOCKED，绝不伪造发送。
+    """
+    appid = env.get('WECHAT_APPID', '') or env.get('WECHAT_APP_ID', '')
+    secret = env.get('WECHAT_SECRET', '') or env.get('WECHAT_APP_SECRET', '')
+    template_id = env.get('WECHAT_TEMPLATE_ID', '')
+    receivers = env.get('WECHAT_RECEIVER_OPENIDS', '')
+    missing = []
+    if not appid:
+        missing.append('WECHAT_APPID')
+    if not secret:
+        missing.append('WECHAT_SECRET')
+    if not template_id:
+        missing.append('WECHAT_TEMPLATE_ID')
+    if not receivers:
+        missing.append('WECHAT_RECEIVER_OPENIDS')
+    if missing:
+        return {
+            'channel': '微信公众号',
+            'status': CredentialStatus.BLOCKED,
+            'missing_fields': missing,
+            'message': '微信公众号凭证缺失（' + '、'.join(missing) + '），保持BLOCKED不伪造发送',
+        }
+    return {'channel': '微信公众号', 'status': CredentialStatus.READY,
+            'missing_fields': [], 'message': '凭证齐全'}
 
 
 # ============================================================

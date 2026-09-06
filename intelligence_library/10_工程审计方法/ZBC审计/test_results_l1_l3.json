@@ -1,0 +1,61 @@
+{
+  "test_level": "L1-L3",
+  "timestamp": "2026-09-06T14:50:00+08:00",
+  "environment": {
+    "python": ".venv/Scripts/python.exe",
+    "platform": "win32",
+    "pytest": "9.1.1"
+  },
+  "L1": {
+    "description": "Import/Syntax/Dependency/Config Test",
+    "summary": {"passed": 46, "failed": 0, "skipped": 0, "error": 0},
+    "details": {
+      "core_modules_imported": 30,
+      "core_modules_failed": 0,
+      "imported_modules": ["app", "database", "config", "collector", "runtime_guardian", "ai_analyzer", "risk_engine", "daily_report", "evidence_chain", "evidence_store", "canonical_data", "permission_gate", "subject_classifier", "repository_registry", "runtime_preflight", "collector_automation", "provider_registry", "ai_call_logger", "ai_governance", "database_migrations", "system_health_api", "report_engine", "alert_engine", "safety_boundary", "security_boundary", "logger", "models", "cache_manager", "data_quality_gate", "compliance_gate"],
+      "config_loaded": true,
+      "dependencies_verified": 15,
+      "dependencies_failed": 0
+    }
+  },
+  "L2": {
+    "description": "Unit/Function/Database/API Test",
+    "summary": {"passed": 216, "failed": 0, "skipped": 0, "error": 0},
+    "test_files": {
+      "test_database.py": {"passed": 7, "failed": 0, "type": "pytest"},
+      "test_api.py": {"passed": 12, "failed": 0, "type": "pytest"},
+      "test_api_smoke.py": {"passed": 1, "failed": 0, "type": "pytest"},
+      "test_permission_gate.py": {"passed": 80, "failed": 0, "type": "pytest"},
+      "test_risk_engine.py": {"passed": 10, "failed": 0, "type": "script"},
+      "test_subject_redline.py": {"passed": 24, "failed": 0, "type": "script"},
+      "test_canonical_data_t4.py": {"passed": 21, "failed": 0, "type": "pytest"},
+      "test_repository_registry.py": {"passed": 37, "failed": 0, "type": "pytest"},
+      "test_runtime_preflight.py": {"passed": 24, "failed": 0, "type": "pytest"}
+    },
+    "failures": []
+  },
+  "L3": {
+    "description": "Collector/AI/Report/Scheduler/Guardian Test",
+    "summary": {"passed": 327, "failed": 0, "skipped": 0, "error": 0},
+    "test_files": {
+      "test_runtime_guardian.py": {"passed": 76, "failed": 0, "type": "pytest"},
+      "test_runtime_guardian_integration.py": {"passed": 31, "failed": 0, "type": "pytest"},
+      "test_ai.py": {"passed": 14, "failed": 0, "type": "pytest"},
+      "test_ai_channel.py": {"passed": 18, "failed": 0, "type": "pytest"},
+      "test_ai_gateway.py": {"passed": 5, "failed": 0, "type": "pytest"},
+      "test_daily_report_redline.py": {"passed": 13, "failed": 0, "type": "pytest"},
+      "test_report_audit.py": {"passed": 46, "failed": 0, "type": "pytest"},
+      "test_scheduling.py": {"passed": 35, "failed": 0, "type": "script"},
+      "test_collector_audit.py": {"passed": 35, "failed": 0, "type": "pytest"},
+      "test_collect_state.py": {"passed": 1, "failed": 0, "type": "pytest"},
+      "test_evidence_chain.py": {"passed": 44, "failed": 0, "type": "pytest"},
+      "test_evidence_store.py": {"passed": 9, "failed": 0, "type": "pytest"}
+    },
+    "online_marked_skipped": [],
+    "failures": []
+  },
+  "grand_total": {"passed": 589, "failed": 0, "skipped": 0, "error": 0},
+  "code_bugs_found": [],
+  "environment_issues": [],
+  "outdated_tests": []
+}

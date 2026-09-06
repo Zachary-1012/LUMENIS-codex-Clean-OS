@@ -1,0 +1,41 @@
+{
+  "evidence_id": "1b1d3cc6b5a4",
+  "task_id": "TASK-24495748",
+  "created_at": "2026-09-06 02:07:18",
+  "verification_status": "EVIDENCE_CREATED",
+  "trace_ref": "TRACE-d14f3bf5f833",
+  "skill_id": "S01",
+  "skill_version": "0.1.0",
+  "provider": "zhipu",
+  "model": "glm-4.5-air",
+  "nodes": [
+    {
+      "node_type": "task",
+      "ref": "TASK-24495748",
+      "detail": "test",
+      "actor": "system",
+      "ts": "2026-09-06 02:07:18"
+    },
+    {
+      "node_type": "skill",
+      "ref": "S01",
+      "detail": "version=0.1.0",
+      "actor": "system",
+      "ts": "2026-09-06 02:07:18"
+    },
+    {
+      "node_type": "action",
+      "ref": "eng_8de868af7edb",
+      "detail": "model=glm-4.5-air",
+      "actor": "engine",
+      "ts": "2026-09-06 02:07:18"
+    },
+    {
+      "node_type": "result",
+      "ref": "output",
+      "detail": "To test the functionality, I'll create a simple example that demonstrates a basic function. Here's a Python function that adds two numbers and returns the result:\n\n```python\ndef add_numbers(a, b):\n    \"\"\"Add two numbers and return the result.\"\"\"\n    return a + b\n\n# Test the function\nresult = add_numbers(5, 3)\nprint(f\"5 + 3 = {result}\")\n```\n\n**Output:**\n```\n5 + 3 = 8\n```\n\n### Explanation:\n1. **Function Definition**: `add_numbers(a, b)` takes two parameters `a` and `b`.\n2. **Docstring**: The tripl",
+      "actor": "engine",
+      "ts": "2026-09-06 02:07:18"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "level": "L1",
+  "imports": {
+    "passed": [
+      "app",
+      "database",
+      "config",
+      "collector",
+      "runtime_guardian",
+      "ai_analyzer",
+      "risk_engine",
+      "daily_report",
+      "evidence_chain",
+      "evidence_store",
+      "canonical_data",
+      "permission_gate",
+      "subject_classifier",
+      "repository_registry",
+      "runtime_preflight",
+      "collector_automation",
+      "provider_registry",
+      "ai_call_logger",
+      "ai_governance",
+      "database_migrations",
+      "system_health_api",
+      "report_engine",
+      "alert_engine",
+      "safety_boundary",
+      "security_boundary",
+      "logger",
+      "models",
+      "cache_manager",
+      "data_quality_gate",
+      "compliance_gate"
+    ],
+    "failed": []
+  },
+  "config": {
+    "BASE_DIR": "D:\\Taikoo-monitor-new",
+    "ENV_EXAMPLE_FILE": "D:\\Taikoo-monitor-new\\.env.example",
+    "ENV_FILE": "D:\\Taikoo-monitor-new\\.env",
+    "SYSTEM_CONFIG_FILE": "D:\\Taikoo-monitor-new\\system_config.json",
+    "json": "<module 'json' from 'C:\\\\Users\\\\28049\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python313\\\\Lib\\\\json\\\\__init__.py'>",
+    "os": "<module 'os' (frozen)>",
+    "_status": "loaded"
+  },
+  "dependencies": {
+    "passed": [
+      "flask",
+      "requests",
+      "sqlite3",
+      "pytest",
+      "dotenv",
+      "apscheduler",
+      "playwright",
+      "numpy",
+      "pandas",
+      "openpyxl",
+      "jinja2",
+      "werkzeug",
+      "dateutil",
+      "bs4",
+      "lxml"
+    ],
+    "failed": []
+  },
+  "summary": {
+    "passed": 46,
+    "failed": 0,
+    "skipped": 0,
+    "error": 0
+  }
+}

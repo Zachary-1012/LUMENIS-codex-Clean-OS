@@ -23,6 +23,7 @@ import logging
 from datetime import datetime, timezone
 
 from .base import BaseAdapter, AdapterResult, CollectedNote
+from .cookie_vault import to_cookie_string
 
 logger = logging.getLogger(__name__)
 
@@ -46,25 +47,8 @@ class XAdapter(BaseAdapter):
 
     @staticmethod
     def _auto_load_cookie() -> str:
-        """从 data/cookies/x.json 自动加载 cookie 字符串。"""
-        try:
-            import json as _json
-            from pathlib import Path
-            p = Path(__file__).parent.parent.parent / "data" / "cookies" / "x.json"
-            if not p.exists():
-                return ""
-            raw = _json.loads(p.read_text(encoding="utf-8"))
-            if isinstance(raw, list):
-                return "; ".join(f"{c['name']}={c['value']}" for c in raw if "name" in c)
-            if isinstance(raw, dict):
-                cookies = raw.get("cookies", raw)
-                if isinstance(cookies, list):
-                    return "; ".join(f"{c['name']}={c['value']}" for c in cookies if "name" in c)
-                if isinstance(cookies, dict):
-                    return "; ".join(f"{k}={v}" for k, v in cookies.items())
-            return ""
-        except Exception:
-            return ""
+        """经 cookie_vault 加载 X cookie 字符串。"""
+        return to_cookie_string("x")
 
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
         if not keyword or not keyword.strip():

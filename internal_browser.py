@@ -437,8 +437,59 @@ def register_internal_browser(app):
 
     @bp.route("/api/internal-browser/navigate", methods=["POST"])
     def api_navigate():
+        """P1-D: 导航到URL，经过 browser_surface.evaluate_navigation 门禁。
+        strict 模式外部域名返回 need_confirmation，前端确认后带 confirmed=true 重试。"""
         data = request.get_json(force=True, silent=True) or {}
-        return jsonify(navigate(data.get("account"), data.get("url", "")))
+        url = data.get("url", "")
+        confirmed = bool(data.get("confirmed", False))
+        account = data.get("account", "")
+        try:
+            port = _port_for(_canonical_account(account)) if account else 9222
+        except Exception:
+            port = 9222
+        try:
+            import internal_browser_adapter as adapter
+            result = adapter.navigate(url, port=port, confirmed=confirmed)
+            status_code = 403 if result.get("status") == "blocked" else 200
+            return jsonify(result), status_code
+        except Exception as e:
+            return jsonify({"ok": False, "status": "error", "error": str(e)}), 500
+
+    @bp.route("/api/internal-browser/tabs", methods=["GET"])
+    def api_tabs():
+        """P1-D: 当前Tab列表（指定端口，默认9222）。"""
+        port = int(request.args.get("port", "9222"))
+        try:
+            import internal_browser_adapter as adapter
+            return jsonify(adapter.list_tabs(port=port))
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e), "tabs": []}), 500
+
+    @bp.route("/api/internal-browser/refresh", methods=["POST"])
+    def api_refresh():
+        """P1-D: 刷新当前Tab（CDP Page.reload）。"""
+        data = request.get_json(force=True, silent=True) or {}
+        port = int(data.get("port", 9222))
+        target_id = data.get("target_id", "")
+        try:
+            import internal_browser_adapter as adapter
+            return jsonify(adapter.refresh(port=port, target_id=target_id or None))
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @bp.route("/api/internal-browser/switch-tab", methods=["POST"])
+    def api_switch_tab():
+        """P1-D: 切换（激活）指定Tab。"""
+        data = request.get_json(force=True, silent=True) or {}
+        port = int(data.get("port", 9222))
+        target_id = data.get("target_id", "")
+        if not target_id:
+            return jsonify({"ok": False, "error": "target_id 为空"}), 400
+        try:
+            import internal_browser_adapter as adapter
+            return jsonify(adapter.switch_tab(port=port, target_id=target_id))
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
 
     @bp.route("/api/internal-browser/evaluate", methods=["POST"])
     def api_evaluate():

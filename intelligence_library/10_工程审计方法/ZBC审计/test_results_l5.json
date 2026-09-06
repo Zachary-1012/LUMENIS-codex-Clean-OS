@@ -1,0 +1,94 @@
+{
+  "level": "L5",
+  "timestamp": "2026-09-06T15:25:00+08:00",
+  "description": "故障注入恢复测试：8 种故障场景验证 detect/log/retry/recover/resume",
+  "summary": {"passed": 8, "failed": 0, "skipped": 0, "error": 0},
+  "fault_tests": [
+    {
+      "fault": "collector_crash",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "guardian 检测到 FAILED 状态，记录 recovery_reason，自动触发 RECOVERING",
+      "passed": true
+    },
+    {
+      "fault": "ai_timeout",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "execute_with_retry 自动重试，失败计入 DLQ，熔断器保护",
+      "passed": true
+    },
+    {
+      "fault": "db_lock",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "sqlite3.OperationalError 被捕获，自动重试，超限入 DLQ",
+      "passed": true
+    },
+    {
+      "fault": "network_timeout",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "RetryPolicy 指数退避（2s/4s/8s 封顶），CircuitBreaker 3 次失败后 OPEN",
+      "passed": true
+    },
+    {
+      "fault": "worker_death",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "Reaper.reap_zombie_workers 检测心跳超时，标记 DEAD 并释放租约",
+      "passed": true
+    },
+    {
+      "fault": "invalid_response",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "5 种无效响应（非JSON/破损JSON/HTML/空/None）均被捕获，规则引擎 fallback 不崩溃",
+      "passed": true
+    },
+    {
+      "fault": "empty_data",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "evaluate_risk 全 None 输入：sentiment/risk_level/final_risk 均保持 unknown，data_available=False，不伪造",
+      "passed": true
+    },
+    {
+      "fault": "duplicate_data",
+      "detected": true,
+      "logged": true,
+      "no_crash": true,
+      "recovery_triggered": true,
+      "detail": "EvidenceStore 基于 SHA256 content_hash 去重，第二次插入返回已有记录 is_new=False",
+      "passed": true
+    }
+  ],
+  "test_file": "tests/test_l5_fault_injection.py",
+  "failures": [],
+  "code_bugs_found": [],
+  "notes": [
+    "所有故障测试均验证 detected=True, logged=True, no_crash=True, recovery_triggered=True",
+    "Collector crash: RuntimeGuardian 状态机 IDLE→RUNNING→FAILED→RECOVERING",
+    "AI timeout: execute_with_retry 内置重试+熔断+DLQ 三层保护",
+    "DB lock: sqlite3.OperationalError 走统一重试通道",
+    "Network timeout: RetryPolicy 指数退避 + CircuitBreaker 状态机",
+    "Worker death: Reaper 双机制（过期租约 + 心跳超时僵尸回收）",
+    "Invalid response: JSON 解析异常被捕获，规则引擎 fallback 保证不崩溃",
+    "Empty data: risk_engine.evaluate_risk 严格保持 unknown，data_available=False",
+    "Duplicate data: EvidenceStore content_hash 去重，返回 (Evidence, is_new)"
+  ]
+}

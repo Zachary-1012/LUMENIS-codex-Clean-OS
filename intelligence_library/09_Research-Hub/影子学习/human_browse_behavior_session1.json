@@ -1,0 +1,151 @@
+{
+  "summary": {
+    "captured_at_utc": "2026-08-31T19:03:42.209584+00:00",
+    "observer": "doubao-passive-readonly",
+    "actor": "human-user",
+    "platform": "rednote mobile/web",
+    "method": "passive URL/scroll/engagement sampling every 2s; no navigation/click/write by observer",
+    "privacy": "note_id kept (content id); xsec_token/user id/nickname NOT recorded",
+    "detail_visits": 3,
+    "dwell_on_detail_s": {
+      "n": 3,
+      "min": 4.1,
+      "median": 18.5,
+      "max": 26.3,
+      "mean": 16.3
+    },
+    "dwell_on_list_s": {
+      "n": 4,
+      "min": 8.1,
+      "median": 16.25,
+      "max": 88.6,
+      "mean": 32.3
+    },
+    "any_write_action_active_seen": false,
+    "detail_note_ids_in_order": [
+      "6a9547030000000026007218",
+      "6a93d7f30000000026035c71",
+      "6a951a930000000021024bc9"
+    ]
+  },
+  "segments": [
+    {
+      "window": 1,
+      "seq": 1,
+      "kind": "search_list",
+      "note_id": null,
+      "dwell_s": 24.2,
+      "scroll_delta_px": 0,
+      "write_action_active_seen": false,
+      "engagement_last": [
+        {"label": "", "pressed": null, "text": ""},
+        {"label": "", "pressed": null, "text": "25"},
+        {"label": "", "pressed": null, "text": "79"},
+        {"label": "", "pressed": null, "text": "599"},
+        {"label": "", "pressed": null, "text": "267"},
+        {"label": "", "pressed": null, "text": "609"}
+      ]
+    },
+    {
+      "window": 1,
+      "seq": 2,
+      "kind": "note_detail",
+      "note_id": "6a9547030000000026007218",
+      "dwell_s": 18.5,
+      "scroll_delta_px": 0,
+      "write_action_active_seen": false,
+      "engagement_last": [
+        {"label": "", "pressed": null, "text": ""},
+        {"label": "", "pressed": null, "text": "25"},
+        {"label": "", "pressed": null, "text": "61"},
+        {"label": "", "pressed": null, "text": "11"},
+        {"label": "", "pressed": null, "text": "27"},
+        {"label": "", "pressed": null, "text": "86"}
+      ]
+    },
+    {
+      "window": 1,
+      "seq": 3,
+      "kind": "search_list",
+      "note_id": null,
+      "dwell_s": 8.3,
+      "scroll_delta_px": 798,
+      "write_action_active_seen": false,
+      "engagement_last": [
+        {"label": "", "pressed": null, "text": ""},
+        {"label": "", "pressed": null, "text": "25"},
+        {"label": "", "pressed": null, "text": "61"},
+        {"label": "", "pressed": null, "text": "11"},
+        {"label": "", "pressed": null, "text": "27"},
+        {"label": "", "pressed": null, "text": "86"}
+      ]
+    },
+    {
+      "window": 1,
+      "seq": 4,
+      "kind": "note_detail",
+      "note_id": "6a93d7f30000000026035c71",
+      "dwell_s": 26.3,
+      "scroll_delta_px": 0,
+      "write_action_active_seen": false,
+      "engagement_last": [
+        {"label": "", "pressed": null, "text": ""},
+        {"label": "", "pressed": null, "text": "136"},
+        {"label": "", "pressed": null, "text": "11"},
+        {"label": "", "pressed": null, "text": "609"},
+        {"label": "", "pressed": null, "text": "4"},
+        {"label": "", "pressed": null, "text": "44"}
+      ]
+    },
+    {
+      "window": 1,
+      "seq": 5,
+      "kind": "search_list",
+      "note_id": null,
+      "dwell_s": 8.1,
+      "scroll_delta_px": 1576,
+      "write_action_active_seen": false,
+      "engagement_last": [
+        {"label": "", "pressed": null, "text": ""},
+        {"label": "", "pressed": null, "text": "136"},
+        {"label": "", "pressed": null, "text": "11"},
+        {"label": "", "pressed": null, "text": "609"},
+        {"label": "", "pressed": null, "text": "4"},
+        {"label": "", "pressed": null, "text": "44"}
+      ]
+    },
+    {
+      "window": 1,
+      "seq": 6,
+      "kind": "note_detail",
+      "note_id": "6a951a930000000021024bc9",
+      "dwell_s": 4.1,
+      "scroll_delta_px": 0,
+      "write_action_active_seen": false,
+      "engagement_last": [
+        {"label": "", "pressed": null, "text": ""},
+        {"label": "", "pressed": null, "text": "72"},
+        {"label": "", "pressed": null, "text": "12"},
+        {"label": "", "pressed": null, "text": "2"},
+        {"label": "", "pressed": null, "text": "80"},
+        {"label": "", "pressed": null, "text": "34"}
+      ]
+    },
+    {
+      "window": 2,
+      "seq": 1,
+      "kind": "search_list",
+      "note_id": null,
+      "dwell_s": 88.6,
+      "scroll_delta_px": 0,
+      "write_action_active_seen": false,
+      "engagement_last": {
+        "body_len": 629,
+        "collect": null,
+        "comment": null,
+        "like": null,
+        "share": {"n": ""}
+      }
+    }
+  ]
+}

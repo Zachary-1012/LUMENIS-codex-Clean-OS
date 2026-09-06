@@ -1,0 +1,125 @@
+{
+  "schema": "zachary.hub.capability.v2",
+  "capabilities": [
+    {
+      "capability_id": "CAP-2026-0001",
+      "name": "research-id-generator",
+      "description": "生成唯一 Research ID (R-YYYY-NNNN)，读取现有记录递增，支持校验和列举",
+      "status": "reusable",
+      "origin_research_id": "R-2026-0001",
+      "owner": "hub",
+      "contract": "src/contracts/research_record.py",
+      "adapter": null,
+      "implementation": "tools/research_id.py",
+      "tests": ["tests/test_research_record.py"],
+      "evidence_refs": ["data/research/records.jsonl"],
+      "rollback_plan": "Remove tools/research_id.py; no production dependency. Research IDs can be regenerated manually.",
+      "validations": {
+        "zbrand": "not_applicable",
+        "ddc": "pass",
+        "sici": "not_applicable"
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-08-31T15:30:00+00:00",
+      "promoted_at": "2026-08-31T15:10:00+00:00",
+      "consumers": [],
+      "used_by": []
+    },
+    {
+      "capability_id": "CAP-2026-0002",
+      "name": "shadow-lifecycle",
+      "description": "Shadow Learning 固定9阶段状态机，禁止跳阶段，verified/reusable 必须有 evidence_refs，Shadow 状态必须声明 production_unchanged",
+      "status": "reusable",
+      "origin_research_id": "R-2026-0001",
+      "owner": "hub",
+      "contract": "src/shared/shadow_lifecycle.py",
+      "adapter": null,
+      "implementation": "src/shared/shadow_lifecycle.py",
+      "tests": ["tests/test_shadow_lifecycle.py"],
+      "evidence_refs": ["data/research/records.jsonl"],
+      "rollback_plan": "Remove src/shared/shadow_lifecycle.py; state transitions revert to manual tracking. No production runtime dependency.",
+      "validations": {
+        "zbrand": "not_applicable",
+        "ddc": "pass",
+        "sici": "not_applicable"
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-08-31T15:30:00+00:00",
+      "promoted_at": "2026-08-31T15:10:00+00:00",
+      "consumers": [],
+      "used_by": []
+    },
+    {
+      "capability_id": "CAP-2026-0003",
+      "name": "ddc-research-adapter",
+      "description": "DDC research_learning JSONL 兼容读写适配器，兼容 zachary.platform.research-learning.v1 schema，自动过滤凭证，不复制 DDC 实现",
+      "status": "reusable",
+      "origin_research_id": "R-2026-0001",
+      "owner": "hub",
+      "contract": "src/contracts/research_record.py",
+      "adapter": "src/adapters/ddc_research_adapter.py",
+      "implementation": "src/adapters/ddc_research_adapter.py",
+      "tests": ["tests/test_ddc_adapter.py"],
+      "evidence_refs": ["data/research/records.jsonl", "DDC:tools/research_learning.py@878ebbf"],
+      "rollback_plan": "Remove src/adapters/ddc_research_adapter.py; Hub falls back to native schema only. DDC store remains unaffected.",
+      "validations": {
+        "zbrand": "not_applicable",
+        "ddc": "pass",
+        "sici": "not_applicable"
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-08-31T15:30:00+00:00",
+      "promoted_at": "2026-08-31T15:10:00+00:00",
+      "consumers": [],
+      "used_by": []
+    },
+    {
+      "capability_id": "CAP-2026-0004",
+      "name": "capability-registry",
+      "description": "reusable 能力注册表，晋级必须满足 origin_research_id/evidence_refs/contract/tests/validations/rollback_plan 全部条件，支持使用登记、deprecate、verify，只增不减",
+      "status": "reusable",
+      "origin_research_id": "R-2026-0001",
+      "owner": "hub",
+      "contract": "src/shared/capability_registry.py",
+      "adapter": null,
+      "implementation": "src/shared/capability_registry.py",
+      "tests": ["tests/test_capability_registry.py"],
+      "evidence_refs": ["data/learning/capability_registry.json"],
+      "rollback_plan": "Revert to v1 schema; all v2 fields are additive and backward-compatible. No production dependency.",
+      "validations": {
+        "zbrand": "not_applicable",
+        "ddc": "pass",
+        "sici": "not_applicable"
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-08-31T15:30:00+00:00",
+      "promoted_at": "2026-08-31T15:10:00+00:00",
+      "consumers": [],
+      "used_by": []
+    },
+    {
+      "capability_id": "CAP-2026-0005",
+      "name": "research-review-mechanism",
+      "description": "Research Record Review 机制，支持 Doubao/ChatGPT/Human 三种 reviewer，reusable 状态必须至少有一个 approved review",
+      "status": "reusable",
+      "origin_research_id": "R-2026-0001",
+      "owner": "hub",
+      "contract": "src/contracts/research_record.py",
+      "adapter": null,
+      "implementation": "src/contracts/research_record.py (make_review, add_review, has_approved_review, validate_review)",
+      "tests": ["tests/test_research_record.py (TestReviewMechanism, 10 tests)"],
+      "evidence_refs": ["data/research/records.jsonl"],
+      "rollback_plan": "Remove review validation from validate(); reviews field remains additive. No production dependency.",
+      "validations": {
+        "zbrand": "not_applicable",
+        "ddc": "pass",
+        "sici": "not_applicable"
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-08-31T15:30:00+00:00",
+      "promoted_at": "2026-08-31T15:30:00+00:00",
+      "consumers": [],
+      "used_by": []
+    }
+  ]
+}

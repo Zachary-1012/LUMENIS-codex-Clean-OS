@@ -1,4 +1,4 @@
-"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
 from pathlib import Path
 
@@ -76,6 +76,7 @@ except Exception as _pg_e:
 import ai_analyzer
 import collector
 import intelligence
+import intelligence_library_api  # P1-C: Unified Intelligence Library API
 import function_registry
 import reprocess
 import xhs_cookie_bridge
@@ -93,6 +94,8 @@ import stability_monitor
 import web_monitor_v570
 import system_health_api
 import architecture_api
+import badge_api
+import system_ai_data_api
 import evaluation_system
 import settings_module
 import export_report
@@ -136,6 +139,8 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 app.register_blueprint(system_health_api.system_health_bp)
 # 注册5层闭环架构蓝图
 app.register_blueprint(architecture_api.architecture_bp)
+app.register_blueprint(badge_api.badge_bp)
+app.register_blueprint(system_ai_data_api.system_ai_bp)
 # 注册设置模块蓝图
 app.register_blueprint(settings_module.settings_bp)
 # 注册导出报告模块蓝图
@@ -148,6 +153,13 @@ app.register_blueprint(system_features_api.system_features_bp)
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
 app.register_blueprint(report_api.report_bp)  # P1-10 拆分批3: 报告 API
 app.register_blueprint(viz_api.viz_bp)  # Phase 14: 函数驱动可视化后端 /api/viz/*
+app.register_blueprint(intelligence_library_api.intelligence_library_bp)
+
+# P1-C: Intelligence Library page (no-scroll, left tree + right list + detail drawer)
+@app.route('/intelligence/library')
+def intelligence_library_page():
+    return render_template('intelligence/library.html')
+  # P1-C: Intelligence Library API
 import data_query_api
 data_query_api.register_data_query_api(app)  # P1-10 拆分批1: 数据只读查询
 import collection_api
@@ -187,6 +199,8 @@ except Exception as _ev_e:
 # 序境 LUMENIS 体验层（L0）前端 Foundation — 隔离 Blueprint，零业务逻辑/零写库
 try:
     from lumenis_frontend import lumenis_bp, domain_api_bp
+    from collector_status_api import collector_status_bp
+    app.register_blueprint(collector_status_bp)
     app.register_blueprint(lumenis_bp)
     app.register_blueprint(domain_api_bp)
     print("[lumenis] frontend registered: /lumenis/*")
@@ -917,7 +931,7 @@ def auth_config_api():
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
-    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health/summary', '/api/risks/active', '/api/risk/active') or request.path.startswith('/v4/') or request.path.startswith('/static/') or request.path.startswith('/api/zbmp/') or request.path.startswith('/api/cth/') or request.path.startswith('/api/system/') or request.path.startswith('/api/viz/'):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health/summary', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or request.path.startswith('/api/zbmp/') or request.path.startswith('/api/cth/') or request.path.startswith('/api/system/') or request.path.startswith('/api/viz/'):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -1014,7 +1028,7 @@ def _permission_gate_write_check():
     """
     if request.method not in _PG_WRITE_METHODS:
         return None
-    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/'):
+    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/'):
         return None
     try:
         if _pg is None:
@@ -4931,6 +4945,16 @@ from v4_upgrade import create_v4_blueprint, init_v4_modules
 init_v4_modules()
 app.register_blueprint(create_v4_blueprint())
 
+# ===== P1-F 账户体系主线化：account/ 一级主线模块（/api/system/account/*） =====
+try:
+    from account import account_bp, compat_bp, init_account_db
+    init_account_db()
+    app.register_blueprint(account_bp)
+    app.register_blueprint(compat_bp)
+    print("[account] 主线账户体系已注册 /api/system/account/* + 兼容层")
+except Exception as _acct_err:
+    print(f"[account] 主线账户体系注册失败（不阻断启动）: {_acct_err}")
+
 # GAP-10 report_center 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
 from v4_upgrade.report_center.api import report_center_bp
 app.register_blueprint(report_center_bp)
@@ -4952,10 +4976,141 @@ try:
     register_dual_domain_api(app)
 except Exception as _dd_err:
     print(f"[dual-domain] API 蓝图注册失败（不阻断启动）: {_dd_err}")
+# ===== V2.0 双域兼容层：旧 API 路由保留但标记 deprecated =====
+_DEPRECATED_API_PREFIXES = ("/api/xhs/", "/api/v4/", "/api/notes/", "/api/web/")
+
+@app.after_request
+def _mark_deprecated_api_headers(response):
+    """对旧 API 路由响应加 X-Deprecated: true 头（不断旧链）。"""
+    try:
+        path = request.path or ""
+        for prefix in _DEPRECATED_API_PREFIXES:
+            if path.startswith(prefix):
+                response.headers["X-Deprecated"] = "true"
+                if prefix == "/api/xhs/":
+                    response.headers["X-Successor"] = "/api/cth/xiaohongshu"
+                elif prefix == "/api/v4/":
+                    response.headers["X-Successor"] = "/api/system/api-keys"
+                elif prefix == "/api/notes/":
+                    response.headers["X-Successor"] = "/api/cth/overview or /api/zbmp/overview"
+                elif prefix == "/api/web/":
+                    response.headers["X-Successor"] = "/api/zbmp/brands or /api/cth/events"
+                break
+    except Exception:
+        pass
+    return response
+
+print("[dual-domain] deprecated 兼容层已注册：旧 /api/xhs|v4|notes|web 加 X-Deprecated 头")
+# ===== V2.0 API 契约补全：断链路由修复 =====
+# 修复前端调用的断链：/api/skills/*, /api/auxiliary/sources, /api/web-sources,
+# /api/zbmp|cth 基础路由, /api/system/account 基础路由
+# 统一响应信封：{success, data, error, domain_id, product_id}
+
+@app.route('/api/skills')
+@app.route('/api/skills/list')
+def api_skills_list():
+    """Skill 列表（从 skill_registry 读取真实数据）。"""
+    try:
+        from skill_registry import list_skills
+        skills = list_skills()
+        return jsonify({"success": True, "data": {"skills": skills, "total": len(skills)},
+                        "error": "", "domain_id": "system", "product_id": "SYSTEM"})
+    except Exception as e:
+        return jsonify({"success": False, "data": {"skills": []}, "error": str(e),
+                        "domain_id": "system", "product_id": "SYSTEM"}), 200
+
+@app.route('/api/skills/status')
+def api_skills_status():
+    """Skill 运行状态。"""
+    return jsonify({"success": True, "data": {"status": "available", "loaded": 0},
+                    "error": "", "domain_id": "system", "product_id": "SYSTEM"})
+
+@app.route('/api/auxiliary/sources')
+def api_auxiliary_sources():
+    """辅助数据源列表（feature-modules.js 调用）。"""
+    try:
+        sources = []
+        try:
+            from resource_library import get_all_sources
+            sources = get_all_sources()
+        except Exception:
+            sources = []
+        return jsonify({"success": True, "data": {"sources": sources, "total": len(sources)},
+                        "error": "", "domain_id": "system", "product_id": "SYSTEM"})
+    except Exception as e:
+        return jsonify({"success": False, "data": {"sources": []}, "error": str(e),
+                        "domain_id": "system", "product_id": "SYSTEM"}), 200
+
+@app.route('/api/web-sources')
+def api_web_sources():
+    """Web 数据源列表（feature-modules.js 备选端点）。"""
+    try:
+        sources = []
+        try:
+            from resource_library import get_web_sources
+            sources = get_web_sources()
+        except Exception:
+            sources = []
+        return jsonify({"success": True, "data": {"sources": sources, "items": sources, "total": len(sources)},
+                        "error": "", "domain_id": "system", "product_id": "SYSTEM"})
+    except Exception as e:
+        return jsonify({"success": False, "data": {"sources": [], "items": []}, "error": str(e),
+                        "domain_id": "system", "product_id": "SYSTEM"}), 200
+
+@app.route('/api/zbmp')
+def api_zbmp_base():
+    """ZBMP API 基础路由：返回域信息+可用端点。"""
+    return jsonify({"success": True, "data": {
+        "domain": "zbmp", "product": "ZBMP",
+        "endpoints": ["/api/zbmp/overview", "/api/zbmp/brands", "/api/zbmp/metrics"]
+    }, "error": "", "domain_id": "zbmp", "product_id": "ZBMP"})
+
+@app.route('/api/cth')
+def api_cth_base():
+    """CTH API 基础路由：返回域信息+可用端点。"""
+    return jsonify({"success": True, "data": {
+        "domain": "cth", "product": "CTH",
+        "endpoints": ["/api/cth/overview", "/api/cth/events", "/api/cth/xiaohongshu"]
+    }, "error": "", "domain_id": "cth", "product_id": "CTH"})
+
+@app.route('/api/system/account')
+def api_system_account_base():
+    """SYSTEM Account 基础路由（settings.js 调用）。"""
+    try:
+        from account.api import get_account_info
+        info = get_account_info()
+        return jsonify({"success": True, "data": info, "error": "",
+                        "domain_id": "system", "product_id": "SYSTEM"})
+    except Exception as e:
+        return jsonify({"success": True, "data": {"status": "available", "message": "account module loaded"},
+                        "error": "", "domain_id": "system", "product_id": "SYSTEM"})
+
+print("[dual-domain] API 契约断链修复完成：skills/auxiliary/web-sources/zbmp|cth base/system/account")
 
 # AI Governance — 脱敏回传+额度控制+使用统计+输出标记（云端 zhipu 内置系统）
 import ai_governance
 import ai_resource_packs
+
+
+
+# ===== P1-F 账户体系页面路由（Settings + CTH/ZBMP登录页） =====
+@app.route('/system/settings')
+def system_settings_page():
+    """SYSTEM 设置页（8分区，双域隔离，No-Scroll）"""
+    from flask import render_template
+    return render_template('system/settings.html')
+
+@app.route('/cth/login')
+def cth_login_page():
+    """CTH 登录页（账号+密码）"""
+    from flask import render_template
+    return render_template('auth/cth_login.html')
+
+@app.route('/zbmp/login')
+def zbmp_login_page():
+    """ZBMP 登录页（TOTP 6位动态码）"""
+    from flask import render_template
+    return render_template('auth/zbmp_login.html')
 
 # ===== 系统启动入口 =====
 

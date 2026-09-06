@@ -1,0 +1,28 @@
+{
+  "contract": "podcast-module-rules",
+  "version": "1.0.0",
+  "inherits_global_rules": true,
+  "rules": {
+    "reuse_before_rebuild": true,
+    "adapt_before_fork": true,
+    "contract_first": true,
+    "evidence_first": true,
+    "no_silent_execution": true,
+    "no_silent_failure": true,
+    "no_silent_completion": true,
+    "ai_cannot_promote_unverified_claims": true,
+    "module_isolation": true,
+    "progressive_disclosure": true,
+    "state_completeness": true,
+    "observability_required": true,
+    "no_fake_benchmark_data": true,
+    "regression_safety": true,
+    "bidirectional_learning": true
+  },
+  "cross_repo_boundary": {
+    "z_brand_core": ["podcast_domain", "research", "case_library", "business_intelligence", "product_ui"],
+    "zachary_os_ai": ["ai", "model_adapters", "runtime", "orchestration", "evaluation"],
+    "transport": ["versioned_contract", "adapter", "evidence_id", "runtime_id"]
+  },
+  "lifecycle": ["research", "ingest", "normalize", "analyze", "verify", "produce", "distribute", "observe", "evaluate", "learn"]
+}

@@ -1,0 +1,598 @@
+{
+  "browser_runtime\\adapters\\cdp_adapter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'cdp_adapter'"
+  },
+  "browser_runtime\\adapters\\playwright_adapter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'playwright_adapter'"
+  },
+  "browser_runtime\\adapters\\xhs_collector_bridge.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'xhs_collector_bridge'"
+  },
+  "collector_guard\\schedule_adapter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'schedule_adapter'"
+  },
+  "contracts\\lumenis_adapter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'lumenis_adapter'"
+  },
+  "platform_adapters\\base.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'base'"
+  },
+  "platform_adapters\\douyin.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'douyin'"
+  },
+  "platform_adapters\\evidence_exporter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'evidence_exporter'"
+  },
+  "platform_adapters\\facebook.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'facebook'"
+  },
+  "platform_adapters\\instagram.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'instagram'"
+  },
+  "platform_adapters\\rednote_policy.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'rednote_policy'"
+  },
+  "platform_adapters\\registry.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'registry'"
+  },
+  "platform_adapters\\safe_collection.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'safe_collection'"
+  },
+  "platform_adapters\\scheduling\\decision.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'decision'"
+  },
+  "platform_adapters\\scheduling\\gate.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'gate'"
+  },
+  "platform_adapters\\scheduling\\planner.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'planner'"
+  },
+  "platform_adapters\\scheduling\\policy.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'policy'"
+  },
+  "platform_adapters\\scheduling\\state_map.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'state_map'"
+  },
+  "platform_adapters\\scheduling\\store.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'store'"
+  },
+  "platform_adapters\\weibo.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'weibo'"
+  },
+  "platform_adapters\\x_platform.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'x_platform'"
+  },
+  "platform_adapters\\xhs.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'xhs'"
+  },
+  "platform_adapters\\xhs_app_topic.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'xhs_app_topic'"
+  },
+  "platform_adapters\\zhihu.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'zhihu'"
+  },
+  "proxy_pool\\adapters.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'adapters'"
+  },
+  "v4_upgrade\\adapters\\auth_recovery.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'auth_recovery'"
+  },
+  "v4_upgrade\\adapters\\baidu_search.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'baidu_search'"
+  },
+  "v4_upgrade\\adapters\\base.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'base'"
+  },
+  "v4_upgrade\\adapters\\bing_search.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'bing_search'"
+  },
+  "v4_upgrade\\adapters\\collector_service.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'collector_service'"
+  },
+  "v4_upgrade\\adapters\\cookie_vault.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'cookie_vault'"
+  },
+  "v4_upgrade\\adapters\\dianping.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'dianping'"
+  },
+  "v4_upgrade\\adapters\\doubao_search.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'doubao_search'"
+  },
+  "v4_upgrade\\adapters\\douyin.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'douyin'"
+  },
+  "v4_upgrade\\adapters\\dual_pool.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'dual_pool'"
+  },
+  "v4_upgrade\\adapters\\facebook.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'facebook'"
+  },
+  "v4_upgrade\\adapters\\google.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'google'"
+  },
+  "v4_upgrade\\adapters\\human_browser.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'human_browser'"
+  },
+  "v4_upgrade\\adapters\\instagram.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'instagram'"
+  },
+  "v4_upgrade\\adapters\\persist.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'persist'"
+  },
+  "v4_upgrade\\adapters\\risk_controller.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'risk_controller'"
+  },
+  "v4_upgrade\\adapters\\smzdm.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'smzdm'"
+  },
+  "v4_upgrade\\adapters\\sogou_search.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'sogou_search'"
+  },
+  "v4_upgrade\\adapters\\sogou_wechat.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'sogou_wechat'"
+  },
+  "v4_upgrade\\adapters\\weibo.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'weibo'"
+  },
+  "v4_upgrade\\adapters\\x_platform.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'x_platform'"
+  },
+  "v4_upgrade\\adapters\\zhihu.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'zhihu'"
+  },
+  "openapi_spec.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "report_export\\app_report_api_patch.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'app_report_api_patch'"
+  },
+  "browser_runtime\\contract.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'contract'"
+  },
+  "browser_runtime\\policy.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'policy'"
+  },
+  "browser_runtime\\router.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'router'"
+  },
+  "browser_runtime_api.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "cdp_helper.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "collector_v2\\browser_session.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'browser_session'"
+  },
+  "collector_v2\\session\\browser_session.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'browser_session'"
+  },
+  "internal_browser_stream.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "xhs_cdp_collector.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "ai_api.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "ai_filter.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "ai_governance.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "ai_learning_engine.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "check_collection_detail.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "domain_isolation.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "local_ai_client.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "topic_note_detail_backfill.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "_parse_jiguang_cookie.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "_parse_x_cookie.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "_parse_x_cookie_v2.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "account_keepalive\\manager.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'manager'"
+  },
+  "ad_intelligence\\analytics\\analyzer.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'analyzer'"
+  },
+  "ad_intelligence\\base.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'base'"
+  },
+  "ad_intelligence\\models\\ctr_predictor.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'ctr_predictor'"
+  },
+  "ad_intelligence\\models\\feature_engineer.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'feature_engineer'"
+  },
+  "ad_intelligence\\platform_registry.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'platform_registry'"
+  },
+  "ad_intelligence\\platforms\\factory.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'factory'"
+  },
+  "ad_intelligence\\platforms\\jiguang.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'jiguang'"
+  },
+  "ad_intelligence\\platforms\\meta_ads.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'meta_ads'"
+  },
+  "ad_intelligence\\platforms\\ocean_engine.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'ocean_engine'"
+  },
+  "ad_intelligence\\platforms\\x_ads.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'x_ads'"
+  },
+  "ad_intelligence\\strategy\\generator.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'generator'"
+  },
+  "auth_recovery_api.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "brand_stats_recompute.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "cache_manager.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "collector_guard\\analyzer.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'analyzer'"
+  },
+  "collector_guard\\checkpoint.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'checkpoint'"
+  },
+  "collector_guard\\metrics.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'metrics'"
+  },
+  "collector_guard\\queue_worker.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'queue_worker'"
+  },
+  "collector_guard\\rate_limiter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'rate_limiter'"
+  },
+  "collector_guard\\resource_guard.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'resource_guard'"
+  },
+  "collector_guard\\runtime_switch.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'runtime_switch'"
+  },
+  "collector_guard\\state.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'state'"
+  },
+  "collector_guard\\task_queue.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'task_queue'"
+  },
+  "collector_v2\\base.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'base'"
+  },
+  "collector_v2\\official_info_scraper.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'official_info_scraper'"
+  },
+  "collector_v2\\pipeline\\deduplicate.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'deduplicate'"
+  },
+  "collector_v2\\pipeline\\normalize.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'normalize'"
+  },
+  "collector_v2\\pipeline\\persist.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'persist'"
+  },
+  "collector_v2\\pipeline\\spam_filter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'spam_filter'"
+  },
+  "collector_v2\\pipeline\\subject_filter.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'subject_filter'"
+  },
+  "collector_v2\\run_live_engine.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'run_live_engine'"
+  },
+  "collector_v2\\run_profile.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'run_profile'"
+  },
+  "collector_v2\\run_xhs_live.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'run_xhs_live'"
+  },
+  "collector_v2\\scheduler\\collector_job.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'collector_job'"
+  },
+  "collector_v2\\xhs\\client.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'client'"
+  },
+  "collector_v2\\xhs\\live_engine.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'live_engine'"
+  },
+  "collector_v2\\xhs\\models.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "collector_v2\\xhs\\parser.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'parser'"
+  },
+  "collector_v2_integration.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "evaluation\\agent_benchmark_contract.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'agent_benchmark_contract'"
+  },
+  "evaluation_system.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "import_cookies.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "import_xhs_cookies.py": {
+    "status": "FAIL",
+    "reason": "[跳过] 未找到本地 Cookie 源文件 data/xhs_cookies.source.json（或内容为空）。\n       请把浏览器导出的小红书 Cookie JSON 数组放到该文件后再运行；本脚本不会内嵌任何凭证。"
+  },
+  "proxy_pool\\health.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'health'"
+  },
+  "proxy_pool\\manager.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'manager'"
+  },
+  "proxy_pool\\models.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "video_intelligence.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "weibo_login_manager.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "_apply_migration_10.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named '_apply_migration_10'"
+  },
+  "podcast\\intelligence\\content_yield.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'content_yield'"
+  },
+  "podcast\\intelligence\\research_pipeline.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'research_pipeline'"
+  },
+  "podcast\\intelligence\\story_nodes.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'story_nodes'"
+  },
+  "podcast_routes.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "v4_upgrade\\ai_hub\\routes.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'routes'"
+  },
+  "v4_upgrade\\ai_hub\\service.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'service'"
+  },
+  "v4_upgrade\\ai_hub\\shadow.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'shadow'"
+  },
+  "v4_upgrade\\auth\\audit.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "v4_upgrade\\auth\\models.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "v4_upgrade\\auth\\security.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'security'"
+  },
+  "v4_upgrade\\auth\\service.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'service'"
+  },
+  "v4_upgrade\\blueprint.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'blueprint'"
+  },
+  "v4_upgrade\\collect\\routes.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'routes'"
+  },
+  "v4_upgrade\\config.py": {
+    "status": "OK",
+    "reason": ""
+  },
+  "v4_upgrade\\console\\routes.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'routes'"
+  },
+  "v4_upgrade\\data_cleanup\\fix_publish_date.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'fix_publish_date'"
+  },
+  "v4_upgrade\\global_bil.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'global_bil'"
+  },
+  "v4_upgrade\\importer\\analyzer.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'analyzer'"
+  },
+  "v4_upgrade\\importer\\parser.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'parser'"
+  },
+  "v4_upgrade\\importer\\service.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'service'"
+  },
+  "v4_upgrade\\report_center\\cth_phrases.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'cth_phrases'"
+  },
+  "v4_upgrade\\report_center\\report_generator.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'report_generator'"
+  },
+  "v4_upgrade\\report_center\\standard_taxonomy.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'standard_taxonomy'"
+  },
+  "v4_upgrade\\report_center\\word_pdf_export.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'word_pdf_export'"
+  },
+  "v4_upgrade\\report_center\\zbmp_phrases.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'zbmp_phrases'"
+  },
+  "v4_upgrade\\settings\\routes.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'routes'"
+  },
+  "v4_upgrade\\unified_logger.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'unified_logger'"
+  },
+  "v4_upgrade\\version_center\\git_manager.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'git_manager'"
+  },
+  "v4_upgrade\\version_center\\routes.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'routes'"
+  },
+  "v4_upgrade\\version_center\\watcher.py": {
+    "status": "FAIL",
+    "reason": "ModuleNotFoundError: No module named 'watcher'"
+  }
+}

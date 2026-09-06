@@ -1,6 +1,7 @@
 /* ============================================================================
    LUMENIS Icons — 24×24 viewBox / 1.5px stroke / currentColor / 圆头线帽
    禁 emoji 作为正式 icon。注册表模式：licon(name) 返回 SVG 字符串。
+   全站统一走 licon()，禁止实心填充块，禁止混用多套图标库。
    ============================================================================ */
 (function (global) {
   "use strict";
@@ -46,6 +47,20 @@
     arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     arrowDown: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/>',
+    // 左导航补充（线性，1.5px 描边，圆角端点，禁止实心填充）
+    bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
+    notebook: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/><path d="M4 7h16"/>',
+    compare: '<path d="m8 3-4 4 4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    megaphone: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    // 品牌平台线性图标（品牌色只描边/小色点，不铺实心块）
+    xiaohongshu: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/><path d="M4 7h16"/>',
+    weibo: '<circle cx="12" cy="12" r="9"/><path d="M8 14c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4-4-1.8-4-4z"/>',
+    bilibili: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5l2-3M17 5l-2-3"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/>',
+    douyin: '<path d="M9 3v12a4 4 0 1 1-4-4"/><path d="M9 3c0 3 2 5 5 5v3c-3 0-5-2-5-5"/><path d="M14 8v7a4 4 0 0 0 4 4"/>',
+    zhihu: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h4M7 12h6M7 16h4"/><path d="m15 8 3 3-3 3"/>',
   };
 
   function licon(name, size, cls) {

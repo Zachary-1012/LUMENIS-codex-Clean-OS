@@ -38,19 +38,28 @@ def test_blocked_schemes_any_mode(url):
 
 
 @pytest.mark.parametrize("ip", [
-    "http://127.0.0.1/",
-    "http://localhost/",
     "http://10.0.0.5/",
     "http://192.168.1.1/",
     "http://172.16.4.4/",
     "http://169.254.1.1/",
-    "http://[::1]/",
     "http://0.0.0.0/",
 ])
 def test_ssrf_internal_blocked(ip):
-    r = bs.evaluate_navigation(ip, mode="open")  # 即使 open 也拦截内网
+    r = bs.evaluate_navigation(ip, mode="open")  # 即使 open 也拦截私网
     assert r["allowed"] is False
     assert "SSRF" in r["reason"] or "内网" in r["reason"]
+
+
+@pytest.mark.parametrize("ip", [
+    "http://127.0.0.1/",
+    "http://localhost/",
+    "http://[::1]/",
+])
+def test_platform_internal_host_allowed(ip):
+    """P1-D: 平台内部主机(127.0.0.1/localhost/::1)直接放行，其他私网仍SSRF拦截。"""
+    r = bs.evaluate_navigation(ip, mode="open")
+    assert r["allowed"] is True
+    assert r["status"] == "allowed"
 
 
 def test_strict_only_platform():
@@ -79,7 +88,7 @@ def test_open_public_passes(monkeypatch):
     # 默认 allowlist 会拦未知域；显式 open 放行公网
     r_open = bs.evaluate_navigation("https://any-public-site.example/page", mode="open")
     assert r_open["allowed"] is True
-    assert r["mode"] == "allowlist"
+    assert r["mode"] == "strict"  # P1-D: 默认 strict
 
 
 def test_empty_and_bad_url():
@@ -219,9 +228,9 @@ def test_nav_config_roundtrip(tmp_path, monkeypatch):
     monkeypatch.setattr(bs, "_ALLOWLIST_FILE", cfg_file)
     monkeypatch.delenv("INTERNAL_BROWSER_NAV_MODE", raising=False)
     monkeypatch.delenv("INTERNAL_BROWSER_EXTRA_DOMAINS", raising=False)
-    # 默认
+    # 默认 P1-D: strict
     g = bs.get_nav_config()
-    assert g["ok"] and g["nav_mode"] == "allowlist" and g["nav_mode_source"] == "default"
+    assert g["ok"] and g["nav_mode"] == "strict" and g["nav_mode_source"] == "default"
     # 写 open 模式 + 追加域
     r = bs.set_nav_config(mode="open", extra_domains=["Example.com", "bing.com"])
     assert r["ok"] and r["nav_mode"] == "open"
@@ -277,7 +286,7 @@ def test_api_nav_config_endpoint(client, tmp_path, monkeypatch):
     monkeypatch.delenv("INTERNAL_BROWSER_NAV_MODE", raising=False)
     monkeypatch.delenv("INTERNAL_BROWSER_EXTRA_DOMAINS", raising=False)
     g = client.get("/api/browser-surface/nav-config").get_json()
-    assert g["ok"] and g["nav_mode"] == "allowlist"
+    assert g["ok"] and g["nav_mode"] == "strict"  # P1-D: 默认 strict
     p = client.post("/api/browser-surface/nav-config", json={"mode": "open"}).get_json()
     assert p["ok"] and p["nav_mode"] == "open"
     bad = client.post("/api/browser-surface/nav-config", json={})

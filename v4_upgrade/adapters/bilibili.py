@@ -27,6 +27,7 @@ import logging
 from datetime import datetime, timezone
 
 from .base import BaseAdapter, AdapterResult
+from .cookie_vault import to_requests_cookies, to_cookie_string, check_cookie_status
 
 logger = logging.getLogger(__name__)
 
@@ -48,33 +49,49 @@ class BilibiliAdapter(BaseAdapter):
 
     def __init__(self, manager=None, **kwargs):
         super().__init__(**kwargs)
-        self._manager = manager
+        self._manager = manager  # 向后兼容：旧测试传入 manager，现统一走 cookie_vault
 
-    def _get_manager(self):
-        """懒加载 B站登录管理器单例。"""
-        if self._manager is not None:
-            return self._manager
-        try:
-            from bilibili_login_manager import get_bilibili_manager
-            return get_bilibili_manager()
-        except Exception as exc:
-            raise RuntimeError(f"无法加载 B站登录管理器: {exc}") from exc
+    @staticmethod
+    def _cookie_ok() -> bool:
+        s = check_cookie_status("bilibili")
+        return s["status"] == "ACTIVE"
 
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
         try:
-            manager = self._get_manager()
-
-            # 登录态前置检查：失效则如实返回，不假成功
-            login_status = manager.check_login_status()
-            if not login_status.get("logged_in", False):
+            import requests as _req
+            # 登录态前置检查（经 cookie_vault）
+            if not self._cookie_ok():
                 return AdapterResult(
                     success=False,
-                    error="B站登录态失效，请更新 cookie 或重新扫码登录",
+                    error="B站 cookie 缺失或无关键认证 cookie，请更新 data/bilibili_cookies.json",
                 )
-
-            raw = manager.search_videos(keyword.strip(), page=1, page_size=max_results)
+            cookies = to_requests_cookies("bilibili")
+            resp = _req.get(
+                "https://api.bilibili.com/x/web-interface/search/type",
+                params={"search_type": "video", "keyword": keyword.strip(),
+                        "page": 1, "page_size": max_results},
+                cookies=cookies,
+                headers=self._api_headers(),
+                timeout=15,
+            )
+            data = resp.json()
+            if data.get("code") != 0:
+                raw = {"ok": False, "error": data.get("message", "搜索失败"), "code": data.get("code")}
+            else:
+                result = data.get("data", {})
+                videos = []
+                for ri in result.get("result", []):
+                    videos.append({
+                        "id": ri.get("aid"), "bvid": ri.get("bvid"),
+                        "title": ri.get("title", ""), "author": ri.get("author"),
+                        "play": ri.get("play"), "video_review": ri.get("video_review"),
+                        "favorites": ri.get("favorites"), "pubdate": ri.get("pubdate"),
+                        "duration": ri.get("duration"), "description": ri.get("description", ""),
+                        "url": f"https://www.bilibili.com/video/{ri.get('bvid', '')}",
+                    })
+                raw = {"ok": True, "videos": videos, "total": result.get("numResults", 0)}
             if not isinstance(raw, dict):
                 return AdapterResult(success=False, error=f"B站搜索返回异常: {raw!r}")
 
@@ -313,21 +330,9 @@ class BilibiliAdapter(BaseAdapter):
             return AdapterResult(success=False, error=f"B站UP主异常: {exc}")
 
     def _load_cookies(self):
-        """从 data/bilibili_cookies.json 读取 cookie dict；失败返回 None。"""
-        try:
-            import json as _json
-            from pathlib import Path
-            p = Path(__file__).parent.parent.parent / "data" / "bilibili_cookies.json"
-            if not p.exists():
-                return None
-            raw = _json.loads(p.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                return raw.get("cookies", raw)
-            if isinstance(raw, list):
-                return {c["name"]: c["value"] for c in raw if "name" in c}
-            return None
-        except Exception:
-            return None
+        """经 cookie_vault 读取 B站 cookie dict；失败返回 None。"""
+        c = to_requests_cookies("bilibili")
+        return c if c else None
 
     @staticmethod
     def _api_headers():

@@ -801,3 +801,102 @@ def evaluate_risk_with_sensational(title: str = "", content: str = "",
     base["note"] = base.get("note", "") + "; IC-044 sensational/synthetic factor applied"
 
     return base
+
+
+# ============================================================
+# P1-D: 专报触发检测（Special Report Trigger）
+# ============================================================
+# 5个触发条件（满足任一即升级专报）：
+#   1. 单条负面互动 ≥ 500（新增专报触发线，不改变现有 >50000 high 阈值）
+#   2. 负面帖 ≥ 3 条集中爆发（24小时窗口）
+#   3. 涉及安全·歧视·违法（关键词 + subject_rules 联动）
+#   4. 本地 KOC 转发（kos_profiles 联动）
+#   5. 集团或媒体问询（人工标记触发）
+# 不改变现有风险分级逻辑，只新增专报触发层。
+
+SPECIAL_REPORT_TRIGGER_THRESHOLD = 500  # 单条负面互动专报触发线
+SPECIAL_REPORT_NEGATIVE_CLUSTER = 3     # 24h内负面帖集中爆发阈值
+
+# 安全·歧视·违法关键词（与 subject_rules 联动）
+_SPECIAL_REPORT_KEYWORDS = {
+    "safety": ["安全", "事故", "受伤", "火灾", "电梯", "摔倒", "坍塌", "踩踏", "食品安全", "卫生", "中毒"],
+    "discrimination": ["歧视", "侮辱", "性骚扰", "racist", "sexist", "打人", "肢体冲突", "驱赶"],
+    "illegal": ["违法", "犯罪", "诈骗", "偷税", "传销", "假货", "侵权"],
+}
+
+
+def check_special_report_trigger(event: dict) -> tuple:
+    """P1-D: 专报触发检测。
+
+    Args:
+        event: 事件/笔记字典，可包含：
+            - engagement: 互动量（likes+comments*3+shares等）
+            - sentiment: 情感（negative/positive/neutral/unknown）
+            - title/content: 文本内容（用于关键词检测）
+            - negative_count_24h: 24小时内负面帖数量
+            - is_koc_forwarded: 是否本地KOC转发（bool）
+            - is_media_inquiry: 是否集团或媒体问询（bool，人工标记）
+            - subject_hit: subject_rules 判定结果（dict）
+
+    Returns:
+        (triggered: bool, reasons: list)
+        triggered=True 时 reasons 包含所有命中的触发条件描述。
+    """
+    reasons = []
+    engagement = int(event.get("engagement", 0) or 0)
+    sentiment = (event.get("sentiment") or "").lower()
+    text = (event.get("title", "") or "") + " " + (event.get("content", "") or "")
+    text_lower = text.lower()
+
+    # 触发条件1: 单条负面互动 ≥ 500
+    if sentiment == "negative" and engagement >= SPECIAL_REPORT_TRIGGER_THRESHOLD:
+        reasons.append(
+            f"单条负面互动≥{SPECIAL_REPORT_TRIGGER_THRESHOLD}（当前{engagement}）"
+        )
+
+    # 触发条件2: 负面帖 ≥ 3 条集中爆发（24小时窗口）
+    negative_count = int(event.get("negative_count_24h", 0) or 0)
+    if negative_count >= SPECIAL_REPORT_NEGATIVE_CLUSTER:
+        reasons.append(
+            f"24h内负面帖≥{SPECIAL_REPORT_NEGATIVE_CLUSTER}条集中爆发（当前{negative_count}条）"
+        )
+
+    # 触发条件3: 涉及安全·歧视·违法（关键词 + subject_rules 联动）
+    hit_categories = []
+    for cat, keywords in _SPECIAL_REPORT_KEYWORDS.items():
+        if any(kw in text_lower for kw in keywords):
+            hit_categories.append(cat)
+    # subject_rules 联动：如果 event 中有 subject_hit 且标记了高风险主体
+    subject_hit = event.get("subject_hit")
+    if isinstance(subject_hit, dict) and subject_hit.get("is_high_risk"):
+        hit_categories.append("subject_rules_high_risk")
+    if hit_categories:
+        reasons.append(
+            f"涉及安全/歧视/违法关键词（命中: {', '.join(hit_categories)}）"
+        )
+
+    # 触发条件4: 本地 KOC 转发（kos_profiles 联动）
+    if event.get("is_koc_forwarded"):
+        reasons.append("本地KOC转发（kos_profiles联动）")
+
+    # 触发条件5: 集团或媒体问询（人工标记触发）
+    if event.get("is_media_inquiry"):
+        reasons.append("集团或媒体问询（人工标记触发）")
+
+    triggered = len(reasons) > 0
+    return triggered, reasons
+
+
+def get_special_report_trigger_config() -> dict:
+    """返回专报触发配置（供API/前端展示）。"""
+    return {
+        "ok": True,
+        "trigger_conditions": [
+            {"id": 1, "name": "单条负面互动≥500", "threshold": SPECIAL_REPORT_TRIGGER_THRESHOLD},
+            {"id": 2, "name": "负面帖≥3条集中爆发(24h)", "threshold": SPECIAL_REPORT_NEGATIVE_CLUSTER},
+            {"id": 3, "name": "涉及安全·歧视·违法", "keywords": _SPECIAL_REPORT_KEYWORDS},
+            {"id": 4, "name": "本地KOC转发", "source": "kos_profiles"},
+            {"id": 5, "name": "集团或媒体问询", "source": "manual_flag"},
+        ],
+        "note": "满足任一即升级专报；不改变现有风险分级阈值（>50000 high）",
+    }

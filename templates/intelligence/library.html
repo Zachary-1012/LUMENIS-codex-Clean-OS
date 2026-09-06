@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}Intelligence Library · 统一资料库 · 序境 LUMENIS{% endblock %}
+{% block page_title %}Intelligence Library{% endblock %}
+
+{% block content %}
+<!-- P1-C Unified Intelligence Library
+  Layout: no-scroll (100dvh lock), left dir tree + right asset list + detail drawer
+  Data source: /api/intelligence/library/* (intelligence_assets table)
+  OSAI boundary: Intelligence Core read-only reference, NOT runtime dependency
+-->
+<style>
+.il-wrap{display:flex;flex-direction:column;height:calc(100dvh - 120px);min-height:0;overflow:hidden;gap:var(--lm-space-sm);padding:var(--lm-space-sm);}
+.il-stats{display:flex;gap:var(--lm-space-sm);flex-shrink:0;flex-wrap:wrap;}
+.il-stat{flex:1;min-width:120px;background:var(--lm-bg-card,#1a1d23);border:1px solid var(--lm-border-subtle,#2a2d35);border-radius:8px;padding:10px 14px;}
+.il-stat__label{font-size:11px;color:var(--lm-text-tertiary,#888);text-transform:uppercase;letter-spacing:.5px;}
+.il-stat__value{font-size:22px;font-weight:700;color:var(--lm-text-primary,#eee);margin-top:2px;}
+.il-stat__sub{font-size:11px;color:var(--lm-text-secondary,#aaa);margin-top:1px;}
+.il-main{display:flex;flex:1;min-height:0;gap:var(--lm-space-sm);}
+.il-tree{width:230px;flex-shrink:0;background:var(--lm-bg-card,#1a1d23);border:1px solid var(--lm-border-subtle,#2a2d35);border-radius:8px;display:flex;flex-direction:column;min-height:0;}
+.il-tree__header{padding:10px 12px;border-bottom:1px solid var(--lm-border-subtle,#2a2d35);font-size:12px;font-weight:600;color:var(--lm-text-secondary,#aaa);flex-shrink:0;}
+.il-tree__list{flex:1;overflow-y:auto;min-height:0;padding:4px;}
+.il-tree__item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12.5px;color:var(--lm-text-secondary,#bbb);transition:background .15s;}
+.il-tree__item:hover{background:var(--lm-bg-hover,#252830);color:var(--lm-text-primary,#eee);}
+.il-tree__item.active{background:var(--lm-accent-bg,rgba(100,140,255,.15));color:var(--lm-accent,#8ab4ff);font-weight:600;}
+.il-tree__count{font-size:11px;color:var(--lm-text-tertiary,#777);background:var(--lm-bg-subtle,#22252c);padding:1px 7px;border-radius:10px;}
+.il-tree__item.active .il-tree__count{background:var(--lm-accent-bg,rgba(100,140,255,.2));color:var(--lm-accent,#8ab4ff);}
+.il-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--lm-space-sm);min-height:0;}
+.il-toolbar{display:flex;gap:var(--lm-space-sm);flex-shrink:0;align-items:center;flex-wrap:wrap;}
+.il-search{flex:1;min-width:200px;}
+.il-filters{display:flex;gap:6px;flex-wrap:wrap;}
+.il-filter{font-size:11.5px;padding:4px 10px;border-radius:12px;border:1px solid var(--lm-border-subtle,#333);background:var(--lm-bg-subtle,#222);color:var(--lm-text-secondary,#aaa);cursor:pointer;transition:all .15s;}
+.il-filter:hover{border-color:var(--lm-accent,#6a8fd4);color:var(--lm-text-primary,#ddd);}
+.il-filter.active{background:var(--lm-accent-bg,rgba(100,140,255,.2));border-color:var(--lm-accent,#6a8fd4);color:var(--lm-accent,#8ab4ff);}
+.il-list{flex:1;min-height:0;background:var(--lm-bg-card,#1a1d23);border:1px solid var(--lm-border-subtle,#2a2d35);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;}
+.il-list__header{display:grid;grid-template-columns:70px 1fr 100px 80px 90px 70px;padding:8px 12px;border-bottom:1px solid var(--lm-border-subtle,#2a2d35);font-size:11px;font-weight:600;color:var(--lm-text-tertiary,#777);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;}
+.il-list__body{flex:1;overflow-y:auto;min-height:0;}
+.il-row{display:grid;grid-template-columns:70px 1fr 100px 80px 90px 70px;padding:7px 12px;border-bottom:1px solid var(--lm-border-faint,#1f2228);font-size:12px;cursor:pointer;transition:background .12s;align-items:center;}
+.il-row:hover{background:var(--lm-bg-hover,#22252c);}
+.il-row__id{color:var(--lm-text-tertiary,#777);font-family:monospace;font-size:11px;}
+.il-row__title{color:var(--lm-text-primary,#e8e8e8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.il-row__origin{color:var(--lm-text-secondary,#aaa);font-size:11.5px;}
+.il-row__product{font-size:11px;}
+.il-row__evidence{font-size:11px;font-weight:600;}
+.il-row__landing{font-size:11px;}
+.badge-zbc{color:#7dd3a0;}
+.badge-ggi{color:#f0b86e;}
+.badge-shared{color:#8ab4ff;}
+.ev-e4{color:#7dd3a0;}
+.ev-e3{color:#8ab4ff;}
+.ev-e2{color:#f0b86e;}
+.ev-e1{color:#e88a8a;}
+.ev-e0{color:#888;}
+.land-landed{color:#7dd3a0;}
+.land-verifying{color:#f0b86e;}
+.land-reuse{color:#8ab4ff;}
+.land-convert{color:#c08ad4;}
+.land-research{color:#888;}
+.il-pagination{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-top:1px solid var(--lm-border-subtle,#2a2d35);font-size:11.5px;color:var(--lm-text-tertiary,#777);flex-shrink:0;}
+.il-pagination button{background:var(--lm-bg-subtle,#252830);border:1px solid var(--lm-border-subtle,#333);color:var(--lm-text-secondary,#aaa);padding:3px 10px;border-radius:5px;cursor:pointer;font-size:11.5px;}
+.il-pagination button:hover:not(:disabled){border-color:var(--lm-accent,#6a8fd4);color:var(--lm-text-primary,#ddd);}
+.il-pagination button:disabled{opacity:.4;cursor:not-allowed;}
+/* Detail drawer */
+.il-drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s;}
+.il-drawer-overlay.open{opacity:1;pointer-events:auto;}
+.il-drawer{position:fixed;top:0;right:0;width:480px;max-width:90vw;height:100dvh;background:var(--lm-bg-card,#1a1d23);border-left:1px solid var(--lm-border-subtle,#333);z-index:1001;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;}
+.il-drawer.open{transform:translateX(0);}
+.il-drawer__header{padding:16px 18px;border-bottom:1px solid var(--lm-border-subtle,#2a2d35);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+.il-drawer__title{font-size:15px;font-weight:700;color:var(--lm-text-primary,#eee);line-height:1.4;}
+.il-drawer__id{font-size:11px;color:var(--lm-text-tertiary,#777);font-family:monospace;margin-top:3px;}
+.il-drawer__close{background:none;border:none;color:var(--lm-text-tertiary,#888);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:5px;}
+.il-drawer__close:hover{color:var(--lm-text-primary,#eee);background:var(--lm-bg-hover,#252830);}
+.il-drawer__body{flex:1;overflow-y:auto;min-height:0;padding:16px 18px;}
+.il-field{margin-bottom:14px;}
+.il-field__label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--lm-text-tertiary,#777);margin-bottom:4px;font-weight:600;}
+.il-field__value{font-size:13px;color:var(--lm-text-primary,#e8e8e8);line-height:1.6;}
+.il-field__value code{background:var(--lm-bg-subtle,#22252c);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--lm-accent,#8ab4ff);}
+.il-tags{display:flex;flex-wrap:wrap;gap:5px;}
+.il-tag{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--lm-bg-subtle,#252830);color:var(--lm-text-secondary,#bbb);border:1px solid var(--lm-border-subtle,#333);}
+.il-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--lm-text-tertiary,#666);font-size:13px;}
+@media (max-width:768px){
+  .il-tree{display:none;}
+  .il-stat{min-width:90px;}
+  .il-stat__value{font-size:18px;}
+  .il-list__header,.il-row{grid-template-columns:60px 1fr 70px 60px;}
+  .il-row__origin,.il-row__evidence{display:none;}
+}
+</style>
+
+<div class="il-wrap">
+  <!-- Stats bar -->
+  <div class="il-stats" id="ilStats">
+    <div class="il-stat"><div class="il-stat__label">总资产</div><div class="il-stat__value" id="statTotal">—</div><div class="il-stat__sub">intelligence_assets</div></div>
+    <div class="il-stat"><div class="il-stat__label">序境 相关</div><div class="il-stat__value badge-zbc" id="statZbc">—</div><div class="il-stat__sub">product=序境</div></div>
+    <div class="il-stat"><div class="il-stat__label">SHARED</div><div class="il-stat__value badge-shared" id="statShared">—</div><div class="il-stat__sub">智能引擎 Core/研究</div></div>
+    <div class="il-stat"><div class="il-stat__label">已落地</div><div class="il-stat__value land-landed" id="statLanded">—</div><div class="il-stat__sub">生产已实现</div></div>
+    <div class="il-stat"><div class="il-stat__label">建议转化</div><div class="il-stat__value land-convert" id="statConvert">—</div><div class="il-stat__sub">需Admission链</div></div>
+    <div class="il-stat"><div class="il-stat__label">E4 已验证</div><div class="il-stat__value ev-e4" id="statE4">—</div><div class="il-stat__sub">审计/测试验证</div></div>
+  </div>
+
+  <!-- Main: left tree + right content -->
+  <div class="il-main">
+    <!-- Left directory tree -->
+    <div class="il-tree">
+      <div class="il-tree__header">13 子库目录</div>
+      <div class="il-tree__list" id="ilTreeList">
+        <div class="il-tree__item active" data-sub="all"><span>全部资产</span><span class="il-tree__count" id="countAll">—</span></div>
+      </div>
+    </div>
+
+    <!-- Right content -->
+    <div class="il-content">
+      <!-- Toolbar: search + filters -->
+      <div class="il-toolbar">
+        <div class="il-search">
+          <input class="lm-search" type="text" id="ilSearchInput" placeholder="搜索资产：标题 / 摘要 / 标签 / 子库…" aria-label="搜索资料库资产">
+        </div>
+        <div class="il-filters" id="ilFilters">
+          <span class="il-filter active" data-landing="all">全部状态</span>
+          <span class="il-filter" data-landing="已落地">已落地</span>
+          <span class="il-filter" data-landing="可直接复用">可复用</span>
+          <span class="il-filter" data-landing="建议转化">建议转化</span>
+          <span class="il-filter" data-product="ZBC">序境</span>
+          <span class="il-filter" data-product="SHARED">SHARED</span>
+        </div>
+      </div>
+
+      <!-- Asset list -->
+      <div class="il-list">
+        <div class="il-list__header">
+          <span>ID</span><span>标题</span><span>来源</span><span>产品</span><span>落地状态</span><span>证据</span>
+        </div>
+        <div class="il-list__body" id="ilListBody">
+          <div class="il-empty">加载中…</div>
+        </div>
+        <div class="il-pagination">
+          <span id="ilPageInfo">—</span>
+          <div style="display:flex;gap:6px;">
+            <button id="ilPrevBtn" disabled>上一页</button>
+            <button id="ilNextBtn" disabled>下一页</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail drawer -->
+<div class="il-drawer-overlay" id="ilDrawerOverlay"></div>
+<div class="il-drawer" id="ilDrawer" role="dialog" aria-label="资产详情">
+  <div class="il-drawer__header">
+    <div>
+      <div class="il-drawer__title" id="drawerTitle">—</div>
+      <div class="il-drawer__id" id="drawerId">—</div>
+    </div>
+    <button class="il-drawer__close" id="drawerClose" aria-label="关闭">&times;</button>
+  </div>
+  <div class="il-drawer__body" id="drawerBody">
+    <div class="il-empty">选择资产查看详情</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+(function(){
+  const API = '/api/intelligence/library';
+  let state = { page:1, perPage:50, subLibrary:'all', landing:'all', product:'all', search:'', total:0, totalPages:0, items:[] };
+
+  // DOM refs
+  const $ = id => document.getElementById(id);
+  const listBody = $('ilListBody');
+  const pageInfo = $('ilPageInfo');
+  const prevBtn = $('ilPrevBtn');
+  const nextBtn = $('ilNextBtn');
+
+  // --- Load stats ---
+  async function loadStats(){
+    try{
+      const r = await fetch(API+'/stats');
+      const d = await r.json();
+      if(d.ok){
+        const s = d.data;
+        $('statTotal').textContent = s.total || '—';
+        $('statZbc').textContent = (s.by_product && s.by_product.ZBC) || '—';
+        $('statShared').textContent = (s.by_product && s.by_product.SHARED) || '—';
+        $('statLanded').textContent = (s.by_landing_status && s.by_landing_status['已落地']) || '—';
+        $('statConvert').textContent = (s.by_landing_status && s.by_landing_status['建议转化']) || '—';
+        $('statE4').textContent = (s.by_evidence_level && s.by_evidence_level.E4) || '—';
+        $('countAll').textContent = s.total || '—';
+        // Build tree
+        buildTree(s.by_sub_library || {});
+      }
+    }catch(e){ console.error('stats error', e); }
+  }
+
+  function buildTree(bySub){
+    const list = $('ilTreeList');
+    const allItem = list.querySelector('.il-tree__item[data-sub="all"]');
+    list.innerHTML = '';
+    list.appendChild(allItem);
+    Object.keys(bySub).sort().forEach(name => {
+      const item = document.createElement('div');
+      item.className = 'il-tree__item';
+      item.dataset.sub = name;
+      item.innerHTML = `<span>${name}</span><span class="il-tree__count">${bySub[name]}</span>`;
+      item.addEventListener('click', () => {
+        list.querySelectorAll('.il-tree__item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        state.subLibrary = name;
+        state.page = 1;
+        loadList();
+      });
+      list.appendChild(item);
+    });
+    allItem.addEventListener('click', () => {
+      list.querySelectorAll('.il-tree__item').forEach(i => i.classList.remove('active'));
+      allItem.classList.add('active');
+      state.subLibrary = 'all';
+      state.page = 1;
+      loadList();
+    });
+  }
+
+  // --- Load list ---
+  async function loadList(){
+    const params = new URLSearchParams();
+    params.set('page', state.page);
+    params.set('per_page', state.perPage);
+    if(state.subLibrary !== 'all') params.set('sub_library', state.subLibrary);
+    if(state.landing !== 'all') params.set('landing_status', state.landing);
+    if(state.product !== 'all') params.set('product', state.product);
+    if(state.search) params.set('q', state.search);
+
+    const url = state.search ? API+'/search?'+params.toString() : API+'?'+params.toString();
+    try{
+      listBody.innerHTML = '<div class="il-empty">加载中…</div>';
+      const r = await fetch(url);
+      const d = await r.json();
+      if(d.ok){
+        state.items = d.data || [];
+        state.total = d.pagination ? d.pagination.total : (d.count || state.items.length);
+        state.totalPages = d.pagination ? d.pagination.total_pages : 1;
+        renderList();
+      }else{
+        listBody.innerHTML = '<div class="il-empty">加载失败：'+(d.error||'未知错误')+'</div>';
+      }
+    }catch(e){
+      listBody.innerHTML = '<div class="il-empty">网络错误：'+e.message+'</div>';
+    }
+  }
+
+  function landingClass(s){
+    if(s==='已落地') return 'land-landed';
+    if(s==='已实现待验证') return 'land-verifying';
+    if(s==='可直接复用') return 'land-reuse';
+    if(s==='建议转化') return 'land-convert';
+    return 'land-research';
+  }
+  function productClass(p){
+    if(p==='ZBC') return 'badge-zbc';
+    if(p==='GGI') return 'badge-ggi';
+    return 'badge-shared';
+  }
+  function evidenceClass(e){ return 'ev-'+(e||'e0').toLowerCase(); }
+
+  function renderList(){
+    if(!state.items.length){
+      listBody.innerHTML = '<div class="il-empty">无匹配资产</div>';
+      pageInfo.textContent = '0 条';
+      prevBtn.disabled = nextBtn.disabled = true;
+      return;
+    }
+    listBody.innerHTML = state.items.map(a => `
+      <div class="il-row" data-id="${a.asset_id}">
+        <span class="il-row__id">${a.asset_id}</span>
+        <span class="il-row__title" title="${(a.title||'').replace(/"/g,'&quot;')}">${a.title||'—'}</span>
+        <span class="il-row__origin">${a.source_origin||'—'}</span>
+        <span class="il-row__product ${productClass(a.product)}">${a.product||'—'}</span>
+        <span class="il-row__landing ${landingClass(a.landing_status)}">${a.landing_status||'—'}</span>
+        <span class="il-row__evidence ${evidenceClass(a.evidence_level)}">${a.evidence_level||'—'}</span>
+      </div>
+    `).join('');
+    // Click handlers
+    listBody.querySelectorAll('.il-row').forEach(row => {
+      row.addEventListener('click', () => openDrawer(row.dataset.id));
+    });
+    pageInfo.textContent = `第 ${state.page}/${state.totalPages} 页 · 共 ${state.total} 条`;
+    prevBtn.disabled = state.page <= 1;
+    nextBtn.disabled = state.page >= state.totalPages;
+  }
+
+  // --- Detail drawer ---
+  async function openDrawer(assetId){
+    const item = state.items.find(a => a.asset_id === assetId);
+    if(!item) return;
+    $('drawerTitle').textContent = item.title || '—';
+    $('drawerId').textContent = item.asset_id + ' · ' + (item.sub_library||'');
+    const tags = Array.isArray(item.tags) ? item.tags : [];
+    $('drawerBody').innerHTML = `
+      <div class="il-field"><div class="il-field__label">摘要</div><div class="il-field__value">${item.summary||'—'}</div></div>
+      <div class="il-field"><div class="il-field__label">子库</div><div class="il-field__value"><code>${item.sub_library||'—'}</code></div></div>
+      <div class="il-field"><div class="il-field__label">来源</div><div class="il-field__value">${item.source_origin||'—'}</div></div>
+      <div class="il-field"><div class="il-field__label">产品归属</div><div class="il-field__value ${productClass(item.product)}">${item.product||'—'}${item.domain?' / '+item.domain:''}</div></div>
+      <div class="il-field"><div class="il-field__label">证据等级</div><div class="il-field__value ${evidenceClass(item.evidence_level)}">${item.evidence_level||'—'} · ${item.knowledge_status||'—'}</div></div>
+      <div class="il-field"><div class="il-field__label">落地状态</div><div class="il-field__value ${landingClass(item.landing_status)}">${item.landing_status||'—'}</div></div>
+      <div class="il-field"><div class="il-field__label">Admission 状态</div><div class="il-field__value">${item.admission_status||'CANDIDATE'}</div></div>
+      <div class="il-field"><div class="il-field__label">库内路径</div><div class="il-field__value"><code>${item.library_path||'—'}</code></div></div>
+      <div class="il-field"><div class="il-field__label">标签</div><div class="il-tags">${tags.map(t=>'<span class="il-tag">'+t+'</span>').join('')||'—'}</div></div>
+      <div class="il-field"><div class="il-field__label">创建 / 更新</div><div class="il-field__value" style="font-size:12px;color:var(--lm-text-tertiary);">${item.created_at||'—'} / ${item.updated_at||'—'}</div></div>
+    `;
+    $('ilDrawer').classList.add('open');
+    $('ilDrawerOverlay').classList.add('open');
+  }
+  function closeDrawer(){
+    $('ilDrawer').classList.remove('open');
+    $('ilDrawerOverlay').classList.remove('open');
+  }
+  $('drawerClose').addEventListener('click', closeDrawer);
+  $('ilDrawerOverlay').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeDrawer(); });
+
+  // --- Filters ---
+  $('ilFilters').addEventListener('click', e => {
+    const el = e.target.closest('.il-filter');
+    if(!el) return;
+    const landing = el.dataset.landing;
+    const product = el.dataset.product;
+    if(landing){
+      state.landing = landing;
+      document.querySelectorAll('.il-filter[data-landing]').forEach(f => f.classList.remove('active'));
+    }
+    if(product){
+      state.product = state.product === product ? 'all' : product;
+      document.querySelectorAll('.il-filter[data-product]').forEach(f => f.classList.toggle('active', f.dataset.product === state.product));
+    }
+    el.classList.add('active');
+    state.page = 1;
+    loadList();
+  });
+
+  // --- Search (debounced) ---
+  let searchTimer;
+  $('ilSearchInput').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.search = e.target.value.trim();
+      state.page = 1;
+      loadList();
+    }, 300);
+  });
+
+  // --- Pagination ---
+  prevBtn.addEventListener('click', () => { if(state.page>1){ state.page--; loadList(); } });
+  nextBtn.addEventListener('click', () => { if(state.page<state.totalPages){ state.page++; loadList(); } });
+
+  // --- Init ---
+  loadStats();
+  loadList();
+})();
+{% endblock %}

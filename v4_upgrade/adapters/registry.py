@@ -106,11 +106,12 @@ def register_default_adapters():
     from .dianping import DianpingAdapter
     from .doubao_search import DoubaoSearchAdapter
     from .smzdm import SmzdmAdapter
+    from .jiguang import JiguangAdapter
 
     for cls in [DouyinAdapter, InstagramAdapter, BilibiliAdapter, WeiboAdapter, ZhihuAdapter,
                 FacebookAdapter, XAdapter, BaiduSearchAdapter,
                 BingSearchAdapter, SogouSearchAdapter, GoogleAdapter, SogouWechatAdapter,
-                DianpingAdapter, DoubaoSearchAdapter, SmzdmAdapter]:
+                DianpingAdapter, DoubaoSearchAdapter, SmzdmAdapter, JiguangAdapter]:
         try:
             registry.register(cls())
         except Exception as e:

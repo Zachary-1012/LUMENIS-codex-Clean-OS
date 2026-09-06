@@ -1,0 +1,1564 @@
+{
+  "imported_by": {
+    "subject_rules.py": [
+      "collector_v2\\run_profile.py",
+      "ai_analyzer.py",
+      "risk_engine.py",
+      "kos_routes.py",
+      "contracts\\lumenis_adapter.py",
+      "app.py",
+      "kos_engine.py",
+      "topic_campaign.py",
+      "collector_automation.py",
+      "collector_v2_integration.py",
+      "kos_scenarios.py",
+      "export_report.py",
+      "collector_v2\\run_live_engine.py",
+      "report_api.py",
+      "database.py"
+    ],
+    "intelligence.py": [
+      "ai_resource_packs.py",
+      "ai_api.py",
+      "app.py",
+      "kos_engine.py",
+      "browser_surface.py",
+      "v4_upgrade\\ai_hub\\service.py",
+      "reprocess.py",
+      "daily_report.py",
+      "learning_collector.py",
+      "ai_filter.py"
+    ],
+    "ai_governance.py": [
+      "ai_api.py",
+      "app.py"
+    ],
+    "ai_analyzer.py": [
+      "xhs_cookie_bridge.py",
+      "ai_api.py",
+      "report_engine.py",
+      "app.py",
+      "reprocess.py",
+      "daily_report.py",
+      "monitor_pipeline.py",
+      "ai_filter.py"
+    ],
+    "ai_learning_engine.py": [
+      "ai_api.py",
+      "app.py"
+    ],
+    "ai_filter.py": [
+      "ai_api.py",
+      "report_engine.py",
+      "app.py"
+    ],
+    "ai_channel.py": [
+      "ai_api.py",
+      "intelligence.py",
+      "app.py"
+    ],
+    "function_registry.py": [
+      "ai_api.py",
+      "v4_upgrade\\ai_hub\\service.py",
+      "app.py"
+    ],
+    "report_api.py": [
+      "ai_api.py",
+      "app.py"
+    ],
+    "ai_resource_packs.py": [
+      "app.py",
+      "intelligence.py",
+      "ai_channel.py",
+      "learning_collector.py"
+    ],
+    "database.py": [
+      "kol_analysis.py",
+      "xhs_cookie_bridge.py",
+      "app.py",
+      "monitor_pipeline.py",
+      "ai_filter.py",
+      "data_query_api.py",
+      "swire_group.py",
+      "v4_upgrade\\report_center\\report_generator.py",
+      "platform_adapters\\health_center.py",
+      "topic_campaign.py",
+      "collector_automation.py",
+      "report_api.py",
+      "topic_snapshot.py",
+      "ic_routes.py",
+      "reprocess.py",
+      "daily_report.py",
+      "collector_v2\\xhs\\live_engine.py",
+      "runtime_preflight.py",
+      "web_monitor_v570.py",
+      "report_engine.py",
+      "v4_upgrade\\ai_hub\\service.py",
+      "collection_api.py",
+      "data_boundary.py"
+    ],
+    "ark_llm.py": [
+      "v4_upgrade\\importer\\analyzer.py",
+      "app.py",
+      "ai_learning_engine.py"
+    ],
+    "canonical_metrics.py": [
+      "v4_upgrade\\report_center\\report_generator.py",
+      "app.py",
+      "report_export\\report_engine.py",
+      "intelligence.py",
+      "brand_stats_recompute.py",
+      "reprocess.py",
+      "daily_report.py",
+      "kos_attribution.py",
+      "export_report.py",
+      "alert_engine.py",
+      "report_api.py"
+    ],
+    "dev_exec_core.py": [
+      "app.py"
+    ],
+    "collector.py": [
+      "collector_v2\\xhs\\__init__.py",
+      "collector_v2\\weibo\\__init__.py",
+      "platform_adapters\\xhs.py",
+      "app.py",
+      "collector_automation.py",
+      "collector_v2_integration.py",
+      "monitor_pipeline.py",
+      "collector_v2\\run_xhs_live.py"
+    ],
+    "collector_v2\\weibo\\collector.py": [
+      "collector_v2\\xhs\\__init__.py",
+      "collector_v2\\weibo\\__init__.py",
+      "platform_adapters\\xhs.py",
+      "app.py",
+      "collector_automation.py",
+      "collector_v2_integration.py",
+      "monitor_pipeline.py",
+      "collector_v2\\run_xhs_live.py"
+    ],
+    "collector_v2\\xhs\\collector.py": [
+      "collector_v2\\xhs\\__init__.py",
+      "collector_v2\\weibo\\__init__.py",
+      "platform_adapters\\xhs.py",
+      "app.py",
+      "collector_automation.py",
+      "collector_v2_integration.py",
+      "monitor_pipeline.py",
+      "collector_v2\\run_xhs_live.py"
+    ],
+    "reprocess.py": [
+      "app.py",
+      "xhs_cookie_bridge.py"
+    ],
+    "xhs_cookie_bridge.py": [
+      "internal_browser.py",
+      "stability_monitor.py",
+      "kos_routes.py",
+      "app.py",
+      "platform_adapters\\health_center.py",
+      "collector_automation.py",
+      "daily_report.py",
+      "xhs_p0_orchestrator.py",
+      "resident_health.py",
+      "collection_api.py"
+    ],
+    "daily_report.py": [
+      "risk_engine.py",
+      "v4_upgrade\\report_center\\report_generator.py",
+      "report_engine.py",
+      "app.py",
+      "report_api.py"
+    ],
+    "report_engine.py": [
+      "app.py",
+      "report_api.py",
+      "report_export\\app_report_api_patch.py"
+    ],
+    "report_export\\report_engine.py": [
+      "app.py",
+      "report_api.py",
+      "report_export\\app_report_api_patch.py"
+    ],
+    "topic_campaign.py": [
+      "app.py",
+      "auth_recovery_api.py"
+    ],
+    "app_evidence.py": [
+      "runtime_preflight.py",
+      "app.py"
+    ],
+    "swire_group.py": [
+      "app.py"
+    ],
+    "weekly_events.py": [
+      "app.py"
+    ],
+    "browser_discovery.py": [
+      "app.py",
+      "browser_surface_api.py"
+    ],
+    "memory_optimizer.py": [
+      "app.py",
+      "run_production.py"
+    ],
+    "stability_monitor.py": [
+      "app.py",
+      "run_production.py"
+    ],
+    "web_monitor_v570.py": [
+      "app.py"
+    ],
+    "system_health_api.py": [
+      "app.py",
+      "engineering_metrics.py"
+    ],
+    "architecture_api.py": [
+      "app.py"
+    ],
+    "evaluation_system.py": [
+      "app.py",
+      "system_features_api.py"
+    ],
+    "settings_module.py": [
+      "app.py"
+    ],
+    "export_report.py": [
+      "app.py"
+    ],
+    "security_scanner.py": [
+      "runtime_preflight.py",
+      "app.py",
+      "system_features_api.py"
+    ],
+    "runtime_preflight.py": [
+      "app.py",
+      "xhs_p0_orchestrator.py"
+    ],
+    "local_ai_client.py": [
+      "app.py",
+      "system_features_api.py"
+    ],
+    "pr_case_integration.py": [
+      "app.py"
+    ],
+    "system_features_api.py": [
+      "app.py"
+    ],
+    "auth_recovery_api.py": [
+      "app.py"
+    ],
+    "xhs_p0_orchestrator.py": [
+      "app.py"
+    ],
+    "collector_automation.py": [
+      "collection_api.py",
+      "app.py",
+      "collector.py"
+    ],
+    "public_opinion_cases.py": [
+      "app.py"
+    ],
+    "data_query_api.py": [
+      "app.py"
+    ],
+    "collection_api.py": [
+      "app.py"
+    ],
+    "ai_api.py": [
+      "app.py"
+    ],
+    "v4_upgrade\\report_center\\api.py": [
+      "app.py"
+    ],
+    "runtime_bin.py": [
+      "swire_group.py",
+      "xhs_cookie_bridge.py",
+      "app.py",
+      "topic_campaign.py",
+      "collector_automation.py",
+      "collector_v2\\xhs\\live_engine.py",
+      "collector.py"
+    ],
+    "v4_upgrade\\unified_logger.py": [
+      "app.py"
+    ],
+    "proxy_pool\\loader.py": [
+      "app.py"
+    ],
+    "config.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\data_cleanup\\fix_publish_date.py",
+      "app.py",
+      "v4_upgrade\\auth\\models.py",
+      "v4_upgrade\\blueprint.py",
+      "proxy_pool\\manager.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\__init__.py",
+      "platform_adapters\\health_center.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "v4_upgrade\\ai_hub\\shadow.py",
+      "platform_adapters\\registry.py",
+      "v4_upgrade\\importer\\service.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\adapters\\risk_controller.py",
+      "v4_upgrade\\adapters\\base_backup_v589.py",
+      "alembic\\env.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\importer\\parser.py",
+      "v4_upgrade\\ai_hub\\service.py",
+      "v4_upgrade\\adapters\\base.py"
+    ],
+    "platform_adapters\\config.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\data_cleanup\\fix_publish_date.py",
+      "app.py",
+      "v4_upgrade\\auth\\models.py",
+      "v4_upgrade\\blueprint.py",
+      "proxy_pool\\manager.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\__init__.py",
+      "platform_adapters\\health_center.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "v4_upgrade\\ai_hub\\shadow.py",
+      "platform_adapters\\registry.py",
+      "v4_upgrade\\importer\\service.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\adapters\\risk_controller.py",
+      "v4_upgrade\\adapters\\base_backup_v589.py",
+      "alembic\\env.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\importer\\parser.py",
+      "v4_upgrade\\ai_hub\\service.py",
+      "v4_upgrade\\adapters\\base.py"
+    ],
+    "proxy_pool\\config.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\data_cleanup\\fix_publish_date.py",
+      "app.py",
+      "v4_upgrade\\auth\\models.py",
+      "v4_upgrade\\blueprint.py",
+      "proxy_pool\\manager.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\__init__.py",
+      "platform_adapters\\health_center.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "v4_upgrade\\ai_hub\\shadow.py",
+      "platform_adapters\\registry.py",
+      "v4_upgrade\\importer\\service.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\adapters\\risk_controller.py",
+      "v4_upgrade\\adapters\\base_backup_v589.py",
+      "alembic\\env.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\importer\\parser.py",
+      "v4_upgrade\\ai_hub\\service.py",
+      "v4_upgrade\\adapters\\base.py"
+    ],
+    "v4_upgrade\\config.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\data_cleanup\\fix_publish_date.py",
+      "app.py",
+      "v4_upgrade\\auth\\models.py",
+      "v4_upgrade\\blueprint.py",
+      "proxy_pool\\manager.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\__init__.py",
+      "platform_adapters\\health_center.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "v4_upgrade\\ai_hub\\shadow.py",
+      "platform_adapters\\registry.py",
+      "v4_upgrade\\importer\\service.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\adapters\\risk_controller.py",
+      "v4_upgrade\\adapters\\base_backup_v589.py",
+      "alembic\\env.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\importer\\parser.py",
+      "v4_upgrade\\ai_hub\\service.py",
+      "v4_upgrade\\adapters\\base.py"
+    ],
+    "internal_browser.py": [
+      "browser_surface.py",
+      "app.py",
+      "internal_browser_stream.py",
+      "browser_runtime\\adapters\\cdp_adapter.py"
+    ],
+    "internal_browser_stream.py": [
+      "app.py"
+    ],
+    "browser_surface_api.py": [
+      "app.py"
+    ],
+    "evidence_api.py": [
+      "app.py"
+    ],
+    "lumenis_frontend.py": [
+      "app.py"
+    ],
+    "lumenis_agg_api.py": [
+      "app.py"
+    ],
+    "kos_routes.py": [
+      "app.py"
+    ],
+    "ic_routes.py": [
+      "app.py"
+    ],
+    "podcast_routes.py": [
+      "app.py"
+    ],
+    "browser_runtime_api.py": [
+      "app.py"
+    ],
+    "network_adaptive.py": [
+      "app.py",
+      "xhs_cookie_bridge.py"
+    ],
+    "cache_manager.py": [
+      "app.py",
+      "xhs_cookie_bridge.py"
+    ],
+    "brand_knowledge_base.py": [
+      "app.py"
+    ],
+    "case_deep_analysis.py": [
+      "app.py"
+    ],
+    "case_templates.py": [
+      "app.py",
+      "case_ai_evaluate.py"
+    ],
+    "case_ai_evaluate.py": [
+      "app.py"
+    ],
+    "subject_classifier.py": [
+      "app.py",
+      "database.py"
+    ],
+    "event_graph.py": [
+      "reprocess.py",
+      "app.py"
+    ],
+    "v4_upgrade\\global_bil.py": [
+      "app.py"
+    ],
+    "v4_upgrade\\ai_hub\\service.py": [
+      "v4_upgrade\\auth\\__init__.py",
+      "app.py",
+      "v4_upgrade\\importer\\__init__.py"
+    ],
+    "v4_upgrade\\auth\\service.py": [
+      "v4_upgrade\\auth\\__init__.py",
+      "app.py",
+      "v4_upgrade\\importer\\__init__.py"
+    ],
+    "v4_upgrade\\importer\\service.py": [
+      "v4_upgrade\\auth\\__init__.py",
+      "app.py",
+      "v4_upgrade\\importer\\__init__.py"
+    ],
+    "resident_health.py": [
+      "app.py"
+    ],
+    "brand_stats_recompute.py": [
+      "app.py"
+    ],
+    "report_filter.py": [
+      "app.py",
+      "report_api.py"
+    ],
+    "platform_adapters\\health_center.py": [
+      "app.py"
+    ],
+    "collector_guard_integration.py": [
+      "app.py"
+    ],
+    "engineering_metrics.py": [
+      "app.py"
+    ],
+    "collector_v2\\official_info_scraper.py": [
+      "app.py"
+    ],
+    "weibo_login_manager.py": [
+      "v4_upgrade\\adapters\\weibo.py",
+      "app.py"
+    ],
+    "bilibili_login_manager.py": [
+      "v4_upgrade\\adapters\\bilibili.py",
+      "app.py"
+    ],
+    "pr_case_engine.py": [
+      "app.py"
+    ],
+    "xhs_collection_optimizer.py": [
+      "app.py"
+    ],
+    "learning_collector.py": [
+      "app.py"
+    ],
+    "evidence_store.py": [
+      "collector_automation.py",
+      "evidence_api.py",
+      "app.py",
+      "resident_health.py"
+    ],
+    "cdp_helper.py": [
+      "v4_upgrade\\adapters\\human_browser.py",
+      "app.py",
+      "topic_campaign.py",
+      "browser_surface.py",
+      "run_production.py",
+      "xhs_cdp_collector.py"
+    ],
+    "auth_recovery_center.py": [
+      "app.py",
+      "xhs_p0_orchestrator.py",
+      "auth_recovery_api.py"
+    ],
+    "auto_recovery.py": [
+      "app.py",
+      "architecture_api.py"
+    ],
+    "data_feedback_loop.py": [
+      "app.py",
+      "architecture_api.py"
+    ],
+    "system_guardian.py": [
+      "app.py"
+    ],
+    "proxy_pool\\adapters.py": [
+      "v4_upgrade\\blueprint.py",
+      "app.py",
+      "proxy_pool\\__init__.py"
+    ],
+    "platform_adapters\\scheduling\\gate.py": [
+      "platform_adapters\\scheduling\\__init__.py",
+      "app.py"
+    ],
+    "adaptive_engine.py": [
+      "app.py",
+      "architecture_api.py",
+      "xhs_cookie_bridge.py"
+    ],
+    "safety_boundary.py": [
+      "browser_runtime\\policy.py",
+      "architecture_api.py"
+    ],
+    "repository_registry.py": [
+      "_split_report_api.py",
+      "brand_knowledge_base.py",
+      "core\\__init__.py",
+      "canonical_data.py",
+      "case_deep_analysis.py",
+      "auth_recovery_center.py"
+    ],
+    "core\\repository_registry.py": [
+      "_split_report_api.py",
+      "brand_knowledge_base.py",
+      "core\\__init__.py",
+      "canonical_data.py",
+      "case_deep_analysis.py",
+      "auth_recovery_center.py"
+    ],
+    "browser_surface.py": [
+      "browser_surface_api.py"
+    ],
+    "context_intelligence.py": [
+      "collection_intelligence.py"
+    ],
+    "collector_guard\\schedule_adapter.py": [
+      "collector.py"
+    ],
+    "collector_guard\\guard.py": [
+      "collector_guard\\__init__.py",
+      "collector.py"
+    ],
+    "risk_engine.py": [
+      "collector.py"
+    ],
+    "collector_guard\\risk_engine.py": [
+      "collector.py"
+    ],
+    "collector_v2\\pipeline\\normalize.py": [
+      "collector_v2_integration.py",
+      "collector_v2\\pipeline\\__init__.py",
+      "collector_v2\\run_xhs_live.py",
+      "collector_v2\\xhs\\live_engine.py"
+    ],
+    "collector_v2\\pipeline\\deduplicate.py": [
+      "collector_v2_integration.py",
+      "collector_v2\\pipeline\\__init__.py",
+      "collector_v2\\run_xhs_live.py",
+      "collector_v2\\xhs\\live_engine.py"
+    ],
+    "collector_v2\\pipeline\\spam_filter.py": [
+      "collector_v2_integration.py",
+      "collector_v2\\pipeline\\__init__.py"
+    ],
+    "collector_v2\\pipeline\\subject_filter.py": [
+      "collector_v2_integration.py",
+      "collector_v2\\pipeline\\__init__.py",
+      "collector_v2\\xhs\\live_engine.py"
+    ],
+    "collector_v2\\pipeline\\persist.py": [
+      "collector_v2_integration.py",
+      "collector_v2\\pipeline\\__init__.py"
+    ],
+    "v4_upgrade\\adapters\\persist.py": [
+      "collector_v2_integration.py",
+      "collector_v2\\pipeline\\__init__.py"
+    ],
+    "collector_v2\\scheduler\\collector_job.py": [
+      "collector_v2_integration.py",
+      "collector_v2\\scheduler\\__init__.py"
+    ],
+    "data_quality_gate.py": [
+      "database.py"
+    ],
+    "collector_guard\\resource_guard.py": [
+      "collector_guard\\schedule_adapter.py",
+      "data_query_api.py"
+    ],
+    "agent_boundary.py": [
+      "dev_exec_core.py"
+    ],
+    "subject_context.py": [
+      "domain_isolation.py",
+      "subject_rules.py"
+    ],
+    "platform_adapters\\scheduling\\planner.py": [
+      "platform_adapters\\scheduling\\__init__.py",
+      "engineering_metrics.py"
+    ],
+    "skill_registry.py": [
+      "function_registry.py"
+    ],
+    "alert_engine.py": [
+      "reprocess.py",
+      "ic_routes.py"
+    ],
+    "kos_scenarios.py": [
+      "ic_routes.py"
+    ],
+    "emv.py": [
+      "report_engine.py",
+      "ic_routes.py"
+    ],
+    "kos_engine.py": [
+      "kos_routes.py",
+      "kos_intel.py",
+      "kos_metrics.py",
+      "kos_ops.py",
+      "ic_routes.py",
+      "kos_scenarios.py"
+    ],
+    "provider_registry.py": [
+      "intelligence.py"
+    ],
+    "kos_execution.py": [
+      "kos_routes.py",
+      "kos_ops.py",
+      "kos_paid.py"
+    ],
+    "kos_metrics.py": [
+      "kos_report.py",
+      "kos_routes.py"
+    ],
+    "kos_ops.py": [
+      "kos_routes.py"
+    ],
+    "kos_paid.py": [
+      "kos_routes.py"
+    ],
+    "kos_report.py": [
+      "kos_routes.py"
+    ],
+    "kos_attribution.py": [
+      "kos_routes.py"
+    ],
+    "kos_intel.py": [
+      "kos_routes.py"
+    ],
+    "juguang_api.py": [
+      "kos_routes.py"
+    ],
+    "collector_v2\\xhs\\live_engine.py": [
+      "collector_v2\\run_profile.py",
+      "collector_v2\\run_live_engine.py",
+      "kos_routes.py"
+    ],
+    "kos_professional.py": [
+      "lumenis_agg_api.py",
+      "kos_routes.py"
+    ],
+    "lumenis_skill_adapter.py": [
+      "lumenis_frontend.py"
+    ],
+    "podcast_store.py": [
+      "podcast_routes.py"
+    ],
+    "podcast\\intelligence\\topic_scoring.py": [
+      "podcast_routes.py"
+    ],
+    "podcast\\intelligence\\story_nodes.py": [
+      "podcast_routes.py"
+    ],
+    "podcast\\intelligence\\episode_runtime.py": [
+      "podcast_routes.py"
+    ],
+    "podcast\\intelligence\\breakout.py": [
+      "podcast_routes.py"
+    ],
+    "podcast\\intelligence\\content_yield.py": [
+      "podcast_routes.py"
+    ],
+    "app.py": [
+      "report_api.py",
+      "run_production.py"
+    ],
+    "brand_report_generator.py": [
+      "report_api.py"
+    ],
+    "web_monitor.py": [
+      "reprocess.py"
+    ],
+    "data_boundary.py": [
+      "runtime_preflight.py"
+    ],
+    "permission_gate.py": [
+      "security_boundary.py",
+      "ad_intelligence\\__init__.py"
+    ],
+    "ad_intelligence\\permission_gate.py": [
+      "security_boundary.py",
+      "ad_intelligence\\__init__.py"
+    ],
+    "collector_auto_start.py": [
+      "system_features_api.py"
+    ],
+    "runtime_guardian.py": [
+      "system_guardian.py"
+    ],
+    "xhs_runtime_state.py": [
+      "xhs_cookie_bridge.py",
+      "topic_campaign.py"
+    ],
+    "database_migrations.py": [
+      "_apply_migration_10.py"
+    ],
+    "v4_upgrade\\adapters\\human_browser.py": [
+      "_douyin_render_walk.py",
+      "v4_upgrade\\adapters\\google.py",
+      "_douyin_detail_debug.py",
+      "_douyin_struct.py",
+      "v4_upgrade\\adapters\\x_platform.py",
+      "_douyin_ssr_debug.py",
+      "v4_upgrade\\adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\instagram.py",
+      "v4_upgrade\\adapters\\auth_recovery.py",
+      "v4_upgrade\\adapters\\facebook.py",
+      "v4_upgrade\\adapters\\douyin.py"
+    ],
+    "v4_upgrade\\adapters\\cookie_vault.py": [
+      "_douyin_render_walk.py",
+      "_douyin_detail_debug.py",
+      "_douyin_struct.py",
+      "v4_upgrade\\adapters\\x_platform.py",
+      "_douyin_ssr_debug.py",
+      "v4_upgrade\\adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\instagram.py",
+      "v4_upgrade\\adapters\\facebook.py",
+      "v4_upgrade\\adapters\\douyin.py"
+    ],
+    "ad_intelligence\\platforms\\jiguang.py": [
+      "ad_intelligence\\platforms\\factory.py",
+      "ad_intelligence\\platforms\\__init__.py",
+      "_verify_jiguang.py"
+    ],
+    "platform_adapters\\x_platform.py": [
+      "_verify_x_adapter.py",
+      "v4_upgrade\\adapters\\registry.py",
+      "_verify_x.py"
+    ],
+    "v4_upgrade\\adapters\\x_platform.py": [
+      "platform_adapters\\x_platform.py",
+      "_verify_x_adapter.py",
+      "v4_upgrade\\adapters\\registry.py",
+      "_verify_x.py"
+    ],
+    "account_keepalive\\manager.py": [
+      "account_keepalive\\__init__.py",
+      "proxy_pool\\loader.py",
+      "proxy_pool\\__init__.py",
+      "proxy_pool\\adapters.py"
+    ],
+    "proxy_pool\\manager.py": [
+      "account_keepalive\\__init__.py",
+      "proxy_pool\\loader.py",
+      "proxy_pool\\__init__.py",
+      "proxy_pool\\adapters.py"
+    ],
+    "ad_intelligence\\base.py": [
+      "collector_v2\\xhs\\collector.py",
+      "v4_upgrade\\adapters\\sogou_wechat.py",
+      "v4_upgrade\\adapters\\weibo.py",
+      "v4_upgrade\\adapters\\instagram.py",
+      "v4_upgrade\\adapters\\sogou_search.py",
+      "platform_adapters\\__init__.py",
+      "v4_upgrade\\adapters\\douyin.py",
+      "platform_adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\doubao_search.py",
+      "v4_upgrade\\adapters\\dianping.py",
+      "platform_adapters\\registry.py",
+      "platform_adapters\\xhs_app_topic.py",
+      "v4_upgrade\\adapters\\registry.py",
+      "v4_upgrade\\adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\__init__.py",
+      "platform_adapters\\facebook.py",
+      "platform_adapters\\zhihu.py",
+      "collector_v2\\weibo\\collector.py",
+      "collector_v2\\xhs\\models.py",
+      "platform_adapters\\douyin.py",
+      "v4_upgrade\\adapters\\smzdm.py",
+      "v4_upgrade\\adapters\\bing_search.py",
+      "v4_upgrade\\adapters\\google.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\adapters\\baidu_search.py",
+      "platform_adapters\\x_platform.py",
+      "platform_adapters\\instagram.py",
+      "platform_adapters\\weibo.py",
+      "v4_upgrade\\adapters\\x_platform.py",
+      "v4_upgrade\\adapters\\facebook.py",
+      "ad_intelligence\\__init__.py"
+    ],
+    "collector_v2\\base.py": [
+      "collector_v2\\xhs\\collector.py",
+      "v4_upgrade\\adapters\\sogou_wechat.py",
+      "v4_upgrade\\adapters\\weibo.py",
+      "v4_upgrade\\adapters\\instagram.py",
+      "v4_upgrade\\adapters\\sogou_search.py",
+      "platform_adapters\\__init__.py",
+      "v4_upgrade\\adapters\\douyin.py",
+      "platform_adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\doubao_search.py",
+      "v4_upgrade\\adapters\\dianping.py",
+      "platform_adapters\\registry.py",
+      "platform_adapters\\xhs_app_topic.py",
+      "v4_upgrade\\adapters\\registry.py",
+      "v4_upgrade\\adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\__init__.py",
+      "platform_adapters\\facebook.py",
+      "platform_adapters\\zhihu.py",
+      "collector_v2\\weibo\\collector.py",
+      "collector_v2\\xhs\\models.py",
+      "platform_adapters\\douyin.py",
+      "v4_upgrade\\adapters\\smzdm.py",
+      "v4_upgrade\\adapters\\bing_search.py",
+      "v4_upgrade\\adapters\\google.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\adapters\\baidu_search.py",
+      "platform_adapters\\x_platform.py",
+      "platform_adapters\\instagram.py",
+      "platform_adapters\\weibo.py",
+      "v4_upgrade\\adapters\\x_platform.py",
+      "v4_upgrade\\adapters\\facebook.py",
+      "ad_intelligence\\__init__.py"
+    ],
+    "platform_adapters\\base.py": [
+      "collector_v2\\xhs\\collector.py",
+      "v4_upgrade\\adapters\\sogou_wechat.py",
+      "v4_upgrade\\adapters\\weibo.py",
+      "v4_upgrade\\adapters\\instagram.py",
+      "v4_upgrade\\adapters\\sogou_search.py",
+      "platform_adapters\\__init__.py",
+      "v4_upgrade\\adapters\\douyin.py",
+      "platform_adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\doubao_search.py",
+      "v4_upgrade\\adapters\\dianping.py",
+      "platform_adapters\\registry.py",
+      "platform_adapters\\xhs_app_topic.py",
+      "v4_upgrade\\adapters\\registry.py",
+      "v4_upgrade\\adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\__init__.py",
+      "platform_adapters\\facebook.py",
+      "platform_adapters\\zhihu.py",
+      "collector_v2\\weibo\\collector.py",
+      "collector_v2\\xhs\\models.py",
+      "platform_adapters\\douyin.py",
+      "v4_upgrade\\adapters\\smzdm.py",
+      "v4_upgrade\\adapters\\bing_search.py",
+      "v4_upgrade\\adapters\\google.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\adapters\\baidu_search.py",
+      "platform_adapters\\x_platform.py",
+      "platform_adapters\\instagram.py",
+      "platform_adapters\\weibo.py",
+      "v4_upgrade\\adapters\\x_platform.py",
+      "v4_upgrade\\adapters\\facebook.py",
+      "ad_intelligence\\__init__.py"
+    ],
+    "v4_upgrade\\adapters\\base.py": [
+      "collector_v2\\xhs\\collector.py",
+      "v4_upgrade\\adapters\\sogou_wechat.py",
+      "v4_upgrade\\adapters\\weibo.py",
+      "v4_upgrade\\adapters\\instagram.py",
+      "v4_upgrade\\adapters\\sogou_search.py",
+      "platform_adapters\\__init__.py",
+      "v4_upgrade\\adapters\\douyin.py",
+      "platform_adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\doubao_search.py",
+      "v4_upgrade\\adapters\\dianping.py",
+      "platform_adapters\\registry.py",
+      "platform_adapters\\xhs_app_topic.py",
+      "v4_upgrade\\adapters\\registry.py",
+      "v4_upgrade\\adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\__init__.py",
+      "platform_adapters\\facebook.py",
+      "platform_adapters\\zhihu.py",
+      "collector_v2\\weibo\\collector.py",
+      "collector_v2\\xhs\\models.py",
+      "platform_adapters\\douyin.py",
+      "v4_upgrade\\adapters\\smzdm.py",
+      "v4_upgrade\\adapters\\bing_search.py",
+      "v4_upgrade\\adapters\\google.py",
+      "v4_upgrade\\adapters\\persist.py",
+      "platform_adapters\\xhs.py",
+      "v4_upgrade\\adapters\\baidu_search.py",
+      "platform_adapters\\x_platform.py",
+      "platform_adapters\\instagram.py",
+      "platform_adapters\\weibo.py",
+      "v4_upgrade\\adapters\\x_platform.py",
+      "v4_upgrade\\adapters\\facebook.py",
+      "ad_intelligence\\__init__.py"
+    ],
+    "ad_intelligence\\platform_registry.py": [
+      "ad_intelligence\\platforms\\factory.py",
+      "ad_intelligence\\__init__.py"
+    ],
+    "ad_intelligence\\analytics\\analyzer.py": [
+      "ad_intelligence\\analytics\\__init__.py",
+      "collector_guard\\__init__.py",
+      "collector_guard\\guard.py",
+      "v4_upgrade\\importer\\__init__.py",
+      "v4_upgrade\\importer\\service.py"
+    ],
+    "collector_guard\\analyzer.py": [
+      "ad_intelligence\\analytics\\__init__.py",
+      "collector_guard\\__init__.py",
+      "collector_guard\\guard.py",
+      "v4_upgrade\\importer\\__init__.py",
+      "v4_upgrade\\importer\\service.py"
+    ],
+    "v4_upgrade\\importer\\analyzer.py": [
+      "ad_intelligence\\analytics\\__init__.py",
+      "collector_guard\\__init__.py",
+      "collector_guard\\guard.py",
+      "v4_upgrade\\importer\\__init__.py",
+      "v4_upgrade\\importer\\service.py"
+    ],
+    "ad_intelligence\\models\\ctr_predictor.py": [
+      "ad_intelligence\\models\\__init__.py"
+    ],
+    "ad_intelligence\\models\\feature_engineer.py": [
+      "ad_intelligence\\models\\__init__.py"
+    ],
+    "ad_intelligence\\platforms\\ocean_engine.py": [
+      "ad_intelligence\\platforms\\factory.py",
+      "ad_intelligence\\platforms\\__init__.py"
+    ],
+    "ad_intelligence\\platforms\\meta_ads.py": [
+      "ad_intelligence\\platforms\\factory.py",
+      "ad_intelligence\\platforms\\__init__.py"
+    ],
+    "ad_intelligence\\platforms\\x_ads.py": [
+      "ad_intelligence\\platforms\\factory.py",
+      "ad_intelligence\\platforms\\__init__.py"
+    ],
+    "ad_intelligence\\platforms\\factory.py": [
+      "ad_intelligence\\platforms\\__init__.py"
+    ],
+    "ad_intelligence\\strategy\\generator.py": [
+      "ad_intelligence\\strategy\\__init__.py"
+    ],
+    "browser_runtime\\contract.py": [
+      "browser_runtime\\adapters\\cdp_adapter.py",
+      "browser_runtime\\adapters\\playwright_adapter.py",
+      "browser_runtime\\__init__.py",
+      "browser_runtime\\router.py"
+    ],
+    "browser_runtime\\policy.py": [
+      "platform_adapters\\scheduling\\__init__.py",
+      "platform_adapters\\scheduling\\planner.py",
+      "browser_runtime\\__init__.py",
+      "browser_runtime\\router.py",
+      "platform_adapters\\scheduling\\decision.py"
+    ],
+    "platform_adapters\\scheduling\\policy.py": [
+      "platform_adapters\\scheduling\\__init__.py",
+      "platform_adapters\\scheduling\\planner.py",
+      "browser_runtime\\__init__.py",
+      "browser_runtime\\router.py",
+      "platform_adapters\\scheduling\\decision.py"
+    ],
+    "browser_runtime\\router.py": [
+      "browser_runtime\\__init__.py"
+    ],
+    "browser_runtime\\adapters\\cdp_adapter.py": [
+      "browser_runtime\\__init__.py"
+    ],
+    "browser_runtime\\adapters\\playwright_adapter.py": [
+      "browser_runtime\\adapters\\xhs_collector_bridge.py",
+      "browser_runtime\\__init__.py"
+    ],
+    "xhs_cdp_collector.py": [
+      "browser_runtime\\adapters\\xhs_collector_bridge.py"
+    ],
+    "collector_guard\\state.py": [
+      "collector_guard\\analyzer.py",
+      "collector_guard\\__init__.py",
+      "collector_guard\\rate_limiter.py",
+      "collector_guard\\guard.py",
+      "collector_guard\\risk_engine.py"
+    ],
+    "collector_guard\\rate_limiter.py": [
+      "collector_guard\\__init__.py",
+      "collector_guard\\guard.py"
+    ],
+    "collector_guard\\metrics.py": [
+      "collector_guard\\__init__.py",
+      "collector_guard\\guard.py"
+    ],
+    "collector_guard\\checkpoint.py": [
+      "collector_guard\\__init__.py",
+      "collector_guard\\guard.py"
+    ],
+    "collector_guard\\dlq_replay.py": [
+      "collector_guard\\schedule_adapter.py"
+    ],
+    "collector_v2\\browser_session.py": [
+      "collector_v2\\session\\__init__.py"
+    ],
+    "collector_v2\\session\\browser_session.py": [
+      "collector_v2\\session\\__init__.py"
+    ],
+    "collector_v2\\xhs\\client.py": [
+      "collector_v2\\xhs\\__init__.py",
+      "collector_v2\\xhs\\collector.py"
+    ],
+    "models.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\auth\\__init__.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "proxy_pool\\__init__.py",
+      "collector_v2\\xhs\\parser.py",
+      "proxy_pool\\manager.py",
+      "collector_v2\\xhs\\live_engine.py",
+      "v4_upgrade\\settings\\routes.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\auth\\audit.py"
+    ],
+    "collector_v2\\xhs\\models.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\auth\\__init__.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "proxy_pool\\__init__.py",
+      "collector_v2\\xhs\\parser.py",
+      "proxy_pool\\manager.py",
+      "collector_v2\\xhs\\live_engine.py",
+      "v4_upgrade\\settings\\routes.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\auth\\audit.py"
+    ],
+    "proxy_pool\\models.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\auth\\__init__.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "proxy_pool\\__init__.py",
+      "collector_v2\\xhs\\parser.py",
+      "proxy_pool\\manager.py",
+      "collector_v2\\xhs\\live_engine.py",
+      "v4_upgrade\\settings\\routes.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\auth\\audit.py"
+    ],
+    "v4_upgrade\\auth\\models.py": [
+      "v4_upgrade\\auth\\security.py",
+      "v4_upgrade\\auth\\__init__.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "proxy_pool\\__init__.py",
+      "collector_v2\\xhs\\parser.py",
+      "proxy_pool\\manager.py",
+      "collector_v2\\xhs\\live_engine.py",
+      "v4_upgrade\\settings\\routes.py",
+      "proxy_pool\\loader.py",
+      "v4_upgrade\\auth\\audit.py"
+    ],
+    "platform_adapters\\registry.py": [
+      "platform_adapters\\xhs.py",
+      "platform_adapters\\x_platform.py",
+      "platform_adapters\\bilibili.py",
+      "platform_adapters\\instagram.py",
+      "platform_adapters\\weibo.py",
+      "platform_adapters\\xhs_app_topic.py",
+      "v4_upgrade\\adapters\\__init__.py",
+      "platform_adapters\\facebook.py",
+      "platform_adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\collector_service.py",
+      "platform_adapters\\douyin.py",
+      "platform_adapters\\__init__.py"
+    ],
+    "v4_upgrade\\adapters\\registry.py": [
+      "platform_adapters\\xhs.py",
+      "platform_adapters\\x_platform.py",
+      "platform_adapters\\bilibili.py",
+      "platform_adapters\\instagram.py",
+      "platform_adapters\\weibo.py",
+      "platform_adapters\\xhs_app_topic.py",
+      "v4_upgrade\\adapters\\__init__.py",
+      "platform_adapters\\facebook.py",
+      "platform_adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\collector_service.py",
+      "platform_adapters\\douyin.py",
+      "platform_adapters\\__init__.py"
+    ],
+    "v4_upgrade\\adapters\\bilibili.py": [
+      "platform_adapters\\bilibili.py",
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\douyin.py": [
+      "platform_adapters\\douyin.py",
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "platform_adapters\\safe_collection.py": [
+      "platform_adapters\\evidence_exporter.py"
+    ],
+    "v4_upgrade\\adapters\\facebook.py": [
+      "platform_adapters\\facebook.py",
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\instagram.py": [
+      "platform_adapters\\instagram.py",
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\weibo.py": [
+      "platform_adapters\\weibo.py",
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\zhihu.py": [
+      "platform_adapters\\zhihu.py",
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "platform_adapters\\scheduling\\decision.py": [
+      "platform_adapters\\scheduling\\__init__.py",
+      "platform_adapters\\scheduling\\planner.py"
+    ],
+    "platform_adapters\\scheduling\\store.py": [
+      "platform_adapters\\scheduling\\__init__.py",
+      "platform_adapters\\scheduling\\planner.py"
+    ],
+    "proxy_pool\\health.py": [
+      "proxy_pool\\manager.py"
+    ],
+    "v4_upgrade\\auth\\workspace.py": [
+      "v4_upgrade\\blueprint.py"
+    ],
+    "v4_upgrade\\adapters\\risk_controller.py": [
+      "v4_upgrade\\blueprint.py",
+      "v4_upgrade\\adapters\\collector_service.py",
+      "v4_upgrade\\adapters\\auth_recovery.py"
+    ],
+    "v4_upgrade\\blueprint.py": [
+      "v4_upgrade\\__init__.py"
+    ],
+    "canonical_data.py": [
+      "v4_upgrade\\adapters\\persist.py"
+    ],
+    "platform_adapters\\douyin.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "platform_adapters\\instagram.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "platform_adapters\\bilibili.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "platform_adapters\\weibo.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "platform_adapters\\zhihu.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "platform_adapters\\facebook.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\baidu_search.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\bing_search.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\sogou_search.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\google.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\sogou_wechat.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\dianping.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\doubao_search.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\adapters\\smzdm.py": [
+      "v4_upgrade\\adapters\\registry.py"
+    ],
+    "v4_upgrade\\ai_hub\\routes.py": [
+      "v4_upgrade\\version_center\\__init__.py",
+      "v4_upgrade\\settings\\__init__.py",
+      "v4_upgrade\\console\\__init__.py",
+      "v4_upgrade\\collect\\__init__.py",
+      "v4_upgrade\\ai_hub\\__init__.py"
+    ],
+    "v4_upgrade\\collect\\routes.py": [
+      "v4_upgrade\\version_center\\__init__.py",
+      "v4_upgrade\\settings\\__init__.py",
+      "v4_upgrade\\console\\__init__.py",
+      "v4_upgrade\\collect\\__init__.py",
+      "v4_upgrade\\ai_hub\\__init__.py"
+    ],
+    "v4_upgrade\\console\\routes.py": [
+      "v4_upgrade\\version_center\\__init__.py",
+      "v4_upgrade\\settings\\__init__.py",
+      "v4_upgrade\\console\\__init__.py",
+      "v4_upgrade\\collect\\__init__.py",
+      "v4_upgrade\\ai_hub\\__init__.py"
+    ],
+    "v4_upgrade\\settings\\routes.py": [
+      "v4_upgrade\\version_center\\__init__.py",
+      "v4_upgrade\\settings\\__init__.py",
+      "v4_upgrade\\console\\__init__.py",
+      "v4_upgrade\\collect\\__init__.py",
+      "v4_upgrade\\ai_hub\\__init__.py"
+    ],
+    "v4_upgrade\\version_center\\routes.py": [
+      "v4_upgrade\\version_center\\__init__.py",
+      "v4_upgrade\\settings\\__init__.py",
+      "v4_upgrade\\console\\__init__.py",
+      "v4_upgrade\\collect\\__init__.py",
+      "v4_upgrade\\ai_hub\\__init__.py"
+    ],
+    "v4_upgrade\\auth\\security.py": [
+      "v4_upgrade\\auth\\__init__.py",
+      "v4_upgrade\\auth\\models.py",
+      "v4_upgrade\\auth\\workspace.py",
+      "v4_upgrade\\auth\\service.py",
+      "v4_upgrade\\settings\\routes.py"
+    ],
+    "v4_upgrade\\auth\\audit.py": [
+      "v4_upgrade\\auth\\__init__.py"
+    ],
+    "v4_upgrade\\data_cleanup\\fix_publish_date.py": [
+      "v4_upgrade\\data_cleanup\\__init__.py"
+    ],
+    "collector_v2\\xhs\\parser.py": [
+      "v4_upgrade\\importer\\analyzer.py",
+      "v4_upgrade\\importer\\service.py",
+      "v4_upgrade\\importer\\__init__.py"
+    ],
+    "v4_upgrade\\importer\\parser.py": [
+      "v4_upgrade\\importer\\analyzer.py",
+      "v4_upgrade\\importer\\service.py",
+      "v4_upgrade\\importer\\__init__.py"
+    ],
+    "v4_upgrade\\report_center\\standard_taxonomy.py": [
+      "v4_upgrade\\report_center\\cth_phrases.py",
+      "v4_upgrade\\report_center\\word_pdf_export.py",
+      "v4_upgrade\\report_center\\__init__.py",
+      "v4_upgrade\\report_center\\report_generator.py"
+    ],
+    "v4_upgrade\\report_center\\report_generator.py": [
+      "v4_upgrade\\report_center\\word_pdf_export.py",
+      "v4_upgrade\\report_center\\__init__.py"
+    ],
+    "v4_upgrade\\report_center\\word_pdf_export.py": [
+      "v4_upgrade\\report_center\\__init__.py"
+    ],
+    "v4_upgrade\\version_center\\git_manager.py": [
+      "v4_upgrade\\version_center\\routes.py",
+      "v4_upgrade\\version_center\\watcher.py",
+      "v4_upgrade\\version_center\\__init__.py"
+    ],
+    "v4_upgrade\\version_center\\watcher.py": [
+      "v4_upgrade\\version_center\\__init__.py"
+    ]
+  },
+  "orphaned": [
+    "agent_runtime_adapter.py",
+    "agent_security.py",
+    "app_refactor_blueprint.py",
+    "check_collection.py",
+    "check_collection_detail.py",
+    "check_db_dates.py",
+    "check_empty_tables.py",
+    "check_logs.py",
+    "check_system.py",
+    "check_warnings.py",
+    "ci_cd.py",
+    "collection_intelligence.py",
+    "collector_v2_integration.py",
+    "compliance_gate.py",
+    "domain_isolation.py",
+    "evaluate_system_timing.py",
+    "import_cookies.py",
+    "import_xhs_cookies.py",
+    "kol_analysis.py",
+    "learning_persistence.py",
+    "logger.py",
+    "monitoring.py",
+    "monitor_pipeline.py",
+    "openapi_spec.py",
+    "populate_empty_tables.py",
+    "production_evidence_contract.py",
+    "quick_check.py",
+    "read_docx.py",
+    "resource_library.py",
+    "review_workflow.py",
+    "run_production.py",
+    "run_supervised.py",
+    "schema_registry.py",
+    "security_boundary.py",
+    "start_tunnel.py",
+    "system_watchdog.py",
+    "topic_monitor_policy.py",
+    "topic_note_detail_backfill.py",
+    "topic_snapshot.py",
+    "tunnel_guardian.py",
+    "ui_data_audit.py",
+    "update_reference.py",
+    "verify_system.py",
+    "verify_system_e2e.py",
+    "video_intelligence.py",
+    "web_topic_discovery.py",
+    "wechat_notifier.py",
+    "zbc_phase11_audit.py",
+    "_apply_migration_10.py",
+    "_audit_backups.py",
+    "_audit_historical.py",
+    "_db_audit.py",
+    "_db_inspect.py",
+    "_douyin_render_walk.py",
+    "_douyin_struct.py",
+    "_open_login_pages.py",
+    "_parse_jiguang_cookie.py",
+    "_parse_x_cookie.py",
+    "_parse_x_cookie_v2.py",
+    "_phase13_adapt.py",
+    "_split_report_api.py",
+    "_t7_db_inspect.py",
+    "_t7_db_inspect2.py",
+    "_verify_jiguang.py",
+    "_verify_x.py",
+    "_verify_x_adapter.py",
+    "_verify_x_final.py",
+    "_verify_x_live.py",
+    "account_keepalive\\__init__.py",
+    "ad_intelligence\\__init__.py",
+    "ad_intelligence\\analytics\\__init__.py",
+    "ad_intelligence\\models\\__init__.py",
+    "ad_intelligence\\platforms\\__init__.py",
+    "ad_intelligence\\strategy\\__init__.py",
+    "alembic\\env.py",
+    "alembic\\versions\\e4278c4d1d79_baseline_existing_54_tables_empty_stamp_.py",
+    "browser_runtime\\__init__.py",
+    "browser_runtime\\adapters\\xhs_collector_bridge.py",
+    "browser_runtime\\adapters\\__init__.py",
+    "collector_guard\\queue_worker.py",
+    "collector_guard\\runtime_switch.py",
+    "collector_guard\\task_queue.py",
+    "collector_guard\\__init__.py",
+    "collector_v2\\run_live_engine.py",
+    "collector_v2\\run_profile.py",
+    "collector_v2\\run_xhs_live.py",
+    "collector_v2\\__init__.py",
+    "collector_v2\\pipeline\\__init__.py",
+    "collector_v2\\scheduler\\__init__.py",
+    "collector_v2\\session\\__init__.py",
+    "collector_v2\\weibo\\__init__.py",
+    "collector_v2\\xhs\\__init__.py",
+    "contracts\\lumenis_adapter.py",
+    "contracts\\__init__.py",
+    "core\\__init__.py",
+    "evaluation\\agent_benchmark_contract.py",
+    "evaluation\\collection_benchmark.py",
+    "platform_adapters\\evidence_exporter.py",
+    "platform_adapters\\rednote_policy.py",
+    "platform_adapters\\xhs.py",
+    "platform_adapters\\xhs_app_topic.py",
+    "platform_adapters\\__init__.py",
+    "platform_adapters\\scheduling\\state_map.py",
+    "platform_adapters\\scheduling\\__init__.py",
+    "podcast\\intelligence\\learning.py",
+    "podcast\\intelligence\\research_levels.py",
+    "podcast\\intelligence\\research_pipeline.py",
+    "podcast\\intelligence\\topic_score.py",
+    "proxy_pool\\__init__.py",
+    "report_export\\app_report_api_patch.py",
+    "v4_upgrade\\__init__.py",
+    "v4_upgrade\\adapters\\auth_recovery.py",
+    "v4_upgrade\\adapters\\base_backup_v589.py",
+    "v4_upgrade\\adapters\\collector_service.py",
+    "v4_upgrade\\adapters\\dual_pool.py",
+    "v4_upgrade\\adapters\\__init__.py",
+    "v4_upgrade\\ai_hub\\shadow.py",
+    "v4_upgrade\\ai_hub\\__init__.py",
+    "v4_upgrade\\auth\\__init__.py",
+    "v4_upgrade\\collect\\__init__.py",
+    "v4_upgrade\\console\\__init__.py",
+    "v4_upgrade\\data_cleanup\\__init__.py",
+    "v4_upgrade\\importer\\__init__.py",
+    "v4_upgrade\\report_center\\cth_phrases.py",
+    "v4_upgrade\\report_center\\zbmp_phrases.py",
+    "v4_upgrade\\report_center\\__init__.py",
+    "v4_upgrade\\settings\\__init__.py",
+    "v4_upgrade\\version_center\\__init__.py"
+  ],
+  "modules_with_tests": [
+    "adaptive_engine.py",
+    "agent_boundary.py",
+    "agent_runtime_adapter.py",
+    "agent_security.py",
+    "ai_analyzer.py",
+    "ai_channel.py",
+    "ai_resource_packs.py",
+    "alert_engine.py",
+    "app.py",
+    "ark_llm.py",
+    "auth_recovery_center.py",
+    "auto_recovery.py",
+    "bilibili_login_manager.py",
+    "brand_knowledge_base.py",
+    "brand_report_generator.py",
+    "browser_discovery.py",
+    "browser_surface.py",
+    "browser_surface_api.py",
+    "canonical_data.py",
+    "canonical_metrics.py",
+    "case_ai_evaluate.py",
+    "case_deep_analysis.py",
+    "collection_intelligence.py",
+    "collector.py",
+    "collector_automation.py",
+    "collector_guard_integration.py",
+    "compliance_gate.py",
+    "config.py",
+    "context_intelligence.py",
+    "daily_report.py",
+    "database.py",
+    "database_migrations.py",
+    "data_boundary.py",
+    "data_feedback_loop.py",
+    "data_quality_gate.py",
+    "dev_exec_core.py",
+    "domain_isolation.py",
+    "emv.py",
+    "engineering_metrics.py",
+    "event_graph.py",
+    "evidence_store.py",
+    "export_report.py",
+    "function_registry.py",
+    "intelligence.py",
+    "internal_browser.py",
+    "kol_analysis.py",
+    "kos_attribution.py",
+    "kos_engine.py",
+    "kos_ops.py",
+    "kos_paid.py",
+    "kos_scenarios.py",
+    "learning_persistence.py",
+    "logger.py",
+    "lumenis_frontend.py",
+    "lumenis_skill_adapter.py",
+    "openapi_spec.py",
+    "permission_gate.py",
+    "podcast_store.py",
+    "provider_registry.py",
+    "report_engine.py",
+    "repository_registry.py",
+    "reprocess.py",
+    "resident_health.py",
+    "risk_engine.py",
+    "runtime_bin.py",
+    "runtime_guardian.py",
+    "runtime_preflight.py",
+    "safety_boundary.py",
+    "schema_registry.py",
+    "security_boundary.py",
+    "security_scanner.py",
+    "skill_registry.py",
+    "stability_monitor.py",
+    "subject_classifier.py",
+    "subject_context.py",
+    "subject_rules.py",
+    "swire_group.py",
+    "system_guardian.py",
+    "system_watchdog.py",
+    "topic_campaign.py",
+    "topic_snapshot.py",
+    "video_intelligence.py",
+    "xhs_cookie_bridge.py",
+    "ad_intelligence\\permission_gate.py",
+    "ad_intelligence\\platform_registry.py",
+    "collector_guard\\dlq_replay.py",
+    "collector_guard\\guard.py",
+    "collector_guard\\queue_worker.py",
+    "collector_guard\\resource_guard.py",
+    "collector_guard\\risk_engine.py",
+    "collector_guard\\runtime_switch.py",
+    "collector_guard\\schedule_adapter.py",
+    "collector_guard\\task_queue.py",
+    "collector_v2\\weibo\\collector.py",
+    "collector_v2\\xhs\\collector.py",
+    "contracts\\lumenis_adapter.py",
+    "core\\repository_registry.py",
+    "evaluation\\agent_benchmark_contract.py",
+    "platform_adapters\\bilibili.py",
+    "platform_adapters\\config.py",
+    "platform_adapters\\evidence_exporter.py",
+    "platform_adapters\\health_center.py",
+    "platform_adapters\\rednote_policy.py",
+    "platform_adapters\\registry.py",
+    "platform_adapters\\scheduling\\state_map.py",
+    "podcast\\intelligence\\breakout.py",
+    "podcast\\intelligence\\episode_runtime.py",
+    "podcast\\intelligence\\topic_scoring.py",
+    "proxy_pool\\config.py",
+    "proxy_pool\\loader.py",
+    "report_export\\report_engine.py",
+    "v4_upgrade\\config.py",
+    "v4_upgrade\\adapters\\bilibili.py",
+    "v4_upgrade\\adapters\\collector_service.py",
+    "v4_upgrade\\adapters\\registry.py",
+    "v4_upgrade\\auth\\workspace.py",
+    "v4_upgrade\\report_center\\api.py"
+  ]
+}

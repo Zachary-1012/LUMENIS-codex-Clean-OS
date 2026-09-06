@@ -107,6 +107,41 @@
   </div>
 </div>
 
+
+<!-- ===== P1-D: 实时采集画面（内置浏览器截图轮询） ===== -->
+<div class="zbc-card" id="live-view-card" style="margin-top:12px;max-height:380px;overflow:hidden;display:flex;flex-direction:column;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">实时采集画面</span>
+    <span class="zbc-tag zbc-tag--info" id="live-view-status">连接中…</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);" id="live-view-url">—</span>
+  </div>
+  <div class="zbc-card__body">
+    <div style="display:flex;gap:16px;align-items:stretch;max-height:300px;overflow:hidden;">
+      <div style="flex:1;min-width:0;">
+        <div id="live-view-screenshot-wrap" style="background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;overflow:hidden;height:260px;max-height:260px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="color:var(--l-text-tertiary,#9CA3AF);font-size:13px;">正在连接采集浏览器…</div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+          <button class="zbc-btn zbc-btn--secondary" style="font-size:12px;padding:4px 12px;" onclick="refreshLiveView()">刷新画面</button>
+          <label style="font-size:12px;color:var(--l-text-secondary,#6B7280);display:flex;align-items:center;gap:4px;">
+            <input type="checkbox" id="live-view-auto" checked style="margin:0;"> 自动轮询(5s)
+          </label>
+          <span style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-left:auto;" id="live-view-time">—</span>
+        </div>
+      </div>
+      <div style="width:240px;flex-shrink:0;">
+        <div style="font-size:12px;color:var(--l-text-secondary,#6B7280);margin-bottom:8px;font-weight:600;">采集器状态</div>
+        <div id="live-view-collector-status" style="font-size:12px;color:var(--l-text-primary,#111827);line-height:1.8;max-height:240px;overflow-y:auto;">
+          <div>当前页面：<span id="lv-page">—</span></div>
+          <div>当前动作：<span id="lv-action">—</span></div>
+          <div>CDP端口：<span id="lv-port">9222</span></div>
+          <div>在线状态：<span id="lv-online">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -322,11 +357,70 @@
   window.loadProxy = loadProxy;
   window.loadQuality = loadQuality;
 
+
+  /* ---- P1-D: 实时采集画面（5s轮询截图） ---- */
+  var LIVE_VIEW_PORT = 9222;
+  var liveViewTimer = null;
+
+  function refreshLiveView() {
+    var wrap = document.getElementById('live-view-screenshot-wrap');
+    var statusEl = document.getElementById('live-view-status');
+    var urlEl = document.getElementById('live-view-url');
+    var timeEl = document.getElementById('live-view-time');
+    if (!wrap) return;
+    statusEl.textContent = '加载中…';
+    fetch('/api/internal-browser/screenshot?port=' + LIVE_VIEW_PORT + '&quality=50')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok && d.image_base64) {
+          wrap.innerHTML = '<img src="data:image/jpeg;base64,' + d.image_base64 + '" style="max-width:100%;max-height:260px;object-fit:contain;display:block;" alt="采集浏览器画面">';
+          statusEl.textContent = '在线';
+          statusEl.className = 'zbc-tag zbc-tag--low';
+          urlEl.textContent = (d.url || '').substring(0, 60);
+          document.getElementById('lv-page').textContent = (d.title || d.url || '—').substring(0, 30);
+          document.getElementById('lv-online').textContent = '在线';
+          document.getElementById('lv-online').style.color = '#10B981';
+        } else {
+          wrap.innerHTML = '<div style="color:var(--l-text-tertiary,#9CA3AF);font-size:13px;">截图失败: ' + esc(d.error || '未知') + '</div>';
+          statusEl.textContent = '离线';
+          statusEl.className = 'zbc-tag zbc-tag--medium';
+          document.getElementById('lv-online').textContent = '离线';
+          document.getElementById('lv-online').style.color = '#DC2626';
+        }
+        timeEl.textContent = new Date().toLocaleTimeString();
+      })
+      .catch(function(e) {
+        wrap.innerHTML = '<div style="color:var(--l-text-tertiary,#9CA3AF);font-size:13px;">连接失败: ' + esc(e.message) + '</div>';
+        statusEl.textContent = '连接失败';
+        statusEl.className = 'zbc-tag zbc-tag--error';
+      });
+    // 同步采集器状态
+    fetch('/api/collector/status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var data = d.data || d;
+        document.getElementById('lv-action').textContent = disp(data.current_task || data.state || '—');
+      })
+      .catch(function() { /* 状态API不可用时静默 */ });
+  }
+
+  function startLiveViewPolling() {
+    if (liveViewTimer) clearInterval(liveViewTimer);
+    var auto = document.getElementById('live-view-auto');
+    if (auto && !auto.checked) return;
+    liveViewTimer = setInterval(refreshLiveView, 5000);
+  }
+
+  window.refreshLiveView = refreshLiveView;
+
   document.addEventListener('DOMContentLoaded', function() {
     loadCollectors();
     loadAccounts();
     loadProxy();
     loadQuality();
+    refreshLiveView();
+    startLiveViewPolling();
+    document.getElementById('live-view-auto').addEventListener('change', startLiveViewPolling);
   });
   setInterval(loadCollectors, 30000);
 })();

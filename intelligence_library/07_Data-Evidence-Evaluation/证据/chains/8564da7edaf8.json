@@ -1,0 +1,41 @@
+{
+  "evidence_id": "8564da7edaf8",
+  "task_id": "TASK-594a2bed",
+  "created_at": "2026-09-06 04:12:24",
+  "verification_status": "EVIDENCE_CREATED",
+  "trace_ref": "TRACE-d66f22bba06a",
+  "skill_id": "S01",
+  "skill_version": "0.1.0",
+  "provider": "zhipu",
+  "model": "glm-4.5-air",
+  "nodes": [
+    {
+      "node_type": "task",
+      "ref": "TASK-594a2bed",
+      "detail": "test",
+      "actor": "system",
+      "ts": "2026-09-06 04:12:24"
+    },
+    {
+      "node_type": "skill",
+      "ref": "S01",
+      "detail": "version=0.1.0",
+      "actor": "system",
+      "ts": "2026-09-06 04:12:24"
+    },
+    {
+      "node_type": "action",
+      "ref": "eng_97fde7902688",
+      "detail": "model=glm-4.5-air",
+      "actor": "engine",
+      "ts": "2026-09-06 04:12:24"
+    },
+    {
+      "node_type": "result",
+      "ref": "output",
+      "detail": "The term \"test\" can refer to various contexts. Here's a breakdown of common interpretations:\n\n### 1. **Software Testing**\n   - **Purpose**: Verify software functionality, performance, and reliability.\n   - **Types**:\n     - **Unit Testing**: Tests individual components (e.g., functions, classes).\n     - **Integration Testing**: Checks interactions between components.\n     - **System Testing**: Validates the entire system against requirements.\n     - **Regression Testing**: Ensures new changes do",
+      "actor": "engine",
+      "ts": "2026-09-06 04:12:24"
+    }
+  ]
+}

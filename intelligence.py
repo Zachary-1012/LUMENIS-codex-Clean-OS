@@ -49,7 +49,7 @@ def _detect_local():
                 data=_get_json(base+'/api/tags')
                 models=data.get('models') or []
                 if models:
-                    wanted=_env('OLLAMA_MODEL','')
+                    wanted=_env('OLLAMA_MODEL','qwen2.5-coder:7b-agent')
                     model=wanted or models[0].get('name')
                     if model: return ('ollama',model,base)
             elif p=='lmstudio':

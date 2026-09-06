@@ -1,0 +1,41 @@
+{
+  "evidence_id": "7b8fa83ba2ea",
+  "task_id": "TASK-09804c9d",
+  "created_at": "2026-09-05 22:55:25",
+  "verification_status": "EVIDENCE_CREATED",
+  "trace_ref": "TRACE-8e23b19dc3f5",
+  "skill_id": "S01",
+  "skill_version": "0.1.0",
+  "provider": "ollama",
+  "model": "",
+  "nodes": [
+    {
+      "node_type": "task",
+      "ref": "TASK-09804c9d",
+      "detail": "test",
+      "actor": "system",
+      "ts": "2026-09-05 22:55:25"
+    },
+    {
+      "node_type": "skill",
+      "ref": "S01",
+      "detail": "version=0.1.0",
+      "actor": "system",
+      "ts": "2026-09-05 22:55:25"
+    },
+    {
+      "node_type": "action",
+      "ref": "eng_b85bf4af8842",
+      "detail": "model=",
+      "actor": "engine",
+      "ts": "2026-09-05 22:55:25"
+    },
+    {
+      "node_type": "result",
+      "ref": "output",
+      "detail": "",
+      "actor": "engine",
+      "ts": "2026-09-05 22:55:25"
+    }
+  ]
+}

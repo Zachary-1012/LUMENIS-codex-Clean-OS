@@ -47,7 +47,7 @@ _ALLOWLIST_FILE = os.path.join(ROOT, "data", "private", "browser_allowlist.json"
 # allowlist : 平台域 + 用户显式追加的可信域（默认，兼顾安全与通用浏览）
 # open      : 任意公网 http/https（仍拦截危险协议 + SSRF 内网）
 NAV_MODES = ("strict", "allowlist", "open")
-DEFAULT_NAV_MODE = "allowlist"
+DEFAULT_NAV_MODE = "strict"  # P1-D: default strict per user requirement
 
 # 无论何种模式都拒绝的协议 scheme（小写）
 _BLOCKED_SCHEMES = (
@@ -129,6 +129,26 @@ def _is_internal_host(host: str) -> bool:
     return False
 
 
+
+
+def _is_platform_internal_host(host: str) -> bool:
+    """P1-D: 平台内部主机判定——仅 127.0.0.1/localhost/::1 等回环地址直接放行。
+    其他私网IP(10.x/192.168.x/172.16.x等)仍走 SSRF 拦截。"""
+    host = (host or "").strip().lower().strip("[]")
+    if not host:
+        return False
+    # localhost 主机名
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    # 回环IP: 127.0.0.0/8 和 ::1
+    try:
+        ip = ipaddress.ip_address(host)
+        if ip.is_loopback:
+            return True
+    except Exception:
+        pass
+    return False
+
 def _domain_allowed(host: str, suffixes) -> bool:
     """host 是否命中后缀白名单（精确域或子域）。"""
     host = (host or "").lower()
@@ -140,43 +160,55 @@ def _domain_allowed(host: str, suffixes) -> bool:
 
 
 def evaluate_navigation(url: str, mode: Optional[str] = None) -> dict:
-    """统一导航门：返回 {allowed, mode, host, reason}。不抛异常，拒绝时给出明确原因。"""
+    """统一导航门（P1-D 强化版）：返回 {allowed, status, mode, host, reason}。
+    status ∈ allowed / blocked / need_confirmation。
+    - 危险协议(javascript:/data:/file:等) → blocked
+    - 内部主机(127.0.0.1/localhost/系统内部域) → 直接放行 allowed
+    - strict 模式外部非白名单域 → need_confirmation（前端弹窗确认后带 confirmed=true 重试）
+    - strict/allowlist 白名单域 → allowed
+    - open 模式公网 → allowed
+    不抛异常，拒绝时给出明确原因。"""
     mode = (mode or current_nav_mode()).lower()
     if mode not in NAV_MODES:
         mode = DEFAULT_NAV_MODE
     url = (url or "").strip()
     if not url:
-        return {"allowed": False, "mode": mode, "host": "", "reason": "url 为空"}
+        return {"allowed": False, "status": "blocked", "mode": mode, "host": "", "reason": "url 为空"}
     parsed = _urlparse.urlsplit(url)
     scheme = (parsed.scheme or "").lower()
     if scheme in _BLOCKED_SCHEMES:
-        return {"allowed": False, "mode": mode, "host": parsed.hostname or "",
+        return {"allowed": False, "status": "blocked", "mode": mode, "host": parsed.hostname or "",
                 "reason": f"危险/受限协议禁止访问: {scheme}:"}
     if scheme not in ("http", "https"):
-        return {"allowed": False, "mode": mode, "host": parsed.hostname or "",
+        return {"allowed": False, "status": "blocked", "mode": mode, "host": parsed.hostname or "",
                 "reason": f"仅允许 http/https，拒绝: {scheme or '无scheme'}:"}
     host = (parsed.hostname or "").lower()
     if not host:
-        return {"allowed": False, "mode": mode, "host": "", "reason": "无法解析主机名"}
-    # SSRF 内网防护：任何模式都不允许访问内网/回环
+        return {"allowed": False, "status": "blocked", "mode": mode, "host": "", "reason": "无法解析主机名"}
+    # P1-D: 平台内部主机(127.0.0.1/localhost/::1)直接放行
+    if _is_platform_internal_host(host):
+        return {"allowed": True, "status": "allowed", "mode": mode, "host": host,
+                "reason": "平台内部主机直接放行"}
+    # SSRF 防护：其他私网/保留地址仍拦截（10.x/192.168.x/172.16.x/169.254.x等）
     if _is_internal_host(host):
-        return {"allowed": False, "mode": mode, "host": host,
+        return {"allowed": False, "status": "blocked", "mode": mode, "host": host,
                 "reason": "拒绝访问内网/回环/保留地址（SSRF 防护）"}
     # strict / allowlist 域校验
     platform_suffixes = [s for s in ib.NAVIGATION_WHITELIST_SUFFIXES]
     if mode == "strict":
         if not _domain_allowed(host, platform_suffixes):
-            return {"allowed": False, "mode": mode, "host": host,
-                    "reason": "strict 模式仅允许平台采集域"}
-        return {"allowed": True, "mode": mode, "host": host, "reason": "平台域放行"}
+            # P1-D: strict 模式外部域名 → need_confirmation，由前端弹窗确认
+            return {"allowed": False, "status": "need_confirmation", "mode": mode, "host": host,
+                    "reason": f"strict 模式：外部域名 {host} 需用户确认后方可访问"}
+        return {"allowed": True, "status": "allowed", "mode": mode, "host": host, "reason": "平台域放行"}
     if mode == "allowlist":
         allowed_suffixes = platform_suffixes + _extra_domains()
         if not _domain_allowed(host, allowed_suffixes):
-            return {"allowed": False, "mode": mode, "host": host,
-                    "reason": "allowlist 模式：该域不在可信白名单，可在设置中追加或切换 open 模式"}
-        return {"allowed": True, "mode": mode, "host": host, "reason": "白名单域放行"}
-    # open：公网 http/https 且通过 SSRF 即放行
-    return {"allowed": True, "mode": mode, "host": host, "reason": "open 模式公网放行"}
+            return {"allowed": False, "status": "need_confirmation", "mode": mode, "host": host,
+                    "reason": "allowlist 模式：该域不在可信白名单，需确认或在设置中追加"}
+        return {"allowed": True, "status": "allowed", "mode": mode, "host": host, "reason": "白名单域放行"}
+    # open：公网 http/https 且通过内部主机检查即放行
+    return {"allowed": True, "status": "allowed", "mode": mode, "host": host, "reason": "open 模式公网放行"}
 
 
 # ─────────────────────────── CDP HTTP 底层 ───────────────────────────

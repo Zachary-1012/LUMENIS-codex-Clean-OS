@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 import requests
 
 from .base import BaseAdapter, AdapterResult
+from .cookie_vault import to_cookie_string
 
 logger = logging.getLogger(__name__)
 
@@ -55,25 +56,8 @@ class ZhihuAdapter(BaseAdapter):
 
     @staticmethod
     def _auto_load_cookie() -> str:
-        """从 data/zhihu_cookies.json 自动加载 cookie 字符串；失败返回空串。"""
-        try:
-            import json as _json
-            from pathlib import Path
-            p = Path(__file__).parent.parent.parent / "data" / "zhihu_cookies.json"
-            if not p.exists():
-                return ""
-            raw = _json.loads(p.read_text(encoding="utf-8"))
-            if isinstance(raw, list):
-                return "; ".join(f"{c['name']}={c['value']}" for c in raw if "name" in c)
-            if isinstance(raw, dict):
-                cookies = raw.get("cookies", raw)
-                if isinstance(cookies, list):
-                    return "; ".join(f"{c['name']}={c['value']}" for c in cookies if "name" in c)
-                if isinstance(cookies, dict):
-                    return "; ".join(f"{k}={v}" for k, v in cookies.items())
-            return ""
-        except Exception:
-            return ""
+        """经 cookie_vault 加载知乎 cookie 字符串；失败返回空串。"""
+        return to_cookie_string("zhihu")
 
     def _get_headers(self) -> dict:
         headers = {

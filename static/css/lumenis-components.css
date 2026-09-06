@@ -363,3 +363,175 @@
 .lm-table tbody tr:hover{background:var(--lm-surface-input);}
 select.lm-input{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:var(--lm-space-lg);background-image:linear-gradient(45deg,transparent 50%,var(--lm-text-tertiary) 50%),linear-gradient(135deg,var(--lm-text-tertiary) 50%,transparent 50%);background-position:calc(100% - 16px) center,calc(100% - 11px) center;background-size:5px 5px;background-repeat:no-repeat;}
 .lm-btn--xs{min-height:24px;padding:0 8px;font-size:var(--lm-text-label);}
+
+
+/* ============================================================
+ * modal_simplify — 精简弹窗理念融入（标题+核心结论+风险+主动作）
+ * 次要信息默认折叠，移动端纵向布局
+ * ============================================================ */
+.lm-modal--simplified {
+  padding: 0;
+  overflow: hidden;
+  max-width: 520px;
+}
+.lm-modal--simplified .lm-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--lm-border, #e8e8e8);
+}
+.lm-modal--simplified .lm-modal__title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--lm-text-primary, #0d0d0d);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+.lm-modal--simplified .lm-modal__close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--lm-text-tertiary, #9ca3af);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.lm-modal--simplified .lm-modal__close:hover {
+  background: var(--lm-surface-hover, #f7f7f8);
+}
+.lm-modal--simplified .lm-modal__body {
+  padding: 18px 22px;
+}
+.lm-modal--simplified .lm-modal__conclusion {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lm-text-primary, #0d0d0d);
+  line-height: 1.6;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: var(--lm-surface-hover, #f7f7f8);
+  border-radius: 10px;
+  border-left: 3px solid var(--lm-accent, #0f766e);
+}
+.lm-modal--simplified .lm-modal__risk {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.15);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--lm-status-danger, #dc2626);
+  line-height: 1.5;
+}
+.lm-modal--simplified .lm-modal__risk-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.lm-modal--simplified .lm-modal__secondary {
+  margin-top: 4px;
+}
+.lm-modal--simplified .lm-modal__secondary-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--lm-text-tertiary, #9ca3af);
+  cursor: pointer;
+  padding: 6px 0;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+.lm-modal--simplified .lm-modal__secondary-toggle:hover {
+  color: var(--lm-text-secondary, #6b7280);
+}
+.lm-modal--simplified .lm-modal__secondary-toggle .arrow {
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.lm-modal--simplified .lm-modal__secondary-toggle.is-open .arrow {
+  transform: rotate(90deg);
+}
+.lm-modal--simplified .lm-modal__secondary-content {
+  display: none;
+  padding-top: 10px;
+  font-size: 12px;
+  color: var(--lm-text-secondary, #6b7280);
+  line-height: 1.6;
+}
+.lm-modal--simplified .lm-modal__secondary-content.is-open {
+  display: block;
+  animation: lm-modal-secondary-in 0.2s ease;
+}
+@keyframes lm-modal-secondary-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.lm-modal--simplified .lm-modal__foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--lm-border, #e8e8e8);
+}
+.lm-modal--simplified .lm-btn--primary {
+  background: var(--lm-accent, #0f766e);
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  font-family: inherit;
+}
+.lm-modal--simplified .lm-btn--primary:hover {
+  background: var(--lm-accent-hover, #14b8a6);
+}
+.lm-modal--simplified .lm-btn--primary:active {
+  transform: scale(0.98);
+}
+.lm-modal--simplified .lm-btn--ghost {
+  background: none;
+  border: 1px solid var(--lm-border, #e8e8e8);
+  color: var(--lm-text-secondary, #6b7280);
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.lm-modal--simplified .lm-btn--ghost:hover {
+  background: var(--lm-surface-hover, #f7f7f8);
+  color: var(--lm-text-primary, #0d0d0d);
+}
+
+/* 移动端纵向布局 */
+@media (max-width: 600px) {
+  .lm-modal--simplified {
+    max-width: calc(100vw - 32px);
+    margin: 0 16px;
+  }
+  .lm-modal--simplified .lm-modal__head {
+    padding: 14px 16px 12px;
+  }
+  .lm-modal--simplified .lm-modal__body {
+    padding: 14px 16px;
+  }
+  .lm-modal--simplified .lm-modal__foot {
+    flex-direction: column-reverse;
+    padding: 12px 16px 16px;
+  }
+  .lm-modal--simplified .lm-modal__foot .lm-btn {
+    width: 100%;
+  }
+}

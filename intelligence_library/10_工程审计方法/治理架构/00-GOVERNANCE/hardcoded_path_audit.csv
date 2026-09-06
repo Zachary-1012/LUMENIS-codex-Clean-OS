@@ -1,0 +1,29 @@
+﻿file,repo,type,replacement,count
+_split_report_api.py,ZBC,standalone ZBC root,get_repo_root(),1
+00-GOVERNANCE\_path_backup\_split_report_api.py,ZBC,standalone ZBC root,get_repo_root(),1
+scripts\e2e_loop_check.py,ZBC,standalone ZBC root,get_repo_root(),1
+scripts\shard_b_audit.py,ZBC,standalone ZBC root,get_repo_root(),1
+scripts\inventory\feature_crosscheck.py,ZBC,standalone ZBC root,get_repo_root(),1
+scripts\inventory\feature_final_verify.py,ZBC,standalone ZBC root,get_repo_root(),1
+tests\test_ai_channel_flag.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_ai_degrade.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_compliance_gate.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_kol_analysis.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_report_special.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_resource_guard.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_schedule_adapter.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_security_scanner_s2.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_topic_snapshot.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\test_v2_p0_modules.py,ZBC,sys.path.insert,dynamic dirname,1
+tests\_audit_system.py,ZBC,standalone ZBC root,get_repo_root(),1
+tests\_diag_cdp_subproc.py,ZBC,standalone ZBC root,get_repo_root(),1
+tests\_make_preview.py,ZBC,standalone ZBC root,get_repo_root(),1
+tests\_s07_scan.py,ZBC,standalone ZBC root,get_repo_root(),1
+osai_engine\repository_registry.py,OSAI,standalone ZBC root,get_repo_root(),1
+scripts\reconcile_capabilities.py,OSAI,ROOT assignment,get_repo_root(),1
+tests\e2e_cross_core_convergence.py,OSAI,standalone ZBC root,get_repo_root(),1
+tests\test_v2_p0_2_3.py,OSAI,sys.path.insert,dynamic dirname,1
+tests\test_v2_p0_2_3.py,OSAI,sys.path.insert OSAI,dynamic dirname,1
+tests\test_v2_p0_modules.py,OSAI,sys.path.insert OSAI,dynamic dirname,1
+tests\test_v2_p0_remaining.py,OSAI,sys.path.insert,dynamic dirname,1
+tests\test_v2_p0_remaining.py,OSAI,sys.path.insert OSAI,dynamic dirname,1

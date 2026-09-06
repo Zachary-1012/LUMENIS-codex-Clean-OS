@@ -9,7 +9,7 @@
 <section class="ch-hero">
   <div class="ch-eyebrow" data-i18n="eyebrow">芥子纳须弥 · Complexity → Simplicity</div>
   <h1 class="ch-title" data-i18n="title">复杂归于序，万象入一境</h1>
-  <p class="ch-subtitle" data-i18n="subtitle">ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯</p>
+  <p class="ch-subtitle" data-i18n="subtitle">序境 · 品牌与舆情智能，统一证据链，每一步可追溯</p>
 
   <!-- Command Input — Primary Intelligence -->
   <div class="ch-command" id="lm-cmd-wrap">
@@ -36,7 +36,7 @@
   <!-- Status Badges — Global Context -->
   <div class="ch-badges">
     <span class="ch-badge"><span class="lm-dot lm-dot--success"></span><span data-i18n="badge_ready">AI Ready</span></span>
-    <span class="ch-badge" id="lm-provider-badge">Provider: detecting…</span>
+    <span class="ch-badge" id="lm-provider-badge" data-i18n="home.badge_provider_connecting">模型连接中…</span>
     <span class="ch-badge" data-i18n="badge_evidence">Evidence-backed</span>
   </div>
 </section>
@@ -355,9 +355,9 @@
 (function(){
   // ===== i18n extension =====
   var homeDict = {
-    zh: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'复杂归于序，万象入一境',subtitle:'ZBC 生产真相 × OSAI 智能推理 · 统一证据链，每一步可追溯',input_placeholder:'输入任务、问题或指令…',qa_audit:'系统审计',qa_collect:'启动采集',qa_report:'生成报告',qa_skills:'浏览 Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_intel:'Intelligence',card_risks:'Risks',card_tasks_label:'Tasks',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
-    en: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'Complexity into Order, All into One',subtitle:'ZBC Production Truth × OSAI Intelligence · Unified evidence chain, every step traceable',input_placeholder:'Enter a task, question, or command…',qa_audit:'System Audit',qa_collect:'Start Collection',qa_report:'Generate Report',qa_skills:'Browse Skills',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_intel:'Intelligence',card_risks:'Risks',card_tasks_label:'Tasks',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
-    ko: {eyebrow:'계자나수미 · Complexity → Simplicity',title:'복잡함을 질서로, 만상을 하나의 경계로',subtitle:'ZBC 생산 진실 × OSAI 지능 추론 · 통합 증거 체인, 모든 단계 추적 가능',input_placeholder:'작업, 질문 또는 명령을 입력하세요…',qa_audit:'시스템 감사',qa_collect:'수집 시작',qa_report:'보고서 생성',qa_skills:'스킬 탐색',badge_ready:'AI Ready',badge_evidence:'Evidence-backed',card_system:'System',card_intel:'Intelligence',card_risks:'Risks',card_tasks_label:'Tasks',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'}
+    'zh-CN': {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'复杂归于序，万象入一境',subtitle:'序境 · 品牌与舆情智能，统一证据链，每一步可追溯',input_placeholder:'输入任务、问题或指令…',qa_audit:'系统审计',qa_collect:'启动采集',qa_report:'生成报告',qa_skills:'浏览技能',badge_ready:'智能就绪',badge_evidence:'证据支撑',badge_provider_connecting:'模型连接中…',card_system:'系统',card_intel:'智能',card_risks:'风险',card_tasks_label:'任务',nav_intel:'智能',nav_skills:'技能中心',nav_prod:'生产',nav_research:'研究',nav_ops:'运维'},
+    en: {eyebrow:'芥子纳须弥 · Complexity → Simplicity',title:'Complexity into Order, All into One',subtitle:'LUMENIS · Brand & Sentiment Intelligence, unified evidence chain, every step traceable',input_placeholder:'Enter a task, question, or command…',qa_audit:'System Audit',qa_collect:'Start Collection',qa_report:'Generate Report',qa_skills:'Browse Skills',badge_ready:'Intelligence Ready',badge_evidence:'Evidence-backed',badge_provider_connecting:'Connecting model…',card_system:'System',card_intel:'Intelligence',card_risks:'Risks',card_tasks_label:'Tasks',nav_intel:'Intelligence',nav_skills:'Skill Hub',nav_prod:'Production',nav_research:'Research',nav_ops:'Operations'},
+    ko: {eyebrow:'계자나수미 · Complexity → Simplicity',title:'복잡함을 질서로, 만상을 하나의 경계로',subtitle:'서경 · 브랜드 및 감성 인텔리전스, 통합 증거 체인, 모든 단계 추적 가능',input_placeholder:'작업, 질문 또는 명령을 입력하세요…',qa_audit:'시스템 감사',qa_collect:'수집 시작',qa_report:'보고서 생성',qa_skills:'스킬 탐색',badge_ready:'지능 준비',badge_evidence:'증거 기반',badge_provider_connecting:'모델 연결 중…',card_system:'시스템',card_intel:'인텔리전스',card_risks:'리스크',card_tasks_label:'작업',nav_intel:'인텔리전스',nav_skills:'스킬 허브',nav_prod:'프로덕션',nav_research:'리서치',nav_ops:'운영'}
   };
   for (var lang in homeDict) { if (LUMENIS.i18n.dict[lang]) Object.assign(LUMENIS.i18n.dict[lang], homeDict[lang]); }
   LUMENIS.i18n.setLang(LUMENIS.i18n.current);
@@ -432,7 +432,7 @@
       .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(d){
         var count = (d && d.count != null) ? d.count : 0;
-        var freshText = 'chains: ' + count + ' · source: OSAI';
+        var freshText = 'chains: ' + count + ' · 智能引擎';
         setMetric(el,fresh,card,count,freshText,false,count===0);
       })
       .catch(function(){ setMetric(el,fresh,card,'ERR','API unavailable',true,false); });

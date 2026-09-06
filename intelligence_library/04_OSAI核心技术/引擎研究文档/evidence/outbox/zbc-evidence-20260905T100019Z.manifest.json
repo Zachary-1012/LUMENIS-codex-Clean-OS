@@ -1,0 +1,34 @@
+{
+  "schema": "zbc.evidence-export.v1",
+  "source": "zbc",
+  "destination": "osai",
+  "app_version": "5.9.9",
+  "generated_at": "2026-09-05T10:00:19.565954+00:00",
+  "counts": {
+    "notes": 0,
+    "events": 0,
+    "daily_reports": 5
+  },
+  "total": 5,
+  "redacted_count": 0,
+  "watermark": {
+    "notes": 0,
+    "events": 0,
+    "daily_reports": 5
+  },
+  "production_unchanged": true,
+  "approval_basis": {
+    "notes": "is_taikoo_verified=1（过 SUBJECT 主体口径）",
+    "events": "fact_status in (confirmed, partially_confirmed)",
+    "daily_reports": "已生成日报"
+  },
+  "record_ids": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "jsonl": "zbc-evidence-20260905T100019Z.jsonl",
+  "sha256": "32de68634917d9a8db4bb5ca3ee671878eb29682b935df5eb1975310848e6e9e"
+}

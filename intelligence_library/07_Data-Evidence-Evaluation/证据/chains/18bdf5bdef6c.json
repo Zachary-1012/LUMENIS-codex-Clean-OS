@@ -1,0 +1,41 @@
+{
+  "evidence_id": "18bdf5bdef6c",
+  "task_id": "TASK-c855043e",
+  "created_at": "2026-09-05 23:25:34",
+  "verification_status": "EVIDENCE_CREATED",
+  "trace_ref": "TRACE-bafb99b959bc",
+  "skill_id": "S01",
+  "skill_version": "1.0.0",
+  "provider": "zhipu",
+  "model": "glm-4.5-air",
+  "nodes": [
+    {
+      "node_type": "task",
+      "ref": "TASK-c855043e",
+      "detail": "Cross-core E2E: audit current source facts",
+      "actor": "system",
+      "ts": "2026-09-05 23:25:34"
+    },
+    {
+      "node_type": "skill",
+      "ref": "S01",
+      "detail": "version=1.0.0",
+      "actor": "system",
+      "ts": "2026-09-05 23:25:34"
+    },
+    {
+      "node_type": "action",
+      "ref": "eng_5216d171b5b5",
+      "detail": "model=glm-4.5-air",
+      "actor": "engine",
+      "ts": "2026-09-05 23:25:34"
+    },
+    {
+      "node_type": "result",
+      "ref": "output",
+      "detail": "To audit the current source facts for **Cross-core E2E (End-to-End)**, follow this structured approach to ensure accuracy, completeness, and reliability of data used in cross-core workflows. This audit focuses on validating data sources, transformations, and dependencies.\n\n---\n\n### **Audit Objectives**\n1. **Verify Source Data Accuracy**: Ensure raw data from source systems is correct and up-to-date.\n2. **Assess Data Completeness**: Confirm all required data points are present.\n3. **Validate Tran",
+      "actor": "engine",
+      "ts": "2026-09-05 23:25:34"
+    }
+  ]
+}

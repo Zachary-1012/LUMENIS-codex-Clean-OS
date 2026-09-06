@@ -760,6 +760,187 @@ def _generate_risk_alerts(events):
     return alerts
 
 
+
+
+# ============================================================
+# P1-D: 日报5板块标准格式 + 专报触发条件标注
+# ============================================================
+# 5个标准板块：
+#   1. 一句话概览（今日监测X条/负面X条/最高互动X/核心话题/等级）
+#   2. 数据速览（总提及/负面/负面占比/最高互动/环比±%）
+#   3. 负面TOP3（业态-笔记摘要-互动-状态）
+#   4. 今日动作（已处理/待跟进(责任人·时限)/预警）
+#   5. 专报触发条件标注（满足任一即升级）
+# 数据缺失显式 null/—，不用0填充
+
+def format_daily_report_5sections(digest: dict, date_str: str = None) -> dict:
+    """P1-D: 将日报数据格式化为5板块标准结构。
+
+    Args:
+        digest: generate_daily_digest() 返回的完整日报数据
+        date_str: 日期字符串
+
+    Returns:
+        {section1_overview, section2_data, section3_negative_top3,
+         section4_actions, section5_special_trigger, report_date}
+    """
+    if date_str is None:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+
+    summary = digest.get('summary', {}) if isinstance(digest.get('summary'), dict) else {}
+    # 如果 digest 没有嵌套 summary，直接从 digest 取字段
+    if not summary:
+        summary = digest
+
+    effective = summary.get('effective_count', digest.get('effective_count', None))
+    negative = summary.get('negative_count', digest.get('risk_count', None))
+    risk_count = summary.get('risk_count', digest.get('risk_count', None))
+    risk_index = summary.get('risk_index', digest.get('risk_index', None))
+    health = summary.get('brand_health_score', digest.get('brand_health_score', None))
+
+    # 等级判定
+    if risk_index is not None:
+        if risk_index >= 60:
+            level = "🔴"
+        elif risk_index >= 30:
+            level = "🟡"
+        else:
+            level = "🟢"
+    else:
+        level = "—"
+
+    # ===== 板块1: 一句话概览 =====
+    core_topic = "—"
+    top_events = digest.get('top_events', []) or []
+    if top_events:
+        core_topic = (top_events[0].get('event_title') or '—')[:30]
+
+    overview_parts = []
+    overview_parts.append(f"今日监测{effective if effective is not None else '—'}条")
+    overview_parts.append(f"负面{negative if negative is not None else '—'}条")
+    overview_parts.append(f"最高互动{summary.get('max_engagement', '—')}")
+    overview_parts.append(f"核心话题{core_topic}")
+    overview_parts.append(f"等级{level}")
+    section1 = "，".join(overview_parts)
+
+    # ===== 板块2: 数据速览 =====
+    total_found = summary.get('total_found', digest.get('total_found', None))
+    neg_pct = None
+    if effective and negative is not None and effective > 0:
+        neg_pct = round(negative / effective * 100, 1)
+
+    # 环比（简化：与昨日对比，数据缺失时为—）
+    chain_change = "—"
+    try:
+        yesterday = (datetime.strptime(date_str, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+        y_summary = generate_today_summary(yesterday)
+        y_eff = y_summary.get('effective_count', 0)
+        if y_eff > 0 and effective is not None:
+            pct = round((effective - y_eff) / y_eff * 100, 1)
+            chain_change = f"{'+' if pct >= 0 else ''}{pct}%"
+    except Exception:
+        pass
+
+    section2 = {
+        "总提及": total_found if total_found is not None else "—",
+        "负面": negative if negative is not None else "—",
+        "负面占比": f"{neg_pct}%" if neg_pct is not None else "—",
+        "最高互动": summary.get('max_engagement', '—'),
+        "环比": chain_change,
+    }
+
+    # ===== 板块3: 负面TOP3 =====
+    negative_top3 = []
+    try:
+        notes = db.get_notes_by_date_range(date_str, date_str)
+        neg_notes = [n for n in notes if (n.get('sentiment') or '').lower() in ('negative', 'risk')]
+        # 按互动量排序
+        for n in neg_notes:
+            engage = int(n.get('likes', 0) or 0) + int(n.get('comments', 0) or 0) * 3
+            n['_engage'] = engage
+        neg_notes.sort(key=lambda x: x.get('_engage', 0), reverse=True)
+        for n in neg_notes[:3]:
+            negative_top3.append({
+                "业态": n.get('category', n.get('industry', '—')),
+                "笔记摘要": (n.get('title') or n.get('content', '—'))[:50],
+                "互动": n.get('_engage', 0),
+                "状态": n.get('ai_filter_status', n.get('status', '—')),
+            })
+    except Exception:
+        pass
+
+    if not negative_top3:
+        negative_top3 = [{"业态": "—", "笔记摘要": "今日无负面内容", "互动": "—", "状态": "—"}]
+
+    section3 = negative_top3
+
+    # ===== 板块4: 今日动作 =====
+    actions = digest.get('action_items', []) or []
+    processed = []
+    pending = []
+    warnings = []
+    for a in actions:
+        priority = (a.get('priority') or '').lower()
+        if priority in ('已处理', 'done', 'completed'):
+            processed.append(a.get('action', ''))
+        elif priority in ('预警', 'warning', 'alert', 'high'):
+            warnings.append(a.get('action', ''))
+        else:
+            pending.append({
+                "action": a.get('action', ''),
+                "owner": a.get('owner', '舆情团队'),
+                "deadline": a.get('deadline', '今日内'),
+            })
+
+    section4 = {
+        "已处理": processed if processed else ["—"],
+        "待跟进": pending if pending else [{"action": "无待跟进事项", "owner": "—", "deadline": "—"}],
+        "预警": warnings if warnings else ["—"],
+    }
+
+    # ===== 板块5: 专报触发条件标注 =====
+    # 调用 risk_engine.check_special_report_trigger 检测
+    trigger_status = {"triggered": False, "reasons": [], "conditions": []}
+    try:
+        import risk_engine
+        # 构建 event 字典用于触发检测
+        max_engage = 0
+        for n in negative_top3:
+            if isinstance(n.get('互动'), int):
+                max_engage = max(max_engage, n['互动'])
+        event = {
+            "engagement": max_engage,
+            "sentiment": "negative" if negative and negative > 0 else "neutral",
+            "title": core_topic,
+            "content": " ".join([n.get('笔记摘要', '') for n in negative_top3]),
+            "negative_count_24h": negative if negative else 0,
+        }
+        triggered, reasons = risk_engine.check_special_report_trigger(event)
+        trigger_status = {
+            "triggered": triggered,
+            "reasons": reasons,
+            "conditions": [
+                "单条负面互动≥500",
+                "负面帖≥3条集中爆发(24h)",
+                "涉及安全·歧视·违法",
+                "本地KOC转发",
+                "集团或媒体问询",
+            ],
+        }
+    except Exception as e:
+        trigger_status["error"] = str(e)
+
+    section5 = trigger_status
+
+    return {
+        "report_date": date_str,
+        "section1_overview": section1,
+        "section2_data": section2,
+        "section3_negative_top3": section3,
+        "section4_actions": section4,
+        "section5_special_trigger": section5,
+    }
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='广州太古汇舆情监测系统 - 智能日报')

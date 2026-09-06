@@ -788,6 +788,201 @@ def api_report_export():
 
 # ===== v5.4 系统配置 API =====
 
+
+
+# ============================================================
+# P1-D: ACT法则应对策略生成 + 案例匹配 + 专报触发记录
+# ============================================================
+# ACT = Acknowledge承认 → Communicate沟通 → Transform转化
+# 不改变专报8板块现有结构，只在"应对策略"板块的AI prompt中加ACT约束
+
+ACT_STRATEGY_PROMPT = """你是广州太古汇品牌公关总监。基于事件信息生成应对策略。
+
+## 输出结构约束（ACT法则）
+所有应对策略必须严格按照 ACT 三段式结构组织：
+
+### A - Acknowledge（承认）
+- 不回避问题，先共情致歉
+- 明确承认事实，不辩解不甩锅
+- 表达对受影响方的关切
+
+### C - Communicate（沟通）
+- 说明已采取的动作和核查进度
+- 明确沟通渠道和时间节点
+- 保持信息透明，不敷衍
+
+### T - Transform（转化）
+- 给出可检验的整改方案
+- 将危机转为改进契机
+- 明确责任方和完成时限
+
+## 要求
+1. 每个策略项必须标注属于 A/C/T 哪个阶段
+2. 策略必须具体可执行，包含责任方和时限
+3. 参考匹配案例的处置方式和恢复周期
+4. 禁忌：不说"个人行为与商场无关"；不甩锅顾客；不隐瞒事实
+5. 直接输出策略列表，不要JSON，不要多余解释
+
+## 匹配案例参考
+{matched_cases_text}
+
+## 事件信息
+{event_info}
+"""
+
+
+def generate_act_strategies(event_info: str, matched_cases: list = None) -> dict:
+    """P1-D: 基于ACT法则生成应对策略。
+
+    Args:
+        event_info: 事件信息文本
+        matched_cases: 匹配的同类案例列表（来自案例库）
+
+    Returns:
+        {ok, strategies, act_structure, provider}
+    """
+    matched_cases_text = ""
+    if matched_cases:
+        lines = []
+        for c in matched_cases:
+            lines.append(f"- {c.get('case_id', '')} {c.get('title', '')}: "
+                         f"处置方式: {c.get('response_summary', '')[:80]}; "
+                         f"太古汇启示: {c.get('taikoo_insight', '')[:100]}")
+        matched_cases_text = "\n".join(lines)
+    else:
+        matched_cases_text = "（无匹配案例，基于通用公关原则生成）"
+
+    prompt = ACT_STRATEGY_PROMPT.format(
+        matched_cases_text=matched_cases_text,
+        event_info=event_info
+    )
+
+    try:
+        import intelligence
+        raw, provider, _ = intelligence.chat(
+            system="你是广州太古汇品牌公关总监，擅长危机公关应对策略制定。",
+            user=prompt,
+            level="high",
+            temperature=0.3,
+            max_tokens=1500,
+            pack_id="glm_4_5_air"
+        )
+        if raw:
+            # 解析ACT结构
+            strategies = [s.strip() for s in raw.strip().split("\n") if s.strip()]
+            return {
+                "ok": True,
+                "strategies": strategies,
+                "act_structure": "Acknowledge→Communicate→Transform",
+                "provider": provider,
+                "raw": raw[:2000],
+            }
+    except Exception as e:
+        # AI不可用时返回规则兜底策略
+        pass
+
+    # 规则兜底：基于场景生成ACT结构策略
+    fallback = [
+        "[A-承认] 对事件造成的影响深表歉意，承认我们在管理/服务中存在不足，不回避不辩解。",
+        "[A-承认] 已第一时间联系受影响方，表达关切并了解具体情况，承担应尽责任。",
+        "[C-沟通] 已成立专项小组核查事件全貌，将在24小时内公布初步调查结果，保持信息透明。",
+        "[C-沟通] 设立专门沟通渠道（客服热线/私信），接受公众咨询和监督，及时回应关切。",
+        "[T-转化] 立即启动整改：对涉事环节进行全面排查，完善管理制度，防止类似事件再次发生。",
+        "[T-转化] 将于7个工作日内公布完整整改报告，接受公众监督，将此次危机转化为服务提升的契机。",
+    ]
+    return {
+        "ok": True,
+        "strategies": fallback,
+        "act_structure": "Acknowledge→Communicate→Transform",
+        "provider": "rule_fallback",
+        "note": "AI不可用，返回规则兜底策略",
+    }
+
+
+@report_bp.route('/api/report/special/generate-strategies', methods=['POST'])
+def api_generate_special_strategies():
+    """P1-D: 专报应对策略生成（ACT法则 + 案例匹配）。
+    Body: {event_name, event_info, scenario, trigger_reasons}
+    返回: {ok, strategies, matched_cases, act_structure, trigger_reasons}
+    """
+    data = request.get_json(silent=True) or {}
+    event_name = data.get('event_name', '')
+    event_info = data.get('event_info', '')
+    scenario = data.get('scenario', '')
+    trigger_reasons = data.get('trigger_reasons', [])
+
+    if not event_info and not event_name:
+        return jsonify({'ok': False, 'error': 'event_info 或 event_name 不能为空'}), 400
+
+    # Step 1: 匹配同类案例（2-3个）
+    matched_cases = []
+    try:
+        from public_opinion_cases import match_cases_by_scenario
+        matched_cases = match_cases_by_scenario(scenario, event_info, limit=3)
+    except Exception as e:
+        matched_cases = []
+
+    # Step 2: 生成ACT策略
+    full_event_info = f"事件名称: {event_name}\n场景: {scenario}\n触发原因: {', '.join(trigger_reasons) if trigger_reasons else '无'}\n详情: {event_info}"
+    result = generate_act_strategies(full_event_info, matched_cases)
+
+    return jsonify({
+        'ok': result.get('ok', False),
+        'strategies': result.get('strategies', []),
+        'matched_cases': matched_cases,
+        'act_structure': result.get('act_structure', ''),
+        'provider': result.get('provider', ''),
+        'trigger_reasons': trigger_reasons,
+    })
+
+
+@report_bp.route('/api/report/special/record-trigger', methods=['POST'])
+def api_record_special_trigger():
+    """P1-D: 专报生成时记录触发原因。
+    Body: {event_id, event_name, trigger_reasons, matched_cases}
+    """
+    data = request.get_json(silent=True) or {}
+    event_id = data.get('event_id', '')
+    event_name = data.get('event_name', '')
+    trigger_reasons = data.get('trigger_reasons', [])
+    matched_cases = data.get('matched_cases', [])
+
+    if not event_id:
+        return jsonify({'ok': False, 'error': 'event_id 不能为空'}), 400
+
+    # 记录到日志（不新增表，使用现有日志机制）
+    try:
+        import logger
+        logger.info(f"[P1-D][SpecialReport] 专报触发记录: event_id={event_id}, "
+                    f"event_name={event_name}, triggers={trigger_reasons}, "
+                    f"matched_cases={[c.get('case_id') for c in matched_cases]}")
+    except Exception:
+        pass
+
+    return jsonify({
+        'ok': True,
+        'event_id': event_id,
+        'event_name': event_name,
+        'trigger_reasons': trigger_reasons,
+        'matched_cases': matched_cases,
+        'recorded_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+
+
+
+@report_bp.route('/api/daily-report/5sections', methods=['GET'])
+def api_daily_report_5sections():
+    """P1-D: 获取5板块标准格式日报。"""
+    from daily_report import generate_daily_digest, format_daily_report_5sections
+    from datetime import datetime
+    date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    try:
+        digest = generate_daily_digest(date_str)
+        formatted = format_daily_report_5sections(digest, date_str)
+        return jsonify({'ok': True, 'report': formatted})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @report_bp.route('/api/report/special/export', methods=['POST'])
 def api_special_report_export():
     data=request.get_json(silent=True) or {}

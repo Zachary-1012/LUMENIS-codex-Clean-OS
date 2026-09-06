@@ -20,6 +20,7 @@
 """
 import re
 import html
+import hashlib
 import time
 import random
 import datetime
@@ -56,11 +57,42 @@ class SogouSearchAdapter(BaseAdapter):
     platform_name = "sogou_search"
     platform_display = "搜狗搜索"
 
+    def __init__(self, product_id: str = "", domain_id: str = "", **kwargs):
+        """初始化。
+
+        Args:
+            product_id: 产品ID（透传到 raw_data，双域隔离用）
+            domain_id: 域ID（CTH/ZBMP，透传到 raw_data，不做隐式过滤）
+        """
+        super().__init__(**kwargs)
+        self.product_id = product_id
+        self.domain_id = domain_id
+
     # 频道定义：(内部名, URL模板, Referer)
     _CHANNELS = (
         ("news", "https://news.sogou.com/news?mode=1&query={q}", "https://news.sogou.com/"),
         ("web", "https://www.sogou.com/web?query={q}", "https://www.sogou.com/"),
     )
+
+    def _load_cookies(self):
+        """统一走 cookie_vault 加载搜狗搜索 cookie（如有）。无则返回空 dict。"""
+        try:
+            from .cookie_vault import to_requests_cookies
+            cookies = to_requests_cookies("sogou_search")
+            if cookies:
+                import logging as _lg
+                _lg.getLogger(__name__).info("搜狗搜索: 从 cookie_vault 加载 %d 条 cookie", len(cookies))
+            return cookies
+        except Exception:
+            return {}
+
+    def _cookie_status(self) -> dict:
+        """检查 cookie 文件级状态（不打印值）。"""
+        try:
+            from .cookie_vault import check_cookie_status
+            return check_cookie_status("sogou_search")
+        except Exception:
+            return {"status": "MISSING", "cookie_count": 0, "has_auth_cookie": False}
 
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
         """搜索入口：默认合并“新闻 + 网页”两个频道，按真实 URL 去重。"""
@@ -72,6 +104,9 @@ class SogouSearchAdapter(BaseAdapter):
             return AdapterResult(success=False, error="缺少 requests 依赖")
 
         session = requests.Session()
+        _cookies = self._load_cookies()
+        if _cookies:
+            session.cookies.update(_cookies)
         collected, blocked = [], []
         for ci, (channel, tmpl, referer) in enumerate(self._CHANNELS):
             if ci > 0:
@@ -169,6 +204,9 @@ class SogouSearchAdapter(BaseAdapter):
                 href = "https://www.sogou.com" + href
             snippet = self._pick_text(item, [".star-wiki", ".space-txt", ".text-layout", ".fz-mid"])
             source, pub, date_source, conflict = self._source_and_date(item, channel, href)
+            _content_hash = hashlib.md5(
+                (title + "|" + (href or "")).encode("utf-8", "ignore")
+            ).hexdigest()
             notes.append(self._make_note(
                 title=re.sub(r"\s+", " ", title),
                 content=re.sub(r"\s+", " ", snippet or ""),
@@ -180,6 +218,11 @@ class SogouSearchAdapter(BaseAdapter):
                     "link_redirect": href.startswith("https://www.sogou.com/link"),
                     "date_source": date_source,       # 日期取自哪里（可追溯）
                     "date_conflict": conflict,         # URL 路径年份与标注日期严重不符
+                    "content_hash": _content_hash,
+                    "platform_id": self.platform_name + "_" + _content_hash[:16],
+                    "product_id": self.product_id,     # 透传，不篡改
+                    "domain_id": self.domain_id,       # 透传，双域隔离：CTH/ZBMP 不混用
+                    "cookie_used": bool(self._load_cookies()),
                 },
             ))
         return notes
@@ -308,6 +351,12 @@ class SogouSearchAdapter(BaseAdapter):
         except ValueError:
             return False
 
+
+    def get_status(self) -> dict:
+        """获取适配器状态（含 cookie 状态）。"""
+        status = super().get_status()
+        status["cookie_status"] = self._cookie_status()
+        return status
 
     # ---------- 中链还原 ----------
     def _resolve_links(self, session, notes, workers: int = 6):

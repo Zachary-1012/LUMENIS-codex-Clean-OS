@@ -1,0 +1,98 @@
+{
+  "subject_words_count": 17,
+  "exclude_words_count": 18,
+  "tests": [
+    {
+      "name": "广州太古汇正面命中",
+      "input_title": "广州太古汇探店",
+      "input_body": "今天去了广州太古汇，环境很好",
+      "expected": true,
+      "actual": true,
+      "reason": "命中主体词:广州太古汇",
+      "pass": true
+    },
+    {
+      "name": "太古汇简称命中",
+      "input_title": "太古汇美食推荐",
+      "input_body": "太古汇里的餐厅都不错",
+      "expected": true,
+      "actual": true,
+      "reason": "命中主体词:太古汇",
+      "pass": true
+    },
+    {
+      "name": "上海太古汇排除",
+      "input_title": "上海太古汇开业",
+      "input_body": "上海兴业太古汇今天开业",
+      "expected": false,
+      "actual": false,
+      "reason": "主体排除词一票否决:上海太古汇",
+      "pass": true
+    },
+    {
+      "name": "成都远洋太古汇排除",
+      "input_title": "成都太古汇攻略",
+      "input_body": "成都远洋太古里逛街指南",
+      "expected": false,
+      "actual": false,
+      "reason": "主体排除词一票否决:成都太古汇",
+      "pass": true
+    },
+    {
+      "name": "北京三里屯排除",
+      "input_title": "三里屯太古汇",
+      "input_body": "北京三里屯太古汇探店",
+      "expected": false,
+      "actual": false,
+      "reason": "主体排除词一票否决:三里屯太古汇",
+      "pass": true
+    },
+    {
+      "name": "无主体词未命中",
+      "input_title": "今天天气真好",
+      "input_body": "出去散步了",
+      "expected": false,
+      "actual": false,
+      "reason": "未命中广州太古汇主体词",
+      "pass": true
+    },
+    {
+      "name": "LV太古汇命中",
+      "input_title": "LV太古汇店",
+      "input_body": "LV在太古汇的新店开业",
+      "expected": true,
+      "actual": true,
+      "reason": "命中主体词:太古汇",
+      "pass": true
+    },
+    {
+      "name": "排除词优先于命中词",
+      "input_title": "上海太古汇和广州太古汇",
+      "input_body": "对比上海太古汇和广州太古汇",
+      "expected": false,
+      "actual": false,
+      "reason": "主体排除词一票否决:上海太古汇",
+      "pass": true
+    },
+    {
+      "name": "空输入",
+      "input_title": "",
+      "input_body": "",
+      "expected": false,
+      "actual": false,
+      "reason": "未命中广州太古汇主体词",
+      "pass": true
+    },
+    {
+      "name": "None输入安全",
+      "input_title": "None",
+      "input_body": "None",
+      "expected": false,
+      "actual": false,
+      "reason": "未命中广州太古汇主体词",
+      "pass": true
+    }
+  ],
+  "all_pass": true,
+  "status": "PASS"
+}

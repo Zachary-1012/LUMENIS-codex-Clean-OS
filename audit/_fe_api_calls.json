@@ -1,0 +1,759 @@
+{
+  "/api/auth-recovery/summary": {
+    "sources": [
+      "templates\\auth_recovery_modal.html",
+      "templates\\auth_recovery_modal.html",
+      "templates\\auth_recovery_modal.html",
+      "templates\\auth_recovery_modal.html"
+    ]
+  },
+  "/api/auth-recovery/tasks/<var>/complete": {
+    "sources": [
+      "templates\\auth_recovery_modal.html",
+      "templates\\auth_recovery_modal.html"
+    ]
+  },
+  "/api/auth-recovery/tasks/<var>/fail": {
+    "sources": [
+      "templates\\auth_recovery_modal.html",
+      "templates\\auth_recovery_modal.html"
+    ]
+  },
+  "/api/auth-recovery/tasks/": {
+    "sources": [
+      "templates\\auth_recovery_modal.html",
+      "templates\\auth_recovery_modal.html",
+      "templates\\auth_recovery_modal.html"
+    ]
+  },
+  "/api/auth/config": {
+    "sources": [
+      "templates\\base.html",
+      "static\\js\\lumenis-core.js"
+    ]
+  },
+  "/api/system/account/members": {
+    "sources": [
+      "templates\\auth\\zbmp_login.html",
+      "templates\\auth\\zbmp_login.html"
+    ]
+  },
+  "/api/system/account/totp/verify": {
+    "sources": [
+      "templates\\auth\\zbmp_login.html",
+      "templates\\auth\\zbmp_login.html"
+    ]
+  },
+  "/api/domain/brands": {
+    "sources": [
+      "templates\\cth\\brands.html"
+    ]
+  },
+  "/api/cases/list": {
+    "sources": [
+      "templates\\cth\\events.html"
+    ]
+  },
+  "/api/intelligence/evidence": {
+    "sources": [
+      "templates\\cth\\evidence.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\intelligence\\evidence.html"
+    ]
+  },
+  "/api/stats": {
+    "sources": [
+      "templates\\cth\\industries.html",
+      "templates\\production\\public_opinion.html",
+      "templates\\production\\public_opinion.html",
+      "templates\\zbmp\\overview.html",
+      "templates\\zbmp\\overview.html",
+      "static\\js\\lumenis-data.js"
+    ]
+  },
+  "/api/hot-notes": {
+    "sources": [
+      "templates\\cth\\kos.html"
+    ]
+  },
+  "/api/cth/overview": {
+    "sources": [
+      "templates\\cth\\overview.html",
+      "templates\\cth\\overview.html",
+      "templates\\cth\\overview.html"
+    ]
+  },
+  "/api/system/health/summary": {
+    "sources": [
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "templates\\production\\monitoring.html",
+      "templates\\production\\monitoring.html",
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html",
+      "templates\\production\\risk.html",
+      "templates\\production\\risk.html",
+      "templates\\production\\risk.html",
+      "static\\js\\lumenis-data.js"
+    ]
+  },
+  "/api/negative/stats": {
+    "sources": [
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html"
+    ]
+  },
+  "/api/dashboard/all": {
+    "sources": [
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html"
+    ]
+  },
+  "/api/collect/tasks": {
+    "sources": [
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html"
+    ]
+  },
+  "/api/ai-governance/status": {
+    "sources": [
+      "templates\\home\\command_home.html",
+      "templates\\home\\command_home.html"
+    ]
+  },
+  "/api/agents/status": {
+    "sources": [
+      "templates\\intelligence\\agent_center.html",
+      "templates\\intelligence\\agent_center.html"
+    ]
+  },
+  "/api/evaluation/status": {
+    "sources": [
+      "templates\\intelligence\\evaluation.html",
+      "templates\\intelligence\\evaluation.html"
+    ]
+  },
+  "/api/intelligence/library/": {
+    "sources": [
+      "templates\\intelligence\\library.html"
+    ]
+  },
+  "/api/intelligence/library": {
+    "sources": [
+      "templates\\intelligence\\library.html"
+    ]
+  },
+  "/api/intelligence/models": {
+    "sources": [
+      "templates\\intelligence\\models.html",
+      "templates\\intelligence\\models.html",
+      "templates\\intelligence\\models.html"
+    ]
+  },
+  "/api/skills/status": {
+    "sources": [
+      "templates\\intelligence\\skill_hub.html"
+    ]
+  },
+  "/api/skills/invocations": {
+    "sources": [
+      "templates\\intelligence\\skill_hub.html"
+    ]
+  },
+  "/api/skills/invoke": {
+    "sources": [
+      "templates\\intelligence\\skill_hub.html"
+    ]
+  },
+  "/api/skills/sync": {
+    "sources": [
+      "templates\\intelligence\\skill_hub.html"
+    ]
+  },
+  "/api/ai/chat": {
+    "sources": [
+      "templates\\intelligence\\workspace.html",
+      "templates\\intelligence\\workspace.html",
+      "templates\\intelligence\\workspace.html",
+      "static\\js\\ai-assistant.js"
+    ]
+  },
+  "/api/ai/status": {
+    "sources": [
+      "templates\\intelligence\\workspace.html",
+      "templates\\intelligence\\workspace.html",
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "static\\js\\lumenis-data.js"
+    ]
+  },
+  "/api/ai/channel-health": {
+    "sources": [
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "static\\js\\lumenis-data.js"
+    ]
+  },
+  "/api/collect/schedule-status": {
+    "sources": [
+      "templates\\operations\\index.html",
+      "templates\\operations\\index.html",
+      "templates\\production\\monitoring.html",
+      "templates\\production\\monitoring.html",
+      "templates\\production\\monitoring.html",
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html",
+      "static\\js\\lumenis-data.js"
+    ]
+  },
+  "/api/operations/permissions": {
+    "sources": [
+      "templates\\operations\\permissions.html",
+      "templates\\operations\\permissions.html",
+      "templates\\operations\\permissions.html"
+    ]
+  },
+  "/api/system/repository": {
+    "sources": [
+      "templates\\operations\\repository.html",
+      "templates\\operations\\repository.html",
+      "templates\\operations\\repository.html"
+    ]
+  },
+  "/api/system/runtime": {
+    "sources": [
+      "templates\\operations\\runtime.html",
+      "templates\\operations\\runtime.html",
+      "templates\\operations\\runtime.html",
+      "templates\\system\\runtime.html"
+    ]
+  },
+  "/api/case-analysis/stats": {
+    "sources": [
+      "templates\\production\\cases.html",
+      "templates\\production\\cases.html",
+      "templates\\production\\cases.html",
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/event-graph/stats": {
+    "sources": [
+      "templates\\production\\cases.html",
+      "templates\\production\\cases.html",
+      "templates\\production\\cases.html"
+    ]
+  },
+  "/api/brand-knowledge/stats": {
+    "sources": [
+      "templates\\production\\cases.html",
+      "templates\\production\\cases.html",
+      "templates\\production\\cases.html",
+      "templates\\research\\findings.html",
+      "templates\\research\\findings.html",
+      "templates\\research\\findings.html"
+    ]
+  },
+  "/api/collector-guard/status": {
+    "sources": [
+      "templates\\production\\monitoring.html",
+      "templates\\production\\monitoring.html",
+      "templates\\production\\monitoring.html"
+    ]
+  },
+  "/api/kos/professional/status": {
+    "sources": [
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html"
+    ]
+  },
+  "/api/kos/professional/enable": {
+    "sources": [
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html"
+    ]
+  },
+  "/api/kos/professional/disable": {
+    "sources": [
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html"
+    ]
+  },
+  "/api/kos/professional/import": {
+    "sources": [
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html",
+      "templates\\production\\overview.html"
+    ]
+  },
+  "/api/risk-alerts": {
+    "sources": [
+      "templates\\production\\public_opinion.html",
+      "templates\\production\\public_opinion.html",
+      "templates\\production\\risk.html",
+      "templates\\production\\risk.html",
+      "templates\\production\\risk.html",
+      "static\\js\\lumenis-data.js"
+    ]
+  },
+  "/api/production/reports": {
+    "sources": [
+      "templates\\production\\reports.html"
+    ]
+  },
+  "/api/case-analysis/system-insights": {
+    "sources": [
+      "templates\\research\\findings.html",
+      "templates\\research\\findings.html",
+      "templates\\research\\findings.html"
+    ]
+  },
+  "/api/research/start": {
+    "sources": [
+      "templates\\research\\workspace.html",
+      "templates\\research\\workspace.html",
+      "templates\\research\\workspace.html"
+    ]
+  },
+  "/api/research/status": {
+    "sources": [
+      "templates\\research\\workspace.html",
+      "templates\\research\\workspace.html"
+    ]
+  },
+  "/api/research/pipeline": {
+    "sources": [
+      "templates\\research\\workspace.html",
+      "templates\\research\\workspace.html"
+    ]
+  },
+  "/viz/ai-providers": {
+    "sources": [
+      "templates\\system\\ai.html"
+    ]
+  },
+  "/viz/ai-logs": {
+    "sources": [
+      "templates\\system\\ai.html"
+    ]
+  },
+  "/viz/ai-owasp": {
+    "sources": [
+      "templates\\system\\ai.html"
+    ]
+  },
+  "/viz/ai-evaluations": {
+    "sources": [
+      "templates\\system\\ai.html"
+    ]
+  },
+  "/api/internal-browser/screenshot": {
+    "sources": [
+      "templates\\system\\collector.html",
+      "templates\\system\\collector.html"
+    ]
+  },
+  "/api/collector/status": {
+    "sources": [
+      "templates\\system\\collector.html",
+      "templates\\system\\collector.html",
+      "templates\\system\\collector.html"
+    ]
+  },
+  "/viz/collectors": {
+    "sources": [
+      "templates\\system\\collector.html"
+    ]
+  },
+  "/viz/collector-quality": {
+    "sources": [
+      "templates\\system\\collector.html"
+    ]
+  },
+  "/viz/database": {
+    "sources": [
+      "templates\\system\\database.html"
+    ]
+  },
+  "/viz/tables": {
+    "sources": [
+      "templates\\system\\database.html"
+    ]
+  },
+  "/viz/database-quality": {
+    "sources": [
+      "templates\\system\\database.html"
+    ]
+  },
+  "/api/domain/context": {
+    "sources": [
+      "templates\\system\\evaluation.html",
+      "templates\\zbmp\\evaluation.html"
+    ]
+  },
+  "/api/viz/runtime": {
+    "sources": [
+      "templates\\system\\runtime.html"
+    ]
+  },
+  "/viz/runtime": {
+    "sources": [
+      "templates\\system\\runtime.html",
+      "templates\\system\\runtime.html"
+    ]
+  },
+  "/viz/security": {
+    "sources": [
+      "templates\\system\\security.html"
+    ]
+  },
+  "/viz/security-permissions": {
+    "sources": [
+      "templates\\system\\security.html"
+    ]
+  },
+  "/viz/domain-isolation": {
+    "sources": [
+      "templates\\system\\security.html"
+    ]
+  },
+  "/viz/security-audit": {
+    "sources": [
+      "templates\\system\\security.html"
+    ]
+  },
+  "/viz/security-masking": {
+    "sources": [
+      "templates\\system\\security.html"
+    ]
+  },
+  "/viz/security-auth-recovery": {
+    "sources": [
+      "templates\\system\\security.html"
+    ]
+  },
+  "/api/creative/social-ops": {
+    "sources": [
+      "templates\\zbmp\\content.html",
+      "templates\\zbmp\\content.html",
+      "templates\\zbmp\\content.html"
+    ]
+  },
+  "/api/domain/overview": {
+    "sources": [
+      "templates\\zbmp\\intelligence.html"
+    ]
+  },
+  "/api/zbmp/overview": {
+    "sources": [
+      "templates\\zbmp\\overview.html",
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/brand-industry/stats": {
+    "sources": [
+      "templates\\zbmp\\overview.html"
+    ]
+  },
+  "/api/brand-industry/brands": {
+    "sources": [
+      "templates\\zbmp\\overview.html",
+      "templates\\zbmp\\overview.html"
+    ]
+  },
+  "/api/metric-trend": {
+    "sources": [
+      "templates\\zbmp\\overview.html"
+    ]
+  },
+  "/api/trends/global": {
+    "sources": [
+      "templates\\zbmp\\overview.html",
+      "templates\\zbmp\\overview.html"
+    ]
+  },
+  "/api/podcast/overview": {
+    "sources": [
+      "templates\\zbmp\\podcast.html",
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/podcast/entities": {
+    "sources": [
+      "templates\\zbmp\\podcast.html",
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/podcast/entity": {
+    "sources": [
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/podcast/topic-score": {
+    "sources": [
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/podcast/story-nodes": {
+    "sources": [
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/podcast/runtime/validate": {
+    "sources": [
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/podcast/breakout": {
+    "sources": [
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/podcast/content-yield": {
+    "sources": [
+      "templates\\zbmp\\podcast.html"
+    ]
+  },
+  "/api/special-report/generate": {
+    "sources": [
+      "templates\\zbmp\\reports.html"
+    ]
+  },
+  "/api/weekly/send-email": {
+    "sources": [
+      "templates\\zbmp\\reports.html"
+    ]
+  },
+  "/api/negative/confirm": {
+    "sources": [
+      "templates\\zbmp\\risk.html",
+      "templates\\zbmp\\risk.html",
+      "templates\\zbmp\\risk.html"
+    ]
+  },
+  "/api/negative/reject": {
+    "sources": [
+      "templates\\zbmp\\risk.html",
+      "templates\\zbmp\\risk.html",
+      "templates\\zbmp\\risk.html"
+    ]
+  },
+  "/api/risks/active": {
+    "sources": [
+      "templates\\_preview\\command-home-preview.html",
+      "templates\\_preview\\command-home-preview.html"
+    ]
+  },
+  "/api/badge/counts": {
+    "sources": [
+      "static\\js\\badge-manager.js"
+    ]
+  },
+  "/api/badge/notifications": {
+    "sources": [
+      "static\\js\\badge-manager.js"
+    ]
+  },
+  "/api/badge/mark-all-read": {
+    "sources": [
+      "static\\js\\badge-manager.js"
+    ]
+  },
+  "/api/zbmp/": {
+    "sources": [
+      "static\\js\\domain-context.js",
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/zbmp": {
+    "sources": [
+      "static\\js\\domain-context.js"
+    ]
+  },
+  "/api/cth": {
+    "sources": [
+      "static\\js\\domain-context.js"
+    ]
+  },
+  "/api/system": {
+    "sources": [
+      "static\\js\\domain-context.js"
+    ]
+  },
+  "/api/case-analysis/list": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/case-analysis/detail": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/pr/cases/": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/pr/act-principle": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/pr/triggers": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/swire/overview": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/swire/events": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/swire/notes": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/topic-campaign/status": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/topic-campaign/topics": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/topic-campaign/stats": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/topic-campaign/campaigns": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/app_evidence/stats": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/app_evidence/list": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/architecture/status": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/adaptive/status": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/recovery/stats": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/feedback/stats": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/boundary/stats": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/security/scan": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/evaluation/run": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/local-ai/status": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/collector/start-cdp": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/collector/stop-cdp": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/zbmp/brands": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/zbmp/metrics": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/auxiliary/sources": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/web-sources": {
+    "sources": [
+      "static\\js\\feature-modules.js"
+    ]
+  },
+  "/api/evidence/list": {
+    "sources": [
+      "static\\js\\lumenis-data.js"
+    ]
+  },
+  "/api/system/account/": {
+    "sources": [
+      "static\\js\\settings.js"
+    ]
+  },
+  "/api/system/account": {
+    "sources": [
+      "static\\js\\settings.js"
+    ]
+  }
+}

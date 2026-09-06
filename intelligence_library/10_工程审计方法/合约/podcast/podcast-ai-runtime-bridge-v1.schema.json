@@ -1,0 +1,23 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"zai://podcast/ai-runtime-bridge/v1",
+  "title":"Podcast AI Runtime Bridge v1",
+  "type":"object",
+  "required":["request_id","run_id","capability","input_refs","contract_version","return_status"],
+  "properties":{
+    "request_id":{"type":"string"},
+    "run_id":{"type":"string"},
+    "capability":{"type":"string","enum":["transcription","diarization","embedding","topic_analysis","person_extraction","story_analysis","content_yield","research_assist"]},
+    "input_refs":{"type":"array","items":{"type":"string"}},
+    "contract_version":{"type":"string"},
+    "model_name":{"type":["string","null"]},
+    "model_version":{"type":["string","null"]},
+    "prompt_version":{"type":["string","null"]},
+    "return_status":{"type":"string","enum":["pending","returned","partial","missing","acknowledged"]},
+    "evidence_ids":{"type":"array","items":{"type":"string"}},
+    "output_ref":{"type":["string","null"]},
+    "confidence":{"type":["number","null"],"minimum":0,"maximum":1},
+    "error_class":{"type":["string","null"]}
+  },
+  "additionalProperties":false
+}

@@ -1,0 +1,41 @@
+{
+  "evidence_id": "13cfa59d5fe3",
+  "task_id": "TASK-4cb9a4a0",
+  "created_at": "2026-09-06 02:01:11",
+  "verification_status": "EVIDENCE_CREATED",
+  "trace_ref": "TRACE-972d370bc773",
+  "skill_id": "S01",
+  "skill_version": "0.1.0",
+  "provider": "zhipu",
+  "model": "glm-4.5-air",
+  "nodes": [
+    {
+      "node_type": "task",
+      "ref": "TASK-4cb9a4a0",
+      "detail": "test",
+      "actor": "system",
+      "ts": "2026-09-06 02:01:11"
+    },
+    {
+      "node_type": "skill",
+      "ref": "S01",
+      "detail": "version=0.1.0",
+      "actor": "system",
+      "ts": "2026-09-06 02:01:11"
+    },
+    {
+      "node_type": "action",
+      "ref": "eng_072e00719dd5",
+      "detail": "model=glm-4.5-air",
+      "actor": "engine",
+      "ts": "2026-09-06 02:01:11"
+    },
+    {
+      "node_type": "result",
+      "ref": "output",
+      "detail": "To run a test, I'll create a simple Python function that demonstrates a basic test case. Here's an example:\n\n```python\ndef add(a, b):\n    \"\"\"Add two numbers and return the result.\"\"\"\n    return a + b\n\n# Test case\ndef test_add():\n    # Test normal case\n    assert add(2, 3) == 5, \"Addition failed for 2 + 3\"\n    \n    # Test negative numbers\n    assert add(-1, 5) == 4, \"Addition failed for -1 + 5\"\n    \n    # Test zero\n    assert add(0, 0) == 0, \"Addition failed for 0 + 0\"\n    \n    print(\"All tests p",
+      "actor": "engine",
+      "ts": "2026-09-06 02:01:11"
+    }
+  ]
+}

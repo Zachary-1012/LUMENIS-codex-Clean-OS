@@ -1,0 +1,36 @@
+api_id,endpoint,method,calling_pages,request_params,response_format,status_codes,error_handling,permission,db_table,real_data,classification,notes
+API001,/api/system/health/summary,GET,"base.html,command_home,operations/index,production/overview,production/monitoring,production/risk",none,"{overall_status, sub_lights, last_collection}",200/401,catch+unknown state,Basic Auth/v4 session,none(health check),YES,REAL_FUNCTIONAL,全局健康状态,所有页面共享
+API002,/lumenis/api/intelligence/evidence,GET,"command_home,intelligence/evidence",none,"{ok,count,chains,source,persistence}",200/401/500,catch+error state,Basic Auth,file_based(OSAI evidence),YES,REAL_FUNCTIONAL,证据链读取,跨核心OSAI
+API003,/api/negative/stats,GET,command_home,none,"{total,pending,confirmed,rejected,high_risk}",200/401,catch+fallback dashboard/all,Basic Auth,notes(negative_confirmed),YES,REAL_FUNCTIONAL,负面确认统计
+API004,/api/dashboard/all,GET,command_home(fallback),none,"{notes_count,negative_count,high_risk,...}",200/401,catch,Basic Auth,notes/events,YES,REAL_FUNCTIONAL,Dashboard全量数据,negative/stats的fallback
+API005,/api/collect/tasks,GET,command_home,none,"{tasks:[{id,status,progress,...}]}",200/401,catch+empty state,Basic Auth,memory(collect_tasks),YES,REAL_FUNCTIONAL,采集任务列表
+API006,/api/ai-governance/status,GET,command_home,none,"{enabled,provider,model,runtime,...}",200/401,catch+local fallback,Basic Auth,none(config),YES,REAL_FUNCTIONAL,AI治理状态,Provider真实检测
+API007,/api/collect/schedule-status,GET,"operations/index,production/overview,production/monitoring",none,"{state,today_runs,today_inserted,manual_left,next_collect}",200/401,catch+empty state,Basic Auth,collection_logs,YES,REAL_FUNCTIONAL,采集调度状态
+API008,/api/ai/status,GET,"operations/index,intelligence/workspace",none,"{enabled,provider,model,runtime}",200/401,catch+offline state,Basic Auth,none(config),YES,REAL_FUNCTIONAL,AI状态
+API009,/api/ai/channel-health,GET,operations/index,none,"{channels:[...]}",200/401,catch,Basic Auth,none,YES,REAL_FUNCTIONAL,AI通道健康
+API010,/api/research/status,GET,research/workspace,none,"{status,...}",200/401,catch+empty,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,研究状态,需验证端点是否存在
+API011,/api/research/pipeline,GET,research/workspace,none,"{pipeline:...}",200/401,catch+empty,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,研究流水线,需验证端点是否存在
+API012,/api/research/start,POST,research/workspace,"{task,...}","{ok,task_id}",200/401,catch,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,启动研究,需验证端点是否存在
+API013,/api/case-analysis/system-insights,GET,research/findings,none,"{insights:...}",200/401,catch,Basic Auth,cases,YES,REAL_FUNCTIONAL,案例系统洞察
+API014,/api/brand-knowledge/stats,GET,"research/findings,production/cases",none,"{brands,total,...}",200/401,catch,Basic Auth,brand_directory,YES,REAL_FUNCTIONAL,品牌知识库统计
+API015,/api/system/runtime,GET,operations/runtime,none,"{runtime:...}",200/401,catch,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,系统运行时,需验证端点是否存在
+API016,/api/operations/permissions,GET,operations/permissions,none,"{permissions:...}",200/401,catch,Basic Auth,v4_users/v4_workspace_grants,UNKNOWN,UI_ONLY_PENDING,权限列表,需验证端点是否存在
+API017,/api/evaluation/status,GET,intelligence/evaluation,none,"{status:...}",200/401,catch+empty,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,评估状态,需验证端点是否存在
+API018,/api/agents/status,GET,intelligence/agent_center,none,"{agents:...}",200/401,catch+empty,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,Agent状态,需验证端点是否存在
+API019,/api/system/repository,GET,operations/repository,none,"{repos:...}",200/401,catch,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,仓库注册,需验证端点是否存在
+API020,/api/intelligence/models,GET,intelligence/models,none,"{models:...}",200/401,catch,Basic Auth,none,UNKNOWN,UI_ONLY_PENDING,模型列表,需验证端点是否存在
+API021,/api/collector-guard/status,GET,production/monitoring,none,"{status,...}",200/401,catch,Basic Auth,none,YES,REAL_FUNCTIONAL,采集守护状态
+API022,/api/risk-alerts,GET,"production/risk,production/public_opinion",none,"{alerts:[...]}",200/401,catch,Basic Auth,risk_alerts/events,YES,REAL_FUNCTIONAL,风险预警列表
+API023,/api/ai/chat,POST,intelligence/workspace,"{message}","{ok,reply,provider,context}",200/401/500,catch+error state,Basic Auth,none(AI调用),YES,REAL_FUNCTIONAL,AI对话,POST端点
+API024,/api/stats,GET,production/public_opinion,none,"{sentiment_distribution,...}",200/401,catch+empty,Basic Auth,notes,YES,REAL_FUNCTIONAL,舆情统计
+API025,/lumenis/api/skills/status,GET,intelligence/skill_hub,none,"{total,running,sync_status,skills,...}",200/401,catch,Basic Auth,OSAI registry(file),YES,REAL_FUNCTIONAL,Skill注册表状态,跨核心OSAI
+API026,/lumenis/api/skills/invocations,GET,intelligence/skill_hub,"limit,skill_id","{ok,count,records,persistence}",200/401/500,catch,Basic Auth,file_based(jsonl),YES,REAL_FUNCTIONAL,Skill调用历史
+API027,/lumenis/api/skills/invoke,POST,intelligence/skill_hub,"{skill_id,task,workspace}","{invocation_id,status,trace_id,evidence_id,...}",200/401/400/404,catch+error state,Basic Auth,file_based+OSAI,YES,REAL_FUNCTIONAL,Skill调用,POST端点,完整证据链
+API028,/lumenis/api/skills/sync,POST,intelligence/skill_hub,none,"{status,synced_count,conflicts,...}",200/401,catch,Basic Auth,OSAI manifests,YES,REAL_FUNCTIONAL,Skill同步,POST端点
+API029,/api/case-analysis/stats,GET,production/cases,none,"{total,categories,...}",200/401,catch,Basic Auth,cases,YES,REAL_FUNCTIONAL,案例分析统计
+API030,/api/event-graph/stats,GET,production/cases,none,"{events,relations,...}",200/401,catch,Basic Auth,events,YES,REAL_FUNCTIONAL,事件图谱统计
+API031,/api/kos/professional/status,GET,production/overview,none,"{enabled,account_count,...}",200/401,catch+empty,Basic Auth,kos_profiles,YES,REAL_FUNCTIONAL,KOS专业号状态
+API032,/api/kos/professional/enable,POST,production/overview,none,"{ok}",200/401,catch,Basic Auth,kos_config,YES,REAL_FUNCTIONAL,KOS开启,POST端点
+API033,/api/kos/professional/disable,POST,production/overview,none,"{ok}",200/401,catch,Basic Auth,kos_config,YES,REAL_FUNCTIONAL,KOS关闭,POST端点
+API034,/api/kos/professional/import,POST,production/overview,none,"{ok,imported}",200/401,catch,Basic Auth,kos_profiles,YES,REAL_FUNCTIONAL,KOS导入,POST端点
+API035,/api/report/*,GET,production/reports,dynamic(url),"{reports:...}",200/401,catch,Basic Auth,daily_reports,YES,REAL_FUNCTIONAL,报告中心,动态URL

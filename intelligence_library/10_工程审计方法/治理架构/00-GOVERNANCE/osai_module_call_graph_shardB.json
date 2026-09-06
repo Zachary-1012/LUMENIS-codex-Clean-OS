@@ -1,0 +1,230 @@
+{
+  "modules": {
+    "ai_gateway": "AI Provider Gateway",
+    "llm": "LLM Interface",
+    "engine_runtime": "Engine Runtime (AI execution)",
+    "context_runtime": "Context Builder",
+    "research": "Research Pipeline",
+    "research_pipeline": "Research Pipeline v2",
+    "skill_registry": "Skill Registry (legacy)",
+    "canonical_skill_registry": "Canonical Skill Registry (truth)",
+    "skill_invocation": "Skill Invocation (main chain)",
+    "skill_execution_contract": "Skill Execution Contract",
+    "skill_manifest": "Skill Manifest",
+    "skill_selector": "Skill Selector",
+    "skill_sync": "Skill Sync",
+    "agent": "Agent Core",
+    "agent_identity": "Agent Identity Registry",
+    "agent_integration": "Agent Integration",
+    "orchestrator": "Orchestrator",
+    "harness_runtime": "Harness Runtime",
+    "engineering_loop": "Engineering Loop",
+    "delegation": "Delegation (legacy)",
+    "obo_jit": "OBO/JIT Delegation",
+    "permission_gate": "Permission Gate",
+    "permission_contract": "Permission Contract",
+    "action_firewall": "Action Firewall",
+    "effect_fence": "Effect Fence / Idempotency",
+    "release_safety": "Release Safety",
+    "runtime_guardian": "Runtime Guardian",
+    "evidence": "Evidence (legacy)",
+    "evidence_chain": "Evidence Chain (persistence)",
+    "evidence_graph": "Evidence Graph",
+    "observability": "Observability / Trace",
+    "trace_evaluation": "Trace Evaluation",
+    "evaluation_contract": "Evaluation Contract",
+    "decision_action_outcome": "Decision→Action→Outcome",
+    "contract_persistence": "Contract Persistence",
+    "learning_record_contract": "Learning Record Contract",
+    "canonical_data": "Canonical Data Models",
+    "capability_registry": "Capability Registry",
+    "config": "OSAI Config",
+    "rules": "Rules Engine",
+    "tools": "Tools Registry",
+    "impact_analysis": "Impact Analysis",
+    "memory_lifecycle": "Memory Lifecycle",
+    "lifecycle_contract": "Lifecycle Contract",
+    "task_contract": "Task Contract",
+    "runtime_contract": "Runtime Contract",
+    "trace_contract": "Trace Contract",
+    "ui_state_contract": "UI State Contract",
+    "repository_contract": "Repository Contract",
+    "repository_registry": "Repository Registry",
+    "browser_capability": "Browser Capability",
+    "browser_executor": "Browser Executor"
+  },
+  "import_matrix": {
+    "ai_gateway": [],
+    "llm": [],
+    "engine_runtime": [],
+    "context_runtime": [],
+    "research": [],
+    "research_pipeline": [],
+    "skill_registry": [],
+    "canonical_skill_registry": [
+      "skill_manifest",
+      "skill_registry"
+    ],
+    "skill_invocation": [
+      "action_firewall",
+      "context_runtime",
+      "effect_fence",
+      "engine_runtime",
+      "evidence_chain",
+      "observability",
+      "permission_gate",
+      "skill_execution_contract",
+      "skill_manifest"
+    ],
+    "skill_execution_contract": [],
+    "skill_manifest": [],
+    "skill_selector": [
+      "skill_manifest"
+    ],
+    "skill_sync": [
+      "skill_manifest"
+    ],
+    "agent": [],
+    "agent_identity": [],
+    "agent_integration": [
+      "agent_identity",
+      "browser_capability",
+      "delegation",
+      "permission_gate"
+    ],
+    "orchestrator": [
+      "orchestrator"
+    ],
+    "harness_runtime": [
+      "context_runtime",
+      "engine_runtime",
+      "engineering_loop",
+      "observability"
+    ],
+    "engineering_loop": [],
+    "delegation": [
+      "agent_identity"
+    ],
+    "obo_jit": [
+      "agent_identity"
+    ],
+    "permission_gate": [],
+    "permission_contract": [],
+    "action_firewall": [],
+    "effect_fence": [],
+    "release_safety": [],
+    "runtime_guardian": [],
+    "evidence": [],
+    "evidence_chain": [],
+    "evidence_graph": [],
+    "observability": [],
+    "trace_evaluation": [],
+    "evaluation_contract": [],
+    "decision_action_outcome": [
+      "canonical_data",
+      "effect_fence"
+    ],
+    "contract_persistence": [],
+    "learning_record_contract": [],
+    "canonical_data": [],
+    "capability_registry": [],
+    "config": [],
+    "rules": [],
+    "tools": [],
+    "impact_analysis": [],
+    "memory_lifecycle": [],
+    "lifecycle_contract": [],
+    "task_contract": [
+      "lifecycle_contract"
+    ],
+    "runtime_contract": [],
+    "trace_contract": [],
+    "ui_state_contract": [],
+    "repository_contract": [],
+    "repository_registry": [],
+    "browser_capability": [],
+    "browser_executor": [
+      "browser_capability"
+    ]
+  },
+  "categories": {
+    "AI Provider/Engine": [
+      "ai_gateway",
+      "llm",
+      "engine_runtime",
+      "context_runtime",
+      "research",
+      "research_pipeline"
+    ],
+    "Skill Registry/Execution": [
+      "skill_registry",
+      "canonical_skill_registry",
+      "skill_invocation",
+      "skill_execution_contract",
+      "skill_manifest",
+      "skill_selector",
+      "skill_sync"
+    ],
+    "Agent/Identity": [
+      "agent",
+      "agent_identity",
+      "agent_integration",
+      "orchestrator",
+      "harness_runtime",
+      "engineering_loop",
+      "delegation",
+      "obo_jit"
+    ],
+    "Permission/Security": [
+      "permission_gate",
+      "permission_contract",
+      "action_firewall",
+      "effect_fence",
+      "release_safety",
+      "runtime_guardian"
+    ],
+    "Evidence/Trace/Eval": [
+      "evidence",
+      "evidence_chain",
+      "evidence_graph",
+      "observability",
+      "trace_evaluation",
+      "evaluation_contract",
+      "decision_action_outcome",
+      "contract_persistence",
+      "learning_record_contract"
+    ],
+    "Canonical/Config/Runtime": [
+      "canonical_data",
+      "capability_registry",
+      "config",
+      "rules",
+      "tools",
+      "impact_analysis",
+      "memory_lifecycle",
+      "lifecycle_contract",
+      "task_contract",
+      "runtime_contract",
+      "trace_contract",
+      "ui_state_contract",
+      "repository_contract",
+      "repository_registry",
+      "browser_capability",
+      "browser_executor"
+    ]
+  },
+  "integration_checks": {
+    "skill_invocation imports action_firewall": true,
+    "skill_invocation imports effect_fence": true,
+    "skill_invocation imports permission_gate": true,
+    "skill_invocation imports evidence_chain": true,
+    "skill_invocation imports engine_runtime": true,
+    "skill_invocation imports observability": true,
+    "skill_invocation imports skill_execution_contract": true,
+    "obo_jit imports agent_identity": true,
+    "decision_action_outcome imports effect_fence": true,
+    "decision_action_outcome imports canonical_data": true,
+    "engine_runtime imports ai_gateway or llm": false,
+    "canonical_skill_registry has no circular import to skill_invocation": true
+  }
+}

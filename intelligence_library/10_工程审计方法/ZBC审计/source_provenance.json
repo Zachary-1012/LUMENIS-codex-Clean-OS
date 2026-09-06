@@ -1,0 +1,121 @@
+{
+  "audit_metadata": {
+    "audit_name": "ZBC Phase 17 - Source Provenance / License Audit",
+    "audit_date": "2026-09-06",
+    "repository": "D:\\Taikoo-monitor-new",
+    "branch": "feat/zbc-full-upgrade-v1",
+    "head": "5e0ccd02648a52c8c4aec34a5b804094c3492a7",
+    "audit_type": "engineering_audit_not_legal_opinion"
+  },
+  "classification_summary": {
+    "ORIGINAL": {"estimated_file_count": 600, "description": "Core Python/JS source, templates, static assets, project docs, 序境/, 99-ARCHIVE/"},
+    "THIRD_PARTY_DEPENDENCY": {"direct_dependency_count": 29, "description": "28 Python + 1 Node.js direct dependencies via package managers"},
+    "DERIVED_WITH_LICENSE": {"file_count": 6, "description": "Third-party code snippets in docs/reference/apple-ui-reference/code-snippets/ with MIT attribution"},
+    "NEEDS_REVIEW": {"estimated_file_count": 650, "description": "Media assets: ref_gpt_v2/ (353), _ref_frames/ (11), docs/reference/ui-research/ media (~280)"},
+    "INFRINGEMENT_RISK": {"file_count": 8, "description": "Client confidential / third-party document text dumps in _pitch_dump/"}
+  },
+  "python_dependencies": [
+    {"name": "Flask", "version_constraint": ">=2.0.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Web framework"},
+    {"name": "Werkzeug", "version_constraint": ">=2.0.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "WSGI utility library"},
+    {"name": "Flask-CORS", "version_constraint": ">=3.0.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "CORS support"},
+    {"name": "Flask-Limiter", "version_constraint": ">=3.5.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Rate limiting"},
+    {"name": "waitress", "version_constraint": ">=2.1.0", "source": "PyPI", "license": "ZPL-2.1", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Production WSGI server"},
+    {"name": "APScheduler", "version_constraint": ">=3.10.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Task scheduling"},
+    {"name": "schedule", "version_constraint": ">=1.2.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Lightweight job scheduling"},
+    {"name": "pandas", "version_constraint": ">=1.3.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Data processing"},
+    {"name": "openpyxl", "version_constraint": ">=3.0.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Excel reading"},
+    {"name": "XlsxWriter", "version_constraint": ">=3.0.0", "source": "PyPI", "license": "BSD-2-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Excel writing"},
+    {"name": "beautifulsoup4", "version_constraint": ">=4.12.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "HTML parsing"},
+    {"name": "lxml", "version_constraint": ">=4.9.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "XML/HTML processing"},
+    {"name": "python-docx", "version_constraint": ">=0.8.11", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Word document generation"},
+    {"name": "reportlab", "version_constraint": ">=3.6.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "PDF generation"},
+    {"name": "playwright", "version_constraint": ">=1.30.0", "source": "PyPI", "license": "Apache-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Browser automation"},
+    {"name": "psutil", "version_constraint": ">=5.9.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "System monitoring"},
+    {"name": "requests", "version_constraint": ">=2.28.0", "source": "PyPI", "license": "Apache-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "HTTP client"},
+    {"name": "httpx", "version_constraint": ">=0.24.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Async HTTP client"},
+    {"name": "websocket-client", "version_constraint": ">=1.6.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "WebSocket client"},
+    {"name": "python-dotenv", "version_constraint": ">=0.21.0", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Environment variable loading"},
+    {"name": "python-dateutil", "version_constraint": ">=2.8.2", "source": "PyPI", "license": "Apache-2.0/BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Date utilities"},
+    {"name": "PyYAML", "version_constraint": ">=6.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "YAML parsing"},
+    {"name": "colorama", "version_constraint": ">=0.4.6", "source": "PyPI", "license": "BSD-3-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Terminal colors"},
+    {"name": "tqdm", "version_constraint": ">=4.64.0", "source": "PyPI", "license": "MIT/MPL-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Progress bars"},
+    {"name": "aiohttp", "version_constraint": ">=3.9.0", "source": "PyPI", "license": "Apache-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Async HTTP client"},
+    {"name": "yyds-logger", "version_constraint": ">=0.8.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Unified logging enhancement"},
+    {"name": "tenacity", "version_constraint": ">=9.1.0", "source": "PyPI", "license": "Apache-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Retry library"},
+    {"name": "alembic", "version_constraint": ">=1.19.1", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Database migrations"}
+  ],
+  "python_license_stats": {
+    "MIT": 12, "BSD-3-Clause": 10, "Apache-2.0": 5, "BSD-2-Clause": 1,
+    "ZPL-2.1": 1, "MIT/MPL-2.0_dual": 1, "Apache-2.0/BSD-3-Clause_dual": 1,
+    "GPL_or_AGPL": 0, "non_commercial_restricted": 0
+  },
+  "nodejs_dependencies": [
+    {"name": "playwright", "version_constraint": "^1.62.1", "source": "npm", "license": "Apache-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Browser automation (Node side)"}
+  ],
+  "derived_with_license": [
+    {"file": "docs/reference/apple-ui-reference/code-snippets/01-sfsymbols-glyph-extraction.swift", "source_repo": "davedelong/sfsymbols", "license": "MIT", "attribution_present": true, "in_production_path": false},
+    {"file": "docs/reference/apple-ui-reference/code-snippets/02-sfsymbols-svg-exporter.swift", "source_repo": "davedelong/sfsymbols", "license": "MIT", "attribution_present": true, "in_production_path": false},
+    {"file": "docs/reference/apple-ui-reference/code-snippets/03-sfsafesymbols-type-safe-access.swift", "source_repo": "SFSafeSymbols/SFSafeSymbols", "license": "MIT", "attribution_present": true, "in_production_path": false},
+    {"file": "docs/reference/apple-ui-reference/code-snippets/04-appicon-asset-catalog.swift", "source_repo": "raphaelhanneken/iconizer", "license": "MIT", "attribution_present": true, "in_production_path": false},
+    {"file": "docs/reference/apple-ui-reference/code-snippets/05-hig-icon-geometry-canvas.tsx", "source_repo": "yc-w-cn/macos-compliant-icon-generator", "license": "TBD", "attribution_present": true, "in_production_path": false},
+    {"file": "docs/reference/apple-ui-reference/code-snippets/06-liquid-glass-iOS26-cheatsheet.txt", "source_repo": "conorluddy/LiquidGlassReference", "license": "TBD", "attribution_present": true, "in_production_path": false}
+  ],
+  "infringement_risk": [
+    {"file": "_pitch_dump/提案Final【25年年度review】-2025年广州太古汇小红书运营项目_MSG251128.txt", "type": "client_confidential", "severity": "high", "in_production_path": false, "in_git": true},
+    {"file": "_pitch_dump/v2-索尼音乐打卡活动Review-2025年广州太古汇小红书运营项目-250428.txt", "type": "client_confidential", "severity": "high", "in_production_path": false, "in_git": true},
+    {"file": "_pitch_dump/【Study-NIO蔚来】25年广州太古汇对话时刻播客项目-板块2-0113.txt", "type": "client_confidential", "severity": "high", "in_production_path": false, "in_git": true},
+    {"file": "_pitch_dump/2024年广州太古汇播客专项-1104.txt", "type": "client_confidential", "severity": "high", "in_production_path": false, "in_git": true},
+    {"file": "_pitch_dump/For：Zachary.txt", "type": "client_confidential", "severity": "medium", "in_production_path": false, "in_git": true},
+    {"file": "_pitch_dump/uth又识mediakit2025.txt", "type": "third_party_copyright", "severity": "medium", "in_production_path": false, "in_git": true},
+    {"file": "_pitch_dump/播客先声.txt", "type": "third_party_copyright", "severity": "low", "in_production_path": false, "in_git": true},
+    {"file": "_pitch_dump/日谈公园介绍2024版.txt", "type": "third_party_copyright", "severity": "low", "in_production_path": false, "in_git": true}
+  ],
+  "needs_review": [
+    {"path": "_ref_frames/sprite_01.jpg ~ sprite_10.jpg", "type": "image_assets", "issue": "Source unknown"},
+    {"path": "docs/reference/apple-ui-reference/code-snippets/05-hig-icon-geometry-canvas.tsx", "type": "third_party_code", "issue": "License TBD"},
+    {"path": "docs/reference/apple-ui-reference/code-snippets/06-liquid-glass-iOS26-cheatsheet.txt", "type": "third_party_doc", "issue": "License TBD"},
+    {"path": "ref_gpt_v2/ (353 files)", "type": "media_assets", "issue": "ChatGPT UI screenshots, must exclude from customer release"},
+    {"path": "docs/reference/ui-research/source-videos/ (8 videos)", "type": "video_assets", "issue": "Third-party product recordings"},
+    {"path": "docs/reference/ui-research/reference-images/ (16+ images)", "type": "image_assets", "issue": "From WeChat cache"},
+    {"path": "nodejs/ (portable runtime)", "type": "binary", "issue": "Node.js portable distribution, verify license if redistributed"}
+  ],
+  "copyright_declarations": {
+    "project_own_license_file": false,
+    "project_own_copyright_headers_in_source": 0,
+    "third_party_attribution_comments": 6
+  },
+  "git_history_audit": {
+    "third_party_fork_found": false,
+    "third_party_merge_found": false,
+    "third_party_cherry_pick_found": false,
+    "all_merges_from_own_branches": true
+  },
+  "gitignore_audit": {
+    "venv_excluded": true, "node_modules_excluded": true, "nodejs_excluded": true,
+    "dependencies_excluded": true, "exe_excluded": true, "db_excluded": true,
+    "pitch_dump_excluded_in_gitignore": true, "pitch_dump_still_tracked_in_git": true,
+    "ref_gpt_v2_excluded": false
+  },
+  "production_path_safety": {
+    "infringement_risk_in_production_path": false,
+    "derived_with_license_in_production_path": false,
+    "needs_review_media_in_production_path": false,
+    "third_party_source_modified": false
+  },
+  "key_directories_audit": {
+    "ref_gpt_v2": {"file_count": 353, "classification": "NEEDS_REVIEW"},
+    "序境": {"file_count": 60, "classification": "ORIGINAL"},
+    "_pitch_dump": {"file_count": 8, "classification": "INFRINGEMENT_RISK"},
+    "_ref_frames": {"file_count": 11, "classification": "NEEDS_REVIEW"},
+    "docs_reference": {"file_count": 284, "classification": "MIXED"},
+    "99-ARCHIVE": {"file_count": 2, "classification": "ORIGINAL"},
+    "dependencies": {"file_count": 0, "classification": "EMPTY"}
+  },
+  "mandatory_actions_before_commercial_release": [
+    "git rm --cached -r _pitch_dump/ to remove client confidential docs from Git tracking",
+    "Customer release must exclude: _pitch_dump/, ref_gpt_v2/, docs/reference/ui-research/source-videos/, docs/reference/apple-ui-reference/code-snippets/",
+    "Add project own LICENSE file",
+    "Confirm license for code snippets 05 and 06 (TBD)",
+    "Generate fixed-version SBOM"
+  ]
+}

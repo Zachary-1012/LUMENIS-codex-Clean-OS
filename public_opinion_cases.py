@@ -310,6 +310,702 @@ BRAND_CASES = [
     },
 ]
 
+
+
+# ========== P1-D: 外部标杆舆情案例库（C-01~C-15） ==========
+# 来源：audit/公关话术模版-舆情信息.docx + 公开可查事实
+# 每个案例含五要素：事件→传播→回应→效果→对太古汇启示
+# severity: 🔴高风险 / 🟡中风险 / 🟢低风险
+# evidence_level: high(多源交叉验证) / medium(单源+公开报道) / low(网传待核)
+
+EXTERNAL_BENCHMARK_CASES = [
+    {
+        "case_id": "C-01",
+        "title": "深圳K11\"穷逛买不起\"服务歧视事件",
+        "category": "服务态度",
+        "scenario": "service_discrimination",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2026-06",
+        "brand": "深圳K11 ECOAST",
+        "event": {
+            "time": "2026年6月",
+            "location": "深圳K11 ECOAST",
+            "brand": "K11",
+            "description": "顾客因想坐店内造型椅被请走，店员嘲讽\"穷逛、买不起\"、\"商场只服务高端用户\"，冲突视频被拍下疯传。"
+        },
+        "spread": {
+            "platform": "小红书/抖音/微博",
+            "volume": "全网热搜级传播",
+            "key_nodes": "店内冲突视频→小红书/抖音扩散→本地号跟进→全网热搜→商场+品牌双重压力"
+        },
+        "response": {
+            "time": "事件发酵后次日",
+            "content": "K11 ECOAST官方致歉，强调\"每一位消费者都应获得平等尊重的体验，不存在消费高低之分\"；品牌方开除涉事员工，承诺服务培训。",
+            "channel": "官方微博/小红书声明"
+        },
+        "effect": {
+            "sentiment_trend": "商场态度获认可，品牌方动作果断，负面约2周回落",
+            "recovery_period": "约2周",
+            "business_impact": "\"高端商场歧视\"标签短期残留，品牌形象受损"
+        },
+        "taikoo_insight": "①高端定位≠歧视普通顾客，服务平等是底线；②商场+品牌联合发声，商场不缺位也不替品牌背全锅；③涉事员工处理要快，但避免\"只开除不整改\"被批作秀。"
+    },
+    {
+        "case_id": "C-02",
+        "title": "合肥万象城香奈儿柜姐打人肢体冲突事件",
+        "category": "服务态度",
+        "scenario": "service_physical_conflict",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2025-07",
+        "brand": "合肥万象城/香奈儿",
+        "event": {
+            "time": "2025年7月",
+            "location": "合肥万象城香奈儿专柜",
+            "brand": "香奈儿",
+            "description": "母亲带孩子逛香奈儿，因拍摄商品与柜姐冲突，演变为三对一肢体冲突，拉卷帘门继续殴打，女儿在旁哭泣。"
+        },
+        "spread": {
+            "platform": "抖音/微博/新闻媒体",
+            "volume": "全网愤怒级传播",
+            "key_nodes": "现场视频→全网愤怒→\"奢侈品柜姐优越感\"话题→媒体深度报道→品牌形象长期受损"
+        },
+        "response": {
+            "time": "事件发酵后（偏晚）",
+            "content": "品牌+商场致歉，涉事柜员停职；但回应偏晚且偏官方，未能平息\"奢侈品维权难\"的深层情绪。",
+            "channel": "品牌官方声明+商场声明"
+        },
+        "effect": {
+            "sentiment_trend": "事件成为\"奢侈品服务傲慢\"标志性案例",
+            "recovery_period": "≥1-3月",
+            "business_impact": "品牌及商场形象恢复周期长，奢侈品维权难话题持续发酵"
+        },
+        "taikoo_insight": "①奢侈品专柜是舆情高风险区，需建立商场侧现场干预机制（不能等品牌方）；②涉及肢体冲突/未成年人在场，情绪敏感度翻倍，必须最高优先级；③回应不能只说\"个人行为\"，要体现商场管理责任。"
+    },
+    {
+        "case_id": "C-03",
+        "title": "郑州正弘城FILA\"嫌贵\"备注隐性歧视事件",
+        "category": "服务态度",
+        "scenario": "service_implicit_discrimination",
+        "severity": "🟡",
+        "risk_level": "medium",
+        "source": "public_record",
+        "evidence_level": "medium",
+        "date": "2025-11",
+        "brand": "郑州正弘城/FILA",
+        "event": {
+            "time": "2025年11月",
+            "location": "郑州正弘城FILA门店",
+            "brand": "FILA",
+            "description": "顾客发现购物小票或系统备注中被标注\"嫌贵\"等带有评判性的标签，感觉被店员隐性歧视和标签化。"
+        },
+        "spread": {
+            "platform": "小红书/微博",
+            "volume": "中等传播",
+            "key_nodes": "顾客发帖曝光→评论区共鸣→\"被店员标签化\"话题→品牌回应"
+        },
+        "response": {
+            "time": "曝光后",
+            "content": "品牌方致歉，称备注为内部沟通用语不当，已对涉事员工进行培训，承诺优化内部沟通规范。",
+            "channel": "品牌客服/官方回应"
+        },
+        "effect": {
+            "sentiment_trend": "负面可控，约1周内回落",
+            "recovery_period": "约1周",
+            "business_impact": "品牌服务形象短期受损，内部管理规范受质疑"
+        },
+        "taikoo_insight": "①内部系统备注/标签是隐性歧视高发区，需规范员工内部用语；②顾客对\"被评判\"高度敏感，即使无恶意也会引发不满；③商场应要求商户建立内部沟通用语审核机制。"
+    },
+    {
+        "case_id": "C-04",
+        "title": "南昌万象城阿迪达斯言语嘲讽事件",
+        "category": "服务态度",
+        "scenario": "service_verbal_mockery",
+        "severity": "🟡",
+        "risk_level": "medium",
+        "source": "public_record",
+        "evidence_level": "medium",
+        "date": "2025-10",
+        "brand": "南昌万象城/阿迪达斯",
+        "event": {
+            "time": "2025年10月",
+            "location": "南昌万象城阿迪达斯门店",
+            "brand": "阿迪达斯",
+            "description": "顾客在店内选购时，店员说出\"等一千块过年\"等带有嘲讽意味的言语，暗示顾客买不起，引发顾客不满。"
+        },
+        "spread": {
+            "platform": "小红书/抖音",
+            "volume": "中等传播",
+            "key_nodes": "顾客发帖→评论区共鸣→\"店员嘲讽顾客\"话题→品牌回应"
+        },
+        "response": {
+            "time": "曝光后",
+            "content": "品牌方致歉，涉事员工停职培训，承诺加强服务意识教育。",
+            "channel": "品牌官方回应"
+        },
+        "effect": {
+            "sentiment_trend": "负面约1-2周回落",
+            "recovery_period": "约1-2周",
+            "business_impact": "品牌服务形象短期受损"
+        },
+        "taikoo_insight": "①言语嘲讽是服务歧视的常见形式，即使未升级为肢体冲突也极易传播；②运动品牌客群年轻化，对\"被嘲讽\"容忍度极低；③商场应将言语服务纳入商户考核。"
+    },
+    {
+        "case_id": "C-05",
+        "title": "三亚大悦城\"红包雨\"拥挤摔倒活动安全事件",
+        "category": "活动安全",
+        "scenario": "event_safety_crowd",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2025-10",
+        "brand": "三亚大悦城",
+        "event": {
+            "time": "2025年10月国庆期间",
+            "location": "三亚大悦城",
+            "brand": "大悦城",
+            "description": "国庆期间举办\"天降红包雨\"活动，参与人数远超预期，局部拥挤，顾客被推倒受伤。"
+        },
+        "spread": {
+            "platform": "抖音/微博/新闻媒体",
+            "volume": "高传播",
+            "key_nodes": "现场视频→安全质疑→\"商场活动无预案\"话题→媒体报道→国庆节点放大效应"
+        },
+        "response": {
+            "time": "次日晚",
+            "content": "发布情况通报，承认\"预判不足\"，致歉并说明受伤顾客跟进，承诺整改人流管控。",
+            "channel": "官方情况通报"
+        },
+        "effect": {
+            "sentiment_trend": "回应及时且态度诚恳，短期负面可控",
+            "recovery_period": "约2周",
+            "business_impact": "活动品牌和商场运营能力受质疑"
+        },
+        "taikoo_insight": "①大型活动（尤其节假日）必须做人流预判和应急预案，太古汇IP活动（如弗里达展）热度高更需警惕；②现场秩序问题是太古汇高频风险（已有弗里达展排队负面），需在活动策划阶段就嵌入舆情预案；③\"预判不足\"比\"意外\"更能获得理解，坦诚比辩解有效。"
+    },
+    {
+        "case_id": "C-06",
+        "title": "巴奴火锅北京悠唐店排队至凌晨活动运营事件",
+        "category": "活动运营",
+        "scenario": "event_operation_queue",
+        "severity": "🟡",
+        "risk_level": "medium",
+        "source": "public_record",
+        "evidence_level": "medium",
+        "date": "2026-05",
+        "brand": "巴奴火锅/北京悠唐",
+        "event": {
+            "time": "2026年5月",
+            "location": "北京悠唐购物中心巴奴火锅",
+            "brand": "巴奴火锅",
+            "description": "巴奴火锅新店开业或促销活动引发大量顾客排队，排队时间长达数小时甚至至凌晨，顾客体验下降，部分顾客抱怨排队管理混乱。"
+        },
+        "spread": {
+            "platform": "小红书/微博",
+            "volume": "中等传播",
+            "key_nodes": "顾客发帖抱怨排队→\"网红店排队\"话题→讨论商场客流管理"
+        },
+        "response": {
+            "time": "发酵后",
+            "content": "品牌方致歉，增加排队管理措施，优化叫号系统，承诺改善顾客排队体验。",
+            "channel": "品牌官方回应"
+        },
+        "effect": {
+            "sentiment_trend": "负面可控，约1周回落",
+            "recovery_period": "约1周",
+            "business_impact": "品牌热度与负面并存，商场客流管理受关注"
+        },
+        "taikoo_insight": "①网红店排队是双刃剑，热度高但体验差易引发负面；②商场应协助商户做好排队区规划和客流疏导；③长时间排队需设置预期管理（如明确告知等待时间）。"
+    },
+    {
+        "case_id": "C-07",
+        "title": "杭州金匠寿司老鼠传送带食品安全事件",
+        "category": "食品安全",
+        "scenario": "food_safety_hygiene",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2026-03",
+        "brand": "杭州金匠寿司",
+        "event": {
+            "time": "2026年3月",
+            "location": "杭州金匠寿司门店",
+            "brand": "金匠寿司",
+            "description": "顾客拍到老鼠在回转寿司传送带上奔跑，旁置待食用寿司，视频引发全网\"太恶心\"情绪爆发。"
+        },
+        "spread": {
+            "platform": "抖音/微博/小红书/新闻媒体",
+            "volume": "全网爆发级传播",
+            "key_nodes": "视频→\"太恶心\"情绪爆发→食品安全话题→媒体跟进→全门店信任危机"
+        },
+        "response": {
+            "time": "当晚+次日升级",
+            "content": "①当晚致歉，废弃当日食材+全额退款+暂停营业消杀；②次日升级补偿：全额退款+十倍现金补偿（不满一千按一千）+全门店系统升级。",
+            "channel": "官方声明（分两步）"
+        },
+        "effect": {
+            "sentiment_trend": "超预期补偿和果断停业获认可，从\"恶心\"转向\"有担当\"",
+            "recovery_period": "约2-3周",
+            "business_impact": "短期停业损失，但品牌信任度因超预期补偿反而提升"
+        },
+        "taikoo_insight": "①场内餐饮商户食品安全是商场连带风险，需建立商户应急联动机制；②补偿超预期是止损利器——\"十倍补偿\"比\"道歉\"更有说服力；③分两步回应（先止损再升级补偿）比一次性说完更有节奏。"
+    },
+    {
+        "case_id": "C-08",
+        "title": "苏州复悦城洗手间海报表述不当内容争议事件",
+        "category": "内容物料",
+        "scenario": "content_material_controversy",
+        "severity": "🟡",
+        "risk_level": "medium",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2026-01",
+        "brand": "苏州复悦城",
+        "event": {
+            "time": "2026年1月",
+            "location": "苏州复悦城男洗手间",
+            "brand": "复悦城",
+            "description": "男洗手间内张贴海报表述不当，被指冒犯女性，引发性别议题发酵，中国妇女报等媒体关注。"
+        },
+        "spread": {
+            "platform": "微博/小红书/新闻媒体",
+            "volume": "中等偏高传播",
+            "key_nodes": "网友拍照发帖→性别议题发酵→中国妇女报等媒体关注→商场审核能力质疑"
+        },
+        "response": {
+            "time": "当天撤除+当晚正式说明",
+            "content": "①初期\"高度重视并正在处理\"；②当晚正式情况说明，承认表述不当致歉，当天已撤除海报，对设计审核张贴全流程复盘彻查。",
+            "channel": "官方情况说明"
+        },
+        "effect": {
+            "sentiment_trend": "撤除快+致歉诚恳+复盘全流程，负面约1周回落",
+            "recovery_period": "约1周",
+            "business_impact": "商场内容审核能力受质疑，但快速回应控制了扩散"
+        },
+        "taikoo_insight": "①商场所有视觉物料（含洗手间、导视、活动海报）必须经过内容审核，不能只看设计美感；②性别/地域/职业等敏感议题在小红书极易发酵，审核清单需纳入；③\"当天撤除+全流程复盘\"是标准动作。"
+    },
+    {
+        "case_id": "C-09",
+        "title": "南京鼓楼吾悦\"您踏马来了\"谐音梗内容事件",
+        "category": "内容物料",
+        "scenario": "content_pun_humor",
+        "severity": "🟢",
+        "risk_level": "low",
+        "source": "public_record",
+        "evidence_level": "medium",
+        "date": "2026-01",
+        "brand": "南京鼓楼吾悦广场",
+        "event": {
+            "time": "2026年1月",
+            "location": "南京鼓楼吾悦广场",
+            "brand": "吾悦广场",
+            "description": "商场使用\"您踏马来了\"作为宣传标语（谐音\"您他妈来了\"），被部分消费者认为不雅，但也有人认为是创意幽默，引发讨论。"
+        },
+        "spread": {
+            "platform": "小红书/微博",
+            "volume": "低传播",
+            "key_nodes": "网友发帖讨论→\"谐音梗边界\"话题→小范围讨论"
+        },
+        "response": {
+            "time": "讨论后",
+            "content": "商场未正式回应，标语后续自然替换或保留，事件未升级。",
+            "channel": "无正式回应"
+        },
+        "effect": {
+            "sentiment_trend": "讨论为主，未形成负面危机",
+            "recovery_period": "数天",
+            "business_impact": "几乎无负面影响，反而获得一定话题度"
+        },
+        "taikoo_insight": "①谐音梗/创意文案需把握雅俗边界，高端商场尤其需谨慎；②低风险事件可不急于回应，让话题自然消退；③但需建立内容审核预判机制，避免创意翻车。"
+    },
+    {
+        "case_id": "C-10",
+        "title": "哈尔滨魁牛火锅凑重扣押金价格规则事件",
+        "category": "价格规则",
+        "scenario": "price_rule_deposit",
+        "severity": "🟡",
+        "risk_level": "medium",
+        "source": "public_record",
+        "evidence_level": "medium",
+        "date": "2026-04",
+        "brand": "哈尔滨魁牛火锅",
+        "event": {
+            "time": "2026年4月",
+            "location": "哈尔滨魁牛火锅门店",
+            "brand": "魁牛火锅",
+            "description": "顾客反映火锅店采用\"凑重\"方式计费（将食材凑到固定重量收费），并扣除押金，规则不透明引发顾客质疑被\"变相多收费\"。"
+        },
+        "spread": {
+            "platform": "小红书/抖音/黑猫投诉",
+            "volume": "中等传播",
+            "key_nodes": "顾客发帖/投诉→\"火锅店收费套路\"话题→讨论价格透明度"
+        },
+        "response": {
+            "time": "发酵后",
+            "content": "品牌方致歉，重新核查收费规则，退还不合理费用，优化规则公示方式。",
+            "channel": "品牌官方回应/客服处理"
+        },
+        "effect": {
+            "sentiment_trend": "负面约1-2周回落",
+            "recovery_period": "约1-2周",
+            "business_impact": "品牌价格诚信受质疑，短期客流可能受影响"
+        },
+        "taikoo_insight": "①价格规则必须透明公示，\"凑重\"\"押金\"等非常规计费方式需明确告知；②顾客对\"被套路\"零容忍，价格争议极易引发投诉；③商场应要求商户在显眼位置公示计费规则。"
+    },
+    {
+        "case_id": "C-11",
+        "title": "狗不理王府井报警威胁差评博主反面硬刚事件",
+        "category": "反面教材",
+        "scenario": "negative_confrontation_police",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2020-09",
+        "brand": "狗不理王府井店",
+        "event": {
+            "time": "2020年9月",
+            "location": "北京狗不理王府井店",
+            "brand": "狗不理",
+            "description": "博主发布探店差评视频，狗不理王府井店发布声明称\"虚假视频\"\"侵犯名誉权\"并报警，完全站在消费者对立面。"
+        },
+        "spread": {
+            "platform": "B站/微博/新闻媒体",
+            "volume": "全网史诗级传播",
+            "key_nodes": "差评视频→店家报警声明→\"差评就报警\"话题→全网嘲讽→店铺最终停业"
+        },
+        "response": {
+            "time": "差评发布后",
+            "content": "报警威胁+声明指责，完全站在消费者对立面，拒绝接受任何批评。",
+            "channel": "店铺声明+报警"
+        },
+        "effect": {
+            "sentiment_trend": "史诗级翻车，从一条差评变成品牌危机",
+            "recovery_period": "不可逆（店铺停业）",
+            "business_impact": "店铺不久后停业，狗不理品牌形象严重受损"
+        },
+        "taikoo_insight": "①绝对禁止用报警/律师函威胁普通消费者差评，这是自杀式操作；②负面评价是正常商业反馈，应对而非对抗；③场内商户如出现此类行为，商场需及时介入制止，避免连带。"
+    },
+    {
+        "case_id": "C-12",
+        "title": "麦当劳员工吐口水多次改口反面甩锅事件",
+        "category": "反面教材",
+        "scenario": "negative_shifting_blame",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "public_record",
+        "evidence_level": "medium",
+        "date": "2026-07",
+        "brand": "麦当劳",
+        "event": {
+            "time": "2026年7月",
+            "location": "麦当劳某门店",
+            "brand": "麦当劳",
+            "description": "顾客拍到麦当劳员工在食物中吐口水，视频曝光后品牌方多次改口，先称\"个人行为\"，后称\"正在调查\"，回应前后矛盾，甩锅意图明显。"
+        },
+        "spread": {
+            "platform": "抖音/微博/新闻媒体",
+            "volume": "高传播",
+            "key_nodes": "视频曝光→品牌首次回应→被发现改口→二次回应→\"麦当劳甩锅\"话题→信任危机"
+        },
+        "response": {
+            "time": "曝光后（多次改口）",
+            "content": "多次改口，先称个人行为，后称正在调查，未能给出一致、诚恳的回应，甩锅意图明显。",
+            "channel": "品牌官方回应（多次）"
+        },
+        "effect": {
+            "sentiment_trend": "多次改口加剧负面，信任危机持续",
+            "recovery_period": "≥1月",
+            "business_impact": "品牌食品安全形象严重受损，多次改口被全网嘲讽"
+        },
+        "taikoo_insight": "①食品安全事件回应必须一致、诚恳，多次改口等于自杀；②不能甩锅\"个人行为\"，品牌需承担管理责任；③回应前需内部统一口径，避免前后矛盾。"
+    },
+    {
+        "case_id": "C-13",
+        "title": "西贝预制菜争议贾国龙扬言起诉创始人硬刚事件",
+        "category": "反面教材",
+        "scenario": "negative_founder_confrontation",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2025-09",
+        "brand": "西贝莜面村",
+        "event": {
+            "time": "2025年9月",
+            "location": "全网",
+            "brand": "西贝",
+            "description": "罗永浩吐槽西贝预制菜\"太贵太恶心\"，创始人贾国龙放话\"起诉\"，后续被曝后厨用两年期冷冻西兰花，证据反转。"
+        },
+        "spread": {
+            "platform": "微博/抖音/新闻媒体",
+            "volume": "全网围观级传播",
+            "key_nodes": "大V吐槽→创始人硬刚起诉→全民围观→证据反转→西贝致歉整改"
+        },
+        "response": {
+            "time": "先硬刚后被迫致歉",
+            "content": "创始人先硬刚起诉→后续证据不利→被迫致歉整改，日营业额下滑超30%。",
+            "channel": "创始人个人言论+品牌官方致歉"
+        },
+        "effect": {
+            "sentiment_trend": "硬刚导致事件持续一周以上，从产品争议变成人品争议",
+            "recovery_period": "≥1月",
+            "business_impact": "日营业额下滑超30%，品牌形象严重受损"
+        },
+        "taikoo_insight": "①创始人/高管个人言论是企业舆情风险点，商场管理层对外发言需谨慎；②面对大V/媒体质疑，\"先听再说\"比\"先怼再道歉\"成本低100倍；③硬刚会逼出更多证据（网友扒料），让事件失控。"
+    },
+    {
+        "case_id": "C-14",
+        "title": "海底捞\"魔童尿海\"标杆超预期补偿事件",
+        "category": "标杆应对",
+        "scenario": "benchmark_extra_compensation",
+        "severity": "🔴",
+        "risk_level": "high",
+        "source": "docx_extract+public_record",
+        "evidence_level": "high",
+        "date": "2025-02",
+        "brand": "海底捞",
+        "event": {
+            "time": "2025年2月",
+            "location": "海底捞某门店",
+            "brand": "海底捞",
+            "description": "顾客在火锅中发现疑似异物（被网友戏称为\"魔童尿海\"），视频传播，引发食品安全危机。"
+        },
+        "spread": {
+            "platform": "抖音/微博/小红书/新闻媒体",
+            "volume": "全网关注级传播",
+            "key_nodes": "视频发酵→\"火锅加料\"话题→全网关注→品牌信任危机"
+        },
+        "response": {
+            "time": "第一时间+48h内+持续",
+            "content": "①第一时间向公安报案（寻求权威介入）；②门店卫生整改（更换餐具彻底消毒）；③48h内完成调查，CEO张勇主动道歉\"主要责任在董事会\"；④全国1300多家门店地毯式排查，退还类似事件款项，公布补偿方案。",
+            "channel": "公安介入+CEO公开道歉+全国排查+补偿方案"
+        },
+        "effect": {
+            "sentiment_trend": "高管担责+权威介入+全面排查+补偿落地，从危机中重建信任",
+            "recovery_period": "约2-3周",
+            "business_impact": "成为行业标杆，品牌信任度因危机应对反而提升"
+        },
+        "taikoo_insight": "①重大事件需要高层（甚至集团层面）出面担责，比基层道歉有力；②寻求权威第三方介入（公安/监管/检测机构）能缓冲舆论；③\"全国排查\"式动作传递系统性整改信号，比单店处理更有说服力；④CEO说\"责任在董事会\"比\"员工个人行为\"高级100倍。"
+    },
+    {
+        "case_id": "C-15",
+        "title": "顺德渔村避雨驱赶标杆快速止损事件",
+        "category": "标杆应对",
+        "scenario": "benchmark_quick_damage_control",
+        "severity": "🟡",
+        "risk_level": "medium",
+        "source": "public_record",
+        "evidence_level": "medium",
+        "date": "2026-06",
+        "brand": "顺德渔村",
+        "event": {
+            "time": "2026年6月",
+            "location": "顺德渔村门店",
+            "brand": "顺德渔村",
+            "description": "暴雨天顾客在餐厅门口避雨被员工驱赶，视频曝光引发\"不近人情\"批评，品牌初期回应不当加剧负面。"
+        },
+        "spread": {
+            "platform": "抖音/微博/小红书",
+            "volume": "中等传播",
+            "key_nodes": "视频曝光→\"避雨被驱赶\"话题→批评品牌不近人情→品牌快速致歉止损"
+        },
+        "response": {
+            "time": "快速致歉（初期不当后立即纠正）",
+            "content": "品牌快速致歉，承认服务意识不足，对涉事员工进行培训，承诺为避雨市民提供便利（如门口设置遮雨区、提供饮用水）。",
+            "channel": "品牌官方致歉+实际行动"
+        },
+        "effect": {
+            "sentiment_trend": "快速止损，负面约1周回落",
+            "recovery_period": "约1周",
+            "business_impact": "品牌形象短期受损，但快速回应和实际行动控制了扩散"
+        },
+        "taikoo_insight": "①服务细节（如避雨、借厕所）是品牌温度的体现，驱赶行为极易引发共情式负面；②初期回应不当后需立即纠正，越拖越被动；③用实际行动（设置遮雨区、提供便利）比单纯道歉更有说服力。"
+    },
+]
+
+# ========== P1-D: 6场景公关回复话术公式 ==========
+PR_RESPONSE_TEMPLATES = [
+    {
+        "scenario": "service_attitude",
+        "scenario_name": "服务态度/歧视",
+        "formula_steps": [
+            "共情致歉：对顾客遭遇表示真诚歉意，不回避问题",
+            "强调平等尊重：明确表态\"每位顾客都应获得平等尊重的体验\"",
+            "涉事人员处理：公布对涉事员工的处理结果（停职/培训/解聘）",
+            "全员培训承诺：承诺全员服务意识培训，建立长效机制"
+        ],
+        "taboos": [
+            "不说\"个人行为与商场无关\"",
+            "不辩解\"顾客也有问题\"",
+            "不拖延回应"
+        ],
+        "example_response": "我们对这位顾客的遭遇深表歉意。每一位走进商场的顾客都应获得平等、尊重的服务体验，这是我们不可动摇的底线。目前涉事员工已停职接受调查，我们将根据调查结果严肃处理。同时，我们已启动全员服务意识专项培训，确保此类事件不再发生。感谢顾客的监督，我们将以此为鉴，持续提升服务品质。"
+    },
+    {
+        "scenario": "event_safety",
+        "scenario_name": "活动安全/秩序",
+        "formula_steps": [
+            "致歉：对活动中发生的安全问题表示诚挚歉意",
+            "承认预判不足：坦诚承认人流预判和应急预案不足",
+            "受伤顾客跟进：说明受伤顾客的医疗跟进和赔偿安排",
+            "人流管控整改方案：公布具体的人流管控和安全整改措施"
+        ],
+        "taboos": [
+            "不甩锅\"顾客自己不遵守秩序\"",
+            "不隐瞒受伤情况",
+            "不辩解\"这是意外\""
+        ],
+        "example_response": "我们对活动现场发生的拥挤事件及受伤顾客深表歉意。经核查，我们对活动参与人数预判不足，现场人流管控措施不到位，这是我们的责任。目前受伤顾客已得到妥善救治，我们将承担全部医疗费用并持续跟进。我们已立即启动整改：增加现场安保人员、设置人流缓冲区、完善应急预案，确保后续活动安全有序。再次向受伤顾客及所有受影响的顾客致歉。"
+    },
+    {
+        "scenario": "food_safety",
+        "scenario_name": "食品安全/卫生",
+        "formula_steps": [
+            "致歉：对食品安全问题表示最诚挚的歉意",
+            "立即停业下架：涉事门店立即暂停营业，问题产品全部下架",
+            "全额退款：为受影响顾客办理全额退款",
+            "超预期补偿：提供超预期补偿（如十倍赔偿、代金券等）",
+            "全门店排查：启动全门店食品安全系统排查和升级"
+        ],
+        "taboos": [
+            "不先说\"外部入侵\"撇清责任",
+            "不只道歉不补偿",
+            "不拖延停业整改"
+        ],
+        "example_response": "我们对发生的食品安全问题深感痛心和歉意。涉事门店已立即暂停营业，问题食材全部废弃销毁。我们将为所有受影响顾客办理全额退款，并提供十倍现金补偿（不足一千元按一千元计）。同时，我们已启动全门店食品安全系统排查，升级卫生管理标准，邀请第三方检测机构定期检测。食品安全是我们的生命线，我们将以最严格的标准要求自己，绝不辜负顾客的信任。"
+    },
+    {
+        "scenario": "content_material",
+        "scenario_name": "内容/物料争议",
+        "formula_steps": [
+            "当天撤除：争议物料当天全部撤除",
+            "承认审核疏漏：坦诚承认内容审核流程存在疏漏",
+            "致歉：对受到冒犯的公众表示诚挚歉意",
+            "全流程复盘：对设计、审核、张贴全流程进行复盘彻查",
+            "完善审核机制：公布完善后的内容审核机制和敏感词清单"
+        ],
+        "taboos": [
+            "不辩解\"只是创意/谐音梗\"",
+            "不拖延撤除",
+            "不指责公众\"过度解读\""
+        ],
+        "example_response": "我们对商场内张贴的不当海报内容深表歉意。该海报已于今天全部撤除。经核查，此事件暴露了我们在内容审核流程中的疏漏，我们对此承担全部责任。我们已对设计、审核、张贴全流程进行复盘彻查，将完善内容审核机制，增加性别、地域、职业等敏感议题的审核清单，确保所有对外物料经过严格审核。感谢公众的监督和批评。"
+    },
+    {
+        "scenario": "price_rule",
+        "scenario_name": "价格/规则争议",
+        "formula_steps": [
+            "致歉：对价格/规则不透明给顾客带来的困扰表示歉意",
+            "重新核查：立即对收费规则进行重新核查",
+            "退还不合理费用：为多收费用的顾客办理退还",
+            "优化规则公示：优化价格规则的公示方式，确保透明清晰"
+        ],
+        "taboos": [
+            "不嘲讽顾客\"穷/计较\"",
+            "不拿\"最终解释权\"压人",
+            "不辩解\"规则一直如此\""
+        ],
+        "example_response": "我们对收费规则不清晰给顾客带来的困扰深表歉意。我们已立即对相关收费规则进行重新核查，对存在不合理收费的顾客，将主动联系并退还多收费用。同时，我们将优化价格规则的公示方式，在显眼位置清晰标注所有收费项目和计费方式，确保顾客明明白白消费。感谢顾客的监督，我们将持续提升服务透明度。"
+    },
+    {
+        "scenario": "misinformation",
+        "scenario_name": "不实信息/抹黑",
+        "formula_steps": [
+            "感谢关注：感谢公众对品牌的关注和监督",
+            "客观陈述事实：客观陈述事实真相，附凭证（监控、检测报告等）",
+            "欢迎私信核实：欢迎质疑者私信沟通，提供核实渠道",
+            "持续改进：承诺持续改进产品和服务，接受公众监督"
+        ],
+        "taboos": [
+            "不报警威胁",
+            "不扣帽子\"黑子/水军\"",
+            "不删评",
+            "不使用攻击性语言"
+        ],
+        "example_response": "感谢大家对我们的关注和监督。针对网络上流传的相关信息，我们在此做客观说明：[陈述事实，附监控截图/检测报告/时间线等凭证]。我们欢迎对此事有疑问的朋友私信联系我们，我们将提供完整的证据材料供核实。我们始终欢迎合理的批评和建议，将持续改进产品和服务品质。如经核实存在我方问题，我们将承担全部责任并立即整改。"
+    },
+]
+
+# ========== P1-D: 案例库查询辅助函数 ==========
+
+def get_external_cases(category=None, scenario=None, severity=None, limit=100):
+    """按分类/场景/严重度查询外部标杆案例。"""
+    results = EXTERNAL_BENCHMARK_CASES
+    if category:
+        results = [c for c in results if c.get("category") == category]
+    if scenario:
+        results = [c for c in results if c.get("scenario") == scenario]
+    if severity:
+        results = [c for c in results if c.get("severity") == severity]
+    return results[:limit]
+
+
+def get_external_case(case_id):
+    """按 case_id 查询单个外部标杆案例详情。"""
+    for c in EXTERNAL_BENCHMARK_CASES:
+        if c.get("case_id") == case_id:
+            return c
+    return None
+
+
+def get_pr_response_template(scenario=None):
+    """查询公关回复话术模板。"""
+    if scenario:
+        for t in PR_RESPONSE_TEMPLATES:
+            if t.get("scenario") == scenario:
+                return t
+        return None
+    return PR_RESPONSE_TEMPLATES
+
+
+def match_cases_by_scenario(event_scenario, event_text="", limit=3):
+    """专报生成时按场景匹配同类案例，返回2-3个案例编号和处置方式。"""
+    # 场景映射：risk_engine风险类型 → 案例库scenario
+    scenario_map = {
+        "service_discrimination": ["service_discrimination", "service_implicit_discrimination", "service_verbal_mockery", "service_physical_conflict"],
+        "service_attitude": ["service_discrimination", "service_implicit_discrimination", "service_verbal_mockery"],
+        "event_safety": ["event_safety_crowd", "event_operation_queue"],
+        "food_safety": ["food_safety_hygiene"],
+        "content_material": ["content_material_controversy", "content_pun_humor"],
+        "price_rule": ["price_rule_deposit"],
+        "misinformation": ["misinformation"],
+        "negative_confrontation": ["negative_confrontation_police", "negative_shifting_blame", "negative_founder_confrontation"],
+        "benchmark": ["benchmark_extra_compensation", "benchmark_quick_damage_control"],
+    }
+    target_scenarios = scenario_map.get(event_scenario, [event_scenario])
+    matched = []
+    for c in EXTERNAL_BENCHMARK_CASES:
+        if c.get("scenario") in target_scenarios:
+            matched.append({
+                "case_id": c["case_id"],
+                "title": c["title"],
+                "severity": c["severity"],
+                "response_summary": c.get("response", {}).get("content", "")[:100],
+                "taikoo_insight": c.get("taikoo_insight", "")[:150],
+            })
+    # 如果匹配不足，补充标杆案例
+    if len(matched) < 2:
+        for c in EXTERNAL_BENCHMARK_CASES:
+            if c.get("category") == "标杆应对" and c["case_id"] not in [m["case_id"] for m in matched]:
+                matched.append({
+                    "case_id": c["case_id"],
+                    "title": c["title"],
+                    "severity": c["severity"],
+                    "response_summary": c.get("response", {}).get("content", "")[:100],
+                    "taikoo_insight": c.get("taikoo_insight", "")[:150],
+                })
+            if len(matched) >= limit:
+                break
+    return matched[:limit]
+
 class PublicOpinionCaseDB:
     """全网舆情案例数据库"""
     
@@ -396,7 +1092,7 @@ class PublicOpinionCaseDB:
             return False
     
     def import_all_cases(self):
-        """导入所有案例"""
+        """导入所有案例（含P1-D外部标杆案例）"""
         count = 0
         
         # 导入广州太古汇案例
@@ -412,6 +1108,27 @@ class PublicOpinionCaseDB:
         # 导入品牌业态案例
         for case in BRAND_CASES:
             if self.insert_case(case, 'brand'):
+                count += 1
+
+        # P1-D: 导入外部标杆案例（C-01~C-15）
+        for case in EXTERNAL_BENCHMARK_CASES:
+            # 转换为insert_case兼容格式
+            compatible = {
+                'case_id': case.get('case_id'),
+                'title': case.get('title'),
+                'summary': case.get('event', {}).get('description', ''),
+                'date': case.get('date', ''),
+                'platform': case.get('spread', {}).get('platform', ''),
+                'category': case.get('category', ''),
+                'risk_level': case.get('risk_level', 'medium'),
+                'sentiment': 'negative',
+                'keywords': case.get('title', ''),
+                'impact': case.get('effect', {}).get('business_impact', ''),
+                'response': case.get('response', {}).get('content', ''),
+                'lessons': case.get('taikoo_insight', ''),
+                'source_url': '',
+            }
+            if self.insert_case(compatible, 'external_benchmark'):
                 count += 1
         
         return count

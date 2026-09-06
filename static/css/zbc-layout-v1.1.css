@@ -846,3 +846,91 @@
     padding: 0 16px;
   }
 }
+
+
+/* ============================================================
+ * P0 布局红线：No-Scroll 有限视口（强制，所有页面）
+ * html,body 锁 100dvh overflow:hidden
+ * 主容器 flex column 高度100%
+ * 数据区 flex:1 overflow:auto（唯一允许的滚动容器）
+ * ============================================================ */
+html, body {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+.zbc-app {
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  overflow: hidden;
+}
+.zbc-sidebar {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+.zbc-main {
+  flex: 1;
+  min-width: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.zbc-topbar {
+  flex-shrink: 0;
+  height: 56px;
+  min-height: 56px;
+}
+.zbc-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+/* 数据集合内部有界滚动（表格/列表/日志） */
+.zbc-scroll-container {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.zbc-scroll-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.zbc-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 3px;
+}
+.zbc-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .zbc-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .zbc-sidebar.is-open {
+    transform: translateX(0);
+  }
+  .zbc-content {
+    padding-bottom: 60px;
+  }
+}
+/* 防止弹层导致body滚动 */
+body.modal-open, body.has-overlay {
+  overflow: hidden;
+}

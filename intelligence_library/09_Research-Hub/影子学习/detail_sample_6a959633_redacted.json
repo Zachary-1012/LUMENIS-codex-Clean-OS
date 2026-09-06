@@ -1,0 +1,31 @@
+{
+  "schema": "zachary.hub.collection-detail-sample.v1",
+  "research_id": "R-2026-0004",
+  "note_id": "6a959633000000002502ff53",
+  "source": "rednote web detail page, opened by human, observer read-only (no like/collect/comment/publish)",
+  "captured_at_utc": "2026-08-31T19:21:52+00:00",
+  "selectors_proven_live": {
+    "engagement_bar": ".interact-container (alias .buttons.engage-bar-style)",
+    "like": ".interact-container .like-wrapper",
+    "collect": ".interact-container .collect-wrapper",
+    "comment": ".interact-container .chat-wrapper",
+    "body": ".note-content .desc",
+    "note_content": ".note-content",
+    "note": "side-rail recommendation cards only have .like-wrapper and must NOT be mistaken for the main bar"
+  },
+  "metrics": {
+    "like": 34,
+    "collect": 4,
+    "comment": 4
+  },
+  "title": "广州方所十五年闭店，往事如烟",
+  "published_visible": "昨天 22:56 广东",
+  "body_len": 389,
+  "in_text_contact_redactions": 0,
+  "body_redacted": "太古汇方所十五年，今夜闭店，方所当然还会在别的地方开，快闪店和琶洲，但是此地此时此个方所此个15年就是永远的结束了。从2011年开始，我就在此流连，15年在这里度过的许许多多时光，结下的情谊，看过的书买过的书，买过的衣服，认识到的人，方所之于我，是五位一体的存在，是引以自豪的文化客厅，是引领审美的高地，是友情岁月的桃花源，是作者的心灵教堂，是喧嚣的物质世界里灵魂安放之地，我查了一下，光是在微博上提到方所就有77次，主持过包括不限于张欣、黎紫书、黄爱东西、马家辉、叶绵添、严明、绿妖、陈丹燕、李长声，蒯乐昊、刘晓蕾、鲁敏、裴谕新、颜言颜悦……的新书讲座，很难受，好像生命当中的一部分就此告别了，自2011年至2026，十五载方所灯火，点亮了我们过去的时光，希望我们永远记得、珍惜我们与美好的书、美好的书店、美好的人相遇的时刻、这些时刻必将点亮与滋养我们往后的人生，再见！方所！",
+  "author_nickname_stored": false,
+  "author_id_stored": false,
+  "xsec_token_stored": false,
+  "write_actions_by_observer": 0,
+  "purpose": "single detail-layer feasibility evidence (metrics + body reachable read-only); NOT a batch crawl; account warming period, slow-and-steady only"
+}

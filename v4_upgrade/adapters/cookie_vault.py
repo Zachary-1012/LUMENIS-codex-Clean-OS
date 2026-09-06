@@ -3,19 +3,20 @@
 统一 Cookie 登录态保险库（Cookie Vault）
 =================================================
 定位：为抖音 / Instagram / 微博 / B站等需要登录态的采集源，提供
-“粘贴文本 → 标准 Cookie → 注入 CDP 浏览器上下文”的可复用桥接，与
+"粘贴文本 → 标准 Cookie → 注入 CDP 浏览器上下文"的可复用桥接，与
 持久 Profile 登录互为补充（Profile 优先、Cookie 注入兜底/换号）。
 
 安全约定（硬性）：
-  · Cookie 是敏感凭证，只落地到本地 data/cookies/<platform>.json，
-    绝不硬编码进源码、不进 git（.gitignore 应排除 data/cookies/）；
+  · Cookie 是敏感凭证，只落地到本地 data/cookies/<platform>.json 或
+    data/<platform>_cookies.json，绝不硬编码进源码、不进 git；
   · 只做登录态桥接，不做任何账号风控绕过；
   · 过期 / 会话型 Cookie 如实标注，不伪造有效期。
+  · 所有适配器统一经本模块加载 cookie，不得自行拼路径读文件。
 
 支持两种来源：
   1. 标准 JSON（EditThisCookie / Cookie-Editor 导出的 [{name,value,domain,...}]）；
-  2. 浏览器 Cookie 面板复制出的“粘连文本”——多条首尾相连、字段间无分隔，
-     用 “字面域名锚点 + 各平台已知 Cookie 名 + 真实子域白名单” 可靠切分。
+  2. 浏览器 Cookie 面板复制出的"粘连文本"——多条首尾相连、字段间无分隔，
+     用 "字面域名锚点 + 各平台已知 Cookie 名 + 真实子域白名单" 可靠切分。
 """
 import re
 import json
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 _BASE = Path(__file__).resolve().parents[2]
 COOKIE_DIR = _BASE / "data" / "cookies"
+DATA_DIR = _BASE / "data"
 
 # 各平台主域名锚点
 PLATFORM_DOMAINS = {
@@ -37,9 +39,39 @@ PLATFORM_DOMAINS = {
     "instagram": ["instagram.com", "cdninstagram.com"],
     "weibo": ["weibo.com", "weibo.cn", "sina.com.cn"],
     "bilibili": ["bilibili.com"],
+    "zhihu": ["zhihu.com"],
+    "x": ["x.com", "twitter.com"],
+    "jiguang": ["jgdt.com", "jiguang.cn"],
     "google": ["google.com"],
     "chatgpt": ["chatgpt.com", "openai.com"],
 }
+
+# 平台 → 候选 cookie 文件路径（按优先级查找，第一个存在即使用）
+PLATFORM_COOKIE_PATHS = {
+    "douyin":      [COOKIE_DIR / "douyin.json"],
+    "xiaohongshu": [DATA_DIR / "xhs_cookies.json", COOKIE_DIR / "xiaohongshu.json"],
+    "xhs":         [DATA_DIR / "xhs_cookies.json", COOKIE_DIR / "xiaohongshu.json"],
+    "instagram":   [COOKIE_DIR / "instagram.json"],
+    "weibo":       [DATA_DIR / "weibo_cookies.json", COOKIE_DIR / "weibo.json"],
+    "bilibili":    [DATA_DIR / "bilibili_cookies.json", COOKIE_DIR / "bilibili.json"],
+    "zhihu":       [DATA_DIR / "zhihu_cookies.json", COOKIE_DIR / "zhihu.json"],
+    "x":           [COOKIE_DIR / "x.json"],
+    "jiguang":     [COOKIE_DIR / "jiguang.json"],
+}
+
+# 各平台判定登录态有效的关键 cookie 名（有任一即视为 cookie 已注入）
+PLATFORM_AUTH_COOKIES = {
+    "douyin":      ["sessionid", "sessionid_ss", "sid_tt", "uid_tt"],
+    "xiaohongshu": ["web_session", "a1", "webId", "gid"],
+    "xhs":         ["web_session", "a1", "webId", "gid"],
+    "instagram":   ["sessionid", "ds_user_id", "csrftoken"],
+    "weibo":       ["SUB", "SCF", "WBPSESS", "PC_TOKEN"],
+    "bilibili":    ["SESSDATA", "bili_jct", "DedeUserID"],
+    "zhihu":       ["z_c0", "d_c0", "_zap"],
+    "x":           ["auth_token", "ct0", "guest_id"],
+    "jiguang":     ["customer-sso-sid", "ares.beaker.session.id"],
+}
+
 # 真实子域白名单：只有这些前缀才视为域名子域，避免把 value 尾段误当子域吞掉
 SUBDOMAIN_WHITELIST = {
     "www", "m", "sso", "passport", "mssdk", "s", "lf", "apimobile",
@@ -94,7 +126,7 @@ def _iso_to_epoch(value) -> float:
 def parse_pasted(text: str, platform: str):
     """把浏览器 Cookie 面板的粘连文本解析为标准 Cookie 列表。
 
-    步骤：字面定位每个“域名/”锚点 → 锚点前一段用“已知 Cookie 名”定位
+    步骤：字面定位每个"域名/"锚点 → 锚点前一段用"已知 Cookie 名"定位
     name 起点、其后到域名为 value → 锚点后一段解析过期时间 / ✓ / SameSite。
     无法可靠识别的条目跳过（宁缺毋滥，不产出错误 Cookie）。
     """
@@ -105,8 +137,6 @@ def parse_pasted(text: str, platform: str):
         return []
 
     dom_alt = "|".join(d.replace(".", r"\.") for d in domains)
-    # 先字面定位主域名/，再向左回看“紧邻的单个点段”判断是否为白名单真实子域，
-    # 避免贪婪正则把 value 尾部字母吞进子域。
     main_anchor = re.compile(r"(" + dom_alt + r")/", re.IGNORECASE)
     matches = list(main_anchor.finditer(text))
     cookies = []
@@ -114,12 +144,11 @@ def parse_pasted(text: str, platform: str):
         main_start = m.start(1)
         seg, t = "", main_start
         if main_start - 1 >= 0 and text[main_start - 1] == ".":
-            k = main_start - 1  # 指向主域前的点
+            k = main_start - 1
             t = k
             while t - 1 >= 0 and re.match(r"[A-Za-z0-9\-]", text[t - 1]):
                 t -= 1
             seg = text[t:k]
-        # 整段是白名单子域，或 value 紧贴白名单子域（如 9831mssdk）——以后缀识别
         segl = seg.lower()
         sub_t, sub_name = None, ""
         if segl in SUBDOMAIN_WHITELIST:
@@ -141,7 +170,6 @@ def parse_pasted(text: str, platform: str):
         head = text[prev_end:dom_start]
         tail = text[m.end():next_start]
 
-        # 在 head 中取“最先出现的已知名”作为本条 name（上一条 tail 不含已知名）
         hit = None
         for n in names:
             p = head.find(n)
@@ -150,7 +178,7 @@ def parse_pasted(text: str, platform: str):
         if not hit:
             continue
         pos, name = hit
-        value = head[pos + len(name):].strip(".")  # 去掉主域前残留分隔点
+        value = head[pos + len(name):].strip(".")
         if not value:
             continue
 
@@ -174,9 +202,23 @@ def parse_pasted(text: str, platform: str):
 
 
 # ============================================================
-# 存储 / 读取
+# 存储 / 读取（统一入口：所有平台经 PLATFORM_COOKIE_PATHS 查找）
 # ============================================================
+def _resolve_path(platform: str) -> Path | None:
+    """按优先级查找平台 cookie 文件，返回第一个存在的路径；都不存在返回 None。"""
+    paths = PLATFORM_COOKIE_PATHS.get(platform)
+    if not paths:
+        # 未配置平台，回退到 data/cookies/<platform>.json
+        p = COOKIE_DIR / f"{platform}.json"
+        return p if p.exists() else None
+    for p in paths:
+        if p.exists():
+            return p
+    return None
+
+
 def _path(platform):
+    """默认写入路径（data/cookies/<platform>.json）。"""
     COOKIE_DIR.mkdir(parents=True, exist_ok=True)
     return COOKIE_DIR / f"{platform}.json"
 
@@ -191,14 +233,27 @@ def save_cookies(platform: str, cookies: list):
 
 
 def load_cookies(platform: str):
-    """读取标准 cookie；不存在返回空列表。"""
-    p = _path(platform)
-    if not p.exists():
+    """读取标准 cookie（按 PLATFORM_COOKIE_PATHS 多路径查找）；不存在返回空列表。
+
+    支持两种文件结构：
+      - 标准列表 [{name, value, domain, ...}]
+      - 包装 dict {"cookies": [...]} 或 {"<name>": "<value>", ...}
+    """
+    p = _resolve_path(platform)
+    if not p:
         return []
     try:
         with open(p, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data if isinstance(data, list) else []
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            if "cookies" in data and isinstance(data["cookies"], list):
+                return data["cookies"]
+            # dict 形式 {name: value} → 转标准列表
+            return [{"name": k, "value": str(v), "domain": "", "path": "/"}
+                    for k, v in data.items() if k != "cookies"]
+        return []
     except Exception as e:
         logger.warning("读取 Cookie 失败 %s: %s", p, e)
         return []
@@ -210,6 +265,70 @@ def import_pasted(platform: str, text: str):
     if cookies:
         save_cookies(platform, cookies)
     return len(cookies), cookies
+
+
+# ============================================================
+# 辅助：cookie 字符串 / requests dict / 状态检查
+# ============================================================
+def to_cookie_string(platform: str) -> str:
+    """加载平台 cookie 并转为 "name1=value1; name2=value2" 字符串（用于 HTTP Header）。
+
+    不打印 cookie 内容，只返回字符串；无 cookie 返回空串。
+    """
+    cookies = load_cookies(platform)
+    if not cookies:
+        return ""
+    parts = []
+    for c in cookies:
+        name = c.get("name", "")
+        value = c.get("value", "")
+        if name and value:
+            parts.append(f"{name}={value}")
+    return "; ".join(parts)
+
+
+def to_requests_cookies(platform: str) -> dict:
+    """加载平台 cookie 并转为 {name: value} dict（用于 requests cookies= 参数）。"""
+    cookies = load_cookies(platform)
+    if not cookies:
+        return {}
+    return {c["name"]: str(c.get("value", "")) for c in cookies if c.get("name")}
+
+
+def check_cookie_status(platform: str) -> dict:
+    """检查平台 cookie 文件状态（不打印 cookie 值，只返回元信息）。
+
+    返回:
+      {
+        "platform": str,
+        "cookie_file": str | None,       # 找到的 cookie 文件路径
+        "cookie_count": int,              # cookie 条数
+        "has_auth_cookie": bool,          # 是否包含关键认证 cookie
+        "auth_cookies_found": list[str],  # 找到的关键认证 cookie 名
+        "status": "ACTIVE" | "MISSING" | "NO_AUTH",  # 文件级状态（非连通状态）
+      }
+    """
+    p = _resolve_path(platform)
+    if not p:
+        return {
+            "platform": platform,
+            "cookie_file": None,
+            "cookie_count": 0,
+            "has_auth_cookie": False,
+            "auth_cookies_found": [],
+            "status": "MISSING",
+        }
+    cookies = load_cookies(platform)
+    auth_keys = PLATFORM_AUTH_COOKIES.get(platform, [])
+    found = [c["name"] for c in cookies if c.get("name") in auth_keys]
+    return {
+        "platform": platform,
+        "cookie_file": str(p),
+        "cookie_count": len(cookies),
+        "has_auth_cookie": bool(found),
+        "auth_cookies_found": found,
+        "status": "ACTIVE" if found else "NO_AUTH",
+    }
 
 
 # ============================================================
@@ -229,7 +348,7 @@ def to_playwright_cookies(cookies: list):
         }
         item["sameSite"] = _SAMESITE_MAP.get(str(c.get("sameSite") or "Lax").lower(), "Lax")
         exp = _iso_to_epoch(c.get("expires"))
-        if exp and exp > time.time() - 86400 * 365:  # 有效时间才带 expires
+        if exp and exp > time.time() - 86400 * 365:
             item["expires"] = exp
         out.append(item)
     return out

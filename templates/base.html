@@ -22,19 +22,19 @@
     <!-- Logo -->
     <div class="zbc-sidebar__logo">
       <span class="zbc-logo__mark" aria-hidden="true">序</span>
-      <span class="zbc-logo__text">序境 LUMENIS</span>
+      <span class="zbc-logo__text" data-i18n="product.name">序境 LUMENIS</span>
     </div>
 
     <!-- Domain Switch -->
     <div class="zbc-domain-switch" role="tablist" aria-label="产品域切换">
       <button class="zbc-domain-tab {% if active_domain=='zbmp' %}is-active{% endif %}" data-domain="zbmp" role="tab" aria-selected="{% if active_domain=='zbmp' %}true{% else %}false{% endif %}">
-        <span class="zbc-domain-tab__dot zbc-dot--zbmp"></span>ZBMP
+        <span class="zbc-domain-tab__dot zbc-dot--zbmp"></span><span data-i18n="domain.zbmp">ZBMP</span>
       </button>
       <button class="zbc-domain-tab {% if active_domain=='cth' or not active_domain %}is-active{% endif %}" data-domain="cth" role="tab" aria-selected="{% if active_domain=='cth' or not active_domain %}true{% else %}false{% endif %}">
-        <span class="zbc-domain-tab__dot zbc-dot--cth"></span>CTH
+        <span class="zbc-domain-tab__dot zbc-dot--cth"></span><span data-i18n="domain.cth">CTH</span>
       </button>
       <button class="zbc-domain-tab {% if active_domain=='system' %}is-active{% endif %}" data-domain="system" role="tab" aria-selected="{% if active_domain=='system' %}true{% else %}false{% endif %}">
-        <span class="zbc-domain-tab__dot zbc-dot--system"></span>SYS
+        <span class="zbc-domain-tab__dot zbc-dot--system"></span><span data-i18n="domain.system">SYS</span>
       </button>
     </div>
 
@@ -43,70 +43,70 @@
 
       <!-- ZBMP Navigation (7 entries) -->
       <div class="zbc-nav-group zbc-nav-group--zbmp" data-domain-nav="zbmp" {% if active_domain!='zbmp' %}hidden{% endif %}>
-        <div class="zbc-nav-group__label">Brand Intelligence</div>
+        <div class="zbc-nav-group__label" data-i18n="domain.zbmp">Brand Intelligence</div>
         <a class="zbc-nav-item {% if active_nav=='zbmp_overview' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_overview') }}">
-          <span class="zbc-nav-item__icon">◈</span><span class="zbc-nav-item__label">Overview</span>
+          <span class="zbc-nav-item__icon" data-icon="home" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.overview">Overview</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_brand' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_brand') }}">
-          <span class="zbc-nav-item__icon">▣</span><span class="zbc-nav-item__label">Brand</span>
+          <span class="zbc-nav-item__icon" data-icon="brand" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.brand">Brand</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_content' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_content') }}">
-          <span class="zbc-nav-item__icon">✎</span><span class="zbc-nav-item__label">Content</span>
+          <span class="zbc-nav-item__icon" data-icon="content" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.content">Content</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_kos' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_kos') }}">
-          <span class="zbc-nav-item__icon">◉</span><span class="zbc-nav-item__label">KOS</span>
+          <span class="zbc-nav-item__icon" data-icon="megaphone" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.kos">KOS</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_competition' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_competition') }}">
-          <span class="zbc-nav-item__icon">⇄</span><span class="zbc-nav-item__label">Competition</span>
+          <span class="zbc-nav-item__icon" data-icon="compare" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.competition">Competition</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_risk' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_risk') }}">
-          <span class="zbc-nav-item__icon">⚠</span><span class="zbc-nav-item__label">Risk</span>
+          <span class="zbc-nav-item__icon" data-icon="risk" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.risk">Risk</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_reports' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_reports') }}">
-          <span class="zbc-nav-item__icon">▤</span><span class="zbc-nav-item__label">Reports</span>
+          <span class="zbc-nav-item__icon" data-icon="report" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.reports">Reports</span>
         </a>
       </div>
 
       <!-- CTH Navigation (6 entries) -->
       <div class="zbc-nav-group zbc-nav-group--cth" data-domain-nav="cth" {% if active_domain and active_domain!='cth' %}hidden{% endif %}>
-        <div class="zbc-nav-group__label">Taikoo Hui Intel</div>
+        <div class="zbc-nav-group__label" data-i18n="domain.cth">Taikoo Hui Intel</div>
         <a class="zbc-nav-item {% if active_nav=='cth_overview' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_overview') }}">
-          <span class="zbc-nav-item__icon">◈</span><span class="zbc-nav-item__label">Overview</span>
+          <span class="zbc-nav-item__icon" data-icon="home" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.overview">Overview</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='cth_realtime' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_realtime') }}">
-          <span class="zbc-nav-item__icon">⚡</span><span class="zbc-nav-item__label">Real-time</span>
+          <span class="zbc-nav-item__icon" data-icon="bolt" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.realtime">Real-time</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='cth_events' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_events') }}">
-          <span class="zbc-nav-item__icon">◆</span><span class="zbc-nav-item__label">Events</span>
+          <span class="zbc-nav-item__icon" data-icon="event" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.events">Events</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='cth_risk' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_risk') }}">
-          <span class="zbc-nav-item__icon">⚠</span><span class="zbc-nav-item__label">Risk</span>
+          <span class="zbc-nav-item__icon" data-icon="risk" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.risk">Risk</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='cth_xhs' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_xhs') }}">
-          <span class="zbc-nav-item__icon">📕</span><span class="zbc-nav-item__label">Xiaohongshu</span>
+          <span class="zbc-nav-item__icon" data-icon="xiaohongshu" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.xiaohongshu">Xiaohongshu</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='cth_reports' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_reports') }}">
-          <span class="zbc-nav-item__icon">▤</span><span class="zbc-nav-item__label">Reports</span>
+          <span class="zbc-nav-item__icon" data-icon="report" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.reports">Reports</span>
         </a>
       </div>
 
       <!-- SYSTEM Navigation (5 entries) -->
       <div class="zbc-nav-group zbc-nav-group--system" data-domain-nav="system" {% if active_domain!='system' %}hidden{% endif %}>
-        <div class="zbc-nav-group__label">Runtime Control</div>
+        <div class="zbc-nav-group__label" data-i18n="domain.system">Runtime Control</div>
         <a class="zbc-nav-item {% if active_nav=='sys_runtime' %}is-active{% endif %}" href="{{ url_for('lumenis.system_runtime') }}">
-          <span class="zbc-nav-item__icon">⚙</span><span class="zbc-nav-item__label">Runtime</span>
+          <span class="zbc-nav-item__icon" data-icon="gear" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.runtime">Runtime</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='sys_collector' %}is-active{% endif %}" href="{{ url_for('lumenis.system_collector') }}">
-          <span class="zbc-nav-item__icon">⬢</span><span class="zbc-nav-item__label">Collector</span>
+          <span class="zbc-nav-item__icon" data-icon="inbox" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.collector">Collector</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='sys_ai' %}is-active{% endif %}" href="{{ url_for('lumenis.system_ai') }}">
-          <span class="zbc-nav-item__icon">◇</span><span class="zbc-nav-item__label">AI</span>
+          <span class="zbc-nav-item__icon" data-icon="intelligence" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.ai">AI</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='sys_database' %}is-active{% endif %}" href="{{ url_for('lumenis.system_database') }}">
-          <span class="zbc-nav-item__icon">▦</span><span class="zbc-nav-item__label">Database</span>
+          <span class="zbc-nav-item__icon" data-icon="database" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.database">Database</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='sys_security' %}is-active{% endif %}" href="{{ url_for('lumenis.system_security') }}">
-          <span class="zbc-nav-item__icon">🔒</span><span class="zbc-nav-item__label">Security</span>
+          <span class="zbc-nav-item__icon" data-icon="lock" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.security">Security</span>
         </a>
       </div>
     </nav>
@@ -115,10 +115,10 @@
     <div class="zbc-sidebar__footer">
       <div class="zbc-status" id="zbc-global-status">
         <span class="zbc-dot zbc-dot--unknown" id="zbc-global-dot"></span>
-        <span id="zbc-global-status-text">连接中…</span>
+        <span id="zbc-global-status-text" data-i18n="footer.status_connecting">连接中…</span>
       </div>
       <button class="zbc-icon-btn" id="zbc-theme-toggle" aria-label="切换主题" title="切换浅色/深色主题">
-        <span class="zbc-icon-btn__icon">◐</span>
+        <span class="zbc-icon-btn__icon" data-icon="sun" data-icon-size="16"></span>
       </button>
     </div>
   </aside>
@@ -135,9 +135,13 @@
       <div class="zbc-topbar__actions">
         {% block topbar_actions %}
         <div class="zbc-search">
-          <input type="text" class="zbc-search__input" placeholder="搜索…" aria-label="搜索">
-          <span class="zbc-search__icon">⌕</span>
+          <input type="text" class="zbc-search__input" data-i18n-placeholder="common.search" placeholder="搜索…" aria-label="搜索">
+          <span class="zbc-search__icon" data-icon="search" data-icon-size="16"></span>
         </div>
+        <button class="zbc-icon-btn zbc-bell-btn" id="zbc-bell-btn" aria-label="通知" title="通知">
+          <span class="zbc-icon-btn__icon" data-icon="bell" data-icon-size="16"></span>
+          <span class="zbc-badge" id="zbc-badge-count" hidden>0</span>
+        </button>
         {% endblock %}
       </div>
     </header>
@@ -151,18 +155,42 @@
 
 <!-- Mobile Bottom Tab Bar -->
 <nav class="zbc-tabbar" aria-label="移动端导航">
-  <a class="zbc-tabbar__item is-active" href="{{ url_for('lumenis.cth_overview') }}"><span>◈</span>Overview</a>
-  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.cth_realtime') }}"><span>⚡</span>Real-time</a>
-  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.cth_events') }}"><span>◆</span>Events</a>
-  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.cth_risk') }}"><span>⚠</span>Risk</a>
-  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.system_runtime') }}"><span>⚙</span>System</a>
+  <a class="zbc-tabbar__item is-active" href="{{ url_for('lumenis.cth_overview') }}"><span data-icon="home" data-icon-size="16"></span><span data-i18n="nav.overview">Overview</span></a>
+  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.cth_realtime') }}"><span data-icon="bolt" data-icon-size="16"></span><span data-i18n="nav.realtime">Real-time</span></a>
+  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.cth_events') }}"><span data-icon="event" data-icon-size="16"></span><span data-i18n="nav.events">Events</span></a>
+  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.cth_risk') }}"><span data-icon="risk" data-icon-size="16"></span><span data-i18n="nav.risk">Risk</span></a>
+  <a class="zbc-tabbar__item" href="{{ url_for('lumenis.system_runtime') }}"><span data-icon="gear" data-icon-size="16"></span><span data-i18n="domain.system">System</span></a>
 </nav>
 
 <!-- ============ Scripts ============ -->
 <script src="{{ url_for('static', filename='js/lumenis-icons.js') }}"></script>
+<script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+<script src="{{ url_for('static', filename='js/terminology.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-core.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/domain-context.js') }}"></script>
 <script src="{{ url_for('static', filename='js/xujing-viz.js') }}"></script>
+<script src="{{ url_for('static', filename='js/keyboard-shortcuts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/badge-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ai-assistant.js') }}"></script>
+<script src="{{ url_for('static', filename='js/feature-modules.js') }}"></script>
+<script src="{{ url_for('static', filename='js/carousel.js') }}"></script>
+<script>
+// ===== 线性图标初始化：将 [data-icon] 替换为 licon() SVG =====
+(function() {
+  function renderIcons() {
+    if (typeof licon !== 'function') return;
+    document.querySelectorAll('[data-icon]').forEach(function(el) {
+      var name = el.getAttribute('data-icon');
+      var size = parseInt(el.getAttribute('data-icon-size') || '18', 10);
+      el.innerHTML = licon(name, size);
+    });
+  }
+  if (document.readyState !== 'loading') renderIcons();
+  else document.addEventListener('DOMContentLoaded', renderIcons);
+  document.addEventListener('lumenis:langchange', renderIcons);
+})();
+</script>
 <script>
 // Wrap xjViz.api to use LUMENIS.fetch (auto-auth from /api/auth/config, credentials include)
 (function() {

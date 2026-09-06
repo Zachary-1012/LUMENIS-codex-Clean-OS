@@ -575,4 +575,79 @@ def get_special_report_triggers():
 
 # 注意：/api/pr/match 已在 app.py 中实现，此处不再重复注册
 
+
+
+# ============================================================
+# P1-D: 外部标杆案例库 API（C-01~C-15）
+# ============================================================
+
+@pr_case_bp.route('/api/pr-cases', methods=['GET'])
+def api_pr_cases_list():
+    """P1-D: 按分类/场景查询外部标杆案例库（C-01~C-15）。
+    Query params: category, scenario, severity, limit
+    """
+    try:
+        from public_opinion_cases import get_external_cases
+        category = request.args.get('category', '')
+        scenario = request.args.get('scenario', '')
+        severity = request.args.get('severity', '')
+        limit = int(request.args.get('limit', '100'))
+        cases = get_external_cases(
+            category=category or None,
+            scenario=scenario or None,
+            severity=severity or None,
+            limit=limit
+        )
+        return jsonify({'ok': True, 'count': len(cases), 'cases': cases})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e), 'cases': []}), 500
+
+
+@pr_case_bp.route('/api/pr-cases/<case_id>', methods=['GET'])
+def api_pr_case_detail(case_id):
+    """P1-D: 单个外部标杆案例详情（按 case_id 字符串查询，如 C-01）。"""
+    try:
+        from public_opinion_cases import get_external_case
+        case = get_external_case(case_id)
+        if not case:
+            return jsonify({'ok': False, 'error': f'案例 {case_id} 不存在'}), 404
+        return jsonify({'ok': True, 'case': case})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@pr_case_bp.route('/api/pr-response-templates', methods=['GET'])
+def api_pr_response_templates():
+    """P1-D: 公关回复话术公式查询（6场景）。
+    Query param: scenario（可选，不传返回全部）
+    """
+    try:
+        from public_opinion_cases import get_pr_response_template
+        scenario = request.args.get('scenario', '')
+        result = get_pr_response_template(scenario or None)
+        if scenario and not result:
+            return jsonify({'ok': False, 'error': f'场景 {scenario} 不存在'}), 404
+        if scenario:
+            return jsonify({'ok': True, 'template': result})
+        return jsonify({'ok': True, 'count': len(result), 'templates': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@pr_case_bp.route('/api/pr-cases/match', methods=['POST'])
+def api_pr_cases_match():
+    """P1-D: 专报生成时按场景匹配同类案例（返回2-3个案例编号和处置方式）。
+    Body: {scenario, text, limit}
+    """
+    try:
+        from public_opinion_cases import match_cases_by_scenario
+        data = request.get_json(silent=True) or {}
+        scenario = data.get('scenario', '')
+        text = data.get('text', '')
+        limit = int(data.get('limit', 3))
+        matched = match_cases_by_scenario(scenario, text, limit=limit)
+        return jsonify({'ok': True, 'count': len(matched), 'matched_cases': matched})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e), 'matched_cases': []}), 500
+
 print("[PRCase] 公关案例整合模块已加载", flush=True)

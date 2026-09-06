@@ -1,0 +1,465 @@
+{
+  "mode": "dry_run",
+  "limit_per_table": 0,
+  "started_at": "2026-09-06 22:00:33",
+  "elapsed_seconds": 2.8,
+  "fix_publish_date_available": true,
+  "results": [
+    {
+      "table": "notes",
+      "source_count": 957,
+      "inserted": 957,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 645,
+      "zbmp_count": 0,
+      "unknown_count": 312
+    },
+    {
+      "table": "note_comments",
+      "source_count": 141,
+      "inserted": 141,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "events",
+      "source_count": 427,
+      "inserted": 427,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "web_mentions",
+      "source_count": 79,
+      "inserted": 76,
+      "updated": 3,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "topic_campaigns",
+      "source_count": 1,
+      "inserted": 1,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "topic_campaign_topics",
+      "source_count": 7,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 7,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "topic_campaign_snapshots",
+      "source_count": 325,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 325,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols",
+        "row7: missing key or no compatible cols",
+        "row8: missing key or no compatible cols",
+        "row9: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "topic_campaign_notes",
+      "source_count": 120,
+      "inserted": 120,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "event_mentions",
+      "source_count": 562,
+      "inserted": 562,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "note_review_history",
+      "source_count": 8327,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 8327,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols",
+        "row7: missing key or no compatible cols",
+        "row8: missing key or no compatible cols",
+        "row9: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "ai_filter_log",
+      "source_count": 827,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 827,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols",
+        "row7: missing key or no compatible cols",
+        "row8: missing key or no compatible cols",
+        "row9: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "collection_logs",
+      "source_count": 477,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 477,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols",
+        "row7: missing key or no compatible cols",
+        "row8: missing key or no compatible cols",
+        "row9: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "daily_reports",
+      "source_count": 29,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 29,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols",
+        "row7: missing key or no compatible cols",
+        "row8: missing key or no compatible cols",
+        "row9: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "daily_digest",
+      "source_count": 5,
+      "inserted": 5,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "event_insights",
+      "source_count": 17,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 17,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols",
+        "row7: missing key or no compatible cols",
+        "row8: missing key or no compatible cols",
+        "row9: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "collector_quality_log",
+      "source_count": 7,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 7,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "feedback_keywords",
+      "source_count": 16,
+      "inserted": 16,
+      "updated": 0,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "web_sources",
+      "source_count": 1,
+      "inserted": 0,
+      "updated": 1,
+      "failed": 0,
+      "failures": [],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    },
+    {
+      "table": "web_runs",
+      "source_count": 28,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 28,
+      "failures": [
+        "row0: missing key or no compatible cols",
+        "row1: missing key or no compatible cols",
+        "row2: missing key or no compatible cols",
+        "row3: missing key or no compatible cols",
+        "row4: missing key or no compatible cols",
+        "row5: missing key or no compatible cols",
+        "row6: missing key or no compatible cols",
+        "row7: missing key or no compatible cols",
+        "row8: missing key or no compatible cols",
+        "row9: missing key or no compatible cols"
+      ],
+      "cth_count": 0,
+      "zbmp_count": 0,
+      "unknown_count": 0
+    }
+  ],
+  "reconciliation": [
+    {
+      "table": "notes",
+      "source_count": 957,
+      "inserted": 957,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 6
+    },
+    {
+      "table": "note_comments",
+      "source_count": 141,
+      "inserted": 141,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 0
+    },
+    {
+      "table": "events",
+      "source_count": 427,
+      "inserted": 427,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 0
+    },
+    {
+      "table": "web_mentions",
+      "source_count": 79,
+      "inserted": 76,
+      "updated": 3,
+      "failed": 0,
+      "actual_after": 13
+    },
+    {
+      "table": "topic_campaigns",
+      "source_count": 1,
+      "inserted": 1,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 1
+    },
+    {
+      "table": "topic_campaign_topics",
+      "source_count": 7,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 7,
+      "actual_after": 7
+    },
+    {
+      "table": "topic_campaign_snapshots",
+      "source_count": 325,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 325,
+      "actual_after": 65
+    },
+    {
+      "table": "topic_campaign_notes",
+      "source_count": 120,
+      "inserted": 120,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 0
+    },
+    {
+      "table": "event_mentions",
+      "source_count": 562,
+      "inserted": 562,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 0
+    },
+    {
+      "table": "note_review_history",
+      "source_count": 8327,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 8327,
+      "actual_after": 0
+    },
+    {
+      "table": "ai_filter_log",
+      "source_count": 827,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 827,
+      "actual_after": 3
+    },
+    {
+      "table": "collection_logs",
+      "source_count": 477,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 477,
+      "actual_after": 0
+    },
+    {
+      "table": "daily_reports",
+      "source_count": 29,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 29,
+      "actual_after": 15
+    },
+    {
+      "table": "daily_digest",
+      "source_count": 5,
+      "inserted": 5,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 3
+    },
+    {
+      "table": "event_insights",
+      "source_count": 17,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 17,
+      "actual_after": 0
+    },
+    {
+      "table": "collector_quality_log",
+      "source_count": 7,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 7,
+      "actual_after": 0
+    },
+    {
+      "table": "feedback_keywords",
+      "source_count": 16,
+      "inserted": 16,
+      "updated": 0,
+      "failed": 0,
+      "actual_after": 0
+    },
+    {
+      "table": "web_sources",
+      "source_count": 1,
+      "inserted": 0,
+      "updated": 1,
+      "failed": 0,
+      "actual_after": 1
+    },
+    {
+      "table": "web_runs",
+      "source_count": 28,
+      "inserted": 0,
+      "updated": 0,
+      "failed": 28,
+      "actual_after": 4
+    }
+  ]
+}
