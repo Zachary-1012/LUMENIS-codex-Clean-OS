@@ -30,7 +30,7 @@ class LocalAIClient:
 
     def __init__(self):
         self.base_url = os.environ.get('OLLAMA_BASE_URL', os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434'))
-        self.default_model = os.environ.get('OLLAMA_MODEL', 'qwen2.5:7b')
+        self.default_model = os.environ.get('OLLAMA_MODEL', 'qwen2.5-coder:7b-agent')
         self.timeout = 60
         self.available = False
         self.available_models = []
