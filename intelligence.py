@@ -1,4 +1,29 @@
+import threading, time
 from provider_registry import is_provider_available, provider_status
+
+# V1.0: 线程安全的最后一次 AI 调用元信息（用于 token 记录，不破坏 _chat 2-tuple 接口）
+_last_call_meta_lock = threading.Lock()
+_last_call_meta = {"provider": "", "model": "", "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "timestamp": ""}
+
+
+def _set_call_meta(provider="", model="", prompt_tokens=0, completion_tokens=0, total_tokens=0):
+    """记录最后一次 AI 调用的元信息（线程安全）。"""
+    with _last_call_meta_lock:
+        _last_call_meta.update({
+            "provider": provider or "",
+            "model": model or "",
+            "prompt_tokens": int(prompt_tokens or 0),
+            "completion_tokens": int(completion_tokens or 0),
+            "total_tokens": int(total_tokens or 0),
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+
+
+def _get_call_meta():
+    """获取最后一次 AI 调用的元信息（线程安全，返回副本）。"""
+    with _last_call_meta_lock:
+        return dict(_last_call_meta)
+
 """广州太古汇本地智能层。
 
 设计目标：无预算也能工作；如果电脑本地已经运行 Ollama / LM Studio / llama.cpp，自动发现并调用本地模型；
@@ -167,7 +192,15 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             req=urllib.request.Request(base+'/api/chat',data=json.dumps({'model':model,'messages':[{'role':'system','content':system},{'role':'user','content':user}],'stream':False,'options':{'temperature':temperature,'num_predict':max_tokens}},ensure_ascii=False).encode('utf-8'),headers={'Content-Type':'application/json'},method='POST')
             with urllib.request.urlopen(req,timeout=_to) as resp:
                 data=json.loads(resp.read().decode('utf-8','replace'))
-            return data.get('message',{}).get('content'),provider
+            _tu = data.get('usage',{}) or {}
+            try:
+                _pt = int(_tu.get('prompt_tokens', 0) or data.get('prompt_eval_count', 0) or 0)
+                _ct = int(_tu.get('completion_tokens', 0) or data.get('eval_count', 0) or 0)
+                _tt = int(_tu.get('total_tokens', 0) or 0) or (_pt + _ct)
+            except Exception:
+                _pt, _ct, _tt = 0, 0, 0
+            _set_call_meta(provider=provider, model=model, prompt_tokens=_pt, completion_tokens=_ct, total_tokens=_tt)
+            return data.get('message',{}).get('content'), provider
         except Exception as exc:
             print('[AI] local failed:',exc)
             return None,'rule'
@@ -206,6 +239,15 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             base.rstrip('/') + '/chat/completions', payload, _hdrs,
             timeout=_to, max_attempts=3, opener=opener)
         data = json.loads(_body[0].decode('utf-8','replace'))
+        # V1.0: 提取 token usage 并记录（修复 token_usage=0 bug）
+        try:
+            _u = data.get('usage', {}) or {}
+            _pt = int(_u.get('prompt_tokens', 0) or 0)
+            _ct = int(_u.get('completion_tokens', 0) or 0)
+            _tt = int(_u.get('total_tokens', 0) or 0) or (_pt + _ct)
+        except Exception:
+            _pt, _ct, _tt = 0, 0, 0
+        _set_call_meta(provider=prov, model=m, prompt_tokens=_pt, completion_tokens=_ct, total_tokens=_tt)
         _msg = data['choices'][0]['message']
         _content = (_msg.get('content') or '').strip() or (_msg.get('reasoning_content') or '').strip()
         if not _content:
@@ -214,9 +256,14 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
 
     try:
         result, used = ai_channel.route_with_fallback(_call_cloud, providers=chain)
+        _cloud_meta = {'token_usage': 0}
+        if isinstance(result, tuple) and len(result) >= 3:
+            _cloud_meta = result[2] if isinstance(result[2], dict) else _cloud_meta
+            result = result[0]
         return result, used
     except Exception as exc:
         print('[AI] all providers failed:', exc)
+        _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
         return None, 'rule'
 
 def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium'):
@@ -626,7 +673,7 @@ def _chat_cache_set(key, out, provider):
         _CHAT_CACHE[key] = (out, provider)
 
 
-def _budget_check(pack_id='per_call', amount=1):
+def _budget_check(pack_id='glm_4_5_air', amount=1):
     """预算护栏：超额返回 False（调用方降级到规则，不硬崩）。配额系统不可用时放行。"""
     try:
         import ai_resource_packs
@@ -636,7 +683,7 @@ def _budget_check(pack_id='per_call', amount=1):
         return True
 
 
-def _budget_record(pack_id='per_call', amount=1, endpoint='', detail=''):
+def _budget_record(pack_id='glm_4_5_air', amount=1, endpoint='', detail=''):
     try:
         import ai_resource_packs
         ai_resource_packs.record_usage(pack_id, amount, endpoint=endpoint, detail=detail)
@@ -644,7 +691,7 @@ def _budget_record(pack_id='per_call', amount=1, endpoint='', detail=''):
         pass
 
 
-def chat(system, user, level='medium', use_cache=False, temperature=None, max_tokens=None, model=None, pack_id='per_call', track=True):
+def chat(system, user, level='medium', use_cache=False, temperature=None, max_tokens=None, model=None, pack_id='glm_4_5_air', track=True):
     """增强版智谱调用：任务分级 + 模型分层 + 确定性缓存 + 预算护栏。
     Args:
         level: low/medium/high/critical（决定 timeout/max_tokens/temperature，HIGH 用强模型）
@@ -665,27 +712,39 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
         return None, 'budget_blocked', {'cache': False, 'level': level, 'budget_blocked': True}
     t0 = time.time()
     out, provider = _chat(system, user, temperature=p['temperature'], max_tokens=p['max_tokens'], model=p['model'], timeout=p['timeout'])
+    # V1.0: 从 _last_call_meta 获取真实 token 用量（修复 token_usage=0 bug）
+    _call_meta = _get_call_meta()
+    _real_tokens = int(_call_meta.get('total_tokens', 0) or 0)
     meta = {'cache': False, 'level': level, 'model': p['model'] or _env('ZHIPU_MODEL', ''),
-            'elapsed_ms': int((time.time() - t0) * 1000), 'provider': provider}
+            'elapsed_ms': int((time.time() - t0) * 1000), 'provider': provider,
+            'token_usage': _real_tokens,
+            'prompt_tokens': int(_call_meta.get('prompt_tokens', 0) or 0),
+            'completion_tokens': int(_call_meta.get('completion_tokens', 0) or 0)}
     if provider not in ('rule', None) and out:
         if use_cache:
             _chat_cache_set(key, out, provider)
         if track:
             _budget_record(pack_id, 1, endpoint='chat', detail=(str(system) or '')[:60])
-    # ZBC Phase 7: bypass AI call logging (never blocks main chain)
+    # V1.0: AI call logging — rule 兜底是正常确定性规则执行，记为 success，不计算在 AI 失败率内
     try:
         import ai_call_logger as _acl
+        _is_rule = provider in ('rule', None, 'budget_blocked')
+        _model_log = 'deterministic_rule' if _is_rule else (p.get('model') or _env('ZHIPU_MODEL', '') or _call_meta.get('model', ''))
+        _tokens_log = 0 if _is_rule else _real_tokens
+        # rule 兜底 = 正常降级执行，success=True；真实 AI 调用失败才记 success=False
+        _success_log = True if _is_rule else bool(out)
+        _fail_reason = '' if _success_log else (f'provider={provider}' if provider else 'unknown')
         _acl.log_call(
-            provider=provider or '',
-            model=p.get('model') or _env('ZHIPU_MODEL', ''),
+            provider=provider or 'rule',
+            model=_model_log,
             prompt_version=f'chat:{level}',
             input_hash=_acl.compute_input_hash(system, user, level),
             output=(out or '')[:4000],
             confidence=0.0,
             latency_ms=meta.get('elapsed_ms', 0),
-            token_usage=0,
-            success=bool(out and provider not in ('rule', None)),
-            failure_reason='' if (out and provider not in ('rule', None)) else f'provider={provider}',
+            token_usage=_tokens_log,
+            success=_success_log,
+            failure_reason=_fail_reason,
         )
     except Exception:
         pass  # logging must never block the AI call chain
@@ -693,7 +752,7 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
     return out, provider, meta
 
 
-def chat_batch(items, level='medium', max_workers=4, use_cache=False, pack_id='per_call'):
+def chat_batch(items, level='medium', max_workers=4, use_cache=False, pack_id='glm_4_5_air'):
     """并发批处理智谱调用（ThreadPoolExecutor；独立任务并发 → 批处理时间从'串行和'变'取最大'）。
     items: 每个元素为 dict{system, user, level?, use_cache?, temperature?, max_tokens?, model?} 或 (system, user) 元组。
     预算护栏：batch 总次数超限 → 整体降级（每项返回 budget_blocked，不硬崩）。

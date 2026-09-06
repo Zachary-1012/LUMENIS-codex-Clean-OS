@@ -20,11 +20,14 @@ import urllib.error
 
 # Provider 状态枚举
 ACTIVE = "ACTIVE"
+ACTIVE_FALLBACK = "ACTIVE_FALLBACK"  # V1.0: 可用兜底Provider
 AVAILABLE = "AVAILABLE"      # 已配置但未运行时验证（本地 Provider 默认态）
 BLOCKED = "BLOCKED"          # 运行时探测失败，不可调用
 LEGACY = "LEGACY"
 DISABLED = "DISABLED"
 REMOVE_CANDIDATE = "REMOVE_CANDIDATE"
+NOT_CONFIGURED = "NOT_CONFIGURED"
+ACTIVE_FALLBACK = "ACTIVE_FALLBACK"
 
 # Canonical Provider Registry
 PROVIDER_REGISTRY: Dict[str, Dict] = {
@@ -66,24 +69,24 @@ PROVIDER_REGISTRY: Dict[str, Dict] = {
         "description": "llama.cpp server 本地推理",
     },
     "ark": {
-        "status": LEGACY,
+        "status": ACTIVE_FALLBACK,
         "role": "cloud_fallback",
         "models": ["doubao-seed-evolving-latest-version"],
         "env_key": "ARK_API_KEY",
         "description": "豆包 ARK 兜底（用户要求保留，不作为主力）",
     },
     "doubao": {
-        "status": LEGACY,
+        "status": ACTIVE_FALLBACK,
         "role": "cloud_fallback",
         "alias_of": "ark",
         "env_key": "ARK_API_KEY",
         "description": "豆包别名，映射到 ark",
     },
     "qwen": {
-        "status": DISABLED,
-        "role": "deprecated",
+        "status": NOT_CONFIGURED,
+        "role": "cloud_standby",
         "env_key": "DASHSCOPE_API_KEY",
-        "description": "已禁用。V2 收敛后不再作为可选 Provider。代码保留为 LEGACY 参考。",
+        "description": "qwen L3 standby V1.0 (no key configured)",
     },
     "openai": {
         "status": DISABLED,
@@ -112,7 +115,7 @@ def is_provider_available(name: str) -> bool:
     AVAILABLE 表示已配置但未验证；调用方应先 probe 再使用。
     BLOCKED / DISABLED 不可用。
     """
-    return provider_status(name) in (ACTIVE, AVAILABLE, LEGACY)
+    return provider_status(name) in (ACTIVE, ACTIVE_FALLBACK, AVAILABLE, LEGACY)
 
 
 def is_provider_active(name: str) -> bool:
@@ -127,7 +130,7 @@ def active_providers() -> List[str]:
 
 def available_providers() -> List[str]:
     """返回所有可尝试的 Provider（ACTIVE + AVAILABLE + LEGACY）。"""
-    return [k for k, v in PROVIDER_REGISTRY.items() if v["status"] in (ACTIVE, AVAILABLE, LEGACY)]
+    return [k for k, v in PROVIDER_REGISTRY.items() if v["status"] in (ACTIVE, ACTIVE_FALLBACK, AVAILABLE, LEGACY)]
 
 
 def filter_available(names: List[str]) -> List[str]:

@@ -46,14 +46,13 @@ RESOURCE_PACKS = {
         "enabled": True,
     },
     "per_call": {
-        "name": "按次计费",
-        "type": "calls",
-        "total": 20,                  # 20次
+        "enabled": True,
+        "total": 100,                  # 20次
         "daily_limit": None,
         "unit": "次",
         "description": "高价值模型按次调用(20次)：2次预留用于采集ChatGPT/Codex编程设计功能、交互及学习能力、可进化板块-实时推进开发执行；其余18次按用户需求执行",
         "enabled": True,
-        "reserved_for_learning": 2,   # 预留2次用于学习采集(ChatGPT/Codex编程/交互/可进化板块)
+        "reserved_for_learning": 5,   # 预留5次用于学习采集(ChatGPT/Codex编程/交互/可进化板块)
     },
     "glm_4_6v": {
         "name": "GLM-4.6V 视觉",

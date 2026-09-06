@@ -355,7 +355,7 @@ def provider_chain():
     raw = _env('AI_PROVIDER_CHAIN', '').strip()
     if raw:
         return [p.strip() for p in raw.split(',') if p.strip()]
-    return ['zhipu', 'ark']  # ark = 豆包（火山引擎）
+    return ['zhipu', 'ark', 'ollama']  # V1.0: zhipu primary -> ark fallback -> ollama local -> rule final
 
 
 def route_with_fallback(call_fn, providers=None, on_result=None):
@@ -666,3 +666,228 @@ def track_b_self_check():
         },
         "status": "READY",
     }
+
+
+# ============================================================
+# V1.0 AI Provider Failover Policy (2026-09-07)
+# 6层 Provider 层级 + 自动切换 + token 记录 + 切换审计
+# ============================================================
+import uuid as _uuid
+
+# 6层 Provider 层级定义
+PROVIDER_LAYERS_V1 = [
+    {"layer": 1, "provider": "zhipu",   "role": "cloud_primary",    "models": ["glm-4.5-air", "glm-5.3", "glm-4.6v", "web-search-pro"]},
+    {"layer": 2, "provider": "ark",     "role": "cloud_fallback",   "models": ["doubao-lite-4k", "doubao-pro-32k"]},
+    {"layer": 3, "provider": "qwen",    "role": "cloud_standby",    "models": ["qwen-flash", "qwen-turbo"]},
+    {"layer": 4, "provider": "ollama",  "role": "local_primary",    "models": ["qwen2.5-coder:7b-agent"]},
+    {"layer": 5, "provider": "lmstudio","role": "local_secondary",  "models": ["local-model"]},
+    {"layer": 6, "provider": "rule",    "role": "deterministic",    "models": ["deterministic_rule"]},
+]
+
+# 切换审计日志（内存环形缓冲，最近 200 条）
+_FAILOVER_LOG = []
+_FAILOVER_LOG_LOCK = threading.Lock()
+_FAILOVER_LOG_MAX = 200
+
+
+def extract_token_usage(response_data):
+    """从 AI API 响应中提取 token 用量。
+    支持 OpenAI 兼容格式: {"usage": {"prompt_tokens": N, "completion_tokens": N, "total_tokens": N}}
+    支持智谱格式: {"usage": {"prompt_tokens": N, "completion_tokens": N, "total_tokens": N}}
+    返回 dict {prompt_tokens, completion_tokens, total_tokens}，全 0 表示无法解析。
+    """
+    if not isinstance(response_data, dict):
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    usage = response_data.get("usage") or {}
+    if not isinstance(usage, dict):
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    try:
+        pt = int(usage.get("prompt_tokens", 0) or 0)
+        ct = int(usage.get("completion_tokens", 0) or 0)
+        tt = int(usage.get("total_tokens", 0) or 0)
+        if tt == 0 and (pt > 0 or ct > 0):
+            tt = pt + ct
+        return {"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": tt}
+    except Exception:
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+
+def record_provider_switch(from_provider, to_provider, reason="",
+                            task_id="", trace_id="", first_result=None):
+    """记录 Provider 切换审计（V1.0 硬规则：禁止静默切换）。
+    记录字段：时间/从哪到哪/原因/task_id/trace_id/切换后首次结果。
+    """
+    entry = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "from_provider": from_provider or "",
+        "to_provider": to_provider or "",
+        "reason": reason or "",
+        "task_id": task_id or "",
+        "trace_id": trace_id or _uuid.uuid4().hex[:16],
+        "first_result": str(first_result)[:200] if first_result is not None else "",
+    }
+    with _FAILOVER_LOG_LOCK:
+        _FAILOVER_LOG.append(entry)
+        if len(_FAILOVER_LOG) > _FAILOVER_LOG_MAX:
+            _FAILOVER_LOG.pop(0)
+    # 同时写入 ai_call_logs（如果可用）
+    try:
+        import ai_call_logger as _acl
+        _acl.log_call(
+            provider=to_provider or "",
+            model="provider_switch",
+            prompt_version="failover_v1",
+            input_hash=_acl.compute_input_hash(from_provider, to_provider, reason),
+            output=f"switch: {from_provider} -> {to_provider}, reason={reason}",
+            confidence=0.0,
+            latency_ms=0,
+            token_usage=0,
+            failure_reason=f"failover:{from_provider}->{to_provider}:{reason}"[:300],
+            success=True,
+            task_id=task_id,
+            trace_id=entry["trace_id"],
+        )
+    except Exception:
+        pass
+    return entry
+
+
+def get_failover_log(limit=50):
+    """获取最近的 Provider 切换审计日志。"""
+    with _FAILOVER_LOG_LOCK:
+        return list(_FAILOVER_LOG[-int(limit):])
+
+
+def build_fallback_chain_v1():
+    """构建 V1.0 6层 fallback 链（基于 .env 配置动态过滤）。
+    有 API Key 的云端 Provider + 可探测的本地 Provider + 最终 rule。
+    返回 provider 名称列表，按层级顺序。
+    """
+    ensure_env_loaded()
+    chain = []
+    # L1 智谱（必须有 key）
+    if _env("ZHIPU_API_KEY"):
+        chain.append("zhipu")
+    # L2 ARK/豆包（必须有 key）
+    if _env("ARK_API_KEY"):
+        chain.append("ark")
+    # L3 千问（必须有 key）
+    if _env("DASHSCOPE_API_KEY") or _env("QWEN_API_KEY"):
+        chain.append("qwen")
+    # L4 Ollama（本地，默认可用）
+    chain.append("ollama")
+    # L5 LM Studio / llama.cpp（本地，默认可用）
+    chain.append("lmstudio")
+    # L6 本地确定性规则（最终兜底，始终在链中）
+    chain.append("rule")
+    return chain
+
+
+def route_with_fallback_v1(call_fn, providers=None, on_result=None,
+                            task_id="", trace_id=""):
+    """V1.0 多 Provider 故障转移执行器（6层链 + 切换审计 + rule 标记）。
+    call_fn(provider_name) -> (result_text, usage_dict) 或抛异常。
+    usage_dict: {prompt_tokens, completion_tokens, total_tokens}
+    按 providers 顺序尝试；每个 Provider 独立熔断；全部失败返回 (None, "rule", usage, switch_log)。
+    rule 兜底标记为 deterministic_fallback，不计算在 AI 失败率内。
+    """
+    chain = providers or build_fallback_chain_v1()
+    last_exc = None
+    last_provider = ""
+    switches = []
+    for prov in chain:
+        # rule 是最终兜底，不走熔断
+        if prov == "rule":
+            break
+        pb = get_provider_breaker(prov)
+        if not pb.allow():
+            if last_provider:
+                sw = record_provider_switch(last_provider, prov, f"circuit_breaker_open:{prov}",
+                                             task_id, trace_id)
+                switches.append(sw)
+            last_provider = prov
+            continue
+        try:
+            result, usage = call_fn(prov)
+            pb.record_success()
+            if last_provider and last_provider != prov:
+                sw = record_provider_switch(last_provider, prov, "fallback_success",
+                                             task_id, trace_id, first_result=str(result)[:100])
+                switches.append(sw)
+            if on_result:
+                try:
+                    on_result(prov, result, True, usage)
+                except Exception:
+                    pass
+            return result, prov, usage or {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}, switches
+        except Exception as exc:
+            kind, retryable = classify_error(exc)
+            pb.record_failure(kind)
+            last_exc = exc
+            if last_provider and last_provider != prov:
+                sw = record_provider_switch(last_provider, prov, f"{kind}:{str(exc)[:80]}",
+                                             task_id, trace_id)
+                switches.append(sw)
+            last_provider = prov
+            if on_result:
+                try:
+                    on_result(prov, None, False, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+                except Exception:
+                    pass
+            # 不可重试错误（auth/bad_request）不切下一个（配置问题，切了也没用）
+            if not retryable and kind in ("auth", "bad_request"):
+                break
+            continue
+    # 全部 Provider 失败/熔断 → L6 本地规则兜底
+    usage_zero = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    if last_provider and last_provider != "rule":
+        sw = record_provider_switch(last_provider, "rule", "all_cloud_providers_failed",
+                                     task_id, trace_id)
+        switches.append(sw)
+    return None, "rule", usage_zero, switches
+
+
+def get_provider_status_v1():
+    """V1.0 获取所有 Provider 运行时状态（基于 .env 配置 + 熔断状态）。"""
+    ensure_env_loaded()
+    statuses = {}
+    for layer in PROVIDER_LAYERS_V1:
+        prov = layer["provider"]
+        if prov == "rule":
+            statuses[prov] = {"status": "DETERMINISTIC_FALLBACK", "layer": layer["layer"], "role": layer["role"]}
+            continue
+        # 检查 API key
+        key_env = {
+            "zhipu": "ZHIPU_API_KEY",
+            "ark": "ARK_API_KEY",
+            "qwen": "DASHSCOPE_API_KEY",
+            "ollama": None,
+            "lmstudio": None,
+        }.get(prov)
+        has_key = True
+        if key_env:
+            has_key = bool(_env(key_env))
+        # 检查熔断状态
+        try:
+            pb = get_provider_breaker(prov)
+            cb_state = pb.state
+        except Exception:
+            cb_state = "UNKNOWN"
+        # 确定状态
+        if not has_key:
+            st = "NOT_CONFIGURED"
+        elif cb_state == "OPEN":
+            st = "CIRCUIT_OPEN"
+        elif prov == "zhipu":
+            st = "ACTIVE"
+        else:
+            st = "ACTIVE_FALLBACK"
+        statuses[prov] = {
+            "status": st,
+            "layer": layer["layer"],
+            "role": layer["role"],
+            "models": layer["models"],
+            "circuit_breaker": cb_state,
+            "api_key_configured": has_key,
+        }
+    return statuses
