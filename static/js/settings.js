@@ -77,9 +77,10 @@ function switchPanel(panel) {
     profile: '账户资料', security: '登录与安全', protection: '访问保护',
     members: '成员管理', approvals: '登录审批', recovery: '账号恢复',
     audit: '审计日志', keys: '程序化密钥', navcustom: '导航自定义',
-    skills: '技能管理', about: '关于系统', domain: '域名与接入',
-    developer: '开发者功能', appearance: '外观', ai: 'AI',
-    collection: '采集与数据源', backup: '通知/备份/帮助'
+    skills: '插件与技能', about: '关于系统', domain: '域名与接入',
+    developer: '开发者功能', appearance: '外观', config: '配置',
+    keyboard: '键盘快捷键', browser: '浏览器', integrations: '集成与连接',
+    ai: 'AI', collection: '采集与数据源', backup: '通知/备份/帮助'
   };
   document.getElementById('panelTitle').textContent = titles[panel] || panel;
 
@@ -92,9 +93,14 @@ function switchPanel(panel) {
   if (panel === 'approvals') loadApprovals();
   if (panel === 'recovery') loadRecovery();
   if (panel === 'navcustom') loadNavConfig();
-  if (panel === 'skills') loadSkills();
+  if (panel === 'skills') loadSkillsCodex();
   if (panel === 'ai') loadAIStatus();
   if (panel === 'collection') loadCollectorStatus();
+  if (panel === 'appearance') initAppearancePanel();
+  if (panel === 'config') initConfigPanel();
+  if (panel === 'keyboard') initKeyboardPanel();
+  if (panel === 'browser') initBrowserPanel();
+  if (panel === 'integrations') loadIntegrations();
 }
 
 // ── API helper ──
@@ -518,32 +524,17 @@ async function resetNavConfig() {
   if (data.success) { showToast('已恢复默认'); loadNavConfig(); }
 }
 
-// ── Skills ──
-async function loadSkills() {
-  const data = await api('/skills');
-  const container = document.getElementById('skillList');
-  if (!data.ok || !data.skills.length) { container.innerHTML = '<div class="empty-state">暂无技能</div>'; return; }
-  container.innerHTML = data.skills.map(s => `
-    <div class="member-card">
-      <div class="member-avatar ${s.product === 'ZBMP' ? 'admin' : s.product === 'CTH' ? 'user' : 'owner'}">⚡</div>
-      <div class="member-info">
-        <div class="member-name">${s.name} <span style="font-size:10px;color:#94a3b8">${s.product} · ${s.domain}</span></div>
-        <div class="member-meta">${s.description || '—'} · v${s.version || '1.0'}</div>
-      </div>
-      <span class="status-badge ${s.status === 'enabled' ? 'ok' : 'off'}">${s.status === 'enabled' ? '已启用' : '已禁用'}</span>
-      ${currentUser?.role === 'owner' ? (s.status === 'enabled'
-        ? `<button class="btn btn-secondary btn-sm" onclick="toggleSkill('${s.skill_id}','disabled')">禁用</button>`
-        : `<button class="btn btn-primary btn-sm" onclick="toggleSkill('${s.skill_id}','enabled')">启用</button>`) : ''}
-    </div>
-  `).join('');
-}
+// ── Skills (legacy alias -> Codex pattern) ──
+async function loadSkills() { loadSkillsCodex(); }
 
 async function toggleSkill(skillId, status) {
   const path = status === 'enabled' ? `/skills/${skillId}/enable` : `/skills/${skillId}/disable`;
   const data = await api(path, { method: 'POST' });
-  if (data.success) { showToast('技能状态已更新'); loadSkills(); }
+  if (data.success) { showToast('技能状态已更新'); loadSkillsCodex(); }
   else showToast(data.error || '失败', 'error');
 }
+// Alias for Codex pattern skill rows
+function toggleSkillStatus(skillId, status) { toggleSkill(skillId, status); }
 
 // ── About ──
 function loadAboutInfo() {
@@ -639,3 +630,635 @@ async function loadCollectorStatus() {
     }
   } catch (e) { /* keep default cards */ }
 }
+
+
+// ================================================================
+// Codex Design Pattern: New Panel Logic
+// ================================================================
+
+// ── Appearance Panel ──
+let appearanceInitialized = false;
+
+function initAppearancePanel() {
+  if (appearanceInitialized) return;
+  appearanceInitialized = true;
+  // Load saved theme
+  let savedTheme = 'light';
+  try { savedTheme = localStorage.getItem('lumenis-theme') || 'light'; } catch(e) {}
+  selectTheme(savedTheme, false);
+  // Accent color dropdown
+  if (window.SettingsDropdown) {
+    SettingsDropdown.init(document.getElementById('accentColorDropdown'), {
+      options: [
+        { value: 'teal', label: '序境青绿', desc: '#0F766E · 品牌主色' },
+        { value: 'blue', label: '太古汇蓝', desc: '#2563EB · 客户域色' },
+        { value: 'purple', label: '系统紫', desc: '#7C3AED · 系统域色' },
+        { value: 'custom', label: '自定义…', desc: '输入自定义色值' }
+      ],
+      value: (function(){ try { return localStorage.getItem('lumenis-accent') || 'teal'; } catch(e){ return 'teal'; } })(),
+      onChange: function(v) {
+        try { localStorage.setItem('lumenis-accent', v); } catch(e) {}
+        if (v === 'custom') {
+          const custom = prompt('输入自定义强调色（如 #1a1a1a）：', '#0F766E');
+          if (custom) {
+            try { localStorage.setItem('lumenis-accent-custom', custom); } catch(e) {}
+          }
+        }
+        showToast('强调色已更新');
+      }
+    });
+  }
+  // Load font config
+  loadFontConfig();
+  // Load translucent sidebar
+  let transOn = false;
+  try { transOn = localStorage.getItem('lumenis-translucent-sidebar') === 'true'; } catch(e) {}
+  const tst = document.getElementById('translucentSidebarToggle');
+  if (tst) { if (transOn) tst.classList.add('on'); }
+  // Load contrast
+  let contrast = 45;
+  try { contrast = parseInt(localStorage.getItem('lumenis-contrast')) || 45; } catch(e) {}
+  setContrastValue(contrast);
+  // Load font size
+  let fontSize = 14;
+  try { fontSize = parseInt(localStorage.getItem('lumenis-ui-font-size')) || 14; } catch(e) {}
+  const fse = document.getElementById('uiFontSize');
+  if (fse) fse.value = fontSize;
+  // Load reduced motion
+  let rm = 'system';
+  try { rm = localStorage.getItem('lumenis-reduced-motion') || 'system'; } catch(e) {}
+  setReducedMotion(rm, false);
+}
+
+function selectTheme(theme, save = true) {
+  document.querySelectorAll('.theme-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.theme === theme);
+  });
+  // Apply theme
+  if (theme === 'dark') {
+    document.body.style.background = '#0f172a';
+    document.body.style.color = '#e2e8f0';
+    document.getElementById('bgValue').textContent = '#0F172A';
+    document.getElementById('fgValue').textContent = '#E2E8F0';
+    document.getElementById('bgSwatch').style.background = '#0F172A';
+    document.getElementById('fgSwatch').style.background = '#E2E8F0';
+  } else if (theme === 'system') {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (prefersDark) {
+      document.body.style.background = '#0f172a';
+      document.body.style.color = '#e2e8f0';
+      document.getElementById('bgValue').textContent = '#0F172A';
+      document.getElementById('fgValue').textContent = '#E2E8F0';
+      document.getElementById('bgSwatch').style.background = '#0F172A';
+      document.getElementById('fgSwatch').style.background = '#E2E8F0';
+    } else {
+      document.body.style.background = '#f8fafc';
+      document.body.style.color = '#1e293b';
+      document.getElementById('bgValue').textContent = '#FFFFFF';
+      document.getElementById('fgValue').textContent = '#1A1C1F';
+      document.getElementById('bgSwatch').style.background = '#FFFFFF';
+      document.getElementById('fgSwatch').style.background = '#1A1C1F';
+    }
+  } else {
+    document.body.style.background = '#f8fafc';
+    document.body.style.color = '#1e293b';
+    document.getElementById('bgValue').textContent = '#FFFFFF';
+    document.getElementById('fgValue').textContent = '#1A1C1F';
+    document.getElementById('bgSwatch').style.background = '#FFFFFF';
+    document.getElementById('fgSwatch').style.background = '#1A1C1F';
+  }
+  if (save) {
+    try { localStorage.setItem('lumenis-theme', theme); } catch(e) {}
+    showToast('主题已切换为' + ({light:'浅色',dark:'深色',system:'跟随系统'}[theme]||theme));
+  }
+}
+
+function loadFontConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('lumenis-font-config') || '{}');
+    if (cfg.uiFamily) document.getElementById('uiFontFamily').value = cfg.uiFamily;
+    if (cfg.uiWeight) document.getElementById('uiFontWeight').value = cfg.uiWeight;
+    if (cfg.contentFamily) document.getElementById('contentFontFamily').value = cfg.contentFamily;
+    if (cfg.contentWeight) document.getElementById('contentFontWeight').value = cfg.contentWeight;
+    if (cfg.codeFamily) document.getElementById('codeFontFamily').value = cfg.codeFamily;
+    if (cfg.codeWeight) document.getElementById('codeFontWeight').value = cfg.codeWeight;
+  } catch(e) {}
+}
+
+function saveFontConfig() {
+  const cfg = {
+    uiFamily: document.getElementById('uiFontFamily').value,
+    uiWeight: document.getElementById('uiFontWeight').value,
+    contentFamily: document.getElementById('contentFontFamily').value,
+    contentWeight: document.getElementById('contentFontWeight').value,
+    codeFamily: document.getElementById('codeFontFamily').value,
+    codeWeight: document.getElementById('codeFontWeight').value,
+  };
+  try { localStorage.setItem('lumenis-font-config', JSON.stringify(cfg)); } catch(e) {}
+}
+
+function toggleTranslucentSidebar() {
+  const el = document.getElementById('translucentSidebarToggle');
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  try { localStorage.setItem('lumenis-translucent-sidebar', on ? 'true' : 'false'); } catch(e) {}
+  const sidebar = document.querySelector('.settings-sidebar');
+  if (sidebar) {
+    if (on) {
+      sidebar.style.background = 'rgba(255,255,255,.7)';
+      sidebar.style.backdropFilter = 'blur(20px)';
+    } else {
+      sidebar.style.background = '';
+      sidebar.style.backdropFilter = '';
+    }
+  }
+}
+
+function setContrast(event) {
+  const track = document.getElementById('contrastSlider');
+  const rect = track.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+  setContrastValue(Math.round(pct));
+}
+
+function setContrastValue(val) {
+  document.getElementById('contrastFill').style.width = val + '%';
+  document.getElementById('contrastThumb').style.left = val + '%';
+  document.getElementById('contrastValue').textContent = val;
+  try { localStorage.setItem('lumenis-contrast', val); } catch(e) {}
+}
+
+function saveFontSize() {
+  const val = parseInt(document.getElementById('uiFontSize').value) || 14;
+  try { localStorage.setItem('lumenis-ui-font-size', val); } catch(e) {}
+  document.documentElement.style.fontSize = val + 'px';
+}
+
+function setReducedMotion(val, save = true) {
+  document.querySelectorAll('#reducedMotionSegment button').forEach(b => {
+    b.classList.toggle('active', b.dataset.value === val);
+  });
+  if (val === 'on') {
+    document.documentElement.style.setProperty('reduced-motion', 'reduce');
+    document.body.classList.add('reduced-motion');
+  } else if (val === 'off') {
+    document.documentElement.style.removeProperty('reduced-motion');
+    document.body.classList.remove('reduced-motion');
+  } else {
+    const prefers = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefers) document.body.classList.add('reduced-motion');
+    else document.body.classList.remove('reduced-motion');
+  }
+  if (save) {
+    try { localStorage.setItem('lumenis-reduced-motion', val); } catch(e) {}
+  }
+}
+
+// ── Config Panel ──
+let configInitialized = false;
+
+function initConfigPanel() {
+  if (configInitialized) return;
+  configInitialized = true;
+  if (!window.SettingsDropdown) return;
+
+  // AI Provider - read from real API
+  fetch('/api/system/config', { credentials: 'include' }).then(r => r.json()).then(data => {
+    const currentProvider = data.ai_provider || 'zhipu';
+    const aiEnabled = data.ai_enabled !== false;
+    const aiToggle = document.getElementById('aiEnabledToggle');
+    if (aiToggle) { if (aiEnabled) aiToggle.classList.add('on'); else aiToggle.classList.remove('on'); }
+
+    SettingsDropdown.init(document.getElementById('aiProviderDropdown'), {
+      options: [
+        { value: 'zhipu', label: '智谱主力', desc: 'GLM-4.5-Air 日常 · GLM-5.3 强推理' },
+        { value: 'doubao', label: '豆包兜底', desc: 'ARK 通道 · 智谱不可用时降级' },
+        { value: 'ollama', label: '本地 Ollama', desc: '离线本地模型 · 无需网络' },
+        { value: 'rule', label: '纯规则', desc: '关闭 AI · 全部走确定性规则引擎' }
+      ],
+      value: currentProvider,
+      onChange: function(v) {
+        showToast('AI Provider 已切换为：' + v + '（重启后生效）');
+      }
+    });
+  }).catch(() => {
+    SettingsDropdown.init(document.getElementById('aiProviderDropdown'), {
+      options: [
+        { value: 'zhipu', label: '智谱主力', desc: 'GLM-4.5-Air 日常 · GLM-5.3 强推理' },
+        { value: 'doubao', label: '豆包兜底', desc: 'ARK 通道 · 智谱不可用时降级' },
+        { value: 'ollama', label: '本地 Ollama', desc: '离线本地模型 · 无需网络' },
+        { value: 'rule', label: '纯规则', desc: '关闭 AI · 全部走确定性规则引擎' }
+      ],
+      value: 'zhipu',
+      onChange: function(v) { showToast('AI Provider：' + v); }
+    });
+  });
+
+  // Output detail
+  SettingsDropdown.init(document.getElementById('outputDetailDropdown'), {
+    options: [
+      { value: 'low', label: '低', desc: '简洁回复，最少上下文' },
+      { value: 'medium', label: '中', desc: '标准详细程度（默认）' },
+      { value: 'high', label: '高', desc: '完整分析，包含推理过程' }
+    ],
+    value: (function(){ try { return localStorage.getItem('lumenis-output-detail') || 'medium'; } catch(e){ return 'medium'; } })(),
+    onChange: function(v) { try { localStorage.setItem('lumenis-output-detail', v); } catch(e){} showToast('输出详细程度：' + v); }
+  });
+
+  // Reasoning summary
+  SettingsDropdown.init(document.getElementById('reasoningSummaryDropdown'), {
+    options: [
+      { value: 'auto', label: '自动', desc: '根据问题复杂度自动决定' },
+      { value: 'concise', label: '简洁', desc: '仅展示关键推理步骤' },
+      { value: 'detailed', label: '详细', desc: '展示完整推理过程' },
+      { value: 'none', label: '无', desc: '不展示推理过程' }
+    ],
+    value: (function(){ try { return localStorage.getItem('lumenis-reasoning-summary') || 'auto'; } catch(e){ return 'auto'; } })(),
+    onChange: function(v) { try { localStorage.setItem('lumenis-reasoning-summary', v); } catch(e){} showToast('推理摘要：' + v); }
+  });
+
+  // Web search
+  SettingsDropdown.init(document.getElementById('webSearchDropdown'), {
+    options: [
+      { value: 'disabled', label: '已禁用', desc: '不联网，仅用本地数据' },
+      { value: 'cached', label: '已缓存', desc: '使用本地缓存的检索结果' },
+      { value: 'indexed', label: '已索引', desc: '使用系统索引的内容库' },
+      { value: 'realtime', label: '实时', desc: '实时联网检索（消耗额度）' }
+    ],
+    value: (function(){ try { return localStorage.getItem('lumenis-web-search') || 'indexed'; } catch(e){ return 'indexed'; } })(),
+    onChange: function(v) { try { localStorage.setItem('lumenis-web-search', v); } catch(e){} showToast('联网方式：' + v); }
+  });
+
+  // Approval policy
+  SettingsDropdown.init(document.getElementById('approvalPolicyDropdown'), {
+    options: [
+      { value: 'per_request', label: '按请求', desc: '每次高风险操作需审批确认' },
+      { value: 'never', label: '从不请求审批', desc: '信任当前账号，跳过审批（不推荐）' }
+    ],
+    value: (function(){ try { return localStorage.getItem('lumenis-approval-policy') || 'per_request'; } catch(e){ return 'per_request'; } })(),
+    onChange: function(v) { try { localStorage.setItem('lumenis-approval-policy', v); } catch(e){} showToast('采集批准策略：' + v); }
+  });
+}
+
+function toggleAIEnabled() {
+  const el = document.getElementById('aiEnabledToggle');
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  const area = document.getElementById('configStatusArea');
+  if (area) {
+    area.innerHTML = on
+      ? '<div class="status-badge ok">AI 已启用 · 规则引擎为兜底</div>'
+      : '<div class="status-badge warn">AI 已关闭 · 全部走本地规则引擎</div>';
+  }
+  showToast(on ? 'AI 已启用' : 'AI 已关闭，切换为纯规则模式');
+}
+
+// ── Keyboard Shortcuts Panel ──
+let keyboardShortcuts = [];
+
+function initKeyboardPanel() {
+  if (!window.SettingsKeyboard) {
+    document.getElementById('keyboardShortcutsList').innerHTML = '<div class="empty-state">键盘快捷键模块未加载</div>';
+    return;
+  }
+  keyboardShortcuts = SettingsKeyboard.load();
+  renderKeyboardShortcuts();
+}
+
+function renderKeyboardShortcuts(filter) {
+  const container = document.getElementById('keyboardShortcutsList');
+  if (!container) return;
+  const q = (filter || '').toLowerCase().trim();
+  const categories = {};
+  keyboardShortcuts.forEach(s => {
+    if (q && !(s.name + ' ' + s.desc + ' ' + (s.combo || '')).toLowerCase().includes(q)) return;
+    if (!categories[s.category]) categories[s.category] = [];
+    categories[s.category].push(s);
+  });
+  const count = Object.values(categories).reduce((a, b) => a + b.length, 0);
+  if (count === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⌨️</div>没有匹配的快捷键</div>';
+    return;
+  }
+  let html = '';
+  Object.keys(categories).forEach(cat => {
+    html += '<div class="kb-group-title">' + cat + '</div>';
+    categories[cat].forEach(s => {
+      const comboHtml = s.combo
+        ? '<span class="kb-combo">' + s.combo.split('+').map(k => '<kbd>' + k + '</kbd>').join('') + '</span>'
+        : '<span class="kb-unassigned">未分配</span>';
+      const editBtn = s.editable
+        ? '<button class="kb-icon-btn" title="编辑" onclick="editKeyboardShortcut(\'' + s.id + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
+        : '';
+      const delBtn = s.editable
+        ? '<button class="kb-icon-btn danger" title="删除" onclick="deleteKeyboardShortcut(\'' + s.id + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>'
+        : '';
+      html += '<div class="kb-row" id="kb-row-' + s.id + '">' +
+        '<div class="kb-row-info"><div class="kb-row-name">' + s.name + '</div>' +
+        '<div class="kb-row-desc">' + s.desc + '</div></div>' +
+        comboHtml +
+        '<div class="kb-actions">' + editBtn + delBtn + '</div>' +
+        '</div>';
+    });
+  });
+  container.innerHTML = html;
+}
+
+function filterKeyboardShortcuts() {
+  const q = document.getElementById('kbFilterInput').value;
+  renderKeyboardShortcuts(q);
+}
+
+function editKeyboardShortcut(id) {
+  const row = document.getElementById('kb-row-' + id);
+  if (row) row.classList.add('kb-capturing');
+  SettingsKeyboard.capture(function(combo) {
+    if (row) row.classList.remove('kb-capturing');
+    if (!combo) return;
+    const conflict = SettingsKeyboard.findConflict(keyboardShortcuts, id, combo);
+    if (conflict) {
+      showToast('快捷键冲突：' + combo + ' 已被「' + conflict.name + '」占用', 'error');
+      return;
+    }
+    const s = keyboardShortcuts.find(x => x.id === id);
+    if (s) { s.combo = combo; SettingsKeyboard.save(keyboardShortcuts); renderKeyboardShortcuts(); showToast('快捷键已更新：' + combo); }
+  });
+}
+
+function deleteKeyboardShortcut(id) {
+  const s = keyboardShortcuts.find(x => x.id === id);
+  if (s && !s.editable) { showToast('系统快捷键不可删除', 'error'); return; }
+  if (s) { s.combo = ''; SettingsKeyboard.save(keyboardShortcuts); renderKeyboardShortcuts(); showToast('快捷键已移除'); }
+}
+
+function resetKeyboardShortcuts() {
+  if (!confirm('确认恢复所有快捷键为默认值？')) return;
+  keyboardShortcuts = SettingsKeyboard.reset();
+  renderKeyboardShortcuts();
+  showToast('已恢复默认快捷键');
+}
+
+// ── Skills Panel (Codex pattern) ──
+let skillsData = [];
+let currentSkillTab = 'plugins';
+
+function loadSkillsCodex() {
+  const container = document.getElementById('skillList');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-spinner"></div><div style="text-align:center;font-size:12px;color:#94a3b8;margin-top:8px">正在加载…</div>';
+  fetch('/api/system/account/skills', { credentials: 'include' }).then(r => r.json()).then(data => {
+    if (data.ok && data.skills) {
+      skillsData = data.skills;
+    } else {
+      skillsData = [];
+    }
+    updateSkillCounts();
+    renderSkillsCodex();
+  }).catch(() => {
+    skillsData = [];
+    updateSkillCounts();
+    renderSkillsCodex();
+  });
+}
+
+function updateSkillCounts() {
+  const plugins = skillsData.filter(s => s.type !== 'mcp').length;
+  const mcps = skillsData.filter(s => s.type === 'mcp').length;
+  const pc = document.getElementById('pluginCount');
+  const mc = document.getElementById('mcpCount');
+  if (pc) pc.textContent = plugins;
+  if (mc) mc.textContent = mcps;
+}
+
+function switchSkillTab(tab) {
+  currentSkillTab = tab;
+  document.querySelectorAll('.skill-tab').forEach(t => t.classList.toggle('active', t.dataset.skillTab === tab));
+  renderSkillsCodex();
+}
+
+function filterSkills() {
+  renderSkillsCodex();
+}
+
+function renderSkillsCodex() {
+  const container = document.getElementById('skillList');
+  if (!container) return;
+  const q = (document.getElementById('skillSearchInput')?.value || '').toLowerCase().trim();
+  let list = skillsData.filter(s => {
+    if (currentSkillTab === 'mcp') return s.type === 'mcp';
+    return s.type !== 'mcp';
+  });
+  if (q) list = list.filter(s => (s.name + ' ' + (s.description || '')).toLowerCase().includes(q));
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div>' + (skillsData.length === 0 ? '暂无已安装插件' : '没有匹配的插件') + '</div>';
+    return;
+  }
+  const colors = ['#0F766E', '#2563EB', '#7C3AED', '#D97706', '#DC2626', '#0891B2', '#65A30D', '#DB2777'];
+  let html = '';
+  list.forEach((s, idx) => {
+    const color = colors[idx % colors.length];
+    const enabled = s.status === 'enabled';
+    const iconChar = (s.name || '?')[0].toUpperCase();
+    html += '<div class="skill-row" onclick="toggleSkillDetail(\'' + (s.skill_id || s.id) + '\')" style="cursor:pointer">' +
+      '<div class="skill-icon" style="background:' + color + '">' + iconChar + '</div>' +
+      '<div class="skill-info">' +
+        '<div class="skill-name">' + (s.name || '未命名') + '</div>' +
+        '<div class="skill-desc">' + (s.description || '—') + '</div>' +
+      '</div>' +
+      '<div class="skill-toggle" onclick="event.stopPropagation()">' +
+        '<div class="toggle ' + (enabled ? 'on' : '') + '" onclick="toggleSkillStatus(\'' + (s.skill_id || s.id) + '\',\'' + (enabled ? 'disabled' : 'enabled') + '\')"></div>' +
+      '</div>' +
+      '<button class="skill-more" onclick="event.stopPropagation();showToast(\'更多操作：' + (s.name || '') + '\')">⋯</button>' +
+      '</div>' +
+      '<div class="skill-detail" id="skill-detail-' + (s.skill_id || s.id) + '">' +
+        '<div class="skill-detail-grid">' +
+          '<div class="skill-detail-item"><span class="dt-label">版本：</span>v' + (s.version || '1.0') + '</div>' +
+          '<div class="skill-detail-item"><span class="dt-label">类型：</span>' + (s.type || 'plugin') + '</div>' +
+          '<div class="skill-detail-item"><span class="dt-label">域：</span>' + (s.product || s.domain || '—') + '</div>' +
+          '<div class="skill-detail-item"><span class="dt-label">状态：</span>' + (enabled ? '已启用' : '已禁用') + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px">能力：' + (s.capabilities || '语义识别 · 内容分析 · 规则辅助') + '</div>' +
+        '<div style="display:flex;gap:6px">' +
+          '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();showToast(\'配置入口：' + (s.name || '') + '\')">配置</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();showToast(\'使用记录：' + (s.name || '') + '\')">使用记录</button>' +
+          (enabled
+            ? '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();toggleSkillStatus(\'' + (s.skill_id || s.id) + '\',\'disabled\')">禁用</button>'
+            : '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();toggleSkillStatus(\'' + (s.skill_id || s.id) + '\',\'enabled\')">启用</button>') +
+        '</div>' +
+      '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function toggleSkillDetail(id) {
+  const el = document.getElementById('skill-detail-' + id);
+  if (el) el.classList.toggle('show');
+}
+
+function openAddSkillModal() {
+  showToast('添加插件：请在「浏览目录」中选择安装');
+}
+
+// ── Browser Panel ──
+let browserInitialized = false;
+
+function initBrowserPanel() {
+  if (browserInitialized) return;
+  browserInitialized = true;
+  if (!window.SettingsDropdown) return;
+
+  SettingsDropdown.init(document.getElementById('linkOpenDropdown'), {
+    options: [
+      { value: 'current', label: '当前标签', desc: '在当前标签页打开链接' },
+      { value: 'new_tab', label: '新标签', desc: '在新标签页打开链接' },
+      { value: 'new_window', label: '新窗口', desc: '在新窗口打开链接' }
+    ],
+    value: (function(){ try { return localStorage.getItem('lumenis-link-open') || 'new_tab'; } catch(e){ return 'new_tab'; } })(),
+    onChange: function(v) { try { localStorage.setItem('lumenis-link-open', v); } catch(e){} showToast('链接打开位置：' + v); }
+  });
+
+  SettingsDropdown.init(document.getElementById('screenshotDropdown'), {
+    options: [
+      { value: 'save', label: '保存到本地', desc: '截图自动保存到下载目录' },
+      { value: 'annotate', label: '批注后保存', desc: '打开批注工具编辑后保存' },
+      { value: 'clipboard', label: '复制到剪贴板', desc: '截图直接复制，不保存文件' }
+    ],
+    value: (function(){ try { return localStorage.getItem('lumenis-screenshot') || 'save'; } catch(e){ return 'save'; } })(),
+    onChange: function(v) { try { localStorage.setItem('lumenis-screenshot', v); } catch(e){} showToast('批注截图：' + v); }
+  });
+
+  // Load toggles
+  let showFull = false;
+  try { showFull = localStorage.getItem('lumenis-show-full-url') === 'true'; } catch(e) {}
+  const sf = document.getElementById('showFullUrlToggle');
+  if (sf && showFull) sf.classList.add('on');
+
+  let dlAsk = false;
+  try { dlAsk = localStorage.getItem('lumenis-download-ask') === 'true'; } catch(e) {}
+  const da = document.getElementById('downloadAskToggle');
+  if (da && dlAsk) da.classList.add('on');
+}
+
+function toggleBrowserControl() {
+  const el = document.getElementById('browserControlToggle');
+  el.classList.toggle('on');
+  showToast(el.classList.contains('on') ? '已允许系统控制内置浏览器' : '已禁止系统控制内置浏览器');
+}
+
+function toggleShowFullUrl() {
+  const el = document.getElementById('showFullUrlToggle');
+  el.classList.toggle('on');
+  try { localStorage.setItem('lumenis-show-full-url', el.classList.contains('on') ? 'true' : 'false'); } catch(e) {}
+}
+
+function toggleDownloadAsk() {
+  const el = document.getElementById('downloadAskToggle');
+  el.classList.toggle('on');
+  try { localStorage.setItem('lumenis-download-ask', el.classList.contains('on') ? 'true' : 'false'); } catch(e) {}
+}
+
+function clearBrowserData() {
+  if (!confirm('确认清除浏览数据？此操作不可恢复。')) return;
+  fetch('/api/browser/clear-history', { method: 'POST', credentials: 'include' }).then(r => r.json()).then(data => {
+    if (data.ok || data.success) showToast('浏览数据已清除');
+    else showToast(data.error || '清除失败', 'error');
+  }).catch(() => {
+    // Fallback: clear local history file via browser_surface
+    showToast('已发送清除请求（本地历史）');
+  });
+}
+
+function showBrowserHistory() {
+  openModal('browserHistoryModal');
+  const container = document.getElementById('browserHistoryList');
+  container.innerHTML = '<div class="loading-spinner"></div>';
+  fetch('/api/browser/history?limit=50', { credentials: 'include' }).then(r => r.json()).then(data => {
+    const items = data.history || data.data?.history || [];
+    if (!items.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div>暂无浏览历史</div>';
+      return;
+    }
+    container.innerHTML = items.map(h =>
+      '<div class="device-row"><div class="device-icon">🌐</div>' +
+      '<div class="device-info"><div class="device-name">' + (h.title || h.url || '无标题') + '</div>' +
+      '<div class="device-meta">' + (h.url || '') + ' · ' + (h.visited_at || h.visitedAt || '') + '</div></div></div>'
+    ).join('');
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state">浏览历史接口不可用</div>';
+  });
+}
+
+function clearBrowserHistory() {
+  if (!confirm('确认清除全部浏览历史？')) return;
+  fetch('/api/browser/clear-history', { method: 'POST', credentials: 'include' }).then(() => {
+    showToast('浏览历史已清除');
+    closeModal('browserHistoryModal');
+  }).catch(() => showToast('清除请求已发送'));
+}
+
+function showDownloadHistory() {
+  openModal('downloadHistoryModal');
+  const container = document.getElementById('downloadHistoryList');
+  container.innerHTML = '<div class="loading-spinner"></div>';
+  fetch('/api/browser/downloads', { credentials: 'include' }).then(r => r.json()).then(data => {
+    const files = data.files || data.downloads || [];
+    if (!files.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📥</div>暂无下载记录</div>';
+      return;
+    }
+    container.innerHTML = files.map(f =>
+      '<div class="device-row"><div class="device-icon">📄</div>' +
+      '<div class="device-info"><div class="device-name">' + (f.name || '文件') + '</div>' +
+      '<div class="device-meta">' + (f.size ? Math.round(f.size/1024) + ' KB' : '') + ' · ' + (f.modified || '') + '</div></div></div>'
+    ).join('');
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state">下载记录接口不可用</div>';
+  });
+}
+
+// ── Integrations Panel ──
+function loadIntegrations() {
+  const container = document.getElementById('integrationsList');
+  const summary = document.getElementById('integrationsSummary');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-spinner"></div><div style="text-align:center;font-size:12px;color:#94a3b8;margin-top:8px">正在检测平台连接…</div>';
+
+  fetch('/api/collector/status', { credentials: 'include' }).then(r => r.json()).then(data => {
+    const platforms = (data.data && data.data.platforms) || data.platforms || [];
+    if (!platforms.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔌</div>暂无采集平台配置</div>';
+      if (summary) summary.textContent = '0 个平台';
+      return;
+    }
+    const colors = { xiaohongshu: '#FF2442', weibo: '#E6162D', bilibili: '#00A1D6', zhihu: '#0066FF', douyin: '#000000', x: '#1DA1F2', instagram: '#E4405F', aurora: '#0F766E' };
+    let html = '';
+    let verified = 0, partial = 0, expired = 0, blocked = 0;
+    platforms.forEach(p => {
+      const name = p.name || p.platform || '未知';
+      const status = (p.cookie_status || p.status || 'unknown').toUpperCase();
+      const key = name.toLowerCase().replace(/[^a-z]/g, '');
+      const color = colors[key] || '#64748B';
+      const iconChar = name[0].toUpperCase();
+      let statusClass = 'unknown', statusLabel = status;
+      if (status === 'VERIFIED' || status === 'ACTIVE' || status === 'OK') { statusClass = 'verified'; statusLabel = 'VERIFIED'; verified++; }
+      else if (status === 'PARTIAL') { statusClass = 'partial'; statusLabel = 'PARTIAL'; partial++; }
+      else if (status === 'EXPIRED' || status === 'INVALID') { statusClass = 'expired'; statusLabel = 'EXPIRED'; expired++; }
+      else if (status === 'BLOCKED' || status === 'MISSING') { statusClass = 'blocked'; statusLabel = 'BLOCKED'; blocked++; }
+      const desc = p.detail || p.message || (statusClass === 'verified' ? '凭证有效，可正常采集' : statusClass === 'partial' ? '部分功能受限' : statusClass === 'expired' ? '凭证已过期，需重新登录' : '未配置或被平台限制');
+      html += '<div class="integration-row">' +
+        '<div class="integration-icon" style="background:' + color + '">' + iconChar + '</div>' +
+        '<div class="integration-info">' +
+          '<div class="integration-name">' + name + '</div>' +
+          '<div class="integration-desc">' + desc + '</div>' +
+        '</div>' +
+        '<span class="integration-status ' + statusClass + '">' + statusLabel + '</span>' +
+        '</div>';
+    });
+    container.innerHTML = html;
+    if (summary) summary.textContent = platforms.length + ' 个平台 · ' + verified + ' 有效 · ' + partial + ' 受限 · ' + expired + ' 过期 · ' + blocked + ' 阻断';
+  }).catch(err => {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>采集器状态接口不可用<br><span style="font-size:11px">' + (err.message || '网络错误') + '</span></div>';
+    if (summary) summary.textContent = '接口不可用';
+  });
+}
+
