@@ -61,6 +61,16 @@
     bilibili: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5l2-3M17 5l-2-3"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/>',
     douyin: '<path d="M9 3v12a4 4 0 1 1-4-4"/><path d="M9 3c0 3 2 5 5 5v3c-3 0-5-2-5-5"/><path d="M14 8v7a4 4 0 0 0 4 4"/>',
     zhihu: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h4M7 12h6M7 16h4"/><path d="m15 8 3 3-3 3"/>',
+    // 浏览器专用线性图标
+    back: '<path d="M19 12H5M5 12l6-6M5 12l6 6"/>',
+    forward: '<path d="M5 12h14M19 12l-6-6M19 12l-6 6"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+    bookmark: '<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/>',
+    history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+    panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/>',
+    shield: '<path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/>',
+    alertTriangle: '<path d="M12 3 2 20h20z"/><path d="M12 10v5M12 18h.01"/>',
   };
 
   function licon(name, size, cls) {

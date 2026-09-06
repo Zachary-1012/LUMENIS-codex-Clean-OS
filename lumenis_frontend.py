@@ -634,6 +634,13 @@ def system_collector():
                            **_domain_template_vars("sys_collector", "system", "Collector"))
 
 
+@lumenis_bp.route("/system/browser")
+def system_browser():
+    """SYSTEM Internal Browser — 平台内置浏览器，对标 Safari/Chrome，全部在平台内完成。"""
+    return render_template("system/browser.html",
+                           **_domain_template_vars("sys_browser", "system", "Internal Browser"))
+
+
 @lumenis_bp.route("/system/ai")
 def system_ai():
     return render_template("system/ai.html",

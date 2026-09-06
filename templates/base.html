@@ -88,6 +88,13 @@
         <a class="zbc-nav-item {% if active_nav=='cth_reports' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_reports') }}">
           <span class="zbc-nav-item__icon" data-icon="report" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.reports">Reports</span>
         </a>
+        <!-- ZBMP 入口（CTH域内） -->
+        <div class="zbc-nav-divider" style="height:1px;background:#e2e8f0;margin:8px 16px"></div>
+        <button class="zbc-nav-item zbc-nav-item--entry" id="zbmp-entry-btn" onclick="if(typeof ZBMPEntry!=='undefined')ZBMPEntry.open()" style="width:100%;background:none;border:none;cursor:pointer;text-align:left;color:#0F766E">
+          <span class="zbc-nav-item__icon" data-icon="intelligence" data-icon-size="18"></span>
+          <span class="zbc-nav-item__label">进入品牌智能 ZBMP</span>
+          <span style="margin-left:auto;font-size:10px;background:rgba(15,118,110,.1);color:#0F766E;padding:2px 6px;border-radius:6px;font-weight:600">TOTP</span>
+        </button>
       </div>
 
       <!-- SYSTEM Navigation (5 entries) -->
@@ -98,6 +105,9 @@
         </a>
         <a class="zbc-nav-item {% if active_nav=='sys_collector' %}is-active{% endif %}" href="{{ url_for('lumenis.system_collector') }}">
           <span class="zbc-nav-item__icon" data-icon="inbox" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.collector">Collector</span>
+        </a>
+        <a class="zbc-nav-item {% if active_nav=='sys_browser' %}is-active{% endif %}" href="{{ url_for('lumenis.system_browser') }}">
+          <span class="zbc-nav-item__icon" data-icon="globe" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.browser">Browser</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='sys_ai' %}is-active{% endif %}" href="{{ url_for('lumenis.system_ai') }}">
           <span class="zbc-nav-item__icon" data-icon="intelligence" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.ai">AI</span>
@@ -169,6 +179,7 @@
 <script src="{{ url_for('static', filename='js/lumenis-core.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lumenis-data.js') }}"></script>
 <script src="{{ url_for('static', filename='js/domain-context.js') }}"></script>
+<script src="{{ url_for('static', filename='js/zbmp-entry.js') }}"></script>
 <script src="{{ url_for('static', filename='js/xujing-viz.js') }}"></script>
 <script src="{{ url_for('static', filename='js/keyboard-shortcuts.js') }}"></script>
 <script src="{{ url_for('static', filename='js/badge-manager.js') }}"></script>
@@ -238,6 +249,22 @@
   domainTabs.forEach(function(tab) {
     tab.addEventListener('click', function() {
       var domain = tab.getAttribute('data-domain');
+      // ZBMP域切换保护：未授权时弹出TOTP验证面板
+      if (domain === 'zbmp') {
+        var zbmpGranted = false;
+        try {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+            if (cookies[i].trim().indexOf('zbmp_domain_grant=1') === 0) {
+              zbmpGranted = true; break;
+            }
+          }
+        } catch(e) {}
+        if (!zbmpGranted && typeof ZBMPEntry !== 'undefined') {
+          ZBMPEntry.open();
+          return;
+        }
+      }
       // Update tabs
       domainTabs.forEach(function(t) {
         t.classList.remove('is-active');

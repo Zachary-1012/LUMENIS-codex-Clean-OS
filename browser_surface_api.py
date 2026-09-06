@@ -89,6 +89,16 @@ def register_browser_surface_api(app):
                                        port=_port(), mode=data.get("mode"),
                                        wait_ms=wait_ms))
 
+    # ── 页面截图（对标浏览器截图，支持指定 port/target_id）──────────
+    @bp.route("/api/browser-surface/screenshot", methods=["GET"])
+    def api_screenshot():
+        try:
+            quality = int(request.args.get("quality", "60"))
+        except (TypeError, ValueError):
+            quality = 60
+        return jsonify(bs._hybrid_screenshot(target_id=_target_id(), account=_acct(),
+                                              port=_port(), quality=quality))
+
     # ── 页面内容提取（对标 Safari Reader / 结构化 DOM）──────────
     @bp.route("/api/browser-surface/extract", methods=["POST", "GET"])
     def api_extract():
