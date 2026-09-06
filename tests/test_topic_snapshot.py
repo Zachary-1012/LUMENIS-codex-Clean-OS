@@ -5,7 +5,7 @@ import sqlite3
 import sys
 import tempfile
 
-sys.path.insert(0, r"D:\Taikoo-monitor-new")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 

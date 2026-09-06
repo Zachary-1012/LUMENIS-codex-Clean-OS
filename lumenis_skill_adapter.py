@@ -18,23 +18,45 @@ import time
 from typing import Any, Dict, List, Optional
 
 
-# OSAI 仓库路径（通过环境变量或默认相对路径发现，不硬编码个人路径）
+# OSAI 仓库路径发现（V2 P0-18：Repository Registry，禁止硬编码个人路径）
 def _osai_root() -> Optional[str]:
-    """发现 OSAI 仓库根目录。优先环境变量，其次常见位置。"""
+    """发现 OSAI 仓库根目录。
+
+    优先级：环境变量 OSAI_REPO_ROOT > Repository Registry 配置 >
+    同级目录自动扫描 > 用户主目录扫描。
+    禁止硬编码 D:\\ 等个人机器路径。
+    """
     env = os.environ.get("OSAI_REPO_ROOT")
     if env and os.path.isdir(env):
         return env
-    # 常见兄弟目录
+
     here = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(os.path.dirname(here), "Zachary-OS-AI"),
-        os.path.join(os.path.dirname(here), "Zachary OS AI"),
-        r"D:\Zachary OS AI",
-        os.path.expanduser("~/Zachary-OS-AI"),
-    ]
-    for c in candidates:
-        if os.path.isdir(c):
-            return c
+    for rp in (os.path.join(here, "repo_registry.json"),
+               os.path.join(here, "config", "repo_registry.json"),
+               os.path.expanduser("~/.lumenis/repo_registry.json")):
+        if os.path.isfile(rp):
+            try:
+                with open(rp, "r", encoding="utf-8") as fh:
+                    reg = json.load(fh)
+                for repo in reg.get("repositories", []):
+                    if (repo.get("role") == "intelligence_core"
+                            or repo.get("name", "").lower() in ("osai", "zachary-os-ai")):
+                        p = repo.get("root_path", "")
+                        if p and os.path.isdir(p):
+                            return p
+            except (json.JSONDecodeError, OSError):
+                continue
+
+    parent = os.path.dirname(here)
+    name_matches = ("zachary-os-ai", "zachary os ai", "osai")
+    for base in (parent, os.path.expanduser("~")):
+        try:
+            for entry in os.listdir(base):
+                full = os.path.join(base, entry)
+                if os.path.isdir(full) and entry.lower() in name_matches:
+                    return full
+        except OSError:
+            pass
     return None
 
 

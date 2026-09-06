@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """P1-H ComplianceGate 测试：多法域矩阵裁决（BLOCK/REVIEW/PASS）+ safe_collection 可选并入。"""
 import sys
+import os
 
-sys.path.insert(0, r"D:\Taikoo-monitor-new")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 

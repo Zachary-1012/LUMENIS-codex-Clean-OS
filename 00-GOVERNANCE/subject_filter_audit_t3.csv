@@ -1,0 +1,50 @@
+检查项,位置,状态,详情,风险等级,验证方式
+SUBJECT_WORDS定义,subject_rules.py:13,PASS,17个正向词含广州太古汇/太古汇/太古仓等核心词,P0,源码审计+运行时验证
+SUBJECT_EXCLUDE_WORDS定义,subject_rules.py:20,PASS,18个排除词覆盖上海/北京/成都/深圳/香港/太古城/南京西路等,P0,源码审计+运行时验证
+subject_hit()核心逻辑,subject_rules.py:161,PASS,排除词一票否决+五字段任一正向命中;使用当前激活品牌配置,P0,源码审计+24项红线断言通过
+subject_hit_for_brand(),subject_rules.py:141,PASS,品牌化主体判断,不修改默认广州口径,P1,源码审计
+subject_hit_note(),subject_rules.py:178,PASS,字典接口委托subject_hit,五字段SUBJECT_FIELDS,P0,运行时验证
+subject_hit_text(),subject_rules.py:271,PASS,单文本适配入口,语义与subject_hit一致,P0,运行时验证
+_subject_sql_and_values(),subject_rules.py:201,PASS,委托品牌化版本;CTH域(ZBC_PRODUCT_ID=CTH)强制广州太古汇;参数175=5字段x(17+18),P0,源码审计+SQL参数验证
+_subject_sql_and_values_for(),subject_rules.py:232,PASS,品牌化SQL生成,正向OR+AND NOT排除,P0,源码审计
+app.py _subject_sql_and_values兼容层,app.py:876,PASS,薄包装委托subject_sql_and_values,无独立逻辑,P0,源码审计
+risk_engine.py _subject_sql_and_values兼容层,risk_engine.py:19,PASS,薄包装委托subject_sql_and_values,无独立逻辑,P0,源码审计
+database.py _subject_clause(),database.py:547,PASS,委托subject_sql_and_values,P0,源码审计
+database.py _verified_base(),database.py:552,PASS,is_taikoo_verified=1 AND relevance_status!=irrelevant AND subject_clause,三重保护,P0,源码审计
+database.py get_notes(),database.py:579,PASS,使用_verified_base(),主体过滤生效,P0,源码审计
+database.py get_notes_by_date_range(),database.py:710,PASS,使用_verified_base(),日报链路主体过滤生效,P0,源码审计
+database.py get_stats(),database.py:594,PASS,使用_verified_base(),统计链路主体过滤生效,P0,源码审计
+aggregate_events(),reprocess.py:149,PASS,委托build_cross_platform_events;注释明确只消费is_taikoo_verified=1,P0,源码审计
+build_cross_platform_events(),reprocess.py:106,PASS,db.get_notes({'verified':True})触发_verified_base主体过滤,P0,源码审计
+build_daily_report(),risk_engine.py:23,PASS,委托daily_report.generate_daily_digest,P0,源码审计
+daily_report generate_daily_digest(),daily_report.py:554,PASS,使用db.get_notes_by_date_range()→_verified_base,主体过滤生效,P0,源码审计
+app.py persist_rednote_data主体过滤,app.py:1098,PASS,通过传入subject_hit_fn过滤;内嵌subject_hit委托subject_rules.subject_hit_text,P0,源码审计
+app.py 内嵌subject_hit,app.py:2453,PASS,委托subject_rules.subject_hit_text,无独立口径,P0,源码审计
+live_engine persist_live主体过滤,collector_v2/xhs/live_engine.py:64,PASS,filter_subject(notes,subject_hit)委托外部权威回调,P0,源码审计
+collector_v2_integration主体过滤,collector_v2_integration.py:200,FIXED,原使用SubjectFilter独立词表(口径分叉);T3修复为filter_subject+subject_hit_text统一权威口径,P0,代码修复+回归测试
+SubjectFilter类独立词表,collector_v2/pipeline/subject_filter.py:10,WARN,类内有独立positive/exclude词表;但filter_subject()函数(150行)正确委托外部回调;SubjectFilter类仅collector_v2_integration使用且已修复,P1,源码审计
+场景隔离-上海太古汇,subject_rules.py+运行时,PASS,排除词一票否决,18/18场景测试通过,P0,运行时验证
+场景隔离-北京太古汇,subject_rules.py+运行时,PASS,排除词一票否决,P0,运行时验证
+场景隔离-成都太古汇,subject_rules.py+运行时,PASS,排除词一票否决(含成都远洋太古汇/远洋太古汇),P0,运行时验证
+场景隔离-香港太古汇,subject_rules.py+运行时,PASS,排除词一票否决,P0,运行时验证
+场景隔离-深圳太古汇,subject_rules.py+运行时,PASS,排除词一票否决,P0,运行时验证
+场景隔离-太古城,subject_rules.py+运行时,PASS,排除词一票否决,P0,运行时验证
+排除优先于正向,subject_rules.py:172,PASS,同时含广州+上海太古汇时排除词优先否决,P0,运行时验证
+去重-SimHashDeduplicator,collector_v2/pipeline/deduplicate.py:12,PASS,64位SimHash+汉明距离阈值6;键=note_id+title+content,P1,源码审计+运行时验证
+去重-live_engine链路,collector_v2/xhs/live_engine.py:62,PASS,deduplicate()在主体过滤前生效,P1,源码审计
+去重-collector_v2_integration链路,collector_v2_integration.py:195,PASS,_deduplicator.batch_deduplicate()在主体过滤前生效,P1,源码审计
+去重-DB层note_id主键,database.py:429,PASS,INSERT ON CONFLICT(note_id) DO UPDATE,DB层唯一键去重,P0,源码审计
+去重-ai_filter语义去重,ai_filter.py:184,PASS,db.find_duplicate_notes(similarity_threshold=0.75),AI层辅助去重,P2,源码审计
+去重-persist_rednote_data旧链路,app.py:1098,WARN,无显式SimHash去重步骤;但依赖DB层note_id主键去重;建议后续补显式去重,P1,源码审计
+QualityGate-DataQualityGate类,data_quality_gate.py:104,PASS,契约驱动校验,支持not_empty/regex/min/max/range/length/allowed_values/date_format,P0,源码审计
+QualityGate-note契约,config/data-contracts/note.yaml,PASS,5条规则:title_not_empty/url_format/risk_level_valid/publish_date_format/title_length,P0,源码审计
+QualityGate-persist_note接入,database.py:347,PASS,data_quality_status为空时自动调用DataQualityGate.enrich_quality_record,软门标记不拒绝,P0,源码审计+10项测试通过
+QualityGate-collector_quality_log表,database.py:141,PASS,表结构完整(note_id/status/score/detail_status/comments_collected/collector_version/checked_at/reason),P0,源码审计
+QualityGate-save_collector_quality,database.py:1072,PASS,写入函数存在,P0,源码审计
+QualityLog-调用点-app.py,app.py:1147,PASS,persist_rednote_data中每条笔记写入质量日志,P0,源码审计
+QualityLog-调用点-live_engine,collector_v2/xhs/live_engine.py:74,PASS,persist_live中每条笔记写入质量日志,P0,源码审计
+硬编码路径-负责文件范围,subject_rules.py/data_quality_gate.py/collector_v2/pipeline/,PASS,无硬编码绝对路径;data_quality_gate.py使用os.path.dirname(__file__)相对路径,P2,源码审计
+硬编码路径-其他文件,tests/scripts/00-GOVERNANCE/,INFO,存在硬编码路径但不在Team3文件范围内,由对应Team处理,P2,源码审计
+ACTIVE_BRAND默认值,subject_rules.py:115,PASS,默认guangzhou_taikoo_hui;注释明确红线不得弱化/切换;其他品牌需显式ZBC_ACTIVE_BRAND,P0,源码审计
+get_active_brand(),subject_rules.py:120,PASS,优先委托SubjectContext,兜底环境变量ZBC_ACTIVE_BRAND,默认广州太古汇,P0,源码审计
+多品牌BRAND_PROFILES,subject_rules.py:31,PASS,6个品牌配置;广州太古汇为默认激活;其他品牌(海南中免/DFS等)独立配置不影响广州口径,P1,源码审计

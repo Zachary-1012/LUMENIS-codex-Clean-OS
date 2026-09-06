@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """execute_per_call_request 的 model 透传回归：默认走智谱旗舰 glm-5.3，且 model 真正传给网关。"""
 import sys, os
-sys.path.insert(0, r'D:\Taikoo-monitor-new')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def test_per_call_default_model_is_flag():
     import ai_resource_packs

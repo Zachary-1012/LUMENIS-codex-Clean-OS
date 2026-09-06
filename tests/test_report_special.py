@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """P1-D 报告 special 专报测试：类型校验 + 周期 + 生成冒烟（monkeypatch AI 不真实调用）。"""
 import sys
+import os
 from datetime import datetime, timedelta
 
-sys.path.insert(0, r"D:\Taikoo-monitor-new")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 

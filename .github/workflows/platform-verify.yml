@@ -1,4 +1,4 @@
-name: Verify Z-Brand-Core via Zachary Platform Contract
+name: Verify Z-Brand-Core
 
 on:
   push:
@@ -9,8 +9,18 @@ on:
 
 jobs:
   verify:
-    uses: Zachary-1012/Development-Command-Console/.github/workflows/reusable-verify.yml@448ba215c8b9516fa63c77ddcced5a54a68f2742
-    with:
-      runtime: python
-      install_command: python -m pip install --disable-pip-version-check -r requirements.txt
-      test_command: python -m compileall -q .
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Compile Python sources
+        run: python -m compileall -q .

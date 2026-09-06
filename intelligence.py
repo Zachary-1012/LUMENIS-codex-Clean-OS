@@ -1,4 +1,5 @@
-﻿"""广州太古汇本地智能层。
+from provider_registry import is_provider_available, provider_status
+"""广州太古汇本地智能层。
 
 设计目标：无预算也能工作；如果电脑本地已经运行 Ollama / LM Studio / llama.cpp，自动发现并调用本地模型；
 否则自动退回可审计的本地规则智能引擎。外部 API Key 永远不是必需项。
@@ -83,8 +84,12 @@ def _provider_config():
             # 'glm' 是 zhipu 的别名（provider_name 已映射），但 configs 无 'glm' 键；
             # 若直接用 requested 取 configs 会 KeyError 且发生在 _chat 的 try 块外导致崩溃（智谱评审 P0B-2）。
             lookup_key = requested if requested in configs else 'zhipu'
-            key, base, model = configs[lookup_key]
-            detected=(provider_name,model,base.rstrip('/')) if key else None
+            # V2 P0-5: DISABLED provider 显式请求时返回 None，不伪造成功
+            if not is_provider_available(lookup_key):
+                detected = None
+            else:
+                key, base, model = configs[lookup_key]
+                detected=(provider_name,model,base.rstrip('/')) if key else None
         else:
             # 正式架构 Ollama-only：auto 只自动发现本机模型；本机没有即回退本地规则引擎（离线可跑、
             # 绝不因云端网络挂起而把批量复核卡死）。云端为 Legacy/Optional，默认不自动启用：
@@ -93,12 +98,9 @@ def _provider_config():
             if not detected and _env('ALLOW_CLOUD_AI','').lower() in ('1','true','yes','on','y'):
                 for p,key,base,model in [
                     ('zhipu',_env('ZHIPU_API_KEY'),_env('ZHIPU_BASE_URL','https://open.bigmodel.cn/api/paas/v4'),_env('ZHIPU_MODEL','glm-4.5-air')),
-                    ('qwen',_env('DASHSCOPE_API_KEY'),_env('DASHSCOPE_BASE_URL','https://dashscope.aliyuncs.com/compatible-mode/v1'),_env('QWEN_MODEL','qwen-plus')),
-                    ('deepseek',_env('DEEPSEEK_API_KEY'),_env('DEEPSEEK_BASE_URL','https://api.deepseek.com/v1'),_env('DEEPSEEK_MODEL','deepseek-chat')),
                     ('ark',_env('ARK_API_KEY'),_env('ARK_BASE_URL','https://ark.cn-beijing.volces.com/api/v3'),_env('ARK_MODEL','doubao-pro-32k')),
-                    ('openai',_env('OPENAI_API_KEY'),_env('OPENAI_BASE_URL','https://api.openai.com/v1'),_env('OPENAI_MODEL','gpt-4.1-mini')),
                 ]:
-                    if key: detected=(p,model,base.rstrip('/')); break
+                    if key and is_provider_available(p): detected=(p,model,base.rstrip('/')); break
         _CACHE.update(ts=now,provider=(detected[0] if detected else None),model=(detected[1] if detected else None),base=(detected[2] if detected else None))
     return detected
 

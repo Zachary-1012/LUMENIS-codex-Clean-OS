@@ -162,6 +162,46 @@ def full_refresh(limit=5000, web_limit=120, translate=False):
     events=build_cross_platform_events()
     return {'backup':backup,'notes':notes,'web':web,'events':len(events),'ai_enabled':intelligence.ai_enabled()}
 
+
+def run_event_pipeline(limit=100, alert_notes=None):
+    """Team5: Event→EventGraph→Alert→Case 全链路编排。
+    打通此前分散的手动API调用为一次原子流水线：
+      1. aggregate_events() → events 表（主体过滤后的权威事件聚合）
+      2. EventGraph.import_from_existing_events() → event_graph_events
+      3. EventGraph.infer_and_link_relations() → event_graph_relations
+      4. alert_engine.evaluate_alerts() → alert_records（消费 canonical_metrics）
+    不修改任何红线函数，仅做编排桥接。
+    """
+    result = {'events': 0, 'graph_imported': 0, 'relations': {}, 'alerts': [], 'errors': []}
+    # Stage 1: Event aggregation (protected authoritative function)
+    try:
+        events = aggregate_events(limit=limit)
+        result['events'] = len(events)
+    except Exception as e:
+        result['errors'].append(f'aggregate_events: {e}')
+    # Stage 2: Sync to EventGraph
+    try:
+        from event_graph import get_event_graph, reset_event_graph
+        reset_event_graph()
+        graph = get_event_graph()
+        result['graph_imported'] = graph.import_from_existing_events(limit=max(limit, 50))
+        rel = graph.infer_and_link_relations(persist=True)
+        result['relations'] = {'added': rel.get('added', 0), 'by_type': rel.get('by_type', {})}
+    except Exception as e:
+        result['errors'].append(f'event_graph: {e}')
+    # Stage 3: Alert evaluation (consumes canonical_metrics, no recompute)
+    try:
+        import alert_engine
+        alert_engine.init_alert_tables()
+        notes_for_alert = alert_notes if alert_notes is not None else db.get_notes({'verified': True}, 500, 0)
+        alert_result = alert_engine.evaluate_alerts(notes=notes_for_alert)
+        result['alerts'] = alert_result.get('alerts', [])
+        result['alert_enabled'] = alert_result.get('enabled', False)
+    except Exception as e:
+        result['errors'].append(f'alert_engine: {e}')
+    return result
+
+
 if __name__=='__main__':
     import argparse
     ap=argparse.ArgumentParser()

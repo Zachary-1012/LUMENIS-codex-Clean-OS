@@ -118,9 +118,26 @@ ACTIVE_BRAND = "guangzhou_taikoo_hui"  # 生产安全默认=广州太古汇（CT
 
 
 def get_active_brand() -> str:
-    """获取当前激活品牌key。"""
-    import os
-    return os.environ.get("ZBC_ACTIVE_BRAND", ACTIVE_BRAND)
+    """获取当前激活品牌key。
+
+    V2 P0-19: 委托给 SubjectContext 管理主体边界。
+    active_brand 不再承担系统数据边界职责，仅作为兼容层返回 brand_key。
+    真实的主体边界由 subject_context.get_subject_context() 统一管理。
+
+    优先级（Shard D 请求级隔离）：
+      1. 线程级 SubjectContext（由 Flask before_request 或 brand_scope 设置）
+      2. 环境变量 ZBC_ACTIVE_BRAND
+      3. CTH 默认 guangzhou_taikoo_hui
+    """
+    try:
+        from subject_context import get_thread_context, get_subject_context
+        ctx = get_thread_context()
+        if ctx is not None:
+            return ctx.brand_key
+        return get_subject_context().brand_key
+    except Exception:
+        import os
+        return os.environ.get("ZBC_ACTIVE_BRAND", ACTIVE_BRAND)
 
 
 def get_brand_config(brand_key: str = "") -> dict:
@@ -192,8 +209,15 @@ def _column(alias: str, field: str) -> str:
 def _subject_sql_and_values(alias: str = '') -> tuple[str, list[str]]:
     """返回可直接拼接到 WHERE 的统一主体 SQL + 参数。
     V4 P0-01：委托品牌化版本，确保 Python/SQL/采集/报告/统计口径统一。
+    V2 P0-1：接入 Domain Isolation，CTH 域强制主体保护。
     旧调用点无需修改，自动走当前激活品牌配置。"""
-    return _subject_sql_and_values_for(get_active_brand(), alias)
+    brand = get_active_brand()
+    # V2 P0-1: CTH 域隔离保护 — 仅当显式设置 ZBC_PRODUCT_ID=CTH 时强制主体
+    # 默认尊重 ZBC_ACTIVE_BRAND 环境变量（多品牌 KOS 场景）
+    import os
+    if os.environ.get("ZBC_PRODUCT_ID") == "CTH" and brand != "guangzhou_taikoo_hui":
+        brand = "guangzhou_taikoo_hui"
+    return _subject_sql_and_values_for(brand, alias)
 
 
 # 保留项目历史命名，避免旧模块/脚本调用断裂。

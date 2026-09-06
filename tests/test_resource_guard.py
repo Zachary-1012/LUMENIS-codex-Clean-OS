@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """P0-G ResourceGuard 四态单测：lifecycle_action 消费 + 资源阈值保护 + 上限约束。"""
 import sys
+import os
 
-sys.path.insert(0, r"D:\Taikoo-monitor-new")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 

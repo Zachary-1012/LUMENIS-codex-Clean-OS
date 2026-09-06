@@ -24,6 +24,38 @@ from typing import List, Dict
 from .base import CollectedNote, AdapterResult
 from ..config import DB_PATH
 
+import logging
+logger = logging.getLogger(__name__)
+
+# T4 Canonical Data 旁路接入（不影响主流程，失败仅记录日志）
+try:
+    from canonical_data import (
+        collected_note_to_canonical, persist_canonical, ensure_canonical_table,
+    )
+    _CANONICAL_AVAILABLE = True
+except Exception as _e:
+    logger.warning(f"[T4] canonical_data 旁路不可用: {_e}")
+    _CANONICAL_AVAILABLE = False
+
+
+def _canonical_bypass(con, n, keyword, source_platform=""):
+    """T4 旁路：将 CollectedNote 同步写入 canonical_data 表。
+
+    调用链：CollectedNote -> collected_note_to_canonical() -> persist_canonical() -> canonical_data
+    文件: canonical_data.py:320 (collected_note_to_canonical), :180 (persist_canonical)
+
+    严格旁路：任何异常不影响主流程，仅记录日志。
+    publish_datetime（平台发布时间）与 captured_at（采集时间）在 canonical_data 内部分离。
+    """
+    if not _CANONICAL_AVAILABLE:
+        return
+    try:
+        ensure_canonical_table(DB_PATH)
+        rec = collected_note_to_canonical(n, source_platform=source_platform, keyword=keyword)
+        persist_canonical(con, rec)
+    except Exception as e:
+        logger.warning(f"[T4] canonical 旁路写入失败（不影响主流程）: {e}")
+
 # 平台分流：社媒 → notes；其余搜索/网页 → web_mentions
 SOCIAL_PLATFORMS = {
     "douyin", "instagram", "xiaohongshu", "rednote", "zhihu",
@@ -114,6 +146,8 @@ def persist_social_note(con, n: CollectedNote, keyword: str) -> str:
                WHERE note_id=?""",
             (n.likes, n.comments, n.collects, n.shares, now, now, note_id),
         )
+        # T4 旁路：同步更新 canonical_data（不影响主流程）
+        _canonical_bypass(con, n, keyword, source_platform=platform)
         return "updated"
     con.execute(
         """INSERT INTO notes
@@ -128,6 +162,8 @@ def persist_social_note(con, n: CollectedNote, keyword: str) -> str:
          n.publish_date, n.publish_date, platform, keyword, now, now,
          "v4-adapter", "active", "pending", "pending", 0, "unverified", "unknown"),
     )
+    # T4 旁路：同步写入 canonical_data（不影响主流程）
+    _canonical_bypass(con, n, keyword, source_platform=platform)
     return "inserted"
 
 
@@ -155,6 +191,8 @@ def persist_web_mention(con, n: CollectedNote, keyword: str, adapter: str) -> st
          n.publish_date, now_str(), adapter, keyword, canonical,
          "pending", "review", "rule"),
     )
+    # T4 旁路：同步写入 canonical_data（不影响主流程）
+    _canonical_bypass(con, n, keyword, source_platform=adapter)
     return "inserted"
 
 

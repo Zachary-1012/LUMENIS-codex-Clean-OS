@@ -164,20 +164,23 @@ class NotePersister:
         return result
     
     def save_comments(self, comments: List[Dict]) -> int:
-        """保存评论"""
+        """保存评论到 note_comments 表（生产表名，非 comments）"""
         if not comments:
             return 0
         
         conn = self._get_connection()
         saved = 0
+        now = datetime.now().isoformat()
         try:
             for comment in comments:
                 try:
+                    import json as _json
+                    raw_json = _json.dumps(comment.get('raw_data', {}), ensure_ascii=False)
                     conn.execute("""
-                        INSERT OR IGNORE INTO comments 
+                        INSERT OR IGNORE INTO note_comments 
                         (comment_id, note_id, content, author_id, author_nickname, 
-                         likes, publish_time, parent_comment_id, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         likes, publish_time, parent_id, raw_json, fetched_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         comment.get('comment_id', ''),
                         comment.get('note_id', ''),
@@ -186,12 +189,13 @@ class NotePersister:
                         comment.get('author_nickname', ''),
                         comment.get('likes', 0),
                         comment.get('publish_time', ''),
-                        comment.get('parent_comment_id', ''),
-                        datetime.now().isoformat()
+                        comment.get('parent_comment_id', comment.get('parent_id', '')),
+                        raw_json,
+                        now,
                     ))
                     saved += 1
-                except:
-                    pass
+                except Exception as ce:
+                    print(f"[NotePersister] 单条评论保存失败: {ce}")
             conn.commit()
         except Exception as e:
             print(f"[NotePersister] 保存评论失败: {e}")

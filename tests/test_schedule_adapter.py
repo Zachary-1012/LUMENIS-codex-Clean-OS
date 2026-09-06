@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """P1-A 六态联动调度器测试：lifecycle_action -> ResourceGuard 四态 -> 停止/放行决策 + collector 接线。"""
 import sys
+import os
 
-sys.path.insert(0, r"D:\Taikoo-monitor-new")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 

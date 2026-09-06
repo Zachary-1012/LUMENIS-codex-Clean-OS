@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """P1-G AI 分层核验：无 key 全链降级不阻塞系统 + 云端发送脱敏（合规 AI-01）。"""
 import sys
+import os
 
-sys.path.insert(0, r"D:\Taikoo-monitor-new")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import intelligence
 

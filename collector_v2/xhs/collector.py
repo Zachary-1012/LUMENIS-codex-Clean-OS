@@ -13,6 +13,32 @@ from ..base import PlatformCollector, RawNote, RawComment
 from .client import XHSClient
 
 
+
+def _parse_count(value) -> int:
+    """解析小红书互动量，兼容 '1.2万' / '3千' / '350' / None 等格式。"""
+    if value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value)
+    s = str(value).strip().lower()
+    if not s:
+        return 0
+    if s.isdigit():
+        return int(s)
+    multiplier = 1
+    if '万' in s or 'w' in s:
+        multiplier = 10000
+        s = s.replace('万', '').replace('w', '')
+    elif '千' in s or 'k' in s:
+        multiplier = 1000
+        s = s.replace('千', '').replace('k', '')
+    try:
+        num = float(re.sub(r'[^\d.]', '', s) or '0')
+        return int(num * multiplier)
+    except (ValueError, TypeError):
+        return 0
+
+
 class XHSCollector(PlatformCollector):
     """小红书采集器"""
     
@@ -102,10 +128,10 @@ class XHSCollector(PlatformCollector):
                 content="",  # 搜索结果没有正文，需要get_detail获取
                 author_id=user.get("user_id", ""),
                 author_nickname=user.get("nickname", ""),
-                likes=int(interact_info.get("liked_count", "0") or 0),
-                comments=int(interact_info.get("comment_count", "0") or 0),
-                collects=int(interact_info.get("collected_count", "0") or 0),
-                shares=int(interact_info.get("share_count", "0") or 0),
+                likes=_parse_count(interact_info.get("liked_count", "0")),
+                comments=_parse_count(interact_info.get("comment_count", "0")),
+                collects=_parse_count(interact_info.get("collected_count", "0")),
+                shares=_parse_count(interact_info.get("share_count", "0")),
                 publish_date=publish_date,
                 url=url,
                 xsec_token=xsec_token,
@@ -142,9 +168,9 @@ class XHSCollector(PlatformCollector):
                 content=desc,
                 author_id=note_data.get("user", {}).get("user_id", ""),
                 author_nickname=note_data.get("user", {}).get("nickname", ""),
-                likes=int(note_data.get("interact_info", {}).get("liked_count", 0) or 0),
-                comments=int(note_data.get("interact_info", {}).get("comment_count", 0) or 0),
-                collects=int(note_data.get("interact_info", {}).get("collected_count", 0) or 0),
+                likes=_parse_count(note_data.get("interact_info", {}).get("liked_count", 0)),
+                comments=_parse_count(note_data.get("interact_info", {}).get("comment_count", 0)),
+                collects=_parse_count(note_data.get("interact_info", {}).get("collected_count", 0)),
                 xsec_token=xsec_token,
                 source_platform=self.platform,
                 raw_data=note_data
@@ -201,7 +227,7 @@ class XHSCollector(PlatformCollector):
                 content=comment_data.get("content", ""),
                 author_id=user_info.get("user_id", ""),
                 author_nickname=user_info.get("nickname", ""),
-                likes=int(comment_data.get("like_count", 0) or 0),
+                likes=_parse_count(comment_data.get("like_count", 0)),
                 publish_time=publish_time,
                 sub_comments=sub_comments,
                 raw_data=comment_data

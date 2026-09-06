@@ -413,6 +413,66 @@ def case_analysis_ai_evaluate():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+@app.route('/api/case-analysis/create', methods=['POST'])
+def case_analysis_create():
+    """创建/更新案例深度拆解记录（写入 case_deep_analysis 表）。
+    Team5 修复：补齐 add_case() 写入链路断点——此前该方法存在但无任何路由调用。
+    """
+    try:
+        from case_deep_analysis import get_case_analysis
+        data = request.get_json(silent=True) or {}
+        if not data.get('case_title'):
+            return jsonify({'ok': False, 'error': '缺少必填字段 case_title'}), 400
+        analysis = get_case_analysis()
+        result = analysis.add_case(data)
+        if result.get('ok'):
+            return jsonify({'ok': True, **result})
+        return jsonify({'ok': False, 'error': result.get('error', '写入失败')}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/case-analysis/generate-from-event', methods=['POST'])
+def case_analysis_generate_from_event():
+    """从 events 表现有事件生成案例深度拆解（Event→Case 链路桥接）。"""
+    try:
+        import database as db
+        from case_deep_analysis import get_case_analysis
+        data = request.get_json(silent=True) or {}
+        event_id = data.get('event_id')
+        event_key = data.get('event_key')
+        if not event_id and not event_key:
+            return jsonify({'ok': False, 'error': '需提供 event_id 或 event_key'}), 400
+        with db.get_db() as conn:
+            if event_id:
+                row = conn.execute('SELECT * FROM events WHERE id=?', (event_id,)).fetchone()
+            else:
+                row = conn.execute('SELECT * FROM events WHERE event_key=?', (event_key,)).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': '事件不存在'}), 404
+        evt = dict(row)
+        case_data = {
+            'case_id': f"evt_{evt.get('event_key', evt.get('id', ''))}",
+            'case_title': evt.get('title', '未命名事件')[:200],
+            'brand': '广州太古汇',
+            'industry': '商业地产',
+            'year': int(str(evt.get('first_seen', ''))[:4]) if str(evt.get('first_seen', ''))[:4].isdigit() else 0,
+            'case_type': 'public_opinion' if evt.get('risk_level') in ('high', 'medium') else 'propagation',
+            'challenge': evt.get('summary', '')[:500],
+            'big_idea': evt.get('recommended_action', '')[:300],
+            'results': json.dumps({'mention_count': evt.get('mention_count', 0), 'source_count': evt.get('source_count', 0), 'risk_level': evt.get('risk_level', ''), 'risk_score': evt.get('risk_score', 0)}, ensure_ascii=False),
+            'methodology': json.dumps(['事件聚类', '风险分级', '主体过滤'], ensure_ascii=False),
+            'system_insights': json.dumps([f"风险等级={evt.get('risk_level', 'unknown')}", f"提及量={evt.get('mention_count', 0)}"], ensure_ascii=False),
+        }
+        analysis = get_case_analysis()
+        result = analysis.add_case(case_data)
+        if result.get('ok'):
+            return jsonify({'ok': True, **result, 'source_event': evt.get('event_key', '')})
+        return jsonify({'ok': False, 'error': result.get('error', '写入失败')}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 # V3.0 传播主体分类器API
 @app.route('/api/subject-classifier/classify', methods=['POST'])
 def subject_classify():
@@ -970,6 +1030,99 @@ def _report_deprecation_headers(resp):
                 resp.headers['Link'] = '</api/report-center/generate>; rel="successor-version"'
     except Exception:
         pass  # 绝不因标记失败影响响应
+    return resp
+
+
+
+# ===== Shard C: CSRF Protection (Bypass Mode — 先旁路、再切换) =====
+# 策略：生成 CSRF token + cookie，对 POST/PUT/DELETE 检查 token。
+# 旁路模式：token 缺失时记录警告但不拒绝（避免破坏现有无 token 表单）。
+# 后续逐步接入前端 token 后切换为强制模式。
+import hmac as _hmac
+import hashlib as _hashlib
+
+_CSRF_SECRET = os.environ.get('CSRF_SECRET', 'lumenis-csrf-secret-change-in-production')
+_CSRF_COOKIE_NAME = 'XSRF-TOKEN'
+_CSRF_HEADER_NAME = 'X-XSRF-TOKEN'
+
+def _generate_csrf_token(session_id=None):
+    """生成 HMAC-based CSRF token。"""
+    sid = session_id or request.cookies.get('session', 'anonymous')
+    raw = f"{sid}:{_CSRF_SECRET}:{int(time.time() // 3600)}"
+    return _hmac.new(_CSRF_SECRET.encode(), raw.encode(), _hashlib.sha256).hexdigest()[:32]
+
+def _verify_csrf_token(token, session_id=None):
+    """验证 CSRF token（接受当前小时和上一小时的 token）。"""
+    if not token:
+        return False
+    sid = session_id or request.cookies.get('session', 'anonymous')
+    for hour_offset in (0, 1):
+        raw = f"{sid}:{_CSRF_SECRET}:{int(time.time() // 3600) - hour_offset}"
+        expected = _hmac.new(_CSRF_SECRET.encode(), raw.encode(), _hashlib.sha256).hexdigest()[:32]
+        if _hmac.compare_digest(token, expected):
+            return True
+    return False
+
+@app.before_request
+def _csrf_protect():
+    """CSRF 旁路保护：对状态变更请求检查 token，缺失时记录警告但不拒绝。"""
+    if request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
+        return None
+    # 白名单：健康检查、auth 配置、webhook 等不需要 CSRF
+    path = request.path
+    whitelist = ('/healthz', '/api/health', '/api/auth/config', '/api/collector-guard/status')
+    if path in whitelist or path.startswith('/static/') or path.startswith('/v4/'):
+        return None
+    token = request.headers.get(_CSRF_HEADER_NAME) or request.form.get('csrf_token')
+    if not token:
+        # 旁路模式：记录警告，不拒绝
+        app.logger.warning('[CSRF] Missing token for %s %s (bypass mode, not rejected)', request.method, path)
+        return None
+    if not _verify_csrf_token(token):
+        app.logger.warning('[CSRF] Invalid token for %s %s (bypass mode, not rejected)', request.method, path)
+    return None
+
+@app.after_request
+def _csrf_cookie(resp):
+    """在响应中设置 CSRF cookie（供前端读取）。"""
+    try:
+        token = _generate_csrf_token()
+        resp.set_cookie(_CSRF_COOKIE_NAME, token, httponly=False, samesite='Lax', max_age=3600)
+    except Exception:
+        pass
+    return resp
+
+@app.route('/api/csrf-token', methods=['GET'])
+def csrf_token_endpoint():
+    """CSRF token 获取端点（供前端 AJAX 请求使用）。"""
+    return jsonify({'csrf_token': _generate_csrf_token(), 'header_name': _CSRF_HEADER_NAME})
+
+# ===== Shard C: Security Headers (CSP / X-Frame-Options / X-Content-Type-Options) =====
+@app.after_request
+def _security_headers(resp):
+    try:
+        resp.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' ws: wss:; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "object-src 'none'; "
+            "upgrade-insecure-requests"
+        )
+        resp.headers['X-Frame-Options'] = 'DENY'
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        resp.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=(), payment=(), usb=()'
+        resp.headers['X-XSS-Protection'] = '1; mode=block'
+        resp.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+        resp.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+    except Exception:
+        pass
     return resp
 
 collect_tasks={}; _task_lock=threading.Lock(); _collect_lock=threading.Lock()
@@ -2215,8 +2368,10 @@ def api_brand_industry_run_v570():
 def api_publish_buckets_v570():
     date=request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
     with db.get_db() as conn:
-        same=[dict(r) for r in conn.execute("SELECT * FROM notes WHERE is_taikoo_verified=1 AND substr(COALESCE(publish_datetime,publish_date),1,10)=? ORDER BY collected_at DESC",(date,)).fetchall()]
-        historical=[dict(r) for r in conn.execute("SELECT * FROM notes WHERE is_taikoo_verified=1 AND substr(COALESCE(publish_datetime,publish_date),1,10)<? AND substr(collected_at,1,10)=? ORDER BY collected_at DESC",(date,date)).fetchall()]
+        _pb_clause, _pb_params = _subject_sql_and_values()
+        _pb_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_pb_clause}"
+        same=[dict(r) for r in conn.execute(f"SELECT * FROM notes WHERE {_pb_base} AND substr(COALESCE(publish_datetime,publish_date),1,10)=? ORDER BY collected_at DESC", tuple(_pb_params)+(date,)).fetchall()]
+        historical=[dict(r) for r in conn.execute(f"SELECT * FROM notes WHERE {_pb_base} AND substr(COALESCE(publish_datetime,publish_date),1,10)<? AND substr(collected_at,1,10)=? ORDER BY collected_at DESC", tuple(_pb_params)+(date,date)).fetchall()]
     return jsonify({'ok':True,'date':date,'published_today':same,'historical_collected_today':historical,'counts':{'published_today':len(same),'historical_collected_today':len(historical)}})
 
 @app.route('/api/trends/global')
@@ -2226,7 +2381,9 @@ def api_global_trends_v570():
     start=(now-timedelta(days=days-1)).strftime('%Y-%m-%d')
     end=now.strftime('%Y-%m-%d')
     with db.get_db() as conn:
-        rows=conn.execute("SELECT publish_date,COUNT(*) total,SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) negative,SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) high FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND publish_date BETWEEN ? AND ? GROUP BY publish_date ORDER BY publish_date",(start,end)).fetchall()
+        _tg_clause, _tg_params = _subject_sql_and_values()
+        _tg_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_tg_clause}"
+        rows=conn.execute(f"SELECT publish_date,COUNT(*) total,SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) negative,SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) high FROM notes WHERE {_tg_base} AND publish_date BETWEEN ? AND ? GROUP BY publish_date ORDER BY publish_date", tuple(_tg_params)+(start,end)).fetchall()
     data=[]
     for r in rows:
         total=r['total'] or 0
@@ -2257,8 +2414,9 @@ def api_notes_library_v571():
         cols=[r[1] for r in conn.execute('PRAGMA table_info(notes)').fetchall()]
         select_cols=[c for c in ['note_id','title','author_nickname','publish_date','collected_at','url','sentiment','risk_level','risk_score','summary','likes','comments','collects','shares','source_platform','negative_confirmed'] if c in cols]
         
-        sql=f"SELECT {','.join(select_cols)} FROM notes WHERE 1=1"
-        params=[]
+        _subj_clause, _subj_params = _subject_sql_and_values()
+        sql=f"SELECT {','.join(select_cols)} FROM notes WHERE is_taikoo_verified=1 AND {_subj_clause}"
+        params=list(_subj_params)
         
         if keyword:
             sql+=" AND (title LIKE ? OR summary LIKE ? OR author_nickname LIKE ?)"
@@ -2770,17 +2928,19 @@ def api_negative_stats():
     try:
         conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
+        _nc, _np = _subject_sql_and_values()
+        _base = f"is_taikoo_verified=1 AND {_nc}"
         # 待确认
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)", tuple(_np))
         pending = cursor.fetchone()[0]
         # 已确认
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE negative_confirmed=1")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND negative_confirmed=1", tuple(_np))
         confirmed = cursor.fetchone()[0]
         # 已驳回
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE negative_confirmed=2")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND negative_confirmed=2", tuple(_np))
         rejected = cursor.fetchone()[0]
         # 总负面
-        cursor.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative'")
+        cursor.execute(f"SELECT COUNT(*) FROM notes WHERE {_base} AND sentiment='negative'", tuple(_np))
         total = cursor.fetchone()[0]
         conn.close()
         return jsonify({
@@ -3897,11 +4057,13 @@ def api_dashboard_all():
         try:
             cursor.execute("SELECT COUNT(*) as total FROM notes")
             total_notes = cursor.fetchone()['total']
-            cursor.execute("SELECT COUNT(*) as verified FROM notes WHERE is_taikoo_verified=1")
+            _ov_clause, _ov_params = _subject_sql_and_values()
+            _ov_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_ov_clause}"
+            cursor.execute(f"SELECT COUNT(*) as verified FROM notes WHERE {_ov_base}", tuple(_ov_params))
             verified_notes = cursor.fetchone()['verified']
-            cursor.execute("SELECT COUNT(*) as negative FROM notes WHERE sentiment='negative'")
+            cursor.execute(f"SELECT COUNT(*) as negative FROM notes WHERE {_ov_base} AND sentiment='negative'", tuple(_ov_params))
             negative_notes = cursor.fetchone()['negative']
-            cursor.execute("SELECT COUNT(*) as today FROM notes WHERE DATE(collected_at)=DATE('now')")
+            cursor.execute(f"SELECT COUNT(*) as today FROM notes WHERE {_ov_base} AND DATE(publish_date)=DATE('now','localtime')", tuple(_ov_params))
             today_notes = cursor.fetchone()['today']
             # 近14天趋势（与 /api/overview 同口径），补齐主轮询 renderTrend 所需，避免“暂无趋势数据”
             _now = datetime.now(); _start = (_now - timedelta(days=13)).strftime('%Y-%m-%d'); _end = _now.strftime('%Y-%m-%d')
@@ -3934,8 +4096,10 @@ def api_dashboard_all():
             # [Canonical P0] 情感/风险/互动统一走 canonical_metrics 唯一实现(FN-SENTIMENT/RISK/ENGAGEMENT)
             # 一次取数替代原6趟全表聚合;输出字段与口径不变(已验证四字段无NULL/情感仅三值,数字零变化)
             import canonical_metrics as _cm
+            _st_clause, _st_params = _subject_sql_and_values()
+            _st_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_st_clause}"
             _note_rows = [dict(r) for r in cursor.execute(
-                "SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes").fetchall()]
+                f"SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes WHERE {_st_base}", tuple(_st_params)).fetchall()]
             _sc = _cm.sentiment_count(_note_rows)
             _rc = _cm.risk_count(_note_rows)
             _es = _cm.engagement_stats(_note_rows)
@@ -3977,32 +4141,36 @@ def api_dashboard_all():
         
         # 5. 风险告警（从notes表查询高/中风险笔记，risk_alerts表不存在）
         try:
-            cursor.execute("""
+            _ra_clause, _ra_params = _subject_sql_and_values()
+            _ra_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_ra_clause}"
+            cursor.execute(f"""
                 SELECT id, note_id, title, author_nickname, sentiment, risk_level, risk_score,
                        likes, comments, shares, collects, collected_at, publish_date, url,
                        category, summary, event_hint
                 FROM notes 
-                WHERE risk_level IN ('high','medium') 
+                WHERE {_ra_base} AND risk_level IN ('high','medium') 
                 ORDER BY risk_score DESC, collected_at DESC 
                 LIMIT 20
-            """)
+            """, tuple(_ra_params))
             result['risk_alerts'] = [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             result['risk_alerts'] = []
         
         # 6. 热门话题（使用category字段分组）
         try:
-            cursor.execute("""
+            _ht_clause, _ht_params = _subject_sql_and_values()
+            _ht_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_ht_clause}"
+            cursor.execute(f"""
                 SELECT category as topic, COUNT(*) as count,
                        SUM(CASE WHEN sentiment='positive' THEN 1 ELSE 0 END) as positive,
                        SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) as negative,
                        SUM(CASE WHEN sentiment='neutral' THEN 1 ELSE 0 END) as neutral
                 FROM notes 
-                WHERE category IS NOT NULL AND category != ''
+                WHERE {_ht_base} AND category IS NOT NULL AND category != ''
                 GROUP BY category 
                 ORDER BY count DESC 
                 LIMIT 14
-            """)
+            """, tuple(_ht_params))
             result['hot_topics'] = [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             result['hot_topics'] = []
@@ -4028,7 +4196,9 @@ def api_dashboard_all():
         try:
             cur2 = conn.cursor()
             # 待审核负面数（口径与 /api/negative/pending 一致）
-            cur2.execute("SELECT COUNT(*) AS c FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
+            _pn_clause, _pn_params = _subject_sql_and_values()
+            _pn_base = f"is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_pn_clause}"
+            cur2.execute(f"SELECT COUNT(*) AS c FROM notes WHERE {_pn_base} AND sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)", tuple(_pn_params))
             result['pending_negative'] = cur2.fetchone()['c']
             # 未读预警数（口径与 /api/alerts?unread=1 一致；无 is_read 列时回退为 alerts 长度）
             try:
@@ -4792,6 +4962,23 @@ def api_pr_check_trigger():
         note = data.get('note')
         result = engine.check_special_report_trigger(notes, note)
         return jsonify({'ok': True, 'result': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/event-pipeline/run', methods=['POST'])
+def event_pipeline_run():
+    """Team5: Event→EventGraph→Alert 全链路一键编排。
+    1. aggregate_events() → events 表
+    2. import_to_event_graph → event_graph_events + relations
+    3. alert_engine.evaluate_alerts → alert_records
+    """
+    try:
+        import reprocess
+        data = request.get_json(silent=True) or {}
+        limit = int(data.get('limit', 100))
+        result = reprocess.run_event_pipeline(limit=limit)
+        return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

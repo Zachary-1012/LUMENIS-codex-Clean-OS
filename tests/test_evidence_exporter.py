@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """P1-8 ZBC→OSAI 证据导出器测试：只读、只导核准、脱敏、剔除凭证、增量幂等。"""
 import json
 import os
