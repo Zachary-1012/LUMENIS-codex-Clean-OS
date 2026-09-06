@@ -32,6 +32,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'fd.title':'研究发现','fd.subtitle':'Research → Finding → Evidence → Decision（外部研究不直接写生产）',
@@ -79,4 +80,5 @@
   document.getElementById('fd-refresh').addEventListener('click',load);
   load();
 })();
+</script>
 {% endblock %}

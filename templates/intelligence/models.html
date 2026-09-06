@@ -51,6 +51,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'models.title':'模型与 AI Gateway','models.subtitle':'Provider-agnostic · Skill 与 Model 解耦',
@@ -103,4 +104,5 @@
     tbody.innerHTML='<tr><td colspan="5" style="color:var(--lm-color-danger);">'+t('common.unavailable')+'</td></tr>';
   });
 })();
+</script>
 {% endblock %}

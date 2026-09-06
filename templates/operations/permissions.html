@@ -44,6 +44,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'pm.title':'权限与审计','pm.subtitle':'Identity → Delegation → Manifest Permissions → Gate → Agent Ceiling',
@@ -82,4 +83,5 @@
     }).join('');
   }).catch(function(){card.setAttribute('data-state','error');tbody.innerHTML='<tr><td colspan="4" style="color:var(--lm-color-danger);">'+t('pm.unavailable')+'</td></tr>';});
 })();
+</script>
 {% endblock %}

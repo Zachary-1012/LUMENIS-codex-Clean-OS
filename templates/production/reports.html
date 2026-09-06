@@ -54,6 +54,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'rp2.title':'报告中心','rp2.subtitle':'日报 / 周报 / 月报 / 专报 · 按发布时间口径',
@@ -116,4 +117,5 @@
   document.getElementById('r-type').addEventListener('change',load);
   load();
 })();
+</script>
 {% endblock %}

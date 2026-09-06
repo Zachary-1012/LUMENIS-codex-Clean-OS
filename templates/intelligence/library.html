@@ -161,6 +161,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   const API = '/api/intelligence/library';
   let state = { page:1, perPage:50, subLibrary:'all', landing:'all', product:'all', search:'', total:0, totalPages:0, items:[] };
@@ -356,4 +357,5 @@
   loadStats();
   loadList();
 })();
+</script>
 {% endblock %}

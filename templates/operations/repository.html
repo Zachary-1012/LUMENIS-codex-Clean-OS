@@ -20,6 +20,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'rp.title':'仓库注册中心','rp.subtitle':'物理独立 · 通过 Contract 逻辑融合，禁止物理合并',
@@ -61,4 +62,5 @@
   document.getElementById('rp-refresh').addEventListener('click',load);
   load();
 })();
+</script>
 {% endblock %}

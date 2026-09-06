@@ -38,6 +38,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'cs.title':'案例库','cs.subtitle':'案例深度拆解 · 事件关系图谱 · 品牌知识库（统一入口，底层库独立）',
@@ -86,4 +87,5 @@
   document.getElementById('cs-refresh').addEventListener('click',load);
   load();
 })();
+</script>
 {% endblock %}

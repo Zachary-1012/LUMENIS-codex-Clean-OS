@@ -37,6 +37,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'risk.high':'高风险','risk.medium':'中风险','risk.low':'低风险','risk.alerts':'系统告警',
@@ -107,4 +108,5 @@
     document.querySelector('[data-component="risk-list"]').setAttribute("data-state","error");
   });
 })();
+</script>
 {% endblock %}

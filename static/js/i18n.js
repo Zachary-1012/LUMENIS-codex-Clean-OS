@@ -68,24 +68,24 @@
       "theme.dark": "Dark"
     },
     "ko": {
-      "common.loading": "__missing__",
-      "common.error": "__missing__",
-      "common.empty": "__missing__",
-      "common.save": "__missing__",
-      "common.cancel": "__missing__",
-      "common.confirm": "__missing__",
-      "common.search": "__missing__",
-      "nav.overview": "__missing__",
-      "nav.risk": "__missing__",
-      "nav.reports": "__missing__",
-      "status.running": "__missing__",
-      "status.warning": "__missing__",
-      "status.error": "__missing__",
-      "status.unknown": "__missing__",
-      "appearance.language": "__missing__",
-      "appearance.theme": "__missing__",
-      "theme.light": "__missing__",
-      "theme.dark": "__missing__"
+      "common.loading": "로딩 중…",
+      "common.error": "로드 실패",
+      "common.empty": "데이터 없음",
+      "common.save": "저장",
+      "common.cancel": "취소",
+      "common.confirm": "확인",
+      "common.search": "검색…",
+      "nav.overview": "개요",
+      "nav.risk": "리스크",
+      "nav.reports": "리포트",
+      "status.running": "실행 중",
+      "status.warning": "경고",
+      "status.error": "오류",
+      "status.unknown": "알 수 없음",
+      "appearance.language": "언어",
+      "appearance.theme": "테마",
+      "theme.light": "라이트",
+      "theme.dark": "다크"
     }
   };
 

@@ -38,6 +38,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'mo.title':'生产监控','mo.subtitle':'Collector · CollectorGuard · Runtime · Risk（数据失败显式，不静默为 0）',
@@ -103,4 +104,5 @@
 
   document.getElementById('mo-refresh').addEventListener('click',function(){location.reload();});
 })();
+</script>
 {% endblock %}

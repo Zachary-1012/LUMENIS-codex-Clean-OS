@@ -74,6 +74,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'ws.heading':'向序境提问，结果必须可追溯到证据',
@@ -155,4 +156,5 @@
   if(btn) btn.addEventListener("click",send);
   if(input) input.addEventListener("keydown",function(e){if(e.key==="Enter")send();});
 })();
+</script>
 {% endblock %}

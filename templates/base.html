@@ -11,6 +11,17 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/xujing-core.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-layout-v1.1.css') }}">
   {% block head %}{% endblock %}
+  <style>
+  /* Language Switcher */
+  .zbc-lang-switch { display:inline-flex; gap:2px; padding:2px; border-radius:8px; background:var(--lm-surface,#f1f5f9); border:1px solid var(--lm-border,#e2e8f0); }
+  .zbc-lang-btn { padding:3px 7px; border:none; background:transparent; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; color:var(--lm-text-tertiary,#64748b); transition:all .15s; font-family:var(--lm-font-family,inherit); }
+  .zbc-lang-btn:hover { color:var(--lm-text-primary,#0f172a); }
+  .zbc-lang-btn.is-active { background:var(--lm-text-primary,#0f172a); color:var(--lm-canvas,#fff); }
+  [data-theme="dark"] .zbc-lang-switch { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.1); }
+  [data-theme="dark"] .zbc-lang-btn { color:#94a3b8; }
+  [data-theme="dark"] .zbc-lang-btn:hover { color:#e2e8f0; }
+  [data-theme="dark"] .zbc-lang-btn.is-active { background:#e2e8f0; color:#0f172a; }
+  </style>
 </head>
 <body data-domain="{% block body_domain %}{{ active_domain|default('cth') }}{% endblock %}">
 
@@ -125,6 +136,12 @@
       <div class="zbc-status" id="zbc-global-status">
         <span class="zbc-dot zbc-dot--unknown" id="zbc-global-dot"></span>
         <span id="zbc-global-status-text" data-i18n="footer.status_connecting">连接中…</span>
+      </div>
+      <!-- Language Switcher (中/英/韩) -->
+      <div class="zbc-lang-switch" role="group" aria-label="语言切换">
+        <button class="zbc-lang-btn" data-lang="zh-CN" onclick="LUMENIS.i18n.setLang('zh-CN')" title="简体中文">中</button>
+        <button class="zbc-lang-btn" data-lang="en" onclick="LUMENIS.i18n.setLang('en')" title="English">EN</button>
+        <button class="zbc-lang-btn" data-lang="ko" onclick="LUMENIS.i18n.setLang('ko')" title="한국어">한</button>
       </div>
       <button class="zbc-icon-btn" id="zbc-theme-toggle" aria-label="切换主题" title="切换浅色/深色主题">
         <span class="zbc-icon-btn__icon" data-icon="sun" data-icon-size="16"></span>
@@ -242,6 +259,17 @@
       if (saved) html.setAttribute('data-theme', saved);
     } catch(e) {}
   }
+
+
+  // Language switcher active state
+  function paintLangBtns() {
+    var cur = (typeof LUMENIS !== 'undefined' && LUMENIS.i18n) ? LUMENIS.i18n.current : 'zh-CN';
+    document.querySelectorAll('.zbc-lang-btn').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-lang') === cur);
+    });
+  }
+  paintLangBtns();
+  document.addEventListener('lumenis:langchange', paintLangBtns);
 
   // Domain switch
   var domainTabs = document.querySelectorAll('.zbc-domain-tab');

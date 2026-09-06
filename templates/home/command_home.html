@@ -7,15 +7,15 @@
 <!-- Viewport: Global Context(hero) + Primary Intelligence(command) + Dynamic Data(status grid) + Evidence/Detail(quick nav) + Action(quick actions) -->
 
 <section class="ch-hero">
-  <div class="ch-eyebrow" data-i18n="eyebrow">芥子纳须弥 · Complexity → Simplicity</div>
-  <h1 class="ch-title" data-i18n="title">复杂归于序，万象入一境</h1>
-  <p class="ch-subtitle" data-i18n="subtitle">序境 · 品牌与舆情智能，统一证据链，每一步可追溯</p>
+  <div class="ch-eyebrow" data-i18n="home.eyebrow">芥子纳须弥 · Complexity → Simplicity</div>
+  <h1 class="ch-title" data-i18n="home.title">复杂归于序，万象入一境</h1>
+  <p class="ch-subtitle" data-i18n="home.subtitle">序境 · 品牌与舆情智能，统一证据链，每一步可追溯</p>
 
   <!-- Command Input — Primary Intelligence -->
   <div class="ch-command" id="lm-cmd-wrap">
     <span class="ch-command-icon" aria-hidden="true">+</span>
     <input type="text" id="lm-command-input" class="ch-command-input"
-           data-i18n-placeholder="input_placeholder"
+           data-i18n-placeholder="home.input_placeholder"
            placeholder="输入任务、问题或指令…"
            aria-label="AI 指令输入">
     <button id="lm-command-send" class="ch-command-btn" aria-label="发送">
@@ -27,10 +27,10 @@
 
   <!-- Quick Actions — Action Layer -->
   <div class="ch-quick-actions" data-zone="Recommended Actions">
-    <button class="ch-quick-btn" data-task="审计当前系统状态" data-i18n="qa_audit">系统审计</button>
-    <button class="ch-quick-btn" data-task="运行采集任务" data-i18n="qa_collect">启动采集</button>
-    <button class="ch-quick-btn" data-task="生成今日舆情报告" data-i18n="qa_report">生成报告</button>
-    <button class="ch-quick-btn" data-task="查看 Skill 能力" data-i18n="qa_skills">浏览 Skills</button>
+    <button class="ch-quick-btn" data-task="审计当前系统状态" data-i18n="home.qa_audit">系统审计</button>
+    <button class="ch-quick-btn" data-task="运行采集任务" data-i18n="home.qa_collect">启动采集</button>
+    <button class="ch-quick-btn" data-task="生成今日舆情报告" data-i18n="home.qa_report">生成报告</button>
+    <button class="ch-quick-btn" data-task="查看 Skill 能力" data-i18n="home.qa_skills">浏览 Skills</button>
   </div>
 
   <!-- Skill Lightweight Entry — 已启用 Skill 横排小图标（点击展开） -->
@@ -42,9 +42,9 @@
 
   <!-- Status Badges — Global Context -->
   <div class="ch-badges">
-    <span class="ch-badge"><span class="lm-dot lm-dot--success"></span><span data-i18n="badge_ready">AI Ready</span></span>
+    <span class="ch-badge"><span class="lm-dot lm-dot--success"></span><span data-i18n="home.badge_ready">AI Ready</span></span>
     <span class="ch-badge" id="lm-provider-badge" data-i18n="home.badge_provider_connecting">模型连接中…</span>
-    <span class="ch-badge" data-i18n="badge_evidence">Evidence-backed</span>
+    <span class="ch-badge" data-i18n="home.badge_evidence">Evidence-backed</span>
   </div>
 </section>
 
@@ -53,7 +53,7 @@
   <div class="ch-metric-grid">
     <!-- System Health — source: /api/system/health/summary -->
     <div class="ch-metric-card" data-metric="system" data-zone="System State" data-source="/api/system/health/summary">
-      <div class="ch-metric-label" data-i18n="card_system">System</div>
+      <div class="ch-metric-label" data-i18n="home.card_system">System</div>
       <div class="ch-metric-value" id="hm-system-status">
         <span class="ch-skeleton"></span>
       </div>
@@ -64,7 +64,7 @@
 
     <!-- Intelligence Evidence — source: /lumenis/api/intelligence/evidence -->
     <div class="ch-metric-card" data-metric="intelligence" data-zone="Intelligence Pulse" data-source="/lumenis/api/intelligence/evidence">
-      <div class="ch-metric-label" data-i18n="card_intel">Intelligence</div>
+      <div class="ch-metric-label" data-i18n="home.card_intel">Intelligence</div>
       <div class="ch-metric-value" id="hm-ai-tasks">
         <span class="ch-skeleton"></span>
       </div>
@@ -75,7 +75,7 @@
 
     <!-- Active Risks — source: /api/negative/stats -->
     <div class="ch-metric-card" data-metric="risks" data-source="/api/negative/stats">
-      <div class="ch-metric-label" data-i18n="card_risks">Risks</div>
+      <div class="ch-metric-label" data-i18n="home.card_risks">Risks</div>
       <div class="ch-metric-value" id="hm-risk-count">
         <span class="ch-skeleton"></span>
       </div>
@@ -86,7 +86,7 @@
 
     <!-- Running Tasks — source: /api/collect/tasks -->
     <div class="ch-metric-card" data-metric="tasks" data-zone="Active Tasks" data-source="/api/collect/tasks">
-      <div class="ch-metric-label" data-i18n="card_tasks_label">Tasks</div>
+      <div class="ch-metric-label" data-i18n="home.card_tasks_label">Tasks</div>
       <div class="ch-metric-value" id="hm-task-count">
         <span class="ch-skeleton"></span>
       </div>
@@ -100,23 +100,23 @@
   <nav class="ch-nav-chips" data-zone="Recent Evidence" aria-label="快捷入口">
     <a href="/lumenis/intelligence" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1h-1v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7H3v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/></svg>
-      <span data-i18n="nav_intel">Intelligence</span>
+      <span data-i18n="home.nav_intel">Intelligence</span>
     </a>
     <a href="/lumenis/intelligence/skills" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-      <span data-i18n="nav_skills">Skill Hub</span>
+      <span data-i18n="home.nav_skills">Skill Hub</span>
     </a>
     <a href="/lumenis/production" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
-      <span data-i18n="nav_prod">Production</span>
+      <span data-i18n="home.nav_prod">Production</span>
     </a>
     <a href="/lumenis/research" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <span data-i18n="nav_research">Research</span>
+      <span data-i18n="home.nav_research">Research</span>
     </a>
     <a href="/lumenis/operations" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span data-i18n="nav_ops">Operations</span>
+      <span data-i18n="home.nav_ops">Operations</span>
     </a>
   </nav>
 </section>
@@ -414,6 +414,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   // ===== i18n extension =====
   var homeDict = {
@@ -560,4 +561,5 @@
 
   console.log('[LUMENIS] Command Home v4 — Shard C refactored, all metrics real-API bound');
 })();
+</script>
 {% endblock %}

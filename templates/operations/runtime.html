@@ -33,6 +33,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'rt.title':'本地运行时','rt.subtitle':'Preflight · Health · Heartbeat · Recovery',
@@ -70,4 +71,5 @@
   document.getElementById('rt-refresh').addEventListener('click',load);
   load();
 })();
+</script>
 {% endblock %}

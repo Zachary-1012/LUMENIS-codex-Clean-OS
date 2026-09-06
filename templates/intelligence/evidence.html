@@ -35,6 +35,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'ev.title':'证据中心','ev.subtitle':'Task → Skill → Engine → Provider → Evidence → Evaluation → Trace',
@@ -84,4 +85,5 @@
   document.getElementById('ev-refresh').addEventListener('click',load);
   load();
 })();
+</script>
 {% endblock %}

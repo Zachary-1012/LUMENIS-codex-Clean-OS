@@ -84,6 +84,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function(){
   Object.assign(LUMENIS.i18n.dict.zh,{
     'rw.init':'初始化…','rw.heading':'研究问题必须可追溯到证据',
@@ -154,4 +155,5 @@
   });
   if(input) input.addEventListener("keydown",function(e){if(e.key==="Enter")btn&&btn.click();});
 })();
+</script>
 {% endblock %}
