@@ -13,6 +13,13 @@ import struct
 import time
 import secrets
 import io
+import os
+import sys
+
+# 确保 vendor 目录中的 qrcode 库可导入
+_vendor_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'vendor')
+if os.path.isdir(_vendor_path) and _vendor_path not in sys.path:
+    sys.path.insert(0, _vendor_path)
 
 # TOTP 参数（RFC6238 默认）
 TOTP_CONFIG = {
@@ -90,29 +97,34 @@ def get_otpauth_url(secret: str, account_name: str, issuer: str = None) -> str:
 
 def generate_qr_code_svg(secret: str, account_name: str, issuer: str = None) -> str:
     """
-    生成二维码 SVG（内嵌 base64 PNG）。
-    使用 qrcode 库生成 PNG，转为 data URL。
+    生成二维码（SVG data URL）。
+    使用 qrcode 库生成 SVG，无需 PIL/Pillow 依赖。
     """
     try:
         import qrcode
+        from qrcode.image.svg import SvgPathImage
         url = get_otpauth_url(secret, account_name, issuer)
         qr = qrcode.QRCode(
             version=None,
             error_correction=qrcode.constants.ERROR_CORRECT_M,
-            box_size=8,
+            box_size=10,
             border=2,
+            image_factory=SvgPathImage,
         )
         qr.add_data(url)
         qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        buf.seek(0)
+        img = qr.make_image()
+        # 获取 SVG 字符串
+        svg_bytes = io.BytesIO()
+        img.save(svg_bytes)
+        svg_str = svg_bytes.getvalue().decode('utf-8')
+        # 转为 data URL
         import base64 as b64
-        png_b64 = b64.b64encode(buf.read()).decode("ascii")
-        return f"data:image/png;base64,{png_b64}"
+        svg_b64 = b64.b64encode(svg_str.encode('utf-8')).decode('ascii')
+        return f"data:image/svg+xml;base64,{svg_b64}"
     except Exception as e:
-        return f"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><text x='10' y='100' font-size='12'>QR unavailable: {e}</text></svg>"
+        return (f"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'>"
+                f"<text x='10' y='100' font-size='12'>QR unavailable: {e}</text></svg>")
 
 
 # ── TOTP 绑定状态管理（DB） ──
@@ -196,6 +208,8 @@ def confirm_totp(user_id: int, code: str) -> dict:
         result = verify_totp(secret, code, user_id=None)  # 绑定时不做抗重放
         if not result["success"]:
             return result
+        # 先删除旧的 enabled=1 绑定（避免 UNIQUE constraint），再启用新绑定
+        conn.execute("DELETE FROM v4_totp_secrets WHERE user_id=? AND enabled=1", (user_id,))
         conn.execute(
             "UPDATE v4_totp_secrets SET enabled=1 WHERE user_id=? AND enabled=0",
             (user_id,)

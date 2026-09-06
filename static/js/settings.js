@@ -13,7 +13,57 @@ let navConfigData = [];
 document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
   loadAboutInfo();
+  loadDomainIdentity();
 });
+
+// ── Domain Identity & Isolation ──
+let currentDomain = 'system';
+const DOMAIN_NAV_VISIBILITY = {
+  cth: ['profile', 'security', 'protection', 'collection', 'appearance', 'about', 'backup', 'domain'],
+  zbmp: ['profile', 'security', 'protection', 'ai', 'skills', 'appearance', 'about', 'backup', 'domain'],
+  system: null, // null = show all
+};
+
+async function loadDomainIdentity() {
+  try {
+    const resp = await fetch('/api/auth/domain-identity', { credentials: 'include' });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.ok) {
+        currentDomain = data.domain_identity || 'system';
+      }
+    }
+  } catch (e) { /* fallback to system */ }
+  updateDomainTag();
+  applyDomainFilter();
+}
+
+function updateDomainTag() {
+  const tag = document.getElementById('domainTag');
+  if (!tag) return;
+  const labels = { cth: 'CTH 太古汇域', zbmp: 'ZBMP 品牌智能域', system: 'SYSTEM 系统全局' };
+  tag.textContent = labels[currentDomain] || currentDomain.toUpperCase();
+  tag.className = 'domain-tag ' + currentDomain;
+}
+
+function applyDomainFilter() {
+  const visible = DOMAIN_NAV_VISIBILITY[currentDomain];
+  document.querySelectorAll('.nav-item[data-panel]').forEach(item => {
+    const panel = item.getAttribute('data-panel');
+    if (visible === null || visible.includes(panel)) {
+      item.style.display = '';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+  // Also hide corresponding panels
+  document.querySelectorAll('.panel[id^="panel-"]').forEach(panel => {
+    const panelName = panel.id.replace('panel-', '');
+    if (visible !== null && !visible.includes(panelName)) {
+      // Don't hide active panel, just hide nav entry
+    }
+  });
+}
 
 // ── Panel switching ──
 function switchPanel(panel) {
@@ -43,6 +93,8 @@ function switchPanel(panel) {
   if (panel === 'recovery') loadRecovery();
   if (panel === 'navcustom') loadNavConfig();
   if (panel === 'skills') loadSkills();
+  if (panel === 'ai') loadAIStatus();
+  if (panel === 'collection') loadCollectorStatus();
 }
 
 // ── API helper ──
@@ -516,4 +568,74 @@ function applyTheme() {
     document.body.style.color = '#1e293b';
   }
   showToast('主题已切换（演示）');
+}
+
+// ── AI Status (real API) ──
+async function loadAIStatus() {
+  const container = document.getElementById('aiModelCards');
+  if (!container) return;
+  try {
+    const resp = await fetch('/api/ai-resource-packs/status', { credentials: 'include' });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.ok) {
+        const packs = data.packs || data.resource_packs || [];
+        if (packs.length > 0) {
+          container.innerHTML = packs.map(p => `
+            <div class="hscroll-card">
+              <h4>${p.name || p.model || 'AI模型'}</h4>
+              <div class="card-value" style="color:${p.status === 'active' ? '#16a34a' : p.status === 'paused' ? '#f59e0b' : '#dc2626'}">
+                ${p.status === 'active' ? '运行中' : p.status === 'paused' ? '已暂停' : '不可用'}
+              </div>
+              <div class="card-label">provider: ${p.provider || '—'}</div>
+            </div>
+          `).join('');
+        }
+      }
+    }
+  } catch (e) { /* keep default cards */ }
+  // Load quota/cost
+  try {
+    const quotaEl = document.getElementById('aiQuota');
+    const costEl = document.getElementById('aiCost');
+    if (quotaEl) quotaEl.textContent = '查询中...';
+    const resp = await fetch('/api/ai-resource-packs/status', { credentials: 'include' });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (quotaEl) quotaEl.textContent = data.total_quota != null ? data.total_quota : '—';
+      if (costEl) costEl.textContent = data.monthly_cost != null ? '¥' + data.monthly_cost : '—';
+    }
+  } catch (e) { /* fallback */ }
+}
+
+// ── Collector Status (real API) ──
+async function loadCollectorStatus() {
+  const container = document.querySelector('#panel-collection .hscroll-container');
+  if (!container) return;
+  try {
+    const resp = await fetch('/api/platform-health', { credentials: 'include' });
+    if (resp.ok) {
+      const data = await resp.json();
+      const platforms = data.platforms || data;
+      if (Array.isArray(platforms) && platforms.length > 0) {
+        container.innerHTML = platforms.map(p => {
+          const status = p.status || p.state || 'unknown';
+          const color = status === 'logged_in' || status === 'ok' || status === 'active' ? '#16a34a'
+                      : status === 'checking' || status === 'pending' ? '#f59e0b'
+                      : '#dc2626';
+          const label = status === 'logged_in' || status === 'ok' ? '已登录'
+                      : status === 'checking' ? '检查中'
+                      : status === 'blocked' ? 'BLOCKED'
+                      : status;
+          return `
+            <div class="hscroll-card">
+              <h4>${p.name || p.platform || '平台'}</h4>
+              <div class="card-value" style="color:${color}">${label}</div>
+              <div class="card-label">${p.detail || p.message || (p.cookie_valid ? 'cookie有效' : '缺cookie')}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  } catch (e) { /* keep default cards */ }
 }

@@ -348,58 +348,58 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <nav class="nav-group" id="navGroup">
       <div class="nav-group-title">账户与安全</div>
       <div class="nav-item active" data-panel="profile" onclick="switchPanel('profile')">
-        <span class="nav-icon">👤</span>账户资料
+        <span class="nav-icon"><span data-icon="user" data-icon-size="16"></span></span>账户资料
       </div>
       <div class="nav-item" data-panel="security" onclick="switchPanel('security')">
-        <span class="nav-icon">🔐</span>登录与安全
+        <span class="nav-icon"><span data-icon="lock" data-icon-size="16"></span></span>登录与安全
       </div>
       <div class="nav-item" data-panel="protection" onclick="switchPanel('protection')">
-        <span class="nav-icon">🛡️</span>访问保护
+        <span class="nav-icon"><span data-icon="shield" data-icon-size="16"></span></span>访问保护
         <span class="nav-badge" id="protectionBadge">3</span>
       </div>
       <div class="nav-item" data-panel="members" onclick="switchPanel('members')">
-        <span class="nav-icon">👥</span>成员管理
+        <span class="nav-icon"><span data-icon="users" data-icon-size="16"></span></span>成员管理
       </div>
       <div class="nav-item" data-panel="approvals" onclick="switchPanel('approvals')">
-        <span class="nav-icon">✅</span>登录审批
+        <span class="nav-icon"><span data-icon="check" data-icon-size="16"></span></span>登录审批
       </div>
       <div class="nav-item" data-panel="recovery" onclick="switchPanel('recovery')">
-        <span class="nav-icon">🔄</span>账号恢复
+        <span class="nav-icon"><span data-icon="refresh" data-icon-size="16"></span></span>账号恢复
       </div>
       <div class="nav-item" data-panel="audit" onclick="switchPanel('audit')">
-        <span class="nav-icon">📋</span>审计日志
+        <span class="nav-icon"><span data-icon="list" data-icon-size="16"></span></span>审计日志
       </div>
       <div class="nav-item" data-panel="keys" onclick="switchPanel('keys')">
-        <span class="nav-icon">🔑</span>程序化密钥
+        <span class="nav-icon"><span data-icon="key" data-icon-size="16"></span></span>程序化密钥
       </div>
 
       <div class="nav-group-title">系统</div>
       <div class="nav-item" data-panel="navcustom" onclick="switchPanel('navcustom')">
-        <span class="nav-icon">🧭</span>导航自定义
+        <span class="nav-icon"><span data-icon="navigation" data-icon-size="16"></span></span>导航自定义
       </div>
       <div class="nav-item" data-panel="skills" onclick="switchPanel('skills')">
-        <span class="nav-icon">⚡</span>技能管理
+        <span class="nav-icon"><span data-icon="bolt" data-icon-size="16"></span></span>技能管理
       </div>
       <div class="nav-item" data-panel="about" onclick="switchPanel('about')">
-        <span class="nav-icon">ℹ️</span>关于系统
+        <span class="nav-icon"><span data-icon="info" data-icon-size="16"></span></span>关于系统
       </div>
       <div class="nav-item" data-panel="domain" onclick="switchPanel('domain')">
-        <span class="nav-icon">🌐</span>域名与接入
+        <span class="nav-icon"><span data-icon="globe" data-icon-size="16"></span></span>域名与接入
       </div>
       <div class="nav-item" data-panel="developer" onclick="switchPanel('developer')">
-        <span class="nav-icon">⚙️</span>开发者功能
+        <span class="nav-icon"><span data-icon="gear" data-icon-size="16"></span></span>开发者功能
       </div>
       <div class="nav-item" data-panel="appearance" onclick="switchPanel('appearance')">
-        <span class="nav-icon">🎨</span>外观
+        <span class="nav-icon"><span data-icon="palette" data-icon-size="16"></span></span>外观
       </div>
       <div class="nav-item" data-panel="ai" onclick="switchPanel('ai')">
-        <span class="nav-icon">🤖</span>AI
+        <span class="nav-icon"><span data-icon="intelligence" data-icon-size="16"></span></span>AI
       </div>
       <div class="nav-item" data-panel="collection" onclick="switchPanel('collection')">
-        <span class="nav-icon">📡</span>采集与数据源
+        <span class="nav-icon"><span data-icon="inbox" data-icon-size="16"></span></span>采集与数据源
       </div>
       <div class="nav-item" data-panel="backup" onclick="switchPanel('backup')">
-        <span class="nav-icon">💾</span>通知/备份/帮助
+        <span class="nav-icon"><span data-icon="database" data-icon-size="16"></span></span>通知/备份/帮助
       </div>
     </nav>
   </aside>
@@ -799,8 +799,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="/static/js/lumenis-icons.js"></script>
 <script src="/static/js/i18n.js"></script>
 <script src="/static/js/settings.js"></script>
+<script>
+// 线性图标初始化
+(function() {
+  function renderIcons() {
+    if (typeof licon !== 'function') return;
+    document.querySelectorAll('[data-icon]').forEach(function(el) {
+      var name = el.getAttribute('data-icon');
+      var size = parseInt(el.getAttribute('data-icon-size') || '16', 10);
+      el.innerHTML = licon(name, size);
+    });
+  }
+  if (document.readyState !== 'loading') renderIcons();
+  else document.addEventListener('DOMContentLoaded', renderIcons);
+})();
+</script>
 <script>
 // 语言切换：持久化 + 整页生效
 function applyLanguage() {

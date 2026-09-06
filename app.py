@@ -1028,7 +1028,7 @@ def _permission_gate_write_check():
     """
     if request.method not in _PG_WRITE_METHODS:
         return None
-    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/'):
+    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/'):
         return None
     try:
         if _pg is None:
@@ -5108,9 +5108,86 @@ def cth_login_page():
 
 @app.route('/zbmp/login')
 def zbmp_login_page():
-    """ZBMP 登录页（TOTP 6位动态码）"""
-    from flask import render_template
-    return render_template('auth/zbmp_login.html')
+    """ZBMP 登录兼容路由：重定向到CTH页并触发ZBMP入口面板。
+    新流程：CTH是主入口，ZBMP通过CTH内TOTP验证进入。"""
+    from flask import redirect
+    return redirect('/lumenis/cth/overview?zbmp-entry=1')
+
+
+# ===== P0 登录流程重构：ZBMP 域身份入口（CTH内TOTP验证） =====
+
+@app.route('/api/auth/zbmp-entry/status', methods=['GET'])
+def api_zbmp_entry_status():
+    """检查当前用户ZBMP域身份状态。"""
+    from account.service import get_current_user
+    from account.totp import get_totp_status
+    user = get_current_user()
+    if not user:
+        return jsonify({"ok": False, "logged_in": False, "error": "未登录CTH"}), 401
+    totp = get_totp_status(user["id"])
+    zbmp_granted = request.cookies.get('zbmp_domain_grant') == '1'
+    return jsonify({
+        "ok": True, "logged_in": True, "user_id": user["id"],
+        "username": user["username"], "totp_bound": totp.get("bound", False),
+        "totp_enabled": totp.get("enabled", False), "zbmp_granted": zbmp_granted,
+        "domain_identity": "zbmp" if zbmp_granted else "cth",
+    })
+
+
+@app.route('/api/auth/zbmp-entry/verify', methods=['POST'])
+def api_zbmp_entry_verify():
+    """CTH已登录用户通过TOTP验证获取ZBMP域身份。"""
+    from account.service import get_current_user
+    from account.totp import verify_user_totp
+    from account.audit import log_audit
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "未登录CTH，请先登录"}), 401
+    data = request.get_json(silent=True) or {}
+    code = data.get("code", "")
+    result = verify_user_totp(user["id"], code)
+    if not result.get("success"):
+        return jsonify(result), 400
+    log_audit("zbmp_entry", "security", str(user["id"]),
+              "用户{}通过TOTP进入ZBMP域".format(user['username']))
+    resp = jsonify({"success": True, "domain_identity": "zbmp",
+                     "message": "ZBMP域身份已授予"})
+    import time as _t
+    expires = _t.strftime("%a, %d %b %Y %H:%M:%S GMT",
+                           _t.gmtime(_t.time() + 8 * 3600))
+    resp.set_cookie('zbmp_domain_grant', '1', max_age=8 * 3600, path='/',
+                    httponly=True, samesite='Lax', expires=expires)
+    return resp
+
+
+@app.route('/api/auth/zbmp-entry/leave', methods=['POST'])
+def api_zbmp_entry_leave():
+    """退出ZBMP域，返回CTH域身份。"""
+    from account.service import get_current_user
+    from account.audit import log_audit
+    user = get_current_user()
+    if user:
+        log_audit("zbmp_leave", "security", str(user["id"]),
+                  "用户{}退出ZBMP域".format(user['username']))
+    resp = jsonify({"success": True, "domain_identity": "cth"})
+    resp.delete_cookie('zbmp_domain_grant', path='/')
+    return resp
+
+
+@app.route('/api/auth/domain-identity', methods=['GET'])
+def api_domain_identity():
+    """获取当前会话的域身份（cth/zbmp）。"""
+    from account.service import get_current_user
+    user = get_current_user()
+    if not user:
+        return jsonify({"ok": False, "domain_identity": None, "logged_in": False}), 401
+    zbmp_granted = request.cookies.get('zbmp_domain_grant') == '1'
+    return jsonify({
+        "ok": True, "logged_in": True, "user_id": user["id"],
+        "username": user["username"], "role": user["role"],
+        "domain_identity": "zbmp" if zbmp_granted else "cth",
+        "cth_logged": True, "zbmp_granted": zbmp_granted,
+    })
 
 # ===== 系统启动入口 =====
 
