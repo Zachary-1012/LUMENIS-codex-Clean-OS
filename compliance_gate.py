@@ -26,11 +26,14 @@ ComplianceGate（P1-H｜统一合规 Gate）。
   # {'ok': True/False, 'overall': 'PASS'/'REVIEW'/'BLOCK', 'findings': [...], ...}
 """
 import json
+import logging
 import os
 
 BLOCK = "BLOCK"
 REVIEW = "REVIEW"
 PASS = "PASS"
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_RULES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "config", "compliance-rules.json")

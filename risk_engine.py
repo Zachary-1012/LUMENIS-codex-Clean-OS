@@ -20,6 +20,7 @@ Track3 修复（2026-09-06）：
 """
 from subject_rules import subject_sql_and_values, SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS
 import daily_report
+import logging
 
 # ============================================================
 # Track3：统一状态枚举（禁止 critical=high、unknown=negative）
@@ -28,6 +29,8 @@ RISK_LEVELS = ("low", "medium", "high", "critical", "unknown")
 SENTIMENT_LABELS = ("positive", "neutral", "negative", "unknown")
 
 # 风险等级数值映射（仅用于排序/聚合，不用于覆盖原始标签）
+logger = logging.getLogger(__name__)
+
 _RISK_SCORE = {"low": 1, "medium": 2, "high": 3, "critical": 4, "unknown": 0}
 _SENTIMENT_SCORE = {"positive": 1, "neutral": 0, "negative": -1, "unknown": None}
 

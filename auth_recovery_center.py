@@ -17,6 +17,7 @@ Auth Recovery Center（V3.0 P0 新增）
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 import sqlite3
@@ -26,6 +27,8 @@ from typing import Any, Dict, List, Optional
 
 from repository_registry import resolve_path
 
+
+logger = logging.getLogger(__name__)
 
 class RecoveryStatus(str, Enum):
     PENDING = "pending"          # 待处理（已创建恢复任务，等待用户操作）

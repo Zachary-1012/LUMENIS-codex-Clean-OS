@@ -11,7 +11,7 @@
 8. 活动窗口（2026-08-28 ~ 2026-10-07）外自动停止
 9. 绝不伪造数据：采集失败记录错误快照，浏览量/讨论量采不到就存0并标注状态
 """
-import os, json, threading, subprocess, time, csv, io, sys, random
+import os, json, threading, subprocess, time, csv, io, sys, random, logging
 from datetime import datetime
 from flask import jsonify, request, send_from_directory, Response
 

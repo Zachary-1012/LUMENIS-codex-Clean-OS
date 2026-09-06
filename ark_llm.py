@@ -181,8 +181,8 @@ def sentiment_analyse(text: str):
             if json_match:
                 try:
                     return json.loads(json_match.group())
-                except:
-                    pass
+                except Exception as _e:
+                    logger.warning('ark_llm json re-parse failed: %s', _e)
             return {"error": "json_parse_failed", "raw_content": content, "sentiment": None}
     except Exception as e:
         logger.error(f"舆情分析失败: {e}")

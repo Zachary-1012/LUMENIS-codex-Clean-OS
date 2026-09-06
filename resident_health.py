@@ -20,6 +20,7 @@ Contract：仅读取 xhs_cookie_bridge 的身份/端口/profile 单一事实源�
 恢复动作委托 scripts/start_resident_browsers.py（幂等），不自行拼浏览器启动参数。
 """
 from __future__ import annotations
+import logging
 import json, os, socket, subprocess, threading, time, urllib.request as ur
 from datetime import datetime
 from typing import Any
@@ -38,6 +39,8 @@ RECOVER_GRACE_SEC = 8
 
 _lock = threading.Lock()
 
+
+logger = logging.getLogger(__name__)
 
 def _now_iso() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")

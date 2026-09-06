@@ -10,12 +10,15 @@ ZBC Phase 9 加固：
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 import database as db
 import ai_analyzer
 import ai_filter
 import daily_report
 import report_artifact as ra
+
+logger = logging.getLogger(__name__)
 
 REPORT_TYPES = ('daily', 'weekly', 'monthly', 'yearly', 'special')
 
@@ -38,6 +41,7 @@ def period_for(report_type: str, now: datetime | None = None):
 
 
 def generate_report(report_type: str, start: str | None = None, end: str | None = None):
+    started_at = datetime.now().isoformat()
     if report_type not in REPORT_TYPES:
         raise ValueError(f'无效报告类型: {report_type}')
     if not start or not end:
@@ -46,9 +50,8 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
     # 先过滤，再统计；报告不读取未经主体审核的数据。
     try:
         ai_filter.run_filter_batch(limit=500)
-    except Exception:
-        # 无 AI / 过滤器异常不能阻塞规则版报告生成。
-        pass
+    except Exception as _e:
+        logger.warning('ai_filter.run_filter_batch failed (non-blocking): %s', _e)
 
     notes = db.get_notes_by_date_range(start, end)
     stats = db.get_stats_by_date_range(start, end)
@@ -85,7 +88,8 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
             "region": {r: [n["name"] for n in region_nodes(r, int(end[5:7]))]
                        for r in ["东南亚", "欧洲", "中东", "拉美", "北美", "东亚", "澳新"]},
         }
-    except Exception:
+    except Exception as _e:
+        logger.warning('marketing_calendar import failed (non-blocking): %s', _e)
         report['marketing_nodes'] = {"nodes": [], "themes": [], "tonality_advice": "",
                                      "cross": [], "global": [], "global_nodes": [],
                                      "region": {}}
@@ -93,7 +97,8 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
     try:
         import emv as _emv
         report['emv'] = _emv.aggregate_emv(notes)
-    except Exception:
+    except Exception as _e:
+        logger.warning('emv aggregate failed (non-blocking): %s', _e)
         report['emv'] = {"status": "NOT_AVAILABLE", "emv_total_yuan": None,
                          "note_count": len(notes), "available_count": 0,
                          "is_estimate": True,
@@ -115,6 +120,10 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
     digest = None
     if report_type == 'daily':
         digest = daily_report.generate_daily_digest(end)
+    report['started_at'] = started_at
+    report['finished_at'] = datetime.now().isoformat()
+    report['status'] = 'success'
+    report['error'] = None
     return report, digest
 
 

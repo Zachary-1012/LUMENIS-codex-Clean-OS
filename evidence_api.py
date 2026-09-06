@@ -6,7 +6,10 @@ Phase 2：把 evidence_store 的能力暴露给前端 Dashboard。
 """
 from __future__ import annotations
 import evidence_store
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 def register_evidence_api(app):
     """在 Flask app 上注册 Evidence 查询蓝图。"""

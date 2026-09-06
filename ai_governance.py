@@ -16,6 +16,7 @@ Track3 修复（2026-09-06）：
 - 新增 get_provider_stats()：成本模型分别记录 zhipu 与 ark 两 provider。
 - 治理层完整链路：额度控制→脱敏→调用→回补→统计→标记。
 """
+import logging
 import os
 import re
 import json
@@ -144,8 +145,8 @@ class AIUsageTracker:
             try:
                 with open(self.stats_file, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _e:
+                logging.getLogger(__name__).warning('ai_governance stats load failed: %s', _e)
         return {"daily": {}, "total": {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
 
     def _save(self):

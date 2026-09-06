@@ -456,7 +456,7 @@ PROVIDER_STATUS = {
     'glm': 'ACTIVE',          # zhipu 别名
     'ark': 'LEGACY',
     'doubao': 'LEGACY',
-    'ollama': 'AVAILABLE',    # Track3：默认 AVAILABLE，运行时探测后才 ACTIVE
+    'ollama': 'ACTIVE_FALLBACK',    # Track3：本地兜底模型，运行时探测后 ACTIVE
     'lmstudio': 'AVAILABLE',
     'llama_cpp': 'AVAILABLE',
     'qwen': 'DISABLED',

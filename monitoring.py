@@ -11,6 +11,7 @@
 """
 
 import os
+import logging
 import sys
 import json
 import time
@@ -26,6 +27,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'data', 'monitor.db')
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 
+
+logger = logging.getLogger(__name__)
 
 class AlertLevel(Enum):
     """告警级别"""

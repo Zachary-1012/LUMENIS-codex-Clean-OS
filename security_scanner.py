@@ -14,6 +14,7 @@
 """
 
 import os
+import logging
 import sys
 import re
 import json
@@ -24,6 +25,8 @@ from datetime import datetime
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+
+logger = logging.getLogger(__name__)
 
 class SecurityScanner:
     """安全扫描器"""
