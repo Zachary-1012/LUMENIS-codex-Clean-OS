@@ -521,6 +521,14 @@ def system_health_summary():
         login_status = check_login_status()
         alerts_info = get_alerts()
 
+        # P1 非静默健康：evidence 写入失败计数（最近24h）
+        evidence_write_failures = 0
+        try:
+            from evidence_store import get_evidence_write_failure_count
+            evidence_write_failures = get_evidence_write_failure_count(24)
+        except Exception:
+            pass
+
         # -------- 4 子灯（红/黄/绿：error/warning/ok） --------
         # 1) database_light: 读写综合
         if db_status['status'] == 'error' or db_write['status'] == 'error':
@@ -599,6 +607,7 @@ def system_health_summary():
             },
             'need_manual_intervention': alerts_info.get('need_manual_intervention', 0),
             'active_alerts': alerts_info.get('active_alerts', 0),
+            'evidence_write_failures_24h': evidence_write_failures,
             # 原摘要字段（保持向后兼容，不破坏原前端）
             'notes_count': db_status.get('notes_count', 0),
             'today_collected': recent_24h,

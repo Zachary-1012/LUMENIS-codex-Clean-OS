@@ -75,5 +75,29 @@ def register_evidence_api(app):
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    @bp.route("/api/evidence/replay-failed", methods=["POST"])
+    def evidence_replay_failed():
+        """P1 非静默健康：重放最近失败的 evidence 写入（限 SYSTEM 域+权限）。
+
+        从 runtime_guardian_dlq 读取 PENDING/FAILED 的 evidence_write 任务，
+        重试写入 app_evidence_records，成功后标记 RESOLVED。
+        """
+        try:
+            # 权限检查：SYSTEM 域
+            from permission_gate import require_system_scope
+            if not require_system_scope():
+                return jsonify({"ok": False, "error": "需要 SYSTEM 域权限"}), 403
+        except ImportError:
+            pass  # permission_gate 不存在时跳过（本地开发模式）
+        except Exception:
+            pass
+
+        try:
+            limit = min(int(request.json.get("limit", 50)) if request.is_json else 50, 200)
+            result = evidence_store.replay_failed_evidence(limit=limit)
+            return jsonify({"ok": True, **result})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
     app.register_blueprint(bp)
     return bp

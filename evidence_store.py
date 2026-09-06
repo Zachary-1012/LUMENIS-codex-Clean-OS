@@ -264,6 +264,313 @@ def _get_table_columns(conn: sqlite3.Connection, table: str = "app_evidence_reco
 
 
 
+def _record_write_failure(fields: dict, error: Exception) -> None:
+
+    """Evidence 写入失败时：写 audit_logs + DLQ（不中断业务，失败不可见=违反）。
+
+    P1 复杂度治理：evidence_write_failed 必须记录+标记降级+进入健康摘要+可补写重放。
+    """
+
+    import uuid as _uuid
+
+    now = _now()
+
+    dlq_id = f"evfail-{_uuid.uuid4().hex[:12]}"
+
+    detail_json = _json_dumps({
+
+        "error_type": type(error).__name__,
+
+        "error_message": str(error)[:500],
+
+        "asset_id": fields.get("asset_id", ""),
+
+        "feature_id": fields.get("feature_id", ""),
+
+        "source": fields.get("source", ""),
+
+        "level": fields.get("level", ""),
+
+        "result": fields.get("result", ""),
+
+        "fields_keys": list(fields.keys()),
+
+        "timestamp": now,
+
+    })
+
+    # 1) 写入 v4_audit_logs（审计中心可查）
+
+    try:
+
+        audit_conn = sqlite3.connect(DB_PATH, timeout=5)
+
+        audit_conn.execute(
+
+            "INSERT INTO v4_audit_logs (user_id, username, action, resource, resource_id, detail, ip, created_at) "
+
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+
+            (0, "system", "evidence_write_failed", "app_evidence_records",
+
+             fields.get("asset_id", "") or dlq_id, detail_json, "127.0.0.1", now),
+
+        )
+
+        audit_conn.commit()
+
+        audit_conn.close()
+
+    except Exception:
+
+        pass  # audit 写入失败不阻塞
+
+    # 2) 写入 runtime_guardian_dlq（可补写重放）
+
+    try:
+
+        dlq_conn = sqlite3.connect(DB_PATH, timeout=5)
+
+        dlq_conn.execute(
+
+            "INSERT INTO runtime_guardian_dlq "
+
+            "(dlq_id, worker_id, run_id, task_type, payload, error, error_type, "
+
+            " attempts, max_attempts, status, created_at, updated_at, domain_id, product_id) "
+
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+
+            (dlq_id, "evidence_store", "record_evidence", "evidence_write",
+
+             _json_dumps(fields), str(error)[:500], type(error).__name__,
+
+             0, 3, "PENDING", now, now,
+
+             fields.get("subject_scope", "SYSTEM"), fields.get("product", "ZBC")),
+
+        )
+
+        dlq_conn.commit()
+
+        dlq_conn.close()
+
+    except Exception:
+
+        pass  # DLQ 写入失败不阻塞
+
+
+
+
+
+def replay_failed_evidence(limit: int = 50) -> dict:
+
+    """重放最近失败的 evidence 写入（从 runtime_guardian_dlq 读取并重试）。
+
+    Returns:
+        {"replayed": N, "succeeded": N, "failed": N, "remaining": N}
+    """
+
+    now = _now()
+
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+
+    conn.row_factory = sqlite3.Row
+
+    try:
+
+        rows = conn.execute(
+
+            "SELECT id, dlq_id, payload, attempts, max_attempts FROM runtime_guardian_dlq "
+
+            "WHERE task_type='evidence_write' AND status IN ('PENDING','FAILED') "
+
+            "ORDER BY id ASC LIMIT ?",
+
+            (limit,),
+
+        ).fetchall()
+
+    except Exception as e:
+
+        return {"replayed": 0, "succeeded": 0, "failed": 0, "remaining": 0, "error": str(e)}
+
+    finally:
+
+        conn.close()
+
+
+
+    succeeded = 0
+
+    failed = 0
+
+    for row in rows:
+
+        try:
+
+            fields = json.loads(row["payload"])
+
+        except Exception:
+
+            continue
+
+        attempts = row["attempts"] + 1
+
+        try:
+
+            # 重试写入
+
+            retry_conn = sqlite3.connect(DB_PATH, timeout=10)
+
+            existing_cols = _get_table_columns(retry_conn)
+
+            if existing_cols:
+
+                fields = {k: v for k, v in fields.items() if k in existing_cols}
+
+            cols = ", ".join(fields.keys())
+
+            placeholders = ", ".join(["?"] * len(fields))
+
+            values = list(fields.values())
+
+            retry_conn.execute(
+
+                f"INSERT INTO app_evidence_records ({cols}) VALUES ({placeholders})",
+
+                values,
+
+            )
+
+            retry_conn.commit()
+
+            retry_conn.close()
+
+            succeeded += 1
+
+            # 标记 DLQ 为 RESOLVED
+
+            _update_dlq_status(row["id"], "RESOLVED", attempts, now)
+
+        except Exception as e:
+
+            failed += 1
+
+            new_status = "FAILED" if attempts >= row["max_attempts"] else "PENDING"
+
+            _update_dlq_status(row["id"], new_status, attempts, now, error=str(e)[:300])
+
+
+
+    # 统计剩余
+
+    try:
+
+        count_conn = sqlite3.connect(DB_PATH, timeout=5)
+
+        remaining = count_conn.execute(
+
+            "SELECT COUNT(*) FROM runtime_guardian_dlq "
+
+            "WHERE task_type='evidence_write' AND status IN ('PENDING','FAILED')"
+
+        ).fetchone()[0]
+
+        count_conn.close()
+
+    except Exception:
+
+        remaining = -1
+
+
+
+    return {
+
+        "replayed": len(rows),
+
+        "succeeded": succeeded,
+
+        "failed": failed,
+
+        "remaining": remaining,
+
+    }
+
+
+
+
+
+def _update_dlq_status(row_id: int, status: str, attempts: int, now: str, error: str = "") -> None:
+
+    try:
+
+        conn = sqlite3.connect(DB_PATH, timeout=5)
+
+        if error:
+
+            conn.execute(
+
+                "UPDATE runtime_guardian_dlq SET status=?, attempts=?, updated_at=?, last_attempt_at=?, error=? WHERE id=?",
+
+                (status, attempts, now, now, error, row_id),
+
+            )
+
+        else:
+
+            conn.execute(
+
+                "UPDATE runtime_guardian_dlq SET status=?, attempts=?, updated_at=?, last_attempt_at=?, resolved_at=? WHERE id=?",
+
+                (status, attempts, now, now, now, row_id),
+
+            )
+
+        conn.commit()
+
+        conn.close()
+
+    except Exception:
+
+        pass
+
+
+
+
+
+def get_evidence_write_failure_count(hours: int = 24) -> int:
+
+    """获取最近 N 小时 evidence 写入失败计数（用于健康摘要）。"""
+
+    try:
+
+        conn = sqlite3.connect(DB_PATH, timeout=5)
+
+        count = conn.execute(
+
+            "SELECT COUNT(*) FROM v4_audit_logs "
+
+            "WHERE action='evidence_write_failed' "
+
+            "AND created_at >= datetime('now', ?, 'localtime')",
+
+            (f"-{hours} hours",),
+
+        ).fetchone()[0]
+
+        conn.close()
+
+        return count
+
+    except Exception:
+
+        return 0
+
+
+
+
+
 def record_evidence(
 
     *,
@@ -462,9 +769,9 @@ def record_evidence(
 
 
 
-    conn = _get_conn()
-
     try:
+
+        conn = _get_conn()
 
         # 向后兼容：只插入表中实际存在的列（新字段未迁移时自动跳过，不报错）
 
@@ -496,9 +803,31 @@ def record_evidence(
 
         return cursor.lastrowid
 
+    except Exception as e:
+
+        # P1 非静默健康：写入失败必须记录+降级+可重放，不中断业务
+
+        try:
+
+            conn.rollback()
+
+        except Exception:
+
+            pass
+
+        _record_write_failure(fields, e)
+
+        return -1  # 失败标记：调用方可检测
+
     finally:
 
-        conn.close()
+        try:
+
+            conn.close()
+
+        except Exception:
+
+            pass
 
 
 

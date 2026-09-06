@@ -44,3 +44,14 @@ jobs:
             --ignore=tests/browser_runtime \
             --continue-on-collection-errors \
             -q --tb=line
+      - name: Boundary Check (双库边界机器检查)
+        # P1 复杂度治理：持续验证 ZBC/OSAI 双库边界隔离。
+        # continue-on-error：边界检查为治理信号，不阻塞构建，但违规会写入报告。
+        continue-on-error: true
+        run: |
+          python scripts/audit_tools/boundary_check.py --ci
+      - name: Asset Impact Scan (全库资产影响图)
+        # P1 复杂度治理：扫描全库资产生成统一索引。
+        continue-on-error: true
+        run: |
+          python scripts/audit_tools/asset_impact_scan.py
