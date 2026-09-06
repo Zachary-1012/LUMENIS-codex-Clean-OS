@@ -3,10 +3,13 @@ import hashlib, json, re, os
 from datetime import datetime
 import database as db
 import ai_analyzer
+import logging
 import intelligence
 import canonical_metrics as cm
 import web_monitor
 
+
+logger = logging.getLogger(__name__)
 
 def _event_key(title, hint, topics, event_date=''):
     """Create an auditable event cluster key using semantics + a short time window.
@@ -99,7 +102,7 @@ def discover_web(limit=120, translate=False):
         db.upsert_feedback_keyword(kw, 1.0, 'web')
     feedback=web_monitor.feedback_keywords(items)
     try: db.log_web_run('multi-source','multi-query',started,datetime.now().strftime('%Y-%m-%d %H:%M:%S'),len(items),analyzed,len(items)-analyzed,'')
-    except Exception: pass
+    except Exception as e: logger.warning("Unhandled exception: %s", e)
     return {'fetched':len(items),'new':new,'analyzed':analyzed,'feedback_keywords':feedback}
 
 
@@ -133,7 +136,7 @@ def build_cross_platform_events(limit=100):
             event['translations']={'en':intelligence.translate_text(ai.get('summary',''),'en'),'ko':intelligence.translate_text(ai.get('summary',''),'ko')}
         event_id=db.upsert_event(event)
         try: db.link_event_mentions(event_id, mentions)
-        except Exception: pass
+        except Exception as e: logger.warning("Unhandled exception: %s", e)
         made.append(event)
     return made
 

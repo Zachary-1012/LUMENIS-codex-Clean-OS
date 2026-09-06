@@ -3,9 +3,11 @@ Auth Recovery Center API（V3.0 P0）
 蓝图：提供恢复任务的查询、创建、更新接口，供前端弹窗提示和用户操作使用。
 """
 from flask import Blueprint, request, jsonify
+import logging
 from auth_recovery_center import recovery_center, RecoveryStatus, AuthIssueType
 
 auth_recovery_bp = Blueprint('auth_recovery', __name__, url_prefix='/api/auth-recovery')
+logger = logging.getLogger(__name__)
 
 
 @auth_recovery_bp.route('/summary', methods=['GET'])

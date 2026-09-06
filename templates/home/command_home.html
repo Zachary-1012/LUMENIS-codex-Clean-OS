@@ -45,7 +45,7 @@
 <section class="ch-status-section">
   <div class="ch-metric-grid">
     <!-- System Health — source: /api/system/health/summary -->
-    <div class="ch-metric-card" data-metric="system" data-source="/api/system/health/summary">
+    <div class="ch-metric-card" data-metric="system" data-zone="System State" data-source="/api/system/health/summary">
       <div class="ch-metric-label" data-i18n="card_system">System</div>
       <div class="ch-metric-value" id="hm-system-status">
         <span class="ch-skeleton"></span>
@@ -56,7 +56,7 @@
     </div>
 
     <!-- Intelligence Evidence — source: /lumenis/api/intelligence/evidence -->
-    <div class="ch-metric-card" data-metric="intelligence" data-source="/lumenis/api/intelligence/evidence">
+    <div class="ch-metric-card" data-metric="intelligence" data-zone="Intelligence Pulse" data-source="/lumenis/api/intelligence/evidence">
       <div class="ch-metric-label" data-i18n="card_intel">Intelligence</div>
       <div class="ch-metric-value" id="hm-ai-tasks">
         <span class="ch-skeleton"></span>
@@ -78,7 +78,7 @@
     </div>
 
     <!-- Running Tasks — source: /api/collect/tasks -->
-    <div class="ch-metric-card" data-metric="tasks" data-source="/api/collect/tasks">
+    <div class="ch-metric-card" data-metric="tasks" data-zone="Active Tasks" data-source="/api/collect/tasks">
       <div class="ch-metric-label" data-i18n="card_tasks_label">Tasks</div>
       <div class="ch-metric-value" id="hm-task-count">
         <span class="ch-skeleton"></span>
@@ -90,7 +90,7 @@
   </div>
 
   <!-- Quick Navigation — Evidence/Detail Layer -->
-  <nav class="ch-nav-chips" aria-label="快捷入口">
+  <nav class="ch-nav-chips" data-zone="Recent Evidence" aria-label="快捷入口">
     <a href="/lumenis/intelligence" class="ch-nav-chip">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1h-1v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7H3v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/></svg>
       <span data-i18n="nav_intel">Intelligence</span>

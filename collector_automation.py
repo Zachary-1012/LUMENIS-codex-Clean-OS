@@ -121,6 +121,7 @@ class CollectorAutomation:
         self._heartbeat_thread = None
         self._task_start_ts = None
         self._stop_event = threading.Event()  # 优雅关闭信号
+        self._collection_thread = None  # 采集后台线程引用（stop 时可 join 等待）
         self._lifecycle_state = CollectorLifecycleState.STOPPED
         # 单次采集任务最大时长（秒），超时由心跳线程标记 worker FAILED；默认 40min
         self._max_task_duration = float(os.getenv('COLLECTOR_MAX_TASK_SECONDS', '2400'))
@@ -376,6 +377,8 @@ class CollectorAutomation:
                     # 每 _hb_interval 秒发送心跳+续期租约
                     if _tick <= 0:
                         g.heartbeat(worker_id)
+                        if self.current_task:
+                            self.current_task['last_heartbeat_at'] = datetime.now().isoformat()
                         if self._lease_owner:
                             g.renew_lease(worker_id, self._lease_owner, ttl_seconds=120)
                         _tick = _hb_interval
@@ -497,8 +500,21 @@ class CollectorAutomation:
             
             config = mode_config.get(mode, mode_config['standard'])
             
+            import uuid as _uuid_for_domain
+            _task_id = f'collect_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+            _trace_id = _uuid_for_domain.uuid4().hex[:16]
+            # 双域核心：采集任务默认 CTH 域（广州太古汇生产采集），
+            # 可通过环境变量 ZBC_COLLECTOR_DOMAIN 覆盖为 zbmp
+            _collector_domain = os.environ.get('ZBC_COLLECTOR_DOMAIN', 'cth')
+            _collector_product = 'CTH' if _collector_domain == 'cth' else 'ZBMP'
             self.current_task = {
-                'id': f'collect_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
+                'id': _task_id,
+                'task_id': _task_id,
+                'trace_id': _trace_id,
+                'domain_id': _collector_domain,
+                'product_id': _collector_product,
+                'collector_id': 'xhs_collector_automation',
+                'source_id': 'xiaohongshu',
                 'keywords': keywords,
                 'mode': mode,
                 'account': account,
@@ -506,6 +522,11 @@ class CollectorAutomation:
                 'config': config,
                 'status': 'starting',
                 'start_time': datetime.now().isoformat(),
+                'started_at': datetime.now().isoformat(),
+                'last_heartbeat_at': None,
+                'last_success_at': None,
+                'finished_at': None,
+                'retry_count': 0,
                 'progress': 0,
                 'new_notes': 0,
                 'errors': [],
@@ -521,11 +542,17 @@ class CollectorAutomation:
                 if g:
                     self._worker_id = g.register_worker(
                         f'xhs_collector_{self.current_task["id"]}',
-                        metadata={'mode': mode, 'account': account, 'keywords': keywords},
+                        metadata={
+                            'mode': mode, 'account': account, 'keywords': keywords,
+                            'task_id': self.current_task.get('task_id'),
+                            'trace_id': self.current_task.get('trace_id'),
+                        },
+                        domain_id=self.current_task.get('domain_id', 'cth'),
+                        product_id=self.current_task.get('product_id', 'CTH'),
                     )
                     self._lease_owner = f'pid-{os.getpid()}'
                     lease = g.acquire_lease(self._worker_id, self._lease_owner, ttl_seconds=120)
-                    g.heartbeat(self._worker_id)
+                    g.heartbeat(self._worker_id, domain_id=self.current_task.get('domain_id', 'cth'))
                     self.current_task['worker_id'] = self._worker_id
                     logger.info('Runtime Guardian: worker %s 已注册并获取租约', self._worker_id)
             except Exception as _rg_err:
@@ -535,6 +562,7 @@ class CollectorAutomation:
 
             # 在后台线程中执行采集
             thread = threading.Thread(target=self._run_collection, args=(self.current_task,), daemon=True)
+            self._collection_thread = thread
             thread.start()
             
             logger.info(f"采集任务已启动: {self.current_task['id']}")
@@ -559,7 +587,16 @@ class CollectorAutomation:
             # 启动浏览器
             self.start_browser(account=task['account'])
             time.sleep(3)
-            
+
+            # 优雅关闭：启动浏览器后检查停止信号
+            if self._stop_event.is_set():
+                logger.info(f"任务 {task['id']}: 收到停止信号，取消采集")
+                task['status'] = 'cancelled'
+                task['finished_at'] = datetime.now().isoformat()
+                self.transition_state(CollectorLifecycleState.STOPPING, reason='cancelled')
+                self.transition_state(CollectorLifecycleState.STOPPED, reason='cancelled')
+                return
+
             task['status'] = 'collecting'
             self.transition_state(CollectorLifecycleState.RUNNING, reason='collecting')
             logger.info(f"任务 {task['id']}: 开始采集...")
@@ -571,6 +608,10 @@ class CollectorAutomation:
             
             task['status'] = 'completed'
             task['end_time'] = datetime.now().isoformat()
+            task['finished_at'] = datetime.now().isoformat()
+            task['last_success_at'] = datetime.now().isoformat()
+            # 合法状态转换：RUNNING -> STOPPING -> STOPPED（禁止 RUNNING 直跳 STOPPED）
+            self.transition_state(CollectorLifecycleState.STOPPING, reason='completed')
             self.transition_state(CollectorLifecycleState.STOPPED, reason='completed')
             logger.info(f"任务 {task['id']}: 采集完成，新增 {new_notes} 条笔记")
             # Runtime Guardian: 保存完成检查点（可恢复/可审计）
@@ -613,6 +654,7 @@ class CollectorAutomation:
             self.transition_state(CollectorLifecycleState.FAILED, reason=str(e)[:200])
             task['errors'].append(str(e))
             task['end_time'] = datetime.now().isoformat()
+            task['finished_at'] = datetime.now().isoformat()
             logger.error(f"任务 {task['id']}: 采集失败: {e}", exc_info=True)
             # Evidence：采集失败必留证据链（异常类型+消息，禁止以0条充当结果）
             try:
@@ -662,7 +704,50 @@ class CollectorAutomation:
             self.current_task = None
     
     def _execute_collection(self, task):
-        """执行实际的采集逻辑（必须真实入库，不再静默 sleep 模拟空跑）"""
+        """执行实际的采集逻辑（必须真实入库，不再静默 sleep 模拟空跑）。
+
+        重试策略：网络/超时类错误最多重试 2 次（指数退避 2s/4s）；
+        风控/登录/验证码类错误不重试（立即上报，避免硬撞风控）。
+        """
+        max_retries = 2
+        attempt = 0
+        last_error = None
+        while attempt <= max_retries:
+            if self._stop_event.is_set():
+                logger.info('采集被停止信号中断（attempt=%d）', attempt)
+                raise RuntimeError('采集被用户停止信号中断')
+            try:
+                result = self._execute_collection_once(task)
+                if attempt > 0:
+                    logger.info('采集重试成功（attempt=%d）', attempt)
+                return result
+            except Exception as e:
+                last_error = e
+                err_str = str(e).lower()
+                # 风控/登录/验证码类错误不重试（立即上报）
+                is_risk_error = any(k in err_str for k in [
+                    '验证码', '人机验证', '风控', '安全拦截', '安全验证',
+                    '登录', 'auth', 'cookie', 'blocked', 'captcha',
+                    '未找到可用的真实采集模块', '被用户停止信号中断',
+                ])
+                if is_risk_error or attempt >= max_retries:
+                    logger.error('采集失败（不重试/已达最大重试次数 attempt=%d）: %s', attempt, e)
+                    raise
+                # 网络/超时类错误：指数退避后重试
+                task['retry_count'] = attempt + 1
+                backoff = 2 ** attempt  # 2s, 4s
+                logger.warning('采集遇瞬时错误，%ds 后重试（attempt=%d/%d）: %s',
+                               backoff, attempt + 1, max_retries, str(e)[:120])
+                # 退避期间可被停止信号中断
+                if self._stop_event.wait(timeout=backoff):
+                    logger.info('退避期间收到停止信号，中断重试')
+                    raise RuntimeError('采集被用户停止信号中断')
+                attempt += 1
+        # 理论上不会到达这里（循环内已 raise），兜底
+        raise last_error or RuntimeError('采集执行失败（未知错误）')
+
+    def _execute_collection_once(self, task):
+        """单次采集执行（被 _execute_collection 的重试循环调用）。"""
         try:
             # 尝试导入并使用现有的采集模块
             sys.path.insert(0, self.base_dir)
@@ -862,7 +947,7 @@ class CollectorAutomation:
         }
     
     def stop_collection(self):
-        """优雅停止当前采集任务：设置 STOPPING 状态 + stop_event，等待线程退出。"""
+        """优雅停止当前采集任务：设置 STOPPING 状态 + stop_event，等待线程退出（最多30s）。"""
         with self._lock:
             if not self.is_running:
                 return {'ok': False, 'error': '没有正在运行的采集任务'}
@@ -881,7 +966,16 @@ class CollectorAutomation:
             except Exception as e:
                 logger.error(f"停止浏览器失败: {e}")
 
+        # 在锁外等待线程退出（避免死锁：_run_collection 的 finally 也会尝试获取 _lock）
+        thread = self._collection_thread
+        if thread and thread.is_alive():
+            thread.join(timeout=30)
+            if thread.is_alive():
+                logger.warning('采集线程 30s 内未退出，标记为强制停止（线程仍在后台运行）')
+
+        with self._lock:
             self.transition_state(CollectorLifecycleState.STOPPED, reason='stopped')
+            self._collection_thread = None
             return {'ok': True, 'message': '采集任务已停止'}
     
     def _load_history(self):

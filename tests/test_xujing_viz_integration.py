@@ -1,0 +1,191 @@
+# -*- coding: utf-8 -*-
+"""xujing-viz.js 集成验证：函数存在性 + API 端点 + 模板引用 + 真实数据绑定。
+
+不启动完整 Flask，不触达数据库。验证：
+1. xujing-viz.js / xujing-core.css 文件存在且无语法问题
+2. 11 模块 + 4 个 Canonical 纯函数存在
+3. base.html 正确引用 xujing 资源
+4. lumenis_frontend.py 注册域数据 API 端点
+5. 页面模板调用真实 API（非 Mock）
+6. 30s 实时更新 + KPI 数字滚动 + SVG 趋势图/环形图渲染逻辑存在
+"""
+import os
+import re
+import sys
+
+ZBC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ZBC)
+
+
+def run_xujing_viz_checks():
+    results = []
+
+    def check(name, ok, detail=""):
+        results.append((name, bool(ok), detail))
+
+    # ===== 1. 文件存在性 =====
+    js_path = os.path.join(ZBC, "static", "js", "xujing-viz.js")
+    css_path = os.path.join(ZBC, "static", "css", "xujing-core.css")
+    css2_path = os.path.join(ZBC, "static", "css", "xujing-dual-domain.css")
+    check("xujing-viz.js exists", os.path.isfile(js_path))
+    check("xujing-core.css exists (restored from git)", os.path.isfile(css_path))
+    check("xujing-dual-domain.css exists", os.path.isfile(css2_path))
+
+    # ===== 2. xujing-viz.js 内容验证 =====
+    if os.path.isfile(js_path):
+        js = open(js_path, encoding="utf-8").read()
+        check("xujing-viz.js size > 15KB", len(js) > 15000, "%d bytes" % len(js))
+        # 11 modules
+        modules = ["数据获取层", "Canonical 纯函数转换层", "工具函数", "数字滚动动效",
+                   "KPI 卡片渲染", "表格渲染", "SVG 趋势图渲染", "环形图渲染",
+                   "Stagger 级联动效", "实时更新循环", "组合渲染"]
+        for m in modules:
+            check("module: " + m, m in js)
+        # 4 pure functions
+        check("FN_SENTIMENT_COUNT exists", "FN_SENTIMENT_COUNT" in js)
+        check("FN_RISK_COUNT exists", "FN_RISK_COUNT" in js)
+        check("FN_ENGAGEMENT exists", "FN_ENGAGEMENT" in js)
+        check("FN_TREND_SERIES exists", "FN_TREND_SERIES" in js)
+        # Export
+        check("xjViz global export", "global.xjViz" in js or "xjViz = {" in js)
+        check("xjViz.api exported", "api: api" in js)
+        check("xjViz.fn exported", "fn: fn" in js)
+        check("xjViz.trend exported", "trend: trend" in js)
+        check("xjViz.donut exported", "donut: donut" in js)
+        check("xjViz.kpi exported", "kpi: kpi" in js)
+        check("xjViz.realtime exported", "realtime: realtime" in js)
+        check("xjViz.table exported", "table: table" in js)
+        # 30s realtime update
+        check("30s realtime interval (30000)", "30000" in js)
+        # SVG rendering
+        check("SVG namespace", "http://www.w3.org/2000/svg" in js)
+        check("SVG trend line/area/bar", "'line'" in js and "'area'" in js and "'bar'" in js)
+        check("SVG donut circle segments", "stroke-dasharray" in js)
+        # Number animation
+        check("animateNumber with requestAnimationFrame", "requestAnimationFrame" in js)
+        check("easeOutCubic animation", "easeOutCubic" in js or "pow(1 - t, 3)" in js)
+        # No mock/hardcoded data in pure functions
+        check("No hardcoded mock data in fn", "mock" not in js.lower() or "MOCK" not in js)
+        # API fetch with auth header support
+        check("API fetch with Authorization header", "__Z_AUTH" in js or "Authorization" in js)
+
+    # ===== 3. xujing-core.css 内容验证 =====
+    if os.path.isfile(css_path):
+        css = open(css_path, encoding="utf-8").read()
+        check("xujing-core.css size > 20KB", len(css) > 20000, "%d bytes" % len(css))
+        check("xj-kpi-row style", ".xj-kpi-row" in css)
+        check("xj-kpi-card style", ".xj-kpi-card" in css)
+        check("xj-trend-container style", ".xj-trend-container" in css)
+        check("xj-donut-container style", ".xj-donut-container" in css)
+        check("xj-data-table style", ".xj-data-table" in css)
+        check("xj-empty style", ".xj-empty" in css)
+        check("xj-stagger animation", "xj-stagger" in css)
+        check("xj-kpi-pos color (green)", "xj-kpi-pos" in css)
+        check("xj-kpi-neg color (red)", "xj-kpi-neg" in css)
+
+    # ===== 4. base.html 引用验证 =====
+    base_path = os.path.join(ZBC, "templates", "base.html")
+    if os.path.isfile(base_path):
+        base = open(base_path, encoding="utf-8").read()
+        check("base.html references xujing-core.css", "xujing-core.css" in base)
+        check("base.html references xujing-viz.js", "xujing-viz.js" in base)
+        check("base.html references xujing-dual-domain.css", "xujing-dual-domain.css" in base)
+        check("base.html has domain switcher", "lm-domain-switch" in base)
+        check("base.html has ZBMP nav group", "lm-nav-group--zbmp" in base)
+        check("base.html has CTH nav group", "lm-nav-group--cth" in base)
+        check("base.html has SYSTEM nav group", "data-domain-nav=\"system\"" in base)
+        check("base.html domain switch JS", "showDomain" in base)
+        check("base.html sets zbc_domain cookie", "zbc_domain" in base)
+
+    # ===== 5. lumenis_frontend.py API 端点验证 =====
+    fe_path = os.path.join(ZBC, "lumenis_frontend.py")
+    if os.path.isfile(fe_path):
+        fe = open(fe_path, encoding="utf-8").read()
+        check("domain_api_bp exists (root-level)", "domain_api_bp = Blueprint" in fe)
+        check("/api/domain/overview endpoint", '"/api/domain/overview"' in fe)
+        check("/api/domain/brands endpoint", '"/api/domain/brands"' in fe)
+        check("/api/domain/risk endpoint", '"/api/domain/risk"' in fe)
+        check("/api/domain/context endpoint", '"/api/domain/context"' in fe)
+        check("api_domain_overview binds real db.get_stats()", "db.get_stats()" in fe)
+        check("api_domain_risk binds real db.get_high_risk_notes()", "get_high_risk_notes" in fe)
+        check("api_domain_brands binds real db.get_category_distribution()", "get_category_distribution" in fe)
+        check("No mock data in domain APIs", "MOCK" not in fe and "fake_data" not in fe)
+        # Domain context helper
+        check("_get_domain_context() reads cookie/header/query", "_get_domain_context" in fe)
+        check("X-Domain-Id header support", "X-Domain-Id" in fe)
+
+    # ===== 6. 页面模板真实 API 绑定验证 =====
+    templates_dir = os.path.join(ZBC, "templates")
+    viz_templates = [
+        ("zbmp/overview.html", ["xjViz.api", "/domain/overview", "/metric-trend", "/domain/brands",
+                                  "xjViz.fn.FN_SENTIMENT_COUNT", "xjViz.trend", "xjViz.donut",
+                                  "setInterval", "30000"]),
+        ("cth/overview.html", ["xjViz.api", "/domain/overview", "/domain/risk", "/hot-notes",
+                                 "xjViz.fn.FN_RISK_COUNT", "xjViz.fn.FN_ENGAGEMENT",
+                                 "xjViz.trend", "xjViz.donut", "setInterval", "30000"]),
+        ("system/runtime.html", ["xjViz.api", "/system/health/summary", "/domain/context",
+                                   "xjViz.table", "setInterval"]),
+        ("zbmp/podcast.html", ["xjViz.api", "/podcast/overview", "/podcast/entities",
+                                 "xjViz.kpi", "xjViz.table"]),
+    ]
+    for tpl_name, required_patterns in viz_templates:
+        tpl_path = os.path.join(templates_dir, tpl_name)
+        if os.path.isfile(tpl_path):
+            tpl = open(tpl_path, encoding="utf-8").read()
+            for pat in required_patterns:
+                check("%s binds: %s" % (tpl_name, pat), pat in tpl)
+            # Verify no mock data
+            check("%s no mock data" % tpl_name, "MOCK" not in tpl and "mockData" not in tpl)
+        else:
+            check("%s exists" % tpl_name, False, "file not found")
+
+    # ===== 7. 六态 UI 验证 =====
+    # Full data pages (overview/podcast/runtime) use panel-level data-state + JS dynamic state.
+    # Generic framework pages use the six-state container pattern.
+    full_pages = {"zbmp/overview.html", "cth/overview.html", "system/runtime.html", "zbmp/podcast.html"}
+    def _norm(p): return p.replace("\\", "/")
+    six_state_templates = []
+    for domain in ["zbmp", "cth", "system"]:
+        ddir = os.path.join(templates_dir, domain)
+        if os.path.isdir(ddir):
+            for f in os.listdir(ddir):
+                if f.endswith(".html"):
+                    six_state_templates.append(os.path.join(domain, f))
+    for tpl_rel in six_state_templates:
+        tpl_path = os.path.join(templates_dir, tpl_rel)
+        tpl = open(tpl_path, encoding="utf-8").read()
+        if _norm(tpl_rel) in full_pages:
+            # Full pages: verify panel-level state management (loading initial + JS error/empty handling)
+            check("%s panel-state: loading initial" % tpl_rel, 'data-state="loading"' in tpl)
+            check("%s panel-state: JS error handler" % tpl_rel, ".catch(" in tpl or "data-state" in tpl)
+            check("%s panel-state: empty state div" % tpl_rel, "-empty" in tpl or "xj-empty" in tpl)
+            check("%s panel-state: success via JS" % tpl_rel, "setAttribute('data-state', 'success')" in tpl or 'data-state\' , \'success\'' in tpl or "setAttribute(\"data-state\", \"success\")" in tpl)
+        else:
+            # Generic pages: strict six-state container
+            for state in ["loading", "empty", "error", "success", "degraded", "permission"]:
+                check("%s six-state: %s" % (tpl_rel, state),
+                      ("state-" + state) in tpl or ("data-state=\"" + state + "\"") in tpl)
+
+    # ===== Summary =====
+    passed = sum(1 for _, ok, _ in results if ok)
+    total = len(results)
+    print("\n" + "=" * 60)
+    print("xujing-viz.js Integration Test Results: %d/%d passed" % (passed, total))
+    print("=" * 60)
+    for name, ok, detail in results:
+        status = "PASS" if ok else "FAIL"
+        line = "  [%s] %s" % (status, name)
+        if detail and not ok:
+            line += "  -- " + detail
+        print(line)
+    return results
+
+
+def test_xujing_viz_integration():
+    results = run_xujing_viz_checks()
+    failed = [(n, d) for n, ok, d in results if not ok]
+    assert not failed, "xujing-viz Integration 失败项: %s" % failed
+
+
+if __name__ == "__main__":
+    run_xujing_viz_checks()

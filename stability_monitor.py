@@ -30,6 +30,7 @@ Checkpoint->Reaper->Retry->DLQ->Resume）。保留全部原有类与函数行为
 收敛工单：ZBC-PHASE2-RUNTIME-GUARDIAN-001
 """
 import os
+import logging
 import sys
 import json
 import time
@@ -41,6 +42,8 @@ from pathlib import Path
 from datetime import datetime
 from collections import deque
 
+
+logger = logging.getLogger(__name__)
 
 class StabilityMonitor:
     """进程级稳定性监控器"""

@@ -345,6 +345,33 @@ def system_runtime():
             db_info = {"exists": True, "table_count": len(tables), "row_counts": counts}
         finally:
             conn.close()
+    # 双域核心扩展：Runtime worker/task 列表，按域分组（Compatibility Layer）
+    # 现有字段保持不变，新增 runtime_by_domain 字段，不破坏现有前端
+    runtime_by_domain = {}
+    try:
+        from runtime_guardian import get_guardian
+        _g = get_guardian("default")
+        for _did in ("cth", "zbmp", "system"):
+            try:
+                _tasks = _g.get_tasks_by_domain(_did)
+                runtime_by_domain[_did] = {
+                    "total_workers": _tasks.get("total_workers", 0),
+                    "running": _tasks.get("running", 0),
+                    "failed": _tasks.get("failed", 0),
+                    "dlq_count": _tasks.get("dlq_count", 0),
+                    "workers": [
+                        {"worker_id": w.get("worker_id", ""),
+                         "worker_name": w.get("worker_name", ""),
+                         "status": w.get("status", ""),
+                         "last_heartbeat_at": w.get("last_heartbeat_at", "")}
+                        for w in _tasks.get("workers", [])[:20]
+                    ],
+                }
+            except Exception:
+                runtime_by_domain[_did] = {"total_workers": 0, "running": 0, "failed": 0, "dlq_count": 0, "workers": []}
+    except Exception as _rg_err:
+        runtime_by_domain = {"error": str(_rg_err)}
+
     return jsonify({
         "ok": True,
         "python": platform.python_version(),
@@ -354,6 +381,9 @@ def system_runtime():
         "osai_root": str(_osai_root()) if _osai_root() else "NOT_FOUND",
         "database": db_info,
         "server_time": datetime.now().isoformat(timespec="seconds"),
+        "runtime_by_domain": runtime_by_domain,
+        "domain_id": "system",
+        "product_id": "SYSTEM",
     })
 
 

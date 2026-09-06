@@ -29,6 +29,7 @@
 """
 
 import os
+import logging
 import sys
 import time
 import json
@@ -42,6 +43,8 @@ from enum import Enum
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+
+logger = logging.getLogger(__name__)
 
 class FixStatus(Enum):
     """修复状态"""

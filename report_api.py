@@ -491,7 +491,8 @@ def api_report_verify_v571():
         # 事件数
         try:
             events=conn.execute("SELECT COUNT(*) FROM events WHERE date(first_seen) BETWEEN ? AND ?",(start,end)).fetchone()[0]
-        except: events=0
+        except Exception as _e:
+            import logging as _log; _log.getLogger(__name__).warning('events count query failed: %s', _e); events=0
     
     return jsonify({
         'ok':True,

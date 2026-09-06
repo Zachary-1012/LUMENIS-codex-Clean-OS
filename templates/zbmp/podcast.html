@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}ZBMP Podcast · 序境 LUMENIS{% endblock %}
+{% block page_title %}ZBMP · Podcast Studio{% endblock %}
+
+{% block content %}
+<div class="lm-viewport" data-domain="zbmp">
+  <div class="lm-viewport__context">
+    <div class="lm-section-header" style="margin:0;">
+      <div class="lm-section-header__title">Podcast Studio</div>
+      <div class="lm-time-dimension">
+        <button class="lm-time-pill is-active">ALL</button>
+      </div>
+    </div>
+    <p style="color:var(--lm-color-text-secondary);margin:4px 0 0;">播客内容管理 · 实体管理 · 话题评分 · 故事节点 · 调用真实 podcast API</p>
+  </div>
+
+  <!-- Podcast Overview KPIs -->
+  <section class="lm-panel" data-state="loading" id="podcast-overview-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Podcast Overview</span>
+      <span class="lm-status-badge lm-status-badge--info">ZBMP · Content</span>
+      <button class="lm-btn lm-btn--icon" onclick="refreshPodcast()" title="刷新"><span data-icon="learning"></span></button>
+    </div>
+    <div class="lm-panel__body">
+      <div class="xj-kpi-row xj-stagger" id="podcast-kpi-row">
+        <div class="xj-kpi-card" id="podcast-kpi-entities"></div>
+        <div class="xj-kpi-card" id="podcast-kpi-topics"></div>
+        <div class="xj-kpi-card" id="podcast-kpi-stories"></div>
+        <div class="xj-kpi-card" id="podcast-kpi-runtime"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Podcast Entities -->
+  <section class="lm-panel" data-state="loading" id="podcast-entities-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">播客实体</span>
+      <span class="lm-badge" id="podcast-entity-count">–</span>
+    </div>
+    <div class="lm-panel__body">
+      <div id="podcast-entities-content"></div>
+      <div class="xj-empty" id="podcast-entities-empty" style="display:none;">暂无播客实体数据</div>
+    </div>
+  </section>
+
+  <!-- API Endpoint Reference -->
+  <section class="lm-panel" data-state="success">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Podcast API 端点（已注册）</span>
+    </div>
+    <div class="lm-panel__body">
+      <div class="xj-data-table-wrap">
+        <table class="xj-data-table">
+          <thead><tr><th>端点</th><th>方法</th><th>用途</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>/api/podcast/overview</td><td>GET</td><td>播客总览</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+            <tr><td>/api/podcast/entities</td><td>GET</td><td>实体列表</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+            <tr><td>/api/podcast/entity</td><td>GET/POST</td><td>实体详情/创建</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+            <tr><td>/api/podcast/topic-score</td><td>POST</td><td>话题评分</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+            <tr><td>/api/podcast/story-nodes</td><td>POST</td><td>故事节点</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+            <tr><td>/api/podcast/runtime/validate</td><td>POST</td><td>运行时校验</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+            <tr><td>/api/podcast/breakout</td><td>POST</td><td>爆款预测</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+            <tr><td>/api/podcast/content-yield</td><td>POST</td><td>内容产出</td><td style="color:#2f9e6e;">✓ 已注册</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+function refreshPodcast() {
+  // Real podcast API: /api/podcast/overview
+  xjViz.api('/podcast/overview').then(function(d) {
+    var data = d.data || d;
+    var entities = (data.entities && data.entities.length) || 0;
+    var topics = (data.topics && data.topics.length) || (data.topic_count || 0);
+    var stories = (data.story_nodes && data.story_nodes.length) || (data.story_count || 0);
+    var runtime = data.runtime_status || data.status || 'UNKNOWN';
+    xjViz.kpi('#podcast-kpi-entities', '播客实体', entities, {});
+    xjViz.kpi('#podcast-kpi-topics', '话题数', Number(topics), {});
+    xjViz.kpi('#podcast-kpi-stories', '故事节点', Number(stories), {});
+    xjViz.kpi('#podcast-kpi-runtime', '运行时', 1, {sub: runtime});
+    document.getElementById('podcast-overview-panel').setAttribute('data-state', 'success');
+  }).catch(function(e) {
+    // API may return empty if no podcast data yet - show degraded
+    xjViz.kpi('#podcast-kpi-entities', '播客实体', 0, {sub: 'API 已注册，暂无数据'});
+    xjViz.kpi('#podcast-kpi-topics', '话题数', 0, {});
+    xjViz.kpi('#podcast-kpi-stories', '故事节点', 0, {});
+    xjViz.kpi('#podcast-kpi-runtime', '运行时', 0, {sub: 'STANDBY'});
+    document.getElementById('podcast-overview-panel').setAttribute('data-state', 'degraded');
+    console.log('Podcast overview API response:', e.message);
+  });
+
+  // Real podcast API: /api/podcast/entities
+  xjViz.api('/podcast/entities').then(function(d) {
+    var entities = d.entities || d.data || [];
+    if (entities.length > 0) {
+      document.getElementById('podcast-entity-count').textContent = entities.length + ' entities';
+      xjViz.table('#podcast-entities-content', entities, [
+        {key: 'id', label: 'ID'},
+        {key: 'name', label: '名称'},
+        {key: 'type', label: '类型'},
+        {key: 'status', label: '状态'}
+      ]);
+      document.getElementById('podcast-entities-panel').setAttribute('data-state', 'success');
+    } else {
+      document.getElementById('podcast-entities-empty').style.display = '';
+      document.getElementById('podcast-entities-panel').setAttribute('data-state', 'empty');
+    }
+  }).catch(function() {
+    document.getElementById('podcast-entities-empty').style.display = '';
+    document.getElementById('podcast-entities-panel').setAttribute('data-state', 'empty');
+  });
+}
+document.addEventListener('DOMContentLoaded', refreshPodcast);
+</script>
+{% endblock %}

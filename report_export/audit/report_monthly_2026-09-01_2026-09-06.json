@@ -1,0 +1,163 @@
+{
+  "report_type": "monthly",
+  "report_date": "2026-09-06",
+  "period_start": "2026-09-01",
+  "period_end": "2026-09-06",
+  "total_notes": 3,
+  "positive_count": 0,
+  "neutral_count": 3,
+  "negative_count": 0,
+  "high_risk_count": 0,
+  "medium_risk_count": 0,
+  "low_risk_count": 3,
+  "total_likes": 1750,
+  "total_comments": 374,
+  "total_engagements": 2689,
+  "top_topics": [],
+  "hot_notes": [
+    {
+      "note_id": "l4_test_003",
+      "title": "广州太古汇服务态度差，投诉无门",
+      "author": "愤怒的消费者",
+      "likes": 890,
+      "comments": 230,
+      "url": "https://xiaohongshu.com/l4_test_003",
+      "sentiment": "neutral",
+      "risk_level": "low"
+    },
+    {
+      "note_id": "l4_test_001",
+      "title": "广州太古汇15周年庆典活动现场打卡",
+      "author": "探店小达人",
+      "likes": 520,
+      "comments": 88,
+      "url": "https://xiaohongshu.com/l4_test_001",
+      "sentiment": "neutral",
+      "risk_level": "low"
+    },
+    {
+      "note_id": "l4_test_002",
+      "title": "太古汇停车场收费标准2026最新",
+      "author": "停车攻略君",
+      "likes": 340,
+      "comments": 56,
+      "url": "https://xiaohongshu.com/l4_test_002",
+      "sentiment": "neutral",
+      "risk_level": "low"
+    }
+  ],
+  "risk_alerts": [],
+  "key_events": [],
+  "event_summary": "【本月事件汇总】数据覆盖 2026-09-01 至 2026-09-06，共采集 3 条真实笔记。\n以上事件均来自小红书真实采集数据，每条事件可通过笔记链接溯源核实。",
+  "sentiment_analysis": "【本月舆情分析】\n一、情感格局：正面0条(0.0%)、中性3条(100.0%)、负面0条(0.0%)。\n正负声量接近，舆情处于中性偏观察状态。\n二、风险态势：高风险0条、中风险0条。\n三、传播力：总互动量2689，篇均互动896。\n传播最热内容：「广州太古汇服务态度差，投诉无门」（互动1120）。\n注：以上分析全部基于小红书真实采集笔记，AI仅做归纳统计，不虚构任何事件。",
+  "summary": "2026-09-01 至 2026-09-06 月报：共监测 3 条笔记；正面0.0% / 负面0.0%",
+  "marketing_nodes": {
+    "nodes": [
+      "白露",
+      "教师节"
+    ],
+    "themes": [
+      "团圆、相思、月光",
+      "清透、秋凉",
+      "尊师、感恩"
+    ],
+    "tonality_advice": "建议调性：premium",
+    "cross": [
+      "精酿节遇白露：微醺、情绪消费、松弛 × 清透、秋凉",
+      "开学季遇白露：新起点、成长、焕新 × 清透、秋凉"
+    ],
+    "global": [
+      "Labor Day (US)遇白露：劳动、假期、夏末 x 清透、秋凉",
+      "NY Fashion Week遇白露：新季、趋势、秀场 x 清透、秋凉"
+    ],
+    "global_nodes": [
+      "Labor Day (US)",
+      "NY Fashion Week"
+    ],
+    "region": {
+      "东南亚": [],
+      "欧洲": [
+        "Oktoberfest 十月节"
+      ],
+      "中东": [],
+      "拉美": [],
+      "北美": [],
+      "东亚": [
+        "韩国 Chuseok 秋夕"
+      ],
+      "澳新": [
+        "AFL 总决赛季"
+      ]
+    }
+  },
+  "emv": {
+    "status": "OK",
+    "emv_total_yuan": 923.88,
+    "exposure_total": 115484.3,
+    "note_count": 3,
+    "available_count": 3,
+    "coverage": 1.0,
+    "is_estimate": true,
+    "disclaimer": "估算口径，非官方媒体投放成本；CPM 来源见 EVIDENCE 文档",
+    "cpm": 8.0,
+    "cpm_source": "行业公开参考区间 3~15 元/千次曝光的中间值（2026，估算口径，非官方媒体投放成本）",
+    "items": [
+      {
+        "note_id": "l4_test_003",
+        "author": "愤怒的消费者",
+        "title": "广州太古汇服务态度差，投诉无门",
+        "sentiment": "neutral",
+        "status": "OK",
+        "emv_yuan": 430.5,
+        "exposure": 53812.8,
+        "weighted_interaction": 1616.0,
+        "cpm": 8.0,
+        "cpm_source": "行业公开参考区间 3~15 元/千次曝光的中间值（2026，估算口径，非官方媒体投放成本）",
+        "exposure_ratio": 33.3,
+        "is_estimate": true,
+        "disclaimer": "估算口径，非官方媒体投放成本；CPM 来源见 EVIDENCE 文档",
+        "basis": "真实互动(likes/comments/collects/shares) × 互动-曝光折算 × CPM"
+      },
+      {
+        "note_id": "l4_test_001",
+        "author": "探店小达人",
+        "title": "广州太古汇15周年庆典活动现场打卡",
+        "sentiment": "neutral",
+        "status": "OK",
+        "emv_yuan": 254.55,
+        "exposure": 31818.1,
+        "weighted_interaction": 955.5,
+        "cpm": 8.0,
+        "cpm_source": "行业公开参考区间 3~15 元/千次曝光的中间值（2026，估算口径，非官方媒体投放成本）",
+        "exposure_ratio": 33.3,
+        "is_estimate": true,
+        "disclaimer": "估算口径，非官方媒体投放成本；CPM 来源见 EVIDENCE 文档",
+        "basis": "真实互动(likes/comments/collects/shares) × 互动-曝光折算 × CPM"
+      },
+      {
+        "note_id": "l4_test_002",
+        "author": "停车攻略君",
+        "title": "太古汇停车场收费标准2026最新",
+        "sentiment": "neutral",
+        "status": "OK",
+        "emv_yuan": 238.83,
+        "exposure": 29853.4,
+        "weighted_interaction": 896.5,
+        "cpm": 8.0,
+        "cpm_source": "行业公开参考区间 3~15 元/千次曝光的中间值（2026，估算口径，非官方媒体投放成本）",
+        "exposure_ratio": 33.3,
+        "is_estimate": true,
+        "disclaimer": "估算口径，非官方媒体投放成本；CPM 来源见 EVIDENCE 文档",
+        "basis": "真实互动(likes/comments/collects/shares) × 互动-曝光折算 × CPM"
+      }
+    ]
+  },
+  "report_id": "RPT-monthly-2026-09-01-2026-09-06",
+  "generated_at": "2026-09-06 15:21:28",
+  "generator_version": "zbc-report-1.0.0",
+  "data_version": "2026-09-01_2026-09-06_20260906152128",
+  "artifact_hash": "3fc7118a1419ca2c4737f2dc37bc36b55f89985d90f832a7e807c4d54df1a47a",
+  "source_snapshot": "notes:publish_date[2026-09-01,2026-09-06];subject:verified;stats_count=3",
+  "_db_row_id": 13,
+  "_artifact_verified": true
+}

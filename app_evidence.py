@@ -27,6 +27,7 @@ AppEvidence
 ├── updated_at
 """
 import os
+import logging
 import json
 import hashlib
 import sqlite3
@@ -88,6 +89,8 @@ CREATE INDEX IF NOT EXISTS idx_app_evidence_status ON app_evidence_records(statu
 CREATE INDEX IF NOT EXISTS idx_app_evidence_hash ON app_evidence_records(evidence_hash);
 """
 
+
+logger = logging.getLogger(__name__)
 
 def _get_db():
     """获取数据库连接"""

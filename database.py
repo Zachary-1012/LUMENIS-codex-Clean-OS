@@ -7,6 +7,15 @@ from datetime import datetime
 from contextlib import contextmanager
 from subject_rules import SUBJECT_FIELDS, subject_hit, subject_sql_and_values
 
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+# 数据库锁超时重试配置
+_DB_MAX_RETRIES = 3
+_DB_RETRY_BASE_DELAY = 0.5  # 秒，指数退避基数
+
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 数据库路径：允许通过环境变量 ZBC_DB_PATH 指定独立库（Staging/测试隔离）。
 # 未设置该变量时默认生产库 data/monitor.db，行为与历史完全一致（向后兼容）。
@@ -291,17 +300,37 @@ def init_db():
             WHERE em.event_id=events.id)''')
 
 
+def _db_connect_with_retry():
+    """带重试的数据库连接，处理 database is locked 错误。"""
+    last_exc = None
+    for attempt in range(_DB_MAX_RETRIES):
+        try:
+            conn = sqlite3.connect(DB_PATH, timeout=30)
+            conn.row_factory = sqlite3.Row
+            conn.execute('PRAGMA busy_timeout=30000')
+            conn.execute('PRAGMA journal_mode=WAL')
+            return conn
+        except sqlite3.OperationalError as e:
+            last_exc = e
+            if 'locked' in str(e).lower() or 'busy' in str(e).lower():
+                delay = _DB_RETRY_BASE_DELAY * (2 ** attempt)
+                logger.warning('DB connect locked (attempt %d/%d), retrying in %.1fs: %s',
+                               attempt + 1, _DB_MAX_RETRIES, delay, e)
+                time.sleep(delay)
+            else:
+                raise
+    raise last_exc
+
+
 @contextmanager
 def get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA busy_timeout=30000')
-    conn.execute('PRAGMA journal_mode=WAL')
+    conn = _db_connect_with_retry()
     try:
         yield conn
         conn.commit()
-    except Exception:
+    except Exception as e:
         conn.rollback()
+        logger.error('DB operation rolled back: %s', e, exc_info=True)
         raise
     finally:
         conn.close()

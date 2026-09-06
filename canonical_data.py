@@ -63,6 +63,134 @@ PRODUCT_ZBMP = "ZBMP"  # Z-Brand Monitoring Platform 母平台
 CANONICAL_TABLE = "canonical_data"
 SCHEMA_VERSION = "1.0.0"
 
+# ============================================================
+# 缺失值标记（P0 红线：禁止 0/"未知" 静默填充）
+# ============================================================
+MISSING = None  # Python 层缺失值统一用 None；JSON 序列化为 null；DB 存储为 NULL
+
+
+def is_missing(value):
+    """判断值是否为缺失（None 或空字符串标记）。真实 0 返回 False。"""
+    if value is None:
+        return True
+    if isinstance(value, str) and value.strip() in ("", "missing", "null", "None"):
+        return True
+    return False
+
+
+def display_missing(value, placeholder="--"):
+    """前端展示辅助：缺失值显示占位符，真实值原样返回。"""
+    if is_missing(value):
+        return placeholder
+    return value
+
+
+
+# ============================================================
+# 时间归一化（P0 红线：publish_datetime vs captured_at 严格分离）
+# ============================================================
+import re as _re_time
+from datetime import datetime as _dt, timedelta as _td
+
+_RELATIVE_PATTERNS = [
+    (_re_time.compile(r'刚刚'), 'just_now'),
+    (_re_time.compile(r'(\d+)\s*分钟前'), 'minutes_ago'),
+    (_re_time.compile(r'(\d+)\s*小时前'), 'hours_ago'),
+    (_re_time.compile(r'昨天\s*(\d{1,2})?:?(\d{1,2})?'), 'yesterday'),
+    (_re_time.compile(r'(\d+)\s*天前'), 'days_ago'),
+    (_re_time.compile(r'(\d+)\s*周前'), 'weeks_ago'),
+    (_re_time.compile(r'(\d+)\s*个月前'), 'months_ago'),
+]
+
+_ABSOLUTE_FORMATS = [
+    "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d",
+    "%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y/%m/%d",
+    "%Y年%m月%d日 %H:%M", "%Y年%m月%d日",
+    "%m-%d %H:%M", "%m/%d %H:%M",
+]
+
+
+def normalize_relative_time(raw_value, reference_time=None):
+    """将相对时间归一化为绝对时间戳。失败返回 None，不得猜测。"""
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, str) and raw_value.strip() in ("", "missing", "null", "None"):
+        return None
+    if isinstance(raw_value, _dt):
+        return raw_value.strftime("%Y-%m-%d %H:%M:%S")
+    s = str(raw_value).strip()
+    ref = reference_time or _dt.now()
+    for fmt in _ABSOLUTE_FORMATS:
+        try:
+            parsed = _dt.strptime(s, fmt)
+            if fmt in ("%m-%d %H:%M", "%m/%d %H:%M"):
+                parsed = parsed.replace(year=ref.year)
+            return parsed.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+    for pattern, kind in _RELATIVE_PATTERNS:
+        m = pattern.search(s)
+        if not m:
+            continue
+        try:
+            if kind == 'just_now':
+                return ref.strftime("%Y-%m-%d %H:%M:%S")
+            elif kind == 'minutes_ago':
+                return (ref - _td(minutes=int(m.group(1)))).strftime("%Y-%m-%d %H:%M:%S")
+            elif kind == 'hours_ago':
+                return (ref - _td(hours=int(m.group(1)))).strftime("%Y-%m-%d %H:%M:%S")
+            elif kind == 'yesterday':
+                yesterday = ref - _td(days=1)
+                hour = int(m.group(1)) if m.group(1) else 0
+                minute = int(m.group(2)) if m.group(2) else 0
+                return yesterday.replace(hour=hour, minute=minute, second=0).strftime("%Y-%m-%d %H:%M:%S")
+            elif kind == 'days_ago':
+                return (ref - _td(days=int(m.group(1)))).strftime("%Y-%m-%d %H:%M:%S")
+            elif kind == 'weeks_ago':
+                return (ref - _td(weeks=int(m.group(1)))).strftime("%Y-%m-%d %H:%M:%S")
+            elif kind == 'months_ago':
+                return (ref - _td(days=int(m.group(1)) * 30)).strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+def verify_time_separation(record):
+    """验证 publish_datetime 与 captured_at 严格分离。"""
+    pd = getattr(record, 'publish_datetime', '')
+    ca = getattr(record, 'captured_at', '')
+    result = {'valid': True, 'publish_datetime': pd, 'captured_at': ca, 'issue': None}
+    if pd and ca and pd == ca:
+        result['valid'] = False
+        result['issue'] = 'publish_datetime 与 captured_at 相同，可能混用'
+    return result
+
+
+
+def _safe_int_or_none(v):
+    """安全转 int，缺失值保留 None（不转为 0）。P0 红线。"""
+    if v is None:
+        return None
+    if isinstance(v, str) and v.strip() in ("", "missing", "null", "None"):
+        return None
+    try:
+        return int(float(v))
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_float_or_none(v):
+    """安全转 float，缺失值保留 None（不转为 0.0）。P0 红线。"""
+    if v is None:
+        return None
+    if isinstance(v, str) and v.strip() in ("", "missing", "null", "None"):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 
 # ============================================================
 # 工具函数
@@ -120,6 +248,7 @@ class CanonicalRecord:
     # --- 身份与追踪（对齐 OSAI CanonicalBase）---
     canonical_id: str = field(default_factory=lambda: _new_canonical_id())
     product_id: str = PRODUCT_CTH
+    domain_id: str = ""  # 双域核心：cth/zbmp/system，__post_init__ 从 product_id 映射
     subject_id: str = ""
     scope: str = "default"
     source_id: str = ""
@@ -158,31 +287,49 @@ class CanonicalRecord:
     confidence: float = 0.0
     relevance_status: str = "relevant"
     verification_status: str = "review"
+    localization_score: Optional[float] = None  # IC-039: 跨文化本地化评分 0-1，None=未评估
 
     # --- 主体与内容类型（AGENTS.md 9.1：严格分开）---
     subject_type: str = ""  # KOS/KOL/KOC/normal_user/media/official/institution
     content_type: str = ""  # UGC/商业/官方/测评/体验/投诉/活动内容
 
-    # --- 互动量（4 字段，与 canonical_metrics.ENGAGEMENT_KEYS 一致）---
-    engagement_likes: int = 0
-    engagement_comments: int = 0
-    engagement_collects: int = 0
-    engagement_shares: int = 0
+    # --- 互动量（P0 红线：缺失为 None，不得静默填 0）---
+    engagement_likes: Optional[int] = None
+    engagement_comments: Optional[int] = None
+    engagement_collects: Optional[int] = None
+    engagement_shares: Optional[int] = None
 
     # --- 标签与事件 ---
     topics: str = "[]"  # JSON array
     tags: str = "[]"  # JSON array
     event_hint: str = ""
 
-    # --- 证据与 AI ---
+    # --- 评论/详情采集状态（P0 红线：失败不静默丢弃）---
+    comments_status: str = "pending"  # pending/success/failed/partial/timeout
+    detail_status: str = "pending"    # pending/success/failed/partial/timeout
+    comments_error: str = ""
+    detail_error: str = ""
+
+    # --- 证据与 AI（P0 红线：AI 结果与原始数据分离存储）---
     evidence_ref: str = ""
     ai_provider: str = "rule"
     ai_model: str = ""
+    ai_analysis: str = ""  # AI 分析结果（独立字段，不覆盖原始 content/sentiment/risk）
     raw_ref: str = ""  # 原始数据引用（JSON: {"table": "notes", "id": 1}）
 
     # --- 时间戳 ---
     created_at: str = field(default_factory=_now_str)
     updated_at: str = field(default_factory=_now_str)
+
+    def __post_init__(self):
+        """双域核心：domain_id 从 product_id 映射，确保二者一致。"""
+        if not self.domain_id:
+            if self.product_id == PRODUCT_CTH:
+                self.domain_id = "cth"
+            elif self.product_id == PRODUCT_ZBMP:
+                self.domain_id = "zbmp"
+            else:
+                self.domain_id = "cth"  # 生产安全默认
 
     def compute_hash(self) -> str:
         """基于 title+content+url 计算内容哈希，用于去重检测。"""
@@ -197,9 +344,11 @@ class CanonicalRecord:
         return asdict(self)
 
     def engagement_total(self) -> int:
-        """互动总量 = likes+comments+collects+shares（与 canonical_metrics 口径一致）。"""
-        return (self.engagement_likes + self.engagement_comments
-                + self.engagement_collects + self.engagement_shares)
+        """互动总量 = likes+comments+collects+shares。缺失值(None)按 0 计入求和，但字段本身保留 None。"""
+        return (
+            (self.engagement_likes or 0) + (self.engagement_comments or 0)
+            + (self.engagement_collects or 0) + (self.engagement_shares or 0)
+        )
 
 
 # ============================================================
@@ -210,6 +359,7 @@ CREATE TABLE IF NOT EXISTS {CANONICAL_TABLE} (
     -- 身份与追踪（对齐 OSAI CanonicalBase）
     canonical_id      TEXT PRIMARY KEY,
     product_id        TEXT DEFAULT 'CTH',
+    domain_id         TEXT DEFAULT 'cth',
     subject_id        TEXT DEFAULT '',
     scope             TEXT DEFAULT 'default',
     source_id         TEXT DEFAULT '',
@@ -248,6 +398,7 @@ CREATE TABLE IF NOT EXISTS {CANONICAL_TABLE} (
     confidence        REAL DEFAULT 0.0,
     relevance_status  TEXT DEFAULT 'relevant',
     verification_status TEXT DEFAULT 'review',
+    localization_score REAL,  -- IC-039: 跨文化本地化评分 0-1，NULL=未评估
 
     -- 主体与内容类型
     subject_type      TEXT DEFAULT '',
@@ -264,10 +415,17 @@ CREATE TABLE IF NOT EXISTS {CANONICAL_TABLE} (
     tags              TEXT DEFAULT '[]',
     event_hint        TEXT DEFAULT '',
 
-    -- 证据与 AI
+    -- 评论/详情采集状态
+    comments_status   TEXT DEFAULT 'pending',
+    detail_status     TEXT DEFAULT 'pending',
+    comments_error    TEXT DEFAULT '',
+    detail_error      TEXT DEFAULT '',
+
+    -- 证据与 AI（AI 结果与原始数据分离）
     evidence_ref      TEXT DEFAULT '',
     ai_provider       TEXT DEFAULT 'rule',
     ai_model          TEXT DEFAULT '',
+    ai_analysis       TEXT DEFAULT '',
     raw_ref           TEXT DEFAULT '',
 
     -- 时间戳
@@ -296,6 +454,16 @@ def ensure_canonical_table(db_path: str) -> None:
         con.execute(CANONICAL_TABLE_DDL)
         for idx_sql in CANONICAL_INDEXES:
             con.execute(idx_sql)
+        # 双域核心迁移：添加 domain_id 列（幂等，已存在则跳过）
+        try:
+            cols = [r[1] for r in con.execute("PRAGMA table_info(canonical_data)").fetchall()]
+            if "domain_id" not in cols:
+                con.execute("ALTER TABLE canonical_data ADD COLUMN domain_id TEXT DEFAULT 'cth'")
+                # 回填：按 product_id 映射 domain_id
+                con.execute("UPDATE canonical_data SET domain_id='cth' WHERE product_id='CTH' AND (domain_id IS NULL OR domain_id='')")
+                con.execute("UPDATE canonical_data SET domain_id='zbmp' WHERE product_id='ZBMP' AND (domain_id IS NULL OR domain_id='')")
+        except Exception as _mig_err:
+            print(f"[canonical_data] domain_id migration skipped: {_mig_err}")
         con.commit()
     finally:
         con.close()
@@ -417,10 +585,10 @@ def note_to_canonical(note_row: Dict[str, Any], product_id: str = PRODUCT_CTH) -
         verification_status=_safe_str(note_row.get("verification_status") or "review"),
         subject_type=_safe_str(note_row.get("subject_type")),
         content_type=_safe_str(note_row.get("content_type")),
-        engagement_likes=_safe_int(note_row.get("likes")),
-        engagement_comments=_safe_int(note_row.get("comments")),
-        engagement_collects=_safe_int(note_row.get("collects")),
-        engagement_shares=_safe_int(note_row.get("shares")),
+        engagement_likes=_safe_int_or_none(note_row.get("likes")),
+        engagement_comments=_safe_int_or_none(note_row.get("comments")),
+        engagement_collects=_safe_int_or_none(note_row.get("collects")),
+        engagement_shares=_safe_int_or_none(note_row.get("shares")),
         topics=_safe_str(note_row.get("topics") or "[]"),
         event_hint=_safe_str(note_row.get("event_hint")),
         ai_provider=_safe_str(note_row.get("ai_provider") or "rule"),
@@ -475,10 +643,10 @@ def web_mention_to_canonical(web_row: Dict[str, Any], product_id: str = PRODUCT_
         verification_status=_safe_str(web_row.get("verification") or "review"),
         subject_type="media",  # 网页提及默认媒体类
         content_type="news",  # 默认新闻类
-        engagement_likes=0,
-        engagement_comments=0,
-        engagement_collects=0,
-        engagement_shares=0,
+        engagement_likes=None,  # web_mentions 无互动字段，显式标记缺失
+        engagement_comments=None,
+        engagement_collects=None,
+        engagement_shares=None,
         topics="[]",
         event_hint="",
         ai_provider=_safe_str(web_row.get("ai_provider") or "rule"),
@@ -553,10 +721,10 @@ def collected_note_to_canonical(collected: Any, source_platform: str = "",
         verification_status="pending",
         subject_type="normal_user",
         content_type="ugc",
-        engagement_likes=_safe_int(getattr(collected, "likes", 0)),
-        engagement_comments=_safe_int(getattr(collected, "comments", 0)),
-        engagement_collects=_safe_int(getattr(collected, "collects", 0)),
-        engagement_shares=_safe_int(getattr(collected, "shares", 0)),
+        engagement_likes=_safe_int_or_none(getattr(collected, "likes", None)),
+        engagement_comments=_safe_int_or_none(getattr(collected, "comments", None)),
+        engagement_collects=_safe_int_or_none(getattr(collected, "collects", None)),
+        engagement_shares=_safe_int_or_none(getattr(collected, "shares", None)),
         topics="[]",
         event_hint="",
         ai_provider="rule",
@@ -676,6 +844,62 @@ def count_canonical(con: sqlite3.Connection) -> Dict[str, int]:
     except Exception:
         pass
     return result
+
+
+
+
+# ============================================================
+# FUNC-CONTENT-02: 情感分析单一真相源（P0 红线：禁止双口径）
+# ============================================================
+def unified_sentiment_analysis(title, content="", topics=None, return_reasons=False):
+    """统一情感分析入口（单一真相源）。
+
+    P0 红线：ai_analyzer.py 与 topic_campaign.py 不得各自实现情感分析口径。
+    所有情感分析必须通过本函数，底层委托 ai_analyzer.analyze_sentiment（主规则引擎）。
+    canonical_data.sentiment 字段为存储层单一真相源。
+    """
+    try:
+        from ai_analyzer import analyze_sentiment as _aa_sentiment
+        return _aa_sentiment(title, content, topics, return_reasons)
+    except Exception:
+        t = (title or "").lower()
+        c = (content or "").lower()
+        text = t + " " + c
+        neg = any(w in text for w in ("垃圾", "投诉", "失望", "避雷", "维权", "退款", "差", "坑"))
+        pos = any(w in text for w in ("好", "赞", "喜欢", "推荐", "满意", "棒", "优秀"))
+        if neg and not pos:
+            return {"sentiment": "negative", "score": -0.5, "reasons": ["fallback"]} if return_reasons else "negative"
+        if pos and not neg:
+            return {"sentiment": "positive", "score": 0.5, "reasons": ["fallback"]} if return_reasons else "positive"
+        return {"sentiment": "neutral", "score": 0.0, "reasons": ["fallback"]} if return_reasons else "neutral"
+
+
+# ============================================================
+# 去重精准（P0 红线：content_hash + platform_id 组合键）
+# ============================================================
+def dedup_key(content_hash, platform_id):
+    """生成去重键：content_hash + platform_id 组合。"""
+    if not content_hash or not platform_id:
+        return None
+    return f"{platform_id}:{content_hash}"
+
+
+def find_duplicates(con, content_hash, platform_id, canonical_id=None):
+    """查找与给定 content_hash + platform_id 重复的记录。"""
+    if not content_hash or not platform_id:
+        return []
+    sql = f"SELECT canonical_id FROM {CANONICAL_TABLE} WHERE content_hash=? AND source_platform=?"
+    params = [content_hash, platform_id]
+    if canonical_id:
+        sql += " AND canonical_id != ?"
+        params.append(canonical_id)
+    rows = con.execute(sql, tuple(params)).fetchall()
+    return [r[0] for r in rows]
+
+
+def is_duplicate(con, content_hash, platform_id, canonical_id=None):
+    """判断是否存在重复记录（content_hash + platform_id 组合）。"""
+    return len(find_duplicates(con, content_hash, platform_id, canonical_id)) > 0
 
 
 # ============================================================

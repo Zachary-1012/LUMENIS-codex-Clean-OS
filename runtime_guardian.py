@@ -280,6 +280,8 @@ CREATE TABLE IF NOT EXISTS runtime_guardian_workers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     worker_id TEXT UNIQUE NOT NULL,
     worker_name TEXT DEFAULT '',
+    domain_id TEXT DEFAULT 'system',
+    product_id TEXT DEFAULT 'SYSTEM',
     status TEXT DEFAULT 'idle',
     lease_owner TEXT DEFAULT '',
     run_id TEXT DEFAULT '',
@@ -312,6 +314,8 @@ CREATE TABLE IF NOT EXISTS runtime_guardian_dlq (
     dlq_id TEXT UNIQUE NOT NULL,
     worker_id TEXT DEFAULT '',
     run_id TEXT DEFAULT '',
+    domain_id TEXT DEFAULT 'system',
+    product_id TEXT DEFAULT 'SYSTEM',
     task_type TEXT DEFAULT '',
     payload TEXT DEFAULT '{}',
     error TEXT DEFAULT '',
@@ -348,6 +352,16 @@ def init_db(db_path: Optional[str] = None) -> None:
     """初始化数据库表（向后兼容：CREATE TABLE IF NOT EXISTS）"""
     with _get_db(db_path) as conn:
         conn.executescript(_SCHEMA_SQL)
+        # 双域核心迁移：添加 domain_id / product_id 列（幂等）
+        for tbl in ('runtime_guardian_workers', 'runtime_guardian_dlq'):
+            try:
+                cols = [r[1] for r in conn.execute(f"PRAGMA table_info({tbl})").fetchall()]
+                if 'domain_id' not in cols:
+                    conn.execute(f"ALTER TABLE {tbl} ADD COLUMN domain_id TEXT DEFAULT 'system'")
+                if 'product_id' not in cols:
+                    conn.execute(f"ALTER TABLE {tbl} ADD COLUMN product_id TEXT DEFAULT 'SYSTEM'")
+            except Exception as _mig_err:
+                print(f"[runtime_guardian] {tbl} domain migration skipped: {_mig_err}")
 
 
 # ---------------------------------------------------------------------------
@@ -376,23 +390,25 @@ class DLQ:
         *,
         worker_id: str = "",
         run_id: str = "",
+        domain_id: str = "system",
+        product_id: str = "SYSTEM",
         task_type: str = "",
         payload: Optional[Dict[str, Any]] = None,
         error: str = "",
         error_type: str = "",
         max_attempts: int = DEFAULT_MAX_RETRIES,
     ) -> str:
-        """入队一条死信，返回 dlq_id"""
+        """入队一条死信，返回 dlq_id。双域核心：必须携带 domain_id/product_id。"""
         dlq_id = uuid.uuid4().hex[:16]
         now = _now_iso()
         with self._conn() as conn:
             conn.execute(
                 """INSERT INTO runtime_guardian_dlq
-                   (dlq_id, worker_id, run_id, task_type, payload, error, error_type,
+                   (dlq_id, worker_id, run_id, domain_id, product_id, task_type, payload, error, error_type,
                     attempts, max_attempts, status, created_at, updated_at, last_attempt_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    dlq_id, worker_id, run_id, task_type,
+                    dlq_id, worker_id, run_id, domain_id, product_id, task_type,
                     json.dumps(payload or {}, ensure_ascii=False),
                     error, error_type, 0, max_attempts,
                     DLQStatus.PENDING.value, now, now, now,
@@ -695,24 +711,30 @@ class RuntimeGuardian:
     # ------------------------------------------------------------------
     # Worker 注册与管理
     # ------------------------------------------------------------------
-    def register_worker(self, worker_name: str, metadata: Optional[Dict[str, Any]] = None) -> str:
-        """注册一个 worker，返回 worker_id"""
+    def register_worker(self, worker_name: str, metadata: Optional[Dict[str, Any]] = None,
+                        domain_id: str = "system", product_id: str = "SYSTEM") -> str:
+        """注册一个 worker，返回 worker_id。双域核心：必须携带 domain_id/product_id。"""
         worker_id = uuid.uuid4().hex[:16]
         now = _now_iso()
+        meta = dict(metadata or {})
+        meta.setdefault("domain_id", domain_id)
+        meta.setdefault("product_id", product_id)
         with _get_db(self._db_path) as conn:
             conn.execute(
                 """INSERT INTO runtime_guardian_workers
-                   (worker_id, worker_name, status, metadata, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                   (worker_id, worker_name, domain_id, product_id, status, metadata, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    worker_id, worker_name, WorkerStatus.IDLE.value,
-                    json.dumps(metadata or {}, ensure_ascii=False), now, now,
+                    worker_id, worker_name, domain_id, product_id, WorkerStatus.IDLE.value,
+                    json.dumps(meta, ensure_ascii=False), now, now,
                 ),
             )
         with self._lock:
             self._workers[worker_id] = {
                 "worker_id": worker_id,
                 "worker_name": worker_name,
+                "domain_id": domain_id,
+                "product_id": product_id,
                 "status": WorkerStatus.IDLE.value,
             }
             self._heartbeats[worker_id] = Heartbeat()
@@ -877,14 +899,23 @@ class RuntimeGuardian:
     # ------------------------------------------------------------------
     # Heartbeat 心跳
     # ------------------------------------------------------------------
-    def heartbeat(self, worker_id: str) -> bool:
-        """发送心跳，更新 last_heartbeat_at"""
+    def heartbeat(self, worker_id: str, domain_id: Optional[str] = None) -> bool:
+        """发送心跳，更新 last_heartbeat_at。双域核心：心跳携带 domain_id。"""
         now = _now_iso()
         with self._lock:
             if worker_id not in self._heartbeats:
                 self._heartbeats[worker_id] = Heartbeat()
             self._heartbeats[worker_id].beat()
-        return self._update_worker_fields(worker_id, last_heartbeat_at=now)
+        fields = {"last_heartbeat_at": now}
+        if domain_id:
+            fields["domain_id"] = domain_id
+            # 同步更新 metadata 中的 domain_id
+            worker = self.get_worker(worker_id)
+            if worker:
+                meta = worker.get("metadata", {}) or {}
+                meta["domain_id"] = domain_id
+                fields["metadata"] = json.dumps(meta, ensure_ascii=False)
+        return self._update_worker_fields(worker_id, **fields)
 
     def is_worker_alive(self, worker_id: str) -> bool:
         """检查 worker 是否存活（心跳未超时）。从未发送心跳的 worker 视为不存活。"""
@@ -1068,6 +1099,69 @@ class RuntimeGuardian:
     def reap_now(self, heartbeat_timeout: float = 60.0) -> Dict[str, List[str]]:
         """立即执行一次回收"""
         return self._reaper.run_cycle(heartbeat_timeout)
+
+    # ------------------------------------------------------------------
+    # 双域核心：按域查询任务/Worker
+    # ------------------------------------------------------------------
+    def get_tasks_by_domain(self, domain_id: str) -> Dict[str, Any]:
+        """按域查询任务列表（workers + DLQ entries），实现任务队列按域隔离。
+
+        返回 {domain_id, workers, dlq_entries, total_active, total_failed}。
+        CTH 大规模采集不拖垮 ZBMP：调用方按域分别查询和调度。
+        """
+        with _get_db(self._db_path) as conn:
+            workers = []
+            try:
+                rows = conn.execute(
+                    "SELECT * FROM runtime_guardian_workers WHERE domain_id = ? ORDER BY created_at DESC",
+                    (domain_id,),
+                ).fetchall()
+                for row in rows:
+                    d = dict(row)
+                    try:
+                        d["metadata"] = json.loads(d.get("metadata") or "{}")
+                    except (json.JSONDecodeError, TypeError):
+                        d["metadata"] = {}
+                    workers.append(d)
+            except Exception as _e:
+                workers = []
+
+            dlq_entries = []
+            try:
+                rows = conn.execute(
+                    "SELECT * FROM runtime_guardian_dlq WHERE domain_id = ? ORDER BY created_at DESC LIMIT 100",
+                    (domain_id,),
+                ).fetchall()
+                for row in rows:
+                    d = dict(row)
+                    try:
+                        d["payload"] = json.loads(d.get("payload") or "{}")
+                    except (json.JSONDecodeError, TypeError):
+                        d["payload"] = {}
+                    dlq_entries.append(d)
+            except Exception as _e:
+                dlq_entries = []
+
+        running = sum(1 for w in workers if w.get("status") == WorkerStatus.RUNNING.value)
+        failed = sum(1 for w in workers if w.get("status") in (
+            WorkerStatus.FAILED.value, WorkerStatus.DEAD.value))
+        return {
+            "domain_id": domain_id,
+            "workers": workers,
+            "dlq_entries": dlq_entries,
+            "total_workers": len(workers),
+            "running": running,
+            "failed": failed,
+            "dlq_count": len(dlq_entries),
+        }
+
+    def list_workers_by_domain(self, domain_id: str, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """按域列出 workers（Guardian 按域隔离 worker 列表）。"""
+        result = self.get_tasks_by_domain(domain_id)
+        workers = result.get("workers", [])
+        if status:
+            workers = [w for w in workers if w.get("status") == status]
+        return workers
 
     # ------------------------------------------------------------------
     # 健康检查与状态

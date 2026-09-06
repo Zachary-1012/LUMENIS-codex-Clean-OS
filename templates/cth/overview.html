@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}CTH Overview · 序境 LUMENIS{% endblock %}
+{% block page_title %}CTH · Guangzhou Taikoo Hui{% endblock %}
+
+{% block content %}
+<div class="lm-viewport" data-domain="cth">
+  <div class="lm-viewport__context">
+    <div class="lm-section-header" style="margin:0;">
+      <div class="lm-section-header__title">CTH Overview</div>
+      <div class="lm-time-dimension" id="cth-time-dim">
+        <button class="lm-time-pill is-active" data-range="today">TODAY</button>
+        <button class="lm-time-pill" data-range="7d">7D</button>
+        <button class="lm-time-pill" data-range="30d">30D</button>
+      </div>
+    </div>
+    <p style="color:var(--lm-color-text-secondary);margin:4px 0 0;">广州太古汇生产真相域 · 199品牌 / 9业态 · subject_rules 保护</p>
+  </div>
+
+  <!-- KPI Cards -->
+  <section class="lm-panel" data-state="loading" id="cth-kpi-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Core Metrics</span>
+      <span class="lm-status-badge lm-status-badge--info">CTH Protected</span>
+      <button class="lm-btn lm-btn--icon" onclick="refreshCTH()" title="刷新"><span data-icon="learning"></span></button>
+    </div>
+    <div class="lm-panel__body">
+      <div class="xj-kpi-row xj-stagger" id="cth-kpi-row">
+        <div class="xj-kpi-card" id="cth-kpi-total"></div>
+        <div class="xj-kpi-card" id="cth-kpi-positive"></div>
+        <div class="xj-kpi-card" id="cth-kpi-negative"></div>
+        <div class="xj-kpi-card" id="cth-kpi-risk"></div>
+        <div class="xj-kpi-card" id="cth-kpi-engagement"></div>
+        <div class="xj-kpi-card" id="cth-kpi-official"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Charts: 舆情趋势 + 风险分布 -->
+  <div class="lm-grid lm-grid--cards">
+    <section class="lm-panel" data-state="loading" id="cth-trend-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">舆情趋势</span>
+        <span class="lm-badge">实时</span>
+      </div>
+      <div class="lm-panel__body">
+        <div class="xj-trend-container" id="cth-trend-chart" style="min-height:180px;"></div>
+      </div>
+    </section>
+
+    <section class="lm-panel" data-state="loading" id="cth-risk-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">风险分布</span>
+      </div>
+      <div class="lm-panel__body" style="display:flex;align-items:center;justify-content:center;min-height:180px;">
+        <div class="xj-donut-container" id="cth-risk-donut"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 小红书数据 + 风险笔记 -->
+  <div class="lm-grid lm-grid--cards">
+    <section class="lm-panel" data-state="loading" id="cth-xhs-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">小红书数据</span>
+        <span class="lm-badge">XHS</span>
+      </div>
+      <div class="lm-panel__body">
+        <div id="cth-xhs-content"></div>
+        <div class="xj-empty" id="cth-xhs-empty" style="display:none;">暂无小红书数据</div>
+      </div>
+    </section>
+
+    <section class="lm-panel" data-state="loading" id="cth-risknotes-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">高风险笔记</span>
+        <a class="lm-nav-item lm-nav-item--inline" href="{{ url_for('lumenis.cth_risk') }}" style="margin-left:auto;">查看全部 →</a>
+      </div>
+      <div class="lm-panel__body">
+        <div id="cth-risknotes-content"></div>
+        <div class="xj-empty" id="cth-risknotes-empty" style="display:none;">暂无高风险笔记</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+function refreshCTH() {
+  // KPI from real /api/domain/overview (CTH domain)
+  xjViz.api('/domain/overview', {domain: 'cth'}).then(function(d) {
+    if (!d.ok) throw new Error(d.error || 'API error');
+    var stats = d.stats || {};
+    var sentiment = xjViz.fn.FN_SENTIMENT_COUNT(stats);
+    var risk = xjViz.fn.FN_RISK_COUNT(stats);
+    var engagement = xjViz.fn.FN_ENGAGEMENT(stats);
+    xjViz.kpi('#cth-kpi-total', '笔记总数', sentiment.total, {});
+    xjViz.kpi('#cth-kpi-positive', '正面', sentiment.positive, {color: 'pos'});
+    xjViz.kpi('#cth-kpi-negative', '负面', sentiment.negative, {color: 'neg'});
+    xjViz.kpi('#cth-kpi-risk', '高风险', risk.high, {color: 'warn'});
+    xjViz.kpi('#cth-kpi-engagement', '互动量', engagement.total, {});
+    xjViz.kpi('#cth-kpi-official', '官方号', Number(stats.official_count || 0), {});
+    // Risk donut
+    xjViz.donut('#cth-risk-donut', [
+      {label: '高风险', value: risk.high, color: '#c0463a'},
+      {label: '中风险', value: risk.medium, color: '#e8a33d'},
+      {label: '低风险', value: risk.low, color: '#2f9e6e'}
+    ], {centerLabel: '风险分布', size: 130, thickness: 10});
+    document.getElementById('cth-kpi-panel').setAttribute('data-state', 'success');
+    document.getElementById('cth-risk-panel').setAttribute('data-state', 'success');
+  }).catch(function(e) {
+    document.getElementById('cth-kpi-panel').setAttribute('data-state', 'error');
+    console.error('CTH KPI error:', e);
+  });
+
+  // Trend from real /api/metric-trend
+  xjViz.api('/metric-trend', {entity_type: 'topic', entity_key: 'guangzhou_taikoo_hui', limit: 30}).then(function(d) {
+    if (d.ok && d.trend && d.trend.length > 0) {
+      var series = xjViz.fn.FN_TREND_SERIES(d.trend, 'total');
+      xjViz.trend('#cth-trend-chart', series, {type: 'area', color: '#2f9e6e', height: 160});
+      document.getElementById('cth-trend-panel').setAttribute('data-state', 'success');
+    } else {
+      // Fallback: use stats-based empty state
+      document.getElementById('cth-trend-chart').innerHTML = '<div class="xj-empty" style="padding:40px;text-align:center;">暂无趋势数据<br><span style="font-size:11px;">metric-trend API 返回空，可能采集尚未启动</span></div>';
+      document.getElementById('cth-trend-panel').setAttribute('data-state', 'empty');
+    }
+  }).catch(function(e) {
+    document.getElementById('cth-trend-panel').setAttribute('data-state', 'error');
+    console.error('CTH trend error:', e);
+  });
+
+  // Risk notes from real /api/domain/risk
+  xjViz.api('/domain/risk', {domain: 'cth'}).then(function(d) {
+    if (d.ok && d.risk_notes && d.risk_notes.length > 0) {
+      var notes = d.risk_notes.slice(0, 5);
+      xjViz.table('#cth-risknotes-content', notes, [
+        {key: 'title', label: '标题'},
+        {key: 'risk_level', label: '风险等级'},
+        {key: 'sentiment', label: '情感'}
+      ]);
+      document.getElementById('cth-risknotes-panel').setAttribute('data-state', 'success');
+    } else {
+      document.getElementById('cth-risknotes-empty').style.display = '';
+      document.getElementById('cth-risknotes-panel').setAttribute('data-state', 'empty');
+    }
+  }).catch(function(e) {
+    document.getElementById('cth-risknotes-panel').setAttribute('data-state', 'error');
+  });
+
+  // XHS data from real /api/hot-notes
+  xjViz.api('/hot-notes', {limit: 5}).then(function(d) {
+    if (d.ok && d.notes && d.notes.length > 0) {
+      xjViz.table('#cth-xhs-content', d.notes, [
+        {key: 'title', label: '笔记标题'},
+        {key: 'likes', label: '点赞'},
+        {key: 'comments', label: '评论'}
+      ]);
+      document.getElementById('cth-xhs-panel').setAttribute('data-state', 'success');
+    } else {
+      document.getElementById('cth-xhs-empty').style.display = '';
+      document.getElementById('cth-xhs-panel').setAttribute('data-state', 'empty');
+    }
+  }).catch(function(e) {
+    document.getElementById('cth-xhs-panel').setAttribute('data-state', 'error');
+  });
+}
+document.addEventListener('DOMContentLoaded', refreshCTH);
+setInterval(refreshCTH, 30000);
+</script>
+{% endblock %}

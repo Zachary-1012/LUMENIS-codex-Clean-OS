@@ -1,0 +1,43 @@
+{
+  "digest_date": "2026-09-06",
+  "total_found": 0,
+  "effective_count": 0,
+  "positive_count": 0,
+  "neutral_count": 0,
+  "risk_count": 0,
+  "risk_index": 0.0,
+  "brand_health_score": 50.0,
+  "ai_summary": "今日监测到0条有效舆情，风险较低（风险指数0.0），品牌健康度一般（50.0分）。0条内容需关注。首要行动：今日舆情整体平稳，按常规节奏监测即可，无需特殊干预。…",
+  "executive_summary": "今日监测到0条有效舆情，风险较低（风险指数0.0），品牌健康度一般（50.0分）。0条内容需关注。首要行动：今日舆情整体平稳，按常规节奏监测即可，无需特殊干预。…",
+  "executive_insight": {
+    "executive_insight": "今日暂无有效舆情数据，建议检查采集任务是否正常运行。",
+    "priority": "low",
+    "focus_area": "舆情监测系统",
+    "key_metric": "采集任务状态",
+    "provider": "ollama"
+  },
+  "trend_alerts": [
+    {
+      "type": "data_gap",
+      "severity": "high",
+      "message": "今日无有效舆情数据，建议检查采集任务是否正常运行",
+      "metric": "effective_count=0"
+    }
+  ],
+  "risk_alerts": [],
+  "key_insights": [
+    {
+      "insight": "今日暂无有效舆情数据，建议检查采集任务是否正常运行。",
+      "type": "system"
+    }
+  ],
+  "action_items": [
+    {
+      "priority": "常规",
+      "action": "今日舆情整体平稳，按常规节奏监测即可，无需特殊干预。",
+      "owner": "舆情团队",
+      "deadline": "持续"
+    }
+  ],
+  "top_events": []
+}

@@ -9,8 +9,8 @@
 |---|---|
 | PLANNED | 0 |
 | IMPLEMENTED | 88 |
-| INTEGRATED | 206 |
-| TESTED | 40 |
+| INTEGRATED | 192 |
+| TESTED | 54 |
 | VERIFIED | 0 |
 | RELEASED | 0 |
 | OPERATING | 0 |
@@ -94,18 +94,18 @@
 | F-0035 | 25 AI Provider/Gateway | AI Engine - BrowserCapabilityRegistry | osai_engine\browser_capability.py | 10 | INTEGRATED | No | Source scan: 11 functions, 11 real, 0 stubs |
 | F-0036 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\browser_capability.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
 | F-0037 | 25 AI Provider/Gateway | AI Engine - browser_executor.py | osai_engine\browser_executor.py | 10 | IMPLEMENTED | No | Source scan: 12 functions, 12 real, 0 stubs |
-| F-0038 | 25 AI Provider/Gateway | AI Engine - Action | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0039 | 25 AI Provider/Gateway | AI Engine - CanonicalBase | osai_engine\canonical_data.py | 3 | INTEGRATED | No | Source scan: 3 functions, 3 real, 0 stubs |
-| F-0040 | 25 AI Provider/Gateway | AI Engine - Case | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0041 | 25 AI Provider/Gateway | AI Engine - Decision | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0042 | 25 AI Provider/Gateway | AI Engine - Evaluation | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0043 | 25 AI Provider/Gateway | AI Engine - Event | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0044 | 25 AI Provider/Gateway | AI Engine - Evidence | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0045 | 25 AI Provider/Gateway | AI Engine - Finding | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0046 | 25 AI Provider/Gateway | AI Engine - LearningAsset | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0047 | 25 AI Provider/Gateway | AI Engine - Outcome | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0048 | 25 AI Provider/Gateway | AI Engine - Source | osai_engine\canonical_data.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0049 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\canonical_data.py | 4 | IMPLEMENTED | No | Source scan: 4 functions, 4 real, 0 stubs |
+| F-0038 | 25 AI Provider/Gateway | AI Engine - Action | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0039 | 25 AI Provider/Gateway | AI Engine - CanonicalBase | osai_engine\canonical_data.py | 3 | TESTED | Yes | Source scan: 3 functions, 3 real, 0 stubs |
+| F-0040 | 25 AI Provider/Gateway | AI Engine - Case | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0041 | 25 AI Provider/Gateway | AI Engine - Decision | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0042 | 25 AI Provider/Gateway | AI Engine - Evaluation | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0043 | 25 AI Provider/Gateway | AI Engine - Event | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0044 | 25 AI Provider/Gateway | AI Engine - Evidence | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0045 | 25 AI Provider/Gateway | AI Engine - Finding | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0046 | 25 AI Provider/Gateway | AI Engine - LearningAsset | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0047 | 25 AI Provider/Gateway | AI Engine - Outcome | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0048 | 25 AI Provider/Gateway | AI Engine - Source | osai_engine\canonical_data.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0049 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\canonical_data.py | 4 | IMPLEMENTED | Yes | Source scan: 4 functions, 4 real, 0 stubs |
 | F-0050 | 25 AI Provider/Gateway | AI Engine - canonical_skill_registry.py | osai_engine\canonical_skill_registry.py | 10 | INTEGRATED | No | Source scan: 10 functions, 10 real, 0 stubs |
 | F-0051 | 25 AI Provider/Gateway | AI Engine - Capability | osai_engine\capability_registry.py | 2 | INTEGRATED | No | Source scan: 2 functions, 2 real, 0 stubs |
 | F-0052 | 25 AI Provider/Gateway | AI Engine - CapabilityRegistry | osai_engine\capability_registry.py | 10 | INTEGRATED | No | Source scan: 10 functions, 10 real, 0 stubs |
@@ -131,11 +131,11 @@
 | F-0072 | 25 AI Provider/Gateway | AI Engine - EvaluationRegistry | osai_engine\evaluation_contract.py | 4 | INTEGRATED | No | Source scan: 4 functions, 4 real, 0 stubs |
 | F-0073 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\evaluation_contract.py | 3 | INTEGRATED | No | Source scan: 3 functions, 3 real, 0 stubs |
 | F-0074 | 25 AI Provider/Gateway | AI Engine - evidence.py | osai_engine\evidence.py | 1 | TESTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0075 | 25 AI Provider/Gateway | AI Engine - BusinessEvidenceChain | osai_engine\evidence_chain.py | 4 | INTEGRATED | No | Source scan: 4 functions, 4 real, 0 stubs |
-| F-0076 | 25 AI Provider/Gateway | AI Engine - EvidenceChain | osai_engine\evidence_chain.py | 5 | INTEGRATED | No | Source scan: 5 functions, 5 real, 0 stubs |
-| F-0077 | 25 AI Provider/Gateway | AI Engine - EvidenceChainRegistry | osai_engine\evidence_chain.py | 7 | INTEGRATED | No | Source scan: 7 functions, 7 real, 0 stubs |
-| F-0078 | 25 AI Provider/Gateway | AI Engine - EvidenceNode | osai_engine\evidence_chain.py | 2 | INTEGRATED | No | Source scan: 2 functions, 2 real, 0 stubs |
-| F-0079 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\evidence_chain.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0075 | 25 AI Provider/Gateway | AI Engine - BusinessEvidenceChain | osai_engine\evidence_chain.py | 4 | TESTED | Yes | Source scan: 4 functions, 4 real, 0 stubs |
+| F-0076 | 25 AI Provider/Gateway | AI Engine - EvidenceChain | osai_engine\evidence_chain.py | 5 | TESTED | Yes | Source scan: 5 functions, 5 real, 0 stubs |
+| F-0077 | 25 AI Provider/Gateway | AI Engine - EvidenceChainRegistry | osai_engine\evidence_chain.py | 7 | TESTED | Yes | Source scan: 7 functions, 7 real, 0 stubs |
+| F-0078 | 25 AI Provider/Gateway | AI Engine - EvidenceNode | osai_engine\evidence_chain.py | 2 | TESTED | Yes | Source scan: 2 functions, 2 real, 0 stubs |
+| F-0079 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\evidence_chain.py | 1 | TESTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
 | F-0080 | 25 AI Provider/Gateway | AI Engine - EvidenceEdge | osai_engine\evidence_graph.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
 | F-0081 | 25 AI Provider/Gateway | AI Engine - EvidenceGraph | osai_engine\evidence_graph.py | 6 | INTEGRATED | No | Source scan: 6 functions, 6 real, 0 stubs |
 | F-0082 | 25 AI Provider/Gateway | AI Engine - EvidenceNode | osai_engine\evidence_graph.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
@@ -160,13 +160,13 @@
 | F-0101 | 25 AI Provider/Gateway | AI Engine - PermissionContractRegistry | osai_engine\permission_contract.py | 4 | INTEGRATED | No | Source scan: 4 functions, 4 real, 0 stubs |
 | F-0102 | 25 AI Provider/Gateway | AI Engine - PermissionRequest | osai_engine\permission_contract.py | 3 | INTEGRATED | No | Source scan: 3 functions, 3 real, 0 stubs |
 | F-0103 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\permission_contract.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0104 | 25 AI Provider/Gateway | AI Engine - permission_gate.py | osai_engine\permission_gate.py | 10 | INTEGRATED | No | Source scan: 10 functions, 10 real, 0 stubs |
+| F-0104 | 25 AI Provider/Gateway | AI Engine - permission_gate.py | osai_engine\permission_gate.py | 10 | TESTED | Yes | Source scan: 10 functions, 10 real, 0 stubs |
 | F-0105 | 25 AI Provider/Gateway | AI Engine - ReleaseCandidate | osai_engine\release_safety.py | 2 | IMPLEMENTED | No | Source scan: 2 functions, 2 real, 0 stubs |
 | F-0106 | 25 AI Provider/Gateway | AI Engine - ReleaseSafetyManager | osai_engine\release_safety.py | 4 | INTEGRATED | No | Source scan: 4 functions, 4 real, 0 stubs |
 | F-0107 | 25 AI Provider/Gateway | AI Engine - RepoRecord | osai_engine\repository_contract.py | 2 | INTEGRATED | No | Source scan: 2 functions, 2 real, 0 stubs |
 | F-0108 | 25 AI Provider/Gateway | AI Engine - RepositoryContractRegistry | osai_engine\repository_contract.py | 5 | INTEGRATED | No | Source scan: 5 functions, 5 real, 0 stubs |
 | F-0109 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\repository_contract.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0110 | 25 AI Provider/Gateway | AI Engine - repository_registry.py | osai_engine\repository_registry.py | 10 | IMPLEMENTED | No | Source scan: 10 functions, 10 real, 0 stubs |
+| F-0110 | 25 AI Provider/Gateway | AI Engine - repository_registry.py | osai_engine\repository_registry.py | 10 | IMPLEMENTED | Yes | Source scan: 10 functions, 10 real, 0 stubs |
 | F-0111 | 25 AI Provider/Gateway | AI Engine - research.py | osai_engine\research.py | 5 | INTEGRATED | No | Source scan: 5 functions, 5 real, 0 stubs |
 | F-0112 | 25 AI Provider/Gateway | AI Engine - ResearchPipeline | osai_engine\research_pipeline.py | 7 | INTEGRATED | No | Source scan: 7 functions, 7 real, 0 stubs |
 | F-0113 | 25 AI Provider/Gateway | AI Engine - ResearchRecord | osai_engine\research_pipeline.py | 3 | INTEGRATED | No | Source scan: 3 functions, 3 real, 0 stubs |
@@ -175,9 +175,9 @@
 | F-0116 | 25 AI Provider/Gateway | AI Engine - RuntimeRegistry | osai_engine\runtime_contract.py | 5 | INTEGRATED | No | Source scan: 5 functions, 5 real, 0 stubs |
 | F-0117 | 25 AI Provider/Gateway | AI Engine - RuntimeState | osai_engine\runtime_contract.py | 4 | INTEGRATED | No | Source scan: 4 functions, 4 real, 0 stubs |
 | F-0118 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\runtime_contract.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0119 | 25 AI Provider/Gateway | AI Engine - Lease | osai_engine\runtime_guardian.py | 2 | INTEGRATED | No | Source scan: 2 functions, 2 real, 0 stubs |
-| F-0120 | 25 AI Provider/Gateway | AI Engine - RuntimeGuardian | osai_engine\runtime_guardian.py | 8 | INTEGRATED | No | Source scan: 8 functions, 8 real, 0 stubs |
-| F-0121 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\runtime_guardian.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0119 | 25 AI Provider/Gateway | AI Engine - Lease | osai_engine\runtime_guardian.py | 2 | TESTED | Yes | Source scan: 2 functions, 2 real, 0 stubs |
+| F-0120 | 25 AI Provider/Gateway | AI Engine - RuntimeGuardian | osai_engine\runtime_guardian.py | 8 | TESTED | Yes | Source scan: 8 functions, 8 real, 0 stubs |
+| F-0121 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\runtime_guardian.py | 1 | IMPLEMENTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
 | F-0122 | 25 AI Provider/Gateway | AI Engine - InvocationRecord | osai_engine\skill_execution_contract.py | 3 | INTEGRATED | No | Source scan: 3 functions, 3 real, 0 stubs |
 | F-0123 | 25 AI Provider/Gateway | AI Engine - SkillExecutionContract | osai_engine\skill_execution_contract.py | 3 | INTEGRATED | No | Source scan: 3 functions, 3 real, 0 stubs |
 | F-0124 | 25 AI Provider/Gateway | AI Engine - Module Functions | osai_engine\skill_execution_contract.py | 2 | IMPLEMENTED | No | Source scan: 2 functions, 2 real, 0 stubs |
@@ -242,7 +242,7 @@
 | F-0183 | 44 Browser/CDP/Login | Browser/CDP - browser_runtime_api.py | browser_runtime_api.py | 3 | INTEGRATED | No | Source scan: 3 functions, 3 real, 0 stubs |
 | F-0184 | 44 Browser/CDP/Login | Browser/CDP - browser_surface.py | browser_surface.py | 10 | IMPLEMENTED | Yes | Source scan: 48 functions, 48 real, 0 stubs |
 | F-0185 | 44 Browser/CDP/Login | Browser/CDP - browser_surface_api.py | browser_surface_api.py | 10 | INTEGRATED | No | Source scan: 31 functions, 31 real, 0 stubs |
-| F-0186 | 01 Product/Domain/Subject | Product/Subject - cache_manager.py | cache_manager.py | 10 | INTEGRATED | No | Source scan: 11 functions, 11 real, 0 stubs |
+| F-0186 | 01 Product/Domain/Subject | Product/Subject - cache_manager.py | cache_manager.py | 10 | TESTED | Yes | Source scan: 11 functions, 11 real, 0 stubs |
 | F-0187 | 15 Metric/Statistics | Metrics/Stats - canonical_metrics.py | canonical_metrics.py | 10 | TESTED | Yes | Source scan: 12 functions, 12 real, 0 stubs |
 | F-0188 | 12 Case/Public Opinion | Case Management - case_ai_evaluate.py | case_ai_evaluate.py | 5 | INTEGRATED | No | Source scan: 5 functions, 5 real, 0 stubs |
 | F-0189 | 12 Case/Public Opinion | Case Management - case_deep_analysis.py | case_deep_analysis.py | 10 | INTEGRATED | No | Source scan: 12 functions, 12 real, 0 stubs |
@@ -257,7 +257,7 @@
 | F-0198 | 03 Data Collection | Collector - collector_guard_integration.py | collector_guard_integration.py | 5 | TESTED | Yes | Source scan: 5 functions, 5 real, 0 stubs |
 | F-0199 | 03 Data Collection | Collector - collector_v2_integration.py | collector_v2_integration.py | 8 | IMPLEMENTED | No | Source scan: 8 functions, 8 real, 0 stubs |
 | F-0200 | 48 Security/Audit | Security - compliance_gate.py | compliance_gate.py | 7 | TESTED | Yes | Source scan: 7 functions, 7 real, 0 stubs |
-| F-0201 | 02 Repository/Runtime/Environment | Config/Environment - config.py | config.py | 10 | INTEGRATED | No | Source scan: 16 functions, 16 real, 0 stubs |
+| F-0201 | 02 Repository/Runtime/Environment | Config/Environment - config.py | config.py | 10 | TESTED | Yes | Source scan: 16 functions, 16 real, 0 stubs |
 | F-0202 | 25 AI Provider/Gateway | AI Engine - context_intelligence.py | context_intelligence.py | 5 | TESTED | Yes | Source scan: 5 functions, 5 real, 0 stubs |
 | F-0203 | 01 Product/Domain/Subject | Product/Subject - lumenis_adapter.py | contracts\lumenis_adapter.py | 8 | IMPLEMENTED | Yes | Source scan: 8 functions, 8 real, 0 stubs |
 | F-0204 | 22 Report | Report Generation - daily_report.py | daily_report.py | 10 | TESTED | Yes | Source scan: 14 functions, 14 real, 0 stubs |
@@ -272,7 +272,7 @@
 | F-0213 | 01 Product/Domain/Subject | Product/Subject - emv.py | emv.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
 | F-0214 | 15 Metric/Statistics | Metrics/Stats - engineering_metrics.py | engineering_metrics.py | 9 | IMPLEMENTED | Yes | Source scan: 9 functions, 9 real, 0 stubs |
 | F-0215 | 01 Product/Domain/Subject | Product/Subject - evaluate_system_timing.py | evaluate_system_timing.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0216 | 40 Evaluation | Evaluation - evaluation_system.py | evaluation_system.py | 10 | INTEGRATED | No | Source scan: 15 functions, 15 real, 0 stubs |
+| F-0216 | 40 Evaluation | Evaluation - evaluation_system.py | evaluation_system.py | 10 | TESTED | Yes | Source scan: 15 functions, 15 real, 0 stubs |
 | F-0217 | 10 Event | Event Management - BrandEvent | event_graph.py | 2 | TESTED | Yes | Source scan: 2 functions, 2 real, 0 stubs |
 | F-0218 | 10 Event | Event Management - EventGraph | event_graph.py | 10 | TESTED | Yes | Source scan: 12 functions, 12 real, 0 stubs |
 | F-0219 | 10 Event | Event Management - EventRelation | event_graph.py | 2 | TESTED | Yes | Source scan: 2 functions, 2 real, 0 stubs |
@@ -350,9 +350,9 @@
 | F-0291 | 01 Product/Domain/Subject | Product/Subject - stability_monitor.py | stability_monitor.py | 10 | INTEGRATED | No | Source scan: 23 functions, 23 real, 0 stubs |
 | F-0292 | 01 Product/Domain/Subject | Product/Subject - start_tunnel.py | start_tunnel.py | 1 | IMPLEMENTED | No | Source scan: 1 functions, 1 real, 0 stubs |
 | F-0293 | 06 Subject Filter/Dedup | Subject Filter/Dedup - subject_classifier.py | subject_classifier.py | 10 | INTEGRATED | No | Source scan: 14 functions, 14 real, 0 stubs |
-| F-0294 | 06 Subject Filter/Dedup | Subject Filter/Dedup - ProductContext | subject_context.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0295 | 06 Subject Filter/Dedup | Subject Filter/Dedup - SubjectContext | subject_context.py | 1 | INTEGRATED | No | Source scan: 1 functions, 1 real, 0 stubs |
-| F-0296 | 06 Subject Filter/Dedup | Subject Filter/Dedup - Module Functions | subject_context.py | 6 | IMPLEMENTED | No | Source scan: 6 functions, 6 real, 0 stubs |
+| F-0294 | 06 Subject Filter/Dedup | Subject Filter/Dedup - ProductContext | subject_context.py | 1 | TESTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0295 | 06 Subject Filter/Dedup | Subject Filter/Dedup - SubjectContext | subject_context.py | 1 | TESTED | Yes | Source scan: 1 functions, 1 real, 0 stubs |
+| F-0296 | 06 Subject Filter/Dedup | Subject Filter/Dedup - Module Functions | subject_context.py | 6 | IMPLEMENTED | Yes | Source scan: 6 functions, 6 real, 0 stubs |
 | F-0297 | 06 Subject Filter/Dedup | Subject Filter/Dedup - subject_rules.py | subject_rules.py | 10 | INTEGRATED | No | Source scan: 14 functions, 14 real, 0 stubs |
 | F-0298 | 01 Product/Domain/Subject | Product/Subject - swire_group.py | swire_group.py | 10 | INTEGRATED | No | Source scan: 17 functions, 17 real, 0 stubs |
 | F-0299 | 01 Product/Domain/Subject | Product/Subject - system_features_api.py | system_features_api.py | 10 | INTEGRATED | No | Source scan: 16 functions, 16 real, 0 stubs |
