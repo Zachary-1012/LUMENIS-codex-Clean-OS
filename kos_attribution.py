@@ -74,8 +74,8 @@ def load_attribution_config():
     try:
         if CONFIG_PATH.exists():
             data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-            # attribution_weights：顶层配置
-            cfg_aw = data.get("attribution_weights", {})
+            # attribution_weights：顶层配置（以下划线开头，避免被 kos_metrics 当作平台遍历）
+            cfg_aw = data.get("_attribution_weights", data.get("attribution_weights", {}))
             if cfg_aw:
                 for k in _DEFAULT_ATTRIBUTION_WEIGHTS:
                     if k in cfg_aw:
