@@ -254,6 +254,26 @@ try:
 except Exception as _li_e:
     print(f"[local_import] API register failed: {_li_e}")
 
+# Shard C：多平台数据导入接口（平台归一化+字段映射+ID精度保护，复用 notes 表）
+try:
+    from platform_adapters.multi_platform_import import import_multi_platform_records
+
+    @app.route('/api/import/multi-platform', methods=['POST'])
+    def api_import_multi_platform():
+        """多平台数据导入：接收 JSON {records: [...]}，按 platform 自动映射字段后入库。"""
+        try:
+            data = request.get_json(silent=True) or {}
+            records = data.get('records') or data.get('items') or []
+            if not isinstance(records, list) or not records:
+                return jsonify({'ok': False, 'error': 'records 不能为空，需传入列表'}), 400
+            result = import_multi_platform_records(records)
+            return jsonify({'ok': result['failed'] == 0, **result})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    print("[multi_platform_import] API registered: POST /api/import/multi-platform")
+except Exception as _mpi_e:
+    print(f"[multi_platform_import] API register failed: {_mpi_e}")
+
 # Zachary OS AI：KOS 传播主体 API（复用 kos_engine/kos_report，不重复建设）
 try:
     import kos_routes
