@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+/* P0-R6: 字体本地化 — Google Fonts @import已移除，改用static/fonts/fonts.css本地woff2 */
 
   :root {
     /* Light Theme - Codex/GPT Light */

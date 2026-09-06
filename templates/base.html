@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}序境 · LUMENIS{% endblock %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- P0-R6: 字体本地化 — 本地woff2缓存，断网可用，font-display:swap -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-design-v1.1.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/xujing-core.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-layout-v1.1.css') }}">
