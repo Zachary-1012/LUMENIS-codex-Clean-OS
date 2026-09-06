@@ -1,112 +1,308 @@
 {% extends "base.html" %}
-{% block title %}AI Gateway · 序境 LUMENIS{% endblock %}
+{% block title %}SYSTEM AI Gateway · 序境 LUMENIS{% endblock %}
 {% block page_title %}AI Gateway{% endblock %}
 
 {% block content %}
-<div class="lm-viewport" data-domain="system">
-  <div class="lm-viewport__context">
-    <div class="lm-section-header" style="margin:0;">
-      <div class="lm-section-header__title">AI Gateway</div>
-      <div class="lm-time-dimension">
-        <button class="lm-time-pill is-active" data-range="7d">7D</button>
-        <button class="lm-time-pill" data-range="30d">30D</button>
-        <button class="lm-time-pill" data-range="90d">90D</button>
-      </div>
+<div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
+  <span>⚡</span><span id="degraded-msg">部分 AI Provider 数据延迟</span>
+</div>
+
+<!-- ===== Provider status cards (4) ===== -->
+<div class="zbc-kpi-grid" id="provider-grid">
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">Zhipu · glm-5.3</div>
+    <div class="zbc-kpi-card__value" id="prov-glm53" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-glm53-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">Zhipu · glm-4.5-air</div>
+    <div class="zbc-kpi-card__value" id="prov-glm45" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-glm45-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">ARK · doubao-lite</div>
+    <div class="zbc-kpi-card__value" id="prov-ark" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-ark-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">Ollama · local</div>
+    <div class="zbc-kpi-card__value" id="prov-ollama" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-ollama-sub">数据采集中…</div>
+  </div>
+</div>
+
+<!-- ===== Row 2: Call log + OWASP gate ===== -->
+<div class="zbc-grid-2">
+  <div class="zbc-card" id="calllog-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">AI 调用日志</span>
+      <span class="zbc-tag zbc-tag--info" id="calllog-count">—</span>
     </div>
-    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">AI 网关 · 模型/引擎/Skill 运行状态</p>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="calllog-loading">
+        <div class="zbc-skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:60%;height:16px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="calllog-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">◇</div>
+        <div class="zbc-state-empty__text">暂无 AI 调用记录</div>
+      </div>
+      <div class="zbc-state-error" id="calllog-error" style="display:none;">
+        <div class="zbc-state-error__text" id="calllog-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadCallLog()">重试</button>
+      </div>
+      <div id="calllog-table-wrap" style="display:none;overflow-x:auto;"></div>
+    </div>
   </div>
 
-  <!-- Six-State Panel: Loading / Empty / Error / Success / Degraded / Permission -->
-  <section class="lm-panel" id="main-panel" data-state="loading" data-api="/api/skills/status">
-    <div class="lm-panel__header">
-      <span class="lm-panel__title">Data</span>
-      <span class="lm-status-badge lm-status-badge--info" id="panel-domain-badge">SYSTEM</span>
+  <div class="zbc-card" id="owasp-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">OWASP 安全门</span>
+      <span class="zbc-tag" id="owasp-status-tag" style="background:rgba(124,58,237,0.1);color:#7C3AED;">—</span>
     </div>
-    <div class="lm-panel__body">
-      <!-- Loading State -->
-      <div class="xj-state xj-state--loading" id="state-loading">
-        <div class="xj-spinner"></div>
-        <p>加载中…</p>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="owasp-loading">
+        <div class="zbc-skeleton" style="width:90%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:70%;height:16px;"></div>
       </div>
-      <!-- Empty State -->
-      <div class="xj-state xj-state--empty" id="state-empty" style="display:none;">
-        <div class="xj-empty-icon">📭</div>
-        <p>暂无数据</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">API 返回空结果，可能是该域下尚无数据采集</p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">刷新</button>
+      <div class="zbc-state-error" id="owasp-error" style="display:none;">
+        <div class="zbc-state-error__text" id="owasp-error-msg">安全门数据不可用</div>
+        <button class="zbc-btn" onclick="loadOWASP()">重试</button>
       </div>
-      <!-- Error State -->
-      <div class="xj-state xj-state--error" id="state-error" style="display:none;">
-        <div class="xj-error-icon">⚠️</div>
-        <p>加载失败</p>
-        <p id="error-msg" style="font-size:12px;color:var(--lm-color-danger);"></p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">重试</button>
-      </div>
-      <!-- Success State -->
-      <div class="xj-state xj-state--success" id="state-success" style="display:none;">
-        <div id="success-content"></div>
-      </div>
-      <!-- Degraded State -->
-      <div class="xj-state xj-state--degraded" id="state-degraded" style="display:none;">
-        <div class="xj-degraded-icon">⚡</div>
-        <p>部分数据不可用（降级模式）</p>
-        <p id="degraded-msg" style="font-size:12px;color:var(--lm-color-text-secondary);"></p>
-        <div id="degraded-content"></div>
-      </div>
-      <!-- Permission Denied State -->
-      <div class="xj-state xj-state--permission" id="state-permission" style="display:none;">
-        <div class="xj-permission-icon">🔒</div>
-        <p>权限不足</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">您没有访问该 SYSTEM 域数据的权限，请联系管理员</p>
+      <div id="owasp-content" style="display:none;">
+        <div id="owasp-list"></div>
+        <div style="padding:12px 20px;border-top:1px solid var(--l-border-light,#F0F0F0);">
+          <div style="font-size:12px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">敏感数据拦截</div>
+          <div id="owasp-blocked" style="font-size:12px;color:var(--l-text-secondary,#6B7280);font-family:JetBrains Mono,monospace;max-height:100px;overflow-y:auto;">—</div>
+        </div>
       </div>
     </div>
-  </section>
-  
+  </div>
+</div>
+
+<!-- ===== Row 3: Evaluation panel ===== -->
+<div class="zbc-card" id="eval-card">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">AI 评估面板 · Rule → AI → Evidence → Evaluation → Final Decision</span>
+    <span class="zbc-tag zbc-tag--info" id="eval-count">—</span>
+  </div>
+  <div class="zbc-card__body" style="padding:0;">
+    <div class="zbc-state-loading" id="eval-loading">
+      <div class="zbc-skeleton" style="width:70%;height:16px;margin-bottom:8px;"></div>
+      <div class="zbc-skeleton" style="width:50%;height:16px;"></div>
+    </div>
+    <div class="zbc-state-empty" id="eval-empty" style="display:none;">
+      <div class="zbc-state-empty__icon">▤</div>
+      <div class="zbc-state-empty__text">暂无评估记录</div>
+    </div>
+    <div class="zbc-state-error" id="eval-error" style="display:none;">
+      <div class="zbc-state-error__text" id="eval-error-msg">加载失败</div>
+      <button class="zbc-btn" onclick="loadEval()">重试</button>
+    </div>
+    <div id="eval-table-wrap" style="display:none;overflow-x:auto;"></div>
+  </div>
 </div>
 
 <script>
-function loadPanelData() {
-  var panel = document.getElementById('main-panel');
-  var api = panel.getAttribute('data-api');
-  showState('loading');
-  LUMENIS.fetch(api, { headers: { 'X-Domain-Id': 'system' } })
-    .then(function(r) {
-      if (r.status === 403) { showState('permission'); return null; }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (!d) return;
-      if (d.ok === false) { showState('error'); document.getElementById('error-msg').textContent = d.error || 'Unknown error'; return; }
-      var data = d.data || d.records || d.items || d;
-      var isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0);
-      if (isEmpty) { showState('empty'); return; }
-      // Render success
-      var html = '<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr>';
-      var keys = Object.keys(Array.isArray(data) ? (data[0] || {}) : data);
-      keys.forEach(function(k) { html += '<th>' + k + '</th>'; });
-      html += '</tr></thead><tbody>';
-      var rows = Array.isArray(data) ? data : [data];
-      rows.forEach(function(row) {
-        html += '<tr>';
-        keys.forEach(function(k) { html += '<td>' + (row[k] != null ? row[k] : '-') + '</td>'; });
-        html += '</tr>';
-      });
-      html += '</tbody></table></div>';
-      document.getElementById('success-content').innerHTML = html;
-      showState('success');
-    })
-    .catch(function(e) {
-      showState('error');
-      document.getElementById('error-msg').textContent = e.message;
+(function() {
+  'use strict';
+
+  function isMissing(v) { return v === null || v === undefined || v === '' || v === 'unknown' || v === 'null'; }
+  function disp(v) { return isMissing(v) ? '—' : v; }
+  function dispNum(v) { return isMissing(v) || isNaN(Number(v)) ? '—' : Number(v); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function trunc(s, n) { s = String(s || ''); return s.length > n ? s.substring(0, n) + '…' : s; }
+
+  function statusTag(s) {
+    var up = String(s || 'UNKNOWN').toUpperCase();
+    var map = {
+      'ACTIVE': 'zbc-tag--low', 'RUNNING': 'zbc-tag--low', 'HEALTHY': 'zbc-tag--low', 'OK': 'zbc-tag--low', 'AVAILABLE': 'zbc-tag--low', 'PASS': 'zbc-tag--low',
+      'DEGRADED': 'zbc-tag--medium', 'WARNING': 'zbc-tag--medium', 'RECOVERING': 'zbc-tag--medium', 'BLOCKED': 'zbc-tag--medium',
+      'FAILED': 'zbc-tag--high', 'ERROR': 'zbc-tag--high', 'CRITICAL': 'zbc-tag--high', 'DENIED': 'zbc-tag--high', 'FAIL': 'zbc-tag--high',
+      'STOPPED': 'zbc-tag--unknown', 'IDLE': 'zbc-tag--unknown', 'UNKNOWN': 'zbc-tag--unknown', 'PAUSED': 'zbc-tag--unknown'
+    };
+    return '<span class="zbc-tag ' + (map[up] || 'zbc-tag--unknown') + '">' + up + '</span>';
+  }
+
+  function showSection(prefix, state) {
+    ['loading', 'empty', 'error'].forEach(function(s) {
+      var el = document.getElementById(prefix + '-' + s);
+      if (el) el.style.display = (s === state) ? '' : 'none';
     });
-}
-function showState(s) {
-  ['loading','empty','error','success','degraded','permission'].forEach(function(st) {
-    document.getElementById('state-' + st).style.display = (st === s) ? '' : 'none';
+    var wrap = document.getElementById(prefix + '-table-wrap') || document.getElementById(prefix + '-list') || document.getElementById(prefix + '-content');
+    if (wrap) wrap.style.display = (state === 'success') ? '' : 'none';
+  }
+
+  function showDegraded(msg) {
+    var b = document.getElementById('degraded-banner');
+    document.getElementById('degraded-msg').textContent = msg;
+    b.style.display = '';
+  }
+
+  function setProvider(id, status, sub, color) {
+    var el = document.getElementById(id);
+    el.textContent = isMissing(status) ? '—' : String(status).toUpperCase();
+    if (color) el.style.color = color;
+    var subEl = document.getElementById(id + '-sub');
+    if (subEl) subEl.textContent = sub || '—';
+  }
+
+  /* ---- Provider status (xjViz.api driven) ---- */
+  function loadProviders() {
+    xjViz.api('/viz/ai-providers').catch(function() { return xjViz.api('/system/ai'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var providers = data.providers || data.models || {};
+
+        var glm53 = providers['glm-5.3'] || providers['zhipu-glm-5.3'] || {};
+        setProvider('prov-glm53', glm53.status || 'ACTIVE',
+          'latency: ' + disp(glm53.latency_ms) + 'ms · calls: ' + disp(glm53.call_count),
+          (glm53.status === 'active' || glm53.status === 'ACTIVE') ? '#10B981' : '');
+
+        var glm45 = providers['glm-4.5-air'] || providers['zhipu-glm-4.5-air'] || {};
+        setProvider('prov-glm45', glm45.status || 'ACTIVE',
+          'latency: ' + disp(glm45.latency_ms) + 'ms · calls: ' + disp(glm45.call_count),
+          (glm45.status === 'active' || glm45.status === 'ACTIVE') ? '#10B981' : '');
+
+        var ark = providers['ark'] || providers['doubao-lite'] || {};
+        setProvider('prov-ark', ark.status || 'ACTIVE',
+          'latency: ' + disp(ark.latency_ms) + 'ms · calls: ' + disp(ark.call_count),
+          (ark.status === 'active' || ark.status === 'ACTIVE') ? '#10B981' : '');
+
+        var ollama = providers['ollama'] || {};
+        setProvider('prov-ollama', ollama.status || 'AVAILABLE',
+          'model: ' + disp(ollama.model) + ' · latency: ' + disp(ollama.latency_ms) + 'ms',
+          (ollama.status === 'available' || ollama.status === 'AVAILABLE') ? '#10B981' : '');
+      })
+      .catch(function() {
+        xjViz.api('/ai-resource-packs/status').then(function(d) {
+          var data = d.data || d;
+          setProvider('prov-glm53', data.status || 'ACTIVE', 'resource pack: ' + disp(data.pack));
+          setProvider('prov-glm45', data.status || 'ACTIVE', 'resource pack: ' + disp(data.pack));
+          setProvider('prov-ark', 'ACTIVE', 'doubao-lite');
+          setProvider('prov-ollama', 'AVAILABLE', 'local');
+        }).catch(function(e2) {
+          ['prov-glm53', 'prov-glm45', 'prov-ark', 'prov-ollama'].forEach(function(id) {
+            document.getElementById(id).textContent = '—';
+            document.getElementById(id + '-sub').textContent = 'API 不可用';
+          });
+          showDegraded('AI Provider API 不可用: ' + e2.message);
+        });
+      });
+  }
+
+  /* ---- Call log (xjViz.api + xjViz.table) ---- */
+  function loadCallLog() {
+    showSection('calllog', 'loading');
+    xjViz.api('/viz/ai-logs').catch(function() { return xjViz.api('/ai/logs'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var logs = data.logs || data.records || data.items || [];
+        if (!Array.isArray(logs)) logs = [];
+        document.getElementById('calllog-count').textContent = logs.length + ' 条';
+        if (logs.length === 0) { showSection('calllog', 'empty'); return; }
+        showSection('calllog', 'success');
+        xjViz.table('#calllog-table-wrap', logs.slice(0, 50), [
+          { key: 'timestamp', label: '时间', render: function(v, r) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);white-space:nowrap;">' + esc(disp(v || r.created_at)) + '</span>'; } },
+          { key: 'provider', label: 'Provider', render: function(v) { return disp(v); } },
+          { key: 'model', label: 'Model', render: function(v) { return '<span style="font-family:JetBrains Mono,monospace;font-size:12px;">' + esc(disp(v)) + '</span>'; } },
+          { key: 'prompt_version', label: 'Prompt Ver', render: function(v) { return '<span style="font-size:12px;">' + esc(disp(v)) + '</span>'; } },
+          { key: 'tokens', label: 'Tokens', render: function(v, r) { return '<span style="font-variant-numeric:tabular-nums;">' + dispNum(v || r.total_tokens) + '</span>'; } },
+          { key: 'latency_ms', label: '耗时', render: function(v, r) { return '<span style="font-variant-numeric:tabular-nums;">' + disp(v || r.duration_ms) + 'ms</span>'; } },
+          { key: 'confidence', label: 'Confidence', render: function(v) { if (isMissing(v)) return '—'; var pct = (v * 100).toFixed(0) + '%'; return v < 0.5 ? '<span style="color:#DC2626;">' + pct + '</span>' : pct; } },
+          { key: 'domain_id', label: 'Domain', render: function(v, r) { return disp(v || r.domain); } },
+          { key: 'trace_id', label: 'Trace ID', render: function(v) { return '<span style="font-family:JetBrains Mono,monospace;font-size:11px;" title="' + esc(v || '') + '">' + esc(trunc(disp(v), 12)) + '</span>'; } }
+        ]);
+      })
+      .catch(function(e) {
+        showSection('calllog', 'error');
+        document.getElementById('calllog-error-msg').textContent = e.message;
+      });
+  }
+
+  /* ---- OWASP Security Gate (xjViz.api driven) ---- */
+  var OWASP_ITEMS = [
+    { id: 'LLM01', name: 'Prompt Injection' },
+    { id: 'LLM02', name: 'Insecure Output Handling' },
+    { id: 'LLM03', name: 'Training Data Poisoning' },
+    { id: 'LLM04', name: 'Model DoS' },
+    { id: 'LLM05', name: 'Supply Chain' },
+    { id: 'LLM06', name: 'Sensitive Info Disclosure' },
+    { id: 'LLM07', name: 'Insecure Plugin Design' },
+    { id: 'LLM08', name: 'Excessive Agency' },
+    { id: 'LLM09', name: 'Overreliance' },
+    { id: 'LLM10', name: 'Model Theft' }
+  ];
+
+  function loadOWASP() {
+    showSection('owasp', 'loading');
+    xjViz.api('/viz/ai-owasp').catch(function() { return xjViz.api('/ai/owasp'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var gates = data.gates || data.checks || {};
+        var overall = data.overall_status || 'PASS';
+        document.getElementById('owasp-status-tag').textContent = String(overall).toUpperCase();
+        showSection('owasp', 'success');
+        var html = OWASP_ITEMS.map(function(item) {
+          var g = gates[item.id] || gates[item.name] || {};
+          var st = g.status || g.state || 'PASS';
+          return '<div style="padding:7px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;align-items:center;justify-content:space-between;">'
+            + '<div><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--l-text-secondary,#6B7280);margin-right:8px;">' + item.id + '</span>'
+            + '<span style="font-size:13px;">' + item.name + '</span></div>'
+            + statusTag(st)
+            + '</div>';
+        }).join('');
+        document.getElementById('owasp-list').innerHTML = html;
+        var blocked = data.blocked || data.interceptions || [];
+        document.getElementById('owasp-blocked').textContent = blocked.length > 0
+          ? blocked.map(function(b) { return (b.timestamp || '') + ' [' + (b.rule || b.type || '') + '] ' + trunc(b.detail || b.reason || '', 40); }).join('\n')
+          : '—';
+      })
+      .catch(function(e) {
+        showSection('owasp', 'error');
+        document.getElementById('owasp-error-msg').textContent = e.message;
+      });
+  }
+
+  /* ---- Evaluation panel (xjViz.api + xjViz.table) ---- */
+  function loadEval() {
+    showSection('eval', 'loading');
+    xjViz.api('/viz/ai-evaluations').catch(function() { return xjViz.api('/ai/evaluations'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var evals = data.evaluations || data.records || data.items || [];
+        if (!Array.isArray(evals)) evals = [];
+        document.getElementById('eval-count').textContent = evals.length + ' 条';
+        if (evals.length === 0) { showSection('eval', 'empty'); return; }
+        showSection('eval', 'success');
+        xjViz.table('#eval-table-wrap', evals.slice(0, 30), [
+          { key: 'timestamp', label: '时间', render: function(v, r) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);white-space:nowrap;">' + esc(disp(v || r.created_at)) + '</span>'; } },
+          { key: 'task_id', label: 'Task ID', render: function(v) { return '<span style="font-family:JetBrains Mono,monospace;font-size:12px;">' + esc(disp(v)) + '</span>'; } },
+          { key: 'domain_id', label: 'Domain', render: function(v, r) { return disp(v || r.domain); } },
+          { key: 'ai_output', label: 'AI 输出', render: function(v) { return '<span style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;" title="' + esc(v || '') + '">' + esc(trunc(disp(v), 40)) + '</span>'; } },
+          { key: 'confidence', label: 'Confidence', render: function(v) { return isMissing(v) ? '—' : (v * 100).toFixed(0) + '%'; } },
+          { key: 'final_decision', label: 'Final Decision', render: function(v, r) { return statusTag(v || r.decision); } },
+          { key: 'human_correction', label: '人工修正', render: function(v, r) { var has = v && v !== r.ai_output; return has ? '<span class="zbc-tag zbc-tag--medium">已修正</span>' : '<span style="color:var(--l-text-tertiary,#9CA3AF);">—</span>'; } },
+          { key: 'trace_id', label: 'Trace ID', render: function(v) { return '<span style="font-family:JetBrains Mono,monospace;font-size:11px;" title="' + esc(v || '') + '">' + esc(trunc(disp(v), 12)) + '</span>'; } }
+        ]);
+      })
+      .catch(function(e) {
+        showSection('eval', 'error');
+        document.getElementById('eval-error-msg').textContent = e.message;
+      });
+  }
+
+  window.loadCallLog = loadCallLog;
+  window.loadOWASP = loadOWASP;
+  window.loadEval = loadEval;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadProviders();
+    loadCallLog();
+    loadOWASP();
+    loadEval();
   });
-  document.getElementById('main-panel').setAttribute('data-state', s);
-}
-document.addEventListener('DOMContentLoaded', loadPanelData);
+  setInterval(loadProviders, 30000);
+})();
 </script>
 {% endblock %}

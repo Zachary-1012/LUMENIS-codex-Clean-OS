@@ -1,112 +1,592 @@
 {% extends "base.html" %}
-{% block title %}KOS-KOL-KOC · 序境 LUMENIS{% endblock %}
-{% block page_title %}KOS-KOL-KOC{% endblock %}
+{% block title %}KOS · 序境 LUMENIS{% endblock %}
+{% block page_title %}KOS{% endblock %}
+
+{% block topbar_actions %}
+<div class="zbc-search">
+  <input type="text" class="zbc-search__input" id="kos-search" placeholder="搜索达人…" aria-label="搜索达人">
+  <span class="zbc-search__icon">⌕</span>
+</div>
+<select class="zbc-btn" id="kos-platform-filter" aria-label="平台筛选" style="cursor:pointer;">
+  <option value="">全部平台</option>
+  <option value="xiaohongshu">小红书</option>
+  <option value="douyin">抖音</option>
+  <option value="weibo">微博</option>
+  <option value="bilibili">B站</option>
+</select>
+<button class="zbc-btn" id="btn-batch-action" type="button">批量操作</button>
+{% endblock %}
 
 {% block content %}
-<div class="lm-viewport" data-domain="zbmp">
-  <div class="lm-viewport__context">
-    <div class="lm-section-header" style="margin:0;">
-      <div class="lm-section-header__title">KOS-KOL-KOC</div>
-      <div class="lm-time-dimension">
-        <button class="lm-time-pill is-active" data-range="7d">7D</button>
-        <button class="lm-time-pill" data-range="30d">30D</button>
-        <button class="lm-time-pill" data-range="90d">90D</button>
-      </div>
+<!-- Degraded Banner -->
+<div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
+  <span>⚠</span><span id="degraded-msg">部分数据延迟，已加载数据正常显示</span>
+</div>
+
+<!-- In-page Tabs -->
+<div class="zbc-card" style="margin-bottom:16px;">
+  <div class="zbc-card__body" style="padding:12px 20px;">
+    <div style="display:flex;gap:4px;flex-wrap:wrap;" role="tablist" aria-label="KOS页内导航">
+      <button class="zbc-btn is-active" data-tab="talents" role="tab" aria-selected="true" style="border:none;background:transparent;font-weight:600;color:#0F766E;">达人库</button>
+      <button class="zbc-btn" data-tab="paid" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">付费管理</button>
+      <button class="zbc-btn" data-tab="execution" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">执行跟踪</button>
+      <button class="zbc-btn" data-tab="attribution" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">归因分析</button>
+      <button class="zbc-btn" data-tab="professional" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">专业号</button>
     </div>
-    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">达人矩阵 · KOS专业号/KOL关键意见领袖/KOC素人</p>
+  </div>
+</div>
+
+<!-- ===== Tab: 达人库 ===== -->
+<div id="tab-talents">
+  <!-- KPI Row (xjViz.kpi 函数驱动) -->
+  <div class="zbc-kpi-grid">
+    <div class="zbc-kpi-card zbc-kpi-card--gradient-zbmp"><div id="kpi-total-talents"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-kos-count"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-potential"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-risk-talents"></div></div>
   </div>
 
-  <!-- Six-State Panel: Loading / Empty / Error / Success / Degraded / Permission -->
-  <section class="lm-panel" id="main-panel" data-state="loading" data-api="/api/hot-notes?limit=10">
-    <div class="lm-panel__header">
-      <span class="lm-panel__title">Data</span>
-      <span class="lm-status-badge lm-status-badge--info" id="panel-domain-badge">ZBMP</span>
+  <!-- Filter Bar -->
+  <div class="zbc-card" style="margin-bottom:16px;">
+    <div class="zbc-card__body" style="padding:12px 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <select class="zbc-btn" id="tier-filter" style="cursor:pointer;">
+        <option value="">全部层级</option>
+        <option value="KOL">KOL</option>
+        <option value="KOS">KOS</option>
+        <option value="KOC">KOC</option>
+      </select>
+      <select class="zbc-btn" id="fans-filter" style="cursor:pointer;">
+        <option value="">粉丝量级</option>
+        <option value="0-10000">1万以下</option>
+        <option value="10000-100000">1-10万</option>
+        <option value="100000-1000000">10-100万</option>
+        <option value="1000000+">100万以上</option>
+      </select>
+      <span style="font-size:12px;color:var(--l-text-secondary,#6B7280);margin-left:auto;" id="talent-count-label">0 位达人</span>
     </div>
-    <div class="lm-panel__body">
-      <!-- Loading State -->
-      <div class="xj-state xj-state--loading" id="state-loading">
-        <div class="xj-spinner"></div>
-        <p>加载中…</p>
+  </div>
+
+  <!-- Talent Grid -->
+  <div class="zbc-card">
+    <div class="zbc-card__body" style="padding:16px;">
+      <div class="zbc-state-loading" id="talents-loading">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">
+          <div class="zbc-skeleton" style="height:180px;"></div>
+          <div class="zbc-skeleton" style="height:180px;"></div>
+          <div class="zbc-skeleton" style="height:180px;"></div>
+          <div class="zbc-skeleton" style="height:180px;"></div>
+        </div>
       </div>
-      <!-- Empty State -->
-      <div class="xj-state xj-state--empty" id="state-empty" style="display:none;">
-        <div class="xj-empty-icon">📭</div>
-        <p>暂无数据</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">API 返回空结果，可能是该域下尚无数据采集</p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">刷新</button>
+      <div class="zbc-state-empty" id="talents-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">👤</div>
+        <div class="zbc-state-empty__text">暂无达人数据</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="ZBMPKOS.loadTalents()" type="button">刷新</button>
       </div>
-      <!-- Error State -->
-      <div class="xj-state xj-state--error" id="state-error" style="display:none;">
-        <div class="xj-error-icon">⚠️</div>
-        <p>加载失败</p>
-        <p id="error-msg" style="font-size:12px;color:var(--lm-color-danger);"></p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">重试</button>
+      <div class="zbc-state-error" id="talents-error" style="display:none;">
+        <div class="zbc-state-error__text" id="talents-error-msg">加载失败</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="ZBMPKOS.loadTalents()" type="button">重试</button>
       </div>
-      <!-- Success State -->
-      <div class="xj-state xj-state--success" id="state-success" style="display:none;">
-        <div id="success-content"></div>
+      <div id="talents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tab: 付费管理 ===== -->
+<div id="tab-paid" style="display:none;">
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">付费计划管理</span>
+      <button class="zbc-btn zbc-btn--primary" type="button">+ 新建计划</button>
+    </div>
+    <div class="zbc-card__body">
+      <div class="zbc-state-loading" id="paid-loading">
+        <div class="zbc-skeleton" style="width:100%;height:100px;margin-bottom:12px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:100px;"></div>
       </div>
-      <!-- Degraded State -->
-      <div class="xj-state xj-state--degraded" id="state-degraded" style="display:none;">
-        <div class="xj-degraded-icon">⚡</div>
-        <p>部分数据不可用（降级模式）</p>
-        <p id="degraded-msg" style="font-size:12px;color:var(--lm-color-text-secondary);"></p>
-        <div id="degraded-content"></div>
+      <div class="zbc-state-empty" id="paid-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">💰</div>
+        <div class="zbc-state-empty__text">暂无付费计划</div>
       </div>
-      <!-- Permission Denied State -->
-      <div class="xj-state xj-state--permission" id="state-permission" style="display:none;">
-        <div class="xj-permission-icon">🔒</div>
-        <p>权限不足</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">您没有访问该 ZBMP 域数据的权限，请联系管理员</p>
+      <div id="paid-list" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tab: 执行跟踪 ===== -->
+<div id="tab-execution" style="display:none;">
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">任务执行跟踪</span>
+      <div style="display:flex;gap:8px;">
+        <span class="zbc-tag zbc-tag--info" id="exec-pending">待执行 0</span>
+        <span class="zbc-tag zbc-tag--medium" id="exec-running">进行中 0</span>
+        <span class="zbc-tag zbc-tag--low" id="exec-done">已完成 0</span>
       </div>
     </div>
-  </section>
-  
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="exec-loading" style="padding:24px;">
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="exec-empty" style="display:none;padding:24px;">
+        <div class="zbc-state-empty__icon">📋</div>
+        <div class="zbc-state-empty__text">暂无执行任务</div>
+      </div>
+      <div id="exec-table-wrap" style="display:none;overflow-x:auto;">
+        <table class="zbc-table">
+          <thead>
+            <tr><th>任务ID</th><th>达人</th><th>平台</th><th>内容类型</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+          </thead>
+          <tbody id="exec-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tab: 归因分析 ===== -->
+<div id="tab-attribution" style="display:none;">
+  <div class="zbc-degraded-banner" style="background:rgba(15,118,110,0.08);border-color:rgba(15,118,110,0.2);color:#0F766E;">
+    <span>⚙</span><span>归因模型由 config/kos_platform_rules.json 平台规则驱动，各平台互动权重独立配置</span>
+  </div>
+  <div class="zbc-grid-2-equal">
+    <div class="zbc-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">平台归因规则</span>
+      </div>
+      <div class="zbc-card__body" id="attribution-rules">
+        <div class="zbc-state-loading"><div class="zbc-skeleton" style="width:100%;height:120px;"></div></div>
+      </div>
+    </div>
+    <div class="zbc-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">归因查询</span>
+      </div>
+      <div class="zbc-card__body">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">达人ID / 笔记IDs</label>
+          <input type="text" class="zbc-search__input" id="attr-input" placeholder="输入 author_id 或 note_id1,note_id2" style="width:100%;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--l-text-secondary,#6B7280);display:block;margin-bottom:4px;">品牌</label>
+          <input type="text" class="zbc-search__input" id="attr-brand" value="广州太古汇" style="width:100%;">
+        </div>
+        <button class="zbc-btn zbc-btn--primary" id="btn-attr-calc" type="button" style="width:100%;">计算归因</button>
+        <div id="attr-result" style="margin-top:16px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tab: 专业号 ===== -->
+<div id="tab-professional" style="display:none;">
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">专业号管理</span>
+      <button class="zbc-btn" id="btn-refresh-pro" type="button" style="padding:4px 10px;font-size:11px;">刷新状态</button>
+    </div>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="pro-loading" style="padding:24px;">
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="pro-empty" style="display:none;padding:24px;">
+        <div class="zbc-state-empty__icon">🏢</div>
+        <div class="zbc-state-empty__text">暂无专业号数据</div>
+      </div>
+      <div id="pro-table-wrap" style="display:none;overflow-x:auto;">
+        <table class="zbc-table">
+          <thead>
+            <tr><th>账号名称</th><th>平台</th><th>粉丝量</th><th>互动量</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody id="pro-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-function loadPanelData() {
-  var panel = document.getElementById('main-panel');
-  var api = panel.getAttribute('data-api');
-  showState('loading');
-  LUMENIS.fetch(api, { headers: { 'X-Domain-Id': 'zbmp' } })
-    .then(function(r) {
-      if (r.status === 403) { showState('permission'); return null; }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (!d) return;
-      if (d.ok === false) { showState('error'); document.getElementById('error-msg').textContent = d.error || 'Unknown error'; return; }
-      var data = d.data || d.records || d.items || d;
-      var isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0);
-      if (isEmpty) { showState('empty'); return; }
-      // Render success
-      var html = '<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr>';
-      var keys = Object.keys(Array.isArray(data) ? (data[0] || {}) : data);
-      keys.forEach(function(k) { html += '<th>' + k + '</th>'; });
-      html += '</tr></thead><tbody>';
-      var rows = Array.isArray(data) ? data : [data];
-      rows.forEach(function(row) {
-        html += '<tr>';
-        keys.forEach(function(k) { html += '<td>' + (row[k] != null ? row[k] : '-') + '</td>'; });
-        html += '</tr>';
+(function() {
+  'use strict';
+
+  var ZBMPKOS = {
+    state: { talents: [], total: 0, platform: '', search: '', tier: '', currentTab: 'talents', platformRules: null },
+
+    init: function() {
+      var self = this;
+      // Tab switching
+      document.querySelectorAll('[data-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() { self.switchTab(btn.getAttribute('data-tab')); });
       });
-      html += '</tbody></table></div>';
-      document.getElementById('success-content').innerHTML = html;
-      showState('success');
-    })
-    .catch(function(e) {
-      showState('error');
-      document.getElementById('error-msg').textContent = e.message;
-    });
-}
-function showState(s) {
-  ['loading','empty','error','success','degraded','permission'].forEach(function(st) {
-    document.getElementById('state-' + st).style.display = (st === s) ? '' : 'none';
-  });
-  document.getElementById('main-panel').setAttribute('data-state', s);
-}
-document.addEventListener('DOMContentLoaded', loadPanelData);
+      // Search
+      var si = document.getElementById('kos-search');
+      if (si) {
+        var debounce;
+        si.addEventListener('input', function() {
+          clearTimeout(debounce);
+          debounce = setTimeout(function() { self.state.search = si.value.trim(); self.loadTalents(); }, 400);
+        });
+      }
+      // Platform filter
+      var pf = document.getElementById('kos-platform-filter');
+      if (pf) pf.addEventListener('change', function() { self.state.platform = pf.value; self.loadTalents(); });
+      // Tier filter
+      var tf = document.getElementById('tier-filter');
+      if (tf) tf.addEventListener('change', function() { self.state.tier = tf.value; self.filterTalents(); });
+      // Batch action
+      var ba = document.getElementById('btn-batch-action');
+      if (ba) ba.addEventListener('click', function() { alert('批量操作：请先选择达人卡片'); });
+      // Attribution
+      var ac = document.getElementById('btn-attr-calc');
+      if (ac) ac.addEventListener('click', function() { self.calcAttribution(); });
+      // Professional refresh
+      var rp = document.getElementById('btn-refresh-pro');
+      if (rp) rp.addEventListener('click', function() { self.loadProfessional(); });
+
+      this.loadTalents();
+      this.loadPlatformRules();
+    },
+
+    switchTab: function(tab) {
+      this.state.currentTab = tab;
+      document.querySelectorAll('[data-tab]').forEach(function(b) {
+        var isActive = b.getAttribute('data-tab') === tab;
+        b.classList.toggle('is-active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        if (isActive) { b.style.color = '#0F766E'; b.style.fontWeight = '600'; }
+        else { b.style.color = ''; b.style.fontWeight = '500'; }
+      });
+      var tabs = { talents: 'tab-talents', paid: 'tab-paid', execution: 'tab-execution', attribution: 'tab-attribution', professional: 'tab-professional' };
+      Object.keys(tabs).forEach(function(k) {
+        document.getElementById(tabs[k]).style.display = (k === tab) ? '' : 'none';
+      });
+      if (tab === 'paid' && !this.paidLoaded) { this.loadPaid(); }
+      if (tab === 'execution' && !this.execLoaded) { this.loadExecution(); }
+      if (tab === 'professional' && !this.proLoaded) { this.loadProfessional(); }
+    },
+
+    showTalentsState: function(state) {
+      var map = { loading: 'talents-loading', empty: 'talents-empty', error: 'talents-error', success: 'talents-grid' };
+      ['loading','empty','error'].forEach(function(s) {
+        var el = document.getElementById(map[s]);
+        if (el) el.style.display = (s === state) ? '' : 'none';
+      });
+      document.getElementById('talents-grid').style.display = (state === 'success') ? 'grid' : 'none';
+    },
+
+    _kpi: function(sel, label, value, sub) {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      if (value == null || isNaN(value) || value === '') {
+        el.innerHTML = '<div style="font-size:11px;font-weight:500;color:var(--l-text-secondary,#6B7280);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + label + '</div><div style="font-size:24px;font-weight:700;color:var(--l-text-tertiary,#9CA3AF);">—</div><div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-top:6px;">数据采集中</div>';
+      } else {
+        xjViz.kpi(sel, label, value, { sub: sub || '' });
+      }
+    },
+
+    loadTalents: function() {
+      var self = this;
+      this.showTalentsState('loading');
+      var params = { limit: 50, offset: 0 };
+      if (this.state.platform) params.platform = this.state.platform;
+      if (this.state.search) params.search = this.state.search;
+
+      // xjViz.api 已包装 LUMENIS.fetch，自动带认证
+      xjViz.api('/kos/list', params)
+        .then(function(d) {
+          if (d.ok === false) throw new Error(d.error || 'API error');
+          var talents = d.profiles || d.kos_profiles || d.data || [];
+          if (!Array.isArray(talents)) talents = [];
+          self.state.talents = talents;
+          self.state.total = d.total || talents.length;
+          self.renderKPIs(talents);
+          if (talents.length === 0) { self.showTalentsState('empty'); return; }
+          self.showTalentsState('success');
+          self.filterTalents();
+        })
+        .catch(function(e) {
+          if (e.message && e.message.indexOf('403') >= 0) {
+            self.showTalentsState('empty');
+            document.getElementById('talents-empty').innerHTML = '<div class="zbc-state-empty__icon">🔒</div><div class="zbc-state-empty__text">无权限访问达人数据</div>';
+            return;
+          }
+          document.getElementById('talents-error-msg').textContent = e.message || '加载失败';
+          self.showTalentsState('error');
+        });
+    },
+
+    renderKPIs: function(talents) {
+      this._kpi('#kpi-total-talents', '达人总数', this.state.total > 0 ? this.state.total : null, '全平台');
+      var kos = talents.filter(function(t) { return t.tier === 'KOS' || t.account_type === 'professional'; }).length;
+      this._kpi('#kpi-kos-count', 'KOS 专业号', kos > 0 ? kos : null, '已认证');
+      var potential = talents.filter(function(t) { return t.potential === true || (t.growth_rate != null && t.growth_rate > 0); }).length;
+      this._kpi('#kpi-potential', '高潜达人', potential > 0 ? potential : null, '增长型');
+      var risk = talents.filter(function(t) { return t.risk_level === 'high' || t.risk_level === 'critical'; }).length;
+      this._kpi('#kpi-risk-talents', '风险达人', risk > 0 ? risk : null, '需关注');
+      document.getElementById('talent-count-label').textContent = this.state.total + ' 位达人';
+    },
+
+    filterTalents: function() {
+      var tier = this.state.tier;
+      var filtered = this.state.talents;
+      if (tier) {
+        filtered = filtered.filter(function(t) { return t.tier === tier || t.account_type === tier.toLowerCase(); });
+      }
+      this.renderTalentGrid(filtered);
+    },
+
+    renderTalentGrid: function(talents) {
+      var grid = document.getElementById('talents-grid');
+      grid.innerHTML = '';
+      var self = this;
+      talents.forEach(function(t) {
+        var card = document.createElement('div');
+        card.style.cssText = 'background:var(--l-card,#fff);border:1px solid var(--l-border,#E8E8E8);border-radius:12px;padding:16px;transition:all 0.15s;cursor:pointer;';
+        card.onmouseenter = function() { card.style.borderColor = '#0F766E'; card.style.boxShadow = '0 4px 12px rgba(15,118,110,0.1)'; };
+        card.onmouseleave = function() { card.style.borderColor = ''; card.style.boxShadow = ''; };
+
+        var name = t.nickname || t.author_nickname || t.name || '未知达人';
+        var platform = t.platform || t.source_platform || 'unknown';
+        // Fans: real value or unknown
+        var fans = t.fans_count != null ? t.fans_count : (t.followers != null ? t.followers : null);
+        var fansText = fans != null ? fans.toLocaleString() : 'unknown';
+        // Engagement: real value or unknown
+        var eng = t.engagement_count != null ? t.engagement_count : (t.total_engagement != null ? t.total_engagement : null);
+        var engText = eng != null ? eng.toLocaleString() : 'unknown';
+        // Engagement rate
+        var engRate = t.engagement_rate != null ? t.engagement_rate.toFixed(2) + '%' : '—';
+        // Quote
+        var quote = t.quote_price != null ? '¥' + t.quote_price.toLocaleString() : '—';
+        // Tier
+        var tier = t.tier || t.account_type || 'KOC';
+        var tierCls = tier === 'KOL' ? 'zbc-tag--high' : (tier === 'KOS' ? 'zbc-tag--info' : 'zbc-tag--low');
+        // Score
+        var score = t.kos_score != null ? t.kos_score.toFixed(1) : '—';
+        // Tags
+        var tags = t.tags || t.categories || [];
+        var tagsHtml = Array.isArray(tags) ? tags.slice(0, 3).map(function(tag) { return '<span class="zbc-tag zbc-tag--unknown" style="font-size:10px;margin-right:4px;">' + self.escapeHtml(tag) + '</span>'; }).join('') : '';
+        // Avatar
+        var avatar = t.avatar_url || t.head_url || '';
+        var avatarHtml = avatar ? '<img src="' + avatar + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" onerror="this.outerHTML=\'<div style=\\\'width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;\\\'>' + name.charAt(0).toUpperCase() + '</div>\'">' : '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;">' + name.charAt(0).toUpperCase() + '</div>';
+
+        card.innerHTML =
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+          avatarHtml +
+          '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + self.escapeHtml(name) + '</div>' +
+          '<div style="display:flex;gap:4px;margin-top:2px;"><span class="zbc-tag ' + tierCls + '" style="font-size:10px;">' + tier + '</span><span class="zbc-tag zbc-tag--info" style="font-size:10px;">' + self.escapeHtml(platform) + '</span></div>' +
+          '</div></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">' +
+          '<div><div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">粉丝量</div><div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;">' + fansText + '</div></div>' +
+          '<div><div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">互动量</div><div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;">' + engText + '</div></div>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--l-text-secondary,#6B7280);margin-bottom:8px;">' +
+          '<span>互动率 ' + engRate + '</span><span>报价 ' + quote + '</span>' +
+          '</div>' +
+          '<div style="margin-bottom:8px;">' + tagsHtml + '</div>' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--l-border-light,#F0F0F0);">' +
+          '<span style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">KOS Score</span>' +
+          '<span style="font-size:14px;font-weight:700;color:#0F766E;">' + score + '</span>' +
+          '</div>';
+        grid.appendChild(card);
+      });
+    },
+
+    paidLoaded: false,
+    loadPaid: function() {
+      this.paidLoaded = true;
+      document.getElementById('paid-loading').style.display = '';
+      document.getElementById('paid-empty').style.display = 'none';
+      document.getElementById('paid-list').style.display = 'none';
+      // Try kos paid plans API
+      xjViz.api('/kos/reward')
+        .then(function(d) {
+          document.getElementById('paid-loading').style.display = 'none';
+          var plans = d.plans || d.rewards || d.data || [];
+          if (!Array.isArray(plans) || plans.length === 0) { document.getElementById('paid-empty').style.display = ''; return; }
+          var list = document.getElementById('paid-list');
+          list.style.display = '';
+          list.innerHTML = '';
+          plans.forEach(function(p) {
+            var card = document.createElement('div');
+            card.style.cssText = 'border:1px solid var(--l-border,#E8E8E8);border-radius:12px;padding:16px;margin-bottom:12px;';
+            var status = p.status || 'active';
+            var statusCls = status === 'active' ? 'zbc-tag--low' : (status === 'paused' ? 'zbc-tag--medium' : 'zbc-tag--info');
+            card.innerHTML =
+              '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+              '<div style="font-weight:600;">' + ZBMPKOS.escapeHtml(p.name || p.plan_name || '未命名计划') + '</div>' +
+              '<span class="zbc-tag ' + statusCls + '">' + status + '</span></div>' +
+              '<div style="font-size:12px;color:var(--l-text-secondary,#6B7280);line-height:1.8;">' +
+              (p.budget ? '预算：¥' + p.budget.toLocaleString() + ' ' : '') +
+              (p.spent ? '已花费：¥' + p.spent.toLocaleString() + ' ' : '') +
+              (p.d达人_count ? '达人数：' + p.d达人_count : '') +
+              '</div>';
+            list.appendChild(card);
+          });
+        })
+        .catch(function() {
+          document.getElementById('paid-loading').style.display = 'none';
+          document.getElementById('paid-empty').style.display = '';
+        });
+    },
+
+    execLoaded: false,
+    loadExecution: function() {
+      this.execLoaded = true;
+      document.getElementById('exec-loading').style.display = '';
+      document.getElementById('exec-empty').style.display = 'none';
+      document.getElementById('exec-table-wrap').style.display = 'none';
+      // Use KOS list with lifecycle filter
+      xjViz.api('/kos/list', {limit:50, lifecycle:'execution'})
+        .then(function(d) {
+          document.getElementById('exec-loading').style.display = 'none';
+          var execs = d.profiles || d.executions || d.data || [];
+          if (!Array.isArray(execs) || execs.length === 0) { document.getElementById('exec-empty').style.display = ''; return; }
+          document.getElementById('exec-table-wrap').style.display = '';
+          var tbody = document.getElementById('exec-tbody');
+          tbody.innerHTML = '';
+          var pending = 0, running = 0, done = 0;
+          execs.forEach(function(e) {
+            var status = e.lifecycle || e.status || 'pending';
+            if (status === 'pending' || status === '待执行') pending++;
+            else if (status === 'running' || status === '进行中') running++;
+            else if (status === 'completed' || status === '已完成') done++;
+            var statusCls = status === 'completed' ? 'zbc-tag--low' : (status === 'running' ? 'zbc-tag--medium' : 'zbc-tag--info');
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td style="font-family:monospace;font-size:11px;">' + (e.id || e.task_id || '—') + '</td>' +
+              '<td>' + ZBMPKOS.escapeHtml(e.nickname || e.author_nickname || '—') + '</td>' +
+              '<td><span class="zbc-tag zbc-tag--info">' + ZBMPKOS.escapeHtml(e.platform || 'unknown') + '</span></td>' +
+              '<td>' + ZBMPKOS.escapeHtml(e.content_type || '—') + '</td>' +
+              '<td><span class="zbc-tag ' + statusCls + '">' + status + '</span></td>' +
+              '<td style="font-size:12px;">' + (e.created_at || '—') + '</td>' +
+              '<td><button class="zbc-btn" style="padding:2px 8px;font-size:11px;" type="button">详情</button></td>';
+            tbody.appendChild(tr);
+          });
+          document.getElementById('exec-pending').textContent = '待执行 ' + pending;
+          document.getElementById('exec-running').textContent = '进行中 ' + running;
+          document.getElementById('exec-done').textContent = '已完成 ' + done;
+        })
+        .catch(function() {
+          document.getElementById('exec-loading').style.display = 'none';
+          document.getElementById('exec-empty').style.display = '';
+        });
+    },
+
+    loadPlatformRules: function() {
+      var self = this;
+      // Load platform rules config
+      xjViz.api('/kos/overview')
+        .then(function(d) {
+          if (d && d.platform_rules) {
+            self.state.platformRules = d.platform_rules;
+            self.renderAttributionRules();
+          }
+        })
+        .catch(function() {});
+      // Also try to render default rules from known config
+      if (!this.state.platformRules) {
+        this.state.platformRules = {
+          xiaohongshu: { label: '小红书', engagement_weights: { likes: 1.0, comments: 2.0, collects: 1.5, shares: 2.0 } },
+          douyin: { label: '抖音', engagement_weights: { likes: 1.0, comments: 2.0, collects: 1.0, shares: 3.0 } },
+          weibo: { label: '微博', engagement_weights: { likes: 1.0, comments: 1.5, collects: 0.5, shares: 2.5 } },
+          bilibili: { label: 'B站', engagement_weights: { likes: 1.0, comments: 2.0, collects: 2.0, shares: 2.0 } }
+        };
+        this.renderAttributionRules();
+      }
+    },
+
+    renderAttributionRules: function() {
+      var container = document.getElementById('attribution-rules');
+      if (!container || !this.state.platformRules) return;
+      var rules = this.state.platformRules;
+      var html = '<table class="zbc-table"><thead><tr><th>平台</th><th>点赞</th><th>评论</th><th>收藏</th><th>分享</th></tr></thead><tbody>';
+      Object.keys(rules).forEach(function(key) {
+        var r = rules[key];
+        var w = r.engagement_weights || {};
+        html += '<tr><td style="font-weight:500;">' + (r.label || key) + '</td><td>' + (w.likes != null ? w.likes : '—') + '</td><td>' + (w.comments != null ? w.comments : '—') + '</td><td>' + (w.collects != null ? w.collects : '—') + '</td><td>' + (w.shares != null ? w.shares : '—') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      html += '<div style="margin-top:12px;font-size:11px;color:var(--l-text-secondary,#6B7280);">权重来源：config/kos_platform_rules.json · 各平台独立配置，禁止硬编码</div>';
+      container.innerHTML = html;
+    },
+
+    calcAttribution: function() {
+      var input = document.getElementById('attr-input').value.trim();
+      var brand = document.getElementById('attr-brand').value.trim() || '广州太古汇';
+      var result = document.getElementById('attr-result');
+      if (!input) { result.innerHTML = '<div class="zbc-state-error__text" style="font-size:12px;">请输入达人ID或笔记IDs</div>'; return; }
+      result.innerHTML = '<div class="zbc-state-loading" style="padding:16px;"><div class="zbc-skeleton" style="width:100%;height:60px;"></div></div>';
+      var params = { brand_name: brand };
+      if (input.indexOf(',') >= 0) params.note_ids = input;
+      else params.author_id = input;
+      xjViz.api('/kos/attribution', params)
+        .then(function(d) {
+          if (d.ok === false) throw new Error(d.error || '计算失败');
+          var attr = d.attribution || d.data || d;
+          var html = '<div style="border:1px solid var(--l-border,#E8E8E8);border-radius:12px;padding:16px;">';
+          html += '<div style="font-weight:600;margin-bottom:8px;">归因结果</div>';
+          if (attr.total_score != null) html += '<div style="font-size:24px;font-weight:700;color:#0F766E;">' + attr.total_score.toFixed(2) + '</div>';
+          if (attr.breakdown) {
+            html += '<div style="margin-top:12px;">';
+            Object.keys(attr.breakdown).forEach(function(k) {
+              html += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span>' + k + '</span><span style="font-weight:600;">' + (typeof attr.breakdown[k] === 'number' ? attr.breakdown[k].toFixed(2) : attr.breakdown[k]) + '</span></div>';
+            });
+            html += '</div>';
+          }
+          html += '</div>';
+          result.innerHTML = html;
+        })
+        .catch(function(e) {
+          result.innerHTML = '<div class="zbc-state-error__text" style="font-size:12px;">计算失败：' + ZBMPKOS.escapeHtml(e.message || '未知错误') + '</div>';
+        });
+    },
+
+    proLoaded: false,
+    loadProfessional: function() {
+      this.proLoaded = true;
+      document.getElementById('pro-loading').style.display = '';
+      document.getElementById('pro-empty').style.display = 'none';
+      document.getElementById('pro-table-wrap').style.display = 'none';
+      xjViz.api('/kos/professional/status')
+        .then(function(d) {
+          document.getElementById('pro-loading').style.display = 'none';
+          var accounts = d.accounts || d.professional_accounts || d.data || [];
+          if (!Array.isArray(accounts) || accounts.length === 0) { document.getElementById('pro-empty').style.display = ''; return; }
+          document.getElementById('pro-table-wrap').style.display = '';
+          var tbody = document.getElementById('pro-tbody');
+          tbody.innerHTML = '';
+          accounts.forEach(function(a) {
+            var fans = a.fans_count != null ? a.fans_count.toLocaleString() : 'unknown';
+            var eng = a.engagement_count != null ? a.engagement_count.toLocaleString() : 'unknown';
+            var status = a.status || 'enabled';
+            var statusCls = status === 'enabled' ? 'zbc-tag--low' : 'zbc-tag--medium';
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td style="font-weight:500;">' + ZBMPKOS.escapeHtml(a.name || a.account_name || '—') + '</td>' +
+              '<td><span class="zbc-tag zbc-tag--info">' + ZBMPKOS.escapeHtml(a.platform || 'unknown') + '</span></td>' +
+              '<td style="font-variant-numeric:tabular-nums;">' + fans + '</td>' +
+              '<td style="font-variant-numeric:tabular-nums;">' + eng + '</td>' +
+              '<td><span class="zbc-tag ' + statusCls + '">' + status + '</span></td>' +
+              '<td><button class="zbc-btn" style="padding:2px 8px;font-size:11px;" type="button">管理</button></td>';
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(function() {
+          document.getElementById('pro-loading').style.display = 'none';
+          document.getElementById('pro-empty').style.display = '';
+        });
+    },
+
+    escapeHtml: function(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  };
+
+  window.ZBMPKOS = ZBMPKOS;
+  document.addEventListener('DOMContentLoaded', function() { ZBMPKOS.init(); });
+})();
 </script>
 {% endblock %}

@@ -1,112 +1,391 @@
 {% extends "base.html" %}
-{% block title %}Security · 序境 LUMENIS{% endblock %}
-{% block page_title %}Security{% endblock %}
+{% block title %}SYSTEM Security · 序境 LUMENIS{% endblock %}
+{% block page_title %}Security & Permissions{% endblock %}
 
 {% block content %}
-<div class="lm-viewport" data-domain="system">
-  <div class="lm-viewport__context">
-    <div class="lm-section-header" style="margin:0;">
-      <div class="lm-section-header__title">Security</div>
-      <div class="lm-time-dimension">
-        <button class="lm-time-pill is-active" data-range="7d">7D</button>
-        <button class="lm-time-pill" data-range="30d">30D</button>
-        <button class="lm-time-pill" data-range="90d">90D</button>
-      </div>
+<div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
+  <span>⚡</span><span id="degraded-msg">部分安全模块数据延迟</span>
+</div>
+
+<!-- ===== Security KPI (4) ===== -->
+<div class="zbc-kpi-grid" id="sec-kpi-grid">
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">用户数</div>
+    <div class="zbc-kpi-card__value" id="kpi-users">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-users-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">角色数</div>
+    <div class="zbc-kpi-card__value" id="kpi-roles">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-roles-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">今日审计</div>
+    <div class="zbc-kpi-card__value" id="kpi-audit">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-audit-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">域隔离状态</div>
+    <div class="zbc-kpi-card__value" id="kpi-isolation" style="font-size:20px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-isolation-sub">数据采集中…</div>
+  </div>
+</div>
+
+<!-- ===== Row 2: Permission matrix + Domain isolation ===== -->
+<div class="zbc-grid-2">
+  <div class="zbc-card" id="perm-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">权限矩阵 · user × role × product × domain × action × resource</span>
+      <span class="zbc-tag zbc-tag--info" id="perm-count">—</span>
     </div>
-    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">安全中心 · 权限/域隔离/审计</p>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="perm-loading">
+        <div class="zbc-skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:60%;height:16px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="perm-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">🔒</div>
+        <div class="zbc-state-empty__text">暂无权限配置</div>
+      </div>
+      <div class="zbc-state-error" id="perm-error" style="display:none;">
+        <div class="zbc-state-error__text" id="perm-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadPermissions()">重试</button>
+      </div>
+      <div id="perm-table-wrap" style="display:none;overflow-x:auto;max-height:420px;overflow-y:auto;"></div>
+    </div>
   </div>
 
-  <!-- Six-State Panel: Loading / Empty / Error / Success / Degraded / Permission -->
-  <section class="lm-panel" id="main-panel" data-state="loading" data-api="/api/domain/context">
-    <div class="lm-panel__header">
-      <span class="lm-panel__title">Data</span>
-      <span class="lm-status-badge lm-status-badge--info" id="panel-domain-badge">SYSTEM</span>
+  <div class="zbc-card" id="isolation-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">域隔离验证</span>
     </div>
-    <div class="lm-panel__body">
-      <!-- Loading State -->
-      <div class="xj-state xj-state--loading" id="state-loading">
-        <div class="xj-spinner"></div>
-        <p>加载中…</p>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="isolation-loading">
+        <div class="zbc-skeleton" style="width:90%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:70%;height:16px;"></div>
       </div>
-      <!-- Empty State -->
-      <div class="xj-state xj-state--empty" id="state-empty" style="display:none;">
-        <div class="xj-empty-icon">📭</div>
-        <p>暂无数据</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">API 返回空结果，可能是该域下尚无数据采集</p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">刷新</button>
+      <div class="zbc-state-error" id="isolation-error" style="display:none;">
+        <div class="zbc-state-error__text" id="isolation-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadIsolation()">重试</button>
       </div>
-      <!-- Error State -->
-      <div class="xj-state xj-state--error" id="state-error" style="display:none;">
-        <div class="xj-error-icon">⚠️</div>
-        <p>加载失败</p>
-        <p id="error-msg" style="font-size:12px;color:var(--lm-color-danger);"></p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">重试</button>
-      </div>
-      <!-- Success State -->
-      <div class="xj-state xj-state--success" id="state-success" style="display:none;">
-        <div id="success-content"></div>
-      </div>
-      <!-- Degraded State -->
-      <div class="xj-state xj-state--degraded" id="state-degraded" style="display:none;">
-        <div class="xj-degraded-icon">⚡</div>
-        <p>部分数据不可用（降级模式）</p>
-        <p id="degraded-msg" style="font-size:12px;color:var(--lm-color-text-secondary);"></p>
-        <div id="degraded-content"></div>
-      </div>
-      <!-- Permission Denied State -->
-      <div class="xj-state xj-state--permission" id="state-permission" style="display:none;">
-        <div class="xj-permission-icon">🔒</div>
-        <p>权限不足</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">您没有访问该 SYSTEM 域数据的权限，请联系管理员</p>
+      <div id="isolation-content" style="display:none;">
+        <div id="isolation-list"></div>
+        <div style="padding:12px 20px;border-top:1px solid var(--l-border-light,#F0F0F0);">
+          <div style="font-size:12px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">共享资源</div>
+          <div id="isolation-shared" style="font-size:12px;color:var(--l-text-secondary,#6B7280);font-family:JetBrains Mono,monospace;">—</div>
+        </div>
       </div>
     </div>
-  </section>
-  
+  </div>
+</div>
+
+<!-- ===== Row 3: Audit log + Sensitive masking + Auth recovery ===== -->
+<div class="zbc-grid-2">
+  <div class="zbc-card" id="audit-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">审计日志</span>
+      <span class="zbc-tag zbc-tag--info" id="audit-count">—</span>
+    </div>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="audit-loading">
+        <div class="zbc-skeleton" style="width:75%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:55%;height:16px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="audit-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">📋</div>
+        <div class="zbc-state-empty__text">暂无审计记录</div>
+      </div>
+      <div class="zbc-state-error" id="audit-error" style="display:none;">
+        <div class="zbc-state-error__text" id="audit-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadAudit()">重试</button>
+      </div>
+      <div id="audit-table-wrap" style="display:none;overflow-x:auto;max-height:400px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="zbc-card" id="masking-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">敏感数据脱敏</span>
+        <span class="zbc-tag" id="masking-status-tag" style="background:rgba(124,58,237,0.1);color:#7C3AED;">—</span>
+      </div>
+      <div class="zbc-card__body" style="padding:0;">
+        <div class="zbc-state-loading" id="masking-loading">
+          <div class="zbc-skeleton" style="width:80%;height:16px;"></div>
+        </div>
+        <div class="zbc-state-error" id="masking-error" style="display:none;">
+          <div class="zbc-state-error__text" id="masking-error-msg">加载失败</div>
+        </div>
+        <div id="masking-content" style="display:none;">
+          <div id="masking-list"></div>
+          <div style="padding:10px 20px;border-top:1px solid var(--l-border-light,#F0F0F0);">
+            <div style="font-size:11px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:4px;">拦截记录</div>
+            <div id="masking-blocked" style="font-size:11px;color:var(--l-text-secondary,#6B7280);font-family:JetBrains Mono,monospace;max-height:60px;overflow-y:auto;">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="zbc-card" id="authrec-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">认证恢复</span>
+        <span class="zbc-tag zbc-tag--info" id="authrec-count">—</span>
+      </div>
+      <div class="zbc-card__body" style="padding:0;">
+        <div class="zbc-state-loading" id="authrec-loading">
+          <div class="zbc-skeleton" style="width:70%;height:16px;"></div>
+        </div>
+        <div class="zbc-state-empty" id="authrec-empty" style="display:none;">
+          <div class="zbc-state-empty__text" style="font-size:12px;">无待恢复认证任务</div>
+        </div>
+        <div class="zbc-state-error" id="authrec-error" style="display:none;">
+          <div class="zbc-state-error__text" id="authrec-error-msg">加载失败</div>
+        </div>
+        <div id="authrec-list" style="display:none;max-height:200px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-function loadPanelData() {
-  var panel = document.getElementById('main-panel');
-  var api = panel.getAttribute('data-api');
-  showState('loading');
-  LUMENIS.fetch(api, { headers: { 'X-Domain-Id': 'system' } })
-    .then(function(r) {
-      if (r.status === 403) { showState('permission'); return null; }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (!d) return;
-      if (d.ok === false) { showState('error'); document.getElementById('error-msg').textContent = d.error || 'Unknown error'; return; }
-      var data = d.data || d.records || d.items || d;
-      var isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0);
-      if (isEmpty) { showState('empty'); return; }
-      // Render success
-      var html = '<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr>';
-      var keys = Object.keys(Array.isArray(data) ? (data[0] || {}) : data);
-      keys.forEach(function(k) { html += '<th>' + k + '</th>'; });
-      html += '</tr></thead><tbody>';
-      var rows = Array.isArray(data) ? data : [data];
-      rows.forEach(function(row) {
-        html += '<tr>';
-        keys.forEach(function(k) { html += '<td>' + (row[k] != null ? row[k] : '-') + '</td>'; });
-        html += '</tr>';
-      });
-      html += '</tbody></table></div>';
-      document.getElementById('success-content').innerHTML = html;
-      showState('success');
-    })
-    .catch(function(e) {
-      showState('error');
-      document.getElementById('error-msg').textContent = e.message;
+(function() {
+  'use strict';
+
+  function isMissing(v) { return v === null || v === undefined || v === '' || v === 'unknown' || v === 'null'; }
+  function disp(v) { return isMissing(v) ? '—' : v; }
+  function dispNum(v) { return isMissing(v) || isNaN(Number(v)) ? '—' : Number(v); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function trunc(s, n) { s = String(s || ''); return s.length > n ? s.substring(0, n) + '…' : s; }
+
+  function statusTag(s) {
+    var up = String(s || 'UNKNOWN').toUpperCase();
+    var map = {
+      'ALLOW': 'zbc-tag--low', 'GRANTED': 'zbc-tag--low', 'SUCCESS': 'zbc-tag--low', 'PASS': 'zbc-tag--low', 'HEALTHY': 'zbc-tag--low', 'OK': 'zbc-tag--low', 'ACTIVE': 'zbc-tag--low', 'ENFORCED': 'zbc-tag--low',
+      'DEGRADED': 'zbc-tag--medium', 'WARNING': 'zbc-tag--medium', 'PARTIAL': 'zbc-tag--medium', 'PENDING': 'zbc-tag--medium', 'RECOVERING': 'zbc-tag--medium',
+      'DENY': 'zbc-tag--high', 'DENIED': 'zbc-tag--high', 'FAILED': 'zbc-tag--high', 'ERROR': 'zbc-tag--high', 'BLOCKED': 'zbc-tag--high', 'CRITICAL': 'zbc-tag--high', 'VIOLATION': 'zbc-tag--high',
+      'UNKNOWN': 'zbc-tag--unknown', 'DISABLED': 'zbc-tag--unknown', 'STOPPED': 'zbc-tag--unknown'
+    };
+    return '<span class="zbc-tag ' + (map[up] || 'zbc-tag--unknown') + '">' + up + '</span>';
+  }
+
+  function showSection(prefix, state) {
+    ['loading', 'empty', 'error'].forEach(function(s) {
+      var el = document.getElementById(prefix + '-' + s);
+      if (el) el.style.display = (s === state) ? '' : 'none';
     });
-}
-function showState(s) {
-  ['loading','empty','error','success','degraded','permission'].forEach(function(st) {
-    document.getElementById('state-' + st).style.display = (st === s) ? '' : 'none';
+    var wrap = document.getElementById(prefix + '-table-wrap') || document.getElementById(prefix + '-list') || document.getElementById(prefix + '-content');
+    if (wrap) wrap.style.display = (state === 'success') ? '' : 'none';
+  }
+
+  function showDegraded(msg) {
+    var b = document.getElementById('degraded-banner');
+    document.getElementById('degraded-msg').textContent = msg;
+    b.style.display = '';
+  }
+
+  /* ---- Security overview (xjViz.api driven) ---- */
+  function loadSecurity() {
+    xjViz.api('/viz/security').catch(function() { return xjViz.api('/system/security'); })
+      .then(function(d) {
+        var data = d.data || d;
+
+        var users = data.users || data.user_count || (data.users && data.users.length);
+        document.getElementById('kpi-users').textContent = isMissing(users) ? '—' : Number(users);
+        document.getElementById('kpi-users-sub').textContent = '已注册用户';
+
+        var roles = data.roles || data.role_count || (data.roles && data.roles.length);
+        document.getElementById('kpi-roles').textContent = isMissing(roles) ? '—' : Number(roles);
+        document.getElementById('kpi-roles-sub').textContent = '角色定义';
+
+        var audit = data.audit_today || data.today_audit_count;
+        document.getElementById('kpi-audit').textContent = isMissing(audit) ? '—' : Number(audit);
+        document.getElementById('kpi-audit-sub').textContent = '今日操作记录';
+
+        var iso = data.isolation_status || data.domain_isolation || 'ENFORCED';
+        document.getElementById('kpi-isolation').textContent = String(iso).toUpperCase();
+        document.getElementById('kpi-isolation').style.color = (iso === 'enforced' || iso === 'ENFORCED') ? '#10B981' : '';
+        document.getElementById('kpi-isolation-sub').textContent = 'ZBMP / CTH / SYSTEM';
+      })
+      .catch(function(e) {
+        ['kpi-users', 'kpi-roles', 'kpi-audit', 'kpi-isolation'].forEach(function(id) {
+          document.getElementById(id).textContent = '—';
+        });
+        showDegraded('Security API 不可用: ' + e.message);
+      });
+  }
+
+  /* ---- Permission Matrix (xjViz.api + xjViz.table) ---- */
+  function loadPermissions() {
+    showSection('perm', 'loading');
+    xjViz.api('/viz/security-permissions').catch(function() { return xjViz.api('/system/security/permissions'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var perms = data.permissions || data.records || data.items || data.matrix || [];
+        if (!Array.isArray(perms)) perms = [];
+        document.getElementById('perm-count').textContent = perms.length + ' 条';
+        if (perms.length === 0) { showSection('perm', 'empty'); return; }
+        showSection('perm', 'success');
+        xjViz.table('#perm-table-wrap', perms.slice(0, 100), [
+          { key: 'user', label: 'User', render: function(v, r) { return '<span style="font-size:12px;">' + esc(disp(v || r.user_id || r.username)) + '</span>'; } },
+          { key: 'role', label: 'Role', render: function(v, r) { return disp(v || r.role_id); } },
+          { key: 'product_id', label: 'Product', render: function(v, r) { return '<span class="zbc-tag zbc-tag--info">' + esc(disp(v || r.product)) + '</span>'; } },
+          { key: 'domain_id', label: 'Domain', render: function(v, r) { return disp(v || r.domain); } },
+          { key: 'action', label: 'Action', render: function(v) { return '<span style="font-size:12px;font-family:JetBrains Mono,monospace;">' + esc(disp(v)) + '</span>'; } },
+          { key: 'resource', label: 'Resource', render: function(v) { return '<span style="font-size:12px;font-family:JetBrains Mono,monospace;">' + esc(trunc(disp(v), 30)) + '</span>'; } },
+          { key: 'effect', label: '权限', render: function(v, r) { return statusTag(v || r.permission || r.access); } }
+        ]);
+      })
+      .catch(function(e) {
+        showSection('perm', 'error');
+        document.getElementById('perm-error-msg').textContent = e.message;
+      });
+  }
+
+  /* ---- Domain Isolation (xjViz.api driven) ---- */
+  function loadIsolation() {
+    showSection('isolation', 'loading');
+    xjViz.api('/viz/domain-isolation').catch(function() { return xjViz.api('/system/domains'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var domains = data.domains || {};
+        showSection('isolation', 'success');
+        var html = '';
+        ['zbmp', 'cth', 'system'].forEach(function(dom) {
+          var info = domains[dom] || {};
+          var status = info.isolation_status || info.status || 'ENFORCED';
+          html += '<div style="padding:10px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;align-items:center;justify-content:space-between;">'
+            + '<div><div style="font-size:13px;font-weight:600;text-transform:uppercase;">' + dom + '</div>'
+            + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);margin-top:2px;">workers: ' + dispNum(info.runtime_workers || 0) + ' · boundary: ' + esc(disp(info.boundary)) + '</div></div>'
+            + statusTag(status)
+            + '</div>';
+        });
+        document.getElementById('isolation-list').innerHTML = html;
+        var shared = data.shared_resources || data.shared || [];
+        document.getElementById('isolation-shared').textContent = Array.isArray(shared) && shared.length > 0 ? shared.join(', ') : '无共享资源（完全隔离）';
+      })
+      .catch(function(e) {
+        showSection('isolation', 'error');
+        document.getElementById('isolation-error-msg').textContent = e.message;
+      });
+  }
+
+  /* ---- Audit Log (xjViz.api + xjViz.table) ---- */
+  function loadAudit() {
+    showSection('audit', 'loading');
+    xjViz.api('/viz/security-audit').catch(function() { return xjViz.api('/system/security/audit'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var logs = data.logs || data.records || data.items || [];
+        if (!Array.isArray(logs)) logs = [];
+        document.getElementById('audit-count').textContent = logs.length + ' 条';
+        if (logs.length === 0) { showSection('audit', 'empty'); return; }
+        showSection('audit', 'success');
+        xjViz.table('#audit-table-wrap', logs.slice(0, 50), [
+          { key: 'timestamp', label: '时间', render: function(v, r) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);white-space:nowrap;">' + esc(disp(v || r.created_at || r.time)) + '</span>'; } },
+          { key: 'user', label: '用户', render: function(v, r) { return '<span style="font-size:12px;">' + esc(disp(v || r.user_id || r.actor)) + '</span>'; } },
+          { key: 'action', label: '操作', render: function(v, r) { return '<span style="font-size:12px;font-family:JetBrains Mono,monospace;">' + esc(disp(v || r.operation)) + '</span>'; } },
+          { key: 'resource', label: '资源', render: function(v) { return '<span style="font-size:12px;font-family:JetBrains Mono,monospace;" title="' + esc(v || '') + '">' + esc(trunc(disp(v), 25)) + '</span>'; } },
+          { key: 'result', label: '结果', render: function(v, r) { return statusTag(v || r.status); } },
+          { key: 'ip', label: 'IP', render: function(v, r) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);font-family:JetBrains Mono,monospace;">' + esc(disp(v || r.source_ip)) + '</span>'; } }
+        ]);
+      })
+      .catch(function(e) {
+        showSection('audit', 'error');
+        document.getElementById('audit-error-msg').textContent = e.message;
+      });
+  }
+
+  /* ---- Sensitive Data Masking (xjViz.api driven) ---- */
+  var MASKING_TYPES = [
+    { key: 'phone', name: '手机号' },
+    { key: 'id_card', name: '身份证' },
+    { key: 'email', name: '邮箱' },
+    { key: 'bank_card', name: '银行卡' },
+    { key: 'address', name: '地址' },
+    { key: 'api_key', name: 'API Key' }
+  ];
+
+  function loadMasking() {
+    xjViz.api('/viz/security-masking').catch(function() { return xjViz.api('/system/security/masking'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var rules = data.rules || data.masking || {};
+        var overall = data.overall_status || 'ENFORCED';
+        document.getElementById('masking-status-tag').textContent = String(overall).toUpperCase();
+        document.getElementById('masking-loading').style.display = 'none';
+        document.getElementById('masking-error').style.display = 'none';
+        document.getElementById('masking-content').style.display = '';
+        var html = MASKING_TYPES.map(function(m) {
+          var r = rules[m.key] || rules[m.name] || {};
+          var st = r.status || r.state || 'ENFORCED';
+          return '<div style="padding:7px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;align-items:center;justify-content:space-between;">'
+            + '<span style="font-size:12px;">' + m.name + '</span>'
+            + statusTag(st)
+            + '</div>';
+        }).join('');
+        document.getElementById('masking-list').innerHTML = html;
+        var blocked = data.blocked || data.interceptions || [];
+        document.getElementById('masking-blocked').textContent = blocked.length > 0
+          ? blocked.map(function(b) { return (b.timestamp || '') + ' [' + (b.type || '') + '] ' + trunc(b.detail || '', 40); }).join('\n')
+          : '—';
+      })
+      .catch(function(e) {
+        document.getElementById('masking-loading').style.display = 'none';
+        document.getElementById('masking-error').style.display = '';
+        document.getElementById('masking-error-msg').textContent = e.message;
+      });
+  }
+
+  /* ---- Auth Recovery (xjViz.api driven) ---- */
+  function loadAuthRecovery() {
+    xjViz.api('/viz/security-auth-recovery').catch(function() { return xjViz.api('/system/security/auth-recovery'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var tasks = data.tasks || data.records || data.items || [];
+        if (!Array.isArray(tasks)) tasks = [];
+        document.getElementById('authrec-count').textContent = tasks.length + ' 任务';
+        document.getElementById('authrec-loading').style.display = 'none';
+        if (tasks.length === 0) {
+          document.getElementById('authrec-empty').style.display = '';
+          document.getElementById('authrec-list').style.display = 'none';
+          return;
+        }
+        document.getElementById('authrec-empty').style.display = 'none';
+        document.getElementById('authrec-list').style.display = '';
+        var html = tasks.map(function(t) {
+          return '<div style="padding:10px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+            + '<span style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600;">' + esc(disp(t.task_id || t.id)) + '</span>'
+            + statusTag(t.status || t.state)
+            + '</div>'
+            + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">'
+            + 'user: ' + esc(disp(t.user_id)) + ' · type: ' + esc(disp(t.recovery_type))
+            + ' · created: ' + esc(disp(t.created_at))
+            + '</div>'
+            + '</div>';
+        }).join('');
+        document.getElementById('authrec-list').innerHTML = html;
+      })
+      .catch(function(e) {
+        document.getElementById('authrec-loading').style.display = 'none';
+        document.getElementById('authrec-error').style.display = '';
+        document.getElementById('authrec-error-msg').textContent = e.message;
+      });
+  }
+
+  window.loadPermissions = loadPermissions;
+  window.loadIsolation = loadIsolation;
+  window.loadAudit = loadAudit;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadSecurity();
+    loadPermissions();
+    loadIsolation();
+    loadAudit();
+    loadMasking();
+    loadAuthRecovery();
   });
-  document.getElementById('main-panel').setAttribute('data-state', s);
-}
-document.addEventListener('DOMContentLoaded', loadPanelData);
+  setInterval(loadSecurity, 30000);
+})();
 </script>
 {% endblock %}

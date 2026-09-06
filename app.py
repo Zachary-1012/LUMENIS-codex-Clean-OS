@@ -1,4 +1,4 @@
-﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
 from pathlib import Path
 
@@ -108,6 +108,7 @@ import ai_learning_engine
 import public_opinion_cases
 import report_api  # P1-10 拆分批3: 报告/摘要/品牌报告 API
 from report_api import _DEV_EXEC_ENABLED, _DEV_EXEC_BLOCK_RE  # GAP-04 开发执行闸门共享变量
+import viz_api  # Phase 14: function-driven visualization backend /api/viz/*
 # ProxyPool 可插拔代理池（可选；导入失败不影响系统启动；总开关默认关闭，关闭时等同直连原版）
 try:
     from proxy_pool import proxy_manager as _proxy_mgr
@@ -146,6 +147,7 @@ app.register_blueprint(system_features_api.system_features_bp)
 # V3.0 P0: Auth Recovery Center（认证恢复中心）
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
 app.register_blueprint(report_api.report_bp)  # P1-10 拆分批3: 报告 API
+app.register_blueprint(viz_api.viz_bp)  # Phase 14: 函数驱动可视化后端 /api/viz/*
 import data_query_api
 data_query_api.register_data_query_api(app)  # P1-10 拆分批1: 数据只读查询
 import collection_api
@@ -915,7 +917,7 @@ def auth_config_api():
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
-    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health/summary', '/api/risks/active', '/api/risk/active') or request.path.startswith('/v4/') or request.path.startswith('/static/') or request.path.startswith('/api/zbmp/') or request.path.startswith('/api/cth/') or request.path.startswith('/api/system/'):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health/summary', '/api/risks/active', '/api/risk/active') or request.path.startswith('/v4/') or request.path.startswith('/static/') or request.path.startswith('/api/zbmp/') or request.path.startswith('/api/cth/') or request.path.startswith('/api/system/') or request.path.startswith('/api/viz/'):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -1012,7 +1014,7 @@ def _permission_gate_write_check():
     """
     if request.method not in _PG_WRITE_METHODS:
         return None
-    if request.path in _PG_BYPASS_PATHS:
+    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/'):
         return None
     try:
         if _pg is None:

@@ -1,112 +1,334 @@
 {% extends "base.html" %}
-{% block title %}Collector · 序境 LUMENIS{% endblock %}
-{% block page_title %}Collector{% endblock %}
+{% block title %}SYSTEM Collector · 序境 LUMENIS{% endblock %}
+{% block page_title %}Collector Management{% endblock %}
 
 {% block content %}
-<div class="lm-viewport" data-domain="system">
-  <div class="lm-viewport__context">
-    <div class="lm-section-header" style="margin:0;">
-      <div class="lm-section-header__title">Collector</div>
-      <div class="lm-time-dimension">
-        <button class="lm-time-pill is-active" data-range="7d">7D</button>
-        <button class="lm-time-pill" data-range="30d">30D</button>
-        <button class="lm-time-pill" data-range="90d">90D</button>
-      </div>
+<div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
+  <span>⚡</span><span id="degraded-msg">部分采集器数据延迟</span>
+</div>
+
+<!-- ===== 5 platform collector status KPI cards ===== -->
+<div class="zbc-kpi-grid" id="collector-kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">小红书</div>
+    <div class="zbc-kpi-card__value" id="kpi-xhs-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-xhs-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">抖音</div>
+    <div class="zbc-kpi-card__value" id="kpi-dy-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-dy-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">微博</div>
+    <div class="zbc-kpi-card__value" id="kpi-wb-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-wb-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">B站</div>
+    <div class="zbc-kpi-card__value" id="kpi-bili-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-bili-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">知乎</div>
+    <div class="zbc-kpi-card__value" id="kpi-zh-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-zh-sub">数据采集中…</div>
+  </div>
+</div>
+
+<!-- ===== Row 2: Account management + Proxy pool ===== -->
+<div class="zbc-grid-2">
+  <div class="zbc-card" id="account-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">账号管理</span>
+      <span class="zbc-tag zbc-tag--info" id="account-count">—</span>
     </div>
-    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">采集器管理 · 采集任务状态与调度</p>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="account-loading">
+        <div class="zbc-skeleton" style="width:75%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:55%;height:16px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="account-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">👤</div>
+        <div class="zbc-state-empty__text">暂无采集账号</div>
+      </div>
+      <div class="zbc-state-error" id="account-error" style="display:none;">
+        <div class="zbc-state-error__text" id="account-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadAccounts()">重试</button>
+      </div>
+      <div id="account-table-wrap" style="display:none;overflow-x:auto;"></div>
+    </div>
   </div>
 
-  <!-- Six-State Panel: Loading / Empty / Error / Success / Degraded / Permission -->
-  <section class="lm-panel" id="main-panel" data-state="loading" data-api="/api/stats">
-    <div class="lm-panel__header">
-      <span class="lm-panel__title">Data</span>
-      <span class="lm-status-badge lm-status-badge--info" id="panel-domain-badge">SYSTEM</span>
+  <div class="zbc-card" id="proxy-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">代理池</span>
+      <span class="zbc-tag zbc-tag--info" id="proxy-count">—</span>
     </div>
-    <div class="lm-panel__body">
-      <!-- Loading State -->
-      <div class="xj-state xj-state--loading" id="state-loading">
-        <div class="xj-spinner"></div>
-        <p>加载中…</p>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="proxy-loading">
+        <div class="zbc-skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:60%;height:16px;"></div>
       </div>
-      <!-- Empty State -->
-      <div class="xj-state xj-state--empty" id="state-empty" style="display:none;">
-        <div class="xj-empty-icon">📭</div>
-        <p>暂无数据</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">API 返回空结果，可能是该域下尚无数据采集</p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">刷新</button>
+      <div class="zbc-state-empty" id="proxy-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">🌐</div>
+        <div class="zbc-state-empty__text">代理池为空</div>
       </div>
-      <!-- Error State -->
-      <div class="xj-state xj-state--error" id="state-error" style="display:none;">
-        <div class="xj-error-icon">⚠️</div>
-        <p>加载失败</p>
-        <p id="error-msg" style="font-size:12px;color:var(--lm-color-danger);"></p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">重试</button>
+      <div class="zbc-state-error" id="proxy-error" style="display:none;">
+        <div class="zbc-state-error__text" id="proxy-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadProxy()">重试</button>
       </div>
-      <!-- Success State -->
-      <div class="xj-state xj-state--success" id="state-success" style="display:none;">
-        <div id="success-content"></div>
-      </div>
-      <!-- Degraded State -->
-      <div class="xj-state xj-state--degraded" id="state-degraded" style="display:none;">
-        <div class="xj-degraded-icon">⚡</div>
-        <p>部分数据不可用（降级模式）</p>
-        <p id="degraded-msg" style="font-size:12px;color:var(--lm-color-text-secondary);"></p>
-        <div id="degraded-content"></div>
-      </div>
-      <!-- Permission Denied State -->
-      <div class="xj-state xj-state--permission" id="state-permission" style="display:none;">
-        <div class="xj-permission-icon">🔒</div>
-        <p>权限不足</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">您没有访问该 SYSTEM 域数据的权限，请联系管理员</p>
+      <div id="proxy-list" style="display:none;max-height:380px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Row 3: Quality Gate 5-step ===== -->
+<div class="zbc-card" id="quality-card">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">质量门禁 · 5 步通过率</span>
+    <span class="zbc-tag zbc-tag--info" id="quality-overall">—</span>
+  </div>
+  <div class="zbc-card__body">
+    <div class="zbc-state-loading" id="quality-loading">
+      <div class="zbc-skeleton" style="width:100%;height:80px;"></div>
+    </div>
+    <div class="zbc-state-error" id="quality-error" style="display:none;">
+      <div class="zbc-state-error__text" id="quality-error-msg">质量门禁数据不可用</div>
+      <button class="zbc-btn" onclick="loadQuality()">重试</button>
+    </div>
+    <div id="quality-content" style="display:none;">
+      <div id="quality-steps" style="display:flex;gap:12px;align-items:stretch;"></div>
+      <div style="margin-top:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">最近失败记录</div>
+        <div id="quality-failures" style="font-size:12px;color:var(--l-text-secondary,#6B7280);font-family:'JetBrains Mono',monospace;max-height:120px;overflow-y:auto;">—</div>
       </div>
     </div>
-  </section>
-  
+  </div>
 </div>
 
 <script>
-function loadPanelData() {
-  var panel = document.getElementById('main-panel');
-  var api = panel.getAttribute('data-api');
-  showState('loading');
-  LUMENIS.fetch(api, { headers: { 'X-Domain-Id': 'system' } })
-    .then(function(r) {
-      if (r.status === 403) { showState('permission'); return null; }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (!d) return;
-      if (d.ok === false) { showState('error'); document.getElementById('error-msg').textContent = d.error || 'Unknown error'; return; }
-      var data = d.data || d.records || d.items || d;
-      var isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0);
-      if (isEmpty) { showState('empty'); return; }
-      // Render success
-      var html = '<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr>';
-      var keys = Object.keys(Array.isArray(data) ? (data[0] || {}) : data);
-      keys.forEach(function(k) { html += '<th>' + k + '</th>'; });
-      html += '</tr></thead><tbody>';
-      var rows = Array.isArray(data) ? data : [data];
-      rows.forEach(function(row) {
-        html += '<tr>';
-        keys.forEach(function(k) { html += '<td>' + (row[k] != null ? row[k] : '-') + '</td>'; });
-        html += '</tr>';
-      });
-      html += '</tbody></table></div>';
-      document.getElementById('success-content').innerHTML = html;
-      showState('success');
-    })
-    .catch(function(e) {
-      showState('error');
-      document.getElementById('error-msg').textContent = e.message;
+(function() {
+  'use strict';
+
+  function isMissing(v) { return v === null || v === undefined || v === '' || v === 'unknown' || v === 'null'; }
+  function disp(v) { return isMissing(v) ? '—' : v; }
+  function dispNum(v) { return isMissing(v) || isNaN(Number(v)) ? '—' : Number(v); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+  function statusTag(s) {
+    var up = String(s || 'UNKNOWN').toUpperCase();
+    var map = {
+      'RUNNING': 'zbc-tag--low', 'HEALTHY': 'zbc-tag--low', 'OK': 'zbc-tag--low', 'ACTIVE': 'zbc-tag--low',
+      'DEGRADED': 'zbc-tag--medium', 'WARNING': 'zbc-tag--medium', 'RECOVERING': 'zbc-tag--medium', 'BLOCKED': 'zbc-tag--medium',
+      'FAILED': 'zbc-tag--high', 'ERROR': 'zbc-tag--high', 'CRITICAL': 'zbc-tag--high', 'EXPIRED': 'zbc-tag--high',
+      'STOPPED': 'zbc-tag--unknown', 'IDLE': 'zbc-tag--unknown', 'UNKNOWN': 'zbc-tag--unknown', 'PAUSED': 'zbc-tag--unknown'
+    };
+    return '<span class="zbc-tag ' + (map[up] || 'zbc-tag--unknown') + '">' + up + '</span>';
+  }
+
+  function showSection(prefix, state) {
+    ['loading', 'empty', 'error'].forEach(function(s) {
+      var el = document.getElementById(prefix + '-' + s);
+      if (el) el.style.display = (s === state) ? '' : 'none';
     });
-}
-function showState(s) {
-  ['loading','empty','error','success','degraded','permission'].forEach(function(st) {
-    document.getElementById('state-' + st).style.display = (st === s) ? '' : 'none';
+    var wrap = document.getElementById(prefix + '-table-wrap') || document.getElementById(prefix + '-list') || document.getElementById(prefix + '-content');
+    if (wrap) wrap.style.display = (state === 'success') ? '' : 'none';
+  }
+
+  function showDegraded(msg) {
+    var b = document.getElementById('degraded-banner');
+    document.getElementById('degraded-msg').textContent = msg;
+    b.style.display = '';
+  }
+
+  var PLATFORMS = [
+    { key: 'xhs', name: 'xiaohongshu' },
+    { key: 'dy', name: 'douyin' },
+    { key: 'wb', name: 'weibo' },
+    { key: 'bili', name: 'bilibili' },
+    { key: 'zh', name: 'zhihu' }
+  ];
+
+  /* ---- Collector status (xjViz.api driven) ---- */
+  function loadCollectors() {
+    xjViz.api('/viz/collectors').catch(function() { return xjViz.api('/system/collectors'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var collectors = data.collectors || data.platforms || {};
+        PLATFORMS.forEach(function(p) {
+          var c = collectors[p.name] || collectors[p.key] || {};
+          var el = document.getElementById('kpi-' + p.key + '-status');
+          var subEl = document.getElementById('kpi-' + p.key + '-sub');
+          var st = c.status || c.state;
+          el.textContent = isMissing(st) ? '—' : String(st).toUpperCase();
+          el.style.color = (st === 'running' || st === 'healthy') ? '#10B981' : (st === 'failed' || st === 'error') ? '#DC2626' : (st === 'degraded' || st === 'blocked') ? '#D97706' : '';
+          var last = c.last_collect_at || c.last_run_at;
+          var rate = isMissing(c.success_rate) ? null : (c.success_rate * 100).toFixed(1) + '%';
+          subEl.textContent = '最近: ' + disp(last) + ' · 成功率: ' + (rate || '—');
+          subEl.className = 'zbc-kpi-card__change ' + (!isMissing(c.success_rate) && c.success_rate < 0.8 ? 'zbc-kpi-card__change--down' : 'zbc-kpi-card__change--neutral');
+        });
+      })
+      .catch(function() {
+        // Fallback: /api/collector/status
+        xjViz.api('/collector/status').then(function(d) {
+          var data = d.data || d;
+          var running = data.is_running;
+          PLATFORMS.forEach(function(p) {
+            var el = document.getElementById('kpi-' + p.key + '-status');
+            var subEl = document.getElementById('kpi-' + p.key + '-sub');
+            el.textContent = running ? 'RUNNING' : 'IDLE';
+            el.style.color = running ? '#10B981' : '';
+            subEl.textContent = 'state: ' + disp(data.state) + ' · task: ' + disp(data.current_task);
+          });
+        }).catch(function(e2) {
+          PLATFORMS.forEach(function(p) {
+            document.getElementById('kpi-' + p.key + '-status').textContent = '—';
+            document.getElementById('kpi-' + p.key + '-sub').textContent = 'API 不可用';
+          });
+          showDegraded('采集器 API 不可用: ' + e2.message);
+        });
+      });
+  }
+
+  /* ---- Accounts (xjViz.api + xjViz.table) ---- */
+  function loadAccounts() {
+    showSection('account', 'loading');
+    xjViz.api('/cookies').then(function(d) {
+      var data = d.data || d;
+      var accounts = data.accounts || data.cookies || data.items || [];
+      if (!Array.isArray(accounts)) accounts = [];
+      document.getElementById('account-count').textContent = accounts.length + ' 账号';
+      if (accounts.length === 0) { showSection('account', 'empty'); return; }
+      showSection('account', 'success');
+      xjViz.table('#account-table-wrap', accounts, [
+        { key: 'platform', label: '平台', render: function(v, r) { return disp(v || r.platform_id); } },
+        { key: 'account_id', label: '账号 ID', render: function(v, r) { return '<span style="font-family:JetBrains Mono,monospace;font-size:12px;">' + esc(disp(v || r.user_id || r.username)) + '</span>'; } },
+        { key: 'cookie_status', label: 'Cookie 状态', render: function(v, r) { return statusTag(v || r.cookie_state); } },
+        { key: 'keepalive_status', label: '保活状态', render: function(v, r) { return statusTag(v || r.alive); } },
+        { key: 'last_used_at', label: '最后使用', render: function(v, r) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);">' + esc(disp(v || r.updated_at)) + '</span>'; } }
+      ]);
+    }).catch(function() {
+      xjViz.api('/cookies/import/status').then(function(d) {
+        var data = d.data || d;
+        var items = data.cookies || data.accounts || [];
+        if (!Array.isArray(items) || items.length === 0) { showSection('account', 'empty'); return; }
+        document.getElementById('account-count').textContent = items.length + ' 账号';
+        showSection('account', 'success');
+        xjViz.table('#account-table-wrap', items, [
+          { key: 'platform', label: '平台', render: function(v) { return disp(v); } },
+          { key: 'account_id', label: '账号 ID', render: function(v, r) { return '<span style="font-family:JetBrains Mono,monospace;font-size:12px;">' + esc(disp(v || r.id)) + '</span>'; } },
+          { key: 'status', label: 'Cookie 状态', render: function(v) { return statusTag(v); } },
+          { key: 'keepalive', label: '保活', render: function() { return '—'; } },
+          { key: 'imported_at', label: '最后使用', render: function(v) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);">' + esc(disp(v)) + '</span>'; } }
+        ]);
+      }).catch(function(e2) {
+        showSection('account', 'error');
+        document.getElementById('account-error-msg').textContent = e2.message;
+      });
+    });
+  }
+
+  /* ---- Proxy pool (xjViz.api driven) ---- */
+  function loadProxy() {
+    showSection('proxy', 'loading');
+    xjViz.api('/proxy').then(function(d) {
+      var data = d.data || d;
+      var proxies = data.proxies || data.items || data.pool || [];
+      if (!Array.isArray(proxies)) proxies = [];
+      document.getElementById('proxy-count').textContent = proxies.length + ' 代理';
+      if (proxies.length === 0) { showSection('proxy', 'empty'); return; }
+      showSection('proxy', 'success');
+      var html = proxies.map(function(p) {
+        var latency = p.latency_ms || p.latency;
+        var latCls = typeof latency === 'number' && latency > 1000 ? 'color:#DC2626;' : typeof latency === 'number' && latency > 300 ? 'color:#D97706;' : '';
+        return '<div style="padding:10px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;align-items:center;justify-content:space-between;">'
+          + '<div>'
+          + '<div style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600;">' + esc(disp(p.host || p.ip || p.address)) + ':' + esc(disp(p.port)) + '</div>'
+          + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);margin-top:2px;">' + esc(disp(p.protocol || p.type)) + ' · ' + esc(disp(p.location || p.region)) + '</div>'
+          + '</div>'
+          + '<div style="text-align:right;">'
+          + '<div style="font-size:12px;font-variant-numeric:tabular-nums;' + latCls + '">' + (typeof latency === 'number' ? latency + 'ms' : '—') + '</div>'
+          + statusTag(p.status || (p.available ? 'HEALTHY' : 'UNKNOWN'))
+          + '</div>'
+          + '</div>';
+      }).join('');
+      document.getElementById('proxy-list').innerHTML = html;
+    }).catch(function() {
+      xjViz.api('/proxy/status').then(function(d) {
+        var data = d.data || d;
+        var total = data.total || data.count || 0;
+        var available = data.available || data.alive || 0;
+        document.getElementById('proxy-count').textContent = available + '/' + total + ' 可用';
+        if (total === 0) { showSection('proxy', 'empty'); return; }
+        showSection('proxy', 'success');
+        document.getElementById('proxy-list').innerHTML = '<div style="padding:16px 20px;">'
+          + '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>总数</span><span style="font-weight:600;">' + total + '</span></div>'
+          + '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>可用</span><span style="font-weight:600;color:#10B981;">' + available + '</span></div>'
+          + '<div style="display:flex;justify-content:space-between;"><span>不可用</span><span style="font-weight:600;color:#DC2626;">' + (total - available) + '</span></div>'
+          + '</div>';
+      }).catch(function(e2) {
+        showSection('proxy', 'error');
+        document.getElementById('proxy-error-msg').textContent = e2.message;
+      });
+    });
+  }
+
+  /* ---- Quality Gate (xjViz.api driven) ---- */
+  var QUALITY_STEPS = [
+    { key: 'source', label: 'Source', desc: '原始采集' },
+    { key: 'raw', label: 'Raw', desc: '原始入库' },
+    { key: 'dedup', label: 'Dedup', desc: '去重过滤' },
+    { key: 'subject', label: 'Subject Filter', desc: '主体过滤' },
+    { key: 'canonical', label: 'Canonical', desc: '规范化' }
+  ];
+
+  function loadQuality() {
+    showSection('quality', 'loading');
+    xjViz.api('/viz/collector-quality').catch(function() { return xjViz.api('/collector/quality'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var steps = data.steps || data.quality_gate || {};
+        var overall = data.overall_pass_rate || data.pass_rate;
+        document.getElementById('quality-overall').textContent = isMissing(overall) ? '—' : (overall * 100).toFixed(1) + '% 总通过';
+        showSection('quality', 'success');
+        var html = QUALITY_STEPS.map(function(s, i) {
+          var step = steps[s.key] || steps[s.label] || {};
+          var rate = isMissing(step.pass_rate) ? (step.input && step.output ? step.output / step.input : null) : step.pass_rate;
+          var pct = rate != null ? (rate * 100).toFixed(1) : '—';
+          var input = disp(step.input || step.count_in);
+          var output = disp(step.output || step.count_out);
+          var barColor = rate != null && rate >= 0.9 ? '#10B981' : rate != null && rate >= 0.7 ? '#D97706' : rate != null ? '#DC2626' : '#9CA3AF';
+          return '<div style="flex:1;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;padding:14px;text-align:center;">'
+            + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">' + (i + 1) + '. ' + s.label + '</div>'
+            + '<div style="font-size:20px;font-weight:700;color:' + barColor + ';font-variant-numeric:tabular-nums;">' + pct + '%</div>'
+            + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);margin-top:4px;">' + s.desc + '</div>'
+            + '<div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);margin-top:2px;font-family:JetBrains Mono,monospace;">' + input + ' → ' + output + '</div>'
+            + '</div>';
+        }).join('');
+        document.getElementById('quality-steps').innerHTML = html;
+        var failures = data.failures || data.recent_failures || [];
+        document.getElementById('quality-failures').textContent = failures.length > 0
+          ? failures.map(function(f) { return (f.timestamp || '') + ' [' + (f.step || '') + '] ' + (f.reason || f.error || ''); }).join('\n')
+          : '—';
+      })
+      .catch(function(e) {
+        showSection('quality', 'error');
+        document.getElementById('quality-error-msg').textContent = e.message;
+      });
+  }
+
+  window.loadAccounts = loadAccounts;
+  window.loadProxy = loadProxy;
+  window.loadQuality = loadQuality;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadCollectors();
+    loadAccounts();
+    loadProxy();
+    loadQuality();
   });
-  document.getElementById('main-panel').setAttribute('data-state', s);
-}
-document.addEventListener('DOMContentLoaded', loadPanelData);
+  setInterval(loadCollectors, 30000);
+})();
 </script>
 {% endblock %}

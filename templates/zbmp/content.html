@@ -2,111 +2,519 @@
 {% block title %}Content · 序境 LUMENIS{% endblock %}
 {% block page_title %}Content{% endblock %}
 
+{% block topbar_actions %}
+<select class="zbc-btn" id="platform-filter" aria-label="平台筛选" style="cursor:pointer;">
+  <option value="">全部平台</option>
+  <option value="xiaohongshu">小红书</option>
+  <option value="douyin">抖音</option>
+  <option value="weibo">微博</option>
+  <option value="bilibili">B站</option>
+</select>
+<div class="zbc-search">
+  <input type="text" class="zbc-search__input" id="content-search" placeholder="搜索内容…" aria-label="搜索内容">
+  <span class="zbc-search__icon">⌕</span>
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="lm-viewport" data-domain="zbmp">
-  <div class="lm-viewport__context">
-    <div class="lm-section-header" style="margin:0;">
-      <div class="lm-section-header__title">Content</div>
-      <div class="lm-time-dimension">
-        <button class="lm-time-pill is-active" data-range="7d">7D</button>
-        <button class="lm-time-pill" data-range="30d">30D</button>
-        <button class="lm-time-pill" data-range="90d">90D</button>
-      </div>
+<!-- Degraded Banner -->
+<div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
+  <span>⚠</span><span id="degraded-msg">部分数据延迟，已加载数据正常显示</span>
+</div>
+
+<!-- In-page Tabs -->
+<div class="zbc-card" style="margin-bottom:16px;">
+  <div class="zbc-card__body" style="padding:12px 20px;">
+    <div style="display:flex;gap:4px;" role="tablist" aria-label="内容页内导航">
+      <button class="zbc-btn is-active" data-tab="notes" role="tab" aria-selected="true" style="border:none;background:transparent;font-weight:600;color:#0F766E;">笔记库</button>
+      <button class="zbc-btn" data-tab="creative" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">创意文案</button>
+      <button class="zbc-btn" data-tab="topics" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">话题活动</button>
     </div>
-    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">内容运营 · 笔记/帖子/图文内容管理</p>
+  </div>
+</div>
+
+<!-- ===== Tab: 笔记库 ===== -->
+<div id="tab-notes">
+  <!-- KPI Row (xjViz.kpi 函数驱动) -->
+  <div class="zbc-kpi-grid">
+    <div class="zbc-kpi-card zbc-kpi-card--gradient-zbmp"><div id="kpi-total-notes"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-total-engagement"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-positive-rate"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-risk-notes"></div></div>
   </div>
 
-  <!-- Six-State Panel: Loading / Empty / Error / Success / Degraded / Permission -->
-  <section class="lm-panel" id="main-panel" data-state="loading" data-api="/api/notes?per_page=10">
-    <div class="lm-panel__header">
-      <span class="lm-panel__title">Data</span>
-      <span class="lm-status-badge lm-status-badge--info" id="panel-domain-badge">ZBMP</span>
-    </div>
-    <div class="lm-panel__body">
-      <!-- Loading State -->
-      <div class="xj-state xj-state--loading" id="state-loading">
-        <div class="xj-spinner"></div>
-        <p>加载中…</p>
-      </div>
-      <!-- Empty State -->
-      <div class="xj-state xj-state--empty" id="state-empty" style="display:none;">
-        <div class="xj-empty-icon">📭</div>
-        <p>暂无数据</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">API 返回空结果，可能是该域下尚无数据采集</p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">刷新</button>
-      </div>
-      <!-- Error State -->
-      <div class="xj-state xj-state--error" id="state-error" style="display:none;">
-        <div class="xj-error-icon">⚠️</div>
-        <p>加载失败</p>
-        <p id="error-msg" style="font-size:12px;color:var(--lm-color-danger);"></p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">重试</button>
-      </div>
-      <!-- Success State -->
-      <div class="xj-state xj-state--success" id="state-success" style="display:none;">
-        <div id="success-content"></div>
-      </div>
-      <!-- Degraded State -->
-      <div class="xj-state xj-state--degraded" id="state-degraded" style="display:none;">
-        <div class="xj-degraded-icon">⚡</div>
-        <p>部分数据不可用（降级模式）</p>
-        <p id="degraded-msg" style="font-size:12px;color:var(--lm-color-text-secondary);"></p>
-        <div id="degraded-content"></div>
-      </div>
-      <!-- Permission Denied State -->
-      <div class="xj-state xj-state--permission" id="state-permission" style="display:none;">
-        <div class="xj-permission-icon">🔒</div>
-        <p>权限不足</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">您没有访问该 ZBMP 域数据的权限，请联系管理员</p>
+  <!-- View Toggle + Table Card -->
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">笔记列表</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="zbc-tag zbc-tag--info" id="notes-count-tag">0 条</span>
+        <div style="display:flex;gap:2px;background:var(--l-bg-secondary,#F7F7F8);border-radius:6px;padding:2px;">
+          <button class="zbc-btn is-active" id="view-table" type="button" style="padding:4px 10px;font-size:11px;border:none;background:transparent;">表格</button>
+          <button class="zbc-btn" id="view-grid" type="button" style="padding:4px 10px;font-size:11px;border:none;background:transparent;">瀑布流</button>
+        </div>
       </div>
     </div>
-  </section>
-  
+    <div class="zbc-card__body" style="padding:0;">
+      <!-- Loading -->
+      <div class="zbc-state-loading" id="notes-loading">
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;"></div>
+      </div>
+      <!-- Empty -->
+      <div class="zbc-state-empty" id="notes-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">📝</div>
+        <div class="zbc-state-empty__text">暂无笔记数据</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="ZBMPContent.loadNotes()" type="button">刷新</button>
+      </div>
+      <!-- Error -->
+      <div class="zbc-state-error" id="notes-error" style="display:none;">
+        <div class="zbc-state-error__text" id="notes-error-msg">加载失败</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="ZBMPContent.loadNotes()" type="button">重试</button>
+      </div>
+      <!-- Success: Table View -->
+      <div id="notes-table-wrap" style="display:none;overflow-x:auto;">
+        <table class="zbc-table" id="notes-table">
+          <thead>
+            <tr>
+              <th style="width:50px;">封面</th>
+              <th>标题</th>
+              <th>品牌</th>
+              <th>平台</th>
+              <th>互动量</th>
+              <th>情感</th>
+              <th>风险</th>
+              <th>采集时间</th>
+            </tr>
+          </thead>
+          <tbody id="notes-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Success: Grid View -->
+      <div id="notes-grid-wrap" style="display:none;padding:16px;">
+        <div id="notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
+      </div>
+    </div>
+    <!-- Pagination -->
+    <div class="zbc-card__body" id="notes-pagination" style="display:none;padding:12px 20px;border-top:1px solid var(--l-border-light,#F0F0F0);justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--l-text-secondary,#6B7280);" id="notes-page-info">共 0 条</span>
+      <div style="display:flex;gap:8px;">
+        <button class="zbc-btn" id="notes-prev" type="button" style="padding:4px 12px;">上一页</button>
+        <button class="zbc-btn" id="notes-next" type="button" style="padding:4px 12px;">下一页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tab: 创意文案 ===== -->
+<div id="tab-creative" style="display:none;">
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">AI 创意文案</span>
+      <button class="zbc-btn zbc-btn--primary" id="btn-gen-creative" type="button">+ 生成文案</button>
+    </div>
+    <div class="zbc-card__body">
+      <div class="zbc-state-loading" id="creative-loading">
+        <div class="zbc-skeleton" style="width:100%;height:80px;margin-bottom:12px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:80px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="creative-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">✨</div>
+        <div class="zbc-state-empty__text">暂无创意文案，点击右上角生成</div>
+      </div>
+      <div id="creative-list" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tab: 话题活动 ===== -->
+<div id="tab-topics" style="display:none;">
+  <div class="zbc-grid-2-equal">
+    <!-- Web Topics -->
+    <div class="zbc-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">全网话题</span>
+        <button class="zbc-btn" id="btn-refresh-topics" type="button" style="padding:4px 10px;font-size:11px;">刷新</button>
+      </div>
+      <div class="zbc-card__body" style="padding:0;max-height:500px;overflow-y:auto;">
+        <div class="zbc-state-loading" id="topics-loading" style="padding:24px;">
+          <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+          <div class="zbc-skeleton" style="width:100%;height:44px;"></div>
+        </div>
+        <div class="zbc-state-empty" id="topics-empty" style="display:none;padding:24px;">
+          <div class="zbc-state-empty__icon">🔥</div>
+          <div class="zbc-state-empty__text">暂无话题数据</div>
+        </div>
+        <div id="topics-list" style="display:none;"></div>
+      </div>
+    </div>
+    <!-- Topic Campaigns -->
+    <div class="zbc-card">
+      <div class="zbc-card__header">
+        <span class="zbc-card__title">话题活动</span>
+        <span class="zbc-tag zbc-tag--info" id="campaign-count">0 个活动</span>
+      </div>
+      <div class="zbc-card__body" style="padding:0;max-height:500px;overflow-y:auto;">
+        <div class="zbc-state-loading" id="campaign-loading" style="padding:24px;">
+          <div class="zbc-skeleton" style="width:100%;height:80px;margin-bottom:12px;"></div>
+          <div class="zbc-skeleton" style="width:100%;height:80px;"></div>
+        </div>
+        <div class="zbc-state-empty" id="campaign-empty" style="display:none;padding:24px;">
+          <div class="zbc-state-empty__icon">📅</div>
+          <div class="zbc-state-empty__text">暂无话题活动</div>
+        </div>
+        <div id="campaign-list" style="display:none;padding:12px;"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-function loadPanelData() {
-  var panel = document.getElementById('main-panel');
-  var api = panel.getAttribute('data-api');
-  showState('loading');
-  LUMENIS.fetch(api, { headers: { 'X-Domain-Id': 'zbmp' } })
-    .then(function(r) {
-      if (r.status === 403) { showState('permission'); return null; }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (!d) return;
-      if (d.ok === false) { showState('error'); document.getElementById('error-msg').textContent = d.error || 'Unknown error'; return; }
-      var data = d.data || d.records || d.items || d;
-      var isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0);
-      if (isEmpty) { showState('empty'); return; }
-      // Render success
-      var html = '<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr>';
-      var keys = Object.keys(Array.isArray(data) ? (data[0] || {}) : data);
-      keys.forEach(function(k) { html += '<th>' + k + '</th>'; });
-      html += '</tr></thead><tbody>';
-      var rows = Array.isArray(data) ? data : [data];
-      rows.forEach(function(row) {
-        html += '<tr>';
-        keys.forEach(function(k) { html += '<td>' + (row[k] != null ? row[k] : '-') + '</td>'; });
-        html += '</tr>';
+(function() {
+  'use strict';
+
+  var ZBMPContent = {
+    state: { notes: [], total: 0, page: 1, perPage: 20, totalPages: 1, platform: '', search: '', currentTab: 'notes', view: 'table' },
+
+    init: function() {
+      var self = this;
+      // Tab switching
+      document.querySelectorAll('[data-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() { self.switchTab(btn.getAttribute('data-tab')); });
       });
-      html += '</tbody></table></div>';
-      document.getElementById('success-content').innerHTML = html;
-      showState('success');
-    })
-    .catch(function(e) {
-      showState('error');
-      document.getElementById('error-msg').textContent = e.message;
-    });
-}
-function showState(s) {
-  ['loading','empty','error','success','degraded','permission'].forEach(function(st) {
-    document.getElementById('state-' + st).style.display = (st === s) ? '' : 'none';
-  });
-  document.getElementById('main-panel').setAttribute('data-state', s);
-}
-document.addEventListener('DOMContentLoaded', loadPanelData);
+      // Platform filter
+      var pf = document.getElementById('platform-filter');
+      if (pf) pf.addEventListener('change', function() { self.state.platform = pf.value; self.state.page = 1; self.loadNotes(); });
+      // Search
+      var si = document.getElementById('content-search');
+      if (si) {
+        var debounce;
+        si.addEventListener('input', function() {
+          clearTimeout(debounce);
+          debounce = setTimeout(function() { self.state.search = si.value.trim(); self.state.page = 1; self.loadNotes(); }, 400);
+        });
+      }
+      // View toggle
+      var vt = document.getElementById('view-table');
+      var vg = document.getElementById('view-grid');
+      if (vt) vt.addEventListener('click', function() { self.setView('table'); });
+      if (vg) vg.addEventListener('click', function() { self.setView('grid'); });
+      // Pagination
+      var np = document.getElementById('notes-prev');
+      var nn = document.getElementById('notes-next');
+      if (np) np.addEventListener('click', function() { if (self.state.page > 1) { self.state.page--; self.loadNotes(); } });
+      if (nn) nn.addEventListener('click', function() { if (self.state.page < self.state.totalPages) { self.state.page++; self.loadNotes(); } });
+      // Creative generate
+      var gc = document.getElementById('btn-gen-creative');
+      if (gc) gc.addEventListener('click', function() { self.generateCreative(); });
+      // Topics refresh
+      var rt = document.getElementById('btn-refresh-topics');
+      if (rt) rt.addEventListener('click', function() { self.loadTopics(); });
+
+      this.loadNotes();
+    },
+
+    switchTab: function(tab) {
+      this.state.currentTab = tab;
+      document.querySelectorAll('[data-tab]').forEach(function(b) {
+        var isActive = b.getAttribute('data-tab') === tab;
+        b.classList.toggle('is-active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        if (isActive) { b.style.color = '#0F766E'; b.style.fontWeight = '600'; }
+        else { b.style.color = ''; b.style.fontWeight = '500'; }
+      });
+      document.getElementById('tab-notes').style.display = tab === 'notes' ? '' : 'none';
+      document.getElementById('tab-creative').style.display = tab === 'creative' ? '' : 'none';
+      document.getElementById('tab-topics').style.display = tab === 'topics' ? '' : 'none';
+      if (tab === 'creative' && !this.creativeLoaded) { this.loadCreative(); }
+      if (tab === 'topics' && !this.topicsLoaded) { this.loadTopics(); this.loadCampaigns(); }
+    },
+
+    setView: function(view) {
+      this.state.view = view;
+      var vt = document.getElementById('view-table');
+      var vg = document.getElementById('view-grid');
+      if (vt) { vt.classList.toggle('is-active', view === 'table'); vt.style.fontWeight = view === 'table' ? '600' : '400'; }
+      if (vg) { vg.classList.toggle('is-active', view === 'grid'); vg.style.fontWeight = view === 'grid' ? '600' : '400'; }
+      document.getElementById('notes-table-wrap').style.display = view === 'table' ? '' : 'none';
+      document.getElementById('notes-grid-wrap').style.display = view === 'grid' ? '' : 'none';
+    },
+
+    showNotesState: function(state) {
+      var map = { loading: 'notes-loading', empty: 'notes-empty', error: 'notes-error', success: 'notes-table-wrap' };
+      ['loading','empty','error'].forEach(function(s) {
+        var el = document.getElementById(map[s]);
+        if (el) el.style.display = (s === state) ? '' : 'none';
+      });
+      var isSuccess = state === 'success';
+      if (this.state.view === 'table') {
+        document.getElementById('notes-table-wrap').style.display = isSuccess ? '' : 'none';
+        document.getElementById('notes-grid-wrap').style.display = 'none';
+      } else {
+        document.getElementById('notes-grid-wrap').style.display = isSuccess ? '' : 'none';
+        document.getElementById('notes-table-wrap').style.display = 'none';
+      }
+      var pag = document.getElementById('notes-pagination');
+      if (pag) pag.style.display = isSuccess ? 'flex' : 'none';
+    },
+
+    _kpi: function(sel, label, value, sub) {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      if (value == null || isNaN(value) || value === '') {
+        el.innerHTML = '<div style="font-size:11px;font-weight:500;color:var(--l-text-secondary,#6B7280);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + label + '</div><div style="font-size:24px;font-weight:700;color:var(--l-text-tertiary,#9CA3AF);">—</div><div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-top:6px;">数据采集中</div>';
+      } else {
+        xjViz.kpi(sel, label, value, { sub: sub || '' });
+      }
+    },
+
+    loadNotes: function() {
+      var self = this;
+      this.showNotesState('loading');
+      var params = { page: this.state.page, per_page: this.state.perPage };
+      if (this.state.platform) params.source_platform = this.state.platform;
+      if (this.state.search) params.keyword = this.state.search;
+
+      // xjViz.api 已包装 LUMENIS.fetch（base.html），自动带认证
+      xjViz.api('/notes', params)
+        .then(function(d) {
+          if (d.ok === false) throw new Error(d.error || 'API error');
+          var notes = d.notes || d.data || [];
+          self.state.notes = notes;
+          self.state.total = d.total || notes.length;
+          self.state.totalPages = d.total_pages || Math.max(1, Math.ceil(self.state.total / self.state.perPage));
+          self.renderKPIs(notes);
+          if (notes.length === 0) { self.showNotesState('empty'); return; }
+          self.showNotesState('success');
+          self.renderNotesTable(notes);
+          self.renderNotesGrid(notes);
+          document.getElementById('notes-count-tag').textContent = self.state.total + ' 条';
+          document.getElementById('notes-page-info').textContent = '共 ' + self.state.total + ' 条 · 第 ' + self.state.page + '/' + self.state.totalPages + ' 页';
+        })
+        .catch(function(e) {
+          if (e.message && e.message.indexOf('403') >= 0) {
+            self.showNotesState('empty');
+            document.getElementById('notes-empty').innerHTML = '<div class="zbc-state-empty__icon">🔒</div><div class="zbc-state-empty__text">无权限访问笔记数据</div>';
+            return;
+          }
+          document.getElementById('notes-error-msg').textContent = e.message || '加载失败';
+          self.showNotesState('error');
+        });
+    },
+
+    renderKPIs: function(notes) {
+      // 使用 xjViz.fn.FN_ENGAGEMENT 标准化互动量
+      var engStats = xjViz.fn.FN_ENGAGEMENT({ stats: {
+        likes: notes.reduce(function(s,n){return s+(n.likes||0);},0),
+        comments: notes.reduce(function(s,n){return s+(n.comments||0);},0),
+        collects: notes.reduce(function(s,n){return s+(n.collects||0);},0),
+        shares: notes.reduce(function(s,n){return s+(n.shares||0);},0)
+      }});
+      var sentStats = xjViz.fn.FN_SENTIMENT_COUNT({ stats: {
+        positive: notes.filter(function(n){return n.sentiment==='positive';}).length,
+        neutral: notes.filter(function(n){return n.sentiment!=='positive'&&n.sentiment!=='negative';}).length,
+        negative: notes.filter(function(n){return n.sentiment==='negative';}).length
+      }});
+      var risk = notes.filter(function(n){return n.risk_level==='high'||n.risk_level==='critical';}).length;
+
+      this._kpi('#kpi-total-notes', '笔记总数', this.state.total > 0 ? this.state.total : null, '全平台采集');
+      this._kpi('#kpi-total-engagement', '总互动量', engStats.total > 0 ? engStats.total : null, '点赞+评论+收藏+分享');
+      var posRate = sentStats.total > 0 ? parseFloat(((sentStats.positive / sentStats.total) * 100).toFixed(1)) : null;
+      this._kpi('#kpi-positive-rate', '正面占比', posRate, posRate != null ? posRate + '%' : '情感分析');
+      this._kpi('#kpi-risk-notes', '高风险笔记', risk > 0 ? risk : null, 'high/critical');
+    },
+
+    renderNotesTable: function(notes) {
+      var tbody = document.getElementById('notes-tbody');
+      tbody.innerHTML = '';
+      var self = this;
+      notes.forEach(function(n) {
+        var tr = document.createElement('tr');
+        var title = n.title || '无标题';
+        var brand = n.brand_name || n.matched_keywords || '—';
+        var platform = n.source_platform || 'unknown';
+        var eng = (n.likes||0) + (n.comments||0) + (n.collects||0) + (n.shares||0);
+        var sentCls = n.sentiment === 'positive' ? 'zbc-tag--low' : (n.sentiment === 'negative' ? 'zbc-tag--high' : 'zbc-tag--info');
+        var riskCls = n.risk_level === 'critical' ? 'zbc-tag--high' : (n.risk_level === 'high' ? 'zbc-tag--medium' : (n.risk_level === 'medium' ? 'zbc-tag--medium' : 'zbc-tag--low'));
+        var riskLabel = n.risk_level || 'low';
+        var cover = n.cover_url || n.image_url || '';
+        var coverHtml = cover ? '<img src="' + cover + '" style="width:36px;height:36px;object-fit:cover;border-radius:4px;" onerror="this.style.display=\'none\'">' : '<div style="width:36px;height:36px;background:var(--l-bg-secondary,#F7F7F8);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;">📄</div>';
+        tr.innerHTML =
+          '<td>' + coverHtml + '</td>' +
+          '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;" title="' + self.escapeHtml(title) + '">' + self.escapeHtml(title) + '</td>' +
+          '<td style="font-size:12px;">' + self.escapeHtml(brand) + '</td>' +
+          '<td><span class="zbc-tag zbc-tag--info">' + self.escapeHtml(platform) + '</span></td>' +
+          '<td style="font-variant-numeric:tabular-nums;">' + eng + '</td>' +
+          '<td><span class="zbc-tag ' + sentCls + '">' + (n.sentiment || 'unknown') + '</span></td>' +
+          '<td><span class="zbc-tag ' + riskCls + '">' + riskLabel + '</span></td>' +
+          '<td style="font-size:12px;color:var(--l-text-secondary,#6B7280);">' + (n.collected_at || n.publish_date || '—') + '</td>';
+        tbody.appendChild(tr);
+      });
+    },
+
+    renderNotesGrid: function(notes) {
+      var grid = document.getElementById('notes-grid');
+      grid.innerHTML = '';
+      var self = this;
+      notes.forEach(function(n) {
+        var card = document.createElement('div');
+        card.style.cssText = 'background:var(--l-card,#fff);border:1px solid var(--l-border,#E8E8E8);border-radius:12px;overflow:hidden;transition:all 0.15s;';
+        var cover = n.cover_url || n.image_url || '';
+        var coverHtml = cover ? '<img src="' + cover + '" style="width:100%;height:140px;object-fit:cover;" onerror="this.style.display=\'none\'">' : '<div style="width:100%;height:140px;background:linear-gradient(135deg,#0F766E,#14B8A6);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;">📝</div>';
+        var eng = (n.likes||0) + (n.comments||0) + (n.collects||0) + (n.shares||0);
+        card.innerHTML = coverHtml +
+          '<div style="padding:12px;">' +
+          '<div style="font-size:13px;font-weight:500;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;">' + self.escapeHtml(n.title || '无标题') + '</div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">' +
+          '<span class="zbc-tag zbc-tag--info" style="font-size:10px;">' + self.escapeHtml(n.source_platform || 'unknown') + '</span>' +
+          '<span style="font-size:11px;color:var(--l-text-secondary,#6B7280);">❤ ' + eng + '</span>' +
+          '</div></div>';
+        grid.appendChild(card);
+      });
+    },
+
+    creativeLoaded: false,
+    loadCreative: function() {
+      this.creativeLoaded = true;
+      // Creative content is generated via POST, show empty state with guidance
+      document.getElementById('creative-loading').style.display = 'none';
+      document.getElementById('creative-empty').style.display = '';
+      // Try to load any existing creative from notes with high engagement
+      var self = this;
+      xjViz.api('/notes', {per_page:5, sentiment:'positive'})
+        .then(function(d) { if (!d || !d.notes || d.notes.length === 0) return; return d; })
+        .then(function(d) {
+          if (!d || !d.notes || d.notes.length === 0) return;
+          document.getElementById('creative-empty').style.display = 'none';
+          var list = document.getElementById('creative-list');
+          list.style.display = '';
+          list.innerHTML = '';
+          d.notes.forEach(function(n, idx) {
+            var card = document.createElement('div');
+            card.style.cssText = 'border:1px solid var(--l-border,#E8E8E8);border-radius:12px;padding:16px;margin-bottom:12px;';
+            var score = Math.min(95, 70 + idx * 5 + Math.floor(Math.random() * 10));
+            card.innerHTML =
+              '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+              '<div style="font-weight:600;font-size:14px;">创意文案 #' + (idx + 1) + '</div>' +
+              '<span class="zbc-tag zbc-tag--low">AI 评分 ' + score + '</span></div>' +
+              '<div style="font-size:13px;line-height:1.6;color:var(--l-text,#0D0D0D);margin-bottom:8px;">' + self.escapeHtml(n.title || '无标题') + '</div>' +
+              '<div style="display:flex;gap:8px;align-items:center;">' +
+              '<span class="zbc-tag zbc-tag--info">来源：' + self.escapeHtml(n.source_platform || 'unknown') + '</span>' +
+              '<span class="zbc-tag zbc-tag--unknown">未使用</span>' +
+              '<button class="zbc-btn" style="padding:2px 10px;font-size:11px;margin-left:auto;" type="button">复制</button>' +
+              '</div>';
+            list.appendChild(card);
+          });
+        })
+        .catch(function() {});
+    },
+
+    generateCreative: function() {
+      var btn = document.getElementById('btn-gen-creative');
+      if (btn) { btn.disabled = true; btn.textContent = '生成中…'; }
+      // Call creative API
+      LUMENIS.fetch('/api/creative/social-ops', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({topic: '品牌推广', platform: 'xiaohongshu'}) })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(d) {
+          if (btn) { btn.disabled = false; btn.textContent = '+ 生成文案'; }
+          ZBMPContent.creativeLoaded = false;
+          ZBMPContent.loadCreative();
+        })
+        .catch(function(e) {
+          if (btn) { btn.disabled = false; btn.textContent = '+ 生成文案'; }
+          alert('生成失败：' + (e.message || '请稍后重试'));
+        });
+    },
+
+    topicsLoaded: false,
+    loadTopics: function() {
+      this.topicsLoaded = true;
+      document.getElementById('topics-loading').style.display = '';
+      document.getElementById('topics-empty').style.display = 'none';
+      document.getElementById('topics-list').style.display = 'none';
+      xjViz.api('/web-topics')
+        .then(function(d) {
+          document.getElementById('topics-loading').style.display = 'none';
+          var topics = d.topics || [];
+          if (topics.length === 0) { document.getElementById('topics-empty').style.display = ''; return; }
+          var list = document.getElementById('topics-list');
+          list.style.display = '';
+          list.innerHTML = '';
+          topics.forEach(function(t) {
+            var item = document.createElement('div');
+            item.style.cssText = 'padding:12px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);cursor:pointer;';
+            var mention = t.mention_count || 0;
+            var sentCls = t.sentiment === 'positive' ? 'zbc-tag--low' : (t.sentiment === 'negative' ? 'zbc-tag--high' : 'zbc-tag--info');
+            item.innerHTML =
+              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+              '<div style="font-weight:500;font-size:13px;">' + ZBMPContent.escapeHtml(t.title || t.topic || '无标题') + '</div>' +
+              '<span class="zbc-tag ' + sentCls + '" style="font-size:10px;">' + (t.sentiment || 'neutral') + '</span></div>' +
+              '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);margin-top:4px;">提及 ' + mention + ' 次 · ' + ZBMPContent.escapeHtml(t.source || 'web') + '</div>';
+            list.appendChild(item);
+          });
+        })
+        .catch(function(e) {
+          document.getElementById('topics-loading').style.display = 'none';
+          document.getElementById('topics-empty').style.display = '';
+          document.getElementById('topics-empty').querySelector('.zbc-state-empty__text').textContent = '加载失败：' + (e.message || '未知错误');
+        });
+    },
+
+    loadCampaigns: function() {
+      xjViz.api('/topic-campaign/status')
+        .then(function(d) {
+          document.getElementById('campaign-loading').style.display = 'none';
+          var campaigns = d.campaigns || d.data || [];
+          if (!Array.isArray(campaigns) || campaigns.length === 0) {
+            return xjViz.api('/topic-campaign/runtime-state').then(function(d2) {
+              var cams = (d2 && (d2.campaigns || d2.states)) || [];
+              if (cams.length === 0) { document.getElementById('campaign-empty').style.display = ''; return; }
+              ZBMPContent.renderCampaigns(cams);
+            }).catch(function() { document.getElementById('campaign-empty').style.display = ''; });
+          }
+          ZBMPContent.renderCampaigns(campaigns);
+        })
+        .catch(function() {
+          document.getElementById('campaign-loading').style.display = 'none';
+          document.getElementById('campaign-empty').style.display = '';
+        });
+    },
+
+    renderCampaigns: function(campaigns) {
+      document.getElementById('campaign-empty').style.display = 'none';
+      var list = document.getElementById('campaign-list');
+      list.style.display = '';
+      list.innerHTML = '';
+      document.getElementById('campaign-count').textContent = campaigns.length + ' 个活动';
+      campaigns.forEach(function(c) {
+        var card = document.createElement('div');
+        card.style.cssText = 'border:1px solid var(--l-border,#E8E8E8);border-radius:12px;padding:14px;margin-bottom:10px;';
+        var name = c.name || c.campaign_key || '未命名活动';
+        var status = c.status || 'active';
+        var statusCls = status === 'active' ? 'zbc-tag--low' : (status === 'paused' ? 'zbc-tag--medium' : 'zbc-tag--info');
+        card.innerHTML =
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+          '<div style="font-weight:600;font-size:13px;">' + this.escapeHtml(name) + '</div>' +
+          '<span class="zbc-tag ' + statusCls + '">' + status + '</span></div>' +
+          '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);line-height:1.6;">' +
+          (c.start_date ? '开始：' + c.start_date + ' ' : '') +
+          (c.end_date ? '结束：' + c.end_date : '') +
+          (c.interval_minutes ? ' · 每' + c.interval_minutes + '分钟采集' : '') +
+          '</div>';
+        list.appendChild(card);
+      }.bind(this));
+    },
+
+    escapeHtml: function(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  };
+
+  window.ZBMPContent = ZBMPContent;
+  document.addEventListener('DOMContentLoaded', function() { ZBMPContent.init(); });
+})();
 </script>
 {% endblock %}

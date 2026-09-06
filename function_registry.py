@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """广州太古汇舆情系统：函数/数据目标映射与统一检索层。
 
-设计目标：把“用户问题/系统功能/底层数据源/页面”建立稳定映射。
+设计目标：把"用户问题/系统功能/底层数据源/页面"建立稳定映射。
 不改变原有主体过滤口径；该模块只负责查询与路由，不负责放宽采集范围。
 """
 from __future__ import annotations
 import json, re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 BASE = Path(__file__).resolve().parent
 BRAND_FILE = BASE / "data" / "brand_directory.json"
@@ -179,3 +179,281 @@ def register_functions_as_skills(registry=None):
         "errors": [e for r in results for e in r.get("errors", [])],
     }
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 14: VIZ_FUNCTIONS — 函数驱动可视化后端注册表
+# ═══════════════════════════════════════════════════════════════════════════
+# 每个条目将前端可视化函数名映射到：
+#   - ui_view_model 转换函数（build_truth_table / default_visualization_for_metric /
+#     compute_time_bounds / filter_records_by_time / MetricLayer / ViewModelBuilder）
+#   - DB 数据来源（表名 + viz_data_provider 查询函数）
+#   - 参数 schema / 返回 schema / domain 隔离
+#
+# 硬约束：不修改现有 FUNCTION_MAP，只追加 VIZ_FUNCTIONS。
+#         每个函数必须经过 ui_view_model 转换，禁止直接返回原始 DB 数据。
+#         数据缺失显式 null/unknown/missing，禁止 0 或默认值填充。
+# ═══════════════════════════════════════════════════════════════════════════
+
+VIZ_FUNCTIONS = [
+    # ── Overview 域 ──────────────────────────────────────────────────────
+    {
+        "function_name": "overview.stats",
+        "label": "舆情总览统计",
+        "description": "总笔记数、情感分布、风险分布、互动总量、官方账号数",
+        "ui_view_fn": "MetricLayer.compute_all + build_truth_table",
+        "db_tables": ["notes"],
+        "db_provider": "provide_overview_stats",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "today"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "delta": {"type": "object"}, "freshness": {"type": "string"}, "confidence": {"type": "string"}, "evidence_refs": {"type": "array"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    {
+        "function_name": "overview.trend",
+        "label": "舆情趋势",
+        "description": "按日聚合的笔记数量、互动量、负面占比趋势",
+        "ui_view_fn": "compute_time_bounds + filter_records_by_time + MetricLayer.count",
+        "db_tables": ["notes", "daily_reports"],
+        "db_provider": "provide_overview_trend",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}, "metric": {"type": "string", "default": "count"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "delta": {"type": "object"}, "freshness": {"type": "string"}, "confidence": {"type": "string"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    {
+        "function_name": "overview.industry_dist",
+        "label": "业态分布",
+        "description": "笔记按 category/业态字段的分布统计",
+        "ui_view_fn": "MetricLayer.compute_all + default_visualization_for_metric",
+        "db_tables": ["notes"],
+        "db_provider": "provide_industry_dist",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}, "limit": {"type": "integer", "default": 10}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "zbmp",
+    },
+    # ── Brand 域 ─────────────────────────────────────────────────────────
+    {
+        "function_name": "brand.top10",
+        "label": "品牌热度 TOP10",
+        "description": "按互动量/提及量排序的品牌 TOP10",
+        "ui_view_fn": "MetricLayer.engagement_total + build_truth_table",
+        "db_tables": ["notes", "brand_directory"],
+        "db_provider": "provide_brand_top10",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}, "sort_by": {"type": "string", "default": "engagement"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "zbmp",
+    },
+    {
+        "function_name": "brand.growth",
+        "label": "品牌增长",
+        "description": "品牌环比增长率、互动量变化、新品牌出现",
+        "ui_view_fn": "compute_time_bounds + filter_records_by_time + Delta 计算",
+        "db_tables": ["notes", "metric_snapshots"],
+        "db_provider": "provide_brand_growth",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}, "brand": {"type": "string"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "delta": {"type": "object"}, "items": {"type": "array"}}},
+        "domain": "zbmp",
+    },
+    # ── KOS 域 ───────────────────────────────────────────────────────────
+    {
+        "function_name": "kos.list",
+        "label": "KOS 专业号列表",
+        "description": "KOS 传播主体列表，含粉丝、互动、合作状态",
+        "ui_view_fn": "MetricLayer.compute_all + build_truth_table",
+        "db_tables": ["professional_accounts", "professional_metrics", "kos_profiles"],
+        "db_provider": "provide_kos_list",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}, "status": {"type": "string"}, "limit": {"type": "integer", "default": 20}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "zbmp",
+    },
+    {
+        "function_name": "kos.attribution",
+        "label": "KOS 归因分析",
+        "description": "KOS 传播归因：内容贡献度、互动归因、转化路径",
+        "ui_view_fn": "MetricLayer.engagement_total + default_visualization_for_metric",
+        "db_tables": ["kos_profiles", "kos_operations", "notes"],
+        "db_provider": "provide_kos_attribution",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}, "kos_id": {"type": "string"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "zbmp",
+    },
+    # ── Risk 域 ──────────────────────────────────────────────────────────
+    {
+        "function_name": "risk.active",
+        "label": "活跃风险",
+        "description": "当前活跃高/中风险笔记列表，排除已驳回",
+        "ui_view_fn": "MetricLayer.risk_distribution + build_truth_table",
+        "db_tables": ["notes"],
+        "db_provider": "provide_risk_active",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "7d"}, "level": {"type": "string", "default": "high"}, "limit": {"type": "integer", "default": 20}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    {
+        "function_name": "risk.trend",
+        "label": "风险趋势",
+        "description": "按日聚合的高/中/低风险笔记数量趋势",
+        "ui_view_fn": "compute_time_bounds + filter_records_by_time + MetricLayer.risk_distribution",
+        "db_tables": ["notes", "daily_reports"],
+        "db_provider": "provide_risk_trend",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    # ── Events 域 ─────────────────────────────────────────────────────────
+    {
+        "function_name": "events.list",
+        "label": "事件列表",
+        "description": "舆情事件列表，含风险等级、提及数、来源数、状态",
+        "ui_view_fn": "build_truth_table + default_visualization_for_metric",
+        "db_tables": ["events", "event_mentions"],
+        "db_provider": "provide_events_list",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "30d"}, "status": {"type": "string"}, "limit": {"type": "integer", "default": 20}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    {
+        "function_name": "events.propagation",
+        "label": "事件传播链",
+        "description": "事件传播路径：提及来源、扩散节点、关键传播者",
+        "ui_view_fn": "compute_time_bounds + filter_records_by_time + MetricLayer.count",
+        "db_tables": ["events", "event_mentions", "event_graph_events", "event_graph_relations"],
+        "db_provider": "provide_events_propagation",
+        "param_schema": {"type": "object", "properties": {"event_id": {"type": "string"}, "time_range": {"type": "string", "default": "30d"}}, "required": ["event_id"]},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    # ── Notes 域 ──────────────────────────────────────────────────────────
+    {
+        "function_name": "notes.realtime",
+        "label": "实时笔记",
+        "description": "最新采集的笔记实时流，按时间倒序",
+        "ui_view_fn": "compute_time_bounds + filter_records_by_time + build_truth_table",
+        "db_tables": ["notes"],
+        "db_provider": "provide_notes_realtime",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "today"}, "limit": {"type": "integer", "default": 20}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    {
+        "function_name": "notes.search",
+        "label": "笔记搜索",
+        "description": "按关键词搜索笔记，支持时间范围、情感、风险过滤",
+        "ui_view_fn": "compute_time_bounds + filter_records_by_time + MetricLayer.compute_all",
+        "db_tables": ["notes", "note_comments"],
+        "db_provider": "provide_notes_search",
+        "param_schema": {"type": "object", "properties": {"keyword": {"type": "string"}, "time_range": {"type": "string", "default": "30d"}, "sentiment": {"type": "string"}, "risk_level": {"type": "string"}, "limit": {"type": "integer", "default": 20}}, "required": ["keyword"]},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "all",
+    },
+    # ── System 域 ─────────────────────────────────────────────────────────
+    {
+        "function_name": "system.runtime",
+        "label": "系统运行时",
+        "description": "系统运行状态：DB 连接、采集器、调度器、内存、运行时长",
+        "ui_view_fn": "build_truth_table + default_visualization_for_metric",
+        "db_tables": ["runtime_guardian_checkpoints", "runtime_guardian_workers"],
+        "db_provider": "provide_system_runtime",
+        "param_schema": {"type": "object", "properties": {}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "system",
+    },
+    {
+        "function_name": "system.workers",
+        "label": "Worker 状态",
+        "description": "Runtime Guardian Worker 列表：状态、心跳、失败次数、恢复原因",
+        "ui_view_fn": "build_truth_table + MetricLayer.count",
+        "db_tables": ["runtime_guardian_workers"],
+        "db_provider": "provide_system_workers",
+        "param_schema": {"type": "object", "properties": {"status": {"type": "string"}, "limit": {"type": "integer", "default": 50}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "system",
+    },
+    {
+        "function_name": "system.database_tables",
+        "label": "数据库表统计",
+        "description": "所有 DB 表的行数、大小、最新更新时间",
+        "ui_view_fn": "build_truth_table + MetricLayer.count",
+        "db_tables": ["sqlite_master"],
+        "db_provider": "provide_system_database_tables",
+        "param_schema": {"type": "object", "properties": {}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "system",
+    },
+    {
+        "function_name": "system.health",
+        "label": "系统健康四灯",
+        "description": "DB/采集器/登录态/去重模块/主体过滤/风险引擎健康状态",
+        "ui_view_fn": "build_truth_table + default_visualization_for_metric(health)",
+        "db_tables": ["collection_logs", "runtime_guardian_checkpoints"],
+        "db_provider": "provide_system_health",
+        "param_schema": {"type": "object", "properties": {}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "system",
+    },
+    # ── AI 域 ─────────────────────────────────────────────────────────────
+    {
+        "function_name": "ai.call_logs",
+        "label": "AI 调用日志",
+        "description": "AI 调用记录：provider、model、延迟、token、成功率、置信度",
+        "ui_view_fn": "compute_time_bounds + filter_records_by_time + build_truth_table",
+        "db_tables": ["ai_call_logs"],
+        "db_provider": "provide_ai_call_logs",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "7d"}, "provider": {"type": "string"}, "success": {"type": "string"}, "limit": {"type": "integer", "default": 50}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "system",
+    },
+    # ── Collector 域 ──────────────────────────────────────────────────────
+    {
+        "function_name": "collector.status",
+        "label": "采集器状态",
+        "description": "采集运行状态：最近采集时间、采集量、成功率、错误信息",
+        "ui_view_fn": "build_truth_table + MetricLayer.count",
+        "db_tables": ["collection_logs", "collector_quality_log"],
+        "db_provider": "provide_collector_status",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "today"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "system",
+    },
+    {
+        "function_name": "collector.quality_gate",
+        "label": "采集质量门",
+        "description": "采集质量门禁：通过率、拒绝率、去重率、主体命中率、各步骤质量",
+        "ui_view_fn": "MetricLayer.compute_all + build_truth_table",
+        "db_tables": ["collector_quality_log", "ai_filter_log"],
+        "db_provider": "provide_collector_quality_gate",
+        "param_schema": {"type": "object", "properties": {"time_range": {"type": "string", "default": "7d"}, "step": {"type": "string"}}, "required": []},
+        "return_schema": {"type": "object", "properties": {"current_value": {"type": "number"}, "items": {"type": "array"}}},
+        "domain": "system",
+    },
+]
+
+
+def get_viz_function(function_name: str) -> Optional[dict]:
+    """按 function_name 查找 VIZ_FUNCTIONS 条目。"""
+    for f in VIZ_FUNCTIONS:
+        if f["function_name"] == function_name:
+            return f
+    return None
+
+
+def list_viz_functions(domain: str = "") -> List[dict]:
+    """列出所有已注册可视化函数，可按 domain 过滤。"""
+    if not domain:
+        return list(VIZ_FUNCTIONS)
+    return [f for f in VIZ_FUNCTIONS if f["domain"] in (domain, "all")]
+
+
+def viz_registry_metadata() -> List[dict]:
+    """返回前端发现用的元数据列表（不含函数引用，只含可序列化字段）。"""
+    meta = []
+    for f in VIZ_FUNCTIONS:
+        meta.append({
+            "function_name": f["function_name"],
+            "label": f["label"],
+            "description": f["description"],
+            "ui_view_fn": f["ui_view_fn"],
+            "db_tables": f["db_tables"],
+            "param_schema": f["param_schema"],
+            "return_schema": f["return_schema"],
+            "domain": f["domain"],
+        })
+    return meta

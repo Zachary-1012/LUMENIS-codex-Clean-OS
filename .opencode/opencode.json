@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "zhipu/glm-5.3",
+  "small_model": "zhipu/glm-4.5-air",
+  "permission": {
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny"
+    },
+    "edit": {
+      "*": "ask"
+    },
+    "glob": "allow",
+    "grep": "allow",
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git log*": "allow",
+      "git diff*": "allow",
+      "git branch*": "allow",
+      "pytest*": "allow",
+      "python -m pytest*": "allow",
+      "ollama list*": "allow",
+      "ollama ps*": "allow"
+    },
+    "webfetch": "deny",
+    "websearch": "deny",
+    "task": "deny"
+  }
+}

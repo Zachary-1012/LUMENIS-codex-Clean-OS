@@ -2,111 +2,490 @@
 {% block title %}Real-time Intelligence · 序境 LUMENIS{% endblock %}
 {% block page_title %}Real-time Intelligence{% endblock %}
 
-{% block content %}
-<div class="lm-viewport" data-domain="cth">
-  <div class="lm-viewport__context">
-    <div class="lm-section-header" style="margin:0;">
-      <div class="lm-section-header__title">Real-time Intelligence</div>
-      <div class="lm-time-dimension">
-        <button class="lm-time-pill is-active" data-range="7d">7D</button>
-        <button class="lm-time-pill" data-range="30d">30D</button>
-        <button class="lm-time-pill" data-range="90d">90D</button>
-      </div>
-    </div>
-    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">实时情报 · 太古汇专项实时舆情监控与预警</p>
-  </div>
+{% block topbar_actions %}
+<div class="zbc-search" style="width:180px;">
+  <input type="text" class="zbc-search__input" id="rt-brand-filter" placeholder="品牌筛选…" aria-label="品牌筛选">
+  <span class="zbc-search__icon">⌕</span>
+</div>
+<select class="zbc-search__input" id="rt-industry-filter" style="width:130px;padding:0 10px;" aria-label="业态筛选">
+  <option value="">全部业态</option>
+  <option value="fashion">时尚</option>
+  <option value="beauty">美妆</option>
+  <option value="food">餐饮</option>
+  <option value="jewelry">珠宝</option>
+  <option value="lifestyle">生活方式</option>
+  <option value="sports">运动</option>
+  <option value="tech">数码</option>
+  <option value="kids">亲子</option>
+  <option value="other">其他</option>
+</select>
+<span id="rt-last-update" style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-left:4px;">最后更新: —</span>
+<button class="zbc-btn" id="rt-refresh-btn" onclick="loadRealtimeAll()" title="手动刷新">
+  <span>↻</span> 刷新
+</button>
+{% endblock %}
 
-  <!-- Six-State Panel: Loading / Empty / Error / Success / Degraded / Permission -->
-  <section class="lm-panel" id="main-panel" data-state="loading" data-api="/api/stats">
-    <div class="lm-panel__header">
-      <span class="lm-panel__title">Data</span>
-      <span class="lm-status-badge lm-status-badge--info" id="panel-domain-badge">CTH</span>
+{% block content %}
+<!-- Degraded Banner -->
+<div class="zbc-degraded-banner" id="rt-degraded-banner" style="display:none;">
+  <span>⚠</span>
+  <span id="rt-degraded-msg">部分数据延迟，已加载数据正常显示</span>
+</div>
+
+<!-- KPI Row (xjViz.kpi driven) -->
+<section class="zbc-kpi-grid" id="rt-kpi-grid">
+  <div class="zbc-kpi-card zbc-kpi-card--gradient-cth" id="rt-kpi-total">
+    <div class="zbc-kpi-card__label">今日笔记</div>
+    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+  </div>
+  <div class="zbc-kpi-card" id="rt-kpi-engagement">
+    <div class="zbc-kpi-card__label">互动总量</div>
+    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+  </div>
+  <div class="zbc-kpi-card" id="rt-kpi-brands">
+    <div class="zbc-kpi-card__label">活跃品牌</div>
+    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+  </div>
+  <div class="zbc-kpi-card" id="rt-kpi-risk">
+    <div class="zbc-kpi-card__label">风险笔记</div>
+    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+  </div>
+</section>
+
+<!-- Main 2/3 + 1/3 Layout -->
+<div class="zbc-grid-2">
+  <!-- Left: Real-time Note Stream (2/3) -->
+  <section class="zbc-card" id="rt-stream-card">
+    <div class="zbc-card__header">
+      <div class="zbc-card__title">实时笔记流</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="zbc-tag zbc-tag--info">自动刷新 30s</span>
+        <span class="zbc-dot zbc-dot--ok" id="rt-stream-dot"></span>
+      </div>
     </div>
-    <div class="lm-panel__body">
-      <!-- Loading State -->
-      <div class="xj-state xj-state--loading" id="state-loading">
-        <div class="xj-spinner"></div>
-        <p>加载中…</p>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="rt-stream-loading">
+        <div class="zbc-skeleton" style="width:100%;height:120px;margin-bottom:12px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:120px;margin-bottom:12px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:120px;"></div>
       </div>
-      <!-- Empty State -->
-      <div class="xj-state xj-state--empty" id="state-empty" style="display:none;">
-        <div class="xj-empty-icon">📭</div>
-        <p>暂无数据</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">API 返回空结果，可能是该域下尚无数据采集</p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">刷新</button>
+      <div class="zbc-state-empty" id="rt-stream-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">📭</div>
+        <div class="zbc-state-empty__text">暂无实时笔记数据</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="loadRealtimeNotes()">刷新</button>
       </div>
-      <!-- Error State -->
-      <div class="xj-state xj-state--error" id="state-error" style="display:none;">
-        <div class="xj-error-icon">⚠️</div>
-        <p>加载失败</p>
-        <p id="error-msg" style="font-size:12px;color:var(--lm-color-danger);"></p>
-        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">重试</button>
+      <div class="zbc-state-error" id="rt-stream-error" style="display:none;">
+        <div class="zbc-state-error__text" id="rt-stream-error-msg">加载失败</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="loadRealtimeNotes()">重试</button>
       </div>
-      <!-- Success State -->
-      <div class="xj-state xj-state--success" id="state-success" style="display:none;">
-        <div id="success-content"></div>
-      </div>
-      <!-- Degraded State -->
-      <div class="xj-state xj-state--degraded" id="state-degraded" style="display:none;">
-        <div class="xj-degraded-icon">⚡</div>
-        <p>部分数据不可用（降级模式）</p>
-        <p id="degraded-msg" style="font-size:12px;color:var(--lm-color-text-secondary);"></p>
-        <div id="degraded-content"></div>
-      </div>
-      <!-- Permission Denied State -->
-      <div class="xj-state xj-state--permission" id="state-permission" style="display:none;">
-        <div class="xj-permission-icon">🔒</div>
-        <p>权限不足</p>
-        <p style="font-size:12px;color:var(--lm-color-text-secondary);">您没有访问该 CTH 域数据的权限，请联系管理员</p>
+      <div id="rt-stream-content" style="display:none;padding:16px;">
+        <div id="rt-stream-masonry" style="columns:2;column-gap:14px;"></div>
       </div>
     </div>
   </section>
-  
-</div>
 
+  <!-- Right: Sidebar Panels (1/3) -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    <!-- Hot Topics Ranking (xjViz.table driven) -->
+    <section class="zbc-card" id="rt-topics-card">
+      <div class="zbc-card__header">
+        <div class="zbc-card__title">热门话题排行</div>
+        <span class="zbc-tag zbc-tag--info">TOP 10</span>
+      </div>
+      <div class="zbc-card__body" style="padding:0;">
+        <div class="zbc-state-loading" id="rt-topics-loading" style="padding:24px;">
+          <div class="zbc-skeleton" style="width:100%;height:32px;margin-bottom:8px;"></div>
+          <div class="zbc-skeleton" style="width:80%;height:32px;margin-bottom:8px;"></div>
+          <div class="zbc-skeleton" style="width:90%;height:32px;"></div>
+        </div>
+        <div class="zbc-state-empty" id="rt-topics-empty" style="display:none;">
+          <div class="zbc-state-empty__text">暂无话题数据</div>
+        </div>
+        <div class="zbc-state-error" id="rt-topics-error" style="display:none;">
+          <div class="zbc-state-error__text">话题加载失败</div>
+        </div>
+        <div id="rt-topics-content" style="display:none;"></div>
+      </div>
+    </section>
+
+    <!-- Propagation Path (xjViz.trend driven) -->
+    <section class="zbc-card" id="rt-propagation-card">
+      <div class="zbc-card__header">
+        <div class="zbc-card__title">传播路径</div>
+        <span class="zbc-tag zbc-tag--unknown">事件→笔记→互动→扩散</span>
+      </div>
+      <div class="zbc-card__body">
+        <div class="zbc-state-loading" id="rt-propagation-loading">
+          <div class="zbc-skeleton" style="width:100%;height:140px;"></div>
+        </div>
+        <div class="zbc-state-empty" id="rt-propagation-empty" style="display:none;">
+          <div class="zbc-state-empty__text">暂无传播路径数据</div>
+        </div>
+        <div id="rt-propagation-content" style="display:none;">
+          <div id="rt-propagation-chart" style="min-height:140px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Collection Status Panel -->
+    <section class="zbc-card" id="rt-collector-card">
+      <div class="zbc-card__header">
+        <div class="zbc-card__title">采集状态</div>
+        <span class="zbc-dot zbc-dot--unknown" id="rt-collector-dot"></span>
+      </div>
+      <div class="zbc-card__body">
+        <div class="zbc-state-loading" id="rt-collector-loading">
+          <div class="zbc-skeleton" style="width:100%;height:80px;"></div>
+        </div>
+        <div class="zbc-state-error" id="rt-collector-error" style="display:none;">
+          <div class="zbc-state-error__text">采集状态获取失败</div>
+        </div>
+        <div id="rt-collector-content" style="display:none;"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-function loadPanelData() {
-  var panel = document.getElementById('main-panel');
-  var api = panel.getAttribute('data-api');
-  showState('loading');
-  LUMENIS.fetch(api, { headers: { 'X-Domain-Id': 'cth' } })
-    .then(function(r) {
-      if (r.status === 403) { showState('permission'); return null; }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (!d) return;
-      if (d.ok === false) { showState('error'); document.getElementById('error-msg').textContent = d.error || 'Unknown error'; return; }
-      var data = d.data || d.records || d.items || d;
-      var isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0);
-      if (isEmpty) { showState('empty'); return; }
-      // Render success
-      var html = '<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr>';
-      var keys = Object.keys(Array.isArray(data) ? (data[0] || {}) : data);
-      keys.forEach(function(k) { html += '<th>' + k + '</th>'; });
-      html += '</tr></thead><tbody>';
-      var rows = Array.isArray(data) ? data : [data];
-      rows.forEach(function(row) {
-        html += '<tr>';
-        keys.forEach(function(k) { html += '<td>' + (row[k] != null ? row[k] : '-') + '</td>'; });
-        html += '</tr>';
-      });
-      html += '</tbody></table></div>';
-      document.getElementById('success-content').innerHTML = html;
-      showState('success');
-    })
-    .catch(function(e) {
-      showState('error');
-      document.getElementById('error-msg').textContent = e.message;
+(function() {
+  'use strict';
+
+  var AUTO_REFRESH_MS = 30000;
+  var degradedApis = [];
+
+  // ===== Helpers =====
+  function fmtNum(v) {
+    if (v == null || v === '' || isNaN(v)) return null;
+    return Number(v);
+  }
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      var pad = function(n) { return n < 10 ? '0' + n : n; };
+      return pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    } catch(e) { return iso; }
+  }
+  function nowTime() {
+    var d = new Date();
+    var pad = function(n) { return n < 10 ? '0' + n : n; };
+    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
-}
-function showState(s) {
-  ['loading','empty','error','success','degraded','permission'].forEach(function(st) {
-    document.getElementById('state-' + st).style.display = (st === s) ? '' : 'none';
+  }
+  function showState(prefix, state) {
+    ['loading','empty','error'].forEach(function(s) {
+      var el = document.getElementById(prefix + '-' + s);
+      if (el) el.style.display = (s === state) ? '' : 'none';
+    });
+    var content = document.getElementById(prefix + '-content');
+    if (content) content.style.display = (state === 'success') ? '' : 'none';
+  }
+  function markDegraded(apiName) {
+    if (degradedApis.indexOf(apiName) < 0) degradedApis.push(apiName);
+    var banner = document.getElementById('rt-degraded-banner');
+    var msg = document.getElementById('rt-degraded-msg');
+    if (banner && msg) {
+      msg.textContent = '部分数据延迟（' + degradedApis.join(', ') + '），已加载数据正常显示';
+      banner.style.display = '';
+    }
+  }
+  function updateLastUpdate() {
+    var el = document.getElementById('rt-last-update');
+    if (el) el.textContent = '最后更新: ' + nowTime();
+  }
+
+  // ===== KPI (xjViz.kpi driven) =====
+  function loadKPI() {
+    xjViz.api('/domain/overview', {domain: 'cth'}).then(function(d) {
+      if (!d || d.ok === false) throw new Error(d.error || 'API error');
+      var stats = d.stats || {};
+      var sentiment = xjViz.fn.FN_SENTIMENT_COUNT(stats);
+      var engagement = xjViz.fn.FN_ENGAGEMENT(stats);
+      var risk = xjViz.fn.FN_RISK_COUNT(stats);
+
+      // xjViz.kpi renders with number animation; null shows via missing handling
+      renderKPICard('rt-kpi-total', '今日笔记', sentiment.total > 0 ? sentiment.total : null);
+      renderKPICard('rt-kpi-engagement', '互动总量', engagement.total > 0 ? engagement.total : null);
+      renderKPICard('rt-kpi-brands', '活跃品牌', stats.active_brands || stats.brand_count || null);
+      renderKPICard('rt-kpi-risk', '风险笔记', risk.total > 0 ? risk.total : null);
+      updateLastUpdate();
+    }).catch(function(e) {
+      console.error('KPI error:', e);
+      markDegraded('domain-overview');
+      renderKPICard('rt-kpi-total', '今日笔记', null);
+      renderKPICard('rt-kpi-engagement', '互动总量', null);
+      renderKPICard('rt-kpi-brands', '活跃品牌', null);
+      renderKPICard('rt-kpi-risk', '风险笔记', null);
+    });
+  }
+
+  function renderKPICard(id, label, value) {
+    var card = document.getElementById(id);
+    if (!card) return;
+    var valEl = card.querySelector('.zbc-kpi-card__value');
+    if (!valEl) return;
+    if (value == null) {
+      valEl.innerHTML = '<span class="zbc-kpi-card__value--missing">—</span>';
+      valEl.title = '数据采集中';
+    } else {
+      // Use xjViz.kpi number animation
+      valEl.textContent = '';
+      xjViz.kpi(valEl, label, value, {duration: 600});
+      // xjViz.kpi adds its own label div; we already have label in card, so clean up
+      var labelEl = valEl.querySelector('.xj-kpi-label');
+      if (labelEl) labelEl.remove();
+      valEl.title = '';
+    }
+  }
+
+  // ===== Real-time Notes (xjViz.api + xjViz.realtime polling) =====
+  function loadRealtimeNotes() {
+    showState('rt-stream', 'loading');
+    var brand = document.getElementById('rt-brand-filter').value.trim();
+    var industry = document.getElementById('rt-industry-filter').value;
+    var params = {limit: 30};
+    if (brand) params.brand = brand;
+    if (industry) params.industry = industry;
+
+    xjViz.api('/hot-notes', params).then(function(d) {
+      var notes = (d && d.notes) ? d.notes : ((d && d.data) ? d.data : []);
+      if (!notes || notes.length === 0) {
+        showState('rt-stream', 'empty');
+        return;
+      }
+      renderNotesStream(notes);
+      showState('rt-stream', 'success');
+      updateLastUpdate();
+    }).catch(function(e) {
+      console.error('Notes error:', e);
+      document.getElementById('rt-stream-error-msg').textContent = e.message || '加载失败';
+      showState('rt-stream', 'error');
+      markDegraded('hot-notes');
+    });
+  }
+
+  function renderNotesStream(notes) {
+    var container = document.getElementById('rt-stream-masonry');
+    if (!container) return;
+    var html = '';
+    notes.forEach(function(n) {
+      var cover = n.cover_url || n.image_url || n.cover || '';
+      var title = n.title || n.note_title || '无标题';
+      var author = n.author || n.user_name || n.nickname || '未知账号';
+      var likes = n.likes != null ? n.likes : (n.like_count != null ? n.like_count : null);
+      var comments = n.comments != null ? n.comments : (n.comment_count != null ? n.comment_count : null);
+      // 时间口径分离：publish_datetime(发布时间) vs captured_at(采集时间)
+      var publishTime = n.publish_datetime || n.publish_time || n.created_at || '';
+      var captureTime = n.captured_at || n.capture_time || n.collected_at || '';
+      var brandTag = n.brand_name || n.brand || '';
+
+      html += '<div class="zbc-card" style="break-inside:avoid;margin-bottom:14px;overflow:hidden;">';
+      if (cover) {
+        html += '<div style="width:100%;height:140px;overflow:hidden;background:var(--l-bg-secondary,#F7F7F8);">';
+        html += '<img src="' + escapeHtml(cover) + '" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">';
+        html += '</div>';
+      }
+      html += '<div style="padding:12px 14px;">';
+      html += '<div style="font-size:13px;font-weight:600;color:var(--l-text,#0D0D0D);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHtml(title) + '</div>';
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">';
+      html += '<span style="font-size:11px;color:var(--l-text-secondary,#6B7280);">👤 ' + escapeHtml(author) + '</span>';
+      if (brandTag) html += '<span class="zbc-tag zbc-tag--info">' + escapeHtml(brandTag) + '</span>';
+      html += '</div>';
+      html += '<div style="display:flex;align-items:center;gap:12px;font-size:11px;color:var(--l-text-secondary,#6B7280);">';
+      html += '<span>♥ ' + (likes != null ? Number(likes).toLocaleString('zh-CN') : '—') + '</span>';
+      html += '<span>💬 ' + (comments != null ? Number(comments).toLocaleString('zh-CN') : '—') + '</span>';
+      html += '</div>';
+      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--l-border-light,#F0F0F0);font-size:10px;color:var(--l-text-tertiary,#9CA3AF);display:flex;flex-direction:column;gap:2px;">';
+      html += '<span>发布时间: ' + (publishTime ? fmtTime(publishTime) : '—') + '</span>';
+      html += '<span>采集时间: ' + (captureTime ? fmtTime(captureTime) : '—') + '</span>';
+      html += '</div>';
+      html += '</div></div>';
+    });
+    container.innerHTML = html;
+  }
+
+  // ===== Hot Topics (xjViz.table driven) =====
+  function loadHotTopics() {
+    showState('rt-topics', 'loading');
+    xjViz.api('/event-graph/events', {limit: 10}).then(function(d) {
+      var events = (d && d.events) ? d.events : ((d && d.data) ? d.data : []);
+      if (!events || events.length === 0) {
+        showState('rt-topics', 'empty');
+        return;
+      }
+      // Use xjViz.table for rendering
+      var tableData = events.map(function(ev, idx) {
+        return {
+          rank: idx + 1,
+          title: ev.title || ev.event_title || ev.name || '未知事件',
+          type: ev.type || ev.event_type || '',
+          volume: ev.volume != null ? ev.volume : (ev.note_count != null ? ev.note_count : null)
+        };
+      });
+      xjViz.table('#rt-topics-content', tableData, [
+        {key: 'rank', label: '#', render: function(v) {
+          var color = v <= 3 ? '#DC2626' : (v <= 6 ? '#D97706' : '#6B7280');
+          return '<span style="font-weight:700;color:' + color + ';">' + v + '</span>';
+        }},
+        {key: 'title', label: '话题', render: function(v, row) {
+          var html = '<div style="font-weight:500;">' + escapeHtml(v) + '</div>';
+          if (row.type) html += '<span class="zbc-tag zbc-tag--info" style="margin-top:2px;">' + escapeHtml(row.type) + '</span>';
+          return html;
+        }},
+        {key: 'volume', label: '声量', render: function(v) {
+          return v != null ? '<span style="font-variant-numeric:tabular-nums;">' + Number(v).toLocaleString('zh-CN') + '</span>' : '—';
+        }}
+      ]);
+      showState('rt-topics', 'success');
+    }).catch(function(e) {
+      console.error('Topics error:', e);
+      showState('rt-topics', 'error');
+      markDegraded('event-graph-events');
+    });
+  }
+
+  // ===== Propagation Path (xjViz.trend driven) =====
+  function loadPropagation() {
+    showState('rt-propagation', 'loading');
+    xjViz.api('/event-graph/stats').then(function(d) {
+      var stats = d.stats || d.data || d;
+      if (!stats || Object.keys(stats).length === 0) {
+        showState('rt-propagation', 'empty');
+        return;
+      }
+      // Build series for xjViz.trend bar chart
+      var events = stats.total_events != null ? stats.total_events : (stats.events || 0);
+      var notes = stats.total_notes != null ? stats.total_notes : (stats.notes || 0);
+      var interactions = stats.total_interactions != null ? stats.total_interactions : (stats.interactions || 0);
+      var spread = stats.total_spread != null ? stats.total_spread : (stats.reposts || 0);
+
+      var series = [
+        {label: '事件', value: events},
+        {label: '笔记', value: notes},
+        {label: '互动', value: interactions},
+        {label: '扩散', value: spread}
+      ];
+      xjViz.trend('#rt-propagation-chart', series, {type: 'bar', color: '#2563EB', height: 140});
+      showState('rt-propagation', 'success');
+    }).catch(function(e) {
+      console.error('Propagation error:', e);
+      showState('rt-propagation', 'empty');
+      markDegraded('event-graph-stats');
+    });
+  }
+
+  // ===== Collector Status =====
+  function loadCollectorStatus() {
+    showState('rt-collector', 'loading');
+    xjViz.api('/collector-guard/status').then(function(d) {
+      renderCollector(d);
+      showState('rt-collector', 'success');
+    }).catch(function() {
+      xjViz.api('/xhs/runtime-check').then(function(d) {
+        renderCollector({status: d.status || 'unknown', detail: d});
+        showState('rt-collector', 'success');
+      }).catch(function() {
+        showState('rt-collector', 'error');
+        markDegraded('collector-guard');
+      });
+    });
+  }
+
+  function renderCollector(data) {
+    var container = document.getElementById('rt-collector-content');
+    var dot = document.getElementById('rt-collector-dot');
+    if (!container) return;
+    var status = data.status || data.state || 'unknown';
+    var statusMap = {
+      'running': {dot: 'zbc-dot--ok', label: '运行中', color: '#10B981'},
+      'active': {dot: 'zbc-dot--ok', label: '运行中', color: '#10B981'},
+      'degraded': {dot: 'zbc-dot--warning', label: '降级运行', color: '#D97706'},
+      'failed': {dot: 'zbc-dot--error', label: '异常', color: '#DC2626'},
+      'stopped': {dot: 'zbc-dot--unknown', label: '已停止', color: '#9CA3AF'},
+      'unknown': {dot: 'zbc-dot--unknown', label: '未知', color: '#9CA3AF'}
+    };
+    var sm = statusMap[status] || statusMap['unknown'];
+    if (dot) dot.className = 'zbc-dot ' + sm.dot;
+
+    var collected = data.collected_count || data.total_collected || data.collected || null;
+    var failed = data.failed_count || data.failed || data.errors || null;
+    var lastRun = data.last_run || data.last_collection || data.updated_at || '';
+
+    var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">';
+    html += '<span style="font-size:14px;font-weight:600;color:' + sm.color + ';">● ' + sm.label + '</span>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+    html += '<div style="background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;padding:10px;text-align:center;">';
+    html += '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">已采集</div>';
+    html += '<div style="font-size:18px;font-weight:700;color:var(--l-text,#0D0D0D);font-variant-numeric:tabular-nums;">' + (collected != null ? Number(collected).toLocaleString('zh-CN') : '—') + '</div>';
+    html += '</div>';
+    html += '<div style="background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;padding:10px;text-align:center;">';
+    html += '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">失败/重试</div>';
+    html += '<div style="font-size:18px;font-weight:700;color:' + (failed > 0 ? '#DC2626' : 'var(--l-text,#0D0D0D)') + ';font-variant-numeric:tabular-nums;">' + (failed != null ? Number(failed).toLocaleString('zh-CN') : '—') + '</div>';
+    html += '</div>';
+    html += '</div>';
+    if (lastRun) {
+      html += '<div style="margin-top:10px;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">最近采集: ' + fmtTime(lastRun) + '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  // ===== Orchestrator =====
+  function loadRealtimeAll() {
+    loadKPI();
+    loadRealtimeNotes();
+    loadHotTopics();
+    loadPropagation();
+    loadCollectorStatus();
+  }
+
+  // xjViz.realtime: 30s auto-polling for notes + KPI
+  var rtRealtimeController = null;
+  function startAutoRefresh() {
+    rtRealtimeController = xjViz.realtime('#rt-stream-content', '/hot-notes?limit=30', AUTO_REFRESH_MS, function(container, data) {
+      var notes = (data && data.notes) ? data.notes : ((data && d.data) ? data.data : []);
+      if (notes && notes.length > 0) {
+        renderNotesStream(notes);
+        showState('rt-stream', 'success');
+        updateLastUpdate();
+      }
+    });
+    // Also refresh KPI and topics on interval
+    setInterval(function() {
+      loadKPI();
+      loadHotTopics();
+    }, AUTO_REFRESH_MS);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var brandInput = document.getElementById('rt-brand-filter');
+    var industrySelect = document.getElementById('rt-industry-filter');
+    if (brandInput) {
+      var t;
+      brandInput.addEventListener('input', function() {
+        clearTimeout(t);
+        t = setTimeout(loadRealtimeNotes, 500);
+      });
+    }
+    if (industrySelect) {
+      industrySelect.addEventListener('change', loadRealtimeNotes);
+    }
+    loadRealtimeAll();
+    startAutoRefresh();
   });
-  document.getElementById('main-panel').setAttribute('data-state', s);
-}
-document.addEventListener('DOMContentLoaded', loadPanelData);
+
+  window.loadRealtimeAll = loadRealtimeAll;
+  window.loadRealtimeNotes = loadRealtimeNotes;
+})();
 </script>
 {% endblock %}
