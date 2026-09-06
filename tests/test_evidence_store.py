@@ -169,6 +169,28 @@ def test_evidence_hash_dedup():
     print("PASS test_evidence_hash_dedup")
 
 
+def test_safe_identifier():
+    """验证 _safe_identifier 拒绝非法标识符，接受合法表名/列名。"""
+    import evidence_store as es
+    # 合法标识符
+    assert es._safe_identifier("notes") == "notes"
+    assert es._safe_identifier("app_evidence_records") == "app_evidence_records"
+    assert es._safe_identifier("col_1") == "col_1"
+    assert es._safe_identifier("_private") == "_private"
+    # 非法标识符（含注入字符）
+    import pytest
+    with pytest.raises(ValueError):
+        es._safe_identifier("notes; DROP TABLE users;--")
+    with pytest.raises(ValueError):
+        es._safe_identifier("notes WHERE 1=1")
+    with pytest.raises(ValueError):
+        es._safe_identifier("")
+    with pytest.raises(ValueError):
+        es._safe_identifier(None)
+    with pytest.raises(ValueError):
+        es._safe_identifier("1bad")
+    print("PASS test_safe_identifier")
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     passed = 0
@@ -182,9 +204,8 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
             failed += 1
-    print(f"\n{'='*50}")
+    print(f"\n{"="*50}")
     print(f"Total: {len(tests)}, Passed: {passed}, Failed: {failed}")
-    # 清理临时数据库
     try:
         os.unlink(_tmp_db)
     except Exception:

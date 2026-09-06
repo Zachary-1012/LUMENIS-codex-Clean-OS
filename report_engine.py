@@ -2,6 +2,11 @@
 
 统一负责：日报、周报、月报、年报的生成、读取与客户预览数据。
 所有统计通过 database.py 的广州太古汇主体硬过滤，不在报告层自行放宽口径。
+
+ZBC Phase 9 加固：
+- 生成后必须验证 DB artifact 真实落库（report_id 可追溯）
+- 报告携带 report_id / artifact_hash / generator_version / data_version
+- get_bundle 区分"缓存命中"与"即时生成"，避免静默重复生成导致数据漂移
 """
 from __future__ import annotations
 
@@ -10,6 +15,7 @@ import database as db
 import ai_analyzer
 import ai_filter
 import daily_report
+import report_artifact as ra
 
 REPORT_TYPES = ('daily', 'weekly', 'monthly', 'yearly', 'special')
 
@@ -92,7 +98,19 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
                          "note_count": len(notes), "available_count": 0,
                          "is_estimate": True,
                          "disclaimer": "EMV 引擎不可用，未估算"}
-    db.save_daily_report(report)
+
+    # ===== ZBC Phase 9: artifact 元数据 + 真实性校验 =====
+    meta = ra.build_artifact_metadata(report_type, start, end, report_data=report)
+    report.update(meta)
+    # source_snapshot：记录数据来源口径（publish_date 区间 + 主体过滤已由 db 层保证）
+    report['source_snapshot'] = f"notes:publish_date[{start},{end}];subject:verified;stats_count={stats.get('total', 0)}"
+
+    # 落库并验证：save_daily_report 返回行 id，id 必须 > 0 才算真实落库
+    row_id = db.save_daily_report(report)
+    if not row_id or row_id <= 0:
+        raise RuntimeError(f"报告落库失败: save_daily_report 返回无效 row_id={row_id}")
+    report['_db_row_id'] = row_id
+    report['_artifact_verified'] = True
 
     digest = None
     if report_type == 'daily':
@@ -115,7 +133,13 @@ def get_bundle(report_type: str, date_str: str | None = None):
     if date_str and report and report.get('report_date') != date_str:
         report = None
     if not report:
+        # 缓存未命中：即时生成（标记 regenerated=True，便于上层判断数据漂移风险）
         report, digest = generate_report(report_type, *(period_for(report_type)))
+        return {'report': report, 'digest': digest, 'report_type': report_type,
+                'regenerated': True, 'artifact_verified': report.get('_artifact_verified', False)}
     else:
         digest = db.get_latest_digest(report.get('report_date')) if report_type == 'daily' else None
-    return {'report': report, 'digest': digest, 'report_type': report_type}
+        # 缓存命中：验证报告 dict 基本真实性
+        vr = ra.verify_report_dict(report)
+        return {'report': report, 'digest': digest, 'report_type': report_type,
+                'regenerated': False, 'artifact_verified': vr['valid']}

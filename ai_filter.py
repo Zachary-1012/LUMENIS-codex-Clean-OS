@@ -24,6 +24,11 @@ import database as db
 import ai_analyzer
 import intelligence
 
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'ACTIVE'
+AI_ROLE = 'SECONDARY_REVIEW_ONLY'
+SUBJECT_FILTER_FIRST = True  # subject filtering is the first gate, AI only does secondary review
+
 # ============== 垃圾/营销内容特征词 ==============
 SPAM_KEYWORDS = {
     '加微信', '加v', '私聊', '私信我', '联系方式', '代购', '代拍',

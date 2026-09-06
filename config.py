@@ -68,7 +68,34 @@ def get_config(force_reload: bool = False) -> 'Config':
 
 class Config:
     """配置管理类"""
-    
+
+    # 内置默认值（Track1 补齐：关键配置项在 .env 缺失时不返回 None）
+    _DEFAULTS = {
+        'APP_HOST': '0.0.0.0',
+        'APP_PORT': 8200,
+        'APP_DEBUG': False,
+        'DATABASE_PATH': 'data/monitor.db',
+        'AI_PROVIDER': 'auto',
+        'AI_TIMEOUT_SECONDS': 90,
+        'AI_LOCAL_ENABLED': False,
+        'LOG_LEVEL': 'INFO',
+        'COLLECTION_DAILY_LIMIT': 50,
+        'COLLECTION_MANUAL_LIMIT': 20,
+        'COLLECTION_AUTO_LIMIT': 30,
+        'COLLECTION_COOLDOWN_MINUTES': 5,
+        'AUTO_INTERVAL_MINUTES': 90,
+        'DAILY_REPORT_HOUR': 9,
+        'TAIKOO_HOST': '0.0.0.0',
+        'TAIKOO_PORT': 8200,
+        'TAIKOO_AUTH_USER': 'admin',
+        'COMPANY_DOMAIN_ENABLED': False,
+        'NOTIFICATION_DEDUP_TTL': 300,
+        'NOTIFICATION_MAX_RETRIES': 3,
+        'ZBC_SCHED_GATE_MODE': 'shadow',
+        'ALLOW_CLOUD_AI': True,
+        'LOCAL_AI_PREFERRED': False,
+    }
+
     def __init__(self):
         """初始化配置"""
         load_env()
@@ -102,7 +129,11 @@ class Config:
         if json_value is not None:
             return json_value
         
-        # 4. 返回默认值
+        # 4. 检查内置默认值
+        if key in self._DEFAULTS:
+            return self._DEFAULTS[key]
+
+        # 5. 返回传入的兜底默认值
         return default
     
     def _get_nested_value(self, key: str) -> Any:
@@ -208,39 +239,67 @@ class Config:
         return all_config
     
     def get_known_keys(self) -> list:
-        """获取已知的配置键列表"""
+        """获取已知的配置键列表（2026-09-06 Phase 16 全量补齐）"""
         return [
             # 服务器配置
             'APP_HOST', 'APP_PORT', 'APP_DEBUG',
-            
+            'TAIKOO_HOST', 'TAIKOO_PORT',
+            'TAIKOO_AUTH_USER', 'TAIKOO_AUTH_PASSWORD',
+            'TAIKOO_COMPANY_DOMAIN', 'TAIKOO_COMPANY_NAME',
             # 数据库配置
             'DATABASE_PATH',
-            
-            # 认证配置
-            'TAIKOO_AUTH_USER', 'TAIKOO_AUTH_PASSWORD',
-            
-            # AI配置
-            'AI_API_KEY', 'AI_PROVIDER', 'AI_MODEL', 'AI_LOCAL_ENDPOINT',
-            'AI_LOCAL_ENABLED', 'AI_ASYNC_ENABLED',
-            
+            # AI 配置（Provider-Agnostic）
+            'AI_PROVIDER', 'AI_MODEL', 'AI_API_KEY',
+            'AI_LOCAL_ENDPOINT', 'AI_LOCAL_ENABLED', 'AI_ASYNC_ENABLED',
+            'AI_TIMEOUT_SECONDS', 'ALLOW_CLOUD_AI', 'LOCAL_AI_PREFERRED',
+            # 本地 AI Runtime
+            'OLLAMA_BASE_URL', 'OLLAMA_MODEL',
+            'LMSTUDIO_BASE_URL', 'LMSTUDIO_MODEL',
+            'LLAMA_CPP_BASE_URL', 'LLAMA_CPP_MODEL',
+            # 云端 AI Provider
+            'ZHIPU_API_KEY', 'ZHIPU_MODEL', 'ZHIPU_STRONG_MODEL', 'ZHIPU_BASE_URL',
+            'DASHSCOPE_API_KEY', 'DASHSCOPE_BASE_URL', 'QWEN_MODEL',
+            'OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_PROXY',
+            'DEEPSEEK_API_KEY', 'DEEPSEEK_MODEL',
+            'ARK_API_KEY', 'ARK_MODEL', 'ARK_BASE_URL', 'ARK_MAX_DAILY_TOKEN',
             # 采集配置
             'COLLECTION_DAILY_LIMIT', 'COLLECTION_MANUAL_LIMIT',
             'COLLECTION_AUTO_LIMIT', 'COLLECTION_COOLDOWN_MINUTES',
-            
+            'AUTO_INTERVAL_MINUTES', 'DAILY_REPORT_HOUR',
+            # 全网话题采集
+            'WEB_ADAPTERS', 'WEB_BASE_QUERY', 'WEB_RSS_URLS', 'WEB_QUERIES',
+            'TAIKOO_WEB_DISCOVERY', 'TAIKOO_WEB_DISCOVERY_TIMEOUT',
             # 小红书配置
-            'XHS_CDP_URL', 'XHS_COOKIE_FILE', 'XHS_PROFILE_DIR',
-            
-            # 邮件配置
+            'XHS_CDP_URL', 'XHS_COOKIE_FILE', 'XHS_COOKIE', 'XHS_PROFILE_DIR',
+            'XHS_CN_CDP_URL', 'XHS_HK_CDP_URL',
+            # 凭证 / Cookie
+            'ZBC_WEIBO_COOKIE_JSON', 'ZBC_BILI_COOKIE_JSON',
+            'ZBC_API_KEY', 'V4_ACCESS_KEY',
+            # 邮件配置（EMAIL_* 旧版 + SMTP_* 新版并存）
             'EMAIL_SMTP_HOST', 'EMAIL_SMTP_PORT', 'EMAIL_SMTP_USER',
             'EMAIL_SMTP_PASSWORD', 'EMAIL_FROM', 'EMAIL_TO',
-            
-            # 公司域名配置
+            'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD',
+            'SMTP_FROM', 'SMTP_SSL',
+            # 公司域名
             'COMPANY_DOMAIN', 'COMPANY_DOMAIN_ENABLED',
-            
-            # 日志配置
+            # 微信通知
+            'WECOM_WEBHOOK_URL', 'SERVERCHAN_SEND_KEY', 'PUSHPLUS_TOKEN',
+            'WECHAT_APP_ID', 'WECHAT_APP_SECRET', 'WECHAT_TEMPLATE_ID',
+            'WECHAT_RECEIVER_OPENIDS',
+            'NOTIFICATION_DEDUP_TTL', 'NOTIFICATION_MAX_RETRIES',
+            'NOTIFICATION_HIGH_RISK_PUSH', 'NOTIFICATION_CRITICAL_PUSH',
+            'NOTIFICATION_SYSTEM_ERROR_PUSH', 'NOTIFICATION_COLLECTION_FAILED_PUSH',
+            'NOTIFICATION_LOGIN_EXPIRED_PUSH', 'NOTIFICATION_DAILY_REPORT_PUSH',
+            'NOTIFICATION_WEEKLY_REPORT_PUSH',
+            # 动态调度门控
+            'ZBC_SCHED_GATE_MODE', 'ZBC_SCHED_GATE_PLATFORMS',
+            # Repository Registry 路径
+            'ZBC_REPO_ROOT', 'ZBC_CORE_DIR', 'ZBC_DATA_DIR', 'ZBC_RUNTIME_DIR',
+            'ZBC_BACKUP_DIR', 'ZBC_EXPORT_DIR', 'ZBC_TEMP_DIR',
+            'ZBC_AI_RUNTIME_DIR', 'ZBC_COLLECTOR_DIR', 'ZBC_LOG_DIR',
+            'ZBC_CONFIG_DIR',
+            # 日志 / Cloudflare
             'LOG_LEVEL', 'LOG_DIR',
-            
-            # Cloudflare配置
             'CLOUDFLARED_PATH', 'CLOUDFLARE_TUNNEL_URL',
         ]
     

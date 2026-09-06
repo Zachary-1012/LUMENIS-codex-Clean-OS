@@ -504,7 +504,7 @@ class EventGraph:
                 # 根据风险等级判断事件类型
                 is_negative = row['negative_confirmed'] == 1
                 risk_level = (row['risk_level'] or '').lower()
-                if is_negative or risk_level in ('high', 'medium'):
+                if is_negative or risk_level in ('critical', 'high', 'medium'):
                     event_type = 'public_opinion_event'
                 else:
                     event_type = 'propagation_event'

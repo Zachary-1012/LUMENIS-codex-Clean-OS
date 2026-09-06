@@ -22,6 +22,12 @@
 - 不改业务逻辑，只增加监控和保护
 - 不动主体词过滤口径（SUBJECT_WORDS / SUBJECT_EXCLUDE_WORDS / subject_hit()）
 - 不动主体SQL过滤、事件聚合过滤和日报中的主体过滤
+
+[LEGACY NOTICE - ZBC Phase 2 Runtime Guardian 统一收敛]
+本模块已由 runtime_guardian.py 接管为统一生命周期守护者（Worker->Lease->Heartbeat->
+Checkpoint->Reaper->Retry->DLQ->Resume）。保留全部原有类与函数行为（向后兼容），
+新代码请直接使用 runtime_guardian.RuntimeGuardian。不删除本文件，保持 import 兼容。
+收敛工单：ZBC-PHASE2-RUNTIME-GUARDIAN-001
 """
 import os
 import sys

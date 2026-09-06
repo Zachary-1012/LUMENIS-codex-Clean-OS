@@ -235,6 +235,12 @@ REPORT_MIGRATIONS = {
     'action_items': "ALTER TABLE daily_reports ADD COLUMN action_items TEXT DEFAULT '[]'",
     'risk_index': "ALTER TABLE daily_reports ADD COLUMN risk_index REAL DEFAULT 0",
     'brand_health_score': "ALTER TABLE daily_reports ADD COLUMN brand_health_score REAL DEFAULT 0",
+    # ===== ZBC Phase 9 报告 artifact 真实性字段（纯增量、向后兼容、默认空，不影响既有数据）=====
+    'report_id': "ALTER TABLE daily_reports ADD COLUMN report_id TEXT DEFAULT ''",
+    'artifact_hash': "ALTER TABLE daily_reports ADD COLUMN artifact_hash TEXT DEFAULT ''",
+    'generator_version': "ALTER TABLE daily_reports ADD COLUMN generator_version TEXT DEFAULT ''",
+    'data_version': "ALTER TABLE daily_reports ADD COLUMN data_version TEXT DEFAULT ''",
+    'source_snapshot': "ALTER TABLE daily_reports ADD COLUMN source_snapshot TEXT DEFAULT ''",
 }
 
 # ===== v5.8.2 事件负面二次确认（与笔记 negative_confirmed 同口径：0待确认/1确认/2驳回）=====
@@ -655,7 +661,7 @@ def get_hot_notes(limit=10):
 def get_high_risk_notes(limit=20):
     base,sp=_verified_base()
     # v5.8.2：排除已人工驳回(negative_confirmed=2)；近30天风险优先，其次风险分/时间，避免永远显示历史旧数据
-    sql=(f"SELECT * FROM notes WHERE {base} AND risk_level IN ('high','medium') "
+    sql=(f"SELECT * FROM notes WHERE {base} AND risk_level IN ('critical','high','medium') "
          f"AND COALESCE(negative_confirmed,0)<>2 "
          f"ORDER BY (CASE WHEN date(COALESCE(NULLIF(collected_at,''),NULLIF(publish_date,'')))>=date('now','localtime','-30 day') THEN 0 ELSE 1 END), "
          f"risk_score DESC, collected_at DESC, (likes+comments) DESC LIMIT ?")
@@ -670,12 +676,12 @@ def get_category_distribution():
 def save_daily_report(report):
     with get_db() as conn:
         rtype=report.get('report_type','daily'); date=report['report_date']
-        values=(rtype,date,report.get('period_start',''),report.get('period_end',''),report.get('total_notes',0),report.get('positive_count',0),report.get('neutral_count',0),report.get('negative_count',0),report.get('high_risk_count',0),report.get('medium_risk_count',0),report.get('low_risk_count',0),report.get('total_likes',0),report.get('total_comments',0),report.get('total_engagements',0),json.dumps(report.get('top_topics',[]),ensure_ascii=False),json.dumps(report.get('hot_notes',[]),ensure_ascii=False),json.dumps(report.get('risk_alerts',[]),ensure_ascii=False),json.dumps(report.get('key_events',[]),ensure_ascii=False),report.get('event_summary',''),report.get('sentiment_analysis',''),report.get('summary',''))
+        values=(rtype,date,report.get('period_start',''),report.get('period_end',''),report.get('total_notes',0),report.get('positive_count',0),report.get('neutral_count',0),report.get('negative_count',0),report.get('high_risk_count',0),report.get('medium_risk_count',0),report.get('low_risk_count',0),report.get('total_likes',0),report.get('total_comments',0),report.get('total_engagements',0),json.dumps(report.get('top_topics',[]),ensure_ascii=False),json.dumps(report.get('hot_notes',[]),ensure_ascii=False),json.dumps(report.get('risk_alerts',[]),ensure_ascii=False),json.dumps(report.get('key_events',[]),ensure_ascii=False),report.get('event_summary',''),report.get('sentiment_analysis',''),report.get('summary',''),report.get('report_id',''),report.get('artifact_hash',''),report.get('generator_version',''),report.get('data_version',''),report.get('source_snapshot',''))
         existing=conn.execute('SELECT id FROM daily_reports WHERE report_type=? AND report_date=?',(rtype,date)).fetchone()
         if existing:
-            conn.execute("""UPDATE daily_reports SET period_start=?,period_end=?,total_notes=?,positive_count=?,neutral_count=?,negative_count=?,high_risk_count=?,medium_risk_count=?,low_risk_count=?,total_likes=?,total_comments=?,total_engagements=?,top_topics=?,hot_notes=?,risk_alerts=?,key_events=?,event_summary=?,sentiment_analysis=?,summary=?,generated_at=datetime('now','localtime') WHERE id=?""", values[2:]+(existing['id'],))
+            conn.execute("""UPDATE daily_reports SET period_start=?,period_end=?,total_notes=?,positive_count=?,neutral_count=?,negative_count=?,high_risk_count=?,medium_risk_count=?,low_risk_count=?,total_likes=?,total_comments=?,total_engagements=?,top_topics=?,hot_notes=?,risk_alerts=?,key_events=?,event_summary=?,sentiment_analysis=?,summary=?,report_id=?,artifact_hash=?,generator_version=?,data_version=?,source_snapshot=?,generated_at=datetime('now','localtime') WHERE id=?""", values[2:]+(existing['id'],))
             return existing['id']
-        cur=conn.execute("""INSERT INTO daily_reports(report_type,report_date,period_start,period_end,total_notes,positive_count,neutral_count,negative_count,high_risk_count,medium_risk_count,low_risk_count,total_likes,total_comments,total_engagements,top_topics,hot_notes,risk_alerts,key_events,event_summary,sentiment_analysis,summary) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",values)
+        cur=conn.execute("""INSERT INTO daily_reports(report_type,report_date,period_start,period_end,total_notes,positive_count,neutral_count,negative_count,high_risk_count,medium_risk_count,low_risk_count,total_likes,total_comments,total_engagements,top_topics,hot_notes,risk_alerts,key_events,event_summary,sentiment_analysis,summary,report_id,artifact_hash,generator_version,data_version,source_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",values)
         return cur.lastrowid
 
 

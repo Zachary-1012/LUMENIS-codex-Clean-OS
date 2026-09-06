@@ -47,6 +47,7 @@ def test_generate_special_smoke(monkeypatch):
         @staticmethod
         def save_daily_report(r):
             captured["saved"] = r
+            return 1  # 模拟真实 save_daily_report 返回行 id
 
     monkeypatch.setattr(report_engine, "ai_analyzer", FakeAnalyzer())
     monkeypatch.setattr(report_engine, "db", FakeDb())

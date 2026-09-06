@@ -1,0 +1,350 @@
+[
+  {
+    "table": "ai_call_logs",
+    "row_count": 16,
+    "has_orm_model": false,
+    "column_count": 15
+  },
+  {
+    "table": "ai_filter_log",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 9
+  },
+  {
+    "table": "alert_configs",
+    "row_count": 13,
+    "has_orm_model": false,
+    "column_count": 5
+  },
+  {
+    "table": "alert_records",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 11
+  },
+  {
+    "table": "app_evidence_records",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 16
+  },
+  {
+    "table": "auth_recovery_tasks",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 15
+  },
+  {
+    "table": "brand_knowledge",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 11
+  },
+  {
+    "table": "canonical_data",
+    "row_count": 13,
+    "has_orm_model": false,
+    "column_count": 46
+  },
+  {
+    "table": "case_deep_analysis",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 22
+  },
+  {
+    "table": "collection_logs",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 7
+  },
+  {
+    "table": "collector_quality_log",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 9
+  },
+  {
+    "table": "daily_digest",
+    "row_count": 3,
+    "has_orm_model": true,
+    "column_count": 15
+  },
+  {
+    "table": "daily_reports",
+    "row_count": 15,
+    "has_orm_model": true,
+    "column_count": 34
+  },
+  {
+    "table": "evaluation_records",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 11
+  },
+  {
+    "table": "event_graph_events",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 12
+  },
+  {
+    "table": "event_graph_relations",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 7
+  },
+  {
+    "table": "event_insights",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 10
+  },
+  {
+    "table": "event_mentions",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 6
+  },
+  {
+    "table": "events",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 22
+  },
+  {
+    "table": "feedback_keywords",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 7
+  },
+  {
+    "table": "historical_import_log",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 20
+  },
+  {
+    "table": "kos_executions",
+    "row_count": 442,
+    "has_orm_model": false,
+    "column_count": 15
+  },
+  {
+    "table": "kos_operations",
+    "row_count": 200,
+    "has_orm_model": false,
+    "column_count": 6
+  },
+  {
+    "table": "kos_paid_plans",
+    "row_count": 80,
+    "has_orm_model": false,
+    "column_count": 16
+  },
+  {
+    "table": "kos_profiles",
+    "row_count": 1,
+    "has_orm_model": false,
+    "column_count": 58
+  },
+  {
+    "table": "kos_rewards",
+    "row_count": 40,
+    "has_orm_model": false,
+    "column_count": 10
+  },
+  {
+    "table": "metric_snapshots",
+    "row_count": 3,
+    "has_orm_model": false,
+    "column_count": 14
+  },
+  {
+    "table": "note_comments",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 11
+  },
+  {
+    "table": "note_review_history",
+    "row_count": 0,
+    "has_orm_model": true,
+    "column_count": 11
+  },
+  {
+    "table": "notes",
+    "row_count": 3,
+    "has_orm_model": true,
+    "column_count": 69
+  },
+  {
+    "table": "podcast_ai_runs",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 10
+  },
+  {
+    "table": "podcast_entities",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 21
+  },
+  {
+    "table": "professional_accounts",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 14
+  },
+  {
+    "table": "professional_metrics",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 14
+  },
+  {
+    "table": "rule_version_registry",
+    "row_count": 1,
+    "has_orm_model": false,
+    "column_count": 12
+  },
+  {
+    "table": "runtime_guardian_checkpoints",
+    "row_count": 1,
+    "has_orm_model": false,
+    "column_count": 9
+  },
+  {
+    "table": "runtime_guardian_dlq",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 15
+  },
+  {
+    "table": "runtime_guardian_workers",
+    "row_count": 1,
+    "has_orm_model": false,
+    "column_count": 16
+  },
+  {
+    "table": "schedule_decisions",
+    "row_count": 9163,
+    "has_orm_model": false,
+    "column_count": 22
+  },
+  {
+    "table": "schema_version",
+    "row_count": 2,
+    "has_orm_model": false,
+    "column_count": 5
+  },
+  {
+    "table": "swire_events",
+    "row_count": 10,
+    "has_orm_model": false,
+    "column_count": 12
+  },
+  {
+    "table": "swire_notes",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 14
+  },
+  {
+    "table": "swire_projects",
+    "row_count": 8,
+    "has_orm_model": false,
+    "column_count": 13
+  },
+  {
+    "table": "token_stat",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 2
+  },
+  {
+    "table": "topic_campaign_notes",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 16
+  },
+  {
+    "table": "topic_campaign_snapshots",
+    "row_count": 58,
+    "has_orm_model": false,
+    "column_count": 12
+  },
+  {
+    "table": "topic_campaign_topics",
+    "row_count": 7,
+    "has_orm_model": false,
+    "column_count": 6
+  },
+  {
+    "table": "topic_campaigns",
+    "row_count": 1,
+    "has_orm_model": false,
+    "column_count": 9
+  },
+  {
+    "table": "v4_audit_logs",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 9
+  },
+  {
+    "table": "v4_login_attempts",
+    "row_count": 0,
+    "has_orm_model": false,
+    "column_count": 5
+  },
+  {
+    "table": "v4_security_questions",
+    "row_count": 2,
+    "has_orm_model": false,
+    "column_count": 6
+  },
+  {
+    "table": "v4_sessions",
+    "row_count": 49,
+    "has_orm_model": false,
+    "column_count": 7
+  },
+  {
+    "table": "v4_users",
+    "row_count": 1,
+    "has_orm_model": false,
+    "column_count": 14
+  },
+  {
+    "table": "v4_workspace_grants",
+    "row_count": 49,
+    "has_orm_model": false,
+    "column_count": 7
+  },
+  {
+    "table": "v4_workspace_keys",
+    "row_count": 245,
+    "has_orm_model": false,
+    "column_count": 10
+  },
+  {
+    "table": "web_mentions",
+    "row_count": 10,
+    "has_orm_model": true,
+    "column_count": 24
+  },
+  {
+    "table": "web_runs",
+    "row_count": 2,
+    "has_orm_model": true,
+    "column_count": 9
+  },
+  {
+    "table": "web_sources",
+    "row_count": 1,
+    "has_orm_model": true,
+    "column_count": 9
+  }
+]

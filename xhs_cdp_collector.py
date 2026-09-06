@@ -515,6 +515,17 @@ def classify_page(text):
     return None, ''
 
 
+def _compute_subject_hit(title, desc):
+    """采集层主体硬判定：委托 subject_rules.subject_hit_text（不修改口径）。
+    返回 True/False；导入失败返回 None（下游不排除，保持向后兼容）。
+    P0 加固：使 collector.py 的 subject_hit_cdp 硬过滤真正生效。"""
+    try:
+        from subject_rules import subject_hit_text
+        return bool(subject_hit_text(f"{title or ''} {desc or ''}"))
+    except Exception:
+        return None
+
+
 def _risk_check(page, result):
     """全程风控检测：命中返回 True 并写 result。"""
     try:
@@ -704,6 +715,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         'detail_fetched': True, 'captured_at': datetime.now().isoformat(),
                         'collector_version': 'xhs-cdp-py-human-2.1',
                     }
+                    rec['subject_hit'] = _compute_subject_hit(rec.get('title'), rec.get('desc'))
                     result['notes'].append(rec)
                     ok_detail += 1
                     log(f'真人阅评 {i+1}/{actual} [{profile}/{consume["dwell_sec"]}s]: {rec["title"][:20]} 视频={rec["is_video"]} 翻图={img_swiped} 评{comment_seen} 赞{likes} 藏{collects} 享{shares} {pub}')
@@ -849,6 +861,7 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         'detail_fetched': True, 'captured_at': datetime.now().isoformat(),
                         'collector_version': 'xhs-cdp-py-1.0',
                     }
+                    rec['subject_hit'] = _compute_subject_hit(rec.get('title'), rec.get('desc'))
                     result['notes'].append(rec); ok_detail += 1
                     log(f'详情 {i+1}/{actual}: {rec["title"][:24]} 赞{likes} 藏{collects} 评{comments} {pub}')
                     human_sleep(1.0, 2.0)

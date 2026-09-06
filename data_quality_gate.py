@@ -196,3 +196,50 @@ class DataQualityGate:
         brief = ["%s.%s:%s" % (e["rule"], e["field"], e["message"]) for e in res["errors"][:5]]
         return {"data_quality_status": status, "data_quality_score": score,
                 "data_quality_errors": "|".join(brief)}
+
+
+# ============================================================
+# ZBC Phase 10 桥接：接入统一 Evaluation 系统（data 维度）
+# ============================================================
+def batch_quality_to_evaluation(validation_results, db_path=None):
+    """将 DataQualityGate 批量校验结果接入统一 Evaluation 系统。
+
+    把 validate_batch() 的结果聚合为 data.completeness 指标，
+    通过 evaluation_recorder.record_evaluation() 持久化。
+
+    Args:
+        validation_results: validate_batch() 返回的结果列表
+        db_path: 数据库路径（默认项目 monitor.db）
+
+    Returns:
+        EvaluationRecord 列表
+    """
+    try:
+        from evaluation_recorder import record_evaluation
+    except Exception:
+        return []
+
+    total = len(validation_results)
+    if total == 0:
+        return [record_evaluation(
+            dimension="data", metric_name="gate_completeness",
+            metric_value=None, pass_threshold=0.90, warn_threshold=0.70,
+            higher_is_better=True, source="data_quality_gate",
+            evidence_ref="batch empty", metadata={"total": 0},
+            db_path=db_path,
+        )]
+
+    valid_count = sum(1 for r in validation_results if r.get("valid", False))
+    completeness = round(valid_count / total, 4)
+    error_count = sum(len(r.get("errors", [])) for r in validation_results)
+    warn_count = sum(len(r.get("warnings", [])) for r in validation_results)
+
+    return [record_evaluation(
+        dimension="data", metric_name="gate_completeness",
+        metric_value=completeness, pass_threshold=0.90, warn_threshold=0.70,
+        higher_is_better=True, source="data_quality_gate",
+        evidence_ref=f"validate_batch | valid={valid_count}/{total}",
+        metadata={"total": total, "valid": valid_count,
+                  "errors": error_count, "warnings": warn_count},
+        db_path=db_path,
+    )]

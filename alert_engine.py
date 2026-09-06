@@ -258,8 +258,11 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
         sent = cm.sentiment_count(notes)
         risk = cm.risk_count(notes)
         total = len(notes)
-        neg_ratio = cm.neg_ratio(sent) or 0.0
+        # MET-NEG-RATIO：分母为 known(pos+neu+neg)，不含 unknown；分母为 0 返回 None（不可算），
+        # 严禁用 or 0.0 把 UNKNOWN 伪装成 0（Phase 6 审计修复）。
+        neg_ratio = cm.neg_ratio(sent)
         high_count = risk.get("high", 0)
+        critical_count = risk.get("critical", 0)  # 方案甲：critical 独立桶，不并入 high
         med_count = risk.get("medium", 0)
 
         # 阈值
@@ -284,14 +287,17 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
                                     f"{risk_index}", f"风险指数 {risk_index} 达偏高阈值（≥{ri_m}），建议加强监控")
                 if aid: alerts.append({"id": aid, "type": "risk_index", "severity": "medium", "metric": f"risk_index={risk_index}"})
 
-        if neg_ratio >= nr_h:
-            aid = _record_alert(c, "neg_ratio", "negative_surge", "high", "negative_pct",
-                                f"{neg_ratio:.2%}", f"负面占比 {neg_ratio:.2%} 超警戒线（≥{nr_h:.0%}），需立即关注来源")
-            if aid: alerts.append({"id": aid, "type": "negative_surge", "severity": "high", "metric": f"negative_pct={neg_ratio:.2%}"})
-        elif neg_ratio >= nr_m:
-            aid = _record_alert(c, "neg_ratio", "negative_elevated", "medium", "negative_pct",
-                                f"{neg_ratio:.2%}", f"负面占比 {neg_ratio:.2%} 处偏高区间（≥{nr_m:.0%}），建议跟踪演化")
-            if aid: alerts.append({"id": aid, "type": "negative_elevated", "severity": "medium", "metric": f"negative_pct={neg_ratio:.2%}"})
+        # neg_ratio 为 None 表示分母为 0（无已知情感数据），不可算→跳过负面占比告警，
+        # 绝不把 UNKNOWN 当 0 触发或不触发告警（Phase 6 审计修复）。
+        if neg_ratio is not None:
+            if neg_ratio >= nr_h:
+                aid = _record_alert(c, "neg_ratio", "negative_surge", "high", "negative_pct",
+                                    f"{neg_ratio:.2%}", f"负面占比 {neg_ratio:.2%} 超警戒线（≥{nr_h:.0%}），需立即关注来源")
+                if aid: alerts.append({"id": aid, "type": "negative_surge", "severity": "high", "metric": f"negative_pct={neg_ratio:.2%}"})
+            elif neg_ratio >= nr_m:
+                aid = _record_alert(c, "neg_ratio", "negative_elevated", "medium", "negative_pct",
+                                    f"{neg_ratio:.2%}", f"负面占比 {neg_ratio:.2%} 处偏高区间（≥{nr_m:.0%}），建议跟踪演化")
+                if aid: alerts.append({"id": aid, "type": "negative_elevated", "severity": "medium", "metric": f"negative_pct={neg_ratio:.2%}"})
 
         if event_high_count is not None:
             if event_high_count >= hrc_h:
@@ -350,7 +356,7 @@ def evaluate_alerts(notes: List[Dict[str, Any]], risk_index: Optional[float] = N
                 aid = _record_alert(c, "risk_index_crisis_med", "risk_index_crisis_med", "medium", "risk_index",
                                     f"{risk_index}", f"[危机期收紧] 风险指数 {risk_index} 达收紧中阈值（≥{ri_m*crisis_factor:.1f}）")
                 if aid: alerts.append({"id": aid, "type": "risk_index_crisis", "severity": "medium", "metric": f"risk_index={risk_index}"})
-            if neg_ratio >= nr_h * crisis_factor:
+            if neg_ratio is not None and neg_ratio >= nr_h * crisis_factor:
                 aid = _record_alert(c, "negative_crisis", "negative_crisis", "high", "negative_pct",
                                     f"{neg_ratio:.2%}", f"[危机期收紧] 负面占比 {neg_ratio:.2%} 达收紧阈值（≥{nr_h*crisis_factor:.0%}），原常规阈值{nr_h:.0%}")
                 if aid: alerts.append({"id": aid, "type": "negative_surge", "severity": "high", "metric": f"negative_pct={neg_ratio:.2%}"})

@@ -93,3 +93,17 @@ def test_export_end_to_end_manifest_and_readonly(tmp_path):
     man2 = EE.export_evidence(str(db), str(outbox), version="5.9.9")
     assert man2["total"] == 0
     assert (outbox / "_watermark.json").exists()
+
+
+def test_safe_identifier():
+    """验证 _safe_identifier 拒绝非法SQL标识符。"""
+    import platform_adapters.evidence_exporter as ee
+    assert ee._safe_identifier("notes") == "notes"
+    assert ee._safe_identifier("daily_reports") == "daily_reports"
+    import pytest
+    with pytest.raises(ValueError):
+        ee._safe_identifier("notes; DROP TABLE x;--")
+    with pytest.raises(ValueError):
+        ee._safe_identifier("a b")
+    with pytest.raises(ValueError):
+        ee._safe_identifier("")

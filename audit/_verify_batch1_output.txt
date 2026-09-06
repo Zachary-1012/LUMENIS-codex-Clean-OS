@@ -1,0 +1,54 @@
+﻿Scanning core production chain modules...
+  ...20 modules, 304 functions
+  ...40 modules, 510 functions
+  ...60 modules, 733 functions
+  ...80 modules, 1026 functions
+  ...100 modules, 1348 functions
+  ...120 modules, 1592 functions
+  ...140 modules, 1890 functions
+.venv\Scripts\python.exe : D:\Taikoo-monitor-new\audit\_final_report.py:291: SyntaxWarning: invalid escape sequence '\_
+'
+所在位置 行:1 字符: 27
++ ... onitor-new; .venv\Scripts\python.exe audit\_verify_batch1.py 2>&1 | O ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\Taikoo-monit...e sequence '\_':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  md.append(f'> **Audit Date**: {datetime.now().strftime("%Y-%m-%d %H:%M")} | **Scope**: All production `.py` files (ex
+cluding tests/.venv/node_modules/\_\_pycache\_\_/.trae-cn/99-ARCHIVE)')
+D:\Taikoo-monitor-new\audit\_final_report.py:291: SyntaxWarning: invalid escape sequence '\_'
+  md.append(f'> **Audit Date**: {datetime.now().strftime("%Y-%m-%d %H:%M")} | **Scope**: All production `.py` files (ex
+cluding tests/.venv/node_modules/\_\_pycache\_\_/.trae-cn/99-ARCHIVE)')
+  ...160 modules, 2159 functions
+  ...180 modules, 2292 functions
+  ...200 modules, 2422 functions
+  ...220 modules, 2553 functions
+  ...240 modules, 2665 functions
+  ...260 modules, 2966 functions
+  ...280 modules, 3209 functions
+  ...300 modules, 3380 functions
+  ...320 modules, 3530 functions
+  ...340 modules, 3723 functions
+  ...360 modules, 3841 functions
+
+Total modules scanned: 376
+Total functions analyzed: 3953
+Parse errors: 0
+
+=== FUNCTION STATUS SUMMARY ===
+  VERIFIED: 1138
+  PARTIAL: 2815
+  BLOCKED: 0
+  DEPRECATED: 0
+  DELETE-CANDIDATE: 0
+
+=== MODULE STATUS SUMMARY ===
+  VERIFIED: 17
+  PARTIAL: 359
+  BLOCKED: 0
+  DEPRECATED: 0
+  DELETE-CANDIDATE: 0
+
+CSV written: D:\Taikoo-monitor-new\audit\verification_batch1_core.csv
+
+=== BLOCKED MODULES (0) ===

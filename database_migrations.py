@@ -17,12 +17,13 @@ import shutil
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-# 数据库路径
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'monitor.db')
-BACKUP_DIR = os.path.join(os.path.dirname(__file__), 'data', 'backups')
+# 数据库路径（与 database.py 保持一致，支持 ZBC_DB_PATH 环境变量覆盖）
+_DB_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or os.path.join(_DB_DIR, 'data', 'monitor.db'))
+BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 9
+CURRENT_VERSION = 10
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -35,6 +36,7 @@ MIGRATION_HISTORY = {
     7: "添加负面舆情二次确认字段(negative_confirmed, negative_confirmed_at, negative_confirmed_by)",
     8: "添加数据质量字段(publish_datetime, captured_at, detail_fetched_at, comments_fetched_at, data_quality_status, data_quality_score, collector_version)",
     9: "添加 HUMAN_CONTROL_GATE 执行审计表 kos_executions(AI_GENERATED->PENDING_HUMAN_REVIEW->HUMAN_APPROVED->EXECUTING->SUCCESS/FAILED)",
+    10: "ZBC Phase15 历史数据治理: notes/canonical_data 添加 rule_version(可空), notes 添加 content_hash/provenance/product_id(可空), 新建 rule_version_registry 与 historical_import_log 表",
 }
 
 
@@ -67,11 +69,25 @@ def init_version_table(conn: sqlite3.Connection):
 
 
 def get_current_version(conn: sqlite3.Connection) -> int:
-    """获取当前数据库版本"""
+    """获取当前数据库版本（int）。
+
+    兼容处理：部分外部模块（如 t4-canonical）会向 schema_version 写入
+    字符串版本号（如 '1.0.0'），导致 SQLite MAX() 在混合类型列上返回
+    TEXT 而非 INTEGER。此处只取可解析为 int 的版本号求最大值。
+    """
     init_version_table(conn)
-    cursor = conn.execute("SELECT MAX(version) as max_version FROM schema_version")
-    row = cursor.fetchone()
-    return row['max_version'] if row['max_version'] else 0
+    cursor = conn.execute("SELECT version FROM schema_version")
+    versions = []
+    for row in cursor.fetchall():
+        v = row[0]
+        if isinstance(v, int):
+            versions.append(v)
+        elif isinstance(v, str):
+            try:
+                versions.append(int(v.strip()))
+            except (ValueError, TypeError):
+                pass  # 跳过非数字版本号如 '1.0.0'
+    return max(versions) if versions else 0
 
 
 def set_version(conn: sqlite3.Connection, version: int, description: str = ""):
@@ -362,6 +378,84 @@ def migration_8_to_9(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_kos_exec_author ON kos_executions(target_author_id)")
 
 
+def migration_9_to_10(conn):
+    """迁移9→10：ZBC Phase15 历史数据治理。
+    - notes/canonical_data 添加 rule_version（可空，不修改现有数据）
+    - notes 添加 content_hash/provenance/product_id（可空，历史数据治理字段）
+    - 新建 rule_version_registry 表（规则版本注册）
+    - 新建 historical_import_log 表（历史导入审计日志）
+    所有 ADD COLUMN 均无 DEFAULT，现有行保持 NULL，不被新规则静默改写。
+    """
+    # --- notes 表：添加历史数据治理字段（可空，不修改现有数据）---
+    cursor = conn.execute("PRAGMA table_info(notes)")
+    note_cols = {row['name'] for row in cursor.fetchall()}
+
+    note_new_columns = [
+        ('rule_version', 'TEXT'),          # 规则版本追踪，历史数据保持原始版本
+        ('content_hash', 'TEXT'),          # SHA256 内容哈希，用于去重
+        ('provenance', 'TEXT'),            # 来源溯源 source_table:source_id
+        ('product_id', 'TEXT'),            # 产品标识 CTH/ZBC，namespace 隔离
+    ]
+    for col_name, col_type in note_new_columns:
+        if col_name not in note_cols:
+            conn.execute(f"ALTER TABLE notes ADD COLUMN {col_name} {col_type}")
+
+    # --- canonical_data 表：添加 rule_version（可空）---
+    cursor = conn.execute("PRAGMA table_info(canonical_data)")
+    cd_cols = {row['name'] for row in cursor.fetchall()}
+    if 'rule_version' not in cd_cols:
+        conn.execute("ALTER TABLE canonical_data ADD COLUMN rule_version TEXT")
+
+    # --- rule_version_registry：规则版本注册表 ---
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS rule_version_registry (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version TEXT NOT NULL UNIQUE,
+            rule_type TEXT NOT NULL DEFAULT 'subject',
+            description TEXT DEFAULT '',
+            subject_words_count INTEGER DEFAULT 0,
+            exclude_words_count INTEGER DEFAULT 0,
+            subject_words_hash TEXT DEFAULT '',
+            exclude_words_hash TEXT DEFAULT '',
+            applied_at TEXT DEFAULT '',
+            applied_by TEXT DEFAULT 'system',
+            is_active INTEGER DEFAULT 0,
+            changelog TEXT DEFAULT '{}'
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_rvr_version ON rule_version_registry(version)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_rvr_active ON rule_version_registry(is_active)")
+
+    # --- historical_import_log：历史数据导入审计日志 ---
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS historical_import_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            import_batch_id TEXT NOT NULL,
+            source_table TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            target_table TEXT NOT NULL,
+            target_id TEXT DEFAULT '',
+            content_hash TEXT DEFAULT '',
+            rule_version TEXT DEFAULT '',
+            product_id TEXT DEFAULT 'CTH',
+            subject_hit INTEGER DEFAULT 0,
+            subject_reason TEXT DEFAULT '',
+            publish_datetime TEXT DEFAULT '',
+            captured_at TEXT DEFAULT '',
+            source_platform TEXT DEFAULT '',
+            import_status TEXT DEFAULT 'imported',
+            dedup_hit INTEGER DEFAULT 0,
+            dedup_of TEXT DEFAULT '',
+            imported_at TEXT DEFAULT '',
+            imported_by TEXT DEFAULT 'historical_importer',
+            notes TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hil_batch ON historical_import_log(import_batch_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hil_hash ON historical_import_log(content_hash)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hil_product ON historical_import_log(product_id)")
+
+
 # 迁移函数映射
 MIGRATIONS = {
     1: migration_1_to_2,
@@ -372,6 +466,7 @@ MIGRATIONS = {
     6: migration_6_to_7,
     7: migration_7_to_8,
     8: migration_8_to_9,
+    9: migration_9_to_10,
 }
 
 

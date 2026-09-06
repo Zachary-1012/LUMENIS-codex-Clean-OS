@@ -5,6 +5,13 @@
 2. 系统健康检查
 3. 自动恢复机制
 4. 性能监控
+
+[LEGACY NOTICE - ZBC Phase 2 Runtime Guardian 统一收敛]
+本模块已由 runtime_guardian.py 接管为统一生命周期守护者。
+保留全部原有函数与行为（向后兼容），health_check() 内部同步委托给
+RuntimeGuardian 记录状态；新代码请直接使用 runtime_guardian.RuntimeGuardian。
+不删除本文件，保持 import 兼容。
+收敛工单：ZBC-PHASE2-RUNTIME-GUARDIAN-001
 """
 
 import os
@@ -15,6 +22,14 @@ import logging
 import traceback
 from datetime import datetime
 from functools import wraps
+
+# Runtime Guardian 委托层（延迟导入，避免循环依赖；失败不阻断原模块）
+_RUNTIME_GUARDIAN = None
+try:
+    from runtime_guardian import get_guardian as _rg_get_guardian
+    _RUNTIME_GUARDIAN = _rg_get_guardian("system_guardian_legacy")
+except Exception:
+    _RUNTIME_GUARDIAN = None
 
 # 日志目录
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'logs')
@@ -84,6 +99,18 @@ def global_exception_handler(func):
             status['last_error_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             save_status(status)
 
+            # 委托 RuntimeGuardian 记录（不阻断原行为）
+            try:
+                if _RUNTIME_GUARDIAN:
+                    _wid = _RUNTIME_GUARDIAN.register_worker(f"legacy_{func.__name__}")
+                    _RUNTIME_GUARDIAN._update_worker_fields(
+                        _wid,
+                        failure_count=1,
+                        recovery_reason=f"{error_type}: {error_msg}",
+                    )
+            except Exception:
+                pass
+
             # 记录日志
             logger.error(f"函数 {func.__name__} 发生异常: {error_type}: {error_msg}")
             logger.error(f"堆栈信息:\n{error_trace}")
@@ -131,7 +158,7 @@ def auto_recovery(func, error, args, kwargs):
 
 
 def health_check():
-    """系统健康检查"""
+    """系统健康检查（Legacy：保留原返回格式，内部同步委托 RuntimeGuardian）"""
     checks = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'status': 'healthy',
@@ -176,6 +203,14 @@ def health_check():
     # 如果最近1小时内错误超过10个，标记为不健康
     if status.get('total_errors', 0) > 50:
         checks['status'] = 'unhealthy'
+
+    # 委托 RuntimeGuardian 同步记录（不阻断原返回）
+    try:
+        if _RUNTIME_GUARDIAN:
+            _rg_health = _RUNTIME_GUARDIAN.health_check()
+            checks['runtime_guardian'] = _rg_health
+    except Exception:
+        pass
 
     return checks
 

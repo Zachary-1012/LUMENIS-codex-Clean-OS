@@ -17,6 +17,11 @@ from pathlib import Path
 # 配置日志
 logger = logging.getLogger(__name__)
 
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'LEGACY_PARTIAL'
+AI_ROLE = 'AUXILIARY_RESEARCH'  # web sentiment search uses ark_llm (LEGACY), guarded by AI_PROVIDER
+NOTE = 'WebSentimentSearch uses ark_llm.chat(); disabled when AI_PROVIDER=zhipu. Learning records are local JSON only.'
+
 class AILearningEngine:
     """AI自学习进化引擎"""
     

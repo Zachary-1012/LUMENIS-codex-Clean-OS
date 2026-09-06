@@ -97,12 +97,21 @@ def _assert_no_forbidden(records: List[Dict]):
             assert k not in FORBIDDEN_KEYS, f"证据导出混入禁带字段: {k}"
 
 
+def _safe_identifier(name: str) -> str:
+    """校验SQL标识符仅含安全字符。"""
+    if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', name or ''):
+        raise ValueError(f"非法SQL标识符: {name!r}")
+    return name
+
+
 def _fetch(conn, table, fields, where, params):
     # 只 SELECT 实际存在的列，兼容历史库缺列；fields 顺序即白名单投影顺序
-    existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+    existing = {r[1] for r in conn.execute(f"PRAGMA table_info({_safe_identifier(table)})")}
     use = [f for f in fields if f in existing]
     cols = ", ".join(use)
-    cur = conn.execute(f"SELECT {cols} FROM {table} WHERE {where}", params)
+    _safe_table = _safe_identifier(table)
+    _safe_cols = ", ".join(_safe_identifier(c) for c in use)
+    cur = conn.execute(f"SELECT {_safe_cols} FROM {_safe_table} WHERE {where}", params)
     rows = cur.fetchall()
     records, redacted = [], 0
     for r in rows:

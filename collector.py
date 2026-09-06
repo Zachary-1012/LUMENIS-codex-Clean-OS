@@ -8,7 +8,16 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime
+
+# Runtime Guardian 旁路接入（ZBC-PHASE2-RUNTIME-GUARDIAN Shard B）
+try:
+    import runtime_guardian as _runtime_guardian
+    _RG_AVAILABLE = True
+except Exception:
+    _runtime_guardian = None
+    _RG_AVAILABLE = False
 
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
 try:
@@ -127,6 +136,7 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
     if snap['should_stop_request']:
         # RiskEngine熔断联动guard.limiter.force_pause（P0-C加固：避免两套熔断系统脱节）
         try:
+            from collector_guard.state import CollectState
             _guard = _get_xhs_guard()
             if _guard and hasattr(_guard, 'limiter'):
                 _guard.limiter.force_pause(CollectState.PAUSED, cooldown_seconds=max(300, risk.reset_timeout))
@@ -345,10 +355,29 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10):
     return _search_standalone(keyword, max_scroll, output_path)
 
 
-def collect_all(keywords=None, max_scroll=4):
+def _collect_one_keyword(guard, kw, kw_scroll, kw_details):
+    """单个关键词采集（封装 CollectorGuard.run），返回 (gr, result_dict)。
+    独立函数便于 Runtime Guardian execute_with_retry 包装重试。"""
+    gr = guard.run(
+        lambda kw=kw, ss=kw_scroll, dd=kw_details: search_xiaohongshu(kw, max_scroll=ss, max_details=dd),
+        kw,
+    )
+    result = gr.raw if isinstance(gr.raw, dict) else {
+        'keyword': kw, 'total': len(gr.notes), 'notes': gr.notes,
+        'error': '', 'channel': 'guard',
+    }
+    return gr, result
+
+
+def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_id=None):
     """
     批量采集所有关键词
     返回去重后的笔记列表
+
+    Runtime Guardian 旁路参数（均为可选，不传时行为与原链路完全一致）：
+      guardian:   RuntimeGuardian 实例，传入后启用逐关键词心跳/检查点/重试+DLQ
+      worker_id:  已注册的 worker ID
+      run_id:     本次采集运行 ID（用于 checkpoint 关联）
     """
     if keywords is None:
         keywords = MONITOR_KEYWORDS
@@ -373,8 +402,31 @@ def collect_all(keywords=None, max_scroll=4):
         kw_scroll = max_scroll if is_core else min(max_scroll, 2)
         print(f"[Collector] 搜索: {kw} ({'核心' if is_core else '扩展'}浅采)" if not is_core else f"[Collector] 搜索: {kw}")
         guard = _get_xhs_guard()
-        gr = guard.run(lambda kw=kw, ss=kw_scroll, dd=kw_details: search_xiaohongshu(kw, max_scroll=ss, max_details=dd), kw)
-        result = gr.raw if isinstance(gr.raw, dict) else {'keyword': kw, 'total': len(gr.notes), 'notes': gr.notes, 'error': '', 'channel': 'guard'}
+        # Runtime Guardian: 逐关键词心跳
+        if guardian and worker_id:
+            try:
+                guardian.heartbeat(worker_id)
+            except Exception:
+                pass
+        # Runtime Guardian: 受保护执行（重试+指数退避+熔断+DLQ），旁路模式
+        if guardian and worker_id and _RG_AVAILABLE:
+            try:
+                gr, result = guardian.execute_with_retry(
+                    worker_id, _collect_one_keyword, guard, kw, kw_scroll, kw_details,
+                    task_type='xhs_keyword_search',
+                    payload={'keyword': kw, 'max_scroll': kw_scroll, 'max_details': kw_details},
+                    run_id=run_id or f'collect_{int(time.time())}',
+                )
+            except RuntimeError as _rg_err:
+                # 重试耗尽进入 DLQ：跳过本关键词，继续后续关键词（不阻塞主链路）
+                print(f"[Collector]   !! 关键词 '{kw}' 重试耗尽进入DLQ，跳过: {_rg_err}")
+                collection_results.append({
+                    'keyword': kw, 'count': 0, 'error': f'DLQ: {_rg_err}',
+                    'guard_state': '', 'tier': 'core' if is_core else 'expand',
+                })
+                continue
+        else:
+            gr, result = _collect_one_keyword(guard, kw, kw_scroll, kw_details)
         if gr.should_stop:
             collection_results.append({'keyword': kw, 'count': result.get('total', 0),
                                        'error': result.get('error', '') or gr.reason,
@@ -397,6 +449,7 @@ def collect_all(keywords=None, max_scroll=4):
             import time as _sched_time
             from collector_guard.schedule_adapter import schedule_sleep_seconds
             _life = _get_xhs_risk_engine().snapshot().get('lifecycle_action')
+            base = float(os.getenv('XHS_GUARD_BASE_INTERVAL', '6'))
             _interval = schedule_sleep_seconds(_life, base_interval=base)
             if _interval > 0.5:
                 print(f"[Collector]   调度间隔 {_interval:.1f}s (lifecycle={_life})")
@@ -417,6 +470,20 @@ def collect_all(keywords=None, max_scroll=4):
                 # 标记来源关键词
                 note['source_keyword'] = kw
                 all_notes[nid] = note
+
+        # Runtime Guardian: 逐关键词检查点（异常中断后可从 checkpoint 恢复而非从头开始）
+        if guardian and worker_id and _RG_AVAILABLE:
+            try:
+                guardian.save_checkpoint(
+                    run_id=run_id or 'collect_all', worker_id=worker_id,
+                    position=f'keyword_idx={idx} keyword={kw} notes={len(all_notes)}',
+                    metadata={
+                        'keyword_idx': idx, 'keyword': kw,
+                        'notes_so_far': len(all_notes), 'is_core': is_core,
+                    },
+                )
+            except Exception:
+                pass
 
     notes_list = list(all_notes.values())
     print(f"[Collector] 去重后共 {len(notes_list)} 条笔记")

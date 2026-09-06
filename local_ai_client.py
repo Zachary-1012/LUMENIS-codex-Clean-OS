@@ -19,6 +19,11 @@ from datetime import datetime
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'ACTIVE_FALLBACK'
+AI_ROLE = 'LOCAL_INFERENCE'  # Ollama local client, used by /api/local-ai/* routes; intelligence.py has its own local path
+NOTE = 'Independent LocalAIClient for Ollama; intelligence.py _chat() also supports local models via auto-detection.'
+
 
 class LocalAIClient:
     """本地AI客户端"""

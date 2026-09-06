@@ -1,0 +1,76 @@
+{
+  "total": 5,
+  "passed": 5,
+  "failed": 0,
+  "results": [
+    {
+      "name": "daily_report.generate_daily_digest",
+      "method": "FUNC",
+      "url": "daily_report.generate_daily_digest(2026-09-06)",
+      "status_code": 200,
+      "ok": true,
+      "body_preview": "{\"digest_date\": \"2026-09-06\", \"total_found\": 0, \"effective_count\": 0, \"risk_index\": 0.0, \"brand_health_score\": 50.0}",
+      "error": "",
+      "timestamp": "2026-09-06T14:31:51",
+      "report_type": "daily_digest",
+      "has_key_insights": true,
+      "has_action_items": true,
+      "has_top_events": false
+    },
+    {
+      "name": "report_engine.generate_report(daily)",
+      "method": "FUNC",
+      "url": "report_engine.generate_report('daily')",
+      "status_code": 200,
+      "ok": true,
+      "body_preview": "{\"report_type\": \"daily\", \"report_date\": \"2026-09-06\", \"total_notes\": 0, \"report_id\": \"RPT-daily-2026-09-06-2026-09-06\", \"_artifact_verified\": true, \"_db_row_id\": 11}",
+      "error": "",
+      "timestamp": "2026-09-06T14:31:53",
+      "report_type": "daily",
+      "artifact_verified": true,
+      "db_row_id": 11,
+      "has_digest": true
+    },
+    {
+      "name": "export_report._export_excel(daily)",
+      "method": "FUNC",
+      "url": "export_report._export_excel('daily')",
+      "status_code": 200,
+      "ok": true,
+      "body_preview": "file=D:\\Taikoo-monitor-new\\data\\exports\\太古汇舆情_daily_20260906_143153.xlsx, size=7277 bytes",
+      "error": "",
+      "timestamp": "2026-09-06T14:31:53",
+      "file_path": "D:\\Taikoo-monitor-new\\data\\exports\\太古汇舆情_daily_20260906_143153.xlsx",
+      "file_size": 7277,
+      "file_exists": true,
+      "file_nonempty": true
+    },
+    {
+      "name": "GET /api/export/report (download xlsx)",
+      "method": "GET",
+      "url": "/api/export/report?type=daily&format=xlsx",
+      "status_code": 200,
+      "ok": true,
+      "body_preview": "content_type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, body_len=7277",
+      "error": "",
+      "timestamp": "2026-09-06T14:31:53",
+      "body_length": 7277,
+      "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "is_attachment": true
+    },
+    {
+      "name": "report_artifact.verify_artifact_file",
+      "method": "FUNC",
+      "url": "verify_artifact_file(广州太古汇舆情_weekly_2026-08-21_2026-08-27.xlsx)",
+      "status_code": 200,
+      "ok": true,
+      "body_preview": "{\"exists\": true, \"size\": 15971, \"hash\": \"608abe9a9d33284e8fb91bf1388a46e41c9bbe1d7cba53bf3d91ba1b04f2c064\", \"valid\": true, \"reason\": \"\", \"verified_at\": \"2026-09-06 14:31:53\"}",
+      "error": "",
+      "timestamp": "2026-09-06T14:31:53",
+      "file": "D:\\Taikoo-monitor-new\\data\\exports\\广州太古汇舆情_weekly_2026-08-21_2026-08-27.xlsx",
+      "valid": true,
+      "size": 15971,
+      "hash": "608abe9a9d33284e..."
+    }
+  ]
+}

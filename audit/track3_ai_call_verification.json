@@ -1,0 +1,107 @@
+{
+  "zhipu_api": {
+    "provider": "zhipu",
+    "model": "glm-4.5-air",
+    "base_url": "https://open.bigmodel.cn/api/paas/v4",
+    "api_key_present": true,
+    "api_key_masked": "8564...tXXW",
+    "prompt": "请用一句话回答：广州太古汇位于哪个城市？",
+    "timestamp": "2026-09-06T14:40:18",
+    "status": "SUCCESS",
+    "http_status": 200,
+    "latency_ms": 562,
+    "response": "广州太古汇位于中国广州市。",
+    "usage": {
+      "completion_tokens": 9,
+      "prompt_tokens": 39,
+      "prompt_tokens_details": {
+        "cached_tokens": 38
+      },
+      "total_tokens": 48
+    },
+    "response_model": "glm-4.5-air",
+    "ai_call_logger_id": 23
+  },
+  "local_ai_probe": {
+    "before_probe": {
+      "ollama": "AVAILABLE",
+      "lmstudio": "AVAILABLE",
+      "llama_cpp": "AVAILABLE"
+    },
+    "after_probe": {
+      "ollama": "ACTIVE",
+      "lmstudio": "BLOCKED",
+      "llama_cpp": "BLOCKED"
+    },
+    "probe_results": {
+      "ollama": "ACTIVE",
+      "lmstudio": "BLOCKED",
+      "llama_cpp": "BLOCKED"
+    },
+    "active_local": [
+      "ollama"
+    ],
+    "blocked_local": [
+      "lmstudio",
+      "llama_cpp"
+    ],
+    "available_local": [],
+    "registry_summary": {
+      "ACTIVE": 2,
+      "BLOCKED": 2,
+      "LEGACY": 2,
+      "DISABLED": 3
+    },
+    "no_fake_active": true,
+    "status": "PASS"
+  },
+  "ai_governance": {
+    "provider_stats": {
+      "zhipu": {
+        "calls": 8,
+        "prompt_tokens": 600,
+        "completion_tokens": 200,
+        "total_tokens": 800,
+        "failures": 4
+      },
+      "ark": {
+        "calls": 4,
+        "prompt_tokens": 400,
+        "completion_tokens": 120,
+        "total_tokens": 520,
+        "failures": 0
+      }
+    },
+    "quota": {
+      "date": "2026-09-06",
+      "call_used": 12,
+      "call_limit": 500,
+      "call_remaining": 488,
+      "token_used": 1320,
+      "token_limit": 200000,
+      "token_remaining": 198680,
+      "call_usage_pct": 2.4,
+      "token_usage_pct": 0.7,
+      "allowed": true
+    },
+    "desensitization_enabled": true,
+    "desensitize_roundtrip_pass": true,
+    "pii_desensitization_pass": true,
+    "checks": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "all_pass": true,
+    "status": "PASS"
+  },
+  "summary": {
+    "zhipu_api": "SUCCESS",
+    "local_ai_probe": "PASS",
+    "ai_governance": "PASS"
+  },
+  "audit_timestamp": "2026-09-06T14:40:23"
+}

@@ -226,3 +226,42 @@ if __name__ == "__main__":
     r, s = execute_dev_code_safe("result = 1+1", "python")
     print(f"正常执行: status={s}, ok={r.get('ok')}, result={r.get('result')}")
     print("自检完成")
+
+
+# ── Phase 13: AgentBoundary integration (optional guard, bypass-safe) ──
+_MODULE_STATUS = "ACTIVE"
+_PHASE13_COMPAT = "agent_boundary.AgentBoundary via agent_boundary_check()"
+
+
+def agent_boundary_check(code: str, *, agent_id: str = "dev-exec-default",
+                         boundary=None) -> dict:
+    """Optional AgentBoundary check for dev code execution.
+
+    Returns {"allowed": bool, "reason": str}. When boundary is None,
+    attempts to use global singleton; if unavailable, returns allowed=True
+    with a warning (fail-open for dev endpoints that already have guard_func).
+
+    This is an ADDITIONAL guard, not a replacement for guard_func.
+    """
+    try:
+        from agent_boundary import get_agent_boundary, AgentRole
+        b = boundary or get_agent_boundary()
+        identity = b.get_identity(agent_id)
+        if identity is None:
+            identity = b.create_agent(agent_id, AgentRole.DEVELOPER)
+        result = b.check_action(
+            identity, "execute_dev_code",
+            tool_name="execute_dev_code_safe",
+            params={"code_len": len(code or "")},
+            description="dev endpoint code execution",
+        )
+        if result["decision"] == "DENY":
+            return {"allowed": False, "reason": result["reason"]}
+        if result["decision"] == "REQUIRE_APPROVAL":
+            return {"allowed": False,
+                    "reason": "requires human approval: " + result["reason"]}
+        return {"allowed": True, "reason": "OK"}
+    except Exception as e:
+        # Fail-open with warning: dev endpoints already have guard_func
+        return {"allowed": True, "reason": f"boundary_check_unavailable: {e}"}
+

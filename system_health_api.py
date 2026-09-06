@@ -23,8 +23,12 @@ HEALTH_STATUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'd
 
 
 def get_db_path():
-    """获取数据库路径"""
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+    """获取数据库路径（统一使用 database.DB_PATH，支持 ZBC_DB_PATH 环境变量）"""
+    try:
+        from database import DB_PATH as _db_path
+        return _db_path
+    except Exception:
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
 
 
 def check_database():

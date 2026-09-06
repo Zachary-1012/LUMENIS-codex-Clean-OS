@@ -17,46 +17,27 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
+# Phase 13: module status marker (ACTIVE, SkillMetadata-compatible)
+_MODULE_STATUS = "ACTIVE"
+_PHASE13_COMPAT = "skill_registry.SkillMetadata via to_skill_metadata()"
 
-# OSAI 仓库路径发现（V2 P0-18：Repository Registry，禁止硬编码个人路径）
+
+# OSAI 仓库路径（通过环境变量或默认相对路径发现，不硬编码个人路径）
 def _osai_root() -> Optional[str]:
-    """发现 OSAI 仓库根目录。
-
-    优先级：环境变量 OSAI_REPO_ROOT > Repository Registry 配置 >
-    同级目录自动扫描 > 用户主目录扫描。
-    禁止硬编码 D:\\ 等个人机器路径。
-    """
+    """发现 OSAI 仓库根目录。优先环境变量，其次常见位置。"""
     env = os.environ.get("OSAI_REPO_ROOT")
     if env and os.path.isdir(env):
         return env
-
+    # 常见兄弟目录
     here = os.path.dirname(os.path.abspath(__file__))
-    for rp in (os.path.join(here, "repo_registry.json"),
-               os.path.join(here, "config", "repo_registry.json"),
-               os.path.expanduser("~/.lumenis/repo_registry.json")):
-        if os.path.isfile(rp):
-            try:
-                with open(rp, "r", encoding="utf-8") as fh:
-                    reg = json.load(fh)
-                for repo in reg.get("repositories", []):
-                    if (repo.get("role") == "intelligence_core"
-                            or repo.get("name", "").lower() in ("osai", "zachary-os-ai")):
-                        p = repo.get("root_path", "")
-                        if p and os.path.isdir(p):
-                            return p
-            except (json.JSONDecodeError, OSError):
-                continue
-
-    parent = os.path.dirname(here)
-    name_matches = ("zachary-os-ai", "zachary os ai", "osai")
-    for base in (parent, os.path.expanduser("~")):
-        try:
-            for entry in os.listdir(base):
-                full = os.path.join(base, entry)
-                if os.path.isdir(full) and entry.lower() in name_matches:
-                    return full
-        except OSError:
-            pass
+    candidates = [
+        os.path.join(os.path.dirname(here), "Zachary-OS-AI"),
+        os.path.join(os.path.dirname(here), "Zachary OS AI"),
+        os.path.expanduser("~/Zachary-OS-AI"),
+    ]
+    for c in candidates:
+        if os.path.isdir(c):
+            return c
     return None
 
 
@@ -266,6 +247,46 @@ class CrossCoreSkillAdapter:
         return {"connected": True, "status": "CONNECTED",
                 "error": None, "osai": data}
 
+
+
+
+    # Phase 13: SkillMetadata compatibility layer (read-only conversion)
+    def to_skill_metadata(self, osai_skill):
+        """Convert OSAI skill dict to ZBC SkillMetadata-compatible dict."""
+        sid = str(osai_skill.get("id", osai_skill.get("skill_id", "unknown"))).lower()
+        status = str(osai_skill.get("status", "PLANNED")).upper()
+        risk_map = {"IMPLEMENTED": "LOW", "PARTIAL": "MEDIUM",
+                    "PLANNED": "LOW", "DEPRECATED": "MEDIUM"}
+        risk = risk_map.get(status, "MEDIUM")
+        policy = "READ_ONLY"
+        if risk in ("HIGH", "CRITICAL"):
+            policy = "APPROVAL_REQUIRED"
+        return {
+            "skill_id": sid,
+            "version": str(osai_skill.get("version", "0.1.0")),
+            "owner": str(osai_skill.get("owner", osai_skill.get("maintainer", "osai"))),
+            "permission_level": "READ",
+            "input_schema": osai_skill.get("input_schema", {"type": "object"}),
+            "output_schema": osai_skill.get("output_schema", {"type": "object"}),
+            "risk_level": risk,
+            "execution_policy": policy,
+            "evidence_contract": str(osai_skill.get(
+                "evidence_contract",
+                "OSAI Skill: evidence via OSAI EvidenceChain (read-only bridge)")),
+            "evaluation_status": status if status in (
+                "PLANNED", "PARTIAL", "EVALUATED", "DEPRECATED") else "PLANNED",
+            "description": str(osai_skill.get("description", "")),
+            "tags": list(osai_skill.get("tags", [])),
+            "source": "OSAI_CANONICAL_REGISTRY",
+            "osai_status": status,
+        }
+
+    def list_skills_as_metadata(self):
+        """Get all OSAI skills as SkillMetadata-compatible dicts."""
+        snap = self.get_registry_snapshot()
+        if not snap.get("connected"):
+            return []
+        return [self.to_skill_metadata(s) for s in snap.get("skills", [])]
 
 
 # 进程级单例

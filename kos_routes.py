@@ -2546,7 +2546,8 @@ def api_professional_status():
         accounts = kp.list_accounts(brand_id)
         enabled = kp.is_enabled(brand_id, platform)
         return jsonify({"ok": True, "enabled": enabled, "brand_id": brand_id,
-                        "platform": platform, "accounts": accounts})
+                        "platform": platform, "accounts": accounts,
+                        "account_count": len(accounts), "state": "CONNECTED" if enabled else "DISABLED"})
     except Exception as e:
         return jsonify({"ok": False, "enabled": False, "error": str(e)})
 

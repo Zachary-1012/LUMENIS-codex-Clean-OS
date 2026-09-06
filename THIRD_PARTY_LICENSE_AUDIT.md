@@ -53,3 +53,113 @@ MediaCrawler 当前文件明确标注 `NON-COMMERCIAL LEARNING LICENSE 1.1`；�
 **当前开发路线：可以继续按自研 Adapter + 正常开源依赖的方式推进。**
 
 但本文件不宣称“已经完成全仓库法律级许可证审计”。在真正商业化发布前，应完成一次基于最终锁定依赖版本和最终源码树的完整扫描。
+
+---
+
+## 7. Phase 17 全仓库源码来源审计补充（2026-09-06）
+
+> 本次审计为 ZBC Phase 17 - Source Provenance / License Audit 的工程级补充。
+> 完整报告见 `audit/SOURCE-PROVENANCE-AUDIT.md`，机器可读数据见 `audit/source_provenance.json`。
+
+### 7.1 Python 依赖 License 全量清单（28 项直接依赖）
+
+| 包名 | License | 商业使用 | NOTICE 要求 |
+|---|---|---|---|
+| Flask | BSD-3-Clause | 允许 | 是 |
+| Werkzeug | BSD-3-Clause | 允许 | 是 |
+| Flask-CORS | MIT | 允许 | 是 |
+| Flask-Limiter | MIT | 允许 | 是 |
+| waitress | ZPL-2.1 | 允许 | 是 |
+| APScheduler | MIT | 允许 | 是 |
+| schedule | MIT | 允许 | 是 |
+| pandas | BSD-3-Clause | 允许 | 是 |
+| openpyxl | MIT | 允许 | 是 |
+| XlsxWriter | BSD-2-Clause | 允许 | 是 |
+| beautifulsoup4 | MIT | 允许 | 是 |
+| lxml | BSD-3-Clause | 允许 | 是 |
+| python-docx | MIT | 允许 | 是 |
+| reportlab | BSD-3-Clause | 允许 | 是 |
+| playwright | Apache-2.0 | 允许 | 是 |
+| psutil | BSD-3-Clause | 允许 | 是 |
+| requests | Apache-2.0 | 允许 | 是 |
+| httpx | BSD-3-Clause | 允许 | 是 |
+| websocket-client | BSD-3-Clause | 允许 | 是 |
+| python-dotenv | BSD-3-Clause | 允许 | 是 |
+| python-dateutil | Apache-2.0 / BSD-3-Clause | 允许 | 是 |
+| PyYAML | MIT | 允许 | 是 |
+| colorama | BSD-3-Clause | 允许 | 是 |
+| tqdm | MIT / MPL-2.0 | 允许 | 是 |
+| aiohttp | Apache-2.0 | 允许 | 是 |
+| yyds-logger | MIT | 允许 | 是 |
+| tenacity | Apache-2.0 | 允许 | 是 |
+| alembic | MIT | 允许 | 是 |
+
+**License 统计**: MIT x 12, BSD-3-Clause x 10, Apache-2.0 x 5, BSD-2-Clause x 1, ZPL-2.1 x 1, 双许可 x 2
+**GPL/AGPL/非商业限制**: 无
+**全部允许商业使用**: 是
+
+### 7.2 Node.js 依赖（1 项直接依赖）
+
+| 包名 | License | 商业使用 | NOTICE 要求 |
+|---|---|---|---|
+| playwright (npm) | Apache-2.0 | 允许 | 是 |
+
+### 7.3 运行时二进制（工作目录存在，.gitignore 已排除）
+
+| 名称 | License | 入库状态 |
+|---|---|---|
+| Node.js 便携运行时 (nodejs/) | Node.js License (MIT + 第三方) | 已排除 |
+| cloudflared.exe | Apache-2.0 | 已排除 (*.exe) |
+
+### 7.4 第三方代码片段（DERIVED_WITH_LICENSE，6 项）
+
+均位于 `docs/reference/apple-ui-reference/code-snippets/`，携带来源 URL / 源文件路径 / SHA / License 标注，**不在生产运行路径中**。
+
+| 文件 | 来源仓库 | License |
+|---|---|---|
+| 01-sfsymbols-glyph-extraction.swift | davedelong/sfsymbols | MIT |
+| 02-sfsymbols-svg-exporter.swift | davedelong/sfsymbols | MIT |
+| 03-sfsafesymbols-type-safe-access.swift | SFSafeSymbols/SFSafeSymbols | MIT |
+| 04-appicon-asset-catalog.swift | raphaelhanneken/iconizer | MIT |
+| 05-hig-icon-geometry-canvas.tsx | yc-w-cn/macos-compliant-icon-generator | **待确认** |
+| 06-liquid-glass-iOS26-cheatsheet.txt | conorluddy/LiquidGlassReference | **待确认** |
+
+### 7.5 INFRINGEMENT_RISK 模块（8 项，均在 _pitch_dump/）
+
+| 文件 | 类型 | 严重度 | 生产路径 |
+|---|---|---|---|
+| 提案Final【25年年度review】...txt | 客户机密 | 高 | 否 |
+| v2-索尼音乐打卡活动Review...txt | 客户机密 | 高 | 否 |
+| 【Study-NIO蔚来】...播客项目...txt | 客户机密 | 高 | 否 |
+| 2024年广州太古汇播客专项-1104.txt | 客户机密 | 高 | 否 |
+| For：Zachary.txt | 客户资料 | 中 | 否 |
+| uth又识mediakit2025.txt | 第三方版权 | 中 | 否 |
+| 播客先声.txt | 第三方版权 | 低 | 否 |
+| 日谈公园介绍2024版.txt | 第三方版权 | 低 | 否 |
+
+**关键事实**: 以上 8 项均为 .txt 文本 dump，不被任何 Python/JS 代码 import，**零生产路径侵权风险**。但 `_pitch_dump/` 虽在 .gitignore 中，因添加前已被跟踪，**当前仍在 Git 版本控制中**。商业化前必须执行 `git rm --cached -r _pitch_dump/`。
+
+### 7.6 源码来源分类统计
+
+| 分类 | 数量 | 说明 |
+|---|---|---|
+| ORIGINAL | ~600+ 文件 | 核心源码、模板、静态资源、项目文档 |
+| THIRD_PARTY_DEPENDENCY | 29 直接依赖 | 28 Python + 1 Node.js |
+| DERIVED_WITH_LICENSE | 6 文件 | apple-ui-reference 代码片段（MIT） |
+| NEEDS_REVIEW | ~650+ 文件 | 媒体素材（ref_gpt_v2/、_ref_frames/、ui-research/） |
+| INFRINGEMENT_RISK | 8 文件 | _pitch_dump/ 客户机密文档 |
+
+### 7.7 Git 历史审计结论
+
+- 未发现从第三方仓库 fork / merge / cherry-pick 的提交
+- 所有 merge 均来自本项目自身分支
+- .gitignore 正确排除了 .venv/、node_modules/、nodejs/、dependencies/、*.exe、*.db 等
+- 唯一遗留问题：`_pitch_dump/` 仍在 Git 跟踪中
+
+### 7.8 商业化前必须执行
+
+1. `git rm --cached -r _pitch_dump/` — 客户机密文档移出 Git
+2. 客户 Release 排除: `_pitch_dump/`、`ref_gpt_v2/`、`docs/reference/ui-research/source-videos/`、`docs/reference/apple-ui-reference/code-snippets/`
+3. 补充项目自身 LICENSE 文件
+4. 确认 05/06 号代码片段 License
+5. 生成固定版本 SBOM

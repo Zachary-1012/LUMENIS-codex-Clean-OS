@@ -2,6 +2,12 @@
 系统看门狗 - 广州太古汇舆情监测系统 v5.8.0
 监控系统运行状态，崩溃后自动重启
 确保系统长时间稳定可用
+
+[LEGACY NOTICE - ZBC Phase 2 Runtime Guardian 统一收敛]
+本模块已由 runtime_guardian.py 接管为统一生命周期守护者（Worker->Lease->Heartbeat->
+Checkpoint->Reaper->Retry->DLQ->Resume）。保留全部原有类与函数行为（向后兼容），
+新代码请直接使用 runtime_guardian.RuntimeGuardian。不删除本文件，保持 import 兼容。
+收敛工单：ZBC-PHASE2-RUNTIME-GUARDIAN-001
 """
 import os
 import sys

@@ -1,0 +1,504 @@
+{
+  "timestamp": "2026-09-06 14:36:21",
+  "summary": {
+    "total": 67,
+    "pass": 66,
+    "fail": 0,
+    "partial": 0,
+    "blocked": 1
+  },
+  "results": {
+    "rg_import": {
+      "status": "PASS",
+      "detail": "runtime_guardian 导入成功",
+      "evidence": {
+        "classes": [
+          "RuntimeGuardian",
+          "DLQ",
+          "CircuitBreaker",
+          "Reaper",
+          "ResumeManager",
+          "WorkerLease",
+          "Heartbeat",
+          "Checkpoint",
+          "RetryPolicy"
+        ]
+      }
+    },
+    "rg_instantiate": {
+      "status": "PASS",
+      "detail": "RuntimeGuardian 实例化成功",
+      "evidence": {
+        "name": "track2_test",
+        "db_path": "D:\\Taikoo-monitor-new\\audit\\_track2_test.db"
+      }
+    },
+    "rg_register_worker": {
+      "status": "PASS",
+      "detail": "Worker 注册成功: 8d1f55b00a97428f",
+      "evidence": {
+        "worker_id": "8d1f55b00a97428f",
+        "status": "idle"
+      }
+    },
+    "rg_acquire_lease": {
+      "status": "PASS",
+      "detail": "租约获取成功, expires_at=1788676625",
+      "evidence": {
+        "owner": "test-node-1",
+        "ttl": 60
+      }
+    },
+    "rg_renew_lease": {
+      "status": "PASS",
+      "detail": "租约续期成功",
+      "evidence": {
+        "new_ttl": 120
+      }
+    },
+    "rg_lease_preemption": {
+      "status": "PASS",
+      "detail": "租约抢占保护生效（其他owner被拒）",
+      "evidence": {}
+    },
+    "rg_get_lease": {
+      "status": "PASS",
+      "detail": "获取当前租约成功",
+      "evidence": {}
+    },
+    "rg_heartbeat": {
+      "status": "PASS",
+      "detail": "心跳发送成功，worker 存活",
+      "evidence": {
+        "last_heartbeat_at": 1788676564.5317242,
+        "alive": true
+      }
+    },
+    "rg_checkpoint": {
+      "status": "PASS",
+      "detail": "检查点保存/读取成功: c1f5388888d04da7",
+      "evidence": {
+        "checkpoint_id": "c1f5388888d04da7",
+        "position": "keyword_idx=2 keyword=广州太古汇 notes=15"
+      }
+    },
+    "rg_resume_from_checkpoint": {
+      "status": "PASS",
+      "detail": "从检查点恢复成功",
+      "evidence": {
+        "resumed_position": "keyword_idx=2 keyword=广州太古汇 notes=15"
+      }
+    },
+    "rg_circuit_breaker_open": {
+      "status": "PASS",
+      "detail": "连续3次失败后熔断器 OPEN",
+      "evidence": {
+        "state": "open",
+        "failure_count": 3
+      }
+    },
+    "rg_circuit_breaker_block": {
+      "status": "PASS",
+      "detail": "熔断中请求被正确拒绝",
+      "evidence": {}
+    },
+    "rg_circuit_breaker_half_open": {
+      "status": "PASS",
+      "detail": "冷却后自动转 HALF_OPEN",
+      "evidence": {}
+    },
+    "rg_circuit_breaker_close": {
+      "status": "PASS",
+      "detail": "HALF_OPEN 成功后恢复 CLOSED",
+      "evidence": {}
+    },
+    "rg_retry_count": {
+      "status": "PASS",
+      "detail": "重试次数正确: 初始1次+重试2次=共3次",
+      "evidence": {
+        "call_count": 3,
+        "max_retries": 2
+      }
+    },
+    "rg_retry_worker_field": {
+      "status": "PASS",
+      "detail": "worker retry_count=3",
+      "evidence": {
+        "retry_count": 3
+      }
+    },
+    "rg_dlq_enqueue": {
+      "status": "PASS",
+      "detail": "失败任务进入 DLQ: 6915c29d7d6945cf",
+      "evidence": {
+        "dlq_id": "6915c29d7d6945cf",
+        "error_type": "ValueError",
+        "dlq_stats": {
+          "total": 1,
+          "pending": 1
+        }
+      }
+    },
+    "rg_worker_failed_status": {
+      "status": "PASS",
+      "detail": "重试耗尽后 worker 状态=FAILED",
+      "evidence": {
+        "status": "failed"
+      }
+    },
+    "rg_dlq_replay_success": {
+      "status": "PASS",
+      "detail": "DLQ 重放成功: ok=1, fail=0",
+      "evidence": {
+        "ok": 1,
+        "fail": 0
+      }
+    },
+    "rg_dlq_stats_after_replay": {
+      "status": "PASS",
+      "detail": "重放后DLQ统计: {'total': 1, 'done': 1}",
+      "evidence": {
+        "stats": {
+          "total": 1,
+          "done": 1
+        }
+      }
+    },
+    "rg_reaper": {
+      "status": "PASS",
+      "detail": "僵死 Worker 回收成功: {'reaped_leases': ['ce02e21cee6c41ac'], 'reaped_zombies': []}",
+      "evidence": {
+        "reaped_leases": [
+          "ce02e21cee6c41ac"
+        ],
+        "reaped_zombies": []
+      }
+    },
+    "rg_reaper_status": {
+      "status": "PASS",
+      "detail": "回收后 worker status=dead, lease_owner=''",
+      "evidence": {}
+    },
+    "rg_health_check": {
+      "status": "PASS",
+      "detail": "健康检查成功, overall=degraded",
+      "evidence": {
+        "overall": "degraded",
+        "workers": {
+          "total": 2,
+          "running": 0,
+          "idle": 0,
+          "failed": 1,
+          "dead": 1
+        },
+        "dlq": {
+          "total": 1,
+          "done": 1
+        }
+      }
+    },
+    "rg_supervised_worker": {
+      "status": "PASS",
+      "detail": "上下文管理器自动注册/心跳/释放",
+      "evidence": {
+        "worker_id": "560728adae3548ca",
+        "exit_status": "stopped"
+      }
+    },
+    "ca_import": {
+      "status": "PASS",
+      "detail": "CollectorAutomation 导入成功",
+      "evidence": {}
+    },
+    "ca_state_attrs": {
+      "status": "PASS",
+      "detail": "状态属性存在 (is_running, current_task)",
+      "evidence": {}
+    },
+    "ca_initial_state": {
+      "status": "PASS",
+      "detail": "初始状态: is_running=False, current_task=None",
+      "evidence": {}
+    },
+    "ca_stop_no_task": {
+      "status": "PASS",
+      "detail": "无任务时 stop_collection 返回 ok=False",
+      "evidence": {}
+    },
+    "ca_get_status": {
+      "status": "PASS",
+      "detail": "get_status 返回完整状态",
+      "evidence": {
+        "is_running": false,
+        "browser_running": true,
+        "lifecycle_state": "stopped"
+      }
+    },
+    "ca_seven_states": {
+      "status": "PASS",
+      "detail": "七态状态机完整: STARTING/RUNNING/DEGRADED/FAILED/STOPPING/STOPPED/RECOVERING",
+      "evidence": {
+        "states": [
+          "starting",
+          "running",
+          "degraded",
+          "failed",
+          "stopping",
+          "stopped",
+          "recovering"
+        ]
+      }
+    },
+    "ca_state_transitions": {
+      "status": "PASS",
+      "detail": "状态转换校验生效（非法转换被拒）",
+      "evidence": {
+        "STARTING->RUNNING": true,
+        "STOPPED->RUNNING": false,
+        "RUNNING->STOPPED": false
+      }
+    },
+    "ca_transition_method": {
+      "status": "PASS",
+      "detail": "transition_state 方法正常工作: STARTING→RUNNING→STOPPING→STOPPED",
+      "evidence": {
+        "final_state": "stopped"
+      }
+    },
+    "scheduler_import": {
+      "status": "PASS",
+      "detail": "Scheduler 导入与实例化成功",
+      "evidence": {}
+    },
+    "scheduler_initial": {
+      "status": "PASS",
+      "detail": "调度器初始状态: daily_limit=12, remaining=12",
+      "evidence": {}
+    },
+    "scheduler_can_collect": {
+      "status": "PASS",
+      "detail": "can_collect=True, reason=可以采集",
+      "evidence": {}
+    },
+    "scheduler_record": {
+      "status": "PASS",
+      "detail": "记录采集后: total=1, manual=1",
+      "evidence": {}
+    },
+    "scheduler_cooldown": {
+      "status": "PASS",
+      "detail": "冷却生效: can=False, wait=14min",
+      "evidence": {}
+    },
+    "scheduler_job": {
+      "status": "PASS",
+      "detail": "CollectorJob 状态跟踪正常",
+      "evidence": {
+        "job_id": "job_001",
+        "status": "running"
+      }
+    },
+    "scheduler_callback": {
+      "status": "PASS",
+      "detail": "采集回调注册成功",
+      "evidence": {}
+    },
+    "xhs_state_initial": {
+      "status": "PASS",
+      "detail": "XhsRuntimeState 初始状态正确: platform_unreachable",
+      "evidence": {
+        "overall": "platform_unreachable"
+      }
+    },
+    "xhs_state_healthy": {
+      "status": "PASS",
+      "detail": "健康探活后状态=healthy",
+      "evidence": {
+        "overall": "healthy"
+      }
+    },
+    "xhs_state_ip_risk": {
+      "status": "PASS",
+      "detail": "IP风控状态正确识别",
+      "evidence": {
+        "overall": "platform_blocked",
+        "platform": "ip_risk"
+      }
+    },
+    "xhs_state_verify": {
+      "status": "PASS",
+      "detail": "验证码状态正确识别",
+      "evidence": {
+        "overall": "auth_required"
+      }
+    },
+    "guard_import": {
+      "status": "PASS",
+      "detail": "CollectorGuard 导入成功",
+      "evidence": {}
+    },
+    "guard_healthy": {
+      "status": "PASS",
+      "detail": "健康采集状态=HEALTHY",
+      "evidence": {
+        "state": "healthy",
+        "ok": true,
+        "count": 1
+      }
+    },
+    "guard_network_error": {
+      "status": "PASS",
+      "detail": "网络异常状态=NETWORK_ERROR",
+      "evidence": {
+        "state": "network_error",
+        "ok": false
+      }
+    },
+    "guard_cooldown": {
+      "status": "PASS",
+      "detail": "IP风控状态=COOLDOWN, should_stop=True",
+      "evidence": {
+        "state": "cooldown",
+        "should_stop": true
+      }
+    },
+    "anti_duplicate_lease": {
+      "status": "PASS",
+      "detail": "防重复任务：租约抢占保护生效",
+      "evidence": {}
+    },
+    "anti_infinite_retry": {
+      "status": "PASS",
+      "detail": "防无限重试: max_retries=1 → 共2次调用",
+      "evidence": {
+        "call_count": 2
+      }
+    },
+    "anti_zombie_worker": {
+      "status": "PASS",
+      "detail": "防僵尸Worker: Reaper已在第9项验证",
+      "evidence": {}
+    },
+    "anti_fake_running": {
+      "status": "PASS",
+      "detail": "防假运行: heartbeat超时检测 + is_worker_alive",
+      "evidence": {}
+    },
+    "anti_infinite_loop": {
+      "status": "PASS",
+      "detail": "防死循环: Scheduler DAILY_LIMIT=12 + COOLDOWN=15min",
+      "evidence": {}
+    },
+    "circuit_breaker": {
+      "status": "PASS",
+      "detail": "熔断器: 已在第6项验证 (CLOSED→OPEN→HALF_OPEN→CLOSED)",
+      "evidence": {}
+    },
+    "exponential_backoff": {
+      "status": "PASS",
+      "detail": "指数退避: 2^attempt, 封顶60s",
+      "evidence": {
+        "attempt1": 2.0,
+        "attempt2": 4.0,
+        "attempt3": 8.0,
+        "attempt10_capped": 60.0
+      }
+    },
+    "tq_enqueue": {
+      "status": "PASS",
+      "detail": "任务入队成功: id=1",
+      "evidence": {}
+    },
+    "tq_dequeue": {
+      "status": "PASS",
+      "detail": "任务出队并标记 running",
+      "evidence": {
+        "task_id": 1,
+        "status": "running"
+      }
+    },
+    "tq_heartbeat": {
+      "status": "PASS",
+      "detail": "任务心跳续期成功",
+      "evidence": {}
+    },
+    "tq_checkpoint": {
+      "status": "PASS",
+      "detail": "任务检查点保存成功",
+      "evidence": {}
+    },
+    "tq_fail_retry": {
+      "status": "PASS",
+      "detail": "失败后回退 pending 等待重试（带指数退避）",
+      "evidence": {
+        "stats": {
+          "pending": 1,
+          "total": 1
+        }
+      }
+    },
+    "tq_max_attempts": {
+      "status": "PASS",
+      "detail": "达到max_attempts后标记 failed",
+      "evidence": {
+        "stats": {
+          "failed": 1,
+          "total": 1
+        }
+      }
+    },
+    "tq_reap_stale": {
+      "status": "PASS",
+      "detail": "僵死任务回收: [2]",
+      "evidence": {
+        "reaped_ids": [
+          2
+        ]
+      }
+    },
+    "playwright_import": {
+      "status": "PASS",
+      "detail": "Playwright 导入成功（代码可运行）",
+      "evidence": {}
+    },
+    "playwright_browser": {
+      "status": "BLOCKED",
+      "detail": "Playwright 浏览器未实际启动（无登录态/测试环境），代码可运行，环境标记 BLOCKED",
+      "evidence": {}
+    },
+    "collector_import": {
+      "status": "PASS",
+      "detail": "collector.py 导入成功，核心函数存在",
+      "evidence": {
+        "keywords_count": 7,
+        "functions": [
+          "collect_all",
+          "search_xiaohongshu",
+          "classify_collect_state"
+        ]
+      }
+    },
+    "classify_collect_state": {
+      "status": "PASS",
+      "detail": "采集状态六态分类正确",
+      "evidence": {
+        "SUCCESS": "SUCCESS",
+        "BLOCKED": "BLOCKED",
+        "CAPTCHA": "CAPTCHA",
+        "AUTH_REQUIRED": "AUTH_REQUIRED"
+      }
+    },
+    "monitoring_import": {
+      "status": "PASS",
+      "detail": "SystemMonitor 导入成功",
+      "evidence": {}
+    },
+    "monitoring_health": {
+      "status": "PASS",
+      "detail": "SystemMonitor 健康检查: status=degraded",
+      "evidence": {
+        "status": "degraded"
+      }
+    }
+  }
+}

@@ -119,3 +119,58 @@ def build_context(q: str, db=None) -> str:
     if r["events"]:
         chunks.append("相关事件："+", ".join((e.get("title") or "")[:40] for e in r["events"][:5]))
     return "\n".join(chunks) if chunks else "未检索到与问题直接对应的结构化记录。"
+
+
+# ── Phase 13: SkillRegistry integration (read-only, bypass-safe) ──
+_MODULE_STATUS = "ACTIVE"
+_PHASE13_COMPAT = "skill_registry.SkillRegistry via register_functions_as_skills()"
+
+
+def register_functions_as_skills(registry=None):
+    """Register FUNCTION_MAP entries as LOW-risk READ_ONLY skills in SkillRegistry.
+
+    This is a read-only registration: each function mapping becomes a metadata-only
+    skill entry. No execution capability is granted. Returns registration results.
+    """
+    try:
+        from skill_registry import (
+            get_skill_registry, SkillMetadata, RiskLevel,
+            ExecutionPolicy, EvaluationStatus,
+        )
+    except ImportError:
+        return {"registered": 0, "errors": ["skill_registry not importable"]}
+
+    reg = registry or get_skill_registry()
+    results = []
+    for func in FUNCTION_MAP:
+        fid = "zbc.func." + func["id"].replace(".", "_")
+        meta = SkillMetadata(
+            skill_id=fid,
+            version="1.0.0",
+            owner="core-team",
+            permission_level="READ",
+            input_schema={"type": "object", "properties": {
+                "query": {"type": "string"},
+            }, "required": []},
+            output_schema={"type": "object", "properties": {
+                "functions": {"type": "array"},
+                "brands": {"type": "array"},
+            }},
+            risk_level=RiskLevel.LOW,
+            execution_policy=ExecutionPolicy.READ_ONLY,
+            evidence_contract=(
+                "Function mapping lookup only; returns matched functions/brands/cases. "
+                "No DB writes, no subject rule modification."
+            ),
+            evaluation_status=EvaluationStatus.EVALUATED,
+            description=func.get("label", fid),
+            tags=["function_map", "readonly", func.get("page", "")],
+        )
+        r = reg.register(meta)
+        results.append(r)
+    return {
+        "registered": sum(1 for r in results if r.get("registered")),
+        "total": len(results),
+        "errors": [e for r in results for e in r.get("errors", [])],
+    }
+

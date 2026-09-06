@@ -7,6 +7,11 @@ from provider_registry import is_provider_available, provider_status
 import json, os, re, urllib.request, urllib.error, time, shutil, platform
 import ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+心跳保活）
 
+# ZBC Phase 7: module status markers
+MODULE_STATUS = 'ACTIVE_PRIMARY'
+AI_ROLE = 'CENTRAL_GATEWAY'  # all AI calls route through _chat/chat; zhipu primary, local fallback
+PROVIDER_POLICY = 'zhipu(GLM) primary + ollama/lmstudio/llama_cpp local fallback + rule final fallback'
+
 _CACHE = {'ts': 0, 'provider': None, 'model': None, 'base': None}
 
 def _env(name, default=''):
@@ -667,6 +672,24 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
             _chat_cache_set(key, out, provider)
         if track:
             _budget_record(pack_id, 1, endpoint='chat', detail=(str(system) or '')[:60])
+    # ZBC Phase 7: bypass AI call logging (never blocks main chain)
+    try:
+        import ai_call_logger as _acl
+        _acl.log_call(
+            provider=provider or '',
+            model=p.get('model') or _env('ZHIPU_MODEL', ''),
+            prompt_version=f'chat:{level}',
+            input_hash=_acl.compute_input_hash(system, user, level),
+            output=(out or '')[:4000],
+            confidence=0.0,
+            latency_ms=meta.get('elapsed_ms', 0),
+            token_usage=0,
+            success=bool(out and provider not in ('rule', None)),
+            failure_reason='' if (out and provider not in ('rule', None)) else f'provider={provider}',
+        )
+    except Exception:
+        pass  # logging must never block the AI call chain
+
     return out, provider, meta
 
 

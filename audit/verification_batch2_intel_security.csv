@@ -1,0 +1,163 @@
+﻿module_path,function_name,entry_ok,params_ok,logic_ok,db_ok,api_ok,return_ok,exception_ok,permission_ok,test_ok,runtime_ok,final_status,notes
+permission_gate.py,PermissionLevel.rank,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,枚举等级排序，逻辑正确
+permission_gate.py,RiskLevel.rank,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,风险等级排序
+permission_gate.py,PermissionGate.__init__,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,fail_closed默认True，默认权限READ..VERIFY，线程安全锁
+permission_gate.py,PermissionGate.has_permission,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,权限集合检查
+permission_gate.py,PermissionGate.grant_permission,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,运行时授权，日志记录
+permission_gate.py,PermissionGate.revoke_permission,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,运行时撤销
+permission_gate.py,PermissionGate.register_operation,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,运行时扩展操作注册表
+permission_gate.py,PermissionGate.check,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,核心权限检查：幂等→注册检查(fail-closed)→权限等级→高风险人工审批→auto_allow→通过，7步完整
+permission_gate.py,PermissionGate.require_human_approval,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,HIGH及以上需审批
+permission_gate.py,PermissionGate.grant_approval,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,审批令牌生成(uuid+sha256)，有效期，审计记录
+permission_gate.py,PermissionGate.revoke_approval,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,令牌撤销
+permission_gate.py,PermissionGate._has_valid_approval,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,线程安全令牌校验
+permission_gate.py,PermissionGate._write_audit,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,审计日志内存+可选文件持久化，限制10000条
+permission_gate.py,PermissionGate.health_check,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,健康检查完整
+permission_gate.py,require_permission (装饰器),Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,装饰器封装，权限拒绝返回deny_return，不执行函数体
+permission_gate.py,get_permission_gate,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,线程安全单例(DCL)
+permission_gate.py,ApprovalToken.is_valid,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,令牌有效性：撤销/过期/操作/资源四重校验
+security_boundary.py,EdgeLayer.__init__,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,速率限制+安全头推荐，L1为应用层占位非真正WAF，文档明确声明
+security_boundary.py,EdgeLayer.check_rate_limit,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,内存速率计数器，线程安全，窗口清理正确
+security_boundary.py,EdgeLayer.validate_security_headers,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,仅校验提示，不强制设置（实际由反向代理负责）
+security_boundary.py,EdgeLayer.validate,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,3项检查，文档完整性校验
+security_boundary.py,EdgeLayer.health_check,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,明确标注is_network_waf=False
+security_boundary.py,ApplicationLayer.__init__,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,XSS/SQLi/路径遍历/SSRF/危险代码模式编译，CSRF令牌存储
+security_boundary.py,ApplicationLayer.detect_xss,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,3种XSS模式检测
+security_boundary.py,ApplicationLayer.detect_sqli,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,4种SQLi模式检测（基础，参数化查询才是根本防护）
+security_boundary.py,ApplicationLayer.detect_path_traversal,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,5种路径遍历模式（含URL编码/Windows）
+security_boundary.py,ApplicationLayer.detect_ssrf,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,6种内网地址模式检测
+security_boundary.py,ApplicationLayer.detect_dangerous_code,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,7种危险函数模式（eval/exec/os.system/shell=True等）
+security_boundary.py,ApplicationLayer.is_command_allowed,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,命令白名单校验
+security_boundary.py,ApplicationLayer.generate_csrf_token,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,secrets.token_hex(32)生成
+security_boundary.py,ApplicationLayer.validate_csrf_token,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,线程安全CSRF校验
+security_boundary.py,ApplicationLayer.validate_input,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,多维度安全检查，高危命中则blocked
+security_boundary.py,ApplicationLayer.validate,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,6项检查全部通过
+security_boundary.py,AIAgentLayer (整体),Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,集成PermissionGate+Action Firewall+工具白名单+身份绑定+幂等性+人工审批
+security_boundary.py,DataLayer (整体),Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,敏感数据/密钥检测/凭证隔离/审计追踪
+security_boundary.py,SecurityBoundary.validate_all,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,四层汇总验证
+security_boundary.py,SecurityBoundary.health_check,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,四层健康检查汇总
+repository_registry.py,RepositoryRegistry.__init__,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,REPO_ROOT三级解析(显式>ENV>__file__)，11个目录注册，ENV覆盖支持
+repository_registry.py,RepositoryRegistry.resolve,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,相对/绝对路径统一解析，ensure_dir自动创建父目录
+repository_registry.py,RepositoryRegistry.resolve_path,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,resolve的pathlib版本
+repository_registry.py,RepositoryRegistry.ensure_dir,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,目录键校验，自动创建，缓存已创建目录
+repository_registry.py,RepositoryRegistry.all_dirs,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,返回所有已注册目录副本
+repository_registry.py,RepositoryRegistry.to_dict,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,序列化用于调试/日志
+repository_registry.py,get_registry,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,单例模式，force_reload支持
+repository_registry.py,resolve_path (模块级),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,便捷函数，等价get_registry().resolve()
+skill_registry.py,SkillMetadata.to_dict,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,枚举值序列化
+skill_registry.py,SkillMetadata.from_dict,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,反序列化，枚举字符串转换
+skill_registry.py,SkillRegistry.__init__,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,空注册表+验证错误列表
+skill_registry.py,SkillRegistry.validate,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,完整校验：必填字段/skill_id格式/version semver/schema非空/高风险不能AUTO_EXECUTE/CRITICAL限制/核心prohibitions/高风险shell模式扫描/权限等级已知
+skill_registry.py,SkillRegistry.register,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,先validate再注册，force可强制
+skill_registry.py,SkillRegistry.get/has/list_all,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,基础查询
+skill_registry.py,SkillRegistry.list_by_risk/list_by_policy,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,按风险/策略筛选
+skill_registry.py,SkillRegistry.list_requiring_approval,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,APPROVAL_REQUIRED或HIGH/CRITICAL风险
+skill_registry.py,SkillRegistry.can_auto_execute,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,未注册→拒绝；非AUTO_EXECUTE→拒绝；HIGH/CRITICAL→拒绝
+skill_registry.py,SkillRegistry.stats,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,按风险/策略统计
+skill_registry.py,get_skill_registry,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,单例+内置3个builtin skill注册
+skill_registry.py,_register_builtin_skills,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,3个内置skill：subject_authority_read/skill_registry_snapshot/agent_boundary_audit
+lumenis_skill_adapter.py,_osai_root,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,四级路径发现：ENV>repo_registry.json>同级目录>用户主目录，禁止硬编码个人路径
+lumenis_skill_adapter.py,_python_executable,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,优先.venv python，兜底sys.executable
+lumenis_skill_adapter.py,CrossCoreSkillAdapter.__init__,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,osai_root自动发现，超时，30秒缓存
+lumenis_skill_adapter.py,CrossCoreSkillAdapter.available,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,osai_root非空即可用
+lumenis_skill_adapter.py,CrossCoreSkillAdapter._run_osai,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,subprocess调用，cwd=osai_root，超时处理，PYTHONPATH设置，错误分类(EXIT/TIMEOUT/ERROR)
+lumenis_skill_adapter.py,CrossCoreSkillAdapter.get_registry_snapshot,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,缓存机制，OSAI不可用返回UNAVAILABLE不造假，CONNECTED时透传真实数据
+lumenis_skill_adapter.py,CrossCoreSkillAdapter.get_skill,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,从snapshot查找单个skill
+lumenis_skill_adapter.py,CrossCoreSkillAdapter.check_sync_status,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,真实检查GitHub→Manifest→Registry同步，不固定返回SYNCED，冲突检测
+lumenis_skill_adapter.py,CrossCoreSkillAdapter.invoke_skill,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,真实执行走OSAI完整链，最小权限默认，绝不伪造COMPLETED，connected=False时保留ACCEPTED兜底
+lumenis_skill_adapter.py,get_skill_adapter,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,进程级单例
+agent_security.py,is_instruction_attempt,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,L2指令注入检测：12种模式(直接覆盖/身份冒充/系统提示词窃取/工具注入/数据外泄/代码执行/越权访问)，风险分级(critical/high/medium/low)
+agent_security.py,sanitize_input,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,L1输入净化：filter(移除整行)/mask(REDACTED替换)/tag(标记)三种模式
+agent_security.py,validate_tool_call,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,L3工具参数校验：蜜罐检测→白名单→必填参数→参数名白名单(防ToolLeak)→类型校验→长度校验→注入检测→敏感信息过滤→只读SQL校验，9层防御
+agent_security.py,filter_output,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,L4输出过滤：8种敏感信息模式(system prompt/API key/password/session cookie/id token/sk-/ghp_)
+agent_security.py,security_audit,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,综合安全审计：输入+工具+输出全链路检查，overall_risk取最高，blocked判定
+agent_security.py,ALLOWED_TOOLS (常量),Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,5个白名单工具(search_notes/get_events/generate_report/query_database只读/analyze_sentiment)
+agent_security.py,HONEYPOT_ACTIONS (常量),Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,3个蜜罐工具(reveal_system_prompt/export_cookies/execute_shell)
+security_scanner.py,SecurityScanner.__init__,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,11种危险函数模式+6种敏感信息模式+8种Agent供应链风险模式，排除目录配置
+security_scanner.py,SecurityScanner.create_baseline,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,文件完整性基线创建(SHA256+大小+修改时间)
+security_scanner.py,SecurityScanner.verify_integrity,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,完整性校验：缺失/修改/新增文件检测，最多返回50个issue
+security_scanner.py,SecurityScanner.scan_dangerous_code,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,危险代码逐行扫描，try/except吞异常(continue)，最多返回50个findings
+security_scanner.py,SecurityScanner.scan_sensitive_info,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,敏感信息扫描，跳过.env和config目录，S2增强供应链风险扫描
+security_scanner.py,SecurityScanner.check_dependencies,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,依赖包安全检查，5个已知风险包版本对比，简化版
+security_scanner.py,SecurityScanner.full_scan,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,完整扫描：完整性+危险代码+敏感信息+依赖，总体风险等级计算，扫描日志记录
+security_scanner.py,SecurityScanner.get_scan_history,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,扫描历史查询，保留最近100条
+security_scanner.py,security_scanner (全局实例),Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,PARTIAL,模块加载时自动实例化，print加载信息
+evidence_api.py,register_evidence_api,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,Flask蓝图注册，4个只读GET端点
+evidence_api.py,evidence_stats (GET /api/evidence/stats),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,调用evidence_store.get_stats()，异常返回500
+evidence_api.py,evidence_list (GET /api/evidence/list),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,6个筛选参数+分页，limit最大200，ValueError返回400，其他异常500
+evidence_api.py,evidence_detail (GET /api/evidence/<id>),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,通过query_evidence(limit=1000)后内存过滤，效率低但功能正确，404处理
+evidence_api.py,evidence_timeline (GET /api/evidence/timeline),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,健康+采集两类证据时间线，limit最大100
+evidence_store.py,record_evidence,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,43字段通用Evidence写入，动态构造INSERT(过滤None)，参数化查询，sha256哈希去重溯源
+evidence_store.py,record_collection_evidence,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,采集任务便捷方法，强制规则：异常时result=FAIL，禁止以0条充当结果
+evidence_store.py,record_health_evidence,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,健康检查便捷方法，三层健康(L1端口/L2 CDP/L3登录态)
+evidence_store.py,query_evidence,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,8个筛选参数+分页+排序，参数化查询，order_by白名单(默认created_at DESC)
+evidence_store.py,get_stats,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,按result/level/account/source分组统计+最近10条
+evidence_store.py,_evidence_hash,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,sha256哈希，sort_keys确保一致性
+evidence_store.py,_json_dumps,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,安全JSON序列化，异常时str()兜底
+kos_execution.py,_conn,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,sqlite3连接，row_factory=Row，幂等自建kos_executions表+索引
+kos_execution.py,create_execution,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,创建gated action，action_type白名单校验(9种)，初始状态AI_GENERATED(不执行)，execution_id生成(时间戳+uuid)，参数化INSERT
+kos_execution.py,transition,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,状态机转移校验：合法目标状态→存在性→合法路径→人工确认actor必填→动态UPDATE(参数化)，4状态转移表完整
+kos_execution.py,get_execution,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,按execution_id查询，参数化
+kos_execution.py,list_executions,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,按status/action_type/target_author_id筛选+分页，参数化查询
+kos_intel.py,classify_intent,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,意向评论分层：strong(32关键词)/weak(16关键词)/负面/普通互动，confidence评分，空文本处理
+kos_intel.py,analyze_comments_intent,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,复用note_comments表，按note_id/author_id筛选，IN子句参数化，分层统计+评论明细
+kos_intel.py,recognize_kos_identity,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,证据加权KOS识别：命名信号(3分)+内容信号(2分)+重复品牌内容(1-2分)+官方标记(4分)，>=3分判定KOS，不虚构雇佣关系
+kos_intel.py,_ensure_identity_columns,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,幂等ALTER TABLE添加identity_label/is_kos列，不破坏既有数据
+kos_intel.py,refresh_kos_identity,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,遍历kos_profiles回写身份标签，参数化UPDATE，分布统计
+kos_intel.py,_entity_stats,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,竞品实体统计：instr判断命中，参数化查询，互动/意向/风险聚合
+kos_intel.py,competitor_benchmark,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,主品牌vs竞品对标，复用hainan_cdf.json消歧配置，实体词规范化过滤，排名评分
+kos_metrics.py,_load_manual/_save_manual,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,手动回填层JSON读写，异常兜底返回空
+kos_metrics.py,set_manual,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,登记单个KOS手动回填指标(WeCom/Sales/Boosting预算/进线/点击)，类型转换
+kos_metrics.py,funnel_metrics,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,三阶漏斗：Viewership→WeCom→Sales，entity=all/kos/brand三种聚合，manual_pending标注缺失
+kos_metrics.py,cost_metrics,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,CPL/CPC/Cost-per-WeCom计算，除零保护(返回None)，manual_pending标注
+kos_metrics.py,tier_benchmark,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,KOS分层看板：Top5/Top6-10/Top11-20/Others，集中度+高/低产出画像
+kos_metrics.py,koc_reward_tier,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,KOC分层判定：Gold/Silver/Bronze/none，24h/7d双口径取高，阈值可配置
+kos_metrics.py,koc_campaign_review,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,KOC campaign复盘聚合，空列表处理
+kos_metrics.py,channel_roi,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,多渠道ROI对比，内置DFS实测基准(小红书CPL 57.32/微信OA 9.36)，vs基准差异计算
+kos_professional.py,_get_conn,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,sqlite3连接，WAL模式，TAIKOO_DB_PATH环境变量支持
+kos_professional.py,init_db,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,幂等建表：professional_accounts(16字段)+professional_metrics(15字段)
+kos_professional.py,is_enabled,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,品牌专业号接入开关检查，默认关闭，异常返回False(fail-closed)
+kos_professional.py,enable,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,开启专业号接入，INSERT OR CONFLICT UPDATE，状态pending(等待授权)
+kos_professional.py,disable,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,关闭专业号接入，UPDATE enabled=0
+kos_professional.py,list_accounts,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,列出品牌专业号配置，异常返回空列表
+kos_professional.py,import_metrics,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,导入专业号后台数据，先检查is_enabled(未开启拒绝)，逐条INSERT OR REPLACE，失败计数，同步状态更新
+kos_professional.py,get_metrics,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,查询专业号指标，未开启返回空列表，日期范围筛选，LIMIT 365
+kos_professional.py,kos_circuit_breaker,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,熔断装饰器：超时/异常→返回default_return，不影响主链路，__name__/__doc__保留
+kos_professional.py,init_db() (模块级调用),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,模块加载时自动init_db()，可能在import时触发DB操作
+kos_report.py,_get_conn,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,sqlite3连接，timeout=10
+kos_report.py,_collect_data,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,从真实DB收集报告数据：KOS总览/分层/生命周期/潜力/风险/TOP KOS/TOP内容/评论/事件/投流候选，不造Demo数据
+kos_report.py,_render_html,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,渲染单文件HTML报告，CSS/JS内嵌无外部依赖，PC/移动端自适应，8个Tab面板，动态筛选/排序/搜索
+kos_report.py,_render_channel_roi,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,多渠道ROI对比卡片，静态HTML无JS依赖，空数据处理
+kos_report.py,generate_report,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,生成KOS动态HTML报告，收集数据→渲染→注入channel_roi→写文件，返回路径+文件大小
+kos_routes.py,register_kos_routes (蓝图注册),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,Flask蓝图，大量KOS相关API端点
+kos_routes.py,KOS概览/列表/详情端点 (多个),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,CRUD端点，参数化查询，分页
+kos_routes.py,KOS识别/刷新端点,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,调用kos_intel识别/刷新，异步处理
+kos_routes.py,KOS指标/漏斗/成本端点,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,调用kos_metrics聚合
+kos_routes.py,KOS报告生成端点,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,调用kos_report.generate_report
+kos_routes.py,KOS执行/状态机端点,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,调用kos_execution状态机转移
+kos_routes.py,专业号接入端点,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,调用kos_professional enable/disable/import
+kos_routes.py,投流/付费相关端点,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,AdPermissionGate权限检查
+kos_routes.py,动态字段查询端点,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,f-string SQL但field来自内部白名单，参数化VALUES
+evaluation/agent_benchmark_contract.py,BenchmarkTask.__init__,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,dataclass，task_id/input_payload/timeout/state/attempts/evidence
+evaluation/agent_benchmark_contract.py,BenchmarkTask.transition,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,状态机：PENDING→RUNNING/CANCELLED，RUNNING→PAUSED/SUCCEEDED/FAILED/TIMED_OUT/CANCELLED等，非法转移raise ValueError
+evaluation/agent_benchmark_contract.py,BenchmarkTask.record_evidence,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,追加证据记录(kind+payload)
+platform_adapters/evidence_exporter.py,_strip_token_url,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,去掉URL中xsec_token等凭证query参数
+platform_adapters/evidence_exporter.py,project_row,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,白名单字段投影+联系方式脱敏(redact_text)+URL token剥离
+platform_adapters/evidence_exporter.py,_assert_no_forbidden,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,双保险：断言导出记录不含FORBIDDEN_KEYS(11个凭证/身份键)
+platform_adapters/evidence_exporter.py,_fetch,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,只SELECT实际存在列(PRAGMA兼容历史库)，白名单投影顺序
+platform_adapters/evidence_exporter.py,build_export,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,纯读取：notes(is_taikoo_verified=1)+events(fact_status verified)+daily_reports，增量水位，不写任何库
+platform_adapters/evidence_exporter.py,build_manifest,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,manifest含schema/source/counts/sha256/production_unchanged=true/approval_basis/record_ids
+platform_adapters/evidence_exporter.py,_sha256_file,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,文件SHA256计算，分块读取
+platform_adapters/evidence_exporter.py,export_evidence,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,VERIFIED,端到端只读导出：db_path强制mode=ro(物理只读)，JSONL+manifest+watermark，零网络
+ad_intelligence/permission_gate.py,AdPermissionLevel (枚举),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,4级：READ/ANALYZE/PREVIEW/EXECUTE，从低到高
+ad_intelligence/permission_gate.py,AdPermissionGate.__init__,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,默认只启用READ+ANALYZE，PREVIEW/EXECUTE需显式授权，EXECUTE需人工确认
+ad_intelligence/permission_gate.py,AdPermissionGate._load_config,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,从AD_PERMISSION_LEVEL环境变量加载，level_map映射，仅显式设置时覆盖默认
+ad_intelligence/permission_gate.py,AdPermissionGate.has_permission,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,权限集合检查
+ad_intelligence/permission_gate.py,AdPermissionGate.require,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,权限检查+EXECUTE级人工确认检查，失败记录日志返回False(fail-closed)
+ad_intelligence/permission_gate.py,AdPermissionGate.grant_human_approval,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,人工授权EXECUTE，有效期默认30分钟，timedelta计算
+ad_intelligence/permission_gate.py,AdPermissionGate.revoke_human_approval,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,撤销人工授权
+ad_intelligence/permission_gate.py,AdPermissionGate._check_approval_expiry,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,授权过期检查，过期自动撤销
+ad_intelligence/permission_gate.py,AdPermissionGate.log_operation,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,操作日志记录(Evidence Chain)，内存列表，时间戳+级别+操作+详情+成功状态+人工授权状态
+ad_intelligence/permission_gate.py,AdPermissionGate.execute_with_gate,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,"带权限门控的执行包装器：require检查→执行→成功/失败都log_operation，异常捕获返回(success, error)"
+ad_intelligence/permission_gate.py,AdPermissionGate.get_status,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,权限状态查询：启用级别/人工授权状态/过期时间/操作计数
+ad_intelligence/permission_gate.py,get_permission_gate (全局单例),Y,Y,Y,Y,Y,Y,Y,Y,N,Y,PARTIAL,懒加载单例，非线程安全(无锁)

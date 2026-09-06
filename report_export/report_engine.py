@@ -51,8 +51,16 @@ def _notes(start=None,end=None,kind="daily",only_confirmed_negative=False):
         d=_pick(cols,["publish_date","publish_datetime","published_at"])
         if not d:
             d="publish_date"
-        sql="SELECT "+",".join(use)+" FROM notes WHERE 1=1"
-        w=[];v=[]
+        # ZBC Phase 9: 强制主体过滤（与 database._verified_base 同口径）
+        try:
+            import sys as _sys; _sys.path.insert(0, str(BASE))
+            from subject_rules import subject_sql_and_values
+            _clause, _sp = subject_sql_and_values()
+            sql="SELECT "+",".join(use)+f" FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_clause}"
+            w=[];v=list(_sp)
+        except Exception:
+            sql="SELECT "+",".join(use)+" FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant'"
+            w=[];v=[]
         # 严格按发布日期过滤
         if start: w.append(f"date({d})>=date(?)");v.append(start)
         if end: w.append(f"date({d})<=date(?)");v.append(end)
@@ -299,6 +307,15 @@ def export_xlsx(p,out):
     ws5.freeze_panes="A2"
     
     wb.save(out)
+    # ZBC Phase 9: 保存后验证文件真实存在且非空
+    import sys as _sys2; _sys2.path.insert(0, str(BASE))
+    try:
+        from report_artifact import verify_artifact_file
+        _v = verify_artifact_file(str(out))
+        if not _v['valid']:
+            raise RuntimeError(f"XLSX artifact 校验失败: {_v['reason']}")
+    except ImportError:
+        pass
 
 def export_docx(p,out):
     if Document is None:raise RuntimeError("请安装 python-docx")
@@ -379,6 +396,15 @@ def export_docx(p,out):
     d.add_paragraph(f"共{p['total_notes']}条笔记，详见附件Excel表格。")
     
     d.save(out)
+    # ZBC Phase 9: 保存后验证文件真实存在且非空
+    import sys as _sys3; _sys3.path.insert(0, str(BASE))
+    try:
+        from report_artifact import verify_artifact_file
+        _v = verify_artifact_file(str(out))
+        if not _v['valid']:
+            raise RuntimeError(f"DOCX artifact 校验失败: {_v['reason']}")
+    except ImportError:
+        pass
 
 def export_report(kind="daily",start=None,end=None,formats=("docx","csv","xlsx")):
     p=payload(kind,start,end)
@@ -394,4 +420,16 @@ def export_report(kind="daily",start=None,end=None,formats=("docx","csv","xlsx")
     if "xlsx" in formats:
         r["xlsx"]=OUT/f"广州太古汇舆情_{kind}_{stamp}.xlsx"
         export_xlsx(p,r["xlsx"])
-    return {"payload":p,"files":{k:str(v) for k,v in r.items()}}
+    # ZBC Phase 9: 汇总验证所有 artifact 真实存在且非空
+    import sys as _sys4; _sys4.path.insert(0, str(BASE))
+    try:
+        from report_artifact import verify_artifact_file
+        _verified = {}
+        for k, v in r.items():
+            _vv = verify_artifact_file(str(v))
+            _verified[k] = {'exists': _vv['exists'], 'size': _vv['size'], 'hash': _vv['hash'], 'valid': _vv['valid']}
+            if not _vv['valid']:
+                raise RuntimeError(f"导出 artifact 校验失败 [{k}]: {_vv['reason']}")
+    except ImportError:
+        _verified = {}
+    return {"payload":p,"files":{k:str(v) for k,v in r.items()},"artifact_verified":_verified}

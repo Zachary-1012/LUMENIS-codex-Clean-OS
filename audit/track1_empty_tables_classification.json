@@ -1,0 +1,212 @@
+{
+  "audit_date": "2026-09-06",
+  "audit_track": "Track 1: Core Runtime & Database & Paths",
+  "total_tables": 58,
+  "empty_tables_count": 28,
+  "classification_rules": "KEEP=actively used by live module or core schema; DEPRECATE=legacy/orphaned, no live code references, candidate for archival; DELETE=truly orphaned, zero references, safe to drop (requires confirmation before execution). NO tables are deleted in this audit.",
+  "tables": [
+    {
+      "table": "ai_filter_log",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists, used by AI filtering pipeline. Empty because no AI-filtered notes processed yet in this DB instance."
+    },
+    {
+      "table": "alert_records",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by alert_engine.py for alert dispatch records. Active feature, empty because no alerts triggered yet."
+    },
+    {
+      "table": "app_evidence_records",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by app_evidence.py (v1.0.0-shadow mode). Active shadow feature, empty because shadow mode does not auto-collect."
+    },
+    {
+      "table": "auth_recovery_tasks",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by auth_recovery_center.py / auth_recovery_api.py. Active feature for login recovery, empty because no recovery tasks submitted."
+    },
+    {
+      "table": "brand_knowledge",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by brand_knowledge_base.py. Active brand knowledge feature, empty because knowledge base not yet populated."
+    },
+    {
+      "table": "case_deep_analysis",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by case_deep_analysis.py. Active PR case analysis feature, empty because no deep analyses run yet."
+    },
+    {
+      "table": "collection_logs",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Currently 0 rows because this is a fresh/recent DB instance; normally populated after each collection run. NOT functionally empty."
+    },
+    {
+      "table": "collector_quality_log",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Used for collector quality auditing. Empty because quality audit not yet run on this instance."
+    },
+    {
+      "table": "evaluation_records",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by evaluation_system.py / evaluation_recorder.py. Active evaluation framework, empty because no evaluation runs completed."
+    },
+    {
+      "table": "event_graph_events",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by event_graph.py. Active event graph feature, empty because no events have been graph-analyzed yet."
+    },
+    {
+      "table": "event_graph_relations",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by event_graph.py. Active event graph feature, empty because no event relations established yet."
+    },
+    {
+      "table": "event_insights",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Empty because no events have AI-generated insights yet."
+    },
+    {
+      "table": "event_mentions",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Empty because no events have been linked to mentions yet (events table itself is empty)."
+    },
+    {
+      "table": "events",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Empty because no舆情事件 have been aggregated in this DB instance. This is the central event table."
+    },
+    {
+      "table": "feedback_keywords",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Used for feedback-driven keyword optimization. Empty because no feedback keywords have been registered."
+    },
+    {
+      "table": "historical_import_log",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Created by database_migrations v10 (Phase15 historical data governance). Active audit log for historical data imports. Empty because no historical imports run yet."
+    },
+    {
+      "table": "note_comments",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Empty because comment collection (V2 collector) has not populated this instance."
+    },
+    {
+      "table": "note_review_history",
+      "row_count": 0,
+      "has_orm_model": true,
+      "classification": "KEEP",
+      "reason": "Core schema table, ORM model exists. Empty because no note reviews/re-classifications have been performed."
+    },
+    {
+      "table": "podcast_ai_runs",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by podcast module (podcast_store.py, podcast_routes.py). Active podcast feature, empty because no podcast AI runs executed."
+    },
+    {
+      "table": "podcast_entities",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by podcast module. Active podcast feature, empty because no podcast entities extracted."
+    },
+    {
+      "table": "professional_accounts",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by kos_professional.py (KOS professional module). Active feature, empty because no professional accounts onboarded."
+    },
+    {
+      "table": "professional_metrics",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by kos_professional.py. Active feature, empty because no professional metrics collected."
+    },
+    {
+      "table": "runtime_guardian_dlq",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by runtime_guardian.py (Dead Letter Queue). Active runtime guardian feature, empty because no tasks have failed into DLQ."
+    },
+    {
+      "table": "swire_notes",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by swire_group.py (Swire brand marketing case library). Active feature, empty because no Swire-specific notes collected."
+    },
+    {
+      "table": "token_stat",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "DEPRECATE",
+      "reason": "Only 2 columns, minimal structure. No clear live module reference found in core code. Candidate for archival after confirming no collector writes to it. Needs Track 4/collector confirmation before any action."
+    },
+    {
+      "table": "topic_campaign_notes",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by topic_campaign.py (active topic campaign scheduler running at [9,11,13,15,17,19]). Empty because campaign notes not yet collected in this instance."
+    },
+    {
+      "table": "v4_audit_logs",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by v4 security/permission module (permission_gate.py, security_boundary.py). Active audit logging, empty because no v4-audited actions performed."
+    },
+    {
+      "table": "v4_login_attempts",
+      "row_count": 0,
+      "has_orm_model": false,
+      "classification": "KEEP",
+      "reason": "Used by v4 auth module. Active security feature, empty because no v4 login attempts recorded (local auth may bypass)."
+    }
+  ],
+  "summary": {
+    "KEEP": 27,
+    "DEPRECATE": 1,
+    "DELETE": 0,
+    "deprecate_candidates": ["token_stat"],
+    "note": "No tables were deleted. token_stat is flagged as DEPRECATE candidate requiring confirmation from Track 4 (collector) before any archival action."
+  }
+}
