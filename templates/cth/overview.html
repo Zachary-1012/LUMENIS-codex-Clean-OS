@@ -309,16 +309,15 @@
       if (notes === null && stats && stats.stats) notes = safeNum(stats.stats.total) || safeNum(stats.stats.total_notes);
       renderKPI('kpi-notes', '今日笔记数', notes, 'CTH 主体保护', 'neutral');
 
-      // KPI 2: 活跃品牌数
-      var brands = null;
-      if (stats && stats.stats) brands = safeNum(stats.stats.active_brands) || safeNum(stats.stats.brand_count);
-      if (brands === null && cth && cth.data && cth.data.recent_records) {
-        var set = {};
-        cth.data.recent_records.forEach(function(r) { if (r.brand_name || r.brand) set[r.brand_name || r.brand] = 1; });
-        var c = Object.keys(set).length;
-        brands = c > 0 ? c : null;
-      }
-      renderKPI('kpi-brands', '活跃品牌数', brands, brands !== null ? '/ 199 品牌' : null, 'neutral');
+      // KPI 2: 活跃品牌数：权威源 /api/brand-stats（199品牌9业态主数据）
+      xjViz.api('/brand-stats').then(function(bs) {
+        var brands = (bs && bs.total_brands) ? safeNum(bs.total_brands) : null;
+        if (brands === null && stats && stats.stats) brands = safeNum(stats.stats.active_brands) || safeNum(stats.stats.brand_count);
+        renderKPI('kpi-brands', '活跃品牌数', brands, brands !== null ? '/ 199 品牌' : null, 'neutral');
+      }).catch(function() {
+        var brands = (stats && stats.stats) ? (safeNum(stats.stats.active_brands) || safeNum(stats.stats.brand_count)) : null;
+        renderKPI('kpi-brands', '活跃品牌数', brands, brands !== null ? '/ 199 品牌' : null, 'neutral');
+      });
 
       // KPI 3: 风险事件
       var riskCnt = null;
@@ -369,21 +368,22 @@
   // ========== API: Trend (xjViz.trend) ==========
   function loadTrend() {
     showState('cth-trend', 'loading');
-    var days = STATE.timeRange === 'today' ? 1 : (STATE.timeRange === '7d' ? 7 : 30);
-
-    xjViz.api('/metric-trend', {entity_type:'topic', entity_key:'guangzhou_taikoo_hui', limit:days}).then(function(d) {
-      if (d && d.trend && d.trend.length > 0) {
-        var series = xjViz.fn.FN_TREND_SERIES(d.trend, 'total');
-        var hasData = series.some(function(s) { return s.value > 0; });
-        if (!hasData) { showState('cth-trend', 'empty'); return; }
-        showState('cth-trend', 'success');
-        var el = document.getElementById('cth-trend-chart');
-        el.innerHTML = '';
-        // xjViz.trend: SVG area chart, function-driven
-        xjViz.trend('#cth-trend-chart', series, {type:'area', color:'#2563EB', height:200});
-      } else {
-        showState('cth-trend', 'empty');
-      }
+    // 权威源：/api/brand-stats.trend_data，按 publish_datetime 发布日聚合（函数驱动，不依赖空快照表）
+    xjViz.api('/brand-stats').then(function(d) {
+      var pts = (d && d.trend_data) || [];
+      if (pts.length === 0) { showState('cth-trend', 'empty'); return; }
+      var series = pts.map(function(p) {
+        return { date: p.date, value: safeNum(p.note_count) || 0, negative: safeNum(p.negative_count) || 0 };
+      });
+      var hasData = series.some(function(s) { return s.value > 0; });
+      if (!hasData) { showState('cth-trend', 'empty'); return; }
+      showState('cth-trend', 'success');
+      var el = document.getElementById('cth-trend-chart');
+      el.innerHTML = '';
+      var vizSeries = (xjViz.fn && xjViz.fn.FN_TREND_SERIES)
+        ? xjViz.fn.FN_TREND_SERIES(series, 'value')
+        : series.map(function(s){return {label:s.date, value:s.value};});
+      xjViz.trend('#cth-trend-chart', vizSeries, {type:'area', color:'#2563EB', height:200});
     }).catch(function(e) {
       console.error('CTH trend error:', e);
       showState('cth-trend', 'error');
@@ -396,20 +396,18 @@
   // ========== API: Industry Donut (xjViz.donut) ==========
   function loadIndustry() {
     showState('cth-industry', 'loading');
-
-    xjViz.api('/stats').then(function(d) {
-      var cats = null;
-      if (d && d.categories) cats = d.categories;
-      else if (d && d.stats && d.stats.categories) cats = d.stats.categories;
-
-      // P0-R6 数据红线：只接受9业态白名单内的key，非9业态key过滤
-      // 拿不到真实9业态分类时必须显式empty，不得用平台/其他分类冒充业态
-      var filtered = filterNineIndustries(cats);
-      if (!filtered || filtered.length === 0) {
-        showState('cth-industry', 'empty');
-        return;
-      }
-      renderDonut(filtered);
+    // 权威源：/api/brand-stats.pie_data —— 笔记经199品牌匹配后归入9业态（brand_directory.json）
+    // P0-R6 数据红线：禁止用 /api/stats.categories（内容分类：探店/投诉/活动等）或 by_platform 冒充业态
+    xjViz.api('/brand-stats').then(function(d) {
+      var pie = (d && d.pie_data) || [];
+      // 转成 renderDonut 兼容格式 {category, count, brand_count}
+      var items = pie.filter(function(p) { return (safeNum(p.note_count) || 0) > 0; })
+                     .map(function(p) {
+                        return { category: p.category, count: safeNum(p.note_count) || 0,
+                                 brand_count: safeNum(p.brand_count) || 0 };
+                     });
+      if (items.length === 0) { showState('cth-industry', 'empty'); return; }
+      renderDonut(items);
     }).catch(function(e) {
       console.error('CTH industry error:', e);
       showState('cth-industry', 'error');
@@ -444,9 +442,9 @@
     if (Array.isArray(data)) {
       data.forEach(function(item, i) {
         var name = item.category || item.name || item.label || ('业态' + (i+1));
-        var val = safeNum(item.count || item.value || item.total);
+        var val = safeNum(item.count || item.value || item.total || item.note_count);
         if (val !== null && val > 0) {
-          items.push({label: INDUSTRY_NAMES[name] || name, value: val, color: INDUSTRY_COLORS[i % INDUSTRY_COLORS.length]});
+          items.push({label: INDUSTRY_NAMES[name] || name, value: val, color: INDUSTRY_COLORS[i % INDUSTRY_COLORS.length], brand_count: item.brand_count});
         }
       });
     } else if (typeof data === 'object') {

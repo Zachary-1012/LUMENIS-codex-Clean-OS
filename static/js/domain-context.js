@@ -289,11 +289,26 @@
         init = init || {};
         var headers = init.headers || {};
 
+        // headers 为纯字符串（如直接传 Authorization 值）时无法安全挂键：
+        // 对原始字符串赋属性会抛 TypeError，此时保持原样放行，域头不强制注入
+        if (typeof headers === "string") {
+          return _origFetch.call(global, input, init);
+        }
+
         // 转换 Headers 对象为普通对象以便注入
         if (typeof Headers !== "undefined" && headers instanceof Headers) {
           var tmp = {};
           headers.forEach(function (v, k) { tmp[k] = v; });
           headers = tmp;
+        }
+
+        // 转换 [key, value] 数组形式为普通对象
+        if (Array.isArray(headers)) {
+          var tmpArr = {};
+          headers.forEach(function (pair) {
+            if (Array.isArray(pair) && pair.length === 2) tmpArr[pair[0]] = pair[1];
+          });
+          headers = tmpArr;
         }
 
         // 注入域头（不覆盖已显式设置的）
