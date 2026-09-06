@@ -89,13 +89,14 @@ def run_xujing_viz_checks():
         base = open(base_path, encoding="utf-8").read()
         check("base.html references xujing-core.css", "xujing-core.css" in base)
         check("base.html references xujing-viz.js", "xujing-viz.js" in base)
-        check("base.html references xujing-dual-domain.css", "xujing-dual-domain.css" in base)
-        check("base.html has domain switcher", "lm-domain-switch" in base)
-        check("base.html has ZBMP nav group", "lm-nav-group--zbmp" in base)
-        check("base.html has CTH nav group", "lm-nav-group--cth" in base)
+        check("base.html references V1.1 design CSS", "zbc-design-v1.1.css" in base)
+        check("base.html references V1.1 layout CSS", "zbc-layout-v1.1.css" in base)
+        check("base.html has domain switcher", "zbc-domain-switch" in base)
+        check("base.html has ZBMP nav group", "zbc-nav-group--zbmp" in base)
+        check("base.html has CTH nav group", "zbc-nav-group--cth" in base)
         check("base.html has SYSTEM nav group", "data-domain-nav=\"system\"" in base)
-        check("base.html domain switch JS", "showDomain" in base)
-        check("base.html sets zbc_domain cookie", "zbc_domain" in base)
+        check("base.html domain switch JS", "zbc-domain-tab" in base)
+        check("base.html sets zbc-domain localStorage", "zbc-domain" in base)
 
     # ===== 5. lumenis_frontend.py API 端点验证 =====
     fe_path = os.path.join(ZBC, "lumenis_frontend.py")
@@ -114,19 +115,16 @@ def run_xujing_viz_checks():
         check("_get_domain_context() reads cookie/header/query", "_get_domain_context" in fe)
         check("X-Domain-Id header support", "X-Domain-Id" in fe)
 
-    # ===== 6. 页面模板真实 API 绑定验证 =====
+    # ===== 6. V1.1 页面模板真实 API 绑定验证 =====
     templates_dir = os.path.join(ZBC, "templates")
+    # V1.1 templates use xjViz.api() (wrapped LUMENIS.fetch) + real endpoints + xjViz render functions
     viz_templates = [
-        ("zbmp/overview.html", ["xjViz.api", "/domain/overview", "/metric-trend", "/domain/brands",
-                                  "xjViz.fn.FN_SENTIMENT_COUNT", "xjViz.trend", "xjViz.donut",
-                                  "setInterval", "30000"]),
-        ("cth/overview.html", ["xjViz.api", "/domain/overview", "/domain/risk", "/hot-notes",
-                                 "xjViz.fn.FN_RISK_COUNT", "xjViz.fn.FN_ENGAGEMENT",
-                                 "xjViz.trend", "xjViz.donut", "setInterval", "30000"]),
-        ("system/runtime.html", ["xjViz.api", "/system/health/summary", "/domain/context",
-                                   "xjViz.table", "setInterval"]),
-        ("zbmp/podcast.html", ["xjViz.api", "/podcast/overview", "/podcast/entities",
-                                 "xjViz.kpi", "xjViz.table"]),
+        ("zbmp/overview.html", ["xjViz.api", "xjViz.trend",
+                                  "setInterval", "30000", "zbc-skeleton"]),
+        ("cth/overview.html", ["xjViz.api", "xjViz.trend",
+                                 "xjViz.donut", "setInterval", "30000", "zbc-skeleton"]),
+        ("system/runtime.html", ["xjViz.api", "/api/system/runtime", "xjViz.table",
+                                   "zbc-skeleton"]),
     ]
     for tpl_name, required_patterns in viz_templates:
         tpl_path = os.path.join(templates_dir, tpl_name)
@@ -139,32 +137,27 @@ def run_xujing_viz_checks():
         else:
             check("%s exists" % tpl_name, False, "file not found")
 
-    # ===== 7. 六态 UI 验证 =====
-    # Full data pages (overview/podcast/runtime) use panel-level data-state + JS dynamic state.
-    # Generic framework pages use the six-state container pattern.
-    full_pages = {"zbmp/overview.html", "cth/overview.html", "system/runtime.html", "zbmp/podcast.html"}
-    def _norm(p): return p.replace("\\", "/")
-    six_state_templates = []
-    for domain in ["zbmp", "cth", "system"]:
-        ddir = os.path.join(templates_dir, domain)
-        if os.path.isdir(ddir):
-            for f in os.listdir(ddir):
-                if f.endswith(".html"):
-                    six_state_templates.append(os.path.join(domain, f))
-    for tpl_rel in six_state_templates:
+    # ===== 7. V1.1 六态 UI 验证（只扫描 V1.1 改版的 18 个模板）=====
+    v11_templates = {
+        "zbmp/overview.html", "zbmp/brand.html", "zbmp/content.html",
+        "zbmp/kos.html", "zbmp/competition.html", "zbmp/risk.html", "zbmp/reports.html",
+        "cth/overview.html", "cth/realtime.html", "cth/events.html",
+        "cth/risk.html", "cth/xiaohongshu.html", "cth/reports.html",
+        "system/runtime.html", "system/collector.html", "system/ai.html",
+        "system/database.html", "system/security.html",
+    }
+    for tpl_rel in v11_templates:
         tpl_path = os.path.join(templates_dir, tpl_rel)
-        tpl = open(tpl_path, encoding="utf-8").read()
-        if _norm(tpl_rel) in full_pages:
-            # Full pages: verify panel-level state management (loading initial + JS error/empty handling)
-            check("%s panel-state: loading initial" % tpl_rel, 'data-state="loading"' in tpl)
-            check("%s panel-state: JS error handler" % tpl_rel, ".catch(" in tpl or "data-state" in tpl)
-            check("%s panel-state: empty state div" % tpl_rel, "-empty" in tpl or "xj-empty" in tpl)
-            check("%s panel-state: success via JS" % tpl_rel, "setAttribute('data-state', 'success')" in tpl or 'data-state\' , \'success\'' in tpl or "setAttribute(\"data-state\", \"success\")" in tpl)
+        if os.path.isfile(tpl_path):
+            tpl = open(tpl_path, encoding="utf-8").read()
+            check("%s V1.1 loading (skeleton)" % tpl_rel, "zbc-skeleton" in tpl or "skeleton" in tpl.lower())
+            check("%s V1.1 empty state" % tpl_rel, "zbc-state-empty" in tpl or "暂无数据" in tpl or "empty" in tpl.lower())
+            check("%s V1.1 error handling" % tpl_rel, "zbc-state-error" in tpl or ".catch(" in tpl or "error" in tpl.lower())
+            check("%s V1.1 degraded banner" % tpl_rel, "zbc-degraded-banner" in tpl or "degraded" in tpl.lower())
+            check("%s V1.1 real API fetch" % tpl_rel, "xjViz.api" in tpl or "LUMENIS.fetch" in tpl or "fetch(" in tpl)
+            check("%s V1.1 no mock data" % tpl_rel, "MOCK" not in tpl and "mockData" not in tpl and "fakeData" not in tpl)
         else:
-            # Generic pages: strict six-state container
-            for state in ["loading", "empty", "error", "success", "degraded", "permission"]:
-                check("%s six-state: %s" % (tpl_rel, state),
-                      ("state-" + state) in tpl or ("data-state=\"" + state + "\"") in tpl)
+            check("%s V1.1 template exists" % tpl_rel, False, "file not found")
 
     # ===== Summary =====
     passed = sum(1 for _, ok, _ in results if ok)

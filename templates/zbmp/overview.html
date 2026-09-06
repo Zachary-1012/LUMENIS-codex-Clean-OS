@@ -16,7 +16,6 @@
 
 {% block content %}
 <style>
-/* ---------- Page-specific (no CSS file modification) ---------- */
 .zbmp-time-filter { display: flex; gap: 4px; align-items: center; }
 .zbmp-time-pill {
   padding: 6px 14px; border: 1px solid var(--l-border, #E8E8E8); border-radius: 7px;
@@ -33,29 +32,22 @@
   background: rgba(15,118,110,0.1); border-color: #0F766E; color: #0F766E; font-weight: 600;
 }
 [data-theme="dark"] .zbmp-time-pill.is-active { background: rgba(20,184,166,0.12); color: #14B8A6; border-color: #14B8A6; }
-
 .zbmp-last-update {
   font-size: 11px; color: var(--l-text-tertiary, #9CA3AF);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 [data-theme="dark"] .zbmp-last-update { color: var(--d-text-tertiary, #71717A); }
-
-/* KPI risk highlight */
 .zbc-kpi-card--risk-active {
   border-color: rgba(220,38,38,0.4); background: rgba(220,38,38,0.04);
 }
 [data-theme="dark"] .zbc-kpi-card--risk-active { background: rgba(220,38,38,0.08); }
 .zbc-kpi-card--risk-active .zbc-kpi-card__value { color: #DC2626; }
-
-/* Slate Mist gradient for KOS card */
 .zbc-kpi-card--gradient-slate {
   background: linear-gradient(135deg, #475569 0%, #64748B 100%);
   border: none; color: #fff;
 }
 .zbc-kpi-card--gradient-slate .zbc-kpi-card__label { color: rgba(255,255,255,0.75); }
 .zbc-kpi-card--gradient-slate .zbc-kpi-card__value { color: #fff; }
-
-/* Horizontal bar chart (xjViz has no horizontal bar; built from real API data) */
 .zbmp-hbar-list { display: flex; flex-direction: column; gap: 14px; }
 .zbmp-hbar-row { display: flex; align-items: center; gap: 10px; }
 .zbmp-hbar-label {
@@ -78,8 +70,6 @@
   color: var(--l-text, #0D0D0D); font-variant-numeric: tabular-nums;
 }
 [data-theme="dark"] .zbmp-hbar-value { color: var(--d-text, #F5F5F5); }
-
-/* Growth opportunity cards */
 .zbmp-opportunity {
   padding: 14px 16px; border: 1px solid var(--l-border-light, #F0F0F0);
   border-radius: 8px; margin-bottom: 10px; transition: all 0.15s ease;
@@ -104,15 +94,10 @@
   display: inline-flex; align-items: center; gap: 3px;
 }
 .zbmp-opportunity__evidence:hover { text-decoration: underline; }
-
-/* Skeleton variants */
-.zbc-skeleton--kpi { height: 70px; }
 .zbc-skeleton--chart { height: 200px; }
 .zbc-skeleton--table-row { height: 44px; margin-bottom: 1px; }
 .zbc-skeleton--text { height: 14px; margin-bottom: 8px; }
 .zbc-skeleton--text-short { height: 14px; width: 60%; margin-bottom: 8px; }
-
-/* Section state visibility */
 [data-section-state] .zbc-state-loading,
 [data-section-state] .zbc-state-empty,
 [data-section-state] .zbc-state-error,
@@ -123,10 +108,7 @@
 [data-section-state="error"] .zbc-state-error { display: flex; }
 [data-section-state="permission"] .zbc-state-permission { display: flex; }
 [data-section-state="success"] .zbmp-section-content { display: block; }
-
 .zbmp-kpi-skeleton { display: flex; flex-direction: column; gap: 10px; }
-
-/* xjViz table inside zbc card */
 .zbmp-section-content .xj-data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .zbmp-section-content .xj-data-table th {
   font-size: 12px; font-weight: 600; color: var(--l-text-secondary, #6B7280);
@@ -149,14 +131,14 @@
 [data-theme="dark"] .zbmp-section-content .xj-data-table tr:hover td { background: var(--d-bg-secondary, #141414); }
 </style>
 
-<!-- Degraded Banner (hidden by default) -->
+<!-- Degraded Banner -->
 <div class="zbc-degraded-banner" id="zbmp-degraded-banner" style="display:none;">
   <span>⚠</span>
   <span>部分数据延迟，已显示可用数据。</span>
   <button class="zbc-btn" style="margin-left:auto;padding:4px 12px;font-size:12px;" onclick="ZBMPOverview.reload()">立即重试</button>
 </div>
 
-<!-- ========== Row 1: KPI Cards ========== -->
+<!-- Row 1: KPI Cards -->
 <section class="zbc-kpi-grid" id="zbmp-kpi-section" data-section-state="loading">
   <div class="zbc-state-loading" style="display:none;">
     <div class="zbc-kpi-card"><div class="zbmp-kpi-skeleton"><div class="zbc-skeleton zbc-skeleton--text-short"></div><div class="zbc-skeleton" style="height:28px;width:50%;"></div></div></div>
@@ -164,10 +146,13 @@
     <div class="zbc-kpi-card"><div class="zbmp-kpi-skeleton"><div class="zbc-skeleton zbc-skeleton--text-short"></div><div class="zbc-skeleton" style="height:28px;width:50%;"></div></div></div>
     <div class="zbc-kpi-card"><div class="zbmp-kpi-skeleton"><div class="zbc-skeleton zbc-skeleton--text-short"></div><div class="zbc-skeleton" style="height:28px;width:50%;"></div></div></div>
   </div>
+  <div class="zbc-state-empty" style="display:none;grid-column:1/-1;justify-content:center;padding:40px;"><div class="zbc-state-empty__icon">📊</div><div class="zbc-state-empty__text">暂无KPI数据</div></div>
+  <div class="zbc-state-error" style="display:none;grid-column:1/-1;justify-content:center;padding:40px;"><div class="zbc-state-error__text">KPI数据加载失败</div><button class="zbc-btn zbc-btn--primary" onclick="ZBMPOverview.reload()">重试</button></div>
+  <div class="zbc-state-permission" style="display:none;grid-column:1/-1;justify-content:center;padding:40px;"><div class="zbc-state-empty__icon">🔒</div><div class="zbc-state-empty__text">无权限访问KPI数据</div></div>
   <div class="zbmp-section-content" id="zbmp-kpi-content" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;"></div>
 </section>
 
-<!-- ========== Row 2: Trend (2/3) + Industry Distribution (1/3) ========== -->
+<!-- Row 2: Trend + Industry -->
 <div class="zbc-grid-2">
   <section class="zbc-card" id="zbmp-trend-section" data-section-state="loading">
     <div class="zbc-card__header">
@@ -184,6 +169,10 @@
       <div class="zbc-state-error" style="display:none;">
         <div class="zbc-state-error__text" id="zbmp-trend-error-msg">趋势数据加载失败</div>
         <button class="zbc-btn zbc-btn--primary" onclick="ZBMPOverview.reload()">重试</button>
+      </div>
+      <div class="zbc-state-permission" style="display:none;">
+        <div class="zbc-state-empty__icon">🔒</div>
+        <div class="zbc-state-empty__text">无权限访问趋势数据</div>
       </div>
       <div class="zbmp-section-content" id="zbmp-trend-content" style="min-height:200px;"></div>
     </div>
@@ -211,12 +200,16 @@
         <div class="zbc-state-error__text" id="zbmp-industry-error-msg">业态数据加载失败</div>
         <button class="zbc-btn zbc-btn--primary" onclick="ZBMPOverview.reload()">重试</button>
       </div>
+      <div class="zbc-state-permission" style="display:none;">
+        <div class="zbc-state-empty__icon">🔒</div>
+        <div class="zbc-state-empty__text">无权限访问业态数据</div>
+      </div>
       <div class="zbmp-section-content" id="zbmp-industry-content"></div>
     </div>
   </section>
 </div>
 
-<!-- ========== Row 3: TOP10 Table (1/2) + Growth Opportunities (1/2) ========== -->
+<!-- Row 3: TOP10 + Opportunities -->
 <div class="zbc-grid-2-equal">
   <section class="zbc-card" id="zbmp-top10-section" data-section-state="loading">
     <div class="zbc-card__header">
@@ -239,6 +232,10 @@
       <div class="zbc-state-error" style="display:none;">
         <div class="zbc-state-error__text" id="zbmp-top10-error-msg">品牌数据加载失败</div>
         <button class="zbc-btn zbc-btn--primary" onclick="ZBMPOverview.reload()">重试</button>
+      </div>
+      <div class="zbc-state-permission" style="display:none;padding:40px;">
+        <div class="zbc-state-empty__icon">🔒</div>
+        <div class="zbc-state-empty__text">无权限访问品牌数据</div>
       </div>
       <div class="zbmp-section-content" id="zbmp-top10-content"></div>
     </div>
@@ -265,18 +262,16 @@
         <div class="zbc-state-error__text" id="zbmp-opportunity-error-msg">增长机会生成失败</div>
         <button class="zbc-btn zbc-btn--primary" onclick="ZBMPOverview.reload()">重试</button>
       </div>
+      <div class="zbc-state-permission" style="display:none;">
+        <div class="zbc-state-empty__icon">🔒</div>
+        <div class="zbc-state-empty__text">无权限访问增长机会</div>
+      </div>
       <div class="zbmp-section-content" id="zbmp-opportunity-content"></div>
     </div>
   </section>
 </div>
 
 <script>
-/* ============================================================
- * ZBMP Overview — xjViz 函数驱动 + 真实 API + 六态 + 30s轮询
- * API: /api/zbmp/overview, /api/stats, /api/brand-industry/*, /api/metric-trend
- * xjViz: .fn.FN_* (数据转换), .trend (面积图), .table (表格), .animateNumber (KPI数字滚动)
- * Auth: LUMENIS.fetch (xjViz.api 已包装)
- * ============================================================ */
 var ZBMPOverview = (function () {
   'use strict';
 
@@ -285,13 +280,11 @@ var ZBMPOverview = (function () {
     data: { overview: null, stats: null, biStats: null, biBrands: null, trend: null },
     errors: {},
     degraded: false,
-    pollTimer: null,
-    lastUpdate: null
+    pollTimer: null
   };
 
   var SECTIONS = ['zbmp-kpi-section', 'zbmp-trend-section', 'zbmp-industry-section', 'zbmp-top10-section', 'zbmp-opportunity-section'];
 
-  /* ---------- helpers ---------- */
   function $(id) { return document.getElementById(id); }
 
   function fmt(n) {
@@ -307,24 +300,21 @@ var ZBMPOverview = (function () {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function setSectionState(sectionId, stateName) {
-    var el = $(sectionId);
-    if (el) el.setAttribute('data-section-state', stateName);
+  function setSectionState(sid, st) {
+    var el = $(sid);
+    if (el) el.setAttribute('data-section-state', st);
   }
 
   function showDegraded(show) {
-    var banner = $('zbmp-degraded-banner');
-    if (banner) banner.style.display = show ? 'flex' : 'none';
+    var b = $('zbmp-degraded-banner');
+    if (b) b.style.display = show ? 'flex' : 'none';
   }
 
   function updateLastUpdate() {
-    _state.lastUpdate = new Date();
+    var now = new Date();
     var el = $('zbmp-last-update');
     if (el) {
-      var h = String(_state.lastUpdate.getHours()).padStart(2, '0');
-      var m = String(_state.lastUpdate.getMinutes()).padStart(2, '0');
-      var s = String(_state.lastUpdate.getSeconds()).padStart(2, '0');
-      el.textContent = '更新于 ' + h + ':' + m + ':' + s;
+      el.textContent = '更新于 ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
     }
   }
 
@@ -332,34 +322,28 @@ var ZBMPOverview = (function () {
     return _state.range === '1d' ? 1 : (_state.range === '30d' ? 30 : 7);
   }
 
-  /* ---------- API fetch (LUMENIS.fetch via xjViz.api wrapper) ---------- */
+  // xjViz.api is wrapped by base.html to use LUMENIS.fetch (auto auth) and prepends /api/
   function apiGet(url) {
-    // xjViz.api is wrapped by base.html to use LUMENIS.fetch (auto auth)
-    return xjViz.api(url.startsWith('/api/') ? url.slice(5) : url).catch(function (e) {
-      if (e && e.message && e.message.indexOf('403') >= 0) {
-        var err = new Error('PERMISSION_DENIED');
-        err.code = 'PERMISSION_DENIED';
-        throw err;
-      }
-      throw e;
-    });
+    var endpoint = url.replace(/^\/?api\//, '');
+    return xjViz.api(endpoint);
   }
 
-  /* ---------- Data loaders (real APIs only) ---------- */
+  /* ----- Data loaders (real APIs only) ----- */
   function loadOverview() {
-    return apiGet('/zbmp/overview').then(function (d) {
+    return apiGet('/api/zbmp/overview').then(function (d) {
       if (d && (d.success === true || d.ok === true)) {
         _state.data.overview = d.data || d;
         return d.data || d;
       }
-      throw new Error(d && d.error ? d.error : 'Invalid response');
+      throw new Error(d && d.error ? d.error : 'Invalid overview response');
     });
   }
 
   function loadStats() {
-    return apiGet('/stats').then(function (d) {
+    return apiGet('/api/stats').then(function (d) {
       if (d && d.ok === true && d.stats) {
         _state.data.stats = d.stats;
+        _state.data.statsCategories = d.categories || [];
         return d.stats;
       }
       throw new Error(d && d.error ? d.error : 'Invalid stats response');
@@ -367,39 +351,49 @@ var ZBMPOverview = (function () {
   }
 
   function loadBrandIndustryStats() {
-    return apiGet('/brand-industry/stats').then(function (d) {
+    return apiGet('/api/brand-industry/stats').then(function (d) {
       if (d && d.ok === true) {
         _state.data.biStats = d;
         return d;
       }
-      throw new Error(d && d.error ? d.error : 'Invalid brand-industry stats');
+      throw new Error(d && d.error ? d.error : 'brand-industry stats error');
     });
   }
 
   function loadBrandIndustryBrands() {
-    return apiGet('/brand-industry/brands?limit=10').then(function (d) {
+    return apiGet('/api/brand-industry/brands?limit=10').then(function (d) {
       if (d && d.ok === true && Array.isArray(d.brands)) {
         _state.data.biBrands = d.brands;
         return d.brands;
       }
-      throw new Error(d && d.error ? d.error : 'Invalid brands response');
+      throw new Error(d && d.error ? d.error : 'brand-industry brands error');
     });
   }
 
   function loadTrend() {
     var days = getRangeDays();
     var limit = Math.max(days, 7);
-    return apiGet('/metric-trend?entity_type=topic&entity_key=guangzhou_taikoo_hui&limit=' + limit).then(function (d) {
-      if (d && d.ok === true && Array.isArray(d.trend)) {
-        var trend = d.trend.slice(-days);
-        _state.data.trend = trend;
-        return trend;
+    return apiGet('/api/metric-trend?entity_type=topic&entity_key=guangzhou_taikoo_hui&limit=' + limit).then(function (d) {
+      if (d && d.ok === true && Array.isArray(d.trend) && d.trend.length > 0) {
+        _state.data.trend = d.trend.slice(-days);
+        return _state.data.trend;
       }
-      throw new Error(d && d.error ? d.error : 'Invalid trend response');
+      // Fallback to /api/trends/global (real daily aggregation)
+      return apiGet('/api/trends/global?days=' + limit).then(function (gd) {
+        if (gd && gd.ok === true && Array.isArray(gd.data) && gd.data.length > 0) {
+          var mapped = gd.data.slice(-days).map(function (r) {
+            return { date: r.date, label: (r.date || '').slice(5), total: r.total || 0, positive: r.positive || 0, negative: r.negative || 0, high: r.high || 0 };
+          });
+          _state.data.trend = mapped;
+          return mapped;
+        }
+        _state.data.trend = [];
+        return [];
+      });
     });
   }
 
-  /* ---------- KPI render (xjViz.animateNumber driven) ---------- */
+  /* ----- KPI render (xjViz.animateNumber driven) ----- */
   function renderKPIs() {
     var stats = _state.data.stats;
     var biStats = _state.data.biStats;
@@ -407,7 +401,7 @@ var ZBMPOverview = (function () {
     var container = $('zbmp-kpi-content');
     if (!container) return;
 
-    // 今日声量: latest trend point total, fallback to stats.total
+    // 今日声量
     var todayVolume = null;
     var volumeChange = null;
     if (trend && trend.length > 0) {
@@ -420,24 +414,26 @@ var ZBMPOverview = (function () {
           volumeChange = ((todayVolume - prevTotal) / prevTotal * 100);
         }
       }
-    } else if (stats) {
-      todayVolume = stats.total != null ? Number(stats.total) : null;
+    } else if (stats && stats.total != null) {
+      todayVolume = Number(stats.total);
     }
 
     // 活跃品牌
     var activeBrands = null;
-    if (biStats) {
-      activeBrands = biStats.total_brands != null ? Number(biStats.total_brands) : (biStats.total != null ? Number(biStats.total) : null);
+    if (biStats && biStats.total_brands != null) {
+      activeBrands = Number(biStats.total_brands);
+    } else if (biStats && biStats.total != null) {
+      activeBrands = Number(biStats.total);
     }
 
-    // KOS互动量 — use xjViz.fn.FN_ENGAGEMENT canonical transform
+    // KOS互动量 — xjViz.fn.FN_ENGAGEMENT canonical transform
     var engagement = null;
     if (stats) {
       var eng = xjViz.fn.FN_ENGAGEMENT({ stats: stats });
-      engagement = eng.total > 0 ? eng.total : null;
+      if (eng.total > 0) engagement = eng.total;
     }
 
-    // 风险事件 — use xjViz.fn.FN_RISK_COUNT canonical transform
+    // 风险事件 — xjViz.fn.FN_RISK_COUNT canonical transform
     var riskCount = null;
     if (stats) {
       var risk = xjViz.fn.FN_RISK_COUNT({ stats: stats });
@@ -450,128 +446,120 @@ var ZBMPOverview = (function () {
     var hasRisk = riskCount != null && riskCount > 0;
 
     var html = '';
-
-    // Card 1: 今日声量 (Teal Glow gradient)
+    // Card 1: 今日声量 (Teal Glow)
     html += '<div class="zbc-kpi-card zbc-kpi-card--gradient-zbmp">' +
       '<div class="zbc-kpi-card__label">今日声量</div>' +
-      '<div class="zbc-kpi-card__value" data-kpi-volume>' + (todayVolume != null ? '0' : '—') + '</div>' +
+      '<div class="zbc-kpi-card__value" data-kpi="volume">' + (todayVolume != null ? '0' : '—') + '</div>' +
       '<div class="zbc-kpi-card__change" style="color:' + (volumeChange != null ? (volumeChange >= 0 ? '#6EE7B7' : '#FCA5A5') : 'rgba(255,255,255,0.6)') + ';">' +
       (volumeChange != null ? (volumeChange >= 0 ? '▲ ' : '▼ ') + Math.abs(volumeChange).toFixed(1) + '% 环比' : (todayVolume != null ? '数据采集中' : '')) +
       '</div></div>';
-
-    // Card 2: 活跃品牌 (solid)
+    // Card 2: 活跃品牌
     html += '<div class="zbc-kpi-card">' +
       '<div class="zbc-kpi-card__label">活跃品牌</div>' +
-      '<div class="zbc-kpi-card__value" data-kpi-brands>' + (activeBrands != null ? '0' : '—') + '</div>' +
+      '<div class="zbc-kpi-card__value" data-kpi="brands">' + (activeBrands != null ? '0' : '—') + '</div>' +
       '<div class="zbc-kpi-card__change zbc-kpi-card__change--neutral">' +
       (activeBrands != null ? '共 ' + fmt(activeBrands) + ' 个品牌在监测' : '数据采集中') +
       '</div></div>';
-
-    // Card 3: KOS互动量 (Slate Mist gradient)
+    // Card 3: KOS互动量 (Slate Mist)
     html += '<div class="zbc-kpi-card zbc-kpi-card--gradient-slate">' +
       '<div class="zbc-kpi-card__label">KOS 互动量</div>' +
-      '<div class="zbc-kpi-card__value" data-kpi-engagement>' + (engagement != null ? '0' : '—') + '</div>' +
+      '<div class="zbc-kpi-card__value" data-kpi="engagement">' + (engagement != null ? '0' : '—') + '</div>' +
       '<div class="zbc-kpi-card__change" style="color:rgba(255,255,255,0.7);">' +
       (engagement != null ? '点赞+评论+收藏+分享' : '数据采集中') +
       '</div></div>';
-
-    // Card 4: 风险事件 (red highlight when > 0)
+    // Card 4: 风险事件
     html += '<div class="zbc-kpi-card ' + (hasRisk ? 'zbc-kpi-card--risk-active' : '') + '">' +
       '<div class="zbc-kpi-card__label">风险事件</div>' +
-      '<div class="zbc-kpi-card__value" data-kpi-risk>' + (riskCount != null ? '0' : '—') + '</div>' +
+      '<div class="zbc-kpi-card__value" data-kpi="risk">' + (riskCount != null ? '0' : '—') + '</div>' +
       '<div class="zbc-kpi-card__change ' + (hasRisk ? 'zbc-kpi-card__change--down' : 'zbc-kpi-card__change--neutral') + '">' +
       (hasRisk ? '⚠ 存在高/中风险事件' : (riskCount != null ? '暂无风险事件' : '数据采集中')) +
       '</div></div>';
 
     container.innerHTML = html;
 
-    // Animate numbers with xjViz.animateNumber (function-driven)
-    if (todayVolume != null) {
-      var volEl = container.querySelector('[data-kpi-volume]');
-      if (volEl) xjViz.animateNumber(volEl, 0, todayVolume, 800);
-    }
-    if (activeBrands != null) {
-      var brandEl = container.querySelector('[data-kpi-brands]');
-      if (brandEl) xjViz.animateNumber(brandEl, 0, activeBrands, 800);
-    }
-    if (engagement != null) {
-      var engEl = container.querySelector('[data-kpi-engagement]');
-      if (engEl) xjViz.animateNumber(engEl, 0, engagement, 800);
-    }
-    if (riskCount != null) {
-      var riskEl = container.querySelector('[data-kpi-risk]');
-      if (riskEl) xjViz.animateNumber(riskEl, 0, riskCount, 800);
-    }
+    // Animate numbers via xjViz.animateNumber (RAF-driven) + setTimeout fallback
+    var anims = [
+      { key: 'volume', val: todayVolume },
+      { key: 'brands', val: activeBrands },
+      { key: 'engagement', val: engagement },
+      { key: 'risk', val: riskCount }
+    ];
+    anims.forEach(function (a) {
+      if (a.val != null) {
+        var el = container.querySelector('[data-kpi="' + a.key + '"]');
+        if (el) {
+          xjViz.animateNumber(el, 0, a.val, 800);
+          // Fallback: RAF may not fire in headless/background contexts
+          setTimeout(function () { el.textContent = fmt(a.val); }, 900);
+        }
+      }
+    });
   }
 
-  /* ---------- Trend chart (xjViz.trend area chart) ---------- */
+  /* ----- Trend chart (xjViz.trend area chart) ----- */
   function renderTrend() {
     var trend = _state.data.trend;
     var content = $('zbmp-trend-content');
     var rangeTag = $('zbmp-trend-range-tag');
     if (!content) return;
-
     var days = getRangeDays();
     if (rangeTag) rangeTag.textContent = days === 1 ? '今日' : ('近' + days + '天');
-
     if (!trend || trend.length === 0) {
       setSectionState('zbmp-trend-section', 'empty');
       return;
     }
-
     // xjViz.fn.FN_TREND_SERIES canonical transform
     var series = xjViz.fn.FN_TREND_SERIES(trend, 'total');
     if (series.length === 0 || series.every(function (d) { return d.value === 0; })) {
       setSectionState('zbmp-trend-section', 'empty');
       return;
     }
-
     setSectionState('zbmp-trend-section', 'success');
-    // xjViz.trend — SVG area chart with gradient fill
-    xjViz.trend('#zbmp-trend-content', series, {
-      type: 'area',
-      color: '#0F766E',
-      height: 200,
-      width: content.clientWidth || 480
-    });
+    xjViz.trend('#zbmp-trend-content', series, { type: 'area', color: '#0F766E', height: 200, width: content.clientWidth || 480 });
   }
 
-  /* ---------- Industry distribution (horizontal bars, real API data) ---------- */
+  /* ----- Industry distribution (horizontal bars from real API data) ----- */
   function renderIndustry() {
     var biStats = _state.data.biStats;
+    var statsCats = _state.data.statsCategories;
     var content = $('zbmp-industry-content');
     var countTag = $('zbmp-industry-count-tag');
     if (!content) return;
 
-    var industries = (biStats && biStats.industries) ? biStats.industries : [];
+    var industries = [];
+    if (biStats && biStats.industries && biStats.industries.length > 0) {
+      industries = biStats.industries.map(function (d) {
+        return { name: d.industry || d.name || '未知', count: Number(d.cnt || d.count || 0) };
+      });
+    } else if (statsCats && statsCats.length > 0) {
+      // Fallback: categories from /api/stats
+      industries = statsCats.map(function (d) {
+        return { name: d.category || d.name || '未知', count: Number(d.count || 0) };
+      });
+    }
 
     if (industries.length === 0) {
       setSectionState('zbmp-industry-section', 'empty');
       return;
     }
-
     setSectionState('zbmp-industry-section', 'success');
     if (countTag) countTag.textContent = industries.length + ' 类业态';
-
-    var maxVal = Math.max.apply(null, industries.map(function (d) { return Number(d.cnt || d.count || 0); }));
+    var maxVal = Math.max.apply(null, industries.map(function (d) { return d.count; }));
     if (maxVal <= 0) maxVal = 1;
 
     var html = '<div class="zbmp-hbar-list">';
     industries.slice(0, 8).forEach(function (ind) {
-      var name = ind.industry || ind.name || '未知';
-      var val = Number(ind.cnt || ind.count || 0);
-      var pct = (val / maxVal * 100).toFixed(1);
+      var pct = (ind.count / maxVal * 100).toFixed(1);
       html += '<div class="zbmp-hbar-row">' +
-        '<div class="zbmp-hbar-label" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</div>' +
+        '<div class="zbmp-hbar-label" title="' + escapeHtml(ind.name) + '">' + escapeHtml(ind.name) + '</div>' +
         '<div class="zbmp-hbar-track"><div class="zbmp-hbar-fill" style="width:' + pct + '%;"></div></div>' +
-        '<div class="zbmp-hbar-value">' + fmt(val) + '</div>' +
-        '</div>';
+        '<div class="zbmp-hbar-value">' + fmt(ind.count) + '</div></div>';
     });
     html += '</div>';
     content.innerHTML = html;
   }
 
-  /* ---------- TOP10 table (xjViz.table function-driven) ---------- */
+  /* ----- TOP10 table (xjViz.table function-driven) ----- */
   function renderTop10() {
     var brands = _state.data.biBrands;
     var overview = _state.data.overview;
@@ -591,31 +579,20 @@ var ZBMPOverview = (function () {
       });
     } else if (overview && overview.brands && overview.brands.length > 0) {
       list = overview.brands.slice(0, 10).map(function (b) {
-        return {
-          name: b.brand_key || '未知',
-          volume: b.note_count || b.record_count || 0,
-          industry: b.platform || '—',
-          risk: 'low'
-        };
+        return { name: b.brand_key || '未知', volume: b.note_count || b.record_count || 0, industry: b.platform || '—', risk: 'low' };
       });
     }
-
     if (list.length === 0) {
       setSectionState('zbmp-top10-section', 'empty');
       return;
     }
-
     setSectionState('zbmp-top10-section', 'success');
     if (countTag) countTag.textContent = list.length + ' 个品牌';
 
-    // xjViz.table — function-driven table render with real data
+    // xjViz.table — function-driven table render
     xjViz.table('#zbmp-top10-content', list, [
-      { key: 'rank', label: '#', render: function (v, row) {
-          var idx = list.indexOf(row) + 1;
-          return '<span style="color:var(--l-text-tertiary,#9CA3AF);font-weight:600;font-size:12px;">' + idx + '</span>';
-      }},
-      { key: 'name', label: '品牌', render: function (v) {
-          return '<span style="font-weight:500;">' + escapeHtml(v) + '</span>';
+      { key: 'name', label: '#', render: function (v, row) {
+          return '<span style="color:var(--l-text-tertiary,#9CA3AF);font-weight:600;font-size:12px;">' + (list.indexOf(row) + 1) + '</span> <span style="font-weight:500;">' + escapeHtml(row.name) + '</span>';
       }},
       { key: 'industry', label: '业态', render: function (v) {
           return '<span class="zbc-tag zbc-tag--info">' + escapeHtml(v) + '</span>';
@@ -625,245 +602,171 @@ var ZBMPOverview = (function () {
       }},
       { key: 'risk', label: '风险', render: function (v) {
           var cls = v === 'high' ? 'zbc-tag--high' : (v === 'medium' ? 'zbc-tag--medium' : 'zbc-tag--low');
-          var label = v === 'high' ? '高风险' : (v === 'medium' ? '中风险' : '正常');
-          return '<span class="zbc-tag ' + cls + '">' + label + '</span>';
+          var lbl = v === 'high' ? '高风险' : (v === 'medium' ? '中风险' : '正常');
+          return '<span class="zbc-tag ' + cls + '">' + lbl + '</span>';
       }}
     ]);
   }
 
-  /* ---------- Growth opportunities (data-driven from real API data) ---------- */
+  /* ----- Growth opportunities (data-driven from real APIs) ----- */
   function renderOpportunities() {
     var stats = _state.data.stats;
     var biStats = _state.data.biStats;
     var brands = _state.data.biBrands;
     var content = $('zbmp-opportunity-content');
     if (!content) return;
+    var ops = [];
 
-    var opportunities = [];
-
-    // Opportunity 1: Industry focus — from real /api/brand-industry/stats
-    if (biStats && biStats.industries && biStats.industries.length > 0) {
-      var topInd = biStats.industries[0];
-      var topIndName = topInd.industry || topInd.name || '';
-      var topIndCnt = Number(topInd.cnt || topInd.count || 0);
-      var totalInd = biStats.industries.reduce(function (s, d) { return s + Number(d.cnt || d.count || 0); }, 0);
-      if (topIndName && topIndCnt > 0 && totalInd > 0) {
-        var pct = (topIndCnt / totalInd * 100).toFixed(1);
-        opportunities.push({
-          badge: '业态机会',
-          title: topIndName + '业态声量占比 ' + pct + '%',
-          desc: topIndName + '业态当前贡献最高声量（' + fmt(topIndCnt) + '条），建议优先配置KOS资源与内容选题，放大头部业态传播效应。',
-          evidence: { text: '查看品牌库', url: '/lumenis/zbmp/brand' }
-        });
+    // 1. Industry focus from real data
+    var industries = (biStats && biStats.industries) ? biStats.industries : (_state.data.statsCategories || []);
+    if (industries.length > 0) {
+      var top = industries[0];
+      var topName = top.industry || top.category || top.name || '';
+      var topCnt = Number(top.cnt || top.count || 0);
+      var total = industries.reduce(function (s, d) { return s + Number(d.cnt || d.count || 0); }, 0);
+      if (topName && topCnt > 0 && total > 0) {
+        var pct = (topCnt / total * 100).toFixed(1);
+        ops.push({ badge: '业态机会', title: topName + '业态声量占比 ' + pct + '%',
+          desc: topName + '业态当前贡献最高声量（' + fmt(topCnt) + '条），建议优先配置KOS资源与内容选题。',
+          evidence: { text: '查看品牌库', url: '/lumenis/zbmp/brand' } });
       }
     }
-
-    // Opportunity 2: Engagement — from real /api/stats via xjViz.fn.FN_ENGAGEMENT
+    // 2. Engagement via xjViz.fn.FN_ENGAGEMENT
     if (stats && stats.total != null) {
-      var total = Number(stats.total) || 0;
+      var totalN = Number(stats.total) || 0;
       var engData = xjViz.fn.FN_ENGAGEMENT({ stats: stats });
-      if (total > 0 && engData.total > 0) {
-        var engRate = (engData.total / total).toFixed(1);
-        if (engRate < 5) {
-          opportunities.push({
-            badge: '互动优化',
-            title: '互动率偏低（' + engRate + '%）',
-            desc: '当前平均每篇互动量较低，建议优化笔记封面与标题钩子，增加互动引导话术（投票/提问/抽奖），提升KOS内容互动转化。',
-            evidence: { text: '查看内容库', url: '/lumenis/zbmp/content' }
-          });
+      if (totalN > 0 && engData.total > 0) {
+        var perNote = (engData.total / totalN).toFixed(1);
+        if (perNote < 5) {
+          ops.push({ badge: '互动优化', title: '篇均互动偏低（' + perNote + '）',
+            desc: '当前平均每篇互动量较低，建议优化封面标题钩子，增加互动引导话术。',
+            evidence: { text: '查看内容库', url: '/lumenis/zbmp/content' } });
         } else {
-          opportunities.push({
-            badge: '互动放大',
-            title: '互动率 ' + engRate + '%，可加大投放',
-            desc: '当前内容互动表现良好（平均' + engRate + '%），建议对高互动笔记进行信息流加热，扩大品牌触达面。',
-            evidence: { text: '查看KOS运营', url: '/lumenis/zbmp/kos' }
-          });
+          ops.push({ badge: '互动放大', title: '篇均互动 ' + perNote + '，可加大投放',
+            desc: '当前内容互动表现良好，建议对高互动笔记进行信息流加热。',
+            evidence: { text: '查看KOS运营', url: '/lumenis/zbmp/kos' } });
         }
       }
     }
-
-    // Opportunity 3: Risk — from real /api/stats via xjViz.fn.FN_RISK_COUNT
+    // 3. Risk via xjViz.fn.FN_RISK_COUNT
     if (stats) {
       var riskData = xjViz.fn.FN_RISK_COUNT({ stats: stats });
       if (riskData.high > 0 || riskData.medium > 0) {
-        opportunities.push({
-          badge: '风险管控',
-          title: '存在 ' + riskData.high + ' 高风险 / ' + riskData.medium + ' 中风险内容',
-          desc: '监测到风险/负面舆情，建议立即启动风险研判流程，评估传播路径并制定回应策略，防止舆情扩散。',
-          evidence: { text: '查看风险中心', url: '/lumenis/zbmp/risk' }
-        });
+        ops.push({ badge: '风险管控', title: '存在 ' + riskData.high + ' 高风险 / ' + riskData.medium + ' 中风险',
+          desc: '监测到风险舆情，建议启动风险研判流程，评估传播路径。',
+          evidence: { text: '查看风险中心', url: '/lumenis/zbmp/risk' } });
       }
     }
-
-    // Opportunity 4: Top brand — from real /api/brand-industry/brands
-    if (brands && brands.length > 0) {
-      var topBrand = brands[0];
+    // 4. Top brand from real /api/brand-industry/brands or overview
+    var topBrand = null;
+    if (brands && brands.length > 0) topBrand = brands[0];
+    else if (_state.data.overview && _state.data.overview.brands && _state.data.overview.brands.length > 0) topBrand = _state.data.overview.brands[0];
+    if (topBrand) {
       var tbName = topBrand.brand_name_cn || topBrand.brand_name || topBrand.brand_key || '';
-      var tbVol = topBrand.note_count || topBrand.mention_count || 0;
+      var tbVol = topBrand.note_count || topBrand.mention_count || topBrand.record_count || 0;
       if (tbName && tbVol > 0) {
-        opportunities.push({
-          badge: '品牌合作',
-          title: '头部品牌「' + tbName + '」声量领先',
-          desc: '「' + tbName + '」当前声量最高（' + fmt(tbVol) + '条），可作为标杆案例分析其内容策略，或探索联合营销机会。',
-          evidence: { text: '查看品牌详情', url: '/lumenis/zbmp/brand' }
-        });
+        ops.push({ badge: '品牌合作', title: '头部品牌「' + tbName + '」声量领先',
+          desc: '「' + tbName + '」当前声量最高（' + fmt(tbVol) + '条），可作为标杆分析内容策略。',
+          evidence: { text: '查看品牌详情', url: '/lumenis/zbmp/brand' } });
       }
     }
-
-    if (opportunities.length === 0) {
+    if (ops.length === 0) {
       setSectionState('zbmp-opportunity-section', 'empty');
       return;
     }
-
     setSectionState('zbmp-opportunity-section', 'success');
     var html = '';
-    opportunities.slice(0, 4).forEach(function (op) {
+    ops.slice(0, 4).forEach(function (op) {
       html += '<div class="zbmp-opportunity">' +
         '<div class="zbmp-opportunity__title"><span class="zbmp-opportunity__badge">' + escapeHtml(op.badge) + '</span>' + escapeHtml(op.title) + '</div>' +
         '<div class="zbmp-opportunity__desc">' + escapeHtml(op.desc) + '</div>' +
-        '<a class="zbmp-opportunity__evidence" href="' + escapeHtml(op.evidence.url) + '">' + escapeHtml(op.evidence.text) + ' →</a>' +
-        '</div>';
+        '<a class="zbmp-opportunity__evidence" href="' + escapeHtml(op.evidence.url) + '">' + escapeHtml(op.evidence.text) + ' →</a></div>';
     });
     content.innerHTML = html;
   }
 
-  /* ---------- Export CSV ---------- */
+  /* ----- Export CSV ----- */
   function exportCSV() {
     var rows = [['指标', '数值']];
-    var stats = _state.data.stats;
-    var biStats = _state.data.biStats;
-
-    if (stats) {
-      rows.push(['总声量', stats.total != null ? stats.total : '—']);
-      rows.push(['正面', stats.positive != null ? stats.positive : '—']);
-      rows.push(['中性', stats.neutral != null ? stats.neutral : '—']);
-      rows.push(['负面', stats.negative != null ? stats.negative : '—']);
-      rows.push(['高风险', stats.high_risk != null ? stats.high_risk : '—']);
-      rows.push(['总互动量', stats.total_engagements != null ? stats.total_engagements : '—']);
-    }
-    if (biStats && biStats.industries) {
-      rows.push([]);
-      rows.push(['业态', '品牌数']);
-      biStats.industries.forEach(function (d) {
-        rows.push([d.industry || d.name || '', d.cnt || d.count || 0]);
-      });
+    var s = _state.data.stats;
+    if (s) {
+      rows.push(['总声量', s.total != null ? s.total : '—']);
+      rows.push(['正面', s.positive != null ? s.positive : '—']);
+      rows.push(['负面', s.negative != null ? s.negative : '—']);
+      rows.push(['高风险', s.high_risk != null ? s.high_risk : '—']);
+      rows.push(['总互动量', s.total_engagements != null ? s.total_engagements : '—']);
     }
     if (_state.data.biBrands) {
-      rows.push([]);
-      rows.push(['排名', '品牌', '声量', '业态']);
+      rows.push([]); rows.push(['排名', '品牌', '声量', '业态']);
       _state.data.biBrands.forEach(function (b, i) {
         rows.push([i + 1, b.brand_name_cn || b.brand_name || b.brand_key || '', b.note_count || b.mention_count || 0, b.industry || '']);
       });
     }
-
     var csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
     var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
-    a.href = url;
-    a.download = 'zbmp_overview_' + new Date().toISOString().slice(0, 10) + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    a.href = url; a.download = 'zbmp_overview_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 
-  /* ---------- Main load orchestration ---------- */
+  /* ----- Main load ----- */
   function reload() {
     _state.errors = {};
     _state.degraded = false;
     showDegraded(false);
-
-    // Show skeleton loading for all sections
     SECTIONS.forEach(function (id) { setSectionState(id, 'loading'); });
 
     var tasks = [
-      { key: 'overview', fn: loadOverview, sections: ['zbmp-top10-section', 'zbmp-opportunity-section'] },
-      { key: 'stats', fn: loadStats, sections: ['zbmp-kpi-section', 'zbmp-opportunity-section'] },
-      { key: 'biStats', fn: loadBrandIndustryStats, sections: ['zbmp-kpi-section', 'zbmp-industry-section', 'zbmp-opportunity-section'] },
-      { key: 'biBrands', fn: loadBrandIndustryBrands, sections: ['zbmp-top10-section', 'zbmp-opportunity-section'] },
-      { key: 'trend', fn: loadTrend, sections: ['zbmp-trend-section', 'zbmp-kpi-section'] }
+      { key: 'overview', fn: loadOverview },
+      { key: 'stats', fn: loadStats },
+      { key: 'biStats', fn: loadBrandIndustryStats },
+      { key: 'biBrands', fn: loadBrandIndustryBrands },
+      { key: 'trend', fn: loadTrend }
     ];
-
-    var completed = 0;
-    var total = tasks.length;
+    var done = 0, total = tasks.length;
 
     tasks.forEach(function (task) {
-      task.fn().then(function () {
-        // success — data stored in _state.data
-      }).catch(function (err) {
+      task.fn().catch(function (err) {
         _state.errors[task.key] = err;
         _state.degraded = true;
-        // Mark affected sections as error/permission only if still loading
-        task.sections.forEach(function (sid) {
-          var el = $(sid);
-          if (el && el.getAttribute('data-section-state') === 'loading') {
-            if (err.code === 'PERMISSION_DENIED') {
-              setSectionState(sid, 'permission');
-            } else {
-              setSectionState(sid, 'error');
-              var errEl = $(sid.replace('-section', '-error-msg'));
-              if (errEl) errEl.textContent = (err.message || '数据加载失败') + '（' + task.key + '）';
-            }
-          }
-        });
       }).finally(function () {
-        completed++;
-        if (completed === total) {
-          // Render all available data
-          var hasAny = false;
-
+        done++;
+        if (done === total) {
           if (_state.data.stats || _state.data.biStats || _state.data.trend) {
-            try { renderKPIs(); setSectionState('zbmp-kpi-section', 'success'); hasAny = true; }
-            catch (e) { setSectionState('zbmp-kpi-section', 'error'); }
+            try { renderKPIs(); setSectionState('zbmp-kpi-section', 'success'); } catch (e) { setSectionState('zbmp-kpi-section', 'error'); }
           }
-          if (_state.data.trend) { try { renderTrend(); hasAny = true; } catch (e) { setSectionState('zbmp-trend-section', 'error'); } }
-          if (_state.data.biStats) { try { renderIndustry(); hasAny = true; } catch (e) { setSectionState('zbmp-industry-section', 'error'); } }
-          if (_state.data.biBrands || _state.data.overview) { try { renderTop10(); hasAny = true; } catch (e) { setSectionState('zbmp-top10-section', 'error'); } }
-          if (_state.data.stats || _state.data.biStats || _state.data.biBrands) { try { renderOpportunities(); hasAny = true; } catch (e) { setSectionState('zbmp-opportunity-section', 'error'); } }
-
-          // Degraded banner if some APIs failed but others succeeded
-          if (_state.degraded && hasAny) {
+          if (_state.data.trend) { try { renderTrend(); } catch (e) { setSectionState('zbmp-trend-section', 'error'); } }
+          if (_state.data.biStats || _state.data.statsCategories) { try { renderIndustry(); } catch (e) { setSectionState('zbmp-industry-section', 'error'); } }
+          if (_state.data.biBrands || _state.data.overview) { try { renderTop10(); } catch (e) { setSectionState('zbmp-top10-section', 'error'); } }
+          if (_state.data.stats || _state.data.biStats || _state.data.biBrands || _state.data.overview) { try { renderOpportunities(); } catch (e) { setSectionState('zbmp-opportunity-section', 'error'); } }
+          if (_state.degraded && (_state.data.stats || _state.data.biStats || _state.data.biBrands || _state.data.overview || _state.data.trend)) {
             showDegraded(true);
           }
-
           updateLastUpdate();
         }
       });
     });
   }
 
-  /* ---------- 30s polling ---------- */
   function startPolling() {
     if (_state.pollTimer) clearInterval(_state.pollTimer);
-    _state.pollTimer = setInterval(function () {
-      reload();
-    }, 30000);
+    _state.pollTimer = setInterval(reload, 30000);
   }
 
-  /* ---------- Time filter ---------- */
-  function initTimeFilter() {
-    var pills = document.querySelectorAll('.zbmp-time-pill');
-    pills.forEach(function (btn) {
+  function init() {
+    // Time filter
+    document.querySelectorAll('.zbmp-time-pill').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        pills.forEach(function (b) { b.classList.remove('is-active'); });
+        document.querySelectorAll('.zbmp-time-pill').forEach(function (b) { b.classList.remove('is-active'); });
         btn.classList.add('is-active');
         _state.range = btn.getAttribute('data-range');
         reload();
       });
     });
-  }
-
-  /* ---------- Export button ---------- */
-  function initExport() {
-    var btn = $('zbmp-export-btn');
-    if (btn) btn.addEventListener('click', exportCSV);
-  }
-
-  /* ---------- Init ---------- */
-  function init() {
-    initTimeFilter();
-    initExport();
+    // Export
+    var exp = $('zbmp-export-btn');
+    if (exp) exp.addEventListener('click', exportCSV);
     reload();
     startPolling();
   }
@@ -874,7 +777,6 @@ var ZBMPOverview = (function () {
     init();
   }
 
-  // Public API
   return { reload: reload };
 })();
 </script>

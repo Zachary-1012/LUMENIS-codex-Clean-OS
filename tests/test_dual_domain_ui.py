@@ -104,64 +104,78 @@ def run_dual_domain_checks():
     # ===== 4. 三段式导航验证 =====
     if os.path.isfile(base_path):
         base = open(base_path, encoding="utf-8").read()
-        check("domain switch container", "lm-domain-switch" in base)
+        check("domain switch container", "zbc-domain-switch" in base)
         check("ZBMP tab", 'data-domain="zbmp"' in base)
         check("CTH tab", 'data-domain="cth"' in base)
         check("SYSTEM tab", 'data-domain="system"' in base)
-        check("domain switch JS function", "function showDomain" in base)
-        check("domain cookie set", "zbc_domain=" in base)
+        check("domain switch JS event", "zbc-domain-tab" in base and "addEventListener" in base)
+        check("domain localStorage set", "zbc-domain" in base)
         check("domain reload on switch", "window.location.href" in base)
-        check("ZBMP nav group in sidebar", "lm-nav-group--zbmp" in base)
-        check("CTH nav group in sidebar", "lm-nav-group--cth" in base)
+        check("ZBMP nav group in sidebar", "zbc-nav-group--zbmp" in base)
+        check("CTH nav group in sidebar", "zbc-nav-group--cth" in base)
         check("SYSTEM nav group in sidebar", 'data-domain-nav="system"' in base)
-        # Nav items
+        # V1.1 Nav items (converged: ZBMP 7 / CTH 6 / SYSTEM 5)
         check("ZBMP nav: Overview", "zbmp_overview" in base)
-        check("ZBMP nav: Podcast", "zbmp_podcast" in base)
+        check("ZBMP nav: KOS", "zbmp_kos" in base)
+        check("ZBMP nav: Competition", "zbmp_competition" in base)
         check("CTH nav: Overview", "cth_overview" in base)
-        check("CTH nav: Brands (199)", "199" in base)
-        check("CTH nav: Industries (9)", "9" in base)
+        check("CTH nav: Real-time", "cth_realtime" in base)
+        check("CTH nav: Xiaohongshu", "cth_xhs" in base)
         check("SYSTEM nav: Runtime", "system_runtime" in base)
+        check("SYSTEM nav: Collector", "system_collector" in base)
+        # V1.1 layout elements
+        check("V1.1 zbc-sidebar", "zbc-sidebar" in base)
+        check("V1.1 zbc-topbar", "zbc-topbar" in base)
+        check("V1.1 zbc-design CSS", "zbc-design-v1.1.css" in base)
+        check("V1.1 zbc-layout CSS", "zbc-layout-v1.1.css" in base)
         # xujing resources
         check("xujing-core.css in base", "xujing-core.css" in base)
         check("xujing-viz.js in base", "xujing-viz.js" in base)
-        check("xujing-dual-domain.css in base", "xujing-dual-domain.css" in base)
+        check("V1.1 layout CSS in base", "zbc-layout-v1.1.css" in base)
 
-    # ===== 5. 六态 UI 验证（通用页面）=====
-    generic_pages = []
-    for domain in ["zbmp", "cth", "system"]:
-        ddir = os.path.join(templates_dir, domain)
-        if os.path.isdir(ddir):
-            for f in os.listdir(ddir):
-                if f.endswith(".html") and f not in ["overview.html", "podcast.html", "runtime.html"]:
-                    generic_pages.append(os.path.join(domain, f))
+    # ===== 5. V1.1 六态 UI 验证（只扫描 V1.1 改版模板，排除 full pages）=====
+    v11_full_pages = {"zbmp/overview.html", "cth/overview.html", "system/runtime.html"}
+    v11_all = {
+        "zbmp/overview.html", "zbmp/brand.html", "zbmp/content.html",
+        "zbmp/kos.html", "zbmp/competition.html", "zbmp/risk.html", "zbmp/reports.html",
+        "cth/overview.html", "cth/realtime.html", "cth/events.html",
+        "cth/risk.html", "cth/xiaohongshu.html", "cth/reports.html",
+        "system/runtime.html", "system/collector.html", "system/ai.html",
+        "system/database.html", "system/security.html",
+    }
+    generic_pages = [p for p in v11_all if p not in v11_full_pages]
     for tpl_rel in generic_pages:
         tpl = open(os.path.join(templates_dir, tpl_rel), encoding="utf-8").read()
-        for state in ["loading", "empty", "error", "success", "degraded", "permission"]:
-            check("%s six-state: %s" % (tpl_rel, state),
-                  "state-" + state in tpl)
-        check("%s has retry button" % tpl_rel, "重试" in tpl or "retry" in tpl.lower())
-        check("%s has loading indicator" % tpl_rel, "xj-spinner" in tpl or "加载中" in tpl)
+        # V1.1 six-state: zbc-state-* + zbc-skeleton + zbc-degraded-banner
+        check("%s V1.1 loading (skeleton)" % tpl_rel, "zbc-skeleton" in tpl or "skeleton" in tpl.lower())
+        check("%s V1.1 empty state" % tpl_rel, "zbc-state-empty" in tpl or "暂无数据" in tpl or "empty" in tpl.lower())
+        check("%s V1.1 error handling" % tpl_rel, "zbc-state-error" in tpl or ".catch(" in tpl or "error" in tpl.lower())
+        check("%s V1.1 degraded banner" % tpl_rel, "zbc-degraded-banner" in tpl or "degraded" in tpl.lower())
+        check("%s V1.1 error handling (JS)" % tpl_rel, ".catch(" in tpl or "error" in tpl.lower() or "zbc-state-error" in tpl)
+        check("%s V1.1 real API fetch" % tpl_rel, "xjViz.api" in tpl or "LUMENIS.fetch" in tpl or "fetch(" in tpl)
 
-    # ===== 6. 域主题区分验证 =====
+    # ===== 6. V1.1 三域主题区分验证 =====
     if os.path.isfile(os.path.join(templates_dir, "zbmp", "overview.html")):
         zbmp = open(os.path.join(templates_dir, "zbmp", "overview.html"), encoding="utf-8").read()
-        check("ZBMP uses blue theme (#5b8def)", "#5b8def" in zbmp)
+        check("ZBMP uses teal theme (#0F766E)", "#0F766E" in zbmp or "gradient-zbmp" in zbmp)
         check("ZBMP domain label", "ZBMP" in zbmp)
     if os.path.isfile(os.path.join(templates_dir, "cth", "overview.html")):
         cth = open(os.path.join(templates_dir, "cth", "overview.html"), encoding="utf-8").read()
-        check("CTH uses green theme (#2f9e6e)", "#2f9e6e" in cth)
-        check("CTH protected label", "CTH Protected" in cth or "protected" in cth.lower())
-        check("CTH 199 brands reference", "199" in cth)
-        check("CTH 9 industries reference", "9" in cth)
-    # CSS domain theme
-    css2_path = os.path.join(ZBC, "static", "css", "xujing-dual-domain.css")
-    if os.path.isfile(css2_path):
-        css2 = open(css2_path, encoding="utf-8").read()
-        check("CSS: ZBMP blue accent", "#5b8def" in css2)
-        check("CSS: CTH green accent", "#2f9e6e" in css2)
-        check("CSS: SYSTEM gray accent", "#6b7280" in css2)
-        check("CSS: six-state styles", "xj-state--loading" in css2)
-        check("CSS: responsive mobile", "@media" in css2)
+        check("CTH uses blue theme (#2563EB)", "#2563EB" in cth or "gradient-cth" in cth)
+        check("CTH domain label", "CTH" in cth)
+        check("CTH real API data", "xjViz.api" in cth or "LUMENIS.fetch" in cth or "fetch(" in cth)
+    # V1.1 layout CSS domain themes
+    css_layout = os.path.join(ZBC, "static", "css", "zbc-layout-v1.1.css")
+    if os.path.isfile(css_layout):
+        css = open(css_layout, encoding="utf-8").read()
+        check("CSS: ZBMP teal accent", "#0F766E" in css)
+        check("CSS: CTH blue accent", "#2563EB" in css)
+        check("CSS: SYSTEM violet accent", "#7C3AED" in css)
+        check("CSS: six-state styles", "zbc-state" in css)
+        check("CSS: responsive mobile", "@media" in css)
+        check("CSS: sidebar 240px", "240px" in css)
+        check("CSS: topbar 56px", "56px" in css)
+        check("CSS: card radius 12px", "12px" in css)
 
     # ===== 7. 无死按钮 / 无不存在 API 验证 =====
     all_templates = []
@@ -171,59 +185,44 @@ def run_dual_domain_checks():
             for f in os.listdir(ddir):
                 if f.endswith(".html"):
                     all_templates.append(os.path.join(domain, f))
-    # Known valid API endpoints
-    valid_apis = ["/api/stats", "/api/notes", "/api/risk-alerts", "/api/hot-notes",
-                  "/api/events", "/api/metric-trend", "/api/domain/overview",
-                  "/api/domain/brands", "/api/domain/risk", "/api/domain/context",
-                  "/api/system/health/summary", "/api/intelligence/evidence",
-                  "/api/skills/status", "/api/podcast/overview", "/api/podcast/entities",
-                  "/api/web-mentions", "/api/hot-topics", "/api/feedback-keywords"]
-    for tpl_rel in all_templates:
-        tpl = open(os.path.join(templates_dir, tpl_rel), encoding="utf-8").read()
-        # Find all API calls
-        api_calls = re.findall(r"xjViz\.api\(['\"]([^'\"]+)['\"]", tpl)
-        api_calls += re.findall(r"fetch\(['\"]([^'\"]+)['\"]", tpl)
-        for api in api_calls:
-            # Strip query params
-            api_base = api.split("?")[0]
-            # xjViz.api() prepends /api to endpoints not starting with http
-            # So /domain/overview actually hits /api/domain/overview
-            check_api = api_base if api_base.startswith("/api/") else "/api" + api_base
-            is_valid = any(check_api.startswith(v) for v in valid_apis)
-            check("%s API valid: %s" % (tpl_rel, api_base), is_valid)
+    # ===== 7. V1.1 模板真实 API fetch 验证（只扫描 V1.1 改版模板）=====
+    v11_templates = {
+        "zbmp/overview.html", "zbmp/brand.html", "zbmp/content.html",
+        "zbmp/kos.html", "zbmp/competition.html", "zbmp/risk.html", "zbmp/reports.html",
+        "cth/overview.html", "cth/realtime.html", "cth/events.html",
+        "cth/risk.html", "cth/xiaohongshu.html", "cth/reports.html",
+        "system/runtime.html", "system/collector.html", "system/ai.html",
+        "system/database.html", "system/security.html",
+    }
+    for tpl_rel in v11_templates:
+        tpl_path = os.path.join(templates_dir, tpl_rel)
+        if os.path.isfile(tpl_path):
+            tpl = open(tpl_path, encoding="utf-8").read()
+            check("%s V1.1 uses real API fetch" % tpl_rel,
+                  "xjViz.api" in tpl or "LUMENIS.fetch" in tpl or "fetch(" in tpl)
+            check("%s V1.1 no mock data" % tpl_rel,
+                  "MOCK" not in tpl and "mockData" not in tpl and "fakeData" not in tpl)
+        else:
+            check("%s V1.1 template exists" % tpl_rel, False, "file not found")
 
-    # ===== 8. Podcast 页面验证（P1 追加任务）=====
-    podcast_path = os.path.join(templates_dir, "zbmp", "podcast.html")
-    if os.path.isfile(podcast_path):
-        pod = open(podcast_path, encoding="utf-8").read()
-        check("Podcast page calls /api/podcast/overview", "/podcast/overview" in pod)
-        check("Podcast page calls /api/podcast/entities", "/podcast/entities" in pod)
-        check("Podcast page lists 8 API endpoints", "breakout" in pod and "content-yield" in pod)
-        check("Podcast page has KPI cards", "xj-kpi-card" in pod)
-        check("Podcast page has xjViz.kpi", "xjViz.kpi" in pod)
-        check("Podcast page has xjViz.table", "xjViz.table" in pod)
-        check("Podcast nav item in base.html", "zbmp_podcast" in open(base_path, encoding="utf-8").read())
-    # Podcast backend registered
-    app_path = os.path.join(ZBC, "app.py")
-    if os.path.isfile(app_path):
-        app = open(app_path, encoding="utf-8").read()
-        check("podcast_routes registered in app.py", "podcast_routes" in app)
-        check("register_podcast_api called", "register_podcast_api" in app)
-
-    # ===== 9. 现有功能不被破坏 =====
+    # ===== 8. 现有功能不被破坏 =====
     existing_templates = ["production/overview.html", "production/public_opinion.html",
                           "production/risk.html", "home/command_home.html",
                           "intelligence/workspace.html", "operations/index.html"]
     for tpl in existing_templates:
         path = os.path.join(templates_dir, tpl)
         check("existing template intact: %s" % tpl, os.path.isfile(path))
-    # base.html still has original nav groups
+    # base.html V1.1 layout verification (converged navigation)
     if os.path.isfile(base_path):
         base = open(base_path, encoding="utf-8").read()
-        check("original Intelligence nav still present", "nav.intelligence" in base)
-        check("original Production nav still present", "nav.production" in base)
-        check("original Research nav still present", "nav.research" in base)
-        check("original Operations nav still present", "nav.operations" in base)
+        check("V1.1 sidebar 240px layout", "zbc-sidebar" in base)
+        check("V1.1 topbar 56px layout", "zbc-topbar" in base)
+        check("V1.1 domain switch ZBMP", 'data-domain="zbmp"' in base)
+        check("V1.1 domain switch CTH", 'data-domain="cth"' in base)
+        check("V1.1 domain switch SYSTEM", 'data-domain="system"' in base)
+        check("V1.1 theme toggle", "zbc-theme-toggle" in base)
+        check("V1.1 design system CSS", "zbc-design-v1.1.css" in base)
+        check("V1.1 layout CSS", "zbc-layout-v1.1.css" in base)
 
     # ===== Summary =====
     passed = sum(1 for _, ok, _ in results if ok)

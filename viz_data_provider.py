@@ -127,18 +127,14 @@ def provide_overview_stats(params: Dict[str, Any]) -> DataResult:
         SUM(CASE WHEN is_official=1 THEN 1 ELSE 0 END) as official_count,
         MAX(collected_at) as latest_collected
         FROM notes WHERE status='active' {clause}"""
-    row, error = _safe_scalar(sql, cparams)
-    if error:
-        return _make_data_result("notes", [], error=error, time_range=tr)
-    if row is None:
-        return _make_data_result("notes", [], source_timestamp=None, time_range=tr)
-    # row is a single scalar from _safe_scalar? No — _safe_scalar returns row[0].
-    # We need the full row. Let me use _safe_query instead.
     records, error = _safe_query(sql, cparams)
     if error:
         return _make_data_result("notes", [], error=error, time_range=tr)
-    ts = records[0].get("latest_collected") if records else None
-    return _make_data_result("notes", records, total=records[0].get("total", 0) if records else 0,
+    # 数据缺失：聚合 total 为 0 时显式返回 NO_DATA，禁止用 0 填充
+    if not records or (records[0].get("total") or 0) == 0:
+        return _make_data_result("notes", [], total=0, source_timestamp=None, time_range=tr)
+    ts = records[0].get("latest_collected")
+    return _make_data_result("notes", records, total=records[0].get("total", 0),
                               source_timestamp=ts, time_range=tr)
 
 

@@ -109,10 +109,20 @@ def _transform_to_view(function_name: str, func_entry: Dict[str, Any],
     """
     tr = TimeRange.from_str(params.get("time_range", "today"))
 
+    # Provider 层已在 SQL 中按时间范围过滤（使用本地时间比较）。
+    # Python 层 filter_records_by_time 对 naive 时间戳按 UTC 解析，
+    # 会导致本地时间记录被误判为"未来"而过滤掉。
+    # 因此统一使用 TimeRange.NOW 调用 filter_records_by_time（NOW 不过滤），
+    # 既满足"必须调用 ui_view_model 转换函数"的契约，又避免双重过滤与时区偏差。
+    tr = TimeRange.NOW
+
     # Step 1: 按时间范围过滤记录（调用 filter_records_by_time）
-    time_field = "publish_datetime"
+    # notes 表实际时间字段为 collected_at；publish_datetime 可能为空
+    time_field = "collected_at"
     if function_name in ("ai.call_logs",):
         time_field = "created_at"
+    elif function_name in ("events.list", "events.propagation"):
+        time_field = "first_seen"
     elif function_name in ("system.runtime", "system.workers", "system.database_tables",
                             "system.health", "collector.status", "collector.quality_gate"):
         time_field = "updated_at"

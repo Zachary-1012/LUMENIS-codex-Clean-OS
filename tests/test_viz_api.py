@@ -363,7 +363,7 @@ class TestVizApiEndpoints(unittest.TestCase):
 
     def test_no_api_key_in_output(self):
         """响应中不包含 API key / secret / password。"""
-        resp = self.client.get("/api/viz/ai.call_logs")
+        resp = self.client.get("/api/viz/ai.call_logs?domain_id=system")
         raw = resp.get_data(as_text=True).lower()
         for sensitive in ("api_key", "secret", "password", "authorization", "bearer", "cookie"):
             self.assertNotIn(sensitive, raw, f"sensitive field {sensitive} found in output")
@@ -377,15 +377,21 @@ class TestMissingValueHandling(unittest.TestCase):
     """数据缺失显式 null/unknown/missing，禁止 0 或默认值填充。"""
 
     def test_empty_data_current_value_is_none(self):
-        """无数据时 current_value 为 None（不是 0）。"""
+        """无数据时 API 层 current_value 为 None（不是 0）。
+
+        MetricLayer.count() 对空列表返回 0 是数学正确的计数；
+        但 viz_api 转换层在 DataStatus.NO_DATA 时必须将 current_value 置为 None，
+        禁止用 0 填充。
+        """
         from ui_view_model import DataQuery, DataResult, DataStatus
-        dr = DataResult(query=DataQuery(source="test"), records=[], total=0, status=DataStatus.NO_DATA)
-        tt = build_truth_table(dr)
-        # current_value 应该由调用方根据 metrics 计算，空数据时 MetricValue.value 为 None
-        from ui_view_model import MetricLayer
-        ml = MetricLayer()
-        metrics = ml.compute_all([])
-        self.assertIsNone(metrics["total"].value)
+        from viz_api import _transform_to_view
+        dr = DataResult(query=DataQuery(source="test"), records=[], total=0,
+                         status=DataStatus.NO_DATA)
+        func_entry = get_viz_function("overview.stats")
+        view = _transform_to_view("overview.stats", func_entry, dr, {})
+        self.assertIsNone(view["current_value"],
+                          "current_value must be None for NO_DATA, not 0")
+        self.assertEqual(view["data_status"], "no_data")
 
     def test_confidence_unknown_for_no_data(self):
         """无数据时 confidence 为 unknown。"""
