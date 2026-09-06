@@ -1,5 +1,13 @@
 # 变更日志
 
+## [Unreleased] - 2026-09-06（P0 Runtime Guardian 与路径收口）
+
+- 为既有 SQLite `TaskQueue` 增加向后兼容的 worker lease、heartbeat、checkpoint、stale-worker reaper 和 recovery metadata；不删除或重建任何队列表。
+- 新增 `RuntimeGuardian`，复用既有 QueueWorker 与追加式 DLQ，在 stale worker 终态时落 DLQ 与恢复审计，避免任务永久显示为运行中。
+- 未知 collector task 不再被确认成功；它进入既有指数退避/失败处理路径。
+- `collector_guard` 的 checkpoint、queue、DLQ、metrics 和 runtime switch 默认路径统一通过 Repository Registry 解析；移除 Registry 中个人 Windows 路径回退。
+- 新增 Runtime Guardian 覆盖测试；无数据库业务数据变更。
+
 ## [Unreleased] - 2026-09-06（测试运行安全与日志初始化修复）
 
 - 修复 `engineering_metrics` 在 import 时替换 `sys.stdout` 导致 pytest 捕获流被关闭的问题。
@@ -569,4 +577,3 @@ git -C "D:\Taikoo-monitor-new" push --force-with-lease origin main
 - 统一控制台外壳新增“全局状态中心 + 不跳页统一恢复弹窗”：首页采集健康矩阵并入小红书主采集六态（v4 适配器 + 老链路合并，共 12 平台），修正平台中文名/数量字段；异常平台点击直接在当前页弹恢复窗而非跳陌生页。
 - 弹窗严格 A 登录失效 / B 人机验证 / C IP风控熔断三类分清：C 类只显示冷却倒计时、不显示扫码（扫码不可解）；三步状态机（打开登录页→扫码/验证→恢复续采）、二维码或登录页截图、“我已完成验证/重新检测”“稍后处理（保持暂停不伪装）”；恢复成功自动解除暂停续采。
 - 全局看门每 12s 巡检，任何子页（含 iframe）平台失效都在外壳弹同一弹窗，手机端底部卡片适配。后端复用既有 /v4/adapters/recovery/* 与 /api/xhs/collect-health，未重造。浏览器真机 E2E：12 平台矩阵、A/B/C/恢复四态渲染、无 JS 运行错误；小红书持久 Profile 登录态只读探测 AUTH_VALID。
-

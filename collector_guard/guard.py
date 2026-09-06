@@ -14,6 +14,7 @@ from .analyzer import ResponseAnalyzer, Reason
 from .rate_limiter import AdaptiveRateLimiter
 from .metrics import GuardMetrics
 from .checkpoint import Checkpoint
+from core.repository_registry import get_data_dir
 
 
 @dataclass
@@ -52,9 +53,8 @@ class CollectorGuard:
         self.enabled = enabled
         self.analyzer = ResponseAnalyzer()
         self.limiter = AdaptiveRateLimiter(base_interval=base_interval, enabled=enabled)
-        _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.metrics = GuardMetrics(
-            persist_path=os.path.join(_base, 'data', 'metrics', 'collector-metrics.jsonl'))
+            persist_path=os.path.join(get_data_dir(), 'metrics', 'collector-metrics.jsonl'))
         self.checkpoint = Checkpoint(platform, checkpoint_dir)
 
     def run(self, collect_fn, keyword, **kwargs):

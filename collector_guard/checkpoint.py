@@ -8,11 +8,13 @@ import os
 import threading
 import time
 
+from core.repository_registry import get_data_dir
+
 
 class Checkpoint:
     def __init__(self, platform, base_dir=None):
         self.platform = re_safe(platform)
-        base_dir = base_dir or os.path.join(os.getcwd(), 'data', 'collector_guard')
+        base_dir = base_dir or os.path.join(get_data_dir(), 'collector_guard')
         self.path = os.path.join(base_dir, f'{self.platform}_checkpoint.json')
         self._lock = threading.RLock()
         self._data = self._load()

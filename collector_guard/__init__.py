@@ -13,10 +13,11 @@ from .rate_limiter import AdaptiveRateLimiter
 from .metrics import GuardMetrics
 from .checkpoint import Checkpoint
 from .guard import CollectorGuard, GuardResult
+from .runtime_guardian import RuntimeGuardian
 
 __all__ = ['CollectState', 'ResponseAnalyzer', 'Reason', 'AdaptiveRateLimiter',
            'GuardMetrics', 'Checkpoint', 'CollectorGuard', 'GuardResult',
-           'create_guard', 'guard_enabled']
+           'RuntimeGuardian', 'create_guard', 'guard_enabled']
 
 
 def guard_enabled():

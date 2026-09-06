@@ -48,9 +48,6 @@ def _probe_fallback_roots():
         "/workspace/Taikoo-monitor-new",
         "/app/Taikoo-monitor-new",
     ]
-    # Windows dev machine fallback (last resort only)
-    if os.name == "nt":
-        candidates.append(r"D:\Taikoo-monitor-new")
     for cand in candidates:
         try:
             if cand and os.path.isdir(cand) and os.path.isfile(os.path.join(cand, "app.py")):
@@ -176,12 +173,6 @@ def get_osai_root():
     sibling = os.path.normpath(os.path.join(os.path.dirname(get_repo_root()), "Zachary OS AI"))
     if os.path.isdir(sibling):
         return sibling
-
-    # Windows dev machine fallback
-    if os.name == "nt":
-        cand = r"D:\Zachary OS AI"
-        if os.path.isdir(cand):
-            return os.path.normpath(cand)
 
     return None
 

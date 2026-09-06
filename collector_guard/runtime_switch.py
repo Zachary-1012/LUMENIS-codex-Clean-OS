@@ -19,9 +19,10 @@ import json
 import os
 import threading
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATE_PATH = os.path.join(ROOT, "data", "runtime-switch.json")
-AUDIT_PATH = os.path.join(ROOT, "data", "runtime-switch-audit.jsonl")
+from core.repository_registry import get_data_dir
+
+STATE_PATH = os.path.join(get_data_dir(), "runtime-switch.json")
+AUDIT_PATH = os.path.join(get_data_dir(), "runtime-switch-audit.jsonl")
 
 
 class RuntimeSwitch:
