@@ -59,7 +59,8 @@
     "production": "生产",
     "research": "研究",
     "operations": "运维",
-    "browser": "浏览器"
+    "browser": "浏览器",
+    "evaluation": "验收评估"
   },
   "status": {
     "running": "运行中",

@@ -66,7 +66,8 @@
     "production": "__missing__",
     "research": "__missing__",
     "operations": "__missing__",
-    "browser": "브라우저"
+    "browser": "브라우저",
+    "evaluation": "평가"
   },
   "status": {
     "running": "__missing__",

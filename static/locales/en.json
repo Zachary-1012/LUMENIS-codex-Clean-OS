@@ -59,7 +59,8 @@
     "production": "Production",
     "research": "Research",
     "operations": "Operations",
-    "browser": "Browser"
+    "browser": "Browser",
+    "evaluation": "Evaluation"
   },
   "status": {
     "running": "Running",

@@ -992,6 +992,8 @@ _PG_BYPASS_PATHS = frozenset({
     '/api/cth/overview', '/api/cth/events', '/api/cth/xiaohongshu',
     '/api/system/status', '/api/system/runtime', '/api/system/domains',
     '/api/developer/run', '/api/config/run-code', '/api/dev/run-code',
+    # 验收判定 judge：纯内存函数计算，不读写 DB/文件/网络/外部状态，等同只读
+    '/api/system/acceptance/judge',
 })
 
 
