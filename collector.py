@@ -19,6 +19,15 @@ except Exception:
     _runtime_guardian = None
     _RG_AVAILABLE = False
 
+# RedNote 采集策略 SoT 旁路接入（阶段5 集中策略）：港版/大陆/三端开关/真人节奏
+# 策略只产出判定不发起采集；导入失败时门控默认放行（向后兼容），但记录警告
+try:
+    from platform_adapters import rednote_policy as _rednote_policy
+    _REDNOTE_POLICY_AVAILABLE = True
+except Exception:
+    _rednote_policy = None
+    _REDNOTE_POLICY_AVAILABLE = False
+
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
 try:
     from runtime_bin import resolve_node as _resolve_node
@@ -369,7 +378,8 @@ def _collect_one_keyword(guard, kw, kw_scroll, kw_details):
     return gr, result
 
 
-def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_id=None):
+def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_id=None,
+                kind="public_opinion", auto_trigger=False):
     """
     批量采集所有关键词
     返回去重后的笔记列表
@@ -378,7 +388,33 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
       guardian:   RuntimeGuardian 实例，传入后启用逐关键词心跳/检查点/重试+DLQ
       worker_id:  已注册的 worker ID
       run_id:     本次采集运行 ID（用于 checkpoint 关联）
+
+    RedNote 策略门控参数（阶段5 集中策略 SoT）：
+      kind:        采集类型 topic/public_opinion/event（三端开关白名单制）
+      auto_trigger: True=调度器自动触发（额外校验 auto_run_enabled），False=手动触发
     """
+    # RedNote 策略门控：港版/大陆区域 + 三端开关 + 自动运行总闸
+    if _REDNOTE_POLICY_AVAILABLE:
+        try:
+            _pol = _rednote_policy.effective_policy()
+            _gate_reason = None
+            if not _pol.can_run_kind(kind):
+                _gate_reason = f"kind={kind} 未在策略白名单内（topic/public_opinion开，event关）"
+            elif auto_trigger and not _pol.auto_run_enabled:
+                _gate_reason = "auto_run_enabled=False（自动调度需显式 REDNOTE_AUTO_RUN=true 授权）"
+            elif _pol.primary_region == "cn" and _pol.cn_paused:
+                _gate_reason = "国内入口 cn_paused=True（熔断中，不撞不绕验证）"
+            if _gate_reason:
+                print(f"[Collector][PolicyGate] BLOCKED: {_gate_reason}")
+                print(f"[Collector][PolicyGate] policy: primary_region={_pol.primary_region} "
+                      f"cn_paused={_pol.cn_paused} auto_run={_pol.auto_run_enabled} "
+                      f"kind_enabled={_pol.kind_enabled}")
+                return []
+            print(f"[Collector][PolicyGate] PASS: kind={kind} auto_trigger={auto_trigger} "
+                  f"region={_pol.primary_region} cadence_status={_pol.human_cadence.get('status')}")
+        except Exception as _pol_err:
+            print(f"[Collector][PolicyGate] policy check failed (fail-open): {_pol_err}")
+
     if keywords is None:
         keywords = MONITOR_KEYWORDS
 
