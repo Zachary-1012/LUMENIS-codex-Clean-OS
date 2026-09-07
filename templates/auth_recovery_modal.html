@@ -4,7 +4,7 @@
   目标：Cookie/session 失效时不简单跳登录页，而是显示平台/账号/状态/原因/恢复选项。
 
   用法：
-  1. 页面引入此模板（{% include 'auth_recovery_modal.html' %}）
+  1. 已全局内联到 base.html（Phase4），无需手动 include
   2. 前端 JS 轮询 /api/auth-recovery/summary
   3. 有 pending 任务时显示 Modal，展示平台/账号/状态/原因/恢复选项
   4. 用户完成扫码/验证后调用 /api/auth-recovery/tasks/<id>/complete
