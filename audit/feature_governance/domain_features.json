@@ -1,0 +1,1202 @@
+{
+  "cth": [
+    {
+      "module_id": "cth_overview",
+      "name": "CTH 概览",
+      "description": "太古汇实时概览KPI",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 22,
+      "db_count": 1,
+      "features": [
+        {
+          "feature_id": "feat.cth_overview.cth_overview",
+          "name": "Overview",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 3,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_overview.api.cth_bp",
+          "name": "CTH 概览 API 能力 (cth_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_overview.api.app",
+          "name": "CTH 概览 API 能力 (app)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 4,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_overview.api.agg_bp",
+          "name": "CTH 概览 API 能力 (agg_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 6,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_overview.api.lumenis_bp",
+          "name": "CTH 概览 API 能力 (lumenis_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 34,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_overview.api.trend_bp",
+          "name": "CTH 概览 API 能力 (trend_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 7,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_overview.api.viz_bp",
+          "name": "CTH 概览 API 能力 (viz_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "cth_realtime",
+      "name": "实时舆情",
+      "description": "小红书笔记实时流",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 193,
+      "db_count": 15,
+      "features": [
+        {
+          "feature_id": "feat.cth_realtime.cth_realtime",
+          "name": "Real-time",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 3,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_realtime.cth_xiaohongshu",
+          "name": "Xiaohongshu",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 6,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_realtime.api.bp",
+          "name": "实时舆情 API 能力 (bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_realtime.api.cth_bp",
+          "name": "实时舆情 API 能力 (cth_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_realtime.api.app",
+          "name": "实时舆情 API 能力 (app)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 25,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_realtime.api.notes_bp",
+          "name": "实时舆情 API 能力 (notes_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 3,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_realtime.api.web_bp",
+          "name": "实时舆情 API 能力 (web_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_realtime.api.lumenis_bp",
+          "name": "实时舆情 API 能力 (lumenis_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "cth_events",
+      "name": "事件中心",
+      "description": "传播/营销/舆情事件",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 71,
+      "db_count": 6,
+      "features": [
+        {
+          "feature_id": "feat.cth_events.cth_events",
+          "name": "Events",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 4,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_events.cth_evidence",
+          "name": "Cth Evidence",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_events.cth_launch",
+          "name": "Cth Launch",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_events.api.app",
+          "name": "事件中心 API 能力 (app)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 11,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_events.api.events_bp",
+          "name": "事件中心 API 能力 (events_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_events.api.ic_bp",
+          "name": "事件中心 API 能力 (ic_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 12,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "cth_risk",
+      "name": "风险预警",
+      "description": "负面风险与预警",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 70,
+      "db_count": 1,
+      "features": [
+        {
+          "feature_id": "feat.cth_risk.cth_risk",
+          "name": "Risk",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "PARTIAL",
+          "api_count": 3,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_risk.api.app",
+          "name": "风险预警 API 能力 (app)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "cth_negative",
+      "name": "负面确认",
+      "description": "负面内容人工复核",
+      "type": "CORE_BUSINESS",
+      "status": "MISSING",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 0,
+      "features": []
+    },
+    {
+      "module_id": "cth_topics",
+      "name": "话题监测",
+      "description": "话题端监测与APP采集",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 46,
+      "db_count": 0,
+      "features": [
+        {
+          "feature_id": "feat.cth_topics.cth_topics",
+          "name": "Topics",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        }
+      ]
+    },
+    {
+      "module_id": "cth_brands",
+      "name": "品牌业态",
+      "description": "199品牌9大业态",
+      "type": "ANALYSIS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 68,
+      "db_count": 1,
+      "features": [
+        {
+          "feature_id": "feat.cth_brands.cth_brands",
+          "name": "Cth Brands",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "PARTIAL",
+          "api_count": 1,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_brands.cth_industries",
+          "name": "Cth Industries",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_brands.cth_kos",
+          "name": "Cth Kos",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_brands.api.app",
+          "name": "品牌业态 API 能力 (app)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 8,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_brands.api.report_bp",
+          "name": "品牌业态 API 能力 (report_bp)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "cth_official",
+      "name": "官方动态",
+      "description": "太古汇官方账号动态",
+      "type": "ANALYSIS",
+      "status": "MISSING",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 0,
+      "features": []
+    },
+    {
+      "module_id": "cth_data_center",
+      "name": "数据中心",
+      "description": "全平台数据真源验证",
+      "type": "DATA",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 234,
+      "db_count": 0,
+      "features": [
+        {
+          "feature_id": "feat.cth_data_center.cth_data_center",
+          "name": "Data Center",
+          "level": "L3",
+          "type": "DATA",
+          "status": "API_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_data_center.cth_dc_platform",
+          "name": "Cth Dc Platform",
+          "level": "L3",
+          "type": "DATA",
+          "status": "API_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_data_center.api.data_center_bp",
+          "name": "数据中心 API 能力 (data_center_bp)",
+          "level": "L3",
+          "type": "DATA",
+          "status": "UI_DRIFT",
+          "api_count": 5,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "cth_reports",
+      "name": "报告中心",
+      "description": "日/周/月报与专报",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 127,
+      "db_count": 2,
+      "features": [
+        {
+          "feature_id": "feat.cth_reports.cth_reports",
+          "name": "Reports",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 2,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.cth_reports.api.app",
+          "name": "报告中心 API 能力 (app)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_reports.api.reports_bp",
+          "name": "报告中心 API 能力 (reports_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_reports.api.export_bp",
+          "name": "报告中心 API 能力 (export_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 7,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.cth_reports.api.report_bp",
+          "name": "报告中心 API 能力 (report_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 16,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "cth_calendar",
+      "name": "舆情日历",
+      "description": "舆情时间线日历视图",
+      "type": "ANALYSIS",
+      "status": "MISSING",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 0,
+      "features": []
+    },
+    {
+      "module_id": "cth_case_library",
+      "name": "营销案例库",
+      "description": "品牌营销案例研究",
+      "type": "ANALYSIS",
+      "status": "MISSING",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 0,
+      "features": []
+    }
+  ],
+  "zbmp": [
+    {
+      "module_id": "zbmp_overview",
+      "name": "ZBMP 概览",
+      "description": "品牌智能总览",
+      "type": "CORE_BUSINESS",
+      "status": "MISSING",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 0,
+      "features": [
+        {
+          "feature_id": "feat.zbmp_overview.zbmp_overview",
+          "name": "Overview",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.zbmp_overview.api.zbmp_bp",
+          "name": "ZBMP 概览 API 能力 (zbmp_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 3,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "zbmp_brand",
+      "name": "品牌监测",
+      "description": "品牌声量与表现",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 10,
+      "features": [
+        {
+          "feature_id": "feat.zbmp_brand.zbmp_brand",
+          "name": "Brand",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 1,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.zbmp_brand.zbmp_intelligence",
+          "name": "Zbmp Intelligence",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.zbmp_brand.zbmp_risk",
+          "name": "Risk",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 2,
+          "ui_count": 1
+        }
+      ]
+    },
+    {
+      "module_id": "zbmp_kos",
+      "name": "KOS 运营",
+      "description": "KOS/KOL/KOC管理",
+      "type": "CORE_BUSINESS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 212,
+      "db_count": 5,
+      "features": [
+        {
+          "feature_id": "feat.zbmp_kos.zbmp_kos",
+          "name": "KOS",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 1,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.zbmp_kos.api.kos_bp",
+          "name": "KOS 运营 API 能力 (kos_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 53,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.zbmp_kos.api.agg_bp",
+          "name": "KOS 运营 API 能力 (agg_bp)",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "UI_DRIFT",
+          "api_count": 3,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "zbmp_content",
+      "name": "内容制作",
+      "description": "AI内容生成与案例库",
+      "type": "ANALYSIS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 147,
+      "db_count": 5,
+      "features": [
+        {
+          "feature_id": "feat.zbmp_content.zbmp_content",
+          "name": "Content",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "API_DRIFT",
+          "api_count": 2,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.zbmp_content.zbmp_launch",
+          "name": "Zbmp Launch",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.zbmp_content.api.app",
+          "name": "内容制作 API 能力 (app)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 28,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.zbmp_content.api.content_bp",
+          "name": "内容制作 API 能力 (content_bp)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 15,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.zbmp_content.api.intelligence_library_bp",
+          "name": "内容制作 API 能力 (intelligence_library_bp)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 4,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.zbmp_content.api.agg_bp",
+          "name": "内容制作 API 能力 (agg_bp)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.zbmp_content.api.pr_case_bp",
+          "name": "内容制作 API 能力 (pr_case_bp)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 7,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "zbmp_podcast",
+      "name": "播客情报",
+      "description": "播客选题与故事节点",
+      "type": "ANALYSIS",
+      "status": "DATA_EMPTY",
+      "api_count": 0,
+      "service_count": 23,
+      "db_count": 2,
+      "features": [
+        {
+          "feature_id": "feat.zbmp_podcast.zbmp_podcast",
+          "name": "Podcast",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.zbmp_podcast.api.app",
+          "name": "播客情报 API 能力 (app)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.zbmp_podcast.api.podcast_bp",
+          "name": "播客情报 API 能力 (podcast_bp)",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "UI_DRIFT",
+          "api_count": 8,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "zbmp_competition",
+      "name": "竞品分析",
+      "description": "竞争品牌对标",
+      "type": "ANALYSIS",
+      "status": "MISSING",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 0,
+      "features": [
+        {
+          "feature_id": "feat.zbmp_competition.zbmp_competition",
+          "name": "Competition",
+          "level": "L3",
+          "type": "ANALYSIS",
+          "status": "API_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        }
+      ]
+    },
+    {
+      "module_id": "zbmp_reports",
+      "name": "品牌报告",
+      "description": "品牌表现/竞争/增长报告",
+      "type": "CORE_BUSINESS",
+      "status": "MISSING",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 0,
+      "features": [
+        {
+          "feature_id": "feat.zbmp_reports.zbmp_reports",
+          "name": "Reports",
+          "level": "L3",
+          "type": "CORE_BUSINESS",
+          "status": "API_DRIFT",
+          "api_count": 1,
+          "ui_count": 1
+        }
+      ]
+    }
+  ],
+  "system": [
+    {
+      "module_id": "system_ai",
+      "name": "AI 助手",
+      "description": "GPT风格AI轻量助手",
+      "type": "AI",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 788,
+      "db_count": 7,
+      "features": [
+        {
+          "feature_id": "feat.system_ai.sys_adaptive_demo",
+          "name": "Sys Adaptive Demo",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_ai.sys_ai",
+          "name": "AI",
+          "level": "L3",
+          "type": "AI",
+          "status": "API_DRIFT",
+          "api_count": 3,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_ai.sys_skill_store",
+          "name": "Sys Skill Store",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_ai.api.bp",
+          "name": "AI 助手 API 能力 (bp)",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 31,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_ai.api.app",
+          "name": "AI 助手 API 能力 (app)",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 8,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_ai.api.ai_bp",
+          "name": "AI 助手 API 能力 (ai_bp)",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_ai.api.architecture_bp",
+          "name": "AI 助手 API 能力 (architecture_bp)",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 4,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_ai.api.lumenis_bp",
+          "name": "AI 助手 API 能力 (lumenis_bp)",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 4,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_ai.api.system_ai_bp",
+          "name": "AI 助手 API 能力 (system_ai_bp)",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_ai.api.system_health_bp",
+          "name": "AI 助手 API 能力 (system_health_bp)",
+          "level": "L3",
+          "type": "AI",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "system_browser",
+      "name": "AI 浏览器",
+      "description": "内置AI浏览器Runtime",
+      "type": "SYSTEM",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 116,
+      "db_count": 0,
+      "features": [
+        {
+          "feature_id": "feat.system_browser.sys_browser",
+          "name": "Browser",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        }
+      ]
+    },
+    {
+      "module_id": "system_runtime",
+      "name": "运行时",
+      "description": "Worker/Guardian/DLQ监控",
+      "type": "SYSTEM",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 232,
+      "db_count": 7,
+      "features": [
+        {
+          "feature_id": "feat.system_runtime.sys_runtime",
+          "name": "Runtime",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "API_DRIFT",
+          "api_count": 2,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_runtime.api.app",
+          "name": "运行时 API 能力 (app)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_runtime.api.architecture_bp",
+          "name": "运行时 API 能力 (architecture_bp)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_runtime.api.badge_bp",
+          "name": "运行时 API 能力 (badge_bp)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 4,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "system_collector",
+      "name": "采集器",
+      "description": "采集调度与双账号轮换",
+      "type": "SYSTEM",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 178,
+      "db_count": 4,
+      "features": [
+        {
+          "feature_id": "feat.system_collector.sys_collector",
+          "name": "Collector",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "API_DRIFT",
+          "api_count": 4,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_collector.api.app",
+          "name": "采集器 API 能力 (app)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 3,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_collector.api.collection_bp",
+          "name": "采集器 API 能力 (collection_bp)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_collector.api.system_features_bp",
+          "name": "采集器 API 能力 (system_features_bp)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "system_database",
+      "name": "数据库",
+      "description": "129表生命周期管理",
+      "type": "SYSTEM",
+      "status": "DATA_EMPTY",
+      "api_count": 0,
+      "service_count": 0,
+      "db_count": 1,
+      "features": [
+        {
+          "feature_id": "feat.system_database.sys_database",
+          "name": "Database",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "API_DRIFT",
+          "api_count": 2,
+          "ui_count": 1
+        }
+      ]
+    },
+    {
+      "module_id": "system_security",
+      "name": "安全中心",
+      "description": "权限/审计/凭证扫描",
+      "type": "SYSTEM",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 195,
+      "db_count": 15,
+      "features": [
+        {
+          "feature_id": "feat.system_security.auth_cth_login",
+          "name": "Auth Cth Login",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "API_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_security.auth_zbmp_login",
+          "name": "Auth Zbmp Login",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "API_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_security.sys_security",
+          "name": "Security",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "API_DRIFT",
+          "api_count": 2,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_security.api.app",
+          "name": "安全中心 API 能力 (app)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 8,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_security.api.architecture_bp",
+          "name": "安全中心 API 能力 (architecture_bp)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 11,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_security.api.auth_recovery_bp",
+          "name": "安全中心 API 能力 (auth_recovery_bp)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 6,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_security.api.system_features_bp",
+          "name": "安全中心 API 能力 (system_features_bp)",
+          "level": "L3",
+          "type": "SYSTEM",
+          "status": "UI_DRIFT",
+          "api_count": 5,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "system_settings",
+      "name": "系统设置",
+      "description": "平台开关/模组管理/品牌配置",
+      "type": "SETTINGS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 28,
+      "db_count": 4,
+      "features": [
+        {
+          "feature_id": "feat.system_settings.sys_settings",
+          "name": "设置中心",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "API_DRIFT",
+          "api_count": 1,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_settings.api.system_bp",
+          "name": "系统设置 API 能力 (system_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 3,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_settings.api.app",
+          "name": "系统设置 API 能力 (app)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 13,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_settings.api.settings_bp",
+          "name": "系统设置 API 能力 (settings_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 7,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_settings.api.agg_bp",
+          "name": "系统设置 API 能力 (agg_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_settings.api.domain_api_bp",
+          "name": "系统设置 API 能力 (domain_api_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 3,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_settings.api.system_features_bp",
+          "name": "系统设置 API 能力 (system_features_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 3,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_settings.api.system_health_bp",
+          "name": "系统设置 API 能力 (system_health_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 2,
+          "ui_count": 0
+        }
+      ]
+    },
+    {
+      "module_id": "system_evaluation",
+      "name": "验收评估",
+      "description": "Feature Completion Matrix",
+      "type": "SETTINGS",
+      "status": "PARTIAL",
+      "api_count": 0,
+      "service_count": 53,
+      "db_count": 0,
+      "features": [
+        {
+          "feature_id": "feat.system_evaluation.sys_evaluation",
+          "name": "Sys Evaluation",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "PARTIAL",
+          "api_count": 1,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_evaluation.zbmp_evaluation",
+          "name": "Zbmp Evaluation",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 0,
+          "ui_count": 1
+        },
+        {
+          "feature_id": "feat.system_evaluation.api.architecture_bp",
+          "name": "验收评估 API 能力 (architecture_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 6,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_evaluation.api.agg_bp",
+          "name": "验收评估 API 能力 (agg_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 1,
+          "ui_count": 0
+        },
+        {
+          "feature_id": "feat.system_evaluation.api.system_features_bp",
+          "name": "验收评估 API 能力 (system_features_bp)",
+          "level": "L3",
+          "type": "SETTINGS",
+          "status": "UI_DRIFT",
+          "api_count": 6,
+          "ui_count": 0
+        }
+      ]
+    }
+  ],
+  "shared": []
+}

@@ -113,6 +113,7 @@ import report_api  # P1-10 拆分批3: 报告/摘要/品牌报告 API
 from report_api import _DEV_EXEC_ENABLED, _DEV_EXEC_BLOCK_RE  # GAP-04 开发执行闸门共享变量
 import viz_api  # Phase 14: function-driven visualization backend /api/viz/*
 import data_center_api  # V1.0: 全平台数据中心API /api/data-center/*
+import feature_governance_api  # ZBC Feature Governance: 功能注册表只读查询 /api/feature-registry/*
 # ProxyPool 可插拔代理池（可选；导入失败不影响系统启动；总开关默认关闭，关闭时等同直连原版）
 try:
     from proxy_pool import proxy_manager as _proxy_mgr
@@ -162,6 +163,8 @@ app.register_blueprint(report_api.report_bp)  # P1-10 拆分批3: 报告 API
 app.register_blueprint(viz_api.viz_bp)  # Phase 14: 函数驱动可视化后端 /api/viz/*
 app.register_blueprint(data_center_api.data_center_bp)  # V1.0: 全平台数据中心 /api/data-center/*
 app.register_blueprint(intelligence_library_api.intelligence_library_bp)
+# ZBC Feature Governance: 功能注册表只读查询（不修改任何业务逻辑）
+app.register_blueprint(feature_governance_api.feature_governance_bp)
 
 # P1-Content: 统一内容生成引擎（AI+研究库+Evidence+Evaluation）
 try:

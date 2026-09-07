@@ -1,0 +1,362 @@
+{
+  "metadata": {
+    "total": 71
+  },
+  "unclassified": [
+    {
+      "feature_id": "feat.unclassified.api.intelligencelibrary",
+      "reason": "API URL无法映射: GET /intelligence/library (blueprint=app)",
+      "evidence": "app.py:198"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apisubject_classifierclassify",
+      "reason": "API URL无法映射: POST /api/subject-classifier/classify (blueprint=app)",
+      "evidence": "app.py:515"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apisubject_classifiertypes",
+      "reason": "API URL无法映射: GET /api/subject-classifier/types (blueprint=app)",
+      "evidence": "app.py:534"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiv2marketingoverview",
+      "reason": "API URL无法映射: GET /api/v2/marketing/overview (blueprint=app)",
+      "evidence": "app.py:836"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiv2global_biloverview",
+      "reason": "API URL无法映射: GET /api/v2/global-bil/overview (blueprint=app)",
+      "evidence": "app.py:889"
+    },
+    {
+      "feature_id": "feat.unclassified.api.unnamed",
+      "reason": "API URL无法映射: GET / (blueprint=app)",
+      "evidence": "app.py:1963"
+    },
+    {
+      "feature_id": "feat.unclassified.api.faviconico",
+      "reason": "API URL无法映射: GET /favicon.ico (blueprint=app)",
+      "evidence": "app.py:1965"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apimetricscanonical",
+      "reason": "API URL无法映射: GET /api/metrics/canonical (blueprint=app)",
+      "evidence": "app.py:1969"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiintelligencerefresh",
+      "reason": "API URL无法映射: POST /api/intelligence/refresh (blueprint=app)",
+      "evidence": "app.py:2008"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apibrowsersessions",
+      "reason": "API URL无法映射: GET /api/browser/sessions (blueprint=app)",
+      "evidence": "app.py:2069"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiresidenthealth",
+      "reason": "API URL无法映射: GET /api/resident/health (blueprint=app)",
+      "evidence": "app.py:2267"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiresidentrecover",
+      "reason": "API URL无法映射: POST /api/resident/recover (blueprint=app)",
+      "evidence": "app.py:2289"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apideveloperrun",
+      "reason": "API URL无法映射: POST /api/developer/run (blueprint=app)",
+      "evidence": "app.py:2500"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apisearch",
+      "reason": "API URL无法映射: GET /api/search (blueprint=app)",
+      "evidence": "app.py:2527"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apifunction_map",
+      "reason": "API URL无法映射: GET /api/function-map (blueprint=app)",
+      "evidence": "app.py:2534"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apitranslate",
+      "reason": "API URL无法映射: POST /api/translate (blueprint=app)",
+      "evidence": "app.py:2538"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apinoteshistorical",
+      "reason": "API URL无法映射: GET /api/notes/historical (blueprint=app)",
+      "evidence": "app.py:2547"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiplatform_health",
+      "reason": "API URL无法映射: GET /api/platform-health (blueprint=app)",
+      "evidence": "app.py:2578"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apinetworkstatus",
+      "reason": "API URL无法映射: GET /api/network/status (blueprint=app)",
+      "evidence": "app.py:2588"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apinetworkreset",
+      "reason": "API URL无法映射: POST /api/network/reset (blueprint=app)",
+      "evidence": "app.py:2593"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apicollect",
+      "reason": "API URL无法映射: POST /api/collect (blueprint=app)",
+      "evidence": "app.py:2623"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apicollectstatustask_id",
+      "reason": "API URL无法映射: GET /api/collect/status/<task_id> (blueprint=app)",
+      "evidence": "app.py:2636"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apianalyze",
+      "reason": "API URL无法映射: POST /api/analyze (blueprint=app)",
+      "evidence": "app.py:2644"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apinotenote_id",
+      "reason": "API URL无法映射: GET /api/note/<note_id> (blueprint=app)",
+      "evidence": "app.py:2664"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apihistorical_notes",
+      "reason": "API URL无法映射: GET /api/historical-notes (blueprint=app)",
+      "evidence": "app.py:2670"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apibackup",
+      "reason": "API URL无法映射: POST /api/backup (blueprint=app)",
+      "evidence": "app.py:2675"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apinotespublish_buckets",
+      "reason": "API URL无法映射: GET /api/notes/publish-buckets (blueprint=app)",
+      "evidence": "app.py:2723"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apidashboardchanges",
+      "reason": "API URL无法映射: GET /api/dashboard/changes (blueprint=app)",
+      "evidence": "app.py:2745"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apinoteslibrary",
+      "reason": "API URL无法映射: GET /api/notes/library (blueprint=app)",
+      "evidence": "app.py:2752"
+    },
+    {
+      "feature_id": "feat.unclassified.api.remote",
+      "reason": "API URL无法映射: GET /remote (blueprint=app)",
+      "evidence": "app.py:2807"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiruntimeworkers",
+      "reason": "API URL无法映射: GET /api/runtime/workers (blueprint=app)",
+      "evidence": "app.py:3125"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiruntimeworkersworker_idarchive",
+      "reason": "API URL无法映射: POST /api/runtime/workers/<worker_id>/archive (blueprint=app)",
+      "evidence": "app.py:3139"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiruntimearchive_dead",
+      "reason": "API URL无法映射: POST /api/runtime/archive-dead (blueprint=app)",
+      "evidence": "app.py:3150"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apioverview",
+      "reason": "API URL无法映射: GET /api/overview (blueprint=app)",
+      "evidence": "app.py:3173"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apistatus",
+      "reason": "API URL无法映射: GET /api/status (blueprint=app)",
+      "evidence": "app.py:3190"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apirednotecollect",
+      "reason": "API URL无法映射: POST /api/rednote/collect (blueprint=app)",
+      "evidence": "app.py:3198"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apialertsread",
+      "reason": "API URL无法映射: POST /api/alerts/read (blueprint=app)",
+      "evidence": "app.py:3275"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apialertsrefresh",
+      "reason": "API URL无法映射: POST /api/alerts/refresh (blueprint=app)",
+      "evidence": "app.py:3290"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apitestexport",
+      "reason": "API URL无法映射: GET /api/test/export (blueprint=app)",
+      "evidence": "app.py:3296"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiengineering_metrics",
+      "reason": "API URL无法映射: GET /api/engineering-metrics (blueprint=app)",
+      "evidence": "app.py:3613"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiofficial_info",
+      "reason": "API URL无法映射: GET /api/official-info (blueprint=app)",
+      "evidence": "app.py:3971"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiofficial_infocollect",
+      "reason": "API URL无法映射: POST /api/official-info/collect (blueprint=app)",
+      "evidence": "app.py:3988"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apispecial_reportgenerate",
+      "reason": "API URL无法映射: POST /api/special-report/generate (blueprint=app)",
+      "evidence": "app.py:4100"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiweeklysend_email",
+      "reason": "API URL无法映射: POST /api/weekly/send-email (blueprint=app)",
+      "evidence": "app.py:4367"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apistabilitystatus",
+      "reason": "API URL无法映射: GET /api/stability/status (blueprint=app)",
+      "evidence": "app.py:4727"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apistabilityheartbeat",
+      "reason": "API URL无法映射: GET /api/stability/heartbeat (blueprint=app)",
+      "evidence": "app.py:4738"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apistabilitycrash_log",
+      "reason": "API URL无法映射: GET /api/stability/crash-log (blueprint=app)",
+      "evidence": "app.py:4760"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apidashboardall",
+      "reason": "API URL无法映射: GET /api/dashboard/all (blueprint=app)",
+      "evidence": "app.py:4778"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apibilibililogin_status",
+      "reason": "API URL无法映射: GET /api/bilibili/login-status (blueprint=app)",
+      "evidence": "app.py:5026"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apibilibilisearch",
+      "reason": "API URL无法映射: GET /api/bilibili/search (blueprint=app)",
+      "evidence": "app.py:5037"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apibilibiliclear_login",
+      "reason": "API URL无法映射: POST /api/bilibili/clear-login (blueprint=app)",
+      "evidence": "app.py:5053"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apidevrun_code",
+      "reason": "API URL无法映射: POST /api/dev/run-code (blueprint=app)",
+      "evidence": "app.py:5571"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiworkspacefile_tree",
+      "reason": "API URL无法映射: GET /api/workspace/file-tree (blueprint=app)",
+      "evidence": "app.py:5603"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiworkspaceterm",
+      "reason": "API URL无法映射: POST /api/workspace/term (blueprint=app)",
+      "evidence": "app.py:5636"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiworkspacefile",
+      "reason": "API URL无法映射: GET /api/workspace/file (blueprint=app)",
+      "evidence": "app.py:5688"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiauxiliarysources",
+      "reason": "API URL无法映射: GET /api/auxiliary/sources (blueprint=app)",
+      "evidence": "app.py:5912"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apizbmp",
+      "reason": "API URL无法映射: GET /api/zbmp (blueprint=app)",
+      "evidence": "app.py:5944"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apicth",
+      "reason": "API URL无法映射: GET /api/cth (blueprint=app)",
+      "evidence": "app.py:5952"
+    },
+    {
+      "feature_id": "feat.unclassified.api.systemsettings",
+      "reason": "API URL无法映射: GET /system/settings (blueprint=app)",
+      "evidence": "app.py:5981"
+    },
+    {
+      "feature_id": "feat.unclassified.api.systemskills",
+      "reason": "API URL无法映射: GET /system/skills (blueprint=app)",
+      "evidence": "app.py:5987"
+    },
+    {
+      "feature_id": "feat.unclassified.api.systemruntime",
+      "reason": "API URL无法映射: GET /system/runtime (blueprint=app)",
+      "evidence": "app.py:5993"
+    },
+    {
+      "feature_id": "feat.unclassified.api.cthlogin",
+      "reason": "API URL无法映射: GET /cth/login (blueprint=app)",
+      "evidence": "app.py:5999"
+    },
+    {
+      "feature_id": "feat.unclassified.api.zbmplogin",
+      "reason": "API URL无法映射: GET /zbmp/login (blueprint=app)",
+      "evidence": "app.py:6005"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiv4api_keys",
+      "reason": "API URL无法映射: GET /api/v4/api-keys (blueprint=app)",
+      "evidence": "app.py:6181"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiv4api_keysgenerate",
+      "reason": "API URL无法映射: POST /api/v4/api-keys/generate (blueprint=app)",
+      "evidence": "app.py:6200"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apiv4api_keysrevoke",
+      "reason": "API URL无法映射: POST /api/v4/api-keys/revoke (blueprint=app)",
+      "evidence": "app.py:6246"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apisearchenhance",
+      "reason": "API URL无法映射: POST /api/search/enhance (blueprint=app)",
+      "evidence": "app.py:6489"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apilearningscan",
+      "reason": "API URL无法映射: POST /api/learning/scan (blueprint=app)",
+      "evidence": "app.py:6507"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apilearninghistory",
+      "reason": "API URL无法映射: GET /api/learning/history (blueprint=app)",
+      "evidence": "app.py:6519"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apicookiesimport",
+      "reason": "API URL无法映射: POST /api/cookies/import (blueprint=app)",
+      "evidence": "app.py:6611"
+    },
+    {
+      "feature_id": "feat.unclassified.api.apicookiesimportraw",
+      "reason": "API URL无法映射: POST /api/cookies/import/raw (blueprint=app)",
+      "evidence": "app.py:6728"
+    }
+  ]
+}
