@@ -1,0 +1,20 @@
+{
+  "path": "/api/negative-review/stats",
+  "url": "http://127.0.0.1:8201/api/negative-review/stats",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:28",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "confirmed": 33,
+    "high_risk": 17,
+    "ok": true,
+    "pending": 9,
+    "rejected": 9,
+    "total": 51
+  },
+  "redirected_to": null,
+  "elapsed_ms": 36
+}

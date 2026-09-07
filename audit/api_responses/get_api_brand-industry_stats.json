@@ -1,0 +1,44 @@
+{
+  "categories": 8,
+  "industries": [
+    {
+      "cnt": 48,
+      "industry": "女装 Ladies' Fashion"
+    },
+    {
+      "cnt": 41,
+      "industry": "餐饮 Food & Beverages"
+    },
+    {
+      "cnt": 36,
+      "industry": "珠宝/钟表/饰品 Jewellery/Watches/Accessories"
+    },
+    {
+      "cnt": 27,
+      "industry": "保健/美容护理 Health/Beauty"
+    },
+    {
+      "cnt": 25,
+      "industry": "休闲服/运动用品 Casual Wear/Sports"
+    },
+    {
+      "cnt": 8,
+      "industry": "鞋/包/皮具用品 Shoes/Bags/Leather Goods"
+    },
+    {
+      "cnt": 8,
+      "industry": "男装 Men's Fashion"
+    },
+    {
+      "cnt": 5,
+      "industry": "生活时尚 Life Style"
+    }
+  ],
+  "negative": 9,
+  "negative_brands": 9,
+  "ok": true,
+  "positive": 30,
+  "positive_brands": 30,
+  "total": 198,
+  "total_brands": 198
+}

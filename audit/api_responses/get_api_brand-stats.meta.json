@@ -1,0 +1,1772 @@
+{
+  "path": "/api/brand-stats",
+  "url": "http://127.0.0.1:8201/api/brand-stats",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:28",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "categories": {
+      "女装": {
+        "brand_count": 47,
+        "brands": [
+          {
+            "brand_cn": "-",
+            "brand_en": "A BATHING APE、I.T",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU07a"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Acne Studios",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L214"
+          },
+          {
+            "brand_cn": "亚历山大麦昆",
+            "brand_en": "Alexander McQueen",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L120"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "American Vintage",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M66"
+          },
+          {
+            "brand_cn": "巴黎世家广州太古汇店",
+            "brand_en": "BALENCIAGA GUANGZHOU TAIKOO HUI STORE",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2/L1",
+            "is_taikoo_brand": true,
+            "shop": "L116&L224"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "BURBERRY",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L117"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "CALVIN KLEIN UNDERWEAR",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M59"
+          },
+          {
+            "brand_cn": "思琳广州太古汇精品店",
+            "brand_en": "CELINE",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L121"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "CHANEL",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2/L1/MU",
+            "is_taikoo_brand": true,
+            "shop": "L114 & MU26"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "COS",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU01"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "CURIEL",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU38"
+          },
+          {
+            "brand_cn": "迪奥",
+            "brand_en": "DIOR",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2/L1/MOH",
+            "is_taikoo_brand": true,
+            "shop": "L111&L215 & MOH L102"
+          },
+          {
+            "brand_cn": "雅莹",
+            "brand_en": "EP YAYING",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M04"
+          },
+          {
+            "brand_cn": "芬廸",
+            "brand_en": "FENDI",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L115"
+          },
+          {
+            "brand_cn": "菲拉格慕",
+            "brand_en": "FERRAGAMO",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L207&L208"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "GRVRGROVE",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M56"
+          },
+          {
+            "brand_cn": "古驰",
+            "brand_en": "Gucci",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2/L1",
+            "is_taikoo_brand": true,
+            "shop": "L113&L217"
+          },
+          {
+            "brand_cn": "爱马仕",
+            "brand_en": "HERMÈS",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2/L1",
+            "is_taikoo_brand": true,
+            "shop": "L125&L233"
+          },
+          {
+            "brand_cn": "之禾",
+            "brand_en": "ICICLE",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M28"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "INITIAL",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M15"
+          },
+          {
+            "brand_cn": "依诺",
+            "brand_en": "IRO",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M60"
+          },
+          {
+            "brand_cn": "吉尔桑德",
+            "brand_en": "JIL SANDER",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L230"
+          },
+          {
+            "brand_cn": "肯佐",
+            "brand_en": "KENZO",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU05"
+          },
+          {
+            "brand_cn": "罗意威",
+            "brand_en": "LOEWE",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L120b"
+          },
+          {
+            "brand_cn": "路易威登",
+            "brand_en": "LOUIS VUITTON",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2/L1",
+            "is_taikoo_brand": true,
+            "shop": "L101&L201"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Loro Piana",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L103"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "MARNI",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L229"
+          },
+          {
+            "brand_cn": "玛俪琳",
+            "brand_en": "MARYLING",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M02"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "MIU MIU",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L118"
+          },
+          {
+            "brand_cn": "摩安珂",
+            "brand_en": "MO&Co.",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M43"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "MO&Co. edition",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M27"
+          },
+          {
+            "brand_cn": "梅森马吉拉",
+            "brand_en": "Maison Margiela",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L231"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "MaxMara",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU02a"
+          },
+          {
+            "brand_cn": "盟可睐",
+            "brand_en": "Moncler",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L123"
+          },
+          {
+            "brand_cn": "三宅之褶",
+            "brand_en": "PLEATS PLEASE ISSEY MIYAKE & BAO BAO ISSEY MIYAKE",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU51"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "PRADA",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2/L1",
+            "is_taikoo_brand": true,
+            "shop": "L112&L216"
+          },
+          {
+            "brand_cn": "圣罗兰",
+            "brand_en": "SAINT LAURENT",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L1/MU",
+            "is_taikoo_brand": true,
+            "shop": "L102&MU03a"
+          },
+          {
+            "brand_cn": "杉卓",
+            "brand_en": "SANDRO",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M17&M18"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "THOM BROWNE",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L205"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "TOMMY HILFIGER",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M47"
+          },
+          {
+            "brand_cn": "汤丽柏琦",
+            "brand_en": "TORY BURCH",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU04"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Theory",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU37"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Vivienne Westwood",
+            "category": "女装 Ladies' Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU11"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "alexanderwang",
+            "category": "女装 Ladies' Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L213"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "ba&sh",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M06"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "maje",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M26"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "self-portrait",
+            "category": "女装 Ladies' Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M65"
+          }
+        ],
+        "engagement": 840,
+        "negative_count": 0,
+        "note_count": 12
+      },
+      "珠宝钟表": {
+        "brand_count": 27,
+        "brands": [
+          {
+            "brand_cn": "布契拉提",
+            "brand_en": "BUCCELLATI",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L109"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "BVLGARI",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L124"
+          },
+          {
+            "brand_cn": "宝珀",
+            "brand_en": "Blancpain",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L212c"
+          },
+          {
+            "brand_cn": "宝玑",
+            "brand_en": "Breguet",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L212a"
+          },
+          {
+            "brand_cn": "香奈儿尊享沙龙",
+            "brand_en": "CHANEL LES SALONS PRIVES",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L234"
+          },
+          {
+            "brand_cn": "尚美巴黎",
+            "brand_en": "CHAUMET",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L1H1"
+          },
+          {
+            "brand_cn": "卡地亚",
+            "brand_en": "Cartier",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L104&L105"
+          },
+          {
+            "brand_cn": "萧邦",
+            "brand_en": "Chopard",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L210a"
+          },
+          {
+            "brand_cn": "周生生",
+            "brand_en": "Chow Sang Sang",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M14b"
+          },
+          {
+            "brand_cn": "斐登",
+            "brand_en": "FRED",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L227"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "GENTLE MONSTER",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU10"
+          },
+          {
+            "brand_cn": "万国",
+            "brand_en": "IWC",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L210b"
+          },
+          {
+            "brand_cn": "周大福荟馆",
+            "brand_en": "JEWELRIA",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M67"
+          },
+          {
+            "brand_cn": "老铺黄金",
+            "brand_en": "LAOPU GOLD",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M24"
+          },
+          {
+            "brand_cn": "亮视点",
+            "brand_en": "LensCrafters",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M05"
+          },
+          {
+            "brand_cn": "浪琴广州太古汇直营店",
+            "brand_en": "Longines GZTKH Corporate Store",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU44"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "MIKIMOTO",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU12"
+          },
+          {
+            "brand_cn": "万宝龙",
+            "brand_en": "MONTBLANC",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L108&L108a"
+          },
+          {
+            "brand_cn": "欧米茄",
+            "brand_en": "OMEGA",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L211"
+          },
+          {
+            "brand_cn": "伯爵",
+            "brand_en": "PIAGET",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L122"
+          },
+          {
+            "brand_cn": "溥仪眼镜",
+            "brand_en": "PUYI OPTICAL",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L206 & L221&L222"
+          },
+          {
+            "brand_cn": "宝曼兰朵",
+            "brand_en": "Pomellato",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU03b"
+          },
+          {
+            "brand_cn": "Qeelin麒麟珠宝",
+            "brand_en": "Qeelin",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU49"
+          },
+          {
+            "brand_cn": "劳力士",
+            "brand_en": "ROLEX",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "MOH",
+            "is_taikoo_brand": true,
+            "shop": "MOH L101"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Tiffany & Co.",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L110"
+          },
+          {
+            "brand_cn": "江诗丹顿",
+            "brand_en": "Vacheron Constantin",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L209a"
+          },
+          {
+            "brand_cn": "梵克雅宝",
+            "brand_en": "Van Cleef & Arpels",
+            "category": "珠宝/钟表/饰品 Jewellery/Watches/Accessories",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L106&L107"
+          }
+        ],
+        "engagement": 1004,
+        "negative_count": 0,
+        "note_count": 10
+      },
+      "生活时尚": {
+        "brand_count": 6,
+        "brands": [
+          {
+            "brand_cn": "-",
+            "brand_en": "Bang & Olufsen",
+            "category": "影音/电器用品 Music/Electronics",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M13"
+          },
+          {
+            "brand_cn": "大疆创新",
+            "brand_en": "DJI",
+            "category": "影音/电器用品 Music/Electronics",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M08"
+          },
+          {
+            "brand_cn": "广州太古汇哈苏授权体验店",
+            "brand_en": "HASSELBLAD",
+            "category": "影音/电器用品 Music/Electronics",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU40"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "SUNION",
+            "category": "影音/电器用品 Music/Electronics",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M10 & M11"
+          },
+          {
+            "brand_cn": "PROFACE照相馆 . SWANK SALON美发沙龙",
+            "brand_en": "PROFACE . SWANK SALON",
+            "category": "生活时尚 Life Style",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU07b"
+          },
+          {
+            "brand_cn": "超级猩猩",
+            "brand_en": "SuperMonkey",
+            "category": "生活时尚 Life Style",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L308a"
+          }
+        ],
+        "engagement": 148,
+        "negative_count": 0,
+        "note_count": 1
+      },
+      "男装": {
+        "brand_count": 8,
+        "brands": [
+          {
+            "brand_cn": "伯尔鲁帝",
+            "brand_en": "BERLUTI",
+            "category": "男装 Men's Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L204"
+          },
+          {
+            "brand_cn": "雅德诺",
+            "brand_en": "CARLO atelier",
+            "category": "男装 Men's Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M09"
+          },
+          {
+            "brand_cn": "芬廸男装精品店",
+            "brand_en": "Fendi Man",
+            "category": "男装 Men's Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L232"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "GENTSPACE",
+            "category": "男装 Men's Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M14a"
+          },
+          {
+            "brand_cn": "派",
+            "brand_en": "PYE",
+            "category": "男装 Men's Fashion",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU45"
+          },
+          {
+            "brand_cn": "单农",
+            "brand_en": "SIMPLE LIVING",
+            "category": "男装 Men's Fashion",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M07"
+          },
+          {
+            "brand_cn": "杰尼亚",
+            "brand_en": "ZEGNA",
+            "category": "男装 Men's Fashion",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L308e"
+          },
+          {
+            "brand_cn": "登喜路",
+            "brand_en": "dunhill",
+            "category": "男装 Men's Fashion",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L2 R & L2T2"
+          }
+        ],
+        "engagement": 0,
+        "negative_count": 0,
+        "note_count": 0
+      },
+      "童装玩具": {
+        "brand_count": 8,
+        "brands": [
+          {
+            "brand_cn": "朋博湾",
+            "brand_en": "BONPOINT",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M63"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "KENZO Kids",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M39"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "MIKI HOUSE",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M35b"
+          },
+          {
+            "brand_cn": "泡泡玛特",
+            "brand_en": "POP MART",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M55"
+          },
+          {
+            "brand_cn": "小帆船",
+            "brand_en": "Petit Bateau",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M37 & M38"
+          },
+          {
+            "brand_cn": "江南布衣童装",
+            "brand_en": "jnby by JNBY",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M40"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "little MO&Co.",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M41a"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "moody tiger",
+            "category": "童装/玩具 Children's Wear/Toys",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M36"
+          }
+        ],
+        "engagement": 0,
+        "negative_count": 0,
+        "note_count": 0
+      },
+      "美容护理": {
+        "brand_count": 29,
+        "brands": [
+          {
+            "brand_cn": "帕尔玛之水",
+            "brand_en": "ACQUA DI PARMA",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU48b"
+          },
+          {
+            "brand_cn": "伊索",
+            "brand_en": "Aesop",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M25"
+          },
+          {
+            "brand_cn": "柏芮朵",
+            "brand_en": "BYREDO",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU29a"
+          },
+          {
+            "brand_cn": "CREED恺芮得香氛",
+            "brand_en": "CREED",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU29b"
+          },
+          {
+            "brand_cn": "Dior迪奥化妆品精品店",
+            "brand_en": "Dior Beauty",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU14"
+          },
+          {
+            "brand_cn": "蒂普提克",
+            "brand_en": "Diptyque",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU29f"
+          },
+          {
+            "brand_cn": "馥马尔、凯利安",
+            "brand_en": "EDITIONS DE PARFUMS FREDERIC MALLE、 KILIAN",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU47b"
+          },
+          {
+            "brand_cn": "ELLE路易士·嘉玛发廊",
+            "brand_en": "ELLE Salon by Kraemer Paris",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M12b"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "FIFTH (Hair Code Group) x SHISEIDO PROFESSIONAL",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU29e"
+          },
+          {
+            "brand_cn": "纪梵希美妆",
+            "brand_en": "GIVENCHY BEAUTY",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU52"
+          },
+          {
+            "brand_cn": "法国娇兰",
+            "brand_en": "GUERLAIN",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU24"
+          },
+          {
+            "brand_cn": "法国科兰黎",
+            "brand_en": "Galenic",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M61"
+          },
+          {
+            "brand_cn": "赫莲娜",
+            "brand_en": "HELENA RUBINSTEIN",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU50"
+          },
+          {
+            "brand_cn": "祖·玛珑",
+            "brand_en": "Jo Malone London",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU53"
+          },
+          {
+            "brand_cn": "阿蒂仙之香",
+            "brand_en": "L'ARTISAN PARFUMEUR",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU33"
+          },
+          {
+            "brand_cn": "欧舒丹",
+            "brand_en": "L'Occitane",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M32"
+          },
+          {
+            "brand_cn": "刘娟美甲沙龙",
+            "brand_en": "L.J Nail salon",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU01c"
+          },
+          {
+            "brand_cn": "海蓝之谜",
+            "brand_en": "LA MER",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU13"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "LE LABO",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU48a"
+          },
+          {
+            "brand_cn": "LOEWE 罗意威香氛",
+            "brand_en": "LOEWE 罗意威香氛",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU54"
+          },
+          {
+            "brand_cn": "娜斯",
+            "brand_en": "NARS",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M19"
+          },
+          {
+            "brand_cn": "潘海利根",
+            "brand_en": "PENHALIGON'S",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU32"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "SEPHORA",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU28"
+          },
+          {
+            "brand_cn": "汤姆福特",
+            "brand_en": "TOM FORD",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU36"
+          },
+          {
+            "brand_cn": "健身中心",
+            "brand_en": "The Fitness Centre",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MOH",
+            "is_taikoo_brand": true,
+            "shop": "4 Floor"
+          },
+          {
+            "brand_cn": "广州文华东方酒店水疗中心",
+            "brand_en": "The Spa at Mandarin Oriental, Guangzhou",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MOH",
+            "is_taikoo_brand": true,
+            "shop": "4 Floor"
+          },
+          {
+            "brand_cn": "CPB肌肤之钥",
+            "brand_en": "clé de peau BEAUTÉ",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU08 & MU09"
+          },
+          {
+            "brand_cn": "馥蕾诗",
+            "brand_en": "fresh",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M64"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "la prairie",
+            "category": "保健/美容护理 Health/Beauty",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU25"
+          }
+        ],
+        "engagement": 297,
+        "negative_count": 0,
+        "note_count": 2
+      },
+      "运动休闲": {
+        "brand_count": 18,
+        "brands": [
+          {
+            "brand_cn": "始祖鸟",
+            "brand_en": "Arc'teryx",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU34"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Calvin Klein Jeans",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M42"
+          },
+          {
+            "brand_cn": "迪桑特",
+            "brand_en": "DESCENTE",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M62"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "EVISU",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M45"
+          },
+          {
+            "brand_cn": "斐乐",
+            "brand_en": "FILA",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M35a"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "FRED PERRY",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU29c"
+          },
+          {
+            "added_at": "2026-09-07T10:51:58.094592",
+            "brand_cn": "凯乐石FUGA",
+            "brand_en": "KAILAS FUGA",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M41b"
+          },
+          {
+            "brand_cn": "可隆体育",
+            "brand_en": "KOLON SPORT",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M44"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Lacoste",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M46"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "POLO RALPH LAUREN",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU39"
+          },
+          {
+            "brand_cn": "萨洛蒙",
+            "brand_en": "SALOMON",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M30&M31a&M31b"
+          },
+          {
+            "brand_cn": "踏比鸥",
+            "brand_en": "Tabio",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M58"
+          },
+          {
+            "brand_cn": "北面",
+            "brand_en": "The North Face",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M57"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "UNDERBOBO",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M48b"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "WASAI LIVING",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M48a"
+          },
+          {
+            "brand_cn": "阿迪达斯",
+            "brand_en": "adidas",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M12a"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "i.t",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU29d"
+          },
+          {
+            "brand_cn": "露露乐蒙",
+            "brand_en": "lululemon",
+            "category": "休闲服/运动用品 Casual Wear/Sports",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU30"
+          }
+        ],
+        "engagement": 51,
+        "negative_count": 0,
+        "note_count": 4
+      },
+      "鞋包皮具": {
+        "brand_count": 7,
+        "brands": [
+          {
+            "brand_cn": "葆蝶家",
+            "brand_en": "BOTTEGA VENETA",
+            "category": "鞋/包/皮具用品 Shoes/Bags/Leather Goods",
+            "floor": "L1",
+            "is_taikoo_brand": true,
+            "shop": "L119"
+          },
+          {
+            "brand_cn": "珑骧",
+            "brand_en": "LONGCHAMP",
+            "category": "鞋/包/皮具用品 Shoes/Bags/Leather Goods",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU31"
+          },
+          {
+            "brand_cn": "昂跑",
+            "brand_en": "On",
+            "category": "鞋/包/皮具用品 Shoes/Bags/Leather Goods",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M29"
+          },
+          {
+            "brand_cn": "日默瓦",
+            "brand_en": "RIMOWA",
+            "category": "鞋/包/皮具用品 Shoes/Bags/Leather Goods",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L226"
+          },
+          {
+            "brand_cn": "罗杰维维亚",
+            "brand_en": "Roger Vivier",
+            "category": "鞋/包/皮具用品 Shoes/Bags/Leather Goods",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L220"
+          },
+          {
+            "brand_cn": "山下有松",
+            "brand_en": "Songmont",
+            "category": "鞋/包/皮具用品 Shoes/Bags/Leather Goods",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M16"
+          },
+          {
+            "brand_cn": "范思哲",
+            "brand_en": "VERSACE",
+            "category": "鞋/包/皮具用品 Shoes/Bags/Leather Goods",
+            "floor": "L2",
+            "is_taikoo_brand": true,
+            "shop": "L223"
+          }
+        ],
+        "engagement": 0,
+        "negative_count": 0,
+        "note_count": 0
+      },
+      "餐饮": {
+        "brand_count": 38,
+        "brands": [
+          {
+            "added_at": "2026-09-07T10:51:58.094531",
+            "brand_cn": "荔事唐",
+            "brand_en": "-",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16c & MU16d & MU16i & MU16j & M49 & M50 & M52"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "1730 MUSEE DU PAIN",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU06"
+          },
+          {
+            "brand_cn": "阿嬷手作",
+            "brand_en": "Ah Ma Hand made",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU17"
+          },
+          {
+            "brand_cn": "面道鲜师",
+            "brand_en": "CHOP-CHOP NOODLES",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16b"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "DAYBYDAY",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16g & MU16h"
+          },
+          {
+            "brand_cn": "鼎泰丰",
+            "brand_en": "DIN TAI FUNG",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU19"
+          },
+          {
+            "brand_cn": "鼎+",
+            "brand_en": "Dim bar",
+            "category": "餐饮 Food & Beverages",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L305"
+          },
+          {
+            "brand_cn": "江南厨子",
+            "brand_en": "Famous Chef From Jiangnan China",
+            "category": "餐饮 Food & Beverages",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M68"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "GONTRAN CHERRIER",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU22"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "Grid Coffee",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16a"
+          },
+          {
+            "brand_cn": "御寶閣潮州酒家",
+            "brand_en": "IMPERIAL TREASURE FINE TEOCHEW CUISINE",
+            "category": "餐饮 Food & Beverages",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L307"
+          },
+          {
+            "brand_cn": "翠园",
+            "brand_en": "Jade Garden",
+            "category": "餐饮 Food & Beverages",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M01"
+          },
+          {
+            "brand_cn": "江-由辉师傅主理",
+            "brand_en": "Jiang by Chef Fei",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MOH",
+            "is_taikoo_brand": true,
+            "shop": "3 Floor"
+          },
+          {
+            "brand_cn": "小山 炉端烧•鮨",
+            "brand_en": "KOYAMA ROBATAYAKI • SUSI",
+            "category": "餐饮 Food & Beverages",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L306"
+          },
+          {
+            "brand_cn": "炎鹏",
+            "brand_en": "Kappo Enho",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16f"
+          },
+          {
+            "brand_cn": "奇华饼家",
+            "brand_en": "Kee Wah Bakery",
+            "category": "餐饮 Food & Beverages",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M53"
+          },
+          {
+            "brand_cn": "尚莲·越南泰国料理",
+            "brand_en": "LIAN. Viet & Thai Cuisine",
+            "category": "餐饮 Food & Beverages",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L303"
+          },
+          {
+            "brand_cn": "樑",
+            "brand_en": "LIÁNG",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MOH",
+            "is_taikoo_brand": true,
+            "shop": "4 Floor"
+          },
+          {
+            "brand_cn": "莱德拉",
+            "brand_en": "LÄDERACH",
+            "category": "餐饮 Food & Beverages",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M22"
+          },
+          {
+            "brand_cn": "鳗几",
+            "brand_en": "MANAGI",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU21"
+          },
+          {
+            "brand_cn": "美奈小馆钻石店",
+            "brand_en": "MUINE·DIAMOND",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU18"
+          },
+          {
+            "brand_cn": "麦当劳",
+            "brand_en": "McDonald’s",
+            "category": "餐饮 Food & Beverages",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M54"
+          },
+          {
+            "brand_cn": "叁木司 • 日式餐酒馆",
+            "brand_en": "Mikisi Japanese Bistro",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU20"
+          },
+          {
+            "brand_cn": "布歌东京",
+            "brand_en": "Mvuke Tokyo",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU41b"
+          },
+          {
+            "brand_cn": "葱间",
+            "brand_en": "NEGIMA",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU43b"
+          },
+          {
+            "brand_cn": "奈斯派索",
+            "brand_en": "Nespresso",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU41a"
+          },
+          {
+            "brand_cn": "九十葉",
+            "brand_en": "Nino Matcha",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16m"
+          },
+          {
+            "brand_cn": "莆田餐厅",
+            "brand_en": "PUTIEN",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU42"
+          },
+          {
+            "brand_cn": "星耀·狮拾久",
+            "brand_en": "SING JEWEL BOUTIQUE",
+            "category": "餐饮 Food & Beverages",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M51"
+          },
+          {
+            "brand_cn": "鮨·半藏",
+            "brand_en": "Sushi Hanzo Pro",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16e"
+          },
+          {
+            "brand_cn": "堂",
+            "brand_en": "TANG",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MOH",
+            "is_taikoo_brand": true,
+            "shop": "4 Floor"
+          },
+          {
+            "brand_cn": "三出山",
+            "brand_en": "TRUE SHAN",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU43a"
+          },
+          {
+            "brand_cn": "The Loft 酒吧",
+            "brand_en": "The Loft",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MOH",
+            "is_taikoo_brand": true,
+            "shop": "2 Floor"
+          },
+          {
+            "brand_cn": "闻绮",
+            "brand_en": "Venchi",
+            "category": "餐饮 Food & Beverages",
+            "floor": "M",
+            "is_taikoo_brand": true,
+            "shop": "M20"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "ZAKUZAKU",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16l"
+          },
+          {
+            "brand_cn": "gaga品牌旗舰店",
+            "brand_en": "gaga CENTRAL",
+            "category": "餐饮 Food & Beverages",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L302"
+          },
+          {
+            "brand_cn": "-",
+            "brand_en": "glance",
+            "category": "餐饮 Food & Beverages",
+            "floor": "L3",
+            "is_taikoo_brand": true,
+            "shop": "L304"
+          },
+          {
+            "brand_cn": "宋·SONG Café",
+            "brand_en": "宋·SONG Café",
+            "category": "餐饮 Food & Beverages",
+            "floor": "MU",
+            "is_taikoo_brand": true,
+            "shop": "MU16k"
+          }
+        ],
+        "engagement": 583,
+        "negative_count": 1,
+        "note_count": 5
+      }
+    },
+    "ok": true,
+    "pie_data": [
+      {
+        "brand_count": 47,
+        "category": "女装",
+        "negative_count": 0,
+        "note_count": 12,
+        "percentage": 35.3
+      },
+      {
+        "brand_count": 8,
+        "category": "男装",
+        "negative_count": 0,
+        "note_count": 0,
+        "percentage": 0.0
+      },
+      {
+        "brand_count": 38,
+        "category": "餐饮",
+        "negative_count": 1,
+        "note_count": 5,
+        "percentage": 14.7
+      },
+      {
+        "brand_count": 27,
+        "category": "珠宝钟表",
+        "negative_count": 0,
+        "note_count": 10,
+        "percentage": 29.4
+      },
+      {
+        "brand_count": 29,
+        "category": "美容护理",
+        "negative_count": 0,
+        "note_count": 2,
+        "percentage": 5.9
+      },
+      {
+        "brand_count": 18,
+        "category": "运动休闲",
+        "negative_count": 0,
+        "note_count": 4,
+        "percentage": 11.8
+      },
+      {
+        "brand_count": 7,
+        "category": "鞋包皮具",
+        "negative_count": 0,
+        "note_count": 0,
+        "percentage": 0.0
+      },
+      {
+        "brand_count": 8,
+        "category": "童装玩具",
+        "negative_count": 0,
+        "note_count": 0,
+        "percentage": 0.0
+      },
+      {
+        "brand_count": 6,
+        "category": "生活时尚",
+        "negative_count": 0,
+        "note_count": 1,
+        "percentage": 2.9
+      }
+    ],
+    "top_brands": [
+      {
+        "brand": "-",
+        "category": "餐饮",
+        "engagement": 845,
+        "negative_count": 0,
+        "note_count": 5
+      },
+      {
+        "brand": "古驰",
+        "category": "女装",
+        "engagement": 272,
+        "negative_count": 0,
+        "note_count": 5
+      },
+      {
+        "brand": "周生生",
+        "category": "珠宝钟表",
+        "engagement": 755,
+        "negative_count": 0,
+        "note_count": 5
+      },
+      {
+        "brand": "罗意威",
+        "category": "女装",
+        "engagement": 117,
+        "negative_count": 0,
+        "note_count": 2
+      },
+      {
+        "brand": "三出山",
+        "category": "餐饮",
+        "engagement": 121,
+        "negative_count": 0,
+        "note_count": 2
+      },
+      {
+        "brand": "踏比鸥",
+        "category": "运动休闲",
+        "engagement": 26,
+        "negative_count": 0,
+        "note_count": 2
+      },
+      {
+        "brand": "葱间",
+        "category": "餐饮",
+        "engagement": 39,
+        "negative_count": 1,
+        "note_count": 2
+      },
+      {
+        "brand": "万国",
+        "category": "珠宝钟表",
+        "engagement": 9,
+        "negative_count": 0,
+        "note_count": 2
+      },
+      {
+        "brand": "柏芮朵",
+        "category": "美容护理",
+        "engagement": 297,
+        "negative_count": 0,
+        "note_count": 1
+      },
+      {
+        "brand": "浪琴广州太古汇直营店",
+        "category": "珠宝钟表",
+        "engagement": 234,
+        "negative_count": 0,
+        "note_count": 1
+      }
+    ],
+    "total_brands": 194,
+    "total_notes": 235,
+    "trend_data": [
+      {
+        "date": "2026-09-02",
+        "negative_count": 1,
+        "note_count": 7
+      },
+      {
+        "date": "2026-09-03",
+        "negative_count": 1,
+        "note_count": 2
+      },
+      {
+        "date": "2026-09-04",
+        "negative_count": 0,
+        "note_count": 7
+      },
+      {
+        "date": "2026-09-05",
+        "negative_count": 1,
+        "note_count": 7
+      },
+      {
+        "date": "2026-09-06",
+        "negative_count": 0,
+        "note_count": 3
+      },
+      {
+        "date": "2026-09-07",
+        "negative_count": 0,
+        "note_count": 2
+      },
+      {
+        "date": "2026-09-08",
+        "negative_count": 0,
+        "note_count": 0
+      }
+    ],
+    "updated_at": "2026-09-08 00:47:28"
+  },
+  "redirected_to": null,
+  "elapsed_ms": 87
+}

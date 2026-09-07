@@ -1,0 +1,20 @@
+{
+  "path": "/api/viz/risk.active",
+  "url": "http://127.0.0.1:8201/api/viz/risk.active",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:28",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "data": {
+      "current_value": 1,
+      "level": "high",
+      "record_count": 1
+    },
+    "success": true
+  },
+  "redirected_to": null,
+  "elapsed_ms": 15
+}

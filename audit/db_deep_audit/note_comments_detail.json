@@ -1,0 +1,128 @@
+{
+  "table": "note_comments",
+  "exists": true,
+  "columns": [
+    "id",
+    "comment_id",
+    "note_id",
+    "content",
+    "author_id",
+    "author_nickname",
+    "likes",
+    "publish_time",
+    "parent_id",
+    "raw_json",
+    "fetched_at"
+  ],
+  "total_rows": {
+    "ok": true,
+    "sql": "SELECT COUNT(*) AS c FROM \"note_comments\"",
+    "columns": [
+      "c"
+    ],
+    "row_count": 1,
+    "rows": [
+      {
+        "c": 141
+      }
+    ]
+  },
+  "note_distribution": {
+    "ok": true,
+    "sql": "SELECT \"note_id\" AS note_id, COUNT(*) AS comment_cnt FROM \"note_comments\" GROUP BY \"note_id\" ORDER BY comment_cnt DESC LIMIT 50",
+    "columns": [
+      "note_id",
+      "comment_cnt"
+    ],
+    "row_count": 11,
+    "rows": [
+      {
+        "note_id": "69a7f7980000000015031ecc",
+        "comment_cnt": 20
+      },
+      {
+        "note_id": "6a7f084d000000002c005fe1",
+        "comment_cnt": 20
+      },
+      {
+        "note_id": "6a8861f30000000023013f59",
+        "comment_cnt": 19
+      },
+      {
+        "note_id": "6a5e02eb000000001102e16c",
+        "comment_cnt": 17
+      },
+      {
+        "note_id": "6a7c2ee9000000002403ef20",
+        "comment_cnt": 16
+      },
+      {
+        "note_id": "69ab034c000000001d025bd8",
+        "comment_cnt": 15
+      },
+      {
+        "note_id": "6a11757f0000000035021f45",
+        "comment_cnt": 12
+      },
+      {
+        "note_id": "6a83060b0000000028008e31",
+        "comment_cnt": 11
+      },
+      {
+        "note_id": "68a5bdbd000000001d02f02e",
+        "comment_cnt": 5
+      },
+      {
+        "note_id": "6a68290900000000010338cb",
+        "comment_cnt": 4
+      },
+      {
+        "note_id": "69d24830000000002202bbb5",
+        "comment_cnt": 2
+      }
+    ]
+  },
+  "distinct_notes": {
+    "ok": true,
+    "sql": "SELECT COUNT(DISTINCT \"note_id\") AS c FROM \"note_comments\"",
+    "columns": [
+      "c"
+    ],
+    "row_count": 1,
+    "rows": [
+      {
+        "c": 11
+      }
+    ]
+  },
+  "publish_time_range": {
+    "ok": true,
+    "sql": "SELECT MIN(\"publish_time\") AS min_v, MAX(\"publish_time\") AS max_v FROM \"note_comments\"",
+    "columns": [
+      "min_v",
+      "max_v"
+    ],
+    "row_count": 1,
+    "rows": [
+      {
+        "min_v": "03-04上海",
+        "max_v": "昨天 09:45浙江"
+      }
+    ]
+  },
+  "fetched_at_range": {
+    "ok": true,
+    "sql": "SELECT MIN(\"fetched_at\") AS min_v, MAX(\"fetched_at\") AS max_v FROM \"note_comments\"",
+    "columns": [
+      "min_v",
+      "max_v"
+    ],
+    "row_count": 1,
+    "rows": [
+      {
+        "min_v": "2026-08-27 01:50:12",
+        "max_v": "2026-08-29 17:15:01"
+      }
+    ]
+  }
+}

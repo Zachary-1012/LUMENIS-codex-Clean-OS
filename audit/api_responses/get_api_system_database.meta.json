@@ -1,0 +1,226 @@
+{
+  "path": "/api/system/database",
+  "url": "http://127.0.0.1:8201/api/system/database",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:29",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "core": {
+      "daily_reports": 39,
+      "events": 494,
+      "kos_operations": 525,
+      "notes": 1020
+    },
+    "empty": 64,
+    "non_empty": 65,
+    "ok": true,
+    "table_count": 129,
+    "tables": [
+      {
+        "count": 11,
+        "name": "auth_recovery_tasks"
+      },
+      {
+        "count": 51,
+        "name": "sqlite_sequence"
+      },
+      {
+        "count": 1020,
+        "name": "notes"
+      },
+      {
+        "count": 39,
+        "name": "daily_reports"
+      },
+      {
+        "count": 520,
+        "name": "collection_logs"
+      },
+      {
+        "count": 90,
+        "name": "web_mentions"
+      },
+      {
+        "count": 494,
+        "name": "events"
+      },
+      {
+        "count": 16,
+        "name": "feedback_keywords"
+      },
+      {
+        "count": 1,
+        "name": "web_sources"
+      },
+      {
+        "count": 35,
+        "name": "web_runs"
+      },
+      {
+        "count": 789,
+        "name": "event_mentions"
+      },
+      {
+        "count": 8387,
+        "name": "note_review_history"
+      },
+      {
+        "count": 921,
+        "name": "ai_filter_log"
+      },
+      {
+        "count": 9,
+        "name": "daily_digest"
+      },
+      {
+        "count": 17,
+        "name": "event_insights"
+      },
+      {
+        "count": 7,
+        "name": "collector_quality_log"
+      },
+      {
+        "count": 141,
+        "name": "note_comments"
+      },
+      {
+        "count": 1087,
+        "name": "metric_snapshots"
+      },
+      {
+        "count": 1,
+        "name": "topic_campaigns"
+      },
+      {
+        "count": 7,
+        "name": "topic_campaign_topics"
+      },
+      {
+        "count": 325,
+        "name": "topic_campaign_snapshots"
+      },
+      {
+        "count": 79,
+        "name": "topic_campaign_notes"
+      },
+      {
+        "count": 19,
+        "name": "app_evidence_records"
+      },
+      {
+        "count": 8,
+        "name": "swire_projects"
+      },
+      {
+        "count": 10,
+        "name": "swire_events"
+      },
+      {
+        "count": 9,
+        "name": "v4_users"
+      },
+      {
+        "count": 163,
+        "name": "v4_sessions"
+      },
+      {
+        "count": 91,
+        "name": "v4_audit_logs"
+      },
+      {
+        "count": 2,
+        "name": "v4_security_questions"
+      },
+      {
+        "count": 73,
+        "name": "v4_login_attempts"
+      },
+      {
+        "count": 16471,
+        "name": "schedule_decisions"
+      },
+      {
+        "count": 4,
+        "name": "schema_version"
+      },
+      {
+        "count": 525,
+        "name": "kos_operations"
+      },
+      {
+        "count": 210,
+        "name": "kos_paid_plans"
+      },
+      {
+        "count": 105,
+        "name": "kos_rewards"
+      },
+      {
+        "count": 499,
+        "name": "v4_workspace_keys"
+      },
+      {
+        "count": 89,
+        "name": "v4_workspace_grants"
+      },
+      {
+        "count": 375,
+        "name": "kos_profiles"
+      },
+      {
+        "count": 494,
+        "name": "kos_executions"
+      },
+      {
+        "count": 13,
+        "name": "alert_configs"
+      },
+      {
+        "count": 5,
+        "name": "alert_records"
+      },
+      {
+        "count": 14,
+        "name": "canonical_data"
+      },
+      {
+        "count": 2798,
+        "name": "runtime_guardian_workers"
+      },
+      {
+        "count": 106,
+        "name": "runtime_guardian_checkpoints"
+      },
+      {
+        "count": 1847,
+        "name": "ai_call_logs"
+      },
+      {
+        "count": 1,
+        "name": "rule_version_registry"
+      },
+      {
+        "count": 6,
+        "name": "zbc_evidence"
+      },
+      {
+        "count": 4,
+        "name": "zbc_canonical_data"
+      },
+      {
+        "count": 8,
+        "name": "zbc_lifecycle_tracking"
+      },
+      {
+        "count": 711,
+        "name": "intelligence_assets"
+      }
+    ]
+  },
+  "redirected_to": null,
+  "elapsed_ms": 33
+}

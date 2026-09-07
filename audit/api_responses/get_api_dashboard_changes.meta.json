@@ -1,0 +1,31 @@
+{
+  "path": "/api/dashboard/changes",
+  "url": "http://127.0.0.1:8201/api/dashboard/changes",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:28",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "ok": true,
+    "server_time": "2026-09-08 00:47:28",
+    "stats": {
+      "high_risk": 22,
+      "low_risk": 643,
+      "medium_risk": 35,
+      "negative": 57,
+      "neutral": 291,
+      "official_count": 38,
+      "positive": 353,
+      "total": 701,
+      "total_comments": 27065,
+      "total_engagements": 343243,
+      "total_likes": 179918,
+      "verified_count": 701
+    },
+    "version": "5.9.9"
+  },
+  "redirected_to": null,
+  "elapsed_ms": 462
+}

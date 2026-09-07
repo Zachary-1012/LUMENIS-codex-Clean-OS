@@ -1,0 +1,216 @@
+{
+  "table": "notes",
+  "total_rows": {
+    "ok": true,
+    "sql": "SELECT COUNT(*) AS c FROM \"notes\"",
+    "columns": [
+      "c"
+    ],
+    "row_count": 1,
+    "rows": [
+      {
+        "c": 1020
+      }
+    ]
+  },
+  "subject_fields": {
+    "is_taikoo_verified": {
+      "distribution": {
+        "ok": true,
+        "sql": "SELECT \"is_taikoo_verified\" AS val, COUNT(*) AS cnt FROM \"notes\" GROUP BY \"is_taikoo_verified\" ORDER BY cnt DESC",
+        "columns": [
+          "val",
+          "cnt"
+        ],
+        "row_count": 2,
+        "rows": [
+          {
+            "val": 1,
+            "cnt": 705
+          },
+          {
+            "val": 0,
+            "cnt": 315
+          }
+        ]
+      },
+      "null_or_empty_count": {
+        "ok": true,
+        "sql": "SELECT COUNT(*) AS c FROM \"notes\" WHERE \"is_taikoo_verified\" IS NULL OR TRIM(CAST(\"is_taikoo_verified\" AS TEXT)) = \"\"",
+        "columns": [
+          "c"
+        ],
+        "row_count": 1,
+        "rows": [
+          {
+            "c": 0
+          }
+        ]
+      }
+    },
+    "subject_type": {
+      "distribution": {
+        "ok": true,
+        "sql": "SELECT \"subject_type\" AS val, COUNT(*) AS cnt FROM \"notes\" GROUP BY \"subject_type\" ORDER BY cnt DESC",
+        "columns": [
+          "val",
+          "cnt"
+        ],
+        "row_count": 6,
+        "rows": [
+          {
+            "val": "CTH",
+            "cnt": 489
+          },
+          {
+            "val": "unknown",
+            "cnt": 312
+          },
+          {
+            "val": "normal_user",
+            "cnt": 201
+          },
+          {
+            "val": "official",
+            "cnt": 14
+          },
+          {
+            "val": "kos",
+            "cnt": 3
+          },
+          {
+            "val": "media",
+            "cnt": 1
+          }
+        ]
+      },
+      "null_or_empty_count": {
+        "ok": true,
+        "sql": "SELECT COUNT(*) AS c FROM \"notes\" WHERE \"subject_type\" IS NULL OR TRIM(CAST(\"subject_type\" AS TEXT)) = \"\"",
+        "columns": [
+          "c"
+        ],
+        "row_count": 1,
+        "rows": [
+          {
+            "c": 0
+          }
+        ]
+      }
+    },
+    "content_type": {
+      "distribution": {
+        "ok": true,
+        "sql": "SELECT \"content_type\" AS val, COUNT(*) AS cnt FROM \"notes\" GROUP BY \"content_type\" ORDER BY cnt DESC",
+        "columns": [
+          "val",
+          "cnt"
+        ],
+        "row_count": 4,
+        "rows": [
+          {
+            "val": "",
+            "cnt": 801
+          },
+          {
+            "val": "ugc",
+            "cnt": 202
+          },
+          {
+            "val": "official",
+            "cnt": 14
+          },
+          {
+            "val": "commercial",
+            "cnt": 3
+          }
+        ]
+      },
+      "null_or_empty_count": {
+        "ok": true,
+        "sql": "SELECT COUNT(*) AS c FROM \"notes\" WHERE \"content_type\" IS NULL OR TRIM(CAST(\"content_type\" AS TEXT)) = \"\"",
+        "columns": [
+          "c"
+        ],
+        "row_count": 1,
+        "rows": [
+          {
+            "c": 801
+          }
+        ]
+      }
+    },
+    "relevance_status": {
+      "distribution": {
+        "ok": true,
+        "sql": "SELECT \"relevance_status\" AS val, COUNT(*) AS cnt FROM \"notes\" GROUP BY \"relevance_status\" ORDER BY cnt DESC",
+        "columns": [
+          "val",
+          "cnt"
+        ],
+        "row_count": 2,
+        "rows": [
+          {
+            "val": "relevant",
+            "cnt": 704
+          },
+          {
+            "val": "irrelevant",
+            "cnt": 316
+          }
+        ]
+      },
+      "null_or_empty_count": {
+        "ok": true,
+        "sql": "SELECT COUNT(*) AS c FROM \"notes\" WHERE \"relevance_status\" IS NULL OR TRIM(CAST(\"relevance_status\" AS TEXT)) = \"\"",
+        "columns": [
+          "c"
+        ],
+        "row_count": 1,
+        "rows": [
+          {
+            "c": 0
+          }
+        ]
+      }
+    },
+    "verification_status": {
+      "distribution": {
+        "ok": true,
+        "sql": "SELECT \"verification_status\" AS val, COUNT(*) AS cnt FROM \"notes\" GROUP BY \"verification_status\" ORDER BY cnt DESC",
+        "columns": [
+          "val",
+          "cnt"
+        ],
+        "row_count": 3,
+        "rows": [
+          {
+            "val": "review",
+            "cnt": 647
+          },
+          {
+            "val": "rejected",
+            "cnt": 316
+          },
+          {
+            "val": "verified",
+            "cnt": 57
+          }
+        ]
+      },
+      "null_or_empty_count": {
+        "ok": true,
+        "sql": "SELECT COUNT(*) AS c FROM \"notes\" WHERE \"verification_status\" IS NULL OR TRIM(CAST(\"verification_status\" AS TEXT)) = \"\"",
+        "columns": [
+          "c"
+        ],
+        "row_count": 1,
+        "rows": [
+          {
+            "c": 0
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "path": "/api/cases/stats",
+  "url": "http://127.0.0.1:8201/api/cases/stats",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:28",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "by_category": {
+      "会员服务": 1,
+      "品牌经营": 1,
+      "品牌质量": 1,
+      "售后服务": 1,
+      "商户经营": 3,
+      "安全事件": 2,
+      "服务态度": 3,
+      "环保安全": 1,
+      "行业趋势": 1,
+      "设施安全": 2,
+      "谣言事件": 1,
+      "餐饮服务": 1
+    },
+    "by_risk": {
+      "high": 9,
+      "low": 1,
+      "medium": 8
+    },
+    "by_type": {
+      "brand": 2,
+      "other_mall": 7,
+      "taikoo_hui": 9
+    },
+    "ok": true,
+    "total": 18
+  },
+  "redirected_to": null,
+  "elapsed_ms": 6
+}

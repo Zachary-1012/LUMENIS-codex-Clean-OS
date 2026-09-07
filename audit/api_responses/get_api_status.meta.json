@@ -1,0 +1,46 @@
+{
+  "path": "/api/status",
+  "url": "http://127.0.0.1:8201/api/status",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:27",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "ai_detail": "云端 Key 已配置",
+    "ai_enabled": true,
+    "ai_model": "glm-4.5-air",
+    "ai_provider": "zhipu",
+    "analyzer": "AI provider + auditable rule fallback",
+    "auto_interval_minutes": 90,
+    "collector": "Playwright/XHS search + rednote CDP",
+    "company_domain": "taikoo-hui.com",
+    "data_source": "公开网页发现 → 关键词反馈 → 小红书/rednote浏览器采集",
+    "last_collection": {
+      "error_msg": "",
+      "finished_at": "2026-09-08 00:10:02",
+      "id": 544,
+      "keyword": "太古汇 差评",
+      "notes_count": 60,
+      "started_at": "2026-09-08 00:10:02",
+      "status": "SUCCESS"
+    },
+    "ok": true,
+    "qian_gua_integration": false,
+    "rednote_cdp_enabled": false,
+    "server_time": "2026-09-08 00:47:27",
+    "system": "广州太古汇舆情监测系统",
+    "total_notes": 701,
+    "unanalyzed": 0,
+    "verified_notes": 701,
+    "version": "5.9.9",
+    "web_sources": [
+      "Google News RSS",
+      "GDELT",
+      "custom RSS"
+    ]
+  },
+  "redirected_to": null,
+  "elapsed_ms": 480
+}

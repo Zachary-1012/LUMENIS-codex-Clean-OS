@@ -1,0 +1,117 @@
+{
+  "path": "/api/overview",
+  "url": "http://127.0.0.1:8201/api/overview",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:27",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "active_events": 157,
+    "ok": true,
+    "recent_negative": 9,
+    "trend": [
+      {
+        "date": "2026-08-26",
+        "high": 0,
+        "label": "08-26",
+        "negative": 1,
+        "total": 9
+      },
+      {
+        "date": "2026-08-27",
+        "high": 0,
+        "label": "08-27",
+        "negative": 1,
+        "total": 15
+      },
+      {
+        "date": "2026-08-28",
+        "high": 0,
+        "label": "08-28",
+        "negative": 2,
+        "total": 27
+      },
+      {
+        "date": "2026-08-29",
+        "high": 0,
+        "label": "08-29",
+        "negative": 0,
+        "total": 24
+      },
+      {
+        "date": "2026-08-30",
+        "high": 0,
+        "label": "08-30",
+        "negative": 3,
+        "total": 18
+      },
+      {
+        "date": "2026-08-31",
+        "high": 0,
+        "label": "08-31",
+        "negative": 0,
+        "total": 5
+      },
+      {
+        "date": "2026-09-01",
+        "high": 0,
+        "label": "09-01",
+        "negative": 0,
+        "total": 7
+      },
+      {
+        "date": "2026-09-02",
+        "high": 0,
+        "label": "09-02",
+        "negative": 1,
+        "total": 7
+      },
+      {
+        "date": "2026-09-03",
+        "high": 0,
+        "label": "09-03",
+        "negative": 1,
+        "total": 2
+      },
+      {
+        "date": "2026-09-04",
+        "high": 0,
+        "label": "09-04",
+        "negative": 0,
+        "total": 6
+      },
+      {
+        "date": "2026-09-05",
+        "high": 0,
+        "label": "09-05",
+        "negative": 0,
+        "total": 5
+      },
+      {
+        "date": "2026-09-06",
+        "high": 0,
+        "label": "09-06",
+        "negative": 0,
+        "total": 3
+      },
+      {
+        "date": "2026-09-07",
+        "high": 0,
+        "label": "09-07",
+        "negative": 0,
+        "total": 2
+      },
+      {
+        "date": "2026-09-08",
+        "high": 0,
+        "label": "09-08",
+        "negative": 0,
+        "total": 0
+      }
+    ]
+  },
+  "redirected_to": null,
+  "elapsed_ms": 95
+}

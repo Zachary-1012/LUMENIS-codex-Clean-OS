@@ -1,0 +1,20 @@
+{
+  "path": "/api/weekly/events",
+  "url": "http://127.0.0.1:8201/api/weekly/events",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:28",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "events": [],
+    "general": [],
+    "ok": true,
+    "period_end": "2026-09-13",
+    "period_start": "2026-09-07",
+    "urgent": []
+  },
+  "redirected_to": null,
+  "elapsed_ms": 16
+}

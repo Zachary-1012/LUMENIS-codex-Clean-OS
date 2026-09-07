@@ -1,0 +1,25 @@
+{
+  "path": "/api/viz/overview.stats",
+  "url": "http://127.0.0.1:8201/api/viz/overview.stats",
+  "method": "GET",
+  "timestamp": "2026-09-08T00:47:27",
+  "status": 200,
+  "content_type": "application/json",
+  "is_json": true,
+  "error": null,
+  "response_json": {
+    "data": {
+      "items": [
+        {
+          "active_brands": 0,
+          "engagement": 24,
+          "total": 2
+        }
+      ],
+      "time_range": "today"
+    },
+    "success": true
+  },
+  "redirected_to": null,
+  "elapsed_ms": 11
+}
