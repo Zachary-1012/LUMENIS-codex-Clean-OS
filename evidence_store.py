@@ -704,7 +704,9 @@ def record_evidence(
 
         "feature_id": feature_id, "level": level, "result": result,
 
-        "account": account, "started_at": started_at,
+        # 注意：started_at/created_at 等时间戳是元数据，不参与证据内容哈希——
+    # 相同业务内容必须得到相同哈希（幂等去重），跨秒写入也不能变。
+    "account": account,
 
     }
 
