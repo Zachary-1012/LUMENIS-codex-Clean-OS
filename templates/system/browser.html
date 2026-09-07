@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Internal Browser · 序境 LUMENIS{% endblock %}
 {% block page_title %}Internal Browser{% endblock %}
 {% block body_domain %}system{% endblock %}
@@ -11,7 +11,7 @@
 
 .browser-shell {
   display: flex; flex-direction: column;
-  height: calc(100vh - 0px);
+  height: 100%;
   width: 100%;
   background: linear-gradient(135deg, rgba(124,58,237,0.04) 0%, rgba(167,139,250,0.02) 50%, rgba(255,255,255,0) 100%);
   overflow: hidden;
@@ -717,3 +717,4 @@
 
 <script src="{{ url_for('static', filename='js/browser.js') }}"></script>
 {% endblock %}
+

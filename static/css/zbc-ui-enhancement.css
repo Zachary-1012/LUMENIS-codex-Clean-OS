@@ -29,7 +29,7 @@
 
 /* ---------- 2. Hover 效果增强 ---------- */
 /* 卡片悬浮：上移+阴影加深 */
-.zbc-card:hover, .card:hover, .stat-card:hover, .kpi-card:hover {
+.zbc-card:hover, .card:hover, .stat-card:hover, .zbc-kpi-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
   border-color: rgba(0, 212, 170, 0.3);
@@ -120,7 +120,7 @@ table tbody tr:hover {
 }
 
 /* ---------- 4. KPI 卡片样式增强 ---------- */
-.kpi-card {
+.zbc-kpi-card {
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, var(--zbc-surface, #fff), var(--zbc-surface-hover, #f8fafc));
@@ -129,7 +129,7 @@ table tbody tr:hover {
   padding: 20px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.kpi-card::before {
+.zbc-kpi-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -140,8 +140,8 @@ table tbody tr:hover {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-.kpi-card:hover::before { opacity: 1; }
-.kpi-card__label {
+.zbc-kpi-card:hover::before { opacity: 1; }
+.zbc-kpi-card__label {
   font-size: 12px;
   color: var(--zbc-text-secondary, #64748b);
   font-weight: 500;
@@ -150,23 +150,23 @@ table tbody tr:hover {
   align-items: center;
   gap: 6px;
 }
-.kpi-card__value {
+.zbc-kpi-card__value {
   font-size: 28px;
   font-weight: 700;
   color: var(--zbc-text-primary, #1e293b);
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-.kpi-card__delta {
+.zbc-kpi-card__delta {
   font-size: 12px;
   margin-top: 6px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.kpi-card__delta--up { color: #10B981; }
-.kpi-card__delta--down { color: #EF4444; }
-.kpi-card__delta--neutral { color: #64748b; }
+.zbc-kpi-card__delta--up { color: #10B981; }
+.zbc-kpi-card__delta--down { color: #EF4444; }
+.zbc-kpi-card__delta--neutral { color: #64748b; }
 
 /* ---------- 5. 表格列宽优化 ---------- */
 .zbc-table {
@@ -235,11 +235,11 @@ table tbody tr:hover {
 
 /* ---------- 8. 移动端触控优化 ---------- */
 @media (max-width: 768px) {
-  .zbc-card, .card, .stat-card, .kpi-card {
+  .zbc-card, .card, .stat-card, .zbc-kpi-card {
     padding: 14px;
     border-radius: 12px;
   }
-  .kpi-card__value { font-size: 22px; }
+  .zbc-kpi-card__value { font-size: 22px; }
   .zbc-table { font-size: 12px; }
   .zbc-table th, .zbc-table td { padding: 8px; }
   .zbc-nav-item {

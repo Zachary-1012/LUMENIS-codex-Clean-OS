@@ -54,7 +54,7 @@
       });
     }, { threshold: 0.3 });
 
-    document.querySelectorAll('.kpi-card__value, .stat-value, [data-count]').forEach(el => {
+    document.querySelectorAll('.zbc-kpi-card__value, .stat-value, [data-count], [data-kpi]').forEach(el => {
       observer.observe(el);
     });
   }

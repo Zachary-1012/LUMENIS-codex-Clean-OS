@@ -533,7 +533,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <span class="nav-icon"><span data-icon="grid" data-icon-size="16"></span></span>模组管理
           <span class="nav-badge">27</span>
         </div>
-          <span class="nav-icon">🔓</span><span>ZBMP 品牌智能</span>
+          <span class="nav-icon">🔓</span><span>ZBMP 序境·品牌市场</span>
           <span class="nav-badge" id="zbmp-status-badge">未开启</span>
         </div>
 
@@ -606,7 +606,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="panel" id="panel-protection">
         <!-- ZBMP TOTP -->
         <div class="protection-block zbmp">
-          <h4>🟢 品牌智能 访问保护 · 动态验证码</h4>
+          <h4>🟢 序境·品牌市场 访问保护 · 动态验证码</h4>
           <div class="form-row">
             <label>保护状态</label>
             <span class="status-badge ok" id="zbmpStatus">已开启 · 动态验证码</span>
@@ -638,14 +638,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
         <!-- CTH Password -->
         <div class="protection-block cth">
-          <h4>🔵 太古汇智能 访问保护 · 账号密码</h4>
+          <h4>🔵 序境·商业运营 访问保护 · 账号密码</h4>
           <div class="form-row">
             <label>保护状态</label>
             <span class="status-badge ok" id="cthStatus">已开启 · 账号密码</span>
           </div>
           <div class="form-row"><label>当前账号</label><span class="form-value" id="cthAccount">—</span></div>
-          <p style="font-size:12px;color:#64748b;margin:8px 0">太古汇智能入口使用v4账号密码体系登录。可在上方"登录与安全"中修改密码。</p>
-          <a href="/cth/login" target="_blank"><button class="btn btn-secondary btn-sm">前往太古汇智能登录页</button></a>
+          <p style="font-size:12px;color:#64748b;margin:8px 0">序境·商业运营入口使用v4账号密码体系登录。可在上方"登录与安全"中修改密码。</p>
+          <a href="/cth/login" target="_blank"><button class="btn btn-secondary btn-sm">前往序境·商业运营登录页</button></a>
         </div>
 
         <!-- SYSTEM Reauth -->
@@ -740,8 +740,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div class="form-row">
             <label>当前域</label>
             <select id="navDomainSelect" onchange="loadNavConfig()">
-              <option value="ZBMP">品牌智能</option>
-              <option value="CTH">太古汇智能</option>
+              <option value="ZBMP">序境·品牌市场</option>
+              <option value="CTH">序境·商业运营</option>
               <option value="SYSTEM">系统</option>
             </select>
           </div>
@@ -804,9 +804,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="setting-card">
           <h3><span class="card-icon">📖</span>运行逻辑与功能说明</h3>
           <p style="font-size:12px;color:#475569;line-height:1.8">
-            序境 LUMENIS 是双域舆情监控系统：<strong>品牌智能域</strong>负责品牌传播、KOS分析、竞品监测；
-            <strong>太古汇智能域</strong>负责实时舆情、事件追踪、小红书采集。
-            账户体系对标Apple ID：1主账号+3管理员+5子账号，双域授权隔离，品牌智能域用动态验证码、太古汇智能域用账号密码。
+            序境 LUMENIS 是双域舆情监控系统：<strong>序境·品牌市场域</strong>负责品牌传播、KOS分析、竞品监测；
+            <strong>序境·商业运营域</strong>负责实时舆情、事件追踪、小红书采集。
+            账户体系对标Apple ID：1主账号+3管理员+5子账号，双域授权隔离，序境·品牌市场域用动态验证码、序境·商业运营域用账号密码。
             所有数据真实函数驱动，缺失显式null/—。
           </p>
         </div>
@@ -1215,12 +1215,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="form-group"><label>角色</label>
       <select id="mRole"><option value="user">子账号(Member)</option><option value="admin">管理员(Admin)</option></select>
     </div>
-    <div class="form-group"><label>双域授权（品牌智能读/写, 太古汇智能读/写）</label>
+    <div class="form-group"><label>双域授权（序境·品牌市场读/写, 序境·商业运营读/写）</label>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authZbmpRead" checked> 品牌智能读</label>
-        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authZbmpWrite"> 品牌智能写</label>
-        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authCthRead" checked> 太古汇智能读</label>
-        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authCthWrite"> 太古汇智能写</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authZbmpRead" checked> 序境·品牌市场读</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authZbmpWrite"> 序境·品牌市场写</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authCthRead" checked> 序境·商业运营读</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authCthWrite"> 序境·商业运营写</label>
       </div>
     </div>
     <div class="modal-actions">
@@ -1236,7 +1236,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <h3>创建程序化密钥</h3>
     <div class="form-group"><label>名称/备注</label><input type="text" id="kLabel" placeholder="如：数据同步脚本"></div>
     <div class="form-group"><label>工作区</label>
-      <select id="kWorkspace"><option>品牌智能</option><option>太古汇智能</option><option>系统</option></select>
+      <select id="kWorkspace"><option>序境·品牌市场</option><option>序境·商业运营</option><option>系统</option></select>
     </div>
     <div class="form-group"><label>有效期（天）</label><input type="number" id="kExpires" value="30" min="1"></div>
     <div class="form-group"><label>绑定IP（可选）</label><input type="text" id="kBoundIp" placeholder="如 192.168.1.100"></div>
@@ -1308,7 +1308,7 @@ function applyLanguage() {
       <!-- ZBMP 产品域解锁面板 -->
       <div class="settings-panel" id="panel-zbmp-domain" style="display:none">
         <div class="panel-header">
-          <h2>品牌智能 ZBMP 域</h2>
+          <h2>序境·品牌市场 ZBMP 域</h2>
           <p class="panel-desc">ZBMP 与 CTH 为独立产品域。解锁后侧边栏将显示 ZBMP 导航组（品牌/内容/播客/KOS/竞品/风险/报告）。</p>
         </div>
 
@@ -1357,7 +1357,7 @@ function applyLanguage() {
         <div class="setting-card" style="background:#f0fdfa">
           <div class="setting-card__title" style="color:#0F766E">产品域解离说明</div>
           <p style="font-size:12px;color:#475569;margin-top:8px;line-height:1.7">
-            ZBMP（品牌智能）与 CTH（太古汇专项）目前共享运行时，但产品域身份、数据、规则、页面已解耦。
+            ZBMP（序境·品牌市场）与 CTH（太古汇专项）目前共享运行时，但产品域身份、数据、规则、页面已解耦。
             后续完全解离时，此处将替换为独立产品域认证服务，调用契约保持不变。
           </p>
         </div>

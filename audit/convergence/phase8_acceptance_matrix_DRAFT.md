@@ -1,7 +1,7 @@
 # 阶段8 最终验收矩阵（草稿）
 
 > 生成时间：2026-09-07
-> 状态：草稿 — Tests 与 Final Status 留空，待全量测试实数填入后定稿
+> 状态：草稿 v2 — 已纳入full22首次全绿(4081 passed)、用户3处修复、Podcast 8 API VERIFIED；Tests连续稳定性与Final Status待最终实数
 > 证据文件：audit/convergence/_phase8_db_trend_evidence.md、_phase8_product_evidence.md、_phase8_audit_branch_evidence.md
 
 ---
@@ -19,17 +19,19 @@
 
 ---
 
-## 2. Tests（测试体系）— ⏳ 待用户填入全量实数
+## 2. Tests（测试体系）
 
 | 维度 | 状态 | 备注 |
 |------|------|------|
-| 全量测试 pass/fail/skip/error | **待填** | 用户重跑中（ZBC_TEST_OFFLINE修复后） |
-| 连续多次独立运行一致性 | **待填** | 用户要求2~3次+随机/逆序 |
-| 总耗时 | **待填** | — |
-| 阶段1修复项 | v4_upgrade懒加载(448→136ms)、collect_ignore列全8个sys.exit脚本、safe_collect 13.4s→1.1s、workspace_keys pbkdf2隔离、security_scanner范围(7232→1475文件)、ai_task_engine心跳泄漏try/finally、ZBC_TEST_OFFLINE云端短路 | commits a98bc5e/34811e0/7115f49 + 用户修复 |
+| full22 首次全绿 | ✅ 4090用例 = 4081 passed / 9 skipped / 0 failed / 0 error | THREAD LEAK REPORT=NO leak，EXIT=0；9 skip为online/BLOCKED合理跳过 |
+| 连续多次独立运行一致性 | **待填** | 用户要求2~3次+随机/逆序，以最终实数为准 |
+| 总耗时(测试本体) | ~360-383s（full18-20） | full22退出阶段异常3687s（见下） |
+| 退出阶段异常 | ⚠️ 调查中 | full22测试本体到100%+warnings正常，卡在之后非daemon线程/atexit join，非确定性(full18-20同命令360-383s)；疑似ThreadPoolExecutor atexit join/loguru enqueue writer/残留socket read；用户用zbc_exitwatch重跑full23定位中。**测试进程退出问题，不改业务判定** |
+| 阶段1修复项 | v4_upgrade懒加载(448→136ms)、collect_ignore列全8个sys.exit脚本、safe_collect 13.4s→1.1s、workspace_keys pbkdf2隔离、security_scanner范围(7232→1475文件)、ai_task_engine心跳泄漏try/finally、ZBC_TEST_OFFLINE云端短路、**cache_manager notes created_at→collected_at**、**test_repository_registry scratch排除_前缀统一**、**conftest _env_full_restore全环境键隔离** | commits a98bc5e/34811e0/7115f49 + 用户修复 |
 | 全量冻结真根因 | test_l4_full_chain::test_step_10_report 真实云端AI HTTPS ssl.read阻塞90s×3=270s（非线程污染、非pbkdf2） | 用户定位，ZBC_TEST_OFFLINE=1修复 |
+| 全量子进程污染根因 | 测试函数体内裸设AI_PROVIDER/API_KEY/OLLAMA_BASE_URL/ZBC_DB_PATH等不还原，泄漏给importlib.reload(app)与subprocess子进程 → test_osai_boundary_audit(3)/test_lean_footprint全量必挂单跑全过 | 用户修复：conftest _env_full_restore autouse fixture |
 | Agent Runtime新测试 | 295个全通过（Core 167 + Memory 128），无线程泄漏 | commits c679dab/bcd1cd6 |
-| 全量测试隔离结论 | **待填** | 稳定后标 VERIFIED / PARTIAL / NOT VERIFIED |
+| 全量测试隔离结论 | **待填** | full22首次全绿，等连续多次稳定后标 VERIFIED |
 
 ---
 
@@ -98,7 +100,7 @@ DB直查核对：notes=1020(1019有publish_datetime)、events=494(全部有event
 |----|------|------|
 | ZBMP brand.html→/api/brands/logos | ✅ VERIFIED | 200，194品牌，logo覆盖率93.8%(182/194) |
 | CTH brands.html | ✅ VERIFIED | 200，同样接入/api/brands/logos |
-| Podcast 10维打分8 API | ⚠️ PARTIAL | 7/8可用(200)，**story-nodes端点HTTP 000超时**(podcast_routes.py:143，import路径问题) |
+| Podcast 10维打分8 API | ✅ VERIFIED | 8/8全部200（含story-nodes POST 200返回{ok:true,count:1,nodes:[...]}；之前HTTP 000是GET/无认证/服务重启窗口探测方法问题，非缺陷） |
 | Settings标准化 | ✅ VERIFIED | 200，平台开关(/api/data-center/platforms返回1平台=小红书)/系统模块入口/语言切换三组齐全 |
 | 9级z-index token | ✅ VERIFIED | adaptive-layout.css 9变量全定义(--z-base=0到--z-auth-recovery=10000)，仅1处魔法数字残留(cth/realtime.html:618) |
 | Motion覆盖 | ⚠️ PARTIAL | 3 JS全加载(motion-bridge/adaptive-motion/carousel)，14页COVERED(data-kpi)、4页PARTIAL(cth/evidence/industries/launch用不同class名)、10+页无KPI元素 |
@@ -117,8 +119,9 @@ DB直查核对：notes=1020(1019有publish_datetime)、events=494(全部有event
 | 业态分布全0 | ⏳ 后端待修 | /api/brand-stats pie_data全0，需修复brand→industry匹配（不可用content categories冒充） |
 | Runtime Guardian全UNKNOWN | ⏳ 后端待修 | runtime_guardian.py零外部调用，需注入guardian数据到/api/system/runtime |
 | /api/xhs/p0/status超时 | ⏳ 后端待修 | 有三级fallback链不影响核心功能 |
-| Podcast story-nodes HTTP 000 | ⚠️ 待修 | podcast_routes.py:143端点存在但调用挂起，需排查import story_nodes路径 |
-| cache_manager.py:241真实bug | ⚠️ 未修 | `SELECT * FROM events ORDER BY created_at`，events表26列中无created_at，运行时必报错 |
+| Podcast story-nodes | ✅ 已解除 | POST路由，正确POST+Basic Auth实测200返回{ok:true,count:1,nodes:[...]}，之前HTTP 000是探测方法问题非缺陷 |
+| cache_manager notes created_at | ✅ 已修(用户) | cache_manager.py:141 `SELECT MAX(created_at) FROM notes`→`collected_at`（notes表真实列是collected_at，无created_at）；测试fixture同步对齐；生产必抛被except吞成latest_note_time永久None |
+| cache_manager events ORDER BY | ⚠️ 待核实 | cache_manager.py:241 `SELECT * FROM events ORDER BY created_at`，events表无created_at列（真实列event_date/first_seen），需确认是否仍存在或已在其他commit修复 |
 | report_api.py:493口径不一致 | ⚠️ 未修 | 用first_seen而非event_date，first_seen含脏值"编辑于2025-08-22" |
 | 平台开关写接口 | ⚠️ 待确认 | POST /api/data-center/platforms/<id>/visibility后端可能未实现，前端优雅降级UI预览模式 |
 | 趋势图平滑过渡 | ⚠️ P1后续 | ZBCMotion.updateChart()已就绪但xjViz现有渲染函数尚未全部改为调用此API |
@@ -138,6 +141,9 @@ DB直查核对：notes=1020(1019有publish_datetime)、events=494(全部有event
 | security_scanner扫描范围 | ✅ 已修 | exclude_dirs增补IDE/浏览器profile/归档+max_scan_file_bytes=1MiB，7232→1475文件/5s |
 | ai_task_engine心跳泄漏 | ✅ 已修 | execute_task try/finally lifecycle_stop，修复前泄漏8线程修复后0泄漏 |
 | report_engine心跳泄漏 | ✅ 已修(复核修正) | generate_report() L270 lifecycle_start已有L381-389 finally配对，非"待修" |
+| cache_manager notes created_at | ✅ 已修(用户) | L141 `SELECT MAX(created_at) FROM notes`→`collected_at`，生产必抛被except吞 |
+| evidence_api blueprint重复注册 | ⚠️ P1待收口 | 启动日志可见already registered，不阻断但需收口（同/api/collector/status双重注册模式） |
+| 全环境键隔离 | ✅ 已修(用户) | conftest _env_full_restore autouse fixture，解决test_osai_boundary_audit/test_lean_footprint全量必挂单跑全过 |
 | 硬编码产品口令1012Zzh | ⚠️ P2建议 | app.py:6046硬编码，建议移.env |
 | 配置漂移 | ⚠️ P1 | 代码读130个env变量，.env.example仅80个且GBK乱码 |
 | 无统一Feature Registry | ⚠️ P1 | 14+ Feature Flag散落为独立env变量 |
@@ -184,18 +190,24 @@ DB直查核对：notes=1020(1019有publish_datetime)、events=494(全部有event
 | 阶段2 DB生命周期 | ✅ VERIFIED |
 | 阶段3趋势闭环 | ✅ VERIFIED |
 | 阶段4采集验证 | ⚠️ PARTIAL（4/6 VERIFIED，XHSAppTopicAdapter+账号保活PARTIAL） |
-| 阶段5产品闭环 | ⚠️ PARTIAL（前端11项全修，后端3项待接入：业态/Guardian/xhs-p0，Podcast story-nodes待修） |
+| 阶段5产品闭环 | ✅ 接近VERIFIED（前端11项全修，Podcast 8 API全200，后端3项待接入：业态/Guardian/xhs-p0） |
 | 阶段6源码审计 | ✅ VERIFIED（P0=0/P1=27/P2=17，含本轮新增8项） |
 | 阶段7分支收敛 | ✅ VERIFIED（97分支A-F分类，F类禁合并） |
 | Agent Runtime | ✅ VERIFIED（Core+Memory，295测试全通过，Feature Flag默认关闭） |
 | push main | ⏳ 未执行（19个本地commit待push） |
 
 ### 阻塞项（影响READY结论）
-1. **全量测试实数** — 待用户填入（决定阶段1是否VERIFIED）
-2. **cache_manager.py:241真实bug** — events表ORDER BY不存在的created_at列，运行时必报错
-3. **Podcast story-nodes HTTP 000** — 端点挂起需排查import路径
-4. **后端3项待接入** — 业态匹配/Runtime Guardian注入/xhs-p0/status
-5. **push main** — 19个本地commit待push
+1. **全量测试连续稳定性** — full22首次全绿(4081 passed/9 skipped/0 failed)，等连续多次+随机/逆序稳定后阶段1标VERIFIED
+2. **全量退出阶段非确定性耗时** — full22退出3687s(full18-20仅360-383s)，疑似ThreadPoolExecutor atexit join/loguru enqueue writer/残留socket read，用户用zbc_exitwatch定位中（测试进程退出问题，不改业务判定）
+3. **cache_manager events ORDER BY created_at** — L241对events表用不存在的created_at列，需确认是否仍存在或已修复
+4. **evidence_api blueprint重复注册** — 启动日志already registered，不阻断但需收口
+5. **后端3项待接入** — 业态匹配/Runtime Guardian注入/xhs-p0/status
+6. **push main** — 本地commit待push
+
+### 已解除阻塞
+- ~~Podcast story-nodes HTTP 000~~ → POST 200 VERIFIED
+- ~~cache_manager notes created_at~~ → 用户修复为collected_at
+- ~~全量子进程环境污染~~ → conftest _env_full_restore修复
 
 ### 建议下一步
 1. 全量测试稳定通过后，阶段1标VERIFIED
