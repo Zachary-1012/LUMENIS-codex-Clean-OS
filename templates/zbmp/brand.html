@@ -10,6 +10,7 @@
 <select class="zbc-btn" id="industry-filter" aria-label="业态筛选" style="cursor:pointer;">
   <option value="">全部业态</option>
 </select>
+<span class="zbc-tag zbc-tag--info" id="logo-coverage-tag">Logo加载中…</span>
 <button class="zbc-btn zbc-btn--primary" id="btn-add-brand" type="button">+ 新增品牌</button>
 {% endblock %}
 
@@ -114,7 +115,7 @@
 (function() {
   'use strict';
   var ZBMPBrand = {
-    state: { brands: [], filtered: [], page: 1, perPage: 20, totalPages: 1, industry: '', search: '', currentTab: 'list', growthLoaded: false },
+    state: { brands: [], filtered: [], page: 1, perPage: 20, totalPages: 1, industry: '', search: '', currentTab: 'list', growthLoaded: false, logoMap: {} },
 
     init: function() {
       var self = this;
@@ -170,7 +171,6 @@
     load: function() {
       var self = this;
       this.showState('loading');
-      // xjViz.api 自动带认证（base.html 已包装 LUMENIS.fetch）
       xjViz.api('/brand-industry/brands', { limit: 200 })
         .then(function(d) {
           if (d.ok === false) throw new Error(d.error || 'API error');
@@ -180,9 +180,9 @@
           self.renderKPIs(brands);
           self.state.totalPages = Math.max(1, Math.ceil(brands.length / self.state.perPage));
           self.applyFilters();
+          self.loadLogos();
         })
         .catch(function(e) {
-          // Fallback to /zbmp/brands
           xjViz.api('/zbmp/brands')
             .then(function(d2) {
               var brands = (d2.data && d2.data.brands) || d2.brands || [];
@@ -191,12 +191,43 @@
               self.state.totalPages = Math.max(1, Math.ceil(brands.length / self.state.perPage));
               self.showDegraded('品牌业态数据延迟，已加载基础品牌列表');
               self.applyFilters();
+              self.loadLogos();
             })
             .catch(function(e2) {
               document.getElementById('brand-error-msg').textContent = e.message || e2.message || '加载失败';
               self.showState('error');
             });
         });
+    },
+
+    /* 产品级 Logo API：/api/brands/logos?domain=zbmp，复用 CTH brands.html 调用模式 */
+    loadLogos: function() {
+      var self = this;
+      fetch('/api/brands/logos?domain=zbmp', { headers: { 'X-Domain-Id': 'zbmp' } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (!d.ok) return;
+          var map = {};
+          (d.brands || []).forEach(function(b) {
+            if (b.brand_en) map[b.brand_en.toLowerCase().trim()] = b;
+            if (b.brand_cn) map[b.brand_cn.toLowerCase().trim()] = b;
+          });
+          self.state.logoMap = map;
+          var stats = d.logo_stats || {};
+          var tag = document.getElementById('logo-coverage-tag');
+          if (tag) tag.textContent = 'Logo ' + (stats.coverage != null ? stats.coverage : 0) + '%';
+          if (self.state.currentTab === 'list') self.renderTable();
+        })
+        .catch(function() { /* logo 失败静默降级为字母头像，不影响主列表 */ });
+    },
+
+    _getLogoForBrand: function(b) {
+      var names = [b.brand_name_cn, b.brand_name, b.brand_key, b.name].filter(Boolean);
+      for (var i = 0; i < names.length; i++) {
+        var key = String(names[i]).toLowerCase().trim();
+        if (this.state.logoMap[key]) return this.state.logoMap[key];
+      }
+      return null;
     },
 
     showDegraded: function(msg) { var b = document.getElementById('degraded-banner'); if (b) { b.style.display = 'flex'; document.getElementById('degraded-msg').textContent = msg; } },
@@ -263,8 +294,18 @@
         var riskTag = neg > 5 ? '<span class="zbc-tag zbc-tag--high">高风险</span>' : (neg > 0 ? '<span class="zbc-tag zbc-tag--medium">关注</span>' : '<span class="zbc-tag zbc-tag--low">正常</span>');
         var change = '—';
         if (b.volume_change != null) { var cls = b.volume_change >= 0 ? 'color:#10B981' : 'color:#DC2626'; var arr = b.volume_change >= 0 ? '↑' : '↓'; change = '<span style="' + cls + ';font-size:12px;font-weight:600;">' + arr + ' ' + Math.abs(b.volume_change) + '%</span>'; }
-        var logo = name.charAt(0).toUpperCase();
-        tr.innerHTML = '<td><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">' + logo + '</div></td>' +
+        /* Logo 渲染：优先产品级 /api/brands/logos 返回的真实 logo，降级为渐变字母头像（复用 CTH 模式） */
+        var logoData = self._getLogoForBrand(b);
+        var initial = name.charAt(0).toUpperCase();
+        var logoCell;
+        if (logoData && logoData.has_logo && logoData.logo) {
+          logoCell = '<div style="width:28px;height:28px;border-radius:6px;background:var(--l-bg-secondary,#F7F7F8);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--l-border-light,#F0F0F0);">'
+            + '<img src="' + logoData.logo + '" alt="' + self.escapeHtml(name) + '" style="width:100%;height:100%;object-fit:contain;" '
+            + 'onerror="this.parentElement.innerHTML=\'<div style=\\\'font-size:12px;font-weight:700;color:var(--l-text-tertiary,#9CA3AF);\\\'>' + initial + '</div>\'"></div>';
+        } else {
+          logoCell = '<div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">' + initial + '</div>';
+        }
+        tr.innerHTML = '<td>' + logoCell + '</td>' +
           '<td style="font-weight:500;">' + self.escapeHtml(name) + '</td>' +
           '<td><span class="zbc-tag zbc-tag--info">' + self.escapeHtml(industry) + '</span></td>' +
           '<td style="font-size:12px;color:var(--l-text-secondary,#6B7280);">' + self.escapeHtml(platform) + '</td>' +
@@ -304,7 +345,6 @@
             nh += '</tbody></table>';
             document.getElementById('profile-recent-notes').innerHTML = nh;
           } else { document.getElementById('profile-recent-notes').innerHTML = '<div class="zbc-state-empty__text" style="padding:24px;">暂无关联笔记</div>'; }
-          // Trend via xjViz.trend
           var trendData = xjViz.fn.FN_TREND_SERIES(notes.map(function(n) { return { date: n.publish_date || '', label: (n.publish_date||'').substring(5,10), total: ((n.likes||0)+(n.comments||0)) }; }), 'total');
           if (trendData.length > 0) { xjViz.trend('#profile-trend', trendData, { type: 'area', color: '#0F766E', height: 160 }); }
           else { document.getElementById('profile-trend').innerHTML = '<div class="zbc-state-empty__text" style="padding:40px 0;">趋势数据采集中</div>'; }
