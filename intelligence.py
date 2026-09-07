@@ -169,10 +169,10 @@ _CAPABILITY_MODEL_MAP = {
         'description': '强推理（复杂分析/逻辑链/深度研判）',
     },
     'daily': {
-        'provider': 'zhipu',
-        'model': 'glm-4.5-air',
-        'fallback_chain': ['ark', 'ollama'],
-        'description': '日常任务（摘要/分类/情绪/普通对话，关思考省额度）',
+        'provider': 'ark',
+        'model': 'doubao-lite-4k',
+        'fallback_chain': ['zhipu:glm-4.5-air', 'ollama'],
+        'description': '日常最小输出（摘要/分类/情绪/轻量对话，豆包 lite 省额度，失败自动降智谱）',
         'thinking_disabled': True,
     },
     'offline_fallback': {
@@ -282,8 +282,14 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
     system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
     # V1.0: 构建 cloud fallback 链（zhipu L1 → ark L2 → qwen L3）
     # 本地 Provider（ollama/lmstudio）由 _provider_config 单独处理，不混入 cloud 链
+    # 根据传入 model 前缀判断主 provider：最小输出豆包优先，大算力智谱优先
+    _model_lower = str(model or '').lower()
+    if _model_lower.startswith(('doubao', 'ark-')):
+        _preferred = ('ark', 'zhipu', 'qwen')
+    else:
+        _preferred = ('zhipu', 'ark', 'qwen')
     chain = []
-    for _p in ('zhipu', 'ark', 'qwen'):
+    for _p in _preferred:
         _key_env = {'zhipu': 'ZHIPU_API_KEY', 'ark': 'ARK_API_KEY', 'qwen': 'DASHSCOPE_API_KEY'}.get(_p, '')
         if _key_env and _env(_key_env):
             chain.append(_p)
@@ -307,8 +313,16 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
         api_key, base, model_default = cfg_map[prov]
         if not api_key:
             raise ValueError(f'provider {prov} no api key')
+        # 备用 Provider 切换为自身默认模型（避免用豆包模型名调智谱接口导致 404）
         m = model or model_default
-        # 备用 Provider 用最小输出（豆包兜底，省额度）；主通道用完整 max_tokens
+        if prov != primary and model:
+            _ml = str(model).lower()
+            _zhipu_family = _ml.startswith(('glm-', 'web-search', 'chatglm'))
+            _ark_family = _ml.startswith(('doubao', 'ark-'))
+            _qwen_family = _ml.startswith(('qwen', 'qw-', 'qwen2'))
+            if (prov == 'zhipu' and not _zhipu_family) or                (prov == 'ark' and not _ark_family) or                (prov == 'qwen' and not _qwen_family):
+                m = model_default
+        # 备用 Provider 用最小输出（省额度）；主通道用完整 max_tokens
         max_tokens_eff = max_tokens if prov == primary else min(max_tokens, 300)
         payload_obj={'model':m,'temperature':temperature,'max_tokens':max_tokens_eff,'messages':[{'role':'system','content':system_r},{'role':'user','content':user_r}]}
         if prov == 'zhipu' and not str(m).lower().startswith('glm-5.3'):

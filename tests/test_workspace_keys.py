@@ -25,9 +25,26 @@ from v4_upgrade.auth.models import init_auth_db  # noqa: E402
 
 @pytest.fixture(scope="module", autouse=True)
 def _setup():
-    init_auth_db()          # 建 v4_users 并确保 owner
+    # 确定性隔离（不依赖 import 顺序）：v4_upgrade.config.DB_PATH 在【首次 import 时按
+    # 当时 os.environ 固化】，auth.models 又以 `from ..config import DB_PATH` 值绑定。
+    # 全量套件（尤其逆序/随机）中它可能已被更早模块固化成生产 data/monitor.db；若不显式
+    # 改回本模块临时库，verify_workspace_key 会对生产库 v4_workspace_keys 数百个历史 active
+    # key（rounds=12）逐个 PBKDF2，必然超过用例超时。故此处同时绑定 config 与 models 两层。
+    import v4_upgrade.config as _cfg
+    import v4_upgrade.auth.models as _models
+    _old_cfg = getattr(_cfg, "DB_PATH", None)
+    _old_models = getattr(_models, "DB_PATH", None)
+    _cfg.DB_PATH = _TMP.name
+    _models.DB_PATH = _TMP.name
+    os.environ["ZBC_DB_PATH"] = _TMP.name
+    init_auth_db()          # 建 v4_users 并确保 owner（落在临时库）
     ws.ensure_workspace_tables()
     yield
+    # 还原全局绑定与环境，杜绝泄漏给后续模块
+    if _old_cfg is not None:
+        _cfg.DB_PATH = _old_cfg
+    if _old_models is not None:
+        _models.DB_PATH = _old_models
     try:
         os.unlink(_TMP.name)
     except OSError:
