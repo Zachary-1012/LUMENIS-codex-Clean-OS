@@ -6,6 +6,20 @@
 <title>设置 · 序境 LUMENIS</title>
 <link rel="stylesheet" href="/static/css/zbc-design-v1.1.css">
 <style>
+/* ===== Phase5b: Z-Index Layer Tokens (standalone page) ===== */
+:root {
+  --z-base: 0; --z-sticky: 10; --z-dropdown: 100; --z-embedded-panel: 150;
+  --z-drawer: 200; --z-modal: 500; --z-dialog: 800; --z-toast: 1000; --z-auth-recovery: 10000;
+}
+/* ===== prefers-reduced-motion global guard ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 /* ===== No-Scroll Lock ===== */
 html,body{height:100dvh;overflow:hidden;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b}
@@ -253,7 +267,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* Modal */
 .modal-overlay{
   position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);
-  display:none;align-items:center;justify-content:center;z-index:1000;
+  display:none;align-items:center;justify-content:center;z-index:var(--z-modal);
 }
 .modal-overlay.show{display:flex}
 .modal{
@@ -297,7 +311,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
   background:#0f172a;color:#fff;padding:12px 24px;border-radius:12px;
-  font-size:13px;z-index:2000;opacity:0;transition:opacity .3s;
+  font-size:13px;z-index:var(--z-toast);opacity:0;transition:opacity .3s;
   pointer-events:none;
 }
 .toast.show{opacity:1}
@@ -317,7 +331,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:768px){
   .settings-shell{grid-template-columns:1fr}
   .settings-sidebar{
-    position:fixed;bottom:0;left:0;right:0;height:auto;z-index:100;
+    position:fixed;bottom:0;left:0;right:0;height:auto;z-index:var(--z-dropdown);
     flex-direction:row;overflow-x:auto;border-right:none;border-top:1px solid #e2e8f0;
   }
   .sidebar-header{display:none}
@@ -479,6 +493,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="nav-item" data-panel="about" onclick="switchPanel('about')">
         <span class="nav-icon"><span data-icon="info" data-icon-size="16"></span></span>关于系统
       </div>
+      <div class="nav-item" data-panel="syslinks" onclick="switchPanel('syslinks')">
+        <span class="nav-icon"><span data-icon="navigation" data-icon-size="16"></span></span>系统模块入口
+      </div>
       <div class="nav-item" data-panel="domain" onclick="switchPanel('domain')">
         <span class="nav-icon"><span data-icon="globe" data-icon-size="16"></span></span>域名与接入
       </div>
@@ -505,6 +522,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div class="nav-item" data-panel="collection" onclick="switchPanel('collection')">
         <span class="nav-icon"><span data-icon="inbox" data-icon-size="16"></span></span>采集与数据源
+      </div>
+      <div class="nav-item" data-panel="platforms" onclick="switchPanel('platforms')">
+        <span class="nav-icon"><span data-icon="globe" data-icon-size="16"></span></span>平台与可见性
       </div>
       <div class="nav-item" data-panel="backup" onclick="switchPanel('backup')">
         <span class="nav-icon"><span data-icon="database" data-icon-size="16"></span></span>通知/备份/帮助
@@ -1051,6 +1071,89 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
 
+
+      <!-- Platform Visibility (Phase5b: 平台开关) -->
+      <div class="panel" id="panel-platforms">
+        <div class="setting-card">
+          <h3><span class="card-icon">🌐</span>平台可见性开关</h3>
+          <p style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.6">
+            主界面默认仅显示<strong>小红书</strong>。其他平台需在此处手动开启后才会出现在主界面导航中。
+            播客板块保留不撤。开关状态实时同步至 <code>/api/data-center/platforms</code> 的 <code>ui_visible</code> 字段。
+          </p>
+          <div id="platformSwitchList"><div class="loading-spinner"></div></div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:#94a3b8" id="platformSwitchSummary">加载中…</span>
+            <button class="btn btn-secondary btn-sm" onclick="loadPlatformSwitches()">刷新</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <h3><span class="card-icon">📻</span>保留板块</h3>
+          <div class="form-row">
+            <label>播客 (Podcast)</label>
+            <span class="status-badge ok">始终保留 · 不撤</span>
+          </div>
+          <p style="font-size:11px;color:#94a3b8;margin-top:8px">播客板块为独立内容域，不受平台可见性开关影响。</p>
+        </div>
+      </div>
+
+      <!-- System Module Quick Links (Phase5b) -->
+      <div class="panel" id="panel-syslinks">
+        <div class="setting-card">
+          <h3><span class="card-icon">🧭</span>系统模块快捷入口</h3>
+          <p style="font-size:12px;color:#64748b;margin-bottom:16px">设置中心为统一入口，以下为各系统模块的独立管理页面。</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+            <a href="/lumenis/system/runtime" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="gear" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Runtime</div><div class="member-meta">运行时控制</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/collector" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="inbox" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Collector</div><div class="member-meta">采集器管理</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/browser" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="globe" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Browser</div><div class="member-meta">内置浏览器</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/ai" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="intelligence" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">AI</div><div class="member-meta">AI Provider 配置</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/database" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="database" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Database</div><div class="member-meta">数据库管理</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/security" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="lock" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Security</div><div class="member-meta">安全与审计</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/skill-store" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="bolt" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Skill Store</div><div class="member-meta">技能商店</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/evaluation" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="check" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Evaluation</div><div class="member-meta">评测中心</div></div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
       <!-- Integrations / Platform Connections -->
       <div class="panel" id="panel-integrations">
         <div class="setting-card">
@@ -1177,5 +1280,78 @@ function applyLanguage() {
   if (document.documentElement) document.documentElement.setAttribute('lang', saved);
 })();
 </script>
+<script>
+// ===== Phase5b: Platform Visibility Switches =====
+function loadPlatformSwitches() {
+  var list = document.getElementById('platformSwitchList');
+  var summary = document.getElementById('platformSwitchSummary');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-spinner"></div>';
+  fetch('/api/data-center/platforms')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var platforms = (data && data.data) ? data.data.platforms : (data.platforms || []);
+      if (!platforms || platforms.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div>暂无平台数据</div>';
+        if (summary) summary.textContent = '0 个平台';
+        return;
+      }
+      var html = '';
+      var visibleCount = 0;
+      platforms.forEach(function(p) {
+        var pid = p.platform_id || p.id || '';
+        var name = p.display_name || p.platform_name || pid;
+        var visible = p.ui_visible === true || p.ui_visible === 1;
+        var status = p.status || 'UNKNOWN';
+        if (visible) visibleCount++;
+        // 小红书强制可见，不可关闭
+        var isXhs = (pid === 'xhs' || pid === 'xiaohongshu' || name.indexOf('小红书') >= 0);
+        var toggleDisabled = isXhs ? 'pointer-events:none;opacity:0.6' : '';
+        html += '<div class="form-row">' +
+          '<div><label style="font-size:13px;font-weight:500;color:#0f172a">' + name + '</label>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px">ID: ' + pid + ' · 状态: ' + status + (isXhs ? ' · 主平台强制可见' : '') + '</div></div>' +
+          '<div class="toggle ' + (visible ? 'on' : '') + '" style="' + toggleDisabled + '" onclick="togglePlatformVisible(\'' + pid.replace(/'/g, "\\'") + '\', this)"></div>' +
+          '</div>';
+      });
+      list.innerHTML = html;
+      if (summary) summary.textContent = '共 ' + platforms.length + ' 个平台，' + visibleCount + ' 个可见';
+    })
+    .catch(function(e) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>加载失败: ' + e.message + '</div>';
+    });
+}
+
+function togglePlatformVisible(pid, toggleEl) {
+  var newVisible = !toggleEl.classList.contains('on');
+  toggleEl.classList.toggle('on', newVisible);
+  // 调用 API 更新 ui_visible（如果有对应接口）
+  fetch('/api/data-center/platforms/' + encodeURIComponent(pid) + '/visibility', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ui_visible: newVisible})
+  }).then(function(r) {
+    if (!r.ok) {
+      // 接口不存在时回退 UI 状态
+      toggleEl.classList.toggle('on', !newVisible);
+      showToast('平台开关接口暂未接入，UI 预览模式', 'error');
+    } else {
+      showToast('平台 ' + pid + ' 已' + (newVisible ? '开启' : '关闭') + '可见性', 'success');
+    }
+  }).catch(function() {
+    toggleEl.classList.toggle('on', !newVisible);
+    showToast('平台开关接口暂未接入，UI 预览模式', 'error');
+  });
+}
+
+// 页面加载时自动加载平台开关
+if (document.readyState !== 'loading') {
+  if (document.getElementById('platformSwitchList')) loadPlatformSwitches();
+} else {
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('platformSwitchList')) loadPlatformSwitches();
+  });
+}
+</script>
+
 </body>
 </html>
