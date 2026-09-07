@@ -1,0 +1,3632 @@
+{
+  "ai_call_logs": {
+    "rows": 542,
+    "total_refs": 42,
+    "core_refs": 18,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 2,
+    "audit_refs": 22,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 18,
+    "core_files": [
+      "00-GOVERNANCE\\AI_PROVIDER_FAILOVER_POLICY_V1.0.md",
+      "ai_call_logger.py",
+      "ai_channel.py",
+      "ai_evaluation.py",
+      "function_registry.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "ai_filter_log": {
+    "rows": 864,
+    "total_refs": 80,
+    "core_refs": 38,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 3,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 0,
+    "audit_refs": 32,
+    "archive_refs": 0,
+    "doc_refs": 5,
+    "real_code_count": 41,
+    "core_files": [
+      ".trae\\specs\\dual-repo-audit-20260902\\spec.md",
+      ".trae\\specs\\dual-repo-audit-20260902\\tasks.md",
+      "ARCHITECTURE.md",
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "data\\backups\\phase8-six-maps-20260902.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "ai_task": {
+    "rows": 970,
+    "total_refs": 6,
+    "core_refs": 2,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "ai_task_engine.py",
+      "app.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "ai_task_evidence": {
+    "rows": 1354,
+    "total_refs": 5,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "ai_task_engine.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "ai_task_step": {
+    "rows": 2234,
+    "total_refs": 5,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "ai_task_engine.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "ai_task_trace": {
+    "rows": 2800,
+    "total_refs": 5,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "ai_task_engine.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "alert_configs": {
+    "rows": 13,
+    "total_refs": 22,
+    "core_refs": 9,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 13,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 9,
+    "core_files": [
+      "alert_engine.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "alert_records": {
+    "rows": 0,
+    "total_refs": 40,
+    "core_refs": 17,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 22,
+    "archive_refs": 0,
+    "doc_refs": 1,
+    "real_code_count": 17,
+    "core_files": [
+      "alert_engine.py",
+      "badge_api.py",
+      "ic_routes.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_module_scan_raw.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "app_evidence_records": {
+    "rows": 17,
+    "total_refs": 75,
+    "core_refs": 29,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 4,
+    "audit_refs": 28,
+    "archive_refs": 0,
+    "doc_refs": 13,
+    "real_code_count": 30,
+    "core_files": [
+      "00-GOVERNANCE\\_path_backup\\scripts_inventory_feature_final_verify.py",
+      "00-GOVERNANCE\\_t10_db_audit.py",
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "app_evidence.py",
+      "evidence_api.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "auth_recovery_tasks": {
+    "rows": 5,
+    "total_refs": 40,
+    "core_refs": 15,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 20,
+    "archive_refs": 0,
+    "doc_refs": 4,
+    "real_code_count": 15,
+    "core_files": [
+      "auth_recovery_center.py",
+      "intelligence_library\\08_UI-UX\\ZBC_PAGE_LEVEL_DESIGN_V1.1.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "bilibili_comments": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "bilibili_users": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "bilibili_videos": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 4,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "brand_industry_monitor": {
+    "rows": 198,
+    "total_refs": 42,
+    "core_refs": 24,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 10,
+    "archive_refs": 1,
+    "doc_refs": 4,
+    "real_code_count": 26,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "app.py",
+      "backups\\app.py.bak-before-v4-20260830-011445.py",
+      "brand_stats_recompute.py",
+      "data\\backups\\topic_campaign_patch_20260828_163857\\app.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "brand_knowledge": {
+    "rows": 0,
+    "total_refs": 56,
+    "core_refs": 21,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 23,
+    "archive_refs": 0,
+    "doc_refs": 11,
+    "real_code_count": 22,
+    "core_files": [
+      "CHANGELOG.md",
+      "brand_knowledge_base.py",
+      "intelligence_library\\00_总览\\INTELLIGENCE_LIBRARY_ARCHITECTURE_V1.0.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "brand_propagation_entities": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 2,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "brand_propagation.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\gap_closure_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "brand_propagation_events": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 2,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "brand_propagation.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\gap_closure_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "brands": {
+    "rows": 0,
+    "total_refs": 117,
+    "core_refs": 51,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 9,
+    "audit_refs": 26,
+    "archive_refs": 1,
+    "doc_refs": 18,
+    "real_code_count": 53,
+    "core_files": [
+      "00-GOVERNANCE\\CANONICAL_REGISTRY.md",
+      "02-ARCHITECTURE\\UNIFIED-DATA-INTELLIGENCE-PIPELINE-V1.0.md",
+      "ai_task_parser.py",
+      "api_dual_domain.py",
+      "app.py",
+      "backups\\app.py.bak-before-v4-20260830-011445.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "browser_evidence": {
+    "rows": 722,
+    "total_refs": 7,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 5,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "ai_browser_runtime.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "canonical_data": {
+    "rows": 13,
+    "total_refs": 100,
+    "core_refs": 35,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 6,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 20,
+    "audit_refs": 38,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 41,
+    "core_files": [
+      "00-GOVERNANCE\\feature_registry.md",
+      "00-GOVERNANCE\\osai_module_call_graph_shardB.json",
+      "api_dual_domain.py",
+      "app.py",
+      "canonical_data.py",
+      "collection_quality_gate.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "case_deep_analysis": {
+    "rows": 0,
+    "total_refs": 106,
+    "core_refs": 50,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 38,
+    "archive_refs": 1,
+    "doc_refs": 15,
+    "real_code_count": 50,
+    "core_files": [
+      "00-GOVERNANCE\\feature_registry.md",
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "app.py",
+      "case_deep_analysis.py",
+      "content_generation.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\ZBC_OPTIMIZATION_MIGRATION_INVENTORY_V1.0.md"
+    ],
+    "has_real_code": true
+  },
+  "channels_comments": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\channels.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "channels_videos": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\channels.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "collection_logs": {
+    "rows": 499,
+    "total_refs": 119,
+    "core_refs": 43,
+    "adapter_refs": 3,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 5,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 14,
+    "audit_refs": 37,
+    "archive_refs": 1,
+    "doc_refs": 14,
+    "real_code_count": 51,
+    "core_files": [
+      ".trae\\specs\\dual-repo-audit-20260902\\tasks.md",
+      "ARCHITECTURE.md",
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "app.py",
+      "backups\\app.py.bak-before-v4-20260830-011445.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\health_center.py",
+      "platform_adapters\\scheduling\\state_map.py",
+      "platform_adapters\\scheduling\\store.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "collection_quality_log": {
+    "rows": 0,
+    "total_refs": 11,
+    "core_refs": 5,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 0,
+    "audit_refs": 5,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 5,
+    "core_files": [
+      "app.py",
+      "collection_quality_gate.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\LUMENIS_ZBC_DUAL_DOMAIN_AUDIT.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\PR_DESCRIPTION.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\data_quality_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "collection_runs": {
+    "rows": 0,
+    "total_refs": 7,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 4,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "collector_quality_log": {
+    "rows": 7,
+    "total_refs": 67,
+    "core_refs": 31,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 3,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 0,
+    "audit_refs": 28,
+    "archive_refs": 0,
+    "doc_refs": 4,
+    "real_code_count": 34,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "check_logs.py",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "data\\function_map.json",
+      "data\\migrate_db.py",
+      "data\\verify_db.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "content_analysis": {
+    "rows": 0,
+    "total_refs": 6,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "content_evaluation": {
+    "rows": 34,
+    "total_refs": 8,
+    "core_refs": 2,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 5,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "app.py",
+      "content_generation.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "content_generation_evidence": {
+    "rows": 34,
+    "total_refs": 8,
+    "core_refs": 2,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 5,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "app.py",
+      "content_generation.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "creators": {
+    "rows": 0,
+    "total_refs": 21,
+    "core_refs": 6,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 4,
+    "archive_refs": 0,
+    "doc_refs": 6,
+    "real_code_count": 7,
+    "core_files": [
+      "contracts\\kos\\KOS_ENTITY_OWNERSHIP_CONTRACT_v1.md",
+      "data_center_api.py",
+      "intelligence_library\\08_UI-UX\\UI-IA-INTERACTION-RESEARCH-CONTRACT-V1-20260903.md",
+      "intelligence_library\\09_Research-Hub\\研究收件箱\\overseas-social-algorithm-2026update-20260903.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\治理架构\\contracts\\kos\\KOS_ENTITY_OWNERSHIP_CONTRACT_v1.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "daily_digest": {
+    "rows": 9,
+    "total_refs": 60,
+    "core_refs": 28,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 0,
+    "audit_refs": 26,
+    "archive_refs": 0,
+    "doc_refs": 3,
+    "real_code_count": 30,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "daily_report.py",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "data\\function_map.json",
+      "database.py",
+      "deployment\\deployment\\σüÑσ║╖µúÇµƒÑ.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "daily_reports": {
+    "rows": 30,
+    "total_refs": 120,
+    "core_refs": 52,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 8,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 12,
+    "audit_refs": 38,
+    "archive_refs": 1,
+    "doc_refs": 6,
+    "real_code_count": 61,
+    "core_files": [
+      ".trae\\specs\\dual-repo-audit-20260902\\tasks.md",
+      "AGENTS.md",
+      "ARCHITECTURE.md",
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "app.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\evidence_exporter.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "douyin_comments": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "douyin_users": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "douyin_videos": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 4,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "evaluation_records": {
+    "rows": 0,
+    "total_refs": 28,
+    "core_refs": 10,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 17,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 10,
+    "core_files": [
+      "evaluation_recorder.py",
+      "evaluation_runner.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\evaluation_system_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "event_graph_events": {
+    "rows": 0,
+    "total_refs": 60,
+    "core_refs": 25,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 23,
+    "archive_refs": 1,
+    "doc_refs": 10,
+    "real_code_count": 26,
+    "core_files": [
+      "CHANGELOG.md",
+      "app.py",
+      "data\\learning_database.json",
+      "event_graph.py",
+      "function_registry.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_api_routes_extracted.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "event_graph_relations": {
+    "rows": 0,
+    "total_refs": 43,
+    "core_refs": 21,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 19,
+    "archive_refs": 1,
+    "doc_refs": 2,
+    "real_code_count": 21,
+    "core_files": [
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "app.py",
+      "event_graph.py",
+      "function_registry.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "event_insights": {
+    "rows": 17,
+    "total_refs": 59,
+    "core_refs": 23,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 0,
+    "audit_refs": 30,
+    "archive_refs": 0,
+    "doc_refs": 3,
+    "real_code_count": 25,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "daily_report.py",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "data\\function_map.json",
+      "database.py",
+      "deployment\\deployment\\σüÑσ║╖µúÇµƒÑ.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "event_mentions": {
+    "rows": 736,
+    "total_refs": 84,
+    "core_refs": 32,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 3,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 2,
+    "audit_refs": 33,
+    "archive_refs": 3,
+    "doc_refs": 9,
+    "real_code_count": 35,
+    "core_files": [
+      ".trae\\specs\\dual-repo-audit-20260902\\E-001-E-009_close-out.md",
+      ".trae\\specs\\dual-repo-audit-20260902\\self-review-checklist.md",
+      ".trae\\specs\\dual-repo-audit-20260902\\tasks.md",
+      "ARCHITECTURE.md",
+      "app.py",
+      "backups\\app.py.bak-before-v4-20260830-011445.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "events": {
+    "rows": 461,
+    "total_refs": 403,
+    "core_refs": 163,
+    "adapter_refs": 1,
+    "account_refs": 1,
+    "report_refs": 2,
+    "script_refs": 18,
+    "ad_intel_refs": 0,
+    "migration_refs": 5,
+    "test_refs": 36,
+    "audit_refs": 65,
+    "archive_refs": 4,
+    "doc_refs": 39,
+    "real_code_count": 185,
+    "core_files": [
+      "00-GOVERNANCE\\PROGRESS.md",
+      "00-GOVERNANCE\\_path_backup\\scripts_e2e_loop_check.py",
+      "02-ARCHITECTURE\\UNIFIED-DATA-INTELLIGENCE-PIPELINE-V1.0.md",
+      "AGENTS.md",
+      "ARCHITECTURE.md",
+      "CHANGELOG.md"
+    ],
+    "adapter_files": [
+      "platform_adapters\\evidence_exporter.py"
+    ],
+    "account_files": [
+      "account\\nav_config.py"
+    ],
+    "migration_files": [
+      "database_migrations.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\ZBC_OPTIMIZATION_MIGRATION_INVENTORY_V1.0.md",
+      "migrations\\migrate_platform_data_dict_v1.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "feedback_keywords": {
+    "rows": 16,
+    "total_refs": 72,
+    "core_refs": 33,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 0,
+    "audit_refs": 32,
+    "archive_refs": 2,
+    "doc_refs": 2,
+    "real_code_count": 35,
+    "core_files": [
+      "00-GOVERNANCE\\_t10_db_audit.py",
+      "ARCHITECTURE.md",
+      "app.py",
+      "backups\\app.py.bak-before-v4-20260830-011445.py",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "data\\backups\\topic_campaign_patch_20260828_163857\\app.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "github_issues": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\github.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "github_pull_requests": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\github.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "github_releases": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\github.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "github_repositories": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\github.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "historical_import_log": {
+    "rows": 0,
+    "total_refs": 22,
+    "core_refs": 7,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 13,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 7,
+    "core_files": [
+      "historical_data_importer.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\historical_data_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_empty_tables_classification.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "industry_stats": {
+    "rows": 8,
+    "total_refs": 13,
+    "core_refs": 4,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 5,
+    "archive_refs": 0,
+    "doc_refs": 3,
+    "real_code_count": 4,
+    "core_files": [
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\对账\\05_DATABASE_RECONCILIATION.md",
+      "intelligence_library\\10_工程审计方法\\对账\\07_OWNERSHIP_RECONCILIATION.md",
+      "schema_registry.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "instagram_comments": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "instagram_media": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "instagram_users": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "intelligence_assets": {
+    "rows": 711,
+    "total_refs": 25,
+    "core_refs": 5,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 5,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 13,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 10,
+    "core_files": [
+      "content_generation.py",
+      "intelligence_library\\00_总览\\INTELLIGENCE_LIBRARY_ARCHITECTURE_V1.0.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\ZBC_CONSOLIDATED_WORK_LEDGER_V1.0_20260906.md",
+      "intelligence_library\\12_研究到ZBC落地索引\\LANDING_INDEX.md",
+      "intelligence_library_api.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\create_intelligence_assets_table.py"
+    ],
+    "has_real_code": true
+  },
+  "kos_executions": {
+    "rows": 494,
+    "total_refs": 28,
+    "core_refs": 9,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 16,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 10,
+    "core_files": [
+      "DEV_LOG.md",
+      "intelligence_library\\08_UI-UX\\ZBC_PAGE_LEVEL_DESIGN_V1.1.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "kos_operations": {
+    "rows": 340,
+    "total_refs": 28,
+    "core_refs": 11,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 2,
+    "audit_refs": 14,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 12,
+    "core_files": [
+      "function_registry.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "kos_paid_plans": {
+    "rows": 136,
+    "total_refs": 27,
+    "core_refs": 9,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 3,
+    "audit_refs": 14,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 10,
+    "core_files": [
+      "intelligence_library\\08_UI-UX\\ZBC_PAGE_LEVEL_DESIGN_V1.1.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "kos_profiles": {
+    "rows": 375,
+    "total_refs": 54,
+    "core_refs": 32,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 5,
+    "audit_refs": 16,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 33,
+    "core_files": [
+      "DEV_LOG.md",
+      "config\\data-contracts\\kos_profile.yaml",
+      "function_registry.py",
+      "intelligence_library\\01_ZBC专项研究\\产品研究\\01-PRODUCT\\CONTRACT_IC047_20260904.md",
+      "intelligence_library\\08_UI-UX\\UI\\UI-HARD-RESET-LEARNING-20260904.md",
+      "intelligence_library\\09_Research-Hub\\研究收件箱\\KOS-COLLECTION-SUITE-20260903.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "kos_rewards": {
+    "rows": 68,
+    "total_refs": 20,
+    "core_refs": 7,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 12,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 8,
+    "core_files": [
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json",
+      "kos_paid.py",
+      "序境\\08-AUDIT\\PIPELINE_P0_AUDIT_20260903.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "linkedin_posts": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\linkedin.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "linkedin_users": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\linkedin.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "metric_snapshots": {
+    "rows": 1087,
+    "total_refs": 55,
+    "core_refs": 18,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 4,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 7,
+    "audit_refs": 20,
+    "archive_refs": 0,
+    "doc_refs": 5,
+    "real_code_count": 22,
+    "core_files": [
+      "data_center_api.py",
+      "database.py",
+      "function_registry.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\09_Research-Hub\\learning-feed\\zell-p0-loop-20260903.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "note_comments": {
+    "rows": 141,
+    "total_refs": 92,
+    "core_refs": 40,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 7,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 4,
+    "audit_refs": 33,
+    "archive_refs": 0,
+    "doc_refs": 6,
+    "real_code_count": 47,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "cache_manager.py",
+      "collector_v2\\pipeline\\persist.py",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "data\\cache\\20260907_122616\\summary.json",
+      "data\\cache\\cache_meta.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "note_review_history": {
+    "rows": 8347,
+    "total_refs": 85,
+    "core_refs": 31,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 3,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 2,
+    "audit_refs": 34,
+    "archive_refs": 3,
+    "doc_refs": 10,
+    "real_code_count": 34,
+    "core_files": [
+      ".trae\\specs\\dual-repo-audit-20260902\\tasks.md",
+      "ARCHITECTURE.md",
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "data\\function_map.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "notes": {
+    "rows": 1020,
+    "total_refs": 780,
+    "core_refs": 305,
+    "adapter_refs": 12,
+    "account_refs": 0,
+    "report_refs": 6,
+    "script_refs": 18,
+    "ad_intel_refs": 1,
+    "migration_refs": 7,
+    "test_refs": 132,
+    "audit_refs": 70,
+    "archive_refs": 5,
+    "doc_refs": 43,
+    "real_code_count": 342,
+    "core_files": [
+      "99-ARCHIVE\\_reanalyze.py",
+      "AGENTS.md",
+      "ARCHITECTURE.md",
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "ai_analyzer.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\bilibili.py",
+      "platform_adapters\\douyin.py",
+      "platform_adapters\\evidence_exporter.py",
+      "platform_adapters\\facebook.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\ZBC_OPTIMIZATION_MIGRATION_INVENTORY_V1.0.md",
+      "intelligence_library\\10_工程审计方法\\工程矩阵\\16_migration_matrix.md",
+      "migrations\\010_notes_subject_content_type.sql"
+    ],
+    "has_real_code": true
+  },
+  "notification_config": {
+    "rows": 0,
+    "total_refs": 22,
+    "core_refs": 8,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 9,
+    "archive_refs": 0,
+    "doc_refs": 5,
+    "real_code_count": 8,
+    "core_files": [
+      "check_empty_tables.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\对账\\01_SOURCE_INVENTORY.md",
+      "intelligence_library\\10_工程审计方法\\对账\\05_DATABASE_RECONCILIATION.md",
+      "intelligence_library\\10_工程审计方法\\对账\\07_OWNERSHIP_RECONCILIATION.md",
+      "intelligence_library\\10_工程审计方法\\对账\\10_TICKET_RECONCILIATION.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "notification_logs": {
+    "rows": 3,
+    "total_refs": 25,
+    "core_refs": 10,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 10,
+    "archive_refs": 0,
+    "doc_refs": 3,
+    "real_code_count": 11,
+    "core_files": [
+      "check_empty_tables.py",
+      "check_system.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\historical_data_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\对账\\03_CAPABILITY_RECONCILIATION.md",
+      "intelligence_library\\10_工程审计方法\\对账\\05_DATABASE_RECONCILIATION.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "platform_accounts": {
+    "rows": 0,
+    "total_refs": 6,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "platform_comments": {
+    "rows": 0,
+    "total_refs": 6,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "platform_contents": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\channels.py",
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "platform_evidence": {
+    "rows": 0,
+    "total_refs": 7,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 4,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "platform_registry": {
+    "rows": 12,
+    "total_refs": 34,
+    "core_refs": 12,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 2,
+    "migration_refs": 1,
+    "test_refs": 2,
+    "audit_refs": 16,
+    "archive_refs": 0,
+    "doc_refs": 1,
+    "real_code_count": 14,
+    "core_files": [
+      "data_center_api.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_GAP_AUDIT_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_batch3_filtered.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_batch3_import_results.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_batch3_import_results_v2.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_batch3_verification_summary.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py"
+    ],
+    "has_real_code": true
+  },
+  "podcast_ai_runs": {
+    "rows": 0,
+    "total_refs": 31,
+    "core_refs": 11,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 20,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 11,
+    "core_files": [
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "podcast_entities": {
+    "rows": 0,
+    "total_refs": 33,
+    "core_refs": 12,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 20,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 12,
+    "core_files": [
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "professional_accounts": {
+    "rows": 0,
+    "total_refs": 37,
+    "core_refs": 14,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 22,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 14,
+    "core_files": [
+      "function_registry.py",
+      "intelligence_library\\08_UI-UX\\ZBC_PAGE_LEVEL_DESIGN_V1.1.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "professional_metrics": {
+    "rows": 0,
+    "total_refs": 35,
+    "core_refs": 13,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 21,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 13,
+    "core_files": [
+      "function_registry.py",
+      "intelligence_library\\08_UI-UX\\ZBC_PAGE_LEVEL_DESIGN_V1.1.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "reddit_comments": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\reddit.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "reddit_posts": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\reddit.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "reddit_subreddits": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\reddit.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "rule_version_registry": {
+    "rows": 1,
+    "total_refs": 20,
+    "core_refs": 6,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 11,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 7,
+    "core_files": [
+      "historical_data_importer.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\historical_data_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "runtime_guardian_checkpoints": {
+    "rows": 38,
+    "total_refs": 24,
+    "core_refs": 10,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 13,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 10,
+    "core_files": [
+      "evaluation_dimensions.py",
+      "function_registry.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\evaluation_system_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "runtime_guardian_dlq": {
+    "rows": 0,
+    "total_refs": 28,
+    "core_refs": 11,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 2,
+    "audit_refs": 15,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 11,
+    "core_files": [
+      "api_dual_domain.py",
+      "evidence_api.py",
+      "evidence_store.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\dual_domain_core_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "runtime_guardian_workers": {
+    "rows": 1007,
+    "total_refs": 27,
+    "core_refs": 10,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 2,
+    "audit_refs": 15,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 10,
+    "core_files": [
+      "api_dual_domain.py",
+      "function_registry.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\dual_domain_core_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "schedule_decisions": {
+    "rows": 14408,
+    "total_refs": 40,
+    "core_refs": 11,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 3,
+    "audit_refs": 14,
+    "archive_refs": 0,
+    "doc_refs": 10,
+    "real_code_count": 13,
+    "core_files": [
+      "DEV_LOG.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json"
+    ],
+    "adapter_files": [
+      "platform_adapters\\scheduling\\planner.py",
+      "platform_adapters\\scheduling\\store.py"
+    ],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "schema_version": {
+    "rows": 4,
+    "total_refs": 66,
+    "core_refs": 31,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 3,
+    "audit_refs": 12,
+    "archive_refs": 0,
+    "doc_refs": 11,
+    "real_code_count": 31,
+    "core_files": [
+      ".trae\\specs\\dual-repo-audit-20260902\\spec.md",
+      ".trae\\specs\\dual-repo-audit-20260902\\tasks.md",
+      "00-GOVERNANCE\\_path_backup\\scripts_reconcile_capabilities.py",
+      "02-ARCHITECTURE\\UNIFIED-DATA-INTELLIGENCE-PIPELINE-V1.0.md",
+      "ARCHITECTURE.md",
+      "browser_surface.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "skill_executions": {
+    "rows": 18,
+    "total_refs": 3,
+    "core_refs": 1,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 2,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 1,
+    "core_files": [
+      "skill_execution_chain.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "skills_registry": {
+    "rows": 12,
+    "total_refs": 10,
+    "core_refs": 0,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\skills.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "swire_events": {
+    "rows": 10,
+    "total_refs": 42,
+    "core_refs": 15,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 1,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 3,
+    "audit_refs": 15,
+    "archive_refs": 0,
+    "doc_refs": 6,
+    "real_code_count": 18,
+    "core_files": [
+      "data\\learning_database.json",
+      "intelligence_library\\01_ZBC专项研究\\产品研究\\01-PRODUCT\\RESEARCH_2026-09-C-CONSTRAINT.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_module_scan_raw.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "swire_notes": {
+    "rows": 0,
+    "total_refs": 70,
+    "core_refs": 25,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 3,
+    "audit_refs": 25,
+    "archive_refs": 0,
+    "doc_refs": 15,
+    "real_code_count": 27,
+    "core_files": [
+      "PROJECT_STATUS.md",
+      "WORK_LOG_20260901.md",
+      "data\\learning_database.json",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_GAP_AUDIT_20260906.md",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\LUMENIS_ZBC_DUAL_DOMAIN_AUDIT.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "swire_projects": {
+    "rows": 8,
+    "total_refs": 30,
+    "core_refs": 11,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 5,
+    "audit_refs": 12,
+    "archive_refs": 0,
+    "doc_refs": 2,
+    "real_code_count": 11,
+    "core_files": [
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json",
+      "intelligence_library\\10_工程审计方法\\对账\\05_DATABASE_RECONCILIATION.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "tiktok_comments": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\tiktok.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "tiktok_users": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\tiktok.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "tiktok_videos": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\tiktok.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "token_stat": {
+    "rows": 0,
+    "total_refs": 47,
+    "core_refs": 18,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 23,
+    "archive_refs": 0,
+    "doc_refs": 5,
+    "real_code_count": 18,
+    "core_files": [
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "ark_llm.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\FINAL_RUNTIME_AUDIT.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\LUMENIS_ZBC_DUAL_DOMAIN_AUDIT.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\PR_DESCRIPTION.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "topic_campaign_notes": {
+    "rows": 79,
+    "total_refs": 84,
+    "core_refs": 30,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 8,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 34,
+    "archive_refs": 0,
+    "doc_refs": 10,
+    "real_code_count": 38,
+    "core_files": [
+      "CHANGELOG.md",
+      "DEV_LOG.md",
+      "PROJECT_STATUS.md",
+      "WORK_LOG_20260901.md",
+      "config\\data-contracts\\topic_campaign_note.yaml",
+      "function_registry.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "topic_campaign_snapshots": {
+    "rows": 325,
+    "total_refs": 51,
+    "core_refs": 18,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 4,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 2,
+    "audit_refs": 22,
+    "archive_refs": 0,
+    "doc_refs": 4,
+    "real_code_count": 22,
+    "core_files": [
+      "DEV_LOG.md",
+      "function_registry.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_GAP_AUDIT_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\data_quality_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "topic_campaign_topics": {
+    "rows": 7,
+    "total_refs": 36,
+    "core_refs": 12,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 3,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 17,
+    "archive_refs": 0,
+    "doc_refs": 2,
+    "real_code_count": 15,
+    "core_files": [
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json",
+      "intelligence_library\\10_工程审计方法\\对账\\03_CAPABILITY_RECONCILIATION.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "topic_campaigns": {
+    "rows": 1,
+    "total_refs": 38,
+    "core_refs": 11,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 4,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 19,
+    "archive_refs": 0,
+    "doc_refs": 2,
+    "real_code_count": 15,
+    "core_files": [
+      "intelligence_library\\08_UI-UX\\ZBC_PAGE_LEVEL_DESIGN_V1.1.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "user_nav_config": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 0,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\nav_config.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_audit_logs": {
+    "rows": 57,
+    "total_refs": 52,
+    "core_refs": 21,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 2,
+    "audit_refs": 22,
+    "archive_refs": 0,
+    "doc_refs": 5,
+    "real_code_count": 23,
+    "core_files": [
+      "00-GOVERNANCE\\_t10_db_audit.py",
+      "00-GOVERNANCE\\security_verification_shardC.md",
+      "evidence_store.py",
+      "intelligence_library\\09_Research-Hub\\SICI研究\\research-learning\\CTH-POMS_LEARNING_LIBRARY.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\VISUAL_REFRESH_AND_APPLEID_ACCOUNT_REQUIREMENT_V1.0.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json"
+    ],
+    "adapter_files": [],
+    "account_files": [
+      "account\\audit.py",
+      "account\\models.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_login_approvals": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 0,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [],
+    "adapter_files": [],
+    "account_files": [
+      "account\\api.py",
+      "account\\models.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_login_attempts": {
+    "rows": 39,
+    "total_refs": 49,
+    "core_refs": 21,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 21,
+    "archive_refs": 0,
+    "doc_refs": 4,
+    "real_code_count": 23,
+    "core_files": [
+      "00-GOVERNANCE\\_t10_db_audit.py",
+      "00-GOVERNANCE\\security_verification_shardC.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\VISUAL_REFRESH_AND_APPLEID_ACCOUNT_REQUIREMENT_V1.0.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_empty_tables_classification.json"
+    ],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\security.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_member_authorizations": {
+    "rows": 2,
+    "total_refs": 9,
+    "core_refs": 0,
+    "adapter_refs": 0,
+    "account_refs": 3,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 6,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [],
+    "adapter_files": [],
+    "account_files": [
+      "account\\authorization.py",
+      "account\\models.py",
+      "account\\service.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_product_protection": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 0,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\product_protection.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_security_questions": {
+    "rows": 2,
+    "total_refs": 33,
+    "core_refs": 13,
+    "adapter_refs": 0,
+    "account_refs": 3,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 11,
+    "archive_refs": 0,
+    "doc_refs": 5,
+    "real_code_count": 16,
+    "core_files": [
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\VISUAL_REFRESH_AND_APPLEID_ACCOUNT_REQUIREMENT_V1.0.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json"
+    ],
+    "adapter_files": [],
+    "account_files": [
+      "account\\api.py",
+      "account\\models.py",
+      "account\\security.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_sessions": {
+    "rows": 110,
+    "total_refs": 43,
+    "core_refs": 16,
+    "adapter_refs": 0,
+    "account_refs": 3,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 2,
+    "audit_refs": 15,
+    "archive_refs": 0,
+    "doc_refs": 6,
+    "real_code_count": 20,
+    "core_files": [
+      "00-GOVERNANCE\\security_verification_shardC.md",
+      "intelligence_library\\09_Research-Hub\\SICI研究\\research-learning\\CTH-POMS_LEARNING_LIBRARY.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [
+      "account\\api.py",
+      "account\\models.py",
+      "account\\service.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_totp_secrets": {
+    "rows": 2,
+    "total_refs": 10,
+    "core_refs": 0,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\totp.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_users": {
+    "rows": 9,
+    "total_refs": 51,
+    "core_refs": 18,
+    "adapter_refs": 0,
+    "account_refs": 5,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 3,
+    "audit_refs": 14,
+    "archive_refs": 0,
+    "doc_refs": 10,
+    "real_code_count": 24,
+    "core_files": [
+      "00-GOVERNANCE\\security_verification_shardC.md",
+      "DEV_LOG.md",
+      "intelligence_library\\09_Research-Hub\\SICI研究\\research-learning\\CTH-POMS_LEARNING_LIBRARY.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json"
+    ],
+    "adapter_files": [],
+    "account_files": [
+      "account\\api.py",
+      "account\\authorization.py",
+      "account\\models.py",
+      "account\\security.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_verification_codes": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 0,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 7,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\verification.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_workspace_grants": {
+    "rows": 70,
+    "total_refs": 28,
+    "core_refs": 10,
+    "adapter_refs": 0,
+    "account_refs": 3,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 13,
+    "archive_refs": 0,
+    "doc_refs": 2,
+    "real_code_count": 13,
+    "core_files": [
+      "00-GOVERNANCE\\security_verification_shardC.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_core_runtime_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track1_verification_results.json",
+      "intelligence_library\\10_工程审计方法\\对账\\03_CAPABILITY_RECONCILIATION.md"
+    ],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\verification.py",
+      "account\\workspace_keys.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "v4_workspace_keys": {
+    "rows": 352,
+    "total_refs": 32,
+    "core_refs": 15,
+    "adapter_refs": 0,
+    "account_refs": 2,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 12,
+    "archive_refs": 0,
+    "doc_refs": 3,
+    "real_code_count": 17,
+    "core_files": [
+      "00-GOVERNANCE\\security_verification_shardC.md",
+      "app.py",
+      "intelligence_library\\09_Research-Hub\\learning-feed\\github-benchmarks-04-collector-ai-observability-20260903.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\VISUAL_REFRESH_AND_APPLEID_ACCOUNT_REQUIREMENT_V1.0.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [
+      "account\\models.py",
+      "account\\workspace_keys.py"
+    ],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "web_mentions": {
+    "rows": 89,
+    "total_refs": 78,
+    "core_refs": 29,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 8,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 5,
+    "audit_refs": 26,
+    "archive_refs": 3,
+    "doc_refs": 5,
+    "real_code_count": 37,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "api_dual_domain.py",
+      "canonical_data.py",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "database.py",
+      "deployment\\deployment\\σüÑσ║╖µúÇµƒÑ.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py",
+      "scripts\\_verify_migration.py"
+    ],
+    "has_real_code": true
+  },
+  "web_runs": {
+    "rows": 29,
+    "total_refs": 45,
+    "core_refs": 18,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 1,
+    "audit_refs": 19,
+    "archive_refs": 2,
+    "doc_refs": 2,
+    "real_code_count": 20,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "database.py",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\_table_info.json",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\source_refs.json"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "web_sources": {
+    "rows": 1,
+    "total_refs": 50,
+    "core_refs": 21,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 2,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 3,
+    "audit_refs": 18,
+    "archive_refs": 3,
+    "doc_refs": 2,
+    "real_code_count": 23,
+    "core_files": [
+      "ARCHITECTURE.md",
+      "app.py",
+      "backups\\app.py.bak-before-v4-20260830-011445.py",
+      "data\\backups\\phase8-six-maps-20260902.json",
+      "data\\backups\\topic_campaign_patch_20260828_163857\\app.py",
+      "database.py"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "x_posts": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "x_users": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "xhs_note_comments": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "xhs_notes": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "xhs_users": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "youtube_channels": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\youtube.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "youtube_comments": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\youtube.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "youtube_videos": {
+    "rows": 0,
+    "total_refs": 9,
+    "core_refs": 1,
+    "adapter_refs": 2,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 3,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py",
+      "platform_adapters\\youtube.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "zbc_canonical_data": {
+    "rows": 4,
+    "total_refs": 23,
+    "core_refs": 5,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 4,
+    "ad_intel_refs": 0,
+    "migration_refs": 1,
+    "test_refs": 0,
+    "audit_refs": 13,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 9,
+    "core_files": [
+      "app.py",
+      "evidence_chain.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\evidence_chain_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [
+      "database_migrations.py"
+    ],
+    "has_real_code": true
+  },
+  "zbc_evidence": {
+    "rows": 6,
+    "total_refs": 35,
+    "core_refs": 14,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 1,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 1,
+    "audit_refs": 19,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 15,
+    "core_files": [
+      "acceptance_evidence_chain.py",
+      "app.py",
+      "evidence_chain.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\06_Security\\ZBC审计\\dual_domain_ai_risk_audit.md",
+      "intelligence_library\\06_Security\\ZBC审计\\track3_ai_risk_evidence_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "zbc_lifecycle_tracking": {
+    "rows": 8,
+    "total_refs": 20,
+    "core_refs": 6,
+    "adapter_refs": 0,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 0,
+    "test_refs": 0,
+    "audit_refs": 14,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 6,
+    "core_files": [
+      "evidence_chain.py",
+      "intelligence_library\\01_ZBC专项研究\\ZBC_FEATURE_MAP_DUAL_DOMAIN_20260906.md",
+      "intelligence_library\\06_Security\\ZBC审计\\track3_ai_risk_evidence_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\db_api_guardian_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\evidence_chain_audit.md",
+      "intelligence_library\\10_工程审计方法\\ZBC审计\\track3_ai_risk_evidence_audit.md"
+    ],
+    "adapter_files": [],
+    "account_files": [],
+    "migration_files": [],
+    "has_real_code": true
+  },
+  "zhihu_answers": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "zhihu_articles": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "zhihu_comments": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  },
+  "zhihu_questions": {
+    "rows": 0,
+    "total_refs": 8,
+    "core_refs": 1,
+    "adapter_refs": 1,
+    "account_refs": 0,
+    "report_refs": 0,
+    "script_refs": 0,
+    "ad_intel_refs": 0,
+    "migration_refs": 2,
+    "test_refs": 1,
+    "audit_refs": 3,
+    "archive_refs": 0,
+    "doc_refs": 0,
+    "real_code_count": 2,
+    "core_files": [
+      "data_center_api.py"
+    ],
+    "adapter_files": [
+      "platform_adapters\\platform_naming.py"
+    ],
+    "account_files": [],
+    "migration_files": [
+      "migrations\\init_platform_registry.py",
+      "migrations\\migrate_platform_data_dict_v1.py"
+    ],
+    "has_real_code": true
+  }
+}

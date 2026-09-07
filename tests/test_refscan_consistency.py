@@ -34,6 +34,16 @@ def _canonical_brand_counts():
     return {'total': total, 'negative': neg, 'positive': pos}
 
 
+def _service_available():
+    """检查 8201 服务是否可达，不可达时测试应 skip 而非 error。"""
+    import socket
+    try:
+        with socket.create_connection(('127.0.0.1', 8201), timeout=3):
+            return True
+    except OSError:
+        return False
+
+
 def _http_get(path, auth_header):
     req = urllib.request.Request(BASE + path, headers={'Authorization': auth_header})
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -44,6 +54,8 @@ def _http_get(path, auth_header):
 def test_brand_industry_stats_matches_canonical():
     """HTTP /api/brand-industry/stats == canonical 实体口径。
     brand_industry_monitor 表未建时 skip（功能未启用）。"""
+    if not _service_available():
+        pytest.skip('Flask service on 127.0.0.1:8201 not reachable (online test)')
     canon = _canonical_brand_counts()
     if canon is None:
         pytest.skip("brand_industry_monitor table not present (feature not enabled)")
@@ -63,6 +75,8 @@ def test_brand_industry_stats_matches_canonical():
 def test_brand_industry_stats_consistent_across_views():
     """/api/brand-industry/stats 内一致：total==total_brands。
     brand_industry_monitor 表未建时 skip。"""
+    if not _service_available():
+        pytest.skip('Flask service on 127.0.0.1:8201 not reachable (online test)')
     canon = _canonical_brand_counts()
     if canon is None:
         pytest.skip("brand_industry_monitor table not present (feature not enabled)")

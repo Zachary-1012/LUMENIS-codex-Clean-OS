@@ -31,6 +31,16 @@ def _load_cm():
     return importlib.import_module('canonical_metrics')
 
 
+def _service_available():
+    """检查 8201 服务是否可达，不可达时测试应 skip 而非 error。"""
+    import socket
+    try:
+        with socket.create_connection(('127.0.0.1', 8201), timeout=3):
+            return True
+    except OSError:
+        return False
+
+
 def _auth():
     ac = json.loads(urllib.request.urlopen(BASE + '/api/auth/config', timeout=15).read().decode('utf-8'))
     return ac.get('auth_header', '')
@@ -61,6 +71,8 @@ def _effective_notes_for(date_str):
 
 @pytest.fixture(scope='module')
 def ctx():
+    if not _service_available():
+        pytest.skip('Flask service on 127.0.0.1:8201 not reachable (online test)')
     os.environ['ZBC_DB_PATH'] = DB
     cm = _load_cm()
     auth = _auth()

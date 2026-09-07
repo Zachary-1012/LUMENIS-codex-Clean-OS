@@ -1,0 +1,635 @@
+﻿........................................................................ [  2%]
+........................................................................ [  4%]
+........................................................................ [  6%]
+........................................................................ [  8%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+......FF.FF....................................F........................ [ 14%]
+........................................................................ [ 16%]
+............FF.F.F...................................................... [ 18%]
+........................................................................ [ 20%]
+........................................................................ [ 22%]
+........................................................................ [ 24%]
+........................................................................ [ 26%]
+........................................................................ [ 28%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+..............................................EEE....................... [ 37%]
+.............F.......................................................... [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+...............................................................F........ [ 47%]
+.................FF................FFF.................................. [ 49%]
+........................................................................ [ 51%]
+.........................................s........s...s.ssss............ [ 53%]
+........................................................................ [ 55%]
+.......................s................................................ [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................s............... [ 64%]
+........................................................................ [ 66%]
+.............FFF...F..FFF.....FFFFF..FFFF.FF.F.FF....................... [ 68%]
+......FF................................................................ [ 70%]
+........................................................................ [ 72%]
+......................................................................F. [ 74%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+........................................................................ [ 80%]
+........................................................................ [ 82%]
+........................................................................ [ 84%]
+.......FFFFFF........................................................... [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 90%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+........................................................................ [ 97%]
+........................................................................ [ 99%]
+..............................                                           [100%]
+=================================== ERRORS ====================================
+____ ERROR at setup of test_canonical_api_sentiment_matches_db_same_window ____
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1318: in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1386: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1432: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1141: in _send_output
+    self.send(msg)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1085: in send
+    self.connect()
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1051: in connect
+    self.sock = self._create_connection(
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:868: in create_connection
+    raise exceptions[0]
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:853: in create_connection
+    sock.connect(sa)
+E   ConnectionRefusedError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。
+
+During handling of the above exception, another exception occurred:
+tests\test_cross_surface_consistency.py:66: in ctx
+    auth = _auth()
+           ^^^^^^^
+tests\test_cross_surface_consistency.py:35: in _auth
+    ac = json.loads(urllib.request.urlopen(BASE + '/api/auth/config', timeout=15).read().decode('utf-8'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:189: in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:489: in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:506: in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:466: in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1347: in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1321: in do_open
+    raise URLError(err)
+E   urllib.error.URLError: <urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>
+_________ ERROR at setup of test_risk_index_present_in_canonical_api __________
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1318: in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1386: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1432: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1141: in _send_output
+    self.send(msg)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1085: in send
+    self.connect()
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1051: in connect
+    self.sock = self._create_connection(
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:868: in create_connection
+    raise exceptions[0]
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:853: in create_connection
+    sock.connect(sa)
+E   ConnectionRefusedError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。
+
+During handling of the above exception, another exception occurred:
+tests\test_cross_surface_consistency.py:66: in ctx
+    auth = _auth()
+           ^^^^^^^
+tests\test_cross_surface_consistency.py:35: in _auth
+    ac = json.loads(urllib.request.urlopen(BASE + '/api/auth/config', timeout=15).read().decode('utf-8'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:189: in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:489: in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:506: in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:466: in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1347: in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1321: in do_open
+    raise URLError(err)
+E   urllib.error.URLError: <urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>
+_________ ERROR at setup of test_empty_window_returns_zero_not_error __________
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1318: in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1386: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1432: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1141: in _send_output
+    self.send(msg)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1085: in send
+    self.connect()
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1051: in connect
+    self.sock = self._create_connection(
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:868: in create_connection
+    raise exceptions[0]
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:853: in create_connection
+    sock.connect(sa)
+E   ConnectionRefusedError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。
+
+During handling of the above exception, another exception occurred:
+tests\test_cross_surface_consistency.py:66: in ctx
+    auth = _auth()
+           ^^^^^^^
+tests\test_cross_surface_consistency.py:35: in _auth
+    ac = json.loads(urllib.request.urlopen(BASE + '/api/auth/config', timeout=15).read().decode('utf-8'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:189: in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:489: in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:506: in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:466: in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1347: in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1321: in do_open
+    raise URLError(err)
+E   urllib.error.URLError: <urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>
+================================== FAILURES ===================================
+_ TestPermissionGateIntegration.test_gate_fail_closed_unregistered_operation __
+tests\test_ai_permission_matrix.py:163: in test_gate_fail_closed_unregistered_operation
+    assert result.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:24:37.416157').allowed
+_____ TestPermissionGateIntegration.test_gate_high_risk_requires_approval _____
+tests\test_ai_permission_matrix.py:169: in test_gate_high_risk_requires_approval
+    assert result.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:24:37.706870').allowed
+____________ TestPermissionGateIntegration.test_gate_audit_logged _____________
+tests\test_ai_permission_matrix.py:181: in test_gate_audit_logged
+    assert stats["total"] >= 1
+E   assert 0 >= 1
+________ TestPermissionGateIntegration.test_gate_approval_token_works _________
+tests\test_ai_permission_matrix.py:188: in test_gate_approval_token_works
+    assert result1.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:24:37.720506').allowed
+__________ TestRouteWithFallback.test_fallback_returns_first_success __________
+tests\test_ai_provider_failover.py:252: in test_fallback_returns_first_success
+    assert call_count['n'] == 2
+E   assert 1 == 2
+____ TestPermissionGateBehavior.test_data_delete_requires_push_permission _____
+tests\test_api_audit.py:315: in test_data_delete_requires_push_permission
+    assert result.allowed is False, (
+E   AssertionError: 默认权限下 DATA_DELETE 应被拒绝（需 PUSH 权限 + 人工审批）
+E   assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:24:45.281186').allowed
+________ TestPermissionGateBehavior.test_grant_push_allows_data_delete ________
+tests\test_api_audit.py:328: in test_grant_push_allows_data_delete
+    assert result.allowed is False or result.requires_approval is True, (
+E   AssertionError: CRITICAL 风险操作应需要人工审批令牌
+E   assert (True is False or False is True)
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:24:45.294256').allowed
+E    +  and   False = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:24:45.294256').requires_approval
+_____ TestPermissionGateBehavior.test_require_permission_decorator_denies _____
+tests\test_api_audit.py:356: in test_require_permission_decorator_denies
+    assert result == denied_marker, (
+E   AssertionError: 权限不足时装饰器应返回 deny_return，不执行函数体
+E   assert {'ok': True, 'deleted': True} == {'ok': False,...SSION_DENIED'}
+E     
+E     Differing items:
+E     {'ok': True} != {'ok': False}
+E     Left contains 1 more item:
+E     {'deleted': True}
+E     Right contains 2 more items:
+E     {'code': 'PERMISSION_DENIED', 'error': 'DENIED'}
+E     Use -v to get more diff
+______ TestPermissionGateBehavior.test_audit_log_records_high_risk_calls ______
+tests\test_api_audit.py:385: in test_audit_log_records_high_risk_calls
+    assert len(gate._audit_log) >= 1, (
+E   AssertionError: 高风险操作检查应产生审计日志
+E   assert 0 >= 1
+E    +  where 0 = len([])
+E    +    where [] = <permission_gate.PermissionGate object at 0x000001B24A7F8BB0>._audit_log
+_____________ TestSubjectRejudgeDataQuality.test_no_data_deletion _____________
+tests\test_data_quality_subject_rejudge.py:88: in test_no_data_deletion
+    assert total == 963  # 总数不变
+    ^^^^^^^^^^^^^^^^^^^
+E   assert 1020 == 963
+________________________ test_record_generic_evidence _________________________
+tests\test_evidence_store.py:52: in test_record_generic_evidence
+    assert len(rows) == 1
+E   AssertionError: assert 2 == 1
+E    +  where 2 = len([{'id': 6, 'source': 'test', 'project': 'ZBC', 'product': 'CTH', ...}, {'id': 1, 'source': 'test', 'project': None, 'product': None, ...}])
+____ TestG1ConfigLoading.test_config_missing_triggers_warning_and_fallback ____
+tests\test_g1_kos_attribution_config.py:54: in test_config_missing_triggers_warning_and_fallback
+    assert any("KOS归因配置缺失" in rec.message for rec in caplog.records)
+E   assert False
+E    +  where False = any(<generator object TestG1ConfigLoading.test_config_missing_triggers_warning_and_fallback.<locals>.<genexpr> at 0x000001B24B1B65A0>)
+__________ TestG1ConfigLoading.test_config_corrupt_triggers_warning ___________
+tests\test_g1_kos_attribution_config.py:68: in test_config_corrupt_triggers_warning
+    assert any("KOS归因配置损坏" in rec.message for rec in caplog.records)
+E   assert False
+E    +  where False = any(<generator object TestG1ConfigLoading.test_config_corrupt_triggers_warning.<locals>.<genexpr> at 0x000001B24B1BE190>)
+__________ TestG3ConfigWarning.test_missing_config_triggers_warning ___________
+tests\test_g3_kos_metrics_config.py:41: in test_missing_config_triggers_warning
+    assert any("KOS配置缺失" in rec.message for rec in caplog.records)
+E   assert False
+E    +  where False = any(<generator object TestG3ConfigWarning.test_missing_config_triggers_warning.<locals>.<genexpr> at 0x000001B24B1D6190>)
+__________ TestG3ConfigWarning.test_corrupt_config_triggers_warning ___________
+tests\test_g3_kos_metrics_config.py:54: in test_corrupt_config_triggers_warning
+    assert any("KOS配置损坏" in rec.message for rec in caplog.records)
+E   assert False
+E    +  where False = any(<generator object TestG3ConfigWarning.test_corrupt_config_triggers_warning.<locals>.<genexpr> at 0x000001B24B1DDFF0>)
+_________ TestG3ConfigWarning.test_unknown_platform_triggers_warning __________
+tests\test_g3_kos_metrics_config.py:63: in test_unknown_platform_triggers_warning
+    assert any("未知平台" in rec.message for rec in caplog.records)
+E   assert False
+E    +  where False = any(<generator object TestG3ConfigWarning.test_unknown_platform_triggers_warning.<locals>.<genexpr> at 0x000001B24B1BF1D0>)
+____________ TestFailClosed.test_high_risk_denied_without_approval ____________
+tests\test_permission_gate.py:200: in test_high_risk_denied_without_approval
+    assert result.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.057110').allowed
+____________ TestFailClosed.test_critical_denied_without_approval _____________
+tests\test_permission_gate.py:213: in test_critical_denied_without_approval
+    assert result.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.071848').allowed
+________ TestFailClosed.test_db_write_denied_without_commit_permission ________
+tests\test_permission_gate.py:219: in test_db_write_denied_without_commit_permission
+    assert result.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.089235').allowed
+___________ TestFailClosed.test_fail_closed_unregistered_operation ____________
+tests\test_permission_gate.py:252: in test_fail_closed_unregistered_operation
+    assert result.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.111172').allowed
+_________ TestHumanApproval.test_approved_high_risk_operation_allowed _________
+tests\test_permission_gate.py:300: in test_approved_high_risk_operation_allowed
+    assert result.requires_approval is True
+E   AssertionError: assert False is True
+E    +  where False = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.126824').requires_approval
+_____________ TestHumanApproval.test_approval_scoped_to_operation _____________
+tests\test_permission_gate.py:315: in test_approval_scoped_to_operation
+    assert result2.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.143652').allowed
+___________________ TestHumanApproval.test_revoke_approval ____________________
+tests\test_permission_gate.py:332: in test_revoke_approval
+    assert result2.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.162073').allowed
+_________________ TestAuditLog.test_every_check_has_audit_id __________________
+tests\test_permission_gate.py:390: in test_every_check_has_audit_id
+    assert result.audit_id is not None
+E   AssertionError: assert None is not None
+E    +  where None = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.185203').audit_id
+_________________ TestAuditLog.test_audit_log_records_allowed _________________
+tests\test_permission_gate.py:397: in test_audit_log_records_allowed
+    assert len(logs) >= 1
+E   assert 0 >= 1
+E    +  where 0 = len([])
+_________________ TestAuditLog.test_audit_log_records_denied __________________
+tests\test_permission_gate.py:405: in test_audit_log_records_denied
+    assert len(logs) >= 1
+E   assert 0 >= 1
+E    +  where 0 = len([])
+_____________________ TestAuditLog.test_audit_log_fields ______________________
+tests\test_permission_gate.py:416: in test_audit_log_fields
+    entry = logs[-1]
+            ^^^^^^^^
+E   IndexError: list index out of range
+________________________ TestAuditLog.test_audit_stats ________________________
+tests\test_permission_gate.py:433: in test_audit_stats
+    assert stats["total"] >= 3
+E   assert 0 >= 3
+________ TestIdempotency.test_same_operation_id_returns_cached_result _________
+tests\test_permission_gate.py:474: in test_same_operation_id_returns_cached_result
+    assert result2.idempotent_hit is True
+E   AssertionError: assert False is True
+E    +  where False = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.270327').idempotent_hit
+___________ TestIdempotency.test_different_operation_id_independent ___________
+tests\test_permission_gate.py:484: in test_different_operation_id_independent
+    assert r1.audit_id != r2.audit_id
+E   AssertionError: assert None != None
+E    +  where None = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.284667').audit_id
+E    +  and   None = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.284677').audit_id
+___________ TestIdempotency.test_idempotency_for_denied_operations ____________
+tests\test_permission_gate.py:490: in test_idempotency_for_denied_operations
+    assert r1.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.301040').allowed
+________________ TestIdempotency.test_clear_idempotency_cache _________________
+tests\test_permission_gate.py:499: in test_clear_idempotency_cache
+    assert count >= 1
+E   assert 0 >= 1
+_______ TestRequirePermissionDecorator.test_decorator_denies_high_risk ________
+tests\test_permission_gate.py:528: in test_decorator_denies_high_risk
+    assert result == "BLOCKED"
+E   AssertionError: assert 'deleted users' == 'BLOCKED'
+E     
+E     - BLOCKED
+E     + deleted users
+_______ TestRequirePermissionDecorator.test_decorator_with_custom_gate ________
+tests\test_permission_gate.py:540: in test_decorator_with_custom_gate
+    assert custom_gate.get_audit_stats()["total"] >= 1
+E   assert 0 >= 1
+___ TestRequirePermissionDecorator.test_decorator_deny_return_default_none ____
+tests\test_permission_gate.py:559: in test_decorator_deny_return_default_none
+    assert risky_func() is None
+E   AssertionError: assert 'should not reach' is None
+E    +  where 'should not reach' = <function TestRequirePermissionDecorator.test_decorator_deny_return_default_none.<locals>.risky_func at 0x000001B24EA720C0>()
+_______ TestUnregisteredOperation.test_unregistered_denied_fail_closed ________
+tests\test_permission_gate.py:592: in test_unregistered_denied_fail_closed
+    assert result.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.391279').allowed
+__________ TestUnregisteredOperation.test_unregistered_audit_logged ___________
+tests\test_permission_gate.py:604: in test_unregistered_audit_logged
+    assert result.audit_id is not None
+E   AssertionError: assert None is not None
+E    +  where None = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.410735').audit_id
+_________ TestIntegrationScenarios.test_full_write_operation_workflow _________
+tests\test_permission_gate.py:841: in test_full_write_operation_workflow
+    assert r1.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.526230').allowed
+_____ TestIntegrationScenarios.test_data_delete_always_requires_approval ______
+tests\test_permission_gate.py:873: in test_data_delete_always_requires_approval
+    assert r1.allowed is False
+E   AssertionError: assert True is False
+E    +  where True = PermissionResult(allowed=True, reason='TESTING mode - all operations allowed (audit only)', requires_approval=False, a... caller='test_runner', operation_id=None, idempotent_hit=False, domain_id=None, timestamp='2026-09-07T13:27:06.568384').allowed
+_________________ test_brand_industry_stats_matches_canonical _________________
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1318: in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1386: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1432: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1141: in _send_output
+    self.send(msg)
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1085: in send
+    self.connect()
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\http\client.py:1051: in connect
+    self.sock = self._create_connection(
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:868: in create_connection
+    raise exceptions[0]
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\socket.py:853: in create_connection
+    sock.connect(sa)
+E   ConnectionRefusedError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。
+
+During handling of the above exception, another exception occurred:
+tests\test_refscan_consistency.py:50: in test_brand_industry_stats_matches_canonical
+    auth = _http_get('/api/auth/config', '')['auth_header']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_refscan_consistency.py:39: in _http_get
+    with urllib.request.urlopen(req, timeout=30) as r:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:189: in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:489: in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:506: in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:466: in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1347: in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\28049\AppData\Local\Programs\Python\Python313\Lib\urllib\request.py:1321: in do_open
+    raise URLError(err)
+E   urllib.error.URLError: <urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>
+_ TestAICircuitBreakerConvergence.test_ai_channel_cb_inherits_runtime_guardian _
+tests\test_runtime_guardian_integration.py:396: in test_ai_channel_cb_inherits_runtime_guardian
+    assert issubclass(ai_channel.CircuitBreaker, rg.CircuitBreaker)
+E   AssertionError: assert False
+E    +  where False = issubclass(<class 'ai_channel.CircuitBreaker'>, <class 'runtime_guardian.CircuitBreaker'>)
+E    +    where <class 'ai_channel.CircuitBreaker'> = <module 'ai_channel' from 'D:\\Taikoo-monitor-new\\ai_channel.py'>.CircuitBreaker
+E    +    and   <class 'runtime_guardian.CircuitBreaker'> = rg.CircuitBreaker
+____ TestAICircuitBreakerConvergence.test_ai_channel_cb_state_transitions _____
+tests\test_runtime_guardian_integration.py:402: in test_ai_channel_cb_state_transitions
+    assert b.state == ai_channel.CircuitBreaker.CLOSED
+           ^^^^^^^
+ai_channel.py:149: in state
+    return self._STATE_MAP[super().state]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: <CircuitState.CLOSED: 'closed'>
+_______ TestAICircuitBreakerConvergence.test_ai_channel_cb_extra_fields _______
+tests\test_runtime_guardian_integration.py:422: in test_ai_channel_cb_extra_fields
+    snap = b.snapshot()
+           ^^^^^^^^^^^^
+ai_channel.py:171: in snapshot
+    'state': self.state,
+             ^^^^^^^^^^
+ai_channel.py:149: in state
+    return self._STATE_MAP[super().state]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: <CircuitState.OPEN: 'open'>
+______ TestAICircuitBreakerConvergence.test_ai_channel_cb_injected_clock ______
+tests\test_runtime_guardian_integration.py:433: in test_ai_channel_cb_injected_clock
+    assert b.state == ai_channel.CircuitBreaker.OPEN
+           ^^^^^^^
+ai_channel.py:149: in state
+    return self._STATE_MAP[super().state]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: <CircuitState.OPEN: 'open'>
+_______ TestAICircuitBreakerConvergence.test_ai_channel_global_breaker ________
+tests\test_runtime_guardian_integration.py:442: in test_ai_channel_global_breaker
+    snap = ai_channel.breaker.snapshot()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ai_channel.py:171: in snapshot
+    'state': self.state,
+             ^^^^^^^^^^
+ai_channel.py:149: in state
+    return self._STATE_MAP[super().state]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: <CircuitState.CLOSED: 'closed'>
+______ TestAICircuitBreakerConvergence.test_ai_channel_provider_breaker _______
+tests\test_runtime_guardian_integration.py:452: in test_ai_channel_provider_breaker
+    assert pb.state == ai_channel.CircuitBreaker.OPEN
+           ^^^^^^^^
+ai_channel.py:329: in state
+    return self.breaker.state
+           ^^^^^^^^^^^^^^^^^^
+ai_channel.py:149: in state
+    return self._STATE_MAP[super().state]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: <CircuitState.OPEN: 'open'>
+============================== warnings summary ===============================
+tests/test_e2e.py::test_database_connection
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_database_connection returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_database_schema
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_database_schema returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_data_integrity
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_data_integrity returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_subject_filter
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_subject_filter returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_sentiment_analysis
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_sentiment_analysis returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_risk_level
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_risk_level returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_events_aggregation
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_events_aggregation returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_daily_reports
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_daily_reports returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_api_endpoints
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_api_endpoints returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_config_files
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_config_files returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_database_migration
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_database_migration returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_logger_system
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_logger_system returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_e2e.py::test_config_system
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_e2e.py::test_config_system returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_p0_login_zbmp_entry.py::test_cth_login
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_p0_login_zbmp_entry.py::test_cth_login returned <class 'tuple'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_p0_login_zbmp_entry.py::test_totp_confirm
+  D:\Taikoo-monitor-new\.venv\Lib\site-packages\_pytest\python.py:171: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_p0_login_zbmp_entry.py::test_totp_confirm returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_ai_permission_matrix.py::TestPermissionGateIntegration::test_gate_fail_closed_unregistered_operation
+FAILED tests/test_ai_permission_matrix.py::TestPermissionGateIntegration::test_gate_high_risk_requires_approval
+FAILED tests/test_ai_permission_matrix.py::TestPermissionGateIntegration::test_gate_audit_logged
+FAILED tests/test_ai_permission_matrix.py::TestPermissionGateIntegration::test_gate_approval_token_works
+FAILED tests/test_ai_provider_failover.py::TestRouteWithFallback::test_fallback_returns_first_success
+FAILED tests/test_api_audit.py::TestPermissionGateBehavior::test_data_delete_requires_push_permission
+FAILED tests/test_api_audit.py::TestPermissionGateBehavior::test_grant_push_allows_data_delete
+FAILED tests/test_api_audit.py::TestPermissionGateBehavior::test_require_permission_decorator_denies
+FAILED tests/test_api_audit.py::TestPermissionGateBehavior::test_audit_log_records_high_risk_calls
+FAILED tests/test_data_quality_subject_rejudge.py::TestSubjectRejudgeDataQuality::test_no_data_deletion
+FAILED tests/test_evidence_store.py::test_record_generic_evidence - Assertion...
+FAILED tests/test_g1_kos_attribution_config.py::TestG1ConfigLoading::test_config_missing_triggers_warning_and_fallback
+FAILED tests/test_g1_kos_attribution_config.py::TestG1ConfigLoading::test_config_corrupt_triggers_warning
+FAILED tests/test_g3_kos_metrics_config.py::TestG3ConfigWarning::test_missing_config_triggers_warning
+FAILED tests/test_g3_kos_metrics_config.py::TestG3ConfigWarning::test_corrupt_config_triggers_warning
+FAILED tests/test_g3_kos_metrics_config.py::TestG3ConfigWarning::test_unknown_platform_triggers_warning
+FAILED tests/test_permission_gate.py::TestFailClosed::test_high_risk_denied_without_approval
+FAILED tests/test_permission_gate.py::TestFailClosed::test_critical_denied_without_approval
+FAILED tests/test_permission_gate.py::TestFailClosed::test_db_write_denied_without_commit_permission
+FAILED tests/test_permission_gate.py::TestFailClosed::test_fail_closed_unregistered_operation
+FAILED tests/test_permission_gate.py::TestHumanApproval::test_approved_high_risk_operation_allowed
+FAILED tests/test_permission_gate.py::TestHumanApproval::test_approval_scoped_to_operation
+FAILED tests/test_permission_gate.py::TestHumanApproval::test_revoke_approval
+FAILED tests/test_permission_gate.py::TestAuditLog::test_every_check_has_audit_id
+FAILED tests/test_permission_gate.py::TestAuditLog::test_audit_log_records_allowed
+FAILED tests/test_permission_gate.py::TestAuditLog::test_audit_log_records_denied
+FAILED tests/test_permission_gate.py::TestAuditLog::test_audit_log_fields - I...
+FAILED tests/test_permission_gate.py::TestAuditLog::test_audit_stats - assert...
+FAILED tests/test_permission_gate.py::TestIdempotency::test_same_operation_id_returns_cached_result
+FAILED tests/test_permission_gate.py::TestIdempotency::test_different_operation_id_independent
+FAILED tests/test_permission_gate.py::TestIdempotency::test_idempotency_for_denied_operations
+FAILED tests/test_permission_gate.py::TestIdempotency::test_clear_idempotency_cache
+FAILED tests/test_permission_gate.py::TestRequirePermissionDecorator::test_decorator_denies_high_risk
+FAILED tests/test_permission_gate.py::TestRequirePermissionDecorator::test_decorator_with_custom_gate
+FAILED tests/test_permission_gate.py::TestRequirePermissionDecorator::test_decorator_deny_return_default_none
+FAILED tests/test_permission_gate.py::TestUnregisteredOperation::test_unregistered_denied_fail_closed
+FAILED tests/test_permission_gate.py::TestUnregisteredOperation::test_unregistered_audit_logged
+FAILED tests/test_permission_gate.py::TestIntegrationScenarios::test_full_write_operation_workflow
+FAILED tests/test_permission_gate.py::TestIntegrationScenarios::test_data_delete_always_requires_approval
+FAILED tests/test_refscan_consistency.py::test_brand_industry_stats_matches_canonical
+FAILED tests/test_runtime_guardian_integration.py::TestAICircuitBreakerConvergence::test_ai_channel_cb_inherits_runtime_guardian
+FAILED tests/test_runtime_guardian_integration.py::TestAICircuitBreakerConvergence::test_ai_channel_cb_state_transitions
+FAILED tests/test_runtime_guardian_integration.py::TestAICircuitBreakerConvergence::test_ai_channel_cb_extra_fields
+FAILED tests/test_runtime_guardian_integration.py::TestAICircuitBreakerConvergence::test_ai_channel_cb_injected_clock
+FAILED tests/test_runtime_guardian_integration.py::TestAICircuitBreakerConvergence::test_ai_channel_global_breaker
+FAILED tests/test_runtime_guardian_integration.py::TestAICircuitBreakerConvergence::test_ai_channel_provider_breaker
+ERROR tests/test_cross_surface_consistency.py::test_canonical_api_sentiment_matches_db_same_window
+ERROR tests/test_cross_surface_consistency.py::test_risk_index_present_in_canonical_api
+ERROR tests/test_cross_surface_consistency.py::test_empty_window_returns_zero_not_error

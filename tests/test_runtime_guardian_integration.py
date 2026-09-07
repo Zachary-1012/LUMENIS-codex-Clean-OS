@@ -361,15 +361,26 @@ class TestAICircuitBreakerConvergence:
         """Reset ai_channel global breaker/provider cache before each test.
 
         Other test files may leave ai_channel.breaker or provider breaker cache in a
-        modified state. Resetting before each test guarantees isolation.
+        modified state. If runtime_guardian was reloaded (e.g. by
+        test_runtime_guardian.py), ai_channel.CircuitBreaker may inherit from a stale
+        base class; reload ai_channel to re-establish the inheritance chain.
         """
+        import importlib
         import ai_channel
         # Save originals (other test files may monkeypatch CircuitBreaker/breaker)
         _saved_cb = getattr(ai_channel, 'CircuitBreaker', None)
         _saved_breaker = getattr(ai_channel, 'breaker', None)
         _saved_pbs = getattr(ai_channel, '_provider_breakers', None)
+        # Defense: if ai_channel.CircuitBreaker is not a subclass of the current
+        # runtime_guardian.CircuitBreaker (happens after importlib.reload of
+        # runtime_guardian), reload ai_channel to re-establish inheritance.
+        try:
+            if not (isinstance(_saved_cb, type) and issubclass(_saved_cb, rg.CircuitBreaker)):
+                importlib.reload(ai_channel)
+        except Exception:
+            pass
         # Ensure real CircuitBreaker class is visible
-        if _saved_cb is None or not isinstance(_saved_cb, type):
+        if not isinstance(getattr(ai_channel, 'CircuitBreaker', None), type):
             from runtime_guardian import CircuitBreaker as _RGB
             ai_channel.CircuitBreaker = _RGB
         # Guarantee a valid global breaker instance

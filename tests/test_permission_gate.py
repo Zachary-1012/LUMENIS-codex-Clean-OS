@@ -34,6 +34,7 @@ from permission_gate import (
     require_permission,
     get_permission_gate,
     reset_permission_gate,
+    set_testing_bypass,
 )
 from security_boundary import (
     SecurityBoundary,
@@ -49,6 +50,13 @@ from security_boundary import (
 # ═══════════════════════════════════════════════════════════════
 # Fixtures
 # ═══════════════════════════════════════════════════════════════
+
+@pytest.fixture(scope='module', autouse=True)
+def _strict_mode_for_unit_tests():
+    set_testing_bypass(False)
+    yield
+    set_testing_bypass(True)
+
 
 @pytest.fixture
 def gate():

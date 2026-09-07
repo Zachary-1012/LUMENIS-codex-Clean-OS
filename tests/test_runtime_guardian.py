@@ -682,13 +682,27 @@ class TestBackwardCompatibility:
         assert wd is not None
 
     def test_runtime_guardian_independent_import(self):
-        """runtime_guardian 可独立 import，不依赖个人路径"""
+        """runtime_guardian 可独立 import，不依赖个人路径。
+        reload 会重建模块内所有类对象，导致 ai_channel 等下游模块继承链断裂。
+        因此保存关键类对象，断言后立即恢复，避免跨模块污染。"""
         import importlib
         import runtime_guardian
-        importlib.reload(runtime_guardian)
-        assert hasattr(runtime_guardian, 'RuntimeGuardian')
-        assert hasattr(runtime_guardian, 'CircuitBreaker')
-        assert hasattr(runtime_guardian, 'DLQ')
+        # 保存 reload 前的关键类对象（下游模块如 ai_channel 引用这些对象）
+        _saved = {
+            k: getattr(runtime_guardian, k)
+            for k in ('CircuitBreaker', 'CircuitState', 'RuntimeGuardian',
+                      'DLQ', 'WorkerStatus', 'RetryPolicy', 'DLQStatus')
+            if hasattr(runtime_guardian, k)
+        }
+        try:
+            importlib.reload(runtime_guardian)
+            assert hasattr(runtime_guardian, 'RuntimeGuardian')
+            assert hasattr(runtime_guardian, 'CircuitBreaker')
+            assert hasattr(runtime_guardian, 'DLQ')
+        finally:
+            # 恢复原始类对象，保持下游模块继承链有效
+            for k, v in _saved.items():
+                setattr(runtime_guardian, k, v)
 
     def test_db_tables_created(self, guardian):
         """验证三张新表已创建且不破坏现有表"""
