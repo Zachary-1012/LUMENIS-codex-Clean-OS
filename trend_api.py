@@ -25,9 +25,17 @@ DB_PATH = 'data/monitor.db'
 # ============================================================
 # 白名单：动态列名 / 表名（P1-8：防 SQL 注入）
 # ============================================================
-_EVENT_TIME_COLUMNS = frozenset({'start_time', 'discovered_at', 'created_at', 'first_seen_at'})
-_RISK_TABLES = frozenset({'risk_records', 'risks', 'note_risk_log'})
-_RISK_TIME_COLUMNS = frozenset({'created_at', 'detected_at', 'risk_time'})
+_EVENT_TIME_COLUMNS = frozenset({'start_time', 'discovered_at', 'created_at', 'first_seen_at',
+                                   'event_date', 'first_seen', 'last_seen', 'negative_confirmed_at'})
+_RISK_TABLES = frozenset({'risk_records', 'risks', 'note_risk_log', 'events'})
+_RISK_TIME_COLUMNS = frozenset({'created_at', 'detected_at', 'risk_time', 'event_date', 'first_seen'})
+# 每张风险表优先尝试的时间列（Phase3：events 表实际存储 risk_level，优先 event_date）
+_RISK_TABLE_COLUMNS = {
+    'events': ['event_date', 'first_seen'],
+    'risk_records': ['created_at', 'detected_at', 'risk_time'],
+    'risks': ['created_at', 'detected_at', 'risk_time'],
+    'note_risk_log': ['created_at', 'detected_at', 'risk_time'],
+}
 _SENTIMENT_COLUMNS = frozenset({'sentiment', 'sentiment_label', 'emotion'})
 
 # 主体过滤所需字段（用于非 notes 表的安全降级）
@@ -161,7 +169,9 @@ def trend_events():
         rows = []
         # P0-1：events 表安全主体过滤（降级）
         subj_sql, subj_vals = _safe_subject_clause(conn, 'events')
-        for col in ['start_time', 'discovered_at', 'created_at', 'first_seen_at']:
+        # Phase3：优先 events 表实际存在的时间列，旧列名向后兼容
+        for col in ['event_date', 'first_seen', 'last_seen', 'negative_confirmed_at',
+                    'start_time', 'discovered_at', 'created_at', 'first_seen_at']:
             if col not in _EVENT_TIME_COLUMNS:
                 continue
             try:
@@ -200,13 +210,14 @@ def trend_risk():
     conn = _get_db()
     try:
         rows = []
-        for table in ['risk_records', 'risks', 'note_risk_log']:
+        # Phase3：events 表实际存储 risk_level（461行），优先查；旧空表向后兼容
+        for table in ['events', 'risk_records', 'risks', 'note_risk_log']:
             if table not in _RISK_TABLES:
                 continue
             # P0-1：risk 表安全主体过滤（降级）
             subj_sql, subj_vals = _safe_subject_clause(conn, table)
             found = False
-            for col in ['created_at', 'detected_at', 'risk_time']:
+            for col in _RISK_TABLE_COLUMNS.get(table, []):
                 if col not in _RISK_TIME_COLUMNS:
                     continue
                 try:
@@ -314,9 +325,10 @@ def trend_kos():
     days = min(90, max(7, int(request.args.get('days', 30))))
     conn = _get_db()
     try:
-        # KOS笔记：subject_type包含kos或author在kos_profiles中
+        # KOS笔记：author在kos_profiles(is_kos=1) 或 subject_type标记为kos/kol/koc
         q = """SELECT DATE(n.publish_datetime) as d, COUNT(*) as cnt
                FROM notes n
+               LEFT JOIN kos_profiles k ON n.author_id = k.author_id
                WHERE n.publish_datetime IS NOT NULL AND n.publish_datetime != ''"""
         params = []
         # P0-2：日期范围
@@ -326,7 +338,8 @@ def trend_kos():
         subj_sql, subj_vals = _subject_clause(alias='n')
         q += f" AND {subj_sql}"
         params.extend(subj_vals)
-        q += """ AND (n.subject_type LIKE '%kos%' OR n.subject_type LIKE '%kol%' OR n.subject_type LIKE '%koc%')
+        # Phase3：JOIN kos_profiles 后按 is_kos=1 过滤，兼容 subject_type 标记
+        q += """ AND (k.is_kos = 1 OR n.subject_type LIKE '%kos%' OR n.subject_type LIKE '%kol%' OR n.subject_type LIKE '%koc%')
                GROUP BY d ORDER BY d"""
         rows = conn.execute(q, params).fetchall()
         data_by_date = {r['d']: r['cnt'] for r in rows}
