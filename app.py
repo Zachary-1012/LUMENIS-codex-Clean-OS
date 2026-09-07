@@ -132,6 +132,8 @@ except Exception as e:
     ARK_LLM_AVAILABLE = False
     print(f'[ARK] 豆包AI模块导入失败（不影响系统运行）: {e}')
 from subject_rules import SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS, subject_hit, subject_sql_and_values
+# 品牌Logo管理系统
+import brand_logo_manager
 # 统一时间序列趋势API（全局趋势线数据源）
 import trend_api
 
@@ -957,6 +959,8 @@ _CTH_READONLY_GET_PREFIXES = (
     '/api/weekly/', '/api/special-report/', '/api/reports/',
     '/api/intelligence/evidence', '/api/alerts', '/api/platform-health',
     '/api/subject/', '/api/trends/', '/api/overview',
+    # P1-1: CTH dual-domain namespace readonly GET (CTH browse-mode no-auth, limited to specific paths)
+    '/api/cth/overview', '/api/cth/events', '/api/cth/xiaohongshu',
 )
 
 def _is_cth_readonly_get(path, method):
@@ -997,7 +1001,7 @@ def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
     # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）
-    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health/summary', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or request.path.startswith('/api/zbmp/') or request.path.startswith('/api/cth/') or request.path.startswith('/api/system/') or request.path.startswith('/api/viz/') or _is_cth_readonly_get(request.path, request.method):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or _is_cth_readonly_get(request.path, request.method):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -1145,6 +1149,39 @@ class ProxyPrefixMiddleware:
         return self.wsgi_app(environ,start_response)
 app.wsgi_app=ProxyPrefixMiddleware(app.wsgi_app)
 db.init_db()
+
+# P0-3/P0-4/P1-2/P1-3/P1-4: Evidence Chain + Canonical Data 旁路接入 + Collector Health + 双域隔离迁移
+try:
+    import database_migrations as _dm
+    _dm.migrate()
+    print("[db_migrations] migration completed (v11: collection_quality_log + dual-domain + evidence_ids)")
+except Exception as _e:
+    print(f"[db_migrations] migration warning (non-fatal): {_e}")
+
+# P0-2: 独立确保 publish_datetime 索引存在（双保险，幂等，不依赖版本迁移成功）
+try:
+    _dm._migrate_add_publish_datetime_index()
+    print("[db_migrations] idx_notes_publish_datetime ensured")
+except Exception as _e:
+    print(f"[db_migrations] publish_datetime index warning (non-fatal): {_e}")
+try:
+    import collection_quality_gate as _cqg
+    _cqg.ensure_quality_log_table(db.DB_PATH)
+    print("[collection_quality_gate] collection_quality_log table ensured")
+except Exception as _e:
+    print(f"[collection_quality_gate] init warning (non-fatal): {_e}")
+try:
+    import evidence_chain as _ec
+    _ec.init_db(db.DB_PATH)
+    print("[evidence_chain] zbc_evidence/zbc_canonical_data tables ensured")
+except Exception as _e:
+    print(f"[evidence_chain] init warning (non-fatal): {_e}")
+try:
+    import canonical_data as _cd
+    _cd.ensure_canonical_table(db.DB_PATH)
+    print("[canonical_data] canonical_data table ensured")
+except Exception as _e:
+    print(f"[canonical_data] init warning (non-fatal): {_e}")
 
 # AI Task Engine 数据库迁移（向后兼容，只建表不改表）
 try:
@@ -1318,6 +1355,54 @@ def run_rednote_collect(keyword='广州太古汇', max_scroll=3, max_details=10,
     except Exception as e:
         return {'ok': False, 'error': str(e)}
 
+def _bypass_evidence_canonical(note_data, provider='rednote'):
+    """P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write）。
+
+    硬红线：所有写入必须 try/except 吞掉并 log warning，绝不影响 notes 主入库。
+    写入 zbc_evidence + zbc_canonical_data（evidence_chain.EvidenceChain）和
+    canonical_data 表（canonical_data.note_to_canonical + persist_canonical）。
+    """
+    try:
+        import evidence_chain as _ec
+        _raw = (note_data.get('title','') + ' ' + note_data.get('content','')).strip()
+        _chain = _ec.EvidenceChain(db.DB_PATH)
+        _chain.capture_and_canonicalize(
+            source_type='xhs_note',
+            source_url=note_data.get('url',''),
+            raw_content=_raw,
+            source_id=note_data.get('note_id',''),
+            normalized_content=_raw[:500],
+            subject_hit=True,
+            subject_keywords=['taikoo_hui'],
+            sentiment='neutral',
+            risk_level='low',
+            engagement_metrics={
+                'likes': note_data.get('likes',0),
+                'comments': note_data.get('comments',0),
+                'collects': note_data.get('collects',0),
+                'shares': note_data.get('shares',0),
+            },
+            publish_datetime=note_data.get('publish_datetime') or None,
+            subject_scope='CTH',
+            provider=provider,
+            domain_id='cth',
+            product_id='CTH',
+        )
+    except Exception as _e:
+        print(f"[bypass][evidence_chain] side-write skipped (non-fatal): {_e}")
+    try:
+        import canonical_data as _cd
+        _rec = _cd.note_to_canonical(note_data, product_id='CTH')
+        _con = _cd.get_connection(db.DB_PATH)
+        try:
+            _cd.persist_canonical(_con, _rec)
+            _con.commit()
+        finally:
+            _con.close()
+    except Exception as _e:
+        print(f"[bypass][canonical_data] side-write skipped (non-fatal): {_e}")
+
+
 def persist_rednote_data(data, subject_hit_fn=None):
     """将 rednote 采集结果入库"""
     if not data or not data.get('ok'):
@@ -1361,6 +1446,8 @@ def persist_rednote_data(data, subject_hit_fn=None):
             }
             db.insert_note(note_data)
             persisted += 1
+            # P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write，失败不影响主入库）
+            _bypass_evidence_canonical(note_data, provider='rednote')
             # 保存评论
             comments = n.get('comment_list') or n.get('comments_data') or []
             if comments:
@@ -3401,6 +3488,28 @@ def api_brands_list():
     paged = filtered[start:start+per_page]
     categories = sorted(list(set(b.get('category','') for b in brands if b.get('category'))))
     return jsonify({'ok': True, 'total': total, 'brands': paged, 'page': page, 'per_page': per_page, 'categories': categories})
+
+@app.route('/api/brands/logos')
+def api_brands_logos():
+    """品牌列表（带logo），用于品牌卡片展示"""
+    from brand_logo_manager import get_all_brands_with_logos, get_logo_stats
+    keyword = request.args.get('keyword', '').lower()
+    category = request.args.get('category', '')
+    brands = get_all_brands_with_logos()
+    if keyword:
+        brands = [b for b in brands if keyword in b.get('brand_en','').lower() or keyword in b.get('brand_cn','').lower()]
+    if category:
+        brands = [b for b in brands if b.get('category') == category]
+    stats = get_logo_stats()
+    categories = sorted(list(set(b.get('category','') for b in brands if b.get('category'))))
+    return jsonify({'ok': True, 'total': len(brands), 'brands': brands, 'categories': categories, 'logo_stats': stats})
+
+@app.route('/api/brands/logo-stats')
+def api_brand_logo_stats():
+    """品牌logo覆盖率统计"""
+    from brand_logo_manager import get_logo_stats
+    return jsonify({'ok': True, 'stats': get_logo_stats()})
+
 
 @app.route('/api/brands', methods=['POST'])
 def api_brand_add():
