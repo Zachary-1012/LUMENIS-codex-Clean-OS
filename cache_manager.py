@@ -138,7 +138,7 @@ def _generate_db_summary(db_path: str) -> Dict:
         
         # 最近更新时间
         try:
-            latest = conn.execute("SELECT MAX(created_at) FROM notes").fetchone()[0]
+            latest = conn.execute("SELECT MAX(collected_at) FROM notes").fetchone()[0]  # 生产 notes 时间列为 collected_at（无 created_at）
             summary["latest_note_time"] = latest
         except Exception:
             summary["latest_note_time"] = None
@@ -244,12 +244,8 @@ def get_cached_data(query_type: str = "stats", limit: int = 50) -> Dict:
             result["data"] = [dict(row) for row in rows]
         
         elif query_type == "alerts":
-            rows = conn.execute("""
-                SELECT * FROM alerts 
-                ORDER BY created_at DESC 
-                LIMIT ?
-            """, (limit,)).fetchall()
-            result["data"] = [dict(row) for row in rows]
+            # alerts表已合并到risk_records，保持兼容返回空
+            result["data"] = []
         
         conn.close()
         return result
