@@ -25,19 +25,19 @@
 <section class="zbc-kpi-grid" id="rep-kpi-grid">
   <div class="zbc-kpi-card zbc-kpi-card--gradient-cth" id="rep-kpi-total">
     <div class="zbc-kpi-card__label">报告总数</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="rep-kpi-daily">
     <div class="zbc-kpi-card__label">日报</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="rep-kpi-weekly">
     <div class="zbc-kpi-card__label">周报</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="rep-kpi-special">
     <div class="zbc-kpi-card__label">专报</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
 </section>
 
@@ -68,7 +68,7 @@
 </section>
 
 <!-- Generate Wizard Modal -->
-<div id="rep-wizard-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto;padding:40px 20px;">
+<div id="rep-wizard-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:var(--z-modal);overflow-y:auto;padding:40px 20px;">
   <div class="zbc-card" style="max-width:640px;margin:0 auto;background:var(--l-card,#fff);">
     <div class="zbc-card__header">
       <div class="zbc-card__title">生成报告</div>
@@ -164,7 +164,7 @@
 </div>
 
 <!-- Preview Modal -->
-<div id="rep-preview-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto;padding:40px 20px;">
+<div id="rep-preview-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:var(--z-modal);overflow-y:auto;padding:40px 20px;">
   <div class="zbc-card" style="max-width:800px;margin:0 auto;background:var(--l-card,#fff);">
     <div class="zbc-card__header">
       <div class="zbc-card__title" id="rep-preview-title">报告预览</div>

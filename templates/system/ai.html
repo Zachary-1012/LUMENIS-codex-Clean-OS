@@ -129,22 +129,22 @@
 <div class="zbc-kpi-grid" id="provider-grid">
   <div class="zbc-kpi-card">
     <div class="zbc-kpi-card__label">Zhipu · glm-5.3</div>
-    <div class="zbc-kpi-card__value" id="prov-glm53" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__value" data-kpi id="prov-glm53" style="font-size:18px;">—</div>
     <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-glm53-sub">数据采集中…</div>
   </div>
   <div class="zbc-kpi-card">
     <div class="zbc-kpi-card__label">Zhipu · glm-4.5-air</div>
-    <div class="zbc-kpi-card__value" id="prov-glm45" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__value" data-kpi id="prov-glm45" style="font-size:18px;">—</div>
     <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-glm45-sub">数据采集中…</div>
   </div>
   <div class="zbc-kpi-card">
     <div class="zbc-kpi-card__label">ARK · doubao-lite</div>
-    <div class="zbc-kpi-card__value" id="prov-ark" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__value" data-kpi id="prov-ark" style="font-size:18px;">—</div>
     <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-ark-sub">数据采集中…</div>
   </div>
   <div class="zbc-kpi-card">
     <div class="zbc-kpi-card__label">Ollama · local</div>
-    <div class="zbc-kpi-card__value" id="prov-ollama" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__value" data-kpi id="prov-ollama" style="font-size:18px;">—</div>
     <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="prov-ollama-sub">数据采集中…</div>
   </div>
 </div>
@@ -271,7 +271,7 @@
 </div>
 
 <!-- Approval Modal -->
-<div id="te-approval-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center;">
+<div id="te-approval-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:var(--z-auth-recovery);align-items:center;justify-content:center;">
   <div style="background:var(--l-bg,#fff);border-radius:16px;padding:24px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
     <div style="font-size:16px;font-weight:600;margin-bottom:8px;">需人工审批</div>
     <div style="font-size:13px;color:var(--l-text-secondary,#6B7280);margin-bottom:14px;" id="te-approval-reason">—</div>

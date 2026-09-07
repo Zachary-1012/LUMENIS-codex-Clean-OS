@@ -40,19 +40,19 @@
 <section class="zbc-kpi-grid" id="ev-kpi-grid">
   <div class="zbc-kpi-card zbc-kpi-card--gradient-cth" id="ev-kpi-total">
     <div class="zbc-kpi-card__label">事件总数</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="ev-kpi-active">
     <div class="zbc-kpi-card__label">进行中</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="ev-kpi-volume">
     <div class="zbc-kpi-card__label">总声量</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="ev-kpi-brands">
     <div class="zbc-kpi-card__label">涉及品牌</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
 </section>
 
@@ -99,7 +99,7 @@
 </div>
 
 <!-- Detail Modal -->
-<div id="ev-detail-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto;padding:40px 20px;">
+<div id="ev-detail-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:var(--z-modal);overflow-y:auto;padding:40px 20px;">
   <div class="zbc-card" style="max-width:960px;margin:0 auto;background:var(--l-card,#fff);">
     <div class="zbc-card__header">
       <div class="zbc-card__title" id="ev-modal-title">事件详情</div>

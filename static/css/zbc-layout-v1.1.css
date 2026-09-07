@@ -357,7 +357,7 @@
   border-bottom: 1px solid var(--l-border, #E8E8E8);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-dropdown);
 }
 
 [data-theme="dark"] .zbc-topbar {
@@ -793,7 +793,7 @@
   background: var(--l-bg, #FFFFFF);
   border-top: 1px solid var(--l-border, #E8E8E8);
   /* PC hidden by default; flex only under max-width:768px (fix duplicate display showing mobile tabbar on PC) */
-  z-index: 200;
+  z-index: var(--z-drawer);
 }
 
 [data-theme="dark"] .zbc-tabbar {
@@ -925,7 +925,7 @@ html, body {
     position: fixed;
     left: 0;
     top: 0;
-    z-index: 1000;
+    z-index: var(--z-modal);
     transform: translateX(-100%);
     transition: transform 0.25s ease;
   }

@@ -43,19 +43,19 @@
 <section class="zbc-kpi-grid" id="risk-kpi-grid">
   <div class="zbc-kpi-card zbc-kpi-card--gradient-cth" id="risk-kpi-pending">
     <div class="zbc-kpi-card__label">待处理</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="risk-kpi-processing">
     <div class="zbc-kpi-card__label">处理中</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="risk-kpi-resolved">
     <div class="zbc-kpi-card__label">已解决</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
   <div class="zbc-kpi-card" id="risk-kpi-response">
     <div class="zbc-kpi-card__label">平均响应时间</div>
-    <div class="zbc-kpi-card__value"><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
+    <div class="zbc-kpi-card__value" data-kpi><span class="zbc-skeleton" style="display:inline-block;width:60px;height:24px;"></span></div>
   </div>
 </section>
 
@@ -119,7 +119,7 @@
 </div>
 
 <!-- Detail Modal -->
-<div id="risk-detail-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto;padding:40px 20px;">
+<div id="risk-detail-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:var(--z-modal);overflow-y:auto;padding:40px 20px;">
   <div class="zbc-card" style="max-width:960px;margin:0 auto;background:var(--l-card,#fff);">
     <div class="zbc-card__header">
       <div class="zbc-card__title" id="risk-modal-title">风险完整详情</div>
