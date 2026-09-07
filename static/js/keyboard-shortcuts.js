@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * keyboard-shortcuts.js — 三域键盘快捷键帮助窗口（ZBC V1.1 架构）
  * Ctrl+/ 或 ? 唤起；覆盖三域导航、全局操作、视图切换。
  * 自包含模态，不依赖旧 openModal；从真实 .zbc-nav-item 动态生成。
@@ -74,7 +74,7 @@
   function buildGroups() {
     var groups = [];
     var navItems = getNavItems();
-    var domainLabels = { zbmp: 'ZBMP 品牌智能域', cth: 'CTH 太古汇情报域', system: 'SYSTEM 运行控制域' };
+    var domainLabels = { zbmp: 'ZBMP 序境·品牌市场域', cth: '序境·商业运营域', system: 'SYSTEM 运行控制域' };
     ['zbmp', 'cth', 'system'].forEach(function (domain) {
       var domainItems = navItems.filter(function (n) { return n.domain === domain; });
       if (domainItems.length) {
@@ -258,3 +258,4 @@
   else boot();
   console.log('[keyboard-shortcuts] 三域键盘快捷键已加载（Ctrl+/ 唤起）');
 })();
+

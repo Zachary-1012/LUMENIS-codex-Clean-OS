@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    LUMENIS Terminology — 渲染层术语替换
    产品术语表 V1.0 唯一权威来源：audit/PRODUCT_TERMINOLOGY_TABLE_V1.0.md
    规则：代码内部可保留工程代号，渲染给用户时必须替换为标准用名。
@@ -20,8 +20,8 @@
     { from: /\bZBC\b/g, to: "序境 LUMENIS" },
     { from: /\bOSAI\b/g, to: "智能引擎" },
     // 域代号（独立词边界）
-    { from: /\bZBMP\b/g, to: "品牌智能" },
-    { from: /\bCTH\b/g, to: "太古汇智能" },
+    { from: /\bZBMP\b/g, to: "序境·品牌市场" },
+    { from: /\bCTH\b/g, to: "序境·商业运营" },
     { from: /\bSYS\b/g, to: "系统" },
     // 安全术语
     { from: /\bTOTP\b/g, to: "动态验证码" },
@@ -100,3 +100,4 @@
     document.addEventListener("DOMContentLoaded", scanPage);
   }
 })(window);
+

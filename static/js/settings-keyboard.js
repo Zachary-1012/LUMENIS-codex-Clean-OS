@@ -1,4 +1,4 @@
-/**
+﻿/**
  * settings-keyboard.js — 序境 LUMENIS 键盘快捷键管理
  * 对接 keyboard-shortcuts.js 现有机制（Ctrl+/等），设置页化
  * 持久化到 localStorage
@@ -16,8 +16,8 @@
     { id: 'ai-assistant', name: 'AI 助手', desc: '唤起/关闭 AI 助手面板', combo: 'Ctrl+J', category: '全局操作', editable: true },
     { id: 'theme-toggle', name: '切换主题', desc: '浅色/深色主题切换', combo: 'Ctrl+T', category: '全局操作', editable: true },
     // 域切换
-    { id: 'domain-zbmp', name: '切换品牌智能域', desc: '切换到 ZBMP 品牌智能域', combo: 'Ctrl+1', category: '域切换', editable: true },
-    { id: 'domain-cth', name: '切换太古汇智能域', desc: '切换到 CTH 太古汇情报域', combo: 'Ctrl+2', category: '域切换', editable: true },
+    { id: 'domain-zbmp', name: '切换序境·品牌市场域', desc: '切换到 ZBMP 序境·品牌市场域', combo: 'Ctrl+1', category: '域切换', editable: true },
+    { id: 'domain-cth', name: '切换序境·商业运营域', desc: '切换到 序境·商业运营域', combo: 'Ctrl+2', category: '域切换', editable: true },
     { id: 'domain-system', name: '切换系统域', desc: '切换到 SYSTEM 运行控制域', combo: 'Ctrl+3', category: '域切换', editable: true },
     // 视图与窗口
     { id: 'shortcuts-help', name: '显示快捷键', desc: '打开快捷键帮助面板', combo: 'Ctrl+/', category: '视图与窗口', editable: false },
@@ -110,3 +110,4 @@
 
   console.log('[settings-keyboard] 键盘快捷键管理已加载');
 })();
+

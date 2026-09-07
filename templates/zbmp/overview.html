@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}ZBMP Overview · 序境 LUMENIS{% endblock %}
 {% block page_title %}Brand Overview{% endblock %}
 
@@ -725,7 +725,7 @@ var ZBMPOverview = (function () {
       if (riskData.high > 0 || riskData.medium > 0) {
         ops.push({ badge: '风险管控', title: '存在 ' + riskData.high + ' 高风险 / ' + riskData.medium + ' 中风险',
           desc: '监测到风险舆情，建议启动风险研判流程，评估传播路径。',
-          evidence: { text: '查看风险中心', url: '/lumenis/zbmp/risk' } });
+          evidence: { text: '查看风险', url: '/lumenis/zbmp/risk' } });
       }
     }
     // 4. Top brand from real /api/brand-industry/brands or overview
@@ -896,3 +896,4 @@ var ZBMPOverview = (function () {
 })();
 </script>
 {% endblock %}
+

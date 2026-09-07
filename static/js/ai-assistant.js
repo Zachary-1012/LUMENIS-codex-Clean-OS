@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * ai-assistant.js — 轻量AI助手（ZBC V2.0 AI Task Engine 对接）
  * 右下角浮动按钮 + 展开面板，对接 /api/ai/tasks（Production-Ready）
  * 降级链：Task Engine API → /api/ai/chat → 本地提示
@@ -116,7 +116,7 @@
 
   function getDomainLabel() {
     var d = getCurrentDomain();
-    return { zbmp: 'ZBMP 品牌智能', cth: 'CTH 太古汇情报', system: 'SYSTEM 运行控制' }[d] || d.toUpperCase();
+    return { zbmp: 'ZBMP 序境·品牌市场', cth: '序境·商业运营', system: 'SYSTEM 运行控制' }[d] || d.toUpperCase();
   }
 
   function getQuickCommands() {
@@ -511,3 +511,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
+

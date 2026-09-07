@@ -1,4 +1,4 @@
-/**
+﻿/**
  * settings.js — ZBC-LUMENIS 设置页前端逻辑
  * 对接 /api/system/account/* 所有端点
  * 守No-Scroll：内容在bounded区域内滚动，外层不滚
@@ -41,7 +41,7 @@ async function loadDomainIdentity() {
 function updateDomainTag() {
   const tag = document.getElementById('domainTag');
   if (!tag) return;
-  const labels = { cth: 'CTH 太古汇域', zbmp: 'ZBMP 品牌智能域', system: 'SYSTEM 系统全局' };
+  const labels = { cth: 'CTH 太古汇域', zbmp: 'ZBMP 序境·品牌市场域', system: 'SYSTEM 系统全局' };
   tag.textContent = labels[currentDomain] || currentDomain.toUpperCase();
   tag.className = 'domain-tag ' + currentDomain;
 }
@@ -81,7 +81,7 @@ function switchPanel(panel) {
     developer: '开发者功能', appearance: '外观', config: '配置',
     keyboard: '键盘快捷键', browser: '浏览器', integrations: '集成与连接',
     ai: 'AI', collection: '采集与数据源', platforms: '平台与可见性',
-    syslinks: '系统链接', 'zbmp-domain': 'ZBMP 品牌智能', backup: '通知/备份/帮助'
+    syslinks: '系统链接', 'zbmp-domain': 'ZBMP 序境·品牌市场', backup: '通知/备份/帮助'
   };
   document.getElementById('panelTitle').textContent = titles[panel] || panel;
 
@@ -1262,4 +1262,5 @@ function loadIntegrations() {
     if (summary) summary.textContent = '接口不可用';
   });
 }
+
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * zbmp-entry.js — ZBMP 域身份入口面板
  *
  * 职责：
@@ -27,7 +27,7 @@
     + '    </button>'
     + '    <div class="zbmp-modal-header">'
     + '      <div class="zbmp-modal-logo"><span class="zbmp-icon zbmp-icon--lg" data-zbmp-icon="intelligence"></span></div>'
-    + '      <h2 id="zbmp-modal-title" class="zbmp-modal-h2">进入品牌智能域</h2>'
+    + '      <h2 id="zbmp-modal-title" class="zbmp-modal-h2">进入序境·品牌市场域</h2>'
     + '      <p class="zbmp-modal-sub" id="zbmp-modal-sub">动态验证码保护 · 每30秒刷新</p>'
     + '    </div>'
     + '    <div class="zbmp-modal-body" id="zbmp-modal-body">'
@@ -235,7 +235,7 @@
     api(ENTRY_API + '/status').then(function (res) {
       if (!res.ok || !res.data.ok) {
         if (res.status === 401) {
-          setBody('<div class="zbmp-info">请先登录CTH账号，再进入品牌智能域。<br><br>'
+          setBody('<div class="zbmp-info">请先登录CTH账号，再进入序境·品牌市场域。<br><br>'
             + '<a href="/cth/login" style="color:#0F766E;font-weight:600">前往CTH登录 →</a></div>');
         } else {
           setBody('<div class="zbmp-error show">' + (res.data.error || '状态检查失败') + '</div>');
@@ -262,11 +262,11 @@
   function showAlreadyGranted() {
     setBody(''
       + '<div class="zbmp-info" style="text-align:center">'
-      + '  <strong>已获得品牌智能域访问权限</strong><br>'
+      + '  <strong>已获得序境·品牌市场域访问权限</strong><br>'
       + '  当前身份：' + (state.username || '') + '<br>'
       + '  域身份有效期：8小时'
       + '</div>'
-      + '<button class="zbmp-btn zbmp-btn-primary" onclick="ZBMPEntry.gotoZBMP()">进入品牌智能 →</button>'
+      + '<button class="zbmp-btn zbmp-btn-primary" onclick="ZBMPEntry.gotoZBMP()">进入序境·品牌市场 →</button>'
       + '<button class="zbmp-btn zbmp-btn-secondary" onclick="ZBMPEntry.leaveZBMP()">退出ZBMP域身份</button>');
   }
 
@@ -275,7 +275,7 @@
     setBody(''
       + '<div class="zbmp-error" id="zbmp-error"></div>'
       + '<div class="zbmp-info">'
-      + '  <strong>首次进入品牌智能域需要绑定动态验证码</strong><br>'
+      + '  <strong>首次进入序境·品牌市场域需要绑定动态验证码</strong><br>'
       + '  系统将生成一个二维码，用iPhone「设置 → 密码」扫码添加，'
       + '  之后每30秒生成6位动态码用于验证身份。'
       + '</div>'
@@ -371,7 +371,7 @@
       + '</div>'
       + '<div class="zbmp-timer-bar"><div class="zbmp-timer-fill" id="zbmp-timer-fill" style="width:100%"></div></div>'
       + '<div class="zbmp-timer-text" id="zbmp-timer-text">验证码每30秒刷新</div>'
-      + '<button class="zbmp-btn zbmp-btn-primary" id="zbmp-verify-btn" disabled>验证并进入品牌智能 →</button>');
+      + '<button class="zbmp-btn zbmp-btn-primary" id="zbmp-verify-btn" disabled>验证并进入序境·品牌市场 →</button>');
 
     bindTotpInputs('zbmp-verify-inputs', function (code) {
       $('zbmp-verify-btn').disabled = code.length !== 6;
@@ -395,7 +395,7 @@
     api(ENTRY_API + '/verify', { method: 'POST', body: { code: code } }).then(function (res) {
       if (!res.ok || !res.data.success) {
         showError(res.data.error || res.data.message || '验证失败，请检查动态码');
-        if (btn) { btn.disabled = false; btn.textContent = '验证并进入品牌智能 →'; }
+        if (btn) { btn.disabled = false; btn.textContent = '验证并进入序境·品牌市场 →'; }
         clearTotpInputs('zbmp-verify-inputs');
         clearTotpInputs('zbmp-confirm-inputs');
         return;
@@ -404,7 +404,7 @@
       setBody(''
         + '<div class="zbmp-loading">'
         + '  <div class="zbmp-spinner" style="border-top-color:#16a34a"></div>'
-        + '  验证成功，正在进入品牌智能域...'
+        + '  验证成功，正在进入序境·品牌市场域...'
         + '</div>');
       stopTimer();
       setTimeout(function () {
@@ -531,3 +531,4 @@
   }
 
 })(typeof window !== 'undefined' ? window : this);
+
