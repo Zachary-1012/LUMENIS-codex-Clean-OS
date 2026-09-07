@@ -170,6 +170,13 @@ try:
 except Exception as _cg_e:
     print(f"[content_generation] blueprint register failed: {_cg_e}")
 
+# Module Registry: 模组注册与用户自定义管理
+try:
+    import module_registry
+    module_registry.register_module_api(app)
+except Exception as _mr_e:
+    print(f"[module_registry] register failed: {_mr_e}")
+
 # P1-C: Intelligence Library page (no-scroll, left tree + right list + detail drawer)
 @app.route('/intelligence/library')
 def intelligence_library_page():

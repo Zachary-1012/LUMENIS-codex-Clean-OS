@@ -14,6 +14,7 @@
   <!-- G Shard: Adaptive UI + Motion System（在lumenis设计系统之后加载，增量扩展不冲突） -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/adaptive-layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/adaptive-components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-design-system.css') }}">
   {% block head %}{% endblock %}
   <style>
   /* Language Switcher */
@@ -55,7 +56,7 @@
     <!-- Navigation Groups -->
     <nav class="zbc-nav" aria-label="页面导航">
 
-      <!-- ZBMP Navigation (7 entries) -->
+      <!-- ZBMP Navigation (8 entries) -->
       <div class="zbc-nav-group zbc-nav-group--zbmp" data-domain-nav="zbmp" {% if active_domain!='zbmp' %}hidden{% endif %}>
         <div class="zbc-nav-group__label" data-i18n="domain.zbmp">Brand Intelligence</div>
         <a class="zbc-nav-item {% if active_nav=='zbmp_overview' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_overview') }}">
@@ -66,6 +67,9 @@
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_content' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_content') }}">
           <span class="zbc-nav-item__icon" data-icon="content" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.content">Content</span>
+        </a>
+        <a class="zbc-nav-item {% if active_nav=='zbmp_podcast' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_podcast') }}">
+          <span class="zbc-nav-item__icon" data-icon="podcast" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.podcast">Podcast</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='zbmp_kos' %}is-active{% endif %}" href="{{ url_for('lumenis.zbmp_kos') }}">
           <span class="zbc-nav-item__icon" data-icon="megaphone" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.kos">KOS</span>
