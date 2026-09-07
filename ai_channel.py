@@ -389,9 +389,8 @@ def route_with_fallback(call_fn, providers=None, on_result=None):
                     on_result(prov, None, False)
                 except Exception:
                     pass
-            # 不可重试错误（auth/bad_request）不切下一个（配置问题，切了也没用）
-            if not retryable and kind in ('auth', 'bad_request'):
-                break
+            # 不可重试错误（auth/bad_request）记录后继续切下一个 provider：
+            # 不同 provider 的 key/配置独立，一个 auth 失败不代表其他 provider 也失败
             continue
     # 全部 Provider 失败/熔断 → 本地规则兜底
     return None, 'rule'
