@@ -8,6 +8,16 @@ import pytest
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 排除纯脚本式 test_ 文件（模块级 sys.exit 会在收集期杀掉 pytest 进程）
+# 这些文件无 def test_，设计为 `python tests/xxx.py` 独立运行，不纳入 pytest 收集
+collect_ignore = [
+    "test_agent_combined_shardB.py",
+    "test_guard_wiring.py",
+    "test_security_scan.py",
+    "test_t2_resilience.py",
+    "test_title_fallback.py",
+]
+
 # 测试配置
 TEST_CONFIG = {
     'test_db': 'data/test_monitor.db',
