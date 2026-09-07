@@ -26,12 +26,18 @@ from permission_gate import (
 
 # 权限门集成测试需要严格模式：不被TESTING通用放行影响
 from permission_gate import set_testing_bypass
-set_testing_bypass(False)
 
 
 # ═══════════════════════════════════════════════════════════════
 # Fixtures
 # ═══════════════════════════════════════════════════════════════
+
+@pytest.fixture(scope='module', autouse=True)
+def _strict_permission_gate():
+    """模块级：进入时关闭TESTING bypass走严格模式，模块结束后重置为True避免污染其他测试。"""
+    set_testing_bypass(False)
+    yield
+    set_testing_bypass(True)
 
 @pytest.fixture
 def flask_client():
