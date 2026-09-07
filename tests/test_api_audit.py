@@ -297,6 +297,14 @@ class TestErrorCodes:
 # ═══════════════════════════════════════════════════════════════
 
 class TestPermissionGateBehavior:
+    @pytest.fixture(autouse=True)
+    def _strict_permission_gate(self):
+        # 本类验证权限门严格行为（拒绝/授权放行/装饰器/审计），必须关闭 TESTING 旁路，结束还原
+        from permission_gate import set_testing_bypass
+        set_testing_bypass(False)
+        yield
+        set_testing_bypass(True)
+
     """PermissionGate 核心行为验证（使用独立实例，不影响全局单例）。"""
 
     def test_gate_default_fail_closed(self):

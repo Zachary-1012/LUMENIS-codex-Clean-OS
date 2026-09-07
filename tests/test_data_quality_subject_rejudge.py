@@ -85,7 +85,8 @@ class TestSubjectRejudgeDataQuality:
         conn = sqlite3.connect(db_path)
         total = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
         conn.close()
-        assert total == 963  # 总数不变
+        # 重判只更新字段不删数据；采集使 notes 只增不减，故总数不得低于建测基线 963（不写死等值）
+        assert total >= 963, f"重判不应删除数据，notes 总数 {total} 低于建测基线 963"
 
     def test_no_empty_subject_type(self):
         """重判后不应有空/NULL subject_type。"""

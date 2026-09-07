@@ -32,8 +32,9 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
-# TESTING bypass 全局开关：默认True（pytest环境放行），权限门集成测试设为False走严格模式
-_TESTING_BYPASS_ENABLED = True
+# TESTING bypass 全局开关：默认 False（OWASP deny-by-default / fail-closed，生产永远严格）。
+# 测试环境由 conftest session fixture 显式 set_testing_bypass(True) 开启；权限专项模块用 module fixture 覆盖为严格。
+_TESTING_BYPASS_ENABLED = False
 
 def set_testing_bypass(enabled: bool) -> None:
     """设置TESTING bypass开关（测试用）。"""
@@ -406,19 +407,9 @@ class PermissionGate:
         Returns:
             PermissionResult
         """
-        # 0a. TESTING 模式兼容：pytest 测试环境下允许所有操作（但记录审计）
-        # 权限门集成测试通过 set_testing_bypass(False) 走严格模式
-        _is_testing = _TESTING_BYPASS_ENABLED and (
-            os.environ.get('PYTEST_CURRENT_TEST') is not None
-            or os.environ.get('PERMISSION_GATE_TESTING') == '1'
-        )
-        if not _is_testing:
-            try:
-                from flask import current_app
-                _is_testing = _TESTING_BYPASS_ENABLED and bool(
-                    current_app and current_app.config.get('TESTING'))
-            except Exception:
-                pass
+        # 0a. TESTING 旁路：必须显式开启（set_testing_bypass(True) 或 PERMISSION_GATE_TESTING=1）。
+        # OWASP deny-by-default：不得因检测到 pytest 环境或 Flask TESTING 就自动放行（那会使权限测试失效、生产也存在被绕过风险）。
+        _is_testing = bool(_TESTING_BYPASS_ENABLED) or os.environ.get('PERMISSION_GATE_TESTING') == '1' 
         if _is_testing:
             logger.debug(f"[PermissionGate] TESTING模式放行: op={operation_type.value}, resource={resource}")
             return PermissionResult(

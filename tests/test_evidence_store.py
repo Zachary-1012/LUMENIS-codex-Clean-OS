@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """evidence_store.py 单元测试（使用临时数据库，不碰生产库）。"""
 import sys, os, tempfile, json
+import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 使用临时数据库
@@ -38,6 +39,21 @@ _conn.execute("""CREATE TABLE app_evidence_records (
 )""")
 _conn.commit()
 _conn.close()
+
+
+@pytest.fixture(autouse=True)
+def _clean_evidence_table_each_test():
+    """每个用例前把 evidence_store.DB_PATH 强制指回本模块临时库并清空，
+    对抗完整套件中其它测试模块级泄漏的 ZBC_DB_PATH / 运行期改 DB_PATH 导致的跨库累积。"""
+    evidence_store.DB_PATH = _tmp_db  # 对抗运行期污染，确保写入/查询都落在本模块临时库
+    _c = sqlite3.connect(_tmp_db)
+    try:
+        _c.execute("DELETE FROM app_evidence_records")
+        _c.commit()
+    finally:
+        _c.close()
+    yield
+
 
 
 def test_record_generic_evidence():

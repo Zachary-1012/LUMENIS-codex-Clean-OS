@@ -528,7 +528,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div class="nav-item" data-panel="backup" onclick="switchPanel('backup')">
         <span class="nav-icon"><span data-icon="database" data-icon-size="16"></span></span>通知/备份/帮助
-      </div>
+              <div class="nav-item" data-panel="zbmp-domain" onclick="switchPanel('zbmp-domain')">
+          <span class="nav-icon">🔓</span><span>ZBMP 品牌智能</span>
+          <span class="nav-badge" id="zbmp-status-badge">未开启</span>
+        </div>
+</div>
     </nav>
   </aside>
 
@@ -1280,6 +1284,33 @@ function applyLanguage() {
   if (document.documentElement) document.documentElement.setAttribute('lang', saved);
 })();
 </script>
+
+      <!-- ZBMP 产品域解锁面板 -->
+      <div class="settings-panel" id="panel-zbmp-domain" style="display:none">
+        <div class="panel-header">
+          <h2>品牌智能 ZBMP 域</h2>
+          <p class="panel-desc">ZBMP 与 CTH 为独立产品域。输入产品密钥解锁后，顶部导航将显示 ZBMP 入口。</p>
+        </div>
+        <div class="setting-card">
+          <div class="setting-card__title">当前状态</div>
+          <div class="setting-card__value" id="zbmp-current-status">未开启</div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-card__title">解锁 ZBMP 域</div>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <input type="password" id="zbmp-unlock-key" placeholder="输入产品密钥" style="flex:1;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px">
+            <button onclick="unlockZBMP()" style="padding:10px 20px;background:#0F766E;color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;font-weight:600">解锁</button>
+          </div>
+          <p id="zbmp-unlock-msg" style="margin-top:10px;font-size:12px;color:#64748b"></p>
+        </div>
+        <div class="setting-card" style="background:#f0fdfa">
+          <div class="setting-card__title" style="color:#0F766E">产品域解离说明</div>
+          <p style="font-size:12px;color:#475569;margin-top:8px;line-height:1.7">
+            ZBMP（品牌智能）与 CTH（太古汇专项）目前共享运行时，但产品域身份、数据、规则、页面已解耦。
+            后续完全解离时，此处将替换为独立产品域认证服务，调用契约保持不变。
+          </p>
+        </div>
+      </div>
 <script>
 // ===== Phase5b: Platform Visibility Switches =====
 function loadPlatformSwitches() {
@@ -1353,5 +1384,37 @@ if (document.readyState !== 'loading') {
 }
 </script>
 
+
+<script>
+function unlockZBMP(){
+  var key = document.getElementById('zbmp-unlock-key').value.trim();
+  var msg = document.getElementById('zbmp-unlock-msg');
+  if(!key){ msg.textContent='请输入密钥'; msg.style.color='#dc2626'; return; }
+  fetch('/api/auth/zbmp-entry/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key})})
+  .then(function(r){return r.json().then(function(d){return {status:r.status,data:d};});})
+  .then(function(res){
+    if(res.data.success){
+      msg.textContent='ZBMP 域已解锁，顶部导航将显示 ZBMP 入口';
+      msg.style.color='#059669';
+      document.getElementById('zbmp-current-status').textContent='已开启';
+      document.getElementById('zbmp-status-badge').textContent='已开启';
+      document.getElementById('zbmp-status-badge').className='nav-badge';
+      document.getElementById('zbmp-status-badge').style.background='#d1fae5';
+      document.getElementById('zbmp-status-badge').style.color='#059669';
+      setTimeout(function(){location.reload();},800);
+    } else {
+      msg.textContent=res.data.error||'解锁失败';
+      msg.style.color='#dc2626';
+    }
+  }).catch(function(){msg.textContent='网络错误，请重试';msg.style.color='#dc2626';});
+}
+// 页面加载时检查 ZBMP 状态
+document.addEventListener('DOMContentLoaded',function(){
+  var granted = document.cookie.indexOf('zbmp_domain_grant=1')>=0;
+  var st=document.getElementById('zbmp-current-status');
+  var badge=document.getElementById('zbmp-status-badge');
+  if(granted){ if(st)st.textContent='已开启'; if(badge){badge.textContent='已开启';badge.style.background='#d1fae5';badge.style.color='#059669';} }
+});
+</script>
 </body>
 </html>

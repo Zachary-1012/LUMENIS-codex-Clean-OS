@@ -82,7 +82,19 @@ class SecurityScanner:
         self.scan_extensions = ['.py', '.js', '.html', '.css', '.json', '.yml', '.yaml', '.env', '.cfg', '.ini', '.md']
 
         # 排除的目录
-        self.exclude_dirs = ['.venv', 'node_modules', '__pycache__', '.git', 'data', 'logs', 'backups', '.ollama']
+        self.exclude_dirs = [
+            '.venv', 'node_modules', '__pycache__', '.git', 'data', 'logs',
+            'backups', '.ollama',
+            # IDE / 编辑器工具目录（含巨型扩展 bundle，非项目源码）
+            '.vscode', '.idea', '.trae-cn', '.trae', '.opencode',
+            # 第三方依赖 / 归档 / 构建产物 / 审计与知识库数据（不作为待扫描源码）
+            'vendor', 'archive', '99-ARCHIVE', 'staging', 'audit',
+            'intelligence_library',
+        ]
+        # 目录名前缀排除（如 edge-cdp-profile / edge-cdp-general 等运行时浏览器自动化 profile，体积大且动态变化）
+        self.exclude_dir_prefixes = ('edge-cdp-',)
+        # 单文件扫描大小护栏：超过该字节数不做全文读取+正则（多为 minified bundle，扫描慢且高误报）
+        self.max_scan_file_bytes = 1024 * 1024  # 1 MiB
 
     def _load_json(self, path, default):
         """加载JSON文件"""
@@ -116,15 +128,28 @@ class SecurityScanner:
             return None
 
     def _get_scan_files(self):
-        """获取需要扫描的文件列表"""
+        """获取需要扫描的文件列表（只扫项目源码：排除工具/依赖/浏览器 profile 目录与超大文件）"""
         files = []
         for root, dirs, filenames in os.walk(self.root_dir):
-            # 排除目录
-            dirs[:] = [d for d in dirs if d not in self.exclude_dirs]
+            # 排除目录：精确名单 + 点开头工具/隐藏目录（保留 .github 以扫描 CI workflow）+ 指定前缀
+            dirs[:] = [
+                d for d in dirs
+                if d not in self.exclude_dirs
+                and not d.startswith(self.exclude_dir_prefixes)
+                and (not d.startswith('.') or d == '.github')
+            ]
             for filename in filenames:
                 ext = os.path.splitext(filename)[1].lower()
-                if ext in self.scan_extensions:
-                    files.append(os.path.join(root, filename))
+                if ext not in self.scan_extensions:
+                    continue
+                fpath = os.path.join(root, filename)
+                try:
+                    # 大文件护栏：跳过超大 minified bundle / 数据文件，避免 f.read + 正则长时间阻塞
+                    if os.path.getsize(fpath) > self.max_scan_file_bytes:
+                        continue
+                except OSError:
+                    continue
+                files.append(fpath)
         return files
 
     # ============================================

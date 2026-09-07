@@ -880,6 +880,18 @@ class TaskEngine:
                 _lc_started = self._lifecycle_worker.lifecycle_start(run_id=f"task_{task_id}")
             except Exception:
                 pass
+        try:
+            return self._execute_task_inner(task_id)
+        finally:
+            # 任务结束（成功/失败/熔断/取消/DLQ/异常）必须停止 lifecycle 心跳线程，
+            # 否则每次 execute_task 都泄漏一个 lifecycle-hb 线程（全量测试累积到末尾拖死进程，生产长期运行同样泄漏）
+            if _lc_started and self._lifecycle_worker:
+                try:
+                    self._lifecycle_worker.lifecycle_stop(reason="task_finished")
+                except Exception:
+                    pass
+
+    def _execute_task_inner(self, task_id: str) -> Dict[str, Any]:
         task = self._db_get_task(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")

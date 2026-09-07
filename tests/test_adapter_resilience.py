@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """阶段4b：v4_upgrade.adapters 韧性增强层单测（纯标准库、tmp 隔离、不触网、不改主采集链）。
 
 覆盖 base 的熔断器/令牌桶/指标/safe_collect 不抛，以及 dual_pool 的 Cookie/Proxy 状态机、

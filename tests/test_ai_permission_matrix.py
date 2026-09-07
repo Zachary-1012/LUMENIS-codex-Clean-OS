@@ -22,7 +22,7 @@ from ai_task_engine import (
 )
 from permission_gate import (
     PermissionGate, PermissionLevel, RiskLevel, OperationType,
-    get_permission_gate, reset_permission_gate,
+    get_permission_gate, reset_permission_gate, set_testing_bypass,
 )
 
 
@@ -155,6 +155,13 @@ class TestHumanApproval:
 # ═══════════════════════════════════════════════════════════════
 
 class TestPermissionGateIntegration:
+    @pytest.fixture(autouse=True)
+    def _strict_permission_gate(self):
+        # 本类验证权限门严格模式（fail-closed/高风险审批/审计/审批令牌），必须关闭 TESTING 旁路
+        set_testing_bypass(False)
+        yield
+        set_testing_bypass(True)
+
     def test_gate_fail_closed_unregistered_operation(self, gate):
         """未注册操作默认拒绝（fail-closed）"""
         class FakeOp:

@@ -41,7 +41,7 @@
 
     <!-- Domain Switch -->
     <div class="zbc-domain-switch" role="tablist" aria-label="产品域切换">
-      <button class="zbc-domain-tab {% if active_domain=='zbmp' %}is-active{% endif %}" data-domain="zbmp" role="tab" aria-selected="{% if active_domain=='zbmp' %}true{% else %}false{% endif %}">
+      <button class="zbc-domain-tab {% if active_domain=='zbmp' %}is-active{% endif %}" id="zbmp-domain-tab" data-domain="zbmp" role="tab" aria-selected="{% if active_domain=='zbmp' %}true{% else %}false{% endif %}" style="display:none">
         <span class="zbc-domain-tab__dot zbc-dot--zbmp"></span><span data-i18n="domain.zbmp">ZBMP</span>
       </button>
       <button class="zbc-domain-tab {% if active_domain=='cth' or not active_domain %}is-active{% endif %}" data-domain="cth" role="tab" aria-selected="{% if active_domain=='cth' or not active_domain %}true{% else %}false{% endif %}">
@@ -108,13 +108,7 @@
         <a class="zbc-nav-item {% if active_nav=='cth_data_center' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_data_center') }}">
           <span class="zbc-nav-item__icon" data-icon="database" data-icon-size="18"></span><span class="zbc-nav-item__label">Data Center</span>
         </a>
-        <!-- ZBMP 入口（CTH域内） -->
-        <div class="zbc-nav-divider" style="height:1px;background:#e2e8f0;margin:8px 16px"></div>
-        <button class="zbc-nav-item zbc-nav-item--entry" id="zbmp-entry-btn" onclick="if(typeof ZBMPEntry!=='undefined')ZBMPEntry.open()" style="width:100%;background:none;border:none;cursor:pointer;text-align:left;color:#0F766E">
-          <span class="zbc-nav-item__icon" data-icon="intelligence" data-icon-size="18"></span>
-          <span class="zbc-nav-item__label">进入品牌智能 ZBMP</span>
-          <span style="margin-left:auto;font-size:10px;background:rgba(15,118,110,.1);color:#0F766E;padding:2px 6px;border-radius:6px;font-weight:600">TOTP</span>
-        </button>
+
       </div>
 
       <!-- SYSTEM Navigation (5 entries) -->

@@ -161,7 +161,9 @@ def test_canonical_matches_live_sql():
         "SELECT COUNT(*) FROM notes WHERE risk_level='high'").fetchone()[0]
     rc = risk_count(rows)
     assert rc["high"] == sql_high
-    assert rc["critical"] == 0  # 现网无 critical（2026-09 基线）
+    sql_critical = __import__("sqlite3").connect(DB).execute(
+        "SELECT COUNT(*) FROM notes WHERE risk_level='critical'").fetchone()[0]
+    assert rc["critical"] == sql_critical  # critical 同样与 live SQL 实时对齐，不写死历史基线
 
     # 互动：Canonical sum == SQL 四字段求和
     sql_eng = __import__("sqlite3").connect(DB).execute(

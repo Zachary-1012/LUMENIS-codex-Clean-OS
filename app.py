@@ -1106,10 +1106,11 @@ def _permission_gate_write_check():
     - 权限拒绝 → 返回 BLOCKED（403），不执行写操作
     - TESTING 模式（pytest）下跳过，由装饰器层权限控制
     """
-    # TESTING 模式跳过：使用 permission_gate 全局开关（权限门集成测试设为False走严格模式）
+    # TESTING 旁路：必须显式开启（set_testing_bypass(True) 或 PERMISSION_GATE_TESTING=1），
+    # 不得因 pytest 环境或 Flask TESTING 自动跳过写拦截（OWASP deny-by-default）。
     try:
         from permission_gate import _TESTING_BYPASS_ENABLED
-        if _TESTING_BYPASS_ENABLED and (os.environ.get('PYTEST_CURRENT_TEST') or app.config.get('TESTING')):
+        if _TESTING_BYPASS_ENABLED or os.environ.get('PERMISSION_GATE_TESTING') == '1':
             return None
     except Exception:
         pass
@@ -5789,6 +5790,41 @@ def api_zbmp_entry_leave():
                   "用户{}退出ZBMP域".format(user['username']))
     resp = jsonify({"success": True, "domain_identity": "cth"})
     resp.delete_cookie('zbmp_domain_grant', path='/')
+    return resp
+
+
+# ===== ZBMP 产品域解离：固定密钥解锁（替代TOTP，预留完全解离口） =====
+ZBMP_DOMAIN_UNLOCK_KEY = "1012Zzh"
+
+
+@app.route('/api/auth/zbmp-entry/unlock', methods=['POST'])
+def api_zbmp_entry_unlock():
+    """通过固定产品密钥解锁ZBMP域。
+
+    设计意图：ZBMP与CTH目前共享运行时，但产品域身份已解耦。
+    解锁密钥固定为 1012Zzh（废弃TOTP随机动态码），后续完全解离时
+    只需将此处替换为独立产品域认证服务，调用方契约不变。
+    """
+    from account.service import get_current_user
+    from account.audit import log_audit
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "未登录"}), 401
+    data = request.get_json(silent=True) or {}
+    key = (data.get("key") or "").strip()
+    if key != ZBMP_DOMAIN_UNLOCK_KEY:
+        log_audit("zbmp_unlock_fail", "security", str(user["id"]),
+                  "用户{}尝试解锁ZBMP域密钥错误".format(user['username']))
+        return jsonify({"success": False, "error": "密钥不正确"}), 403
+    log_audit("zbmp_unlock", "security", str(user["id"]),
+              "用户{}通过产品密钥解锁ZBMP域".format(user['username']))
+    resp = jsonify({"success": True, "domain_identity": "zbmp",
+                     "message": "ZBMP域已解锁"})
+    import time as _t
+    expires = _t.strftime("%a, %d %b %Y %H:%M:%S GMT",
+                           _t.gmtime(_t.time() + 8 * 3600))
+    resp.set_cookie('zbmp_domain_grant', '1', max_age=8 * 3600, path='/',
+                    httponly=True, samesite='Lax', expires=expires)
     return resp
 
 
