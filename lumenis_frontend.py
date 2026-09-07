@@ -501,6 +501,77 @@ def cth_data_center_platform(platform_id):
                            **_domain_template_vars("cth_data_center", "cth", "Data Center"))
 
 
+
+@lumenis_bp.route("/cth/qa")
+def cth_qa():
+    """智能问答 — AI 智能问答 · 舆情/品牌/风险一站式咨询（CTH保护域）。"""
+    return render_template("cth/qa.html",
+                           **_domain_template_vars("cth_qa", "cth", "智能问答"))
+
+
+@lumenis_bp.route("/cth/negative")
+def cth_negative():
+    """负面监测 — 负面内容监测 · 待审核/已确认/统计（CTH保护域）。"""
+    return render_template("cth/negative.html",
+                           **_domain_template_vars("cth_negative", "cth", "负面监测"))
+
+
+@lumenis_bp.route("/cth/official")
+def cth_official():
+    """官方动态 — 官方账号动态 · 专业号/平台官方内容监测（CTH保护域）。"""
+    return render_template("cth/official.html",
+                           **_domain_template_vars("cth_official", "cth", "官方动态"))
+
+
+@lumenis_bp.route("/cth/event-graph")
+def cth_event_graph():
+    """事件关系 — 事件关系图谱 · 触发/衍生/继发/并行关系（CTH保护域）。"""
+    return render_template("cth/event_graph.html",
+                           **_domain_template_vars("cth_event_graph", "cth", "事件关系"))
+
+
+@lumenis_bp.route("/cth/calendar")
+def cth_calendar():
+    """舆情日历 — 舆情日历 · 按时间轴展示事件/笔记/报告（CTH保护域）。"""
+    return render_template("cth/calendar.html",
+                           **_domain_template_vars("cth_calendar", "cth", "舆情日历"))
+
+
+@lumenis_bp.route("/cth/analysis")
+def cth_analysis():
+    """舆情分析 — 舆情分析 · 声量/情绪/互动/趋势多维分析（CTH保护域）。"""
+    return render_template("cth/analysis.html",
+                           **_domain_template_vars("cth_analysis", "cth", "舆情分析"))
+
+
+@lumenis_bp.route("/cth/cases")
+def cth_cases():
+    """案例库 — 品牌案例库 · 营销/传播/舆情案例沉淀与复用（CTH保护域）。"""
+    return render_template("cth/cases.html",
+                           **_domain_template_vars("cth_cases", "cth", "案例库"))
+
+
+@lumenis_bp.route("/cth/case-analysis")
+def cth_case_analysis():
+    """案例分析 — 案例深度分析 · 方法论/危机SOP/AI评估（CTH保护域）。"""
+    return render_template("cth/case_analysis.html",
+                           **_domain_template_vars("cth_case_analysis", "cth", "案例分析"))
+
+
+@lumenis_bp.route("/cth/knowledge")
+def cth_knowledge():
+    """知识库 — 品牌知识库 · 品牌知识/情报资产/智能检索（CTH保护域）。"""
+    return render_template("cth/knowledge.html",
+                           **_domain_template_vars("cth_knowledge", "cth", "知识库"))
+
+
+@lumenis_bp.route("/cth/notes")
+def cth_notes():
+    """全平台笔记 — 全平台笔记 · 小红书/微博/B站/抖音等多平台内容（CTH保护域）。"""
+    return render_template("cth/notes.html",
+                           **_domain_template_vars("cth_notes", "cth", "全平台笔记"))
+
+
 @lumenis_bp.route("/cth/launch")
 def cth_launch():
     """CTH Launch Screen — 太古汇情报域启动屏。"""

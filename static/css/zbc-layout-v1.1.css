@@ -177,6 +177,24 @@
   color: var(--d-text-tertiary, #71717A);
 }
 
+/* Nav Section (六大类功能分组) */
+.zbc-nav-section {
+  margin-bottom: 2px;
+}
+.zbc-nav-section__label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--l-text-tertiary, #9CA3AF);
+  padding: 12px 10px 4px;
+  opacity: 0.65;
+  user-select: none;
+}
+[data-theme="dark"] .zbc-nav-section__label {
+  color: var(--d-text-tertiary, #71717A);
+}
+
 .zbc-nav-item {
   display: flex;
   align-items: center;
