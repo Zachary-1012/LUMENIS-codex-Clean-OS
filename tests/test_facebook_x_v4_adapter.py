@@ -86,8 +86,13 @@ class TestXAdapter:
         assert XAdapter._extract_metric(tweet, '[data-testid="like"]') == 0
 
     def test_auto_load_cookie_list_format(self):
+        """_auto_load_cookie 通过 cookie_vault.to_cookie_string 将 {name,value} 列表格式化为 name=value 字符串。
+
+        直接 mock cookie_vault.load_cookies 返回测试 cookie 列表，避免依赖真实 cookie 文件。
+        （历史版本 mock Path.read_text 无效，因为 load_cookies 内部用 open(p) 而非 p.read_text()）
+        """
         from v4_upgrade.adapters.x_platform import XAdapter
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.read_text", return_value='[{"name":"auth_token","value":"abc"}]'):
-                result = XAdapter._auto_load_cookie()
-                assert "auth_token=abc" in result
+        with patch("v4_upgrade.adapters.cookie_vault.load_cookies",
+                   return_value=[{"name": "auth_token", "value": "abc"}]):
+            result = XAdapter._auto_load_cookie()
+            assert "auth_token=abc" in result

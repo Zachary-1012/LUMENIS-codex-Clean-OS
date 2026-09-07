@@ -364,24 +364,32 @@ class TestAICircuitBreakerConvergence:
         modified state. Resetting before each test guarantees isolation.
         """
         import ai_channel
-        # Reset global breaker to a fresh CLOSED state
-        if hasattr(ai_channel, 'breaker') and ai_channel.breaker is not None:
-            try:
-                ai_channel.breaker.state = ai_channel.CircuitBreaker.CLOSED
-                ai_channel.breaker.consecutive_failures = 0
-                if hasattr(ai_channel.breaker, 'failure_count'):
-                    ai_channel.breaker.failure_count = 0
-                if hasattr(ai_channel.breaker, 'success_count'):
-                    ai_channel.breaker.success_count = 0
-            except Exception:
-                pass
-        # Clear provider breaker cache if it exists
-        if hasattr(ai_channel, '_provider_breakers'):
-            try:
-                ai_channel._provider_breakers.clear()
-            except Exception:
-                pass
+        # Save originals (other test files may monkeypatch CircuitBreaker/breaker)
+        _saved_cb = getattr(ai_channel, 'CircuitBreaker', None)
+        _saved_breaker = getattr(ai_channel, 'breaker', None)
+        _saved_pbs = getattr(ai_channel, '_provider_breakers', None)
+        # Ensure real CircuitBreaker class is visible
+        if _saved_cb is None or not isinstance(_saved_cb, type):
+            from runtime_guardian import CircuitBreaker as _RGB
+            ai_channel.CircuitBreaker = _RGB
+        # Guarantee a valid global breaker instance
+        try:
+            ai_channel.breaker = ai_channel.CircuitBreaker(fail_threshold=5, cooldown_sec=300)
+        except Exception:
+            pass
+        # Clear provider breaker cache
+        if isinstance(getattr(ai_channel, '_provider_breakers', None), dict):
+            ai_channel._provider_breakers.clear()
+        else:
+            ai_channel._provider_breakers = {}
         yield
+        # Restore originals after test
+        if _saved_cb is not None:
+            ai_channel.CircuitBreaker = _saved_cb
+        if _saved_breaker is not None:
+            ai_channel.breaker = _saved_breaker
+        if _saved_pbs is not None:
+            ai_channel._provider_breakers = _saved_pbs
     def test_ai_channel_cb_inherits_runtime_guardian(self):
         """ai_channel.CircuitBreaker 继承自 runtime_guardian.CircuitBreaker"""
         import ai_channel

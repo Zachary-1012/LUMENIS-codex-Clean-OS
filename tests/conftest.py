@@ -52,6 +52,61 @@ def db():
     conn.close()
 
 
+@pytest.fixture(autouse=True)
+def _global_state_isolation():
+    """Reset known global-state modules before every test for full-suite isolation.
+
+    Some modules (ai_channel, kos_metrics, kos_attribution) hold module-level
+    mutable state that earlier tests may mutate and not restore.  This fixture
+    guarantees a clean slate regardless of test ordering.
+    """
+    import importlib
+    # --- ai_channel ---
+    try:
+        import ai_channel
+        _saved_aicb = getattr(ai_channel, 'CircuitBreaker', None)
+        _saved_aibr = getattr(ai_channel, 'breaker', None)
+        _saved_aipb = getattr(ai_channel, '_provider_breakers', None)
+    except Exception:
+        _saved_aicb = _saved_aibr = _saved_aipb = None
+    # --- kos_metrics ---
+    try:
+        import kos_metrics
+        _saved_kmpr = getattr(kos_metrics, 'PLATFORM_RULES', None)
+    except Exception:
+        _saved_kmpr = None
+    # --- kos_attribution ---
+    try:
+        import kos_attribution
+        _saved_kacache = getattr(kos_attribution, '_attr_config_cache', None)
+    except Exception:
+        _saved_kacache = None
+    yield
+    # Restore
+    try:
+        import ai_channel
+        if _saved_aicb is not None:
+            ai_channel.CircuitBreaker = _saved_aicb
+        if _saved_aibr is not None:
+            ai_channel.breaker = _saved_aibr
+        if _saved_aipb is not None:
+            ai_channel._provider_breakers = _saved_aipb
+    except Exception:
+        pass
+    try:
+        import kos_metrics
+        if _saved_kmpr is not None:
+            kos_metrics.PLATFORM_RULES = _saved_kmpr
+    except Exception:
+        pass
+    try:
+        import kos_attribution
+        if _saved_kacache is not None:
+            kos_attribution._attr_config_cache = _saved_kacache
+    except Exception:
+        pass
+
+
 def pytest_ignore_collect(collection_path, config):
     """GAP-01 统一测试入口：纯脚本式 test_ 文件（全文无 def test_）默认不收集，
     避免 import 期执行真实平台/网络副作用或顶层 sys.exit 打断收集；
