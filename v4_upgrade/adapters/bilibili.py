@@ -59,6 +59,43 @@ class BilibiliAdapter(BaseAdapter):
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
+        # 向后兼容：测试传入 mock manager 时走 manager 路径
+        if self._manager is not None:
+            try:
+                login_status = self._manager.check_login_status()
+                if not login_status.get("logged_in", False):
+                    return AdapterResult(success=False, error="登录态失效：B站 cookie 未配置或已过期")
+                raw = self._manager.search_videos(keyword, max_results=max_results)
+            except Exception as _e:
+                return AdapterResult(success=False, error=f"manager搜索异常: {_e}")
+            if not isinstance(raw, dict):
+                return AdapterResult(success=False, error=f"manager返回异常: {raw!r}")
+            if not raw.get("ok", False):
+                code = raw.get("code")
+                error = raw.get("error", "搜索失败")
+                if code == -101:
+                    return AdapterResult(success=False, error=f"B站 cookie 失效: {error}")
+                if code in (-352, -509):
+                    return AdapterResult(success=False, error=f"B站风控/频控: {error}")
+                return AdapterResult(success=False, error=f"B站搜索失败: {error} (code={code})")
+            videos = raw.get("videos", []) or []
+            notes = []
+            for v in videos[:max_results]:
+                notes.append(self._make_note(
+                    title=self._clean_title(v.get("title")),
+                    content=(v.get("description") or "").strip(),
+                    url=v.get("url", ""),
+                    author=v.get("author", ""),
+                    author_id="",
+                    publish_date=self._ts_to_iso(v.get("pubdate")),
+                    likes=0,
+                    comments=v.get("video_review", 0),
+                    collects=v.get("favorites", 0),
+                    shares=0,
+                    source_platform="bilibili",
+                    raw_data=v,
+                ))
+            return AdapterResult(success=True, notes=notes, raw_count=len(videos))
         try:
             import requests as _req
             # 登录态前置检查（经 cookie_vault）
