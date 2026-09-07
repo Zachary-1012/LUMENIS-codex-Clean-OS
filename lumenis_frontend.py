@@ -488,6 +488,42 @@ def cth_evidence():
                            **_domain_template_vars("cth_evidence", "cth", "Evidence"))
 
 
+
+@lumenis_bp.route("/cth/brand-industry")
+def cth_brand_industry():
+    return render_template("cth/brand_industry.html",
+                           **_domain_template_vars("cth_brand_industry", "cth", "品牌业态"))
+
+
+@lumenis_bp.route("/cth/trend")
+def cth_trend():
+    return render_template("cth/trend.html",
+                           **_domain_template_vars("cth_trend", "cth", "趋势分析"))
+
+
+@lumenis_bp.route("/cth/topic-campaign")
+def cth_topic_campaign():
+    return render_template("cth/topic_campaign.html",
+                           **_domain_template_vars("cth_topic_campaign", "cth", "话题活动"))
+
+
+@lumenis_bp.route("/cth/weekly")
+def cth_weekly():
+    return render_template("cth/weekly.html",
+                           **_domain_template_vars("cth_weekly", "cth", "周报"))
+
+
+@lumenis_bp.route("/cth/weibo")
+def cth_weibo():
+    return render_template("cth/weibo.html",
+                           **_domain_template_vars("cth_weibo", "cth", "微博状态"))
+
+
+@lumenis_bp.route("/cth/workspace")
+def cth_workspace():
+    return render_template("cth/workspace.html",
+                           **_domain_template_vars("cth_workspace", "cth", "Workspace"))
+
 @lumenis_bp.route("/cth/data-center")
 def cth_data_center():
     return render_template("cth/data_center/index.html",

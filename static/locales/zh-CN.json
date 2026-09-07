@@ -1,4 +1,4 @@
-﻿{
+{
   "product": {
     "name": "序境 LUMENIS",
     "tagline": "序境 LUMENIS · 商业运营与品牌市场，统一证据链，每一步可追溯",
@@ -131,5 +131,38 @@
     "status_connecting": "连接中…",
     "status_running": "运行中",
     "status_error": "连接失败"
-  }
+  },
+  "nav.overview": "总览",
+  "nav.intelligence": "舆情监测",
+  "nav.risk": "风险预警",
+  "nav.negative": "负面监测",
+  "nav.notes": "笔记",
+  "nav.official": "官方动态",
+  "nav.topics": "话题监测",
+  "nav.analysis": "舆情分析",
+  "nav.events": "事件",
+  "nav.event-graph": "事件关系",
+  "nav.calendar": "舆情日历",
+  "nav.brand": "品牌中心",
+  "nav.taikoo": "太古汇",
+  "nav.cases": "案例库",
+  "nav.case-analysis": "案例分析",
+  "nav.knowledge": "知识库",
+  "nav.brand-report": "品牌报告",
+  "nav.evidence": "Evidence",
+  "nav.reports": "报告",
+  "nav.health": "系统健康",
+  "nav.browser": "内部浏览器",
+  "nav.settings": "设置",
+  "nav.qa": "智能问答",
+  "nav.content": "内容",
+  "nav.kos": "KOS分析",
+  "nav.competition": "竞品分析",
+  "nav.podcast": "播客",
+  "nav.evaluation": "验收评估",
+  "nav.collector": "采集器",
+  "nav.database": "数据库",
+  "nav.security": "安全",
+  "nav.ai": "AI Gateway",
+  "nav.runtime": "运行时"
 }

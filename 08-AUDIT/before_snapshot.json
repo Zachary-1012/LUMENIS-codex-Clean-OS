@@ -1,0 +1,55 @@
+{
+  "p0a_url_credentials": [],
+  "p0b_js_syntax_errors": [],
+  "p0c_auth_recovery_modal": {
+    "definitions": [
+      {
+        "file": "templates\\auth_recovery_modal.html",
+        "line": 19,
+        "type": "html_element"
+      },
+      {
+        "file": "templates\\auth_recovery_modal.html",
+        "line": 274,
+        "type": "js_declaration"
+      },
+      {
+        "file": "templates\\base.html",
+        "line": 594,
+        "type": "html_element"
+      },
+      {
+        "file": "templates\\base.html",
+        "line": 849,
+        "type": "js_declaration"
+      }
+    ],
+    "includes": [],
+    "dynamic_loads": [
+      {
+        "file": "templates\\auth_recovery_modal.html",
+        "line": 387
+      },
+      {
+        "file": "templates\\auth_recovery_modal.html",
+        "line": 410
+      },
+      {
+        "file": "templates\\auth_recovery_modal.html",
+        "line": 431
+      },
+      {
+        "file": "templates\\base.html",
+        "line": 962
+      },
+      {
+        "file": "templates\\base.html",
+        "line": 985
+      },
+      {
+        "file": "templates\\base.html",
+        "line": 1006
+      }
+    ]
+  }
+}

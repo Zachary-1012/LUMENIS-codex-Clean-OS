@@ -1,0 +1,72 @@
+﻿3d8cb450652dcda5841bd8c7960beb18ddaa822d
+2026-09-07 22:59:25 +0800
+Zachary-1012
+fix(routing): 根路由重定向到 /lumenis/ 修复首页404，补 /VERSION 路由，settings 浏览器面板接统一门面 browser-surface
+
+diff --git a/app.py b/app.py
+index c6a2c3b..c41cb03 100644
+--- a/app.py
++++ b/app.py
+@@ -1963,11 +1963,21 @@ def export_report_to_csv(report_type='daily', date_str=None):
+     return output.getvalue(), filename
+ 
+ @app.route('/')
+-def index(): return send_from_directory('static','index.html')
++def index():
++    # LUMENIS 前端重构后入口为 /lumenis/（旧 static/index.html 已在 UI HARD RESET 删除）
++    return redirect('/lumenis/')
+ @app.route('/favicon.ico')
+ def favicon():
+     # 消除浏览器自动请求 favicon 产生的 404 控制台报错
+     return Response(status=204)
++@app.route('/VERSION')
++def version_file():
++    # 前端 settings.js 读取版本号（纯文本，与根目录 VERSION 文件一致）
++    try:
++        with io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'VERSION'), encoding='utf-8') as _vf:
++            return Response(_vf.read().strip(), mimetype='text/plain')
++    except Exception:
++        return Response(APP_VERSION, mimetype='text/plain')
+ @app.route('/api/metrics/canonical')
+ def api_metrics_canonical():
+     """Unified Data Intelligence Pipeline: Canonical Metric API (UDIP P2)
+diff --git a/static/js/settings.js b/static/js/settings.js
+index 225adcf..9b1bca0 100644
+--- a/static/js/settings.js
++++ b/static/js/settings.js
+@@ -1160,7 +1160,7 @@ function toggleDownloadAsk() {
+ 
+ function clearBrowserData() {
+   if (!confirm('确认清除浏览数据？此操作不可恢复。')) return;
+-  fetch('/api/browser/clear-history', { method: 'POST', credentials: 'include' }).then(r => r.json()).then(data => {
++  fetch('/api/browser-surface/history/clear', { method: 'POST', credentials: 'include' }).then(r => r.json()).then(data => {
+     if (data.ok || data.success) showToast('浏览数据已清除');
+     else showToast(data.error || '清除失败', 'error');
+   }).catch(() => {
+@@ -1173,7 +1173,7 @@ function showBrowserHistory() {
+   openModal('browserHistoryModal');
+   const container = document.getElementById('browserHistoryList');
+   container.innerHTML = '<div class="loading-spinner"></div>';
+-  fetch('/api/browser/history?limit=50', { credentials: 'include' }).then(r => r.json()).then(data => {
++  fetch('/api/browser-surface/history?limit=50', { credentials: 'include' }).then(r => r.json()).then(data => {
+     const items = data.history || data.data?.history || [];
+     if (!items.length) {
+       container.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div>暂无浏览历史</div>';
+@@ -1191,7 +1191,7 @@ function showBrowserHistory() {
+ 
+ function clearBrowserHistory() {
+   if (!confirm('确认清除全部浏览历史？')) return;
+-  fetch('/api/browser/clear-history', { method: 'POST', credentials: 'include' }).then(() => {
++  fetch('/api/browser-surface/history/clear', { method: 'POST', credentials: 'include' }).then(() => {
+     showToast('浏览历史已清除');
+     closeModal('browserHistoryModal');
+   }).catch(() => showToast('清除请求已发送'));
+@@ -1201,7 +1201,7 @@ function showDownloadHistory() {
+   openModal('downloadHistoryModal');
+   const container = document.getElementById('downloadHistoryList');
+   container.innerHTML = '<div class="loading-spinner"></div>';
+-  fetch('/api/browser/downloads', { credentials: 'include' }).then(r => r.json()).then(data => {
++  fetch('/api/browser-surface/downloads', { credentials: 'include' }).then(r => r.json()).then(data => {
+     const files = data.files || data.downloads || [];
+     if (!files.length) {
+       container.innerHTML = '<div class="empty-state"><div class="empty-icon">📥</div>暂无下载记录</div>';

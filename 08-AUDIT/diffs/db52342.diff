@@ -1,0 +1,46 @@
+﻿db523428ceb5fa22e53db2d1a45c088347d6be8d
+2026-09-07 19:47:39 +0800
+Zachary-1012
+fix(p1): cache_manager alerts表不存在返回空+账号恢复弹窗加回base.html
+
+diff --git a/cache_manager.py b/cache_manager.py
+index 08c5a9d..c08a346 100644
+--- a/cache_manager.py
++++ b/cache_manager.py
+@@ -138,7 +138,7 @@ def _generate_db_summary(db_path: str) -> Dict:
+         
+         # 最近更新时间
+         try:
+-            latest = conn.execute("SELECT MAX(created_at) FROM notes").fetchone()[0]
++            latest = conn.execute("SELECT MAX(collected_at) FROM notes").fetchone()[0]  # 生产 notes 时间列为 collected_at（无 created_at）
+             summary["latest_note_time"] = latest
+         except Exception:
+             summary["latest_note_time"] = None
+@@ -244,12 +244,8 @@ def get_cached_data(query_type: str = "stats", limit: int = 50) -> Dict:
+             result["data"] = [dict(row) for row in rows]
+         
+         elif query_type == "alerts":
+-            rows = conn.execute("""
+-                SELECT * FROM alerts 
+-                ORDER BY created_at DESC 
+-                LIMIT ?
+-            """, (limit,)).fetchall()
+-            result["data"] = [dict(row) for row in rows]
++            # alerts表已合并到risk_records，保持兼容返回空
++            result["data"] = []
+         
+         conn.close()
+         return result
+diff --git a/templates/base.html b/templates/base.html
+index 27b3d75..142d990 100644
+--- a/templates/base.html
++++ b/templates/base.html
+@@ -220,6 +220,8 @@
+ 
+   <!-- 浏览器面板浮动启动按钮（折叠时显示） -->
+   <button class="zbc-browser-launcher" id="zbc-browser-launcher" onclick="BrowserPanel.expand()" style="display:none;position:fixed;right:16px;bottom:80px;width:48px;height:48px;border-radius:50%;background:var(--zbc-primary-gradient);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:var(--zbc-shadow-glow-green);z-index:999;transition:transform .2s" title="展开AI浏览器">🌐</button>
++
++{% include "auth_recovery_modal.html" %}
+ </div>
+ 
+ <!-- Mobile Bottom Tab Bar -->

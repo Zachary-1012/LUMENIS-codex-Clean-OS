@@ -1,0 +1,420 @@
+﻿3055918f2fed92292398e9966642119a7f7fa263
+2026-09-07 18:36:46 +0800
+Zachary-1012
+fix(frontend): 数据渲染修复 - 趋势图auth时序/风险字段映射/平台可见性/笔记详情弹窗/browser auth
+
+diff --git a/static/js/browser.js b/static/js/browser.js
+index fb75056..29c0790 100644
+--- a/static/js/browser.js
++++ b/static/js/browser.js
+@@ -1,4 +1,4 @@
+-/* ============================================================================
++﻿/* ============================================================================
+    LUMENIS Internal Browser — Frontend Controller
+    对标 Safari/Chrome，全部在平台内完成，不跳系统外部浏览器。
+    后端：browser_surface.py + browser_surface_api.py + internal_browser.py
+@@ -57,15 +57,29 @@
+     var opts = options || {};
+     opts.headers = opts.headers || {};
+     opts.headers['Content-Type'] = 'application/json';
++    opts.credentials = 'include';
+     if (opts.body && typeof opts.body !== 'string') {
+       opts.body = JSON.stringify(opts.body);
+     }
+-    return fetch(url, opts).then(function (r) {
++    var doFetch = function() { return fetch(url, opts); };
++    if (window.LUMENIS && window.LUMENIS.Auth && typeof window.LUMENIS.Auth.getHeader === 'function') {
++      return window.LUMENIS.Auth.getHeader().then(function(h) {
++        if (h) { opts.headers['Authorization'] = h; window.__Z_AUTH = h; }
++        return doFetch();
++      }).then(function (r) {
+       return r.json().then(function (d) {
+         if (!r.ok && !d) throw new Error('HTTP ' + r.status);
+         return d;
+       });
+-    });
++      });
++    } else {
++      return doFetch().then(function (r) {
++      return r.json().then(function (d) {
++        if (!r.ok && !d) throw new Error('HTTP ' + r.status);
++        return d;
++      });
++      });
++    }
+   }
+ 
+   function apiGet(url) { return api(url); }
+@@ -730,15 +744,29 @@
+     var opts = options || {};
+     opts.headers = opts.headers || {};
+     opts.headers['Content-Type'] = 'application/json';
++    opts.credentials = 'include';
+     if (opts.body && typeof opts.body !== 'string') {
+       opts.body = JSON.stringify(opts.body);
+     }
+-    return fetch(url, opts).then(function (r) {
++    var doFetch = function() { return fetch(url, opts); };
++    if (window.LUMENIS && window.LUMENIS.Auth && typeof window.LUMENIS.Auth.getHeader === 'function') {
++      return window.LUMENIS.Auth.getHeader().then(function(h) {
++        if (h) { opts.headers['Authorization'] = h; window.__Z_AUTH = h; }
++        return doFetch();
++      }).then(function (r) {
+       return r.json().then(function (d) {
+         if (!r.ok && !d) throw new Error('HTTP ' + r.status);
+         return d;
+       });
+-    });
++      });
++    } else {
++      return doFetch().then(function (r) {
++      return r.json().then(function (d) {
++        if (!r.ok && !d) throw new Error('HTTP ' + r.status);
++        return d;
++      });
++      });
++    }
+   }
+   function apiPost(url, body) { return api(url, { method: 'POST', body: body }); }
+   function apiGet(url) { return api(url); }
+diff --git a/static/js/xujing-viz.js b/static/js/xujing-viz.js
+index 7d23237..98c7066 100644
+--- a/static/js/xujing-viz.js
++++ b/static/js/xujing-viz.js
+@@ -13,9 +13,12 @@
+       const qs = new URLSearchParams(params).toString();
+       if (qs) url += (url.includes('?') ? '&' : '?') + qs;
+     }
++    if (global.LUMENIS && global.LUMENIS.Auth && typeof global.LUMENIS.Auth.getHeader === 'function') {
++      try { const h = await global.LUMENIS.Auth.getHeader(); if (h) global.__Z_AUTH = h; } catch (e) {}
++    }
+     const headers = {};
+     if (global.__Z_AUTH) headers['Authorization'] = global.__Z_AUTH;
+-    const r = await fetch(url, { headers });
++    const r = await fetch(url, { headers, credentials: 'include' });
+     const d = await r.json().catch(() => ({}));
+     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+     return d;
+diff --git a/static/js/zbc-trend-line.js b/static/js/zbc-trend-line.js
+index 1ad83bb..cd2c01d 100644
+--- a/static/js/zbc-trend-line.js
++++ b/static/js/zbc-trend-line.js
+@@ -1,4 +1,4 @@
+-/* ============================================================
++﻿/* ============================================================
+  * ZBC 全局趋势线组件 v1.1
+  * 函数驱动：API获取 → xujing-viz FN_TREND_SERIES → SVG趋势线 → 动效
+  * 所有有时间序列的页面统一调用，不重复实现。
+@@ -99,7 +99,8 @@
+           data = cached;
+         } else {
+           const url = apiEndpoint + (apiEndpoint.includes('?') ? '&' : '?') + 'days=' + opts.days;
+-          const resp = await fetch(url, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {} });
++          if (global.LUMENIS && global.LUMENIS.Auth && typeof global.LUMENIS.Auth.getHeader === 'function') { try { const h = await global.LUMENIS.Auth.getHeader(); if (h) global.__Z_AUTH = h; } catch (e) {} }
++          const resp = await fetch(url, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {}, credentials: 'include' });
+           if (!resp.ok) {
+             throw new Error('HTTP ' + resp.status);
+           }
+diff --git a/templates/cth/realtime.html b/templates/cth/realtime.html
+index a0ec7be..637a172 100644
+--- a/templates/cth/realtime.html
++++ b/templates/cth/realtime.html
+@@ -1,4 +1,4 @@
+-{% extends "base.html" %}
++﻿{% extends "base.html" %}
+ {% block title %}Real-time Intelligence · 序境 LUMENIS{% endblock %}
+ {% block page_title %}Real-time Intelligence{% endblock %}
+ 
+@@ -147,7 +147,17 @@
+ 
+   </div>
+ </div>
+-{% endblock %}
++
++<!-- Note Detail Modal -->
++<div id="rt-note-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;overflow-y:auto;padding:40px 16px;" onclick="if(event.target===this)closeNoteDetail()">
++  <div class="zbc-card" style="max-width:720px;margin:0 auto;background:var(--l-card,#fff);border-radius:16px;overflow:hidden;">
++    <div class="zbc-card__header" style="display:flex;align-items:center;justify-content:space-between;">
++      <div class="zbc-card__title" id="rt-modal-title" style="font-size:15px;">笔记详情</div>
++      <button class="zbc-icon-btn" onclick="closeNoteDetail()" aria-label="关闭" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--l-text-secondary,#6B7280);">✕</button>
++    </div>
++    <div class="zbc-card__body" id="rt-modal-body" style="max-height:70vh;overflow-y:auto;"></div>
++  </div>
++</div>{% endblock %}
+ 
+ {% block scripts %}
+ <script>
+@@ -274,14 +284,16 @@
+     });
+   }
+ 
++  var _currentNotes = [];
+   function renderNotesStream(notes) {
+     var container = document.getElementById('rt-stream-masonry');
+     if (!container) return;
++    _currentNotes = notes;
+     var html = '';
+-    notes.forEach(function(n) {
++    notes.forEach(function(n, i) {
+       var cover = n.cover_url || n.image_url || n.cover || '';
+       var title = n.title || n.note_title || '无标题';
+-      var author = n.author || n.user_name || n.nickname || '未知账号';
++      var author = n.author_nickname || n.author || n.user_name || n.nickname || '未知账号';
+       var likes = n.likes != null ? n.likes : (n.like_count != null ? n.like_count : null);
+       var comments = n.comments != null ? n.comments : (n.comment_count != null ? n.comment_count : null);
+       // 时间口径分离：publish_datetime(发布时间) vs captured_at(采集时间)
+@@ -289,7 +301,7 @@
+       var captureTime = n.captured_at || n.capture_time || n.collected_at || '';
+       var brandTag = n.brand_name || n.brand || '';
+ 
+-      html += '<div class="zbc-card" style="break-inside:avoid;margin-bottom:14px;overflow:hidden;">';
++      html += '<div class="zbc-card rt-note-card" data-idx="' + i + '" data-note-id="' + escapeHtml(n.note_id || n.id || '') + '" style="break-inside:avoid;margin-bottom:14px;overflow:hidden;cursor:pointer;transition:box-shadow 0.2s,transform 0.15s;" onclick="openNoteDetail(\'' + escapeHtml(n.note_id || n.id || '') + '\')">';
+       if (cover) {
+         html += '<div style="width:100%;height:140px;overflow:hidden;background:var(--l-bg-secondary,#F7F7F8);">';
+         html += '<img src="' + escapeHtml(cover) + '" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">';
+@@ -308,6 +320,7 @@
+       html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--l-border-light,#F0F0F0);font-size:10px;color:var(--l-text-tertiary,#9CA3AF);display:flex;flex-direction:column;gap:2px;">';
+       html += '<span>发布时间: ' + (publishTime ? fmtTime(publishTime) : '—') + '</span>';
+       html += '<span>采集时间: ' + (captureTime ? fmtTime(captureTime) : '—') + '</span>';
++      if (n.url) html += '<a href="' + escapeHtml(n.url) + '" target="_blank" onclick="event.stopPropagation()" style="color:var(--l-primary,#2563EB);text-decoration:none;font-size:10px;margin-top:4px;display:inline-block;">🔗 查看原文 ↗</a>';
+       html += '</div>';
+       html += '</div></div>';
+     });
+@@ -484,8 +497,195 @@
+     startAutoRefresh();
+   });
+ 
++  // ===== Note Detail Modal =====
++  function openNoteDetail(idx) {
++    var n = _currentNotes[idx];
++    if (!n) return;
++    var modal = document.getElementById('rt-note-modal');
++    var body = document.getElementById('rt-modal-body');
++    var titleEl = document.getElementById('rt-modal-title');
++    if (!modal || !body) return;
++
++    var title = n.title || n.note_title || '无标题';
++    var author = n.author_nickname || n.author || n.user_name || '未知账号';
++    var authorAvatar = n.author_avatar || '';
++    var cover = n.cover || n.cover_url || n.image_url || '';
++    var bodyText = n.body || n.content || n.summary || '';
++    var likes = n.likes != null ? n.likes : (n.like_count != null ? n.like_count : 0);
++    var comments = n.comments != null ? n.comments : (n.comment_count != null ? n.comment_count : 0);
++    var collects = n.collects != null ? n.collects : (n.collect_count != null ? n.collect_count : 0);
++    var shares = n.shares != null ? n.shares : 0;
++    var publishTime = n.publish_datetime || n.publish_date || n.publish_time || n.created_at || '';
++    var captureTime = n.captured_at || n.capture_time || n.collected_at || '';
++    var url = n.url || '';
++    var riskLevel = n.risk_level || 'unknown';
++    var sentiment = n.sentiment || 'neutral';
++    var topics = n.topics || [];
++    var sourcePlatform = n.source_platform || n.platform || 'xiaohongshu';
++    var noteId = n.note_id || n.id || '';
++
++    if (titleEl) titleEl.textContent = title;
++
++    var riskColor = {'critical':'#DC2626','high':'#DC2626','medium':'#D97706','low':'#10B981','unknown':'#9CA3AF'};
++    var sentColor = {'positive':'#10B981','negative':'#EF4444','neutral':'#9CA3AF'};
++    var sentLabel = {'positive':'正面','negative':'负面','neutral':'中性'};
++
++    var html = '<div style="padding:16px;">';
++    // Author row
++    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">';
++    if (authorAvatar) html += '<img src="' + authorAvatar + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">';
++    html += '<div><div style="font-size:13px;font-weight:600;">' + escapeHtml(author) + '</div>';
++    html += '<div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">' + escapeHtml(sourcePlatform) + ' · ID: ' + escapeHtml(String(noteId).substring(0,12)) + '</div></div>';
++    html += '<span class="zbc-tag zbc-tag--' + (riskLevel in riskColor ? riskLevel : 'unknown') + '" style="margin-left:auto;">' + escapeHtml(riskLevel) + '</span>';
++    html += '<span class="zbc-tag" style="background:' + (sentColor[sentiment] || '#9CA3AF') + '20;color:' + (sentColor[sentiment] || '#9CA3AF') + ';">' + (sentLabel[sentiment] || sentiment) + '</span>';
++    html += '</div>';
++
++    // Cover image
++    if (cover) {
++      html += '<div style="width:100%;max-height:360px;overflow:hidden;border-radius:10px;margin-bottom:14px;background:var(--l-bg-secondary,#F7F7F8);">';
++      html += '<img src="' + escapeHtml(cover) + '" style="width:100%;height:auto;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'">';
++      html += '</div>';
++    }
++
++    // Body text
++    if (bodyText) {
++      html += '<div style="font-size:13px;line-height:1.7;color:var(--l-text,#0D0D0D);margin-bottom:14px;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(bodyText) + '</div>';
++    }
++
++    // Topics
++    if (topics && topics.length > 0) {
++      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">';
++      topics.forEach(function(t) {
++        html += '<span class="zbc-tag zbc-tag--info" style="font-size:11px;">#' + escapeHtml(t) + '</span>';
++      });
++      html += '</div>';
++    }
++
++    // Stats
++    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">';
++    html += '<div style="text-align:center;padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;"><div style="font-size:16px;font-weight:700;">' + Number(likes).toLocaleString('zh-CN') + '</div><div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">点赞</div></div>';
++    html += '<div style="text-align:center;padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;"><div style="font-size:16px;font-weight:700;">' + Number(comments).toLocaleString('zh-CN') + '</div><div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">评论</div></div>';
++    html += '<div style="text-align:center;padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;"><div style="font-size:16px;font-weight:700;">' + Number(collects).toLocaleString('zh-CN') + '</div><div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">收藏</div></div>';
++    html += '<div style="text-align:center;padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;"><div style="font-size:16px;font-weight:700;">' + Number(shares).toLocaleString('zh-CN') + '</div><div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">分享</div></div>';
++    html += '</div>';
++
++    // Time info
++    html += '<div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);line-height:1.8;margin-bottom:14px;">';
++    html += '<div>发布时间: ' + (publishTime ? fmtTime(publishTime) : '—') + '</div>';
++    html += '<div>采集时间: ' + (captureTime ? fmtTime(captureTime) : '—') + '</div>';
++    html += '</div>';
++
++    // Action buttons
++    html += '<div style="display:flex;gap:10px;">';
++    if (url) html += '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" class="zbc-btn zbc-btn--primary" style="flex:1;text-align:center;text-decoration:none;">跳转原文</a>';
++    html += '<button class="zbc-btn" onclick="closeNoteDetail()" style="flex:1;">关闭</button>';
++    html += '</div>';
++
++    html += '</div>';
++    body.innerHTML = html;
++    modal.style.display = '';
++    document.body.style.overflow = 'hidden';
++  }
++
++  function closeNoteDetail() {
++    var modal = document.getElementById('rt-note-modal');
++    if (modal) modal.style.display = 'none';
++    document.body.style.overflow = '';
++  }
++
++  // Event delegation for note card clicks (works with dynamic elements)
++  document.addEventListener('click', function(e) {
++    var card = e.target.closest('.rt-note-card');
++    if (card) {
++      var idx = parseInt(card.getAttribute('data-idx'), 10);
++      if (!isNaN(idx)) openNoteDetail(idx);
++    }
++  });
++
++  // ESC key to close modal
++  document.addEventListener('keydown', function(e) {
++    if (e.key === 'Escape') closeNoteDetail();
++  });
++
+   window.loadRealtimeAll = loadRealtimeAll;
+   window.loadRealtimeNotes = loadRealtimeNotes;
++  window.openNoteDetail = openNoteDetail;
++  window.closeNoteDetail = closeNoteDetail;
+ })();
+ </script>
++
++<!-- 笔记详情弹窗 -->
++<div id="note-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeNoteDetail()">
++  <div style="background:var(--l-bg,#FFF);border-radius:16px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
++    <div style="padding:20px 24px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--l-bg,#FFF);z-index:1;">
++      <div style="font-size:16px;font-weight:700;color:var(--l-text,#0D0D0D);">笔记详情</div>
++      <button onclick="closeNoteDetail()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--l-text-secondary,#6B7280);width:32px;height:32px;border-radius:50%;">✕</button>
++    </div>
++    <div id="note-detail-body" style="padding:20px 24px;">
++      <div style="text-align:center;padding:40px;color:var(--l-text-tertiary,#9CA3AF);">加载中…</div>
++    </div>
++  </div>
++</div>
++<script>
++function openNoteDetail(noteId) {
++  if (!noteId) return;
++  var modal = document.getElementById('note-detail-modal');
++  var body = document.getElementById('note-detail-body');
++  modal.style.display = 'flex';
++  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--l-text-tertiary,#9CA3AF);">加载中…</div>';
++  xjViz.api('/notes/' + encodeURIComponent(noteId)).then(function(d) {
++    var n = d.note || d.data || d;
++    if (!n || (!n.note_id && !n.id)) { body.innerHTML = '<div style="text-align:center;padding:40px;color:#DC2626;">未找到笔记详情</div>'; return; }
++    var cover = n.cover || n.cover_url || n.image_url || '';
++    var title = n.title || '无标题';
++    var author = n.author_nickname || n.author || n.nickname || '未知';
++    var avatar = n.author_avatar || '';
++    var bodyText = n.body || n.content || n.desc || '';
++    var likes = n.likes != null ? n.likes : (n.like_count != null ? n.like_count : 0);
++    var comments = n.comments != null ? n.comments : (n.comment_count != null ? n.comment_count : 0);
++    var collects = n.collects != null ? n.collects : (n.collect_count != null ? n.collect_count : 0);
++    var shares = n.shares != null ? n.shares : (n.share_count != null ? n.share_count : 0);
++    var publishTime = n.publish_datetime || n.publish_time || n.publish_date || '';
++    var captureTime = n.captured_at || n.collected_at || '';
++    var url = n.url || '';
++    var sentiment = n.sentiment || '';
++    var riskLevel = n.risk_level || '';
++    var topics = n.topics || n.tag_list || [];
++    if (typeof topics === 'string') topics = topics.split(',').filter(Boolean);
++    var html = '';
++    if (cover) { html += '<div style="width:100%;max-height:360px;overflow:hidden;border-radius:12px;margin-bottom:16px;"><img src="' + escapeHtml(cover) + '" style="width:100%;object-fit:cover;" onerror="this.parentElement.style.display=\'none\'"></div>'; }
++    html += '<h2 style="font-size:18px;font-weight:700;margin:0 0 12px;line-height:1.4;">' + escapeHtml(title) + '</h2>';
++    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
++    if (avatar) html += '<img src="' + escapeHtml(avatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'">';
++    html += '<div><div style="font-size:14px;font-weight:600;">' + escapeHtml(author) + '</div>';
++    if (publishTime) html += '<div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">发布: ' + fmtTime(publishTime) + '</div>';
++    html += '</div></div>';
++    html += '<div style="display:flex;gap:16px;margin-bottom:16px;padding:12px 16px;background:var(--l-bg-secondary,#F7F7F8);border-radius:10px;flex-wrap:wrap;">';
++    html += '<span style="font-size:13px;">❤️ <b>' + Number(likes).toLocaleString('zh-CN') + '</b> 点赞</span>';
++    html += '<span style="font-size:13px;">💬 <b>' + Number(comments).toLocaleString('zh-CN') + '</b> 评论</span>';
++    html += '<span style="font-size:13px;">⭐ <b>' + Number(collects).toLocaleString('zh-CN') + '</b> 收藏</span>';
++    html += '<span style="font-size:13px;">🔄 <b>' + Number(shares).toLocaleString('zh-CN') + '</b> 分享</span>';
++    html += '</div>';
++    if (topics && topics.length) { html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">'; topics.forEach(function(t){html+='<span class="zbc-tag zbc-tag--info" style="font-size:11px;">#'+escapeHtml(String(t).trim())+'</span>';}); html += '</div>'; }
++    if (bodyText) html += '<div style="font-size:14px;line-height:1.7;white-space:pre-wrap;margin-bottom:16px;padding:16px;background:var(--l-bg-secondary,#F7F7F8);border-radius:10px;">' + escapeHtml(bodyText) + '</div>';
++    if (sentiment || riskLevel) {
++      html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
++      if (sentiment) { var sc=sentiment==='positive'?'#059669':(sentiment==='negative'?'#DC2626':'#6B7280'); var st=sentiment==='positive'?'正面':(sentiment==='negative'?'负面':'中性'); html+='<span style="padding:4px 10px;border-radius:6px;font-size:12px;background:'+sc+'20;color:'+sc+';font-weight:600;">情绪: '+st+'</span>'; }
++      if (riskLevel && riskLevel!=='none' && riskLevel!=='low') { var rc=riskLevel==='critical'?'#DC2626':(riskLevel==='high'?'#EA580C':'#CA8A04'); html+='<span style="padding:4px 10px;border-radius:6px;font-size:12px;background:'+rc+'20;color:'+rc+';font-weight:600;">风险: '+riskLevel+'</span>'; }
++      html += '</div>';
++    }
++    html += '<div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);line-height:1.8;border-top:1px solid var(--l-border-light,#F0F0F0);padding-top:12px;">';
++    html += '<div>笔记ID: ' + escapeHtml(n.note_id || n.id || '') + '</div>';
++    if (captureTime) html += '<div>采集时间: ' + fmtTime(captureTime) + '</div>';
++    if (n.source_platform) html += '<div>来源平台: ' + escapeHtml(n.source_platform) + '</div>';
++    if (n.matched_keywords) html += '<div>命中关键词: ' + escapeHtml(n.matched_keywords) + '</div>';
++    html += '</div>';
++    if (url) html += '<div style="margin-top:16px;text-align:center;"><a href="' + escapeHtml(url) + '" target="_blank" style="display:inline-block;padding:10px 24px;background:var(--l-primary,#2563EB);color:#FFF;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">🔗 在小红书查看原文 ↗</a></div>';
++    body.innerHTML = html;
++  }).catch(function(e) { body.innerHTML = '<div style="text-align:center;padding:40px;color:#DC2626;">加载失败: ' + escapeHtml(e.message || '未知错误') + '</div>'; });
++}
++function closeNoteDetail() { document.getElementById('note-detail-modal').style.display = 'none'; }
++document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeNoteDetail(); });
++</script>
++
+ {% endblock %}
+diff --git a/templates/cth/risk.html b/templates/cth/risk.html
+index 5712b01..512dc43 100644
+--- a/templates/cth/risk.html
++++ b/templates/cth/risk.html
+@@ -1,4 +1,4 @@
+-{% extends "base.html" %}
++﻿{% extends "base.html" %}
+ {% block title %}Risk Center · 序境 LUMENIS{% endblock %}
+ {% block page_title %}Risk Center{% endblock %}
+ 
+@@ -218,9 +218,9 @@
+         title:r.title||r.risk_title||r.note_title||r.summary||'无标题',
+         type:r.type||r.risk_type||r.category||'other',
+         level:r.level||r.risk_level||r.severity||'unknown',
+-        brand:r.brand||r.brand_name||r.related_brand||'',
+-        source:r.source||r.platform||r.origin||'',
+-        time:r.created_at||r.detected_at||r.first_seen||r.time||'',
++        brand:r.brand||r.brand_name||r.related_brand||r.source_keyword||'广州太古汇',
++        source:r.source||r.platform||r.origin||r.source_platform||'',
++        time:r.created_at||r.detected_at||r.first_seen||r.time||r.publish_date||r.collected_at||'',
+         status:r.status||r.state||'pending'
+       };
+     });
+diff --git a/templates/system/settings.html b/templates/system/settings.html
+index 0c3a7c5..212b482 100644
+--- a/templates/system/settings.html
++++ b/templates/system/settings.html
+@@ -1,4 +1,4 @@
+-<!DOCTYPE html>
++﻿<!DOCTYPE html>
+ <html lang="zh-CN">
+ <head>
+ <meta charset="UTF-8">
+@@ -1318,7 +1318,7 @@ function loadPlatformSwitches() {
+   var summary = document.getElementById('platformSwitchSummary');
+   if (!list) return;
+   list.innerHTML = '<div class="loading-spinner"></div>';
+-  fetch('/api/data-center/platforms')
++  (window.LUMENIS ? LUMENIS.fetch('/api/data-center/platforms') : fetch('/api/data-center/platforms', {credentials:'include'}))
+     .then(function(r) { return r.json(); })
+     .then(function(data) {
+       var platforms = (data && data.data) ? data.data.platforms : (data.platforms || []);

@@ -1,0 +1,134 @@
+﻿fea297a3031a4a4507112d20c2f07ba5a1f7cc19
+2026-09-07 20:01:06 +0800
+Zachary-1012
+docs(governance): align canonical registry with product domain naming
+
+diff --git a/00-GOVERNANCE/CANONICAL_REGISTRY.md b/00-GOVERNANCE/CANONICAL_REGISTRY.md
+index bc9214a..9fe4554 100644
+--- a/00-GOVERNANCE/CANONICAL_REGISTRY.md
++++ b/00-GOVERNANCE/CANONICAL_REGISTRY.md
+@@ -11,32 +11,69 @@ This registry is the single structural reference for mapping production assets w
+ | Layer | Standard name | Role |
+ |---|---|---|
+ | Product | **序境 / LUMENIS** | Production Core · Production Truth Owner |
+-| Domain | **CTH — Commerce & Trading Hub** | 主体驱动的商业与交易情报域 |
+-| Domain | **ZBMP — Brand Monitoring Platform** | 多主体品牌监测与品牌情报域 |
++| Product | **序境·商业运营 / LUMENIS Commerce Operations** | CTH · Commerce Operations Domain · Subject-first |
++| Product | **序境·品牌市场 / LUMENIS Brand & Market** | BMP · Brand & Market Domain · Brand-first / Primary Focus |
++| Shared Capability | **序境·内容创作 / LUMENIS Content & Creation** | Cross-product shared capability |
+ 
+-Korean product name: **서경 LUMENIS**. Existing repository/internal identifiers such as `ZBC`, `ZBMP`, and `CTH` may remain in code, API paths, database fields and migration history where compatibility requires them; user-facing naming follows this registry.
++Korean product name: **서경 LUMENIS**. CTH Korean: **서경·커머스 운영**. BMP Korean: **서경·브랜드 & 마켓**. Existing repository/internal identifiers such as `ZBC`, `ZBMP`, and `CTH` may remain in code, API paths, database fields and migration history where compatibility requires them; user-facing naming follows this registry.
+ 
+ ## Domain semantics
+ 
+-### CTH — Commerce & Trading Hub
++### CTH — Commerce Operations
+ 
+-**中文标准名：商业与交易枢纽**  
+-**한국어：커머스 & 트레이딩 허브**
++**中文正式产品名：序境·商业运营**  
++**English：LUMENIS Commerce Operations**  
++**한국어：서경·커머스 운영**  
++**领域：Commerce Operations Domain / 商业运营领域 / 커머스 운영 영역**
+ 
+-CTH is **subject-selectable, not Taikoo Hui-fixed**. Guangzhou Taikoo Hui is one selectable business subject, not the permanent product boundary.
++CTH is **subject-first and subject-selectable, not Taikoo Hui-fixed**. A selected legal business Subject establishes the working context for the existing CTH capabilities across its subordinate business units/sections, brands, categories, content, events, propagation, user feedback, sentiment, risks, analysis, decision information and reports.
+ 
+-The selected subject establishes the current business context. CTH capabilities follow the selected `subject_id / scope`, including monitoring, subject rules, subordinate business units/sections, categories, events, risks, analysis, decision information and reports.
++CTH does not imply trading or transaction capability. Do not use `Commerce & Trading Hub`, `Trading`, `商业交易`, `商业情报`, `Taikoo Hui Intelligence`, or `太古汇智能` as current product terminology.
+ 
+-Changing the selected subject changes the working context and focus; it must never overwrite, migrate, reinterpret or contaminate historical canonical facts.
++Guangzhou Taikoo Hui is one selectable `Subject Profile`, not the CTH product name or permanent product boundary.
+ 
+-### ZBMP — Brand Monitoring Platform
++### BMP — Brand & Market
+ 
+-**中文标准名：品牌监测平台**  
+-**한국어：브랜드 모니터링 플랫폼**
++**中文正式产品名：序境·品牌市场**  
++**English：LUMENIS Brand & Market**  
++**한국어：서경·브랜드 & 마켓**  
++**领域：Brand & Market Domain / 品牌市场领域 / 브랜드 & 마켓 영역**
+ 
+-ZBMP retains its original multi-brand monitoring capability. Brands and other eligible subjects can remain in routine monitoring; selecting a subject establishes the **primary monitoring focus**, not an exclusive platform boundary.
++BMP remains **brand-first / primary-focus**, while retaining its existing multi-brand and cross-subject monitoring behavior. Selecting a brand sets the current primary monitoring focus; it does not make other brands, competitors, market signals, content, communication subjects, events, risks, consumer needs, benchmarking or multi-platform monitoring inaccessible.
+ 
+-The platform must continue to support other monitored brands/subjects, competitors, content, communication subjects, events, risk, consumer needs, benchmarking, multi-platform monitoring and related intelligence workflows.
++Do not use `Z-Brand Monitoring Platform`, `Brand Intelligence`, or `品牌智能` as current user-facing product names. `BMP` remains a stable internal identifier for compatibility.
++
++### Shared Capability — Content & Creation
++
++**中文：序境·内容创作**  
++**English：LUMENIS Content & Creation**  
++**한국어：서경·콘텐츠 & 크리에이션**
++
++Content & Creation is a shared capability, not a CTH-only or BMP-only product/module. CTH, BMP, Agent Groups and future LUMENIS products may consume it through explicit capability contracts. Naming changes must not alter existing content creation behavior, permissions, APIs or runtime flows.
++
++### Agent Groups
++
++Agent Groups are **Cross-Product Execution & Collaboration / 跨产品执行与协作层**, not a third product. They may call CTH, BMP, shared capabilities, AI and other authorized capabilities through the existing permission and contract boundaries.
++
++## Product hierarchy
++
++```text
++LUMENIS / 序境
++│
++├── Commerce Operations Domain
++│   └── 序境·商业运营 / LUMENIS Commerce Operations / CTH
++│       └── Subject-first
++│
++├── Brand & Market Domain
++│   └── 序境·品牌市场 / LUMENIS Brand & Market / BMP
++│       └── Brand-first / Primary Focus
++│
++├── Shared Capability Layer
++│   └── 序境·内容创作 / LUMENIS Content & Creation
++│
++└── Cross-Product Execution & Collaboration
++    └── Agent Groups
++```
+ 
+ ## Twin boundary
+ 
+@@ -57,7 +94,7 @@ Cross-cutting governance: `Policy / Permission / Safety / Evidence / Audit`.
+ 
+ `Product → Domain → Selected Subject → Scope` is explicit state. Never use an implicit global subject/brand state to redefine production truth.
+ 
+-CTH and ZBMP may share infrastructure and contracts, but their domain semantics remain explicit. `product_id`, `subject_id`, `scope`, source identity and evidence lineage must remain traceable through collection, analysis, risk, reporting and UI.
++CTH and BMP may share infrastructure and contracts, but their domain semantics remain explicit. `product_id`, `subject_id`, `scope`, source identity and evidence lineage must remain traceable through collection, analysis, risk, reporting and UI.
+ 
+ ## Core domains
+ 
+@@ -105,14 +142,16 @@ External research is reference material only. Adopt/adapt/reject decisions must
+ 
+ ## Naming rules
+ 
+-1. Public product: **序境 / LUMENIS**.
+-2. Korean public product: **서경 LUMENIS**.
++1. Public parent product: **序境 / LUMENIS**.
++2. Korean parent product: **서경 LUMENIS**.
+ 3. Production role: **Production Core · Production Truth Owner**.
+-4. CTH: **Commerce & Trading Hub / 商业与交易枢纽 / 커머스 & 트레이딩 허브**.
+-5. ZBMP: **Brand Monitoring Platform / 品牌监测平台 / 브랜드 모니터링 플랫폼**.
+-6. The leading `Z-` is removed from the **public ZBMP product name**; `ZBMP` remains a stable internal identifier for compatibility and APIs.
+-7. Taikoo Hui is a selectable CTH subject, not the CTH product name or permanent scope.
+-8. No user-facing use of `Xujing`, `Xujing Core`, `서경` as a standalone substitute for LUMENIS, or `Z-Brand` as the public ZBMP name.
++4. CTH public product: **序境·商业运营 / LUMENIS Commerce Operations / 서경·커머스 운영**.
++5. BMP public product: **序境·品牌市场 / LUMENIS Brand & Market / 서경·브랜드 & 마켓**.
++6. Shared content capability: **序境·内容创作 / LUMENIS Content & Creation / 서경·콘텐츠 & 크리에이션**.
++7. `CTH`, `BMP`, and `ZBC` remain stable internal identifiers where compatibility requires them.
++8. Taikoo Hui is a selectable CTH Subject Profile, not the CTH product name or permanent scope.
++9. Do not use `Xujing`, `Xujing Core`, `서경` as a standalone substitute for LUMENIS, `ZBMP`, `Z-Brand Monitoring Platform`, `Brand Intelligence`, `品牌智能`, `Commerce & Trading Hub`, `Trading`, `商业交易`, `商业情报`, `Taikoo Hui Intelligence`, or `太古汇智能` as current user-facing product names.
++10. Do not use Center / 中心 / System / 系统 as product naming substitutes.
+ 
+ ## Non-negotiables
+ 
+@@ -122,4 +161,6 @@ External research is reference material only. Adopt/adapt/reject decisions must
+ 4. No production rule bypass for UI, research, automation, or language.
+ 5. No deletion without evidence of non-use and regression safety.
+ 6. Subject selection must never rewrite canonical historical facts.
+-7. CTH must remain subject-selectable; ZBMP must remain multi-subject with primary-focus selection.
++7. CTH must remain subject-selectable; BMP must remain multi-subject with primary-focus selection.
++8. Product naming and domain metadata changes must not alter existing functional ownership, APIs, DB schema, permissions, collectors, or runtime behavior.
++9. Cross-repository product semantics must be synchronized through versioned, traceable contract/artifact references; no shared production database or unrestricted writer.

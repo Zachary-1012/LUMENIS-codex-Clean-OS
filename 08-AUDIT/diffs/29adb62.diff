@@ -1,0 +1,23 @@
+﻿29adb627f7cc249ac1867adc167d5eebd4c3c052
+2026-09-07 21:14:56 +0800
+Zachary-1012
+fix(i18n): 修正CTH/System导航fallback文本
+
+diff --git a/templates/base.html b/templates/base.html
+index 84be10b..d4a2439 100644
+--- a/templates/base.html
++++ b/templates/base.html
+@@ -118,7 +118,7 @@
+ 
+       <!-- SYSTEM Navigation (5 entries) -->
+       <div class="zbc-nav-group zbc-nav-group--system" data-domain-nav="system" {% if active_domain!='system' %}hidden{% endif %}>
+-        <div class="zbc-nav-group__label" data-i18n="domain.system">Runtime Control</div>
++        <div class="zbc-nav-group__label" data-i18n="domain.system">系统</div>
+         <a class="zbc-nav-item {% if active_nav=='sys_runtime' %}is-active{% endif %}" href="{{ url_for('lumenis.system_runtime') }}" style="display:none">
+           <span class="zbc-nav-item__icon" data-icon="gear" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.runtime">Runtime</span>
+         </a>
+@@ -899,3 +899,4 @@ const AuthRecoveryModal = (function() {
+ </body>
+ </html>
+ 
++

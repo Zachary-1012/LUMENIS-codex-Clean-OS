@@ -1,0 +1,443 @@
+﻿4f7a44d18b3cce2bcc62ed70160e361f9772e329
+2026-09-07 19:29:20 +0800
+Zachary-1012
+feat(ui): 三栏布局-右侧AI浏览器面板+拖拽延展
+
+diff --git a/static/css/zbc-design-system.css b/static/css/zbc-design-system.css
+index 54682ae..7d29ffd 100644
+--- a/static/css/zbc-design-system.css
++++ b/static/css/zbc-design-system.css
+@@ -489,3 +489,227 @@ nav.side-nav {
+   .kpi-value { font-size: 22px; }
+   .modal, .zbc-modal { border-radius: var(--zbc-radius-lg); margin: 12px; }
+ }
++
++
++/* ============================================================
++   三栏布局：Sidebar + Main + Browser Panel
++   横向拖拽延展
++   ============================================================ */
++.zbc-app {
++  display: flex;
++  height: 100vh;
++  overflow: hidden;
++}
++
++.zbc-sidebar {
++  flex-shrink: 0;
++  width: 240px;
++  transition: width 0.3s var(--zbc-ease);
++}
++
++.zbc-sidebar.is-collapsed {
++  width: 64px;
++}
++
++.zbc-main {
++  flex: 1;
++  min-width: 0;
++  display: flex;
++  flex-direction: column;
++  overflow: hidden;
++}
++
++.zbc-content {
++  flex: 1;
++  overflow-y: auto;
++  overflow-x: hidden;
++}
++
++/* 拖拽分隔条 */
++.zbc-resizer {
++  width: 5px;
++  flex-shrink: 0;
++  cursor: col-resize;
++  background: transparent;
++  position: relative;
++  z-index: 100;
++  transition: background 0.2s;
++}
++
++.zbc-resizer:hover,
++.zbc-resizer.is-dragging {
++  background: var(--zbc-primary);
++  opacity: 0.6;
++}
++
++.zbc-resizer::after {
++  content: '';
++  position: absolute;
++  top: 50%;
++  left: 50%;
++  transform: translate(-50%, -50%);
++  width: 3px;
++  height: 40px;
++  border-radius: 3px;
++  background: rgba(0,0,0,0.1);
++  opacity: 0;
++  transition: opacity 0.2s;
++}
++
++.zbc-resizer:hover::after {
++  opacity: 1;
++}
++
++/* 右侧浏览器面板 */
++.zbc-browser-panel {
++  flex-shrink: 0;
++  width: 420px;
++  display: flex;
++  flex-direction: column;
++  background: var(--zbc-glass);
++  backdrop-filter: var(--zbc-blur);
++  -webkit-backdrop-filter: var(--zbc-blur);
++  border-left: 1px solid var(--zbc-border);
++  box-shadow: -4px 0 24px rgba(0,0,0,0.06);
++  transition: width 0.3s var(--zbc-ease), opacity 0.3s;
++  overflow: hidden;
++}
++
++.zbc-browser-panel.is-collapsed {
++  width: 0;
++  opacity: 0;
++  border-left: none;
++  box-shadow: none;
++}
++
++.zbc-browser-panel__header {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  padding: 10px 14px;
++  background: rgba(255,255,255,0.5);
++  border-bottom: 1px solid var(--zbc-border-subtle);
++  flex-shrink: 0;
++}
++
++.zbc-browser-panel__title {
++  font-size: 12px;
++  font-weight: 600;
++  color: var(--zbc-text-secondary);
++  flex: 1;
++  display: flex;
++  align-items: center;
++  gap: 6px;
++}
++
++.zbc-browser-panel__title .status-dot {
++  width: 6px;
++  height: 6px;
++}
++
++.zbc-browser-panel__actions {
++  display: flex;
++  gap: 4px;
++}
++
++.zbc-browser-panel__btn {
++  width: 28px;
++  height: 28px;
++  border: none;
++  background: transparent;
++  border-radius: 8px;
++  cursor: pointer;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  font-size: 14px;
++  color: var(--zbc-text-tertiary);
++  transition: all 0.15s;
++}
++
++.zbc-browser-panel__btn:hover {
++  background: rgba(0,0,0,0.06);
++  color: var(--zbc-text-primary);
++}
++
++.zbc-browser-panel__body {
++  flex: 1;
++  overflow: hidden;
++  position: relative;
++  background: #fff;
++}
++
++.zbc-browser-panel__iframe {
++  width: 100%;
++  height: 100%;
++  border: none;
++}
++
++.zbc-browser-panel__placeholder {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  justify-content: center;
++  height: 100%;
++  gap: 12px;
++  color: var(--zbc-text-tertiary);
++  text-align: center;
++  padding: 24px;
++}
++
++.zbc-browser-panel__placeholder-icon {
++  font-size: 48px;
++  opacity: 0.3;
++}
++
++.zbc-browser-panel__placeholder-text {
++  font-size: 13px;
++  line-height: 1.6;
++}
++
++/* 浏览器面板URL栏 */
++.zbc-browser-urlbar {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  padding: 6px 10px;
++  background: rgba(0,0,0,0.03);
++  border-radius: 8px;
++  flex: 1;
++}
++
++.zbc-browser-urlbar input {
++  flex: 1;
++  border: none;
++  background: transparent;
++  font-size: 12px;
++  color: var(--zbc-text-secondary);
++  outline: none;
++  font-family: var(--zbc-font);
++}
++
++/* 拖拽时禁止文本选择 */
++body.is-resizing {
++  user-select: none;
++  cursor: col-resize;
++}
++
++body.is-resizing * {
++  cursor: col-resize !important;
++}
++
++/* 响应式：窄屏隐藏浏览器面板 */
++@media (max-width: 1200px) {
++  .zbc-browser-panel {
++    width: 320px;
++  }
++}
++
++@media (max-width: 900px) {
++  .zbc-browser-panel {
++    display: none;
++  }
++  .zbc-resizer {
++    display: none;
++  }
++}
+diff --git a/static/js/browser-panel.js b/static/js/browser-panel.js
+new file mode 100644
+index 0000000..6e9d772
+--- /dev/null
++++ b/static/js/browser-panel.js
+@@ -0,0 +1,149 @@
++// ZBC Browser Panel — 右侧AI浏览器面板控制
++// 三栏布局：拖拽延展 + 折叠/展开 + iframe嵌入
++(function() {
++  'use strict';
++
++  const STORAGE_KEY = 'zbc_browser_panel_width';
++  const DEFAULT_WIDTH = 420;
++  const MIN_WIDTH = 280;
++  const MAX_WIDTH = 800;
++
++  const panel = document.getElementById('zbc-browser-panel');
++  const resizer = document.getElementById('zbc-resizer');
++  const iframe = document.getElementById('browser-panel-iframe');
++  const placeholder = document.getElementById('browser-panel-placeholder');
++  const launcher = document.getElementById('zbc-browser-launcher');
++
++  let isDragging = false;
++  let startX = 0;
++  let startWidth = 0;
++
++  // 恢复保存的宽度
++  function restoreWidth() {
++    const saved = localStorage.getItem(STORAGE_KEY);
++    if (saved && !isNaN(parseInt(saved))) {
++      const w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parseInt(saved)));
++      if (panel) panel.style.width = w + 'px';
++    }
++  }
++
++  // 拖拽逻辑
++  if (resizer) {
++    resizer.addEventListener('mousedown', function(e) {
++      isDragging = true;
++      startX = e.clientX;
++      startWidth = panel ? panel.offsetWidth : DEFAULT_WIDTH;
++      document.body.classList.add('is-resizing');
++      resizer.classList.add('is-dragging');
++      e.preventDefault();
++    });
++  }
++
++  document.addEventListener('mousemove', function(e) {
++    if (!isDragging || !panel) return;
++    const delta = startX - e.clientX; // 向右拖=缩小面板
++    const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidth + delta));
++    panel.style.width = newWidth + 'px';
++  });
++
++  document.addEventListener('mouseup', function() {
++    if (isDragging) {
++      isDragging = false;
++      document.body.classList.remove('is-resizing');
++      if (resizer) resizer.classList.remove('is-dragging');
++      if (panel) localStorage.setItem(STORAGE_KEY, panel.offsetWidth);
++    }
++  });
++
++  // 浏览器面板API
++  window.BrowserPanel = {
++    launch: function() {
++      if (!iframe || !placeholder) return;
++      placeholder.style.display = 'none';
++      iframe.style.display = 'block';
++      iframe.src = '/system/browser';
++      this._updateStatus(true);
++    },
++    reload: function() {
++      if (iframe && iframe.src !== 'about:blank') {
++        iframe.src = iframe.src;
++      }
++    },
++    collapse: function() {
++      if (panel) {
++        panel.classList.add('is-collapsed');
++        panel.style.width = '0';
++      }
++      if (resizer) resizer.style.display = 'none';
++      if (launcher) launcher.style.display = 'block';
++      localStorage.setItem('zbc_browser_panel_collapsed', '1');
++    },
++    expand: function() {
++      if (panel) {
++        panel.classList.remove('is-collapsed');
++        restoreWidth();
++      }
++      if (resizer) resizer.style.display = '';
++      if (launcher) launcher.style.display = 'none';
++      localStorage.setItem('zbc_browser_panel_collapsed', '0');
++    },
++    toggle: function() {
++      if (panel && panel.classList.contains('is-collapsed')) {
++        this.expand();
++      } else {
++        this.collapse();
++      }
++    },
++    toggleFullscreen: function() {
++      if (!panel) return;
++      if (panel.dataset.fullscreen === '1') {
++        panel.style.width = '';
++        panel.style.position = '';
++        panel.style.zIndex = '';
++        panel.dataset.fullscreen = '0';
++        if (resizer) resizer.style.display = '';
++      } else {
++        panel.style.width = '80vw';
++        panel.style.position = 'fixed';
++        panel.style.right = '0';
++        panel.style.top = '0';
++        panel.style.bottom = '0';
++        panel.style.zIndex = '9999';
++        panel.dataset.fullscreen = '1';
++        if (resizer) resizer.style.display = 'none';
++      }
++    },
++    navigate: function(url) {
++      if (iframe) {
++        if (placeholder) placeholder.style.display = 'none';
++        iframe.style.display = 'block';
++        iframe.src = url;
++      }
++    },
++    _updateStatus: function(active) {
++      const dot = document.getElementById('browser-panel-dot');
++      if (dot) {
++        dot.className = 'status-dot ' + (active ? 'active' : '');
++      }
++    }
++  };
++
++  // 初始化：恢复折叠状态
++  document.addEventListener('DOMContentLoaded', function() {
++    restoreWidth();
++    const collapsed = localStorage.getItem('zbc_browser_panel_collapsed') === '1';
++    if (collapsed) {
++      window.BrowserPanel.collapse();
++    }
++  });
++
++  // 键盘快捷键：Ctrl+B 切换浏览器面板
++  document.addEventListener('keydown', function(e) {
++    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
++      e.preventDefault();
++      window.BrowserPanel.toggle();
++    }
++  });
++
++  console.log('[BrowserPanel] 三栏布局右侧浏览器面板已就绪 (Ctrl+B 切换)');
++})();
+diff --git a/templates/base.html b/templates/base.html
+index 4ca953b..ca3f5a5 100644
+--- a/templates/base.html
++++ b/templates/base.html
+@@ -188,6 +188,38 @@
+       {% block content %}{% endblock %}
+     </main>
+   </div>
++
++  <!-- 拖拽分隔条 -->
++  <div class="zbc-resizer" id="zbc-resizer" title="拖拽调整宽度"></div>
++
++  <!-- 右侧浏览器面板 -->
++  <aside class="zbc-browser-panel" id="zbc-browser-panel" aria-label="AI浏览器">
++    <div class="zbc-browser-panel__header">
++      <div class="zbc-browser-panel__title">
++        <span class="status-dot active" id="browser-panel-dot"></span>
++        <span>AI 浏览器</span>
++      </div>
++      <div class="zbc-browser-panel__actions">
++        <button class="zbc-browser-panel__btn" onclick="BrowserPanel.reload()" title="刷新">↻</button>
++        <button class="zbc-browser-panel__btn" onclick="BrowserPanel.toggleFullscreen()" title="全屏">⛶</button>
++        <button class="zbc-browser-panel__btn" onclick="BrowserPanel.collapse()" title="折叠">—</button>
++      </div>
++    </div>
++    <div class="zbc-browser-panel__body" id="browser-panel-body">
++      <div class="zbc-browser-panel__placeholder" id="browser-panel-placeholder">
++        <div class="zbc-browser-panel__placeholder-icon">🌐</div>
++        <div class="zbc-browser-panel__placeholder-text">
++          AI 浏览器就绪<br>
++          <small>点击下方按钮启动内置浏览器</small>
++        </div>
++        <button class="zbc-btn zbc-btn--primary" onclick="BrowserPanel.launch()" style="margin-top:8px">启动浏览器</button>
++      </div>
++      <iframe class="zbc-browser-panel__iframe" id="browser-panel-iframe" style="display:none" src="about:blank"></iframe>
++    </div>
++  </aside>
++
++  <!-- 浏览器面板浮动启动按钮（折叠时显示） -->
++  <button class="zbc-browser-launcher" id="zbc-browser-launcher" onclick="BrowserPanel.expand()" style="display:none;position:fixed;right:16px;bottom:80px;width:48px;height:48px;border-radius:50%;background:var(--zbc-primary-gradient);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:var(--zbc-shadow-glow-green);z-index:999;transition:transform .2s" title="展开AI浏览器">🌐</button>
+ </div>
+ 
+ <!-- Mobile Bottom Tab Bar -->
+@@ -215,6 +247,7 @@
+ <script src="{{ url_for('static', filename='js/zbc-trend-line.js') }}"></script>
+ <script src="{{ url_for('static', filename='js/keyboard-shortcuts.js') }}"></script>
+ <script src="{{ url_for('static', filename='js/badge-manager.js') }}"></script>
++<script src="{{ url_for('static', filename='js/browser-panel.js') }}"></script>
+ <!-- ai-assistant.js FAB浮动面板已废弃（V2.1 GPT风格主工作台替代），代码保留不删除 -->
+ <!-- <script src="{{ url_for('static', filename='js/ai-assistant.js') }}"></script> -->
+ <script src="{{ url_for('static', filename='js/feature-modules.js') }}"></script>

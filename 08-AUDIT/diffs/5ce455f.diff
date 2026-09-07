@@ -1,0 +1,317 @@
+﻿5ce455f04de079d5e7d75a6278065ac5abf7e726
+2026-09-07 19:53:30 +0800
+Zachary-1012
+feat(ui): 系统运行工具移到设置页 - Runtime/Collector/Database/Security从侧边栏隐藏，设置页加系统运行工具分组含快捷链接
+
+diff --git a/app.py b/app.py
+index c6a2c3b..239d28b 100644
+--- a/app.py
++++ b/app.py
+@@ -402,10 +402,17 @@ def case_analysis_list():
+         limit = int(request.args.get('limit', 50))
+         offset = int(request.args.get('offset', 0))
+         results = analysis.list_cases(
++<<<<<<< Updated upstream
+             case_type=case_type or '',
+             industry=industry or '',
+             brand=brand or '',
+             min_quality_score=float(min_quality) if min_quality else 0,
++=======
++            case_type=case_type or None,
++            industry=industry or None,
++            brand=brand or None,
++            min_quality_score=float(min_quality) if min_quality else None,
++>>>>>>> Stashed changes
+             limit=limit,
+             offset=offset,
+         )
+@@ -465,6 +472,7 @@ def case_analysis_system_insights():
+     except Exception as e:
+         return jsonify({'ok': False, 'error': str(e)}), 500
+ 
++<<<<<<< Updated upstream
+ @app.route('/api/case-analysis/template-match', methods=['GET', 'POST'])
+ def case_analysis_template_match():
+     """按事件/场景匹配可复用处置模板（学习资产：9模板 + 危机SOP）"""
+@@ -513,6 +521,8 @@ def case_analysis_ai_evaluate():
+         return jsonify({'ok': False, 'error': str(e)}), 500
+ 
+ 
++=======
++>>>>>>> Stashed changes
+ # V3.0 传播主体分类器API
+ @app.route('/api/subject-classifier/classify', methods=['POST'])
+ def subject_classify():
+diff --git a/subject_classifier.py b/subject_classifier.py
+index 2ac70b2..b1eb9e1 100644
+--- a/subject_classifier.py
++++ b/subject_classifier.py
+@@ -95,20 +95,47 @@ class SubjectClassifier:
+         """
+         分类传播主体类型（V2：多类型匹配+冲突解决）
+ 
++<<<<<<< Updated upstream
+         核心改进：
+         - 先收集所有匹配的类型，再按优先级解决冲突
+         - 媒体+官方同时匹配时，判定为媒体（如"羊城晚报官方账号"）
+         - 机构+官方同时匹配时，判定为机构
+         - 传统媒体关键词（日报/晚报/电视台）置信度更高
++=======
++        参数：
++            author_name: 作者名称
++            author_desc: 作者简介/描述
++            followers: 粉丝数
++            is_verified: 是否认证
++            verified_type: 认证类型（企业/个人/媒体等）
++            content_pattern: 内容模式（销售导向/内容创作/日常分享等）
++
++        返回：
++            {
++                'subject_type': 'kol',  # 主体类型
++                'subject_type_name': 'KOL',  # 主体类型中文名
++                'confidence': 0.8,  # 置信度
++                'reasons': ['粉丝数>10万', '内容创作导向'],  # 判断依据
++                'content_type_hint': 'ugc',  # 内容类型建议
++            }
++>>>>>>> Stashed changes
+         """
+         reasons = []
+         confidence = 0.3
+ 
+         full_text = f'{author_name} {author_desc} {verified_type}'.lower()
+ 
++<<<<<<< Updated upstream
+         # V2: 多类型匹配
+         matches = {}
+ 
++=======
++        # ===== V2: 多类型匹配 + 冲突解决机制 =====
++        # 先收集所有匹配的类型，再按优先级解决冲突
++        matches = {}  # {type: {'matched_keywords': [...], 'confidence': float}}
++
++        # 1. 检测所有匹配类型
++>>>>>>> Stashed changes
+         official_match = self._match_official_detailed(full_text, verified_type)
+         if official_match:
+             matches['official'] = official_match
+@@ -125,7 +152,11 @@ class SubjectClassifier:
+         if kos_match:
+             matches['kos'] = kos_match
+ 
++<<<<<<< Updated upstream
+         # 冲突解决
++=======
++        # 2. 冲突解决
++>>>>>>> Stashed changes
+         if matches:
+             resolved = self._resolve_conflicts(matches, full_text)
+             subject_type = resolved['type']
+@@ -141,7 +172,11 @@ class SubjectClassifier:
+             return self._result(subject_type, confidence, reasons,
+                                 content_hint_map.get(subject_type, 'ugc'))
+ 
++<<<<<<< Updated upstream
+         # KOL/KOC/普通用户判断（基于粉丝数）
++=======
++        # 3. KOL/KOC/普通用户判断（基于粉丝数）
++>>>>>>> Stashed changes
+         if followers > 0:
+             if followers >= 100000:
+                 reasons.append(f'粉丝数{followers}>10万')
+@@ -160,15 +195,35 @@ class SubjectClassifier:
+                 confidence = max(confidence, 0.6)
+                 return self._result('normal_user', confidence, reasons, 'ugc')
+ 
++<<<<<<< Updated upstream
+         # 默认普通用户
++=======
++        # 4. 默认普通用户
++>>>>>>> Stashed changes
+         reasons.append('无明显主体特征，默认普通用户')
+         return self._result('normal_user', confidence, reasons, 'ugc')
+ 
+     def _resolve_conflicts(self, matches: dict, full_text: str) -> dict:
++<<<<<<< Updated upstream
+         """冲突解决：当多个类型同时匹配时，按优先级规则解决"""
+         types = list(matches.keys())
+ 
+         # 规则1：媒体 + 官方 → 媒体（如"羊城晚报官方账号"）
++=======
++        """
++        冲突解决机制：当多个类型同时匹配时，按优先级规则解决
++
++        核心规则：
++        1. 媒体 + 官方同时匹配 → 媒体（如"羊城晚报官方账号"是媒体，不是品牌官方）
++        2. 机构 + 官方同时匹配 → 机构（如"消费者协会官方"是机构）
++        3. 媒体 + 机构同时匹配 → 媒体（媒体属性更明确）
++        4. KOS + 官方同时匹配 → KOS（导购账号本质是KOS）
++        5. 单一匹配 → 直接返回
++        """
++        types = list(matches.keys())
++
++        # 规则1：媒体 + 官方 → 媒体
++>>>>>>> Stashed changes
+         if 'media' in matches and 'official' in matches:
+             media_kw = matches['media']['matched_keywords']
+             official_kw = matches['official']['matched_keywords']
+@@ -177,7 +232,11 @@ class SubjectClassifier:
+                 'confidence': 0.9,
+                 'reasons': [
+                     f'同时匹配媒体关键词{media_kw}和官方关键词{official_kw}',
++<<<<<<< Updated upstream
+                     '冲突解决：媒体+官方组合判定为媒体（"XX晚报官方账号"是媒体账号）',
++=======
++                    '冲突解决：媒体+官方组合判定为媒体（如"XX晚报官方账号"是媒体账号）',
++>>>>>>> Stashed changes
+                     f'媒体关键词更具体（{media_kw}），"官方"为通用后缀不改变媒体属性',
+                 ],
+             }
+@@ -188,7 +247,11 @@ class SubjectClassifier:
+                 'type': 'institution',
+                 'confidence': 0.85,
+                 'reasons': [
++<<<<<<< Updated upstream
+                     '同时匹配机构关键词和官方关键词',
++=======
++                    f'同时匹配机构关键词和官方关键词',
++>>>>>>> Stashed changes
+                     '冲突解决：机构+官方组合判定为机构（如"XX协会官方"是机构账号）',
+                 ],
+             }
+@@ -235,8 +298,13 @@ class SubjectClassifier:
+             ],
+         }
+ 
++<<<<<<< Updated upstream
+     def _match_official_detailed(self, text: str, verified_type: str):
+         """详细匹配官方账号"""
++=======
++    def _match_official_detailed(self, text: str, verified_type: str) -> Optional[dict]:
++        """详细匹配官方账号，返回匹配详情"""
++>>>>>>> Stashed changes
+         matched = []
+         for kw in self.official_keywords:
+             if kw.lower() in text:
+@@ -247,8 +315,13 @@ class SubjectClassifier:
+             return {'matched_keywords': matched, 'confidence': 0.9}
+         return None
+ 
++<<<<<<< Updated upstream
+     def _match_media_detailed(self, text: str, verified_type: str):
+         """详细匹配媒体账号"""
++=======
++    def _match_media_detailed(self, text: str, verified_type: str) -> Optional[dict]:
++        """详细匹配媒体账号，返回匹配详情"""
++>>>>>>> Stashed changes
+         matched = []
+         for kw in self.media_keywords:
+             if kw.lower() in text:
+@@ -256,15 +329,25 @@ class SubjectClassifier:
+         if '媒体' in verified_type or '新闻' in verified_type:
+             matched.append(f'认证类型:{verified_type}')
+         if matched:
++<<<<<<< Updated upstream
+             strong_media = ['日报', '晚报', '电视台', '广播', '周刊', '杂志', '新闻',
+                             '都市报', '时报', '商报', '晨报', '导报', '邮报', '通讯社', '传媒', '报业']
++=======
++            # 传统媒体关键词（日报/晚报/电视台/广播）置信度更高
++            strong_media = ['日报', '晚报', '电视台', '广播', '周刊', '杂志', '新闻']
++>>>>>>> Stashed changes
+             has_strong = any(kw in matched for kw in strong_media)
+             conf = 0.9 if has_strong else 0.8
+             return {'matched_keywords': matched, 'confidence': conf}
+         return None
+ 
++<<<<<<< Updated upstream
+     def _match_institution_detailed(self, text: str, verified_type: str):
+         """详细匹配机构账号"""
++=======
++    def _match_institution_detailed(self, text: str, verified_type: str) -> Optional[dict]:
++        """详细匹配机构账号，返回匹配详情"""
++>>>>>>> Stashed changes
+         matched = []
+         for kw in self.institution_keywords:
+             if kw.lower() in text:
+@@ -273,8 +356,13 @@ class SubjectClassifier:
+             return {'matched_keywords': matched, 'confidence': 0.85}
+         return None
+ 
++<<<<<<< Updated upstream
+     def _match_kos_detailed(self, text: str, content_pattern: str):
+         """详细匹配KOS账号"""
++=======
++    def _match_kos_detailed(self, text: str, content_pattern: str) -> Optional[dict]:
++        """详细匹配KOS账号，返回匹配详情"""
++>>>>>>> Stashed changes
+         matched = []
+         for kw in self.kos_keywords:
+             if kw.lower() in text:
+@@ -297,8 +385,11 @@ class SubjectClassifier:
+ 
+     def _match_kos(self, text: str, content_pattern: str) -> bool:
+         return self._match_kos_detailed(text, content_pattern) is not None
++<<<<<<< Updated upstream
+ 
+ 
++=======
++>>>>>>> Stashed changes
+ 
+     def _result(self, subject_type: str, confidence: float,
+                 reasons: list, content_type_hint: str) -> Dict[str, Any]:
+diff --git a/templates/base.html b/templates/base.html
+index 142d990..fb028a5 100644
+--- a/templates/base.html
++++ b/templates/base.html
+@@ -118,10 +118,10 @@
+       <!-- SYSTEM Navigation (5 entries) -->
+       <div class="zbc-nav-group zbc-nav-group--system" data-domain-nav="system" {% if active_domain!='system' %}hidden{% endif %}>
+         <div class="zbc-nav-group__label" data-i18n="domain.system">Runtime Control</div>
+-        <a class="zbc-nav-item {% if active_nav=='sys_runtime' %}is-active{% endif %}" href="{{ url_for('lumenis.system_runtime') }}">
++        <a class="zbc-nav-item {% if active_nav=='sys_runtime' %}is-active{% endif %}" href="{{ url_for('lumenis.system_runtime') }}" style="display:none">
+           <span class="zbc-nav-item__icon" data-icon="gear" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.runtime">Runtime</span>
+         </a>
+-        <a class="zbc-nav-item {% if active_nav=='sys_collector' %}is-active{% endif %}" href="{{ url_for('lumenis.system_collector') }}">
++        <a class="zbc-nav-item {% if active_nav=='sys_collector' %}is-active{% endif %}" href="{{ url_for('lumenis.system_collector') }}" style="display:none">
+           <span class="zbc-nav-item__icon" data-icon="inbox" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.collector">Collector</span>
+         </a>
+         <a class="zbc-nav-item {% if active_nav=='sys_browser' %}is-active{% endif %}" href="{{ url_for('lumenis.system_browser') }}">
+@@ -130,10 +130,10 @@
+         <a class="zbc-nav-item {% if active_nav=='sys_ai' %}is-active{% endif %}" href="{{ url_for('lumenis.system_ai') }}">
+           <span class="zbc-nav-item__icon" data-icon="intelligence" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.ai">AI</span>
+         </a>
+-        <a class="zbc-nav-item {% if active_nav=='sys_database' %}is-active{% endif %}" href="{{ url_for('lumenis.system_database') }}">
++        <a class="zbc-nav-item {% if active_nav=='sys_database' %}is-active{% endif %}" href="{{ url_for('lumenis.system_database') }}" style="display:none">
+           <span class="zbc-nav-item__icon" data-icon="database" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.database">Database</span>
+         </a>
+-        <a class="zbc-nav-item {% if active_nav=='sys_security' %}is-active{% endif %}" href="{{ url_for('lumenis.system_security') }}">
++        <a class="zbc-nav-item {% if active_nav=='sys_security' %}is-active{% endif %}" href="{{ url_for('lumenis.system_security') }}" style="display:none">
+           <span class="zbc-nav-item__icon" data-icon="lock" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.security">Security</span>
+         </a>
+         <a class="zbc-nav-item {% if active_nav=='sys_settings' %}is-active{% endif %}" href="/system/settings">
+diff --git a/templates/system/settings.html b/templates/system/settings.html
+index a2420e8..7ffdc00 100644
+--- a/templates/system/settings.html
++++ b/templates/system/settings.html
+@@ -536,6 +536,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
+           <span class="nav-icon">🔓</span><span>ZBMP 品牌智能</span>
+           <span class="nav-badge" id="zbmp-status-badge">未开启</span>
+         </div>
++
++      <div class="nav-group-title">系统运行工具</div>
++      <a class="nav-item" href="/system/runtime" style="text-decoration:none;color:inherit">
++        <span class="nav-icon"><span data-icon="gear" data-icon-size="16"></span></span>运行时监控
++        <span class="nav-badge">Guardian</span>
++      </a>
++      <a class="nav-item" href="/system/collector" style="text-decoration:none;color:inherit">
++        <span class="nav-icon"><span data-icon="inbox" data-icon-size="16"></span></span>采集器管理
++      </a>
++      <a class="nav-item" href="/system/database" style="text-decoration:none;color:inherit">
++        <span class="nav-icon"><span data-icon="database" data-icon-size="16"></span></span>数据库管理
++        <span class="nav-badge">129表</span>
++      </a>
++      <a class="nav-item" href="/system/security" style="text-decoration:none;color:inherit">
++        <span class="nav-icon"><span data-icon="lock" data-icon-size="16"></span></span>安全扫描
++      </a>
+ </div>
+     </nav>
+   </aside>

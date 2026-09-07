@@ -1,4 +1,4 @@
-﻿{
+{
   "product": {
     "name": "LUMENIS",
     "tagline": "LUMENIS · Commerce Operations & Brand Market, unified evidence chain",
@@ -131,5 +131,38 @@
     "status_connecting": "Connecting…",
     "status_running": "Running",
     "status_error": "Connection failed"
-  }
+  },
+  "nav.overview": "Overview",
+  "nav.intelligence": "Monitoring",
+  "nav.risk": "Risk Alerts",
+  "nav.negative": "Negative Monitoring",
+  "nav.notes": "Notes",
+  "nav.official": "Official Updates",
+  "nav.topics": "Topic Monitoring",
+  "nav.analysis": "Sentiment Analysis",
+  "nav.events": "Events",
+  "nav.event-graph": "Event Relations",
+  "nav.calendar": "Sentiment Calendar",
+  "nav.brand": "Brand Center",
+  "nav.taikoo": "Taikoo Hui",
+  "nav.cases": "Case Library",
+  "nav.case-analysis": "Case Analysis",
+  "nav.knowledge": "Knowledge Base",
+  "nav.brand-report": "Brand Reports",
+  "nav.evidence": "Evidence",
+  "nav.reports": "Reports",
+  "nav.health": "System Health",
+  "nav.browser": "Internal Browser",
+  "nav.settings": "Settings",
+  "nav.qa": "AI Assistant",
+  "nav.content": "Content",
+  "nav.kos": "KOS Analysis",
+  "nav.competition": "Competitor Analysis",
+  "nav.podcast": "Podcast",
+  "nav.evaluation": "Evaluation",
+  "nav.collector": "Collector",
+  "nav.database": "Database",
+  "nav.security": "Security",
+  "nav.ai": "AI Gateway",
+  "nav.runtime": "Runtime"
 }

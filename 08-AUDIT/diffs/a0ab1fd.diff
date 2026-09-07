@@ -1,0 +1,75 @@
+﻿a0ab1fd24a0b8aeff0f79ad2912081c4ba33301f
+2026-09-07 21:13:09 +0800
+Zachary-1012
+fix(i18n): 技能中心→技能 三语统一
+
+diff --git a/static/locales/en.json b/static/locales/en.json
+index a2fe8f7..db9c236 100644
+--- a/static/locales/en.json
++++ b/static/locales/en.json
+@@ -1,4 +1,4 @@
+-{
++﻿{
+   "product": {
+     "name": "LUMENIS",
+     "tagline": "LUMENIS · Commerce Operations & Brand Market, unified evidence chain",
+@@ -57,7 +57,7 @@
+     "database": "Database",
+     "security": "Security",
+     "intelligence": "Intelligence",
+-    "skill_hub": "Skill Hub",
++    "skill_hub": "Skills",
+     "production": "Production",
+     "research": "Research",
+     "operations": "Operations",
+@@ -96,7 +96,7 @@
+     "card_risks": "Risks",
+     "card_tasks_label": "Tasks",
+     "nav_intel": "Intelligence",
+-    "nav_skills": "Skill Hub",
++    "nav_skills": "Skills",
+     "nav_prod": "Production",
+     "nav_research": "Research",
+     "nav_ops": "Operations",
+@@ -132,4 +132,4 @@
+     "status_running": "Running",
+     "status_error": "Connection failed"
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/static/locales/zh-CN.json b/static/locales/zh-CN.json
+index 9761f4f..6da8cef 100644
+--- a/static/locales/zh-CN.json
++++ b/static/locales/zh-CN.json
+@@ -1,4 +1,4 @@
+-{
++﻿{
+   "product": {
+     "name": "序境 LUMENIS",
+     "tagline": "序境 LUMENIS · 商业运营与品牌市场，统一证据链，每一步可追溯",
+@@ -57,7 +57,7 @@
+     "database": "数据库",
+     "security": "安全",
+     "intelligence": "智能",
+-    "skill_hub": "技能中心",
++    "skill_hub": "技能",
+     "production": "生产",
+     "research": "研究",
+     "operations": "运维",
+@@ -96,7 +96,7 @@
+     "card_risks": "风险",
+     "card_tasks_label": "任务",
+     "nav_intel": "智能",
+-    "nav_skills": "技能中心",
++    "nav_skills": "技能",
+     "nav_prod": "生产",
+     "nav_research": "研究",
+     "nav_ops": "运维",
+@@ -132,4 +132,4 @@
+     "status_running": "运行中",
+     "status_error": "连接失败"
+   }
+-}
+\ No newline at end of file
++}

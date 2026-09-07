@@ -162,6 +162,12 @@
           <a class="zbc-nav-item {% if active_nav=='cth_topics' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_topics') }}">
             <span class="zbc-nav-item__icon" data-icon="topic" data-icon-size="18"></span><span class="zbc-nav-item__label">话题监测</span>
           </a>
+          <a class="zbc-nav-item {% if active_nav=='cth_topic_campaign' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_topic_campaign') }}">
+            <span class="zbc-nav-item__icon" data-icon="megaphone" data-icon-size="18"></span><span class="zbc-nav-item__label">话题活动</span>
+          </a>
+          <a class="zbc-nav-item {% if active_nav=='cth_weibo' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_weibo') }}">
+            <span class="zbc-nav-item__icon" data-icon="globe" data-icon-size="18"></span><span class="zbc-nav-item__label">微博</span>
+          </a>
         </div>
 
         <!-- 分析 -->
@@ -179,6 +185,9 @@
           <a class="zbc-nav-item {% if active_nav=='cth_calendar' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_calendar') }}">
             <span class="zbc-nav-item__icon" data-icon="list" data-icon-size="18"></span><span class="zbc-nav-item__label">舆情日历</span>
           </a>
+          <a class="zbc-nav-item {% if active_nav=='cth_trend' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_trend') }}">
+            <span class="zbc-nav-item__icon" data-icon="trendingUp" data-icon-size="18"></span><span class="zbc-nav-item__label">趋势分析</span>
+          </a>
         </div>
 
         <!-- 品牌资产 -->
@@ -186,6 +195,9 @@
           <div class="zbc-nav-section__label">品牌资产</div>
           <a class="zbc-nav-item {% if active_nav=='cth_brands' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_brands') }}">
             <span class="zbc-nav-item__icon" data-icon="brand" data-icon-size="18"></span><span class="zbc-nav-item__label">品牌中心</span>
+          </a>
+          <a class="zbc-nav-item {% if active_nav=='cth_brand_industry' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_brand_industry') }}">
+            <span class="zbc-nav-item__icon" data-icon="compare" data-icon-size="18"></span><span class="zbc-nav-item__label">品牌业态</span>
           </a>
           <a class="zbc-nav-item {% if active_nav=='cth_industries' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_industries') }}">
             <span class="zbc-nav-item__icon" data-icon="compare" data-icon-size="18"></span><span class="zbc-nav-item__label">太古汇</span>
@@ -213,6 +225,9 @@
           <a class="zbc-nav-item" href="{{ url_for('lumenis.cth_reports') }}">
             <span class="zbc-nav-item__icon" data-icon="report" data-icon-size="18"></span><span class="zbc-nav-item__label">报告</span>
           </a>
+          <a class="zbc-nav-item {% if active_nav=='cth_weekly' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_weekly') }}">
+            <span class="zbc-nav-item__icon" data-icon="calendar" data-icon-size="18"></span><span class="zbc-nav-item__label">周报</span>
+          </a>
         </div>
 
         <!-- 系统 -->
@@ -223,6 +238,9 @@
           </a>
           <a class="zbc-nav-item {% if active_nav=='sys_browser' %}is-active{% endif %}" href="{{ url_for('lumenis.system_browser') }}">
             <span class="zbc-nav-item__icon" data-icon="globe" data-icon-size="18"></span><span class="zbc-nav-item__label">内部浏览器</span>
+          </a>
+          <a class="zbc-nav-item {% if active_nav=='cth_workspace' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_workspace') }}">
+            <span class="zbc-nav-item__icon" data-icon="folder" data-icon-size="18"></span><span class="zbc-nav-item__label">Workspace</span>
           </a>
           <a class="zbc-nav-item {% if active_nav=='sys_settings' %}is-active{% endif %}" href="/system/settings">
             <span class="zbc-nav-item__icon" data-icon="sliders" data-icon-size="18"></span><span class="zbc-nav-item__label">设置</span>

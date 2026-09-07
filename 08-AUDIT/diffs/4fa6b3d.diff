@@ -1,0 +1,90 @@
+﻿4fa6b3d58c4f6ed1f1f3ece763644f1c3c338242
+2026-09-07 22:05:25 +0800
+Zachary-1012
+v5.9.9 自动保存版本（22:05 巡检）
+
+diff --git a/intelligence.py b/intelligence.py
+index 66b0ec9..bb01849 100644
+--- a/intelligence.py
++++ b/intelligence.py
+@@ -169,10 +169,10 @@ _CAPABILITY_MODEL_MAP = {
+         'description': '强推理（复杂分析/逻辑链/深度研判）',
+     },
+     'daily': {
+-        'provider': 'zhipu',
+-        'model': 'glm-4.5-air',
+-        'fallback_chain': ['ark', 'ollama'],
+-        'description': '日常任务（摘要/分类/情绪/普通对话，关思考省额度）',
++        'provider': 'ark',
++        'model': 'doubao-lite-4k',
++        'fallback_chain': ['zhipu:glm-4.5-air', 'ollama'],
++        'description': '日常最小输出（摘要/分类/情绪/轻量对话，豆包 lite 省额度，失败自动降智谱）',
+         'thinking_disabled': True,
+     },
+     'offline_fallback': {
+@@ -282,8 +282,14 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
+     system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
+     # V1.0: 构建 cloud fallback 链（zhipu L1 → ark L2 → qwen L3）
+     # 本地 Provider（ollama/lmstudio）由 _provider_config 单独处理，不混入 cloud 链
++    # 根据传入 model 前缀判断主 provider：最小输出豆包优先，大算力智谱优先
++    _model_lower = str(model or '').lower()
++    if _model_lower.startswith(('doubao', 'ark-')):
++        _preferred = ('ark', 'zhipu', 'qwen')
++    else:
++        _preferred = ('zhipu', 'ark', 'qwen')
+     chain = []
+-    for _p in ('zhipu', 'ark', 'qwen'):
++    for _p in _preferred:
+         _key_env = {'zhipu': 'ZHIPU_API_KEY', 'ark': 'ARK_API_KEY', 'qwen': 'DASHSCOPE_API_KEY'}.get(_p, '')
+         if _key_env and _env(_key_env):
+             chain.append(_p)
+@@ -307,8 +313,16 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
+         api_key, base, model_default = cfg_map[prov]
+         if not api_key:
+             raise ValueError(f'provider {prov} no api key')
++        # 备用 Provider 切换为自身默认模型（避免用豆包模型名调智谱接口导致 404）
+         m = model or model_default
+-        # 备用 Provider 用最小输出（豆包兜底，省额度）；主通道用完整 max_tokens
++        if prov != primary and model:
++            _ml = str(model).lower()
++            _zhipu_family = _ml.startswith(('glm-', 'web-search', 'chatglm'))
++            _ark_family = _ml.startswith(('doubao', 'ark-'))
++            _qwen_family = _ml.startswith(('qwen', 'qw-', 'qwen2'))
++            if (prov == 'zhipu' and not _zhipu_family) or                (prov == 'ark' and not _ark_family) or                (prov == 'qwen' and not _qwen_family):
++                m = model_default
++        # 备用 Provider 用最小输出（省额度）；主通道用完整 max_tokens
+         max_tokens_eff = max_tokens if prov == primary else min(max_tokens, 300)
+         payload_obj={'model':m,'temperature':temperature,'max_tokens':max_tokens_eff,'messages':[{'role':'system','content':system_r},{'role':'user','content':user_r}]}
+         if prov == 'zhipu' and not str(m).lower().startswith('glm-5.3'):
+diff --git a/tests/test_workspace_keys.py b/tests/test_workspace_keys.py
+index c763722..685072d 100644
+--- a/tests/test_workspace_keys.py
++++ b/tests/test_workspace_keys.py
+@@ -25,9 +25,26 @@ from v4_upgrade.auth.models import init_auth_db  # noqa: E402
+ 
+ @pytest.fixture(scope="module", autouse=True)
+ def _setup():
+-    init_auth_db()          # 建 v4_users 并确保 owner
++    # 确定性隔离（不依赖 import 顺序）：v4_upgrade.config.DB_PATH 在【首次 import 时按
++    # 当时 os.environ 固化】，auth.models 又以 `from ..config import DB_PATH` 值绑定。
++    # 全量套件（尤其逆序/随机）中它可能已被更早模块固化成生产 data/monitor.db；若不显式
++    # 改回本模块临时库，verify_workspace_key 会对生产库 v4_workspace_keys 数百个历史 active
++    # key（rounds=12）逐个 PBKDF2，必然超过用例超时。故此处同时绑定 config 与 models 两层。
++    import v4_upgrade.config as _cfg
++    import v4_upgrade.auth.models as _models
++    _old_cfg = getattr(_cfg, "DB_PATH", None)
++    _old_models = getattr(_models, "DB_PATH", None)
++    _cfg.DB_PATH = _TMP.name
++    _models.DB_PATH = _TMP.name
++    os.environ["ZBC_DB_PATH"] = _TMP.name
++    init_auth_db()          # 建 v4_users 并确保 owner（落在临时库）
+     ws.ensure_workspace_tables()
+     yield
++    # 还原全局绑定与环境，杜绝泄漏给后续模块
++    if _old_cfg is not None:
++        _cfg.DB_PATH = _old_cfg
++    if _old_models is not None:
++        _models.DB_PATH = _old_models
+     try:
+         os.unlink(_TMP.name)
+     except OSError:

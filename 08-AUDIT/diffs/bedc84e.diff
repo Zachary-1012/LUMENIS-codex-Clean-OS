@@ -1,0 +1,32 @@
+﻿bedc84e5161fe000d7a814e7e3c0d37d781ce02c
+2026-09-07 19:21:34 +0800
+Zachary-1012
+feat(ui+agent): Luminous设计系统v2.0+模组管理器+7增量层blueprint注册
+
+diff --git a/app.py b/app.py
+index 16de9b1..96bc4e0 100644
+--- a/app.py
++++ b/app.py
+@@ -177,6 +177,22 @@ try:
+ except Exception as _mr_e:
+     print(f"[module_registry] register failed: {_mr_e}")
+ 
++# Agent Runtime 7增量层 Blueprint（先旁路验证，不影响主链路）
++try:
++    from agent_adaptive_ui.routes import adaptive_ui_bp
++    app.register_blueprint(adaptive_ui_bp)
++    print("[agent_adaptive_ui] blueprint registered")
++except Exception as _aui_e:
++    print(f"[agent_adaptive_ui] register failed: {_aui_e}")
++
++try:
++    from agent_proactive.routes import proactive_bp
++    if proactive_bp:
++        app.register_blueprint(proactive_bp)
++        print("[agent_proactive] blueprint registered")
++except Exception as _ap_e:
++    print(f"[agent_proactive] register failed: {_ap_e}")
++
+ # P1-C: Intelligence Library page (no-scroll, left tree + right list + detail drawer)
+ @app.route('/intelligence/library')
+ def intelligence_library_page():

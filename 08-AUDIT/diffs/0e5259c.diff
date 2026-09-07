@@ -1,0 +1,323 @@
+﻿0e5259c8f7e1e618378430fc654226d8d67aae7d
+2026-09-07 21:36:20 +0800
+Zachary-1012
+fix(p0): terminology.js全局术语映射修正(CTH→序境·商业运营/ZBMP→序境·品牌市场) + 全库旧名称清零(太古汇智能0/品牌智能0/风险中心0) + BMP解锁弹窗文本修正
+
+diff --git a/static/js/ai-assistant.js b/static/js/ai-assistant.js
+index 842919b..b65aea1 100644
+--- a/static/js/ai-assistant.js
++++ b/static/js/ai-assistant.js
+@@ -1,4 +1,4 @@
+-/* ============================================================
++﻿/* ============================================================
+  * ai-assistant.js — 轻量AI助手（ZBC V2.0 AI Task Engine 对接）
+  * 右下角浮动按钮 + 展开面板，对接 /api/ai/tasks（Production-Ready）
+  * 降级链：Task Engine API → /api/ai/chat → 本地提示
+@@ -116,7 +116,7 @@
+ 
+   function getDomainLabel() {
+     var d = getCurrentDomain();
+-    return { zbmp: 'ZBMP 品牌智能', cth: 'CTH 太古汇情报', system: 'SYSTEM 运行控制' }[d] || d.toUpperCase();
++    return { zbmp: 'ZBMP 序境·品牌市场', cth: '序境·商业运营', system: 'SYSTEM 运行控制' }[d] || d.toUpperCase();
+   }
+ 
+   function getQuickCommands() {
+@@ -511,3 +511,4 @@
+   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+   else boot();
+ })();
++
+diff --git a/static/js/keyboard-shortcuts.js b/static/js/keyboard-shortcuts.js
+index bcc45c9..c8474f0 100644
+--- a/static/js/keyboard-shortcuts.js
++++ b/static/js/keyboard-shortcuts.js
+@@ -1,4 +1,4 @@
+-/* ============================================================
++﻿/* ============================================================
+  * keyboard-shortcuts.js — 三域键盘快捷键帮助窗口（ZBC V1.1 架构）
+  * Ctrl+/ 或 ? 唤起；覆盖三域导航、全局操作、视图切换。
+  * 自包含模态，不依赖旧 openModal；从真实 .zbc-nav-item 动态生成。
+@@ -74,7 +74,7 @@
+   function buildGroups() {
+     var groups = [];
+     var navItems = getNavItems();
+-    var domainLabels = { zbmp: 'ZBMP 品牌智能域', cth: 'CTH 太古汇情报域', system: 'SYSTEM 运行控制域' };
++    var domainLabels = { zbmp: 'ZBMP 序境·品牌市场域', cth: '序境·商业运营域', system: 'SYSTEM 运行控制域' };
+     ['zbmp', 'cth', 'system'].forEach(function (domain) {
+       var domainItems = navItems.filter(function (n) { return n.domain === domain; });
+       if (domainItems.length) {
+@@ -258,3 +258,4 @@
+   else boot();
+   console.log('[keyboard-shortcuts] 三域键盘快捷键已加载（Ctrl+/ 唤起）');
+ })();
++
+diff --git a/static/js/settings-keyboard.js b/static/js/settings-keyboard.js
+index e061e3e..424576b 100644
+--- a/static/js/settings-keyboard.js
++++ b/static/js/settings-keyboard.js
+@@ -1,4 +1,4 @@
+-/**
++﻿/**
+  * settings-keyboard.js — 序境 LUMENIS 键盘快捷键管理
+  * 对接 keyboard-shortcuts.js 现有机制（Ctrl+/等），设置页化
+  * 持久化到 localStorage
+@@ -16,8 +16,8 @@
+     { id: 'ai-assistant', name: 'AI 助手', desc: '唤起/关闭 AI 助手面板', combo: 'Ctrl+J', category: '全局操作', editable: true },
+     { id: 'theme-toggle', name: '切换主题', desc: '浅色/深色主题切换', combo: 'Ctrl+T', category: '全局操作', editable: true },
+     // 域切换
+-    { id: 'domain-zbmp', name: '切换品牌智能域', desc: '切换到 ZBMP 品牌智能域', combo: 'Ctrl+1', category: '域切换', editable: true },
+-    { id: 'domain-cth', name: '切换太古汇智能域', desc: '切换到 CTH 太古汇情报域', combo: 'Ctrl+2', category: '域切换', editable: true },
++    { id: 'domain-zbmp', name: '切换序境·品牌市场域', desc: '切换到 ZBMP 序境·品牌市场域', combo: 'Ctrl+1', category: '域切换', editable: true },
++    { id: 'domain-cth', name: '切换序境·商业运营域', desc: '切换到 序境·商业运营域', combo: 'Ctrl+2', category: '域切换', editable: true },
+     { id: 'domain-system', name: '切换系统域', desc: '切换到 SYSTEM 运行控制域', combo: 'Ctrl+3', category: '域切换', editable: true },
+     // 视图与窗口
+     { id: 'shortcuts-help', name: '显示快捷键', desc: '打开快捷键帮助面板', combo: 'Ctrl+/', category: '视图与窗口', editable: false },
+@@ -110,3 +110,4 @@
+ 
+   console.log('[settings-keyboard] 键盘快捷键管理已加载');
+ })();
++
+diff --git a/static/js/settings.js b/static/js/settings.js
+index 804ddc2..225adcf 100644
+--- a/static/js/settings.js
++++ b/static/js/settings.js
+@@ -1,4 +1,4 @@
+-/**
++﻿/**
+  * settings.js — ZBC-LUMENIS 设置页前端逻辑
+  * 对接 /api/system/account/* 所有端点
+  * 守No-Scroll：内容在bounded区域内滚动，外层不滚
+@@ -41,7 +41,7 @@ async function loadDomainIdentity() {
+ function updateDomainTag() {
+   const tag = document.getElementById('domainTag');
+   if (!tag) return;
+-  const labels = { cth: 'CTH 太古汇域', zbmp: 'ZBMP 品牌智能域', system: 'SYSTEM 系统全局' };
++  const labels = { cth: 'CTH 太古汇域', zbmp: 'ZBMP 序境·品牌市场域', system: 'SYSTEM 系统全局' };
+   tag.textContent = labels[currentDomain] || currentDomain.toUpperCase();
+   tag.className = 'domain-tag ' + currentDomain;
+ }
+@@ -81,7 +81,7 @@ function switchPanel(panel) {
+     developer: '开发者功能', appearance: '外观', config: '配置',
+     keyboard: '键盘快捷键', browser: '浏览器', integrations: '集成与连接',
+     ai: 'AI', collection: '采集与数据源', platforms: '平台与可见性',
+-    syslinks: '系统链接', 'zbmp-domain': 'ZBMP 品牌智能', backup: '通知/备份/帮助'
++    syslinks: '系统链接', 'zbmp-domain': 'ZBMP 序境·品牌市场', backup: '通知/备份/帮助'
+   };
+   document.getElementById('panelTitle').textContent = titles[panel] || panel;
+ 
+@@ -1263,3 +1263,4 @@ function loadIntegrations() {
+   });
+ }
+ 
++
+diff --git a/static/js/terminology.js b/static/js/terminology.js
+index d23c03a..e3c02f6 100644
+--- a/static/js/terminology.js
++++ b/static/js/terminology.js
+@@ -1,4 +1,4 @@
+-/* ============================================================================
++﻿/* ============================================================================
+    LUMENIS Terminology — 渲染层术语替换
+    产品术语表 V1.0 唯一权威来源：audit/PRODUCT_TERMINOLOGY_TABLE_V1.0.md
+    规则：代码内部可保留工程代号，渲染给用户时必须替换为标准用名。
+@@ -20,8 +20,8 @@
+     { from: /\bZBC\b/g, to: "序境 LUMENIS" },
+     { from: /\bOSAI\b/g, to: "智能引擎" },
+     // 域代号（独立词边界）
+-    { from: /\bZBMP\b/g, to: "品牌智能" },
+-    { from: /\bCTH\b/g, to: "太古汇智能" },
++    { from: /\bZBMP\b/g, to: "序境·品牌市场" },
++    { from: /\bCTH\b/g, to: "序境·商业运营" },
+     { from: /\bSYS\b/g, to: "系统" },
+     // 安全术语
+     { from: /\bTOTP\b/g, to: "动态验证码" },
+@@ -100,3 +100,4 @@
+     document.addEventListener("DOMContentLoaded", scanPage);
+   }
+ })(window);
++
+diff --git a/static/js/zbmp-entry.js b/static/js/zbmp-entry.js
+index a417a07..2baec71 100644
+--- a/static/js/zbmp-entry.js
++++ b/static/js/zbmp-entry.js
+@@ -1,4 +1,4 @@
+-/**
++﻿/**
+  * zbmp-entry.js — ZBMP 域身份入口面板
+  *
+  * 职责：
+@@ -27,7 +27,7 @@
+     + '    </button>'
+     + '    <div class="zbmp-modal-header">'
+     + '      <div class="zbmp-modal-logo"><span class="zbmp-icon zbmp-icon--lg" data-zbmp-icon="intelligence"></span></div>'
+-    + '      <h2 id="zbmp-modal-title" class="zbmp-modal-h2">进入品牌智能域</h2>'
++    + '      <h2 id="zbmp-modal-title" class="zbmp-modal-h2">进入序境·品牌市场域</h2>'
+     + '      <p class="zbmp-modal-sub" id="zbmp-modal-sub">动态验证码保护 · 每30秒刷新</p>'
+     + '    </div>'
+     + '    <div class="zbmp-modal-body" id="zbmp-modal-body">'
+@@ -235,7 +235,7 @@
+     api(ENTRY_API + '/status').then(function (res) {
+       if (!res.ok || !res.data.ok) {
+         if (res.status === 401) {
+-          setBody('<div class="zbmp-info">请先登录CTH账号，再进入品牌智能域。<br><br>'
++          setBody('<div class="zbmp-info">请先登录CTH账号，再进入序境·品牌市场域。<br><br>'
+             + '<a href="/cth/login" style="color:#0F766E;font-weight:600">前往CTH登录 →</a></div>');
+         } else {
+           setBody('<div class="zbmp-error show">' + (res.data.error || '状态检查失败') + '</div>');
+@@ -262,11 +262,11 @@
+   function showAlreadyGranted() {
+     setBody(''
+       + '<div class="zbmp-info" style="text-align:center">'
+-      + '  <strong>已获得品牌智能域访问权限</strong><br>'
++      + '  <strong>已获得序境·品牌市场域访问权限</strong><br>'
+       + '  当前身份：' + (state.username || '') + '<br>'
+       + '  域身份有效期：8小时'
+       + '</div>'
+-      + '<button class="zbmp-btn zbmp-btn-primary" onclick="ZBMPEntry.gotoZBMP()">进入品牌智能 →</button>'
++      + '<button class="zbmp-btn zbmp-btn-primary" onclick="ZBMPEntry.gotoZBMP()">进入序境·品牌市场 →</button>'
+       + '<button class="zbmp-btn zbmp-btn-secondary" onclick="ZBMPEntry.leaveZBMP()">退出ZBMP域身份</button>');
+   }
+ 
+@@ -275,7 +275,7 @@
+     setBody(''
+       + '<div class="zbmp-error" id="zbmp-error"></div>'
+       + '<div class="zbmp-info">'
+-      + '  <strong>首次进入品牌智能域需要绑定动态验证码</strong><br>'
++      + '  <strong>首次进入序境·品牌市场域需要绑定动态验证码</strong><br>'
+       + '  系统将生成一个二维码，用iPhone「设置 → 密码」扫码添加，'
+       + '  之后每30秒生成6位动态码用于验证身份。'
+       + '</div>'
+@@ -371,7 +371,7 @@
+       + '</div>'
+       + '<div class="zbmp-timer-bar"><div class="zbmp-timer-fill" id="zbmp-timer-fill" style="width:100%"></div></div>'
+       + '<div class="zbmp-timer-text" id="zbmp-timer-text">验证码每30秒刷新</div>'
+-      + '<button class="zbmp-btn zbmp-btn-primary" id="zbmp-verify-btn" disabled>验证并进入品牌智能 →</button>');
++      + '<button class="zbmp-btn zbmp-btn-primary" id="zbmp-verify-btn" disabled>验证并进入序境·品牌市场 →</button>');
+ 
+     bindTotpInputs('zbmp-verify-inputs', function (code) {
+       $('zbmp-verify-btn').disabled = code.length !== 6;
+@@ -395,7 +395,7 @@
+     api(ENTRY_API + '/verify', { method: 'POST', body: { code: code } }).then(function (res) {
+       if (!res.ok || !res.data.success) {
+         showError(res.data.error || res.data.message || '验证失败，请检查动态码');
+-        if (btn) { btn.disabled = false; btn.textContent = '验证并进入品牌智能 →'; }
++        if (btn) { btn.disabled = false; btn.textContent = '验证并进入序境·品牌市场 →'; }
+         clearTotpInputs('zbmp-verify-inputs');
+         clearTotpInputs('zbmp-confirm-inputs');
+         return;
+@@ -404,7 +404,7 @@
+       setBody(''
+         + '<div class="zbmp-loading">'
+         + '  <div class="zbmp-spinner" style="border-top-color:#16a34a"></div>'
+-        + '  验证成功，正在进入品牌智能域...'
++        + '  验证成功，正在进入序境·品牌市场域...'
+         + '</div>');
+       stopTimer();
+       setTimeout(function () {
+@@ -531,3 +531,4 @@
+   }
+ 
+ })(typeof window !== 'undefined' ? window : this);
++
+diff --git a/templates/auth/zbmp_login.html b/templates/auth/zbmp_login.html
+index 8e3cb57..8924fed 100644
+--- a/templates/auth/zbmp_login.html
++++ b/templates/auth/zbmp_login.html
+@@ -1,4 +1,4 @@
+-<!DOCTYPE html>
++﻿<!DOCTYPE html>
+ <html lang="zh-CN">
+ <head>
+ <meta charset="UTF-8">
+@@ -124,7 +124,7 @@ body::before{
+   <div class="info-box">
+     <strong>如何获取动态码？</strong><br>
+     打开iPhone「设置」→「密码」→找到序境 LUMENIS条目，每30秒生成6位数字。
+-    未绑定？请先在<a href="/system/settings" style="color:var(--zbmp-primary)">设置→账户与安全→品牌智能访问保护</a>中扫码绑定。
++    未绑定？请先在<a href="/system/settings" style="color:var(--zbmp-primary)">设置→账户与安全→序境·品牌市场访问保护</a>中扫码绑定。
+   </div>
+   <button class="btn-primary" id="verifyBtn" disabled>验 证 进 入</button>
+ </div>
+@@ -245,3 +245,4 @@ inputs[0].focus();
+ </script>
+ </body>
+ </html>
++
+diff --git a/templates/zbmp/intelligence.html b/templates/zbmp/intelligence.html
+index d9f6dd3..6db63aa 100644
+--- a/templates/zbmp/intelligence.html
++++ b/templates/zbmp/intelligence.html
+@@ -1,4 +1,4 @@
+-{% extends "base.html" %}
++﻿{% extends "base.html" %}
+ {% block title %}Brand Intelligence · 序境 LUMENIS{% endblock %}
+ {% block page_title %}Brand Intelligence{% endblock %}
+ 
+@@ -13,7 +13,7 @@
+         <button class="lm-time-pill" data-range="90d">90D</button>
+       </div>
+     </div>
+-    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">品牌智能分析 · 跨品牌舆情洞察与趋势预测</p>
++    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">序境·品牌市场分析 · 跨品牌舆情洞察与趋势预测</p>
+   </div>
+ 
+   <!-- Six-State Panel: Loading / Empty / Error / Success / Degraded / Permission -->
+@@ -110,3 +110,4 @@ function showState(s) {
+ document.addEventListener('DOMContentLoaded', loadPanelData);
+ </script>
+ {% endblock %}
++
+diff --git a/templates/zbmp/launch.html b/templates/zbmp/launch.html
+index 135e8fb..fd6202d 100644
+--- a/templates/zbmp/launch.html
++++ b/templates/zbmp/launch.html
+@@ -1,9 +1,9 @@
+-<!DOCTYPE html>
++﻿<!DOCTYPE html>
+ <html lang="zh-CN">
+ <head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+-  <title>序境 · ZBMP 品牌智能</title>
++  <title>序境 · ZBMP 序境·品牌市场</title>
+   <!-- P0-R6: 字体本地化 -->
+   <link rel="stylesheet" href="/static/fonts/fonts.css">
+   <style>
+@@ -150,7 +150,7 @@
+ <body>
+   <div class="launch-container">
+     <div class="launch-logo">序</div>
+-    <h1 class="launch-product">序境 · 品牌智能</h1>
++    <h1 class="launch-product">序境 · 序境·品牌市场</h1>
+     <p class="launch-subtitle">ZBMP · Brand Intelligence & Content Marketing</p>
+ 
+     <div class="launch-features">
+@@ -207,3 +207,4 @@
+   </script>
+ </body>
+ </html>
++
+diff --git a/templates/zbmp/overview.html b/templates/zbmp/overview.html
+index 974c007..f98ab15 100644
+--- a/templates/zbmp/overview.html
++++ b/templates/zbmp/overview.html
+@@ -1,4 +1,4 @@
+-{% extends "base.html" %}
++﻿{% extends "base.html" %}
+ {% block title %}ZBMP Overview · 序境 LUMENIS{% endblock %}
+ {% block page_title %}Brand Overview{% endblock %}
+ 
+@@ -725,7 +725,7 @@ var ZBMPOverview = (function () {
+       if (riskData.high > 0 || riskData.medium > 0) {
+         ops.push({ badge: '风险管控', title: '存在 ' + riskData.high + ' 高风险 / ' + riskData.medium + ' 中风险',
+           desc: '监测到风险舆情，建议启动风险研判流程，评估传播路径。',
+-          evidence: { text: '查看风险中心', url: '/lumenis/zbmp/risk' } });
++          evidence: { text: '查看风险', url: '/lumenis/zbmp/risk' } });
+       }
+     }
+     // 4. Top brand from real /api/brand-industry/brands or overview
+@@ -896,3 +896,4 @@ var ZBMPOverview = (function () {
+ })();
+ </script>
+ {% endblock %}
++
