@@ -61,7 +61,7 @@
       if (!iframe || !placeholder) return;
       placeholder.style.display = 'none';
       iframe.style.display = 'block';
-      iframe.src = '/system/browser';
+      iframe.src = '/lumenis/system/browser';
       this._updateStatus(true);
     },
     reload: function() {

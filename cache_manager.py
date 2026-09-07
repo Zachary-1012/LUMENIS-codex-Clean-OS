@@ -228,9 +228,9 @@ def get_cached_data(query_type: str = "stats", limit: int = 50) -> Dict:
         elif query_type == "notes":
             rows = conn.execute("""
                 SELECT id, title, author, likes, collects, comments, sentiment, 
-                       risk_level, created_at, url 
+                       risk_level, collected_at, url 
                 FROM notes 
-                ORDER BY created_at DESC 
+                ORDER BY collected_at DESC 
                 LIMIT ?
             """, (limit,)).fetchall()
             result["data"] = [dict(row) for row in rows]
@@ -238,7 +238,7 @@ def get_cached_data(query_type: str = "stats", limit: int = 50) -> Dict:
         elif query_type == "events":
             rows = conn.execute("""
                 SELECT * FROM events 
-                ORDER BY created_at DESC 
+                ORDER BY first_seen DESC 
                 LIMIT ?
             """, (limit,)).fetchall()
             result["data"] = [dict(row) for row in rows]

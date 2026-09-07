@@ -529,6 +529,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="nav-item" data-panel="backup" onclick="switchPanel('backup')">
         <span class="nav-icon"><span data-icon="database" data-icon-size="16"></span></span>通知/备份/帮助
               <div class="nav-item" data-panel="zbmp-domain" onclick="switchPanel('zbmp-domain')">
+        <div class="nav-item" data-panel="modules" onclick="switchPanel('modules')">
+          <span class="nav-icon"><span data-icon="grid" data-icon-size="16"></span></span>模组管理
+          <span class="nav-badge">27</span>
+        </div>
           <span class="nav-icon">🔓</span><span>ZBMP 品牌智能</span>
           <span class="nav-badge" id="zbmp-status-badge">未开启</span>
         </div>
@@ -1416,5 +1420,238 @@ document.addEventListener('DOMContentLoaded',function(){
   if(granted){ if(st)st.textContent='已开启'; if(badge){badge.textContent='已开启';badge.style.background='#d1fae5';badge.style.color='#059669';} }
 });
 </script>
+
+<!-- ========== 模组管理面板 ========== -->
+<div class="settings-panel" id="panel-modules" style="display:none">
+  <div class="panel-header">
+    <h2 class="panel-title">模组管理</h2>
+    <p class="panel-desc">启用/禁用/排序功能模组，功能本身不删除，仅控制可见性和顺序</p>
+  </div>
+
+  <div class="module-toolbar">
+    <div class="module-filter">
+      <button class="zbc-btn is-active" data-domain-filter="all" onclick="ModuleManager.filter('all')">全部</button>
+      <button class="zbc-btn" data-domain-filter="cth" onclick="ModuleManager.filter('cth')">CTH</button>
+      <button class="zbc-btn" data-domain-filter="zbmp" onclick="ModuleManager.filter('zbmp')">ZBMP</button>
+      <button class="zbc-btn" data-domain-filter="system" onclick="ModuleManager.filter('system')">System</button>
+    </div>
+    <div class="module-actions">
+      <button class="zbc-btn" onclick="ModuleManager.reset()">↺ 恢复默认</button>
+      <span class="module-stats" id="module-stats">加载中...</span>
+    </div>
+  </div>
+
+  <div class="module-list" id="module-list">
+    <div class="skeleton" style="height:60px;margin-bottom:10px"></div>
+    <div class="skeleton" style="height:60px;margin-bottom:10px"></div>
+    <div class="skeleton" style="height:60px"></div>
+  </div>
+
+  <div class="module-footer">
+    <small>模组配置保存在本地，功能代码不会被删除。禁用后仅在导航和页面中隐藏。</small>
+  </div>
+</div>
+
+<style>
+.module-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+.module-filter { display:flex; gap:6px; }
+.module-filter .zbc-btn { padding:6px 14px; font-size:12px; }
+.module-filter .zbc-btn.is-active { background:var(--zbc-primary-gradient); color:#fff; border:none; }
+.module-actions { display:flex; align-items:center; gap:12px; }
+.module-stats { font-size:12px; color:var(--zbc-text-tertiary); }
+.module-list { display:flex; flex-direction:column; gap:8px; }
+.module-item {
+  display:flex; align-items:center; gap:14px;
+  padding:14px 16px;
+  background:var(--zbc-glass);
+  backdrop-filter:var(--zbc-blur);
+  border:1px solid var(--zbc-border);
+  border-radius:var(--zbc-radius-md);
+  transition:all 0.2s var(--zbc-ease);
+  cursor:grab;
+}
+.module-item:hover { background:var(--zbc-glass-strong); box-shadow:var(--zbc-shadow-sm); transform:translateX(2px); }
+.module-item.is-disabled { opacity:0.5; }
+.module-item.dragging { opacity:0.4; cursor:grabbing; }
+.module-drag { color:var(--zbc-text-tertiary); font-size:16px; cursor:grab; flex-shrink:0; }
+.module-icon { font-size:22px; flex-shrink:0; width:32px; text-align:center; }
+.module-info { flex:1; min-width:0; }
+.module-name { font-size:14px; font-weight:600; color:var(--zbc-text-primary); }
+.module-desc { font-size:12px; color:var(--zbc-text-tertiary); margin-top:2px; }
+.module-meta { display:flex; gap:8px; margin-top:4px; }
+.module-domain-tag {
+  font-size:10px; padding:2px 8px; border-radius:var(--zbc-radius-pill);
+  background:var(--zbc-info-light); color:var(--zbc-info); font-weight:600;
+}
+.module-domain-tag.cth { background:var(--zbc-primary-light); color:var(--zbc-primary); }
+.module-domain-tag.zbmp { background:var(--zbc-accent-light); color:var(--zbc-accent); }
+.module-domain-tag.system { background:var(--zbc-warning-light); color:var(--zbc-warning); }
+.module-toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
+.module-toggle input { opacity:0; width:0; height:0; }
+.module-toggle .slider {
+  position:absolute; inset:0; background:rgba(0,0,0,0.15);
+  border-radius:var(--zbc-radius-pill); cursor:pointer; transition:0.3s;
+}
+.module-toggle .slider:before {
+  content:''; position:absolute; width:18px; height:18px; left:3px; top:3px;
+  background:#fff; border-radius:50%; transition:0.3s; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+}
+.module-toggle input:checked + .slider { background:var(--zbc-primary); }
+.module-toggle input:checked + .slider:before { transform:translateX(20px); }
+.module-order { display:flex; flex-direction:column; gap:2px; flex-shrink:0; }
+.module-order button {
+  width:22px; height:18px; border:none; background:transparent; cursor:pointer;
+  font-size:10px; color:var(--zbc-text-tertiary); border-radius:4px;
+}
+.module-order button:hover { background:rgba(0,0,0,0.06); color:var(--zbc-text-primary); }
+.module-footer { margin-top:16px; padding-top:12px; border-top:1px solid var(--zbc-border-subtle); }
+</style>
+
+<script>
+// 模组管理器
+window.ModuleManager = {
+  modules: [],
+  currentFilter: 'all',
+
+  init: function() {
+    this.load();
+  },
+
+  load: function() {
+    LUMENIS.fetch('/api/modules').then(function(res) {
+      if (res.ok && res.modules) {
+        ModuleManager.modules = res.modules;
+        ModuleManager.render();
+      }
+    }).catch(function(e) {
+      document.getElementById('module-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--zbc-danger)">加载失败: ' + e + '</div>';
+    });
+  },
+
+  filter: function(domain) {
+    this.currentFilter = domain;
+    document.querySelectorAll('.module-filter .zbc-btn').forEach(function(b) {
+      b.classList.toggle('is-active', b.dataset.domainFilter === domain);
+    });
+    this.render();
+  },
+
+  render: function() {
+    var list = document.getElementById('module-list');
+    var filtered = this.currentFilter === 'all'
+      ? this.modules
+      : this.modules.filter(function(m) { return m.domain === ModuleManager.currentFilter; });
+
+    var enabled = filtered.filter(function(m) { return m.enabled; }).length;
+    document.getElementById('module-stats').textContent =
+      filtered.length + ' 个模组 · ' + enabled + ' 已启用';
+
+    list.innerHTML = filtered.map(function(m, i) {
+      return '<div class="module-item ' + (m.enabled ? '' : 'is-disabled') + '" ' +
+        'draggable="true" data-module-id="' + m.module_id + '" data-index="' + i + '">' +
+        '<span class="module-drag">⋮⋮</span>' +
+        '<span class="module-icon">' + m.icon + '</span>' +
+        '<div class="module-info">' +
+          '<div class="module-name">' + m.name + '</div>' +
+          '<div class="module-desc">' + (m.description || '') + '</div>' +
+          '<div class="module-meta"><span class="module-domain-tag ' + m.domain + '">' + m.domain.toUpperCase() + '</span></div>' +
+        '</div>' +
+        '<div class="module-order">' +
+          '<button onclick="ModuleManager.moveUp(\'' + m.module_id + '\')" title="上移">▲</button>' +
+          '<button onclick="ModuleManager.moveDown(\'' + m.module_id + '\')" title="下移">▼</button>' +
+        '</div>' +
+        '<label class="module-toggle">' +
+          '<input type="checkbox" ' + (m.enabled ? 'checked' : '') + ' onchange="ModuleManager.toggle(\'' + m.module_id + '\', this.checked)">' +
+          '<span class="slider"></span>' +
+        '</label>' +
+      '</div>';
+    }).join('');
+
+    this._bindDrag();
+  },
+
+  toggle: function(moduleId, enabled) {
+    LUMENIS.fetch('/api/modules/' + moduleId + '/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ enabled: enabled })
+    }).then(function() {
+      ModuleManager.load();
+    }).catch(function(e) { alert('操作失败: ' + e); });
+  },
+
+  moveUp: function(moduleId) {
+    var idx = this.modules.findIndex(function(m) { return m.module_id === moduleId; });
+    if (idx > 0) {
+      var tmp = this.modules[idx];
+      this.modules[idx] = this.modules[idx-1];
+      this.modules[idx-1] = tmp;
+      this._saveOrder();
+    }
+  },
+
+  moveDown: function(moduleId) {
+    var idx = this.modules.findIndex(function(m) { return m.module_id === moduleId; });
+    if (idx < this.modules.length - 1) {
+      var tmp = this.modules[idx];
+      this.modules[idx] = this.modules[idx+1];
+      this.modules[idx+1] = tmp;
+      this._saveOrder();
+    }
+  },
+
+  _saveOrder: function() {
+    var ids = this.modules.map(function(m) { return m.module_id; });
+    LUMENIS.fetch('/api/modules/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ order: ids })
+    }).then(function() { ModuleManager.render(); }).catch(function(){});
+  },
+
+  reset: function() {
+    if (confirm('确定恢复默认模组配置？')) {
+      LUMENIS.fetch('/api/modules/reset', { method: 'POST' }).then(function() {
+        ModuleManager.load();
+      });
+    }
+  },
+
+  _bindDrag: function() {
+    var items = document.querySelectorAll('.module-item');
+    var dragSrc = null;
+    items.forEach(function(item) {
+      item.addEventListener('dragstart', function(e) {
+        dragSrc = this;
+        this.classList.add('dragging');
+      });
+      item.addEventListener('dragend', function() {
+        this.classList.remove('dragging');
+      });
+      item.addEventListener('dragover', function(e) { e.preventDefault(); });
+      item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (dragSrc && dragSrc !== this) {
+          var fromId = dragSrc.dataset.moduleId;
+          var toId = this.dataset.moduleId;
+          var fromIdx = ModuleManager.modules.findIndex(function(m){return m.module_id===fromId;});
+          var toIdx = ModuleManager.modules.findIndex(function(m){return m.module_id===toId;});
+          var moved = ModuleManager.modules.splice(fromIdx, 1)[0];
+          ModuleManager.modules.splice(toIdx, 0, moved);
+          ModuleManager._saveOrder();
+        }
+      });
+    });
+  }
+};
+
+// 切换到模组面板时初始化
+var _origSwitchPanel = window.switchPanel;
+window.switchPanel = function(name) {
+  _origSwitchPanel(name);
+  if (name === 'modules') {
+    setTimeout(function() { ModuleManager.init(); }, 100);
+  }
+};
+</script>
+
 </body>
 </html>
