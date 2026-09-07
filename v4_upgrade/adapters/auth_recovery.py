@@ -359,6 +359,39 @@ def _refresh_shot(platform: str, cfg: dict):
             pass
 
 
+def _bridge_to_recovery_center(platform: str, source_state: str, detail: str, kind: str) -> None:
+    """Phase4: 桥接 v4 内存态恢复会话 -> auth_recovery_center（DB表 auth_recovery_tasks）。
+    前端全局 Modal 轮询 /api/auth-recovery/summary 读的是 center，不桥接则弹窗永远拿不到任务。
+    最小增量：detect_and_create_task 幂等（同 platform+issue_type 已有 pending 则复用）。
+    任何异常吞掉并 log，绝不阻塞 v4 主恢复链路。
+    """
+    try:
+        from auth_recovery_center import recovery_center, AuthIssueType
+        state_upper = (source_state or "").upper()
+        if state_upper in ("AUTH_REQUIRED", "AUTH_FAILED", "SESSION_EXPIRED"):
+            issue_type = AuthIssueType.COOKIE_EXPIRED.value
+            title = "小红书登录失效 - 需要扫码恢复"
+        elif state_upper in ("CAPTCHA", "NEED_VERIFY"):
+            issue_type = AuthIssueType.CAPTCHA.value
+            title = "小红书人机验证 - 需要人工通过"
+        elif state_upper == "BLOCKED":
+            issue_type = AuthIssueType.IP_RISK.value
+            title = "小红书IP风控熔断 - 冷却中"
+        else:
+            issue_type = AuthIssueType.SESSION_INVALID.value
+            title = "小红书采集认证异常 - 需要恢复"
+        desc = detail or ("采集链路检测到 " + (source_state or "认证异常") + ", kind=" + kind + ", 请在系统内完成验证后恢复。")
+        recovery_url = ""
+        cfg = RECOVERY_PROFILES.get(platform, {})
+        if cfg.get("login_url"):
+            recovery_url = cfg["login_url"]
+        recovery_center.detect_and_create_task(
+            platform=platform, issue_type=issue_type, title=title,
+            description=desc, recovery_url=recovery_url,
+        )
+    except Exception as _bridge_err:
+        print("[AuthRecovery][Bridge] 桥接 auth_recovery_center 失败(不阻塞主链路):", _bridge_err)
+
 def request_recovery(platform: str, source_state: str = "", detail: str = "") -> dict:
     """发起恢复（幂等）。BLOCKED 类不开浏览器、不伪装成扫码可解。"""
     cfg = RECOVERY_PROFILES.get(platform)
@@ -367,6 +400,7 @@ def request_recovery(platform: str, source_state: str = "", detail: str = "") ->
     kind = classify_kind(platform, source_state, detail)
     existing = _get(platform)
     if existing and existing.get("state") in (REQUIRED, QR_DISPLAYED, WAITING_SCAN, SCANNED, CONFIRMING):
+        _bridge_to_recovery_center(platform, source_state, detail, kind)
         return {"success": True, "session": existing, "reuse": True, "kind": kind}
 
     base = {"platform": platform, "display": cfg["display"], "kind": kind,
@@ -375,6 +409,8 @@ def request_recovery(platform: str, source_state: str = "", detail: str = "") ->
             "cancel": False, "steps": {"open": False, "scan": False, "done": False}}
     with _lock:
         _sessions[platform] = dict(base)
+
+    _bridge_to_recovery_center(platform, source_state, detail, kind)
 
     if kind == KIND_BLOCKED:
         # C类：只冷却，不开登录页、不轮询
