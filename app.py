@@ -2892,7 +2892,7 @@ def api_system_health():
 
 # ===== ZBC Lifecycle Contract V1.0: Runtime Worker API =====
 # ========== Security API（P0修复：前端调用/api/security/scan 404） ==========
-@app.route('/api/security/scan', methods=['GET', 'POST'])
+@app.route('/api/security/scan', methods=['GET'])
 def api_security_scan():
     """安全扫描API。调用security_scanner，返回扫描结果摘要。"""
     try:

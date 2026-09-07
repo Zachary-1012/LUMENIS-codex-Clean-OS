@@ -272,6 +272,62 @@ def pytest_sessionfinish(session, exitstatus):
     if reporter is not None:
         reporter.write_line(line)
 
+# ==== 出网守卫（阶段1测试隔离）：默认禁止真实公网连接 ====
+# 漏 mock 的云端 AI/外部请求在 TCP connect 阶段立即失败（->生产降级 rule 兜底），
+# 不在 ssl.read 上长等待(90s*3)冻结整个测试进程；放行回环/内网（本地 8201 online、CDP 9222）。
+# 测试在 urllib/requests 层 mock 时根本到不了 socket，故不影响任何上层 mock。
+# 确需真实公网的用例设环境变量 ZBC_ALLOW_NETWORK=1 显式放行。
+import socket as _socket_guard
+import ipaddress as _ipaddress_guard
+
+def _peer_is_public(host):
+    if host is None:
+        return False
+    h = str(host).strip('[]').lower()
+    if h in ('localhost', '0.0.0.0', '::', ''):
+        return False
+    try:
+        ip = _ipaddress_guard.ip_address(h)
+        return not (ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_unspecified)
+    except ValueError:
+        return True  # 域名直连按公网处理（create_connection 正常会先解析成 IP）
+
+@pytest.fixture(autouse=True)
+def _block_real_outbound(monkeypatch):
+    if os.environ.get('ZBC_ALLOW_NETWORK') == '1':
+        yield
+        return
+    _real_create_connection = _socket_guard.create_connection
+    _RealSocket = _socket_guard.socket
+
+    def _guarded_create_connection(address, *a, **k):
+        host = address[0] if isinstance(address, tuple) else address
+        if _peer_is_public(host):
+            raise ConnectionRefusedError(
+                '[test-offline] 真实公网连接被测试守卫阻断，请 mock 网络层: %s' % (host,))
+        return _real_create_connection(address, *a, **k)
+
+    class _GuardedSocket(_RealSocket):
+        def connect(self, address):
+            host = address[0] if isinstance(address, tuple) else address
+            if _peer_is_public(host):
+                raise ConnectionRefusedError(
+                    '[test-offline] 真实公网连接被测试守卫阻断，请 mock: %s' % (host,))
+            return _RealSocket.connect(self, address)
+
+        def connect_ex(self, address):
+            host = address[0] if isinstance(address, tuple) else address
+            if _peer_is_public(host):
+                raise ConnectionRefusedError(
+                    '[test-offline] 真实公网连接被测试守卫阻断，请 mock: %s' % (host,))
+            return _RealSocket.connect_ex(self, address)
+
+    monkeypatch.setattr(_socket_guard, 'create_connection', _guarded_create_connection)
+    monkeypatch.setattr(_socket_guard, 'socket', _GuardedSocket)
+    yield
+
+# ==== 出网守卫结束 ====
+
 # ==== 线程泄漏探针结束 ====
 
 def pytest_ignore_collect(collection_path, config):

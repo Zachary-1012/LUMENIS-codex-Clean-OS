@@ -74,6 +74,15 @@ class WeiboAdapter(BaseAdapter):
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
         try:
+            # 注入 manager 时优先采信其登录态：明确未登录则前置短路，不发任何请求
+            # （账号保活/不暴力采集；也使全 mock 单测不触网）
+            if self._manager is not None:
+                try:
+                    _login_state = self._manager.check_login_status()
+                except Exception:
+                    _login_state = None
+                if isinstance(_login_state, dict) and _login_state.get('logged_in') is False:
+                    return AdapterResult(success=False, error='微博登录失效：当前账号未登录，请先登录或更新 cookie')
             # 登录态前置检查（经 cookie_vault，不打印 cookie 内容）
             if not self._cookie_ok():
                 return AdapterResult(
