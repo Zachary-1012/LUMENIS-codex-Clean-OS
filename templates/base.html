@@ -188,6 +188,38 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  <!-- 拖拽分隔条 -->
+  <div class="zbc-resizer" id="zbc-resizer" title="拖拽调整宽度"></div>
+
+  <!-- 右侧浏览器面板 -->
+  <aside class="zbc-browser-panel" id="zbc-browser-panel" aria-label="AI浏览器">
+    <div class="zbc-browser-panel__header">
+      <div class="zbc-browser-panel__title">
+        <span class="status-dot active" id="browser-panel-dot"></span>
+        <span>AI 浏览器</span>
+      </div>
+      <div class="zbc-browser-panel__actions">
+        <button class="zbc-browser-panel__btn" onclick="BrowserPanel.reload()" title="刷新">↻</button>
+        <button class="zbc-browser-panel__btn" onclick="BrowserPanel.toggleFullscreen()" title="全屏">⛶</button>
+        <button class="zbc-browser-panel__btn" onclick="BrowserPanel.collapse()" title="折叠">—</button>
+      </div>
+    </div>
+    <div class="zbc-browser-panel__body" id="browser-panel-body">
+      <div class="zbc-browser-panel__placeholder" id="browser-panel-placeholder">
+        <div class="zbc-browser-panel__placeholder-icon">🌐</div>
+        <div class="zbc-browser-panel__placeholder-text">
+          AI 浏览器就绪<br>
+          <small>点击下方按钮启动内置浏览器</small>
+        </div>
+        <button class="zbc-btn zbc-btn--primary" onclick="BrowserPanel.launch()" style="margin-top:8px">启动浏览器</button>
+      </div>
+      <iframe class="zbc-browser-panel__iframe" id="browser-panel-iframe" style="display:none" src="about:blank"></iframe>
+    </div>
+  </aside>
+
+  <!-- 浏览器面板浮动启动按钮（折叠时显示） -->
+  <button class="zbc-browser-launcher" id="zbc-browser-launcher" onclick="BrowserPanel.expand()" style="display:none;position:fixed;right:16px;bottom:80px;width:48px;height:48px;border-radius:50%;background:var(--zbc-primary-gradient);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:var(--zbc-shadow-glow-green);z-index:999;transition:transform .2s" title="展开AI浏览器">🌐</button>
 </div>
 
 <!-- Mobile Bottom Tab Bar -->
@@ -215,6 +247,7 @@
 <script src="{{ url_for('static', filename='js/zbc-trend-line.js') }}"></script>
 <script src="{{ url_for('static', filename='js/keyboard-shortcuts.js') }}"></script>
 <script src="{{ url_for('static', filename='js/badge-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/browser-panel.js') }}"></script>
 <!-- ai-assistant.js FAB浮动面板已废弃（V2.1 GPT风格主工作台替代），代码保留不删除 -->
 <!-- <script src="{{ url_for('static', filename='js/ai-assistant.js') }}"></script> -->
 <script src="{{ url_for('static', filename='js/feature-modules.js') }}"></script>

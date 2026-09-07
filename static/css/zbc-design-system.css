@@ -489,3 +489,227 @@ nav.side-nav {
   .kpi-value { font-size: 22px; }
   .modal, .zbc-modal { border-radius: var(--zbc-radius-lg); margin: 12px; }
 }
+
+
+/* ============================================================
+   三栏布局：Sidebar + Main + Browser Panel
+   横向拖拽延展
+   ============================================================ */
+.zbc-app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.zbc-sidebar {
+  flex-shrink: 0;
+  width: 240px;
+  transition: width 0.3s var(--zbc-ease);
+}
+
+.zbc-sidebar.is-collapsed {
+  width: 64px;
+}
+
+.zbc-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.zbc-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 拖拽分隔条 */
+.zbc-resizer {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 100;
+  transition: background 0.2s;
+}
+
+.zbc-resizer:hover,
+.zbc-resizer.is-dragging {
+  background: var(--zbc-primary);
+  opacity: 0.6;
+}
+
+.zbc-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 40px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.1);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.zbc-resizer:hover::after {
+  opacity: 1;
+}
+
+/* 右侧浏览器面板 */
+.zbc-browser-panel {
+  flex-shrink: 0;
+  width: 420px;
+  display: flex;
+  flex-direction: column;
+  background: var(--zbc-glass);
+  backdrop-filter: var(--zbc-blur);
+  -webkit-backdrop-filter: var(--zbc-blur);
+  border-left: 1px solid var(--zbc-border);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.06);
+  transition: width 0.3s var(--zbc-ease), opacity 0.3s;
+  overflow: hidden;
+}
+
+.zbc-browser-panel.is-collapsed {
+  width: 0;
+  opacity: 0;
+  border-left: none;
+  box-shadow: none;
+}
+
+.zbc-browser-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.5);
+  border-bottom: 1px solid var(--zbc-border-subtle);
+  flex-shrink: 0;
+}
+
+.zbc-browser-panel__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--zbc-text-secondary);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zbc-browser-panel__title .status-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.zbc-browser-panel__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.zbc-browser-panel__btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--zbc-text-tertiary);
+  transition: all 0.15s;
+}
+
+.zbc-browser-panel__btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: var(--zbc-text-primary);
+}
+
+.zbc-browser-panel__body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+}
+
+.zbc-browser-panel__iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.zbc-browser-panel__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--zbc-text-tertiary);
+  text-align: center;
+  padding: 24px;
+}
+
+.zbc-browser-panel__placeholder-icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.zbc-browser-panel__placeholder-text {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 浏览器面板URL栏 */
+.zbc-browser-urlbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 8px;
+  flex: 1;
+}
+
+.zbc-browser-urlbar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--zbc-text-secondary);
+  outline: none;
+  font-family: var(--zbc-font);
+}
+
+/* 拖拽时禁止文本选择 */
+body.is-resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+
+body.is-resizing * {
+  cursor: col-resize !important;
+}
+
+/* 响应式：窄屏隐藏浏览器面板 */
+@media (max-width: 1200px) {
+  .zbc-browser-panel {
+    width: 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .zbc-browser-panel {
+    display: none;
+  }
+  .zbc-resizer {
+    display: none;
+  }
+}
