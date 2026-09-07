@@ -10,7 +10,7 @@
   <option value="monthly">月报</option>
   <option value="event">事件专报</option>
   <option value="risk">风险专报</option>
-  <option value="intelligence">太古汇情报报告</option>
+  <option value="intelligence">商业运营报告</option>
 </select>
 <button class="zbc-btn zbc-btn--primary" onclick="openGenerateWizard()"><span>+</span> 生成报告</button>
 <button class="zbc-btn" onclick="loadReportsAll()"><span>↻</span> 刷新</button>
@@ -107,7 +107,7 @@
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--l-border,#E8E8E8);border-radius:8px;cursor:pointer;" onclick="selectReportType('intelligence')">
             <input type="radio" name="report-type" value="intelligence" style="accent-color:#2563EB;">
-            <div><div style="font-size:13px;font-weight:600;">太古汇情报报告</div><div style="font-size:10px;color:var(--l-text-secondary,#6B7280);">综合情报分析</div></div>
+            <div><div style="font-size:13px;font-weight:600;">商业运营报告</div><div style="font-size:10px;color:var(--l-text-secondary,#6B7280);">综合情报分析</div></div>
           </label>
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:20px;">
@@ -181,7 +181,7 @@
 <script>
 (function() {
   'use strict';
-  var REPORT_TYPES={'daily':{label:'日报',api:'/daily',icon:'📅'},'weekly':{label:'周报',api:'/weekly/events',icon:'📆'},'monthly':{label:'月报',api:'/reports',icon:'🗓'},'event':{label:'事件专报',api:'/special-report/generate',icon:'⚡'},'risk':{label:'风险专报',api:'/special-report/generate',icon:'⚠'},'intelligence':{label:'太古汇情报报告',api:'/special-report/generate',icon:'🔮'}};
+  var REPORT_TYPES={'daily':{label:'日报',api:'/daily',icon:'📅'},'weekly':{label:'周报',api:'/weekly/events',icon:'📆'},'monthly':{label:'月报',api:'/reports',icon:'🗓'},'event':{label:'事件专报',api:'/special-report/generate',icon:'⚡'},'risk':{label:'风险专报',api:'/special-report/generate',icon:'⚠'},'intelligence':{label:'商业运营报告',api:'/special-report/generate',icon:'🔮'}};
   var wizardState={step:1,type:null,range:'7d',brand:'',format:'pdf'};
   var degradedApis=[];
 

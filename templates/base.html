@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
   <meta charset="UTF-8">
@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/adaptive-layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/adaptive-components.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-design-system.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/zbc-ui-enhancement.css') }}">
   {% block head %}{% endblock %}
   <style>
   /* Language Switcher */
@@ -137,7 +138,7 @@
           <span class="zbc-nav-item__icon" data-icon="lock" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.security">Security</span>
         </a>
         <a class="zbc-nav-item {% if active_nav=='sys_settings' %}is-active{% endif %}" href="/system/settings">
-          <span class="zbc-nav-item__icon" data-icon="sliders" data-icon-size="18"></span><span class="zbc-nav-item__label">设置中心</span>
+          <span class="zbc-nav-item__icon" data-icon="sliders" data-icon-size="18"></span><span class="zbc-nav-item__label">设置</span>
         </a>
       </div>
     </nav>
@@ -251,6 +252,7 @@
 <script src="{{ url_for('static', filename='js/badge-manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/browser-panel.js') }}"></script>
 <script src="{{ url_for('static', filename='js/zbc-motion.js') }}"></script>
+<script src="{{ url_for('static', filename='js/zbc-ui-enhancement.js') }}"></script>
 <!-- ai-assistant.js FAB浮动面板已废弃（V2.1 GPT风格主工作台替代），代码保留不删除 -->
 <!-- <script src="{{ url_for('static', filename='js/ai-assistant.js') }}"></script> -->
 <script src="{{ url_for('static', filename='js/feature-modules.js') }}"></script>
@@ -896,3 +898,4 @@ const AuthRecoveryModal = (function() {
 
 </body>
 </html>
+

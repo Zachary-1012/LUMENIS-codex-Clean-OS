@@ -1,0 +1,336 @@
+/* ============================================================
+   LUMENIS UI Enhancement v2.1
+   交互细节 + 数据展示 + 性能 + 移动端 综合增强
+   追加到 zbc-design-system.css 之后
+   ============================================================ */
+
+/* ---------- 1. 页面转场动画 ---------- */
+.zbc-main-content {
+  animation: zbc-page-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes zbc-page-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 内容区块交错入场 */
+.zbc-section {
+  animation: zbc-section-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.zbc-section:nth-child(1) { animation-delay: 0.05s; }
+.zbc-section:nth-child(2) { animation-delay: 0.1s; }
+.zbc-section:nth-child(3) { animation-delay: 0.15s; }
+.zbc-section:nth-child(4) { animation-delay: 0.2s; }
+.zbc-section:nth-child(5) { animation-delay: 0.25s; }
+@keyframes zbc-section-fade {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- 2. Hover 效果增强 ---------- */
+/* 卡片悬浮：上移+阴影加深 */
+.zbc-card:hover, .card:hover, .stat-card:hover, .kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+/* 表格行 hover */
+.zbc-table tbody tr:hover,
+table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(0, 212, 170, 0.06), transparent);
+  transition: background 0.2s ease;
+}
+
+/* 导航项 hover */
+.zbc-nav-item:hover {
+  background: rgba(0, 212, 170, 0.08);
+  transform: translateX(3px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.zbc-nav-item.is-active {
+  background: linear-gradient(90deg, rgba(0, 212, 170, 0.15), rgba(0, 212, 170, 0.05));
+  border-left: 3px solid var(--zbc-accent, #00D4AA);
+}
+
+/* 按钮点击反馈 */
+.zbc-btn:active, button:active, .btn:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* 标签 hover */
+.zbc-badge:hover, .badge:hover, .tag:hover {
+  transform: scale(1.05);
+  transition: transform 0.15s ease;
+}
+
+/* ---------- 3. 加载状态统一 ---------- */
+/* 统一 spinner */
+.zbc-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--zbc-text-secondary, #64748b);
+  font-size: 13px;
+}
+.zbc-loading::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 212, 170, 0.2);
+  border-top-color: var(--zbc-accent, #00D4AA);
+  border-radius: 50%;
+  animation: zbc-spin 0.8s linear infinite;
+}
+@keyframes zbc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 骨架屏增强 */
+.zbc-skeleton, .skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: zbc-shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+@keyframes zbc-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 空状态统一 */
+.zbc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--zbc-text-tertiary, #94a3b8);
+  text-align: center;
+}
+.zbc-empty__icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.zbc-empty__text {
+  font-size: 14px;
+  color: var(--zbc-text-secondary, #64748b);
+}
+
+/* ---------- 4. KPI 卡片样式增强 ---------- */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--zbc-surface, #fff), var(--zbc-surface-hover, #f8fafc));
+  border: 1px solid var(--zbc-border, #e2e8f0);
+  border-radius: var(--zbc-radius-lg, 16px);
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--zbc-accent, #00D4AA), var(--zbc-accent-light, #5EEAD4));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.kpi-card:hover::before { opacity: 1; }
+.kpi-card__label {
+  font-size: 12px;
+  color: var(--zbc-text-secondary, #64748b);
+  font-weight: 500;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kpi-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--zbc-text-primary, #1e293b);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-card__delta {
+  font-size: 12px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.kpi-card__delta--up { color: #10B981; }
+.kpi-card__delta--down { color: #EF4444; }
+.kpi-card__delta--neutral { color: #64748b; }
+
+/* ---------- 5. 表格列宽优化 ---------- */
+.zbc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.zbc-table th {
+  background: var(--zbc-surface-hover, #f8fafc);
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--zbc-text-secondary, #64748b);
+  font-size: 12px;
+  border-bottom: 2px solid var(--zbc-border, #e2e8f0);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.zbc-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--zbc-border-light, #f1f5f9);
+  color: var(--zbc-text-primary, #1e293b);
+  vertical-align: middle;
+}
+/* 数字列右对齐 */
+.zbc-table td.num, .zbc-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* 长文本截断 */
+.zbc-table .truncate {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 6. 图表配色统一 ---------- */
+:root {
+  --zbc-chart-1: #00D4AA;
+  --zbc-chart-2: #3B82F6;
+  --zbc-chart-3: #F59E0B;
+  --zbc-chart-4: #8B5CF6;
+  --zbc-chart-5: #EC4899;
+  --zbc-chart-6: #10B981;
+  --zbc-chart-7: #F97316;
+  --zbc-chart-8: #06B6D4;
+  --zbc-chart-positive: #10B981;
+  --zbc-chart-neutral: #94A3B8;
+  --zbc-chart-negative: #EF4444;
+  --zbc-chart-risk-high: #EF4444;
+  --zbc-chart-risk-medium: #F59E0B;
+  --zbc-chart-risk-low: #10B981;
+}
+
+/* ---------- 7. 性能：懒加载占位 ---------- */
+.zbc-lazy {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.zbc-lazy.is-loaded {
+  opacity: 1;
+}
+
+/* ---------- 8. 移动端触控优化 ---------- */
+@media (max-width: 768px) {
+  .zbc-card, .card, .stat-card, .kpi-card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+  .kpi-card__value { font-size: 22px; }
+  .zbc-table { font-size: 12px; }
+  .zbc-table th, .zbc-table td { padding: 8px; }
+  .zbc-nav-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .zbc-btn, button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* 移动端表格横向滚动 */
+  .zbc-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ---------- 9. 减少动效偏好 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- 10. 模态框层级统一 ---------- */
+.zbc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: zbc-fade-in 0.2s ease;
+}
+.zbc-modal {
+  background: var(--zbc-surface, #fff);
+  border-radius: var(--zbc-radius-xl, 20px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow: auto;
+  animation: zbc-modal-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes zbc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes zbc-modal-enter {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---------- 11. 通知/Toast 统一 ---------- */
+.zbc-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--zbc-surface, #fff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-left: 4px solid var(--zbc-accent, #00D4AA);
+  z-index: 2000;
+  animation: zbc-toast-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 13px;
+  max-width: 360px;
+}
+.zbc-toast--success { border-left-color: #10B981; }
+.zbc-toast--error { border-left-color: #EF4444; }
+.zbc-toast--warning { border-left-color: #F59E0B; }
+@keyframes zbc-toast-enter {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ---------- 12. 进度条统一 ---------- */
+.zbc-progress {
+  width: 100%;
+  height: 6px;
+  background: var(--zbc-border-light, #f1f5f9);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.zbc-progress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--zbc-accent, #00D4AA), var(--zbc-accent-light, #5EEAD4));
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
