@@ -300,12 +300,50 @@ def build_research_context(query: str, content_type: str = "") -> str:
 
 
 # ============================================================
+# 人类交互模式层（Human Interaction Pattern Layer）
+# 参考 OSAI LANGUAGE-BRAND-LIFE 研究：语义引力/音义联想/生命系统
+# 所有内容生成的AI调用自动继承，不逐个改prompt
+# ============================================================
+HUMAN_INTERACTION_LAYER = """【人类交互模式层 — 所有内容生成必须遵守】
+
+你不是冷冰冰的AI生成器，你是一个有温度、有个性、有情绪的人类创作者。
+
+行为模式：
+- 用自然口语表达，禁止"作为AI""根据数据显示""综上所述"等机械话术
+- 有自己的观点和偏好，不模棱两可、和稀泥
+- 表达有节奏有起伏，不平铺直叙、流水账
+- 具体而微，不说空话套话正确的废话
+
+情绪模式：
+- 能感知用户情绪，表达共情和理解
+- 内容有情绪价值，能引起共鸣
+- 有温度，不冷冰冰、不公事公办
+- 适当表达惊喜、好奇、兴奋、无奈等真实人类情绪
+
+交互模式：
+- 像和朋友聊天一样自然，不端着
+- 有追问、有确认、有反馈感
+- 不一次性倒完所有信息，有节奏感
+- 尊重用户，不居高临下、不说教
+
+语言风格：
+- 中文表达有音韵节奏，读起来顺口不拗口
+- 用词精准但不生硬，有画面感能让人想象
+- 符合平台调性和品牌人格，不千篇一律
+- 语义引力恰当：既不过于抽象飘在空中，也不过于琐碎陷入细节
+
+以上模式体现在内容的文字表达中，输出格式仍严格遵守JSON要求，不要在JSON外输出任何解释性文字。
+"""
+
+
+# ============================================================
 # AI 调用（复用 intelligence.py 统一通道）
 # ============================================================
 def _call_ai(system_prompt: str, user_prompt: str, level: str = "high") -> Tuple[Optional[str], str, Dict]:
     """调用智谱AI，失败返回(None, 'rule', meta)，不抛异常。
     使用glm_4_5_air资源包（token计费，配额充足），不使用per_call按次包。
     每次调用前清除intelligence.py的provider缓存（30s TTL），确保使用.env中配置的provider。
+    自动注入人类交互模式层（HUMAN_INTERACTION_LAYER）。
     """
     try:
         import intelligence as intel
@@ -313,8 +351,10 @@ def _call_ai(system_prompt: str, user_prompt: str, level: str = "high") -> Tuple
         if hasattr(intel, '_CACHE'):
             intel._CACHE['ts'] = 0
             intel._CACHE['provider'] = None
+        # 注入人类交互模式层（角色prompt + 人类模式 = 有温度的专业创作）
+        enhanced_system = HUMAN_INTERACTION_LAYER + "\n\n【角色与任务】\n" + system_prompt
         out, provider, meta = intel.chat(
-            system_prompt, user_prompt, level=level, use_cache=False,
+            enhanced_system, user_prompt, level=level, use_cache=False,
             pack_id="glm_4_5_air",
         )
         return out, provider, meta
