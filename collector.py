@@ -364,6 +364,17 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
         region = region or 'cn'; cdp_port = cdp_port or 9222
     cdp_url = f'http://127.0.0.1:{cdp_port}'
 
+    # Phase4: 浏览器模式门控 - external_standalone 时跳过CDP，直接走独立Chromium兜底
+    _browser_mode = 'internal_cdp'
+    try:
+        import collector_browser_mode as _cbm
+        _browser_mode = _cbm.get_browser_mode()
+    except Exception:
+        pass
+    if _browser_mode == 'external_standalone':
+        print('[Collector] 浏览器模式=external_standalone，跳过CDP真人通道，直接走独立Chromium兜底')
+        return _search_standalone(keyword, max_scroll, output_path)
+
     # 主路径：CDP 真人通道
     try:
         if os.path.exists(CDP_SCRIPT) and (_cdp_online(cdp_url=cdp_url) or (cdp_port == 9222 and _ensure_cdp_online())):

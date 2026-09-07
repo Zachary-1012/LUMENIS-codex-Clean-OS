@@ -108,6 +108,28 @@
 </div>
 
 
+<!-- ===== Phase4: 采集浏览器模式选择器（内部AI浏览器默认，可切外部） ===== -->
+<div class="zbc-card" id="browser-mode-card" style="margin-top:12px;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">采集浏览器模式</span>
+    <span class="zbc-tag zbc-tag--success" id="browser-mode-current">内部AI浏览器（默认）</span>
+  </div>
+  <div class="zbc-card__body">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="browser-mode" value="internal_cdp" id="bm-internal" checked>
+        <span><strong>内部AI浏览器（CDP真人通道）</strong> — 9222大陆/9223港版持久登录态，稳定低风控，默认推荐</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="browser-mode" value="external_standalone" id="bm-external">
+        <span><strong>外部独立浏览器</strong> — 无持久登录态独立Chromium，易被风控，仅测试/兜底用</span>
+      </label>
+      <button class="zbc-btn zbc-btn--primary" style="font-size:12px;padding:4px 16px;margin-left:auto;" onclick="saveBrowserMode()">保存模式</button>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);" id="browser-mode-source">配置来源: 默认</div>
+  </div>
+</div>
+
 <!-- ===== P1-D: 实时采集画面（内置浏览器截图轮询） ===== -->
 <div class="zbc-card" id="live-view-card" style="margin-top:12px;max-height:380px;overflow:hidden;display:flex;flex-direction:column;">
   <div class="zbc-card__header">
@@ -582,11 +604,53 @@
   function logsPrevPage() { if (logsOffset >= logsLimit) { logsOffset -= logsLimit; loadCollectionLogs(); } }
   function logsNextPage() { if (logsOffset + logsLimit < logsTotal) { logsOffset += logsLimit; loadCollectionLogs(); } }
 
+  // ===== Phase4: 采集浏览器模式选择器 =====
+  function loadBrowserMode() {
+    fetch('/api/collector/browser-mode')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d || !d.ok) return;
+        var mode = d.mode || 'internal_cdp';
+        var radios = document.querySelectorAll('input[name="browser-mode"]');
+        radios.forEach(function(r) { r.checked = (r.value === mode); });
+        var tag = document.getElementById('browser-mode-current');
+        if (tag) {
+          tag.textContent = (mode === 'internal_cdp') ? '内部AI浏览器（默认）' : '外部独立浏览器';
+          tag.className = 'zbc-tag ' + (mode === 'internal_cdp' ? 'zbc-tag--success' : 'zbc-tag--warning');
+        }
+        var src = document.getElementById('browser-mode-source');
+        if (src) { src.textContent = '配置来源: ' + (d.source || 'default') + '（' + (d.config_file || '') + '）'; }
+      })
+      .catch(function(e) { console.error('[BrowserMode] 加载失败:', e); });
+  }
+
+  function saveBrowserMode() {
+    var checked = document.querySelector('input[name="browser-mode"]:checked');
+    if (!checked) { alert('请选择浏览器模式'); return; }
+    var mode = checked.value;
+    fetch('/api/collector/browser-mode', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({mode: mode})
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d && d.ok) {
+          alert('浏览器模式已保存为: ' + (mode === 'internal_cdp' ? '内部AI浏览器（CDP）' : '外部独立浏览器') + '\n下次采集生效。');
+          loadBrowserMode();
+        } else {
+          alert('保存失败: ' + (d && d.error ? d.error : '未知错误'));
+        }
+      })
+      .catch(function(e) { alert('请求失败: ' + e.message); });
+  }
+
   // 页面加载时自动加载
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadCollectionLogs);
+    document.addEventListener('DOMContentLoaded', function() { loadCollectionLogs(); loadBrowserMode(); });
   } else {
     loadCollectionLogs();
+    loadBrowserMode();
   }
 
 })();

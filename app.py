@@ -2015,6 +2015,29 @@ def api_collector_browser_stop():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+# ========== Phase4: 采集浏览器模式配置（内部AI浏览器默认，可切外部） ==========
+@app.route('/api/collector/browser-mode', methods=['GET'])
+def api_collector_browser_mode_get():
+    try:
+        import collector_browser_mode as cbm
+        return jsonify(cbm.get_browser_mode_info())
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/collector/browser-mode', methods=['POST'])
+def api_collector_browser_mode_set():
+    try:
+        import collector_browser_mode as cbm
+        data = request.get_json(silent=True) or {}
+        mode = data.get('mode', '')
+        result = cbm.set_browser_mode(mode)
+        if result.get('ok'):
+            return jsonify(result)
+        return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # ========== 双子星库 Contract · XHS Runtime 统一预检 & 双身份切换 ==========
 @app.route('/api/xhs/runtime-check', methods=['GET', 'POST'])
 def api_xhs_runtime_check():
