@@ -30,13 +30,30 @@ Source → Evidence → Event → Case → Finding / Insight
 
 ### CTH / ZBMP
 
-- **CTH**：广州太古汇专属生产域，数据与主体边界受保护。
-- **ZBMP**：更广泛的多主体品牌管理平台。
+- **CTH = Commerce & Trading Hub**：商业与交易枢纽。它不是“广州太古汇专属产品”，而是可持续扩展的**主体驱动业务情报域**；广州太古汇只是可选择的一个主体。用户选择任意合法业务主体后，CTH 的能力、数据口径、监测规则、分析与报告随 `subject_id` / `scope` 绑定，并进一步监测该主体下的板块、业务单元、业态、事件与相关内容。
+- **ZBMP = Brand Monitoring Platform**：品牌监测平台。它保持原有多品牌、品牌/竞品、传播主体、内容、事件、风险、消费者需求、品牌对标、多平台监测等能力；所有品牌均可作为日常监测对象。选择某一主体不是把平台锁死在该主体，而是用于设定**主要监测主体 / 当前工作焦点**，平台仍可持续监测其他品牌与主体。
+- **CTH 与 ZBMP 都是主体可选择、能力可配置的业务域，不得把历史“太古汇固定主体”或单一品牌固定为产品架构硬编码。**
 - 两者不得通过全局 `active_brand` 等隐式状态互相污染。
 - 请求、数据记录与业务计算必须具备明确的 `product_id / subject_id / scope` 语义。
-- CTH 历史事实不得被 ZBMP 的选择器覆盖、迁移或重新解释。
+- 历史 CTH 数据必须保持事实可追溯；主体切换不得覆盖、迁移或重新解释既有事实。
 
 `SUBJECT_WORDS`、`SUBJECT_EXCLUDE_WORDS`、`subject_hit()` 等主体规则属于生产保护项；重构必须保持语义兼容并提供回归证据。
+
+### 主体模型原则
+
+```text
+Product
+  └─ Domain (CTH / ZBMP)
+       └─ Selected Subject
+            ├─ Sub-Subject / Business Unit
+            ├─ Industry / Category
+            ├─ Content
+            ├─ Event / Case
+            ├─ Risk
+            └─ Report / Decision
+```
+
+**选择主体 ≠ 改写生产事实。** 选择器只改变当前工作上下文、重点监测范围和下游视图；Canonical Data、Evidence、历史事件与已确认结果必须保持原始归属。
 
 ## 3. 四仓边界
 
@@ -54,7 +71,7 @@ Source → Evidence → Event → Case → Finding / Insight
        │ 序境 / LUMENIS     │                      │ Global Growth      │
        │ Production Core    │                      │ Intelligence        │
        │ Production Truth   │                      │ Independent Product │
-       └────────────────────┘                      └────────────────────┘
+       └────────────────────┘                      └─────────────────────┘
 
        LUMENIS Command / 序枢
        = Private R&D Sidecar
