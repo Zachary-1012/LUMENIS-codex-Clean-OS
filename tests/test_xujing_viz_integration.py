@@ -26,10 +26,10 @@ def run_xujing_viz_checks():
     # ===== 1. 文件存在性 =====
     js_path = os.path.join(ZBC, "static", "js", "xujing-viz.js")
     css_path = os.path.join(ZBC, "static", "css", "xujing-core.css")
-    css2_path = os.path.join(ZBC, "static", "css", "xujing-dual-domain.css")
+    css2_path = os.path.join(ZBC, "static", "css", "zbc-layout-v1.1.css")
     check("xujing-viz.js exists", os.path.isfile(js_path))
     check("xujing-core.css exists (restored from git)", os.path.isfile(css_path))
-    check("xujing-dual-domain.css exists", os.path.isfile(css2_path))
+    check("zbc-layout-v1.1.css exists (dual-domain layout styles)", os.path.isfile(css2_path))
 
     # ===== 2. xujing-viz.js 内容验证 =====
     if os.path.isfile(js_path):

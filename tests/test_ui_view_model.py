@@ -641,12 +641,19 @@ class TestTimeBounds:
         assert "n009" not in ids
         assert "n010" not in ids
 
-    def test_filter_records_today(self, sample_notes):
-        filtered = filter_records_by_time(sample_notes, TimeRange.TODAY)
-        # n001(now), n002(2小时前), n003(5小时前) 都是今天的
+    def test_filter_records_today(self):
+        # 使用固定 now（中午12点），确保所有"今天"记录都在范围内，跨午夜不失败
+        now = datetime(2026, 9, 7, 12, 0, 0, tzinfo=timezone.utc)
+        records = [
+            {"id": "t1", "publish_datetime": now.isoformat()},
+            {"id": "t2", "publish_datetime": (now - timedelta(hours=2)).isoformat()},
+            {"id": "t3", "publish_datetime": (now - timedelta(hours=5)).isoformat()},
+            {"id": "t4", "publish_datetime": (now - timedelta(days=1)).isoformat()},
+        ]
+        filtered = filter_records_by_time(records, TimeRange.TODAY, now=now)
         assert len(filtered) == 3
         ids = {r["id"] for r in filtered}
-        assert ids == {"n001", "n002", "n003"}
+        assert ids == {"t1", "t2", "t3"}
 
     def test_filter_records_now_no_filter(self, sample_notes):
         """NOW 不过滤。"""

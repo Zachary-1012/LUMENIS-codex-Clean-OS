@@ -659,9 +659,31 @@ class TestApiDomainEndToEnd:
 
     @pytest.fixture
     def client(self):
+        """Flask test client with Basic Auth for ZBMP/system endpoints.
+
+        P1-1 auth收窄后 /api/zbmp/* 需要 Basic Auth；CTH 只读 GET 仍免密。
+        Auth header 对所有请求都发送（对免密端点无害）。
+        """
+        import base64
         from app import app
         app.config["TESTING"] = True
-        return app.test_client()
+        c = app.test_client()
+        _env = {}
+        _env_path = os.path.join(PROJECT_ROOT, ".env")
+        try:
+            for _line in open(_env_path, encoding="utf-8"):
+                _line = _line.strip()
+                if "=" in _line and not _line.startswith("#"):
+                    _k, _v = _line.split("=", 1)
+                    _env[_k.strip()] = _v.strip().strip('"')
+        except Exception:
+            pass
+        _u = _env.get("TAIKOO_AUTH_USER", os.environ.get("TAIKOO_AUTH_USER", "zachary"))
+        _p = _env.get("TAIKOO_AUTH_PASSWORD", os.environ.get("TAIKOO_AUTH_PASSWORD", "Zachary01"))
+        if _u and _p:
+            _tok = base64.b64encode(("%s:%s" % (_u, _p)).encode()).decode()
+            c.environ_base["HTTP_AUTHORIZATION"] = "Basic " + _tok
+        return c
 
     def test_zbmp_api_chain_domain_e2e(self, client):
         """ZBMP API 链：请求头 X-Product-Id=ZBMP → 响应 domain_id=zbmp。"""

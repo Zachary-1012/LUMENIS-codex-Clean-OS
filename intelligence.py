@@ -144,6 +144,77 @@ def ai_status():
 
 def ai_enabled(): return bool(_provider_config())
 
+
+# ============================================================
+# P1-5: AI Capability-Based Routing
+# 按任务能力自动选择模型，保持 provider-agnostic，主 provider 不可用时自动降级
+# ============================================================
+_CAPABILITY_MODEL_MAP = {
+    'vision': {
+        'provider': 'zhipu',
+        'model': 'glm-4.6v',
+        'fallback_chain': ['zhipu:glm-4.5-air', 'ark', 'ollama'],
+        'description': '视觉理解（图片分析/OCR/多模态）',
+    },
+    'web_search': {
+        'provider': 'zhipu',
+        'model': 'web-search-pro',
+        'fallback_chain': ['zhipu:glm-4.5-air', 'ark', 'ollama'],
+        'description': '联网搜索（实时信息/事实核查）',
+    },
+    'strong_reasoning': {
+        'provider': 'zhipu',
+        'model': 'glm-5.3',
+        'fallback_chain': ['zhipu:glm-4.5-air', 'ark', 'ollama'],
+        'description': '强推理（复杂分析/逻辑链/深度研判）',
+    },
+    'daily': {
+        'provider': 'zhipu',
+        'model': 'glm-4.5-air',
+        'fallback_chain': ['ark', 'ollama'],
+        'description': '日常任务（摘要/分类/情绪/普通对话，关思考省额度）',
+        'thinking_disabled': True,
+    },
+    'offline_fallback': {
+        'provider': 'ollama',
+        'model': 'local-model',
+        'fallback_chain': ['lmstudio', 'llama_cpp', 'rule'],
+        'description': '离线兜底（本地模型/确定性规则）',
+    },
+}
+
+
+def select_model_by_capability(capability='daily'):
+    """按任务能力选择 AI 模型，返回 {provider, model, fallback_chain, ...}。
+
+    capability 可选值:
+      - 'vision'           -> glm-4.6v（智谱视觉）
+      - 'web_search'       -> web-search-pro（智谱联网）
+      - 'strong_reasoning' -> glm-5.3（智谱强推理）
+      - 'daily'            -> glm-4.5-air（智谱日常，关思考）
+      - 'offline_fallback' -> ollama 本地模型
+
+    返回 dict 包含 provider, model, fallback_chain, description。
+    主 provider 不可用时，调用方应按 fallback_chain 顺序降级。
+    不绑定单一模型，保持 provider-agnostic。
+    """
+    cap = (capability or 'daily').lower().strip()
+    if cap not in _CAPABILITY_MODEL_MAP:
+        cap = 'daily'  # 未知 capability 安全降级到 daily
+    entry = dict(_CAPABILITY_MODEL_MAP[cap])
+    entry['capability'] = cap
+    # 运行时检查主 provider 可用性，不可用时标记并建议 fallback
+    try:
+        from provider_registry import is_provider_available, provider_status
+        primary = entry['provider']
+        entry['primary_available'] = is_provider_available(primary)
+        entry['primary_status'] = provider_status(primary)
+    except Exception:
+        entry['primary_available'] = True
+        entry['primary_status'] = 'UNKNOWN'
+    return entry
+
+
 # ============================================================
 # 外接云端 AI 发送前脱敏（最高原则：敏感信息不出内网）
 # 本地模型(ollama/lmstudio)不出网，不脱敏；仅云端 provider 发送前强制脱敏。
@@ -701,7 +772,7 @@ def _budget_record(pack_id='glm_4_5_air', amount=1, endpoint='', detail=''):
         pass
 
 
-def chat(system, user, level='medium', use_cache=False, temperature=None, max_tokens=None, model=None, pack_id='glm_4_5_air', track=True):
+def chat(system, user, level='medium', use_cache=False, temperature=None, max_tokens=None, model=None, pack_id='glm_4_5_air', track=True, capability='daily'):
     """增强版智谱调用：任务分级 + 模型分层 + 确定性缓存 + 预算护栏。
     Args:
         level: low/medium/high/critical（决定 timeout/max_tokens/temperature，HIGH 用强模型）
@@ -711,7 +782,19 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
         track: 成功调用是否计入预算
     Returns:
         (output, provider, meta)；失败/降级 (None, 'rule'/'budget_blocked', meta)。
-    现有 _chat 行为不变；本函数为独立新入口。"""
+    现有 _chat 行为不变；本函数为独立新入口。
+
+    capability: 任务能力路由（默认 'daily'）。调用 select_model_by_capability 自动选模型，
+                主 provider 不可用时按 fallback_chain 降级。显式 model 参数优先级高于 capability。
+    """
+    # P1-5: capability-based 模型选择（显式 model 优先）
+    if model is None and capability:
+        try:
+            cap_cfg = select_model_by_capability(capability)
+            if cap_cfg.get('primary_available', True):
+                model = cap_cfg.get('model')
+        except Exception:
+            pass  # capability 路由失败不阻断，沿用 _level_params 默认
     p = _level_params(level, temperature, max_tokens, model)
     key = _cache_key(system, user, p['temperature'], p['max_tokens'], p['model']) if use_cache else None
     if use_cache:

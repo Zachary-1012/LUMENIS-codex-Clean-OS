@@ -150,9 +150,27 @@ class TestBackendDomainHeaderResolution:
 
     @pytest.fixture
     def client(self):
+        import base64
         from app import app
         app.config["TESTING"] = True
-        return app.test_client()
+        c = app.test_client()
+        # P1-1: ZBMP/system endpoints now require auth
+        _env = {}
+        _env_path = os.path.join(PROJECT_ROOT, ".env")
+        try:
+            for _line in open(_env_path, encoding="utf-8"):
+                _line = _line.strip()
+                if "=" in _line and not _line.startswith("#"):
+                    _k, _v = _line.split("=", 1)
+                    _env[_k.strip()] = _v.strip().strip('"')
+        except Exception:
+            pass
+        _u = _env.get("TAIKOO_AUTH_USER", os.environ.get("TAIKOO_AUTH_USER", "zachary"))
+        _p = _env.get("TAIKOO_AUTH_PASSWORD", os.environ.get("TAIKOO_AUTH_PASSWORD", "Zachary01"))
+        if _u and _p:
+            _tok = base64.b64encode(("%s:%s" % (_u, _p)).encode()).decode()
+            c.environ_base["HTTP_AUTHORIZATION"] = "Basic " + _tok
+        return c
 
     def test_zbmp_api_returns_zbmp_domain(self, client):
         """带 X-Domain-Id: zbmp 的 /api/zbmp/overview 返回 domain_id=zbmp。"""

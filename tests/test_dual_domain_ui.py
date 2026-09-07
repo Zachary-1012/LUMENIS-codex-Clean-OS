@@ -91,11 +91,11 @@ def run_dual_domain_checks():
                       "system_database", "system_security", "system_evaluation"]
         for r in sys_routes:
             check("route def: %s" % r, "def %s(" % r in fe)
-        # Existing routes not broken
-        check("existing route: production_overview still exists", "def production_overview(" in fe)
-        check("existing route: public_opinion still exists", "def public_opinion(" in fe)
-        check("existing route: risk still exists", "def risk(" in fe)
-        check("existing route: intelligence_workspace still exists", "def intelligence_workspace(" in fe)
+        # Existing routes not broken (dual-domain migration: old V1 production routes replaced by zbmp/cth/system)
+        check("existing route: command_home still exists", "def command_home(" in fe)
+        check("existing route: zbmp_overview still exists", "def zbmp_overview(" in fe)
+        check("existing route: cth_overview still exists", "def cth_overview(" in fe)
+        check("existing route: system_runtime still exists", "def system_runtime(" in fe)
         # Domain API blueprint
         check("domain_api_bp registered", "domain_api_bp = Blueprint" in fe)
         check("_get_domain_context helper", "def _get_domain_context()" in fe)
@@ -206,9 +206,9 @@ def run_dual_domain_checks():
             check("%s V1.1 template exists" % tpl_rel, False, "file not found")
 
     # ===== 8. 现有功能不被破坏 =====
-    existing_templates = ["production/overview.html", "production/public_opinion.html",
-                          "production/risk.html", "home/command_home.html",
-                          "intelligence/workspace.html", "operations/index.html"]
+    existing_templates = ["zbmp/overview.html", "cth/overview.html",
+                          "system/runtime.html", "zbmp/risk.html",
+                          "cth/xiaohongshu.html", "system/ai.html"]
     for tpl in existing_templates:
         path = os.path.join(templates_dir, tpl)
         check("existing template intact: %s" % tpl, os.path.isfile(path))

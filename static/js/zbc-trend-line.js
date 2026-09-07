@@ -1,14 +1,57 @@
 /* ============================================================
- * ZBC 全局趋势线组件 v1.0
+ * ZBC 全局趋势线组件 v1.1
  * 函数驱动：API获取 → xujing-viz FN_TREND_SERIES → SVG趋势线 → 动效
  * 所有有时间序列的页面统一调用，不重复实现。
- * 用法：ZBC趋势线.render(containerId, '/api/trend/notes', {title:'笔记趋势', days:30})
+ * 用法：ZBCTrendLine.render(containerId, '/api/trend/notes', {title:'笔记趋势', days:30})
+ *
+ * v1.1 变更（P1-7 性能修复）：
+ * - 新增按 endpoint+days 的内存缓存（TTL 60s），避免重复请求
+ * - autoRefresh 定时器存储在 container.dataset 上，重渲染前 clearTimeout 旧定时器
+ * - fetch 失败时显示 error 状态（不再静默）
  * ============================================================ */
 (function (global) {
   'use strict';
 
+  // ---- P1-7: 内存缓存（endpoint+days → {data, timestamp}）----
+  var _cache = new Map();
+  var _CACHE_TTL_MS = 60 * 1000; // 60 秒
+
+  function _cacheKey(endpoint, days) {
+    return endpoint + '::days=' + days;
+  }
+
+  function _cacheGet(endpoint, days) {
+    var key = _cacheKey(endpoint, days);
+    var entry = _cache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > _CACHE_TTL_MS) {
+      _cache.delete(key);
+      return null;
+    }
+    return entry.data;
+  }
+
+  function _cacheSet(endpoint, days, data) {
+    var key = _cacheKey(endpoint, days);
+    _cache.set(key, { data: data, timestamp: Date.now() });
+  }
+
+  // ---- P1-7: 定时器管理（存 container.dataset，重渲染前清理）----
+  function _clearAutoRefresh(container) {
+    if (container && container.dataset && container.dataset.zbcTrendTimer) {
+      clearTimeout(Number(container.dataset.zbcTrendTimer));
+      delete container.dataset.zbcTrendTimer;
+    }
+  }
+
+  function _setAutoRefresh(container, timerId) {
+    if (container && container.dataset) {
+      container.dataset.zbcTrendTimer = String(timerId);
+    }
+  }
+
   const TrendLine = {
-    version: '1.0',
+    version: '1.1',
 
     /**
      * 渲染趋势线
@@ -32,6 +75,9 @@
       const container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
       if (!container) { console.warn('[TrendLine] 容器不存在:', containerId); return; }
 
+      // P1-7: 重渲染前清理旧定时器，防止定时器叠加
+      _clearAutoRefresh(container);
+
       // 渲染骨架
       container.innerHTML = `
         <div class="zbc-trend" style="width:100%;">
@@ -46,9 +92,21 @@
       const valueEl = container.querySelector('.zbc-trend__value');
 
       try {
-        const url = apiEndpoint + (apiEndpoint.includes('?') ? '&' : '?') + 'days=' + opts.days;
-        const resp = await fetch(url, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {} });
-        const data = await resp.json();
+        let data;
+        // P1-7: 优先读缓存
+        const cached = _cacheGet(apiEndpoint, opts.days);
+        if (cached) {
+          data = cached;
+        } else {
+          const url = apiEndpoint + (apiEndpoint.includes('?') ? '&' : '?') + 'days=' + opts.days;
+          const resp = await fetch(url, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {} });
+          if (!resp.ok) {
+            throw new Error('HTTP ' + resp.status);
+          }
+          data = await resp.json();
+          // P1-7: 写入缓存
+          _cacheSet(apiEndpoint, opts.days, data);
+        }
 
         if (!data.ok || !data.series || data.series.length === 0) {
           chartEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9CA3AF;font-size:12px;">${opts.emptyText}</div>`;
@@ -68,12 +126,21 @@
 
         this._renderSVG(chartEl, series, opts);
 
-        // 自动刷新
+        // P1-7: 自动刷新 — 定时器存 container.dataset，便于重渲染前清理
         if (opts.autoRefresh > 0) {
-          setTimeout(() => this.render(containerId, apiEndpoint, opts), opts.autoRefresh * 1000);
+          const self = this;
+          const timerId = setTimeout(function () {
+            self.render(container, apiEndpoint, opts);
+          }, opts.autoRefresh * 1000);
+          _setAutoRefresh(container, timerId);
         }
       } catch (e) {
-        chartEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#F87171;font-size:12px;">加载失败: ${e.message}</div>`;
+        // P1-7: fetch 失败显式 error 状态，不再静默
+        console.error('[TrendLine] 加载失败:', apiEndpoint, e.message);
+        chartEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#F87171;font-size:12px;flex-direction:column;gap:4px;">
+          <span>加载失败</span>
+          <span style="font-size:10px;color:#9CA3AF;">${e.message}</span>
+        </div>`;
       }
     },
 
@@ -196,8 +263,16 @@
       const chartEl = container.querySelector('div:last-child');
 
       try {
-        const resp = await fetch(apiEndpoint + '?days=' + opts.days, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {} });
-        const data = await resp.json();
+        let data;
+        const cached = _cacheGet(apiEndpoint, opts.days);
+        if (cached) {
+          data = cached;
+        } else {
+          const resp = await fetch(apiEndpoint + '?days=' + opts.days, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {} });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          data = await resp.json();
+          _cacheSet(apiEndpoint, opts.days, data);
+        }
         if (!data.ok || !data.series) { chartEl.innerHTML = '<div style="color:#9CA3AF;font-size:12px;padding:40px;text-align:center;">暂无数据</div>'; return; }
 
         const w = chartEl.offsetWidth || 300;
@@ -239,7 +314,8 @@
             ${paths}${xLabels}
           </svg>`;
       } catch (e) {
-        chartEl.innerHTML = `<div style="color:#F87171;font-size:12px;">加载失败</div>`;
+        console.error('[TrendLine] renderMulti 加载失败:', apiEndpoint, e.message);
+        chartEl.innerHTML = `<div style="color:#F87171;font-size:12px;padding:20px;text-align:center;">加载失败: ${e.message}</div>`;
       }
     }
   };

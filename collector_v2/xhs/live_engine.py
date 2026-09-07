@@ -55,6 +55,52 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
     return data
 
 
+def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2'):
+    """P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write）。
+
+    硬红线：所有写入必须 try/except 吞掉并 log warning，绝不影响 notes 主入库。
+    """
+    try:
+        import evidence_chain as _ec
+        _raw = (str(note_data.get('title','')) + ' ' + str(note_data.get('content',''))).strip()
+        _chain = _ec.EvidenceChain(database.DB_PATH)
+        _chain.capture_and_canonicalize(
+            source_type='xhs_note',
+            source_url=str(note_data.get('url','')),
+            raw_content=_raw,
+            source_id=str(note_data.get('note_id','')),
+            normalized_content=_raw[:500],
+            subject_hit=True,
+            subject_keywords=['taikoo_hui'],
+            sentiment='neutral',
+            risk_level='low',
+            engagement_metrics={
+                'likes': note_data.get('likes',0),
+                'comments': note_data.get('comments',0),
+                'collects': note_data.get('collects',0),
+                'shares': note_data.get('shares',0),
+            },
+            publish_datetime=note_data.get('publish_datetime') or note_data.get('publish_date') or None,
+            subject_scope='CTH',
+            provider=provider,
+            domain_id='cth',
+            product_id='CTH',
+        )
+    except Exception as _e:
+        print(f"[bypass][evidence_chain][live] side-write skipped (non-fatal): {_e}")
+    try:
+        import canonical_data as _cd
+        _rec = _cd.note_to_canonical(note_data, product_id='CTH')
+        _con = _cd.get_connection(database.DB_PATH)
+        try:
+            _cd.persist_canonical(_con, _rec)
+            _con.commit()
+        finally:
+            _con.close()
+    except Exception as _e:
+        print(f"[bypass][canonical_data][live] side-write skipped (non-fatal): {_e}")
+
+
 def persist_live(data: dict, subject_hit: Callable[[str], bool]) -> dict:
     if data.get('verification_required'):
         return {'ok': False, 'status': 'verification_required', 'accepted': 0, 'reason': '平台要求人工验证，本次不把0条当作无舆情'}
@@ -71,6 +117,8 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool]) -> dict:
         n['captured_at'] = n.get('fetched_at') or datetime.now().isoformat()
         n['comments_collected'] = int(n.get('comments_collected',0) or 0)
         database.insert_note(n)
+        # P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write，失败不影响主入库）
+        _bypass_evidence_canonical_live(n, provider='xhs-live-v2')
         database.save_collector_quality(n.get('note_id'), {
             **q, 'detail_status': n.get('detail_status',''),
             'comments_collected': n.get('comments_collected',0), 'collector_version':'xhs-live-v2'

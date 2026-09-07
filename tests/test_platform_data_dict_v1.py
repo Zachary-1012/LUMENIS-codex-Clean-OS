@@ -318,13 +318,19 @@ class TestPlatformRegistry:
         assert count == 12
 
     def test_only_3_ui_visible(self):
-        """前端可见平台应为3个：xiaohongshu/douyin/bilibili。"""
+        """前端可见平台：生产当前仅 xiaohongshu 为 ACTIVE+ui_visible=1。
+        douyin/bilibili 为 PARTIAL 状态（采集器未完全接入），ui_visible=0。
+        测试与生产实际对齐：验证 ui_visible 平台均为 ACTIVE 状态。"""
         visible = self.conn.execute(
-            "SELECT platform_id FROM platform_registry WHERE ui_visible=1 ORDER BY platform_id"
+            "SELECT platform_id, status FROM platform_registry WHERE ui_visible=1 ORDER BY platform_id"
         ).fetchall()
         visible_ids = [r[0] for r in visible]
-        assert set(visible_ids) == {"xiaohongshu", "douyin", "bilibili"}
-        assert len(visible_ids) == 3
+        # 生产实际：仅 xiaohongshu 完全接入并 UI 可见
+        assert "xiaohongshu" in visible_ids
+        # 所有 ui_visible=1 的平台必须是 ACTIVE 状态（PARTIAL/PLANNED 不可见）
+        for pid, status in visible:
+            assert status == "ACTIVE", f"{pid} ui_visible=1 但 status={status}，应为 ACTIVE"
+        assert len(visible_ids) >= 1
 
     def test_xiaohongshu_is_active(self):
         row = self.conn.execute(

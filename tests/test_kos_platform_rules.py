@@ -19,6 +19,7 @@ import copy
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
+import kos_metrics as km
 from kos_metrics import (
     PLATFORM_RULES, load_platform_rules, reload_platform_rules,
     get_platform_rule, platform_engagement, platform_kos_score, platform_ad_score,
@@ -67,14 +68,14 @@ class TestPlatformRulesExist:
 
     def test_platform_rules_independent(self):
         """各平台规则相互独立，修改一个不影响其他。"""
-        original = copy.deepcopy(PLATFORM_RULES)
-        # 修改 xiaohongshu 的权重
-        PLATFORM_RULES["xiaohongshu"]["engagement_weights"]["comments"] = 99.0
+        original = copy.deepcopy(km.PLATFORM_RULES)
+        # 修改 xiaohongshu 的权重（使用模块引用，避免 reload 后本地引用失效）
+        km.PLATFORM_RULES["xiaohongshu"]["engagement_weights"]["comments"] = 99.0
         # 验证其他平台不受影响
-        assert PLATFORM_RULES["douyin"]["engagement_weights"]["comments"] != 99.0
-        assert PLATFORM_RULES["weibo"]["engagement_weights"]["comments"] != 99.0
+        assert km.PLATFORM_RULES["douyin"]["engagement_weights"]["comments"] != 99.0
+        assert km.PLATFORM_RULES["weibo"]["engagement_weights"]["comments"] != 99.0
         # 恢复
-        PLATFORM_RULES["xiaohongshu"]["engagement_weights"]["comments"] = (
+        km.PLATFORM_RULES["xiaohongshu"]["engagement_weights"]["comments"] = (
             original["xiaohongshu"]["engagement_weights"]["comments"]
         )
 
@@ -175,7 +176,7 @@ class TestPlatformKosScore:
                 subject_type="kos", content_quality=0.5,
             )
             # 大幅提高 engagement_coeff
-            PLATFORM_RULES["xiaohongshu"]["influence"]["engagement_coeff"] = 50.0
+            km.PLATFORM_RULES["xiaohongshu"]["influence"]["engagement_coeff"] = 50.0
             modified = platform_kos_score(
                 "xiaohongshu", engagement=50, note_count=3,
                 subject_type="kos", content_quality=0.5,
@@ -183,7 +184,7 @@ class TestPlatformKosScore:
             assert modified["engagement_score"] > base["engagement_score"], \
                 "修改规则后 engagement_score 未变化，可能存在硬编码"
         finally:
-            PLATFORM_RULES["xiaohongshu"]["influence"]["engagement_coeff"] = (
+            km.PLATFORM_RULES["xiaohongshu"]["influence"]["engagement_coeff"] = (
                 original["xiaohongshu"]["influence"]["engagement_coeff"]
             )
 

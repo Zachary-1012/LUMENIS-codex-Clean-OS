@@ -1,31 +1,61 @@
 """
-ZBC 统一时间序列趋势API v1.0
+ZBC 统一时间序列趋势API v1.1
 全局趋势线数据源：笔记/事件/风险/KOS/互动量，全部按发布日期(publish_datetime)聚合。
 函数驱动：SQL聚合 → Canonical格式 → xujing-viz FN_TREND_SERIES → 页面SVG趋势线。
+
+v1.1 变更（P0 修复）：
+- P0-1：所有 notes 表查询追加主体过滤（委托 subject_rules.subject_sql_and_values）
+- P0-2：所有查询追加日期范围约束（SQL 层限定天数，而非 Python 端裁剪）
+- P1-6：trend_notes 与 _get_notes_series 去重，trend_notes 委托 _get_notes_series
+- P1-8：动态列名/表名使用白名单校验，裸 except 改为 except Exception + log warning
 """
 import sqlite3
+import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
+
+from subject_rules import subject_sql_and_values, get_brand_config, SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS
+
+logger = logging.getLogger(__name__)
 
 trend_bp = Blueprint('trend', __name__)
 
 DB_PATH = 'data/monitor.db'
+
+# ============================================================
+# 白名单：动态列名 / 表名（P1-8：防 SQL 注入）
+# ============================================================
+_EVENT_TIME_COLUMNS = frozenset({'start_time', 'discovered_at', 'created_at', 'first_seen_at'})
+_RISK_TABLES = frozenset({'risk_records', 'risks', 'note_risk_log'})
+_RISK_TIME_COLUMNS = frozenset({'created_at', 'detected_at', 'risk_time'})
+_SENTIMENT_COLUMNS = frozenset({'sentiment', 'sentiment_label', 'emotion'})
+
+# 主体过滤所需字段（用于非 notes 表的安全降级）
+_SUBJECT_FIELDS = ('title', 'body', 'content', 'source_keyword', 'matched_keywords')
+
 
 def _get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def _date_range(days=30):
     """生成日期范围，确保无数据的日期也显示0。"""
     end = datetime.now().date()
-    start = end - timedelta(days=days-1)
+    start = end - timedelta(days=days - 1)
     dates = []
     d = start
     while d <= end:
         dates.append(d.isoformat())
         d += timedelta(days=1)
     return dates
+
+
+def _days_offset(days):
+    """SQLite date() 偏移参数：覆盖 days 天（含今天），即回溯 days-1 天。"""
+    return f'-{days - 1} days'
+
 
 def _fill_zeros(data_by_date, dates, metric='count'):
     """填充无数据日期为0，按日期排序。"""
@@ -35,17 +65,75 @@ def _fill_zeros(data_by_date, dates, metric='count'):
         result.append({'date': d, 'label': d[5:], metric: val, 'total': val if metric == 'count' else val})
     return result
 
+
+def _subject_clause(alias=''):
+    """统一主体过滤：委托 subject_rules.subject_sql_and_values（P0-1）。
+    适用于 notes 表（含全部主体字段）。"""
+    return subject_sql_and_values(alias)
+
+
+def _safe_subject_clause(conn, table, alias=''):
+    """对非 notes 表安全应用主体过滤（P0-1 降级）。
+
+    events / risk 表可能不具备全部 5 个主体字段。
+    仅当表至少拥有 title 列时，基于实际存在的列生成简化主体过滤；
+    否则返回空（数据在创建时已通过 notes 主体边界化）。
+    """
+    try:
+        existing = {r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
+    except Exception as e:
+        logger.warning('[trend] _safe_subject_clause PRAGMA failed for %s: %s', table, e)
+        return '', []
+    usable = [f for f in _SUBJECT_FIELDS if f in existing]
+    if 'title' not in usable:
+        return '', []
+    cfg = get_brand_config()
+    sw = cfg.get('subject_words', SUBJECT_WORDS)
+    ew = cfg.get('exclude_words', SUBJECT_EXCLUDE_WORDS)
+    prefix = f'{alias}.' if alias else ''
+    positives = []
+    values = []
+    for field in usable:
+        for word in sw:
+            positives.append(f"LOWER(COALESCE({prefix}{field}, '')) LIKE ?")
+            values.append(f'%{word.lower()}%')
+    excludes = []
+    for field in usable:
+        for word in ew:
+            excludes.append(f"LOWER(COALESCE({prefix}{field}, '')) LIKE ?")
+            values.append(f'%{word.lower()}%')
+    clause = f"({' OR '.join(positives)}) AND NOT ({' OR '.join(excludes)})"
+    return clause, values
+
+
+# ============================================================
+# 笔记趋势
+# ============================================================
 @trend_bp.route('/api/trend/notes')
 def trend_notes():
-    """笔记发布趋势 - 按publish_datetime聚合。"""
+    """笔记发布趋势 - 按publish_datetime聚合。
+    P1-6：委托 _get_notes_series，消除重复 SQL。"""
     days = min(90, max(7, int(request.args.get('days', 30))))
     platform = request.args.get('platform', '').strip()
     domain = request.args.get('domain', '').strip()
+    series = _get_notes_series(days, platform=platform, domain=domain)
+    return jsonify({'ok': True, 'metric': 'notes', 'days': days, 'series': series})
 
+
+def _get_notes_series(days, platform='', domain=''):
+    """笔记时间序列（P0-1 主体过滤 + P0-2 日期范围）。
+    供 trend_notes 与 trend_overview 复用（P1-6 去重）。"""
     conn = _get_db()
     try:
         q = "SELECT DATE(publish_datetime) as d, COUNT(*) as cnt FROM notes WHERE publish_datetime IS NOT NULL AND publish_datetime != ''"
         params = []
+        # P0-2：SQL 层日期范围约束
+        q += " AND date(publish_datetime) >= date('now', ?)"
+        params.append(_days_offset(days))
+        # P0-1：主体过滤
+        subj_sql, subj_vals = _subject_clause()
+        q += f" AND {subj_sql}"
+        params.extend(subj_vals)
         if platform:
             q += " AND source_platform = ?"
             params.append(platform)
@@ -57,27 +145,41 @@ def trend_notes():
         data_by_date = {r['d']: r['cnt'] for r in rows}
     finally:
         conn.close()
+    return _fill_zeros(data_by_date, _date_range(days))
 
-    dates = _date_range(days)
-    series = _fill_zeros(data_by_date, dates)
-    return jsonify({'ok': True, 'metric': 'notes', 'days': days, 'series': series})
 
+# ============================================================
+# 事件趋势
+# ============================================================
 @trend_bp.route('/api/trend/events')
 def trend_events():
-    """事件趋势 - 按事件开始/发现时间聚合。"""
+    """事件趋势 - 按事件开始/发现时间聚合。
+    P0-2：日期范围约束；P1-8：列名白名单 + 异常日志。"""
     days = min(90, max(7, int(request.args.get('days', 30))))
     conn = _get_db()
     try:
-        # 尝试不同的时间字段
+        rows = []
+        # P0-1：events 表安全主体过滤（降级）
+        subj_sql, subj_vals = _safe_subject_clause(conn, 'events')
         for col in ['start_time', 'discovered_at', 'created_at', 'first_seen_at']:
+            if col not in _EVENT_TIME_COLUMNS:
+                continue
             try:
-                rows = conn.execute(f"SELECT DATE({col}) as d, COUNT(*) as cnt FROM events WHERE {col} IS NOT NULL GROUP BY d").fetchall()
+                q = f"SELECT DATE({col}) as d, COUNT(*) as cnt FROM events WHERE {col} IS NOT NULL"
+                params = []
+                # P0-2：日期范围
+                q += f" AND date({col}) >= date('now', ?)"
+                params.append(_days_offset(days))
+                if subj_sql:
+                    q += f" AND {subj_sql}"
+                    params.extend(subj_vals)
+                q += " GROUP BY d ORDER BY d"
+                rows = conn.execute(q, params).fetchall()
                 if rows:
                     break
-            except:
+            except Exception as e:
+                logger.warning('[trend/events] column %s query failed: %s', col, e)
                 continue
-        else:
-            rows = []
         data_by_date = {r['d']: r['cnt'] for r in rows}
     finally:
         conn.close()
@@ -86,26 +188,46 @@ def trend_events():
     series = _fill_zeros(data_by_date, dates)
     return jsonify({'ok': True, 'metric': 'events', 'days': days, 'series': series})
 
+
+# ============================================================
+# 风险趋势
+# ============================================================
 @trend_bp.route('/api/trend/risk')
 def trend_risk():
-    """风险趋势 - 按风险记录时间聚合，分high/medium/low。"""
+    """风险趋势 - 按风险记录时间聚合，分high/medium/low。
+    P0-2：日期范围约束；P1-8：表名/列名白名单 + 异常日志。"""
     days = min(90, max(7, int(request.args.get('days', 30))))
     conn = _get_db()
     try:
-        # 尝试风险表
+        rows = []
         for table in ['risk_records', 'risks', 'note_risk_log']:
-            try:
-                for col in ['created_at', 'detected_at', 'risk_time']:
-                    try:
-                        rows = conn.execute(f"SELECT DATE({col}) as d, risk_level, COUNT(*) as cnt FROM {table} WHERE {col} IS NOT NULL GROUP BY d, risk_level").fetchall()
-                        if rows:
-                            break
-                    except:
-                        continue
-                if rows:
-                    break
-            except:
+            if table not in _RISK_TABLES:
                 continue
+            # P0-1：risk 表安全主体过滤（降级）
+            subj_sql, subj_vals = _safe_subject_clause(conn, table)
+            found = False
+            for col in ['created_at', 'detected_at', 'risk_time']:
+                if col not in _RISK_TIME_COLUMNS:
+                    continue
+                try:
+                    q = f"SELECT DATE({col}) as d, risk_level, COUNT(*) as cnt FROM {table} WHERE {col} IS NOT NULL"
+                    params = []
+                    # P0-2：日期范围
+                    q += f" AND date({col}) >= date('now', ?)"
+                    params.append(_days_offset(days))
+                    if subj_sql:
+                        q += f" AND {subj_sql}"
+                        params.extend(subj_vals)
+                    q += " GROUP BY d, risk_level ORDER BY d"
+                    rows = conn.execute(q, params).fetchall()
+                    if rows:
+                        found = True
+                        break
+                except Exception as e:
+                    logger.warning('[trend/risk] table=%s col=%s query failed: %s', table, col, e)
+                    continue
+            if found:
+                break
         else:
             rows = []
 
@@ -135,9 +257,14 @@ def trend_risk():
         })
     return jsonify({'ok': True, 'metric': 'risk', 'days': days, 'series': series})
 
+
+# ============================================================
+# 互动量趋势
+# ============================================================
 @trend_bp.route('/api/trend/engagement')
 def trend_engagement():
-    """互动量趋势 - 按发布日期聚合点赞+评论+收藏+分享。"""
+    """互动量趋势 - 按发布日期聚合点赞+评论+收藏+分享。
+    P0-1 主体过滤 + P0-2 日期范围。"""
     days = min(90, max(7, int(request.args.get('days', 30))))
     platform = request.args.get('platform', '').strip()
     conn = _get_db()
@@ -149,6 +276,13 @@ def trend_engagement():
                COALESCE(SUM(shares),0) as shares
                FROM notes WHERE publish_datetime IS NOT NULL AND publish_datetime != ''"""
         params = []
+        # P0-2：日期范围
+        q += " AND date(publish_datetime) >= date('now', ?)"
+        params.append(_days_offset(days))
+        # P0-1：主体过滤
+        subj_sql, subj_vals = _subject_clause()
+        q += f" AND {subj_sql}"
+        params.extend(subj_vals)
         if platform:
             q += " AND source_platform = ?"
             params.append(platform)
@@ -169,19 +303,32 @@ def trend_engagement():
         series.append({'date': d, 'label': d[5:], **e})
     return jsonify({'ok': True, 'metric': 'engagement', 'days': days, 'series': series})
 
+
+# ============================================================
+# KOS 达人内容趋势
+# ============================================================
 @trend_bp.route('/api/trend/kos')
 def trend_kos():
-    """KOS达人内容趋势 - 按发布日期聚合KOS相关笔记。"""
+    """KOS达人内容趋势 - 按发布日期聚合KOS相关笔记。
+    P0-1 主体过滤 + P0-2 日期范围。"""
     days = min(90, max(7, int(request.args.get('days', 30))))
     conn = _get_db()
     try:
         # KOS笔记：subject_type包含kos或author在kos_profiles中
         q = """SELECT DATE(n.publish_datetime) as d, COUNT(*) as cnt
                FROM notes n
-               WHERE n.publish_datetime IS NOT NULL AND n.publish_datetime != ''
-               AND (n.subject_type LIKE '%kos%' OR n.subject_type LIKE '%kol%' OR n.subject_type LIKE '%koc%')
+               WHERE n.publish_datetime IS NOT NULL AND n.publish_datetime != ''"""
+        params = []
+        # P0-2：日期范围
+        q += " AND date(n.publish_datetime) >= date('now', ?)"
+        params.append(_days_offset(days))
+        # P0-1：主体过滤（使用别名 n）
+        subj_sql, subj_vals = _subject_clause(alias='n')
+        q += f" AND {subj_sql}"
+        params.extend(subj_vals)
+        q += """ AND (n.subject_type LIKE '%kos%' OR n.subject_type LIKE '%kol%' OR n.subject_type LIKE '%koc%')
                GROUP BY d ORDER BY d"""
-        rows = conn.execute(q).fetchall()
+        rows = conn.execute(q, params).fetchall()
         data_by_date = {r['d']: r['cnt'] for r in rows}
     finally:
         conn.close()
@@ -190,20 +337,38 @@ def trend_kos():
     series = _fill_zeros(data_by_date, dates)
     return jsonify({'ok': True, 'metric': 'kos', 'days': days, 'series': series})
 
+
+# ============================================================
+# 情感趋势
+# ============================================================
 @trend_bp.route('/api/trend/sentiment')
 def trend_sentiment():
-    """情感趋势 - 按发布日期聚合正面/中性/负面。"""
+    """情感趋势 - 按发布日期聚合正面/中性/负面。
+    P0-1 主体过滤 + P0-2 日期范围 + P1-8 列名白名单。"""
     days = min(90, max(7, int(request.args.get('days', 30))))
     conn = _get_db()
     try:
+        rows = []
         for col in ['sentiment', 'sentiment_label', 'emotion']:
+            if col not in _SENTIMENT_COLUMNS:
+                continue
             try:
-                rows = conn.execute(f"""SELECT DATE(publish_datetime) as d, {col} as s, COUNT(*) as cnt
-                    FROM notes WHERE publish_datetime IS NOT NULL AND {col} IS NOT NULL AND {col} != ''
-                    GROUP BY d, {col}""").fetchall()
+                q = f"""SELECT DATE(publish_datetime) as d, {col} as s, COUNT(*) as cnt
+                    FROM notes WHERE publish_datetime IS NOT NULL AND {col} IS NOT NULL AND {col} != ''"""
+                params = []
+                # P0-2：日期范围
+                q += " AND date(publish_datetime) >= date('now', ?)"
+                params.append(_days_offset(days))
+                # P0-1：主体过滤
+                subj_sql, subj_vals = _subject_clause()
+                q += f" AND {subj_sql}"
+                params.extend(subj_vals)
+                q += f" GROUP BY d, {col} ORDER BY d"
+                rows = conn.execute(q, params).fetchall()
                 if rows:
                     break
-            except:
+            except Exception as e:
+                logger.warning('[trend/sentiment] column %s query failed: %s', col, e)
                 continue
         else:
             rows = []
@@ -231,11 +396,15 @@ def trend_sentiment():
         series.append({'date': d, 'label': d[5:], **s, 'total': total})
     return jsonify({'ok': True, 'metric': 'sentiment', 'days': days, 'series': series})
 
+
+# ============================================================
+# 全局概览趋势
+# ============================================================
 @trend_bp.route('/api/trend/overview')
 def trend_overview():
     """全局概览趋势 - 一次性返回笔记/事件/风险/互动的时间序列。"""
     days = min(90, max(7, int(request.args.get('days', 30))))
-    # 复用各API逻辑但合并
+    # 复用各 API 逻辑但合并
     notes_data = _get_notes_series(days)
     engagement_data = _get_engagement_series(days)
     return jsonify({
@@ -244,21 +413,25 @@ def trend_overview():
         'engagement': engagement_data
     })
 
-def _get_notes_series(days):
-    conn = _get_db()
-    try:
-        rows = conn.execute("SELECT DATE(publish_datetime) as d, COUNT(*) as cnt FROM notes WHERE publish_datetime IS NOT NULL AND publish_datetime != '' GROUP BY d").fetchall()
-        data_by_date = {r['d']: r['cnt'] for r in rows}
-    finally:
-        conn.close()
-    return _fill_zeros(data_by_date, _date_range(days))
 
 def _get_engagement_series(days):
+    """互动量时间序列（P0-1 主体过滤 + P0-2 日期范围）。
+    供 trend_overview 复用。"""
     conn = _get_db()
     try:
-        rows = conn.execute("""SELECT DATE(publish_datetime) as d,
+        q = """SELECT DATE(publish_datetime) as d,
             COALESCE(SUM(likes),0)+COALESCE(SUM(comments),0)+COALESCE(SUM(collects),0)+COALESCE(SUM(shares),0) as total
-            FROM notes WHERE publish_datetime IS NOT NULL AND publish_datetime != '' GROUP BY d""").fetchall()
+            FROM notes WHERE publish_datetime IS NOT NULL AND publish_datetime != ''"""
+        params = []
+        # P0-2：日期范围
+        q += " AND date(publish_datetime) >= date('now', ?)"
+        params.append(_days_offset(days))
+        # P0-1：主体过滤
+        subj_sql, subj_vals = _subject_clause()
+        q += f" AND {subj_sql}"
+        params.extend(subj_vals)
+        q += " GROUP BY d ORDER BY d"
+        rows = conn.execute(q, params).fetchall()
         data_by_date = {r['d']: r['total'] for r in rows}
     finally:
         conn.close()

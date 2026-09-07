@@ -23,7 +23,7 @@ DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or os.path.join(_DB_DIR,
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 10
+CURRENT_VERSION = 12
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -37,6 +37,8 @@ MIGRATION_HISTORY = {
     8: "添加数据质量字段(publish_datetime, captured_at, detail_fetched_at, comments_fetched_at, data_quality_status, data_quality_score, collector_version)",
     9: "添加 HUMAN_CONTROL_GATE 执行审计表 kos_executions(AI_GENERATED->PENDING_HUMAN_REVIEW->HUMAN_APPROVED->EXECUTING->SUCCESS/FAILED)",
     10: "ZBC Phase15 历史数据治理: notes/canonical_data 添加 rule_version(可空), notes 添加 content_hash/provenance/product_id(可空), 新建 rule_version_registry 与 historical_import_log 表",
+    11: "Evidence Chain/Canonical Data bypass: collection_quality_log table, zbc_canonical_data domain_id/product_id, notes domain_id, daily_reports evidence_ids",
+    12: "P0-2 性能修复: notes.publish_datetime 添加索引 idx_notes_publish_datetime（趋势API日期范围查询加速）",
 }
 
 
@@ -456,6 +458,89 @@ def migration_9_to_10(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_hil_product ON historical_import_log(product_id)")
 
 
+def migration_10_to_11(conn):
+    """Migration 10->11: Evidence Chain / Canonical Data bypass + Collector Health + dual-domain.
+
+    P1-2: Create collection_quality_log table (5-step quality gate log).
+    P1-3: zbc_canonical_data add domain_id/product_id; notes add domain_id (already has product_id).
+    P1-4: daily_reports add evidence_ids TEXT (JSON array, nullable, no logic change).
+    All ADD COLUMN have DEFAULT, backward compatible.
+    """
+    # P1-2: collection_quality_log
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS collection_quality_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id TEXT DEFAULT '',
+            step TEXT NOT NULL,
+            status TEXT NOT NULL,
+            reason TEXT DEFAULT '',
+            source_platform TEXT DEFAULT '',
+            content_hash TEXT DEFAULT '',
+            canonical_id TEXT DEFAULT '',
+            raw_ref TEXT DEFAULT '',
+            details TEXT DEFAULT '',
+            created_at TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_quality_log_step ON collection_quality_log(step, status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_quality_log_hash ON collection_quality_log(content_hash)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_quality_log_run ON collection_quality_log(run_id)")
+
+    # P1-3: zbc_canonical_data dual-domain columns
+    zbc_cd_cols = {row[1] for row in conn.execute("PRAGMA table_info(zbc_canonical_data)").fetchall()}
+    if 'domain_id' not in zbc_cd_cols:
+        conn.execute("ALTER TABLE zbc_canonical_data ADD COLUMN domain_id TEXT NOT NULL DEFAULT 'cth'")
+    if 'product_id' not in zbc_cd_cols:
+        conn.execute("ALTER TABLE zbc_canonical_data ADD COLUMN product_id TEXT NOT NULL DEFAULT 'CTH'")
+
+    # P1-3: notes add domain_id (already has product_id from migration 9->10)
+    note_cols = {row[1] for row in conn.execute("PRAGMA table_info(notes)").fetchall()}
+    if 'domain_id' not in note_cols:
+        conn.execute("ALTER TABLE notes ADD COLUMN domain_id TEXT DEFAULT 'cth'")
+        conn.execute("UPDATE notes SET domain_id='cth' WHERE product_id='CTH' AND (domain_id IS NULL OR domain_id='')")
+        conn.execute("UPDATE notes SET domain_id='zbmp' WHERE product_id='ZBMP' AND (domain_id IS NULL OR domain_id='')")
+
+    # P1-4: daily_reports evidence_ids (reserved, no logic change)
+    dr_cols = {row[1] for row in conn.execute("PRAGMA table_info(daily_reports)").fetchall()}
+    if 'evidence_ids' not in dr_cols:
+        conn.execute("ALTER TABLE daily_reports ADD COLUMN evidence_ids TEXT DEFAULT '[]'")
+
+    # Pre-existing schema drift fix: canonical_data table missing columns defined in CanonicalRecord DDL
+    cd_actual = {row[1] for row in conn.execute("PRAGMA table_info(canonical_data)").fetchall()}
+    cd_missing = [
+        ('localization_score', 'REAL'),
+        ('comments_status', "TEXT DEFAULT 'pending'"),
+        ('detail_status', "TEXT DEFAULT 'pending'"),
+        ('comments_error', "TEXT DEFAULT ''"),
+        ('detail_error', "TEXT DEFAULT ''"),
+        ('ai_analysis', "TEXT DEFAULT ''"),
+    ]
+    for _col, _def in cd_missing:
+        if _col not in cd_actual:
+            conn.execute(f"ALTER TABLE canonical_data ADD COLUMN {_col} {_def}")
+
+
+def migration_11_to_12(conn):
+    """迁移11→12：P0-2 性能修复。
+    为 notes.publish_datetime 创建索引，加速趋势API的日期范围 GROUP BY 查询。
+    使用 IF NOT EXISTS，幂等安全，不修改现有表结构/数据。
+    """
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_notes_publish_datetime ON notes(publish_datetime)")
+    conn.commit()
+
+
+def _migrate_add_publish_datetime_index():
+    """独立入口：启动时直接确保 publish_datetime 索引存在（幂等，不触发完整版本迁移/备份）。
+    P0-2：趋势API日期范围查询依赖此索引。
+    """
+    conn = get_connection()
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_notes_publish_datetime ON notes(publish_datetime)")
+        conn.commit()
+    finally:
+        conn.close()
+
+
 # 迁移函数映射
 MIGRATIONS = {
     1: migration_1_to_2,
@@ -467,6 +552,8 @@ MIGRATIONS = {
     7: migration_7_to_8,
     8: migration_8_to_9,
     9: migration_9_to_10,
+    10: migration_10_to_11,
+    11: migration_11_to_12,
 }
 
 

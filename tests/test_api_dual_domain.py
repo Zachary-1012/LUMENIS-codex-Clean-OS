@@ -19,9 +19,30 @@ import pytest
 
 @pytest.fixture(scope="module")
 def client():
-    """Create Flask test client once for all tests."""
+    """Create Flask test client once for all tests (with auth for ZBMP/system endpoints).
+
+    P1-1: ZBMP/system endpoints now require auth; CTH readonly GET remains no-auth.
+    Auth headers are sent for all requests (harmless for no-auth endpoints).
+    """
+    import base64
     from app import app
-    return app.test_client()
+    c = app.test_client()
+    _env = {}
+    _env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    try:
+        for _line in open(_env_path, encoding="utf-8"):
+            _line = _line.strip()
+            if "=" in _line and not _line.startswith("#"):
+                _k, _v = _line.split("=", 1)
+                _env[_k.strip()] = _v.strip().strip('"')
+    except Exception:
+        pass
+    _u = _env.get("TAIKOO_AUTH_USER", os.environ.get("TAIKOO_AUTH_USER", "zachary"))
+    _p = _env.get("TAIKOO_AUTH_PASSWORD", os.environ.get("TAIKOO_AUTH_PASSWORD", "Zachary01"))
+    if _u and _p:
+        _tok = base64.b64encode(("%s:%s" % (_u, _p)).encode()).decode()
+        c.environ_base["HTTP_AUTHORIZATION"] = "Basic " + _tok
+    return c
 
 
 class TestZBMPEndpoints:
