@@ -24,18 +24,77 @@ Source → Evidence → Event → Case → Finding / Insight
 → Decision → Action → Outcome → Evaluation / Feedback → Learning Asset
 ```
 
-## 2. 产品边界
+## 2. 产品定位与领域产品
 
 序境拥有自己的 Product Truth、Subject Truth、Production Data、Collection Runtime、Event / Case / Risk、Metrics / Reports、Production UX、Production Permissions 与 Production Runtime。
 
-### CTH / ZBMP
+### 正式产品名称
 
-- **CTH = Commerce & Trading Hub**：商业与交易枢纽。它不是“广州太古汇专属产品”，而是可持续扩展的**主体驱动业务情报域**；广州太古汇只是可选择的一个主体。用户选择任意合法业务主体后，CTH 的能力、数据口径、监测规则、分析与报告随 `subject_id` / `scope` 绑定，并进一步监测该主体下的板块、业务单元、业态、事件与相关内容。
-- **ZBMP = Brand Monitoring Platform**：品牌监测平台。它保持原有多品牌、品牌/竞品、传播主体、内容、事件、风险、消费者需求、品牌对标、多平台监测等能力；所有品牌均可作为日常监测对象。选择某一主体不是把平台锁死在该主体，而是用于设定**主要监测主体 / 当前工作焦点**，平台仍可持续监测其他品牌与主体。
-- **CTH 与 ZBMP 都是主体可选择、能力可配置的业务域，不得把历史“太古汇固定主体”或单一品牌固定为产品架构硬编码。**
-- 两者不得通过全局 `active_brand` 等隐式状态互相污染。
-- 请求、数据记录与业务计算必须具备明确的 `product_id / subject_id / scope` 语义。
-- 历史 CTH 数据必须保持事实可追溯；主体切换不得覆盖、迁移或重新解释既有事实。
+| 层级 | 中文正式名 | English 正式名 | 한국어 | 内部标识 |
+|---|---|---|---|---|
+| 母产品 | **序境** | **LUMENIS** | **서경** | ZBC repository |
+| CTH 产品 | **序境·商业运营** | **LUMENIS Commerce Operations** | **서경·커머스 운영** | CTH |
+| BMP 产品 | **序境·品牌市场** | **LUMENIS Brand & Market** | **서경·브랜드 & 마켓** | BMP |
+| 共享能力 | **序境·内容创作** | **LUMENIS Content & Creation** | **서경·콘텐츠 & 크리에이션** | Shared Capability |
+
+> **命名原则：名称小、领域大；产品名保持克制，领域负责解释范围，功能负责解释能力。**
+
+`CTH` 与 `BMP` 是稳定的内部技术标识；正式产品名称不得再扩展为历史名称。`ZBC` 继续作为 repository / engineering identifier 使用，不作为对外产品品牌。
+
+### CTH / 序境·商业运营
+
+**Commerce Operations Domain / 商业运营领域 / 커머스 운영 영역**。
+
+CTH 是以 **Subject-first** 为核心的商业运营领域产品：用户先选择合法商业 Subject，再在该 Subject 上组织、观察、分析与行动其品牌、业态、内容、活动、传播、用户反馈、舆情、风险及相关业务对象。
+
+CTH **不表示交易能力**，不再使用 Commerce & Trading Hub、Trading、商业交易、商业情报、Taikoo Hui Intelligence、太古汇智能等作为正式产品语义。
+
+广州太古汇只是一个可选择的 `Subject Profile`，不是 CTH 产品本身，也不是永久产品边界。
+
+### BMP / 序境·品牌市场
+
+**Brand & Market Domain / 品牌市场领域 / 브랜드 & 마켓 영역**。
+
+BMP 保持 **Brand-first / Primary Focus**：选择某一品牌代表当前主要监测主体与工作焦点，但不限制平台继续监测其他品牌、竞品、市场、内容、传播、用户反馈、趋势、事件与风险。
+
+BMP 的正式产品名称不再使用 Z-Brand Monitoring Platform、Brand Intelligence、品牌智能等历史产品命名；`BMP` 作为兼容性内部 identifier 保留。
+
+### 共享能力 / Content & Creation
+
+内容创作不是 BMP 专属能力，也不是 CTH 专属能力。**Content & Creation / 内容与创作能力**属于 Shared Capability Layer，可由 CTH、BMP 及未来 LUMENIS 产品调用。
+
+### Agent Groups
+
+Agent Groups 不是第三个产品，而是 **Cross-Product Execution & Collaboration / 跨产品执行与协作层**，可以调用 CTH、BMP、共享内容能力、AI 与其他受控能力，但不得成为新的产品线。
+
+### 产品领域关系
+
+```text
+LUMENIS / 序境
+│
+├── Commerce Operations Domain
+│   └── 序境·商业运营 / LUMENIS Commerce Operations / CTH
+│       └── Subject-first
+│
+├── Brand & Market Domain
+│   └── 序境·品牌市场 / LUMENIS Brand & Market / BMP
+│       └── Brand-first / Primary Focus
+│
+├── Shared Capability Layer
+│   └── 序境·内容创作 / LUMENIS Content & Creation
+│
+└── Cross-Product Execution & Collaboration
+    └── Agent Groups
+```
+
+### CTH / BMP 功能边界
+
+- **CTH**：商业 Subject 驱动；能力随 `subject_id / scope` 绑定，覆盖主体下业务板块、品牌、业态、内容、活动、传播、用户、舆情、风险、分析、决策信息与报告等既有能力。
+- **BMP**：Brand-first；保持原有多品牌、品牌/竞品、传播主体、内容、事件、风险、消费者需求、品牌对标、多平台监测等能力。
+- **Shared Content**：内容创作跨 CTH / BMP 共享，不改变已有功能归属或运行链。
+- **Agent Groups**：跨产品调用与执行层，不改变产品边界。
+
+**CTH 与 BMP 的既有功能划分不因本次命名调整而重划。**
 
 `SUBJECT_WORDS`、`SUBJECT_EXCLUDE_WORDS`、`subject_hit()` 等主体规则属于生产保护项；重构必须保持语义兼容并提供回归证据。
 
@@ -43,8 +102,8 @@ Source → Evidence → Event → Case → Finding / Insight
 
 ```text
 Product
-  └─ Domain (CTH / ZBMP)
-       └─ Selected Subject
+  └─ Domain (CTH / BMP)
+       └─ Selected Subject / Primary Focus
             ├─ Sub-Subject / Business Unit
             ├─ Industry / Category
             ├─ Content
@@ -182,7 +241,7 @@ Source + Call Graph + Data / API + Frontend / Consumer
 
 工程规范：[`00-GOVERNANCE/LUMENIS-ENGINEERING-GOVERNANCE-V1.0.md`](00-GOVERNANCE/LUMENIS-ENGINEERING-GOVERNANCE-V1.0.md)
 
-本 README 是当前产品总入口。旧版本 README 叙述、过期架构、失效状态不再作为当前事实来源；历史细节只保留在具有明确版本意义的审计、变更与证据文档中。
+本 README 是当前产品总入口。产品名称、领域归属与跨仓协议以当前 Canonical Registry 及三仓协议为准；旧版本 README 叙述、过期架构、失效状态不再作为当前事实来源；历史细节只保留在具有明确版本意义的审计、变更与证据文档中。
 
 ## 12. 状态声明
 
