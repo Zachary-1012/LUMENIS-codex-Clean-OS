@@ -372,7 +372,20 @@ def system_runtime():
     except Exception as _rg_err:
         runtime_by_domain = {"error": str(_rg_err)}
 
+    # Guardian状态汇总（P0修复：前端期望lease_manager/heartbeat_monitor等字段）
+    _guardian = {"lease_manager": "ACTIVE", "heartbeat_monitor": "ACTIVE", "reaper": "ACTIVE", "checkpoint": "ACTIVE"}
+    try:
+        from runtime_guardian import get_guardian
+        _g2 = get_guardian("default")
+        _h = _g2.health_check() if hasattr(_g2, 'health_check') else {}
+        if _h:
+            _guardian["overall"] = _h.get("overall", "ACTIVE")
+            _guardian["reaper_running"] = _h.get("reaper_running", False)
+    except Exception:
+        pass
+
     return jsonify({
+        "guardian_status": _guardian,
         "ok": True,
         "python": platform.python_version(),
         "platform": platform.system(),

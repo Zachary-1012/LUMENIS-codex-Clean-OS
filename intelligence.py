@@ -293,6 +293,10 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
 
     def _call_cloud(prov):
         """对单个云端 Provider 构造请求并调用（复用 StableChannel 重试+熔断+UTF-8）。"""
+        # 测试离线开关：ZBC_TEST_OFFLINE=1 时不发起任何真实云端网络（漏 mock 的用例快速失败->rule 兜底，
+        # 避免弱网/无网时在 ssl.read 长等待冻结整个测试进程）。生产默认不设置，行为不变。
+        if os.environ.get('ZBC_TEST_OFFLINE') == '1':
+            raise ConnectionError('ZBC_TEST_OFFLINE=1: cloud AI blocked; expected rule fallback/mock')
         cfg_map = {
             'zhipu': (_env('ZHIPU_API_KEY',''), _env('ZHIPU_BASE_URL','https://open.bigmodel.cn/api/paas/v4'), _env('ZHIPU_MODEL','glm-4.5-air')),
             'ark': (_env('ARK_API_KEY',''), _env('ARK_BASE_URL','https://ark.cn-beijing.volces.com/api/v3'), _env('ARK_MODEL','doubao-pro-32k')),

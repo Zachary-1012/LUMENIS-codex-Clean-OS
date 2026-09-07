@@ -38,6 +38,12 @@ TEST_CONFIG = {
 os.environ['TAIKOO_AUTH_USER'] = TEST_CONFIG['auth_user']
 os.environ['TAIKOO_AUTH_PASSWORD'] = TEST_CONFIG['auth_pass']
 
+# 测试默认离线：禁止任何真实云端 AI 网络（智谱/ARK/千问）。漏 mock 的用例若走到云端，
+# intelligence._call_cloud 会立即抛 ConnectionError 并按生产降级链走 rule 兜底，
+# 而不是在 ssl.read 上长等待（90s*3）冻结整个测试进程。需要真实云端的测试须显式
+# monkeypatch.delenv('ZBC_TEST_OFFLINE', raising=False) 并自行负责网络与耗时。
+os.environ.setdefault('ZBC_TEST_OFFLINE', '1')
+
 # conftest 由 pytest 在 collect tests/ 下任何测试模块【之前】导入，此处记录的是尚未被
 # 测试模块级 os.environ 污染的会话干净基线（如 ZBC_DB_PATH）。某些隔离测试
 # （test_workspace_keys 等）在模块顶层把 ZBC_DB_PATH 指向临时空库，collect 期即全局生效、

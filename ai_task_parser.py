@@ -39,6 +39,7 @@ class Intent(str, Enum):
     WEB_SEARCH = "web_search"                # 搜索网页
     PAGE_OPERATION = "page_operation"        # 页面操作
     GENERATE_REPORT = "generate_report"      # 生成报告
+    CHAT = "chat"                            # 闲聊/问候/对话（L0自动通过）
     UNKNOWN = "unknown"                       # 未知（显式标记，fail-closed）
 
 
@@ -86,6 +87,11 @@ _HUMAN_APPROVAL_PATTERNS = [
 # ═══════════════════════════════════════════════════════════════
 
 _INTENT_RULES: List[Tuple[Intent, List[str]]] = [
+    (Intent.CHAT, [
+        "你好", "您好", "嗨", "hi", "hello", "在吗", "在不在", "哈喽", "喂",
+        "早上好", "下午好", "晚上好", "你好啊", "你好呀", "在么", "在嘛",
+        "hey", "yo", "sup", "你好吗", "最近怎么样", "忙吗",
+    ]),
     (Intent.GENERATE_REPORT, [
         "生成报告", "生成日报", "生成周报", "生成月报", "出报告", "写报告",
         "report", "daily report", "weekly report",
@@ -343,7 +349,8 @@ class TaskParser:
 
         # 按 Intent 判定基础风险
         intent_risk_map = {
-            Intent.QUERY_DATA: (TaskRiskLevel.L0, "read-only data query"),
+            Intent.CHAT: (TaskRiskLevel.L0, "casual chat, auto-pass"),
+    Intent.QUERY_DATA: (TaskRiskLevel.L0, "read-only data query"),
             Intent.SUMMARIZE: (TaskRiskLevel.L0, "read-only summarization"),
             Intent.CLASSIFY: (TaskRiskLevel.L0, "read-only classification"),
             Intent.COMPARE: (TaskRiskLevel.L0, "read-only comparison"),
