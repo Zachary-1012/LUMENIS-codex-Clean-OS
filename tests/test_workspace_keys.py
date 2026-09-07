@@ -34,6 +34,17 @@ def _setup():
         pass
 
 
+@pytest.fixture(autouse=True)
+def _fast_pbkdf2(monkeypatch):
+    """生产配置 bcrypt_rounds=12 → hash_password 用 120000 iterations，
+    每次 pbkdf2_hmac 约0.3-0.5s；全量累积 CPU 负载下可超 20s 触发 timeout。
+    单测里把 AUTH_CONFIG[bcrypt_rounds] 压到 1（=10000 iterations），
+    hash_password 存小迭代数，verify_password 从 stored hash 读小迭代数。"""
+    import v4_upgrade.auth.security as _sec
+    monkeypatch.setitem(_sec.AUTH_CONFIG, 'bcrypt_rounds', 1)
+    yield
+
+
 def test_issue_and_verify_ok():
     out = ws.issue_workspace_key("ZBMP", label="pytest-key")
     assert out["success"] and out["key"].startswith("zbmp_")
