@@ -15,6 +15,18 @@ import pytest
 
 import kos_metrics as km
 
+@pytest.fixture(autouse=True)
+def _reload_platform_rules_before_each():
+    """Ensure clean platform rules state before each test (defensive isolation).
+
+    Previous tests may have left km.PLATFORM_RULES_PATH patched or PLATFORM_RULES stale.
+    Reloading before every test guarantees a known-good starting state.
+    """
+    km.reload_platform_rules()
+    yield
+    km.reload_platform_rules()
+
+
 
 class TestG3ConfigWarning:
     """G3: 配置缺失触发 WARNING"""

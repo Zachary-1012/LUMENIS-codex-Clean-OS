@@ -355,6 +355,33 @@ class TestCircuitBreakerFullCycle:
 # 场景5：ai_channel CircuitBreaker 收敛验证
 # ---------------------------------------------------------------------------
 class TestAICircuitBreakerConvergence:
+
+    @pytest.fixture(autouse=True)
+    def _reset_ai_channel_globals(self):
+        """Reset ai_channel global breaker/provider cache before each test.
+
+        Other test files may leave ai_channel.breaker or provider breaker cache in a
+        modified state. Resetting before each test guarantees isolation.
+        """
+        import ai_channel
+        # Reset global breaker to a fresh CLOSED state
+        if hasattr(ai_channel, 'breaker') and ai_channel.breaker is not None:
+            try:
+                ai_channel.breaker.state = ai_channel.CircuitBreaker.CLOSED
+                ai_channel.breaker.consecutive_failures = 0
+                if hasattr(ai_channel.breaker, 'failure_count'):
+                    ai_channel.breaker.failure_count = 0
+                if hasattr(ai_channel.breaker, 'success_count'):
+                    ai_channel.breaker.success_count = 0
+            except Exception:
+                pass
+        # Clear provider breaker cache if it exists
+        if hasattr(ai_channel, '_provider_breakers'):
+            try:
+                ai_channel._provider_breakers.clear()
+            except Exception:
+                pass
+        yield
     def test_ai_channel_cb_inherits_runtime_guardian(self):
         """ai_channel.CircuitBreaker 继承自 runtime_guardian.CircuitBreaker"""
         import ai_channel

@@ -17,6 +17,18 @@ import pytest
 
 import kos_attribution as ka
 
+@pytest.fixture(autouse=True)
+def _reload_attribution_config_before_each():
+    """Ensure clean config state before each test (defensive isolation).
+
+    Previous tests may have left ka.CONFIG_PATH patched or _attr_config_cache stale.
+    Reloading before every test guarantees a known-good starting state.
+    """
+    ka.reload_attribution_config()
+    yield
+    ka.reload_attribution_config()
+
+
 
 class TestG1ConfigLoading:
     """G1: 配置加载与回退"""

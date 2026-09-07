@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 import kos_metrics as km
 from kos_metrics import (
-    PLATFORM_RULES, load_platform_rules, reload_platform_rules,
+    load_platform_rules, reload_platform_rules,
     get_platform_rule, platform_engagement, platform_kos_score, platform_ad_score,
     PLATFORM_RULES_PATH, _DEFAULT_PLATFORM_RULES,
 )
@@ -33,11 +33,11 @@ class TestPlatformRulesExist:
     def test_five_platforms_exist(self):
         """五个平台（xiaohongshu/douyin/weibo/bilibili/zhihu）均有规则。"""
         for p in ("xiaohongshu", "douyin", "weibo", "bilibili", "zhihu"):
-            assert p in PLATFORM_RULES, f"平台 {p} 缺少规则配置"
+            assert p in km.PLATFORM_RULES, f"平台 {p} 缺少规则配置"
 
     def test_each_platform_has_engagement_weights(self):
         """每个平台都有 engagement_weights 且包含四个互动维度。"""
-        for p, rule in PLATFORM_RULES.items():
+        for p, rule in km.PLATFORM_RULES.items():
             assert "engagement_weights" in rule, f"{p} 缺少 engagement_weights"
             w = rule["engagement_weights"]
             for key in ("likes", "comments", "collects", "shares"):
@@ -46,7 +46,7 @@ class TestPlatformRulesExist:
 
     def test_each_platform_has_influence_config(self):
         """每个平台都有 influence 配置。"""
-        for p, rule in PLATFORM_RULES.items():
+        for p, rule in km.PLATFORM_RULES.items():
             assert "influence" in rule, f"{p} 缺少 influence"
             inf = rule["influence"]
             for key in ("engagement_coeff", "engagement_max", "volume_coeff",
@@ -56,14 +56,14 @@ class TestPlatformRulesExist:
 
     def test_each_platform_has_score_config(self):
         """每个平台都有 score 配置（min/max/round_digits）。"""
-        for p, rule in PLATFORM_RULES.items():
+        for p, rule in km.PLATFORM_RULES.items():
             assert "score" in rule, f"{p} 缺少 score"
             sc = rule["score"]
             assert "min" in sc and "max" in sc and "round_digits" in sc
 
     def test_each_platform_has_ad_candidate_config(self):
         """每个平台都有 ad_candidate 配置。"""
-        for p, rule in PLATFORM_RULES.items():
+        for p, rule in km.PLATFORM_RULES.items():
             assert "ad_candidate" in rule, f"{p} 缺少 ad_candidate"
 
     def test_platform_rules_independent(self):
@@ -102,7 +102,7 @@ class TestPlatformEngagement:
     def test_different_platforms_different_results(self):
         """相同输入在不同平台应得到不同结果（规则独立）。"""
         args = (100, 50, 30, 20)
-        results = {p: platform_engagement(p, *args) for p in PLATFORM_RULES}
+        results = {p: platform_engagement(p, *args) for p in km.PLATFORM_RULES}
         # 至少有两个平台结果不同
         unique_values = set(round(v, 2) for v in results.values())
         assert len(unique_values) > 1, "所有平台互动量结果相同，规则未生效"
@@ -168,7 +168,7 @@ class TestPlatformKosScore:
 
     def test_platform_rules_affect_score(self):
         """修改平台规则后得分相应变化（证明无硬编码）。"""
-        original = copy.deepcopy(PLATFORM_RULES)
+        original = copy.deepcopy(km.PLATFORM_RULES)
         try:
             # 使用较小 engagement，确保未达到 engagement_max 上限
             base = platform_kos_score(
