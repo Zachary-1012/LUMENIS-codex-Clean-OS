@@ -118,7 +118,7 @@
 
       <!-- SYSTEM Navigation (5 entries) -->
       <div class="zbc-nav-group zbc-nav-group--system" data-domain-nav="system" {% if active_domain!='system' %}hidden{% endif %}>
-        <div class="zbc-nav-group__label" data-i18n="domain.system">Runtime Control</div>
+        <div class="zbc-nav-group__label" data-i18n="domain.system">系统</div>
         <a class="zbc-nav-item {% if active_nav=='sys_runtime' %}is-active{% endif %}" href="{{ url_for('lumenis.system_runtime') }}" style="display:none">
           <span class="zbc-nav-item__icon" data-icon="gear" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.runtime">Runtime</span>
         </a>
@@ -898,4 +898,5 @@ const AuthRecoveryModal = (function() {
 
 </body>
 </html>
+
 
