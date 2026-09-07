@@ -3448,6 +3448,8 @@ def api_push_emails():
     return jsonify({'ok': True, 'message': f'邮箱 {email} 已添加', 'emails': config['push_emails'], 'count': len(config['push_emails'])})
 
 @app.route('/api/config/run-code', methods=['POST'])
+@require_permission(OperationType.RUNTIME_OPERATION, RiskLevel.HIGH,
+    deny_return=lambda: (jsonify({'ok': False, 'error': '权限不足：代码运行需管理员审批', 'code': 'PERMISSION_DENIED'}), 403))
 def api_run_code():
     """GAP-04 统一收口点②：运行代码热更新（调用 dev_exec_core 统一执行核心）。"""
     data = request.get_json(silent=True) or {}
@@ -5146,6 +5148,8 @@ import tempfile
 import importlib.util
 
 @app.route('/api/dev/run-code', methods=['POST'])
+@require_permission(OperationType.RUNTIME_OPERATION, RiskLevel.HIGH,
+    deny_return=lambda: (jsonify({'ok': False, 'error': '权限不足：开发者代码运行需管理员审批', 'code': 'PERMISSION_DENIED'}), 403))
 def api_dev_run_code():
     """GAP-04 统一收口点③：开发者工具运行升级代码（调用 dev_exec_core 统一执行核心）。"""
     data = request.get_json(silent=True) or {}
