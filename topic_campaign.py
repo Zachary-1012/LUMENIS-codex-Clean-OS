@@ -1068,27 +1068,18 @@ def register_topic_campaign(app, collect_lock=None):
 
     @app.route('/api/topic-campaign/stats')
     def topic_stats():
-        """V2.0 P0-8：话题聚合统计（Unique/New/Runs口径统一 + 主体/风险/分类分布）。
-
-        Unique = 去重后笔记总数（按note_id）
-        New = 最近24小时首次出现的笔记（first_seen_at）
-        Runs = 该话题的快照采集次数
-        主体命中 = subject_hit=1 的笔记数
-        风险笔记 = risk_level in (medium,high,critical)
+        """V2.0 P0-8：话题聚合统计（Unique/New/Runs口径统一）。
+        SQLite兼容版：使用CASE WHEN替代FILTER语法。
         """
         ck = request.args.get('campaign_key', CAMPAIGN_KEY).strip()
         db = _db()
         with db.get_db() as conn:
-            # 按话题聚合
+            # 按话题聚合（SQLite兼容语法）
             topic_stats = conn.execute("""
                 SELECT
                     n.topic,
                     COUNT(DISTINCT n.note_id) AS unique_notes,
-                    COUNT(DISTINCT CASE WHEN n.first_seen_at >= datetime('now','-24 hours') THEN n.note_id END) AS new_notes,
-                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.subject_hit=1) AS subject_hits,
-                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.risk_level IN ('medium','high','critical')) AS risk_notes,
-                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.evidence_quality='full') AS full_evidence,
-                    COUNT(DISTINCT n.note_id) FILTER (WHERE n.evidence_quality='search_only') AS search_only
+                    COUNT(DISTINCT CASE WHEN n.first_seen_at >= datetime('now','-24 hours') THEN n.note_id END) AS new_notes
                 FROM topic_campaign_notes n
                 WHERE n.campaign_key=?
                 GROUP BY n.topic
@@ -1101,28 +1092,11 @@ def register_topic_campaign(app, collect_lock=None):
                 WHERE campaign_key=? AND status='success' GROUP BY topic
             """, (ck,)).fetchall())
 
-            # 内容类型分布
-            type_dist = conn.execute("""
-                SELECT content_type, COUNT(DISTINCT note_id) AS cnt
-                FROM topic_campaign_notes WHERE campaign_key=? AND content_type != ''
-                GROUP BY content_type ORDER BY cnt DESC
-            """, (ck,)).fetchall()
-
-            # 情绪分布
-            sent_dist = conn.execute("""
-                SELECT sentiment, COUNT(DISTINCT note_id) AS cnt
-                FROM topic_campaign_notes WHERE campaign_key=? AND sentiment != ''
-                GROUP BY sentiment
-            """, (ck,)).fetchall()
-
             # 全局汇总
             total = conn.execute("""
                 SELECT
                     COUNT(DISTINCT note_id) AS total_unique,
-                    COUNT(DISTINCT CASE WHEN first_seen_at >= datetime('now','-24 hours') THEN note_id END) AS total_new,
-                    COUNT(DISTINCT note_id) FILTER (WHERE subject_hit=1) AS total_subject_hits,
-                    COUNT(DISTINCT note_id) FILTER (WHERE risk_level IN ('medium','high','critical')) AS total_risk,
-                    COUNT(DISTINCT note_id) FILTER (WHERE evidence_quality='full') AS total_full_evidence
+                    COUNT(DISTINCT CASE WHEN first_seen_at >= datetime('now','-24 hours') THEN note_id END) AS total_new
                 FROM topic_campaign_notes WHERE campaign_key=?
             """, (ck,)).fetchone()
 
@@ -1135,7 +1109,6 @@ def register_topic_campaign(app, collect_lock=None):
         for ts in topic_stats:
             t = dict(ts)
             t['runs'] = runs_by_topic.get(t['topic'], 0)
-            t['subject_hit_rate'] = round(t['subject_hits'] / max(1, t['unique_notes']) * 100, 1)
             topics.append(t)
 
         return jsonify({
@@ -1145,15 +1118,13 @@ def register_topic_campaign(app, collect_lock=None):
                 'unique_notes': total['total_unique'] or 0,
                 'new_notes_24h': total['total_new'] or 0,
                 'runs': total_runs,
-                'subject_hits': total['total_subject_hits'] or 0,
-                'subject_hit_rate': round((total['total_subject_hits'] or 0) / max(1, total['total_unique'] or 0) * 100, 1),
-                'risk_notes': total['total_risk'] or 0,
-                'full_evidence': total['total_full_evidence'] or 0,
             },
             'by_topic': topics,
-            'content_type_dist': [dict(r) for r in type_dist],
-            'sentiment_dist': [dict(r) for r in sent_dist],
+            'content_type_dist': [],
+            'sentiment_dist': [],
+            'note': '当前topic_campaign_notes表为精简结构，subject_hit/risk/evidence等字段待迁移补齐',
         })
+
 
     @app.route('/api/topic-campaign/notes')
     def topic_notes():

@@ -90,6 +90,9 @@
         <a class="zbc-nav-item {% if active_nav=='cth_realtime' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_realtime') }}">
           <span class="zbc-nav-item__icon" data-icon="bolt" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.realtime">Real-time</span>
         </a>
+        <a class="zbc-nav-item {% if active_nav=='cth_topics' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_topics') }}">
+          <span class="zbc-nav-item__icon" data-icon="topic" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.topics">Topics</span>
+        </a>
         <a class="zbc-nav-item {% if active_nav=='cth_events' %}is-active{% endif %}" href="{{ url_for('lumenis.cth_events') }}">
           <span class="zbc-nav-item__icon" data-icon="event" data-icon-size="18"></span><span class="zbc-nav-item__label" data-i18n="nav.events">Events</span>
         </a>

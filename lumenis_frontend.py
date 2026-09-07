@@ -432,6 +432,13 @@ def cth_realtime():
                            **_domain_template_vars("cth_realtime", "cth", "Real-time Intelligence"))
 
 
+@lumenis_bp.route("/cth/topics")
+def cth_topics():
+    """CTH Topics — 话题监测端口（活动/话题/笔记/时间线/导出）。"""
+    return render_template("cth/topics.html",
+                           **_domain_template_vars("cth_topics", "cth", "Topic Monitor"))
+
+
 @lumenis_bp.route("/cth/events")
 def cth_events():
     return render_template("cth/events.html",
