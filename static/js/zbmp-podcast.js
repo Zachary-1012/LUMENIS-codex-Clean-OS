@@ -1,6 +1,6 @@
 /* ============================================================
  * ZBMP Podcast Studio · 前端交互层
- * 对接 /api/podcast/* 共 9 个端点
+ * 对接 /api/podcast/* + /api/content/* 共 11 个端点
  * 纯原生 JS/CSS 自研可视化，不引入第三方图表库
  * ============================================================ */
 (function (global) {
@@ -22,6 +22,8 @@
     return (m > 0 ? m + 'm ' : '') + s + 's';
   }
   function pct(v) { return (Math.round(v * 100) / 100) + '%'; }
+  function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 
   /* POST JSON，走 LUMENIS.fetch（带 auth），回退原生 fetch */
   function postJSON(url, body) {
@@ -159,7 +161,6 @@
     });
     box.innerHTML = html;
 
-    /* 绑定滑块实时计算 */
     var sliders = box.querySelectorAll('.podcast-slider');
     sliders.forEach(function (s) {
       s.addEventListener('input', function () {
@@ -193,7 +194,6 @@
     var sig = readSignals();
     var score = computeLocalScore(sig);
     $('topic-live-score').textContent = score.toFixed(1);
-    /* 本地阶段预判（不调用 classify，仅近似） */
     var stage = 'watch';
     if (score < 35) stage = 'rejected';
     else if (sig.timeliness >= 0.85) stage = 'now';
@@ -221,7 +221,6 @@
       sb.style.color = sl.color;
       sb.style.borderColor = sl.color;
 
-      /* 渲染各维度贡献条 */
       var signals = r.signals || {};
       var weights = r.weights || {};
       var html = '';
@@ -229,7 +228,7 @@
         var v = signals[dim.key] != null ? signals[dim.key] : 0;
         var w = weights[dim.key] != null ? weights[dim.key] : dim.weight;
         var contrib = dim.positive ? (v * w) : -(v * w);
-        var barW = Math.abs(contrib) * 100 * 5; /* 放大显示 */
+        var barW = Math.abs(contrib) * 100 * 5;
         var color = dim.positive ? '#2f9e6e' : '#c0463a';
         html += '<div class="podcast-contrib-row">'
           + '<span class="podcast-contrib-label">' + dim.label + '</span>'
@@ -279,7 +278,6 @@
   ];
 
   function loadStoryNodes() {
-    /* 用默认分段调用 API，用户可在 textarea 中修改 */
     $('story-input').value = JSON.stringify(DEFAULT_SEGMENTS, null, 2);
     fetchStoryNodes(DEFAULT_SEGMENTS);
   }
@@ -319,7 +317,6 @@
     var maxEnd = Math.max.apply(null, nodes.map(function (n) { return n.end_ms || 0; }));
     maxEnd = maxEnd || 1;
 
-    /* 时间轴：横向条带 */
     var tl = '<div class="podcast-timeline">';
     nodes.forEach(function (n) {
       var left = ((n.start_ms || 0) / maxEnd) * 100;
@@ -332,7 +329,6 @@
         + '</div>';
     });
     tl += '</div>';
-    /* 时间刻度 */
     tl += '<div class="podcast-timeline-scale">';
     for (var i = 0; i <= 4; i++) {
       var t = Math.round((maxEnd / 4) * i);
@@ -341,7 +337,6 @@
     tl += '</div>';
     $('story-timeline').innerHTML = tl;
 
-    /* 节点卡片 */
     var cards = '';
     nodes.forEach(function (n, idx) {
       var color = NODE_TYPE_COLORS[n.node_type] || '#666';
@@ -562,6 +557,197 @@
   }
 
   /* ============================================================
+   * 8. 话题研究 + 快照 + 持久化（闭环入口）
+   * ============================================================ */
+  var LS_KEY_HISTORY = 'zbmp_podcast_topic_history';
+  var LS_KEY_SCORES = 'zbmp_podcast_saved_scores';
+  var currentTopic = '';
+
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY_HISTORY) || '[]'); } catch (e) { return []; }
+  }
+  function saveHistory(list) {
+    try { localStorage.setItem(LS_KEY_HISTORY, JSON.stringify(list.slice(0, 20))); } catch (e) {}
+  }
+  function pushHistory(topic) {
+    if (!topic) return;
+    var list = getHistory().filter(function (t) { return t !== topic; });
+    list.unshift(topic);
+    saveHistory(list);
+    renderHistory();
+  }
+  function renderHistory() {
+    var box = $('research-history');
+    if (!box) return;
+    var list = getHistory();
+    var html = '<span style="font-size:11px;color:var(--lm-color-text-secondary,#999);">历史：</span>';
+    list.forEach(function (t) {
+      html += '<span class="podcast-history-tag" data-topic="' + escapeAttr(t) + '">' + escapeHtml(t) + '</span>';
+    });
+    box.innerHTML = html;
+    box.querySelectorAll('.podcast-history-tag').forEach(function (el) {
+      el.addEventListener('click', function () {
+        $('research-topic-input').value = el.getAttribute('data-topic');
+      });
+    });
+  }
+
+  function getSavedScores() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY_SCORES) || '[]'); } catch (e) { return []; }
+  }
+  function saveScoreRecord(rec) {
+    var list = getSavedScores();
+    list.unshift(rec);
+    try { localStorage.setItem(LS_KEY_SCORES, JSON.stringify(list.slice(0, 30))); } catch (e) {}
+    renderSavedScores();
+  }
+  function renderSavedScores() {
+    var row = $('saved-scores-row');
+    var listEl = $('saved-scores-list');
+    if (!row || !listEl) return;
+    var list = getSavedScores();
+    if (!list.length) { row.style.display = 'none'; return; }
+    row.style.display = '';
+    var html = '';
+    list.forEach(function (r, i) {
+      html += '<span class="podcast-saved-score" title="' + escapeAttr(r.topic || '') + ' · ' + (r.stage || '') + '" data-idx="' + i + '">'
+        + (r.topic ? escapeHtml(r.topic.substring(0, 12)) : '未命名') + ' · ' + (r.score != null ? r.score : '?') + '分</span>';
+    });
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('.podcast-saved-score').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var idx = parseInt(el.getAttribute('data-idx'), 10);
+        var rec = getSavedScores()[idx];
+        if (rec && rec.signals) {
+          Object.keys(rec.signals).forEach(function (k) {
+            var s = $('topic-input-' + k);
+            if (s) s.value = Math.round((rec.signals[k] || 0) * 100);
+          });
+          updateLiveScore();
+          if (rec.topic) { $('research-topic-input').value = rec.topic; setCurrentTopic(rec.topic); }
+        }
+      });
+    });
+  }
+
+  function setCurrentTopic(topic) {
+    currentTopic = topic || '';
+    var label = $('topic-current-label');
+    if (label) {
+      if (currentTopic) { label.style.display = ''; label.textContent = '话题：' + currentTopic; }
+      else { label.style.display = 'none'; }
+    }
+  }
+
+  function submitResearch() {
+    var topic = $('research-topic-input').value.trim();
+    if (!topic) { showResearchError('请输入话题'); return; }
+    hideResearchError();
+    pushHistory(topic);
+    setCurrentTopic(topic);
+    var btn = $('research-btn');
+    btn.disabled = true; btn.textContent = '研究中…';
+    postJSON('/api/content/podcast-research', { topic: topic, brand: 'ZBMP', platform: 'podcast' })
+      .then(function (d) {
+        var content = (d && (d.content || d.text || d.result || d.output)) || JSON.stringify(d, null, 2);
+        $('research-result-content').textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+        $('research-result').style.display = '';
+        $('research-result-badge').textContent = '研究结果 · ' + topic;
+      })
+      .catch(function (e) {
+        showResearchError('研究失败: ' + e.message);
+      })
+      .finally(function () { btn.disabled = false; btn.textContent = 'AI 研究'; });
+  }
+
+  function submitSnapshot() {
+    var topic = $('research-topic-input').value.trim();
+    if (!topic) { showResearchError('请输入话题'); return; }
+    hideResearchError();
+    pushHistory(topic);
+    setCurrentTopic(topic);
+    fetch('/api/content/topic-snapshot?topic=' + encodeURIComponent(topic))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) throw new Error(d.error || 'snapshot failed');
+        var snap = d.snapshot || {};
+        var html = '<div style="font-size:13px;line-height:1.8;">';
+        if (typeof snap === 'object' && snap !== null) {
+          Object.keys(snap).forEach(function (k) {
+            var v = snap[k];
+            html += '<div><strong>' + escapeHtml(k) + '：</strong>' + escapeHtml(typeof v === 'object' ? JSON.stringify(v) : String(v)) + '</div>';
+          });
+        } else {
+          html += escapeHtml(String(snap));
+        }
+        html += '</div>';
+        $('snapshot-result-content').innerHTML = html;
+        $('snapshot-result').style.display = '';
+      })
+      .catch(function (e) { showResearchError('快照失败: ' + e.message); });
+  }
+
+  function applyTopicToScoring() {
+    var topic = $('research-topic-input').value.trim();
+    if (!topic) { showResearchError('请先输入话题'); return; }
+    setCurrentTopic(topic);
+    var panel = $('topic-score-panel');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function saveCurrentScore() {
+    var scoreEl = $('topic-result-score');
+    var score = scoreEl ? parseFloat(scoreEl.textContent) : null;
+    if (score == null || isNaN(score)) { showResearchError('请先提交打分后再保存'); return; }
+    var stageEl = $('topic-result-stage');
+    saveScoreRecord({
+      topic: currentTopic || $('research-topic-input').value.trim() || '未命名',
+      score: score,
+      stage: stageEl ? stageEl.textContent : '',
+      signals: readSignals(),
+      saved_at: new Date().toISOString()
+    });
+  }
+
+  function showResearchError(msg) { var e = $('research-error'); if (e) { e.textContent = msg; e.style.display = ''; } }
+  function hideResearchError() { var e = $('research-error'); if (e) e.style.display = 'none'; }
+
+  function clearHistory() {
+    try { localStorage.removeItem(LS_KEY_HISTORY); } catch (e) {}
+    renderHistory();
+  }
+
+  /* ============================================================
+   * 9. 实体创建（POST /api/podcast/entity）
+   * ============================================================ */
+  function submitCreateEntity() {
+    var etype = $('entity-type-input').value.trim();
+    var title = $('entity-title-input').value.trim();
+    var errEl = $('entity-create-error');
+    if (!etype) { if (errEl) { errEl.textContent = '实体类型必填'; errEl.style.display = ''; } return; }
+    if (errEl) errEl.style.display = 'none';
+    var body = { entity_type: etype, title: title };
+    var parent = $('entity-parent-input').value.trim();
+    if (parent) body.parent_id = parent;
+    var tags = $('entity-tags-input').value.trim();
+    if (tags) body.tags = tags.split(/[,，]/).map(function (t) { return t.trim(); }).filter(Boolean);
+    var btn = $('entity-create-btn');
+    btn.disabled = true; btn.textContent = '创建中…';
+    postJSON('/api/podcast/entity', body)
+      .then(function (d) {
+        $('entity-type-input').value = '';
+        $('entity-title-input').value = '';
+        $('entity-parent-input').value = '';
+        $('entity-tags-input').value = '';
+        loadEntities();
+      })
+      .catch(function (e) {
+        if (errEl) { errEl.textContent = '创建失败: ' + e.message; errEl.style.display = ''; }
+      })
+      .finally(function () { btn.disabled = false; btn.textContent = '创建实体'; });
+  }
+
+  /* ============================================================
    * 初始化
    * ============================================================ */
   function init() {
@@ -571,8 +757,9 @@
     loadStoryNodes();
     loadRuntimeValidate();
     renderCaseStudy();
+    renderHistory();
+    renderSavedScores();
 
-    /* 绑定按钮 */
     var tsb = $('topic-submit-btn');
     if (tsb) tsb.addEventListener('click', submitTopicScore);
     var ssb = $('story-submit-btn');
@@ -583,6 +770,22 @@
     if (ysb) ysb.addEventListener('click', submitContentYield);
     var rsb = $('runtime-submit-btn');
     if (rsb) rsb.addEventListener('click', submitRuntimeValidate);
+
+    var rb = $('research-btn');
+    if (rb) rb.addEventListener('click', submitResearch);
+    var sb = $('snapshot-btn');
+    if (sb) sb.addEventListener('click', submitSnapshot);
+    var rab = $('research-apply-btn');
+    if (rab) rab.addEventListener('click', applyTopicToScoring);
+    var rsb2 = $('research-save-btn');
+    if (rsb2) rsb2.addEventListener('click', saveCurrentScore);
+    var rcb = $('research-clear-btn');
+    if (rcb) rcb.addEventListener('click', clearHistory);
+    var rti = $('research-topic-input');
+    if (rti) rti.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitResearch(); });
+
+    var ecb = $('entity-create-btn');
+    if (ecb) ecb.addEventListener('click', submitCreateEntity);
   }
 
   global.ZBMPPodcast = {
@@ -592,7 +795,10 @@
     submitStoryNodes: submitStoryNodes,
     submitBreakout: submitBreakout,
     submitContentYield: submitContentYield,
-    submitRuntimeValidate: submitRuntimeValidate
+    submitRuntimeValidate: submitRuntimeValidate,
+    submitResearch: submitResearch,
+    submitSnapshot: submitSnapshot,
+    submitCreateEntity: submitCreateEntity
   };
 
   if (document.readyState === 'loading') {
