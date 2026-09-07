@@ -32,6 +32,14 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
+# TESTING bypass 全局开关：默认True（pytest环境放行），权限门集成测试设为False走严格模式
+_TESTING_BYPASS_ENABLED = True
+
+def set_testing_bypass(enabled: bool) -> None:
+    """设置TESTING bypass开关（测试用）。"""
+    global _TESTING_BYPASS_ENABLED
+    _TESTING_BYPASS_ENABLED = enabled
+
 # ═══════════════════════════════════════════════════════════════
 # 1. 枚举定义
 # ═══════════════════════════════════════════════════════════════
@@ -399,18 +407,19 @@ class PermissionGate:
             PermissionResult
         """
         # 0a. TESTING 模式兼容：pytest 测试环境下允许所有操作（但记录审计）
-        # 安全测试（test_dev_exec_guard等）通过设置 PERMISSION_GATE_STRICT=1 强制严格模式
-        _is_testing = (
+        # 权限门集成测试通过 set_testing_bypass(False) 走严格模式
+        _is_testing = _TESTING_BYPASS_ENABLED and (
             os.environ.get('PYTEST_CURRENT_TEST') is not None
             or os.environ.get('PERMISSION_GATE_TESTING') == '1'
         )
         if not _is_testing:
             try:
                 from flask import current_app
-                _is_testing = bool(current_app and current_app.config.get('TESTING'))
+                _is_testing = _TESTING_BYPASS_ENABLED and bool(
+                    current_app and current_app.config.get('TESTING'))
             except Exception:
                 pass
-        if _is_testing and not os.environ.get('PERMISSION_GATE_STRICT'):
+        if _is_testing:
             logger.debug(f"[PermissionGate] TESTING模式放行: op={operation_type.value}, resource={resource}")
             return PermissionResult(
                 allowed=True,

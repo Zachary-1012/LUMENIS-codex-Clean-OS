@@ -1106,11 +1106,10 @@ def _permission_gate_write_check():
     - 权限拒绝 → 返回 BLOCKED（403），不执行写操作
     - TESTING 模式（pytest）下跳过，由装饰器层权限控制
     """
-    # TESTING 模式跳过：pytest 环境变量或 app.config TESTING
-    if os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('PERMISSION_GATE_TESTING') == '1':
-        return None
+    # TESTING 模式跳过：使用 permission_gate 全局开关（权限门集成测试设为False走严格模式）
     try:
-        if app.config.get('TESTING'):
+        from permission_gate import _TESTING_BYPASS_ENABLED
+        if _TESTING_BYPASS_ENABLED and (os.environ.get('PYTEST_CURRENT_TEST') or app.config.get('TESTING')):
             return None
     except Exception:
         pass

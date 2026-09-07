@@ -24,6 +24,10 @@ from permission_gate import (
     get_permission_gate, reset_permission_gate,
 )
 
+# 权限门集成测试需要严格模式：不被TESTING通用放行影响
+from permission_gate import set_testing_bypass
+set_testing_bypass(False)
+
 
 # ═══════════════════════════════════════════════════════════════
 # Fixtures
