@@ -1963,11 +1963,21 @@ def export_report_to_csv(report_type='daily', date_str=None):
     return output.getvalue(), filename
 
 @app.route('/')
-def index(): return send_from_directory('static','index.html')
+def index():
+    # LUMENIS 前端重构后入口为 /lumenis/（旧 static/index.html 已在 UI HARD RESET 删除）
+    return redirect('/lumenis/')
 @app.route('/favicon.ico')
 def favicon():
     # 消除浏览器自动请求 favicon 产生的 404 控制台报错
     return Response(status=204)
+@app.route('/VERSION')
+def version_file():
+    # 前端 settings.js 读取版本号（纯文本，与根目录 VERSION 文件一致）
+    try:
+        with io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'VERSION'), encoding='utf-8') as _vf:
+            return Response(_vf.read().strip(), mimetype='text/plain')
+    except Exception:
+        return Response(APP_VERSION, mimetype='text/plain')
 @app.route('/api/metrics/canonical')
 def api_metrics_canonical():
     """Unified Data Intelligence Pipeline: Canonical Metric API (UDIP P2)

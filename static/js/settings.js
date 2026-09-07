@@ -1160,7 +1160,7 @@ function toggleDownloadAsk() {
 
 function clearBrowserData() {
   if (!confirm('确认清除浏览数据？此操作不可恢复。')) return;
-  fetch('/api/browser/clear-history', { method: 'POST', credentials: 'include' }).then(r => r.json()).then(data => {
+  fetch('/api/browser-surface/history/clear', { method: 'POST', credentials: 'include' }).then(r => r.json()).then(data => {
     if (data.ok || data.success) showToast('浏览数据已清除');
     else showToast(data.error || '清除失败', 'error');
   }).catch(() => {
@@ -1173,7 +1173,7 @@ function showBrowserHistory() {
   openModal('browserHistoryModal');
   const container = document.getElementById('browserHistoryList');
   container.innerHTML = '<div class="loading-spinner"></div>';
-  fetch('/api/browser/history?limit=50', { credentials: 'include' }).then(r => r.json()).then(data => {
+  fetch('/api/browser-surface/history?limit=50', { credentials: 'include' }).then(r => r.json()).then(data => {
     const items = data.history || data.data?.history || [];
     if (!items.length) {
       container.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div>暂无浏览历史</div>';
@@ -1191,7 +1191,7 @@ function showBrowserHistory() {
 
 function clearBrowserHistory() {
   if (!confirm('确认清除全部浏览历史？')) return;
-  fetch('/api/browser/clear-history', { method: 'POST', credentials: 'include' }).then(() => {
+  fetch('/api/browser-surface/history/clear', { method: 'POST', credentials: 'include' }).then(() => {
     showToast('浏览历史已清除');
     closeModal('browserHistoryModal');
   }).catch(() => showToast('清除请求已发送'));
@@ -1201,7 +1201,7 @@ function showDownloadHistory() {
   openModal('downloadHistoryModal');
   const container = document.getElementById('downloadHistoryList');
   container.innerHTML = '<div class="loading-spinner"></div>';
-  fetch('/api/browser/downloads', { credentials: 'include' }).then(r => r.json()).then(data => {
+  fetch('/api/browser-surface/downloads', { credentials: 'include' }).then(r => r.json()).then(data => {
     const files = data.files || data.downloads || [];
     if (!files.length) {
       container.innerHTML = '<div class="empty-state"><div class="empty-icon">📥</div>暂无下载记录</div>';
