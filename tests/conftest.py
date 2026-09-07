@@ -38,6 +38,49 @@ TEST_CONFIG = {
 os.environ['TAIKOO_AUTH_USER'] = TEST_CONFIG['auth_user']
 os.environ['TAIKOO_AUTH_PASSWORD'] = TEST_CONFIG['auth_pass']
 
+# conftest 由 pytest 在 collect tests/ 下任何测试模块【之前】导入，此处记录的是尚未被
+# 测试模块级 os.environ 污染的会话干净基线（如 ZBC_DB_PATH）。某些隔离测试
+# （test_workspace_keys 等）在模块顶层把 ZBC_DB_PATH 指向临时空库，collect 期即全局生效、
+# 字母序最后的还会覆盖前者，导致后续实时读 environ 的生产代码（api_dual_domain._get_db_path）
+# 连到无表临时库返回 500。用此基线在每个"不自行设置该变量"的用例运行前还原。
+_ENV_SESSION_BASELINE = {'ZBC_DB_PATH': os.environ.get('ZBC_DB_PATH')}
+_MODULE_SETS_ENV_CACHE = {}
+
+def _module_self_sets_env(mod, key='ZBC_DB_PATH'):
+    """测试模块自身源码是否会【写/删/setdefault】该环境变量（顶层语句或 module/function
+    fixture 内都算"自理"）。自理模块（如 ic_contracts_p2 用 module fixture 强制临时库、
+    workspace_keys 顶层指定隔离库）的设置必须保留，护栏不得干预；只有源码完全不写该变量
+    的受害模块（如 api_dual_domain 只 get 读取），才在 setup 恢复会话基线、清除 collect 期
+    其它模块顶层遗留的全局污染。"""
+    if mod is None:
+        return False
+    ident = getattr(mod, '__file__', None)
+    if ident is None:
+        return False
+    if ident in _MODULE_SETS_ENV_CACHE:
+        return _MODULE_SETS_ENV_CACHE[ident]
+    import re as _re
+    # 任意缩进位置：os.environ["KEY"]=（赋值，排除==）、.update(、.setdefault(、.pop("KEY"
+    _pat = _re.compile(
+        r"os\.environ\s*(?:\[\s*['\"]" + _re.escape(key) + r"['\"]\s*\]\s*=(?!=)"
+        r"|\.update\s*\(|\.setdefault\s*\(|\.pop\s*\(\s*['\"]" + _re.escape(key) + r")"
+    )
+    sets = False
+    try:
+        with open(ident, encoding='utf-8', errors='replace') as _fh:
+            sets = any(_pat.search(_ln) for _ln in _fh)
+    except OSError:
+        sets = False
+    _MODULE_SETS_ENV_CACHE[ident] = sets
+    return sets
+
+def _restore_env_baseline(key='ZBC_DB_PATH'):
+    _bv = _ENV_SESSION_BASELINE.get(key)
+    if _bv is None:
+        os.environ.pop(key, None)
+    else:
+        os.environ[key] = _bv
+
 @pytest.fixture(scope='session')
 def app():
     """创建Flask应用实例"""
@@ -67,7 +110,7 @@ def db():
 
 
 @pytest.fixture(autouse=True)
-def _global_state_isolation():
+def _global_state_isolation(request):
     """每个用例前后把已知模块级"可变全局状态"重置到干净基线，保证完整套件任意顺序隔离。
 
     关键教训：必须重置对象的【内部状态】(dict.clear / breaker.reset / logger.setLevel)，
@@ -91,6 +134,9 @@ def _global_state_isolation():
     # 会污染整个 pytest 进程，导致延迟 import 的模块 DB_PATH 指向别人的临时库）
     _ENV_LEAK_KEYS = ('ZBC_DB_PATH',)
     _saved_env = {k: os.environ.get(k) for k in _ENV_LEAK_KEYS if k in os.environ}
+    # 当前用例模块自身是否在顶层设置 ZBC_DB_PATH（隔离测试需要自己的临时库，予以保留；
+    # 其余模块用例运行前一律恢复会话基线，清除 collect 期其它模块遗留的全局污染）
+    _self_sets_env = _module_self_sets_env(getattr(request, 'module', None))
 
     def _reset_global_state():
         # ai_channel：清空每-provider 熔断器（get 时按 CLOSED 重建）+ 复位全局 breaker
@@ -123,6 +169,10 @@ def _global_state_isolation():
             pass
 
     _reset_global_state()
+    # 当前模块不自行顶层设置 ZBC_DB_PATH 时，清除 collect 期其它隔离测试遗留的全局污染，
+    # 让实时读 environ 的生产代码（如 api_dual_domain）连回会话基线库而非别人的临时空库
+    if not _self_sets_env:
+        _restore_env_baseline()
     yield
     _reset_global_state()
 
@@ -153,16 +203,22 @@ def _global_state_isolation():
     except Exception:
         pass
 
-    # --- 恢复 os.environ 易泄漏变量，杜绝 ZBC_DB_PATH 跨用例污染 ---
+    # --- 恢复 os.environ，杜绝 ZBC_DB_PATH 跨用例/跨模块污染 ---
+    # 自身顶层设置的隔离模块：恢复其进入用例时的值（保持模块内临时库一致）；
+    # 其余模块：一律回到会话干净基线（未设置则 pop），不把任何临时库泄漏给后续模块。
     try:
-        for _k, _v in _saved_env.items():
-            if _v is None:
-                os.environ.pop(_k, None)
-            else:
-                os.environ[_k] = _v
-        for _k in _ENV_LEAK_KEYS:
-            if _k not in _saved_env:
-                os.environ.pop(_k, None)
+        if _self_sets_env:
+            for _k, _v in _saved_env.items():
+                if _v is None:
+                    os.environ.pop(_k, None)
+                else:
+                    os.environ[_k] = _v
+            for _k in _ENV_LEAK_KEYS:
+                if _k not in _saved_env:
+                    os.environ.pop(_k, None)
+        else:
+            for _k in _ENV_LEAK_KEYS:
+                _restore_env_baseline(_k)
     except Exception:
         pass
 

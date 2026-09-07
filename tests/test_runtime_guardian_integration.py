@@ -52,6 +52,11 @@ def guardian():
         circuit_breaker_threshold=10,
     ))
     yield g
+    # 兜底：无论用例是否自行 stop，teardown 都确保 reaper 后台线程退出，杜绝跨用例线程泄漏
+    try:
+        g.stop_reaper()
+    except Exception:
+        pass
     try:
         os.remove(db_path)
     except OSError:

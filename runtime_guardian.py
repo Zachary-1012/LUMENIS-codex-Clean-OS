@@ -1125,8 +1125,14 @@ class RuntimeGuardian:
             self._reaper_thread.start()
 
     def stop_reaper(self) -> None:
+        # 标志位在锁内翻转；join 必须放在锁外——_reaper_loop.run_cycle 也会获取 self._lock，
+        # 在锁内 join 会自死锁。join 保证 stop 返回时后台线程已（接近）退出，避免被线程泄漏
+        # 探针捕获到仍在 time.sleep 中、尚未自然结束的 reaper 线程。
         with self._lock:
             self._reaper_running = False
+            thr = getattr(self, '_reaper_thread', None)
+        if thr is not None and thr is not threading.current_thread() and thr.is_alive():
+            thr.join(timeout=2.0)
 
     def _reaper_loop(self, interval: float) -> None:
         while self._reaper_running:

@@ -551,7 +551,7 @@ def get_metric_trend(entity_type, entity_key, limit=200):
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM metric_snapshots WHERE entity_type=? AND entity_key=? "
-            "ORDER BY id ASC LIMIT ?", (entity_type, entity_key, int(limit))).fetchall()
+            "ORDER BY snapshot_at ASC LIMIT ?", (entity_type, entity_key, int(limit))).fetchall()
         for r in rows:
             d = dict(r)
             out.append(d)
