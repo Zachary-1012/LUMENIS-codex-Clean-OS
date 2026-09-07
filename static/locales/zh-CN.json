@@ -1,4 +1,4 @@
-{
+﻿{
   "product": {
     "name": "序境 LUMENIS",
     "tagline": "序境 LUMENIS · 商业运营与品牌市场，统一证据链，每一步可追溯",
@@ -57,7 +57,7 @@
     "database": "数据库",
     "security": "安全",
     "intelligence": "智能",
-    "skill_hub": "技能中心",
+    "skill_hub": "技能",
     "production": "生产",
     "research": "研究",
     "operations": "运维",
@@ -96,7 +96,7 @@
     "card_risks": "风险",
     "card_tasks_label": "任务",
     "nav_intel": "智能",
-    "nav_skills": "技能中心",
+    "nav_skills": "技能",
     "nav_prod": "生产",
     "nav_research": "研究",
     "nav_ops": "运维",

@@ -1,4 +1,4 @@
-{
+﻿{
   "product": {
     "name": "LUMENIS",
     "tagline": "LUMENIS · Commerce Operations & Brand Market, unified evidence chain",
@@ -57,7 +57,7 @@
     "database": "Database",
     "security": "Security",
     "intelligence": "Intelligence",
-    "skill_hub": "Skill Hub",
+    "skill_hub": "Skills",
     "production": "Production",
     "research": "Research",
     "operations": "Operations",
@@ -96,7 +96,7 @@
     "card_risks": "Risks",
     "card_tasks_label": "Tasks",
     "nav_intel": "Intelligence",
-    "nav_skills": "Skill Hub",
+    "nav_skills": "Skills",
     "nav_prod": "Production",
     "nav_research": "Research",
     "nav_ops": "Operations",
