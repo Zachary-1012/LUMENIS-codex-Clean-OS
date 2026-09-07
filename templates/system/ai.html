@@ -3,6 +3,32 @@
 {% block page_title %}AI Gateway{% endblock %}
 
 {% block content %}
+<style>
+/* ===== GPT 风格 AI 对话区 ===== */
+.gpt-welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 24px;text-align:center;gap:24px}
+.gpt-welcome__title{font-size:28px;font-weight:700;color:#1e293b;letter-spacing:-.5px}
+.gpt-welcome__subtitle{font-size:13px;color:#94a3b8;margin-top:-16px}
+.gpt-shortcuts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:560px;width:100%;margin-top:8px}
+.gpt-shortcut{display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;cursor:pointer;font-size:13px;color:#475569;text-align:left;transition:all .15s;min-height:48px}
+.gpt-shortcut:hover{border-color:#0F766E;background:#f0fdfa;color:#0F766E;transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,118,110,.08)}
+.gpt-shortcut__icon{font-size:16px;flex-shrink:0}
+.gpt-shortcut__text{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpt-input-area{padding:12px 16px 16px;border-top:1px solid #f1f5f9;background:#fff}
+.gpt-input-row{display:flex;align-items:flex-end;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:8px 8px 8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:border-color .15s,box-shadow .15s}
+.gpt-input-row:focus-within{border-color:#0F766E;box-shadow:0 0 0 3px rgba(15,118,110,.08)}
+.gpt-input__attach{background:none;border:none;cursor:pointer;color:#64748b;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.gpt-input__attach:hover{background:#f1f5f9;color:#0F766E}
+.gpt-input__textarea{flex:1;border:none;outline:none;resize:none;font-size:14px;line-height:1.6;color:#1e293b;background:transparent;max-height:160px;min-height:24px;font-family:inherit;padding:4px 0}
+.gpt-input__textarea::placeholder{color:#94a3b8}
+.gpt-input__tools{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.gpt-input__tool{background:none;border:none;cursor:pointer;color:#64748b;padding:8px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .15s;width:34px;height:34px}
+.gpt-input__tool:hover{background:#f1f5f9;color:#0F766E}
+.gpt-input__send{background:#0F766E;border:none;cursor:pointer;color:#fff;padding:8px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .15s;width:34px;height:34px;flex-shrink:0}
+.gpt-input__send:hover{background:#0d5d56;transform:scale(1.05)}
+.gpt-input__send:disabled{background:#cbd5e1;cursor:not-allowed;transform:none}
+.gpt-input__hint{text-align:center;font-size:11px;color:#94a3b8;margin-top:8px}
+@media(max-width:768px){.gpt-shortcuts{grid-template-columns:repeat(2,1fr)}.gpt-welcome__title{font-size:22px}}
+</style>
 <div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
   <span>⚡</span><span id="degraded-msg">部分 AI Provider 数据延迟</span>
 </div>
@@ -65,21 +91,24 @@
               <div class="ai-msg__bubble">你好！我是序境 AI 对话工作台。输入自然语言任务，我会通过 AI Task Engine（Parser→Intent→Agent→Skill→Permission→Execution→Evidence→Verification→Trace）执行，并在右侧详情面板展示完整执行链路。</div>
             </div>
           </div>
-          <div class="ai-input-area">
+          <div class="ai-input-area gpt-input-area">
             <div class="ai-attach-preview" id="ai-attach-preview" style="display:none;"></div>
-            <div class="ai-input-row">
-              <textarea id="ai-chat-input" placeholder="输入任务或问题，Enter 发送，Shift+Enter 换行…" rows="1"></textarea>
-              <div class="ai-input-tools">
-                <label class="ai-btn ai-btn--ghost ai-btn--icon" title="上传图片/文件（UI预览）">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                  <input type="file" id="ai-file-input" multiple accept="image/*,.pdf,.txt,.docx,.xlsx,.csv">
-                </label>
-                <button class="ai-btn ai-btn--primary" id="ai-send-btn" onclick="AIChat.send()">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                  发送
+            <div class="gpt-input-row">
+              <button class="gpt-input__attach" title="上传附件" onclick="document.getElementById('ai-file-input').click()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                <input type="file" id="ai-file-input" multiple accept="image/*,.pdf,.txt,.docx,.xlsx,.csv" style="display:none">
+              </button>
+              <textarea id="ai-chat-input" class="gpt-input__textarea" placeholder="有问题，随便问…（Enter 发送，Shift+Enter 换行）" rows="1"></textarea>
+              <div class="gpt-input__tools">
+                <button class="gpt-input__tool" id="ai-think-btn" title="深度思考" onclick="AIChat.toggleThink()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                </button>
+                <button class="gpt-input__send" id="ai-send-btn" onclick="AIChat.send()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
               </div>
             </div>
+            <div class="gpt-input__hint">AI 生成内容仅供参考，关键决策请人工核实 · 内容制作按流程直接输出结果</div>
           </div>
         </div>
       </div>
@@ -690,6 +719,23 @@
     _saveSessions: function() {
       try { localStorage.setItem('ai_chat_sessions', JSON.stringify(AIChat.sessions.slice(0, 30))); } catch(e) {}
     },
+    /* ---- GPT 快捷入口：填入输入框并发送 ---- */
+    quickAsk: function(text) {
+      var input = document.getElementById('ai-chat-input');
+      if (input) { input.value = text; input.style.height = 'auto'; }
+      AIChat.send();
+    },
+    /* ---- 深度思考开关（UI标记，实际由后端Task Engine决定模型） ---- */
+    _thinkMode: false,
+    toggleThink: function() {
+      AIChat._thinkMode = !AIChat._thinkMode;
+      var btn = document.getElementById('ai-think-btn');
+      if (btn) {
+        btn.style.background = AIChat._thinkMode ? 'rgba(15,118,110,.12)' : '';
+        btn.style.color = AIChat._thinkMode ? '#0F766E' : '';
+        btn.title = AIChat._thinkMode ? '深度思考：开（点击关闭）' : '深度思考：关（点击开启）';
+      }
+    },
     newChat: function() {
       var id = 'sess_' + Date.now();
       AIChat.sessions.unshift({ id: id, title: '新对话', messages: [], created_at: Date.now() });
@@ -730,8 +776,17 @@
       var container = document.getElementById('ai-chat-messages');
       var sess = AIChat._getSession();
       if (!sess || !sess.messages.length) {
-        container.innerHTML = '<div class="ai-msg ai-msg--ai"><div class="ai-msg__role">AI Assistant</div>'
-          + '<div class="ai-msg__bubble">你好！我是序境 AI 对话工作台。输入自然语言任务，我会通过 AI Task Engine 执行，并在右侧详情面板展示完整执行链路。</div></div>';
+        container.innerHTML = '<div class="gpt-welcome">'
+          + '<div class="gpt-welcome__title">你今天在想些什么？</div>'
+          + '<div class="gpt-welcome__subtitle">序境 AI 助手 · 内容创作 / 品牌分析 / 舆情研判 / 播客研究</div>'
+          + '<div class="gpt-shortcuts">'
+          + '<button class="gpt-shortcut" onclick="AIChat.quickAsk(\'帮我写一篇小红书种草文案，品牌：广州太古汇，主题：入秋香氛治愈\')"><span class="gpt-shortcut__icon">✍️</span><span class="gpt-shortcut__text">小红书文案</span></button>'
+          + '<button class="gpt-shortcut" onclick="AIChat.quickAsk(\'研究一个播客选题，主题：品牌传播与消费者洞察，给出10维评分\')"><span class="gpt-shortcut__icon">🎙️</span><span class="gpt-shortcut__text">播客选题</span></button>'
+          + '<button class="gpt-shortcut" onclick="AIChat.quickAsk(\'生成一份品牌传播周报，覆盖声量、互动、风险、KOS贡献\')"><span class="gpt-shortcut__icon">📊</span><span class="gpt-shortcut__text">品牌报告</span></button>'
+          + '<button class="gpt-shortcut" onclick="AIChat.quickAsk(\'分析当前太古汇舆情趋势，识别风险事件和增长机会\')"><span class="gpt-shortcut__icon">🔍</span><span class="gpt-shortcut__text">舆情研判</span></button>'
+          + '<button class="gpt-shortcut" onclick="AIChat.quickAsk(\'帮我改写这段文案，更符合小红书情绪向风格\')"><span class="gpt-shortcut__icon">✨</span><span class="gpt-shortcut__text">内容改写</span></button>'
+          + '<button class="gpt-shortcut" onclick="AIChat.quickAsk(\'搜索最新的品牌营销案例和平台规则变化\')"><span class="gpt-shortcut__icon">🌐</span><span class="gpt-shortcut__text">搜索研究</span></button>'
+          + '</div></div>';
         return;
       }
       container.innerHTML = sess.messages.map(function(m) {
