@@ -19,6 +19,13 @@
 
 {% block content %}
 <!-- Degraded Banner -->
+
+  <!-- 全局趋势线 -->
+  <section class="zbc-trend-section" style="margin:16px 0;">
+    <div class="zbc-card" style="padding:16px;border-radius:16px;border:1px solid var(--l-border,#e5e7eb);background:var(--l-surface,#fff);">
+      <div id="trend-kos" style="width:100%;"></div>
+    </div>
+  </section>
 <div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
   <span>⚠</span><span id="degraded-msg">部分数据延迟，已加载数据正常显示</span>
 </div>
@@ -589,4 +596,10 @@
   document.addEventListener('DOMContentLoaded', function() { ZBMPKOS.init(); });
 })();
 </script>
+<script>
+  if (typeof ZBCTrendLine !== 'undefined') {
+    ZBCTrendLine.render('trend-kos', '/api/trend/kos', {title:'KOS内容趋势', days:30, color:'#F59E0B', metric:'count', height:180});
+  }
+</script>
+
 {% endblock %}

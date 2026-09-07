@@ -25,6 +25,13 @@
 {% endblock %}
 
 {% block content %}
+
+  <!-- 全局趋势线 -->
+  <section class="zbc-trend-section" style="margin:16px 0;">
+    <div class="zbc-card" style="padding:16px;border-radius:16px;border:1px solid var(--l-border,#e5e7eb);background:var(--l-surface,#fff);">
+      <div id="trend-risk" style="width:100%;"></div>
+    </div>
+  </section>
 <div class="zbc-degraded-banner" style="background:rgba(37,99,235,0.06);border-color:rgba(37,99,235,0.2);color:#2563EB;">
   <span>🛡</span><span>CTH 专项风险策略已启用 · 与 ZBMP 风险策略隔离 · subject_rules.py 红线保护中</span>
 </div>
@@ -359,4 +366,14 @@
   window.openRiskModal=openRiskModal;window.closeRiskModal=closeRiskModal;
 })();
 </script>
+<script>
+  if (typeof ZBCTrendLine !== 'undefined') {
+    ZBCTrendLine.renderMulti('trend-risk', '/api/trend/risk', [
+      {metric:'high', color:'#EF4444', name:'高风险'},
+      {metric:'medium', color:'#F59E0B', name:'中风险'},
+      {metric:'low', color:'#10B981', name:'低风险'}
+    ], {title:'风险趋势', days:30, height:180});
+  }
+</script>
+
 {% endblock %}

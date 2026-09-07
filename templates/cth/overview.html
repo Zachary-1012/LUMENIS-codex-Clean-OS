@@ -91,6 +91,19 @@
       <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-health-change"></div>
     </div>
   </section>
+  <!-- ========== 全局趋势线区域 ========== -->
+  <section class="zbc-trend-section" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin:20px 0;">
+    <div class="zbc-card" style="padding:16px;border-radius:16px;border:1px solid var(--l-border,#e5e7eb);background:var(--l-surface,#fff);">
+      <div id="trend-notes" style="width:100%;"></div>
+    </div>
+    <div class="zbc-card" style="padding:16px;border-radius:16px;border:1px solid var(--l-border,#e5e7eb);background:var(--l-surface,#fff);">
+      <div id="trend-engagement" style="width:100%;"></div>
+    </div>
+    <div class="zbc-card" style="padding:16px;border-radius:16px;border:1px solid var(--l-border,#e5e7eb);background:var(--l-surface,#fff);">
+      <div id="trend-sentiment" style="width:100%;"></div>
+    </div>
+  </section>
+
 
   <!-- ========== Row 2: Trend (2/3) + Industry Donut (1/3) ========== -->
   <div class="zbc-grid-2">
@@ -197,6 +210,18 @@
 </div>
 
 <script>
+
+  // 全局趋势线初始化
+  if (typeof ZBCTrendLine !== 'undefined') {
+    ZBCTrendLine.render('trend-notes', '/api/trend/notes', {title:'笔记发布趋势（按发布日期）', days:30, color:'#00D4AA', height:160});
+    ZBCTrendLine.render('trend-engagement', '/api/trend/engagement', {title:'互动量趋势', days:30, color:'#6366F1', metric:'total', height:160});
+    ZBCTrendLine.renderMulti('trend-sentiment', '/api/trend/sentiment', [
+      {metric:'positive', color:'#10B981', name:'正面'},
+      {metric:'neutral', color:'#9CA3AF', name:'中性'},
+      {metric:'negative', color:'#EF4444', name:'负面'}
+    ], {title:'情感趋势', days:30, height:160});
+  }
+
 (function() {
   'use strict';
 

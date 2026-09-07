@@ -40,6 +40,13 @@ from flask import Blueprint, request, jsonify, send_from_directory
 
 
 
+# KOS采集专用香港账号（rednote_hk）
+try:
+    from dual_account_rotation import select_account_for_collection
+    KOS_DUAL_ACCOUNT = True
+except ImportError:
+    KOS_DUAL_ACCOUNT = False
+
 import os, sys
 
 

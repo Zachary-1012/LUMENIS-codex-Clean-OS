@@ -11,6 +11,14 @@
 8. 活动窗口（2026-08-28 ~ 2026-10-07）外自动停止
 9. 绝不伪造数据：采集失败记录错误快照，浏览量/讨论量采不到就存0并标注状态
 """
+# 话题APP端采集adapter（小红书APP搜索话题，与Web端互补）
+try:
+    from platform_adapters.xhs_app_topic import XHSAppTopicAdapter
+    APP_TOPIC_ENABLED = True
+except ImportError:
+    APP_TOPIC_ENABLED = False
+    XHSAppTopicAdapter = None
+
 import os, json, threading, subprocess, time, csv, io, sys, random, logging
 from datetime import datetime
 from flask import jsonify, request, send_from_directory, Response
@@ -1243,3 +1251,31 @@ def register_topic_campaign(app, collect_lock=None):
 
     print('[TopicCampaign] 话题监测端口模块已注册（多任务 + 固定时间点调度，独立线程）')
 
+
+
+# ===== 话题APP端采集集成 =====
+def _app_topic_collect(topic_keyword, max_notes=20):
+    """通过小红书APP端采集话题笔记（与Web端互补，APP端数据更全）。"""
+    if not APP_TOPIC_ENABLED or XHSAppTopicAdapter is None:
+        return {'enabled': False, 'reason': 'APP采集adapter未启用'}
+    try:
+        adapter = XHSAppTopicAdapter()
+        if not adapter.is_enabled():
+            return {'enabled': False, 'reason': 'APP采集未启用（检查配置）'}
+        result = adapter.search(topic_keyword, max_results=max_notes)
+        return {'enabled': True, 'data': result, 'source': 'xhs_app'}
+    except Exception as e:
+        return {'enabled': False, 'reason': f'APP采集异常: {e}'}
+
+def _merge_app_and_web_notes(web_notes, app_notes):
+    """合并Web端和APP端采集的笔记（按note_id去重）。"""
+    merged = {}
+    for note in web_notes or []:
+        nid = note.get('note_id') or note.get('id') or str(note)
+        if nid:
+            merged[nid] = {**note, '_source': 'web'}
+    for note in app_notes or []:
+        nid = note.get('note_id') or note.get('id') or str(note)
+        if nid and nid not in merged:
+            merged[nid] = {**note, '_source': 'xhs_app'}
+    return list(merged.values())

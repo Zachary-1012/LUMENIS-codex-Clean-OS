@@ -132,6 +132,8 @@ except Exception as e:
     ARK_LLM_AVAILABLE = False
     print(f'[ARK] 豆包AI模块导入失败（不影响系统运行）: {e}')
 from subject_rules import SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS, subject_hit, subject_sql_and_values
+# 统一时间序列趋势API（全局趋势线数据源）
+import trend_api
 
 app=Flask(__name__, static_folder='static', static_url_path='/static')
 # 全局上传大小限制：500MB（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
@@ -152,6 +154,8 @@ app.register_blueprint(pr_case_integration.pr_case_bp)
 app.register_blueprint(system_features_api.system_features_bp)
 # V3.0 P0: Auth Recovery Center（认证恢复中心）
 app.register_blueprint(auth_recovery_api.auth_recovery_bp)
+# 统一趋势API蓝图
+app.register_blueprint(trend_api.trend_bp)
 app.register_blueprint(report_api.report_bp)  # P1-10 拆分批3: 报告 API
 app.register_blueprint(viz_api.viz_bp)  # Phase 14: 函数驱动可视化后端 /api/viz/*
 app.register_blueprint(data_center_api.data_center_bp)  # V1.0: 全平台数据中心 /api/data-center/*

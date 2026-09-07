@@ -2,6 +2,13 @@
 采集器自动化模块 - 广州太古汇舆情监测系统 v5.8.0
 实现自动启动→采集→自动关闭的完整流程
 """
+# 双账号不规则轮换采集（大陆+香港账号交替，根据状态浮动）
+try:
+    from dual_account_rotation import select_account_for_collection, record_collection_result, get_rotation_status
+    DUAL_ACCOUNT_ENABLED = True
+except ImportError:
+    DUAL_ACCOUNT_ENABLED = False
+
 import os
 import sys
 import time
@@ -1033,3 +1040,24 @@ if __name__ == '__main__':
     # collector.start_browser()
     # time.sleep(5)
     # collector.stop_browser()
+
+
+# ===== 双账号轮换集成 =====
+def _rotate_account_before_collection(kos_mode=False):
+    """采集前选择账号（不规则轮换）。"""
+    if not DUAL_ACCOUNT_ENABLED:
+        return None, '双账号模块未启用'
+    try:
+        account, reason = select_account_for_collection(kos_mode=kos_mode)
+        return account, reason
+    except Exception as e:
+        return None, f'账号轮换异常: {e}'
+
+def _record_collection_result(account, success, risk=False):
+    """记录采集结果用于账号轮换决策。"""
+    if not DUAL_ACCOUNT_ENABLED or not account:
+        return
+    try:
+        record_collection_result(account, success, risk)
+    except:
+        pass
