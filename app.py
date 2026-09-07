@@ -3491,18 +3491,32 @@ def api_brands_list():
 
 @app.route('/api/brands/logos')
 def api_brands_logos():
-    """品牌列表（带logo），用于品牌卡片展示"""
+    """产品级品牌列表（带logo），支持domain隔离：CTH场内品牌 / ZBMP全部监测品牌"""
     from brand_logo_manager import get_all_brands_with_logos, get_logo_stats
     keyword = request.args.get('keyword', '').lower()
     category = request.args.get('category', '')
+    domain = request.args.get('domain', '')  # cth / zbmp / 空=全部
     brands = get_all_brands_with_logos()
+
+    # 按域隔离：CTH只显示场内品牌，ZBMP显示全部监测品牌
+    if domain == 'cth':
+        brands = [b for b in brands if b.get('is_taikoo_brand', True)]
+    elif domain == 'zbmp':
+        # ZBMP包含场内品牌+外部监测品牌，目前全部品牌都可监测
+        pass
+
     if keyword:
         brands = [b for b in brands if keyword in b.get('brand_en','').lower() or keyword in b.get('brand_cn','').lower()]
     if category:
         brands = [b for b in brands if b.get('category') == category]
     stats = get_logo_stats()
     categories = sorted(list(set(b.get('category','') for b in brands if b.get('category'))))
-    return jsonify({'ok': True, 'total': len(brands), 'brands': brands, 'categories': categories, 'logo_stats': stats})
+    return jsonify({
+        'ok': True, 'total': len(brands), 'brands': brands,
+        'categories': categories, 'logo_stats': stats,
+        'domain': domain or 'all',
+        'product': 'LUMENIS/序境'
+    })
 
 @app.route('/api/brands/logo-stats')
 def api_brand_logo_stats():
