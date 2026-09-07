@@ -12,8 +12,10 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
+# disable_existing_loggers=False：迁移时不得禁用已存在的业务 logger、不得清空 root
+# handlers（否则在测试套件/长驻进程中跑一次迁移就会让后续日志与 pytest caplog 全部失效）。
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

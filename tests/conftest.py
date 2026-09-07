@@ -77,14 +77,16 @@ def _global_state_isolation():
     """
     import logging as _logging
 
-    # --- logging 全局状态快照（level/disable 是值类型，保存-恢复有效）---
+    # --- logging 全局状态快照（level/disable/handlers/disabled/propagate 全维度）---
     _root_logger = _logging.getLogger()
     _saved_root_level = _root_logger.level
     _saved_disable = _logging.root.manager.disable
-    _saved_logger_levels = {
-        n: lg.level for n, lg in _logging.Logger.manager.loggerDict.items()
-        if isinstance(lg, _logging.Logger)
-    }
+    _saved_root_handlers = list(_root_logger.handlers)
+    _saved_logger_state = {}
+    for _n, _lg in list(_logging.Logger.manager.loggerDict.items()):
+        if isinstance(_lg, _logging.Logger):
+            _saved_logger_state[_n] = (_lg.level, _lg.disabled, _lg.propagate,
+                                       list(_lg.handlers))
     # os.environ 中易被测试裸设且不还原的变量（多个测试模块级 os.environ['ZBC_DB_PATH']=...
     # 会污染整个 pytest 进程，导致延迟 import 的模块 DB_PATH 指向别人的临时库）
     _ENV_LEAK_KEYS = ('ZBC_DB_PATH',)
@@ -124,12 +126,30 @@ def _global_state_isolation():
     yield
     _reset_global_state()
 
-    # --- 恢复 logging：解除任何全局抑制、还原 root 与各具名 logger 级别 ---
+    # --- 恢复 logging 全维度：level/disable/disabled/propagate/handlers ---
+    # 关键：alembic env.py 的 fileConfig（disable_existing_loggers）等会禁用业务 logger、
+    # 清空 root handlers（摘掉 pytest caplog），必须逐维度还原，否则后续用例 caplog 失效。
     try:
         _logging.disable(_saved_disable)
         _root_logger.setLevel(_saved_root_level)
-        for _name, _lvl in _saved_logger_levels.items():
-            _logging.getLogger(_name).setLevel(_lvl)
+        # root handlers：移除用例期间新增的，补回用例期间被移除的
+        for _h in list(_root_logger.handlers):
+            if _h not in _saved_root_handlers:
+                _root_logger.removeHandler(_h)
+        for _h in _saved_root_handlers:
+            if _h not in _root_logger.handlers:
+                _root_logger.addHandler(_h)
+        for _name, (_lvl, _dis, _prop, _hdlrs) in _saved_logger_state.items():
+            _lg = _logging.getLogger(_name)
+            _lg.setLevel(_lvl)
+            _lg.disabled = _dis
+            _lg.propagate = _prop
+            for _h in list(_lg.handlers):
+                if _h not in _hdlrs:
+                    _lg.removeHandler(_h)
+            for _h in _hdlrs:
+                if _h not in _lg.handlers:
+                    _lg.addHandler(_h)
     except Exception:
         pass
 

@@ -21,6 +21,15 @@ BASELINE_REV = "e4278c4d1d79"
 _MIG_FILE = "zz_test_rollback.py"
 
 
+@pytest.fixture(autouse=True)
+def _restore_cwd():
+    """_cfg() 内 os.chdir(REPO_DIR) 改变进程 CWD 且不还原，会污染后续测试的相对路径解析；
+    每个用例后强制还原。"""
+    _old_cwd = os.getcwd()
+    yield
+    os.chdir(_old_cwd)
+
+
 def _make_mini_db(db_path: str) -> str:
     if os.path.exists(db_path):
         os.remove(db_path)

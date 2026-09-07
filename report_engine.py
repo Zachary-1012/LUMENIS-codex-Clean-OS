@@ -271,108 +271,122 @@ def generate_domain_report(
         except Exception:
             _lc_worker = None
 
-    import json
-    import os as _os
+    def _domain_report_inner():
+        # start/end/output_dir 在下方被重新赋值，需 nonlocal 绑定外层参数而非成为 inner 局部变量
+        nonlocal start, end, output_dir
+        import json
+        import os as _os
 
-    if domain_id not in DUAL_DOMAIN_REPORTS:
-        raise ValueError(f"未知域: {domain_id}，有效域: {list(DUAL_DOMAIN_REPORTS.keys())}")
+        if domain_id not in DUAL_DOMAIN_REPORTS:
+            raise ValueError(f"未知域: {domain_id}，有效域: {list(DUAL_DOMAIN_REPORTS.keys())}")
 
-    domain_info = DUAL_DOMAIN_REPORTS[domain_id]
-    if report_type not in domain_info:
-        raise ValueError(
-            f"域 {domain_id} 不支持报告类型 {report_type}，"
-            f"支持: {list(domain_info.keys())}"
-        )
+        domain_info = DUAL_DOMAIN_REPORTS[domain_id]
+        if report_type not in domain_info:
+            raise ValueError(
+                f"域 {domain_id} 不支持报告类型 {report_type}，"
+                f"支持: {list(domain_info.keys())}"
+            )
 
-    report_meta = domain_info[report_type]
-    now = datetime.now()
-    if not start:
-        start = (now - timedelta(days=30)).strftime('%Y-%m-%d')
-    if not end:
-        end = now.strftime('%Y-%m-%d')
+        report_meta = domain_info[report_type]
+        now = datetime.now()
+        if not start:
+            start = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+        if not end:
+            end = now.strftime('%Y-%m-%d')
 
-    # 构建报告数据（共享 Report Engine 逻辑）
-    report_data = {
-        "report_type": report_type,
-        "domain_id": domain_id,
-        "product_id": "CTH" if domain_id == "cth" else "ZBMP",
-        "report_name": report_meta["name"],
-        "template": report_meta["template"],
-        "period_start": start,
-        "period_end": end,
-        "generated_at": now.isoformat(),
-        "generator_version": "dual-domain-v2.0",
-        "protected": report_meta["protected"],
-        "status": "success",
-    }
-
-    # CTH 专项：添加太古汇专项数据标记
-    if domain_id == "cth":
-        report_data["cth_specific"] = {
-            "subject_words_protected": True,
-            "subject_exclude_words_protected": True,
-            "subject_hit_enabled": True,
-            "brand_count": 199,
-            "business_formats": 9,
-            "note": "CTH report uses Taikoo Hui specific subject filtering and rules",
+        # 构建报告数据（共享 Report Engine 逻辑）
+        report_data = {
+            "report_type": report_type,
+            "domain_id": domain_id,
+            "product_id": "CTH" if domain_id == "cth" else "ZBMP",
+            "report_name": report_meta["name"],
+            "template": report_meta["template"],
+            "period_start": start,
+            "period_end": end,
+            "generated_at": now.isoformat(),
+            "generator_version": "dual-domain-v2.0",
+            "protected": report_meta["protected"],
+            "status": "success",
         }
-        # 尝试获取真实统计数据
-        try:
-            notes = db.get_notes_by_date_range(start, end)
-            stats = db.get_stats_by_date_range(start, end)
-            report_data["total_notes"] = stats.get("total", 0)
-            report_data["positive_count"] = stats.get("positive", 0)
-            report_data["negative_count"] = stats.get("negative", 0)
-            report_data["high_risk_count"] = stats.get("high_risk", 0)
-            report_data["data_source"] = "real_db"
-        except Exception as _e:
-            report_data["total_notes"] = 0
-            report_data["data_source"] = "db_unavailable"
-            report_data["db_error"] = str(_e)[:200]
 
-    # ZBMP 专项：添加多品牌数据标记
-    if domain_id == "zbmp":
-        report_data["zbmp_specific"] = {
-            "multi_brand": True,
-            "competitive_analysis": True,
-            "market_trends": True,
-            "brand_growth": True,
-            "note": "ZBMP report uses multi-brand perspective, no CTH-specific subject filtering",
+        # CTH 专项：添加太古汇专项数据标记
+        if domain_id == "cth":
+            report_data["cth_specific"] = {
+                "subject_words_protected": True,
+                "subject_exclude_words_protected": True,
+                "subject_hit_enabled": True,
+                "brand_count": 199,
+                "business_formats": 9,
+                "note": "CTH report uses Taikoo Hui specific subject filtering and rules",
+            }
+            # 尝试获取真实统计数据
+            try:
+                notes = db.get_notes_by_date_range(start, end)
+                stats = db.get_stats_by_date_range(start, end)
+                report_data["total_notes"] = stats.get("total", 0)
+                report_data["positive_count"] = stats.get("positive", 0)
+                report_data["negative_count"] = stats.get("negative", 0)
+                report_data["high_risk_count"] = stats.get("high_risk", 0)
+                report_data["data_source"] = "real_db"
+            except Exception as _e:
+                report_data["total_notes"] = 0
+                report_data["data_source"] = "db_unavailable"
+                report_data["db_error"] = str(_e)[:200]
+
+        # ZBMP 专项：添加多品牌数据标记
+        if domain_id == "zbmp":
+            report_data["zbmp_specific"] = {
+                "multi_brand": True,
+                "competitive_analysis": True,
+                "market_trends": True,
+                "brand_growth": True,
+                "note": "ZBMP report uses multi-brand perspective, no CTH-specific subject filtering",
+            }
+            # 尝试使用品牌报告生成器
+            try:
+                from brand_report_generator import BrandReportGenerator
+                gen = BrandReportGenerator(brand_name="多品牌平台", report_period=f"{start}~{end}")
+                report_data["brand_report_available"] = True
+            except Exception as _e:
+                report_data["brand_report_available"] = False
+                report_data["brand_report_error"] = str(_e)[:200]
+
+        # 落盘为 JSON 文件
+        if output_dir is None:
+            output_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "data", "reports", domain_id)
+        _os.makedirs(output_dir, exist_ok=True)
+
+        filename = f"{domain_id}_{report_type}_{end.replace('-', '')}_{now.strftime('%H%M%S')}.json"
+        file_path = _os.path.join(output_dir, filename)
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, ensure_ascii=False, indent=2)
+
+        file_size = _os.path.getsize(file_path)
+
+        return {
+            "report_type": report_type,
+            "domain_id": domain_id,
+            "product_id": report_data["product_id"],
+            "start": start,
+            "end": end,
+            "status": "success",
+            "file_path": file_path,
+            "file_size": file_size,
+            "report_name": report_meta["name"],
+            "report_data": report_data,
         }
-        # 尝试使用品牌报告生成器
-        try:
-            from brand_report_generator import BrandReportGenerator
-            gen = BrandReportGenerator(brand_name="多品牌平台", report_period=f"{start}~{end}")
-            report_data["brand_report_available"] = True
-        except Exception as _e:
-            report_data["brand_report_available"] = False
-            report_data["brand_report_error"] = str(_e)[:200]
 
-    # 落盘为 JSON 文件
-    if output_dir is None:
-        output_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "data", "reports", domain_id)
-    _os.makedirs(output_dir, exist_ok=True)
 
-    filename = f"{domain_id}_{report_type}_{end.replace('-', '')}_{now.strftime('%H%M%S')}.json"
-    file_path = _os.path.join(output_dir, filename)
-
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(report_data, f, ensure_ascii=False, indent=2)
-
-    file_size = _os.path.getsize(file_path)
-
-    return {
-        "report_type": report_type,
-        "domain_id": domain_id,
-        "product_id": report_data["product_id"],
-        "start": start,
-        "end": end,
-        "status": "success",
-        "file_path": file_path,
-        "file_size": file_size,
-        "report_name": report_meta["name"],
-        "report_data": report_data,
-    }
+    try:
+        return _domain_report_inner()
+    finally:
+        # 保证任何 return/raise 分支都停止 lifecycle 心跳线程，杜绝线程泄漏
+        if _lc_worker is not None:
+            try:
+                _lc_worker.lifecycle_stop(reason='report_finished')
+            except Exception:
+                pass
 
 
 def list_domain_reports(domain_id: str | None = None) -> dict:
