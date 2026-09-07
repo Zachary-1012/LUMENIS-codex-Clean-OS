@@ -5036,6 +5036,116 @@ def api_collection_counter_v580():
         'source': 'live:notes+collection_logs+collector_stats'
     })
 
+@app.route('/api/collection/logs', methods=['GET'])
+def api_collection_logs():
+    """采集日志与生命周期追溯：返回最近N条采集任务记录，含来源/状态/时间线。"""
+    try:
+        limit = min(200, max(1, int(request.args.get('limit', 50))))
+        offset = max(0, int(request.args.get('offset', 0)))
+        status_filter = request.args.get('status', '').strip()
+        date_from = request.args.get('from', '').strip()
+        date_to = request.args.get('to', '').strip()
+        keyword = request.args.get('keyword', '').strip()
+
+        conn = sqlite3.connect(db.DB_PATH, timeout=30)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        where = []
+        params = []
+        if status_filter:
+            where.append("UPPER(COALESCE(status,'')) = UPPER(?)")
+            params.append(status_filter)
+        if date_from:
+            where.append("date(started_at) >= date(?)")
+            params.append(date_from)
+        if date_to:
+            where.append("date(started_at) <= date(?)")
+            params.append(date_to)
+        if keyword:
+            where.append("keyword LIKE ?")
+            params.append('%' + keyword + '%')
+
+        where_sql = (' WHERE ' + ' AND '.join(where)) if where else ''
+        total = cursor.execute("SELECT COUNT(*) FROM collection_logs" + where_sql, params).fetchone()[0]
+
+        rows = cursor.execute(
+            "SELECT id, keyword, notes_count, status, error_msg, started_at, finished_at "
+            "FROM collection_logs" + where_sql + " ORDER BY id DESC LIMIT ? OFFSET ?",
+            params + [limit, offset]
+        ).fetchall()
+
+        logs = []
+        for r in rows:
+            status = (r['status'] or '').upper()
+            if status in ('SUCCESS', 'OK', 'COMPLETED'):
+                lifecycle = 'completed'
+            elif status in ('RUNNING', 'IN_PROGRESS', 'COLLECTING'):
+                lifecycle = 'running'
+            elif status in ('FAILED', 'ERROR', 'BLOCKED'):
+                lifecycle = 'failed'
+            elif status in ('COOLING_DOWN', 'RISK_WARNING', 'NEED_VERIFY'):
+                lifecycle = 'degraded'
+            else:
+                lifecycle = 'unknown'
+
+            duration_ms = None
+            if r['started_at'] and r['finished_at']:
+                try:
+                    from datetime import datetime as _dt
+                    s = _dt.fromisoformat(r['started_at'].replace('Z', '+00:00').split('+')[0])
+                    e = _dt.fromisoformat(r['finished_at'].replace('Z', '+00:00').split('+')[0])
+                    duration_ms = int((e - s).total_seconds() * 1000)
+                except Exception:
+                    pass
+
+            logs.append({
+                'id': r['id'],
+                'keyword': r['keyword'],
+                'notes_count': r['notes_count'] or 0,
+                'status': status,
+                'lifecycle': lifecycle,
+                'error_msg': r['error_msg'],
+                'started_at': r['started_at'],
+                'finished_at': r['finished_at'],
+                'duration_ms': duration_ms,
+                'source': 'collection_logs',
+                'traceable': True
+            })
+
+        summary = cursor.execute(
+            "SELECT COUNT(*) total_runs, "
+            "SUM(CASE WHEN UPPER(COALESCE(status,''))='SUCCESS' THEN 1 ELSE 0 END) success, "
+            "SUM(CASE WHEN UPPER(COALESCE(status,'')) IN ('FAILED','ERROR') THEN 1 ELSE 0 END) failed, "
+            "SUM(CASE WHEN UPPER(COALESCE(status,'')) IN ('COOLING_DOWN','RISK_WARNING','NEED_VERIFY','BLOCKED') THEN 1 ELSE 0 END) degraded, "
+            "COALESCE(SUM(notes_count),0) total_notes_collected "
+            "FROM collection_logs"
+        ).fetchone()
+
+        conn.close()
+
+        return jsonify({
+            'ok': True,
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'logs': logs,
+            'summary': {
+                'total_runs': summary[0] or 0,
+                'success': summary[1] or 0,
+                'failed': summary[2] or 0,
+                'degraded': summary[3] or 0,
+                'total_notes_collected': summary[4] or 0,
+                'success_rate': round((summary[1] or 0) * 100.0 / max(1, summary[0] or 0), 1)
+            },
+            'data_source': 'collection_logs (真实采集记录)',
+            'lifecycle_stages': ['queued', 'running', 'completed', 'failed', 'degraded']
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e), 'logs': [], 'summary': {}}), 500
+
+
+
 # ===== v5.6.6 全网话题事件搜集（普通浏览器搜索，不占用小红书检索次数） =====
 import urllib.request
 import urllib.parse

@@ -139,6 +139,83 @@
         </div>
       </div>
     </div>
+  
+
+<!-- ===== 采集日志与生命周期追溯 ===== -->
+<div class="zbc-card" id="collection-logs-card" style="margin-top:12px;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">采集日志 · 生命周期追溯</span>
+    <span class="zbc-tag zbc-tag--info" id="logs-total">—</span>
+    <span style="margin-left:8px;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">来源: collection_logs 真实记录</span>
+  </div>
+  <div class="zbc-card__body">
+    <!-- 摘要 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;">
+      <div style="padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">总任务</div>
+        <div style="font-size:20px;font-weight:600;color:var(--l-text-primary,#111827);" id="logs-summary-total">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(16,185,129,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">成功</div>
+        <div style="font-size:20px;font-weight:600;color:#10B981;" id="logs-summary-success">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(239,68,68,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">失败</div>
+        <div style="font-size:20px;font-weight:600;color:#EF4444;" id="logs-summary-failed">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(245,158,11,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">降级/风控</div>
+        <div style="font-size:20px;font-weight:600;color:#F59E0B;" id="logs-summary-degraded">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(99,102,241,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">累计采集</div>
+        <div style="font-size:20px;font-weight:600;color:#6366F1;" id="logs-summary-notes">—</div>
+      </div>
+      <div style="padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">成功率</div>
+        <div style="font-size:20px;font-weight:600;color:var(--l-text-primary,#111827);" id="logs-summary-rate">—</div>
+      </div>
+    </div>
+    <!-- 筛选 -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+      <select id="logs-status-filter" style="padding:6px 10px;border:1px solid var(--l-border,#E5E7EB);border-radius:6px;font-size:12px;background:var(--l-bg-primary,#FFF);color:var(--l-text-primary,#111827);">
+        <option value="">全部状态</option>
+        <option value="SUCCESS">成功</option>
+        <option value="FAILED">失败</option>
+        <option value="COOLING_DOWN">降级/风控</option>
+      </select>
+      <input type="text" id="logs-keyword-filter" placeholder="搜索关键词..." style="padding:6px 10px;border:1px solid var(--l-border,#E5E7EB);border-radius:6px;font-size:12px;flex:1;min-width:120px;background:var(--l-bg-primary,#FFF);color:var(--l-text-primary,#111827);">
+      <button class="zbc-btn zbc-btn--secondary" style="font-size:12px;padding:6px 14px;" onclick="loadCollectionLogs()">刷新</button>
+    </div>
+    <!-- 日志表格 -->
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--l-border,#E5E7EB);text-align:left;">
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">ID</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">关键词</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">采集数</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">状态</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">生命周期</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">开始时间</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">结束时间</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">耗时</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">来源</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody">
+          <tr><td colspan="9" style="padding:20px;text-align:center;color:var(--l-text-tertiary,#9CA3AF);">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- 分页 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:var(--l-text-secondary,#6B7280);">
+      <span id="logs-page-info">—</span>
+      <div style="display:flex;gap:6px;">
+        <button class="zbc-btn zbc-btn--secondary" style="font-size:11px;padding:4px 10px;" onclick="logsPrevPage()" id="logs-prev-btn">上一页</button>
+        <button class="zbc-btn zbc-btn--secondary" style="font-size:11px;padding:4px 10px;" onclick="logsNextPage()" id="logs-next-btn">下一页</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -423,6 +500,95 @@
     document.getElementById('live-view-auto').addEventListener('change', startLiveViewPolling);
   });
   setInterval(loadCollectors, 30000);
+
+  // ===== 采集日志与生命周期 =====
+  var logsOffset = 0;
+  var logsLimit = 20;
+  var logsTotal = 0;
+
+  function lifecycleTag(lc) {
+    var map = {
+      'completed': 'zbc-tag--low',
+      'running': 'zbc-tag--info',
+      'failed': 'zbc-tag--high',
+      'degraded': 'zbc-tag--medium',
+      'unknown': 'zbc-tag--neutral'
+    };
+    return '<span class="zbc-tag ' + (map[lc] || 'zbc-tag--neutral') + '">' + lc + '</span>';
+  }
+
+  function statusTag(s) {
+    var up = String(s || '').toUpperCase();
+    var cls = 'zbc-tag--neutral';
+    if (up === 'SUCCESS' || up === 'OK' || up === 'COMPLETED') cls = 'zbc-tag--low';
+    else if (up === 'FAILED' || up === 'ERROR') cls = 'zbc-tag--high';
+    else if (up === 'COOLING_DOWN' || up === 'RISK_WARNING' || up === 'NEED_VERIFY' || up === 'BLOCKED') cls = 'zbc-tag--medium';
+    else if (up === 'RUNNING' || up === 'COLLECTING') cls = 'zbc-tag--info';
+    return '<span class="zbc-tag ' + cls + '">' + up + '</span>';
+  }
+
+  function loadCollectionLogs() {
+    var status = document.getElementById('logs-status-filter').value;
+    var keyword = document.getElementById('logs-keyword-filter').value;
+    var url = '/api/collection/logs?limit=' + logsLimit + '&offset=' + logsOffset;
+    if (status) url += '&status=' + encodeURIComponent(status);
+    if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+
+    fetch(url, { credentials: 'same-origin' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok) { document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#EF4444;">加载失败: ' + (d.error || 'unknown') + '</td></tr>'; return; }
+        logsTotal = d.total || 0;
+        var s = d.summary || {};
+        document.getElementById('logs-total').textContent = logsTotal + ' 条';
+        document.getElementById('logs-summary-total').textContent = s.total_runs || 0;
+        document.getElementById('logs-summary-success').textContent = s.success || 0;
+        document.getElementById('logs-summary-failed').textContent = s.failed || 0;
+        document.getElementById('logs-summary-degraded').textContent = s.degraded || 0;
+        document.getElementById('logs-summary-notes').textContent = (s.total_notes_collected || 0).toLocaleString();
+        document.getElementById('logs-summary-rate').textContent = (s.success_rate || 0) + '%';
+
+        var tbody = document.getElementById('logs-tbody');
+        if (!d.logs || d.logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--l-text-tertiary,#9CA3AF);">暂无采集日志</td></tr>';
+        } else {
+          tbody.innerHTML = d.logs.map(function(log) {
+            var dur = log.duration_ms ? (log.duration_ms / 1000).toFixed(1) + 's' : '—';
+            return '<tr style="border-bottom:1px solid var(--l-border,#E5E7EB);">' +
+              '<td style="padding:8px 10px;font-family:monospace;">#' + log.id + '</td>' +
+              '<td style="padding:8px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (log.keyword || '') + '">' + (log.keyword || '—') + '</td>' +
+              '<td style="padding:8px 10px;font-weight:600;">' + (log.notes_count || 0) + '</td>' +
+              '<td style="padding:8px 10px;">' + statusTag(log.status) + '</td>' +
+              '<td style="padding:8px 10px;">' + lifecycleTag(log.lifecycle) + '</td>' +
+              '<td style="padding:8px 10px;font-size:11px;color:var(--l-text-secondary,#6B7280);">' + (log.started_at || '—') + '</td>' +
+              '<td style="padding:8px 10px;font-size:11px;color:var(--l-text-secondary,#6B7280);">' + (log.finished_at || '—') + '</td>' +
+              '<td style="padding:8px 10px;">' + dur + '</td>' +
+              '<td style="padding:8px 10px;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">' + (log.source || '—') + '</td>' +
+              '</tr>';
+          }).join('');
+        }
+
+        var page = Math.floor(logsOffset / logsLimit) + 1;
+        var totalPages = Math.ceil(logsTotal / logsLimit);
+        document.getElementById('logs-page-info').textContent = '第 ' + page + ' / ' + totalPages + ' 页 (共 ' + logsTotal + ' 条)';
+        document.getElementById('logs-prev-btn').disabled = logsOffset === 0;
+        document.getElementById('logs-next-btn').disabled = logsOffset + logsLimit >= logsTotal;
+      })
+      .catch(function(e) {
+        document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#EF4444;">加载失败: ' + e.message + '</td></tr>';
+      });
+  }
+
+  function logsPrevPage() { if (logsOffset >= logsLimit) { logsOffset -= logsLimit; loadCollectionLogs(); } }
+  function logsNextPage() { if (logsOffset + logsLimit < logsTotal) { logsOffset += logsLimit; loadCollectionLogs(); } }
+
+  // 页面加载时自动加载
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadCollectionLogs);
+  } else {
+    loadCollectionLogs();
+  }
+
 })();
 </script>
 {% endblock %}
