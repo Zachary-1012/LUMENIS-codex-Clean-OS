@@ -402,10 +402,17 @@ def case_analysis_list():
         limit = int(request.args.get('limit', 50))
         offset = int(request.args.get('offset', 0))
         results = analysis.list_cases(
+<<<<<<< Updated upstream
             case_type=case_type or '',
             industry=industry or '',
             brand=brand or '',
             min_quality_score=float(min_quality) if min_quality else 0,
+=======
+            case_type=case_type or None,
+            industry=industry or None,
+            brand=brand or None,
+            min_quality_score=float(min_quality) if min_quality else None,
+>>>>>>> Stashed changes
             limit=limit,
             offset=offset,
         )
@@ -465,6 +472,7 @@ def case_analysis_system_insights():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+<<<<<<< Updated upstream
 @app.route('/api/case-analysis/template-match', methods=['GET', 'POST'])
 def case_analysis_template_match():
     """按事件/场景匹配可复用处置模板（学习资产：9模板 + 危机SOP）"""
@@ -513,6 +521,8 @@ def case_analysis_ai_evaluate():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+=======
+>>>>>>> Stashed changes
 # V3.0 传播主体分类器API
 @app.route('/api/subject-classifier/classify', methods=['POST'])
 def subject_classify():
