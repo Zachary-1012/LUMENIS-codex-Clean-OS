@@ -954,10 +954,10 @@ _CTH_READONLY_GET_PREFIXES = (
     '/api/stats', '/api/metric-trend', '/api/notes',
     '/api/negative/', '/api/risks/', '/api/risk/',
     '/api/event-graph/', '/api/cases/', '/api/case-analysis/',
-    '/api/domain/', '/api/hot-notes', '/api/xhs/',
+    '/api/domain/', '/api/hot-notes',
     '/api/collection/counter', '/api/collect/tasks',
     '/api/weekly/', '/api/special-report/', '/api/reports/',
-    '/api/intelligence/evidence', '/api/alerts', '/api/platform-health',
+    '/api/intelligence/evidence', '/api/alerts',
     '/api/subject/', '/api/trends/', '/api/overview',
     # P1-1: CTH dual-domain namespace readonly GET (CTH browse-mode no-auth, limited to specific paths)
     '/api/cth/overview', '/api/cth/events', '/api/cth/xiaohongshu',
