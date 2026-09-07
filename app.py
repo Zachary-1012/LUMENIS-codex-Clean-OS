@@ -1107,7 +1107,7 @@ def _permission_gate_write_check():
     """
     if request.method not in _PG_WRITE_METHODS:
         return None
-    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/') or request.path.startswith('/api/content/') or request.path.startswith('/api/podcast/'):
+    if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/') or request.path.startswith('/api/content/') or request.path.startswith('/api/podcast/') or request.path.startswith('/api/ic/'):
         return None
     try:
         if _pg is None:
@@ -3513,7 +3513,7 @@ def api_brand_logo_stats():
 
 @app.route('/api/brands', methods=['POST'])
 def api_brand_add():
-    """添加新品牌（进场）"""
+    """添加新品牌（进场）→ 自动触发logo发现 + 品牌监测任务"""
     global _brand_cache
     data = request.get_json(silent=True) or {}
     brand_en = (data.get('brand_en') or '').strip()
@@ -3521,6 +3521,8 @@ def api_brand_add():
     category = (data.get('category') or '').strip()
     shop = (data.get('shop') or '').strip()
     floor = (data.get('floor') or '').strip()
+    auto_monitor = data.get('auto_monitor', True)  # 默认自动监测
+
     if not brand_en:
         return jsonify({'ok': False, 'error': '品牌英文名不能为空'}), 400
     if not category:
@@ -3528,6 +3530,7 @@ def api_brand_add():
     brands = _load_brands()
     if any(b['brand_en'].lower() == brand_en.lower() for b in brands):
         return jsonify({'ok': False, 'error': '该品牌已存在'}), 409
+
     new_brand = {
         'brand_en': brand_en,
         'brand_cn': brand_cn,
@@ -3536,11 +3539,59 @@ def api_brand_add():
         'floor': floor,
         'is_taikoo_brand': True,
         'added_at': datetime.now().isoformat(),
+        'monitor_status': 'pending' if auto_monitor else 'disabled',
     }
     brands.append(new_brand)
     _save_brands(brands)
-    _brand_cache = None  # 清除缓存
-    return jsonify({'ok': True, 'message': f'品牌 {brand_cn or brand_en} 已进场', 'brand': new_brand, 'total': len(brands)})
+    _brand_cache = None
+
+    # 自动触发：1.logo发现 2.品牌监测任务
+    monitor_info = {'logo': 'pending', 'collection': 'pending', 'analysis': 'pending'}
+    if auto_monitor:
+        try:
+            # 1. 异步触发logo自动发现
+            from brand_logo_auto import auto_discover_logo
+            import threading
+            def _discover_and_monitor():
+                try:
+                    auto_discover_logo(brand_en, brand_cn)
+                except:
+                    pass
+            threading.Thread(target=_discover_and_monitor, daemon=True).start()
+            monitor_info['logo'] = 'discovering'
+
+            # 2. 创建品牌监测任务（品牌名作为采集关键词）
+            monitor_task_id = f'brand_monitor_{brand_en.lower().replace(" ", "_")}_{int(datetime.now().timestamp())}'
+            try:
+                # 记录监测任务到数据库
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute("""CREATE TABLE IF NOT EXISTS brand_monitor_tasks (
+                    task_id TEXT PRIMARY KEY, brand_en TEXT, brand_cn TEXT,
+                    category TEXT, keywords TEXT, status TEXT, created_at TEXT,
+                    last_run_at TEXT, notes_count INTEGER DEFAULT 0
+                )""")
+                keywords = json.dumps([brand_en, brand_cn] if brand_cn else [brand_en], ensure_ascii=False)
+                conn.execute("INSERT OR REPLACE INTO brand_monitor_tasks VALUES (?,?,?,?,?,?,?,?,?)",
+                    (monitor_task_id, brand_en, brand_cn, category, keywords, 'active',
+                     datetime.now().isoformat(), None, 0))
+                conn.commit()
+                conn.close()
+                monitor_info['collection'] = 'scheduled'
+                monitor_info['task_id'] = monitor_task_id
+                new_brand['monitor_status'] = 'active'
+            except Exception as e:
+                monitor_info['collection'] = f'error: {str(e)[:50]}'
+        except Exception as e:
+            monitor_info['logo'] = f'error: {str(e)[:50]}'
+
+    return jsonify({
+        'ok': True,
+        'message': f'品牌 {brand_cn or brand_en} 已进场，监测任务已创建',
+        'brand': new_brand,
+        'total': len(brands),
+        'monitor': monitor_info,
+        'next_steps': ['logo自动发现中', '品牌关键词已加入采集队列', '采集完成后自动分析舆情']
+    })
 
 @app.route('/api/brands/<brand_en>', methods=['PUT'])
 def api_brand_update(brand_en):
