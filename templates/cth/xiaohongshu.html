@@ -517,7 +517,7 @@
       var comments = n.comments != null ? n.comments : (n.comment_count != null ? n.comment_count : 0);
       html += '<div class="ld-content-card" style="animation-delay:' + (idx * 40) + 'ms;">';
       if (cover) {
-        html += '<img class="ld-content-card__cover" src="' + escapeHtml(cover) + '" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">';
+        html += '<img class="ld-content-card__cover" src="' + escapeHtml(cover) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
       }
       html += '<div style="height:120px;background:var(--l-bg-secondary,#F7F7F8);display:none;align-items:center;justify-content:center;color:var(--l-text-tertiary,#9CA3AF);font-size:24px;">📝</div>';
       html += '<div class="ld-content-card__body">';

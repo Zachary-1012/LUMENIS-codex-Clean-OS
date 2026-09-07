@@ -533,7 +533,7 @@
     var html = '<div style="padding:16px;">';
     // Author row
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">';
-    if (authorAvatar) html += '<img src="' + authorAvatar + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">';
+    if (authorAvatar) html += '<img src="' + authorAvatar + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'">';
     html += '<div><div style="font-size:13px;font-weight:600;">' + escapeHtml(author) + '</div>';
     html += '<div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">' + escapeHtml(sourcePlatform) + ' · ID: ' + escapeHtml(String(noteId).substring(0,12)) + '</div></div>';
     html += '<span class="zbc-tag zbc-tag--' + (riskLevel in riskColor ? riskLevel : 'unknown') + '" style="margin-left:auto;">' + escapeHtml(riskLevel) + '</span>';
@@ -543,7 +543,7 @@
     // Cover image
     if (cover) {
       html += '<div style="width:100%;max-height:360px;overflow:hidden;border-radius:10px;margin-bottom:14px;background:var(--l-bg-secondary,#F7F7F8);">';
-      html += '<img src="' + escapeHtml(cover) + '" style="width:100%;height:auto;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'">';
+      html += '<img src="' + escapeHtml(cover) + '" style="width:100%;height:auto;object-fit:cover;display:block;" onerror="this.parentElement.style.display=\'none\'">';
       html += '</div>';
     }
 
