@@ -42,11 +42,11 @@ def temp_db(tmp_path):
     """创建一个临时测试数据库。"""
     db_path = tmp_path / "test_monitor.db"
     conn = sqlite3.connect(str(db_path))
-    conn.execute("CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, title TEXT, author TEXT, likes INTEGER DEFAULT 0, collects INTEGER DEFAULT 0, comments INTEGER DEFAULT 0, shares INTEGER DEFAULT 0, sentiment TEXT, risk_level TEXT, created_at TEXT, url TEXT)")
-    conn.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, title TEXT, created_at TEXT)")
+    conn.execute("CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, title TEXT, author TEXT, likes INTEGER DEFAULT 0, collects INTEGER DEFAULT 0, comments INTEGER DEFAULT 0, shares INTEGER DEFAULT 0, sentiment TEXT, risk_level TEXT, collected_at TEXT, url TEXT)")  # 对齐生产 notes：时间列 collected_at
+    conn.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, title TEXT, first_seen TEXT, last_seen TEXT)")  # 对齐生产 events
     conn.execute("CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, level TEXT, created_at TEXT)")
-    conn.execute("INSERT INTO notes (title, author, sentiment, created_at) VALUES ('测试笔记1', '用户A', 'positive', '2026-01-01 10:00:00')")
-    conn.execute("INSERT INTO notes (title, author, sentiment, created_at) VALUES ('测试笔记2', '用户B', 'negative', '2026-01-02 11:00:00')")
+    conn.execute("INSERT INTO notes (title, author, sentiment, collected_at) VALUES ('测试笔记1', '用户A', 'positive', '2026-01-01 10:00:00')")
+    conn.execute("INSERT INTO notes (title, author, sentiment, collected_at) VALUES ('测试笔记2', '用户B', 'negative', '2026-01-02 11:00:00')")
     conn.execute("INSERT INTO alerts (level, created_at) VALUES ('high', '2026-01-02 12:00:00')")
     conn.commit()
     conn.close()
