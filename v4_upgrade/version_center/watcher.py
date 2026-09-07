@@ -6,6 +6,7 @@
 - 任何异常只记录不抛出，版本能力永远是增强项，不拖垮主业务；
 - 单例启动，避免 Flask debug reloader / 多入口重复拉起。
 """
+import os
 import threading
 import time
 from .git_manager import gm
@@ -34,6 +35,8 @@ def start_version_watcher():
     with _watcher_lock:
         if _watcher_started:
             return False
+        if os.environ.get('ZBC_TEST_OFFLINE') == '1':
+            return False  # 测试隔离：不启动 git 自动提交守护（测试期严禁自动 commit 工作区）
         if not gm().is_repo():
             return False
         t = threading.Thread(target=_loop, name="version-center-watcher", daemon=True)

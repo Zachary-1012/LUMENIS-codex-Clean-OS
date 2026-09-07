@@ -921,20 +921,11 @@ def _proxy_health_loop(interval=300):
 if PROXY_POOL_AVAILABLE:
     try:
         _load_proxy_nodes()
-        if _proxy_mgr.nodes:
+        if _proxy_mgr.nodes and os.environ.get('ZBC_TEST_OFFLINE') != '1':
             _PROXY_HL_NAME = 'proxy-health-loop'
             _existing_proxy_hl = [t for t in threading.enumerate()
                                   if getattr(t, 'name', '') == _PROXY_HL_NAME and t.is_alive()]
-            try:
-                import traceback as _tb_spawn
-                with open(os.path.join(os.environ.get('TEMP', '/tmp'), 'zbc_proxy_spawn.log'),
-                          'a', encoding='utf-8') as _df_spawn:
-                    _df_spawn.write('=== proxy-health spawn check; existing alive=%d ===\n'
-                                    % len(_existing_proxy_hl))
-                    _df_spawn.write(''.join(_tb_spawn.format_stack()[-7:]))
-            except Exception:
-                pass
-            if not _existing_proxy_hl:
+            if not _existing_proxy_hl:  # 幂等：reload/重复 import 不重复起巡检线程
                 threading.Thread(target=_proxy_health_loop,
                                  args=(int(os.getenv('PROXY_HEALTH_INTERVAL', '300')),),
                                  daemon=True, name=_PROXY_HL_NAME).start()
@@ -1693,10 +1684,22 @@ def api_brand_stats():
     category_order = ['女装', '男装', '餐饮', '珠宝钟表', '美容护理', '运动休闲', '鞋包皮具', '童装玩具', '生活时尚']
     for cat in category_order:
         category_stats[cat] = {'brand_count': 0, 'note_count': 0, 'negative_count': 0, 'engagement': 0, 'brands': []}
-    
+
+    # 业态映射：品牌目录用英文双语(如"女装 Ladies' Fashion")，统一映射到纯中文key
+    _CAT_MAP = {'女装':"女装",'男装':"男装",'餐饮':"餐饮",'珠宝':"珠宝钟表",'钟表':"珠宝钟表",
+                '美容':"美容护理",'保健':"美容护理",'运动':"运动休闲",'休闲服':"运动休闲",
+                '鞋包':"鞋包皮具",'皮具':"鞋包皮具",'童装':"童装玩具",'玩具':"童装玩具",
+                '生活':"生活时尚",'影音':"生活时尚",'电器':"生活时尚"}
+    def _map_cat(raw):
+        if not raw: return None
+        if raw in category_stats: return raw
+        for k, v in _CAT_MAP.items():
+            if k in raw: return v
+        return None
+
     for b in brands:
-        cat = b.get('category', '')
-        if cat in category_stats:
+        cat = _map_cat(b.get('category', ''))
+        if cat:
             category_stats[cat]['brand_count'] += 1
             category_stats[cat]['brands'].append(b)
     
@@ -1704,6 +1707,7 @@ def api_brand_stats():
     brand_note_map = {}
     for n in notes:
         brand, brand_category = _match_brand(n)
+        brand_category = _map_cat(brand_category)
         if brand and brand_category in category_stats:
             category_stats[brand_category]['note_count'] += 1
             if n.get('sentiment') == 'negative':

@@ -115,10 +115,12 @@ def from_agent_loop(loop_state: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(metrics, dict):
         metrics = {}
 
+    goal = _safe_get(loop_state, "goal", "")
     context: Dict[str, Any] = {
         "task_phase": task_phase,
         "agent_id": _safe_get(loop_state, "agent_id", ""),
-        "goal": _safe_get(loop_state, "goal", ""),
+        "goal": goal,
+        "user_prompt": goal,  # goal 映射为 user_prompt，供意图推断使用
         "current_step": _safe_get(loop_state, "current_step", 0),
         "total_steps": _safe_get(loop_state, "total_steps", 0),
         "system_metrics": {

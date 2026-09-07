@@ -849,6 +849,8 @@ def _campaign_scheduler_loop():
 def start_scheduler():
     """启动专题调度器（幂等）。"""
     global _scheduler_running
+    if os.environ.get('ZBC_TEST_OFFLINE') == '1':
+        return False  # 测试隔离：不启动生产采集调度线程（避免测试期真实采集/解释器退出时崩溃）
     if os.environ.get('ZBC_ENV') == 'staging' or os.environ.get('XHS_PRODUCTION', '').lower() in ('false', '0', 'off'):
         print('[TopicCampaign] Staging/no-collect: campaign scheduler thread disabled')
         return False
