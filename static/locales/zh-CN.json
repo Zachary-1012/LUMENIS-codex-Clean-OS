@@ -1,11 +1,12 @@
 {
   "product": {
     "name": "序境 LUMENIS",
-    "tagline": "品牌与舆情智能，统一证据链，每一步可追溯"
+    "tagline": "序境 LUMENIS · 商业运营与品牌市场，统一证据链，每一步可追溯",
+    "mother": "序境 LUMENIS"
   },
   "domain": {
-    "zbmp": "品牌智能",
-    "cth": "太古汇智能",
+    "zbmp": "序境·品牌市场",
+    "cth": "序境·商业运营",
     "system": "系统"
   },
   "common": {

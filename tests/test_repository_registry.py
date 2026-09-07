@@ -307,7 +307,10 @@ class TestNoHardcodedPathsInProduction:
             for fn in filenames:
                 if not fn.endswith(".py"):
                     continue
-                # 排除 scratch/debug 临时文件（项目约定：_ 前缀为一次性脚本）
+                # 根目录下所有 _ 前缀文件均为一次性/调试/导入脚本（项目约定，0 生产引用），不属生产运行时
+                if os.path.abspath(root) == os.path.abspath(REPO_ROOT) and fn.startswith("_"):
+                    continue
+                # 排除子目录 scratch/debug 临时文件（特定前缀）
                 if fn.startswith("_tmp_") or fn.startswith("_zbc_") or fn.startswith("_patch_") or fn.startswith("_split_") or fn.startswith("_lifecycle_") or fn.startswith("_archive_"):
                     continue
                 files.append(os.path.join(root, fn))

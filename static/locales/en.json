@@ -1,11 +1,12 @@
 {
   "product": {
     "name": "LUMENIS",
-    "tagline": "Brand & Sentiment Intelligence — unified evidence chain, every step traceable"
+    "tagline": "LUMENIS · Commerce Operations & Brand Market, unified evidence chain",
+    "mother": "LUMENIS"
   },
   "domain": {
-    "zbmp": "Brand Intelligence",
-    "cth": "Taikoo Hui Intelligence",
+    "zbmp": "LUMENIS Brand & Market",
+    "cth": "LUMENIS Commerce Operations",
     "system": "System"
   },
   "common": {

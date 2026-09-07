@@ -50,6 +50,9 @@ os.environ.setdefault('ZBC_TEST_OFFLINE', '1')
 # 字母序最后的还会覆盖前者，导致后续实时读 environ 的生产代码（api_dual_domain._get_db_path）
 # 连到无表临时库返回 500。用此基线在每个"不自行设置该变量"的用例运行前还原。
 _ENV_SESSION_BASELINE = {'ZBC_DB_PATH': os.environ.get('ZBC_DB_PATH')}
+# 完整会话环境基线：任何用例（含其函数体内 os.environ 裸设）结束后，非自理模块一律回到此基线，
+# 杜绝 AI_PROVIDER/API_KEY/OLLAMA_BASE_URL/ZBC_* 等泄漏给后续用例、importlib.reload(app) 与子进程。
+_ENV_CANONICAL = dict(os.environ)
 _MODULE_SETS_ENV_CACHE = {}
 
 def _module_self_sets_env(mod, key='ZBC_DB_PATH'):
@@ -63,8 +66,9 @@ def _module_self_sets_env(mod, key='ZBC_DB_PATH'):
     ident = getattr(mod, '__file__', None)
     if ident is None:
         return False
-    if ident in _MODULE_SETS_ENV_CACHE:
-        return _MODULE_SETS_ENV_CACHE[ident]
+    _ck = (ident, key)
+    if _ck in _MODULE_SETS_ENV_CACHE:
+        return _MODULE_SETS_ENV_CACHE[_ck]
     import re as _re
     # 任意缩进位置：os.environ["KEY"]=（赋值，排除==）、.update(、.setdefault(、.pop("KEY"
     _pat = _re.compile(
@@ -77,7 +81,7 @@ def _module_self_sets_env(mod, key='ZBC_DB_PATH'):
             sets = any(_pat.search(_ln) for _ln in _fh)
     except OSError:
         sets = False
-    _MODULE_SETS_ENV_CACHE[ident] = sets
+    _MODULE_SETS_ENV_CACHE[_ck] = sets
     return sets
 
 def _restore_env_baseline(key='ZBC_DB_PATH'):
@@ -86,6 +90,37 @@ def _restore_env_baseline(key='ZBC_DB_PATH'):
         os.environ.pop(key, None)
     else:
         os.environ[key] = _bv
+
+@pytest.fixture(autouse=True)
+def _env_full_restore(request):
+    """全环境键隔离：进入用例前快照，用例结束后对所有变化键三向还原。
+    - 当前模块源码自理该键（顶层/函数内会写它，如隔离测试指定临时库）：还原到进入用例时的值，
+      保证同模块后续用例仍可见其模块级设置；
+    - 其余模块（受害方）：一律回到会话基线 _ENV_CANONICAL（基线没有则删除），
+      使 importlib.reload(app) 与 subprocess 子进程继承到的是干净环境而非前置用例泄漏。
+    PYTEST_CURRENT_TEST 由 pytest 自身管理，不干预。"""
+    _enter_env = dict(os.environ)
+    _mod = getattr(request, 'module', None)
+    yield
+    _all_keys = set(os.environ) | set(_enter_env) | set(_ENV_CANONICAL)
+    for _k in _all_keys:
+        if _k == 'PYTEST_CURRENT_TEST':
+            continue
+        try:
+            if _module_self_sets_env(_mod, _k):
+                _ev = _enter_env.get(_k)
+                if _ev is None:
+                    os.environ.pop(_k, None)
+                else:
+                    os.environ[_k] = _ev
+            else:
+                _cv = _ENV_CANONICAL.get(_k)
+                if _cv is None:
+                    os.environ.pop(_k, None)
+                else:
+                    os.environ[_k] = _cv
+        except Exception:
+            pass
 
 @pytest.fixture(scope='session')
 def app():

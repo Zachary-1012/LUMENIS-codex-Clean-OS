@@ -15,11 +15,12 @@
   },
   "product": {
     "name": "서경 LUMENIS",
-    "tagline": "브랜드 및 여론 인텔리전스, 통합 증거 체인, 모든 단계 추적 가능"
+    "tagline": "서경 LUMENIS · 커머스 운영 & 브랜드 마켓, 통합 증거 체인",
+    "mother": "서경 LUMENIS"
   },
   "domain": {
-    "zbmp": "브랜드 모니터링 플랫폼",
-    "cth": "커머스 & 트레이딩 허브",
+    "zbmp": "서경·브랜드 & 마켓",
+    "cth": "서경·커머스 운영",
     "system": "시스템"
   },
   "common": {
