@@ -177,6 +177,22 @@ try:
 except Exception as _mr_e:
     print(f"[module_registry] register failed: {_mr_e}")
 
+# Agent Runtime 7增量层 Blueprint（先旁路验证，不影响主链路）
+try:
+    from agent_adaptive_ui.routes import adaptive_ui_bp
+    app.register_blueprint(adaptive_ui_bp)
+    print("[agent_adaptive_ui] blueprint registered")
+except Exception as _aui_e:
+    print(f"[agent_adaptive_ui] register failed: {_aui_e}")
+
+try:
+    from agent_proactive.routes import proactive_bp
+    if proactive_bp:
+        app.register_blueprint(proactive_bp)
+        print("[agent_proactive] blueprint registered")
+except Exception as _ap_e:
+    print(f"[agent_proactive] register failed: {_ap_e}")
+
 # P1-C: Intelligence Library page (no-scroll, left tree + right list + detail drawer)
 @app.route('/intelligence/library')
 def intelligence_library_page():
