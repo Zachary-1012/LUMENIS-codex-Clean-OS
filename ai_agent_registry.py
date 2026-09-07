@@ -141,6 +141,21 @@ def _builtin_agents() -> List[AgentSpec]:
             allows_external_side_effect=True,
             requires_human_approval=False,
         ),
+        AgentSpec(
+            agent_id="chat_agent",
+            name="对话助手 Agent",
+            description="闲聊/问候/通用对话，直接调用 AI 聊天接口，L0 自动通过，不修改生产数据。",
+            capabilities=[
+                Intent.CHAT.value,
+            ],
+            required_permission="READ",
+            risk_level=TaskRiskLevel.L0,
+            preferred_skills=[],
+            timeout_seconds=30,
+            max_retries=1,
+            allows_external_side_effect=False,
+            requires_human_approval=False,
+        ),
     ]
 
 
