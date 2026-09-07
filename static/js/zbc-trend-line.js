@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * ZBC 全局趋势线组件 v1.1
  * 函数驱动：API获取 → xujing-viz FN_TREND_SERIES → SVG趋势线 → 动效
  * 所有有时间序列的页面统一调用，不重复实现。
@@ -99,7 +99,8 @@
           data = cached;
         } else {
           const url = apiEndpoint + (apiEndpoint.includes('?') ? '&' : '?') + 'days=' + opts.days;
-          const resp = await fetch(url, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {} });
+          if (global.LUMENIS && global.LUMENIS.Auth && typeof global.LUMENIS.Auth.getHeader === 'function') { try { const h = await global.LUMENIS.Auth.getHeader(); if (h) global.__Z_AUTH = h; } catch (e) {} }
+          const resp = await fetch(url, { headers: global.__Z_AUTH ? { 'Authorization': global.__Z_AUTH } : {}, credentials: 'include' });
           if (!resp.ok) {
             throw new Error('HTTP ' + resp.status);
           }

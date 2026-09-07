@@ -13,9 +13,12 @@
       const qs = new URLSearchParams(params).toString();
       if (qs) url += (url.includes('?') ? '&' : '?') + qs;
     }
+    if (global.LUMENIS && global.LUMENIS.Auth && typeof global.LUMENIS.Auth.getHeader === 'function') {
+      try { const h = await global.LUMENIS.Auth.getHeader(); if (h) global.__Z_AUTH = h; } catch (e) {}
+    }
     const headers = {};
     if (global.__Z_AUTH) headers['Authorization'] = global.__Z_AUTH;
-    const r = await fetch(url, { headers });
+    const r = await fetch(url, { headers, credentials: 'include' });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     return d;

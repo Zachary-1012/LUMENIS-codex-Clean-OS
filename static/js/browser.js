@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    LUMENIS Internal Browser — Frontend Controller
    对标 Safari/Chrome，全部在平台内完成，不跳系统外部浏览器。
    后端：browser_surface.py + browser_surface_api.py + internal_browser.py
@@ -57,15 +57,29 @@
     var opts = options || {};
     opts.headers = opts.headers || {};
     opts.headers['Content-Type'] = 'application/json';
+    opts.credentials = 'include';
     if (opts.body && typeof opts.body !== 'string') {
       opts.body = JSON.stringify(opts.body);
     }
-    return fetch(url, opts).then(function (r) {
+    var doFetch = function() { return fetch(url, opts); };
+    if (window.LUMENIS && window.LUMENIS.Auth && typeof window.LUMENIS.Auth.getHeader === 'function') {
+      return window.LUMENIS.Auth.getHeader().then(function(h) {
+        if (h) { opts.headers['Authorization'] = h; window.__Z_AUTH = h; }
+        return doFetch();
+      }).then(function (r) {
       return r.json().then(function (d) {
         if (!r.ok && !d) throw new Error('HTTP ' + r.status);
         return d;
       });
-    });
+      });
+    } else {
+      return doFetch().then(function (r) {
+      return r.json().then(function (d) {
+        if (!r.ok && !d) throw new Error('HTTP ' + r.status);
+        return d;
+      });
+      });
+    }
   }
 
   function apiGet(url) { return api(url); }
@@ -730,15 +744,29 @@
     var opts = options || {};
     opts.headers = opts.headers || {};
     opts.headers['Content-Type'] = 'application/json';
+    opts.credentials = 'include';
     if (opts.body && typeof opts.body !== 'string') {
       opts.body = JSON.stringify(opts.body);
     }
-    return fetch(url, opts).then(function (r) {
+    var doFetch = function() { return fetch(url, opts); };
+    if (window.LUMENIS && window.LUMENIS.Auth && typeof window.LUMENIS.Auth.getHeader === 'function') {
+      return window.LUMENIS.Auth.getHeader().then(function(h) {
+        if (h) { opts.headers['Authorization'] = h; window.__Z_AUTH = h; }
+        return doFetch();
+      }).then(function (r) {
       return r.json().then(function (d) {
         if (!r.ok && !d) throw new Error('HTTP ' + r.status);
         return d;
       });
-    });
+      });
+    } else {
+      return doFetch().then(function (r) {
+      return r.json().then(function (d) {
+        if (!r.ok && !d) throw new Error('HTTP ' + r.status);
+        return d;
+      });
+      });
+    }
   }
   function apiPost(url, body) { return api(url, { method: 'POST', body: body }); }
   function apiGet(url) { return api(url); }

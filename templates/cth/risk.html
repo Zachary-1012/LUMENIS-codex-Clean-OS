@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Risk Center · 序境 LUMENIS{% endblock %}
 {% block page_title %}Risk Center{% endblock %}
 
@@ -218,9 +218,9 @@
         title:r.title||r.risk_title||r.note_title||r.summary||'无标题',
         type:r.type||r.risk_type||r.category||'other',
         level:r.level||r.risk_level||r.severity||'unknown',
-        brand:r.brand||r.brand_name||r.related_brand||'',
-        source:r.source||r.platform||r.origin||'',
-        time:r.created_at||r.detected_at||r.first_seen||r.time||'',
+        brand:r.brand||r.brand_name||r.related_brand||r.source_keyword||'广州太古汇',
+        source:r.source||r.platform||r.origin||r.source_platform||'',
+        time:r.created_at||r.detected_at||r.first_seen||r.time||r.publish_date||r.collected_at||'',
         status:r.status||r.state||'pending'
       };
     });

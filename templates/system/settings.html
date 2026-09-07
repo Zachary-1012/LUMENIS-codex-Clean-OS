@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -1318,7 +1318,7 @@ function loadPlatformSwitches() {
   var summary = document.getElementById('platformSwitchSummary');
   if (!list) return;
   list.innerHTML = '<div class="loading-spinner"></div>';
-  fetch('/api/data-center/platforms')
+  (window.LUMENIS ? LUMENIS.fetch('/api/data-center/platforms') : fetch('/api/data-center/platforms', {credentials:'include'}))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var platforms = (data && data.data) ? data.data.platforms : (data.platforms || []);
