@@ -364,6 +364,34 @@
       }
     },
 
+    _updatePlatformIndicator: function() {
+      var indicator = document.getElementById('platform-indicator');
+      if (!indicator) return;
+      var platform = this.state.platform || '';
+      var PLATFORM_META = {
+        'xiaohongshu': { name: '小红书', icon: 'RED', color: '#FF2442', desc: '主平台·已接入采集', field: 'source_platform=xiaohongshu' },
+        'xhs': { name: '小红书', icon: 'RED', color: '#FF2442', desc: '主平台·已接入采集', field: 'source_platform=xhs' },
+        'douyin': { name: '抖音', icon: 'DY', color: '#000000', desc: '设置中开启后显示', field: 'source_platform=douyin' },
+        'weibo': { name: '微博', icon: 'WB', color: '#E6162D', desc: '设置中开启后显示', field: 'source_platform=weibo' },
+        'bilibili': { name: 'B站', icon: 'B', color: '#00A1D6', desc: '设置中开启后显示', field: 'source_platform=bilibili' },
+        '': { name: '全平台', icon: 'ALL', color: '#00D4AA', desc: '当前仅小红书数据可见', field: 'all platforms' }
+      };
+      var meta = PLATFORM_META[platform] || PLATFORM_META[''];
+      if (platform && platform !== 'all') {
+        indicator.style.display = 'flex';
+        var iconEl = document.getElementById('platform-indicator-icon');
+        var nameEl = document.getElementById('platform-indicator-name');
+        var descEl = document.getElementById('platform-indicator-desc');
+        var fieldEl = document.getElementById('platform-indicator-field');
+        if (iconEl) { iconEl.textContent = meta.icon; iconEl.style.background = meta.color; }
+        if (nameEl) nameEl.textContent = meta.name;
+        if (descEl) descEl.textContent = meta.desc;
+        if (fieldEl) fieldEl.textContent = meta.field;
+      } else {
+        indicator.style.display = 'none';
+      }
+    },
+
     loadNotes: function() {
       var self = this;
       this.showNotesState('loading');
