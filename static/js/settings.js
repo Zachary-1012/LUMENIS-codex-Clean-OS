@@ -80,7 +80,8 @@ function switchPanel(panel) {
     skills: '插件与技能', about: '关于系统', domain: '域名与接入',
     developer: '开发者功能', appearance: '外观', config: '配置',
     keyboard: '键盘快捷键', browser: '浏览器', integrations: '集成与连接',
-    ai: 'AI', collection: '采集与数据源', backup: '通知/备份/帮助'
+    ai: 'AI', collection: '采集与数据源', platforms: '平台与可见性',
+    syslinks: '系统链接', 'zbmp-domain': 'ZBMP 品牌智能', backup: '通知/备份/帮助'
   };
   document.getElementById('panelTitle').textContent = titles[panel] || panel;
 

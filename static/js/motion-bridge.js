@@ -94,13 +94,17 @@
     function triggerCountUp(el, newVal) {
       if (el._animating) return; // 防止 count-up 过程中递归触发
       var oldVal = parseFloat(el.getAttribute('data-kpi-value') || el._lastText || '0');
+      if (isNaN(oldVal)) oldVal = 0;
       if (oldVal === newVal) return;
       el._animating = true;
-      el.setAttribute('data-kpi-value', newVal);
       el._lastText = newVal;
       if (Motion && Motion.updateKPI) {
+        // 先设置旧值，确保 Motion.updateKPI 读取到正确 oldValue 并触发动画
+        // （Motion.updateKPI 会回退到 element.textContent，但 renderKPI 已设为新值）
+        el.setAttribute('data-kpi-value', oldVal);
         Motion.updateKPI(el, newVal);
       } else {
+        el.setAttribute('data-kpi-value', newVal);
         el.textContent = newVal;
       }
       setTimeout(function() { el._animating = false; }, 900);

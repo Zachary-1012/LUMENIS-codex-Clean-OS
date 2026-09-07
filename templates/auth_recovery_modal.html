@@ -385,12 +385,19 @@ const AuthRecoveryModal = (function() {
   async function fetchSummary() {
     try {
       const resp = await fetch('/api/auth-recovery/summary');
+      if (!resp.ok) {
+        console.warn('[AuthRecovery] API returned HTTP', resp.status);
+        return;
+      }
       const data = await resp.json();
       if (data.ok && data.data) {
         currentTasks = data.data.pending_tasks || [];
         if (currentTasks.length > 0) {
           renderTasks(currentTasks);
           show();
+        } else {
+          // 无待处理任务：隐藏弹窗，避免一直显示/转圈
+          close();
         }
       }
     } catch (e) {
