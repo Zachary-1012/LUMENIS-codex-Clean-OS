@@ -95,10 +95,12 @@ AI Gateway/Provider、AI Analyzer/Filter/Learning、Skill、Agent Groups 位于�
 ### 偏离骨架页面
 
 1. CTH 报告存在“品牌报告”和“报告”重复入口。
-2. CTH 首页移动导航仍引用不存在的 `cth_overview` endpoint。
+2. 初始扫描曾报告 CTH 首页移动导航引用不存在的 `cth_overview` endpoint；本轮通过 `backend/lumenis_frontend.py` 与 `frontend/templates/base.html` 复核后，CTH 概览路由和移动入口均存在，原结论标记为已关闭。
 3. ZBMP/CTH/SYSTEM 的 evaluation、launch、data-center、xiaohongshu 等页面存在路由但无导航入口。
 4. CTH 的 Workspace 属于开发工具，却位于业务域系统分组。
 5. KOS 同时出现在 CTH 与 BMP，产品归属需要明确只读/主责关系。
+
+P0 已执行：BMP 重复的“传播声量”入口已从当前 `base.html` 导航移除；KOS/KOL/KOC canonical route 保留，生产 endpoint 未删除。
 
 ### 旧设计残留
 
@@ -115,7 +117,7 @@ AI Gateway/Provider、AI Analyzer/Filter/Learning、Skill、Agent Groups 位于�
 
 ### 错误信息层级
 
-当前运行观察到部分页面同时显示“数据加载失败/无权限/部分延迟”和实际数据。这会把“局部请求失败”误解为“整个页面不可用”。应后续建立：页面级状态 → 区块级状态 → 字段级 freshness/error 的优先级，但本轮不修改。
+既有模板包含“数据加载失败/无权限/部分延迟”等区块状态。由于当前业务页面受认证边界保护，本轮未在未授权状态下证明“真实数据与失败提示同时出现”；该项保留为待运行验证风险。应后续建立：页面级状态 → 区块级状态 → 字段级 freshness/error 的优先级，但本轮不修改。
 
 ### 应删除设计 / 应新增设计
 
@@ -126,6 +128,7 @@ AI Gateway/Provider、AI Analyzer/Filter/Learning、Skill、Agent Groups 位于�
 
 - 自动化：3954 passed / 53 skipped / 0 failed。
 - 健康接口：`/healthz` 返回 200。
+- 目标回归：`tests/test_lumenis_frontend_foundation.py` 与 `tests/test_dual_domain_ui.py` 共 2 passed，无后台线程泄漏。
 - 内置浏览器只读观察：CTH 概览、BMP 概览、SYSTEM 设置可打开；页面真实数据可见，但部分区块状态提示不一致。
 - 数据库：测试使用外部副本；生产库未删除、未清空、未覆盖。
 
