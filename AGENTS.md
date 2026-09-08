@@ -218,261 +218,64 @@ AI 输出必须可记录、可追溯、可人工修正；修正结果可沉淀�
 Cookie/session 在任何页面、任何任务、任何时间失效时，不得简单跳转到孤立登录页。
 
 系统应通过全局 Auth 状态中心触发系统内弹窗，至少包含：
-- 平台
-- 当前账号
-- 当前状态
-- 失效/验证原因
-- 对应二维码或合法登录/验证入口（由平台正常流程提供）
-- “我已完成验证”
-- “稍后处理”
-- 当前任务暂停/恢复状态
-
-验证完成后自动健康检查并恢复任务；未完成则保持暂停/冷却，不得把失败伪装成 0 条。
-
-## 7.3 采集状态
-
-系统至少能表达：
-- `SUCCESS`
-- `NO_NEW_DATA`
-- `RISK_WARNING`
-- `NEED_VERIFY`
-- `BLOCKED`
-- `SESSION_EXPIRED`
-- `COLLECT_ERROR`
-- `COOLING_DOWN`
-
-如果源码已有更完整六态/多态状态机，优先兼容并扩展，不得重复制造冲突状态。
 
 ---
 
-# 8. 多平台 Adapter
+# 100. Heritage Intelligence Retrieval Gate（2026-09-09 增补）
 
-目标：
-`BasePlatformAdapter → XiaohongshuAdapter / WeiboAdapter / BilibiliAdapter / FutureAdapter`
+> 本节是对当前工程协作流程的增量约束，不改变 Production Truth，不把历史知识直接视为当前事实。
 
-平台层负责登录/授权、搜索、详情、评论、平台字段、平台 ID、原始 URL；上层统一负责标准化、去重、主体过滤、质量、风险、事件、分析和报告。
+## 100.1 强制前置检索
 
-不得为新平台复制整套系统。
+Codex / Agent 在执行任何涉及产品功能、数据、平台、UI/UX、AI/Agent、Runtime、安全、测试、架构或重构的任务前，必须先读取：
 
----
+1. `heritage_intelligence/README.md`
+2. `heritage_intelligence/ASSET_REGISTRY.md`
+3. `heritage_intelligence/ASSET_GOVERNANCE.md`
+4. `heritage_intelligence/SOURCE_MAP.md`
+5. 与当前任务域对应的 Heritage 资产、Decision Memory、Regression Memory
 
-# 9. 品牌传播与市场情报新板块
+禁止只读 README / AGENTS / 当前源码后直接重构而忽略 Heritage。
 
-这是 Z-Brand 与客户版未来共同演进的 Core 能力，但客户版只开放经过验证的业务子集。
+## 100.2 定向检索，不做无差别全文灌入
 
-核心维度：
+任务域映射：
+- UI/UX → Product/UX + Data Presentation + Decision Memory
+- 数据/指标/表格 → Data/Metrics + Evidence/Contracts + Decision Memory + Regression Memory
+- 平台 → Platform Intelligence + Domain + Compliance/Contract
+- 韩语/内容/i18n → Language & Content Intelligence
+- KOS/Podcast/舆情/Campaign/Research/Operations → Domain Methodology + Data + Contract
+- AI/Agent → AI & Agent Intelligence + Engineering Governance
+- Runtime/Security/Release → Engineering Governance + Regression Memory
 
-`WHO = 传播主体`
-`WHAT = 内容`
-`WHAT HAPPENED = 事件`
-`SO WHAT = 品牌影响`
+Codex 应检索相关资产，而不是每次把整个 Heritage Library 全量塞入上下文。
 
-## 9.1 传播主体
+## 100.3 当前事实优先级
 
-统一纳入：
-- KOS
-- KOL
-- KOC
-- 普通用户
-- 媒体
-- 官方
-- 机构
+必须遵守：
 
-**主体身份与内容属性严格分开。**
+`Current Production Truth > Current Verified Architecture > Applicable Heritage Asset > Superseded / Reference-only Asset`
 
-`subject_type = KOS/KOL/KOC/...`
-`content_type = UGC/商业/官方/测评/体验/投诉/活动内容/...`
+Heritage 结论必须回到当前源码、当前测试、当前数据契约和当前运行证据中复核。
 
-禁止：`user_type=UGC` 这种把内容属性当账号类型的设计。
+## 100.4 Heritage → Capability Promotion
 
-## 9.2 六维主体画像
+若历史资产仍具有当前价值，Codex 必须判断其属于：
+- DESIGN_ENHANCEMENT
+- FUNCTION_ENHANCEMENT
+- DATA_ENHANCEMENT
+- PLATFORM_ENHANCEMENT
+- AI_ENHANCEMENT
+- ENGINEERING_ENHANCEMENT
+- REFERENCE_ONLY
+- NOT_APPLICABLE
 
-1. 身份
-2. 内容能力
-3. 传播能力
-4. 品牌关系
-5. 舆情表现
-6. 事件贡献
+任何提升为当前 Capability 的资产必须经过：
+`Heritage Retrieval → Current Fit → Decision → Implementation → Test → Evidence → Regression → Release Gate`
 
-识别结果可由规则+Ollama辅助，必须支持人工修正和置信度记录。
+## 100.5 禁止事项
 
-## 9.3 三类事件
-
-- 营销事件：品牌主动发起
-- 传播事件：市场/用户自发形成热点
-- 舆情事件：公众态度聚集，可正可负
-
-事件必须支持生命周期：发现→形成→增长→爆发→扩散→分化→衰减→结束（不同事件类型允许语义差异）。
-
-事件不是孤立列表；必须逐步建设 `event_relation`，记录触发、衍生、继发、并行等关系。
-
-目标因果链：
-`营销事件 → 传播事件 → 舆情事件 → 品牌影响`
-
----
-
-# 10. 页面与交互原则
-
-当前既有菜单应尽量复用：
-- 首页概览
-- 舆情监测
-- 风险预警
-- 事件中心
-- 负面确认
-- 热门话题
-- 话题监测端口
-- 笔记搜索
-- 数据分析
-- 品牌业态
-- 官方动态
-- 品牌营销案例库
-- 案例库
-- 舆情日历
-- 报告中心
-- 系统设置
-
-新能力优先作为既有页面内部扩展，不无理由增加大量顶级菜单。
-
-交互必须支持：
-`概览 → 下钻 → 详情 → 回溯 → 溯源分析`
-
-事件、主体、内容之间必须支持双向回溯：
-- 事件 → 主体 → 历史内容
-- 内容 → 所属事件
-- 主体 → 参与事件
-
-移动端不能只做到“不溢出”，后续需继续完成合理的分组、弹窗、层级和跳转体验。
-
----
-
-# 11. 数据分析与报告
-
-分析必须区分：
-- 内容量
-- 事件量
-- 传播贡献
-- 风险
-- 消费者需求
-- 品牌影响
-
-报告默认不把采集窗口误当发布时间窗口。
-
-未来支持：
-- 营销传播综合报告
-- 传播主体分析报告
-- 事件因果溯源报告
-- 现有舆情日报/周报/月报
-
-任何分析结论必须能追溯到统计周期、事件、内容和原始证据。
-
----
-
-# 12. 双产品 Release 与版本血缘
-
-客户版必须是经过验证的 Release 快照，不得运行时依赖 Z-Brand。
-
-每次客户交付必须记录：
-- Core 基线版本
-- Brand Profile
-- 规则/配置变更
-- 数据库迁移
-- 测试结果
-- Release 时间
-- 已知限制
-
-推荐血缘：
-`Z-Brand Core → 验证 Release → Customer Profile → 独立客户包`
-
-短期允许配置驱动裁剪；成熟后再实现一键 Build 两种产物。
-
----
-
-# 13. 修改安全协议
-
-任何修改必须遵循：
-
-`审计 → 备份/确认 → 最小修改 → 单测 → E2E → 真实数据验证 → 回归 → CHANGELOG → 交付`
-
-### P0
-启动、数据库、主体口径、采集主链路、Auth、数据真实性、核心报告、现有页面稳定性。
-
-### P1
-传播主体、三类事件、event_relation、数据质量、动态调度、权限、Release 结构、Ollama 正式接入。
-
-### P2
-自动 Build、完整多品牌、完整事件图谱、深度移动端、CI/CD、性能与监控深化。
-
-不得因为 P1/P2 功能破坏 P0。
-
----
-
-# 14. 测试与验收
-
-修改后至少执行与变更范围匹配的：
-- Python 单测
-- 数据库迁移测试
-- API smoke test
-- 浏览器 E2E
-- 关键页面检查
-- 主体口径回归
-- 时间口径回归
-- 采集状态回归
-- Auth 恢复回归
-- 报告周期回归
-
-测试失败时必须记录真实错误，不得通过删除测试、屏蔽异常或伪造结果“修复”。
-
----
-
-# 15. Git / GitHub 规则
-
-GitHub `Z-Brand-Core` 是工程协作与版本血缘中心。
-
-提交前必须检查：
-- 是否误加入 Cookie、Token、API Key、个人隐私
-- 是否误加入生产数据库
-- 是否误加入测试垃圾
-- 是否破坏 AGENTS/文档
-- 是否存在重复 Core
-- 是否更新 CHANGELOG/状态文档
-
-敏感凭证只允许通过本地 `.env`/系统密钥管理，不进入 Git。
-
----
-
-# 16. 交付输出格式
-
-每次完成任务后，向主开发窗口报告：
-
-1. 修改了什么
-2. 为什么修改
-3. 修改了哪些文件
-4. 数据库是否变化
-5. 测试了什么
-6. 测试结果
-7. 未完成项
-8. 风险/已知限制
-9. Git commit
-10. 下一步建议
-
-禁止只回复“完成”“已修复”而不提供可审计结果。
-
----
-
-# 17. 最终不可违反的项目原则
-
-> **稳定版本优先于漂亮重构。**
->
-> **真实源码优先于历史印象。**
->
-> **系统内循环优先于 AI。**
->
-> **客户 Release 必须独立运行。**
->
-> **一套 Core，两个产品，不复制两套长期维护代码。**
->
-> **数据失败必须显式，不得静默成 0 条。**
->
-> **Cookie/session 失效必须在系统内可见、可处理、可恢复。**
->
-> **任何新能力先旁路验证，再进入主链路。**
+- 禁止因旧分支落后、文件未被 Runtime 引用而直接判定无用。
+- 禁止把旧代码/旧数据库/旧 API/旧 UI/旧 Provider 因进入 Heritage 而自动恢复。
+- 禁止 Heritage 绕过 Production Truth、Evidence、测试或 Release Gate。
+- 禁止重新发明已有且仍有效的研究、Contract、Metric、Decision 或 Regression 规则而不先检索其历史资产。
