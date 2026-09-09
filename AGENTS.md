@@ -1,275 +1,400 @@
-# AGENTS.md — CorTech Lab / Z-Brand 舆情监测系统协作与接管总指令
+# AGENTS.md — 序境 / LUMENIS 工程协作与生产收敛总指令
 
-> Version: V2.0
+> Version: V3.0
 > Status: Active
-> Purpose: 本文件是 Z-Brand-Core 的长期工程协作宪法，供 ChatGPT 主开发窗口、豆包、本地 Ollama、Codex 及其他辅助开发工具共同遵守。
+> Scope: `Zachary-1012/LUMENIS-codex-Clean-OS`
+> Product: **序境 / LUMENIS · Production Core · Production Truth Owner**
 >
 > 核心原则：**先审计、再修改；先兼容、再重构；先旁路、再切换；先验证、再交付。**
 
-## 0. 事实基线与协作角色
+---
 
-本项目不是从零开发。当前真实生产基线来自用户最新可运行源码/工作区；历史聊天、架构文档和 GitHub 均不能替代真实源码事实。
+# 0. 当前阶段与最高事实基线
 
-### 主开发窗口
+当前执行阶段：
 
-ChatGPT 当前主窗口负责：
-- 总体架构与产品路线
-- 版本基线与变更决策
-- 跨模块依赖判断
-- P0/P1/P2 优先级
-- 数据模型与接口契约
-- 代码审计、方案设计、回归标准
-- 汇总辅助窗口、测试结果和变更日志
+```text
+PRODUCTION CONVERGENCE
+→ Production Acceptance
+→ Release Candidate
+→ Production / Operating
+```
 
-其他聊天窗口属于辅助研究窗口；其结论必须回收到主窗口和 GitHub 文档，不得自行改变核心架构。
+当前优先级：
 
-### 本地执行与验证
+```text
+Capability Closure
+→ Runtime Verification
+→ Production Acceptance
+→ Release Candidate
+→ Production / Operating
+```
 
-豆包/本地开发环境负责：
-- 读取 GitHub 与本地源码
-- 按本文件执行修改
-- 本地运行、数据库检查、浏览器 E2E
-- 记录真实测试结果
-- 提交可审计的代码与变更说明
+除明确 P0 / P1 或最终生产收敛所需能力外，新功能默认进入 Backlog，不得打断当前收敛。
 
-### Ollama
+任何 Codex / Agent / 豆包 / 本地模型 / 人工研发执行前后，都必须执行：
 
-Ollama 是当前正式 AI Runtime。AI 是增强层，不是系统生命线。
+```text
+READ CURRENT REPO
+→ AUDIT CURRENT TRUTH
+→ CLASSIFY GAPS
+→ IMPLEMENT / FIX
+→ TEST
+→ VERIFY
+→ EVIDENCE
+→ UPDATE STATUS
+→ RE-AUDIT
+```
+
+事实优先级：
+
+```text
+Current Local Worktree / Current Source
+> Current Verified Runtime / Test / Data Evidence
+> Current README / Governance / Architecture
+> Applicable Heritage Asset
+> Historical Chat / Old README / Old Commit Message / Superseded Docs
+```
+
+禁止依赖历史聊天、旧 README、旧 commit message、旧产品命名或上一次会话结论直接继续研发。
+
+强制读取：
+
+- 当前 `README.md`
+- 当前 `AGENTS.md`
+- `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
+- `CAPABILITY_REGISTRY.md`
+- 当前 Governance / Architecture / Audit / Runtime / Test / Evidence
+- 与任务域对应的 Heritage 资产
+
+最终六大 Production Acceptance Gate：
+
+1. `P0 Blocking = 0`
+2. `Repository Integrity = PASS`
+3. `Production Truth = PASS`
+4. `Runtime + Critical E2E = PASS`
+5. `Security + Recovery = PASS`
+6. `Release Lineage + Rollback = VERIFIED`
+
+任意一项未通过，不得声明 Production Ready。
 
 ---
 
-# 1. 双产品线
+# 1. 产品身份与产品结构
 
-## 产品 A：CorTech-TaikooHui
+正式母产品：
 
-全称：**CorTech Lab-GuangZhou Taikoo Hui Public Opinion Monitoring System**
+**序境 / LUMENIS**
 
-定位：广州太古汇客户交付版。
-- 单品牌/单项目
-- Taikoo Hui Profile 固化
-- 主体词、排除词、风险口径锁定
-- 独立数据库
-- 独立运行，不依赖 Z-Brand 在线服务
-- 不暴露研发、实验、样本库、多品牌管理等内部能力
-- 以验收通过的 Release 快照为准
+定位：
 
-## 产品 B：Z-Brand Monitoring Platform
+**Production Core · Production Truth Owner**
 
-定位：多品牌品牌传播与市场情报母平台。
-- 多品牌/竞品
-- Brand Profile
-- Campaign
-- KOS/KOL/KOC/普通用户/媒体/官方传播主体
-- 内容库
-- 营销事件/传播事件/舆情事件
-- 事件关系与生命周期
-- 消费者需求洞察
-- 品牌对标
-- 多平台 Adapter
-- 账号中心
-- Ollama/AI Shadow/样本与评测能力
-- 新客户 Release 构建能力
+序境不是 AI 产品外壳。AI 是增强能力，不是 Production Truth 本身。
 
-**目标：一套 Core，两种 Release 产物；绝不复制两套 Core 源码长期维护。**
+当前产品结构：
+
+```text
+序境 / LUMENIS
+│
+├── 序境·商业运营 / LUMENIS Commerce Operations / CTH
+│   └── Subject-first
+│
+├── 序境·品牌市场 / LUMENIS Brand & Market / BMP
+│   └── Brand-first / Primary Focus
+│
+├── 序境·内容创作 / LUMENIS Content & Creation
+│   └── Shared Capability Layer
+│
+└── Agent Groups
+    └── Cross-Product Execution & Collaboration
+```
+
+硬规则：
+
+- CTH / BMP 是领域产品，不是两套长期复制维护的 Core。
+- Content & Creation 是共享能力，不是第三个独立产品。
+- Agent Groups 是跨产品执行与协作层，不是新的产品线。
+- `ZBC`、`Z-Brand-Core`、CorTech 等仅作为历史 / Legacy / engineering compatibility 语义，不得覆盖当前正式产品身份。
+- 广州太古汇是 CTH 中可选择的 `Subject Profile` / 业务主体，不是母产品永久边界。
 
 ---
 
-# 2. 一套 Core、配置驱动、运行隔离
+# 2. Repository 与跨仓边界
+
+当前 Canonical Production Repository：
+
+`Zachary-1012/LUMENIS-codex-Clean-OS`
+
+相关仓库角色：
+
+- `Zachary-1012/LUMENIS-codex-Clean-OS`：序境 / LUMENIS Production Core / Production Truth
+- `Zachary-1012/Zachary-OS-AI`：Shared Intelligence Capability
+- `Zachary-1012/global-growth-intelligence`：独立 Research / Growth Product
+- `Zachary-1012/lumenis-command`：R&D Control / Engineering Evidence Sidecar
+- `Zachary-1012/Z-Brand-Core`：Legacy / Historical Engineering Asset
+
+当前唯一主动产品研发优先级是 **序境 / LUMENIS**。
+
+其他仓库不得无具体依赖理由被横向扩张。
+
+跨仓原则：
+
+**架构融合、协议融合、能力协同；代码、数据库、Truth、Runtime 保持隔离。**
 
 禁止：
-- 复制整套源码形成两个长期独立项目
-- 客户版与母平台分别修 Bug
-- 为客户版物理删除公共 Core 后维护副本
-- 让客户版运行时依赖 Z-Brand 服务
 
-产品差异优先通过：
-- Runtime Mode
-- Feature Flags
-- Brand Profile
-- 权限
-- 路由白名单
-- Build/Release 配置
+- 共享生产数据库
+- 共享生产凭据
+- 隐藏 Runtime 耦合
+- 让 OSAI / GGI / LUMENIS Command 成为序境启动或核心生产流程前置条件
+- 未经 Contract / Artifact / Evidence 直接复制另一产品业务代码
 
-控制。
-
-推荐模式：
-- `CUSTOMER_RELEASE`
-- `ZBRAND_PLATFORM`
-
-如果当前源码没有成熟 Build 系统，不得为了理想化工程而破坏 P0 稳定性。先配置驱动，后自动化 Build。
+跨仓共享只能通过版本化、可追溯、可验证的 Contract / Artifact / Evidence。
 
 ---
 
-# 3. AI 运行时：规则内循环优先，Provider-Agnostic（演进自 Ollama-only）
+# 3. Production Truth 与核心生产链
 
-> **演进注记（2026-09-04，用户批准 MERGE）**：本节早期表述为“正式生产 Ollama-only、不得使用任何云端大模型 API”。
-> 依据 `AI_PROVIDER_RUNTIME_POLICY_V1` 与 LUMENIS AI Gateway，现行口径升级为 **Provider-Agnostic**：
-> 智谱 GLM 为云端主力（日常 `glm-4.5-air` 关思考、强推理 `glm-5.3`、视觉 `glm-4.6v`、联网 `web-search-pro`），
-> ARK / 千问为云端备用，**Ollama / gpt-oss 本地模型为离线兜底，本地确定性规则为最终兜底**。
-> 以下三条硬红线不因本次演进而改变，且优先级高于任何模型选择：
-> 1. **系统生命线不绑定任何单一 AI Provider**：断网、无 key、任一云厂商不可用时，必须能自动降级到本地模型与确定性规则，主链路不中断；
-> 2. **规则与数据是业务最终真值，AI 永远只是增强层**（见本节末“AI 不得单独决定”清单）；
-> 3. **任何 API Key 只允许经本地 `.env` / 系统密钥注入，严禁写入源码、前端、Git、模板、DB 初始化脚本、日志、测试**。
-> 历史 Ollama 链路与历史外部 AI 代码均保留为兜底/Legacy，不删除。
+核心生产链：
 
-历史外部 AI 代码不得贸然删除：先审计调用链，标记 Legacy/Optional，默认关闭，确认不影响核心后再清理。
+```text
+External Data
+→ Evidence
+→ Canonical Data
+→ Function
+→ Metric
+→ Truth Table
+→ View Model
+→ Dynamic Visualization
+→ UI / Report / Export
+```
 
-严禁将任何 API Key 写入：源码、前端、Git、模板、数据库初始化脚本、日志或测试样例。
+业务情报闭环：
 
-系统必须做到：
+```text
+Source
+→ Evidence
+→ Event
+→ Case
+→ Finding / Insight
+→ Decision
+→ Action
+→ Outcome
+→ Evaluation / Feedback
+→ Learning Asset
+```
 
-`没有 AI → 仍可采集 → 仍可过滤 → 仍可去重 → 仍可事件分析 → 仍可风险判断 → 仍可统计 → 仍可报告`
+任何核心结果必须能够回溯到：
 
-系统主判断来自：规则、数据、主体过滤、时间口径、去重、风险规则、事件规则、统计、质量、证据链。
+- Source
+- Evidence
+- 时间
+- Subject / Brand Scope
+- Function / Rule
+- Metric
+- 数据版本
+- 真实 / 估算 / AI 建议状态
 
-Ollama 可辅助：情绪解释、主题分类、用户诉求、事件摘要、风险原因、评论总结、趋势解释、报告润色、主体/内容语义识别、事件聚类建议。
+禁止：
 
-AI 不得单独决定：广州太古汇归属、真实发布时间、统计数量、报告周期、原始数据真实性、最终核心风险口径。
+- 数据失败静默变成 `0`
+- 页面独立重算业务指标
+- 报告维护另一套业务真相
+- AI 覆盖确定性事实
+- UI 伪造指标、Runtime、测试、部署或完成状态
 
-AI 输出必须可记录、可追溯、可人工修正；修正结果可沉淀为规则/样本。
+至少区分：
+
+`0 / NULL / UNKNOWN / NOT_AVAILABLE / STALE / ERROR`
 
 ---
 
-# 4. 数据库与数据资产：最高保护级别
+# 4. Capability 状态与完成定义
 
-任何 `.db/.sqlite/.sqlite3`、迁移、SQL、seed、备份、历史数据库、导入导出文件、ORM Model 都属于数据资产。
+Capability 状态必须按真实证据晋级：
 
-**未经用户明确授权，不得删除、清空、重建或覆盖生产数据库。**
+```text
+PLANNED
+→ IMPLEMENTED
+→ INTEGRATED
+→ TESTED
+→ VERIFIED
+→ RELEASED
+→ OPERATING
+```
 
-新增表/字段必须优先采用向后兼容迁移，不得破坏历史数据。
+文件存在 ≠ 功能完成。
 
-至少保护现有业务实体（实际名称以源码为准）：
-- notes
-- comments
-- events
-- daily_reports
-- crawl_logs
-- keywords
-- campaign/brand/profile
-- risk
-- AI 运行/反馈记录
-- 其他实际存在业务表
+测试文件存在 ≠ 测试通过。
 
-数据库必须区分生产、测试、实验域；客户 Release 禁止携带其他品牌测试数据、AI 实验数据。
+测试通过 ≠ Runtime 已验证。
+
+页面能打开 ≠ 数据链路完成。
+
+能力只有具备以下闭环证据才能声明 VERIFIED：
+
+```text
+Source
++ Call Graph
++ Data / API
++ Frontend / Consumer
++ Runtime
++ Tests
++ Production Evidence
+```
+
+每个 Capability 只能有一个 Production Owner 和一个 Canonical Implementation；其他实现只能是 Adapter / Compatibility / Legacy / Candidate / Sub-capability。
 
 ---
 
-# 5. 广州太古汇主体口径：P0 不得弱化
+# 5. 数据库与数据资产：最高保护级别
 
-必须保护现有源码中的：
+任何 `.db/.sqlite/.sqlite3`、migration、SQL、seed、备份、历史数据库、导入导出文件、ORM Model 都属于数据资产。
+
+未经用户明确授权，不得：
+
+- 删除生产数据库
+- 清空生产数据库
+- 覆盖生产数据库
+- 为了测试“修成通过”而改写历史事实
+- 因为表空、旧、未引用或名称带 backup/legacy 就直接删除
+
+每张表必须明确：
+
+`Owner / Meaning / Writer / Reader / Canonical ID / Lifecycle / Migration / Retention`
+
+历史表、字段、API、脚本、Provider、Skill、Agent、Collector、UI、Runtime 能力必须先经过：
+
+```text
+Inventory
+→ Dependency Trace
+→ Runtime Verification
+→ KEEP / MERGE / MIGRATE / REIMPLEMENT / LEGACY / ARCHIVE / DELETE
+→ Regression
+→ Evidence
+```
+
+`DELETE` 必须有：依赖扫描、替代物、回归验证、运行证据和明确批准。
+
+数据库健康必须分别验证：
+
+```text
+Path
+→ Process
+→ Schema
+→ Migration Version
+→ integrity_check
+→ foreign_key_check
+→ Core Data
+→ API
+→ Page / Consumer
+```
+
+`integrity_check=ok` 不等于外键健康，也不等于 Production Ready。
+
+---
+
+# 6. CTH / Subject Authority：P0 生产保护
+
+CTH 采用 Subject-first。
+
+选择 Subject 只改变当前工作上下文和重点范围，不得改写：
+
+- Canonical Data
+- Evidence
+- 历史事件
+- 已确认业务事实
+
+必须保护现有源码中实际存在且仍被使用的主体规则，包括但不限于：
+
 - `SUBJECT_WORDS`
 - `SUBJECT_EXCLUDE_WORDS`
 - `subject_hit()`
-- `app.py` / `risk_engine.py` 中 `_subject_sql_and_values()`
-- `aggregate_events()` 主体过滤
-- `build_daily_report()` 主体过滤
-- 所有下游 SQL、Dashboard、日报/周报/月报、专题统计的主体边界
+- `_subject_sql_and_values()`
+- `aggregate_events()`
+- `build_daily_report()`
 
-不得为了“增加采集量”而取消或弱化主体过滤。
+是否继续使用、迁移、重构或适配必须由当前源码、调用链和回归证据决定。
 
-已有词表以实际源码为最终准绳。文档中的词表只是保护性基线，不得覆盖源码中已经扩展的词表。
+不得为了增加采集量弱化主体过滤。
 
-广州太古汇与上海/北京/成都/香港等同名或相似场景必须严格隔离。
-
----
-
-# 6. 时间口径
-
-必须分离：
-- `publish_datetime`：内容真实发布时间
-- `captured_at`：系统采集时间
-
-日报、周报、月报、舆情日历、活动周期统计默认按 `publish_datetime`。
-
-“编辑于”“小时前”等相对时间不能未经归一化直接进入正式统计口径；无法可靠归一化时应标记不确定状态。
+广州太古汇与其他城市、同名主体或相似商业场景必须严格隔离。
 
 ---
 
-# 7. 小红书采集与 Auth：稳定、可恢复、不可静默
+# 7. BMP / Brand & Market
 
-小红书是当前主平台。目标不是高频暴力采集，而是稳定、低风险、可解释、可恢复。
+BMP 采用 Brand-first / Primary Focus。
 
-标准链路：
-`账号/Cookie → 持久化浏览器上下文 → Playwright/CDP → 搜索发现 → 详情 → 评论 → 标准化 → 质量 → 主体过滤 → 去重 → 入库`
+Brand Selection 代表当前主要观察焦点，但不得阻止系统继续处理：
 
-搜索、详情、评论必须分层；详情失败不得等同于“没有舆情”，评论失败不得静默丢弃笔记。
+- 多品牌
+- 竞品
+- 市场
+- 内容
+- 传播主体
+- 用户反馈
+- 趋势
+- Campaign
+- Event / Case / Risk
+- Benchmark
+- Report / Evaluation
 
-### 官方账号只读保护（硬红线，2026-09-03 用户明令）
-- 无论浏览器当前登录的是哪个账号（**包括广州太古汇官方账号**），一切自动采集 / 登录保活 / 内置浏览器自动流程对账号**一律只读**：仅可打开页面、读取 cookie/会话、读取公开内容、探测登录态。
-- **永久禁止**任何作用于账号的写操作或交互：关注 / 取关、点赞、收藏、发表评论、私信、发布 / 转发、改资料或设置、退出登录、切换账号、点击 follow/like/collect/comment/publish/logout 等任何社交动作按钮——即使页面已登录也不允许。
-- 登录只能由用户本人在系统内浏览器手动扫码；“展开评论 / 滚动浏览”是只读允许项，“发表评论 / 点赞”是写操作禁止项。
-- 新增任何浏览器自动化前，必须先确认不含上述账号写操作；code review 以此为必检项。
-
-## 7.1 风控
-
-遇到验证码、安全验证、300012、IP 风险、安全限制页、登录验证页：
-- 识别
-- 停止危险请求
-- 记录状态
-- 熔断
-- 冷却
-- 健康检查
-- 在合法人工验证完成后恢复
-
-**不得破解验证码、绕过平台安全验证、对抗或规避平台风控。**
-
-## 7.2 Auth 体验是全局能力
-
-Cookie/session 在任何页面、任何任务、任何时间失效时，不得简单跳转到孤立登录页。
-
-系统应通过全局 Auth 状态中心触发系统内弹窗，至少包含：
-- 平台
-- 当前账号
-- 当前状态
-- 失效/验证原因
-- 对应二维码或合法登录/验证入口（由平台正常流程提供）
-- “我已完成验证”
-- “稍后处理”
-- 当前任务暂停/恢复状态
-
-验证完成后自动健康检查并恢复任务；未完成则保持暂停/冷却，不得把失败伪装成 0 条。
-
-## 7.3 采集状态
-
-系统至少能表达：
-- `SUCCESS`
-- `NO_NEW_DATA`
-- `RISK_WARNING`
-- `NEED_VERIFY`
-- `BLOCKED`
-- `SESSION_EXPIRED`
-- `COLLECT_ERROR`
-- `COOLING_DOWN`
-
-如果源码已有更完整六态/多态状态机，优先兼容并扩展，不得重复制造冲突状态。
+必须保证 Brand Scope、Subject Scope、数据归属、报告、搜索、Agent Context 不串线。
 
 ---
 
-# 8. 多平台 Adapter
+# 8. Content & Creation / Podcast / Research
 
-目标：
-`BasePlatformAdapter → XiaohongshuAdapter / WeiboAdapter / BilibiliAdapter / FutureAdapter`
+内容创作属于 Shared Capability Layer。
 
-平台层负责登录/授权、搜索、详情、评论、平台字段、平台 ID、原始 URL；上层统一负责标准化、去重、主体过滤、质量、风险、事件、分析和报告。
+目标生产链：
 
-不得为新平台复制整套系统。
+```text
+Brief
+→ Fact Contract
+→ Research
+→ Scene / Audience
+→ Story / Interview / Content Strategy
+→ Draft
+→ Platform Adaptation
+→ Evaluation
+→ Revision
+→ Human Approval
+→ Publish
+→ Performance
+→ Learning
+```
+
+覆盖并持续扩展：
+
+- Xiaohongshu Content Intelligence
+- Narrative / Documentary Methodology
+- Deep Interview Methodology
+- Human Meaning / Emotion Layer
+- Episode Reverse Engineering
+- Viral Intelligence
+- Failure Intelligence
+- Platform Adaptation
+- Content Evaluation
+- Podcast Production
+
+红线：
+
+- 不编造时间、价格、规则、活动事实
+- 未经批准不得自动发布
+- 不大段复制研究案例
+- AI 文案不得覆盖 Fact Contract
+
+Podcast 是内容生产能力的一部分，不是独立第三产品。
 
 ---
 
-# 9. 品牌传播与市场情报新板块
+# 9. KOS / KOL / KOC / UGC 与传播主体
 
-这是 Z-Brand 与客户版未来共同演进的 Core 能力，但客户版只开放经过验证的业务子集。
+统一支持并区分：
 
-核心维度：
-
-`WHO = 传播主体`
-`WHAT = 内容`
-`WHAT HAPPENED = 事件`
-`SO WHAT = 品牌影响`
-
-## 9.1 传播主体
-
-统一纳入：
 - KOS
 - KOL
 - KOC
@@ -278,247 +403,531 @@ Cookie/session 在任何页面、任何任务、任何时间失效时，不得�
 - 官方
 - 机构
 
-**主体身份与内容属性严格分开。**
+主体身份与内容属性必须分开。
 
-`subject_type = KOS/KOL/KOC/...`
-`content_type = UGC/商业/官方/测评/体验/投诉/活动内容/...`
+例如：
 
-禁止：`user_type=UGC` 这种把内容属性当账号类型的设计。
+```text
+subject_type = KOS / KOL / KOC / USER / MEDIA / OFFICIAL / ORG
+content_type = UGC / COMMERCIAL / OFFICIAL / REVIEW / EXPERIENCE / COMPLAINT / CAMPAIGN / ...
+```
 
-## 9.2 六维主体画像
+禁止把 UGC 当作账号身份类型。
 
-1. 身份
-2. 内容能力
-3. 传播能力
-4. 品牌关系
-5. 舆情表现
-6. 事件贡献
+识别可使用规则 + AI 辅助，但必须保留：
 
-识别结果可由规则+Ollama辅助，必须支持人工修正和置信度记录。
-
-## 9.3 三类事件
-
-- 营销事件：品牌主动发起
-- 传播事件：市场/用户自发形成热点
-- 舆情事件：公众态度聚集，可正可负
-
-事件必须支持生命周期：发现→形成→增长→爆发→扩散→分化→衰减→结束（不同事件类型允许语义差异）。
-
-事件不是孤立列表；必须逐步建设 `event_relation`，记录触发、衍生、继发、并行等关系。
-
-目标因果链：
-`营销事件 → 传播事件 → 舆情事件 → 品牌影响`
+- Evidence
+- Confidence
+- 人工修正
+- 修正历史
 
 ---
 
-# 10. 页面与交互原则
+# 10. Event / Case / Risk / Campaign / Decision / Action
 
-当前既有菜单应尽量复用：
-- 首页概览
-- 舆情监测
-- 风险预警
-- 事件中心
-- 负面确认
-- 热门话题
-- 话题监测端口
-- 笔记搜索
-- 数据分析
-- 品牌业态
-- 官方动态
-- 品牌营销案例库
-- 案例库
-- 舆情日历
-- 报告中心
-- 系统设置
+事件至少区分并支持当前业务语义中的：
 
-新能力优先作为既有页面内部扩展，不无理由增加大量顶级菜单。
+- Marketing / Campaign Event
+- Propagation Event
+- Public Opinion Event
 
-交互必须支持：
-`概览 → 下钻 → 详情 → 回溯 → 溯源分析`
+事件、案例与风险不得成为孤立列表，应支持生命周期、关系和溯源。
 
-事件、主体、内容之间必须支持双向回溯：
-- 事件 → 主体 → 历史内容
-- 内容 → 所属事件
-- 主体 → 参与事件
+目标链：
 
-移动端不能只做到“不溢出”，后续需继续完成合理的分组、弹窗、层级和跳转体验。
+```text
+Content / Brand / Subject / Campaign
+→ Event
+→ Case
+→ Risk / Finding
+→ Insight
+→ Decision
+→ Action
+→ Outcome
+→ Evaluation
+```
+
+Decision / Action 涉及生产影响时必须经过权限、Action Firewall、Effect Fence / Idempotency 与 Evidence。
 
 ---
 
-# 11. 数据分析与报告
+# 11. Collector / 多平台 / Browser / Auth
 
-分析必须区分：
-- 内容量
-- 事件量
-- 传播贡献
-- 风险
-- 消费者需求
-- 品牌影响
+采集目标不是高频暴力抓取，而是稳定、低风险、可解释、可恢复。
 
-报告默认不把采集窗口误当发布时间窗口。
+目标链：
 
-未来支持：
-- 营销传播综合报告
-- 传播主体分析报告
-- 事件因果溯源报告
-- 现有舆情日报/周报/月报
+```text
+Collector
+→ Session / Auth
+→ Fetch
+→ Normalize
+→ Evidence
+→ Canonical
+→ Event / Content
+```
 
-任何分析结论必须能追溯到统计周期、事件、内容和原始证据。
+必须验证：
 
----
+- Login State
+- Cookie / Session
+- Browser / CDP
+- Retry
+- Cooldown
+- Circuit Breaker
+- Checkpoint / Resume
+- Heartbeat
+- Last Successful Collection
+- Failure Trace
+- Duplicate Handling
+- Platform Mapping
 
-# 12. 双产品 Release 与版本血缘
+### 社交平台账号永久只读保护
 
-客户版必须是经过验证的 Release 快照，不得运行时依赖 Z-Brand。
+所有自动采集、登录保活、浏览器自动流程对登录账号一律只读。
 
-每次客户交付必须记录：
-- Core 基线版本
-- Brand Profile
-- 规则/配置变更
-- 数据库迁移
-- 测试结果
-- Release 时间
-- 已知限制
+允许：
 
-推荐血缘：
-`Z-Brand Core → 验证 Release → Customer Profile → 独立客户包`
+- 打开页面
+- 读取合法会话状态
+- 读取公开内容
+- 展开页面
+- 滚动浏览
+- 检测登录状态
 
-短期允许配置驱动裁剪；成熟后再实现一键 Build 两种产物。
+永久禁止自动执行：
 
----
+- 关注 / 取关
+- 点赞
+- 收藏
+- 评论
+- 私信
+- 发布 / 转发
+- 修改资料 / 设置
+- 退出登录
+- 切换账号
+- 任何等价社交写操作
 
-# 13. 修改安全协议
+登录 / 验证只能走平台正常流程，并由用户本人完成必要人工验证。
 
-任何修改必须遵循：
+遇到验证码、安全验证、IP 风险、登录验证页或平台限制：
 
-`审计 → 备份/确认 → 最小修改 → 单测 → E2E → 真实数据验证 → 回归 → CHANGELOG → 交付`
+```text
+Detect
+→ Stop Risky Requests
+→ Record
+→ Circuit Break
+→ Cooldown
+→ Health Check
+→ Resume only after legitimate verification
+```
 
-### P0
-启动、数据库、主体口径、采集主链路、Auth、数据真实性、核心报告、现有页面稳定性。
+不得破解验证码、绕过安全验证或规避平台风控。
 
-### P1
-传播主体、三类事件、event_relation、数据质量、动态调度、权限、Release 结构、Ollama 正式接入。
-
-### P2
-自动 Build、完整多品牌、完整事件图谱、深度移动端、CI/CD、性能与监控深化。
-
-不得因为 P1/P2 功能破坏 P0。
-
----
-
-# 14. 测试与验收
-
-修改后至少执行与变更范围匹配的：
-- Python 单测
-- 数据库迁移测试
-- API smoke test
-- 浏览器 E2E
-- 关键页面检查
-- 主体口径回归
-- 时间口径回归
-- 采集状态回归
-- Auth 恢复回归
-- 报告周期回归
-
-测试失败时必须记录真实错误，不得通过删除测试、屏蔽异常或伪造结果“修复”。
+多平台 Adapter 应共享上层业务逻辑，不得为每个平台复制整套系统。
 
 ---
 
-# 15. Git / GitHub 规则
+# 12. 时间、数据质量与 Evidence
 
-GitHub `Z-Brand-Core` 是工程协作与版本血缘中心。
+必须区分：
 
-提交前必须检查：
-- 是否误加入 Cookie、Token、API Key、个人隐私
-- 是否误加入生产数据库
-- 是否误加入测试垃圾
-- 是否破坏 AGENTS/文档
-- 是否存在重复 Core
-- 是否更新 CHANGELOG/状态文档
+- `publish_datetime`：真实发布时间
+- `captured_at`：系统采集时间
 
-敏感凭证只允许通过本地 `.env`/系统密钥管理，不进入 Git。
+日报、周报、月报、活动周期、舆情日历默认按真实发布时间语义计算，除非具体业务 Contract 明确另有定义。
 
----
+无法可靠归一化的相对时间必须保留不确定状态。
 
-# 16. 交付输出格式
+Evidence 必须支持：
 
-每次完成任务后，向主开发窗口报告：
+```text
+Source
+→ Evidence ID
+→ Canonical Object
+→ Finding
+→ Decision
+→ Action
+```
 
-1. 修改了什么
-2. 为什么修改
-3. 修改了哪些文件
-4. 数据库是否变化
-5. 测试了什么
-6. 测试结果
-7. 未完成项
-8. 风险/已知限制
-9. Git commit
-10. 下一步建议
+以及 timestamp / provenance / identity or hash / relation / trace / audit。
 
-禁止只回复“完成”“已修复”而不提供可审计结果。
+Raw / Evidence 原则上不可被派生结果静默覆盖；派生数据应创建版本化结果。
 
 ---
 
-# 17. 最终不可违反的项目原则
+# 13. AI / Skill / Agent
 
-> **稳定版本优先于漂亮重构。**
->
-> **真实源码优先于历史印象。**
->
-> **系统内循环优先于 AI。**
->
-> **客户 Release 必须独立运行。**
->
-> **一套 Core，两个产品，不复制两套长期维护代码。**
->
-> **数据失败必须显式，不得静默成 0 条。**
->
-> **Cookie/session 失效必须在系统内可见、可处理、可恢复。**
->
-> **任何新能力先旁路验证，再进入主链路。**
+AI 架构遵循：
+
+```text
+Production Truth
+→ Intelligence Router
+├─ Approved Cloud Provider
+├─ Local AI
+└─ Deterministic Rules / No-AI
+```
+
+Provider ACTIVE 状态必须由当前真实调用链、健康检查和测试证据证明，不能由历史配置证明。
+
+禁止隐藏 fallback、死 Provider 或未验证 Provider 进入生产路径。
+
+系统生命线不能绑定单一 AI Provider。
+
+AI 不可用时，核心生产流程必须继续成立。
+
+AI 可用于：
+
+- 发现
+- 分类
+- 摘要
+- 解释
+- 推理
+- 建议
+- 内容辅助
+- 工程辅助
+
+AI 不得单独决定：
+
+- 原始事实真实性
+- Production Truth
+- 确定性业务规则最终结果
+- 核心统计数量
+- 最终主体归属
+- 未经证据支持的风险结论
+- 未经权限批准的生产写入
+
+Skill / Agent 运行链：
+
+```text
+Task
+→ Identity
+→ Permission
+→ Plan
+→ Skill / Tool
+→ Action Firewall
+→ Effect Fence / Idempotency
+→ Execute
+→ Evidence
+→ Evaluation
+→ Trace
+→ Outcome
+```
+
+AI / Agent 不得绕过权限直接修改 Production Truth。
 
 ---
 
-# 100. Heritage Intelligence Retrieval Gate（2026-09-09 增补）
+# 14. Runtime / Recovery / Observability
 
-> 本节是对当前工程协作流程的增量约束，不改变 Production Truth，不把历史知识直接视为当前事实。
+生产 Runtime 覆盖：
 
-## 100.1 强制前置检索
+- Process
+- Worker
+- Queue
+- Lease
+- Scheduler
+- DB
+- Collector
+- Browser
+- Provider
+- Agent
+- Auth / Session
+- Recovery
+- Audit / Trace / Evidence
 
-Codex / Agent 在执行任何涉及产品功能、数据、平台、UI/UX、AI/Agent、Runtime、安全、测试、架构或重构的任务前，必须先读取：
+关键 Worker 目标链：
+
+```text
+Worker
+→ Lease
+→ Heartbeat
+→ Checkpoint
+→ Failure Detection
+→ Reaper
+→ Retry
+→ DLQ
+→ Resume
+→ Evidence
+```
+
+`overall healthy` 不得掩盖 Worker、Reaper、Collector、Queue 等子系统未运行。
+
+健康状态必须表达真实粒度。
+
+---
+
+# 15. API / Frontend / UI / UX
+
+API 链：
+
+```text
+Route
+→ Auth
+→ Permission
+→ Input Contract
+→ Service
+→ DB / Function
+→ Output Contract
+→ Frontend Consumer
+```
+
+重点审计：
+
+- orphan API
+- UI drift
+- API drift
+- duplicate blueprint
+- legacy endpoint
+- hidden fallback
+- fake 200
+
+前端是 Production Truth View，不是独立静态展示层。
+
+所有页面状态必须来自真实 API / State Contract。
+
+统一体验要求：
+
+- PC / Tablet / Mobile 自适应
+- 2–4 层信息架构
+- Drill-down
+- Trend / Cards / Tables
+- Evidence / Insight / Action
+- Dynamic Visualization
+- Motion 用于表达因果、状态与连续性，不是装饰
+- Current + Delta + Freshness + Confidence
+- 时间序列可回溯 Evidence / Event / Case
+
+### Heritage UI 硬规则
+
+**Legacy code is a capability source, not a UI source.**
+
+历史 UI/UX 只能用于证明旧业务意图、缺失功能或信息关系，不能作为最终 UI 来源。
+
+历史功能恢复链必须为：
+
+```text
+Historical / Legacy Asset
+→ Inventory
+→ Source / Dependency Trace
+→ Current Equivalent Audit
+→ Semantic Dedup
+→ Current Production Line Mapping
+→ KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE
+→ Capability Recovery / Reimplementation
+→ Current API / State Contract Integration
+→ NEW UI / UX DESIGN
+→ Runtime / E2E
+→ Tests
+→ Evidence
+→ Re-Audit
+```
+
+最终 UI 必须按当前 LUMENIS Design System 与当前信息架构重新设计。
+
+---
+
+# 16. Report / Search / Import / Export / Notification
+
+报告覆盖并逐步统一：
+
+- Daily
+- Weekly / Monthly（若当前 Contract 支持）
+- Special Report
+- Campaign
+- KOS / Audience
+- Public Opinion
+- Research
+- Evaluation
+- Operations
+
+报告链：
+
+```text
+Metric
+→ Evidence
+→ Finding
+→ Risk / Insight
+→ Decision Context
+→ Action
+→ Report Artifact
+```
+
+报告不得独立维护业务计算逻辑。
+
+Search、Import、Export、Notification 必须遵守：
+
+- Scope / Permission
+- Production Truth
+- Evidence
+- Data Minimization
+- Domain Isolation
+- Error State
+
+不得通过导入或搜索绕过 Subject / Brand / Permission 边界。
+
+---
+
+# 17. 数据最小化与合规
+
+允许的业务最小字段应以当前产品 Contract 为准，原则包括：
+
+- 标题
+- 发布时间
+- 互动数据
+- 内容分析
+- 链接
+- 必要结构化元数据
+
+默认不保存：
+
+- 原始视频
+- 原始图片
+- 不必要个人信息
+
+部署地区规则必须按 Mainland China / Hong Kong / Overseas 的实际合规要求切换。
+
+任何地区配置都不得成为绕过平台规则或安全边界的手段。
+
+---
+
+# 18. Security
+
+安全分层：
+
+```text
+Edge
+→ Application
+→ Auth
+→ Permission
+→ Agent Tool Firewall
+→ Data
+→ Runtime
+→ Supply Chain
+```
+
+必须：
+
+- 默认最小权限
+- fail-close
+- 敏感字段脱敏
+- API Key / Token / Cookie 不进入 Git
+- 危险操作需要明确权限与审计
+- Agent 写入需要 Action Firewall / Effect Fence
+- 重要结果保留 Evidence / Trace
+
+任何 API Key 只允许通过本地 `.env` / 系统密钥 / 合法 Secret 管理注入。
+
+严禁写入源码、前端、Git、模板、数据库初始化脚本、日志或测试样例。
+
+---
+
+# 19. Developer Settings：Post-Launch Backlog
+
+`系统设置 → 开发者 / Developer` 属于历史能力保护项，但当前调度状态为：
+
+```text
+POST_LAUNCH_BACKLOG
+Target Phase: POST_LAUNCH_UPGRADE
+```
+
+在当前：
+
+```text
+Production Convergence
+→ Production Acceptance
+→ Release Candidate
+→ first Production
+```
+
+阶段：
+
+- 保护历史资产
+- 不删除、不覆盖
+- 不把 Developer Settings 作为当前发布前置条件
+- 不让其创建新的 Runtime prerequisite
+
+**Developer Settings 不是当前六大 Production Acceptance Gate 的阻塞项。**
+
+其缺失或尚未恢复不得阻止 Production Acceptance、RC 或首个 Production。
+
+首个生产版本上线并完成稳定性观察后，再执行完整恢复链：
+
+```text
+Current Source Audit
+→ Historical Inventory
+→ Feature Source Trace
+→ Route / API / Service / DB / Config / Permission / Runtime Trace
+→ Historical Behavior & Acceptance Evidence
+→ Current Equivalent Audit
+→ Capability Matrix & Gap Classification
+→ KEEP / MERGE / MIGRATE / REIMPLEMENT / LEGACY / ARCHIVE
+→ Current Architecture Mapping
+→ Security / Permission Boundary Design
+→ Current API / State Contract Integration
+→ System Settings IA Integration
+→ NEW Developer Settings UI / UX Design
+→ PC / Tablet / Mobile Responsive
+→ Runtime Integration
+→ Tests / Critical E2E
+→ Evidence
+→ Re-Audit
+```
+
+硬规则：
+
+- 不丢功能
+- 不盲目复活
+- 不恢复旧 UI
+- 不暴露生产秘密
+- 不绕过权限
+- 不伪造状态
+- 不破坏领域隔离
+- 不制造 Runtime 前置依赖
+- 危险操作必须受控
+- 默认最小权限
+
+---
+
+# 20. Heritage Intelligence Retrieval Gate
+
+Heritage 是历史能力与知识证据，不是当前 Production Truth。
+
+执行任何涉及产品功能、数据、平台、UI/UX、AI/Agent、Runtime、安全、测试、架构或重构任务前，必须定向读取：
 
 1. `heritage_intelligence/README.md`
 2. `heritage_intelligence/ASSET_REGISTRY.md`
 3. `heritage_intelligence/ASSET_GOVERNANCE.md`
 4. `heritage_intelligence/SOURCE_MAP.md`
-5. 与当前任务域对应的 Heritage 资产、Decision Memory、Regression Memory
-
-禁止只读 README / AGENTS / 当前源码后直接重构而忽略 Heritage。
-
-## 100.2 定向检索，不做无差别全文灌入
+5. 与当前任务域对应的 Heritage Asset / Decision Memory / Regression Memory
 
 任务域映射：
+
 - UI/UX → Product/UX + Data Presentation + Decision Memory
 - 数据/指标/表格 → Data/Metrics + Evidence/Contracts + Decision Memory + Regression Memory
 - 平台 → Platform Intelligence + Domain + Compliance/Contract
-- 韩语/内容/i18n → Language & Content Intelligence
-- KOS/Podcast/舆情/Campaign/Research/Operations → Domain Methodology + Data + Contract
+- 内容/i18n → Language & Content Intelligence
+- KOS / Podcast / 舆情 / Campaign / Research / Operations → Domain Methodology + Data + Contract
 - AI/Agent → AI & Agent Intelligence + Engineering Governance
 - Runtime/Security/Release → Engineering Governance + Regression Memory
 
-Codex 应检索相关资产，而不是每次把整个 Heritage Library 全量塞入上下文。
+禁止无差别全文灌入上下文；应按任务定向检索。
 
-## 100.3 当前事实优先级
+Heritage → Capability Promotion：
 
-必须遵守：
+```text
+Heritage Retrieval
+→ Current Fit
+→ Decision
+→ Implementation
+→ Test
+→ Evidence
+→ Regression
+→ Release Gate
+```
 
-`Current Production Truth > Current Verified Architecture > Applicable Heritage Asset > Superseded / Reference-only Asset`
+可分类：
 
-Heritage 结论必须回到当前源码、当前测试、当前数据契约和当前运行证据中复核。
-
-## 100.4 Heritage → Capability Promotion
-
-若历史资产仍具有当前价值，Codex 必须判断其属于：
 - DESIGN_ENHANCEMENT
 - FUNCTION_ENHANCEMENT
 - DATA_ENHANCEMENT
@@ -528,12 +937,148 @@ Heritage 结论必须回到当前源码、当前测试、当前数据契约和�
 - REFERENCE_ONLY
 - NOT_APPLICABLE
 
-任何提升为当前 Capability 的资产必须经过：
-`Heritage Retrieval → Current Fit → Decision → Implementation → Test → Evidence → Regression → Release Gate`
+禁止：
 
-## 100.5 禁止事项
+- 因旧分支落后、文件未被 Runtime 引用而直接判定无用
+- 因进入 Heritage 就自动恢复旧代码/旧 DB/旧 API/旧 UI/旧 Provider
+- Heritage 绕过 Production Truth、Evidence、测试或 Release Gate
+- 未先检索历史资产就重新发明已有且仍有效的 Contract / Metric / Decision / Regression 规则
 
-- 禁止因旧分支落后、文件未被 Runtime 引用而直接判定无用。
-- 禁止把旧代码/旧数据库/旧 API/旧 UI/旧 Provider 因进入 Heritage 而自动恢复。
-- 禁止 Heritage 绕过 Production Truth、Evidence、测试或 Release Gate。
-- 禁止重新发明已有且仍有效的研究、Contract、Metric、Decision 或 Regression 规则而不先检索其历史资产。
+---
+
+# 21. 修改安全协议
+
+任何修改必须遵循：
+
+```text
+Audit
+→ Dependency / Impact Check
+→ Backup / Rollback Plan where needed
+→ Minimal Safe Change
+→ Unit / Integration Test
+→ API / DB / Runtime Verification
+→ Critical E2E where applicable
+→ Regression
+→ Evidence
+→ CHANGELOG / Status Update where applicable
+→ Re-Audit
+```
+
+禁止：
+
+- 为了“通过”删除测试
+- 屏蔽真实异常
+- 伪造 Runtime / Test / Production Evidence
+- 无依赖分析的大规模重写
+- 无替代物的删除
+- 直接把历史方案覆盖当前源码
+
+P0 优先保护：
+
+- 启动
+- 数据库 / Migration
+- Production Truth
+- Subject / Brand Scope
+- Collector / Auth
+- Evidence / Canonical / Metric
+- Runtime / Recovery
+- Core API
+- Core Report
+- Security / Permission
+- 当前已验证页面与业务能力
+
+---
+
+# 22. Git / GitHub 规则
+
+当前 Canonical Production Repository：
+
+`Zachary-1012/LUMENIS-codex-Clean-OS`
+
+提交前必须检查：
+
+- Cookie / Token / API Key / Credential
+- 个人隐私
+- 生产数据库
+- 测试垃圾 / 临时文件
+- 重复 Core
+- Governance drift
+- 是否需要 CHANGELOG / Evidence / Status 更新
+- 是否破坏当前 README / AGENTS / Acceptance Gate
+
+禁止未经授权：
+
+- force push
+- reset --hard
+- clean -fd
+- 改写历史
+- 删除生产分支资产
+
+本地工作区存在未提交修改时，任何辅助 Agent 不得用 online main 覆盖本地真实现场。
+
+---
+
+# 23. 测试与验收
+
+修改后按变更范围至少验证：
+
+- Unit Test
+- Integration Test
+- Database Migration Test
+- API Smoke / Contract Test
+- Runtime Test
+- Permission / Security Test
+- Browser / Critical E2E
+- Subject / Brand Scope Regression
+- Time Semantics Regression
+- Collector State / Auth Recovery Regression
+- Report Truth Regression
+- Rollback / Recovery where applicable
+
+测试失败必须记录真实错误。
+
+不得通过删除测试、跳过失败、屏蔽异常或伪造数据让状态变绿。
+
+---
+
+# 24. 交付输出格式
+
+每次任务完成后必须报告：
+
+1. 审计了什么
+2. 修改了什么
+3. 为什么修改
+4. 修改文件
+5. DB 是否变化
+6. API / Runtime 是否变化
+7. 执行的测试
+8. 测试结果
+9. Evidence
+10. 未完成 / Blocked / Needs Evidence
+11. 风险 / 已知限制
+12. Git commit / push 状态
+13. 下一步建议
+
+禁止只回复“完成”“已修复”。
+
+---
+
+# 25. 最终不可违反原则
+
+> **真实源码与真实运行证据优先于历史印象。**
+>
+> **Production Truth 优先于 AI 输出。**
+>
+> **稳定版本优先于漂亮重构。**
+>
+> **能力可以共享，Truth / DB / Runtime / Ownership 不得模糊。**
+>
+> **数据失败必须显式，不得静默成 0。**
+>
+> **历史代码是能力来源，不是最终 UI 来源。**
+>
+> **任何新能力先旁路验证，再进入主链路。**
+>
+> **没有 Source + Call Graph + Data/API + Consumer + Runtime + Tests + Production Evidence，就不能声明 VERIFIED。**
+>
+> **当前唯一主动产品研发优先级是序境 / LUMENIS。**
