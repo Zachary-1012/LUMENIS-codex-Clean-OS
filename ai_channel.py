@@ -349,13 +349,13 @@ def all_provider_snapshots():
 
 
 # Provider 优先级配置（环境变量可覆盖）
-# 主通道智谱（最大算力），备用豆包（最小输出兜底），最后本地规则
+# 兼容通道默认本地优先；云端仅为策略允许的可选增强。
 def provider_chain():
     """返回 Provider 优先级列表 [主, 备...]。环境变量 AI_PROVIDER_CHAIN 可覆盖（逗号分隔）。"""
     raw = _env('AI_PROVIDER_CHAIN', '').strip()
     if raw:
         return [p.strip() for p in raw.split(',') if p.strip()]
-    return ['zhipu', 'ark', 'ollama']  # V1.0: zhipu primary -> ark fallback -> ollama local -> rule final
+    return ['ollama', 'zhipu', 'ark']
 
 
 def route_with_fallback(call_fn, providers=None, on_result=None):
@@ -389,8 +389,9 @@ def route_with_fallback(call_fn, providers=None, on_result=None):
                     on_result(prov, None, False)
                 except Exception:
                     pass
-            # 不可重试错误（auth/bad_request）记录后继续切下一个 provider：
-            # 不同 provider 的 key/配置独立，一个 auth 失败不代表其他 provider 也失败
+            # 凭据或请求契约错误不得通过自动轮换掩盖；显式回退确定性规则。
+            if kind in {'auth', 'bad_request'}:
+                break
             continue
     # 全部 Provider 失败/熔断 → 本地规则兜底
     return None, 'rule'
@@ -833,8 +834,8 @@ def route_with_fallback_v1(call_fn, providers=None, on_result=None,
                     on_result(prov, None, False, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
                 except Exception:
                     pass
-            # 不可重试错误（auth/bad_request）记录后继续切下一个 provider：
-            # 不同 provider 的 key/配置独立，一个 auth 失败不代表其他 provider 也失败
+            if kind in {'auth', 'bad_request'}:
+                break
             continue
     # 全部 Provider 失败/熔断 → L6 本地规则兜底
     usage_zero = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}

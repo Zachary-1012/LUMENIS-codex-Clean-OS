@@ -23,9 +23,10 @@ def get_planner() -> PlatformSchedulePlanner:
         with _PLANNER_LOCK:
             if _PLANNER is None:
                 root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
-                store = ScheduleDecisionStore(_os.path.join(root, "data", "monitor.db"))
+                db_path = _os.path.abspath(_os.environ.get("ZBC_DB_PATH") or _os.path.join(root, "data", "monitor.db"))
+                store = ScheduleDecisionStore(db_path)
                 _PLANNER = PlatformSchedulePlanner(
-                    state_file=_os.path.join(root, "data", "schedule_state.json"), store=store)
+                    state_file=_os.path.join(_os.path.dirname(db_path), "schedule_state.json"), store=store)
     return _PLANNER
 
 

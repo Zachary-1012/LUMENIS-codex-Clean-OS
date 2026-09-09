@@ -25,33 +25,31 @@ from report_api import _canonical_report_metrics
 
 @bp.route('/api/ai/status')
 def api_ai_status():
-    status = intelligence.ai_status()
-    return jsonify({'ok': True, **status, 'interface': 'local-ai-gateway', 'fallback': 'local_rule', 'providers': ['ollama','lmstudio','llama_cpp','qwen','openai','deepseek']})
+    try:
+        from local_ai_runtime import LocalFirstAIService
+        status = LocalFirstAIService().health(real_call=False)
+        return jsonify({'ok': True, **status, 'interface': 'lumenis-local-first-ai-v3', 'fallback': 'DETERMINISTIC_RULE', 'providers': ['OLLAMA_LOCAL', 'ZHIPU']})
+    except Exception as exc:
+        return jsonify({'ok': False, 'status': 'DOWN', 'error_type': type(exc).__name__, 'interface': 'lumenis-local-first-ai-v3'}), 503
+
+
+@bp.route('/api/ai/runtime-modes')
+def api_ai_runtime_modes():
+    from local_ai_runtime.contracts import RuntimeMode
+    from local_ai_runtime.registry import AIRuntimeRegistry
+    registry = AIRuntimeRegistry()
+    return jsonify({'ok': True, 'default': registry.runtime['default_mode'], 'modes': [mode.value for mode in RuntimeMode]})
 
 @bp.route('/api/ai/test', methods=['POST'])
 def api_ai_test():
     data = request.get_json(silent=True) or {}
     text = str(data.get('text') or '请用一句话说明广州太古汇舆情监测系统正在监测什么。').strip()[:1200]
-    # AI 治理：额度检查
-    allowed, quota = ai_governance._usage_tracker.check_quota()
-    if not allowed:
-        return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota}), 429
-    # AI 治理：脱敏
-    desensitized_text, mapping = ai_governance.desensitize_text(text)
-    result = intelligence.test_connection(desensitized_text)
-    # AI 治理：回传补回实体
-    if isinstance(result, dict) and 'reply' in result:
-        result['reply'] = ai_governance.restore_text(str(result['reply']), mapping)
-    # AI 治理：记录使用统计
-    ai_governance.record_ai_call('ai/test', prompt_tokens=len(text)//2,
-                                   completion_tokens=len(str(result.get('reply','')))//2 if isinstance(result, dict) else 0,
-                                   total_tokens=len(text)//2, provider=result.get('provider','zhipu') if isinstance(result, dict) else 'zhipu',
-                                   success=True)
-    # AI 治理：输出标记
-    marked = ai_governance.mark_ai_output(result if isinstance(result, dict) else {'result': result},
-                                             provider=result.get('provider','zhipu') if isinstance(result, dict) else 'zhipu',
-                                             endpoint='ai/test')
-    return jsonify(marked)
+    try:
+        from local_ai_runtime import LocalFirstAIService
+        result = LocalFirstAIService().analyze(text, task_type='connection_test', mode=data.get('runtime_mode'))
+        return jsonify({'ok': True, 'reply': result['summary'], 'analysis': result})
+    except Exception as exc:
+        return jsonify({'ok': False, 'error_type': type(exc).__name__, 'error': 'AI test failed explicitly'}), 503
 
 # ========== 豆包AI API（ark_llm）- 可选辅助功能 ==========
 # 【S1 2026-09-02】云智(ARK)已停用，改用智谱(zhipu)驱动（intelligence 网关）。
@@ -369,25 +367,26 @@ def api_ai_channel_health():
 
 @bp.route('/api/ai/analyze', methods=['POST'])
 def api_ai_analyze_v580():
-    """AI分析舆情"""
+    """Local-first advisory analysis with structured output and Evidence."""
     data = request.get_json(silent=True) or {}
     note_id = data.get('note_id')
-    provider = data.get('provider', 'local')
     analysis_type = data.get('type', 'summary')  # summary/sentiment/risk/event
-    
-    # 这里可以集成实际的AI调用逻辑
-    # 暂时返回模拟数据
-    return jsonify({
-        'ok': True,
-        'provider': provider,
-        'note_id': note_id,
-        'analysis': {
-            'summary': '这是AI分析的摘要内容',
-            'sentiment': 'neutral',
-            'risk_level': 'low',
-            'event_type': 'general'
-        }
-    })
+    text = str(data.get('text') or data.get('content') or '').strip()
+    if not text:
+        return jsonify({'ok': False, 'error': 'text is required'}), 400
+    try:
+        from local_ai_runtime import LocalFirstAIService
+        result = LocalFirstAIService().analyze(
+            text,
+            task_type=analysis_type,
+            mode=data.get('runtime_mode'),
+            evidence_ids=[str(note_id)] if note_id is not None else [],
+        )
+        return jsonify({'ok': True, 'note_id': note_id, 'analysis': result})
+    except (ValueError, TypeError) as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        return jsonify({'ok': False, 'error_type': type(exc).__name__, 'error': 'local AI analysis failed explicitly'}), 503
 
 
 @bp.route('/api/ai-learning/optimization/<operation_type>')

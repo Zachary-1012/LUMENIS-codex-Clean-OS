@@ -148,37 +148,25 @@ async function sendMessage() {
       else { const t = setInterval(() => { if (window.LUMENIS && window.LUMENIS.fetch) { clearInterval(t); resolve(); } }, 50); }
     });
 
-    const res = await LUMENIS.fetch('/api/ai/chat', {
+    const res = await LUMENIS.fetch('/api/ai/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: q,
-        domain: 'cth',
-        history: chatHistory.slice(-6)
+        text: q,
+        type: 'business_analysis',
+        runtime_mode: 'LOCAL_ONLY'
       })
     });
 
     removeTyping();
 
     if (!res.ok) {
-      // 尝试其他 AI 接口
-      const res2 = await LUMENIS.fetch('/api/ai/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, domain: 'cth' })
-      });
-      if (res2.ok) {
-        const data2 = await res2.json();
-        const answer = data2.answer || data2.result || data2.summary || JSON.stringify(data2, null, 2).slice(0, 2000);
-        addMessage('ai', answer);
-        chatHistory.push({ role: 'user', content: q });
-        chatHistory.push({ role: 'assistant', content: answer });
-      } else {
-        addMessage('ai', `AI 接口暂不可用（HTTP ${res.status}/${res2.status}）。请稍后重试，或检查 AI 服务配置。`);
-      }
+      addMessage('ai', `本地 AI 接口暂不可用（HTTP ${res.status}）。生产核心仍保持运行，请检查本地模型健康状态。`);
     } else {
       const data = await res.json();
-      const answer = data.reply || data.answer || data.response || data.result || data.message || data.content || JSON.stringify(data, null, 2).slice(0, 2000);
+      const analysis = data.analysis || {};
+      const topics = Array.isArray(analysis.topics) && analysis.topics.length ? `\n主题：${analysis.topics.join('、')}` : '';
+      const answer = `${analysis.summary || '未生成摘要'}\n情绪：${analysis.sentiment || 'uncertain'} · 置信度：${analysis.confidence ?? 0}${topics}\n证据：${analysis.evidence_id || '未生成'} · Provider：${analysis.provider || 'unknown'}（仅供辅助分析）`;
       addMessage('ai', answer);
       chatHistory.push({ role: 'user', content: q });
       chatHistory.push({ role: 'assistant', content: answer });

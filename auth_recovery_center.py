@@ -80,7 +80,7 @@ class AuthRecoveryCenter:
     """
 
     _instance: Optional['AuthRecoveryCenter'] = None
-    DB_PATH = resolve_path('data/monitor.db')
+    DB_PATH = os.path.abspath(os.environ.get("ZBC_DB_PATH") or resolve_path('data/monitor.db'))
     TASK_TTL_SECONDS = 3600  # 恢复任务有效期1小时
 
     def __new__(cls) -> 'AuthRecoveryCenter':

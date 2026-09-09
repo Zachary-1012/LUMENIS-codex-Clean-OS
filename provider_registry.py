@@ -8,7 +8,7 @@ Track3 修复（2026-09-06）：
   默认 AVAILABLE，仅当运行时探测到实际可调用才升级为 ACTIVE；
   探测失败标记 BLOCKED。禁止 ACTIVE 但实际无法调用。
 - 新增 probe_local_providers() 运行时探测函数。
-- zhipu 保持 ACTIVE（.env 中 ZHIPU_API_KEY 已验证连通）。
+- 云端 key 只能证明 CONFIGURED/AVAILABLE；没有本次真实调用证据不得静态标记 ACTIVE。
 
 不删除旧 provider 代码，只通过 Registry 控制可用性。
 """
@@ -32,16 +32,16 @@ ACTIVE_FALLBACK = "ACTIVE_FALLBACK"
 # Canonical Provider Registry
 PROVIDER_REGISTRY: Dict[str, Dict] = {
     "zhipu": {
-        "status": ACTIVE,
-        "role": "cloud_primary",
+        "status": NOT_CONFIGURED,
+        "role": "optional_cloud_provider",
         "models": ["glm-4.5-air", "glm-5.3", "glm-4.6v", "web-search-pro"],
         "env_key": "ZHIPU_API_KEY",
-        "description": "智谱云端主力 Provider",
+        "description": "智谱可选云端增强；配置存在不等于真实调用已验证",
     },
     "ollama": {
         "status": AVAILABLE,
         "role": "local_primary",
-        "models": ["local-model"],
+        "models": ["qwen2.5-coder:1.5b-instruct", "qwen2.5-coder:7b-agent"],
         "env_key": None,
         "probe_url_env": "OLLAMA_BASE_URL",
         "probe_url_default": "http://127.0.0.1:11434",
@@ -172,7 +172,7 @@ def probe_local_providers() -> Dict[str, str]:
     """运行时探测所有本地 Provider，更新 Registry 状态。
 
     返回 {provider_name: new_status} 映射。
-    - 探测成功（有可用模型）→ ACTIVE
+    - 探测成功（有可用模型）→ AVAILABLE；只有真实推理验证才能由治理层升级 ACTIVE
     - 探测失败 → BLOCKED
     仅影响 ollama / lmstudio / llama_cpp，不触碰云端 Provider。
     """
@@ -185,11 +185,29 @@ def probe_local_providers() -> Dict[str, str]:
         base_url = os.environ.get(entry.get("probe_url_env", ""), "") or entry.get("probe_url_default", "")
         path = entry.get("probe_path", "/api/tags")
         ok = _probe_endpoint(base_url, path)
-        new_status = ACTIVE if ok else BLOCKED
+        new_status = AVAILABLE if ok else BLOCKED
         entry["status"] = new_status
         entry["last_probe"] = _now_iso()
         entry["probe_ok"] = ok
         results[name] = new_status
+    return results
+
+
+def refresh_configured_cloud_providers() -> Dict[str, str]:
+    """Refresh cloud configuration state without claiming a successful call."""
+    results: Dict[str, str] = {}
+    for name in ("zhipu", "ark", "qwen"):
+        entry = PROVIDER_REGISTRY.get(name)
+        if not entry:
+            continue
+        key_name = entry.get("env_key")
+        configured = bool(key_name and os.environ.get(key_name, "").strip())
+        entry["configured"] = configured
+        if name == "zhipu":
+            entry["status"] = AVAILABLE if configured else NOT_CONFIGURED
+        elif not configured:
+            entry["status"] = NOT_CONFIGURED
+        results[name] = entry["status"]
     return results
 
 

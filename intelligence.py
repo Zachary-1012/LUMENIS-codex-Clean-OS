@@ -34,8 +34,8 @@ import ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+�
 
 # ZBC Phase 7: module status markers
 MODULE_STATUS = 'ACTIVE_PRIMARY'
-AI_ROLE = 'CENTRAL_GATEWAY'  # all AI calls route through _chat/chat; zhipu primary, local fallback
-PROVIDER_POLICY = 'zhipu(GLM) primary + ollama/lmstudio/llama_cpp local fallback + rule final fallback'
+AI_ROLE = 'LEGACY_GATEWAY_COMPATIBILITY'
+PROVIDER_POLICY = 'local-first + cloud-optional + deterministic final fallback'
 
 _CACHE = {'ts': 0, 'provider': None, 'model': None, 'base': None}
 
@@ -139,7 +139,8 @@ def ai_status():
     hints=_installed_hints()
     if d:
         provider,model,base=d
-        return {'enabled':True,'provider':provider,'model':model,'base_url':base,'detail':'本机模型自动接入' if provider in ('ollama','lmstudio','llama_cpp') else '云端 Key 已配置','runtime':'local' if provider in ('ollama','lmstudio','llama_cpp') else 'cloud','installed':True,'running':True,'hints':hints}
+        local = provider in ('ollama','lmstudio','llama_cpp')
+        return {'enabled':True,'provider':provider,'model':model,'base_url':base,'detail':'本机模型端点可达；真实推理需单独验证' if local else '云端 Key 已配置；真实调用未由本状态证明','runtime':'local' if local else 'cloud','installed':local,'configured':True,'reachable':local,'real_call_verified':False,'status':'REACHABLE' if local else 'CONFIGURED','running':local,'hints':hints}
     return {'enabled':False,'provider':'local_rule','model':'Taikoo Local Intelligence','base_url':'','detail':'未发现可调用的本地模型，当前使用内置本地智能引擎','runtime':'rule','installed':bool(hints),'running':False,'hints':hints}
 
 def ai_enabled(): return bool(_provider_config())

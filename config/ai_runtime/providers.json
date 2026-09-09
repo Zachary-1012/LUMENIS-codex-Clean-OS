@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "providers": [
+    {
+      "id": "OLLAMA_LOCAL",
+      "kind": "local_model_runtime",
+      "endpoint_env": "OLLAMA_BASE_URL",
+      "endpoint_default": "http://127.0.0.1:11434",
+      "credential_env": null,
+      "production_business_allowed": true,
+      "engineering_only": false,
+      "status": "PRODUCTION_CANDIDATE"
+    },
+    {
+      "id": "ZHIPU",
+      "kind": "optional_cloud_provider",
+      "endpoint_env": "ZHIPU_BASE_URL",
+      "endpoint_default": "https://open.bigmodel.cn/api/paas/v4",
+      "credential_env": "ZHIPU_API_KEY",
+      "production_business_allowed": true,
+      "engineering_only": false,
+      "status": "SHADOW"
+    },
+    {
+      "id": "OPENCODE_EXECUTION",
+      "kind": "execution_orchestration",
+      "endpoint_env": null,
+      "endpoint_default": null,
+      "credential_env": null,
+      "production_business_allowed": false,
+      "engineering_only": true,
+      "status": "RESEARCH_ONLY"
+    },
+    {
+      "id": "CODEX_SOL",
+      "kind": "engineering_intelligence",
+      "endpoint_env": null,
+      "endpoint_default": null,
+      "credential_env": null,
+      "production_business_allowed": false,
+      "engineering_only": true,
+      "status": "RESEARCH_ONLY"
+    },
+    {
+      "id": "INTERACTION_MODEL_FUTURE",
+      "kind": "future_interaction_model_adapter",
+      "endpoint_env": null,
+      "endpoint_default": null,
+      "credential_env": null,
+      "production_business_allowed": false,
+      "engineering_only": false,
+      "status": "RESEARCH_ONLY"
+    }
+  ]
+}

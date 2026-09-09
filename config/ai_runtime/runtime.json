@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "default_mode": "LOCAL_ONLY",
+  "default_model": "qwen2.5-coder:1.5b-instruct",
+  "operational_context_window": 2048,
+  "prompt_version": "lumenis-business-analysis-v3.0",
+  "resource_guard": {
+    "max_ram_mb": 12288,
+    "min_free_ram_mb": 1024,
+    "max_cpu_percent": 99.5,
+    "max_model_memory_mb": 10240,
+    "max_runtime_seconds": 120,
+    "max_concurrency": 1,
+    "max_queue": 2,
+    "max_retry": 1,
+    "cooldown_seconds": 15,
+    "idle_unload": true
+  },
+  "cloud_escalation_errors": ["DOWN", "TIMEOUT", "RESOURCE_LIMIT", "UNSUPPORTED_CAPABILITY"]
+}

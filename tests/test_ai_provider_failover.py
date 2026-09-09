@@ -29,10 +29,10 @@ class TestProviderChain:
         assert 'ark' in chain
         assert 'ollama' in chain
 
-    def test_provider_chain_zhipu_is_first(self):
+    def test_provider_chain_ollama_is_first(self):
         import ai_channel as ac
         chain = ac.provider_chain()
-        assert chain[0] == 'zhipu'
+        assert chain[0] == 'ollama'
 
     def test_provider_chain_env_override(self):
         import ai_channel as ac
@@ -64,9 +64,9 @@ class TestProviderStatus:
         import provider_registry as pr
         assert pr.provider_status('qwen') == 'NOT_CONFIGURED'
 
-    def test_zhipu_is_active(self):
+    def test_zhipu_is_not_statically_active(self):
         import provider_registry as pr
-        assert pr.provider_status('zhipu') == 'ACTIVE'
+        assert pr.provider_status('zhipu') == 'NOT_CONFIGURED'
 
     def test_ark_available_for_call(self):
         import provider_registry as pr

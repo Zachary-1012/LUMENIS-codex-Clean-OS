@@ -246,3 +246,5 @@ Source + Call Graph + Data / API + Frontend / Consumer
 ## 12. 状态声明
 
 **序境 / LUMENIS · Independent Production Core · Production Truth Owner · AI-Enhanced, Not AI-Dependent**
+
+本地优先 AI 的隔离集成说明：[`docs/ai_runtime/LUMENIS-OPEN-SOURCE-RUNTIME-AND-RESEARCH-INTEGRATION-V1.md`](docs/ai_runtime/LUMENIS-OPEN-SOURCE-RUNTIME-AND-RESEARCH-INTEGRATION-V1.md)。当前状态只允许以该文档及真实验收 Evidence 中的 `SHADOW_READY / READY_FOR_AUDIT` 表述，不代表生产批准。

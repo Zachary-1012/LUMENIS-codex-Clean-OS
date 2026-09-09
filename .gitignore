@@ -21,6 +21,9 @@ dependencies/
 models/
 *.gguf
 *.safetensors
+/models/
+/external_open_source/**/weights/
+/data/ai_runtime_evidence/
 *.onnx
 # ---------- IDE / 编辑器 / 工具缓存 ----------
 .vscode/
