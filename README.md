@@ -4,6 +4,61 @@
 >
 > 面向真实业务生产的独立产品：数据、采集、分析、风险、决策信息、报告、运行与产品体验由本仓库负责。
 
+## 0. 当前执行阶段 / Current Execution Phase
+
+**CURRENT PHASE: PRODUCTION CONVERGENCE**
+
+本仓库已经进入最终生产收敛阶段。当前优先级不是继续横向扩张，而是：
+
+```text
+Capability Closure
+→ Runtime Verification
+→ Production Acceptance
+→ Release Candidate
+→ Production / Operating
+```
+
+每次 Codex / Agent / 人工研发执行前后都必须执行真实审计循环：
+
+```text
+READ CURRENT REPO → AUDIT CURRENT TRUTH → CLASSIFY GAPS
+→ IMPLEMENT / FIX → TEST → VERIFY → EVIDENCE
+→ UPDATE STATUS → RE-AUDIT
+```
+
+强制读取：
+
+- 当前 `README.md`
+- 当前 `AGENTS.md`
+- `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
+- 当前 Governance / Architecture / Audit / Runtime / Test / Evidence
+
+除明确 P0 / P1 或最终收敛所需能力外，新功能默认进入 Backlog，不得打断收敛。
+
+最终六大 Gate：
+
+1. `P0 Blocking = 0`
+2. `Repository Integrity = PASS`
+3. `Production Truth = PASS`
+4. `Runtime + Critical E2E = PASS`
+5. `Security + Recovery = PASS`
+6. `Release Lineage + Rollback = VERIFIED`
+
+任意一项未通过，不得声明 Production Ready。
+
+### 四仓 Canonical Registry
+
+| 仓库 | 当前角色 | 真相所有权 | 对其他仓运行时依赖 |
+|---|---|---|---|
+| `Zachary-1012/LUMENIS-codex-Clean-OS` | 序境 / LUMENIS Production Core | Production Truth | 无 |
+| `Zachary-1012/Zachary-OS-AI` | LUMENIS Intelligence / OSAI | Shared Intelligence Capability | 无 |
+| `Zachary-1012/global-growth-intelligence` | Global Growth Intelligence | Research / Growth Truth | 无 |
+| `Zachary-1012/lumenis-command` | 序枢 / LUMENIS Command | R&D Control / Engineering Evidence | 不得成为产品 Runtime 依赖 |
+
+`Zachary-1012/Z-Brand-Core` 视为历史 / Legacy 工程资产，不是当前四仓 Canonical Production Registry 中的主生产仓；任何恢复、对照或迁移必须先做依赖追踪与当前等价能力审计。
+
+跨仓共享只能通过**版本化、可追溯、可验证的 Contract / Artifact / Evidence**，不得共享生产数据库、生产凭据、隐藏运行时耦合或未经验证的事实。
+
 ## 1. 产品定位
 
 序境不是“AI 产品外壳”。**AI 是序境中的增强能力，不是生产真相本身。**
@@ -32,14 +87,14 @@ Source → Evidence → Event → Case → Finding / Insight
 
 | 层级 | 中文正式名 | English 正式名 | 한국어 | 内部标识 |
 |---|---|---|---|---|
-| 母产品 | **序境** | **LUMENIS** | **서경** | ZBC repository |
+| 母产品 | **序境** | **LUMENIS** | **서경** | ZBC repository identifier / legacy compatibility |
 | CTH 产品 | **序境·商业运营** | **LUMENIS Commerce Operations** | **서경·커머스 운영** | CTH |
 | BMP 产品 | **序境·品牌市场** | **LUMENIS Brand & Market** | **서경·브랜드 & 마켓** | BMP |
 | 共享能力 | **序境·内容创作** | **LUMENIS Content & Creation** | **서경·콘텐츠 & 크리에이션** | Shared Capability |
 
 > **命名原则：名称小、领域大；产品名保持克制，领域负责解释范围，功能负责解释能力。**
 
-`CTH` 与 `BMP` 是稳定的内部技术标识；正式产品名称不得再扩展为历史名称。`ZBC` 继续作为 repository / engineering identifier 使用，不作为对外产品品牌。
+`CTH` 与 `BMP` 是稳定的内部技术标识；正式产品名称不得再扩展为历史名称。`ZBC` 仅作为历史 / engineering compatibility identifier 使用，不作为对外产品品牌，也不覆盖当前 Canonical Repository Registry。
 
 ### CTH / 序境·商业运营
 
@@ -145,6 +200,7 @@ Product
 3. 不共享生产数据库、生产凭据或未经验证的产品事实。
 4. 跨仓共享只能通过版本化、可追溯的 Contract / Artifact。
 5. 序枢停止、删除或故障，不得导致序境生产不可运行。
+6. 四仓每次发生边界、命名、Contract、Release 或 Runtime 变更时，必须先审计当前真实状态并检查四仓兼容性。
 
 ## 4. AI / Skill / Agent
 
@@ -222,7 +278,7 @@ READ → AUDIT → ANALYZE → PLAN → PATCH PREVIEW
 
 ## 9. 当前状态
 
-当前处于**产品级全量收口与持续产品化**阶段，覆盖前端、后端、API、数据库、采集、AI、Skill、Agent、Runtime、Security、Evidence、Evaluation、Report、Import/Export、KOS/KOL/KOC、Research、Learning 与历史实现。
+当前处于 **Production Convergence / 最终生产收敛** 阶段，覆盖前端、后端、API、数据库、采集、AI、Skill、Agent、Runtime、Security、Evidence、Evaluation、Report、Import/Export、KOS/KOL/KOC、Research、Learning 与历史实现。
 
 状态严格区分：`PLANNED / IMPLEMENTED / TESTED / VERIFIED / RELEASED / OPERATING`。
 
@@ -241,8 +297,10 @@ Source + Call Graph + Data / API + Frontend / Consumer
 
 工程规范：[`00-GOVERNANCE/LUMENIS-ENGINEERING-GOVERNANCE-V1.0.md`](00-GOVERNANCE/LUMENIS-ENGINEERING-GOVERNANCE-V1.0.md)
 
-本 README 是当前产品总入口。产品名称、领域归属与跨仓协议以当前 Canonical Registry 及三仓协议为准；旧版本 README 叙述、过期架构、失效状态不再作为当前事实来源；历史细节只保留在具有明确版本意义的审计、变更与证据文档中。
+最终收敛母清单：[`00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`](00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md)
+
+本 README 是当前产品总入口。产品名称、领域归属与跨仓协议以当前 Canonical Registry 及**四仓协议**为准；旧版本 README 叙述、过期架构、失效状态不再作为当前事实来源；历史细节只保留在具有明确版本意义的审计、变更与证据文档中。
 
 ## 12. 状态声明
 
-**序境 / LUMENIS · Independent Production Core · Production Truth Owner · AI-Enhanced, Not AI-Dependent**
+**序境 / LUMENIS · Independent Production Core · Production Truth Owner · AI-Enhanced, Not AI-Dependent · Production Convergence**
