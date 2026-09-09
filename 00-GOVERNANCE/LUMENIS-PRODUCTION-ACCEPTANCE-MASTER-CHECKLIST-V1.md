@@ -120,35 +120,17 @@ Production Truth → Intelligence Router
 └─ Deterministic Rules / No-AI
 ```
 
-必须验证：
-- Provider Health
-- Router
-- Local Runtime
-- ZERO_CLOUD / cloud-off independence
-- Structured Output
-- Hallucination Guard
-- Fallback
-- Cost Guard
-- Resource Guard
-- Trace
+必须验证：Provider Health / Router / Local Runtime / ZERO_CLOUD / cloud-off independence / Structured Output / Hallucination Guard / Fallback / Cost Guard / Resource Guard / Trace。
 
 AI 不可用时核心生产流程仍必须成立。
 
 ## 8. AI 产品闭环六项
 
-最终闭环前必须逐项 VERIFIED：
-1. Chat Memory
-2. Context Manager
-3. Tool Calling Framework
-4. Prompt / Skill Registry
-5. Evaluation System
-6. Model Routing
+最终闭环前必须逐项 VERIFIED：Chat Memory、Context Manager、Tool Calling Framework、Prompt / Skill Registry、Evaluation System、Model Routing。
 
 缺任一项不得声明 AI Chat Experience COMPLETE。
 
 ## 9. Skill
-
-必须形成：
 
 ```text
 Skill Registry → Skill Contract → Permission → Execution
@@ -165,9 +147,7 @@ Task → Permission → Action Firewall
 → Evidence → Evaluation → Trace
 ```
 
-必须验证 READ / TASK / AUDIT / WRITE / ACTION / RETRY / FAIL / CANCEL / RECOVERY / EVIDENCE / TRACE。
-
-AI / Agent 不得直接绕过权限修改 Production Truth。
+必须验证 READ / TASK / AUDIT / WRITE / ACTION / RETRY / FAIL / CANCEL / RECOVERY / EVIDENCE / TRACE。AI / Agent 不得直接绕过权限修改 Production Truth。
 
 ## 11. Collector / 多平台数据
 
@@ -176,21 +156,11 @@ Collector → Session / Auth → Fetch → Normalize
 → Evidence → Canonical → Event / Content
 ```
 
-必须验证：
-- Login State / Cookie
-- Browser / CDP
-- Retry / Cooldown / Circuit Breaker
-- Checkpoint / Resume
-- Heartbeat / Last Successful Collection
-- Failure Trace
-- Duplicate handling
-- Platform Mapping
+必须验证 Login State / Cookie / Browser / CDP / Retry / Cooldown / Circuit Breaker / Checkpoint / Resume / Heartbeat / Last Successful Collection / Failure Trace / Duplicate handling / Platform Mapping。
 
 ## 12. 数据最小化与合规
 
-允许最小字段：标题、发布时间、互动数据、内容分析、链接、必要结构化元数据。
-默认不保存原始视频、原始图片和不必要个人信息。
-部署地区规则：Mainland China / Hong Kong / Overseas。
+允许最小字段：标题、发布时间、互动数据、内容分析、链接、必要结构化元数据。默认不保存原始视频、原始图片和不必要个人信息。部署地区规则：Mainland China / Hong Kong / Overseas。
 
 ## 13. Database / Schema
 
@@ -219,11 +189,11 @@ Route → Auth → Permission → Input Contract
 
 UI 必须只是 Production Truth 的真实 View，状态来自真实 API / State Contract，禁止假完成、假指标、假 Runtime、假测试、假部署状态。
 
+**历史功能恢复时，本节优先于历史 UI。Legacy code is a capability source, not a UI source.**
+
 ## 16. Reports
 
 覆盖 Daily / Special Report / Campaign / KOS / Public Opinion / Research / Evaluation / Operations。
-
-每个报告必须满足：
 
 ```text
 Metric → Evidence → Finding → Risk / Insight → Action
@@ -253,27 +223,82 @@ Edge → Application → Auth → Permission
 
 ## 20. Reliability / Recovery
 
-必须测试 Crash / Network Fail / DB Lock / Provider Down / Collector Fail / Browser Fail / Partial Data / Restart。
+必须测试 Crash / Network Fail / DB Lock / Provider Down / Collector Fail / Browser Fail / Partial Data / Restart，并验证 checkpoint / resume / retry / DLQ / cooldown / circuit breaker / idempotency。
 
-并验证 checkpoint / resume / retry / DLQ / cooldown / circuit breaker / idempotency。
+## 21. Heritage Recovery / 历史功能找回与 UI 重设计
 
-## 21. Heritage Recovery
+原则：**恢复历史能力 ≠ 恢复旧产品；恢复功能 ≠ 恢复旧界面。**
 
-原则：恢复历史能力 ≠ 恢复旧产品。
+历史仓库、历史分支、旧源码、旧数据库结构、旧 API、旧测试和旧文档可以作为“能力证据源”，用于找回曾经真实存在但当前缺失或退化的功能；不得因为当前 Clean OS 没有某个入口就直接判定该能力从未存在。
+
+功能找回必须执行：
 
 ```text
-Historical Asset → Source Trace → Current Equivalent Audit
-→ Semantic Dedup → Current Production Line Mapping
-→ Capability Promotion → Implementation → Tests → Evidence
+Historical / Legacy Asset
+→ Inventory
+→ Source / Dependency Trace
+→ Current Equivalent Audit
+→ Semantic Dedup
+→ Current Production Line Mapping
+→ KEEP / MERGE / MIGRATE / LEGACY / ARCHIVE / DELETE
+→ Capability Recovery / Reimplementation
+→ Current API / State Contract Integration
+→ NEW UI / UX DESIGN
+→ Runtime / E2E
+→ Tests
+→ Evidence
+→ Re-Audit
 ```
 
-旧 IA / 旧模板 / 旧设计不得重新成为默认产品架构。
+允许优先找回和迁移的对象包括：
+- 业务逻辑 / Functions / Services
+- API / Route Contract 的业务语义
+- Data Model / Schema / Migration Knowledge
+- Algorithm / Rules / Subject Logic
+- State Machine / Permission / Runtime Logic
+- Collector / Report / Evaluation / Evidence Logic
+- Tests / Fixtures / Acceptance Criteria
+- 能证明历史业务意图的页面流程信息
+
+**默认禁止把以下历史 UI 直接恢复为当前最终产品：**
+- 旧页面布局与旧导航结构
+- 旧 Dashboard / 卡片 / 表格 / 弹窗
+- 旧视觉语言、颜色体系、组件外观
+- 旧交互流程与旧响应式实现
+- 不符合当前 2–4 层信息架构的页面
+- 仅因“以前能用”而复制回来的历史模板
+
+旧 UI 只能用于识别：缺失业务入口、信息需求、用户任务、状态与功能语义；**不能作为最终视觉实现来源。**
+
+所有找回功能的最终 UI / UX 必须在当前 LUMENIS Design System 下重新设计，并满足：
+
+```text
+Real Business Hierarchy
+→ 2–4 Layer Information Architecture
+→ Drill-down
+→ Trend / Card / Table / Dynamic Visualization
+→ Evidence
+→ Insight
+→ Action
+→ Runtime State
+→ Motion / Interaction
+→ PC / Tablet / Mobile Responsive
+```
+
+同时必须满足：
+- UI 只消费当前真实 API / State Contract；
+- UI 不得改变 Canonical Data / Production Truth；
+- CTH / BMP 的 Domain、Scope、Permission、Data Ownership 必须保持隔离；
+- Shared Capability 可以复用能力，但不得导致 UI、数据或权限串线；
+- 不复制外部产品 UI，也不机械复制历史 LUMENIS UI；
+- 页面、API、Data Model、Runtime State 必须同步演进；
+- 找回功能必须通过当前 E2E、响应式、交互、数据真实性与 Evidence 验收后才可晋级 VERIFIED。
+
+**硬规则：Legacy code is a capability source, not a UI source. Historical UI/UX may only be used as evidence of missing business intent. Final UI/UX must be redesigned under the current LUMENIS design system and current information architecture.**
 
 ## 22. Research / Learning
 
 Research Asset ≠ Production Capability。
-
-必须经过：
 
 ```text
 Research → Decision → Design → Implementation
@@ -299,8 +324,6 @@ Learning Memory ≠ Production Truth。
 
 ## 25. Autonomous Research
 
-Auto Research / Performance Race / Execution Efficiency / Interaction Model Research 属于研发基础设施。
-
 ```text
 Fixed Budget → Baseline → Experiment → Benchmark
 → Compare → Evidence → Human Approval
@@ -322,13 +345,9 @@ Export 必须与当前 Truth 一致，覆盖 CSV / Excel / Report / Dashboard Sn
 
 ## 28. Performance
 
-必须真实测量 CPU / RAM / SQLite / Browser / Worker / Agent Concurrency / AI Latency。
-
-优化原则：Quality × Speed × Resource Efficiency。
+必须真实测量 CPU / RAM / SQLite / Browser / Worker / Agent Concurrency / AI Latency。优化原则：Quality × Speed × Resource Efficiency。
 
 ## 29. Release Lineage
-
-必须建立：
 
 ```text
 Source SHA → Build → Artifact → Schema → Profile
@@ -349,7 +368,6 @@ Current Release → Failure → Rollback Target
 ## 31. Production Acceptance 六大硬门
 
 全部通过才能进入 Production Acceptance / Release Candidate：
-
 1. P0 Blocking = 0
 2. Repository Integrity = PASS
 3. Production Truth = PASS
@@ -361,20 +379,9 @@ Current Release → Failure → Rollback Target
 
 ## 32. 功能状态统一
 
-任何能力只允许使用：
-
-```text
-PLANNED
-IMPLEMENTED
-TESTED
-VERIFIED
-RELEASED
-OPERATING
-```
+任何能力只允许使用：PLANNED / IMPLEMENTED / TESTED / VERIFIED / RELEASED / OPERATING。
 
 禁止把页面存在、API 存在、测试文件存在、commit message、AI 文字结论当作完成证据。
-
-完成标准：
 
 ```text
 Source + Call Graph + Data / API + Frontend / Consumer
