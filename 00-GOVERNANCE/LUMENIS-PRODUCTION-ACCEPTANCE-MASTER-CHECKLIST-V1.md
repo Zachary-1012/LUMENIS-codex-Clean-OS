@@ -296,6 +296,65 @@ Real Business Hierarchy
 
 **硬规则：Legacy code is a capability source, not a UI source. Historical UI/UX may only be used as evidence of missing business intent. Final UI/UX must be redesigned under the current LUMENIS design system and current information architecture.**
 
+### 21.1 Developer Settings / 开发者功能恢复保护
+
+`系统设置 → 开发者 / Developer` 作为既有产品能力的恢复保护项处理。当前源码中没有入口或命名命中，**不得据此认定该功能不存在、废弃或允许删除**；必须先完成当前仓、历史仓、历史分支与 Legacy 资产审计，再决定其当前实现状态。
+
+恢复时不得跳步，完整链路固定为：
+
+```text
+Current Source Audit
+→ Historical Repository / Branch / Commit Inventory
+→ Developer Feature Source Trace
+→ Route / API / Service / DB / Config / Permission / Runtime Dependency Trace
+→ Historical Behavior & Acceptance Evidence
+→ Current Equivalent Audit
+→ Capability Matrix & Gap Classification
+→ KEEP / MERGE / MIGRATE / REIMPLEMENT / LEGACY / ARCHIVE
+→ Current Architecture Mapping
+→ Security / Permission Boundary Design
+→ Current API / State Contract Integration
+→ System Settings IA Integration
+→ NEW Developer Settings UI / UX Design
+→ PC / Tablet / Mobile Responsive
+→ Runtime Integration
+→ Unit / Integration / Permission / Security Tests
+→ Critical E2E
+→ Evidence
+→ Re-Audit
+→ VERIFIED only after all gates pass
+```
+
+恢复范围必须以真实历史代码审计结果为准，不凭记忆预设功能清单。审计时至少覆盖所有与 Developer / Dev / Settings / System / Debug / Runtime / Provider / Model / Agent / Skill / Tool / API / Collector / Browser / Feature Flag / Experimental / Diagnostics / Logs / Evidence / Test / Environment / Import-Export / Permission 等开发者能力相关的入口、路由、组件、服务、配置、表、脚本、测试和历史调用链，防止因名称变化而漏检。
+
+开发者能力恢复必须遵守以下硬规则：
+- **不丢功能**：任何有真实历史 Source / Call Graph / Test / Runtime / Evidence 支撑的能力，在完成依赖追踪前不得删除或忽略；
+- **不盲目复活**：历史能力如已有当前等价实现，必须合并语义、去重，不制造第二套并行系统；
+- **不恢复旧 UI**：历史设置页仅作为业务意图与入口证据；最终入口统一归入当前 `系统设置 / Settings` 信息架构，Developer UI 必须重新设计；
+- **不暴露生产秘密**：API Key、Token、Cookie、Secret、生产凭据不得明文显示、写入前端、日志、测试或仓库；只允许安全注入、掩码显示和受控更新；
+- **不绕过权限**：Developer 功能不得成为绕过 Auth / Permission / Agent Tool Firewall / Effect Fence / Human Approval 的后门；
+- **不伪造状态**：Provider、Runtime、Agent、Collector、Browser、DB、测试、部署、Feature Flag 状态必须来自真实 State Contract / Health / Evidence；
+- **不破坏双领域隔离**：CTH / BMP 的 Scope、Data Ownership、Permission、Report、Agent Context 不得因 Developer 工具串线；
+- **不制造 Runtime 前置依赖**：开发者页面不可用时，不得导致序境核心生产链停止；
+- **危险操作必须受控**：任何写入、重置、迁移、清理、重新索引、重新运行、Provider 切换、实验开关等动作必须具备权限、确认、幂等/Effect Fence、Audit/Trace、失败恢复；
+- **默认最小权限**：普通产品用户不应看到或操作仅面向研发/管理员的 Developer 控件；具体角色与可见性以当前权限模型审计结果为准。
+
+Developer Settings 的完成标准不是“页面重新出现”，而是：
+
+```text
+Historical Capability Evidence
++ Current Source / Call Graph
++ Current API / State Contract
++ Permission / Security Boundary
++ Redesigned Settings UI
++ Runtime Integration
++ Tests / Critical E2E
++ Production Evidence
+= VERIFIED
+```
+
+在上述链路完成前，Developer Settings 状态只能标记为 `PLANNED / IMPLEMENTED / TESTED` 中与真实证据相符的状态，不得仅因页面存在、历史 commit、旧文档或 AI 判断标记 `VERIFIED / RELEASED / OPERATING`。
+
 ## 22. Research / Learning
 
 Research Asset ≠ Production Capability。
