@@ -1,0 +1,131 @@
+﻿repository,branch,commit,commit_date,subject,tip_alias_count,tip_file_count,changed_from_default_merge_base
+clean,main,b4aafe48bce6d10eb7e74e04aa9b673a40993b2a,2026-09-09 03:16:59 +0800,docs: audit release lineage and canary gates,1,3684,0
+zbrand,aqrjrr-codex/-zbc,f35a740eb886e1866b5539733bd5a856bc41e804,2026-09-06 13:27:20 +0800,feat: add lease-based runtime guardian,1,1873,0
+zbrand,codex,7c53f1f252f1f6d1f85d53b9bbdaa1aa2df0c07c,2026-09-06 13:11:57 +0800,fix: make test initialization safe and portable,1,1871,0
+zbrand,docs/engineering-loop-contract-v1,e7699a761d033d370896c06d52fc43114ead1740,2026-09-05 02:36:45 +0800,docs: add bounded engineering loop contract,1,1706,0
+zbrand,feat/i18n-ko-en-zh-v6,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/i18n-ko-en-zh-v6-impl,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/i18n-ko-en-zh-v6-impl2,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/i18n-ko-en-zh-v6-impl3,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/i18n-ko-en-zh-v6-research,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/i18n-ko-en-zh-v6-research-final,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/i18n-ko-en-zh-v6-research-final2,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/i18n-ko-en-zh-v6-research-final3,4cb2cc19fdde5429768abf1c301037172bf98dc9,2026-09-03 14:11:58 +0800,"feat(engine): 高奢克制叙事句库4组(LUX专属) + 创意工作台前端(输入即出创意卡,凭证动态注入)",8,1728,0
+zbrand,feat/keyboard-shortcuts-modal,a01d3017516840a5cf60d5f0917a08eb6d749b11,2026-09-01 16:35:40 +0800,feat(ui): 新增键盘快捷键帮助窗口（Ctrl+/ 唤起）,1,1065,0
+zbrand,feat/lumenis-internal-beta-closure,4738545d85de3e35cc087bf7338847df65377f06,2026-09-06 02:12:18 +0800,v5.9.9 自动保存版本（02:12 巡检）,1,1792,0
+zbrand,feat/lumenis-p0-convergence,971e58a9fbd061b030f5a4c61200283060b38d73,2026-09-05 05:30:24 +0800,v5.9.9 自动保存版本（05:30 巡检）,1,1745,0
+zbrand,feat/lumenis-p0-p1-source-convergence,12350afaf6fbdc498185f842860f713c49ac0182,2026-09-05 20:41:54 +0800,feat(ui): bind 6 remaining LUMENIS pages to real APIs,1,1799,17
+zbrand,feat/lumenis-p1-full-product-ui,57b15803cfa64e3d8da6b0b2e71d1b2127088ea5,2026-09-05 15:49:30 +0800,feat(p1): LUMENIS Full Product Visual Foundation,1,1793,0
+zbrand,feat/lumenis-phase2-foundation,7ddefdcc643ff2bcb4532176e6cb055c109f4b27,2026-09-05 13:53:23 +0800,feat(collectors): 多平台采集全能力升级 - douyin/bilibili/weibo/zhihu detail/comments/creator,1,1750,0
+zbrand,feat/lumenis-phase3-runtime-ui,80605ac4ba25d8643e5296981929f25fa1924027,2026-09-05 14:20:21 +0800,feat(zhihu): 知乎采集改用浏览器CDP模式，绕过API x-zse-96签名要求，API保留为fallback,1,1755,0
+zbrand,feat/lumenis-phase3-skill-runtime,a51aae15df600525ed7e9f16135ed0cf10f92f0f,2026-09-05 14:39:57 +0800,chore: 补全ad_intelligence子包和tests的__init__.py,1,1771,0
+zbrand,feat/lumenis-product-convergence,0c9c19845fd065536b81a3f8bebc70c56a714a8e,2026-09-06 04:37:06 +0800,docs: record 2026-09-06 product convergence start,1,1801,4
+zbrand,feat/lumenis-product-convergence-docs,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-product-convergence-docs-final,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-product-convergence-docs-final2,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-product-convergence-docs-final3,7a82add875379cbd2fe54d09bfd803e35f3ac235,2026-09-06 04:35:44 +0800,docs: align README with product convergence master baseline,1,1800,2
+zbrand,feat/lumenis-product-convergence-docs-final4,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-product-convergence-docs-final5,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-product-convergence-docs2,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-product-convergence-docs3,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-product-convergence-docs4,d7236f26d946c1911f8d456f2c324a2d1eaf28b3,2026-09-06 04:12:18 +0800,v5.9.9 自动保存版本（04:12 巡检）,8,1799,0
+zbrand,feat/lumenis-v2-domain-convergence-readme-followup,e3688f22d7d388f83302ebd7098959fe2ab55a6c,2026-09-06 04:40:50 +0800,docs: fully converge ZBC README to current product architecture,1,1793,0
+zbrand,feat/lumenis-v3-risk-fix,e22984e7db5fc50db71e89f9c1ba0b73186b403d,2026-09-05 14:59:47 +0800,V3 risk fix: ZBC Skill Hub backend API (status/invoke/sync),1,1780,0
+zbrand,feat/podcast-table-system-v1,206ca6c751bf11d726958d2dbbdd596c539f1373,2026-09-03 20:07:07 +0800,feat(podcast): add deterministic content yield planner,7,1797,0
+zbrand,feat/podcast-table-system-v2,206ca6c751bf11d726958d2dbbdd596c539f1373,2026-09-03 20:07:07 +0800,feat(podcast): add deterministic content yield planner,7,1797,0
+zbrand,feat/podcast-table-system-v3,206ca6c751bf11d726958d2dbbdd596c539f1373,2026-09-03 20:07:07 +0800,feat(podcast): add deterministic content yield planner,7,1797,0
+zbrand,feat/podcast-table-system-v4,206ca6c751bf11d726958d2dbbdd596c539f1373,2026-09-03 20:07:07 +0800,feat(podcast): add deterministic content yield planner,7,1797,0
+zbrand,feat/podcast-table-system-v5,206ca6c751bf11d726958d2dbbdd596c539f1373,2026-09-03 20:07:07 +0800,feat(podcast): add deterministic content yield planner,7,1797,0
+zbrand,feat/podcast-table-system-v6,206ca6c751bf11d726958d2dbbdd596c539f1373,2026-09-03 20:07:07 +0800,feat(podcast): add deterministic content yield planner,7,1797,0
+zbrand,feat/podcast-table-system-v7,206ca6c751bf11d726958d2dbbdd596c539f1373,2026-09-03 20:07:07 +0800,feat(podcast): add deterministic content yield planner,7,1797,0
+zbrand,feat/system-fusion-first-instruction,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,feat/system-fusion-first-instruction-20260905,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,feat/system-fusion-first-instruction-20260905-b,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,feat/system-fusion-first-instruction-final,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,feat/system-fusion-first-instruction-final2,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,feat/system-fusion-first-instruction-v1,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,feat/zb-runtime-preflight,5a716996757c883a780da54540ac7e059d78af90,2026-09-01 11:00:30 +0800,docs(audit): ZB-RUNTIME-PREFLIGHT-001 Push2 独立审计报告(AUDIT PASS),1,1041,0
+zbrand,feat/zbc-full-upgrade-v1,0e1ff9a964509ff16d6aff6e9a652cd814d15c81,2026-09-06 13:36:55 +0800,"fix: resolve test failures from phase upgrades (API regex, historical_data assert, evidence_store cache)",1,1961,142
+zbrand,fusion-exec,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,fusion-exec-2,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,fusion-exec-3,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,fusion-exec-4,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,fusion-exec-5,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,fusion-exec-6,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,fusion-exec-7,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,integration/rd-data-function-ui-baseline,07cc77523711e639fe384f58d5616a67d4a01e79,2026-09-04 06:43:13 +0800,governance: lock synchronized ZBP and CTH completion gate,1,1832,0
+zbrand,lumenis-dual-domain-v3,e608cd87de816bad647f86b8fead8d0058603be2,2026-09-07 04:47:50 +0800,v5.9.9 自动保存版本（04:47 巡检）,1,3353,0
+zbrand,lumenis-full-refinement-v2,8ae4d3fecaa1af300cb87ccea6979cfac9178698,2026-09-06 15:38:33 +0800,refinement: final audit script and command_home fixes,1,2021,0
+zbrand,lumenis-full-runtime-convergence,1c868c592fe81eebe2bf63870fd45860241d1dad,2026-09-06 15:06:19 +0800,docs: finalize audit report with PR #27 and branch rename info,1,1980,0
+zbrand,main,0d25b913a62c90ea38c183267d89fba8222dbb53,2026-09-08 18:47:00 +0800,docs: record final product convergence checkpoint,1,3667,0
+zbrand,p0-continuation-audit,1ee830fc840aeff0d1b59e4e8a3224d9dd018e89,2026-09-06 13:27:33 +0800,Merge pull request #26 from Zachary-1012/aqrjrr-codex/-zbc,2,1873,0
+zbrand,p0-continuation-full-audit,1ee830fc840aeff0d1b59e4e8a3224d9dd018e89,2026-09-06 13:27:33 +0800,Merge pull request #26 from Zachary-1012/aqrjrr-codex/-zbc,2,1873,0
+zbrand,research/context-intelligence-20260901,d2b12d9b755cd435fe5f9fda526f32f1934de2ec,2026-09-01 21:35:16 +0800,test(intelligence): cover context and comment event signals,1,1354,0
+zbrand,research/kdrama-fansub-study,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-20260903,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-20260903-a,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-20260903-final,10dd7c42e6d2bc86307c5b08eb53a67f71a09958,2026-09-03 14:34:25 +0800,docs: add K-drama fansub and Chinese subtitle translation study 2023-2026,1,1732,1
+zbrand,research/kdrama-fansub-study-final-10,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-11,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-12,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-2,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-3,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-4,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-5,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-6,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-7,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-8,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-study-final-9,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-01,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-02,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-03,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-04,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-05,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-06,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-07,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-08,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-09,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-10,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-final,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-research,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-research2,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-v2,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-v3,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/kdrama-fansub-translation-2023-2026-v4,b4ba2a89da28a3dbfa2cf650c4091046b0843b17,2026-09-03 14:29:49 +0800,docs: add Korean drama dialogue research 2023-2026,31,1731,0
+zbrand,research/zachary-ai-context-convergence-20260901,9fb66a3c11ef58d99b12ca86c1135aaebcc57fff,2026-09-02 21:53:08 +0800,merge(research): resolve conflict - keep main's test_context_intelligence.py (matches main's context engine version),1,1368,0
+zbrand,system-fusion-first-execution-20260905,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,system-fusion-first-execution-20260905-x,511b819d8c2a16911a8ed8e823ed54b80ff675dc,2026-09-05 04:05:48 +0800,docs: add LUMENIS engineering governance,15,1706,0
+zbrand,ui/staging-foundation,580c2cf983560e4ca36d4c336261c3bd1a5cf373,2026-09-01 17:57:13 +0800,docs(ui): merge-to-main evidence (ZBMP key gate + 16-node event graph on merged main 8301),1,1336,0
+osai,feat/engineering-loop-v1,a14ee62714b5a2e28df148ca8608ff18eba1a0bd,2026-09-05 02:36:20 +0800,feat: add bounded engineering agent loop primitives,1,539,3
+osai,feat/lumenis-internal-beta-closure,ef0c3b12bd2b8af8db08c76e03448ea6aca8263a,2026-09-06 02:16:38 +0800,V4 P0/P1 工程收敛: InvocationResult/Evidence/ActionFirewall/Gateway/RuntimeGuard/Release/Memory/Impact,1,619,0
+osai,feat/lumenis-p0-p1-source-convergence,3c1bd123e41a0b15427e9539103c3ca64f233f35,2026-09-05 18:08:41 +0800,feat(closeout): E2E桥接脚本 + Learning Asset JSON持久化 + lifecycle映射文档,1,614,9
+osai,feat/lumenis-phase2-foundation,2533956f97985aebd4f28c6c9e892c5602548e89,2026-09-05 05:44:46 +0800,feat(phase2): Engine Layer + Cross-Core Verification,1,575,0
+osai,feat/lumenis-phase3-runtime-ui,23c817b2d984ec63e74f277b2433987dce03f251,2026-09-05 14:00:38 +0800,PHASE 3: Real Engine Runtime + Context Runtime + Observability,1,579,0
+osai,feat/lumenis-phase3-skill-runtime,6fbe7b807b68709c6b254316772536e7f5c6ee94,2026-09-05 14:32:49 +0800,V3 增量层: Agent Identity + Delegation + Browser Capability + Research Pipeline — 全部自研,1,603,0
+osai,feat/lumenis-product-convergence,0b124ea51bbbe133b7d34adf1bcc52fe6ac7f672,2026-09-06 04:01:44 +0800,feat(v2): P0-2 Capability Registry + P0-3 Canonical Data + runtime integration,2,625,7
+osai,feat/lumenis-product-convergence-docs,0b124ea51bbbe133b7d34adf1bcc52fe6ac7f672,2026-09-06 04:01:44 +0800,feat(v2): P0-2 Capability Registry + P0-3 Canonical Data + runtime integration,2,625,7
+osai,feat/lumenis-product-convergence-docs2,43105cf248145d741395bee6f9ff41824a357eb2,2026-09-06 04:36:33 +0800,docs: align OSAI README with convergence verification baseline,1,626,9
+osai,feat/lumenis-v2-domain-convergence,e4b8c742129ca8af7672a90c21c35957813867dc,2026-09-06 11:17:46 +0800,fix: complete identity compatibility and browser attribution boundary,1,643,39
+osai,feat/lumenis-v3-risk-fix,1b3549fdc08f6b97a63d73ccd59ba6208a0e497f,2026-09-05 15:00:06 +0800,V3 risk fix: Agent Identity Integration + Local Browser Executor,1,606,0
+osai,feat/system-fusion-first-instruction,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,feat/system-fusion-first-instruction-20260905,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,feat/system-fusion-first-instruction-20260905-b,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,feat/system-fusion-first-instruction-final,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,feat/system-fusion-first-instruction-final2,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,feat/system-fusion-first-instruction-v1,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,fusion-exec,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,fusion-exec-2,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,fusion-exec-3,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,fusion-exec-4,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,fusion-exec-5,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,fusion-exec-6,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,integration/rd-data-function-ui-baseline,74becf8ba278a38af3049b5f151e3ed1e0d5c7aa,2026-09-04 06:59:38 +0800,"docs(research): 新增MiniMax研究模块(01系列Lightning Attention/M1-M2.5-M2.7-M3/H3 2K全模态视频开源/Speech-2.8/Music3.0/定价/采纳判定),智谱主力不变,研究层EVALUATE",1,634,0
+osai,main,dedf8a2d48b948132870ea8ecec848e2afa4d2d9,2026-09-07 20:01:32 +0800,docs(protocol): synchronize LUMENIS product domain contract,1,645,0
+osai,system-fusion-first-execution-20260905,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+osai,system-fusion-first-execution-20260905-x,4d427207b26027091a7d6c3f28513971343bc3ce,2026-09-05 04:06:12 +0800,docs: add LUMENIS intelligence governance,14,537,0
+ggi,feat/ggi-foundation-v0.1,9318d6f3e8ff8fa9f4322fd55802c90398c3bccc,2026-09-05 20:20:26 +0800,feat(ggi): enhance frontend views Evidence verify Decision approve Outbox error,1,19,17
+ggi,feat/ggi-research-dimensions,721e7a8112284a31bf740ab3a4774b31564558cd,2026-09-05 23:50:25 +0800,feat(ggi): 9 research dimensions taxonomy with zero-migration metadata persistence,1,20,0
+ggi,main,c4bc5323d65c495571deec0ce26b5b4515fed6e5,2026-09-07 20:01:52 +0800,docs(protocol): synchronize LUMENIS product domain contract,1,45,0
+ggi,master,e46b5473ca1c621fefe22ae69c860fa4b2dde3b0,2026-09-05 21:27:54 +0800,docs(revenue-mvp): 商业化交付报告(Word) + 生成脚本,1,95,95
+command,main,2f65a218eb5131c6abbfabd203dc37ef3cbf8d21,2026-09-06 18:03:28 +0800,feat(v4.0): Mobile-First + Deployment-First architecture + Codex PWA UI,1,165,0

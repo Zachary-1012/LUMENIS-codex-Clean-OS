@@ -1,0 +1,46 @@
+{
+  "repositories_scanned": 5,
+  "reachable_commits_scanned": 2986,
+  "historical_candidate_path_blob_versions": 11209,
+  "historical_only_candidate_versions": 3479,
+  "current_exact_blob_matches": 6435,
+  "current_same_path_different_blob": 2168,
+  "no_exact_current_equivalent": 2606,
+  "repositories": [
+    {
+      "repository": "clean",
+      "reachable_commits": 1242,
+      "raw_change_observations": 6736,
+      "historical_candidate_versions": 4959,
+      "historical_only_candidate_versions": 1998
+    },
+    {
+      "repository": "zbrand",
+      "reachable_commits": 1249,
+      "raw_change_observations": 6948,
+      "historical_candidate_versions": 5040,
+      "historical_only_candidate_versions": 1221
+    },
+    {
+      "repository": "osai",
+      "reachable_commits": 433,
+      "raw_change_observations": 1166,
+      "historical_candidate_versions": 912,
+      "historical_only_candidate_versions": 207
+    },
+    {
+      "repository": "ggi",
+      "reachable_commits": 53,
+      "raw_change_observations": 194,
+      "historical_candidate_versions": 149,
+      "historical_only_candidate_versions": 24
+    },
+    {
+      "repository": "command",
+      "reachable_commits": 9,
+      "raw_change_observations": 231,
+      "historical_candidate_versions": 149,
+      "historical_only_candidate_versions": 29
+    }
+  ]
+}

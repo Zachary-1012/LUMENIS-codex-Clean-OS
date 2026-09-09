@@ -1,0 +1,11 @@
+{
+  "candidate_unique_blobs": 5449,
+  "text_blobs_requested": 4752,
+  "text_blobs_read": 4752,
+  "text_blobs_decoded": 4750,
+  "decode_failures": 2,
+  "normalized_duplicate_groups": 9,
+  "normalized_duplicate_extra_blobs": 9,
+  "semantic_duplicate_candidates": 376,
+  "semantic_candidates_require_review": true
+}

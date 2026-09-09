@@ -47,3 +47,15 @@ P0：Korean/K-drama/Fansub/Translation/i18n、Platform Research、Data/Metrics/T
 `DISCOVERED / INDEXED / VERIFIED / DEDUPED / PROMOTED / REFERENCE_ONLY / SUPERSEDED / ARCHIVED / REJECTED_WITH_REASON`
 
 禁止以“旧”“当前未引用”“分支落后”“不在 Runtime”为理由直接删除知识资产。
+
+## 2026-09-09 P0 全量回收输出
+
+- [A. Heritage Recovery Report](HERITAGE_RECOVERY_REPORT.md)
+- [B. Asset Coverage Matrix](ASSET_COVERAGE_REPORT.md)
+- [C. Missing Asset Report](MISSING_ASSET_REPORT.md)
+- [D. Duplicate & Superseded Report](DUPLICATE_SUPERSEDED_REPORT.md)
+- [E. Knowledge Gap Report](KNOWLEDGE_GAP_REPORT.md)
+- [F. Promotion Candidates](PROMOTION_CANDIDATES.md)
+- [G. Korean Collection Report](KOREAN_COLLECTION_REPORT.md)
+
+机器可读证据位于 `_inventory/`。来源索引覆盖率 100% 只表示 5,449 个唯一知识 Blob 均有来源关系，不表示全部已验证、采用、发布或运行。

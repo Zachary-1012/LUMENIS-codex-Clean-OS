@@ -94,6 +94,11 @@ data/alerts.json
 *.7z
 *.rar
 tools/
+!heritage_intelligence/tools/
+!heritage_intelligence/tools/heritage_inventory.py
+!heritage_intelligence/tools/heritage_content_compare.py
+!heritage_intelligence/tools/heritage_history_inventory.py
+!heritage_intelligence/tools/heritage_registry_build.py
 监测系统-ui架构&互动视频参考案例/
 *.mp4
 *.mov
