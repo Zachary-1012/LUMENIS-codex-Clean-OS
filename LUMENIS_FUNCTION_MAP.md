@@ -112,4 +112,3 @@
 ## 8. 总判定
 
 功能资产丰富，但“一个能力一个 Canonical Implementation”尚未实现。当前功能地图状态为 `INVENTORIED / OWNERSHIP MAPPED / CANONICALIZATION PARTIAL`，不能把候选数量或旧 VERIFIED 标签视为生产完成率。
-
