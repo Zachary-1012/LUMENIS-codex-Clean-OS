@@ -120,21 +120,56 @@ Source → Evidence → Event → Case → Finding / Insight
 
 `CTH` 与 `BMP` 是稳定的内部技术标识；正式产品名称不得再扩展为历史名称。`ZBC` 仅作为历史 / engineering compatibility identifier 使用，不作为对外产品品牌，也不覆盖当前 Canonical Repository Registry。
 
+### 统一主体上下文 / Global Subject Context
+
+CTH 与 BMP **都支持主体可选择**。两者不得分别建立互不兼容的主体选择体系，而应共享同一套 `Subject Context` / 主体上下文语义。
+
+统一原则：
+
+```text
+Selected Subject
+→ Domain Lens
+→ Scope / Permission
+→ Query / Function / Metric
+→ View Model
+→ UI / Report / Export
+```
+
+主体决定当前工作上下文；领域决定分析方法、指标体系、对象关系、功能组合与行动链。
+
+建议的目标 Contract 至少覆盖：
+
+```text
+SubjectContext
+├── subject_id
+├── subject_type
+├── domain
+├── scope
+├── permissions
+├── time_window
+├── locale
+└── context_version
+```
+
+该结构是当前 Production Convergence 的目标契约方向；真实实施必须先审计当前 Source / Route / API / Service / DB / Cache / Permission / Frontend，再做兼容映射，不得凭文档直接重写现有生产链。
+
 ### CTH / 序境·商业运营
 
 **Commerce Operations Domain / 商业运营领域 / 커머스 운영 영역**。
 
-CTH 是以 **Subject-first** 为核心的商业运营领域产品：用户先选择合法商业 Subject，再在该 Subject 上组织、观察、分析与行动其品牌、业态、内容、活动、传播、用户反馈、舆情、风险及相关业务对象。
+CTH 是 **Selected Subject + Commerce Operations Lens**：用户选择合法商业 Subject 后，以商业运营视角组织、观察、分析与行动其业务板块、品牌、业态、内容、活动、传播、用户反馈、舆情、风险及相关业务对象。
 
 CTH **不表示交易能力**，不再使用 Commerce & Trading Hub、Trading、商业交易、商业情报、Taikoo Hui Intelligence、太古汇智能等作为正式产品语义。
 
-广州太古汇只是一个可选择的 `Subject Profile`，不是 CTH 产品本身，也不是永久产品边界。
+广州太古汇是当前已有业务规则与生产保护最成熟的一个可选择 `Subject Profile`，不是 CTH 产品本身，也不是永久产品边界。
 
 ### BMP / 序境·品牌市场
 
 **Brand & Market Domain / 品牌市场领域 / 브랜드 & 마켓 영역**。
 
-BMP 保持 **Brand-first / Primary Focus**：选择某一品牌代表当前主要监测主体与工作焦点，但不限制平台继续监测其他品牌、竞品、市场、内容、传播、用户反馈、趋势、事件与风险。
+BMP 同样支持 **Selected Subject**，并以 **Brand & Market Lens** 处理当前主体：围绕品牌、竞品、市场、内容、传播主体、KOS / KOL / KOC / UGC、消费者需求、趋势、Campaign、Event / Case / Risk、Benchmark、Report / Evaluation 等能力形成品牌与市场工作链。
+
+BMP 不再以“只有品牌才能作为固定主语”作为产品边界；品牌仍是其最重要、最常见的 `subject_type` 之一，但主体上下文必须允许当前源码与业务契约支持的其他合法主体类型。
 
 BMP 的正式产品名称不再使用 Z-Brand Monitoring Platform、Brand Intelligence、品牌智能等历史产品命名；`BMP` 作为兼容性内部 identifier 保留。
 
@@ -151,13 +186,16 @@ Agent Groups 不是第三个产品，而是 **Cross-Product Execution & Collabor
 ```text
 LUMENIS / 序境
 │
+├── Global Subject Context
+│   └── Selected Subject
+│
 ├── Commerce Operations Domain
 │   └── 序境·商业运营 / LUMENIS Commerce Operations / CTH
-│       └── Subject-first
+│       └── Selected Subject + Commerce Operations Lens
 │
 ├── Brand & Market Domain
 │   └── 序境·品牌市场 / LUMENIS Brand & Market / BMP
-│       └── Brand-first / Primary Focus
+│       └── Selected Subject + Brand & Market Lens
 │
 ├── Shared Capability Layer
 │   └── 序境·内容创作 / LUMENIS Content & Creation
@@ -168,12 +206,13 @@ LUMENIS / 序境
 
 ### CTH / BMP 功能边界
 
-- **CTH**：商业 Subject 驱动；能力随 `subject_id / scope` 绑定，覆盖主体下业务板块、品牌、业态、内容、活动、传播、用户、舆情、风险、分析、决策信息与报告等既有能力。
-- **BMP**：Brand-first；保持原有多品牌、品牌/竞品、传播主体、内容、事件、风险、消费者需求、品牌对标、多平台监测等能力。
+- **CTH**：主体可选择；以商业运营视角处理主体下业务板块、品牌组合、业态、内容、活动、传播、用户反馈、舆情、风险、分析、决策信息、行动与报告等既有能力。
+- **BMP**：主体可选择；以品牌与市场视角处理品牌/竞品、传播主体、内容、Campaign、消费者需求、市场趋势、事件、风险、品牌对标、决策、行动与评估等既有能力。
+- **Shared Subject Context**：CTH / BMP 共享主体上下文契约，不复制两套主体选择基础设施；Domain 与 Subject 必须可以独立切换和验证。
 - **Shared Content**：内容创作跨 CTH / BMP 共享，不改变已有功能归属或运行链。
 - **Agent Groups**：跨产品调用与执行层，不改变产品边界。
 
-**CTH 与 BMP 的既有功能划分不因本次命名调整而重划。**
+**CTH 与 BMP 的既有功能划分不因统一 Subject Context 而重划。统一的是主体上下文与隔离规则，不是把两个领域合并成一个。**
 
 `SUBJECT_WORDS`、`SUBJECT_EXCLUDE_WORDS`、`subject_hit()` 等主体规则属于生产保护项；重构必须保持语义兼容并提供回归证据。
 
@@ -181,17 +220,33 @@ LUMENIS / 序境
 
 ```text
 Product
-  └─ Domain (CTH / BMP)
-       └─ Selected Subject / Primary Focus
+  └─ Selected Subject
+       └─ Domain Lens (CTH / BMP)
+            ├─ Scope / Permission
             ├─ Sub-Subject / Business Unit
             ├─ Industry / Category
             ├─ Content
             ├─ Event / Case
             ├─ Risk
-            └─ Report / Decision
+            └─ Report / Decision / Action
 ```
 
 **选择主体 ≠ 改写生产事实。** 选择器只改变当前工作上下文、重点监测范围和下游视图；Canonical Data、Evidence、历史事件与已确认结果必须保持原始归属。
+
+Subject Context 必须贯穿并隔离：
+
+```text
+Subject Selector
+→ URL / Router Context
+→ API Context
+→ Permission Validation
+→ Query / Function Scope
+→ Cache Key
+→ Evidence / Trace
+→ Report / Export Snapshot
+```
+
+不得仅依赖前端传入 `subject_id` 作为授权依据；后端必须重新验证 Subject access。缓存、查询、指标、报告与导出不得发生跨 Subject 污染。
 
 ## 3. 四仓边界
 
