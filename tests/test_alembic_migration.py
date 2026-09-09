@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 T-P1-3 Alembic 可回滚 DB 迁移 —— 回归测试
-在隔离的自建 mini 库上验证 stamp baseline / upgrade / downgrade 全链路。
-迁移脚本写入仓库 alembic/versions/（与真实使用一致），测试结束清理，绝不残留。
-关键隔离点：清除其他测试（如 test_workspace_keys 模块级设置）泄漏的 ZBC_DB_PATH，
-避免 alembic env.py 误连到别的库。不触碰生产库 data/monitor.db。
+在隔离的自建 mini 库和临时 Alembic 环境中验证 stamp / upgrade / downgrade。
+仓库源码目录零写入，ZBC_DB_PATH 始终保持显式临时路径。
 """
 import os
 import sqlite3
+import shutil
+from pathlib import Path
 import pytest
 
 from alembic.config import Config
@@ -16,18 +16,8 @@ from alembic import command
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(TESTS_DIR)
 INI = os.path.join(REPO_DIR, "alembic.ini")
-VERSIONS_DIR = os.path.join(REPO_DIR, "alembic", "versions")
 BASELINE_REV = "e4278c4d1d79"
 _MIG_FILE = "zz_test_rollback.py"
-
-
-@pytest.fixture(autouse=True)
-def _restore_cwd():
-    """_cfg() 内 os.chdir(REPO_DIR) 改变进程 CWD 且不还原，会污染后续测试的相对路径解析；
-    每个用例后强制还原。"""
-    _old_cwd = os.getcwd()
-    yield
-    os.chdir(_old_cwd)
 
 
 def _make_mini_db(db_path: str) -> str:
@@ -57,17 +47,24 @@ def _make_mini_db(db_path: str) -> str:
     return db_path
 
 
-def _cfg(db_path: str) -> Config:
-    # 隔离：全量加载时其他测试可能设置 ZBC_DB_PATH（模块级、未清理），必须清除，
-    # 否则 alembic/env.py 会用它覆盖 sqlalchemy.url 误连到别的库。
-    os.environ.pop("ZBC_DB_PATH", None)
-    os.chdir(REPO_DIR)
-    cfg = Config(INI)
+def _cfg(db_path: str, tmp_path: Path) -> tuple[Config, Path]:
+    script_location = tmp_path / "alembic"
+    versions = script_location / "versions"
+    versions.mkdir(parents=True)
+    shutil.copy2(Path(REPO_DIR) / "alembic" / "env.py", script_location / "env.py")
+    shutil.copy2(
+        Path(REPO_DIR) / "alembic" / "versions" /
+        "e4278c4d1d79_baseline_existing_54_tables_empty_stamp_.py",
+        versions / "e4278c4d1d79_baseline.py",
+    )
+    os.environ["ZBC_DB_PATH"] = os.path.abspath(db_path)
+    cfg = Config()
+    cfg.set_main_option("script_location", str(script_location))
     cfg.set_main_option(
         "sqlalchemy.url",
         "sqlite:///" + os.path.abspath(db_path).replace("\\", "/"),
     )
-    return cfg
+    return cfg, versions
 
 
 def _tables(db_path: str):
@@ -88,16 +85,9 @@ def _version(db_path: str):
     return rows
 
 
-def _cleanup_zz():
-    p = os.path.join(VERSIONS_DIR, _MIG_FILE)
-    if os.path.exists(p):
-        os.remove(p)
-
-
 def test_stamp_baseline_writes_version(tmp_path):
-    _cleanup_zz()
     db = _make_mini_db(str(tmp_path / "t.db"))
-    cfg = _cfg(db)
+    cfg, _ = _cfg(db, tmp_path)
     command.stamp(cfg, BASELINE_REV)
     ver = _version(db)
     assert ver == [BASELINE_REV], (
@@ -108,15 +98,14 @@ def test_stamp_baseline_writes_version(tmp_path):
 
 
 def test_upgrade_then_downgrade_rollback(tmp_path):
-    _cleanup_zz()
     db = _make_mini_db(str(tmp_path / "t2.db"))
-    cfg = _cfg(db)
+    cfg, versions = _cfg(db, tmp_path)
     command.stamp(cfg, BASELINE_REV)
     before = sqlite3.connect(f"file:{db}?mode=ro", uri=True).execute(
         "SELECT count(*) FROM notes").fetchone()[0]
     assert before == 2
 
-    mig_path = os.path.join(VERSIONS_DIR, _MIG_FILE)
+    mig_path = versions / _MIG_FILE
     mig_src = (
         '"""zz test rollback"""\n'
         "from alembic import op\n"
@@ -130,22 +119,19 @@ def test_upgrade_then_downgrade_rollback(tmp_path):
         "def downgrade() -> None:\n"
         "    op.drop_column('notes', 'zz_test_col')\n"
     )
-    with open(mig_path, "w", encoding="utf-8") as fh:
+    with mig_path.open("w", encoding="utf-8") as fh:
         fh.write(mig_src)
-    try:
-        command.upgrade(cfg, "head")
-        cols = [r[1] for r in sqlite3.connect(
-            f"file:{db}?mode=ro", uri=True).execute("PRAGMA table_info(notes)")]
-        assert "zz_test_col" in cols
-        assert _version(db) == ["zztest0001"]
+    command.upgrade(cfg, "head")
+    cols = [r[1] for r in sqlite3.connect(
+        f"file:{db}?mode=ro", uri=True).execute("PRAGMA table_info(notes)")]
+    assert "zz_test_col" in cols
+    assert _version(db) == ["zztest0001"]
 
-        command.downgrade(cfg, "-1")
-        cols = [r[1] for r in sqlite3.connect(
-            f"file:{db}?mode=ro", uri=True).execute("PRAGMA table_info(notes)")]
-        assert "zz_test_col" not in cols
-        assert _version(db) == [BASELINE_REV]
-    finally:
-        _cleanup_zz()
+    command.downgrade(cfg, "-1")
+    cols = [r[1] for r in sqlite3.connect(
+        f"file:{db}?mode=ro", uri=True).execute("PRAGMA table_info(notes)")]
+    assert "zz_test_col" not in cols
+    assert _version(db) == [BASELINE_REV]
 
     after = sqlite3.connect(f"file:{db}?mode=ro", uri=True).execute(
         "SELECT count(*) FROM notes").fetchone()[0]

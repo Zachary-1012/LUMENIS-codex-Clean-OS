@@ -151,6 +151,7 @@ EVAL_LABELS = {
 def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
@@ -447,11 +448,15 @@ def record_evidence(
     prompt: str, output_text: str, output_json: Optional[Dict],
     model: str, provider: str, level: str, confidence: float,
     latency_ms: int, status: str, error: str = "",
-    parent_evidence_id: str = "", iteration: int = 1,
+    parent_evidence_id: Optional[str] = None, iteration: int = 1,
     product_id: str = "ZBMP", domain_id: str = "zbmp",
 ) -> str:
     """记录内容生成Evidence，返回evidence_id。"""
     evidence_id = _gen_id("CGE")
+    normalized_parent = (
+        parent_evidence_id.strip() if isinstance(parent_evidence_id, str)
+        else parent_evidence_id
+    ) or None
     conn = _get_conn()
     c = conn.cursor()
     c.execute("""
@@ -465,7 +470,7 @@ def record_evidence(
         json.dumps(input_data, ensure_ascii=False), research_context,
         prompt, output_text or "", json.dumps(output_json, ensure_ascii=False) if output_json else "",
         model, provider, level, confidence, latency_ms,
-        status, error, parent_evidence_id, iteration, _now_iso(),
+        status, error, normalized_parent, iteration, _now_iso(),
     ))
     conn.commit()
     conn.close()
@@ -510,7 +515,7 @@ def generate_content(
     extra_input: Dict = None,
     product_id: str = "ZBMP",
     domain_id: str = "zbmp",
-    parent_evidence_id: str = "",
+    parent_evidence_id: Optional[str] = None,
     iteration: int = 1,
     human_feedback: str = "",
 ) -> Dict[str, Any]:

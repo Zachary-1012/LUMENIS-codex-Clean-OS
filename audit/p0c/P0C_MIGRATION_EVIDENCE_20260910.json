@@ -1,0 +1,1028 @@
+{
+  "generated_at": "2026-09-09T17:21:50.301354+00:00",
+  "policy": "source databases opened read-only; migrations run on SQLite backup copies",
+  "clean_bootstrap": {
+    "migration_ok": true,
+    "version": 12,
+    "identity": {
+      "path": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-p0c-migrate-98wpjquh\\clean\\monitor.db",
+      "exists": true,
+      "size": 405504,
+      "mtime_ns": 1788974510426692700,
+      "sha256": "98d5150f22a97bacd343701c4d076743695a5d326d15882fd1d29696ac7ae368",
+      "integrity": "ok",
+      "foreign_key_violations": 0,
+      "table_count": 26
+    },
+    "pass": true
+  },
+  "historical_v9_upgrade": {
+    "migration_ok": true,
+    "version": 12,
+    "historical_row_preserved": true,
+    "read_compatibility": {
+      "notes_readable": true,
+      "canonical_rule_version": true,
+      "evidence_domain_identity": true,
+      "pass": true
+    },
+    "pass": true
+  },
+  "rollback_read_compatibility": {
+    "failure_rejected": true,
+    "schema_and_version_rolled_back": true,
+    "legacy_read_compatible": true,
+    "pass": true
+  },
+  "sources": {
+    "historical": {
+      "source_before": {
+        "path": "D:\\LUMENIS_REBUILD\\P0A_BASELINE_20260909_1040\\database_backups\\02-Z-Brand-Core-monitor.db",
+        "exists": true,
+        "size": 22663168,
+        "mtime_ns": 1788933198353548300,
+        "sha256": "2257d178bfb74c9ffa50e176271cf2e091051fb2ec9bf32070f64e8127548ef8",
+        "integrity": "ok",
+        "foreign_key_violations": 43,
+        "table_count": 130
+      },
+      "source_after": {
+        "path": "D:\\LUMENIS_REBUILD\\P0A_BASELINE_20260909_1040\\database_backups\\02-Z-Brand-Core-monitor.db",
+        "exists": true,
+        "size": 22663168,
+        "mtime_ns": 1788933198353548300,
+        "sha256": "2257d178bfb74c9ffa50e176271cf2e091051fb2ec9bf32070f64e8127548ef8",
+        "integrity": "ok",
+        "foreign_key_violations": 43,
+        "table_count": 130
+      },
+      "source_unchanged": true,
+      "source_fk_details": [
+        {
+          "table": "ai_task_step",
+          "rowid": 6431,
+          "parent": "ai_task",
+          "fkid": 0,
+          "child_column": "task_id",
+          "child_value": "1",
+          "parent_column": "task_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "ai_task_step",
+          "rowid": 6432,
+          "parent": "ai_task",
+          "fkid": 0,
+          "child_column": "task_id",
+          "child_value": "1",
+          "parent_column": "task_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "ai_task_trace",
+          "rowid": 8079,
+          "parent": "ai_task",
+          "fkid": 0,
+          "child_column": "task_id",
+          "child_value": "1",
+          "parent_column": "task_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "ai_task_trace",
+          "rowid": 8080,
+          "parent": "ai_task",
+          "fkid": 0,
+          "child_column": "task_id",
+          "child_value": "1",
+          "parent_column": "task_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 1,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 2,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 3,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 4,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 5,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 6,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 7,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 8,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 9,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 10,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 11,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 12,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 13,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 14,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 15,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 16,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 17,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 18,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 19,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 20,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 21,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 22,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 23,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 24,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 25,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 26,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 27,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 28,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 29,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 30,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 31,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 32,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 33,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 34,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 35,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 36,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 37,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 38,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 39,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        }
+      ],
+      "copy_path": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-p0c-migrate-98wpjquh\\copy-1\\monitor.db",
+      "migration_ok": true,
+      "copy_version": 12,
+      "copy_identity": {
+        "path": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-p0c-migrate-98wpjquh\\copy-1\\monitor.db",
+        "exists": true,
+        "size": 22663168,
+        "mtime_ns": 1788974511471447900,
+        "sha256": "791942b3b8cf48267c51f2098ce851956d738ec173491f054c877956b85e32f0",
+        "integrity": "ok",
+        "foreign_key_violations": 43,
+        "table_count": 130
+      },
+      "row_count_decreases": {},
+      "read_compatibility": {
+        "notes_readable": true,
+        "canonical_rule_version": true,
+        "evidence_domain_identity": true,
+        "pass": true
+      },
+      "pass": true
+    },
+    "production_candidate": {
+      "source_before": {
+        "path": "D:\\LUMENIS_REBUILD\\P0A_BASELINE_20260909_1040\\database_backups\\05-Taikoo-monitor-new-monitor.db",
+        "exists": true,
+        "size": 23359488,
+        "mtime_ns": 1788933198845101000,
+        "sha256": "2efba86d4dceacca0857a517152df9f33e843cdfdea657716169a4e8707e9f6f",
+        "integrity": "ok",
+        "foreign_key_violations": 35,
+        "table_count": 129
+      },
+      "source_after": {
+        "path": "D:\\LUMENIS_REBUILD\\P0A_BASELINE_20260909_1040\\database_backups\\05-Taikoo-monitor-new-monitor.db",
+        "exists": true,
+        "size": 23359488,
+        "mtime_ns": 1788933198845101000,
+        "sha256": "2efba86d4dceacca0857a517152df9f33e843cdfdea657716169a4e8707e9f6f",
+        "integrity": "ok",
+        "foreign_key_violations": 35,
+        "table_count": 129
+      },
+      "source_unchanged": true,
+      "source_fk_details": [
+        {
+          "table": "content_generation_evidence",
+          "rowid": 1,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 2,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 3,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 4,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 5,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 6,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 7,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 8,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 9,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 10,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 11,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 12,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 13,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 14,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 15,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 16,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 17,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 18,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 19,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 20,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 21,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 22,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 23,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 24,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 25,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 26,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 27,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 28,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 29,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 30,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 31,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 32,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 33,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 34,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 35,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        }
+      ],
+      "copy_path": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-p0c-migrate-98wpjquh\\copy-2\\monitor.db",
+      "migration_ok": true,
+      "copy_version": 12,
+      "copy_identity": {
+        "path": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-p0c-migrate-98wpjquh\\copy-2\\monitor.db",
+        "exists": true,
+        "size": 23359488,
+        "mtime_ns": 1788974512824508800,
+        "sha256": "5481c9254f51b886912738180b50a62d0ec4fb29d7f6cfedd88b01923b2007fc",
+        "integrity": "ok",
+        "foreign_key_violations": 35,
+        "table_count": 129
+      },
+      "row_count_decreases": {},
+      "read_compatibility": {
+        "notes_readable": true,
+        "canonical_rule_version": true,
+        "evidence_domain_identity": true,
+        "pass": true
+      },
+      "pass": true
+    },
+    "clean_candidate": {
+      "source_before": {
+        "path": "D:\\LUMENIS_REBUILD\\P0A_BASELINE_20260909_1040\\database_backups\\01-Z-Brand-Core-monitor.db",
+        "exists": true,
+        "size": 1122304,
+        "mtime_ns": 1788933198091130300,
+        "sha256": "7f5817507b368ca91243b4eb4936d149d9c81389b800fbad1c087ac7278f315c",
+        "integrity": "ok",
+        "foreign_key_violations": 7,
+        "table_count": 64
+      },
+      "source_after": {
+        "path": "D:\\LUMENIS_REBUILD\\P0A_BASELINE_20260909_1040\\database_backups\\01-Z-Brand-Core-monitor.db",
+        "exists": true,
+        "size": 1122304,
+        "mtime_ns": 1788933198091130300,
+        "sha256": "7f5817507b368ca91243b4eb4936d149d9c81389b800fbad1c087ac7278f315c",
+        "integrity": "ok",
+        "foreign_key_violations": 7,
+        "table_count": 64
+      },
+      "source_unchanged": true,
+      "source_fk_details": [
+        {
+          "table": "content_generation_evidence",
+          "rowid": 1,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 2,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 3,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 4,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 5,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 6,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        },
+        {
+          "table": "content_generation_evidence",
+          "rowid": 7,
+          "parent": "content_generation_evidence",
+          "fkid": 0,
+          "child_column": "parent_evidence_id",
+          "child_value": "",
+          "parent_column": "evidence_id",
+          "root_cause": "missing_parent_reference"
+        }
+      ],
+      "copy_path": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-p0c-migrate-98wpjquh\\copy-3\\monitor.db",
+      "migration_ok": true,
+      "copy_version": 12,
+      "copy_identity": {
+        "path": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-p0c-migrate-98wpjquh\\copy-3\\monitor.db",
+        "exists": true,
+        "size": 1122304,
+        "mtime_ns": 1788974513435841100,
+        "sha256": "7974f50e013cc0cb33d9a67321bb68166d557807b88f7630cee5928470670648",
+        "integrity": "ok",
+        "foreign_key_violations": 7,
+        "table_count": 64
+      },
+      "row_count_decreases": {},
+      "read_compatibility": {
+        "notes_readable": true,
+        "canonical_rule_version": true,
+        "evidence_domain_identity": true,
+        "pass": true
+      },
+      "pass": true
+    }
+  },
+  "overall_pass": true
+}

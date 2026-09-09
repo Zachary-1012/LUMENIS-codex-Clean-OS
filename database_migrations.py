@@ -13,7 +13,6 @@
 import os
 import sys
 import sqlite3
-import shutil
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -92,13 +91,14 @@ def get_current_version(conn: sqlite3.Connection) -> int:
     return max(versions) if versions else 0
 
 
-def set_version(conn: sqlite3.Connection, version: int, description: str = ""):
+def set_version(conn: sqlite3.Connection, version: int, description: str = "", *, commit: bool = True):
     """设置数据库版本"""
     conn.execute(
         "INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)",
         (version, description, datetime.now().isoformat())
     )
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def backup_database(backup_name: Optional[str] = None) -> str:
@@ -107,16 +107,29 @@ def backup_database(backup_name: Optional[str] = None) -> str:
     
     if not backup_name:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_name = f"monitor_db_v{get_current_version(get_connection())}_{timestamp}.db"
+        version_connection = get_connection()
+        try:
+            version = get_current_version(version_connection)
+        finally:
+            version_connection.close()
+        backup_name = f"monitor_db_v{version}_{timestamp}.db"
     
     backup_path = os.path.join(BACKUP_DIR, backup_name)
     
     if os.path.exists(DB_PATH):
-        shutil.copy2(DB_PATH, backup_path)
-        print(f"✅ 数据库已备份到: {backup_path}")
+        # SQLite Backup API 会复制同一时刻的一致快照，且不会改写源库；直接 copy2
+        # 可能遗漏 WAL 中尚未 checkpoint 的事务。
+        source = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+        destination = sqlite3.connect(backup_path)
+        try:
+            source.backup(destination)
+        finally:
+            destination.close()
+            source.close()
+        print(f"[migration] 数据库已备份到: {backup_path}")
         print(f"   备份大小: {os.path.getsize(backup_path) / 1024 / 1024:.2f} MB")
     else:
-        print(f"⚠️  数据库不存在: {DB_PATH}")
+        print(f"[migration] 数据库不存在: {DB_PATH}")
     
     return backup_path
 
@@ -388,6 +401,13 @@ def migration_9_to_10(conn):
     - 新建 historical_import_log 表（历史导入审计日志）
     所有 ADD COLUMN 均无 DEFAULT，现有行保持 NULL，不被新规则静默改写。
     """
+    # clean bootstrap 时 app 的历史顺序是先 migrate、后 ensure_canonical_table。
+    # 因此迁移自身必须在同一连接/事务内建立依赖表，不能假设启动后续步骤已运行。
+    from canonical_data import CANONICAL_TABLE_DDL, CANONICAL_INDEXES
+    conn.execute(CANONICAL_TABLE_DDL)
+    for index_sql in CANONICAL_INDEXES:
+        conn.execute(index_sql)
+
     # --- notes 表：添加历史数据治理字段（可空，不修改现有数据）---
     cursor = conn.execute("PRAGMA table_info(notes)")
     note_cols = {row['name'] for row in cursor.fetchall()}
@@ -466,6 +486,27 @@ def migration_10_to_11(conn):
     P1-4: daily_reports add evidence_ids TEXT (JSON array, nullable, no logic change).
     All ADD COLUMN have DEFAULT, backward compatible.
     """
+    # 与 canonical_data 相同，zbc_canonical_data 在旧启动顺序中也晚于 migrate。
+    # 在迁移事务中建立最小兼容表，后续 evidence_chain.init_db 会幂等补齐完整链路。
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS zbc_canonical_data (
+            canonical_id TEXT PRIMARY KEY,
+            evidence_id TEXT NOT NULL DEFAULT '',
+            normalized_content TEXT NOT NULL DEFAULT '',
+            subject_hit INTEGER NOT NULL DEFAULT 0,
+            subject_keywords TEXT NOT NULL DEFAULT '[]',
+            sentiment TEXT NOT NULL DEFAULT 'neutral',
+            risk_level TEXT NOT NULL DEFAULT 'low',
+            engagement_metrics TEXT NOT NULL DEFAULT '{}',
+            rule_version TEXT NOT NULL DEFAULT 'evidence-chain-v1.0.0',
+            ai_analysis TEXT NOT NULL DEFAULT '{}',
+            human_correction TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY (evidence_id) REFERENCES zbc_evidence(evidence_id)
+        )
+    """)
+
     # P1-2: collection_quality_log
     conn.execute("""
         CREATE TABLE IF NOT EXISTS collection_quality_log (
@@ -526,7 +567,6 @@ def migration_11_to_12(conn):
     使用 IF NOT EXISTS，幂等安全，不修改现有表结构/数据。
     """
     conn.execute("CREATE INDEX IF NOT EXISTS idx_notes_publish_datetime ON notes(publish_datetime)")
-    conn.commit()
 
 
 def _migrate_add_publish_datetime_index():
@@ -561,44 +601,53 @@ def migrate(target_version: Optional[int] = None) -> bool:
     """执行数据库迁移"""
     if target_version is None:
         target_version = CURRENT_VERSION
-    
+
     conn = get_connection()
-    current_version = get_current_version(conn)
-    
-    print(f"📊 当前数据库版本: v{current_version}")
-    print(f"🎯 目标版本: v{target_version}")
-    
-    if current_version >= target_version:
-        print("✅ 数据库已是最新版本，无需迁移")
-        conn.close()
-        return True
-    
-    # 迁移前自动备份
-    print("\n📦 迁移前自动备份数据库...")
-    backup_database(f"before_migration_v{current_version}_to_v{target_version}.db")
-    
-    # 执行迁移
-    for version in range(current_version, target_version):
-        if version in MIGRATIONS:
-            print(f"\n🔄 执行迁移 v{version} → v{version + 1}...")
-            print(f"   {MIGRATION_HISTORY.get(version + 1, '未知迁移')}")
-            
-            try:
+    try:
+        current_version = get_current_version(conn)
+        print(f"[migration] 当前数据库版本: v{current_version}")
+        print(f"[migration] 目标版本: v{target_version}")
+
+        if current_version >= target_version:
+            print("[migration] 数据库已是最新版本，无需迁移")
+            return True
+
+        print("[migration] 创建迁移前一致性备份")
+        backup_database(f"before_migration_v{current_version}_to_v{target_version}.db")
+
+        # 所有目标版本在一个事务中执行；任一步失败都回到进入 migrate 时的版本与 schema。
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            start_version = current_version
+            if current_version == 0:
+                base_tables = {row[0] for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()}
+                required = {"notes", "daily_reports", "collection_logs"}
+                if not required.issubset(base_tables):
+                    raise RuntimeError(
+                        "v0 数据库缺少基础表；必须先运行 database.init_db()，禁止猜测或静默 stamp"
+                    )
+                set_version(conn, 1, MIGRATION_HISTORY[1], commit=False)
+                start_version = 1
+                print("[migration] 已验证基础表并在事务内登记 v1")
+            for version in range(start_version, target_version):
+                if version not in MIGRATIONS:
+                    raise RuntimeError(f"缺少迁移实现 v{version} -> v{version + 1}")
+                print(f"[migration] 执行 v{version} -> v{version + 1}")
                 MIGRATIONS[version](conn)
-                set_version(conn, version + 1, MIGRATION_HISTORY.get(version + 1, ''))
-                print(f"   ✅ 迁移成功")
-            except Exception as e:
-                print(f"   ❌ 迁移失败: {e}")
-                print(f"   ⚠️  数据库已回滚到 v{current_version}")
-                conn.rollback()
-                conn.close()
-                return False
-        else:
-            print(f"⚠️  跳过未知迁移 v{version} → v{version + 1}")
-    
-    print(f"\n🎉 数据库迁移完成！当前版本: v{get_current_version(conn)}")
-    conn.close()
-    return True
+                set_version(conn, version + 1,
+                            MIGRATION_HISTORY.get(version + 1, ''), commit=False)
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            print(f"[migration] 失败并回滚到 v{current_version}: {exc}")
+            return False
+
+        print(f"[migration] 完成，当前版本: v{get_current_version(conn)}")
+        return True
+    finally:
+        conn.close()
 
 
 def rollback() -> bool:

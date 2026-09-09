@@ -135,7 +135,7 @@ def test_registry_snapshot_is_copy():
 
 
 # ---------- 真实生产库一致性（迁移零数字变化证据）----------
-DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "monitor.db")
+DB = os.environ["ZBC_DB_PATH"]
 
 
 @pytest.mark.skipif(not os.path.exists(DB), reason="生产 monitor.db 不存在时跳过")

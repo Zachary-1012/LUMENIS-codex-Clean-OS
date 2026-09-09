@@ -126,6 +126,16 @@ data/*
 !data/brand_websites.json
 !data/case_library.json
 !data/.gitkeep
+!data/README-DATABASE-ENVIRONMENTS.md
+!data/production/
+data/production/*
+!data/production/.gitkeep
+!data/test/
+data/test/*
+!data/test/.gitkeep
+!data/experiment/
+data/experiment/*
+!data/experiment/.gitkeep
 # === 本地敏感/运行态（不入版本库，Z-Brand Core 安全闸）===
 config/proxy_nodes.json
 edge-cdp-profile/

@@ -10,12 +10,13 @@ import tempfile
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class TestProviderRegistry:
-    def test_zhipu_active(self):
-        from provider_registry import provider_status, ACTIVE
-        assert provider_status("zhipu") == ACTIVE
+    def test_zhipu_not_claimed_active_without_runtime_evidence(self):
+        from provider_registry import provider_status, NOT_CONFIGURED
+        assert provider_status("zhipu") == NOT_CONFIGURED
 
     def test_ollama_available(self):
         from provider_registry import provider_status, AVAILABLE
@@ -40,7 +41,7 @@ class TestProviderRegistry:
     def test_active_providers(self):
         from provider_registry import active_providers
         active = active_providers()
-        assert "zhipu" in active
+        assert "zhipu" not in active
         # ollama=AVAILABLE, ark=ACTIVE_FALLBACK 不在 active 列表，但在可用链中
         assert "qwen" not in active
 
@@ -123,18 +124,18 @@ class TestDomainIsolation:
 
 class TestRepositoryRegistry:
     def test_registry_file_exists(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "repo_registry.json")
+        path = os.path.join(ROOT, "repo_registry.json")
         assert os.path.isfile(path)
 
     def test_registry_valid_json(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "repo_registry.json")
+        path = os.path.join(ROOT, "repo_registry.json")
         with open(path, "r", encoding="utf-8") as f:
             reg = json.load(f)
         assert "repositories" in reg
         assert len(reg["repositories"]) >= 2
 
     def test_registry_has_zbc_and_osai(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "repo_registry.json")
+        path = os.path.join(ROOT, "repo_registry.json")
         with open(path, "r", encoding="utf-8") as f:
             reg = json.load(f)
         roles = [r["role"] for r in reg["repositories"]]
@@ -144,14 +145,14 @@ class TestRepositoryRegistry:
 
 class TestSkillAdapterNoHardcode:
     def test_no_d_zachary_hardcode(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "lumenis_skill_adapter.py")
+        path = os.path.join(ROOT, "lumenis_skill_adapter.py")
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
         assert r"D:\Zachary OS AI" not in content
         assert "D:\\\\Zachary" not in content
 
     def test_adapter_has_repo_registry_support(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "lumenis_skill_adapter.py")
+        path = os.path.join(ROOT, "lumenis_skill_adapter.py")
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
         assert "repo_registry.json" in content

@@ -3,10 +3,97 @@ pytest配置文件 - 广州太古汇舆情监测系统
 """
 import os
 import sys
+import hashlib
+import sqlite3
+import shutil
+import tempfile
+from pathlib import Path
+from urllib.parse import unquote
 import pytest
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
+
+# P0-C 数据库隔离 Gate：pytest 进程在收集任何测试模块前就绑定到系统临时目录。
+# 测试不得依赖、读取或写入仓库 data/monitor.db，也不得通过删除 ZBC_DB_PATH 回退到默认生产路径。
+_PYTEST_DB_ROOT = Path(tempfile.mkdtemp(prefix="lumenis-pytest-db-"))
+_PYTEST_DEFAULT_DB = _PYTEST_DB_ROOT / "test" / "monitor.db"
+_PYTEST_DEFAULT_DB.parent.mkdir(parents=True, exist_ok=True)
+os.environ["ZBC_TEST_RUN"] = "1"
+os.environ["LUMENIS_DATA_ENVIRONMENT"] = "test"
+os.environ["ZBC_DB_PATH"] = str(_PYTEST_DEFAULT_DB)
+
+
+def _file_identity(path: Path):
+    if not path.exists():
+        return None
+    stat = path.stat()
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return {"sha256": digest.hexdigest(), "size": stat.st_size,
+            "mtime_ns": stat.st_mtime_ns}
+
+
+def _protected_database_paths():
+    paths = {_REPO_ROOT / "data" / "monitor.db"}
+    extra = os.environ.get("LUMENIS_PROTECTED_DB_PATHS", "")
+    for raw in extra.split(os.pathsep):
+        if raw.strip():
+            paths.add(Path(raw.strip()).expanduser().resolve())
+    expanded = set()
+    for path in paths:
+        resolved = path.resolve()
+        expanded.add(resolved)
+        expanded.add(Path(str(resolved) + "-wal"))
+        expanded.add(Path(str(resolved) + "-shm"))
+    return tuple(sorted(expanded, key=str))
+
+
+_PROTECTED_DB_BASELINE = {
+    path: _file_identity(path) for path in _protected_database_paths()
+}
+
+# Collection-time hard fence: legacy modules and tests may bypass database.py and
+# call sqlite3.connect("data/monitor.db") directly.  Environment isolation alone
+# cannot protect against that path, so reject every direct connection to a
+# protected database before any test module is imported.
+_SQLITE_CONNECT = sqlite3.connect
+
+
+def _guarded_sqlite_connect(database, *args, **kwargs):
+    if isinstance(database, (str, os.PathLike)):
+        raw = os.fspath(database)
+        candidate = raw
+        if raw.startswith("file:"):
+            candidate = unquote(raw[5:].split("?", 1)[0])
+        if candidate not in (":memory:", ""):
+            target = Path(candidate).expanduser()
+            if not target.is_absolute():
+                target = Path.cwd() / target
+            target = target.resolve()
+            if target in {item.resolve() for item in _PROTECTED_DB_BASELINE}:
+                raise RuntimeError(f"P0-C: pytest 禁止连接受保护数据库: {target}")
+    return _SQLITE_CONNECT(database, *args, **kwargs)
+
+
+sqlite3.connect = _guarded_sqlite_connect
+
+
+def _assert_test_database_path(path_value: str) -> None:
+    if not path_value:
+        raise AssertionError("P0-C: 测试必须显式绑定临时 ZBC_DB_PATH")
+    path = Path(path_value).expanduser().resolve()
+    protected = {item.resolve() for item in _PROTECTED_DB_BASELINE}
+    if path in protected:
+        raise AssertionError(f"P0-C: 测试禁止访问受保护数据库: {path}")
+    temp_root = Path(tempfile.gettempdir()).resolve()
+    try:
+        path.relative_to(temp_root)
+    except ValueError as exc:
+        raise AssertionError(f"P0-C: 测试数据库必须位于系统临时目录: {path}") from exc
 
 # 排除纯脚本式 test_ 文件（模块级顶层 sys.exit 会在 pytest 收集/import 期杀掉整个进程，
 # 表现为全量跑到某百分比静默退出、无 F、stderr 为空）。文件无 def test_，设计为
@@ -24,12 +111,20 @@ collect_ignore = [
 
 # 测试配置
 TEST_CONFIG = {
-    'test_db': 'data/test_monitor.db',
+    'test_db': str(_PYTEST_DEFAULT_DB),
     'test_port': 8201,
     'test_host': '127.0.0.1',
     'auth_user': 'Zachary',
     'auth_pass': 'Zachary01',
 }
+
+
+@pytest.fixture(autouse=True)
+def _p0c_database_path_gate():
+    """每个用例前后都拒绝生产路径；路径变更只能落在系统临时目录。"""
+    _assert_test_database_path(os.environ.get("ZBC_DB_PATH", ""))
+    yield
+    _assert_test_database_path(os.environ.get("ZBC_DB_PATH", ""))
 
 # 测试鉴权隔离（P1-9 权限审计修复）：
 # app.py 在 import 时经 _load_dotenv 读取 .env，但只填充「环境变量中不存在」的 key。
@@ -306,6 +401,24 @@ def pytest_sessionfinish(session, exitstatus):
     reporter = session.config.pluginmanager.get_plugin("terminalreporter")
     if reporter is not None:
         reporter.write_line(line)
+
+    changed = []
+    for path, before in _PROTECTED_DB_BASELINE.items():
+        after = _file_identity(path)
+        if after != before:
+            changed.append(f"{path}: before={before}, after={after}")
+    if changed:
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
+        message = "P0-C DATABASE ISOLATION VIOLATION\n" + "\n".join(changed)
+        print(message)
+        if reporter is not None:
+            reporter.write_line(message)
+    else:
+        message = "P0-C DATABASE ISOLATION: protected DB hash/mtime unchanged."
+        print(message)
+        if reporter is not None:
+            reporter.write_line(message)
+    shutil.rmtree(_PYTEST_DB_ROOT, ignore_errors=True)
 
 # ==== 出网守卫（阶段1测试隔离）：默认禁止真实公网连接 ====
 # 漏 mock 的云端 AI/外部请求在 TCP connect 阶段立即失败（->生产降级 rule 兜底），
