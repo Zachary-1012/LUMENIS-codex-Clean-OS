@@ -133,6 +133,36 @@ def test_non_enforce_never_raises(monkeypatch):
     assert rep["overall"] == "block" and rep["blocker_count"] == 1
 
 
+def test_release_manifest_required_blocks_unverified(monkeypatch):
+    monkeypatch.setenv("LUMENIS_REQUIRE_RELEASE_MANIFEST", "1")
+    monkeypatch.setattr(
+        rp.runtime_identity,
+        "get_runtime_identity",
+        lambda **kwargs: {
+            "release_state": "UNRELEASED",
+            "release_manifest": {"verified": False},
+        },
+    )
+    result = rp.check_runtime_identity()
+    assert result["level"] == "P0"
+    assert result["status"] == "fail"
+
+
+def test_release_manifest_verified_passes(monkeypatch):
+    monkeypatch.setenv("LUMENIS_REQUIRE_RELEASE_MANIFEST", "1")
+    monkeypatch.setattr(
+        rp.runtime_identity,
+        "get_runtime_identity",
+        lambda **kwargs: {
+            "release_state": "MANIFEST_VERIFIED",
+            "release_manifest": {"verified": True},
+        },
+    )
+    result = rp.check_runtime_identity()
+    assert result["level"] == "P0"
+    assert result["status"] == "pass"
+
+
 # ------------------------------------------------------------------ 6) Attestation
 def test_attestation_written_and_redacted():
     rep = rp.run_preflight(write_attestation=True)
@@ -144,6 +174,8 @@ def test_attestation_written_and_redacted():
     data = json.loads(raw)
     assert data["overall"] in ("pass", "warn", "block")
     assert data["product"] == rp.PRODUCT
+    assert data["runtime_identity"]["identity_schema"] == "lumenis.runtime-identity.v1"
+    assert "identity_digest" in data["runtime_identity"]["database"]
     # 证据文件里不得出现常见明文凭证前缀
     for bad in ("sk-", "BEGIN PRIVATE KEY", "sessionid="):
         assert bad not in raw

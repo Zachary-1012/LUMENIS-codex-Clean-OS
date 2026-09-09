@@ -48,7 +48,9 @@ def test_01_app_api_health_readonly():
     resp = client.get('/api/health')
     assert resp.status_code == 200
     body = resp.get_json()
-    assert body.get('service') == 'taikoo-monitor'
+    assert body.get('service') == 'lumenis-production-core'
+    assert body.get('legacy_service') == 'taikoo-monitor'
+    assert body.get('runtime_identity', {}).get('identity_schema') == 'lumenis.runtime-identity.v1'
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +293,7 @@ def test_20_osai_modules_not_in_app_import_chain():
     )
     result = subprocess.run(
         [sys.executable, '-c', code], cwd=_REPO_ROOT,
-        capture_output=True, text=True, timeout=120,
+        capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=120,
         env={**os.environ, 'PYTHONIOENCODING': 'utf-8'},
     )
     assert 'HEALTHZ_OK' in result.stdout, f"app 启动失败: {result.stderr[-500:]}"

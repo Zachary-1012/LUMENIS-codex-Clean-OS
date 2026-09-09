@@ -36,7 +36,14 @@ def command_home():
 @lumenis_bp.route("/healthz")
 def foundation_healthz():
     """Foundation 层存活探针（不触达业务/数据库）。"""
-    return {"status": "ok", "layer": "L0-experience", "component": "lumenis-frontend-foundation"}
+    from runtime_identity import get_runtime_identity
+
+    return {
+        "status": "ok",
+        "layer": "L0-experience",
+        "component": "lumenis-frontend-foundation",
+        "runtime_identity": get_runtime_identity(public=True),
+    }
 
 
 # ========== Skill Hub API（Cross-Core Adapter，ZBC 不维护独立 Skill Truth） ==========

@@ -1031,7 +1031,7 @@ def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
     # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）
-    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or _is_cth_readonly_get(request.path, request.method):
+    if not _auth_enabled() or request.path in ('/healthz', '/lumenis/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or _is_cth_readonly_get(request.path, request.method):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -1060,7 +1060,7 @@ def _basic_auth():
 # === ZBC Phase 12: PermissionGate 统一写操作拦截（fail-closed） ===
 _PG_WRITE_METHODS = frozenset({'POST', 'PUT', 'DELETE', 'PATCH'})
 _PG_BYPASS_PATHS = frozenset({
-    '/healthz', '/api/health', '/api/collector-guard/status',
+    '/healthz', '/lumenis/healthz', '/api/health', '/api/collector-guard/status',
     '/api/auth/config', '/favicon.ico', '/api/system/health/summary',
     '/api/zbmp/overview', '/api/zbmp/brands', '/api/zbmp/metrics',
     '/api/cth/overview', '/api/cth/events', '/api/cth/xiaohongshu',
@@ -2843,7 +2843,12 @@ def remote_access():
 
 @app.route('/healthz')
 def healthz():
-    return jsonify({'ok':True,'version':APP_VERSION,'service':'taikoo-monitor'})
+    return jsonify({
+        'ok': True,
+        'version': APP_VERSION,
+        'service': 'lumenis-production-core',
+        'runtime_identity': runtime_preflight.runtime_identity.get_runtime_identity(public=True),
+    })
 
 @app.route('/api/health')
 def api_health():
@@ -2874,22 +2879,33 @@ def api_health():
         _db_error = str(_e)
     _payload = {
         'ok': _db_status == 'ok',
-        'service': 'taikoo-monitor',
+        'service': 'lumenis-production-core',
+        'legacy_service': 'taikoo-monitor',
         'version': APP_VERSION,
         'pid': os.getpid(),
         'port': _port,
         'database': _db_status,
         'time': datetime.now().isoformat(),
+        'runtime_identity': runtime_preflight.runtime_identity.get_runtime_identity(public=True),
     }
     if _db_error:
         _payload['database_error'] = _db_error
     return jsonify(_payload)
 
+
+@app.route('/api/runtime/attestation')
+def api_runtime_attestation():
+    """受控 Runtime Identity；只读、缓存、不返回绝对路径或凭据。"""
+    return jsonify({
+        'ok': True,
+        'runtime_identity': runtime_preflight.runtime_identity.get_runtime_identity(),
+    })
+
 @app.route('/api/system/health')
 def api_system_health():
     """产品级健康状态：区分‘系统正常’与‘数据源没有数据’。"""
     now=datetime.now()
-    result={'version':APP_VERSION,'service':'taikoo-monitor','time':now.strftime('%Y-%m-%d %H:%M:%S')}
+    result={'version':APP_VERSION,'service':'lumenis-production-core','legacy_service':'taikoo-monitor','time':now.strftime('%Y-%m-%d %H:%M:%S')}
     try:
         stats=db.get_stats()
         latest=''

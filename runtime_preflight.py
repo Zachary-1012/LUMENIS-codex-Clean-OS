@@ -37,6 +37,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT_DIR)
 
 import data_boundary  # noqa: E402
+import runtime_identity  # noqa: E402
 
 PRODUCT = "Z-Brand-Core"
 PRODUCT_FULL = "Z-Brand 品牌业务生产平台 / Z-Brand-Core（承载 CTH-POMS 与 ZBMP）"
@@ -250,6 +251,43 @@ def check_config():
                   "统一配置与数据路径入口可解析（值不写入证据）", db_resolvable=bool(ok))
 
 
+def check_runtime_identity():
+    identity = runtime_identity.get_runtime_identity(force=True)
+    verified = identity["release_manifest"].get("verified") is True
+    required = str(os.environ.get("LUMENIS_REQUIRE_RELEASE_MANIFEST", "")).lower() in (
+        "1", "true", "yes", "on"
+    )
+    if required and not verified:
+        return _check(
+            "RUNTIME-IDENTITY",
+            "runtime_identity",
+            "P0",
+            "fail",
+            "生产 Manifest 为强制项，但当前缺失、无效或与源码不匹配",
+            release_state=identity["release_state"],
+            manifest_verified=False,
+        )
+    if verified:
+        return _check(
+            "RUNTIME-IDENTITY",
+            "runtime_identity",
+            "P0",
+            "pass",
+            "Runtime Identity 与 Release Manifest、Commit、Git tree 匹配",
+            release_state=identity["release_state"],
+            manifest_verified=True,
+        )
+    return _check(
+        "RUNTIME-IDENTITY",
+        "runtime_identity",
+        "P1",
+        "warn",
+        "当前为未发布开发快照；不得声明 RELEASED/OPERATING",
+        release_state=identity["release_state"],
+        manifest_verified=False,
+    )
+
+
 CHECKS = [
     check_identity,
     check_permissions,
@@ -259,6 +297,7 @@ CHECKS = [
     check_dangerous_mode,
     check_capability,
     check_config,
+    check_runtime_identity,
 ]
 
 
@@ -286,6 +325,7 @@ def run_preflight(enforce=None, write_attestation=True):
         "warning_count": len(warnings_),
         "checks": results,
         "blockers": [{"id": c["id"], "detail": data_boundary.sanitize_text(c["detail"])} for c in blockers],
+        "runtime_identity": runtime_identity.get_runtime_identity(),
     }
     if write_attestation:
         report["attestation"] = _write_attestation(report)
