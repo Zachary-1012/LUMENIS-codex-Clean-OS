@@ -296,14 +296,21 @@ Real Business Hierarchy
 
 **硬规则：Legacy code is a capability source, not a UI source. Historical UI/UX may only be used as evidence of missing business intent. Final UI/UX must be redesigned under the current LUMENIS design system and current information architecture.**
 
-### 21.1 Developer Settings / 开发者功能恢复保护
+### 21.1 Developer Settings / 开发者功能恢复保护（Post-Launch Upgrade）
 
-`系统设置 → 开发者 / Developer` 作为既有产品能力的恢复保护项处理。当前源码中没有入口或命名命中，**不得据此认定该功能不存在、废弃或允许删除**；必须先完成当前仓、历史仓、历史分支与 Legacy 资产审计，再决定其当前实现状态。
+`系统设置 → 开发者 / Developer` 作为既有产品能力的恢复保护项处理，同时明确调整为 **Post-Launch Upgrade / 上线后升级项**。
 
-恢复时不得跳步，完整链路固定为：
+**当前 Production Convergence → Production Acceptance → Release Candidate → 首次 Production / Operating 阶段，不要求 Developer Settings 完成恢复，也不得把其未恢复状态视为当前六大 Production Acceptance Gate 的阻塞项。**
+
+当前阶段只执行三件事：保护历史资产、禁止误删、避免新增依赖。不得因为当前源码中没有入口或命名命中，就认定该功能不存在、废弃或允许删除；但也不得为了赶首发强行恢复 Developer Settings，从而打断当前生产收敛主线。
+
+调度标签：`POST_LAUNCH_BACKLOG / POST_LAUNCH_UPGRADE`。该标签仅表示研发调度阶段，**不替代**第 32 节统一能力状态 `PLANNED / IMPLEMENTED / TESTED / VERIFIED / RELEASED / OPERATING`。
+
+首次正式上线并完成稳定性观察后，再启动 Developer Settings 的完整恢复。恢复时不得跳步，完整链路固定为：
 
 ```text
-Current Source Audit
+Post-Launch Stability Confirmation
+→ Current Source Audit
 → Historical Repository / Branch / Commit Inventory
 → Developer Feature Source Trace
 → Route / API / Service / DB / Config / Permission / Runtime Dependency Trace
@@ -335,11 +342,21 @@ Current Source Audit
 - **不绕过权限**：Developer 功能不得成为绕过 Auth / Permission / Agent Tool Firewall / Effect Fence / Human Approval 的后门；
 - **不伪造状态**：Provider、Runtime、Agent、Collector、Browser、DB、测试、部署、Feature Flag 状态必须来自真实 State Contract / Health / Evidence；
 - **不破坏双领域隔离**：CTH / BMP 的 Scope、Data Ownership、Permission、Report、Agent Context 不得因 Developer 工具串线；
-- **不制造 Runtime 前置依赖**：开发者页面不可用时，不得导致序境核心生产链停止；
-- **危险操作必须受控**：任何写入、重置、迁移、清理、重新索引、重新运行、Provider 切换、实验开关等动作必须具备权限、确认、幂等/Effect Fence、Audit/Trace、失败恢复；
+- **不制造 Runtime 前置依赖**：开发者页面不可用、未恢复或处于升级中时，不得导致序境核心生产链停止；
+- **危险操作必须受控**：任何写入、重置、迁移、清理、重新索引、重新运行、Provider 切换、实验开关等动作必须具备权限、确认、幂等 / Effect Fence、Audit / Trace、失败恢复；
 - **默认最小权限**：普通产品用户不应看到或操作仅面向研发/管理员的 Developer 控件；具体角色与可见性以当前权限模型审计结果为准。
 
-Developer Settings 的完成标准不是“页面重新出现”，而是：
+当前首发阶段的验收规则：
+
+```text
+Developer historical assets protected
++ no destructive deletion
++ no unresolved dependency that blocks core Production Runtime
++ no secret / permission regression introduced by deferred state
+= NON-BLOCKING FOR INITIAL RELEASE
+```
+
+上线后恢复完成标准仍然不是“页面重新出现”，而是：
 
 ```text
 Historical Capability Evidence
@@ -353,7 +370,7 @@ Historical Capability Evidence
 = VERIFIED
 ```
 
-在上述链路完成前，Developer Settings 状态只能标记为 `PLANNED / IMPLEMENTED / TESTED` 中与真实证据相符的状态，不得仅因页面存在、历史 commit、旧文档或 AI 判断标记 `VERIFIED / RELEASED / OPERATING`。
+因此：**Developer Settings 未恢复不得阻塞首次 RC / Production；但任何历史资产在上线前仍不得未经审计删除。上线稳定后必须按本节完整链路恢复、重设计、调试与验收，未完成前不得宣称该能力 VERIFIED / RELEASED / OPERATING。**
 
 ## 22. Research / Learning
 
