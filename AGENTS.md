@@ -1,6 +1,6 @@
 # AGENTS.md — 序境 / LUMENIS 工程协作与生产收敛总指令
 
-> Version: V3.0
+> Version: V3.1
 > Status: Active
 > Scope: `Zachary-1012/LUMENIS-codex-Clean-OS`
 > Product: **序境 / LUMENIS · Production Core · Production Truth Owner**
@@ -97,11 +97,14 @@ Current Local Worktree / Current Source
 ```text
 序境 / LUMENIS
 │
+├── Global Subject Context
+│   └── Selected Subject
+│
 ├── 序境·商业运营 / LUMENIS Commerce Operations / CTH
-│   └── Subject-first
+│   └── Selected Subject + Commerce Operations Lens
 │
 ├── 序境·品牌市场 / LUMENIS Brand & Market / BMP
-│   └── Brand-first / Primary Focus
+│   └── Selected Subject + Brand & Market Lens
 │
 ├── 序境·内容创作 / LUMENIS Content & Creation
 │   └── Shared Capability Layer
@@ -112,11 +115,30 @@ Current Local Worktree / Current Source
 
 硬规则：
 
+- CTH / BMP **都支持主体可选择**，不得把 CTH 固化为广州太古汇，也不得把 BMP 固化为单一品牌主语。
+- CTH / BMP 共享统一 `Subject Context` 语义；区别来自 Domain Lens、Metric、Relationship、Capability Set 与 Action Chain，而不是分别复制两套主体选择基础设施。
 - CTH / BMP 是领域产品，不是两套长期复制维护的 Core。
 - Content & Creation 是共享能力，不是第三个独立产品。
 - Agent Groups 是跨产品执行与协作层，不是新的产品线。
 - `ZBC`、`Z-Brand-Core`、CorTech 等仅作为历史 / Legacy / engineering compatibility 语义，不得覆盖当前正式产品身份。
-- 广州太古汇是 CTH 中可选择的 `Subject Profile` / 业务主体，不是母产品永久边界。
+- 广州太古汇是 CTH 中当前已有业务规则与生产保护最成熟的可选择 `Subject Profile` / 业务主体，不是母产品或 CTH 的永久边界。
+- 主体选择只改变当前工作上下文，不得改写 Production Truth、Canonical Data、Evidence、历史归属或已确认结果。
+
+统一 Subject Context 目标至少覆盖：
+
+```text
+SubjectContext
+├── subject_id
+├── subject_type
+├── domain
+├── scope
+├── permissions
+├── time_window
+├── locale
+└── context_version
+```
+
+该 Contract 是当前收敛目标，不得绕过真实源码审计直接重写。必须先追踪当前 Route / API / Service / DB / Cache / Permission / Frontend / Report / Export，再做兼容映射。
 
 ---
 
@@ -190,7 +212,7 @@ Source
 - Source
 - Evidence
 - 时间
-- Subject / Brand Scope
+- Subject / Domain Scope
 - Function / Rule
 - Metric
 - 数据版本
@@ -295,9 +317,20 @@ Path
 
 ---
 
-# 6. CTH / Subject Authority：P0 生产保护
+# 6. Unified Subject Context / CTH：P0 生产保护
 
-CTH 采用 Subject-first。
+CTH 与 BMP 共享统一 Subject Context；本节同时对 CTH 的历史主体规则进行 P0 保护。
+
+统一上下文链：
+
+```text
+Selected Subject
+→ Domain Lens
+→ Scope / Permission
+→ Query / Function / Metric
+→ View Model
+→ UI / Report / Export
+```
 
 选择 Subject 只改变当前工作上下文和重点范围，不得改写：
 
@@ -305,6 +338,28 @@ CTH 采用 Subject-first。
 - Evidence
 - 历史事件
 - 已确认业务事实
+- 原始 Subject attribution
+
+Subject Context 必须贯穿并隔离：
+
+```text
+Subject Selector
+→ URL / Router Context
+→ API Context
+→ Permission Validation
+→ Query / Function Scope
+→ Cache Key
+→ Evidence / Trace
+→ Report / Export Snapshot
+```
+
+前端传入 `subject_id` 不构成授权；后端必须重新验证 Subject access。缓存、查询、Metric、Event / Case、Report、Export、Agent Context 不得发生跨 Subject 污染。
+
+CTH 定义：
+
+**Selected Subject + Commerce Operations Lens**。
+
+广州太古汇只是当前一个可选择 Subject Profile。其现有生产规则必须作为兼容与回归保护基线，而不是继续固化为整个 CTH 的永久边界。
 
 必须保护现有源码中实际存在且仍被使用的主体规则，包括但不限于：
 
@@ -321,27 +376,49 @@ CTH 采用 Subject-first。
 
 广州太古汇与其他城市、同名主体或相似商业场景必须严格隔离。
 
+旧广州太古汇主体能力向统一 Subject Context 演进时必须遵循：
+
+```text
+Current Rule Inventory
+→ Dependency Trace
+→ Subject Profile Adapter
+→ Shadow Comparison
+→ Semantic / Result Regression
+→ Cutover only after evidence
+```
+
+禁止直接删除旧规则后凭新通用逻辑假设结果等价。
+
 ---
 
 # 7. BMP / Brand & Market
 
-BMP 采用 Brand-first / Primary Focus。
+BMP 同样支持 Selected Subject，定义为：
 
-Brand Selection 代表当前主要观察焦点，但不得阻止系统继续处理：
+**Selected Subject + Brand & Market Lens**。
 
-- 多品牌
+品牌仍是 BMP 最重要、最常见的 `subject_type` 之一，但不得把 BMP 实现成只能围绕一个固定品牌主语工作的独立上下文体系。
+
+当前 Subject 进入 BMP 后，品牌与市场视角可以继续处理：
+
+- 品牌 / 多品牌
 - 竞品
 - 市场
 - 内容
+- KOS / KOL / KOC / UGC
 - 传播主体
 - 用户反馈
+- 消费者需求
 - 趋势
 - Campaign
 - Event / Case / Risk
 - Benchmark
+- Decision / Action
 - Report / Evaluation
 
-必须保证 Brand Scope、Subject Scope、数据归属、报告、搜索、Agent Context 不串线。
+必须保证 Subject Scope、Domain Scope、数据归属、报告、搜索、缓存、权限、Agent Context 不串线。
+
+**统一 Subject Context 不等于 CTH / BMP 合并。** 两者继续保持不同的领域语义、关系模型、Metric Pack、报告口径与行动链。
 
 ---
 
@@ -697,6 +774,8 @@ Route
 - Motion 用于表达因果、状态与连续性，不是装饰
 - Current + Delta + Freshness + Confidence
 - 时间序列可回溯 Evidence / Event / Case
+- Subject Selector 是产品上下文能力，不得由各页面各自维护隐式主体状态
+- Domain 与 Subject 必须可独立切换，刷新 / Deep Link 后上下文必须可恢复
 
 ### Heritage UI 硬规则
 
@@ -757,14 +836,17 @@ Metric
 
 Search、Import、Export、Notification 必须遵守：
 
-- Scope / Permission
+- Subject / Domain Scope
+- Permission
 - Production Truth
 - Evidence
 - Data Minimization
 - Domain Isolation
 - Error State
 
-不得通过导入或搜索绕过 Subject / Brand / Permission 边界。
+不得通过导入、搜索、URL、Export 或 Notification 绕过 Subject / Domain / Permission 边界。
+
+Report / Export 必须能够固化生成时的 Subject / Domain / Scope / Time Window Snapshot，防止后续切换上下文导致历史输出语义漂移。
 
 ---
 
@@ -815,6 +897,7 @@ Edge
 - 危险操作需要明确权限与审计
 - Agent 写入需要 Action Firewall / Effect Fence
 - 重要结果保留 Evidence / Trace
+- Subject access 必须在服务端校验，不能信任前端选择器或 URL 参数
 
 任何 API Key 只允许通过本地 `.env` / 系统密钥 / 合法 Secret 管理注入。
 
@@ -978,7 +1061,7 @@ P0 优先保护：
 - 启动
 - 数据库 / Migration
 - Production Truth
-- Subject / Brand Scope
+- Subject / Domain Scope
 - Collector / Auth
 - Evidence / Canonical / Metric
 - Runtime / Recovery
@@ -1029,7 +1112,10 @@ P0 优先保护：
 - Runtime Test
 - Permission / Security Test
 - Browser / Critical E2E
-- Subject / Brand Scope Regression
+- Subject / Domain Scope Regression
+- Subject Switch / Domain Switch Isolation Regression
+- Cache Isolation Regression
+- Report / Export Subject Snapshot Regression
 - Time Semantics Regression
 - Collector State / Auth Recovery Regression
 - Report Truth Regression
@@ -1072,6 +1158,10 @@ P0 优先保护：
 > **稳定版本优先于漂亮重构。**
 >
 > **能力可以共享，Truth / DB / Runtime / Ownership 不得模糊。**
+>
+> **CTH 与 BMP 都支持主体可选择；统一 Subject Context，但领域语义与生产边界不得合并。**
+>
+> **主体选择只改变上下文，不得改写 Production Truth。**
 >
 > **数据失败必须显式，不得静默成 0。**
 >
