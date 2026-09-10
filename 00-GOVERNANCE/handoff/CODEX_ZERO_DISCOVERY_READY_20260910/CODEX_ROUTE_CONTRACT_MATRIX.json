@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "static_route_declarations": 843,
+  "runtime_registered_routes": 815,
+  "blueprints": 47,
+  "distinct_frontend_api_references": 180,
+  "ui_api_reference_total": 216,
+  "method_note": "朴素装饰器843 vs 运行时815的差并非全是orphan:多数为未叠加blueprint url_prefix的朴素计数假阳性;真实orphan/duplicate须按url_prefix重算(保留UNKNOWN,不臆断277)",
+  "chain_schema": "FrontendPage→JS consumer→API→Blueprint→Route→Service→DB/Canonical/Evidence→ResponseContract→Test→RuntimeStatus→E2E",
+  "status_legend": ["MATCHED", "BROKEN_404", "FAKE_200_RISK", "DEAD_CONSUMER", "ORPHAN_ROUTE", "DUPLICATE_ROUTE", "LEGACY", "UNKNOWN"],
+  "verified_rows": [
+    {"page": "health", "route": "/healthz", "runtime_status": "MATCHED", "http": 200, "evidence": "P0D_RUNTIME probe"},
+    {"page": "CTH overview", "route": "/lumenis/cth/overview", "runtime_status": "MATCHED", "http": 200, "bytes": 112495, "evidence": "P0D probe"},
+    {"page": "runtime identity", "route": "/api/runtime/identity", "runtime_status": "BROKEN_404", "http": 404, "finding": "模块存在未注册", "ticket": "RUNTIME-REG-1"},
+    {"page": "BMP overview", "route": "/lumenis/bmp/overview", "runtime_status": "BROKEN_404", "http": 404, "finding": "BMP蓝图/路由缺失,对照CTH", "ticket": "ROUTE-BMP-1"}
+  ],
+  "full_matrix_source": "逐路由×前端消费的完整矩阵需基于P0D_SOURCE_CAPABILITY_EVIDENCE(python_files/ui_api_reference_counts)+app.url_map叠url_prefix重算;本轮不臆造,列为TICKET ROUTE-MAP-1",
+  "fake_200_rule": "API返回200但数据为fallback/mock一律FAKE_200_RISK,不得算MATCHED;Flask默认404不得算通过"
+}
