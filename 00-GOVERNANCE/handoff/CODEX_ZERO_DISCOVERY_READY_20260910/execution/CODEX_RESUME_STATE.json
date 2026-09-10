@@ -1,1 +1,28 @@
-{"schema":"CODEX_RESUME_STATE/v1","updated_at":"2026-09-10 21:00:25","current_ticket":"GIT-002","last_closed_ticket":null,"next_ticket":"GIT-002","prerequisite_note":"GIT-001(在线fetch ab67612增量)为canonical对照前置,与GIT-002同在可写终端先做","p0_remaining":20,"p1_remaining":17,"test_failures_remaining":60,"new_regressions":0,"runtime_blockers":["/api/runtime/identity=404→RUNTIME-REG-1","/lumenis/bmp/overview=404→ROUTE-BMP-1","playwright缺失→RUNTIME-GATE-1","canonical在线增量UNKNOWN→GIT-001"],"gate1":"NOT_PASS","gate2":"PARTIAL","gate3":"NOT_PASS","gate4":"NOT_PASS","gate5":"PARTIAL","gate6":"NOT_PASS","last_safe_commit":"2a3be0ab(CleanOS integration/p0c同SHA已在远程)","rollback_point":"integration/p0c=2a3be0a + GIT-002备份分支","next_session_read_order":["AGENTS.md","CODEX_RESUME_STATE.json","current ticket pack"]}
+{
+  "schema": "CODEX_RESUME_STATE/v1",
+  "updated_at": "2026-09-10 22:55:00",
+  "current_ticket": "GIT-002",
+  "last_closed_ticket": "GIT-001(CLOSED_VERIFIED)",
+  "next_ticket": "GIT-002",
+  "prerequisite_note": "GIT-001 is CLOSED_VERIFIED and does not block GIT-002. Handoff branch already exists; resolve its remote HEAD dynamically. GIT-002 only backs up local dirty P0-D work.",
+  "p0_remaining": 19,
+  "p1_remaining": 18,
+  "test_failures_remaining": 60,
+  "new_regressions": 0,
+  "runtime_blockers": [
+    "/api/runtime/identity=404→RUNTIME-REG-1",
+    "/lumenis/bmp/overview=404→ROUTE-BMP-1",
+    "critical E2E toolchain unresolved→RUNTIME-GATE-1",
+    "launcher machine-specific absolute path→RUNTIME-ENTRY-1(required before RC)"
+  ],
+  "canonical_runtime_entry": {"launcher":"scripts/start_production.ps1","supervisor":"run_supervised.py","host":"0.0.0.0","port":8201,"legacy":"run_production.py is not the production start command"},
+  "gate1": "NOT_PASS",
+  "gate2": "PARTIAL(GIT-001 closed; handoff exists; local in-flight backup still pending GIT-002)",
+  "gate3": "NOT_PASS",
+  "gate4": "NOT_PASS",
+  "gate5": "PARTIAL",
+  "gate6": "NOT_PASS",
+  "last_safe_commit": "work/integration baseline=2a3be0ab; handoff remote head must be resolved dynamically at start",
+  "rollback_point": "work/integration baseline 2a3be0ab + current remote handoff branch ref at session start",
+  "next_session_read_order": ["AGENTS.md","CODEX_RESUME_STATE.json","current ticket pack"]
+}
