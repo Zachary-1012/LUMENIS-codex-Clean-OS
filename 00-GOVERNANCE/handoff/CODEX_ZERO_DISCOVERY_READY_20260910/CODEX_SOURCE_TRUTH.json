@@ -1,0 +1,46 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "reuse_basis": {
+    "evidence_commit": "2a3be0ab2ef79cb0274c5b9a21114f3ce2e371af",
+    "current_head": "2a3be0ab2ef79cb0274c5b9a21114f3ce2e371af",
+    "reuse_valid": true,
+    "note": "证据JSON由scripts/build_p0d_capability_evidence.py在HEAD生成,与当前HEAD一致,直接REUSE不重扫;仅app_evidence.py 1M在途(+6/-1)与3个未跟踪文件属增量"
+  },
+  "inventory": {
+    "tracked_files": 3800,
+    "python_files": 983,
+    "python_parse_errors": 0,
+    "ui_files": 100,
+    "functions": 11199,
+    "classes": 1464,
+    "route_declarations": 843,
+    "ui_api_references": 216,
+    "distinct_ui_api_references": 180,
+    "distinct_table_references": 456,
+    "runtime_reachable_python": 241,
+    "unreached_production_candidates": 287
+  },
+  "entrypoints": ["app.py"],
+  "status_legend": ["VERIFIED", "PARTIAL", "UNREACHED", "UNKNOWN", "LEGACY_REFERENCE", "NOT_IMPLEMENTED", "BLOCKED"],
+  "counts_note": "文件存在≠VERIFIED;须有runtime reachability+consumer+test。runtime_reachable_python=241,unreached_production_candidates=287(逐文件清单见audit/p0d/P0D_SOURCE_CAPABILITY_EVIDENCE python_files)",
+  "source_evidence_path": "D:\\LUMENIS_REBUILD\\Z-Brand-Core\\audit\\p0d\\P0D_SOURCE_CAPABILITY_EVIDENCE_20260910.json",
+  "tracked_files": 3800,
+  "python_files": 983,
+  "functions": 11199,
+  "classes": 1464,
+  "route_declarations": 843,
+  "distinct_table_references": 456,
+  "ui_files": 100,
+  "distinct_ui_api_references": 180,
+  "incremental_dirty": {
+    "modified": ["app_evidence.py"],
+    "untracked": ["audit/p0d/", "scripts/build_p0d_capability_evidence.py", "scripts/verify_p0d_runtime_surface.py"]
+  },
+  "canonical_online_delta": {
+    "base": "fc75d87938f3631bec99338c9e059eca34c6a680",
+    "head": "ab67612367c172ced2dff62b44e98de86469d1e6",
+    "verified": "documentation-only",
+    "product_source_drift": false,
+    "note": "GitHub online compare verified fc75d879..ab676123: main is ahead by 5 commits, and the resulting file delta contains only two added handoff Markdown files under 00-GOVERNANCE/handoff; no product source-code file changed in this range. GIT-001 therefore requires no Codex fetch/discovery to establish source drift."
+  }
+}
