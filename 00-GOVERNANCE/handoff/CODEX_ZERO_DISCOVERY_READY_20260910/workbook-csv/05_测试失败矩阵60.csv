@@ -1,0 +1,109 @@
+测试模块,用例,类别,P级,kind,影响能力,需改代码,需环境,需凭证,需外部,过时候选,对应工单,根因提示,报错摘录
+test_account_keepalive,test_check_x_cookie,EXTERNAL_COOKIE,P2,failure,CAP-COL-001,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert 0 > 0
+ +  where 0 = AccountInfo(platform='x', account_id='', account_name='', cookie_path='data/cookies/x.json', cookie_count=0, status=<A...e'>, last_check="
+test_account_keepalive,test_check_jiguang_cookie,EXTERNAL_COOKIE,P2,failure,CAP-COL-001,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert 0 > 0
+ +  where 0 = AccountInfo(platform='jiguang', account_id='', account_name='', cookie_path='data/cookies/jiguang.json', cookie_count=...t_check=17890147"
+test_ad_intelligence,test_baseline_prediction,MISSING_MODULE,P1,failure,CAP-AI-003,Y,,,,,TST-004,测试import ad_intelligence.models但包内无该模块(内部模块缺失/路径漂移),ModuleNotFoundError: No module named 'ad_intelligence.models'
+test_ad_intelligence,test_batch_predict,MISSING_MODULE,P1,failure,CAP-AI-003,Y,,,,,TST-004,测试import ad_intelligence.models但包内无该模块(内部模块缺失/路径漂移),ModuleNotFoundError: No module named 'ad_intelligence.models'
+test_ad_intelligence,test_model_info,MISSING_MODULE,P1,failure,CAP-AI-003,Y,,,,,TST-004,测试import ad_intelligence.models但包内无该模块(内部模块缺失/路径漂移),ModuleNotFoundError: No module named 'ad_intelligence.models'
+test_ad_intelligence,test_extract_features,MISSING_MODULE,P1,failure,CAP-AI-003,Y,,,,,TST-004,测试import ad_intelligence.models但包内无该模块(内部模块缺失/路径漂移),ModuleNotFoundError: No module named 'ad_intelligence.models'
+test_ad_intelligence,test_flat_dict,MISSING_MODULE,P1,failure,CAP-AI-003,Y,,,,,TST-004,测试import ad_intelligence.models但包内无该模块(内部模块缺失/路径漂移),ModuleNotFoundError: No module named 'ad_intelligence.models'
+test_ad_intelligence,test_feature_importance,MISSING_MODULE,P1,failure,CAP-AI-003,Y,,,,,TST-004,测试import ad_intelligence.models但包内无该模块(内部模块缺失/路径漂移),ModuleNotFoundError: No module named 'ad_intelligence.models'
+test_ad_intelligence_platforms,test_proxy_required_blocks_without_proxy,UNKNOWN,P2,failure,CAP-AI-003,,,,,,TST-012,需Codex打开定位,"AssertionError: assert 'api_error' == 'blocked'
+  
+  - blocked
+  + api_error"
+test_ai_channel_flag,test_provider_config_glm_alias_no_keyerror,AI_PROVIDER,P1,failure,CAP-AI-001,Y,Y,,,,TST-006,无云端API key时provider默认回退ollama/别名/网关策略与测试期望冲突,assert None is not None
+test_ai_evaluation,test_provider_chain_default,AI_PROVIDER,P1,failure,CAP-AI-002,Y,Y,,,,TST-006,无云端API key时provider默认回退ollama/别名/网关策略与测试期望冲突,"AssertionError: assert 'ollama' == 'zhipu'
+  
+  - zhipu
+  + ollama"
+test_ai_evaluation,test_central_gateway_policy,AI_PROVIDER,P1,failure,CAP-AI-002,Y,Y,,,,TST-006,无云端API key时provider默认回退ollama/别名/网关策略与测试期望冲突,"AssertionError: assert 'LEGACY_GATEWAY_COMPATIBILITY' == 'CENTRAL_GATEWAY'
+  
+  - CENTRAL_GATEWAY
+  + LEGACY_GATEWAY_COMPATIBILITY"
+test_api_dual_domain,test_existing_system_runtime_has_domain_data,DB_ISOLATION,P0,failure,CAP-API-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",RuntimeError: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_canonical_metrics,test_canonical_matches_live_sql,DATA_FIXTURE,P1,failure,CAP-DATA-003,Y,,,,,TST-007,"测试依赖生产/在线数据非空,隔离库无数据","AssertionError: 生产 notes 不应为空
+assert []"
+test_collector_multi_platform,test_cookie_files_exist_and_parse,EXTERNAL_COOKIE,P2,failure,CAP-COL-001,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: xiaohongshu cookie 文件不存在或为空
+assert 0 > 0"
+test_collector_multi_platform,test_to_cookie_string_non_empty,EXTERNAL_COOKIE,P2,failure,CAP-COL-001,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: xiaohongshu to_cookie_string 为空
+assert 0 > 0
+ +  where 0 = len('')"
+test_collector_multi_platform,test_to_requests_cookies_returns_dict,EXTERNAL_COOKIE,P2,failure,CAP-COL-001,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: xiaohongshu to_requests_cookies 为空
+assert 0 > 0
+ +  where 0 = len({})"
+test_data_quality_subject_rejudge,test_no_data_deletion,DB_ISOLATION,P0,failure,CAP-CORE-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",RuntimeError: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_data_quality_subject_rejudge,test_no_empty_subject_type,DB_ISOLATION,P0,failure,CAP-CORE-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",RuntimeError: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_data_quality_subject_rejudge,test_unknown_is_explicit,DB_ISOLATION,P0,failure,CAP-CORE-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",RuntimeError: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_data_quality_subject_rejudge,test_cth_notes_hit_subject,DB_ISOLATION,P0,failure,CAP-CORE-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",RuntimeError: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_data_quality_subject_rejudge,test_unknown_notes_dont_hit_subject,DB_ISOLATION,P0,failure,CAP-CORE-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",RuntimeError: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_database,test_required_tables_exist,MIGRATION,P0,failure,CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在","AssertionError: 必需的数据表不存在: kos_profiles
+assert 'kos_profiles' in ['runtime_guardian_workers', 'sqlite_sequence', 'runtime_guardian_checkpoints', 'runtime_guardian_dlq', 'skill_exec"
+test_ic_contracts_p1,test_emv_api,AUTH,P1,failure,CAP-API-001,Y,,,,,TST-005,test_client请求未带认证→401(测试未带auth_headers或鉴权契约变化),"assert 401 == 200
+ +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code"
+test_ic_contracts_p1,test_localization_api,AUTH,P1,failure,CAP-API-001,Y,,,,,TST-005,test_client请求未带认证→401(测试未带auth_headers或鉴权契约变化),"assert 401 == 200
+ +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code"
+test_ic_contracts_p1,test_kos_interest_api,AUTH,P1,failure,CAP-API-001,Y,,,,,TST-005,test_client请求未带认证→401(测试未带auth_headers或鉴权契约变化),"assert 401 == 200
+ +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code"
+test_idea_sit_backing,test_report_payload_consumes_circles,DB_ISOLATION,P0,failure,CAP-REP-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",RuntimeError: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_l4_full_chain,test_step_02_config,ENVIRONMENT,P1,failure,CAP-DATA-001,,Y,,,,TST-003,缺少pip依赖 python-dotenv(requirements声明但环境未装),Failed: CONFIG failed: No module named 'dotenv'
+test_l4_full_chain,test_step_09_evidence,DB_ISOLATION,P0,failure,CAP-DATA-001,Y,,,,,TST-002,"测试自身绕过ZBC_DB_PATH硬连仓库data/monitor.db,被P0-C护栏正确拦截",Failed: EVIDENCE failed: P0-C: pytest 禁止连接受保护数据库: D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+test_l4_full_chain,test_step_12_chain_complete,REAL_PRODUCT_DEFECT,P0,failure,CAP-DATA-001,Y,,,,,TST-008,L4全链路步骤失败(见message定位config/evidence/chain),"Failed: CHAIN_COMPLETE failed: 证据链不完整
+assert 0 == 3
+ +  where 0 = len([])"
+test_platform_data_dict_v1,test_raw_tables_exist,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在","AssertionError: Missing raw tables: ['xhs_notes', 'xhs_note_comments', 'xhs_users', 'douyin_videos', 'douyin_comments', 'douyin_users', 'bilibili_videos', 'bilibili_comments', 'bil"
+test_platform_data_dict_v1,test_normalized_tables_exist,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在","AssertionError: Missing normalized table: platform_accounts
+assert 'platform_accounts' in {'ai_call_logs', 'ai_filter_log', 'ai_task', 'ai_task_evidence', 'ai_task_step', 'ai_task_"
+test_platform_data_dict_v1,test_evidence_tables_exist,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在","AssertionError: Missing evidence table: collection_runs
+assert 'collection_runs' in {'ai_call_logs', 'ai_filter_log', 'ai_task', 'ai_task_evidence', 'ai_task_step', 'ai_task_trace'"
+test_platform_data_dict_v1,test_business_tables_exist,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在","AssertionError: Missing business table: brands
+assert 'brands' in {'ai_call_logs', 'ai_filter_log', 'ai_task', 'ai_task_evidence', 'ai_task_step', 'ai_task_trace', ...}
+ +  where {"
+test_platform_data_dict_v1,test_events_extended_columns,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在","AssertionError: events missing column: event_type
+assert 'event_type' in {'ai_provider', 'event_date', 'event_key', 'fact_status', 'first_seen', 'id', ...}"
+test_platform_data_dict_v1,test_platform_contents_has_unique_constraint,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",TypeError: 'NoneType' object is not subscriptable
+test_platform_data_dict_v1,test_xhs_notes_has_liked_count_not_likes,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",AssertionError: assert 'liked_count' in set()
+test_platform_data_dict_v1,test_douyin_videos_has_digg_count,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",AssertionError: assert 'digg_count' in set()
+test_platform_data_dict_v1,test_bilibili_videos_has_view_not_play_count,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",AssertionError: assert 'view' in set()
+test_platform_data_dict_v1,test_registry_has_12_platforms,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",sqlite3.OperationalError: no such table: platform_registry
+test_platform_data_dict_v1,test_only_3_ui_visible,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",sqlite3.OperationalError: no such table: platform_registry
+test_platform_data_dict_v1,test_xiaohongshu_is_active,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",sqlite3.OperationalError: no such table: platform_registry
+test_platform_data_dict_v1,test_planned_platforms_not_ui_visible,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",sqlite3.OperationalError: no such table: platform_registry
+test_platform_data_dict_v1,test_registry_has_required_columns,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在","AssertionError: platform_registry missing column: platform_id
+assert 'platform_id' in set()"
+test_platform_data_dict_v1,test_raw_table_field_naming_compliance,MIGRATION,P0,failure,CAP-COL-001/CAP-DB-002,Y,Y,,,,TST-001,"隔离临时库未bootstrap迁移到v12,测试期望的表/列/约束不存在",AssertionError: assert 'liked_count' in set()
+test_repository_registry,test_config_py_base_dir_still_works,ENVIRONMENT,P1,failure,CAP-DB-001,,Y,,,,TST-003,缺少pip依赖 python-dotenv(requirements声明但环境未装),ModuleNotFoundError: No module named 'dotenv'
+test_repository_registry,test_config_get_config_still_works,ENVIRONMENT,P1,failure,CAP-DB-001,,Y,,,,TST-003,缺少pip依赖 python-dotenv(requirements声明但环境未装),ModuleNotFoundError: No module named 'dotenv'
+test_repository_registry,test_no_hardcoded_paths_in_production_py,REAL_PRODUCT_DEFECT,P1,failure,CAP-DB-001,Y,,,,,TST-009,去硬编码守卫在生产代码发现1处硬编码路径(需定位具体文件),"AssertionError: 生产代码中发现 1 处硬编码路径:
+  08-AUDIT\audit_before.py:15: ROOT = Path(r""D:\Taikoo-monitor-new"")
+assert not ['08-AUDIT\\audit_before.py:15: ROOT = Path(r""D:\\Taikoo-monitor-n"
+test_repository_registry,test_db_path_in_modified_files_points_to_data_dir,OLD_CONTRACT,P1,failure,CAP-DB-001,Y,,,,Y,TST-010,"测试编码旧行为(隔离路径应==monitor.db/circles字段),与去硬编码/viewmodel演进冲突","AssertionError: assert 'C:\\Users\\2...\\isolated.db' == 'D:\\LUMENIS_...a\\monitor.db'
+  
+  - D:\LUMENIS_REBUILD\Z-Brand-Core\data\monitor.db
+  + C:\Users\28049\AppData\Local\Temp"
+test_secondary_platforms_main,test_detail_not_implemented,EXTERNAL_OFFLINE,P2,failure,CAP-COL-002,,Y,,Y,Y,TST-011,"依赖真实平台/CDP/bs4在线解析,离线隔离下失败","AssertionError: assert <CollectionSt...SION_EXPIRED'> == <CollectionSt...OLLECT_ERROR'>
+  
+  - COLLECT_ERROR
+  + SESSION_EXPIRED"
+test_secondary_platforms_main,test_comments_not_implemented,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert <CollectionSt...SION_EXPIRED'> == <CollectionSt...OLLECT_ERROR'>
+  
+  - COLLECT_ERROR
+  + SESSION_EXPIRED"
+test_sogou_adapters,test_parse_channel_with_bs4,EXTERNAL_OFFLINE,P2,failure,CAP-COL-002,,Y,,Y,Y,TST-011,"依赖真实平台/CDP/bs4在线解析,离线隔离下失败","assert 0 >= 1
+ +  where 0 = len([])"
+test_tenacity_retry,test_cdp_online_retries_on_transient_failure,ENVIRONMENT,P1,failure,CAP-RUN-001,,Y,,,,TST-003,缺少pip依赖 tenacity(requirements声明但环境未装),ModuleNotFoundError: No module named 'tenacity'
+test_tenacity_retry,test_cdp_online_tenacity_importable,ENVIRONMENT,P1,failure,CAP-RUN-001,,Y,,,,TST-003,缺少pip依赖 tenacity(requirements声明但环境未装),ModuleNotFoundError: No module named 'tenacity'
+test_weibo_v4_adapter,test_search_success_returns_notes,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert False is True
+ +  where False = AdapterResult(success=False, notes=[], error='微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json', raw_count=0, duration_s"
+test_weibo_v4_adapter,test_search_empty_returns_success,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert False is True
+ +  where False = AdapterResult(success=False, notes=[], error='微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json', raw_count=0, duration_s"
+test_weibo_v4_adapter,test_search_api_error_login,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert '登录' in '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json'
+ +  where '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json' = AdapterResult(success=Fal"
+test_weibo_v4_adapter,test_search_api_error_captcha,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert ('验证' in '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json' or '风控' in '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json')
+ +  where '微博 cookie 缺失或"
+test_weibo_v4_adapter,test_search_max_results_truncation,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert 0 == 3
+ +  where 0 = len([])
+ +    where [] = AdapterResult(success=False, notes=[], error='微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json', raw_count"
+test_weibo_v4_adapter,test_search_exception_handled,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert '异常' in '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json'
+ +  where '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json' = AdapterResult(success=Fal"
