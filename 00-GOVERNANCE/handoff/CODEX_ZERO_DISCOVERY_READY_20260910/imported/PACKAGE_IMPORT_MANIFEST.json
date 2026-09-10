@@ -1,6 +1,6 @@
 {
-  "schema": "LUMENIS_GIT_IMPORT_MANIFEST/v2",
-  "status": "COMPLETE_VERIFIED_CONTENT_CONVERSION",
+  "schema": "LUMENIS_GIT_IMPORT_MANIFEST/v3",
+  "status": "COMPLETE_VERIFIED_CONTENT_CONVERSION_WITH_FINAL_CONSOLIDATED_AUDIT",
   "target_repository": "Zachary-1012/LUMENIS-codex-Clean-OS",
   "target_branch": "handoff/codex-zero-discovery-ready-20260910",
   "scope": "handoff/evidence only",
@@ -17,6 +17,21 @@
       "sha256": "3b9ca80444f411b87cfe045daae6ac408e17b75d5d346dbb10aff1d578be149a",
       "entry_count": 5,
       "content_conversion": "VERIFIED_DEDUPED"
+    },
+    {
+      "name": "LUMENIS_CODEX_FINAL_CONSOLIDATED_20260910.zip",
+      "uploaded_alias": "LUMENIS_CODEX_FINAL_CONSOLIDATED_20260910(1).zip",
+      "sha256": "0f2366373515fa95bc4f31d54286749e7a8bd5bfbfca71f85bdf554f8c032ec9",
+      "size_bytes": 563757,
+      "entry_count": 91,
+      "json_files": 69,
+      "json_parse_errors": 0,
+      "ticket_pack_count": 41,
+      "exec_plan_count": 7,
+      "xlsx_files": 3,
+      "docx_files": 2,
+      "handling": "AUDITED_AND_INDEXED_AS_FINAL_SOURCE; DO_NOT overwrite normalized execution truth with stale generation-time metadata",
+      "audit": "final-consolidated/FINAL_CONSOLIDATED_AUDIT_20260910.json"
     }
   ],
   "coverage_manifest": "text-packages-v2/SOURCE_COVERAGE_MANIFEST.json",
@@ -24,9 +39,11 @@
   "legacy_text_package_status": "DEPRECATED_INCOMPLETE_ARCHIVE_SHARDS",
   "current_truth_override": "../execution/CURRENT_TRUTH_OVERRIDE_20260910.json",
   "external_truth_patch": "../EXTERNAL_TRUTH_SYNC_PATCH_20260910.md",
+  "final_consolidated_precedence": "live worktree/source/runtime/test evidence > CURRENT_TRUTH_OVERRIDE > normalized execution files > final consolidated source snapshot/audit > older source packages",
   "source_mutated": false,
   "test_mutated": false,
   "database_mutated": false,
+  "runtime_config_mutated": false,
   "main_branch_mutated": false,
   "product_readiness": "NOT_READY"
 }
