@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "scope": "只做前置实施映射,本轮不实现Subject功能(指令§12)",
+  "online_governance": "CTH/BMP向Selected Subject Context收口(CAP-CORE-001 Subject Authority)",
+  "core_modules": [
+    {"file": "ai_domain_context.py", "role": "AI域上下文"},
+    {"file": "collector_v2/pipeline/subject_filter.py", "role": "support"},
+    {"file": "domain_isolation.py", "role": "域隔离"},
+    {"file": "subject_classifier.py", "role": "分类器"},
+    {"file": "subject_context.py", "role": "上下文持有/传播"},
+    {"file": "subject_rules.py", "role": "规则/权威判定"}
+  ],
+  "consumer_files": ["00-GOVERNANCE/_path_backup/tests_test_v2_p0_2_3.py", "00-GOVERNANCE/_scan_output/update_subject_rules.py", "ai_domain_context.py", "api_dual_domain.py", "app.py", "canonical_data.py", "domain_adapter.py", "domain_isolation.py", "evidence_chain.py", "intelligence_library/07_Data-Evidence-Evaluation/OSAI测试证据/test_canonical_data_and_evidence_graph.py", "intelligence_library/07_Data-Evidence-Evaluation/OSAI测试证据/test_v2_p0_2_3.py", "intelligence_library/10_工程审计方法/治理架构/00-GOVERNANCE/_path_backup/tests_test_v2_p0_2_3.py", "intelligence_library/10_工程审计方法/治理架构/00-GOVERNANCE/_scan_output/update_subject_rules.py", "production_evidence_contract.py", "scripts/audit_tools/scan_zbc_owned.py", "subject_context.py", "subject_rules.py"],
+  "test_modules": ["tests/test_ai_domain_context.py", "tests/test_data_quality_subject_rejudge.py", "tests/test_kos_subject_ownership.py", "tests/test_subject_context_isolation.py", "tests/test_subject_dual_dimension.py", "tests/test_subject_redline.py"],
+  "propagation_to_map": ["CTH consumers", "BMP consumers", "API consumers", "DB filters", "cache", "report", "event", "risk", "campaign", "KOS", "podcast/research"],
+  "known_findings": ["BMP overview 404(对照CTH 200)→BMP消费链缺路由", "test_data_quality_subject_rejudge 5项硬连受保护库被护栏拦(DB_ISOLATION,非subject逻辑缺陷)"],
+  "implementation_status": "NOT_STARTED (待DB/Runtime主链收口后由Codex按本图研发)"
+}
