@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "scope": "只出实施地图,不重设计;Legacy UI仅作capability evidence,最终遵循LUMENIS Design System(指令§13)",
+  "templates_top_level": ["auth", "auth_recovery_modal.html", "base.html", "cth", "system", "zbmp"],
+  "templates_count": 6,
+  "static_assets_count": 97,
+  "ui_files_total_evidence": 100,
+  "responsive_breakpoints": "NEEDS_CODEX_RESOLVE(未在本轮逐CSS核,不臆断断点)",
+  "per_page_required_fields": ["route", "template/component", "API", "data", "state", "responsive_issue", "ux_issue", "missing_capability", "codex_ticket"],
+  "verified_pages": [
+    {"route": "/lumenis/cth/overview", "render": "200/112495B(服务端渲染成功)"},
+    {"route": "/lumenis/bmp/overview", "render": "404(缺)", "ticket": "ROUTE-BMP-1"},
+    {"route": "/healthz", "render": "json 200"}
+  ],
+  "frontend_api_distinct_refs": 180,
+  "note": "完整逐页地图基于P0D_SOURCE ui_files/ui_api_reference_counts生成;本轮锁定规模与已证断点,不逐页臆造"
+}
