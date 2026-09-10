@@ -1,0 +1,21 @@
+{
+  "schema":"LUMENIS_CURRENT_TRUTH_OVERRIDE/v1",
+  "generated_at":"2026-09-10 23:05:00",
+  "precedence":["current worktree/source/runtime/test evidence","this override","normalized execution files","historical/source package snapshots"],
+  "canonical_repo":"Zachary-1012/LUMENIS-codex-Clean-OS",
+  "canonical_main_baseline":"ab67612367c172ced2dff62b44e98de86469d1e6",
+  "git_001":"CLOSED_VERIFIED",
+  "first_ticket":"GIT-002",
+  "handoff_branch":"handoff/codex-zero-discovery-ready-20260910",
+  "handoff_head_policy":"DYNAMIC_REMOTE_REF; resolve at session start; never treat c8a57c0 as current",
+  "ticket_universe":41,
+  "priority_counts_in_source_package":{"P0":20,"P1":18,"P2":3},
+  "p0_remaining":19,
+  "p1_remaining":18,
+  "known_failures":60,
+  "canonical_runtime":{"launcher":"scripts/start_production.ps1","supervisor":"run_supervised.py","host":"0.0.0.0","port":8201,"legacy_launcher":"run_production.py"},
+  "runtime_entry_ticket":"RUNTIME-ENTRY-1 required before RC",
+  "known_runtime_findings":{"/healthz":200,"/lumenis/cth/overview":200,"/api/runtime/identity":404,"/lumenis/bmp/overview":404},
+  "source_worktree_freeze":{"head":"2a3be0ab2ef79cb0274c5b9a21114f3ce2e371af","dirty":["app_evidence.py"],"untracked":["audit/p0d/","scripts/build_p0d_capability_evidence.py","scripts/verify_p0d_runtime_surface.py"],"protected_db_sha256":"fa10e00c9eb98995a643a47823e72b533ffc11763b22e9516bd13a6c40c1fa6f","status":"source snapshot; cheap recheck required at session start"},
+  "rules":["No full-repo rediscovery when freeze anchors match","No direct push/force to main","No real DB mutation","Do not delete tests to obtain green status","No secret/cookie/token logging","PASS requires runtime/test/evidence, not file existence"]
+}

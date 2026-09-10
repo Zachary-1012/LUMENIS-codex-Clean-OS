@@ -1,0 +1,16 @@
+{
+  "schema":"LUMENIS_FINAL_CONSOLIDATED_AUDIT/v1",
+  "source_archive":"LUMENIS_CODEX_FINAL_CONSOLIDATED_20260910.zip",
+  "source_size_bytes":563757,
+  "source_sha256":"0f2366373515fa95bc4f31d54286749e7a8bd5bfbfca71f85bdf554f8c032ec9",
+  "entry_count":91,
+  "json_parse_check":"PASS (all source JSON parseable)",
+  "source_execution_ticket_packs":41,
+  "source_exec_plans":7,
+  "source_ticket_priority_counts":{"P0":20,"P1":18,"P2":3},
+  "source_resume_state":{"current_ticket":"GIT-002","p0_remaining":19,"p1_remaining":18,"failures_remaining":60},
+  "source_self_check":"PASS 20/20",
+  "source_findings_corrected_in_normalized_layer":["source-package handoff HEAD c8a57c0 is not current after governance imports","final closure text still said GIT-001 not fetched/handoff branch absent","self-check ledger detail said ledger mismatch despite equal 41-ticket sets","RUNTIME-GATE-1 referenced legacy run_production.py","RUNTIME-ENTRY-1 attempted python py_compile on PowerShell .ps1","binary master checklist remains an older 40-ticket snapshot; execution JSON is authoritative at 41"],
+  "doubao_additional_work_required":false,
+  "reason":"Remaining issues are deterministic normalization/current-remote-drift corrections; no new repository discovery is needed."
+}

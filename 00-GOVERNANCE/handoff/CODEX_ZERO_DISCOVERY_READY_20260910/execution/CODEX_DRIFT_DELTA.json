@@ -1,1 +1,13 @@
-{"schema":"CODEX_DRIFT_DELTA/v1","generated_at":"2026-09-10 21:00:25","FREEZE_MATCH":"YES","baseline":"CODEX_RESUME_PACK.json @ 2a3be0a","drift_items":[{"id":"WORKTREE","status":"NO_DRIFT","evidence":"HEAD 2a3be0a / 1M app_evidence.py / 3?? 与基线一致"},{"id":"PROTECTED_DB","status":"NO_DRIFT","evidence":"sha256 fa10e00c9eb98995a643a47823e72b533ffc11763b22e9516bd13a6c40c1fa6f size 1142784 与基线 fa10e00c…/1142784 一致"},{"id":"CANONICAL_ONLINE","status":"KNOWN_DRIFT","evidence":"fc75→ab67612 增量UNKNOWN","action":"GIT-001"},{"id":"INREPO_GOVERNANCE_HANDOFF_DIR","status":"ABSENT","evidence":"00-GOVERNANCE/handoff/ 本地不存在","action":"GIT-002在handoff分支放入execution包"},{"id":"PART_SPLIT_FILES","status":"ABSENT_BUT_NOT_NEEDED","evidence":"part01-21不存在;实际为完整单文件且301/60/40齐全","action":"REUSE完整单文件,不分片"},{"id":"HANDOFF_BRANCH","status":"ABSENT","evidence":"无 handoff/codex-zero-discovery-ready-20260910","action":"GIT-002"}],"no_rediscovery_performed":["983 py files","301 DB entries","60 failures","五仓关系","capability inventory"]}
+{
+  "schema":"CODEX_DRIFT_DELTA/v1",
+  "generated_at":"2026-09-10 23:05:00",
+  "baseline":"source package + verified GitHub current truth",
+  "drift_items":[
+    {"id":"WORKTREE","status":"RECHECK_AT_SESSION_START","evidence":"Source package recorded HEAD 2a3be0ab, modified app_evidence.py and three untracked P0-D artifacts.","action":"Only git HEAD/status + protected DB sha256; if equal, reuse all frozen discovery."},
+    {"id":"CANONICAL_ONLINE","status":"RESOLVED","evidence":"GIT-001 CLOSED_VERIFIED: fc75d879→ab676123 compare audited.","action":"none unless new main drift is explicitly detected"},
+    {"id":"HANDOFF_BRANCH","status":"RESOLVED","evidence":"handoff/codex-zero-discovery-ready-20260910 exists remotely.","action":"resolve its HEAD dynamically at session start"},
+    {"id":"RUNTIME_ENTRY","status":"RESOLVED_IDENTITY_PENDING_PORTABILITY","evidence":"canonical=scripts/start_production.ps1→run_supervised.py, default 0.0.0.0:8201; run_production.py is legacy.","action":"RUNTIME-ENTRY-1 before RC"},
+    {"id":"TICKET_UNIVERSE","status":"RESOLVED","evidence":"41 ticket packs, 7 exec plans; GIT-001 historical closed; FIRST_TICKET=GIT-002.","action":"use normalized execution JSON, not stale 40-ticket workbook"}
+  ],
+  "no_rediscovery_default":["full repo tree","301 DB anchors","60 failure reclassification","five-repo research","architecture redesign"]
+}
