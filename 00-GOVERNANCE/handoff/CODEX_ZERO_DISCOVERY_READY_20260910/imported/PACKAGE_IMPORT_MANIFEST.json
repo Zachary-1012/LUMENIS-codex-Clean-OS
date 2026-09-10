@@ -1,7 +1,32 @@
 {
-  "schema": "LUMENIS_GIT_IMPORT_MANIFEST/v1",
-  "status": "CHECKPOINT_COMMITTED_PENDING_REMAINING_IMPORT",
+  "schema": "LUMENIS_GIT_IMPORT_MANIFEST/v2",
+  "status": "COMPLETE_VERIFIED_CONTENT_CONVERSION",
   "target_repository": "Zachary-1012/LUMENIS-codex-Clean-OS",
   "target_branch": "handoff/codex-zero-discovery-ready-20260910",
-  "note": "Import in progress. Do not mark COMPLETE until all converted execution/ticket/workbook artifacts are online-verified."
+  "scope": "handoff/evidence only",
+  "source_packages": [
+    {
+      "name": "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip",
+      "sha256": "94b00c495d6b390b3e38da7984f1a2ef4469a8e24f60e773854bb1868c5bf739",
+      "entry_count": 85,
+      "content_conversion": "VERIFIED",
+      "byte_exact_legacy_archive_reconstruction": "NOT_CLAIMED"
+    },
+    {
+      "name": "LUMENIS_PRE_CODEX_FINAL_SUPPLEMENT_5_20260910.zip",
+      "sha256": "3b9ca80444f411b87cfe045daae6ac408e17b75d5d346dbb10aff1d578be149a",
+      "entry_count": 5,
+      "content_conversion": "VERIFIED_DEDUPED"
+    }
+  ],
+  "coverage_manifest": "text-packages-v2/SOURCE_COVERAGE_MANIFEST.json",
+  "legacy_text_package_manifest": "text-packages/PACKAGE_MANIFEST.json",
+  "legacy_text_package_status": "DEPRECATED_INCOMPLETE_ARCHIVE_SHARDS",
+  "current_truth_override": "../execution/CURRENT_TRUTH_OVERRIDE_20260910.json",
+  "external_truth_patch": "../EXTERNAL_TRUTH_SYNC_PATCH_20260910.md",
+  "source_mutated": false,
+  "test_mutated": false,
+  "database_mutated": false,
+  "main_branch_mutated": false,
+  "product_readiness": "NOT_READY"
 }
