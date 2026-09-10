@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "single_production_entrypoint": "scripts/start_production.ps1 (canonical online source); starts run_supervised.py --host 0.0.0.0 --port 8201. CURRENT P0: $Root hard-coded to D:\\Taikoo-monitor-new -> RUNTIME-ENTRY-1.",
+  "entry_candidates": {
+    "app.py": "Flask app=工厂主入口",
+    "run_production.py": "LEGACY compatibility launcher only; explicit redirect notice to scripts/start_production.ps1; default 8200 is not canonical production port",
+    "run_supervised.py": "受监督启动",
+    "runtime_bin.py": "运行时二进制封装(有test_runtime_bin)",
+    "runtime_preflight.py": "启动前检查(有测试)",
+    "runtime_identity.py": "运行时身份(/api/runtime/identity蓝图,当前未注册→404)",
+    "runtime_guardian.py": "运行时守护",
+    "scripts/start_production.ps1": "CANONICAL production launcher; starts run_supervised.py --host 0.0.0.0 --port 8201; hardcoded old Root pending RUNTIME-ENTRY-1"
+  },
+  "blueprints_registered": 47,
+  "routes_registered_runtime": 815,
+  "isolated_probe_evidence": {
+    "mode": "isolated-test-client",
+    "network": "offline",
+    "database": "os-temp/test/monitor.db",
+    "pass": true,
+    "protected_unchanged": true,
+    "probes": [
+      {"path": "/healthz", "status": 200, "content_type": "application/json", "bytes": 462},
+      {"path": "/api/runtime/identity", "status": 404, "content_type": "text/html; charset=utf-8", "bytes": 207},
+      {"path": "/lumenis/cth/overview", "status": 200, "content_type": "text/html; charset=utf-8", "bytes": 112495},
+      {"path": "/lumenis/bmp/overview", "status": 404, "content_type": "text/html; charset=utf-8", "bytes": 207}
+    ]
+  },
+  "known_broken_probes": [
+    {"path": "/api/runtime/identity", "status": 404, "finding": "runtime_identity.py存在但路由未在app注册(UNREACHED)"},
+    {"path": "/lumenis/bmp/overview", "status": 404, "finding": "BMP总览404而CTH总览200,蓝图/路由缺失(对照CAP-CORE-002)"}
+  ],
+  "commands": {
+    "START_ISOLATED_RUNTIME": "$env:ZBC_DB_PATH='<os-temp>/monitor.db'; .\\.venv\\Scripts\\python.exe run_supervised.py --host 127.0.0.1 --port 8201  (first keep protected-DB guard active; canonical full launcher only after RUNTIME-ENTRY-1 path fix)",
+    "STOP_RUNTIME": "Ctrl-C / Stop-Process (按启动PID)",
+    "HEALTH_CHECK": "GET /healthz (隔离探测已证200, application/json)",
+    "DUMP_ROUTES": "python scripts/verify_p0d_runtime_surface.py (复现815路由/47蓝图/4探测)",
+    "VERIFY_DB_IDENTITY": "GET /api/runtime/identity (当前404→Ticket RUNTIME-REG-1 修复后应200)",
+    "VERIFY_PROTECTED_DB": "对比运行前后 data/monitor.db 的sha256/size(应不变;基线见RESUME_PACK.PROTECTED_DATABASES)",
+    "RUN_P0_TESTS": "python -m pytest tests -m \"not online\" -q (conftest自动隔离,禁cacheprovider)",
+    "RUN_RUNTIME_TESTS": "python -m pytest tests/test_runtime_identity_v1.py tests/test_runtime_preflight.py tests/test_runtime_bin.py -q",
+    "RUN_CRITICAL_E2E": "NEEDS_CODEX_RESOLVE(无playwright;CAP-REL/UI E2E待建,见TICKETS)",
+    "START_PRODUCTION_AFTER_ENTRY_FIX": "powershell -ExecutionPolicy Bypass -File scripts\\start_production.ps1 ; then GET http://127.0.0.1:8201/healthz"
+  },
+  "background_jobs_scheduler": "UNKNOWN(scheduler依赖apscheduler/schedule,当前环境MISSING;runtime后台采集/心跳线程清单需Codex从app启动链确认)",
+  "ai_startup_dependency": "云AI不得为启动硬依赖(ZBC_TEST_OFFLINE降级链;生产缺key应回退local_rule)",
+  "legacy_entrypoint": "run_production.py explicitly marked LEGACY; default port 8200; do not use as canonical production gate.",
+  "production_port": 8201
+}
