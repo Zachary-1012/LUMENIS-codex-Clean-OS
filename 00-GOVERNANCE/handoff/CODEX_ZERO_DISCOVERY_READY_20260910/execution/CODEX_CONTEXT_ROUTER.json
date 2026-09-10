@@ -1,0 +1,1 @@
+{"schema":"CODEX_CONTEXT_ROUTER/v1","sharded":true,"index":"CODEX_CONTEXT_ROUTER.index.json","read_rule":"Use the index to load only the shard containing the current ticket. Do not expand to all shards unless required by a documented blocker."}
