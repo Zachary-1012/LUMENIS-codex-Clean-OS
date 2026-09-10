@@ -1,0 +1,16 @@
+维度,内容
+Subject核心模块,ai_domain_context.py;collector_v2/pipeline/subject_filter.py;domain_isolation.py;subject_classifier.py;subject_context.py;subject_rules.py
+Subject消费文件数,17: 00-GOVERNANCE/_path_backup/tests_test_v2_p0_2_3.py;00-GOVERNANCE/_scan_output/update_subject_rules.py;ai_domain_context.py;api_dual_domain.py;app.py;canonical_data.py;domain_adapter.py;domain_isolation.py;evidence_chain.py;intelligence_library/07_Data-Evidence-Evaluation/OSAI测试证据/test_canonical_data_and_evidence_graph.py;intelligence_library/07_Data-Evidence-Evaluation/OSAI测试证据/test_v2_p0_2_3.py;intelligence_library/10_工程审计方法/治理架构/00-GOVERNANCE/_path_backup/tests_test_v2_p0_2_3.py;intelligence_library/10_工程审计方法/治理架构/00-GOVERNANCE/_scan_output/update_subject_rules.py;production_evidence_contract.py;scripts/audit_tools/scan_zbc_owned.py;subject_context.py;subject_rules.py
+Subject测试,tests/test_ai_domain_context.py;tests/test_data_quality_subject_rejudge.py;tests/test_kos_subject_ownership.py;tests/test_subject_context_isolation.py;tests/test_subject_dual_dimension.py;tests/test_subject_redline.py
+UI templates/static,"6 / 97 (ui_total证据=100, 前端distinct引用=180)"
+UI templates清单,auth;auth_recovery_modal.html;base.html;cth;system;zbmp
+Security:DB write permission,PARTIAL | permission_gate存在;但多模块硬编码连接绕过统一入口(见DB MAP HARD_CODED_BYPASS) | 
+Security:Agent/tool action permission,"PARTIAL | agent_security/p2_action_firewall存在,有test_ai_permission_matrix/test_agent_security | 逐tool白名单未全核"
+Security:Browser permission,"UNKNOWN | ai_browser_runtime存在,CDP 9222;权限边界未在本轮验证 | "
+Security:Secrets/.env,ENV_GAP | Z-Brand-Core无.env;真实智谱key在D:\Taikoo-monitor-new\.env(不得读取/打印值);app._load_dotenv仅填不存在的key | 
+Security:PII/minimization,"UNKNOWN | 未审计,保留UNKNOWN | "
+Security:Migration rollback,PARTIAL | database_migrations有SQLite Backup API/set_version(commit=False);回滚演练未做(P0C-C carry-over) | 
+Security:Runtime crash recovery,PARTIAL | auto_recovery/runtime_guardian/auth_recovery_center存在并有测试;真实kill恢复未演练 | 
+Security:Scheduler/collector failure & circuit breaker,PARTIAL | ai_channel provider breaker(conftest复位);采集侧collection_quality_gate;端到端故障注入未做 | 
+Env已装,Python3.14.7/Node22.23.2/npm10.9.8/flask3.1.3/sqlalchemy2.0.52/alembic1.19.2/openpyxl3.1.5/requests2.34.2/httpx0.28.1/pytest9.1.1
+Env缺失,"python-dotenv,tenacity,pandas,numpy,schedule,apscheduler,websocket-client,playwright(py),zhipuai,openai,sklearn;无pnpm;node_modules缺;.venv缺;ZBC无.env"
