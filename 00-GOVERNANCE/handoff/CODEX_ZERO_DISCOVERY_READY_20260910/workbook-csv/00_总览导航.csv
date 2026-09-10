@@ -1,0 +1,16 @@
+﻿项,内容
+交付主题,"LUMENIS/序境 — 五仓Truth Lock + Codex Zero-Discovery 前置交接(只读审计,不改代码)"
+生成时间,2026-09-10 12:51:54
+Canonical Repo,Zachary-1012/LUMENIS-codex-Clean-OS
+Canonical HEAD(线上),"ab67612367c172ced2dff62b44e98de86469d1e6 (online ls-remote); locally readable baseline fc75d87 (DRIFT, content delta UNKNOWN→GIT-001)"
+活动仓 / 分支 / HEAD,D:\LUMENIS_REBUILD\Z-Brand-Core / integration/p0d-capability-recovery-v1 / 2a3be0a
+Working Tree,"1M app_evidence.py + 3?? untracked, 0 staged(进场=出场,未改变)"
+全量测试,"4133 collected / 60 failed / 0 error / 9 skipped / 381.5s(conftest强隔离,受保护库跑前后hash不变)"
+Codex 工单,40 张(P0=20/P1=17/P2=3;P0-BLOCKING=12)
+能力登记,37 项 CAPABILITY(Cross-Repo Diff)
+DB连接锚点,301 文件命中;根级 77 文件含 sqlite3.connect
+生产状态,"NOT_READY(六Gate未过,禁止提前宣布Production)"
+本会话物理BLOCK,沙箱禁止git写对象:fetch/clone/add/commit/push 均 Permission denied → GIT-001/GIT-002 交Codex正常终端
+零变更声明,WORKTREE_MUTATED=NO; FILES_CREATED(仓内)=0; 源码/测试/DB/Git零修改;产物全部落在仓外目录
+产物目录,D:\LUMENIS_REBUILD\CODEX_ZERO_DISCOVERY_HANDOFF_20260910 (14 JSON + 2 MD)
+Sheet导航,01指令覆盖 / 02五仓Baseline / 03能力37 / 04DB连接 / 05测试失败60 / 06工单40 / 07DAG / 08TruthOwner / 09Runtime路由 / 10Subject-UI-Sec-Env / 11能力找回 / 12Gate回传
