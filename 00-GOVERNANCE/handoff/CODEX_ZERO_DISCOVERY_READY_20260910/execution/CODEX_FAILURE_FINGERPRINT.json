@@ -1,0 +1,1 @@
+{"schema":"CODEX_FAILURE_FINGERPRINT/v1","sharded":true,"index":"CODEX_FAILURE_FINGERPRINT.index.json","read_rule":"Use fingerprint shards for delta comparison; do not re-analyze all failures unless a new regression requires it."}
