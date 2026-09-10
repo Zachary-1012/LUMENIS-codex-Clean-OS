@@ -1,0 +1,3 @@
+测试模块,用例,类别,P级,kind,影响能力,需改代码,需环境,需凭证,需外部,过时候选,对应工单,根因提示,报错摘录
+test_weibo_v4_adapter,test_search_exception_handled,EXTERNAL_COOKIE,P2,failure,CAP-COL-002,,Y,Y,Y,,TST-011,"依赖真实平台cookie/凭证,干净环境缺失(非生产缺陷)","AssertionError: assert '异常' in '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json'
+ +  where '微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json' = AdapterResult(success=Fal"
