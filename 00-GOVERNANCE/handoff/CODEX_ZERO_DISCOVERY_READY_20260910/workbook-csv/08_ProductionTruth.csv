@@ -1,0 +1,18 @@
+业务域,写者,读者,Owner,表,API,前端,运行时路径,测试,fallback,Owner状态
+Evidence,evidence_chain.py / evidence_store.py / app_evidence.py(在途) / content_generation.record_evidence,evidence view/export,UNRESOLVED-MULTIPLE,"app_evidence_records, content_generation_evidence, evidence_*",/api/evidence*,Evidence页,多写者并存,"test_evidence_export(外部写,见I2)",静默fallback风险,OWNER_CONFLICT(CAP-DATA-001)
+Canonical Data,canonical_data.persist_canonical(传参连接),canonical view/model,canonical_data.py候选,canonical_*,/api/canonical*,Canonical视图,调用方决定db_path(MULTIPLE入口),"test_canonical_metrics(依赖生产数据,失败)",-,OWNER_CONFLICT(CAP-DATA-002)
+Metric,"canonical_metrics.py(无直连,经canonical_data)",metric read,canonical_metrics.py候选,canonical/metric聚合,/api/metrics*,Metric看板,计算层与取数层分离,test_canonical_metrics,空数据风险,PARTIAL(CAP-DATA-003 MULTIPLE)
+Collection,collector_v2/* + 平台adapter(weibo/xhs/douyin/bili/sogou),collection_quality_gate,collector_v2 pipeline,raw_* / platform_registry(隔离库缺失→16失败),/api/collect*,采集页,离线/在线适配,test_weibo/sogou/secondary(离线失败),cookie缺失SESSION_EXPIRED,PARTIAL(CAP-COL-*)
+Subject/CTH/BMP,subject_rules+subject_context+domain_isolation+ai_domain_context,CTH/BMP overview,subject_rules.py(Selected Subject Authority),subject/profile,/lumenis/cth|bmp/*,CTH=200/BMP=404,"CTH主消费,BMP缺路由",test_subject_* / subject_rejudge(护栏拦截),-,PARTIAL(CAP-CORE-001/002)
+Event/Case/Risk,event_graph.py / public_opinion_cases.py / ip_risk_state_machine.py,对应API,各模块(存在硬编码连接),events/cases/risk_*,/api/event*等,事件/案例/风险页,硬编码旁路待收口,-,-,PARTIAL
+Campaign/KOS,kos_engine/kos_attribution/kos_*,kos_routes,kos_engine,kos_*,/api/kos*,KOS页,kos_attribution硬编码连接,test_ic_contracts kos_interest(401),-,PARTIAL
+Report/Export,report_export/report_engine.py + export_report.py,report API,report_engine候选,report_*,/api/report*,报告页,report_engine硬编码BASE/data,-,-,PARTIAL(CAP-REP-001)
+AI/Agent,"ai_channel/intelligence(产品内) + Zachary-OS-AI(外部智能层,契约)",ai gateway API,产品内ai_channel为唯一runtime owner;OSAI仅contract,ai token/调用日志,/api/ai*,AI设置,OSAI不得成为第二AI Truth,test_ai_*(离线默认契约失败3),无key回退ollama/rule,BOUNDARY_DEFINED(CAP-AI-*)
+Permission/Security,permission_gate.py + p2_action_firewall + agent/safety/security_boundary,auth_recovery_*,permission_gate.py(deny-by-default;测试旁路),-,鉴权中间件,全局,"测试默认bypass,生产严格",test_permission_*,-,DEFINED(CAP-SEC-*)
+Runtime/Release,app.py + runtime_identity; Release未实现,/healthz,app.py唯一runtime owner;CAP-REL-001缺,-,-,-,identity路由404;release lineage未实现,test_runtime_*,-,PARTIAL/NOT_IMPLEMENTED
+,,,,,,,,,,
+OWNER_CONFLICTS,,,,,,,,,,
+CAP-DATA-001 Evidence MULTIPLE,,,,,,,,,,
+CAP-DATA-002 Canonical MULTIPLE,,,,,,,,,,
+CAP-DATA-003 Metric MULTIPLE,,,,,,,,,,
+CAP-DB-001/002 baseline split & manual-vs-alembic,,,,,,,,,,
