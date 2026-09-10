@@ -1,0 +1,15 @@
+{
+  "schema": "CODEX_GATE_TRANSITION_MAP/v1",
+  "generated_at": "2026-09-10 21:04:29",
+  "rule": "PARTIAL/UNKNOWN/文档/route存在/pytest部分过 均不算PASS",
+  "gates": [
+    {"gate":"TICKET_CLOSURE","name":"单票关闭","entry_condition":"ticket实现完成且Level A/B/C通过","commands":["见ticket-pack minimal_test_commands"],"required_evidence":"测试输出+evidence_output","pass_condition":"acceptance_criteria全满足且无NEW_REGRESSION","fail_action":"定位file/symbol/route/table/test修复,不跳P0","next_gate":"P0_REGRESSION"},
+    {"gate":"P0_REGRESSION","name":"P0回归","entry_condition":"相关P0票全部CLOSED","commands":["python -m pytest tests -m \"not online\" -q"],"required_evidence":"FAILURE_FINGERPRINT比对(RESOLVED/UNCHANGED/CHANGED/NEW)","pass_condition":"P0=0 且无P0 NEW_REGRESSION","fail_action":"剩余P0回DAG串行主干","next_gate":"RUNTIME_GATE"},
+    {"gate":"RUNTIME_GATE","name":"运行时Gate","entry_condition":"P0=0","commands":"$env:ZBC_DB_PATH='<tmp>'; python run_production.py; python scripts/verify_p0d_runtime_surface.py","required_evidence":"/healthz=200 且 identity/bmp注册可达","pass_condition":"核心route无404、无fake200、隔离DB启动","fail_action":"RUNTIME-REG/ROUTE-BMP类票修复后重测","next_gate":"CRITICAL_E2E"},
+    {"gate":"CRITICAL_E2E","name":"关键E2E","entry_condition":"Runtime Gate PASS","commands":"playwright(装好后)关键链路脚本","required_evidence":"关键用户链路E2E证据","pass_condition":"Critical E2E全过(非mock)","fail_action":"缺工具先解RUNTIME-GATE-1,失败回对应票","next_gate":"SECURITY_RECOVERY"},
+    {"gate":"SECURITY_RECOVERY","name":"安全/恢复","entry_condition":"Critical E2E PASS","commands":"权限门/回滚/崩溃恢复探测(见SECURITY_MATRIX)","required_evidence":"权限边界+备份/回滚/熔断证据","pass_condition":"无越权、可回滚、UNKNOWN清零或显式接受","fail_action":"SEC类票修复","next_gate":"RC"},
+    {"gate":"RC","name":"发布候选","entry_condition":"Security/Recovery PASS","commands":"Release lineage清单(CAP-REL-1)","required_evidence":"lineage可追溯+单purpose commit链","pass_condition":"release_lineage=VERIFIED","fail_action":"补lineage,禁止跳","next_gate":"ROLLBACK_VERIFICATION"},
+    {"gate":"ROLLBACK_VERIFICATION","name":"回滚演练","entry_condition":"RC就绪","commands":"在隔离副本演练回滚到rollback_point","required_evidence":"回滚演练记录","pass_condition":"回滚成功且数据/能力不丢","fail_action":"回滚不可保证则停止(停止条件6)","next_gate":"PRODUCTION_CLOSURE"},
+    {"gate":"PRODUCTION_CLOSURE","name":"生产收口","entry_condition":"上一Gate PASS","commands":"对照CODEX_FINAL_CLOSURE_CONTRACT九条件","required_evidence":"九条件全PASS证据","pass_condition":"PRODUCTION_CLOSURE=PASS","fail_action":"任一UNKNOWN/BLOCKED/FAIL不得宣布Production Ready","next_gate":"DONE"}
+  ]
+}
