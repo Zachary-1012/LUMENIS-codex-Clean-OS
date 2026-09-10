@@ -1,0 +1,95 @@
+{
+  "schema": "LUMENIS_FINAL_CONSOLIDATED_AUDIT/v1",
+  "audited_at": "2026-09-10",
+  "source_file": {
+    "uploaded_name": "LUMENIS_CODEX_FINAL_CONSOLIDATED_20260910(1).zip",
+    "canonical_name": "LUMENIS_CODEX_FINAL_CONSOLIDATED_20260910.zip",
+    "sha256": "0f2366373515fa95bc4f31d54286749e7a8bd5bfbfca71f85bdf554f8c032ec9",
+    "size_bytes": 563757,
+    "entry_count": 91
+  },
+  "structure": {
+    "json_files": 69,
+    "json_parse_errors": 0,
+    "markdown_files": 16,
+    "text_files": 1,
+    "xlsx_files": 3,
+    "docx_files": 2,
+    "ticket_pack_count": 41,
+    "exec_plan_count": 7,
+    "ticket_priority_counts": {"P0": 20, "P1": 18, "P2": 3}
+  },
+  "mechanical_checks": {
+    "ticket_ids_unique": true,
+    "context_router_matches_41_ticket_universe": true,
+    "test_router_matches_41_ticket_universe": true,
+    "scope_guard_matches_41_ticket_universe": true,
+    "progress_ledger_matches_41_ticket_universe": true,
+    "dependency_dag_matches_41_ticket_universe": true,
+    "dependency_targets_resolve": true,
+    "dependency_cycles": 0,
+    "first_ticket": "GIT-002",
+    "GIT-001": "CLOSED_VERIFIED"
+  },
+  "workbook_audit": {
+    "master_checklist": {
+      "sha256": "e3bf2055a3ac16d6ee6eb6c832f1b7815fbd6fd9f0ccc3b47873e5fdd59a3724",
+      "sheet_count": 13,
+      "historical_ticket_sheet": "06_Codex工单40",
+      "historical_ticket_rows": 40,
+      "note": "README says 41 tickets because execution compiler contains RUNTIME-ENTRY-1; the binary workbook remains the older 40-ticket evidence snapshot.",
+      "formula_like_text_defects": [
+        {"sheet": "02_五仓Baseline", "cell": "K2", "formula": "= Production Core,唯一Production Truth Owner;所有能力以此为canonical收敛", "observed_value": "#NAME?"},
+        {"sheet": "02_五仓Baseline", "cell": "A7", "formula": "==结论==", "observed_value": "#NAME?"}
+      ],
+      "execution_rule": "Do not use these two workbook formula errors or the 40-ticket sheet as current execution truth."
+    },
+    "prior_p0c_audit": {"sha256": "6f64f28e1e17a0c3981cdbf954d1aac95cee9976eaf7ef9e0654469a043adf1f", "sheet_count": 13},
+    "prior_p0d_audit": {"sha256": "ad6e8de8e7bbaa83d00fc6f24db16ac8900ad28aaf8f8db9779d9c4c39db2da3", "sheet_count": 16}
+  },
+  "source_doc_audit": {
+    "LUMENIS_P0-D_Codex_Closure_Handoff.docx": {"paragraphs_nonempty": 50, "tables": 2, "table_rows": 16},
+    "LUMENIS_Doubao_PreProduction_Audit_to_Codex_Handoff.docx": {"paragraphs_nonempty": 193, "tables": 2, "table_rows": 18}
+  },
+  "source_snapshot_inconsistencies": [
+    {
+      "severity": "P1_METADATA_ONLY",
+      "file": "03_EXECUTION_COMPILER/CODEX_HANDOFF_SELF_CHECK.json",
+      "finding": "ledger_id_match has result PASS but detail text says 'ledger mismatch'. Independent set comparison shows missing=set() and extra=set()."
+    },
+    {
+      "severity": "P1_METADATA_ONLY",
+      "file": "03_EXECUTION_COMPILER/CODEX_FINAL_CLOSURE_CONTRACT.json",
+      "finding": "repository_integrity text is stale: it still says GIT-001 was not fetched and handoff branch did not exist."
+    },
+    {
+      "severity": "P1_METADATA_ONLY",
+      "scope": "multiple package files",
+      "finding": "handoff HEAD c8a57c0 is a generation-time snapshot and must not be treated as a live branch head."
+    },
+    {
+      "severity": "P1_METADATA_ONLY",
+      "file": "00_README_FIRST.txt vs 01_MASTER_CHECKLIST/...xlsx",
+      "finding": "README describes 41-ticket current universe while the Excel ticket board is still the historical 40-ticket snapshot."
+    }
+  ],
+  "online_normalization_status": {
+    "do_not_overwrite_with_source_snapshot": true,
+    "current_truth_override": "../../execution/CURRENT_TRUTH_OVERRIDE_20260910.json",
+    "external_truth_patch": "../../EXTERNAL_TRUTH_SYNC_PATCH_20260910.md",
+    "normalized_resume_state": "../../execution/CODEX_RESUME_STATE.json",
+    "normalized_self_check": "../../execution/CODEX_HANDOFF_SELF_CHECK.json",
+    "normalized_final_closure_contract": "../../execution/CODEX_FINAL_CLOSURE_CONTRACT.json",
+    "normalized_gate_map": "../../execution/CODEX_GATE_TRANSITION_MAP.json",
+    "precedence_rule": "live worktree/source/runtime/test evidence > CURRENT_TRUTH_OVERRIDE > normalized execution files > this immutable source audit/snapshot"
+  },
+  "product_safety": {
+    "product_source_mutated_by_this_audit": false,
+    "tests_mutated_by_this_audit": false,
+    "database_mutated_by_this_audit": false,
+    "runtime_config_mutated_by_this_audit": false,
+    "main_branch_mutated_by_this_audit": false,
+    "production_readiness": "NOT_READY"
+  },
+  "assessment": "APPROVED_AS_HANDOFF_SOURCE_WITH_CURRENT_TRUTH_OVERRIDE. No further Doubao rediscovery is required before Codex; Codex must start from GIT-002 and recheck only the cheap freeze anchors."
+}
