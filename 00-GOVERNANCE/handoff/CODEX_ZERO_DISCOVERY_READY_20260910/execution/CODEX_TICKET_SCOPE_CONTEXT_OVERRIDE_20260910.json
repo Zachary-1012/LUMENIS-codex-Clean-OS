@@ -1,0 +1,10 @@
+{
+  "schema":"CODEX_TICKET_SCOPE_CONTEXT_OVERRIDE/v1",
+  "precedence":"Overrides conflicting entries for the listed tickets in CODEX_CONTEXT_ROUTER/CODEX_SCOPE_GUARD. All other tickets keep their existing router/scope definitions.",
+  "tickets":{
+    "GIT-001":{"state":"CLOSED_VERIFIED","mandatory_context":["CODEX_ONE_PAGE_START.md","CURRENT_TRUTH_OVERRIDE_20260910.json","ticket-packs/GIT-001.json"],"optional_context":[],"allowed_files":[],"expected_max_files_changed":0,"expected_change_type":"NO_OP"},
+    "GIT-002":{"mandatory_context":["CODEX_ONE_PAGE_START.md","CODEX_RESUME_STATE.json","CODEX_HANDOFF_FREEZE.json","ticket-packs/GIT-002.json"],"allowed_files":["app_evidence.py","audit/p0d/","scripts/build_p0d_capability_evidence.py","scripts/verify_p0d_runtime_surface.py"],"expected_max_files_changed":4,"expected_change_type":"BACKUP_ONLY"},
+    "RUNTIME-ENTRY-1":{"mandatory_context":["CODEX_RUNTIME_MANIFEST.json","ticket-packs/RUNTIME-ENTRY-1.json"],"allowed_files":["scripts/start_production.ps1","run_supervised.py"],"expected_max_files_changed":2,"expected_change_type":"PORTABILITY_ONLY"},
+    "RUNTIME-GATE-1":{"mandatory_context":["CODEX_RUNTIME_MANIFEST.json","CODEX_ROUTE_CONTRACT_MATRIX.json","ticket-packs/RUNTIME-GATE-1.json"],"optional_context":["scripts/start_production.ps1","run_supervised.py","app.py"],"allowed_files":[],"expected_max_files_changed":0,"expected_change_type":"VERIFY_ONLY"}
+  }
+}

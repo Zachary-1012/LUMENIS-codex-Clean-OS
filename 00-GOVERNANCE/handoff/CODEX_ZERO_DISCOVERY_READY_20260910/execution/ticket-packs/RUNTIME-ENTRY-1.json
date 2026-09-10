@@ -1,0 +1,18 @@
+{
+  "ticket_id":"RUNTIME-ENTRY-1",
+  "priority":"P1",
+  "phase":"P1-NONBLOCKING-REQUIRED-BEFORE-RC",
+  "title":"Canonical launcher portability: remove machine-specific absolute paths",
+  "goal":"Keep canonical launch chain scripts/start_production.ps1→run_supervised.py and remove machine-specific absolute path assumptions. Do not broaden into routes/Evidence/FK/database work.",
+  "root_cause":"scripts/start_production.ps1 contains stale machine-specific root D:\\Taikoo-monitor-new.",
+  "dependencies":[],
+  "blocked_by":[],
+  "exact_files":["scripts/start_production.ps1","run_supervised.py"],
+  "allowed_write_scope":["scripts/start_production.ps1","run_supervised.py"],
+  "forbidden_write_scope":["canonical main","business routes","Evidence/Canonical/Metric logic","FK/migrations","real DB","secrets/cookies/tokens"],
+  "implementation_steps":["Inspect only the two launchers for machine-specific absolute-path anchors","Replace with repository-relative/environment-configurable resolution while preserving idempotency/health/browser safeguards","Launch with isolated ZBC_DB_PATH and verify 0.0.0.0:8201 plus /healthz=200"],
+  "minimal_test_commands":{"Level_A_syntax_import":["powershell -NoProfile -Command \"$e=$null;$t=$null;[void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/start_production.ps1'),[ref]$t,[ref]$e); if($e.Count){$e | Format-List; exit 1}\"","python -m py_compile run_supervised.py"],"Level_B_exact_related":["python -m pytest tests/test_runtime_bin.py tests/test_runtime_preflight.py -q"],"Level_C_neighbour_regression":[],"Level_D_phase_regression":"See test router only at phase gate","Level_E_full_suite_GATE_ONLY":"python -m pytest tests -m \"not online\" -q only at gate"},
+  "runtime_probe":"Set isolated ZBC_DB_PATH; powershell scripts/start_production.ps1; GET http://127.0.0.1:8201/healthz",
+  "expected_after":"No machine-specific launcher root; canonical default runtime starts on 0.0.0.0:8201 and healthz=200; env/repository-relative resolution works.",
+  "acceptance_criteria":"Portable launcher verified without unrelated behavior changes; required before RC."
+}
