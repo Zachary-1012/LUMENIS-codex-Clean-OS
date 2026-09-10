@@ -1,0 +1,62 @@
+工单,标题,P级,层级,状态,依赖于,并行组,量级
+GIT-001,拉取并审计 canonical main fc75→ab67612 增量(本会话git对象写被禁),P0,P0-BLOCKING,BLOCKED_EXTERNAL,,G1,S
+GIT-002,保护在途成果并建立integration/handoff远程分支(本会话push被禁),P0,P0-REQUIRED-FOR-CLOSURE,BLOCKED_EXTERNAL,GIT-001,G1,M
+DB-001,收口10个绝对硬编码 data/monitor.db 旁路到canonical resolver,P0,P0-BLOCKING,READY_FOR_CODEX,GIT-001,DB,L
+DB-002,修复裸相对'data/monitor.db'的cwd漂移(data_center_api/trend_api),P0,P0-BLOCKING,READY_FOR_CODEX,GIT-001,DB,S
+DB-003,repository_registry旁路纳入ZBC_DB_PATH(brand_knowledge_base/case_deep_analysis),P1,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,DB-001,DB,M
+DB-004,裁决 evidence_chain 的 ZBC_EVIDENCE_DB_PATH 别名(主库 or 独立库),P0,P0-BLOCKING,READY_FOR_CODEX,GIT-001,DB,M
+DB-005,收口DB fallback风险(swire_group/ai_task_engine/evaluation_recorder/app_evidence在途),P1,P1-NONBLOCKING,READY_FOR_CODEX,DB-001,DB,M
+DB-006,逐个审计 app.py 内21处内联sqlite3.connect并归类,P1,P1-NONBLOCKING,READY_FOR_CODEX,DB-001,DB,L
+DB-007,建立Connection Policy Matrix并分阶段开启FK enforcement,P0,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,"DB-001,P0C-CGE-1",DB,L
+P0C-CGE-1,CGE根证据 parent_evidence_id 空串''改NULL(新写入根因),P0,P0-BLOCKING,READY_FOR_CODEX,GIT-001,P0C,M
+P0C-CGE-2,存量 parent_evidence_id='' →NULL 修复策略(仅隔离副本先验证),P0,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,"P0C-CGE-1,P0C-3DB-1",P0C,M
+P0C-AITASK-1,ai_task task_id='1' 四孤儿Dependency Trace(禁直接删),P0,P0-REQUIRED-FOR-CLOSURE,NEEDS_MORE_EVIDENCE,P0C-3DB-1,P0C,M
+P0C-MIG-1,Migration原子性:故障注入回滚/源库不变/Backup WAL/版本跃迁 测试补齐,P0,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,GIT-001,P0C,L
+P0C-BOOT-1,Clean Bootstrap 三独立Gate:MigrationOnly/ApplicationReadable/RuntimeVerified,P0,P0-BLOCKING,READY_FOR_CODEX,P0C-MIG-1,P0C,L
+P0C-3DB-1,三库(clean/historical/production-candidate)各自迁移验证票,P0,P0-BLOCKING,READY_FOR_CODEX,P0C-MIG-1,P0C,L
+P0C-ALEMBIC-1,手写migration vs Alembic stamp-only 归属裁决(CAP-DB-002 MULTIPLE),P1,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,P0C-MIG-1,P0C,M
+TST-001,16项schema/table失败:测试临时库未bootstrap到v12(或旧平台契约),P0,P0-BLOCKING,READY_FOR_CODEX,P0C-BOOT-1,TST,L
+TST-002,8项测试自身硬连受保护库被护栏拦截→改走临时库(P0C-I),P0,P0-BLOCKING,READY_FOR_CODEX,,TST,M
+TST-002b,test_evidence_export 向 D:\Taikoo-monitor-new 写staging snapshot的外部写隔离,P1,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,,TST,S
+TST-003,"补齐缺失pip依赖(python-dotenv/tenacity等),不盲目升级",P1,P1-NONBLOCKING,READY_FOR_CODEX,,ENV,S
+TST-004,ad_intelligence.models 模块缺失×6,P1,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,,TST,M
+TST-005,ic_contracts 三API 401→测试认证/鉴权契约,P1,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,TST-001,TST,S
+TST-006,AI离线默认provider契约×3(glm别名/provider chain/central gateway),P1,P1-NONBLOCKING,READY_FOR_CODEX,,TST,M
+TST-007,canonical_matches_live_sql 改为合成fixture(禁依赖生产数据),P1,P1-NONBLOCKING,READY_FOR_CODEX,TST-001,TST,S
+TST-008,L4 step12 证据链不完整(真实缺陷定位),P0,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,"TST-002,P0C-CGE-1",TST,M
+TST-009,去硬编码守卫发现1处生产硬编码路径→定位并收口,P1,P1-NONBLOCKING,READY_FOR_CODEX,DB-006,TST,S
+TST-010,repository_registry 旧契约测试与隔离方向冲突对齐,P1,P1-NONBLOCKING,READY_FOR_CODEX,DB-003,TST,S
+TST-011,外部cookie/在线适配器14项:fixture或marker隔离(P2),P2,POST-CLOSURE,READY_FOR_CODEX,,TST,L
+TST-012,meta ads blocked 单UNKNOWN项定位,P2,POST-CLOSURE,NEEDS_MORE_EVIDENCE,,TST,S
+RUNTIME-REG-1,"注册 /api/runtime/identity 路由(当前404,模块已存在)",P0,P0-BLOCKING,READY_FOR_CODEX,DB-001,RT,S
+ROUTE-BMP-1,修复 /lumenis/bmp/overview 404(对照CTH 200),P0,P0-BLOCKING,READY_FOR_CODEX,"RUNTIME-REG-1,DB-001",RT,M
+ROUTE-MAP-1,叠url_prefix重算真实orphan/duplicate路由(推翻朴素277假阳性),P1,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,RUNTIME-REG-1,RT,L
+RUNTIME-GATE-1,Runtime/E2E六Gate之Gate4:启动+核心API+Critical E2E,P0,P0-REQUIRED-FOR-CLOSURE,NEEDS_CODEX_RUNTIME,"P0C-BOOT-1,RUNTIME-REG-1,ROUTE-BMP-1,TST-001",RT,L
+OWNER-EVID-1,收口Evidence多写者 owner conflict(CAP-DATA-001),P0,P0-BLOCKING,READY_FOR_CODEX,"DB-004,P0C-CGE-1",OWN,L
+OWNER-CANON-1,收口Canonical Data owner(CAP-DATA-002),P0,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,DB-001,OWN,M
+OWNER-METRIC-1,收口Metric owner(CAP-DATA-003),P1,P0-REQUIRED-FOR-CLOSURE,READY_FOR_CODEX,OWNER-CANON-1,OWN,M
+CAP-REL-1,实现Release Lineage/Rollback(CAP-REL-001当前NOT IMPLEMENTED),P1,POST-CLOSURE,POST_CLOSURE,"P0C-MIG-1,GIT-002",OWN,L
+SEC-001,补验Browser权限/PII/日志脱敏UNKNOWN项,P1,POST-CLOSURE,POST_CLOSURE,,SEC,M
+SUBJ-001,按Subject Context实施地图研发Selected Subject(DB/Runtime主链后),P1,POST-CLOSURE,POST_CLOSURE,"ROUTE-BMP-1,OWNER-EVID-1",SUBJ,L
+UI-001,按UI实施地图补逐页responsive/state(遵循LUMENIS Design System),P2,POST-CLOSURE,POST_CLOSURE,RUNTIME-GATE-1,UI,L
+,,,,,,,
+串行硬阻塞 SERIAL BLOCKERS,,,,,,,
+"GIT-001(不fetch无法确认canonical增量,阻塞所有'对照canonical'判断)",,,,,,,
+"DB-001/DB-002(硬编码/相对路径不收口,隔离与owner判断不可信)",,,,,,,
+P0C-CGE-1(CGE根证据写NULL是FK与Evidence owner前提),,,,,,,
+P0C-MIG-1→P0C-BOOT-1→P0C-3DB-1(迁移原子性→干净boot gate→三库验证严格串行),,,,,,,
+"P0C-BOOT-1→TST-001(无v12 bootstrap fixture,16项schema失败无法判定)",,,,,,,
+RUNTIME-REG-1→ROUTE-BMP-1→RUNTIME-GATE-1(身份→BMP→运行时Gate),,,,,,,
+DB-004→OWNER-EVID-1(证据库别名裁决先于Evidence owner收口),,,,,,,
+,,,,,,,
+FIRST 10,,,,,,,
+1. GIT-001,,,,,,,
+2. GIT-002,,,,,,,
+3. DB-002,,,,,,,
+4. DB-001,,,,,,,
+5. P0C-CGE-1,,,,,,,
+6. TST-002,,,,,,,
+7. P0C-MIG-1,,,,,,,
+8. P0C-BOOT-1,,,,,,,
+9. TST-001,,,,,,,
+10. RUNTIME-REG-1,,,,,,,
