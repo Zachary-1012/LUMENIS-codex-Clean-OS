@@ -1,0 +1,10 @@
+﻿项,值
+canonical production entry,scripts/start_production.ps1 → run_supervised.py --host 0.0.0.0 --port 8201
+legacy entry,run_production.py (explicit LEGACY redirect; default 8200 not canonical)
+health check,http://127.0.0.1:8201/healthz
+probe /healthz,200
+probe /api/runtime/identity,404 BROKEN → RUNTIME-REG-1
+probe /lumenis/cth/overview,200 (112495B)
+probe /lumenis/bmp/overview,404 BROKEN → ROUTE-BMP-1
+静态声明/运行时/前端引用,843/815/180
+orphan口径,"朴素装饰器843 vs 运行时815的差并非全是orphan:多数为未叠加blueprint url_prefix的朴素计数假阳性;真实orphan/duplicate须按url_prefix重算(保留UNKNOWN,不臆断277)"
