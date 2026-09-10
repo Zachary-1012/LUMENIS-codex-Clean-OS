@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "canonical_production_repo": "Zachary-1012/LUMENIS-codex-Clean-OS",
+  "canonical_lock_basis": "线上main仍为序境产品主线(README=Production Core/Production Truth Owner;CAPABILITY_REGISTRY=Canonical Ownership Registry V1);本地缓存fc75与活动ZBC根模块221全同、Registry零差异。",
+  "canonical_drift": {"status":"RESOLVED_FOR_PRODUCT_SOURCE","base":"fc75d87938f3631bec99338c9e059eca34c6a680","head":"ab67612367c172ced2dff62b44e98de86469d1e6","result":"5 commits ahead; final delta only two handoff markdown files; no product source file drift","GIT-001":"CLOSED_VERIFIED"},
+  "single_production_truth_owner": "Zachary-1012/LUMENIS-codex-Clean-OS (main); 活动实现仓 Z-Brand-Core integration/p0d 与其同源、领先隔离工作,不构成第二Truth Owner",
+  "repos": [
+    {"repo":"Zachary-1012/LUMENIS-codex-Clean-OS","github_url":"https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS.git","default_branch":"main","online_main_HEAD":"ab67612367c172ced2dff62b44e98de86469d1e6","online_branch_count":5,"role":["PRODUCTION_CORE","CANONICAL_TRUTH_OWNER"],"canonical_status":"CANONICAL_LOCKED","production_dependency":"SELF","runtime_dependency":"SELF","recommended_relationship":"Production Core,唯一Production Truth Owner;所有能力以此为canonical收敛","note":"integration/p0c-test-migration-isolation-v1=2a3be0a 已存在远程备份"},
+    {"repo":"Zachary-1012/Z-Brand-Core","github_url":"https://github.com/Zachary-1012/Z-Brand-Core.git","default_branch":"main","online_main_HEAD":"0d25b913a62c90ea38c183267d89fba8222dbb53","online_branch_count":97,"local_path":"D:\\LUMENIS_REBUILD\\Z-Brand-Core (活动); D:\\Z-Brand-Core (旧main历史副本)","local_HEAD":"2a3be0ab2ef79cb0274c5b9a21114f3ce2e371af","local_branch":"integration/p0d-capability-recovery-v1","role":["LEGACY_CAPABILITY_SOURCE","CURRENT_WORKING_PRODUCTION_IMPL"],"canonical_status":"SAME_PRODUCT_LINE","production_dependency":"canonical的工作实现仓,不另立Truth","runtime_dependency":"产品Runtime本体(待收口)","shared_code":"同源(同一产品线)","shared_schema":"同一SQLite monitor.db schema","shared_api":"同一Flask app/blueprints","recommended_relationship":"能力在Clean-OS收敛;历史能力以本仓为evidence source, Recover capability not obsolete UI","note":"活动仓dirty:1M app_evidence.py + 3?? audit/p0d及两个脚本,0 staged"},
+    {"repo":"Zachary-1012/Zachary-OS-AI","github_url":"https://github.com/Zachary-1012/Zachary-OS-AI.git","default_branch":"main","online_main_HEAD":"e7d7b900e93ae694dafeea54c9dfeb50f77da7c4","online_branch_count":27,"role":["AI_RESEARCH_OR_RUNTIME_SOURCE","SHARED_INTELLIGENCE_LAYER"],"canonical_status":"SUPPORTING_LAYER (非Production Truth)","production_dependency":"NO (versioned contract/artifact boundary)","runtime_dependency":"NO","shared_ai":"AI Gateway/Agent/Skill/Evidence/Evaluation/Memory","recommended_relationship":"adapter/service boundary/versioned contract;禁止双AI Truth Owner"},
+    {"repo":"Zachary-1012/lumenis-command","github_url":"https://github.com/Zachary-1012/lumenis-command.git","default_branch":"main","online_main_HEAD":"cbcf717fa3d71a5c059366fb4e7a7a7366366ed4","online_branch_count":1,"role":["ENGINEERING_GOVERNANCE_SOURCE","COMMAND_OR_CONTROL_SOURCE","PRIVATE_RD_SIDECAR"],"canonical_status":"TOOLING (非Production Truth)","production_dependency":"NO","runtime_dependency":"NO","shared_governance":"READ/AUDIT/PATCH PREVIEW/TEST/HUMAN APPROVAL/COMMIT/PUSH闭环与权限矩阵","recommended_relationship":"研发控制台;绝不把其实现注入产品runtime"},
+    {"repo":"Zachary-1012/global-growth-intelligence","github_url":"https://github.com/Zachary-1012/global-growth-intelligence.git","default_branch":"main","online_main_HEAD":"695aed10001275241a0e164f81cabc4bda5fff8d","online_branch_count":4,"role":["KNOWLEDGE_SOURCE","INDEPENDENT_PRODUCT","GROWTH_RESEARCH"],"canonical_status":"REFERENCE_ONLY / POST_CLOSURE","production_dependency":"NO","runtime_dependency":"NO","recommended_relationship":"独立产品,不并入当前P0主线;POST_CLOSURE再评估"}
+  ],
+  "new_related_repos_scan": "ChatGPT GitHub connector list_repositories verified exactly 5 accessible repositories at sync time; no sixth repo returned. Future new repos must still be classified RELATED/UNRELATED before use.",
+  "architecture_conclusion": {
+    "Production Core":"LUMENIS-codex-Clean-OS(main, online ab67612)",
+    "Legacy Capability Source":"Z-Brand-Core(活动integration/p0d + 旧main)",
+    "AI Source":"Zachary-OS-AI(共享智能层,contract边界)",
+    "Engineering/Command Source":"lumenis-command(私有研发sidecar)",
+    "Growth/Research Source":"global-growth-intelligence(独立产品,REFERENCE/POST_CLOSURE)",
+    "Canonical DB Owner":"database.py + database_migrations.py(canonical内,CAP-DB-001 BASELINE SPLIT待收口)",
+    "Canonical Evidence Owner":"未定(evidence_chain/evidence_store/app_evidence MULTIPLE→OWNER_CONFLICT)",
+    "Canonical Metric Owner":"未定(canonical_metrics候选,MULTIPLE)",
+    "Canonical Runtime Owner":"scripts/start_production.ps1 (canonical launcher) -> run_supervised.py/app.py; runtime_identity.py 当前未注册(RUNTIME-REG-1); launcher旧Root硬编码待RUNTIME-ENTRY-1",
+    "Canonical Frontend Owner":"lumenis_frontend.py + templates/static(CAP-UI-001)",
+    "Canonical API Owner":"app.py蓝图注册(47蓝图/815路由),统一API Contract待建",
+    "Canonical Subject Context Owner":"subject_rules.py+subject_context.py+domain_isolation.py",
+    "Canonical Release Owner":"未实现(CAP-REL-001 NOT IMPLEMENTED)"
+  },
+  "account_repo_enumeration_verified": {"method":"ChatGPT GitHub connector list_repositories","repos":["Zachary-1012/Z-Brand-Core","Zachary-1012/Zachary-OS-AI","Zachary-1012/global-growth-intelligence","Zachary-1012/lumenis-command","Zachary-1012/LUMENIS-codex-Clean-OS"],"count":5,"note":"No sixth accessible repo was returned at verification time; future new repos still require explicit relationship classification."}
+}
