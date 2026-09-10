@@ -1,0 +1,31 @@
+来源仓,原始文件,符号,历史行为,当前等价,迁移状态,建议动作
+Z-Brand-Core(integration/p0d),database_isolation.py,module,P0-C/D新增(测试DB隔离/runtime身份),canonical main尚无,NOT_IN_CANONICAL_MAIN(已在CleanOS integration/p0c远程分支=2a3be0a),PORT_CAPABILITY
+Z-Brand-Core(integration/p0d),runtime_identity.py,module,P0-C/D新增(测试DB隔离/runtime身份),canonical main尚无,NOT_IN_CANONICAL_MAIN(已在CleanOS integration/p0c远程分支=2a3be0a),PORT_CAPABILITY
+D:\Z-Brand-Core(旧main),audit_routes.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),audit_routes2.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),audit_routes3.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),fix_hybrid.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),replace_emojis.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),scan_emojis.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),scan_hex_colors.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),tokenize_colors.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),verify_css.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),verify_pages.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,ARCHIVE
+D:\Z-Brand-Core(旧main),zbc_source_doctor.py,module,历史审计/修复工具脚本,canonical scripts/或已被替代(需逐项核),UNKNOWN,UNKNOWN
+canonical内多实现,`evidence_chain.py` 候选,CAP-DATA-001,Evidence Ingestion,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,`canonical_data.py` 候选,CAP-DATA-002,Canonical Data,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,`canonical_metrics.py` 候选,CAP-DATA-003,Metric Engine,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,待从 `collector.py/collector_v2` 验证,CAP-COL-001,Collection Orchestration,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,Browser Surface + Runtime Adapter 待定,CAP-COL-003,Browser/CDP,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,Event Graph 与 events 需合并 Contract,CAP-CTH-001,Event,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,待从 case implementations 选定,CAP-CTH-002,Case,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,Topic Campaign/Propagation Contract 待定,CAP-BMP-001,Campaign,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,KOS identity/attribution contract,CAP-BMP-003,Audience Identity,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,Shared Evaluation Contract,CAP-BMP-004,Brand Evaluation,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,`evaluation_system.py` 候选,CAP-SHR-003,Evaluation,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,待收敛唯一入口,CAP-AI-002,Orchestrator,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,Canonical registries 待合并,CAP-AI-003,Skill/Tool Execution,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,`permission_gate.py` 候选,CAP-SEC-001,Permission,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,`runtime_guardian.py` 候选,CAP-RUN-001,Runtime Guardian,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,待统一 Alembic/database migrations,CAP-DB-002,Migration,MULTIPLE候选,OWNER_CONFLICT,MERGE
+canonical内多实现,待从 report paths 选唯一入口,CAP-REP-001,Report Orchestration,MULTIPLE候选,OWNER_CONFLICT,MERGE
