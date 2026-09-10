@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "method": "capability-level(非纯文件diff): 以canonical CAPABILITY_REGISTRY 37项为骨架,叠加五仓根模块/同名模块存在性与README自述边界;Runtime/E2E语义级别仍需Codex验证,不据此标VERIFIED",
+  "cleanos_vs_zbc_root_modules": {"canon_root_py":221,"zbc_root_py":223,"common":221,"zbc_only":["database_isolation.py","runtime_identity.py"],"canon_only":[],"registry_text_diff":0,"interpretation":"活动ZBC与canonical fc75同源,仅多出Codex P0-C/D新增的隔离/身份两模块(尚未进canonical main)"},
+  "legacy_old_main": {"path":"D:\\Z-Brand-Core(main=6f0c9f4,v5.9.9)","root_only_scripts":["audit_routes.py","audit_routes2.py","audit_routes3.py","fix_hybrid.py","replace_emojis.py","scan_emojis.py","scan_hex_colors.py","tokenize_colors.py","verify_css.py","verify_pages.py","zbc_source_doctor.py"],"interpretation":"旧main根级仅11个审计/修复脚本无缺失产品根模块;历史产品能力主体已在canonical heritage_intelligence等收敛,深层子目录能力对比交CAPABILITY_RECOVERY_QUEUE逐项核"},
+  "same_basename_modules": {"osai_18":[],"command_829_count":0,"ggi_11":["app.py"],"interpretation":"OSAI同名=智能层自身实现(契约边界,需确认不形成双Truth);Command同名=审计/快照框架非产品实现;GGI同名=独立产品自身代码"},
+  "status_legend": ["PRESENT_AND_VERIFIED","PRESENT_BUT_PARTIAL","PRESENT_BUT_UNREACHED","MISSING_IN_CANONICAL","LEGACY_ONLY","DUPLICATED","CONFLICTING","SUPERSEDED","POST_LAUNCH","UNKNOWN"],
+  "capabilities_parts": ["CODEX_CROSS_REPO_CAPABILITY_DIFF.capabilities.part01.json","CODEX_CROSS_REPO_CAPABILITY_DIFF.capabilities.part02.json","CODEX_CROSS_REPO_CAPABILITY_DIFF.capabilities.part03.json","CODEX_CROSS_REPO_CAPABILITY_DIFF.capabilities.part04.json","CODEX_CROSS_REPO_CAPABILITY_DIFF.capabilities.part05.json"],
+  "total_capabilities":37,
+  "capability_recovery_queue_parts": ["CODEX_CROSS_REPO_CAPABILITY_DIFF.capability_recovery_queue.part01.json","CODEX_CROSS_REPO_CAPABILITY_DIFF.capability_recovery_queue.part02.json","CODEX_CROSS_REPO_CAPABILITY_DIFF.capability_recovery_queue.part03.json","CODEX_CROSS_REPO_CAPABILITY_DIFF.capability_recovery_queue.part04.json"],
+  "total_capability_recovery_queue":30
+}
