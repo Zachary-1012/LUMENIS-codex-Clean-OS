@@ -1,0 +1,2 @@
+文件,分类,风险,sqlite3.connect行号,说明(对应什么问题)
+xhs_collection_optimizer.py,REVIEW_REQUIRED,UNKNOWN,145,"存在连接/路径锚点但未逐行定性,保守标REVIEW_REQUIRED交Codex"
