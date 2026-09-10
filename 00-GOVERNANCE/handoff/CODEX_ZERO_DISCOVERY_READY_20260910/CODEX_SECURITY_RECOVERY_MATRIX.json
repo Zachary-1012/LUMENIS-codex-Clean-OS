@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-09-10 12:45:57",
+  "modules": {
+    "permission": ["permission_gate.py", "ad_intelligence/permission_gate.py"],
+    "action_firewall": ["p2_action_firewall.py"],
+    "agent_safety": ["agent_security.py", "safety_boundary.py", "security_boundary.py"],
+    "auth_recovery": ["auth_recovery_api.py", "auth_recovery_center.py", "auto_recovery.py", "v4_upgrade/adapters/auth_recovery.py", "agent_smart_tool/recovery.py"]
+  },
+  "permission_model": "生产deny-by-default;conftest set_testing_bypass(True)仅测试;READ/TASK/AUDIT/WRITE/DEPLOY分级(与lumenis-command权限矩阵对齐但不并入runtime)",
+  "matrix": [
+    {"area": "DB write permission", "status": "PARTIAL", "evidence": "permission_gate存在;但多模块硬编码连接绕过统一入口(见DB MAP HARD_CODED_BYPASS)", "ticket": "DB-RESOLVE-*"},
+    {"area": "Agent/tool action permission", "status": "PARTIAL", "evidence": "agent_security/p2_action_firewall存在,有test_ai_permission_matrix/test_agent_security", "unknown": "逐tool白名单未全核"},
+    {"area": "Browser permission", "status": "UNKNOWN", "evidence": "ai_browser_runtime存在,CDP 9222;权限边界未在本轮验证"},
+    {"area": "Secrets/.env", "status": "ENV_GAP", "evidence": "Z-Brand-Core无.env;真实智谱key在D:\\Taikoo-monitor-new\\.env(不得读取/打印值);app._load_dotenv仅填不存在的key"},
+    {"area": "PII/minimization", "status": "UNKNOWN", "evidence": "未审计,保留UNKNOWN"},
+    {"area": "Migration rollback", "status": "PARTIAL", "evidence": "database_migrations有SQLite Backup API/set_version(commit=False);回滚演练未做(P0C-C carry-over)"},
+    {"area": "Runtime crash recovery", "status": "PARTIAL", "evidence": "auto_recovery/runtime_guardian/auth_recovery_center存在并有测试;真实kill恢复未演练"},
+    {"area": "Scheduler/collector failure & circuit breaker", "status": "PARTIAL", "evidence": "ai_channel provider breaker(conftest复位);采集侧collection_quality_gate;端到端故障注入未做"}
+  ],
+  "unknowns_kept": ["Browser permission", "PII", "外网白名单", "日志脱敏"],
+  "rule": "无法验证项一律UNKNOWN,不填PASS"
+}
