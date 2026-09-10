@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-09-10 12:51:49",
+  "run_command": "python -m pytest tests -m \"not online\" --junitxml=p0d_junit.xml -q -p no:cacheprovider (ZBC_ALLOW_NETWORK=0, conftest强隔离)",
+  "environment": "isolated: ZBC_DB_PATH=os-temp, 公网阻断, sqlite护栏拒绝受保护库",
+  "duration_sec": 381.526,
+  "totals": {"tests":4133,"failed":60,"errors":0,"skipped":9,"passed":4064},
+  "protected_db_verdict": "P0-C DATABASE ISOLATION: protected DB hash/mtime unchanged (全量跑前后data/monitor.db未变)",
+  "by_category": {"EXTERNAL_COOKIE":12,"MISSING_MODULE":6,"UNKNOWN":1,"AI_PROVIDER":3,"DB_ISOLATION":8,"DATA_FIXTURE":1,"MIGRATION":16,"AUTH":3,"ENVIRONMENT":5,"REAL_PRODUCT_DEFECT":2,"OLD_CONTRACT":1,"EXTERNAL_OFFLINE":2},
+  "by_priority": {"P2":15,"P1":20,"P0":25},
+  "category_enum": ["REAL_PRODUCT_DEFECT","DB_ISOLATION","MIGRATION","OLD_CONTRACT","MISSING_MODULE","AUTH","EXTERNAL_COOKIE","AI_PROVIDER","ENVIRONMENT","LEGACY_TEST","TEST_POLLUTION","DATA_FIXTURE","UNKNOWN"],
+  "rule": "禁止删失败测试求绿;online/credential类用fixture或marker,不改生产迎合",
+  "cases_parts": ["CODEX_TEST_FAILURE_MATRIX.part01.json","CODEX_TEST_FAILURE_MATRIX.part02.json","CODEX_TEST_FAILURE_MATRIX.part03.json","CODEX_TEST_FAILURE_MATRIX.part04.json","CODEX_TEST_FAILURE_MATRIX.part05.json"],
+  "total_cases": 60
+}
