@@ -1,0 +1,17 @@
+{
+  "schema": "CODEX_FINAL_CLOSURE_CONTRACT/v1",
+  "generated_at": "2026-09-10 21:04:29",
+  "PRODUCTION_CLOSURE": "NOT_PASS (当前为前置交接态,以下条件当前值如实标注)",
+  "conditions": {
+    "P0=0": {"required":0,"current":20,"pass":false},
+    "required_P1_before_RC=0": {"required":0,"current":"见RESUME_STATE.p1_remaining=17(需在RC前收敛required子集)","pass":false},
+    "repository_integrity": {"current":"PARTIAL (基线已锁;GIT-001在线增量未fetch;handoff分支未建GIT-002)","pass":false},
+    "production_truth": {"current":"NOT_PASS (Evidence/Canonical/Metric MULTIPLE→OWNER-*)","pass":false},
+    "runtime": {"current":"NOT_PASS (identity/bmp=404)","pass":false},
+    "critical_e2e": {"current":"NOT_PASS (playwright缺失,链路未验)","pass":false},
+    "security_recovery": {"current":"PARTIAL (多UNKNOWN)","pass":false},
+    "release_lineage": {"current":"UNVERIFIED (CAP-REL-001 NOT IMPLEMENTED)","pass":false},
+    "rollback": {"current":"UNVERIFIED (未演练)","pass":false}
+  },
+  "hard_rule": "任何 UNKNOWN / BLOCKED / FAIL 存在时不得声明 Production Ready;九条件全真才允许 PRODUCTION_CLOSURE=PASS"
+}
