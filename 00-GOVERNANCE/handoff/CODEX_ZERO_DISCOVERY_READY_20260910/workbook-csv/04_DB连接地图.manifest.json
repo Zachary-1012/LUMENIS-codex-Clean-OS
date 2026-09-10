@@ -1,0 +1,18 @@
+{
+  "schema":"LUMENIS_WORKBOOK_CSV_SHARD/v1",
+  "logical_sheet":"04_DB连接地图",
+  "source_csv_raw_size_bytes":43051,
+  "source_csv_raw_sha256":"cd8b77621b9591e3fed9ed0da4c665c371cf8b5cc5391e1c6eacfc8a76be0b2b",
+  "source_csv_normalized_utf8_sha256":"67a143780268d337a9702cecd8c543fa573253200e27602ee3eed4a611185c83",
+  "source_rows_including_header":302,
+  "representation":"UTF-8 CSV sharded because this is the largest workbook sheet",
+  "reassembly":"Use part01 in full, then append part02-part04 excluding each repeated header row.",
+  "parts":[
+    {"file":"04_DB连接地图.part01.csv","rows_including_header":101,"sha256":"61c0ea3dc5a5087cf09c1d898c08d3448b1754e896869efbc3d81b9b93e81874"},
+    {"file":"04_DB连接地图.part02.csv","rows_including_header":101,"sha256":"c6164a6a06399aeb422f2e5cdbf7119b486af0a3fdea8ea799d7d094f876cb22"},
+    {"file":"04_DB连接地图.part03.csv","rows_including_header":101,"sha256":"7f3fc3451c621a9f7b5962cdcf763880ff88f612a4fa1612873b6f43f30f37db"},
+    {"file":"04_DB连接地图.part04.csv","rows_including_header":2,"sha256":"c1f0e29c795d74d6be2f0d855e1a66230674f78cb5e4c935ac1d8a54cb4e5e1f"}
+  ],
+  "logical_data_rows":301,
+  "status":"COMPLETE"
+}
