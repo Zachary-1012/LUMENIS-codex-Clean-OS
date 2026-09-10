@@ -1,0 +1,54 @@
+{
+  "schema": "LUMENIS_GIT_TEXT_PACKAGE/v1",
+  "encoding": "base64",
+  "chunk_chars": 30000,
+  "packages": [
+    {
+      "label": "full_package",
+      "original_name": "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip",
+      "sha256": "94b00c495d6b390b3e38da7984f1a2ef4469a8e24f60e773854bb1868c5bf739",
+      "size_bytes": 270590,
+      "base64_chars": 360788,
+      "part_count": 13,
+      "parts": [
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part001",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part002",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part003",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part004",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part005",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part006",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part007",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part008",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part009",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part010",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part011",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part012",
+        "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip.b64.part013"
+      ]
+    },
+    {
+      "label": "final_supplement",
+      "original_name": "LUMENIS_PRE_CODEX_FINAL_SUPPLEMENT_5_20260910.zip",
+      "sha256": "3b9ca80444f411b87cfe045daae6ac408e17b75d5d346dbb10aff1d578be149a",
+      "size_bytes": 5419,
+      "base64_chars": 7228,
+      "part_count": 1,
+      "parts": [
+        "LUMENIS_PRE_CODEX_FINAL_SUPPLEMENT_5_20260910.zip.b64.part001"
+      ]
+    },
+    {
+      "label": "workbook_csv",
+      "original_name": "LUMENIS_MASTER_CHECKLIST_CSV_EXPORT.tar.gz",
+      "sha256": "444756c90ed0a3c85e1ed67bdf1ec43cda7027cba666a40ba06a4777ff38e4fb",
+      "size_bytes": 32931,
+      "base64_chars": 43908,
+      "part_count": 2,
+      "parts": [
+        "LUMENIS_MASTER_CHECKLIST_CSV_EXPORT.tar.gz.b64.part001",
+        "LUMENIS_MASTER_CHECKLIST_CSV_EXPORT.tar.gz.b64.part002"
+      ]
+    }
+  ],
+  "note": "All parts are UTF-8 ASCII text accepted by Git. Concatenate parts in lexical order and base64-decode to restore exact bytes."
+}
