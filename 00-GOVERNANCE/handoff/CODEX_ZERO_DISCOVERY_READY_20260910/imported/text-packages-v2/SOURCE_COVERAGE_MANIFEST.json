@@ -1,0 +1,49 @@
+{
+  "schema": "LUMENIS_GIT_SOURCE_COVERAGE/v2",
+  "status": "COMPLETE_VERIFIED_CONTENT_CONVERSION",
+  "scope": "handoff evidence only; no product source, test, database, runtime configuration, or main-branch mutation",
+  "source_packages": [
+    {
+      "name": "LUMENIS_CODEX_ZERO_DISCOVERY_FULL_PACKAGE_20260910.zip",
+      "sha256": "94b00c495d6b390b3e38da7984f1a2ef4469a8e24f60e773854bb1868c5bf739",
+      "size_bytes": 270590,
+      "source_entry_count": 85,
+      "source_shape": "16 base handoff text files + 21 execution top-level files + 7 execution plans + 40 ticket packs + 1 XLSX workbook",
+      "git_conversion": {
+        "base_handoff_text": "preserved under CODEX_ZERO_DISCOVERY_READY_20260910/ and, where oversized, deterministic JSON parts",
+        "execution": "preserved/normalized under execution/; current source-snapshot universe is 41 ticket packs because RUNTIME-ENTRY-1 was added as a live-truth correction; the historical 40-ticket workbook remains historical evidence",
+        "workbook": "converted to UTF-8 CSV under workbook-csv/; 12 sheets are direct CSV files and 04_DB连接地图 is preserved as 5 ordered CSV parts under workbook-csv/parts/",
+        "current_truth": "execution/CURRENT_TRUTH_OVERRIDE_20260910.json + EXTERNAL_TRUTH_SYNC_PATCH_20260910.md"
+      }
+    },
+    {
+      "name": "LUMENIS_PRE_CODEX_FINAL_SUPPLEMENT_5_20260910.zip",
+      "sha256": "3b9ca80444f411b87cfe045daae6ac408e17b75d5d346dbb10aff1d578be149a",
+      "size_bytes": 5419,
+      "source_entry_count": 5,
+      "dedupe": "All five supplement files were locally hash-compared with the same-basename files in the full package and are byte-identical; no second semantic copy is required.",
+      "git_conversion": "represented by the corresponding execution files; source ZIP Base64 also exists under imported/source-packages/"
+    }
+  ],
+  "workbook_csv_sheet_count": 13,
+  "workbook_csv_representation": {
+    "direct_sheet_count": 12,
+    "split_sheet": "04_DB连接地图",
+    "split_parts": 5,
+    "split_path": "../../workbook-csv/parts/"
+  },
+  "legacy_archive_notice": {
+    "path": "../text-packages/PACKAGE_MANIFEST.json",
+    "status": "DEPRECATED_INCOMPLETE_ARCHIVE_SHARDS",
+    "rule": "Do not use the legacy Base64 shard declaration as completeness evidence. Content-level Git conversion and current-truth files supersede it."
+  },
+  "codex_start_rule": {
+    "repo_wide_rediscovery": false,
+    "GIT-001": "CLOSED_VERIFIED",
+    "first_executable_ticket": "GIT-002",
+    "runtime_launcher": "scripts/start_production.ps1 -> run_supervised.py --host 0.0.0.0 --port 8201",
+    "RUNTIME-ENTRY-1": "hard-coded D:\\Taikoo-monitor-new portability / clean-clone closure"
+  },
+  "byte_exact_full_zip_reconstruction": "NOT_CLAIMED; the old raw Base64 archive shard set is incomplete online and has been explicitly invalidated. This v2 status certifies source-content conversion/coverage, not raw ZIP byte archival.",
+  "product_readiness": "NOT_READY; this manifest is handoff evidence and must not be interpreted as product/release acceptance."
+}
