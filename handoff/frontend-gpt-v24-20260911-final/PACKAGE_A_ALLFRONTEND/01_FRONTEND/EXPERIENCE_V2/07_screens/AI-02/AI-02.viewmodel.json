@@ -1,0 +1,46 @@
+{
+  "screen": "AI-02",
+  "viewmodel": {
+    "task_steps": [
+      "{key,label_key,state,tool}"
+    ],
+    "evidence_refs": [
+      "evidence_id"
+    ]
+  },
+  "binding": {
+    "task_orchestration": "CODEX_VERIFY (ai_task_engine = UNKNOWN route)"
+  },
+  "ports": {
+    "ViewModel": [
+      "task_steps",
+      "evidence_refs"
+    ],
+    "Capability": [
+      "PAT-AI-02"
+    ],
+    "Motion": [
+      "M05",
+      "M09",
+      "M10"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "AI-02.actions.json",
+    "Permission": [
+      "notify:write",
+      "report:write",
+      "task:write"
+    ],
+    "Evidence": [
+      "EV-7731",
+      "EV-7732",
+      "EV: ai_trace"
+    ]
+  },
+  "unknown_binding_keys": [
+    "task_orchestration"
+  ],
+  "binding_owner_default": "CODEX"
+}

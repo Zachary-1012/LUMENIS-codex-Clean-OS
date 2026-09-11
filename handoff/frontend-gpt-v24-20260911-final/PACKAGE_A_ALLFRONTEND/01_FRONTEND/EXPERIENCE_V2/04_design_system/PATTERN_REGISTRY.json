@@ -1,0 +1,163 @@
+{
+  "version": "V2",
+  "count": 9,
+  "patterns": {
+    "PAT-NAV-01": {
+      "name": "Compact Rail Navigation",
+      "family": "navigation",
+      "renderer": "shell.rail",
+      "motion": [
+        "M02"
+      ],
+      "used_by": [
+        "ACC-02",
+        "CTH-01"
+      ]
+    },
+    "PAT-NAV-02": {
+      "name": "Bottom Dock + AI FAB",
+      "family": "navigation",
+      "renderer": "shell.dock",
+      "motion": [
+        "M05"
+      ],
+      "used_by": [
+        "ACC-03"
+      ]
+    },
+    "PAT-DATA-01": {
+      "name": "KPI Overview + Sparkline + Evidence source",
+      "family": "data",
+      "renderer": "R.kpis",
+      "motion": [
+        "M07"
+      ],
+      "used_by": [
+        "ACC-03",
+        "CTH-01",
+        "CTH-02",
+        "CTH-03",
+        "CTH-07",
+        "CTH-09",
+        "BMP-01",
+        "BMP-02",
+        "BMP-03",
+        "BMP-04",
+        "BMP-05",
+        "BMP-07",
+        "BMP-09",
+        "BMP-11",
+        "AI-05",
+        "SYS-01",
+        "SYS-02",
+        "SYS-07",
+        "SYS-08",
+        "SH-03",
+        "SH-05",
+        "SH-06"
+      ]
+    },
+    "PAT-EVD-01": {
+      "name": "Evidence Chain Panel",
+      "family": "evidence",
+      "renderer": "R.evidence",
+      "motion": [
+        "M08"
+      ],
+      "used_by": [
+        "CTH-01",
+        "CTH-04",
+        "CTH-06",
+        "CTH-08",
+        "CTH-09",
+        "CTH-10",
+        "BMP-01",
+        "BMP-03",
+        "BMP-09",
+        "BMP-10",
+        "AI-03",
+        "SYS-03",
+        "SH-02"
+      ]
+    },
+    "PAT-AI-01": {
+      "name": "AI Composer Intent Home",
+      "family": "ai",
+      "renderer": "R.ai",
+      "motion": [
+        "M15",
+        "M05"
+      ],
+      "used_by": [
+        "ACC-01",
+        "BMP-08",
+        "AI-01",
+        "AI-03",
+        "SYS-06",
+        "SH-01"
+      ]
+    },
+    "PAT-AI-02": {
+      "name": "Artifact-first AI Thread + Stage Steps",
+      "family": "ai",
+      "renderer": "R.ai+R.steps",
+      "motion": [
+        "M06",
+        "M07"
+      ],
+      "used_by": [
+        "AI-01",
+        "AI-02",
+        "SH-01"
+      ]
+    },
+    "PAT-UPLOAD-01": {
+      "name": "Upload Pipeline (stage progress, no fake %)",
+      "family": "input",
+      "renderer": "R.upload",
+      "motion": [
+        "M12"
+      ],
+      "used_by": [
+        "CTH-10",
+        "BMP-06",
+        "BMP-07",
+        "BMP-08",
+        "SYS-02",
+        "SH-01",
+        "SH-04"
+      ]
+    },
+    "PAT-FILTER-01": {
+      "name": "Filter Chips / Segmented",
+      "family": "input",
+      "renderer": "R.filters",
+      "motion": [
+        "M10"
+      ],
+      "used_by": [
+        "CTH-02",
+        "CTH-05",
+        "CTH-06",
+        "CTH-08",
+        "BMP-02",
+        "BMP-05",
+        "BMP-06",
+        "AI-04",
+        "SYS-04",
+        "SH-01",
+        "SH-02"
+      ]
+    },
+    "PAT-EMPTY-01": {
+      "name": "13-state State Block",
+      "family": "state",
+      "renderer": "LumUI.stateBlock",
+      "motion": [
+        "M13",
+        "M14"
+      ],
+      "used_by": []
+    }
+  }
+}

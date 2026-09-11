@@ -1,0 +1,1704 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>设置 · 序境 LUMENIS</title>
+<link rel="stylesheet" href="/static/css/zbc-design-v1.1.css">
+<style>
+/* ===== Phase5b: Z-Index Layer Tokens (standalone page) ===== */
+:root {
+  --z-base: 0; --z-sticky: 10; --z-dropdown: 100; --z-embedded-panel: 150;
+  --z-drawer: 200; --z-modal: 500; --z-dialog: 800; --z-toast: 1000; --z-auth-recovery: 10000;
+}
+/* ===== prefers-reduced-motion global guard ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* ===== No-Scroll Lock ===== */
+html,body{height:100dvh;overflow:hidden;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b}
+
+/* ===== Layout: 100dvh bounded ===== */
+.settings-shell{
+  display:grid;grid-template-columns:260px 1fr;
+  height:100dvh;overflow:hidden;
+}
+/* Left sidebar */
+.settings-sidebar{
+  background:#fff;border-right:1px solid #e2e8f0;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sidebar-header{
+  padding:20px 16px 16px;border-bottom:1px solid #f1f5f9;
+}
+.apple-id-card{
+  display:flex;align-items:center;gap:12px;padding:12px;
+  background:linear-gradient(135deg,#f0fdfa,#ecfeff);
+  border-radius:16px;margin-bottom:8px;cursor:pointer;
+  border:1px solid rgba(15,118,110,.1);
+}
+.apple-id-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,#0F766E,#14B8A6);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:18px;flex-shrink:0;
+}
+.apple-id-info{min-width:0}
+.apple-id-name{font-size:14px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.apple-id-role{font-size:11px;color:#64748b;margin-top:2px}
+.quota-mini{font-size:10px;color:#0F766E;margin-top:2px;font-weight:600}
+
+/* Nav groups */
+.nav-group{padding:8px 0;overflow-y:auto;flex:1}
+.nav-group-title{
+  font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;
+  letter-spacing:.5px;padding:8px 20px 4px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 20px;cursor:pointer;font-size:13px;
+  color:#475569;transition:all .15s;border-left:3px solid transparent;
+  min-height:44px;
+}
+.nav-item:hover{background:#f8fafc;color:#0f172a}
+.nav-item.active{
+  background:#f0fdfa;color:#0F766E;font-weight:600;
+  border-left-color:#0F766E;
+}
+.nav-item .nav-icon{width:18px;text-align:center;font-size:15px;flex-shrink:0}
+.nav-item .nav-badge{
+  margin-left:auto;font-size:10px;background:#e2e8f0;color:#64748b;
+  padding:2px 6px;border-radius:8px;
+}
+.nav-item .nav-badge.warn{background:#fef3c7;color:#92400e}
+.nav-item .nav-badge.blocked{background:#fee2e2;color:#991b1b}
+
+/* Right content */
+.settings-content{
+  overflow:hidden;display:flex;flex-direction:column;
+  background:#f8fafc;
+}
+.content-header{
+  padding:20px 28px 16px;background:#fff;border-bottom:1px solid #e2e8f0;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.content-header h2{font-size:18px;font-weight:700;color:#0f172a}
+.content-header .domain-tag{
+  font-size:11px;padding:4px 10px;border-radius:12px;font-weight:600;
+}
+.domain-tag.zbmp{background:rgba(15,118,110,.1);color:#0F766E}
+.domain-tag.cth{background:rgba(37,99,235,.1);color:#2563eb}
+.domain-tag.system{background:rgba(124,58,237,.1);color:#7c3aed}
+
+.content-body{
+  flex:1;overflow-y:auto;padding:24px 28px;
+  scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent;
+}
+.content-body::-webkit-scrollbar{width:6px}
+.content-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+
+/* ===== Section panels ===== */
+.panel{display:none}
+.panel.active{display:block}
+
+/* Cards */
+.setting-card{
+  background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;
+  border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.setting-card h3{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.setting-card h3 .card-icon{font-size:16px}
+.form-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.form-row:last-child{border-bottom:none}
+.form-row label{font-size:13px;color:#475569}
+.form-row .form-value{font-size:13px;color:#0f172a;font-weight:500}
+.form-row input[type="text"],.form-row input[type="email"],.form-row input[type="password"],.form-row select{
+  padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;
+  width:200px;outline:none;
+}
+.form-row input:focus{border-color:#0F766E}
+
+/* Toggle switch */
+.toggle{
+  position:relative;width:44px;height:24px;background:#e2e8f0;border-radius:12px;
+  cursor:pointer;transition:background .2s;flex-shrink:0;
+}
+.toggle.on{background:#0F766E}
+.toggle::after{
+  content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;
+  background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.toggle.on::after{transform:translateX(20px)}
+
+/* Buttons */
+.btn{
+  padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:6px;
+}
+.btn-primary{background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;box-shadow:0 2px 8px rgba(15,118,110,.25)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-danger{background:#fef2f2;color:#dc2626}
+.btn-danger:hover{background:#fee2e2}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Quota big numbers */
+.quota-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.quota-card{
+  border-radius:14px;padding:16px;text-align:center;position:relative;overflow:hidden;
+}
+.quota-card.owner{background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d}
+.quota-card.admin{background:linear-gradient(135deg,#ccfbf1,#99f6e4);border:1px solid #5eead4}
+.quota-card.member{background:linear-gradient(135deg,#dbeafe,#bfdbfe);border:1px solid #93c5fd}
+.quota-num{font-size:28px;font-weight:800;color:#0f172a;line-height:1}
+.quota-num .limit{font-size:16px;color:#64748b;font-weight:500}
+.quota-label{font-size:11px;color:#475569;margin-top:6px;font-weight:600}
+
+/* Member cards */
+.member-list{display:flex;flex-direction:column;gap:10px}
+.member-card{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;
+  border-radius:14px;background:#fff;border:1px solid #e2e8f0;
+  transition:box-shadow .15s;
+}
+.member-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.member-avatar{
+  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0;
+}
+.member-avatar.owner{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.member-avatar.admin{background:linear-gradient(135deg,#0F766E,#14B8A6)}
+.member-avatar.user{background:linear-gradient(135deg,#2563eb,#3b82f6)}
+.member-info{flex:1;min-width:0}
+.member-name{font-size:14px;font-weight:600;color:#0f172a}
+.member-meta{font-size:11px;color:#64748b;margin-top:2px}
+.member-status{
+  font-size:10px;padding:3px 8px;border-radius:8px;font-weight:600;flex-shrink:0;
+}
+.member-status.active{background:#dcfce7;color:#166534}
+.member-status.disabled{background:#f1f5f9;color:#64748b}
+.member-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* Auth matrix chips */
+.auth-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.auth-chip{
+  font-size:10px;padding:2px 8px;border-radius:6px;font-weight:600;
+}
+.auth-chip.zbmp{background:rgba(15,118,110,.1);color:#0F766E}
+.auth-chip.cth{background:rgba(37,99,235,.1);color:#2563eb}
+.auth-chip.system{background:rgba(124,58,237,.1);color:#7c3aed}
+
+/* Device list (iOS style) */
+.device-list{display:flex;flex-direction:column}
+.device-row{
+  display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid #f1f5f9;
+}
+.device-row:last-child{border-bottom:none}
+.device-icon{width:36px;height:36px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.device-info{flex:1;min-width:0}
+.device-name{font-size:13px;font-weight:600;color:#0f172a}
+.device-meta{font-size:11px;color:#64748b;margin-top:2px}
+.device-battery{
+  width:60px;height:20px;border:1.5px solid #cbd5e1;border-radius:4px;
+  position:relative;overflow:hidden;flex-shrink:0;
+}
+.device-battery::after{
+  content:'';position:absolute;right:-3px;top:5px;width:2px;height:8px;
+  background:#cbd5e1;border-radius:0 2px 2px 0;
+}
+.device-battery-fill{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:2px}
+.device-battery-text{font-size:10px;color:#64748b;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:600}
+
+/* TOTP section */
+.totp-setup{text-align:center;padding:20px}
+.totp-qr{
+  width:180px;height:180px;margin:0 auto 16px;border-radius:16px;
+  background:#fff;padding:12px;border:1px solid #e2e8f0;
+}
+.totp-qr img{width:100%;height:100%;object-fit:contain}
+.totp-secret{
+  font-family:monospace;font-size:14px;background:#f8fafc;padding:8px 16px;
+  border-radius:8px;display:inline-block;letter-spacing:2px;color:#0F766E;
+  font-weight:600;margin-bottom:12px;
+}
+.totp-input-row{display:flex;gap:8px;justify-content:center;margin:16px 0}
+.totp-input-row input{
+  width:40px;height:48px;text-align:center;font-size:20px;font-weight:700;
+  border:1.5px solid #e2e8f0;border-radius:10px;outline:none;
+}
+.totp-input-row input:focus{border-color:#0F766E}
+
+/* Status badges */
+.status-badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:11px;
+  padding:3px 10px;border-radius:8px;font-weight:600;
+}
+.status-badge.ok{background:#dcfce7;color:#166534}
+.status-badge.warn{background:#fef3c7;color:#92400e}
+.status-badge.blocked{background:#fee2e2;color:#991b1b}
+.status-badge.off{background:#f1f5f9;color:#64748b}
+
+/* Horizontal scroll cards */
+.hscroll-container{
+  display:flex;gap:12px;overflow-x:auto;padding:4px 0 12px;
+  scroll-snap-type:x mandatory;scrollbar-width:thin;
+}
+.hscroll-container::-webkit-scrollbar{height:4px}
+.hscroll-container::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px}
+.hscroll-card{
+  min-width:200px;max-width:220px;flex-shrink:0;scroll-snap-align:start;
+  background:#fff;border-radius:14px;padding:16px;border:1px solid #e2e8f0;
+}
+.hscroll-card h4{font-size:13px;font-weight:700;margin-bottom:8px;color:#0f172a}
+.hscroll-card .card-value{font-size:22px;font-weight:800;color:#0F766E}
+.hscroll-card .card-label{font-size:11px;color:#64748b;margin-top:4px}
+.hscroll-dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.hscroll-dot{width:6px;height:6px;border-radius:50%;background:#cbd5e1}
+.hscroll-dot.active{background:#0F766E;width:18px;border-radius:3px}
+
+/* Modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;z-index:var(--z-modal);
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:#fff;border-radius:20px;padding:24px;width:480px;max-width:92vw;
+  max-height:85dvh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);
+}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:#0f172a}
+.modal .form-group{margin-bottom:14px}
+.modal .form-group label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px}
+.modal .form-group input,.modal .form-group select,.modal .form-group textarea{
+  width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;
+}
+.modal .form-group input:focus{border-color:#0F766E}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* Audit table */
+.audit-table{width:100%;border-collapse:collapse;font-size:12px}
+.audit-table th{text-align:left;padding:8px 10px;background:#f8fafc;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0}
+.audit-table td{padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#475569}
+.audit-table tr:hover{background:#f8fafc}
+
+/* Pagination */
+.pagination{display:flex;gap:6px;justify-content:center;margin-top:16px;align-items:center}
+.pagination button{
+  padding:6px 12px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;
+  cursor:pointer;font-size:12px;color:#475569;
+}
+.pagination button.active{background:#0F766E;color:#fff;border-color:#0F766E}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+
+/* Empty/Loading states */
+.empty-state{text-align:center;padding:40px 20px;color:#94a3b8}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px}
+.loading-spinner{
+  width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#0F766E;
+  border-radius:50%;animation:spin .8s linear infinite;margin:20px auto;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#0f172a;color:#fff;padding:12px 24px;border-radius:12px;
+  font-size:13px;z-index:var(--z-toast);opacity:0;transition:opacity .3s;
+  pointer-events:none;
+}
+.toast.show{opacity:1}
+.toast.error{background:#dc2626}
+.toast.success{background:#16a34a}
+
+/* Protection sub-sections */
+.protection-block{
+  border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #e2e8f0;
+}
+.protection-block.zbmp{background:linear-gradient(135deg,#f0fdfa,#fff);border-color:rgba(15,118,110,.2)}
+.protection-block.cth{background:linear-gradient(135deg,#eff6ff,#fff);border-color:rgba(37,99,235,.2)}
+.protection-block.system{background:linear-gradient(135deg,#faf5ff,#fff);border-color:rgba(124,58,237,.2)}
+.protection-block h4{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+
+/* Responsive */
+@media(max-width:768px){
+  .settings-shell{grid-template-columns:1fr}
+  .settings-sidebar{
+    position:fixed;bottom:0;left:0;right:0;height:auto;z-index:var(--z-dropdown);
+    flex-direction:row;overflow-x:auto;border-right:none;border-top:1px solid #e2e8f0;
+  }
+  .sidebar-header{display:none}
+  .nav-group{display:flex;overflow-x:auto;padding:0}
+  .nav-group-title{display:none}
+  .nav-item{flex-direction:column;gap:2px;padding:8px 12px;font-size:10px;border-left:none;border-top:3px solid transparent;min-width:60px}
+  .nav-item.active{border-left:none;border-top-color:#0F766E}
+  .content-body{padding:16px}
+  .quota-grid{grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .quota-num{font-size:20px}
+}
+
+/* ===== Codex Design Pattern: New Components ===== */
+.theme-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.theme-card{border-radius:12px;border:1.5px solid #e2e8f0;overflow:hidden;cursor:pointer;transition:all .15s;background:#fff}
+.theme-card:hover{border-color:#94a3b8}
+.theme-card.selected{border-color:#0F766E;box-shadow:0 0 0 3px rgba(15,118,110,.12)}
+.theme-card-preview{height:80px;position:relative;overflow:hidden}
+.theme-card-preview.light{background:linear-gradient(135deg,#f8fafc,#fff)}
+.theme-card-preview.dark{background:linear-gradient(135deg,#0f172a,#1e293b)}
+.theme-card-preview.system{background:linear-gradient(135deg,#f8fafc 50%,#0f172a 50%)}
+.theme-card-preview .mock-sidebar{position:absolute;left:0;top:0;bottom:0;width:28px;background:rgba(15,118,110,.15)}
+.theme-card-preview.dark .mock-sidebar{background:rgba(20,184,166,.2)}
+.theme-card-preview .mock-bar{position:absolute;left:34px;right:8px;top:8px;height:6px;border-radius:3px;background:rgba(0,0,0,.08)}
+.theme-card-preview.dark .mock-bar{background:rgba(255,255,255,.12)}
+.theme-card-preview .mock-bar2{position:absolute;left:34px;right:20px;top:20px;height:4px;border-radius:2px;background:rgba(0,0,0,.05)}
+.theme-card-preview.dark .mock-bar2{background:rgba(255,255,255,.08)}
+.theme-card-label{padding:8px 10px;text-align:center;font-size:12px;font-weight:600;color:#475569}
+.theme-card.selected .theme-card-label{color:#0F766E}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-track{flex:1;height:4px;background:#e2e8f0;border-radius:2px;position:relative;cursor:pointer}
+.slider-fill{height:100%;background:#0F766E;border-radius:2px;position:absolute;left:0;top:0}
+.slider-thumb{width:16px;height:16px;background:#0F766E;border-radius:50%;position:absolute;top:50%;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:grab}
+.slider-value{font-size:13px;font-weight:600;color:#0F766E;min-width:32px;text-align:right;font-family:monospace}
+.color-capsule{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;font-family:monospace;border:1px solid #e2e8f0}
+.color-swatch{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.1)}
+.font-dual{display:flex;gap:6px}
+.font-dual select{padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;background:#fff;outline:none}
+.font-dual select:focus{border-color:#0F766E}
+.skill-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
+.skill-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid #e2e8f0}
+.skill-tab{padding:8px 14px;font-size:13px;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
+.skill-tab:hover{color:#0f172a}
+.skill-tab.active{color:#0F766E;border-bottom-color:#0F766E;font-weight:600}
+.skill-tab .tab-count{font-size:11px;color:#94a3b8;margin-left:4px;font-weight:400}
+.skill-search{flex:1;min-width:180px;padding:8px 12px 8px 34px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#f8fafc}
+.skill-search:focus{border-color:#0F766E;background:#fff;box-shadow:0 0 0 3px rgba(15,118,110,.1)}
+.skill-list{display:flex;flex-direction:column}
+.skill-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;transition:background .12s;position:relative}
+.skill-row:hover{background:#f8fafc}
+.skill-row:hover .skill-more{opacity:1}
+.skill-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:#fff}
+.skill-info{flex:1;min-width:0}
+.skill-name{font-size:13px;font-weight:600;color:#0f172a;display:flex;align-items:center;gap:6px}
+.skill-desc{font-size:11px;color:#94a3b8;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skill-more{position:absolute;right:12px;top:50%;transform:translateY(-50%);opacity:0;transition:opacity .15s;background:none;border:none;font-size:16px;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:6px}
+.skill-more:hover{background:#e2e8f0;color:#475569}
+.skill-toggle{flex-shrink:0;margin-right:28px}
+.skill-detail{display:none;padding:0 12px 12px 60px;border-bottom:1px solid #f1f5f9}
+.skill-detail.show{display:block}
+.skill-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.skill-detail-item{font-size:11px;color:#64748b}
+.skill-detail-item .dt-label{color:#94a3b8;margin-right:4px}
+.kb-search-wrap{position:relative;margin-bottom:14px}
+.kb-search-wrap input{width:100%;padding:9px 12px 9px 36px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#f8fafc}
+.kb-search-wrap input:focus{border-color:#0F766E;background:#fff}
+.kb-search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;width:16px;height:16px}
+.kb-group-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;padding:10px 4px 6px}
+.kb-row{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:8px;transition:background .12s}
+.kb-row:hover{background:#f8fafc}
+.kb-row-info{flex:1;min-width:0}
+.kb-row-name{font-size:13px;color:#0f172a;font-weight:500}
+.kb-row-desc{font-size:11px;color:#94a3b8;margin-top:1px}
+.kb-combo{display:inline-flex;gap:3px;align-items:center;flex-shrink:0}
+.kb-combo kbd{font-family:'JetBrains Mono',Consolas,monospace;font-size:11px;padding:3px 7px;border:1px solid #e2e8f0;border-bottom-width:2px;border-radius:6px;background:#f8fafc;color:#64748b;font-weight:500}
+.kb-unassigned{font-size:12px;color:#cbd5e1;font-style:italic;flex-shrink:0}
+.kb-actions{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .15s}
+.kb-row:hover .kb-actions{opacity:1}
+.kb-icon-btn{background:none;border:none;padding:5px;border-radius:6px;cursor:pointer;color:#94a3b8;display:flex;align-items:center;justify-content:center}
+.kb-icon-btn:hover{background:#e2e8f0;color:#475569}
+.kb-icon-btn.danger:hover{background:#fee2e2;color:#dc2626}
+.kb-capturing{background:#f0fdfa !important;border:1px dashed #0F766E}
+.browser-total-row{display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(135deg,#f0fdfa,#fff);border-radius:12px;border:1px solid rgba(15,118,110,.15);margin-bottom:16px}
+.browser-total-icon{width:32px;height:32px;border-radius:8px;background:rgba(15,118,110,.1);display:flex;align-items:center;justify-content:center;color:#0F766E;flex-shrink:0}
+.browser-total-info{flex:1}
+.browser-total-name{font-size:13px;font-weight:600;color:#0f172a}
+.browser-total-desc{font-size:11px;color:#94a3b8;margin-top:1px}
+.setting-group-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;padding:4px 0 8px;margin-top:8px}
+.integration-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;transition:background .12s}
+.integration-row:hover{background:#f8fafc}
+.integration-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff;font-weight:700}
+.integration-info{flex:1;min-width:0}
+.integration-name{font-size:13px;font-weight:600;color:#0f172a}
+.integration-desc{font-size:11px;color:#94a3b8;margin-top:1px}
+.integration-status{font-size:11px;padding:3px 10px;border-radius:8px;font-weight:600;flex-shrink:0}
+.integration-status.verified{background:#dcfce7;color:#166534}
+.integration-status.expired{background:#fee2e2;color:#991b1b}
+.integration-status.partial{background:#fef3c7;color:#92400e}
+.integration-status.blocked{background:#f1f5f9;color:#64748b}
+.integration-status.unknown{background:#f1f5f9;color:#64748b}
+.skeleton{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:skeleton-shimmer 1.5s infinite;border-radius:6px}
+@keyframes skeleton-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-line{height:14px;margin-bottom:8px}
+.skeleton-line.short{width:60%}
+.reduced-motion-segment{display:inline-flex;background:#f1f5f9;border-radius:8px;padding:2px}
+.reduced-motion-segment button{border:none;background:transparent;padding:5px 12px;font-size:12px;color:#64748b;cursor:pointer;border-radius:6px;transition:all .15s;font-weight:500}
+.reduced-motion-segment button.active{background:#fff;color:#0F766E;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+</style>
+</head>
+<body>
+<div class="settings-shell">
+  <!-- Left Sidebar -->
+  <aside class="settings-sidebar">
+    <div class="sidebar-header">
+      <div class="apple-id-card" onclick="switchPanel('profile')">
+        <div class="apple-id-avatar" id="userAvatar">Z</div>
+        <div class="apple-id-info">
+          <div class="apple-id-name" id="userName">加载中...</div>
+          <div class="apple-id-role" id="userRole">—</div>
+          <div class="quota-mini" id="quotaMini">—</div>
+        </div>
+      </div>
+    </div>
+    <nav class="nav-group" id="navGroup">
+      <div class="nav-group-title">账户与安全</div>
+      <div class="nav-item active" data-panel="profile" onclick="switchPanel('profile')">
+        <span class="nav-icon"><span data-icon="user" data-icon-size="16"></span></span>账户资料
+      </div>
+      <div class="nav-item" data-panel="security" onclick="switchPanel('security')">
+        <span class="nav-icon"><span data-icon="lock" data-icon-size="16"></span></span>登录与安全
+      </div>
+      <div class="nav-item" data-panel="protection" onclick="switchPanel('protection')">
+        <span class="nav-icon"><span data-icon="shield" data-icon-size="16"></span></span>访问保护
+        <span class="nav-badge" id="protectionBadge">3</span>
+      </div>
+      <div class="nav-item" data-panel="members" onclick="switchPanel('members')">
+        <span class="nav-icon"><span data-icon="users" data-icon-size="16"></span></span>成员管理
+      </div>
+      <div class="nav-item" data-panel="approvals" onclick="switchPanel('approvals')">
+        <span class="nav-icon"><span data-icon="check" data-icon-size="16"></span></span>登录审批
+      </div>
+      <div class="nav-item" data-panel="recovery" onclick="switchPanel('recovery')">
+        <span class="nav-icon"><span data-icon="refresh" data-icon-size="16"></span></span>账号恢复
+      </div>
+      <div class="nav-item" data-panel="audit" onclick="switchPanel('audit')">
+        <span class="nav-icon"><span data-icon="list" data-icon-size="16"></span></span>审计日志
+      </div>
+      <div class="nav-item" data-panel="keys" onclick="switchPanel('keys')">
+        <span class="nav-icon"><span data-icon="key" data-icon-size="16"></span></span>程序化密钥
+      </div>
+
+      <div class="nav-group-title">系统</div>
+      <div class="nav-item" data-panel="navcustom" onclick="switchPanel('navcustom')">
+        <span class="nav-icon"><span data-icon="navigation" data-icon-size="16"></span></span>导航自定义
+      </div>
+      <div class="nav-item" data-panel="skills" onclick="switchPanel('skills')">
+        <span class="nav-icon"><span data-icon="bolt" data-icon-size="16"></span></span>技能管理
+      </div>
+      <div class="nav-item" data-panel="about" onclick="switchPanel('about')">
+        <span class="nav-icon"><span data-icon="info" data-icon-size="16"></span></span>关于系统
+      </div>
+      <div class="nav-item" data-panel="syslinks" onclick="switchPanel('syslinks')">
+        <span class="nav-icon"><span data-icon="navigation" data-icon-size="16"></span></span>系统模块入口
+      </div>
+      <div class="nav-item" data-panel="domain" onclick="switchPanel('domain')">
+        <span class="nav-icon"><span data-icon="globe" data-icon-size="16"></span></span>域名与接入
+      </div>
+      <div class="nav-item" data-panel="developer" onclick="switchPanel('developer')">
+        <span class="nav-icon"><span data-icon="gear" data-icon-size="16"></span></span>开发者功能
+      </div>
+      <div class="nav-item" data-panel="appearance" onclick="switchPanel('appearance')">
+        <span class="nav-icon"><span data-icon="palette" data-icon-size="16"></span></span>外观
+      </div>
+      <div class="nav-item" data-panel="config" onclick="switchPanel('config')">
+        <span class="nav-icon"><span data-icon="sliders" data-icon-size="16"></span></span>配置
+      </div>
+      <div class="nav-item" data-panel="keyboard" onclick="switchPanel('keyboard')">
+        <span class="nav-icon"><span data-icon="keyboard" data-icon-size="16"></span></span>键盘快捷键
+      </div>
+      <div class="nav-item" data-panel="browser" onclick="switchPanel('browser')">
+        <span class="nav-icon"><span data-icon="globe" data-icon-size="16"></span></span>浏览器
+      </div>
+      <div class="nav-item" data-panel="integrations" onclick="switchPanel('integrations')">
+        <span class="nav-icon"><span data-icon="plug" data-icon-size="16"></span></span>集成与连接
+      </div>
+      <div class="nav-item" data-panel="ai" onclick="switchPanel('ai')">
+        <span class="nav-icon"><span data-icon="intelligence" data-icon-size="16"></span></span>AI
+      </div>
+      <div class="nav-item" data-panel="collection" onclick="switchPanel('collection')">
+        <span class="nav-icon"><span data-icon="inbox" data-icon-size="16"></span></span>采集与数据源
+      </div>
+      <div class="nav-item" data-panel="platforms" onclick="switchPanel('platforms')">
+        <span class="nav-icon"><span data-icon="globe" data-icon-size="16"></span></span>平台与可见性
+      </div>
+      <div class="nav-item" data-panel="backup" onclick="switchPanel('backup')">
+        <span class="nav-icon"><span data-icon="database" data-icon-size="16"></span></span>通知/备份/帮助
+              <div class="nav-item" data-panel="zbmp-domain" onclick="switchPanel('zbmp-domain')">
+        <div class="nav-item" data-panel="modules" onclick="switchPanel('modules')">
+          <span class="nav-icon"><span data-icon="grid" data-icon-size="16"></span></span>模组管理
+          <span class="nav-badge">27</span>
+        </div>
+          <span class="nav-icon">🔓</span><span>ZBMP 序境·品牌市场</span>
+          <span class="nav-badge" id="zbmp-status-badge">未开启</span>
+        </div>
+
+      <div class="nav-group-title">系统运行工具</div>
+      <a class="nav-item" href="/system/runtime" style="text-decoration:none;color:inherit">
+        <span class="nav-icon"><span data-icon="gear" data-icon-size="16"></span></span>运行时监控
+        <span class="nav-badge">Guardian</span>
+      </a>
+      <a class="nav-item" href="/system/collector" style="text-decoration:none;color:inherit">
+        <span class="nav-icon"><span data-icon="inbox" data-icon-size="16"></span></span>采集器管理
+      </a>
+      <a class="nav-item" href="/system/database" style="text-decoration:none;color:inherit">
+        <span class="nav-icon"><span data-icon="database" data-icon-size="16"></span></span>数据库管理
+        <span class="nav-badge">129表</span>
+      </a>
+      <a class="nav-item" href="/system/security" style="text-decoration:none;color:inherit">
+        <span class="nav-icon"><span data-icon="lock" data-icon-size="16"></span></span>安全扫描
+      </a>
+</div>
+    </nav>
+  </aside>
+
+  <!-- Right Content -->
+  <main class="settings-content">
+    <div class="content-header">
+      <h2 id="panelTitle">账户资料</h2>
+      <span class="domain-tag system" id="domainTag">系统</span>
+    </div>
+    <div class="content-body" id="contentBody">
+
+      <!-- Profile -->
+      <div class="panel active" id="panel-profile">
+        <div class="setting-card">
+          <h3><span class="card-icon">👤</span>个人资料</h3>
+          <div class="form-row"><label>头像</label><div class="form-value" id="profileAvatar">—</div></div>
+          <div class="form-row"><label>显示名</label><input type="text" id="profileDisplayName" placeholder="显示名"></div>
+          <div class="form-row"><label>邮箱</label><input type="email" id="profileEmail" placeholder="邮箱"></div>
+          <div class="form-row"><label>手机</label><input type="text" id="profilePhone" placeholder="手机号"></div>
+          <div style="margin-top:16px;text-align:right">
+            <button class="btn btn-primary" onclick="saveProfile()">保存资料</button>
+          </div>
+        </div>
+        <div class="setting-card" id="weakPwdWarning" style="display:none;border-color:#fcd34d;background:linear-gradient(135deg,#fffbeb,#fff)">
+          <h3><span class="card-icon">⚠️</span>安全建议</h3>
+          <p style="font-size:13px;color:#92400e;line-height:1.6">
+            您正在使用默认弱口令 <strong>Zachary01</strong>，建议立即修改。
+            <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="switchPanel('security')">去修改</button>
+          </p>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="panel" id="panel-security">
+        <div class="setting-card">
+          <h3><span class="card-icon">🔑</span>修改密码</h3>
+          <div class="form-row"><label>当前密码</label><input type="password" id="oldPassword" placeholder="当前密码"></div>
+          <div class="form-row"><label>新密码</label><input type="password" id="newPassword" placeholder="至少6位"></div>
+          <div class="form-row"><label>确认新密码</label><input type="password" id="confirmPassword" placeholder="再次输入"></div>
+          <div style="margin-top:16px;text-align:right">
+            <button class="btn btn-primary" onclick="changePassword()">修改密码</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <h3><span class="card-icon">📱</span>受信任设备与会话</h3>
+          <div id="deviceList"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Protection (ZBMP/CTH/SYSTEM 独立三块) -->
+      <div class="panel" id="panel-protection">
+        <!-- ZBMP TOTP -->
+        <div class="protection-block zbmp">
+          <h4>🟢 序境·品牌市场 访问保护 · 动态验证码</h4>
+          <div class="form-row">
+            <label>保护状态</label>
+            <span class="status-badge ok" id="zbmpStatus">已开启 · 动态验证码</span>
+          </div>
+          <div id="totpArea">
+            <div id="totpNotBound" style="display:none">
+              <p style="font-size:12px;color:#64748b;margin-bottom:12px">未绑定动态验证码。点击下方按钮生成种子和二维码，用iPhone「密码」扫码绑定。</p>
+              <button class="btn btn-primary btn-sm" onclick="setupTOTP()">生成动态验证码种子</button>
+            </div>
+            <div id="totpSetupArea" style="display:none">
+              <div class="totp-setup">
+                <div class="totp-qr"><img id="totpQrImg" src="" alt="TOTP QR"></div>
+                <div class="totp-secret" id="totpSecretText">—</div>
+                <p style="font-size:11px;color:#64748b;margin-bottom:12px">用iPhone「设置→密码」扫码添加，然后输入6位码确认绑定</p>
+                <div class="totp-input-row" id="totpConfirmInputs">
+                  <input type="text" maxlength="1" inputmode="numeric"><input type="text" maxlength="1" inputmode="numeric"><input type="text" maxlength="1" inputmode="numeric"><input type="text" maxlength="1" inputmode="numeric"><input type="text" maxlength="1" inputmode="numeric"><input type="text" maxlength="1" inputmode="numeric">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="confirmTOTP()">确认绑定</button>
+                <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="cancelTOTPSetup()">取消</button>
+              </div>
+            </div>
+            <div id="totpBound" style="display:none">
+              <div class="form-row"><label>绑定状态</label><span class="status-badge ok">已绑定 · iPhone「密码」</span></div>
+              <div class="form-row"><label>最后使用</label><span class="form-value" id="totpLastUsed">—</span></div>
+              <button class="btn btn-danger btn-sm" onclick="resetTOTP()">重置动态验证码</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTH Password -->
+        <div class="protection-block cth">
+          <h4>🔵 序境·商业运营 访问保护 · 账号密码</h4>
+          <div class="form-row">
+            <label>保护状态</label>
+            <span class="status-badge ok" id="cthStatus">已开启 · 账号密码</span>
+          </div>
+          <div class="form-row"><label>当前账号</label><span class="form-value" id="cthAccount">—</span></div>
+          <p style="font-size:12px;color:#64748b;margin:8px 0">序境·商业运营入口使用v4账号密码体系登录。可在上方"登录与安全"中修改密码。</p>
+          <a href="/cth/login" target="_blank"><button class="btn btn-secondary btn-sm">前往序境·商业运营登录页</button></a>
+        </div>
+
+        <!-- SYSTEM Reauth -->
+        <div class="protection-block system">
+          <h4>🟣 系统 敏感操作 · 二次确认</h4>
+          <div class="form-row">
+            <label>保护状态</label>
+            <span class="status-badge ok">已开启 · 二次确认</span>
+          </div>
+          <div class="form-row">
+            <label>成员管理/密钥/审计导出</label>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <p style="font-size:11px;color:#94a3b8;margin-top:8px">系统域敏感操作需密码或动态验证码二次验证</p>
+        </div>
+
+        <!-- Other channels (BLOCKED) -->
+        <div class="protection-block" style="background:#f8fafc">
+          <h4>📡 其他通道（预留）</h4>
+          <div class="form-row"><label>Bark iOS推送</label><span class="status-badge blocked">BLOCKED · 需Bark key</span></div>
+          <div class="form-row"><label>Sign in with Apple</label><span class="status-badge blocked">BLOCKED · 需开发者账号¥688/年</span></div>
+          <div class="form-row"><label>短信验证码</label><span class="status-badge blocked">BLOCKED · 需短信网关凭证</span></div>
+          <div class="form-row"><label>邮件验证码</label><span class="status-badge blocked">BLOCKED · 需SMTP凭证</span></div>
+          <p style="font-size:11px;color:#94a3b8;margin-top:8px">以上通道缺凭证标BLOCKED，绝不伪造"已发送"提示</p>
+        </div>
+      </div>
+
+      <!-- Members -->
+      <div class="panel" id="panel-members">
+        <div class="quota-grid" id="quotaGrid">
+          <div class="quota-card owner"><div class="quota-num">1<span class="limit">/1</span></div><div class="quota-label">主账号</div></div>
+          <div class="quota-card admin"><div class="quota-num" id="adminUsed">0<span class="limit">/3</span></div><div class="quota-label">管理员</div></div>
+          <div class="quota-card member"><div class="quota-num" id="memberUsed">0<span class="limit">/5</span></div><div class="quota-label">子账号</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span style="font-size:13px;font-weight:600;color:#475569">成员列表</span>
+          <button class="btn btn-primary btn-sm" onclick="openMemberModal()">+ 新建成员</button>
+        </div>
+        <div class="member-list" id="memberList"><div class="loading-spinner"></div></div>
+      </div>
+
+      <!-- Approvals -->
+      <div class="panel" id="panel-approvals">
+        <div class="setting-card">
+          <h3><span class="card-icon">✅</span>待审批登录</h3>
+          <div id="approvalList"><div class="empty-state"><div class="empty-icon">📭</div>暂无待审批登录</div></div>
+        </div>
+      </div>
+
+      <!-- Recovery -->
+      <div class="panel" id="panel-recovery">
+        <div class="setting-card">
+          <h3><span class="card-icon">🔄</span>账号恢复</h3>
+          <p style="font-size:13px;color:#475569;margin-bottom:12px">复用现有 auth_recovery_center 安全问答+恢复码机制</p>
+          <div id="recoveryQuestions"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Audit -->
+      <div class="panel" id="panel-audit">
+        <div class="setting-card">
+          <h3><span class="card-icon">📋</span>审计日志</h3>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input type="text" id="auditFilterUser" placeholder="筛选用户" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;width:120px">
+            <input type="text" id="auditFilterAction" placeholder="筛选动作" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;width:120px">
+            <button class="btn btn-secondary btn-sm" onclick="loadAuditLogs()">筛选</button>
+          </div>
+          <div id="auditTableContainer"><div class="loading-spinner"></div></div>
+          <div class="pagination" id="auditPagination"></div>
+        </div>
+      </div>
+
+      <!-- Keys -->
+      <div class="panel" id="panel-keys">
+        <div class="setting-card">
+          <h3><span class="card-icon">🔑</span>程序化访问密钥</h3>
+          <div id="rotationWarning" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">
+            ⚠️ 检测到 <span id="rotationCount">0</span> 个无过期/已过期密钥，建议轮换
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:12px;color:#64748b">静态密钥已降级为程序化访问，新密钥强制过期</span>
+            <button class="btn btn-primary btn-sm" onclick="openKeyModal()">+ 创建密钥</button>
+          </div>
+          <div id="keyList"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Nav Custom -->
+      <div class="panel" id="panel-navcustom">
+        <div class="setting-card">
+          <h3><span class="card-icon">🧭</span>导航/工作台自定义</h3>
+          <div class="form-row">
+            <label>当前域</label>
+            <select id="navDomainSelect" onchange="loadNavConfig()">
+              <option value="ZBMP">序境·品牌市场</option>
+              <option value="CTH">序境·商业运营</option>
+              <option value="SYSTEM">系统</option>
+            </select>
+          </div>
+          <div id="navConfigList"><div class="loading-spinner"></div></div>
+          <div style="margin-top:16px;text-align:right">
+            <button class="btn btn-secondary btn-sm" onclick="resetNavConfig()">恢复默认</button>
+            <button class="btn btn-primary btn-sm" onclick="saveNavConfig()">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Keyboard Shortcuts -->
+      <div class="panel" id="panel-keyboard">
+        <div class="setting-card">
+          <div class="kb-search-wrap">
+            <svg class="kb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="kbFilterInput" placeholder="搜索快捷键…" oninput="filterKeyboardShortcuts()" autocomplete="off">
+          </div>
+          <div id="keyboardShortcutsList"><div class="loading-spinner"></div></div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:#94a3b8">修改后自动保存到本地，Ctrl+/ 随时查看</span>
+            <button class="btn btn-secondary btn-sm" onclick="resetKeyboardShortcuts()">恢复默认</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills (Codex pattern: tabs + search + list with detail) -->
+      <div class="panel" id="panel-skills">
+        <div class="setting-card">
+          <div class="skill-header-row">
+            <div class="skill-tabs">
+              <div class="skill-tab active" data-skill-tab="plugins" onclick="switchSkillTab('plugins')">插件 <span class="tab-count" id="pluginCount">0</span></div>
+              <div class="skill-tab" data-skill-tab="mcp" onclick="switchSkillTab('mcp')">MCP <span class="tab-count" id="mcpCount">0</span></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <a href="/system/skills" class="btn btn-secondary btn-sm" style="text-decoration:none">浏览目录</a>
+              <button class="btn btn-primary btn-sm" onclick="openAddSkillModal()">添加</button>
+            </div>
+          </div>
+          <div style="position:relative;margin-bottom:12px">
+            <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="skill-search" id="skillSearchInput" placeholder="搜索插件…" oninput="filterSkills()" style="padding-left:34px">
+          </div>
+          <div class="skill-list" id="skillList"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="panel" id="panel-about">
+        <div class="setting-card">
+          <h3><span class="card-icon">ℹ️</span>关于系统</h3>
+          <div class="form-row"><label>产品名</label><span class="form-value">序境 LUMENIS</span></div>
+          <div class="form-row"><label>版本</label><span class="form-value" id="aboutVersion">—</span></div>
+          <div class="form-row"><label>Build</label><span class="form-value" id="aboutBuild">—</span></div>
+          <div class="form-row"><label>Commit SHA</label><span class="form-value" id="aboutCommit" style="font-family:monospace;font-size:12px">—</span></div>
+          <div class="form-row"><label>分支</label><span class="form-value" id="aboutBranch">—</span></div>
+          <div class="form-row"><label>运行环境</label><span class="form-value">Python 3.13 · Flask · SQLite</span></div>
+          <div class="form-row"><label>端口</label><span class="form-value">8201</span></div>
+        </div>
+        <div class="setting-card">
+          <h3><span class="card-icon">📖</span>运行逻辑与功能说明</h3>
+          <p style="font-size:12px;color:#475569;line-height:1.8">
+            序境 LUMENIS 是双域舆情监控系统：<strong>序境·品牌市场域</strong>负责品牌传播、KOS分析、竞品监测；
+            <strong>序境·商业运营域</strong>负责实时舆情、事件追踪、小红书采集。
+            账户体系对标Apple ID：1主账号+3管理员+5子账号，双域授权隔离，序境·品牌市场域用动态验证码、序境·商业运营域用账号密码。
+            所有数据真实函数驱动，缺失显式null/—。
+          </p>
+        </div>
+      </div>
+
+      <!-- Domain -->
+      <div class="panel" id="panel-domain">
+        <div class="setting-card">
+          <h3><span class="card-icon">🌐</span>域名与接入</h3>
+          <div class="form-row"><label>本地地址</label><span class="form-value">127.0.0.1:8201</span></div>
+          <div class="form-row"><label>局域网地址</label><span class="form-value" id="lanAddr">—</span></div>
+          <div class="form-row"><label>Cloudflare Tunnel</label><span class="status-badge blocked">BLOCKED · 需Cloudflare账号</span></div>
+          <div class="form-row"><label>反向代理</label><span class="status-badge off">未配置</span></div>
+          <div class="form-row"><label>自定义域名</label><span class="status-badge off">未配置</span></div>
+        </div>
+      </div>
+
+      <!-- Developer -->
+      <div class="panel" id="panel-developer">
+        <div class="setting-card">
+          <h3><span class="card-icon">⚙️</span>开发者功能</h3>
+          <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">
+            ⚠️ 开发者功能包含风险操作，开启后所有操作记录审计日志
+          </div>
+          <div class="form-row"><label>开发者模式</label><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="form-row"><label>API / MCP 接口</label><span class="status-badge ok">已启用</span></div>
+          <div class="form-row"><label>日志级别</label>
+            <select><option>INFO</option><option>DEBUG</option><option>WARNING</option><option>ERROR</option></select>
+          </div>
+          <div class="form-row"><label>实验功能</label><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="form-row"><label>内部浏览器通道</label><span class="status-badge ok">运行中</span></div>
+        </div>
+      </div>
+
+      <!-- Appearance (Codex pattern: theme cards + full config) -->
+      <div class="panel" id="panel-appearance">
+        <div class="setting-card">
+          <div class="theme-cards" id="themeCards">
+            <div class="theme-card selected" data-theme="light" onclick="selectTheme('light')">
+              <div class="theme-card-preview light"><div class="mock-sidebar"></div><div class="mock-bar"></div><div class="mock-bar2"></div></div>
+              <div class="theme-card-label">浅色</div>
+            </div>
+            <div class="theme-card" data-theme="dark" onclick="selectTheme('dark')">
+              <div class="theme-card-preview dark"><div class="mock-sidebar"></div><div class="mock-bar"></div><div class="mock-bar2"></div></div>
+              <div class="theme-card-label">深色</div>
+            </div>
+            <div class="theme-card" data-theme="system" onclick="selectTheme('system')">
+              <div class="theme-card-preview system"><div class="mock-sidebar"></div><div class="mock-bar"></div><div class="mock-bar2"></div></div>
+              <div class="theme-card-label">跟随系统</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">强调色</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面主色调与选中态</div></div>
+            <div id="accentColorDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">背景 / 前景色</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">当前主题的基础色值</div></div>
+            <div style="display:flex;gap:8px">
+              <span class="color-capsule"><span class="color-swatch" id="bgSwatch" style="background:#FFFFFF"></span><span id="bgValue">#FFFFFF</span></span>
+              <span class="color-capsule"><span class="color-swatch" id="fgSwatch" style="background:#1A1C1F"></span><span id="fgValue">#1A1C1F</span></span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">UI 字体</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面文字字体与字重</div></div>
+            <div class="font-dual">
+              <select id="uiFontFamily" onchange="saveFontConfig()"><option value="Inter">Inter</option><option value="system-ui">系统默认</option><option value="Noto Sans SC">Noto Sans SC</option></select>
+              <select id="uiFontWeight" onchange="saveFontConfig()"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">内容字体</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">正文与长文本字体</div></div>
+            <div class="font-dual">
+              <select id="contentFontFamily" onchange="saveFontConfig()"><option value="Noto Sans SC">Noto Sans SC</option><option value="Inter">Inter</option><option value="system-ui">系统默认</option></select>
+              <select id="contentFontWeight" onchange="saveFontConfig()"><option value="400">常规</option><option value="500">中等</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">代码字体</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">等宽代码与数据显示</div></div>
+            <div class="font-dual">
+              <select id="codeFontFamily" onchange="saveFontConfig()"><option value="JetBrains Mono">JetBrains Mono</option><option value="Consolas">Consolas</option><option value="monospace">系统等宽</option></select>
+              <select id="codeFontWeight" onchange="saveFontConfig()"><option value="400">常规</option><option value="500">中等</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">半透明侧边栏</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">侧边栏使用毛玻璃效果</div></div>
+            <div class="toggle" id="translucentSidebarToggle" onclick="toggleTranslucentSidebar()"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">对比度</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">调整界面元素对比度</div></div>
+            <div class="slider-row" style="width:220px">
+              <div class="slider-track" id="contrastSlider" onclick="setContrast(event)">
+                <div class="slider-fill" id="contrastFill" style="width:45%"></div>
+                <div class="slider-thumb" id="contrastThumb" style="left:45%"></div>
+              </div>
+              <span class="slider-value" id="contrastValue">45</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">UI 字号</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面基础字号（px）</div></div>
+            <input type="number" id="uiFontSize" value="14" min="12" max="18" style="width:70px;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;text-align:center" onchange="saveFontSize()">
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">减少动态效果</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">降低动画与过渡效果</div></div>
+            <div class="reduced-motion-segment" id="reducedMotionSegment">
+              <button data-value="system" class="active" onclick="setReducedMotion('system')">跟随系统</button>
+              <button data-value="on" onclick="setReducedMotion('on')">开启</button>
+              <button data-value="off" onclick="setReducedMotion('off')">关闭</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">语言 / Language</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">界面显示语言</div></div>
+            <select id="langSelect" onchange="applyLanguage()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+              <option value="zh-CN">简体中文</option>
+              <option value="en">English</option>
+              <option value="ko">한국어</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config (Codex pattern: unified dropdown rows) -->
+      <div class="panel" id="panel-config">
+        <div class="setting-card">
+          <div class="setting-group-title">AI 与推理</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">AI Provider 策略</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">选择主力模型与降级链路</div></div>
+            <div id="aiProviderDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">输出详细程度</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">控制 AI 回复的篇幅与细节</div></div>
+            <div id="outputDetailDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">推理摘要</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">推理过程的展示方式</div></div>
+            <div id="reasoningSummaryDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">联网方式</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">AI 检索外部信息的策略</div></div>
+            <div id="webSearchDropdown"></div>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">采集与批准</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">采集批准策略</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">高风险采集操作是否需要审批</div></div>
+            <div id="approvalPolicyDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">AI 总开关</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">关闭后全部走本地规则引擎</div></div>
+            <div class="toggle" id="aiEnabledToggle" onclick="toggleAIEnabled()"></div>
+          </div>
+          <div id="configStatusArea" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- AI -->
+      <div class="panel" id="panel-ai">
+        <div class="setting-card">
+          <h3><span class="card-icon">🤖</span>AI 配置</h3>
+          <div class="hscroll-container" id="aiModelCards">
+            <div class="hscroll-card"><h4>智谱 GLM</h4><div class="card-value">主力</div><div class="card-label">provider: zhipu</div></div>
+            <div class="hscroll-card"><h4>ARK 兜底</h4><div class="card-value">备用</div><div class="card-label">provider: ark</div></div>
+            <div class="hscroll-card"><h4>Ollama本地</h4><div class="card-value">—</div><div class="card-label">需本地模型</div></div>
+          </div>
+          <div class="form-row"><label>API额度</label><span class="form-value" id="aiQuota">—</span></div>
+          <div class="form-row"><label>本月成本</label><span class="form-value" id="aiCost">—</span></div>
+          <div class="form-row"><label>连接状态</label><span class="status-badge ok">正常</span></div>
+        </div>
+      </div>
+
+      <!-- Collection -->
+      <div class="panel" id="panel-collection">
+        <div class="setting-card">
+          <h3><span class="card-icon">📡</span>采集与数据源</h3>
+          <div class="hscroll-container">
+            <div class="hscroll-card"><h4>小红书</h4><div class="card-value" style="color:#16a34a">已登录</div><div class="card-label">cookie有效</div></div>
+            <div class="hscroll-card"><h4>微博</h4><div class="card-value" style="color:#16a34a">已登录</div><div class="card-label">cookie有效</div></div>
+            <div class="hscroll-card"><h4>B站</h4><div class="card-value" style="color:#f59e0b">待验证</div><div class="card-label">cookie检查中</div></div>
+            <div class="hscroll-card"><h4>知乎</h4><div class="card-value" style="color:#dc2626">BLOCKED</div><div class="card-label">缺cookie</div></div>
+            <div class="hscroll-card"><h4>抖音</h4><div class="card-value" style="color:#dc2626">BLOCKED</div><div class="card-label">缺cookie</div></div>
+          </div>
+          <div class="hscroll-dots"><div class="hscroll-dot active"></div><div class="hscroll-dot"></div></div>
+        </div>
+      </div>
+
+      <!-- Browser Settings -->
+      <div class="panel" id="panel-browser">
+        <div class="setting-card">
+          <div class="browser-total-row">
+            <div class="browser-total-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div class="browser-total-info">
+              <div class="browser-total-name">允许系统控制内置浏览器</div>
+              <div class="browser-total-desc">开启后系统可在采集与分析中自动操作内置浏览器</div>
+            </div>
+            <div class="toggle on" id="browserControlToggle" onclick="toggleBrowserControl()"></div>
+          </div>
+          <div class="setting-group-title">常规</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">链接打开位置</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">点击链接时的默认行为</div></div>
+            <div id="linkOpenDropdown"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">显示完整网址</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">地址栏显示完整 URL 而非简化域名</div></div>
+            <div class="toggle" id="showFullUrlToggle" onclick="toggleShowFullUrl()"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">浏览数据</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">清除缓存、Cookie 与历史记录</div></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="clearBrowserData()">清除浏览数据</button>
+              <button class="btn btn-secondary btn-sm" onclick="showBrowserHistory()">浏览历史管理</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">批注截图</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">页面截图的保存与批注方式</div></div>
+            <div id="screenshotDropdown"></div>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">自动填充和密码</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">密码管理器</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">查看与管理已保存的登录凭证</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('密码管理器：BLOCKED · 凭证在安全边界内不展示', 'error')">管理</button>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">联系信息</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">表单自动填充的地址与联系方式</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('联系信息：BLOCKED · 功能预留', 'error')">管理</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">下载</div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">下载位置</label><div style="font-size:11px;color:#94a3b8;margin-top:2px" id="downloadPathLabel">data/private/browser_downloads</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('下载位置：BLOCKED · 目录固定在安全边界内', 'error')">更改</button>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">下载前询问</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">每次下载前确认保存位置</div></div>
+            <div class="toggle" id="downloadAskToggle" onclick="toggleDownloadAsk()"></div>
+          </div>
+          <div class="form-row">
+            <div><label style="font-size:13px;font-weight:500;color:#0f172a">下载历史</label><div style="font-size:11px;color:#94a3b8;margin-top:2px">查看已下载文件列表</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="showDownloadHistory()">管理</button>
+          </div>
+        </div>
+        <div id="browserHistoryModal" class="modal-overlay">
+          <div class="modal" style="width:560px">
+            <h3>浏览历史</h3>
+            <div id="browserHistoryList" style="max-height:400px;overflow-y:auto"><div class="loading-spinner"></div></div>
+            <div class="modal-actions">
+              <button class="btn btn-danger btn-sm" onclick="clearBrowserHistory()">清除全部历史</button>
+              <button class="btn btn-secondary" onclick="closeModal('browserHistoryModal')">关闭</button>
+            </div>
+          </div>
+        </div>
+        <div id="downloadHistoryModal" class="modal-overlay">
+          <div class="modal" style="width:560px">
+            <h3>下载历史</h3>
+            <div id="downloadHistoryList" style="max-height:400px;overflow-y:auto"><div class="loading-spinner"></div></div>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" onclick="closeModal('downloadHistoryModal')">关闭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backup -->
+      <div class="panel" id="panel-backup">
+        <div class="setting-card">
+          <h3><span class="card-icon">🔔</span>通知设置</h3>
+          <div class="form-row"><label>舆情告警通知</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="form-row"><label>日报推送</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+        <div class="setting-card">
+          <h3><span class="card-icon">💾</span>数据与备份</h3>
+          <div class="form-row"><label>数据库</label><span class="form-value">SQLite · 62+表</span></div>
+          <div class="form-row"><label>自动备份</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="form-row"><label>上次备份</label><span class="form-value" id="lastBackup">—</span></div>
+          <button class="btn btn-secondary btn-sm">立即备份</button>
+          <button class="btn btn-secondary btn-sm" style="margin-left:8px">导出数据</button>
+        </div>
+        <div class="setting-card">
+          <h3><span class="card-icon">📚</span>资料库 / 帮助</h3>
+          <div class="form-row"><label>智能资料库</label><a href="/lumenis/intelligence" style="color:#0F766E;font-size:13px">进入 →</a></div>
+          <div class="form-row"><label>使用文档</label><span class="form-value">内置帮助</span></div>
+        </div>
+      </div>
+
+
+      <!-- Platform Visibility (Phase5b: 平台开关) -->
+      <div class="panel" id="panel-platforms">
+        <div class="setting-card">
+          <h3><span class="card-icon">🌐</span>平台可见性开关</h3>
+          <p style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.6">
+            主界面默认仅显示<strong>小红书</strong>。其他平台需在此处手动开启后才会出现在主界面导航中。
+            播客板块保留不撤。开关状态实时同步至 <code>/api/data-center/platforms</code> 的 <code>ui_visible</code> 字段。
+          </p>
+          <div id="platformSwitchList"><div class="loading-spinner"></div></div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:#94a3b8" id="platformSwitchSummary">加载中…</span>
+            <button class="btn btn-secondary btn-sm" onclick="loadPlatformSwitches()">刷新</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <h3><span class="card-icon">📻</span>保留板块</h3>
+          <div class="form-row">
+            <label>播客 (Podcast)</label>
+            <span class="status-badge ok">始终保留 · 不撤</span>
+          </div>
+          <p style="font-size:11px;color:#94a3b8;margin-top:8px">播客板块为独立内容域，不受平台可见性开关影响。</p>
+        </div>
+      </div>
+
+      <!-- System Module Quick Links (Phase5b) -->
+      <div class="panel" id="panel-syslinks">
+        <div class="setting-card">
+          <h3><span class="card-icon">🧭</span>系统模块快捷入口</h3>
+          <p style="font-size:12px;color:#64748b;margin-bottom:16px">设置中心为统一入口，以下为各系统模块的独立管理页面。</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+            <a href="/lumenis/system/runtime" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="gear" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Runtime</div><div class="member-meta">运行时控制</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/collector" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="inbox" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Collector</div><div class="member-meta">采集器管理</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/browser" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="globe" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Browser</div><div class="member-meta">内置浏览器</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/ai" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="intelligence" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">AI</div><div class="member-meta">AI Provider 配置</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/database" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="database" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Database</div><div class="member-meta">数据库管理</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/security" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="lock" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Security</div><div class="member-meta">安全与审计</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/skill-store" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="bolt" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Skill Store</div><div class="member-meta">技能商店</div></div>
+              </div>
+            </a>
+            <a href="/lumenis/system/evaluation" style="text-decoration:none">
+              <div class="member-card" style="cursor:pointer">
+                <div class="member-avatar admin"><span data-icon="check" data-icon-size="18"></span></div>
+                <div class="member-info"><div class="member-name">Evaluation</div><div class="member-meta">评测中心</div></div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Integrations / Platform Connections -->
+      <div class="panel" id="panel-integrations">
+        <div class="setting-card">
+          <div class="setting-group-title">采集平台连接状态</div>
+          <p style="font-size:12px;color:#64748b;margin-bottom:12px">各平台 Cookie 与登录态只读展示，凭证在安全边界内不可见。状态实时取自采集器健康检查。</p>
+          <div id="integrationsList"><div class="loading-spinner"></div></div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:#94a3b8" id="integrationsSummary">加载中…</span>
+            <button class="btn btn-secondary btn-sm" onclick="loadIntegrations()">刷新状态</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-group-title">状态说明</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#64748b">
+            <span><span class="integration-status verified">VERIFIED</span> 凭证有效，可正常采集</span>
+            <span><span class="integration-status partial">PARTIAL</span> 部分功能受限</span>
+            <span><span class="integration-status expired">EXPIRED</span> 凭证已过期，需重新登录</span>
+            <span><span class="integration-status blocked">BLOCKED</span> 未配置或被平台限制</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Member Modal -->
+<div class="modal-overlay" id="memberModal">
+  <div class="modal">
+    <h3 id="memberModalTitle">新建成员</h3>
+    <div class="form-group"><label>用户名</label><input type="text" id="mUsername" placeholder="登录用户名"></div>
+    <div class="form-group"><label>初始密码</label><input type="password" id="mPassword" placeholder="至少6位"></div>
+    <div class="form-group"><label>显示名</label><input type="text" id="mDisplayName" placeholder="显示名称"></div>
+    <div class="form-group"><label>邮箱</label><input type="email" id="mEmail" placeholder="邮箱（可选）"></div>
+    <div class="form-group"><label>角色</label>
+      <select id="mRole"><option value="user">子账号(Member)</option><option value="admin">管理员(Admin)</option></select>
+    </div>
+    <div class="form-group"><label>双域授权（序境·品牌市场读/写, 序境·商业运营读/写）</label>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authZbmpRead" checked> 序境·品牌市场读</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authZbmpWrite"> 序境·品牌市场写</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authCthRead" checked> 序境·商业运营读</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="authCthWrite"> 序境·商业运营写</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('memberModal')">取消</button>
+      <button class="btn btn-primary" onclick="submitMember()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- Key Modal -->
+<div class="modal-overlay" id="keyModal">
+  <div class="modal">
+    <h3>创建程序化密钥</h3>
+    <div class="form-group"><label>名称/备注</label><input type="text" id="kLabel" placeholder="如：数据同步脚本"></div>
+    <div class="form-group"><label>工作区</label>
+      <select id="kWorkspace"><option>序境·品牌市场</option><option>序境·商业运营</option><option>系统</option></select>
+    </div>
+    <div class="form-group"><label>有效期（天）</label><input type="number" id="kExpires" value="30" min="1"></div>
+    <div class="form-group"><label>绑定IP（可选）</label><input type="text" id="kBoundIp" placeholder="如 192.168.1.100"></div>
+    <p style="font-size:11px;color:#94a3b8">新密钥强制设置过期时间，不允许永不过期</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('keyModal')">取消</button>
+      <button class="btn btn-primary" onclick="submitKey()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- Key Result Modal -->
+<div class="modal-overlay" id="keyResultModal">
+  <div class="modal" style="text-align:center">
+    <h3>🔑 密钥已创建</h3>
+    <p style="font-size:12px;color:#dc2626;margin-bottom:12px">请立即保存，之后无法再次查看！</p>
+    <div style="background:#f8fafc;padding:16px;border-radius:10px;font-family:monospace;font-size:14px;word-break:break-all;color:#0F766E;font-weight:600" id="keyResultText">—</div>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn btn-primary" onclick="closeModal('keyResultModal')">我已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/static/js/lumenis-icons.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script src="/static/js/settings-dropdown.js"></script>
+<script src="/static/js/settings-keyboard.js"></script>
+<script src="/static/js/settings.js"></script>
+<script>
+// 线性图标初始化
+(function() {
+  function renderIcons() {
+    if (typeof licon !== 'function') return;
+    document.querySelectorAll('[data-icon]').forEach(function(el) {
+      var name = el.getAttribute('data-icon');
+      var size = parseInt(el.getAttribute('data-icon-size') || '16', 10);
+      el.innerHTML = licon(name, size);
+    });
+  }
+  if (document.readyState !== 'loading') renderIcons();
+  else document.addEventListener('DOMContentLoaded', renderIcons);
+})();
+</script>
+<script>
+// 语言切换：持久化 + 整页生效
+function applyLanguage() {
+  var sel = document.getElementById('langSelect');
+  if (!sel) return;
+  var lang = sel.value;
+  try { localStorage.setItem('lumenis-lang', lang); } catch(e) {}
+  if (window.LUMENIS && LUMENIS.i18n && LUMENIS.i18n.setLang) {
+    LUMENIS.i18n.setLang(lang);
+  }
+  // 设置页自身文案也走 i18n（阶段一核心词条）
+  if (document.documentElement) document.documentElement.setAttribute('lang', lang);
+  showToast('语言已切换为 ' + sel.options[sel.selectedIndex].text, 'success');
+}
+// 初始化语言选择器
+(function() {
+  var saved = 'zh-CN';
+  try { saved = localStorage.getItem('lumenis-lang') || 'zh-CN'; } catch(e) {}
+  var sel = document.getElementById('langSelect');
+  if (sel) sel.value = saved;
+  if (document.documentElement) document.documentElement.setAttribute('lang', saved);
+})();
+</script>
+
+      <!-- ZBMP 产品域解锁面板 -->
+      <div class="settings-panel" id="panel-zbmp-domain" style="display:none">
+        <div class="panel-header">
+          <h2>序境·品牌市场 ZBMP 域</h2>
+          <p class="panel-desc">ZBMP 与 CTH 为独立产品域。解锁后侧边栏将显示 ZBMP 导航组（品牌/内容/播客/KOS/竞品/风险/报告）。</p>
+        </div>
+
+        <!-- 引导卡片 -->
+        <div class="setting-card" style="background:linear-gradient(135deg,#f0fdfa,#ecfeff);border:1px solid #99f6e4;margin-bottom:16px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="font-size:28px">🔓</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600;color:#0F766E;margin-bottom:6px">ZBMP 入口已隐藏，需在此解锁</div>
+              <p style="font-size:12px;color:#475569;line-height:1.7;margin:0">
+                ZBMP（Z-Brand Monitoring Platform）是多品牌品牌传播与市场情报母平台，包含品牌管理、内容制作、播客工坊、KOS运营、竞品分析等能力。
+                为保持 CTH 太古汇专项界面纯净，ZBMP 默认隐藏，输入产品密钥后解锁可见。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card__title">当前状态</div>
+          <div class="setting-card__value" id="zbmp-current-status" style="display:flex;align-items:center;gap:8px">
+            <span class="zbc-dot zbc-dot--unknown" id="zbmp-status-dot" style="width:8px;height:8px;border-radius:50%;background:#94a3b8;display:inline-block"></span>
+            <span id="zbmp-status-text">未开启</span>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-card__title">解锁 ZBMP 域</div>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <input type="password" id="zbmp-unlock-key" placeholder="输入产品密钥" style="flex:1;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px" onkeydown="if(event.key==='Enter')unlockZBMP()">
+            <button onclick="unlockZBMP()" style="padding:10px 24px;background:#0F766E;color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;font-weight:600;transition:all .2s" onmouseover="this.style.background='#0d5d56'" onmouseout="this.style.background='#0F766E'">解锁</button>
+          </div>
+          <p id="zbmp-unlock-msg" style="margin-top:10px;font-size:12px;color:#64748b"></p>
+          <p style="margin-top:8px;font-size:11px;color:#94a3b8">解锁后有效期 8 小时，到期需重新解锁。按 Enter 可快速解锁。</p>
+        </div>
+        <div class="setting-card" style="background:#f8fafc">
+          <div class="setting-card__title" style="color:#475569">ZBMP 包含的功能模块</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px">
+            <div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155">🏢 品牌管理</div>
+            <div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155">✍️ 内容制作</div>
+            <div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155">🎙️ 播客工坊</div>
+            <div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155">📣 KOS运营</div>
+            <div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155">⚔️ 竞品分析</div>
+            <div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155">⚠️ 风险预警</div>
+            <div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155">📊 报告中心</div>
+          </div>
+        </div>
+        <div class="setting-card" style="background:#f0fdfa">
+          <div class="setting-card__title" style="color:#0F766E">产品域解离说明</div>
+          <p style="font-size:12px;color:#475569;margin-top:8px;line-height:1.7">
+            ZBMP（序境·品牌市场）与 CTH（太古汇专项）目前共享运行时，但产品域身份、数据、规则、页面已解耦。
+            后续完全解离时，此处将替换为独立产品域认证服务，调用契约保持不变。
+          </p>
+        </div>
+      </div>
+<script>
+// ===== Phase5b: Platform Visibility Switches =====
+function loadPlatformSwitches() {
+  var list = document.getElementById('platformSwitchList');
+  var summary = document.getElementById('platformSwitchSummary');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-spinner"></div>';
+  (window.LUMENIS ? LUMENIS.fetch('/api/data-center/platforms') : fetch('/api/data-center/platforms', {credentials:'include'}))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var platforms = (data && data.data) ? data.data.platforms : (data.platforms || []);
+      if (!platforms || platforms.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div>暂无平台数据</div>';
+        if (summary) summary.textContent = '0 个平台';
+        return;
+      }
+      var html = '';
+      var visibleCount = 0;
+      platforms.forEach(function(p) {
+        var pid = p.platform_id || p.id || '';
+        var name = p.display_name || p.platform_name || pid;
+        var visible = p.ui_visible === true || p.ui_visible === 1;
+        var status = p.status || 'UNKNOWN';
+        if (visible) visibleCount++;
+        // 小红书强制可见，不可关闭
+        var isXhs = (pid === 'xhs' || pid === 'xiaohongshu' || name.indexOf('小红书') >= 0);
+        var toggleDisabled = isXhs ? 'pointer-events:none;opacity:0.6' : '';
+        html += '<div class="form-row">' +
+          '<div><label style="font-size:13px;font-weight:500;color:#0f172a">' + name + '</label>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px">ID: ' + pid + ' · 状态: ' + status + (isXhs ? ' · 主平台强制可见' : '') + '</div></div>' +
+          '<div class="toggle ' + (visible ? 'on' : '') + '" style="' + toggleDisabled + '" onclick="togglePlatformVisible(\'' + pid.replace(/'/g, "\\'") + '\', this)"></div>' +
+          '</div>';
+      });
+      list.innerHTML = html;
+      if (summary) summary.textContent = '共 ' + platforms.length + ' 个平台，' + visibleCount + ' 个可见';
+    })
+    .catch(function(e) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>加载失败: ' + e.message + '</div>';
+    });
+}
+
+function togglePlatformVisible(pid, toggleEl) {
+  var newVisible = !toggleEl.classList.contains('on');
+  toggleEl.classList.toggle('on', newVisible);
+  // 调用 API 更新 ui_visible（如果有对应接口）
+  fetch('/api/data-center/platforms/' + encodeURIComponent(pid) + '/visibility', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ui_visible: newVisible})
+  }).then(function(r) {
+    if (!r.ok) {
+      // 接口不存在时回退 UI 状态
+      toggleEl.classList.toggle('on', !newVisible);
+      showToast('平台开关接口暂未接入，UI 预览模式', 'error');
+    } else {
+      showToast('平台 ' + pid + ' 已' + (newVisible ? '开启' : '关闭') + '可见性', 'success');
+    }
+  }).catch(function() {
+    toggleEl.classList.toggle('on', !newVisible);
+    showToast('平台开关接口暂未接入，UI 预览模式', 'error');
+  });
+}
+
+// 页面加载时自动加载平台开关
+if (document.readyState !== 'loading') {
+  if (document.getElementById('platformSwitchList')) loadPlatformSwitches();
+} else {
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('platformSwitchList')) loadPlatformSwitches();
+  });
+}
+</script>
+
+
+<script>
+function unlockZBMP(){
+  var key = document.getElementById('zbmp-unlock-key').value.trim();
+  var msg = document.getElementById('zbmp-unlock-msg');
+  if(!key){ msg.textContent='请输入密钥'; msg.style.color='#dc2626'; return; }
+  fetch('/api/auth/zbmp-entry/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key})})
+  .then(function(r){return r.json().then(function(d){return {status:r.status,data:d};});})
+  .then(function(res){
+    if(res.data.success){
+      msg.textContent='ZBMP 域已解锁，顶部导航将显示 ZBMP 入口';
+      msg.style.color='#059669';
+      document.getElementById('zbmp-current-status').textContent='已开启';
+      document.getElementById('zbmp-status-badge').textContent='已开启';
+      document.getElementById('zbmp-status-badge').className='nav-badge';
+      document.getElementById('zbmp-status-badge').style.background='#d1fae5';
+      document.getElementById('zbmp-status-badge').style.color='#059669';
+      setTimeout(function(){location.reload();},800);
+    } else {
+      msg.textContent=res.data.error||'解锁失败';
+      msg.style.color='#dc2626';
+    }
+  }).catch(function(){msg.textContent='网络错误，请重试';msg.style.color='#dc2626';});
+}
+// 页面加载时检查 ZBMP 状态
+document.addEventListener('DOMContentLoaded',function(){
+  var granted = document.cookie.indexOf('zbmp_domain_grant=1')>=0;
+  var st=document.getElementById('zbmp-current-status');
+  var badge=document.getElementById('zbmp-status-badge');
+  if(granted){ if(st)st.textContent='已开启'; if(badge){badge.textContent='已开启';badge.style.background='#d1fae5';badge.style.color='#059669';} }
+});
+</script>
+
+<!-- ========== 模组管理面板 ========== -->
+<div class="settings-panel" id="panel-modules" style="display:none">
+  <div class="panel-header">
+    <h2 class="panel-title">模组管理</h2>
+    <p class="panel-desc">启用/禁用/排序功能模组，功能本身不删除，仅控制可见性和顺序</p>
+  </div>
+
+  <div class="module-toolbar">
+    <div class="module-filter">
+      <button class="zbc-btn is-active" data-domain-filter="all" onclick="ModuleManager.filter('all')">全部</button>
+      <button class="zbc-btn" data-domain-filter="cth" onclick="ModuleManager.filter('cth')">CTH</button>
+      <button class="zbc-btn" data-domain-filter="zbmp" onclick="ModuleManager.filter('zbmp')">ZBMP</button>
+      <button class="zbc-btn" data-domain-filter="system" onclick="ModuleManager.filter('system')">System</button>
+    </div>
+    <div class="module-actions">
+      <button class="zbc-btn" onclick="ModuleManager.reset()">↺ 恢复默认</button>
+      <span class="module-stats" id="module-stats">加载中...</span>
+    </div>
+  </div>
+
+  <div class="module-list" id="module-list">
+    <div class="skeleton" style="height:60px;margin-bottom:10px"></div>
+    <div class="skeleton" style="height:60px;margin-bottom:10px"></div>
+    <div class="skeleton" style="height:60px"></div>
+  </div>
+
+  <div class="module-footer">
+    <small>模组配置保存在本地，功能代码不会被删除。禁用后仅在导航和页面中隐藏。</small>
+  </div>
+</div>
+
+<style>
+.module-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+.module-filter { display:flex; gap:6px; }
+.module-filter .zbc-btn { padding:6px 14px; font-size:12px; }
+.module-filter .zbc-btn.is-active { background:var(--zbc-primary-gradient); color:#fff; border:none; }
+.module-actions { display:flex; align-items:center; gap:12px; }
+.module-stats { font-size:12px; color:var(--zbc-text-tertiary); }
+.module-list { display:flex; flex-direction:column; gap:8px; }
+.module-item {
+  display:flex; align-items:center; gap:14px;
+  padding:14px 16px;
+  background:var(--zbc-glass);
+  backdrop-filter:var(--zbc-blur);
+  border:1px solid var(--zbc-border);
+  border-radius:var(--zbc-radius-md);
+  transition:all 0.2s var(--zbc-ease);
+  cursor:grab;
+}
+.module-item:hover { background:var(--zbc-glass-strong); box-shadow:var(--zbc-shadow-sm); transform:translateX(2px); }
+.module-item.is-disabled { opacity:0.5; }
+.module-item.dragging { opacity:0.4; cursor:grabbing; }
+.module-drag { color:var(--zbc-text-tertiary); font-size:16px; cursor:grab; flex-shrink:0; }
+.module-icon { font-size:22px; flex-shrink:0; width:32px; text-align:center; }
+.module-info { flex:1; min-width:0; }
+.module-name { font-size:14px; font-weight:600; color:var(--zbc-text-primary); }
+.module-desc { font-size:12px; color:var(--zbc-text-tertiary); margin-top:2px; }
+.module-meta { display:flex; gap:8px; margin-top:4px; }
+.module-domain-tag {
+  font-size:10px; padding:2px 8px; border-radius:var(--zbc-radius-pill);
+  background:var(--zbc-info-light); color:var(--zbc-info); font-weight:600;
+}
+.module-domain-tag.cth { background:var(--zbc-primary-light); color:var(--zbc-primary); }
+.module-domain-tag.zbmp { background:var(--zbc-accent-light); color:var(--zbc-accent); }
+.module-domain-tag.system { background:var(--zbc-warning-light); color:var(--zbc-warning); }
+.module-toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
+.module-toggle input { opacity:0; width:0; height:0; }
+.module-toggle .slider {
+  position:absolute; inset:0; background:rgba(0,0,0,0.15);
+  border-radius:var(--zbc-radius-pill); cursor:pointer; transition:0.3s;
+}
+.module-toggle .slider:before {
+  content:''; position:absolute; width:18px; height:18px; left:3px; top:3px;
+  background:#fff; border-radius:50%; transition:0.3s; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+}
+.module-toggle input:checked + .slider { background:var(--zbc-primary); }
+.module-toggle input:checked + .slider:before { transform:translateX(20px); }
+.module-order { display:flex; flex-direction:column; gap:2px; flex-shrink:0; }
+.module-order button {
+  width:22px; height:18px; border:none; background:transparent; cursor:pointer;
+  font-size:10px; color:var(--zbc-text-tertiary); border-radius:4px;
+}
+.module-order button:hover { background:rgba(0,0,0,0.06); color:var(--zbc-text-primary); }
+.module-footer { margin-top:16px; padding-top:12px; border-top:1px solid var(--zbc-border-subtle); }
+</style>
+
+<script>
+// 模组管理器
+window.ModuleManager = {
+  modules: [],
+  currentFilter: 'all',
+
+  init: function() {
+    this.load();
+  },
+
+  load: function() {
+    LUMENIS.fetch('/api/modules').then(function(res) {
+      if (res.ok && res.modules) {
+        ModuleManager.modules = res.modules;
+        ModuleManager.render();
+      }
+    }).catch(function(e) {
+      document.getElementById('module-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--zbc-danger)">加载失败: ' + e + '</div>';
+    });
+  },
+
+  filter: function(domain) {
+    this.currentFilter = domain;
+    document.querySelectorAll('.module-filter .zbc-btn').forEach(function(b) {
+      b.classList.toggle('is-active', b.dataset.domainFilter === domain);
+    });
+    this.render();
+  },
+
+  render: function() {
+    var list = document.getElementById('module-list');
+    var filtered = this.currentFilter === 'all'
+      ? this.modules
+      : this.modules.filter(function(m) { return m.domain === ModuleManager.currentFilter; });
+
+    var enabled = filtered.filter(function(m) { return m.enabled; }).length;
+    document.getElementById('module-stats').textContent =
+      filtered.length + ' 个模组 · ' + enabled + ' 已启用';
+
+    list.innerHTML = filtered.map(function(m, i) {
+      return '<div class="module-item ' + (m.enabled ? '' : 'is-disabled') + '" ' +
+        'draggable="true" data-module-id="' + m.module_id + '" data-index="' + i + '">' +
+        '<span class="module-drag">⋮⋮</span>' +
+        '<span class="module-icon">' + m.icon + '</span>' +
+        '<div class="module-info">' +
+          '<div class="module-name">' + m.name + '</div>' +
+          '<div class="module-desc">' + (m.description || '') + '</div>' +
+          '<div class="module-meta"><span class="module-domain-tag ' + m.domain + '">' + m.domain.toUpperCase() + '</span></div>' +
+        '</div>' +
+        '<div class="module-order">' +
+          '<button onclick="ModuleManager.moveUp(\'' + m.module_id + '\')" title="上移">▲</button>' +
+          '<button onclick="ModuleManager.moveDown(\'' + m.module_id + '\')" title="下移">▼</button>' +
+        '</div>' +
+        '<label class="module-toggle">' +
+          '<input type="checkbox" ' + (m.enabled ? 'checked' : '') + ' onchange="ModuleManager.toggle(\'' + m.module_id + '\', this.checked)">' +
+          '<span class="slider"></span>' +
+        '</label>' +
+      '</div>';
+    }).join('');
+
+    this._bindDrag();
+  },
+
+  toggle: function(moduleId, enabled) {
+    LUMENIS.fetch('/api/modules/' + moduleId + '/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ enabled: enabled })
+    }).then(function() {
+      ModuleManager.load();
+    }).catch(function(e) { alert('操作失败: ' + e); });
+  },
+
+  moveUp: function(moduleId) {
+    var idx = this.modules.findIndex(function(m) { return m.module_id === moduleId; });
+    if (idx > 0) {
+      var tmp = this.modules[idx];
+      this.modules[idx] = this.modules[idx-1];
+      this.modules[idx-1] = tmp;
+      this._saveOrder();
+    }
+  },
+
+  moveDown: function(moduleId) {
+    var idx = this.modules.findIndex(function(m) { return m.module_id === moduleId; });
+    if (idx < this.modules.length - 1) {
+      var tmp = this.modules[idx];
+      this.modules[idx] = this.modules[idx+1];
+      this.modules[idx+1] = tmp;
+      this._saveOrder();
+    }
+  },
+
+  _saveOrder: function() {
+    var ids = this.modules.map(function(m) { return m.module_id; });
+    LUMENIS.fetch('/api/modules/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ order: ids })
+    }).then(function() { ModuleManager.render(); }).catch(function(){});
+  },
+
+  reset: function() {
+    if (confirm('确定恢复默认模组配置？')) {
+      LUMENIS.fetch('/api/modules/reset', { method: 'POST' }).then(function() {
+        ModuleManager.load();
+      });
+    }
+  },
+
+  _bindDrag: function() {
+    var items = document.querySelectorAll('.module-item');
+    var dragSrc = null;
+    items.forEach(function(item) {
+      item.addEventListener('dragstart', function(e) {
+        dragSrc = this;
+        this.classList.add('dragging');
+      });
+      item.addEventListener('dragend', function() {
+        this.classList.remove('dragging');
+      });
+      item.addEventListener('dragover', function(e) { e.preventDefault(); });
+      item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (dragSrc && dragSrc !== this) {
+          var fromId = dragSrc.dataset.moduleId;
+          var toId = this.dataset.moduleId;
+          var fromIdx = ModuleManager.modules.findIndex(function(m){return m.module_id===fromId;});
+          var toIdx = ModuleManager.modules.findIndex(function(m){return m.module_id===toId;});
+          var moved = ModuleManager.modules.splice(fromIdx, 1)[0];
+          ModuleManager.modules.splice(toIdx, 0, moved);
+          ModuleManager._saveOrder();
+        }
+      });
+    });
+  }
+};
+
+// 切换到模组面板时初始化
+var _origSwitchPanel = window.switchPanel;
+window.switchPanel = function(name) {
+  _origSwitchPanel(name);
+  if (name === 'modules') {
+    setTimeout(function() { ModuleManager.init(); }, 100);
+  }
+};
+</script>
+
+</body>
+</html>

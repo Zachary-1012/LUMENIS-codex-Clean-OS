@@ -1,0 +1,18 @@
+{
+  "non_ready_states": [
+    "loading",
+    "updating",
+    "partial",
+    "stale",
+    "degraded",
+    "empty_true",
+    "empty_notcollected",
+    "empty_filter",
+    "empty_permission",
+    "permission_denied",
+    "blocked",
+    "offline",
+    "error"
+  ],
+  "ready": "rendered from ViewModel; every other state explicit, never silent fallback"
+}

@@ -1,0 +1,102 @@
+{
+  "screen": "BMP-10",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "EV-BR01..03"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "BMP · 品牌市场",
+      "title": "品牌风险与事件",
+      "titleKey": "screen.BMP-10",
+      "desc": "品牌侧风险/舆情事件的监测、分级与处置，复用统一风险引擎。"
+    },
+    {
+      "type": "risks",
+      "items": [
+        {
+          "level": "high",
+          "title": "竞品对比稿争议",
+          "evidence": "EV-BR01",
+          "desc": "对比表述可能引发合规风险。",
+          "score": 66
+        },
+        {
+          "level": "med",
+          "title": "KOL 翻车风险",
+          "evidence": "EV-BR02",
+          "desc": "某合作创作者历史争议。",
+          "score": 48
+        },
+        {
+          "level": "med",
+          "title": "负面话题外溢",
+          "evidence": "EV-BR03",
+          "desc": "从小红书外溢到微博。",
+          "score": 45
+        }
+      ]
+    },
+    {
+      "type": "events",
+      "title": "相关事件",
+      "items": [
+        {
+          "time": "09-09",
+          "title": "竞品发布对比内容",
+          "desc": "",
+          "date": "09-09",
+          "level": "med",
+          "tags": [
+            "竞品"
+          ],
+          "evidence": "EV-BR01"
+        },
+        {
+          "time": "09-08",
+          "title": "KOL 历史言论被翻出",
+          "desc": "",
+          "date": "09-08",
+          "level": "med",
+          "tags": [
+            "创作者"
+          ],
+          "evidence": "EV-BR02"
+        }
+      ],
+      "more": true
+    },
+    {
+      "type": "actions",
+      "title": "处置",
+      "items": [
+        {
+          "id": "hold-creator",
+          "title": "暂停合作创作者",
+          "icon": "pause",
+          "cls": "NAVIGATION",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "creator:hold",
+          "desc": "EFFECT",
+          "risk": true
+        },
+        {
+          "id": "draft-response",
+          "title": "起草回应口径",
+          "icon": "edit",
+          "cls": "NAVIGATION",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "response:draft",
+          "desc": "DRAFT"
+        }
+      ]
+    }
+  ]
+}

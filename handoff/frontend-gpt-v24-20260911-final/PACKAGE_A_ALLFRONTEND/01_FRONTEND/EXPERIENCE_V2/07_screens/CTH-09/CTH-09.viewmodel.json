@@ -1,0 +1,48 @@
+{
+  "screen": "CTH-09",
+  "viewmodel": {
+    "risks": [
+      "{level,title,score,evidence_id}"
+    ],
+    "decisions": [
+      "action"
+    ]
+  },
+  "binding": {
+    "risk": "CODEX_VERIFY (risk_engine = UNKNOWN)",
+    "decision": "DRAFT/EFFECT contract = UNKNOWN"
+  },
+  "ports": {
+    "ViewModel": [
+      "risks",
+      "decisions"
+    ],
+    "Capability": [
+      "PAT-DATA-01",
+      "PAT-EVD-01"
+    ],
+    "Motion": [
+      "M03",
+      "M13"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "CTH-09.actions.json",
+    "Permission": [
+      "facility:write",
+      "ops:write",
+      "roster:write"
+    ],
+    "Evidence": [
+      "EV-7710",
+      "EV-7699",
+      "EV-7712"
+    ]
+  },
+  "unknown_binding_keys": [
+    "risk",
+    "decision"
+  ],
+  "binding_owner_default": "CODEX"
+}

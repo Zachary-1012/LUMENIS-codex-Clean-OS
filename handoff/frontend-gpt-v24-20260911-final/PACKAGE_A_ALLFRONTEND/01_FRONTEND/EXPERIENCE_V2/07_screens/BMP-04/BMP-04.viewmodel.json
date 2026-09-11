@@ -1,0 +1,36 @@
+{
+  "screen": "BMP-04",
+  "viewmodel": {
+    "channels": [
+      "{name,reach,engage,convert}"
+    ]
+  },
+  "binding": {
+    "channels": "CODEX_VERIFY (communication_analysis = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "channels"
+    ],
+    "Capability": [
+      "PAT-DATA-01"
+    ],
+    "Motion": [
+      "M03",
+      "M06"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "BMP-04.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "EV-B401",
+      "EV-B402"
+    ]
+  },
+  "unknown_binding_keys": [
+    "channels"
+  ],
+  "binding_owner_default": "CODEX"
+}

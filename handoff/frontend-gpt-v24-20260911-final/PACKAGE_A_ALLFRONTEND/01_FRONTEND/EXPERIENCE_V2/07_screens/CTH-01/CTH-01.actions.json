@@ -1,0 +1,133 @@
+{
+  "screen": "CTH-01",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 6,
+  "actions": [
+    {
+      "action_id": "CTH-01.draft-brief",
+      "display_label_zh": "生成运营简报",
+      "display_key": null,
+      "action_class": "DRAFT",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "report:write",
+      "input_context": {
+        "screen": "CTH-01",
+        "section": "head",
+        "scope": "subject:current",
+        "target": "report"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "report"
+    },
+    {
+      "action_id": "CTH-01.head",
+      "display_label_zh": "切换时间范围",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "CTH-01",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "calendar"
+    },
+    {
+      "action_id": "CTH-01.export-overview",
+      "display_label_zh": "导出",
+      "display_key": null,
+      "action_class": "QUERY",
+      "capability_status": "CODEX_BINDING_REQUIRED",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "CTH-01",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "download"
+    },
+    {
+      "action_id": "CTH-01.open-event",
+      "display_label_zh": "打开事件 EV-7710",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "CTH-01",
+        "section": "actions:建议行动",
+        "scope": "UNKNOWN",
+        "target": "CTH-04"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "event"
+    },
+    {
+      "action_id": "CTH-01.draft-action",
+      "display_label_zh": "起草引导排班调整",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "plan:write",
+      "input_context": {
+        "screen": "CTH-01",
+        "section": "actions:建议行动",
+        "scope": "subject:current",
+        "target": "ops_plan"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "edit"
+    },
+    {
+      "action_id": "CTH-01.notify-team",
+      "display_label_zh": "通知运营值班群",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "notify:write",
+      "input_context": {
+        "screen": "CTH-01",
+        "section": "actions:建议行动",
+        "scope": "team:ops",
+        "target": "im"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": true,
+      "prototype_behavior": "local/navigation only",
+      "icon": "message"
+    }
+  ]
+}

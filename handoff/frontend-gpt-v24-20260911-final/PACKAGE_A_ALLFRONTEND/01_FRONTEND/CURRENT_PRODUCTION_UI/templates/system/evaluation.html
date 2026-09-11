@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Evaluation · 序境 LUMENIS{% endblock %}
+{% block page_title %}Evaluation{% endblock %}
+
+{% block content %}
+<div class="lm-viewport" data-domain="system">
+  <div class="lm-viewport__context">
+    <div class="lm-section-header" style="margin:0;">
+      <div class="lm-section-header__title" data-i18n="nav.evaluation">验收评估</div>
+      <div class="lm-time-dimension">
+        <button class="lm-time-pill is-active" data-range="7d">7D</button>
+        <button class="lm-time-pill" data-range="30d">30D</button>
+        <button class="lm-time-pill" data-range="90d">90D</button>
+      </div>
+    </div>
+    <p class="lm-section-header__desc" style="color:var(--lm-color-text-secondary);margin:4px 0 0;">
+      CI 状态（代码检查）与功能验收状态分离 · 只由真实源码/调用链/测试/运行/Evidence/Verification/Security/Regression 共同决定 VERIFIED
+    </p>
+  </div>
+
+  <!-- 运行质量面板（保留原机制） -->
+  <section class="lm-panel" id="main-panel" data-state="loading" data-api="/api/domain/context">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">运行质量</span>
+      <span class="lm-status-badge lm-status-badge--info" id="panel-domain-badge">SYSTEM</span>
+    </div>
+    <div class="lm-panel__body">
+      <div class="xj-state xj-state--loading" id="state-loading"><div class="xj-spinner"></div><p>加载中…</p></div>
+      <div class="xj-state xj-state--empty" id="state-empty" style="display:none;"><div class="xj-empty-icon">📭</div><p>暂无数据</p>
+        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">刷新</button></div>
+      <div class="xj-state xj-state--error" id="state-error" style="display:none;"><div class="xj-error-icon">⚠️</div><p>加载失败</p>
+        <p id="error-msg" style="font-size:12px;color:var(--lm-color-danger);"></p>
+        <button class="lm-btn lm-btn--primary" onclick="loadPanelData()">重试</button></div>
+      <div class="xj-state xj-state--success" id="state-success" style="display:none;"><div id="success-content"></div></div>
+      <div class="xj-state xj-state--degraded" id="state-degraded" style="display:none;"><div class="xj-degraded-icon">⚡</div><p>部分数据不可用（降级模式）</p><div id="degraded-content"></div></div>
+      <div class="xj-state xj-state--permission" id="state-permission" style="display:none;"><div class="xj-permission-icon">🔒</div><p>权限不足</p></div>
+    </div>
+  </section>
+
+  <!-- 最终验收判定器 Acceptance Gate -->
+  <section class="lm-panel" style="margin-top:14px;">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">功能验收判定器 · Acceptance Gate</span>
+      <span class="lm-status-badge lm-status-badge--info" id="ag-ai-flag">普通功能</span>
+    </div>
+    <div class="lm-panel__body">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--lm-color-text-secondary);">任务ID
+          <input id="ag-task-id" type="text" value="TASK-001" style="margin-left:6px;padding:4px 8px;border:1px solid var(--lm-color-border,rgba(0,0,0,.1));border-radius:8px;font-size:12px;">
+        </label>
+        <label style="font-size:12px;color:var(--lm-color-text-secondary);">CI 检查
+          <select id="ag-ci" style="margin-left:6px;padding:4px 8px;border-radius:8px;font-size:12px;border:1px solid var(--lm-color-border,rgba(0,0,0,.1));">
+            <option value="pass">✓ PASS</option>
+            <option value="failed">× FAILED</option>
+            <option value="unknown">UNKNOWN</option>
+          </select>
+        </label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" id="ag-is-ai"> AI / Browser 功能（需完整链路闭环）
+        </label>
+        <button class="lm-btn lm-btn--primary" id="ag-judge-btn">判定</button>
+        <button class="lm-btn" id="ag-all-btn">全选8维</button>
+        <button class="lm-btn" id="ag-clear-btn">清空</button>
+      </div>
+
+      <div id="ag-dimensions" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px;"></div>
+
+      <!-- 三维状态结果卡片 -->
+      <div id="ag-result" style="display:none;border:1px solid var(--lm-color-border,rgba(0,0,0,.08));border-radius:16px;padding:14px;background:var(--lm-color-surface-2,rgba(0,0,0,.02));">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+          <div><div style="font-size:11px;color:var(--lm-color-text-secondary);">CI STATUS</div><div id="ag-r-ci" style="font-size:16px;font-weight:600;margin-top:2px;">—</div></div>
+          <div style="width:1px;height:34px;background:var(--lm-color-border,rgba(0,0,0,.1));"></div>
+          <div><div style="font-size:11px;color:var(--lm-color-text-secondary);">FUNCTION STATUS</div><div id="ag-r-fn" style="font-size:16px;font-weight:700;margin-top:2px;">—</div></div>
+          <div style="width:1px;height:34px;background:var(--lm-color-border,rgba(0,0,0,.1));"></div>
+          <div style="min-width:160px;flex:1;">
+            <div style="font-size:11px;color:var(--lm-color-text-secondary);">EVIDENCE COVERAGE</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+              <div style="flex:1;height:8px;border-radius:6px;background:var(--lm-color-border,rgba(0,0,0,.08));overflow:hidden;">
+                <div id="ag-r-bar" style="height:100%;width:0%;border-radius:6px;background:var(--lm-color-primary,#0F766E);transition:width .3s;"></div>
+              </div>
+              <span id="ag-r-pct" style="font-size:12px;font-weight:600;">0%</span>
+            </div>
+          </div>
+        </div>
+        <div id="ag-r-reasons" style="margin-top:10px;"></div>
+        <div id="ag-r-dims" style="margin-top:8px;font-size:11px;color:var(--lm-color-text-secondary);"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+var AG_DIMS = [
+  ['source_exists','Source 真实源码'],['call_graph_closed','Call Graph 调用链闭环'],
+  ['runtime_evidence','Runtime 真实运行'],['test_passed','Test 自动化测试'],
+  ['evidence_recorded','Evidence 证据链'],['verification_passed','Verification 预期核验'],
+  ['security_verified','Security 权限/安全'],['regression_passed','Regression 回归无破坏']
+];
+function agRenderDims(){
+  var box = document.getElementById('ag-dimensions'); box.innerHTML='';
+  AG_DIMS.forEach(function(d){
+    var lab=document.createElement('label');
+    lab.style.cssText='display:flex;gap:8px;align-items:center;font-size:12px;padding:8px 10px;border:1px solid var(--lm-color-border,rgba(0,0,0,.08));border-radius:10px;cursor:pointer;';
+    lab.innerHTML='<input type="checkbox" class="ag-dim" data-k="'+d[0]+'"> <span>'+d[1]+'</span>';
+    box.appendChild(lab);
+  });
+}
+function agCollect(){
+  var payload={task_id:document.getElementById('ag-task-id').value||'TASK'};
+  var ci=document.getElementById('ag-ci').value;
+  payload.ci_passed = ci==='pass'?true:(ci==='failed'?false:null);
+  payload.is_ai_or_browser=document.getElementById('ag-is-ai').checked;
+  document.querySelectorAll('.ag-dim').forEach(function(c){payload[c.dataset.k]=c.checked;});
+  return payload;
+}
+function agBadge(status){
+  var map={VERIFIED:'#0F766E',RELEASED:'#0F766E',OPERATING:'#0F766E',TESTED:'#B45309',IMPLEMENTED:'#1D4ED8',PLANNED:'#6B7280',PARTIAL:'#B91C1C',PASS:'#0F766E',FAILED:'#B91C1C',UNKNOWN:'#6B7280'};
+  return 'color:'+(map[status]||'inherit');
+}
+function agJudge(){
+  var payload=agCollect();
+  LUMENIS.fetch('/api/system/acceptance/judge',{method:'POST',headers:{'Content-Type':'application/json','X-Domain-Id':'system'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){alert(d.error||'判定失败');return;}
+      var v=d.verdict; var res=document.getElementById('ag-result'); res.style.display='';
+      var ci=document.getElementById('ag-r-ci'); ci.textContent='CI: '+(v.ci_status==='PASS'?'✓ PASS':v.ci_status==='FAILED'?'× FAILED':v.ci_status); ci.style.cssText=agBadge(v.ci_status)+';font-size:16px;font-weight:600;margin-top:2px;';
+      var fn=document.getElementById('ag-r-fn'); fn.textContent=v.functional_status; fn.style.cssText=agBadge(v.functional_status)+';font-size:16px;font-weight:700;margin-top:2px;';
+      document.getElementById('ag-r-bar').style.width=v.evidence_coverage+'%';
+      document.getElementById('ag-r-pct').textContent=v.evidence_coverage+'%';
+      var rb=document.getElementById('ag-r-reasons');
+      if(v.partial_reasons&&v.partial_reasons.length){
+        rb.innerHTML='<div style="font-size:11px;color:var(--lm-color-text-secondary);margin-bottom:4px;">未验收原因</div>'+
+          v.partial_reasons.map(function(r){return '<span style="display:inline-block;font-size:11px;padding:2px 8px;margin:2px 4px 2px 0;border-radius:8px;background:rgba(185,28,28,.08);color:#B91C1C;">'+r+'</span>';}).join('');
+      }else{rb.innerHTML='<span style="font-size:12px;color:#0F766E;">8 维证据全部成立，无缺失项</span>';}
+      document.getElementById('ag-r-dims').textContent='已满足: '+(v.satisfied_dimensions.join(', ')||'无')+' ｜ 缺失: '+(v.missing_dimensions.join(', ')||'无');
+    }).catch(function(e){alert(e.message);});
+}
+function loadPanelData(){
+  var panel=document.getElementById('main-panel'); var api=panel.getAttribute('data-api'); showState('loading');
+  LUMENIS.fetch(api,{headers:{'X-Domain-Id':'system'}})
+    .then(function(r){if(r.status===403){showState('permission');return null;}if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(d){
+      if(!d)return;
+      if(d.ok===false){showState('error');document.getElementById('error-msg').textContent=d.error||'Unknown error';return;}
+      var data=d.data||d.records||d.items||d;
+      var isEmpty=!data||(Array.isArray(data)&&data.length===0)||(typeof data==='object'&&Object.keys(data).length===0);
+      if(isEmpty){showState('empty');return;}
+      var html='<div class="xj-data-table-wrap"><table class="xj-data-table"><thead><tr>';
+      var keys=Object.keys(Array.isArray(data)?(data[0]||{}):data);
+      keys.forEach(function(k){html+='<th>'+k+'</th>';}); html+='</tr></thead><tbody>';
+      var rows=Array.isArray(data)?data:[data];
+      rows.forEach(function(row){html+='<tr>';keys.forEach(function(k){html+='<td>'+(row[k]!=null?row[k]:'-')+'</td>';});html+='</tr>';});
+      html+='</tbody></table></div>';
+      document.getElementById('success-content').innerHTML=html; showState('success');
+    }).catch(function(e){showState('error');document.getElementById('error-msg').textContent=e.message;});
+}
+function showState(s){['loading','empty','error','success','degraded','permission'].forEach(function(st){document.getElementById('state-'+st).style.display=(st===s)?'':'none';});document.getElementById('main-panel').setAttribute('data-state',s);}
+document.addEventListener('DOMContentLoaded',function(){
+  agRenderDims();
+  document.getElementById('ag-judge-btn').addEventListener('click',agJudge);
+  document.getElementById('ag-all-btn').addEventListener('click',function(){document.querySelectorAll('.ag-dim').forEach(function(c){c.checked=true;});});
+  document.getElementById('ag-clear-btn').addEventListener('click',function(){document.querySelectorAll('.ag-dim').forEach(function(c){c.checked=false;});document.getElementById('ag-result').style.display='none';});
+  document.getElementById('ag-is-ai').addEventListener('change',function(){document.getElementById('ag-ai-flag').textContent=this.checked?'AI / Browser（需链路闭环）':'普通功能';});
+  loadPanelData();
+});
+</script>
+{% endblock %}

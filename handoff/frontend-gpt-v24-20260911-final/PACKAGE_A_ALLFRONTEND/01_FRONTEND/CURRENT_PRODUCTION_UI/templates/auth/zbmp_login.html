@@ -1,0 +1,248 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>序境·品牌市场 登录 · LUMENIS</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --zbmp-primary:#0F766E;--zbmp-primary-light:#14B8A6;--zbmp-bg:#f0fdfa;
+  --text:#1e293b;--text-light:#64748b;--border:#e2e8f0;
+  --radius:20px;--shadow:0 8px 32px rgba(15,118,110,.12);
+}
+html,body{height:100dvh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{
+  background:linear-gradient(135deg,#f0fdfa 0%,#ccfbf1 50%,#99f6e4 100%);
+  display:flex;align-items:center;justify-content:center;position:relative;
+}
+body::before{
+  content:'';position:absolute;bottom:-20%;left:-10%;width:500px;height:500px;
+  background:radial-gradient(circle,rgba(20,184,166,.15) 0%,transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.login-card{
+  width:400px;max-width:92vw;background:rgba(255,255,255,.88);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:40px 36px;position:relative;z-index:1;
+  border:1px solid rgba(255,255,255,.6);
+}
+.login-header{text-align:center;margin-bottom:28px}
+.login-header .logo{
+  width:56px;height:56px;border-radius:16px;
+  background:linear-gradient(135deg,var(--zbmp-primary),var(--zbmp-primary-light));
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;color:#fff;font-size:20px;font-weight:700;
+  box-shadow:0 4px 16px rgba(15,118,110,.3);
+}
+.login-header h1{font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px}
+.login-header p{font-size:13px;color:var(--text-light)}
+.domain-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(15,118,110,.1);color:var(--zbmp-primary);
+  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:12px;
+}
+.totp-input-group{margin-bottom:20px}
+.totp-input-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px}
+.totp-inputs{display:flex;gap:8px;justify-content:center}
+.totp-inputs input{
+  width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;
+  border:1.5px solid var(--border);border-radius:12px;background:#fff;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+  -moz-appearance:textfield;
+}
+.totp-inputs input::-webkit-outer-spin-button,
+.totp-inputs input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.totp-inputs input:focus{border-color:var(--zbmp-primary);box-shadow:0 0 0 3px rgba(15,118,110,.1)}
+.totp-inputs input.filled{background:linear-gradient(135deg,#f0fdfa,#ccfbf1)}
+.timer-bar{
+  height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;margin:12px 0 20px;
+}
+.timer-fill{
+  height:100%;background:linear-gradient(90deg,var(--zbmp-primary),var(--zbmp-primary-light));
+  border-radius:2px;transition:width 1s linear;
+}
+.timer-text{text-align:center;font-size:12px;color:var(--text-light);margin-bottom:16px}
+.btn-primary{
+  width:100%;padding:14px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--zbmp-primary),var(--zbmp-primary-light));
+  color:#fff;font-size:15px;font-weight:600;cursor:pointer;
+  transition:transform .15s,box-shadow .2s;
+  box-shadow:0 4px 12px rgba(15,118,110,.25);
+}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.error-msg{
+  background:#fef2f2;border:1px solid #fecaca;color:#dc2626;
+  padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;display:none;
+}
+.error-msg.show{display:block}
+.info-box{
+  background:rgba(15,118,110,.06);border:1px solid rgba(15,118,110,.15);
+  border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-light);
+  margin-bottom:20px;line-height:1.6;
+}
+.info-box strong{color:var(--zbmp-primary)}
+.step-indicator{display:flex;gap:6px;justify-content:center;margin-bottom:24px}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border)}
+.step-dot.active{background:var(--zbmp-primary)}
+.user-select{margin-bottom:16px}
+.user-select select{
+  width:100%;padding:12px 14px;border:1.5px solid var(--border);
+  border-radius:12px;font-size:14px;background:#fff;outline:none;cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="login-header">
+    <div class="logo">序境·品牌市场</div>
+    <div class="domain-badge">序境·品牌市场 · 产品域保护</div>
+    <h1>动态码验证</h1>
+    <p>输入iPhone「密码」中的6位动态码</p>
+  </div>
+  <div class="error-msg" id="errorMsg"></div>
+  <div class="user-select">
+    <select id="userSelect">
+      <option value="">选择账号</option>
+    </select>
+  </div>
+  <div class="totp-input-group">
+    <label>6位动态验证码</label>
+    <div class="totp-inputs" id="totpInputs">
+      <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-idx="0">
+      <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-idx="1">
+      <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-idx="2">
+      <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-idx="3">
+      <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-idx="4">
+      <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" data-idx="5">
+    </div>
+  </div>
+  <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+  <div class="timer-text" id="timerText">验证码每30秒刷新</div>
+  <div class="info-box">
+    <strong>如何获取动态码？</strong><br>
+    打开iPhone「设置」→「密码」→找到序境 LUMENIS条目，每30秒生成6位数字。
+    未绑定？请先在<a href="/system/settings" style="color:var(--zbmp-primary)">设置→账户与安全→序境·品牌市场访问保护</a>中扫码绑定。
+  </div>
+  <button class="btn-primary" id="verifyBtn" disabled>验 证 进 入</button>
+</div>
+<script>
+const inputs = document.querySelectorAll('#totpInputs input');
+const verifyBtn = document.getElementById('verifyBtn');
+const errEl = document.getElementById('errorMsg');
+let timerInterval;
+
+// 加载用户列表
+fetch('/api/system/account/members').then(r=>r.json()).then(d=>{
+  if(d.ok){
+    const sel = document.getElementById('userSelect');
+    d.members.forEach(m=>{
+      if(m.role==='owner'||m.role==='admin'){
+        const opt = document.createElement('option');
+        opt.value = m.id; opt.textContent = m.display_name||m.username + ' ('+m.role+')';
+        sel.appendChild(opt);
+      }
+    });
+  }
+}).catch(()=>{});
+
+// TOTP input handling
+inputs.forEach((input, idx)=>{
+  input.addEventListener('input', e=>{
+    const val = e.target.value.replace(/\D/g,'');
+    e.target.value = val;
+    if(val){
+      e.target.classList.add('filled');
+      if(idx < inputs.length-1) inputs[idx+1].focus();
+    } else {
+      e.target.classList.remove('filled');
+    }
+    checkComplete();
+  });
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Backspace' && !e.target.value && idx>0){
+      inputs[idx-1].focus();
+    }
+  });
+  input.addEventListener('paste', e=>{
+    e.preventDefault();
+    const paste = (e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');
+    for(let i=0;i<6&&i<paste.length;i++){
+      inputs[i].value = paste[i];
+      inputs[i].classList.add('filled');
+    }
+    checkComplete();
+    if(paste.length>=6) inputs[5].blur();
+  });
+});
+
+function checkComplete(){
+  const code = getCode();
+  verifyBtn.disabled = code.length !== 6 || !document.getElementById('userSelect').value;
+}
+
+function getCode(){
+  return Array.from(inputs).map(i=>i.value).join('');
+}
+
+document.getElementById('userSelect').addEventListener('change', checkComplete);
+
+// 30s timer
+function startTimer(){
+  let remaining = 30;
+  const now = Math.floor(Date.now()/1000);
+  remaining = 30 - (now % 30);
+  updateTimer(remaining);
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    remaining--;
+    if(remaining<=0) remaining = 30;
+    updateTimer(remaining);
+  },1000);
+}
+function updateTimer(sec){
+  document.getElementById('timerFill').style.width = (sec/30*100)+'%';
+  document.getElementById('timerText').textContent = `下次刷新 ${sec}s`;
+}
+startTimer();
+
+verifyBtn.addEventListener('click', async ()=>{
+  const code = getCode();
+  const userId = document.getElementById('userSelect').value;
+  if(code.length!==6||!userId) return;
+  verifyBtn.disabled = true; verifyBtn.textContent = '验证中...';
+  errEl.classList.remove('show');
+  try{
+    const resp = await fetch('/api/system/account/totp/verify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:parseInt(userId), code:code})
+    });
+    const data = await resp.json();
+    if(data.success){
+      // Set session and redirect
+      if(data.grant && data.grant.token){
+        document.cookie = 'cth_poms_v4_session='+data.grant.token+';path=/;max-age=28800;SameSite=Lax';
+      }
+      window.location.href = '/lumenis/zbmp/overview';
+    } else {
+      errEl.textContent = data.error || '验证失败';
+      errEl.classList.add('show');
+      inputs.forEach(i=>{i.value='';i.classList.remove('filled')});
+      inputs[0].focus();
+      verifyBtn.disabled = false; verifyBtn.textContent = '验 证 进 入';
+    }
+  }catch(err){
+    errEl.textContent = '网络错误：'+err.message;
+    errEl.classList.add('show');
+    verifyBtn.disabled = false; verifyBtn.textContent = '验 证 进 入';
+  }
+});
+
+inputs[0].focus();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,70 @@
+{
+  "screen": "BMP-06",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 3,
+  "actions": [
+    {
+      "action_id": "BMP-06.new",
+      "display_label_zh": "新建内容",
+      "display_key": null,
+      "action_class": "DRAFT",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "content:draft",
+      "input_context": {
+        "screen": "BMP-06",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "content"
+    },
+    {
+      "action_id": "BMP-06.submit-review",
+      "display_label_zh": "提交审批",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "content:submit",
+      "input_context": {
+        "screen": "BMP-06",
+        "section": "actions:发布动作（需权限）",
+        "scope": "content:self",
+        "target": "approval"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "check"
+    },
+    {
+      "action_id": "BMP-06.publish",
+      "display_label_zh": "发布到平台",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "content:publish",
+      "input_context": {
+        "screen": "BMP-06",
+        "section": "actions:发布动作（需权限）",
+        "scope": "channel:external",
+        "target": "publisher"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": true,
+      "prototype_behavior": "local/navigation only",
+      "icon": "share"
+    }
+  ]
+}

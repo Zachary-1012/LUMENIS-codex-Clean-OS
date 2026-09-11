@@ -1,0 +1,28 @@
+{
+  "screen": "SH-04",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 1,
+  "actions": [
+    {
+      "action_id": "SH-04.new-export",
+      "display_label_zh": "新建导出",
+      "display_key": null,
+      "action_class": "DRAFT",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "report:export",
+      "input_context": {
+        "screen": "SH-04",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "download"
+    }
+  ]
+}

@@ -1,0 +1,636 @@
+{
+  "rule": "Every DESIGN_ONLY fixture field that needs backend truth is listed; none is presented as a real field.",
+  "total": 54,
+  "by_screen": {
+    "ACC-01": [
+      "auth"
+    ],
+    "ACC-02": [
+      "subjects"
+    ],
+    "ACC-03": [
+      "launch"
+    ],
+    "ACC-04": [
+      "guard"
+    ],
+    "CTH-01": [
+      "kpis",
+      "events",
+      "insight"
+    ],
+    "CTH-02": [
+      "brands"
+    ],
+    "CTH-03": [
+      "stream"
+    ],
+    "CTH-04": [
+      "graph"
+    ],
+    "CTH-05": [
+      "calendar"
+    ],
+    "CTH-06": [
+      "items"
+    ],
+    "CTH-07": [
+      "trend"
+    ],
+    "CTH-08": [
+      "cases"
+    ],
+    "CTH-09": [
+      "risk",
+      "decision"
+    ],
+    "CTH-10": [
+      "report"
+    ],
+    "BMP-01": [
+      "all"
+    ],
+    "BMP-02": [
+      "brands"
+    ],
+    "BMP-03": [
+      "intel"
+    ],
+    "BMP-04": [
+      "channels"
+    ],
+    "BMP-05": [
+      "creators"
+    ],
+    "BMP-06": [
+      "assets"
+    ],
+    "BMP-07": [
+      "campaign"
+    ],
+    "BMP-08": [
+      "podcast"
+    ],
+    "BMP-09": [
+      "eval"
+    ],
+    "BMP-10": [
+      "risk"
+    ],
+    "BMP-11": [
+      "benchmark"
+    ],
+    "AI-01": [
+      "composer",
+      "providers"
+    ],
+    "AI-02": [
+      "task_orchestration"
+    ],
+    "AI-03": [
+      "thread",
+      "evidence_jump"
+    ],
+    "AI-04": [
+      "registry"
+    ],
+    "AI-05": [
+      "status"
+    ],
+    "SYS-01": [
+      "health"
+    ],
+    "SYS-02": [
+      "collectors"
+    ],
+    "SYS-03": [
+      "db"
+    ],
+    "SYS-04": [
+      "perm"
+    ],
+    "SYS-05": [
+      "prefs"
+    ],
+    "SYS-06": [
+      "browser"
+    ],
+    "SYS-07": [
+      "acceptance"
+    ],
+    "SYS-08": [
+      "logs"
+    ],
+    "SH-01": [
+      "studio",
+      "pattern_retrieval",
+      "fact_wall",
+      "publish",
+      "ai_thread",
+      "capability_status"
+    ],
+    "SH-02": [
+      "library"
+    ],
+    "SH-03": [
+      "canonical"
+    ],
+    "SH-04": [
+      "export"
+    ],
+    "SH-05": [
+      "assets"
+    ],
+    "SH-06": [
+      "tasks"
+    ]
+  },
+  "items": [
+    {
+      "screen": "ACC-01",
+      "field": "auth",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/ACC-01/ACC-01.fixture.json",
+      "current_source": "CODEX_VERIFY (auth/login/sso = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "ACC-02",
+      "field": "subjects",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/ACC-02/ACC-02.fixture.json",
+      "current_source": "CODEX_VERIFY (subject resolver/permission = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "ACC-03",
+      "field": "launch",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/ACC-03/ACC-03.fixture.json",
+      "current_source": "CODEX_VERIFY (workspace home = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "ACC-04",
+      "field": "guard",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/ACC-04/ACC-04.fixture.json",
+      "current_source": "CODEX_VERIFY (auth guard/recovery = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-01",
+      "field": "kpis",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-01/CTH-01.fixture.json",
+      "current_source": "CODEX_VERIFY (canonical_metrics routes = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-01",
+      "field": "events",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-01/CTH-01.fixture.json",
+      "current_source": "CODEX_VERIFY (event list = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-01",
+      "field": "insight",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-01/CTH-01.fixture.json",
+      "current_source": "VIEWMODEL only; backend insight API = UNKNOWN",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-02",
+      "field": "brands",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-02/CTH-02.fixture.json",
+      "current_source": "CODEX_VERIFY (brand_directory/brand APIs = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-03",
+      "field": "stream",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-03/CTH-03.fixture.json",
+      "current_source": "CODEX_VERIFY (collector_v2/realtime endpoints = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-04",
+      "field": "graph",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-04/CTH-04.fixture.json",
+      "current_source": "CODEX_VERIFY (event_graph API = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-05",
+      "field": "calendar",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-05/CTH-05.fixture.json",
+      "current_source": "CODEX_VERIFY (weekly_events/calendar = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-06",
+      "field": "items",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-06/CTH-06.fixture.json",
+      "current_source": "CODEX_VERIFY (negative/comment feedback APIs = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-07",
+      "field": "trend",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-07/CTH-07.fixture.json",
+      "current_source": "CODEX_VERIFY (trend_api/canonical_metrics = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-08",
+      "field": "cases",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-08/CTH-08.fixture.json",
+      "current_source": "CODEX_VERIFY (case_library/case_templates = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-09",
+      "field": "risk",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-09/CTH-09.fixture.json",
+      "current_source": "CODEX_VERIFY (risk_engine = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-09",
+      "field": "decision",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-09/CTH-09.fixture.json",
+      "current_source": "DRAFT/EFFECT contract = UNKNOWN",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "CTH-10",
+      "field": "report",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/CTH-10/CTH-10.fixture.json",
+      "current_source": "CODEX_VERIFY (report_api/report_export = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-01",
+      "field": "all",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-01/BMP-01.fixture.json",
+      "current_source": "CODEX_VERIFY (brand/market overview APIs = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-02",
+      "field": "brands",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-02/BMP-02.fixture.json",
+      "current_source": "CODEX_VERIFY (brand_center = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-03",
+      "field": "intel",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-03/BMP-03.fixture.json",
+      "current_source": "CODEX_VERIFY (market_intel = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-04",
+      "field": "channels",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-04/BMP-04.fixture.json",
+      "current_source": "CODEX_VERIFY (communication_analysis = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-05",
+      "field": "creators",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-05/BMP-05.fixture.json",
+      "current_source": "CODEX_VERIFY (kos_kol_koc = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-06",
+      "field": "assets",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-06/BMP-06.fixture.json",
+      "current_source": "CODEX_VERIFY (content_center = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-07",
+      "field": "campaign",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-07/BMP-07.fixture.json",
+      "current_source": "CODEX_VERIFY (campaign APIs = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-08",
+      "field": "podcast",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-08/BMP-08.fixture.json",
+      "current_source": "CODEX_VERIFY (podcast_store/skill = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-09",
+      "field": "eval",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-09/BMP-09.fixture.json",
+      "current_source": "CODEX_VERIFY (brand_evaluation = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-10",
+      "field": "risk",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-10/BMP-10.fixture.json",
+      "current_source": "CODEX_VERIFY (brand_risk = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "BMP-11",
+      "field": "benchmark",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/BMP-11/BMP-11.fixture.json",
+      "current_source": "CODEX_VERIFY (benchmark = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "AI-01",
+      "field": "composer",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/AI-01/AI-01.fixture.json",
+      "current_source": "CODEX_VERIFY (POST /api/ai/intent = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "AI-01",
+      "field": "providers",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/AI-01/AI-01.fixture.json",
+      "current_source": "CODEX_VERIFY (/api/runtime/identity, ai gateway status = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "AI-02",
+      "field": "task_orchestration",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/AI-02/AI-02.fixture.json",
+      "current_source": "CODEX_VERIFY (ai_task_engine = UNKNOWN route)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "AI-03",
+      "field": "thread",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/AI-03/AI-03.fixture.json",
+      "current_source": "CODEX_VERIFY (ai thread stream = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "AI-03",
+      "field": "evidence_jump",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/AI-03/AI-03.fixture.json",
+      "current_source": "CODEX_VERIFY (evidence detail route = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "AI-04",
+      "field": "registry",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/AI-04/AI-04.fixture.json",
+      "current_source": "CODEX_VERIFY (skill_registry/ai_agent_registry = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "AI-05",
+      "field": "status",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/AI-05/AI-05.fixture.json",
+      "current_source": "CODEX_VERIFY (provider_registry/ai_governance = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-01",
+      "field": "health",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-01/SYS-01.fixture.json",
+      "current_source": "CODEX_VERIFY (/api/runtime/identity, health = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-02",
+      "field": "collectors",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-02/SYS-02.fixture.json",
+      "current_source": "CODEX_VERIFY (collector_v2 = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-03",
+      "field": "db",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-03/SYS-03.fixture.json",
+      "current_source": "CODEX_VERIFY (database.py/database_migrations.py = owner CODEX)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-04",
+      "field": "perm",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-04/SYS-04.fixture.json",
+      "current_source": "CODEX_VERIFY (permission matrix/api = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-05",
+      "field": "prefs",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-05/SYS-05.fixture.json",
+      "current_source": "CODEX_VERIFY (user settings store = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-06",
+      "field": "browser",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-06/SYS-06.fixture.json",
+      "current_source": "CODEX_VERIFY (internal browser = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-07",
+      "field": "acceptance",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-07/SYS-07.fixture.json",
+      "current_source": "owner CODEX (production acceptance)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SYS-08",
+      "field": "logs",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SYS-08/SYS-08.fixture.json",
+      "current_source": "CODEX_VERIFY (observability = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-01",
+      "field": "studio",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-01/SH-01.fixture.json",
+      "current_source": "CODEX_BINDING_REQUIRED (content creation APIs = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-01",
+      "field": "pattern_retrieval",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-01/SH-01.fixture.json",
+      "current_source": "CODEX_BINDING_REQUIRED (scoped retrieval = UNKNOWN, no whole-file injection)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-01",
+      "field": "fact_wall",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-01/SH-01.fixture.json",
+      "current_source": "CODEX_BINDING_REQUIRED (claim->evidence resolver = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-01",
+      "field": "publish",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-01/SH-01.fixture.json",
+      "current_source": "CODEX_BINDING_REQUIRED + permission content:publish (UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-01",
+      "field": "ai_thread",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-01/SH-01.fixture.json",
+      "current_source": "DESIGN_ONLY fixture -> backend task state at binding",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-01",
+      "field": "capability_status",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-01/SH-01.fixture.json",
+      "current_source": "PARTIAL",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-02",
+      "field": "library",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-02/SH-02.fixture.json",
+      "current_source": "CODEX_VERIFY (evidence_chain/evidence store = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-03",
+      "field": "canonical",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-03/SH-03.fixture.json",
+      "current_source": "CODEX_VERIFY (canonical_data/metric engine = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-04",
+      "field": "export",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-04/SH-04.fixture.json",
+      "current_source": "CODEX_VERIFY (report_export/report_engine = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-05",
+      "field": "assets",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-05/SH-05.fixture.json",
+      "current_source": "CODEX_VERIFY (learning assets = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    },
+    {
+      "screen": "SH-06",
+      "field": "tasks",
+      "design_source": "08_FIXTURES/DESIGN_ONLY/SH-06/SH-06.fixture.json",
+      "current_source": "CODEX_VERIFY (notification/task center = UNKNOWN)",
+      "replacement": "Codex 按 11_integration_skeleton/binding_contract.schema.json 用真实后端字段替换 DESIGN_ONLY 值",
+      "owner": "CODEX",
+      "status": "DESIGN_ONLY_PENDING_CODEX_BINDING"
+    }
+  ]
+}

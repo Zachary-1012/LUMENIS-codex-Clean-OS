@@ -1,0 +1,1 @@
+Headless Chromium 151 对 44 个 standalone 屏真实采集的原始结果，未做美化；失败/修复历史见 visual-regression/README 与 validate raw_output。

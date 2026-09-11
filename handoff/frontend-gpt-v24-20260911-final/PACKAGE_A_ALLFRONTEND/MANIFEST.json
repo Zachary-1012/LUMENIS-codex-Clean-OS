@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-09-11T16:01:19+08:00",
+  "repo": "Zachary-1012/LUMENIS-codex-Clean-OS",
+  "head": "ab67612",
+  "notes": [
+    "static byte-identical Clean-OS vs Z-Brand-Core -> single copy",
+    "ZBC templates differ -> bundled as legacy reference only",
+    "ZBC other ~900 js are collector/automation (not product UI); remain in Z-Brand-Core repo"
+  ],
+  "parts": {
+    "fe_current_templates": {
+      "files": 55,
+      "bytes": 1114571
+    },
+    "fe_current_static": {
+      "files": 97,
+      "bytes": 2374833
+    },
+    "fe_experience_v2": {
+      "files": 823,
+      "bytes": 78620025
+    },
+    "fe_internal_browser_scripts": {
+      "files": 4
+    },
+    "fe_legacy_zbc_templates": {
+      "files": 55,
+      "bytes": 1114264
+    },
+    "fe_v241_correction": {
+      "files": 1,
+      "bytes": 6840
+    },
+    "fe_delivery_xlsx": {
+      "files": 1
+    },
+    "chatgpt_compliance": {
+      "files": 20,
+      "bytes": 52137
+    },
+    "03_legacy_delivery_evidence": {
+      "files": 273,
+      "bytes": 44312781,
+      "note": "unique historical evidence folded from archived earlier packages; never overrides current source"
+    }
+  }
+}

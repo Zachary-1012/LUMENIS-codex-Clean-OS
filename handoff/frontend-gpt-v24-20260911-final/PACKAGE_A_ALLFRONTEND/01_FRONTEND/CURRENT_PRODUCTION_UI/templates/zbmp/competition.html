@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% block title %}Competition · 序境 LUMENIS{% endblock %}
+{% block page_title %}Competition{% endblock %}
+
+{% block topbar_actions %}
+<div style="display:flex;gap:8px;align-items:center;">
+  <select class="zbc-btn" id="comp-brand-1" aria-label="对比品牌1" style="cursor:pointer;max-width:140px;"></select>
+  <select class="zbc-btn" id="comp-brand-2" aria-label="对比品牌2" style="cursor:pointer;max-width:140px;"></select>
+  <select class="zbc-btn" id="comp-brand-3" aria-label="对比品牌3" style="cursor:pointer;max-width:140px;"></select>
+  <select class="zbc-btn" id="comp-brand-4" aria-label="对比品牌4" style="cursor:pointer;max-width:140px;"></select>
+</div>
+<select class="zbc-btn" id="comp-time-range" aria-label="时间范围" style="cursor:pointer;">
+  <option value="7d">近7天</option>
+  <option value="30d">近30天</option>
+  <option value="90d">近90天</option>
+</select>
+{% endblock %}
+
+{% block content %}
+<!-- PARTIAL Banner -->
+<div class="zbc-degraded-banner" style="background:rgba(217,119,0,0.08);border-color:rgba(217,119,0,0.2);color:#D97706;">
+  <span>⚠</span><span>PARTIAL · 竞品对比功能骨架已建，数据从 brand-industry 扩展，完整对比数据接入中</span>
+</div>
+
+<!-- KPI Comparison Row -->
+<div class="zbc-card" style="margin-bottom:16px;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">对比 KPI</span>
+    <span class="zbc-tag zbc-tag--info" id="comp-kpi-range">近7天</span>
+  </div>
+  <div class="zbc-card__body" style="padding:0;">
+    <div class="zbc-state-loading" id="comp-kpi-loading" style="padding:24px;">
+      <div class="zbc-skeleton" style="width:100%;height:80px;"></div>
+    </div>
+    <div id="comp-kpi-table-wrap" style="display:none;overflow-x:auto;">
+      <table class="zbc-table" id="comp-kpi-table">
+        <thead>
+          <tr>
+            <th>指标</th>
+            <th id="comp-th-1">品牌1</th>
+            <th id="comp-th-2">品牌2</th>
+            <th id="comp-th-3">品牌3</th>
+            <th id="comp-th-4">品牌4</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="font-weight:600;">声量</td><td id="comp-vol-1">—</td><td id="comp-vol-2">—</td><td id="comp-vol-3">—</td><td id="comp-vol-4">—</td></tr>
+          <tr><td style="font-weight:600;">互动量</td><td id="comp-eng-1">—</td><td id="comp-eng-2">—</td><td id="comp-eng-3">—</td><td id="comp-eng-4">—</td></tr>
+          <tr><td style="font-weight:600;">增长率</td><td id="comp-growth-1">—</td><td id="comp-growth-2">—</td><td id="comp-growth-3">—</td><td id="comp-growth-4">—</td></tr>
+          <tr><td style="font-weight:600;">风险事件</td><td id="comp-risk-1">—</td><td id="comp-risk-2">—</td><td id="comp-risk-3">—</td><td id="comp-risk-4">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Trend Comparison + Radar -->
+<div class="zbc-grid-2">
+  <!-- Volume Trend -->
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">声量趋势对比</span>
+    </div>
+    <div class="zbc-card__body">
+      <div class="zbc-state-loading" id="comp-trend-loading">
+        <div class="zbc-skeleton" style="width:100%;height:200px;"></div>
+      </div>
+      <div id="comp-trend-chart" style="display:none;min-height:200px;"></div>
+      <div class="zbc-state-empty" id="comp-trend-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">📈</div>
+        <div class="zbc-state-empty__text">趋势数据采集中</div>
+      </div>
+    </div>
+  </div>
+  <!-- Content Theme Radar -->
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">内容主题分布</span>
+    </div>
+    <div class="zbc-card__body">
+      <div class="zbc-state-loading" id="comp-radar-loading">
+        <div class="zbc-skeleton" style="width:100%;height:200px;"></div>
+      </div>
+      <div id="comp-radar-chart" style="display:none;min-height:200px;"></div>
+      <div class="zbc-state-empty" id="comp-radar-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">🎯</div>
+        <div class="zbc-state-empty__text">主题雷达数据采集中</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Differentiation Insights -->
+<div class="zbc-card" style="margin-bottom:16px;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">差异化洞察</span>
+    <span class="zbc-tag zbc-tag--info">AI 分析</span>
+  </div>
+  <div class="zbc-card__body">
+    <div class="zbc-state-loading" id="comp-insight-loading">
+      <div class="zbc-skeleton" style="width:100%;height:100px;"></div>
+    </div>
+    <div id="comp-insight-cards" style="display:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;"></div>
+    <div class="zbc-state-empty" id="comp-insight-empty" style="display:none;">
+      <div class="zbc-state-empty__icon">💡</div>
+      <div class="zbc-state-empty__text">选择至少2个品牌生成差异化洞察</div>
+    </div>
+  </div>
+</div>
+
+<!-- Competitor Action Timeline -->
+<div class="zbc-card">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">竞品动作时间线</span>
+    <button class="zbc-btn" id="btn-refresh-timeline" type="button" style="padding:4px 10px;font-size:11px;">刷新</button>
+  </div>
+  <div class="zbc-card__body" style="padding:0;">
+    <div class="zbc-state-loading" id="comp-timeline-loading" style="padding:24px;">
+      <div class="zbc-skeleton" style="width:100%;height:60px;margin-bottom:8px;"></div>
+      <div class="zbc-skeleton" style="width:100%;height:60px;"></div>
+    </div>
+    <div class="zbc-state-empty" id="comp-timeline-empty" style="display:none;padding:24px;">
+      <div class="zbc-state-empty__icon">📅</div>
+      <div class="zbc-state-empty__text">暂无竞品动作记录</div>
+    </div>
+    <div id="comp-timeline" style="display:none;padding:16px 20px;"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var ZBMPCompetition = {
+    state: { brands: [], selected: ['', '', '', ''], timeRange: '7d', brandData: {} },
+
+    COLORS: ['#0F766E', '#2563EB', '#D97706', '#7C3AED'],
+
+    init: function() {
+      var self = this;
+      // Load brand list for selectors
+      this.loadBrands();
+      // Brand selectors
+      for (var i = 1; i <= 4; i++) {
+        (function(idx) {
+          var sel = document.getElementById('comp-brand-' + idx);
+          if (sel) sel.addEventListener('change', function() {
+            self.state.selected[idx - 1] = sel.value;
+            self.loadComparison();
+          });
+        })(i);
+      }
+      // Time range
+      var tr = document.getElementById('comp-time-range');
+      if (tr) tr.addEventListener('change', function() {
+        self.state.timeRange = tr.value;
+        var label = tr.options[tr.selectedIndex].text;
+        document.getElementById('comp-kpi-range').textContent = label;
+        self.loadComparison();
+      });
+      // Timeline refresh
+      var rt = document.getElementById('btn-refresh-timeline');
+      if (rt) rt.addEventListener('click', function() { self.loadTimeline(); });
+    },
+
+    loadBrands: function() {
+      var self = this;
+      xjViz.api('/brand-industry/brands', {limit:100})
+        .then(function(d) {
+          var brands = d.brands || [];
+          self.state.brands = brands;
+          // Populate selectors
+          for (var i = 1; i <= 4; i++) {
+            var sel = document.getElementById('comp-brand-' + i);
+            if (!sel) continue;
+            sel.innerHTML = '<option value="">品牌' + i + '</option>';
+            brands.forEach(function(b) {
+              var name = b.brand_name_cn || b.brand_name || b.name || '';
+              if (name) {
+                var opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                sel.appendChild(opt);
+              }
+            });
+          }
+          // Auto-select first 2 brands
+          if (brands.length >= 2) {
+            var b1 = brands[0].brand_name_cn || brands[0].brand_name || brands[0].name;
+            var b2 = brands[1].brand_name_cn || brands[1].brand_name || brands[1].name;
+            document.getElementById('comp-brand-1').value = b1;
+            document.getElementById('comp-brand-2').value = b2;
+            self.state.selected[0] = b1;
+            self.state.selected[1] = b2;
+            self.loadComparison();
+          }
+        })
+        .catch(function(e) {
+          console.error('Load brands error:', e);
+        });
+    },
+
+    loadComparison: function() {
+      var self = this;
+      var selected = this.state.selected.filter(function(b) { return b; });
+      if (selected.length < 1) return;
+
+      // Update headers
+      for (var i = 0; i < 4; i++) {
+        var th = document.getElementById('comp-th-' + (i + 1));
+        if (th) th.textContent = this.state.selected[i] || '品牌' + (i + 1);
+      }
+
+      // Show loading
+      document.getElementById('comp-kpi-loading').style.display = '';
+      document.getElementById('comp-kpi-table-wrap').style.display = 'none';
+
+      // Load each brand's data
+      var promises = selected.map(function(brand) {
+        return xjViz.api('/brand-industry/brands/' + encodeURIComponent(brand))
+          .then(function(d) { return d && d.ok ? d.brand : null; })
+          .catch(function() { return null; });
+      });
+
+      Promise.all(promises).then(function(results) {
+        document.getElementById('comp-kpi-loading').style.display = 'none';
+        document.getElementById('comp-kpi-table-wrap').style.display = '';
+        results.forEach(function(brand, idx) {
+          var col = idx + 1;
+          if (!brand) {
+            for (var k = 1; k <= 4; k++) {
+              var cell = document.getElementById('comp-' + ['vol','eng','growth','risk'][k-1] + '-' + col);
+              if (cell) cell.textContent = '—';
+            }
+            return;
+          }
+          self.state.brandData[selected[idx]] = brand;
+          // Volume
+          var vol = brand.total_notes != null ? brand.total_notes : (brand.note_count || '—');
+          document.getElementById('comp-vol-' + col).textContent = vol;
+          // Engagement (approximate from notes)
+          var eng = '—';
+          if (brand.recent_notes && brand.recent_notes.length > 0) {
+            var totalEng = 0;
+            brand.recent_notes.forEach(function(n) { totalEng += (n.likes||0) + (n.comments||0) + (n.collects||0) + (n.shares||0); });
+            eng = totalEng.toLocaleString();
+          }
+          document.getElementById('comp-eng-' + col).textContent = eng;
+          // Growth rate (positive ratio as proxy)
+          var growth = '—';
+          if (brand.total_notes > 0 && brand.positive != null) {
+            var rate = ((brand.positive / brand.total_notes) * 100).toFixed(1);
+            growth = '<span style="color:#10B981;font-weight:600;">' + rate + '%</span>';
+          }
+          document.getElementById('comp-growth-' + col).innerHTML = growth;
+          // Risk
+          var risk = brand.negative || 0;
+          var riskCls = risk > 5 ? 'color:#DC2626;font-weight:600;' : (risk > 0 ? 'color:#D97706;font-weight:600;' : '');
+          document.getElementById('comp-risk-' + col).innerHTML = '<span style="' + riskCls + '">' + risk + '</span>';
+        });
+
+        // Render charts
+        self.renderTrendChart(selected, results);
+        self.renderRadarChart(selected, results);
+        self.renderInsights(selected, results);
+      });
+    },
+
+    renderTrendChart: function(selected, results) {
+      var container = document.getElementById('comp-trend-chart');
+      var loading = document.getElementById('comp-trend-loading');
+      var empty = document.getElementById('comp-trend-empty');
+      loading.style.display = 'none';
+
+      var hasData = results.some(function(r) { return r && r.recent_notes && r.recent_notes.length > 0; });
+      if (!hasData) { empty.style.display = ''; container.style.display = 'none'; return; }
+      empty.style.display = 'none';
+      container.style.display = '';
+
+      // Build simple trend visualization using div bars
+      var html = '<div style="display:flex;align-items:flex-end;gap:4px;height:180px;padding-top:20px;">';
+      var maxVal = 0;
+      var seriesData = selected.map(function(brand, idx) {
+        var r = results[idx];
+        var notes = (r && r.recent_notes) || [];
+        var byDate = {};
+        notes.forEach(function(n) {
+          var d = (n.publish_date || '').substring(0, 10);
+          if (d) byDate[d] = (byDate[d] || 0) + 1;
+        });
+        var vals = Object.values(byDate);
+        if (vals.length > 0) maxVal = Math.max(maxVal, Math.max.apply(null, vals));
+        return { brand: brand, data: byDate, color: this.COLORS[idx] };
+      }.bind(this));
+
+      // Get all dates
+      var allDates = {};
+      seriesData.forEach(function(s) { Object.keys(s.data).forEach(function(d) { allDates[d] = true; }); });
+      var dates = Object.keys(allDates).sort().slice(-14);
+
+      dates.forEach(function(date) {
+        html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">';
+        seriesData.forEach(function(s) {
+          var val = s.data[date] || 0;
+          var h = maxVal > 0 ? (val / maxVal * 140) : 0;
+          html += '<div style="width:100%;max-width:20px;height:' + h + 'px;background:' + s.color + ';border-radius:2px 2px 0 0;opacity:0.8;" title="' + s.brand + ': ' + val + '"></div>';
+        });
+        html += '<div style="font-size:9px;color:var(--l-text-tertiary,#9CA3AF);margin-top:4px;transform:rotate(-45deg);white-space:nowrap;">' + date.substring(5) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      // Legend
+      html += '<div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;">';
+      seriesData.forEach(function(s) {
+        html += '<div style="display:flex;align-items:center;gap:6px;font-size:11px;"><span style="width:10px;height:10px;border-radius:2px;background:' + s.color + ';"></span>' + this.escapeHtml(s.brand) + '</div>';
+      }.bind(this));
+      html += '</div>';
+      container.innerHTML = html;
+    },
+
+    renderRadarChart: function(selected, results) {
+      var container = document.getElementById('comp-radar-chart');
+      var loading = document.getElementById('comp-radar-loading');
+      var empty = document.getElementById('comp-radar-empty');
+      loading.style.display = 'none';
+
+      var hasData = results.some(function(r) { return r && r.total_notes > 0; });
+      if (!hasData) { empty.style.display = ''; container.style.display = 'none'; return; }
+      empty.style.display = 'none';
+      container.style.display = '';
+
+      // Simple horizontal bar comparison for content themes
+      var themes = ['时尚', '美食', '美妆', '生活方式', '活动', '其他'];
+      var html = '<div style="padding:10px 0;">';
+      selected.forEach(function(brand, idx) {
+        var r = results[idx];
+        var total = (r && r.total_notes) || 0;
+        var pos = (r && r.positive) || 0;
+        var neg = (r && r.negative) || 0;
+        var neu = total - pos - neg;
+        html += '<div style="margin-bottom:16px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="width:10px;height:10px;border-radius:2px;background:' + this.COLORS[idx] + ';"></span><span style="font-size:12px;font-weight:600;">' + this.escapeHtml(brand) + '</span><span style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-left:auto;">共 ' + total + ' 篇</span></div>';
+        html += '<div style="display:flex;height:20px;border-radius:4px;overflow:hidden;">';
+        if (total > 0) {
+          html += '<div style="width:' + (pos/total*100) + '%;background:#10B981;" title="正面 ' + pos + '"></div>';
+          html += '<div style="width:' + (neu/total*100) + '%;background:#9CA3AF;" title="中性 ' + neu + '"></div>';
+          html += '<div style="width:' + (neg/total*100) + '%;background:#DC2626;" title="负面 ' + neg + '"></div>';
+        }
+        html += '</div>';
+        html += '<div style="display:flex;gap:12px;margin-top:4px;font-size:10px;color:var(--l-text-secondary,#6B7280);"><span>正面 ' + pos + '</span><span>中性 ' + neu + '</span><span>负面 ' + neg + '</span></div>';
+        html += '</div>';
+      }.bind(this));
+      html += '</div>';
+      container.innerHTML = html;
+    },
+
+    renderInsights: function(selected, results) {
+      var container = document.getElementById('comp-insight-cards');
+      var loading = document.getElementById('comp-insight-loading');
+      var empty = document.getElementById('comp-insight-empty');
+      loading.style.display = 'none';
+
+      if (selected.length < 2) { empty.style.display = ''; container.style.display = 'none'; return; }
+      empty.style.display = 'none';
+      container.style.display = 'grid';
+
+      var insights = [];
+      // Find highest volume brand
+      var volData = selected.map(function(b, i) { return { brand: b, vol: (results[i] && results[i].total_notes) || 0 }; });
+      volData.sort(function(a, b) { return b.vol - a.vol; });
+      if (volData[0].vol > 0 && volData[1].vol > 0) {
+        var diff = ((volData[0].vol - volData[1].vol) / volData[1].vol * 100).toFixed(1);
+        insights.push({ title: '声量领先', desc: volData[0].brand + ' 声量领先 ' + volData[1].brand + ' 约 ' + diff + '%', type: 'volume' });
+      }
+      // Find highest positive ratio
+      var posData = selected.map(function(b, i) {
+        var r = results[i];
+        var rate = r && r.total_notes > 0 ? (r.positive / r.total_notes * 100) : 0;
+        return { brand: b, rate: rate };
+      });
+      posData.sort(function(a, b) { return b.rate - a.rate; });
+      if (posData[0].rate > 0) {
+        insights.push({ title: '口碑最佳', desc: posData[0].brand + ' 正面占比最高，达 ' + posData[0].rate.toFixed(1) + '%', type: 'positive' });
+      }
+      // Risk warning
+      var riskData = selected.map(function(b, i) { return { brand: b, risk: (results[i] && results[i].negative) || 0 }; });
+      riskData.sort(function(a, b) { return b.risk - a.risk; });
+      if (riskData[0].risk > 0) {
+        insights.push({ title: '风险关注', desc: riskData[0].brand + ' 负面笔记最多（' + riskData[0].risk + ' 篇），建议关注', type: 'risk' });
+      }
+
+      if (insights.length === 0) {
+        container.innerHTML = '<div class="zbc-state-empty__text" style="grid-column:1/-1;padding:24px;">数据不足，无法生成差异化洞察</div>';
+        return;
+      }
+
+      var typeColors = { volume: '#0F766E', positive: '#10B981', risk: '#DC2626' };
+      var typeIcons = { volume: '📊', positive: '👍', risk: '⚠' };
+      container.innerHTML = insights.map(function(ins) {
+        var color = typeColors[ins.type] || '#0F766E';
+        return '<div style="border:1px solid var(--l-border,#E8E8E8);border-radius:12px;padding:16px;border-left:3px solid ' + color + ';">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span>' + (typeIcons[ins.type] || '💡') + '</span><span style="font-weight:600;font-size:14px;">' + ins.title + '</span></div>' +
+          '<div style="font-size:12px;color:var(--l-text-secondary,#6B7280);line-height:1.6;">' + this.escapeHtml(ins.desc) + '</div>' +
+          '</div>';
+      }.bind(this)).join('');
+    },
+
+    loadTimeline: function() {
+      var loading = document.getElementById('comp-timeline-loading');
+      var empty = document.getElementById('comp-timeline-empty');
+      var container = document.getElementById('comp-timeline');
+      loading.style.display = '';
+      empty.style.display = 'none';
+      container.style.display = 'none';
+
+      // Use events API for timeline
+      xjViz.api('/events', {include:'all'})
+        .then(function(d) {
+          loading.style.display = 'none';
+          var events = d.events || [];
+          if (events.length === 0) { empty.style.display = ''; return; }
+          container.style.display = '';
+          var html = '<div style="position:relative;padding-left:24px;">';
+          html += '<div style="position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--l-border,#E8E8E8);"></div>';
+          events.slice(0, 20).forEach(function(ev) {
+            var title = ev.title || ev.event_title || '未命名事件';
+            var date = ev.created_at || ev.event_date || ev.start_date || '—';
+            var type = ev.event_type || ev.type || 'event';
+            var typeCls = type === 'risk' ? 'zbc-tag--high' : (type === 'campaign' ? 'zbc-tag--info' : 'zbc-tag--low');
+            html += '<div style="position:relative;margin-bottom:16px;">';
+            html += '<div style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:#0F766E;border:2px solid #fff;"></div>';
+            html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="zbc-tag ' + typeCls + '" style="font-size:10px;">' + type + '</span><span style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">' + date + '</span></div>';
+            html += '<div style="font-size:13px;font-weight:500;">' + ZBMPCompetition.escapeHtml(title) + '</div>';
+            html += '</div>';
+          });
+          html += '</div>';
+          container.innerHTML = html;
+        })
+        .catch(function() {
+          loading.style.display = 'none';
+          empty.style.display = '';
+        });
+    },
+
+    escapeHtml: function(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  };
+
+  window.ZBMPCompetition = ZBMPCompetition;
+  document.addEventListener('DOMContentLoaded', function() { ZBMPCompetition.init(); });
+})();
+</script>
+{% endblock %}

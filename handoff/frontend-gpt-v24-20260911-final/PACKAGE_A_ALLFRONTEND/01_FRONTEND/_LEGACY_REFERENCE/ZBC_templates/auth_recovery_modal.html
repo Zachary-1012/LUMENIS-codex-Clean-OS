@@ -1,0 +1,481 @@
+<!--
+  Auth Recovery Modal（V3.0 P0）
+  归属：Z-Brand Core / P0 采集健康中心 / Auth Recovery Center
+  目标：Cookie/session 失效时不简单跳登录页，而是显示平台/账号/状态/原因/恢复选项。
+
+  用法：
+  1. 已全局内联到 base.html（Phase4），无需手动 include
+  2. 前端 JS 轮询 /api/auth-recovery/summary
+  3. 有 pending 任务时显示 Modal，展示平台/账号/状态/原因/恢复选项
+  4. 用户完成扫码/验证后调用 /api/auth-recovery/tasks/<id>/complete
+  5. 系统自动触发健康探活，确认完全健康才解除熔断
+
+  硬红线：
+  - 不破解验证码、不绕过平台安全机制
+  - 恢复必须由用户人工完成扫码/验证
+  - 恢复后必须做健康探活，确认完全健康才解除熔断
+  - 不简单跳登录页，必须展示完整恢复信息
+-->
+<div id="auth-recovery-modal" class="auth-recovery-modal" style="display:none;">
+  <div class="auth-recovery-overlay" onclick="AuthRecoveryModal.close()"></div>
+  <div class="auth-recovery-dialog">
+    <!-- 头部 -->
+    <div class="auth-recovery-header">
+      <div class="auth-recovery-title">
+        <span class="auth-recovery-icon">&#9888;</span>
+        <span>采集认证异常 · 需要恢复</span>
+      </div>
+      <button class="auth-recovery-close" onclick="AuthRecoveryModal.close()" title="关闭">&times;</button>
+    </div>
+
+    <!-- 任务列表容器 -->
+    <div id="auth-recovery-tasks" class="auth-recovery-tasks">
+      <!-- 任务卡片由 JS 动态渲染 -->
+    </div>
+
+    <!-- 底部操作 -->
+    <div class="auth-recovery-footer">
+      <div class="auth-recovery-hint">
+        <strong>注意：</strong>请在新窗口/新标签页中完成扫码或验证，完成后回到此页面点击"已完成验证"。
+        系统将自动执行健康探活，确认完全健康后才解除熔断。
+      </div>
+      <div class="auth-recovery-actions">
+        <button class="auth-recovery-btn auth-recovery-btn-secondary" onclick="AuthRecoveryModal.refresh()">
+          刷新状态
+        </button>
+        <button class="auth-recovery-btn auth-recovery-btn-primary" onclick="AuthRecoveryModal.close()">
+          稍后处理
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.auth-recovery-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: var(--z-auth-recovery);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.auth-recovery-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.auth-recovery-dialog {
+  position: relative;
+  max-width: 640px;
+  margin: 60px auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  overflow: hidden;
+  animation: authRecoverySlideIn 0.3s ease-out;
+}
+@keyframes authRecoverySlideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.auth-recovery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-bottom: 1px solid #f0e0a0;
+}
+.auth-recovery-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #856404;
+}
+.auth-recovery-icon {
+  font-size: 20px;
+}
+.auth-recovery-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #856404;
+  padding: 0 4px;
+  line-height: 1;
+}
+.auth-recovery-close:hover { color: #5a4500; }
+.auth-recovery-tasks {
+  padding: 16px 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.auth-recovery-task-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: #fafafa;
+}
+.auth-recovery-task-card:last-child { margin-bottom: 0; }
+.auth-recovery-task-platform {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+.auth-recovery-platform-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+.platform-xhs { background: #ff2442; }
+.platform-douyin { background: #000; }
+.platform-weibo { background: #e6162d; }
+.platform-bilibili { background: #00a1d6; }
+.platform-zhihu { background: #0066ff; }
+.platform-default { background: #666; }
+.auth-recovery-task-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: auto;
+}
+.status-pending { background: #fff3cd; color: #856404; }
+.status-in_progress { background: #cce5ff; color: #004085; }
+.status-completed { background: #d4edda; color: #155724; }
+.status-failed { background: #f8d7da; color: #721c24; }
+.auth-recovery-task-detail {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.auth-recovery-task-detail strong { color: #333; }
+.auth-recovery-issue-type {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  background: #f0f0f0;
+  color: #555;
+  margin-right: 4px;
+}
+.auth-recovery-qr-section {
+  text-align: center;
+  padding: 12px;
+  background: #fff;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  margin: 10px 0;
+}
+.auth-recovery-qr-placeholder {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 8px;
+  background: #f5f5f5;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 12px;
+}
+.auth-recovery-qr-img {
+  max-width: 160px;
+  max-height: 160px;
+  border-radius: 8px;
+}
+.auth-recovery-task-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.auth-recovery-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.auth-recovery-btn-primary {
+  background: #007bff;
+  color: #fff;
+}
+.auth-recovery-btn-primary:hover { background: #0056b3; }
+.auth-recovery-btn-secondary {
+  background: #6c757d;
+  color: #fff;
+}
+.auth-recovery-btn-secondary:hover { background: #545b62; }
+.auth-recovery-btn-success {
+  background: #28a745;
+  color: #fff;
+}
+.auth-recovery-btn-success:hover { background: #1e7e34; }
+.auth-recovery-btn-outline {
+  background: #fff;
+  color: #007bff;
+  border: 1px solid #007bff;
+}
+.auth-recovery-btn-outline:hover { background: #e8f0fe; }
+.auth-recovery-footer {
+  padding: 14px 20px;
+  background: #f8f9fa;
+  border-top: 1px solid #e0e0e0;
+}
+.auth-recovery-hint {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #fff3cd;
+  border-radius: 4px;
+  border-left: 3px solid #ffc107;
+}
+.auth-recovery-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.auth-recovery-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+</style>
+
+<script>
+/**
+ * Auth Recovery Modal 前端控制器
+ *
+ * 功能：
+ * 1. 轮询 /api/auth-recovery/summary 获取待处理任务
+ * 2. 有 pending 任务时自动弹出 Modal
+ * 3. 渲染任务卡片（平台/账号/状态/原因/恢复选项）
+ * 4. 支持打开恢复链接、标记完成/失败
+ * 5. 完成后自动刷新状态，健康探活通过后关闭 Modal
+ *
+ * 硬红线：不简单跳登录页，必须展示完整恢复信息供用户人工处理。
+ */
+const AuthRecoveryModal = (function() {
+  const POLL_INTERVAL = 30000;  // 30秒轮询一次
+  let pollTimer = null;
+  let currentTasks = [];
+
+  function show() {
+    const modal = document.getElementById('auth-recovery-modal');
+    if (modal) modal.style.display = 'block';
+  }
+
+  function close() {
+    const modal = document.getElementById('auth-recovery-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function getPlatformBadgeClass(platform) {
+    const map = {
+      'xhs': 'platform-xhs', 'xiaohongshu': 'platform-xhs',
+      'douyin': 'platform-douyin',
+      'weibo': 'platform-weibo',
+      'bilibili': 'platform-bilibili', 'b站': 'platform-bilibili',
+      'zhihu': 'platform-zhihu',
+    };
+    return map[platform] || 'platform-default';
+  }
+
+  function getPlatformLabel(platform) {
+    const map = {
+      'xhs': '小红书', 'xiaohongshu': '小红书',
+      'douyin': '抖音',
+      'weibo': '微博',
+      'bilibili': 'B站', 'b站': 'B站',
+      'zhihu': '知乎',
+    };
+    return map[platform] || platform;
+  }
+
+  function getIssueTypeLabel(issueType) {
+    const map = {
+      'cookie_expired': 'Cookie失效',
+      'login_expired': '登录过期',
+      'captcha': '验证码',
+      'qr_required': '需要扫码',
+      'session_invalid': '会话无效',
+      'ip_risk': 'IP风控',
+      'unknown': '未知异常',
+    };
+    return map[issueType] || issueType;
+  }
+
+  function renderTaskCard(task) {
+    const platformClass = getPlatformBadgeClass(task.platform);
+    const platformLabel = getPlatformLabel(task.platform);
+    const issueLabel = getIssueTypeLabel(task.issue_type);
+    const statusClass = 'status-' + (task.status || 'pending');
+
+    let qrSection = '';
+    if (task.qr_code_url) {
+      qrSection = `<div class="auth-recovery-qr-section">
+        <img src="${task.qr_code_url}" alt="恢复二维码" class="auth-recovery-qr-img" />
+        <div style="font-size:12px;color:#666;">请使用 ${platformLabel} APP 扫码完成验证</div>
+      </div>`;
+    }
+
+    let recoveryBtn = '';
+    if (task.recovery_url) {
+      recoveryBtn = `<button class="auth-recovery-btn auth-recovery-btn-outline"
+        onclick="AuthRecoveryModal.openRecoveryUrl('${task.recovery_url}')">
+        打开恢复页面
+      </button>`;
+    }
+
+    return `<div class="auth-recovery-task-card" data-task-id="${task.id}">
+      <div class="auth-recovery-task-platform">
+        <span class="auth-recovery-platform-badge ${platformClass}">${platformLabel}</span>
+        <span>${task.title || '认证异常'}</span>
+        <span class="auth-recovery-task-status ${statusClass}">${task.status}</span>
+      </div>
+      <div class="auth-recovery-task-detail">
+        <div><strong>异常类型：</strong><span class="auth-recovery-issue-type">${issueLabel}</span></div>
+        <div><strong>平台账号：</strong>${task.platform}（任务ID: ${task.id}）</div>
+        <div><strong>异常原因：</strong>${task.description || '采集时检测到认证异常，需要人工恢复'}</div>
+        <div><strong>创建时间：</strong>${task.created_at || '-'}</div>
+        <div><strong>过期时间：</strong>${task.expires_at || '-'}</div>
+        ${task.error_message ? `<div><strong>错误信息：</strong>${task.error_message}</div>` : ''}
+      </div>
+      ${qrSection}
+      <div class="auth-recovery-task-actions">
+        ${recoveryBtn}
+        <button class="auth-recovery-btn auth-recovery-btn-success"
+          onclick="AuthRecoveryModal.markComplete(${task.id})">
+          已完成验证
+        </button>
+        <button class="auth-recovery-btn auth-recovery-btn-secondary"
+          onclick="AuthRecoveryModal.markFailed(${task.id})">
+          验证失败
+        </button>
+      </div>
+    </div>`;
+  }
+
+  function renderTasks(tasks) {
+    const container = document.getElementById('auth-recovery-tasks');
+    if (!container) return;
+    if (!tasks || tasks.length === 0) {
+      container.innerHTML = '<div class="auth-recovery-empty">暂无待处理的恢复任务</div>';
+      return;
+    }
+    container.innerHTML = tasks.map(renderTaskCard).join('');
+  }
+
+  async function fetchSummary() {
+    try {
+      const resp = await fetch('/api/auth-recovery/summary');
+      if (!resp.ok) {
+        console.warn('[AuthRecovery] API returned HTTP', resp.status);
+        return;
+      }
+      const data = await resp.json();
+      if (data.ok && data.data) {
+        currentTasks = data.data.pending_tasks || [];
+        if (currentTasks.length > 0) {
+          renderTasks(currentTasks);
+          show();
+        } else {
+          // 无待处理任务：隐藏弹窗，避免一直显示/转圈
+          close();
+        }
+      }
+    } catch (e) {
+      console.error('[AuthRecovery] 获取恢复摘要失败:', e);
+    }
+  }
+
+  async function markComplete(taskId) {
+    try {
+      const resp = await fetch(`/api/auth-recovery/tasks/${taskId}/complete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({error_message: ''})
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        alert('验证已标记完成，系统正在执行健康探活...\n探活通过后将自动解除熔断。');
+        refresh();
+      } else {
+        alert('标记失败: ' + (data.message || '未知错误'));
+      }
+    } catch (e) {
+      alert('请求失败: ' + e.message);
+    }
+  }
+
+  async function markFailed(taskId) {
+    const errorMsg = prompt('请输入失败原因（可选）:', '验证失败');
+    if (errorMsg === null) return;
+    try {
+      const resp = await fetch(`/api/auth-recovery/tasks/${taskId}/fail`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({error_message: errorMsg})
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        alert('已标记为失败');
+        refresh();
+      }
+    } catch (e) {
+      alert('请求失败: ' + e.message);
+    }
+  }
+
+  function openRecoveryUrl(url) {
+    window.open(url, '_blank', 'width=800,height=600');
+  }
+
+  function refresh() {
+    fetchSummary();
+  }
+
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    fetchSummary();  // 立即检查一次
+    pollTimer = setInterval(fetchSummary, POLL_INTERVAL);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  // 页面加载完成后自动开始轮询
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startPolling);
+  } else {
+    startPolling();
+  }
+
+  return {
+    show, close, refresh,
+    markComplete, markFailed,
+    openRecoveryUrl,
+    startPolling, stopPolling,
+  };
+})();
+</script>
