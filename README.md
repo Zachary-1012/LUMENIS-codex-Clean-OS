@@ -2,7 +2,7 @@
 
 > **Production Core · Production Truth Owner**
 >
-> 当前阶段：**PRODUCTION CONVERGENCE**。本仓库负责序境 / LUMENIS 的真实生产代码、数据、Evidence、API、DB、Runtime、Permission、Metric、Report、UI binding、测试与 Production Acceptance。
+> 当前阶段：**PRODUCTION CONVERGENCE + DESIGN ECOSYSTEM OPTIMIZATION**。本仓库负责序境 / LUMENIS 的真实生产代码、数据、Evidence、API、DB、Runtime、Permission、Metric、Report、UI binding、测试与 Production Acceptance。
 
 ## 0. Codex 唯一入口 / Canonical Codex Entrypoint
 
@@ -30,6 +30,8 @@ WOFF2_REQUIRED       = 56
 Package B 与 Package A 的 Legacy Delivery Evidence 可以发生 Git Blob 去重，但 **Package B 独立 provenance 必须永久保留**。
 
 `READY_FOR_CODEX_EXECUTION` 只表示仓库已达到 Codex 可直接接手状态，**不等于 `PRODUCTION_READY`**。
+
+当前 `READY_FOR_CODEX_EXECUTION` 判定暂缓，先完成豆包主导的 **Design Ecosystem Optimization** 并将其作为 Experience V2 的增量正式资产同步；该暂停不授权重新定义 Production Truth，也不允许重做已完成的前端前期。
 
 ---
 
@@ -179,7 +181,77 @@ Codex 对前端的责任是：阅读、核验、必要修复、AI-01 + CTH-01 �
 
 ---
 
-## 5. Legacy
+## 5. Design Ecosystem Optimization / 设计生态系统优化
+
+本阶段由 **豆包作为设计生态优化执行者**，基于已正式入仓的 Experience V2、Design Language v2.4、页面 source、contracts、registries、frontend engineering assets、research 与 legacy evidence 做 **增量优化**。
+
+目标不是再做一套设计，而是把现有设计资产收敛成一个跨模块、跨页面、跨状态、跨设备可持续扩展的 **LUMENIS Design Ecosystem**。
+
+### 豆包可以优化
+
+- 全产品视觉与交互一致性
+- 四域共享但不混淆的设计语义
+- AI / CTH / BMP / Shared Capability / SYSTEM 页面之间的生态关系
+- Layout、Grid、Spacing、Typography、Icon、Surface、Divider、State、Motion、Responsive 的统一规则
+- 页面层级与 2–4 层动态信息架构的视觉承载
+- Evidence / Trace / Decision / Action / Outcome 的统一呈现语义
+- AI Conversation、Dashboard、Detail、Workspace、Report、Settings 等页面族的系统化模式
+- Component / Pattern / Token / Motion / Interaction 的复用与变体治理
+- Desktop / Tablet / Mobile 的响应式连续性
+- Empty / Loading / Error / Stale / Unknown / Permission / Approval / Risk 等状态体系
+- Accessibility、可读性、信息密度、动效性能与工程可实现性
+
+### 豆包不得做
+
+- 从零重建第二套 Design System
+- 推翻 Experience V2 的正式边界
+- 将 Legacy UI 重新提升为 Current Truth
+- 发明不存在的 API / DB / Permission / Evidence / Metric / Runtime 能力
+- 为追求视觉效果改变 Production Truth
+- 把内部生产链或 Runtime 链做成业务页面装饰性流程图
+- 将产品改成 generic SaaS / card wall / purple AI template
+
+### 设计生态最终应形成
+
+```text
+LUMENIS Design Ecosystem
+├─ Foundations
+│  ├─ Color / Material / Typography / Grid / Spacing
+│  ├─ Iconography / Illustration / AI Orb
+│  └─ Motion / Accessibility / Responsive
+├─ Tokens
+│  ├─ Primitive Tokens
+│  ├─ Semantic Tokens
+│  └─ Domain / State Tokens
+├─ Components
+│  ├─ Core Components
+│  ├─ Data / Evidence Components
+│  ├─ AI Components
+│  └─ Control / Permission Components
+├─ Patterns
+│  ├─ Context / Fact / Relationship
+│  ├─ Evidence / Finding / Risk
+│  ├─ Decision / Action / Outcome
+│  └─ Approval / Provenance / Trace
+├─ Page Families
+│  ├─ AI Workspace
+│  ├─ CTH
+│  ├─ BMP
+│  ├─ Shared Capability
+│  └─ SYSTEM
+└─ Governance
+   ├─ Reuse / Variant Rules
+   ├─ Responsive Rules
+   ├─ Motion Rules
+   ├─ Accessibility Rules
+   └─ Engineering Acceptance
+```
+
+豆包交付后的设计生态资产属于 **Experience V2 增量正式输入**。Codex 接手后只做读取、真实性核验、工程实现、真实数据与后端绑定、必要修复和 E2E，不再重复设计生态前期工作。
+
+---
+
+## 6. Legacy
 
 Legacy 永久定义为：
 
@@ -193,13 +265,13 @@ Legacy 可以用于能力追踪、历史语义、回归、迁移依据，但不�
 
 ---
 
-## 6. Codex 接手顺序
+## 7. Codex 接手顺序
 
 ```text
 README
 → AGENTS
 → CODEX TAKEOVER
-→ Experience V2 formal source
+→ Experience V2 + Design Ecosystem formal source
 → Contracts / Registries
 → Current backend / API / DB / Permission / Evidence / Runtime
 → Current Tests / Production Acceptance
@@ -227,7 +299,7 @@ Read → Verify → AI-01 + CTH-01 calibration → Backend binding → E2E → P
 
 ---
 
-## 7. AI Conversation 安全边界
+## 8. AI Conversation 安全边界
 
 AI 页面允许展示：
 
@@ -257,7 +329,7 @@ AI 页面允许展示：
 
 ---
 
-## 8. ChatGPT / MCP 公共边界
+## 9. ChatGPT / MCP 公共边界
 
 正式链路：
 
@@ -278,7 +350,7 @@ ChatGPT
 
 ---
 
-## 9. Production Acceptance
+## 10. Production Acceptance
 
 最终 Production Ready 必须真实通过：
 
@@ -293,6 +365,6 @@ ChatGPT
 
 ---
 
-## 10. 当前状态声明
+## 11. 当前状态声明
 
-**序境 / LUMENIS · Independent Production Core · Production Truth Owner · AI-Enhanced, Not AI-Dependent · Production Convergence**
+**序境 / LUMENIS · Independent Production Core · Production Truth Owner · AI-Enhanced, Not AI-Dependent · Production Convergence + Design Ecosystem Optimization**
