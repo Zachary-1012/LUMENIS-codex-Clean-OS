@@ -1,0 +1,15 @@
+{
+  "status": "CODEX_CANONICAL_IMPORT_PAYLOAD",
+  "file_count": 111,
+  "source_bundle_sha256": "c4bbb60c3e21db88d3f271ff63359dd845e052aaf69911aa554bb1a3fdcf202c",
+  "legacy_bundle_sha256": "0e45ab95481de42462b291917cbbc4452e1b07f2dafb7a055776f3bf5c26d4a9",
+  "audited_repo_base": "f548669d82974ea065afb310776ec63935896d7d",
+  "policy": [
+    "canonical editable source/contracts only",
+    "generated 07_screens and prototype data regenerated from build/src",
+    "visual regression/media excluded from source history",
+    "legacy evidence read-only",
+    "anti-template Design Language v2.4 mandatory",
+    "AI-01 + CTH-01 calibration before broad propagation"
+  ]
+}
