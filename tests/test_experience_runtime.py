@@ -1,0 +1,188 @@
+# -*- coding: utf-8 -*-
+"""序境 Experience V2 生产运行时挂载层测试（experience_runtime）。
+
+隔离原则（红线）：
+  * 每个测试使用 pytest tmp_path 下的独立 SQLite（ZBC_DB_PATH），绝不写仓库 data/ 或生产库；
+  * 只挂 experience_bp 蓝图，不启动全量 app.py / 调度线程；
+  * 外部无数据源的指标必须 value=None + state=notcollected，禁止伪造 0 或假百分比；
+  * 有真实源的指标必须等于隔离库内现算值；identity 不得泄露绝对路径/密钥。
+"""
+import datetime as dt
+import importlib
+import os
+import sys
+
+import pytest
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+
+@pytest.fixture()
+def isolated_client(tmp_path, monkeypatch):
+    db_file = tmp_path / "isolated_monitor.db"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_file))
+    monkeypatch.setenv("ZBC_ACTIVE_BRAND", "guangzhou_taikoo_hui")
+
+    import database
+    importlib.reload(database)  # 让 DB_PATH 取到隔离路径
+    database.DB_PATH = str(db_file)
+    database.init_db()
+
+    import evidence_store
+    evidence_store.DB_PATH = str(db_file)
+
+    today = dt.date.today().strftime("%Y-%m-%d")
+    with database.get_db() as c:
+        rows = [
+            ("n1", "太古汇 负面投诉 排队", "negative", "high", 8),
+            ("n2", "太古汇 差评 服务", "negative", "medium", 3),
+            ("n3", "太古汇 正常分享", "neutral", "low", 1),
+            ("n4", "太古汇 日常打卡", "neutral", "low", 2),
+            ("n5", "太古汇 好评推荐", "positive", "low", 5),
+        ]
+        for nid, title, sent, risk, eng in rows:
+            c.execute(
+                """INSERT INTO notes(note_id,title,content,sentiment,risk_level,likes,comments,
+                   collects,shares,publish_date,is_taikoo_verified,relevance_status,status)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,1,'relevant','active')""",
+                (nid, title, title, sent, risk, eng, eng, 0, 0, today),
+            )
+        c.execute(
+            """INSERT INTO events(event_key,title,summary,risk_level,status,mention_count,
+               source_count,first_seen,last_seen,event_date)
+               VALUES('e1','太古汇 排队投诉事件','多平台提及','high','active',5,3,?,?,?)""",
+            (today, today, today),
+        )
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS app_evidence_records(
+               id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT, project TEXT, product TEXT,
+               feature_id TEXT, level TEXT, result TEXT, account TEXT, env TEXT,
+               actual TEXT, created_at TEXT)"""
+        )
+        c.executemany(
+            """INSERT INTO app_evidence_records(source,feature_id,level,result,account,actual,created_at)
+               VALUES(?,?,?,?,?,?,datetime('now','localtime'))""",
+            [("unit", "FUNC-RISK-01", "feature", "pass", "acc1", "risk computed"),
+             ("integration", "EVENT-GRAPH", "feature", "pass", "acc1", "event chain")],
+        )
+
+    import experience_runtime
+    from flask import Flask
+    app = Flask(__name__)
+    app.register_blueprint(experience_runtime.experience_bp)
+    return app.test_client(), str(db_file)
+
+
+def _sections(j):
+    return {s.get("type"): s for s in j["sections"]}
+
+
+def _kpis(j):
+    return {m["id"]: m for m in _sections(j)["kpis"]["items"]}
+
+
+# --------------------------- 外壳托管 ---------------------------
+def test_shell_serves_and_injects_runtime(isolated_client):
+    cli, _ = isolated_client
+    r = cli.get("/experience/")
+    assert r.status_code == 200
+    assert b"assets/runtime.js" in r.data
+    r2 = cli.get("/experience/assets/runtime.js")
+    assert r2.status_code == 200 and r2.content_length and r2.content_length > 1000
+
+
+# --------------------------- CTH-01 真实绑定 + 诚实缺失 ---------------------------
+def test_cth01_external_metrics_are_not_collected(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/CTH-01").get_json()
+    assert j["bound"] is True
+    k = _kpis(j)
+    # POS/销售外部源缺失：必须 None + notcollected，绝不是 0
+    assert k["cth.footfall"]["value"] is None and k["cth.footfall"]["state"] == "notcollected"
+    assert k["cth.member_sales"]["value"] is None and k["cth.member_sales"]["state"] == "notcollected"
+    blocked = {b["field"] for b in j["binding"]["blocked"]}
+    assert {"cth.footfall", "cth.member_sales"} <= blocked
+
+
+def test_cth01_real_metrics_match_isolated_db(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/CTH-01").get_json()
+    k = _kpis(j)
+    assert k["cth.negative_voice"]["value"] == 2
+    assert k["cth.negative_voice"]["state"] == "ready"
+    assert (k["cth.open_events"]["value"] or 0) >= 1
+    # 不得出现原型里的伪造数字
+    blob = __import__("json").dumps(j, ensure_ascii=False)
+    assert "38214" not in blob and "41.8" not in blob
+
+
+def test_cth01_risk_level_uses_frontend_enum(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/CTH-01").get_json()
+    sec = _sections(j)
+    # 找到 split.side 里的 risks
+    risks = None
+    for s in sec["split"]["side"]:
+        if s.get("type") == "risks":
+            risks = s
+    levels = {r["level"] for r in risks["items"]}
+    assert "medium" not in levels  # 后端 medium 必须映射为前端 med
+    assert levels <= {"high", "med", "low", "critical"}
+
+
+# --------------------------- AI-01 真实绑定 + 诚实缺失 ---------------------------
+def test_ai01_anchored_evidence_real(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/AI-01").get_json()
+    assert j["bound"] is True
+    k = _kpis(j)
+    assert k["ai.anchored_evidence"]["value"] == 2
+    assert k["ai.anchored_evidence"]["state"] == "ready"
+
+
+def test_ai01_traceability_not_fabricated(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/AI-01").get_json()
+    k = _kpis(j)
+    # 无已完成执行链样本时不得编造可追溯率
+    assert k["ai.traceability"]["value"] is None
+    assert k["ai.traceability"]["state"] == "notcollected"
+
+
+def test_ai01_composer_present_and_no_cot_leak(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/AI-01").get_json()
+    raw = [s for s in j["sections"] if s.get("type") == "raw"]
+    assert raw and "data-ai-send" in raw[0]["html"]
+    blob = __import__("json").dumps(j, ensure_ascii=False).lower()
+    for leak in ("system prompt", "developer prompt", "chain-of-thought", "private cot"):
+        assert leak not in blob
+
+
+# --------------------------- 未绑定屏诚实回退 ---------------------------
+def test_unbound_screen_keeps_prototype(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-01").get_json()
+    assert j["bound"] is False and j["sections"] is None
+
+
+# --------------------------- 身份不泄密 ---------------------------
+def test_identity_has_no_secrets_or_abspath(isolated_client):
+    cli, db_file = isolated_client
+    j = cli.get("/api/experience/runtime/identity").get_json()
+    import json
+    blob = json.dumps(j, ensure_ascii=False)
+    assert j["database"]["exists"] is True
+    assert db_file not in blob and ":\\" not in blob  # 不暴露绝对路径
+    low = blob.lower()
+    for secret in ("secret", "password", "api_key", "token", "cookie"):
+        assert secret not in low
+
+
+# --------------------------- AI intent 校验 ---------------------------
+def test_ai_intent_validation(isolated_client):
+    cli, _ = isolated_client
+    assert cli.post("/api/experience/ai/intent", json={"task": ""}).status_code == 400
+    assert cli.post("/api/experience/ai/intent", json={"task": "x" * 4001}).status_code == 400

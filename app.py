@@ -248,6 +248,15 @@ try:
 except Exception as _lm_e:
     print(f"[lumenis] blueprint register failed: {_lm_e}")
 
+# 序境 Experience V2 生产运行时挂载层（/experience/ 零构建前端 + /api/experience/* 真实 ViewModel）
+# 加法式：不改旧 /lumenis/*，只读聚合既有 database/evidence/ai/runtime 能力，不写业务库。
+try:
+    from experience_runtime import register_experience_runtime
+    register_experience_runtime(app)
+    print("[experience_runtime] registered: /experience/ + /api/experience/*")
+except Exception as _er_e:
+    print(f"[experience_runtime] register failed: {_er_e}")
+
 # 序境 LUMENIS 聚合只读 API（全局 /api：模型/Agent/评估/研究/权限/仓库/运行时/报告/KOS专业号）
 try:
     from lumenis_agg_api import register_agg_api

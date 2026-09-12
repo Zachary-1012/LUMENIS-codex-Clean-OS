@@ -1,0 +1,51 @@
+/* ============================================================================
+   LUMENIS Experience V2 — Optical Material V1
+   Self-built WebGL serves ONLY 4 surfaces (supplement sec9/sec11):
+     OPT-01 AI Composer · OPT-02 Active Dock · OPT-03 Active Nav/Mode · OPT-04 Task Morph Surface
+   Everything else = Tier B Soft Glass (.lum-softglass). No universal DOM glass.
+   Pipeline: ambient -> SDF mask -> normal/edge -> refraction -> RGB micro-shift
+             -> Fresnel -> specular -> composite. Only 7 params exposed (tokens).
+   Degradation: OPTICAL_HIGH -> STANDARD -> SOFT_GLASS -> OPAQUE (function 100%).
+   ========================================================================== */
+.lum-opt{position:relative;isolation:isolate;overflow:hidden}
+/* V2.5: the WebGL refraction layer is retired from the visual language — metal
+   surfaces are deterministic and identical across GPUs/headless. The canvas
+   stays in the DOM (contract unchanged) but never paints; fallback is canonical. */
+.lum-opt canvas.lum-opt__gl{display:none!important}
+.lum-opt > *:not(canvas){position:relative;z-index:1}
+/* CSS fallback used before WebGL mounts or when degraded.
+   V2.5: calm metal surface + single top catch-light, NOT a glass fog blob. */
+.lum-opt__fallback{position:absolute;inset:0;z-index:0;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 30%),
+    var(--lum-surface-raised);
+  box-shadow:var(--lum-edge-hi);
+  border-radius:inherit}
+.lum-app[data-theme="dark"] .lum-opt__fallback{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,0) 32%),
+    var(--lum-surface-raised)}
+.lum-opt[data-mounted="true"] .lum-opt__fallback{opacity:1}
+
+/* state strength (supplement sec11): intensity only, never a常驻 flowing light */
+.lum-opt[data-strength="idle"]      {--lum-opt-refraction:.10}
+.lum-opt[data-strength="focus"]     {--lum-opt-refraction:.22}
+.lum-opt[data-strength="composing"] {--lum-opt-refraction:.18}
+.lum-opt[data-strength="submit"]    {--lum-opt-refraction:.30}
+.lum-opt[data-strength="executing"] {--lum-opt-refraction:.12}
+.lum-opt[data-strength="approval"]  {--lum-opt-refraction:.05;box-shadow:inset 0 0 0 1px var(--lum-c-warning)}
+.lum-opt[data-strength="error"]     {--lum-opt-refraction:0;box-shadow:inset 0 0 0 1px var(--lum-c-danger)}
+
+/* the four surfaces — V2.5 metal: hairline boundary, no floating glass shadow */
+.lum-opt-composer{border-radius:var(--lum-r-xl);border:1px solid var(--lum-line);box-shadow:none;background:var(--lum-surface-raised)}
+.lum-opt-dock{border-radius:var(--lum-r-pill);border:1px solid var(--lum-line)}
+.lum-opt-nav{border-radius:var(--lum-r-pill)}
+.lum-opt-morph{border-radius:var(--lum-r-lg);border:1px solid var(--lum-line);min-height:120px;background:var(--lum-surface-raised)}
+
+/* when WebGL unavailable, data-optical=soft/opaque hides canvas cleanly */
+.lum-app[data-optical="soft"] .lum-opt__gl,
+.lum-app[data-optical="opaque"] .lum-opt__gl{display:none}
+.lum-app[data-optical="opaque"] .lum-opt__fallback{background:var(--lum-surface-solid)}
+@media (prefers-reduced-motion:reduce){
+  .lum-opt__gl{display:none}.lum-opt__fallback{opacity:1!important}
+}
