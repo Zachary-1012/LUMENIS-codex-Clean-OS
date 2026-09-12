@@ -1,0 +1,529 @@
+{
+  "generated_at": "2026-09-11T11:14:41",
+  "completion_token": "DOUBAO_FRONTEND_HANDOFF (NOT Production Ready)",
+  "freeze": {
+    "local_checkout": "ab67612367c172ced2dff62b44e98de86469d1e6",
+    "remote_main": "b910117567a81b98746468e98dee3a4105d275cc",
+    "remote_delta": "5 commits docs/governance only, zero source diff",
+    "writable_root": "experience_v2/ (untracked, isolated)"
+  },
+  "counts": {
+    "screens": 44,
+    "copy_keys": 164,
+    "copy_parity": 164,
+    "actions_total": 66,
+    "actions_by_class": {
+      "NAVIGATION": 47,
+      "DRAFT": 12,
+      "QUERY": 4,
+      "EFFECT": 1,
+      "TASK": 2
+    },
+    "binding_rows": 54,
+    "backend_gaps": 54,
+    "patterns": 9,
+    "motions": 15,
+    "total_files": 823,
+    "total_bytes": 78436796
+  },
+  "screen_packages": {
+    "ACC-01": [
+      "ACC-01.actions.json",
+      "ACC-01.fixture.json",
+      "ACC-01.html",
+      "ACC-01.spec.json",
+      "ACC-01.state-board.html",
+      "ACC-01.viewmodel.json"
+    ],
+    "ACC-02": [
+      "ACC-02.actions.json",
+      "ACC-02.fixture.json",
+      "ACC-02.html",
+      "ACC-02.spec.json",
+      "ACC-02.state-board.html",
+      "ACC-02.viewmodel.json"
+    ],
+    "ACC-03": [
+      "ACC-03.actions.json",
+      "ACC-03.fixture.json",
+      "ACC-03.html",
+      "ACC-03.spec.json",
+      "ACC-03.state-board.html",
+      "ACC-03.viewmodel.json"
+    ],
+    "ACC-04": [
+      "ACC-04.actions.json",
+      "ACC-04.fixture.json",
+      "ACC-04.html",
+      "ACC-04.spec.json",
+      "ACC-04.state-board.html",
+      "ACC-04.viewmodel.json"
+    ],
+    "CTH-01": [
+      "CTH-01.actions.json",
+      "CTH-01.fixture.json",
+      "CTH-01.html",
+      "CTH-01.spec.json",
+      "CTH-01.state-board.html",
+      "CTH-01.viewmodel.json"
+    ],
+    "CTH-02": [
+      "CTH-02.actions.json",
+      "CTH-02.fixture.json",
+      "CTH-02.html",
+      "CTH-02.spec.json",
+      "CTH-02.state-board.html",
+      "CTH-02.viewmodel.json"
+    ],
+    "CTH-03": [
+      "CTH-03.actions.json",
+      "CTH-03.fixture.json",
+      "CTH-03.html",
+      "CTH-03.spec.json",
+      "CTH-03.state-board.html",
+      "CTH-03.viewmodel.json"
+    ],
+    "CTH-04": [
+      "CTH-04.actions.json",
+      "CTH-04.fixture.json",
+      "CTH-04.html",
+      "CTH-04.spec.json",
+      "CTH-04.state-board.html",
+      "CTH-04.viewmodel.json"
+    ],
+    "CTH-05": [
+      "CTH-05.actions.json",
+      "CTH-05.fixture.json",
+      "CTH-05.html",
+      "CTH-05.spec.json",
+      "CTH-05.state-board.html",
+      "CTH-05.viewmodel.json"
+    ],
+    "CTH-06": [
+      "CTH-06.actions.json",
+      "CTH-06.fixture.json",
+      "CTH-06.html",
+      "CTH-06.spec.json",
+      "CTH-06.state-board.html",
+      "CTH-06.viewmodel.json"
+    ],
+    "CTH-07": [
+      "CTH-07.actions.json",
+      "CTH-07.fixture.json",
+      "CTH-07.html",
+      "CTH-07.spec.json",
+      "CTH-07.state-board.html",
+      "CTH-07.viewmodel.json"
+    ],
+    "CTH-08": [
+      "CTH-08.actions.json",
+      "CTH-08.fixture.json",
+      "CTH-08.html",
+      "CTH-08.spec.json",
+      "CTH-08.state-board.html",
+      "CTH-08.viewmodel.json"
+    ],
+    "CTH-09": [
+      "CTH-09.actions.json",
+      "CTH-09.fixture.json",
+      "CTH-09.html",
+      "CTH-09.spec.json",
+      "CTH-09.state-board.html",
+      "CTH-09.viewmodel.json"
+    ],
+    "CTH-10": [
+      "CTH-10.actions.json",
+      "CTH-10.fixture.json",
+      "CTH-10.html",
+      "CTH-10.spec.json",
+      "CTH-10.state-board.html",
+      "CTH-10.viewmodel.json"
+    ],
+    "BMP-01": [
+      "BMP-01.actions.json",
+      "BMP-01.fixture.json",
+      "BMP-01.html",
+      "BMP-01.spec.json",
+      "BMP-01.state-board.html",
+      "BMP-01.viewmodel.json"
+    ],
+    "BMP-02": [
+      "BMP-02.actions.json",
+      "BMP-02.fixture.json",
+      "BMP-02.html",
+      "BMP-02.spec.json",
+      "BMP-02.state-board.html",
+      "BMP-02.viewmodel.json"
+    ],
+    "BMP-03": [
+      "BMP-03.actions.json",
+      "BMP-03.fixture.json",
+      "BMP-03.html",
+      "BMP-03.spec.json",
+      "BMP-03.state-board.html",
+      "BMP-03.viewmodel.json"
+    ],
+    "BMP-04": [
+      "BMP-04.actions.json",
+      "BMP-04.fixture.json",
+      "BMP-04.html",
+      "BMP-04.spec.json",
+      "BMP-04.state-board.html",
+      "BMP-04.viewmodel.json"
+    ],
+    "BMP-05": [
+      "BMP-05.actions.json",
+      "BMP-05.fixture.json",
+      "BMP-05.html",
+      "BMP-05.spec.json",
+      "BMP-05.state-board.html",
+      "BMP-05.viewmodel.json"
+    ],
+    "BMP-06": [
+      "BMP-06.actions.json",
+      "BMP-06.fixture.json",
+      "BMP-06.html",
+      "BMP-06.spec.json",
+      "BMP-06.state-board.html",
+      "BMP-06.viewmodel.json"
+    ],
+    "BMP-07": [
+      "BMP-07.actions.json",
+      "BMP-07.fixture.json",
+      "BMP-07.html",
+      "BMP-07.spec.json",
+      "BMP-07.state-board.html",
+      "BMP-07.viewmodel.json"
+    ],
+    "BMP-08": [
+      "BMP-08.actions.json",
+      "BMP-08.fixture.json",
+      "BMP-08.html",
+      "BMP-08.spec.json",
+      "BMP-08.state-board.html",
+      "BMP-08.viewmodel.json"
+    ],
+    "BMP-09": [
+      "BMP-09.actions.json",
+      "BMP-09.fixture.json",
+      "BMP-09.html",
+      "BMP-09.spec.json",
+      "BMP-09.state-board.html",
+      "BMP-09.viewmodel.json"
+    ],
+    "BMP-10": [
+      "BMP-10.actions.json",
+      "BMP-10.fixture.json",
+      "BMP-10.html",
+      "BMP-10.spec.json",
+      "BMP-10.state-board.html",
+      "BMP-10.viewmodel.json"
+    ],
+    "BMP-11": [
+      "BMP-11.actions.json",
+      "BMP-11.fixture.json",
+      "BMP-11.html",
+      "BMP-11.spec.json",
+      "BMP-11.state-board.html",
+      "BMP-11.viewmodel.json"
+    ],
+    "AI-01": [
+      "AI-01.actions.json",
+      "AI-01.fixture.json",
+      "AI-01.html",
+      "AI-01.spec.json",
+      "AI-01.state-board.html",
+      "AI-01.viewmodel.json"
+    ],
+    "AI-02": [
+      "AI-02.actions.json",
+      "AI-02.fixture.json",
+      "AI-02.html",
+      "AI-02.spec.json",
+      "AI-02.state-board.html",
+      "AI-02.viewmodel.json"
+    ],
+    "AI-03": [
+      "AI-03.actions.json",
+      "AI-03.fixture.json",
+      "AI-03.html",
+      "AI-03.spec.json",
+      "AI-03.state-board.html",
+      "AI-03.viewmodel.json"
+    ],
+    "AI-04": [
+      "AI-04.actions.json",
+      "AI-04.fixture.json",
+      "AI-04.html",
+      "AI-04.spec.json",
+      "AI-04.state-board.html",
+      "AI-04.viewmodel.json"
+    ],
+    "AI-05": [
+      "AI-05.actions.json",
+      "AI-05.fixture.json",
+      "AI-05.html",
+      "AI-05.spec.json",
+      "AI-05.state-board.html",
+      "AI-05.viewmodel.json"
+    ],
+    "SYS-01": [
+      "SYS-01.actions.json",
+      "SYS-01.fixture.json",
+      "SYS-01.html",
+      "SYS-01.spec.json",
+      "SYS-01.state-board.html",
+      "SYS-01.viewmodel.json"
+    ],
+    "SYS-02": [
+      "SYS-02.actions.json",
+      "SYS-02.fixture.json",
+      "SYS-02.html",
+      "SYS-02.spec.json",
+      "SYS-02.state-board.html",
+      "SYS-02.viewmodel.json"
+    ],
+    "SYS-03": [
+      "SYS-03.actions.json",
+      "SYS-03.fixture.json",
+      "SYS-03.html",
+      "SYS-03.spec.json",
+      "SYS-03.state-board.html",
+      "SYS-03.viewmodel.json"
+    ],
+    "SYS-04": [
+      "SYS-04.actions.json",
+      "SYS-04.fixture.json",
+      "SYS-04.html",
+      "SYS-04.spec.json",
+      "SYS-04.state-board.html",
+      "SYS-04.viewmodel.json"
+    ],
+    "SYS-05": [
+      "SYS-05.actions.json",
+      "SYS-05.fixture.json",
+      "SYS-05.html",
+      "SYS-05.spec.json",
+      "SYS-05.state-board.html",
+      "SYS-05.viewmodel.json"
+    ],
+    "SYS-06": [
+      "SYS-06.actions.json",
+      "SYS-06.fixture.json",
+      "SYS-06.html",
+      "SYS-06.spec.json",
+      "SYS-06.state-board.html",
+      "SYS-06.viewmodel.json"
+    ],
+    "SYS-07": [
+      "SYS-07.actions.json",
+      "SYS-07.fixture.json",
+      "SYS-07.html",
+      "SYS-07.spec.json",
+      "SYS-07.state-board.html",
+      "SYS-07.viewmodel.json"
+    ],
+    "SYS-08": [
+      "SYS-08.actions.json",
+      "SYS-08.fixture.json",
+      "SYS-08.html",
+      "SYS-08.spec.json",
+      "SYS-08.state-board.html",
+      "SYS-08.viewmodel.json"
+    ],
+    "SH-01": [
+      "SH-01.actions.json",
+      "SH-01.fixture.json",
+      "SH-01.html",
+      "SH-01.spec.json",
+      "SH-01.state-board.html",
+      "SH-01.viewmodel.json"
+    ],
+    "SH-02": [
+      "SH-02.actions.json",
+      "SH-02.fixture.json",
+      "SH-02.html",
+      "SH-02.spec.json",
+      "SH-02.state-board.html",
+      "SH-02.viewmodel.json"
+    ],
+    "SH-03": [
+      "SH-03.actions.json",
+      "SH-03.fixture.json",
+      "SH-03.html",
+      "SH-03.spec.json",
+      "SH-03.state-board.html",
+      "SH-03.viewmodel.json"
+    ],
+    "SH-04": [
+      "SH-04.actions.json",
+      "SH-04.fixture.json",
+      "SH-04.html",
+      "SH-04.spec.json",
+      "SH-04.state-board.html",
+      "SH-04.viewmodel.json"
+    ],
+    "SH-05": [
+      "SH-05.actions.json",
+      "SH-05.fixture.json",
+      "SH-05.html",
+      "SH-05.spec.json",
+      "SH-05.state-board.html",
+      "SH-05.viewmodel.json"
+    ],
+    "SH-06": [
+      "SH-06.actions.json",
+      "SH-06.fixture.json",
+      "SH-06.html",
+      "SH-06.spec.json",
+      "SH-06.state-board.html",
+      "SH-06.viewmodel.json"
+    ]
+  },
+  "regression": {
+    "viewports": [
+      1920,
+      1440,
+      1280,
+      1024,
+      768,
+      430,
+      390,
+      360
+    ],
+    "dark": "1440",
+    "state_boards": true,
+    "errors": [],
+    "shots_per_screen": [
+      "1024.png",
+      "1280.jpeg",
+      "1440-dark.jpeg",
+      "1440.png",
+      "1920.jpeg",
+      "360.jpeg",
+      "390.png",
+      "430.jpeg",
+      "768.jpeg"
+    ]
+  },
+  "inventory": {
+    "00_readme": {
+      "files": 1,
+      "bytes": 4071
+    },
+    "01_repo_audit": {
+      "files": 5,
+      "bytes": 8323
+    },
+    "02_authority": {
+      "files": 1,
+      "bytes": 3808
+    },
+    "03_ia_and_flows": {
+      "files": 1,
+      "bytes": 4791
+    },
+    "04_design_system": {
+      "files": 4,
+      "bytes": 22602
+    },
+    "05_components": {
+      "files": 2,
+      "bytes": 4783
+    },
+    "06_motion": {
+      "files": 2,
+      "bytes": 6906
+    },
+    "07_screens": {
+      "files": 264,
+      "bytes": 723597
+    },
+    "08_psd": {
+      "files": 1,
+      "bytes": 2420
+    },
+    "09_responsive": {
+      "files": 1,
+      "bytes": 2236
+    },
+    "10_prototype": {
+      "files": 20,
+      "bytes": 368464
+    },
+    "11_integration_skeleton": {
+      "files": 3,
+      "bytes": 3394
+    },
+    "12_contracts": {
+      "files": 9,
+      "bytes": 128281
+    },
+    "12_i18n": {
+      "files": 6,
+      "bytes": 35628
+    },
+    "13_research": {
+      "files": 10,
+      "bytes": 4779577
+    },
+    "14_visual_regression": {
+      "files": 441,
+      "bytes": 69114385
+    },
+    "15_provenance_licenses": {
+      "files": 1,
+      "bytes": 7637
+    },
+    "16_versioning": {
+      "files": 2,
+      "bytes": 12954
+    },
+    "17_acceptance": {
+      "files": 2,
+      "bytes": 7616
+    },
+    "18_validation": {
+      "files": 1,
+      "bytes": 6263
+    },
+    "19_handoff": {
+      "files": 1,
+      "bytes": 4387
+    },
+    "19_previews": {
+      "files": 9,
+      "bytes": 2820388
+    },
+    "build": {
+      "files": 20,
+      "bytes": 175374
+    },
+    "codex_handoff": {
+      "files": 16,
+      "bytes": 188911
+    }
+  },
+  "build_commands": [
+    "python build/verify_specs.py",
+    "python build/generate.py",
+    "python build/build_registries.py",
+    "python build/smoke_render.py",
+    "python build/capture_all.py",
+    "python 18_validation/validate_handoff.py"
+  ],
+  "entry": {
+    "codex_start": "19_handoff/INTEGRATION_START_HERE.md",
+    "prototype": "10_prototype/index.html",
+    "integration_guide": "11_integration_skeleton/INTEGRATION_GUIDE.md",
+    "binding_adapter_example": "11_integration_skeleton/server_binding_adapter.example.py"
+  },
+  "deferred": {
+    "logo_and_launch_animation": "LOGO_DEFERRED by explicit user instruction"
+  },
+  "honest_boundaries": [
+    "dense per-screen business fixture body is zh DESIGN_ONLY representative data, replaced by backend ViewModel",
+    "all data surfaces PARTIAL + CODEX_BINDING_REQUIRED; no fake endpoint",
+    "research sources never shipped as assets"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "lumenis.design/motion-sources-v2.5",
+  "version": "2.5.0",
+  "printers": ["opacity", "transform only", "no transition:all", "prefers-reduced-motion fallback"],
+  "verbs": {"Touch":"contact","Open":"stratum opens","Trace":"evidence path","Shift":"focus change","Settle":"lands","Return":"back to subject"},
+  "sources": [
+    {"id":"M01","name":"button-press","verb":"Touch","trigger":"pointerdown/up .lum-btn,.lum-action-item","properties":"transform scale(.97)->1","duration_ms":120,"easing":"standard","reduced":"instant, no scale"},
+    {"id":"M02","name":"chip-toggle","verb":"Touch","trigger":".lum-chip toggle","properties":"opacity+translateY(2->0)","duration_ms":160,"easing":"standard","reduced":"instant"},
+    {"id":"M03","name":"tab-shift","verb":"Shift","trigger":".lum-tabs button / .lum-segmented","properties":"indicator translateX + panel cross-fade opacity","duration_ms":220,"easing":"emphasized","reduced":"instant"},
+    {"id":"M04","name":"page-enter","verb":"Open","trigger":"route renderScreen","properties":"section stagger translateY(8)+opacity","duration_ms":320,"easing":"emphasized","reduced":"shown"},
+    {"id":"M05","name":"section-reveal","verb":"Trace","trigger":"[data-reveal] IntersectionObserver","properties":"opacity+translateY","duration_ms":300,"easing":"standard","reduced":"shown"},
+    {"id":"M06","name":"modal-in","verb":"Open","trigger":"LumUI.openModal","properties":"overlay opacity + modal translateY(12)","duration_ms":260,"easing":"emphasized","reduced":"shown"},
+    {"id":"M07","name":"drawer-in","verb":"Open","trigger":"LumUI.openDrawer","properties":"translateX from edge + scrim","duration_ms":300,"easing":"emphasized","reduced":"shown"},
+    {"id":"M08","name":"toast-in","verb":"Settle","trigger":"LumUI.toast","properties":"translateY from bottom/side+opacity","duration_ms":200,"easing":"standard","reduced":"shown"},
+    {"id":"M09","name":"evidence-trace","verb":"Trace","trigger":".lum-evidence trace render","properties":"stroke-dashoffset (icy 1px line)","duration_ms":480,"easing":"standard","reduced":"full"},
+    {"id":"M10","name":"metric-countup","verb":"Settle","trigger":"[data-countup]","properties":"number tween, tabular-nums","duration_ms":480,"easing":"emphasized","reduced":"final value"},
+    {"id":"M11","name":"ai-step","verb":"Trace","trigger":"lum:ai-step / .lum-msg-step","properties":"step row opacity+translateY stagger","duration_ms":220,"easing":"standard","reduced":"all shown"},
+    {"id":"M12","name":"orb-flow","verb":"Trace","trigger":"canvas.lum-orb","properties":"fbm domain-warp flow inside sphere (idle .55 / processing 1.7 +icy)","duration_ms":"continuous","easing":"rAF","reduced":"single frame"},
+    {"id":"M13","name":"launch-standard","verb":"Return","trigger":"LumLaunch.play full","properties":"drop/sea/mark/word keyframes","duration_ms":2300,"easing":"mixed","reduced":"static .7s"},
+    {"id":"M14","name":"launch-short","verb":"Return","trigger":"LumLaunch.play short","properties":"mark settle+word","duration_ms":920,"easing":"emphasized","reduced":"static"},
+    {"id":"M15","name":"hover-sheen","verb":"Touch","trigger":":hover raised surface","properties":"top 1px sheen opacity","duration_ms":160,"easing":"standard","reduced":"none"}
+  ]
+}

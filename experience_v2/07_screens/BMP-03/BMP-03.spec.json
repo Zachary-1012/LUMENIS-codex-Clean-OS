@@ -1,0 +1,148 @@
+{
+  "screen": "BMP-03",
+  "meta": {
+    "domain": "BMP",
+    "group": "bmp",
+    "icon": "research",
+    "zh": "市场情报",
+    "en": "Market Intelligence",
+    "ko": "마켓 인텔리전스",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.BMP-03",
+    "patterns": [
+      "PAT-DATA-01",
+      "PAT-EVD-01"
+    ],
+    "motions": [
+      "M03",
+      "M11"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "BMP · 品牌市场",
+        "title": "市场情报",
+        "titleKey": "screen.BMP-03",
+        "desc": "行业趋势、品类机会与外部情报，区分已确认情报与待核实线索。"
+      },
+      {
+        "type": "split",
+        "main": [
+          {
+            "type": "chart",
+            "title": "品类热度走势",
+            "kind": "line",
+            "series": [
+              {
+                "data": [
+                  30,
+                  34,
+                  38,
+                  36,
+                  44,
+                  48,
+                  52
+                ],
+                "color": "var(--lum-c-info)"
+              }
+            ],
+            "labels": [
+              "9/2",
+              "9/5",
+              "9/8",
+              "9/11",
+              "9/14",
+              "9/17",
+              "9/20"
+            ]
+          },
+          {
+            "type": "cards",
+            "items": [
+              {
+                "title": "品类机会：体验业态",
+                "desc": "搜索热度 +22%，竞品布局不足",
+                "ico": "research",
+                "badge": {
+                  "text": "机会",
+                  "cls": "success"
+                }
+              },
+              {
+                "title": "渠道迁移",
+                "desc": "短视频→直播转化提升",
+                "ico": "research"
+              },
+              {
+                "title": "政策/合规提示",
+                "desc": "广告法敏感词更新",
+                "ico": "security",
+                "badge": {
+                  "text": "合规",
+                  "cls": "warning"
+                }
+              }
+            ],
+            "cols": 1
+          }
+        ],
+        "side": [
+          {
+            "type": "evidence",
+            "title": "情报来源",
+            "items": [
+              {
+                "kind": "External",
+                "id": "EV-B301",
+                "chain": [
+                  "External",
+                  "Intel",
+                  "VM"
+                ],
+                "quote": "行业报告：体验业态 Q3 增速领先。",
+                "time": "09-08",
+                "source": "market.report",
+                "conf": 82
+              },
+              {
+                "kind": "Social",
+                "id": "EV-B302",
+                "chain": [
+                  "Social",
+                  "Intel"
+                ],
+                "quote": "话题聚类显示「场景化体验」上升。",
+                "time": "09-09",
+                "source": "social.cluster",
+                "conf": 78
+              }
+            ]
+          },
+          {
+            "type": "note",
+            "text": "外部情报置信度低于内部 Canonical，界面分级展示并要求二次核实后才进入决策。",
+            "kind": "RULE",
+            "code": "INTEL-CONF"
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "EV-B301",
+        "EV-B302"
+      ]
+    },
+    "viewmodel": {
+      "intel": [
+        "{title,kind,confidence,source,evidence}"
+      ]
+    },
+    "binding": {
+      "intel": "CODEX_VERIFY (market_intel = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

@@ -1,0 +1,70 @@
+{
+  "screen": "SYS-06",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 3,
+  "actions": [
+    {
+      "action_id": "SYS-06.new-tab",
+      "display_label_zh": "新标签",
+      "display_key": null,
+      "action_class": "TASK",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "browser:open",
+      "input_context": {
+        "screen": "SYS-06",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "browser"
+    },
+    {
+      "action_id": "SYS-06.snapshot",
+      "display_label_zh": "固定快照为证据",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "evidence:capture",
+      "input_context": {
+        "screen": "SYS-06",
+        "section": "actions:取证",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "link"
+    },
+    {
+      "action_id": "SYS-06.extract",
+      "display_label_zh": "抽取结构化数据",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "SYS-06",
+        "section": "actions:取证",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "layers"
+    }
+  ]
+}

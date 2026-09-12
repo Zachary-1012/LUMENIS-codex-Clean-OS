@@ -1,0 +1,35 @@
+{
+  "screen": "BMP-02",
+  "viewmodel": {
+    "brands": [
+      "{id,role,health,voice,positive,engagement,evidence}"
+    ]
+  },
+  "binding": {
+    "brands": "CODEX_VERIFY (brand_center = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "brands"
+    ],
+    "Capability": [
+      "PAT-FILTER-01",
+      "PAT-DATA-01"
+    ],
+    "Motion": [
+      "M07"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "BMP-02.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "EV-B201..204"
+    ]
+  },
+  "unknown_binding_keys": [
+    "brands"
+  ],
+  "binding_owner_default": "CODEX"
+}

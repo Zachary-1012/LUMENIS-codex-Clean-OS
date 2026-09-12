@@ -1,0 +1,149 @@
+{
+  "screen": "ACC-03",
+  "meta": {
+    "domain": "ACCOUNT",
+    "group": "acc",
+    "icon": "home",
+    "zh": "全局工作空间启动",
+    "en": "Global Workspace Launch",
+    "ko": "워크스페이스 시작",
+    "dock": true
+  },
+  "spec": {
+    "titleKey": "screen.ACC-03",
+    "patterns": [
+      "PAT-NAV-02",
+      "PAT-DATA-01"
+    ],
+    "motions": [
+      "M01",
+      "M08"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "Entry",
+        "title": "全局工作空间启动",
+        "titleKey": "screen.ACC-03",
+        "desc": "从统一入口进入各领域与 AI；底部 Dock 承载一级目的地与中央 AI 入口。"
+      },
+      {
+        "type": "kpis",
+        "items": [
+          {
+            "label": "待办",
+            "value": 6,
+            "icon": "bell",
+            "source": "SH-06",
+            "fresh": "live",
+            "decimals": 0
+          },
+          {
+            "label": "在办事件",
+            "value": 9,
+            "icon": "event",
+            "source": "CTH-04",
+            "fresh": "live",
+            "decimals": 0
+          },
+          {
+            "label": "进行中 Campaign",
+            "value": 4,
+            "icon": "campaign",
+            "source": "BMP-07",
+            "fresh": "live",
+            "decimals": 0
+          },
+          {
+            "label": "证据新增(24h)",
+            "value": 312,
+            "icon": "link",
+            "source": "SH-02",
+            "fresh": "live",
+            "decimals": 0,
+            "delta": 8,
+            "deltaUnit": "%"
+          }
+        ]
+      },
+      {
+        "type": "cards",
+        "items": [
+          {
+            "title": "进入商业运营",
+            "desc": "总览/监测/事件/风险/报告",
+            "ico": "compass",
+            "action": {
+              "label": "进入",
+              "variant": "secondary",
+              "id": "",
+              "cls": "NAVIGATION",
+              "scope": "UNKNOWN",
+              "target": "UNKNOWN",
+              "permission": "UNKNOWN",
+              "size": "sm"
+            }
+          },
+          {
+            "title": "进入品牌市场",
+            "desc": "品牌/传播/创作者/播客",
+            "ico": "campaign"
+          },
+          {
+            "title": "问 AI Composer",
+            "desc": "沿证据链得到结论",
+            "ico": "sparkles",
+            "badge": {
+              "text": "AI",
+              "cls": "brand"
+            }
+          },
+          {
+            "title": "继续未完成",
+            "desc": "周报 W37 草稿 / Case-221",
+            "ico": "folder"
+          }
+        ],
+        "cols": 4
+      },
+      {
+        "type": "runtime",
+        "title": "启动检查",
+        "items": [
+          {
+            "name": "运行时身份",
+            "state": "ok",
+            "detail": "/api/runtime/identity"
+          },
+          {
+            "name": "数据库隔离",
+            "state": "ok",
+            "detail": "ZBC_DB_PATH"
+          },
+          {
+            "name": "权限上下文",
+            "state": "ok",
+            "detail": "已加载"
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "启动链 runtime identity"
+      ]
+    },
+    "viewmodel": {
+      "launch_cards": [
+        "{title,desc,icon,route}"
+      ],
+      "startup_checks": [
+        "{name,state,detail}"
+      ]
+    },
+    "binding": {
+      "launch": "CODEX_VERIFY (workspace home = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

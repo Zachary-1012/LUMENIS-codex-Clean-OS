@@ -1,0 +1,8 @@
+whole-backend-tree probes (experience_v2 excluded)
+MCP annotations readOnlyHint/openWorldHint/destructiveHint/idempotentHint: 0
+inputSchema/outputSchema: 0
+FastMCP|mcp.server|tools/list|tools/call (public MCP): 0  (only internal agent_capability/agent_smart_tool list_tools)
+filenames privacy/terms/mcp/plugin/chatgpt/submission/support/data-policy: 0
+Flask routes /privacy /terms /data-policy /support: 0
+chatgpt-app-submission.json: 0
+"openai" = LLM provider only (.env.example empty; provider matrix DISABLED; test_openai_disabled)

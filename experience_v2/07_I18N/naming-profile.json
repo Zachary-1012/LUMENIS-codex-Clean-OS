@@ -1,0 +1,21 @@
+{
+ "$schema": "lumenis.design/naming-profile-v2.5",
+ "product_name": "序境 LUMENIS",
+ "wordmark": "LUMENIS",
+ "korean_name": "서경",
+ "rules": [
+  "navigation shows full Chinese names 商业运营/品牌市场 with NO CTH/BMP abbreviation suffix",
+  "domain labels: 序境·商业运营 / 序境·品牌市场 / 系统 / 共享能力",
+  "no ALL-CAPS decorative labels except the mono wordmark LUMENIS",
+  "zero em-dash in UI copy",
+  "sentence-case for Latin; honorific-neutral Korean",
+  "status words distinguish 0 / 空 / 未知 / 不可用 / 过期 / 错误"
+ ],
+ "forbidden": [
+  "CTH",
+  "BMP",
+  "Ops",
+  "Mgmt 缩写后缀作为可见文案",
+  "紫色/AI 模板话术 Elevate/Seamless/Unleash"
+ ]
+}
