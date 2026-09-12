@@ -5,7 +5,7 @@
 ## Git
 - CURRENT_BRANCH（目标）: `handoff/frontend-gpt-v24-20260911-final`
 - BASE_HEAD: `9da9ff8d1c4e5b5859a07ec4f843d4c1a1828c5b`
-- FINAL_HEAD: 见 push 后分支 tip（§21 回传给出 SHA）
+- FINAL_HEAD（交付内容提交）: `38b17d6b632ce12d0049728729f2716037d15249`（远端分支 tip；本回填为其上一个 docs 提交）
 - commit list:
   1. `experience(v2.5): import LUMENIS design ecosystem, zero-build prototype, contracts (text/vector only)`
   2. `docs(v2.5): frontend delivery report / change matrix / remaining gaps / page registry`
