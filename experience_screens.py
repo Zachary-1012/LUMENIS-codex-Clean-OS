@@ -1109,6 +1109,160 @@ def _build_sys05() -> Dict[str, Any]:
     return _envelope("SYS-05", sections, truth={"data_source": "localStorage", "backend_required": False})
 
 
+def _build_acc02() -> Dict[str, Any]:
+    """主体选择与领域视角：真实已配置主体（subject_rules.BRAND_PROFILES）+ 当前激活主体。"""
+    import subject_rules as sr
+
+    profiles = sr.BRAND_PROFILES if isinstance(sr.BRAND_PROFILES, dict) else {}
+    active = _safe(sr.get_active_brand, default="")
+    rows = []
+    for key, cfg in profiles.items():
+        cfg = cfg if isinstance(cfg, dict) else {}
+        kws = cfg.get("collect_keywords")
+        rows.append({
+            "主体": cfg.get("display_name") or key,
+            "地区": cfg.get("region") or "本地",
+            "业态": cfg.get("store_type") or "商业体",
+            "采集关键词": len(kws) if isinstance(kws, list) else 0,
+            "当前": "● 激活" if key == active else "",
+        })
+    kpis = [
+        metric("acc02.subjects", "已配置主体", value=len(rows), state=STATE_READY, icon="collection",
+               source="subject_rules.BRAND_PROFILES"),
+    ]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="可选主体（真实配置）",
+                  columns=[{"label": "主体", "key": "主体"}, {"label": "地区", "key": "地区"},
+                           {"label": "业态", "key": "业态"}, {"label": "采集关键词", "key": "采集关键词", "numeric": True},
+                           {"label": "当前", "key": "当前"}], rows=rows)
+    note = section("note", STATE_READY, kind="RULE",
+                   text="选择主体只切换工作上下文（SubjectContext），不改变数据归属；进入领域后由后端重验授权。")
+    sections = [_head("ACC-02"), section("kpis", STATE_READY, items=kpis), tbl, note]
+    return _envelope("ACC-02", sections, truth={"active_brand": active})
+
+
+def _build_acc03() -> Dict[str, Any]:
+    """全局工作空间启动：启动时真实运行时健康（runtime_guardian），统一入口状态。"""
+    import runtime_guardian as rg
+
+    h = _safe(rg.legacy_health_check, default={})
+    h = h if isinstance(h, dict) and not _is_err(h) else {}
+    w = h.get("workers") if isinstance(h.get("workers"), dict) else {}
+    dlq = h.get("dlq") if isinstance(h.get("dlq"), dict) else {}
+    kpis = [
+        metric("acc03.workers", "工作进程", value=_int_or_none(w.get("total")),
+               state=STATE_READY if "total" in w else STATE_NOT_COLLECTED, icon="runtime",
+               source="runtime_guardian.legacy_health_check"),
+        metric("acc03.running", "运行中", value=_int_or_none(w.get("running")),
+               state=STATE_READY if "running" in w else STATE_NOT_COLLECTED, icon="runtime",
+               source="runtime_guardian.legacy_health_check"),
+        metric("acc03.failed", "异常", value=_int_or_none(w.get("failed")),
+               state=STATE_READY if "failed" in w else STATE_NOT_COLLECTED, icon="risk",
+               source="runtime_guardian.legacy_health_check"),
+        metric("acc03.dlq", "死信队列", value=_int_or_none(dlq.get("total")),
+               state=STATE_READY if "total" in dlq else STATE_NOT_COLLECTED, icon="risk",
+               source="runtime_guardian.legacy_health_check"),
+    ]
+    note = section("note", STATE_READY, kind="ENTRY",
+                   text="统一入口启动状态来自真实运行时守护；底部 Dock 承载一级目的地与中央 AI 入口。")
+    sections = [_head("ACC-03"), section("kpis", STATE_READY, items=kpis), note]
+    return _envelope("ACC-03", sections, truth={"overall": h.get("overall")})
+
+
+def _build_bmp03() -> Dict[str, Any]:
+    """市场情报：canonical 连接只读 intelligence_assets（表不存在则诚实空态，不造假）。"""
+    import database as db
+
+    total = None
+    by_sub: Dict[str, int] = {}
+    table_exists = False
+    try:
+        with db.get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='intelligence_assets'")
+            table_exists = cur.fetchone() is not None
+            if table_exists:
+                cur.execute("SELECT COUNT(*) FROM intelligence_assets")
+                total = int(cur.fetchone()[0])
+                cur.execute("SELECT sub_library, COUNT(*) FROM intelligence_assets GROUP BY sub_library ORDER BY sub_library")
+                by_sub = {str(r[0] or "未分类"): int(r[1]) for r in cur.fetchall()}
+    except Exception as exc:  # 只读守卫：任何异常都降级为未采集，绝不抛到 UI
+        return _envelope("BMP-03", [_head("BMP-03"),
+                                    section("note", STATE_NOT_COLLECTED, kind="OFFLINE",
+                                            text=f"市场情报只读探测失败：{type(exc).__name__}；保持未采集态，不造假。")],
+                         truth={"error": type(exc).__name__})
+    state = STATE_READY if table_exists else STATE_NOT_COLLECTED
+    kpis = [
+        metric("bmp03.total", "情报资产", value=total if table_exists else None,
+               state=state, icon="collection", source="intelligence_assets (read-only)"),
+    ]
+    rows = [{"子库": k, "资产数": _int_or_none(v)} for k, v in by_sub.items()]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="按子库分布（真实）",
+                  columns=[{"label": "子库", "key": "子库"},
+                           {"label": "资产数", "key": "资产数", "numeric": True}], rows=rows)
+    if not table_exists:
+        note = section("note", STATE_NOT_COLLECTED, kind="NOT-COLLECTED",
+                       text="intelligence_assets 表尚未在当前库建立（情报入库流水线未运行），保持未采集态，不补默认值。")
+    else:
+        note = section("note", STATE_READY, kind="SOURCE",
+                       text="只读自 canonical 库 intelligence_assets；情报入库/评审属写入侧，走权限链。")
+    sections = [_head("BMP-03"), section("kpis", STATE_READY, items=kpis), tbl, note]
+    return _envelope("BMP-03", sections, truth={"table_exists": table_exists, "total": total})
+
+
+def _build_bmp04() -> Dict[str, Any]:
+    """传播分析：brand_propagation 三类传播看板真实只读汇总（空库诚实空态）。"""
+    import brand_propagation as bp
+
+    eng = _safe(bp.get_brand_propagation_engine, default=None)
+    dash = _safe(eng.get_all_dashboards, default={}) if eng is not None else {}
+    dash = dash if isinstance(dash, dict) and not _is_err(dash) else {}
+    entities = _safe(eng.list_entities, default=[]) if eng is not None else []
+    entities = entities if isinstance(entities, list) else []
+
+    def _g(d, k):
+        return getattr(d, k, None)
+
+    tot = pos = neu = neg = 0
+    heats = []
+    rows = []
+    for cat, d in dash.items():
+        t = _int_or_none(_g(d, "total_events")) or 0
+        p = _int_or_none(_g(d, "positive_count")) or 0
+        nu = _int_or_none(_g(d, "neutral_count")) or 0
+        ng = _int_or_none(_g(d, "negative_count")) or 0
+        ah = _g(d, "avg_heat")
+        tot += t; pos += p; neu += nu; neg += ng
+        if isinstance(ah, (int, float)):
+            heats.append(ah)
+        rows.append({"传播看板": str(_g(d, "title") or cat), "事件数": t, "正面": p,
+                     "中性": nu, "负面": ng, "平均热度": round(float(ah), 2) if isinstance(ah, (int, float)) else None})
+    avg_heat = round(sum(heats) / len(heats), 2) if heats else None
+    kpis = [
+        metric("bmp04.total", "传播事件", value=tot, state=STATE_READY, icon="trend",
+               source="brand_propagation.get_all_dashboards"),
+        metric("bmp04.pos", "正面", value=pos, state=STATE_READY, icon="check",
+               source="brand_propagation.get_all_dashboards"),
+        metric("bmp04.neg", "负面", value=neg, state=STATE_READY, icon="risk",
+               source="brand_propagation.get_all_dashboards"),
+        metric("bmp04.heat", "平均热度", value=avg_heat, decimals=2,
+               state=STATE_READY if avg_heat is not None else STATE_EMPTY, icon="trend",
+               source="brand_propagation.get_all_dashboards"),
+        metric("bmp04.ent", "传播实体", value=len(entities), state=STATE_READY, icon="collection",
+               source="brand_propagation.list_entities"),
+    ]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="分域传播看板（真实）",
+                  columns=[{"label": "传播看板", "key": "传播看板"},
+                           {"label": "事件数", "key": "事件数", "numeric": True},
+                           {"label": "正面", "key": "正面", "numeric": True},
+                           {"label": "中性", "key": "中性", "numeric": True},
+                           {"label": "负面", "key": "负面", "numeric": True},
+                           {"label": "平均热度", "key": "平均热度", "numeric": True}], rows=rows)
+    note = section("note", STATE_EMPTY if tot == 0 else STATE_READY, kind="EMPTY-OK",
+                   text="传播事件由采集与传播引擎沉淀；当前无事件时显示真实 0/空态，不生成示例传播链。")
+    sections = [_head("BMP-04"), section("kpis", STATE_READY, items=kpis), tbl, note]
+    return _envelope("BMP-04", sections, truth={"total_events": tot, "entities": len(entities)})
+
+
 # ---------------------------------------------------------------------------
 # 注册表：一屏一 builder
 # ---------------------------------------------------------------------------
@@ -1145,4 +1299,8 @@ SCREEN_BUILDERS = {
     "BMP-09": _build_bmp09,
     "SH-05": _build_sh05,
     "SYS-05": _build_sys05,
+    "ACC-02": _build_acc02,
+    "ACC-03": _build_acc03,
+    "BMP-03": _build_bmp03,
+    "BMP-04": _build_bmp04,
 }

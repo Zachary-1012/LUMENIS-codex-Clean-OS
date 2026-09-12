@@ -164,7 +164,7 @@ def test_ai01_composer_present_and_no_cot_leak(isolated_client):
 # --------------------------- 未绑定屏诚实回退 ---------------------------
 def test_unbound_screen_keeps_prototype(isolated_client):
     cli, _ = isolated_client
-    j = cli.get("/api/experience/screen/BMP-04").get_json()
+    j = cli.get("/api/experience/screen/BMP-05").get_json()
     assert j["bound"] is False and j["sections"] is None
 
 
@@ -193,7 +193,8 @@ PROPAGATED = ["CTH-02", "CTH-03", "CTH-04", "CTH-05", "CTH-06", "CTH-07", "CTH-0
               "CTH-09", "CTH-10", "AI-02", "AI-03", "AI-04", "AI-05",
               "SYS-01", "SYS-02", "SYS-03", "SYS-04", "SYS-05", "SYS-07", "SYS-08",
               "SH-02", "SH-03", "SH-04", "SH-05", "SH-06",
-              "BMP-01", "BMP-02", "BMP-06", "BMP-07", "BMP-08", "BMP-09", "BMP-10"]
+              "ACC-02", "ACC-03",
+              "BMP-01", "BMP-02", "BMP-03", "BMP-04", "BMP-06", "BMP-07", "BMP-08", "BMP-09", "BMP-10"]
 
 
 def test_all_propagated_screens_bound_with_sections(isolated_client):
@@ -247,7 +248,7 @@ def test_ready_kpis_have_value_nonready_are_none(isolated_client):
 
 def test_unbound_classified_as_external_dependency(isolated_client):
     cli, _ = isolated_client
-    j = cli.get("/api/experience/screen/BMP-03").get_json()
+    j = cli.get("/api/experience/screen/BMP-11").get_json()
     assert j["bound"] is False
     assert j["classification"] == "BLOCKED_BY_EXTERNAL_DEPENDENCY"
 
@@ -339,6 +340,33 @@ def test_sys05_is_frontend_local_only(isolated_client):
     assert j["bound"] is True and j["truth"]["backend_required"] is False
     form = [s for s in j["sections"] if s["type"] == "form"][0]
     assert len(form["fields"]) == 4
+
+
+def test_acc02_subject_profiles_real(isolated_client):
+    """ACC-02 主体选择：真实配置主体（6 个 BRAND_PROFILES）。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/ACC-02").get_json()
+    assert j["bound"] is True and j["truth"]["active_brand"]
+    tbl = [s for s in j["sections"] if s["type"] == "table"][0]
+    assert len(tbl["rows"]) == 6
+
+
+def test_bmp03_missing_table_honest_not_fake(isolated_client):
+    """BMP-03 情报表缺失时显式未采集，total=None，不造假 0。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-03").get_json()
+    assert j["bound"] is True and j["truth"]["table_exists"] is False
+    kpi = [s for s in j["sections"] if s["type"] == "kpis"][0]["items"][0]
+    assert kpi["value"] is None and kpi["state"] == "notcollected"
+
+
+def test_bmp04_propagation_three_dashboards(isolated_client):
+    """BMP-04 传播分析：品牌/产品/行业三类看板真实只读（空库 0 诚实）。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-04").get_json()
+    assert j["bound"] is True and j["truth"]["total_events"] == 0
+    tbl = [s for s in j["sections"] if s["type"] == "table"][0]
+    assert len(tbl["rows"]) == 3
 
 
 def test_screen_meta_covers_44_screens():
