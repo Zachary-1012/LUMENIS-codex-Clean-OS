@@ -1,0 +1,7 @@
+{
+ "scanned": "10_prototype (excluding vendor/)",
+ "runtime_external_requests": 0,
+ "runtime_cdn_dependencies": 0,
+ "note": "SVG xmlns and data: URIs are not network calls; example.com appears only inside DESIGN_ONLY fixture text and is never requested.",
+ "findings": []
+}

@@ -1,0 +1,163 @@
+{
+  "note": "all prototype evidence ids are DESIGN_ONLY; production claims must link Source->Evidence->Canonical",
+  "screens": {
+    "ACC-01": [],
+    "ACC-02": [
+      "SubjectContext v2.1"
+    ],
+    "ACC-03": [
+      "启动链 runtime identity"
+    ],
+    "ACC-04": [],
+    "CTH-01": [
+      "EV-7701",
+      "EV-7704",
+      "EV-7706",
+      "EV-7710"
+    ],
+    "CTH-02": [
+      "EV: subject_profile",
+      "EV: brand_directory"
+    ],
+    "CTH-03": [
+      "RUNTIME: collector/pipeline"
+    ],
+    "CTH-04": [
+      "EV-7710",
+      "EV: event_graph"
+    ],
+    "CTH-05": [
+      "EV: calendar aggregate"
+    ],
+    "CTH-06": [
+      "EV-7704",
+      "EV-7720"
+    ],
+    "CTH-07": [
+      "EV: canonical_metrics"
+    ],
+    "CTH-08": [
+      "CASE-221",
+      "EV-7710"
+    ],
+    "CTH-09": [
+      "EV-7710",
+      "EV-7699",
+      "EV-7712"
+    ],
+    "CTH-10": [
+      "报告内全部 EV 清单随导出固化"
+    ],
+    "BMP-01": [
+      "EV-B108",
+      "EV-B110",
+      "EV-B112"
+    ],
+    "BMP-02": [
+      "EV-B201..204"
+    ],
+    "BMP-03": [
+      "EV-B301",
+      "EV-B302"
+    ],
+    "BMP-04": [
+      "EV-B401",
+      "EV-B402"
+    ],
+    "BMP-05": [
+      "EV-C01..05"
+    ],
+    "BMP-06": [
+      "EV-M01",
+      "EV-M11",
+      "EV-M12"
+    ],
+    "BMP-07": [
+      "EV: campaign lineage"
+    ],
+    "BMP-08": [
+      "EV-P01",
+      "EV-P02"
+    ],
+    "BMP-09": [
+      "EV-R01",
+      "EV-R02"
+    ],
+    "BMP-10": [
+      "EV-BR01..03"
+    ],
+    "BMP-11": [
+      "EV-B1101"
+    ],
+    "AI-01": [
+      "EV: evidence_chain（全局）",
+      "EV: subject_context v2.1",
+      "RUNTIME: ai_gateway"
+    ],
+    "AI-02": [
+      "EV-7731",
+      "EV-7732",
+      "EV: ai_trace"
+    ],
+    "AI-03": [
+      "EV-7701",
+      "EV-7704",
+      "EV-7710",
+      "EV-7711"
+    ],
+    "AI-04": [
+      "EV: skill_registry",
+      "EV: agent call graph"
+    ],
+    "AI-05": [
+      "RUNTIME: ai_gateway",
+      "EV: provider health"
+    ],
+    "SYS-01": [
+      "RUNTIME: process/health/identity"
+    ],
+    "SYS-02": [
+      "COL-01..06"
+    ],
+    "SYS-03": [
+      "DB: integrity/foreign_key",
+      "P0C evidence"
+    ],
+    "SYS-04": [
+      "SEC-01",
+      "SEC-02"
+    ],
+    "SYS-05": [],
+    "SYS-06": [
+      "浏览器快照证据"
+    ],
+    "SYS-07": [
+      "acceptance gates"
+    ],
+    "SYS-08": [
+      "RUNTIME: logs/trace"
+    ],
+    "SH-01": [
+      "ASSET-01",
+      "EV-B110",
+      "BRIEF"
+    ],
+    "SH-02": [
+      "EV-7701",
+      "EV-7704",
+      "EV-7710"
+    ],
+    "SH-03": [
+      "DB: canonical"
+    ],
+    "SH-04": [
+      "导出固化证据清单"
+    ],
+    "SH-05": [
+      "资产来源 Case/Report"
+    ],
+    "SH-06": [
+      "待办来源各域"
+    ]
+  }
+}

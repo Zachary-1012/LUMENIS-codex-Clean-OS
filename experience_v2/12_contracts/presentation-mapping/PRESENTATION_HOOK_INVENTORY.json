@@ -1,0 +1,245 @@
+{
+ "data_hooks": {
+  "data-source": [
+   "sections.js",
+   "app.js"
+  ],
+  "data-reveal": [
+   "sections.js",
+   "motion.js"
+  ],
+  "data-i18n": [
+   "sections.js",
+   "components.js",
+   "shell.js",
+   "i18n.js"
+  ],
+  "data-state-slot": [
+   "sections.js"
+  ],
+  "data-countup": [
+   "sections.js",
+   "components.js"
+  ],
+  "data-decimals": [
+   "sections.js"
+  ],
+  "data-provenance": [
+   "sections.js"
+  ],
+  "data-level": [
+   "sections.js"
+  ],
+  "data-i18n-ph": [
+   "sections.js",
+   "i18n.js"
+  ],
+  "data-action": [
+   "sections.js",
+   "components.js"
+  ],
+  "data-act-class": [
+   "sections.js"
+  ],
+  "data-scope": [
+   "sections.js"
+  ],
+  "data-target": [
+   "sections.js",
+   "components.js"
+  ],
+  "data-permission": [
+   "sections.js"
+  ],
+  "data-risk": [
+   "sections.js",
+   "haptics.js"
+  ],
+  "data-state": [
+   "sections.js"
+  ],
+  "data-panel": [
+   "sections.js",
+   "components.js"
+  ],
+  "data-who": [
+   "sections.js"
+  ],
+  "data-real": [
+   "sections.js"
+  ],
+  "data-close": [
+   "components.js"
+  ],
+  "data-kind": [
+   "components.js"
+  ],
+  "data-lum-brand": [
+   "shell.js",
+   "brand.js"
+  ],
+  "data-group": [
+   "shell.js"
+  ],
+  "data-collapse-group": [
+   "shell.js"
+  ],
+  "data-route": [
+   "shell.js"
+  ],
+  "data-status": [
+   "shell.js",
+   "orb.js"
+  ],
+  "data-val": [
+   "shell.js"
+  ],
+  "data-pick": [
+   "shell.js"
+  ],
+  "data-context": [
+   "shell.js"
+  ],
+  "data-chrome": [
+   "app.js"
+  ],
+  "data-opt": [
+   "app.js",
+   "optical.js"
+  ],
+  "data-day": [
+   "app.js"
+  ],
+  "data-lum-ready": [
+   "app.js"
+  ],
+  "data-brand-mounted": [
+   "brand.js"
+  ],
+  "data-strength": [
+   "optical.js"
+  ]
+ },
+ "global_objects": {
+  "LUM_STANDALONE": [
+   "app.js"
+  ],
+  "LumOrb": [
+   "orb.js"
+  ]
+ },
+ "section_classes": [
+  "lum-action-item",
+  "lum-action-item__ico",
+  "lum-action-item__scope",
+  "lum-action-item__txt",
+  "lum-action-panel",
+  "lum-ai",
+  "lum-ai-avatar",
+  "lum-ai-bubble",
+  "lum-ai-cite",
+  "lum-ai-msg",
+  "lum-ai-step",
+  "lum-ai-tool",
+  "lum-badge",
+  "lum-badge-${c.badge.cls",
+  "lum-badge-${row[c.toneKey]",
+  "lum-badge-brand",
+  "lum-badge-info",
+  "lum-badge-neutral",
+  "lum-body-2",
+  "lum-btn",
+  "lum-btn-${a.variant",
+  "lum-btn-ghost",
+  "lum-btn-secondary",
+  "lum-btn-sm",
+  "lum-caption",
+  "lum-card",
+  "lum-card-pad",
+  "lum-card-solid",
+  "lum-chart",
+  "lum-chip",
+  "lum-conf",
+  "lum-conf-bar",
+  "lum-display",
+  "lum-dot",
+  "lum-dot-${s.state}",
+  "lum-dot-ok",
+  "lum-ev-arrow",
+  "lum-ev-node",
+  "lum-event",
+  "lum-event__body",
+  "lum-event__rail",
+  "lum-event__tags",
+  "lum-event__time",
+  "lum-event__title",
+  "lum-evidence",
+  "lum-evidence-rail",
+  "lum-evidence__chain",
+  "lum-evidence__head",
+  "lum-evidence__meta",
+  "lum-evidence__quote",
+  "lum-eyebrow",
+  "lum-field",
+  "lum-fs-sm",
+  "lum-fw-sb",
+  "lum-grid-${d.cols",
+  "lum-grid-2",
+  "lum-grid-4",
+  "lum-grid-main-side",
+  "lum-h4",
+  "lum-hide",
+  "lum-input",
+  "lum-insight",
+  "lum-insight__kind",
+  "lum-insight__text",
+  "lum-insight__why",
+  "lum-label",
+  "lum-metric",
+  "lum-metric__delta",
+  "lum-metric__foot",
+  "lum-metric__freshness",
+  "lum-metric__label",
+  "lum-metric__top",
+  "lum-metric__value",
+  "lum-mono",
+  "lum-num",
+  "lum-page-head",
+  "lum-press",
+  "lum-progress",
+  "lum-risk",
+  "lum-risk-level",
+  "lum-risk__head",
+  "lum-risk__meter",
+  "lum-row",
+  "lum-row-between",
+  "lum-runtime",
+  "lum-runtime__grid",
+  "lum-search",
+  "lum-section-head",
+  "lum-select",
+  "lum-softglass",
+  "lum-spacer",
+  "lum-stack-${d.gap",
+  "lum-stack-2",
+  "lum-stack-4",
+  "lum-stack-6",
+  "lum-stagger",
+  "lum-step",
+  "lum-step-label",
+  "lum-step-line",
+  "lum-steps",
+  "lum-table",
+  "lum-table-wrap",
+  "lum-tabs",
+  "lum-text-2",
+  "lum-textarea",
+  "lum-timeline",
+  "lum-tl-desc",
+  "lum-tl-item",
+  "lum-tl-time",
+  "lum-tl-title",
+  "lum-unit",
+  "lum-wrap"
+ ]
+}

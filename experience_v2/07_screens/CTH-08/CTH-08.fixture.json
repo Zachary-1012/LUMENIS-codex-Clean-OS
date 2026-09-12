@@ -1,0 +1,179 @@
+{
+  "screen": "CTH-08",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "CASE-221",
+      "EV-7710"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "CTH · 商业运营",
+      "title": "案例库 / 案例分析 / 知识库",
+      "titleKey": "screen.CTH-08",
+      "desc": "Case 由事件与证据沉淀，知识库沉淀可复用结论，不覆盖原始事实。",
+      "actions": [
+        {
+          "label": "新建案例",
+          "variant": "primary",
+          "id": "new-case",
+          "cls": "DRAFT",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "case:write",
+          "ico": "case"
+        }
+      ]
+    },
+    {
+      "type": "tabs",
+      "id": "cth08",
+      "tabs": [
+        {
+          "label": "案例库",
+          "sections": [
+            {
+              "type": "table",
+              "title": "",
+              "columns": [
+                {
+                  "label": "案例",
+                  "key": "n"
+                },
+                {
+                  "label": "状态",
+                  "key": "s",
+                  "numeric": true,
+                  "type": "t"
+                },
+                {
+                  "label": "关联事件",
+                  "key": "e"
+                },
+                {
+                  "label": "风险",
+                  "key": "r"
+                },
+                {
+                  "label": "证据",
+                  "key": "ev"
+                }
+              ],
+              "rows": [
+                {
+                  "n": "晚高峰停车摩擦处置",
+                  "s": "进行中",
+                  "t": "warning",
+                  "e": "EV-7710",
+                  "r": "高",
+                  "ev": "CASE-221"
+                },
+                {
+                  "n": "快闪开业保障",
+                  "s": "已关闭",
+                  "t": "success",
+                  "e": "EV-7706",
+                  "r": "低",
+                  "ev": "CASE-218"
+                },
+                {
+                  "n": "会员日复盘",
+                  "s": "已归档",
+                  "t": "neutral",
+                  "e": "EV-7688",
+                  "r": "低",
+                  "ev": "CASE-210"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "案例分析",
+          "sections": [
+            {
+              "type": "evidence",
+              "title": "案例证据链",
+              "items": [
+                {
+                  "kind": "Case",
+                  "id": "CASE-221",
+                  "chain": [
+                    "Event",
+                    "Evidence",
+                    "Decision",
+                    "Action",
+                    "Outcome"
+                  ],
+                  "quote": "处置：增派引导+开放 B3，平均离场时间 -6.2 分钟。",
+                  "time": "进行中",
+                  "source": "case_engine",
+                  "conf": 90
+                }
+              ]
+            },
+            {
+              "type": "timeline",
+              "title": "处置时间线",
+              "items": [
+                {
+                  "time": "10:22",
+                  "title": "建 Case",
+                  "desc": null,
+                  "done": true
+                },
+                {
+                  "time": "10:40",
+                  "title": "指派运营",
+                  "desc": null,
+                  "done": true
+                },
+                {
+                  "time": "11:00",
+                  "title": "现场执行",
+                  "desc": "观察中",
+                  "done": false
+                }
+              ],
+              "label": null
+            }
+          ]
+        },
+        {
+          "label": "知识库",
+          "sections": [
+            {
+              "type": "cards",
+              "items": [
+                {
+                  "title": "高峰停车疏导 SOP",
+                  "desc": "历史复盘沉淀的标准动作",
+                  "ico": "folder",
+                  "badge": {
+                    "text": "可复用",
+                    "cls": "brand"
+                  }
+                },
+                {
+                  "title": "快闪活动保障清单",
+                  "desc": "跨部门 checklist",
+                  "ico": "folder"
+                },
+                {
+                  "title": "负面回应口径模板",
+                  "desc": "经审批的回应模板",
+                  "ico": "content"
+                }
+              ],
+              "cols": 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

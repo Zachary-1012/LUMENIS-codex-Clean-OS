@@ -1,0 +1,35 @@
+{
+  "screen": "CTH-07",
+  "viewmodel": {
+    "series": [
+      "{label,data[],color}"
+    ]
+  },
+  "binding": {
+    "trend": "CODEX_VERIFY (trend_api/canonical_metrics = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "series"
+    ],
+    "Capability": [
+      "PAT-DATA-01"
+    ],
+    "Motion": [
+      "M03",
+      "M06"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "CTH-07.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "EV: canonical_metrics"
+    ]
+  },
+  "unknown_binding_keys": [
+    "trend"
+  ],
+  "binding_owner_default": "CODEX"
+}

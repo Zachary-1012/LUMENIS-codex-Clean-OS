@@ -1,0 +1,175 @@
+{
+  "screen": "SH-01",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 8,
+  "actions": [
+    {
+      "action_id": "SH-01.new-brief",
+      "display_label_zh": "新建 Brief",
+      "display_key": null,
+      "action_class": "DRAFT",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "content:draft",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "content"
+    },
+    {
+      "action_id": "SH-01.ai-draft",
+      "display_label_zh": "按 Pattern 检索并起草",
+      "display_key": null,
+      "action_class": "TASK",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "content:draft",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "form:Brief / Context（事实来源，非 locale 文案）",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "orb"
+    },
+    {
+      "action_id": "SH-01.save",
+      "display_label_zh": "保存草稿",
+      "display_key": null,
+      "action_class": "DRAFT",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "form:Brief / Context（事实来源，非 locale 文案）",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "check"
+    },
+    {
+      "action_id": "SH-01.card:春季种草 · 文案 v2",
+      "display_label_zh": "打开",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "card:春季种草 · 文案 v2",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": null
+    },
+    {
+      "action_id": "SH-01.submit-review",
+      "display_label_zh": "提交评审",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "content:submit",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "evaluation"
+    },
+    {
+      "action_id": "SH-01.approve",
+      "display_label_zh": "审批通过",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "content:approve",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "check"
+    },
+    {
+      "action_id": "SH-01.publish",
+      "display_label_zh": "发布/导出",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "content:publish",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": true,
+      "prototype_behavior": "local/navigation only",
+      "icon": "share"
+    },
+    {
+      "action_id": "SH-01.promote-learning",
+      "display_label_zh": "评估后沉淀 Pattern",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "SH-01",
+        "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "skill"
+    }
+  ]
+}

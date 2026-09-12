@@ -1,0 +1,235 @@
+/* ============================================================================
+   LUMENIS Experience V2.5 — Design Tokens  ·  序境 / LUMENIS
+   "A quiet instrument of truth." 数据与证据是主角，界面后退。
+   Namespace --lum-* · human-engineer editable · derive nothing from screenshots.
+   ── Ownable language ──────────────────────────────────────────────────────
+   · SH-01 light = BLACK-SILVER （铂金雾面 + 墨黑铬主操作）
+   · AI-01 dark  = WHITE-SILVER （近黑场 + 银白金属，light 的精确反相）
+   · Icy cyan appears ONLY for live data / processing / focus — never chrome.
+   · Hierarchy is carried by the SURFACE LADDER + hairline + whitespace,
+     not by stacked drop shadows (Linear craft). Shadows belong to floating
+     layers only (menu / popover / drawer / modal / toast).
+   · Type: Geist (instrument sans & numerals) · Geist Mono (IDs) ·
+     Fraunces + 宋体 (literary display). 70 / 20 / 10 = clarity / space / motion.
+   ========================================================================== */
+.lum-app {
+  /* ===== Neutral metal ramp (true silver, no hue) ===== */
+  --lum-c-slate-0:  #ffffff;
+  --lum-c-slate-25: #f7f8f9;
+  --lum-c-slate-50: #f0f1f3;
+  --lum-c-slate-100:#e6e8eb;
+  --lum-c-slate-200:#d3d6da;
+  --lum-c-slate-300:#b4b8bf;
+  --lum-c-slate-400:#8b9099;
+  --lum-c-slate-500:#666b75;
+  --lum-c-slate-600:#494e58;
+  --lum-c-slate-700:#343840;
+  --lum-c-slate-800:#23262d;
+  --lum-c-slate-850:#1a1d23;
+  --lum-c-slate-900:#14161b;
+  --lum-c-slate-950:#0b0c0f;
+  /* convenience alias consumed by base scrollbars */
+  --lum-slate-300: var(--lum-c-slate-300);
+
+  /* ===== Brand = monochrome metal. Names kept so all consumers inherit.
+     LIGHT / BLACK-SILVER: primary action is ink / black-chrome. ===== */
+  --lum-c-brand-50: #f2f3f5;
+  --lum-c-brand-100:#e7e9ed;   /* silver wash · selected background */
+  --lum-c-brand-200:#d3d7dd;
+  --lum-c-brand-300:#aeb4bd;
+  --lum-c-brand-400:#71767f;
+  --lum-c-brand-500:#16181d;   /* primary = near-black ink （黑银） */
+  --lum-c-brand-600:#000000;
+  --lum-c-brand-700:#000000;
+  --lum-c-brand-800:#14161b;
+  --lum-c-brand-900:#0b0c0f;
+  --lum-c-brand-grad:linear-gradient(168deg,#2a2d34 0%,#15171c 52%,#05060a 100%); /* black-chrome, restrained */
+  --lum-metal-sheen:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 44%);
+  --lum-c-accent-secondary:#3a3f49;
+  /* Lumen Line signature — ink→graphite, a whisper of icy at the terminus (data life) */
+  --lum-lumen-line:linear-gradient(90deg,#16181d,rgba(138,143,152,.0) 70%);
+  --lum-lumen-line-icy:linear-gradient(90deg,#16181d,#8a8f98 60%,rgba(79,196,232,.5));
+
+  /* ===== Icy luminous — DATA VIZ / STATUS / FOCUS only, never a chrome fill ===== */
+  --lum-c-icy-100:#E4F8FF; --lum-c-icy-200:#C4F0FF; --lum-c-icy-300:#9BE7FF;
+  --lum-c-icy-400:#8BE7FF; --lum-c-icy-500:#4FC4E8; --lum-c-icy-600:#2C9DBF;
+  --lum-c-pearl:#F2F3F5;
+  --lum-c-paper:#ECEDEF;
+  --lum-icy-grad:linear-gradient(135deg,#D8F4FF 0%,#8BE7FF 55%,#6FD6F2 100%);
+  --lum-c-icy-grad:var(--lum-icy-grad);
+  --lum-edge-hi:inset 0 1px 0 rgba(255,255,255,.7);            /* 1px top catch-light (pixel-precise) */
+  --lum-ring:0 0 0 3px rgba(20,22,28,.12);                     /* neutral focus fallback */
+  --lum-ring-icy:0 0 0 3px rgba(28,30,38,.13);
+  /* ultra-fine film grain (barely-there material, not a grid) */
+  --lum-grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+
+  /* ===== Semantic authority colors ===== */
+  --lum-c-success:#16835D; --lum-c-success-bg:#e3f2ec;
+  --lum-c-warning:#A86300; --lum-c-warning-bg:#f8ecd8;
+  --lum-c-danger: #C33F4A; --lum-c-danger-bg:#f9e6e8;
+  --lum-c-info:   #2E64C7; --lum-c-info-bg:#e6eefb;
+  --lum-c-neutral:#6D778A;--lum-c-neutral-bg:#eceff4;
+  --lum-c-risk-low:#16835D; --lum-c-risk-med:#A86300; --lum-c-risk-high:#d2691e; --lum-c-risk-crit:#C33F4A;
+
+  /* ===== Surface ladder (canvas → raised artifact → floating layer).
+     Depth = step + hairline, NOT shadow. ===== */
+  --lum-canvas:        #EBECEE;                         /* the field everything rests on */
+  --lum-bg:            #EBECEE;                         /* platinum-mist canvas (黑银） */
+  --lum-bg-ambient-1:  rgba(255,255,255,.55);           /* single soft top-light */
+  --lum-bg-ambient-2:  rgba(120,126,138,.10);           /* faint corner falloff */
+  --lum-surface:       transparent;                    /* open by default — de-boxed */
+  --lum-surface-solid:#FBFBFC;                         /* S1: pearl artifact */
+  --lum-surface-subtle:#F3F4F6;                        /* S0: subtle grouping wash */
+  --lum-surface-raised:#FFFFFF;                        /* S2: raised, nested solid */
+  --lum-surface-2:     rgba(251,251,252,.7);
+  --lum-surface-sunken:#E7E9EC;                        /* recessed wells */
+  --lum-text:          #14161B;                         /* ink */
+  --lum-text-2:        #555a64;
+  --lum-text-3:        #8a8f99;
+  --lum-text-invert:   #ffffff;
+  --lum-line:          rgba(16,18,24,.10);
+  --lum-line-solid:    #DCDFE3;
+  --lum-line-strong:   #C9CDD3;
+  --lum-shadow-color:  18,20,28;
+
+  /* ===== Typography ===== */
+  --lum-font-sans:"Geist Variable","Geist",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --lum-font-mono:"Geist Mono Variable","Geist Mono",ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  --lum-font-display:"Fraunces Variable","Fraunces",ui-serif,Georgia,"Songti SC","STSong","STZhongsong","Noto Serif SC","Source Han Serif SC",serif;
+  --lum-font-num:"Geist Variable","Geist",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; /* KPI numerals */
+  /* fluid scale (360 phone → 1440+); body near-constant, display breathes */
+  --lum-fs-2xs:clamp(10.5px,.04vw + 10.4px,11.5px);
+  --lum-fs-xs:clamp(11.5px,.05vw + 11.3px,12.5px);
+  --lum-fs-sm:clamp(12.5px,.06vw + 12.3px,13.5px);
+  --lum-fs-md:clamp(13.5px,.07vw + 13.2px,14.5px);
+  --lum-fs-lg:clamp(15px,.14vw + 14.5px,16.5px);
+  --lum-fs-xl:clamp(16px,.28vw + 15px,19px);
+  --lum-fs-2xl:clamp(19px,.46vw + 17.3px,24px);
+  --lum-fs-3xl:clamp(23px,.65vw + 20.7px,30px);
+  --lum-fs-4xl:clamp(30px,1.05vw + 26px,42px);
+  --lum-fs-5xl:clamp(34px,1.7vw + 27px,54px);
+  --lum-type-display:40px/48px 540; --lum-type-h1:28px/36px 560; --lum-type-h2:22px/30px 560;
+  --lum-type-h3:18px/26px 600; --lum-type-bodyl:16px/25px 400; --lum-type-body:14px/22px 400;
+  --lum-type-dense:13px/20px 450; --lum-type-label:12px/18px 600; --lum-type-caption:11px/16px 450; --lum-type-kpi:34px/40px 600;
+  --lum-lh-tight:1.12; --lum-lh-snug:1.34; --lum-lh-normal:1.58; --lum-lh-relaxed:1.72;
+  --lum-fw-reg:400; --lum-fw-med:500; --lum-fw-sb:600; --lum-fw-bold:680;
+  --lum-tr:0;
+  --lum-track-display:-.028em; --lum-track-tight:-.016em; --lum-track-eyebrow:.24em;
+  --lum-page-pad:clamp(18px,2.2vw + 8px,44px);
+  --lum-gap:clamp(14px,1.3vw + 10px,30px);
+  --lum-rail-w:clamp(212px,15.6vw,252px);
+
+  /* ===== Spacing (4px base) ===== */
+  --lum-sp-1:4px; --lum-sp-2:8px; --lum-sp-3:12px; --lum-sp-4:16px; --lum-sp-5:20px;
+  --lum-sp-6:24px; --lum-sp-8:32px; --lum-sp-10:40px; --lum-sp-12:48px; --lum-sp-16:64px;
+
+  /* ===== Radius (precise, capped — inner < outer) ===== */
+  --lum-r-xs:3px; --lum-r-sm:6px; --lum-r-md:10px; --lum-r-lg:14px; --lum-r-xl:18px; --lum-r-pill:999px;
+
+  /* ===== Elevation: cards are flat (hairline carries depth); only floating
+     layers lift. This is the de-template / de-card-wall lever. ===== */
+  --lum-sh-flat: none;
+  --lum-sh-1: none;
+  --lum-sh-2: 0 2px 8px rgba(18,20,28,.06),0 16px 40px rgba(18,20,28,.10);
+  --lum-sh-3: 0 10px 24px rgba(18,20,28,.12),0 30px 64px rgba(18,20,28,.18);
+  --lum-sh-float:0 14px 42px rgba(10,12,18,.22),0 2px 10px rgba(10,12,18,.10),inset 0 1px 0 rgba(255,255,255,.5);
+
+  /* ===== Glass (Tier B; Optical V1 only on OPT-01..04) ===== */
+  --lum-glass-blur:22px; --lum-glass-saturate:1.35;
+  --lum-glass-bg: rgba(252,252,253,.6);
+  --lum-glass-line: rgba(255,255,255,.7);
+  --lum-glass-sh: inset 0 1px 0 rgba(255,255,255,.8),inset 0 0 0 1px rgba(20,22,28,.05),0 14px 38px rgba(14,16,22,.1);
+
+  /* ===== Optical V1 (7 params) ===== */
+  --lum-opt-refraction:.10; --lum-opt-aberration:.12; --lum-opt-edge-width:1.2px;
+  --lum-opt-fresnel:.22; --lum-opt-specular:.28; --lum-opt-blur:.18; --lum-opt-opacity:.9;
+
+  /* ===== Motion (meaningful, interruptible; opacity/transform only) ===== */
+  --lum-dur-instant:120ms; --lum-dur-fast:200ms; --lum-dur-base:320ms; --lum-dur-slow:480ms; --lum-dur-morph:520ms;
+  --lum-ease-standard:cubic-bezier(.2,.7,.2,1);
+  --lum-ease-emphasized:cubic-bezier(.2,0,0,1);
+  --lum-ease-exit:cubic-bezier(.4,0,1,1);
+  --lum-ease-spring:cubic-bezier(.34,1.4,.5,1);
+
+  /* ===== Layout ===== */
+  --lum-rail-w:252px; --lum-rail-w-collapsed:68px; --lum-context-w:324px;
+  --lum-topbar-h:62px; --lum-dock-h:74px;
+  --lum-content-max:1560px;
+  --lum-z-rail:40; --lum-z-topbar:45; --lum-z-context:42; --lum-z-dock:50;
+  --lum-z-sticky:60; --lum-z-drawer:80; --lum-z-modal:90; --lum-z-toast:100;
+
+  /* ===== Lumen Axis （序轴） & Strata （境层） — kept, made whisper-quiet ===== */
+  --lum-axis:linear-gradient(180deg,var(--lum-c-brand-500),var(--lum-c-slate-400) 70%,transparent);
+  --lum-strata:rgba(20,22,28,.018);
+  --lum-node:var(--lum-c-brand-500);
+  --lum-editorial-gap:clamp(26px,2.2vw + 14px,48px);  /* literary whitespace between strata */
+}
+.lum-app[data-theme="dark"]{ --lum-strata:rgba(255,255,255,.022); }
+
+/* ===== DARK = WHITE-SILVER (the precise inverse of light) ===== */
+.lum-app[data-theme="dark"] {
+  --lum-canvas:#060709;
+  --lum-bg:#060709; --lum-bg-ambient-1:rgba(255,255,255,.045); --lum-bg-ambient-2:rgba(0,0,0,.35);
+  --lum-surface:transparent; --lum-surface-solid:#101115; --lum-surface-2:rgba(16,17,21,.6);
+  --lum-surface-subtle:#15171c; --lum-surface-raised:#1b1d23; --lum-surface-sunken:#08090c;
+  --lum-text:#F2F3F5; --lum-text-2:#AEB3BD; --lum-text-3:#7d838e; --lum-text-invert:#0d0e11;
+  --lum-line:rgba(255,255,255,.085); --lum-line-solid:#23262d; --lum-line-strong:#32363e;
+  --lum-shadow-color:0,0,0;
+  --lum-edge-hi:inset 0 1px 0 rgba(255,255,255,.07);
+  --lum-sh-flat:none; --lum-sh-1:none;
+  --lum-sh-2:0 2px 10px rgba(0,0,0,.4),0 18px 44px rgba(0,0,0,.5);
+  --lum-sh-3:0 12px 28px rgba(0,0,0,.5),0 34px 70px rgba(0,0,0,.62);
+  --lum-c-brand-50:#1a1c21; --lum-c-brand-100:#20232a; --lum-c-brand-200:#2b2f37; --lum-c-brand-300:#4a4e57;
+  --lum-c-brand-400:#9aa0aa; --lum-c-brand-500:#E9EBEF; --lum-c-brand-600:#FFFFFF; --lum-c-brand-700:#FFFFFF;
+  --lum-c-brand-grad:linear-gradient(168deg,#FFFFFF 0%,#D6D9DF 52%,#A6ACB6 100%); /* white-silver chrome */
+  --lum-metal-sheen:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 46%);
+  --lum-lumen-line:linear-gradient(90deg,#E9EBEF,rgba(107,112,121,0) 70%);
+  --lum-lumen-line-icy:linear-gradient(90deg,#E9EBEF,#6b7079 60%,rgba(111,214,242,.5));
+  --lum-c-accent-secondary:#B9BEC7;
+  --lum-c-icy-400:#8BE7FF; --lum-c-icy-500:#6FD6F2;
+  --lum-ring:0 0 0 3px rgba(233,235,239,.16);
+  --lum-ring-icy:0 0 0 3px rgba(233,235,239,.16);
+  --lum-c-success:#43C68B; --lum-c-warning:#F0B45B; --lum-c-danger:#FF7A85; --lum-c-info:#8FB4FF; --lum-c-neutral:#9BA1AB;
+  --lum-glass-bg:rgba(17,18,22,.58); --lum-glass-line:rgba(255,255,255,.09);
+  --lum-glass-sh:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.05),0 14px 38px rgba(0,0,0,.5);
+  --lum-c-success-bg:#10332a; --lum-c-warning-bg:#3a2a12; --lum-c-danger-bg:#3a1a19; --lum-c-info-bg:#122640;
+}
+
+/* ============================================================================
+   REALM DIALECTS — one ecosystem, four dialects (Brand Research V1 §5).
+   Set on .lum-app[data-realm] from the screen-id prefix (presentation only):
+     CTH→operational · BMP→editorial · AI→intent · SH→studio · SYS→system.
+   Same grammar (Point/Axis/Boundary/Strata/Trace/Return); different density,
+   whitespace, axis strength and curatorial rhythm. Never a different product.
+   ========================================================================== */
+.lum-app{ --lum-axis-strength:.22; --lum-trace-strength:.8; --lum-realm-glow:transparent }
+/* CTH · Operational Realm — denser, stronger order, Trace first, facts lead */
+.lum-app[data-realm="operational"]{
+  --lum-editorial-gap:clamp(18px,1.5vw + 12px,34px);
+  --lum-axis-strength:.34; --lum-trace-strength:1;
+}
+/* BMP · Editorial Realm — more whitespace, media/story weight, curatorial */
+.lum-app[data-realm="editorial"]{
+  --lum-editorial-gap:clamp(32px,3vw + 18px,66px);
+  --lum-axis-strength:.13; --lum-trace-strength:.7;
+}
+/* AI · Intent Realm — the Core reads forward; state transitions legible */
+.lum-app[data-realm="intent"]{
+  --lum-editorial-gap:clamp(24px,2.2vw + 14px,46px);
+  --lum-axis-strength:.18; --lum-trace-strength:.9;
+}
+/* Shared · Studio Realm — content owns the stage, controls recede */
+.lum-app[data-realm="studio"]{
+  --lum-editorial-gap:clamp(28px,2.6vw + 14px,54px);
+  --lum-axis-strength:.12; --lum-trace-strength:.6;
+}
+.lum-app[data-realm="system"]{ --lum-axis-strength:.3; --lum-trace-strength:1 }
+
+/* ===== Optical state machine ===== */
+.lum-app[data-optical="standard"] { --lum-opt-refraction:.06; --lum-opt-blur:.12; }
+.lum-app[data-optical="soft"]    { --lum-opt-refraction:0; --lum-opt-aberration:0; --lum-opt-fresnel:.10; }
+.lum-app[data-optical="opaque"]  { --lum-glass-bg:var(--lum-surface-solid); --lum-glass-blur:0; --lum-glass-saturate:1; --lum-opt-fresnel:0; --lum-opt-specular:0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lum-app { --lum-dur-instant:1ms; --lum-dur-fast:1ms; --lum-dur-base:1ms; --lum-dur-slow:1ms; --lum-dur-morph:1ms; }
+}

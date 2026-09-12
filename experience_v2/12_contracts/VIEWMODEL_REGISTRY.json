@@ -1,0 +1,741 @@
+{
+  "status_enum": [
+    "VERIFIED_AVAILABLE",
+    "VERIFIED_UNAVAILABLE",
+    "PARTIAL",
+    "UNKNOWN",
+    "BLOCKED",
+    "CODEX_BINDING_REQUIRED"
+  ],
+  "state_source_enum": [
+    "backend",
+    "frontend-derived",
+    "user-input",
+    "DESIGN_ONLY fixture"
+  ],
+  "screens": {
+    "ACC-01": {
+      "domain": "ACCOUNT",
+      "title": "领域登录入口",
+      "viewmodel": {
+        "auth": "{domain,account,sso_provider}",
+        "domains": "enum[CTH,BMP]"
+      },
+      "binding": {
+        "auth": "CODEX_VERIFY (auth/login/sso = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "auth"
+      ]
+    },
+    "ACC-02": {
+      "domain": "ACCOUNT",
+      "title": "主体选择与领域视角",
+      "viewmodel": {
+        "subjects": [
+          "{subject_id,subject_type,scope,name}"
+        ]
+      },
+      "binding": {
+        "subjects": "CODEX_VERIFY (subject resolver/permission = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "subjects"
+      ]
+    },
+    "ACC-03": {
+      "domain": "ACCOUNT",
+      "title": "全局工作空间启动",
+      "viewmodel": {
+        "launch_cards": [
+          "{title,desc,icon,route}"
+        ],
+        "startup_checks": [
+          "{name,state,detail}"
+        ]
+      },
+      "binding": {
+        "launch": "CODEX_VERIFY (workspace home = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "launch"
+      ]
+    },
+    "ACC-04": {
+      "domain": "ACCOUNT",
+      "title": "账号恢复与权限守卫",
+      "viewmodel": {
+        "guard": "{reason,required_permission,subject_id,recovery_paths[]}"
+      },
+      "binding": {
+        "guard": "CODEX_VERIFY (auth guard/recovery = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "guard"
+      ]
+    },
+    "CTH-01": {
+      "domain": "CTH",
+      "title": "商业运营总览",
+      "viewmodel": {
+        "kpis": [
+          "{id,label_key,value,unit,delta,spark,evidence_id,freshness}"
+        ],
+        "trend": "{series[],labels[]}",
+        "events": [
+          "{time,title,level,tags,evidence_id}"
+        ],
+        "insight": "{text,why,cites[]}"
+      },
+      "binding": {
+        "kpis": "CODEX_VERIFY (canonical_metrics routes = UNKNOWN)",
+        "events": "CODEX_VERIFY (event list = UNKNOWN)",
+        "insight": "VIEWMODEL only; backend insight API = UNKNOWN"
+      },
+      "unknown_binding_keys": [
+        "kpis",
+        "events",
+        "insight"
+      ]
+    },
+    "CTH-02": {
+      "domain": "CTH",
+      "title": "主体档案 / 业务单元 / 品牌业态",
+      "viewmodel": {
+        "units": [
+          "{unit_id,name,categories[]}"
+        ],
+        "brands": [
+          "{brand_id,name,category,floor,unit,state,voice}"
+        ]
+      },
+      "binding": {
+        "brands": "CODEX_VERIFY (brand_directory/brand APIs = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "brands"
+      ]
+    },
+    "CTH-03": {
+      "domain": "CTH",
+      "title": "实时监测",
+      "viewmodel": {
+        "realtime_series": [
+          "number"
+        ],
+        "collectors": [
+          "{name,state,detail}"
+        ]
+      },
+      "binding": {
+        "stream": "CODEX_VERIFY (collector_v2/realtime endpoints = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "stream"
+      ]
+    },
+    "CTH-04": {
+      "domain": "CTH",
+      "title": "事件与事件关系",
+      "viewmodel": {
+        "graph": "{nodes[],edges[]}",
+        "timeline": [
+          "event"
+        ]
+      },
+      "binding": {
+        "graph": "CODEX_VERIFY (event_graph API = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "graph"
+      ]
+    },
+    "CTH-05": {
+      "domain": "CTH",
+      "title": "舆情日历",
+      "viewmodel": {
+        "calendar": "{date:{sentiment,event_count,evidence[]}}"
+      },
+      "binding": {
+        "calendar": "CODEX_VERIFY (weekly_events/calendar = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "calendar"
+      ]
+    },
+    "CTH-06": {
+      "domain": "CTH",
+      "title": "负面与用户/评论反馈",
+      "viewmodel": {
+        "items": [
+          "{time,channel,summary,sentiment,cluster,evidence_id}"
+        ]
+      },
+      "binding": {
+        "items": "CODEX_VERIFY (negative/comment feedback APIs = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "items"
+      ]
+    },
+    "CTH-07": {
+      "domain": "CTH",
+      "title": "趋势分析",
+      "viewmodel": {
+        "series": [
+          "{label,data[],color}"
+        ]
+      },
+      "binding": {
+        "trend": "CODEX_VERIFY (trend_api/canonical_metrics = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "trend"
+      ]
+    },
+    "CTH-08": {
+      "domain": "CTH",
+      "title": "案例库 / 案例分析 / 知识库",
+      "viewmodel": {
+        "cases": [
+          "{id,title,state,events[],risk,evidence}"
+        ]
+      },
+      "binding": {
+        "cases": "CODEX_VERIFY (case_library/case_templates = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "cases"
+      ]
+    },
+    "CTH-09": {
+      "domain": "CTH",
+      "title": "风险中心与决策看板",
+      "viewmodel": {
+        "risks": [
+          "{level,title,score,evidence_id}"
+        ],
+        "decisions": [
+          "action"
+        ]
+      },
+      "binding": {
+        "risk": "CODEX_VERIFY (risk_engine = UNKNOWN)",
+        "decision": "DRAFT/EFFECT contract = UNKNOWN"
+      },
+      "unknown_binding_keys": [
+        "risk",
+        "decision"
+      ]
+    },
+    "CTH-10": {
+      "domain": "CTH",
+      "title": "报告 / 周报 / 证据",
+      "viewmodel": {
+        "reports": [
+          "{id,title,period,state,evidence_count}"
+        ]
+      },
+      "binding": {
+        "report": "CODEX_VERIFY (report_api/report_export = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "report"
+      ]
+    },
+    "BMP-01": {
+      "domain": "BMP",
+      "title": "品牌市场总览",
+      "viewmodel": {
+        "kpis": [
+          "metric"
+        ],
+        "voice_trend": "series",
+        "events": [
+          "event"
+        ]
+      },
+      "binding": {
+        "all": "CODEX_VERIFY (brand/market overview APIs = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "all"
+      ]
+    },
+    "BMP-02": {
+      "domain": "BMP",
+      "title": "品牌中心 / 多品牌与竞品",
+      "viewmodel": {
+        "brands": [
+          "{id,role,health,voice,positive,engagement,evidence}"
+        ]
+      },
+      "binding": {
+        "brands": "CODEX_VERIFY (brand_center = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "brands"
+      ]
+    },
+    "BMP-03": {
+      "domain": "BMP",
+      "title": "市场情报",
+      "viewmodel": {
+        "intel": [
+          "{title,kind,confidence,source,evidence}"
+        ]
+      },
+      "binding": {
+        "intel": "CODEX_VERIFY (market_intel = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "intel"
+      ]
+    },
+    "BMP-04": {
+      "domain": "BMP",
+      "title": "传播分析",
+      "viewmodel": {
+        "channels": [
+          "{name,reach,engage,convert}"
+        ]
+      },
+      "binding": {
+        "channels": "CODEX_VERIFY (communication_analysis = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "channels"
+      ]
+    },
+    "BMP-05": {
+      "domain": "BMP",
+      "title": "创作者 KOS/KOL/KOC/UGC",
+      "viewmodel": {
+        "creators": [
+          "{id,name,tier,platform,posts,engagement,convert,risk,evidence}"
+        ]
+      },
+      "binding": {
+        "creators": "CODEX_VERIFY (kos_kol_koc = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "creators"
+      ]
+    },
+    "BMP-06": {
+      "domain": "BMP",
+      "title": "内容中心",
+      "viewmodel": {
+        "assets": [
+          "{id,title,kind,state,approval,evidence}"
+        ]
+      },
+      "binding": {
+        "assets": "CODEX_VERIFY (content_center = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "assets"
+      ]
+    },
+    "BMP-07": {
+      "domain": "BMP",
+      "title": "话题活动",
+      "viewmodel": {
+        "campaign": "{goal,stage,kpis,timeline}",
+        "roi": "number"
+      },
+      "binding": {
+        "campaign": "CODEX_VERIFY (campaign APIs = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "campaign"
+      ]
+    },
+    "BMP-08": {
+      "domain": "BMP",
+      "title": "播客工作室",
+      "viewmodel": {
+        "materials": [
+          "file"
+        ],
+        "outline": [
+          "section"
+        ]
+      },
+      "binding": {
+        "podcast": "CODEX_VERIFY (podcast_store/skill = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "podcast"
+      ]
+    },
+    "BMP-09": {
+      "domain": "BMP",
+      "title": "品牌报告与评估",
+      "viewmodel": {
+        "dimensions": [
+          "{name,score}"
+        ],
+        "reports": [
+          "report"
+        ]
+      },
+      "binding": {
+        "eval": "CODEX_VERIFY (brand_evaluation = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "eval"
+      ]
+    },
+    "BMP-10": {
+      "domain": "BMP",
+      "title": "品牌风险与事件",
+      "viewmodel": {
+        "risks": [
+          "risk"
+        ],
+        "events": [
+          "event"
+        ]
+      },
+      "binding": {
+        "risk": "CODEX_VERIFY (brand_risk = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "risk"
+      ]
+    },
+    "BMP-11": {
+      "domain": "BMP",
+      "title": "对标与竞品分析",
+      "viewmodel": {
+        "matrix": [
+          "{dim,self,competitors[],gap}"
+        ]
+      },
+      "binding": {
+        "benchmark": "CODEX_VERIFY (benchmark = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "benchmark"
+      ]
+    },
+    "AI-01": {
+      "domain": "AI",
+      "title": "AI 意图入口 / Composer",
+      "viewmodel": {
+        "composer": {
+          "intent": "string?",
+          "subject_id": "string",
+          "domain": "enum[CTH,BMP]",
+          "time_window": "range"
+        },
+        "capability_cards": [
+          "{capability_id,label_key,route,permission}"
+        ],
+        "providers": [
+          "{name,state,latency_ms}"
+        ]
+      },
+      "binding": {
+        "composer": "CODEX_VERIFY (POST /api/ai/intent = UNKNOWN)",
+        "providers": "CODEX_VERIFY (/api/runtime/identity, ai gateway status = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "composer",
+        "providers"
+      ]
+    },
+    "AI-02": {
+      "domain": "AI",
+      "title": "能力→任务工作台",
+      "viewmodel": {
+        "task_steps": [
+          "{key,label_key,state,tool}"
+        ],
+        "evidence_refs": [
+          "evidence_id"
+        ]
+      },
+      "binding": {
+        "task_orchestration": "CODEX_VERIFY (ai_task_engine = UNKNOWN route)"
+      },
+      "unknown_binding_keys": [
+        "task_orchestration"
+      ]
+    },
+    "AI-03": {
+      "domain": "AI",
+      "title": "证据锚定分析线程",
+      "viewmodel": {
+        "thread": [
+          "{who,text,cites[],tools[]}"
+        ]
+      },
+      "binding": {
+        "thread": "CODEX_VERIFY (ai thread stream = UNKNOWN)",
+        "evidence_jump": "CODEX_VERIFY (evidence detail route = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "thread",
+        "evidence_jump"
+      ]
+    },
+    "AI-04": {
+      "domain": "AI",
+      "title": "Agent / 技能中心",
+      "viewmodel": {
+        "agents": [
+          "{id,name_key,domain,kind,permission,callchain_state,evidence}"
+        ]
+      },
+      "binding": {
+        "registry": "CODEX_VERIFY (skill_registry/ai_agent_registry = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "registry"
+      ]
+    },
+    "AI-05": {
+      "domain": "AI",
+      "title": "AI Gateway 与 Provider",
+      "viewmodel": {
+        "providers": [
+          "{name,use,state,latency_ms}"
+        ],
+        "call_series": [
+          "number[]"
+        ]
+      },
+      "binding": {
+        "status": "CODEX_VERIFY (provider_registry/ai_governance = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "status"
+      ]
+    },
+    "SYS-01": {
+      "domain": "SYSTEM",
+      "title": "运行时健康",
+      "viewmodel": {
+        "services": [
+          "{name,state,detail}"
+        ],
+        "latency": "number[]"
+      },
+      "binding": {
+        "health": "CODEX_VERIFY (/api/runtime/identity, health = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "health"
+      ]
+    },
+    "SYS-02": {
+      "domain": "SYSTEM",
+      "title": "采集器状态",
+      "viewmodel": {
+        "collectors": [
+          "{name,platform,state,cadence,last_ok,queue,evidence}"
+        ]
+      },
+      "binding": {
+        "collectors": "CODEX_VERIFY (collector_v2 = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "collectors"
+      ]
+    },
+    "SYS-03": {
+      "domain": "SYSTEM",
+      "title": "数据库与事实链",
+      "viewmodel": {
+        "truth_chain": [
+          "stage"
+        ],
+        "db_identity": "{driver,path,isolation,fk}"
+      },
+      "binding": {
+        "db": "CODEX_VERIFY (database.py/database_migrations.py = owner CODEX)"
+      },
+      "unknown_binding_keys": [
+        "db"
+      ]
+    },
+    "SYS-04": {
+      "domain": "SYSTEM",
+      "title": "安全与权限",
+      "viewmodel": {
+        "matrix": [
+          "{domain,read,task,audit,write,deploy}"
+        ]
+      },
+      "binding": {
+        "perm": "CODEX_VERIFY (permission matrix/api = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "perm"
+      ]
+    },
+    "SYS-05": {
+      "domain": "SYSTEM",
+      "title": "设置 / 外观 / 语言",
+      "viewmodel": {
+        "prefs": "{theme,optical,density,reduced_motion,locale}"
+      },
+      "binding": {
+        "prefs": "CODEX_VERIFY (user settings store = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "prefs"
+      ]
+    },
+    "SYS-06": {
+      "domain": "SYSTEM",
+      "title": "内部浏览器",
+      "viewmodel": {
+        "tabs": [
+          "{url,title,evidence_id}"
+        ]
+      },
+      "binding": {
+        "browser": "CODEX_VERIFY (internal browser = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "browser"
+      ]
+    },
+    "SYS-07": {
+      "domain": "SYSTEM",
+      "title": "验收评估",
+      "viewmodel": {
+        "gates": [
+          "{id,criteria,state,evidence}"
+        ]
+      },
+      "binding": {
+        "acceptance": "owner CODEX (production acceptance)"
+      },
+      "unknown_binding_keys": [
+        "acceptance"
+      ]
+    },
+    "SYS-08": {
+      "domain": "SYSTEM",
+      "title": "可观测 / 日志",
+      "viewmodel": {
+        "logs": [
+          "{time,level,module,msg,trace_id}"
+        ]
+      },
+      "binding": {
+        "logs": "CODEX_VERIFY (observability = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "logs"
+      ]
+    },
+    "SH-01": {
+      "domain": "SHARED",
+      "title": "内容创作工作室",
+      "viewmodel": {
+        "pipeline_stage": "enum[Brief,Context,Evidence,Strategy,Create,Review,Approval,Export,Evaluation,Learning]",
+        "brief": "{platform,artifact_type,audience,objective,language,subject_id}",
+        "artifacts": [
+          "{id,type,stage,fact_anchors[],unknowns[],assets[]}"
+        ],
+        "pattern_registries": "Narrative|Copy|Visual|Motion|Campaign|Evaluation (schema per Contract §4)",
+        "content_learning_asset": "ContentLearningAsset schema per Contract §5",
+        "factuality": "claim -> verified Evidence | brief-supplied | UNKNOWN"
+      },
+      "binding": {
+        "studio": "CODEX_BINDING_REQUIRED (content creation APIs = UNKNOWN)",
+        "pattern_retrieval": "CODEX_BINDING_REQUIRED (scoped retrieval = UNKNOWN, no whole-file injection)",
+        "fact_wall": "CODEX_BINDING_REQUIRED (claim->evidence resolver = UNKNOWN)",
+        "publish": "CODEX_BINDING_REQUIRED + permission content:publish (UNKNOWN)",
+        "ai_thread": "DESIGN_ONLY fixture -> backend task state at binding",
+        "capability_status": "PARTIAL"
+      },
+      "unknown_binding_keys": [
+        "studio",
+        "pattern_retrieval",
+        "fact_wall",
+        "publish"
+      ]
+    },
+    "SH-02": {
+      "domain": "SHARED",
+      "title": "证据库",
+      "viewmodel": {
+        "evidence": [
+          "{id,kind,summary,confidence,time,source,chain[]}"
+        ]
+      },
+      "binding": {
+        "library": "CODEX_VERIFY (evidence_chain/evidence store = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "library"
+      ]
+    },
+    "SH-03": {
+      "domain": "SHARED",
+      "title": "Canonical 数据 / 指标浏览器",
+      "viewmodel": {
+        "metrics": [
+          "{name,definition,table,cadence,state,lineage}"
+        ]
+      },
+      "binding": {
+        "canonical": "CODEX_VERIFY (canonical_data/metric engine = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "canonical"
+      ]
+    },
+    "SH-04": {
+      "domain": "SHARED",
+      "title": "报告导出中心",
+      "viewmodel": {
+        "exports": [
+          "{report,format,scope,state,evidence_count}"
+        ]
+      },
+      "binding": {
+        "export": "CODEX_VERIFY (report_export/report_engine = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "export"
+      ]
+    },
+    "SH-05": {
+      "domain": "SHARED",
+      "title": "学习与评估资产",
+      "viewmodel": {
+        "assets": [
+          "{id,title,kind,verified,updated}"
+        ]
+      },
+      "binding": {
+        "assets": "CODEX_VERIFY (learning assets = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "assets"
+      ]
+    },
+    "SH-06": {
+      "domain": "SHARED",
+      "title": "通知 / 任务中心",
+      "viewmodel": {
+        "tasks": [
+          "{id,title,source,priority,due}"
+        ]
+      },
+      "binding": {
+        "tasks": "CODEX_VERIFY (notification/task center = UNKNOWN)"
+      },
+      "unknown_binding_keys": [
+        "tasks"
+      ]
+    }
+  }
+}

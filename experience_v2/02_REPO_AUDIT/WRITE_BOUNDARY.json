@@ -1,0 +1,24 @@
+{
+  "$schema": "lumenis.design/write-boundary-v2.5",
+  "may_write_doubao": [
+    "experience_v2/10_prototype/assets presentation layer (fonts/tokens/base/shell/components/optical/brand/motion.css, orb/brand/launch/haptics.js)",
+    "experience_v2/10_prototype/index.html (link/script order only)",
+    "experience_v2/04_design_system,05_components,06_motion,09_QA,10_ORIGINALITY and other experience_v2 design/evidence folders"
+  ],
+  "must_not_write": [
+    "backend / API / collectors / runtime",
+    "database / migrations / canonical data / metrics / evidence engine",
+    "permission / auth",
+    "tracked production source outside experience_v2",
+    "main branch HEAD (no checkout/reset/rebase/pull/merge)",
+    "legacy UI (read-only evidence)",
+    "any real database"
+  ],
+  "stable_contracts_not_renamed": [
+    "section types in data/screens.js",
+    "data-action/data-act-class/data-scope/data-target/data-permission/data-risk and the 35 data-* hooks",
+    "global objects LumUI/LumShell/LumOrb/LumBrand/LumLaunch/LumHaptics",
+    "class hooks .lum-* consumed by Codex"
+  ],
+  "git_policy": {"force_push": false, "push_main": false, "main_modified": false, "design_branch_pushed": false, "note": "Branch creation/push is a user decision; this package is produced on-disk under untracked experience_v2."}
+}

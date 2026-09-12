@@ -1,0 +1,42 @@
+{
+  "screen": "BMP-10",
+  "viewmodel": {
+    "risks": [
+      "risk"
+    ],
+    "events": [
+      "event"
+    ]
+  },
+  "binding": {
+    "risk": "CODEX_VERIFY (brand_risk = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "risks",
+      "events"
+    ],
+    "Capability": [
+      "PAT-EVD-01"
+    ],
+    "Motion": [
+      "M11",
+      "M13"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "BMP-10.actions.json",
+    "Permission": [
+      "creator:hold",
+      "response:draft"
+    ],
+    "Evidence": [
+      "EV-BR01..03"
+    ]
+  },
+  "unknown_binding_keys": [
+    "risk"
+  ],
+  "binding_owner_default": "CODEX"
+}

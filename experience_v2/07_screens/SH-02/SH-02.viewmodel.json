@@ -1,0 +1,40 @@
+{
+  "screen": "SH-02",
+  "viewmodel": {
+    "evidence": [
+      "{id,kind,summary,confidence,time,source,chain[]}"
+    ]
+  },
+  "binding": {
+    "library": "CODEX_VERIFY (evidence_chain/evidence store = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "evidence"
+    ],
+    "Capability": [
+      "PAT-EVD-01",
+      "PAT-FILTER-01"
+    ],
+    "Motion": [
+      "M07",
+      "M11"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "SH-02.actions.json",
+    "Permission": [
+      "UNKNOWN"
+    ],
+    "Evidence": [
+      "EV-7701",
+      "EV-7704",
+      "EV-7710"
+    ]
+  },
+  "unknown_binding_keys": [
+    "library"
+  ],
+  "binding_owner_default": "CODEX"
+}

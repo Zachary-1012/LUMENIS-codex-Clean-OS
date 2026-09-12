@@ -1,0 +1,144 @@
+{
+  "screen": "SH-04",
+  "meta": {
+    "domain": "SHARED",
+    "group": "shared",
+    "icon": "download",
+    "zh": "报告导出中心",
+    "en": "Report Export Center",
+    "ko": "리포트 내보내기",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.SH-04",
+    "patterns": [
+      "PAT-UPLOAD-01"
+    ],
+    "motions": [
+      "M15"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "Shared · 序境·内容创作",
+        "title": "报告导出中心",
+        "titleKey": "screen.SH-04",
+        "desc": "按模板导出 PDF/Excel/PPT，固化口径、时间窗与证据清单；导出动作可审计。",
+        "actions": [
+          {
+            "label": "新建导出",
+            "variant": "primary",
+            "id": "new-export",
+            "cls": "DRAFT",
+            "scope": "UNKNOWN",
+            "target": "UNKNOWN",
+            "permission": "report:export",
+            "ico": "download"
+          }
+        ]
+      },
+      {
+        "type": "split",
+        "main": [
+          {
+            "type": "table",
+            "title": "导出任务",
+            "columns": [
+              {
+                "label": "报告",
+                "key": "r"
+              },
+              {
+                "label": "格式",
+                "key": "f"
+              },
+              {
+                "label": "范围",
+                "key": "scope"
+              },
+              {
+                "label": "状态",
+                "key": "s",
+                "numeric": true,
+                "type": "t"
+              },
+              {
+                "label": "证据数",
+                "key": "e",
+                "numeric": true
+              },
+              {
+                "label": "操作",
+                "key": "o"
+              }
+            ],
+            "rows": [
+              {
+                "r": "运营周报 W37",
+                "f": "PDF",
+                "scope": "近7天",
+                "s": "就绪",
+                "t": "success",
+                "e": 128,
+                "o": "下载"
+              },
+              {
+                "r": "品牌月报",
+                "f": "Excel",
+                "scope": "近30天",
+                "s": "生成中",
+                "t": "info",
+                "e": 240,
+                "o": "—"
+              },
+              {
+                "r": "停车专题",
+                "f": "PPT",
+                "scope": "自定义",
+                "s": "草稿",
+                "t": "warning",
+                "e": 42,
+                "o": "继续"
+              }
+            ]
+          }
+        ],
+        "side": [
+          {
+            "type": "upload",
+            "title": "导出输入",
+            "files": [
+              {
+                "name": "自定义封面.png",
+                "pct": 100,
+                "stage": "已附加"
+              }
+            ],
+            "dropTitle": "附加封面/备注",
+            "dropHint": null
+          },
+          {
+            "type": "note",
+            "text": "导出文件内嵌证据清单与生成时间，保证数字可回溯；原型不真正生成文件。",
+            "kind": "RULE",
+            "code": "EXPORT-LINEAGE"
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "导出固化证据清单"
+      ]
+    },
+    "viewmodel": {
+      "exports": [
+        "{report,format,scope,state,evidence_count}"
+      ]
+    },
+    "binding": {
+      "export": "CODEX_VERIFY (report_export/report_engine = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

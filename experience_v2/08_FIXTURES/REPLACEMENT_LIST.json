@@ -1,0 +1,764 @@
+{
+ "$schema": "lumenis.design/replacement-list-v2.5",
+ "rule": "Every DESIGN_ONLY value must be replaced by a confirmed backend binding before production; fixture never ships as truth.",
+ "provenance_marker": "data-source=prototype applied at screen mount (assets/app.js)",
+ "count": 54,
+ "items": [
+  {
+   "replace_id": "BACKEND-GAP-001",
+   "screen": "ACC-01",
+   "field": "auth",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-002",
+   "screen": "ACC-02",
+   "field": "subjects",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-003",
+   "screen": "ACC-03",
+   "field": "launch",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-004",
+   "screen": "ACC-04",
+   "field": "guard",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-005",
+   "screen": "CTH-01",
+   "field": "kpis",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-006",
+   "screen": "CTH-01",
+   "field": "events",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-007",
+   "screen": "CTH-01",
+   "field": "insight",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-008",
+   "screen": "CTH-02",
+   "field": "brands",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-009",
+   "screen": "CTH-03",
+   "field": "stream",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-010",
+   "screen": "CTH-04",
+   "field": "graph",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-011",
+   "screen": "CTH-05",
+   "field": "calendar",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-012",
+   "screen": "CTH-06",
+   "field": "items",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-013",
+   "screen": "CTH-07",
+   "field": "trend",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-014",
+   "screen": "CTH-08",
+   "field": "cases",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-015",
+   "screen": "CTH-09",
+   "field": "risk",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-016",
+   "screen": "CTH-09",
+   "field": "decision",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-017",
+   "screen": "CTH-10",
+   "field": "report",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-018",
+   "screen": "BMP-01",
+   "field": "all",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-019",
+   "screen": "BMP-02",
+   "field": "brands",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-020",
+   "screen": "BMP-03",
+   "field": "intel",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-021",
+   "screen": "BMP-04",
+   "field": "channels",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-022",
+   "screen": "BMP-05",
+   "field": "creators",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-023",
+   "screen": "BMP-06",
+   "field": "assets",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-024",
+   "screen": "BMP-07",
+   "field": "campaign",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-025",
+   "screen": "BMP-08",
+   "field": "podcast",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-026",
+   "screen": "BMP-09",
+   "field": "eval",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-027",
+   "screen": "BMP-10",
+   "field": "risk",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-028",
+   "screen": "BMP-11",
+   "field": "benchmark",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-029",
+   "screen": "AI-01",
+   "field": "composer",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-030",
+   "screen": "AI-01",
+   "field": "providers",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-031",
+   "screen": "AI-02",
+   "field": "task_orchestration",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-032",
+   "screen": "AI-03",
+   "field": "thread",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-033",
+   "screen": "AI-03",
+   "field": "evidence_jump",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-034",
+   "screen": "AI-04",
+   "field": "registry",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-035",
+   "screen": "AI-05",
+   "field": "status",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-036",
+   "screen": "SYS-01",
+   "field": "health",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-037",
+   "screen": "SYS-02",
+   "field": "collectors",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-038",
+   "screen": "SYS-03",
+   "field": "db",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-039",
+   "screen": "SYS-04",
+   "field": "perm",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-040",
+   "screen": "SYS-05",
+   "field": "prefs",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-041",
+   "screen": "SYS-06",
+   "field": "browser",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-042",
+   "screen": "SYS-07",
+   "field": "acceptance",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-043",
+   "screen": "SYS-08",
+   "field": "logs",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-044",
+   "screen": "SH-01",
+   "field": "studio",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-045",
+   "screen": "SH-01",
+   "field": "pattern_retrieval",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-046",
+   "screen": "SH-01",
+   "field": "fact_wall",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-047",
+   "screen": "SH-01",
+   "field": "publish",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-048",
+   "screen": "SH-01",
+   "field": "ai_thread",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-049",
+   "screen": "SH-01",
+   "field": "capability_status",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-050",
+   "screen": "SH-02",
+   "field": "library",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-051",
+   "screen": "SH-03",
+   "field": "canonical",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-052",
+   "screen": "SH-04",
+   "field": "export",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-053",
+   "screen": "SH-05",
+   "field": "assets",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  },
+  {
+   "replace_id": "BACKEND-GAP-054",
+   "screen": "SH-06",
+   "field": "tasks",
+   "current": "DESIGN_ONLY prototype fixture (app.js marks each screen root data-source=prototype)",
+   "required_backend": {
+    "api": "UNKNOWN",
+    "permission": "UNKNOWN",
+    "evidence": "UNKNOWN"
+   },
+   "frontend_contract": "keep section type/field names; replace value only",
+   "owner": "CODEX",
+   "do_not": "do not ship fixture as real data; do not invent endpoint; UNKNOWN stays UNKNOWN until confirmed"
+  }
+ ]
+}

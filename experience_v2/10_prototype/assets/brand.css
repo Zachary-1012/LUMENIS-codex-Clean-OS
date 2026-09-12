@@ -1,0 +1,63 @@
+/* ============================================================================
+   LUMENIS V2.5 — Brand mark / lockups / launch (Point·Axis·Boundary)
+   Metal monochrome via currentColor; the only chroma is the single icy Point.
+   ========================================================================== */
+.lum-brand{display:inline-flex;align-items:center;gap:11px;line-height:1;color:var(--lum-text)}
+.lum-brand-mark{height:34px;width:auto;flex:0 0 auto;overflow:visible}
+.lum-brand-mark .lum-brand-axis{opacity:.2}
+.lum-brand-mark .lum-brand-boundary-inner{opacity:.34}
+.lum-brand-mark .lum-brand-boundary-outer{opacity:.92}
+.lum-brand-mark .lum-brand-core{opacity:.85}
+.lum-brand-mark .lum-brand-point{fill:var(--lum-c-icy-500)}
+.lum-brand__txt{display:flex;flex-direction:column;gap:2px}
+.lum-brand__cjk{font-family:var(--lum-font-display);font-size:19px;font-weight:580;letter-spacing:.04em;line-height:1}
+.lum-brand__lat{font-family:var(--lum-font-mono);font-size:9px;letter-spacing:.42em;text-transform:uppercase;color:var(--lum-text-3);padding-left:2px}
+.lum-brand--symbol .lum-brand-mark{height:inherit}
+.lum-brand--sm .lum-brand-mark{height:22px}.lum-brand--sm .lum-brand__cjk{font-size:15px}.lum-brand--sm{gap:8px}
+.lum-brand--lg .lum-brand-mark{height:56px}.lum-brand--lg .lum-brand__cjk{font-size:30px}.lum-brand--lg .lum-brand__lat{font-size:11px;letter-spacing:.5em}
+
+/* small-size legibility: drop the inner stratum under 22px (Brief §5: 24/32/64) */
+@media (max-width:600px){ .lum-brand-mark .lum-brand-boundary-inner{opacity:.28} }
+
+/* ============================ LAUNCH ============================ */
+/* Cold-start: 点→滴→海→世界→收束→定格 (2.1s full / .is-short 0.8s).
+   Pure CSS/SVG, GPU transform/opacity only; reduced-motion → static mark. */
+.lum-launch{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;
+  background:var(--lum-bg);overflow:hidden}
+.lum-launch__stage{position:relative;display:grid;place-items:center;width:min(320px,72vw)}
+.lum-launch__mark{height:84px;color:var(--lum-text);opacity:0;transform:scale(.82)}
+.lum-launch__mark svg{height:100%;width:auto;overflow:visible}
+/* the falling drop = the icy Point travelling down the axis */
+.lum-launch__drop{position:absolute;top:6%;width:7px;height:7px;border-radius:50%;
+  background:var(--lum-c-icy-500);box-shadow:0 0 14px 2px color-mix(in srgb,var(--lum-c-icy-500) 55%,transparent);opacity:0}
+/* the sea/horizon that expands from the contact point, then withdraws (Return) */
+.lum-launch__sea{position:absolute;left:50%;top:62%;height:1px;width:0;transform:translateX(-50%);
+  background:linear-gradient(90deg,transparent,var(--lum-text-3) 18%,var(--lum-text-3) 82%,transparent);opacity:0}
+.lum-launch__word{position:absolute;top:calc(50% + 64px);display:flex;flex-direction:column;align-items:center;gap:6px;opacity:0}
+.lum-launch__word .cjk{font-family:var(--lum-font-display);font-size:30px;font-weight:580;letter-spacing:.12em;color:var(--lum-text)}
+.lum-launch__word .lat{font-family:var(--lum-font-mono);font-size:10px;letter-spacing:.56em;color:var(--lum-text-3);padding-left:.56em}
+
+/* ---- FULL 2.1s timeline ---- */
+.lum-launch:not(.is-short){animation:lum-launch-bg 2.3s var(--lum-ease-standard) forwards}
+.lum-launch:not(.is-short) .lum-launch__drop{animation:lum-drop 0.72s cubic-bezier(.45,0,.7,1) .10s forwards}
+.lum-launch:not(.is-short) .lum-launch__sea{animation:lum-sea 1.06s var(--lum-ease-standard) .72s forwards}
+.lum-launch:not(.is-short) .lum-launch__mark{animation:lum-mark-settle 0.62s var(--lum-ease-emphasized) 1.46s forwards}
+.lum-launch:not(.is-short) .lum-launch__word{animation:lum-word-in .5s ease-out 1.72s forwards}
+@keyframes lum-drop{0%{opacity:0;transform:translateY(-30px) scale(.6)}15%{opacity:1}100%{opacity:0;transform:translateY(150px) scale(1)}}
+@keyframes lum-sea{0%{width:0;opacity:0}30%{opacity:.85;width:min(260px,64vw)}55%{width:min(300px,72vw);opacity:.7}100%{width:0;opacity:0}}
+@keyframes lum-mark-settle{0%{opacity:0;transform:scale(.86)}60%{opacity:1;transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
+@keyframes lum-word-in{to{opacity:1}}
+@keyframes lum-launch-bg{0%,88%{opacity:1}100%{opacity:0;visibility:hidden}}
+
+/* ---- SHORT 0.8s (re-entry / light start): mark settles only ---- */
+.lum-launch.is-short{animation:lum-launch-bg .9s var(--lum-ease-standard) forwards}
+.lum-launch.is-short .lum-launch__drop,.lum-launch.is-short .lum-launch__sea{display:none}
+.lum-launch.is-short .lum-launch__mark{animation:lum-mark-settle .4s var(--lum-ease-emphasized) .04s forwards}
+.lum-launch.is-short .lum-launch__word{animation:lum-word-in .34s ease-out .2s forwards}
+
+@media (prefers-reduced-motion:reduce){
+  .lum-launch{animation:none!important}
+  .lum-launch__drop,.lum-launch__sea{display:none}
+  .lum-launch__mark,.lum-launch__word{opacity:1;transform:none;animation:none}
+  .lum-launch{animation:lum-launch-bg .3s ease .35s forwards}
+}

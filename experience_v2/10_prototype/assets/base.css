@@ -1,0 +1,155 @@
+/* ============================================================================
+   LUMENIS Experience V2.5 — Base / reset / typography / layout primitives
+   序境 · "the field recedes, the evidence speaks."
+   Namespace lum-* · scoped under .lum-app
+   ── De-template principles applied here ──
+   · No repeating blueprint grid, no stacked halo washes — one calm field.
+   · Depth from the surface ladder + hairline + whitespace, never card shadows.
+   · Editorial serif masthead (Fraunces / 宋体) over an instrument sans (Geist).
+   · Every decorative rule earns its place or is removed.
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box}
+
+/* ---------- the field (Lumen Field): calm, monochrome, one soft top-light ---------- */
+.lum-app{
+  font-family:var(--lum-font-sans);font-size:var(--lum-fs-md);line-height:var(--lum-lh-normal);
+  color:var(--lum-text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
+  font-feature-settings:"ss01" 1,"cv11" 1;
+  font-optical-sizing:auto;
+  position:relative;min-height:100vh;overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 50% -12%,var(--lum-bg-ambient-1),transparent 60%),
+    radial-gradient(90% 70% at 108% 108%,var(--lum-bg-ambient-2),transparent 62%),
+    var(--lum-bg);
+}
+/* whisper of film grain — material, not a grid; static & non-interactive */
+.lum-app::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.028;
+  background-image:var(--lum-grain);background-size:180px 180px;mix-blend-mode:multiply}
+.lum-app[data-theme="dark"]::after{opacity:.045;mix-blend-mode:screen}
+.lum-app > *{position:relative;z-index:2}
+.lum-app button{font-family:inherit;color:inherit}
+
+/* ---------- type architecture ---------- */
+.lum-app h1,.lum-app h2{font-family:var(--lum-font-display);font-weight:560;letter-spacing:var(--lum-track-tight);
+  font-optical-sizing:auto}
+.lum-app h3,.lum-app h4{font-weight:var(--lum-fw-sb);letter-spacing:-.014em}
+.lum-app h1,.lum-app h2,.lum-app h3,.lum-app h4{margin:0;line-height:var(--lum-lh-tight);text-wrap:balance}
+.lum-app p{margin:0}
+.lum-app a{color:inherit;text-decoration:none}
+.lum-app ul{margin:0;padding:0;list-style:none}
+.lum-app ::selection{background:rgba(79,196,232,.22);color:inherit}
+.lum-app[data-theme="dark"] ::selection{background:rgba(111,214,242,.26);color:#fff}
+
+/* ---------- scrollbars (quiet metal) ---------- */
+.lum-app *{scrollbar-width:thin;scrollbar-color:var(--lum-c-slate-300,transparent)}
+.lum-app ::-webkit-scrollbar{width:10px;height:10px}
+.lum-app ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--lum-c-slate-400) 55%,transparent);
+  border:3px solid transparent;border-radius:999px;background-clip:content-box}
+.lum-app ::-webkit-scrollbar-thumb:hover{background:var(--lum-c-slate-400);background-clip:content-box;border:3px solid transparent}
+
+/* ---------- focus (a11y, visible) ---------- */
+.lum-app :focus-visible{outline:2px solid var(--lum-c-icy-500);outline-offset:2px;border-radius:var(--lum-r-xs)}
+.lum-app .lum-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ---------- typography helpers ---------- */
+/* eyebrow = quiet mono overline; NO leading dash/rule (de-template) */
+.lum-eyebrow{font-family:var(--lum-font-mono);font-size:var(--lum-fs-2xs);font-weight:500;
+  letter-spacing:var(--lum-track-eyebrow);text-transform:uppercase;color:var(--lum-text-3);
+  display:inline-flex;align-items:center;gap:0}
+.lum-display{font-family:var(--lum-font-display);font-size:var(--lum-fs-5xl);font-weight:540;
+  letter-spacing:var(--lum-track-display);line-height:1.06}
+.lum-h1{font-family:var(--lum-font-display);font-size:var(--lum-fs-4xl);font-weight:550;letter-spacing:var(--lum-track-tight);line-height:var(--lum-lh-tight)}
+.lum-h2{font-family:var(--lum-font-display);font-size:var(--lum-fs-3xl);font-weight:560;letter-spacing:var(--lum-track-tight);line-height:var(--lum-lh-snug)}
+.lum-h3{font-size:var(--lum-fs-2xl);line-height:var(--lum-lh-snug)}
+.lum-h4{font-size:var(--lum-fs-lg);letter-spacing:-.01em}
+.lum-body{font-size:var(--lum-fs-md);color:var(--lum-text)}
+.lum-body-2{font-size:var(--lum-fs-sm);color:var(--lum-text-2);line-height:var(--lum-lh-snug)}
+.lum-caption{font-size:var(--lum-fs-xs);color:var(--lum-text-3)}
+.lum-mono{font-family:var(--lum-font-mono);font-feature-settings:"tnum" 1}
+.lum-num{font-family:var(--lum-font-num);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1}
+.lum-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lum-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- surfaces (surface ladder; shadow OR hairline, never both) ---------- */
+/* open artifact by default — a hairline on the field, no plastic box */
+.lum-card{background:var(--lum-surface-solid);border:1px solid var(--lum-line);border-radius:var(--lum-r-md);
+  box-shadow:none;position:relative;transition:border-color var(--lum-dur-fast),background var(--lum-dur-fast)}
+.lum-card:hover{border-color:var(--lum-line-strong)}
+/* raised nested artifact: S2 + a single 1px top catch-light (Linear pixel-precision) */
+.lum-card-solid{background:var(--lum-surface-raised);border:1px solid var(--lum-line);border-radius:var(--lum-r-sm);
+  box-shadow:var(--lum-edge-hi)}
+.lum-card-pad{padding:var(--lum-sp-5)}
+.lum-softglass{background:var(--lum-glass-bg);border:1px solid var(--lum-glass-line);border-radius:var(--lum-r-lg);
+  box-shadow:var(--lum-glass-sh);backdrop-filter:blur(var(--lum-glass-blur)) saturate(var(--lum-glass-saturate));
+  -webkit-backdrop-filter:blur(var(--lum-glass-blur)) saturate(var(--lum-glass-saturate))}
+.lum-hairline{border:1px solid var(--lum-line)}
+.lum-divider{height:1px;background:var(--lum-line);border:0;margin:var(--lum-sp-4) 0}
+
+/* ---------- layout primitives ---------- */
+.lum-row{display:flex;align-items:center;gap:var(--lum-sp-3)}
+.lum-row-between{display:flex;align-items:center;justify-content:space-between;gap:var(--lum-sp-3)}
+.lum-col{display:flex;flex-direction:column;gap:var(--lum-sp-3)}
+.lum-wrap{display:flex;flex-wrap:wrap;gap:var(--lum-sp-2)}
+.lum-grid{display:grid;gap:var(--lum-sp-4)}
+.lum-spacer{flex:1 1 auto}
+.lum-grow{flex:1 1 auto;min-width:0}
+.lum-page{padding:var(--lum-page-pad);max-width:var(--lum-content-max);margin:0 auto;width:100%;
+  display:flex;flex-direction:column;gap:var(--lum-editorial-gap);position:relative}
+/* the 序轴 Lumen Axis — ONE whisper rule the wide page hangs from (kept as DNA, not a grid) */
+@media (min-width:1025px){
+  .lum-page{padding-bottom:var(--lum-sp-12);padding-left:calc(var(--lum-page-pad) + 24px)}
+  .lum-page::before{content:"";position:absolute;left:var(--lum-page-pad);top:var(--lum-page-pad);bottom:var(--lum-sp-10);
+    width:1px;background:var(--lum-line-strong);opacity:var(--lum-axis-strength,.22)}
+}
+.lum-shell[data-chrome="none"] .lum-page{padding-left:var(--lum-page-pad)}
+.lum-shell[data-chrome="none"] .lum-page::before{display:none}
+.lum-stack-2{display:flex;flex-direction:column;gap:var(--lum-sp-2)}
+.lum-stack-4{display:flex;flex-direction:column;gap:var(--lum-sp-4)}
+.lum-stack-6{display:flex;flex-direction:column;gap:var(--lum-sp-6)}
+
+/* section heading — editorial, hairline recedes */
+.lum-section-head{display:flex;align-items:baseline;gap:var(--lum-sp-3);margin-bottom:var(--lum-sp-4)}
+.lum-section-head .lum-eyebrow{flex-shrink:0}
+.lum-section-head h2,.lum-section-head h3{margin:0;font-family:var(--lum-font-display);font-weight:560;letter-spacing:var(--lum-track-tight)}
+.lum-section-head::after{content:"";flex:1;height:1px;background:var(--lum-line);opacity:.5;align-self:center}
+
+/* editorial page masthead: serif title over a single closing baseline */
+.lum-page-head{padding-bottom:var(--lum-sp-5);border-bottom:1px solid var(--lum-line);position:relative}
+.lum-page-head::after{content:"";position:absolute;left:0;bottom:-1px;width:64px;height:1.5px;background:var(--lum-lumen-line);opacity:.85}
+.lum-page-head .lum-display{letter-spacing:var(--lum-track-display)}
+.lum-page-head .lum-body-2{max-width:74ch;color:var(--lum-text-2);line-height:var(--lum-lh-relaxed)}
+
+/* ---------- badges / chips / tags ---------- */
+.lum-chip{display:inline-flex;align-items:center;gap:6px;height:25px;padding:0 10px;border-radius:var(--lum-r-pill);
+  font-size:var(--lum-fs-xs);font-weight:var(--lum-fw-med);background:transparent;color:var(--lum-text-2);
+  border:1px solid var(--lum-line);white-space:nowrap;transition:border-color var(--lum-dur-fast),color var(--lum-dur-fast)}
+.lum-chip:hover{border-color:var(--lum-line-strong);color:var(--lum-text)}
+.lum-chip .lum-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.lum-badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:var(--lum-r-xs);
+  font-size:var(--lum-fs-2xs);font-weight:var(--lum-fw-sb);letter-spacing:.03em;line-height:1.5}
+.lum-badge-success{background:var(--lum-c-success-bg);color:var(--lum-c-success)}
+.lum-badge-warning{background:var(--lum-c-warning-bg);color:var(--lum-c-warning)}
+.lum-badge-danger{background:var(--lum-c-danger-bg);color:var(--lum-c-danger)}
+.lum-badge-info{background:var(--lum-c-info-bg);color:var(--lum-c-info)}
+.lum-badge-neutral{background:var(--lum-c-neutral-bg);color:var(--lum-text-2)}
+.lum-badge-brand{background:var(--lum-c-brand-100);color:var(--lum-c-brand-600)}
+.lum-app[data-theme="dark"] .lum-badge-brand{background:var(--lum-c-brand-200);color:var(--lum-c-brand-600)}
+
+/* ---------- skeleton ---------- */
+.lum-skeleton{position:relative;overflow:hidden;background:var(--lum-c-slate-100);border-radius:var(--lum-r-sm)}
+.lum-app[data-theme="dark"] .lum-skeleton{background:var(--lum-c-slate-800)}
+.lum-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:lum-shimmer 1.4s infinite}
+@keyframes lum-shimmer{100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){.lum-skeleton::after{animation:none}}
+
+/* ---------- utilities ---------- */
+.lum-mt-2{margin-top:var(--lum-sp-2)}.lum-mt-4{margin-top:var(--lum-sp-4)}.lum-mt-6{margin-top:var(--lum-sp-6)}
+.lum-mb-2{margin-bottom:var(--lum-sp-2)}.lum-mb-4{margin-bottom:var(--lum-sp-4)}
+.lum-text-2{color:var(--lum-text-2)}.lum-text-3{color:var(--lum-text-3)}
+.lum-fw-sb{font-weight:var(--lum-fw-sb)}.lum-fw-bold{font-weight:var(--lum-fw-bold)}
+.lum-ta-r{text-align:right}.lum-ta-c{text-align:center}
+.lum-hide{display:none!important}
+.lum-relative{position:relative}
+.lum-enter{opacity:0;transform:translateY(8px)}
+.lum-enter.is-in{opacity:1;transform:none;transition:opacity var(--lum-dur-base) var(--lum-ease-standard),transform var(--lum-dur-base) var(--lum-ease-standard)}

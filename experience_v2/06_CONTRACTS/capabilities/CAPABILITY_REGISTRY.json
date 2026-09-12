@@ -1,0 +1,588 @@
+{
+  "screens": {
+    "ACC-01": {
+      "domain": "ACCOUNT",
+      "patterns": [
+        "PAT-AI-01"
+      ],
+      "motions": [
+        "M01",
+        "M02"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "ACC-02": {
+      "domain": "ACCOUNT",
+      "patterns": [
+        "PAT-NAV-01"
+      ],
+      "motions": [
+        "M01",
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "ACC-03": {
+      "domain": "ACCOUNT",
+      "patterns": [
+        "PAT-NAV-02",
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M01",
+        "M08"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "ACC-04": {
+      "domain": "ACCOUNT",
+      "patterns": [],
+      "motions": [
+        "M01"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-01": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-DATA-01",
+        "PAT-EVD-01",
+        "PAT-NAV-01"
+      ],
+      "motions": [
+        "M01",
+        "M03",
+        "M08",
+        "M14"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-02": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-DATA-01",
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M01",
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-03": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M06",
+        "M14"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-04": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-EVD-01"
+      ],
+      "motions": [
+        "M08",
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-05": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-06": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-EVD-01",
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M07",
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-07": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M03",
+        "M06"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-08": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-EVD-01",
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M07",
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-09": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-DATA-01",
+        "PAT-EVD-01"
+      ],
+      "motions": [
+        "M03",
+        "M13"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "CTH-10": {
+      "domain": "CTH",
+      "patterns": [
+        "PAT-EVD-01",
+        "PAT-UPLOAD-01"
+      ],
+      "motions": [
+        "M11",
+        "M15"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-01": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-DATA-01",
+        "PAT-EVD-01"
+      ],
+      "motions": [
+        "M01",
+        "M03",
+        "M08"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-02": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-FILTER-01",
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-03": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-DATA-01",
+        "PAT-EVD-01"
+      ],
+      "motions": [
+        "M03",
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-04": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M03",
+        "M06"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-05": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-DATA-01",
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-06": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-UPLOAD-01",
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M05",
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-07": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-DATA-01",
+        "PAT-UPLOAD-01"
+      ],
+      "motions": [
+        "M03",
+        "M05"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-08": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-AI-01",
+        "PAT-UPLOAD-01"
+      ],
+      "motions": [
+        "M05",
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-09": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-EVD-01",
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-10": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-EVD-01"
+      ],
+      "motions": [
+        "M11",
+        "M13"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "BMP-11": {
+      "domain": "BMP",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M03",
+        "M06"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "AI-01": {
+      "domain": "AI",
+      "patterns": [
+        "PAT-AI-01",
+        "PAT-AI-02"
+      ],
+      "motions": [
+        "M02",
+        "M05",
+        "M09",
+        "M12"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "AI-02": {
+      "domain": "AI",
+      "patterns": [
+        "PAT-AI-02"
+      ],
+      "motions": [
+        "M05",
+        "M09",
+        "M10"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "AI-03": {
+      "domain": "AI",
+      "patterns": [
+        "PAT-AI-01",
+        "PAT-EVD-01"
+      ],
+      "motions": [
+        "M11",
+        "M13"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "AI-04": {
+      "domain": "AI",
+      "patterns": [
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M01",
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "AI-05": {
+      "domain": "AI",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M06"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-01": {
+      "domain": "SYSTEM",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M06",
+        "M14"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-02": {
+      "domain": "SYSTEM",
+      "patterns": [
+        "PAT-UPLOAD-01",
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M05"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-03": {
+      "domain": "SYSTEM",
+      "patterns": [
+        "PAT-EVD-01"
+      ],
+      "motions": [
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-04": {
+      "domain": "SYSTEM",
+      "patterns": [
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M07"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-05": {
+      "domain": "SYSTEM",
+      "patterns": [],
+      "motions": [
+        "M01"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-06": {
+      "domain": "SYSTEM",
+      "patterns": [
+        "PAT-AI-01"
+      ],
+      "motions": [
+        "M05"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-07": {
+      "domain": "SYSTEM",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M03"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SYS-08": {
+      "domain": "SYSTEM",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M06"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SH-01": {
+      "domain": "SHARED",
+      "patterns": [
+        "PAT-AI-01",
+        "PAT-AI-02",
+        "PAT-UPLOAD-01",
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M05",
+        "M06",
+        "M09",
+        "M12",
+        "M15"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SH-02": {
+      "domain": "SHARED",
+      "patterns": [
+        "PAT-EVD-01",
+        "PAT-FILTER-01"
+      ],
+      "motions": [
+        "M07",
+        "M11"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SH-03": {
+      "domain": "SHARED",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M03",
+        "M06"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SH-04": {
+      "domain": "SHARED",
+      "patterns": [
+        "PAT-UPLOAD-01"
+      ],
+      "motions": [
+        "M15"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SH-05": {
+      "domain": "SHARED",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M03"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    },
+    "SH-06": {
+      "domain": "SHARED",
+      "patterns": [
+        "PAT-DATA-01"
+      ],
+      "motions": [
+        "M01"
+      ],
+      "capability_status": "PARTIAL",
+      "frontend": "READY_DESIGN_ONLY",
+      "backend": "CODEX_BINDING_REQUIRED"
+    }
+  }
+}
