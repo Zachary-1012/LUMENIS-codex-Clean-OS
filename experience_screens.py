@@ -894,6 +894,222 @@ def _build_bmp10() -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# 第三批传播：品牌市场总览 / 多品牌目录 / Campaign 配额 / 评估 / 学习资产 / 本地设置
+# 全部来自真实只读源；无数据走 EMPTY，纯前端偏好显式标注 INTENTIONALLY_NOT_APPLICABLE。
+# ---------------------------------------------------------------------------
+def _risk_items(notes: List[Dict[str, Any]], limit: int = 5) -> List[Dict[str, Any]]:
+    out = []
+    for n in notes[:limit]:
+        if not isinstance(n, dict):
+            continue
+        rs = n.get("risk_score")
+        out.append({
+            "level": _LV.get(n.get("risk_level", "low"), "low"),
+            "score": rs if isinstance(rs, (int, float)) and rs else None,
+            "title": (n.get("title") or "风险记录")[:40],
+            "desc": (n.get("content") or "")[:90],
+            "evidence": f"NOTE:{n.get('note_id') or n.get('id') or 'UNKNOWN'}",
+        })
+    return out
+
+
+def _build_bmp01() -> Dict[str, Any]:
+    """品牌市场总览（editorial）：与 CTH 同源只读口径，编辑式呈现品牌市场全局。"""
+    import database as db
+    import daily_report
+
+    stats = _safe(db.get_stats, default={})
+    stats = stats if isinstance(stats, dict) and not _is_err(stats) else {}
+    summ = _safe(daily_report.generate_today_summary, today_str(), default={})
+    ri = summ.get("risk_index") if isinstance(summ, dict) and not _is_err(summ) else None
+    bh = summ.get("brand_health_score") if isinstance(summ, dict) and not _is_err(summ) else None
+
+    def _has(k: str) -> str:
+        return STATE_READY if k in stats else STATE_NOT_COLLECTED
+
+    kpis = [
+        metric("bmp01.total", "总声量", value=_int_or_none(stats.get("total")), state=_has("total"),
+               icon="trend", source="database.get_stats"),
+        metric("bmp01.neg", "负面声量", value=_int_or_none(stats.get("negative")), state=_has("negative"),
+               icon="risk", source="database.get_stats"),
+        metric("bmp01.high", "高风险", value=_int_or_none(stats.get("high_risk")), state=_has("high_risk"),
+               icon="risk", source="database.get_stats"),
+        metric("bmp01.eng", "总互动", value=_int_or_none(stats.get("total_engagements")),
+               state=_has("total_engagements"), icon="trend", source="database.get_stats"),
+        metric("bmp01.ri", "风险指数", value=ri, decimals=1,
+               state=STATE_READY if ri is not None else STATE_EMPTY, icon="risk",
+               source="daily_report.generate_today_summary", evidence_id="MET-RISK-01"),
+        metric("bmp01.health", "品牌健康分", value=bh, decimals=1,
+               state=STATE_READY if bh is not None else STATE_EMPTY, icon="trend",
+               source="daily_report.generate_today_summary", evidence_id="MET-RISK-02"),
+    ]
+    labels: List[str] = []
+    totals, negs = [], []
+    today = _dt.date.today()
+    for back in range(13, -1, -1):
+        d = today - _dt.timedelta(days=back)
+        st = _safe(db.get_stats_by_date_range, d.strftime("%Y-%m-%d"), d.strftime("%Y-%m-%d"), default={})
+        labels.append(d.strftime("%m-%d"))
+        totals.append(int(st.get("total", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
+        negs.append(int(st.get("negative", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
+    chart = section("chart", STATE_READY, kind="line", title="近14日声量与负面", sub="按天现算",
+                    labels=labels,
+                    series=[{"name": "总声量", "data": totals, "color": "var(--lum-text-2,#8a8f98)"},
+                            {"name": "负面", "data": negs, "color": "var(--lum-c-danger,#c0563f)"}],
+                    legend=[{"label": "总声量", "color": "var(--lum-text-2,#8a8f98)"},
+                            {"label": "负面", "color": "var(--lum-c-danger,#c0563f)"}])
+    ev = _curated(_safe(db.get_events_curated, 6, default=[]))
+    rn = _safe(db.get_high_risk_notes, 6, default=[])
+    rn = rn if isinstance(rn, list) else []
+    ev_sec = section("events", STATE_READY if ev else STATE_EMPTY, title="重点事件", items=_events_items(ev))
+    risk_sec = section("risks", STATE_READY if rn else STATE_EMPTY, items=_risk_items(rn))
+    sections = [_head("BMP-01"), section("kpis", STATE_READY, items=kpis), chart, ev_sec, risk_sec]
+    return _envelope("BMP-01", sections, truth={"risk_index": ri, "brand_health_score": bh})
+
+
+def _build_bmp02() -> Dict[str, Any]:
+    """品牌中心 / 多品牌与竞品：真实零售目录业态分布（web_monitor_v570 策展目录）。"""
+    import web_monitor_v570 as wm
+
+    d = _safe(wm.get_brand_directory, default={})
+    d = d if isinstance(d, dict) and not _is_err(d) else {}
+    cats = d.get("categories")
+    cats = cats if isinstance(cats, dict) else {}
+    total = _int_or_none(d.get("total_brands"))
+    rows = [{"业态类目": str(k), "品牌数": _int_or_none(v)} for k, v in cats.items()]
+    rows.sort(key=lambda r: -(r["品牌数"] or 0))
+    kpis = [
+        metric("bmp02.total", "目录品牌总数", value=total,
+               state=STATE_READY if total is not None else STATE_EMPTY, icon="collection",
+               source="web_monitor_v570.get_brand_directory"),
+        metric("bmp02.cats", "业态类目数", value=len(cats), state=STATE_READY,
+               icon="collection", source="web_monitor_v570.get_brand_directory"),
+    ]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="零售目录业态分布（真实）",
+                  columns=[{"label": "业态类目", "key": "业态类目"},
+                           {"label": "品牌数", "key": "品牌数", "numeric": True}], rows=rows)
+    src = d.get("source") or "—"
+    upd = d.get("updated_at") or "—"
+    note = section("note", STATE_READY, kind="SOURCE",
+                   text=f"策展零售目录更新于 {upd}；来源：{src}。竞品对标（benchmark）仍需外部数据源，"
+                        "当前不造假、不补默认值。")
+    sections = [_head("BMP-02"), section("kpis", STATE_READY, items=kpis), tbl, note]
+    return _envelope("BMP-02", sections, truth={"total_brands": total, "updated_at": upd})
+
+
+def _build_bmp07() -> Dict[str, Any]:
+    """话题活动 Campaign：真实采集配额/冷却运行态；活动列表写入侧无只读表，诚实空态。"""
+    import topic_campaign as tc
+
+    q = _safe(tc.get_campaign_rate_status, default={})
+    q = q if isinstance(q, dict) and not _is_err(q) else {}
+    kpis = [
+        metric("bmp07.ran", "今日已运行", value=_int_or_none(q.get("today_runs")),
+               state=STATE_READY if "today_runs" in q else STATE_NOT_COLLECTED, icon="runtime",
+               source="topic_campaign.get_campaign_rate_status"),
+        metric("bmp07.max", "每日上限", value=_int_or_none(q.get("max_daily_runs")),
+               state=STATE_READY if "max_daily_runs" in q else STATE_NOT_COLLECTED, icon="runtime",
+               source="topic_campaign.get_campaign_rate_status"),
+        metric("bmp07.remain", "今日剩余", value=_int_or_none(q.get("remaining_today")),
+               state=STATE_READY if "remaining_today" in q else STATE_NOT_COLLECTED, icon="runtime",
+               source="topic_campaign.get_campaign_rate_status"),
+        metric("bmp07.cooldown", "冷却剩余(分)", value=_int_or_none(q.get("cooldown_remaining_minutes")),
+               state=STATE_READY if "cooldown_remaining_minutes" in q else STATE_NOT_COLLECTED,
+               icon="runtime", source="topic_campaign.get_campaign_rate_status"),
+    ]
+    note = section("note", STATE_READY, kind="SCOPE",
+                   text="此处仅呈现真实的活动采集配额与冷却运行态。活动创建/编排属写入侧，"
+                        "当前无只读活动表，活动列表保持空态，待后端活动只读源就绪后绑定。")
+    sections = [_head("BMP-07"), section("kpis", STATE_READY, items=kpis), note]
+    return _envelope("BMP-07", sections, truth={"quota": q})
+
+
+def _build_bmp09() -> Dict[str, Any]:
+    """品牌报告与评估：evaluation_recorder 真实评估汇总 + 记录（空库诚实空态）。"""
+    import evaluation_recorder as er
+
+    s = _safe(er.get_evaluation_summary, default={})
+    s = s if isinstance(s, dict) and not _is_err(s) else {}
+    recs = _safe(er.get_evaluation_records, 100, default=[])
+    recs = recs if isinstance(recs, list) else []
+    counts = s.get("counts")
+    counts = counts if isinstance(counts, dict) else {}
+
+    def _c(k: str):
+        return _int_or_none(counts.get(k))
+
+    kpis = [
+        metric("bmp09.total", "评估记录总数", value=_int_or_none(s.get("total_records")),
+               state=STATE_READY if "total_records" in s else STATE_NOT_COLLECTED, icon="report",
+               source="evaluation_recorder.get_evaluation_summary"),
+        metric("bmp09.pass", "通过", value=_c("pass"), state=STATE_READY, icon="check",
+               source="evaluation_recorder.get_evaluation_summary"),
+        metric("bmp09.warn", "警示", value=_c("warn"), state=STATE_READY, icon="risk",
+               source="evaluation_recorder.get_evaluation_summary"),
+        metric("bmp09.fail", "失败", value=_c("fail"), state=STATE_READY, icon="risk",
+               source="evaluation_recorder.get_evaluation_summary"),
+    ]
+    crows = [{"评估状态": {"pass": "通过", "warn": "警示", "fail": "失败", "unknown": "未知"}.get(k, k),
+              "数量": _c(k)} for k in ("pass", "warn", "fail", "unknown")]
+    ctbl = section("table", STATE_READY, title="评估状态分布（真实）",
+                   columns=[{"label": "评估状态", "key": "评估状态"},
+                            {"label": "数量", "key": "数量", "numeric": True}], rows=crows)
+    rrows = [{"维度": str(r.get("dimension") or "—"), "指标": str(r.get("metric_id") or r.get("metric") or "—"),
+              "状态": str(r.get("status") or "—")} for r in recs[:30] if isinstance(r, dict)]
+    rtbl = section("table", STATE_READY if rrows else STATE_EMPTY, title="最近评估记录",
+                   columns=[{"label": "维度", "key": "维度"}, {"label": "指标", "key": "指标"},
+                            {"label": "状态", "key": "状态"}], rows=rrows)
+    gstatus = s.get("global_status")
+    note = section("note", STATE_READY, kind="STATUS",
+                   text=f"全局评估状态：{gstatus or '—'}（来自 evaluation_recorder，未产生评估记录前为 unknown，属真实空态）。")
+    sections = [_head("BMP-09"), section("kpis", STATE_READY, items=kpis), ctbl, rtbl, note]
+    return _envelope("BMP-09", sections, truth={"global_status": gstatus})
+
+
+def _build_sh05() -> Dict[str, Any]:
+    """学习与评估资产：learning_collector 真实学习历史（空库诚实空态）。"""
+    import learning_collector as lc
+
+    h = _safe(lc.get_learning_history, default={})
+    h = h if isinstance(h, dict) and not _is_err(h) else {}
+    items = h.get("learnings")
+    items = items if isinstance(items, list) else []
+    kpis = [
+        metric("sh05.count", "学习资产", value=len(items), state=STATE_READY, icon="collection",
+               source="learning_collector.get_learning_history"),
+    ]
+    rows = [{"标题": str(x.get("title") or x.get("summary") or "—")[:60],
+             "类型": str(x.get("type") or x.get("kind") or "—"),
+             "时间": str(x.get("created_at") or x.get("learned_at") or "—")}
+            for x in items[:40] if isinstance(x, dict)]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="学习历史（真实）",
+                  columns=[{"label": "标题", "key": "标题"}, {"label": "类型", "key": "类型"},
+                           {"label": "时间", "key": "时间"}], rows=rows)
+    note = section("note", STATE_EMPTY if not items else STATE_READY, kind="EMPTY-OK",
+                   text="学习资产由生产运行沉淀；当前无学习记录时显示空态，不生成示例/占位资产。")
+    sections = [_head("SH-05"), section("kpis", STATE_READY, items=kpis), tbl, note]
+    return _envelope("SH-05", sections, truth={"learning_count": len(items)})
+
+
+def _build_sys05() -> Dict[str, Any]:
+    """设置 / 外观 / 语言：纯前端本地偏好（localStorage），无后端数据源——显式 INTENTIONALLY_NOT_APPLICABLE。"""
+    form = section("form", STATE_READY, title="本地偏好（仅存于本浏览器 localStorage，不上传、无后端表）",
+                   fields=[
+                       {"label": "外观主题（黑银浅色 / 白银深色）", "type": "select",
+                        "opts": ["跟随系统", "浅色 · 黑银 SH", "深色 · 白银 AI"]},
+                       {"label": "显示语言", "type": "select", "opts": ["简体中文", "English", "한국어"]},
+                       {"label": "光学密度 Optical", "type": "select", "opts": ["LOW", "BALANCED", "HIGH"]},
+                       {"label": "减弱动态效果（无障碍）", "type": "select", "opts": ["跟随系统", "开启", "关闭"]},
+                   ])
+    note = section("note", STATE_READY, kind="INTENTIONALLY-NOT-APPLICABLE",
+                   code="FRONTEND_LOCAL_ONLY",
+                   text="本屏为前端本地偏好，不依赖后端/数据库，分类 INTENTIONALLY_NOT_APPLICABLE；"
+                        "不产生外部数据缺口，也不伪造任何后端状态。")
+    sections = [_head("SYS-05"), form, note]
+    return _envelope("SYS-05", sections, truth={"data_source": "localStorage", "backend_required": False})
+
+
+# ---------------------------------------------------------------------------
 # 注册表：一屏一 builder
 # ---------------------------------------------------------------------------
 SCREEN_BUILDERS = {
@@ -923,4 +1139,10 @@ SCREEN_BUILDERS = {
     "BMP-06": _build_bmp06,
     "BMP-08": _build_bmp08,
     "BMP-10": _build_bmp10,
+    "BMP-01": _build_bmp01,
+    "BMP-02": _build_bmp02,
+    "BMP-07": _build_bmp07,
+    "BMP-09": _build_bmp09,
+    "SH-05": _build_sh05,
+    "SYS-05": _build_sys05,
 }

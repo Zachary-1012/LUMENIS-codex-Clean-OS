@@ -164,7 +164,7 @@ def test_ai01_composer_present_and_no_cot_leak(isolated_client):
 # --------------------------- 未绑定屏诚实回退 ---------------------------
 def test_unbound_screen_keeps_prototype(isolated_client):
     cli, _ = isolated_client
-    j = cli.get("/api/experience/screen/BMP-01").get_json()
+    j = cli.get("/api/experience/screen/BMP-04").get_json()
     assert j["bound"] is False and j["sections"] is None
 
 
@@ -191,9 +191,9 @@ def test_ai_intent_validation(isolated_client):
 # --------------------------- P1 传播层（experience_screens） ---------------------------
 PROPAGATED = ["CTH-02", "CTH-03", "CTH-04", "CTH-05", "CTH-06", "CTH-07", "CTH-08",
               "CTH-09", "CTH-10", "AI-02", "AI-03", "AI-04", "AI-05",
-              "SYS-01", "SYS-02", "SYS-03", "SYS-04", "SYS-07", "SYS-08",
-              "SH-02", "SH-03", "SH-04", "SH-06",
-              "BMP-06", "BMP-08", "BMP-10"]
+              "SYS-01", "SYS-02", "SYS-03", "SYS-04", "SYS-05", "SYS-07", "SYS-08",
+              "SH-02", "SH-03", "SH-04", "SH-05", "SH-06",
+              "BMP-01", "BMP-02", "BMP-06", "BMP-07", "BMP-08", "BMP-09", "BMP-10"]
 
 
 def test_all_propagated_screens_bound_with_sections(isolated_client):
@@ -247,7 +247,7 @@ def test_ready_kpis_have_value_nonready_are_none(isolated_client):
 
 def test_unbound_classified_as_external_dependency(isolated_client):
     cli, _ = isolated_client
-    j = cli.get("/api/experience/screen/BMP-02").get_json()
+    j = cli.get("/api/experience/screen/BMP-03").get_json()
     assert j["bound"] is False
     assert j["classification"] == "BLOCKED_BY_EXTERNAL_DEPENDENCY"
 
@@ -302,6 +302,43 @@ def test_sys07_owasp_checks_real(isolated_client):
     j = cli.get("/api/experience/screen/SYS-07").get_json()
     sec = {s["type"]: s for s in j["sections"]}
     assert len(sec["table"]["rows"]) == 5  # ai_governance 启用 5 项 OWASP 防护
+
+
+# --------------------------- 第三批传播：总览/目录/配额/评估/学习/本地设置 ---------------------------
+def test_bmp02_brand_directory_real(isolated_client):
+    """BMP-02 多品牌目录：真实策展零售目录（194 品牌 / 13 业态），非伪造。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-02").get_json()
+    assert j["bound"] is True and j["truth"]["total_brands"] == 194
+    sec = {s["type"]: s for s in j["sections"]}
+    assert len(sec["table"]["rows"]) == 13
+
+
+def test_bmp07_campaign_quota_integer(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-07").get_json()
+    sec = {s["type"]: s for s in j["sections"]}
+    for m in sec["kpis"]["items"]:
+        assert isinstance(m["value"], int) and not isinstance(m["value"], bool)
+
+
+def test_bmp09_evaluation_status_distribution(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-09").get_json()
+    sec = {s["type"]: s for s in j["sections"]}
+    tables = sec.get("table") if isinstance(sec.get("table"), list) else [sec["table"]]
+    # 第一张表为 pass/warn/fail/unknown 四态
+    first = [t for t in j["sections"] if t["type"] == "table"][0]
+    assert len(first["rows"]) == 4
+
+
+def test_sys05_is_frontend_local_only(isolated_client):
+    """SYS-05 设置为纯前端本地偏好：无外部依赖、显式 backend_required=False。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/SYS-05").get_json()
+    assert j["bound"] is True and j["truth"]["backend_required"] is False
+    form = [s for s in j["sections"] if s["type"] == "form"][0]
+    assert len(form["fields"]) == 4
 
 
 def test_screen_meta_covers_44_screens():
