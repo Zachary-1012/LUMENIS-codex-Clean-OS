@@ -379,11 +379,22 @@ def _build_cth01() -> Dict[str, Any]:
         if isinstance(v, (list, tuple)):
             return f"items={len(v)}"
         return "NA" if v is None else str(v)
+    def _health_text(h):
+        if isinstance(h, dict):
+            st = h.get("state") or h.get("status")
+            msg = h.get("detail") or h.get("message")
+            parts = []
+            if st is not None:
+                parts.append(f"状态 {st}")
+            if msg:
+                parts.append(str(msg))
+            return "；".join(parts) if parts else "无状态"
+        return _scalar(h)
     runtime_items = [
         {"name": "舆情数据库", "state": "ok" if not stats_err else "offline",
          "detail": f"共 {stats.get('total') if isinstance(stats, dict) else 'NA'} 条"},
         {"name": "Canonical 指标", "state": "ok" if not canon_err else "offline",
-         "detail": ("采集健康：" + _scalar(canonical.get("collection_health"))) if not canon_err else "unavailable"},
+         "detail": ("采集健康：" + _health_text(canonical.get("collection_health"))) if not canon_err else "unavailable"},
         {"name": "证据存储", "state": "ok" if isinstance(evid, list) else "offline",
          "detail": f"近 {len(evid) if isinstance(evid, list) else 'NA'} 条样本"},
     ]
