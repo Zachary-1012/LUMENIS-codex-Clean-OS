@@ -191,7 +191,9 @@ def test_ai_intent_validation(isolated_client):
 # --------------------------- P1 传播层（experience_screens） ---------------------------
 PROPAGATED = ["CTH-02", "CTH-03", "CTH-04", "CTH-05", "CTH-06", "CTH-07", "CTH-08",
               "CTH-09", "CTH-10", "AI-02", "AI-03", "AI-04", "AI-05",
-              "SYS-01", "SYS-03", "SYS-04", "SH-03"]
+              "SYS-01", "SYS-02", "SYS-03", "SYS-04", "SYS-07", "SYS-08",
+              "SH-02", "SH-03", "SH-04", "SH-06",
+              "BMP-06", "BMP-08", "BMP-10"]
 
 
 def test_all_propagated_screens_bound_with_sections(isolated_client):
@@ -245,9 +247,61 @@ def test_ready_kpis_have_value_nonready_are_none(isolated_client):
 
 def test_unbound_classified_as_external_dependency(isolated_client):
     cli, _ = isolated_client
-    j = cli.get("/api/experience/screen/BMP-08").get_json()
+    j = cli.get("/api/experience/screen/BMP-02").get_json()
     assert j["bound"] is False
     assert j["classification"] == "BLOCKED_BY_EXTERNAL_DEPENDENCY"
+
+
+# --------------------------- 第二批传播：真实只读源回归 ---------------------------
+def test_sys02_collector_status_real_platforms(isolated_client):
+    """SYS-02 采集器：17 平台真实状态表；KPI 为整数；未连通如实 MISSING，不伪造 ACTIVE。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/SYS-02").get_json()
+    assert j["bound"] is True
+    sec = {s["type"]: s for s in j["sections"]}
+    tbl = sec["table"]
+    assert len(tbl["rows"]) == 17  # collector_status_api.PLATFORMS
+    for m in sec["kpis"]["items"]:
+        assert isinstance(m["value"], int) and not isinstance(m["value"], bool)
+    # 隔离环境无 cookie：ACTIVE 必须为 0，绝不造假
+    active = next(m for m in sec["kpis"]["items"] if "ACTIVE" in m["label"])
+    assert active["value"] == 0
+
+
+def test_sys08_logs_hide_absolute_path(isolated_client):
+    """SYS-08 日志：只显文件名，不暴露 log_dir 绝对路径。"""
+    import json
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/SYS-08").get_json()
+    assert j["bound"] is True
+    blob = json.dumps(j, ensure_ascii=False)
+    assert ":\\" not in blob and "/logs" not in blob
+
+
+def test_sh04_report_catalog_real(isolated_client):
+    """SH-04 报告目录：cth/zbmp 真实报告类型行，且标注导出 EFFECT 未造假下载。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/SH-04").get_json()
+    sec = {s["type"]: s for s in j["sections"]}
+    rows = sec["table"]["rows"]
+    assert len(rows) >= 10
+    assert {r["领域"] for r in rows} >= {"cth", "zbmp"}
+
+
+def test_bmp10_uses_curated_events_dict(isolated_client):
+    """BMP-10 必须正确解包 get_events_curated 的 {'featured':[...]}（回归把 dict 当 list 的缺陷）。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-10").get_json()
+    sec = {s["type"]: s for s in j["sections"]}
+    ev = sec["events"]
+    assert len(ev["items"]) == 1 and ev["items"][0]["evidence"].startswith("EV:")
+
+
+def test_sys07_owasp_checks_real(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/SYS-07").get_json()
+    sec = {s["type"]: s for s in j["sections"]}
+    assert len(sec["table"]["rows"]) == 5  # ai_governance 启用 5 项 OWASP 防护
 
 
 def test_screen_meta_covers_44_screens():

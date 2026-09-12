@@ -124,6 +124,14 @@ def _notes_table(title: str, notes: List[Dict[str, Any]], limit: int = 12,
                    columns=cols, rows=rows)
 
 
+def _curated(v: Any) -> List[Dict[str, Any]]:
+    """get_events_curated 返回 {'featured':[...],'generic_count','noise_count','total'}；取 featured 列表。"""
+    if isinstance(v, dict):
+        f = v.get("featured")
+        return f if isinstance(f, list) else []
+    return v if isinstance(v, list) else []
+
+
 def _events_items(events: List[Dict[str, Any]], limit: int = 6) -> List[Dict[str, Any]]:
     out = []
     for e in (events or [])[:limit]:
@@ -234,7 +242,7 @@ def _build_cth04() -> Dict[str, Any]:
     import database as db
 
     events = _safe(db.get_events_curated, 20, default=[])
-    items = _events_items(events if isinstance(events, list) else [])
+    items = _events_items(_curated(events))
     kpis = [
         metric("cth04.events", "已策展事件", value=len(items), state=STATE_READY,
                icon="event", source="database.get_events_curated"),
@@ -325,8 +333,8 @@ def _build_cth08() -> Dict[str, Any]:
     kpi = metric("cth08.cases", "高风险候选案例", value=len(risk), state=STATE_READY,
                  icon="risk", source="database.get_high_risk_notes")
     tbl = _notes_table("高风险案例（真实）", risk, 14)
-    ev = section("events", STATE_READY if events else STATE_EMPTY, title="已策展事件",
-                 items=_events_items(events if isinstance(events, list) else []))
+    ev = section("events", STATE_READY if _curated(events) else STATE_EMPTY, title="已策展事件",
+                 items=_events_items(_curated(events)))
     sections = [_head("CTH-08"), section("kpis", STATE_READY, items=[kpi]), tbl, ev]
     return _envelope("CTH-08", sections)
 
@@ -592,6 +600,299 @@ def _build_sh03() -> Dict[str, Any]:
     return _envelope("SH-03", sections, truth={"counts": counts})
 
 
+# ===========================================================================
+# 第二批传播：存在真实只读后端源的 System / Shared / BMP 屏（P1 增量）
+# 每个数值都来自真实只读函数；无数据走 EMPTY，外部未连通如实标状态，绝不造假。
+# ===========================================================================
+def _int_or_none(v: Any) -> Optional[int]:
+    return v if isinstance(v, int) and not isinstance(v, bool) else None
+
+
+def _build_sys02() -> Dict[str, Any]:
+    """采集器状态：collector_status_api.get_all_status（真实连通状态，未验证不标 ACTIVE）。"""
+    from collector_status_api import get_all_status
+
+    st = _safe(get_all_status, default={})
+    st = st if isinstance(st, dict) and not _is_err(st) else {}
+    summ = st.get("summary") if isinstance(st.get("summary"), dict) else {}
+    plats = st.get("platforms") if isinstance(st.get("platforms"), list) else []
+
+    def _k(key: str, label: str, icon: str = "ops") -> Dict[str, Any]:
+        v = _int_or_none(summ.get(key))
+        return metric(f"sys02.{key}", label, value=v,
+                      state=STATE_READY if v is not None else STATE_EMPTY,
+                      icon=icon, source="collector_status_api.get_all_status")
+
+    kpis = [_k("active", "真连通 ACTIVE/VERIFIED"), _k("partial", "受限 PARTIAL"),
+            _k("missing", "缺登录态 MISSING"), _k("blocked", "被反爬 BLOCKED")]
+    rows = [{
+        "平台": p.get("display") or p.get("platform"),
+        "状态": p.get("cookie_status") or "—",
+        "解析记录": _int_or_none(p.get("records_parsed")),
+        "说明": p.get("error") or "—",
+    } for p in plats if isinstance(p, dict)]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY,
+                  title="采集器连通状态（真实；未连通如实标 MISSING/INVALID/BLOCKED）",
+                  columns=[{"label": "平台", "key": "平台"}, {"label": "状态", "key": "状态"},
+                           {"label": "解析记录", "key": "解析记录", "numeric": True},
+                           {"label": "说明", "key": "说明"}], rows=rows)
+    note = section("note", STATE_READY, kind="RULE", code="NO-FAKE-ACTIVE",
+                   text="状态来自最近一次真连通验证缓存与 cookie 文件级检查；未做真连通验证不标 ACTIVE。")
+    sections = [_head("SYS-02"), section("kpis", STATE_READY, items=kpis), tbl, note]
+    return _envelope("SYS-02", sections, truth={"summary": summ, "total_platforms": st.get("total_platforms")})
+
+
+def _build_sys07() -> Dict[str, Any]:
+    """验收评估：ai_governance OWASP 启用项 + 已注册技能轻状态（真实）。"""
+    import ai_governance as gov
+    from skill_execution_chain import get_skills_light_status
+
+    ow = _safe(gov.get_owasp_security_status, default={})
+    ow = ow if isinstance(ow, dict) and not _is_err(ow) else {}
+    sk = _safe(get_skills_light_status, default=[])
+    sk = sk if isinstance(sk, list) else []
+    checks = ow.get("checks_enabled") if isinstance(ow.get("checks_enabled"), list) else []
+    cnt = _int_or_none(ow.get("checks_count")) or (len(checks) or None)
+    kpis = [
+        metric("sys07.owasp_checks", "OWASP 防护项", value=cnt,
+               state=STATE_READY if checks else STATE_EMPTY, icon="permission",
+               source="ai_governance.get_owasp_security_status"),
+        metric("sys07.skills", "已注册技能", value=len(sk) or None,
+               state=STATE_READY if sk else STATE_EMPTY, icon="ai",
+               source="skill_execution_chain.get_skills_light_status"),
+    ]
+    rows = [{"防护项": str(c), "参考": ow.get("ic_reference") or "—"} for c in checks]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY,
+                  title="OWASP Agentic Top10 启用项（真实）",
+                  columns=[{"label": "防护项", "key": "防护项"}, {"label": "参考", "key": "参考"}], rows=rows)
+    sections = [_head("SYS-07"), section("kpis", STATE_READY, items=kpis), tbl]
+    return _envelope("SYS-07", sections, truth={"ic_reference": ow.get("ic_reference")})
+
+
+def _build_sys08() -> Dict[str, Any]:
+    """可观测/日志：logger.get_log_summary（真实；只显文件名，不暴露绝对路径）。"""
+    import logger as L
+
+    s = _safe(L.get_log_summary, default={})
+    s = s if isinstance(s, dict) and not _is_err(s) else {}
+    files = s.get("files") if isinstance(s.get("files"), list) else []
+    tf = _int_or_none(s.get("total_files"))
+    tmb = s.get("total_size_mb")
+    kpis = [
+        metric("sys08.files", "日志文件", value=tf,
+               state=STATE_READY if tf is not None else STATE_EMPTY, icon="ops",
+               source="logger.get_log_summary"),
+        metric("sys08.size_mb", "日志体积 MB", value=round(tmb, 2) if isinstance(tmb, (int, float)) else None,
+               decimals=2, state=STATE_READY if isinstance(tmb, (int, float)) else STATE_EMPTY,
+               icon="ops", source="logger.get_log_summary"),
+    ]
+    rows = [{"文件": f.get("name"), "大小MB": f.get("size_mb"),
+             "修改": str(f.get("modified") or "")[:19]} for f in files if isinstance(f, dict)]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY,
+                  title="日志文件（真实；仅文件名，不暴露绝对路径）",
+                  columns=[{"label": "文件", "key": "文件"},
+                           {"label": "大小MB", "key": "大小MB", "numeric": True},
+                           {"label": "修改", "key": "修改"}], rows=rows)
+    sections = [_head("SYS-08"), section("kpis", STATE_READY, items=kpis), tbl]
+    return _envelope("SYS-08", sections)
+
+
+def _build_sh02() -> Dict[str, Any]:
+    """证据库：evidence_store 真实只读列表 + 统计。"""
+    import evidence_store as es
+
+    recs = _safe(es.query_evidence, limit=30, default=[])
+    stats = _safe(es.get_stats, default={})
+    recs = recs if isinstance(recs, list) else []
+    stats = stats if isinstance(stats, dict) and not _is_err(stats) else {}
+    total = _int_or_none(stats.get("total"))
+    if total is None:
+        total = len(recs) or None
+    kpi = metric("sh02.total", "证据总量", value=total,
+                 state=STATE_READY if total is not None else STATE_EMPTY, icon="link",
+                 source="evidence_store.get_stats/query_evidence")
+    rows = [{
+        "ID": f"EV:{r.get('id')}",
+        "级别": r.get("level") or "—",
+        "来源": r.get("source") or r.get("account") or "—",
+        "特征": str(r.get("feature_id") or "")[:28] or "—",
+        "结果": r.get("result") or "—",
+        "时间": str(r.get("created_at") or "")[:16],
+    } for r in recs if isinstance(r, dict)]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="证据库记录（真实只读）",
+                  columns=[{"label": "ID", "key": "ID"}, {"label": "级别", "key": "级别"},
+                           {"label": "来源", "key": "来源"}, {"label": "特征", "key": "特征"},
+                           {"label": "结果", "key": "结果"}, {"label": "时间", "key": "时间"}], rows=rows)
+    ev = section("evidence", STATE_READY if recs else STATE_EMPTY,
+                 title="证据链（最近）", items=_evidence_items(recs, 4))
+    sections = [_head("SH-02"), section("kpis", STATE_READY, items=[kpi]), tbl, ev]
+    return _envelope("SH-02", sections, truth={"stats": stats})
+
+
+def _build_sh04() -> Dict[str, Any]:
+    """报告导出中心：report_engine.list_domain_reports 真实目录（导出 EFFECT 待端点，不造假下载）。"""
+    import report_engine as re_
+
+    cat = _safe(re_.list_domain_reports, default={})
+    cat = cat if isinstance(cat, dict) and not _is_err(cat) else {}
+    rows = []
+    for dom, types in cat.items():
+        if not isinstance(types, dict):
+            continue
+        for t, meta in types.items():
+            meta = meta if isinstance(meta, dict) else {}
+            rows.append({"领域": str(dom), "类型": str(t),
+                         "名称": meta.get("name") or t,
+                         "受保护": "是" if meta.get("protected") else "否"})
+    kpi = metric("sh04.types", "报告类型", value=len(rows) or None,
+                 state=STATE_READY if rows else STATE_EMPTY, icon="report",
+                 source="report_engine.list_domain_reports")
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="可导出报告目录（真实）",
+                  columns=[{"label": "领域", "key": "领域"}, {"label": "类型", "key": "类型"},
+                           {"label": "名称", "key": "名称"}, {"label": "受保护", "key": "受保护"}], rows=rows)
+    note = section("note", STATE_READY, kind="RULE", code="EXPORT-EFFECT",
+                   text="目录为真实只读；点击导出属写操作，需 report_engine 导出端点 + 权限门控，未接通前不提供假下载。")
+    sections = [_head("SH-04"), section("kpis", STATE_READY, items=[kpi]), tbl, note]
+    return _envelope("SH-04", sections, truth={"domains": list(cat.keys())})
+
+
+def _build_sh06() -> Dict[str, Any]:
+    """通知/任务中心：TaskEngine.list_tasks/get_dlq/health_check（真实）。"""
+    import ai_task_engine as te
+
+    eng = te.get_task_engine()
+    tasks = _safe(eng.list_tasks, limit=20, default=[])
+    dlq = _safe(eng.get_dlq, default=[])
+    hc = _safe(eng.health_check, default={})
+    tasks = tasks if isinstance(tasks, list) else []
+    dlq = dlq if isinstance(dlq, list) else []
+    hc = hc if isinstance(hc, dict) and not _is_err(hc) else {}
+
+    def _g(o: Any, k: str) -> Any:
+        return o.get(k) if isinstance(o, dict) else getattr(o, k, None)
+
+    kpis = [
+        metric("sh06.tasks", "在列任务", value=len(tasks) or None,
+               state=STATE_READY if tasks else STATE_EMPTY, icon="ai",
+               source="TaskEngine.list_tasks"),
+        metric("sh06.dlq", "死信队列", value=len(dlq), state=STATE_READY,
+               icon="ops", source="TaskEngine.get_dlq"),
+    ]
+    rows = []
+    for t in tasks:
+        st = _g(t, "status")
+        st = st if isinstance(st, str) else getattr(st, "value", "—")
+        rows.append({"任务": str(_g(t, "task_id") or _g(t, "id") or "—")[:22],
+                     "状态": st, "技能": str(_g(t, "skill_id") or "—"),
+                     "创建": str(_g(t, "created_at") or "")[:16]})
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="任务 / 通知（真实）",
+                  columns=[{"label": "任务", "key": "任务"}, {"label": "状态", "key": "状态"},
+                           {"label": "技能", "key": "技能"}, {"label": "创建", "key": "创建"}], rows=rows)
+    cb = hc.get("circuit_breaker") if isinstance(hc.get("circuit_breaker"), dict) else {}
+    rt = section("runtime", title="任务引擎健康（真实）", items=[
+        {"name": "总体", "state": {"healthy": "ok", "ok": "ok", "degraded": "warn"}.get(
+            str(hc.get("status")).lower(), "idle"), "detail": str(hc.get("status") or "—")},
+        {"name": "熔断器", "state": "ok" if cb.get("state") == "closed" else "warn",
+         "detail": f"state={cb.get('state', '—')} · failures={_int_or_none(cb.get('failure_count')) or 0}"},
+        {"name": "DB", "state": "ok" if hc.get("db") == "connected" else "bad",
+         "detail": str(hc.get("db") or "—")},
+    ])
+    sections = [_head("SH-06"), section("kpis", STATE_READY, items=kpis), tbl, rt]
+    return _envelope("SH-06", sections, truth={"engine_status": hc.get("status")})
+
+
+def _build_bmp06() -> Dict[str, Any]:
+    """内容中心：content_generation 模块状态 + 内容证据（真实）。"""
+    import content_generation as cg
+
+    le = _safe(cg.list_evidence, limit=20, default={})
+    mods = _safe(cg.get_module_status, default=[])
+    le = le if isinstance(le, dict) and not _is_err(le) else {}
+    mods = mods if isinstance(mods, list) else []
+    items = le.get("items") if isinstance(le.get("items"), list) else []
+    active = [m for m in mods if isinstance(m, dict) and m.get("status") == "ACTIVE"]
+    ev_total = _int_or_none(le.get("total"))
+    if ev_total is None:
+        ev_total = len(items) or None
+    kpis = [
+        metric("bmp06.evidence", "内容证据", value=ev_total,
+               state=STATE_READY if ev_total is not None else STATE_EMPTY, icon="content",
+               source="content_generation.list_evidence"),
+        metric("bmp06.modules", "ACTIVE 模块", value=len(active) or None,
+               state=STATE_READY if active else STATE_EMPTY, icon="ai",
+               source="content_generation.get_module_status"),
+    ]
+    rows = [{"模块": m.get("name") or m.get("id"), "ID": m.get("id"),
+             "状态": m.get("status") or "—", "AI": "是" if m.get("ai") else "否",
+             "端点": m.get("api") or "—"} for m in mods if isinstance(m, dict)]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="内容生成模块状态（真实）",
+                  columns=[{"label": "模块", "key": "模块"}, {"label": "ID", "key": "ID"},
+                           {"label": "状态", "key": "状态"}, {"label": "AI", "key": "AI"},
+                           {"label": "端点", "key": "端点"}], rows=rows)
+    sections = [_head("BMP-06"), section("kpis", STATE_READY, items=kpis), tbl]
+    return _envelope("BMP-06", sections, truth={"module_count": len(mods)})
+
+
+def _build_bmp08() -> Dict[str, Any]:
+    """播客工作室：podcast_store 统计 + 实体（真实，空库如实 EMPTY）。"""
+    import podcast_store as ps
+
+    st = _safe(ps.get_stats, default={})
+    ents = _safe(ps.list_entities, limit=20, default=[])
+    st = st if isinstance(st, dict) and not _is_err(st) else {}
+    ents = ents if isinstance(ents, list) else []
+    total = _int_or_none(st.get("total"))
+    if total is None:
+        total = len(ents) or None
+    by_ev = st.get("by_evidence") if isinstance(st.get("by_evidence"), dict) else {}
+    verified = sum(v for v in by_ev.values() if isinstance(v, int)) if by_ev else None
+    kpis = [
+        metric("bmp08.entities", "播客实体", value=total,
+               state=STATE_READY if total is not None else STATE_EMPTY, icon="content",
+               source="podcast_store.get_stats"),
+        metric("bmp08.evidence", "已标证据状态", value=verified,
+               state=STATE_READY if verified is not None else STATE_EMPTY, icon="link",
+               source="podcast_store.get_stats.by_evidence"),
+    ]
+    rows = [{"类型": e.get("entity_type"), "标题": e.get("title") or "—",
+             "证据状态": e.get("evidence_status") or "unverified",
+             "ID": str(e.get("entity_id") or "—")[:24]} for e in ents if isinstance(e, dict)]
+    tbl = section("table", STATE_READY if rows else STATE_EMPTY,
+                  title="播客实体（真实；空库显示空态，不造假数据）",
+                  columns=[{"label": "类型", "key": "类型"}, {"label": "标题", "key": "标题"},
+                           {"label": "证据状态", "key": "证据状态"}, {"label": "ID", "key": "ID"}], rows=rows)
+    sections = [_head("BMP-08"), section("kpis", STATE_READY, items=kpis), tbl]
+    return _envelope("BMP-08", sections, truth={"stats": st})
+
+
+def _build_bmp10() -> Dict[str, Any]:
+    """品牌风险与事件：database 真实事件 + 高风险笔记（与 CTH 同源只读，域适配 BMP）。"""
+    import database as db
+
+    ev = _safe(db.get_events_curated, 12, default=[])
+    rn = _safe(db.get_high_risk_notes, 10, default=[])
+    ev = _curated(ev)
+    rn = rn if isinstance(rn, list) else []
+    kpis = [
+        metric("bmp10.events", "在办事件", value=len(ev) or None,
+               state=STATE_READY if ev else STATE_EMPTY, icon="event",
+               source="database.get_events_curated"),
+        metric("bmp10.high_risk", "高风险记录", value=len(rn), state=STATE_READY,
+               icon="risk", source="database.get_high_risk_notes"),
+    ]
+    ev_sec = section("events", STATE_READY if ev else STATE_EMPTY, items=_events_items(ev))
+    risk_items = [{
+        "level": _LV.get(n.get("risk_level", "low"), "low"),
+        "score": n.get("risk_score") if isinstance(n.get("risk_score"), (int, float)) and n.get("risk_score") else None,
+        "title": (n.get("title") or "风险记录")[:40],
+        "desc": (n.get("content") or "")[:90],
+        "evidence": f"NOTE:{n.get('note_id') or n.get('id') or 'UNKNOWN'}",
+    } for n in rn[:5] if isinstance(n, dict)]
+    risk_sec = section("risks", STATE_READY if risk_items else STATE_EMPTY, items=risk_items)
+    sections = [_head("BMP-10"), section("kpis", STATE_READY, items=kpis), ev_sec, risk_sec]
+    return _envelope("BMP-10", sections)
+
+
 # ---------------------------------------------------------------------------
 # 注册表：一屏一 builder
 # ---------------------------------------------------------------------------
@@ -610,7 +911,16 @@ SCREEN_BUILDERS = {
     "AI-04": _build_ai04,
     "AI-05": _build_ai05,
     "SYS-01": _build_sys01,
+    "SYS-02": _build_sys02,
     "SYS-03": _build_sys03,
     "SYS-04": _build_sys04,
+    "SYS-07": _build_sys07,
+    "SYS-08": _build_sys08,
+    "SH-02": _build_sh02,
     "SH-03": _build_sh03,
+    "SH-04": _build_sh04,
+    "SH-06": _build_sh06,
+    "BMP-06": _build_bmp06,
+    "BMP-08": _build_bmp08,
+    "BMP-10": _build_bmp10,
 }
