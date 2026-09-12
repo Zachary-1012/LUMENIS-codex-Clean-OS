@@ -296,3 +296,17 @@
 @media (prefers-reduced-motion:reduce){
   .lum-overlay,.lum-modal,.lum-drawer,.lum-toast{animation:none}
 }
+
+/* Runtime unbound-screen honesty banner (production shell only) */
+.lum-unbound-banner{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px;padding:11px 14px;
+  border:1px solid var(--lum-line,#d8dade);border-left:3px solid var(--lum-c-info,#4FC4E8);
+  border-radius:10px;background:color-mix(in srgb,var(--lum-c-info,#4FC4E8) 7%,transparent);
+  color:var(--lum-text-2,#5b606b);font-size:12.5px;line-height:1.55;max-width:100%;}
+.lum-unbound-banner b{color:var(--lum-text,#14161B);font-weight:600;}
+.lum-unbound-banner__dot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;margin-top:5px;
+  background:var(--lum-c-info,#4FC4E8);box-shadow:0 0 0 3px color-mix(in srgb,var(--lum-c-info,#4FC4E8) 18%,transparent);}
+[data-theme="dark"] .lum-unbound-banner{border-color:color-mix(in srgb,#6FD6F2 28%,transparent);color:var(--lum-text-2,#9aa0ab);}
+@media (max-width:768px){.lum-unbound-banner{font-size:12px;padding:10px 12px;}}
+@media (prefers-reduced-motion:reduce){.lum-unbound-banner{transition:none;}}
+/* Text-valued KPI (status/name/date): same visual weight as numeric, no countup */
+.lum-metric__text{font-variant-numeric:tabular-nums;letter-spacing:-.01em;}

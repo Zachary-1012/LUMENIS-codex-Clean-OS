@@ -1,0 +1,648 @@
+{
+  "ACC-01": {
+    "title": "ACC-01",
+    "titleKey": "screen.ACC-01",
+    "eyebrow": "",
+    "chrome": "none",
+    "desc": "",
+    "sectionTypes": [
+      "raw"
+    ]
+  },
+  "ACC-02": {
+    "title": "主体选择与领域视角",
+    "titleKey": "screen.ACC-02",
+    "eyebrow": "Entry",
+    "chrome": "app",
+    "desc": "先选 Subject（主体）再进入领域视角；选择只改变工作上下文，不改变数据归属，后端重验授权。",
+    "sectionTypes": [
+      "head",
+      "cards",
+      "split",
+      "note",
+      "form"
+    ]
+  },
+  "ACC-03": {
+    "title": "全局工作空间启动",
+    "titleKey": "screen.ACC-03",
+    "eyebrow": "Entry",
+    "chrome": "app",
+    "desc": "从统一入口进入各领域与 AI；底部 Dock 承载一级目的地与中央 AI 入口。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "cards",
+      "runtime"
+    ]
+  },
+  "ACC-04": {
+    "title": "ACC-04",
+    "titleKey": "screen.ACC-04",
+    "eyebrow": "",
+    "chrome": "none",
+    "desc": "",
+    "sectionTypes": [
+      "raw"
+    ]
+  },
+  "CTH-01": {
+    "title": "商业运营总览",
+    "titleKey": "screen.CTH-01",
+    "eyebrow": "CTH · 序境·商业运营",
+    "chrome": "app",
+    "desc": "以当前 Subject 为上下文组织核心指标、趋势、事件证据与决策行动，全部可追溯。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "split",
+      "chart",
+      "events",
+      "evidence",
+      "insight",
+      "risks",
+      "actions",
+      "runtime"
+    ]
+  },
+  "CTH-02": {
+    "title": "主体档案 / 业务单元 / 品牌业态",
+    "titleKey": "screen.CTH-02",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "选择主体只改变工作上下文；品牌、业态、业务单元的事实归属保持不变。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "cards",
+      "table",
+      "filters",
+      "chart",
+      "note"
+    ]
+  },
+  "CTH-03": {
+    "title": "实时监测",
+    "titleKey": "screen.CTH-03",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "实时指标与采集器健康状态，区分实时值与已确认值。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "split",
+      "chart",
+      "runtime",
+      "events",
+      "note"
+    ]
+  },
+  "CTH-04": {
+    "title": "事件与事件关系",
+    "titleKey": "screen.CTH-04",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "事件与案例的关系图与时间线，点击节点回跳证据。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "raw",
+      "events",
+      "evidence",
+      "actions"
+    ]
+  },
+  "CTH-05": {
+    "title": "舆情日历",
+    "titleKey": "screen.CTH-05",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "按日聚合情绪/事件密度，点选日期联动右侧证据与事件。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "raw",
+      "events",
+      "kpis"
+    ]
+  },
+  "CTH-06": {
+    "title": "负面监测与用户/评论反馈",
+    "titleKey": "screen.CTH-06",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "负面条目必须可追溯到原始 Source；区分用户反馈与公开舆情。",
+    "sectionTypes": [
+      "head",
+      "filters",
+      "split",
+      "table",
+      "risks",
+      "evidence"
+    ]
+  },
+  "CTH-07": {
+    "title": "趋势分析",
+    "titleKey": "screen.CTH-07",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "统一口径下的多指标趋势、同环比与构成变化，所有数值来自 Canonical。",
+    "sectionTypes": [
+      "head",
+      "filters",
+      "chart",
+      "split",
+      "insight"
+    ]
+  },
+  "CTH-08": {
+    "title": "案例库 / 案例分析 / 知识库",
+    "titleKey": "screen.CTH-08",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "Case 由事件与证据沉淀，知识库沉淀可复用结论，不覆盖原始事实。",
+    "sectionTypes": [
+      "head",
+      "tabs",
+      "table",
+      "evidence",
+      "timeline",
+      "cards"
+    ]
+  },
+  "CTH-09": {
+    "title": "风险中心与决策看板",
+    "titleKey": "screen.CTH-09",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "风险分、决策项、行动与证据一屏对齐；高风险行动需确认与权限。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "split",
+      "risks",
+      "actions",
+      "evidence"
+    ]
+  },
+  "CTH-10": {
+    "title": "报告 / 周报 / 证据",
+    "titleKey": "screen.CTH-10",
+    "eyebrow": "CTH · 商业运营",
+    "chrome": "app",
+    "desc": "报告由 Canonical 与 Evidence 生成，导出保留口径、时间窗与证据清单。",
+    "sectionTypes": [
+      "head",
+      "tabs",
+      "table",
+      "insight",
+      "chart",
+      "evidence"
+    ]
+  },
+  "BMP-01": {
+    "title": "品牌市场总览",
+    "titleKey": "screen.BMP-01",
+    "eyebrow": "BMP · 序境·品牌市场",
+    "chrome": "app",
+    "desc": "品牌健康、传播、创作者与市场情报的统一视图，全部锚定证据。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "split",
+      "chart",
+      "events",
+      "insight",
+      "risks",
+      "actions"
+    ]
+  },
+  "BMP-02": {
+    "title": "品牌中心 / 多品牌与竞品",
+    "titleKey": "screen.BMP-02",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "管理自有多品牌与竞品集合，切换品牌即切换 Subject 上下文。",
+    "sectionTypes": [
+      "head",
+      "filters",
+      "cards",
+      "table"
+    ]
+  },
+  "BMP-03": {
+    "title": "市场情报",
+    "titleKey": "screen.BMP-03",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "行业趋势、品类机会与外部情报，区分已确认情报与待核实线索。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "chart",
+      "cards",
+      "evidence",
+      "note"
+    ]
+  },
+  "BMP-04": {
+    "title": "传播分析",
+    "titleKey": "screen.BMP-04",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "渠道×内容×时段的传播表现与转化漏斗，统一口径。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "split",
+      "chart",
+      "insight",
+      "evidence"
+    ]
+  },
+  "BMP-05": {
+    "title": "创作者 KOS / KOL / KOC / UGC",
+    "titleKey": "screen.BMP-05",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "分层管理创作者，评估真实贡献与合作风险，沉淀可复用脚本。",
+    "sectionTypes": [
+      "head",
+      "filters",
+      "table",
+      "split",
+      "chart",
+      "risks"
+    ]
+  },
+  "BMP-06": {
+    "title": "内容中心",
+    "titleKey": "screen.BMP-06",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "素材/脚本/成片的生产进度与审批状态，EFFECT 发布需权限。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "upload",
+      "table",
+      "actions",
+      "note"
+    ]
+  },
+  "BMP-07": {
+    "title": "话题活动 Campaign",
+    "titleKey": "screen.BMP-07",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "Campaign 目标、节奏、内容与效果，持续推进并保留证据。",
+    "sectionTypes": [
+      "head",
+      "steps",
+      "split",
+      "kpis",
+      "chart",
+      "timeline",
+      "actions"
+    ]
+  },
+  "BMP-08": {
+    "title": "播客工作室",
+    "titleKey": "screen.BMP-08",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "把研究/证据材料转成播客提纲、脚本与成片，AI 仅起草、人工定稿。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "upload",
+      "ai",
+      "steps",
+      "actions"
+    ]
+  },
+  "BMP-09": {
+    "title": "品牌报告与评估",
+    "titleKey": "screen.BMP-09",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "品牌资产评估、周期报告与评分，结论均可回溯证据。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "chart",
+      "table",
+      "evidence"
+    ]
+  },
+  "BMP-10": {
+    "title": "品牌风险与事件",
+    "titleKey": "screen.BMP-10",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "品牌侧风险/舆情事件的监测、分级与处置，复用统一风险引擎。",
+    "sectionTypes": [
+      "head",
+      "risks",
+      "events",
+      "actions"
+    ]
+  },
+  "BMP-11": {
+    "title": "对标与竞品分析",
+    "titleKey": "screen.BMP-11",
+    "eyebrow": "BMP · 品牌市场",
+    "chrome": "app",
+    "desc": "同口径竞品对标：指标、内容、渠道、价格与节奏，输出差异与证据。",
+    "sectionTypes": [
+      "head",
+      "table",
+      "split",
+      "chart",
+      "insight"
+    ]
+  },
+  "AI-01": {
+    "title": "AI 意图入口",
+    "titleKey": "screen.AI-01",
+    "eyebrow": "AI Agent",
+    "chrome": "app",
+    "desc": "从一句任务出发，识别意图、检索证据、生成可追溯结论；AI 是增强层，不拥有生产事实。",
+    "sectionTypes": [
+      "head",
+      "raw",
+      "kpis",
+      "cards",
+      "split",
+      "timeline",
+      "runtime",
+      "note"
+    ]
+  },
+  "AI-02": {
+    "title": "能力任务工作台",
+    "titleKey": "screen.AI-02",
+    "eyebrow": "AI Agent",
+    "chrome": "app",
+    "desc": "选择能力进入任务上下文，证据随过程落定，可随时中断。",
+    "sectionTypes": [
+      "head",
+      "steps",
+      "raw",
+      "ai",
+      "evidence",
+      "actions"
+    ]
+  },
+  "AI-03": {
+    "title": "证据锚定分析线程",
+    "titleKey": "screen.AI-03",
+    "eyebrow": "AI Agent",
+    "chrome": "app",
+    "desc": "每条 AI 结论都可回跳到 Evidence；缺证据的推断显式标 UNKNOWN，不编造。",
+    "sectionTypes": [
+      "head",
+      "ai",
+      "split",
+      "evidence",
+      "risks",
+      "actions"
+    ]
+  },
+  "AI-04": {
+    "title": "Agent / 技能中心",
+    "titleKey": "screen.AI-04",
+    "eyebrow": "AI Agent",
+    "chrome": "app",
+    "desc": "所有 Agent/Skill 必须有真实调用链与权限边界；文件存在不等于能力可用。",
+    "sectionTypes": [
+      "head",
+      "filters",
+      "cards",
+      "table"
+    ]
+  },
+  "AI-05": {
+    "title": "AI Gateway 与 Provider",
+    "titleKey": "screen.AI-05",
+    "eyebrow": "AI Agent",
+    "chrome": "app",
+    "desc": "Provider 不可用时核心生产链由规则与数据继续运行；云 AI 不是启动硬依赖。",
+    "sectionTypes": [
+      "head",
+      "runtime",
+      "split",
+      "chart",
+      "kpis",
+      "note",
+      "table"
+    ]
+  },
+  "SYS-01": {
+    "title": "运行时健康 Runtime Health",
+    "titleKey": "screen.SYS-01",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "唯一生产 Runtime 的进程、端口、依赖与降级状态；启动链与健康检查可追溯。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "split",
+      "runtime",
+      "chart",
+      "note",
+      "actions"
+    ]
+  },
+  "SYS-02": {
+    "title": "采集器状态 Collector",
+    "titleKey": "screen.SYS-02",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "各平台采集任务的调度、限流、退避与入链情况；采集失败不污染 Canonical。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "table",
+      "note"
+    ]
+  },
+  "SYS-03": {
+    "title": "数据库与事实链 Database & Truth Chain",
+    "titleKey": "screen.SYS-03",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "schema_version 不等于应用可读；展示版本、完整性、外键、Canonical 链路与隔离契约。",
+    "sectionTypes": [
+      "head",
+      "kpis",
+      "split",
+      "timeline",
+      "table",
+      "note",
+      "risks"
+    ]
+  },
+  "SYS-04": {
+    "title": "安全与权限 Security & Permission",
+    "titleKey": "screen.SYS-04",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "READ/TASK/AUDIT/WRITE/DEPLOY 五级边界；EFFECT 行动必须二次确认与权限校验。",
+    "sectionTypes": [
+      "head",
+      "table",
+      "split",
+      "risks",
+      "actions",
+      "note"
+    ]
+  },
+  "SYS-05": {
+    "title": "设置 / 外观 / 语言",
+    "titleKey": "screen.SYS-05",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "主题、光学档位、语言（zh/en/ko）、密度与动效偏好；偏好不外溢为业务数据。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "form",
+      "note"
+    ]
+  },
+  "SYS-06": {
+    "title": "内部浏览器",
+    "titleKey": "screen.SYS-06",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "受控采集/取证浏览器：页面快照、证据固定与操作审计，不与个人浏览混用。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "raw",
+      "runtime",
+      "actions"
+    ]
+  },
+  "SYS-07": {
+    "title": "验收评估 Evaluation / Acceptance",
+    "titleKey": "screen.SYS-07",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "Production Acceptance 六 Gate 状态；PARTIAL/UNKNOWN 不算 PASS，文档存在不算通过。",
+    "sectionTypes": [
+      "head",
+      "steps",
+      "table",
+      "note"
+    ]
+  },
+  "SYS-08": {
+    "title": "可观测 / 日志 Observability & Logs",
+    "titleKey": "screen.SYS-08",
+    "eyebrow": "System",
+    "chrome": "app",
+    "desc": "结构化日志、Trace、错误聚合与链路；区分前端原型日志与后端运行时日志。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "chart",
+      "table",
+      "runtime",
+      "note"
+    ]
+  },
+  "SH-01": {
+    "title": "内容创作工作室 Content Studio",
+    "titleKey": "screen.SH-01",
+    "eyebrow": "Shared · 序境·内容创作",
+    "chrome": "app",
+    "desc": "AI 只按真实 Brief/Evidence 起草原创产物，定稿与发布权在人。",
+    "sectionTypes": [
+      "head",
+      "steps",
+      "split",
+      "tabs",
+      "form",
+      "note",
+      "upload",
+      "cards",
+      "ai",
+      "table",
+      "actions"
+    ]
+  },
+  "SH-02": {
+    "title": "证据库 Evidence Library",
+    "titleKey": "screen.SH-02",
+    "eyebrow": "Shared · 序境·内容创作",
+    "chrome": "app",
+    "desc": "统一检索 Source/Evidence/Canonical 引用；每条证据可回溯原始快照与链路。",
+    "sectionTypes": [
+      "head",
+      "filters",
+      "split",
+      "table",
+      "evidence",
+      "actions"
+    ]
+  },
+  "SH-03": {
+    "title": "Canonical 数据 / 指标浏览器",
+    "titleKey": "screen.SH-03",
+    "eyebrow": "Shared · 序境·内容创作",
+    "chrome": "app",
+    "desc": "浏览 Canonical 表、指标口径与血缘；区分 Canonical 事实与派生指标。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "table",
+      "chart",
+      "note"
+    ]
+  },
+  "SH-04": {
+    "title": "报告导出中心",
+    "titleKey": "screen.SH-04",
+    "eyebrow": "Shared · 序境·内容创作",
+    "chrome": "app",
+    "desc": "按模板导出 PDF/Excel/PPT，固化口径、时间窗与证据清单；导出动作可审计。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "table",
+      "upload",
+      "note"
+    ]
+  },
+  "SH-05": {
+    "title": "学习与评估资产",
+    "titleKey": "screen.SH-05",
+    "eyebrow": "Shared · 序境·内容创作",
+    "chrome": "app",
+    "desc": "沉淀 SOP、复盘、培训与评估题库，区分已验证资产与草稿。",
+    "sectionTypes": [
+      "head",
+      "cards",
+      "table"
+    ]
+  },
+  "SH-06": {
+    "title": "通知 / 任务中心",
+    "titleKey": "screen.SH-06",
+    "eyebrow": "Shared · 序境·内容创作",
+    "chrome": "app",
+    "desc": "聚合待办、审批、告警与订阅；区分需要行动与仅知会。",
+    "sectionTypes": [
+      "head",
+      "split",
+      "tabs",
+      "table",
+      "events",
+      "runtime",
+      "actions",
+      "note"
+    ]
+  }
+}

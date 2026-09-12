@@ -1,0 +1,1528 @@
+{
+  "contract_fields": [
+    "action_id",
+    "display_key",
+    "capability_status",
+    "permission_requirement",
+    "input_context",
+    "success_state",
+    "failure_state",
+    "evidence_effect",
+    "binding_owner"
+  ],
+  "total": 66,
+  "by_class": {
+    "NAVIGATION": 47,
+    "DRAFT": 12,
+    "QUERY": 4,
+    "EFFECT": 1,
+    "TASK": 2
+  },
+  "screens": {
+    "ACC-01": [],
+    "ACC-02": [
+      {
+        "action_id": "ACC-02.card:广州太古汇",
+        "display_label_zh": "进入",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "ACC-02",
+          "section": "card:广州太古汇",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": null
+      },
+      {
+        "action_id": "ACC-02.enter",
+        "display_label_zh": "设为默认并进入",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "ACC-02",
+          "section": "form:默认视角",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check"
+      }
+    ],
+    "ACC-03": [
+      {
+        "action_id": "ACC-03.card:进入商业运营",
+        "display_label_zh": "进入",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "ACC-03",
+          "section": "card:进入商业运营",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": null
+      }
+    ],
+    "ACC-04": [],
+    "CTH-01": [
+      {
+        "action_id": "CTH-01.draft-brief",
+        "display_label_zh": "生成运营简报",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "report:write",
+        "input_context": {
+          "screen": "CTH-01",
+          "section": "head",
+          "scope": "subject:current",
+          "target": "report"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "report",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "CTH-01.head",
+        "display_label_zh": "切换时间范围",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "CTH-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "calendar"
+      },
+      {
+        "action_id": "CTH-01.export-overview",
+        "display_label_zh": "导出",
+        "display_key": null,
+        "action_class": "QUERY",
+        "capability_status": "CODEX_BINDING_REQUIRED",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "CTH-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "download",
+        "binding_conclusion": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
+        "block_reason": "导出需真实 report_export 路由与文件生成契约，experience 层尚未挂载，禁止假下载",
+        "fallback_behavior": "前端禁用或提示待后端接入，不伪造成功结果"
+      },
+      {
+        "action_id": "CTH-01.open-event",
+        "display_label_zh": "打开事件 EV-7710",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "CTH-01",
+          "section": "actions:建议行动",
+          "scope": "UNKNOWN",
+          "target": "CTH-04"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "event"
+      },
+      {
+        "action_id": "CTH-01.draft-action",
+        "display_label_zh": "起草引导排班调整",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "plan:write",
+        "input_context": {
+          "screen": "CTH-01",
+          "section": "actions:建议行动",
+          "scope": "subject:current",
+          "target": "ops_plan"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "edit"
+      },
+      {
+        "action_id": "CTH-01.notify-team",
+        "display_label_zh": "通知运营值班群",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "notify:write",
+        "input_context": {
+          "screen": "CTH-01",
+          "section": "actions:建议行动",
+          "scope": "team:ops",
+          "target": "im"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "message"
+      }
+    ],
+    "CTH-02": [],
+    "CTH-03": [],
+    "CTH-04": [
+      {
+        "action_id": "CTH-04.new-event",
+        "display_label_zh": "新建事件",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "event:write",
+        "input_context": {
+          "screen": "CTH-04",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "plus",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "CTH-04.to-case",
+        "display_label_zh": "转 Case",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "case:write",
+        "input_context": {
+          "screen": "CTH-04",
+          "section": "actions:事件操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "case"
+      },
+      {
+        "action_id": "CTH-04.link-risk",
+        "display_label_zh": "关联风险",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "CTH-04",
+          "section": "actions:事件操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "risk"
+      }
+    ],
+    "CTH-05": [],
+    "CTH-06": [],
+    "CTH-07": [],
+    "CTH-08": [
+      {
+        "action_id": "CTH-08.new-case",
+        "display_label_zh": "新建案例",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "case:write",
+        "input_context": {
+          "screen": "CTH-08",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "case",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      }
+    ],
+    "CTH-09": [
+      {
+        "action_id": "CTH-09.decide-b3",
+        "display_label_zh": "开放 B3 备用通道（18-21点）",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "facility:write",
+        "input_context": {
+          "screen": "CTH-09",
+          "section": "actions:待决策",
+          "scope": "facility:parking",
+          "target": "access_control"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check"
+      },
+      {
+        "action_id": "CTH-09.decide-staff",
+        "display_label_zh": "增派晚高峰引导 4 人",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "roster:write",
+        "input_context": {
+          "screen": "CTH-09",
+          "section": "actions:待决策",
+          "scope": "team:ops",
+          "target": "roster"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "users"
+      },
+      {
+        "action_id": "CTH-09.decide-sign",
+        "display_label_zh": "更新北区指引标识",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "ops:write",
+        "input_context": {
+          "screen": "CTH-09",
+          "section": "actions:待决策",
+          "scope": "facility:signage",
+          "target": "work_order"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "edit"
+      }
+    ],
+    "CTH-10": [
+      {
+        "action_id": "CTH-10.gen-weekly",
+        "display_label_zh": "生成周报",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "report:write",
+        "input_context": {
+          "screen": "CTH-10",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "report",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "CTH-10.export",
+        "display_label_zh": "导出 PDF/Excel",
+        "display_key": null,
+        "action_class": "QUERY",
+        "capability_status": "CODEX_BINDING_REQUIRED",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "CTH-10",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "download",
+        "binding_conclusion": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
+        "block_reason": "PDF/Excel 导出需 report_engine 真实导出端点，当前未接，禁止假文件",
+        "fallback_behavior": "前端禁用或提示待后端接入，不伪造成功结果"
+      }
+    ],
+    "BMP-01": [
+      {
+        "action_id": "BMP-01.draft",
+        "display_label_zh": "品牌简报",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "report:write",
+        "input_context": {
+          "screen": "BMP-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "report",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "BMP-01.head",
+        "display_label_zh": "切换品牌",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "BMP-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "campaign"
+      },
+      {
+        "action_id": "BMP-01.go-creator",
+        "display_label_zh": "打开创作者分析",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "BMP-01",
+          "section": "actions:建议行动",
+          "scope": "UNKNOWN",
+          "target": "BMP-05"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "creators"
+      },
+      {
+        "action_id": "BMP-01.draft-plan",
+        "display_label_zh": "起草传播计划",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "plan:write",
+        "input_context": {
+          "screen": "BMP-01",
+          "section": "actions:建议行动",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "edit"
+      }
+    ],
+    "BMP-02": [],
+    "BMP-03": [],
+    "BMP-04": [],
+    "BMP-05": [
+      {
+        "action_id": "BMP-05.add",
+        "display_label_zh": "添加创作者",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "creator:write",
+        "input_context": {
+          "screen": "BMP-05",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "creators",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      }
+    ],
+    "BMP-06": [
+      {
+        "action_id": "BMP-06.new",
+        "display_label_zh": "新建内容",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "content:draft",
+        "input_context": {
+          "screen": "BMP-06",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "content",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "BMP-06.submit-review",
+        "display_label_zh": "提交审批",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "content:submit",
+        "input_context": {
+          "screen": "BMP-06",
+          "section": "actions:发布动作（需权限）",
+          "scope": "content:self",
+          "target": "approval"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check"
+      },
+      {
+        "action_id": "BMP-06.publish",
+        "display_label_zh": "发布到平台",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "content:publish",
+        "input_context": {
+          "screen": "BMP-06",
+          "section": "actions:发布动作（需权限）",
+          "scope": "channel:external",
+          "target": "publisher"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "share"
+      }
+    ],
+    "BMP-07": [
+      {
+        "action_id": "BMP-07.add-content",
+        "display_label_zh": "追加内容",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "campaign:write",
+        "input_context": {
+          "screen": "BMP-07",
+          "section": "actions:活动操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "content"
+      },
+      {
+        "action_id": "BMP-07.end-campaign",
+        "display_label_zh": "结束活动",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "campaign:close",
+        "input_context": {
+          "screen": "BMP-07",
+          "section": "actions:活动操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check"
+      }
+    ],
+    "BMP-08": [
+      {
+        "action_id": "BMP-08.gen-script",
+        "display_label_zh": "生成完整脚本",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "podcast:draft",
+        "input_context": {
+          "screen": "BMP-08",
+          "section": "actions:制作动作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "edit"
+      },
+      {
+        "action_id": "BMP-08.render",
+        "display_label_zh": "渲染成片",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "podcast:render",
+        "input_context": {
+          "screen": "BMP-08",
+          "section": "actions:制作动作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "podcast"
+      }
+    ],
+    "BMP-09": [
+      {
+        "action_id": "BMP-09.gen",
+        "display_label_zh": "生成评估报告",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "report:write",
+        "input_context": {
+          "screen": "BMP-09",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "evaluation",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      }
+    ],
+    "BMP-10": [
+      {
+        "action_id": "BMP-10.hold-creator",
+        "display_label_zh": "暂停合作创作者",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "creator:hold",
+        "input_context": {
+          "screen": "BMP-10",
+          "section": "actions:处置",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "pause"
+      },
+      {
+        "action_id": "BMP-10.draft-response",
+        "display_label_zh": "起草回应口径",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "response:draft",
+        "input_context": {
+          "screen": "BMP-10",
+          "section": "actions:处置",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "edit"
+      }
+    ],
+    "BMP-11": [],
+    "AI-01": [
+      {
+        "action_id": "AI-01.go-AI-05",
+        "display_label_zh": "查看 AI Gateway",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "AI-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "ops"
+      },
+      {
+        "action_id": "AI-01.go-AI-04",
+        "display_label_zh": "技能中心",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "AI-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "skill"
+      }
+    ],
+    "AI-02": [
+      {
+        "action_id": "AI-02.insert-to-report",
+        "display_label_zh": "插入到周报草稿",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "report:write",
+        "input_context": {
+          "screen": "AI-02",
+          "section": "actions:下一步",
+          "scope": "report:draft",
+          "target": "weekly_report"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "report"
+      },
+      {
+        "action_id": "AI-02.save-task",
+        "display_label_zh": "保存为可复用任务",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "task:write",
+        "input_context": {
+          "screen": "AI-02",
+          "section": "actions:下一步",
+          "scope": "user:self",
+          "target": "task_library"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "folder"
+      },
+      {
+        "action_id": "AI-02.run-effect",
+        "display_label_zh": "推送到协作群",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "notify:write",
+        "input_context": {
+          "screen": "AI-02",
+          "section": "actions:下一步",
+          "scope": "channel:external",
+          "target": "im_webhook"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "message"
+      }
+    ],
+    "AI-03": [
+      {
+        "action_id": "AI-03.create-case",
+        "display_label_zh": "生成处置 Case",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "case:write",
+        "input_context": {
+          "screen": "AI-03",
+          "section": "actions:建议行动",
+          "scope": "subject:current",
+          "target": "case"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "case"
+      },
+      {
+        "action_id": "AI-03.assign-owner",
+        "display_label_zh": "指派责任人",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "team:assign",
+        "input_context": {
+          "screen": "AI-03",
+          "section": "actions:建议行动",
+          "scope": "team:ops",
+          "target": "assignment"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "user"
+      }
+    ],
+    "AI-04": [
+      {
+        "action_id": "AI-04.head",
+        "display_label_zh": "仅看可用",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "AI-04",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "evaluation"
+      }
+    ],
+    "AI-05": [],
+    "SYS-01": [
+      {
+        "action_id": "SYS-01.identity",
+        "display_label_zh": "运行时身份",
+        "display_key": null,
+        "action_class": "QUERY",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SYS-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "runtime",
+        "binding_conclusion": "BOUND",
+        "bound_api": "/api/experience/runtime/identity（真实只读身份端点，不泄密）"
+      },
+      {
+        "action_id": "SYS-01.restart",
+        "display_label_zh": "重启服务",
+        "display_key": null,
+        "action_class": "EFFECT",
+        "capability_status": "CODEX_BINDING_REQUIRED",
+        "permission_requirement": "runtime:restart",
+        "input_context": {
+          "screen": "SYS-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "CODEX",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "confirm-then-toast, never calls backend",
+        "icon": "refresh",
+        "binding_conclusion": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
+        "block_reason": "EFFECT 运行时重启属高危变更，需受权限门控的真实运维端点与二次确认，禁止前端伪造",
+        "fallback_behavior": "前端禁用或提示待后端接入，不伪造成功结果"
+      },
+      {
+        "action_id": "SYS-01.view-identity",
+        "display_label_zh": "查看运行时身份",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SYS-01",
+          "section": "actions:运行时操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "runtime"
+      },
+      {
+        "action_id": "SYS-01.graceful-reload",
+        "display_label_zh": "平滑重载",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "runtime:reload",
+        "input_context": {
+          "screen": "SYS-01",
+          "section": "actions:运行时操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "refresh"
+      }
+    ],
+    "SYS-02": [],
+    "SYS-03": [],
+    "SYS-04": [
+      {
+        "action_id": "SYS-04.view-audit",
+        "display_label_zh": "查看审计日志",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "audit:read",
+        "input_context": {
+          "screen": "SYS-04",
+          "section": "actions:审计操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "ops"
+      },
+      {
+        "action_id": "SYS-04.rotate-key",
+        "display_label_zh": "轮换密钥",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "secret:rotate",
+        "input_context": {
+          "screen": "SYS-04",
+          "section": "actions:审计操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "security"
+      }
+    ],
+    "SYS-05": [
+      {
+        "action_id": "SYS-05.save-pref",
+        "display_label_zh": "保存偏好",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "pref:write",
+        "input_context": {
+          "screen": "SYS-05",
+          "section": "form:外观",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "SYS-05.form:外观",
+        "display_label_zh": "重置",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SYS-05",
+          "section": "form:外观",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": null
+      }
+    ],
+    "SYS-06": [
+      {
+        "action_id": "SYS-06.new-tab",
+        "display_label_zh": "新标签",
+        "display_key": null,
+        "action_class": "TASK",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "browser:open",
+        "input_context": {
+          "screen": "SYS-06",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "browser",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "SYS-06.snapshot",
+        "display_label_zh": "固定快照为证据",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "evidence:capture",
+        "input_context": {
+          "screen": "SYS-06",
+          "section": "actions:取证",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "link"
+      },
+      {
+        "action_id": "SYS-06.extract",
+        "display_label_zh": "抽取结构化数据",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SYS-06",
+          "section": "actions:取证",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "layers"
+      }
+    ],
+    "SYS-07": [],
+    "SYS-08": [
+      {
+        "action_id": "SYS-08.export-log",
+        "display_label_zh": "导出日志",
+        "display_key": null,
+        "action_class": "QUERY",
+        "capability_status": "CODEX_BINDING_REQUIRED",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SYS-08",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "download",
+        "binding_conclusion": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
+        "block_reason": "日志导出需真实日志读取/落盘端点与权限，当前未接，禁止假导出",
+        "fallback_behavior": "前端禁用或提示待后端接入，不伪造成功结果"
+      }
+    ],
+    "SH-01": [
+      {
+        "action_id": "SH-01.new-brief",
+        "display_label_zh": "新建 Brief",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "content:draft",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "content",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "SH-01.ai-draft",
+        "display_label_zh": "按 Pattern 检索并起草",
+        "display_key": null,
+        "action_class": "TASK",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "content:draft",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "form:Brief / Context（事实来源，非 locale 文案）",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "orb",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "SH-01.save",
+        "display_label_zh": "保存草稿",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "form:Brief / Context（事实来源，非 locale 文案）",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      },
+      {
+        "action_id": "SH-01.card:春季种草 · 文案 v2",
+        "display_label_zh": "打开",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "card:春季种草 · 文案 v2",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": null
+      },
+      {
+        "action_id": "SH-01.submit-review",
+        "display_label_zh": "提交评审",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "content:submit",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "evaluation"
+      },
+      {
+        "action_id": "SH-01.approve",
+        "display_label_zh": "审批通过",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "content:approve",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check"
+      },
+      {
+        "action_id": "SH-01.publish",
+        "display_label_zh": "发布/导出",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "content:publish",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "share"
+      },
+      {
+        "action_id": "SH-01.promote-learning",
+        "display_label_zh": "评估后沉淀 Pattern",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SH-01",
+          "section": "actions:流转（Review→Approval→Export→Evaluation→Learning）",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "skill"
+      }
+    ],
+    "SH-02": [
+      {
+        "action_id": "SH-02.open-source",
+        "display_label_zh": "查看原始来源",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SH-02",
+          "section": "actions:证据操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "link"
+      },
+      {
+        "action_id": "SH-02.pin",
+        "display_label_zh": "固定到报告",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SH-02",
+          "section": "actions:证据操作",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "report"
+      }
+    ],
+    "SH-03": [],
+    "SH-04": [
+      {
+        "action_id": "SH-04.new-export",
+        "display_label_zh": "新建导出",
+        "display_key": null,
+        "action_class": "DRAFT",
+        "capability_status": "PARTIAL",
+        "permission_requirement": "report:export",
+        "input_context": {
+          "screen": "SH-04",
+          "section": "head",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "download",
+        "binding_conclusion": "INTENTIONALLY_NOT_APPLICABLE",
+        "binding_note": "前端本地控制（打开草稿/面板/本地意图捕获），按设计不在此步写后端；其下游持久化/提交 EFFECT 另由后端工单跟踪"
+      }
+    ],
+    "SH-05": [],
+    "SH-06": [
+      {
+        "action_id": "SH-06.approve",
+        "display_label_zh": "通过审批",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "approval:write",
+        "input_context": {
+          "screen": "SH-06",
+          "section": "actions:快速处理",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": true,
+        "prototype_behavior": "local/navigation only",
+        "icon": "check"
+      },
+      {
+        "action_id": "SH-06.snooze",
+        "display_label_zh": "稍后提醒",
+        "display_key": null,
+        "action_class": "NAVIGATION",
+        "capability_status": "VERIFIED_AVAILABLE",
+        "permission_requirement": "UNKNOWN",
+        "input_context": {
+          "screen": "SH-06",
+          "section": "actions:快速处理",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN"
+        },
+        "success_state": "NEEDS_CODEX_DEFINE",
+        "failure_state": "NEEDS_CODEX_DEFINE",
+        "evidence_effect": "UNKNOWN",
+        "binding_owner": "FRONTEND",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "local/navigation only",
+        "icon": "clock"
+      }
+    ]
+  },
+  "binding_conclusion_summary": {
+    "rule": "BOUND=已有真实端点；BLOCKED=缺真实写/导出/运维端点不造假；N/A=前端本地控制按设计不绑后端",
+    "BOUND": 1,
+    "BLOCKED_BY_EXTERNAL_DEPENDENCY": 4,
+    "INTENTIONALLY_NOT_APPLICABLE": 14
+  }
+}

@@ -381,11 +381,11 @@ def _build_cth01() -> Dict[str, Any]:
         return "NA" if v is None else str(v)
     runtime_items = [
         {"name": "舆情数据库", "state": "ok" if not stats_err else "offline",
-         "detail": f"total={stats.get('total') if isinstance(stats, dict) else 'NA'}"},
+         "detail": f"共 {stats.get('total') if isinstance(stats, dict) else 'NA'} 条"},
         {"name": "Canonical 指标", "state": "ok" if not canon_err else "offline",
-         "detail": _scalar(canonical.get("collection_health")) if not canon_err else "unavailable"},
+         "detail": ("采集健康：" + _scalar(canonical.get("collection_health"))) if not canon_err else "unavailable"},
         {"name": "证据存储", "state": "ok" if isinstance(evid, list) else "offline",
-         "detail": f"recent={len(evid) if isinstance(evid, list) else 'NA'}"},
+         "detail": f"近 {len(evid) if isinstance(evid, list) else 'NA'} 条样本"},
     ]
     runtime_sec = section("runtime", title="数据新鲜度", items=runtime_items)
 
@@ -599,6 +599,21 @@ def _provider_runtime(gov: Dict[str, Any], gov_err: bool) -> List[Dict[str, Any]
 # ===========================================================================
 _BUILDERS = {"CTH-01": _build_cth01, "AI-01": _build_ai01}
 
+# P1 传播：其余真实数据屏的 builder 集中在 experience_screens.py（一屏一函数）
+try:
+    from experience_screens import SCREEN_BUILDERS as _PROPAGATED_BUILDERS
+
+    _BUILDERS.update(_PROPAGATED_BUILDERS)
+except Exception as _prop_exc:  # noqa: BLE001 - 传播层缺失不应拖垮样板屏
+    _PROPAGATED_BUILDERS = {}
+    _PROPAGATION_IMPORT_ERROR = str(_prop_exc)
+else:
+    _PROPAGATION_IMPORT_ERROR = ""
+
+# 未绑定屏幕（无生产数据源）的诚实说明，来自 06_CONTRACTS/unknown-bindings.json
+def _unbound_reason(screen_id: str) -> str:
+    return "screen has no production data source yet (BLOCKED_BY_EXTERNAL_DEPENDENCY); prototype structure only"
+
 
 @experience_bp.route("/api/experience/screen/<screen_id>")
 def screen_viewmodel(screen_id: str):
@@ -607,7 +622,8 @@ def screen_viewmodel(screen_id: str):
     if builder is None:
         return jsonify({"ok": True, "screen": screen_id, "source": "prototype", "bound": False,
                         "sections": None,
-                        "note": "screen not yet bound to production backend (propagation pending)"}), 200
+                        "classification": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
+                        "note": _unbound_reason(screen_id)}), 200
     try:
         return jsonify(builder())
     except Exception as exc:  # noqa: BLE001

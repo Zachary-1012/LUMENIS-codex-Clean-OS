@@ -43,6 +43,30 @@
     tag.textContent = map[mode] || mode;
   }
 
+  /* 未绑定屏诚实横幅：生产外壳下绝不把 DESIGN_ONLY fixture 当成真实生产数据 */
+  function unboundBanner(id, classification) {
+    let bar = document.querySelector('[data-unbound-banner]');
+    const host = document.querySelector('#lum-page') || document.querySelector('.lum-main') || document.body;
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-unbound-banner', '1');
+      bar.className = 'lum-unbound-banner';
+    }
+    const reason = classification === 'BLOCKED_BY_EXTERNAL_DEPENDENCY'
+      ? '生产数据源尚未接入（BLOCKED_BY_EXTERNAL_DEPENDENCY）'
+      : '生产 ViewModel 尚未绑定';
+    bar.innerHTML =
+      '<span class="lum-unbound-banner__dot" aria-hidden="true"></span>' +
+      '<span>当前为 <b>原型结构 · DESIGN_ONLY 示例</b>，' + reason +
+      '，下列数值为设计样例，<b>不是真实生产数据</b>。屏幕：' + id + '</span>';
+    // 固定为内容区第一个子节点，保证用户先看到诚实声明再看到样例
+    if (bar.parentNode !== host) host.insertBefore(bar, host.firstChild);
+  }
+  function clearUnboundBanner() {
+    const bar = document.querySelector('[data-unbound-banner]');
+    if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+  }
+
   /* 用真实 sections 替换并重渲一次 */
   function applyViewModel(id, vm) {
     const store = SCREENS();
@@ -72,12 +96,14 @@
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const vm = await resp.json();
       if (vm && vm.bound && Array.isArray(vm.sections)) {
+        clearUnboundBanner();
         applyViewModel(id, vm);
         hydrated.add(sig);
         setSourceTag('runtime');
         reportBinding(vm.binding);
       } else {
-        // 未绑定屏：明确保持原型（诚实，不假装 runtime）
+        // 未绑定屏：保持原型结构，但必须显式标注 DESIGN_ONLY，防止假数据被当成生产值
+        unboundBanner(id, vm && vm.classification);
         setSourceTag('prototype');
       }
     } catch (err) {

@@ -69,9 +69,14 @@
       const NA_KIND = { notcollected: 'empty_notcollected', empty: 'empty_true', offline: 'offline', error: 'error', permission: 'empty_permission', blocked: 'blocked' };
       return `<section class="lum-grid-4 lum-stagger" data-reveal>${d.items.map(m => {
         const na = m.state && m.state !== 'ready';
+        // ready 值区分数值 / 文本：只有真正可数值化的才走 countup，状态串/名称/日期直接渲染，杜绝 NaN
+        const isNum = m.value !== null && m.value !== undefined && m.value !== '' &&
+          typeof m.value !== 'boolean' && !Number.isNaN(Number(m.value));
         const valueHtml = na
           ? `<span class="lum-metric__na" data-metric-state="${m.state}" title="${m.stateNote || ''}">—</span>`
-          : `<span data-countup="${m.value}" data-decimals="${m.decimals || 0}">${m.value == null ? '—' : m.value}</span>`;
+          : isNum
+            ? `<span data-countup="${m.value}" data-decimals="${m.decimals || 0}">${m.value}</span>`
+            : `<span class="lum-metric__text">${m.value == null ? '—' : m.value}</span>`;
         const dotCls = na ? 'lum-dot' : 'lum-dot lum-dot-ok';
         const NA_FALLBACK = { notcollected: '尚未采集', empty: '暂无记录', offline: '运行时不可用', error: '加载出错', permission: '无权限', blocked: '已阻断' };
         const naLabel = m.stateNote || (t('state.' + (NA_KIND[m.state] || 'empty_true'))) || NA_FALLBACK[m.state] || 'NA';

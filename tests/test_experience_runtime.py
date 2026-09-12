@@ -186,3 +186,74 @@ def test_ai_intent_validation(isolated_client):
     cli, _ = isolated_client
     assert cli.post("/api/experience/ai/intent", json={"task": ""}).status_code == 400
     assert cli.post("/api/experience/ai/intent", json={"task": "x" * 4001}).status_code == 400
+
+
+# --------------------------- P1 传播层（experience_screens） ---------------------------
+PROPAGATED = ["CTH-02", "CTH-03", "CTH-04", "CTH-05", "CTH-06", "CTH-07", "CTH-08",
+              "CTH-09", "CTH-10", "AI-02", "AI-03", "AI-04", "AI-05",
+              "SYS-01", "SYS-03", "SYS-04", "SH-03"]
+
+
+def test_all_propagated_screens_bound_with_sections(isolated_client):
+    cli, _ = isolated_client
+    for sid in PROPAGATED:
+        j = cli.get(f"/api/experience/screen/{sid}").get_json()
+        assert j["bound"] is True, sid
+        assert isinstance(j["sections"], list) and j["sections"], sid
+        assert j["sections"][0]["type"] == "head", sid
+
+
+def test_sys01_status_is_not_a_numeric_kpi(isolated_client):
+    """状态串不得进入数值 KPI（回归 NaN bug）：SYS-01 KPI 必须是真实整数。"""
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/SYS-01").get_json()
+    for m in _sections(j)["kpis"]["items"]:
+        assert isinstance(m["value"], int) and not isinstance(m["value"], bool), m["id"]
+    # 总体状态字符串应在 runtime 状态条里
+    rt = [s for s in j["sections"] if s.get("type") == "runtime"][0]
+    overall = next(i for i in rt["items"] if i["name"] == "总体状态")
+    assert overall["detail"] in ("healthy", "ok", "degraded", "unhealthy", "unknown")
+
+
+def test_cth07_chart_series_are_real_14d(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/CTH-07").get_json()
+    chart = [s for s in j["sections"] if s.get("type") == "chart"][0]
+    assert len(chart["labels"]) == 14
+    for s in chart["series"]:
+        assert len(s["data"]) == 14 and all(isinstance(v, int) for v in s["data"])
+
+
+def test_ready_kpis_have_value_nonready_are_none(isolated_client):
+    """状态契约：ready 必有标量值；非 ready 必须 value=None（不造假）。"""
+    cli, _ = isolated_client
+    import json
+    for sid in ["CTH-01", "AI-01"] + PROPAGATED:
+        j = cli.get(f"/api/experience/screen/{sid}").get_json()
+        for sec in j["sections"]:
+            if sec.get("type") != "kpis":
+                continue
+            for m in sec["items"]:
+                if m["state"] == "ready":
+                    assert m["value"] is not None, (sid, m["id"])
+                    assert not isinstance(m["value"], (dict, list)), (sid, m["id"])
+                else:
+                    assert m["value"] is None, (sid, m["id"])
+        # 任何已绑定屏都不得泄漏原型伪造大数字
+        assert "38214" not in json.dumps(j, ensure_ascii=False), sid
+
+
+def test_unbound_classified_as_external_dependency(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/BMP-08").get_json()
+    assert j["bound"] is False
+    assert j["classification"] == "BLOCKED_BY_EXTERNAL_DEPENDENCY"
+
+
+def test_screen_meta_covers_44_screens():
+    import json
+    path = os.path.join(REPO_ROOT, "experience_v2", "10_prototype", "data", "screen_meta.json")
+    meta = json.load(open(path, encoding="utf-8"))
+    assert len(meta) == 44
+    for sid in ["AI-01", "CTH-01", "SH-01"]:
+        assert meta[sid]["title"]
