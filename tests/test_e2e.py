@@ -8,6 +8,11 @@
     python test_e2e.py --verbose    # 详细输出
 """
 
+# 这是需要已启动服务与现有业务数据的独立验收脚本，不是 hermetic pytest。
+# 脚本函数以 bool 返回执行结果；若被 pytest 自动收集，False 也会被当作通过。
+# 因此正式单元/契约套件不收集本模块，运行时验收阶段由命令行显式执行 main。
+__test__ = False
+
 import os
 import sys
 import json

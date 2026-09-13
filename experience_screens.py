@@ -1042,16 +1042,20 @@ def _build_bmp09() -> Dict[str, Any]:
         metric("bmp09.total", "评估记录总数", value=_int_or_none(s.get("total_records")),
                state=STATE_READY if "total_records" in s else STATE_NOT_COLLECTED, icon="report",
                source="evaluation_recorder.get_evaluation_summary"),
-        metric("bmp09.pass", "通过", value=_c("pass"), state=STATE_READY, icon="check",
+        metric("bmp09.pass", "通过", value=_c("pass"),
+               state=STATE_READY if "pass" in counts else STATE_NOT_COLLECTED, icon="check",
                source="evaluation_recorder.get_evaluation_summary"),
-        metric("bmp09.warn", "警示", value=_c("warn"), state=STATE_READY, icon="risk",
+        metric("bmp09.warn", "警示", value=_c("warn"),
+               state=STATE_READY if "warn" in counts else STATE_NOT_COLLECTED, icon="risk",
                source="evaluation_recorder.get_evaluation_summary"),
-        metric("bmp09.fail", "失败", value=_c("fail"), state=STATE_READY, icon="risk",
+        metric("bmp09.fail", "失败", value=_c("fail"),
+               state=STATE_READY if "fail" in counts else STATE_NOT_COLLECTED, icon="risk",
                source="evaluation_recorder.get_evaluation_summary"),
     ]
     crows = [{"评估状态": {"pass": "通过", "warn": "警示", "fail": "失败", "unknown": "未知"}.get(k, k),
               "数量": _c(k)} for k in ("pass", "warn", "fail", "unknown")]
-    ctbl = section("table", STATE_READY, title="评估状态分布（真实）",
+    ctbl = section("table", STATE_READY if counts else STATE_NOT_COLLECTED,
+                   title="评估状态分布（真实）",
                    columns=[{"label": "评估状态", "key": "评估状态"},
                             {"label": "数量", "key": "数量", "numeric": True}], rows=crows)
     rrows = [{"维度": str(r.get("dimension") or "—"), "指标": str(r.get("metric_id") or r.get("metric") or "—"),
@@ -1264,6 +1268,173 @@ def _build_bmp04() -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# 最终六屏生产绑定：只读既有 Canonical 能力，不复制业务规则
+# ---------------------------------------------------------------------------
+def _build_acc01() -> Dict[str, Any]:
+    """统一入口：只陈述认证入口配置是否具备，不返回用户名或密钥。"""
+    user_configured = bool(os.environ.get("TAIKOO_AUTH_USER", "").strip())
+    secret_configured = bool(os.environ.get("TAIKOO_AUTH_PASSWORD", "").strip())
+    ready = user_configured and secret_configured
+    state = STATE_READY if ready else STATE_OFFLINE
+    sections = [
+        _head("ACC-01"),
+        section("kpis", state, items=[
+            metric("acc01.auth", "认证入口", value=1 if ready else None, state=state,
+                   icon="lock", source="app authentication configuration",
+                   note="凭据仅报告是否配置，不回传内容"),
+            metric("acc01.domains", "产品领域", value=2, state=STATE_READY,
+                   icon="domain", source="canonical CTH/BMP registry"),
+        ]),
+        section("note", state, kind="AUTH-READY" if ready else "CONFIG-REQUIRED",
+                text="统一入口使用后端认证与权限校验；主体选择不会改变 Production Truth。"),
+    ]
+    return _envelope("ACC-01", sections, truth={"auth_configured": ready, "domains": ["CTH", "BMP"]})
+
+
+def _build_acc04() -> Dict[str, Any]:
+    """账号恢复：复用 AuthRecoveryCenter 的真实待处理任务。"""
+    from auth_recovery_center import recovery_center
+
+    summary = _safe(recovery_center.get_recovery_summary, default={"__error__": "unavailable"})
+    failed = _is_err(summary)
+    pending = None if failed else int(summary.get("pending_count", 0) or 0)
+    rows = [] if failed else [
+        {"platform": t.get("platform", "—"), "title": t.get("title", "—"),
+         "status": t.get("status", "—"), "created_at": t.get("created_at", "—")}
+        for t in summary.get("pending_tasks", [])[:20]
+    ]
+    state = STATE_OFFLINE if failed else (STATE_READY if rows else STATE_EMPTY)
+    sections = [
+        _head("ACC-04"),
+        section("kpis", state, items=[metric("acc04.pending", "待恢复任务", value=pending,
+                state=state, icon="risk", source="auth_recovery_center.get_recovery_summary")]),
+        section("table", state, title="认证恢复队列", columns=[
+            {"label": "平台", "key": "platform"}, {"label": "问题", "key": "title"},
+            {"label": "状态", "key": "status"}, {"label": "创建时间", "key": "created_at"}], rows=rows),
+        section("note", state, kind="RECOVERY", text="验证由用户完成；系统只展示、暂停并在验证后健康复核。"),
+    ]
+    return _envelope("ACC-04", sections, truth=None if failed else {"pending_count": pending})
+
+
+def _build_bmp05() -> Dict[str, Any]:
+    """创作者：复用 KOS Canonical Profile，只读聚合。"""
+    import kos_engine
+
+    stats = _safe(kos_engine.get_stats, default={"__error__": "unavailable"})
+    listing = _safe(kos_engine.list_profiles, limit=20, default={"__error__": "unavailable"})
+    failed = _is_err(stats) or _is_err(listing)
+    profiles = [] if failed else listing.get("profiles", [])
+    rows = [{"name": p.get("author_nickname") or p.get("author_id") or "—",
+             "type": p.get("subject_type") or p.get("identity_label") or "UNKNOWN",
+             "tier": p.get("kos_tier") or "—", "score": p.get("kos_score"),
+             "engagement": p.get("total_engagement", 0)} for p in profiles]
+    state = STATE_OFFLINE if failed else (STATE_READY if rows else STATE_EMPTY)
+    total = None if failed else int(stats.get("total", 0) or 0)
+    sections = [
+        _head("BMP-05"),
+        section("kpis", state, items=[
+            metric("bmp05.total", "传播主体", value=total, state=state, icon="creators",
+                   source="kos_engine.get_stats"),
+            metric("bmp05.potential", "潜力主体", value=None if failed else stats.get("potential", 0),
+                   state=state, icon="trend", source="kos_engine.get_stats"),
+            metric("bmp05.risk", "风险主体", value=None if failed else stats.get("risk", 0),
+                   state=state, icon="risk", source="kos_engine.get_stats"),
+        ]),
+        section("table", state, title="KOS / KOL / KOC / UGC 主体", columns=[
+            {"label": "主体", "key": "name"}, {"label": "类型", "key": "type"},
+            {"label": "层级", "key": "tier"}, {"label": "评分", "key": "score", "numeric": True},
+            {"label": "互动", "key": "engagement", "numeric": True}], rows=rows),
+    ]
+    return _envelope("BMP-05", sections, truth=None if failed else {"total": total})
+
+
+def _build_bmp11() -> Dict[str, Any]:
+    """竞品对标：复用 kos_intel 的实体消歧与确定性评分。"""
+    import kos_intel
+
+    data = _safe(kos_intel.competitor_benchmark, default={"__error__": "unavailable"})
+    failed = _is_err(data)
+    ranking = [] if failed else data.get("ranking", [])
+    rows = [{"entity": r.get("entity", "—"), "score": r.get("score")} for r in ranking]
+    state = STATE_OFFLINE if failed else (STATE_READY if rows else STATE_EMPTY)
+    sections = [
+        _head("BMP-11"),
+        section("kpis", state, items=[
+            metric("bmp11.entities", "对标实体", value=None if failed else len(rows), state=state,
+                   icon="benchmark", source="kos_intel.competitor_benchmark"),
+            metric("bmp11.leader", "当前领先", value=None if failed else data.get("leader"), state=state,
+                   icon="trend", source="kos_intel.competitor_benchmark"),
+        ]),
+        section("table", state, title="可追溯对标", columns=[
+            {"label": "实体", "key": "entity"}, {"label": "确定性评分", "key": "score", "numeric": True}], rows=rows),
+        section("note", state, kind="METHOD", text="评分来自内容量、互动、强意向和作者数；AI 不改写统计口径。"),
+    ]
+    return _envelope("BMP-11", sections, truth=None if failed else {"leader": data.get("leader"), "ranking": ranking})
+
+
+def _build_sh01() -> Dict[str, Any]:
+    """内容创作工作室：呈现已登记能力与真实内容 Evidence，不生成示例内容。"""
+    import content_generation
+
+    modules = _safe(content_generation.get_module_status, default=[])
+    evidence = _safe(content_generation.list_evidence, limit=12, default={"__error__": "unavailable"})
+    failed = _is_err(evidence)
+    rows = [] if failed else evidence.get("items", [])
+    state = STATE_OFFLINE if failed else (STATE_READY if rows else STATE_EMPTY)
+    sections = [
+        _head("SH-01"),
+        section("kpis", state, items=[
+            metric("sh01.modules", "已登记创作能力", value=len(modules), state=STATE_READY,
+                   icon="content", source="content_generation.get_module_status",
+                   note="登记不等于全部 Runtime 已验证"),
+            metric("sh01.evidence", "创作证据", value=None if failed else evidence.get("total", 0),
+                   state=state, icon="evidence", source="content_generation.list_evidence"),
+        ]),
+        section("table", state, title="创作 Evidence", columns=[
+            {"label": "证据 ID", "key": "evidence_id"}, {"label": "内容类型", "key": "content_type"},
+            {"label": "Provider", "key": "provider"}, {"label": "状态", "key": "status"},
+            {"label": "时间", "key": "created_at"}], rows=rows),
+        section("note", state, kind="FACTUALITY-WALL",
+                text="Brief → Evidence → Draft → Human Approval；AI 只增强草稿，不拥有事实。"),
+    ]
+    return _envelope("SH-01", sections, truth=None if failed else {"evidence_total": evidence.get("total", 0)})
+
+
+def _build_sys06() -> Dict[str, Any]:
+    """内部浏览器：只读能力与驻场实例状态，不返回 Profile 绝对路径或 Cookie。"""
+    import browser_surface
+
+    report = _safe(browser_surface.capability_report, default={"__error__": "unavailable"})
+    failed = _is_err(report)
+    residents = [] if failed else report.get("residents", [])
+    rows = [{"account": r.get("account") or r.get("name") or "—",
+             "port": r.get("port"), "state": r.get("state") or r.get("status") or "UNKNOWN"}
+            for r in residents]
+    if not failed:
+        general = report.get("general_browser", {})
+        rows.append({"account": "GENERAL", "port": general.get("port"),
+                     "state": "ONLINE" if general.get("online") else "OFFLINE"})
+    online = sum(1 for r in rows if str(r.get("state", "")).upper() in ("ONLINE", "READY", "HEALTHY"))
+    state = STATE_OFFLINE if failed else STATE_READY
+    sections = [
+        _head("SYS-06"),
+        section("kpis", state, items=[
+            metric("sys06.instances", "浏览器实例", value=None if failed else len(rows), state=state,
+                   icon="browser", source="browser_surface.capability_report"),
+            metric("sys06.online", "当前在线", value=None if failed else online, state=state,
+                   icon="status", source="browser_surface.capability_report"),
+            metric("sys06.capabilities", "只读能力", value=None if failed else len(report.get("capabilities", [])),
+                   state=state, icon="layers", source="browser_surface.capability_report"),
+        ]),
+        section("table", state, title="隔离浏览实例", columns=[
+            {"label": "实例", "key": "account"}, {"label": "CDP 端口", "key": "port", "numeric": True},
+            {"label": "状态", "key": "state"}], rows=rows),
+        section("note", state, kind="READ-ONLY", text="自动化永久禁止关注、点赞、评论、私信、发布和账号设置写操作。"),
+    ]
+    return _envelope("SYS-06", sections, truth=None if failed else {"instances": len(rows), "online": online})
+
+
+# ---------------------------------------------------------------------------
 # 注册表：一屏一 builder
 # ---------------------------------------------------------------------------
 SCREEN_BUILDERS = {
@@ -1303,4 +1474,10 @@ SCREEN_BUILDERS = {
     "ACC-03": _build_acc03,
     "BMP-03": _build_bmp03,
     "BMP-04": _build_bmp04,
+    "ACC-01": _build_acc01,
+    "ACC-04": _build_acc04,
+    "BMP-05": _build_bmp05,
+    "BMP-11": _build_bmp11,
+    "SH-01": _build_sh01,
+    "SYS-06": _build_sys06,
 }

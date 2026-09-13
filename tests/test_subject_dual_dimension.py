@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def temp_db(tmp_path, monkeypatch):
     import database as db
     db_file = str(tmp_path / 'dual_dim.db')
+    monkeypatch.setenv('ZBC_DB_PATH', db_file)
     monkeypatch.setattr(db, 'DB_PATH', db_file)
     db.init_db()
     db.init_db()  # 幂等：第二次不得因列已存在而报错

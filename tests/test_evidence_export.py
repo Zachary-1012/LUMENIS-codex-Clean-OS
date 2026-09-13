@@ -19,9 +19,9 @@ def _load():
     return m
 
 
-def test_build_snapshot_structure():
+def test_build_snapshot_structure(tmp_path):
     m = _load()
-    snap = m.build()
+    snap = m.build(out_dir=str(tmp_path))
     assert snap["ts"]
     assert snap["source"]
     assert snap["git"].get("hash")
@@ -32,19 +32,20 @@ def test_build_snapshot_structure():
     assert "total_calls" in snap["ai_budget"] or "error" in snap["ai_budget"]
 
 
-def test_verify_pass():
+def test_verify_pass(tmp_path):
     m = _load()
-    m.build()
-    errs, j = m.verify()
+    m.build(out_dir=str(tmp_path))
+    errs, j = m.verify(out_dir=str(tmp_path))
+    # 允许 baseline/budget 缺数据时为 error，但 ts/git 必须存在
     assert j["ts"]
     assert j["git"].get("hash")
     assert isinstance(errs, list)
 
 
-def test_snapshot_file_written():
+def test_snapshot_file_written(tmp_path):
     m = _load()
-    m.build()
-    p = ROOT / "staging" / "evidence-export" / "evidence-snapshot-latest.json"
+    m.build(out_dir=str(tmp_path))
+    p = tmp_path / "evidence-snapshot-latest.json"
     assert p.exists()
     with p.open(encoding="utf-8") as fh:
         j = json.load(fh)

@@ -57,28 +57,30 @@ class TestCookieVault:
             cookies = load_cookies(p)
             assert isinstance(cookies, list), f"{p} load_cookies 返回非 list"
 
-    def test_cookie_files_exist_and_parse(self):
-        """所有平台 cookie 文件存在且可解析为标准格式"""
+    def test_cookie_status_is_explicit(self):
+        """凭证不进仓库；存在时验证认证结构，不存在时必须显式报告。"""
         for p in PLATFORMS_UNDER_TEST:
             status = check_cookie_status(p)
             assert status["platform"] == p
-            assert status["cookie_count"] > 0, f"{p} cookie 文件不存在或为空"
-            assert status["has_auth_cookie"], f"{p} 缺少关键认证 cookie: {status['auth_cookies_found']}"
+            assert status["cookie_count"] >= 0
+            assert status["status"] in {"ACTIVE", "MISSING", "INVALID"}
+            if status["cookie_count"] > 0:
+                assert status["has_auth_cookie"], f"{p} 缺少关键认证 cookie"
 
-    def test_to_cookie_string_non_empty(self):
-        """to_cookie_string 对所有平台返回非空字符串"""
+    def test_to_cookie_string_matches_loaded_state(self):
         for p in PLATFORMS_UNDER_TEST:
             s = to_cookie_string(p)
             assert isinstance(s, str), f"{p} to_cookie_string 返回非 str"
-            assert len(s) > 0, f"{p} to_cookie_string 为空"
-            assert "=" in s, f"{p} cookie string 格式异常"
+            if load_cookies(p):
+                assert "=" in s, f"{p} cookie string 格式异常"
+            else:
+                assert s == ""
 
-    def test_to_requests_cookies_returns_dict(self):
-        """to_requests_cookies 对所有平台返回非空 dict"""
+    def test_to_requests_cookies_returns_safe_dict(self):
         for p in PLATFORMS_UNDER_TEST:
             c = to_requests_cookies(p)
             assert isinstance(c, dict), f"{p} to_requests_cookies 返回非 dict"
-            assert len(c) > 0, f"{p} to_requests_cookies 为空"
+            assert all(isinstance(k, str) and isinstance(v, str) for k, v in c.items())
 
     def test_no_cookie_value_in_status_output(self):
         """check_cookie_status 不返回 cookie value（安全）"""

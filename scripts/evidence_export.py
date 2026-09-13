@@ -99,7 +99,7 @@ def _budget():
         return {"error": str(e)}
 
 
-def build(osai_dir=None):
+def build(osai_dir=None, out_dir=None):
     now = _dt.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     snap = {
         "ts": now,
@@ -109,11 +109,12 @@ def build(osai_dir=None):
         "lean": _lean(),
         "ai_budget": _budget(),
     }
-    os.makedirs(OUT_DIR, exist_ok=True)
-    latest = os.path.join(OUT_DIR, "evidence-snapshot-latest.json")
+    target_dir = out_dir or OUT_DIR
+    os.makedirs(target_dir, exist_ok=True)
+    latest = os.path.join(target_dir, "evidence-snapshot-latest.json")
     with io_open(latest, "w", encoding="utf-8") as f:
         json.dump(snap, f, ensure_ascii=False, indent=1)
-    arch = os.path.join(OUT_DIR, "evidence-snapshot-%s.json" % now.replace(":", "").replace("-", "").replace("T", "-"))
+    arch = os.path.join(target_dir, "evidence-snapshot-%s.json" % now.replace(":", "").replace("-", "").replace("T", "-"))
     with io_open(arch, "w", encoding="utf-8") as f:
         json.dump(snap, f, ensure_ascii=False, indent=1)
     # ZBC→OSAI 证据流转：同步到 OSAI 仓库（git 管理，供 Observatory 消费）
@@ -126,8 +127,8 @@ def build(osai_dir=None):
     return snap
 
 
-def verify():
-    p = os.path.join(OUT_DIR, "evidence-snapshot-latest.json")
+def verify(out_dir=None):
+    p = os.path.join(out_dir or OUT_DIR, "evidence-snapshot-latest.json")
     j = _read_json(p)
     errs = []
     for k in ("ts", "git", "baseline", "lean", "ai_budget"):

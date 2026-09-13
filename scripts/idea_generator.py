@@ -28,6 +28,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from db_paths import main_db_path
+
 # ---- 圈层符号语言（人群 → 沟通语言/符号体系）----
 CIRCLE_SYMBOLS = {
     "Z世代潮人": {"lang": "玩梗/反差/亚文化/圈层暗语", "symbols": ["暗语", "梗图", "共创", "remix"],
@@ -559,9 +561,8 @@ def _load_case_backing():
         return _CASE_BACKING_CACHE
     _CASE_BACKING_CACHE = {}
     try:
-        import os, sqlite3
-        _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "monitor.db")
-        _c = sqlite3.connect(_db, timeout=5)
+        import sqlite3
+        _c = sqlite3.connect(main_db_path(), timeout=5)
         _rows = _c.execute(
             "SELECT brand,title,summary,source,url,tags FROM swire_events WHERE project_key='case_study'"
         ).fetchall()
@@ -641,9 +642,8 @@ def _load_circle_backing():
         return _CIRCLE_BACKING
     idx = {}
     try:
-        import os, sqlite3
-        _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "monitor.db")
-        _c = sqlite3.connect(_db, timeout=5)
+        import sqlite3
+        _c = sqlite3.connect(main_db_path(), timeout=5)
         _rows = _c.execute(
             "SELECT title,brand,url,tags FROM swire_events WHERE project_key='case_study'").fetchall()
         _c.close()
@@ -675,9 +675,8 @@ def _node_circles(hotspot):
     if not hotspot:
         return None
     try:
-        import os, sqlite3
-        _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "monitor.db")
-        _c = sqlite3.connect(_db, timeout=5)
+        import sqlite3
+        _c = sqlite3.connect(main_db_path(), timeout=5)
         _rows = _c.execute(
             "SELECT name,date,category,circles,note FROM marketing_nodes").fetchall()
         _c.close()

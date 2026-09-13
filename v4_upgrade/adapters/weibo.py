@@ -83,14 +83,20 @@ class WeiboAdapter(BaseAdapter):
                     _login_state = None
                 if isinstance(_login_state, dict) and _login_state.get('logged_in') is False:
                     return AdapterResult(success=False, error='微博登录失效：当前账号未登录，请先登录或更新 cookie')
-            # 登录态前置检查（经 cookie_vault，不打印 cookie 内容）
-            if not self._cookie_ok():
+            # 注入 manager（测试或宿主 Auth Center）时由其提供 cookie；否则走统一 vault。
+            manager_cookie = ""
+            if self._manager is not None:
+                try:
+                    manager_cookie = self._manager.get_cookie_string() or ""
+                except Exception:
+                    manager_cookie = ""
+            if self._manager is None and not self._cookie_ok():
                 return AdapterResult(
                     success=False,
                     error="微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json",
                 )
 
-            cookie_string = to_cookie_string("weibo")
+            cookie_string = manager_cookie or to_cookie_string("weibo")
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
 

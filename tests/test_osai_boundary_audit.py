@@ -291,7 +291,7 @@ def test_20_osai_modules_not_in_app_import_chain():
     )
     result = subprocess.run(
         [sys.executable, '-c', code], cwd=_REPO_ROOT,
-        capture_output=True, text=True, timeout=120,
+        capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=120,
         env={**os.environ, 'PYTHONIOENCODING': 'utf-8'},
     )
     assert 'HEALTHZ_OK' in result.stdout, f"app 启动失败: {result.stderr[-500:]}"

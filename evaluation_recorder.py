@@ -152,7 +152,11 @@ CREATE INDEX IF NOT EXISTS idx_eval_records_evaluated ON evaluation_records(eval
 
 
 def _get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
-    path = db_path or DEFAULT_DB_PATH
+    if db_path is None:
+        from db_paths import main_db_path
+        path = main_db_path()
+    else:
+        path = db_path
     os.makedirs(os.path.dirname(path), exist_ok=True)
     conn = sqlite3.connect(path, timeout=10)
     conn.row_factory = sqlite3.Row

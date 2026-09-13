@@ -16,6 +16,7 @@ from topic_snapshot import TIME_MODEL, TopicSnapshotManager  # noqa: E402
 @pytest.fixture
 def iso_db(tmp_path, monkeypatch):
     p = tmp_path / "iso.db"
+    monkeypatch.setenv("ZBC_DB_PATH", str(p))
     monkeypatch.setattr(db, "DB_PATH", str(p))
     # 建最小表结构
     con = sqlite3.connect(str(p))
