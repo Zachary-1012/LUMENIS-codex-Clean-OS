@@ -1,0 +1,137 @@
+{
+  "screen": "BMP-09",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "EV-R01",
+      "EV-R02"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "BMP · 品牌市场",
+      "title": "品牌报告与评估",
+      "titleKey": "screen.BMP-09",
+      "desc": "品牌资产评估、周期报告与评分，结论均可回溯证据。",
+      "actions": [
+        {
+          "label": "生成评估报告",
+          "variant": "primary",
+          "id": "gen",
+          "cls": "DRAFT",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "report:write",
+          "ico": "evaluation"
+        }
+      ]
+    },
+    {
+      "type": "split",
+      "main": [
+        {
+          "type": "chart",
+          "title": "品牌资产五维",
+          "kind": "bar",
+          "series": [
+            {
+              "data": [
+                82,
+                76,
+                80,
+                71,
+                85
+              ],
+              "color": "var(--lum-c-brand-500)"
+            }
+          ],
+          "labels": [
+            "认知",
+            "美誉",
+            "传播",
+            "体验",
+            "忠诚"
+          ]
+        },
+        {
+          "type": "table",
+          "title": "评估记录",
+          "columns": [
+            {
+              "label": "报告",
+              "key": "r"
+            },
+            {
+              "label": "周期",
+              "key": "p"
+            },
+            {
+              "label": "综合分",
+              "key": "s",
+              "numeric": true
+            },
+            {
+              "label": "状态",
+              "key": "st",
+              "numeric": true,
+              "type": "t"
+            },
+            {
+              "label": "证据",
+              "key": "ev"
+            }
+          ],
+          "rows": [
+            {
+              "r": "Q3 品牌资产评估",
+              "p": "Q3",
+              "s": 82.4,
+              "st": "已确认",
+              "t": "success",
+              "ev": "EV-R01"
+            },
+            {
+              "r": "8 月品牌月报",
+              "p": "8月",
+              "s": 79.6,
+              "st": "已确认",
+              "t": "success",
+              "ev": "EV-R02"
+            },
+            {
+              "r": "竞品对比评估",
+              "p": "近30天",
+              "s": "草稿",
+              "st": "草稿",
+              "t": "warning",
+              "ev": "UNKNOWN"
+            }
+          ]
+        }
+      ],
+      "side": [
+        {
+          "type": "evidence",
+          "title": "评估依据",
+          "items": [
+            {
+              "kind": "Metric",
+              "id": "EV-R01",
+              "chain": [
+                "Canonical",
+                "Evaluation"
+              ],
+              "quote": "五维评分来自同口径指标加权。",
+              "time": "09-08",
+              "source": "eval_engine",
+              "conf": 92
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

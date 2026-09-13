@@ -1,0 +1,150 @@
+[
+  {
+    "id": "rs01_motionsites",
+    "url": "https://motionsites.org/",
+    "http": 200,
+    "file": "D:\\LUMENIS_REBUILD\\LUMENIS-codex-Clean-OS\\experience_v2\\13_research\\source_captures\\rs01_motionsites.png",
+    "bytes": 526638,
+    "sha256": "a2a6b0c3401945d9",
+    "title": "MotionSites - Premium AI Website Prompts & Templates",
+    "headings": [
+      "UNLOCK YOUR AI\nDESIGN SUPERPOWERS",
+      "3d Character Studio",
+      "Data Storytelling",
+      "Bloom",
+      "Custom Spaces",
+      "Book Hero",
+      "OYLA",
+      "Form Study",
+      "Urban Jungle",
+      "Spatial Mapping Platform",
+      "3D Jack Portfolio",
+      "Stillmind"
+    ],
+    "status": "ok"
+  },
+  {
+    "id": "rs02_showreel",
+    "url": "https://showreel.design/",
+    "http": 200,
+    "file": "D:\\LUMENIS_REBUILD\\LUMENIS-codex-Clean-OS\\experience_v2\\13_research\\source_captures\\rs02_showreel.png",
+    "bytes": 134352,
+    "sha256": "0413488ef873edd2",
+    "title": "Showreel.design — Discover the Best Showreels",
+    "headings": [
+      "Discover 228 Best Showreels"
+    ],
+    "status": "ok"
+  },
+  {
+    "id": "rs03_reactbits",
+    "url": "https://reactbits.dev/",
+    "http": 200,
+    "file": "D:\\LUMENIS_REBUILD\\LUMENIS-codex-Clean-OS\\experience_v2\\13_research\\source_captures\\rs03_reactbits.png",
+    "bytes": 1496291,
+    "sha256": "1debc5a564a4a657",
+    "title": "React Bits - Animated UI Components For React",
+    "headings": [
+      "React components for\ncreative developers",
+      "What's inside",
+      "170+ Components",
+      "Visual Editors",
+      "Well Organized",
+      "Pick Your Stack",
+      "AI-Ready",
+      "Growing Fast",
+      "See them in action",
+      "Build the complete product.",
+      "Get started in seconds",
+      "The code is yours"
+    ],
+    "status": "ok"
+  },
+  {
+    "id": "rs04_animejs",
+    "url": "https://animejs.com/",
+    "http": 200,
+    "file": "D:\\LUMENIS_REBUILD\\LUMENIS-codex-Clean-OS\\experience_v2\\13_research\\source_captures\\rs04_animejs.png",
+    "bytes": 236723,
+    "sha256": "a40e5d87df6cf531",
+    "title": "Anime.js | JavaScript Animation Engine",
+    "headings": [
+      "All-in-one\nanimation\nengine.\nAll-in-one\nanimation\nengine.",
+      "The complete\nanimator's toolbox",
+      "Intuitive API",
+      "Enhanced transforms",
+      "Scroll Observer",
+      "Advanced staggering",
+      "SVG toolset",
+      "Springs and draggable",
+      "Runs like\nclockwork",
+      "Responsive animations",
+      "A lightweight\nand modular API"
+    ],
+    "status": "ok"
+  },
+  {
+    "id": "rs05_aceternity",
+    "url": "https://ui.aceternity.com/",
+    "http": 200,
+    "file": "D:\\LUMENIS_REBUILD\\LUMENIS-codex-Clean-OS\\experience_v2\\13_research\\source_captures\\rs05_aceternity.png",
+    "bytes": 143934,
+    "sha256": "ca56894d88648d89",
+    "title": "Aceternity UI — React & Tailwind CSS Component Library",
+    "headings": [
+      "The React component library for beautiful landing pages.",
+      "Used by companies and people working at",
+      "Copy, paste, or build with your \nAI agent.\nAI agent.",
+      "Loved by thousands of developers, designers and entrepreneurs",
+      "Get more done with Aceternity UI All-Access Pass",
+      "Design & Development Studio Template",
+      "Productized Agency Template",
+      "Simplistic SaaS Template",
+      "Featured by popular YouTubers",
+      "Frequently asked questions",
+      "What does Aceternity UI lifetime access include?",
+      "Is Aceternity UI free?"
+    ],
+    "status": "ok"
+  },
+  {
+    "id": "rs06_uiverse",
+    "url": "https://uiverse.io/",
+    "http": 403,
+    "file": "D:\\LUMENIS_REBUILD\\LUMENIS-codex-Clean-OS\\experience_v2\\13_research\\source_captures\\rs06_uiverse.png",
+    "bytes": 51366,
+    "sha256": "8cc9d5a0e19e1225",
+    "title": "Attention Required! | Cloudflare",
+    "headings": [
+      "Sorry, you have been blocked",
+      "You are unable to access uiverse.io",
+      "Why have I been blocked?",
+      "What can I do to resolve this?"
+    ],
+    "status": "ok"
+  },
+  {
+    "id": "rs07_liquidglass_demo",
+    "url": "https://liquid-glass.ybouane.com/",
+    "http": 200,
+    "file": "D:\\LUMENIS_REBUILD\\LUMENIS-codex-Clean-OS\\experience_v2\\13_research\\source_captures\\rs07_liquidglass_demo.png",
+    "bytes": 2169051,
+    "sha256": "ab42f249a6fa09b8",
+    "title": "LiquidGlass — WebGL Glass Effects for the Web",
+    "headings": [
+      "Liquid Glass",
+      "What is Liquid Glass?",
+      "Getting Started",
+      "Interactive Playground",
+      "Configuration Options",
+      "Frosted Panel",
+      "Dark Glass",
+      "Button Mode",
+      "Dome Bevel (Magnifier)",
+      "Limitations & Gotchas",
+      "Structural",
+      "Performance"
+    ],
+    "status": "ok"
+  }
+]

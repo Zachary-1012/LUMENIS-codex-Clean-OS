@@ -1,0 +1,35 @@
+{
+  "screen": "SH-03",
+  "viewmodel": {
+    "metrics": [
+      "{name,definition,table,cadence,state,lineage}"
+    ]
+  },
+  "binding": {
+    "canonical": "CODEX_VERIFY (canonical_data/metric engine = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "metrics"
+    ],
+    "Capability": [
+      "PAT-DATA-01"
+    ],
+    "Motion": [
+      "M03",
+      "M06"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "SH-03.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "DB: canonical"
+    ]
+  },
+  "unknown_binding_keys": [
+    "canonical"
+  ],
+  "binding_owner_default": "CODEX"
+}

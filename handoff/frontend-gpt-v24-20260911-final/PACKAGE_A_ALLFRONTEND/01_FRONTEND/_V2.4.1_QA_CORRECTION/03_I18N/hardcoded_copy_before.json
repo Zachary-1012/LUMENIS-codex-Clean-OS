@@ -1,0 +1,107 @@
+[
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\index.html",
+    "line_number": 6,
+    "content": "<title>序境 LUMENIS · Experience V2 Prototype</title>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\index.html",
+    "line_number": 20,
+    "content": "<noscript>序境 / LUMENIS prototype requires JavaScript.</noscript>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\index.html",
+    "line_number": 40,
+    "content": "  <select data-locale aria-label=\"locale\"><option value=\"zh-CN\">简体中文</option><option value=\"en\">English</option><option value=\"ko\">한국어</option><option value=\"pseudo\">Pseudo(文本压力)</option></select>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 15,
+    "content": "  const DOMAIN_NAME = { CTH: '商业运营', BMP: '品牌市场' };"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 16,
+    "content": "  const SCOPE_NAME = { mall_group: '商业体群组', single_unit: '单一业务单元', brand: '品牌' };"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 17,
+    "content": "  const WINDOW_NAME = { last_30d: '近 30 天', last_7d: '近 7 天', last_24h: '近 24 小时' };"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 18,
+    "content": "  const LOCALE_NAME = { 'zh-CN': '简体中文', 'en-US': 'English', 'ko-KR': '한국어' };"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 26,
+    "content": "      <div class=\"lum-softglass\" style=\"padding:14px\"><span class=\"lum-eyebrow\">工作上下文</span>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 28,
+    "content": "          ${row('当前主体', subj.name || cv.subject_id, cv.subject_id)}"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 29,
+    "content": "          ${row('领域', DOMAIN_NAME[cv.domain] || cv.domain)}"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 30,
+    "content": "          ${row('范围', SCOPE_NAME[cv.scope] || cv.scope, cv.scope)}"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 31,
+    "content": "          ${row('时间窗', WINDOW_NAME[cv.time_window] || cv.time_window, cv.time_window)}"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 32,
+    "content": "          ${row('语言', LOCALE_NAME[cv.locale] || cv.locale)}</div></div>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\app.js",
+    "line_number": 33,
+    "content": "      ${c.evidence ? `<div class=\"lum-card-solid lum-card-pad\"><span class=\"lum-eyebrow\">证据</span><div class=\"lum-stack-2\" style=\"margin-top:8px\">${c.evidence.map(e => `<div class=\"lum-row\"><span class=\"lum-dot lum-dot-ok\"></span><span class=\"lum-body-2 lum-mono\">${e}</span></div>`).join(''})}</div></div>` : ''}"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\shell.js",
+    "line_number": 28,
+    "content": "        <div class=\"lum-rail__logo\">序</div>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\shell.js",
+    "line_number": 29,
+    "content": "        <div class=\"nm\"><b data-i18n=\"product.mother\">序境 LUMENIS</b><span id=\"lum-domain-label\" data-i18n=\"domain.cth\">序境·商业运营</span></div>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\shell.js",
+    "line_number": 49,
+    "content": "      <div class=\"lum-crumb\"><span id=\"lum-crumb-domain\" data-i18n=\"domain.cth\">序境·商业运营</span> ${icon('chevron-right', 14)} <b id=\"lum-crumb-page\">${title || ''}</b></div>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\shell.js",
+    "line_number": 51,
+    "content": "        <span class=\"av\">主</span><span id=\"lum-subject-name\">—</span>${icon('chevron-down', 16)}"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\shell.js",
+    "line_number": 54,
+    "content": "        <button data-val=\"CTH\" data-i18n=\"navgroup.cth\" aria-pressed=\"true\">商业运营</button><button data-val=\"BMP\" data-i18n=\"navgroup.bmp\" aria-pressed=\"false\">品牌市场</button>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\shell.js",
+    "line_number": 74,
+    "content": "        <span class=\"lum-action-item__txt\"><b>${s.name}</b><span>${({commercial_property:'商业体',brand:'品牌',unit:'业务单元'}[s.subject_type]||s.subject_type)} · ${({mall_group:'商业体群组',single_unit:'单一业务单元',brand:'品牌'}[s.scope]||s.scope||'UNKNOWN')}</span></span>"
+  },
+  {
+    "file_path": "D:\\LUMENIS_REBUILD\\_handoff_build\\LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612\\03_EXPERIENCE_V2\\10_prototype\\assets\\shell.js",
+    "line_number": 78,
+    "content": "       <p class=\"lum-caption\">切换主体只改变当前工作上下文，不改变底层事实数据。</p></div>`);"
+  }
+]

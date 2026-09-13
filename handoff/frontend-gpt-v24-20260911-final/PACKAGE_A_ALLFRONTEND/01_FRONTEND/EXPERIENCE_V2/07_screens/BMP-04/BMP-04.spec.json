@@ -1,0 +1,170 @@
+{
+  "screen": "BMP-04",
+  "meta": {
+    "domain": "BMP",
+    "group": "bmp",
+    "icon": "trend",
+    "zh": "传播分析",
+    "en": "Communication Analysis",
+    "ko": "커뮤니케이션 분석",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.BMP-04",
+    "patterns": [
+      "PAT-DATA-01"
+    ],
+    "motions": [
+      "M03",
+      "M06"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "BMP · 品牌市场",
+        "title": "传播分析",
+        "titleKey": "screen.BMP-04",
+        "desc": "渠道×内容×时段的传播表现与转化漏斗，统一口径。"
+      },
+      {
+        "type": "kpis",
+        "items": [
+          {
+            "label": "总曝光",
+            "value": 1.28,
+            "icon": "trend",
+            "source": "EV:reach",
+            "fresh": "live",
+            "decimals": 2,
+            "unit": "M",
+            "delta": 11,
+            "deltaUnit": "%"
+          },
+          {
+            "label": "互动率",
+            "value": 4.8,
+            "icon": "creators",
+            "source": "EV:engage",
+            "fresh": "live",
+            "decimals": 1,
+            "unit": "%"
+          },
+          {
+            "label": "转发/收藏",
+            "value": 38420,
+            "icon": "share",
+            "source": "EV:share",
+            "fresh": "live",
+            "decimals": 0
+          },
+          {
+            "label": "引流转化",
+            "value": 2.1,
+            "icon": "arrow-right",
+            "source": "EV:convert",
+            "fresh": "live",
+            "decimals": 1,
+            "unit": "%"
+          }
+        ]
+      },
+      {
+        "type": "split",
+        "main": [
+          {
+            "type": "chart",
+            "title": "渠道贡献",
+            "kind": "bar",
+            "series": [
+              {
+                "data": [
+                  42,
+                  28,
+                  16,
+                  9,
+                  5
+                ],
+                "color": "var(--lum-c-brand-500)"
+              }
+            ],
+            "labels": [
+              "小红书",
+              "抖音",
+              "微博",
+              "微信",
+              "其他"
+            ]
+          },
+          {
+            "type": "chart",
+            "title": "传播漏斗",
+            "kind": "bar",
+            "series": [
+              {
+                "data": [
+                  100,
+                  64,
+                  38,
+                  18,
+                  9
+                ],
+                "color": "var(--lum-c-info)"
+              }
+            ],
+            "labels": [
+              "曝光",
+              "点击",
+              "互动",
+              "加购",
+              "转化"
+            ]
+          }
+        ],
+        "side": [
+          {
+            "type": "insight",
+            "text": "小红书贡献最高互动但转化偏低，抖音引流转化更优，建议组合投放并 A/B 脚本。",
+            "evidence": [
+              "EV-B401",
+              "EV-B402"
+            ]
+          },
+          {
+            "type": "evidence",
+            "title": "口径",
+            "items": [
+              {
+                "kind": "Metric",
+                "id": "EV-B401",
+                "chain": [
+                  "Source",
+                  "Canonical",
+                  "Metric"
+                ],
+                "quote": "渠道去重口径，已排除刷量异常。",
+                "time": "09-09",
+                "source": "canonical",
+                "conf": 95
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "EV-B401",
+        "EV-B402"
+      ]
+    },
+    "viewmodel": {
+      "channels": [
+        "{name,reach,engage,convert}"
+      ]
+    },
+    "binding": {
+      "channels": "CODEX_VERIFY (communication_analysis = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

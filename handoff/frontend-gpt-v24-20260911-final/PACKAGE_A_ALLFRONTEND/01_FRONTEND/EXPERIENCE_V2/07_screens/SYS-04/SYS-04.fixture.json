@@ -1,0 +1,142 @@
+{
+  "screen": "SYS-04",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "SEC-01",
+      "SEC-02"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "System",
+      "title": "安全与权限 Security & Permission",
+      "titleKey": "screen.SYS-04",
+      "desc": "READ/TASK/AUDIT/WRITE/DEPLOY 五级边界；EFFECT 行动必须二次确认与权限校验。"
+    },
+    {
+      "type": "table",
+      "title": "权限矩阵",
+      "columns": [
+        {
+          "label": "能力域",
+          "key": "d"
+        },
+        {
+          "label": "READ",
+          "key": "r"
+        },
+        {
+          "label": "TASK",
+          "key": "t"
+        },
+        {
+          "label": "AUDIT",
+          "key": "a"
+        },
+        {
+          "label": "WRITE",
+          "key": "w"
+        },
+        {
+          "label": "DEPLOY",
+          "key": "dp"
+        }
+      ],
+      "rows": [
+        {
+          "d": "Evidence/Canonical",
+          "r": "✓",
+          "t": "✓",
+          "a": "✓",
+          "w": "受限",
+          "dp": "—"
+        },
+        {
+          "d": "报告导出",
+          "r": "✓",
+          "t": "✓",
+          "a": "✓",
+          "w": "草稿",
+          "dp": "—"
+        },
+        {
+          "d": "内容发布",
+          "r": "✓",
+          "t": "草稿",
+          "a": "✓",
+          "w": "审批",
+          "dp": "—"
+        },
+        {
+          "d": "生产部署",
+          "r": "管理员",
+          "t": "—",
+          "a": "✓",
+          "w": "管理员",
+          "dp": "管理员"
+        }
+      ]
+    },
+    {
+      "type": "split",
+      "main": [
+        {
+          "type": "risks",
+          "items": [
+            {
+              "level": "high",
+              "title": "越权写入风险",
+              "evidence": "SEC-01",
+              "desc": "任何 EFFECT 必须后端重验 Subject/Scope 授权。"
+            },
+            {
+              "level": "med",
+              "title": "凭据泄漏面",
+              "evidence": "SEC-02",
+              "desc": ".env/key 不进前端与交付物。"
+            }
+          ]
+        }
+      ],
+      "side": [
+        {
+          "type": "actions",
+          "title": "审计操作",
+          "items": [
+            {
+              "id": "view-audit",
+              "title": "查看审计日志",
+              "icon": "ops",
+              "cls": "NAVIGATION",
+              "scope": "UNKNOWN",
+              "target": "UNKNOWN",
+              "permission": "audit:read",
+              "desc": "QUERY"
+            },
+            {
+              "id": "rotate-key",
+              "title": "轮换密钥",
+              "icon": "security",
+              "cls": "NAVIGATION",
+              "scope": "UNKNOWN",
+              "target": "UNKNOWN",
+              "permission": "secret:rotate",
+              "desc": "EFFECT",
+              "risk": true
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "text": "前端只做交互确认；真正授权判定在后端，Subject 切换不改变数据归属，后端必须重验。",
+          "kind": "RULE",
+          "code": "PERM-BACKEND"
+        }
+      ]
+    }
+  ]
+}

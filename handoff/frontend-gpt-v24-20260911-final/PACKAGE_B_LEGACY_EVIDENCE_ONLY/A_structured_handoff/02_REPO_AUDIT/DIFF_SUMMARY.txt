@@ -1,0 +1,4 @@
+Tracked-source git diff --stat: (empty)
+Cached: (empty)
+Untracked entries: 1 -> ['?? experience_v2/']
+Conclusion: ZERO modification to tracked backend/legacy source; all Doubao output is isolated under untracked experience_v2/.

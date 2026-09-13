@@ -1,0 +1,34 @@
+{
+  "screen": "SYS-07",
+  "viewmodel": {
+    "gates": [
+      "{id,criteria,state,evidence}"
+    ]
+  },
+  "binding": {
+    "acceptance": "owner CODEX (production acceptance)"
+  },
+  "ports": {
+    "ViewModel": [
+      "gates"
+    ],
+    "Capability": [
+      "PAT-DATA-01"
+    ],
+    "Motion": [
+      "M03"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "SYS-07.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "acceptance gates"
+    ]
+  },
+  "unknown_binding_keys": [
+    "acceptance"
+  ],
+  "binding_owner_default": "CODEX"
+}

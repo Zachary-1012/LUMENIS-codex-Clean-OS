@@ -1,0 +1,35 @@
+{
+  "screen": "BMP-11",
+  "viewmodel": {
+    "matrix": [
+      "{dim,self,competitors[],gap}"
+    ]
+  },
+  "binding": {
+    "benchmark": "CODEX_VERIFY (benchmark = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "matrix"
+    ],
+    "Capability": [
+      "PAT-DATA-01"
+    ],
+    "Motion": [
+      "M03",
+      "M06"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "BMP-11.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "EV-B1101"
+    ]
+  },
+  "unknown_binding_keys": [
+    "benchmark"
+  ],
+  "binding_owner_default": "CODEX"
+}

@@ -1,0 +1,720 @@
+﻿{% extends "base.html" %}
+{% block title %}Internal Browser · 序境 LUMENIS{% endblock %}
+{% block page_title %}Internal Browser{% endblock %}
+{% block body_domain %}system{% endblock %}
+
+{% block head %}
+<style>
+/* ===== Browser Page — No-Scroll Full-Height Layout ===== */
+.zbc-content { padding: 0 !important; overflow: hidden !important; }
+#zbc-topbar { display: none; }
+
+.browser-shell {
+  display: flex; flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(135deg, rgba(124,58,237,0.04) 0%, rgba(167,139,250,0.02) 50%, rgba(255,255,255,0) 100%);
+  overflow: hidden;
+}
+
+/* ===== Tab Bar ===== */
+.browser-tabbar {
+  display: flex; align-items: flex-end;
+  padding: 8px 12px 0 12px;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  gap: 4px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.browser-tab-list { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.browser-tab-list::-webkit-scrollbar { display: none; }
+
+.browser-tab {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  min-width: 140px; max-width: 220px;
+  background: rgba(255,255,255,0.4);
+  border: 1px solid rgba(0,0,0,0.05);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+.browser-tab:hover { background: rgba(255,255,255,0.7); }
+.browser-tab.is-active {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(124,58,237,0.2);
+  box-shadow: 0 -2px 8px rgba(124,58,237,0.08);
+}
+.browser-tab.is-active::after {
+  content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, #7C3AED, #A78BFA);
+  border-radius: 2px 2px 0 0;
+}
+.browser-tab__favicon { width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #7C3AED; }
+.browser-tab__title {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; font-weight: 500; color: #374151;
+}
+.browser-tab.is-active .browser-tab__title { color: #111827; font-weight: 600; }
+.browser-tab__close {
+  width: 20px; height: 20px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: #9CA3AF; cursor: pointer; flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.browser-tab__close:hover { background: rgba(220,38,38,0.1); color: #DC2626; }
+
+.browser-tab-new {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(124,58,237,0.08); color: #7C3AED;
+  cursor: pointer; flex-shrink: 0; margin-bottom: 4px;
+  transition: all 0.2s ease; border: 1px solid rgba(124,58,237,0.15);
+}
+.browser-tab-new:hover { background: rgba(124,58,237,0.15); transform: scale(1.05); }
+
+/* ===== Toolbar ===== */
+.browser-toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.browser-nav-btns { display: flex; gap: 4px; flex-shrink: 0; }
+.browser-nav-btn {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent;
+  color: #4B5563; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.browser-nav-btn:hover { background: rgba(124,58,237,0.08); color: #7C3AED; }
+.browser-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.browser-nav-btn.is-loading { color: #7C3AED; animation: browser-spin 1s linear infinite; }
+@keyframes browser-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.browser-address-wrap {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 0 14px;
+  height: 40px;
+  transition: all 0.2s ease;
+}
+.browser-address-wrap:focus-within {
+  border-color: rgba(124,58,237,0.4);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+}
+.browser-security-indicator {
+  display: flex; align-items: center; gap: 5px;
+  flex-shrink: 0; cursor: default;
+}
+.browser-security-indicator svg { width: 16px; height: 16px; }
+.browser-security-indicator.is-secure { color: #059669; }
+.browser-security-indicator.is-warning { color: #D97706; }
+.browser-security-indicator.is-danger { color: #DC2626; }
+.browser-security-indicator.is-unknown { color: #9CA3AF; }
+.browser-security-label { font-size: 11px; font-weight: 500; }
+
+.browser-address-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: 13px; font-family: 'JetBrains Mono', monospace;
+  color: #111827; height: 100%;
+}
+.browser-address-input::placeholder { color: #9CA3AF; }
+
+.browser-toolbar-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.browser-action-btn {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent;
+  color: #4B5563; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.browser-action-btn:hover { background: rgba(124,58,237,0.08); color: #7C3AED; }
+.browser-action-btn.is-active { background: rgba(124,58,237,0.12); color: #7C3AED; border-color: rgba(124,58,237,0.2); }
+
+/* ===== Main Content Area ===== */
+.browser-main {
+  flex: 1; display: flex; min-height: 0;
+  position: relative;
+}
+.browser-viewport {
+  flex: 1; position: relative; overflow: hidden;
+  background: rgba(255,255,255,0.3);
+}
+.browser-viewport__img-wrap {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: auto;
+}
+.browser-viewport__img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.browser-viewport__placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  color: #9CA3AF;
+}
+.browser-viewport__placeholder-icon {
+  width: 64px; height: 64px; border-radius: 20px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(167,139,250,0.05));
+  display: flex; align-items: center; justify-content: center;
+  color: #7C3AED;
+}
+.browser-viewport__placeholder-text { font-size: 14px; font-weight: 500; color: #6B7280; }
+.browser-viewport__placeholder-sub { font-size: 12px; color: #9CA3AF; }
+
+/* Blocked page */
+.browser-blocked {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 40px;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(20px);
+}
+.browser-blocked__icon {
+  width: 72px; height: 72px; border-radius: 24px;
+  background: rgba(220,38,38,0.08);
+  display: flex; align-items: center; justify-content: center;
+  color: #DC2626;
+}
+.browser-blocked__title { font-size: 18px; font-weight: 700; color: #111827; }
+.browser-blocked__reason { font-size: 13px; color: #6B7280; text-align: center; max-width: 400px; line-height: 1.6; }
+.browser-blocked__url {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: #DC2626; background: rgba(220,38,38,0.06);
+  padding: 6px 14px; border-radius: 8px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ===== Sidebar Panel ===== */
+.browser-sidebar {
+  width: 300px; flex-shrink: 0;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(0,0,0,0.06);
+  display: flex; flex-direction: column;
+  transition: width 0.3s ease, margin 0.3s ease;
+  overflow: hidden;
+}
+.browser-sidebar.is-collapsed { width: 0; border-left: none; }
+
+.browser-sidebar__tabs {
+  display: flex; gap: 2px; padding: 10px 12px 0 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  flex-shrink: 0;
+}
+.browser-sidebar__tab {
+  flex: 1; padding: 8px 4px; text-align: center;
+  font-size: 11px; font-weight: 600; color: #6B7280;
+  cursor: pointer; border-radius: 8px 8px 0 0;
+  transition: all 0.15s ease;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.browser-sidebar__tab:hover { color: #7C3AED; background: rgba(124,58,237,0.04); }
+.browser-sidebar__tab.is-active { color: #7C3AED; background: rgba(124,58,237,0.08); }
+.browser-sidebar__tab svg { width: 14px; height: 14px; }
+
+.browser-sidebar__content { flex: 1; overflow-y: auto; padding: 12px; }
+.browser-sidebar__content::-webkit-scrollbar { width: 4px; }
+.browser-sidebar__content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+
+.browser-panel-section { margin-bottom: 16px; }
+.browser-panel-section__header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.browser-panel-section__title { font-size: 11px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; }
+.browser-panel-section__action {
+  font-size: 11px; color: #7C3AED; cursor: pointer; font-weight: 500;
+  padding: 2px 8px; border-radius: 6px; transition: all 0.15s ease;
+}
+.browser-panel-section__action:hover { background: rgba(124,58,237,0.08); }
+
+.browser-list-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 12px;
+  cursor: pointer; transition: all 0.15s ease;
+  margin-bottom: 4px;
+}
+.browser-list-item:hover { background: rgba(124,58,237,0.06); }
+.browser-list-item__icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(124,58,237,0.08); color: #7C3AED;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.browser-list-item__icon svg { width: 14px; height: 14px; }
+.browser-list-item__body { flex: 1; min-width: 0; }
+.browser-list-item__title {
+  font-size: 12px; font-weight: 600; color: #111827;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.browser-list-item__url {
+  font-size: 10px; color: #9CA3AF; font-family: 'JetBrains Mono', monospace;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-top: 2px;
+}
+.browser-list-item__meta { font-size: 10px; color: #9CA3AF; margin-top: 2px; }
+.browser-list-item__remove {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: #9CA3AF; cursor: pointer; flex-shrink: 0;
+  transition: all 0.15s ease; opacity: 0;
+}
+.browser-list-item:hover .browser-list-item__remove { opacity: 1; }
+.browser-list-item__remove:hover { background: rgba(220,38,38,0.1); color: #DC2626; }
+
+.browser-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 32px 16px; color: #9CA3AF;
+}
+.browser-empty svg { width: 32px; height: 32px; opacity: 0.5; }
+.browser-empty__text { font-size: 12px; color: #9CA3AF; }
+
+/* Collect status panel */
+.browser-collect-status {
+  background: rgba(124,58,237,0.04);
+  border: 1px solid rgba(124,58,237,0.1);
+  border-radius: 14px; padding: 14px;
+}
+.browser-collect-status__row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; font-size: 12px;
+}
+.browser-collect-status__label { color: #6B7280; }
+.browser-collect-status__value { font-weight: 600; color: #111827; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.browser-collect-status__value.is-online { color: #059669; }
+.browser-collect-status__value.is-offline { color: #DC2626; }
+
+.browser-readonly-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; margin-bottom: 12px;
+  background: rgba(5,150,105,0.06);
+  border: 1px solid rgba(5,150,105,0.15);
+  border-radius: 10px;
+  font-size: 11px; color: #059669; font-weight: 500;
+}
+.browser-readonly-banner svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ===== Confirmation Modal ===== */
+.browser-modal-overlay {
+  position: fixed; inset: 0; z-index: var(--z-dialog);
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.browser-modal-overlay.is-visible { opacity: 1; pointer-events: auto; }
+
+.browser-modal {
+  width: 440px; max-width: 90vw;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.15);
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.browser-modal-overlay.is-visible .browser-modal { transform: scale(1) translateY(0); }
+
+.browser-modal__icon {
+  width: 56px; height: 56px; border-radius: 18px;
+  background: linear-gradient(135deg, rgba(217,119,6,0.12), rgba(217,119,6,0.04));
+  display: flex; align-items: center; justify-content: center;
+  color: #D97706; margin-bottom: 16px;
+}
+.browser-modal__title { font-size: 17px; font-weight: 700; color: #111827; margin-bottom: 8px; }
+.browser-modal__desc { font-size: 13px; color: #6B7280; line-height: 1.6; margin-bottom: 16px; }
+.browser-modal__url-box {
+  background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px; padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: #374151; word-break: break-all; margin-bottom: 20px;
+}
+.browser-modal__actions { display: flex; gap: 10px; }
+.browser-modal__btn {
+  flex: 1; padding: 11px 20px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s ease; border: 1px solid transparent;
+}
+.browser-modal__btn--cancel {
+  background: rgba(0,0,0,0.04); color: #4B5563;
+}
+.browser-modal__btn--cancel:hover { background: rgba(0,0,0,0.08); }
+.browser-modal__btn--confirm {
+  background: linear-gradient(135deg, #7C3AED, #A78BFA);
+  color: #fff; box-shadow: 0 4px 12px rgba(124,58,237,0.3);
+}
+.browser-modal__btn--confirm:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124,58,237,0.4); }
+
+/* ===== Status Bar ===== */
+.browser-statusbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 6px 16px;
+  background: rgba(255,255,255,0.6);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0,0,0,0.05);
+  flex-shrink: 0;
+  font-size: 11px; color: #6B7280;
+}
+.browser-statusbar__item { display: flex; align-items: center; gap: 5px; }
+.browser-statusbar__dot { width: 6px; height: 6px; border-radius: 50%; }
+.browser-statusbar__dot.is-online { background: #059669; }
+.browser-statusbar__dot.is-offline { background: #DC2626; }
+.browser-statusbar__spacer { flex: 1; }
+
+/* Dark theme adjustments */
+[data-theme="dark"] .browser-shell { background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(167,139,250,0.04) 50%, rgba(0,0,0,0) 100%); }
+[data-theme="dark"] .browser-tabbar, [data-theme="dark"] .browser-toolbar, [data-theme="dark"] .browser-sidebar, [data-theme="dark"] .browser-statusbar { background: rgba(30,30,40,0.7); border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .browser-tab { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.05); }
+[data-theme="dark"] .browser-tab.is-active { background: rgba(50,50,65,0.9); }
+[data-theme="dark"] .browser-tab__title { color: #9CA3AF; }
+[data-theme="dark"] .browser-tab.is-active .browser-tab__title { color: #F3F4F6; }
+[data-theme="dark"] .browser-address-wrap { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
+[data-theme="dark"] .browser-address-input { color: #F3F4F6; }
+[data-theme="dark"] .browser-nav-btn, [data-theme="dark"] .browser-action-btn { color: #9CA3AF; }
+[data-theme="dark"] .browser-viewport { background: rgba(0,0,0,0.2); }
+[data-theme="dark"] .browser-blocked { background: rgba(20,20,30,0.95); }
+[data-theme="dark"] .browser-blocked__title { color: #F3F4F6; }
+[data-theme="dark"] .browser-list-item__title { color: #E5E7EB; }
+[data-theme="dark"] .browser-collect-status { background: rgba(124,58,237,0.08); border-color: rgba(124,58,237,0.2); }
+[data-theme="dark"] .browser-collect-status__label { color: #9CA3AF; }
+[data-theme="dark"] .browser-collect-status__value { color: #E5E7EB; }
+[data-theme="dark"] .browser-modal { background: rgba(30,30,45,0.95); border-color: rgba(255,255,255,0.1); }
+[data-theme="dark"] .browser-modal__title { color: #F3F4F6; }
+[data-theme="dark"] .browser-modal__desc { color: #9CA3AF; }
+[data-theme="dark"] .browser-modal__url-box { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #D1D5DB; }
+[data-theme="dark"] .browser-modal__btn--cancel { background: rgba(255,255,255,0.08); color: #D1D5DB; }
+[data-theme="dark"] .browser-statusbar { color: #9CA3AF; }
+[data-theme="dark"] .browser-panel-section__title { color: #9CA3AF; }
+[data-theme="dark"] .browser-sidebar__tab { color: #9CA3AF; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="browser-shell" id="browser-shell">
+
+  <!-- ===== Tab Bar ===== -->
+  <div class="browser-tabbar">
+    <div class="browser-tab-list" id="browser-tab-list"></div>
+    <div class="browser-tab-new" id="browser-tab-new" title="新建标签页" onclick="BrowserApp.newTab()">
+      <span data-icon="plus" data-icon-size="16"></span>
+    </div>
+  </div>
+
+  <!-- ===== Toolbar ===== -->
+  <div class="browser-toolbar">
+    <div class="browser-nav-btns">
+      <button class="browser-nav-btn" id="btn-back" title="后退" onclick="BrowserApp.goBack()">
+        <span data-icon="back" data-icon-size="18"></span>
+      </button>
+      <button class="browser-nav-btn" id="btn-forward" title="前进" onclick="BrowserApp.goForward()">
+        <span data-icon="forward" data-icon-size="18"></span>
+      </button>
+      <button class="browser-nav-btn" id="btn-refresh" title="刷新" onclick="BrowserApp.refresh()">
+        <span data-icon="refresh" data-icon-size="18"></span>
+      </button>
+      <button class="browser-nav-btn" id="btn-stop" title="停止" onclick="BrowserApp.stopLoading()" style="display:none;">
+        <span data-icon="stop" data-icon-size="14"></span>
+      </button>
+    </div>
+
+    <div class="browser-address-wrap">
+      <div class="browser-security-indicator is-unknown" id="security-indicator">
+        <span data-icon="globe" data-icon-size="16"></span>
+        <span class="browser-security-label" id="security-label">未知</span>
+      </div>
+      <input type="text" class="browser-address-input" id="address-input"
+             placeholder="输入 URL 或搜索…" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="browser-toolbar-actions">
+      <button class="browser-action-btn" id="btn-bookmark" title="添加书签" onclick="BrowserApp.toggleBookmark()">
+        <span data-icon="bookmark" data-icon-size="18"></span>
+      </button>
+      <button class="browser-action-btn is-active" id="btn-sidebar" title="侧边面板" onclick="BrowserApp.toggleSidebar()">
+        <span data-icon="panel" data-icon-size="18"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Main Content ===== -->
+  <div class="browser-main">
+    <div class="browser-viewport" id="browser-viewport">
+      <div class="browser-viewport__img-wrap" id="viewport-img-wrap">
+        <div class="browser-viewport__placeholder" id="viewport-placeholder">
+          <div class="browser-viewport__placeholder-icon">
+            <span data-icon="globe" data-icon-size="32"></span>
+          </div>
+          <div class="browser-viewport__placeholder-text">系统内置浏览器</div>
+          <div class="browser-viewport__placeholder-sub">在地址栏输入 URL 开始浏览 · 所有操作在平台内完成</div>
+        </div>
+      </div>
+      <!-- Blocked page overlay (hidden by default) -->
+      <div class="browser-blocked" id="browser-blocked" style="display:none;">
+        <div class="browser-blocked__icon">
+          <span data-icon="alertTriangle" data-icon-size="32"></span>
+        </div>
+        <div class="browser-blocked__title">访问被拦截</div>
+        <div class="browser-blocked__url" id="blocked-url"></div>
+        <div class="browser-blocked__reason" id="blocked-reason"></div>
+      </div>
+    </div>
+
+    <!-- ===== Sidebar ===== -->
+    <div class="browser-sidebar" id="browser-sidebar">
+      <div class="browser-sidebar__tabs">
+        <div class="browser-sidebar__tab is-active" data-panel="bookmarks" onclick="BrowserApp.switchPanel('bookmarks')">
+          <span data-icon="bookmark" data-icon-size="14"></span> 书签
+        </div>
+        <div class="browser-sidebar__tab" data-panel="history" onclick="BrowserApp.switchPanel('history')">
+          <span data-icon="history" data-icon-size="14"></span> 历史
+        </div>
+        <div class="browser-sidebar__tab" data-panel="collect" onclick="BrowserApp.switchPanel('collect')">
+          <span data-icon="inbox" data-icon-size="14"></span> 采集
+        </div>
+        <div class="browser-sidebar__tab" data-panel="ai-agent" onclick="BrowserApp.switchPanel('ai-agent')">
+          <span data-icon="sparkles" data-icon-size="14"></span> AI Agent
+        </div>
+      </div>
+
+      <div class="browser-sidebar__content" id="sidebar-content">
+        <!-- Bookmarks Panel -->
+        <div class="browser-panel" id="panel-bookmarks">
+          <div class="browser-panel-section">
+            <div class="browser-panel-section__header">
+              <span class="browser-panel-section__title">书签</span>
+              <span class="browser-panel-section__action" onclick="BrowserApp.refreshBookmarks()">刷新</span>
+            </div>
+            <div id="bookmarks-list"></div>
+          </div>
+        </div>
+
+        <!-- History Panel -->
+        <div class="browser-panel" id="panel-history" style="display:none;">
+          <div class="browser-panel-section">
+            <div class="browser-panel-section__header">
+              <span class="browser-panel-section__title">浏览历史</span>
+              <span class="browser-panel-section__action" onclick="BrowserApp.clearHistory()">清空</span>
+            </div>
+            <div id="history-list"></div>
+          </div>
+        </div>
+
+        <!-- Collect Status Panel -->
+        <div class="browser-panel" id="panel-collect" style="display:none;">
+          <div class="browser-readonly-banner">
+            <span data-icon="shield" data-icon-size="14"></span>
+            <span>官方账号只读保护：禁止关注/点赞/评论/私信等写操作</span>
+          </div>
+          <div class="browser-collect-status">
+            <div class="browser-collect-status__row">
+              <span class="browser-collect-status__label">当前平台</span>
+              <span class="browser-collect-status__value" id="cs-platform">—</span>
+            </div>
+            <div class="browser-collect-status__row">
+              <span class="browser-collect-status__label">CDP 端口</span>
+              <span class="browser-collect-status__value" id="cs-port">9222</span>
+            </div>
+            <div class="browser-collect-status__row">
+              <span class="browser-collect-status__label">浏览器状态</span>
+              <span class="browser-collect-status__value is-offline" id="cs-online">检测中…</span>
+            </div>
+            <div class="browser-collect-status__row">
+              <span class="browser-collect-status__label">当前页面</span>
+              <span class="browser-collect-status__value" id="cs-page" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">—</span>
+            </div>
+            <div class="browser-collect-status__row">
+              <span class="browser-collect-status__label">标签页数</span>
+              <span class="browser-collect-status__value" id="cs-tabs">—</span>
+            </div>
+            <div class="browser-collect-status__row">
+              <span class="browser-collect-status__label">导航模式</span>
+              <span class="browser-collect-status__value" id="cs-navmode">—</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <button class="browser-modal__btn browser-modal__btn--cancel" style="flex:1;padding:8px;font-size:12px;" onclick="BrowserApp.checkCollectStatus()">检测状态</button>
+          </div>
+        </div>
+      </div>
+        <!-- AI Agent Panel -->
+        <div class="browser-panel" id="panel-ai-agent" style="display:none;">
+          <div class="browser-readonly-banner" style="margin-bottom:10px;">
+            <span data-icon="shield" data-icon-size="14"></span>
+            <span>AI Browser Runtime · 只读保护 · 每个Action经过Verification闭环</span>
+          </div>
+
+          <!-- Session Status -->
+          <div class="browser-panel-section">
+            <div class="browser-panel-section__header">
+              <span class="browser-panel-section__title">Session 状态</span>
+              <span class="browser-panel-section__action" onclick="AIBrowser.refreshStatus()">刷新</span>
+            </div>
+            <div class="browser-collect-status">
+              <div class="browser-collect-status__row">
+                <span class="browser-collect-status__label">Session ID</span>
+                <span class="browser-collect-status__value" id="ai-session-id" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">未创建</span>
+              </div>
+              <div class="browser-collect-status__row">
+                <span class="browser-collect-status__label">状态</span>
+                <span class="browser-collect-status__value" id="ai-session-status">—</span>
+              </div>
+              <div class="browser-collect-status__row">
+                <span class="browser-collect-status__label">当前URL</span>
+                <span class="browser-collect-status__value" id="ai-current-url" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">—</span>
+              </div>
+              <div class="browser-collect-status__row">
+                <span class="browser-collect-status__label">风险等级</span>
+                <span class="browser-collect-status__value" id="ai-risk-level">medium</span>
+              </div>
+              <div class="browser-collect-status__row">
+                <span class="browser-collect-status__label">熔断器</span>
+                <span class="browser-collect-status__value" id="ai-circuit-breaker">closed</span>
+              </div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:6px;">
+              <button class="browser-modal__btn browser-modal__btn--confirm" style="flex:1;padding:6px;font-size:11px;" onclick="AIBrowser.createSession()">创建Session</button>
+              <button class="browser-modal__btn browser-modal__btn--cancel" style="flex:1;padding:6px;font-size:11px;" onclick="AIBrowser.stopSession()">关闭</button>
+            </div>
+          </div>
+
+          <!-- Current Observation -->
+          <div class="browser-panel-section">
+            <div class="browser-panel-section__header">
+              <span class="browser-panel-section__title">当前观察 (Observe)</span>
+              <span class="browser-panel-section__action" onclick="AIBrowser.observe()">观察</span>
+            </div>
+            <div id="ai-observe-content" style="font-size:11px;color:#6B7280;max-height:120px;overflow-y:auto;word-break:break-all;">
+              点击"观察"获取当前页面状态（DOM摘要+脱敏文本）
+            </div>
+            <div id="ai-injection-warning" style="display:none;margin-top:6px;padding:6px 8px;background:#FEF3C7;border-radius:6px;font-size:11px;color:#92400E;">
+              ⚠ 检测到 Prompt Injection 模式，网页内容已标记为不可信
+            </div>
+          </div>
+
+          <!-- Action Execution -->
+          <div class="browser-panel-section">
+            <div class="browser-panel-section__header">
+              <span class="browser-panel-section__title">执行动作 (Act)</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <select id="ai-action-type" style="padding:6px;border-radius:6px;border:1px solid #E5E7EB;font-size:12px;">
+                <option value="click">click - 点击</option>
+                <option value="input">input - 输入</option>
+                <option value="navigate">navigate - 导航</option>
+                <option value="scroll">scroll - 滚动</option>
+                <option value="back">back - 后退</option>
+                <option value="forward">forward - 前进</option>
+                <option value="reload">reload - 刷新</option>
+                <option value="wait">wait - 等待</option>
+                <option value="keyboard">keyboard - 键盘</option>
+              </select>
+              <input type="text" id="ai-action-selector" placeholder="CSS/XPath selector (click/input)" style="padding:6px;border-radius:6px;border:1px solid #E5E7EB;font-size:12px;">
+              <input type="text" id="ai-action-value" placeholder="value/url/text (input/navigate/scroll)" style="padding:6px;border-radius:6px;border:1px solid #E5E7EB;font-size:12px;">
+              <input type="text" id="ai-action-expected" placeholder="期望状态: url_contains=xxx 或 text_present=yyy" style="padding:6px;border-radius:6px;border:1px solid #E5E7EB;font-size:12px;">
+              <button class="browser-modal__btn browser-modal__btn--confirm" style="padding:8px;font-size:12px;" onclick="AIBrowser.executeAction()">
+                执行 Action（带 Verification）
+              </button>
+            </div>
+          </div>
+
+          <!-- Execution Status & Verification -->
+          <div class="browser-panel-section">
+            <div class="browser-panel-section__header">
+              <span class="browser-panel-section__title">执行状态 & 验证 (Verify)</span>
+            </div>
+            <div id="ai-action-result" style="font-size:11px;color:#6B7280;max-height:150px;overflow-y:auto;">
+              等待执行...
+            </div>
+          </div>
+
+          <!-- Evidence Timeline -->
+          <div class="browser-panel-section">
+            <div class="browser-panel-section__header">
+              <span class="browser-panel-section__title">Evidence 时间线</span>
+              <span class="browser-panel-section__action" onclick="AIBrowser.refreshEvidence()">刷新</span>
+            </div>
+            <div id="ai-evidence-timeline" style="font-size:11px;color:#6B7280;max-height:150px;overflow-y:auto;">
+              暂无 Evidence 记录
+            </div>
+          </div>
+        </div>
+
+    </div>
+  </div>
+
+  <!-- ===== Status Bar ===== -->
+  <div class="browser-statusbar">
+    <div class="browser-statusbar__item">
+      <span class="browser-statusbar__dot is-offline" id="status-dot"></span>
+      <span id="status-text">未连接</span>
+    </div>
+    <div class="browser-statusbar__item" id="status-url" style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
+    <div class="browser-statusbar__spacer"></div>
+    <div class="browser-statusbar__item" id="status-time"></div>
+  </div>
+
+</div>
+
+<!-- ===== Confirmation Modal ===== -->
+<div class="browser-modal-overlay" id="confirm-modal">
+  <div class="browser-modal">
+    <div class="browser-modal__icon">
+      <span data-icon="alertTriangle" data-icon-size="28"></span>
+    </div>
+    <div class="browser-modal__title">外部域名访问确认</div>
+    <div class="browser-modal__desc">您即将访问一个不在平台白名单内的外部域名。请确认这是您有意访问的安全网站。</div>
+    <div class="browser-modal__url-box" id="confirm-url"></div>
+    <div class="browser-modal__actions">
+      <button class="browser-modal__btn browser-modal__btn--cancel" onclick="BrowserApp.cancelNavigate()">取消</button>
+      <button class="browser-modal__btn browser-modal__btn--confirm" onclick="BrowserApp.confirmNavigate()">确认访问</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== AI Human Approval Modal ===== -->
+<div class="browser-modal-overlay" id="ai-approval-modal" style="display:none;">
+  <div class="browser-modal">
+    <div class="browser-modal__icon" style="background:#FEF3C7;">
+      <span data-icon="alertTriangle" data-icon-size="28" style="color:#D97706;"></span>
+    </div>
+    <div class="browser-modal__title">需要人工审批</div>
+    <div class="browser-modal__desc" id="ai-approval-reason">
+      AI Browser Runtime 请求执行以下操作，需要您的确认。
+    </div>
+    <div style="background:#F9FAFB;border-radius:8px;padding:10px;margin:10px 0;font-size:12px;">
+      <div style="margin-bottom:4px;"><strong>Action:</strong> <span id="ai-approval-action"></span></div>
+      <div style="margin-bottom:4px;"><strong>Target:</strong> <span id="ai-approval-target"></span></div>
+      <div style="margin-bottom:4px;"><strong>Expected:</strong> <span id="ai-approval-expected"></span></div>
+      <div><strong>Risk:</strong> <span id="ai-approval-risk" style="color:#DC2626;"></span></div>
+    </div>
+    <div class="browser-modal__actions">
+      <button class="browser-modal__btn browser-modal__btn--cancel" onclick="AIBrowser.rejectAction()">拒绝</button>
+      <button class="browser-modal__btn browser-modal__btn--confirm" onclick="AIBrowser.approveAction()">批准执行</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/browser.js') }}"></script>
+{% endblock %}
+

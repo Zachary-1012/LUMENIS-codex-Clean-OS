@@ -1,0 +1,168 @@
+{
+  "screen": "SH-02",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "EV-7701",
+      "EV-7704",
+      "EV-7710"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "Shared · 序境·内容创作",
+      "title": "证据库 Evidence Library",
+      "titleKey": "screen.SH-02",
+      "desc": "统一检索 Source/Evidence/Canonical 引用；每条证据可回溯原始快照与链路。"
+    },
+    {
+      "type": "filters",
+      "chips": [
+        {
+          "label": "全部",
+          "on": true
+        },
+        {
+          "label": "Metric",
+          "on": false
+        },
+        {
+          "label": "Source",
+          "on": false
+        },
+        {
+          "label": "Finding",
+          "on": false
+        },
+        {
+          "label": "Risk",
+          "on": false
+        },
+        {
+          "label": "Case",
+          "on": false
+        }
+      ]
+    },
+    {
+      "type": "split",
+      "main": [
+        {
+          "type": "table",
+          "title": "证据",
+          "columns": [
+            {
+              "label": "ID",
+              "key": "id"
+            },
+            {
+              "label": "类型",
+              "key": "k"
+            },
+            {
+              "label": "摘要",
+              "key": "s"
+            },
+            {
+              "label": "置信",
+              "key": "c",
+              "numeric": true
+            },
+            {
+              "label": "时间",
+              "key": "t"
+            },
+            {
+              "label": "来源",
+              "key": "src"
+            }
+          ],
+          "rows": [
+            {
+              "id": "EV-7701",
+              "k": "Metric",
+              "s": "今日客流 38,214",
+              "c": 99,
+              "t": "10:00",
+              "src": "footfall"
+            },
+            {
+              "id": "EV-7704",
+              "k": "Finding",
+              "s": "停车簇 96 条/30.8%",
+              "c": 93,
+              "t": "09:31",
+              "src": "cluster.rule"
+            },
+            {
+              "id": "EV-7710",
+              "k": "Risk",
+              "s": "停车风险分 72",
+              "c": 90,
+              "t": "10:22",
+              "src": "risk_engine"
+            },
+            {
+              "id": "EV-B110",
+              "k": "Source",
+              "s": "小红书话题快照",
+              "c": 96,
+              "t": "09:40",
+              "src": "xhs"
+            }
+          ]
+        }
+      ],
+      "side": [
+        {
+          "type": "evidence",
+          "title": "证据链",
+          "items": [
+            {
+              "kind": "Metric",
+              "id": "EV-7701",
+              "chain": [
+                "Source",
+                "Canonical",
+                "Metric"
+              ],
+              "quote": "去重闸机口径，原始快照已固定。",
+              "time": "10:00",
+              "source": "footfall",
+              "conf": 99
+            }
+          ]
+        },
+        {
+          "type": "actions",
+          "title": "证据操作",
+          "items": [
+            {
+              "id": "open-source",
+              "title": "查看原始来源",
+              "icon": "link",
+              "cls": "NAVIGATION",
+              "scope": "UNKNOWN",
+              "target": "UNKNOWN",
+              "permission": "UNKNOWN",
+              "desc": "NAVIGATION"
+            },
+            {
+              "id": "pin",
+              "title": "固定到报告",
+              "icon": "report",
+              "cls": "NAVIGATION",
+              "scope": "UNKNOWN",
+              "target": "UNKNOWN",
+              "permission": "UNKNOWN",
+              "desc": "DRAFT"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

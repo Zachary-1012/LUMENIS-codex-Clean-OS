@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "status": "PROPOSED_NOT_IMPLEMENTED",
+    "default": "DENY_IF_UNKNOWN",
+    "note": "Adapt to any existing equivalent model rather than duplicating; internal provenance primitives already exist (08-AUDIT/_source_provenance_scan.py, canonical_data.provenance)."
+  },
+  "source_status_enum": [
+    "AUTHORIZED_API",
+    "LICENSED",
+    "USER_PROVIDED",
+    "PUBLIC_ALLOWED",
+    "INTERNAL_RESTRICTED",
+    "BLOCKED_EXTERNAL"
+  ],
+  "record_schema": {
+    "source_id": "string, stable",
+    "status": {
+      "type": "string",
+      "enum": "AUTHORIZED_API|LICENSED|USER_PROVIDED|PUBLIC_ALLOWED|INTERNAL_RESTRICTED|BLOCKED_EXTERNAL"
+    },
+    "rights_verified": "boolean",
+    "rights_evidence_ref": "string|null (license/ToS/consent reference; TODO(HUMAN/LEGAL))",
+    "scope": "string (what the rights cover)",
+    "allowed_fields": [
+      "string"
+    ],
+    "retention": "string (per real table/contract; TODO(CODEX/LEGAL))",
+    "public_plugin_allowed": "boolean (true ONLY when status in first four AND rights_verified AND scope_valid AND data_minimized)",
+    "evidence_reference": "string"
+  },
+  "decision_rule": "public_plugin_allowed = status ∈ {AUTHORIZED_API, LICENSED, USER_PROVIDED, PUBLIC_ALLOWED} AND rights_verified=true AND scope covers the field AND minimization holds; otherwise the public tool MUST NOT read it and MUST NOT trigger fresh third-party collection.",
+  "registry_seed": "TODO(CODEX): enumerate each source the public tools will touch and fill records; unknown stays BLOCKED — never guess."
+}

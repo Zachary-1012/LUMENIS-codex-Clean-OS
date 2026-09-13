@@ -1,0 +1,41 @@
+{
+  "screen": "CTH-02",
+  "viewmodel": {
+    "units": [
+      "{unit_id,name,categories[]}"
+    ],
+    "brands": [
+      "{brand_id,name,category,floor,unit,state,voice}"
+    ]
+  },
+  "binding": {
+    "brands": "CODEX_VERIFY (brand_directory/brand APIs = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "units",
+      "brands"
+    ],
+    "Capability": [
+      "PAT-DATA-01",
+      "PAT-FILTER-01"
+    ],
+    "Motion": [
+      "M01",
+      "M07"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "CTH-02.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "EV: subject_profile",
+      "EV: brand_directory"
+    ]
+  },
+  "unknown_binding_keys": [
+    "brands"
+  ],
+  "binding_owner_default": "CODEX"
+}

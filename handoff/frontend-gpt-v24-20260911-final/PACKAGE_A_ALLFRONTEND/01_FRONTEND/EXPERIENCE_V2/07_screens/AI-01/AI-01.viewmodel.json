@@ -1,0 +1,55 @@
+{
+  "screen": "AI-01",
+  "viewmodel": {
+    "composer": {
+      "intent": "string?",
+      "subject_id": "string",
+      "domain": "enum[CTH,BMP]",
+      "time_window": "range"
+    },
+    "capability_cards": [
+      "{capability_id,label_key,route,permission}"
+    ],
+    "providers": [
+      "{name,state,latency_ms}"
+    ]
+  },
+  "binding": {
+    "composer": "CODEX_VERIFY (POST /api/ai/intent = UNKNOWN)",
+    "providers": "CODEX_VERIFY (/api/runtime/identity, ai gateway status = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "composer",
+      "capability_cards",
+      "providers"
+    ],
+    "Capability": [
+      "PAT-AI-01",
+      "PAT-AI-02"
+    ],
+    "Motion": [
+      "M02",
+      "M05",
+      "M09",
+      "M12"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "AI-01.actions.json",
+    "Permission": [
+      "UNKNOWN"
+    ],
+    "Evidence": [
+      "EV: evidence_chain（全局）",
+      "EV: subject_context v2.1",
+      "RUNTIME: ai_gateway"
+    ]
+  },
+  "unknown_binding_keys": [
+    "composer",
+    "providers"
+  ],
+  "binding_owner_default": "CODEX"
+}

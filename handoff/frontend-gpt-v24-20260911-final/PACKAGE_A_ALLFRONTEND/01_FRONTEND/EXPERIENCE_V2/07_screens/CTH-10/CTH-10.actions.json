@@ -1,0 +1,49 @@
+{
+  "screen": "CTH-10",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 2,
+  "actions": [
+    {
+      "action_id": "CTH-10.gen-weekly",
+      "display_label_zh": "生成周报",
+      "display_key": null,
+      "action_class": "DRAFT",
+      "capability_status": "PARTIAL",
+      "permission_requirement": "report:write",
+      "input_context": {
+        "screen": "CTH-10",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "report"
+    },
+    {
+      "action_id": "CTH-10.export",
+      "display_label_zh": "导出 PDF/Excel",
+      "display_key": null,
+      "action_class": "QUERY",
+      "capability_status": "CODEX_BINDING_REQUIRED",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "CTH-10",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "download"
+    }
+  ]
+}

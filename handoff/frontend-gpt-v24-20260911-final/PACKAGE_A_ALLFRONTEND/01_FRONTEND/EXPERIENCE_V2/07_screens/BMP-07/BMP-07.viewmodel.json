@@ -1,0 +1,39 @@
+{
+  "screen": "BMP-07",
+  "viewmodel": {
+    "campaign": "{goal,stage,kpis,timeline}",
+    "roi": "number"
+  },
+  "binding": {
+    "campaign": "CODEX_VERIFY (campaign APIs = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "campaign",
+      "roi"
+    ],
+    "Capability": [
+      "PAT-DATA-01",
+      "PAT-UPLOAD-01"
+    ],
+    "Motion": [
+      "M03",
+      "M05"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "BMP-07.actions.json",
+    "Permission": [
+      "campaign:close",
+      "campaign:write"
+    ],
+    "Evidence": [
+      "EV: campaign lineage"
+    ]
+  },
+  "unknown_binding_keys": [
+    "campaign"
+  ],
+  "binding_owner_default": "CODEX"
+}

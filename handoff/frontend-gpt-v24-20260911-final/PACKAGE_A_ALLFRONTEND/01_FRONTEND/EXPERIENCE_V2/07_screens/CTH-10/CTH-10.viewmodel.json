@@ -1,0 +1,39 @@
+{
+  "screen": "CTH-10",
+  "viewmodel": {
+    "reports": [
+      "{id,title,period,state,evidence_count}"
+    ]
+  },
+  "binding": {
+    "report": "CODEX_VERIFY (report_api/report_export = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "reports"
+    ],
+    "Capability": [
+      "PAT-EVD-01",
+      "PAT-UPLOAD-01"
+    ],
+    "Motion": [
+      "M11",
+      "M15"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "CTH-10.actions.json",
+    "Permission": [
+      "UNKNOWN",
+      "report:write"
+    ],
+    "Evidence": [
+      "报告内全部 EV 清单随导出固化"
+    ]
+  },
+  "unknown_binding_keys": [
+    "report"
+  ],
+  "binding_owner_default": "CODEX"
+}

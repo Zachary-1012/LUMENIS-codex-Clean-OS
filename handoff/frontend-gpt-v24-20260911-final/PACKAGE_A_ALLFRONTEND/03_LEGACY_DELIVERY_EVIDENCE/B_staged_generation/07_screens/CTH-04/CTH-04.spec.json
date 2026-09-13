@@ -1,0 +1,150 @@
+{
+  "screen": "CTH-04",
+  "meta": {
+    "domain": "CTH",
+    "group": "cth",
+    "icon": "event",
+    "zh": "事件与事件关系",
+    "en": "Events & Event Graph",
+    "ko": "이벤트 및 이벤트 관계",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.CTH-04",
+    "patterns": [
+      "PAT-EVD-01"
+    ],
+    "motions": [
+      "M08",
+      "M11"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "CTH · 商业运营",
+        "title": "事件与事件关系",
+        "titleKey": "screen.CTH-04",
+        "desc": "Source→Event→Case 的关系图与时间线，点击节点回跳证据。",
+        "actions": [
+          {
+            "label": "新建事件",
+            "variant": "primary",
+            "id": "new-event",
+            "cls": "DRAFT",
+            "scope": "UNKNOWN",
+            "target": "UNKNOWN",
+            "permission": "event:write",
+            "ico": "plus"
+          }
+        ]
+      },
+      {
+        "type": "split",
+        "main": [
+          {
+            "type": "raw",
+            "html": "<section class=\"lum-card lum-card-pad\" data-reveal><div class=\"lum-section-head\"><span class=\"lum-eyebrow\">Event Graph</span><h3 class=\"lum-h4\">事件关系图（原型示意）</h3></div>\n      <svg viewBox=\"0 0 560 300\" class=\"lum-chart\" role=\"img\" aria-label=\"event graph\">\n        <line x1=\"120\" y1=\"80\" x2=\"300\" y2=\"150\" class=\"lum-flow-link\"/>\n        <line x1=\"120\" y1=\"220\" x2=\"300\" y2=\"150\" class=\"lum-flow-link\"/>\n        <line x1=\"300\" y1=\"150\" x2=\"470\" y2=\"90\" class=\"lum-flow-link\"/>\n        <line x1=\"300\" y1=\"150\" x2=\"470\" y2=\"210\" class=\"lum-flow-link\"/>\n        <g><circle cx=\"120\" cy=\"80\" r=\"34\" fill=\"var(--lum-c-brand-100)\"/><text x=\"120\" y=\"84\" text-anchor=\"middle\" font-size=\"11\" fill=\"var(--lum-text)\">评论簇</text></g>\n        <g><circle cx=\"120\" cy=\"220\" r=\"34\" fill=\"var(--lum-c-warning-bg)\"/><text x=\"120\" y=\"224\" text-anchor=\"middle\" font-size=\"11\" fill=\"var(--lum-text)\">帖子簇</text></g>\n        <g><circle cx=\"300\" cy=\"150\" r=\"42\" fill=\"var(--lum-c-brand-500)\"/><text x=\"300\" y=\"154\" text-anchor=\"middle\" font-size=\"11\" fill=\"var(--lum-text-invert)\">EV-7710</text></g>\n        <g><circle cx=\"470\" cy=\"90\" r=\"32\" fill=\"var(--lum-c-danger-bg)\"/><text x=\"470\" y=\"94\" text-anchor=\"middle\" font-size=\"11\" fill=\"var(--lum-text)\">Case</text></g>\n        <g><circle cx=\"470\" cy=\"210\" r=\"32\" fill=\"var(--lum-c-info-bg)\"/><text x=\"470\" y=\"214\" text-anchor=\"middle\" font-size=\"11\" fill=\"var(--lum-text)\">Risk</text></g>\n      </svg></section>"
+          },
+          {
+            "type": "events",
+            "title": "事件时间线",
+            "items": [
+              {
+                "time": "09:05",
+                "title": "首条相关评论",
+                "desc": "",
+                "date": "09-10",
+                "level": "low",
+                "tags": [],
+                "evidence": "EV-7690"
+              },
+              {
+                "time": "09:31",
+                "title": "聚类形成停车簇",
+                "desc": "96 条",
+                "date": "09-10",
+                "level": "med",
+                "tags": [],
+                "evidence": "EV-7704"
+              },
+              {
+                "time": "10:22",
+                "title": "升级为事件 EV-7710",
+                "desc": "风险分 72",
+                "date": "09-10",
+                "level": "high",
+                "tags": [],
+                "evidence": "EV-7710"
+              }
+            ],
+            "more": true
+          }
+        ],
+        "side": [
+          {
+            "type": "evidence",
+            "title": "事件证据",
+            "items": [
+              {
+                "kind": "Event",
+                "id": "EV-7710",
+                "chain": [
+                  "Cluster",
+                  "Event",
+                  "Case?",
+                  "Risk?"
+                ],
+                "quote": "停车/离场摩擦事件，关联 3 个簇、2 个潜在 Case。",
+                "time": "10:22",
+                "source": "event_engine",
+                "conf": 91
+              }
+            ]
+          },
+          {
+            "type": "actions",
+            "title": "事件操作",
+            "items": [
+              {
+                "id": "to-case",
+                "title": "转 Case",
+                "icon": "case",
+                "cls": "NAVIGATION",
+                "scope": "UNKNOWN",
+                "target": "UNKNOWN",
+                "permission": "case:write",
+                "desc": "DRAFT"
+              },
+              {
+                "id": "link-risk",
+                "title": "关联风险",
+                "icon": "risk",
+                "cls": "NAVIGATION",
+                "scope": "UNKNOWN",
+                "target": "UNKNOWN",
+                "permission": "UNKNOWN",
+                "desc": "DRAFT"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "EV-7710",
+        "EV: event_graph"
+      ]
+    },
+    "viewmodel": {
+      "graph": "{nodes[],edges[]}",
+      "timeline": [
+        "event"
+      ]
+    },
+    "binding": {
+      "graph": "CODEX_VERIFY (event_graph API = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

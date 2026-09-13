@@ -1,0 +1,150 @@
+{
+  "screen": "AI-02",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "EV-7731",
+      "EV-7732",
+      "EV: ai_trace"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "AI Agent",
+      "title": "能力 → 任务工作台",
+      "titleKey": "screen.AI-02",
+      "desc": "选择能力后，表面发生 Morph：旧能力后退、任务上下文进入、证据落定；全过程可中断。"
+    },
+    {
+      "type": "steps",
+      "items": [
+        {
+          "label": "识别意图",
+          "state": "is-done"
+        },
+        {
+          "label": "能力后退",
+          "state": "is-done"
+        },
+        {
+          "label": "表面 Morph",
+          "state": "is-active"
+        },
+        {
+          "label": "上下文解析",
+          "state": null
+        },
+        {
+          "label": "内容进入",
+          "state": null
+        },
+        {
+          "label": "证据落定",
+          "state": null
+        }
+      ]
+    },
+    {
+      "type": "raw",
+      "html": "<div class=\"lum-opt lum-opt-morph\" data-opt=\"morph\" data-strength=\"composing\" data-reveal>\n    <canvas class=\"lum-opt__gl\"></canvas><div class=\"lum-opt__fallback\"></div>\n    <div style=\"padding:18px;position:relative\" class=\"lum-row-between\">\n      <div><div class=\"lum-eyebrow\">CAPABILITY</div><b style=\"font-size:18px\">传播分析 Communication Analysis</b></div>\n      <svg width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><path d='M5 12h14M13 6l6 6-6 6'/></svg><div><div class=\"lum-eyebrow\">TASK</div><b style=\"font-size:18px\">对比近 30 天小红书 vs 微博声量</b></div>\n    </div></div>"
+    },
+    {
+      "type": "ai",
+      "steps": [
+        {
+          "label": "识别意图：跨平台声量对比",
+          "state": "done",
+          "tool": "intent"
+        },
+        {
+          "label": "检索 Subject 范围内已确认证据",
+          "state": "done",
+          "tool": "evidence_store"
+        },
+        {
+          "label": "按统一口径计算趋势",
+          "state": "done",
+          "tool": "canonical_metrics"
+        },
+        {
+          "label": "生成结论并标注引用",
+          "state": "running",
+          "tool": "llm:glm-5.3"
+        }
+      ],
+      "children": "<div style=\"margin-top:6px\"></div>"
+    },
+    {
+      "type": "evidence",
+      "title": "本任务引用的证据",
+      "items": [
+        {
+          "kind": "Canonical",
+          "id": "EV-7731",
+          "chain": [
+            "Source 小红书",
+            "Canonical",
+            "Metric"
+          ],
+          "quote": "近 30 天小红书提及 4,218 条，环比 +18.4%。",
+          "time": "09:42",
+          "source": "xhs.collector",
+          "conf": 96
+        },
+        {
+          "kind": "Canonical",
+          "id": "EV-7732",
+          "chain": [
+            "Source 微博",
+            "Canonical",
+            "Metric"
+          ],
+          "quote": "同期微博提及 2,106 条，环比 +3.1%。",
+          "time": "09:42",
+          "source": "weibo.collector",
+          "conf": 95
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "title": "下一步",
+      "items": [
+        {
+          "id": "insert-to-report",
+          "title": "插入到周报草稿",
+          "icon": "report",
+          "cls": "NAVIGATION",
+          "scope": "report:draft",
+          "target": "weekly_report",
+          "permission": "report:write",
+          "desc": "DRAFT"
+        },
+        {
+          "id": "save-task",
+          "title": "保存为可复用任务",
+          "icon": "folder",
+          "cls": "NAVIGATION",
+          "scope": "user:self",
+          "target": "task_library",
+          "permission": "task:write",
+          "desc": "QUERY"
+        },
+        {
+          "id": "run-effect",
+          "title": "推送到协作群",
+          "icon": "message",
+          "cls": "NAVIGATION",
+          "scope": "channel:external",
+          "target": "im_webhook",
+          "permission": "notify:write",
+          "desc": "EFFECT",
+          "risk": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}Adaptive Demo · 序境 LUMENIS{% endblock %}
+{% block page_title %}Adaptive UI Demo{% endblock %}
+{% block body_domain %}system{% endblock %}
+
+{% block content %}
+<!-- ============================================================================
+     G Shard: 新模块接入示例 — 通过 Module Contract 注册自动获得自适应+动效
+     此页面演示：同一套组件代码在不同容器宽度下自动重排
+     Table → Condensed Table → List → Data Card（Container Query 驱动）
+     ============================================================================ -->
+
+<div class="ad-container" id="demo-dashboard" style="margin-bottom:20px;">
+  <div class="ad-toolbar" style="margin-bottom:16px;">
+    <div class="ad-toolbar__group">
+      <span class="ad-text-label">当前容器尺寸：</span>
+      <span class="ad-badge ad-badge--mint" id="demo-size-badge">检测中…</span>
+    </div>
+    <div class="ad-toolbar__spacer"></div>
+    <div class="ad-toolbar__group ad-toolbar__group--secondary">
+      <button class="zbc-btn" onclick="DemoApp.toggleDensity()">切换密度</button>
+      <button class="zbc-btn" onclick="DemoApp.refreshData()">刷新数据</button>
+    </div>
+    <div class="ad-toolbar__group ad-toolbar__group--overflow">
+      <button class="zbc-btn">⋯</button>
+    </div>
+  </div>
+
+  <!-- KPI Row — 4个KPI模块，通过Module Registry注册 -->
+  <div class="ad-kpi-grid" id="demo-kpi-grid" style="margin-bottom:20px;">
+    <div class="ad-kpi ad-kpi--gradient-mint" id="kpi-volume" data-module-id="demo-kpi-volume">
+      <div class="ad-kpi__label">今日声量</div>
+      <div class="ad-kpi__value" data-kpi-target="volume">0</div>
+      <div class="ad-kpi__delta ad-kpi__delta--up">▲ 12.5% 环比</div>
+      <div class="ad-kpi__sparkline" id="sparkline-volume"></div>
+    </div>
+    <div class="ad-kpi" id="kpi-brands" data-module-id="demo-kpi-brands">
+      <div class="ad-kpi__label">活跃品牌</div>
+      <div class="ad-kpi__value" data-kpi-target="brands">0</div>
+      <div class="ad-kpi__delta ad-kpi__delta--flat">共 199 品牌</div>
+    </div>
+    <div class="ad-kpi ad-kpi--gradient-purple" id="kpi-engagement" data-module-id="demo-kpi-engagement">
+      <div class="ad-kpi__label">KOS互动量</div>
+      <div class="ad-kpi__value" data-kpi-target="engagement">0</div>
+      <div class="ad-kpi__delta ad-kpi__delta--up">▲ 8.3%</div>
+    </div>
+    <div class="ad-kpi" id="kpi-risk" data-module-id="demo-kpi-risk">
+      <div class="ad-kpi__label">风险事件</div>
+      <div class="ad-kpi__value" data-kpi-target="risk">0</div>
+      <div class="ad-kpi__delta ad-kpi__delta--down">▼ 需关注</div>
+    </div>
+  </div>
+
+  <!-- Chart + Info 双栏 — 容器足够宽时分栏，窄时堆叠 -->
+  <div class="ad-grid--split" style="margin-bottom:20px;">
+    <div class="ad-card" id="demo-chart-card" data-module-id="demo-chart">
+      <div class="ad-card__header">
+        <span class="ad-card__title">声量趋势</span>
+        <span class="ad-badge ad-badge--info">近7天</span>
+      </div>
+      <div class="ad-card__body">
+        <div class="ad-chart" id="demo-trend-chart" style="min-height:200px;"></div>
+      </div>
+    </div>
+    <div class="ad-card" id="demo-info-card" data-module-id="demo-info">
+      <div class="ad-card__header">
+        <span class="ad-card__title">业态分布</span>
+        <span class="ad-badge ad-badge--mint">9业态</span>
+      </div>
+      <div class="ad-card__body">
+        <div class="ad-progress" style="margin-bottom:10px;">
+          <div class="ad-progress__label"><span>女装</span><span class="ad-progress__value">32%</span></div>
+          <div class="ad-progress__bar" data-progress-target="32" style="width:0%"></div>
+        </div>
+        <div class="ad-progress" style="margin-bottom:10px;">
+          <div class="ad-progress__label"><span>餐饮</span><span class="ad-progress__value">24%</span></div>
+          <div class="ad-progress__bar ad-progress__bar--purple" data-progress-target="24" style="width:0%"></div>
+        </div>
+        <div class="ad-progress" style="margin-bottom:10px;">
+          <div class="ad-progress__label"><span>珠宝钟表</span><span class="ad-progress__value">18%</span></div>
+          <div class="ad-progress__bar ad-progress__bar--warm" data-progress-target="18" style="width:0%"></div>
+        </div>
+        <div class="ad-progress">
+          <div class="ad-progress__label"><span>美容护理</span><span class="ad-progress__value">14%</span></div>
+          <div class="ad-progress__bar" data-progress-target="14" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Adaptive Table — 演示 Table→Condensed→List→Data Card 自动重排 -->
+  <div class="ad-card" id="demo-table-card" data-module-id="demo-table">
+    <div class="ad-card__header">
+      <span class="ad-card__title">品牌声量排行（自适应表格）</span>
+      <span class="ad-badge ad-badge--info" id="demo-table-count">—</span>
+    </div>
+    <div class="ad-card__body" style="padding:0;">
+      <div class="ad-table-wrapper">
+        <table class="ad-table" id="demo-table">
+          <thead>
+            <tr>
+              <th data-col-primary="true">#</th>
+              <th>品牌</th>
+              <th data-col-optional="true">业态</th>
+              <th>声量</th>
+              <th data-col-optional="true">互动率</th>
+              <th>风险</th>
+            </tr>
+          </thead>
+          <tbody id="demo-table-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Module Contract 注册说明 -->
+<div class="ad-card" style="margin-top:20px;">
+  <div class="ad-card__header">
+    <span class="ad-card__title">Module Contract 注册信息</span>
+    <span class="ad-badge ad-badge--mint">自动接入</span>
+  </div>
+  <div class="ad-card__body">
+    <div class="ad-detail" id="demo-module-info"></div>
+  </div>
+</div>
+
+<script>
+var DemoApp = (function() {
+  'use strict';
+
+  var _density = 'normal';
+
+  // ===== 1. 注册 Module Contract — 新模块只需声明即可自动获得自适应+动效 =====
+  function registerModules() {
+    if (typeof ZBCAdaptive === 'undefined') return;
+
+    var modules = [
+      {
+        module_id: 'demo-kpi-volume',
+        module_type: 'kpi',
+        data_source: 'demo/stats',
+        min_width: 140, preferred_width: 200, max_width: 300,
+        priority: 0, responsive_mode: 'reflow', motion_mode: 'full',
+        visibility: 'always'
+      },
+      {
+        module_id: 'demo-kpi-brands',
+        module_type: 'kpi',
+        data_source: 'demo/brands',
+        min_width: 140, preferred_width: 200, max_width: 300,
+        priority: 1, responsive_mode: 'reflow', motion_mode: 'full',
+        visibility: 'always'
+      },
+      {
+        module_id: 'demo-kpi-engagement',
+        module_type: 'kpi',
+        data_source: 'demo/engagement',
+        min_width: 140, preferred_width: 200, max_width: 300,
+        priority: 1, responsive_mode: 'reflow', motion_mode: 'full',
+        visibility: 'always'
+      },
+      {
+        module_id: 'demo-kpi-risk',
+        module_type: 'kpi',
+        data_source: 'demo/risk',
+        min_width: 140, preferred_width: 200, max_width: 300,
+        priority: 0, responsive_mode: 'reflow', motion_mode: 'full',
+        visibility: 'always'
+      },
+      {
+        module_id: 'demo-chart',
+        module_type: 'chart',
+        data_source: 'demo/trend',
+        min_width: 300, preferred_width: 600, max_width: Infinity,
+        priority: 0, responsive_mode: 'reflow', motion_mode: 'full',
+        visibility: 'always'
+      },
+      {
+        module_id: 'demo-info',
+        module_type: 'panel',
+        data_source: 'demo/industry',
+        min_width: 200, preferred_width: 350, max_width: 500,
+        priority: 2, responsive_mode: 'reflow', motion_mode: 'minimal',
+        visibility: 'always'
+      },
+      {
+        module_id: 'demo-table',
+        module_type: 'table',
+        data_source: 'demo/brands',
+        min_width: 280, preferred_width: 600, max_width: Infinity,
+        priority: 1, responsive_mode: 'reflow', motion_mode: 'full',
+        visibility: 'always'
+      }
+    ];
+
+    modules.forEach(function(m) {
+      ZBCAdaptive.registerModule(m);
+      var el = document.querySelector('[data-module-id="' + m.module_id + '"]');
+      if (el) ZBCAdaptive.bindModule(m.module_id, el);
+    });
+
+    // 监听容器尺寸变化
+    var container = document.getElementById('demo-dashboard');
+    if (container) {
+      container.addEventListener('adaptive:sizechange', function(e) {
+        var badge = document.getElementById('demo-size-badge');
+        if (badge) {
+          badge.textContent = e.detail.size.toUpperCase() + ' (' + e.detail.width + 'px)';
+        }
+      });
+    }
+
+    renderModuleInfo(modules);
+  }
+
+  function renderModuleInfo(modules) {
+    var el = document.getElementById('demo-module-info');
+    if (!el) return;
+    var html = '';
+    modules.forEach(function(m) {
+      html += '<div class="ad-detail__row">' +
+        '<div class="ad-detail__label">' + m.module_id + '</div>' +
+        '<div class="ad-detail__value">type=' + m.module_type +
+        ' | priority=P' + m.priority +
+        ' | min=' + m.min_width + 'px preferred=' + m.preferred_width + 'px' +
+        ' | responsive=' + m.responsive_mode +
+        ' | motion=' + m.motion_mode + '</div></div>';
+    });
+    el.innerHTML = html;
+  }
+
+  // ===== 2. 数据渲染 — 统一使用 Motion System =====
+  var DEMO_DATA = {
+    volume: 12847,
+    brands: 156,
+    engagement: 8932,
+    risk: 3,
+    trend: [
+      {label: '09-01', y: 820}, {label: '09-02', y: 940}, {label: '09-03', y: 1100},
+      {label: '09-04', y: 890}, {label: '09-05', y: 1250}, {label: '09-06', y: 1420},
+      {label: '09-07', y: 1284}
+    ],
+    brands_list: [
+      {rank:1, name:'Louis Vuitton', industry:'女装', volume:3420, engagement:'4.8%', risk:'low'},
+      {rank:2, name:'Gucci', industry:'女装', volume:2890, engagement:'5.2%', risk:'low'},
+      {rank:3, name:'Dior', industry:'女装', volume:2450, engagement:'3.9%', risk:'medium'},
+      {rank:4, name:'Chanel', industry:'珠宝钟表', volume:2100, engagement:'6.1%', risk:'low'},
+      {rank:5, name:'Hermès', industry:'珠宝钟表', volume:1890, engagement:'7.3%', risk:'low'},
+      {rank:6, name:'Cartier', industry:'珠宝钟表', volume:1650, engagement:'4.5%', risk:'high'},
+      {rank:7, name:'Prada', industry:'女装', volume:1420, engagement:'3.2%', risk:'low'},
+      {rank:8, name:'Tiffany', industry:'珠宝钟表', volume:1280, engagement:'5.8%', risk:'low'}
+    ]
+  };
+
+  function renderKPIs() {
+    if (typeof ZBCMotion === 'undefined') return;
+    var kpis = [
+      {target: 'volume', value: DEMO_DATA.volume},
+      {target: 'brands', value: DEMO_DATA.brands},
+      {target: 'engagement', value: DEMO_DATA.engagement},
+      {target: 'risk', value: DEMO_DATA.risk}
+    ];
+    kpis.forEach(function(k, i) {
+      var el = document.querySelector('[data-kpi-target="' + k.target + '"]');
+      if (el) {
+        setTimeout(function() {
+          ZBCMotion.updateKPI(el, k.value);
+        }, i * 100);
+      }
+    });
+  }
+
+  function renderChart() {
+    var container = document.getElementById('demo-trend-chart');
+    if (!container) return;
+    if (typeof LDMotion !== 'undefined' && LDMotion.drawAreaChart) {
+      LDMotion.drawAreaChart(container, DEMO_DATA.trend, {
+        lineColor: '#8B5CF6',
+        areaGradient: ['rgba(236,72,153,0.25)', 'rgba(59,130,246,0.02)'],
+        height: 200,
+        width: container.clientWidth || 500
+      });
+    }
+  }
+
+  function renderProgress() {
+    document.querySelectorAll('[data-progress-target]').forEach(function(el) {
+      var pct = parseFloat(el.getAttribute('data-progress-target'));
+      if (typeof ZBCMotion !== 'undefined') {
+        ZBCMotion.updateProgress(el, pct);
+      } else {
+        el.style.width = pct + '%';
+      }
+    });
+  }
+
+  function renderTable() {
+    var tbody = document.getElementById('demo-table-body');
+    var countEl = document.getElementById('demo-table-count');
+    if (!tbody) return;
+    var html = '';
+    DEMO_DATA.brands_list.forEach(function(b) {
+      var riskCls = b.risk === 'high' ? 'ad-badge--error' : (b.risk === 'medium' ? 'ad-badge--warning' : 'ad-badge--success');
+      var riskLbl = b.risk === 'high' ? '高风险' : (b.risk === 'medium' ? '中风险' : '正常');
+      html += '<tr>' +
+        '<td data-label="#" data-col-primary="true">' + b.rank + '</td>' +
+        '<td data-label="品牌">' + b.name + '</td>' +
+        '<td data-label="业态" data-col-optional="true"><span class="ad-badge ad-badge--info">' + b.industry + '</span></td>' +
+        '<td data-label="声量">' + b.volume.toLocaleString() + '</td>' +
+        '<td data-label="互动率" data-col-optional="true">' + b.engagement + '</td>' +
+        '<td data-label="风险"><span class="ad-badge ' + riskCls + '">' + riskLbl + '</span></td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+    if (countEl) countEl.textContent = DEMO_DATA.brands_list.length + ' 个品牌';
+
+    // 级联进入动画
+    if (typeof ZBCMotion !== 'undefined') {
+      ZBCMotion.staggerIn(tbody, {delay: 100, step: 50});
+    }
+  }
+
+  function toggleDensity() {
+    _density = _density === 'normal' ? 'compact' : (_density === 'compact' ? 'comfortable' : 'normal');
+    if (typeof ZBCAdaptive !== 'undefined') {
+      ZBCAdaptive.setDensity(_density);
+    }
+  }
+
+  function refreshData() {
+    // 模拟数据变化 — 只有变化的值才触发动画
+    DEMO_DATA.volume += Math.floor(Math.random() * 200) - 100;
+    DEMO_DATA.engagement += Math.floor(Math.random() * 100) - 50;
+    renderKPIs();
+    if (typeof ZBCMotion !== 'undefined') {
+      ZBCMotion.flashUpdate(document.getElementById('demo-dashboard'));
+    }
+  }
+
+  function init() {
+    registerModules();
+    setTimeout(function() {
+      renderKPIs();
+      renderChart();
+      renderProgress();
+      renderTable();
+    }, 200);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  return { toggleDensity: toggleDensity, refreshData: refreshData };
+})();
+</script>
+{% endblock %}
