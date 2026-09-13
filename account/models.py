@@ -4,15 +4,13 @@ account/models.py — 数据库模型与建表
 保留全部 v4_ 表名，新增 v4_verification_codes / v4_member_authorizations / v4_login_approvals。
 对 v4_users 做幂等 ALTER TABLE 新增 avatar/phone 字段（不破坏现有数据）。
 全部 CREATE TABLE IF NOT EXISTS / ALTER TABLE 安全操作。
+
+数据库路径统一通过 db_paths.main_db_path() 在连接时解析，避免模块 reload / 环境变量切换后
+继续使用 import-time 固化路径，保证测试/生产 DB identity 与全仓 canonical contract 一致。
 """
 import sqlite3
-import os
 
-DB_PATH = os.path.abspath(
-    os.environ.get("ZBC_DB_PATH")
-    or os.environ.get("MONITOR_DB_PATH")
-    or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "monitor.db")
-)
+from db_paths import main_db_path
 
 # ── 基础 v4 表（与 v4_upgrade/auth/models.py 保持一致，幂等重建） ──
 BASE_TABLES_SQL = """
@@ -231,8 +229,8 @@ _WS_KEY_NEW_COLUMNS = [
 
 
 def get_db():
-    """获取数据库连接（与 v4_upgrade/auth 一致）"""
-    conn = sqlite3.connect(DB_PATH)
+    """获取数据库连接；路径在调用时通过全仓 canonical resolver 解析。"""
+    conn = sqlite3.connect(main_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
