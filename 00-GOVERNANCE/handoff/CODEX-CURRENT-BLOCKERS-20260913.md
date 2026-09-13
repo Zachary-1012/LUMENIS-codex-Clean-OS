@@ -2,7 +2,7 @@
 
 > Point-in-time takeover evidence for the **current local production workspace**. Current source/runtime/tests always outrank this file.
 >
-> This file supersedes the earlier remote-only blocker snapshot from the same date.
+> This file supersedes earlier remote-only blocker snapshots from the same date.
 
 ## 1. Canonical repository and local workspace
 
@@ -18,33 +18,68 @@ Long-lived remote development truth:
 main
 ```
 
-Current remote main observed before this handoff refresh:
-
-```text
-7cf0e8add51c4be32e4a50ab5c8be3434d252467
-```
-
 Canonical local production-development workspace on the current Windows machine:
 
 ```text
 D:\LUMENIS_REBUILD
 ```
 
-This path is a workstation locator, not a portable runtime requirement. On another machine, resolve the repository root with `git rev-parse --show-toplevel`.
+This path is the only active local LUMENIS workspace on the current machine. It is a workstation locator, not a portable runtime requirement. On another machine, resolve the repository root with `git rev-parse --show-toplevel`.
 
-## 2. Critical sync truth
+## 2. Mandatory local-to-main sync gate
 
-The local workspace has progressed **beyond the earlier remote-only CI blocker snapshot**. Do not restart from the old remote blocker list.
+The local workspace has progressed beyond the earlier remote-only CI blocker snapshot.
 
-Before changing code, compare:
+Therefore the first action of the next Codex session is **not** to restart from remote blockers and **not** to pull/reset over the local tree.
+
+First establish:
 
 ```text
-local HEAD / working tree / unpushed commits
+LOCAL HEAD
+LOCAL working tree
+LOCAL unpushed commits
 vs
 origin/main
 ```
 
-Preserve valid local work. If local implementation is ahead of remote, converge that work into `main`; do not overwrite it with the remote tree.
+State must be classified as one of:
+
+```text
+LOCAL_EQUAL
+LOCAL_AHEAD_VALID
+REMOTE_AHEAD
+DIVERGED_NEEDS_SEMANTIC_CONVERGENCE
+UNKNOWN
+```
+
+If valid local implementation is ahead of remote:
+
+```text
+preserve local work
+→ fetch latest main
+→ compare by source/contract/test
+→ adapt/resolve semantic conflicts
+→ targeted regression
+→ required full regression
+→ coherent commit(s)
+→ converge into main
+```
+
+Do **not** overwrite verified local fixes with the remote tree.
+
+Until this comparison/convergence is complete:
+
+```text
+REMOTE_CODE_CURRENT = NOT VERIFIED
+SYNC_REQUIRED = YES
+```
+
+Once valid local production/test fixes are represented in latest `main` and the working tree/commits are reconciled:
+
+```text
+SYNC_REQUIRED = NO
+main = current remote production-candidate truth
+```
 
 ## 3. Local work already completed — do not rediscover
 
@@ -74,7 +109,7 @@ The previous Codex session on `D:\LUMENIS_REBUILD` already completed the followi
 - the final 3 failures were diagnosed as Python module reload type/path identity drift rather than product-domain behavior failures;
 - those three were repaired through serialized/public contract semantics and module-owned/canonical database-path handling.
 
-Do not redo this work unless current source proves it was lost during convergence.
+Do not redo this work unless current local source proves it was lost.
 
 ## 4. Exact continuation point
 
@@ -90,23 +125,26 @@ canonical production DB/config convergence
 → run final full regression
 ```
 
-This is the current takeover point.
+This is the current takeover point **after** the local-to-main sync assessment.
 
 ## 5. Immediate execution order
 
 ```text
-A. Protect local work and establish local-vs-origin diff
-B. Finish canonical production DB/config convergence
-C. Verify the 3 reload/type/path identity repairs with targeted tests
-D. Run final full regression
-E. Prove protected production/candidate DB unchanged by tests
-F. If 0 failed / 0 errors: close Cleanup phase permanently
-G. Converge valid local commits/changes into latest main
-H. Production startup / health / supervisor qualification
-I. CTH / BMP / Shared Capability / SYSTEM critical E2E
-J. Shared Capability × Collector closed-loop acceptance
-K. Security / Recovery / Rollback
-L. Release Candidate / Launch-Ready gate
+A. Start at D:\LUMENIS_REBUILD
+B. Protect local work and establish local-vs-origin diff
+C. Preserve/converge valid local work without resetting it
+D. Finish canonical production DB/config convergence
+E. Verify the 3 reload/type/path identity repairs with targeted tests
+F. Run final full regression
+G. Prove protected production/candidate DB unchanged by tests
+H. If 0 failed / 0 errors: close Cleanup phase permanently
+I. Ensure all valid local implementation is in latest main
+J. Start the production system
+K. Verify /healthz + supervisor + core runtime
+L. Run CTH / BMP / Shared Capability / SYSTEM critical E2E
+M. Run Shared Capability × Collector closed-loop acceptance
+N. Security / Recovery / Rollback
+O. Release Candidate / Launch-Ready gate
 ```
 
 ## 6. DB/config hard rules
@@ -164,13 +202,11 @@ configuration identity
 full-regression result
 ```
 
-## 9. Remote/main convergence
+## 9. Mainline convergence
 
-`main` remains the only long-lived remote development truth.
+`main` is the only long-lived remote development truth.
 
-However, valid unpushed local production work in `D:\LUMENIS_REBUILD` must be preserved and converged into `main` before the remote tree can be considered current.
-
-Do not let old remote code overwrite newer verified local fixes.
+No valid production implementation may remain only in a local-only commit or a long-lived side branch.
 
 Convergence pattern:
 
@@ -180,18 +216,35 @@ preserve local work
 → compare by content/contract/tests
 → adapt/resolve semantic conflicts
 → targeted regression
-→ final full regression where required
+→ full regression where required
 → coherent commits
 → push/merge to main
+→ verify local-vs-main equivalence for the completed work
 ```
 
-## 10. Next product phase after repository/test convergence
+Do not force-push `main`.
 
-Once local and remote are synchronized and the full regression is green, immediately move to real product acceptance:
+## 10. Production startup is mandatory after green regression
+
+Once local/remote are synchronized and the final full regression is green, immediately start the real local production candidate:
+
+```powershell
+Set-Location D:\LUMENIS_REBUILD
+powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+```
+
+Expected core health endpoint:
+
+```text
+http://127.0.0.1:8201/healthz
+```
+
+Qualification chain:
 
 ```text
 Production Startup
 → /healthz
+→ supervisor stability
 → Runtime / Scheduler / Evidence / Permission / AI Gateway
 → CTH E2E
 → BMP E2E
@@ -204,9 +257,30 @@ Production Startup
 → Release Candidate
 ```
 
-Do not remain in CI/test-infrastructure cleanup after this gate.
+Do not remain in CI/test-infrastructure cleanup after the regression gate.
 
-## 11. Completion semantics
+External browser/platform login availability must be reported separately from core application health.
+
+## 11. User-operable completion rule
+
+A feature is not complete because a page, route or test exists.
+
+For important user-operable capabilities prove:
+
+```text
+UI Entry
+→ User Action
+→ API / Service
+→ Permission
+→ Canonical Read/Write
+→ Real Result
+→ Evidence / Trace
+→ Honest Error State
+→ Automated Test
+→ E2E
+```
+
+## 12. Completion semantics
 
 ```text
 IMPLEMENTED = code exists
@@ -224,16 +298,17 @@ RELEASED = NO
 OPERATING = NO
 ```
 
-## 12. Rules for the next Codex executor
+## 13. Rules for the next Codex executor
 
 - Start from `D:\LUMENIS_REBUILD` on this workstation.
 - Verify repository identity before acting.
 - Preserve valid local modifications and unpushed commits.
-- Do not restart from the old remote-only blocker clusters unless current code/tests reproduce them.
-- Do not redo branch archaeology; remote repository convergence is already complete.
+- Perform the local-to-main sync assessment before new feature work.
+- Do not restart from old remote-only blocker clusters unless current local code/tests reproduce them.
+- Do not redo branch archaeology.
 - Do not rediscover historical local paths.
-- Do not rerun full-suite tests after every leaf edit.
+- Do not rerun the full suite after every leaf edit.
 - Prefer `reuse → adapt → bind → verify`.
 - Keep one DB truth, one Permission truth, one Evidence truth, one Runtime truth and one long-lived `main`.
-- After final regression passes, immediately continue to production startup and E2E rather than continuing cleanup indefinitely.
+- After final regression passes, start the system and continue through runtime + E2E; do not stop at green tests.
 - Clean CI alone never proves launch readiness.
