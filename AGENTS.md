@@ -571,3 +571,199 @@ README
 
 - 接手先跑 `git status` / `git branch --show-current` / `git rev-parse HEAD`，与 `CODEX_RESUME_PACK_20260913.json` 的 work_head 比对；一致则禁止重新全仓扫描、禁止重读全部 DB、禁止重做五仓关系与前端前期，直接按 DAG 开工。
 - 连续闭环：TICKET → IMPLEMENT → SCOPED TEST → NEIGHBOUR REGRESSION → REQUIRED RUNTIME/E2E → EVIDENCE → ONE-PURPOSE COMMIT → UPDATE STATE → NEXT；无真实 blocker 不得逐票等待确认。
+
+---
+
+# 19. Shared Capability × Collector Closed Loop V1（Canonical Incremental Rule）
+
+已批准规范：`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`。本节是执行约束，不覆盖当前真实 Source / Runtime / DB / API / Permission / Evidence / Tests；冲突时仍按 #1 Authority Priority 判断。
+
+## 19.1 Ownership
+
+- Collector 属于 SYSTEM Runtime，只有一个 Production Owner。
+- CTH / BMP / Shared Capability 可以创建合法 Collection Task，但不得各自复制 Collector Runtime。
+- Upload / Import / API / Collector 只是 Source Acquisition Adapter，必须汇入同一个 Source / Evidence / Canonical / Provenance Truth。
+- 禁止新增第二套 Evidence、Canonical Data、Metric、Permission、Subject Context、DB Truth、Runtime Truth。
+
+## 19.2 Collector 输出边界
+
+Collector 只负责：
+
+```text
+discover
+fetch
+parse
+snapshot
+normalize-minimum
+health
+checkpoint
+```
+
+Collector 不直接产出业务结论，不直接成为 AI Truth。业务结论必须继续经过 Evidence → Canonical → Function / Research → Finding / Pattern。
+
+Discovery Collection 与 Tracking Collection 共用同一个 Runtime。Tracking 必须 append MetricSnapshot，禁止覆盖旧观测。
+
+## 19.3 Canonical Content Intelligence
+
+跨平台内容必须收敛到现有 Canonical Owner 或其增量适配，语义上至少覆盖：
+
+```text
+ContentUnit
+ContentSequence
+TranscriptSegment
+MetricSnapshot
+ResearchCohort
+```
+
+实际表名 / service / route / schema 必须由 Dependency Trace 决定，不得凭文档直接创建平行表。
+
+不得把秒级 Runtime 强加给图文等非时间序媒体。ContentSequence 必须兼容时序与非时序内容。
+
+## 19.4 Research → Learning → Creation → Evaluation
+
+正式闭环：
+
+```text
+Source / Evidence
+→ ContentUnit
+→ ResearchCohort
+→ Comparative Analysis
+→ PatternCandidate
+→ LearningAsset
+→ SH-01 Scoped Retrieval
+→ Draft
+→ Fact Wall
+→ Review
+→ Approval
+→ Export
+→ ApplicationTrace
+→ Collector Tracking
+→ MetricSnapshot
+→ EvaluationRun
+→ PatternEvaluation
+→ LearningAsset Version N+1
+```
+
+AI 可以产生 Hypothesis / Pattern Candidate / Promotion Proposal，但不得自行执行 `Pattern → ADOPT`。
+
+## 19.5 Application Trace 为 P0 闭环能力
+
+任何由 SH-01 生成并进入评估链的 Artifact，必须可追踪：
+
+- Brief / Subject / Platform / Content Type / Objective / Audience
+- Evidence IDs
+- Learning Asset ID + Version
+- Applied Pattern IDs + Versions
+- Retrieval Scope / Query Hash
+- Model Provider / Model Version
+- Prompt Contract Version
+
+没有 Application Trace，不得声明 Research → Creation → Evaluation 闭环完成。
+
+## 19.6 Fact Wall
+
+事实型输出必须有 Evidence 或 Brief 显式输入支撑。日期、价格、活动规则、品牌信息、商户、真实数字、人物引述、平台指标等缺乏支撑时必须返回 UNKNOWN / unsupported state，不得补写“合理值”。
+
+## 19.7 Safety
+
+登录态 Collector 永久只读。Collector 与未来 Publisher 必须独立。
+
+未来 Publisher 如实现，必须单独经过：
+
+```text
+Permission
+→ Approval
+→ Effect Fence
+→ legitimate integration path
+→ Audit
+→ Evidence
+```
+
+禁止借 Collector Browser 执行发布、评论、点赞、收藏、私信、关注、转发等社交写动作。
+
+## 19.8 Continuous Execution DAG
+
+Codex 执行顺序更新为：
+
+```text
+G0  Repository Truth Convergence
+G1  DB / Safety Foundation
+G2  Source + Evidence Unification
+G3  Collector Runtime
+G4  Canonical Content Intelligence
+G5  Research Engine
+G6  Learning Asset Engine
+G7  Write / Permission / Approval Closure
+G8  Content Studio Production Binding
+G9  Application Trace
+G10 Performance Collector
+G11 Evaluation → Pattern Validation
+G12 Learning Version Update
+G13 SH-02/03/05/06 + SYSTEM UI Binding
+G14 凉子访谈录 60期真实 Acceptance Dataset
+G15 Full Regression / Security / Recovery / E2E
+G16 Release Gates
+```
+
+每一 Gate：
+
+```text
+AUDIT
+→ DEPENDENCY TRACE
+→ REUSE EXISTING OWNER
+→ IMPLEMENT
+→ MIGRATE IF REQUIRED
+→ SCOPED TEST
+→ NEIGHBOUR REGRESSION
+→ RUNTIME TEST
+→ REQUIRED E2E
+→ EVIDENCE
+→ ONE-PURPOSE COMMIT
+→ UPDATE REGISTRY / STATE
+→ NEXT GATE
+```
+
+没有真实 blocker 不得逐票等待人工确认。
+
+## 19.9 First Safety Gate
+
+`P0-DBISO-01` 仍是新增闭环研发的第一安全 Gate。DB override 未统一前，所有隔离测试必须遵守 #18.2 的多路径隔离要求，并证明真实生产 DB 未变化。
+
+## 19.10 Acceptance Dataset
+
+第一套端到端真实验收数据集为《凉子访谈录》60期：
+
+```text
+20 breakout
+20 baseline
+20 low-performing
+```
+
+20/20/20 只是本次 Research Cohort 配置，不得 hardcode 为通用研究逻辑。
+
+验收必须覆盖：Source → Evidence → Canonical → Transcript / Sequence → Metric Snapshot → Cohort → Pattern → LearningAsset V1 → SH-01 Retrieval → Artifact → ApplicationTrace → Fact Wall → Approval / Export → 真实 Performance（可得时）→ Evaluation → LearningAsset V2。
+
+未来尚未到时的 T+1d / T+7d / T+30d 数据必须保持 pending / scheduled，禁止伪造。
+
+## 19.11 Release Semantics
+
+- `RELEASED`：代码、真实历史数据、Runtime、当前可验证闭环、测试、安全与回滚 Gate 均已通过。
+- `OPERATING`：至少有一轮真实 scheduled Collector Tracking → MetricSnapshot → Evaluation → Learning Version Update 的运行证据。
+
+不得用模拟未来数据把 RELEASED 冒充 OPERATING。
+
+## 19.12 Hard Prohibitions
+
+额外禁止：
+
+- 独立第五域
+- 独立 Podcast Product
+- 独立 Content Intelligence Product
+- 独立 Collector UI 架构脱离 SYSTEM Runtime
+- UI 重算业务指标
+- 覆盖历史 MetricSnapshot
+- `missing → 0`
+- AI 自动 Pattern → ADOPT
+- fake future performance
+- prototype action 无完整证据却标 VERIFIED
+- force push
