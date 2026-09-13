@@ -60,6 +60,20 @@ jobs:
           echo "Hermetic test files selected: $selected_count"
           exit "$missing"
 
+      - name: Credential-path boundary diagnostic (INFORMATIONAL)
+        # data_boundary returns only tracked relative paths; it never reads or prints secret values.
+        shell: bash
+        run: |
+          python - <<'PY'
+          import data_boundary
+          result = data_boundary.assert_no_tracked_credentials('.')
+          print('status:', result['status'])
+          print('tracked_total:', result['tracked_total'])
+          print('leak_count:', len(result['leaks']))
+          for path in result['leaks']:
+              print('tracked-boundary-path:', path)
+          PY
+
       - name: Run clean-checkout hermetic pytest (BLOCKING)
         # Production/live suites remain required acceptance evidence, but are not
         # valid prerequisites for a secret-free clean checkout. See tests/CI_TEST_TIERS.md.
