@@ -5,7 +5,7 @@
 '  说明：不删除本脚本（保持向后兼容），但任何后续生产运维请使用上述入口。
 ' ============================================================
 ' 广州太古汇舆情监测系统 - Cloudflare开机自启动（隐藏窗口）
-' 指向新路径 D:\Taikoo-monitor-new
+' 使用脚本所在仓库，不绑定机器绝对路径
 Set WshShell = CreateObject("WScript.Shell")
-WshShell.CurrentDirectory = "D:\Taikoo-monitor-new"
-WshShell.Run chr(34) & "D:\Taikoo-monitor-new\start_cloudflare_stable.bat" & chr(34), 0, False
+WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
+WshShell.Run chr(34) & WshShell.CurrentDirectory & "\start_cloudflare_stable.bat" & chr(34), 0, False

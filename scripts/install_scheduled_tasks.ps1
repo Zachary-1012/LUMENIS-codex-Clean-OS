@@ -7,7 +7,7 @@
 # All ASCII for Windows PowerShell 5.1 GBK safety.
 $ErrorActionPreference = 'Stop'
 
-$Root = 'D:\Taikoo-monitor-new'
+$Root = Split-Path -Parent $PSScriptRoot
 if (-not (Test-Path (Join-Path $Root 'app.py'))) { throw "Project root not found: $Root" }
 
 # 1) Health guard (runs the triple-idempotent launcher every 5 minutes, detached/hidden)

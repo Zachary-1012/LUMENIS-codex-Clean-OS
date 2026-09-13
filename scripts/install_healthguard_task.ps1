@@ -6,12 +6,12 @@
 # Runs as the current interactive user (Limited), which is required so Edge CDP has a desktop.
 # Safe to run repeatedly (-Force overwrites). No admin required.
 $ErrorActionPreference = 'Stop'
-$Root = 'D:\Taikoo-monitor-new'
+$Root = Split-Path -Parent $PSScriptRoot
 $Starter = Join-Path $Root 'scripts\start_production.ps1'
 if (-not (Test-Path $Starter)) { throw "starter not found: $Starter" }
 
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-    -Argument '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "D:\Taikoo-monitor-new\scripts\start_production.ps1"'
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}"' -f $Starter)
 
 # AtLogon trigger + repeat every 5 minutes (repetition borrowed from a Once trigger).
 $logon = New-ScheduledTaskTrigger -AtLogOn

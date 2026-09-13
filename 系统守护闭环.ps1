@@ -12,7 +12,7 @@
 #>
 
 $ErrorActionPreference = "SilentlyContinue"
-$WorkDir = "D:\Taikoo-monitor-new"
+$WorkDir = $PSScriptRoot
 $PythonExe = "$WorkDir\.venv\Scripts\python.exe"
 $AppFile = "$WorkDir\app.py"
 $Port = 8200

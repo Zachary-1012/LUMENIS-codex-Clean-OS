@@ -13,7 +13,7 @@ echo   自动检测 + 崩溃自动重启
 echo ========================================
 echo.
 
-cd /d "D:\Taikoo-monitor-new"
+cd /d "%~dp0"
 
 setlocal enabledelayedexpansion
 set RESTART_COUNT=0

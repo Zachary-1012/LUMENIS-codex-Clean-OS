@@ -14,8 +14,8 @@ echo.
 REM 配置
 set EDGE_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
 set CDP_PORT=9222
-set PROFILE_DIR=D:\Taikoo-monitor-new\edge-cdp-profile
-set APP_PATH=D:\Taikoo-monitor-new
+set PROFILE_DIR=%~dp0edge-cdp-profile
+set APP_PATH=%~dp0
 set PYTHON_PATH=%APP_PATH%\.venv\Scripts\python.exe
 
 REM 检查Edge是否存在

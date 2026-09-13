@@ -25,7 +25,7 @@ echo.
 setlocal enabledelayedexpansion
 
 :: 配置
-set "SYSTEM_DIR=D:\Taikoo-monitor-new"
+set "SYSTEM_DIR=%~dp0"
 set "PYTHON_EXE=%SYSTEM_DIR%\.venv\Scripts\python.exe"
 set "APP_FILE=%SYSTEM_DIR%\app.py"
 set "PORT=8200"

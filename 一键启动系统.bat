@@ -13,7 +13,7 @@ echo   一键启动（系统+CDP+Cloudflare+守护）
 echo ========================================
 echo.
 
-cd /d "D:\Taikoo-monitor-new"
+cd /d "%~dp0"
 
 echo [1/4] 启动系统服务...
 start "TaikooMonitor-System" /min cmd /c ".venv\Scripts\python.exe app.py --host 0.0.0.0 --port 8200"

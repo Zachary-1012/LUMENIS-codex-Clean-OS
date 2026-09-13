@@ -14,8 +14,8 @@ echo.
 REM 配置
 set CLOUDFLARED_PATH=C:\Program Files (x86)\cloudflared\cloudflared.exe
 set LOCAL_URL=http://127.0.0.1:8200
-set URL_FILE=D:\Taikoo-monitor-new\data\cloudflared_url.txt
-set LOG_FILE=D:\Taikoo-monitor-new\data\cloudflared.log
+set URL_FILE=%~dp0data\cloudflared_url.txt
+set LOG_FILE=%~dp0data\cloudflared.log
 
 REM 检查cloudflared是否存在
 if not exist "%CLOUDFLARED_PATH%" (
@@ -34,7 +34,7 @@ if %errorlevel% neq 0 (
 )
 
 REM 创建数据目录
-if not exist "D:\Taikoo-monitor-new\data" mkdir "D:\Taikoo-monitor-new\data"
+if not exist "%~dp0data" mkdir "%~dp0data"
 
 echo [1/3] 启动 Cloudflare Tunnel（HTTP2协议，4条高可用连接）...
 echo.

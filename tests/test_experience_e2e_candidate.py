@@ -159,6 +159,10 @@ def test_identity_does_not_leak_absolute_path(candidate_client):
     assert j["database"]["name"] == "candidate_copy.db"
     assert j["database"]["resolved"] is True
 
+    canonical = cli.get("/api/runtime/identity")
+    assert canonical.status_code == 200
+    assert canonical.get_json()["api"] == j["api"]
+
 
 def test_source_db_immutable_after_full_run(candidate_client):
     cli, src_before = candidate_client

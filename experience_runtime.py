@@ -203,6 +203,7 @@ def experience_asset(filename: str):
 # ===========================================================================
 # 运行时身份 / 主体（只读，不泄露安全内部）
 # ===========================================================================
+@experience_bp.route("/api/runtime/identity")
 @experience_bp.route("/api/experience/runtime/identity")
 def runtime_identity():
     """P0-RT-01：前端运行时身份。返回应用/数据库身份、域、运行时健康，全部真实、无密钥。"""

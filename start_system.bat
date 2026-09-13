@@ -11,12 +11,12 @@ echo   广州太古汇舆情监测系统 - 一键启动（含CDP浏览器）
 echo ============================================================
 echo.
 
-cd /d D:\Taikoo-monitor-new
+cd /d "%~dp0"
 
 REM 配置
 set EDGE_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
 set CDP_PORT=9222
-set PROFILE_DIR=D:\Taikoo-monitor-new\edge-cdp-newaccount
+set PROFILE_DIR=%~dp0edge-cdp-newaccount
 
 REM 检查Edge是否存在
 if not exist "%EDGE_PATH%" (

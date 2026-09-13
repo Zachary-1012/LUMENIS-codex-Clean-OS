@@ -15,6 +15,6 @@ echo.
 echo 守护闭环已启动，系统崩溃后5秒内自动重启
 echo 此窗口不要关闭，关闭后守护功能失效
 echo.
-cd /d "D:\Taikoo-monitor-new"
+cd /d "%~dp0"
 powershell -ExecutionPolicy Bypass -File "系统守护闭环.ps1"
 pause

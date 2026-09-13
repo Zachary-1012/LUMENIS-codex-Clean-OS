@@ -13,7 +13,7 @@ echo   进程守护模式 - 崩溃自动重启
 echo ========================================
 echo.
 
-cd /d D:\Taikoo-monitor-new
+cd /d "%~dp0"
 
 :loop
 echo [%date% %time%] 启动系统...
