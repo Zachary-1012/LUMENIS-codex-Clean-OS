@@ -1,201 +1,239 @@
-# LUMENIS — Current Codex Blockers (2026-09-13)
+# LUMENIS — Current Codex Handoff (2026-09-13)
 
-> Point-in-time handoff only. Re-verify current `origin/main`, local working tree and runtime before acting.
-> Current source/runtime/tests outrank this file. Do not turn this handoff into a mandatory full-read step for unrelated tasks.
+> Point-in-time takeover evidence for the **current local production workspace**. Current source/runtime/tests always outrank this file.
+>
+> This file supersedes the earlier remote-only blocker snapshot from the same date.
 
-## Already converged — do not rediscover
+## 1. Canonical repository and local workspace
 
-The active repository-convergence work has already established:
-
-- clean-checkout hermetic CI separated from Production/Live/Environment suites;
-- `excluded from clean CI != PASS`;
-- compile and hermetic pytest are real blocking gates;
-- production/live/browser/protected-data suites remain Production Acceptance requirements;
-- tracked credential-path diagnostic now passes (`leak_count = 0`); the prior `naming-profile.json` / historical `secret_scan_result.txt` hits were verified classification false positives and fixed narrowly;
-- `codex/production-convergence` valid DB isolation / Permission / Experience runtime implementation and tests have been selectively absorbed;
-- remaining old implementation/handoff/research branch ancestry has been folded into the single convergence history without restoring stale trees;
-- README is bilingual Chinese/English and `main` is defined as the only long-lived development line;
-- AGENTS is a compact model-neutral execution router;
-- third-party/open-source inventory/replacement boundaries are canonicalized.
-
-Branch-convergence authority:
-
-- `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md`
-
-CI-tier authority:
-
-- `tests/CI_TEST_TIERS.md`
-- `tests/ci_environment_tests.txt`
-- `tests/ci_quarantined_nodeids.txt`
-- `tests/select_ci_tests.py`
-
-## Latest completed high-signal hermetic run
-
-Run #100 selected **248 hermetic test files** and executed to 100%.
-
-Infrastructure truth:
+Remote repository:
 
 ```text
-Development/test dependencies = PASS
-Python compile = PASS
-CI tier manifest validation = PASS
-Tracked credential-path diagnostic = PASS (6212 tracked / 0 leaks)
-Hermetic pytest = FAIL (deterministic product/contract failures remain)
-Thread leak = NONE
-Boundary advisory = 19 (INFO 11 / MEDIUM 8 / HIGH 0)
-Asset inventory = 984 Python files / 617 routes / 68 DB tables / 275 test files
+Zachary-1012/LUMENIS-codex-Clean-OS
 ```
 
-Do not hide the remaining deterministic failures by moving them into Environment/Live tiers.
-
-## P0 — Canonical DB identity / module identity cluster
-
-### 1. Import-time DB path ownership remains outside the new call-time resolver
-
-Current evidence:
-
-- canonical resolver now exists in `db_paths.py`;
-- `database.py` and several production writers were converged to call-time resolution;
-- `account/models.py` still captures `DB_PATH` at module import time;
-- `skill_execution_chain.query_executions()` uses `account.models.get_db()`;
-- module reload / temporary `ZBC_DB_PATH` changes can therefore read/write a different DB identity than the active test/runtime contract.
-
-Observed deterministic symptoms include:
-
-- `tests/test_experience_runtime.py::test_ai01_traceability_not_fabricated` → traceability is calculated from samples that should not exist in the isolated test DB;
-- `tests/test_ai_task_engine.py::TestDBMigration::test_tables_exist` → expected `ai_task` table absent;
-- `tests/test_ai_task_engine.py::TestDBMigration::test_evidence_hash_columns_exist` → evidence hash columns absent;
-- `tests/test_subject_dual_dimension.py` → expected isolated schema/count differs from observed DB state;
-- `tests/test_topic_snapshot.py` → expected snapshot rows written to isolated DB are absent;
-- `tests/test_negative_event_api.py::test_event_mentions_linked_notes` may belong to the same fixture/DB-identity cluster and must be rechecked after canonical DB identity is fixed.
-
-Required direction:
+Long-lived remote development truth:
 
 ```text
-all active persistence consumers
-→ one canonical call-time DB-path contract
-→ isolated test DB remains isolated across reload/import order
-→ production DB unchanged
+main
 ```
 
-Do **not** create another DB resolver. Extend/use current `db_paths.py` ownership.
-
-### 2. Python reload/type identity drift
-
-`tests/test_permission_gate.py::TestOperationRegistry::test_operation_spec_fields` currently fails because an enum value created by a reloaded `permission_gate` module is not `isinstance`-identical to the test's previously imported `PermissionLevel` class.
-
-Fix the public/serialized contract or module ownership so reload order cannot invalidate type checks. Do not suppress the test merely to get green CI.
-
-## P1 — Semantic memory / asset admission
-
-Current hermetic failures:
-
-- `tests/agent_memory/test_memory_integration.py::TestMemoryFullChain::test_semantic_context_injection`
-- `tests/agent_memory/test_memory_integration.py::TestLearningLoopFullChain::test_six_layer_memory_interop`
-- `tests/agent_memory/test_semantic_memory.py` search/get/context/stats cases
-
-These surfaced after semantic-asset admission work was recovered from the production-convergence branch. Determine whether fixture seeding, asset visibility/admission state, or current semantic-memory ownership is wrong. Do not restore an obsolete parallel memory truth.
-
-## P1 — `ad_intelligence.models` ownership gap
-
-Six tests in `tests/test_ad_intelligence.py` import:
+Current remote main observed before this handoff refresh:
 
 ```text
-ad_intelligence.models.ctr_predictor.CTRPredictor
-ad_intelligence.models.feature_engineer.AdFeatureEngineer
+7cf0e8add51c4be32e4a50ab5c8be3434d252467
 ```
 
-Current package has no `ad_intelligence.models` implementation, and repository search found no equivalent `CTRPredictor` / `AdFeatureEngineer` implementation.
-
-Decision must come from current product ownership:
-
-- if this is a still-required capability, implement it under the existing ad-intelligence contract with real tests;
-- if the model layer was intentionally removed/superseded, update the stale tests/contract with evidence.
-
-Do not create a parallel model stack solely because a test import name exists.
-
-## P1 — AI/provider contract cluster
-
-### Model / thinking metadata
-
-`tests/test_ai_channel_flag.py` currently reports:
-
-- requested model override not preserved (`glm-5.2` expected, metadata model is `None`);
-- `has_thinking` missing for several GLM variants.
-
-Resolve against current AI Gateway/provider metadata contract.
-
-### Auth failure fallback semantics
-
-`tests/test_ai_channel_multiprovider.py::TestRouteWithFallback::test_auth_error_no_fallback` expects a provider 401/auth failure to stop fallback, while current routing attempts the next provider.
-
-Current AI provider policy supports multi-provider fallback generally, but auth/fatal-error semantics must be made explicit at the routing owner. Do not change behavior only to satisfy one assertion without reconciling the canonical policy.
-
-## P1 — IC API auth/permission contract
-
-`tests/test_ic_contracts_p1.py` has three smoke routes returning `401` where the test expects `200`:
-
-- EMV API
-- localization API
-- KOS interest API
-
-Resolve against current authentication/permission truth. Do not disable auth globally to obtain green tests.
-
-## P1 — Secondary-platform state semantics
-
-`tests/test_secondary_platforms_main.py` currently reports:
-
-- Bilibili detail not implemented: actual `SESSION_EXPIRED`, expected `COLLECT_ERROR`;
-- Weibo comments not implemented: actual `SESSION_EXPIRED`, expected `COLLECT_ERROR`.
-
-Resolve the canonical collection-state semantics at the adapter owner. Missing implementation and expired authentication are distinct states and must not be conflated.
-
-## Advisory architecture debt
-
-Latest boundary advisory reports:
+Canonical local production-development workspace on the current Windows machine:
 
 ```text
-B1 ZBC direct OSAI import                0
-B2 OSAI direct ZBC DB                    1
-B3 OSAI direct production-table writes   0
-B4 app startup depends on OSAI            0
-B5 cross-repo interaction contract       10
-B6 Skill/Agent Permission Gate            8
-B7 PENDING/CONCEPT production refs        0
-B8 credential security                    0
-TOTAL                                     19
-HIGH                                      0
+D:\LUMENIS_REBUILD
 ```
 
-This remains advisory while deterministic product gates are repaired, but it must be reconciled before Production Acceptance where applicable.
+This path is a workstation locator, not a portable runtime requirement. On another machine, resolve the repository root with `git rev-parse --show-toplevel`.
 
-## Recommended next execution order
+## 2. Critical sync truth
+
+The local workspace has progressed **beyond the earlier remote-only CI blocker snapshot**. Do not restart from the old remote blocker list.
+
+Before changing code, compare:
 
 ```text
-P0 canonical DB identity / import-time path consumers
-→ rerun DBISO + Experience + subject/topic/AI-task focused tests
-→ P0 reload/type identity contract
-→ semantic-memory/admission cluster
-→ AI/provider contract cluster
-→ ad_intelligence ownership decision
-→ IC auth/permission contract
-→ secondary-platform state semantics
-→ hermetic CI full rerun
-→ Production/Live environment acceptance
-→ canonical DB/config final full regression on local runtime
-→ production startup / health / core runtime
-→ domain + closed-loop Critical E2E
-→ G0→G16 continuation
+local HEAD / working tree / unpushed commits
+vs
+origin/main
 ```
 
-## Rules for the next executor
+Preserve valid local work. If local implementation is ahead of remote, converge that work into `main`; do not overwrite it with the remote tree.
 
-- Work from current `main`; do not use an old side branch as a development authority.
-- Do not redo branch archaeology; the single-mainline convergence document records the completed history convergence.
-- Do not reclassify deterministic failures as Environment/Live tests merely to make CI green.
-- Do not rerun full repository discovery before working.
-- Read only the owner/source/tests needed for the active blocker.
+## 3. Local work already completed — do not rediscover
+
+The previous Codex session on `D:\LUMENIS_REBUILD` already completed the following:
+
+- limited cleanup only to LUMENIS-related duplicates/cache/temp assets proven unused by dependency, Git, database and runtime checks;
+- no deletion of Windows, Program Files, user profile data, business spreadsheets, WeChat data or unrelated personal/system data;
+- FlClash/system proxy facts established for Git connectivity: `127.0.0.1:7890`; Git local proxy/HTTP 1.1 was configured and GitHub push was verified;
+- full-suite isolation diagnosis proved that many previous failures came from forcing all modules onto an empty DB before pytest collection;
+- session-level temporary database copies and temporary output paths were introduced so tests do not write the protected candidate database or repository staging paths;
+- old hard-coded `D:\Taikoo-monitor-new` test paths were removed from affected tests;
+- a focused isolation regression of 119 tests passed with protected database SHA-256 unchanged;
+- full suite improved from `89 failed + 5 errors` to `62 failed + 0 errors` after isolation fixes;
+- missing ad prediction/feature-engineering implementation was added as a deterministic, explainable, read-only enhancement layer;
+- AI provider fatal authentication/parameter failures were changed to stop invalid fallback attempts;
+- Cookie tests were changed to explicit `MISSING`/valid-structure semantics instead of requiring sensitive credentials in the repository;
+- credential/data-boundary false positives for naming configuration and redacted reports were corrected without weakening real Cookie/Token/DB/private-key protections;
+- the second full regression reached:
+
+```text
+4120 passed
+3 failed
+15 skipped
+0 errors
+```
+
+- the final 3 failures were diagnosed as Python module reload type/path identity drift rather than product-domain behavior failures;
+- those three were repaired through serialized/public contract semantics and module-owned/canonical database-path handling.
+
+Do not redo this work unless current source proves it was lost during convergence.
+
+## 4. Exact continuation point
+
+The previous Codex session stopped while entering this step:
+
+```text
+canonical production DB/config convergence
+→ backup the protected canonical data path
+→ point production config to the single protected path
+→ remove/isolate the ignored repository DB copy polluted by old tests
+→ verify no silent fallback to stale/duplicate DB paths
+→ rerun targeted identity regressions
+→ run final full regression
+```
+
+This is the current takeover point.
+
+## 5. Immediate execution order
+
+```text
+A. Protect local work and establish local-vs-origin diff
+B. Finish canonical production DB/config convergence
+C. Verify the 3 reload/type/path identity repairs with targeted tests
+D. Run final full regression
+E. Prove protected production/candidate DB unchanged by tests
+F. If 0 failed / 0 errors: close Cleanup phase permanently
+G. Converge valid local commits/changes into latest main
+H. Production startup / health / supervisor qualification
+I. CTH / BMP / Shared Capability / SYSTEM critical E2E
+J. Shared Capability × Collector closed-loop acceptance
+K. Security / Recovery / Rollback
+L. Release Candidate / Launch-Ready gate
+```
+
+## 6. DB/config hard rules
+
+Use one canonical DB-path owner. Do not create another resolver.
+
+Tests/staging must remain isolated/disposable and must never silently fall back to the protected production/candidate DB.
+
+Before removing any DB copy, prove:
+
+```text
+identity
+hash
+schema
+row-count relevance
+Git status/history relevance
+runtime references
+configuration references
+```
+
+Only delete/move a LUMENIS DB copy when it is proven to be a polluted/duplicate/test artifact and the canonical protected path is backed up and verified.
+
+## 7. Final full-regression gate
+
+After the targeted identity regressions pass, execute the same official full-suite entrypoint used for the `4120 / 3 / 15 / 0` run.
+
+Required result:
+
+```text
+FAILED = 0
+ERRORS = 0
+```
+
+All skips must be explicitly classified as expected online/platform/environment conditions; no unknown skip is acceptable.
+
+Do not obtain green by deleting tests, weakening assertions, adding broad skips, expanding environment exclusions, or using `continue-on-error`.
+
+## 8. After full green — stop cleanup
+
+When final regression is genuinely green:
+
+```text
+CLEANUP_PHASE = CLOSED
+```
+
+Do not resume old-path archaeology or duplicate-repository cleanup unless new evidence proves a concrete production problem.
+
+Create a clean production baseline recording at least:
+
+```text
+HEAD
+branch
+canonical DB identity/hash
+configuration identity
+full-regression result
+```
+
+## 9. Remote/main convergence
+
+`main` remains the only long-lived remote development truth.
+
+However, valid unpushed local production work in `D:\LUMENIS_REBUILD` must be preserved and converged into `main` before the remote tree can be considered current.
+
+Do not let old remote code overwrite newer verified local fixes.
+
+Convergence pattern:
+
+```text
+preserve local work
+→ fetch latest origin/main
+→ compare by content/contract/tests
+→ adapt/resolve semantic conflicts
+→ targeted regression
+→ final full regression where required
+→ coherent commits
+→ push/merge to main
+```
+
+## 10. Next product phase after repository/test convergence
+
+Once local and remote are synchronized and the full regression is green, immediately move to real product acceptance:
+
+```text
+Production Startup
+→ /healthz
+→ Runtime / Scheduler / Evidence / Permission / AI Gateway
+→ CTH E2E
+→ BMP E2E
+→ Shared Capability E2E
+→ SYSTEM E2E
+→ Shared Capability × Collector closed loop
+→ Security
+→ Recovery
+→ Rollback
+→ Release Candidate
+```
+
+Do not remain in CI/test-infrastructure cleanup after this gate.
+
+## 11. Completion semantics
+
+```text
+IMPLEMENTED = code exists
+TESTED      = scoped automated tests pass
+VERIFIED    = runtime/E2E proves behavior
+RELEASED    = production/security/recovery/rollback gates pass
+OPERATING   = real operation produces required live evidence
+```
+
+Until production startup, domain/closed-loop E2E, security, recovery and rollback are all evidenced:
+
+```text
+PRODUCTION_READY = NO
+RELEASED = NO
+OPERATING = NO
+```
+
+## 12. Rules for the next Codex executor
+
+- Start from `D:\LUMENIS_REBUILD` on this workstation.
+- Verify repository identity before acting.
+- Preserve valid local modifications and unpushed commits.
+- Do not restart from the old remote-only blocker clusters unless current code/tests reproduce them.
+- Do not redo branch archaeology; remote repository convergence is already complete.
+- Do not rediscover historical local paths.
+- Do not rerun full-suite tests after every leaf edit.
 - Prefer `reuse → adapt → bind → verify`.
-- Extend current canonical DB/Permission/Evidence/Runtime owners; do not create second truths.
-- After deterministic CI is green, return to the real local Production/Live gates rather than continuing CI cleanup indefinitely.
-- Clean GitHub CI alone never proves `PRODUCTION_READY = YES`.
+- Keep one DB truth, one Permission truth, one Evidence truth, one Runtime truth and one long-lived `main`.
+- After final regression passes, immediately continue to production startup and E2E rather than continuing cleanup indefinitely.
+- Clean CI alone never proves launch readiness.
