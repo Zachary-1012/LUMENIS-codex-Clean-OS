@@ -301,7 +301,7 @@ def stop_health_monitor():
 # ============================================================
 # 7) 多 Provider 故障转移层（智谱主 + 豆包备 + 本地规则兜底）
 #    每个 Provider 独立熔断；主通道失败/熔断时自动切备用；备用也失败才降 rule。
-#    设计目标：24h 连接不断——主通道抖动时业务无感切换，不打爆任一通道。
+#    Fatal auth/bad-request stops the chain immediately to avoid wasteful provider switching.
 # ============================================================
 class ProviderBreaker:
     """单个 Provider 的独立熔断 + 健康快照（线程安全）。"""
@@ -363,10 +363,10 @@ def route_with_fallback(call_fn, providers=None, on_result=None):
     多 Provider 故障转移执行器。
     call_fn(provider_name) -> (result, provider_used) 或抛异常。
     按 provider_chain() 顺序尝试；每个 Provider 独立熔断；全部失败返回 (None, 'rule')。
+    auth / bad_request 等 fatal error 立即终止 provider 链，避免无效切换与额度浪费。
     on_result(provider, result, ok) 用于审计/额度记录。
     """
     chain = providers or provider_chain()
-    last_exc = None
     for prov in chain:
         pb = get_provider_breaker(prov)
         if not pb.allow():
@@ -383,16 +383,15 @@ def route_with_fallback(call_fn, providers=None, on_result=None):
         except Exception as exc:
             kind, retryable = classify_error(exc)
             pb.record_failure(kind)
-            last_exc = exc
             if on_result:
                 try:
                     on_result(prov, None, False)
                 except Exception:
                     pass
-            # 不可重试错误（auth/bad_request）记录后继续切下一个 provider：
-            # 不同 provider 的 key/配置独立，一个 auth 失败不代表其他 provider 也失败
+            if not retryable:
+                break
             continue
-    # 全部 Provider 失败/熔断 → 本地规则兜底
+    # 全部 Provider 失败/熔断，或 fatal error → 本地规则兜底
     return None, 'rule'
 
 
@@ -788,10 +787,10 @@ def route_with_fallback_v1(call_fn, providers=None, on_result=None,
     call_fn(provider_name) -> (result_text, usage_dict) 或抛异常。
     usage_dict: {prompt_tokens, completion_tokens, total_tokens}
     按 providers 顺序尝试；每个 Provider 独立熔断；全部失败返回 (None, "rule", usage, switch_log)。
+    auth / bad_request 等 fatal error 立即停止 provider 链。
     rule 兜底标记为 deterministic_fallback，不计算在 AI 失败率内。
     """
     chain = providers or build_fallback_chain_v1()
-    last_exc = None
     last_provider = ""
     switches = []
     for prov in chain:
@@ -822,7 +821,6 @@ def route_with_fallback_v1(call_fn, providers=None, on_result=None,
         except Exception as exc:
             kind, retryable = classify_error(exc)
             pb.record_failure(kind)
-            last_exc = exc
             if last_provider and last_provider != prov:
                 sw = record_provider_switch(last_provider, prov, f"{kind}:{str(exc)[:80]}",
                                              task_id, trace_id)
@@ -833,13 +831,13 @@ def route_with_fallback_v1(call_fn, providers=None, on_result=None,
                     on_result(prov, None, False, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
                 except Exception:
                     pass
-            # 不可重试错误（auth/bad_request）记录后继续切下一个 provider：
-            # 不同 provider 的 key/配置独立，一个 auth 失败不代表其他 provider 也失败
+            if not retryable:
+                break
             continue
-    # 全部 Provider 失败/熔断 → L6 本地规则兜底
+    # 全部 Provider 失败/熔断或 fatal error → L6 本地规则兜底
     usage_zero = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     if last_provider and last_provider != "rule":
-        sw = record_provider_switch(last_provider, "rule", "all_cloud_providers_failed",
+        sw = record_provider_switch(last_provider, "rule", "provider_chain_exhausted_or_fatal",
                                      task_id, trace_id)
         switches.append(sw)
     return None, "rule", usage_zero, switches
