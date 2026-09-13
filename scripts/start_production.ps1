@@ -12,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 # Single-instance mutex. Keep the historical mutex name for process compatibility.
 $mutex = New-Object System.Threading.Mutex($false, 'Global\ZBrandCoreLauncher8201')
 if (-not $mutex.WaitOne(0)) {
-    Write-Output '[ZBC-8201] another launcher is running, exit'
+    Write-Output '[LUMENIS-8201] another launcher is running, exit'
     return
 }
 try {
@@ -71,11 +71,11 @@ function Wait-Healthz([string]$Url, [int]$Seconds=15) {
 # stale lock, then start exactly ONE supervisor (whose own lock is atomic-create).
 $httpOk = Test-Http 'http://127.0.0.1:8201/healthz'
 if ($httpOk) {
-    Write-Output '[ZBC-8201] already healthy, skip'
+    Write-Output '[LUMENIS-8201] already healthy, skip'
 } else {
     $stale = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -and ($_.CommandLine -match '8201') -and ($_.CommandLine -match 'run_supervised\.py|app\.py') }
     if ($stale) {
-        Write-Output ("[ZBC-8201] cleaning stale pids: " + (($stale | ForEach-Object { $_.ProcessId }) -join ','))
+        Write-Output ("[LUMENIS-8201] cleaning stale pids: " + (($stale | ForEach-Object { $_.ProcessId }) -join ','))
         $stale | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
         Start-Sleep -Seconds 3
     }
@@ -83,11 +83,11 @@ if ($httpOk) {
     $supOut = Join-Path $LogDir 'supervisor_console.log'
     $supErr = Join-Path $LogDir 'supervisor_console.err'
     Start-Process -FilePath $Py -ArgumentList @('run_supervised.py','--host','0.0.0.0','--port','8201') -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $supOut -RedirectStandardError $supErr
-    Write-Output '[ZBC-8201] starting single supervisor (run_supervised.py --port 8201)'
-    Write-Output '[ZBC-8201] waiting healthz (max 15s)...'
+    Write-Output '[LUMENIS-8201] starting single supervisor (run_supervised.py --port 8201)'
+    Write-Output '[LUMENIS-8201] waiting healthz (max 15s)...'
     $up = Wait-Healthz 'http://127.0.0.1:8201/healthz' 15
     if ($up) {
-        Write-Output '[ZBC-8201] OK http://127.0.0.1:8201/healthz returned 200'
+        Write-Output '[LUMENIS-8201] OK http://127.0.0.1:8201/healthz returned 200'
     } else {
         Write-Error '8201 did not pass 15s health check.'
         Write-Error "  stdout: $supOut"
@@ -104,10 +104,10 @@ if ($httpOk) {
 # The launcher is idempotent: an online port is reused and its platform login tab is ensured.
 $resident = Join-Path $Root 'scripts\start_resident_browsers.py'
 if (Test-Path $resident) {
-    Write-Output '[ZBC-Resident] ensuring 9222/9223 dual resident browsers ...'
+    Write-Output '[LUMENIS-Resident] ensuring 9222/9223 dual resident browsers ...'
     & $Py $resident
 } else {
-    Write-Output "[ZBC-Resident] launcher missing: $resident"
+    Write-Output "[LUMENIS-Resident] launcher missing: $resident"
 }
 
 Write-Output ''
