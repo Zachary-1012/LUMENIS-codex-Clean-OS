@@ -1,0 +1,5 @@
+# LUMENIS development/test dependencies
+# Keep production runtime dependencies in requirements.txt.
+-r requirements.txt
+
+pytest>=8.0

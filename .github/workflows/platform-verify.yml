@@ -1,4 +1,4 @@
-name: Verify Z-Brand-Core
+name: Verify LUMENIS
 
 on:
   push:
@@ -16,20 +16,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements.txt
-      - name: Compile Python sources
-        # SyntaxWarning 不阻塞构建；真正的 SyntaxError 会在 pytest 阶段暴露。
-        continue-on-error: true
+
+      - name: Install development/test dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Compile Python sources (BLOCKING)
+        # A real SyntaxError is a production blocker and must fail CI.
         run: python -m compileall -q .
-      - name: Run pytest (non-browser subset)
-        # M1: CI 执行 pytest 子集。排除 Playwright/CDP 浏览器测试、e2e 测试、
-        # 需要真实网络/平台的 online 标记测试。continue-on-error 避免 CI 假失败阻塞。
-        continue-on-error: true
+
+      - name: Run pytest non-browser subset (BLOCKING)
+        # Browser/CDP and real-network tests are exercised by their own runtime/E2E gates.
+        # Collection errors are blocking here; do not hide them with --continue-on-collection-errors.
         timeout-minutes: 15
         run: |
           python -m pytest tests/ \
@@ -44,16 +46,14 @@ jobs:
             --ignore=tests/test_collector_e2e_four_layer.py \
             --ignore=tests/test_dual_domain_e2e.py \
             --ignore=tests/browser_runtime \
-            --continue-on-collection-errors \
             -q --tb=line
-      - name: Boundary Check (双库边界机器检查)
-        # P1 复杂度治理：持续验证 ZBC/OSAI 双库边界隔离。
-        # continue-on-error：边界检查为治理信号，不阻塞构建，但违规会写入报告。
+
+      - name: Boundary Check (ADVISORY)
+        # Governance signal until violations are classified into explicit blocking/advisory policy.
         continue-on-error: true
-        run: |
-          python scripts/audit_tools/boundary_check.py --ci
-      - name: Asset Impact Scan (全库资产影响图)
-        # P1 复杂度治理：扫描全库资产生成统一索引。
+        run: python scripts/audit_tools/boundary_check.py --ci
+
+      - name: Asset Impact Scan (INFORMATIONAL)
+        # Repository inventory signal; failure is reported but does not currently block release.
         continue-on-error: true
-        run: |
-          python scripts/audit_tools/asset_impact_scan.py
+        run: python scripts/audit_tools/asset_impact_scan.py
