@@ -17,7 +17,7 @@ if (-not $mutex.WaitOne(0)) {
 }
 try {
 
-$Root   = 'D:\Taikoo-monitor-new'
+$Root   = Split-Path -Parent $PSScriptRoot
 $Py     = Join-Path $Root '.venv\Scripts\python.exe'
 $Edge   = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
 $LogDir = Join-Path $Root 'logs'

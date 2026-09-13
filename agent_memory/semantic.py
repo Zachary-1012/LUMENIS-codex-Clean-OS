@@ -39,7 +39,7 @@ class SemanticMemory(BaseMemoryLayer):
         try:
             conn = get_db_connection(self.db_path)
             try:
-                sql = "SELECT * FROM intelligence_assets WHERE 1=1"
+                sql = "SELECT * FROM intelligence_assets WHERE knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED'"
                 params: list = []
                 if sub_library:
                     sql += " AND sub_library=?"
@@ -75,7 +75,7 @@ class SemanticMemory(BaseMemoryLayer):
             conn = get_db_connection(self.db_path)
             try:
                 row = conn.execute(
-                    "SELECT * FROM intelligence_assets WHERE asset_id=?", (asset_id,)
+                    "SELECT * FROM intelligence_assets WHERE asset_id=? AND knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED'", (asset_id,)
                 ).fetchone()
                 return dict(row) if row else None
             finally:
@@ -93,7 +93,8 @@ class SemanticMemory(BaseMemoryLayer):
             try:
                 rows = conn.execute(
                     """SELECT * FROM intelligence_assets
-                       WHERE sub_library=? ORDER BY updated_at DESC LIMIT ?""",
+                       WHERE sub_library=? AND knowledge_status IN ('FACT','VERIFIED')
+                       AND admission_status='ADMITTED' ORDER BY updated_at DESC LIMIT ?""",
                     (sub_library, limit),
                 ).fetchall()
                 return [dict(r) for r in rows]
@@ -167,7 +168,7 @@ class SemanticMemory(BaseMemoryLayer):
             try:
                 conn = get_db_connection(self.db_path)
                 try:
-                    ia = conn.execute("SELECT COUNT(*) FROM intelligence_assets").fetchone()[0]
+                    ia = conn.execute("SELECT COUNT(*) FROM intelligence_assets WHERE knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED'").fetchone()[0]
                     rv = conn.execute("SELECT COUNT(*) FROM rule_version_registry").fetchone()[0]
                     s["intelligence_assets_total"] = ia
                     s["rule_version_total"] = rv

@@ -26,6 +26,7 @@ from __future__ import annotations
 import datetime as _dt
 import io as _io
 import os
+import threading
 import traceback as _tb
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -654,16 +655,31 @@ def _provider_runtime(gov: Dict[str, Any], gov_err: bool) -> List[Dict[str, Any]
 # ===========================================================================
 _BUILDERS = {"CTH-01": _build_cth01, "AI-01": _build_ai01}
 
-# P1 传播：其余真实数据屏的 builder 集中在 experience_screens.py（一屏一函数）
-try:
-    from experience_screens import SCREEN_BUILDERS as _PROPAGATED_BUILDERS
+# P1 传播：其余真实数据屏 builder 集中在 experience_screens.py（一屏一函数）。
+# 注意 experience_screens 顶部反向 import 本模块的同构构造器，构成导入环：若在模块体
+# 顶部直接 import，会在对方“部分初始化”时拿不到 SCREEN_BUILDERS，异常被静默吞掉，导致
+# 36 个传播屏全部退回 prototype（P0-E2E-03 实测发现）。改为首次请求时懒加载——此刻两个
+# 模块必然都已完成初始化，无论谁先 import 都能正确合并（P0-E2E-03 修复）。
+_PROPAGATED_BUILDERS: Dict[str, Any] = {}
+_PROPAGATION_LOADED = False
+_PROPAGATION_IMPORT_ERROR = ""
+_PROPAGATION_LOCK = threading.RLock()
 
-    _BUILDERS.update(_PROPAGATED_BUILDERS)
-except Exception as _prop_exc:  # noqa: BLE001 - 传播层缺失不应拖垮样板屏
-    _PROPAGATED_BUILDERS = {}
-    _PROPAGATION_IMPORT_ERROR = str(_prop_exc)
-else:
-    _PROPAGATION_IMPORT_ERROR = ""
+
+def _all_builders() -> Dict[str, Any]:
+    """返回样板屏 + 传播屏的全部 builder（首次调用时懒加载 experience_screens，破循环导入）。"""
+    global _PROPAGATION_LOADED, _PROPAGATED_BUILDERS, _PROPAGATION_IMPORT_ERROR
+    with _PROPAGATION_LOCK:
+        if not _PROPAGATION_LOADED:
+            try:
+                from experience_screens import SCREEN_BUILDERS as _propagated
+                _BUILDERS.update(_propagated)
+                _PROPAGATED_BUILDERS = dict(_propagated)
+                _PROPAGATION_IMPORT_ERROR = ""
+                _PROPAGATION_LOADED = True
+            except Exception as _prop_exc:  # Retry on the next request after an import failure.
+                _PROPAGATION_IMPORT_ERROR = str(_prop_exc)
+    return _BUILDERS
 
 # 未绑定屏幕（无生产数据源）的诚实说明，来自 06_CONTRACTS/unknown-bindings.json
 def _unbound_reason(screen_id: str) -> str:
@@ -673,7 +689,7 @@ def _unbound_reason(screen_id: str) -> str:
 @experience_bp.route("/api/experience/screen/<screen_id>")
 def screen_viewmodel(screen_id: str):
     """返回与原型同构的真实 section 描述符。未绑定屏幕明确 bound=False（前端保留原型，不假装）。"""
-    builder = _BUILDERS.get(screen_id)
+    builder = _all_builders().get(screen_id)
     if builder is None:
         return jsonify({"ok": True, "screen": screen_id, "source": "prototype", "bound": False,
                         "sections": None,
