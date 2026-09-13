@@ -26,27 +26,43 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
       - name: Compile Python sources (BLOCKING)
-        # A real SyntaxError is a production blocker and must fail CI.
+        # Syntax errors are repository blockers.
         run: python -m compileall -q .
 
-      - name: Run pytest non-browser subset (BLOCKING)
-        # Browser/CDP and real-network tests are exercised by their own runtime/E2E gates.
-        # Collection errors are blocking here; do not hide them with --continue-on-collection-errors.
+      - name: Validate CI test-tier manifest (BLOCKING)
+        shell: bash
+        run: |
+          missing=0
+          while IFS='|' read -r raw_path reason; do
+            path="$(echo "$raw_path" | xargs)"
+            [[ -z "$path" || "$path" == \#* ]] && continue
+            if [[ ! -e "$path" ]]; then
+              echo "Missing test-tier path: $path"
+              missing=1
+            fi
+          done < tests/ci_environment_tests.txt
+          exit "$missing"
+
+      - name: Run clean-checkout hermetic pytest (BLOCKING)
+        # Environment/live suites remain required acceptance evidence but are not
+        # valid clean-checkout tests. See tests/CI_TEST_TIERS.md.
+        shell: bash
         timeout-minutes: 15
         run: |
+          ignore_args=()
+          while IFS='|' read -r raw_path reason; do
+            path="$(echo "$raw_path" | xargs)"
+            [[ -z "$path" || "$path" == \#* ]] && continue
+            ignore_args+=("--ignore=$path")
+          done < tests/ci_environment_tests.txt
+
           python -m pytest tests/ \
             -m "not online" \
-            --ignore=tests/test_e2e.py \
-            --ignore=tests/test_browser_e2e.py \
-            --ignore=tests/test_browser_hybrid.py \
-            --ignore=tests/test_browser_runtime_resident.py \
-            --ignore=tests/test_browser_surface.py \
-            --ignore=tests/test_browser_downloads.py \
-            --ignore=tests/test_internal_browser_recovery.py \
-            --ignore=tests/test_collector_e2e_four_layer.py \
-            --ignore=tests/test_dual_domain_e2e.py \
-            --ignore=tests/browser_runtime \
+            "${ignore_args[@]}" \
             -q --tb=line
+
+      - name: Production/live gate inventory (INFORMATIONAL)
+        run: cat tests/ci_environment_tests.txt
 
       - name: Boundary Check (ADVISORY)
         # Governance signal until violations are classified into explicit blocking/advisory policy.
