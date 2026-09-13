@@ -1,15 +1,18 @@
-"""V2 P0 新模块综合测试（ZBC 侧）
+"""V2 P0 module integration tests.
 
-覆盖：Provider Registry, Subject Context, Domain Isolation, Repository Registry
+Covers provider registry, subject context, domain isolation and repository registry.
+All repository file access is resolved from this checkout rather than a developer-machine path.
 """
 import json
 import os
 import sys
-import tempfile
+from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 class TestProviderRegistry:
@@ -41,7 +44,6 @@ class TestProviderRegistry:
         from provider_registry import active_providers
         active = active_providers()
         assert "zhipu" in active
-        # ollama=AVAILABLE, ark=ACTIVE_FALLBACK 不在 active 列表，但在可用链中
         assert "qwen" not in active
 
     def test_unknown_provider_disabled(self):
@@ -57,23 +59,19 @@ class TestSubjectContext:
         assert ctx.product_id == PRODUCT_CTH
 
     def test_cth_protection(self):
-        from subject_context import get_subject_context, assert_cth_protection
-        ctx = get_subject_context()
-        assert_cth_protection()  # 不应抛异常
+        from subject_context import assert_cth_protection
+        assert_cth_protection()
 
     def test_subject_to_dict(self):
         from subject_context import get_subject_context
-        ctx = get_subject_context()
-        d = ctx.to_dict()
+        d = get_subject_context().to_dict()
         assert "subject_id" in d
         assert "brand_key" in d
         assert "product_id" in d
 
     def test_thread_context(self):
-        from subject_context import (set_thread_context, get_thread_context,
-                                     clear_thread_context, get_subject_context)
-        ctx = get_subject_context()
-        set_thread_context(ctx)
+        from subject_context import set_thread_context, get_thread_context, clear_thread_context, get_subject_context
+        set_thread_context(get_subject_context())
         assert get_thread_context() is not None
         clear_thread_context()
         assert get_thread_context() is None
@@ -88,13 +86,11 @@ class TestSubjectContext:
 class TestDomainIsolation:
     def test_cth_domain_protected(self):
         from domain_isolation import get_domain
-        cth = get_domain("cth")
-        assert cth.is_protected is True
+        assert get_domain("cth").is_protected is True
 
     def test_zbmp_domain_not_protected(self):
         from domain_isolation import get_domain
-        zbmp = get_domain("zbmp")
-        assert zbmp.is_protected is False
+        assert get_domain("zbmp").is_protected is False
 
     def test_isolated_resources(self):
         from domain_isolation import CTH_DOMAIN
@@ -122,20 +118,20 @@ class TestDomainIsolation:
 
 
 class TestRepositoryRegistry:
+    def _registry_path(self):
+        return REPO_ROOT / "repo_registry.json"
+
     def test_registry_file_exists(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "repo_registry.json")
-        assert os.path.isfile(path)
+        assert self._registry_path().is_file()
 
     def test_registry_valid_json(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "repo_registry.json")
-        with open(path, "r", encoding="utf-8") as f:
+        with self._registry_path().open("r", encoding="utf-8") as f:
             reg = json.load(f)
         assert "repositories" in reg
         assert len(reg["repositories"]) >= 2
 
-    def test_registry_has_zbc_and_osai(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "repo_registry.json")
-        with open(path, "r", encoding="utf-8") as f:
+    def test_registry_has_production_and_intelligence_roles(self):
+        with self._registry_path().open("r", encoding="utf-8") as f:
             reg = json.load(f)
         roles = [r["role"] for r in reg["repositories"]]
         assert "production_core" in roles
@@ -143,17 +139,16 @@ class TestRepositoryRegistry:
 
 
 class TestSkillAdapterNoHardcode:
-    def test_no_d_zachary_hardcode(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "lumenis_skill_adapter.py")
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
+    def _adapter_path(self):
+        return REPO_ROOT / "lumenis_skill_adapter.py"
+
+    def test_no_personal_osai_hardcode(self):
+        content = self._adapter_path().read_text(encoding="utf-8")
         assert r"D:\Zachary OS AI" not in content
         assert "D:\\\\Zachary" not in content
 
     def test_adapter_has_repo_registry_support(self):
-        path = os.path.join(r"D:\Taikoo-monitor-new", "lumenis_skill_adapter.py")
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
+        content = self._adapter_path().read_text(encoding="utf-8")
         assert "repo_registry.json" in content
 
 
