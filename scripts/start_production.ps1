@@ -1,15 +1,15 @@
-# Z-Brand Core / CTH-POMS production idempotent launcher (safe to run repeatedly).
+# LUMENIS production idempotent launcher (safe to run repeatedly).
 # Starts 8201 supervisor and the 9222/9223 dual Resident Browsers (idempotent).
 # Triple idempotency: global mutex (no concurrent launchers) + existing-process guard + healthz.
 # Does NOT touch 8200. All ASCII-safe for Windows PowerShell 5.1.
 #
-#  Zachary-OS-AI T0-3 统一生产入口（所有 LEGACY 入口都 REDIRECT 到此）
-#    Usage:  powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+# Canonical Windows production entry:
+#   powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
 #
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 
-# Single-instance mutex
+# Single-instance mutex. Keep the historical mutex name for process compatibility.
 $mutex = New-Object System.Threading.Mutex($false, 'Global\ZBrandCoreLauncher8201')
 if (-not $mutex.WaitOne(0)) {
     Write-Output '[ZBC-8201] another launcher is running, exit'
@@ -17,7 +17,8 @@ if (-not $mutex.WaitOne(0)) {
 }
 try {
 
-$Root   = 'D:\Taikoo-monitor-new'
+# Resolve the repository from this script instead of depending on one developer-machine path.
+$Root   = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Py     = Join-Path $Root '.venv\Scripts\python.exe'
 $Edge   = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
 $LogDir = Join-Path $Root 'logs'
@@ -25,7 +26,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 Write-Output ''
 Write-Output '============================================================'
-Write-Output ' Zachary-OS-AI  Z-Brand-Core production launcher'
+Write-Output ' LUMENIS production launcher'
 Write-Output '   8201 Flask supervisor  +  9222/9223 Resident Browsers'
 Write-Output '============================================================'
 Write-Output "Root: $Root"

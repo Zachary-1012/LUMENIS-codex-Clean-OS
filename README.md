@@ -2,44 +2,17 @@
 
 > **Production Core · Production Truth Owner**
 >
-> 当前阶段：**PRODUCTION CONVERGENCE + DESIGN ECOSYSTEM OPTIMIZATION**。本仓库负责序境 / LUMENIS 的真实生产代码、数据、Evidence、API、DB、Runtime、Permission、Metric、Report、UI binding、测试与 Production Acceptance。
+> Current phase: **PRODUCTION CONVERGENCE**. This repository contains the active production implementation, runtime, data contracts, Evidence, API, Permission, Metric, UI binding, tests and release evidence for 序境 / LUMENIS.
 
-## 0. Codex 唯一入口 / Canonical Codex Entrypoint
-
-当前唯一 Codex 接手入口：
-
-```text
-Repository: Zachary-1012/LUMENIS-codex-Clean-OS
-Branch: handoff/frontend-gpt-v24-20260911-final
-Base: main
-```
-
-当前前端 / Experience 最终交付硬基线：
-
-```text
-TOTAL_SOURCE_RECORDS = 1604
-NON_MEDIA_EXPECTED   = 682
-PACKAGE_A_REQUIRED   = 642
-PACKAGE_B_REQUIRED   = 40
-MEDIA_EXCLUDED       = 922
-WOFF2_REQUIRED       = 56
-```
-
-历史 `CANONICAL_IMPORT_MANIFEST.json / file_count=111` 只代表早期过度裁剪版本，**已废止，不得再作为完整 Codex handoff 标准**。
-
-Package B 与 Package A 的 Legacy Delivery Evidence 可以发生 Git Blob 去重，但 **Package B 独立 provenance 必须永久保留**。
-
-`READY_FOR_CODEX_EXECUTION` 只表示仓库已达到 Codex 可直接接手状态，**不等于 `PRODUCTION_READY`**。
-
-当前 `READY_FOR_CODEX_EXECUTION` 判定暂缓，先完成豆包主导的 **Design Ecosystem Optimization** 并将其作为 Experience V2 的增量正式资产同步；该暂停不授权重新定义 Production Truth，也不允许重做已完成的前端前期。
+`README.md` is the human engineering entrypoint. It is not a historical progress log and does not by itself prove that a feature or release gate has passed.
 
 ---
 
-## 1. Product Truth / 产品定义
+## 1. What LUMENIS is
 
-序境不是 AI 外壳。AI 是增强能力，不是 Production Truth 本身。
+序境 / LUMENIS is an operational and brand/market product whose AI layer enhances — but does not own — production truth.
 
-### 内部主生产链
+Canonical internal production chain:
 
 ```text
 External Data
@@ -53,9 +26,7 @@ External Data
 → UI / Report / Export
 ```
 
-这条链属于 **backend / contracts / production logic / runtime truth**，不是普通页面视觉流程。
-
-### 业务链
+Canonical business chain:
 
 ```text
 Source
@@ -70,343 +41,272 @@ Source
 → Learning Asset
 ```
 
-正常业务页面不得把以上内部链条做成长期可见的 decorative flow diagram / stepper / card chain / permanent process bar。
-
-业务页面应展示：
-
-`Context / Facts / Relationships / State / Evidence / Finding / Risk / Decision / Action / Outcome / Controls`
+The UI must expose useful context, facts, relationships, state, evidence, findings, risk, decisions, actions and outcomes. Internal production chains are not decorative page flows.
 
 ---
 
-## 2. 四域 / Four Domains
+## 2. Product domains
 
-### CTH｜序境·商业运营 / LUMENIS Commerce Operations
+### CTH · Commerce Operations
 
-Subject-first。以 Selected Subject + Commerce Operations Lens 组织运营、事件、案例、风险、决策与行动。
+Subject-first operational domain for subjects, venues/projects, events, cases, risk, decisions and actions.
 
-### BMP｜序境·品牌市场 / LUMENIS Brand & Market
+### BMP · Brand & Market
 
-Brand / Market-first。支持品牌、竞品、KOS/KOL/KOC/UGC、Campaign、市场、传播、风险、Benchmark、Report / Evaluation。
+Brand/market-first domain for brands, competitors, creators/accounts, campaigns, market/communication performance, benchmarks, risk and evaluation.
 
 ### Shared Capability
 
-共享能力，包括 Content & Creation、Evidence、Evaluation、Learning Asset、AI Enhancement。
+Shared product capabilities including Content & Creation, Evidence, Research, Evaluation, Learning Assets and AI Enhancement.
 
 ### SYSTEM
 
-Collector、Runtime、AI Gateway、Database、Security、Permission、Settings、Recovery、Observability。
+Infrastructure and control plane: Collector, Runtime, Scheduler, AI Gateway, Database, Security, Permission, Settings, Recovery and Observability.
 
-CTH 与 BMP 共享统一 Subject Context 语义，但领域模型、Metric Pack、Relationship、Action Chain 不合并。
+CTH and BMP may share Subject Context semantics and infrastructure, but their domain models, metrics, relationships and action semantics must not silently collapse into one model.
 
 ---
 
-## 3. Authority Priority / 权威优先级
+## 3. Authority and truth
 
-发生冲突时，必须按以下顺序：
+When artifacts disagree, use this precedence:
 
 ```text
 Current Production Source
->
-Runtime Reality
->
-Current DB / API / Permission / Evidence Contracts
->
-Tests / Production Acceptance
->
-Experience V2
->
-Current Production UI capability evidence
->
-Legacy Evidence
+> Runtime Reality
+> Current DB / API / Permission / Evidence Contracts
+> Tests / E2E / Production Acceptance
+> Current Canonical Governance
+> Experience V2 / current UI capability evidence
+> Historical Handoff / Legacy Evidence
+> Chat History
 ```
 
-不得用旧聊天、旧 README、旧 commit message、Legacy UI、研究稿或前端静态稿覆盖当前真实 Source / Runtime / Data / Permission / Evidence / Test。
+`IMPLEMENTED`, `TESTED`, `VERIFIED`, `RELEASED` and `OPERATING` are different states. A document or commit message never upgrades runtime state by itself.
 
 ---
 
-## 4. Experience V2 正式边界
+## 4. Canonical closed loop
 
-Experience V2 负责：
+The approved Shared Capability × Collector production direction is:
 
-- IA
-- Experience
-- Interaction
-- Screen Contracts
-- Visual Language
-- Design Tokens
-- Motion semantics
-- Responsive behavior
+```text
+SYSTEM Collector
+→ Source / Evidence
+→ Canonical Content
+→ Research
+→ Learning Asset
+→ Content Studio
+→ Application Trace
+→ Collector Tracking
+→ Evaluation
+→ Learning Version Update
+```
 
-Experience V2 **不能伪造或替代**：
+Key invariants:
 
-- Backend
-- API
-- DB
-- Permission
-- Runtime
-- Evidence
-- Metrics
-- Production status
+- Collector remains a single SYSTEM-owned Runtime capability.
+- Upload / Import / API / Collector are acquisition adapters into one Production Truth.
+- Tracking observations append `MetricSnapshot`; historical observations are not overwritten.
+- `missing != 0` and future T+ performance must not be fabricated.
+- AI may propose Pattern candidates but may not autonomously promote `Pattern → ADOPT`.
+- Logged-in social Collector behavior is read-only; any future Publisher is a separate permission/effect capability.
+- `RELEASED != OPERATING`.
 
-前端前期工作已经完成并作为正式 handoff 资产入仓。Codex **不得重新从零研究 UI 趋势、重新定义 IA、重新搭第二套 Design System、重新做所有前端稿、重新定义 Experience V2**。
-
-Codex 对前端的责任是：阅读、核验、必要修复、AI-01 + CTH-01 校准、真实 backend binding、E2E、验证后传播。
-
-### Design Language v2.4
-
-保持：
-
-- black-silver / white-silver
-- metallic monochrome
-- editorial serif display
-- restrained sans
-- Lumen Axis / 序轴
-- Strata / 境层
-- de-boxed hierarchy
-- whitespace
-- hairlines
-- Icy Cyan only for state / data semantics
-- LUMENIS original AI orb
-- Evidence / Trace-first
-- semantic motion
-
-失败标准：
-
-- generic SaaS
-- generic dashboard
-- card wall
-- purple / indigo AI template
-- component-library demo
-- 换 Logo 后仍像任何普通 AI SaaS
+Canonical detail: [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
 
 ---
 
-## 5. Design Ecosystem Optimization / 设计生态系统优化
+## 5. Repository orientation
 
-本阶段由 **豆包作为设计生态优化执行者**，基于已正式入仓的 Experience V2、Design Language v2.4、页面 source、contracts、registries、frontend engineering assets、research 与 legacy evidence 做 **增量优化**。
-
-目标不是再做一套设计，而是把现有设计资产收敛成一个跨模块、跨页面、跨状态、跨设备可持续扩展的 **LUMENIS Design Ecosystem**。
-
-### 豆包可以优化
-
-- 全产品视觉与交互一致性
-- 四域共享但不混淆的设计语义
-- AI / CTH / BMP / Shared Capability / SYSTEM 页面之间的生态关系
-- Layout、Grid、Spacing、Typography、Icon、Surface、Divider、State、Motion、Responsive 的统一规则
-- 页面层级与 2–4 层动态信息架构的视觉承载
-- Evidence / Trace / Decision / Action / Outcome 的统一呈现语义
-- AI Conversation、Dashboard、Detail、Workspace、Report、Settings 等页面族的系统化模式
-- Component / Pattern / Token / Motion / Interaction 的复用与变体治理
-- Desktop / Tablet / Mobile 的响应式连续性
-- Empty / Loading / Error / Stale / Unknown / Permission / Approval / Risk 等状态体系
-- Accessibility、可读性、信息密度、动效性能与工程可实现性
-
-### 豆包不得做
-
-- 从零重建第二套 Design System
-- 推翻 Experience V2 的正式边界
-- 将 Legacy UI 重新提升为 Current Truth
-- 发明不存在的 API / DB / Permission / Evidence / Metric / Runtime 能力
-- 为追求视觉效果改变 Production Truth
-- 把内部生产链或 Runtime 链做成业务页面装饰性流程图
-- 将产品改成 generic SaaS / card wall / purple AI template
-
-### 设计生态最终应形成
+Important entry areas currently present in the repository:
 
 ```text
-LUMENIS Design Ecosystem
-├─ Foundations
-│  ├─ Color / Material / Typography / Grid / Spacing
-│  ├─ Iconography / Illustration / AI Orb
-│  └─ Motion / Accessibility / Responsive
-├─ Tokens
-│  ├─ Primitive Tokens
-│  ├─ Semantic Tokens
-│  └─ Domain / State Tokens
-├─ Components
-│  ├─ Core Components
-│  ├─ Data / Evidence Components
-│  ├─ AI Components
-│  └─ Control / Permission Components
-├─ Patterns
-│  ├─ Context / Fact / Relationship
-│  ├─ Evidence / Finding / Risk
-│  ├─ Decision / Action / Outcome
-│  └─ Approval / Provenance / Trace
-├─ Page Families
-│  ├─ AI Workspace
-│  ├─ CTH
-│  ├─ BMP
-│  ├─ Shared Capability
-│  └─ SYSTEM
-└─ Governance
-   ├─ Reuse / Variant Rules
-   ├─ Responsive Rules
-   ├─ Motion Rules
-   ├─ Accessibility Rules
-   └─ Engineering Acceptance
+README.md                       human product + engineering entrypoint
+AGENTS.md                       coding-agent execution router
+00-GOVERNANCE/                 canonical rules, release/handoff evidence
+02-ARCHITECTURE/                architecture material
+08-AUDIT/                       audit evidence
+99-ARCHIVE/                     historical/archive evidence
+.github/                        CI/workflow configuration
+scripts/                        operational/startup/maintenance scripts
+app.py                          current Flask application entry implementation
+run_supervised.py               current process supervisor implementation
+requirements.txt                current direct Python dependency manifest
+package.json                    current root Node tooling manifest
+.env.example                    non-secret configuration template
 ```
 
-豆包交付后的设计生态资产属于 **Experience V2 增量正式输入**。Codex 接手后只做读取、真实性核验、工程实现、真实数据与后端绑定、必要修复和 E2E，不再重复设计生态前期工作。
+This is an orientation, not a claim that every root file is optimally placed. Do not mass-move production code by filename. Use dependency tracing, runtime ownership and tests before restructuring.
+
+Canonical engineering standard: [`00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`](00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md)
 
 ---
 
-## 6. Legacy
+## 6. Engineering onboarding
 
-Legacy 永久定义为：
+### 6.1 Verify repository identity first
 
-```text
-READ ONLY
-EVIDENCE
-CAPABILITY REFERENCE
+Never assume a developer-specific local path.
+
+```bash
+git rev-parse --show-toplevel
+git remote -v
+git branch --show-current
+git rev-parse HEAD
+git status
+git fetch origin
 ```
 
-Legacy 可以用于能力追踪、历史语义、回归、迁移依据，但不能覆盖 Current Production Truth，也不能要求 Codex 把旧 UI 当作最终 UI 来源。
+Confirm that the local repository points to:
+
+```text
+Zachary-1012/LUMENIS-codex-Clean-OS
+```
+
+Preserve unknown local changes until classified.
+
+### 6.2 Python environment
+
+Current root manifest is `requirements.txt`.
+
+Windows example:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Do not commit `.env`, credentials, cookies, sessions or real production data.
+
+### 6.3 Node tooling
+
+The root `package.json` currently exists for Playwright-based browser/login/search tooling. Install it only when the task requires those scripts:
+
+```bash
+npm install
+```
+
+Do not assume the Node tooling is the main application runtime.
 
 ---
 
-## 7. Codex 接手顺序
+## 7. Configuration and data safety
 
-```text
-README
-→ AGENTS
-→ CODEX TAKEOVER
-→ Experience V2 + Design Ecosystem formal source
-→ Contracts / Registries
-→ Current backend / API / DB / Permission / Evidence / Runtime
-→ Current Tests / Production Acceptance
-→ AI-01 + CTH-01 calibration
-→ real backend binding
-→ Critical E2E
-→ validated propagation
-→ remaining module integration
-→ GPT / MCP public adapter
-→ Security / Regression / Recovery
-→ Production Acceptance
-```
+`.env.example` is the configuration template. It still contains historical naming and multiple generations of configuration keys; production convergence must preserve behavior while consolidating canonical ownership rather than deleting keys by appearance.
 
-第一阶段不是：
+Rules:
 
-```text
-Research → Re-design → New design system → New frontend architecture
-```
+- no committed secrets or live cookies/sessions;
+- no developer-machine absolute repository path as a production requirement;
+- tests/staging must use isolated/disposable databases;
+- no silent fallback from a test DB into the protected production DB;
+- DB isolation and migration behavior require runtime evidence before being marked PASS;
+- missing/unknown data states must remain distinct from numeric zero.
 
-第一阶段必须是：
-
-```text
-Read → Verify → AI-01 + CTH-01 calibration → Backend binding → E2E → Propagate
-```
+Configuration cleanup is a dependency-traced engineering task, not a text-search rename exercise.
 
 ---
 
-## 8. AI Conversation 安全边界
+## 8. Start and health
 
-AI 页面允许展示：
+The current repository identifies the Windows production launcher as:
 
-- retrieval status
-- evidence citation
-- source
-- tool status
-- action status
-- permission
-- approval
-- artifact
-- provenance
-- confidence
-- limitation
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+```
 
-禁止展示：
+The current launch chain includes the supervisor and `/healthz` checks. The launcher in the present main lineage also contains legacy machine-specific assumptions; therefore **do not hardcode a local path in new work and do not claim cross-machine startup verified until the portability gate is tested**.
 
-- private chain-of-thought
-- system prompt
-- developer prompt
-- credentials
-- cookie
-- token
-- browser session
-- CDP
-- security internals
+Current health target used by the production launcher:
+
+```text
+http://127.0.0.1:8201/healthz
+```
+
+Startup acceptance is more than a live process:
+
+```text
+dependencies
+→ configuration
+→ launcher
+→ application boot
+→ supervisor stability
+→ port bind
+→ health
+→ required runtime initialization
+→ critical APIs / Experience
+```
+
+External browser/login/source availability should be reported separately from core application health.
 
 ---
 
-## 9. ChatGPT / MCP 公共边界
+## 9. Development workflow
 
-正式链路：
+For each change:
 
 ```text
-ChatGPT
-→ MCP / App Adapter
-→ Allowlisted Schema
-→ Auth
-→ Subject Context
-→ Domain
+Current Gate / Ticket
+→ Dependency Trace
+→ Reuse Existing Owner
+→ Implement
+→ Scoped Test
+→ Neighbour Regression
+→ Runtime / E2E when required
+→ Evidence
+→ Coherent Commit
+→ Update State / Registry when required
+```
+
+Prefer reuse → adapt → bind → verify. Do not create a second DB, Evidence, Metric, Permission, Runtime, Subject Context, Design System or API truth to solve a local problem.
+
+Do not start every task with a full repository rediscovery. Load only the files and canonical documents required by the active change.
+
+Coding-agent rules: [`AGENTS.md`](AGENTS.md)
+
+---
+
+## 10. Testing and E2E
+
+Use proportional testing:
+
+```text
+fast/static
+→ targeted unit
+→ affected integration
+→ neighbour regression
+→ representative/domain E2E
+→ full regression at convergence/release gates
+```
+
+Do not run the complete suite after every leaf edit. Conversely, do not treat a small targeted test as proof of an entire domain.
+
+Every important user-operable feature should eventually be traceable through:
+
+```text
+UI Entry
+→ User Action
+→ API / Service
 → Permission
-→ Provenance / Policy
-→ Versioned Internal Contract
-→ LUMENIS Production Truth
+→ Canonical Read/Write
+→ Real Result
+→ Evidence / Trace
+→ Error State
+→ Automated Test
+→ E2E
 ```
 
-公共 ChatGPT 不得直接访问：Collector、Cookie、Browser Session、CDP、raw DB、privileged hidden tools。
+`UI EXISTS`, `API EXISTS` or `TEST EXISTS` alone does not mean `FEATURE DONE`.
+
+The canonical Feature Acceptance Matrix contract is defined in the engineering standard.
 
 ---
 
-## 10. Production Acceptance
+## 11. Production convergence DAG
 
-最终 Production Ready 必须真实通过：
-
-1. `P0 Blocking = 0`
-2. `Repository Integrity = PASS`
-3. `Production Truth = PASS`
-4. `Runtime + Critical E2E = PASS`
-5. `Security + Recovery = PASS`
-6. `Release Lineage + Rollback = VERIFIED`
-
-任何一项未通过，不得声明 Production Ready。
-
----
-
-## 11. 当前状态声明
-
-**序境 / LUMENIS · Independent Production Core · Production Truth Owner · AI-Enhanced, Not AI-Dependent · Production Convergence + Design Ecosystem Optimization**
-
----
-
-## 12. 进度更新 / Progress Log — 2026-09-13（追加，不改动 §0–§11）
-
-> 本节为**追加式**进度记录，原有 §0–§11 全部保持有效；如与旧表述有出入，以当前真实源码 + 运行证据为准。
-
-### 12.1 本轮已完成（Experience 蓝图 → 可运行接线）
-- 工作分支 `codex/production-experience-wiring`，基线 HEAD `0efd15e`，相对 `origin/main@49c325f` 0 behind / 11 ahead（本地未 push）。
-- 两次远端整合已并入本分支：`f1eb53b`、`edf6d2b`（远端原型冻结在 `handoff/frontend-gpt-v24-20260911-final/PACKAGE_*`，与活路径 `experience_v2/10_prototype` 不构成双运行时真相）。
-- **38/44 屏真实后端只读绑定**：`experience_runtime.py`（蓝图 7 路由 + AI-01/CTH-01 样板）+ `experience_screens.py`（36 builder）；Binding 台账 42 BOUND / 3 N/A / 9 blocked-rows；Action 66/66 结论化。
-- 本切片测试 `tests/test_experience_runtime.py` 28 函数全过；隔离全量 app 真实 HTTP 集成打通；CDP 深色/浅色 1440 各 38 屏 + 真 390 移动抽测全绿（零溢出/零 undefined/零原型横幅）。
-- 4 屏诚实 BLOCKED（BMP-05/BMP-11/SH-01/SYS-06）、2 屏 N/A（ACC-01/04），未造假。
-
-### 12.2 当前结论
-- `PRODUCTION_READY = NO`：前端体验层接线闭环，但生产闭环仍差 P0 写权限链 / 生产副本 E2E / DB 隔离契约统一等（见下）。
-- 详细逐项真实 Gate 结果：`FINAL_CODEX_EXECUTION_REPORT.md`。
-- 分类剩余工作与执行 DAG：`00-GOVERNANCE/handoff/CODEX_REMAINING_WORK_20260913.md`（人类）与 `CODEX_RESUME_PACK_20260913.json`（机器）。
-
-### 12.3 新增工程红线（DB 隔离，来自本轮真实运行证据）
-- 仓内有三个 DB 覆盖环境变量：`ZBC_DB_PATH`（canonical，25 处）、`ZBC_EVIDENCE_DB_PATH`（仅 `evidence_chain.py`，写 `zbc_evidence`）、`ZBC_RUNTIME_GUARDIAN_DB`（仅 `runtime_guardian.py`）；只设 `ZBC_DB_PATH` 不能完全隔离。
-- 测试 / Staging 必须三者同设（或由 Codex 统一为单一 canonical override）；`ai_task_engine.py`/`app_evidence.py`/`ark_llm.py` 仍硬编码默认库，属 P0 待收口项。详见交接单 P0-DBISO-01。
-
----
-
-## 13. Shared Capability × Collector Closed Loop V1 — 2026-09-13
-
-已批准并纳入 `main` 的增量主线规范：`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`。
-
-核心边界：
-
-- Collector 继续由 **SYSTEM** 持有唯一 Runtime / Adapter / Scheduler / Recovery / Observability Owner；不得把 Collector 复制成 Shared Capability 内第二套采集系统。
-- Upload / Import / API / Collector 只是不同 Source Acquisition Adapter，必须汇入同一 Source / Evidence / Canonical / Provenance Truth。
-- Shared Capability 负责消费统一 Source / Evidence，并完成 Research → Learning Asset → Content Studio → Application Trace → Evaluation → Learning Version Update。
-- Tracking Collection 必须 append `MetricSnapshot`，禁止覆盖旧观测，禁止 `missing → 0`。
-- AI 可以生成 Pattern Candidate / Promotion Proposal，但不得自行将 Pattern 升级为 `ADOPT`。
-- 登录态 Collector 永久只读；Collector 与未来 Publisher 必须是两个权限与 Effect Boundary 独立的 Capability。
-
-批准的连续执行主线：
+The currently approved execution line is:
 
 ```text
 G0  Repository Truth Convergence
@@ -428,6 +328,95 @@ G0  Repository Truth Convergence
 → G16 Release Gates
 ```
 
-第一安全 Gate 仍为 `P0-DBISO-01`。未经 DB 隔离事实收口，不得让新增 Collector / Evaluation writer 直接进入 Production 写路径。
+The 60-episode dataset is an acceptance dataset/configuration; its 20/20/20 cohort split must not become a universal hardcoded research rule.
 
-`RELEASED` 可以在代码、历史真实数据、Runtime、测试与当前可验证闭环全部通过后成立；`OPERATING` 必须等待至少一轮真实 Collector Tracking → MetricSnapshot → Evaluation → Learning Version Update 的运行证据，不得伪造未来 T+ 数据。
+Future performance windows stay pending/scheduled until real time and real source data exist.
+
+---
+
+## 12. CI, security and recovery
+
+CI checks must distinguish:
+
+```text
+BLOCKING
+ADVISORY
+INFORMATIONAL
+```
+
+Syntax errors, required tests not executing, critical data-integrity/permission/E2E failures and P0 security failures cannot be hidden by `continue-on-error` or exception swallowing.
+
+Production acceptance also requires appropriate evidence for:
+
+- secret/credential handling;
+- permission/approval boundaries;
+- production DB protection;
+- Collector/browser/session boundaries;
+- critical error/retry/recovery paths;
+- rollback lineage.
+
+A recovery function existing in source is not proof that recovery has been exercised.
+
+---
+
+## 13. Documentation map
+
+Use documentation by purpose instead of reading everything before every task:
+
+| Need | Start here |
+| --- | --- |
+| Product + engineering onboarding | `README.md` |
+| Coding-agent routing/safety | `AGENTS.md` |
+| Human maintainability, E2E and release semantics | `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md` |
+| Shared Capability × Collector closed loop | `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md` |
+| Third-party/open-source inventory and replacement boundary | `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md` |
+| Point-in-time takeover evidence | `00-GOVERNANCE/handoff/` |
+| Historical evidence | `99-ARCHIVE/` and historical governance/audit material |
+
+Historical handoff/progress files must not be used as current runtime truth without re-verification.
+
+---
+
+## 14. Release state
+
+This README does **not** assert `PRODUCTION_READY = YES`.
+
+Production readiness requires evidence for the applicable gates, including repository integrity/human maintainability, canonical DB/configuration, regression, startup/health, domain and closed-loop E2E, permission, Evidence/Trace, truthful CI, security, recovery and rollback.
+
+Use states precisely:
+
+```text
+IMPLEMENTED
+TESTED
+VERIFIED
+RELEASED
+OPERATING
+```
+
+If a blocking gate is not proven, treat production readiness as NO rather than inferring success from documentation or commit count.
+
+---
+
+## 15. Third-Party / Open-Source Components
+
+This section is intentionally the **final README section**. Full canonical inventory: [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md).
+
+Current direct manifests show important non-self-developed components including:
+
+| Area | Direct components observed | Boundary / replacement intent |
+| --- | --- | --- |
+| Web runtime | Flask, Werkzeug, Flask-CORS, Flask-Limiter, waitress | Keep business truth outside framework-specific code where practical |
+| Scheduling | APScheduler, schedule | Runtime/scheduler boundary; replace through owned scheduling contracts |
+| Data/import/export | pandas, openpyxl, xlsxwriter, beautifulsoup4, lxml | Data/parser/import-export boundaries |
+| Document/report | python-docx, reportlab | Report/export adapters |
+| Browser/Collector | Playwright (Python and root Node manifest) | Browser/Collector adapter boundary; never Production Truth owner |
+| Runtime/monitoring | psutil | Runtime/process observation boundary |
+| Network | requests, httpx, websocket-client, optional aiohttp | Network adapters |
+| Configuration/utilities | python-dotenv, python-dateutil, PyYAML, colorama, tqdm | Utility/config/CLI boundaries |
+| Resilience/logging | optional yyds-logger, tenacity | Logging/retry boundaries with fallbacks recorded in the manifest |
+| DB migration tooling | Alembic | Migration tooling; production migration remains gated |
+| Platform/runtime | Python SQLite stdlib, Windows PowerShell 5.1, Microsoft Edge in current launcher | Platform dependencies; portability must be tested, not assumed |
+
+The repository has **not yet verified every shipped dependency license in the canonical register**. Entries that are not verified are deliberately marked `VERIFY_BEFORE_RELEASE`; license/attribution reconciliation is a release gate.
+
+Future candidates such as OpenTelemetry, Langfuse OSS or Temporal are **not current dependencies merely because they are evaluated**. They may be adopted only when a real capability gap is proven and only behind a bounded LUMENIS-owned adapter/contract so they can later be replaced without replacing Production Truth.
