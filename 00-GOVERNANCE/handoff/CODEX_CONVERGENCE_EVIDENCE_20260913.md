@@ -57,7 +57,7 @@
 
 - 全量 non-online 套件未通过。
 - 6 个 Experience 屏仍为诚实未绑定状态（4 个外部依赖阻塞，2 个 N/A）。
-- 远端分支推送和远端 CI 尚待本轮最终重试确认。
+- 推送 `codex/production-convergence` 已重试，GitHub HTTPS 返回 `Recv failure: Connection was reset`；随后 TCP 443 探测失败。远端分支与远端 CI 因本机网络阻断尚未验收，本地提交与 bundle 证据保留。
 - 当前仅验证候选副本 Runtime，未部署、未发布、未证明真实生产持续运行。
 
 `PRODUCTION_READY = NO`
