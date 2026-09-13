@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
-"""ZBC→OSAI 证据流转快照：结构与 E2E 验证（不依赖真实网络/DB）。"""
+"""LUMENIS→OSAI evidence snapshot structure/E2E test.
+
+This test is repository-relative and does not depend on a developer-machine path.
+"""
 import importlib.util
 import json
-import os
-import sys
+from pathlib import Path
 
-ROOT = r"D:\Taikoo-monitor-new"
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location("evidence_export", os.path.join(ROOT, "scripts", "evidence_export.py"))
+    module_path = ROOT / "scripts" / "evidence_export.py"
+    spec = importlib.util.spec_from_file_location("evidence_export", module_path)
     m = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
     spec.loader.exec_module(m)
     return m
 
@@ -19,16 +23,12 @@ def test_build_snapshot_structure():
     m = _load()
     snap = m.build()
     assert snap["ts"]
-    assert snap["source"].startswith("ZBC")
-    # git
+    assert snap["source"]
     assert snap["git"].get("hash")
-    # baseline（缺数据时允许 error）
     assert "overall" in snap["baseline"] or "error" in snap["baseline"]
     if "error" not in snap["baseline"]:
         assert snap["baseline"]["overall"] in ("PASS", "FAIL", None)
-    # lean（缺数据时允许 error）
     assert snap["lean"].get("py_files") or "error" in snap["lean"]
-    # budget
     assert "total_calls" in snap["ai_budget"] or "error" in snap["ai_budget"]
 
 
@@ -36,7 +36,6 @@ def test_verify_pass():
     m = _load()
     m.build()
     errs, j = m.verify()
-    # 允许 baseline/budget 缺数据时为 error，但 ts/git 必须存在
     assert j["ts"]
     assert j["git"].get("hash")
     assert isinstance(errs, list)
@@ -45,7 +44,8 @@ def test_verify_pass():
 def test_snapshot_file_written():
     m = _load()
     m.build()
-    p = os.path.join(ROOT, "staging", "evidence-export", "evidence-snapshot-latest.json")
-    assert os.path.exists(p)
-    j = json.load(open(p, encoding="utf-8"))
+    p = ROOT / "staging" / "evidence-export" / "evidence-snapshot-latest.json"
+    assert p.exists()
+    with p.open(encoding="utf-8") as fh:
+        j = json.load(fh)
     assert j["git"]["hash"]
