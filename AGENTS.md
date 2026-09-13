@@ -53,30 +53,34 @@ Expected remote:
 Zachary-1012/LUMENIS-codex-Clean-OS
 ```
 
+Expected writable branch:
+
+```text
+main
+```
+
 Confirm local repository identity. Preserve unknown/uncommitted work until classified. Never reset/discard it merely to obtain a clean tree.
 
 ### Local-to-main sync gate
 
-The current local workspace may contain valid production/test fixes newer than the remote tree. Before starting new product work:
+The current local workspace may contain valid production/test fixes newer than the remote tree. Before starting new product work, compare:
 
 ```text
-local HEAD + working tree + unpushed commits
+local main HEAD + working tree + unpushed commits
 vs
 origin/main
 ```
-
-must be compared by content, contracts and tests.
 
 If valid local work is ahead:
 
 ```text
 preserve local work
-→ fetch latest main
-→ adapt/resolve semantic conflicts
+→ fetch latest origin/main
+→ resolve semantic conflicts on local main
 → targeted regression
-→ required full regression
-→ coherent commit(s)
-→ converge into main
+→ required full regression at the real convergence gate
+→ coherent commit(s) on main
+→ push origin main
 ```
 
 Do not overwrite verified local fixes with the remote tree. Do not claim local-only code is already on GitHub.
@@ -87,19 +91,41 @@ Current point-in-time takeover evidence for this workstation is:
 00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md
 ```
 
-Read it for the current production-convergence session; do not treat historical handoffs as active truth.
+Read it only when the current production-convergence session needs its unresolved facts; do not treat historical handoffs as active truth.
 
-### Single-mainline rule
+### SINGLE-MAINLINE HARD RULE
 
-`main` is the only long-lived development line and the only remote production-candidate truth.
+`main` is the **only writable development, integration and production-candidate branch**.
 
-A task branch may exist only as a short-lived isolation mechanism for one coherent change. Valid implementation, tests, governance and evidence must converge back into `main`; do not create a second long-lived production, integration, handoff or feature truth.
+The normal engineering path is exactly:
 
-Before retiring an old branch, compare it with `main` by content and dependency ownership:
+```text
+D:\LUMENIS_REBUILD
+→ local main
+→ edit / implement
+→ targeted test
+→ affected regression
+→ coherent commit on main
+→ push origin main
+→ main CI
+→ runtime / browser E2E when required
+→ next gate
+```
 
-- `ahead_by = 0` → already absorbed; treat as retired.
-- unique valid implementation/test/evidence → salvage or merge into `main` first.
-- historical-only/superseded material → preserve only where it still has evidence value; do not re-promote it into active Production Truth.
+Hard prohibitions:
+
+- do not create task branches;
+- do not create feature branches;
+- do not create `codex/*` branches;
+- do not create `production/*` branches;
+- do not create `integration/*` branches;
+- do not create `handoff/*` branches;
+- do not create `research/*` branches;
+- do not open a routine PR as an intermediate development path;
+- do not move validated work away from `main` for isolation;
+- do not continue development on an existing historical side branch.
+
+Existing historical remote branches are read-only evidence only. If an old branch contains unique valid implementation/test/evidence, compare it once, absorb that unique valid work into `main`, and continue only on `main`. Do not recreate or revive the side branch.
 
 Do not force-push `main`. Do not use branch names or old branch HEADs as proof that a capability is current.
 
@@ -125,18 +151,19 @@ Typical loop:
 ```text
 ACTIVE GATE / TICKET
 → inspect exact owner / callers / contracts / tests
-→ implement
+→ implement on main
 → scoped test
 → neighbour regression
 → runtime / E2E when required
 → evidence
-→ coherent commit
-→ merge/converge to main
+→ coherent commit on main
+→ push origin main
+→ main CI when required
 → update state/registry if required
 → next dependent gate
 ```
 
-Do not stop after the first code edit if implementation, validation and repair are still executable.
+Do not stop after the first code edit if implementation, validation and repair are still safely executable.
 
 ## 4. Progressive document routing
 
@@ -153,7 +180,7 @@ Conditional canonical docs:
 - human maintainability / feature closure / E2E / release: `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`
 - Collector + Shared Capability closed loop: `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`
 - third-party/open-source dependency/replacement work: `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`
-- branch consolidation: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md` when present
+- historical branch-consolidation evidence: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md` when present
 - historical evidence: `99-ARCHIVE/` only when migration/history is relevant
 
 Task routing examples:
@@ -165,7 +192,7 @@ Permission/write → Permission owner + action/approval contract + affected rout
 Frontend/Experience → relevant current screen/runtime contract + backend binding + E2E
 Startup/deployment → launcher/supervisor/health/config + relevant operations tests
 Third-party change → actual manifests/imports + component register + license/release implications
-Branch convergence → compare branch against main; salvage only unique valid implementation/test/evidence
+Historical branch recovery → compare old ref against main once; absorb only unique valid work into main; never resume side-branch development
 Ordinary bug → affected source/caller/test only
 ```
 
@@ -433,7 +460,7 @@ dependencies
 
 Report external browser/login/source dependencies separately from core application health.
 
-After the final regression is green and local work has converged into `main`, startup qualification is the next mandatory gate; do not continue repository-cleanup work instead.
+After the final regression is green and local work is safely on `main`, startup qualification is the next mandatory gate; do not continue repository-cleanup work instead.
 
 ## 16. Third-party / OSS
 
@@ -466,17 +493,17 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 
 ## 18. Git discipline
 
-- `main` is the only long-lived development line.
+- `main` is the only writable development, integration and production-candidate branch.
 - current workstation root is `D:\LUMENIS_REBUILD`; verify it before changing code.
-- valid local work must be converged into `main` before beginning a new production phase.
-- short-lived task branches must converge back into `main` when their valid work is complete.
-- do not leave a parallel implementation only on a branch.
-- preserve unknown local work before convergence.
+- normal engineering work happens directly on local `main` and is pushed to `origin/main`.
+- do not create task/feature/codex/production/integration/handoff/research branches.
+- do not open routine PRs as an intermediate engineering path.
+- preserve unknown/uncommitted local work before synchronizing.
+- if historical side branches contain unique valid work, absorb it into `main` once and never continue development there.
 - use coherent-purpose commits.
 - do not force-push `main`.
 - do not commit production DB, secrets, cookies, sessions, caches or generated junk.
 - do not claim an unpushed/local commit exists remotely.
-- before retiring a branch, prove either `ahead_by = 0` or that its unique valid work has been absorbed into `main`.
 
 ## 19. Completion semantics
 
@@ -502,7 +529,8 @@ Stop for user input only when required by a real blocker such as:
 - destructive production-data action needs explicit approval;
 - unresolved migration conflict creates material data risk;
 - legal/security decision cannot safely be inferred;
-- high-risk external effect requires real human approval.
+- high-risk external effect requires real human approval;
+- production hosting/domain/paid resource requires user authorization.
 
 Large code volume, long tests, context size or many files are not themselves blockers.
 
@@ -511,18 +539,19 @@ Large code volume, long tests, context size or many files are not themselves blo
 Keep progress compact. Final reports should state evidence, not essays:
 
 ```text
-Local root / Branch / Start HEAD / Final HEAD
+Local root / Branch(main) / Start HEAD / Final main HEAD
 Local-to-main sync status
-Implemented / commits
+Implemented / commits pushed to main
 Canonical DB/config
 Tests actually run
 Startup / health
+Local product URL + browser visibility/usability
 Domain + critical E2E
 Permission / Evidence / Trace
-CI
+Main CI
 Security / Recovery / Rollback
 Third-party changes
-Branch convergence status
+Public deployment / URL when authorized and executed
 Remaining blockers
 RELEASED = YES/NO
 OPERATING = YES/NO
