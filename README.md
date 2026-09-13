@@ -10,6 +10,42 @@ This repository contains the active production implementation, runtime, data con
 
 ---
 
+## Current Windows takeover / 当前 Windows 接续入口
+
+当前这台 Windows 研发机唯一有效本地工作区：
+
+```text
+D:\LUMENIS_REBUILD
+```
+
+远端唯一长期研发主线：
+
+```text
+Zachary-1012/LUMENIS-codex-Clean-OS
+main
+```
+
+Codex/工程师在当前机器开始工作时必须先从 `D:\LUMENIS_REBUILD` 验证本地 HEAD、working tree、unpushed commits 与 `origin/main`，保护本地已完成修复并完成 local→main 收敛；不得用 remote tree 覆盖尚未 push 的有效本地实现。
+
+Current takeover details: [`00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`](00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md)
+
+Production launcher after regression/sync gates:
+
+```powershell
+Set-Location D:\LUMENIS_REBUILD
+powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+```
+
+Expected core health endpoint:
+
+```text
+http://127.0.0.1:8201/healthz
+```
+
+This workstation path is not a portable production-code requirement; the launcher resolves the repository root from its own location.
+
+---
+
 ## 1. 产品定位 / What LUMENIS is
 
 序境 / LUMENIS 是面向商业运营与品牌市场的生产级产品。AI 是增强能力，不拥有 Production Truth。
@@ -190,9 +226,13 @@ This is orientation, not a claim that every root file is optimally placed. Do no
 
 ### 7.1 先确认仓库身份 / Verify repository identity first
 
-不要预设任何开发者本地绝对路径。
+在当前 Windows 机器，先进入唯一工作区：
 
-Never assume a developer-specific local path.
+```powershell
+Set-Location D:\LUMENIS_REBUILD
+```
+
+然后核验：
 
 ```bash
 git rev-parse --show-toplevel
@@ -278,12 +318,13 @@ Node tooling is not the main application runtime.
 当前 Windows production launcher / Current Windows production launcher:
 
 ```powershell
+Set-Location D:\LUMENIS_REBUILD
 powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
 ```
 
-启动脚本从自身位置解析仓库根，不应再依赖某个旧本地主路径。当前 Windows/PowerShell/Edge 运行契约与跨平台能力仍必须分别测试。
+启动脚本从自身位置解析仓库根，不会把 `D:\LUMENIS_REBUILD` 硬编码进可移植生产逻辑。
 
-The launcher resolves the repository root from its own script location instead of relying on one developer-machine path. Windows/PowerShell/Edge runtime behavior and cross-platform portability remain separate gates that must be tested.
+The launcher resolves the repository root from its own script location; `D:\LUMENIS_REBUILD` is the current workstation entrypoint, not a portable production-code dependency.
 
 当前 health target / Current health target:
 
@@ -399,134 +440,50 @@ G0  Repository Truth Convergence
 → G12 Learning Version Update
 → G13 Shared + SYSTEM UI Binding
 → G14 凉子访谈录 60期真实 Acceptance Dataset
-→ G15 Regression / Security / Recovery / E2E
+→ G15 Full Regression / Security / Recovery / E2E
 → G16 Release Gates
 ```
 
-60 期数据是 acceptance dataset/configuration，20/20/20 不能硬编码为所有研究的通用规则。
-
-The 60-episode dataset is an acceptance dataset/configuration; its 20/20/20 split must not become a universal hardcoded research rule.
-
-未来 performance window 必须等待真实时间与真实数据。
-
-Future performance windows remain pending/scheduled until real time and source data exist.
-
 ---
 
-## 13. CI、安全与恢复 / CI, security and recovery
-
-CI 明确分为 / CI must distinguish:
+## 13. 发布语义 / Release semantics
 
 ```text
-BLOCKING
-ADVISORY
-INFORMATIONAL
+IMPLEMENTED = 代码存在 / code exists
+TESTED      = 对应测试通过 / scoped tests pass
+VERIFIED    = Runtime / E2E 证明行为 / runtime/E2E proves behavior
+RELEASED    = 发布、安全、恢复、回滚 Gate 通过 / release/security/recovery/rollback gates pass
+OPERATING   = 真实运行产生规定的线上/时间性证据 / real operation produces required live/time evidence
 ```
 
-SyntaxError、required tests 未执行、关键 DB/data-integrity/Permission/E2E/P0 security 失败不得通过 `continue-on-error` 或吞异常隐藏。
+不要把 GitHub Actions 绿色、HTTP 200 或页面能打开当成 Production Ready 的替代证据。
 
-Syntax errors, required tests not executing, and critical DB/data-integrity/Permission/E2E/P0 security failures must not be hidden by `continue-on-error` or swallowed exceptions.
-
-Clean-checkout GitHub CI 只证明 hermetic/repository gate。Production/live/environment suite 在上线前仍必须有证据。绿色 Actions badge 不自动意味着 `PRODUCTION_READY = YES`。
-
-Clean-checkout GitHub CI proves hermetic/repository gates only. Production/live/environment suites still require evidence before release. A green Actions badge does not automatically mean `PRODUCTION_READY = YES`.
-
-Production Acceptance 还必须覆盖 / Production Acceptance also requires:
-
-- secret / credential handling
-- Permission / Approval boundaries
-- production DB protection
-- Collector / browser / session boundaries
-- critical error / retry / recovery
-- rollback lineage
-
-源代码里“存在 recovery function”不等于已经完成 recovery drill。
-
-A recovery function existing in source is not proof that recovery has been exercised.
+Do not use a green workflow, HTTP 200 or a rendered page as a substitute for Production Readiness.
 
 ---
 
-## 14. 文档地图 / Documentation map
+## 14. 文档索引 / Documentation index
 
-| 需求 / Need | 入口 / Start here |
-| --- | --- |
-| 产品与工程上手 / Product + engineering onboarding | `README.md` |
-| Agent 路由与安全 / Coding-agent routing & safety | `AGENTS.md` |
-| 人类可维护性、E2E、Release / Maintainability, E2E, release | `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md` |
-| Shared × Collector 闭环 / Closed loop | `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md` |
-| CI 分层 / CI tiers | `tests/CI_TEST_TIERS.md` |
-| 第三方与替换边界 / Third-party & replacement boundary | `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md` |
-| 当前分支收敛 / Current branch consolidation | `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md` when present |
-| 点时交接证据 / Point-in-time handoff | `00-GOVERNANCE/handoff/` |
-| 历史证据 / Historical evidence | `99-ARCHIVE/` and historical governance/audit material |
+长期规则优先阅读：
 
-历史 handoff/progress 不能在不重新验证的情况下当作当前 Runtime Truth。
+- [`AGENTS.md`](AGENTS.md)
+- [`00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`](00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md)
+- [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
+- [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
+- [`00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md`](00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md)
 
-Historical handoff/progress files must not be used as current Runtime Truth without re-verification.
+当前 Windows 接续任务再读取：
+
+- [`00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`](00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md)
+
+历史 handoff / audit / archive 只在迁移、回溯、审计需要时读取，不作为正常开发必读材料。
 
 ---
 
-## 15. 发布状态 / Release state
+## 15. Third-Party / Open-Source Components
 
-本 README **不声称** `PRODUCTION_READY = YES`。
+所有重要非自研组件必须登记到 [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，并保持：purpose、usage、integration boundary、license/verification status、replaceability 与 native replacement direction。
 
-This README **does not assert** `PRODUCTION_READY = YES`.
+All material non-native components must be recorded in the canonical third-party register with purpose, usage, integration boundary, license/verification status, replaceability and native-replacement direction.
 
-使用状态必须准确 / Use states precisely:
-
-```text
-IMPLEMENTED
-TESTED
-VERIFIED
-RELEASED
-OPERATING
-```
-
-任何 blocking gate 未被证实时，Production Ready 都应视为 NO，而不是根据文档、提交数或测试数量推断成功。
-
-If a blocking gate is not proven, production readiness remains NO rather than being inferred from documentation, commit counts or test counts.
-
----
-
-## 16. 第三方 / 开源组件 · Third-Party / Open-Source Components
-
-> 本节必须保持为 README **最后一节**。完整登记：[`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
->
-> This section intentionally remains the **final README section**. Canonical inventory: [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
-
-当前 manifests 可确认的重要非自研组件 / Important non-self-developed components observed in current manifests:
-
-| 领域 / Area | 当前直接组件 / Direct components observed | 边界与未来替换 / Boundary & replacement intent |
-| --- | --- | --- |
-| Web runtime | Flask, Werkzeug, Flask-CORS, Flask-Limiter, waitress | 业务真相尽量保持在 framework-specific code 之外 / keep business truth outside framework-specific code |
-| Scheduling | APScheduler, schedule | 通过自有 scheduling contract 隔离 / isolate behind owned scheduling contracts |
-| Data/import/export | pandas, openpyxl, xlsxwriter, beautifulsoup4, lxml | Data/parser/import-export boundaries |
-| Document/report | python-docx, reportlab | Report/export adapters |
-| Browser/Collector | Playwright (Python + Node manifest) | Browser/Collector adapter；不得成为 Production Truth owner |
-| Runtime/monitoring | psutil | Runtime/process observation boundary |
-| Network | requests, httpx, websocket-client, optional aiohttp | Network adapters |
-| Configuration/utilities | python-dotenv, python-dateutil, PyYAML, colorama, tqdm | Utility/config/CLI boundaries |
-| Resilience/logging | optional yyds-logger, tenacity | Logging/retry boundary，fallback 必须被记录 |
-| DB migration tooling | Alembic | Migration tool；真实生产迁移仍受 Gate 约束 |
-| Test tooling | pytest | TEST ONLY；不属于 production runtime truth |
-| Platform/runtime | Python SQLite stdlib, Windows PowerShell 5.1, Microsoft Edge in current launcher | 平台依赖；可移植性必须测试而不是假设 |
-
-仓库尚未完成所有 shipped dependency 的许可证确认。Canonical Register 中未确认的条目必须保持 `VERIFY_BEFORE_RELEASE`，license/attribution reconciliation 是 Release Gate。
-
-The repository has not yet verified every shipped dependency license. Unverified entries remain `VERIFY_BEFORE_RELEASE`; license/attribution reconciliation is a Release Gate.
-
-OpenTelemetry、Langfuse OSS、Temporal 等候选项**不会因为治理文件提到就自动成为当前依赖**。只有真实能力缺口被证明、集成收益高于复杂度，并通过 LUMENIS 自有 Contract/Adapter 隔离后才可采用。
-
-Candidates such as OpenTelemetry, Langfuse OSS and Temporal **do not become current dependencies merely because governance mentions them**. Adoption requires a proven capability gap, a favorable benefit/complexity tradeoff, and a bounded LUMENIS-owned Contract/Adapter.
-
-长期目标 / Long-term goal:
-
-```text
-LUMENIS-owned Contract
-→ Replaceable Adapter
-→ Third-party OSS implementation
-```
-
-上线后可逐步学习、自研并替换第三方实现，但不能为“自研替换”破坏现有 Production Truth、用户闭环或上线稳定性。
-
-After release, third-party implementations may be progressively learned from and replaced with native LUMENIS implementations, but replacement must never break Production Truth, user closure or operational stability.
+Third parties may implement adapters/infrastructure but must not silently become the owner of LUMENIS DB Truth, Evidence Truth, Metric Truth, Permission Truth or Business Truth.
