@@ -3,10 +3,87 @@ pytest配置文件 - 广州太古汇舆情监测系统
 """
 import os
 import sys
+import atexit
+import shutil
+import tempfile
 import pytest
+import sqlite3 as _sqlite3_guard
+import traceback as _traceback_guard
+from urllib.parse import unquote as _uri_unquote
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _REPO_ROOT)
+
+# P0-C 测试数据库总隔离：在任何测试模块被收集/import 前，把本机候选库复制到
+# OS 临时目录，并让所有 Canonical DB 入口只指向该副本。这样既保留真实 schema/fixture
+# 基线，也不会因“全局空库”制造假失败，更不会让普通测试写回仓库或生产候选数据库。
+_PYTEST_DB_ROOT = tempfile.mkdtemp(prefix="lumenis-pytest-")
+_PYTEST_DB_PATH = os.path.join(_PYTEST_DB_ROOT, "monitor-test-copy.db")
+_LOCAL_CANDIDATE_DB = os.path.join(_REPO_ROOT, "data", "monitor.db")
+_EXPLICIT_TEST_SEED_DB = os.environ.get("LUMENIS_TEST_SEED_DB", "").strip()
+_TEST_SEED_DB = _EXPLICIT_TEST_SEED_DB or _LOCAL_CANDIDATE_DB
+if os.path.isfile(_TEST_SEED_DB):
+    # The source is read-only test input. Every test process operates on its own copy.
+    shutil.copy2(_TEST_SEED_DB, _PYTEST_DB_PATH)
+else:
+    # CI/新机器允许从空文件开始；具体迁移测试必须自行初始化 schema，不能回退生产路径。
+    open(_PYTEST_DB_PATH, "ab").close()
+for _db_key in (
+    "ZBC_DB_PATH",
+    "ZBC_EVIDENCE_DB_PATH",
+    "ZBC_RUNTIME_GUARDIAN_DB",
+    "ZBC_TOKEN_DB_PATH",
+):
+    os.environ[_db_key] = _PYTEST_DB_PATH
+
+# Hard Gate: tests may never open the repository-default SQLite database. This
+# catches legacy literal paths even when application code swallows the exception.
+_REAL_SQLITE_CONNECT = _sqlite3_guard.connect
+_REPOSITORY_DEFAULT_DB = os.path.normcase(os.path.abspath(_LOCAL_CANDIDATE_DB))
+_REPOSITORY_DB_VIOLATIONS = []
+
+
+def _connection_target(database):
+    raw = os.fspath(database) if isinstance(database, os.PathLike) else str(database)
+    if raw == ":memory:":
+        return None
+    if raw.startswith("file:"):
+        raw = _uri_unquote(raw[5:].split("?", 1)[0])
+        if raw.startswith("/") and len(raw) > 2 and raw[2] == ":":
+            raw = raw[1:]
+    return os.path.normcase(os.path.abspath(raw))
+
+
+def _guarded_sqlite_connect(database, *args, **kwargs):
+    target = _connection_target(database)
+    if target == _REPOSITORY_DEFAULT_DB:
+        _REPOSITORY_DB_VIOLATIONS.append("".join(_traceback_guard.format_stack(limit=8)))
+        raise RuntimeError(
+            "[P0-C TEST DB GATE] repository data/monitor.db is forbidden; "
+            "use ZBC_DB_PATH or tmp_path"
+        )
+    return _REAL_SQLITE_CONNECT(database, *args, **kwargs)
+
+
+_sqlite3_guard.connect = _guarded_sqlite_connect
+
+
+@pytest.fixture(autouse=True)
+def _assert_no_repository_db_connection():
+    before = len(_REPOSITORY_DB_VIOLATIONS)
+    yield
+    assert len(_REPOSITORY_DB_VIOLATIONS) == before, (
+        "test attempted repository data/monitor.db connection:\n" +
+        "\n---\n".join(_REPOSITORY_DB_VIOLATIONS[before:before + 3])
+    )
+
+
+def _cleanup_pytest_db_root():
+    shutil.rmtree(_PYTEST_DB_ROOT, ignore_errors=True)
+
+
+atexit.register(_cleanup_pytest_db_root)
 
 # 排除纯脚本式 test_ 文件（模块级顶层 sys.exit 会在 pytest 收集/import 期杀掉整个进程，
 # 表现为全量跑到某百分比静默退出、无 F、stderr 为空）。文件无 def test_，设计为

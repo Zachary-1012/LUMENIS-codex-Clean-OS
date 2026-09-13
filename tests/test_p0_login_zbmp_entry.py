@@ -12,6 +12,11 @@ test_p0_login_zbmp_entry.py — P0 登录流程重构 + TOTP + 域身份 测试
 6. /zbmp/login 重定向到CTH
 7. 设置页API连通性
 """
+
+# 本文件是依赖已启动 Runtime、测试账号与有状态 TOTP 流程的独立验收脚本。
+# record() 只累计结果而不向 pytest 抛错，故不得被 hermetic pytest 自动收集；
+# 正式运行验收阶段以脚本 main() 的退出码执行并记录证据。
+__test__ = False
 import os
 import sys
 import json

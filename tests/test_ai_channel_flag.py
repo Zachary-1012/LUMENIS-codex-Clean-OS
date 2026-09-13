@@ -29,6 +29,7 @@ def test_per_call_passes_model_to_chat(monkeypatch):
 
 def test_intelligence_chat_model_override(monkeypatch):
     import intelligence
+    monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     def fake_provider_config():
         return ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4')
     monkeypatch.setattr(intelligence, '_provider_config', fake_provider_config)
@@ -56,6 +57,7 @@ def test_intelligence_chat_model_override(monkeypatch):
 def test_intelligence_chat_glm53_no_thinking(monkeypatch):
     """glm-5.3 始终思考：不得传 thinking（否则 400），且 content 空时回退 reasoning_content。"""
     import intelligence
+    monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
                         lambda: ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4'))
     sent = {}
@@ -103,6 +105,7 @@ def test_provider_config_glm_without_key_returns_none(monkeypatch):
 def test_glm53_case_insensitive_no_thinking(monkeypatch):
     """GLM-5.3 大写也应视为始终思考模型，不传 thinking（防 400）。"""
     import intelligence
+    monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
                         lambda: ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4'))
     sent = {}
@@ -127,6 +130,7 @@ def test_glm53_case_insensitive_no_thinking(monkeypatch):
 def test_glm53_flash_variant_no_thinking(monkeypatch):
     """glm-5.3-flash 变体也应视为始终思考，不传 thinking。"""
     import intelligence
+    monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
                         lambda: ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4'))
     sent = {}

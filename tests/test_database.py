@@ -8,24 +8,29 @@ import sqlite3
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+def _db_path():
+    """Return the pytest-isolated database selected by tests/conftest.py."""
+    return os.environ['ZBC_DB_PATH']
+
 class TestDatabase:
     """数据库基础测试"""
 
     def test_database_exists(self):
         """测试数据库文件存在"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'monitor.db')
+        db_path = _db_path()
         assert os.path.exists(db_path), f"数据库文件不存在: {db_path}"
 
     def test_database_connection(self):
         """测试数据库连接"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'monitor.db')
+        db_path = _db_path()
         conn = sqlite3.connect(db_path)
         assert conn is not None
         conn.close()
 
     def test_required_tables_exist(self):
         """测试必需的数据表存在"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'monitor.db')
+        db_path = _db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -43,7 +48,7 @@ class TestDatabase:
 
     def test_notes_table_structure(self):
         """测试笔记表结构"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'monitor.db')
+        db_path = _db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("PRAGMA table_info(notes)")
@@ -56,7 +61,7 @@ class TestDatabase:
 
     def test_events_table_structure(self):
         """测试事件表结构"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'monitor.db')
+        db_path = _db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("PRAGMA table_info(events)")
@@ -69,7 +74,7 @@ class TestDatabase:
 
     def test_notes_has_data(self):
         """测试笔记表有数据"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'monitor.db')
+        db_path = _db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM notes")
@@ -79,7 +84,7 @@ class TestDatabase:
 
     def test_database_integrity(self):
         """测试数据库完整性"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'monitor.db')
+        db_path = _db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("PRAGMA integrity_check")

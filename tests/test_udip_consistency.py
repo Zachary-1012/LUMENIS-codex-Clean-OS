@@ -13,8 +13,8 @@ import importlib
 
 import pytest
 
-ZBC = r'D:\Taikoo-monitor-new'
-DB = os.path.join(ZBC, 'data', 'monitor.db')
+ZBC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB = os.environ['ZBC_DB_PATH']
 
 
 def _load():
@@ -30,9 +30,9 @@ def _load():
 
 
 @pytest.fixture()
-def env():
-    os.environ['ZBC_DB_PATH'] = DB
-    os.chdir(ZBC)
+def env(monkeypatch):
+    monkeypatch.setenv('ZBC_DB_PATH', DB)
+    monkeypatch.chdir(ZBC)
     return _load()
 
 

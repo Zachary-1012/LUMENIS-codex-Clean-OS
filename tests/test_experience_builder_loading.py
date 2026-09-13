@@ -19,5 +19,5 @@ def test_import_failure_can_recover(monkeypatch):
         assert not runtime._PROPAGATION_LOADED
     with ThreadPoolExecutor(max_workers=8) as pool:
         counts = list(pool.map(lambda _: len(runtime._all_builders()), range(16)))
-    assert counts == [38] * 16
+    assert counts == [44] * 16
     assert runtime._PROPAGATION_IMPORT_ERROR == ''

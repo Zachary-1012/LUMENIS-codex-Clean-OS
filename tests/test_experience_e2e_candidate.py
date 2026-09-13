@@ -3,9 +3,7 @@
 
 红线与覆盖：
   * 绝不打开/写入仓库真实库：先复制到 tmp_path，四个隔离环境变量全部指向副本；
-  * 44 屏全部 HTTP 200；38 屏 bound=True/source=runtime；6 屏诚实未绑定
-    （4 BLOCKED: BMP-05/BMP-11/SH-01/SYS-06；2 N/A: ACC-01/ACC-04），未绑定屏必须
-    bound=False + BLOCKED_BY_EXTERNAL_DEPENDENCY，禁止假 200/假数据；
+  * 44 屏全部 HTTP 200 且绑定 Canonical 只读 ViewModel；字段级缺口仍诚实 notcollected；
   * 任意 ViewModel 文本不得出现独立 token 的 undefined / NaN / [object Object]，
     也不得出现 float NaN（词边界匹配，避免误伤 governance 这类正常词）；
   * AI composer 权限门在挂载 app 内三态可达：ANALYZE granted / WRITE denied / PUSH permanent_deny；
@@ -13,7 +11,7 @@
   * identity 不泄漏绝对路径/密钥；
   * 跑完后**源库文件 sha256 不变、源目录不产生 -wal/-shm 侧车**（只读不变性）。
 
-仓库未携带真实 data/monitor.db（CI/他人机器）时本模块整体 skip，不伪造候选库。
+未通过 LUMENIS_TEST_SEED_DB 提供候选库时本模块整体 skip，不伪造候选库。
 """
 import hashlib
 import importlib
@@ -31,17 +29,18 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-SRC_DB = os.path.join(REPO_ROOT, "data", "monitor.db")
+SRC_DB = os.environ.get("LUMENIS_TEST_SEED_DB", "").strip()
 ALL_SCREENS_REGISTRY = os.path.join(
     REPO_ROOT, "experience_v2", "06_CONTRACTS", "actions", "ACTION_REGISTRY.json"
 )
-# 诚实未绑定集合：4 个外部依赖阻塞 + 2 个不适用；其余必须真实绑定
-EXPECTED_UNBOUND = {"ACC-01", "ACC-04", "BMP-05", "BMP-11", "SH-01", "SYS-06"}
+# 全部 44 屏均有 Canonical 只读 Runtime ViewModel；外部字段仍可在屏内逐项 notcollected，
+# 但不得再让整屏退回 prototype。
+EXPECTED_UNBOUND = set()
 _BAD_TOKEN = re.compile(r"\bundefined\b|\bNaN\b|\[object object\]", re.IGNORECASE)
 
 pytestmark = pytest.mark.skipif(
     not os.path.exists(SRC_DB),
-    reason="真实候选库 data/monitor.db 不存在（CI 环境），跳过候选副本 E2E",
+    reason="未提供 LUMENIS_TEST_SEED_DB 候选库（CI 环境），跳过候选副本 E2E",
 )
 
 
@@ -51,6 +50,16 @@ def _sha256(path):
         for chunk in iter(lambda: f.read(1 << 16), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _sidecar_state(path):
+    base = os.path.basename(path)
+    folder = os.path.dirname(path)
+    return {
+        name: (_sha256(os.path.join(folder, name)), os.path.getsize(os.path.join(folder, name)))
+        for name in os.listdir(folder)
+        if name.startswith(base + "-") and os.path.isfile(os.path.join(folder, name))
+    }
 
 
 def _scan_bad_tokens(o, path="$"):
@@ -75,6 +84,7 @@ def _scan_bad_tokens(o, path="$"):
 @pytest.fixture()
 def candidate_client(tmp_path, monkeypatch):
     src_before = _sha256(SRC_DB)
+    sidecars_before = _sidecar_state(SRC_DB)
     copy_db = tmp_path / "candidate_copy.db"
     shutil.copy2(SRC_DB, copy_db)
     for k in ("ZBC_DB_PATH", "ZBC_EVIDENCE_DB_PATH",
@@ -91,14 +101,14 @@ def candidate_client(tmp_path, monkeypatch):
     database.DB_PATH = str(copy_db)
 
     import experience_runtime
-    # 懒加载合并传播 builder（P0-E2E-03 破循环导入），必须无传播错误且达到 38
+    # 懒加载合并全部 44 屏 builder（P0-E2E-03 破循环导入），必须无传播错误且全量绑定
     builders = experience_runtime._all_builders()
     assert experience_runtime._PROPAGATION_IMPORT_ERROR == ""
-    assert len(builders) == 38
+    assert len(builders) == 44
 
     app = Flask(__name__)
     experience_runtime.register_experience_runtime(app)
-    return app.test_client(), src_before
+    return app.test_client(), src_before, sidecars_before
 
 
 def _all_screen_ids():
@@ -107,7 +117,7 @@ def _all_screen_ids():
 
 
 def test_all_44_screens_200_and_binding_is_honest(candidate_client):
-    cli, _ = candidate_client
+    cli, _, _ = candidate_client
     bound, unbound = [], []
     for sid in _all_screen_ids():
         r = cli.get(f"/api/experience/screen/{sid}")
@@ -122,11 +132,11 @@ def test_all_44_screens_200_and_binding_is_honest(candidate_client):
             assert j.get("classification") == "BLOCKED_BY_EXTERNAL_DEPENDENCY", sid
             unbound.append(sid)
     assert set(unbound) == EXPECTED_UNBOUND
-    assert len(bound) == 38
+    assert len(bound) == 44
 
 
 def test_cth01_external_sources_not_faked_as_zero(candidate_client):
-    cli, _ = candidate_client
+    cli, _, _ = candidate_client
     j = cli.get("/api/experience/screen/CTH-01").get_json()
     metrics = {m["id"]: m for s in j["sections"] if s.get("type") == "kpis"
                for m in s.get("items", [])}
@@ -136,7 +146,7 @@ def test_cth01_external_sources_not_faked_as_zero(candidate_client):
 
 
 def test_ai_intent_gate_three_states_in_mounted_app(candidate_client):
-    cli, _ = candidate_client
+    cli, _, _ = candidate_client
 
     def post(action):
         return cli.post("/api/experience/ai/intent",
@@ -151,7 +161,7 @@ def test_ai_intent_gate_three_states_in_mounted_app(candidate_client):
 
 
 def test_identity_does_not_leak_absolute_path(candidate_client):
-    cli, _ = candidate_client
+    cli, _, _ = candidate_client
     j = cli.get("/api/experience/runtime/identity").get_json()
     assert j["ok"] is True
     blob = json.dumps(j, ensure_ascii=False)
@@ -165,7 +175,7 @@ def test_identity_does_not_leak_absolute_path(candidate_client):
 
 
 def test_source_db_immutable_after_full_run(candidate_client):
-    cli, src_before = candidate_client
+    cli, src_before, sidecars_before = candidate_client
     # 跑一遍全部屏幕 + 外壳 + runtime.js，制造完整读负载
     for sid in _all_screen_ids():
         cli.get(f"/api/experience/screen/{sid}")
@@ -173,7 +183,5 @@ def test_source_db_immutable_after_full_run(candidate_client):
     cli.get("/experience/assets/runtime.js")
     # 源库字节必须逐位不变
     assert _sha256(SRC_DB) == src_before
-    # 源库旁不得产生 WAL/SHM 侧车（证明所有写都落在副本）
-    data_dir = os.path.dirname(SRC_DB)
-    sidecars = [n for n in os.listdir(data_dir) if n.startswith("monitor.db-")]
-    assert sidecars == []
+    # 已有 WAL/SHM 属候选库既有状态；完整读负载不得新增或改变它们。
+    assert _sidecar_state(SRC_DB) == sidecars_before

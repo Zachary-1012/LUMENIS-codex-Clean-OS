@@ -212,7 +212,11 @@ def init_task_engine_db() -> None:
     """
     try:
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-        with get_db() as conn:
+        # Use this module's resolved DB_PATH directly. Importing database.get_db would
+        # re-resolve mutable module state and can point migrations at a different DB
+        # after an isolated runtime reload.
+        with sqlite3.connect(DB_PATH, timeout=30) as conn:
+            conn.row_factory = sqlite3.Row
             conn.executescript(_TASK_ENGINE_SCHEMA)
             # 向后兼容迁移：evidence 链式哈希字段（Decision 6: 全链路Evidence/Audit Trail）
             ev_cols = {r[1] for r in conn.execute('PRAGMA table_info(ai_task_evidence)').fetchall()}

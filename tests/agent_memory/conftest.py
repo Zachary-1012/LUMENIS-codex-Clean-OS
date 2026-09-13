@@ -340,7 +340,7 @@ def seeded_db(temp_db):
            (asset_id, title, sub_library, tags, summary, evidence_level, knowledge_status, created_at)
            VALUES (?,?,?,?,?,?,?,?)""",
         ("asset_001", "太古汇品牌营销策略", "brand_knowledge",
-         "品牌,营销,策略", "广州太古汇的品牌营销策略分析", "high", "verified",
+         "品牌,营销,策略", "广州太古汇的品牌营销策略分析", "high", "VERIFIED",
          "2026-09-01T00:00:00"),
     )
     conn.execute(
@@ -348,9 +348,10 @@ def seeded_db(temp_db):
            (asset_id, title, sub_library, tags, summary, evidence_level, knowledge_status, created_at)
            VALUES (?,?,?,?,?,?,?,?)""",
         ("asset_002", "舆情危机处理案例", "case_library",
-         "危机,公关,案例", "典型舆情危机处理案例汇总", "medium", "pending",
+         "危机,公关,案例", "典型舆情危机处理案例汇总", "medium", "VERIFIED",
          "2026-09-02T00:00:00"),
     )
+    conn.execute("UPDATE intelligence_assets SET admission_status='ADMITTED'")
     # 预置 rule_version_registry
     conn.execute(
         """INSERT INTO rule_version_registry

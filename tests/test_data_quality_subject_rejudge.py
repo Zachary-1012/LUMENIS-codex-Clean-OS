@@ -79,7 +79,7 @@ class TestSubjectRejudgeDataQuality:
 
     def test_no_data_deletion(self):
         """重判只更新字段，不删除数据（通过生产库验证总数）。"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'monitor.db')
+        db_path = os.environ['ZBC_DB_PATH']
         if not os.path.exists(db_path):
             pytest.skip("生产库不存在")
         conn = sqlite3.connect(db_path)
@@ -90,7 +90,7 @@ class TestSubjectRejudgeDataQuality:
 
     def test_no_empty_subject_type(self):
         """重判后不应有空/NULL subject_type。"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'monitor.db')
+        db_path = os.environ['ZBC_DB_PATH']
         if not os.path.exists(db_path):
             pytest.skip("生产库不存在")
         conn = sqlite3.connect(db_path)
@@ -102,7 +102,7 @@ class TestSubjectRejudgeDataQuality:
 
     def test_unknown_is_explicit(self):
         """不相关笔记 subject_type 应为 'unknown'，不是'未知'或空。"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'monitor.db')
+        db_path = os.environ['ZBC_DB_PATH']
         if not os.path.exists(db_path):
             pytest.skip("生产库不存在")
         conn = sqlite3.connect(db_path)
@@ -115,7 +115,7 @@ class TestSubjectRejudgeDataQuality:
 
     def test_cth_notes_hit_subject(self):
         """CTH 分类的笔记应确实命中主体。"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'monitor.db')
+        db_path = os.environ['ZBC_DB_PATH']
         if not os.path.exists(db_path):
             pytest.skip("生产库不存在")
         conn = sqlite3.connect(db_path)
@@ -133,7 +133,7 @@ class TestSubjectRejudgeDataQuality:
 
     def test_unknown_notes_dont_hit_subject(self):
         """unknown 分类的笔记应确实不命中主体。"""
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'monitor.db')
+        db_path = os.environ['ZBC_DB_PATH']
         if not os.path.exists(db_path):
             pytest.skip("生产库不存在")
         conn = sqlite3.connect(db_path)

@@ -10,10 +10,18 @@
 import os
 import sys
 import sqlite3
+import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from subject_rules import subject_sql_and_values, subject_hit
 from database import note_to_dict
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _ensure_isolated_schema():
+    """Clean-checkout CI starts from an empty temp file; initialize only that file."""
+    import database
+    database.init_db()
 
 
 def _visible(note):
@@ -34,7 +42,7 @@ def _get_pending(conn):
 
 def test_negative_pending_no_case_brands():
     """待办列表不含全网公关案例（拉夫劳伦/宝格丽/ZARA 等）。"""
-    conn = sqlite3.connect('data/monitor.db')
+    conn = sqlite3.connect(os.environ['ZBC_DB_PATH'])
     conn.row_factory = sqlite3.Row
     try:
         pending, _, _ = _get_pending(conn)
@@ -49,7 +57,7 @@ def test_negative_pending_no_case_brands():
 
 def test_negative_pending_subject_visible():
     """每条待办笔记经详情主体口径均可见（杜绝 Not found）。"""
-    conn = sqlite3.connect('data/monitor.db')
+    conn = sqlite3.connect(os.environ['ZBC_DB_PATH'])
     conn.row_factory = sqlite3.Row
     try:
         pending, _, _ = _get_pending(conn)
@@ -62,13 +70,28 @@ def test_negative_pending_subject_visible():
 
 
 def test_event_mentions_linked_notes():
-    """首个事件经 event_mentions 可关联到笔记，负面排在最前。"""
-    conn = sqlite3.connect('data/monitor.db')
+    """隔离构造的事件经 event_mentions 可关联到笔记，负面排在最前。"""
+    conn = sqlite3.connect(os.environ['ZBC_DB_PATH'])
     conn.row_factory = sqlite3.Row
+    note_id = 'pytest-event-linked-negative'
+    event_key = 'pytest-event-link-contract'
     try:
-        ev = conn.execute("SELECT id FROM events ORDER BY id LIMIT 1").fetchone()
-        if not ev:
-            pytest.skip('数据库无事件数据，跳过')
+        conn.execute(
+            "INSERT OR REPLACE INTO notes(note_id,title,content,sentiment) VALUES(?,?,?,?)",
+            (note_id, '太古汇 测试负面事件', '隔离测试证据', 'negative'),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO events(event_key,title) VALUES(?,?)",
+            (event_key, '隔离事件关联契约'),
+        )
+        ev = conn.execute("SELECT id FROM events WHERE event_key=?", (event_key,)).fetchone()
+        assert ev is not None
+        conn.execute(
+            "INSERT OR REPLACE INTO event_mentions(event_id,source_type,source_id,match_score) "
+            "VALUES(?,?,?,?)",
+            (ev['id'], 'note', note_id, 1.0),
+        )
+        conn.commit()
         linked = conn.execute("""SELECT COUNT(*) FROM event_mentions m JOIN notes n ON n.note_id=m.source_id
                                  WHERE m.event_id=?""", (ev['id'],)).fetchone()[0]
         assert linked >= 1, f'事件(id={ev["id"]})经event_mentions无关联笔记'
@@ -80,12 +103,18 @@ def test_event_mentions_linked_notes():
         if negs:
             assert min(negs) == 0, '事件关联笔记负面未排在最前'
     finally:
+        ev = conn.execute("SELECT id FROM events WHERE event_key=?", (event_key,)).fetchone()
+        if ev:
+            conn.execute("DELETE FROM event_mentions WHERE event_id=?", (ev['id'],))
+            conn.execute("DELETE FROM events WHERE id=?", (ev['id'],))
+        conn.execute("DELETE FROM notes WHERE note_id=?", (note_id,))
+        conn.commit()
         conn.close()
 
 
 def test_negative_stats_matches_list():
     """统计 pending 数与列表 total 一致。"""
-    conn = sqlite3.connect('data/monitor.db')
+    conn = sqlite3.connect(os.environ['ZBC_DB_PATH'])
     conn.row_factory = sqlite3.Row
     try:
         pending, base, sp = _get_pending(conn)

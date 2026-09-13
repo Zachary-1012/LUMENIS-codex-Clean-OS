@@ -44,15 +44,17 @@ class TestAccountKeepAlive:
         ka = AccountKeepAlive()
         account = ka.check_account("x")
         assert account.platform == "x"
-        # X cookie刚保存，应该有cookie
-        assert account.cookie_count > 0
+        # 凭证不进入仓库；无本地授权时必须显式 no_cookie，而不是伪造在线。
+        assert account.cookie_count >= 0
+        assert account.status.value in ["active", "expiring", "expired", "no_cookie", "unknown"]
 
     def test_check_jiguang_cookie(self):
         from account_keepalive import AccountKeepAlive
         ka = AccountKeepAlive()
         account = ka.check_account("jiguang")
         assert account.platform == "jiguang"
-        assert account.cookie_count > 0
+        assert account.cookie_count >= 0
+        assert account.status.value in ["active", "expiring", "expired", "no_cookie", "unknown"]
 
     def test_status_summary(self):
         from account_keepalive import AccountKeepAlive

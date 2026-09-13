@@ -422,7 +422,7 @@ class TestCircuitBreaker:
 class TestDBMigration:
     def test_tables_exist(self, engine):
         import sqlite3
-        from database import DB_PATH
+        from ai_task_engine import DB_PATH
         with sqlite3.connect(DB_PATH, timeout=30) as conn:
             tables = {r[0] for r in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'"
@@ -434,7 +434,7 @@ class TestDBMigration:
 
     def test_evidence_hash_columns_exist(self, engine):
         import sqlite3
-        from database import DB_PATH
+        from ai_task_engine import DB_PATH
         with sqlite3.connect(DB_PATH, timeout=30) as conn:
             cols = {r[1] for r in conn.execute("PRAGMA table_info(ai_task_evidence)").fetchall()}
         assert "previous_hash" in cols

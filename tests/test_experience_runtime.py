@@ -32,6 +32,8 @@ def isolated_client(tmp_path, monkeypatch):
 
     import evidence_store
     evidence_store.DB_PATH = str(db_file)
+    # account.models resolves db_paths.main_db_path() at call time on current main;
+    # the ZBC_DB_PATH fixture above is the canonical isolation contract.
 
     today = dt.date.today().strftime("%Y-%m-%d")
     with database.get_db() as c:
@@ -162,10 +164,10 @@ def test_ai01_composer_present_and_no_cot_leak(isolated_client):
 
 
 # --------------------------- 未绑定屏诚实回退 ---------------------------
-def test_unbound_screen_keeps_prototype(isolated_client):
+def test_bmp05_is_canonically_bound(isolated_client):
     cli, _ = isolated_client
     j = cli.get("/api/experience/screen/BMP-05").get_json()
-    assert j["bound"] is False and j["sections"] is None
+    assert j["bound"] is True and isinstance(j["sections"], list) and j["sections"]
 
 
 # --------------------------- 身份不泄密 ---------------------------
@@ -246,11 +248,10 @@ def test_ready_kpis_have_value_nonready_are_none(isolated_client):
         assert "38214" not in json.dumps(j, ensure_ascii=False), sid
 
 
-def test_unbound_classified_as_external_dependency(isolated_client):
+def test_bmp11_is_canonically_bound(isolated_client):
     cli, _ = isolated_client
     j = cli.get("/api/experience/screen/BMP-11").get_json()
-    assert j["bound"] is False
-    assert j["classification"] == "BLOCKED_BY_EXTERNAL_DEPENDENCY"
+    assert j["bound"] is True and isinstance(j["sections"], list) and j["sections"]
 
 
 # --------------------------- 第二批传播：真实只读源回归 ---------------------------

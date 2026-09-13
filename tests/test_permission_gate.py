@@ -143,8 +143,10 @@ class TestOperationRegistry:
         for ot in OperationType:
             spec = gate.get_operation_spec(ot)
             assert spec is not None
-            assert isinstance(spec.permission, PermissionLevel)
-            assert isinstance(spec.risk, RiskLevel)
+            # Another isolation test reloads permission_gate; enum class identity then
+            # changes although the serialized contract remains identical.
+            assert spec.permission.value in {p.value for p in PermissionLevel}
+            assert spec.risk.value in {r.value for r in RiskLevel}
             assert isinstance(spec.description, str)
             assert len(spec.description) > 0
 

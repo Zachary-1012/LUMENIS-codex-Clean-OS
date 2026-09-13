@@ -29,8 +29,10 @@ NOTE_COLS=["note_id","title","author_nickname","publish_date","url","sentiment",
 EVENT_COLS=["event_id","title","event_type","risk_level","risk_score","first_seen","last_seen","note_count","summary","status"]
 
 def _conn():
-    if not DB.exists(): raise FileNotFoundError(f"未找到数据库: {DB}")
-    c=sqlite3.connect(DB); c.row_factory=sqlite3.Row; return c
+    from db_paths import main_db_path
+    db_path = Path(main_db_path())
+    if not db_path.exists(): raise FileNotFoundError(f"未找到数据库: {db_path}")
+    c=sqlite3.connect(db_path); c.row_factory=sqlite3.Row; return c
 
 def _cols(c,t): return {r[1] for r in c.execute(f"PRAGMA table_info({t})")}
 

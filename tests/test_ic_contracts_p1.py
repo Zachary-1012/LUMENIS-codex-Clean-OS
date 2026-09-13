@@ -30,7 +30,13 @@ def _isolated_db():
         os.remove(_TEST_DB)
     # 建全 schema（database.init_db 读 ZBC_DB_PATH）
     import database as _db
+    _old_database_path = _db.DB_PATH
+    _db.DB_PATH = _TEST_DB
     _db.init_db()
+    import kos_engine as _kos
+    _old_kos_path = _kos.DB_PATH
+    _kos.DB_PATH = _TEST_DB
+    _kos._KOS_SCHEMA_ENSURED = False
     yield
     if os.path.exists(_TEST_DB):
         os.remove(_TEST_DB)
@@ -39,6 +45,9 @@ def _isolated_db():
         os.environ.pop("ZBC_DB_PATH", None)
     else:
         os.environ["ZBC_DB_PATH"] = _old
+    _db.DB_PATH = _old_database_path
+    _kos.DB_PATH = _old_kos_path
+    _kos._KOS_SCHEMA_ENSURED = False
 
 
 # ===================== IC-021 EMV =====================
@@ -195,8 +204,10 @@ class TestICAPISmoke:
                     env[_k.strip()] = _v.strip().strip('"')
         except Exception:
             pass
-        _u = env.get("TAIKOO_AUTH_USER", "zachary")
-        _p = env.get("TAIKOO_AUTH_PASSWORD", "Zachary01")
+        # CI has no .env by design; the suite-wide test credentials are injected
+        # into os.environ by conftest before app import.
+        _u = os.environ.get("TAIKOO_AUTH_USER", env.get("TAIKOO_AUTH_USER", "zachary"))
+        _p = os.environ.get("TAIKOO_AUTH_PASSWORD", env.get("TAIKOO_AUTH_PASSWORD", "Zachary01"))
         _tok = base64.b64encode(("%s:%s" % (_u, _p)).encode()).decode()
         c = app_mod.app.test_client()
         c.environ_base["HTTP_AUTHORIZATION"] = "Basic " + _tok

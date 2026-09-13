@@ -17,7 +17,7 @@ import sqlite3
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "monitor.db")
+DB_PATH = os.environ["ZBC_DB_PATH"]
 
 from platform_adapters.platform_naming import (
     normalize_platform,

@@ -58,9 +58,10 @@ def _make_mini_db(db_path: str) -> str:
 
 
 def _cfg(db_path: str) -> Config:
-    # 隔离：全量加载时其他测试可能设置 ZBC_DB_PATH（模块级、未清理），必须清除，
-    # 否则 alembic/env.py 会用它覆盖 sqlalchemy.url 误连到别的库。
-    os.environ.pop("ZBC_DB_PATH", None)
+    # Alembic env.py honors the canonical DB environment first. Point it at the
+    # same disposable mini DB; deleting the variable would silently fall back to
+    # the repository database and create test artifacts there.
+    os.environ["ZBC_DB_PATH"] = os.path.abspath(db_path)
     os.chdir(REPO_DIR)
     cfg = Config(INI)
     cfg.set_main_option(

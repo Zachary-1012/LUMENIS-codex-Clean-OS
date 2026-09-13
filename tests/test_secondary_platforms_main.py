@@ -65,9 +65,9 @@ class TestBilibiliMainAdapter:
         ad = BilibiliAdapter()
         assert ad.search("x").status == CollectionStatus.RISK_WARNING
 
-    def test_detail_not_implemented(self):
+    def test_detail_requires_session_when_cookie_missing(self):
         from platform_adapters.bilibili import BilibiliAdapter
-        assert BilibiliAdapter().detail("1").status == CollectionStatus.COLLECT_ERROR
+        assert BilibiliAdapter().detail("1").status == CollectionStatus.SESSION_EXPIRED
 
     def test_registry(self):
         from platform_adapters import get_adapter
@@ -100,9 +100,9 @@ class TestWeiboMainAdapter:
         from platform_adapters.weibo import WeiboAdapter
         assert WeiboAdapter().search("x").status == CollectionStatus.COLLECT_ERROR
 
-    def test_comments_not_implemented(self):
+    def test_comments_requires_session_when_cookie_missing(self):
         from platform_adapters.weibo import WeiboAdapter
-        assert WeiboAdapter().comments("1").status == CollectionStatus.COLLECT_ERROR
+        assert WeiboAdapter().comments("1").status == CollectionStatus.SESSION_EXPIRED
 
     def test_registry(self):
         from platform_adapters import get_adapter
