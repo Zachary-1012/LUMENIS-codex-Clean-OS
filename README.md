@@ -132,7 +132,8 @@ AGENTS.md                       coding-agent execution router
 scripts/                        operational/startup/maintenance scripts
 app.py                          current Flask application entry implementation
 run_supervised.py               current process supervisor implementation
-requirements.txt                current direct Python dependency manifest
+requirements.txt                production/runtime Python dependency manifest
+requirements-dev.txt            development/test Python dependency manifest
 package.json                    current root Node tooling manifest
 .env.example                    non-secret configuration template
 ```
@@ -168,15 +169,27 @@ Preserve unknown local changes until classified.
 
 ### 6.2 Python environment
 
-Current root manifest is `requirements.txt`.
+Production/runtime dependencies:
 
-Windows example:
+```text
+requirements.txt
+```
+
+Development/test dependencies:
+
+```text
+requirements-dev.txt
+```
+
+Windows development example:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 ```
+
+For a production-only environment install `requirements.txt` instead.
 
 Do not commit `.env`, credentials, cookies, sessions or real production data.
 
@@ -211,13 +224,13 @@ Configuration cleanup is a dependency-traced engineering task, not a text-search
 
 ## 8. Start and health
 
-The current repository identifies the Windows production launcher as:
+The current Windows production launcher is:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
 ```
 
-The current launch chain includes the supervisor and `/healthz` checks. The launcher in the present main lineage also contains legacy machine-specific assumptions; therefore **do not hardcode a local path in new work and do not claim cross-machine startup verified until the portability gate is tested**.
+The launcher resolves the repository root from its own script location instead of requiring one developer-machine repository path. It still depends on the current Windows/PowerShell/Edge runtime contract, so cross-platform startup remains a separate portability gate and must be tested rather than assumed.
 
 Current health target used by the production launcher:
 
@@ -283,6 +296,8 @@ fast/static
 
 Do not run the complete suite after every leaf edit. Conversely, do not treat a small targeted test as proof of an entire domain.
 
+Clean-checkout CI and environment/live acceptance are deliberately separated. See [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md). A test excluded from clean-checkout CI because it requires protected data, cookies, resident browsers or other local runtime state is **not** considered passed; it remains part of Production Acceptance.
+
 Every important user-operable feature should eventually be traceable through:
 
 ```text
@@ -346,6 +361,8 @@ INFORMATIONAL
 
 Syntax errors, required tests not executing, critical data-integrity/permission/E2E failures and P0 security failures cannot be hidden by `continue-on-error` or exception swallowing.
 
+Clean-checkout GitHub CI proves repository/hermetic gates only. Production/live/environment suites are tracked separately and must be evidenced before release. A green GitHub Actions badge alone never means `PRODUCTION_READY = YES`.
+
 Production acceptance also requires appropriate evidence for:
 
 - secret/credential handling;
@@ -369,6 +386,7 @@ Use documentation by purpose instead of reading everything before every task:
 | Coding-agent routing/safety | `AGENTS.md` |
 | Human maintainability, E2E and release semantics | `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md` |
 | Shared Capability × Collector closed loop | `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md` |
+| CI/hermetic/environment test interpretation | `tests/CI_TEST_TIERS.md` |
 | Third-party/open-source inventory and replacement boundary | `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md` |
 | Point-in-time takeover evidence | `00-GOVERNANCE/handoff/` |
 | Historical evidence | `99-ARCHIVE/` and historical governance/audit material |
