@@ -60,7 +60,15 @@ The table records direct manifest entries, not every transitive dependency.
 
 The current `requirements.txt` mentions, but does not require-install: `openai`, `ollama`, `docx2pdf`, `pypdf`, and Windows-specific `win32-setctime`. Presence at runtime must be checked before treating any of them as active dependencies.
 
-## 3. Node direct dependencies observed in root `package.json`
+## 3. Python development/test dependencies observed in `requirements-dev.txt`
+
+`requirements-dev.txt` layers on top of `requirements.txt`; entries here are not production-runtime requirements merely because CI installs them.
+
+| Component | Class | Purpose in repository | Integration / replacement boundary | License status | Replaceable |
+| --- | --- | --- | --- | --- | --- |
+| pytest | TEST ONLY | Automated test collection/execution and CI blocking regression gate | Test runner boundary; production runtime must not depend on it | VERIFY_BEFORE_RELEASE | Yes |
+
+## 4. Node direct dependencies observed in root `package.json`
 
 | Component | Class | Purpose | Integration / replacement boundary | License status | Replaceable |
 | --- | --- | --- | --- | --- | --- |
@@ -68,7 +76,7 @@ The current `requirements.txt` mentions, but does not require-install: `openai`,
 
 Current root package metadata still carries historical naming. Metadata cleanup is allowed, but script/behavior changes require runtime verification.
 
-## 4. Built-in / platform dependencies
+## 5. Built-in / platform dependencies
 
 These are not third-party packages in the manifests but materially affect operation:
 
@@ -78,7 +86,7 @@ These are not third-party packages in the manifests but materially affect operat
 | Windows PowerShell 5.1 | PLATFORM | Current canonical production launcher | Current production launch path is Windows-specific |
 | Microsoft Edge | EXTERNAL PLATFORM | Resident browser/CDP path in current launcher | Installation path/browser availability must be detected rather than assumed long-term |
 
-## 5. Evaluated future OSS adapters — not installed by this register
+## 6. Evaluated future OSS adapters — not installed by this register
 
 These names are architectural candidates only. Their inclusion here does **not** authorize installation or imply current usage.
 
@@ -88,7 +96,7 @@ These names are architectural candidates only. Their inclusion here does **not**
 | Langfuse OSS | AI trace/evaluation/prompt observation | AI observability only; never Evidence/Metric/Permission/Business Truth owner |
 | Temporal | Durable long-running workflow/recovery | Adopt only if current scheduler/runtime/recovery is proven insufficient; use a workflow adapter |
 
-## 6. Required pre-release reconciliation
+## 7. Required pre-release reconciliation
 
 Before a production release:
 
