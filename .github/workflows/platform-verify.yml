@@ -26,10 +26,9 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
       - name: Compile Python sources (BLOCKING)
-        # Syntax errors are repository blockers.
         run: python -m compileall -q .
 
-      - name: Validate CI test-tier manifest (BLOCKING)
+      - name: Validate CI test-tier manifests (BLOCKING)
         shell: bash
         run: |
           missing=0
@@ -37,15 +36,25 @@ jobs:
             path="$(echo "$raw_path" | xargs)"
             [[ -z "$path" || "$path" == \#* ]] && continue
             if [[ ! -e "$path" ]]; then
-              echo "Missing test-tier path: $path"
+              echo "Missing environment-tier path: $path"
               missing=1
             fi
           done < tests/ci_environment_tests.txt
+
+          while IFS='|' read -r raw_node reason; do
+            node="$(echo "$raw_node" | xargs)"
+            [[ -z "$node" || "$node" == \#* ]] && continue
+            file="${node%%::*}"
+            if [[ ! -f "$file" ]]; then
+              echo "Missing quarantined-node file: $file"
+              missing=1
+            fi
+          done < tests/ci_quarantined_nodeids.txt
           exit "$missing"
 
       - name: Run clean-checkout hermetic pytest (BLOCKING)
-        # Environment/live suites remain required acceptance evidence but are not
-        # valid clean-checkout tests. See tests/CI_TEST_TIERS.md.
+        # Production/live suites remain required acceptance evidence, but are not
+        # valid prerequisites for a secret-free clean checkout. See tests/CI_TEST_TIERS.md.
         shell: bash
         timeout-minutes: 15
         run: |
@@ -56,20 +65,31 @@ jobs:
             ignore_args+=("--ignore=$path")
           done < tests/ci_environment_tests.txt
 
+          deselect_args=()
+          while IFS='|' read -r raw_node reason; do
+            node="$(echo "$raw_node" | xargs)"
+            [[ -z "$node" || "$node" == \#* ]] && continue
+            deselect_args+=("--deselect=$node")
+          done < tests/ci_quarantined_nodeids.txt
+
           python -m pytest tests/ \
             -m "not online" \
             "${ignore_args[@]}" \
+            "${deselect_args[@]}" \
             -q --tb=line
 
-      - name: Production/live gate inventory (INFORMATIONAL)
-        run: cat tests/ci_environment_tests.txt
+      - name: Production/live and quarantine inventory (INFORMATIONAL)
+        shell: bash
+        run: |
+          echo "=== Environment / Production-Live suites ==="
+          cat tests/ci_environment_tests.txt
+          echo "=== Exact quarantined nodeids ==="
+          cat tests/ci_quarantined_nodeids.txt
 
       - name: Boundary Check (ADVISORY)
-        # Governance signal until violations are classified into explicit blocking/advisory policy.
         continue-on-error: true
         run: python scripts/audit_tools/boundary_check.py --ci
 
       - name: Asset Impact Scan (INFORMATIONAL)
-        # Repository inventory signal; failure is reported but does not currently block release.
         continue-on-error: true
         run: python scripts/audit_tools/asset_impact_scan.py
