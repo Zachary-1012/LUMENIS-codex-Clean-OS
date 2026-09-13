@@ -1,8 +1,8 @@
 # LUMENIS Single-Mainline Branch Consolidation V1
 
-> Status: Canonical repository-convergence rule.
+> Status: Canonical repository-convergence rule and current convergence evidence.
 > Goal: `main` is the only long-lived development and production-candidate line.
-> This document records branch disposition by content, not by branch name.
+> Branch disposition is determined by content and ancestry, not by branch name.
 
 ## 1. Rule
 
@@ -10,130 +10,144 @@
 
 Short-lived task branches are allowed only to isolate a coherent change. Before a branch is retired, one of the following must be proven:
 
-1. `ahead_by = 0` against current `main`; or
-2. all unique valid implementation/tests/evidence have been merged or salvaged into `main`; or
-3. the branch contains historical/superseded evidence only, and its commit history has been preserved without re-promoting its old tree into current Production Truth.
+1. `ahead_by = 0` against the current convergence/main line; or
+2. all unique valid implementation/tests/evidence have been merged or selectively salvaged; or
+3. historical/superseded commit history has been preserved without restoring its stale tree as current Production Truth.
 
-Never delete/overwrite unique implementation merely to obtain a clean branch list.
+Never delete or overwrite unique implementation merely to obtain a clean branch list.
 
-## 2. Current audit snapshot
+## 2. Convergence already completed on the active consolidation line
 
-Audit basis: GitHub compare against `main` at `571d15d31ab4012887f7863f9217005c000de9d2`, followed by the active convergence PR branch.
+### `codex/production-convergence`
 
-### A. Already absorbed — no unique commits
+The branch previously had six unique production commits. Its valid production implementation was selectively absorbed while the branch tip was retained as a merge parent.
 
-These branches were verified with `ahead_by = 0` and therefore are not development authorities:
+Absorbed production areas include:
+
+- canonical DB path resolver (`db_paths.py`);
+- DB isolation/path changes across active writers;
+- PermissionGate enforcement for Experience AI intent writes;
+- Experience screen-builder deterministic loading;
+- Experience candidate E2E / DB isolation / Permission regression tests;
+- semantic asset-admission implementation/tests where present in the source branch.
+
+Explicitly **not** restored from the old tree:
+
+- obsolete CI workflow state;
+- obsolete launcher/local-path assumptions;
+- old README/AGENTS/governance copies.
+
+Verified after convergence: comparing the active convergence line to `codex/production-convergence` returns `ahead_by = 0`. The side branch no longer contains unique commit ancestry.
+
+### Older integration chain
+
+The following chain is represented by its highest tip `integration/p0c-test-migration-isolation-v1`:
+
+```text
+integration/local-open-source-ai-runtime-v3
+→ integration/p0b-runtime-identity-v1
+→ integration/p0c-test-migration-isolation-v1
+```
+
+The P0C tip was folded into the active convergence history without restoring its stale tree over current Production Truth. This preserves the local-AI, Runtime Identity and migration/isolation implementation history for reuse while preventing old provider/API/config behavior from silently replacing the current application.
+
+Verified after convergence: comparing the active convergence line to `integration/p0c-test-migration-isolation-v1` returns `ahead_by = 0`.
+
+Important implementation decision:
+
+- `runtime_identity.py` / release-manifest work remains valid reusable historical implementation evidence but is **not declared active merely because its history is merged**; it must be adapted to current `app.py`, current preflight and current DB ownership and then retested before activation.
+- old `database_isolation.py` is not promoted as a second canonical DB-path resolver because current `db_paths.py` owns path resolution. Useful read-only copy/integrity primitives may be selectively reused behind the current DB contract.
+- old local-AI/provider code is not automatically reactivated; current AI Gateway/provider truth wins.
+
+## 3. Historical / handoff / research ancestry preserved
+
+The following unique historical tips have also been folded into the convergence ancestry while retaining the current file tree:
+
+- `handoff/codex-zero-discovery-ready-20260910`
+- `handoff/pre-codex-20260910-v2`
+- `handoff/frontend-gpt-v24-20260911-final` / `handoff-import-v25` shared historical line
+- `research/autonomous-optimization-shadow`
+
+Their history/evidence remains retrievable, but those branches are not runtime or product authorities.
+
+Branches already verified with no unique commits before this convergence included:
 
 - `codex/ci-truth-convergence-20260913`
 - `codex/human-engineering-convergence-20260913`
 - `codex/production-experience-wiring`
 - `handoff/codex-frontend-gpt-ready-20260911`
-- the branch group pointing at `f548669d82974ea065afb310776ec63935896d7d`
-- `handoff/frontend-gpt-v24-20260911-codex-ready` (`faddac4c60e49dd2dbf730d91af4f03c8c10a477`)
-- `handoff/pre-codex-20260910` (`ab67612367c172ced2dff62b44e98de86469d1e6`)
+- the repeated frontend handoff branch group pointing at `f548669d82974ea065afb310776ec63935896d7d`
+- `handoff/frontend-gpt-v24-20260911-codex-ready`
+- `handoff/pre-codex-20260910`
 
-Disposition: RETIRED / ALREADY IN MAIN.
+These are retired development authorities.
 
-### B. Unique production implementation — must converge by code, not by history-only merge
+## 4. Current active convergence branch
 
-#### `codex/production-convergence`
+`codex/ci-layering-engineering-20260913` is a temporary consolidation branch only.
 
-Observed: diverged, `ahead_by = 6`.
+It currently owns the in-flight convergence work for:
 
-Unique work includes production-facing DB isolation/path ownership, Experience runtime builder loading, Permission/action-chain work, candidate E2E tests and related convergence evidence. Examples observed in diff include:
+- truthful hermetic CI versus Production/Live test tiers;
+- bilingual human-engineering README;
+- compact model-neutral AGENTS router;
+- third-party / OSS register and replaceability boundary;
+- portable production launcher root resolution;
+- security data-boundary false-positive repair;
+- branch-history convergence;
+- selective recovery of valid production implementation.
 
-- `db_paths.py`
-- DB-path changes across active modules
-- `experience_runtime.py`
-- `experience_screens.py`
-- `experience_v2/06_CONTRACTS/actions/ACTION_REGISTRY.json`
-- `tests/test_db_isolation_contract.py`
-- `tests/test_ai_intent_permission.py`
-- `tests/test_experience_builder_loading.py`
-- `tests/test_experience_e2e_candidate.py`
+It must merge to `main` and then cease to be a separate development authority.
 
-Disposition: **DO NOT RETIRE UNTIL VALID UNIQUE IMPLEMENTATION IS IN MAIN AND RETESTED.**
+## 5. Known current-source follow-up discovered during convergence
 
-#### `integration/local-open-source-ai-runtime-v3`
+Branch convergence exposed a remaining DB-isolation ownership gap:
 
-Observed: diverged, `ahead_by = 1`.
+- `account/models.py` still captures `DB_PATH` at module import time;
+- `skill_execution_chain` uses `account.models.get_db()` for execution traces;
+- therefore module reload / environment-path changes can read execution samples from the wrong database identity;
+- this can contaminate Experience AI traceability metrics and tests.
 
-Contains a local AI runtime/config/adapter implementation and related tests/evidence. It must be evaluated against the current AI Gateway/adapter ownership before any production adoption; do not blindly reintroduce old provider/runtime behavior.
+This is a real DBISO follow-up. Do not hide it by weakening the traceability assertion or classifying it as an environment-only test.
 
-Disposition: UNIQUE IMPLEMENTATION — dependency-trace and selectively converge.
+The canonical repair direction is to make account persistence resolve the current canonical DB path at connection time, without creating another DB truth.
 
-#### `integration/p0b-runtime-identity-v1`
-
-Observed: diverged, `ahead_by = 2`.
-
-Contains runtime identity/release-manifest/preflight implementation layered on the local-AI integration work.
-
-Disposition: UNIQUE IMPLEMENTATION — dependency-trace and selectively converge.
-
-#### `integration/p0c-test-migration-isolation-v1`
-
-Observed: diverged, `ahead_by = 3`.
-
-Contains DB/test/migration-isolation work plus the prior integration chain, including `database_isolation.py`, migration/test fixture changes and P0C verification assets.
-
-Disposition: UNIQUE IMPLEMENTATION — highest integration branch in that chain; evaluate this branch before separately re-applying its ancestors.
-
-### C. Unique historical / handoff / research evidence
-
-These branches have unique commits, but their observed unique value is primarily point-in-time handoff, research, design-delivery or audit evidence rather than current runtime authority:
-
-- `handoff/codex-zero-discovery-ready-20260910` — large zero-discovery handoff package; observed `ahead_by = 136` from old baseline.
-- `handoff/pre-codex-20260910-v2` — five pre-Codex handoff documents; observed `ahead_by = 5`.
-- `handoff/frontend-gpt-v24-20260911-final` / `handoff-import-v25` group — old Experience V2 delivery/handoff assets; observed unique commit history against current main.
-- `research/autonomous-optimization-shadow` — autonomous-optimization/open-source integration research/governance; observed `ahead_by = 4`.
-
-Disposition: preserve history/evidence without replacing current main tree or reactivating stale runtime assumptions. If a concrete artifact remains useful, place it under the appropriate current governance/archive path and link it; do not make the historical branch an execution authority.
-
-## 3. Active convergence branch
-
-`codex/ci-layering-engineering-20260913` is a short-lived task branch only. Its purpose is to repair CI truthfulness/test-tier semantics, human engineering entrypoints, single-mainline governance and current blocker diagnostics.
-
-It must converge into `main`; it must not become a second permanent line.
-
-## 4. Consolidation order
-
-Use this order to minimize regression risk:
+## 6. Remaining consolidation order
 
 ```text
-1. Merge current CI/human-engineering convergence into main when its scoped changes are acceptable
-2. Rebase/compare current main truth
-3. Converge codex/production-convergence valid code + tests
-4. Evaluate integration/p0c-test-migration-isolation-v1 as the tip of the older integration chain
-5. Salvage only still-valid local-AI/runtime-identity pieces not already superseded by current main
-6. Preserve historical/handoff/research branch history without restoring stale runtime trees
-7. Run hermetic CI + affected integration/E2E
-8. Run Production/Live gates where environment is available
-9. Retire/align stale branch refs after unique work is safely represented in main
+1. Complete the current hermetic CI run and retain deterministic failures as real blockers
+2. Merge the active consolidation PR into main
+3. Confirm every historical/implementation branch is ahead_by = 0 against main
+4. Align stale branch refs to final main where repository permissions allow
+5. Close temporary convergence PRs
+6. Continue deterministic blocker repair from current main only
+7. Run Production/Live acceptance on the real local runtime
 ```
 
-## 5. Non-negotiable safety
+## 7. Non-negotiable safety
 
 - Never merge a branch solely because its name sounds important.
-- Never resolve a conflict by blindly preferring the older branch tree.
+- Never resolve conflicts by blindly preferring an older branch tree.
 - Never replace current README/AGENTS/CI/governance with stale branch copies.
-- Never drop unique production implementation without explicit classification.
-- Never use a history-only merge for branches that still contain unabsorbed production code.
-- Never mark branch convergence complete until current `main` tests/runtime prove the integrated result.
+- Never drop unique production implementation without classification.
+- Never reactivate historical local-AI/provider/runtime behavior merely because its history is now an ancestor.
+- Never create a second DB/API/Evidence/Permission/Runtime truth while salvaging old work.
+- Never mark repository convergence as Production Ready until current main runtime/tests/E2E prove it.
 
-## 6. Completion definition
+## 8. Completion definition
 
-Branch convergence is complete when:
+Repository branch convergence is complete when:
 
 ```text
 main = only long-lived development truth
 AND
-all unique valid implementation is represented in main
+all side-branch tips are ancestors of main / ahead_by = 0
 AND
-historical-only branch value is preserved as history/evidence without becoming runtime authority
+all unique valid current implementation is represented in the active main tree
+AND
+historical-only value is preserved as history/evidence, not active runtime authority
 AND
 no active feature/runtime implementation exists only on a side branch
-AND
-current CI/runtime/E2E validates the converged main tree
 ```
 
-Branch count alone is not the acceptance criterion; absence of parallel implementation truth is.
+This is distinct from product Production Readiness. A single-mainline repository may still have truthful product/test blockers that Codex must repair next.
