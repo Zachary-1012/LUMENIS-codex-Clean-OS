@@ -46,7 +46,8 @@ EVIDENCE_ALLOWED_EXTENSIONS = {
 EVIDENCE_MAX_FILE_SIZE_MB = 500
 EVIDENCE_MAX_FILE_SIZE_BYTES = EVIDENCE_MAX_FILE_SIZE_MB * 1024 * 1024
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+from db_paths import main_db_path  # P0-DBISO-01 隔离重定向，call-time
+DB_PATH = main_db_path()
 
 # 支持的来源平台
 SUPPORTED_SOURCES = ['xhs_app', 'douyin_app', 'weibo_app', 'other']
@@ -94,7 +95,7 @@ logger = logging.getLogger(__name__)
 
 def _get_db():
     """获取数据库连接"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(main_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

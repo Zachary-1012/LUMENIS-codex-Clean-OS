@@ -19,7 +19,8 @@ _DB_RETRY_BASE_DELAY = 0.5  # 秒，指数退避基数
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 数据库路径：允许通过环境变量 ZBC_DB_PATH 指定独立库（Staging/测试隔离）。
 # 未设置该变量时默认生产库 data/monitor.db，行为与历史完全一致（向后兼容）。
-DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or os.path.join(_BASE_DIR, 'data', 'monitor.db'))
+from db_paths import main_db_path  # P0-DBISO-01 统一隔离解析（call-time，向后兼容默认路径）
+DB_PATH = main_db_path()
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS notes (
@@ -305,7 +306,7 @@ def _db_connect_with_retry():
     last_exc = None
     for attempt in range(_DB_MAX_RETRIES):
         try:
-            conn = sqlite3.connect(DB_PATH, timeout=30)
+            conn = sqlite3.connect(main_db_path(), timeout=30)
             conn.row_factory = sqlite3.Row
             conn.execute('PRAGMA busy_timeout=30000')
             conn.execute('PRAGMA journal_mode=WAL')
@@ -780,7 +781,7 @@ def backup_database(destination):
     不直接 copy monitor.db，避免 WAL 模式运行中复制数据库时得到不完整快照。
     """
     os.makedirs(os.path.dirname(os.path.abspath(destination)), exist_ok=True)
-    src = sqlite3.connect(DB_PATH, timeout=30)
+    src = sqlite3.connect(main_db_path(), timeout=30)
     try:
         dst = sqlite3.connect(destination)
         try:

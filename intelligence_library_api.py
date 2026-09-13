@@ -12,12 +12,13 @@ from flask import Blueprint, jsonify, request
 # Blueprint
 intelligence_library_bp = Blueprint('intelligence_library', __name__, url_prefix='/api/intelligence/library')
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+from db_paths import main_db_path  # P0-DBISO-01 隔离重定向，call-time
+DB_PATH = main_db_path()
 
 
 def _get_db():
     """Get database connection."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(main_db_path())
     conn.row_factory = sqlite3.Row
     return conn
 

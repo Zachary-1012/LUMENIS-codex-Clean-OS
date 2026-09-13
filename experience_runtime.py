@@ -26,6 +26,7 @@ from __future__ import annotations
 import datetime as _dt
 import io as _io
 import os
+import threading
 import traceback as _tb
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -48,6 +49,50 @@ STATE_NOT_COLLECTED = "notcollected"   # 后端无该数据源（需外部依赖
 STATE_EMPTY = "empty"                  # 数据源存在但当前无记录
 STATE_OFFLINE = "offline"              # 依赖运行时不可用
 STATE_ERROR = "error"
+
+# ---------------------------------------------------------------------------
+# P0-WRITEPERM-02：AI composer 写权限边界（标准 permission_gate.PermissionGate）
+#
+# 执行任何 skill 前先过统一权限门，deny-by-default，四态：
+#   granted          -> 权限通过，进入执行链
+#   pending_approval -> 权限等级够但高风险缺人工审批令牌（不执行、不写证据，HTTP 200 等审批）
+#   denied           -> 权限不足/未注册/跨域（不执行、不写证据，HTTP 403）
+#   permanent_deny   -> AI composer 边界永不放行的操作类别（发布/上线/删除，HTTP 403）
+# denied / pending 路径在到达 run_execution_chain 之前就返回，因此不会产生任何证据写入。
+# ---------------------------------------------------------------------------
+#: AI composer（派生增强层）永久拒绝的动作：不允许直接发布/上线/推送/删除。
+PERMANENT_DENY_ACTIONS = frozenset({"PUSH"})
+
+
+def _action_gate_spec(action_value: str):
+    """skill ActionType -> (permission_gate.OperationType, RiskLevel)。
+
+    未注册动作返回 None，由调用方 fail-closed 拒绝。只读/分析低风险自动放行；
+    导出为中风险（VERIFY 权限）；写/提交为高风险，需要对应权限等级 + 人工审批。
+    """
+    from permission_gate import OperationType, RiskLevel
+    mapping = {
+        "READ": (OperationType.AI_CALL, RiskLevel.LOW),
+        "ANALYZE": (OperationType.AI_CALL, RiskLevel.LOW),
+        "SUGGEST": (OperationType.AI_CALL, RiskLevel.LOW),
+        "EXPORT": (OperationType.DATA_EXPORT, RiskLevel.MEDIUM),
+        "WRITE": (OperationType.DB_WRITE, RiskLevel.HIGH),
+        "COMMIT": (OperationType.CONFIG_MODIFY, RiskLevel.HIGH),
+    }
+    return mapping.get(action_value)
+
+
+_perm_gate_singleton = None
+
+
+def get_permission_gate():
+    """AI composer 边界复用的标准权限门单例（deny-by-default，caller 固定为本模块）。"""
+    global _perm_gate_singleton
+    if _perm_gate_singleton is None:
+        from permission_gate import PermissionGate
+        _perm_gate_singleton = PermissionGate(caller="experience_runtime.ai_intent")
+    return _perm_gate_singleton
+
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +203,7 @@ def experience_asset(filename: str):
 # ===========================================================================
 # 运行时身份 / 主体（只读，不泄露安全内部）
 # ===========================================================================
+@experience_bp.route("/api/runtime/identity")
 @experience_bp.route("/api/experience/runtime/identity")
 def runtime_identity():
     """P0-RT-01：前端运行时身份。返回应用/数据库身份、域、运行时健康，全部真实、无密钥。"""
@@ -610,16 +656,31 @@ def _provider_runtime(gov: Dict[str, Any], gov_err: bool) -> List[Dict[str, Any]
 # ===========================================================================
 _BUILDERS = {"CTH-01": _build_cth01, "AI-01": _build_ai01}
 
-# P1 传播：其余真实数据屏的 builder 集中在 experience_screens.py（一屏一函数）
-try:
-    from experience_screens import SCREEN_BUILDERS as _PROPAGATED_BUILDERS
+# P1 传播：其余真实数据屏 builder 集中在 experience_screens.py（一屏一函数）。
+# 注意 experience_screens 顶部反向 import 本模块的同构构造器，构成导入环：若在模块体
+# 顶部直接 import，会在对方“部分初始化”时拿不到 SCREEN_BUILDERS，异常被静默吞掉，导致
+# 36 个传播屏全部退回 prototype（P0-E2E-03 实测发现）。改为首次请求时懒加载——此刻两个
+# 模块必然都已完成初始化，无论谁先 import 都能正确合并（P0-E2E-03 修复）。
+_PROPAGATED_BUILDERS: Dict[str, Any] = {}
+_PROPAGATION_LOADED = False
+_PROPAGATION_IMPORT_ERROR = ""
+_PROPAGATION_LOCK = threading.RLock()
 
-    _BUILDERS.update(_PROPAGATED_BUILDERS)
-except Exception as _prop_exc:  # noqa: BLE001 - 传播层缺失不应拖垮样板屏
-    _PROPAGATED_BUILDERS = {}
-    _PROPAGATION_IMPORT_ERROR = str(_prop_exc)
-else:
-    _PROPAGATION_IMPORT_ERROR = ""
+
+def _all_builders() -> Dict[str, Any]:
+    """返回样板屏 + 传播屏的全部 builder（首次调用时懒加载 experience_screens，破循环导入）。"""
+    global _PROPAGATION_LOADED, _PROPAGATED_BUILDERS, _PROPAGATION_IMPORT_ERROR
+    with _PROPAGATION_LOCK:
+        if not _PROPAGATION_LOADED:
+            try:
+                from experience_screens import SCREEN_BUILDERS as _propagated
+                _BUILDERS.update(_propagated)
+                _PROPAGATED_BUILDERS = dict(_propagated)
+                _PROPAGATION_IMPORT_ERROR = ""
+                _PROPAGATION_LOADED = True
+            except Exception as _prop_exc:  # Retry on the next request after an import failure.
+                _PROPAGATION_IMPORT_ERROR = str(_prop_exc)
+    return _BUILDERS
 
 # 未绑定屏幕（无生产数据源）的诚实说明，来自 06_CONTRACTS/unknown-bindings.json
 def _unbound_reason(screen_id: str) -> str:
@@ -629,7 +690,7 @@ def _unbound_reason(screen_id: str) -> str:
 @experience_bp.route("/api/experience/screen/<screen_id>")
 def screen_viewmodel(screen_id: str):
     """返回与原型同构的真实 section 描述符。未绑定屏幕明确 bound=False（前端保留原型，不假装）。"""
-    builder = _BUILDERS.get(screen_id)
+    builder = _all_builders().get(screen_id)
     if builder is None:
         return jsonify({"ok": True, "screen": screen_id, "source": "prototype", "bound": False,
                         "sections": None,
@@ -644,17 +705,64 @@ def screen_viewmodel(screen_id: str):
 
 @experience_bp.route("/api/experience/ai/intent", methods=["POST"])
 def ai_intent():
-    """AI-01 composer 提交：复用既有 skill_execution_chain（不重复实现 AI），走 Contract/Artifact 边界。"""
+    """AI-01 composer 提交：先过标准权限门（P0-WRITEPERM-02），通过后复用既有
+    skill_execution_chain（不重复实现 AI），走 Contract/Artifact 边界。
+
+    四态：granted / pending_approval / denied / permanent_deny。未通过权限门时在进入
+    执行链之前返回，保证不写任何证据、不触碰生产写侧，也不回显任何安全内部。
+    """
     body = request.get_json(silent=True) or {}
     task = (body.get("task") or body.get("intent") or "").strip()
     if not task:
         return jsonify({"ok": False, "error": "task required"}), 400
     if len(task) > 4000:
         return jsonify({"ok": False, "error": "task too long (max 4000)"}), 400
-    try:
-        from skill_execution_chain import run_execution_chain, ActionType
 
-        action_type = ActionType(body.get("action_type", "ANALYZE"))
+    # ── 第 1 步：解析动作类型（非法值 fail-closed） ──
+    from skill_execution_chain import ActionType, run_execution_chain
+    raw_action = str(body.get("action_type", "ANALYZE")).upper()
+    try:
+        action_type = ActionType(raw_action)
+    except ValueError:
+        return jsonify({"ok": False, "status": "denied",
+                        "reason": f"unknown action_type: {raw_action}"}), 400
+
+    # ── 第 2 步：永久拒绝类别（AI 派生层永不发布/推送/删除） ──
+    if raw_action in PERMANENT_DENY_ACTIONS:
+        return jsonify({
+            "ok": False, "status": "permanent_deny",
+            "reason": "AI composer 为派生增强层，不允许执行发布/上线/推送/删除类操作。",
+        }), 403
+
+    # ── 第 3 步：标准权限门检查 ──
+    gate_spec = _action_gate_spec(raw_action)
+    if gate_spec is None:
+        return jsonify({"ok": False, "status": "denied",
+                        "reason": f"action_type {raw_action} 未注册权限映射（fail-closed）"}), 403
+    operation_type, risk_level = gate_spec
+    decision = get_permission_gate().check(
+        operation_type,
+        resource=body.get("skill_id") or "zbc.generic_analysis",
+        risk_level=risk_level,
+        caller=body.get("user_id") or "experience_user",
+        domain_id=body.get("domain", "CTH"),
+    )
+    if not decision.allowed:
+        # pending_approval 用 200（流程未失败，等待人工）；denied 用 403。两者都不执行。
+        status = "pending_approval" if decision.requires_approval else "denied"
+        http_code = 200 if status == "pending_approval" else 403
+        return jsonify({
+            "ok": False,
+            "status": status,
+            "reason": decision.reason,
+            "permission_required": getattr(decision.permission_required, "value", decision.permission_required),
+            "risk_level": risk_level.value,
+            "requires_approval": bool(decision.requires_approval),
+            "audit_id": decision.audit_id,
+        }), http_code
+
+    # ── 第 4 步：仅在 granted 后进入执行链（此前任何分支都不会写证据） ──
+    try:
         ctx = run_execution_chain(
             skill_id=body.get("skill_id") or "zbc.generic_analysis",
             task=task,
@@ -666,6 +774,8 @@ def ai_intent():
         )
         return jsonify({
             "ok": True,
+            "permission_status": "granted",
+            "audit_id": decision.audit_id,
             "execution_id": ctx.execution_id,
             "status": ctx.status.value,
             "evidence_recorded": bool(getattr(ctx, "evidence_record", {}).get("ok", False)),

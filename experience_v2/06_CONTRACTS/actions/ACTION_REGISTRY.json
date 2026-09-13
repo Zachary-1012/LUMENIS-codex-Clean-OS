@@ -1524,5 +1524,75 @@
     "BOUND": 1,
     "BLOCKED_BY_EXTERNAL_DEPENDENCY": 4,
     "INTENTIONALLY_NOT_APPLICABLE": 14
+  },
+  "permission_gate_policy": {
+    "updated_at": "2026-09-13",
+    "boundary": "POST /api/experience/ai/intent -> experience_runtime.ai_intent -> permission_gate.PermissionGate",
+    "principle": "AI composer is a derivative enhancement layer; the canonical gate runs BEFORE skill_execution_chain. Denied / pending paths return before execution and write no evidence.",
+    "action_type_mapping": {
+      "READ": {
+        "operation": "ai_call",
+        "risk": "low",
+        "default_outcome": "granted"
+      },
+      "ANALYZE": {
+        "operation": "ai_call",
+        "risk": "low",
+        "default_outcome": "granted"
+      },
+      "SUGGEST": {
+        "operation": "ai_call",
+        "risk": "low",
+        "default_outcome": "granted"
+      },
+      "EXPORT": {
+        "operation": "data_export",
+        "risk": "medium",
+        "default_outcome": "granted_with_verify_permission"
+      },
+      "WRITE": {
+        "operation": "db_write",
+        "risk": "high",
+        "default_outcome": "requires_commit_permission_and_human_approval"
+      },
+      "COMMIT": {
+        "operation": "config_modify",
+        "risk": "high",
+        "default_outcome": "requires_commit_permission_and_human_approval"
+      }
+    },
+    "permanent_deny": {
+      "PUSH": "AI composer never publishes / pushes / deletes; permanently denied at this boundary regardless of approval."
+    },
+    "four_states": {
+      "granted": "gate.allowed=True; execution chain runs.",
+      "pending_approval": "permission level met but high-risk human approval token missing; HTTP 200, no execution, no evidence.",
+      "denied": "insufficient permission / unregistered / cross-domain; HTTP 403, no execution, no evidence.",
+      "permanent_deny": "action class forbidden at this boundary; HTTP 403, no execution."
+    },
+    "never_leak": [
+      "system_prompt",
+      "developer_prompt",
+      "cookie",
+      "token",
+      "credential",
+      "browser_session",
+      "cdp"
+    ],
+    "high_risk_action_ids": [
+      "AI-02:AI-02.run-effect",
+      "AI-03:AI-03.assign-owner",
+      "BMP-06:BMP-06.publish",
+      "BMP-07:BMP-07.end-campaign",
+      "BMP-08:BMP-08.render",
+      "BMP-10:BMP-10.hold-creator",
+      "CTH-01:CTH-01.notify-team",
+      "CTH-09:CTH-09.decide-b3",
+      "SH-01:SH-01.publish",
+      "SH-06:SH-06.approve",
+      "SYS-01:SYS-01.graceful-reload",
+      "SYS-01:SYS-01.restart",
+      "SYS-04:SYS-04.rotate-key"
+    ]
   }
 }

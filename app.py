@@ -681,7 +681,7 @@ def creative_ideas():
         if not brand:
             return jsonify({'ok': False, 'error': 'brand 不能为空'}), 400
         if keyword:
-            signals = signals_from_db(data.get('db', 'data/monitor.db'), keyword, circle, hotspot)
+            signals = signals_from_db(data.get('db') or db.main_db_path(), keyword, circle, hotspot)  # P0-DBISO-01
             signals['overseas'] = bool(data.get('overseas'))
             signals['region'] = data.get('region', '')
             if profile:
@@ -927,7 +927,7 @@ def event_graph_delete_event(event_id):
         del graph.events[event_id]
         graph.relations = [r for r in graph.relations
                           if r.source_event.event_id != event_id and r.target_event.event_id != event_id]
-        _dbp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+        _dbp = db.main_db_path()  # P0-DBISO-01 统一隔离
         with _sq3.connect(_dbp) as conn:
             conn.execute("DELETE FROM event_graph_events WHERE event_id=?", (event_id,))
             conn.execute("DELETE FROM event_graph_relations WHERE source_event_id=? OR target_event_id=?", (event_id, event_id))
@@ -3130,7 +3130,8 @@ def api_podcast_topics_compat():
         from podcast_routes import podcast_bp
         # 直接调用overview逻辑
         import sqlite3
-        db = sqlite3.connect("data/monitor.db")
+        from db_paths import main_db_path as _main_db_path  # P0-DBISO-01（本函数局部变量 db 遮蔽模块，故局部 import）
+        db = sqlite3.connect(_main_db_path())
         c = db.cursor()
         tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
         topics = []
