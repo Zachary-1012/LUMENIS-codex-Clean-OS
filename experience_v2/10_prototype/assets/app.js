@@ -46,6 +46,13 @@
     const page = $('#lum-page');
     if (!page) return;
     if (!sc) { page.innerHTML = global.LumUI.stateBlock('error'); return; }
+    // Deep links and nav clicks must carry the matching Domain Lens into the
+    // shared Subject Context before runtime hydration reads its signature.
+    const routeDomain = id.startsWith('BMP-') ? 'BMP' : id.startsWith('CTH-') ? 'CTH' : null;
+    if (routeDomain && global.LumShell.SubjectContext.value.domain !== routeDomain) {
+      global.LumShell.SubjectContext.value.domain = routeDomain;
+      global.LumShell.renderSubject();
+    }
     const appEl = document.querySelector('.lum-app'); if (appEl) appEl.dataset.realm = realmOf(id);
     page.dataset.screen = id;
     // Production hydration (assets/runtime.js) marks a screen __runtime; otherwise prototype fixture.

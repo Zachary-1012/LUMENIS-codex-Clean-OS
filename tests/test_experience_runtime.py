@@ -106,6 +106,13 @@ def test_shell_serves_and_injects_runtime(isolated_client):
     assert r4.status_code == 200
     assert b"const host = $('.lum-app') || document.body" in r4.data
     assert b"host.appendChild(d)" in r4.data
+    r5 = cli.get("/experience/assets/app.js")
+    assert r5.status_code == 200
+    assert b"const routeDomain = id.startsWith('BMP-')" in r5.data
+    assert b"global.LumShell.renderSubject()" in r5.data
+    r6 = cli.get("/experience/assets/sections.js")
+    assert r6.status_code == 200
+    assert b"${m.evidenceId ?" in r6.data
 
 
 # --------------------------- CTH-01 真实绑定 + 诚实缺失 ---------------------------

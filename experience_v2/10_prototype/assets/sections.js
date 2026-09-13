@@ -87,7 +87,7 @@
           <div class="lum-metric__value">${valueHtml}${m.unit && !na ? `<span class="lum-unit">${m.unit}</span>` : ''}</div>
           ${!na && m.delta != null ? `<span class="lum-metric__delta ${m.delta >= 0 ? 'lum-delta-up' : 'lum-delta-down'}">${icon(m.delta >= 0 ? 'arrow-up' : 'arrow-down', 13)}${Math.abs(m.delta)}${m.deltaUnit || '%'}</span>` : ''}
           ${!na && m.spark ? sparkline(m.spark, { color: m.sparkColor }) : ''}
-          <div class="lum-metric__foot" ${m.source ? `data-provenance="${m.source}" title="${na ? (m.stateNote || '') : m.source}"` : ''}><span class="lum-metric__freshness"><span class="${dotCls}"></span>${freshTxt}</span></div>
+          <div class="lum-metric__foot" ${m.source ? `data-provenance="${m.source}" title="${na ? (m.stateNote || '') : m.source}"` : ''}><span class="lum-metric__freshness"><span class="${dotCls}"></span>${freshTxt}</span>${m.evidenceId ? `<span class="lum-ai-cite">${icon('link', 12)}${m.evidenceId}</span>` : ''}</div>
         </div>`;}).join('')}</section>`;
     },
     evidence(d) {
