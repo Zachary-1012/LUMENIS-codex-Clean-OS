@@ -83,6 +83,7 @@ jobs:
             -q --tb=line
 
       - name: Production/live and quarantine inventory (INFORMATIONAL)
+        if: ${{ always() }}
         shell: bash
         run: |
           echo "=== Environment / Production-Live suites ==="
@@ -91,9 +92,11 @@ jobs:
           cat tests/ci_quarantined_nodeids.txt
 
       - name: Boundary Check (ADVISORY)
+        if: ${{ always() }}
         continue-on-error: true
         run: python scripts/audit_tools/boundary_check.py --ci
 
       - name: Asset Impact Scan (INFORMATIONAL)
+        if: ${{ always() }}
         continue-on-error: true
         run: python scripts/audit_tools/asset_impact_scan.py
