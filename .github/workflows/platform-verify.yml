@@ -50,6 +50,14 @@ jobs:
               missing=1
             fi
           done < tests/ci_quarantined_nodeids.txt
+
+          python tests/select_ci_tests.py > /tmp/lumenis-hermetic-tests.txt
+          selected_count="$(wc -l < /tmp/lumenis-hermetic-tests.txt | xargs)"
+          if [[ "$selected_count" -lt 1 ]]; then
+            echo "Hermetic selector produced no tests"
+            missing=1
+          fi
+          echo "Hermetic test files selected: $selected_count"
           exit "$missing"
 
       - name: Run clean-checkout hermetic pytest (BLOCKING)
@@ -58,12 +66,7 @@ jobs:
         shell: bash
         timeout-minutes: 15
         run: |
-          ignore_args=()
-          while IFS='|' read -r raw_path reason; do
-            path="$(echo "$raw_path" | xargs)"
-            [[ -z "$path" || "$path" == \#* ]] && continue
-            ignore_args+=("--ignore=$path")
-          done < tests/ci_environment_tests.txt
+          mapfile -t test_files < <(python tests/select_ci_tests.py)
 
           deselect_args=()
           while IFS='|' read -r raw_node reason; do
@@ -72,9 +75,10 @@ jobs:
             deselect_args+=("--deselect=$node")
           done < tests/ci_quarantined_nodeids.txt
 
-          python -m pytest tests/ \
+          echo "Running ${#test_files[@]} hermetic test files"
+          python -m pytest \
+            "${test_files[@]}" \
             -m "not online" \
-            "${ignore_args[@]}" \
             "${deselect_args[@]}" \
             -q --tb=line
 
