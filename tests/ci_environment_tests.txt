@@ -14,6 +14,13 @@ tests/test_production_baseline.py | requires generated production-baseline evide
 tests/test_udip_consistency.py | cross-surface consistency currently requires protected production DB
 tests/test_weibo_v4_adapter.py | requires real Weibo credential/session behavior
 
+# Manual/runtime smoke scripts named test_*.py but implemented as top-level executable scripts.
+tests/test_auth_api.py | requires a running local service on port 8201; top-level manual smoke
+tests/test_brand_library.py | top-level E2E script writes the configured brand-library database
+tests/test_collect_pipeline.py | top-level collector smoke uses runtime DB and external search adapter
+tests/test_collection_full.py | top-level full collector script uses production-like DB and browser/session state
+tests/test_llm_online.py | top-level online LLM smoke requires .env credentials and live network
+
 # Browser / CDP / external runtime E2E
 tests/test_e2e.py | legacy/local E2E entry requiring runtime state
 tests/test_browser_e2e.py | browser/CDP runtime
