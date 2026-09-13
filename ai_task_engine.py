@@ -61,7 +61,8 @@ try:
     from database import DB_PATH, get_db
 except ImportError:
     # 测试环境 fallback
-    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "monitor.db")
+    from db_paths import main_db_path  # P0-DBISO-01 fallback 也尊重隔离
+    DB_PATH = main_db_path()
 
     from contextlib import contextmanager
 

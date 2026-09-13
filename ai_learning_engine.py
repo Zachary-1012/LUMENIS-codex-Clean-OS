@@ -13,6 +13,7 @@ import time
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from db_paths import main_db_path  # P0-DBISO-01
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -364,7 +365,7 @@ class WebSentimentSearch:
         """保存到案例库"""
         try:
             import sqlite3
-            db_path = os.path.join(self.data_dir, 'monitor.db')
+            db_path = main_db_path()  # P0-DBISO-01 隔离重定向（默认仍为 data/monitor.db）
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             
