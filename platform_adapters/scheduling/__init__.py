@@ -23,7 +23,8 @@ def get_planner() -> PlatformSchedulePlanner:
         with _PLANNER_LOCK:
             if _PLANNER is None:
                 root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
-                store = ScheduleDecisionStore(_os.path.join(root, "data", "monitor.db"))
+                from db_paths import main_db_path
+                store = ScheduleDecisionStore(main_db_path())
                 _PLANNER = PlatformSchedulePlanner(
                     state_file=_os.path.join(root, "data", "schedule_state.json"), store=store)
     return _PLANNER

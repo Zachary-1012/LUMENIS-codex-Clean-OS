@@ -64,6 +64,15 @@ def test_single_canonical_env_redirects_every_domain(iso_db, monkeypatch):
     assert _norm(db_paths.token_db_path()) == _norm(iso_db)
 
 
+def test_scheduler_store_uses_single_canonical_env(iso_db, monkeypatch):
+    import platform_adapters.scheduling as scheduling
+
+    monkeypatch.setenv("ZBC_DB_PATH", iso_db)
+    monkeypatch.setattr(scheduling, "_PLANNER", None)
+    planner = scheduling.get_planner()
+    assert _norm(planner.store.db_path) == _norm(iso_db)
+
+
 def test_domain_specific_env_takes_precedence(iso_db, monkeypatch):
     import db_paths
 
