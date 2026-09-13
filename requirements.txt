@@ -1,5 +1,6 @@
-# 广州太古汇舆情监测系统 - Python依赖清单
-# 使用方法：pip install -r requirements.txt
+# 序境 / LUMENIS - Python production/runtime dependencies
+# Install: python -m pip install -r requirements.txt
+# Development/test dependencies are layered in requirements-dev.txt.
 
 # ===== Web框架 =====
 Flask>=2.0.0
