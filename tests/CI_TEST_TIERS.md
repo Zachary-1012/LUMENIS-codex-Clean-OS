@@ -9,15 +9,16 @@ This file defines how tests are interpreted in CI. It prevents two failure modes
 
 Runs on every PR/push from a clean checkout:
 
-- dependency installation
-- `python -m compileall -q .`
-- pytest collection and clean-checkout reproducible tests
+- dependency installation;
+- `python -m compileall -q .`;
+- test-tier manifest validation;
+- pytest collection and clean-checkout reproducible tests.
 
 A failure here is a real repository blocker.
 
 ## Tier B — Hermetic Product/Contract Regression (BLOCKING)
 
-Runs all non-online tests except files listed in `tests/ci_environment_tests.txt`.
+Runs all non-online tests except files listed in `tests/ci_environment_tests.txt` and exact nodeids listed in `tests/ci_quarantined_nodeids.txt`.
 
 Requirements for a Tier B test:
 
@@ -30,7 +31,7 @@ Requirements for a Tier B test:
 
 If a product/contract test can be made hermetic, move it out of the environment list instead of weakening its assertions.
 
-## Tier C — Production / Live / Environment Gate (NOT A CLEAN-CHECKOUT PASS)
+## Tier C — Production / Live / Environment Gate
 
 Files in `tests/ci_environment_tests.txt` remain required acceptance evidence, but must run only where their prerequisites exist. Examples:
 
@@ -42,9 +43,20 @@ Files in `tests/ci_environment_tests.txt` remain required acceptance evidence, b
 
 Excluded does **not** mean PASS, obsolete, or optional. Production readiness cannot be declared from Tier A/B alone.
 
+## Exact-node quarantine
+
+`tests/ci_quarantined_nodeids.txt` is only for a narrow test whose own scope/fixture is currently invalid for clean CI while the rest of its module should remain blocking.
+
+Rules:
+
+- exact nodeid only; never quarantine an entire deterministic module to hide a regression;
+- every line requires a reason;
+- quarantine is temporary and is not PASS;
+- restore the node once its scanner/fixture is correctly scoped.
+
 ## Change rule
 
-When adding or moving a test between tiers, record the reason. Do not put a failing deterministic regression into Tier C merely to make CI green.
+When adding or moving a test between tiers, record the reason. Do not move a failing deterministic regression into Tier C or quarantine merely to make CI green.
 
 Preferred migration direction:
 
