@@ -44,7 +44,8 @@ def _osai_root():
 
 def _db_path():
     """生产数据库路径（只读使用）。"""
-    p = _ZBC_ROOT / "data" / "monitor.db"
+    configured = os.environ.get("ZBC_DB_PATH", "").strip()
+    p = Path(configured) if configured else _ZBC_ROOT / "data" / "monitor.db"
     return p if p.exists() else None
 
 
