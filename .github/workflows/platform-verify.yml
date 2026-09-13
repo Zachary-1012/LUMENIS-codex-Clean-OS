@@ -26,34 +26,91 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
       - name: Compile Python sources (BLOCKING)
-        # A real SyntaxError is a production blocker and must fail CI.
         run: python -m compileall -q .
 
-      - name: Run pytest non-browser subset (BLOCKING)
-        # Browser/CDP and real-network tests are exercised by their own runtime/E2E gates.
-        # Collection errors are blocking here; do not hide them with --continue-on-collection-errors.
+      - name: Validate CI test-tier manifests (BLOCKING)
+        shell: bash
+        run: |
+          missing=0
+          while IFS='|' read -r raw_path reason; do
+            path="$(echo "$raw_path" | xargs)"
+            [[ -z "$path" || "$path" == \#* ]] && continue
+            if [[ ! -e "$path" ]]; then
+              echo "Missing environment-tier path: $path"
+              missing=1
+            fi
+          done < tests/ci_environment_tests.txt
+
+          while IFS='|' read -r raw_node reason; do
+            node="$(echo "$raw_node" | xargs)"
+            [[ -z "$node" || "$node" == \#* ]] && continue
+            file="${node%%::*}"
+            if [[ ! -f "$file" ]]; then
+              echo "Missing quarantined-node file: $file"
+              missing=1
+            fi
+          done < tests/ci_quarantined_nodeids.txt
+
+          python tests/select_ci_tests.py > /tmp/lumenis-hermetic-tests.txt
+          selected_count="$(wc -l < /tmp/lumenis-hermetic-tests.txt | xargs)"
+          if [[ "$selected_count" -lt 1 ]]; then
+            echo "Hermetic selector produced no tests"
+            missing=1
+          fi
+          echo "Hermetic test files selected: $selected_count"
+          exit "$missing"
+
+      - name: Credential-path boundary diagnostic (INFORMATIONAL)
+        # data_boundary returns only tracked relative paths; it never reads or prints secret values.
+        shell: bash
+        run: |
+          python - <<'PY'
+          import data_boundary
+          result = data_boundary.assert_no_tracked_credentials('.')
+          print('status:', result['status'])
+          print('tracked_total:', result['tracked_total'])
+          print('leak_count:', len(result['leaks']))
+          for path in result['leaks']:
+              print('tracked-boundary-path:', path)
+          PY
+
+      - name: Run clean-checkout hermetic pytest (BLOCKING)
+        # Production/live suites remain required acceptance evidence, but are not
+        # valid prerequisites for a secret-free clean checkout. See tests/CI_TEST_TIERS.md.
+        shell: bash
         timeout-minutes: 15
         run: |
-          python -m pytest tests/ \
+          mapfile -t test_files < <(python tests/select_ci_tests.py)
+
+          deselect_args=()
+          while IFS='|' read -r raw_node reason; do
+            node="$(echo "$raw_node" | xargs)"
+            [[ -z "$node" || "$node" == \#* ]] && continue
+            deselect_args+=("--deselect=$node")
+          done < tests/ci_quarantined_nodeids.txt
+
+          echo "Running ${#test_files[@]} hermetic test files"
+          python -m pytest \
+            "${test_files[@]}" \
             -m "not online" \
-            --ignore=tests/test_e2e.py \
-            --ignore=tests/test_browser_e2e.py \
-            --ignore=tests/test_browser_hybrid.py \
-            --ignore=tests/test_browser_runtime_resident.py \
-            --ignore=tests/test_browser_surface.py \
-            --ignore=tests/test_browser_downloads.py \
-            --ignore=tests/test_internal_browser_recovery.py \
-            --ignore=tests/test_collector_e2e_four_layer.py \
-            --ignore=tests/test_dual_domain_e2e.py \
-            --ignore=tests/browser_runtime \
+            "${deselect_args[@]}" \
             -q --tb=line
 
+      - name: Production/live and quarantine inventory (INFORMATIONAL)
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          echo "=== Environment / Production-Live suites ==="
+          cat tests/ci_environment_tests.txt
+          echo "=== Exact quarantined nodeids ==="
+          cat tests/ci_quarantined_nodeids.txt
+
       - name: Boundary Check (ADVISORY)
-        # Governance signal until violations are classified into explicit blocking/advisory policy.
+        if: ${{ always() }}
         continue-on-error: true
         run: python scripts/audit_tools/boundary_check.py --ci
 
       - name: Asset Impact Scan (INFORMATIONAL)
-        # Repository inventory signal; failure is reported but does not currently block release.
+        if: ${{ always() }}
         continue-on-error: true
         run: python scripts/audit_tools/asset_impact_scan.py

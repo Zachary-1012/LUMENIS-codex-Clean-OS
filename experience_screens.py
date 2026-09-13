@@ -1181,9 +1181,9 @@ def _build_bmp03() -> Dict[str, Any]:
             cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='intelligence_assets'")
             table_exists = cur.fetchone() is not None
             if table_exists:
-                cur.execute("SELECT COUNT(*) FROM intelligence_assets")
+                cur.execute("SELECT COUNT(*) FROM intelligence_assets WHERE knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED'")
                 total = int(cur.fetchone()[0])
-                cur.execute("SELECT sub_library, COUNT(*) FROM intelligence_assets GROUP BY sub_library ORDER BY sub_library")
+                cur.execute("SELECT sub_library, COUNT(*) FROM intelligence_assets WHERE knowledge_status IN ('FACT','VERIFIED') AND admission_status='ADMITTED' GROUP BY sub_library ORDER BY sub_library")
                 by_sub = {str(r[0] or "未分类"): int(r[1]) for r in cur.fetchall()}
     except Exception as exc:  # 只读守卫：任何异常都降级为未采集，绝不抛到 UI
         return _envelope("BMP-03", [_head("BMP-03"),
