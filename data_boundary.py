@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Z-Brand 数据边界（Data Boundary）
-================================
-工单：ZB-DATA-BOUNDARY-001（P0，《ZBIP_四产品_统一安全架构运行预检工单》Z-Brand 行）
+LUMENIS 数据边界（Data Boundary）
+===============================
 
 职责（只做边界判定与脱敏，不读取/打印任何凭证内容、不改业务数据、不改业务口径）：
 1. 定义四类数据分区：
@@ -25,9 +24,6 @@ import subprocess
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ------------------------------------------------------------------
-# 1. 数据分区定义（相对根目录的归属；仅用于边界说明与判定，不移动任何文件）
-# ------------------------------------------------------------------
 ZONES = {
     "CODE": {
         "desc": "源码/模板/文档，可入库",
@@ -51,37 +47,36 @@ ZONES = {
     },
 }
 
-# 源码 / 样式 / 脚本 / 文档：即使文件名含 cookie/token（如 xhs_cookie_bridge.py、tokens.css），
-# 也属于“处理凭证的代码”而非凭证本身，路径层放行，改由 runtime_preflight 的内容层扫描把关。
 _SOURCE_EXTS = {
     ".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".css", ".scss", ".less",
     ".html", ".htm", ".md", ".bat", ".cmd", ".ps1", ".sh", ".yml", ".yaml",
-    ".toml", ".ini", ".cfg", ".conf", ".vue", ".jsx",
+    ".toml", ".ini", ".cfg", ".conf", ".vue",
 }
-# 凭证 / 业务数据“载体文件”扩展名：只要被跟踪即判越界
 _CRED_DATA_EXTS = {
     ".db", ".sqlite", ".sqlite3", ".db-wal", ".db-shm", ".db-journal",
     ".pem", ".key", ".p12", ".pfx", ".keystore", ".jks", ".crt", ".cer",
 }
-# 数据/文本类载体：仅当路径同时带有凭证语义时才判越界（避免误伤普通业务 json）
 _DATA_TEXT_EXTS = {".json", ".txt", ".dat", ".bin", ".log", ".csv"}
 _CRED_WORD = re.compile(r"cookie|token|secret|credential|session|passwd|password|profile|login[_-]?state", re.I)
-# 即使命中规则也允许入库的白名单（模板/示例/文档/测试夹具）
+
+# 即使命中凭证语义也允许入库的明确非凭证路径。
+# 白名单必须窄：只放模板/测试/文档/已验证的配置或扫描报告命名，不放宽 Cookie/Token/DB/私钥载体。
 _CRED_PATH_WHITELIST = [
     r"\.env\.example$",
-    r"(^|/)tests?/",                # 测试目录内的夹具
-    r"(^|/)docs/",                  # 文档中的示例
+    r"(^|/)tests?/",
+    r"(^|/)docs/",
     r"example|sample|fixture|dummy|fake",
-    r"design[_-]?token|tokens?\.css|tokens?\.js",  # 设计 Token（CSS 变量），与凭证无关
-    r"kos[_-]?monitor[_-]?profiles?",               # KOS 监控配置档案（品牌/关键词业务配置），非浏览器登录 Profile
+    r"design[_-]?token|tokens?\.css|tokens?\.js",
+    r"kos[_-]?monitor[_-]?profiles?",
+    r"(^|/)naming[_-]?profile\.json$",          # i18n/design naming profile, not browser login profile
+    r"(^|/)secret[_-]?scan[_-]?result\.txt$", # scan result report; contents are separately security-scanned
 ]
 
 
 def _is_credential_path(rel_path: str) -> bool:
-    """判断一个相对路径是否属于凭证/数据“载体”（不应入库）。
+    """判断相对路径是否属于凭证/数据载体（不应入库）。
 
-    分层原则：处理凭证的【源码】(xhs_cookie_bridge.py / cookie_vault.py) 允许入库，
-    由内容层扫描确认其不含明文；路径层只拦截真正的凭证/数据【载体文件】。白名单优先放行。
+    处理凭证的源码允许入库；路径层只拦截真正的凭证/数据载体。
     """
     p = rel_path.replace("\\", "/").lower()
     for wl in _CRED_PATH_WHITELIST:
@@ -89,19 +84,14 @@ def _is_credential_path(rel_path: str) -> bool:
             return False
     base = os.path.basename(p)
     _, ext = os.path.splitext(base)
-    # 1) .env 本体及其环境变体（.env.local / .env.prod）
     if base == ".env" or re.match(r"\.env\.[\w-]+$", base):
         return True
-    # 2) 数据库 / 密钥库 / 证书载体
     if ext in _CRED_DATA_EXTS:
         return True
-    # 3) 源码 / 样式 / 脚本：路径层放行（交给内容层 SEC-SCAN）
     if ext in _SOURCE_EXTS:
         return False
-    # 4) 文本/数据载体且带凭证语义（如 cookies.json、session.dat、xxx_profile/ 下文件）
     if ext in _DATA_TEXT_EXTS and _CRED_WORD.search(p):
         return True
-    # 5) 浏览器持久化登录 Profile 目录内的任意文件
     if "profile" in p and ext not in _SOURCE_EXTS:
         return True
     return False
@@ -124,26 +114,37 @@ def git_tracked_files(root: str = ROOT_DIR, timeout: int = 15):
 def assert_no_tracked_credentials(root: str = ROOT_DIR):
     """检查 Git 跟踪面是否混入凭证/业务数据库。
 
-    返回: {"status": "pass"|"fail"|"skip", "tracked_total": int, "leaks": [...相对路径...], "detail": str}
-    绝不读取这些文件内容，也不返回任何密钥值。
+    返回结构绝不读取这些文件内容，也不返回任何密钥值。
     """
     tracked = git_tracked_files(root)
     if tracked is None:
-        return {"status": "skip", "tracked_total": 0, "leaks": [],
-                "detail": "当前不是可用 Git 工作树（git ls-files 不可用），凭证入库检查跳过"}
+        return {
+            "status": "skip",
+            "tracked_total": 0,
+            "leaks": [],
+            "detail": "当前不是可用 Git 工作树（git ls-files 不可用），凭证入库检查跳过",
+        }
     leaks = sorted({p for p in tracked if _is_credential_path(p)})
     if leaks:
-        return {"status": "fail", "tracked_total": len(tracked), "leaks": leaks,
-                "detail": f"发现 {len(leaks)} 个凭证/数据类文件进入 Git 跟踪面，必须移出跟踪"}
-    return {"status": "pass", "tracked_total": len(tracked), "leaks": [],
-            "detail": f"Git 跟踪面 {len(tracked)} 个文件，未发现 Cookie/Token/.env/私钥/数据库被跟踪"}
+        return {
+            "status": "fail",
+            "tracked_total": len(tracked),
+            "leaks": leaks,
+            "detail": f"发现 {len(leaks)} 个凭证/数据类文件进入 Git 跟踪面，必须移出跟踪",
+        }
+    return {
+        "status": "pass",
+        "tracked_total": len(tracked),
+        "leaks": [],
+        "detail": f"Git 跟踪面 {len(tracked)} 个文件，未发现 Cookie/Token/.env/私钥/数据库被跟踪",
+    }
 
 
 def current_db_zone():
     """识别当前业务数据库落在哪个分区、是否处于隔离状态（不返回库内任何数据）。"""
     info = {"configured": False, "isolated": False, "zone": "UNKNOWN", "inside_project": False, "detail": ""}
     try:
-        import database as _db  # 复用统一入口，避免另造路径口径
+        import database as _db
         db_path = os.path.abspath(getattr(_db, "DB_PATH", ""))
         info["configured"] = bool(db_path)
         proj = os.path.abspath(ROOT_DIR).lower()
@@ -157,32 +158,33 @@ def current_db_zone():
         else:
             info["zone"] = "BRAND_DATA(external)"
         info["detail"] = f"DB 分区={info['zone']}，隔离={'是' if info['isolated'] else '否（默认生产口径）'}"
-    except Exception as e:  # 数据库模块不可用时只告警，不伪造
+    except Exception as e:
         info["detail"] = f"数据库分区识别失败: {type(e).__name__}"
     return info
 
 
-# ------------------------------------------------------------------
-# 2. 日志 / Evidence 脱敏
-# ------------------------------------------------------------------
-# 顺序敏感：先处理“键=值 / 键: 值”，再处理 Authorization 头与私钥块
 _SAN_RULES = [
-    # Authorization: Bearer xxxx / Basic xxxx
-    (re.compile(r"(authorization\s*[:=]\s*)(bearer|basic|token)?\s*[A-Za-z0-9._\-/+=]{6,}", re.I),
-     r"\1\2 [REDACTED]"),
-    # Cookie: a=b; c=d 整串
+    (
+        re.compile(r"(authorization\s*[:=]\s*)(bearer|basic|token)?\s*[A-Za-z0-9._\-/+=]{6,}", re.I),
+        r"\1\2 [REDACTED]",
+    ),
     (re.compile(r"(cookie\s*[:=]\s*)[^;\n\r]{0,4096}", re.I), r"\1[REDACTED]"),
-    # 各种 key/token/secret/password = "值"（前缀统一消费键名两侧与值前引号，尾部再吃掉闭合引号）
-    (re.compile(r"([\"']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|session[_-]?secret|xsec[_-]?token|token|secret|password|passwd|pwd|private[_-]?key)[\"']?\s*[:=]\s*[\"']?)[^\s\"',;}&]{3,}[\"']?", re.I),
-     r"\1[REDACTED]"),
-    # PEM 私钥块
-    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
-     "[REDACTED PRIVATE KEY]"),
+    (
+        re.compile(
+            r"([\"']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|session[_-]?secret|xsec[_-]?token|token|secret|password|passwd|pwd|private[_-]?key)[\"']?\s*[:=]\s*[\"']?)[^\s\"',;}&]{3,}[\"']?",
+            re.I,
+        ),
+        r"\1[REDACTED]",
+    ),
+    (
+        re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
+        "[REDACTED PRIVATE KEY]",
+    ),
 ]
 
 
 def sanitize_text(text):
-    """把任意待写入日志/Evidence/Attestation 的文本中的凭证打码。非字符串原样返回。"""
+    """把待写入日志/Evidence/Attestation 的文本中的凭证打码。非字符串原样返回。"""
     if not isinstance(text, str):
         return text
     out = text
@@ -192,7 +194,7 @@ def sanitize_text(text):
 
 
 def sanitize_mapping(obj):
-    """递归脱敏 dict/list 内的字符串值（用于 Attestation 落盘前最后一道闸）。"""
+    """递归脱敏 dict/list 内的字符串值。"""
     if isinstance(obj, dict):
         return {k: sanitize_mapping(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
@@ -206,10 +208,9 @@ def assess(root: str = ROOT_DIR):
     """汇总数据边界评估，供 Runtime Preflight 调用。"""
     tracked = assert_no_tracked_credentials(root)
     db_zone = current_db_zone()
-    status = tracked["status"]
     return {
         "check_id": "ZB-DATA-BOUNDARY-001",
-        "status": status,                       # pass / fail / skip
+        "status": tracked["status"],
         "level": "P0",
         "tracked_credentials": tracked,
         "db_zone": db_zone,
@@ -220,6 +221,7 @@ def assess(root: str = ROOT_DIR):
 
 if __name__ == "__main__":
     import json
+
     print(json.dumps(assess(), ensure_ascii=False, indent=2))
     demo = "Authorization: Bearer abc123def456ghi789; Cookie: sessionid=xxxx; api_key=sk-abcdef123456"
     print("sanitize demo ->", sanitize_text(demo))
