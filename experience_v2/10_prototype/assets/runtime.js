@@ -18,6 +18,18 @@
   const API = global.LUM_RUNTIME_API;
   if (!API) return; // 离线原型：不激活
 
+  // Production Truth fence. Fixtures remain available only as structural input;
+  // their example values must never flash as production facts.
+  document.title = '序境 LUMENIS · Production';
+  if (!document.querySelector('#lum-production-truth-fence')) {
+    const fence = document.createElement('style');
+    fence.id = 'lum-production-truth-fence';
+    fence.textContent = '.lum-qa-bar{display:none!important}' +
+      '.lum-page[data-source="prototype"]>*:not([data-unbound-banner]),' +
+      '.lum-page[data-source="offline"]>*:not([data-unbound-banner]){display:none!important}';
+    document.head.appendChild(fence);
+  }
+
   const { $, $$, toast, bindActions, init } = global.LumUI || {};
   if (!$) { console.warn('[runtime] LumUI missing, hydration disabled'); return; }
 
@@ -34,13 +46,14 @@
 
   function setSourceTag(mode) {
     const tag = document.querySelector('[data-source-tag]');
-    if (!tag) return;
     const map = {
       runtime: 'data-source=runtime · PRODUCTION',
       prototype: 'data-source=prototype · DESIGN_ONLY',
       offline: 'data-source=runtime unavailable · prototype fallback',
     };
-    tag.textContent = map[mode] || mode;
+    if (tag) tag.textContent = map[mode] || mode;
+    const page = document.querySelector('#lum-page');
+    if (page) page.dataset.source = mode;
   }
 
   /* 未绑定屏诚实横幅：生产外壳下绝不把 DESIGN_ONLY fixture 当成真实生产数据 */
@@ -54,7 +67,9 @@
     }
     const reason = classification === 'BLOCKED_BY_EXTERNAL_DEPENDENCY'
       ? '生产数据源尚未接入（BLOCKED_BY_EXTERNAL_DEPENDENCY）'
-      : '生产 ViewModel 尚未绑定';
+      : classification === 'RUNTIME_UNAVAILABLE'
+        ? '生产 Runtime / API 当前不可用，未展示任何设计样例数据'
+        : '生产 ViewModel 尚未绑定';
     bar.innerHTML =
       '<span class="lum-unbound-banner__dot" aria-hidden="true"></span>' +
       '<span>当前为 <b>原型结构 · DESIGN_ONLY 示例</b>，' + reason +
@@ -91,6 +106,9 @@
     const sig = subjectSignature(id);
     if (pending.has(sig) || hydrated.has(sig)) { wireRuntime(document); return; }
     pending.add(sig);
+    // Production Truth fence: app.js 先渲染的 DESIGN_ONLY fixture 仅是结构源。
+    // 在真实 ViewModel 到达前保持隐藏，避免慢请求期间把样例数字误认作生产事实。
+    setSourceTag('prototype');
     try {
       const resp = await fetch(`${API}/screen/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -107,9 +125,10 @@
         setSourceTag('prototype');
       }
     } catch (err) {
-      console.warn('[runtime] hydrate failed, keep prototype:', err);
+      console.warn('[runtime] hydrate failed, show honest unavailable state:', err);
       setSourceTag('offline');
-      toast('运行时数据暂不可用，已回退到原型视图', 'info');
+      unboundBanner(id, 'RUNTIME_UNAVAILABLE');
+      toast('运行时数据暂不可用，未展示设计样例数据', 'info');
     } finally {
       pending.delete(sig);
     }

@@ -188,6 +188,10 @@ def experience_shell():
             html = fh.read()
     except OSError as exc:
         return f"experience prototype missing: {exc}", 500
+    html = html.replace(
+        "<title>序境 LUMENIS · Experience V2 Prototype</title>",
+        "<title>序境 LUMENIS · Production</title>",
+    )
     if "assets/runtime.js" not in html:
         html = html.replace("</body>", f"{_RUNTIME_BOOT}\n</body>")
     # 生产外壳下隐藏原型 QA 工具条与 prototype 标记（由 runtime.js 统一改为 runtime 来源）

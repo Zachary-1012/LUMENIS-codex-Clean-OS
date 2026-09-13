@@ -255,7 +255,10 @@
 .lum-modal__foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--lum-line)}
 .lum-drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);z-index:var(--lum-z-drawer);
   background:var(--lum-surface-raised);border-left:1px solid var(--lum-line);box-shadow:var(--lum-sh-3);
-  animation:lum-slide-in var(--lum-dur-base) var(--lum-ease-emphasized);overflow:auto}
+  overflow:auto;visibility:hidden;pointer-events:none;opacity:0;transform:translateX(16px);
+  transition:opacity var(--lum-dur-base) var(--lum-ease-emphasized),transform var(--lum-dur-base) var(--lum-ease-emphasized),visibility 0s linear var(--lum-dur-base)}
+.lum-drawer.is-open{visibility:visible;pointer-events:auto;opacity:1;transform:none;
+  transition-delay:0s}
 .lum-toast-stack{position:fixed;right:18px;bottom:18px;z-index:var(--lum-z-toast);display:flex;flex-direction:column;gap:10px;max-width:min(380px,90vw)}
 .lum-toast{display:flex;align-items:center;gap:10px;padding:12px 15px;border-radius:var(--lum-r-md);
   background:var(--lum-surface-raised);border:1px solid var(--lum-line);box-shadow:var(--lum-sh-2);font-size:var(--lum-fs-sm);

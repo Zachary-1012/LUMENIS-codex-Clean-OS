@@ -91,8 +91,21 @@ def test_shell_serves_and_injects_runtime(isolated_client):
     r = cli.get("/experience/")
     assert r.status_code == 200
     assert b"assets/runtime.js" in r.data
+    assert "<title>序境 LUMENIS · Production</title>".encode() in r.data
     r2 = cli.get("/experience/assets/runtime.js")
     assert r2.status_code == 200 and r2.content_length and r2.content_length > 1000
+    assert b"lum-production-truth-fence" in r2.data
+    assert b'.lum-qa-bar{display:none!important}' in r2.data
+    assert b'.lum-page[data-source="prototype"]' in r2.data
+    assert b"RUNTIME_UNAVAILABLE" in r2.data
+    r3 = cli.get("/experience/assets/components.css")
+    assert r3.status_code == 200
+    assert b".lum-drawer.is-open" in r3.data
+    assert b"pointer-events:none" in r3.data
+    r4 = cli.get("/experience/assets/components.js")
+    assert r4.status_code == 200
+    assert b"const host = $('.lum-app') || document.body" in r4.data
+    assert b"host.appendChild(d)" in r4.data
 
 
 # --------------------------- CTH-01 真实绑定 + 诚实缺失 ---------------------------

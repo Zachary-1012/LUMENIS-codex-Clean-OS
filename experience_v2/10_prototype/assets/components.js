@@ -43,9 +43,11 @@
   function closeModal(ov) { if (!ov) return; ov.classList.remove('is-open'); setTimeout(() => { if (ov.dataset.ephemeral !== 'keep') ov.remove(); }, 320); }
   function openDrawer(id, title, bodyHtml) {
     let d = $('#' + id);
+    const host = $('.lum-app') || document.body;
     if (!d) { d = el('aside', 'lum-drawer'); d.id = id; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
       d.innerHTML = `<div class="lum-modal__head"><h3 class="lum-h3">${title || ''}</h3><button class="lum-iconbtn" data-close aria-label="Close">${icon('x')}</button></div><div class="lum-grow" style="overflow:auto;padding:0 20px 20px">${bodyHtml || ''}</div>`;
-      document.body.appendChild(d); d.querySelector('[data-close]').onclick = () => closeDrawer(d); }
+      host.appendChild(d); d.querySelector('[data-close]').onclick = () => closeDrawer(d); }
+    else if (d.parentNode !== host) { host.appendChild(d); }
     requestAnimationFrame(() => d.classList.add('is-open')); return d;
   }
   function closeDrawer(d) { if (!d) return; d.classList.remove('is-open'); }
