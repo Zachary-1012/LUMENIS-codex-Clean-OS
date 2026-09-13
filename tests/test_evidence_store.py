@@ -220,7 +220,7 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
             failed += 1
-    print(f"\n{"="*50}")
+    print("\n" + "=" * 50)
     print(f"Total: {len(tests)}, Passed: {passed}, Failed: {failed}")
     try:
         os.unlink(_tmp_db)
