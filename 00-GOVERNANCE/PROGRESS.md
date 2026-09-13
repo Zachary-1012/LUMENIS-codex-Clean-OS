@@ -37,3 +37,14 @@
 
 ## 阻塞项汇总
 （各Team遇到阻塞在此追加）
+
+---
+
+## 2026-09-13 Experience → Production 接线进度（追加，不改写上方历史看板）
+
+- 分支：`codex/production-experience-wiring`；HEAD：`0efd15e`；相对 `origin/main@49c325f` 0 behind / 11 ahead（未 push，push 受当前 github.com:443 不可达阻塞，代理开启后可推）。
+- 已完成：Experience V2 蓝图 → Flask 可运行接线；**38/44 屏真实只读绑定**（AI-01/CTH-01 样板 + 36 builder）；Binding 42 BOUND/3 N/A/9 blocked-rows；Action 66/66；本切片 28 测试全过；隔离真实 HTTP 集成 + 深色/浅色 1440/真 390 CDP 遍历全绿。
+- 诚实缺口：4 屏 BLOCKED（BMP-05/BMP-11/SH-01/SYS-06）、2 屏 N/A（ACC-01/04）；`PRODUCTION_READY = NO`。
+- 新发现工程债：DB 隔离三环境变量不统一（`ZBC_DB_PATH` / `ZBC_EVIDENCE_DB_PATH` / `ZBC_RUNTIME_GUARDIAN_DB`），列为 P0-DBISO-01。
+- 剩余分类工作与 DAG：`00-GOVERNANCE/handoff/CODEX_REMAINING_WORK_20260913.md`、`CODEX_RESUME_PACK_20260913.json`；逐项 Gate 证据：`FINAL_CODEX_EXECUTION_REPORT.md`。
+- 下一动作（Codex）：P0-DBISO-01 → P0-WRITEPERM-02 → P0-E2E-03 → P0-BLOCKEDSCREEN-04 → P1-LEGACYTEST-05。

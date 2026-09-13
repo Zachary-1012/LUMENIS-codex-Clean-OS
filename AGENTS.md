@@ -543,3 +543,31 @@ README
 > **主体选择只改变上下文，不改写 Production Truth。**
 >
 > **没有 Source + Call Graph + Data/API + Consumer + Runtime + Tests + Production Evidence，就不能声明 VERIFIED。**
+
+---
+
+# 18. 2026-09-13 当前进度与新增隔离红线（追加，不覆盖 #0–#17）
+
+> 本节为追加条款，#0–#17 全部继续有效；冲突时以当前真实源码 + 运行证据为准。
+
+## 18.1 当前进度快照（HEAD `0efd15e`，分支 `codex/production-experience-wiring`）
+
+- Experience V2 → Flask 可运行接线已完成：38/44 屏真实只读绑定，AI-01/CTH-01 为生产样板；前端复用既有栈，未引入 React/Vue，未建第二套 Contracts/Registry。
+- 本切片 28 测试全过；隔离全量 app 真实 HTTP 集成、深色/浅色 1440 + 真 390 CDP 遍历全绿。
+- 4 屏保持 BLOCKED_BY_EXTERNAL_DEPENDENCY（BMP-05/BMP-11/SH-01/SYS-06），2 屏 N/A（ACC-01/04）；禁止为追求数字造假。
+- 剩余工作按 `00-GOVERNANCE/handoff/CODEX_REMAINING_WORK_20260913.md` + `CODEX_RESUME_PACK_20260913.json` 的 DAG 执行，**FIRST TICKET = P0-DBISO-01**。
+
+## 18.2 新增红线：DB 隔离三环境变量（来自真实运行，不是推测）
+
+- 写库连接的覆盖变量并不统一：
+  - `ZBC_DB_PATH`：canonical，25 处；
+  - `ZBC_EVIDENCE_DB_PATH`：仅 `evidence_chain.py:38`（`zbc_evidence` 写入方）；
+  - `ZBC_RUNTIME_GUARDIAN_DB`：仅 `runtime_guardian.py:41`；
+  - `ai_task_engine.py` / `app_evidence.py` / `ark_llm.py` 无 env 覆盖、硬编码 `data/monitor.db`。
+- 因此：**任何测试 / Staging / 隔离运行，必须同时设置上述三个 env 到临时库**；在 P0-DBISO-01 统一为单一 canonical override 之前，不得假设只设 `ZBC_DB_PATH` 即隔离。
+- 隔离运行结束必须核对真实库 mtime 与关键表行数不变；若误写，只能用带行数断言的事务精确回滚自己产生的合成行，禁止删真实业务数据。
+
+## 18.3 接手协议（避免重复发现）
+
+- 接手先跑 `git status` / `git branch --show-current` / `git rev-parse HEAD`，与 `CODEX_RESUME_PACK_20260913.json` 的 work_head 比对；一致则禁止重新全仓扫描、禁止重读全部 DB、禁止重做五仓关系与前端前期，直接按 DAG 开工。
+- 连续闭环：TICKET → IMPLEMENT → SCOPED TEST → NEIGHBOUR REGRESSION → REQUIRED RUNTIME/E2E → EVIDENCE → ONE-PURPOSE COMMIT → UPDATE STATE → NEXT；无真实 blocker 不得逐票等待确认。

@@ -368,3 +368,25 @@ ChatGPT
 ## 11. 当前状态声明
 
 **序境 / LUMENIS · Independent Production Core · Production Truth Owner · AI-Enhanced, Not AI-Dependent · Production Convergence + Design Ecosystem Optimization**
+
+---
+
+## 12. 进度更新 / Progress Log — 2026-09-13（追加，不改动 §0–§11）
+
+> 本节为**追加式**进度记录，原有 §0–§11 全部保持有效；如与旧表述有出入，以当前真实源码 + 运行证据为准。
+
+### 12.1 本轮已完成（Experience 蓝图 → 可运行接线）
+- 工作分支 `codex/production-experience-wiring`，基线 HEAD `0efd15e`，相对 `origin/main@49c325f` 0 behind / 11 ahead（本地未 push）。
+- 两次远端整合已并入本分支：`f1eb53b`、`edf6d2b`（远端原型冻结在 `handoff/frontend-gpt-v24-20260911-final/PACKAGE_*`，与活路径 `experience_v2/10_prototype` 不构成双运行时真相）。
+- **38/44 屏真实后端只读绑定**：`experience_runtime.py`（蓝图 7 路由 + AI-01/CTH-01 样板）+ `experience_screens.py`（36 builder）；Binding 台账 42 BOUND / 3 N/A / 9 blocked-rows；Action 66/66 结论化。
+- 本切片测试 `tests/test_experience_runtime.py` 28 函数全过；隔离全量 app 真实 HTTP 集成打通；CDP 深色/浅色 1440 各 38 屏 + 真 390 移动抽测全绿（零溢出/零 undefined/零原型横幅）。
+- 4 屏诚实 BLOCKED（BMP-05/BMP-11/SH-01/SYS-06）、2 屏 N/A（ACC-01/04），未造假。
+
+### 12.2 当前结论
+- `PRODUCTION_READY = NO`：前端体验层接线闭环，但生产闭环仍差 P0 写权限链 / 生产副本 E2E / DB 隔离契约统一等（见下）。
+- 详细逐项真实 Gate 结果：`FINAL_CODEX_EXECUTION_REPORT.md`。
+- 分类剩余工作与执行 DAG：`00-GOVERNANCE/handoff/CODEX_REMAINING_WORK_20260913.md`（人类）与 `CODEX_RESUME_PACK_20260913.json`（机器）。
+
+### 12.3 新增工程红线（DB 隔离，来自本轮真实运行证据）
+- 仓内有三个 DB 覆盖环境变量：`ZBC_DB_PATH`（canonical，25 处）、`ZBC_EVIDENCE_DB_PATH`（仅 `evidence_chain.py`，写 `zbc_evidence`）、`ZBC_RUNTIME_GUARDIAN_DB`（仅 `runtime_guardian.py`）；只设 `ZBC_DB_PATH` 不能完全隔离。
+- 测试 / Staging 必须三者同设（或由 Codex 统一为单一 canonical override）；`ai_task_engine.py`/`app_evidence.py`/`ark_llm.py` 仍硬编码默认库，属 P0 待收口项。详见交接单 P0-DBISO-01。
