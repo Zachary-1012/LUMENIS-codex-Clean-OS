@@ -25,6 +25,7 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from collections import Counter
+from db_paths import main_db_path
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -35,7 +36,7 @@ class DataFeedbackLoop:
 
     def __init__(self):
         self.root_dir = os.path.dirname(os.path.abspath(__file__))
-        self.db_path = os.path.join(self.root_dir, 'data', 'monitor.db')
+        self.db_path = main_db_path()
         self.feedback_file = os.path.join(self.root_dir, 'data', 'feedback_loop.json')
         self.suggestions_file = os.path.join(self.root_dir, 'data', 'strategy_suggestions.json')
 

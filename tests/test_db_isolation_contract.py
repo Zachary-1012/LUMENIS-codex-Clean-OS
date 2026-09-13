@@ -73,6 +73,37 @@ def test_scheduler_store_uses_single_canonical_env(iso_db, monkeypatch):
     assert _norm(planner.store.db_path) == _norm(iso_db)
 
 
+def test_ui_polling_apis_use_single_canonical_env(iso_db, monkeypatch):
+    import badge_api
+    import data_center_api
+
+    monkeypatch.setenv("ZBC_DB_PATH", iso_db)
+    badge_conn = badge_api._get_db()
+    data_center_conn = data_center_api._get_db()
+    try:
+        assert _norm(_open_file(badge_conn)) == _norm(iso_db)
+        assert _norm(_open_file(data_center_conn)) == _norm(iso_db)
+    finally:
+        badge_conn.close()
+        data_center_conn.close()
+
+
+def test_legacy_guardian_helpers_use_single_canonical_env(iso_db, monkeypatch):
+    import auto_recovery
+    import data_feedback_loop
+
+    monkeypatch.setenv("ZBC_DB_PATH", iso_db)
+    conn = sqlite3.connect(iso_db)
+    conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY)")
+    conn.commit()
+    conn.close()
+
+    feedback = data_feedback_loop.DataFeedbackLoop()
+    assert _norm(feedback.db_path) == _norm(iso_db)
+    ok, _message = auto_recovery.AutoRecoveryEngine().check_database()
+    assert ok is True
+
+
 def test_domain_specific_env_takes_precedence(iso_db, monkeypatch):
     import db_paths
 

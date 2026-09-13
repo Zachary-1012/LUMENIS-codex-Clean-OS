@@ -3,18 +3,15 @@ badge_api.py — 轻量红点提醒 API（ZBC V1.1 前端回补）
 查询 alert_records 未读数 + notes/events 负面待审数，30s 轮询。
 不修改任何核心模块，只读数据库 + 写 alert_records.state。
 """
-import os
 import sqlite3
 from datetime import datetime
 from flask import Blueprint, jsonify, request
+from db_paths import main_db_path
 
 badge_bp = Blueprint('badge', __name__)
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
-
-
 def _get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = sqlite3.connect(main_db_path(), timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 

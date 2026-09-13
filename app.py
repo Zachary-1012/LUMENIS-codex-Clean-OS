@@ -96,7 +96,6 @@ import system_health_api
 import architecture_api
 import badge_api
 import system_ai_data_api
-import evaluation_system
 import settings_module
 import export_report
 import security_scanner

@@ -11,10 +11,9 @@ import sqlite3
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
+from db_paths import main_db_path
 
 data_center_bp = Blueprint("data_center", __name__, url_prefix="/api/data-center")
-
-DB_PATH = "data/monitor.db"
 
 # 允许查询的表白名单（防止SQL注入）
 ALLOWED_TABLES = {
@@ -70,7 +69,7 @@ PLATFORM_COLORS: Dict[str, str] = {
 
 
 def _get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(main_db_path())
     conn.row_factory = sqlite3.Row
     return conn
 

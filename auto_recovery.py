@@ -35,6 +35,7 @@ import time
 import json
 import socket
 import sqlite3
+from db_paths import main_db_path
 import subprocess
 import threading
 from datetime import datetime
@@ -171,7 +172,7 @@ class AutoRecoveryEngine:
     def check_database(self):
         """检查数据库连接"""
         try:
-            db_path = os.path.join(self.root_dir, 'data', 'monitor.db')
+            db_path = main_db_path()
             if not os.path.exists(db_path):
                 return False, '数据库文件不存在'
 
@@ -194,7 +195,7 @@ class AutoRecoveryEngine:
             return None
 
         try:
-            db_path = os.path.join(self.root_dir, 'data', 'monitor.db')
+            db_path = main_db_path()
             if not os.path.exists(db_path):
                 return None
 
@@ -249,7 +250,7 @@ class AutoRecoveryEngine:
 
         for attempt in range(self.max_retries):
             try:
-                db_path = os.path.join(self.root_dir, 'data', 'monitor.db')
+                db_path = main_db_path()
                 conn = sqlite3.connect(db_path, timeout=10)
                 c = conn.cursor()
                 c.execute("SELECT 1")
