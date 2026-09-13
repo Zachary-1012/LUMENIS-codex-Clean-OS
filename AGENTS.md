@@ -40,7 +40,19 @@ git rev-parse origin/main
 
 Confirm local repository identity. Preserve unknown/uncommitted work until classified. Never reset/discard it merely to obtain a clean tree.
 
-Use or create a focused working branch. Do not force-push `main`.
+### Single-mainline rule
+
+`main` is the only long-lived development line and the only remote production-candidate truth.
+
+A task branch may exist only as a short-lived isolation mechanism for one coherent change. Valid implementation, tests, governance and evidence must converge back into `main`; do not create a second long-lived production, integration, handoff or feature truth.
+
+Before retiring an old branch, compare it with `main` by content and dependency ownership:
+
+- `ahead_by = 0` → already absorbed; treat as retired.
+- unique valid implementation/test/evidence → salvage or merge into `main` first.
+- historical-only/superseded material → preserve only where it still has evidence value; do not re-promote it into active Production Truth.
+
+Do not force-push `main`. Do not use branch names or old branch HEADs as proof that a capability is current.
 
 ## 3. Execution mode
 
@@ -70,6 +82,7 @@ ACTIVE GATE / TICKET
 → runtime / E2E when required
 → evidence
 → coherent commit
+→ merge/converge to main
 → update state/registry if required
 → next dependent gate
 ```
@@ -90,6 +103,7 @@ Conditional canonical docs:
 - human maintainability / feature closure / E2E / release: `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`
 - Collector + Shared Capability closed loop: `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`
 - third-party/open-source dependency/replacement work: `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`
+- branch consolidation: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md` when present
 - point-in-time takeover evidence: `00-GOVERNANCE/handoff/` only when the current task actually depends on it
 - historical evidence: `99-ARCHIVE/` only when migration/history is relevant
 
@@ -102,6 +116,7 @@ Permission/write → Permission owner + action/approval contract + affected rout
 Frontend/Experience → relevant current screen/runtime contract + backend binding + E2E
 Startup/deployment → launcher/supervisor/health/config + relevant operations tests
 Third-party change → actual manifests/imports + component register + license/release implications
+Branch convergence → compare branch against main; salvage only unique valid implementation/test/evidence
 Ordinary bug → affected source/caller/test only
 ```
 
@@ -327,6 +342,8 @@ Syntax errors, required test infrastructure missing/not executing, critical DB/d
 
 A green workflow is not sufficient if blocking work did not actually execute successfully.
 
+Environment/Production-Live tests may be separated from secret-free clean-checkout CI only when their dependency is explicit. `excluded != PASS`.
+
 ## 15. Startup / runtime
 
 Use the existing production launcher/supervisor path unless current evidence proves it must change. Do not create a second launcher as a shortcut.
@@ -379,12 +396,15 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 
 ## 18. Git discipline
 
-- preserve unknown local work;
-- work on a focused branch;
-- use coherent-purpose commits;
-- do not force-push `main`;
-- do not commit production DB, secrets, cookies, sessions, caches or generated junk;
+- `main` is the only long-lived development line.
+- short-lived task branches must converge back into `main` when their valid work is complete.
+- do not leave a parallel implementation only on a branch.
+- preserve unknown local work before convergence.
+- use coherent-purpose commits.
+- do not force-push `main`.
+- do not commit production DB, secrets, cookies, sessions, caches or generated junk.
 - do not claim an unpushed/local commit exists remotely.
+- before retiring a branch, prove either `ahead_by = 0` or that its unique valid work has been absorbed into `main`.
 
 ## 19. Completion semantics
 
@@ -429,6 +449,7 @@ Permission / Evidence / Trace
 CI
 Security / Recovery / Rollback
 Third-party changes
+Branch convergence status
 Remaining blockers
 RELEASED = YES/NO
 OPERATING = YES/NO
