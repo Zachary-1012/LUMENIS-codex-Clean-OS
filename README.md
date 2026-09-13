@@ -390,3 +390,44 @@ ChatGPT
 ### 12.3 新增工程红线（DB 隔离，来自本轮真实运行证据）
 - 仓内有三个 DB 覆盖环境变量：`ZBC_DB_PATH`（canonical，25 处）、`ZBC_EVIDENCE_DB_PATH`（仅 `evidence_chain.py`，写 `zbc_evidence`）、`ZBC_RUNTIME_GUARDIAN_DB`（仅 `runtime_guardian.py`）；只设 `ZBC_DB_PATH` 不能完全隔离。
 - 测试 / Staging 必须三者同设（或由 Codex 统一为单一 canonical override）；`ai_task_engine.py`/`app_evidence.py`/`ark_llm.py` 仍硬编码默认库，属 P0 待收口项。详见交接单 P0-DBISO-01。
+
+---
+
+## 13. Shared Capability × Collector Closed Loop V1 — 2026-09-13
+
+已批准并纳入 `main` 的增量主线规范：`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`。
+
+核心边界：
+
+- Collector 继续由 **SYSTEM** 持有唯一 Runtime / Adapter / Scheduler / Recovery / Observability Owner；不得把 Collector 复制成 Shared Capability 内第二套采集系统。
+- Upload / Import / API / Collector 只是不同 Source Acquisition Adapter，必须汇入同一 Source / Evidence / Canonical / Provenance Truth。
+- Shared Capability 负责消费统一 Source / Evidence，并完成 Research → Learning Asset → Content Studio → Application Trace → Evaluation → Learning Version Update。
+- Tracking Collection 必须 append `MetricSnapshot`，禁止覆盖旧观测，禁止 `missing → 0`。
+- AI 可以生成 Pattern Candidate / Promotion Proposal，但不得自行将 Pattern 升级为 `ADOPT`。
+- 登录态 Collector 永久只读；Collector 与未来 Publisher 必须是两个权限与 Effect Boundary 独立的 Capability。
+
+批准的连续执行主线：
+
+```text
+G0  Repository Truth Convergence
+→ G1  DB / Safety Foundation
+→ G2  Source + Evidence Unification
+→ G3  Collector Runtime
+→ G4  Canonical Content Intelligence
+→ G5  Research Engine
+→ G6  Learning Asset Engine
+→ G7  Write / Permission / Approval Closure
+→ G8  Content Studio Production Binding
+→ G9  Application Trace
+→ G10 Performance Collector
+→ G11 Evaluation → Pattern Validation
+→ G12 Learning Version Update
+→ G13 Shared + SYSTEM UI Binding
+→ G14 凉子访谈录 60期真实 Acceptance Dataset
+→ G15 Regression / Security / Recovery / E2E
+→ G16 Release Gates
+```
+
+第一安全 Gate 仍为 `P0-DBISO-01`。未经 DB 隔离事实收口，不得让新增 Collector / Evaluation writer 直接进入 Production 写路径。
+
+`RELEASED` 可以在代码、历史真实数据、Runtime、测试与当前可验证闭环全部通过后成立；`OPERATING` 必须等待至少一轮真实 Collector Tracking → MetricSnapshot → Evaluation → Learning Version Update 的运行证据，不得伪造未来 T+ 数据。
