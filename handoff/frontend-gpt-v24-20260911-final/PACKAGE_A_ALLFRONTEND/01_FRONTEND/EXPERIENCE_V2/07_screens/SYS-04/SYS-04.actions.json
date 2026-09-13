@@ -1,0 +1,49 @@
+{
+  "screen": "SYS-04",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 2,
+  "actions": [
+    {
+      "action_id": "SYS-04.view-audit",
+      "display_label_zh": "查看审计日志",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "audit:read",
+      "input_context": {
+        "screen": "SYS-04",
+        "section": "actions:审计操作",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "ops"
+    },
+    {
+      "action_id": "SYS-04.rotate-key",
+      "display_label_zh": "轮换密钥",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "secret:rotate",
+      "input_context": {
+        "screen": "SYS-04",
+        "section": "actions:审计操作",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": true,
+      "prototype_behavior": "local/navigation only",
+      "icon": "security"
+    }
+  ]
+}

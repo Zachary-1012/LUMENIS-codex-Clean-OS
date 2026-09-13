@@ -1,0 +1,8 @@
+COMMAND: python validate_handoff.py (cwd=experience_v2/build)
+EXIT_CODE: 0
+GENERATED_AT: 2026-09-11T11:29:44
+
+== STDOUT ==
+VALIDATE 34/34
+
+== STDERR ==

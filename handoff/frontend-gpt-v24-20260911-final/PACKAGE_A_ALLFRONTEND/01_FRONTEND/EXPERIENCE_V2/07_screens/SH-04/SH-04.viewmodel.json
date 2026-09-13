@@ -1,0 +1,36 @@
+{
+  "screen": "SH-04",
+  "viewmodel": {
+    "exports": [
+      "{report,format,scope,state,evidence_count}"
+    ]
+  },
+  "binding": {
+    "export": "CODEX_VERIFY (report_export/report_engine = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "exports"
+    ],
+    "Capability": [
+      "PAT-UPLOAD-01"
+    ],
+    "Motion": [
+      "M15"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "SH-04.actions.json",
+    "Permission": [
+      "report:export"
+    ],
+    "Evidence": [
+      "导出固化证据清单"
+    ]
+  },
+  "unknown_binding_keys": [
+    "export"
+  ],
+  "binding_owner_default": "CODEX"
+}

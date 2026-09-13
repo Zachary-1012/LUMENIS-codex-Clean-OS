@@ -1,0 +1,84 @@
+{
+  "_meta": {
+    "status": "SKELETON_BLOCKED_DO_NOT_SUBMIT",
+    "rule": "Finalize ONLY after real tools exist, annotations match handlers, and legal/demo items clear. Exactly 5 positive and 3 negative cases. Do NOT put review findings in this file. Missing outputSchema = warning, never fabricate.",
+    "official_guidelines": "https://developers.openai.com/plugins/app-guidelines"
+  },
+  "app": {
+    "name": "TODO(CODEX): from repo truth (LUMENIS / 序境)",
+    "summary": "TODO(CODEX)",
+    "description": "TODO(CODEX)",
+    "support_contact": "TODO(HUMAN)",
+    "privacy_url": "TODO(LEGAL)/null until published",
+    "terms_url": "TODO(LEGAL)/null",
+    "verified_developer": "TODO(HUMAN)"
+  },
+  "tools": [],
+  "test_cases": {
+    "positive": [
+      {
+        "id": "P1",
+        "scenario": "TODO(CODEX)",
+        "tool": null,
+        "input": null,
+        "expected": null
+      },
+      {
+        "id": "P2",
+        "scenario": "TODO(CODEX)",
+        "tool": null,
+        "input": null,
+        "expected": null
+      },
+      {
+        "id": "P3",
+        "scenario": "TODO(CODEX)",
+        "tool": null,
+        "input": null,
+        "expected": null
+      },
+      {
+        "id": "P4",
+        "scenario": "TODO(CODEX)",
+        "tool": null,
+        "input": null,
+        "expected": null
+      },
+      {
+        "id": "P5",
+        "scenario": "TODO(CODEX)",
+        "tool": null,
+        "input": null,
+        "expected": null
+      }
+    ],
+    "negative": [
+      {
+        "id": "N1",
+        "scenario": "cross-workspace access attempt must fail-close",
+        "tool": null,
+        "input": null,
+        "expected": "denied"
+      },
+      {
+        "id": "N2",
+        "scenario": "BLOCKED_EXTERNAL source request must be refused, no fresh fetch",
+        "tool": null,
+        "input": null,
+        "expected": "refused"
+      },
+      {
+        "id": "N3",
+        "scenario": "external send without explicit confirmation must not execute",
+        "tool": null,
+        "input": null,
+        "expected": "blocked"
+      }
+    ]
+  },
+  "output_schema_warnings": [],
+  "demo_account": {
+    "provided": false,
+    "note": "TODO(HUMAN): fully-featured demo with sample data; no gated signup/2FA or OpenAI rejects"
+  }
+}

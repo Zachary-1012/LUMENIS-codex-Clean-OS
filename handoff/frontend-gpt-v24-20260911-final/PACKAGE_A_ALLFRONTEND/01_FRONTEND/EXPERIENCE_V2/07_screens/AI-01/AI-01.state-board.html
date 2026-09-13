@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AI-01 · State Board</title>
+<link rel="stylesheet" href="../../10_prototype/assets/tokens.css">
+<link rel="stylesheet" href="../../10_prototype/assets/base.css">
+<link rel="stylesheet" href="../../10_prototype/assets/components.css">
+<link rel="stylesheet" href="../../10_prototype/assets/shell.css">
+<link rel="stylesheet" href="../../10_prototype/assets/optical.css">
+<link rel="stylesheet" href="../../10_prototype/assets/motion.css">
+<style>.lum-qa-bar{position:fixed;right:10px;bottom:10px;z-index:9999;display:flex;gap:8px;align-items:center;
+ padding:6px 10px;border-radius:999px;background:rgba(20,26,35,.82);backdrop-filter:blur(10px);font-size:12px}
+ .lum-qa-bar select{height:28px;border-radius:8px;border:1px solid var(--lum-line);background:var(--lum-surface-solid);color:var(--lum-text);padding:0 6px}
+ .lum-qa-tag{color:#cdd6ee}html.lum-capture .lum-qa-bar{display:none!important}
+ @media print{.lum-qa-bar{display:none}}</style>
+</head>
+<body>
+<noscript>序境 / LUMENIS prototype requires JavaScript.</noscript>
+<script>
+window.LUM_LOCALE='zh-CN';
+window.LUM_STATE_BOARD='AI-01';
+</script>
+<script src="../../10_prototype/data/copy.js"></script>
+<script src="../../10_prototype/data/fixtures.js"></script>
+<script src="../../10_prototype/data/shell.js"></script>
+<script src="../../10_prototype/data/screens.js"></script>
+<script src="../../10_prototype/assets/icons.js"></script>
+<script src="../../10_prototype/assets/orb.js"></script>
+<script src="../../10_prototype/assets/motion.js"></script>
+<script src="../../10_prototype/assets/i18n.js"></script>
+<script src="../../10_prototype/assets/optical.js"></script>
+<script src="../../10_prototype/assets/components.js"></script>
+<script src="../../10_prototype/assets/sections.js"></script>
+<script src="../../10_prototype/assets/shell.js"></script>
+<script src="../../10_prototype/assets/app.js"></script>
+
+<div class="lum-qa-bar" role="region" aria-label="prototype controls">
+  <select data-locale aria-label="locale"><option value="zh-CN">简体中文</option><option value="en">English</option><option value="ko">한국어</option><option value="pseudo">Pseudo(文本压力)</option></select>
+  <select id="lum-qa-optical" aria-label="optical"><option value="high">Optical HIGH</option><option value="standard">STANDARD</option><option value="soft">SOFT GLASS</option><option value="opaque">OPAQUE</option></select>
+  <span class="lum-qa-tag" data-source-tag>data-source=prototype · DESIGN_ONLY</span>
+</div>
+<script>
+document.addEventListener('change',function(e){
+ if(e.target && e.target.id==='lum-qa-optical'){var a=document.querySelector('.lum-app');if(a)a.dataset.optical=e.target.value;}
+});</script>
+</body>
+</html>

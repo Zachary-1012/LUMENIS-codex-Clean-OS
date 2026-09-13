@@ -1,0 +1,1 @@
+结构/光学两级回归：每屏 8 视口 +1440-dark + state-board；像素基线见 04_VISUAL_BASELINES 与 03_EXPERIENCE_V2/14_visual_regression；regression_report.json errors=0。本轮曾真实捕获 2 个问题（capture 注入空引用、h1→h3 跳级），修复后归零，过程不筛除。

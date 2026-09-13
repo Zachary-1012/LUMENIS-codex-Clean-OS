@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+{% block title %}Brand · 序境 LUMENIS{% endblock %}
+{% block page_title %}Brand{% endblock %}
+
+{% block topbar_actions %}
+<div class="zbc-search">
+  <input type="text" class="zbc-search__input" id="brand-search" placeholder="搜索品牌…" aria-label="搜索品牌">
+  <span class="zbc-search__icon">⌕</span>
+</div>
+<select class="zbc-btn" id="industry-filter" aria-label="业态筛选" style="cursor:pointer;">
+  <option value="">全部业态</option>
+</select>
+<span class="zbc-tag zbc-tag--info" id="logo-coverage-tag">Logo加载中…</span>
+<button class="zbc-btn zbc-btn--primary" id="btn-add-brand" type="button">+ 新增品牌</button>
+{% endblock %}
+
+{% block content %}
+<div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
+  <span>⚠</span><span id="degraded-msg">部分数据延迟，已加载数据正常显示</span>
+</div>
+
+<div class="zbc-card" style="margin-bottom:16px;">
+  <div class="zbc-card__body" style="padding:12px 20px;">
+    <div style="display:flex;gap:4px;" role="tablist">
+      <button class="zbc-btn is-active" data-tab="list" role="tab" aria-selected="true" style="border:none;background:transparent;font-weight:600;color:#0F766E;">品牌列表</button>
+      <button class="zbc-btn" data-tab="profile" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">品牌画像</button>
+      <button class="zbc-btn" data-tab="growth" role="tab" aria-selected="false" style="border:none;background:transparent;font-weight:500;">增长指标</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: 品牌列表 -->
+<div id="tab-list">
+  <div class="zbc-kpi-grid" id="brand-kpi-grid">
+    <div class="zbc-kpi-card zbc-kpi-card--gradient-zbmp"><div id="kpi-total-brands"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-active-brands"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-risk-brands"></div></div>
+    <div class="zbc-kpi-card"><div id="kpi-industries"></div></div>
+  </div>
+
+  <div class="zbc-card" id="brand-table-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">品牌列表</span>
+      <span class="zbc-tag zbc-tag--info" id="brand-count-tag">0 个品牌</span>
+    </div>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="brand-loading">
+        <div class="zbc-skeleton" style="width:80%;height:20px;margin:0 auto 12px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="brand-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">📭</div>
+        <div class="zbc-state-empty__text">暂无品牌数据</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="ZBMPBrand.load()" type="button">刷新</button>
+      </div>
+      <div class="zbc-state-error" id="brand-error" style="display:none;">
+        <div class="zbc-state-error__text" id="brand-error-msg">加载失败</div>
+        <button class="zbc-btn zbc-btn--primary" onclick="ZBMPBrand.load()" type="button">重试</button>
+      </div>
+      <div id="brand-table-wrap" style="display:none;overflow-x:auto;">
+        <table class="zbc-table" id="brand-table">
+          <thead><tr><th style="width:40px;"></th><th>品牌名称</th><th>业态</th><th>平台</th><th>声量</th><th>环比</th><th>风险状态</th><th style="width:80px;">操作</th></tr></thead>
+          <tbody id="brand-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="zbc-card__body" id="brand-pagination" style="display:none;padding:12px 20px;border-top:1px solid var(--l-border-light,#F0F0F0);justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--l-text-secondary,#6B7280);" id="brand-page-info">共 0 条</span>
+      <div style="display:flex;gap:8px;">
+        <button class="zbc-btn" id="brand-prev" type="button" style="padding:4px 12px;">上一页</button>
+        <button class="zbc-btn" id="brand-next" type="button" style="padding:4px 12px;">下一页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: 品牌画像 -->
+<div id="tab-profile" style="display:none;">
+  <div class="zbc-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">品牌画像</span>
+      <select class="zbc-btn" id="profile-brand-select" aria-label="选择品牌" style="cursor:pointer;"></select>
+    </div>
+    <div class="zbc-card__body">
+      <div class="zbc-state-loading" id="profile-loading"><div class="zbc-skeleton" style="width:60%;height:24px;margin-bottom:16px;"></div><div class="zbc-skeleton" style="width:100%;height:120px;"></div></div>
+      <div class="zbc-state-empty" id="profile-empty" style="display:none;"><div class="zbc-state-empty__icon">🔍</div><div class="zbc-state-empty__text">选择品牌查看画像</div></div>
+      <div id="profile-content" style="display:none;">
+        <div class="zbc-grid-2-equal">
+          <div><h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">基本信息</h3><div id="profile-basic" style="font-size:13px;line-height:2;"></div></div>
+          <div><h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">声量趋势</h3><div id="profile-trend" style="min-height:160px;"></div></div>
+        </div>
+        <div style="margin-top:20px;"><h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">最近笔记</h3><div id="profile-recent-notes"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: 增长指标 -->
+<div id="tab-growth" style="display:none;">
+  <div class="zbc-card">
+    <div class="zbc-card__header"><span class="zbc-card__title">品牌增长排名</span><span class="zbc-tag zbc-tag--info">声量增长率 / 互动增长率 / 新客增长</span></div>
+    <div class="zbc-card__body">
+      <div class="zbc-state-loading" id="growth-loading"><div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div><div class="zbc-skeleton" style="width:100%;height:44px;"></div></div>
+      <div class="zbc-state-empty" id="growth-empty" style="display:none;"><div class="zbc-state-empty__icon">📊</div><div class="zbc-state-empty__text">增长指标数据采集中</div></div>
+      <div id="growth-table-wrap" style="display:none;overflow-x:auto;">
+        <table class="zbc-table"><thead><tr><th>排名</th><th>品牌</th><th>声量增长率</th><th>互动增长率</th><th>总声量</th><th>趋势</th></tr></thead><tbody id="growth-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  var ZBMPBrand = {
+    state: { brands: [], filtered: [], page: 1, perPage: 20, totalPages: 1, industry: '', search: '', currentTab: 'list', growthLoaded: false, logoMap: {} },
+
+    init: function() {
+      var self = this;
+      document.querySelectorAll('[data-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() { self.switchTab(btn.getAttribute('data-tab')); });
+      });
+      var si = document.getElementById('brand-search');
+      if (si) { var deb; si.addEventListener('input', function() { clearTimeout(deb); deb = setTimeout(function() { self.state.search = si.value.trim().toLowerCase(); self.state.page = 1; self.applyFilters(); }, 300); }); }
+      var inf = document.getElementById('industry-filter');
+      if (inf) inf.addEventListener('change', function() { self.state.industry = inf.value; self.state.page = 1; self.applyFilters(); });
+      var pb = document.getElementById('brand-prev'), nb = document.getElementById('brand-next');
+      if (pb) pb.addEventListener('click', function() { if (self.state.page > 1) { self.state.page--; self.renderTable(); } });
+      if (nb) nb.addEventListener('click', function() { if (self.state.page < self.state.totalPages) { self.state.page++; self.renderTable(); } });
+      var ps = document.getElementById('profile-brand-select');
+      if (ps) ps.addEventListener('change', function() { self.loadProfile(ps.value); });
+      var ab = document.getElementById('btn-add-brand');
+      if (ab) ab.addEventListener('click', function() { alert('新增品牌：请通过品牌业态配置接口添加'); });
+      this.load();
+    },
+
+    switchTab: function(tab) {
+      this.state.currentTab = tab;
+      document.querySelectorAll('[data-tab]').forEach(function(b) {
+        var act = b.getAttribute('data-tab') === tab;
+        b.classList.toggle('is-active', act); b.setAttribute('aria-selected', act ? 'true' : 'false');
+        b.style.color = act ? '#0F766E' : ''; b.style.fontWeight = act ? '600' : '500';
+      });
+      document.getElementById('tab-list').style.display = tab === 'list' ? '' : 'none';
+      document.getElementById('tab-profile').style.display = tab === 'profile' ? '' : 'none';
+      document.getElementById('tab-growth').style.display = tab === 'growth' ? '' : 'none';
+      if (tab === 'growth' && !this.growthLoaded) this.loadGrowth();
+    },
+
+    showState: function(s) {
+      var m = { loading: 'brand-loading', empty: 'brand-empty', error: 'brand-error', success: 'brand-table-wrap' };
+      ['loading','empty','error'].forEach(function(k) { var el = document.getElementById(m[k]); if (el) el.style.display = (k === s) ? '' : 'none'; });
+      document.getElementById('brand-table-wrap').style.display = (s === 'success') ? '' : 'none';
+      var pag = document.getElementById('brand-pagination'); if (pag) pag.style.display = (s === 'success') ? 'flex' : 'none';
+    },
+
+    _kpi: function(sel, label, value, sub) {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      if (value == null || isNaN(value) || value === '') {
+        el.innerHTML = '<div style="font-size:11px;font-weight:500;color:var(--l-text-secondary,#6B7280);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + label + '</div>' +
+          '<div style="font-size:24px;font-weight:700;color:var(--l-text-tertiary,#9CA3AF);line-height:1.2;">—</div>' +
+          '<div style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-top:6px;">数据采集中</div>';
+      } else {
+        xjViz.kpi(sel, label, value, { sub: sub || '' });
+      }
+    },
+
+    load: function() {
+      var self = this;
+      this.showState('loading');
+      xjViz.api('/brand-industry/brands', { limit: 200 })
+        .then(function(d) {
+          if (d.ok === false) throw new Error(d.error || 'API error');
+          var brands = d.brands || [];
+          self.state.brands = brands; self.state.filtered = brands.slice();
+          self.populateIndustries(brands); self.populateProfileSelect(brands);
+          self.renderKPIs(brands);
+          self.state.totalPages = Math.max(1, Math.ceil(brands.length / self.state.perPage));
+          self.applyFilters();
+          self.loadLogos();
+        })
+        .catch(function(e) {
+          xjViz.api('/zbmp/brands')
+            .then(function(d2) {
+              var brands = (d2.data && d2.data.brands) || d2.brands || [];
+              self.state.brands = brands; self.state.filtered = brands.slice();
+              self.populateProfileSelect(brands);
+              self.state.totalPages = Math.max(1, Math.ceil(brands.length / self.state.perPage));
+              self.showDegraded('品牌业态数据延迟，已加载基础品牌列表');
+              self.applyFilters();
+              self.loadLogos();
+            })
+            .catch(function(e2) {
+              document.getElementById('brand-error-msg').textContent = e.message || e2.message || '加载失败';
+              self.showState('error');
+            });
+        });
+    },
+
+    /* 产品级 Logo API：/api/brands/logos?domain=zbmp，复用 CTH brands.html 调用模式 */
+    loadLogos: function() {
+      var self = this;
+      fetch('/api/brands/logos?domain=zbmp', { headers: { 'X-Domain-Id': 'zbmp' } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (!d.ok) return;
+          var map = {};
+          (d.brands || []).forEach(function(b) {
+            if (b.brand_en) map[b.brand_en.toLowerCase().trim()] = b;
+            if (b.brand_cn) map[b.brand_cn.toLowerCase().trim()] = b;
+          });
+          self.state.logoMap = map;
+          var stats = d.logo_stats || {};
+          var tag = document.getElementById('logo-coverage-tag');
+          if (tag) tag.textContent = 'Logo ' + (stats.coverage != null ? stats.coverage : 0) + '%';
+          if (self.state.currentTab === 'list') self.renderTable();
+        })
+        .catch(function() { /* logo 失败静默降级为字母头像，不影响主列表 */ });
+    },
+
+    _getLogoForBrand: function(b) {
+      var names = [b.brand_name_cn, b.brand_name, b.brand_key, b.name].filter(Boolean);
+      for (var i = 0; i < names.length; i++) {
+        var key = String(names[i]).toLowerCase().trim();
+        if (this.state.logoMap[key]) return this.state.logoMap[key];
+      }
+      return null;
+    },
+
+    showDegraded: function(msg) { var b = document.getElementById('degraded-banner'); if (b) { b.style.display = 'flex'; document.getElementById('degraded-msg').textContent = msg; } },
+
+    populateIndustries: function(brands) {
+      var ind = {};
+      brands.forEach(function(b) { var i = b.industry || b.category || '未分类'; ind[i] = (ind[i] || 0) + 1; });
+      var sel = document.getElementById('industry-filter'); if (!sel) return;
+      var cur = sel.value; sel.innerHTML = '<option value="">全部业态</option>';
+      Object.keys(ind).sort().forEach(function(i) { var o = document.createElement('option'); o.value = i; o.textContent = i + ' (' + ind[i] + ')'; sel.appendChild(o); });
+      sel.value = cur;
+    },
+
+    populateProfileSelect: function(brands) {
+      var sel = document.getElementById('profile-brand-select'); if (!sel) return;
+      sel.innerHTML = '<option value="">选择品牌…</option>';
+      brands.slice(0, 100).forEach(function(b) {
+        var n = b.brand_name_cn || b.brand_name || b.brand_key || b.name || '未知';
+        var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
+      });
+    },
+
+    renderKPIs: function(brands) {
+      var total = brands.length;
+      this._kpi('#kpi-total-brands', '品牌总数', total > 0 ? total : null, '全平台');
+      var active = brands.filter(function(b) { return (b.note_count || b.record_count || 0) > 0; }).length;
+      this._kpi('#kpi-active-brands', '活跃品牌', active > 0 ? active : null, '近7天有数据');
+      var risk = brands.filter(function(b) { return (b.negative_count || 0) > 0; }).length;
+      this._kpi('#kpi-risk-brands', '有风险品牌', risk > 0 ? risk : null, '存在负面笔记');
+      var ind = {}; brands.forEach(function(b) { ind[b.industry || b.category || '未分类'] = true; });
+      var ic = Object.keys(ind).length;
+      this._kpi('#kpi-industries', '业态覆盖', ic > 0 ? ic : null, '类业态');
+      document.getElementById('brand-count-tag').textContent = total + ' 个品牌';
+    },
+
+    applyFilters: function() {
+      var self = this;
+      this.state.filtered = this.state.brands.filter(function(b) {
+        var name = (b.brand_name_cn || b.brand_name || b.brand_key || b.name || '').toLowerCase();
+        var ms = !self.state.search || name.indexOf(self.state.search) >= 0;
+        var bi = b.industry || b.category || '未分类';
+        var mi = !self.state.industry || bi === self.state.industry;
+        return ms && mi;
+      });
+      this.state.totalPages = Math.max(1, Math.ceil(this.state.filtered.length / this.state.perPage));
+      if (this.state.page > this.state.totalPages) this.state.page = this.state.totalPages;
+      this.renderTable();
+    },
+
+    renderTable: function() {
+      var self = this;
+      var start = (this.state.page - 1) * this.state.perPage;
+      var pageData = this.state.filtered.slice(start, start + this.state.perPage);
+      if (pageData.length === 0) { this.showState('empty'); return; }
+      this.showState('success');
+      var tbody = document.getElementById('brand-tbody'); tbody.innerHTML = '';
+      pageData.forEach(function(b) {
+        var tr = document.createElement('tr');
+        var name = b.brand_name_cn || b.brand_name || b.brand_key || b.name || '未知';
+        var industry = b.industry || b.category || '未分类';
+        var platform = b.platform || b.source_platform || '—';
+        var volume = b.note_count != null ? b.note_count : (b.record_count != null ? b.record_count : '—');
+        var neg = b.negative_count || 0;
+        var riskTag = neg > 5 ? '<span class="zbc-tag zbc-tag--high">高风险</span>' : (neg > 0 ? '<span class="zbc-tag zbc-tag--medium">关注</span>' : '<span class="zbc-tag zbc-tag--low">正常</span>');
+        var change = '—';
+        if (b.volume_change != null) { var cls = b.volume_change >= 0 ? 'color:#10B981' : 'color:#DC2626'; var arr = b.volume_change >= 0 ? '↑' : '↓'; change = '<span style="' + cls + ';font-size:12px;font-weight:600;">' + arr + ' ' + Math.abs(b.volume_change) + '%</span>'; }
+        /* Logo 渲染：优先产品级 /api/brands/logos 返回的真实 logo，降级为渐变字母头像（复用 CTH 模式） */
+        var logoData = self._getLogoForBrand(b);
+        var initial = name.charAt(0).toUpperCase();
+        var logoCell;
+        if (logoData && logoData.has_logo && logoData.logo) {
+          logoCell = '<div style="width:28px;height:28px;border-radius:6px;background:var(--l-bg-secondary,#F7F7F8);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--l-border-light,#F0F0F0);">'
+            + '<img src="' + logoData.logo + '" alt="' + self.escapeHtml(name) + '" style="width:100%;height:100%;object-fit:contain;" '
+            + 'onerror="this.parentElement.innerHTML=\'<div style=\\\'font-size:12px;font-weight:700;color:var(--l-text-tertiary,#9CA3AF);\\\'>' + initial + '</div>\'"></div>';
+        } else {
+          logoCell = '<div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">' + initial + '</div>';
+        }
+        tr.innerHTML = '<td>' + logoCell + '</td>' +
+          '<td style="font-weight:500;">' + self.escapeHtml(name) + '</td>' +
+          '<td><span class="zbc-tag zbc-tag--info">' + self.escapeHtml(industry) + '</span></td>' +
+          '<td style="font-size:12px;color:var(--l-text-secondary,#6B7280);">' + self.escapeHtml(platform) + '</td>' +
+          '<td style="font-variant-numeric:tabular-nums;font-weight:600;">' + volume + '</td>' +
+          '<td>' + change + '</td><td>' + riskTag + '</td>' +
+          '<td><button class="zbc-btn" style="padding:2px 8px;font-size:11px;" onclick="ZBMPBrand.viewProfile(\'' + self.escapeHtml(name).replace(/'/g, "\\'") + '\')" type="button">画像</button></td>';
+        tbody.appendChild(tr);
+      });
+      document.getElementById('brand-page-info').textContent = '共 ' + this.state.filtered.length + ' 条 · 第 ' + this.state.page + '/' + this.state.totalPages + ' 页';
+      document.getElementById('brand-prev').disabled = this.state.page <= 1;
+      document.getElementById('brand-next').disabled = this.state.page >= this.state.totalPages;
+    },
+
+    viewProfile: function(name) { this.switchTab('profile'); var s = document.getElementById('profile-brand-select'); if (s) { s.value = name; this.loadProfile(name); } },
+
+    loadProfile: function(name) {
+      if (!name) { document.getElementById('profile-loading').style.display = 'none'; document.getElementById('profile-empty').style.display = ''; document.getElementById('profile-content').style.display = 'none'; return; }
+      document.getElementById('profile-loading').style.display = ''; document.getElementById('profile-empty').style.display = 'none'; document.getElementById('profile-content').style.display = 'none';
+      xjViz.api('/brand-industry/brands/' + encodeURIComponent(name))
+        .then(function(d) {
+          if (!d || d.ok === false) throw new Error(d.error || '品牌不存在');
+          var brand = d.brand || {};
+          document.getElementById('profile-loading').style.display = 'none'; document.getElementById('profile-content').style.display = '';
+          var bh = '<div><strong>品牌名称：</strong>' + (brand.name || brand.brand_name_cn || name) + '</div>' +
+            '<div><strong>业态：</strong>' + (brand.category || brand.industry || '未分类') + '</div>' +
+            '<div><strong>总笔记：</strong>' + (brand.total_notes != null ? brand.total_notes : '—') + '</div>' +
+            '<div><strong>正面：</strong>' + (brand.positive != null ? brand.positive : '—') + ' / <strong>中性：</strong>' + (brand.neutral != null ? brand.neutral : '—') + ' / <strong>负面：</strong>' + (brand.negative != null ? brand.negative : '—') + '</div>';
+          document.getElementById('profile-basic').innerHTML = bh;
+          var notes = brand.recent_notes || [];
+          if (notes.length > 0) {
+            var nh = '<table class="zbc-table"><thead><tr><th>标题</th><th>作者</th><th>情感</th><th>互动</th></tr></thead><tbody>';
+            notes.forEach(function(n) {
+              var sc = n.sentiment === 'positive' ? 'zbc-tag--low' : (n.sentiment === 'negative' ? 'zbc-tag--high' : 'zbc-tag--info');
+              var eng = ((n.likes||0)+(n.comments||0)+(n.collects||0)+(n.shares||0));
+              nh += '<tr><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (n.title||'无标题') + '</td><td>' + (n.author_nickname||'—') + '</td><td><span class="zbc-tag ' + sc + '">' + (n.sentiment||'unknown') + '</span></td><td>' + eng + '</td></tr>';
+            });
+            nh += '</tbody></table>';
+            document.getElementById('profile-recent-notes').innerHTML = nh;
+          } else { document.getElementById('profile-recent-notes').innerHTML = '<div class="zbc-state-empty__text" style="padding:24px;">暂无关联笔记</div>'; }
+          var trendData = xjViz.fn.FN_TREND_SERIES(notes.map(function(n) { return { date: n.publish_date || '', label: (n.publish_date||'').substring(5,10), total: ((n.likes||0)+(n.comments||0)) }; }), 'total');
+          if (trendData.length > 0) { xjViz.trend('#profile-trend', trendData, { type: 'area', color: '#0F766E', height: 160 }); }
+          else { document.getElementById('profile-trend').innerHTML = '<div class="zbc-state-empty__text" style="padding:40px 0;">趋势数据采集中</div>'; }
+        })
+        .catch(function(e) {
+          document.getElementById('profile-loading').style.display = 'none'; document.getElementById('profile-empty').style.display = '';
+          document.getElementById('profile-empty').querySelector('.zbc-state-empty__text').textContent = '加载失败：' + (e.message||'未知错误');
+        });
+    },
+
+    loadGrowth: function() {
+      this.growthLoaded = true;
+      var brands = this.state.brands.slice();
+      if (brands.length === 0) { document.getElementById('growth-loading').style.display = 'none'; document.getElementById('growth-empty').style.display = ''; return; }
+      brands.sort(function(a, b) { return (b.note_count || b.record_count || 0) - (a.note_count || a.record_count || 0); });
+      document.getElementById('growth-loading').style.display = 'none'; document.getElementById('growth-table-wrap').style.display = '';
+      var tbody = document.getElementById('growth-tbody'); tbody.innerHTML = '';
+      var self = this;
+      brands.slice(0, 50).forEach(function(b, idx) {
+        var name = b.brand_name_cn || b.brand_name || b.brand_key || b.name || '未知';
+        var vol = b.note_count || b.record_count || 0;
+        var pos = b.positive_count || 0;
+        var gr = vol > 0 ? ((pos / vol) * 100).toFixed(1) : null;
+        var bar = '<div style="width:100px;height:6px;background:var(--l-border-light,#F0F0F0);border-radius:3px;overflow:hidden;"><div style="width:' + Math.min(100, vol/10) + '%;height:100%;background:linear-gradient(90deg,#0F766E,#14B8A6);"></div></div>';
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td style="font-weight:600;color:#0F766E;">' + (idx+1) + '</td><td style="font-weight:500;">' + self.escapeHtml(name) + '</td>' +
+          '<td>' + (gr != null ? gr + '%' : '—') + '</td><td>—</td><td style="font-variant-numeric:tabular-nums;">' + vol + '</td><td>' + bar + '</td>';
+        tbody.appendChild(tr);
+      });
+    },
+
+    escapeHtml: function(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  };
+  window.ZBMPBrand = ZBMPBrand;
+  document.addEventListener('DOMContentLoaded', function() { ZBMPBrand.init(); });
+})();
+</script>
+{% endblock %}

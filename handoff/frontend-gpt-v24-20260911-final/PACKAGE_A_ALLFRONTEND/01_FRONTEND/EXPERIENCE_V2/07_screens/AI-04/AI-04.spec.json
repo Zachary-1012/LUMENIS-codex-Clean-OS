@@ -1,0 +1,221 @@
+{
+  "screen": "AI-04",
+  "meta": {
+    "domain": "AI",
+    "group": "ai",
+    "icon": "skill",
+    "zh": "Agent / 技能中心",
+    "en": "Agent / Skill Hub",
+    "ko": "에이전트·스킬 허브",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.AI-04",
+    "patterns": [
+      "PAT-FILTER-01"
+    ],
+    "motions": [
+      "M01",
+      "M07"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "AI Agent",
+        "title": "Agent / 技能中心",
+        "titleKey": "screen.AI-04",
+        "desc": "所有 Agent/Skill 必须有真实调用链与权限边界；文件存在不等于能力可用。",
+        "actions": [
+          {
+            "label": "仅看可用",
+            "variant": "secondary",
+            "id": "",
+            "cls": "NAVIGATION",
+            "scope": "UNKNOWN",
+            "target": "UNKNOWN",
+            "permission": "UNKNOWN",
+            "ico": "evaluation"
+          }
+        ]
+      },
+      {
+        "type": "filters",
+        "chips": [
+          {
+            "label": "全部",
+            "on": true
+          },
+          {
+            "label": "商业运营",
+            "on": false
+          },
+          {
+            "label": "品牌市场",
+            "on": false
+          },
+          {
+            "label": "采集",
+            "on": false
+          },
+          {
+            "label": "分析",
+            "on": false
+          },
+          {
+            "label": "创作",
+            "on": false
+          },
+          {
+            "label": "系统",
+            "on": false
+          }
+        ]
+      },
+      {
+        "type": "cards",
+        "items": [
+          {
+            "title": "证据检索 Agent",
+            "desc": "沿证据链检索并回标来源，状态 VERIFIED",
+            "ico": "link",
+            "badge": {
+              "text": "VERIFIED",
+              "cls": "success"
+            }
+          },
+          {
+            "title": "事件聚类 Skill",
+            "desc": "规则+模型聚类评论/帖子",
+            "ico": "event",
+            "badge": {
+              "text": "VERIFIED",
+              "cls": "success"
+            }
+          },
+          {
+            "title": "内容草稿 Agent",
+            "desc": "生成多平台草稿，进入 DRAFT 审批",
+            "ico": "content",
+            "badge": {
+              "text": "PARTIAL",
+              "cls": "warning"
+            }
+          },
+          {
+            "title": "播客脚本 Skill",
+            "desc": "把研究材料转成播客提纲",
+            "ico": "podcast",
+            "badge": {
+              "text": "PARTIAL",
+              "cls": "warning"
+            }
+          },
+          {
+            "title": "自动处置 Agent",
+            "desc": "EFFECT 类，默认禁用，需审批",
+            "ico": "shield-off",
+            "badge": {
+              "text": "BLOCKED",
+              "cls": "danger"
+            }
+          },
+          {
+            "title": "跨仓研究桥",
+            "desc": "仅研发侧参考，非运行时依赖",
+            "ico": "research",
+            "badge": {
+              "text": "LEGACY",
+              "cls": "neutral"
+            }
+          }
+        ],
+        "cols": 3
+      },
+      {
+        "type": "table",
+        "title": "Agent / Skill 调用链",
+        "columns": [
+          {
+            "label": "名称",
+            "key": "name"
+          },
+          {
+            "label": "领域",
+            "key": "domain"
+          },
+          {
+            "label": "类型",
+            "key": "kind"
+          },
+          {
+            "label": "权限",
+            "key": "perm"
+          },
+          {
+            "label": "调用链状态",
+            "key": "state",
+            "numeric": true,
+            "type": "stateTone"
+          },
+          {
+            "label": "证据",
+            "key": "ev"
+          }
+        ],
+        "rows": [
+          {
+            "name": "证据检索 Agent",
+            "domain": "共享能力",
+            "kind": "检索",
+            "perm": "evidence:read",
+            "state": "VERIFIED",
+            "stateTone": "success",
+            "ev": "EV-AG-01"
+          },
+          {
+            "name": "事件聚类 Skill",
+            "domain": "商业运营",
+            "kind": "规则+模型",
+            "perm": "content:read",
+            "state": "VERIFIED",
+            "stateTone": "success",
+            "ev": "EV-AG-02"
+          },
+          {
+            "name": "内容草稿 Agent",
+            "domain": "共享能力",
+            "kind": "生成",
+            "perm": "content:draft",
+            "state": "PARTIAL",
+            "stateTone": "warning",
+            "ev": "UNKNOWN"
+          },
+          {
+            "name": "自动处置 Agent",
+            "domain": "系统层",
+            "kind": "执行",
+            "perm": "effect:write",
+            "state": "BLOCKED",
+            "stateTone": "danger",
+            "ev": "—"
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "EV: skill_registry",
+        "EV: agent call graph"
+      ]
+    },
+    "viewmodel": {
+      "agents": [
+        "{id,name_key,domain,kind,permission,callchain_state,evidence}"
+      ]
+    },
+    "binding": {
+      "registry": "CODEX_VERIFY (skill_registry/ai_agent_registry = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

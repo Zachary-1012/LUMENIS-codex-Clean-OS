@@ -1,0 +1,213 @@
+{
+  "screen": "CTH-02",
+  "meta": {
+    "domain": "CTH",
+    "group": "cth",
+    "icon": "layers",
+    "zh": "主体档案 / 业务单元 / 品牌业态",
+    "en": "Subject Profile · Units · Brands",
+    "ko": "주체 프로필·사업단위·브랜드",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.CTH-02",
+    "patterns": [
+      "PAT-DATA-01",
+      "PAT-FILTER-01"
+    ],
+    "motions": [
+      "M01",
+      "M07"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "CTH · 商业运营",
+        "title": "主体档案 / 业务单元 / 品牌业态",
+        "titleKey": "screen.CTH-02",
+        "desc": "选择主体只改变工作上下文；品牌、业态、业务单元的事实归属保持不变。"
+      },
+      {
+        "type": "split",
+        "main": [
+          {
+            "type": "cards",
+            "items": [
+              {
+                "title": "广州太古汇",
+                "desc": "商业综合体 ·  mall_group",
+                "ico": "target",
+                "badge": {
+                  "text": "当前主体",
+                  "cls": "brand"
+                },
+                "meta": "subject_id=subj_taikoo_hui"
+              },
+              {
+                "title": "业务单元 12",
+                "desc": "北区/西区/L1-L4 等",
+                "ico": "layers"
+              },
+              {
+                "title": "在场品牌 386",
+                "desc": "零售/餐饮/体验/服务",
+                "ico": "campaign"
+              },
+              {
+                "title": "业态 24",
+                "desc": "一级业态 6 / 二级 18",
+                "ico": "grid"
+              }
+            ],
+            "cols": 2
+          },
+          {
+            "type": "table",
+            "title": "品牌与业态",
+            "columns": [
+              {
+                "label": "品牌",
+                "key": "b"
+              },
+              {
+                "label": "业态",
+                "key": "cat"
+              },
+              {
+                "label": "楼层",
+                "key": "fl"
+              },
+              {
+                "label": "业务单元",
+                "key": "unit"
+              },
+              {
+                "label": "状态",
+                "key": "s",
+                "numeric": true,
+                "type": "t"
+              },
+              {
+                "label": "声量",
+                "key": "v",
+                "numeric": true
+              }
+            ],
+            "rows": [
+              {
+                "b": "Dior",
+                "cat": "美妆精品",
+                "fl": "L1",
+                "unit": "西区",
+                "s": "正常",
+                "t": "success",
+                "v": 1240
+              },
+              {
+                "b": "lululemon",
+                "cat": "运动生活",
+                "fl": "L3",
+                "unit": "北区",
+                "s": "活动期",
+                "t": "info",
+                "v": 980
+              },
+              {
+                "b": "新茶饮品牌 A",
+                "cat": "餐饮",
+                "fl": "B1",
+                "unit": "食集",
+                "s": "新入驻",
+                "t": "warning",
+                "v": 412
+              },
+              {
+                "b": "体验品牌 B",
+                "cat": "体验业态",
+                "fl": "L4",
+                "unit": "北区",
+                "s": "装修",
+                "t": "neutral",
+                "v": 0
+              }
+            ]
+          }
+        ],
+        "side": [
+          {
+            "type": "filters",
+            "chips": [
+              {
+                "label": "全部",
+                "on": true
+              },
+              {
+                "label": "零售",
+                "on": false
+              },
+              {
+                "label": "餐饮",
+                "on": false
+              },
+              {
+                "label": "体验",
+                "on": false
+              },
+              {
+                "label": "服务",
+                "on": false
+              }
+            ]
+          },
+          {
+            "type": "chart",
+            "title": "业态声量占比",
+            "kind": "ring",
+            "parts": [
+              {
+                "v": 34,
+                "color": "var(--lum-c-brand-500)"
+              },
+              {
+                "v": 26,
+                "color": "var(--lum-c-info)"
+              },
+              {
+                "v": 18,
+                "color": "var(--lum-c-success)"
+              },
+              {
+                "v": 22,
+                "color": "var(--lum-c-slate-300)"
+              }
+            ]
+          },
+          {
+            "type": "note",
+            "text": "品牌/业态为业务数据（ViewModel），不进入 i18n；主体切换不重写 Canonical 归属。",
+            "kind": "RULE",
+            "code": "SUBJECT-CTX"
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "EV: subject_profile",
+        "EV: brand_directory"
+      ]
+    },
+    "viewmodel": {
+      "units": [
+        "{unit_id,name,categories[]}"
+      ],
+      "brands": [
+        "{brand_id,name,category,floor,unit,state,voice}"
+      ]
+    },
+    "binding": {
+      "brands": "CODEX_VERIFY (brand_directory/brand APIs = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

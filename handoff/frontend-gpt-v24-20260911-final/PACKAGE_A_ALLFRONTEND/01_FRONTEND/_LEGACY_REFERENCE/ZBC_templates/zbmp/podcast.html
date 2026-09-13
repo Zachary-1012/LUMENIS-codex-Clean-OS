@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+{% block title %}ZBMP Podcast · 序境 LUMENIS{% endblock %}
+{% block page_title %}ZBMP · Podcast Studio{% endblock %}
+
+{% block content %}
+<style>
+/* ===== Podcast Studio 专属样式（原生 CSS，无第三方库） ===== */
+.podcast-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:900px) { .podcast-grid { grid-template-columns:1fr; } }
+
+/* --- 选题打分滑块 --- */
+.podcast-slider-row { margin-bottom:10px; }
+.podcast-slider-label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; color:var(--lm-color-text-secondary,#6B7280); }
+.podcast-slider-weight { font-size:11px; opacity:0.7; }
+.podcast-slider-track { display:flex; align-items:center; gap:10px; }
+.podcast-slider { flex:1; -webkit-appearance:none; appearance:none; height:4px; background:var(--lm-color-border,#e0e0e0); border-radius:2px; outline:none; cursor:pointer; }
+.podcast-slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--lm-color-primary,#0F766E); cursor:pointer; }
+.podcast-slider::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background:var(--lm-color-primary,#0F766E); cursor:pointer; border:none; }
+.podcast-slider-value { min-width:36px; text-align:right; font-size:12px; font-family:monospace; color:var(--lm-color-text,#0D0D0D); }
+
+.podcast-score-display { display:flex; align-items:center; gap:16px; padding:12px 16px; background:var(--lm-color-bg-secondary,#f7f8fa); border-radius:8px; margin:12px 0; }
+.podcast-score-num { font-size:36px; font-weight:700; font-family:monospace; color:var(--lm-color-primary,#0F766E); }
+.podcast-score-stage { padding:4px 12px; border:1px solid; border-radius:12px; font-size:13px; font-weight:600; }
+.podcast-score-meta { font-size:12px; color:var(--lm-color-text-secondary,#6B7280); }
+
+.podcast-contrib-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; font-size:12px; }
+.podcast-contrib-label { width:70px; flex-shrink:0; color:var(--lm-color-text-secondary,#6B7280); }
+.podcast-contrib-bar-wrap { flex:1; height:8px; background:var(--lm-color-border,#eee); border-radius:4px; overflow:hidden; }
+.podcast-contrib-bar { height:100%; border-radius:4px; transition:width .3s; }
+.podcast-contrib-val { width:50px; text-align:right; font-family:monospace; font-size:11px; }
+
+/* --- 故事节点时间轴 --- */
+.podcast-timeline { position:relative; height:48px; background:var(--lm-color-bg-secondary,#f7f8fa); border-radius:6px; margin:12px 0 4px; overflow:hidden; }
+.podcast-tl-node { position:absolute; top:8px; height:32px; border-radius:4px; display:flex; align-items:center; justify-content:center; opacity:0.9; min-width:2px; }
+.podcast-tl-node-label { font-size:10px; color:#fff; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 4px; }
+.podcast-timeline-scale { position:relative; height:18px; font-size:10px; color:var(--lm-color-text-secondary,#6B7280); margin-bottom:12px; }
+.podcast-timeline-scale span { position:absolute; transform:translateX(-50%); }
+
+.podcast-node-card { border-left:3px solid; padding:10px 14px; margin-bottom:8px; background:var(--lm-color-bg-secondary,#f7f8fa); border-radius:0 6px 6px 0; }
+.podcast-node-card-head { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.podcast-node-index { font-size:12px; font-weight:700; color:var(--lm-color-text-secondary,#6B7280); }
+.podcast-node-time { font-size:11px; font-family:monospace; color:var(--lm-color-text-secondary,#6B7280); margin-left:auto; }
+.podcast-node-rationale { font-size:13px; color:var(--lm-color-text,#0D0D0D); margin:4px 0; }
+.podcast-node-meta { display:flex; gap:16px; font-size:11px; color:var(--lm-color-text-secondary,#6B7280); }
+
+/* --- 破圈 --- */
+.podcast-breakout-result { text-align:center; }
+.podcast-breakout-state { display:inline-block; padding:8px 24px; border:2px solid; border-radius:20px; font-size:18px; font-weight:700; margin-bottom:12px; }
+.podcast-breakout-metrics { display:flex; justify-content:center; gap:32px; margin-bottom:16px; }
+.podcast-breakout-metrics > div { display:flex; flex-direction:column; }
+.podcast-metric-label { font-size:11px; color:var(--lm-color-text-secondary,#6B7280); }
+.podcast-metric-val { font-size:20px; font-weight:700; font-family:monospace; }
+.podcast-breakout-bar-wrap { position:relative; height:20px; margin:0 20px 4px; }
+.podcast-breakout-bar-bg { position:absolute; inset:0; background:var(--lm-color-border,#eee); border-radius:10px; }
+.podcast-breakout-bar-fill { position:absolute; top:0; left:0; height:100%; border-radius:10px; transition:width .4s; }
+.podcast-breakout-threshold { position:absolute; top:-2px; bottom:-2px; width:2px; background:#999; }
+.podcast-breakout-legend { display:flex; justify-content:space-between; font-size:10px; color:var(--lm-color-text-secondary,#6B7280); margin:0 20px 12px; }
+
+/* --- 内容产出 --- */
+.podcast-yield-assets { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.podcast-yield-asset { padding:6px 14px; background:var(--lm-color-primary,#0F766E); color:#fff; border-radius:14px; font-size:13px; }
+.podcast-yield-rationale-item { font-size:12px; color:var(--lm-color-text-secondary,#6B7280); margin-bottom:4px; padding-left:8px; }
+
+/* --- 运行时校验 --- */
+.podcast-runtime-valid, .podcast-runtime-invalid { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:8px; }
+.podcast-runtime-valid { background:rgba(47,158,110,0.1); color:#2f9e6e; }
+.podcast-runtime-invalid { background:rgba(192,70,58,0.1); color:#c0463a; }
+.podcast-runtime-icon { font-size:24px; font-weight:700; }
+
+/* --- 案例 --- */
+.podcast-case-header { margin-bottom:16px; }
+.podcast-case-header h3 { margin:0 0 6px; font-size:18px; }
+.podcast-case-role { font-size:13px; color:var(--lm-color-text-secondary,#6B7280); margin:0; }
+.podcast-case-section { margin-bottom:20px; }
+.podcast-case-section h4 { font-size:14px; margin:0 0 10px; color:var(--lm-color-primary,#0F766E); border-bottom:1px solid var(--lm-color-border,#eee); padding-bottom:4px; }
+.podcast-case-layers { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+@media (max-width:900px) { .podcast-case-layers { grid-template-columns:1fr; } }
+.podcast-case-layer { background:var(--lm-color-bg-secondary,#f7f8fa); border-radius:6px; padding:10px 12px; }
+.podcast-case-layer h5 { margin:0 0 6px; font-size:13px; }
+.podcast-case-layer ul { margin:0; padding-left:16px; font-size:12px; color:var(--lm-color-text-secondary,#6B7280); }
+.podcast-case-layer li { margin-bottom:2px; }
+.podcast-case-dims { display:flex; flex-wrap:wrap; gap:6px; }
+.podcast-case-dim { padding:3px 10px; background:var(--lm-color-bg-secondary,#f7f8fa); border-radius:10px; font-size:11px; color:var(--lm-color-text-secondary,#6B7280); }
+.podcast-case-hypo { padding-left:18px; font-size:13px; color:var(--lm-color-text,#0D0D0D); }
+.podcast-case-hypo li { margin-bottom:4px; }
+.podcast-case-anticopy { padding:10px 14px; background:rgba(192,70,58,0.06); border-left:3px solid #c0463a; border-radius:0 6px 6px 0; font-size:13px; color:var(--lm-color-text,#0D0D0D); }
+
+/* --- 通用表单 --- */
+.podcast-form-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.podcast-form-row label { min-width:80px; font-size:13px; color:var(--lm-color-text-secondary,#6B7280); }
+.podcast-form-row input[type="number"], .podcast-form-row input[type="text"] {
+  flex:1; padding:6px 10px; border:1px solid var(--lm-color-border,#ddd); border-radius:4px; font-size:13px;
+  background:var(--lm-color-bg,#fff); color:var(--lm-color-text,#0D0D0D);
+}
+.podcast-textarea { width:100%; min-height:120px; padding:8px 10px; border:1px solid var(--lm-color-border,#ddd); border-radius:4px; font-size:12px; font-family:monospace; resize:vertical; background:var(--lm-color-bg,#fff); color:var(--lm-color-text,#0D0D0D); }
+.podcast-error { color:#c0463a; font-size:12px; margin-top:6px; display:none; }
+.podcast-result-box { margin-top:12px; padding:12px; background:var(--lm-color-bg-secondary,#f7f8fa); border-radius:6px; display:none; }
+
+/* --- 研究历史标签 --- */
+.podcast-history-tag { padding:3px 10px; background:var(--lm-color-bg-secondary,#f7f8fa); border-radius:10px; font-size:11px; cursor:pointer; color:var(--lm-color-text-secondary,#6B7280); border:1px solid var(--lm-color-border,#eee); transition:all 0.15s; }
+.podcast-history-tag:hover { background:var(--lm-color-primary,#0F766E); color:#fff; border-color:var(--lm-color-primary,#0F766E); }
+
+/* --- 已保存打分 --- */
+.podcast-saved-score { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:rgba(15,118,110,0.08); border-radius:10px; font-size:11px; margin:2px; cursor:pointer; }
+.podcast-saved-score:hover { background:rgba(15,118,110,0.15); }
+</style>
+
+<div class="lm-viewport" data-domain="zbmp">
+  <div class="lm-viewport__context">
+    <div class="lm-section-header" style="margin:0;">
+      <div class="lm-section-header__title">Podcast Studio</div>
+      <div class="lm-time-dimension">
+        <button class="lm-time-pill is-active">ALL</button>
+      </div>
+    </div>
+    <p style="color:var(--lm-color-text-secondary,#6B7280);margin:4px 0 0;">播客内容管理 · 实体管理 · 十维选题打分 · 故事节点 · 破圈分析 · 内容产出 · 运行时校验 · 调用真实 podcast API</p>
+  </div>
+
+  <!-- ===== Podcast Overview KPIs ===== -->
+  <section class="lm-panel" data-state="loading" id="podcast-overview-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Podcast Overview</span>
+      <span class="lm-status-badge lm-status-badge--info">ZBMP · Content</span>
+      <button class="lm-btn lm-btn--icon" onclick="ZBMPPodcast.refresh()" title="刷新"><span data-icon="learning"></span></button>
+    </div>
+    <div class="lm-panel__body">
+      <div class="xj-kpi-row xj-stagger" id="podcast-kpi-row">
+        <div class="xj-kpi-card" id="podcast-kpi-entities"></div>
+        <div class="xj-kpi-card" id="podcast-kpi-topics"></div>
+        <div class="xj-kpi-card" id="podcast-kpi-stories"></div>
+        <div class="xj-kpi-card" id="podcast-kpi-runtime"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 话题研究与输入（闭环入口） ===== -->
+  <section class="lm-panel" data-state="success" id="topic-research-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">话题研究 · 选题输入</span>
+      <span class="lm-badge">POST /api/content/podcast-research · GET /api/content/topic-snapshot</span>
+    </div>
+    <div class="lm-panel__body">
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1;min-width:240px;">
+          <input type="text" class="zbc-search__input" id="research-topic-input" placeholder="输入播客话题，例如：年轻人为什么不想结婚…" aria-label="播客话题" style="width:100%;padding:8px 12px;">
+        </div>
+        <button class="lm-btn lm-btn--primary" id="research-btn" type="button">AI 研究</button>
+        <button class="lm-btn" id="snapshot-btn" type="button">话题快照</button>
+        <button class="lm-btn" id="research-clear-btn" type="button" style="opacity:0.7;">清空历史</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;" id="research-history">
+        <span style="font-size:11px;color:var(--lm-color-text-secondary,#999);">历史：</span>
+      </div>
+      <div id="research-result" style="margin-top:14px;display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <span class="lm-badge" id="research-result-badge">研究结果</span>
+          <button class="lm-btn lm-btn--icon" id="research-apply-btn" title="将话题应用到打分" style="padding:2px 8px;font-size:11px;">→ 应用到打分</button>
+          <button class="lm-btn lm-btn--icon" id="research-save-btn" title="保存本次打分" style="padding:2px 8px;font-size:11px;">💾 保存打分</button>
+        </div>
+        <div id="research-result-content" style="font-size:13px;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto;padding:12px;background:var(--lm-color-bg-secondary,#f7f8fa);border-radius:6px;"></div>
+      </div>
+      <div id="snapshot-result" style="margin-top:14px;display:none;">
+        <div class="lm-badge" style="margin-bottom:8px;">话题快照</div>
+        <div id="snapshot-result-content" style="font-size:13px;line-height:1.7;"></div>
+      </div>
+      <!-- 已保存打分 -->
+      <div id="saved-scores-row" style="margin-top:10px;display:none;">
+        <span style="font-size:11px;color:var(--lm-color-text-secondary,#999);margin-right:6px;">已保存：</span>
+        <span id="saved-scores-list"></span>
+      </div>
+      <div class="podcast-error" id="research-error"></div>
+    </div>
+  </section>
+
+  <!-- ===== 选题打分（10 维度） ===== -->
+  <section class="lm-panel" data-state="success" id="topic-score-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">选题打分 · 十维确定性算法</span>
+      <span class="lm-badge">POST /api/podcast/topic-score</span>
+      <span class="lm-badge" id="topic-current-label" style="display:none;background:rgba(15,118,110,0.1);color:#0F766E;"></span>
+    </div>
+    <div class="lm-panel__body">
+      <div class="podcast-grid">
+        <div>
+          <div id="topic-sliders"></div>
+          <button class="lm-btn lm-btn--primary" id="topic-submit-btn" style="margin-top:8px;">提交打分</button>
+        </div>
+        <div>
+          <div class="podcast-score-display">
+            <div>
+              <div class="podcast-score-num" id="topic-live-score">0.0</div>
+              <div class="podcast-score-meta">实时加权总分（0–100）</div>
+            </div>
+            <div>
+              <span class="podcast-score-stage" id="topic-live-stage">观察</span>
+              <div class="podcast-score-meta" style="margin-top:4px;">阶段预判</div>
+            </div>
+          </div>
+          <div class="podcast-result-box" id="topic-result-panel">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+              <span style="font-size:13px;color:var(--lm-color-text-secondary,#6B7280);">API 返回得分：</span>
+              <span style="font-size:24px;font-weight:700;font-family:monospace;" id="topic-result-score">–</span>
+              <span class="podcast-score-stage" id="topic-result-stage">–</span>
+            </div>
+            <div id="topic-contrib-detail"></div>
+          </div>
+          <div class="podcast-error" id="topic-result-error"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 故事节点可视化 ===== -->
+  <section class="lm-panel" data-state="loading" id="story-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">故事节点 · 时间线可视化</span>
+      <span class="lm-badge">POST /api/podcast/story-nodes</span>
+      <button class="lm-btn lm-btn--icon" id="story-submit-btn" title="重新提取"><span data-icon="learning"></span></button>
+    </div>
+    <div class="lm-panel__body">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--lm-color-text-secondary,#6B7280);">分段输入（JSON，可编辑后点击刷新重新提取）：</label>
+        <textarea class="podcast-textarea" id="story-input" style="min-height:100px;"></textarea>
+        <div class="podcast-error" id="story-error"></div>
+      </div>
+      <div id="story-timeline"></div>
+      <div id="story-node-cards"></div>
+    </div>
+  </section>
+
+  <!-- ===== 破圈分类 + 内容产出率 ===== -->
+  <div class="podcast-grid">
+    <!-- 破圈分类 -->
+    <section class="lm-panel" data-state="success" id="breakout-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">破圈分类</span>
+        <span class="lm-badge">POST /api/podcast/breakout</span>
+      </div>
+      <div class="lm-panel__body">
+        <div class="podcast-form-row">
+          <label>当前值</label>
+          <input type="number" id="breakout-current" value="5200" step="100">
+        </div>
+        <div class="podcast-form-row">
+          <label>基线值</label>
+          <input type="number" id="breakout-baseline" value="2000" step="100">
+        </div>
+        <div class="podcast-form-row">
+          <label>破圈阈值</label>
+          <input type="number" id="breakout-ratio" value="1.8" step="0.1">
+        </div>
+        <div class="podcast-form-row">
+          <label>病毒阈值</label>
+          <input type="number" id="breakout-viral" value="3.0" step="0.1">
+        </div>
+        <button class="lm-btn lm-btn--primary" id="breakout-submit-btn">分类</button>
+        <div id="breakout-result" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- 内容产出率 -->
+    <section class="lm-panel" data-state="success" id="yield-panel">
+      <div class="lm-panel__header">
+        <span class="lm-panel__title">内容产出规划</span>
+        <span class="lm-badge">POST /api/podcast/content-yield</span>
+      </div>
+      <div class="lm-panel__body">
+        <div class="podcast-form-row">
+          <label>故事节点数</label>
+          <input type="number" id="yield-story" value="3" min="0">
+        </div>
+        <div class="podcast-form-row">
+          <label>洞察节点数</label>
+          <input type="number" id="yield-insight" value="2" min="0">
+        </div>
+        <div class="podcast-form-row">
+          <label>情绪峰值数</label>
+          <input type="number" id="yield-emotion" value="1" min="0">
+        </div>
+        <div class="podcast-form-row">
+          <label>金句数</label>
+          <input type="number" id="yield-quote" value="2" min="0">
+        </div>
+        <div class="podcast-form-row">
+          <label>证据段数</label>
+          <input type="number" id="yield-evidence" value="1" min="0">
+        </div>
+        <button class="lm-btn lm-btn--primary" id="yield-submit-btn">规划产出</button>
+        <div id="yield-result" style="margin-top:12px;"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== 运行时校验 ===== -->
+  <section class="lm-panel" data-state="success" id="runtime-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">运行时分段校验</span>
+      <span class="lm-badge">POST /api/podcast/runtime/validate</span>
+      <button class="lm-btn lm-btn--icon" id="runtime-submit-btn" title="重新校验"><span data-icon="learning"></span></button>
+    </div>
+    <div class="lm-panel__body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="podcast-runtime-grid">
+        <div>
+          <label style="font-size:12px;color:var(--lm-color-text-secondary,#6B7280);">分段 JSON（kind: opening/story/conflict/question/insight/emotion/quote/transition/ending）：</label>
+          <textarea class="podcast-textarea" id="runtime-input"></textarea>
+          <div class="podcast-error" id="runtime-error"></div>
+        </div>
+        <div id="runtime-result"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 播客实体 ===== -->
+  <section class="lm-panel" data-state="loading" id="podcast-entities-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">播客实体</span>
+      <span class="lm-badge" id="podcast-entity-count">–</span>
+      <span class="lm-badge">GET/POST /api/podcast/entity</span>
+    </div>
+    <div class="lm-panel__body">
+      <!-- 实体创建表单 -->
+      <div style="margin-bottom:14px;padding:12px;background:var(--lm-color-bg-secondary,#f7f8fa);border-radius:6px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--lm-color-text-secondary,#666);">+ 新建实体（POST /api/podcast/entity）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" class="podcast-entity-form-grid">
+          <input type="text" id="entity-type-input" placeholder="类型 (person/topic/episode/...)" class="zbc-search__input" style="padding:6px 10px;font-size:12px;">
+          <input type="text" id="entity-title-input" placeholder="标题/名称" class="zbc-search__input" style="padding:6px 10px;font-size:12px;">
+          <input type="text" id="entity-parent-input" placeholder="父实体 ID（可选）" class="zbc-search__input" style="padding:6px 10px;font-size:12px;">
+          <input type="text" id="entity-tags-input" placeholder="标签，逗号分隔（可选）" class="zbc-search__input" style="padding:6px 10px;font-size:12px;">
+        </div>
+        <button class="lm-btn lm-btn--primary" id="entity-create-btn" type="button" style="margin-top:8px;padding:4px 14px;font-size:12px;">创建实体</button>
+        <span class="podcast-error" id="entity-create-error" style="margin-left:8px;"></span>
+      </div>
+      <div id="podcast-entities-content"></div>
+      <div class="xj-empty" id="podcast-entities-empty" style="display:none;">暂无播客实体数据</div>
+    </div>
+  </section>
+
+  <!-- ===== 案例：凉子访谈录 ===== -->
+  <section class="lm-panel" data-state="success" id="case-study-panel">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">基准案例 · 凉子访谈录</span>
+      <span class="lm-status-badge lm-status-badge--info">Benchmark Case V1</span>
+    </div>
+    <div class="lm-panel__body">
+      <div id="case-study-content"></div>
+    </div>
+  </section>
+
+  <!-- ===== API Endpoint Reference ===== -->
+  <section class="lm-panel" data-state="success">
+    <div class="lm-panel__header">
+      <span class="lm-panel__title">Podcast API 端点（已注册）</span>
+    </div>
+    <div class="lm-panel__body">
+      <div class="xj-data-table-wrap">
+        <table class="xj-data-table">
+          <thead><tr><th>端点</th><th>方法</th><th>用途</th><th>前端模块</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>/api/podcast/overview</td><td>GET</td><td>播客总览（stats + capabilities）</td><td>Overview KPIs</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/podcast/entities</td><td>GET</td><td>实体列表（支持 type/parent/evidence 过滤）</td><td>播客实体表</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/podcast/entity</td><td>GET/POST</td><td>实体详情 / 创建</td><td>实体 CRUD</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/content/podcast-research</td><td>POST</td><td>AI 辅助选题研究</td><td>话题研究面板</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/content/topic-snapshot</td><td>GET/POST</td><td>话题快照</td><td>话题研究面板</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/podcast/topic-score</td><td>POST</td><td>十维选题打分（demand/timeliness/.../risk/cost）</td><td>选题打分表单</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/podcast/story-nodes</td><td>POST</td><td>故事节点提取（7 种 node_type）</td><td>时间线 + 节点卡片</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/podcast/runtime/validate</td><td>POST</td><td>运行时分段校验（单调递增 · 非重叠）</td><td>运行时校验面板</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/podcast/breakout</td><td>POST</td><td>破圈分类（normal/accelerating/breakout/viral/...）</td><td>破圈分类面板</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+            <tr><td>/api/podcast/content-yield</td><td>POST</td><td>内容产出规划（9 种衍生资产）</td><td>内容产出面板</td><td style="color:#2f9e6e;">✓ 已对接</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+/* 移动端自适应：沿用现有 Adaptive UI，运行时网格和实体表单单列 */
+@media (max-width:768px) {
+  .podcast-runtime-grid { grid-template-columns:1fr !important; }
+  .podcast-entity-form-grid { grid-template-columns:1fr !important; }
+}
+</style>
+
+<script src="{{ url_for('static', filename='js/zbmp-podcast.js') }}"></script>
+{% endblock %}

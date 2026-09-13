@@ -1,0 +1,61 @@
+{
+  "package": "LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612",
+  "generated_at": "2026-09-11T11:29:45",
+  "freeze": {
+    "branch": "main",
+    "head": "ab67612367c172ced2dff62b44e98de86469d1e6",
+    "writable_root": "experience_v2/",
+    "backend_tracked_changed": 0
+  },
+  "completion": "DOUBAO_FRONTEND_HANDOFF_COMPLETE_ONLY",
+  "explicitly_not": "PRODUCTION_READY / RUNTIME_VERIFIED / E2E_VERIFIED (Codex ownership)",
+  "counts": {
+    "screens": 44,
+    "copy_keys": 164,
+    "copy_parity": 164,
+    "actions_total": 66,
+    "actions_by_class": {
+      "NAVIGATION": 47,
+      "DRAFT": 12,
+      "QUERY": 4,
+      "EFFECT": 1,
+      "TASK": 2
+    },
+    "binding_rows": 54,
+    "backend_gaps": 54,
+    "patterns": 9,
+    "motions": 15,
+    "total_files": 823,
+    "total_bytes": 78436796
+  },
+  "gates": {
+    "validate_handoff": "34/34 all_pass=True",
+    "console_errors": 0,
+    "a11y_critical": 0,
+    "text_expansion_overflow_px": 0,
+    "visual_regression_errors": 0,
+    "external_runtime_refs": 0
+  },
+  "unknown_bindings_preserved": 54,
+  "deferred": [
+    {
+      "logo": "LOGO_DEFERRED"
+    },
+    {
+      "psd": "BLOCKED (layered sources provided, no fake .psd)"
+    },
+    {
+      "per_motion_individual_clip": "not separately rendered; merged overview + full specs/source"
+    },
+    {
+      "captions": "optional, deferred"
+    }
+  ],
+  "codex_ownership": [
+    "54 backend bindings",
+    "runtime startup",
+    "critical E2E",
+    "six production gates",
+    "release/rollback"
+  ]
+}

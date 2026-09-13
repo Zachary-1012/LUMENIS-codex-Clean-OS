@@ -1,0 +1,20 @@
+{
+  "payload_format": "tar.gz -> base64 split",
+  "payload_sha256": "1f916070e27e5e9a230cca69e4f6ce3901118ddf53be106afde1afe9d6dfc6ff",
+  "payload_bytes": 227752,
+  "base64_chars": 303672,
+  "part_count": 26,
+  "part_size_chars": 12000,
+  "selected_canonical_file_count": 111,
+  "selected_canonical_bytes": 768697,
+  "source_bundle_sha256": "c4bbb60c3e21db88d3f271ff63359dd845e052aaf69911aa554bb1a3fdcf202c",
+  "legacy_bundle_sha256": "0e45ab95481de42462b291917cbbc4452e1b07f2dafb7a055776f3bf5c26d4a9",
+  "audited_main_before_import": "f548669d82974ea065afb310776ec63935896d7d",
+  "policy": [
+    "canonical editable source/contracts only",
+    "generated 07_screens and prototype data are rebuilt from build/src and registries",
+    "visual-regression screenshots/media are excluded from normal source history",
+    "legacy delivery evidence remains read-only and does not override current Experience",
+    "Design Language v2.4 anti-template gate is mandatory"
+  ]
+}

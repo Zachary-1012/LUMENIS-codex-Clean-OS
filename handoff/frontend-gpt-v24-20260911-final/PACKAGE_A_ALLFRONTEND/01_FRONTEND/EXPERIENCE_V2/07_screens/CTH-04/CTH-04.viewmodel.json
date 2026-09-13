@@ -1,0 +1,42 @@
+{
+  "screen": "CTH-04",
+  "viewmodel": {
+    "graph": "{nodes[],edges[]}",
+    "timeline": [
+      "event"
+    ]
+  },
+  "binding": {
+    "graph": "CODEX_VERIFY (event_graph API = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "graph",
+      "timeline"
+    ],
+    "Capability": [
+      "PAT-EVD-01"
+    ],
+    "Motion": [
+      "M08",
+      "M11"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "CTH-04.actions.json",
+    "Permission": [
+      "UNKNOWN",
+      "case:write",
+      "event:write"
+    ],
+    "Evidence": [
+      "EV-7710",
+      "EV: event_graph"
+    ]
+  },
+  "unknown_binding_keys": [
+    "graph"
+  ],
+  "binding_owner_default": "CODEX"
+}

@@ -1,0 +1,144 @@
+{
+  "screen": "SH-03",
+  "meta": {
+    "domain": "SHARED",
+    "group": "shared",
+    "icon": "database",
+    "zh": "Canonical 数据 / 指标浏览器",
+    "en": "Canonical Data & Metric Explorer",
+    "ko": "캐노니컬 데이터·지표",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.SH-03",
+    "patterns": [
+      "PAT-DATA-01"
+    ],
+    "motions": [
+      "M03",
+      "M06"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "Shared · 序境·内容创作",
+        "title": "Canonical 数据 / 指标浏览器",
+        "titleKey": "screen.SH-03",
+        "desc": "浏览 Canonical 表、指标口径与血缘；区分 Canonical 事实与派生指标。"
+      },
+      {
+        "type": "split",
+        "main": [
+          {
+            "type": "table",
+            "title": "指标目录",
+            "columns": [
+              {
+                "label": "指标",
+                "key": "m"
+              },
+              {
+                "label": "口径",
+                "key": "d"
+              },
+              {
+                "label": "表",
+                "key": "tbl"
+              },
+              {
+                "label": "更新",
+                "key": "u"
+              },
+              {
+                "label": "状态",
+                "key": "s",
+                "numeric": true,
+                "type": "t"
+              }
+            ],
+            "rows": [
+              {
+                "m": "daily_footfall",
+                "d": "去重闸机日客流",
+                "tbl": "canonical.footfall",
+                "u": "1m",
+                "s": "OK",
+                "t": "success"
+              },
+              {
+                "m": "sentiment_volume",
+                "d": "去重平台提及",
+                "tbl": "canonical.voice",
+                "u": "3m",
+                "s": "OK",
+                "t": "success"
+              },
+              {
+                "m": "member_sales_share",
+                "d": "会员销售/总销售",
+                "tbl": "canonical.sales",
+                "u": "1h",
+                "s": "OK",
+                "t": "success"
+              },
+              {
+                "m": "creator_roi",
+                "d": "创作者投放 ROI",
+                "tbl": "derived",
+                "u": "手动",
+                "s": "PARTIAL",
+                "t": "warning"
+              }
+            ]
+          }
+        ],
+        "side": [
+          {
+            "type": "chart",
+            "title": "指标血缘（示意）",
+            "kind": "line",
+            "series": [
+              {
+                "data": [
+                  3,
+                  5,
+                  8,
+                  12,
+                  15
+                ],
+                "color": "var(--lum-c-brand-500)"
+              }
+            ],
+            "labels": [
+              "Source",
+              "Evidence",
+              "Canonical",
+              "Metric",
+              "VM"
+            ]
+          },
+          {
+            "type": "note",
+            "text": "Canonical 是唯一事实源；派生指标必须记录计算口径与上游，不允许同名不同义。",
+            "kind": "RULE",
+            "code": "CANONICAL-ONE"
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "DB: canonical"
+      ]
+    },
+    "viewmodel": {
+      "metrics": [
+        "{name,definition,table,cadence,state,lineage}"
+      ]
+    },
+    "binding": {
+      "canonical": "CODEX_VERIFY (canonical_data/metric engine = UNKNOWN)"
+    }
+  },
+  "data_source": "prototype"
+}

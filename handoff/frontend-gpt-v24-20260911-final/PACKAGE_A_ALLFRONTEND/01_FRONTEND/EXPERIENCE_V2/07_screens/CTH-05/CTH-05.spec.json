@@ -1,0 +1,100 @@
+{
+  "screen": "CTH-05",
+  "meta": {
+    "domain": "CTH",
+    "group": "cth",
+    "icon": "calendar",
+    "zh": "舆情日历",
+    "en": "Sentiment Calendar",
+    "ko": "감성 캘린더",
+    "dock": false
+  },
+  "spec": {
+    "titleKey": "screen.CTH-05",
+    "patterns": [
+      "PAT-FILTER-01"
+    ],
+    "motions": [
+      "M07"
+    ],
+    "sections": [
+      {
+        "type": "head",
+        "eyebrow": "CTH · 商业运营",
+        "title": "舆情日历",
+        "titleKey": "screen.CTH-05",
+        "desc": "按日聚合情绪/事件密度，点选日期联动右侧证据与事件。"
+      },
+      {
+        "type": "split",
+        "main": [
+          {
+            "type": "raw",
+            "html": "<section class=\"lum-card lum-card-pad\" data-reveal><div class=\"lum-section-head\"><span class=\"lum-eyebrow\">Calendar</span><h2 class=\"lum-h4\">2026 年 9 月</h2></div>\n      <div style=\"display:grid;grid-template-columns:repeat(7,1fr);gap:8px\" id=\"cal-grid\"></div></section>"
+          }
+        ],
+        "side": [
+          {
+            "type": "events",
+            "title": "当日明细 · 09-10",
+            "items": [
+              {
+                "time": "10:22",
+                "title": "停车事件升级",
+                "desc": "",
+                "date": "",
+                "level": "high",
+                "tags": [],
+                "evidence": "EV-7710"
+              },
+              {
+                "time": "09:05",
+                "title": "快闪开业",
+                "desc": "",
+                "date": "",
+                "level": "low",
+                "tags": [],
+                "evidence": "EV-7706"
+              }
+            ],
+            "more": true
+          },
+          {
+            "type": "kpis",
+            "items": [
+              {
+                "label": "当日负面",
+                "value": 12,
+                "icon": "risk",
+                "source": "EV:calendar",
+                "fresh": "live",
+                "decimals": 0
+              },
+              {
+                "label": "当日事件",
+                "value": 3,
+                "icon": "event",
+                "source": "EV:calendar",
+                "fresh": "live",
+                "decimals": 0
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "context": {
+      "evidence": [
+        "EV: calendar aggregate"
+      ]
+    },
+    "viewmodel": {
+      "calendar": "{date:{sentiment,event_count,evidence[]}}"
+    },
+    "binding": {
+      "calendar": "CODEX_VERIFY (weekly_events/calendar = UNKNOWN)"
+    },
+    "onMountClient": "fillCalendar"
+  },
+  "data_source": "prototype"
+}

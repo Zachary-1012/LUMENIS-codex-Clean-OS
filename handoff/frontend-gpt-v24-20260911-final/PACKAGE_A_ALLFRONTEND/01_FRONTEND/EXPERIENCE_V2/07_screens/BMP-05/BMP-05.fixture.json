@@ -1,0 +1,192 @@
+{
+  "screen": "BMP-05",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "EV-C01..05"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "BMP · 品牌市场",
+      "title": "创作者 KOS / KOL / KOC / UGC",
+      "titleKey": "screen.BMP-05",
+      "desc": "分层管理创作者，评估真实贡献与合作风险，沉淀可复用脚本。",
+      "actions": [
+        {
+          "label": "添加创作者",
+          "variant": "primary",
+          "id": "add",
+          "cls": "DRAFT",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "creator:write",
+          "ico": "creators"
+        }
+      ]
+    },
+    {
+      "type": "filters",
+      "chips": [
+        {
+          "label": "全部",
+          "on": true
+        },
+        {
+          "label": "KOS",
+          "on": false
+        },
+        {
+          "label": "KOL",
+          "on": false
+        },
+        {
+          "label": "KOC",
+          "on": false
+        },
+        {
+          "label": "UGC",
+          "on": false
+        },
+        {
+          "label": "高风险",
+          "on": false
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "创作者表现",
+      "columns": [
+        {
+          "label": "创作者",
+          "key": "n"
+        },
+        {
+          "label": "分层",
+          "key": "t"
+        },
+        {
+          "label": "平台",
+          "key": "p"
+        },
+        {
+          "label": "内容数",
+          "key": "c",
+          "numeric": true
+        },
+        {
+          "label": "互动率",
+          "key": "i",
+          "numeric": true
+        },
+        {
+          "label": "转化",
+          "key": "cv",
+          "numeric": true
+        },
+        {
+          "label": "风险",
+          "key": "r",
+          "numeric": true,
+          "type": "rt"
+        },
+        {
+          "label": "证据",
+          "key": "ev"
+        }
+      ],
+      "rows": [
+        {
+          "n": "@城市生活家",
+          "t": "KOL",
+          "p": "小红书",
+          "c": 18,
+          "i": 6.8,
+          "cv": 3.2,
+          "r": "低",
+          "rt": "success",
+          "ev": "EV-C01"
+        },
+        {
+          "n": "门店导购·小林",
+          "t": "KOS",
+          "p": "抖音",
+          "c": 42,
+          "i": 4.1,
+          "cv": 5.6,
+          "r": "低",
+          "rt": "success",
+          "ev": "EV-C02"
+        },
+        {
+          "n": "@真实测评君",
+          "t": "KOC",
+          "p": "小红书",
+          "c": 9,
+          "i": 9.2,
+          "cv": 2.1,
+          "r": "中",
+          "rt": "warning",
+          "ev": "EV-C03"
+        },
+        {
+          "n": "匿名 UGC ×128",
+          "t": "UGC",
+          "p": "多平台",
+          "c": 128,
+          "i": 2.4,
+          "cv": 0.8,
+          "r": "待核",
+          "rt": "neutral",
+          "ev": "EV-C04"
+        }
+      ]
+    },
+    {
+      "type": "split",
+      "main": [
+        {
+          "type": "chart",
+          "title": "分层贡献",
+          "kind": "ring",
+          "parts": [
+            {
+              "v": 38,
+              "color": "var(--lum-c-brand-500)"
+            },
+            {
+              "v": 27,
+              "color": "var(--lum-c-info)"
+            },
+            {
+              "v": 24,
+              "color": "var(--lum-c-success)"
+            },
+            {
+              "v": 11,
+              "color": "var(--lum-slate-300)"
+            }
+          ]
+        }
+      ],
+      "side": [
+        {
+          "type": "risks",
+          "items": [
+            {
+              "level": "med",
+              "title": "刷量嫌疑创作者 2",
+              "evidence": "EV-C05",
+              "desc": "互动异常，合作前需核验。",
+              "score": 44
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

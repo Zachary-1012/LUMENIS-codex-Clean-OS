@@ -1,0 +1,31 @@
+{
+  "screen": "SYS-05",
+  "viewmodel": {
+    "prefs": "{theme,optical,density,reduced_motion,locale}"
+  },
+  "binding": {
+    "prefs": "CODEX_VERIFY (user settings store = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "prefs"
+    ],
+    "Capability": [],
+    "Motion": [
+      "M01"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "SYS-05.actions.json",
+    "Permission": [
+      "UNKNOWN",
+      "pref:write"
+    ],
+    "Evidence": []
+  },
+  "unknown_binding_keys": [
+    "prefs"
+  ],
+  "binding_owner_default": "CODEX"
+}

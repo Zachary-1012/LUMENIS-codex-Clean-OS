@@ -1,0 +1,151 @@
+{
+  "screen": "BMP-06",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "EV-M01",
+      "EV-M11",
+      "EV-M12"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "BMP · 品牌市场",
+      "title": "内容中心",
+      "titleKey": "screen.BMP-06",
+      "desc": "素材/脚本/成片的生产流水线与审批状态，EFFECT 发布需权限。",
+      "actions": [
+        {
+          "label": "新建内容",
+          "variant": "primary",
+          "id": "new",
+          "cls": "DRAFT",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "content:draft",
+          "ico": "content"
+        }
+      ]
+    },
+    {
+      "type": "split",
+      "main": [
+        {
+          "type": "upload",
+          "title": "上传素材",
+          "files": [
+            {
+              "name": "主视觉_v3.png",
+              "pct": 100,
+              "stage": "已入库 · EV-M01"
+            },
+            {
+              "name": "门店短视频.mp4",
+              "pct": 64,
+              "stage": "AI 分析中…"
+            },
+            {
+              "name": "KOC 脚本包.docx",
+              "pct": 18,
+              "stage": "等待上传"
+            }
+          ],
+          "dropTitle": "拖拽或点击上传素材",
+          "dropHint": "支持图片/视频/文档，自动去重并建立证据"
+        },
+        {
+          "type": "table",
+          "title": "内容资产",
+          "columns": [
+            {
+              "label": "标题",
+              "key": "t"
+            },
+            {
+              "label": "类型",
+              "key": "k"
+            },
+            {
+              "label": "状态",
+              "key": "s",
+              "numeric": true,
+              "type": "st"
+            },
+            {
+              "label": "审批",
+              "key": "a"
+            },
+            {
+              "label": "证据",
+              "key": "ev"
+            }
+          ],
+          "rows": [
+            {
+              "t": "新品体验脚本 A",
+              "k": "脚本",
+              "s": "草稿",
+              "st": "warning",
+              "a": "待提交",
+              "ev": "EV-M11"
+            },
+            {
+              "t": "门店探店成片",
+              "k": "视频",
+              "s": "待审批",
+              "st": "info",
+              "a": "审批中",
+              "ev": "EV-M12"
+            },
+            {
+              "t": "主视觉 KV",
+              "k": "图片",
+              "s": "已确认",
+              "st": "success",
+              "a": "通过",
+              "ev": "EV-M01"
+            }
+          ]
+        }
+      ],
+      "side": [
+        {
+          "type": "actions",
+          "title": "发布动作（需权限）",
+          "items": [
+            {
+              "id": "submit-review",
+              "title": "提交审批",
+              "icon": "check",
+              "cls": "NAVIGATION",
+              "scope": "content:self",
+              "target": "approval",
+              "permission": "content:submit",
+              "desc": "DRAFT"
+            },
+            {
+              "id": "publish",
+              "title": "发布到平台",
+              "icon": "share",
+              "cls": "NAVIGATION",
+              "scope": "channel:external",
+              "target": "publisher",
+              "permission": "content:publish",
+              "desc": "EFFECT",
+              "risk": true
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "text": "内容生成是 DRAFT，必须经审批与权限校验后才能 EFFECT 发布；原型不真实发布。",
+          "kind": "RULE",
+          "code": "DRAFT-TO-EFFECT"
+        }
+      ]
+    }
+  ]
+}

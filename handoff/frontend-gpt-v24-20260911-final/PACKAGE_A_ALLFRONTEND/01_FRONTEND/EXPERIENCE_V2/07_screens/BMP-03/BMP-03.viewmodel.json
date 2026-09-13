@@ -1,0 +1,37 @@
+{
+  "screen": "BMP-03",
+  "viewmodel": {
+    "intel": [
+      "{title,kind,confidence,source,evidence}"
+    ]
+  },
+  "binding": {
+    "intel": "CODEX_VERIFY (market_intel = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "intel"
+    ],
+    "Capability": [
+      "PAT-DATA-01",
+      "PAT-EVD-01"
+    ],
+    "Motion": [
+      "M03",
+      "M11"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "BMP-03.actions.json",
+    "Permission": [],
+    "Evidence": [
+      "EV-B301",
+      "EV-B302"
+    ]
+  },
+  "unknown_binding_keys": [
+    "intel"
+  ],
+  "binding_owner_default": "CODEX"
+}

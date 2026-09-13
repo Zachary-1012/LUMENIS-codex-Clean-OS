@@ -1,0 +1,200 @@
+/* ============================================================================
+   LUMENIS Experience V2 — Design Tokens
+   序境 / LUMENIS · Truth-driven Spatial Work Interface
+   Namespace: --lum-*  ·  No legacy CSS imported (LEGACY_CSS_IMPORTED = 0)
+   Ratio: 70% information clarity / 20% spatial texture / 10% motion delight
+   This file is human-engineer editable. Do not derive colors from screenshots.
+   ========================================================================== */
+.lum-app {
+  /* ---- v2.3 BLACK-SILVER neutral system (light): true silver greys, no hue ---- */
+  --lum-c-slate-0:  #ffffff;
+  --lum-c-slate-25: #f7f8f9;
+  --lum-c-slate-50: #f0f1f3;
+  --lum-c-slate-100:#e6e8eb;
+  --lum-c-slate-200:#d3d6da;
+  --lum-c-slate-300:#b4b8bf;
+  --lum-c-slate-400:#8b9099;
+  --lum-c-slate-500:#666b75;
+  --lum-c-slate-600:#494e58;
+  --lum-c-slate-700:#343840;
+  --lum-c-slate-800:#23262d;
+  --lum-c-slate-850:#1a1d23;
+  --lum-c-slate-900:#14161b;
+  --lum-c-slate-950:#0b0c0f;
+
+  /* ---- Brand tokens repurposed to the monochrome metal system.
+         Names kept so every consumer inherits the pivot with no markup change.
+         LIGHT = BLACK-SILVER: primary action is ink/black-chrome; silver ramps are washes/edges. ---- */
+  --lum-c-brand-50: #f2f3f5;
+  --lum-c-brand-100:#e7e9ed; /* silver wash / active background */
+  --lum-c-brand-200:#d3d7dd;
+  --lum-c-brand-300:#aeb4bd;
+  --lum-c-brand-400:#71767f;
+  --lum-c-brand-500:#1b1d23; /* primary = near-black ink (黑银) */
+  --lum-c-brand-600:#000000;
+  --lum-c-brand-700:#000000;
+  --lum-c-brand-800:#14161b;
+  --lum-c-brand-900:#0b0c0f;
+  --lum-c-brand-grad: linear-gradient(135deg,#3a3d45 0%,#17191e 48%,#05060a 100%); /* black-chrome metal */
+  --lum-metal-sheen:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 46%); /* top specular sheen */
+  --lum-c-accent-secondary:#3a3f49; /* monochrome secondary */
+  /* The Lumen Line signature — monochrome chrome with a faint icy terminus (data life) */
+  --lum-lumen-line:linear-gradient(90deg,#1b1d23,#8a8f98 58%,rgba(79,196,232,.55));
+
+  /* ---- Icy luminous detail: DATA VIZ + STATUS ONLY (never chrome fill) ---- */
+  --lum-c-icy-100:#E4F8FF; --lum-c-icy-200:#C4F0FF; --lum-c-icy-300:#9BE7FF;
+  --lum-c-icy-400:#8BE7FF; --lum-c-icy-500:#4FC4E8; --lum-c-icy-600:#2C9DBF;
+  --lum-c-pearl:#F2F3F5; /* silver pearl */
+  --lum-c-paper:#ECEDEF; /* silver mist white */
+  --lum-icy-grad:linear-gradient(135deg,#D8F4FF 0%,#8BE7FF 55%,#6FD6F2 100%);
+  --lum-edge-hi:inset 0 1px 0 rgba(255,255,255,.82); /* top specular catch-light */
+  --lum-ring-icy:0 0 0 3px rgba(28,30,38,.14);
+  --lum-grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+
+  /* ---- Semantic (authority §10.1 exact) ---- */
+  --lum-c-success:#16835D; --lum-c-success-bg:#e3f2ec;
+  --lum-c-warning:#A86300; --lum-c-warning-bg:#f8ecd8;
+  --lum-c-danger: #C33F4A; --lum-c-danger-bg:#f9e6e8;
+  --lum-c-info:   #2E64C7; --lum-c-info-bg:#e6eefb;
+  --lum-c-neutral:#6D778A;--lum-c-neutral-bg:#eceff4; /* authority unknown */
+
+  /* risk levels (derived, anchored to canonical semantic) */
+  --lum-c-risk-low:#16835D; --lum-c-risk-med:#A86300; --lum-c-risk-high:#d2691e; --lum-c-risk-crit:#C33F4A;
+
+  /* ---- Light theme surfaces — BLACK-SILVER: silver-mist canvas, ink text, pearl-chrome surfaces ---- */
+  --lum-bg:            #ECEDEF; /* silver mist canvas */
+  --lum-bg-ambient-1:  #E3E6EA; /* cool silver wash */
+  --lum-bg-ambient-2:  #DDE0E5; /* graphite mist wash */
+  --lum-surface:       rgba(250,250,251,.86);
+  --lum-surface-solid:#FAFAFB; /* pearl-silver surface */
+  --lum-surface-subtle:#F1F2F4;
+  --lum-surface-raised:#FFFFFF;
+  --lum-surface-2:     rgba(250,250,251,.66);
+  --lum-surface-sunken:#E5E7EA;
+  --lum-text:          #16181D; /* near-black ink */
+  --lum-text-2:        #545963;
+  --lum-text-3:        #888D96;
+  --lum-text-invert:   #ffffff; /* text ON a black-chrome primary */
+  --lum-line:          rgba(20,22,28,.10);
+  --lum-line-solid:    #DCDFE3; /* silver hairline */
+  --lum-line-strong:   #CED2D7;
+  --lum-shadow-color:  18,20,28;
+
+  /* ---- Typography (authority §9.1 exact runtime stack + type scale) ---- */
+  --lum-font-sans: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --lum-font-mono: ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  /* v2.4 signature: editorial serif display (literary whitespace) over sans body.
+     CJK Songti for 中文大标题, Georgia/Times for latin — the "序" editorial voice. */
+  --lum-font-display:"Songti SC","STSong","Noto Serif SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
+  /* v2.4 Editorial display: literary serif for headings & hero numerals only
+     (local system serif, zero third-party runtime). Body stays sans. */
+  --lum-font-display: ui-serif,Georgia,"Times New Roman","Songti SC","STSong","STZhongsong","SimSun","Noto Serif SC","Source Han Serif SC",serif;
+  /* Fluid type scale — adapts to device viewport (360 phone → 1440+ desktop).
+     Body near-constant for legibility; display scales (Apple/Linear discipline). */
+  --lum-fs-2xs:clamp(11px,.05vw + 10.8px,11.5px);
+  --lum-fs-xs:clamp(12px,.05vw + 11.8px,12.5px);
+  --lum-fs-sm:clamp(13px,.05vw + 12.8px,13.5px);
+  --lum-fs-md:clamp(14px,.05vw + 13.8px,14.5px);
+  --lum-fs-lg:clamp(15px,.14vw + 14.5px,16.5px);
+  --lum-fs-xl:clamp(16px,.28vw + 15px,19px);
+  --lum-fs-2xl:clamp(19px,.46vw + 17.3px,24px);
+  --lum-fs-3xl:clamp(23px,.65vw + 20.7px,30px);
+  --lum-fs-4xl:clamp(28px,.93vw + 24.7px,38px);
+  --lum-fs-5xl:clamp(32px,1.48vw + 26.7px,48px);
+  /* canonical type scale: size / line-height / weight */
+  --lum-type-display:40px/48px 650; --lum-type-h1:28px/36px 650; --lum-type-h2:22px/30px 650;
+  --lum-type-h3:18px/26px 600; --lum-type-bodyl:16px/24px 400; --lum-type-body:14px/22px 400;
+  --lum-type-dense:13px/20px 450; --lum-type-label:12px/18px 600; --lum-type-caption:11px/16px 450; --lum-type-kpi:32px/38px 650;
+  --lum-lh-tight:1.14; --lum-lh-snug:1.32; --lum-lh-normal:1.55;
+  --lum-fw-reg:400; --lum-fw-med:450; --lum-fw-sb:600; --lum-fw-bold:650;
+  --lum-tr: 0; /* numeric tabular via font-feature-settings */
+  /* editorial tracking + fluid page architecture (device-adaptive) */
+  --lum-track-display:-.022em; --lum-track-tight:-.012em; --lum-track-eyebrow:.22em;
+  --lum-page-pad:clamp(16px,2.1vw + 9px,40px);
+  --lum-gap:clamp(14px,1.3vw + 10px,30px);
+  --lum-rail-w:clamp(208px,15.4vw,248px);
+
+  /* ---- Spacing scale (4px base) ---- */
+  --lum-sp-1:4px; --lum-sp-2:8px; --lum-sp-3:12px; --lum-sp-4:16px; --lum-sp-5:20px;
+  --lum-sp-6:24px; --lum-sp-8:32px; --lum-sp-10:40px; --lum-sp-12:48px; --lum-sp-16:64px;
+
+  /* ---- Radius ---- */
+  --lum-r-xs:3px; --lum-r-sm:6px; --lum-r-md:10px; --lum-r-lg:14px; --lum-r-xl:18px; --lum-r-pill:999px;
+
+  /* ---- Elevation (soft warm, layered; top catch-light for material feel) ---- */
+  --lum-sh-flat: inset 0 1px 0 rgba(255,255,255,.7),0 1px 1px rgba(18,20,28,.04);
+  --lum-sh-1: var(--lum-edge-hi),0 1px 2px rgba(18,20,28,.06),0 1px 2px rgba(18,20,28,.04);
+  --lum-sh-2: var(--lum-edge-hi),0 2px 8px rgba(18,20,28,.06),0 14px 34px rgba(18,20,28,.10);
+  --lum-sh-3: var(--lum-edge-hi),0 8px 20px rgba(18,20,28,.10),0 26px 56px rgba(18,20,28,.16);
+  --lum-sh-float: 0 12px 38px rgba(10,12,18,.20),0 2px 10px rgba(10,12,18,.10),inset 0 1px 0 rgba(255,255,255,.6);
+
+  /* ---- Glass (Tier B soft glass default; Optical V1 only on OPT-01..04) ---- */
+  --lum-glass-blur:20px;
+  --lum-glass-saturate:1.4;
+  --lum-glass-bg: rgba(252,252,253,.62);
+  --lum-glass-line: rgba(255,255,255,.78);
+  --lum-glass-sh: inset 0 1px 0 rgba(255,255,255,.85),inset 0 0 0 1px rgba(20,22,28,.06),0 12px 34px rgba(14,16,22,.12);
+
+  /* ---- Optical V1 controlled parameters (only 7 exposed, per supplement sec9) ---- */
+  --lum-opt-refraction:.10; --lum-opt-aberration:.12; --lum-opt-edge-width:1.2px;
+  --lum-opt-fresnel:.22; --lum-opt-specular:.28; --lum-opt-blur:.18; --lum-opt-opacity:.9;
+
+  /* ---- Motion (meaningful, interruptible) ---- */
+  --lum-dur-instant:120ms; --lum-dur-fast:200ms; --lum-dur-base:320ms; --lum-dur-slow:480ms; --lum-dur-morph:520ms;
+  --lum-ease-standard:cubic-bezier(.2,.7,.2,1);
+  --lum-ease-emphasized:cubic-bezier(.2,0,0,1);
+  --lum-ease-exit:cubic-bezier(.4,0,1,1);
+  --lum-ease-spring:cubic-bezier(.34,1.4,.5,1);
+
+  /* ---- Layout ---- */
+  --lum-rail-w:248px; --lum-rail-w-collapsed:68px; --lum-context-w:320px;
+  --lum-topbar-h:60px; --lum-dock-h:72px;
+  --lum-content-max:1560px;
+  --lum-z-rail:40; --lum-z-topbar:45; --lum-z-context:42; --lum-z-dock:50;
+  --lum-z-sticky:60; --lum-z-drawer:80; --lum-z-modal:90; --lum-z-toast:100;
+
+  /* v2.4 signature material — the Lumen Axis (序轴) & Strata (境层) */
+  --lum-axis:linear-gradient(180deg,var(--lum-c-brand-500),var(--lum-c-slate-400) 70%,transparent);
+  --lum-strata:rgba(20,22,28,.028);            /* faint baseline grid, light */
+  --lum-node:var(--lum-c-brand-500);
+  --lum-editorial-gap:clamp(22px,2vw + 14px,44px);  /* literary whitespace between strata */
+}
+.lum-app[data-theme="dark"]{
+  --lum-strata:rgba(255,255,255,.032);
+}
+
+/* ---- Dark theme (authority §10.1 exact anchors) ---- */
+.lum-app[data-theme="dark"] {
+  /* WHITE-SILVER on near-black: primary action is silver-white chrome (inverse of light's black) */
+  --lum-bg:#07080A; --lum-bg-ambient-1:#10131A; --lum-bg-ambient-2:#0E1016;
+  --lum-surface: rgba(18,19,23,.80); --lum-surface-solid:#121318; --lum-surface-2:rgba(18,19,23,.58);
+  --lum-surface-subtle:#181A20; --lum-surface-raised:#1F2128; --lum-surface-sunken:#0A0B0E;
+  --lum-text:#F1F2F4; --lum-text-2:#AEB3BD; --lum-text-3:#7E848F; --lum-text-invert:#0E0F12; /* dark text ON silver */
+  --lum-line: rgba(255,255,255,.09); --lum-line-solid:#262930; --lum-line-strong:#33373F;
+  --lum-shadow-color: 0,0,0;
+  --lum-edge-hi:inset 0 1px 0 rgba(255,255,255,.08);
+  --lum-sh-flat: inset 0 1px 0 rgba(255,255,255,.05),0 1px 1px rgba(0,0,0,.35);
+  /* silver ramp + white-silver primary */
+  --lum-c-brand-50:#1a1c21; --lum-c-brand-100:#20232a; --lum-c-brand-200:#2b2f37; --lum-c-brand-300:#4a4e57;
+  --lum-c-brand-400:#9aa0aa; --lum-c-brand-500:#E9EBEF; --lum-c-brand-600:#FFFFFF; --lum-c-brand-700:#FFFFFF;
+  --lum-c-brand-grad:linear-gradient(135deg,#FFFFFF 0%,#D7DAE0 48%,#A9AFB9 100%); /* white-silver chrome */
+  --lum-metal-sheen:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 48%);
+  --lum-lumen-line:linear-gradient(90deg,#E9EBEF,#6b7079 58%,rgba(111,214,242,.5));
+  --lum-c-accent-secondary:#B9BEC7;
+  --lum-c-icy-400:#8BE7FF; --lum-c-icy-500:#6FD6F2;
+  --lum-ring-icy:0 0 0 3px rgba(233,235,239,.18);
+  --lum-c-success:#43C68B; --lum-c-warning:#F0B45B; --lum-c-danger:#FF7A85; --lum-c-info:#8FB4FF; --lum-c-neutral:#9BA1AB;
+  --lum-glass-bg: rgba(20,21,26,.60); --lum-glass-line: rgba(255,255,255,.10);
+  --lum-glass-sh: inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 0 1px rgba(255,255,255,.06),0 12px 34px rgba(0,0,0,.5);
+  --lum-c-success-bg:#10332a; --lum-c-warning-bg:#3a2a12; --lum-c-danger-bg:#3a1a19; --lum-c-info-bg:#122640;
+}
+
+/* ---- Optical performance state machine (supplement sec11) ----
+   OPTICAL_HIGH -> OPTICAL_STANDARD -> SOFT_GLASS -> OPAQUE; UI function 100% at every tier */
+.lum-app[data-optical="standard"] { --lum-opt-refraction:.06; --lum-opt-blur:.12; }
+.lum-app[data-optical="soft"]    { --lum-opt-refraction:0; --lum-opt-aberration:0; --lum-opt-fresnel:.10; }
+.lum-app[data-optical="opaque"]  { --lum-glass-bg:var(--lum-surface-solid); --lum-glass-blur:0; --lum-glass-saturate:1; --lum-opt-fresnel:0; --lum-opt-specular:0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lum-app { --lum-dur-instant:1ms; --lum-dur-fast:1ms; --lum-dur-base:1ms; --lum-dur-slow:1ms; --lum-dur-morph:1ms; }
+}
