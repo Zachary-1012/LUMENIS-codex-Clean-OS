@@ -50,12 +50,20 @@ READ CURRENT REPO → AUDIT CURRENT TRUTH → CLASSIFY GAPS
 → UPDATE STATUS → RE-AUDIT
 ```
 
-强制读取：
+### Codex / Agent 接手读取顺序
 
-- 当前 `README.md`
-- 当前 `AGENTS.md`
-- `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
-- 当前 Governance / Architecture / Audit / Runtime / Test / Evidence
+以下顺序用于**快速恢复当前上下文并进入真实生产收敛**，不是新的 Production Truth。任何文档与当前可验证的 Source / Runtime / Data / Permission / Evidence / Test 发生冲突时，以当前真实证据为准，不得用设计文档或历史交接快照覆盖生产事实。
+
+1. 当前 [`README.md`](README.md) —— 产品总入口、当前阶段、产品/领域边界与生产原则。
+2. 当前 [`AGENTS.md`](AGENTS.md) —— 工程协作、审计、实现、测试、证据与收敛执行规则。
+3. [`LUMENIS Production Acceptance Master Checklist V1`](00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md) —— Production Gate 与最终完成标准。
+4. [`LUMENIS Experience Current Direction — READ FIRST`](00-GOVERNANCE/LUMENIS-EXPERIENCE-CURRENT-DIRECTION-READ-FIRST-20260911.md) —— 豆包 Experience → Codex Production Integration 的当前接手方向、Logo/启动动画与前后端责任边界。
+5. [`LUMENIS Experience Design Authority V2`](00-GOVERNANCE/LUMENIS-EXPERIENCE-DESIGN-AUTHORITY-V2-20260911.md) —— 当前最高 Experience Presentation / Interaction 设计权威；不得覆盖 Production Truth。
+6. [`LUMENIS Experience Research & Learning Asset V1`](00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md) —— UI/UX、Motion、Material、Brand、AI Interface 与可复用研究方法；Research / Learning ≠ Production Capability。
+7. [`LUMENIS Content Creation Learning Source Contract V1`](00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md) —— 将研究资产结构化提供给 Shared Content & Creation；Learning Source ≠ Production Truth ≠ automatic model training。
+8. 如继续既有后端 Production Closure，进入 [`CODEX_ZERO_DISCOVERY_READY_20260910`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/tree/handoff/codex-zero-discovery-ready-20260910/00-GOVERNANCE/handoff/CODEX_ZERO_DISCOVERY_READY_20260910) 交接目录，按 `execution/CODEX_ONE_PAGE_START.md → CODEX_RESUME_STATE.json → CURRENT_TRUTH_OVERRIDE_20260910.json → 当前 Ticket Pack` 读取；该分支是执行交接快照，必须先与当前 `main` / Source / Runtime / Test 做最小漂移核验。
+9. 豆包完整 Experience 包到仓后，再读取 `experience_v2/19_handoff/INTEGRATION_START_HERE.md`；**当前文件不存在时不得自行假设其内容或接口。**
+10. 最后只按当前任务范围读取真实 Source / Route / API / DB / Permission / Evidence / Runtime / Test，完成 Binding Adapter、相关回归、Critical E2E 与 Production Acceptance。
 
 除明确 P0 / P1 或最终收敛所需能力外，新功能默认进入 Backlog，不得打断收敛。
 
@@ -176,6 +184,8 @@ BMP 的正式产品名称不再使用 Z-Brand Monitoring Platform、Brand Intell
 ### 共享能力 / Content & Creation
 
 内容创作不是 BMP 专属能力，也不是 CTH 专属能力。**Content & Creation / 内容与创作能力**属于 Shared Capability Layer，可由 CTH、BMP 及未来 LUMENIS 产品调用。
+
+最新 Experience Research 的可复用研究方法已通过 [`LUMENIS Content Creation Learning Source Contract V1`](00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md) 进入内容创作学习源治理：内容生产可复用 Narrative / Copy / Visual / Motion / Campaign / Evaluation Pattern，但必须由真实 Brief / Context / Evidence 驱动，不得将研究参考、设计样例或历史成功稿当成业务事实，也不得自动训练或替换 Production AI。
 
 ### Agent Groups
 
@@ -326,6 +336,16 @@ AI / Agent 不得绕过生产权限直接修改 Production Truth。
 - UI/UX 使用序境自己的视觉与交互体系，不复制外部模板。
 - 页面、API、数据模型、Runtime 状态同步演进。
 
+### Experience V2 融合适配
+
+最新 Experience 更新是对本节的**增量权威补充**，不是重写 Production Truth：
+
+- [`Current Direction — READ FIRST`](00-GOVERNANCE/LUMENIS-EXPERIENCE-CURRENT-DIRECTION-READ-FIRST-20260911.md) 负责当前接手方向与豆包/Codex责任边界。
+- [`Experience Design Authority V2`](00-GOVERNANCE/LUMENIS-EXPERIENCE-DESIGN-AUTHORITY-V2-20260911.md) 负责新 Production Experience 的视觉、交互、动效、材质、品牌、三语与响应式权威。
+- [`Experience Research & Learning Asset V1`](00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md) 负责研究方法与可复用学习资产，不直接成为生产能力。
+- 豆包阶段现有 Production Backend / DB / Runtime / Permission / Evidence 保持 Read Only；新 Experience 隔离在 `experience_v2/**`，由 Codex 后续基于**当时最新真实后端**完成 ViewModel / API / Permission / Evidence / Runtime Binding 与 E2E。
+- 外部网站、GitHub 学习仓库、截图、视频、组件库和动效案例均为 `REFERENCE_ONLY`；只提炼原则，产品可见代码与资产保持 Original / Clean-room 实现。
+
 ## 7. 数据库与历史实现
 
 每张表必须明确：所有权、事实含义、读写者、生命周期、canonical ID、保留与迁移策略。
@@ -378,7 +398,17 @@ Source + Call Graph + Data / API + Frontend / Consumer
 
 最终收敛母清单：[`00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`](00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md)
 
+当前 Experience 接手入口：[`00-GOVERNANCE/LUMENIS-EXPERIENCE-CURRENT-DIRECTION-READ-FIRST-20260911.md`](00-GOVERNANCE/LUMENIS-EXPERIENCE-CURRENT-DIRECTION-READ-FIRST-20260911.md)
+
+当前 Experience 设计权威：[`00-GOVERNANCE/LUMENIS-EXPERIENCE-DESIGN-AUTHORITY-V2-20260911.md`](00-GOVERNANCE/LUMENIS-EXPERIENCE-DESIGN-AUTHORITY-V2-20260911.md)
+
+Research / Learning 母资产：[`00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md`](00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md)
+
+Content & Creation 学习源契约：[`00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md`](00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md)
+
 本 README 是当前产品总入口。产品名称、领域归属与跨仓协议以当前 Canonical Registry 及**四仓协议**为准；旧版本 README 叙述、过期架构、失效状态不再作为当前事实来源；历史细节只保留在具有明确版本意义的审计、变更与证据文档中。
+
+上述 Experience / Research / Content Learning 文档只在各自 Authority Boundary 内生效；任何设计、学习或交接内容都不得覆盖当前 Source / Runtime / Data / Permission / Evidence / Test 真值，也不得单独作为 Production Ready 证据。
 
 ## 12. 状态声明
 
