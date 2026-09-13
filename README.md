@@ -18,14 +18,18 @@ This repository contains the active production implementation, runtime, data con
 D:\LUMENIS_REBUILD
 ```
 
-远端唯一长期研发主线：
+唯一可写研发、集成与生产候选主线：
 
 ```text
 Zachary-1012/LUMENIS-codex-Clean-OS
 main
 ```
 
-Codex/工程师在当前机器开始工作时必须先从 `D:\LUMENIS_REBUILD` 验证本地 HEAD、working tree、unpushed commits 与 `origin/main`，保护本地已完成修复并完成 local→main 收敛；不得用 remote tree 覆盖尚未 push 的有效本地实现。
+Codex/工程师在当前机器开始工作时必须先从 `D:\LUMENIS_REBUILD` 验证本地 `main` HEAD、working tree、unpushed commits 与 `origin/main`，保护本地已完成修复并完成 local→main 收敛；不得用 remote tree 覆盖尚未 push 的有效本地实现。
+
+**禁止为日常研发创建 task/feature/codex/production/integration/handoff/research 分支；禁止把常规研发改为“开分支 → PR → 合 main”。工程工作直接在本地 `main` 完成、验证、提交并 push 到 `origin/main`。**
+
+**Do not create task/feature/codex/production/integration/handoff/research branches for normal engineering work. Do not turn routine development into a branch/PR/merge workflow. Work directly on local `main`, validate it, commit it and push it to `origin/main`.**
 
 Current takeover details: [`00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`](00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md)
 
@@ -202,23 +206,27 @@ This is orientation, not a claim that every root file is optimally placed. Do no
 
 ---
 
-## 6. 唯一主线 / Single-mainline policy
+## 6. 唯一本地工作区 + 唯一可写主线 / One workspace + one writable mainline
 
-**`main` 是唯一长期研发主线、唯一远端生产候选真相。**
+**当前 Windows 机器唯一有效本地工作区：`D:\LUMENIS_REBUILD`。**
 
-**`main` is the only long-lived development line and the only remote production-candidate truth.**
+**`main` 是唯一可写研发主线、唯一集成主线、唯一远端生产候选真相。**
 
-规则 / Rules:
+**On the current Windows workstation, `D:\LUMENIS_REBUILD` is the only active local workspace. `main` is the only writable development line, the only integration line and the only remote production-candidate truth.**
 
-- 任务支线只能短期存在，用于隔离一个明确工程任务；task branches are short-lived and scoped to one coherent change.
-- 有效实现、测试、规范和证据必须在完成后合入 `main`; valid implementation, tests, governance and evidence must converge back into `main`.
-- 不允许长期存在第二条 production/feature/integration 真相；no parallel long-lived production/feature/integration truth.
-- 分支名、旧 branch HEAD、handoff branch 不能作为当前功能完成证明；branch names and historical HEADs are not runtime proof.
-- 合并前必须比较内容与依赖，不得因为“分支存在”就无脑覆盖当前主线；compare content and dependency ownership before consolidation.
-- 已被 `main` 完整包含的旧分支应视为 retired；branches fully contained by `main` are retired, not development entrypoints.
-- 如果旧分支存在独有实现，先把仍有效的实现/测试/证据收回 `main`，再结束该分支；if a branch has unique work, salvage valid implementation/test/evidence into `main` before retirement.
+硬规则 / Hard rules:
 
-分支收敛审计见 / Branch-convergence audit: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md`（若存在 / when present）。
+- 不创建任务支线；do not create task branches.
+- 不创建 feature/codex/production/integration/handoff/research 分支；do not create feature/codex/production/integration/handoff/research branches.
+- 日常研发不通过 PR 中转；routine engineering does not use PRs as an intermediate workflow.
+- 所有正常研发直接发生在本地 `main`；normal engineering happens directly on local `main`.
+- 有效修改经 scoped/targeted test 后形成 coherent commit，并直接 push `origin/main`; validated changes are committed coherently and pushed directly to `origin/main`.
+- 历史 side branch 只作为只读证据；historical side branches are read-only evidence only.
+- 若历史 branch 含唯一有效实现，只允许一次性比较并把独有有效内容吸收进 `main`，随后继续只在 `main` 研发；if an old branch contains unique valid work, absorb it into `main` once and never resume side-branch development.
+- 不得 force-push `main`; never force-push `main`.
+- 分支名、旧 HEAD、handoff 不能作为当前功能完成证明；branch names, old HEADs and handoffs are not runtime proof.
+
+历史分支收敛资料 / Historical branch-convergence evidence: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md`（若存在 / when present）。
 
 ---
 
@@ -248,6 +256,12 @@ git rev-parse origin/main
 
 ```text
 Zachary-1012/LUMENIS-codex-Clean-OS
+```
+
+正确可写分支 / Expected writable branch:
+
+```text
+main
 ```
 
 未知本地修改在分类前不得丢弃。
@@ -355,7 +369,9 @@ External browser/login/source availability is reported separately from core appl
 ## 10. 开发流程 / Development workflow
 
 ```text
-Current Gate / Ticket
+D:\LUMENIS_REBUILD
+→ local main
+→ Current Gate / Ticket
 → Dependency Trace
 → Reuse Existing Owner
 → Implement
@@ -363,10 +379,13 @@ Current Gate / Ticket
 → Neighbour Regression
 → Runtime / E2E when required
 → Evidence
-→ Coherent Commit
-→ Merge to main
+→ Coherent Commit on main
+→ push origin main
+→ main CI when required
 → Next Gate
 ```
+
+**没有“开任务分支 → PR → Merge to main”的常规阶段。There is no routine `task branch → PR → merge to main` stage.**
 
 优先 `reuse → adapt → bind → verify`。不得为局部问题建立第二套 DB、Evidence、Metric、Permission、Runtime、Subject Context、Design System 或 API truth。
 
@@ -470,9 +489,12 @@ Do not use a green workflow, HTTP 200 or a rendered page as a substitute for Pro
 - [`00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`](00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md)
 - [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
 - [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
+
+历史分支收敛证据（仅回溯旧 ref 时读取）：
+
 - [`00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md`](00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md)
 
-当前 Windows 接续任务再读取：
+当前 Windows 接续任务在确有未决事实时再读取：
 
 - [`00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`](00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md)
 
