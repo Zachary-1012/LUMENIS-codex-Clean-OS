@@ -24,11 +24,20 @@ Documentation merged into `main` means the rule/plan exists; it does not mean th
 
 ## 2. Session start
 
-Do not assume a local absolute path.
+### Current workstation
 
-Start with only:
+On the current Windows production-development machine, the one canonical local workspace is:
 
 ```text
+D:\LUMENIS_REBUILD
+```
+
+This path is a workstation locator, not a portable runtime requirement. On another machine, resolve the repository root with Git.
+
+For the current workstation, start from that path and verify identity before doing any engineering work:
+
+```powershell
+Set-Location D:\LUMENIS_REBUILD
 git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
@@ -38,7 +47,47 @@ git fetch origin
 git rev-parse origin/main
 ```
 
+Expected remote:
+
+```text
+Zachary-1012/LUMENIS-codex-Clean-OS
+```
+
 Confirm local repository identity. Preserve unknown/uncommitted work until classified. Never reset/discard it merely to obtain a clean tree.
+
+### Local-to-main sync gate
+
+The current local workspace may contain valid production/test fixes newer than the remote tree. Before starting new product work:
+
+```text
+local HEAD + working tree + unpushed commits
+vs
+origin/main
+```
+
+must be compared by content, contracts and tests.
+
+If valid local work is ahead:
+
+```text
+preserve local work
+→ fetch latest main
+→ adapt/resolve semantic conflicts
+→ targeted regression
+→ required full regression
+→ coherent commit(s)
+→ converge into main
+```
+
+Do not overwrite verified local fixes with the remote tree. Do not claim local-only code is already on GitHub.
+
+Current point-in-time takeover evidence for this workstation is:
+
+```text
+00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md
+```
+
+Read it for the current production-convergence session; do not treat historical handoffs as active truth.
 
 ### Single-mainline rule
 
@@ -100,11 +149,11 @@ Always-use entrypoints:
 
 Conditional canonical docs:
 
+- current workstation takeover: `00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`
 - human maintainability / feature closure / E2E / release: `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`
 - Collector + Shared Capability closed loop: `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`
 - third-party/open-source dependency/replacement work: `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`
 - branch consolidation: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md` when present
-- point-in-time takeover evidence: `00-GOVERNANCE/handoff/` only when the current task actually depends on it
 - historical evidence: `99-ARCHIVE/` only when migration/history is relevant
 
 Task routing examples:
@@ -346,9 +395,28 @@ Environment/Production-Live tests may be separated from secret-free clean-checko
 
 ## 15. Startup / runtime
 
+On the current Windows workstation, start from:
+
+```text
+D:\LUMENIS_REBUILD
+```
+
 Use the existing production launcher/supervisor path unless current evidence proves it must change. Do not create a second launcher as a shortcut.
 
-Do not hardcode a developer-specific local repository path in new code.
+Canonical command:
+
+```powershell
+Set-Location D:\LUMENIS_REBUILD
+powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+```
+
+Expected core health endpoint:
+
+```text
+http://127.0.0.1:8201/healthz
+```
+
+Do not hardcode this workstation path into portable production code; the launcher resolves its own repository root.
 
 Startup acceptance requires more than a live process:
 
@@ -364,6 +432,8 @@ dependencies
 ```
 
 Report external browser/login/source dependencies separately from core application health.
+
+After the final regression is green and local work has converged into `main`, startup qualification is the next mandatory gate; do not continue repository-cleanup work instead.
 
 ## 16. Third-party / OSS
 
@@ -397,6 +467,8 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 ## 18. Git discipline
 
 - `main` is the only long-lived development line.
+- current workstation root is `D:\LUMENIS_REBUILD`; verify it before changing code.
+- valid local work must be converged into `main` before beginning a new production phase.
 - short-lived task branches must converge back into `main` when their valid work is complete.
 - do not leave a parallel implementation only on a branch.
 - preserve unknown local work before convergence.
@@ -439,7 +511,8 @@ Large code volume, long tests, context size or many files are not themselves blo
 Keep progress compact. Final reports should state evidence, not essays:
 
 ```text
-Branch / Start HEAD / Final HEAD
+Local root / Branch / Start HEAD / Final HEAD
+Local-to-main sync status
 Implemented / commits
 Canonical DB/config
 Tests actually run
