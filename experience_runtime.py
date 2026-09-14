@@ -622,7 +622,9 @@ def _build_ai01() -> Dict[str, Any]:
 
     head = {
         "type": "head", "state": STATE_READY, "eyebrow": "LUMENIS AI · INTENT WORKSPACE",
-        "title": "LUMENIS AI", "titleKey": "screen.AI-01",
+        # The AI-first product entry is a canonical product name, not the
+        # retired prototype label stored under screen.AI-01 in fixture data.
+        "title": "LUMENIS AI", "titleKey": None,
         "desc": "从一句任务出发，读取当前业务上下文与本地证据，形成可追溯的判断或受控任务；AI 是增强层，不拥有生产事实。",
         "actions": [
             {"label": "查看 AI Gateway", "variant": "secondary", "id": "go-AI-05", "cls": "NAVIGATION",
@@ -754,6 +756,117 @@ def screen_viewmodel(screen_id: str):
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": False, "screen": screen_id, "bound": True, "error": str(exc),
                         "trace": _tb.format_exc(limit=2)}), 500
+
+
+@experience_bp.route("/api/experience/shared-skills")
+def shared_skills_catalog():
+    """Read-only catalog for the single Shared Content & Creation surface."""
+    try:
+        from lumenis_shared_skills import list_shared_skills
+        return jsonify({
+            "ok": True,
+            "product": "LUMENIS",
+            "capability": "Shared Content & Creation",
+            "consumers": ["CTH", "BMP"],
+            "skills": list_shared_skills(),
+        })
+    except Exception as exc:  # pragma: no cover - defensive runtime boundary
+        return jsonify({"ok": False, "error": "shared skill catalog unavailable", "error_type": type(exc).__name__}), 503
+
+
+@experience_bp.route("/api/experience/shared-skills/<skill_id>/run", methods=["POST"])
+def run_shared_skill_route(skill_id: str):
+    """Execute a shared skill through the standard permission/evidence chain.
+
+    This surface intentionally accepts only read/analysis/suggestion actions.
+    Export, write, publish, commit and push remain outside the AI/Shared
+    surface and must use their own permissioned human-approved paths.
+    """
+    from lumenis_shared_skills import get_shared_skill, run_shared_skill, validate_input
+
+    spec = get_shared_skill(skill_id)
+    if not spec:
+        return jsonify({"ok": False, "status": "not_found", "error": "shared skill not found"}), 404
+    body = request.get_json(silent=True) or {}
+    action_value = str(body.get("action_type") or "ANALYZE").upper()
+    if action_value not in {"READ", "ANALYZE", "SUGGEST"}:
+        return jsonify({
+            "ok": False, "status": "denied", "code": "SHARED_ACTION_NOT_ALLOWED",
+            "reason": "Shared Content & Creation 只允许 READ/ANALYZE/SUGGEST；写入、发布和推送必须走人工审批链。",
+        }), 403
+    task = str(body.get("task") or "").strip()[:4000]
+    payload = body.get("input") if isinstance(body.get("input"), dict) else {}
+    invalid = validate_input(payload)
+    if invalid:
+        return jsonify({"ok": False, "status": "denied", **invalid}), 403
+    # The product lens travels as context; the shared skill never becomes a
+    # fourth product line and never changes ownership of CTH/BMP facts.  The
+    # browser uses product-facing labels (CTH/BMP), while the existing
+    # execution firewall contract uses canonical scopes (cth/zbmp).  Normalize
+    # at this boundary instead of weakening the firewall or leaking a second
+    # domain vocabulary into the execution chain.
+    raw_domain = str(body.get("domain") or payload.get("domain") or "CTH").strip().upper()
+    domain_id = {"CTH": "cth", "BMP": "zbmp", "ZBMP": "zbmp", "SYSTEM": "system"}.get(raw_domain)
+    if not domain_id:
+        return jsonify({
+            "ok": False,
+            "status": "denied",
+            "code": "DOMAIN_NOT_ALLOWED",
+            "reason": "共享能力只接受 CTH/BMP 产品领域（内部映射为 cth/zbmp）。",
+        }), 400
+    payload = dict(payload)
+    payload["domain"] = domain_id
+    payload["product"] = "LUMENIS"
+
+    from skill_execution_chain import ActionType, SkillRuntimeInfo, run_execution_chain
+
+    try:
+        action_type = ActionType(action_value)
+        runtime_info = SkillRuntimeInfo(
+            skill_id=skill_id,
+            name=spec["name"],
+            description=spec["description"],
+            product="SHARED",
+            domain="content",
+            version=spec["metadata"]["version"],
+            enabled=True,
+            source="lumenis_shared_skills",
+            cross_domain_allowed=["CTH", "BMP"],
+        )
+        ctx = run_execution_chain(
+            skill_id=skill_id,
+            task=task,
+            input_payload=payload,
+            action_type=action_type,
+            user_role="user",
+            product="LUMENIS",
+            domain=domain_id,
+            skill_info=runtime_info,
+            handler=lambda execution_ctx: run_shared_skill(
+                skill_id, task=execution_ctx.task, input_payload=execution_ctx.input_payload
+            ),
+        )
+        execute_result = ctx.execute_result or {}
+        return jsonify({
+            "ok": ctx.status.value == "completed",
+            "status": ctx.status.value,
+            "skill_id": skill_id,
+            "execution_id": ctx.execution_id,
+            "result": execute_result.get("result"),
+            "error": ctx.error or execute_result.get("error"),
+            "permission": ctx.permission_result,
+            "firewall": ctx.firewall_result,
+            "effect_fence": ctx.effect_fence_result,
+            "evidence": ctx.evidence,
+            "evidence_recorded": bool(getattr(ctx, "evidence_record", {}).get("ok", False)),
+            "evaluation": ctx.evaluation,
+            "ai_is_derivative": True,
+            "external_fetch": False,
+        }), 200
+    except ValueError as exc:
+        return jsonify({"ok": False, "status": "denied", "error": str(exc)}), 400
+    except Exception as exc:  # noqa: BLE001 - API boundary must remain honest
+        return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 500
 
 
 @experience_bp.route("/api/experience/content/evidence/<evidence_id>")

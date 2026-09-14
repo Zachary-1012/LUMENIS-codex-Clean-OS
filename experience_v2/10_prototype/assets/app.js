@@ -62,7 +62,8 @@
     if (shellEl) shellEl.setAttribute('data-chrome', sc.chrome === 'none' ? 'none' : 'full');
     global.LumShell.setActiveRoute(id);
     global.LumShell.setContext(contextPanelFor(sc));
-    const crumb = $('#lum-crumb-page'); if (crumb) crumb.textContent = global.LumI18n.t(sc.titleKey) || sc.title;
+    const crumb = $('#lum-crumb-page');
+    if (crumb) crumb.textContent = id === 'AI-01' ? 'LUMENIS AI' : (global.LumI18n.t(sc.titleKey) || sc.title);
     global.LumI18n.bind(page);
     global.LumUI.init(page);
     global.LumUI.bindActions(page, sc.actionHandlers || {});

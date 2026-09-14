@@ -203,7 +203,7 @@ SHARED_SKILL_CATALOG: List[Dict[str, Any]] = [
         research_basis=_LOCAL_RESEARCH + ["content_generation.py", "用户提供：huashu-skills 规格"],
         bindings=[
             {"module": "content_generation.py", "functions": ["get_module_status", "generate_content"]},
-            {"module": "content_evaluation.py", "functions": ["evaluate_content"]},
+            {"module": "content_generation.py", "functions": ["evaluate_content"]},
         ],
     ),
     _metadata(
@@ -271,6 +271,8 @@ def _binding_state(spec: Mapping[str, Any]) -> Dict[str, Any]:
     results = []
     available = True
     for binding in spec.get("bindings", []):
+        missing: List[str] = []
+        exc_name = ""
         module_name = str(binding.get("module", ""))
         if module_name.endswith(".py"):
             module_name = module_name[:-3].replace("/", ".")
@@ -291,7 +293,7 @@ def _binding_state(spec: Mapping[str, Any]) -> Dict[str, Any]:
         row = {"module": str(binding.get("module")), "available": ok, "functions": binding.get("functions", [])}
         if missing:
             row["missing"] = missing
-        if not ok and "exc_name" in locals():
+        if not ok and exc_name:
             row["error_type"] = exc_name
         results.append(row)
         available = available and ok
@@ -579,4 +581,3 @@ def _bounded_int(value: Any, default: int, maximum: int) -> int:
         return max(1, min(int(value), maximum))
     except (TypeError, ValueError):
         return default
-

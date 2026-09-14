@@ -35,6 +35,7 @@
   function linkHTML(it) {
     const i18n = it.labelKey ? `data-i18n="${it.labelKey}"` : '';
     return `<a class="lum-nav-item" data-route="${it.id}" href="#/${it.id}" aria-current="false">
+      <span class="lum-nav-item__mark" aria-hidden="true">${icon(it.icon || 'arrow-right', 15)}</span>
       <span class="lbl" ${i18n}>${it.label || ''}</span>${it.count ? `<span class="cnt">${it.count}</span>` : ''}</a>`;
   }
 
@@ -51,11 +52,13 @@
     const bmp = groupByKey('bmp');
     const system = groupByKey('system');
     const shared = groupByKey('shared');
-    const ai = groupByKey('ai');
     const aiEntry = { id: 'AI-01', label: 'LUMENIS AI', labelKey: null, icon: 'orb' };
     const aiChat = { id: 'AI-01', label: 'AI 对话', labelKey: null, icon: 'orb' };
     const studio = { id: 'SH-01', label: '内容制作 · Content Studio', labelKey: null, icon: 'content' };
     const sharedSupport = (shared.items || []).filter(it => it.id !== 'SH-01');
+    const settingsItems = (system.items || []).concat(sharedSupport.map(it => ({
+      ...it, label: `资产 · ${it.label || it.id}`,
+    })));
     return `<a class="lum-rail__brand" data-route="AI-01" href="#/AI-01" aria-label="LUMENIS AI">
         <span data-lum-brand="standard" class="lum-brand--sm"></span>
         <span id="lum-domain-label" class="lum-rail__domain">LUMENIS AI · 序境</span>
@@ -65,11 +68,7 @@
       </a>
       ${navGroupHTML('cth', '商业运营', (cth.items || []).concat([aiChat, studio]), 'navgroup.cth', 'lum-nav-group--product lum-nav-group--cth')}
       ${navGroupHTML('bmp', '品牌市场', (bmp.items || []).concat([aiChat, studio]), 'navgroup.bmp', 'lum-nav-group--product lum-nav-group--bmp')}
-      ${navGroupHTML('settings', 'Settings · 设置', system.items || [], null, 'lum-nav-group--settings')}
-      <div class="lum-nav-subgroup" data-shared-support>
-        <span class="lum-nav-subgroup__label">Shared Capability · 数据与资产</span>
-        ${(sharedSupport || []).map(linkHTML).join('')}
-      </div>`;
+      ${navGroupHTML('settings', 'Settings · 设置', settingsItems, null, 'lum-nav-group--settings')}`;
   }
   function dockHTML() {
     // Bottom dock: primary destinations + central AI FAB

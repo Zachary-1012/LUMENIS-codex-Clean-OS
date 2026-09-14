@@ -17,12 +17,18 @@
 
 /* ---------- Compact rail (the catalog field) ---------- */
 .lum-rail{grid-area:rail;display:flex;flex-direction:column;gap:2px;padding:18px 14px 14px;
-  background:transparent;border-right:1px solid var(--lum-line);z-index:var(--lum-z-rail);overflow:hidden}
+  background:transparent;border-right:1px solid var(--lum-line);z-index:var(--lum-z-rail);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
 /* brand lockup — Lumen Mark + wordmark, domain line beneath */
-.lum-rail__brand{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:2px 10px 16px;min-height:var(--lum-topbar-h);box-sizing:border-box}
+.lum-rail__brand{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:2px 10px 16px;min-height:var(--lum-topbar-h);box-sizing:border-box;
+  text-decoration:none;color:inherit;cursor:pointer;flex:0 0 auto}
 .lum-rail__logo{display:none} /* the filled 序 tile is retired */
 .lum-rail__brand .lum-brand--sm{margin-top:2px}
 .lum-rail__domain{font-family:var(--lum-font-mono);font-size:9.5px;letter-spacing:.18em;color:var(--lum-text-3);padding-left:1px}
+.lum-nav-item--home{height:40px;margin:0 0 2px;padding:0 10px;border-top:1px solid var(--lum-line);border-bottom:1px solid var(--lum-line);
+  color:var(--lum-text);font-family:var(--lum-font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.lum-nav-item--home:hover{padding-left:14px;color:var(--lum-text)}
+.lum-nav-item--home[aria-current="page"]::after{height:18px}
+.lum-nav-home-mark{margin-left:auto;color:var(--lum-c-icy-600);font-size:15px;line-height:1}
 .lum-shell[data-rail="collapsed"] .lum-rail__brand .lum-brand__txt,.lum-shell[data-rail="collapsed"] .lum-rail__domain,.lum-shell[data-rail="collapsed"] .lum-nav-item span.lbl,
 .lum-shell[data-rail="collapsed"] .lum-nav-group__label,.lum-shell[data-rail="collapsed"] .lum-nav-group__chev{display:none}
 .lum-shell[data-rail="collapsed"] .lum-rail__brand .lum-brand--sm{gap:0}
@@ -45,6 +51,8 @@
   color:var(--lum-text-2);font-size:var(--lum-fs-sm);font-weight:var(--lum-fw-med);cursor:pointer;position:relative;
   transition:color var(--lum-dur-fast),padding-left var(--lum-dur-fast)}
 .lum-nav-item svg{display:none}
+.lum-nav-item__mark{display:none;flex:0 0 18px;width:18px;height:18px;place-items:center;color:var(--lum-text-3)}
+.lum-nav-item__mark svg{display:block;width:15px;height:15px}
 .lum-nav-item .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lum-nav-item::before{content:none} /* retired the node dot ("小方块") */
 .lum-nav-item:hover{color:var(--lum-text);padding-left:28px}
@@ -54,6 +62,16 @@
   border-radius:2px;background:var(--lum-c-brand-500)}
 .lum-app[data-theme="dark"] .lum-nav-item[aria-current="page"]::after{background:var(--lum-c-brand-500)}
 .lum-nav-item .cnt{margin-left:auto;font-family:var(--lum-font-mono);font-size:var(--lum-fs-2xs);color:var(--lum-text-3);font-variant-numeric:tabular-nums}
+.lum-nav-subgroup{display:flex;flex-direction:column;gap:0;margin:13px 0 4px;padding:12px 0 8px;border-top:1px solid var(--lum-line);position:relative;flex:0 0 auto}
+.lum-nav-subgroup__label{padding:0 10px 7px;color:var(--lum-text-3);font-family:var(--lum-font-mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lum-nav-group--settings{margin-top:8px;padding-top:5px;border-top:1px solid var(--lum-line)}
+.lum-nav-group--settings::before{display:none}
+.lum-shell[data-rail="collapsed"] .lum-nav-item{justify-content:center;padding:0;height:40px}
+.lum-shell[data-rail="collapsed"] .lum-nav-item:hover{padding-left:0}
+.lum-shell[data-rail="collapsed"] .lum-nav-item__mark{display:grid}
+.lum-shell[data-rail="collapsed"] .lum-nav-item--home{padding:0}
+.lum-shell[data-rail="collapsed"] .lum-nav-item--home .lum-nav-home-mark{margin:0}
+.lum-shell[data-rail="collapsed"] .lum-nav-item .cnt,.lum-shell[data-rail="collapsed"] .lum-nav-subgroup{display:none}
 
 /* ---------- Topbar ---------- */
 .lum-topbar{grid-area:topbar;display:flex;align-items:center;gap:14px;padding:0 var(--lum-sp-6);
@@ -219,3 +237,31 @@ html,body{overflow-x:hidden}
   .lum-qa-bar{bottom:80px;left:8px;right:8px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
 }
 @media (min-width:769px){ .lum-qa-bar{right:10px;left:auto} }
+
+/* ---------- shared capability field ----------
+   The six tools sit on the same axis as AI/Content Studio.  They are a
+   working instrument surface, not a fourth product menu or a decorative
+   bento wall. */
+.lum-shared-skill-field{min-width:0;padding:var(--lum-sp-5) 0 var(--lum-sp-2);border-top:1px solid var(--lum-line);border-bottom:1px solid var(--lum-line)}
+.lum-shared-skill-field__head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--lum-sp-5);min-width:0}
+.lum-shared-skill-field__head>div{min-width:0}
+.lum-shared-skill-palette{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin-top:var(--lum-sp-5);background:var(--lum-line);border:1px solid var(--lum-line);min-width:0}
+.lum-shared-skill{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;min-height:142px;padding:14px;background:var(--lum-surface-solid);border:0;text-align:left;cursor:pointer;transition:background var(--lum-dur-fast),color var(--lum-dur-fast)}
+.lum-shared-skill:hover{background:var(--lum-surface-raised);color:var(--lum-text)}
+.lum-shared-skill:focus-visible{outline-offset:-2px}
+.lum-shared-skill__top{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:0}
+.lum-shared-skill__name{font-size:var(--lum-fs-sm);font-weight:var(--lum-fw-sb);line-height:1.25;overflow-wrap:anywhere}
+.lum-shared-skill__tool{font-family:var(--lum-font-mono);font-size:9px;letter-spacing:.04em;color:var(--lum-text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.lum-shared-skill__desc{font-size:var(--lum-fs-xs);line-height:1.45;color:var(--lum-text-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lum-shared-skill__state{margin-top:auto;font-family:var(--lum-font-mono);font-size:9px;letter-spacing:.08em;color:var(--lum-c-icy-600);text-transform:uppercase}
+.lum-shared-skill__state[data-state="PARTIAL_LOCAL"]:before,.lum-shared-skill__state[data-state="BOUND_LOCAL_PARTIAL"]:before{content:"· ";color:var(--lum-c-warning)}
+.lum-shared-skill__state[data-state="UNBOUND"]{color:var(--lum-c-warning)}
+.lum-shared-skill-field__boundary{margin-top:12px;max-width:86ch}
+.lum-ai-turn{min-width:0;overflow-wrap:anywhere}
+.lum-ai-turn__status{padding:10px 12px;border-left:2px solid var(--lum-c-icy-500);background:var(--lum-surface-subtle);color:var(--lum-text-2);font-size:var(--lum-fs-sm);line-height:1.45}
+.lum-ai-turn__bubble{padding:12px;border-left:2px solid var(--lum-line-strong);background:var(--lum-surface-subtle);white-space:pre-wrap;font-size:var(--lum-fs-sm);line-height:1.55;color:var(--lum-text-2)}
+.lum-ai-turn__meta{margin-top:7px;color:var(--lum-text-3);font-family:var(--lum-font-mono);font-size:10px;line-height:1.4}
+.lum-shared-skill-result{margin-top:10px;padding:12px;border-left:2px solid var(--lum-c-brand-500);background:var(--lum-surface-subtle);min-width:0}
+.lum-shared-skill-result pre{max-height:280px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:11px/1.45 var(--lum-font-mono);color:var(--lum-text-2)}
+@media (max-width:1024px){.lum-shared-skill-palette{grid-template-columns:repeat(2,minmax(0,1fr))}.lum-shared-skill-field__head{flex-direction:column;gap:10px}}
+@media (max-width:560px){.lum-shared-skill-palette{grid-template-columns:1fr}.lum-shared-skill{min-height:118px}.lum-shared-skill-field{padding-top:var(--lum-sp-4)}}

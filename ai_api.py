@@ -285,9 +285,15 @@ def api_ai_chat():
     system='你是广州太古汇舆情监测系统的智能助手“诺米”。你拥有系统结构化检索能力。必须优先依据检索结果回答，不编造数据库事实；涉及舆情事实时明确区分“系统已监测”“用户描述”“待核验”。可以回答系统操作、品牌/业态、品牌官网、案例、公关回复、风险分析、报告、事件与架构问题。需要处置建议时使用：判断→依据→动作→责任方/时限→复盘指标。若没有足够数据，明确告诉用户缺什么，不要用常识冒充系统数据。'
     user=f'用户问题：{text}\n\n函数与数据检索结果：\n{context}\n\n当前统计：{json.dumps(stats,ensure_ascii=False,default=str)[:5000]}\n\n{_canonical_str}'
     if history_text: user += '\n\n最近对话：\n' + '\n'.join(history_text)
+    status=intelligence.ai_status()
+    # Explicitly stay local/rule when no model is actually ready.  This keeps
+    # a missing Ollama model from falling through to an unrequested cloud call
+    # and preserves the user's local-first/no-waste boundary.
+    if not status.get('enabled'):
+        fallback='我已完成系统检索，但当前本机模型暂不可用，未发起站外模型调用。\n\n' + context
+        return jsonify({'ok':True,'reply':fallback,'provider':'local_rule','ai_status':status,'context':context})
     try: raw,provider=intelligence._chat(system,user,0.15,1800)
     except Exception as exc: raw,provider=None,'rule'; print('[Nomi] chat failed:',exc)
-    status=intelligence.ai_status()
     if raw: return jsonify({'ok':True,'reply':raw.strip(),'provider':provider,'ai_status':status,'context':context})
     fallback='我已完成系统检索，但当前可调用模型暂不可用。\n\n' + context
     return jsonify({'ok':True,'reply':fallback,'provider':'local_rule','ai_status':status,'context':context})

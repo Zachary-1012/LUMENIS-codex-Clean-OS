@@ -31,6 +31,7 @@ from experience_runtime import (  # noqa: E402
     days_labels_series,
     metric,
     section,
+    shared_skill_surface,
     today_str,
 )
 
@@ -1398,6 +1399,7 @@ def _build_sh01() -> Dict[str, Any]:
             {"label": "证据 ID", "key": "evidence_id"}, {"label": "内容类型", "key": "content_type"},
             {"label": "Provider", "key": "provider"}, {"label": "状态", "key": "status"},
             {"label": "时间", "key": "created_at"}], rows=rows),
+        shared_skill_surface("STUDIO"),
         section("note", state, kind="FACTUALITY-WALL",
                 text="Brief → Evidence → Draft → Human Approval；AI 只增强草稿，不拥有事实。"),
         section("raw", state,

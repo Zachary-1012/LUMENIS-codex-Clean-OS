@@ -150,7 +150,7 @@
     thread.appendChild(node);
   }
 
-  function wireComposer(root) {
+  function wireComposerLegacy(root) {
     const send = root.querySelector('[data-ai-send]');
     const box = root.querySelector('[data-ai-composer]');
     if (!send || send.dataset.wired) return;
@@ -193,6 +193,218 @@
     });
 
     // 引用证据 / 指定主体 / 时间范围：QUERY 类本地控制，不造假数据
+    ['[data-ai-ref]', '[data-ai-subject]', '[data-ai-window]'].forEach(sel => {
+      const b = root.querySelector(sel);
+      if (b && !b.dataset.wired) { b.dataset.wired = '1'; b.addEventListener('click', () => toast('该筛选为本地控制，待对应后端选择器接入', 'info')); }
+    });
+  }
+
+  // Conversational UI is deliberately separate from task execution.  The
+  // response is rendered with textContent so server/model text cannot inject
+  // markup into the product surface or expose hidden reasoning.
+  const chatHistory = [];
+
+  function subjectContext() {
+    return (global.LumShell && global.LumShell.SubjectContext.value) || {};
+  }
+
+  function threadNode(kind, text, meta) {
+    const thread = $('[data-ai-thread]');
+    if (!thread) return null;
+    const node = document.createElement('div');
+    node.className = 'lum-ai-turn';
+    const bubble = document.createElement('div');
+    bubble.className = kind === 'status' ? 'lum-ai-turn__status' : 'lum-ai-turn__bubble';
+    bubble.textContent = String(text || '');
+    node.appendChild(bubble);
+    if (meta) {
+      const line = document.createElement('div');
+      line.className = 'lum-ai-turn__meta';
+      line.textContent = String(meta);
+      node.appendChild(line);
+    }
+    thread.appendChild(node);
+    thread.scrollTop = thread.scrollHeight;
+    return node;
+  }
+
+  function resultHost(root) {
+    let host = root.querySelector('[data-shared-skill-results]');
+    if (!host) {
+      host = document.createElement('div');
+      host.setAttribute('data-shared-skill-results', '1');
+      host.className = 'lum-shared-skill-results';
+      const palette = root.querySelector('[data-shared-skill-palette]');
+      if (palette && palette.parentNode) palette.parentNode.appendChild(host);
+      else root.appendChild(host);
+    }
+    return host;
+  }
+
+  function appendSharedSkillResult(root, skill, data) {
+    const host = resultHost(root);
+    const item = document.createElement('article');
+    item.className = 'lum-shared-skill-result';
+    const heading = document.createElement('div');
+    heading.className = 'lum-row-between';
+    const name = document.createElement('b');
+    name.textContent = skill.name || skill.tool_name || skill.skill_id;
+    const state = document.createElement('span');
+    state.className = 'lum-chip'; state.textContent = data.status || 'unknown';
+    heading.append(name, state);
+    const meta = document.createElement('div');
+    meta.className = 'lum-caption lum-mono';
+    meta.textContent = [
+      data.execution_id ? `execution:${data.execution_id}` : '',
+      data.evidence_recorded ? 'Evidence:recorded' : 'Evidence:not-recorded',
+      'external_fetch:false',
+    ].filter(Boolean).join(' · ');
+    const pre = document.createElement('pre');
+    const raw = data.result === undefined ? (data.error || '没有返回结果') : JSON.stringify(data.result, null, 2);
+    pre.textContent = String(raw).slice(0, 7000);
+    item.append(heading, meta, pre);
+    host.prepend(item);
+  }
+
+  async function runSharedSkill(root, skill, task, input) {
+    const domain = subjectContext().domain || 'CTH';
+    const action = skill.execution_policy === 'READ_ONLY' ? 'ANALYZE' : 'SUGGEST';
+    const host = resultHost(root);
+    const pendingNode = document.createElement('div');
+    pendingNode.className = 'lum-ai-turn__status';
+    pendingNode.textContent = `${skill.tool_name || skill.name} · 读取本地证据并执行…`;
+    host.prepend(pendingNode);
+    try {
+      const resp = await fetch(`${API}/shared-skills/${encodeURIComponent(skill.skill_id)}/run`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          task: task || `查看 ${skill.name} 的本地可用能力`,
+          input: input || {}, action_type: action, domain,
+        }),
+      });
+      const data = await resp.json();
+      pendingNode.remove();
+      appendSharedSkillResult(root, skill, data);
+    } catch (err) {
+      pendingNode.textContent = `能力执行失败：${String(err.message || err)}`;
+    }
+  }
+
+  function sharedStateLabel(state) {
+    return ({
+      BOUND_LOCAL_READ: 'LOCAL · READ',
+      BOUND_LOCAL_DRAFT: 'LOCAL · DRAFT',
+      BOUND_LOCAL_PARTIAL: 'LOCAL · PARTIAL',
+      BOUND_LOCAL_WORKFLOW: 'LOCAL · WORKFLOW',
+      UNBOUND: 'UNBOUND',
+    }[state] || state || 'UNKNOWN');
+  }
+
+  async function mountSharedSkillPalette(root) {
+    if (!root || !['AI-01', 'SH-01'].includes(currentId)) return;
+    const host = root.querySelector('[data-shared-skill-palette]');
+    if (!host || host.dataset.wired) return;
+    host.dataset.wired = '1';
+    try {
+      const resp = await fetch(`${API}/shared-skills`, { headers: { Accept: 'application/json' } });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok || !Array.isArray(data.skills)) throw new Error(data.error || `HTTP ${resp.status}`);
+      host.replaceChildren();
+      const box = root.querySelector('[data-ai-composer]');
+      data.skills.forEach(skill => {
+        const card = document.createElement('article'); card.className = 'lum-shared-skill';
+        const top = document.createElement('div'); top.className = 'lum-shared-skill__top';
+        const name = document.createElement('span'); name.className = 'lum-shared-skill__name'; name.textContent = skill.name || skill.tool_name;
+        const state = document.createElement('span'); state.className = 'lum-shared-skill__state';
+        state.dataset.state = skill.implementation_state || 'UNKNOWN'; state.textContent = sharedStateLabel(skill.implementation_state);
+        top.append(name, state);
+        const tool = document.createElement('span'); tool.className = 'lum-shared-skill__tool'; tool.textContent = skill.tool_name || skill.skill_id;
+        const desc = document.createElement('span'); desc.className = 'lum-shared-skill__desc'; desc.textContent = skill.description || '';
+        const actions = document.createElement('div'); actions.className = 'lum-row'; actions.style.marginTop = 'auto'; actions.style.gap = '6px';
+        const select = document.createElement('button'); select.type = 'button'; select.className = 'lum-chip'; select.textContent = '装载';
+        select.addEventListener('click', () => {
+          if (box) { box.value = `使用 ${skill.tool_name || skill.name}：${skill.input_hint || ''}`.trim(); box.focus(); }
+          toast(`${skill.tool_name || skill.name} 已装载到当前上下文`, 'info');
+        });
+        const run = document.createElement('button'); run.type = 'button'; run.className = 'lum-chip'; run.textContent = '运行预览';
+        run.addEventListener('click', () => {
+          const task = box && box.value.trim() ? box.value.trim() : `查看 ${skill.name} 的本地可用能力`;
+          runSharedSkill(root, skill, task, { domain: subjectContext().domain || 'CTH' });
+        });
+        actions.append(select, run);
+        card.append(top, tool, desc, actions); host.appendChild(card);
+      });
+    } catch (err) {
+      host.textContent = `共享能力注册表暂不可用：${String(err.message || err)}`;
+    }
+  }
+
+  function wireComposer(root) {
+    const send = root.querySelector('[data-ai-send]');
+    const execute = root.querySelector('[data-ai-execute]');
+    const box = root.querySelector('[data-ai-composer]');
+    if (!send && !execute) return;
+    if (send && !send.dataset.wired) {
+      send.dataset.wired = '1';
+      send.addEventListener('click', async () => {
+        const task = (box && box.value || '').trim();
+        if (!task) { toast('请先输入任务', 'info'); box && box.focus(); return; }
+        const subj = subjectContext();
+        send.disabled = true;
+        threadNode('user', task, `${subj.domain || 'CTH'} · 当前上下文`);
+        try {
+          const resp = await fetch('/api/ai/chat', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ message: task, domain: subj.domain || 'CTH', product: 'LUMENIS', history: chatHistory.slice(-6) }),
+          });
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+          const reply = String(data.reply || '当前没有可展示的回答');
+          chatHistory.push({ role: 'user', content: task }, { role: 'assistant', content: reply });
+          threadNode('assistant', reply, `Provider: ${data.provider || 'unknown'} · AI 为派生层，不覆盖 Evidence/Canonical`);
+        } catch (err) {
+          threadNode('status', `对话暂不可用：${String(err.message || err)}`, '未改变生产数据');
+        } finally {
+          send.disabled = false;
+        }
+      });
+    }
+    if (execute && !execute.dataset.wired) {
+      execute.dataset.wired = '1';
+      execute.addEventListener('click', async () => {
+        const task = (box && box.value || '').trim();
+        if (!task) { toast('请先输入任务', 'info'); box && box.focus(); return; }
+        const subj = subjectContext();
+        execute.disabled = true;
+        threadNode('status', '任务请求已提交：等待权限门与执行链结果…');
+        try {
+          const resp = await fetch(`${API}/ai/intent`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ task, domain: subj.domain || 'CTH', product: 'LUMENIS', action_type: 'ANALYZE' }),
+          });
+          const data = await resp.json();
+          const detail = [
+            `任务状态：${data.status || (resp.ok ? 'unknown' : 'error')}`,
+            data.execution_id ? `execution:${data.execution_id}` : '',
+            data.evidence_recorded === true ? 'Evidence:recorded' : 'Evidence:待确认',
+            data.reason || data.error || '',
+          ].filter(Boolean).join(' · ');
+          threadNode('status', detail, '权限/Trace 结果可见；不展示私有思考链');
+        } catch (err) {
+          threadNode('status', `任务提交失败：${String(err.message || err)}`, '未改变生产数据');
+        } finally {
+          execute.disabled = false;
+        }
+      });
+    }
+    $$('[data-action^="intent-"]', root).forEach(btn => {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', () => {
+        const text = (currentId && intentMap[currentId] && intentMap[currentId][btn.dataset.action]) || '';
+        if (box && text) { box.value = text; box.focus(); }
+      });
+    });
     ['[data-ai-ref]', '[data-ai-subject]', '[data-ai-window]'].forEach(sel => {
       const b = root.querySelector(sel);
       if (b && !b.dataset.wired) { b.dataset.wired = '1'; b.addEventListener('click', () => toast('该筛选为本地控制，待对应后端选择器接入', 'info')); }
@@ -253,6 +465,7 @@
     init(root);                 // countup / tabs（对已水合真实数值生效）
     wireActions(root);
     wireComposer(root);
+    mountSharedSkillPalette(root);
   }
 
   /* ---------------- 事件接线 ---------------- */
