@@ -55,6 +55,13 @@
     }).join('')).join('')}</svg>`;
   }
 
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   /* ---------------- component renderers ---------------- */
   const R = {
     head(d) {
@@ -141,6 +148,41 @@
         ${d.title ? `<div class="lum-row-between" style="padding:14px 16px"><h2 class="lum-h4">${d.title}</h2>${d.action ? actionBtn(d.action) : ''}</div>` : ''}
         <table class="lum-table"><thead><tr>${d.columns.map(c => `<th class="${c.numeric ? 'lum-num' : ''}">${c.label}</th>`).join('')}</tr></thead>
         <tbody>${d.rows.map(row => `<tr>${d.columns.map((c, i) => `<td class="${c.numeric ? 'lum-num' : ''}">${cellFmt(c, row[c.key], row)}</td>`).join('')}</tr>`).join('')}</tbody></table></section>`;
+    },
+    platforms(d) {
+      const items = Array.isArray(d.items) ? d.items : [];
+      const options = items.map(p => `<option value="${esc(p.platform_id)}">${esc(p.platform)}</option>`).join('');
+      const rows = items.map(p => `
+        <tr data-platform-row="${esc(p.platform_id)}">
+          <td><b>${esc(p.platform)}</b></td>
+          <td><span class="lum-badge lum-badge-${esc(p.status_tone || 'neutral')}">${esc(p.status || '—')}</span></td>
+          <td>${esc(p.schedule || '—')}</td>
+          <td class="lum-mono">${esc(p.last_run || '—')}</td>
+          <td class="lum-num">${esc(p.counts || '—')}</td>
+          <td>${esc(p.evidence || '—')}</td>
+        </tr>`).join('');
+      return `<section class="lum-platform-surface" data-platform-surface data-reveal data-state-slot>
+        <div class="lum-platform-surface__head">
+          <div><span class="lum-eyebrow">CTH · Evidence Intake</span><h2 class="lum-h4">${esc(d.title || '平台情报 · 只读采集')}</h2>
+          <p class="lum-caption">${esc(d.description || '')}</p></div>
+          <span class="lum-chip lum-mono">${d.consumer === 'BMP' ? 'BMP · READ ONLY' : 'CTH · OWNER'}</span>
+        </div>
+        <div class="lum-platform-table-wrap"><table class="lum-table lum-platform-table" aria-label="平台只读采集状态">
+          <thead><tr><th>平台</th><th>状态</th><th>入口</th><th>最近运行</th><th class="lum-num">抓取 / 主体</th><th>证据</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" class="lum-caption">暂无平台状态</td></tr>'}</tbody>
+        </table></div>
+        <form class="lum-platform-form" data-platform-collection-form data-endpoint="${esc(d.endpoint || '')}">
+          <label class="lum-platform-form__field"><span class="lum-label">人工触发只读采集</span>
+            <select class="lum-select" data-platform-select aria-label="选择平台">${options}</select></label>
+          <label class="lum-platform-form__field lum-platform-form__keyword"><span class="lum-label">关键词</span>
+            <input class="lum-input" data-platform-keyword value="${esc(d.default_keyword || '')}" maxlength="120" aria-label="采集关键词"></label>
+          <label class="lum-platform-form__field lum-platform-form__limit"><span class="lum-label">数量</span>
+            <select class="lum-select" data-platform-limit aria-label="采集数量"><option value="5">5</option><option value="10">10</option><option value="20">20</option></select></label>
+          <button type="submit" class="lum-btn lum-btn-secondary" data-platform-collection-submit>读取并写入 Evidence</button>
+        </form>
+        <p class="lum-caption lum-platform-boundary" data-platform-collection-status aria-live="polite">${esc(d.consumer === 'BMP' ? 'BMP 只读消费 CTH 的同一条证据链。' : '人工触发 · 只读 · 不发布 · 不启动后台调度。')}</p>
+        <p class="lum-caption">大陆小红书保持暂停；其余平台不在本轮范围。审核后的发布动作仍由人完成，序境不会代发。</p>
+      </section>`;
     },
     chart(d) {
       const fn = d.kind === 'bar' ? barChart : d.kind === 'ring' ? ring : d.kind === 'heat' ? heat : lineChart;

@@ -130,6 +130,9 @@ def test_publish_request_is_traceable_and_never_external(artifact_client, monkey
     assert payload["status"] == "awaiting_approval"
     assert payload["approval_required"] is True
     assert payload["external_action"] == "not_executed"
+    assert payload["next_step"] == "human_manual_publish"
+    assert payload["human_controls_publish"] is True
+    assert payload["product_will_not_publish"] is True
     assert payload["account_policy"] == "XHS_RETINAUT"
     assert payload["task"]["status"] == "awaiting_approval"
 

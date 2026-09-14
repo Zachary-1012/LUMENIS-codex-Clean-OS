@@ -776,6 +776,73 @@ def shared_skills_catalog():
         return jsonify({"ok": False, "error": "shared skill catalog unavailable", "error_type": type(exc).__name__}), 503
 
 
+@experience_bp.route("/api/experience/cth/platform-collection")
+def cth_platform_collection_surface():
+    """Return the single CTH-owned, human-triggered secondary collection surface.
+
+    This endpoint is a local health/readiness read.  It does not start a
+    browser, call a platform, or expose credential paths.  BMP consumes the
+    same surface through its screen ViewModel rather than owning another
+    collector.
+    """
+    try:
+        from platform_adapters.secondary_collection import get_collection_surface
+        return jsonify(get_collection_surface())
+    except Exception as exc:  # pragma: no cover - defensive runtime boundary
+        return jsonify({
+            "ok": False,
+            "product": "LUMENIS",
+            "domain": "CTH",
+            "error": "platform collection surface unavailable",
+            "error_type": type(exc).__name__,
+        }), 503
+
+
+@experience_bp.route("/api/experience/cth/platform-collection/search", methods=["POST"])
+def cth_platform_collection_search():
+    """Run one explicit, read-only platform search after human confirmation.
+
+    The endpoint is intentionally separate from scheduler controls and from
+    AI task execution.  It can import Evidence/Canonical records, but it has
+    no external write or publish path.
+    """
+    body = request.get_json(silent=True) or {}
+    operator = str(body.get("operator") or "").strip().lower()
+    if operator not in {"human", "human_ui"}:
+        return jsonify({
+            "ok": False,
+            "status": "denied",
+            "code": "HUMAN_OPERATOR_REQUIRED",
+            "reason": "平台采集只能由人工从序境内触发。",
+            "read_only": True,
+            "external_write": False,
+        }), 403
+    if body.get("confirm_read_only") is not True:
+        return jsonify({
+            "ok": False,
+            "status": "input_required",
+            "code": "READ_ONLY_CONFIRMATION_REQUIRED",
+            "reason": "必须确认本次只读采集，不执行外部写入或发布。",
+        }), 400
+    platform = body.get("platform")
+    keyword = body.get("keyword")
+    max_results = body.get("max_results", 20)
+    try:
+        from platform_adapters.secondary_collection import collect_search
+        result = collect_search(platform, keyword, max_results=max_results, operator=operator)
+        http_status = 409 if result.get("status") in {"BUSY", "RATE_LIMITED"} else 200
+        return jsonify(result), http_status
+    except PermissionError as exc:
+        return jsonify({"ok": False, "status": "denied", "code": "HUMAN_OPERATOR_REQUIRED",
+                        "reason": str(exc), "read_only": True, "external_write": False}), 403
+    except ValueError as exc:
+        return jsonify({"ok": False, "status": "invalid_request", "error": str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({"ok": False, "status": "blocked", "error_type": type(exc).__name__}), 503
+    except Exception as exc:  # noqa: BLE001 - no adapter details at HTTP boundary
+        return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
+
+
 @experience_bp.route("/api/experience/shared-skills/shared.video_shotcraft/render", methods=["POST"])
 def render_shared_video_artifact():
     """Render explicitly supplied local assets into a staged video artifact.
@@ -1031,7 +1098,9 @@ def create_publish_approval_request():
             "account_policy": account_policy,
             "artifact": artifact,
             "task": task,
-            "next_step": "/api/ai/tasks/{task_id}/approve",
+            "next_step": "human_manual_publish",
+            "human_controls_publish": True,
+            "product_will_not_publish": True,
         }), 200
     except Exception as exc:  # noqa: BLE001 - do not expose DB details
         return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
@@ -1054,6 +1123,9 @@ def publish_approval_request_detail(task_id: str):
         "task": task,
         "approval_required": True,
         "external_action": "not_executed",
+        "next_step": "human_manual_publish",
+        "human_controls_publish": True,
+        "product_will_not_publish": True,
         "artifact_id": context.get("artifact_id"),
         "platform": context.get("platform"),
         "account_policy": context.get("account_policy"),

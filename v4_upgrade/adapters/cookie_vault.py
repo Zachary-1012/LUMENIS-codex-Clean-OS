@@ -23,14 +23,43 @@ import json
 import time
 import logging
 import calendar
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 _BASE = Path(__file__).resolve().parents[2]
-COOKIE_DIR = _BASE / "data" / "cookies"
-DATA_DIR = _BASE / "data"
+
+
+def _resolve_runtime_data_dir(root: str | None = None, environ=None) -> Path:
+    """Resolve the credential/data root used by the running instance.
+
+    Production credentials live beside the canonical runtime database, outside
+    the source checkout.  ``ZBC_DATA_DIR`` is authoritative; otherwise the
+    parent of ``ZBC_DB_PATH`` is used.  The repository ``data`` directory is
+    retained only as the development/test fallback.
+    """
+    env = os.environ if environ is None else environ
+    base = Path(root or _BASE).resolve()
+    configured = str(env.get("ZBC_DATA_DIR") or "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve()
+
+    db_path = str(env.get("ZBC_DB_PATH") or "").strip()
+    if db_path:
+        if db_path.startswith("sqlite:///"):
+            db_path = db_path[len("sqlite:///"):]
+        elif db_path.startswith("file:"):
+            db_path = db_path[len("file:"):].split("?", 1)[0]
+        parent = Path(db_path).expanduser().resolve().parent
+        if str(parent):
+            return parent
+    return (base / "data").resolve()
+
+
+DATA_DIR = _resolve_runtime_data_dir()
+COOKIE_DIR = DATA_DIR / "cookies"
 
 # 各平台主域名锚点
 PLATFORM_DOMAINS = {
@@ -58,6 +87,35 @@ PLATFORM_COOKIE_PATHS = {
     "x":           [COOKIE_DIR / "x.json"],
     "jiguang":     [COOKIE_DIR / "jiguang.json"],
 }
+
+
+def _current_data_dir() -> Path:
+    """Read the current process path contract without exposing credentials."""
+    return _resolve_runtime_data_dir()
+
+
+def _current_cookie_paths(platform: str) -> list[Path] | None:
+    """Build platform paths from the current runtime root.
+
+    The exported ``PLATFORM_COOKIE_PATHS`` remains a compatibility snapshot for
+    callers/tests.  Runtime reads use this function so a supervised process
+    that loads environment configuration after module import still follows the
+    canonical protected data directory.
+    """
+    data_dir = _current_data_dir()
+    cookie_dir = data_dir / "cookies"
+    paths = {
+        "douyin": [cookie_dir / "douyin.json"],
+        "xiaohongshu": [data_dir / "xhs_cookies.json", cookie_dir / "xiaohongshu.json"],
+        "xhs": [data_dir / "xhs_cookies.json", cookie_dir / "xiaohongshu.json"],
+        "instagram": [cookie_dir / "instagram.json"],
+        "weibo": [data_dir / "weibo_cookies.json", cookie_dir / "weibo.json"],
+        "bilibili": [data_dir / "bilibili_cookies.json", cookie_dir / "bilibili.json"],
+        "zhihu": [data_dir / "zhihu_cookies.json", cookie_dir / "zhihu.json"],
+        "x": [cookie_dir / "x.json"],
+        "jiguang": [cookie_dir / "jiguang.json"],
+    }
+    return paths.get(platform)
 
 # 各平台判定登录态有效的关键 cookie 名（有任一即视为 cookie 已注入）
 PLATFORM_AUTH_COOKIES = {
@@ -206,10 +264,10 @@ def parse_pasted(text: str, platform: str):
 # ============================================================
 def _resolve_path(platform: str) -> Path | None:
     """按优先级查找平台 cookie 文件，返回第一个存在的路径；都不存在返回 None。"""
-    paths = PLATFORM_COOKIE_PATHS.get(platform)
+    paths = _current_cookie_paths(platform)
     if not paths:
         # 未配置平台，回退到 data/cookies/<platform>.json
-        p = COOKIE_DIR / f"{platform}.json"
+        p = _current_data_dir() / "cookies" / f"{platform}.json"
         return p if p.exists() else None
     for p in paths:
         if p.exists():
@@ -219,8 +277,9 @@ def _resolve_path(platform: str) -> Path | None:
 
 def _path(platform):
     """默认写入路径（data/cookies/<platform>.json）。"""
-    COOKIE_DIR.mkdir(parents=True, exist_ok=True)
-    return COOKIE_DIR / f"{platform}.json"
+    cookie_dir = _current_data_dir() / "cookies"
+    cookie_dir.mkdir(parents=True, exist_ok=True)
+    return cookie_dir / f"{platform}.json"
 
 
 def save_cookies(platform: str, cookies: list):

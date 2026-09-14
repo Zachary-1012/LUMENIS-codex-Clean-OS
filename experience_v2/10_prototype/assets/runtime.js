@@ -460,10 +460,71 @@
     bindActions(root, handlers);
   }
 
+  /* ---------------- CTH secondary platform collection ---------------- */
+  function wirePlatformCollection(root) {
+    const forms = $$('[data-platform-collection-form]', root);
+    forms.forEach(form => {
+      if (form.dataset.wired) return;
+      form.dataset.wired = '1';
+      const select = form.querySelector('[data-platform-select]');
+      const keyword = form.querySelector('[data-platform-keyword]');
+      const limit = form.querySelector('[data-platform-limit]');
+      const submit = form.querySelector('[data-platform-collection-submit]');
+      const status = form.parentElement && form.parentElement.querySelector('[data-platform-collection-status]');
+      form.addEventListener('submit', async ev => {
+        ev.preventDefault();
+        const query = String(keyword && keyword.value || '').trim();
+        if (!query) {
+          if (status) status.textContent = '请先输入关键词；未发起外部请求。';
+          keyword && keyword.focus();
+          return;
+        }
+        if (submit) submit.disabled = true;
+        if (status) status.textContent = '正在由本地适配器执行只读采集；不执行外部写入…';
+        try {
+          const resp = await fetch(form.dataset.endpoint || `${API}/cth/platform-collection/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+              operator: 'human_ui',
+              confirm_read_only: true,
+              platform: select && select.value,
+              keyword: query,
+              max_results: Number(limit && limit.value || 5),
+            }),
+          });
+          const data = await resp.json();
+          if (data && data.ok) {
+            const count = `${data.imported || 0} 新增 / ${data.updated || 0} 更新`;
+            if (status) status.textContent = `${data.platform || ''}：${data.status || '已完成'} · ${count} · Evidence：${data.evidence_recorded ? '已记录' : '待确认'} · 产品不发布。`;
+            toast('只读采集完成，已回到 CTH Evidence 链路', 'success');
+          } else {
+            const reason = (data && (data.error || data.reason || data.status)) || `HTTP ${resp.status}`;
+            if (status) status.textContent = `本次未完成：${reason} · 未执行外部写入。`;
+            toast('平台采集未完成，未执行发布或外部写入', 'info');
+          }
+          // Reload the current screen ViewModel so the table reflects the
+          // just-recorded run without introducing a second client-side truth.
+          if (currentId) {
+            for (const key of Array.from(hydrated)) if (key.startsWith(currentId + '|')) hydrated.delete(key);
+            await hydrate(currentId);
+            wireRuntime(document);
+          }
+        } catch (err) {
+          if (status) status.textContent = `采集请求不可用：${String(err.message || err)} · 未改变外部平台。`;
+          toast('采集请求不可用，未改变外部平台', 'info');
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
+    });
+  }
+
   function wireRuntime(root) {
     if (!root) return;
     init(root);                 // countup / tabs（对已水合真实数值生效）
     wireActions(root);
+    wirePlatformCollection(root);
     wireComposer(root);
     mountSharedSkillPalette(root);
   }

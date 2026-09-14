@@ -313,3 +313,33 @@
 @media (prefers-reduced-motion:reduce){.lum-unbound-banner{transition:none;}}
 /* Text-valued KPI (status/name/date): same visual weight as numeric, no countup */
 .lum-metric__text{font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+
+/* CTH platform intelligence field: one responsive source table shared by CTH
+   and BMP.  The field can compress to a two-column form without requiring
+   browser zoom; the evidence table keeps horizontal scroll only for its
+   dense data columns on narrow screens. */
+.lum-platform-surface{width:100%;min-width:0;padding:var(--lum-sp-5);border:1px solid var(--lum-line);
+  border-radius:var(--lum-r-md);background:linear-gradient(135deg,var(--lum-surface-solid),var(--lum-surface-subtle));
+  display:flex;flex-direction:column;gap:var(--lum-sp-4);overflow:hidden}
+.lum-platform-surface__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;min-width:0}
+.lum-platform-surface__head>div{min-width:0}
+.lum-platform-surface__head .lum-caption{max-width:78ch;line-height:1.55;margin-top:6px}
+.lum-platform-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--lum-line);border-radius:var(--lum-r-sm);background:var(--lum-surface-solid)}
+.lum-platform-table{min-width:780px;border:0}
+.lum-platform-table tbody td{white-space:nowrap}
+.lum-platform-form{display:grid;grid-template-columns:minmax(150px,.85fr) minmax(220px,1.5fr) 90px auto;align-items:end;gap:12px;padding-top:2px}
+.lum-platform-form__field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lum-platform-form__keyword .lum-input{min-width:0}
+.lum-platform-form>[data-platform-collection-submit]{white-space:nowrap;min-height:38px}
+.lum-platform-boundary{padding:10px 12px;border-left:2px solid var(--lum-c-icy-500);background:color-mix(in srgb,var(--lum-c-icy-500) 7%,transparent)}
+@media (max-width:1100px){
+  .lum-platform-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 100px}
+  .lum-platform-form>[data-platform-collection-submit]{grid-column:1/-1;justify-self:start}
+}
+@media (max-width:680px){
+  .lum-platform-surface{padding:var(--lum-sp-4);gap:var(--lum-sp-3)}
+  .lum-platform-surface__head{flex-direction:column;gap:9px}
+  .lum-platform-form{grid-template-columns:1fr}
+  .lum-platform-form>[data-platform-collection-submit]{grid-column:auto;width:100%}
+  .lum-platform-table{min-width:700px}
+}

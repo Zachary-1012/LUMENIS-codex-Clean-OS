@@ -24,8 +24,10 @@ class InstagramAdapter(BasePlatformAdapter):
     enabled = False
     monitor_priority = "secondary"
 
-    # Cookie path resolved from this file: platform_adapters/ -> repo root -> data/cookies/
+    # Compatibility override for tests/diagnostics.  The default is resolved
+    # from the shared Cookie Vault at runtime, beside the canonical DB.
     COOKIE_PATH = Path(__file__).resolve().parents[1] / "data" / "cookies" / "instagram.json"
+    _DEFAULT_COOKIE_PATH = COOKIE_PATH
 
     def __init__(self, *, engine: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -190,13 +192,20 @@ class InstagramAdapter(BasePlatformAdapter):
 
         Does NOT start a browser or access the network.
         """
-        cookie_exists = self.COOKIE_PATH.is_file() and self.COOKIE_PATH.stat().st_size > 0
+        cookie_path = self.COOKIE_PATH
+        if cookie_path == self._DEFAULT_COOKIE_PATH:
+            try:
+                from v4_upgrade.adapters.cookie_vault import _resolve_path
+                cookie_path = _resolve_path("instagram") or cookie_path
+            except Exception:
+                pass
+        cookie_exists = cookie_path.is_file() and cookie_path.stat().st_size > 0
         proxy_configured = bool(self._proxy_configured())
 
         metadata = {
             "cookie_exists": cookie_exists,
             "proxy_configured": proxy_configured,
-            "cookie_path": str(self.COOKIE_PATH),
+            "cookie_path": str(cookie_path),
         }
 
         if cookie_exists and proxy_configured:

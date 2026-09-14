@@ -125,6 +125,93 @@ def _notes_table(title: str, notes: List[Dict[str, Any]], limit: int = 12,
                    columns=cols, rows=rows)
 
 
+def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
+    """Build the shared platform-intelligence surface for CTH and BMP.
+
+    CTH owns the collector and its Evidence/Canonical writes.  BMP receives
+    the same read-only view as a market-intelligence consumer; this helper
+    deliberately does not create a second BMP collector or truth table.
+    """
+    try:
+        from platform_adapters.secondary_collection import get_collection_surface
+
+        surface = _safe(get_collection_surface, default={})
+    except Exception:
+        surface = {}
+    if not isinstance(surface, dict) or not surface.get("ok"):
+        return section(
+            "platforms", STATE_OFFLINE,
+            title="平台情报 · 只读采集",
+            description="CTH 采集面当前不可读取；未展示平台样例数据。",
+            items=[],
+            consumer=consumer,
+            manual_only=True,
+            read_only=True,
+            product_will_not_publish=True,
+        )
+
+    status_labels = {
+        "READY": "待人工触发",
+        "SUCCESS": "最近成功",
+        "NO_NEW_DATA": "暂无新内容",
+        "SESSION_EXPIRED": "需更新登录态",
+        "NEED_VERIFY": "需人工验证",
+        "RISK_WARNING": "风险降频",
+        "BLOCKED": "已阻断",
+        "COLLECT_ERROR": "引擎异常",
+        "UNAVAILABLE": "未就绪",
+    }
+    tone = {
+        "READY": "info", "SUCCESS": "success", "NO_NEW_DATA": "neutral",
+        "SESSION_EXPIRED": "warning", "NEED_VERIFY": "warning",
+        "RISK_WARNING": "warning", "BLOCKED": "danger", "COLLECT_ERROR": "danger",
+        "UNAVAILABLE": "neutral",
+    }
+    rows: List[Dict[str, Any]] = []
+    for item in surface.get("platforms", []) if isinstance(surface.get("platforms"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "UNAVAILABLE").upper()
+        health = item.get("health") if isinstance(item.get("health"), dict) else {}
+        last = item.get("last_run") if isinstance(item.get("last_run"), dict) else {}
+        fetched = last.get("fetched")
+        accepted = last.get("accepted")
+        counts = "—" if not last else f"{fetched if fetched is not None else '—'} / {accepted if accepted is not None else '—'}"
+        last_at = (last.get("finished_at") or last.get("started_at") or "—") if last else "—"
+        rows.append({
+            "platform": item.get("name") or item.get("platform") or "—",
+            "platform_id": item.get("platform") or "",
+            "status": status_labels.get(status, status),
+            "status_tone": tone.get(status, "neutral"),
+            "schedule": "人工触发" if item.get("manual_collection_enabled") else "未开放",
+            "last_run": last_at,
+            "counts": counts,
+            "subject_matches": last.get("accepted") if last else None,
+            "evidence": "Evidence 链路" if last else "待首次运行",
+            "ready": bool(health.get("ready")),
+        })
+
+    return section(
+        "platforms", STATE_READY,
+        title="平台情报 · CTH 只读采集",
+        description=(
+            "抖音、微博、知乎、Instagram 由 CTH 统一采集；BMP 只读消费同一条 Evidence → Canonical 链。"
+            "每次操作均由人工触发，不启动后台调度，不执行外部写入或发布。"
+        ),
+        items=rows,
+        endpoint="/api/experience/cth/platform-collection/search",
+        source_endpoint="/api/experience/cth/platform-collection",
+        default_keyword="广州太古汇",
+        manual_only=True,
+        read_only=True,
+        external_write=False,
+        product_will_not_publish=True,
+        consumer=consumer,
+        paused_platforms=surface.get("paused_platforms", []),
+        out_of_scope_platforms=surface.get("out_of_scope_platforms", []),
+    )
+
+
 def _curated(v: Any) -> List[Dict[str, Any]]:
     """get_events_curated 返回 {'featured':[...],'generic_count','noise_count','total'}；取 featured 列表。"""
     if isinstance(v, dict):
@@ -233,8 +320,9 @@ def _build_cth03() -> Dict[str, Any]:
         metric("cth03.negative", "其中负面", value=n_neg, state=STATE_READY,
                icon="risk", source="database.get_negative_comments"),
     ]
+    platform_sec = _platform_collection_section(consumer="CTH")
     stream = _notes_table("实时记录流（真实）", recent if isinstance(recent, list) else [], 15)
-    sections = [_head("CTH-03"), section("kpis", STATE_READY, items=kpis), stream]
+    sections = [_head("CTH-03"), section("kpis", STATE_READY, items=kpis), platform_sec, stream]
     return _envelope("CTH-03", sections)
 
 
@@ -1210,7 +1298,8 @@ def _build_bmp03() -> Dict[str, Any]:
     else:
         note = section("note", STATE_READY, kind="SOURCE",
                        text="只读自 canonical 库 intelligence_assets；情报入库/评审属写入侧，走权限链。")
-    sections = [_head("BMP-03"), section("kpis", STATE_READY, items=kpis), tbl, note]
+    platform_sec = _platform_collection_section(consumer="BMP")
+    sections = [_head("BMP-03"), section("kpis", STATE_READY, items=kpis), tbl, platform_sec, note]
     return _envelope("BMP-03", sections, truth={"table_exists": table_exists, "total": total})
 
 

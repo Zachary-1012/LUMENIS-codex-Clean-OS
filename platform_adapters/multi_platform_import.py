@@ -86,6 +86,11 @@ def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str
             or raw.get("collected_at")
             or ""
         ),
+        # Provenance fields are transport metadata, not a subject decision.
+        # Keeping them on the canonical notes row lets CTH apply its existing
+        # subject rules without losing the human query that produced a record.
+        "source_keyword": raw.get("source_keyword") or raw.get("keyword") or "",
+        "matched_keywords": raw.get("matched_keywords") or raw.get("keyword") or "",
     }
 
     # 小红书 xsec_token 透传（signature_token 字段名因平台而异）

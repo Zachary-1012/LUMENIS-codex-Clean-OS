@@ -1,10 +1,11 @@
 """Platform capability configuration.
 
-Current production release keeps only the existing XHS collector active through the
-adapter boundary. Secondary platforms (douyin/instagram/bilibili/weibo/zhihu) have
-complete v4 engines (search/detail/comments/creator) and main-chain thin wrappers,
-but remain disabled by default pending cookie/proxy verification and E2E validation.
-Other platforms are event-monitoring extension points only.
+Current production release keeps the existing Hong Kong/International XHS path
+separate from the CTH secondary collection surface.  Douyin, Weibo, Zhihu and
+Instagram are now available for explicit, human-triggered, read-only search
+collection through the canonical adapter boundary.  Their scheduled/background
+collection remains disabled until an operating policy explicitly enables it.
+Other platforms are event-monitoring extension points only and remain disabled.
 """
 
 PLATFORM_CAPABILITIES = {
@@ -24,6 +25,9 @@ PLATFORM_CAPABILITIES = {
     "douyin": {
         "name": "抖音",
         "enabled": False,
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
+        "product_owner": "CTH",
         "priority": "secondary",
         "search": True,
         "detail": True,
@@ -49,6 +53,9 @@ PLATFORM_CAPABILITIES = {
     "weibo": {
         "name": "微博",
         "enabled": False,
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
+        "product_owner": "CTH",
         "priority": "secondary",
         "search": True,
         "detail": True,
@@ -62,6 +69,9 @@ PLATFORM_CAPABILITIES = {
     "zhihu": {
         "name": "知乎",
         "enabled": False,
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
+        "product_owner": "CTH",
         "priority": "secondary",
         "search": True,
         "detail": True,
@@ -74,6 +84,9 @@ PLATFORM_CAPABILITIES = {
     "instagram": {
         "name": "Instagram",
         "enabled": False,
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
+        "product_owner": "CTH",
         "priority": "secondary",
         "search": True,
         "detail": True,

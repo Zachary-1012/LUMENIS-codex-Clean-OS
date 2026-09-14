@@ -124,10 +124,20 @@ class DouyinAdapter(BasePlatformAdapter):
     def health_check(self, **kwargs: Any) -> CollectionResult:
         """检查抖音 cookie 与引擎可用性（不实际启动浏览器）。"""
         import os
-        cookie_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "data", "cookies", "douyin.json",
-        )
+        try:
+            from v4_upgrade.adapters.cookie_vault import _resolve_path
+            resolved = _resolve_path("douyin")
+            cookie_path = str(resolved) if resolved else os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "data", "cookies", "douyin.json",
+            )
+        except Exception:
+            cookie_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "data", "cookies", "douyin.json",
+            )
+        # Keep this filesystem check explicit and patchable for the existing
+        # unit contract; runtime path resolution itself belongs to Cookie Vault.
         cookie_exists = os.path.exists(cookie_path)
         try:
             backend = self._load_backend()

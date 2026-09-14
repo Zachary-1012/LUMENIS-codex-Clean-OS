@@ -75,6 +75,9 @@ def build_platform_health(*, runtime_provider: Optional[Callable[[str], Dict[str
             "platform": key,
             "name": cap.get("name", key),
             "enabled": enabled,
+            "manual_collection_enabled": bool(cap.get("manual_collection_enabled", False)),
+            "collection_mode": cap.get("collection_mode", "scheduled" if enabled else "disabled"),
+            "product_owner": cap.get("product_owner", "CTH" if key == "xhs" else ""),
             "priority": cap.get("priority", "event"),
             "priority_label": _PRIORITY_LABEL.get(cap.get("priority", "event"), ""),
             "status": DISABLED,
@@ -91,6 +94,11 @@ def build_platform_health(*, runtime_provider: Optional[Callable[[str], Dict[str
             "verification_required": False,
             "message": "未启用扩展槽位" if not enabled else "待命中",
         }
+
+        if not enabled and item["manual_collection_enabled"]:
+            # Background scheduling stays fail-closed, while the product can
+            # expose an explicit human-triggered read-only collection action.
+            item["message"] = "已开放人工触发的只读采集；后台调度仍关闭"
 
         if not enabled:
             counts["disabled"] += 1

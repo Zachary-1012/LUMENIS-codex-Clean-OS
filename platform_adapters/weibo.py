@@ -121,10 +121,18 @@ class WeiboAdapter(BasePlatformAdapter):
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         import os
-        cookie_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "data", "weibo_cookies.json",
-        )
+        try:
+            from v4_upgrade.adapters.cookie_vault import _resolve_path
+            resolved = _resolve_path("weibo")
+            cookie_path = str(resolved) if resolved else os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "data", "weibo_cookies.json",
+            )
+        except Exception:
+            cookie_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "data", "weibo_cookies.json",
+            )
         cookie_exists = os.path.exists(cookie_path)
         try:
             backend = self._load_backend()

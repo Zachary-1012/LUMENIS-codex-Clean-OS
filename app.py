@@ -1115,6 +1115,11 @@ def _pg_resolve_operation_type(path, method):
             # protected runtime data root; it never publishes or touches a
             # platform account.  Keep it auditable as a conditional export.
             return OperationType.DATA_EXPORT
+    # Secondary CTH collection is an explicit human-triggered read-only
+    # external action.  It writes local Evidence/Canonical records, but never
+    # writes to a platform account and never publishes.
+    if p == '/api/experience/cth/platform-collection/search' and method == 'POST':
+        return OperationType.COLLECTOR_START
     # 1. 删除类（最高风险）
     if method == 'DELETE' or '/delete' in p or '/revoke' in p:
         return OperationType.DATA_DELETE
