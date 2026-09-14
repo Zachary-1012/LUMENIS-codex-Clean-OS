@@ -202,6 +202,15 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS idx_cge_type ON content_generation_evidence(content_type)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_cge_created ON content_generation_evidence(created_at)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_ce_evidence ON content_evaluation(evidence_id)")
+    # 空父证据不是有效的自引用。历史版本把默认空字符串写入了外键列，
+    # SQLite 因而报告违规；空父级的规范表示是 NULL。幂等修复既不删除
+    # 证据内容，也不改变真实的非空父子关系。
+    c.execute("""
+        UPDATE content_generation_evidence
+           SET parent_evidence_id = NULL
+         WHERE parent_evidence_id IS NOT NULL
+           AND TRIM(parent_evidence_id) = ''
+    """)
     conn.commit()
     conn.close()
 
@@ -447,11 +456,12 @@ def record_evidence(
     prompt: str, output_text: str, output_json: Optional[Dict],
     model: str, provider: str, level: str, confidence: float,
     latency_ms: int, status: str, error: str = "",
-    parent_evidence_id: str = "", iteration: int = 1,
+    parent_evidence_id: Optional[str] = None, iteration: int = 1,
     product_id: str = "ZBMP", domain_id: str = "zbmp",
 ) -> str:
     """记录内容生成Evidence，返回evidence_id。"""
     evidence_id = _gen_id("CGE")
+    normalized_parent_id = (parent_evidence_id or "").strip() or None
     conn = _get_conn()
     c = conn.cursor()
     c.execute("""
@@ -465,7 +475,7 @@ def record_evidence(
         json.dumps(input_data, ensure_ascii=False), research_context,
         prompt, output_text or "", json.dumps(output_json, ensure_ascii=False) if output_json else "",
         model, provider, level, confidence, latency_ms,
-        status, error, parent_evidence_id, iteration, _now_iso(),
+        status, error, normalized_parent_id, iteration, _now_iso(),
     ))
     conn.commit()
     conn.close()
@@ -510,7 +520,7 @@ def generate_content(
     extra_input: Dict = None,
     product_id: str = "ZBMP",
     domain_id: str = "zbmp",
-    parent_evidence_id: str = "",
+    parent_evidence_id: Optional[str] = None,
     iteration: int = 1,
     human_feedback: str = "",
 ) -> Dict[str, Any]:
