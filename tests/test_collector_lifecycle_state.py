@@ -82,10 +82,10 @@ class TestTaskObjectFields:
         """start_collection 创建的 task 必须包含所有标准字段。"""
         ca = CollectorAutomation()
         # 模拟预检通过 + 不实际启动线程
-        with patch.object(ca, '_port_for', return_value=9222), \
+        with patch.object(ca, '_port_for', return_value=9223), \
              patch('xhs_cookie_bridge.runtime_preflight_check',
                    return_value={'ok': True, 'overall_state': 'healthy',
-                                 'evidence': 'ok', 'active_account': 'XHS_CN_PRIMARY',
+                                 'evidence': 'ok', 'active_account': 'XHS_RETINAUT',
                                  'checks': []}), \
              patch('xhs_cookie_bridge.cookie_configured', return_value=True), \
              patch.object(ca, '_run_collection'), \

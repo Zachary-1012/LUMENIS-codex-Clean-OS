@@ -24,13 +24,22 @@ collector 通过 venv python 子进程调用本脚本以隔离崩溃；stdout �
 import argparse
 import json
 import math
+import os
 import random
 import re
 import sys
 import time
 from datetime import datetime, timedelta
 
-CDP_URL = 'http://127.0.0.1:9222'
+CDP_URL = 'http://127.0.0.1:9223'
+COLLECTION_HOST = os.environ.get('XHS_COLLECTION_HOST', 'www.rednote.com').strip().lower()
+COLLECTION_ORIGIN = f'https://{COLLECTION_HOST}'
+
+
+def _assert_collection_host():
+    """只允许香港/国际 RedNote 主机，避免 Cookie/CDP 与大陆站点错配。"""
+    if COLLECTION_HOST != 'www.rednote.com':
+        raise RuntimeError('当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com')
 
 _IP_WORDS = ['300012', 'IP存在风险', 'ip存在风险', '安全限制', '访问受限', '当前访问出现异常', '网络有点忙', '操作频繁', '访问过于频繁']
 _VERIFY_WORDS = ['验证码', '安全验证', '人机验证', '请完成验证', '请通过验证', '滑块', '拖动下方', 'captcha', '安全检测']
@@ -466,7 +475,7 @@ _LIST_JS = r"""
       time_raw: q('a.author .time') || q('.time'),
       likes_raw: q('span.like-wrapper .count') || q('.count'),
       cover: img ? img.getAttribute('src') : '',
-      url: href && href.startsWith('http') ? href : ('https://www.xiaohongshu.com' + (href.startsWith('/') ? href : '/' + href))
+      url: href && href.startsWith('http') ? href : new URL(href.startsWith('/') ? href : '/' + href, window.location.origin).href
     });
   });
   return out.filter(x => x.note_id);
@@ -568,6 +577,7 @@ def robust_goto(page, url, commit_to=30000, dom_to=45000):
 # 真人采集主流程（默认）
 # ============================================================
 def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
+    _assert_collection_host()
     from playwright.sync_api import sync_playwright
     result = {'ok': False, 'keyword': keyword, 'mode': 'human', 'notes': [], 'summary': {}, 'human_trace': []}
     trace = result['human_trace']
@@ -585,7 +595,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
             from urllib.parse import quote
             # 先稳落探索页（无 keyword 的 search_result 冷导航易挂起；explore 实测稳定），
             # 再由真人键盘输入关键词触发结果页，更像真人且更稳
-            landing = 'https://www.xiaohongshu.com/explore'
+            landing = f'{COLLECTION_ORIGIN}/explore'
             log('真人模式：打开探索页')
             robust_goto(page, landing)
             human_sleep(2.4, 3.8)
@@ -597,7 +607,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
             except Exception as e:
                 # 兜底：键盘输入失败时退回 URL 直达（仍继续真人浏览，不中断采集）
                 log(f'键盘输入失败，回退URL直达: {e}')
-                robust_goto(page, f'https://www.xiaohongshu.com/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51')
+                robust_goto(page, f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51')
             try:
                 page.wait_for_selector('section.note-item', timeout=18000)
             except Exception:
@@ -735,7 +745,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         try:
                             page.go_back(wait_until='commit', timeout=12000)
                         except Exception:
-                            page.goto(f'https://www.xiaohongshu.com/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51',
+                            page.goto(f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51',
                                       wait_until='commit', timeout=20000)
                     human_sleep(2.4, 4.2)  # 返回信息流后的真人停顿
                     try:
@@ -750,7 +760,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                                             'detail_publish_time': normalize_publish_time(target.get('time_raw'))})
                     # 异常后尝试回到结果流，避免卡在详情页
                     try:
-                        page.goto(f'https://www.xiaohongshu.com/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51',
+                        page.goto(f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51',
                                   wait_until='commit', timeout=20000)
                         human_sleep(2.0, 3.2)
                     except Exception:
@@ -773,6 +783,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
 # 旧直连流程（--human=0 回退用，保留稳定基线）
 # ============================================================
 def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
+    _assert_collection_host()
     from playwright.sync_api import sync_playwright
     result = {'ok': False, 'keyword': keyword, 'mode': 'direct', 'notes': [], 'summary': {}}
     with sync_playwright() as p:
@@ -787,7 +798,7 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
         page = ctx.new_page()
         try:
             from urllib.parse import quote
-            url = f'https://www.xiaohongshu.com/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51'
+            url = f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51'
             log(f'导航搜索: {keyword}')
             page.goto(url, wait_until='commit', timeout=30000)
             human_sleep(3.0, 4.5)

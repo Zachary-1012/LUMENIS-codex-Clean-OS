@@ -15,7 +15,9 @@ def test_default_policy_matches_signed_off_strategy(monkeypatch):
         monkeypatch.delenv(k, raising=False)
     from platform_adapters.rednote_policy import effective_policy
     p = effective_policy()
-    assert p.primary_region == "intl" and p.cn_paused is False  # 2026-09-02 用户指令恢复国内采集，不再暂停
+    assert p.primary_region == "intl" and p.cn_paused is True
+    assert p.to_dict()["collection_account"] == "XHS_RETINAUT"
+    assert p.to_dict()["collection_region"] == "intl"
     # 默认不自动跑真实平台（不撞熔断）
     assert p.auto_run_enabled is False and p.daily_login_keepalive is False
     # 三端：话题开、舆情笔记开、事件笔记关
@@ -36,6 +38,16 @@ def test_env_overrides_are_explicit(monkeypatch):
     from platform_adapters.rednote_policy import effective_policy
     p = effective_policy()
     assert p.auto_run_enabled and p.daily_login_keepalive and p.can_run_kind("event")
+
+
+def test_mainland_pause_cannot_be_unlocked_by_runtime_env(monkeypatch):
+    monkeypatch.setenv("REDNOTE_MAINLAND_ENABLE", "true")
+    monkeypatch.setenv("REDNOTE_CN_PAUSED", "false")
+    monkeypatch.setenv("REDNOTE_PRIMARY_REGION", "cn")
+    from platform_adapters.rednote_policy import effective_policy
+    p = effective_policy()
+    assert p.cn_paused is True
+    assert p.to_dict()["mainland_opt_in"] is False
 
 
 def test_human_cadence_marked_not_verified(monkeypatch):

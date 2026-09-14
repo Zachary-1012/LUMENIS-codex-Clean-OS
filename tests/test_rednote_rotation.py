@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""RedNote 区域轮番（intl 港版 9223 × cn 大陆 9222）+ KOS 强制 intl 测试。"""
+"""RedNote 生产区域门控：香港/国际 9223；大陆暂停。"""
 import pytest
 
 from platform_adapters import rednote_policy as rp
@@ -16,7 +16,7 @@ def _reset_state():
 
 class TestRegionRotation:
     def test_normal_rotation_alternates(self):
-        # 普通采集 intl/cn 交替轮番
+        # 普通生产采集固定使用香港/国际入口
         last = None
         seq = []
         for _ in range(4):
@@ -24,7 +24,7 @@ class TestRegionRotation:
             seq.append(sel["region"])
             last = sel["region"]
         assert seq[0] == "intl"
-        assert seq == ["intl", "cn", "intl", "cn"]
+        assert seq == ["intl", "intl", "intl", "intl"]
 
     def test_kos_forced_intl(self):
         # KOS 品牌采集强制 intl(9223 RedNote)
@@ -36,8 +36,9 @@ class TestRegionRotation:
 
     def test_force_region(self):
         sel = rp.select_region(force_region="cn")
-        assert sel["region"] == "cn"
-        assert sel["cdp_port"] == 9222
+        assert sel["region"] == "intl"
+        assert sel["cdp_port"] == 9223
+        assert sel["blocked"] is True
 
     def test_cn_paused_fallback_intl(self, monkeypatch):
         monkeypatch.setenv("REDNOTE_CN_PAUSED", "true")
@@ -58,3 +59,9 @@ class TestRegionRotation:
             assert str(sel["cdp_port"]) in url
         except ImportError:
             pytest.skip("xhs_cookie_bridge unavailable")
+
+    def test_collection_gate_allows_hk_and_blocks_mainland(self):
+        assert rp.collection_gate(account="XHS_RETINAUT", region="intl")["ok"] is True
+        blocked = rp.collection_gate(account="XHS_CN_PRIMARY", region="cn")
+        assert blocked["ok"] is False
+        assert blocked["code"] == "account_paused"

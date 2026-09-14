@@ -412,7 +412,19 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
     region = 'intl'
     cdp_port = 9223
     if output_path is None:
-        output_path = os.path.join(SCRIPT_DIR, 'data', f'search_{int(datetime.now().timestamp())}.json')
+        # 采集原始产物属于运行数据，不得回写唯一源码目录；沿用账号桥的
+        # 受保护数据根目录，保证直接调用与 API/调度器使用同一落盘边界。
+        try:
+            from xhs_cookie_bridge import PRIVATE_DATA_DIR as _private_data_dir
+        except Exception as exc:
+            return {
+                'keyword': keyword, 'total': 0, 'notes': [],
+                'error': f'运行数据目录不可用，拒绝写入源码目录: {exc}',
+                'channel': 'policy', 'region': region,
+                'policy': {'ok': False, 'code': 'runtime_data_dir_unavailable'},
+            }
+        output_path = os.path.join(_private_data_dir,
+                                   f'search_{int(datetime.now().timestamp())}.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # 选择器只返回当前允许的香港/国际入口；不再轮换或回落到大陆。

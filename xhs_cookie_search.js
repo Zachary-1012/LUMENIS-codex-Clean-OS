@@ -1,4 +1,4 @@
-// v5.3.2 - Local authenticated Xiaohongshu search bridge
+// v5.3.2 - Local authenticated RedNote search bridge
 // Cookie is read locally from XHS_COOKIES_JSON / XHS_COOKIE_HEADER or a private file.
 // It is NEVER written to output JSON, logs, or source code.
 import { chromium } from 'playwright';
@@ -8,6 +8,12 @@ import os from 'node:os';
 
 const PROFILE = process.env.XHS_PROFILE_DIR || path.join(os.homedir(), '.skills-router', 'rednote', 'instances', 'taikoo');
 const COOKIE_FILE = process.env.XHS_COOKIE_FILE || path.join(process.cwd(), 'data', 'private', 'xhs_cookie_header.txt');
+const COLLECTION_HOST = (process.env.XHS_COLLECTION_HOST || 'www.rednote.com').trim().toLowerCase();
+if (COLLECTION_HOST !== 'www.rednote.com') {
+  throw new Error('当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com');
+}
+const COLLECTION_ORIGIN = `https://${COLLECTION_HOST}`;
+const COOKIE_DOMAIN = '.rednote.com';
 
 function args() {
   const a = process.argv.slice(2), r = { keyword:'', output:'', maxScroll:6 };
@@ -35,7 +41,7 @@ function parseCookieHeader(raw) {
   return raw.split(';').map(x=>x.trim()).filter(Boolean).map(pair=>{
     const i=pair.indexOf('=');
     if (i<=0) return null;
-    return { name:pair.slice(0,i).trim(), value:pair.slice(i+1).trim(), domain:'.xiaohongshu.com', path:'/' };
+    return { name:pair.slice(0,i).trim(), value:pair.slice(i+1).trim(), domain:COOKIE_DOMAIN, path:'/' };
   }).filter(Boolean);
 }
 
@@ -43,7 +49,7 @@ function normalize(item) {
   const card=item.note_card || {}, user=card.user || {}, interact=card.interact_info || {}, cover=card.cover || {};
   const noteId=item.id || '';
   const token=item.xsec_token || '';
-  const url=token ? `https://www.xiaohongshu.com/explore/${noteId}?xsec_token=${encodeURIComponent(token)}` : `https://www.xiaohongshu.com/explore/${noteId}`;
+  const url=token ? `${COLLECTION_ORIGIN}/explore/${noteId}?xsec_token=${encodeURIComponent(token)}` : `${COLLECTION_ORIGIN}/explore/${noteId}`;
   const raw=card.time ?? card.display_time ?? item.time ?? item.create_time ?? '';
   let publishDate='';
   const s=String(raw);
@@ -115,10 +121,10 @@ async function main() {
   });
   // 冷导航预热（对齐 Python CDP 采集实践）：直冷导航 search_result 易挂起，先稳落 explore 再进搜索页
   if (isCdp) {
-    try { await page.goto('https://www.xiaohongshu.com/explore',{waitUntil:'domcontentloaded',timeout:20000}); await page.waitForTimeout(1500); }
+    try { await page.goto(`${COLLECTION_ORIGIN}/explore`,{waitUntil:'domcontentloaded',timeout:20000}); await page.waitForTimeout(1500); }
     catch(e){ process.stderr.write('[xhs-cookie-search] explore warmup fail: '+String(e&&e.message).slice(0,100)+'\n'); }
   }
-  const url=`https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(keyword)}&source=web_explore_feed`;
+  const url=`${COLLECTION_ORIGIN}/search_result?keyword=${encodeURIComponent(keyword)}&source=web_explore_feed`;
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForTimeout(3500);
   for (let i=0;i<maxScroll;i++) { await page.evaluate(()=>window.scrollBy(0,900)); await page.waitForTimeout(1800); }

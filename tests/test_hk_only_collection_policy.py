@@ -1,0 +1,106 @@
+# -*- coding: utf-8 -*-
+"""当前生产采集边界：只允许香港/国际 RedNote，不触发真实平台。"""
+import asyncio
+import os
+import sys
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parent.parent
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+
+def test_bridge_defaults_to_hk_collection_identity(monkeypatch):
+    import xhs_cookie_bridge as bridge
+
+    monkeypatch.setattr(bridge, '_ACTIVE_ACCOUNT', None)
+    monkeypatch.delenv('XHS_COOKIE_FILE_OVERRIDE', raising=False)
+    assert bridge._canonical_account_name() == bridge.XHS_RETINAUT_NAME
+    assert bridge.cdp_port_for() == 9223
+    assert bridge.home_url_for().startswith('https://www.rednote.com')
+    assert bridge.collection_policy_gate(account=bridge.XHS_RETINAUT_NAME)['ok'] is True
+
+
+def test_bridge_blocks_mainland_before_platform_request():
+    import xhs_cookie_bridge as bridge
+
+    result = bridge.sync(keywords=['广州太古汇'], account=bridge.XHS_CN_PRIMARY_NAME)
+    assert result['ok'] is False
+    assert result['task_state'] == 'POLICY_BLOCKED'
+    assert result['collection_policy']['code'] == 'account_paused'
+
+
+def test_collector_blocks_cn_before_subprocess(monkeypatch):
+    import collector
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError('策略阻断前不应启动任何采集子进程')
+
+    monkeypatch.setattr(collector.subprocess, 'run', fail_if_called)
+    result = collector.search_xiaohongshu('广州太古汇', region='cn')
+    assert result['channel'] == 'policy'
+    assert result['error'] in ('account_paused', 'region_paused')
+    assert result['total'] == 0
+
+
+def test_collector_default_artifact_path_is_protected(monkeypatch):
+    import collector
+    import xhs_cookie_bridge as bridge
+
+    seen = {}
+
+    monkeypatch.setattr(collector, '_cdp_online', lambda **kwargs: False)
+
+    def fake_standalone(keyword, max_scroll, output_path, **kwargs):
+        seen['output_path'] = output_path
+        return {'keyword': keyword, 'total': 0, 'notes': [],
+                'error': 'offline test', 'channel': 'standalone'}
+
+    monkeypatch.setattr(collector, '_search_standalone', fake_standalone)
+    collector.search_xiaohongshu('广州太古汇', account=bridge.DEFAULT_COLLECTION_ACCOUNT)
+    assert Path(seen['output_path']).parent == Path(bridge.PRIVATE_DATA_DIR)
+
+
+def test_cookie_status_recognizes_private_runtime_source(monkeypatch, tmp_path):
+    import app as app_module
+    import xhs_cookie_bridge as bridge
+
+    (tmp_path / 'private').mkdir()
+    (tmp_path / 'private' / 'xhs_cookie_retinaut.txt').write_text(
+        'retinaut_cookie=test-only', encoding='utf-8'
+    )
+    monkeypatch.setattr(bridge, 'DATA_DIR', str(tmp_path))
+    with app_module.app.test_request_context('/api/cookies/import/status'):
+        response = app_module.api_cookies_import_status()
+    payload = response.get_json()
+    assert payload['status']['xhs_source_exists'] is True
+    assert payload['status']['xhs']['source'] == 'private_cookie_file'
+
+
+def test_collect_all_returns_stable_tuple_when_kind_blocked():
+    import collector
+
+    notes, results = collector.collect_all(keywords=['广州太古汇'], kind='event')
+    assert notes == []
+    assert results and results[0]['error'] == 'KIND_POLICY_BLOCKED'
+
+
+def test_p0_orchestrator_blocks_cn_before_select():
+    import xhs_p0_orchestrator as orchestrator
+    import xhs_cookie_bridge as bridge
+
+    result = orchestrator.trigger_collection(account_name=bridge.XHS_CN_PRIMARY_NAME)
+    assert result['ok'] is False
+    assert result['code'] == 'account_paused'
+
+
+def test_private_v2_client_never_reaches_network():
+    from collector_v2.xhs.client import XHSClient
+
+    async def invoke():
+        with pytest.raises(RuntimeError, match='非生产路径'):
+            await XHSClient(cookie='test').request('GET', 'https://edith.xiaohongshu.com/test')
+
+    asyncio.run(invoke())

@@ -28,11 +28,30 @@ SCRIPT_FALLBACK = ROOT / 'xhs_live_engine.js'  # 备用旧引擎
 
 
 def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
-             wait_ms=4000, comments=True, cdp_url=None) -> dict:
-    out = ROOT / 'data' / f'xhs_live_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.json'
+             wait_ms=4000, comments=True, cdp_url=None, account=None) -> dict:
+    import xhs_cookie_bridge as _xcb
+    resolved_account = account or _xcb.DEFAULT_COLLECTION_ACCOUNT
+    policy_gate = _xcb.collection_policy_gate(account=resolved_account, region='intl')
+    if not policy_gate.get('ok'):
+        return {'ok': False, 'code': policy_gate.get('code'),
+                'error': policy_gate.get('reason'), 'notes': [],
+                'collection_policy': policy_gate}
+    if cdp_url and not cdp_url.rstrip('/').endswith(':9223'):
+        gate = dict(policy_gate)
+        gate.update({'ok': False, 'code': 'cdp_port_not_allowed',
+                     'reason': '当前生产采集仅允许香港/国际驻场端口9223'})
+        return {'ok': False, 'code': gate['code'], 'error': gate['reason'],
+                'notes': [], 'collection_policy': gate}
+    cdp_url = cdp_url or _xcb.cdp_url_for(resolved_account)
+    out = Path(_xcb.PRIVATE_DATA_DIR) / f'xhs_live_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.json'
+    out.parent.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
-    if cdp_url:
-        env['XHS_CDP_URL'] = cdp_url
+    env['XHS_CDP_URL'] = cdp_url
+    env['XHS_COLLECTION_REGION'] = 'intl'
+    env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
+    profile = _xcb.ACCOUNT_PROFILES.get(resolved_account)
+    if profile and profile[0]:
+        env['XHS_COOKIE_FILE'] = str(profile[0])
     cmd = [_NODE_BIN, str(SCRIPT), '--keyword', keyword, '--output', str(out),
            '--max-scroll', str(max_scroll), '--max-details', str(max_details),
            '--max-comment-pages', str(max_comment_pages), '--wait-ms', str(wait_ms)]
@@ -52,6 +71,7 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
     except json.JSONDecodeError as e:
         data = {'ok': False, 'error': f'JSON解析失败: {e}', 'raw_tail': (p.stderr or stdout)[-1200:]}
     data['_process_returncode'] = p.returncode
+    data.setdefault('collection_policy', policy_gate)
     return data
 
 
@@ -102,8 +122,15 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2'):
 
 
 def persist_live(data: dict, subject_hit: Callable[[str], bool]) -> dict:
+    if data.get('code') in ('account_paused', 'region_paused', 'policy_unavailable',
+                            'policy_error', 'cdp_port_not_allowed'):
+        return {'ok': False, 'status': 'policy_blocked', 'accepted': 0,
+                'reason': data.get('error') or '采集策略阻断'}
     if data.get('verification_required'):
         return {'ok': False, 'status': 'verification_required', 'accepted': 0, 'reason': '平台要求人工验证，本次不把0条当作无舆情'}
+    if not data.get('ok', True) and not data.get('notes'):
+        return {'ok': False, 'status': 'source_unavailable', 'accepted': 0,
+                'reason': data.get('error') or '采集源不可用，本次不把0条当作正常空结果'}
     raw = data.get('notes') or []
     notes = deduplicate([normalize_note(n) for n in raw])
     # 红线：这里唯一调用现有 subject_hit；不在采集器内重写主体口径。

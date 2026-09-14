@@ -8,7 +8,8 @@
  *   node rednote_collector.js --keyword "广州太古汇" --output data/result.json --max-details 10 --max-scroll 3
  * 
  * 环境变量：
- *   XHS_CDP_URL — CDP 调试地址，如 http://127.0.0.1:9222（必须）
+ *   XHS_CDP_URL — 香港/国际 CDP 调试地址，如 http://127.0.0.1:9223（必须）
+ *   XHS_COLLECTION_HOST — 固定为 www.rednote.com
  * 
  * 注意：CDP 模式下不要调用 browser.close()，否则会关闭整个 Edge 浏览器。
  */
@@ -68,7 +69,13 @@ function normalizePublishTime(raw) {
 
 async function collect(options) {
   const { keyword, output, maxDetails, maxScroll } = options;
-  const cdpUrl = process.env.XHS_CDP_URL || 'http://127.0.0.1:9222';
+  const collectionHost = (process.env.XHS_COLLECTION_HOST || 'www.rednote.com').trim().toLowerCase();
+  if (collectionHost !== 'www.rednote.com') {
+    return { ok: false, code: 'collection_host_not_allowed',
+      error: '当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com', notes: [] };
+  }
+  const collectionOrigin = `https://${collectionHost}`;
+  const cdpUrl = process.env.XHS_CDP_URL || 'http://127.0.0.1:9223';
   const allResults = [];
   let verificationRequired = false;
   let ipBlocked = false;
@@ -83,7 +90,7 @@ async function collect(options) {
     browser = await chromium.connectOverCDP(cdpUrl);
     context = browser.contexts()[0];
     // v5.9.0 始终新建干净标签页采集，避免复用 MSN/扩展后台页导致 goto 卡死；结束时关闭
-    const existing = context.pages().find(p => p.url().includes('xiaohongshu.com/search_result'));
+    const existing = context.pages().find(p => p.url().includes(`${collectionHost}/search_result`));
     page = existing || await context.newPage();
     console.log('[rednote] CDP 连接成功, 采集页面:', page.url().slice(0, 80));
   } catch (e) {
@@ -93,7 +100,7 @@ async function collect(options) {
 
   // 2. 搜索
   console.log('\n[rednote] === 步骤1: 搜索 ===');
-  const searchUrl = `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(keyword)}&source=web_explore_feed`;
+  const searchUrl = `${collectionOrigin}/search_result?keyword=${encodeURIComponent(keyword)}&source=web_explore_feed`;
   
   try {
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -138,7 +145,7 @@ async function collect(options) {
 
   // 4. 提取笔记列表
   console.log('\n[rednote] === 步骤2: 提取笔记列表 ===');
-  const rawNotes = await page.evaluate(() => {
+  const rawNotes = await page.evaluate((origin) => {
     const results = [];
     document.querySelectorAll('section.note-item').forEach(item => {
       const coverLink = item.querySelector('a.cover') || item.querySelector('a[href*="/search_result/"]');
@@ -168,12 +175,12 @@ async function collect(options) {
           publish_time_raw: time,
           likes_raw: likes,
           cover,
-          url: 'https://www.xiaohongshu.com' + (href.startsWith('/') ? href : '/' + href)
+          url: origin + (href.startsWith('/') ? href : '/' + href)
         });
       }
     });
     return results;
-  });
+  }, collectionOrigin);
 
   // 在 Node.js 端做标准化
   const notes = rawNotes.map(n => ({

@@ -312,6 +312,16 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             product="SYSTEM", domain="global", category="开发者工具",
         ),
     ]
+    # The six user-specified creation/research tools are one shared capability
+    # surface.  They are registered from the canonical catalog so the AI
+    # surface, CTH and BMP consume the same IDs/permissions/evidence contract.
+    # A missing optional adapter must not make the core registry unavailable.
+    try:
+        from lumenis_shared_skills import SHARED_SKILL_CATALOG
+        for item in SHARED_SKILL_CATALOG:
+            builtins.append(SkillMetadata.from_dict(item["metadata"]))
+    except Exception:
+        pass
     for b in builtins:
         reg.register(b)
 

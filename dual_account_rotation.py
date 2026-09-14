@@ -223,9 +223,16 @@ def get_rotation():
 
 
 def select_account_for_collection(kos_mode=False, force_account=None):
-    """采集入口：选择下一个账号。"""
-    rot = get_rotation()
-    return rot.select_next_account(force_account=force_account, kos_mode=kos_mode)
+    """采集入口：当前生产边界只允许香港/国际账号。"""
+    try:
+        import xhs_cookie_bridge as _bridge
+        requested = force_account or _bridge.DEFAULT_COLLECTION_ACCOUNT
+        gate = _bridge.collection_policy_gate(account=requested, region='intl')
+        if not gate.get('ok'):
+            return None, gate.get('reason', '当前账号不允许生产采集')
+        return _bridge.DEFAULT_COLLECTION_ACCOUNT, '生产采集固定使用香港/国际账号'
+    except Exception as exc:
+        return None, f'生产采集策略不可用，已拒绝账号轮换: {exc}'
 
 
 def record_collection_result(account, success, risk=False, cooldown_minutes=0):

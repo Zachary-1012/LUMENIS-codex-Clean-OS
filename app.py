@@ -1375,14 +1375,29 @@ def _generate_all_reports():
 # ========== rednote CDP 采集 ==========
 REDNOTE_SCRIPT = Path(__file__).parent / 'rednote_collector.cjs'
 
-def run_rednote_collect(keyword='广州太古汇', max_scroll=3, max_details=10, cdp_url=None):
-    """使用 rednote_collector.cjs 通过 CDP 连接已登录浏览器采集真实数据"""
-    cdp_url = cdp_url or os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9222')
+def run_rednote_collect(keyword='广州太古汇', max_scroll=3, max_details=10, cdp_url=None, account=None):
+    """使用香港/国际 RedNote 账号通过 CDP 采集真实数据；策略拒绝时不启动子进程。"""
+    resolved_account = account or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
+    policy_gate = xhs_cookie_bridge.collection_policy_gate(account=resolved_account, region='intl')
+    if not policy_gate.get('ok'):
+        return {'ok': False, 'error': policy_gate.get('reason'),
+                'code': policy_gate.get('code'), 'collection_policy': policy_gate}
+    configured_cdp = cdp_url or os.getenv('XHS_CDP_URL')
+    if configured_cdp and not configured_cdp.rstrip('/').endswith(':9223'):
+        return {'ok': False, 'error': '当前生产采集仅允许香港/国际驻场端口9223',
+                'code': 'cdp_port_not_allowed', 'collection_policy': policy_gate}
+    cdp_url = configured_cdp or xhs_cookie_bridge.cdp_url_for(resolved_account)
     if not REDNOTE_SCRIPT.exists():
         return {'ok': False, 'error': f'rednote_collector.cjs 不存在: {REDNOTE_SCRIPT}'}
     env = os.environ.copy()
     env['XHS_CDP_URL'] = cdp_url
-    out_file = Path(__file__).parent / 'data' / f'rednote_{datetime.now():%Y%m%d_%H%M%S}.json'
+    env['XHS_COLLECTION_REGION'] = 'intl'
+    env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
+    profile = xhs_cookie_bridge.ACCOUNT_PROFILES.get(resolved_account)
+    if profile and profile[0]:
+        env['XHS_COOKIE_FILE'] = str(profile[0])
+    out_file = Path(xhs_cookie_bridge.PRIVATE_DATA_DIR) / f'rednote_{datetime.now():%Y%m%d_%H%M%S}.json'
+    out_file.parent.mkdir(parents=True, exist_ok=True)
     cmd = [_NODE_BIN, str(REDNOTE_SCRIPT), '--keyword', keyword, '--output', str(out_file),
            '--max-scroll', str(max_scroll), '--max-details', str(max_details)]
     try:
@@ -1396,6 +1411,7 @@ def run_rednote_collect(keyword='广州太古汇', max_scroll=3, max_details=10,
         else:
             data = {'ok': False, 'error': (p.stderr or stdout)[-1000:]}
         data['_returncode'] = p.returncode
+        data.setdefault('collection_policy', policy_gate)
         return data
     except subprocess.TimeoutExpired:
         return {'ok': False, 'error': '采集超时（300秒）'}
@@ -2177,10 +2193,16 @@ def api_xhs_runtime_check():
         data = {}
         if request.method == 'POST':
             data = request.get_json(silent=True) or {}
-        account = (request.args.get('account') or data.get('account') or '').strip() or None
+        account = (request.args.get('account') or data.get('account') or '').strip() or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
         quick = str(request.args.get('quick', '') or data.get('quick', '')).lower() in ('1', 'true', 'yes', 'on')
-        # 按逻辑身份解析驻场端口（大陆9222/香港9223）；显式 XHS_CDP_URL 仍最优先
-        cdp_url = os.getenv('XHS_CDP_URL') or xhs_cookie_bridge.cdp_url_for(account)
+        # 生产预检固定使用香港/国际端口；旧的全局 9222 覆盖不得混入本轮。
+        configured_cdp = os.getenv('XHS_CDP_URL')
+        if configured_cdp and not configured_cdp.rstrip('/').endswith(':9223'):
+            return jsonify({'ok': True, 'overall_state': 'cdp_port_not_allowed',
+                            'active_account': account,
+                            'collection_policy': xhs_cookie_bridge.collection_policy_gate(account=account, region='intl'),
+                            'evidence': '检测到非香港/国际 9223 的 XHS_CDP_URL，生产采集预检已拒绝'}), 200
+        cdp_url = configured_cdp or xhs_cookie_bridge.cdp_url_for(account)
         result = xhs_cookie_bridge.runtime_preflight_check(account=account, cdp_url=cdp_url, quick=quick)
         # overall_state 对应 Auth Recovery Center：
         #   no_cookie / need_account / blocked → 需要前端弹扫码 / 验证入口
@@ -2234,7 +2256,8 @@ def api_xhs_accounts():
     """
     try:
         import os as _os
-        active = getattr(xhs_cookie_bridge, '_ACTIVE_ACCOUNT', None) or xhs_cookie_bridge.XHS_CN_PRIMARY_NAME
+        active = getattr(xhs_cookie_bridge, '_ACTIVE_ACCOUNT', None) or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
+        collection_policy = xhs_cookie_bridge.collection_policy_gate(account=active, region='intl')
         accounts = []
         for name, (cookie_path, cdp_profile_dir) in xhs_cookie_bridge.ACCOUNT_PROFILES.items():
             c_ready = bool(cookie_path and _os.path.isfile(cookie_path) and
@@ -2254,6 +2277,7 @@ def api_xhs_accounts():
                 current_uid = None
             id_match = bool(current_uid and current_uid in xhs_cookie_bridge.ALLOWED_USER_IDS)
             _cdp_port = xhs_cookie_bridge.cdp_port_for(name)
+            account_policy = xhs_cookie_bridge.collection_policy_gate(account=name, region='intl')
             _cdp_online = False
             try:
                 import socket as _sock
@@ -2267,7 +2291,10 @@ def api_xhs_accounts():
                 'cookie_ready': c_ready,
                 'user_id_match': id_match,
                 'user_id_preview': (current_uid[:12] + '...') if current_uid else None,
-                'can_use': (c_ready and id_match),
+                'diagnostic_ready': (c_ready and id_match),
+                'can_use': (c_ready and id_match and account_policy.get('ok')),
+                'collection_enabled': bool(account_policy.get('ok')),
+                'collection_policy': account_policy,
                 'cdp_port': _cdp_port,
                 'cdp_online': _cdp_online,
                 'cdp_profile_dir_exist': bool(cdp_profile_dir and _os.path.isdir(cdp_profile_dir)),
@@ -2277,6 +2304,7 @@ def api_xhs_accounts():
             'active_account': active,
             'allowed_accounts': list(xhs_cookie_bridge.ACCOUNT_PROFILES.keys()),
             'accounts': accounts,
+            'collection_policy': collection_policy,
             'allowed_user_ids_preview': [x[:12] + '...' for x in xhs_cookie_bridge.ALLOWED_USER_IDS],
             'contract_version': 'Z-Brand-Core · 双子星库 Contract v1.0（仅 XHS_CN_PRIMARY + XHS_RETINAUT）',
         })
@@ -3222,9 +3250,18 @@ def api_rednote_collect():
     keyword = data.get('keyword', '广州太古汇')
     max_scroll = max(1, min(10, int(data.get('max_scroll', 3))))
     max_details = max(1, min(50, int(data.get('max_details', 10))))
-    account = data.get('account', 'default')
-    # 按逻辑身份解析驻场端口（大陆9222/香港9223）；显式传入/环境变量优先
-    cdp_url = data.get('cdp_url') or os.getenv('XHS_CDP_URL') or xhs_cookie_bridge.cdp_url_for(account)
+    account = data.get('account') or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
+    policy_gate = xhs_cookie_bridge.collection_policy_gate(account=account, region='intl')
+    if not policy_gate.get('ok'):
+        return jsonify({'ok': False, 'error': policy_gate.get('reason'),
+                        'code': policy_gate.get('code'),
+                        'collection_policy': policy_gate}), 403
+    requested_cdp = data.get('cdp_url') or os.getenv('XHS_CDP_URL')
+    if requested_cdp and not requested_cdp.rstrip('/').endswith(':9223'):
+        return jsonify({'ok': False, 'error': '当前生产采集仅允许香港/国际驻场端口9223',
+                        'code': 'cdp_port_not_allowed',
+                        'collection_policy': policy_gate}), 403
+    cdp_url = requested_cdp or xhs_cookie_bridge.cdp_url_for(account)
     persist = bool(data.get('persist', True))
 
     # Resident Browser：对应身份驻场实例不在线才拉起；在线直接附着复用
@@ -3246,7 +3283,7 @@ def api_rednote_collect():
     
     def worker():
         try:
-            result = run_rednote_collect(keyword, max_scroll, max_details, cdp_url)
+            result = run_rednote_collect(keyword, max_scroll, max_details, cdp_url, account=account)
             if persist and result.get('ok'):
                 def subject_hit(text):
                     # P0-02 收敛：统一委托 subject_rules 权威主体口径（排除词一票否决+正向词命中），
@@ -4522,7 +4559,7 @@ def scheduler_loop():
     last_midnight_report_date = ''  # 00:00日报生成记录
     last_morning_report_date = ''   # 09:00日报生成记录
     last_evening_report_date = ''   # 23:30日报生成记录
-    _last_keepalive_min = -1        # 小红书双平台保活检查（每 30 分钟一次）
+    _last_keepalive_min = -1        # 香港/国际 RedNote 保活检查（每 30 分钟一次）
     
     import os as _os
     _os.environ.setdefault('ZBC_SCHED_GATE_MODE', 'enforce')
@@ -4540,16 +4577,14 @@ def scheduler_loop():
                 last_date_check = today_str
                 print(f'[Scheduler] 新的一天 {today_str}，自动采集次数已重置')
 
-            # ===== 小红书双平台登录保活定时检查（掉线自动再弹核心） =====
-            # 每 30 分钟对 rednote_hk（9223）/ xhs_cn（9222）recheck：
-            #   已登录 → 自动标记当日保活完成；掉线 → 重置当日标记 + need_relogin，
-            #   前端轮询到 need_relogin=true 自动弹登录窗。仅审计/标记，不阻断采集。
+            # ===== 香港/国际 RedNote 登录保活定时检查（掉线自动再弹核心） =====
+            # 内地采集已暂停，本调度循环不得探测或触发 xhs_cn 采集上下文。
             _kbucket = (now.hour * 60 + now.minute) // 30
             if _kbucket != _last_keepalive_min:
                 _last_keepalive_min = _kbucket
                 try:
                     import xhs_collection_optimizer as _xco
-                    for _kpf in ('rednote_hk', 'xhs_cn'):
+                    for _kpf in ('rednote_hk',):
                         try:
                             _kd = _xco.recheck_keepalive(_kpf)
                             print(f'[Keepalive] {_kpf} -> {_kd.get("status")} need_relogin={_kd.get("need_relogin")} {_kd.get("message", "")}')
@@ -6747,13 +6782,23 @@ def api_cookies_import_status():
             except Exception:
                 return {'configured': True, 'error': 'parse_error'}
         return {'configured': False}
+    # 生产主路径是受保护目录中的私有 Cookie 文件，不要求也不允许把
+    # 凭证复制成可提交的 xhs_cookies.source.json。状态字段必须反映真实
+    # 主路径，否则前端会把“已配置”误显示成“来源不存在”。
+    xhs_private_files = (
+        _data / 'private' / 'xhs_cookie_header.txt',
+        _data / 'private' / 'xhs_cookie_retinaut.txt',
+    )
+    xhs_private_exists = any(p.is_file() and p.stat().st_size > 0 for p in xhs_private_files)
     status = {
         'weibo': _stat('weibo'),
         'bilibili': _stat('bilibili'),
         'xhs': _stat('xhs'),
-        'xhs_source_exists': (_data / 'xhs_cookies.source.json').exists(),
+        'xhs_source_exists': (_data / 'xhs_cookies.source.json').exists() or xhs_private_exists,
     }
     # 私有 Header 文件是生产主路径，不要求存在可提交的源 JSON。
+    if xhs_private_exists:
+        status['xhs']['source'] = 'private_cookie_file'
     xhs_private = _data / 'private' / 'xhs_cookie_header.txt'
     if xhs_private.is_file() and xhs_private.stat().st_size > 0 and not status['xhs'].get('configured'):
         try:

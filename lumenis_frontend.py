@@ -28,9 +28,42 @@ domain_api_bp = Blueprint("domain_api", __name__)
 
 @lumenis_bp.route("/")
 def command_home():
-    """Root — redirect to CTH overview (dual-domain production UI)."""
+    """Canonical product entry — LUMENIS AI first, backed by Experience V2 runtime.
+
+    The legacy /lumenis/<domain> routes remain compatibility surfaces for existing
+    links and API/UI regression coverage.  New product navigation starts at the
+    AI workspace so CTH/BMP are product domains, not competing application roots.
+    """
     from flask import redirect
-    return redirect("/lumenis/cth/overview")
+    return redirect("/experience/#/AI-01")
+
+
+@lumenis_bp.route("/ai")
+def command_ai():
+    """Stable deep-link for the canonical LUMENIS AI workspace."""
+    from flask import redirect
+    return redirect("/experience/#/AI-01")
+
+
+@lumenis_bp.route("/cth")
+def command_cth():
+    """Stable product-domain entry without introducing a third product line."""
+    from flask import redirect
+    return redirect("/experience/#/CTH-01")
+
+
+@lumenis_bp.route("/zbmp")
+def command_zbmp():
+    """Stable product-domain entry without introducing a third product line."""
+    from flask import redirect
+    return redirect("/experience/#/BMP-01")
+
+
+@lumenis_bp.route("/settings")
+def command_settings():
+    """Settings entry: system, account, security and runtime controls."""
+    from flask import redirect
+    return redirect("/experience/#/SYS-05")
 
 
 @lumenis_bp.route("/healthz")

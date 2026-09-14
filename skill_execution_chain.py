@@ -194,6 +194,15 @@ def execute_skill(ctx, handler=None):
 
 def _execute_builtin_local(ctx, meta):
     sid = ctx.skill_id
+    if sid.startswith("shared."):
+        try:
+            from lumenis_shared_skills import run_shared_skill
+            return run_shared_skill(sid, task=ctx.task, input_payload=ctx.input_payload)
+        except Exception:
+            # Keep the execution chain's existing fail-closed behavior.  The
+            # caller receives NO_HANDLER/failed evidence instead of a fake
+            # successful tool result.
+            return None
     if sid == "zbc.subject_authority_read":
         try:
             from skill_registry import get_skill_registry

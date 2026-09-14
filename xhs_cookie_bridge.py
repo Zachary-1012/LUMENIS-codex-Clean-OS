@@ -71,6 +71,7 @@ DEFAULT_KEYWORDS=['广州太古汇','太古汇 15周年','太古汇 周年庆','
 # 逻辑身份常量（Contract 入口：Z-Brand Core 所有采集仅接受下面两个身份名）
 XHS_CN_PRIMARY_NAME = "XHS_CN_PRIMARY"   # 主账号：日常采集/驻场
 XHS_RETINAUT_NAME  = "XHS_RETINAUT"      # Retinaut 账号：备用身份/隔离采集
+DEFAULT_COLLECTION_ACCOUNT = XHS_RETINAUT_NAME
 # 物理 user_id 白名单（与逻辑身份一一绑定）
 XHS_CN_PRIMARY = "61d58d560000000010005a8a"   # 现有主账号（100% 向后兼容原 ALLOWED_USER_ID）
 XHS_RETINAUT  = "6a3cef27000000000e03b800"          # Retinaut 香港 rednote 账号真实 user_id（来自个人主页 URL，24位）

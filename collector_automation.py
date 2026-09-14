@@ -897,7 +897,9 @@ class CollectorAutomation:
         self._warmup_cdp(account)
         for kw in (task.get('keywords') or []):
             attempted += 1
-            out = os.path.join(self.data_dir, f'rednote_cdp_{datetime.now():%Y%m%d_%H%M%S}_{abs(hash(kw))%10000}.json')
+            out = os.path.join(_xcb.PRIVATE_DATA_DIR,
+                               f'rednote_cdp_{datetime.now():%Y%m%d_%H%M%S}_{abs(hash(kw))%10000}.json')
+            os.makedirs(os.path.dirname(out), exist_ok=True)
             cmd = [_NODE_BIN, cjs, '--keyword', str(kw), '--output', out,
                    '--max-scroll', str(max_scroll), '--max-details', str(max_details)]
             try:

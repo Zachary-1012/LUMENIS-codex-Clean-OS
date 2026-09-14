@@ -110,12 +110,9 @@ def effective_policy() -> RedNotePolicy:
     kind["topic"] = _env_bool("REDNOTE_KIND_TOPIC", kind["topic"])
     kind["public_opinion"] = _env_bool("REDNOTE_KIND_PUBLIC_OPINION", kind["public_opinion"])
     kind["event"] = _env_bool("REDNOTE_KIND_EVENT", kind["event"])
-    # REDNOTE_MAINLAND_ENABLE 是未来恢复内地采集的显式总闸；仅设置
-    # REDNOTE_CN_PAUSED=false 不得解除当前暂停边界。
-    mainland_opt_in = _env_bool("REDNOTE_MAINLAND_ENABLE", False)
-    cn_paused = not mainland_opt_in
-    if _env_bool("REDNOTE_CN_PAUSED", False):
-        cn_paused = True
+    # 当前用户边界是不可由运行环境偷偷解除的暂停；未来如恢复内地，必须
+    # 经过新的产品/安全确认并修改这份策略源代码，而不是注入一个环境变量。
+    cn_paused = CN_PAUSED
     return RedNotePolicy(
         primary_region=(os.environ.get("REDNOTE_PRIMARY_REGION") or DEFAULT_PRIMARY_REGION).strip().lower(),
         cn_paused=cn_paused,

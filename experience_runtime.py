@@ -167,6 +167,41 @@ def section(stype: str, state: str = STATE_READY, **kw) -> Dict[str, Any]:
     return d
 
 
+def shared_skill_surface(surface: str = "AI") -> Dict[str, Any]:
+    """One shared tool surface consumed by AI-01 and SH-01.
+
+    The catalog itself is fetched at runtime so the UI can show real binding
+    state.  This section only establishes the product placement; it does not
+    embed fixture outputs or claim that an optional tool is ready.
+    """
+    title = "Shared Content & Creation" if surface == "STUDIO" else "把能力带入任务"
+    desc = (
+        "六个研究/创作工具共享同一套 Content Studio 执行链；选择工具只生成受控的本地草案，"
+        "不离开序境、不直接发布。"
+        if surface == "STUDIO"
+        else "从当前主体/品牌上下文调用共享能力；每次运行都会标记输入范围、权限、Evidence 与状态。"
+    )
+    html = (
+        '<section class="lum-shared-skill-field" data-shared-skill-surface="'
+        + surface
+        + '" data-reveal>'
+        '<div class="lum-shared-skill-field__head">'
+        '<div><span class="lum-eyebrow">Shared Capability · Content Studio</span>'
+        '<h2 class="lum-h4" style="margin-top:6px">'
+        + title
+        + '</h2><p class="lum-caption" style="margin-top:5px">'
+        + desc
+        + '</p></div>'
+        '<span class="lum-chip lum-mono">CTH ↔ BMP · local-first</span></div>'
+        '<div data-shared-skill-palette class="lum-shared-skill-palette" aria-live="polite">'
+        '<span class="lum-caption">正在读取本地能力注册表…</span></div>'
+        '<p class="lum-caption lum-shared-skill-field__boundary">'
+        'AI 只做增强；原始 Evidence、Canonical Data、权限与人工审批仍由序境持有。'
+        '</p></section>'
+    )
+    return section("raw", STATE_READY, html=html)
+
+
 # ===========================================================================
 # 静态托管：把零构建原型作为生产前端提供（注入运行时配置，不改动磁盘上的原型文件）
 # ===========================================================================
@@ -586,9 +621,9 @@ def _build_ai01() -> Dict[str, Any]:
                              "不覆盖原始 Evidence 或 Canonical Data。")
 
     head = {
-        "type": "head", "state": STATE_READY, "eyebrow": "AI Agent",
-        "title": "AI 意图入口", "titleKey": "screen.AI-01",
-        "desc": "从一句任务出发，识别意图、检索证据、生成可追溯结论；AI 是增强层，不拥有生产事实。",
+        "type": "head", "state": STATE_READY, "eyebrow": "LUMENIS AI · INTENT WORKSPACE",
+        "title": "LUMENIS AI", "titleKey": "screen.AI-01",
+        "desc": "从一句任务出发，读取当前业务上下文与本地证据，形成可追溯的判断或受控任务；AI 是增强层，不拥有生产事实。",
         "actions": [
             {"label": "查看 AI Gateway", "variant": "secondary", "id": "go-AI-05", "cls": "NAVIGATION",
              "scope": "global", "target": "AI-05", "permission": "read", "ico": "ops"},
@@ -603,7 +638,8 @@ def _build_ai01() -> Dict[str, Any]:
             '<canvas class="lum-opt__gl"></canvas><div class="lum-opt__fallback"></div>'
             '<div style="padding:20px">'
             '<div class="lum-row" style="gap:8px;margin-bottom:10px">'
-            '<span class="lum-chip lum-press"><span data-i18n="ai.task_morph">能力任务</span></span></div>'
+            '<span class="lum-chip lum-press"><span data-i18n="ai.task_morph">能力任务</span></span>'
+            '<span class="lum-caption">对话与执行分开：先理解，再决定是否进入任务链。</span></div>'
             '<textarea class="lum-textarea" data-ai-composer style="min-height:84px;background:transparent;'
             'border:0;font-size:16px;padding:0" data-i18n-ph="ai.composer_placeholder" '
             'data-i18n-aria="ai.composer_placeholder" placeholder="" aria-label="composer"></textarea>'
@@ -611,14 +647,16 @@ def _build_ai01() -> Dict[str, Any]:
             '<button type="button" class="lum-chip lum-press" data-ai-ref>引用证据</button>'
             '<button type="button" class="lum-chip lum-press" data-ai-subject>指定主体</button>'
             '<button type="button" class="lum-chip lum-press" data-ai-window>时间范围</button></div>'
+            '<div class="lum-row" style="gap:8px;justify-content:flex-end">'
+            '<button type="button" class="lum-btn lum-btn-secondary" data-ai-execute>进入任务 →</button>'
             '<button type="button" class="lum-btn lum-btn-primary" data-ai-send>'
-            '<span data-i18n="ai.send">发送</span> →</button></div>'
+            '<span data-i18n="ai.send">发送</span> →</button></div></div>'
             '<div data-ai-thread class="lum-stack-4" style="margin-top:14px"></div></div></div>'
         ),
     }
 
     sections = [
-        head, composer,
+        head, composer, shared_skill_surface("AI"),
         section("kpis", STATE_READY, items=kpis),
         cards,
         {"type": "split", "state": STATE_READY, "main": [timeline_sec],
@@ -646,14 +684,23 @@ def _ai_governance() -> Dict[str, Any]:
 
 
 def _provider_runtime(gov: Dict[str, Any], gov_err: bool) -> List[Dict[str, Any]]:
-    """真实 Provider 状态：治理层可用则反映配置/可用性；本地确定性引擎恒为 ok；不伪造延迟。"""
+    """真实 Provider 状态；configured 不等于 reachable/model-ready。"""
     items: List[Dict[str, Any]] = []
-    zhipu_ok = isinstance(gov, dict) and not gov_err
-    items.append({"name": "智谱 glm-5.3", "state": "ok" if zhipu_ok else "offline",
-                  "detail": "governance configured" if zhipu_ok else "governance unavailable"})
-    items.append({"name": "本地 Ollama", "state": "idle", "detail": "local · 未在请求内探测"})
+    try:
+        import intelligence
+        ai_state = intelligence.ai_status() or {}
+    except Exception:
+        ai_state = {}
+    active_provider = str(ai_state.get("provider") or "")
+    zhipu_configured = isinstance(gov, dict) and not gov_err and bool(gov.get("providers") or gov.get("zhipu") or gov.get("enabled"))
+    zhipu_ok = bool(ai_state.get("enabled")) and active_provider == "zhipu"
+    items.append({"name": "智谱 · 可选", "state": "ok" if zhipu_ok else ("idle" if zhipu_configured else "offline"),
+                  "detail": "active · verified by gateway" if zhipu_ok else ("configured · not active" if zhipu_configured else "not verified")})
+    ollama_ok = bool(ai_state.get("enabled")) and active_provider == "ollama"
+    ollama_detail = "active · local model" if ollama_ok else "daemon/model not ready"
+    items.append({"name": "本地 Ollama", "state": "ok" if ollama_ok else "idle", "detail": ollama_detail})
     items.append({"name": "规则引擎", "state": "ok", "detail": "deterministic"})
-    items.append({"name": "备用通道", "state": "idle", "detail": "standby"})
+    items.append({"name": "备用通道", "state": "idle", "detail": "standby · no production truth"})
     return items
 
 
