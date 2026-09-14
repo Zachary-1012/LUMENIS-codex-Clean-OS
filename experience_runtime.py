@@ -18,7 +18,9 @@
   * 任何读取异常都降级为对应 section 的 error/offline 状态，不伪造 200 成功数据。
   * identity 不返回绝对路径、密钥、cookie、token、浏览器会话等安全内部。
 
-本模块是只读聚合层 + 静态托管层：不写业务库、不迁移、不改权限语义。
+本模块以只读聚合层 + 静态托管层为主；共享视频渲染只写入受保护的 staged
+artifact registry，并通过现有执行链记录 Evidence。发布接口只创建人工审批
+任务，不执行外部平台动作、不改变 Canonical Data。
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ import threading
 import traceback as _tb
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import Blueprint, jsonify, request, send_file, send_from_directory
 
 # ---------------------------------------------------------------------------
 # 路径与蓝图
@@ -772,6 +774,290 @@ def shared_skills_catalog():
         })
     except Exception as exc:  # pragma: no cover - defensive runtime boundary
         return jsonify({"ok": False, "error": "shared skill catalog unavailable", "error_type": type(exc).__name__}), 503
+
+
+@experience_bp.route("/api/experience/shared-skills/shared.video_shotcraft/render", methods=["POST"])
+def render_shared_video_artifact():
+    """Render explicitly supplied local assets into a staged video artifact.
+
+    This is an EXPORT action, not a platform action.  The global permission
+    resolver maps it to DATA_EXPORT; the execution chain still records the
+    action, Evidence and Evaluation.  No remote URL or browser media request
+    is accepted here.
+    """
+    from lumenis_shared_skills import validate_input
+    from shared_artifacts import LocalArtifactError, render_local_video_artifact, validate_local_asset
+
+    body = request.get_json(silent=True) or {}
+    action_value = str(body.get("action_type") or "").upper()
+    if action_value != "EXPORT":
+        return jsonify({
+            "ok": False,
+            "status": "denied",
+            "code": "VIDEO_RENDER_REQUIRES_EXPORT",
+            "reason": "视频渲染是受控的 staged EXPORT，不能伪装成普通分析请求。",
+        }), 403
+    payload = body.get("input") if isinstance(body.get("input"), dict) else {}
+    invalid = validate_input(payload)
+    if invalid:
+        return jsonify({"ok": False, "status": "denied", **invalid}), 403
+    if any(str(key).lower() in {"url", "media_url", "media_urls", "remote_url", "download_url"}
+           for key in payload.keys()):
+        return jsonify({
+            "ok": False,
+            "status": "denied",
+            "code": "LOCAL_ASSETS_ONLY",
+            "reason": "视频渲染只接受明确提交的本地素材，不接受远程媒体地址。",
+        }), 400
+    asset_paths = payload.get("asset_paths")
+    if not isinstance(asset_paths, list) or not asset_paths:
+        return jsonify({
+            "ok": False,
+            "status": "input_required",
+            "code": "LOCAL_ASSETS_REQUIRED",
+            "reason": "必须明确提供 asset_paths；系统不会自行下载或猜测平台媒体。",
+        }), 400
+    try:
+        # Validate before entering the execution chain so invalid/remote input
+        # is a client error, never a misleading runtime failure.
+        [validate_local_asset(value) for value in asset_paths]
+    except LocalArtifactError as exc:
+        return jsonify({
+            "ok": False,
+            "status": "rejected",
+            "code": str(exc),
+            "reason": "本地素材未通过受限渲染边界，未产生制品。",
+            "external_fetch": False,
+        }), 400
+    raw_domain = str(body.get("domain") or payload.get("domain") or "CTH").strip().upper()
+    domain_id = {"CTH": "cth", "BMP": "zbmp", "ZBMP": "zbmp"}.get(raw_domain)
+    if not domain_id:
+        return jsonify({
+            "ok": False,
+            "status": "denied",
+            "code": "DOMAIN_NOT_ALLOWED",
+            "reason": "视频共享能力只接受 CTH/BMP 产品领域。",
+        }), 400
+    evidence_id = str(payload.get("evidence_id") or "").strip()
+    note_id = str(payload.get("note_id") or "").strip()
+    if evidence_id or note_id:
+        if not evidence_id or not note_id or payload.get("source", "browser_rendered") != "browser_rendered":
+            return jsonify({
+                "ok": False,
+                "status": "denied",
+                "code": "BROWSER_RENDERED_EVIDENCE_REQUIRED",
+                "reason": "关联视频 Evidence 时必须同时提供 note_id，并声明 browser_rendered。",
+            }), 400
+
+    task = str(body.get("task") or payload.get("brief") or "视频本地素材成片草稿").strip()[:4000]
+    normalized_payload = dict(payload)
+    normalized_payload["domain"] = domain_id
+    normalized_payload["product"] = "LUMENIS"
+
+    from skill_execution_chain import ActionType, SkillRuntimeInfo, run_execution_chain
+
+    runtime_info = SkillRuntimeInfo(
+        skill_id="shared.video_shotcraft",
+        name="专业级片头与转场",
+        description="共享视频成片草稿能力",
+        product="SHARED",
+        domain="content",
+        version="1.0.0",
+        enabled=True,
+        source="lumenis_shared_skills",
+        cross_domain_allowed=["CTH", "BMP"],
+    )
+
+    def _render(_ctx):
+        return render_local_video_artifact(
+            normalized_payload["asset_paths"],
+            brief=task,
+            product_id="LUMENIS",
+            domain_id=domain_id,
+            source_execution_id=_ctx.execution_id,
+            evidence_id=evidence_id,
+            note_id=note_id,
+        )
+
+    try:
+        ctx = run_execution_chain(
+            skill_id="shared.video_shotcraft",
+            task=task,
+            input_payload=normalized_payload,
+            action_type=ActionType.EXPORT,
+            user_role="user",
+            product="LUMENIS",
+            domain=domain_id,
+            skill_info=runtime_info,
+            handler=_render,
+        )
+        execute_result = ctx.execute_result or {}
+        result = execute_result.get("result") if isinstance(execute_result, dict) else None
+        result = result if isinstance(result, dict) else {}
+        ok = ctx.status.value == "completed" and bool(result.get("artifact"))
+        return jsonify({
+            "ok": ok,
+            "status": result.get("status") if ok else ctx.status.value,
+            "execution_status": ctx.status.value,
+            "skill_id": "shared.video_shotcraft",
+            "execution_id": ctx.execution_id,
+            "artifact": result.get("artifact"),
+            "render": result if ok else None,
+            "error": None if ok else (ctx.error or execute_result.get("error")),
+            "error_type": None if ok else type(ctx.error).__name__ if ctx.error else execute_result.get("code"),
+            "permission": ctx.permission_result,
+            "firewall": ctx.firewall_result,
+            "effect_fence": ctx.effect_fence_result,
+            "evidence": ctx.evidence,
+            "evidence_recorded": bool(getattr(ctx, "evidence_record", {}).get("ok", False)),
+            "evaluation": ctx.evaluation,
+            "external_fetch": False,
+            "approval_required": True,
+            "publish_status": "not_performed",
+        }), (200 if ok else 503)
+    except LocalArtifactError as exc:
+        return jsonify({
+            "ok": False,
+            "status": "rejected",
+            "code": str(exc),
+            "reason": "本地素材未通过受限渲染边界，未产生制品。",
+            "external_fetch": False,
+        }), 400
+    except Exception as exc:  # noqa: BLE001 - API boundary must not expose paths
+        return jsonify({
+            "ok": False,
+            "status": "error",
+            "error_type": type(exc).__name__,
+            "external_fetch": False,
+        }), 503
+
+
+@experience_bp.route("/api/experience/artifacts/<artifact_id>")
+def shared_artifact_detail(artifact_id: str):
+    """Return staged artifact metadata without exposing its filesystem path."""
+    from shared_artifacts import get_artifact
+
+    artifact = get_artifact(artifact_id)
+    if not artifact:
+        return jsonify({"ok": False, "error": "artifact not found"}), 404
+    return jsonify({
+        "ok": True,
+        "source": "runtime",
+        "artifact": artifact,
+        "approval_required": True,
+        "publish_status": "not_performed",
+        "preview_url": f"/api/experience/artifacts/{artifact_id}/file",
+    })
+
+
+@experience_bp.route("/api/experience/artifacts/<artifact_id>/file")
+def shared_artifact_file(artifact_id: str):
+    """Stream a staged local artifact after root-confinement validation."""
+    from shared_artifacts import artifact_file_path, get_artifact
+
+    artifact = get_artifact(artifact_id)
+    path = artifact_file_path(artifact_id)
+    if not artifact or path is None:
+        return jsonify({"ok": False, "error": "artifact not found"}), 404
+    return send_file(
+        path,
+        mimetype=artifact.get("media_type") or "application/octet-stream",
+        as_attachment=False,
+        download_name=artifact.get("filename") or "artifact",
+        conditional=True,
+    )
+
+
+@experience_bp.route("/api/experience/ai/publish-requests", methods=["POST"])
+def create_publish_approval_request():
+    """Create a traceable human-approval task without publishing externally."""
+    from shared_artifacts import get_artifact
+
+    body = request.get_json(silent=True) or {}
+    artifact_id = str(body.get("artifact_id") or "").strip()
+    artifact = get_artifact(artifact_id)
+    if not artifact:
+        return jsonify({"ok": False, "code": "ARTIFACT_NOT_FOUND", "error": "artifact not found"}), 404
+    if artifact.get("status") != "staged" or not artifact.get("approval_required"):
+        return jsonify({
+            "ok": False,
+            "code": "ARTIFACT_NOT_APPROVABLE",
+            "error": "only staged approval-required artifacts may enter the publish queue",
+        }), 409
+    requested_platform = str(body.get("platform") or "rednote_hk").strip().lower()
+    if requested_platform in {"xhs", "rednote", "xhs_hk", "rednote_hk"}:
+        platform = "rednote_hk"
+        account_policy = "XHS_RETINAUT"
+    else:
+        return jsonify({
+            "ok": False,
+            "code": "PLATFORM_NOT_ENABLED",
+            "error": "当前只开放已验证的香港/国际 RedNote 审批目标；大陆账号及其他平台保持暂停。",
+        }), 409
+    raw_domain = str(body.get("domain") or artifact.get("domain_id") or "").strip().lower()
+    if raw_domain not in {"cth", "zbmp"} or raw_domain != str(artifact.get("domain_id") or "").lower():
+        return jsonify({
+            "ok": False,
+            "code": "DOMAIN_MISMATCH",
+            "error": "发布审批的产品领域必须与制品绑定领域一致。",
+        }), 409
+    requested_by = str(body.get("requested_by") or "product_user").strip()[:64]
+    note = str(body.get("note") or "").strip()[:500]
+    try:
+        from ai_task_engine import get_task_engine, init_task_engine_db
+
+        init_task_engine_db()
+        engine = get_task_engine()
+        created = engine.create_task(
+            "申请发布内容到香港/国际 RedNote（仅创建人工审批请求，不执行外部操作）",
+            context={
+                "artifact_id": artifact_id,
+                "domain": raw_domain,
+                "platform": platform,
+                "account_policy": account_policy,
+                "publish_mode": "human_approval_required",
+                "external_action": "not_executed",
+                "request_note": note,
+            },
+            created_by=requested_by,
+        )
+        task = engine.parse_task(created["task_id"])
+        return jsonify({
+            "ok": True,
+            "status": "awaiting_approval" if task.get("status") == "awaiting_approval" else task.get("status"),
+            "approval_required": True,
+            "external_action": "not_executed",
+            "platform": platform,
+            "account_policy": account_policy,
+            "artifact": artifact,
+            "task": task,
+            "next_step": "/api/ai/tasks/{task_id}/approve",
+        }), 200
+    except Exception as exc:  # noqa: BLE001 - do not expose DB details
+        return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
+
+
+@experience_bp.route("/api/experience/ai/publish-requests/<task_id>")
+def publish_approval_request_detail(task_id: str):
+    """Read one publish approval task and keep external action explicit."""
+    try:
+        from ai_task_engine import get_task_engine
+
+        task = get_task_engine().get_task(task_id)
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
+    if not task:
+        return jsonify({"ok": False, "error": "publish request not found"}), 404
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    return jsonify({
+        "ok": True,
+        "task": task,
+        "approval_required": True,
+        "external_action": "not_executed",
+        "artifact_id": context.get("artifact_id"),
+        "platform": context.get("platform"),
+        "account_policy": context.get("account_policy"),
+    })
 
 
 @experience_bp.route("/api/experience/shared-skills/<skill_id>/run", methods=["POST"])

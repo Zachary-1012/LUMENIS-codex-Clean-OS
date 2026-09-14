@@ -172,6 +172,16 @@ try:
 except Exception as _cg_e:
     print(f"[content_generation] blueprint register failed: {_cg_e}")
 
+# Shared Capability staged artifacts: create the registry in the canonical
+# runtime database at startup so read/preview requests never perform a first
+# schema write, and so the video renderer has one stable persistence contract.
+try:
+    import shared_artifacts as _shared_artifacts
+    _shared_artifacts.ensure_artifact_table()
+    print("[shared_artifacts] staged artifact registry ensured")
+except Exception as _sa_e:
+    print(f"[shared_artifacts] registry warning (non-fatal): {_sa_e}")
+
 # Module Registry: 模组注册与用户自定义管理
 try:
     import module_registry
@@ -1100,6 +1110,11 @@ def _pg_resolve_operation_type(path, method):
             requested = 'ANALYZE'
         if requested in ('READ', 'ANALYZE', 'SUGGEST'):
             return OperationType.AI_CALL
+        if requested == 'EXPORT' and p.endswith('/shared.video_shotcraft/render'):
+            # Local video rendering writes only a staged artifact below the
+            # protected runtime data root; it never publishes or touches a
+            # platform account.  Keep it auditable as a conditional export.
+            return OperationType.DATA_EXPORT
     # 1. 删除类（最高风险）
     if method == 'DELETE' or '/delete' in p or '/revoke' in p:
         return OperationType.DATA_DELETE

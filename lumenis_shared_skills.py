@@ -134,7 +134,7 @@ SHARED_SKILL_CATALOG: List[Dict[str, Any]] = [
         owner="Shared Capability / Content Studio",
         permission_level="ANALYZE",
         input_schema={"type": "object", "properties": {"brief": {"type": "string"}, "evidence_id": {"type": "string"}, "note_id": {"type": "string"}, "ocr_text": {"type": "string"}, "asr_text": {"type": "string"}}, "required": ["brief"]},
-        output_schema={"type": "object", "properties": {"shot_plan": {"type": "array"}, "video_analysis": {"type": "object"}}},
+        output_schema={"type": "object", "properties": {"shot_plan": {"type": "array"}, "video_analysis": {"type": "object"}, "artifact": {"type": "object"}, "render_status": {"type": "string"}}},
         risk_level="MEDIUM",
         execution_policy="APPROVAL_REQUIRED",
         evidence_contract="只接受已由授权运行时提供的 browser_rendered Evidence；规划/分析结果标为派生草稿，不生成或发布媒体。",
@@ -142,7 +142,7 @@ SHARED_SKILL_CATALOG: List[Dict[str, Any]] = [
         description="专业级片头与转场：依据 Brief 生成可审阅镜头草案，并在提供 Evidence 时复用本地视频分析规范。",
         tags=["content", "video", "storyboard", "evidence-first"],
         category="内容制作",
-        implementation="video_intelligence.VideoIntelligenceEngine + deterministic shot planner",
+        implementation="video_intelligence.VideoIntelligenceEngine + deterministic shot planner + local staged renderer",
         implementation_state="BOUND_LOCAL_DRAFT",
         consumers=["CTH", "BMP"],
         tool_name="video-shotcraft",
@@ -428,7 +428,9 @@ def _run_video_shotcraft(task: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         "implementation_state": "BOUND_LOCAL_DRAFT",
         "external_media_fetch": False,
         "approval_required": True,
-        "unimplemented": ["自动生成成片", "平台发布"],
+        "render_capability": "explicit_local_assets_only",
+        "render_api": "/api/experience/shared-skills/shared.video_shotcraft/render",
+        "unimplemented": ["平台发布"],
     }
     evidence_id = str(payload.get("evidence_id") or "").strip()
     note_id = str(payload.get("note_id") or "").strip()
@@ -491,6 +493,8 @@ def _run_huashu(task: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             "context": {k: payload.get(k) for k in ("domain", "product", "platform", "asset_type", "audience", "goal") if payload.get(k)},
             "stages": ["Brief", "Context", "Evidence", "Strategy", "Create", "Review", "Approval", "Export/Publish", "Evaluation", "Learning"],
             "next_api": "/api/content/generate",
+            "render_api": "/api/experience/shared-skills/shared.video_shotcraft/render",
+            "publish_request_api": "/api/experience/ai/publish-requests",
             "publish": "human_approval_required",
         },
         "content_types": types,

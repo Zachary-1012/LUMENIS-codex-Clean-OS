@@ -43,6 +43,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from db_paths import main_db_path
+
 logger = logging.getLogger(__name__)
 # ZBC Lifecycle Contract V1.0 (bypass-mode, never breaks main chain)
 try:
@@ -61,7 +63,6 @@ try:
     from database import DB_PATH, get_db
 except ImportError:
     # 测试环境 fallback
-    from db_paths import main_db_path  # P0-DBISO-01 fallback 也尊重隔离
     DB_PATH = main_db_path()
 
     from contextlib import contextmanager
@@ -211,11 +212,11 @@ def init_task_engine_db() -> None:
     新增字段通过 ALTER TABLE ADD COLUMN 幂等迁移。
     """
     try:
-        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-        # Use this module's resolved DB_PATH directly. Importing database.get_db would
-        # re-resolve mutable module state and can point migrations at a different DB
-        # after an isolated runtime reload.
-        with sqlite3.connect(DB_PATH, timeout=30) as conn:
+        # Resolve at call time so an isolated runtime/test changing ZBC_DB_PATH
+        # cannot send approval tasks to a stale import-time database.
+        db_path = main_db_path()
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        with sqlite3.connect(db_path, timeout=30) as conn:
             conn.row_factory = sqlite3.Row
             conn.executescript(_TASK_ENGINE_SCHEMA)
             # 向后兼容迁移：evidence 链式哈希字段（Decision 6: 全链路Evidence/Audit Trail）

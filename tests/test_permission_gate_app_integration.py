@@ -152,6 +152,12 @@ class TestOperationTypeResolver:
                 '/api/experience/shared-skills/shared.social_card/run', 'POST'
             ) == OperationType.DB_WRITE
 
+    def test_shared_video_export_is_conditional_data_export(self):
+        """本地成片只允许走可审计的 staged export，不得伪装成 AI 读请求。"""
+        path = '/api/experience/shared-skills/shared.video_shotcraft/render'
+        with app_module.app.test_request_context(path, method='POST', json={'action_type': 'EXPORT'}):
+            assert app_module._pg_resolve_operation_type(path, 'POST') == OperationType.DATA_EXPORT
+
     def test_skill_execute(self):
         assert app_module._pg_resolve_operation_type('/api/developer/run', 'POST') == OperationType.SKILL_EXECUTE
         assert app_module._pg_resolve_operation_type('/api/dev/run-code', 'POST') == OperationType.SKILL_EXECUTE

@@ -48,10 +48,28 @@ def _get_json(url, timeout=1.5):
         return json.loads(r.read().decode('utf-8','replace'))
 
 def _installed_hints():
-    """返回本机已发现的本地 AI 运行时线索；不自动启动任何程序。"""
+    """返回本机已发现的本地 AI 运行时线索；不自动启动任何程序。
+
+    ``ollama`` 的桌面安装不一定把命令写入 PATH，因此命令存在不能
+    代表服务在线。优先读取本机 ``/api/tags``，让健康页反映真实模型
+    运行状态，而不是只显示“已安装”。
+    """
     hints=[]
-    if shutil.which('ollama'):
-        hints.append({'provider':'ollama','installed':True,'running':False,'detail':'检测到 ollama 命令，可启动 Ollama 服务后自动接入'})
+    ollama_base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
+    ollama_models = []
+    try:
+        ollama_models = _get_json(ollama_base + '/api/tags').get('models') or []
+    except Exception:
+        ollama_models = []
+    if ollama_models or shutil.which('ollama'):
+        hints.append({
+            'provider': 'ollama',
+            'installed': True,
+            'running': bool(ollama_models),
+            'model_count': len(ollama_models),
+            'detail': (f'已连接 Ollama，本机可调用 {len(ollama_models)} 个模型'
+                       if ollama_models else '检测到 Ollama，但服务尚未返回可调用模型'),
+        })
     if platform.system().lower() == 'windows':
         paths=[os.path.expandvars(r'%LOCALAPPDATA%\\LM Studio\\LM Studio.exe'), os.path.expandvars(r'%PROGRAMFILES%\\LM Studio\\LM Studio.exe')]
         if any(os.path.exists(x) for x in paths):
@@ -75,7 +93,8 @@ def _detect_local():
                 models=data.get('models') or []
                 if models:
                     wanted=_env('OLLAMA_MODEL','qwen2.5-coder:7b-agent')
-                    model=wanted or models[0].get('name')
+                    names = [str(item.get('name') or '') for item in models]
+                    model=wanted if wanted in names else (names[0] if names else '')
                     if model: return ('ollama',model,base)
             elif p=='lmstudio':
                 base=_env('LMSTUDIO_BASE_URL','http://127.0.0.1:1234').rstrip('/')

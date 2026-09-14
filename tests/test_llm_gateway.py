@@ -89,6 +89,20 @@ def test_explicit_local_failure_falls_back_to_rule_only(monkeypatch):
     assert raw is None
     assert provider == "rule"
 
+
+def test_ollama_hint_reflects_reachable_models(monkeypatch):
+    """健康提示必须以 /api/tags 的真实结果为准，而不是只看 PATH。"""
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+    monkeypatch.setattr(
+        intelligence,
+        "_get_json",
+        lambda url, timeout=1.5: {"models": [{"name": "qwen2.5-coder:7b-agent"}]},
+    )
+    hint = next(item for item in intelligence._installed_hints() if item["provider"] == "ollama")
+    assert hint["running"] is True
+    assert hint["model_count"] == 1
+    assert "可调用 1 个模型" in hint["detail"]
+
 def test_review_note_structure():
     note = {"title": "太古汇停车排队久", "content": "品牌很全环境好，就是停车场排队太久、引导不清"}
     rule = {"verified": True, "summary": "提及太古汇停车", "topics": ["停车"], "verify_reason": ""}
