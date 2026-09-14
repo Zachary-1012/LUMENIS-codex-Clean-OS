@@ -1381,6 +1381,7 @@ def _build_sh01() -> Dict[str, Any]:
     failed = _is_err(evidence)
     rows = [] if failed else evidence.get("items", [])
     state = STATE_OFFLINE if failed else (STATE_READY if rows else STATE_EMPTY)
+    latest_evidence_id = rows[0].get("evidence_id", "") if rows else ""
     sections = [
         _head("SH-01"),
         section("kpis", state, items=[
@@ -1390,12 +1391,19 @@ def _build_sh01() -> Dict[str, Any]:
             metric("sh01.evidence", "创作证据", value=None if failed else evidence.get("total", 0),
                    state=state, icon="evidence", source="content_generation.list_evidence"),
         ]),
-        section("table", state, title="创作 Evidence", columns=[
+        section("table", state, title="创作 Evidence",
+                action=({"id": "open-content-evidence", "label": "查看最近证据", "variant": "secondary",
+                         "size": "sm", "cls": "QUERY", "scope": "SHARED", "target": latest_evidence_id,
+                         "permission": "READ", "ico": "evidence"} if latest_evidence_id else None), columns=[
             {"label": "证据 ID", "key": "evidence_id"}, {"label": "内容类型", "key": "content_type"},
             {"label": "Provider", "key": "provider"}, {"label": "状态", "key": "status"},
             {"label": "时间", "key": "created_at"}], rows=rows),
         section("note", state, kind="FACTUALITY-WALL",
                 text="Brief → Evidence → Draft → Human Approval；AI 只增强草稿，不拥有事实。"),
+        section("raw", state,
+                html='<section class="lum-card lum-card-pad" data-content-evidence-detail '
+                     'aria-live="polite"><span class="lum-eyebrow">Evidence Detail</span>'
+                     '<p class="lum-body-2">选择一条真实创作 Evidence 查看可追溯结果。</p></section>'),
     ]
     return _envelope("SH-01", sections, truth=None if failed else {"evidence_total": evidence.get("total", 0)})
 

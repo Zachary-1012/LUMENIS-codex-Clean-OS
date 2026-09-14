@@ -26,6 +26,8 @@ from __future__ import annotations
 import datetime as _dt
 import io as _io
 import os
+import json
+import re
 import threading
 import traceback as _tb
 from typing import Any, Dict, List, Optional, Tuple
@@ -705,6 +707,39 @@ def screen_viewmodel(screen_id: str):
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": False, "screen": screen_id, "bound": True, "error": str(exc),
                         "trace": _tb.format_exc(limit=2)}), 500
+
+
+@experience_bp.route("/api/experience/content/evidence/<evidence_id>")
+def content_evidence_detail(evidence_id: str):
+    """返回 SH-01 可展示的创作证据字段；输入 Prompt/研究上下文永不下发。"""
+    if not re.fullmatch(r"CGE-[A-Za-z0-9_-]{1,96}", evidence_id):
+        return jsonify({"ok": False, "error": "invalid evidence id"}), 400
+    import content_generation
+    record = _safe(content_generation.get_evidence, evidence_id, default={"__error__": "unavailable"})
+    if _is_err(record):
+        return jsonify({"ok": False, "error": "evidence runtime unavailable"}), 503
+    if not record:
+        return jsonify({"ok": False, "error": "evidence not found"}), 404
+    try:
+        output = json.loads(record.get("output_json") or "{}")
+    except (TypeError, ValueError):
+        output = {"status": "stored output is not structured JSON"}
+    evaluations = [{key: item.get(key) for key in (
+        "relevance", "creativity", "brand_fit", "platform_fit", "overall",
+        "eval_method", "human_rating", "created_at",
+    )} for item in record.get("evaluations", [])]
+    return jsonify({"ok": True, "source": "runtime", "ai_is_derivative": True, "evidence": {
+        "evidence_id": record.get("evidence_id"),
+        "content_type": record.get("content_type"),
+        "provider": record.get("provider"),
+        "model": record.get("model"),
+        "status": record.get("status"),
+        "confidence": record.get("confidence"),
+        "iteration": record.get("iteration"),
+        "created_at": record.get("created_at"),
+        "output": output,
+        "evaluations": evaluations,
+    }})
 
 
 @experience_bp.route("/api/experience/ai/intent", methods=["POST"])

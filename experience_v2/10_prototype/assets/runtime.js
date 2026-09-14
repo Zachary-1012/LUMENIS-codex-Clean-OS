@@ -206,6 +206,43 @@
       const a = node.dataset.action || '';
       if (a.startsWith('go-') || a === 'open-event') {
         handlers[a] = (n) => { const t = n.dataset.target; if (t) location.hash = '#/' + t; };
+      } else if (a === 'open-content-evidence') {
+        // Section render may already have applied the generic action binder before
+        // runtime hydration. Bind this runtime-only query independently and once.
+        if (node.dataset.contentEvidenceWired) return;
+        node.dataset.contentEvidenceWired = '1';
+        node.addEventListener('click', async () => {
+          const n = node;
+          const target = n.dataset.target || '';
+          const host = root.querySelector('[data-content-evidence-detail]');
+          if (!target || !host) return;
+          n.disabled = true;
+          host.querySelector('p').textContent = '正在读取真实 Evidence…';
+          try {
+            const res = await fetch(`${API}/content/evidence/${encodeURIComponent(target)}`);
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+            const ev = data.evidence || {};
+            host.replaceChildren();
+            const eyebrow = document.createElement('span');
+            eyebrow.className = 'lum-eyebrow'; eyebrow.textContent = 'Evidence Detail · PRODUCTION';
+            const title = document.createElement('h2');
+            title.className = 'lum-h4'; title.textContent = ev.evidence_id || target;
+            const meta = document.createElement('p');
+            meta.className = 'lum-caption lum-mono';
+            meta.textContent = [ev.content_type, ev.provider, ev.model, ev.status, ev.created_at].filter(Boolean).join(' · ');
+            const output = document.createElement('pre');
+            output.className = 'lum-body-2'; output.style.whiteSpace = 'pre-wrap';
+            output.textContent = JSON.stringify(ev.output || {}, null, 2);
+            const fence = document.createElement('p');
+            fence.className = 'lum-caption'; fence.textContent = 'AI 为派生结果；Prompt 与内部研究上下文未下发。';
+            host.append(eyebrow, title, meta, output, fence);
+          } catch (err) {
+            host.querySelector('p').textContent = `Evidence 读取失败：${String(err.message || err)}`;
+          } finally {
+            n.disabled = false;
+          }
+        });
       }
     });
     bindActions(root, handlers);

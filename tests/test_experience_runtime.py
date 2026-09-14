@@ -310,6 +310,39 @@ def test_sh04_report_catalog_real(isolated_client):
     assert {r["领域"] for r in rows} >= {"cth", "zbmp"}
 
 
+def test_sh01_content_evidence_detail_is_real_and_sanitized(isolated_client):
+    """SH-01 用户动作读取真实 Evidence，同时不把 prompt/input 上送到浏览器。"""
+    import content_generation
+    import json
+    cli, _ = isolated_client
+    content_generation.init_db()
+    with content_generation._get_conn() as conn:
+        conn.execute(
+            """INSERT INTO content_generation_evidence
+               (evidence_id,content_type,input_json,prompt,output_json,provider,model,status,confidence,iteration,created_at)
+               VALUES(?,?,?,?,?,?,?,?,?,?,datetime('now','localtime'))""",
+            ("CGE-TEST-SH01", "social_post", json.dumps({"prompt": "SECRET BRIEF"}),
+             "SECRET SYSTEM PROMPT", json.dumps({"headline": "真实草稿"}, ensure_ascii=False),
+             "ollama", "local", "generated", 0.91, 1),
+        )
+        conn.commit()
+
+    screen = cli.get("/api/experience/screen/SH-01").get_json()
+    table = next(s for s in screen["sections"] if s["type"] == "table")
+    assert table["action"]["id"] == "open-content-evidence"
+    assert table["action"]["target"] == "CGE-TEST-SH01"
+
+    response = cli.get("/api/experience/content/evidence/CGE-TEST-SH01")
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["source"] == "runtime" and payload["ai_is_derivative"] is True
+    assert payload["evidence"]["output"]["headline"] == "真实草稿"
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "SECRET BRIEF" not in serialized and "input_json" not in serialized and "prompt" not in serialized.lower()
+
+    assert cli.get("/api/experience/content/evidence/not-valid").status_code == 400
+
+
 def test_bmp10_uses_curated_events_dict(isolated_client):
     """BMP-10 必须正确解包 get_events_curated 的 {'featured':[...]}（回归把 dict 当 list 的缺陷）。"""
     cli, _ = isolated_client
