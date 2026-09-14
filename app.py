@@ -6644,7 +6644,8 @@ def api_cookies_import():
     import os as _os
     from pathlib import Path as _Path
     _base = _Path(__file__).resolve().parent
-    _data = _Path(_os.environ.get('ZBC_DATA_DIR', str(_base / 'data')))
+    # Reuse the same protected data root as the active collector/runtime.
+    _data = _Path(getattr(xhs_cookie_bridge, 'DATA_DIR', _os.environ.get('ZBC_DATA_DIR', str(_base / 'data'))))
     _data.mkdir(exist_ok=True)
     results = {}
 
@@ -6689,7 +6690,7 @@ def api_cookies_import():
             results['bilibili'] = {'ok': False, 'error': str(_e)}
     results.setdefault('bilibili', {'ok': True, 'count': bl_n} if bl_n else {'ok': False, 'note': '未配置 ZBC_BILI_COOKIE_JSON'})
 
-    # --- 小红书（本地源 data/xhs_cookies.source.json，凭证不入库）---
+    # --- 小红书（优先复用私有 Cookie 文件；源 JSON 仍兼容）---
     xhs_src = _data / 'xhs_cookies.source.json'
     xhs_n = 0
     if xhs_src.exists():
@@ -6709,6 +6710,14 @@ def api_cookies_import():
                 xhs_n = len(xhs)
         except Exception as _e:
             results['xhs'] = {'ok': False, 'error': str(_e)}
+    if not xhs_n:
+        # 生产环境可直接维护 private/xhs_cookie_header.txt；不要求把凭证
+        # 再复制成源 JSON，也不把 Cookie 明文写回任何响应或证据。
+        try:
+            if xhs_cookie_bridge.cookie_configured():
+                results['xhs'] = {'ok': True, 'count': 0, 'note': '已复用本地私有 Cookie 文件'}
+        except Exception:
+            pass
     results.setdefault('xhs', {'ok': True, 'count': xhs_n} if xhs_n else {'ok': False, 'note': '未找到 data/xhs_cookies.source.json'})
 
     # Evidence 记录（不记录 Cookie 值，只记录元信息）
@@ -6728,7 +6737,7 @@ def api_cookies_import_status():
     from pathlib import Path as _Path
     import os as _os, json as _json
     _base = _Path(__file__).resolve().parent
-    _data = _base / 'data'
+    _data = _Path(getattr(xhs_cookie_bridge, 'DATA_DIR', _base / 'data'))
     def _stat(platform):
         p = _data / f'{platform}_login_status.json'
         if p.exists():
@@ -6738,12 +6747,23 @@ def api_cookies_import_status():
             except Exception:
                 return {'configured': True, 'error': 'parse_error'}
         return {'configured': False}
-    return jsonify({'ok': True, 'status': {
+    status = {
         'weibo': _stat('weibo'),
         'bilibili': _stat('bilibili'),
         'xhs': _stat('xhs'),
         'xhs_source_exists': (_data / 'xhs_cookies.source.json').exists(),
-    }})
+    }
+    # 私有 Header 文件是生产主路径，不要求存在可提交的源 JSON。
+    xhs_private = _data / 'private' / 'xhs_cookie_header.txt'
+    if xhs_private.is_file() and xhs_private.stat().st_size > 0 and not status['xhs'].get('configured'):
+        try:
+            verified, _ = xhs_cookie_bridge.verify_account()
+            status['xhs'] = {'configured': True, 'logged_in': bool(verified), 'cookie_count': 0,
+                             'source': 'private_cookie_file'}
+        except Exception:
+            status['xhs'] = {'configured': True, 'logged_in': False, 'cookie_count': 0,
+                             'source': 'private_cookie_file'}
+    return jsonify({'ok': True, 'status': status})
 
 
 @app.route('/api/cookies/import/raw', methods=['POST'])

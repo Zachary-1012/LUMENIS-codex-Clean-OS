@@ -31,6 +31,28 @@ def get_db_path():
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
 
 
+def get_data_dir():
+    """获取与生产数据库一致的本地运行数据根目录。
+
+    Cookie、采集统计和报告必须与 Runtime 使用同一个受保护数据根；否则
+    健康面板会把真实生产数据误判为缺失。显式 ZBC_DATA_DIR 优先，未设置时
+    复用 ZBC_DB_PATH 的父目录，最后才回退到仓库 data/（开发/测试默认）。
+    """
+    configured = os.environ.get('ZBC_DATA_DIR', '').strip()
+    if configured:
+        return os.path.abspath(configured)
+    db_path = str(get_db_path() or '').strip()
+    if db_path.startswith('sqlite:///'):
+        db_path = db_path[len('sqlite:///'):]
+    elif db_path.startswith('file:'):
+        db_path = db_path[len('file:'):].split('?', 1)[0]
+    if db_path:
+        parent = os.path.dirname(os.path.abspath(db_path))
+        if parent:
+            return parent
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+
+
 def check_database():
     """检查数据库状态"""
     try:
@@ -71,7 +93,7 @@ def check_collector():
     """检查采集器状态"""
     try:
         # 检查采集计数文件
-        stats_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'collector_stats.json')
+        stats_file = os.path.join(get_data_dir(), 'collector_stats.json')
         today_runs = 0
         last_run = None
         
@@ -96,7 +118,7 @@ def check_collector():
             pass
         
         # 检查Cookie配置
-        cookie_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'private', 'xhs_cookie_header.txt')
+        cookie_file = os.path.join(get_data_dir(), 'private', 'xhs_cookie_header.txt')
         cookie_configured = os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 0
         
         status = 'ok' if (cdp_running and cookie_configured and today_runs > 0) else 'warning'
@@ -137,7 +159,7 @@ def check_login_status():
         return {
             'status': status,
             'recent_7d_collects': recent_7d,
-            'cookie_file_exists': os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'private', 'xhs_cookie_header.txt'))
+            'cookie_file_exists': os.path.exists(os.path.join(get_data_dir(), 'private', 'xhs_cookie_header.txt'))
         }
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
@@ -240,7 +262,7 @@ def check_report_generator():
         pr_case_exists = os.path.exists(pr_case_file)
         
         # 检查报告目录
-        report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reports')
+        report_dir = os.path.join(get_data_dir(), 'reports')
         reports_count = 0
         if os.path.exists(report_dir):
             reports_count = len([f for f in os.listdir(report_dir) if f.endswith(('.docx', '.xlsx', '.pdf'))])

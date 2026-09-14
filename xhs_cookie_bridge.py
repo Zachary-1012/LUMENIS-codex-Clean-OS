@@ -16,6 +16,42 @@ import network_adaptive
 import cache_manager
 
 ROOT=os.path.dirname(os.path.abspath(__file__))
+
+
+def _resolve_runtime_data_dir(root: str | None = None, environ=None) -> str:
+    """Resolve the shared local data root used by the running production instance.
+
+    Production keeps the SQLite database and credential assets outside the source
+    checkout.  The bridge must follow the same path contract as the rest of the
+    runtime instead of silently falling back to ``<repo>/data``.  ``ZBC_DATA_DIR``
+    is authoritative; when it is not set, the parent of ``ZBC_DB_PATH`` is the
+    existing local data root.  The repository ``data`` directory remains the
+    development fallback for isolated tests and fresh checkouts.
+    """
+    env = os.environ if environ is None else environ
+    base = os.path.abspath(root or os.path.dirname(os.path.abspath(__file__)))
+
+    configured = str(env.get('ZBC_DATA_DIR') or '').strip()
+    if configured:
+        return os.path.abspath(configured)
+
+    db_path = str(env.get('ZBC_DB_PATH') or '').strip()
+    if db_path:
+        # Accept the SQLite URL form used by Alembic as well as the plain
+        # filesystem path used by the production launcher.
+        if db_path.startswith('sqlite:///'):
+            db_path = db_path[len('sqlite:///'):]
+        elif db_path.startswith('file:'):
+            db_path = db_path[len('file:'):].split('?', 1)[0]
+        parent = os.path.dirname(os.path.abspath(db_path))
+        if parent:
+            return parent
+
+    return os.path.join(base, 'data')
+
+
+DATA_DIR = _resolve_runtime_data_dir()
+PRIVATE_DATA_DIR = os.path.join(DATA_DIR, 'private')
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
 try:
     from runtime_bin import resolve_node as _resolve_node
@@ -23,8 +59,10 @@ try:
 except Exception:
     _NODE_BIN='node'
 SEARCH_JS=os.path.join(ROOT,'xhs_cookie_search.js')
-COOKIE_FILE=os.path.join(ROOT,'data','private','xhs_cookie_header.txt')
-STATS_FILE=os.path.join(ROOT,'data','collector_stats.json')  # 采集计数持久化文件
+COOKIE_FILE=os.path.abspath(
+    os.environ.get('XHS_COOKIE_FILE') or os.path.join(PRIVATE_DATA_DIR, 'xhs_cookie_header.txt')
+)
+STATS_FILE=os.path.join(DATA_DIR,'collector_stats.json')  # 采集计数持久化文件
 DEFAULT_KEYWORDS=['广州太古汇','太古汇 15周年','太古汇 周年庆','太古汇 活动','太古汇 展览','太古汇 快闪',
                   '太古汇 新店','太古汇 开业','太古汇 美食','太古汇 探店','太古汇 打卡','太古汇 方所','太古汇 品牌',
                   '太古汇 投诉','太古汇 避雷','太古汇 差评','太古汇 吐槽','太古汇 维权','太古汇 服务','太古汇 停车']
@@ -46,7 +84,7 @@ ACCOUNT_PROFILES = {
         os.path.join(ROOT, "edge-cdp-newaccount"),
     ),
     XHS_RETINAUT_NAME: (
-        os.path.join(ROOT, "data", "private", "xhs_cookie_retinaut.txt"),
+        os.path.join(PRIVATE_DATA_DIR, "xhs_cookie_retinaut.txt"),
         os.path.join(ROOT, "edge-cdp-retinaut"),
     ),
 }
@@ -531,7 +569,8 @@ def _run_search(keyword,max_scroll=6):
     effective_scroll = min(max_scroll, adaptive.get('current_scroll_limit', 6))
     delay = adaptive.get('current_delay_seconds', 2)
     
-    out=os.path.join(ROOT,'data','private',f'xhs_{int(time.time()*1000)}.json')
+    os.makedirs(PRIVATE_DATA_DIR, exist_ok=True)
+    out=os.path.join(PRIVATE_DATA_DIR,f'xhs_{int(time.time()*1000)}.json')
     env=os.environ.copy()
     # 双子星库 Contract：传 select_account() 选择的身份对应 Cookie 文件（Node 进程读取一致）
     env['XHS_COOKIE_FILE'] = _effective_cookie_file()
