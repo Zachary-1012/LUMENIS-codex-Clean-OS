@@ -95,6 +95,9 @@ def test_shell_serves_and_injects_runtime(isolated_client):
     r2 = cli.get("/experience/assets/runtime.js")
     assert r2.status_code == 200 and r2.content_length and r2.content_length > 1000
     assert b"lum-production-truth-fence" in r2.data
+    assert b"/api/auth/config" in r2.data
+    assert b"async function apiFetch" in r2.data
+    assert b"const initialId" in r2.data
     assert b'.lum-qa-bar{display:none!important}' in r2.data
     assert b'.lum-page[data-source="prototype"]' in r2.data
     assert b"RUNTIME_UNAVAILABLE" in r2.data

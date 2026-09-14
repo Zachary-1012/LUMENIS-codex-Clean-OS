@@ -258,7 +258,8 @@ except Exception as _lm_e:
     print(f"[lumenis] blueprint register failed: {_lm_e}")
 
 # 序境 Experience V2 生产运行时挂载层（/experience/ 零构建前端 + /api/experience/* 真实 ViewModel）
-# 加法式：不改旧 /lumenis/*，只读聚合既有 database/evidence/ai/runtime 能力，不写业务库。
+# 旧 /lumenis/* 页面源代码保留用于兼容与能力找回；真正的页面入口由下方
+# _canonical_lumenis_experience_route 统一切到 Experience V2，避免旧 UI 再次成为生产入口。
 try:
     from experience_runtime import register_experience_runtime
     register_experience_runtime(app)
@@ -1042,6 +1043,30 @@ def auth_config_api():
         return jsonify({'ok': True, 'auth_enabled': True, 'auth_header': header})
     except Exception as _e:
         return jsonify({'ok': False, 'error': 'auth_header 生成失败: ' + str(_e), 'code': 'AUTH_HEADER_ENCODE_ERROR'}), 500
+
+
+@app.before_request
+def _canonical_lumenis_experience_route():
+    """Make Experience V2 the only UI served by the public LUMENIS page paths.
+
+    Historical Jinja handlers remain registered so their APIs and source can
+    still be recovered, but a browser navigation to an old page must never
+    render that UI.  Compatibility APIs/static assets/probes are explicitly
+    left alone.  The hook is registered before authentication so both the
+    redirect and the target use one deterministic page contract.
+    """
+    if request.method not in ('GET', 'HEAD') or not request.path.startswith('/lumenis'):
+        return None
+    try:
+        from lumenis_route_contract import canonical_screen_for_lumenis_path
+        screen_id = canonical_screen_for_lumenis_path(request.path)
+    except Exception:
+        # A routing guard must fail open to the existing auth/error boundary,
+        # never invent a page or expose a second static implementation.
+        return None
+    if screen_id:
+        return redirect(f'/experience/#/{screen_id}', code=302)
+    return None
 
 
 @app.before_request

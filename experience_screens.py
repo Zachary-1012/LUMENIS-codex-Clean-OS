@@ -195,8 +195,8 @@ def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
         "platforms", STATE_READY,
         title="平台情报 · CTH 只读采集",
         description=(
-            "抖音、微博、知乎、Instagram 由 CTH 统一采集；BMP 只读消费同一条 Evidence → Canonical 链。"
-            "每次操作均由人工触发，不启动后台调度，不执行外部写入或发布。"
+            "抖音、知乎、Instagram 由 CTH 统一采集；BMP 只读消费同一条 Evidence → Canonical 链。"
+            "微博与大陆小红书当前暂停。每次操作均由人工触发，不启动后台调度，不执行外部写入或发布。"
         ),
         items=rows,
         endpoint="/api/experience/cth/platform-collection/search",

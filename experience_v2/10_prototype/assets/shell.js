@@ -157,10 +157,18 @@
     const crumb = $('#lum-crumb-page');
     const domain = $('#lum-crumb-domain');
     const railDomain = $('#lum-domain-label');
-    const special = id === 'AI-01' ? 'LUMENIS AI' : id.startsWith('SYS-') ? 'Settings · 设置' : id.startsWith('SH-') ? 'Shared Capability' : null;
+    const special = id === 'AI-01' ? 'LUMENIS AI' : id.startsWith('SYS-') ? 'Settings · 设置' : null;
     if (special) {
       if (domain) domain.textContent = special;
       if (railDomain) railDomain.textContent = special;
+    } else if (id.startsWith('SH-')) {
+      // Content Studio is one canonical capability consumed by both domains,
+      // not a third product line.  Keep the user's active product lens in the
+      // chrome while the screen itself remains shared and unduplicated.
+      const dk = SubjectContext.value.domain === 'BMP' ? 'domain.zbmp' : 'domain.cth';
+      const label = global.LumI18n ? global.LumI18n.t(dk) : (SubjectContext.value.domain === 'BMP' ? '品牌市场' : '商业运营');
+      if (domain) domain.textContent = label;
+      if (railDomain) railDomain.textContent = label;
     } else if (domain && global.LumI18n) {
       const dk = id.startsWith('BMP-') ? 'domain.zbmp' : 'domain.cth';
       domain.textContent = global.LumI18n.t(dk);

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """CTH secondary platform collection surface.
 
-This module is the one canonical runtime entry for the four platforms requested
-for the current launch scope: Douyin, Weibo, Zhihu and Instagram.
+This module is the one canonical runtime entry for the three platforms in the
+current launch scope: Douyin, Zhihu and Instagram.  Weibo remains a paused
+legacy adapter and is not exposed by the product surface.
 
 The product boundary is deliberately narrow:
 
@@ -32,7 +33,7 @@ from .registry import get_adapter
 from .safe_collection import CollectionHygienePolicy
 
 
-SECONDARY_COLLECTION_PLATFORMS = ("douyin", "weibo", "zhihu", "instagram")
+SECONDARY_COLLECTION_PLATFORMS = ("douyin", "zhihu", "instagram")
 PLATFORM_NAMES = {
     "douyin": "抖音",
     "weibo": "微博",
@@ -192,7 +193,7 @@ def get_collection_surface() -> Dict[str, Any]:
         "surface": "平台情报 / 只读证据采集",
         "source_of_truth": "notes + canonical_data + web_runs + v4_audit_logs",
         "platforms": platforms,
-        "paused_platforms": ["xiaohongshu_cn"],
+        "paused_platforms": ["weibo", "xiaohongshu_cn"],
         "out_of_scope_platforms": [
             "kuaishou", "bilibili", "tieba", "facebook", "x", "youtube",
             "tiktok", "reddit", "linkedin", "github", "channels",
@@ -208,7 +209,7 @@ def get_collection_surface() -> Dict[str, Any]:
 def _validate_request(platform: str, keyword: str, max_results: int) -> tuple[str, str, int]:
     canonical = str(platform or "").strip().lower()
     if canonical not in SECONDARY_COLLECTION_PLATFORMS:
-        raise ValueError("当前只开放抖音、微博、知乎和 Instagram 四个平台")
+        raise ValueError("当前只开放抖音、知乎和 Instagram；微博与大陆小红书暂停")
     query = str(keyword or "").strip()
     if not query or len(query) > 120:
         raise ValueError("keyword 必须为 1-120 个字符")

@@ -33,6 +33,38 @@
   const { $, $$, toast, bindActions, init } = global.LumUI || {};
   if (!$) { console.warn('[runtime] LumUI missing, hydration disabled'); return; }
 
+  // The production shell is protected by the same Basic contract as the
+  // legacy app.  Browser navigation may satisfy the challenge once, but
+  // script fetches are not guaranteed to reuse that header.  Reuse the
+  // existing backend auth/config contract instead of embedding credentials or
+  // letting every runtime request fall into the honest offline state.
+  let authHeader = global.__Z_AUTH || '';
+  let authConfigPromise = null;
+  function loadAuthHeader() {
+    if (authHeader) return Promise.resolve(authHeader);
+    if (authConfigPromise) return authConfigPromise;
+    authConfigPromise = fetch('/api/auth/config', {
+      headers: { Accept: 'application/json' }, credentials: 'include',
+    }).then(resp => resp.ok ? resp.json() : {})
+      .then(data => {
+        authHeader = data && data.auth_enabled && data.auth_header ? data.auth_header : '';
+        if (authHeader) global.__Z_AUTH = authHeader;
+        return authHeader;
+      }).catch(() => '');
+    return authConfigPromise;
+  }
+  async function apiFetch(input, init) {
+    const opts = Object.assign({}, init || {});
+    const headers = new Headers(opts.headers || {});
+    if (!headers.has('Authorization')) {
+      const header = await loadAuthHeader();
+      if (header) headers.set('Authorization', header);
+    }
+    opts.headers = headers;
+    opts.credentials = opts.credentials || 'include';
+    return fetch(input, opts);
+  }
+
   const SCREENS = () => global.LUM_SCREENS || {};
   const pending = new Set();      // 正在拉取的屏幕签名，防重复
   const hydrated = new Set();    // 已水合签名，防重渲循环
@@ -110,7 +142,7 @@
     // 在真实 ViewModel 到达前保持隐藏，避免慢请求期间把样例数字误认作生产事实。
     setSourceTag('prototype');
     try {
-      const resp = await fetch(`${API}/screen/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
+      const resp = await apiFetch(`${API}/screen/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const vm = await resp.json();
       if (vm && vm.bound && Array.isArray(vm.sections)) {
@@ -171,7 +203,7 @@
       send.disabled = true;
       threadAdd('<div class="lum-ai-turn__status">检索证据 · 执行中…</div>');
       try {
-        const resp = await fetch(`${API}/ai/intent`, {
+        const resp = await apiFetch(`${API}/ai/intent`, {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({ task, domain: subj.domain || 'CTH', product: 'LUMENIS' }),
         });
@@ -275,7 +307,7 @@
     pendingNode.textContent = `${skill.tool_name || skill.name} · 读取本地证据并执行…`;
     host.prepend(pendingNode);
     try {
-      const resp = await fetch(`${API}/shared-skills/${encodeURIComponent(skill.skill_id)}/run`, {
+      const resp = await apiFetch(`${API}/shared-skills/${encodeURIComponent(skill.skill_id)}/run`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           task: task || `查看 ${skill.name} 的本地可用能力`,
@@ -306,7 +338,7 @@
     if (!host || host.dataset.wired) return;
     host.dataset.wired = '1';
     try {
-      const resp = await fetch(`${API}/shared-skills`, { headers: { Accept: 'application/json' } });
+      const resp = await apiFetch(`${API}/shared-skills`, { headers: { Accept: 'application/json' } });
       const data = await resp.json();
       if (!resp.ok || !data.ok || !Array.isArray(data.skills)) throw new Error(data.error || `HTTP ${resp.status}`);
       host.replaceChildren();
@@ -353,7 +385,7 @@
         send.disabled = true;
         threadNode('user', task, `${subj.domain || 'CTH'} · 当前上下文`);
         try {
-          const resp = await fetch('/api/ai/chat', {
+          const resp = await apiFetch('/api/ai/chat', {
             method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({ message: task, domain: subj.domain || 'CTH', product: 'LUMENIS', history: chatHistory.slice(-6) }),
           });
@@ -378,7 +410,7 @@
         execute.disabled = true;
         threadNode('status', '任务请求已提交：等待权限门与执行链结果…');
         try {
-          const resp = await fetch(`${API}/ai/intent`, {
+          const resp = await apiFetch(`${API}/ai/intent`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({ task, domain: subj.domain || 'CTH', product: 'LUMENIS', action_type: 'ANALYZE' }),
           });
@@ -431,7 +463,7 @@
           n.disabled = true;
           host.querySelector('p').textContent = '正在读取真实 Evidence…';
           try {
-            const res = await fetch(`${API}/content/evidence/${encodeURIComponent(target)}`);
+            const res = await apiFetch(`${API}/content/evidence/${encodeURIComponent(target)}`);
             const data = await res.json();
             if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
             const ev = data.evidence || {};
@@ -482,7 +514,7 @@
         if (submit) submit.disabled = true;
         if (status) status.textContent = '正在由本地适配器执行只读采集；不执行外部写入…';
         try {
-          const resp = await fetch(form.dataset.endpoint || `${API}/cth/platform-collection/search`, {
+          const resp = await apiFetch(form.dataset.endpoint || `${API}/cth/platform-collection/search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({
@@ -546,8 +578,18 @@
     hydrate(currentId).then(() => wireRuntime(document));
   });
 
+  // runtime.js is injected by the production mount after the prototype's
+  // synchronous app.js boot.  That boot can dispatch the first lum:screen
+  // event before this listener exists; recover the current hash explicitly so
+  // the production shell never stays blank behind the truth fence.
+  const initialId = (global.location.hash || '').replace(/^#\/?/, '') || global.LUM_FIRST || 'AI-01';
+  if (!currentId && initialId) {
+    currentId = initialId;
+    hydrate(currentId).then(() => wireRuntime(document));
+  }
+
   // 启动身份探测（失败不阻断）
-  fetch(`${API}/runtime/identity`).then(r => r.json()).then(idn => {
+  apiFetch(`${API}/runtime/identity`).then(r => r.json()).then(idn => {
     global.LUM_RUNTIME_IDENTITY = idn;
     console.info('[runtime] identity', idn && idn.database, idn && idn.runtime_guardian);
   }).catch(() => { /* 静默：屏幕水合各自处理失败 */ });

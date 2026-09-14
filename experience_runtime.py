@@ -2,7 +2,8 @@
 
 职责（严格最小、加法式）：
   1. 把零构建前端蓝图 ``experience_v2/10_prototype`` 通过现有 Flask 生产进程挂载到
-     ``/experience/``（不新建 React/Vue，不重写旧 Jinja 前端，旧 ``/lumenis/*`` 保持原样）。
+     ``/experience/``（不新建 React/Vue；旧 Jinja 页面源码保留用于兼容与能力找回，
+     但由 app 的 canonical route guard 统一阻止其作为生产 UI 入口）。
   2. 提供与原型 section 描述符**同构**的真实 ViewModel JSON：
        GET  /api/experience/screen/<screen_id>
        GET  /api/experience/runtime/identity

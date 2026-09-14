@@ -181,7 +181,7 @@
           <button type="submit" class="lum-btn lum-btn-secondary" data-platform-collection-submit>读取并写入 Evidence</button>
         </form>
         <p class="lum-caption lum-platform-boundary" data-platform-collection-status aria-live="polite">${esc(d.consumer === 'BMP' ? 'BMP 只读消费 CTH 的同一条证据链。' : '人工触发 · 只读 · 不发布 · 不启动后台调度。')}</p>
-        <p class="lum-caption">大陆小红书保持暂停；其余平台不在本轮范围。审核后的发布动作仍由人完成，序境不会代发。</p>
+        <p class="lum-caption">微博与大陆小红书当前暂停；其余平台不在本轮范围。审核后的发布动作仍由人完成，序境不会代发。</p>
       </section>`;
     },
     chart(d) {

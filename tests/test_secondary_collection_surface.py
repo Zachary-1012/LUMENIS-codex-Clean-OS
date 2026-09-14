@@ -31,13 +31,14 @@ def test_surface_has_exact_launch_allowlist(monkeypatch):
     assert result["product"] == "LUMENIS"
     assert result["domain"] == "CTH"
     assert [item["platform"] for item in result["platforms"]] == [
-        "douyin", "weibo", "zhihu", "instagram"
+        "douyin", "zhihu", "instagram"
     ]
     assert result["manual_only"] is True
     assert result["read_only"] is True
     assert result["external_write"] is False
     assert result["product_will_not_publish"] is True
     assert "xiaohongshu_cn" in result["paused_platforms"]
+    assert "weibo" in result["paused_platforms"]
     assert "bilibili" not in [item["platform"] for item in result["platforms"]]
 
 
@@ -57,14 +58,19 @@ def test_surface_status_preserves_last_run_failure(monkeypatch):
             "accepted": 0,
             "rejected": 0,
             "error_recorded": True,
-        } if platform == "weibo" else None,
+        } if platform == "instagram" else None,
     )
 
     result = surface.get_collection_surface()
 
     by_platform = {item["platform"]: item for item in result["platforms"]}
-    assert by_platform["weibo"]["status"] == "SESSION_EXPIRED"
-    assert by_platform["weibo"]["health"]["status"] == "SUCCESS"
+    assert by_platform["instagram"]["status"] == "SESSION_EXPIRED"
+    assert by_platform["instagram"]["health"]["status"] == "SUCCESS"
+
+
+def test_paused_weibo_is_not_collectable_from_product_surface():
+    with pytest.raises(ValueError, match="微博"):
+        surface.collect_search("weibo", "广州太古汇", operator="human")
 
 
 def test_native_record_keeps_string_id_and_provenance():

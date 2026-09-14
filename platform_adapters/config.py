@@ -1,10 +1,11 @@
 """Platform capability configuration.
 
 Current production release keeps the existing Hong Kong/International XHS path
-separate from the CTH secondary collection surface.  Douyin, Weibo, Zhihu and
-Instagram are now available for explicit, human-triggered, read-only search
-collection through the canonical adapter boundary.  Their scheduled/background
-collection remains disabled until an operating policy explicitly enables it.
+separate from the CTH secondary collection surface.  Douyin, Zhihu and
+Instagram are available for explicit, human-triggered, read-only search
+collection through the canonical adapter boundary.  Weibo is paused for this
+release.  Scheduled/background collection remains disabled until an operating
+policy explicitly enables it.
 Other platforms are event-monitoring extension points only and remain disabled.
 """
 
@@ -53,8 +54,8 @@ PLATFORM_CAPABILITIES = {
     "weibo": {
         "name": "微博",
         "enabled": False,
-        "manual_collection_enabled": True,
-        "collection_mode": "human_triggered_read_only",
+        "manual_collection_enabled": False,
+        "collection_mode": "paused",
         "product_owner": "CTH",
         "priority": "secondary",
         "search": True,
