@@ -2,7 +2,7 @@
 采集器自动化模块 - 广州太古汇舆情监测系统 v5.8.0
 实现自动启动→采集→自动关闭的完整流程
 """
-# 双账号不规则轮换采集（大陆+香港账号交替，根据状态浮动）
+# 采集生产主链固定使用香港/国际账号；大陆身份只保留诊断能力，不进入采集。
 try:
     from dual_account_rotation import select_account_for_collection, record_collection_result, get_rotation_status
     DUAL_ACCOUNT_ENABLED = True
@@ -106,8 +106,8 @@ class CollectorAutomation:
         self.base_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(self.base_dir, 'data')
         self.logs_dir = os.path.join(self.base_dir, 'logs')
-        self.cdp_port = 9222
-        self._task_cdp_port = 9222  # 当前任务实际驻场端口（按逻辑身份解析：大陆9222/香港9223）
+        self.cdp_port = 9223
+        self._task_cdp_port = 9223  # 当前任务实际驻场端口（香港/国际 RedNote）
         self.edge_path = self._find_edge_browser()
         self.is_running = False
         self.current_task = None
@@ -173,6 +173,8 @@ class CollectorAutomation:
         # ── 双子星库 Contract：优先读取 xhs_cookie_bridge 的身份定义（与 xhs_cookie_bridge.select_account 同源）──
         try:
             import xhs_cookie_bridge as _xcb
+            if account in (None, '', 'default'):
+                account = _xcb.DEFAULT_COLLECTION_ACCOUNT
             contract_profiles = getattr(_xcb, 'ACCOUNT_PROFILES', None) or {}
             if account in contract_profiles:
                 # ACCOUNT_PROFILES[name] = (cookie_path, cdp_profile_dir)
@@ -197,7 +199,7 @@ class CollectorAutomation:
         return profile_dir
     
     def _port_for(self, account=None):
-        """按逻辑身份解析驻场 CDP 端口（委托 xhs_cookie_bridge 单一事实源；异常回退默认 9222）。"""
+        """按逻辑身份解析驻场 CDP 端口（委托 xhs_cookie_bridge 单一事实源；异常回退默认 9223）。"""
         try:
             import xhs_cookie_bridge as _xcb
             _a = None if account in (None, '', 'default') else account
@@ -441,7 +443,7 @@ class CollectorAutomation:
         """启动采集任务。force=True 跳过 1 小时冷却（测试期使用）。
 
         双子星库 Contract 门控：采集前调用 xhs_cookie_bridge.runtime_preflight_check()。
-        - account 传 'default' 时：等价于无显式 account，runtime_preflight 会激活默认 XHS_CN_PRIMARY。
+        - account 传 'default' 时：解析为香港/国际 XHS_RETINAUT。
         - account ∈ {XHS_CN_PRIMARY_NAME, XHS_RETINAUT_NAME}：按 Contract 白名单切换；不在白名单直接拒绝。
         - 任何预检失败（熔断/无Cookie/白名单/冷却/暂停）→ 如实返回错误，绝不静默启动空跑。
         """
@@ -454,11 +456,27 @@ class CollectorAutomation:
             pre_ok, pre_msg, pre_detail = True, '', {}
             try:
                 import xhs_cookie_bridge as _xcb
-                # 归一化：'default' 传 None → runtime_preflight 使用默认 XHS_CN_PRIMARY_NAME
-                _account_for_check = None if account in (None, '', 'default') else account
+                # 归一化：'default' 明确解析为当前唯一生产采集账号
+                _account_for_check = account
+                if _account_for_check in (None, '', 'default'):
+                    _account_for_check = _xcb.DEFAULT_COLLECTION_ACCOUNT
+                policy_gate = _xcb.collection_policy_gate(account=_account_for_check, region='intl')
+                if not policy_gate.get('ok'):
+                    pre_ok = False
+                    pre_msg = f'[采集策略门禁] {policy_gate.get("reason", "当前账号/区域不允许生产采集")}'
+                    pre_detail = {'overall_state': policy_gate.get('code'),
+                                  'collection_policy': policy_gate}
+                    return {'ok': False, 'error': pre_msg, 'preflight': pre_detail}
                 # force=True 预检仍跑（保留真实报告），但只在严重 P0 阻断（身份/白名单/熔断）时才拦截
-                # 按逻辑身份解析驻场端口（大陆9222/香港9223）；显式 XHS_CDP_URL 环境变量仍最优先
-                _cdp_url = os.getenv('XHS_CDP_URL') or _xcb.cdp_url_for(_account_for_check)
+                # 生产采集固定使用香港/国际端口；不接受全局环境中的大陆端口覆盖。
+                _configured_cdp = os.getenv('XHS_CDP_URL')
+                if _configured_cdp and not _configured_cdp.rstrip('/').endswith(':9223'):
+                    pre_ok = False
+                    pre_msg = '[采集策略门禁] XHS_CDP_URL 不是香港/国际 9223，拒绝启动采集'
+                    pre_detail = {'overall_state': 'cdp_port_not_allowed',
+                                  'collection_policy': policy_gate}
+                    return {'ok': False, 'error': pre_msg, 'preflight': pre_detail}
+                _cdp_url = _configured_cdp or _xcb.cdp_url_for(_account_for_check)
                 preflight = _xcb.runtime_preflight_check(account=_account_for_check,
                                                           cdp_url=_cdp_url,
                                                           quick=False)
@@ -469,7 +487,9 @@ class CollectorAutomation:
                 if not preflight.get('ok'):
                     ov = str(preflight.get('overall_state', ''))
                     # force=True 允许旁路 cooldown / rate_limit（用于测试 & 紧急）；但 P0 严重项仍然阻断
-                    p0_blocker = ov in ('need_account', 'no_cookie', 'not_in_whitelist', 'blocked', 'user_paused')
+                    p0_blocker = ov in ('need_account', 'no_cookie', 'not_in_whitelist', 'blocked',
+                                        'user_paused', 'account_paused', 'region_paused',
+                                        'policy_unavailable', 'policy_error', 'cdp_port_not_allowed')
                     if p0_blocker or not force:
                         pre_ok = False
                         pre_msg = f'[采集预检未通过·状态={ov}] {preflight.get("evidence","")}'
@@ -524,7 +544,7 @@ class CollectorAutomation:
                 'source_id': 'xiaohongshu',
                 'keywords': keywords,
                 'mode': mode,
-                'account': account,
+                'account': _account_for_check,
                 'trigger_type': trigger_type,
                 'config': config,
                 'status': 'starting',
@@ -768,7 +788,10 @@ class CollectorAutomation:
                 if hasattr(xhs_cookie_bridge, 'sync'):
                     if not xhs_cookie_bridge.cookie_configured():
                         raise RuntimeError('XHS Cookie 未配置：请在 data/private/xhs_cookie_header.txt 配置，或使用已登录的 CDP profile')
-                    result = xhs_cookie_bridge.sync(keywords=task['keywords'], max_scroll=max_scroll)
+                    result = xhs_cookie_bridge.sync(
+                        keywords=task['keywords'], max_scroll=max_scroll,
+                        account=task.get('account') or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT,
+                    )
                     ins = int(result.get('inserted', 0)); upd = int(result.get('updated', 0))
                     task['collect_detail'] = {'inserted': ins, 'updated': upd,
                                              'rejected': result.get('rejected'), 'raw_unique': result.get('raw_unique')}
@@ -856,9 +879,19 @@ class CollectorAutomation:
         if not os.path.exists(cjs):
             raise RuntimeError(f'CDP 兜底采集缺少 rednote_collector.cjs: {cjs}')
         account = task.get('account')
+        import xhs_cookie_bridge as _xcb
+        policy_gate = _xcb.collection_policy_gate(account=account, region='intl')
+        if not policy_gate.get('ok'):
+            logger.warning('[CDP采集] 生产策略阻断: %s', policy_gate.get('reason'))
+            return 0, 'blocked'
         port = self._port_for(account)
         env = os.environ.copy()
         env['XHS_CDP_URL'] = f'http://127.0.0.1:{port}'
+        env['XHS_COLLECTION_REGION'] = 'intl'
+        env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
+        profile = _xcb.ACCOUNT_PROFILES.get(account or _xcb.DEFAULT_COLLECTION_ACCOUNT)
+        if profile and profile[0]:
+            env['XHS_COOKIE_FILE'] = str(profile[0])
         max_details = 6
         total_new = 0; blocked_any = False; loadfail_any = False; attempted = 0
         self._warmup_cdp(account)

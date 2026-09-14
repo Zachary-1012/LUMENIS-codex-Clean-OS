@@ -19,8 +19,8 @@ except Exception:
     _runtime_guardian = None
     _RG_AVAILABLE = False
 
-# RedNote 采集策略 SoT 旁路接入（阶段5 集中策略）：港版/大陆/三端开关/真人节奏
-# 策略只产出判定不发起采集；导入失败时门控默认放行（向后兼容），但记录警告
+# RedNote 采集策略 SoT 旁路接入（阶段5 集中策略）：香港/国际主链 + 内地暂停
+# 这是生产采集入口的硬门禁；策略模块缺失时必须拒绝，不得 fail-open。
 try:
     from platform_adapters import rednote_policy as _rednote_policy
     _REDNOTE_POLICY_AVAILABLE = True
@@ -69,8 +69,8 @@ def _check_profile_lock():
     lock_dir = os.path.expanduser('~/.skills-router/rednote/instances/taikoo')
     return any(os.path.exists(os.path.join(lock_dir, f)) for f in ('SingletonLock', 'SingletonCookie', 'SingletonSocket'))
 
-# CDP 真人通道（9222 有头、已登录、持久 Edge；用户认可“真实窗口登录一次长期复用”）
-CDP_URL = os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9222')
+# CDP 真人通道（9223 香港/国际 RedNote；仅复用已登录的本机驻场实例）
+CDP_URL = os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9223')
 CDP_SCRIPT = os.path.join(SCRIPT_DIR, 'xhs_cdp_collector.py')  # Python Playwright CDP 真人通道
 CDP_NODE_FALLBACK = os.path.join(SCRIPT_DIR, 'rednote_collector.cjs')  # 备用 node 通道
 # 明确风控态：这些不是“0条舆情”，上层必须据此熔断/转 AUTH&VERIFY，不得当成正常空结果
@@ -79,6 +79,46 @@ _CDP_RISK_STATES = ('IP_RISK_OR_300012', 'NEED_VERIFY')
 
 _XHS_GUARD = None
 _XHS_RISK = None
+
+
+def _collection_policy_gate(region=None, account=None):
+    """返回生产采集门禁结果；策略不可用时按安全边界拒绝。"""
+    if not _REDNOTE_POLICY_AVAILABLE:
+        return {
+            'ok': False, 'code': 'policy_unavailable',
+            'reason': 'RedNote生产策略模块不可用，拒绝进入采集主链',
+        }
+    try:
+        from xhs_cookie_bridge import DEFAULT_COLLECTION_ACCOUNT
+        return _rednote_policy.collection_gate(
+            account=account or DEFAULT_COLLECTION_ACCOUNT,
+            region=region or 'intl',
+        )
+    except Exception as exc:
+        return {
+            'ok': False, 'code': 'policy_error',
+            'reason': f'RedNote生产策略判定失败，拒绝进入采集主链: {exc}',
+        }
+
+
+def _collection_env(account=None, region='intl', cdp_url=None):
+    """为下游适配器注入同一账号/区域契约，不包含 Cookie 内容。"""
+    env = os.environ.copy()
+    env['XHS_COLLECTION_REGION'] = region or 'intl'
+    env['XHS_COLLECTION_HOST'] = 'www.rednote.com' if env['XHS_COLLECTION_REGION'] == 'intl' else 'www.xiaohongshu.com'
+    if cdp_url:
+        env['XHS_CDP_URL'] = cdp_url
+    try:
+        from xhs_cookie_bridge import ACCOUNT_PROFILES, DEFAULT_COLLECTION_ACCOUNT
+        selected = account or DEFAULT_COLLECTION_ACCOUNT
+        profile = ACCOUNT_PROFILES.get(selected)
+        if profile and profile[0]:
+            env['XHS_COOKIE_FILE'] = str(profile[0])
+    except Exception:
+        pass
+    env['PYTHONIOENCODING'] = 'utf-8'
+    env['PYTHONUTF8'] = '1'
+    return env
 
 
 def _get_xhs_guard():
@@ -175,7 +215,7 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
 
 
 def _cdp_online(timeout=2.0, cdp_url=None):
-    """探测 CDP 是否在线（默认9222大陆，可传9223港版；不启动浏览器，只探测）。"""
+    """探测 CDP 是否在线（默认9223香港/国际；不启动浏览器，只探测）。"""
     import urllib.request
     _url = (cdp_url or CDP_URL)
 
@@ -207,22 +247,22 @@ def _cdp_online(timeout=2.0, cdp_url=None):
 
 
 def _ensure_cdp_online(timeout=30):
-    """9222 真人通道掉线时自动拉起持久 Edge（无人值守自愈）；拉起失败返回 False，由上层走兜底。"""
+    """香港/国际真人通道掉线时尝试拉起持久 Edge；拉起失败返回 False，由上层走兜底。"""
     import time as _time
     if _cdp_online():
         return True
     try:
         from collector_automation import CollectorAutomation
         ctrl = CollectorAutomation(base_dir=SCRIPT_DIR)
-        print('[Collector] 9222 不在线，尝试自动拉起真人采集浏览器 ...')
+        print('[Collector] 9223 不在线，尝试自动拉起香港/国际真人采集浏览器 ...')
         ctrl.start_browser(account='default', headless=False)  # 内部已等待 CDP 就绪
         for _ in range(timeout):
             if _cdp_online():
-                print('[Collector] 9222 已自动拉起并就绪')
+                print('[Collector] 9223 已自动拉起并就绪')
                 return True
             _time.sleep(1)
     except Exception as e:
-        print('[Collector] 自动拉起 9222 失败:', e)
+        print('[Collector] 自动拉起 9223 失败:', e)
     return _cdp_online()
 
 
@@ -260,19 +300,18 @@ def _norm_cdp_note(rec):
         # 显式落采集时刻，不依赖下游 insert_note 的隐式兜底（智谱采集链审查 P0-C 加固）。
         'captured_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'xsec_token': rec.get('xsec_token', ''),
-        'source_channel': 'cdp_edge_9222',
+        'source_channel': 'cdp_edge_9223',
         'quality_status': rec.get('quality_status', ''),
         'subject_hit_cdp': rec.get('subject_hit'),
         'comment_list': rec.get('comment_list', []),
     }
 
 
-def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None):
+def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None):
     """走已登录 Edge 的 rednote_collector.cjs，返回与独立通道一致的 dict 结构。
-    cdp_url: 9222=大陆cn / 9223=港版intl，默认 CDP_URL(9222)。region 仅用于通道标记。"""
+    cdp_url: 9223=香港/国际intl；region/account 仅用于统一通道标记和 Cookie 路径。"""
     _cdp = cdp_url or CDP_URL
-    env = os.environ.copy(); env['XHS_CDP_URL'] = _cdp
-    env['PYTHONIOENCODING'] = 'utf-8'; env['PYTHONUTF8'] = '1'  # 子进程强制 UTF-8，避免 Windows cp936 捕获中文乱码
+    env = _collection_env(account=account, region=region or 'intl', cdp_url=_cdp)
     py = sys.executable or 'python'
     cmd = [py, CDP_SCRIPT, '--keyword', keyword, '--output', output_path,
            '--max-scroll', str(max_scroll), '--max-details', str(max_details), '--cdp-url', _cdp]
@@ -301,13 +340,14 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
             'channel': 'cdp', 'summary': summ, 'ok': bool(data.get('ok'))}
 
 
-def _search_standalone(keyword, max_scroll, output_path):
+def _search_standalone(keyword, max_scroll, output_path, account=None, region='intl', cdp_url=None):
     """回退通道：独立持久化 Chromium（xhs_search.js）。无 CDP 时使用，headless 易被风控，仅作兜底。"""
     if not os.path.exists(SEARCH_SCRIPT):
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': f'搜索脚本缺失: {SEARCH_SCRIPT}', 'channel': 'standalone'}
     cmd = [_NODE_BIN, SEARCH_SCRIPT, '--keyword', keyword, '--output', output_path, '--max-scroll', str(max_scroll)]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        env = _collection_env(account=account, region=region, cdp_url=cdp_url)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()
             return {'keyword': keyword, 'total': 0, 'notes': [], 'error': err[-800:] or f'Node exited with code {result.returncode}', 'channel': 'standalone'}
@@ -345,23 +385,40 @@ def _is_noise_keyword(k):
 
 
 def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
-                        region=None, cdp_port=None, kos_only=False):
-    """多通道搜索小红书：CDP 真人通道优先（9222大陆/9223港版轮番），独立 Chromium 兜底。
+                        region=None, cdp_port=None, kos_only=False, account=None):
+    """多通道搜索 RedNote：仅走香港/国际账号与 9223 入口。
     返回 dict: {keyword,total,notes,error,channel,region}。风控态显式返回，不当作普通0条。
-    region: 'cn'=大陆9222 / 'intl'=港版9223；kos_only=True 强制 intl(RedNote)。"""
+    region: 当前生产值为 'intl'；'cn' 明确返回策略阻断，不触发任何下游进程。
+    """
+    policy_gate = _collection_policy_gate(region=region or 'intl', account=account)
+    if not policy_gate.get('ok'):
+        return {
+            'keyword': keyword, 'total': 0, 'notes': [],
+            'error': policy_gate.get('code', 'POLICY_BLOCKED'),
+            'blocked_reason': policy_gate.get('reason', 'RedNote生产采集被策略阻断'),
+            'channel': 'policy', 'region': region or 'intl',
+            'policy': policy_gate,
+        }
+    if cdp_port is not None and int(cdp_port) != 9223:
+        gate = dict(policy_gate)
+        gate.update({'ok': False, 'code': 'cdp_port_not_allowed',
+                     'reason': '当前生产采集仅允许香港/国际驻场端口9223'})
+        return {
+            'keyword': keyword, 'total': 0, 'notes': [],
+            'error': gate['code'], 'blocked_reason': gate['reason'],
+            'channel': 'policy', 'region': 'intl', 'cdp_port': cdp_port,
+            'policy': gate,
+        }
+    region = 'intl'
+    cdp_port = 9223
     if output_path is None:
         output_path = os.path.join(SCRIPT_DIR, 'data', f'search_{int(datetime.now().timestamp())}.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # 区域选择：KOS强制intl，否则用传入region或默认
+    # 选择器只返回当前允许的香港/国际入口；不再轮换或回落到大陆。
     if _REDNOTE_POLICY_AVAILABLE:
-        try:
-            sel = _rednote_policy.select_region(kos_only=kos_only, force_region=region)
-            region = sel['region']; cdp_port = sel['cdp_port']
-        except Exception:
-            region = region or 'cn'; cdp_port = cdp_port or 9222
-    else:
-        region = region or 'cn'; cdp_port = cdp_port or 9222
+        sel = _rednote_policy.select_region(kos_only=kos_only, force_region='intl')
+        region = sel['region']; cdp_port = sel['cdp_port']
     cdp_url = f'http://127.0.0.1:{cdp_port}'
 
     # Phase4: 浏览器模式门控 - external_standalone 时跳过CDP，直接走独立Chromium兜底
@@ -372,31 +429,35 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
     except Exception:
         pass
     if _browser_mode == 'external_standalone':
-        print('[Collector] 浏览器模式=external_standalone，跳过CDP真人通道，直接走独立Chromium兜底')
-        return _search_standalone(keyword, max_scroll, output_path)
+        print('[Collector] 浏览器模式=external_standalone，使用香港/国际策略上下文的独立通道')
+        return _search_standalone(keyword, max_scroll, output_path, account=account,
+                                   region=region, cdp_url=cdp_url)
 
     # 主路径：CDP 真人通道
     try:
-        if os.path.exists(CDP_SCRIPT) and (_cdp_online(cdp_url=cdp_url) or (cdp_port == 9222 and _ensure_cdp_online())):
+        if os.path.exists(CDP_SCRIPT) and _cdp_online(cdp_url=cdp_url):
             res = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details,
-                                  cdp_url=cdp_url, region=region)
+                                  cdp_url=cdp_url, region=region, account=account)
             res['region'] = region; res['cdp_port'] = cdp_port
             if res.get('notes') or res.get('error') in _CDP_RISK_STATES:
                 return res  # 真出数 / 明确风控态都直接返回
             # CDP 非风控空结果，落兜底通道再试一次
-            fb = _search_standalone(keyword, max_scroll, output_path)
+            fb = _search_standalone(keyword, max_scroll, output_path, account=account,
+                                    region=region, cdp_url=cdp_url)
             fb['cdp_first_empty'] = res.get('error', '')
             return fb
     except Exception as e:
         print('[Collector] CDP 主路径异常，回退独立通道:', e)
-    return _search_standalone(keyword, max_scroll, output_path)
+    return _search_standalone(keyword, max_scroll, output_path, account=account,
+                              region=region, cdp_url=cdp_url)
 
 
-def _collect_one_keyword(guard, kw, kw_scroll, kw_details):
+def _collect_one_keyword(guard, kw, kw_scroll, kw_details, account=None):
     """单个关键词采集（封装 CollectorGuard.run），返回 (gr, result_dict)。
     独立函数便于 Runtime Guardian execute_with_retry 包装重试。"""
     gr = guard.run(
-        lambda kw=kw, ss=kw_scroll, dd=kw_details: search_xiaohongshu(kw, max_scroll=ss, max_details=dd),
+        lambda kw=kw, ss=kw_scroll, dd=kw_details, acc=account: search_xiaohongshu(
+            kw, max_scroll=ss, max_details=dd, account=acc, region='intl', cdp_port=9223),
         kw,
     )
     result = gr.raw if isinstance(gr.raw, dict) else {
@@ -407,7 +468,7 @@ def _collect_one_keyword(guard, kw, kw_scroll, kw_details):
 
 
 def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_id=None,
-                kind="public_opinion", auto_trigger=False):
+                kind="public_opinion", auto_trigger=False, account=None):
     """
     批量采集所有关键词
     返回去重后的笔记列表
@@ -421,27 +482,25 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
       kind:        采集类型 topic/public_opinion/event（三端开关白名单制）
       auto_trigger: True=调度器自动触发（额外校验 auto_run_enabled），False=手动触发
     """
-    # RedNote 策略门控：港版/大陆区域 + 三端开关 + 自动运行总闸
-    if _REDNOTE_POLICY_AVAILABLE:
-        try:
-            _pol = _rednote_policy.effective_policy()
-            _gate_reason = None
-            if not _pol.can_run_kind(kind):
-                _gate_reason = f"kind={kind} 未在策略白名单内（topic/public_opinion开，event关）"
-            elif auto_trigger and not _pol.auto_run_enabled:
-                _gate_reason = "auto_run_enabled=False（自动调度需显式 REDNOTE_AUTO_RUN=true 授权）"
-            elif _pol.primary_region == "cn" and _pol.cn_paused:
-                _gate_reason = "国内入口 cn_paused=True（熔断中，不撞不绕验证）"
-            if _gate_reason:
-                print(f"[Collector][PolicyGate] BLOCKED: {_gate_reason}")
-                print(f"[Collector][PolicyGate] policy: primary_region={_pol.primary_region} "
-                      f"cn_paused={_pol.cn_paused} auto_run={_pol.auto_run_enabled} "
-                      f"kind_enabled={_pol.kind_enabled}")
-                return []
-            print(f"[Collector][PolicyGate] PASS: kind={kind} auto_trigger={auto_trigger} "
-                  f"region={_pol.primary_region} cadence_status={_pol.human_cadence.get('status')}")
-        except Exception as _pol_err:
-            print(f"[Collector][PolicyGate] policy check failed (fail-open): {_pol_err}")
+    # RedNote 统一门控：香港/国际账号 + 三端能力白名单 + 自动运行总闸。
+    policy_gate = _collection_policy_gate(region='intl', account=account)
+    if not policy_gate.get('ok'):
+        print(f"[Collector][PolicyGate] BLOCKED: {policy_gate.get('reason')}")
+        return [], [{'keyword': '', 'count': 0, 'error': policy_gate.get('code', 'POLICY_BLOCKED'),
+                     'policy': policy_gate}]
+    _pol = _rednote_policy.effective_policy()
+    _gate_reason = None
+    if not _pol.can_run_kind(kind):
+        _gate_reason = f"kind={kind} 未在策略白名单内（topic/public_opinion开，event关）"
+    elif auto_trigger and not _pol.auto_run_enabled:
+        _gate_reason = "auto_run_enabled=False（自动调度需显式 REDNOTE_AUTO_RUN=true 授权）"
+    if _gate_reason:
+        print(f"[Collector][PolicyGate] BLOCKED: {_gate_reason}")
+        return [], [{'keyword': '', 'count': 0, 'error': 'KIND_POLICY_BLOCKED',
+                     'policy': policy_gate, 'detail': _gate_reason}]
+    print(f"[Collector][PolicyGate] PASS: kind={kind} auto_trigger={auto_trigger} "
+          f"region=intl account={policy_gate.get('account')} "
+          f"cadence_status={_pol.human_cadence.get('status')}")
 
     if keywords is None:
         keywords = MONITOR_KEYWORDS
@@ -477,6 +536,7 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
             try:
                 gr, result = guardian.execute_with_retry(
                     worker_id, _collect_one_keyword, guard, kw, kw_scroll, kw_details,
+                    account or policy_gate.get('account'),
                     task_type='xhs_keyword_search',
                     payload={'keyword': kw, 'max_scroll': kw_scroll, 'max_details': kw_details},
                     run_id=run_id or f'collect_{int(time.time())}',
@@ -490,7 +550,8 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
                 })
                 continue
         else:
-            gr, result = _collect_one_keyword(guard, kw, kw_scroll, kw_details)
+            gr, result = _collect_one_keyword(guard, kw, kw_scroll, kw_details,
+                                              account or policy_gate.get('account'))
         if gr.should_stop:
             collection_results.append({'keyword': kw, 'count': result.get('total', 0),
                                        'error': result.get('error', '') or gr.reason,

@@ -203,12 +203,18 @@ def trigger_collection(account_name: str | None = None,
       3. runtime_preflight_check：Session 健康预检
     之后调用 bridge.sync（内部完成采集 → database.insert_note → 主体过滤）。
     """
-    # 门控 1：身份硬白名单
-    account = account_name or bridge.XHS_CN_PRIMARY_NAME
+    # 门控 1：身份硬白名单 + 当前生产边界（仅香港/国际账号）
+    account = account_name or bridge.DEFAULT_COLLECTION_ACCOUNT
     if not _identity_allowed(account):
         return {"ok": False,
                 "msg": f"身份 [{account}] 不在双子星库 Contract 硬白名单中。"
                        f"允许身份: {list(ALLOWED_IDENTITY_NAMES)}"}
+    policy_gate = bridge.collection_policy_gate(account=account, region='intl')
+    if not policy_gate.get('ok'):
+        return {"ok": False, "account": account,
+                "code": policy_gate.get('code'),
+                "collection_policy": policy_gate,
+                "msg": f"[生产采集边界] {policy_gate.get('reason', '当前账号暂不可采集')}"}
 
     # 门控 2：身份切换
     ok_sel, msg_sel = bridge.select_account(account)
@@ -235,7 +241,8 @@ def trigger_collection(account_name: str | None = None,
             _STATE.heartbeat_fails = 0
             _STATE.collections += 1
             _STATE.last_collection_at = time.time()
-        return {"ok": True, "account": account, "result": result}
+        return {"ok": True, "account": account,
+                "collection_policy": policy_gate, "result": result}
     except Exception as e:  # noqa: BLE001
         _mark_session_lost(f"采集异常: {e}")
         return {"ok": False, "msg": f"采集执行异常: {e}"}

@@ -96,7 +96,7 @@ ACCOUNT_CDP_PORTS = {
     XHS_CN_PRIMARY_NAME: 9222,
     XHS_RETINAUT_NAME: 9223,
 }
-DEFAULT_CDP_PORT = 9222
+DEFAULT_CDP_PORT = 9223
 
 ACCOUNT_HOME_URLS = {
     XHS_CN_PRIMARY_NAME: 'https://www.xiaohongshu.com',
@@ -104,13 +104,13 @@ ACCOUNT_HOME_URLS = {
 }
 
 def _canonical_account_name(account=None):
-    """default/None/空 → 具体逻辑身份名（优先当前激活身份，回退大陆主号）。"""
+    """default/None/空 → 当前生产采集默认的香港/国际身份。"""
     if account in (None, '', 'default'):
-        return _ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME
+        return _ACTIVE_ACCOUNT or XHS_RETINAUT_NAME
     return account
 
 def cdp_port_for(account=None):
-    """逻辑身份 → 驻场 CDP 端口；未知身份回退 9222（不抛异常，保证主号链路稳定）。"""
+    """逻辑身份 → 驻场 CDP 端口；未知身份回退香港/国际端口。"""
     return int(ACCOUNT_CDP_PORTS.get(_canonical_account_name(account), DEFAULT_CDP_PORT))
 
 def cdp_url_for(account=None):
@@ -119,14 +119,23 @@ def cdp_url_for(account=None):
 
 def home_url_for(account=None):
     """逻辑身份 → 平台首页（驻场窗口起始页 / CDP 热身页）。"""
-    return ACCOUNT_HOME_URLS.get(_canonical_account_name(account), ACCOUNT_HOME_URLS[XHS_CN_PRIMARY_NAME])
+    return ACCOUNT_HOME_URLS.get(_canonical_account_name(account), ACCOUNT_HOME_URLS[XHS_RETINAUT_NAME])
+
+
+def collection_policy_gate(account=None, region='intl'):
+    """统一生产采集门禁；只判定，不读取 Cookie 内容、不连平台、不启动浏览器。"""
+    from platform_adapters import rednote_policy
+    requested = account
+    if requested in (None, '', 'default'):
+        requested = rednote_policy.DEFAULT_COLLECTION_ACCOUNT
+    return rednote_policy.collection_gate(account=requested, region=region)
 
 # 配置一致性断言：逻辑身份在 ACCOUNT_PROFILES 中存在 / 白名单数量匹配
 assert XHS_CN_PRIMARY_NAME in ACCOUNT_PROFILES and XHS_RETINAUT_NAME in ACCOUNT_PROFILES, \
     "ACCOUNT_PROFILES 必须覆盖所有双身份逻辑名"
 assert len(ALLOWED_USER_IDS) == (1 if XHS_RETINAUT is None else 2), \
     f"ALLOWED_USER_IDS 长度不匹配：XHS_RETINAUT 配置为 {XHS_RETINAUT!r}（None=暂不启用）"
-# 运行时当前激活的身份（select_account 设置；None=默认 XHS_CN_PRIMARY_NAME + 未 override）
+# 运行时当前激活的身份（select_account 设置；None=默认 XHS_RETINAUT + 未 override）
 _ACTIVE_ACCOUNT: str | None = None
 
 # ── 每日次数上限：已改为“动态调度下的防失控兜底”，不再是固定配额 ──────────────
@@ -305,7 +314,7 @@ def verify_account():
             f"当前账号({current_id[:8]}...)不在硬白名单内（双子星库 Contract：仅允许 "
             f"{list(name_map.values())} = {allow_preview}）。其它身份禁止进入采集任务，仅允许轻量检索。"
         )
-    active = _ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME
+    active = _ACTIVE_ACCOUNT or XHS_RETINAUT_NAME
     return True, f"账号验证通过（身份={active}, user_id={current_id[:8]}...）"
 
 def check_rate_limit(run_type='manual'):
@@ -358,8 +367,9 @@ def get_account_status():
         elapsed = time.time() - _last_run_time
         if elapsed < COOLDOWN_MINUTES * 60:
             cooldown_remaining = int((COOLDOWN_MINUTES * 60 - elapsed) / 60) + 1
-    active_account = _ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME
+    active_account = _ACTIVE_ACCOUNT or XHS_RETINAUT_NAME
     allowed_preview = [x[:12] + '...' for x in ALLOWED_USER_IDS]
+    policy = collection_policy_gate(account=active_account)
     return {
         'active_account': active_account,
         'active_cookie_file': _effective_cookie_file(),
@@ -379,6 +389,8 @@ def get_account_status():
         'cooldown_remaining_minutes': cooldown_remaining,
         'new_account_guard_runs': NEW_ACCOUNT_GUARD_RUNS,
         'cookie_configured': cookie_configured(),
+        'collection_enabled': bool(policy.get('ok')),
+        'collection_policy': policy,
         'status': 'ready' if (in_whitelist and cookie_configured() and cooldown_remaining == 0) else 'restricted'
     }
 
@@ -435,30 +447,27 @@ def runtime_preflight_check(account: str | None = None,
     def _add(cid, name, level, st, detail, **kw):
         checks.append({'id':cid,'name':name,'level':level,'status':st,'detail':detail, **kw})
 
-    # ── 1) Account：account 参数切换（显式） ──
-    account_used = account or (_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME)
-    if account is not None:
-        ok_sel, msg_sel = select_account(account)
-        if not ok_sel:
-            _add('A1_ACCOUNT','双子星库身份门控','P0','fail',msg_sel)
-            return {'ok':False,'overall_state':'need_account','checks':checks,
-                    'account_status':get_account_status(),'circuit':get_circuit_state(),
-                    'active_account':account_used,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                    'cdp_online':False,'user_paused':is_user_paused(),
-                    'evidence':'身份无效：' + msg_sel}
-        _add('A1_ACCOUNT','双子星库身份门控','P0','pass',f'身份={account_used}，已激活')
-    else:
-        # 无显式 account 时激活默认 PRIMARY
-        if _ACTIVE_ACCOUNT is None:
-            ok_default, msg_default = select_account(XHS_CN_PRIMARY_NAME)
-            if not ok_default:
-                _add('A1_ACCOUNT','双子星库默认身份激活','P0','fail',msg_default)
-                return {'ok':False,'overall_state':'need_account','checks':checks,
-                        'account_status':get_account_status(),'circuit':get_circuit_state(),
-                        'active_account':XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                        'cdp_online':False,'user_paused':is_user_paused(),
-                        'evidence':'默认身份激活失败：' + msg_default}
-        _add('A1_ACCOUNT','双子星库默认身份','P0','pass',f'身份={_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME}')
+    # ── 1) Account：生产采集只允许香港/国际身份；内地身份仍可诊断但不得放行 ──
+    account_used = (account or DEFAULT_COLLECTION_ACCOUNT).strip().upper()
+    policy_gate = collection_policy_gate(account=account_used, region='intl')
+    if not policy_gate.get('ok'):
+        _add('A0_POLICY','RedNote生产边界','P0','fail',policy_gate.get('reason', '采集策略拒绝'))
+        return {'ok':False,'overall_state':policy_gate.get('code','account_paused'),
+                'checks':checks,'account_status':get_account_status(),
+                'circuit':get_circuit_state(),'active_account':account_used,
+                'allowed_accounts':list(ACCOUNT_PROFILES.keys()),'cdp_online':False,
+                'user_paused':is_user_paused(),'collection_policy':policy_gate,
+                'evidence':'生产采集被策略门禁阻断：' + policy_gate.get('reason','')}
+    ok_sel, msg_sel = select_account(account_used)
+    if not ok_sel:
+        _add('A1_ACCOUNT','双子星库身份门控','P0','fail',msg_sel)
+        return {'ok':False,'overall_state':'need_account','checks':checks,
+                'account_status':get_account_status(),'circuit':get_circuit_state(),
+                'active_account':account_used,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':False,'user_paused':is_user_paused(),
+                'collection_policy':policy_gate,'evidence':'身份无效：' + msg_sel}
+    _add('A1_ACCOUNT','双子星库生产身份门控','P0','pass',f'身份={account_used}，已激活香港/国际采集身份')
+    cdp_probe_url = cdp_url or os.getenv('XHS_CDP_URL') or cdp_url_for(account_used)
 
     # ── 2) Cookie 文件存在且非空 ──
     ccfg = cookie_configured()
@@ -469,8 +478,8 @@ def runtime_preflight_check(account: str | None = None,
         _add('A2_COOKIE','Cookie文件检查','P0','fail',f'Cookie 缺失，请在 {cp} 导入有效Cookie或完成扫码登录')
         return {'ok':False,'overall_state':'no_cookie','checks':checks,
                 'account_status':get_account_status(),'circuit':get_circuit_state(),
-                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':_check_cdp_online(cdp_url or os.getenv('XHS_CDP_URL','')),
+                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':_check_cdp_online(cdp_probe_url),
                 'user_paused':is_user_paused(),'evidence':'无Cookie/登录态：请在系统内完成小红书扫码登录'}
     _add('A2_COOKIE','Cookie文件检查','P0','pass',f'已加载：{os.path.basename(_effective_cookie_file())}')
     state.session = SessionState.COOKIE_PRESENT
@@ -482,8 +491,8 @@ def runtime_preflight_check(account: str | None = None,
         _add('A3_WHITELIST','双子星库白名单','P0','fail',msg_uid)
         return {'ok':False,'overall_state':'not_in_whitelist','checks':checks,
                 'account_status':get_account_status(),'circuit':get_circuit_state(),
-                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
-                'cdp_online':_check_cdp_online(cdp_url or os.getenv('XHS_CDP_URL','')),
+                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'cdp_online':_check_cdp_online(cdp_probe_url),
                 'user_paused':is_user_paused(),'evidence':'账号不在双子星库白名单：' + msg_uid}
     _add('A3_WHITELIST','双子星库白名单','P0','pass',msg_uid)
     state.auth = AuthState.VALID
@@ -491,13 +500,13 @@ def runtime_preflight_check(account: str | None = None,
     # ── 4) CDP 浏览器驻场检测（quick=False 才检查；quick 模式用于高频轮询省开销） ──
     cdp_online = False
     if not quick:
-        cdp_online = _check_cdp_online(cdp_url or os.getenv('XHS_CDP_URL',''))
+        cdp_online = _check_cdp_online(cdp_probe_url)
         if cdp_online:
             state.session = SessionState.BROWSER_CONNECTED
-            _add('A4_CDP','驻场浏览器(CDP)','P1','pass',f'CDP端口已在线：{cdp_url or os.getenv("XHS_CDP_URL") or "http://127.0.0.1:9222"}')
+            _add('A4_CDP','驻场浏览器(CDP)','P1','pass',f'CDP端口已在线：{cdp_probe_url}')
         else:
             # CDP 不在线不是致命（cookie_bridge 纯HTTP可能够用），但 Session 仍未达到驻场级
-            _add('A4_CDP','驻场浏览器(CDP)','P1','warn','未检测到9222常驻浏览器；纯HTTP通道可采集，遇风控时建议打开CDP驻场。')
+            _add('A4_CDP','驻场浏览器(CDP)','P1','warn','未检测到香港/国际9223常驻浏览器；纯HTTP通道可采集，遇风控时建议打开CDP驻场。')
             state.platform = PlatformState.UNREACHABLE
     else:
         _add('A4_CDP','驻场浏览器(CDP)','P1','skip','quick模式跳过端口探活（节省开销）')
@@ -515,7 +524,7 @@ def runtime_preflight_check(account: str | None = None,
              f'{circ.get("state","BLOCKED")} 至 {circ.get("resume_at","")}：{circ.get("detail","")}')
         return {'ok':False,'overall_state':'blocked','checks':checks,
                 'account_status':get_account_status(),'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
                 'cdp_online':cdp_online,'user_paused':is_user_paused(),
                 'evidence':'处于风控/登录态熔断，需冷却或在系统内完成人工验证'}
     _add('A5_CIRCUIT','熔断状态','P0','pass','未熔断，可正常发起采集')
@@ -527,7 +536,7 @@ def runtime_preflight_check(account: str | None = None,
         _add('A6_PAUSE','手动暂停开关','P0','fail',f'用户主动暂停：{up.get("reason","")}（{up.get("at","")}）')
         return {'ok':False,'overall_state':'user_paused','checks':checks,
                 'account_status':get_account_status(),'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
                 'cdp_online':cdp_online,'user_paused':up,
                 'evidence':'用户主动暂停采集：请在系统设置或顶部操作恢复'}
     _add('A6_PAUSE','手动暂停开关','P0','pass','未手动暂停')
@@ -539,7 +548,7 @@ def runtime_preflight_check(account: str | None = None,
         _add('A7_RATE','频率/冷却','P1','warn',f'冷却中：约剩 {cooldown} 分钟')
         return {'ok':False,'overall_state':'cooldown','checks':checks,
                 'account_status':acc_status,'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
                 'cdp_online':cdp_online,'user_paused':up,
                 'evidence':f'处于采集冷却期，约 {cooldown} 分钟后可再发起（保护账号安全）'}
     t_limit = acc_status.get('today_runs',0) >= acc_status.get('max_daily_runs',12)
@@ -547,7 +556,7 @@ def runtime_preflight_check(account: str | None = None,
         _add('A7_RATE','频率/冷却','P1','fail','今日已达到每日上限次数')
         return {'ok':False,'overall_state':'rate_limit','checks':checks,
                 'account_status':acc_status,'circuit':circ,
-                'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
                 'cdp_online':cdp_online,'user_paused':up,
                 'evidence':'今日采集次数已达上限，请明天再试'}
     _add('A7_RATE','频率/冷却','P0','pass',
@@ -556,7 +565,8 @@ def runtime_preflight_check(account: str | None = None,
 
     return {'ok':True,'overall_state':'ready','checks':checks,
             'account_status':acc_status,'circuit':circ,
-            'active_account':_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+             'active_account':_ACTIVE_ACCOUNT or XHS_RETINAUT_NAME,'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+             'collection_policy':policy_gate,
             'cdp_online':cdp_online,'user_paused':up,
             'state_machine':{
                 'auth':state.auth.value,'session':state.session.value,
@@ -574,7 +584,9 @@ def _run_search(keyword,max_scroll=6):
     env=os.environ.copy()
     # 双子星库 Contract：传 select_account() 选择的身份对应 Cookie 文件（Node 进程读取一致）
     env['XHS_COOKIE_FILE'] = _effective_cookie_file()
-    # 搜索优先复用当前身份的常驻 CDP（大陆9222/香港9223，已登录保活）；JS 侧 CDP 不可达会自动回退 headless+cookie
+    env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
+    env['XHS_COLLECTION_REGION'] = 'intl'
+    # 搜索只复用香港/国际身份的常驻 CDP；JS 侧 CDP 不可达会按既有适配器策略处理
     env['XHS_CDP_URL'] = cdp_url_for()
     cmd=[_NODE_BIN,SEARCH_JS,'--keyword',keyword,'--output',out,'--max-scroll',str(effective_scroll)]
     try:
@@ -645,9 +657,9 @@ def _run_search(keyword,max_scroll=6):
         time.sleep(delay)
 
 # ========== 六态状态机：采集日志落库 + 自动熔断 ==========
-CIRCUIT_FILE=os.path.join(ROOT,'data','private','xhs_circuit.json')
+CIRCUIT_FILE=os.path.join(PRIVATE_DATA_DIR,'xhs_circuit.json')
 # 用户级“手动暂停采集”开关（区别于风控熔断：由用户主动设置，手动/自动一律不发起平台请求，直到用户主动恢复）
-USER_PAUSE_FILE=os.path.join(ROOT,'data','private','xhs_user_paused.json')
+USER_PAUSE_FILE=os.path.join(PRIVATE_DATA_DIR,'xhs_user_paused.json')
 
 def is_user_paused():
     """返回用户暂停信息 dict；未暂停返回 None。"""
@@ -763,6 +775,26 @@ def select_account(account_name: str):
                   f"| cdp_profile={os.path.basename(cdp_profile_dir) if cdp_profile_dir else 'N/A'}")
 
 def sync(keywords=None, max_scroll=6, account=None):
+    resolved_account = account or DEFAULT_COLLECTION_ACCOUNT
+    policy_gate = collection_policy_gate(account=resolved_account, region='intl')
+    if not policy_gate.get('ok'):
+        requested_keywords = list(dict.fromkeys(keywords or DEFAULT_KEYWORDS))
+        return {
+            'ok': False, 'task_state': 'POLICY_BLOCKED', 'state_counts': {},
+            'keywords': requested_keywords, 'raw_unique': 0, 'verified': 0,
+            'rejected': 0, 'inserted': 0, 'updated': 0, 'analyzed': 0, 'events': 0,
+            'results': [{'stage': 'collection_policy', 'status': 'blocked',
+                         'code': policy_gate.get('code'), 'message': policy_gate.get('reason')}],
+            'network_status': network_adaptive.get_network_status(),
+            'cache_status': cache_manager.get_cache_status(),
+            'blocked': policy_gate.get('reason'), 'collection_policy': policy_gate,
+            'active_account': resolved_account, 'active_user_id': None,
+            'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+            'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        }
+    ok_sel, msg_sel = select_account(resolved_account)
+    if not ok_sel:
+        raise RuntimeError(f"[XHS生产身份门控] {msg_sel}")
     # ── 统一采集前置门：自动 create_task / collector_automation / p0_orchestrator 三条生产路径
     #     最终都汇聚到本函数，在此一处收口，确保“用户暂停”对所有采集一视同仁、零平台请求（测试模式旁路）──
     if not is_test_mode():
@@ -775,22 +807,13 @@ def sync(keywords=None, max_scroll=6, account=None):
                     'results':[{'stage':'user_paused','message':_msg}],
                     'network_status':network_adaptive.get_network_status(),
                     'cache_status':cache_manager.get_cache_status(),'blocked':_msg,
-                    'active_account':(_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME),'active_user_id':None,
+                    'active_account':resolved_account,'active_user_id':None,
                     'allowed_accounts':list(ACCOUNT_PROFILES.keys()),
+                    'collection_policy':policy_gate,
                     'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-    # ── 双子星库 Contract 身份门控（最先执行，防止未授权身份进入采集）──
-    if account is not None:
-        ok_sel, msg_sel = select_account(account)
-        if not ok_sel:
-            raise RuntimeError(f"[XHS身份门控] {msg_sel}")
-    elif _ACTIVE_ACCOUNT is None:
-        # 默认激活 XHS_CN_PRIMARY（向后兼容，保持历史行为不变）
-        ok_default, msg_default = select_account(XHS_CN_PRIMARY_NAME)
-        if not ok_default:
-            raise RuntimeError(f"[XHS默认身份激活失败] {msg_default}")
 
     if not cookie_configured():
-        raise RuntimeError('未配置本机 XHS Cookie。请在 data/private/xhs_cookie_header.txt 配置，或使用已登录的 Playwright profile。')
+        raise RuntimeError(f'未配置本机香港/国际 XHS Cookie。请在 {ACCOUNT_PROFILES[resolved_account][0]} 导入合法登录态。')
     keywords=list(dict.fromkeys(keywords or DEFAULT_KEYWORDS))[:32]
     raw={}; results=[]; blocked={}; state_counts={}
     _consec_bad=0  # 连续被拦截/失败计数（成功或空结果清零），达到阈值即提前结束本轮保护账号
@@ -912,9 +935,10 @@ def sync(keywords=None, max_scroll=6, account=None):
         'cache_status': cache_manager.get_cache_status(),
         'blocked': blocked_summary,
         # ── 双子星库 Contract 身份证据链（写入所有 sync 返回，方便追溯哪条数据由哪个身份采集）──
-        'active_account': (_ACTIVE_ACCOUNT or XHS_CN_PRIMARY_NAME),
+        'active_account': resolved_account,
         'active_user_id': ((_cid[:12] + '...') if (_cid := _get_current_user_id()) else None),
         'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+        'collection_policy': policy_gate,
         'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
@@ -934,10 +958,17 @@ def _shadow_record_result(task_state, items_found, blocked='', run_type='auto'):
         print('[xhs-bridge] shadow record skipped:', e, flush=True)
 
 
-def create_task(keywords=None,max_scroll=6,run_type='manual'):
+def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
     """创建采集任务
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
     """
+    resolved_account = account or DEFAULT_COLLECTION_ACCOUNT
+    policy_gate = collection_policy_gate(account=resolved_account, region='intl')
+    if not policy_gate.get('ok'):
+        raise RuntimeError(f"采集策略门禁：{policy_gate.get('reason', '当前账号/区域不允许生产采集')}")
+    ok_sel, msg_sel = select_account(resolved_account)
+    if not ok_sel:
+        raise RuntimeError(f'[XHS生产身份门控] {msg_sel}')
     # 用户主动暂停期间，手动/自动一律不发起平台请求（测试模式旁路），保护账号，直到用户显式恢复
     _paused = is_user_paused()
     if _paused and not is_test_mode():
@@ -966,13 +997,13 @@ def create_task(keywords=None,max_scroll=6,run_type='manual'):
     type_label = '手动触发' if run_type == 'manual' else '自动采集'
     if not _lock.acquire(blocking=False): raise RuntimeError('已有小红书 Cookie 同步任务运行中')
     task_id=f"xhs-{datetime.now():%Y%m%d%H%M%S}-{int(time.time()*1000)%1000:03d}"
-    _tasks[task_id]={'task_id':task_id,'status':'running','progress':5,'run_type':run_type,'message':f'[{type_label}]正在使用本机登录态检索小红书…{guard_msg}','created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    _tasks[task_id]={'task_id':task_id,'status':'running','progress':5,'run_type':run_type,'account':resolved_account,'collection_policy':policy_gate,'message':f'[{type_label}]正在使用香港/国际登录态检索RedNote…{guard_msg}','created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     def worker():
         _w_start=time.time()
         try:
             record_run(run_type)  # 记录运行（区分手动/自动）
             _tasks[task_id].update(progress=20,message=f'[{type_label}]搜索广州太古汇关键词…{guard_msg}')
-            result=sync(keywords,max_scroll)
+            result=sync(keywords,max_scroll,account=resolved_account)
             ts=result.get('task_state','SUCCESS')
             if ts=='USER_PAUSED':
                 # 用户主动暂停：不回写 planner/adaptive（非网络成败、不触发退避），直接收尾且零请求

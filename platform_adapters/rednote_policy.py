@@ -27,9 +27,12 @@ _DEFAULT_KIND_ENABLED = {
     "event": False,           # 事件笔记端：暂不开放
 }
 
-# 入口区域：intl=RedNote 香港/国际为主；cn=国内（2026-09-02 用户指令恢复国内采集，不再暂停）
+# 入口区域：intl=RedNote 香港/国际；cn=国内。
+# 当前生产边界由最新运行指令冻结为：仅使用香港/国际账号，内地暂停。
 DEFAULT_PRIMARY_REGION = "intl"
-CN_PAUSED = False
+DEFAULT_COLLECTION_ACCOUNT = "XHS_RETINAUT"
+POLICY_VERSION = "rednote-hk-only-v1"
+CN_PAUSED = True
 
 # 真人节奏保守占位（秒）。NOT_VERIFIED：待最新一轮真人频率实测后用实测值覆盖；
 # 这里宁慢勿快，避免把未实测数值当作结论。
@@ -70,8 +73,34 @@ class RedNotePolicy:
         """三端门控：未登记的 kind 默认不放行（白名单制）。"""
         return bool(self.kind_enabled.get(str(kind).lower(), False))
 
+    def region_allowed(self, region: str) -> bool:
+        """判断区域是否允许进入生产采集主链。"""
+        normalized = (region or "").strip().lower()
+        if normalized == "intl":
+            return True
+        if normalized == "cn":
+            return not self.cn_paused
+        return False
+
+    def account_allowed(self, account: str) -> bool:
+        """判断账号是否允许进入生产采集主链。
+
+        当前只允许 XHS_RETINAUT（香港/国际账号）；内地账号仍可被
+        Runtime 诊断识别，但不能触发生产采集。
+        """
+        return (account or "").strip().upper() == DEFAULT_COLLECTION_ACCOUNT
+
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        data.update({
+            "policy_version": POLICY_VERSION,
+            "collection_account": DEFAULT_COLLECTION_ACCOUNT,
+            "collection_region": "intl",
+            "collection_accounts": [DEFAULT_COLLECTION_ACCOUNT],
+            "paused_regions": ["cn"] if self.cn_paused else [],
+            "mainland_opt_in": not self.cn_paused,
+        })
+        return data
 
 
 def effective_policy() -> RedNotePolicy:
@@ -81,9 +110,15 @@ def effective_policy() -> RedNotePolicy:
     kind["topic"] = _env_bool("REDNOTE_KIND_TOPIC", kind["topic"])
     kind["public_opinion"] = _env_bool("REDNOTE_KIND_PUBLIC_OPINION", kind["public_opinion"])
     kind["event"] = _env_bool("REDNOTE_KIND_EVENT", kind["event"])
+    # REDNOTE_MAINLAND_ENABLE 是未来恢复内地采集的显式总闸；仅设置
+    # REDNOTE_CN_PAUSED=false 不得解除当前暂停边界。
+    mainland_opt_in = _env_bool("REDNOTE_MAINLAND_ENABLE", False)
+    cn_paused = not mainland_opt_in
+    if _env_bool("REDNOTE_CN_PAUSED", False):
+        cn_paused = True
     return RedNotePolicy(
         primary_region=(os.environ.get("REDNOTE_PRIMARY_REGION") or DEFAULT_PRIMARY_REGION).strip().lower(),
-        cn_paused=_env_bool("REDNOTE_CN_PAUSED", CN_PAUSED),
+        cn_paused=cn_paused,
         auto_run_enabled=_env_bool("REDNOTE_AUTO_RUN", False),
         daily_login_keepalive=_env_bool("REDNOTE_DAILY_LOGIN_KEEPALIVE", False),
         kind_enabled=kind,
@@ -92,7 +127,7 @@ def effective_policy() -> RedNotePolicy:
 
 
 # ============================================================
-# 区域轮番（RedNote 港版 intl × 大陆 cn 安全交替）
+# 区域选择（当前生产主链固定 RedNote 港版 intl；大陆仅保留诊断映射）
 # ============================================================
 # CDP 端口映射（与 start_production.ps1 三浏览器对齐）：
 #   9222 = XHS_CN_PRIMARY  大陆 xiaohongshu.com
@@ -115,7 +150,43 @@ def get_cdp_port(region: str):
     if region in REGION_CDP_PORT:
         return REGION_CDP_PORT[region]
     pol = effective_policy()
-    return REGION_CDP_PORT.get(pol.primary_region, 9222)
+    return REGION_CDP_PORT.get(pol.primary_region, REGION_CDP_PORT["intl"])
+
+
+def collection_gate(*, account: str = None, region: str = None) -> dict:
+    """生产采集统一门禁；只判定，不连接平台、不启动浏览器。"""
+    pol = effective_policy()
+    requested_account = (account or DEFAULT_COLLECTION_ACCOUNT).strip().upper()
+    requested_region = (region or "intl").strip().lower()
+    if not pol.account_allowed(requested_account):
+        return {
+            "ok": False,
+            "code": "account_paused",
+            "account": requested_account,
+            "region": requested_region,
+            "allowed_account": DEFAULT_COLLECTION_ACCOUNT,
+            "reason": "当前生产采集仅允许XHS_RETINAUT香港/国际账号，内地账号已暂停",
+            "policy_version": POLICY_VERSION,
+        }
+    if not pol.region_allowed(requested_region):
+        return {
+            "ok": False,
+            "code": "region_paused" if requested_region == "cn" else "region_not_allowed",
+            "account": requested_account,
+            "region": requested_region,
+            "allowed_region": "intl",
+            "reason": "当前生产采集仅允许RedNote香港/国际入口，内地入口已暂停",
+            "policy_version": POLICY_VERSION,
+        }
+    return {
+        "ok": True,
+        "code": "allowed",
+        "account": requested_account,
+        "region": "intl",
+        "cdp_port": REGION_CDP_PORT["intl"],
+        "host": REGION_HOST["intl"],
+        "policy_version": POLICY_VERSION,
+    }
 
 
 def select_region(*, kos_only: bool = False, last_region: str = None,
@@ -124,10 +195,9 @@ def select_region(*, kos_only: bool = False, last_region: str = None,
 
     规则（安全优先，不做高频纯随机）：
     1. KOS 品牌采集：强制 intl（RedNote 港版），不走大陆通道；
-    2. force_region 显式指定时遵从（测试/手动指定）；
-    3. 普通采集：intl 与 cn 交替轮番（避免同一通道连续高频暴露），
-       以 last_region 为优先记忆，缺省用进程内状态，再缺省用 primary_region；
-    4. cn_paused=True 时全部回落 intl（熔断中不撞大陆）。
+    2. 当前 cn_paused=True 时，显式指定 cn 也拒绝，不得被强制参数穿透；
+    3. 普通生产采集固定使用 intl，保留 last_region 参数仅用于兼容历史调用；
+    4. 只有未来显式恢复内地总闸后，才允许旧的 intl/cn 轮番逻辑重新启用。
 
     返回 dict: {region, cdp_port, host, rotated(bool), reason}
     """
@@ -137,16 +207,21 @@ def select_region(*, kos_only: bool = False, last_region: str = None,
         return {"region": "intl", "cdp_port": REGION_CDP_PORT["intl"],
                 "host": REGION_HOST["intl"], "rotated": False,
                 "reason": "kos_only: KOS品牌采集专用RedNote港版通道"}
-    # 显式指定
+    # 显式指定：暂停区域必须返回阻断事实，不能静默当作已接受。
     if force_region and force_region.strip().lower() in REGION_CDP_PORT:
         r = force_region.strip().lower()
+        if not pol.region_allowed(r):
+            return {"region": "intl", "cdp_port": REGION_CDP_PORT["intl"],
+                    "host": REGION_HOST["intl"], "rotated": False,
+                    "blocked": True, "requested_region": r,
+                    "reason": "cn_paused: force_region=cn被生产门禁拒绝"}
         return {"region": r, "cdp_port": REGION_CDP_PORT[r],
                 "host": REGION_HOST[r], "rotated": False,
-                "reason": f"force_region={r}"}
+                "blocked": False, "reason": f"force_region={r}"}
     # 大陆熔断 → 全部 intl
     if pol.cn_paused:
         return {"region": "intl", "cdp_port": REGION_CDP_PORT["intl"],
-                "host": REGION_HOST["intl"], "rotated": False,
+                "host": REGION_HOST["intl"], "rotated": False, "blocked": False,
                 "reason": "cn_paused: 大陆熔断回落intl"}
     # 轮番交替：优先用外部传入的 last_region，其次进程内记忆
     prev = (last_region or _last_region_state["region"] or "").strip().lower()
@@ -159,5 +234,5 @@ def select_region(*, kos_only: bool = False, last_region: str = None,
     _last_region_state["region"] = nxt
     _last_region_state["count"] += 1
     return {"region": nxt, "cdp_port": REGION_CDP_PORT[nxt],
-            "host": REGION_HOST[nxt], "rotated": prev is not None and prev != "",
+            "host": REGION_HOST[nxt], "rotated": prev is not None and prev != "", "blocked": False,
             "reason": f"rotation: {prev or 'init'} -> {nxt}"}
