@@ -52,6 +52,43 @@ def test_auto_priority():
     assert st["provider"] in ("zhipu", "local_rule") + LOCAL_PROVIDERS, st
     print("[PASS] auto 选择 ->", st["provider"], st.get("model"))
 
+
+def test_local_chat_does_not_consume_cloud_pack(monkeypatch):
+    """Ollama 已就绪时，chat 不应检查或记录云端资源包。"""
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
+    local = ("ollama", "qwen2.5-coder:7b-agent", "http://127.0.0.1:11434")
+    monkeypatch.setattr(intelligence, "_provider_config", lambda: local)
+    monkeypatch.setattr(intelligence, "_chat", lambda *args, **kwargs: ("本地结果", "ollama"))
+    budget_checks = []
+    budget_records = []
+    monkeypatch.setattr(intelligence, "_budget_check", lambda *args, **kwargs: budget_checks.append(args) or False)
+    monkeypatch.setattr(intelligence, "_budget_record", lambda *args, **kwargs: budget_records.append(args))
+    raw, provider, meta = intelligence.chat(
+        "只回复结果", "本地测试", level="medium", pack_id="glm_4_5_air", use_cache=False
+    )
+    assert (raw, provider) == ("本地结果", "ollama")
+    assert meta["model"] == "qwen2.5-coder:7b-agent"
+    assert budget_checks == []
+    assert budget_records == []
+
+
+def test_explicit_local_failure_falls_back_to_rule_only(monkeypatch):
+    """显式 Ollama 失败时不得偷偷切到云端 Provider。"""
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
+    monkeypatch.setattr(
+        intelligence,
+        "_provider_config",
+        lambda: ("ollama", "qwen2.5-coder:7b-agent", "http://127.0.0.1:11434"),
+    )
+
+    def fail_urlopen(*args, **kwargs):
+        raise OSError("simulated local outage")
+
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", fail_urlopen)
+    raw, provider = intelligence._chat("只回复结果", "本地测试", 0.0, 8)
+    assert raw is None
+    assert provider == "rule"
+
 def test_review_note_structure():
     note = {"title": "太古汇停车排队久", "content": "品牌很全环境好，就是停车场排队太久、引导不清"}
     rule = {"verified": True, "summary": "提及太古汇停车", "topics": ["停车"], "verify_reason": ""}

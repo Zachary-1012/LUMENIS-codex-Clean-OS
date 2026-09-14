@@ -1090,6 +1090,16 @@ def _pg_resolve_operation_type(path, method):
     """根据请求路径+方法映射 PermissionGate OperationType。
     覆盖采集/报告/导入导出/配置/事件/规则等所有写操作类别。"""
     p = path.lower()
+    # Shared Content & Creation 在 experience_runtime 内部执行动作白名单：
+    # READ/ANALYZE/SUGGEST 是低风险 AI_CALL；未被共享面放行的写入/发布动作
+    # 继续落入默认高风险门，避免把安全共享请求误判为 db_write。
+    if p.startswith('/api/experience/shared-skills/') and method == 'POST':
+        try:
+            requested = str((request.get_json(silent=True) or {}).get('action_type') or 'ANALYZE').upper()
+        except Exception:
+            requested = 'ANALYZE'
+        if requested in ('READ', 'ANALYZE', 'SUGGEST'):
+            return OperationType.AI_CALL
     # 1. 删除类（最高风险）
     if method == 'DELETE' or '/delete' in p or '/revoke' in p:
         return OperationType.DATA_DELETE
@@ -1527,6 +1537,29 @@ def persist_rednote_data(data, subject_hit_fn=None):
         except Exception as e:
             print(f'[rednote] 入库失败 {n.get("note_id","")}: {e}')
     return {'ok': True, 'persisted': persisted, 'comments': comments_total, 'total': len(notes)}
+
+
+def _record_rednote_collection_log(data, keyword=''):
+    """将 CDP RedNote 结果归一后写入唯一 collection_logs 真相源。
+
+    采集脚本与传统 collector 共用同一六态分类；verification/ip-risk
+    优先于“0 条”，避免安全阻断被误记为 EMPTY。此函数只记录运行事实，
+    不改变 notes、主体过滤或风险判断。
+    """
+    data = data if isinstance(data, dict) else {}
+    notes = data.get('notes') if isinstance(data.get('notes'), list) else []
+    summary = data.get('summary') if isinstance(data.get('summary'), dict) else {}
+    error = str(data.get('error') or '')
+    guard_state = str(data.get('guard_state') or '')
+    if summary.get('verification_required'):
+        guard_state = 'NEED_VERIFY'
+    elif summary.get('ip_blocked'):
+        guard_state = 'BLOCKED'
+    count = len(notes)
+    cstate = collector.classify_collect_state(error=error, guard_state=guard_state, count=count)
+    resolved_keyword = str(keyword or summary.get('keyword') or 'rednote')
+    db.log_collection(resolved_keyword, count, cstate, error)
+    return {'status': cstate, 'notes_count': count, 'keyword': resolved_keyword}
 
 # ========== 舆情预警通知 ==========
 ALERTS_FILE = Path(__file__).parent / 'data' / 'alerts.json'
@@ -3284,6 +3317,13 @@ def api_rednote_collect():
     def worker():
         try:
             result = run_rednote_collect(keyword, max_scroll, max_details, cdp_url, account=account)
+            # CDP 直连入口也必须写入同一 collection_logs 真相源。否则
+            # /api/platform-health 会继续读到旧的 NETWORK_ERROR，和本次
+            # 已完成的真实采集脱节，进而把产品健康灯误报为异常。
+            try:
+                _record_rednote_collection_log(result, keyword)
+            except Exception as _log_e:
+                app.logger.warning('RedNote 采集状态落库失败（不影响主结果）: %s', type(_log_e).__name__)
             if persist and result.get('ok'):
                 def subject_hit(text):
                     # P0-02 收敛：统一委托 subject_rules 权威主体口径（排除词一票否决+正向词命中），

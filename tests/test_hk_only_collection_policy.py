@@ -104,3 +104,39 @@ def test_private_v2_client_never_reaches_network():
             await XHSClient(cookie='test').request('GET', 'https://edith.xiaohongshu.com/test')
 
     asyncio.run(invoke())
+
+
+def test_cdp_result_updates_canonical_collection_log(monkeypatch):
+    """CDP 入口的成功结果必须覆盖旧的健康状态，不能只更新 notes。"""
+    import app as app_module
+
+    seen = []
+    monkeypatch.setattr(
+        app_module.db,
+        'log_collection',
+        lambda keyword, count, status, error='': seen.append((keyword, count, status, error)),
+    )
+    result = app_module._record_rednote_collection_log(
+        {'ok': True, 'notes': [{'note_id': 'n-1'}], 'summary': {'keyword': '广州太古汇'}},
+        '广州太古汇',
+    )
+    assert result['status'] == 'SUCCESS'
+    assert seen == [('广州太古汇', 1, 'SUCCESS', '')]
+
+
+def test_cdp_verification_result_is_not_misclassified_as_empty(monkeypatch):
+    """人机验证信号优先于 0 条，必须进入 CAPTCHA 状态。"""
+    import app as app_module
+
+    seen = []
+    monkeypatch.setattr(
+        app_module.db,
+        'log_collection',
+        lambda keyword, count, status, error='': seen.append((keyword, count, status, error)),
+    )
+    result = app_module._record_rednote_collection_log(
+        {'ok': False, 'notes': [], 'summary': {'keyword': '广州太古汇', 'verification_required': True}},
+        '广州太古汇',
+    )
+    assert result['status'] == 'CAPTCHA'
+    assert seen[0][2] == 'CAPTCHA'

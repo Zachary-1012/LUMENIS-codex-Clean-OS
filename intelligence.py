@@ -34,8 +34,8 @@ import ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+�
 
 # ZBC Phase 7: module status markers
 MODULE_STATUS = 'ACTIVE_PRIMARY'
-AI_ROLE = 'CENTRAL_GATEWAY'  # all AI calls route through _chat/chat; zhipu primary, local fallback
-PROVIDER_POLICY = 'zhipu(GLM) primary + ollama/lmstudio/llama_cpp local fallback + rule final fallback'
+AI_ROLE = 'CENTRAL_GATEWAY'  # all AI calls route through _chat/chat; local-first, rule final fallback
+PROVIDER_POLICY = 'ollama local primary when configured; cloud providers explicit-only; rule final fallback'
 
 _CACHE = {'ts': 0, 'provider': None, 'model': None, 'base': None}
 
@@ -251,10 +251,27 @@ def redact_for_cloud(text):
     return out
 
 def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
-    """AI 对话核心。云端走多 Provider 故障转移（智谱主→豆包备最小输出→本地规则）。
-    24h 稳固：每个 Provider 独立熔断+重试+心跳，主通道抖动时业务无感切换。"""
-    _to = timeout or int(_env("AI_TIMEOUT_SECONDS", "90"))
+    """AI 对话核心。
+
+    显式选择本地 Provider 时，本地失败只降级到规则，不偷偷切换云端；
+    这样本地优先与“云端仅显式启用”边界在运行时真正一致。
+    """
     d=_provider_config()
+    # CPU Ollama needs a longer, independently bounded window for structured
+    # content generation.  Keep the cloud timeout unchanged, and never let a
+    # local request fall through to a cloud provider when that window expires.
+    if timeout is not None:
+        _to = timeout
+    elif d and d[0] in ('ollama', 'lmstudio', 'llama_cpp'):
+        try:
+            _to = int(_env("OLLAMA_TIMEOUT_SECONDS", "180"))
+        except (TypeError, ValueError):
+            _to = 180
+    else:
+        try:
+            _to = int(_env("AI_TIMEOUT_SECONDS", "90"))
+        except (TypeError, ValueError):
+            _to = 90
     # 本地模型（ollama/lmstudio/llama_cpp）保持原逻辑，不走云端故障转移
     if d and d[0] in ('ollama','lmstudio','llama_cpp'):
         provider,model_default,base=d
@@ -273,10 +290,9 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             _set_call_meta(provider=provider, model=model, prompt_tokens=_pt, completion_tokens=_ct, total_tokens=_tt)
             return data.get('message',{}).get('content'), provider
         except Exception as exc:
-            print('[AI] local failed, trying cloud chain:',exc)
+            print('[AI] local failed, falling back to local rule:',exc)
             _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
-            # V1.0: 本地失败不直接到 rule，先尝试 cloud 链（L1→L2→L3）
-            # 落到下面的 cloud fallback 逻辑继续执行
+            return None, 'rule'
 
     # 云端：多 Provider 故障转移（智谱 L1 → ark L2 → qwen L3 → rule L6）
     system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
@@ -803,8 +819,17 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
     capability: 任务能力路由（默认 'daily'）。调用 select_model_by_capability 自动选模型，
                 主 provider 不可用时按 fallback_chain 降级。显式 model 参数优先级高于 capability。
     """
-    # P1-5: capability-based 模型选择（显式 model 优先）
-    if model is None and capability:
+    # 先看真实运行时 Provider。若本地模型已可用，不得把 daily/strong
+    # 的云端模型名注入本地 Ollama 请求（例如把 doubao-lite-4k 送给 Ollama）。
+    _runtime_local = False
+    try:
+        _runtime = _provider_config()
+        _runtime_local = bool(_runtime and _runtime[0] in ('ollama', 'lmstudio', 'llama_cpp'))
+    except Exception:
+        _runtime = None
+
+    # P1-5: capability-based 模型选择（显式 model 优先；本地运行时跳过云端选模）
+    if model is None and capability and not _runtime_local:
         try:
             cap_cfg = select_model_by_capability(capability)
             if cap_cfg.get('primary_available', True):
@@ -812,19 +837,30 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
         except Exception:
             pass  # capability 路由失败不阻断，沿用 _level_params 默认
     p = _level_params(level, temperature, max_tokens, model)
+    if _runtime_local:
+        # HIGH/CRITICAL previously inherited a cloud model name from the
+        # level config.  The local runtime owns the actual model identity.
+        p['model'] = _runtime[1]
+        try:
+            local_timeout = int(_env('OLLAMA_TIMEOUT_SECONDS', '180'))
+        except (TypeError, ValueError):
+            local_timeout = 180
+        p['timeout'] = max(p['timeout'], local_timeout)
     key = _cache_key(system, user, p['temperature'], p['max_tokens'], p['model']) if use_cache else None
     if use_cache:
         hit = _chat_cache_get(key)
         if hit:
             return hit[0], hit[1], {'cache': True, 'level': level, 'model': p['model']}
-    if not _budget_check(pack_id, 1):
+    # 云端资源包只约束云端调用；本地 Ollama 不应消耗或污染云端配额。
+    if not _runtime_local and not _budget_check(pack_id, 1):
         return None, 'budget_blocked', {'cache': False, 'level': level, 'budget_blocked': True}
     t0 = time.time()
     out, provider = _chat(system, user, temperature=p['temperature'], max_tokens=p['max_tokens'], model=p['model'], timeout=p['timeout'])
     # V1.0: 从 _last_call_meta 获取真实 token 用量（修复 token_usage=0 bug）
     _call_meta = _get_call_meta()
     _real_tokens = int(_call_meta.get('total_tokens', 0) or 0)
-    meta = {'cache': False, 'level': level, 'model': p['model'] or _env('ZHIPU_MODEL', ''),
+    resolved_model = p['model'] or (_call_meta.get('model', '') if _runtime_local else '') or _env('ZHIPU_MODEL', '')
+    meta = {'cache': False, 'level': level, 'model': resolved_model,
             'elapsed_ms': int((time.time() - t0) * 1000), 'provider': provider,
             'token_usage': _real_tokens,
             'prompt_tokens': int(_call_meta.get('prompt_tokens', 0) or 0),
@@ -832,7 +868,7 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
     if provider not in ('rule', None) and out:
         if use_cache:
             _chat_cache_set(key, out, provider)
-        if track:
+        if track and not _runtime_local:
             _budget_record(pack_id, 1, endpoint='chat', detail=(str(system) or '')[:60])
     # V1.0: AI call logging — rule 兜底是正常确定性规则执行，记为 success，不计算在 AI 失败率内
     try:

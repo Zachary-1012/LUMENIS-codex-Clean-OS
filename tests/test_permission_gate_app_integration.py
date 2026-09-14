@@ -131,6 +131,27 @@ class TestOperationTypeResolver:
         assert app_module._pg_resolve_operation_type('/api/case-analysis/ai-evaluate', 'POST') == OperationType.AI_CALL
         assert app_module._pg_resolve_operation_type('/api/pr/match', 'POST') == OperationType.AI_CALL
 
+    def test_shared_safe_actions_are_ai_calls(self):
+        """共享能力的低风险动作不能被全局门误判成 DB_WRITE。"""
+        for action in ('READ', 'ANALYZE', 'SUGGEST'):
+            with app_module.app.test_request_context(
+                '/api/experience/shared-skills/shared.social_card/run',
+                method='POST', json={'action_type': action},
+            ):
+                assert app_module._pg_resolve_operation_type(
+                    '/api/experience/shared-skills/shared.social_card/run', 'POST'
+                ) == OperationType.AI_CALL
+
+    def test_shared_write_action_stays_high_risk(self):
+        """共享能力未放行的写动作仍保持 DB_WRITE 高风险门。"""
+        with app_module.app.test_request_context(
+            '/api/experience/shared-skills/shared.social_card/run',
+            method='POST', json={'action_type': 'WRITE'},
+        ):
+            assert app_module._pg_resolve_operation_type(
+                '/api/experience/shared-skills/shared.social_card/run', 'POST'
+            ) == OperationType.DB_WRITE
+
     def test_skill_execute(self):
         assert app_module._pg_resolve_operation_type('/api/developer/run', 'POST') == OperationType.SKILL_EXECUTE
         assert app_module._pg_resolve_operation_type('/api/dev/run-code', 'POST') == OperationType.SKILL_EXECUTE

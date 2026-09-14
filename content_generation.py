@@ -2,7 +2,7 @@
 """
 content_generation.py — ZBC 统一内容生成引擎
 =============================================
-整合：智谱AI调用(glm-5.3强推理/glm-4.5-air快速) + 研究库检索 + Evidence链 + 4维Evaluation评分 + 人工反馈迭代。
+整合：统一智能网关（本地 Ollama 优先，云端显式启用） + 研究库检索 + Evidence链 + 4维Evaluation评分 + 人工反馈迭代。
 
 设计原则：
 - AI是增强层，规则与数据是最终真值
@@ -10,7 +10,7 @@ content_generation.py — ZBC 统一内容生成引擎
 - 每次生成必须有Evaluation(相关性/创意性/品牌契合度/平台适配度)
 - 研究库检索在AI生成前自动执行，结果注入prompt
 - 支持人工反馈→修正→再生成
-- Provider-Agnostic：智谱主力，失败降级到本地规则，不静默
+- Provider-Agnostic：本地模型优先，明确失败降级到本地规则，不静默切换云端
 - 不修改SUBJECT_WORDS/subject_hit()，不碰生产数据
 """
 from __future__ import annotations
@@ -349,8 +349,8 @@ HUMAN_INTERACTION_LAYER = """【人类交互模式层 — 所有内容生成必�
 # AI 调用（复用 intelligence.py 统一通道）
 # ============================================================
 def _call_ai(system_prompt: str, user_prompt: str, level: str = "high") -> Tuple[Optional[str], str, Dict]:
-    """调用智谱AI，失败返回(None, 'rule', meta)，不抛异常。
-    使用glm_4_5_air资源包（token计费，配额充足），不使用per_call按次包。
+    """调用统一智能网关，失败返回(None, 'rule', meta)，不抛异常。
+    本地 Ollama 已配置时不消耗云端资源包；云端只有在显式选择时才会调用。
     每次调用前清除intelligence.py的provider缓存（30s TTL），确保使用.env中配置的provider。
     自动注入人类交互模式层（HUMAN_INTERACTION_LAYER）。
     """
