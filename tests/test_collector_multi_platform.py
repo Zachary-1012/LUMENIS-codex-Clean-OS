@@ -224,13 +224,13 @@ class TestDataPrecision:
         note = CollectedNote(title="test", content="content", source_platform="x")
         assert note.publish_date == "", "缺失发布时间不应臆造"
 
-    def test_missing_interaction_counts_are_zero_not_unknown(self):
-        """互动数缺失为 0（数值型字段），不填 '未知'"""
+    def test_missing_interaction_counts_remain_unknown(self):
+        """缺失的互动指标保持未知；只有来源显式报告 0 才表示实测为零。"""
         note = CollectedNote(title="test", content="content", source_platform="weibo")
-        assert isinstance(note.likes, int)
-        assert isinstance(note.comments, int)
-        assert note.likes == 0
-        assert note.comments == 0
+        assert note.likes is None
+        assert note.comments is None
+        assert note.collects is None
+        assert note.shares is None
 
     def test_adapter_result_error_field_records_failures(self):
         """AdapterResult 失败时 error 字段记录错误，不静默丢弃"""

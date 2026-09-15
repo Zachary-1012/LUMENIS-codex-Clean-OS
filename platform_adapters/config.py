@@ -1,12 +1,9 @@
 """Platform capability configuration.
 
-Current production release keeps the existing Hong Kong/International XHS path
-separate from the CTH secondary collection surface.  Douyin, Zhihu and
-Instagram are available for explicit, human-triggered, read-only search
-collection through the canonical adapter boundary.  Weibo is paused for this
-release.  Scheduled/background collection remains disabled until an operating
-policy explicitly enables it.
-Other platforms are event-monitoring extension points only and remain disabled.
+The existing Hong Kong/International XHS path remains on its current primary
+collector. CTH secondary collection is explicit, human-triggered and read-only.
+Scheduled/background collection remains disabled. A registered adapter does not
+imply that credentials, platform permissions, or a live provider are configured.
 """
 
 PLATFORM_CAPABILITIES = {
@@ -38,15 +35,28 @@ PLATFORM_CAPABILITIES = {
         "proxy_pool": True,
         "enable_gate": "cookie_plus_browser_engine_verified",
     },
-    "kuaishou": {"name": "快手", "enabled": False, "priority": "event"},
+    "kuaishou": {
+        "name": "快手", "enabled": False, "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only", "product_owner": "CTH",
+        "priority": "secondary", "search": False, "detail": False,
+        "comments": False, "creator": False, "author": False,
+        "author_posts": False, "healthcheck": True,
+        "provider_state": "not_configured_authorized_session_required",
+    },
     "bilibili": {
         "name": "B站",
         "enabled": False,
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
+        "product_owner": "CTH",
         "priority": "secondary",
         "search": True,
         "detail": True,
         "comments": True,
         "creator": True,
+        "author": True,
+        "author_posts": False,
+        "healthcheck": True,
         "session_cache": True,
         "proxy_pool": False,
         "enable_gate": "cookie_plus_engine_verified",
@@ -54,17 +64,28 @@ PLATFORM_CAPABILITIES = {
     "weibo": {
         "name": "微博",
         "enabled": False,
-        "manual_collection_enabled": False,
-        "collection_mode": "paused",
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
         "product_owner": "CTH",
         "priority": "secondary",
         "search": True,
         "detail": True,
         "comments": True,
         "creator": True,
+        "author": True,
+        "author_posts": False,
+        "healthcheck": True,
         "session_cache": True,
         "proxy_pool": False,
         "enable_gate": "cookie_plus_engine_verified",
+    },
+    "web_rss": {
+        "name": "Web RSS", "enabled": False, "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only", "product_owner": "CTH",
+        "priority": "secondary", "search": True, "detail": False,
+        "comments": False, "creator": False, "author": False,
+        "author_posts": False, "healthcheck": True,
+        "provider_state": "public_keyless_rss",
     },
     "tieba": {"name": "贴吧", "enabled": False, "priority": "event"},
     "zhihu": {

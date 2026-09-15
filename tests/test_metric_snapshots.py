@@ -101,3 +101,31 @@ def test_snapshot_failure_does_not_block_upsert(dbmod, monkeypatch):
     with dbmod.get_db() as conn:
         row = conn.execute("SELECT likes FROM notes WHERE note_id='n4'").fetchone()
     assert row["likes"] == 42
+
+
+def test_missing_metrics_remain_unknown_and_do_not_erase_last_observation(dbmod):
+    dbmod.insert_note({"note_id": "n5", "title": "unknown metrics"})
+    with dbmod.get_db() as conn:
+        row = conn.execute(
+            "SELECT likes,comments,collects,shares FROM notes WHERE note_id='n5'"
+        ).fetchone()
+    assert tuple(row) == (None, None, None, None)
+    assert dbmod.get_metric_trend("note", "n5") == []
+
+    dbmod.insert_note({"note_id": "n5", "title": "observed", "likes": 0, "comments": 4})
+    with dbmod.get_db() as conn:
+        row = conn.execute(
+            "SELECT likes,comments,collects,shares FROM notes WHERE note_id='n5'"
+        ).fetchone()
+    assert tuple(row) == (0, 4, None, None)
+    trend = dbmod.get_metric_trend("note", "n5")
+    assert len(trend) == 1
+    assert (trend[0]["likes"], trend[0]["comments"], trend[0]["collects"], trend[0]["shares"]) == (0, 4, None, None)
+
+    dbmod.insert_note({"note_id": "n5", "title": "partial update", "shares": 0})
+    with dbmod.get_db() as conn:
+        row = conn.execute(
+            "SELECT likes,comments,collects,shares FROM notes WHERE note_id='n5'"
+        ).fetchone()
+    assert tuple(row) == (0, 4, None, 0)
+    assert len(dbmod.get_metric_trend("note", "n5")) == 2

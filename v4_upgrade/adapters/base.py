@@ -21,6 +21,16 @@ from ..config import ADAPTER_CONFIG
 logger = logging.getLogger(__name__)
 
 
+def optional_int(value):
+    """Convert an observed count without turning absence into a measured zero."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 @dataclass
 class CollectedNote:
     """标准化采集结果"""
@@ -30,10 +40,11 @@ class CollectedNote:
     author: str = ""
     author_id: str = ""
     publish_date: str = ""
-    likes: int = 0
-    comments: int = 0
-    collects: int = 0
-    shares: int = 0
+    # Missing observations are unknown, not measured zero.
+    likes: Optional[int] = None
+    comments: Optional[int] = None
+    collects: Optional[int] = None
+    shares: Optional[int] = None
     cover: str = ""
     source_platform: str = ""
     raw_data: dict = field(default_factory=dict)

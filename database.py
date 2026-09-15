@@ -362,13 +362,19 @@ def insert_note(note_data):
     with get_db() as conn:
         existing = conn.execute('SELECT * FROM notes WHERE note_id=?', (nid,)).fetchone()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        def _nullable_metric(name):
+            value = note_data.get(name)
+            if value is None or (isinstance(value, str) and not value.strip()):
+                return None
+            return int(value)
+
         vals = {
             'title': note_data.get('title','') or '', 'source_platform': note_data.get('source_platform','xhs') or 'xhs', 'content': note_data.get('content','') or '',
             'url': note_data.get('url','') or '', 'cover': note_data.get('cover','') or '',
             'author_id': note_data.get('author_id','') or '', 'author_nickname': note_data.get('author_nickname','') or '',
             'author_avatar': note_data.get('author_avatar','') or '',
-            'likes': int(note_data.get('likes',0) or 0), 'comments': int(note_data.get('comments',0) or 0),
-            'collects': int(note_data.get('collects',0) or 0), 'shares': int(note_data.get('shares',0) or 0),
+            'likes': _nullable_metric('likes'), 'comments': _nullable_metric('comments'),
+            'collects': _nullable_metric('collects'), 'shares': _nullable_metric('shares'),
             'note_type': note_data.get('type','normal') or 'normal', 'xsec_token': note_data.get('xsec_token','') or '',
             'publish_date': (note_data.get('publish_datetime','') or note_data.get('publish_date','') or '').strip(),
             'is_taikoo_verified': int(note_data.get('is_taikoo_verified',0) or 0),
@@ -421,7 +427,8 @@ def insert_note(note_data):
                 author_id=CASE WHEN ?<>'' THEN ? ELSE author_id END,
                 author_nickname=CASE WHEN ?<>'' THEN ? ELSE author_nickname END,
                 author_avatar=CASE WHEN ?<>'' THEN ? ELSE author_avatar END,
-                likes=?, comments=?, collects=?, shares=?, note_type=?,
+                likes=COALESCE(?,likes), comments=COALESCE(?,comments),
+                collects=COALESCE(?,collects), shares=COALESCE(?,shares), note_type=?,
                 xsec_token=CASE WHEN ?<>'' THEN ? ELSE xsec_token END,
                 publish_date=CASE WHEN ?<>'' THEN ? ELSE publish_date END,
                 is_taikoo_verified=CASE WHEN ?=1 THEN 1 ELSE is_taikoo_verified END,
@@ -500,12 +507,18 @@ def record_note_metric_snapshot(conn, note_id, metrics, source='live', collector
     """
     if not _metric_snapshot_enabled() or not note_id:
         return False
-    cur_vals = tuple(int(metrics.get(k, 0) or 0) for k in _NOTE_METRIC_KEYS)
+    cur_vals = tuple(
+        None if metrics.get(k) is None or (isinstance(metrics.get(k), str) and not metrics.get(k).strip())
+        else int(metrics[k])
+        for k in _NOTE_METRIC_KEYS
+    )
+    if all(value is None for value in cur_vals):
+        return False
     if not force:
         row = conn.execute(
             "SELECT likes,comments,collects,shares FROM metric_snapshots "
             "WHERE entity_type='note' AND entity_key=? ORDER BY id DESC LIMIT 1", (note_id,)).fetchone()
-        if row is not None and tuple(int(row[k] or 0) for k in _NOTE_METRIC_KEYS) == cur_vals:
+        if row is not None and tuple(None if row[k] is None else int(row[k]) for k in _NOTE_METRIC_KEYS) == cur_vals:
             return False  # 指标无变化，不重复刷表
     conn.execute(
         "INSERT INTO metric_snapshots(entity_type,entity_key,likes,comments,collects,shares,"

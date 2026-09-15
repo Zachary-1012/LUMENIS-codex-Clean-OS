@@ -69,10 +69,10 @@ def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str
             or ""
         ),
         "author_avatar": raw.get("author_avatar") or raw.get("avatar") or raw.get("avatar_url") or "",
-        "likes": canonical.get("like_count") if canonical.get("like_count") is not None else 0,
-        "comments": canonical.get("comment_count") if canonical.get("comment_count") is not None else 0,
-        "collects": canonical.get("collect_count") if canonical.get("collect_count") is not None else 0,
-        "shares": canonical.get("share_count") if canonical.get("share_count") is not None else 0,
+        "likes": canonical.get("like_count"),
+        "comments": canonical.get("comment_count"),
+        "collects": canonical.get("collect_count"),
+        "shares": canonical.get("share_count"),
         "type": canonical.get("content_type") or raw.get("type") or "normal",
         "publish_datetime": (
             canonical.get("published_at")

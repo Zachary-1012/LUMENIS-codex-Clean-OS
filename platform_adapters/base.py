@@ -9,6 +9,9 @@ from typing import Any, Dict, Iterable, Optional
 class CollectionStatus(str, Enum):
     SUCCESS = "SUCCESS"
     NO_NEW_DATA = "NO_NEW_DATA"
+    NOT_SUPPORTED = "NOT_SUPPORTED"
+    NOT_CONFIGURED = "NOT_CONFIGURED"
+    PROVIDER_UNAVAILABLE = "PROVIDER_UNAVAILABLE"
     RISK_WARNING = "RISK_WARNING"
     NEED_VERIFY = "NEED_VERIFY"
     QR_REQUIRED = "QR_REQUIRED"  # V3.0 P0: 需要扫码恢复
@@ -63,24 +66,53 @@ class BasePlatformAdapter(ABC):
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
         return CollectionResult(
-            status=CollectionStatus.COLLECT_ERROR,
+            status=CollectionStatus.NOT_SUPPORTED,
             platform=self.platform,
-            message="comments() is not implemented for this adapter",
+            message="comments capability is not supported by this adapter",
         )
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return CollectionResult(
-            status=CollectionStatus.COLLECT_ERROR,
+            status=CollectionStatus.NOT_SUPPORTED,
             platform=self.platform,
-            message="creator() is not implemented for this adapter",
+            message="author capability is not supported by this adapter",
+        )
+
+    def author(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        """Canonical author-profile name; ``creator`` remains a compatible alias."""
+        return self.creator(author_id, **kwargs)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return CollectionResult(
+            status=CollectionStatus.NOT_SUPPORTED,
+            platform=self.platform,
+            message="author_posts capability is not supported by this adapter",
         )
 
     def health_check(self, **_: Any) -> CollectionResult:
         return CollectionResult(
-            status=CollectionStatus.SUCCESS,
+            status=CollectionStatus.NOT_CONFIGURED,
             platform=self.platform,
-            message="adapter loaded; live platform health check is adapter-specific",
+            message="adapter has no configured health check",
         )
+
+    def healthcheck(self, **kwargs: Any) -> CollectionResult:
+        """Canonical spelling; keep ``health_check`` for existing callers."""
+        return self.health_check(**kwargs)
+
+    def capability_map(self) -> Dict[str, str]:
+        """Describe implementation presence separately from runtime readiness."""
+        cls = type(self)
+        creator_implemented = cls.creator is not BasePlatformAdapter.creator
+        author_implemented = cls.author is not BasePlatformAdapter.author or creator_implemented
+        return {
+            "search": "implemented",
+            "detail": "implemented",
+            "comments": "implemented" if cls.comments is not BasePlatformAdapter.comments else "not_supported",
+            "author": "implemented" if author_implemented else "not_supported",
+            "author_posts": "implemented" if cls.author_posts is not BasePlatformAdapter.author_posts else "not_supported",
+            "healthcheck": "implemented" if cls.health_check is not BasePlatformAdapter.health_check else "not_configured",
+        }
 
     def normalize_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize only transport/platform fields; do not apply business filters."""

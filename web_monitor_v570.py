@@ -75,51 +75,81 @@ def discover_brand_industry(brands=None, categories=None, batch=20, offset=0):
     
     return items, total
 
-def _search_google_news_rss(query, max_results=5):
+def fetch_google_news_rss(query, max_results=5):
+    """Fetch and normalize the existing public RSS source with explicit failure state.
+
+    The fixed provider host and quoted query prevent this helper from becoming a
+    configurable-URL fetcher. Existing callers keep using the list-returning
+    wrapper below; the Collector adapter consumes the structured result.
     """
-    使用Google News RSS搜索（无需API Key，不占用小红书次数）
-    """
-    items = []
+    import xml.etree.ElementTree as ET
+
+    collected_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    outcome = {
+        'ok': False,
+        'items': [],
+        'provider': 'google_news_rss',
+        'source': 'news.google.com/rss/search',
+        'collected_at': collected_at,
+        'error_type': '',
+    }
     try:
+        query = str(query or '').strip()
+        if not query or len(query) > 120:
+            outcome['error_type'] = 'INVALID_QUERY'
+            return outcome
+        limit = max(1, min(int(max_results), 20))
         url = f"https://news.google.com/rss/search?q={quote(query)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans"
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'LUMENIS-Collector/1.0 (+public RSS reader)'
         }
-        resp = requests.get(url, headers=headers, timeout=10)
-        if resp.status_code == 200:
-            # 简单解析RSS XML
-            import xml.etree.ElementTree as ET
-            root = ET.fromstring(resp.content)
-            channel = root.find('channel')
-            if channel is not None:
-                for i, item in enumerate(channel.findall('item')[:max_results]):
-                    title = item.findtext('title', '')
-                    link = item.findtext('link', '')
-                    pub_date = item.findtext('pubDate', '')
-                    source = item.findtext('source', '')
-                    
-                    # 转换日期格式
-                    published_at = ''
-                    if pub_date:
-                        try:
-                            from email.utils import parsedate_to_datetime
-                            dt = parsedate_to_datetime(pub_date)
-                            published_at = dt.strftime('%Y-%m-%d %H:%M:%S')
-                        except Exception:
-                            published_at = pub_date
-                    
-                    items.append({
-                        'title': title,
-                        'url': link,
-                        'source': source,
-                        'published_at': published_at,
-                        'query': query,
-                        'platform': 'google_news'
-                    })
-    except Exception:
-        pass
-    
-    return items
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            outcome['error_type'] = f'HTTP_{response.status_code}'
+            return outcome
+
+        root = ET.fromstring(response.content)
+        channel = root.find('channel')
+        if channel is None:
+            outcome['error_type'] = 'RSS_CHANNEL_MISSING'
+            return outcome
+
+        from email.utils import parsedate_to_datetime
+        items = []
+        for item in channel.findall('item')[:limit]:
+            pub_date = item.findtext('pubDate', '')
+            published_at = ''
+            if pub_date:
+                try:
+                    published_at = parsedate_to_datetime(pub_date).strftime('%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    published_at = pub_date
+            items.append({
+                'title': item.findtext('title', ''),
+                'url': item.findtext('link', ''),
+                'source': item.findtext('source', ''),
+                'published_at': published_at,
+                'query': query,
+                'platform': 'google_news',
+            })
+        outcome['ok'] = True
+        outcome['items'] = items
+        return outcome
+    except requests.RequestException as exc:
+        outcome['error_type'] = type(exc).__name__
+        return outcome
+    except ET.ParseError:
+        outcome['error_type'] = 'RSS_PARSE_ERROR'
+        return outcome
+    except Exception as exc:
+        outcome['error_type'] = type(exc).__name__
+        return outcome
+
+
+def _search_google_news_rss(query, max_results=5):
+    """Backward-compatible list API for the existing web-monitor callers."""
+    outcome = fetch_google_news_rss(query, max_results=max_results)
+    return outcome['items'] if outcome.get('ok') else []
 
 def get_brand_directory():
     """

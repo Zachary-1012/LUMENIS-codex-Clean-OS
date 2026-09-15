@@ -1,7 +1,7 @@
-"""广州太古汇 v5.3.2：本地 Cookie 小红书数据桥。
+"""广州太古汇 v5.3.2：受控运行时 Cookie 小红书数据桥。
 
 职责：
-1. 使用本机 Cookie/持久化 Playwright profile 搜索小红书；
+1. 使用受控运行时 Cookie/隔离 Playwright profile 搜索小红书；
 2. 只把搜索结果标准化后交给现有 database.insert_note；
 3. 继续调用现有 ai_analyzer / reprocess，保持 v5.3.1 业务链；
 4. source_id 使用 note_id，xsec_token 原样存入 notes，保证真实详情链接可更新；
@@ -82,11 +82,11 @@ ALLOWED_USER_ID = XHS_CN_PRIMARY  # LEGACY ALIAS（只读）
 ACCOUNT_PROFILES = {
     XHS_CN_PRIMARY_NAME: (
         COOKIE_FILE,  # 原主 Cookie：data/private/xhs_cookie_header.txt
-        os.path.join(ROOT, "edge-cdp-newaccount"),
+        os.path.join(PRIVATE_DATA_DIR, "profiles", "xhs-cn-primary"),
     ),
     XHS_RETINAUT_NAME: (
         os.path.join(PRIVATE_DATA_DIR, "xhs_cookie_retinaut.txt"),
-        os.path.join(ROOT, "edge-cdp-retinaut"),
+        os.path.join(PRIVATE_DATA_DIR, "profiles", "xhs-retinaut"),
     ),
 }
 
@@ -115,8 +115,8 @@ def cdp_port_for(account=None):
     return int(ACCOUNT_CDP_PORTS.get(_canonical_account_name(account), DEFAULT_CDP_PORT))
 
 def cdp_url_for(account=None):
-    """逻辑身份 → 驻场 CDP 连接 URL。"""
-    return f'http://127.0.0.1:{cdp_port_for(account)}'
+    """Return the configured server browser-worker endpoint; no loopback default."""
+    return str(os.environ.get('XHS_CDP_URL') or '').strip()
 
 def home_url_for(account=None):
     """逻辑身份 → 平台首页（驻场窗口起始页 / CDP 热身页）。"""

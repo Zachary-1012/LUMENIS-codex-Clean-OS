@@ -31,6 +31,8 @@ PLATFORM_ALIASES: Dict[str, str] = {
     "douyin": "douyin", "aweme": "douyin", "dy": "douyin", "抖音": "douyin",
     # 快手
     "kuaishou": "kuaishou", "ks": "kuaishou", "快手": "kuaishou",
+    # 公开 RSS 聚合源（不是社交平台账号）
+    "web_rss": "web_rss", "rss": "web_rss", "google_news_rss": "web_rss",
     # 微博
     "weibo": "weibo", "wb": "weibo", "微博": "weibo",
     # B 站
@@ -63,6 +65,7 @@ PLATFORM_ALIASES: Dict[str, str] = {
 # canonical → 标准展示名（中/英/韩三语由 i18n 层处理，这里给中文名）
 PLATFORM_DISPLAY_NAME: Dict[str, str] = {
     "xiaohongshu": "小红书", "douyin": "抖音", "kuaishou": "快手", "weibo": "微博",
+    "web_rss": "Web RSS",
     "bilibili": "B站", "zhihu": "知乎", "tieba": "贴吧",
     "instagram": "Instagram", "facebook": "Facebook", "x": "X",
     "channels": "视频号", "youtube": "YouTube", "tiktok": "TikTok",
@@ -132,6 +135,11 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         published_at="timestamp", like_field="like_count", comment_field="comment_count",
         collect_field=None, share_field="share_count",
         url_template="https://www.kuaishou.com/short-video/{content_id}"),
+    "web_rss": PlatformFieldSpec(
+        content_id="content_id", author_id="source_id",
+        published_at="published_at", like_field="like_count", comment_field="comment_count",
+        collect_field=None, share_field="share_count", url_template="",
+        notes="公共 RSS 来源；仅保留文章标题、来源、URL 与发布时间，互动指标不可用"),
     "weibo": PlatformFieldSpec(
         content_id="mid", author_id="idstr", id_is_bigint=True,
         published_at="created_at", like_field="attitudes_count", comment_field="comments_count",

@@ -29,7 +29,7 @@ from datetime import datetime
 
 import requests
 
-from .base import BaseAdapter, AdapterResult
+from .base import BaseAdapter, AdapterResult, optional_int
 from .cookie_vault import to_cookie_string, check_cookie_status
 
 logger = logging.getLogger(__name__)
@@ -163,10 +163,10 @@ class WeiboAdapter(BaseAdapter):
                 author=user.get("screen_name", ""),
                 author_id=str(user.get("id", "")),
                 publish_date=self._parse_weibo_date(mblog.get("created_at")),
-                likes=int(mblog.get("attitudes_count", 0) or 0),
-                comments=int(mblog.get("comments_count", 0) or 0),
-                collects=0,  # 微博搜索API不返回收藏数
-                shares=int(mblog.get("reposts_count", 0) or 0),
+                likes=optional_int(mblog.get("attitudes_count")),
+                comments=optional_int(mblog.get("comments_count")),
+                collects=None,  # 微博搜索API不返回收藏数
+                shares=optional_int(mblog.get("reposts_count")),
                 cover="",
                 source_platform=self.platform_name,
                 raw_data={
@@ -270,10 +270,10 @@ class WeiboAdapter(BaseAdapter):
                     author=user.get("screen_name", ""),
                     author_id=str(user.get("id", "")),
                     publish_date=self._parse_weibo_date(c.get("created_at")),
-                    likes=int(c.get("like_count", 0) or 0),
-                    comments=0,
-                    collects=0,
-                    shares=0,
+                    likes=optional_int(c.get("like_count")),
+                    comments=None,
+                    collects=None,
+                    shares=None,
                     cover="",
                     source_platform=self.platform_name,
                     raw_data={"engine": "weibo_comments_api", "cid": c.get("id"), "type": "comment"},
@@ -321,10 +321,10 @@ class WeiboAdapter(BaseAdapter):
                 author=user_info.get("screen_name", ""),
                 author_id=str(user_info.get("id", "")),
                 publish_date="",
-                likes=int(user_info.get("followers_count", 0) or 0),
-                comments=0,
-                collects=0,
-                shares=int(user_info.get("statuses_count", 0) or 0),
+                likes=None,
+                comments=None,
+                collects=None,
+                shares=None,
                 cover=user_info.get("avatar_hd", ""),
                 source_platform=self.platform_name,
                 raw_data={

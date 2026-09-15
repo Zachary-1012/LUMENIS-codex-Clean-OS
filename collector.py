@@ -9,7 +9,9 @@ import os
 import re
 import sys
 import time
+import ipaddress
 from datetime import datetime
+from urllib.parse import urlsplit
 
 # Runtime Guardian 旁路接入（ZBC-PHASE2-RUNTIME-GUARDIAN Shard B）
 try:
@@ -70,7 +72,7 @@ def _check_profile_lock():
     return any(os.path.exists(os.path.join(lock_dir, f)) for f in ('SingletonLock', 'SingletonCookie', 'SingletonSocket'))
 
 # CDP 真人通道（9223 香港/国际 RedNote；仅复用已登录的本机驻场实例）
-CDP_URL = os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9223')
+CDP_URL = os.getenv('XHS_CDP_URL', '').strip()
 CDP_SCRIPT = os.path.join(SCRIPT_DIR, 'xhs_cdp_collector.py')  # Python Playwright CDP 真人通道
 CDP_NODE_FALLBACK = os.path.join(SCRIPT_DIR, 'rednote_collector.cjs')  # 备用 node 通道
 # 明确风控态：这些不是“0条舆情”，上层必须据此熔断/转 AUTH&VERIFY，不得当成正常空结果
@@ -102,8 +104,9 @@ def _collection_policy_gate(region=None, account=None):
 
 
 def _collection_env(account=None, region='intl', cdp_url=None):
-    """为下游适配器注入同一账号/区域契约，不包含 Cookie 内容。"""
+    """Inject the server-owned account vault and remote worker URL, never shell-local credentials."""
     env = os.environ.copy()
+    env.pop('XHS_COOKIE_FILE', None)
     env['XHS_COLLECTION_REGION'] = region or 'intl'
     env['XHS_COLLECTION_HOST'] = 'www.rednote.com' if env['XHS_COLLECTION_REGION'] == 'intl' else 'www.xiaohongshu.com'
     if cdp_url:
@@ -119,6 +122,31 @@ def _collection_env(account=None, region='intl', cdp_url=None):
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'
     return env
+
+
+def _resolve_server_cdp_url(cdp_url=None):
+    """Resolve a configured browser-worker endpoint; implicit loopback is forbidden."""
+    candidate = str(cdp_url or os.getenv('XHS_CDP_URL') or CDP_URL or '').strip()
+    if not candidate:
+        return '', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+    try:
+        parsed = urlsplit(candidate)
+        hostname = (parsed.hostname or '').strip('[]').lower()
+        if parsed.scheme not in {'http', 'https'} or not hostname or parsed.path not in {'', '/'}:
+            return '', 'COLLECTOR_ENDPOINT_INVALID'
+        if parsed.username or parsed.password or parsed.fragment:
+            return '', 'COLLECTOR_ENDPOINT_INVALID'
+        if hostname in {'localhost', 'localhost.localdomain'}:
+            return '', 'LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN'
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_loopback or ip.is_unspecified:
+                return '', 'LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN'
+        except ValueError:
+            pass
+        return candidate.rstrip('/'), ''
+    except Exception:
+        return '', 'COLLECTOR_ENDPOINT_INVALID'
 
 
 def _get_xhs_guard():
@@ -215,9 +243,11 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
 
 
 def _cdp_online(timeout=2.0, cdp_url=None):
-    """探测 CDP 是否在线（默认9223香港/国际；不启动浏览器，只探测）。"""
+    """Probe a configured remote browser worker; never assume a local browser."""
     import urllib.request
-    _url = (cdp_url or CDP_URL)
+    _url, endpoint_error = _resolve_server_cdp_url(cdp_url)
+    if endpoint_error:
+        return False
 
     def _probe():
         with urllib.request.urlopen(_url + '/json/version', timeout=timeout) as r:
@@ -246,24 +276,9 @@ def _cdp_online(timeout=2.0, cdp_url=None):
             return False
 
 
-def _ensure_cdp_online(timeout=30):
-    """香港/国际真人通道掉线时尝试拉起持久 Edge；拉起失败返回 False，由上层走兜底。"""
-    import time as _time
-    if _cdp_online():
-        return True
-    try:
-        from collector_automation import CollectorAutomation
-        ctrl = CollectorAutomation(base_dir=SCRIPT_DIR)
-        print('[Collector] 9223 不在线，尝试自动拉起香港/国际真人采集浏览器 ...')
-        ctrl.start_browser(account='default', headless=False)  # 内部已等待 CDP 就绪
-        for _ in range(timeout):
-            if _cdp_online():
-                print('[Collector] 9223 已自动拉起并就绪')
-                return True
-            _time.sleep(1)
-    except Exception as e:
-        print('[Collector] 自动拉起 9223 失败:', e)
-    return _cdp_online()
+def _ensure_cdp_online(timeout=30, cdp_url=None):
+    """Compatibility name; production never launches a developer-local browser."""
+    return _cdp_online(timeout=min(float(timeout), 5.0), cdp_url=cdp_url)
 
 
 def _norm_cdp_note(rec):
@@ -308,9 +323,10 @@ def _norm_cdp_note(rec):
 
 
 def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None):
-    """走已登录 Edge 的 rednote_collector.cjs，返回与独立通道一致的 dict 结构。
-    cdp_url: 9223=香港/国际intl；region/account 仅用于统一通道标记和 Cookie 路径。"""
-    _cdp = cdp_url or CDP_URL
+    """Use the configured server browser worker with the existing XHS collector."""
+    _cdp, endpoint_error = _resolve_server_cdp_url(cdp_url)
+    if endpoint_error:
+        return {'keyword': keyword, 'total': 0, 'notes': [], 'error': endpoint_error, 'channel': 'cdp'}
     env = _collection_env(account=account, region=region or 'intl', cdp_url=_cdp)
     py = sys.executable or 'python'
     cmd = [py, CDP_SCRIPT, '--keyword', keyword, '--output', output_path,
@@ -410,7 +426,13 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
             'policy': gate,
         }
     region = 'intl'
-    cdp_port = 9223
+    cdp_port = 9223  # legacy policy identity only; it is not a host-local endpoint
+    cdp_url, endpoint_error = _resolve_server_cdp_url()
+    if endpoint_error:
+        return {
+            'keyword': keyword, 'total': 0, 'notes': [], 'error': endpoint_error,
+            'channel': 'worker', 'region': region, 'policy': policy_gate,
+        }
     if output_path is None:
         # 采集原始产物属于运行数据，不得回写唯一源码目录；沿用账号桥的
         # 受保护数据根目录，保证直接调用与 API/调度器使用同一落盘边界。
@@ -431,37 +453,17 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
     if _REDNOTE_POLICY_AVAILABLE:
         sel = _rednote_policy.select_region(kos_only=kos_only, force_region='intl')
         region = sel['region']; cdp_port = sel['cdp_port']
-    cdp_url = f'http://127.0.0.1:{cdp_port}'
-
-    # Phase4: 浏览器模式门控 - external_standalone 时跳过CDP，直接走独立Chromium兜底
-    _browser_mode = 'internal_cdp'
-    try:
-        import collector_browser_mode as _cbm
-        _browser_mode = _cbm.get_browser_mode()
-    except Exception:
-        pass
-    if _browser_mode == 'external_standalone':
-        print('[Collector] 浏览器模式=external_standalone，使用香港/国际策略上下文的独立通道')
-        return _search_standalone(keyword, max_scroll, output_path, account=account,
-                                   region=region, cdp_url=cdp_url)
-
-    # 主路径：CDP 真人通道
-    try:
-        if os.path.exists(CDP_SCRIPT) and _cdp_online(cdp_url=cdp_url):
-            res = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details,
-                                  cdp_url=cdp_url, region=region, account=account)
-            res['region'] = region; res['cdp_port'] = cdp_port
-            if res.get('notes') or res.get('error') in _CDP_RISK_STATES:
-                return res  # 真出数 / 明确风控态都直接返回
-            # CDP 非风控空结果，落兜底通道再试一次
-            fb = _search_standalone(keyword, max_scroll, output_path, account=account,
-                                    region=region, cdp_url=cdp_url)
-            fb['cdp_first_empty'] = res.get('error', '')
-            return fb
-    except Exception as e:
-        print('[Collector] CDP 主路径异常，回退独立通道:', e)
-    return _search_standalone(keyword, max_scroll, output_path, account=account,
-                              region=region, cdp_url=cdp_url)
+    if not os.path.exists(CDP_SCRIPT):
+        return {'keyword': keyword, 'total': 0, 'notes': [], 'error': 'COLLECTOR_SCRIPT_UNAVAILABLE',
+                'channel': 'worker', 'region': region}
+    if not _cdp_online(cdp_url=cdp_url):
+        return {'keyword': keyword, 'total': 0, 'notes': [], 'error': 'COLLECTOR_ENDPOINT_UNAVAILABLE',
+                'channel': 'worker', 'region': region}
+    result = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details,
+                             cdp_url=cdp_url, region=region, account=account)
+    result['region'] = region
+    result['channel'] = 'authorized_browser_worker'
+    return result
 
 
 def _collect_one_keyword(guard, kw, kw_scroll, kw_details, account=None):

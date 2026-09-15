@@ -61,10 +61,10 @@ class BilibiliAdapter(BasePlatformAdapter):
                 "author_nickname": getattr(n, "author", ""),
                 "publish_datetime": getattr(n, "publish_date", ""),
                 "url": getattr(n, "url", ""),
-                "likes": getattr(n, "likes", 0),
-                "comments": getattr(n, "comments", 0),
-                "collects": getattr(n, "collects", 0),
-                "shares": getattr(n, "shares", 0),
+                "likes": getattr(n, "likes", None),
+                "comments": getattr(n, "comments", None),
+                "collects": getattr(n, "collects", None),
+                "shares": getattr(n, "shares", None),
                 "raw": raw,
             }))
         return items

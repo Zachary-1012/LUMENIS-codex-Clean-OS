@@ -75,7 +75,8 @@ async function collect(options) {
       error: '当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com', notes: [] };
   }
   const collectionOrigin = `https://${collectionHost}`;
-  const cdpUrl = process.env.XHS_CDP_URL || 'http://127.0.0.1:9223';
+  const cdpUrl = process.env.XHS_CDP_URL || '';
+  if (!cdpUrl) throw new Error('COLLECTOR_ENDPOINT_NOT_CONFIGURED');
   const allResults = [];
   let verificationRequired = false;
   let ipBlocked = false;

@@ -31,7 +31,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-CDP_URL = 'http://127.0.0.1:9223'
+CDP_URL = os.getenv('XHS_CDP_URL', '').strip()
 COLLECTION_HOST = os.environ.get('XHS_COLLECTION_HOST', 'www.rednote.com').strip().lower()
 COLLECTION_ORIGIN = f'https://{COLLECTION_HOST}'
 
@@ -895,6 +895,9 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
 
 def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1):
     """统一入口：human=1 真人浏览链路（默认），human=0 旧直连。"""
+    if not cdp_url:
+        return {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {},
+                'error': 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'}
     if int(human) == 0:
         return collect_direct(keyword, max_scroll, max_details, cdp_url)
     return collect_human(keyword, max_scroll, max_details, cdp_url)

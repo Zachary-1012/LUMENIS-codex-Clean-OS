@@ -25,7 +25,7 @@ import time
 import logging
 import datetime
 import urllib.parse
-from .base import BaseAdapter, AdapterResult
+from .base import BaseAdapter, AdapterResult, optional_int
 from .human_browser import HumanBrowser, PageState
 from .cookie_vault import inject_into_context
 
@@ -264,24 +264,21 @@ class DouyinAdapter(BaseAdapter):
 
     @staticmethod
     def _to_int(v):
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return 0
+        return optional_int(v)
 
     @staticmethod
     def _cn_num(text):
         """把 '1.2万' / '3.4亿' 等中文计数转为整数；无法解析返回 0。"""
-        if not text:
-            return 0
+        if text is None or not str(text).strip():
+            return None
         s = str(text).strip().replace(",", "")
         m = re.search(r"([\d.]+)\s*([万亿wW]?)", s)
         if not m:
-            return 0
+            return None
         try:
             v = float(m.group(1))
         except ValueError:
-            return 0
+            return None
         unit = m.group(2)
         if unit in ("万", "w", "W"):
             v *= 1e4

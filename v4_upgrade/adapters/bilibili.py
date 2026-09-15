@@ -26,7 +26,7 @@ Bilibili（B站）视频内容采集适配器
 import logging
 from datetime import datetime, timezone
 
-from .base import BaseAdapter, AdapterResult
+from .base import BaseAdapter, AdapterResult, optional_int
 from .cookie_vault import to_requests_cookies, to_cookie_string, check_cookie_status
 
 logger = logging.getLogger(__name__)
@@ -88,10 +88,10 @@ class BilibiliAdapter(BaseAdapter):
                     author=v.get("author", ""),
                     author_id="",
                     publish_date=self._ts_to_iso(v.get("pubdate")),
-                    likes=0,
-                    comments=v.get("video_review", 0),
-                    collects=v.get("favorites", 0),
-                    shares=0,
+                    likes=None,
+                    comments=optional_int(v.get("video_review")),
+                    collects=optional_int(v.get("favorites")),
+                    shares=None,
                     source_platform="bilibili",
                     raw_data=v,
                 ))
@@ -162,10 +162,10 @@ class BilibiliAdapter(BaseAdapter):
                     author=v.get("author", ""),
                     author_id="",  # 搜索API不返回mid，留空不臆造
                     publish_date=self._ts_to_iso(v.get("pubdate")),
-                    likes=0,       # 搜索API不返回点赞数
-                    comments=0,    # 搜索API不返回评论数
-                    collects=int(v.get("favorites", 0) or 0),
-                    shares=0,
+                    likes=None,    # 搜索API不返回点赞数
+                    comments=optional_int(v.get("video_review")),
+                    collects=optional_int(v.get("favorites")),
+                    shares=None,
                     cover="",      # 搜索API不返回封面
                     source_platform=self.platform_name,
                     raw_data={
@@ -243,10 +243,10 @@ class BilibiliAdapter(BaseAdapter):
                 author=owner.get("name", ""),
                 author_id=str(owner.get("mid", "")),
                 publish_date=self._ts_to_iso(v.get("pubdate")),
-                likes=int(stat.get("like", 0) or 0),
-                comments=int(stat.get("reply", 0) or 0),
-                collects=int(stat.get("favorite", 0) or 0),
-                shares=int(stat.get("share", 0) or 0),
+                likes=optional_int(stat.get("like")),
+                comments=optional_int(stat.get("reply")),
+                collects=optional_int(stat.get("favorite")),
+                shares=optional_int(stat.get("share")),
                 cover=v.get("pic", ""),
                 source_platform=self.platform_name,
                 raw_data={
@@ -305,10 +305,10 @@ class BilibiliAdapter(BaseAdapter):
                     author=member.get("uname", ""),
                     author_id=str(member.get("mid", "")),
                     publish_date=self._ts_to_iso(r.get("ctime")),
-                    likes=int(r.get("like", 0) or 0),
-                    comments=0,
-                    collects=0,
-                    shares=0,
+                    likes=optional_int(r.get("like")),
+                    comments=None,
+                    collects=None,
+                    shares=None,
                     cover="",
                     source_platform=self.platform_name,
                     raw_data={"engine": "bilibili_reply_api", "rpid": r.get("rpid"), "type": "comment"},
@@ -345,10 +345,10 @@ class BilibiliAdapter(BaseAdapter):
                 author=u.get("name", ""),
                 author_id=str(u.get("mid", "")),
                 publish_date="",
-                likes=0,
-                comments=0,
-                collects=0,
-                shares=0,
+                likes=None,
+                comments=None,
+                collects=None,
+                shares=None,
                 cover=u.get("face", ""),
                 source_platform=self.platform_name,
                 raw_data={
