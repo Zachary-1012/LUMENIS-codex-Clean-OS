@@ -3,6 +3,7 @@
 import sys, os
 import pytest
 from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -136,6 +137,51 @@ class TestDouyinDetailCommentsCreator:
         r = DouyinAdapter().creator("sec123")
         assert r.status == CollectionStatus.SUCCESS
         mock_load.return_value.creator.assert_called_once_with(sec_uid="sec123")
+
+
+@pytest.mark.parametrize(
+    "adapter_module,adapter_class,platform",
+    [
+        ("platform_adapters.bilibili", "BilibiliAdapter", "bilibili"),
+        ("platform_adapters.weibo", "WeiboAdapter", "weibo"),
+        ("platform_adapters.douyin", "DouyinAdapter", "douyin"),
+    ],
+)
+def test_missing_optional_provider_method_is_not_supported(adapter_module, adapter_class, platform):
+    module = __import__(adapter_module, fromlist=[adapter_class])
+    adapter = getattr(module, adapter_class)(backend=SimpleNamespace())
+
+    result = adapter.comments("content-1")
+
+    assert result.platform == platform
+    assert result.status == CollectionStatus.NOT_SUPPORTED
+    assert result.metadata["capability"] == "comments"
+
+
+def test_xhs_detail_and_worker_health_are_explicitly_degraded():
+    from platform_adapters.xhs import XiaohongshuAdapter
+
+    class Worker:
+        def __init__(self, endpoint, error, reachable=False):
+            self.endpoint = endpoint
+            self.error = error
+            self.reachable = reachable
+
+        def _resolve_server_cdp_url(self):
+            return self.endpoint, self.error
+
+        def _cdp_online(self, timeout=2.0, cdp_url=None):
+            assert cdp_url == self.endpoint
+            return self.reachable
+
+    adapter = XiaohongshuAdapter(backend=Worker("", "COLLECTOR_ENDPOINT_NOT_CONFIGURED"))
+    assert adapter.detail("note-1").status == CollectionStatus.NOT_SUPPORTED
+    assert adapter.health_check().status == CollectionStatus.NOT_CONFIGURED
+
+    adapter = XiaohongshuAdapter(backend=Worker("https://worker.example", "", reachable=False))
+    result = adapter.health_check()
+    assert result.status == CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.metadata["healthcheck_scope"] == "worker_connectivity"
 
 
 class TestCapabilityMatrix:

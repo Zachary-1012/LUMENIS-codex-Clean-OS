@@ -52,6 +52,8 @@ MIN_INTERVAL_SECONDS = 3.0
 _DEFAULT_GET_ADAPTER = get_adapter
 _runtime_adapters: Dict[str, Any] = {}
 _runtime_adapter_lock = threading.RLock()
+_evidence_schema_paths: set[str] = set()
+_evidence_schema_lock = threading.Lock()
 
 
 def _get_runtime_adapter(platform: str):
@@ -101,6 +103,7 @@ def _status_message(status: str, *, detail: str = "") -> str:
         "POLICY_STATE_UNAVAILABLE": "无法读取采集限额状态，已阻止外部请求",
         "IMPORT_FAILED": "部分记录未能写入现有业务数据，结果未标记完成",
         "CANONICAL_SYNC_FAILED": "原始记录已保留，但 Canonical Data 同步未完成",
+        "EVIDENCE_WRITE_FAILED": "Evidence 未能持久化，本次采集不标记为完成",
         "COLLECT_ERROR": "采集引擎未完成本次请求",
         "UNAVAILABLE": "采集引擎未就绪",
     }
@@ -340,6 +343,15 @@ def _daily_action_count(platform: str, at: datetime) -> int | None:
     try:
         import database as db
 
+        with db.get_db() as conn:
+            web_runs_exists = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='web_runs'"
+            ).fetchone()
+        if not web_runs_exists:
+            # Match the application's existing cold-start initializer for a
+            # brand-new runtime DB; do not treat missing policy state as 0.
+            db.init_db()
+
         day_start = at.strftime("%Y-%m-%d 00:00:00")
         next_day = at.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
         with db.get_db() as conn:
@@ -417,13 +429,34 @@ def _write_run_log(platform: str, keyword: str, *, started: str, finished: str,
     )
 
 
+def _ensure_evidence_schema() -> None:
+    """Initialize the existing Evidence table for the currently bound runtime DB."""
+    from db_paths import main_db_path
+
+    db_path = main_db_path()
+    if db_path in _evidence_schema_paths:
+        return
+    with _evidence_schema_lock:
+        if db_path in _evidence_schema_paths:
+            return
+        # Reuse the existing schema and additive evidence-chain migration. Both
+        # resolve through the same ZBC_DB_PATH-bound runtime database.
+        from app_evidence import init_db as init_app_evidence_db
+        from evidence_store import migrate_evidence_chain_fields
+
+        init_app_evidence_db()
+        migrate_evidence_chain_fields(db_path)
+        _evidence_schema_paths.add(db_path)
+
+
 def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, started: str) -> int | None:
     try:
+        _ensure_evidence_schema()
         from evidence_store import record_collection_evidence
 
         status = result.get("status") or "COLLECT_ERROR"
         provenance = result.get("provenance") if isinstance(result.get("provenance"), dict) else {}
-        return record_collection_evidence(
+        evidence_id = record_collection_evidence(
             account=f"CTH_{platform.upper()}_RUNTIME",
             platform=platform,
             notes_collected=int(result.get("raw_count", 0) or 0),
@@ -444,6 +477,7 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
             collected_at=provenance.get("collected_at") or "",
             collection_metadata=provenance,
         )
+        return evidence_id if isinstance(evidence_id, int) and not isinstance(evidence_id, bool) and evidence_id > 0 else None
     except Exception:
         return None
 
@@ -519,8 +553,6 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         if not health.get("can_attempt", health.get("ready", False)):
             finished = _now()
             error = f"{health_status}: {_status_message(health_status)}"
-            _write_run_log(platform, keyword, started=started_at, finished=finished,
-                           fetched=0, accepted=0, rejected=0, error=error)
             result = {
                 "ok": False, "status": health_status, "platform": platform,
                 "keyword": keyword, "raw_count": 0, "returned_count": 0,
@@ -532,6 +564,15 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             }
             evidence_id = _write_evidence(platform, keyword, result, started=started_at)
             result["evidence_recorded"] = evidence_id is not None
+            if evidence_id is None:
+                result.update({
+                    "ok": False,
+                    "status": "EVIDENCE_WRITE_FAILED",
+                    "error_type": "EVIDENCE_WRITE_FAILED",
+                    "error": f"EVIDENCE_WRITE_FAILED: {_status_message('EVIDENCE_WRITE_FAILED')}",
+                })
+            _write_run_log(platform, keyword, started=started_at, finished=finished,
+                           fetched=0, accepted=0, rejected=0, error=result["error"])
             return result
 
         adapter = _get_runtime_adapter(platform)
@@ -579,13 +620,6 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             final_status = "IMPORT_FAILED"
         finished = _now()
         error = "" if final_status in {"SUCCESS", "NO_NEW_DATA"} else f"{final_status}: {_status_message(final_status)}"
-        _write_run_log(
-            platform, keyword, started=started_at, finished=finished,
-            fetched=int(collection.raw_count or len(items) or 0),
-            accepted=int(subject.get("subject_matches", 0) or 0),
-            rejected=max(0, len(items) - int(subject.get("subject_matches", 0) or 0)),
-            error=error,
-        )
         result = {
             "ok": bool(collection.ok and not import_result.get("failed") and not canonical_failed),
             "status": final_status,
@@ -611,6 +645,20 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         }
         evidence_id = _write_evidence(platform, keyword, result, started=started_at)
         result["evidence_recorded"] = evidence_id is not None
+        if evidence_id is None:
+            result.update({
+                "ok": False,
+                "status": "EVIDENCE_WRITE_FAILED",
+                "error_type": "EVIDENCE_WRITE_FAILED",
+                "error": f"EVIDENCE_WRITE_FAILED: {_status_message('EVIDENCE_WRITE_FAILED')}",
+            })
+        _write_run_log(
+            platform, keyword, started=started_at, finished=finished,
+            fetched=int(collection.raw_count or len(items) or 0),
+            accepted=int(subject.get("subject_matches", 0) or 0),
+            rejected=max(0, len(items) - int(subject.get("subject_matches", 0) or 0)),
+            error=result["error"],
+        )
         return result
     finally:
         lock.release()

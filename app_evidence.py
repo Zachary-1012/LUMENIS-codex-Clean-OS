@@ -36,7 +36,10 @@ from flask import jsonify, request
 
 # ========== 配置 ==========
 MODULE_VERSION = '1.0.0-shadow'
-EVIDENCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'app_evidence')
+EVIDENCE_DIR = os.path.join(
+    os.environ.get('ZBC_DATA_DIR') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'),
+    'app_evidence',
+)
 # 上传安全限制（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
 EVIDENCE_ALLOWED_EXTENSIONS = {
     '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp',  # 图片
@@ -60,10 +63,6 @@ STATUS_PENDING = 'pending'
 STATUS_CONFIRMED = 'confirmed'
 STATUS_REJECTED = 'rejected'
 STATUS_SHADOW = 'shadow'
-
-# 确保目录存在
-os.makedirs(EVIDENCE_DIR, exist_ok=True)
-
 
 # ========== 数据库 Schema ==========
 SCHEMA = """
@@ -342,6 +341,7 @@ def register_app_evidence(app):
                         return jsonify({'ok': False, 'error': f'不支持的文件格式: {ext}，允许: {sorted(EVIDENCE_ALLOWED_EXTENSIONS)}'}), 400
                     # 先保存再检查大小（Flask MAX_CONTENT_LENGTH 已在全局拦截，这里二次校验）
                     filename = f"evidence_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.urandom(4).hex()}{ext}"
+                    os.makedirs(EVIDENCE_DIR, exist_ok=True)
                     evidence_path = os.path.join(EVIDENCE_DIR, filename)
                     file.save(evidence_path)
                     actual_size = os.path.getsize(evidence_path)

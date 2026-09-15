@@ -106,7 +106,14 @@ class WeiboAdapter(BasePlatformAdapter):
     def _delegate_v4(self, method: str, *args, **kwargs) -> CollectionResult:
         try:
             backend = self._load_backend()
-            fn = getattr(backend, method)
+            fn = getattr(backend, method, None)
+            if not callable(fn):
+                return CollectionResult(
+                    status=CollectionStatus.NOT_SUPPORTED,
+                    platform=self.platform,
+                    message=f"Weibo provider does not support {method}",
+                    metadata={"provider": "weibo_first_party_read_api", "capability": method},
+                )
             result = fn(*args, **kwargs)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             comments = map_v4_comments(result.notes) if method == "comments" else []

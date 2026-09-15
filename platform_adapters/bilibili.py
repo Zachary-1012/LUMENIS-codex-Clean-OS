@@ -107,7 +107,14 @@ class BilibiliAdapter(BasePlatformAdapter):
         """通用 v4 委托：调用指定方法并映射 AdapterResult → CollectionResult。"""
         try:
             backend = self._load_backend()
-            fn = getattr(backend, method)
+            fn = getattr(backend, method, None)
+            if not callable(fn):
+                return CollectionResult(
+                    status=CollectionStatus.NOT_SUPPORTED,
+                    platform=self.platform,
+                    message=f"Bilibili provider does not support {method}",
+                    metadata={"provider": "bilibili_first_party_read_api", "capability": method},
+                )
             result = fn(*args, **kwargs)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             comments = map_v4_comments(result.notes) if method == "comments" else []

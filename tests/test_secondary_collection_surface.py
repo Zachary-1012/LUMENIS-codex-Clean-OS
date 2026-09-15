@@ -216,6 +216,47 @@ def test_provider_exception_isolated_and_recorded(monkeypatch):
     assert evidence["provenance"]["source"] == "platform:bilibili"
 
 
+def test_evidence_failure_marker_is_not_reported_as_persisted(monkeypatch):
+    import evidence_store
+
+    monkeypatch.setattr(surface, "_ensure_evidence_schema", lambda: None)
+    monkeypatch.setattr(evidence_store, "record_collection_evidence", lambda **kwargs: -1)
+
+    assert surface._write_evidence(
+        "bilibili",
+        "广州太古汇",
+        {"status": "SUCCESS", "provenance": {"provider": "fixture"}},
+        started="2026-09-15 10:00:00",
+    ) is None
+
+
+def test_collection_fails_closed_when_evidence_is_not_persisted(monkeypatch):
+    class FakeAdapter:
+        def health_check(self):
+            return CollectionResult(status=CollectionStatus.SUCCESS, platform="kuaishou")
+
+        def search(self, keyword, max_results=20):
+            return CollectionResult(
+                status=CollectionStatus.NO_NEW_DATA,
+                platform="kuaishou",
+                items=[],
+            )
+
+    run_log = {}
+    monkeypatch.setattr(surface, "get_adapter", lambda platform: FakeAdapter())
+    monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
+    monkeypatch.setattr(surface, "_write_evidence", lambda *args, **kwargs: None)
+    monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: run_log.update(kwargs))
+    monkeypatch.setitem(surface._last_action, "kuaishou", 0.0)
+
+    result = surface.collect_search("kuaishou", "广州太古汇", max_results=1, operator="human")
+
+    assert result["ok"] is False
+    assert result["status"] == "EVIDENCE_WRITE_FAILED"
+    assert result["evidence_recorded"] is False
+    assert run_log["error"].startswith("EVIDENCE_WRITE_FAILED:")
+
+
 def test_product_route_requires_explicit_human_read_only_confirmation():
     from flask import Flask
     import experience_runtime

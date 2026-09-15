@@ -108,7 +108,14 @@ class DouyinAdapter(BasePlatformAdapter):
     def _delegate_v4(self, method: str, *args, **kwargs) -> CollectionResult:
         try:
             backend = self._load_backend()
-            fn = getattr(backend, method)
+            fn = getattr(backend, method, None)
+            if not callable(fn):
+                return CollectionResult(
+                    status=CollectionStatus.NOT_SUPPORTED,
+                    platform=self.platform,
+                    message=f"Douyin provider does not support {method}",
+                    metadata={"provider": "authorized_browser_worker", "capability": method},
+                )
             result = fn(*args, **kwargs)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             comments = map_v4_comments(result.notes) if method == "comments" else []

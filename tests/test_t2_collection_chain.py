@@ -339,10 +339,10 @@ def run_tests():
     check("Adapter enabled=True", adapter.enabled is True)
     check("Adapter monitor_priority=primary", adapter.monitor_priority == "primary")
 
-    # detail 未接入应返回 COLLECT_ERROR（显式声明，非静默失败）
+    # detail 未接入应以 NOT_SUPPORTED 明确声明能力缺失，不伪装成 Provider 故障。
     detail_result = adapter.detail("test_id")
-    check("detail 未接入显式返回 COLLECT_ERROR", detail_result.status == CollectionStatus.COLLECT_ERROR)
-    check("detail 未接入有明确 message", "delegated" in detail_result.message.lower() or "Detail" in detail_result.message)
+    check("detail 未接入显式返回 NOT_SUPPORTED", detail_result.status == CollectionStatus.NOT_SUPPORTED)
+    check("detail 未接入有明确 message", "独立详情" in detail_result.message)
 
     # ===== 汇总 =====
     print("\n" + "=" * 60)
