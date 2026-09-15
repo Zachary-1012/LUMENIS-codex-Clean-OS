@@ -33,7 +33,7 @@ PLATFORM_CAPABILITIES = {
         "creator": True,
         "session_cache": True,
         "proxy_pool": True,
-        "enable_gate": "cookie_plus_browser_engine_verified",
+        "enable_gate": "managed_remote_worker_plus_authorized_session",
     },
     "kuaishou": {
         "name": "快手", "enabled": False, "manual_collection_enabled": True,
@@ -59,7 +59,7 @@ PLATFORM_CAPABILITIES = {
         "healthcheck": True,
         "session_cache": True,
         "proxy_pool": False,
-        "enable_gate": "cookie_plus_engine_verified",
+        "enable_gate": "server_authorized_session_and_manual_live_verification",
     },
     "weibo": {
         "name": "微博",
@@ -77,7 +77,7 @@ PLATFORM_CAPABILITIES = {
         "healthcheck": True,
         "session_cache": True,
         "proxy_pool": False,
-        "enable_gate": "cookie_plus_engine_verified",
+        "enable_gate": "server_authorized_session_and_manual_live_verification",
     },
     "web_rss": {
         "name": "Web RSS", "enabled": False, "manual_collection_enabled": True,

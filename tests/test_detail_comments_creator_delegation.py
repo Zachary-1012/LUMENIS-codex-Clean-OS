@@ -43,6 +43,8 @@ class TestBilibiliDetailCommentsCreator:
         from platform_adapters.bilibili import BilibiliAdapter
         r = BilibiliAdapter().comments("BV1xx", max_comments=15)
         assert r.status == CollectionStatus.SUCCESS
+        assert r.items == []
+        assert r.comments[0]["content"] == "c"
         mock_load.return_value.comments.assert_called_once()
 
     @patch("platform_adapters.bilibili.BilibiliAdapter._load_backend")
@@ -70,6 +72,8 @@ class TestWeiboDetailCommentsCreator:
         from platform_adapters.weibo import WeiboAdapter
         r = WeiboAdapter().comments("mid123")
         assert r.status == CollectionStatus.SUCCESS
+        assert r.items == []
+        assert r.comments[0]["content"] == "c"
 
     @patch("platform_adapters.weibo.WeiboAdapter._load_backend")
     def test_creator_delegates_v4(self, mock_load):
@@ -122,6 +126,8 @@ class TestDouyinDetailCommentsCreator:
         from platform_adapters.douyin import DouyinAdapter
         r = DouyinAdapter().comments("aweme123")
         assert r.status == CollectionStatus.SUCCESS
+        assert r.items == []
+        assert r.comments[0]["content"] == "c"
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_creator_delegates_v4(self, mock_load):
@@ -143,3 +149,32 @@ class TestCapabilityMatrix:
             assert cap["detail"] is True, f"{p} detail should be True"
             assert cap["comments"] is True, f"{p} comments should be True"
             assert cap["creator"] is True, f"{p} creator should be True"
+
+
+def test_search_stops_on_risk_and_never_returns_stale_fallback():
+    from v4_upgrade.adapters.base import AdapterResult, BaseAdapter, CollectedNote
+    from platform_adapters.bilibili import BilibiliAdapter
+
+    class RiskBackend(BaseAdapter):
+        platform_name = "bilibili"
+        platform_display = "B站"
+
+        def __init__(self):
+            super().__init__(rate_per_minute=600)
+            self.calls = 0
+            self._last_result = AdapterResult(
+                success=True,
+                notes=[CollectedNote(title="stale item")],
+                raw_count=1,
+            )
+
+        def search(self, keyword, max_results=20):
+            self.calls += 1
+            return AdapterResult(success=False, error="captcha verify required")
+
+    backend = RiskBackend()
+    result = BilibiliAdapter(backend=backend).search("广州太古汇")
+
+    assert backend.calls == 1
+    assert result.status == CollectionStatus.RISK_WARNING
+    assert result.items == []

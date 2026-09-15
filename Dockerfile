@@ -3,8 +3,9 @@
 # ---------------------------------------------------------------------
 # Design notes (intentionally conservative, see docs/governance/DOCKER-STAGING.md):
 # - Base python:3.12-slim; Flask + SQLite, no stack replacement.
-# - No browser is baked into the image. Platform collection talks to an
-#   external/remote CDP endpoint (XHS_CDP_URL). Staging never collects.
+# - No developer browser is baked into the image. Browser-backed collection
+#   talks only to an explicitly configured managed remote Worker
+#   (XHS_CDP_URL / DOUYIN_CDP_URL). Staging never collects.
 # - Runtime DB path is injected via ZBC_DB_PATH (database.py reads it), so the
 #   image stays stateless and the SQLite file lives on a mounted volume.
 # - Default CMD mirrors the locally-verified launch path (python app.py).

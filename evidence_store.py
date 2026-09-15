@@ -872,6 +872,16 @@ def record_collection_evidence(
 
     version: str = "",
 
+    feature_id: str = "XHS_COLLECT",
+
+    provider: str = "rule",
+
+    source: str = "collector",
+
+    collected_at: str = "",
+
+    collection_metadata=None,
+
 ) -> int:
 
     """采集任务 Evidence 便捷方法。
@@ -910,6 +920,33 @@ def record_collection_evidence(
 
         actual_parts.append(f"session={session_state}")
 
+    # Reuse the existing Evidence metadata contract. Keep only provenance and
+    # operational state; raw provider records, credentials and response bodies
+    # never enter this record.
+    safe_metadata = {
+        "provider": str(provider or "rule")[:100],
+        "source": str(source or "collector")[:180],
+        "collected_at": str(collected_at or "")[:40],
+    }
+    if isinstance(collection_metadata, dict):
+        allowed_metadata = {
+            "healthcheck_scope", "session_state", "endpoint_configured",
+            "error_type", "source_platform",
+        }
+        for key in allowed_metadata:
+            value = collection_metadata.get(key)
+            if isinstance(value, (str, int, float, bool)):
+                safe_metadata[key] = value
+
+    try:
+        from platform_adapters.safe_collection import sanitize
+
+        safe_metadata = sanitize(safe_metadata)
+    except Exception:
+        # The provenance allowlist above remains safe if the optional sanitizer
+        # cannot be imported during application bootstrap.
+        pass
+
 
 
     return record_evidence(
@@ -920,7 +957,7 @@ def record_collection_evidence(
 
         product="CTH",
 
-        feature_id="XHS_COLLECT",
+        feature_id=feature_id or "XHS_COLLECT",
 
         level="L8",
 
@@ -953,6 +990,8 @@ def record_collection_evidence(
         version=version,
 
         notes=f"平台={platform}; 会话={session_state or 'unknown'}" if session_state else f"平台={platform}",
+        provider=provider or "rule",
+        collection_metadata=safe_metadata,
 
     )
 

@@ -25,6 +25,9 @@ import time
 import logging
 import datetime
 import urllib.parse
+import ipaddress
+import os
+from urllib.parse import urlsplit
 from .base import BaseAdapter, AdapterResult, optional_int
 from .human_browser import HumanBrowser, PageState
 from .cookie_vault import inject_into_context
@@ -32,6 +35,36 @@ from .cookie_vault import inject_into_context
 logger = logging.getLogger(__name__)
 
 _SEARCH_API_KEYS = ("general/search/single", "general/search/stream")
+
+
+def _configured_browser_worker_url() -> str:
+    """Require an explicitly provisioned remote worker; never infer localhost."""
+    value = str(os.getenv("DOUYIN_CDP_URL") or "").strip()
+    if not value:
+        raise RuntimeError("DOUYIN_CDP_URL is not configured")
+    parsed = urlsplit(value)
+    if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+            or parsed.username or parsed.password or parsed.query or parsed.fragment
+            or parsed.path not in {"", "/"}):
+        raise RuntimeError("DOUYIN_CDP_URL must be a plain worker endpoint URL")
+    host = parsed.hostname.lower().rstrip(".")
+    if host in {"localhost", "localhost.localdomain"}:
+        raise RuntimeError("DOUYIN_CDP_URL must identify a remote browser worker")
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        address = None
+    if address is not None and (address.is_loopback or address.is_unspecified):
+        raise RuntimeError("DOUYIN_CDP_URL must not use a loopback endpoint")
+    return value
+
+
+def _new_browser_worker():
+    return HumanBrowser(
+        cdp_url=_configured_browser_worker_url(),
+        auto_ensure=False,
+        launch_url="about:blank",
+    )
 
 
 def _iter_json_objects(text):
@@ -59,8 +92,7 @@ class DouyinAdapter(BaseAdapter):
     platform_name = "douyin"
     platform_display = "抖音"
 
-    # 连接 9222 采集专用 Profile（与小红书共用同一套持久指纹/登录态）
-    CDP_PORT = 9222
+    # The deployed CDP endpoint is injected as DOUYIN_CDP_URL by the runtime.
 
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
         if not keyword or not keyword.strip():
@@ -72,7 +104,7 @@ class DouyinAdapter(BaseAdapter):
             return AdapterResult(success=False, error=f"抖音浏览器采集异常: {e}")
 
     def _search_browser(self, keyword, max_results) -> AdapterResult:
-        hb = HumanBrowser(port=self.CDP_PORT, launch_url="about:blank")
+        hb = _new_browser_worker()
         hb.connect()
         injected = inject_into_context(hb._context, "douyin")  # Cookie 兜底/换号
         logger.info("抖音采集：注入 Cookie %d 条", injected)
@@ -297,7 +329,7 @@ class DouyinAdapter(BaseAdapter):
             return AdapterResult(success=False, error=f"抖音详情异常: {e}")
 
     def _detail_browser(self, aweme_id) -> AdapterResult:
-        hb = HumanBrowser(port=self.CDP_PORT, launch_url="about:blank")
+        hb = _new_browser_worker()
         hb.connect()
         inject_into_context(hb._context, "douyin")
         detail_bags = []
@@ -348,7 +380,7 @@ class DouyinAdapter(BaseAdapter):
             return AdapterResult(success=False, error=f"抖音评论异常: {e}")
 
     def _comments_browser(self, aweme_id, max_comments) -> AdapterResult:
-        hb = HumanBrowser(port=self.CDP_PORT, launch_url="about:blank")
+        hb = _new_browser_worker()
         hb.connect()
         inject_into_context(hb._context, "douyin")
         cmt_bags = []
@@ -405,7 +437,7 @@ class DouyinAdapter(BaseAdapter):
             return AdapterResult(success=False, error=f"抖音用户异常: {e}")
 
     def _creator_browser(self, sec_uid) -> AdapterResult:
-        hb = HumanBrowser(port=self.CDP_PORT, launch_url="about:blank")
+        hb = _new_browser_worker()
         hb.connect()
         inject_into_context(hb._context, "douyin")
         profile_bags = []

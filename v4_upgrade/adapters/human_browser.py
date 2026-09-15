@@ -26,6 +26,7 @@ import time
 import random
 import socket
 import logging
+from urllib.parse import urlsplit
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
 
@@ -91,6 +92,19 @@ def is_cdp_open(host: str = "127.0.0.1", port: int = 9222, timeout: float = 1.0)
         return False
 
 
+def is_cdp_url_open(cdp_url: str, timeout: float = 1.0) -> bool:
+    """Check only TCP reachability for an explicitly configured worker URL."""
+    try:
+        parsed = urlsplit(str(cdp_url or "").strip())
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            return False
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        with socket.create_connection((parsed.hostname, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
 @dataclass
 class HumanConfig:
     """拟人节奏参数（毫秒/秒级，贴近真人分布）。"""
@@ -116,6 +130,7 @@ class HumanBrowser:
                  launch_url: str = "about:blank",
                  browser: str = "edge"):
         # 允许直接给 cdp_url；否则按端口拼。port/profile/proxy 用于自动拉起对应实例
+        self._explicit_cdp_url = bool(cdp_url)
         self.cdp_url = cdp_url or f"http://127.0.0.1:{port}"
         self.port = port
         self.profile_dir = profile_dir
@@ -132,17 +147,22 @@ class HumanBrowser:
     # ---------- 生命周期 ----------
     def connect(self):
         """连接 CDP Edge；auto_ensure 时端口未开则尝试经 cdp_helper 拉起。"""
-        if not is_cdp_open(port=self.port):
+        if self._explicit_cdp_url:
+            if not is_cdp_url_open(self.cdp_url):
+                raise RuntimeError("configured browser worker endpoint is unavailable")
+        elif not is_cdp_open(port=self.port):
             if not self.auto_ensure:
                 raise RuntimeError(f"CDP 浏览器未启动（端口 {self.port}），且 auto_ensure=False")
             self._ensure_browser()
         from playwright.sync_api import sync_playwright
-        # 连接前 HTTP 复位重页面/残留 worker，避免 attach 现有重页面时 CDP 握手挂起
-        try:
-            from cdp_helper import reset_cdp_targets
-            reset_cdp_targets(self.port)
-        except Exception:
-            pass
+        # The legacy local path may reset stale local targets. An explicitly
+        # configured remote worker is never touched through localhost helpers.
+        if not self._explicit_cdp_url:
+            try:
+                from cdp_helper import reset_cdp_targets
+                reset_cdp_targets(self.port)
+            except Exception:
+                pass
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.connect_over_cdp(self.cdp_url)
         if not self._browser.contexts:

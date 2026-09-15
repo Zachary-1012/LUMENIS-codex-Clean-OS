@@ -132,3 +132,21 @@ class BasePlatformAdapter(ABC):
             "captured_at": item.get("captured_at"),
             "raw": item.get("raw"),
         }
+
+
+def map_v4_comments(notes: Iterable[Any]) -> list[Dict[str, Any]]:
+    """Map existing v4 comment notes to the canonical comments result field."""
+    comments: list[Dict[str, Any]] = []
+    for note in notes or []:
+        raw = getattr(note, "raw_data", {})
+        raw = raw if isinstance(raw, dict) else {}
+        comment_id = raw.get("rpid") or raw.get("comment_id") or raw.get("id") or ""
+        comments.append({
+            "platform_comment_id": str(comment_id),
+            "content": getattr(note, "content", "") or "",
+            "author_id": getattr(note, "author_id", "") or "",
+            "author_nickname": getattr(note, "author", "") or "",
+            "publish_datetime": getattr(note, "publish_date", "") or "",
+            "likes": getattr(note, "likes", None),
+        })
+    return comments

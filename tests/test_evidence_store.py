@@ -109,6 +109,33 @@ def test_record_collection_evidence_fail():
     print("PASS test_record_collection_evidence_fail")
 
 
+def test_collection_evidence_keeps_provider_source_and_collected_at(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        evidence_store,
+        "record_evidence",
+        lambda **kwargs: captured.update(kwargs) or 42,
+    )
+
+    result = evidence_store.record_collection_evidence(
+        account="CTH_WEB_RSS_RUNTIME",
+        platform="web_rss",
+        result="PASS",
+        feature_id="CTH_WEB_RSS_COLLECT",
+        provider="google_news_rss",
+        source="news.google.com/rss/search",
+        collected_at="2026-09-15 12:00:00",
+        collection_metadata={"api_key": "must-not-persist", "healthcheck_scope": "public"},
+    )
+
+    assert result == 42
+    assert captured["feature_id"] == "CTH_WEB_RSS_COLLECT"
+    assert captured["provider"] == "google_news_rss"
+    assert captured["collection_metadata"]["source"] == "news.google.com/rss/search"
+    assert captured["collection_metadata"]["collected_at"] == "2026-09-15 12:00:00"
+    assert "api_key" not in captured["collection_metadata"]
+
+
 def test_record_health_evidence():
     eid = evidence_store.record_health_evidence(
         account="XHS_CN_PRIMARY", level="L3", port=9222,

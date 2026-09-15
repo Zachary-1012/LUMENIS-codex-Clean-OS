@@ -210,7 +210,8 @@ class BaseAdapter(ABC):
         """搜索采集，子类必须实现"""
         pass
 
-    def collect(self, keyword: str, max_results: int = 20) -> AdapterResult:
+    def collect(self, keyword: str, max_results: int = 20, *,
+                allow_fallback: bool = True) -> AdapterResult:
         """
         采集入口（带熔断器+重试+限流）
         外部调用此方法，不要直接调search
@@ -224,13 +225,16 @@ class BaseAdapter(ABC):
                 self.metrics.record_call(False, 0, rate_limited=True)
             logger.info(f"[{self.platform_name}] 限流中，等待令牌...")
             if not self.rate_limiter.acquire(timeout=10.0):
-                return self._fallback_or_fail(keyword, "限流超时", start)
+                return self._fallback_or_fail(keyword, "限流超时", start, allow_fallback=allow_fallback)
 
         # 熔断检查
         if not self.breaker.allow():
             if self.metrics:
                 self.metrics.record_call(False, time.time() - start, circuit_open=True)
-            return self._fallback_or_fail(keyword, f"熔断器开启，平台{self.platform_name}暂不可用", start)
+            return self._fallback_or_fail(
+                keyword, f"熔断器开启，平台{self.platform_name}暂不可用", start,
+                allow_fallback=allow_fallback,
+            )
 
         last_error = ""
         for attempt in range(self.config["max_retries"]):
@@ -244,33 +248,58 @@ class BaseAdapter(ABC):
                         self.metrics.record_call(True, result.duration_seconds)
                     return result
                 last_error = result.error
+                if self._is_terminal_provider_state(last_error):
+                    # Authentication, rate-limit and risk responses must not be
+                    # hammered by automatic retries.
+                    break
             except Exception as e:
                 last_error = str(e)
-                logger.error(f"[{self.platform_name}] 第{attempt+1}次失败: {e}")
+                logger.error("[%s] attempt=%s error_type=%s",
+                             self.platform_name, attempt + 1, type(e).__name__)
+                if self._is_terminal_provider_state(last_error):
+                    break
             time.sleep(self.config["retry_delay"] * (attempt + 1))
 
         self.breaker.record_failure()
         duration = time.time() - start
         if self.metrics:
             self.metrics.record_call(False, duration, last_error)
-        return self._fallback_or_fail(keyword, f"{self.platform_display}采集失败: {last_error}", start)
+        return self._fallback_or_fail(
+            keyword, f"{self.platform_display}采集失败: {last_error}", start,
+            allow_fallback=allow_fallback,
+        )
 
-    def safe_collect(self, keyword: str, max_results: int = 20) -> AdapterResult:
+    @staticmethod
+    def _is_terminal_provider_state(error: str) -> bool:
+        text = str(error or "").lower()
+        markers = (
+            "captcha", "验证码", "安全验证", "need_verify", "login", "登录",
+            "cookie", "session expired", "会话失效", "风控", "risk", "频控",
+            "rate limit", "too many requests", "http 429", "http 403", "blocked",
+            "封禁", "300012", "-352", "-509",
+        )
+        return any(marker in text for marker in markers)
+
+    def safe_collect(self, keyword: str, max_results: int = 20, *,
+                     allow_fallback: bool = True) -> AdapterResult:
         """
         安全采集入口：永不抛异常，失败时返回空结果而非异常
         适用于批量采集场景，单个适配器失败不影响整体
         """
         try:
-            return self.collect(keyword, max_results)
+            return self.collect(keyword, max_results, allow_fallback=allow_fallback)
         except Exception as e:
-            logger.error(f"[{self.platform_name}] safe_collect异常: {e}")
+            logger.error("[%s] safe_collect error_type=%s", self.platform_name, type(e).__name__)
             if self.metrics:
-                self.metrics.record_call(False, 0, str(e))
+                self.metrics.record_call(False, 0, type(e).__name__)
             return AdapterResult(success=False, error=f"{self.platform_name}异常: {e}")
 
-    def _fallback_or_fail(self, keyword: str, error: str, start: float) -> AdapterResult:
+    def _fallback_or_fail(self, keyword: str, error: str, start: float, *,
+                          allow_fallback: bool = True) -> AdapterResult:
         """降级处理：优先用fallback_handler，其次用最近成功结果缓存，最后返回失败"""
         duration = time.time() - start
+        if not allow_fallback:
+            return AdapterResult(success=False, error=error, duration_seconds=duration)
         # 1. 用户自定义降级
         if self.fallback_handler:
             try:

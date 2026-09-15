@@ -56,12 +56,13 @@ class WebRSSAdapter(BasePlatformAdapter):
             if not url:
                 continue
             item_id = hashlib.sha256(url.encode("utf-8")).hexdigest()[:32]
+            source_name = str(source_item.get("source") or "").strip()
             items.append(self.normalize_item({
                 "platform_content_id": f"google-news:{item_id}",
                 "title": source_item.get("title") or "",
                 "content": "",
-                "author_id": None,
-                "author_nickname": "",
+                "author_id": source_name or None,
+                "author_nickname": source_name,
                 "publish_datetime": source_item.get("published_at") or "",
                 "url": url,
                 "likes": None,
@@ -90,6 +91,11 @@ class WebRSSAdapter(BasePlatformAdapter):
             platform=self.platform,
             message="RSS detail retrieval is not part of the configured public-feed contract",
         )
+
+    def capability_map(self) -> dict[str, str]:
+        capabilities = super().capability_map()
+        capabilities["detail"] = "not_supported"
+        return capabilities
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         return CollectionResult(
