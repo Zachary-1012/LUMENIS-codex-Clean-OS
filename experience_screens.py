@@ -152,6 +152,9 @@ def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
 
     status_labels = {
         "READY": "待人工触发",
+        "PROBING": "驻场状态探测中",
+        "UNVERIFIED": "本机运行态未验证",
+        "USER_PAUSED": "用户已暂停",
         "SUCCESS": "最近成功",
         "NO_NEW_DATA": "暂无新内容",
         "SESSION_EXPIRED": "需更新登录态",
@@ -160,20 +163,72 @@ def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
         "BLOCKED": "已阻断",
         "COLLECT_ERROR": "引擎异常",
         "UNAVAILABLE": "未就绪",
+        "CONFIGURED": "已配置，待首次运行",
+        "NOT_SUPPORTED": "暂不支持该能力",
+        "NOT_CONFIGURED": "未配置运行方式",
+        "PROVIDER_UNAVAILABLE": "运行服务暂不可用",
+        "COOLING_DOWN": "冷却中",
+        "RATE_LIMITED": "达到采集频率上限",
+        "POLICY_STATE_UNAVAILABLE": "门禁状态不可用",
+        "IMPORT_FAILED": "部分记录未入库",
+        "CANONICAL_SYNC_FAILED": "Canonical 同步未完成",
+        "EVIDENCE_WRITE_FAILED": "Evidence 保存失败",
+        "BUSY": "正在采集中",
     }
     tone = {
         "READY": "info", "SUCCESS": "success", "NO_NEW_DATA": "neutral",
+        "PROBING": "info", "UNVERIFIED": "neutral", "USER_PAUSED": "neutral",
         "SESSION_EXPIRED": "warning", "NEED_VERIFY": "warning",
-        "RISK_WARNING": "warning", "BLOCKED": "danger", "COLLECT_ERROR": "danger",
-        "UNAVAILABLE": "neutral",
+        "NOT_CONFIGURED": "warning", "PROVIDER_UNAVAILABLE": "warning",
+        "COOLING_DOWN": "warning", "RATE_LIMITED": "warning",
+        "POLICY_STATE_UNAVAILABLE": "warning", "BUSY": "info",
+        "RISK_WARNING": "danger", "BLOCKED": "danger", "COLLECT_ERROR": "danger",
+        "IMPORT_FAILED": "danger", "CANONICAL_SYNC_FAILED": "danger",
+        "EVIDENCE_WRITE_FAILED": "danger", "UNAVAILABLE": "neutral",
+        "CONFIGURED": "neutral", "NOT_SUPPORTED": "neutral",
     }
     rows: List[Dict[str, Any]] = []
+    primary = surface.get("primary_collection")
+    if isinstance(primary, dict):
+        runtime = primary.get("runtime") if isinstance(primary.get("runtime"), dict) else {}
+        health = primary.get("health") if isinstance(primary.get("health"), dict) else {}
+        last = primary.get("last_run") if isinstance(primary.get("last_run"), dict) else {}
+        status = str(primary.get("status") or runtime.get("status") or "UNVERIFIED").upper()
+        fetched = last.get("fetched")
+        rows.append({
+            "platform": primary.get("name") or "小红书（香港账号）",
+            "platform_id": "xhs_hk_primary",
+            "primary_collector": True,
+            "status": {
+                "READY": "驻场状态已验证",
+                "PROBING": "驻场状态探测中",
+                "SESSION_EXPIRED": "登录态需人工恢复",
+                "USER_PAUSED": "用户已暂停",
+                "UNVERIFIED": "本机运行态未验证",
+            }.get(status, status),
+            "status_tone": {
+                "READY": "success", "PROBING": "info", "SESSION_EXPIRED": "warning",
+                "USER_PAUSED": "neutral", "UNVERIFIED": "neutral",
+            }.get(status, tone.get(status, "neutral")),
+            "schedule": primary.get("entry_label") or "既有主采集链路 · 此表只读展示",
+            "last_run": (last.get("finished_at") or last.get("started_at") or "—") if last else "—",
+            "counts": f"{fetched if fetched is not None else '—'} / —" if last else "—",
+            "subject_matches": None,
+            "evidence": "既有采集日志" if last else "暂无持久化采集日志",
+            "ready": bool(health.get("ready")),
+            "manual_collection_enabled": bool(primary.get("manual_collection_enabled")),
+            "can_attempt": bool(health.get("can_attempt")),
+            "form_selectable": False,
+        })
+
     for item in surface.get("platforms", []) if isinstance(surface.get("platforms"), list) else []:
         if not isinstance(item, dict):
             continue
         status = str(item.get("status") or "UNAVAILABLE").upper()
         health = item.get("health") if isinstance(item.get("health"), dict) else {}
         last = item.get("last_run") if isinstance(item.get("last_run"), dict) else {}
+        manual_enabled = bool(item.get("manual_collection_enabled"))
+        can_attempt = bool(health.get("can_attempt", health.get("ready", False)))
         fetched = last.get("fetched")
         accepted = last.get("accepted")
         counts = "—" if not last else f"{fetched if fetched is not None else '—'} / {accepted if accepted is not None else '—'}"
@@ -183,25 +238,33 @@ def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
             "platform_id": item.get("platform") or "",
             "status": status_labels.get(status, status),
             "status_tone": tone.get(status, "neutral"),
-            "schedule": "人工触发" if item.get("manual_collection_enabled") else "未开放",
+            "schedule": item.get("entry_label") or (
+                "可人工触发" if manual_enabled and can_attempt
+                else "需配置 / 验证" if manual_enabled
+                else "未开放"
+            ),
             "last_run": last_at,
             "counts": counts,
             "subject_matches": last.get("accepted") if last else None,
             "evidence": "Evidence 链路" if last else "待首次运行",
             "ready": bool(health.get("ready")),
+            "manual_collection_enabled": manual_enabled,
+            "can_attempt": can_attempt,
         })
 
+    can_trigger = consumer == "CTH"
     return section(
         "platforms", STATE_READY,
         title="平台情报 · CTH 只读采集",
         description=(
-            "抖音、知乎、Instagram 由 CTH 统一采集；BMP 只读消费同一条 Evidence → Canonical 链。"
-            "微博与大陆小红书当前暂停。每次操作均由人工触发，不启动后台调度，不执行外部写入或发布。"
+            "香港小红书沿用既有主采集链路；其他平台复用已注册适配器，由 CTH 人工触发并按 Evidence / Canonical 契约处理。"
+            "本表单不接管小红书、不启用平台写入或自动发布；BMP 只读查看共享数据。"
         ),
         items=rows,
-        endpoint="/api/experience/cth/platform-collection/search",
-        source_endpoint="/api/experience/cth/platform-collection",
-        default_keyword="广州太古汇",
+        endpoint="/api/experience/cth/platform-collection/search" if can_trigger else "",
+        source_endpoint="/api/experience/cth/platform-collection" if can_trigger else "",
+        default_keyword="广州太古汇" if can_trigger else "",
+        can_trigger=can_trigger,
         manual_only=True,
         read_only=True,
         external_write=False,

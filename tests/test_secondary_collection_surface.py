@@ -44,6 +44,118 @@ def test_surface_has_exact_launch_allowlist(monkeypatch):
     assert "kuaishou" not in result["out_of_scope_platforms"]
 
 
+def test_primary_xhs_status_is_a_separate_read_only_projection(monkeypatch):
+    health_calls = []
+    monkeypatch.setattr(
+        surface,
+        "_adapter_health",
+        lambda platform: health_calls.append(platform) or {
+            "status": "NOT_CONFIGURED", "ready": False, "can_attempt": False,
+            "message": "not configured", "metadata": {},
+        },
+    )
+    monkeypatch.setattr(surface, "_last_run", lambda _platform: None)
+    monkeypatch.setattr(surface, "_xhs_primary_runtime_status", lambda: {
+        "status": "READY", "heartbeat_at": "2026-09-15 09:00:00", "observed": True,
+    })
+    monkeypatch.setattr(surface, "_xhs_primary_last_run", lambda: {
+        "state": "SUCCESS", "fetched": 4, "accepted": None,
+        "started_at": "2026-09-15 08:55:00", "finished_at": "2026-09-15 09:00:00",
+        "source": "collection_logs",
+    })
+
+    result = surface.get_collection_surface()
+    primary = result["primary_collection"]
+
+    assert health_calls == list(surface.SECONDARY_COLLECTION_PLATFORMS)
+    assert primary["platform"] == "xiaohongshu"
+    assert primary["region"] == "hk_international"
+    assert primary["status"] == "READY"
+    assert primary["last_run"]["fetched"] == 4
+    assert primary["last_run"]["accepted"] is None
+    assert primary["form_selectable"] is False
+    assert primary["parallel_collector_added"] is False
+    assert not any(secret in str(primary).lower() for secret in ("cookie", "token", "password"))
+
+
+def test_primary_xhs_runtime_reader_does_not_import_orchestrator(monkeypatch):
+    monkeypatch.delitem(sys.modules, "xhs_p0_orchestrator", raising=False)
+
+    result = surface._xhs_primary_runtime_status()
+
+    assert result == {"status": "UNVERIFIED", "heartbeat_at": None, "observed": False}
+    assert "xhs_p0_orchestrator" not in sys.modules
+
+
+def test_primary_xhs_runtime_reader_requires_a_fresh_heartbeat(monkeypatch):
+    import time
+
+    class FakeOrchestrator:
+        def get_status(self):
+            return {
+                "session_ok": True,
+                "heartbeat_last": time.time() - 61,
+                "heartbeat_interval": 30,
+                "resident_mode": "RESIDENT_ACTIVE",
+                "user_paused": False,
+            }
+
+    monkeypatch.setitem(sys.modules, "xhs_p0_orchestrator", FakeOrchestrator())
+
+    result = surface._xhs_primary_runtime_status()
+
+    assert result["status"] == "UNVERIFIED"
+    assert result["observed"] is True
+
+
+def test_primary_xhs_runtime_reader_accepts_a_fresh_heartbeat(monkeypatch):
+    import time
+
+    class FakeOrchestrator:
+        def get_status(self):
+            return {
+                "session_ok": True,
+                "heartbeat_last": time.time(),
+                "heartbeat_interval": 30,
+                "resident_mode": "RESIDENT_ACTIVE",
+                "user_paused": False,
+            }
+
+    monkeypatch.setitem(sys.modules, "xhs_p0_orchestrator", FakeOrchestrator())
+
+    result = surface._xhs_primary_runtime_status()
+
+    assert result["status"] == "READY"
+    assert result["observed"] is True
+    assert result["heartbeat_at"]
+
+
+def test_surface_route_exposes_primary_status_projection(monkeypatch):
+    from flask import Flask
+    import experience_runtime
+
+    payload = {
+        "ok": True,
+        "product": "LUMENIS",
+        "domain": "CTH",
+        "primary_collection": {
+            "platform": "xiaohongshu",
+            "status": "UNVERIFIED",
+            "form_selectable": False,
+            "parallel_collector_added": False,
+        },
+        "platforms": [],
+    }
+    monkeypatch.setattr(surface, "get_collection_surface", lambda: payload)
+    app = Flask(__name__)
+    app.register_blueprint(experience_runtime.experience_bp)
+
+    response = app.test_client().get("/api/experience/cth/platform-collection")
+
+    assert response.status_code == 200
+    assert response.get_json()["primary_collection"] == payload["primary_collection"]
+
+
 def test_surface_status_preserves_last_run_failure(monkeypatch):
     monkeypatch.setattr(
         surface,

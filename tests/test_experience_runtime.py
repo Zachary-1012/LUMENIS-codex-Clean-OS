@@ -417,6 +417,72 @@ def test_bmp03_missing_table_honest_not_fake(isolated_client):
     assert kpi["value"] is None and kpi["state"] == "notcollected"
 
 
+def test_platform_collection_is_cth_owned_and_bmp_read_only(isolated_client, monkeypatch):
+    """CTH owns the actionable form; BMP receives only the shared read-only surface."""
+    cli, _ = isolated_client
+    import platform_adapters.secondary_collection as collection
+
+    monkeypatch.setattr(collection, "get_collection_surface", lambda: {
+        "ok": True,
+        "paused_platforms": ["xiaohongshu_cn"],
+        "out_of_scope_platforms": [],
+        "primary_collection": {
+            "platform": "xiaohongshu", "name": "小红书（香港账号）",
+            "status": "READY", "entry_label": "既有主采集链路 · 此表只读展示",
+            "manual_collection_enabled": True, "form_selectable": False,
+            "health": {"ready": True, "can_attempt": True},
+            "runtime": {"status": "READY", "observed": True},
+            "last_run": {
+                "state": "SUCCESS", "fetched": 4, "accepted": None,
+                "started_at": "2026-09-15 08:55:00", "finished_at": "2026-09-15 09:00:00",
+            },
+        },
+        "platforms": [
+            {
+                "platform": "web_rss", "name": "Web RSS",
+                "manual_collection_enabled": True, "status": "SUCCESS",
+                "health": {"ready": True, "can_attempt": True}, "last_run": None,
+            },
+            {
+                "platform": "douyin", "name": "抖音",
+                "manual_collection_enabled": True, "status": "NOT_CONFIGURED",
+                "health": {"ready": False, "can_attempt": False}, "last_run": None,
+            },
+            {
+                "platform": "kuaishou", "name": "快手",
+                "manual_collection_enabled": False, "status": "NOT_SUPPORTED",
+                "health": {"ready": False, "can_attempt": False}, "last_run": None,
+            },
+        ],
+    })
+
+    cth = cli.get("/api/experience/screen/CTH-03").get_json()
+    cth_surface = next(s for s in cth["sections"] if s["type"] == "platforms")
+    cth_rows = {row["platform_id"]: row for row in cth_surface["items"]}
+    assert cth_surface["consumer"] == "CTH"
+    assert cth_surface["can_trigger"] is True
+    assert cth_surface["endpoint"].endswith("/cth/platform-collection/search")
+    assert cth_rows["web_rss"]["can_attempt"] is True
+    assert cth_rows["web_rss"]["schedule"] == "可人工触发"
+    assert cth_rows["xhs_hk_primary"]["status"] == "驻场状态已验证"
+    assert cth_rows["xhs_hk_primary"]["schedule"] == "既有主采集链路 · 此表只读展示"
+    assert cth_rows["xhs_hk_primary"]["can_attempt"] is True
+    assert cth_rows["xhs_hk_primary"]["form_selectable"] is False
+    assert cth_rows["xhs_hk_primary"]["counts"] == "4 / —"
+    assert cth_rows["xhs_hk_primary"]["evidence"] == "既有采集日志"
+    assert cth_rows["douyin"]["can_attempt"] is False
+    assert cth_rows["douyin"]["schedule"] == "需配置 / 验证"
+    assert cth_rows["douyin"]["status"] == "未配置运行方式"
+    assert cth_rows["kuaishou"]["manual_collection_enabled"] is False
+
+    bmp = cli.get("/api/experience/screen/BMP-03").get_json()
+    bmp_surface = next(s for s in bmp["sections"] if s["type"] == "platforms")
+    assert bmp_surface["consumer"] == "BMP"
+    assert bmp_surface["can_trigger"] is False
+    assert bmp_surface["endpoint"] == ""
+    assert bmp_surface["items"] == cth_surface["items"]
+
+
 def test_bmp04_propagation_three_dashboards(isolated_client):
     """BMP-04 传播分析：品牌/产品/行业三类看板真实只读（空库 0 诚实）。"""
     cli, _ = isolated_client

@@ -495,6 +495,45 @@
   /* ---------------- CTH secondary platform collection ---------------- */
   function wirePlatformCollection(root) {
     const forms = $$('[data-platform-collection-form]', root);
+    const statusCopy = {
+      SUCCESS: '只读采集完成',
+      NO_NEW_DATA: '本次没有新记录',
+      SESSION_EXPIRED: '登录状态需要更新',
+      NEED_VERIFY: '需要人工验证连接',
+      RISK_WARNING: '平台出现风险信号，采集已停止',
+      BLOCKED: '本次请求已被安全门禁阻止',
+      COOLING_DOWN: '平台处于冷却期，请稍后再试',
+      NOT_SUPPORTED: '该平台暂不支持此项能力',
+      NOT_CONFIGURED: '尚未配置该平台的运行方式',
+      PROVIDER_UNAVAILABLE: '采集服务暂不可用',
+      RATE_LIMITED: '已达到采集频率上限',
+      POLICY_STATE_UNAVAILABLE: '无法确认采集门禁状态，本次已阻止',
+      IMPORT_FAILED: '部分记录未能写入业务数据',
+      CANONICAL_SYNC_FAILED: 'Canonical Data 同步未完成',
+      EVIDENCE_WRITE_FAILED: 'Evidence 未能保存，本次不计为完成',
+      BUSY: '该平台已有采集任务正在运行',
+      UNAVAILABLE: '该平台当前未就绪',
+      COLLECT_ERROR: '采集未完成',
+    };
+    function outcomeText(data, responseOk, platformFallback) {
+      const statusKey = String(data && data.status || '').toUpperCase();
+      const label = statusCopy[statusKey] || String(data && (data.reason || data.error) || '本次采集未完成').slice(0, 180);
+      const platform = String(data && data.platform || platformFallback || '平台');
+      const parts = [`${platform} · ${label}`];
+      if (data && data.ok && responseOk) {
+        parts.push(`${Number(data.imported || 0)} 条新增 / ${Number(data.updated || 0)} 条更新`);
+        if (data.canonical_synced != null) parts.push(`Canonical ${Number(data.canonical_synced || 0)} 条`);
+      }
+      if (data && data.evidence_recorded === true) parts.push('Evidence 已记录');
+      else if (data && data.evidence_recorded === false) parts.push('Evidence 未确认');
+      const trace = data && data.provenance && typeof data.provenance === 'object' ? data.provenance : null;
+      if (trace) {
+        const traceParts = [trace.source, trace.provider, trace.collected_at].filter(Boolean).map(v => String(v).slice(0, 180));
+        if (traceParts.length) parts.push(`溯源 ${traceParts.join(' · ')}`);
+      }
+      parts.push('未向平台写入 · 未发布');
+      return parts.join(' · ');
+    }
     forms.forEach(form => {
       if (form.dataset.wired) return;
       form.dataset.wired = '1';
@@ -502,17 +541,25 @@
       const keyword = form.querySelector('[data-platform-keyword]');
       const limit = form.querySelector('[data-platform-limit]');
       const submit = form.querySelector('[data-platform-collection-submit]');
-      const status = form.parentElement && form.parentElement.querySelector('[data-platform-collection-status]');
+      const surface = form.closest('[data-platform-surface]') || form.parentElement;
+      const status = surface && surface.querySelector('[data-platform-collection-status]');
+      const idleLabel = submit && (submit.dataset.idleLabel || submit.textContent.trim());
       form.addEventListener('submit', async ev => {
         ev.preventDefault();
+        if (form.getAttribute('aria-busy') === 'true') return;
         const query = String(keyword && keyword.value || '').trim();
         if (!query) {
           if (status) status.textContent = '请先输入关键词；未发起外部请求。';
           keyword && keyword.focus();
           return;
         }
+        const submittedScreen = currentId;
+        const selectedPlatform = String(select && select.value || '');
+        let announcement = '';
         if (submit) submit.disabled = true;
-        if (status) status.textContent = '正在由本地适配器执行只读采集；不执行外部写入…';
+        form.setAttribute('aria-busy', 'true');
+        if (submit) submit.textContent = '正在读取…';
+        if (status) status.textContent = '正在读取公开或已授权数据；不向平台写入…';
         try {
           const resp = await apiFetch(form.dataset.endpoint || `${API}/cth/platform-collection/search`, {
             method: 'POST',
@@ -526,27 +573,31 @@
             }),
           });
           const data = await resp.json();
+          announcement = outcomeText(data, resp.ok, selectedPlatform);
+          if (status) status.textContent = announcement;
           if (data && data.ok) {
-            const count = `${data.imported || 0} 新增 / ${data.updated || 0} 更新`;
-            if (status) status.textContent = `${data.platform || ''}：${data.status || '已完成'} · ${count} · Evidence：${data.evidence_recorded ? '已记录' : '待确认'} · 产品不发布。`;
             toast('只读采集完成，已回到 CTH Evidence 链路', 'success');
           } else {
-            const reason = (data && (data.error || data.reason || data.status)) || `HTTP ${resp.status}`;
-            if (status) status.textContent = `本次未完成：${reason} · 未执行外部写入。`;
             toast('平台采集未完成，未执行发布或外部写入', 'info');
           }
-          // Reload the current screen ViewModel so the table reflects the
-          // just-recorded run without introducing a second client-side truth.
-          if (currentId) {
-            for (const key of Array.from(hydrated)) if (key.startsWith(currentId + '|')) hydrated.delete(key);
-            await hydrate(currentId);
-            wireRuntime(document);
-          }
-        } catch (err) {
-          if (status) status.textContent = `采集请求不可用：${String(err.message || err)} · 未改变外部平台。`;
+        } catch (_) {
+          announcement = '采集响应未能确认；请查看平台最近运行状态后再决定是否重试。未向平台写入，也未发布。';
+          if (status) status.textContent = announcement;
           toast('采集请求不可用，未改变外部平台', 'info');
         } finally {
           if (submit) submit.disabled = false;
+          if (submit && idleLabel) submit.textContent = idleLabel;
+          form.setAttribute('aria-busy', 'false');
+        }
+        // Reload the same screen from its canonical ViewModel, then restore
+        // the live status message that re-rendering would otherwise replace.
+        if (submittedScreen && submittedScreen === currentId) {
+          for (const key of Array.from(hydrated)) if (key.startsWith(submittedScreen + '|')) hydrated.delete(key);
+          await hydrate(submittedScreen);
+          wireRuntime(document);
+          const refreshedSurface = document.querySelector('[data-platform-surface]');
+          const refreshedStatus = refreshedSurface && refreshedSurface.querySelector('[data-platform-collection-status]');
+          if (refreshedStatus && announcement) refreshedStatus.textContent = announcement;
         }
       });
     });

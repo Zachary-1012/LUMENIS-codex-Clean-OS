@@ -151,7 +151,15 @@
     },
     platforms(d) {
       const items = Array.isArray(d.items) ? d.items : [];
-      const options = items.map(p => `<option value="${esc(p.platform_id)}">${esc(p.platform)}</option>`).join('');
+      const canTrigger = d.consumer !== 'BMP' && d.can_trigger !== false;
+      const selectable = items.filter(p => p.manual_collection_enabled && p.can_attempt && p.form_selectable !== false);
+      const hasPrimaryXhs = items.some(p => p.primary_collector === true);
+      const noReadyMessage = hasPrimaryXhs
+        ? '次级平台暂无可尝试连接；香港小红书继续由既有主链路负责，本表不发起该平台采集。'
+        : '目前没有健康状态允许尝试的平台；表格仍展示各平台真实配置与最近运行状态。';
+      const options = selectable.length
+        ? selectable.map((p, i) => `<option value="${esc(p.platform_id)}"${i === 0 ? ' selected' : ''}>${esc(p.platform)}</option>`).join('')
+        : '<option value="" selected>当前没有已就绪的次级平台</option>';
       const rows = items.map(p => `
         <tr data-platform-row="${esc(p.platform_id)}">
           <td><b>${esc(p.platform)}</b></td>
@@ -171,17 +179,22 @@
           <thead><tr><th>平台</th><th>状态</th><th>入口</th><th>最近运行</th><th class="lum-num">抓取 / 主体</th><th>证据</th></tr></thead>
           <tbody>${rows || '<tr><td colspan="6" class="lum-caption">暂无平台状态</td></tr>'}</tbody>
         </table></div>
-        <form class="lum-platform-form" data-platform-collection-form data-endpoint="${esc(d.endpoint || '')}">
-          <label class="lum-platform-form__field"><span class="lum-label">人工触发只读采集</span>
-            <select class="lum-select" data-platform-select aria-label="选择平台">${options}</select></label>
+        ${canTrigger ? `
+        <form class="lum-platform-form" data-platform-collection-form data-endpoint="${esc(d.endpoint || '')}" aria-label="CTH 平台只读采集" aria-busy="false">
+          <label class="lum-platform-form__field"><span class="lum-label">采集平台</span>
+            <select class="lum-select" data-platform-select aria-label="采集平台"${selectable.length ? '' : ' disabled'}>${options}</select></label>
           <label class="lum-platform-form__field lum-platform-form__keyword"><span class="lum-label">关键词</span>
             <input class="lum-input" data-platform-keyword value="${esc(d.default_keyword || '')}" maxlength="120" aria-label="采集关键词"></label>
-          <label class="lum-platform-form__field lum-platform-form__limit"><span class="lum-label">数量</span>
-            <select class="lum-select" data-platform-limit aria-label="采集数量"><option value="5">5</option><option value="10">10</option><option value="20">20</option></select></label>
-          <button type="submit" class="lum-btn lum-btn-secondary" data-platform-collection-submit>读取并写入 Evidence</button>
+          <label class="lum-platform-form__field lum-platform-form__limit"><span class="lum-label">最大读取条数</span>
+            <select class="lum-select" data-platform-limit aria-label="最大读取条数"><option value="5">5</option><option value="10">10</option><option value="20">20</option></select></label>
+          <button type="submit" class="lum-btn lum-btn-secondary" data-platform-collection-submit data-idle-label="只读采集并进入证据链"${selectable.length ? '' : ' disabled'}>只读采集并进入证据链</button>
         </form>
-        <p class="lum-caption lum-platform-boundary" data-platform-collection-status aria-live="polite">${esc(d.consumer === 'BMP' ? 'BMP 只读消费 CTH 的同一条证据链。' : '人工触发 · 只读 · 不发布 · 不启动后台调度。')}</p>
-        <p class="lum-caption">微博与大陆小红书当前暂停；其余平台不在本轮范围。审核后的发布动作仍由人完成，序境不会代发。</p>
+        <p class="lum-caption lum-platform-boundary" data-platform-collection-status role="status" aria-live="polite" aria-atomic="true">${selectable.length ? '人工触发 · 只读取公开或已授权数据 · 不向平台写入 · 不代发。' : noReadyMessage}</p>
+        <p class="lum-caption">未就绪的平台不会进入可执行选择项；连接状态以本页面健康状态和最近运行记录为准。发布权始终由人掌握。</p>
+        ` : `
+        <p class="lum-caption lum-platform-boundary">BMP 只读查看 CTH 维护的同一条 Evidence → Canonical 链；不在品牌市场页面启动采集。<a href="#/CTH-03">前往 CTH 人工采集</a></p>
+        <p class="lum-caption">此页面不提供外部平台写入或发布操作；发布权始终由人掌握。</p>
+        `}
       </section>`;
     },
     chart(d) {

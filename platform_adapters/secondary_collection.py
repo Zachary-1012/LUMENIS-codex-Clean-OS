@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import threading
 import time
+import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List
 
@@ -170,6 +171,76 @@ def _last_run(platform: str) -> Dict[str, Any] | None:
         return None
 
 
+def _xhs_primary_runtime_status() -> Dict[str, Any]:
+    """Project the already-loaded XHS orchestrator snapshot without probing credentials.
+
+    The orchestrator is imported by the application entry point.  Looking it up
+    in ``sys.modules`` avoids importing ``xhs_cookie_bridge`` from a screen read;
+    that module has initialization-time statistics persistence.  This function
+    never reads Cookie contents, starts a browser, or makes a network request.
+    """
+    base = {"status": "UNVERIFIED", "heartbeat_at": None, "observed": False}
+    orchestrator = sys.modules.get("xhs_p0_orchestrator")
+    get_status = getattr(orchestrator, "get_status", None)
+    if not callable(get_status):
+        return base
+    try:
+        snapshot = get_status()
+        if not isinstance(snapshot, dict):
+            return base
+        base["observed"] = True
+        paused = bool(snapshot.get("user_paused"))
+        session_ok = snapshot.get("session_ok")
+        heartbeat = snapshot.get("heartbeat_last")
+        try:
+            heartbeat = float(heartbeat) if heartbeat is not None else None
+            interval = max(1.0, float(snapshot.get("heartbeat_interval") or 30.0))
+        except (TypeError, ValueError):
+            heartbeat = None
+            interval = 30.0
+        age = time.time() - heartbeat if heartbeat is not None else None
+        heartbeat_fresh = age is not None and 0 <= age < interval * 2
+
+        if paused:
+            base["status"] = "USER_PAUSED"
+        elif session_ok is False:
+            base["status"] = "SESSION_EXPIRED"
+        elif session_ok is True and heartbeat_fresh:
+            base["status"] = "READY"
+        elif str(snapshot.get("resident_mode") or "").upper() == "PROBING":
+            base["status"] = "PROBING"
+        if heartbeat is not None and heartbeat > 0:
+            base["heartbeat_at"] = datetime.fromtimestamp(heartbeat).strftime("%Y-%m-%d %H:%M:%S")
+        return base
+    except Exception:
+        return base
+
+
+def _xhs_primary_last_run() -> Dict[str, Any] | None:
+    """Read the last durable XHS collection-log summary, excluding error text."""
+    try:
+        import database as db
+
+        with db.get_db() as conn:
+            row = conn.execute(
+                """SELECT status, notes_count, started_at, finished_at
+                     FROM collection_logs ORDER BY id DESC LIMIT 1"""
+            ).fetchone()
+        if not row:
+            return None
+        count = int(row[1]) if row[1] is not None else None
+        return {
+            "state": str(row[0] or "UNKNOWN").upper(),
+            "fetched": count,
+            "accepted": None,
+            "started_at": row[2],
+            "finished_at": row[3],
+            "source": "collection_logs",
+        }
+    except Exception:
+        return None
+
+
 def _adapter_health(platform: str) -> Dict[str, Any]:
     try:
         adapter = _get_runtime_adapter(platform)
@@ -244,17 +315,43 @@ def get_collection_surface() -> Dict[str, Any]:
             "truth_path": "external_data -> evidence -> canonical_data -> CTH",
         })
 
+    primary_runtime = _xhs_primary_runtime_status()
+    primary_status = str(primary_runtime.get("status") or "UNVERIFIED").upper()
+    primary_collection = {
+        "platform": "xiaohongshu",
+        "name": "小红书（香港账号）",
+        "region": "hk_international",
+        "product_owner": "CTH",
+        "consumer_views": ["CTH", "BMP"],
+        "implementation": "existing_primary_collector",
+        "parallel_collector_added": False,
+        "manual_collection_enabled": True,
+        # The Experience V2 secondary form is intentionally not a second XHS
+        # action surface. The existing primary route remains its sole owner.
+        "form_selectable": False,
+        "entry_label": "既有主采集链路 · 此表只读展示",
+        "status": primary_status,
+        "status_source": "existing_xhs_orchestrator_snapshot",
+        "health": {
+            "status": primary_status,
+            "ready": primary_status == "READY",
+            "can_attempt": primary_status == "READY",
+            "healthcheck_scope": "in_process_status_snapshot",
+        },
+        "runtime": primary_runtime,
+        "last_run": _xhs_primary_last_run(),
+        "external_write": False,
+        "publish_authority": "human_manual_only",
+        "truth_path": "existing_xhs_primary_pipeline",
+    }
+
     return {
         "ok": True,
         "product": "LUMENIS",
         "domain": "CTH",
         "surface": "平台情报 / 只读证据采集",
-        "source_of_truth": "notes + canonical_data + web_runs + v4_audit_logs",
-        "primary_collection": {
-            "platform": "xiaohongshu",
-            "implementation": "existing_primary_collector",
-            "parallel_collector_added": False,
-        },
+        "source_of_truth": "notes + canonical_data + collection_logs + web_runs + v4_audit_logs",
+        "primary_collection": primary_collection,
         "platforms": platforms,
         "paused_platforms": ["xiaohongshu_cn"],
         "out_of_scope_platforms": [
@@ -262,6 +359,7 @@ def get_collection_surface() -> Dict[str, Any]:
             "tiktok", "reddit", "linkedin", "github", "channels",
         ],
         "manual_only": True,
+        "manual_only_scope": "secondary_platform_form",
         "read_only": True,
         "external_write": False,
         "product_will_not_publish": True,
