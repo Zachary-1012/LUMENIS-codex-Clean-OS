@@ -1,50 +1,143 @@
-# 序境全产品收口 - 共享进度看板
+# 序境 / LUMENIS — CURRENT PROGRESS
 
-> 每10分钟由各Team更新，主Agent读取汇总。只报真实已验证事实，禁止"预计""应该"。
+> Current-state board only. Historical team/shard progress remains available in Git history and dated handoff/audit files; it must not be treated as current execution truth.  
+> Updated: 2026-09-17  
+> Remote evidence anchor: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`
 
-## 全局状态
-- 分支：feat/lumenis-v2-domain-convergence
-- 基线：ZBC d7236f2 / OSAI 168bcc5
-- 更新时间：2026-09-06
+## 1. Current remote state
 
-## Team进度
+```text
+repository = Zachary-1012/LUMENIS-codex-Clean-OS
+branch     = main
+HEAD       = 5a14ff25b51303efb776126d0f6a3a5a936ec73f
+phase      = PRODUCTION CONVERGENCE
+```
 
-| Team | 领域 | 负责人 | 修改文件数 | Commit SHA | 硬编码清除 | 测试结果 | 状态 | 阻塞 |
-|------|------|--------|-----------|------------|-----------|---------|------|------|
-| T1 | 产品/域/主体+Registry | ShardD | 0 | - | - | - | 运行中 | - |
-| T2 | 采集+Source+Raw | Team2 | 4 | 8bba987/2885405 | 0 | 161 PASS/0 FAIL | 运行中 | - |
-| T3 | Subject Filter+Dedup+Quality | Team3 | 2 | 85f7138 | 负责文件0剩余 | 主体红线24+双维度10+KOS15+质量门10+事件3=62 PASS | 运行中 | - |
-| T4 | Canonical+Schema Registry | Team4 | 5 | 550d644 | 0剩余 | 21 passed | Raw→Canonical已打通,13条记录同步,时间分离0违规 | 无 |
-| T5 | Event+Case+Risk+Alert | ShardA | 2 | 0c4b4f5,00bb65e | 生产0剩余 | 58 passed | 核心链路已打通 | 无verified输入致events空(非bug) |
-| T6 | Metric+Dashboard+KOS/KOL/KOC+Search | Team6 | 1 | 8bba987 | 生产0剩余 | metric 6/6, KOS 47pass1skip, professional 12/12, 综合42PASS | 已完成验证+修复 | 无 |
-| T7 | Report+Import/Export+Campaign | (待创建) | 0 | - | - | - | 待启动 | - |
-| T8 | AI Gateway+Skill | ShardB | 7 | f228dd7(ZBC),0a6cbd1(OSAI) | 生产0剩余 | AI OFF 17/17, glm-5.3真实调用通过, Skill链SUCCESS+evidence+trace, OSAI P0 18/18 | Action Firewall接入skill_invocation, Provider Matrix完成, 无隐藏fallback | 无 |
-| T9 | Agent+Orchestrator+Identity | ShardB | 7(含T8) | f228dd7(ZBC) | 生产0剩余 | Agent组合测试17/17, Identity/Delegation/OBO/JIT全通过, Agent≠User≠Task分离验证, OSAI 52模块调用图11/12 | AgentRuntimeAdapter(subprocess桥接,fail-close)已接入, 无Runtime硬耦合 | 无 |
-| T10 | Evidence+Trace+Runtime+CI/CD | (待创建) | 0 | - | - | - | 待启动 | - |
-| UI | 前端个性化+Security | ShardC | 10 | baa169f,557e96e | - | 20页面200OK,9项安全header验证通过,35API端点真实绑定,0UI_ONLY | 运行中 | 无 |
+Current GitHub Actions at the anchor:
 
-## 关键指标
-- Feature Registry行数：0
-- 硬编码路径剩余：0（生产模块）
-- DB空表处置：Event/Case/Alert链路已验证
-- AI OFF测试：17/17 PASSED（Team8 ShardB）
-- 前端页面验收：20/20（19 LUMENIS页面 + 1 healthz，全部200 OK）
-- UI_ONLY页面：0（全部已绑定真实API）
-- Design Token：static/css/lumenis-tokens-v2.css（16类Language）
-- 核心组件库：static/css/lumenis-core-components.css（10类可复用组件）
-- API端点：35个（前端实际调用，全部200 OK）
-- Security：9/9通过（CSP/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy/X-XSS-Protection/COOP/CORP）
+```text
+LUMENIS Product Gate        = SUCCESS
+Verify LUMENIS-GGI Contract = SUCCESS
+```
 
-## 阻塞项汇总
-（各Team遇到阻塞在此追加）
+This is remote CI evidence only. It does not by itself prove workstation live health, RELEASED or OPERATING.
 
----
+## 2. Current canonical product model
 
-## 2026-09-13 Experience → Production 接线进度（追加，不改写上方历史看板）
+```text
+External Data
+→ Evidence
+→ Canonical Data
+→ Function
+→ Metric
+→ Truth Table
+→ View Model
+→ Visualization
+→ UI / Report / Export
+```
 
-- 分支：`codex/production-experience-wiring`；HEAD：`0efd15e`；相对 `origin/main@49c325f` 0 behind / 11 ahead（未 push，push 受当前 github.com:443 不可达阻塞，代理开启后可推）。
-- 已完成：Experience V2 蓝图 → Flask 可运行接线；**38/44 屏真实只读绑定**（AI-01/CTH-01 样板 + 36 builder）；Binding 42 BOUND/3 N/A/9 blocked-rows；Action 66/66；本切片 28 测试全过；隔离真实 HTTP 集成 + 深色/浅色 1440/真 390 CDP 遍历全绿。
-- 诚实缺口：4 屏 BLOCKED（BMP-05/BMP-11/SH-01/SYS-06）、2 屏 N/A（ACC-01/04）；`PRODUCTION_READY = NO`。
-- 新发现工程债：DB 隔离三环境变量不统一（`ZBC_DB_PATH` / `ZBC_EVIDENCE_DB_PATH` / `ZBC_RUNTIME_GUARDIAN_DB`），列为 P0-DBISO-01。
-- 剩余分类工作与 DAG：`00-GOVERNANCE/handoff/CODEX_REMAINING_WORK_20260913.md`、`CODEX_RESUME_PACK_20260913.json`；逐项 Gate 证据：`FINAL_CODEX_EXECUTION_REPORT.md`。
-- 下一动作（Codex）：P0-DBISO-01 → P0-WRITEPERM-02 → P0-E2E-03 → P0-BLOCKEDSCREEN-04 → P1-LEGACYTEST-05。
+```text
+Source
+→ Evidence
+→ Event
+→ Case
+→ Insight
+→ Decision
+→ Action
+→ Outcome
+→ Evaluation
+→ Learning Asset
+```
+
+Domains:
+
+```text
+CTH               Subject-first Commerce Operations
+BMP               Brand/Market-first
+Shared Capability Content & Creation / Evidence / Research / Evaluation / Learning / AI Enhancement
+SYSTEM            Collector / Runtime / Scheduler / AI Gateway / DB / Security / Permission / Settings / Recovery / Observability
+```
+
+## 3. Current ecosystem alignment
+
+Active cross-product contract:
+
+```text
+contract_id = lumenis-ggi-cross-product
+version     = 1.1.0
+fingerprint = 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f
+```
+
+```text
+序境 / LUMENIS              = Production Truth
+序蕴 / LUMENIS Intelligence = Shared Intelligence Assets
+序衍 / LUMENIS Growth       = Research / Growth Truth
+序枢 / LUMENIS Command      = Engineering Evidence
+```
+
+No shared production DB, no hard cross-product runtime dependency and no unrestricted cross-product writer.
+
+## 4. Current source-audited owners
+
+The latest source audit identifies:
+
+```text
+scripts/start_production.ps1  Windows production launcher
+run_supervised.py             supervisor
+app.py                        Flask application entry
+8201 /healthz                 core health target
+9222 / 9223                   Resident Browser identities
+experience_runtime.py         Experience V2 runtime
+CTH-01 / AI-01                explicitly bound screens in audited source
+evidence_chain.py             Evidence / Canonical lineage
+xhs_cookie_bridge.py          controlled XHS/RedNote collector runtime
+content_generation.py         research → generation → Evidence → Evaluation → human feedback
+```
+
+Do not infer newer source behavior from old progress notes. Re-read the exact current owner before engineering.
+
+## 5. Screenshot intake 2026-09-17
+
+Three user screenshots were compared with current repository truth. The canonical production/business chains and main/local/origin rules shown in readable portions are already covered by `README.md` and `AGENTS.md`; they were not duplicated.
+
+Exact unreadable text from the two very low-resolution images was not promoted to implementation truth. Detailed disposition:
+
+`08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md`
+
+## 6. Codex current entrypoint
+
+Use:
+
+`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`
+
+Do not start from the old 2026-09-06 team board or the 2026-09-11 takeover HEAD as if they were current.
+
+## 7. Current unverified / must be re-proven when required
+
+```text
+8201 live workstation health = NOT VERIFIED by this documentation update
+Playwright live acceptance   = NOT VERIFIED by this documentation update
+P0/P1 release closure        = NOT RE-VERIFIED by this documentation update
+RELEASED                     = NO NEW CLAIM
+OPERATING                    = NO NEW CLAIM
+local D:\LUMENIS_REBUILD     = must be inspected/reconciled by Codex before local writes
+```
+
+## 8. Resume rule
+
+```text
+fetch current origin/main
+→ preserve local/uncommitted/unpushed valid work
+→ compare local vs remote
+→ do not redo already-merged product-gate/contract/brand convergence
+→ select the next unresolved production-acceptance gate
+→ inspect exact owner/caller/contract/tests
+→ reuse/adapt/bind
+→ targeted test + affected regression
+→ runtime/E2E when required
+→ evidence
+→ coherent mainline commit/push
+→ current main CI
+```
+
+Historical progress is evidence, not an active task queue.
