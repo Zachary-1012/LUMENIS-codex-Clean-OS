@@ -36,8 +36,13 @@ jobs:
           python scripts/audit_tools/verify_lumenis_ggi_contract.py
           00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
 
-      - name: Compile Python sources (BLOCKING)
-        run: python -m compileall -q .
+      - name: Compile tracked Python sources (BLOCKING)
+        shell: bash
+        run: |
+          python_files="$(git ls-files '*.py' | wc -l | xargs)"
+          test "$python_files" -gt 0
+          echo "Compiling ${python_files} tracked Python files"
+          git ls-files -z '*.py' | xargs -0 -r -n 120 python -m py_compile
 
       - name: Validate CI test-tier manifests (BLOCKING)
         shell: bash
