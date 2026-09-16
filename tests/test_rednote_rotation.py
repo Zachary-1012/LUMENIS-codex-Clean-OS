@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""RedNote 生产区域门控：香港/国际 9223；大陆暂停。"""
+"""RedNote 生产区域门控：香港/国际 9223；大陆暂停；worker 必须显式配置。"""
 import pytest
 
 from platform_adapters import rednote_policy as rp
@@ -49,16 +49,23 @@ class TestRegionRotation:
         assert rp.get_cdp_port("cn") == 9222
         assert rp.get_cdp_port("intl") == 9223
 
-    def test_kos_consistent_with_cookie_bridge(self):
-        # KOS 策略端口必须与 xhs_cookie_bridge.XHS_RETINAUT 端口一致(9223)
-        try:
-            from xhs_cookie_bridge import cdp_url_for, XHS_RETINAUT_NAME
-            url = cdp_url_for(XHS_RETINAUT_NAME)
-            assert "9223" in url
-            sel = rp.select_region(kos_only=True)
-            assert str(sel["cdp_port"]) in url
-        except ImportError:
-            pytest.skip("xhs_cookie_bridge unavailable")
+    def test_kos_consistent_with_explicit_worker_config(self, monkeypatch):
+        # 9223 是策略身份；网络地址必须由 server-owned XHS_CDP_URL 显式配置，禁止 localhost 默认值。
+        from xhs_cookie_bridge import cdp_url_for, XHS_RETINAUT_NAME
+
+        endpoint = "https://browser-worker.example:9223"
+        monkeypatch.setenv("XHS_CDP_URL", endpoint)
+        url = cdp_url_for(XHS_RETINAUT_NAME)
+        sel = rp.select_region(kos_only=True)
+        assert url == endpoint
+        assert sel["cdp_port"] == 9223
+        assert str(sel["cdp_port"]) in url
+
+    def test_no_implicit_worker_endpoint(self, monkeypatch):
+        from xhs_cookie_bridge import cdp_url_for, XHS_RETINAUT_NAME
+
+        monkeypatch.delenv("XHS_CDP_URL", raising=False)
+        assert cdp_url_for(XHS_RETINAUT_NAME) == ""
 
     def test_collection_gate_allows_hk_and_blocks_mainland(self):
         assert rp.collection_gate(account="XHS_RETINAUT", region="intl")["ok"] is True
