@@ -35,7 +35,7 @@ import ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+�
 # ZBC Phase 7: module status markers
 MODULE_STATUS = 'ACTIVE_PRIMARY'
 AI_ROLE = 'CENTRAL_GATEWAY'  # all AI calls route through _chat/chat; local-first, rule final fallback
-PROVIDER_POLICY = 'ollama local primary when configured; cloud providers explicit-only; rule final fallback'
+PROVIDER_POLICY = 'ollama local primary when configured; zhipu and other cloud providers explicit-only; rule final fallback'
 
 _CACHE = {'ts': 0, 'provider': None, 'model': None, 'base': None}
 

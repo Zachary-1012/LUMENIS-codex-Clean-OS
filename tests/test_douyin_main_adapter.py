@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-抖音主链路 adapter 单元测试（全 mock，不实际启动浏览器）
+抖音主链路 adapter 单元测试（全 mock，不实际启动浏览器）。
+
+测试当前生产契约：
+- search 仍通过 v4 AdapterResult 映射六态；
+- browser worker 必须显式配置，禁止把本机 cookie/file presence 当成远端会话健康；
+- provider 初始化异常按 PROVIDER_UNAVAILABLE fail-closed，且不向用户泄露内部异常正文。
 """
 import sys, os
-import pytest
 from unittest.mock import MagicMock, patch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,13 +42,21 @@ def _make_v4_result(success=True, notes=None, error="", raw_count=0, duration=0.
                          raw_count=raw_count, duration_seconds=duration)
 
 
+def _search_backend(result):
+    """构造只走 search() 的 backend；避免 MagicMock 虚构 breaker/safe_collect 能力。"""
+    backend = MagicMock()
+    backend.breaker = None
+    backend.safe_collect = None
+    backend.search.return_value = result
+    return backend
+
+
 class TestDouyinMainAdapterSearch:
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_search_success(self, mock_load):
-        mock_backend = MagicMock()
-        mock_backend.search.return_value = _make_v4_result(
-            success=True, notes=[_make_v4_note()], raw_count=1)
+        mock_backend = _search_backend(_make_v4_result(
+            success=True, notes=[_make_v4_note()], raw_count=1))
         mock_load.return_value = mock_backend
 
         ad = DouyinAdapter()
@@ -60,54 +72,39 @@ class TestDouyinMainAdapterSearch:
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_search_no_new_data(self, mock_load):
-        mock_backend = MagicMock()
-        mock_backend.search.return_value = _make_v4_result(success=True, notes=[], raw_count=0)
-        mock_load.return_value = mock_backend
-
-        ad = DouyinAdapter()
-        result = ad.search("空结果")
+        mock_load.return_value = _search_backend(
+            _make_v4_result(success=True, notes=[], raw_count=0))
+        result = DouyinAdapter().search("空结果")
         assert result.status == CollectionStatus.NO_NEW_DATA
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_search_session_expired(self, mock_load):
-        mock_backend = MagicMock()
-        mock_backend.search.return_value = _make_v4_result(
-            success=False, error="登录态失效，请重新登录")
-        mock_load.return_value = mock_backend
-
-        ad = DouyinAdapter()
-        result = ad.search("测试")
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=False, error="登录态失效，请重新登录"))
+        result = DouyinAdapter().search("测试")
         assert result.status == CollectionStatus.SESSION_EXPIRED
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_search_risk_warning(self, mock_load):
-        mock_backend = MagicMock()
-        mock_backend.search.return_value = _make_v4_result(
-            success=False, error="风控验证，请稍后再试")
-        mock_load.return_value = mock_backend
-
-        ad = DouyinAdapter()
-        result = ad.search("测试")
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=False, error="风控验证，请稍后再试"))
+        result = DouyinAdapter().search("测试")
         assert result.status == CollectionStatus.RISK_WARNING
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_search_collect_error(self, mock_load):
-        mock_backend = MagicMock()
-        mock_backend.search.return_value = _make_v4_result(
-            success=False, error="网络连接超时")
-        mock_load.return_value = mock_backend
-
-        ad = DouyinAdapter()
-        result = ad.search("测试")
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=False, error="网络连接超时"))
+        result = DouyinAdapter().search("测试")
         assert result.status == CollectionStatus.COLLECT_ERROR
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
-    def test_search_exception_handled(self, mock_load):
+    def test_search_exception_is_provider_unavailable_without_internal_leak(self, mock_load):
         mock_load.side_effect = RuntimeError("引擎加载失败")
-        ad = DouyinAdapter()
-        result = ad.search("测试")
-        assert result.status == CollectionStatus.COLLECT_ERROR
-        assert "引擎加载失败" in result.message
+        result = DouyinAdapter().search("测试")
+        assert result.status == CollectionStatus.PROVIDER_UNAVAILABLE
+        assert result.metadata["error_type"] == "RuntimeError"
+        assert "引擎加载失败" not in result.message
 
 
 class TestDouyinMainAdapterDetailCommentsCreator:
@@ -142,22 +139,32 @@ class TestDouyinMainAdapterDetailCommentsCreator:
 
 class TestDouyinMainAdapterHealth:
 
-    @patch("os.path.exists", return_value=True)
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
-    def test_health_ok(self, mock_load, mock_exists):
+    @patch("v4_upgrade.adapters.human_browser.is_cdp_url_open", return_value=True)
+    @patch("v4_upgrade.adapters.douyin._configured_browser_worker_url",
+           return_value="https://browser-worker.example")
+    def test_health_worker_reachable_requires_runtime_verification(
+            self, mock_url, mock_open, mock_load):
         mock_load.return_value = MagicMock()
-        ad = DouyinAdapter()
-        result = ad.health_check()
-        assert result.status == CollectionStatus.SUCCESS
-        assert result.metadata["cookie_exists"] is True
+        result = DouyinAdapter().health_check()
+        assert result.status == CollectionStatus.NEED_VERIFY
+        assert result.metadata["endpoint_configured"] is True
+        assert result.metadata["session_state"] == "worker_reachable_unverified"
 
-    @patch("os.path.exists", return_value=False)
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
-    def test_health_no_cookie(self, mock_load, mock_exists):
-        mock_load.return_value = MagicMock()
-        ad = DouyinAdapter()
-        result = ad.health_check()
-        assert result.status == CollectionStatus.SESSION_EXPIRED
+    @patch("v4_upgrade.adapters.douyin._configured_browser_worker_url",
+           side_effect=RuntimeError("DOUYIN_CDP_URL is not configured"))
+    def test_health_without_worker_configuration_is_not_configured(self, mock_url):
+        result = DouyinAdapter().health_check()
+        assert result.status == CollectionStatus.NOT_CONFIGURED
+        assert result.metadata["endpoint_configured"] is False
+
+    @patch("v4_upgrade.adapters.human_browser.is_cdp_url_open", return_value=False)
+    @patch("v4_upgrade.adapters.douyin._configured_browser_worker_url",
+           return_value="https://browser-worker.example")
+    def test_health_configured_but_unreachable_is_provider_unavailable(self, mock_url, mock_open):
+        result = DouyinAdapter().health_check()
+        assert result.status == CollectionStatus.PROVIDER_UNAVAILABLE
+        assert result.metadata["endpoint_configured"] is True
 
 
 class TestDouyinMainAdapterRegistry:
