@@ -123,6 +123,34 @@ class TestEvidenceHash:
         assert ev2.evidence_id == ev1.evidence_id
         assert ev_store.count() == 1  # 不重复入库
 
+    def test_source_scoped_dedup_keeps_distinct_source_provenance(self, ev_store):
+        """相同文本来自不同笔记时保留各自来源，同一来源重复采集仍幂等。"""
+        common = {
+            "source_type": "xhs_note",
+            "raw_content": "内容相同但来源身份不同",
+            "provider": "xhs_cookie_bridge",
+            "subject_scope": "CTH",
+            "domain_id": "cth",
+            "product_id": "CTH",
+            "dedupe_by_source": True,
+        }
+        first, first_new = ev_store.add_evidence(
+            **common, source_id="note-1", source_url="https://rednote.com/explore/note-1"
+        )
+        same_source, same_source_new = ev_store.add_evidence(
+            **common, source_id="note-1", source_url="https://rednote.com/explore/note-1"
+        )
+        different_source, different_source_new = ev_store.add_evidence(
+            **common, source_id="note-2", source_url="https://rednote.com/explore/note-2"
+        )
+
+        assert first_new is True
+        assert same_source_new is False
+        assert same_source.evidence_id == first.evidence_id
+        assert different_source_new is True
+        assert different_source.evidence_id != first.evidence_id
+        assert ev_store.count() == 2
+
     def test_evidence_dedup_different_content(self, ev_store):
         """不同内容可以正常入库。"""
         ev1, _ = ev_store.add_evidence(

@@ -27,6 +27,7 @@ import json
 import os
 import sqlite3
 import uuid
+from functools import lru_cache
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
@@ -443,6 +444,7 @@ class EvidenceStore:
         trace_id: str = "",
         collection_metadata: Optional[Dict[str, Any]] = None,
         provider: str = "rule",
+        dedupe_by_source: bool = False,
         authenticity_score: float = 1.0,
         domain_id: str = "",
         product_id: str = "",
@@ -474,11 +476,24 @@ class EvidenceStore:
 
         conn = _get_conn(self.db_path)
         try:
-            # hash 去重检查
-            existing = conn.execute(
-                "SELECT * FROM zbc_evidence WHERE content_hash = ?",
-                (content_hash,),
-            ).fetchone()
+            # 默认保持历史上的全局内容哈希去重；采集入口可按来源身份收窄，
+            # 避免不同笔记恰好同文时复用首条 Evidence、丢失后续 source/provider。
+            if dedupe_by_source:
+                existing = conn.execute(
+                    "SELECT * FROM zbc_evidence WHERE content_hash = ? AND source_type = ? "
+                    "AND source_id = ? AND source_url = ? AND provider = ? "
+                    "AND subject_scope = ? AND domain_id = ? AND product_id = ? "
+                    "ORDER BY created_at LIMIT 1",
+                    (content_hash, str(source_type or "unknown"), str(source_id or ""),
+                     str(source_url or ""), str(provider or "rule"),
+                     str(subject_scope or "CTH"), str(domain_id or "cth"),
+                     str(product_id or "CTH")),
+                ).fetchone()
+            else:
+                existing = conn.execute(
+                    "SELECT * FROM zbc_evidence WHERE content_hash = ?",
+                    (content_hash,),
+                ).fetchone()
             if existing:
                 return Evidence.from_row(existing), False
 
@@ -941,6 +956,7 @@ class EvidenceChain:
         source_url: str,
         raw_content: str,
         source_id: str = "",
+        captured_at: Optional[str] = None,
         normalized_content: str = "",
         subject_hit: bool = False,
         subject_keywords: Optional[List[str]] = None,
@@ -955,6 +971,7 @@ class EvidenceChain:
         evaluation_id: str = "",
         collection_metadata: Optional[Dict[str, Any]] = None,
         provider: str = "rule",
+        dedupe_by_source: bool = False,
         rule_version: str = RULE_VERSION,
         domain_id: str = "",
         product_id: str = "",
@@ -978,12 +995,14 @@ class EvidenceChain:
             source_url=source_url,
             source_id=source_id,
             raw_content=raw_content,
+            captured_at=captured_at or "",
             publish_datetime=publish_datetime,
             subject_scope=subject_scope,
             task_id=task_id,
             trace_id=trace_id,
             collection_metadata=collection_metadata,
             provider=provider,
+            dedupe_by_source=dedupe_by_source,
             domain_id=domain_id,
             product_id=product_id,
             evaluation_id=evaluation_id,
@@ -1056,6 +1075,134 @@ class EvidenceChain:
         }
 
 
+@lru_cache(maxsize=8)
+def _note_lineage_chain(db_path: str) -> EvidenceChain:
+    """每个数据库路径只初始化一次证据链 schema；采集批次内复用连接工厂。"""
+    return EvidenceChain(db_path)
+
+
+@lru_cache(maxsize=8)
+def _note_canonical_data_module(db_path: str):
+    """按数据库路径幂等准备现有 Canonical 表，避免每条笔记重复跑 DDL。"""
+    import canonical_data as _canonical_data
+
+    _canonical_data.ensure_canonical_table(db_path)
+    return _canonical_data
+
+
+def capture_note_lineage(
+    note_data: Dict[str, Any],
+    *,
+    db_path: Optional[str] = None,
+    provider: str = "unknown",
+    subject_scope: str = "CTH",
+    domain_id: str = "cth",
+    product_id: str = "CTH",
+) -> Dict[str, Any]:
+    """以现有 Evidence 与 Canonical 契约记录已入库笔记的可失败旁路。
+
+    主业务 ``notes`` 写入由调用方先完成；本函数独立记录不可变来源证据、
+    zbc canonical/lifecycle 和 ``canonical_data``。两侧分别容错，不能让
+    任一旁路故障回滚主业务事实。来源范围去重保留不同笔记的 source/provider。
+    """
+    note = dict(note_data or {})
+    source_id = str(note.get("note_id") or note.get("source_id") or "").strip()
+    if not source_id:
+        return {"ok": False, "errors": [{"stage": "validation", "error_type": "missing_source_id"}]}
+
+    path = db_path or evidence_db_path()
+    captured_at = str(note.get("captured_at") or note.get("collected_at") or _now())
+    note["captured_at"] = captured_at
+    title = str(note.get("title") or "").strip()
+    content = str(note.get("content") or note.get("body") or "").strip()
+    raw_content = " ".join(part for part in (title, content) if part)
+    if not raw_content:
+        return {"ok": False, "errors": [{"stage": "validation", "error_type": "missing_source_content"}]}
+
+    source_url = str(note.get("url") or "")
+    source_platform = str(note.get("source_platform") or "xhs")
+    source_keyword = str(note.get("source_keyword") or note.get("keyword") or "")
+    matched = note.get("matched_keywords") or []
+    if isinstance(matched, str):
+        matched = [item.strip() for item in matched.replace("，", ",").replace("、", ",").split(",") if item.strip()]
+    elif not isinstance(matched, (list, tuple, set)):
+        matched = []
+    subject_keywords = [str(item).strip() for item in matched if str(item).strip()]
+    if source_keyword and source_keyword not in subject_keywords:
+        subject_keywords.append(source_keyword)
+
+    collection_metadata = build_provenance_metadata(
+        source_type="xhs_note",
+        source_url=source_url,
+        captured_at=captured_at,
+        subject_scope=subject_scope,
+        provider=provider,
+        source_platform=source_platform,
+        source_id=source_id,
+        source_keyword=source_keyword,
+        collector_version=str(note.get("collector_version") or ""),
+    )
+    result: Dict[str, Any] = {
+        "ok": False,
+        "source_id": source_id,
+        "captured_at": captured_at,
+        "evidence_id": "",
+        "chain_canonical_id": "",
+        "canonical_id": "",
+        "canonical_action": "",
+        "errors": [],
+    }
+
+    try:
+        chain_result = _note_lineage_chain(path).capture_and_canonicalize(
+            source_type="xhs_note",
+            source_url=source_url,
+            raw_content=raw_content,
+            source_id=source_id,
+            captured_at=captured_at,
+            normalized_content=raw_content[:500],
+            subject_hit=bool(note.get("is_taikoo_verified")),
+            subject_keywords=subject_keywords,
+            sentiment=str(note.get("sentiment") or "neutral"),
+            risk_level=str(note.get("risk_level") or "low"),
+            engagement_metrics={
+                "likes": note.get("likes"),
+                "comments": note.get("comments"),
+                "collects": note.get("collects"),
+                "shares": note.get("shares"),
+            },
+            publish_datetime=note.get("publish_datetime") or note.get("publish_date") or None,
+            subject_scope=subject_scope,
+            task_id=str(note.get("task_id") or ""),
+            trace_id=str(note.get("trace_id") or ""),
+            collection_metadata=collection_metadata,
+            provider=provider,
+            dedupe_by_source=True,
+            domain_id=domain_id,
+            product_id=product_id,
+        )
+        result["evidence_id"] = chain_result["evidence"].evidence_id
+        result["chain_canonical_id"] = chain_result["canonical"].canonical_id
+    except Exception as exc:
+        result["errors"].append({"stage": "evidence_chain", "error_type": type(exc).__name__})
+
+    try:
+        _canonical_data = _note_canonical_data_module(path)
+        record = _canonical_data.note_to_canonical(note, product_id=product_id)
+        conn = _canonical_data.get_connection(path)
+        try:
+            result["canonical_action"] = _canonical_data.persist_canonical(conn, record)
+            conn.commit()
+        finally:
+            conn.close()
+        result["canonical_id"] = record.canonical_id
+    except Exception as exc:
+        result["errors"].append({"stage": "canonical_data", "error_type": type(exc).__name__})
+
+    result["ok"] = bool(result["evidence_id"] and result["chain_canonical_id"] and result["canonical_id"] and not result["errors"])
+    return result
+
+
 # ============================================================
 # 向后兼容适配 —— 现有模块增强（不修改原文件，提供适配函数）
 # ============================================================
@@ -1100,6 +1247,7 @@ __all__ = [
     "CanonicalDataStore",
     "LifecycleTracker",
     "EvidenceChain",
+    "capture_note_lineage",
     "LIFECYCLE_STAGES",
     "RULE_VERSION",
     "compute_content_hash",

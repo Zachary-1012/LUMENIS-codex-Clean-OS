@@ -775,6 +775,28 @@ def select_account(account_name: str):
     return True, (f"身份切换成功: {account_name} | cookie={os.path.basename(cookie_path)} "
                   f"| cdp_profile={os.path.basename(cdp_profile_dir) if cdp_profile_dir else 'N/A'}")
 
+def _record_note_lineage(note_data, provider="xhs_cookie_bridge"):
+    """写 Evidence/Canonical 旁路；任何异常都不能覆盖或回滚 notes 主记录。"""
+    try:
+        import evidence_chain as _evidence_chain
+
+        result = _evidence_chain.capture_note_lineage(
+            note_data,
+            db_path=db.DB_PATH,
+            provider=provider,
+            subject_scope="CTH",
+            domain_id="cth",
+            product_id="CTH",
+        )
+        if not result.get("ok"):
+            error_types = ",".join(item.get("error_type", "unknown") for item in result.get("errors", []))
+            print(f"[xhs-bridge][lineage] side-write incomplete: {error_types or 'unknown'}", flush=True)
+        return result
+    except Exception as exc:
+        print(f"[xhs-bridge][lineage] side-write skipped (non-fatal): {type(exc).__name__}", flush=True)
+        return {"ok": False, "errors": [{"stage": "lineage", "error_type": type(exc).__name__}]}
+
+
 def sync(keywords=None, max_scroll=6, account=None):
     resolved_account = account or DEFAULT_COLLECTION_ACCOUNT
     policy_gate = collection_policy_gate(account=resolved_account, region='intl')
@@ -860,7 +882,9 @@ def sync(keywords=None, max_scroll=6, account=None):
         ok,reason=ai_analyzer.verify_taikoo_location(n.get('title',''),n.get('content',''))
         n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
         if not ok: rejected+=1; continue
+        n['captured_at']=str(n.get('captured_at') or n.get('collected_at') or datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         _,new=db.insert_note(n); inserted+=int(new); updated+=int(not new)
+        _record_note_lineage(n, provider='xhs_cookie_bridge')
     analyzed=0
     events=[]
     try:

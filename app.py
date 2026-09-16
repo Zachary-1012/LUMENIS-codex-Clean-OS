@@ -1477,48 +1477,21 @@ def _bypass_evidence_canonical(note_data, provider='rednote'):
     """P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write）。
 
     硬红线：所有写入必须 try/except 吞掉并 log warning，绝不影响 notes 主入库。
-    写入 zbc_evidence + zbc_canonical_data（evidence_chain.EvidenceChain）和
-    canonical_data 表（canonical_data.note_to_canonical + persist_canonical）。
+    委托统一的 evidence_chain.capture_note_lineage，避免不同小红书入口各自
+    复制一套 Evidence/Canonical 写入逻辑。
     """
     try:
         import evidence_chain as _ec
-        _raw = (note_data.get('title','') + ' ' + note_data.get('content','')).strip()
-        _chain = _ec.EvidenceChain(db.DB_PATH)
-        _chain.capture_and_canonicalize(
-            source_type='xhs_note',
-            source_url=note_data.get('url',''),
-            raw_content=_raw,
-            source_id=note_data.get('note_id',''),
-            normalized_content=_raw[:500],
-            subject_hit=True,
-            subject_keywords=['taikoo_hui'],
-            sentiment='neutral',
-            risk_level='low',
-            engagement_metrics={
-                'likes': note_data.get('likes',0),
-                'comments': note_data.get('comments',0),
-                'collects': note_data.get('collects',0),
-                'shares': note_data.get('shares',0),
-            },
-            publish_datetime=note_data.get('publish_datetime') or None,
-            subject_scope='CTH',
-            provider=provider,
-            domain_id='cth',
-            product_id='CTH',
+        result = _ec.capture_note_lineage(
+            note_data, db_path=db.DB_PATH, provider=provider,
+            subject_scope='CTH', domain_id='cth', product_id='CTH',
         )
+        if not result.get('ok'):
+            app.logger.warning('Evidence/Canonical side-write incomplete: %s', result.get('errors', []))
+        return result
     except Exception as _e:
-        print(f"[bypass][evidence_chain] side-write skipped (non-fatal): {_e}")
-    try:
-        import canonical_data as _cd
-        _rec = _cd.note_to_canonical(note_data, product_id='CTH')
-        _con = _cd.get_connection(db.DB_PATH)
-        try:
-            _cd.persist_canonical(_con, _rec)
-            _con.commit()
-        finally:
-            _con.close()
-    except Exception as _e:
-        print(f"[bypass][canonical_data] side-write skipped (non-fatal): {_e}")
+        app.logger.warning('Evidence/Canonical side-write skipped (non-fatal): %s', type(_e).__name__)
+        return {'ok': False, 'errors': [{'stage': 'lineage', 'error_type': type(_e).__name__}]}
 
 
 def persist_rednote_data(data, subject_hit_fn=None):
