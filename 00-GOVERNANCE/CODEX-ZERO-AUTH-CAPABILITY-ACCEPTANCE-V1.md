@@ -1,100 +1,116 @@
 # LUMENIS / Codex Zero-Auth Capability Acceptance V1
 
 > Status: CANONICAL ACCEPTANCE MATRIX  
-> Date: 2026-09-16  
-> Scope: Codex local development tooling, LUMENIS zero-auth integration foundations, future integration candidates.
+> Updated: 2026-09-16  
+> Scope: Codex engineering tooling, LUMENIS zero-auth integration foundations, CI/release gates, future integration candidates.
 
 ## 1. Truth boundary
 
-Remote source-audit baseline before this documentation update:
+Current remote status used for this correction:
 
 ```text
-repo   = Zachary-1012/LUMENIS-codex-Clean-OS
-branch = main
-sha    = 147e3bd331b22236930ae29112a67c613a148f67
+repo        = Zachary-1012/LUMENIS-codex-Clean-OS
+branch      = main
+pre-update  = e50e07701399b1d46b794dd1802dca93defae9d8
+CI workflow = Verify LUMENIS #148
+CI result   = completed / failure
 ```
 
-The current acceptance session also produced local workstation evidence that `aiohttp 3.14.3` and `feedparser 6.0.14` imported successfully and that `pip check` returned no broken requirements. That local evidence must not be confused with remote repository implementation.
+Local workstation evidence remains separate from remote repository truth.
 
-At the audited remote baseline:
+Local evidence already produced in the current acceptance session:
 
 ```text
-aiohttp     = PRESENT in requirements.txt
-feedparser  = NOT PRESENT in requirements.txt
+aiohttp 3.14.3     import PASS
+feedparser 6.0.14  import PASS
+pip check           No broken requirements found
+RSS fixture         PASS
+Atom library        AVAILABLE
+Atom function test  NOT RUN
 ```
 
-Therefore `feedparser` is classified as `LOCAL_VERIFIED / REMOTE_NOT_YET_IMPLEMENTED` until its manifest change is actually committed and pushed.
+Remote manifest truth at the pre-update SHA:
+
+```text
+aiohttp>=3.9.0  = PRESENT in requirements.txt
+feedparser       = NOT PRESENT in requirements.txt
+```
+
+Therefore:
+
+```text
+aiohttp    = dependency-level PASS only; async adapter behavior still requires functional tests
+feedparser = local/library-level partial PASS; remote manifest convergence still pending
+Atom       = library capability available; functional acceptance NOT RUN
+```
+
+Do not upgrade any of the above to adapter, runtime, live or release success without matching evidence.
 
 ## 2. Category legend
 
-GitHub Markdown does not support reliable row background colors across renderers, so the Excel color classes are represented semantically:
+GitHub Markdown does not reliably preserve Excel row fills, so the Excel classes are represented semantically:
 
-- 🟦 **CODEX DEV** — Codex / local engineering tooling
+- 🟦 **CODEX DEV** — Codex / engineering tooling
 - 🟩 **LUMENIS NOW** — current LUMENIS foundation or approved immediate zero-auth integration
-- 🟨 **FUTURE** — future optional/cloud/commercial integration, not part of current zero-auth release path
+- 🟨 **FUTURE** — future optional/cloud/commercial integration, outside the current zero-auth release path
 
-## 3. Final acceptance matrix
+## 3. Codex engineering tooling
 
-| Category | Tool / Capability | Remote status | Cost | Key / OAuth | Codex | LUMENIS integration | Purpose | Closed-loop position | Acceptance criterion |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 🟦 CODEX DEV | Git CLI | external workstation tool | Free | None | Yes | indirect | status/diff/log/commit/compare | Develop → Release | repository identity/status/log operations work |
-| 🟦 CODEX DEV | Playwright MCP | workstation install, not repo runtime | Free | None | Yes | No, not a production dependency | browser/UI/E2E/live acceptance | Test → Live Verify | Codex can open 8201 and execute critical UI path |
-| 🟦 CODEX DEV | Filesystem MCP | workstation install, not repo runtime | Free | None | Yes | No, not a production dependency | scoped file read/write/search | Develop | access limited to active workspace/repository |
-| 🟦 CODEX DEV | ripgrep / rg | workstation tool | Free | None | Yes | No | fast source search | Discover → Develop | `rg --version`; source search works |
-| 🟦 CODEX DEV | fd | workstation tool | Free | None | Yes | No | file discovery | Discover | `fd --version`; repository discovery works |
-| 🟦 CODEX DEV | jq | workstation tool | Free | None | Yes | scripting only | JSON/API/test output | API → Verify | `jq --version`; API JSON can be parsed |
-| 🟦 CODEX DEV | sqlite3 CLI | workstation tool | Free | None | Yes | direct read-only inspection | DB/Evidence/Canonical/Truth inspection | Data → Verify | CLI opens intended DB and performs scoped read-only checks |
-| 🟦 CODEX DEV | curl | Windows/platform tool | Free | None | Yes | operations/verification | HTTP/API/health | Runtime → Verify | `curl` can verify `/healthz` and scoped APIs |
-| 🟩 LUMENIS NOW | requests | present in remote requirements | Free | None | Yes | Yes | synchronous public HTTP | External → Evidence | import + adapter test PASS |
-| 🟩 LUMENIS NOW | httpx | present in remote requirements | Free | None | Yes | Yes | HTTP client | External → Evidence | import + adapter test PASS |
-| 🟩 LUMENIS NOW | aiohttp | present in remote requirements; local runtime verified | Free | None | Yes | Yes | async collector HTTP | Collector → Evidence | import + async acquisition test PASS |
-| 🟩 LUMENIS NOW | BeautifulSoup4 | present in remote requirements | Free | None | Yes | Yes | HTML parser | Raw → Canonical | HTML fixture parser PASS |
-| 🟩 LUMENIS NOW | lxml | present in remote requirements | Free | None | Yes | Yes | HTML/XML/Sitemap parser | Raw/XML → Canonical | XML/Sitemap fixture PASS |
-| 🟩 LUMENIS NOW | Playwright | present in remote requirements | Free | None | Yes | Yes | existing browser runtime / browser adapter | Source → Evidence | existing browser chain remains regression-green |
-| 🟩 LUMENIS NOW | SQLite | Python stdlib / current persistence | Free | None | Yes | Yes | Production Truth persistence | Evidence → Canonical → Metric | intended DB identity verified; no protected DB leakage |
-| 🟩 LUMENIS NOW | APScheduler | present in remote requirements | Free | None | Yes | Yes | scheduled Collector/runtime tasks | Scheduler → Collector | scheduler behavior test PASS |
-| 🟩 LUMENIS NOW | tenacity | present in remote requirements | Free | None | Yes | Yes | retry/backoff | Reliability | retry semantics tested |
-| 🟩 LUMENIS NOW | feedparser | **local verified; remote manifest pending** | Free | None | Yes | Approved | RSS/Atom parser | External → Evidence | add to manifest → install/import → RSS/Atom fixtures PASS |
-| 🟩 LUMENIS NOW | PublicHttpAdapter | foundation exists; adapter closure not yet proven | Free | None | Codex develops | Approved | unified public-page acquisition | External → Evidence | public HTML → Evidence → Canonical; failure isolation PASS |
-| 🟩 LUMENIS NOW | RSSAdapter | not yet remote-verified as closed loop | Free | None | Codex develops | Approved | RSS monitoring | RSS → Evidence | fixture/real public RSS → Evidence → Canonical PASS |
-| 🟩 LUMENIS NOW | AtomAdapter | not yet remote-verified as closed loop | Free | None | Codex develops | Approved | Atom monitoring | Atom → Evidence | fixture/real public Atom → Evidence → Canonical PASS |
-| 🟩 LUMENIS NOW | SitemapAdapter | not yet remote-verified; no new parser needed | Free | None | Codex develops | Approved | public URL discovery | Sitemap → Fetch → Evidence | XML parse + URL discovery + Evidence PASS |
-| 🟩 LUMENIS NOW | BrowserAdapter | existing browser capabilities; unified adapter semantics still require acceptance | Free | None | Codex converges | Yes | browser-based acquisition | Browser → Evidence | no bypass of Evidence/Canonical; XHS/browser regression PASS |
-| 🟨 FUTURE | Firecrawl Cloud | not integrated | quota/cloud | Key | possible | Not current | web research provider | Future Research Provider | separate API/commercial/privacy review |
-| 🟨 FUTURE | Exa | not integrated | quota/cloud | Key | possible | Not current | search/research provider | Future Research Provider | separate API/commercial/privacy review |
-| 🟨 FUTURE | PostHog Cloud | not integrated | free tier/cloud | account/config | possible | Future | product analytics/observability | Observability | privacy/data-boundary review after launch |
-| 🟨 FUTURE | Mixpanel | not integrated | free tier/cloud | account/config | possible | Future | product analytics | Observability | choose against PostHog; do not duplicate by default |
-| 🟨 FUTURE | Supabase | not integrated | free tier/cloud | account/auth | possible | Not now | Postgres/Auth/Storage | Future SaaS | explicit DB/SaaS migration decision only |
-| 🟨 FUTURE | Railway | not integrated | not fully free | account | possible | Not now | cloud Flask/API/worker runtime | Future Deploy | resolve Windows/CDP/Resident Browser dependencies first |
-| 🟨 FUTURE | Vercel | not integrated | free tier | account | possible | Not now | separated frontend deployment | Future Frontend | only after actual frontend/runtime split |
-| 🟨 FUTURE | Figma | external design tool | free tier | authorization | useful | not core runtime | UI/UX/design-to-code | Design → Develop | external design workflow only |
-| 🟨 FUTURE | Runway / Higgsfield / OpenArt | not integrated | quota/cloud | authorization/API | possible | Future | media provider | Content → Artifact | commercial/API/license review before adoption |
+| Category | Tool / Capability | Current status | Cost | Auth | LUMENIS runtime | Purpose | Acceptance state |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 🟦 CODEX DEV | Git CLI | already used | Free | None | indirect only | status/diff/log/commit/compare | AVAILABLE |
+| 🟦 CODEX DEV | GitHub Plugin | installed and actually used in this session | Free | GitHub connector/OAuth | No | repository audit, file update, CI/commit inspection | PLUGIN-LEVEL PASS |
+| 🟦 CODEX DEV | OpenAI Developers | installed | Free / API usage separate | plugin connection | No | OpenAI API / Agents / SDK development reference | INSTALLED / FUNCTIONAL SMOKE PENDING |
+| 🟦 CODEX DEV | Figma | installed and connected | free tier available | OAuth | No | UI/UX, Design System, design-to-code | CONNECTION PASS / TASK SMOKE PENDING |
+| 🟦 CODEX DEV | Context7 | installed and connected | provider policy applies | plugin connection | No | current library/API docs and examples | CONNECTION PASS / TASK SMOKE PENDING |
+| 🟦 CODEX DEV | Codex Security | installed | plugin capability | plugin connection | No | security scan / analysis / investigation | INSTALLED / FUNCTIONAL SMOKE PENDING |
+| 🟦 CODEX DEV | Playwright MCP | user-confirmed installed | Free | local MCP | No | browser/UI/E2E/live acceptance | INSTALLED / 8201 LIVE SMOKE PENDING |
+| 🟦 CODEX DEV | Filesystem MCP | optional; not required by current repository work | Free | local | No | outside-workspace file operations only if a real gap exists | OPTIONAL / NOT VERIFIED |
+| 🟦 CODEX DEV | ripgrep / rg | local tool | Free | None | No | fast source search | LOCAL CHECK PENDING |
+| 🟦 CODEX DEV | fd | local tool | Free | None | No | file discovery | LOCAL CHECK PENDING |
+| 🟦 CODEX DEV | jq | local tool | Free | None | script-only | JSON/API verification | LOCAL CHECK PENDING |
+| 🟦 CODEX DEV | sqlite3 CLI | optional; Python sqlite3 already available | Free | None | read-only inspection preferred | DB/Evidence/Canonical inspection | CLI CHECK PENDING |
+| 🟦 CODEX DEV | curl | usually present on Windows | Free | None | operations/verification only | health/API verification | LOCAL CHECK PENDING |
 
-## 4. LUMENIS zero-auth closed-loop target
+Installed/connected does not equal functionally verified. Codex must run one real smoke test per relevant tool after quota recovery.
+
+## 4. LUMENIS current zero-auth foundation
+
+| Category | Tool / Capability | Remote / local truth | Purpose | Closed-loop position | Acceptance criterion | Current state |
+| --- | --- | --- | --- | --- | --- | --- |
+| 🟩 LUMENIS NOW | requests | remote manifest present | sync Public HTTP | External → Evidence | import + public HTTP adapter test | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | httpx | remote manifest present | HTTP client | External → Evidence | import + request/error behavior test | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | aiohttp | remote manifest present; local 3.14.3 import PASS | async collector HTTP | Collector → Evidence | import/version + `pip check` PASS at dependency gate; adapter behavior tested separately | DEPENDENCY-LEVEL PASS |
+| 🟩 LUMENIS NOW | BeautifulSoup4 | remote manifest present | HTML parse | Raw HTML → Canonical | fixture parse PASS | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | lxml | remote manifest present | HTML/XML/Sitemap parse | Raw/XML → Canonical | XML/Sitemap fixture PASS | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | Playwright | remote manifest present | browser runtime / future unified BrowserAdapter | Source → Evidence | browser chain regression + adapter semantics | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | SQLite | Python stdlib/current persistence | Production Truth persistence | Evidence → Canonical → Metric | intended DB identity; no protected-data leakage | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | APScheduler | remote manifest present | scheduler | Scheduler → Collector | scheduling behavior test | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | tenacity | remote manifest present | retry/backoff | Reliability | retry semantics test | FOUNDATION PRESENT |
+| 🟩 LUMENIS NOW | feedparser | local 6.0.14 import PASS; remote manifest pending | RSS + Atom parse | External → Evidence | remote manifest convergence; RSS fixture PASS; Atom functional fixture must run | PARTIAL / LIBRARY-LEVEL |
+| 🟩 LUMENIS NOW | Public HTTP Adapter | not yet closed | unified public-page acquisition | External → Evidence | public HTML → Evidence → Canonical + failure isolation | TO DEVELOP |
+| 🟩 LUMENIS NOW | RSS Adapter | not yet closed | RSS monitoring | RSS → Evidence | RSS → Evidence → Canonical | TO DEVELOP |
+| 🟩 LUMENIS NOW | Atom Adapter | not yet closed | Atom monitoring | Atom → Evidence | Atom fixture/real public feed → Evidence → Canonical | TO DEVELOP |
+| 🟩 LUMENIS NOW | Sitemap Adapter | not yet closed; no new parser required | URL discovery | Sitemap → Fetch → Evidence | XML parse + URL discovery + Evidence | TO DEVELOP |
+| 🟩 LUMENIS NOW | Browser Adapter | existing browser capabilities need unified semantics | browser acquisition | Browser → Evidence | never bypass Evidence/Canonical; existing XHS/browser regression stays green | TO CONVERGE |
+
+Approved closed-loop target:
 
 ```text
 External Source
-        ↓
-Acquisition Adapter
-├── Public HTTP
-├── RSS
-├── Atom
-├── Sitemap
-└── Browser
-        ↓
-Evidence
-        ↓
-Canonical Data / Canonical Content
-        ↓
-Function / Research
-        ↓
-Metric / Truth Table
-        ↓
-View Model
-        ↓
-CTH / BMP / Shared Capability
-        ↓
-UI / Report / Export
+→ Acquisition Adapter
+   ├─ Public HTTP
+   ├─ RSS
+   ├─ Atom
+   ├─ Sitemap
+   └─ Browser
+→ Evidence
+→ Canonical Data / Canonical Content
+→ Function / Research
+→ Metric / Truth Table
+→ View Model
+→ CTH / BMP / Shared Capability
+→ UI / Report / Export
 ```
 
 Forbidden shortcuts:
@@ -103,30 +119,120 @@ Forbidden shortcuts:
 RSS → AI directly
 Web page → UI directly
 Browser result → parallel DB truth
-Third party → canonical truth owner
+Third party → Canonical/Evidence/Metric/Permission truth owner
 ```
 
-## 5. Launch Gate
+## 5. Future / optional integration
+
+| Category | Capability | Current decision |
+| --- | --- | --- |
+| 🟨 FUTURE | Firecrawl Cloud | not current; requires API/commercial/privacy review |
+| 🟨 FUTURE | Exa | not current; requires API/commercial/privacy review |
+| 🟨 FUTURE | PostHog Cloud | future observability candidate after privacy/data-boundary review |
+| 🟨 FUTURE | Mixpanel | future alternative to PostHog; do not dual-adopt by default |
+| 🟨 FUTURE | Supabase | do not migrate current SQLite merely to adopt it; reassess at SaaS/multi-tenant stage |
+| 🟨 FUTURE | Railway | not a drop-in fit for current Windows/CDP resident-browser runtime |
+| 🟨 FUTURE | Vercel | evaluate only after an actual frontend/runtime split |
+| 🟨 FUTURE | Runway / Higgsfield / OpenArt | future media providers after commercial/API/license review |
+
+Figma is no longer classified as a FUTURE product integration in this matrix; it is installed Codex/design tooling and is not a LUMENIS production-runtime dependency.
+
+## 6. CI binding and run #148 correction
+
+CI binding is proven:
+
+```text
+workflow = .github/workflows/platform-verify.yml
+trigger  = push to main / pull_request to main / workflow_dispatch
+run      = Verify LUMENIS #148
+head     = e50e07701399b1d46b794dd1802dca93defae9d8
+status   = completed
+result   = failure
+```
+
+Successful steps in #148 included:
+
+```text
+Checkout
+Set up Python
+Install development/test dependencies
+Compile Python sources (BLOCKING)
+Validate CI test-tier manifests (BLOCKING)
+Credential-path boundary diagnostic
+Production/live and quarantine inventory
+Boundary Check (ADVISORY)
+Asset Impact Scan (INFORMATIONAL)
+```
+
+Blocking failure:
+
+```text
+Run clean-checkout hermetic pytest (BLOCKING) = FAILURE
+```
+
+The log shows 257 hermetic test files selected and 21 failing test cases across these areas:
+
+```text
+AI provider-policy expectation
+Douyin adapter status/result semantics
+HK-only collection policy artifact-path expectation
+RedNote rotation / resident-browser port expectation
+Bilibili / Weibo secondary-platform adapter semantics
+CDP retry/online expectation
+```
+
+Therefore:
+
+```text
+CI_BOUND       = YES
+CI_TRIGGERED   = YES
+CI_COMPLETED   = YES
+CI_PASS        = NO
+TARGETED_TESTS = NOT GREEN
+```
+
+Do not weaken, quarantine or delete legitimate deterministic tests merely to obtain green CI. First classify whether each failure is stale-test expectation, fixture/mock drift, or production regression.
+
+## 7. Launch Gate
 
 | Gate | Name | Acceptance condition | Current classification |
 | --- | --- | --- | --- |
-| G01 | DEPENDENCY_READY | required runtime deps import; local zero-auth install verified; manifest truth matches target candidate | **LOCAL PASS / remote feedparser pending** |
-| G02 | ADAPTER_IMPLEMENTED | Public HTTP / RSS / Atom / Sitemap / Browser adapter contracts implemented | NOT YET VERIFIED |
-| G03 | EVIDENCE_TESTED | every adapter emits provenance-bearing Evidence; idempotence/source semantics correct | NOT YET VERIFIED |
-| G04 | CANONICAL_TESTED | Evidence → Canonical works; missing is never fabricated as zero | NOT YET VERIFIED |
-| G05 | SIDEWRITE_ISOLATED | non-critical side-write failure does not corrupt/break primary ingestion where contract requires isolation | NOT YET VERIFIED for new adapters |
-| G06 | API_VERIFIED | related API status/data/error semantics verified | NOT YET VERIFIED |
-| G07 | UI_VERIFIED | Experience V2 renders real data honestly; no dead/fixture-only production claim | NOT YET VERIFIED |
-| G08 | TARGETED_TESTS_PASS | new/affected tests pass | NOT YET VERIFIED |
-| G09 | 8201_HEALTHY | production candidate starts and `/healthz` is healthy | NOT VERIFIED by this document update |
-| G10 | PLAYWRIGHT_LIVE_PASS | critical Experience path passes live browser acceptance | NOT VERIFIED |
-| G11 | WORKTREE_CLEAN | candidate contains only intended files | requires local candidate check |
+| G00-A | CODEX_TOOLING_READY | GitHub/OpenAI Developers/Figma/Context7/Codex Security installed; Playwright MCP installed; relevant tools pass real Codex smoke tests | INSTALLED / FUNCTIONAL SMOKE PENDING |
+| G00-B | CI_BOUND | workflow reacts to main push/PR/manual dispatch | **PASS** |
+| G01 | DEPENDENCY_READY | required runtime deps import; manifest truth matches candidate | **PARTIAL** — local imports/pip check pass; remote feedparser manifest convergence pending |
+| G02 | ADAPTER_IMPLEMENTED | Public HTTP / RSS / Atom / Sitemap / Browser adapter contracts implemented | NOT VERIFIED |
+| G03 | EVIDENCE_TESTED | every adapter emits provenance-bearing Evidence; idempotence/source semantics correct | NOT VERIFIED |
+| G04 | CANONICAL_TESTED | Evidence → Canonical works; missing is never fabricated as zero | NOT VERIFIED |
+| G05 | SIDEWRITE_ISOLATED | adapter/side-write failure does not corrupt primary Production Truth | NOT VERIFIED for new adapters |
+| G06 | API_VERIFIED | related API data/status/error semantics verified | NOT VERIFIED |
+| G07 | UI_VERIFIED | Experience V2 shows real state; no fixture-only production claim | NOT VERIFIED |
+| G08 | TARGETED_TESTS_PASS | new/affected + clean-checkout blocking regression green | **FAIL at CI #148** |
+| G09 | 8201_HEALTHY | production candidate starts and `/healthz` is healthy | NOT VERIFIED by this update |
+| G10 | PLAYWRIGHT_LIVE_PASS | critical Experience path passes browser acceptance | NOT VERIFIED |
+| G11 | WORKTREE_CLEAN | candidate contains only intended files | current local/remote relation must be rechecked; old `ahead 1` snapshot is historical |
 | G12 | P0_P1_ZERO | no unresolved P0/P1 release blockers | NOT VERIFIED |
 | G13 | SAFE_TO_COMMIT | scope/tests/rollback point known | candidate-specific |
 | G14 | SAFE_TO_PUSH | local/remote relation reconciled; candidate SHA explicit | candidate-specific |
 | G15 | LIVE_VERIFIED | post-start/deploy live runtime acceptance passes | NO |
 
-## 6. Status semantics
+## 8. Codex next takeover sequence
+
+When Codex quota is available again:
+
+```text
+1. preserve local unpushed work
+2. git fetch origin and reconcile local main with current remote main without reset/clean
+3. keep and verify the intended feedparser manifest delta
+4. reproduce/classify/fix CI #148 blocking failures
+5. run Atom functional fixture
+6. smoke-test installed Codex tools/plugins
+7. implement/converge Public HTTP / RSS / Atom / Sitemap / Browser adapters
+8. enforce Adapter → Evidence → Canonical
+9. targeted + affected regression
+10. 8201 health → API → Playwright E2E → CI → release gates
+```
+
+## 9. Status semantics
 
 ```text
 IMPLEMENTED = code exists
@@ -136,4 +242,4 @@ RELEASED    = release/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/time evidence
 ```
 
-Never convert dependency installation, documentation, CI green, an HTTP 200, or a prototype page into `LIVE_VERIFIED`.
+Never convert dependency installation, plugin installation, documentation, a CI trigger, an HTTP 200 or a rendered page into `LIVE_VERIFIED`.
