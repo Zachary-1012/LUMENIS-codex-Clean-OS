@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """当前生产采集边界：只允许香港/国际 RedNote，不触发真实平台。"""
 import asyncio
-import os
 import sys
 from pathlib import Path
 
@@ -46,21 +45,54 @@ def test_collector_blocks_cn_before_subprocess(monkeypatch):
 
 
 def test_collector_default_artifact_path_is_protected(monkeypatch):
+    """显式远程 worker 可用时，默认原始产物只能写入受保护运行数据目录。"""
     import collector
     import xhs_cookie_bridge as bridge
 
     seen = {}
+    worker = 'https://browser-worker.example:9223'
 
-    monkeypatch.setattr(collector, '_cdp_online', lambda **kwargs: False)
+    monkeypatch.setattr(collector, '_resolve_server_cdp_url', lambda cdp_url=None: (worker, ''))
+    monkeypatch.setattr(collector, '_cdp_online', lambda **kwargs: True)
+    monkeypatch.setattr(collector, 'CDP_SCRIPT', collector.__file__)
+    monkeypatch.setattr(collector.os, 'makedirs', lambda *args, **kwargs: None)
 
-    def fake_standalone(keyword, max_scroll, output_path, **kwargs):
+    def fake_worker(keyword, max_scroll, output_path, **kwargs):
         seen['output_path'] = output_path
+        seen['cdp_url'] = kwargs.get('cdp_url')
         return {'keyword': keyword, 'total': 0, 'notes': [],
-                'error': 'offline test', 'channel': 'standalone'}
+                'error': '', 'channel': 'cdp', 'ok': True}
 
-    monkeypatch.setattr(collector, '_search_standalone', fake_standalone)
-    collector.search_xiaohongshu('广州太古汇', account=bridge.DEFAULT_COLLECTION_ACCOUNT)
+    monkeypatch.setattr(collector, '_search_via_cdp', fake_worker)
+    result = collector.search_xiaohongshu(
+        '广州太古汇', account=bridge.DEFAULT_COLLECTION_ACCOUNT)
+
     assert Path(seen['output_path']).parent == Path(bridge.PRIVATE_DATA_DIR)
+    assert seen['cdp_url'] == worker
+    assert result['channel'] == 'authorized_browser_worker'
+
+
+def test_collector_without_explicit_worker_fails_closed_before_collection(monkeypatch):
+    """无 server-owned worker 时不得回退到 localhost 或独立浏览器。"""
+    import collector
+    import xhs_cookie_bridge as bridge
+
+    monkeypatch.setattr(
+        collector, '_resolve_server_cdp_url',
+        lambda cdp_url=None: ('', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'),
+    )
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError('未配置远程 worker 时不应进入任何采集实现')
+
+    monkeypatch.setattr(collector, '_search_via_cdp', fail_if_called)
+    monkeypatch.setattr(collector, '_search_standalone', fail_if_called)
+
+    result = collector.search_xiaohongshu(
+        '广州太古汇', account=bridge.DEFAULT_COLLECTION_ACCOUNT)
+    assert result['total'] == 0
+    assert result['channel'] == 'worker'
+    assert result['error'] == 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
 
 
 def test_cookie_status_recognizes_private_runtime_source(monkeypatch, tmp_path):
