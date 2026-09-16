@@ -4,9 +4,9 @@ import hashlib
 import json
 from pathlib import Path
 
-EXPECTED_FINGERPRINT = "a5e8d6e16bb99d1b5b0985d9fb406d53c853097315699c3a99ecfa914004a9c7"
+EXPECTED_FINGERPRINT = "68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f"
 EXPECTED_CONTRACT_ID = "lumenis-ggi-cross-product"
-EXPECTED_VERSION = "1.0.0"
+EXPECTED_VERSION = "1.1.0"
 LOCAL_REPO = "Zachary-1012/LUMENIS-codex-Clean-OS"
 
 EXPECTED_REGISTRY = {
@@ -16,12 +16,12 @@ EXPECTED_REGISTRY = {
         "truth_owner": "Production Truth",
     },
     "Zachary-1012/Zachary-OS-AI": {
-        "product": "LUMENIS Intelligence / OSAI",
+        "product": "序蕴 / LUMENIS Intelligence",
         "role": "Shared Intelligence Capability",
         "truth_owner": "Shared Intelligence Assets",
     },
     "Zachary-1012/global-growth-intelligence": {
-        "product": "Global Growth Intelligence",
+        "product": "序衍 / LUMENIS Growth",
         "role": "Independent Research & Growth Product",
         "truth_owner": "Research / Growth Truth",
     },
@@ -85,8 +85,8 @@ def validate_contract(path: Path) -> None:
     assert data["adoption_gate"] == EXPECTED_ADOPTION_GATE
     assert data["compatibility_gate"]["ci_blocking"] is True
 
-    # LUMENIS alone owns production truth. Neither GGI, OSAI nor Command may
-    # become an unrestricted writer into LUMENIS business/runtime truth.
+    # 序境 / LUMENIS alone owns Production Truth. 序蕴、序衍、序枢 remain
+    # independently governed products/capabilities and never receive unrestricted writes.
     assert EXPECTED_REGISTRY[LOCAL_REPO]["role"] == "Production Core"
     assert boundary["ai_or_research_may_overwrite_lumenis_production_truth"] is False
     assert boundary["unrestricted_cross_product_writer"] is False
