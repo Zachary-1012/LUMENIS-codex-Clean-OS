@@ -1,9 +1,12 @@
 # LUMENIS Source-Level Repository Audit — 2026-09-16
 
-> Scope: current remote `main` source, runtime entrypoints, manifests, CI/test tiers, Evidence/Canonical implementation, XHS/RedNote collector runtime, Experience V2 and content-generation implementation.  
-> This report records source-level facts and explicit limitations. It is not a runtime/live verification certificate.
+> Status: SOURCE AUDIT + POST-AUDIT CORRECTION  
+> Scope: remote `main` source/runtime/manifests/CI tiers/Evidence/Canonical/XHS-RedNote/Experience V2/content-generation plus the post-audit CI result.  
+> This document is not a runtime/live verification certificate.
 
-## 1. Audited remote baseline
+## 1. Source-audit baseline and post-audit state
+
+The source-level audit baseline remains:
 
 ```text
 repository = Zachary-1012/LUMENIS-codex-Clean-OS
@@ -13,20 +16,22 @@ baseline   = 147e3bd331b22236930ae29112a67c613a148f67
 commit     = Integrate existing XHS status into CTH surface
 ```
 
-GitHub repository metadata at audit time showed administrative/push access for the active connection and `main` as the default branch. Branch protection was not enabled at the audited baseline.
-
-The repository-level GitHub license metadata reported:
+Documentation/legal updates then advanced remote `main` through:
 
 ```text
-license.key     = other
-license.spdx_id = NOASSERTION
+74f2a662  README truth refresh
+2a98f7bb  AGENTS execution alignment
+8819c192  zero-auth acceptance matrix
+81eb8e00  source-level audit
+E50e0770  proprietary LICENSE notice
+7d2d2851  corrected tooling + CI acceptance truth
 ```
 
-No canonical root `LICENSE` file was found at the audited baseline by direct file lookup. A repository-level proprietary license notice is therefore added as part of this documentation update instead of pretending an OSI license already existed.
+The exact current HEAD should always be re-read before engineering work; commit lists in an audit are historical evidence, not a substitute for `git fetch`/remote inspection.
 
 ## 2. Audit method
 
-The audit did not rely on chat memory as implementation proof. It inspected current remote repository resources including:
+Implementation claims were grounded in current remote source rather than chat memory. Inspected resources included:
 
 ```text
 README.md
@@ -46,13 +51,11 @@ content_generation.py
 00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md
 ```
 
-The recursive repository tree was also inspected to confirm the presence of canonical governance, architecture, audit, workflow and source areas.
+The repository tree was also inspected for governance, architecture, audit, workflow and production source areas.
 
 ## 3. Repository / governance findings
 
-### 3.1 Canonical entrypoints exist
-
-Remote source contains:
+Canonical entrypoints exist:
 
 ```text
 README.md
@@ -65,30 +68,22 @@ AGENTS.md
 scripts/
 ```
 
-The pre-update README and AGENTS both define current source/runtime truth above historical handoff/chat evidence and enforce a single writable `main` workflow.
+Current source/runtime truth has precedence over historical handoff/chat evidence. Local unpushed code and remote GitHub state remain separate facts until actual reconciliation/push.
 
-### 3.2 Local and remote truth must remain separate
-
-The current working session also has user-supplied local evidence of a local `main` newer than the audited remote baseline and a local `requirements.txt` modification for `feedparser`.
-
-That local state is not reclassified as remote implementation in this audit. Documentation must state:
+Hard rule retained:
 
 ```text
 local evidence != GitHub remote evidence
 ```
 
-until the actual local changes are reconciled and pushed.
-
 ## 4. Runtime findings
 
 ### 4.1 Canonical Windows launcher
 
-`scripts/start_production.ps1` is explicitly documented in source as the canonical Windows production entrypoint.
-
-Observed runtime behavior includes:
+`scripts/start_production.ps1` is the canonical Windows production entrypoint. Observed responsibilities include:
 
 ```text
-repo-root resolution from script location
+repository-root resolution from script location
 .venv Python validation
 production dependency check
 8201 supervisor launch
@@ -97,95 +92,59 @@ stale 8201 Python cleanup when unhealthy
 9222 / 9223 resident-browser ensure step
 ```
 
-The script resolves the repository root from its own location; the workstation path is therefore an operational entrypoint rather than a portable code requirement.
-
 ### 4.2 Supervisor
 
-`run_supervised.py` supervises `app.py`, writes supervisor state/logs, monitors `/healthz`, restarts actual process exits and kills/restarts zombie-like process trees after repeated health failures.
-
-The supervisor remains Windows-oriented through `msvcrt`, `taskkill`, Windows process flags and the current launcher architecture.
+`run_supervised.py` supervises `app.py`, persists supervisor state/logs, probes `/healthz`, restarts real exits and restarts zombie-like process trees after repeated health failure. The current implementation is Windows-oriented (`msvcrt`, `taskkill`, Windows process behavior).
 
 ### 4.3 Deployment implication
 
-The current production runtime is not a drop-in Vercel/Railway style deployment because the full operating model includes Windows process control and resident Edge/CDP browser dependencies.
-
-Cloud migration may later separate stateless Flask/API/workers from browser-dependent runtime, but that is a future architecture decision, not a current source fact.
+The complete current runtime is not a drop-in Vercel/Railway deployment because resident Edge/CDP and Windows process-control behavior are part of the operating model. Any cloud split is a future architecture decision.
 
 ## 5. Application / API findings
 
-`app.py` is the current Flask application entrypoint and registers multiple existing product/runtime APIs.
+`app.py` remains the current Flask application entrypoint and wires existing system/product capabilities including health, settings, reports/export, runtime/system features, trend/viz/data-center, intelligence library, content generation, module registry, internal browser/browser surface, Evidence APIs, Experience V2 and aggregation APIs.
 
-Source-level examples include registration of:
-
-```text
-system health
-architecture
-settings
-export/report
-runtime/system features
-trend/viz/data-center
-intelligence library
-content generation
-module registry
-internal browser
-browser surface
-evidence API
-LUMENIS frontend compatibility layer
-Experience V2 runtime
-aggregation API
-```
-
-The application still contains historical `ZBC`/广州太古汇 naming in comments/docstrings/modules. This is legacy naming evidence, not proof that the product definition remains a single-subject monitoring tool.
+Historical `ZBC`/广州太古汇 naming still exists in source comments/docstrings/modules. That is legacy naming debt, not proof that the current product definition is limited to a single-subject monitoring tool.
 
 ## 6. Experience V2 findings
 
-`experience_runtime.py` states that it mounts the current zero-build Experience V2 under:
+`experience_runtime.py` mounts the current Experience V2 at:
 
 ```text
 /experience/
 /api/experience/*
 ```
 
-The source explicitly defines:
+Current source explicitly defines:
 
 ```python
 BOUND_SCREENS = ("CTH-01", "AI-01")
 ```
 
-Therefore:
+Therefore only those screens have explicit current backend-binding claims from that contract. Other prototype assets must not be promoted to production-bound status merely because they exist.
 
-- CTH-01 and AI-01 have explicit backend-binding claims in current source;
-- other prototype screens must not be represented as fully production-bound merely because prototype assets exist;
-- missing backend data is intended to use explicit states such as `notcollected`, `empty`, `offline`, `error` rather than fabricated values.
-
-The runtime also contains permission-gated AI/composer behavior and explicit permanent-deny handling for direct push/publish-like actions.
+The runtime intentionally distinguishes states such as `notcollected`, `empty`, `offline`, and `error` rather than fabricating numeric values.
 
 ## 7. Evidence / Canonical findings
 
-`evidence_chain.py` is a material current Evidence/Canonical owner.
-
-Observed source principles:
+`evidence_chain.py` is a material current Evidence/Canonical owner. Observed source contracts include:
 
 ```text
-Evidence raw source is immutable in meaning
+immutable-source Evidence semantics
 full SHA-256 content hash
 provenance metadata
-source/task/trace identity fields
+source/task/trace identity
 subject/domain/product context
 AI analysis separated from human correction
-rule_version preserved
+rule_version preservation
 zbc_evidence + zbc_canonical_data + lifecycle tracking
 ```
 
-The current remote baseline documentation/comments describe hash-based dedupe and independent Evidence/Canonical tables.
-
-Important distinction: the current working session reports a newer local XHS lineage convergence commit that is not present at the audited remote baseline. This audit does not rewrite remote history by pretending that local commit is already in GitHub.
+The existing app path also contains a side-write Evidence/Canonical integration pattern whose failure must not silently corrupt the primary ingestion path where the contract requires isolation.
 
 ## 8. XHS / RedNote collector findings
 
-`xhs_cookie_bridge.py` contains current controlled runtime collection behavior.
-
-Observed source facts include:
+`xhs_cookie_bridge.py` contains controlled runtime collection behavior including:
 
 ```text
 local/private cookie-file contract
@@ -195,35 +154,19 @@ CDP 9222 / 9223 mapping
 account policy gate
 cooldown / run-count safety controls
 resident-browser model
-no source/log JSON cookie disclosure intent
 ```
 
-The current code still includes real operational identifiers/config conventions and therefore remains sensitive production infrastructure. Documentation should describe the contract, not duplicate credential/session material.
+The source contains operational configuration/identity conventions; documentation should describe contracts without duplicating credential/session material.
 
 ## 9. Content / Research findings
 
-`content_generation.py` implements a structured content-generation engine with multiple content types and a research-before-generation flow.
+`content_generation.py` implements research-before-generation behavior with structured content types, generation Evidence, Evaluation records, human-feedback/regeneration lineage and local-first/provider-controlled AI behavior.
 
-Observed implementation concepts include:
+This supports the architecture rule that AI is an enhancement layer rather than the owner of Production Truth.
 
-```text
-research lookup from intelligence_assets
-filesystem research lookup
-structured generation schema
-Evidence record per generation
-Evaluation record
-human feedback / regeneration lineage
-local-first AI semantics
-explicit cloud enable behavior
-```
+## 10. Dependency findings — corrected
 
-This supports the product architecture claim that AI is an enhancement layer around research/evidence/evaluation rather than an independent Production Truth owner.
-
-## 10. Dependency findings
-
-### 10.1 Remote Python runtime manifest
-
-The audited `requirements.txt` includes direct runtime/tooling dependencies such as:
+Remote `requirements.txt` at the audited source baseline includes, among others:
 
 ```text
 Flask / Werkzeug / Flask-CORS / Flask-Limiter / waitress
@@ -238,31 +181,29 @@ python-dotenv / python-dateutil / PyYAML / colorama / tqdm
 aiohttp / yyds-logger / tenacity / alembic
 ```
 
-`sqlite3` is correctly treated as Python stdlib rather than a pip dependency.
+`requirements-dev.txt` layers pytest on top of runtime requirements. Root `package.json` is private and Playwright/tooling-oriented rather than proof of a Next/React/Vite production frontend.
 
-### 10.2 Remote development manifest
-
-`requirements-dev.txt` layers on top of `requirements.txt` and adds pytest.
-
-### 10.3 Root Node manifest
-
-`package.json` is marked `private: true`, uses historical package name `taikoo-monitor`, and directly depends only on Playwright with XHS search/inject/login scripts.
-
-The root Node manifest is therefore tooling-oriented; it is not evidence of a Next.js/React/Vite production frontend.
-
-### 10.4 feedparser truth
-
-At the audited remote baseline:
+Corrected acceptance for the two newly discussed dependencies:
 
 ```text
-feedparser NOT present in requirements.txt
+aiohttp 3.14.3
+  local import/version PASS
+  pip consistency PASS
+  NOT sufficient evidence for async adapter functional PASS
+
+feedparser 6.0.14
+  local install/import PASS
+  RSS fixture PASS
+  Atom library capability AVAILABLE
+  Atom functional test NOT RUN
+  remote requirements.txt convergence still pending at the audited remote state
 ```
 
-The current acceptance session locally verified `feedparser 6.0.14`, but that remains local evidence until the actual manifest change reaches `main`.
+Therefore neither library installation nor import alone proves the new adapter closed loop.
 
-## 11. Zero-auth capability findings
+## 11. Zero-auth capability direction
 
-Existing remote foundations already support a zero-auth acquisition program without adding cloud APIs:
+Existing foundations support a zero-auth acquisition program without adding cloud APIs:
 
 ```text
 requests / httpx / aiohttp
@@ -276,16 +217,14 @@ tenacity
 Approved immediate adapter direction:
 
 ```text
-PublicHttpAdapter
-RSSAdapter
-AtomAdapter
-SitemapAdapter
-BrowserAdapter
+Public HTTP Adapter
+RSS Adapter
+Atom Adapter
+Sitemap Adapter
+Browser Adapter
 ```
 
-But source audit does **not** prove all of these named adapters currently exist as one completed, unified production contract.
-
-Required closure remains:
+Required production closure:
 
 ```text
 External Source
@@ -297,21 +236,80 @@ External Source
 → UI / Report / Export
 ```
 
-## 12. CI / test findings
+No adapter may create a parallel Evidence/Canonical/DB truth.
 
-`.github/workflows/platform-verify.yml` currently defines a blocking clean-checkout path including:
+## 12. Codex tooling status — external engineering layer
+
+The engineering environment now reports these Codex/plugin capabilities as installed/connected:
 
 ```text
-Python 3.11
-requirements-dev install
-compileall
-CI test-tier manifest validation
-hermetic pytest
+GitHub               installed; actually used in this audit/update flow
+OpenAI Developers    installed
+Figma                installed + connected
+Context7              installed + connected
+Codex Security        installed
+Playwright MCP        user-confirmed installed
 ```
 
-It also reports credential-path boundary diagnostics and classifies boundary/asset scans as advisory/informational.
+These are engineering tools, not LUMENIS production-runtime dependencies. `installed/connected` is not the same as functional task-level verification. Codex should run real smoke tests after quota recovery.
 
-`tests/CI_TEST_TIERS.md` explicitly separates:
+Filesystem MCP remains optional rather than mandatory for normal repository work. `rg`, `fd`, `jq`, `curl`, and `sqlite3 CLI` are local tools and should be verified on the workstation only as needed; Python `sqlite3` is already sufficient for equivalent scoped read-only DB inspection.
+
+## 13. CI / test findings — corrected with run #148
+
+CI is definitively bound. `.github/workflows/platform-verify.yml` responds to:
+
+```text
+push to main
+pull_request to main
+workflow_dispatch
+```
+
+The documentation/license update triggered:
+
+```text
+workflow = Verify LUMENIS
+run      = #148
+head     = e50e07701399b1d46b794dd1802dca93defae9d8
+event    = push
+status   = completed
+result   = failure
+```
+
+Successful steps included dependency installation, Python compile, CI test-tier manifest validation and credential-path boundary diagnostic. The blocking failure was:
+
+```text
+Run clean-checkout hermetic pytest (BLOCKING)
+```
+
+The run selected 257 hermetic test files. The log contains 21 failing test cases grouped around:
+
+```text
+AI provider-policy expectation
+Douyin adapter result/status semantics
+HK-only collection policy artifact-path expectation
+RedNote rotation / resident browser port expectation
+Bilibili / Weibo secondary-platform adapter semantics
+CDP retry/online expectation
+```
+
+Thus the precise CI state is:
+
+```text
+CI_BOUND       = YES
+CI_TRIGGERED   = YES
+CI_COMPLETED   = YES
+CI_PASS        = NO
+TARGETED_TESTS = NOT GREEN
+```
+
+The advisory Boundary Check also reported non-zero findings, but that step is currently classified advisory and did not cause the workflow failure. Those findings are still evidence to review; advisory does not mean resolved.
+
+Do not move deterministic failures into quarantine, weaken assertions or delete tests solely to obtain a green badge. First classify each failure as stale expectation, fixture/mock drift, or production regression.
+
+## 14. CI tier semantics remain valid
+
+`tests/CI_TEST_TIERS.md` separates:
 
 ```text
 Tier A — Repository Integrity (BLOCKING)
@@ -319,79 +317,68 @@ Tier B — Hermetic Product/Contract Regression (BLOCKING)
 Tier C — Production / Live / Environment Gate
 ```
 
-Therefore a green GitHub workflow cannot be used as a substitute for Tier C/live evidence or full release readiness.
+Even when Tier A/B eventually become green, that will not substitute for Tier C/live evidence or full release readiness.
 
-## 13. Third-party / OSS findings
+## 15. Third-party / license findings
 
-`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md` exists and correctly uses `VERIFY_BEFORE_RELEASE` instead of inventing unknown license claims.
+`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md` uses `VERIFY_BEFORE_RELEASE` instead of inventing package-license claims and requires reconciliation before release.
 
-The register explicitly requires license reconciliation before release and treats unknown licensing as a blocker.
+At the original audit baseline, repository metadata was `Other / NOASSERTION` and no canonical root `LICENSE` was found. A root proprietary `LICENSE` notice was then added at commit `e50e077...`, explicitly preserving third-party components under their own licenses.
 
-This audit preserves that rule.
+Any future change from proprietary to an open/source-available license remains an explicit legal/governance decision.
 
-## 14. Repository license finding and action
+## 16. Current acceptance state
 
-At baseline:
-
-```text
-GitHub license metadata = Other / NOASSERTION
-canonical root LICENSE  = not found by direct lookup
-repository visibility   = private
-package.json private     = true
-```
-
-Because no existing OSI license was proven, this update does **not** invent an MIT/Apache/GPL grant.
-
-A root proprietary `LICENSE` notice is added to define a conservative repository-level source-code boundary while explicitly excluding third-party components from that ownership grant.
-
-Any future change from proprietary to an open/source-available license is a legal/governance decision and must be explicit.
-
-## 15. Current acceptance state after this audit
-
-Documentation/source audit can prove:
+Proven by current source/audit evidence:
 
 ```text
-SOURCE_AUDITED                   = YES
-REMOTE_BASELINE_IDENTIFIED       = YES
-RUNTIME_ENTRYPOINT_IDENTIFIED    = YES
-DEPENDENCY_MANIFEST_AUDITED      = YES
-CI_TIER_MODEL_AUDITED            = YES
-EVIDENCE_OWNER_AUDITED           = YES
-XHS_RUNTIME_AUDITED              = YES
-EXPERIENCE_RUNTIME_AUDITED       = YES
-CONTENT_ENGINE_AUDITED           = YES
-LICENSE_BOUNDARY_DOCUMENTED      = YES after LICENSE commit
+SOURCE_AUDITED                    = YES
+REMOTE_BASELINE_IDENTIFIED        = YES
+RUNTIME_ENTRYPOINT_IDENTIFIED     = YES
+DEPENDENCY_MANIFEST_AUDITED       = YES
+CI_BOUND                          = YES
+CI_LAST_OBSERVED_PASS             = NO (#148 failure)
+EVIDENCE_OWNER_AUDITED            = YES
+XHS_RUNTIME_AUDITED               = YES
+EXPERIENCE_RUNTIME_AUDITED        = YES
+CONTENT_ENGINE_AUDITED            = YES
+LICENSE_BOUNDARY_DOCUMENTED       = YES
 ```
 
-This audit does **not** prove:
+Not proven / currently blocked:
 
 ```text
-ADAPTER_IMPLEMENTED              = NO CLAIM
-ALL_TARGETED_TESTS_PASS          = NO CLAIM
-8201_LIVE_HEALTHY                = NO CLAIM
-PLAYWRIGHT_LIVE_PASS             = NO CLAIM
-P0_P1_ZERO                       = NO CLAIM
-LIVE_VERIFIED                    = NO
-RELEASED                         = NO CLAIM
-OPERATING                        = NO CLAIM
+ADAPTER_IMPLEMENTED               = NOT VERIFIED
+ALL_TARGETED_TESTS_PASS           = NO
+8201_LIVE_HEALTHY                 = NOT VERIFIED by this update
+PLAYWRIGHT_LIVE_PASS              = NOT VERIFIED
+P0_P1_ZERO                        = NOT VERIFIED
+LIVE_VERIFIED                     = NO
+RELEASED                          = NO CLAIM
+OPERATING                         = NO CLAIM
 ```
 
-## 16. Required next engineering sequence
+## 17. Required next engineering sequence
 
-After the user's current local work is reconciled with the documentation commits now added to remote `main`:
+When Codex quota is restored:
 
 ```text
-preserve local 005e827... work
-→ fetch origin/main
-→ reconcile without destructive reset/clean
-→ keep intended requirements.txt feedparser delta
-→ inspect current diff
-→ implement/close zero-auth adapters against existing Evidence/Canonical contracts
-→ targeted tests
-→ affected regression
-→ 8201 runtime acceptance
-→ Experience/API live verification
-→ release gate decision
+preserve local unpushed work
+→ fetch current origin/main
+→ reconcile local main without reset/clean
+→ preserve/verify intended feedparser manifest change
+→ reproduce and classify CI #148 failures
+→ fix legitimate regressions / stale fixtures without weakening gates
+→ run Atom functional fixture
+→ smoke-test installed Codex tools/plugins
+→ implement/converge Public HTTP / RSS / Atom / Sitemap / Browser adapters
+→ enforce Adapter → Evidence → Canonical
+→ targeted + affected regression
+→ 8201 health
+→ API verification
+→ Playwright E2E
+→ CI
+→ release gates
 ```
 
-Do not reopen unrelated historical audits unless current executable evidence proves a regression.
+Do not reopen unrelated historical audits unless current executable evidence requires it.
