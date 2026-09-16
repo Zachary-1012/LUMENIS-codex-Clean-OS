@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""B站/微博/知乎主链路 adapter 单元测试（全 mock，不实际联网）"""
+"""B站/微博/知乎主链路 adapter 单元测试（全 mock，不实际联网）。"""
 import sys, os
-import pytest
 from unittest.mock import MagicMock, patch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,12 +35,21 @@ def _make_v4_result(success=True, notes=None, error="", raw_count=0, duration=0.
                          raw_count=raw_count, duration_seconds=duration)
 
 
+def _search_backend(result):
+    """构造只声明 search 能力的 backend，避免 MagicMock 虚构 breaker/safe_collect。"""
+    backend = MagicMock()
+    backend.breaker = None
+    backend.safe_collect = None
+    backend.search.return_value = result
+    return backend
+
+
 class TestBilibiliMainAdapter:
 
     @patch("platform_adapters.bilibili.BilibiliAdapter._load_backend")
     def test_search_success(self, mock_load):
-        mock_load.return_value.search.return_value = _make_v4_result(
-            success=True, notes=[_make_v4_note()], raw_count=1)
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=True, notes=[_make_v4_note()], raw_count=1))
         from platform_adapters.bilibili import BilibiliAdapter
         ad = BilibiliAdapter()
         r = ad.search("测试", max_results=10)
@@ -51,23 +59,21 @@ class TestBilibiliMainAdapter:
 
     @patch("platform_adapters.bilibili.BilibiliAdapter._load_backend")
     def test_search_session_expired(self, mock_load):
-        mock_load.return_value.search.return_value = _make_v4_result(
-            success=False, error="登录态失效")
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=False, error="登录态失效"))
         from platform_adapters.bilibili import BilibiliAdapter
-        ad = BilibiliAdapter()
-        assert ad.search("x").status == CollectionStatus.SESSION_EXPIRED
+        assert BilibiliAdapter().search("x").status == CollectionStatus.SESSION_EXPIRED
 
     @patch("platform_adapters.bilibili.BilibiliAdapter._load_backend")
     def test_search_risk_warning(self, mock_load):
-        mock_load.return_value.search.return_value = _make_v4_result(
-            success=False, error="风控验证 wbi 签名失败")
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=False, error="风控验证 wbi 签名失败"))
         from platform_adapters.bilibili import BilibiliAdapter
-        ad = BilibiliAdapter()
-        assert ad.search("x").status == CollectionStatus.RISK_WARNING
+        assert BilibiliAdapter().search("x").status == CollectionStatus.RISK_WARNING
 
-    def test_detail_requires_session_when_cookie_missing(self):
+    def test_detail_without_configured_session_is_not_configured(self):
         from platform_adapters.bilibili import BilibiliAdapter
-        assert BilibiliAdapter().detail("1").status == CollectionStatus.SESSION_EXPIRED
+        assert BilibiliAdapter().detail("1").status == CollectionStatus.NOT_CONFIGURED
 
     def test_registry(self):
         from platform_adapters import get_adapter
@@ -79,30 +85,29 @@ class TestWeiboMainAdapter:
 
     @patch("platform_adapters.weibo.WeiboAdapter._load_backend")
     def test_search_success(self, mock_load):
-        mock_load.return_value.search.return_value = _make_v4_result(
-            success=True, notes=[_make_v4_note()], raw_count=1)
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=True, notes=[_make_v4_note()], raw_count=1))
         from platform_adapters.weibo import WeiboAdapter
-        ad = WeiboAdapter()
-        r = ad.search("测试")
+        r = WeiboAdapter().search("测试")
         assert r.status == CollectionStatus.SUCCESS
         assert len(r.items) == 1
 
     @patch("platform_adapters.weibo.WeiboAdapter._load_backend")
     def test_search_no_new_data(self, mock_load):
-        mock_load.return_value.search.return_value = _make_v4_result(success=True, notes=[])
+        mock_load.return_value = _search_backend(_make_v4_result(success=True, notes=[]))
         from platform_adapters.weibo import WeiboAdapter
         assert WeiboAdapter().search("x").status == CollectionStatus.NO_NEW_DATA
 
     @patch("platform_adapters.weibo.WeiboAdapter._load_backend")
     def test_search_collect_error(self, mock_load):
-        mock_load.return_value.search.return_value = _make_v4_result(
-            success=False, error="网络超时")
+        mock_load.return_value = _search_backend(_make_v4_result(
+            success=False, error="网络超时"))
         from platform_adapters.weibo import WeiboAdapter
         assert WeiboAdapter().search("x").status == CollectionStatus.COLLECT_ERROR
 
-    def test_comments_requires_session_when_cookie_missing(self):
+    def test_comments_without_configured_session_is_not_configured(self):
         from platform_adapters.weibo import WeiboAdapter
-        assert WeiboAdapter().comments("1").status == CollectionStatus.SESSION_EXPIRED
+        assert WeiboAdapter().comments("1").status == CollectionStatus.NOT_CONFIGURED
 
     def test_registry(self):
         from platform_adapters import get_adapter
