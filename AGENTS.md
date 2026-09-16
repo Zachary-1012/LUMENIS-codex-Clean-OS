@@ -1,6 +1,6 @@
 # AGENTS.md — 序境 / LUMENIS Production Execution Router
 
-> Purpose: compact model-neutral routing and safety rules for coding agents.
+> Purpose: model-neutral routing, evidence, safety and completion rules for coding agents.  
 > This file is not a second README, architecture book, handoff log, or proof of runtime state.
 
 ## 1. Authority
@@ -18,23 +18,27 @@ Current Production Source
 > Chat History
 ```
 
-Never use old chat, old README text, old commit messages, static prototypes or handoff claims to override current executable truth.
+Never use old chat, old commit messages, stale README text, static prototypes or handoff claims to override executable truth.
 
-Documentation merged into `main` means the rule/plan exists; it does not mean the production capability is implemented.
+Documentation merged into `main` proves only that the rule/document exists. It does not prove the production capability is implemented, tested, live-verified or released.
 
-## 2. Session start
+## 2. Canonical workspace and mainline
 
-### Current workstation
-
-On the current Windows production-development machine, the one canonical local workspace is:
+Current Windows workstation entrypoint:
 
 ```text
 D:\LUMENIS_REBUILD
 ```
 
-This path is a workstation locator, not a portable runtime requirement. On another machine, resolve the repository root with Git.
+Expected repository:
 
-For the current workstation, start from that path and verify identity before doing any engineering work:
+```text
+Zachary-1012/LUMENIS-codex-Clean-OS
+```
+
+`main` is the only writable development, integration and production-candidate branch.
+
+Start every engineering session with:
 
 ```powershell
 Set-Location D:\LUMENIS_REBUILD
@@ -42,96 +46,37 @@ git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
 git rev-parse HEAD
-git status
+git status --short --branch
 git fetch origin
 git rev-parse origin/main
 ```
 
-Expected remote:
+Preserve unknown/uncommitted/unpushed work until classified. Never reset, clean or overwrite valid local work merely to make the tree look clean.
+
+### Local-to-main truth gate
+
+Always distinguish:
 
 ```text
-Zachary-1012/LUMENIS-codex-Clean-OS
-```
-
-Expected writable branch:
-
-```text
-main
-```
-
-Confirm local repository identity. Preserve unknown/uncommitted work until classified. Never reset/discard it merely to obtain a clean tree.
-
-### Local-to-main sync gate
-
-The current local workspace may contain valid production/test fixes newer than the remote tree. Before starting new product work, compare:
-
-```text
-local main HEAD + working tree + unpushed commits
-vs
+local main HEAD
+local working tree
+local unpushed commits
 origin/main
 ```
 
-If valid local work is ahead:
+Do not claim local-only work exists on GitHub. If local valid work is ahead, preserve it, integrate the newest `origin/main` without destructive overwrite, run proportional regression, then commit/push coherently.
 
-```text
-preserve local work
-→ fetch latest origin/main
-→ resolve semantic conflicts on local main
-→ targeted regression
-→ required full regression at the real convergence gate
-→ coherent commit(s) on main
-→ push origin main
-```
+### Single-mainline hard rules
 
-Do not overwrite verified local fixes with the remote tree. Do not claim local-only code is already on GitHub.
-
-Current point-in-time takeover evidence for this workstation is:
-
-```text
-00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md
-```
-
-Read it only when the current production-convergence session needs its unresolved facts; do not treat historical handoffs as active truth.
-
-### SINGLE-MAINLINE HARD RULE
-
-`main` is the **only writable development, integration and production-candidate branch**.
-
-The normal engineering path is exactly:
-
-```text
-D:\LUMENIS_REBUILD
-→ local main
-→ edit / implement
-→ targeted test
-→ affected regression
-→ coherent commit on main
-→ push origin main
-→ main CI
-→ runtime / browser E2E when required
-→ next gate
-```
-
-Hard prohibitions:
-
-- do not create task branches;
-- do not create feature branches;
-- do not create `codex/*` branches;
-- do not create `production/*` branches;
-- do not create `integration/*` branches;
-- do not create `handoff/*` branches;
-- do not create `research/*` branches;
-- do not open a routine PR as an intermediate development path;
-- do not move validated work away from `main` for isolation;
-- do not continue development on an existing historical side branch.
-
-Existing historical remote branches are read-only evidence only. If an old branch contains unique valid implementation/test/evidence, compare it once, absorb that unique valid work into `main`, and continue only on `main`. Do not recreate or revive the side branch.
-
-Do not force-push `main`. Do not use branch names or old branch HEADs as proof that a capability is current.
+- do not create routine task/feature/codex/production/integration/handoff/research branches;
+- do not open routine PRs as an intermediate development path;
+- do not force-push `main`;
+- historical side branches are read-only evidence only;
+- if an old branch has unique valid work, compare it once, absorb only the unique valid implementation into `main`, then continue on `main`.
 
 ## 3. Execution mode
 
-Use model-neutral high-efficiency production execution:
+Use:
 
 ```text
 Progressive Disclosure
@@ -144,69 +89,33 @@ Persistent Execution
 Explicit Completion Criteria
 ```
 
-Do not begin by rediscovering or summarizing the entire repository.
+Do not begin every task with a full-repository rediscovery. Load only the owners, callers, contracts, tests and runtime paths required by the active gate.
 
-Typical loop:
+Default loop:
 
 ```text
 ACTIVE GATE / TICKET
-→ inspect exact owner / callers / contracts / tests
+→ inspect exact source owner / caller / contract / tests
+→ verify existing capability before adding dependencies
+→ reuse / adapt / bind
 → implement on main
 → scoped test
-→ neighbour regression
+→ affected regression
 → runtime / E2E when required
 → evidence
-→ coherent commit on main
-→ push origin main
+→ coherent commit
+→ push origin main when safe
 → main CI when required
-→ update state/registry if required
 → next dependent gate
 ```
 
-Do not stop after the first code edit if implementation, validation and repair are still safely executable.
-
-## 4. Progressive document routing
-
-Read only what the active change needs.
-
-Always-use entrypoints:
-
-- human/product orientation: `README.md`
-- this router: `AGENTS.md`
-
-Conditional canonical docs:
-
-- current workstation takeover: `00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`
-- human maintainability / feature closure / E2E / release: `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`
-- Collector + Shared Capability closed loop: `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`
-- third-party/open-source dependency/replacement work: `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`
-- historical branch-consolidation evidence: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md` when present
-- historical evidence: `99-ARCHIVE/` only when migration/history is relevant
-
-Task routing examples:
-
-```text
-DB/schema/migration → DB owner + affected contracts/tests + DB governance/playbook
-Collector → Collector runtime/adapters + closed-loop canonical doc + relevant tests
-Permission/write → Permission owner + action/approval contract + affected route/service/tests
-Frontend/Experience → relevant current screen/runtime contract + backend binding + E2E
-Startup/deployment → launcher/supervisor/health/config + relevant operations tests
-Third-party change → actual manifests/imports + component register + license/release implications
-Historical branch recovery → compare old ref against main once; absorb only unique valid work into main; never resume side-branch development
-Ordinary bug → affected source/caller/test only
-```
-
-Do not reread unchanged large documents in the same session.
-
-## 5. Product ownership
-
-LUMENIS has four product domains:
+## 4. Product ownership
 
 ```text
 CTH             Subject-first Commerce Operations
 BMP             Brand / Market-first
 Shared Capability
-SYSTEM          Collector / Runtime / AI Gateway / DB / Security / Permission / Settings / Recovery / Observability
+SYSTEM          Collector / Runtime / Scheduler / AI Gateway / DB / Security / Permission / Settings / Recovery / Observability
 ```
 
 AI enhances the product; AI is not Production Truth.
@@ -240,9 +149,9 @@ Source
 → Learning Asset
 ```
 
-## 6. No duplicate truth
+## 5. No duplicate truth
 
-Before creating a model/table/service/registry/runtime, dependency-trace the existing owner.
+Before creating a new model/table/service/registry/runtime, dependency-trace the existing owner.
 
 Prefer:
 
@@ -254,8 +163,8 @@ Do not create a second:
 
 - Evidence truth
 - Canonical Data truth
-- Metric engine/truth
-- Permission system/truth
+- Metric truth
+- Permission truth
 - Subject Context
 - DB truth
 - Runtime truth
@@ -265,7 +174,143 @@ Do not create a second:
 
 A missing adapter does not justify a parallel platform.
 
-## 7. Data truth and DB safety
+## 6. Current remote source facts that constrain implementation
+
+The 2026-09-16 source audit was performed against pre-documentation-update remote `main` SHA:
+
+```text
+147e3bd331b22236930ae29112a67c613a148f67
+```
+
+See:
+
+```text
+08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md
+```
+
+Key verified source facts:
+
+- production launcher is `scripts/start_production.ps1`;
+- core application target is port `8201` with `/healthz`;
+- Resident Browser infrastructure uses the existing 9222/9223 dual-identity model;
+- `app.py` is the Flask application entry and registers existing runtime/API blueprints;
+- Experience V2 is mounted through `experience_runtime.py` at `/experience/` and `/api/experience/*`;
+- current source explicitly lists `CTH-01` and `AI-01` as bound Experience screens; prototype existence is not backend-binding proof;
+- `evidence_chain.py` owns the current `zbc_evidence` / `zbc_canonical_data` lineage model;
+- `xhs_cookie_bridge.py` contains current XHS/RedNote collection safety/runtime logic;
+- `content_generation.py` contains the current research → generation → Evidence → Evaluation → human-feedback flow;
+- root Node tooling is Playwright-oriented and is not a React/Next/Vite production application manifest;
+- clean CI and Production/Live acceptance are separate tiers.
+
+If current source later differs, current source wins over this point-in-time list.
+
+## 7. Codex local development tools
+
+The following may be used by Codex when installed on the workstation:
+
+```text
+Git CLI
+Playwright MCP
+Filesystem MCP
+ripgrep / rg
+fd
+jq
+sqlite3 CLI
+curl
+```
+
+Rules:
+
+- these are development/inspection/acceptance tools, not automatically LUMENIS production dependencies;
+- Filesystem MCP must be scoped to the active repository/workspace, not entire disks unless explicitly required;
+- Playwright MCP may validate UI/E2E/runtime, but it does not replace the repository's own Playwright/browser runtime contracts;
+- CLI inspection must be read-only against protected production data unless the active task explicitly requires and safely authorizes a write.
+
+## 8. Zero-auth acquisition capability program
+
+Canonical acceptance matrix:
+
+```text
+00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md
+```
+
+Remote source already provides these foundations through manifests/source:
+
+```text
+requests
+httpx
+aiohttp
+BeautifulSoup4
+lxml
+Playwright
+SQLite
+APScheduler
+tenacity
+```
+
+`feedparser` was verified locally during the current acceptance session, but the audited remote baseline did not contain it in `requirements.txt`. Until that manifest change is committed/pushed, classify it as:
+
+```text
+LOCAL_VERIFIED / REMOTE_NOT_YET_IMPLEMENTED
+```
+
+Do not lie by upgrading it to remote `IMPLEMENTED` before the repository manifest actually contains it.
+
+### Approved zero-auth adapters
+
+Target adapters:
+
+```text
+PublicHttpAdapter
+RSSAdapter
+AtomAdapter
+SitemapAdapter
+BrowserAdapter
+```
+
+All adapters must converge to existing LUMENIS truth:
+
+```text
+External Source
+→ Acquisition Adapter
+→ Evidence
+→ Canonical Data / Canonical Content
+→ Function / Research
+→ Metric / Truth Table
+→ View Model
+→ UI / Report / Export
+```
+
+Forbidden shortcuts:
+
+```text
+RSS → AI directly
+Web page → UI directly
+Browser result → parallel DB truth
+Sitemap → new independent content store
+```
+
+### Adapter completion gate
+
+For every adapter, prove as applicable:
+
+```text
+source fixture / real public source
+→ fetch/parse
+→ provenance
+→ Evidence
+→ canonicalization
+→ idempotence / source identity semantics
+→ failure isolation
+→ API binding
+→ UI binding where user-visible
+→ targeted tests
+→ runtime/E2E
+```
+
+No API key/OAuth/cloud dependency may be added to this zero-auth program without a separate architecture and legal/commercial decision.
+
+## 9. Data truth and DB safety
 
 Never conflate:
 
@@ -282,23 +327,60 @@ BLOCKED
 PENDING / SCHEDULED
 ```
 
-Forbidden: `missing → 0`, `UNKNOWN → healthy`, API failure → business success.
+Forbidden:
 
-Tests/staging must use explicit isolated/disposable DBs and prove the protected production DB is unchanged when the task touches persistence.
+```text
+missing → 0
+UNKNOWN → healthy
+API failure → business success
+excluded test → PASS
+```
 
-Do not delete, rewrite, migrate or repair real production data without the required safety evidence/approval.
+Tests/staging must use explicit isolated/disposable DBs and prove the protected production DB is unchanged when persistence is touched.
 
-## 8. Permission and external effects
+Do not delete, rewrite, migrate or repair real production data without required evidence and approval.
 
-Consequential writes must use the real permission/approval/effect boundary. Denied or pending actions must not create forbidden side effects.
+## 10. Evidence and lineage
 
-Representative policy states should remain distinguishable, including denied, pending approval, granted and permanent deny where the current contract supports them.
+Evidence is provenance-bearing source truth and must not be overwritten by analysis output.
+
+When touching XHS/RedNote or any new acquisition path:
+
+- primary ingestion must not be broken by a non-critical Evidence side-write failure unless the canonical contract explicitly changes;
+- preserve source identity, source URL, capture time, provider, domain/product context and trace metadata where available;
+- do not collapse distinct source provenance merely because normalized content text matches;
+- AI analysis and human correction/final decision must remain distinguishable;
+- historical records must not be silently rewritten by new rules.
+
+If local code contains a newer lineage convergence commit than remote `main`, preserve and reconcile it before new work; do not reimplement it from old remote code.
+
+## 11. Permission and external effects
+
+Consequential writes must pass the real permission/approval/effect boundary.
+
+Denied or pending actions must not create forbidden side effects.
 
 Do not fake write success to unblock UI.
 
-## 9. Collector / Shared Capability closed-loop hard rules
+For publisher-like behavior:
 
-Canonical owner: `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`.
+```text
+Permission
+→ Approval
+→ Effect Fence
+→ legitimate integration
+→ Audit / Evidence
+```
+
+Logged-in social collection remains read-only unless a separately approved Publisher capability exists.
+
+## 12. Collector / Shared Capability closed loop
+
+Canonical owner:
+
+```text
+00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md
+```
 
 Required direction:
 
@@ -317,62 +399,21 @@ SYSTEM Collector
 
 Hard constraints:
 
-- Collector is SYSTEM-owned; CTH/BMP/Shared may request collection but do not own parallel runtimes.
-- Upload / Import / API / Collector converge into the same Source/Evidence/Canonical/Provenance truth.
-- `MetricSnapshot` is append-only; do not overwrite prior observations.
-- future T+ performance stays pending/scheduled until real time/data exists.
-- AI may propose PatternCandidate/PromotionProposal but may not autonomously execute `Pattern → ADOPT`.
-- Application Trace is required for Research → Creation → Evaluation closure.
-- Fact Wall must fail honestly when factual Evidence/Brief support is absent.
-- logged-in social Collector behavior is read-only.
-- future Publisher is a separate capability with Permission → Approval → Effect Fence → legitimate integration → Audit/Evidence.
+- Collector is SYSTEM-owned;
+- CTH/BMP/Shared may request collection but do not own parallel runtimes;
+- Upload / Import / API / Collector converge into the same Source/Evidence/Canonical/Provenance truth;
+- `MetricSnapshot` is append-only;
+- future T+ performance stays pending/scheduled until real time/data exists;
+- AI may propose PatternCandidate/PromotionProposal but may not autonomously execute `Pattern → ADOPT`;
+- Application Trace is required for Research → Creation → Evaluation closure;
+- Fact Wall must fail honestly when factual Evidence/Brief support is absent;
 - `RELEASED != OPERATING`.
 
-First real acceptance dataset remains the configured 60-episode 凉子访谈录 cohort. Do not hardcode its 20/20/20 split into universal research logic.
-
-## 10. Continuous production DAG
-
-Follow the currently approved dependency order unless current source proves a gate is already satisfied or a dependency has changed:
-
-```text
-G0  Repository Truth Convergence
-G1  DB / Safety Foundation
-G2  Source + Evidence Unification
-G3  Collector Runtime
-G4  Canonical Content Intelligence
-G5  Research Engine
-G6  Learning Asset Engine
-G7  Write / Permission / Approval Closure
-G8  Content Studio Production Binding
-G9  Application Trace
-G10 Performance Collector
-G11 Evaluation → Pattern Validation
-G12 Learning Version Update
-G13 Shared + SYSTEM UI Binding
-G14 凉子访谈录 60期真实 Acceptance Dataset
-G15 Full Regression / Security / Recovery / E2E
-G16 Release Gates
-```
-
-Do not redo a gate only because an old handoff says it exists. Verify the relevant current source/runtime/test evidence and continue.
-
-## 11. Human engineering quality
-
-When touching production code, leave it easier for another engineer to understand without changing behavior gratuitously.
-
-Use `00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md` for naming, ownership, dependency direction, error semantics, configuration, feature closure and release rules.
-
-Do not mass-rename/move code by filename. Before restructuring, identify caller, owner, data read/write, runtime path and tests.
-
-Do not add ambiguous production names such as `new_final`, `utils2`, `temp_fix`, `copy`, or `misc`.
-
-Do not delete dead/duplicate-looking code until imports, registries, dynamic loading, routes, scripts, tests and runtime paths prove it unused.
-
-## 12. User-visible feature completion
+## 13. Experience / user-visible completion
 
 A page, route or test existing is not completion.
 
-For important user-operable features, prove as applicable:
+For an important user-operable feature prove, as applicable:
 
 ```text
 UI Entry
@@ -383,15 +424,15 @@ UI Entry
 → Real Result
 → Evidence / Trace
 → Honest Error State
-→ Test
+→ Automated Test
 → E2E
 ```
 
-Use the Feature Acceptance Matrix contract in the engineering standard.
-
 No fake values, fake 200s, `undefined`, `NaN`, `[object Object]`, or silent missing→0 transformations in production acceptance.
 
-## 13. Testing policy
+Do not treat prototype-only screens as production-bound screens.
+
+## 14. Testing policy
 
 Default progression:
 
@@ -404,33 +445,37 @@ fast/static
 → full regression at convergence/release points
 ```
 
-Do not run thousands of unrelated tests after every leaf edit.
+Do not burn quota by running thousands of unrelated tests after every leaf edit.
 
-Widen testing when shared primitives, persistence, permission, domain contracts or runtime infrastructure change.
+Widen testing when shared primitives, persistence, permission, Evidence, Canonical contracts or runtime infrastructure change.
 
-Never delete, skip or weaken a legitimate test simply to obtain PASS. Classify failures before changing production code.
+Never delete, skip or weaken a legitimate test merely to obtain PASS.
 
-## 14. CI truthfulness
-
-CI checks must be semantically classified as `BLOCKING`, `ADVISORY` or `INFORMATIONAL`.
-
-Syntax errors, required test infrastructure missing/not executing, critical DB/data-integrity failures, critical permission failures, critical E2E failures and P0 security failures must not be hidden by `continue-on-error` or swallowed exceptions.
-
-A green workflow is not sufficient if blocking work did not actually execute successfully.
-
-Environment/Production-Live tests may be separated from secret-free clean-checkout CI only when their dependency is explicit. `excluded != PASS`.
-
-## 15. Startup / runtime
-
-On the current Windows workstation, start from:
+Test-tier truth is defined in:
 
 ```text
-D:\LUMENIS_REBUILD
+tests/CI_TEST_TIERS.md
 ```
 
-Use the existing production launcher/supervisor path unless current evidence proves it must change. Do not create a second launcher as a shortcut.
+Interpretation:
 
-Canonical command:
+```text
+Tier A/B green = clean repository/hermetic contract evidence
+Tier C green   = environment/live acceptance evidence
+Tier A/B green alone != PRODUCTION_READY
+```
+
+## 15. CI truthfulness
+
+CI checks must remain semantically classified as `BLOCKING`, `ADVISORY` or `INFORMATIONAL`.
+
+Syntax errors, missing required test execution, critical DB/data-integrity failures, permission failures, required E2E failures and P0 security failures must not be hidden by `continue-on-error` or swallowed exceptions.
+
+A green workflow is insufficient if blocking work did not actually execute.
+
+## 16. Startup / runtime
+
+Canonical Windows command:
 
 ```powershell
 Set-Location D:\LUMENIS_REBUILD
@@ -443,71 +488,80 @@ Expected core health endpoint:
 http://127.0.0.1:8201/healthz
 ```
 
-Do not hardcode this workstation path into portable production code; the launcher resolves its own repository root.
-
-Startup acceptance requires more than a live process:
+Startup acceptance:
 
 ```text
 dependencies
-→ config
-→ app boot
-→ supervisor/runtime
-→ port
+→ configuration
+→ launcher
+→ application boot
+→ supervisor stability
+→ port bind
 → health
 → required runtime initialization
-→ critical API/Experience
+→ critical API / Experience
 ```
 
-Report external browser/login/source dependencies separately from core application health.
+External browser/login/source health must be reported separately from core application health.
 
-After the final regression is green and local work is safely on `main`, startup qualification is the next mandatory gate; do not continue repository-cleanup work instead.
+## 17. Third-party / OSS
 
-## 16. Third-party / OSS
+Canonical register:
 
-Before adding a third party, inspect actual current dependencies and prove a real capability gap.
+```text
+00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md
+```
 
-Canonical register: `00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`.
+Before adding a third party:
 
-Prefer:
+1. inspect current manifests/import/runtime usage;
+2. prove a real capability gap;
+3. verify license from authoritative project/package sources;
+4. record attribution/notice obligations;
+5. keep the dependency behind a bounded adapter where practical;
+6. record replacement direction.
+
+Preferred shape:
 
 ```text
 LUMENIS Contract → Adapter → Third-party implementation
 ```
 
-Third parties do not become LUMENIS Production Truth owners. Track license/attribution, current usage, integration boundary and replacement plan.
+Unknown licensing is a release blocker.
 
-OpenTelemetry, Langfuse OSS and Temporal are evaluation candidates only unless current source/manifests prove adoption. Do not install them merely because they are named in governance.
+## 18. License boundary
 
-## 17. AI/security boundaries
+Repository-level source licensing is defined by root `LICENSE`.
+
+Third-party dependencies and vendored components retain their own licenses. Never rewrite or imply ownership of third-party licenses.
+
+If the repository license changes, treat it as a legal/governance change, not a routine code refactor.
+
+## 19. Security boundaries
 
 Never expose or commit:
 
-- system/developer prompts or private reasoning
-- credentials/API keys
-- cookies/session material
-- browser/CDP secrets
-- real production DB files
-- privileged hidden tool details
+- credentials/API keys;
+- cookies/session material;
+- browser/CDP secrets;
+- real production DB files;
+- system/developer prompts or private reasoning;
+- privileged hidden tool details;
+- unauthorized external-effect credentials.
 
-Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal contracts, authentication, Subject Context, domain, permission and provenance/policy boundaries. Do not expose raw DB/Collector session internals.
+Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal contracts, authentication where applicable, Subject Context, domain, permission and provenance/policy boundaries. Do not expose raw DB/Collector session internals.
 
-## 18. Git discipline
+## 20. Git discipline
 
-- `main` is the only writable development, integration and production-candidate branch.
-- current workstation root is `D:\LUMENIS_REBUILD`; verify it before changing code.
-- normal engineering work happens directly on local `main` and is pushed to `origin/main`.
-- do not create task/feature/codex/production/integration/handoff/research branches.
-- do not open routine PRs as an intermediate engineering path.
-- preserve unknown/uncommitted local work before synchronizing.
-- if historical side branches contain unique valid work, absorb it into `main` once and never continue development there.
-- use coherent-purpose commits.
-- do not force-push `main`.
-- do not commit production DB, secrets, cookies, sessions, caches or generated junk.
-- do not claim an unpushed/local commit exists remotely.
+- `main` is the only writable development, integration and production-candidate branch;
+- preserve unknown/uncommitted local work before synchronizing;
+- use coherent-purpose commits;
+- do not force-push `main`;
+- do not commit production DB, secrets, cookies, sessions, caches or generated junk;
+- do not claim an unpushed/local commit exists remotely;
+- after remote documentation changes, a local branch that was previously ahead must `fetch` and reconcile the new remote commits before pushing.
 
-## 19. Completion semantics
-
-Use states precisely:
+## 21. Completion semantics
 
 ```text
 IMPLEMENTED = code exists
@@ -517,45 +571,17 @@ RELEASED    = required production/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/scheduled evidence
 ```
 
-`PRODUCTION_READY = YES` only when all blocking production gates are evidenced. Otherwise report `NO` with real blockers.
+Use `LIVE_VERIFIED` only for actual live/runtime verification. CI, static source review and dependency installation do not qualify.
 
-Continue through implementation → validation → repair while work is safely executable. Do not stop merely to ask for approval between routine engineering steps.
-
-## 20. Legitimate stop conditions
+## 22. Legitimate stop conditions
 
 Stop for user input only when required by a real blocker such as:
 
-- required credential/source is inaccessible;
+- required credential/source inaccessible;
 - destructive production-data action needs explicit approval;
 - unresolved migration conflict creates material data risk;
 - legal/security decision cannot safely be inferred;
-- high-risk external effect requires real human approval;
-- production hosting/domain/paid resource requires user authorization.
+- high-risk external effect requires human approval;
+- production hosting/domain/paid resource requires authorization.
 
-Large code volume, long tests, context size or many files are not themselves blockers.
-
-## 21. Final reporting
-
-Keep progress compact. Final reports should state evidence, not essays:
-
-```text
-Local root / Branch(main) / Start HEAD / Final main HEAD
-Local-to-main sync status
-Implemented / commits pushed to main
-Canonical DB/config
-Tests actually run
-Startup / health
-Local product URL + browser visibility/usability
-Domain + critical E2E
-Permission / Evidence / Trace
-Main CI
-Security / Recovery / Rollback
-Third-party changes
-Public deployment / URL when authorized and executed
-Remaining blockers
-RELEASED = YES/NO
-OPERATING = YES/NO
-PRODUCTION_READY = YES/NO
-```
-
-Do not use documentation completion, API 200s, test counts or commit counts as substitutes for real product closure.
+Large code volume, many files, long tests or context size are not themselves blockers.
