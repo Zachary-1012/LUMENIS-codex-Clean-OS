@@ -1,9 +1,9 @@
 {
-  "protocol_fingerprint_sha256": "a5e8d6e16bb99d1b5b0985d9fb406d53c853097315699c3a99ecfa914004a9c7",
+  "protocol_fingerprint_sha256": "68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f",
   "contract_id": "lumenis-ggi-cross-product",
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "status": "ACTIVE",
-  "effective_date": "2026-09-16",
+  "effective_date": "2026-09-17",
   "canonical_registry": {
     "Zachary-1012/LUMENIS-codex-Clean-OS": {
       "product": "序境 / LUMENIS",
@@ -11,12 +11,12 @@
       "truth_owner": "Production Truth"
     },
     "Zachary-1012/Zachary-OS-AI": {
-      "product": "LUMENIS Intelligence / OSAI",
+      "product": "序蕴 / LUMENIS Intelligence",
       "role": "Shared Intelligence Capability",
       "truth_owner": "Shared Intelligence Assets"
     },
     "Zachary-1012/global-growth-intelligence": {
-      "product": "Global Growth Intelligence",
+      "product": "序衍 / LUMENIS Growth",
       "role": "Independent Research & Growth Product",
       "truth_owner": "Research / Growth Truth"
     },
