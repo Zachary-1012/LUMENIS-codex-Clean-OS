@@ -2,25 +2,29 @@
 
 > Current-state board only. Historical team/shard progress remains available in Git history and dated handoff/audit files; it must not be treated as current execution truth.  
 > Updated: 2026-09-17  
-> Remote evidence anchor: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`
+> Last runner-backed green baseline: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`  
+> Exact current remote HEAD: **always fetch/read `origin/main`; do not trust a hardcoded SHA in this board.**
 
-## 1. Current remote state
+## 1. Current remote state model
 
 ```text
-repository = Zachary-1012/LUMENIS-codex-Clean-OS
-branch     = main
-HEAD       = 5a14ff25b51303efb776126d0f6a3a5a936ec73f
-phase      = PRODUCTION CONVERGENCE
+repository              = Zachary-1012/LUMENIS-codex-Clean-OS
+branch                  = main
+current HEAD            = git fetch + git rev-parse origin/main
+phase                   = PRODUCTION CONVERGENCE
+last runner-backed green= 5a14ff25b51303efb776126d0f6a3a5a936ec73f
 ```
 
-Current GitHub Actions at the anchor:
+Runner-backed evidence at that green baseline:
 
 ```text
 LUMENIS Product Gate        = SUCCESS
 Verify LUMENIS-GGI Contract = SUCCESS
 ```
 
-This is remote CI evidence only. It does not by itself prove workstation live health, RELEASED or OPERATING.
+Post-green documentation convergence is also on `main`. The latest Actions attempts for those docs-only commits have terminated before repository steps with `steps = null` and no job logs. Therefore current-head CI is **execution-layer unverified**, not a proven source regression and not a PASS.
+
+Do not create empty commits merely to retrigger Actions. Rerun the same HEAD when GitHub runners execute normally.
 
 ## 2. Current canonical product model
 
@@ -110,17 +114,18 @@ Use:
 
 `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`
 
-Do not start from the old 2026-09-06 team board or the 2026-09-11 takeover HEAD as if they were current.
+The dated `LUMENIS-CODEX-TAKEOVER-READ-FIRST-20260911.md` is historical/superseded. Do not start from the old 2026-09-06 team board or 2026-09-11 HEAD as current truth.
 
 ## 7. Current unverified / must be re-proven when required
 
 ```text
-8201 live workstation health = NOT VERIFIED by this documentation update
-Playwright live acceptance   = NOT VERIFIED by this documentation update
-P0/P1 release closure        = NOT RE-VERIFIED by this documentation update
-RELEASED                     = NO NEW CLAIM
-OPERATING                    = NO NEW CLAIM
-local D:\LUMENIS_REBUILD     = must be inspected/reconciled by Codex before local writes
+current fetched HEAD CI       = must receive runner-backed execution before PASS claim
+8201 live workstation health  = NOT VERIFIED by this documentation update
+Playwright live acceptance    = NOT VERIFIED by this documentation update
+P0/P1 release closure         = NOT RE-VERIFIED by this documentation update
+RELEASED                      = NO NEW CLAIM
+OPERATING                     = NO NEW CLAIM
+local D:\LUMENIS_REBUILD      = must be inspected/reconciled by Codex before local writes
 ```
 
 ## 8. Resume rule
@@ -129,7 +134,8 @@ local D:\LUMENIS_REBUILD     = must be inspected/reconciled by Codex before loca
 fetch current origin/main
 → preserve local/uncommitted/unpushed valid work
 → compare local vs remote
-→ do not redo already-merged product-gate/contract/brand convergence
+→ inspect commits after last runner-backed green baseline
+→ do not redo already-merged product-gate/contract/brand/handoff convergence
 → select the next unresolved production-acceptance gate
 → inspect exact owner/caller/contract/tests
 → reuse/adapt/bind
@@ -137,7 +143,7 @@ fetch current origin/main
 → runtime/E2E when required
 → evidence
 → coherent mainline commit/push
-→ current main CI
+→ current main CI when runner executes normally
 ```
 
 Historical progress is evidence, not an active task queue.

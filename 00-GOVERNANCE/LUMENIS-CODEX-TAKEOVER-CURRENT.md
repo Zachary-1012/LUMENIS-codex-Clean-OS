@@ -1,9 +1,11 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Verified remote anchor: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`  
-> Anchor date: 2026-09-17  
-> This file records current remote handoff truth. It does **not** upgrade source evidence into LIVE/RELEASE/OPERATING claims.
+> Last runner-backed green remote baseline: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`  
+> Updated: 2026-09-17  
+> **Do not hardcode this document's own commit as current HEAD. Codex must fetch and read `origin/main` at session start.**
+
+This file records the current handoff model and the latest verified baseline. It does **not** upgrade source evidence into LIVE/RELEASE/OPERATING claims.
 
 ## 1. Authority and read order
 
@@ -19,22 +21,36 @@ Read in this order before changing product code:
 
 Current executable source/runtime truth always outranks this handoff. Historical handoffs, chat history and screenshots never override executable truth.
 
-## 2. Current remote facts verified before this handoff
+## 2. Remote evidence lock
+
+Repository and branch:
 
 ```text
 repository = Zachary-1012/LUMENIS-codex-Clean-OS
 branch     = main
-HEAD       = 5a14ff25b51303efb776126d0f6a3a5a936ec73f
+current HEAD = READ WITH git fetch + git rev-parse origin/main
 ```
 
-The merge at this anchor contains the LUMENIS product gate, baseline repairs and the 序 ecosystem contract/brand convergence.
-
-GitHub Actions evidence at this exact HEAD:
+Last runner-backed green baseline:
 
 ```text
+HEAD = 5a14ff25b51303efb776126d0f6a3a5a936ec73f
 LUMENIS Product Gate          = SUCCESS
 Verify LUMENIS-GGI Contract   = SUCCESS
 ```
+
+That merge contains the LUMENIS product gate, baseline repairs and the 序 ecosystem contract/brand convergence.
+
+After that green baseline, documentation-only convergence for the Codex handoff/screenshot intake was fast-forwarded to `main`. GitHub Actions attempts for those documentation pushes have exhibited the same platform-level pre-step failure already observed on Command: jobs terminate in seconds with `steps = null` and no repository-step logs. Therefore:
+
+```text
+last runner-backed green source baseline = 5a14ff25...
+current origin/main                      = MUST BE FETCHED
+current-head CI                          = DO NOT INFER FROM LAST GREEN BASELINE
+pre-step Actions failure                 = PLATFORM/EXECUTION-LAYER UNVERIFIED, NOT A SOURCE TEST FAILURE
+```
+
+Do not create empty commits merely to retrigger Actions. Rerun the same commit when the runner executes normally.
 
 The active cross-product contract is `lumenis-ggi-cross-product` v1.1.0 with fingerprint:
 
@@ -144,7 +160,7 @@ RELEASED    = required production/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/scheduled evidence
 ```
 
-At this handoff anchor, the remote product/contract CI is green. This does **not** by itself prove:
+The last runner-backed green baseline proves its two GitHub workflows passed at that commit. This does **not** by itself prove the current fetched HEAD, workstation live health, release or operation.
 
 ```text
 8201 live workstation health = NOT VERIFIED by this handoff
@@ -153,7 +169,7 @@ RELEASED                     = NO NEW CLAIM
 OPERATING                    = NO NEW CLAIM
 ```
 
-Do not repeat the old CI #148 failure as current state: it belongs to the 2026-09-16 source-audit history and was followed by later repairs and a green current main Product Gate.
+Do not repeat the old CI #148 failure as current product state: it belongs to the 2026-09-16 source-audit history and was followed by later repairs and a green runner-backed baseline.
 
 ## 7. Codex resume protocol
 
@@ -175,7 +191,8 @@ Then:
 ```text
 preserve unknown/uncommitted/unpushed valid work
 → compare local HEAD vs origin/main
-→ do not repeat already-merged gate/contract/brand repairs
+→ inspect commits after the last runner-backed green baseline
+→ do not repeat already-merged gate/contract/brand/handoff repairs
 → inspect exact active owner/caller/contract/tests
 → reuse/adapt/bind before rebuild
 → scoped tests
@@ -183,7 +200,7 @@ preserve unknown/uncommitted/unpushed valid work
 → runtime/E2E when required
 → evidence
 → coherent mainline commit/push
-→ current main CI
+→ current main CI when runner is executing normally
 → next unresolved production-acceptance gate
 ```
 
