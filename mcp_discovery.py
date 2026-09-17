@@ -289,3 +289,224 @@ def discover_mcp_stdio(
                     pass
         base["trace"]["duration_ms"] = int((time.monotonic() - started) * 1000)
     return base
+
+
+def _contains_sensitive_field(value: Any) -> bool:
+    """Reject secret-shaped MCP arguments before a tool process is started."""
+    sensitive = {
+        "password", "token", "api_key", "secret", "cookie", "session",
+        "private_key", "credential", "authorization",
+    }
+    if isinstance(value, dict):
+        for key, item in value.items():
+            normalized = str(key).strip().lower().replace("-", "_")
+            if normalized in sensitive or any(
+                marker in normalized for marker in ("password", "token", "secret", "cookie")
+            ):
+                return True
+            if _contains_sensitive_field(item):
+                return True
+    elif isinstance(value, list):
+        return any(_contains_sensitive_field(item) for item in value)
+    return False
+
+
+def _redacted(value: Any, *, key: str = "", depth: int = 0) -> Any:
+    """Bound and redact server-returned fields before crossing the API boundary."""
+    normalized = key.strip().lower().replace("-", "_")
+    if normalized in {
+        "password", "token", "api_key", "secret", "cookie", "session",
+        "private_key", "credential", "authorization",
+    } or any(marker in normalized for marker in ("password", "token", "secret", "cookie")):
+        return "[redacted]"
+    if depth >= _MAX_DEPTH:
+        return "[truncated]"
+    if isinstance(value, dict):
+        return {
+            str(item_key)[:128]: _redacted(item, key=str(item_key), depth=depth + 1)
+            for item_key, item in list(value.items())[:_MAX_ITEMS]
+        }
+    if isinstance(value, list):
+        return [_redacted(item, depth=depth + 1) for item in value[:_MAX_ITEMS]]
+    if isinstance(value, str):
+        return value[:_MAX_STRING]
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    return str(value)[:_MAX_STRING]
+
+
+def call_mcp_stdio(
+    command: Sequence[str],
+    args: Sequence[str] = (),
+    *,
+    tool_name: str,
+    arguments: Optional[Dict[str, Any]] = None,
+    allow_process: bool = False,
+    allow_tool_call: bool = False,
+    human_approved: bool = False,
+    permissions_granted: Sequence[str] = (),
+    allowed_tools: Sequence[str] = (),
+    timeout: float = 10.0,
+    extra_env: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    """Call one reviewed read-only MCP tool through a bounded stdio session.
+
+    This is deliberately stricter than MCP's advisory annotations.  The
+    caller must separately provide process permission, tool-call permission,
+    human approval, a reviewed tool allowlist, and the ``read_only`` grant.
+    The result is returned as redacted staging data; this function never
+    writes the LUMENIS database, Evidence, Canonical Data, or publication
+    systems.
+    """
+    started = time.monotonic()
+    permission_values = (
+        [str(item) for item in list(permissions_granted)[:16]]
+        if isinstance(permissions_granted, (list, tuple, set)) else []
+    )
+    allowlist_values = (
+        [str(item) for item in list(allowed_tools)[:128]]
+        if isinstance(allowed_tools, (list, tuple, set)) else []
+    )
+    base: Dict[str, Any] = {
+        "ok": False,
+        "state": "BLOCKED",
+        "transport": "stdio",
+        "server_info": {},
+        "protocol_version": None,
+        "tool": tool_name if isinstance(tool_name, str) else "",
+        "tool_definition": {},
+        "result": None,
+        "security": {
+            "process_started": False,
+            "permissions_granted": permission_values,
+            "secrets_injected": False,
+            "execution": "READ_ONLY_TOOL_CALL",
+            "tool_calls": 0,
+            "production_truth_write": False,
+        },
+        "trace": {"request_count": 0, "duration_ms": 0},
+        "warnings": [],
+        "errors": [],
+    }
+
+    def blocked(message: str, state: str = "BLOCKED") -> Dict[str, Any]:
+        base["state"] = state
+        base["errors"].append(message)
+        base["trace"]["duration_ms"] = int((time.monotonic() - started) * 1000)
+        return base
+
+    try:
+        argv = _safe_argv(command, args)
+        env = _safe_env(extra_env)
+    except ValueError as exc:
+        return blocked(str(exc))
+    if not allow_process:
+        return blocked("process execution requires explicit permission")
+    if not allow_tool_call:
+        return blocked("MCP tool call requires explicit permission")
+    if not human_approved:
+        return blocked("MCP tool call requires human approval")
+    if not isinstance(permissions_granted, (list, tuple, set)):
+        return blocked("permissions_granted must be a list")
+    if not isinstance(allowed_tools, (list, tuple, set)):
+        return blocked("allowed_tools must be a list")
+    if "mcp:tools/call" not in set(permission_values):
+        return blocked("permission mcp:tools/call is required")
+    if not isinstance(tool_name, str) or not tool_name.strip() or len(tool_name) > 256:
+        return blocked("tool_name is invalid")
+    reviewed_tools = set(allowlist_values)
+    if tool_name not in reviewed_tools:
+        return blocked("tool is not in the reviewed allowlist")
+    if not isinstance(arguments, dict):
+        return blocked("MCP tool arguments must be an object")
+    if _contains_sensitive_field(arguments):
+        return blocked("MCP tool arguments contain sensitive fields")
+    if timeout <= 0 or timeout > 60:
+        return blocked("MCP call timeout must be between 0 and 60 seconds")
+
+    proc = None
+    queue: Queue = Queue()
+    try:
+        proc = subprocess.Popen(
+            argv,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            shell=False,
+            env=env,
+        )
+        base["security"]["process_started"] = True
+        reader = threading.Thread(target=_reader, args=(proc, queue), daemon=True)
+        reader.start()
+        deadline = time.monotonic() + timeout
+        request_id = 0
+
+        def request(method: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+            nonlocal request_id
+            request_id += 1
+            message: Dict[str, Any] = {"jsonrpc": "2.0", "id": request_id, "method": method}
+            if params is not None:
+                message["params"] = params
+            _send(proc, message)
+            base["trace"]["request_count"] = request_id
+            return _next_response(queue, request_id, deadline)
+
+        initialized = request(
+            "initialize",
+            {
+                "protocolVersion": "2025-11-25",
+                "capabilities": {},
+                "clientInfo": {"name": "lumenis-client", "version": "1.0.0"},
+            },
+        )
+        _send(proc, {"jsonrpc": "2.0", "method": "notifications/initialized"})
+        tools_result = request("tools/list")
+        tools = _items(tools_result, "tools")
+        selected = next((item for item in tools if item.get("name") == tool_name), None)
+        if selected is None:
+            return blocked("requested MCP tool was not advertised", "TOOL_NOT_FOUND")
+        annotations = selected.get("annotations")
+        if not isinstance(annotations, dict) or annotations.get("readOnlyHint") is not True:
+            return blocked("MCP tool lacks an explicit readOnlyHint", "READ_ONLY_GATE_BLOCKED")
+        if annotations.get("destructiveHint") is True:
+            return blocked("MCP tool is marked destructive", "READ_ONLY_GATE_BLOCKED")
+
+        base["server_info"] = _redacted(initialized.get("serverInfo", {}))
+        base["protocol_version"] = initialized.get("protocolVersion")
+        base["tool_definition"] = _redacted(selected)
+        base["security"]["tool_calls"] = 1
+        call_result = request("tools/call", {"name": tool_name, "arguments": arguments})
+        redacted_result = _redacted(call_result)
+        base["result"] = redacted_result
+        if call_result.get("isError") is True:
+            base["state"] = "TOOL_ERROR"
+            base["errors"].append("MCP tool reported an error")
+            return base
+        base["ok"] = True
+        base["state"] = "CALLED"
+    except TimeoutError as exc:
+        base["state"] = "TIMEOUT"
+        base["errors"].append(str(exc))
+    except (OSError, RuntimeError, ValueError) as exc:
+        base["state"] = "PROTOCOL_ERROR"
+        base["errors"].append(str(exc))
+    finally:
+        if proc is not None:
+            try:
+                if proc.stdin:
+                    proc.stdin.close()
+            except OSError:
+                pass
+            try:
+                proc.terminate()
+                proc.wait(timeout=1)
+            except (OSError, subprocess.TimeoutExpired):
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
+        base["trace"]["duration_ms"] = int((time.monotonic() - started) * 1000)
+    return base

@@ -19,7 +19,7 @@
 | 序境平台入口 | `v4_upgrade/adapters/registry.py:35-76` | `platforms=None` 时遍历全部已注册平台，并逐平台返回状态 |
 | 序境 Skill 预检 | `skill_package_runtime.py` | 支持来源识别、manifest 校验、精确 Git revision，以及临时目录中的远程 manifest 只读发现；当前不等于已安装/已执行 |
 | 序境 Skill 登记 | `account/skills.py:128-217` | 通过验证的本地/ZIP/SKILL.md/GitHub remote manifest 只能登记为 `disabled + not_installed`；MCP 仍阻断 |
-| MCP 当前边界 | `mcp_discovery.py`、`account/api.py`、`tests/test_skill_package_runtime.py` | stdio `tools/list` 只读发现已实现；`tools/call`、安装、启用、生产执行仍需权限审批与隔离自测，不得伪造已接入 |
+| MCP 当前边界 | `mcp_discovery.py`、`account/api.py`、`tests/test_skill_package_runtime.py` | stdio `tools/list` 只读发现与受控只读 `tools/call` 已实现；安装、启用、生产执行仍需权限审批与隔离自测，不得伪造已接入 |
 
 本文件不改变以上事实，也不把“覆盖目录”“代码存在”“构建通过”改写成“平台实时可用”。
 
@@ -171,7 +171,7 @@ SOURCE
  → AVAILABLE
 ```
 
-每一阶段必须有独立状态和证据。当前序境已落地的是来源识别、manifest/SKILL.md 校验、Git revision 解析和禁用登记；远程下载、隔离安装、MCP capability discovery、工具 schema 审查、真实执行仍不能标记为完成。
+每一阶段必须有独立状态和证据。当前序境已落地的是来源识别、manifest/SKILL.md 校验、Git revision 解析、禁用登记、MCP capability discovery 与受控只读工具调用；远程下载、隔离安装、启用和生产执行仍不能标记为完成。
 
 标准 `SKILL.md` 只描述能力与使用说明；脚本、依赖、网络和外部动作必须经过序境自己的权限与隔离门。Skill 的说明文字不能授权它访问 Cookie、数据库或外部写操作。
 
@@ -184,7 +184,7 @@ MCP Client
   → discovery（tools/list / resources/list）
   → schema / annotation review
   → allowlist + permission
-  → isolated call
+  → explicitly approved read-only call
   → output validation
   → Evidence / Trace / Evaluation
 ```
@@ -288,6 +288,7 @@ GitHub revision resolution = PASS
 当前序境与 origin/main = 0 0
 远程 Skill manifest 只读发现 = PASS（pinned revision、临时目录、无安装/无执行）
 MCP stdio tools/list 只读发现 = PASS（真实本地镜像、19 tools、0 tool calls）
+MCP stdio reviewed read-only tools/call = PASS（Zachary-Skill 本地镜像 `main@487b3d6` 的 `list_platforms`、显式 owner/permission/allowlist、1 tool call、结果脱敏、无 Production Truth 写入）
 ```
 
 仍未标记完成：
@@ -295,7 +296,7 @@ MCP stdio tools/list 只读发现 = PASS（真实本地镜像、19 tools、0 too
 ```text
 远程 Skill 隔离安装与依赖缓存
 Zachary-Skill 已安装、启用并作为外部 Skill 进入序境生产执行链
-MCP tools/call 的序境正式 Client 与受控调用闭环
+MCP 非只读工具调用、隔离安装、启用和生产执行闭环
 38 个 TrendHub 源全部实时在线
 其他平台的真实运行状态全部通过
 CTH/BMP UI 已完成该桥接后的真实页面验收

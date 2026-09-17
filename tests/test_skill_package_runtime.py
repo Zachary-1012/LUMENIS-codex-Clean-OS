@@ -298,6 +298,25 @@ def test_mcp_discovery_route_requires_owner(client):
     assert response.status_code == 401
 
 
+def test_mcp_call_route_requires_owner(client):
+    response = client.post(
+        "/api/system/account/skills/source/mcp/call",
+        json={
+            "source": "mcp+stdio://trendhub",
+            "command": ["node"],
+            "args": [],
+            "tool_name": "read_signal",
+            "arguments": {},
+            "allowed_tools": ["read_signal"],
+            "permissions_granted": ["mcp:tools/call"],
+            "confirm_process": True,
+            "confirm_tool_call": True,
+            "human_approved": True,
+        },
+    )
+    assert response.status_code == 401
+
+
 def test_validated_skill_metadata_is_registered_disabled_and_uninstalled(tmp_path, monkeypatch):
     package = tmp_path / "registered-skill"
     package.mkdir()
@@ -380,6 +399,81 @@ def test_mcp_stdio_discovery_lists_capabilities_but_never_calls_tools(tmp_path):
     assert result["resources"][0]["name"] == "evidence://fixture"
     assert result["prompts"][0]["name"] == "brief"
     assert result["security"]["tool_calls"] == 0
+
+
+def test_mcp_tool_call_requires_human_permission_before_starting_process(tmp_path):
+    import sys
+    from mcp_discovery import call_mcp_stdio
+
+    result = call_mcp_stdio(
+        [sys.executable], [str(tmp_path / "not-started.py")],
+        tool_name="read_signal", allowed_tools=("read_signal",),
+    )
+
+    assert result["state"] == "BLOCKED"
+    assert result["security"]["process_started"] is False
+    assert result["security"]["tool_calls"] == 0
+
+
+def test_mcp_tool_call_requires_reviewed_read_only_annotation(tmp_path):
+    import json
+    import sys
+    from mcp_discovery import call_mcp_stdio
+
+    script = tmp_path / "mcp_write_hint_fixture.py"
+    script.write_text(
+        "import json,sys\n"
+        "for line in sys.stdin:\n"
+        " m=json.loads(line); i=m.get('id'); method=m.get('method')\n"
+        " r={'jsonrpc':'2.0','id':i,'result':{}}\n"
+        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','serverInfo':{'name':'fixture','version':'1'}}\n"
+        " elif method=='tools/list': r['result']={'tools':[{'name':'write_signal','inputSchema':{'type':'object'}}]}\n"
+        " elif method=='tools/call': r['result']={'content':[{'type':'text','text':'should not run'}]}\n"
+        " if 'id' in m: print(json.dumps(r),flush=True)\n",
+        encoding="utf-8",
+    )
+    result = call_mcp_stdio(
+        [sys.executable], [str(script)],
+        tool_name="write_signal", arguments={},
+        allow_process=True, allow_tool_call=True, human_approved=True,
+        permissions_granted=("mcp:tools/call",), allowed_tools=("write_signal",),
+    )
+
+    assert result["ok"] is False
+    assert result["state"] == "READ_ONLY_GATE_BLOCKED"
+    assert result["security"]["tool_calls"] == 0
+
+
+def test_mcp_tool_call_returns_redacted_staging_result_without_production_write(tmp_path):
+    import json
+    import sys
+    from mcp_discovery import call_mcp_stdio
+
+    script = tmp_path / "mcp_read_fixture.py"
+    script.write_text(
+        "import json,sys\n"
+        "for line in sys.stdin:\n"
+        " m=json.loads(line); i=m.get('id'); method=m.get('method')\n"
+        " r={'jsonrpc':'2.0','id':i,'result':{}}\n"
+        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','serverInfo':{'name':'fixture','version':'1'}}\n"
+        " elif method=='tools/list': r['result']={'tools':[{'name':'read_signal','description':'read only','annotations':{'readOnlyHint':True,'destructiveHint':False},'inputSchema':{'type':'object'}}]}\n"
+        " elif method=='tools/call': r['result']={'content':[{'type':'text','text':'signal ok'}],'structuredContent':{'value':42,'token':'do-not-leak'}}\n"
+        " if 'id' in m: print(json.dumps(r),flush=True)\n",
+        encoding="utf-8",
+    )
+    result = call_mcp_stdio(
+        [sys.executable], [str(script)],
+        tool_name="read_signal", arguments={"query":"lumenis"},
+        allow_process=True, allow_tool_call=True, human_approved=True,
+        permissions_granted=("mcp:tools/call",), allowed_tools=("read_signal",),
+    )
+
+    assert result["ok"] is True
+    assert result["state"] == "CALLED"
+    assert result["security"]["tool_calls"] == 1
+    assert result["security"]["production_truth_write"] is False
+    assert result["result"]["structuredContent"]["value"] == 42
+    assert result["result"]["structuredContent"]["token"] == "[redacted]"
 
 
 def test_github_connector_is_allowlisted_read_only_and_never_exposes_token():

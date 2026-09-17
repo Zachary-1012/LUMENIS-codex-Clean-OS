@@ -42,7 +42,7 @@ from .skills import (
     register_validated_skill,
 )
 from skill_package_runtime import preview_skill_source
-from mcp_discovery import discover_mcp_stdio
+from mcp_discovery import call_mcp_stdio, discover_mcp_stdio
 from github_connector import GitHubConnector, GitHubConnectorError
 
 account_bp = Blueprint("account", __name__, url_prefix="/api/system/account")
@@ -640,6 +640,59 @@ def api_discover_mcp_source():
         args,
         allow_process=bool(data.get("confirm_process", False)),
         timeout=float(data.get("timeout", 10.0)),
+    )
+    return jsonify(result), 200 if result.get("ok") else 400
+
+
+@account_bp.route("/skills/source/mcp/call", methods=["POST"])
+@require_owner
+def api_call_mcp_tool():
+    """Call one reviewed read-only MCP tool; never persist its result."""
+    data = request.get_json(silent=True) or {}
+    source = str(data.get("source") or "")
+    from skill_package_runtime import detect_source
+    detected = detect_source(source)
+    if detected.source_type != "mcp_stdio":
+        return jsonify({
+            "ok": False, "state": "BLOCKED",
+            "error": "source must be an mcp+stdio source",
+        }), 400
+    command = data.get("command")
+    args = data.get("args", [])
+    if not isinstance(command, list) or not isinstance(args, list):
+        return jsonify({
+            "ok": False, "state": "BLOCKED",
+            "error": "command and args must be argv lists",
+        }), 400
+    tool_name = data.get("tool_name")
+    permissions = data.get("permissions_granted", [])
+    allowed_tools = data.get("allowed_tools", [])
+    arguments = data.get("arguments", {})
+    if not isinstance(tool_name, str) or not isinstance(permissions, list):
+        return jsonify({
+            "ok": False, "state": "BLOCKED",
+            "error": "tool_name and permissions_granted are required",
+        }), 400
+    if not isinstance(allowed_tools, list) or not isinstance(arguments, dict):
+        return jsonify({
+            "ok": False, "state": "BLOCKED",
+            "error": "allowed_tools must be a list and arguments must be an object",
+        }), 400
+    try:
+        timeout = float(data.get("timeout", 10.0))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "state": "BLOCKED", "error": "timeout is invalid"}), 400
+    result = call_mcp_stdio(
+        command,
+        args,
+        tool_name=tool_name,
+        arguments=arguments,
+        allow_process=data.get("confirm_process") is True,
+        allow_tool_call=data.get("confirm_tool_call") is True,
+        human_approved=data.get("human_approved") is True,
+        permissions_granted=permissions,
+        allowed_tools=allowed_tools,
+        timeout=timeout,
     )
     return jsonify(result), 200 if result.get("ok") else 400
 
