@@ -5952,14 +5952,6 @@ except Exception as _acct_err:
 from v4_upgrade.report_center.api import report_center_bp
 app.register_blueprint(report_center_bp)
 
-# GAP-11 Evidence API 注册（修复 cth/evidence.html API断链）
-try:
-    from evidence_api import register_evidence_api
-    register_evidence_api(app)
-    print("[evidence_api] 证据查询API已注册 /api/evidence/*")
-except Exception as _ev_err:
-    print(f"[evidence_api] 注册失败（不阻断启动）: {_ev_err}")
-
 # ===== ZBC V2.0 双域核心扩展：请求级域上下文 + 双域 API 命名空间 =====
 # subject_context.init_app: 注册 before/after_request 钩子，
 # 从 X-Domain-Id / X-Product-Id / X-Brand-Key 解析域身份，设置线程 SubjectContext + DomainContext

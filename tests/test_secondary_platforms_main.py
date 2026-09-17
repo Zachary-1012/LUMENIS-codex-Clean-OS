@@ -71,7 +71,11 @@ class TestBilibiliMainAdapter:
         from platform_adapters.bilibili import BilibiliAdapter
         assert BilibiliAdapter().search("x").status == CollectionStatus.RISK_WARNING
 
-    def test_detail_without_configured_session_is_not_configured(self):
+    def test_detail_without_configured_session_is_not_configured(self, monkeypatch, tmp_path):
+        # Do not let local production credentials turn this contract test into
+        # a real network request.
+        monkeypatch.setenv("ZBC_DATA_DIR", str(tmp_path))
+        monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "monitor.db"))
         from platform_adapters.bilibili import BilibiliAdapter
         assert BilibiliAdapter().detail("1").status == CollectionStatus.NOT_CONFIGURED
 
@@ -105,7 +109,11 @@ class TestWeiboMainAdapter:
         from platform_adapters.weibo import WeiboAdapter
         assert WeiboAdapter().search("x").status == CollectionStatus.COLLECT_ERROR
 
-    def test_comments_without_configured_session_is_not_configured(self):
+    def test_comments_without_configured_session_is_not_configured(self, monkeypatch, tmp_path):
+        # Do not let local production credentials turn this contract test into
+        # a real network request.
+        monkeypatch.setenv("ZBC_DATA_DIR", str(tmp_path))
+        monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "monitor.db"))
         from platform_adapters.weibo import WeiboAdapter
         assert WeiboAdapter().comments("1").status == CollectionStatus.NOT_CONFIGURED
 

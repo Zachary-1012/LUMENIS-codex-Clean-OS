@@ -9,7 +9,6 @@
 """
 import os
 import sys
-import sqlite3
 import tempfile
 import base64
 
@@ -19,38 +18,37 @@ TEST_USER = 'Zachary'
 TEST_PASS = 'Zachary01'
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def client():
     fd, path = tempfile.mkstemp(suffix='.db')
     os.close(fd)
     # 数据目录隔离：临时 data/ 避免 raw 导入测试污染生产 data/
     tmp_data = tempfile.mkdtemp(prefix='zbip_test_data_')
-    os.environ['ZBC_DATA_DIR'] = tmp_data
-    os.environ['ZBC_DB_PATH'] = path
-    os.environ['TAIKOO_AUTH_USER'] = TEST_USER
-    os.environ['TAIKOO_AUTH_PASSWORD'] = TEST_PASS
+    # Keep the whole app request in an isolated, function-scoped environment.
+    # A module-scoped fixture used to conflict with the suite's per-test
+    # environment guard and leak temporary runtime paths into later tests.
+    env_patch = pytest.MonkeyPatch()
+    env_patch.setenv('ZBC_DATA_DIR', tmp_data)
+    env_patch.setenv('ZBC_DB_PATH', path)
+    env_patch.setenv('TAIKOO_AUTH_USER', TEST_USER)
+    env_patch.setenv('TAIKOO_AUTH_PASSWORD', TEST_PASS)
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    # 临时库补证据表（app.init_db 会建基础表）
-    conn = sqlite3.connect(path)
-    try:
-        conn.execute("CREATE TABLE IF NOT EXISTS app_evidence_records (id INTEGER PRIMARY KEY AUTOINCREMENT, project TEXT, product TEXT, feature_id TEXT, env TEXT, level TEXT, test_name TEXT, result TEXT, outputs TEXT, actual TEXT, created_at TEXT)")
-        conn.commit()
-    except Exception:
-        pass
-    conn.close()
     from app import app
     app.config['TESTING'] = True
     c = app.test_client()
-    yield c
     try:
-        os.unlink(path)
-    except OSError:
-        pass
-    try:
-        import shutil
-        shutil.rmtree(tmp_data, ignore_errors=True)
-    except Exception:
-        pass
+        yield c
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        try:
+            import shutil
+            shutil.rmtree(tmp_data, ignore_errors=True)
+        except Exception:
+            pass
+        env_patch.undo()
 
 
 def _headers():
