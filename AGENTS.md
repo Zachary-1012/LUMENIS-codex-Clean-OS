@@ -22,6 +22,28 @@ Never use old chat, old commit messages, stale README text, static prototypes or
 
 Documentation merged into `main` proves only that the rule/document exists. It does not prove the production capability is implemented, tested, live-verified or released.
 
+### Mandatory Codex bootstrap
+
+This root `AGENTS.md` is the first coding-agent instruction boundary. Before changing product code, Codex must resolve the current remote truth and then read the CURRENT governance path:
+
+```text
+AGENTS.md
+→ 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ README.md
+→ 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
+→ 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
+→ exact current source / runtime / DB / API / Permission / Evidence / tests for the active slice
+```
+
+Hard rules:
+
+- current HEAD comes from `git fetch origin` + `git rev-parse origin/main`, never from a document, screenshot, chat or pasted SHA;
+- the active cross-product contract is `lumenis-ggi-cross-product` **v1.1.0** with fingerprint `68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f`;
+- the Markdown registry is a human-readable mirror; the JSON contract plus blocking validators are the machine gate;
+- if CURRENT governance artifacts disagree, fail closed and reconcile them before cross-product work;
+- dated handoffs, archived audits and legacy repositories are provenance only unless current executable evidence revalidates them;
+- do not write to another repository merely because it is listed in the cross-repo registry; that repository must be explicitly in the active task scope.
+
 ## 2. Canonical workspace and mainline
 
 Current Windows workstation entrypoint:

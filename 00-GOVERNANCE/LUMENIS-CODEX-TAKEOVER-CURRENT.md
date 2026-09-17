@@ -1,25 +1,42 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Last runner-backed green remote baseline: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`  
 > Updated: 2026-09-17  
-> **Do not hardcode this document's own commit as current HEAD. Codex must fetch and read `origin/main` at session start.**
+> Last runner-backed green remote baseline: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`  
+> **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
-This file records the current handoff model and the latest verified baseline. It does **not** upgrade source evidence into LIVE/RELEASE/OPERATING claims.
+This file records the current Codex handoff model, authority order and the latest runner-backed baseline. It does **not** upgrade source evidence into LIVE / RELEASED / OPERATING claims.
 
-## 1. Authority and read order
+## 1. Mandatory Codex bootstrap and authority
 
-Read in this order before changing product code:
+Root `AGENTS.md` is the first coding-agent instruction boundary. After reading it and before changing product code, use this order:
 
-1. `README.md`
-2. `AGENTS.md`
-3. this file
-4. `08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`
-5. `08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md`
-6. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
-7. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
+1. `AGENTS.md`
+2. this file: `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`
+3. `README.md`
+4. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
+5. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
+6. `08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`
+7. `08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md`
+8. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
+9. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
+
+When evidence conflicts:
+
+```text
+Current Production Source
+> Runtime Reality
+> Current DB / API / Permission / Evidence Contracts
+> Tests / E2E / Production Acceptance
+> Current Canonical Governance
+> README
+> Historical Handoff / Legacy Evidence
+> Chat History
+```
 
 Current executable source/runtime truth always outranks this handoff. Historical handoffs, chat history and screenshots never override executable truth.
+
+The root README, this CURRENT handoff, the human-readable cross-repo registry and the machine contract must not define conflicting current protocol identities. A mismatch is a governance failure to repair before cross-product changes continue.
 
 ## 2. Remote evidence lock
 
@@ -31,6 +48,33 @@ branch     = main
 current HEAD = READ WITH git fetch + git rev-parse origin/main
 ```
 
+Mandatory start commands on the canonical workstation:
+
+```powershell
+Set-Location D:\LUMENIS_REBUILD
+git rev-parse --show-toplevel
+git remote -v
+git branch --show-current
+git rev-parse HEAD
+git status --short --branch
+git fetch origin
+git rev-parse origin/main
+```
+
+Always distinguish:
+
+```text
+local working tree
+local main HEAD
+local unpushed commits
+origin/main
+last runner-backed green baseline
+current-head CI
+live workstation runtime
+```
+
+Do not collapse these into a single "current" claim.
+
 Last runner-backed green baseline:
 
 ```text
@@ -39,23 +83,27 @@ LUMENIS Product Gate          = SUCCESS
 Verify LUMENIS-GGI Contract   = SUCCESS
 ```
 
-That merge contains the LUMENIS product gate, baseline repairs and the 序 ecosystem contract/brand convergence.
+That baseline contains the LUMENIS product gate, baseline repairs and ecosystem contract/brand convergence available at that point in history.
 
-After that green baseline, documentation-only convergence for the Codex handoff/screenshot intake was fast-forwarded to `main`. GitHub Actions attempts for those documentation pushes have exhibited the same platform-level pre-step failure already observed on Command: jobs terminate in seconds with `steps = null` and no repository-step logs. Therefore:
+Later documentation/governance pushes have also encountered GitHub Actions execution-layer failures where jobs end in seconds with an empty step list and no repository-step logs. Therefore:
 
 ```text
 last runner-backed green source baseline = 5a14ff25...
 current origin/main                      = MUST BE FETCHED
-current-head CI                          = DO NOT INFER FROM LAST GREEN BASELINE
-pre-step Actions failure                 = PLATFORM/EXECUTION-LAYER UNVERIFIED, NOT A SOURCE TEST FAILURE
+current-head CI                          = MUST BE READ, NOT INFERRED
+0-step / empty-step Actions failure      = EXECUTION-LAYER UNVERIFIED, NOT A SOURCE TEST FAILURE
 ```
 
 Do not create empty commits merely to retrigger Actions. Rerun the same commit when the runner executes normally.
 
-The active cross-product contract is `lumenis-ggi-cross-product` v1.1.0 with fingerprint:
+## 3. Current cross-product protocol — v1.1
+
+Active contract:
 
 ```text
-68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f
+contract_id = lumenis-ggi-cross-product
+version     = 1.1.0
+fingerprint = 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f
 ```
 
 Current formal ecosystem identities:
@@ -67,9 +115,13 @@ Current formal ecosystem identities:
 序枢 / LUMENIS Command      = Engineering Evidence / R&D control sidecar
 ```
 
+The machine contract in `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json` is the blocking protocol artifact. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md` is its human-readable authority map. They must remain aligned.
+
 Stable technical aliases/repository/package/API/DB identifiers are compatibility identities and must not be renamed merely for branding.
 
-## 3. Canonical product model — already present, do not rebuild
+Do not mutate another repository merely because it appears in this registry. Cross-repository writes require that repository to be explicitly in the active task scope.
+
+## 4. Canonical product model — already present, do not rebuild
 
 Canonical production chain:
 
@@ -111,7 +163,7 @@ Shared Capability Content & Creation / Evidence / Research / Evaluation / Learni
 SYSTEM            Collector / Runtime / Scheduler / AI Gateway / DB / Security / Permission / Settings / Recovery / Observability
 ```
 
-## 4. Current source/runtime facts — source-audited, not live-certified by this handoff
+## 5. Current source/runtime facts — source-audited, not live-certified by this handoff
 
 The latest source audit identifies these existing owners/contracts:
 
@@ -130,13 +182,13 @@ content_generation.py         research → generation → Evidence → Evaluatio
 
 Audited dependency foundations include Flask/Waitress, APScheduler, requests/httpx/aiohttp, BeautifulSoup/lxml, Playwright, SQLite, tenacity and Alembic. `package.json` is Playwright/tooling-oriented; it is not proof of a React/Next/Vite production frontend.
 
-Do not replace these with screenshot-derived or generic stack assumptions.
+Do not replace these with screenshot-derived or generic stack assumptions. If current source differs from a point-in-time audit, current source wins.
 
-## 5. Screenshot architecture intake — disposition
+## 6. Screenshot architecture intake — disposition
 
-The three user-provided screenshots were reviewed against the current repository. The reliably readable architecture principles that match current repository truth are already represented by the canonical chains, truth hierarchy, main/local/origin separation and completion semantics.
+The three user-provided screenshots were reviewed against the repository. The reliably readable architecture principles that match repository truth are represented by the canonical chains, truth hierarchy, main/local/origin separation and completion semantics.
 
-Two screenshots are too low-resolution for exact line-by-line extraction. Their unreadable package names, versions, commands or implementation claims were **not imported as truth**. See `08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md`.
+Two screenshots were too low-resolution for exact line-by-line extraction. Their unreadable package names, versions, commands or implementation claims were **not imported as truth**. See `08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md`.
 
 Rule for later higher-resolution re-ingestion:
 
@@ -148,7 +200,7 @@ Screenshot statement
 → create a new owner only when no valid owner exists
 ```
 
-## 6. Current acceptance semantics
+## 7. Current acceptance semantics
 
 Use only these meanings:
 
@@ -160,7 +212,7 @@ RELEASED    = required production/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/scheduled evidence
 ```
 
-The last runner-backed green baseline proves its two GitHub workflows passed at that commit. This does **not** by itself prove the current fetched HEAD, workstation live health, release or operation.
+The last runner-backed green baseline proves its workflows passed at that commit. It does **not** by itself prove the current fetched HEAD, workstation live health, release or operation.
 
 ```text
 8201 live workstation health = NOT VERIFIED by this handoff
@@ -171,22 +223,9 @@ OPERATING                    = NO NEW CLAIM
 
 Do not repeat the old CI #148 failure as current product state: it belongs to the 2026-09-16 source-audit history and was followed by later repairs and a green runner-backed baseline.
 
-## 7. Codex resume protocol
+## 8. Codex resume protocol
 
-On the workstation, first preserve and reconcile local truth:
-
-```powershell
-Set-Location D:\LUMENIS_REBUILD
-git rev-parse --show-toplevel
-git remote -v
-git branch --show-current
-git rev-parse HEAD
-git status --short --branch
-git fetch origin
-git rev-parse origin/main
-```
-
-Then:
+After the bootstrap and local/remote reconciliation:
 
 ```text
 preserve unknown/uncommitted/unpushed valid work
@@ -206,7 +245,7 @@ preserve unknown/uncommitted/unpushed valid work
 
 Never reset/clean valid local work merely to match remote. Never treat local-only code as GitHub-complete.
 
-## 8. Non-regression boundaries
+## 9. Non-regression boundaries
 
 Do not create a second Evidence, Canonical Data, Metric, Permission, DB, Runtime, API, Design System or Collector truth.
 
@@ -214,6 +253,19 @@ Do not make 序蕴、序衍、序枢 hard runtime dependencies of 序境. Do not
 
 Do not weaken CI, delete legitimate tests, broaden quarantine or use `continue-on-error` to manufacture green status.
 
-## 9. Historical documents
+## 10. Historical documents
 
-Dated takeover/handoff files before this `CURRENT` entry remain historical evidence only. They may explain provenance but must not be used as a current HEAD, current CI or current completion claim without re-verification.
+Dated takeover/handoff files before this `CURRENT` entry remain historical evidence only. They may explain provenance but must not be used as a current HEAD, current CI, current protocol or current completion claim without re-verification.
+
+## 11. Blocking consistency guard
+
+The LUMENIS Product Gate must run:
+
+```text
+python scripts/audit_tools/verify_lumenis_ggi_contract.py \
+  00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
+
+python scripts/audit_tools/verify_codex_takeover_governance.py
+```
+
+The second check prevents regression of the CURRENT takeover path, v1.1 protocol identity, root agent routing and human/machine contract alignment. A runner-level 0-step failure means the check did not execute; it is not a passing or failing repository assertion.
