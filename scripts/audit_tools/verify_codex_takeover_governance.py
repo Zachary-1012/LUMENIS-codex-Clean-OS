@@ -17,6 +17,8 @@ PATHS = {
     "takeover": ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md",
     "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
     "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
+    "contract_workflow": ROOT / ".github" / "workflows" / "lumenis-ggi-contract.yml",
+    "platform_workflow": ROOT / ".github" / "workflows" / "platform-verify.yml",
 }
 
 
@@ -53,6 +55,8 @@ def validate() -> None:
     readme = _read("readme")
     takeover = _read("takeover")
     registry = _read("registry")
+    contract_workflow = _read("contract_workflow")
+    platform_workflow = _read("platform_workflow")
     contract = json.loads(_read("contract"))
 
     _assert_single_machine_contract()
@@ -110,6 +114,19 @@ def validate() -> None:
         label="root README.md",
     )
 
+    # Both the dedicated contract workflow and the broader product gate must
+    # enforce the machine contract and the Codex takeover governance together.
+    for label, workflow in (
+        ("dedicated contract workflow", contract_workflow),
+        ("platform verify workflow", platform_workflow),
+    ):
+        _require(
+            workflow,
+            "verify_lumenis_ggi_contract.py",
+            "verify_codex_takeover_governance.py",
+            label=label,
+        )
+
     # Dated source-audit SHAs may remain as provenance. What must never regress is
     # the CURRENT takeover path pretending a fixed SHA is the live HEAD.
     if "current HEAD = READ WITH git fetch + git rev-parse origin/main" not in takeover:
@@ -121,5 +138,5 @@ if __name__ == "__main__":
     print(
         "CODEX TAKEOVER GOVERNANCE OK "
         f"{EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} {EXPECTED_FINGERPRINT} "
-        "single-machine-contract=PASS"
+        "single-machine-contract=PASS workflow-guards=PASS"
     )
