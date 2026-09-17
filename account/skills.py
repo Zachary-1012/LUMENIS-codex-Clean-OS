@@ -146,13 +146,21 @@ def register_validated_skill(preview: dict) -> dict:
             "error": "MCP registration requires capability discovery and human approval",
             "code": "MCP_DISCOVERY_AND_APPROVAL_REQUIRED",
         }
-    if source_type not in ("local", "zip", "skill_md"):
+    if source_type not in ("local", "zip", "skill_md", "github"):
         return {
             "success": False,
-            "error": "only local, ZIP, or standalone SKILL.md metadata can be registered at this stage",
+            "error": "only validated local, ZIP, SKILL.md, or pinned GitHub metadata can be registered at this stage",
             "code": "SOURCE_REGISTRATION_NOT_SUPPORTED",
         }
-    if preview.get("state") != "VALIDATED":
+    valid_states = {"VALIDATED"}
+    if source_type == "github":
+        valid_states = {"REMOTE_VALIDATED"}
+        revision = str(preview.get("revision") or "")
+        remote_manifest = preview.get("remote_manifest") or {}
+        if not revision or len(revision) != 40 or remote_manifest.get("path") is None:
+            return {"success": False, "error": "pinned GitHub manifest evidence is incomplete",
+                    "code": "REMOTE_MANIFEST_INCOMPLETE"}
+    if preview.get("state") not in valid_states:
         return {"success": False, "error": "only VALIDATED Skill sources can be registered",
                 "code": "SOURCE_NOT_VALIDATED"}
     if not isinstance(normalized, dict) or not normalized.get("skill_id"):

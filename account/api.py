@@ -42,6 +42,7 @@ from .skills import (
     register_validated_skill,
 )
 from skill_package_runtime import preview_skill_source
+from mcp_discovery import discover_mcp_stdio
 from github_connector import GitHubConnector, GitHubConnectorError
 
 account_bp = Blueprint("account", __name__, url_prefix="/api/system/account")
@@ -597,7 +598,11 @@ def api_preview_skill_source():
     """只读探测 Skill 来源；不下载、不安装、不执行、不授予权限。"""
     data = request.get_json(silent=True) or {}
     source = data.get("source", "")
-    result = preview_skill_source(source, resolve_remote=bool(data.get("resolve_remote", False)))
+    result = preview_skill_source(
+        source,
+        resolve_remote=bool(data.get("resolve_remote", False)),
+        fetch_remote_manifest=bool(data.get("fetch_remote_manifest", False)),
+    )
     return jsonify(result), 200 if result.get("ok") else 400
 
 
@@ -607,9 +612,36 @@ def api_register_skill_source():
     """登记已验证的 Skill 元数据；不安装、不执行、不授予权限。"""
     data = request.get_json(silent=True) or {}
     source = data.get("source", "")
-    preview = preview_skill_source(source, resolve_remote=bool(data.get("resolve_remote", False)))
+    preview = preview_skill_source(
+        source,
+        resolve_remote=bool(data.get("resolve_remote", False)),
+        fetch_remote_manifest=bool(data.get("fetch_remote_manifest", False)),
+    )
     result = register_validated_skill(preview)
     return jsonify(result), 201 if result.get("success") else 400
+
+
+@account_bp.route("/skills/source/mcp/discover", methods=["POST"])
+@require_owner
+def api_discover_mcp_source():
+    """只读发现 MCP 能力；不调用工具、不注册、不授予权限。"""
+    data = request.get_json(silent=True) or {}
+    source = str(data.get("source") or "")
+    from skill_package_runtime import detect_source
+    detected = detect_source(source)
+    if detected.source_type != "mcp_stdio":
+        return jsonify({"ok": False, "state": "BLOCKED", "error": "source must be an mcp+stdio source"}), 400
+    command = data.get("command")
+    args = data.get("args", [])
+    if not isinstance(command, list) or not isinstance(args, list):
+        return jsonify({"ok": False, "state": "BLOCKED", "error": "command and args must be argv lists"}), 400
+    result = discover_mcp_stdio(
+        command,
+        args,
+        allow_process=bool(data.get("confirm_process", False)),
+        timeout=float(data.get("timeout", 10.0)),
+    )
+    return jsonify(result), 200 if result.get("ok") else 400
 
 
 @account_bp.route("/connectors/github/status", methods=["GET"])

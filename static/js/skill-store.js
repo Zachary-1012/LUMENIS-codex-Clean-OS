@@ -7,7 +7,7 @@
   const SKILL_COLORS = {ai_analyzer:'#0F766E',risk_engine:'#cf222e',report_generator:'#8250df',kos_engine:'#bf8700',collector_xhs:'#ff2442',collector_weibo:'#e6162d',collector_bilibili:'#0969da',brand_analysis:'#8250df',internal_browser:'#0969da',data_visualization:'#1a7f37',intelligence_library:'#8250df',alert_engine:'#bc4c00'};
   const SKILL_ICONS = {ai_analyzer:'🧠',risk_engine:'⚠️',report_generator:'📄',kos_engine:'👥',collector_xhs:'📕',collector_weibo:'🔴',collector_bilibili:'📺',brand_analysis:'📊',internal_browser:'🌐',data_visualization:'📈',intelligence_library:'📚',alert_engine:'🔔'};
   const DEFAULT_COLOR = '#656d76';
-  let allSkills = [], currentTab = 'plugins', expandedSkillId = null, searchQuery = '', lastPreviewSource = '', lastPreviewResolveRemote = false;
+  let allSkills = [], currentTab = 'plugins', expandedSkillId = null, searchQuery = '', lastPreviewSource = '', lastPreviewResolveRemote = false, lastPreviewFetchRemoteManifest = false;
 
   async function api(url, opts) {
     try { const r = await fetch(url, {credentials:'include', ...opts}); return await r.json(); }
@@ -18,8 +18,8 @@
   async function addSkill(id, name, desc) { return api('/api/system/account/skills', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({skill_id:id,name,description:desc,product:'SYSTEM',domain:'global'})}); }
   async function fetchExecutions(id, limit) { return (await api(`/api/system/account/skills/${id}/executions?limit=${limit||5}`)).executions || []; }
   async function executeSkill(id, task) { return api(`/api/system/account/skills/${id}/execute`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task:task||'manual run', action_type:'ANALYZE'})}); }
-  async function previewSource(source, resolveRemote) { return api('/api/system/account/skills/source/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote})}); }
-  async function registerSource(source, resolveRemote) { return api('/api/system/account/skills/source/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote})}); }
+  async function previewSource(source, resolveRemote, fetchRemoteManifest) { return api('/api/system/account/skills/source/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote, fetch_remote_manifest:!!fetchRemoteManifest})}); }
+  async function registerSource(source, resolveRemote, fetchRemoteManifest) { return api('/api/system/account/skills/source/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote, fetch_remote_manifest:!!fetchRemoteManifest})}); }
   async function fetchGithubStatus() { return api('/api/system/account/connectors/github/status'); }
 
   function escapeHTML(value) {
@@ -68,15 +68,19 @@
     const validation = result.validation || {};
     const security = result.security || {};
     const ownership = result.ownership || {};
+    const remote = result.remote_manifest || {};
+    const remoteLine = remote.path ? `<div><b>远程 manifest</b>：<code>${escapeHTML(remote.path)}</code> · revision：<code>${escapeHTML(result.revision || '—')}</code></div>` : '';
+    const completion = result.state === 'REMOTE_VALIDATED' ? '已完成远程 manifest 只读验证；安装、隔离、自测、权限授予与启用仍未开放。' : '当前仅完成来源预检。安装、隔离执行、权限授予与生命周期更新仍未开放。';
     el.innerHTML = `<div class="ss-preview-state">${escapeHTML(result.state || 'UNKNOWN')}</div>
       <div style="margin-top:8px"><b>来源</b>：<code>${escapeHTML(source.source || '')}</code></div>
       <div><b>类型 / 运行时</b>：${escapeHTML(source.source_type || 'unknown')} / ${escapeHTML(result.runtime || 'unknown')}</div>
+      ${remoteLine}
       <div><b>Manifest</b>：${escapeHTML(result.manifest_state || 'UNKNOWN')}；兼容性：${validation.valid === true ? '通过' : '未通过'}</div>
       <div><b>能力</b>：${listValue(result.capabilities)}；工具：${listValue(result.tools)}</div>
       <div><b>请求权限</b>：${listValue(security.permissions_requested)}；已授予：${listValue(security.permissions_granted)}</div>
       <div><b>安全</b>：${escapeHTML(security.decision || 'DENY_BY_DEFAULT')}；Secrets 注入：${security.secrets_injected === true ? '是' : '否'}</div>
       <div><b>归属</b>：Registry=${escapeHTML(ownership.registry || '—')}；Evidence=${escapeHTML(ownership.evidence || '—')}</div>
-      <div style="margin-top:8px;color:var(--ss-text3)">当前仅完成来源预检。安装、隔离执行、权限授予与生命周期更新仍未开放。</div>
+      <div style="margin-top:8px;color:var(--ss-text3)">${completion}</div>
       ${result.state === 'VALIDATED' ? '<button class="ss-btn ss-btn-primary" style="margin-top:10px" onclick="window.__ssRegisterSourcePreview()">登记为禁用 Skill</button>' : ''}`;
   }
 
@@ -208,14 +212,15 @@
     if (result) result.innerHTML='<div class="ss-preview-state">CHECKING</div><div>正在执行只读来源预检…</div>';
     lastPreviewSource = source;
     lastPreviewResolveRemote = !!document.getElementById('ssResolveRemote')?.checked;
-    const response = await previewSource(source, lastPreviewResolveRemote);
+    lastPreviewFetchRemoteManifest = lastPreviewResolveRemote && !!document.getElementById('ssFetchRemoteManifest')?.checked;
+    const response = await previewSource(source, lastPreviewResolveRemote, lastPreviewFetchRemoteManifest);
     renderSourceResult(response);
   };
   window.__ssRegisterSourcePreview = async function() {
     if (!lastPreviewSource) return;
     const result = document.getElementById('ssSourceResult');
     if (result) result.innerHTML='<div class="ss-preview-state">REGISTERING</div><div>正在登记元数据；不会安装或执行…</div>';
-    const response = await registerSource(lastPreviewSource, lastPreviewResolveRemote);
+    const response = await registerSource(lastPreviewSource, lastPreviewResolveRemote, lastPreviewFetchRemoteManifest);
     if (response.success || response.ok) {
       if (result) result.innerHTML=`<div class="ss-preview-state">REGISTERED</div><div>已登记 ${escapeHTML(response.skill_id || '')}，状态：disabled，安装状态：not_installed。</div><div style="margin-top:6px;color:var(--ss-text3)">权限仍为默认拒绝，后续需经过安装、隔离、自测与人工授权门。</div>`;
       await refresh();

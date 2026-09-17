@@ -16,6 +16,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -100,6 +101,13 @@ def _list_value(value: Any, limit: int = 64) -> List[str]:
         if isinstance(item, str) and item.strip():
             result.append(item.strip()[:256])
     return list(dict.fromkeys(result))
+
+
+def _tool_names(value: Any, limit: int = 64) -> List[str]:
+    """Normalize a manifest's string or structured tool declarations."""
+    if isinstance(value, (list, tuple)) and value and all(isinstance(item, dict) for item in value):
+        return _list_value([item.get("name") for item in value], limit=limit)
+    return _list_value(value, limit=limit)
 
 
 def _manifest_digest(manifest: Dict[str, Any]) -> str:
@@ -307,7 +315,17 @@ def validate_manifest(manifest: Dict[str, Any], *, standard_skill_md: bool = Fal
             errors.append("SKILL.md skill_id must match its lowercase hyphenated name")
         if not str(manifest.get("description") or "").strip():
             errors.append("SKILL.md description is required")
-    elif not skill_id or not _SKILL_ID_RE.match(skill_id):
+    elif not skill_id:
+        # The authored TrendHub manifest uses the standard package ``name``
+        # without a second LUMENIS-specific id field.  Derive only when the
+        # name is already a valid stable id; never slugify or guess from prose.
+        derived_id = name.lower()
+        if _SKILL_ID_RE.match(derived_id):
+            skill_id = derived_id
+            warnings.append("skill_id is absent; derived from manifest name")
+        else:
+            errors.append("skill_id must match ^[a-z][a-z0-9_.-]{2,63}$")
+    elif not _SKILL_ID_RE.match(skill_id):
         errors.append("skill_id must match ^[a-z][a-z0-9_.-]{2,63}$")
     if not name:
         errors.append("name is required")
@@ -316,7 +334,11 @@ def validate_manifest(manifest: Dict[str, Any], *, standard_skill_md: bool = Fal
         warnings.append("SKILL.md does not declare a version; source revision/digest is the pin")
     elif not re.match(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$", version):
         errors.append("version must be semver-like")
-    runtime = str(manifest.get("runtime") or "unknown").strip().lower()
+    runtime_descriptor = manifest.get("runtime") if isinstance(manifest.get("runtime"), dict) else {}
+    runtime_value = runtime_descriptor.get("type") if runtime_descriptor else manifest.get("runtime")
+    runtime = str(runtime_value or "unknown").strip().lower()
+    if runtime == "local-mcp-plugin":
+        runtime = "mcp"
     if runtime not in SUPPORTED_RUNTIMES:
         warnings.append(f"runtime '{runtime}' needs an explicit adapter")
     permissions = _list_value(
@@ -325,7 +347,27 @@ def validate_manifest(manifest: Dict[str, Any], *, standard_skill_md: bool = Fal
     unsupported = sorted(set(permissions) - PERMISSION_SCOPES)
     if unsupported:
         errors.append(f"unsupported permission scopes: {unsupported}")
-    if not manifest.get("entrypoint") and runtime not in ("builtin", "unknown"):
+    entrypoint = str(manifest.get("entrypoint") or "").strip()
+    if not entrypoint and runtime == "mcp":
+        transports = runtime_descriptor.get("transports") if runtime_descriptor else None
+        transport = next(
+            (
+                item for item in (transports if isinstance(transports, list) else [])
+                if isinstance(item, dict) and item.get("id") == "stdio"
+                and item.get("default", True) is True
+            ),
+            None,
+        )
+        install_mcp = (manifest.get("aiInstall") or {}).get("mcpStdio")
+        declared = transport or (install_mcp if isinstance(install_mcp, dict) else None)
+        if isinstance(declared, dict) and declared.get("command"):
+            entrypoint = json.dumps(
+                {"command": str(declared["command"]), "args": _list_value(declared.get("args", []), 16)},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            warnings.append("entrypoint derived from declared MCP stdio transport")
+    if not entrypoint and runtime not in ("builtin", "unknown"):
         warnings.append("entrypoint is not declared; install/invoke remains blocked")
     return {
         "valid": not errors,
@@ -337,9 +379,9 @@ def validate_manifest(manifest: Dict[str, Any], *, standard_skill_md: bool = Fal
             "description": str(manifest.get("description") or "")[:2000],
             "version": version,
             "runtime": runtime,
-            "entrypoint": str(manifest.get("entrypoint") or "")[:512],
+            "entrypoint": entrypoint[:512],
             "capabilities": _list_value(manifest.get("capabilities", [])),
-            "tools": _list_value(manifest.get("tools", [])),
+            "tools": _tool_names(manifest.get("tools", [])),
             "permissions_requested": permissions,
             "secrets_required": _list_value(manifest.get("secrets_required", []), limit=32),
             "dependencies": _list_value(manifest.get("dependencies", []), limit=64),
@@ -350,7 +392,9 @@ def validate_manifest(manifest: Dict[str, Any], *, standard_skill_md: bool = Fal
 
 
 def preview_skill_source(source: str, *, resolve_remote: bool = False,
-                         git_executable: str = "git") -> Dict[str, Any]:
+                         fetch_remote_manifest: bool = False,
+                         git_executable: str = "git",
+                         timeout: float = 30.0) -> Dict[str, Any]:
     """Return a non-mutating, non-executing installation preflight."""
     detected = detect_source(source)
     result: Dict[str, Any] = {
@@ -449,6 +493,43 @@ def preview_skill_source(source: str, *, resolve_remote: bool = False,
         try:
             result["revision"] = resolve_github_revision(detected.source, git_executable=git_executable)
             result["state"] = "REMOTE_RESOLVED"
+            if fetch_remote_manifest:
+                remote = fetch_github_manifest(
+                    detected,
+                    revision=result["revision"],
+                    git_executable=git_executable,
+                    timeout=timeout,
+                )
+                result["remote_manifest"] = remote
+                if remote["state"] != "VALIDATED":
+                    result["state"] = "BLOCKED"
+                    result["manifest_state"] = remote["state"]
+                    result["errors"].append(remote.get("reason", "remote manifest unavailable"))
+                else:
+                    result["manifest_state"] = "PARSED"
+                    result["manifest"] = {
+                        "name": remote["path"],
+                        "path": remote["path"],
+                        "format": remote["format"],
+                    }
+                    result["validation"] = remote["validation"]
+                    normalized = remote["validation"].get("normalized") or {}
+                    result["security"]["permissions_requested"] = normalized.get(
+                        "permissions_requested", []
+                    )
+                    result["compatibility"]["supported_runtime"] = (
+                        normalized.get("runtime") in SUPPORTED_RUNTIMES
+                    )
+                    result["digest"] = remote["digest"]
+                    if remote["validation"].get("valid") and result["compatibility"]["supported_runtime"]:
+                        result["state"] = "REMOTE_VALIDATED"
+                        result["registration"] = {
+                            "allowed": True,
+                            "status": "VALIDATED_METADATA_ONLY",
+                            "reason": "remote manifest is pinned and validated; install/execute still require separate gates",
+                        }
+                    else:
+                        result["state"] = "BLOCKED"
         except SkillSourceError as exc:
             result["errors"].append(str(exc))
             result["state"] = "BLOCKED"
@@ -457,6 +538,156 @@ def preview_skill_source(source: str, *, resolve_remote: bool = False,
 
 class SkillSourceError(RuntimeError):
     pass
+
+
+def _run_remote_git(git_executable: str, args: List[str], cwd: Path,
+                    timeout: float) -> str:
+    """Run a read-only Git inspection command in a disposable directory.
+
+    The command is deliberately constrained to repository initialization,
+    remote fetch of one already-resolved commit, tree listing and blob read.
+    It never checks out files, runs hooks, installs dependencies or executes
+    repository content.  Credentials are not read from the LUMENIS database.
+    """
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    try:
+        completed = subprocess.run(
+            [git_executable, *args],
+            cwd=str(cwd),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            env=env,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise SkillSourceError(f"remote manifest inspection unavailable: {type(exc).__name__}") from exc
+    if completed.returncode != 0:
+        raise SkillSourceError("remote manifest inspection failed")
+    return completed.stdout
+
+
+def _remote_manifest_candidates(tree: str, subpath: Optional[str]) -> List[str]:
+    names = [line.strip().replace("\\", "/") for line in tree.splitlines() if line.strip()]
+    if len(names) > 20000:
+        raise SkillSourceError("remote repository tree exceeds inspection limit")
+    names = [name for name in names if "\x00" not in name and not any(
+        part in ("", ".", "..") for part in name.split("/")
+    )]
+    json_names = {name.lower() for name in _MANIFEST_NAMES}
+    markdown_names = {name.lower() for name in _MARKDOWN_NAMES}
+    prefix = (subpath or "").strip("/")
+    if prefix:
+        scoped = [
+            name for name in names
+            if name.lower().startswith(f"{prefix.lower()}/")
+            and name[len(prefix) + 1:].lower() in json_names | markdown_names
+        ]
+    else:
+        # A repository root can contain several independent Skills.  Only an
+        # exact root manifest is auto-selectable; nested candidates are shown
+        # to the caller instead of guessing which product to register.
+        scoped = [
+            name for name in names
+            if "/" not in name and name.lower() in json_names | markdown_names
+        ]
+    # Match the local manifest reader: an explicit JSON manifest wins over a
+    # co-located SKILL.md.  This avoids treating a package's documentation as
+    # a second Skill when both files are intentionally present.
+    json_candidates = [
+        name for name in scoped
+        if (name[len(prefix) + 1:] if prefix else name).lower() in json_names
+    ]
+    candidates = json_candidates or [
+        name for name in scoped
+        if (name[len(prefix) + 1:] if prefix else name).lower() in markdown_names
+    ]
+    return sorted(dict.fromkeys(candidates))
+
+
+def fetch_github_manifest(detected: SkillSource, *, revision: str,
+                          git_executable: str = "git",
+                          timeout: float = 30.0) -> Dict[str, Any]:
+    """Fetch and validate one GitHub manifest at an exact commit.
+
+    This is a metadata-only operation used by source preview.  It is not an
+    installer: repository files stay in a temporary directory and are never
+    imported, built, or executed.  A repository with multiple nested Skills
+    must provide a GitHub ``tree/<ref>/<skill-path>`` source so selection is
+    explicit.
+    """
+    if detected.source_type != "github" or not _REVISION_RE.fullmatch(str(revision or "")):
+        raise SkillSourceError("remote manifest inspection requires an exact Git revision")
+    remote = f"https://{detected.locator}"
+    with tempfile.TemporaryDirectory(prefix="lumenis-skill-preview-") as temp_dir:
+        worktree = Path(temp_dir)
+        _run_remote_git(git_executable, ["init", "--quiet"], worktree, timeout)
+        _run_remote_git(git_executable, ["remote", "add", "origin", remote], worktree, timeout)
+        _run_remote_git(
+            git_executable,
+            ["fetch", "--quiet", "--depth=1", "--no-tags", "origin", revision],
+            worktree,
+            timeout,
+        )
+        tree = _run_remote_git(
+            git_executable,
+            ["ls-tree", "-r", "--name-only", "FETCH_HEAD"],
+            worktree,
+            timeout,
+        )
+        candidates = _remote_manifest_candidates(tree, detected.subpath)
+        if len(candidates) != 1:
+            reason = "remote manifest not found" if not candidates else "remote manifest selection is ambiguous"
+            return {
+                "state": "MISSING" if not candidates else "AMBIGUOUS",
+                "reason": reason,
+                "path": None,
+                "candidates": candidates[:32],
+                "format": None,
+                "validation": {"valid": False, "errors": [reason], "warnings": []},
+                "digest": "",
+            }
+        manifest_path = candidates[0]
+        raw = _run_remote_git(
+            git_executable,
+            ["show", f"FETCH_HEAD:{manifest_path}"],
+            worktree,
+            timeout,
+        )
+        raw = raw or ""
+        if len(raw.encode("utf-8", errors="replace")) > _MAX_MANIFEST_BYTES:
+            reason = "remote manifest exceeds size limit"
+            return {
+                "state": "BLOCKED", "reason": reason, "path": manifest_path,
+                "candidates": candidates, "format": None,
+                "validation": {"valid": False, "errors": [reason], "warnings": []},
+                "digest": "",
+            }
+        standard_skill_md = manifest_path.lower().endswith("skill.md")
+        try:
+            manifest = (_parse_skill_markdown(raw) if standard_skill_md else json.loads(raw))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            reason = "remote manifest is not valid JSON or SKILL.md front matter"
+            return {
+                "state": "BLOCKED", "reason": reason, "path": manifest_path,
+                "candidates": candidates, "format": "agentskills" if standard_skill_md else "lumenis-json",
+                "validation": {"valid": False, "errors": [reason], "warnings": []},
+                "digest": "",
+            }
+        validation = validate_manifest(manifest, standard_skill_md=standard_skill_md)
+        return {
+            "state": "VALIDATED" if validation.get("valid") else "BLOCKED",
+            "reason": "" if validation.get("valid") else "remote manifest validation failed",
+            "path": manifest_path,
+            "candidates": candidates,
+            "format": "agentskills" if standard_skill_md else "lumenis-json",
+            "validation": validation,
+            "digest": _manifest_digest(manifest),
+        }
 
 
 def resolve_github_revision(source: str, *, git_executable: str = "git", timeout: float = 15.0) -> str:
@@ -472,13 +703,18 @@ def resolve_github_revision(source: str, *, git_executable: str = "git", timeout
         if detected.ref:
             remote = f"https://{detected.locator}"
             ref = detected.ref
-        completed = subprocess.run(
-            [git_executable, "ls-remote", remote, ref],
-            check=False, capture_output=True, text=True, timeout=timeout,
-        )
+        completed = None
+        for attempt in range(2):
+            completed = subprocess.run(
+                [git_executable, "ls-remote", remote, ref],
+                check=False, capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=timeout,
+            )
+            if completed.returncode == 0:
+                break
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise SkillSourceError(f"GitHub ref resolution unavailable: {type(exc).__name__}") from exc
-    if completed.returncode != 0:
+    if completed is None or completed.returncode != 0:
         raise SkillSourceError("GitHub ref resolution failed")
     for line in completed.stdout.splitlines():
         fields = line.split()

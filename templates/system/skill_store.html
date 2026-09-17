@@ -124,10 +124,11 @@
 <div id="ssSourceModal" class="ss-preview-modal" role="dialog" aria-modal="true" aria-labelledby="ssSourceTitle">
   <div class="ss-preview-dialog">
     <h3 id="ssSourceTitle" style="font-size:16px;font-weight:600;margin-bottom:6px;color:var(--ss-text)">Skill 来源预检</h3>
-    <p style="font-size:12px;color:var(--ss-text2);line-height:1.55;margin-bottom:14px">输入 GitHub 仓库地址、目录、ZIP、SKILL.md 或 MCP/HTTP 来源。远程 revision 解析是可选的只读操作；不会把来源标记为已安装或已连接。</p>
+    <p style="font-size:12px;color:var(--ss-text2);line-height:1.55;margin-bottom:14px">输入 GitHub 仓库地址、目录、ZIP、SKILL.md 或 MCP/HTTP 来源。远程 revision 与 manifest 发现都是可选的只读操作；不会把来源标记为已安装、已连接或已授予权限。</p>
     <label for="ssSourceInput" style="font-size:12px;color:var(--ss-text2);display:block;margin-bottom:4px">来源</label>
     <input id="ssSourceInput" class="ss-preview-input" type="text" placeholder="https://github.com/owner/repo 或本地路径" autocomplete="off">
     <label class="ss-preview-check"><input id="ssResolveRemote" type="checkbox"> 对 GitHub HEAD 做只读 revision 解析</label>
+    <label class="ss-preview-check"><input id="ssFetchRemoteManifest" type="checkbox"> 在精确 revision 上只读发现并验证 manifest（需先勾选上项）</label>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="ss-btn" onclick="window.__ssCloseSourcePreview()">关闭</button>
       <button class="ss-btn ss-btn-primary" onclick="window.__ssSubmitSourcePreview()">开始预检</button>

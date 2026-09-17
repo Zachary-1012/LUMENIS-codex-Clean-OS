@@ -23,6 +23,29 @@
 
 本文件不改变以上事实，也不把“覆盖目录”“代码存在”“构建通过”改写成“平台实时可用”。
 
+### 0.1 专业产品能力基准（研究后转译为序境约束）
+
+本轮对 Brandwatch Consumer Intelligence、Sprinklr Listening/Insights、Meltwater
+Media Intelligence 的公开产品资料做了能力级对照；只提炼产品机制，不复制界面、代码或供应商实现。
+共同的专业基线不是“接入越多越好”，而是：
+
+| 能力基线 | 序境转译 | 事实边界 |
+| --- | --- | --- |
+| 多源统一观察 | Source Catalog → Adapter → Evidence → Canonical | 不允许各业务域私建采集真相 |
+| 信号可靠性与缺失可见 | source status、quality、latency、failure class、history sufficiency | 缺失不等于 0；AI 不补事实 |
+| 观察到行动 | Event → Case → Risk → Decision → Action → Outcome → Evaluation | 外部写动作始终经过人工审批/Effect Fence |
+| 内容工作流 | Evidence/Trend → Brief → Content Candidate → Review | 内容草案不等于已发布内容 |
+| 组织化工作 | CTH/BMP/Shared 共用事实链，按领域显示不同 View Model | 不产生第四产品线 |
+| AI 接入可控 | Skill/MCP 是受控能力源，Permission/Trace/Evaluation/Audit 独立存在 | Skill/MCP 不拥有 Production Truth |
+
+研究依据：
+
+- Brandwatch Consumer Intelligence / Suite：<https://www.brandwatch.com/suite/>。
+- Sprinklr Social Listening：<https://www.sprinklr.com/help/articles/what-is-social-listening/transform-extensive-data-into-actionable-insights-with-social-listening/63f76dece02459133724ae4a>。
+- Meltwater Media Intelligence：<https://www.meltwater.com/en>。
+- Agent Skills specification：<https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx>。
+- MCP Tools / Resources / Transports：<https://modelcontextprotocol.io/specification/2025-11-25/server/tools>、<https://modelcontextprotocol.io/specification/2025-11-25/server/resources>、<https://modelcontextprotocol.io/specification/2025-11-25/basic/transports>。
+
 ## 1. 研究结论：真正要学习的不是“免 Cookie 爬取”
 
 `Zachary-Skill` 的可复用方法是五个层次的组合：
@@ -258,7 +281,7 @@ TrendHub build/test/smoke = PASS
 TrendHub MCP tools = 19
 序境 Skill/secondary collection focused tests = 35 passed
 GitHub revision resolution = PASS
-当前序境 HEAD = 0bfb4304307526fc31216c740809310e3cfe6382
+当前序境 HEAD = 19c50b2b765ae8ca1df2334304050d1bb5c1f2b5
 当前序境与 origin/main = 0 0
 ```
 

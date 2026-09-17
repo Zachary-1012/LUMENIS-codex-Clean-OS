@@ -149,6 +149,105 @@ def test_github_skill_directory_is_pinned_before_manifest_fetch(monkeypatch):
     assert calls == [["git", "ls-remote", "https://github.com/example/skill", "main"]]
 
 
+def test_github_skill_manifest_is_discovered_at_pinned_revision_without_checkout(monkeypatch):
+    import skill_package_runtime as runtime
+
+    source = "https://github.com/Zachary-1012/Zachary-Skill/tree/main/trendhub-mcp"
+    revision = "0123456789abcdef0123456789abcdef01234567"
+    calls = []
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        result = Completed()
+        if command[1:3] == ["ls-tree", "-r"]:
+            result.stdout = "trendhub-mcp/manifest.json\ntrendhub-mcp/SKILL.md\n"
+        elif command[1] == "show":
+            result.stdout = '{"name":"trendhub-mcp","version":"1.4.4","runtime":"mcp","entrypoint":"scripts/launcher.mjs","permissions":[]}'
+        return result
+
+    monkeypatch.setattr(runtime.subprocess, "run", fake_run)
+    detected = runtime.detect_source(source)
+    result = runtime.fetch_github_manifest(detected, revision=revision)
+
+    assert result["state"] == "VALIDATED"
+    assert result["path"] == "trendhub-mcp/manifest.json"
+    assert result["validation"]["normalized"]["runtime"] == "mcp"
+    assert calls[0][1:3] == ["init", "--quiet"]
+    assert not any("checkout" in command for command in calls)
+
+
+def test_github_skill_root_manifest_does_not_guess_between_nested_skills(monkeypatch):
+    import skill_package_runtime as runtime
+
+    revision = "fedcba9876543210fedcba9876543210fedcba98"
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+
+    def fake_run(command, **kwargs):
+        result = Completed()
+        if command[1:3] == ["ls-tree", "-r"]:
+            result.stdout = "skills/trendhub/SKILL.md\ntrendhub-mcp/manifest.json\n"
+        return result
+
+    monkeypatch.setattr(runtime.subprocess, "run", fake_run)
+    monkeypatch.setattr(runtime, "resolve_github_revision", lambda *args, **kwargs: revision)
+    result = runtime.preview_skill_source(
+        "https://github.com/Zachary-1012/Zachary-Skill",
+        resolve_remote=True,
+        fetch_remote_manifest=True,
+    )
+
+    assert result["state"] == "BLOCKED"
+    assert result["manifest_state"] == "MISSING"
+    assert result["remote_manifest"]["candidates"] == []
+    assert "manifest not found" in result["errors"][0]
+
+
+def test_github_remote_registration_requires_validated_manifest_evidence(tmp_path, monkeypatch):
+    import skill_package_runtime as runtime
+    from account.models import init_account_db
+    from account.skills import list_skills, register_validated_skill
+
+    revision = "abcdef0123456789abcdef0123456789abcdef01"
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+
+    def fake_run(command, **kwargs):
+        result = Completed()
+        if command[1:3] == ["ls-tree", "-r"]:
+            result.stdout = "trendhub-mcp/manifest.json\ntrendhub-mcp/SKILL.md\n"
+        elif command[1] == "show":
+            result.stdout = '{"name":"trendhub-mcp","version":"1.4.4","runtime":"mcp","entrypoint":"scripts/launcher.mjs","permissions":[]}'
+        return result
+
+    monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "skills.db"))
+    monkeypatch.setattr(runtime.subprocess, "run", fake_run)
+    monkeypatch.setattr(runtime, "resolve_github_revision", lambda *args, **kwargs: revision)
+    preview = runtime.preview_skill_source(
+        "https://github.com/Zachary-1012/Zachary-Skill/tree/main/trendhub-mcp",
+        resolve_remote=True,
+        fetch_remote_manifest=True,
+    )
+    init_account_db()
+    result = register_validated_skill(preview)
+
+    assert preview["state"] == "REMOTE_VALIDATED"
+    assert result["success"] is True
+    registered = next(item for item in list_skills() if item["skill_id"] == "trendhub-mcp")
+    assert registered["source_type"] == "github"
+    assert registered["revision"] == revision
+    assert registered["install_state"] == "not_installed"
+    assert registered["status"] == "disabled"
+
+
 def test_unknown_source_is_blocked_and_never_installed(tmp_path):
     from skill_package_runtime import preview_skill_source
 
@@ -187,6 +286,14 @@ def test_skill_source_register_route_requires_owner(client):
     response = client.post(
         "/api/system/account/skills/source/register",
         json={"source": "C:/untrusted/skill"},
+    )
+    assert response.status_code == 401
+
+
+def test_mcp_discovery_route_requires_owner(client):
+    response = client.post(
+        "/api/system/account/skills/source/mcp/discover",
+        json={"source": "mcp+stdio://trendhub", "command": ["node"], "args": []},
     )
     assert response.status_code == 401
 
@@ -233,6 +340,46 @@ def test_mcp_registration_is_fail_closed(tmp_path):
     result = register_validated_skill(preview)
     assert result["success"] is False
     assert result["code"] == "MCP_DISCOVERY_AND_APPROVAL_REQUIRED"
+
+
+def test_mcp_discovery_is_blocked_without_explicit_process_permission():
+    from mcp_discovery import discover_mcp_stdio
+
+    result = discover_mcp_stdio(["node"], ["server.mjs"])
+
+    assert result["state"] == "BLOCKED"
+    assert result["security"]["process_started"] is False
+    assert result["security"]["tool_calls"] == 0
+
+
+def test_mcp_stdio_discovery_lists_capabilities_but_never_calls_tools(tmp_path):
+    import sys
+    from mcp_discovery import discover_mcp_stdio
+
+    script = tmp_path / "mcp_fixture.py"
+    script.write_text(
+        "import sys,json\n"
+        "for line in sys.stdin:\n"
+        " m=json.loads(line); i=m.get('id'); method=m.get('method')\n"
+        " r={'jsonrpc':'2.0','id':i,'result':{}}\n"
+        " if method=='initialize': r['result']={'protocolVersion':'2025-11-25','capabilities':{},'serverInfo':{'name':'fixture','version':'1'}}\n"
+        " elif method=='tools/list': r['result']={'tools':[{'name':'read_signal','description':'read only','inputSchema':{'type':'object'}}]}\n"
+        " elif method=='resources/list': r['result']={'resources':[{'name':'evidence://fixture'}]}\n"
+        " elif method=='prompts/list': r['result']={'prompts':[{'name':'brief'}]}\n"
+        " if 'id' in m: print(json.dumps(r),flush=True)\n",
+        encoding="utf-8",
+    )
+    result = discover_mcp_stdio(
+        [sys.executable], [str(script)], allow_process=True, timeout=10,
+    )
+
+    assert result["ok"] is True
+    assert result["state"] == "DISCOVERED"
+    assert result["server_info"]["name"] == "fixture"
+    assert [tool["name"] for tool in result["tools"]] == ["read_signal"]
+    assert result["resources"][0]["name"] == "evidence://fixture"
+    assert result["prompts"][0]["name"] == "brief"
+    assert result["security"]["tool_calls"] == 0
 
 
 def test_github_connector_is_allowlisted_read_only_and_never_exposes_token():
