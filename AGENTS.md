@@ -49,7 +49,7 @@ Hard rules:
 Current Windows workstation entrypoint:
 
 ```text
-D:\LUMENIS_REBUILD
+D:\\LUMENIS_REBUILD
 ```
 
 Expected repository:
@@ -63,7 +63,7 @@ Zachary-1012/LUMENIS-codex-Clean-OS
 Start every engineering session with:
 
 ```powershell
-Set-Location D:\LUMENIS_REBUILD
+Set-Location D:\\LUMENIS_REBUILD
 git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
@@ -196,7 +196,7 @@ Do not create a second:
 
 A missing adapter does not justify a parallel platform.
 
-## 6. Current remote source facts that constrain implementation
+## 6. Point-in-time source audit (non-authoritative for current HEAD)
 
 The 2026-09-16 source audit was performed against pre-documentation-update remote `main` SHA:
 
@@ -210,21 +210,23 @@ See:
 08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md
 ```
 
-Key verified source facts:
+This SHA is retained only as audit provenance. **Codex must never use it as a checkout target, current baseline, or reason to reset/downgrade `main`.** Current truth must always be resolved from `origin/main` at session start.
+
+Key facts verified at that audit point:
 
 - production launcher is `scripts/start_production.ps1`;
 - core application target is port `8201` with `/healthz`;
 - Resident Browser infrastructure uses the existing 9222/9223 dual-identity model;
 - `app.py` is the Flask application entry and registers existing runtime/API blueprints;
 - Experience V2 is mounted through `experience_runtime.py` at `/experience/` and `/api/experience/*`;
-- current source explicitly lists `CTH-01` and `AI-01` as bound Experience screens; prototype existence is not backend-binding proof;
-- `evidence_chain.py` owns the current `zbc_evidence` / `zbc_canonical_data` lineage model;
-- `xhs_cookie_bridge.py` contains current XHS/RedNote collection safety/runtime logic;
-- `content_generation.py` contains the current research → generation → Evidence → Evaluation → human-feedback flow;
-- root Node tooling is Playwright-oriented and is not a React/Next/Vite production application manifest;
+- current source explicitly listed `CTH-01` and `AI-01` as bound Experience screens; prototype existence is not backend-binding proof;
+- `evidence_chain.py` owned the audited `zbc_evidence` / `zbc_canonical_data` lineage model;
+- `xhs_cookie_bridge.py` contained the audited XHS/RedNote collection safety/runtime logic;
+- `content_generation.py` contained the audited research → generation → Evidence → Evaluation → human-feedback flow;
+- root Node tooling was Playwright-oriented and was not a React/Next/Vite production application manifest;
 - clean CI and Production/Live acceptance are separate tiers.
 
-If current source later differs, current source wins over this point-in-time list.
+If current source differs, current source wins over this point-in-time list.
 
 ## 7. Codex local development tools
 
@@ -500,8 +502,8 @@ A green workflow is insufficient if blocking work did not actually execute.
 Canonical Windows command:
 
 ```powershell
-Set-Location D:\LUMENIS_REBUILD
-powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+Set-Location D:\\LUMENIS_REBUILD
+powershell -ExecutionPolicy Bypass -File scripts\\start_production.ps1
 ```
 
 Expected core health endpoint:
