@@ -1,60 +1,47 @@
 # 序境 / LUMENIS
 
-> **Production Core · Production Truth Owner**
->
+> **Production Core · Production Truth Owner**  
 > 当前阶段 / Current phase: **PRODUCTION CONVERGENCE**
-
-本仓库承载序境 / LUMENIS 当前生产实现、运行时、数据契约、Evidence、API、Permission、Metric、UI binding、测试与发布证据。`README.md` 是人类工程师入口，不是历史进度日志，也不能单独证明某项功能已经完成。
-
-This repository contains the active production implementation, runtime, data contracts, Evidence, API, Permission, Metric, UI binding, tests and release evidence for 序境 / LUMENIS. `README.md` is the human engineering entrypoint. It is not a historical progress log and does not by itself prove that a capability is complete.
-
----
-
-## Current Windows takeover / 当前 Windows 接续入口
-
-当前这台 Windows 研发机唯一有效本地工作区：
-
-```text
-D:\LUMENIS_REBUILD
-```
-
-唯一可写研发、集成与生产候选主线：
-
-```text
-Zachary-1012/LUMENIS-codex-Clean-OS
-main
-```
-
-Codex/工程师在当前机器开始工作时必须先从 `D:\LUMENIS_REBUILD` 验证本地 `main` HEAD、working tree、unpushed commits 与 `origin/main`，保护本地已完成修复并完成 local→main 收敛；不得用 remote tree 覆盖尚未 push 的有效本地实现。
-
-**禁止为日常研发创建 task/feature/codex/production/integration/handoff/research 分支；禁止把常规研发改为“开分支 → PR → 合 main”。工程工作直接在本地 `main` 完成、验证、提交并 push 到 `origin/main`。**
-
-**Do not create task/feature/codex/production/integration/handoff/research branches for normal engineering work. Do not turn routine development into a branch/PR/merge workflow. Work directly on local `main`, validate it, commit it and push it to `origin/main`.**
-
-Current takeover details: [`00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`](00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md)
-
-Production launcher after regression/sync gates:
-
-```powershell
-Set-Location D:\LUMENIS_REBUILD
-powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
-```
-
-Expected core health endpoint:
-
-```text
-http://127.0.0.1:8201/healthz
-```
-
-This workstation path is not a portable production-code requirement; the launcher resolves the repository root from its own location.
-
----
-
-## 1. 产品定位 / What LUMENIS is
 
 序境 / LUMENIS 是面向商业运营与品牌市场的生产级产品。AI 是增强能力，不拥有 Production Truth。
 
-LUMENIS is a production product for commerce operations and brand/market work. AI enhances the product but does not own Production Truth.
+本仓库承载当前生产实现、运行时、数据契约、Evidence、API、Permission、Metric、Experience、测试与发布证据。`README.md` 是人类工程入口，不是历史进度日志；文档、提交说明、CI 绿色或页面可打开，都不能单独证明功能已经 `VERIFIED / RELEASED / OPERATING`。
+
+> Coding Agent / Codex 的当前执行入口固定为：`AGENTS.md` → `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`。当前 HEAD 必须通过 `git fetch origin` + `git rev-parse origin/main` 动态解析，不得从 README、历史 handoff、截图或粘贴 SHA 推断。
+
+## 0. CURRENT 接管入口与历史审计基线 / Current takeover and audit provenance
+
+当前执行入口：
+
+```text
+AGENTS.md
+→ 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ README.md
+→ 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
+→ 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
+→ current source / runtime / DB / API / Permission / Evidence / tests for the active slice
+```
+
+2026-09-16 文档更新前的远程 `main` 审计点：
+
+```text
+repo   = Zachary-1012/LUMENIS-codex-Clean-OS
+branch = main
+sha    = 147e3bd331b22236930ae29112a67c613a148f67
+```
+
+**这个 SHA 只保留为 point-in-time audit provenance，不是当前 HEAD、checkout target、reset target 或 Codex 开发基线。** 当前 `origin/main` 必须在每次工程会话开始时重新读取。
+
+该历史审计基于当时远程源码、运行入口、依赖清单、CI 分层、Evidence、Collector、Experience V2 与内容生成实现进行核对；记录见：
+
+- [`08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`](08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md)
+- [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
+
+远程、当前本地 working tree、local-only commit、历史审计点、最后 runner-backed green baseline、current-head CI 与 live runtime 必须分开描述；不得互相冒充。
+
+---
+
+## 1. 产品定位 / Product definition
 
 Canonical production chain / 标准生产链：
 
@@ -85,49 +72,70 @@ Source
 → Learning Asset
 ```
 
-内部链路是生产约束，不是为了页面展示而存在的装饰流程。
+四域结构：
 
-These chains define production semantics; they are not decorative page flows.
-
----
-
-## 2. 产品域 / Product domains
-
-### CTH · 商业运营 / Commerce Operations
-
-主体优先（Subject-first），负责主体、场地/项目、事件、案例、风险、决策与行动。
-
-Subject-first domain for subjects, venues/projects, events, cases, risk, decisions and actions.
-
-### BMP · 品牌市场 / Brand & Market
-
-品牌/市场优先，负责品牌、竞品、创作者/账号、Campaign、传播/市场表现、Benchmark、风险与评估。
-
-Brand/market-first domain for brands, competitors, creators/accounts, campaigns, communication/market performance, benchmarks, risk and evaluation.
-
-### Shared Capability · 共享能力
-
-内容与创作、Evidence、Research、Evaluation、Learning Asset、AI Enhancement 等跨域能力。
-
-Cross-domain capabilities including Content & Creation, Evidence, Research, Evaluation, Learning Assets and AI Enhancement.
-
-### SYSTEM · 系统
-
-Collector、Runtime、Scheduler、AI Gateway、Database、Security、Permission、Settings、Recovery、Observability。
-
-Infrastructure and control plane: Collector, Runtime, Scheduler, AI Gateway, Database, Security, Permission, Settings, Recovery and Observability.
+| 域 | 定位 | 主要责任 |
+| --- | --- | --- |
+| CTH · 商业运营 | Subject-first | 主体、场地/项目、事件、案例、风险、决策与行动 |
+| BMP · 品牌市场 | Brand/Market-first | 品牌、竞品、创作者/账号、Campaign、传播表现、Benchmark、风险与评估 |
+| Shared Capability | 跨域共享 | Content & Creation、Evidence、Research、Evaluation、Learning Asset、AI Enhancement |
+| SYSTEM | 控制与基础设施 | Collector、Runtime、Scheduler、AI Gateway、Database、Security、Permission、Settings、Recovery、Observability |
 
 CTH 与 BMP 可以共享 Subject Context 与基础设施，但不得静默合并领域模型、指标、关系和行动语义。
 
-CTH and BMP may share Subject Context semantics and infrastructure, but their domain models, metrics, relationships and action semantics must not silently collapse into one model.
+---
+
+## 2. 2026-09-16 源码审计确认的生产事实 / Point-in-time source facts
+
+以下内容是 `147e3bd...` 审计点确认的 source evidence，不是对未来/current HEAD 的永久声明。Codex 开始具体工作时必须以当前源码重新核验 owner、caller、contract、runtime 与 tests；若当前源码不同，以当前源码为准。
+
+### Runtime
+
+审计点确认的 Windows canonical launcher：
+
+```powershell
+Set-Location D:\LUMENIS_REBUILD
+powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
+```
+
+审计点确认的 core health target：
+
+```text
+http://127.0.0.1:8201/healthz
+```
+
+审计点启动链使用现有 `.venv`、`run_supervised.py`、Flask/Waitress 运行时，并维护 8201 supervisor；Resident Browser 使用现有 9222/9223 双身份 CDP。工作站路径是本机入口，不应成为可移植生产代码硬依赖。
+
+### Experience V2
+
+审计点 `app.py` 已注册 `experience_runtime`，Experience 挂载到：
+
+```text
+/experience/
+/api/experience/*
+```
+
+审计点源码明确声明真实后端绑定屏幕为 `CTH-01` 与 `AI-01`；其他屏幕不得仅因原型存在就视为生产绑定完成。当前 HEAD 是否已有变化必须重新以源码验证。
+
+### Evidence / Canonical
+
+审计点 `evidence_chain.py` 提供 `zbc_evidence`、`zbc_canonical_data` 与 lifecycle tracking 等链路，强调 Evidence 不被分析结果覆盖、provenance、rule version、AI 输出与人工修正分离。
+
+XHS side-write、lineage convergence 与其他 Evidence 行为必须以当前源码和测试为准；若本地存在比远程更新的有效修复，必须先完成 local→main 收敛再把状态升级为远程已实现。
+
+### Collector / XHS runtime
+
+审计点 `xhs_cookie_bridge.py` 包含受控本地 Cookie/Profile 读取、双身份逻辑、9222/9223 Resident Browser、冷却/风控/次数兜底和 policy gate。Cookie/session 不得进入源码、日志、公开配置或文档。
+
+### Content & Creation
+
+审计点 `content_generation.py` 包含结构化内容类型、研究库检索、Evidence、Evaluation、人工反馈迭代以及 local-first AI / 显式 cloud enable 语义。AI 输出仍不是 Production Truth。
 
 ---
 
-## 3. 事实权威 / Authority and truth
+## 3. 事实权威 / Authority order
 
-发生冲突时按以下优先级判断：
-
-When artifacts disagree, use this precedence:
+发生冲突时：
 
 ```text
 Current Production Source
@@ -136,21 +144,51 @@ Current Production Source
 > Tests / E2E / Production Acceptance
 > Current Canonical Governance
 > Experience V2 / Current UI Capability Evidence
+> README
 > Historical Handoff / Legacy Evidence
 > Chat History
 ```
 
-`IMPLEMENTED`、`TESTED`、`VERIFIED`、`RELEASED`、`OPERATING` 是不同状态。文档、提交说明或聊天记录不能自动升级运行状态。
+状态语义必须严格区分：
 
-`IMPLEMENTED`, `TESTED`, `VERIFIED`, `RELEASED` and `OPERATING` are different states. Documentation, commit messages and chat history never upgrade runtime state by themselves.
+```text
+IMPLEMENTED = 代码存在
+TESTED      = 对应 scoped automated tests 通过
+VERIFIED    = Runtime / E2E 证明行为
+RELEASED    = 发布、安全、恢复、回滚 Gate 通过
+OPERATING   = 真实运行产生规定的线上/时间性证据
+```
+
+`CI PASS != LIVE_VERIFIED`，`RELEASED != OPERATING`。
 
 ---
 
-## 4. 标准闭环 / Canonical closed loop
+## 4. 审计点依赖与零授权能力边界
 
-Shared Capability × Collector 的正式方向：
+2026-09-16 审计点的 `requirements.txt` 包含并可作为既有基础设施的历史核验对象：
 
-Approved Shared Capability × Collector direction:
+```text
+Flask / Waitress
+APScheduler / schedule
+requests / httpx / aiohttp
+BeautifulSoup4 / lxml
+Playwright
+SQLite (stdlib)
+tenacity
+Alembic
+```
+
+审计点根 `package.json` 承担 Node tooling，并直接依赖 Playwright；它不是 Next.js/React/Vite 生产前端 manifest。当前依赖状态必须以当前 manifest 重新读取。
+
+本轮“零授权能力”标准：免费、无需第三方 API Key/OAuth、可进入 LUMENIS 自有 Production Truth。正式验收表见：
+
+[`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
+
+特别说明：2026-09-16 远程审计点 `requirements.txt` **尚未包含 `feedparser`**。这是历史审计事实，不得反向覆盖当前 manifest；Codex 应先读取当前 `requirements.txt` 再判断其当前状态。
+
+---
+
+## 5. 标准闭环 / Canonical closed loop
 
 ```text
 SYSTEM Collector
@@ -165,262 +203,118 @@ SYSTEM Collector
 → Learning Version Update
 ```
 
-核心约束 / Key invariants:
+硬约束：
 
-- Collector 始终由 SYSTEM 唯一拥有；Collector remains a single SYSTEM-owned Runtime capability.
-- Upload / Import / API / Collector 只是不同 acquisition adapter，最终进入同一 Production Truth；they converge into one Production Truth.
-- `MetricSnapshot` append-only，不覆盖历史观测；historical observations are not overwritten.
-- `missing != 0`，未来 T+ 表现不得伪造；future T+ performance must not be fabricated.
-- AI 可提出 Pattern candidate，但不得自主执行 `Pattern → ADOPT`; AI may propose but not autonomously adopt.
-- 登录态 Collector 只读；未来 Publisher 必须是独立 Permission/Effect capability; logged-in Collector remains read-only.
-- `RELEASED != OPERATING`.
+- Collector 始终由 SYSTEM 单一拥有；
+- Upload / Import / API / Collector 只是 acquisition adapters，必须汇聚到同一 Production Truth；
+- `MetricSnapshot` append-only；
+- `missing != 0`；
+- AI 可提出 Pattern candidate，但不能自主执行 `Pattern → ADOPT`；
+- 登录态 Collector 保持只读；未来 Publisher 必须独立经过 Permission → Approval → Effect Fence；
+- 第三方组件只能位于 bounded adapter/infrastructure 边界，不能成为 DB/Evidence/Metric/Permission/Business Truth owner。
 
-详细规范 / Canonical detail: [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
+Canonical detail: [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
 
 ---
 
-## 5. 仓库导航 / Repository orientation
+## 6. 仓库导航 / Repository orientation
 
 ```text
-README.md                       人类产品+工程入口 / human product + engineering entrypoint
-AGENTS.md                       Coding Agent 路由 / coding-agent execution router
-00-GOVERNANCE/                 权威规则、发布、handoff evidence / canonical governance
-02-ARCHITECTURE/               架构资料 / architecture material
-08-AUDIT/                       审计证据 / audit evidence
-99-ARCHIVE/                     历史/归档证据 / historical evidence
-.github/                        CI/workflow
-scripts/                        运维、启动、维护脚本 / operations/startup/maintenance
-app.py                          当前 Flask 应用入口 / current Flask application entry
-run_supervised.py               当前进程监督器 / current process supervisor
-requirements.txt                生产/运行 Python 依赖 / production/runtime Python dependencies
-requirements-dev.txt            开发/测试 Python 依赖 / development/test dependencies
-package.json                    根 Node tooling manifest
-.env.example                    非敏感配置模板 / non-secret configuration template
+README.md                       人类产品 + 工程入口
+AGENTS.md                       Coding Agent 执行路由
+LICENSE                         LUMENIS 源码许可边界
+00-GOVERNANCE/                 权威规则、验收、handoff evidence
+02-ARCHITECTURE/               架构资料
+08-AUDIT/                      当前审计证据
+99-ARCHIVE/                    历史/归档证据
+.github/workflows/             CI
+scripts/                       运维、启动、维护脚本
+app.py                         当前 Flask 应用入口
+run_supervised.py              当前进程监督器
+requirements.txt               生产/运行 Python 依赖
+requirements-dev.txt           开发/测试 Python 依赖
+package.json                   Node tooling manifest
+.env.example                   非敏感配置模板
 ```
 
-以上是入口导航，不代表所有根目录文件都已经达到最终目录形态。不得只看文件名进行批量移动或重写。
-
-This is orientation, not a claim that every root file is optimally placed. Do not mass-move or rewrite production code based on filenames alone.
-
-工程标准 / Engineering standard: [`00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`](00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md)
+不得按文件名批量移动/删除源码。任何重构前先完成 owner/caller/data read-write/runtime/test dependency trace。
 
 ---
 
-## 6. 唯一本地工作区 + 唯一可写主线 / One workspace + one writable mainline
+## 7. 唯一本地工作区 + 唯一可写主线
 
-**当前 Windows 机器唯一有效本地工作区：`D:\LUMENIS_REBUILD`。**
+当前 Windows 研发机唯一有效工作区：
 
-**`main` 是唯一可写研发主线、唯一集成主线、唯一远端生产候选真相。**
+```text
+D:\LUMENIS_REBUILD
+```
 
-**On the current Windows workstation, `D:\LUMENIS_REBUILD` is the only active local workspace. `main` is the only writable development line, the only integration line and the only remote production-candidate truth.**
+`main` 是唯一可写研发、集成和生产候选主线。
 
-硬规则 / Hard rules:
-
-- 不创建任务支线；do not create task branches.
-- 不创建 feature/codex/production/integration/handoff/research 分支；do not create feature/codex/production/integration/handoff/research branches.
-- 日常研发不通过 PR 中转；routine engineering does not use PRs as an intermediate workflow.
-- 所有正常研发直接发生在本地 `main`；normal engineering happens directly on local `main`.
-- 有效修改经 scoped/targeted test 后形成 coherent commit，并直接 push `origin/main`; validated changes are committed coherently and pushed directly to `origin/main`.
-- 历史 side branch 只作为只读证据；historical side branches are read-only evidence only.
-- 若历史 branch 含唯一有效实现，只允许一次性比较并把独有有效内容吸收进 `main`，随后继续只在 `main` 研发；if an old branch contains unique valid work, absorb it into `main` once and never resume side-branch development.
-- 不得 force-push `main`; never force-push `main`.
-- 分支名、旧 HEAD、handoff 不能作为当前功能完成证明；branch names, old HEADs and handoffs are not runtime proof.
-
-历史分支收敛资料 / Historical branch-convergence evidence: `00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md`（若存在 / when present）。
-
----
-
-## 7. 工程师上手 / Engineering onboarding
-
-### 7.1 先确认仓库身份 / Verify repository identity first
-
-在当前 Windows 机器，先进入唯一工作区：
+开始工作前：
 
 ```powershell
 Set-Location D:\LUMENIS_REBUILD
-```
-
-然后核验：
-
-```bash
 git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
 git rev-parse HEAD
-git status
+git status --short --branch
 git fetch origin
 git rev-parse origin/main
 ```
 
-正确远端 / Expected remote:
+硬规则：
 
-```text
-Zachary-1012/LUMENIS-codex-Clean-OS
-```
-
-正确可写分支 / Expected writable branch:
-
-```text
-main
-```
-
-未知本地修改在分类前不得丢弃。
-
-Preserve unknown local changes until classified.
-
-### 7.2 Python 环境 / Python environment
-
-生产/运行依赖 / Production/runtime:
-
-```text
-requirements.txt
-```
-
-开发/测试依赖 / Development/test:
-
-```text
-requirements-dev.txt
-```
-
-Windows 开发示例 / Windows development example:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-Copy-Item .env.example .env
-```
-
-生产环境只安装运行依赖时使用 `requirements.txt`。不得提交 `.env`、凭证、Cookie、Session 或真实生产数据。
-
-Use `requirements.txt` for a runtime-only environment. Never commit `.env`, credentials, cookies, sessions or real production data.
-
-### 7.3 Node tooling
-
-根 `package.json` 当前服务于 Playwright/browser/login/search 等工具。只有任务需要时才安装：
-
-The root `package.json` supports Playwright/browser/login/search tooling. Install it only when required:
-
-```bash
-npm install
-```
-
-Node tooling 不是主应用运行时。
-
-Node tooling is not the main application runtime.
+- 保护未知/未提交/未 push 的有效本地工作；
+- 不用 remote tree 覆盖本地有效修复；
+- 正常研发不创建 task/feature/codex/production/integration/handoff/research 分支；
+- 不 force-push `main`；
+- validated change → coherent commit → push `origin/main`；
+- side branch 只作历史证据，必要时一次性吸收其独有有效实现。
 
 ---
 
-## 8. 配置与数据安全 / Configuration and data safety
+## 8. Codex / Coding Agent 执行标准
 
-`.env.example` 是非敏感配置模板。历史命名或多代配置键必须通过依赖追踪逐步收口，不能凭外观直接删除。
+Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-`.env.example` is the non-secret configuration template. Historical naming and multiple configuration generations must be converged through dependency tracing, not deleted by appearance.
-
-硬规则 / Hard rules:
-
-- 不提交 secret/live Cookie/session；no committed secrets/live cookies/sessions.
-- 生产运行不得依赖某个开发者机器绝对路径；no developer-machine absolute path as a production requirement.
-- tests/staging 使用 isolated/disposable DB；tests/staging use isolated/disposable databases.
-- test DB 不得静默 fallback 到受保护 production DB；no silent fallback into the protected production DB.
-- DB isolation/migration 必须有运行证据；DB isolation/migration requires runtime evidence.
-- missing/unknown 与数字 `0` 必须保持不同语义；missing/unknown remains distinct from numeric zero.
-
----
-
-## 9. 启动与健康检查 / Start and health
-
-当前 Windows production launcher / Current Windows production launcher:
-
-```powershell
-Set-Location D:\LUMENIS_REBUILD
-powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
-```
-
-启动脚本从自身位置解析仓库根，不会把 `D:\LUMENIS_REBUILD` 硬编码进可移植生产逻辑。
-
-The launcher resolves the repository root from its own script location; `D:\LUMENIS_REBUILD` is the current workstation entrypoint, not a portable production-code dependency.
-
-当前 health target / Current health target:
+默认执行方式：
 
 ```text
-http://127.0.0.1:8201/healthz
-```
-
-启动验收 / Startup acceptance:
-
-```text
-dependencies
-→ configuration
-→ launcher
-→ application boot
-→ supervisor stability
-→ port bind
-→ health
-→ required runtime initialization
-→ critical APIs / Experience
-```
-
-外部 browser/login/source 可用性与 core application health 分开报告。
-
-External browser/login/source availability is reported separately from core application health.
-
----
-
-## 10. 开发流程 / Development workflow
-
-```text
-D:\LUMENIS_REBUILD
-→ local main
-→ Current Gate / Ticket
-→ Dependency Trace
-→ Reuse Existing Owner
+Active Gate / Ticket
+→ Inspect exact owner / caller / contract / tests
+→ Reuse before rebuild
 → Implement
-→ Scoped Test
-→ Neighbour Regression
+→ Scoped test
+→ Affected regression
 → Runtime / E2E when required
 → Evidence
-→ Coherent Commit on main
-→ push origin main
-→ main CI when required
-→ Next Gate
+→ Coherent commit
+→ Sync main
 ```
 
-**没有“开任务分支 → PR → Merge to main”的常规阶段。There is no routine `task branch → PR → merge to main` stage.**
+Codex 本地开发工具（如 Playwright MCP、Filesystem MCP、Git、rg、fd、jq、sqlite3 CLI、curl）属于开发/验收工具层，不自动成为 LUMENIS 生产依赖。
 
-优先 `reuse → adapt → bind → verify`。不得为局部问题建立第二套 DB、Evidence、Metric、Permission、Runtime、Subject Context、Design System 或 API truth。
-
-Prefer `reuse → adapt → bind → verify`. Do not create a second DB, Evidence, Metric, Permission, Runtime, Subject Context, Design System or API truth to solve a local problem.
-
-不要每次任务都重新全仓发现，只加载当前工作需要的源码、契约与测试。
-
-Do not rediscover the full repository for every task; load only the source, contracts and tests required by the active work.
-
-Coding-agent rules / Agent 规则: [`AGENTS.md`](AGENTS.md)
+不得为了“确认权限”、测试 connector、重触发 Actions 或制造活动记录而创建/删除 probe 文件、空提交、无内容变化提交或重复改写同一文件。已有证据可复用时不得重复取证；只有当前任务所需且尚未验证的事实才继续读取。
 
 ---
 
-## 11. 测试与 E2E / Testing and E2E
+## 9. 测试、CI 与 Live Gate
 
-按影响范围逐步扩大 / Widen tests proportionally:
+CI 当前分层：
 
 ```text
-fast/static
-→ targeted unit
-→ affected integration
-→ neighbour regression
-→ representative/domain E2E
-→ full regression at convergence/release gates
+Tier A  Repository Integrity            BLOCKING
+Tier B  Hermetic Product/Contract       BLOCKING
+Tier C  Production / Live / Environment required acceptance evidence
 ```
 
-叶子修改不要反复跑完整数千测试；共享 primitive、DB、Permission、Runtime 等变化则必须扩大验证。
+详见 [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md)。
 
-Do not run the entire suite after every leaf edit; widen verification when shared primitives, persistence, permission or runtime infrastructure changes.
+当前 GitHub workflow 会执行 dependency install、`compileall`、test-tier manifest validation 与 hermetic pytest；Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。
 
-Clean-checkout CI 与 Environment/Production-Live Acceptance 分层。详见 [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md)。被 clean CI 排除的 live test **不等于 PASS**。
-
-Clean-checkout CI and Environment/Production-Live Acceptance are separate tiers. See [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md). A live test excluded from clean CI is **not** considered passed.
-
-重要用户功能最终应证明 / Important user-operable features should prove:
+重要用户功能应证明：
 
 ```text
 UI Entry
@@ -435,13 +329,11 @@ UI Entry
 → E2E
 ```
 
-`UI EXISTS`、`API EXISTS`、`TEST EXISTS` 单独都不等于 `FEATURE DONE`。
-
-`UI EXISTS`, `API EXISTS` or `TEST EXISTS` alone does not mean `FEATURE DONE`.
+GitHub Actions 若出现 job 未真正开始、`steps=[]`、0-step 或无 repository-step log，只能标记为 execution-layer unverified；不得伪装成源码测试 PASS，也不得直接归因为产品回归。不要通过空提交重触发。
 
 ---
 
-## 12. Production Convergence DAG
+## 10. Production Convergence DAG
 
 ```text
 G0  Repository Truth Convergence
@@ -463,49 +355,50 @@ G0  Repository Truth Convergence
 → G16 Release Gates
 ```
 
----
-
-## 13. 发布语义 / Release semantics
-
-```text
-IMPLEMENTED = 代码存在 / code exists
-TESTED      = 对应测试通过 / scoped tests pass
-VERIFIED    = Runtime / E2E 证明行为 / runtime/E2E proves behavior
-RELEASED    = 发布、安全、恢复、回滚 Gate 通过 / release/security/recovery/rollback gates pass
-OPERATING   = 真实运行产生规定的线上/时间性证据 / real operation produces required live/time evidence
-```
-
-不要把 GitHub Actions 绿色、HTTP 200 或页面能打开当成 Production Ready 的替代证据。
-
-Do not use a green workflow, HTTP 200 or a rendered page as a substitute for Production Readiness.
+不得因为旧 handoff、旧 commit 或文档写过某 Gate 就重复做，也不得因为文档存在就跳过执行证据。
 
 ---
 
-## 14. 文档索引 / Documentation index
+## 11. 第三方与 License
 
-长期规则优先阅读：
+第三方组件登记：[`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
+
+当前仓库源码许可边界见 [`LICENSE`](LICENSE)。第三方/开源依赖继续受各自原始许可证约束，不能被本仓库 License 覆盖或重新许可。
+
+未知第三方许可证、未登记的 shipped third-party code、错误 attribution 均是 release blocker。
+
+---
+
+## 12. 安全红线
+
+不得提交或暴露：
+
+- `.env`、API key、credential；
+- Cookie / session / browser profile secret；
+- 真实生产 DB；
+- system/developer prompt 或 private reasoning；
+- 受保护内部工具细节；
+- 未经审批的高风险外部写操作。
+
+Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变更都必须证明不会静默落到受保护 production DB。
+
+---
+
+## 13. Canonical documents
+
+当前接管与跨产品治理优先读取：
 
 - [`AGENTS.md`](AGENTS.md)
+- [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)
+- [`00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`](00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md)
+- [`00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`](00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json)
+
+其他优先级较高的长期文档：
+
 - [`00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`](00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md)
 - [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
 - [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
-
-历史分支收敛证据（仅回溯旧 ref 时读取）：
-
-- [`00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md`](00-GOVERNANCE/SINGLE-MAINLINE-BRANCH-CONSOLIDATION-V1.md)
-
-当前 Windows 接续任务在确有未决事实时再读取：
-
-- [`00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md`](00-GOVERNANCE/handoff/CODEX-CURRENT-BLOCKERS-20260913.md)
+- [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
+- [`08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`](08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md)
 
 历史 handoff / audit / archive 只在迁移、回溯、审计需要时读取，不作为正常开发必读材料。
-
----
-
-## 15. Third-Party / Open-Source Components
-
-所有重要非自研组件必须登记到 [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，并保持：purpose、usage、integration boundary、license/verification status、replaceability 与 native replacement direction。
-
-All material non-native components must be recorded in the canonical third-party register with purpose, usage, integration boundary, license/verification status, replaceability and native-replacement direction.
-
-Third parties may implement adapters/infrastructure but must not silently become the owner of LUMENIS DB Truth, Evidence Truth, Metric Truth, Permission Truth or Business Truth.

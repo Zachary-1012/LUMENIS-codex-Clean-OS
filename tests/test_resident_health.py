@@ -65,7 +65,6 @@ class TestCheckAccount(unittest.TestCase):
         """结果中绝不能包含 cookie 值（只含名称存在性和数量）。"""
         result = rh.check_account(bridge.XHS_CN_PRIMARY_NAME)
         raw = json.dumps(result, ensure_ascii=False)
-        # web_session 的值是 040069 开头，id_token 是 VjE 开头——结果中不应出现这些值模式
         self.assertNotRegex(raw, r"040069[a-f0-9]{20,}")
         self.assertNotRegex(raw, r"VjEA[A-Za-z0-9+/]{20,}")
 
@@ -96,7 +95,6 @@ class TestCheckAll(unittest.TestCase):
 class TestRecover(unittest.TestCase):
     def test_recover_healthy_returns_noop(self):
         """对 HEALTHY 身份，recover 应直接 noop，不实际重启浏览器。"""
-        # 先确保是 HEALTHY（如果不是则跳过此测试的 noop 断言）
         current = rh.check_account(bridge.XHS_CN_PRIMARY_NAME)
         if current["status"] != "HEALTHY":
             self.skipTest("primary not HEALTHY in this env, skip noop test")
@@ -104,12 +102,12 @@ class TestRecover(unittest.TestCase):
         self.assertEqual(result["action"], "noop")
         self.assertEqual(result["reason"], "already HEALTHY")
 
-    def test_recover_unknown_account_fallback(self):
-        """未知身份应回退到主号端口（不抛异常）。"""
-        # 不实际调用 recover（可能触发重启），只验证 check 不抛异常
+    def test_unknown_account_follows_current_default_identity(self):
+        """未知身份按当前生产默认 Retinaut/intl 身份回退，不得静默切回大陆主号。"""
         result = rh.check_account("XHS_UNKNOWN")
         self.assertIsInstance(result, dict)
-        self.assertEqual(result["cdp_port"], 9222)  # 回退默认
+        self.assertEqual(result["cdp_port"], bridge.DEFAULT_CDP_PORT)
+        self.assertEqual(result["cdp_port"], 9223)
 
 
 class TestStatusCache(unittest.TestCase):

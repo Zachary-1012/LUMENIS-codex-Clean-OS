@@ -1,6 +1,10 @@
 # LUMENIS CODEX TAKEOVER — READ FIRST — 2026-09-11
 
-> Status: **EXECUTION ENTRYPOINT / NO-REDISCOVERY HANDOFF**  
+> **SUPERSEDED / HISTORICAL HANDOFF.**  
+> Current Codex entrypoint: `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`.  
+> Do not use the HEAD, CI status or execution priority below as current truth without re-verifying `origin/main`.
+
+> Historical status at creation: **EXECUTION ENTRYPOINT / NO-REDISCOVERY HANDOFF**  
 > Import base audited against GitHub `main@f548669d82974ea065afb310776ec63935896d7d`.  
 > Goal: use Codex quota on real binding, optimization, gates and closure — not on rebuilding assets already delivered.
 

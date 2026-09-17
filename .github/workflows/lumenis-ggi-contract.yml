@@ -1,0 +1,36 @@
+name: Verify LUMENIS-GGI Contract
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lumenis-ggi-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate cross-product contract (BLOCKING)
+        run: >-
+          python scripts/audit_tools/verify_lumenis_ggi_contract.py
+          00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
+
+      - name: Validate Codex takeover governance (BLOCKING)
+        run: python scripts/audit_tools/verify_codex_takeover_governance.py

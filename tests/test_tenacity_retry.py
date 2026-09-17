@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""P1-2 tenacity 网络层指数退避重试单测（_cdp_online 瞬断重试）。"""
+"""P1-2 tenacity 网络层指数退避重试单测（显式远程 worker）。"""
 import os
 import sys
 
@@ -9,23 +9,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 pytestmark = pytest.mark.redline
 
+REMOTE_WORKER = "https://browser-worker.example:9223"
+
 
 def test_cdp_online_retries_on_transient_failure(monkeypatch):
-    """CDP 探测瞬时失败应指数退避重试（不误判为掉线）。"""
+    """已配置 worker 的 CDP 探测瞬时失败应指数退避重试。"""
+    import urllib.error
+    import urllib.request
     import collector
 
     calls = {'n': 0}
-    real = collector._cdp_online
-
-    def fake_probe_after_fail():
-        return real
-
-    # 模拟：前 2 次 URLError（瞬断），第 3 次成功
-    from unittest.mock import patch
-    import urllib.error
-
-    orig_urlopen = None
-    import urllib.request
 
     class _FakeResponse:
         status = 200
@@ -41,32 +34,17 @@ def test_cdp_online_retries_on_transient_failure(monkeypatch):
         return _FakeResponse()
 
     monkeypatch.setattr(urllib.request, 'urlopen', flaky_urlopen)
-
-    # 直接测 tenacity 包装的探测逻辑：重新调用 _cdp_online（内部已带重试）
-    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-    calls2 = {'n': 0}
-    def flaky_probe():
-        calls2['n'] += 1
-        if calls2['n'] < 3:
-            raise urllib.error.URLError('transient')
-        return True
-
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=0.3, min=0.2, max=1.2),
-           retry=retry_if_exception_type((urllib.error.URLError, OSError, TimeoutError)),
-           reraise=True)
-    def probe_retry():
-        return flaky_probe()
-
-    assert probe_retry() is True
-    assert calls2['n'] == 3, '瞬断应重试到第3次成功'
+    assert collector._cdp_online(timeout=1.0, cdp_url=REMOTE_WORKER) is True
+    assert calls['n'] == 3, '瞬断应重试到第3次成功'
 
 
 def test_cdp_online_immediate_success(monkeypatch):
-    """CDP 探测首次即成功，不应多打请求。"""
+    """已配置 worker 首次探测成功时不应多打请求。"""
     import urllib.request
+    import collector
 
     calls = {'n': 0}
+
     class _FakeResponse:
         status = 200
         def __enter__(self):
@@ -79,9 +57,23 @@ def test_cdp_online_immediate_success(monkeypatch):
         return _FakeResponse()
 
     monkeypatch.setattr(urllib.request, 'urlopen', ok_urlopen)
+    assert collector._cdp_online(timeout=1.0, cdp_url=REMOTE_WORKER) is True
+    assert calls['n'] == 1
+
+
+def test_cdp_online_without_endpoint_fails_closed_without_network(monkeypatch):
+    """没有显式 worker 时必须直接 False，不能偷偷探测 localhost。"""
+    import urllib.request
     import collector
-    # 直接探测 _cdp_online（走 tenacity 路径，首次成功）
-    assert collector._cdp_online(timeout=1.0) is True
+
+    monkeypatch.delenv('XHS_CDP_URL', raising=False)
+    monkeypatch.setattr(collector, 'CDP_URL', '')
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError('未配置 worker 时不应发送网络请求')
+
+    monkeypatch.setattr(urllib.request, 'urlopen', fail_if_called)
+    assert collector._cdp_online(timeout=1.0) is False
 
 
 def test_cdp_online_tenacity_importable():

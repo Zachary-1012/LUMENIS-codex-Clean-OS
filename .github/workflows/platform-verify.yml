@@ -1,4 +1,4 @@
-name: Verify LUMENIS
+name: LUMENIS Product Gate
 
 on:
   push:
@@ -7,15 +7,21 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: lumenis-product-gate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
+    name: production truth + hermetic platform verification
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -25,8 +31,21 @@ jobs:
       - name: Install development/test dependencies
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
-      - name: Compile Python sources (BLOCKING)
-        run: python -m compileall -q .
+      - name: Validate four-product contract and LUMENIS authority (BLOCKING)
+        run: >-
+          python scripts/audit_tools/verify_lumenis_ggi_contract.py
+          00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
+
+      - name: Validate Codex takeover governance consistency (BLOCKING)
+        run: python scripts/audit_tools/verify_codex_takeover_governance.py
+
+      - name: Compile tracked Python sources (BLOCKING)
+        shell: bash
+        run: |
+          python_files="$(git ls-files '*.py' | wc -l | xargs)"
+          test "$python_files" -gt 0
+          echo "Compiling ${python_files} tracked Python files"
+          git ls-files -z '*.py' | xargs -0 -r -n 120 python -m py_compile
 
       - name: Validate CI test-tier manifests (BLOCKING)
         shell: bash
@@ -61,7 +80,6 @@ jobs:
           exit "$missing"
 
       - name: Credential-path boundary diagnostic (INFORMATIONAL)
-        # data_boundary returns only tracked relative paths; it never reads or prints secret values.
         shell: bash
         run: |
           python - <<'PY'
@@ -75,8 +93,6 @@ jobs:
           PY
 
       - name: Run clean-checkout hermetic pytest (BLOCKING)
-        # Production/live suites remain required acceptance evidence, but are not
-        # valid prerequisites for a secret-free clean checkout. See tests/CI_TEST_TIERS.md.
         shell: bash
         timeout-minutes: 15
         run: |

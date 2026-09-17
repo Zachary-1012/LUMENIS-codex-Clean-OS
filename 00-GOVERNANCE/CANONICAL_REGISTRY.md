@@ -17,6 +17,21 @@ This registry is the single structural reference for mapping production assets w
 
 Korean product name: **서경 LUMENIS**. CTH Korean: **서경·커머스 운영**. BMP Korean: **서경·브랜드 & 마켓**. Existing repository/internal identifiers such as `ZBC`, `ZBMP`, and `CTH` may remain in code, API paths, database fields and migration history where compatibility requires them; user-facing naming follows this registry.
 
+## Ecosystem identity and four-repository contract
+
+The formal ecosystem naming and Truth Ownership are locked as follows:
+
+| Product | Canonical Repository | Stable technical alias | Canonical role | Truth Owner |
+|---|---|---|---|---|
+| **序境 / LUMENIS** | `Zachary-1012/LUMENIS-codex-Clean-OS` | LUMENIS / historical `ZBC` where compatibility requires | Production Core | **Production Truth** |
+| **序蕴 / LUMENIS Intelligence** | `Zachary-1012/Zachary-OS-AI` | OSAI / `Zachary-OS-AI` | Shared Intelligence Capability | **Shared Intelligence Assets** |
+| **序衍 / LUMENIS Growth** | `Zachary-1012/global-growth-intelligence` | GGI / `global-growth-intelligence` | Independent Research & Growth Product | **Research / Growth Truth** |
+| **序枢 / LUMENIS Command** | `Zachary-1012/lumenis-command` | COMMAND / `lumenis-command` | R&D Control Sidecar | **Engineering Evidence** |
+
+Machine contract: `lumenis-ggi-cross-product` v`1.1.0`, status `ACTIVE`, effective `2026-09-17`, fingerprint `68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f`.
+
+Stable technical aliases, repository names, package names, environment variables, API namespaces, DB keys and historical links are not destructively renamed solely for branding. Formal names above govern README, governance, product-facing naming and new human-readable documentation.
+
 ## Domain semantics
 
 ### CTH — Commerce Operations
@@ -75,14 +90,16 @@ LUMENIS / 序境
     └── Agent Groups
 ```
 
-## Twin boundary
+## Four-product boundary
 
-| System | Canonical role | Owns | May request |
+| Product | Canonical role | Owns | May exchange |
 |---|---|---|---|
-| 序境 / LUMENIS | Production Truth | production code/data/runtime/policy/reporting | research, models, recommendations |
-| LUMENIS Intelligence / OSAI | Research & Intelligence | research/evidence/models/evaluation/contracts | LUMENIS implementation through Contract |
+| 序境 / LUMENIS | Production Core | Production Truth, production code/data/runtime/policy/reporting | versioned Contract / Artifact / Evidence Reference |
+| 序蕴 / LUMENIS Intelligence | Shared Intelligence Capability | Shared Intelligence Assets, validated reusable intelligence capabilities | versioned Contract / Artifact / validated learning candidate |
+| 序衍 / LUMENIS Growth | Independent Research & Growth Product | Research / Growth Truth | versioned Contract / Artifact / Evidence Reference |
+| 序枢 / LUMENIS Command | R&D Control Sidecar | Engineering Evidence | repository/test/CI/release/runtime verification evidence |
 
-Neither system becomes the other's unrestricted writer.
+No product receives unrestricted write authority over another product. No shared production database is permitted. No cross-product runtime hard dependency is permitted. AI or Research output may not automatically overwrite LUMENIS Production Truth. Cross-product sharing is restricted to explicit, versioned and traceable Contract / Artifact boundaries.
 
 ## Canonical hierarchy
 
@@ -145,17 +162,18 @@ External research is reference material only. Adopt/adapt/reject decisions must 
 1. Public parent product: **序境 / LUMENIS**.
 2. Korean parent product: **서경 LUMENIS**.
 3. Production role: **Production Core · Production Truth Owner**.
-4. CTH public product: **序境·商业运营 / LUMENIS Commerce Operations / 서경·커머스 운영**.
-5. BMP public product: **序境·品牌市场 / LUMENIS Brand & Market / 서경·브랜드 & 마켓**.
-6. Shared content capability: **序境·内容创作 / LUMENIS Content & Creation / 서경·콘텐츠 & 크리에이션**.
-7. `CTH`, `BMP`, and `ZBC` remain stable internal identifiers where compatibility requires them.
-8. Taikoo Hui is a selectable CTH Subject Profile, not the CTH product name or permanent scope.
-9. Do not use `Xujing`, `Xujing Core`, `서경` as a standalone substitute for LUMENIS, `ZBMP`, `Z-Brand Monitoring Platform`, `Brand Intelligence`, `品牌智能`, `Commerce & Trading Hub`, `Trading`, `商业交易`, `商业情报`, `Taikoo Hui Intelligence`, or `太古汇智能` as current user-facing product names.
-10. Do not use Center / 中心 / System / 系统 as product naming substitutes.
+4. Ecosystem products: **序蕴 / LUMENIS Intelligence**, **序衍 / LUMENIS Growth**, **序枢 / LUMENIS Command**.
+5. Stable aliases `OSAI`, `GGI`, `COMMAND`, `ZBC`, `CTH`, `BMP` remain where compatibility requires them; they are not substitutes for current formal product naming in new human-readable governance/product surfaces.
+6. CTH public product: **序境·商业运营 / LUMENIS Commerce Operations / 서경·커머스 운영**.
+7. BMP public product: **序境·品牌市场 / LUMENIS Brand & Market / 서경·브랜드 & 마켓**.
+8. Shared content capability: **序境·内容创作 / LUMENIS Content & Creation / 서경·콘텐츠 & 크리에이션**.
+9. Taikoo Hui is a selectable CTH Subject Profile, not the CTH product name or permanent scope.
+10. Do not use `Xujing`, `Xujing Core`, `서경` as a standalone substitute for LUMENIS, `ZBMP`, `Z-Brand Monitoring Platform`, `Brand Intelligence`, `品牌智能`, `Commerce & Trading Hub`, `Trading`, `商业交易`, `商业情报`, `Taikoo Hui Intelligence`, or `太古汇智能` as current user-facing product names.
+11. Do not use Center / 中心 / System / 系统 as product naming substitutes.
 
 ## Non-negotiables
 
-1. No third core repository.
+1. The four canonical products remain independently owned and independently runnable; capability sharing does not merge Truth Ownership.
 2. No AI/Agent direct write to production truth.
 3. No module outside the registry.
 4. No production rule bypass for UI, research, automation, or language.
@@ -164,3 +182,4 @@ External research is reference material only. Adopt/adapt/reject decisions must 
 7. CTH must remain subject-selectable; BMP must remain multi-subject with primary-focus selection.
 8. Product naming and domain metadata changes must not alter existing functional ownership, APIs, DB schema, permissions, collectors, or runtime behavior.
 9. Cross-repository product semantics must be synchronized through versioned, traceable contract/artifact references; no shared production database or unrestricted writer.
+10. No cross-product runtime hard dependency. AI/Research output cannot automatically overwrite LUMENIS Production Truth.

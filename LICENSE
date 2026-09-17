@@ -1,0 +1,48 @@
+LUMENIS PROPRIETARY LICENSE NOTICE
+
+Copyright (c) 2026 Zachary-1012. All rights reserved.
+
+This repository and the original LUMENIS / 序境 source code, documentation,
+product logic, architecture, designs, schemas, workflows, prompts, datasets,
+configuration and other original materials contained in this repository
+(collectively, the "LUMENIS Materials") are proprietary unless a specific file
+or component states otherwise.
+
+No license or permission is granted by this notice to copy, reproduce, modify,
+publish, distribute, sublicense, sell, commercially exploit, publicly deploy,
+create derivative works from, or otherwise use the LUMENIS Materials outside
+the scope expressly authorized in writing by the copyright owner.
+
+Authorized contributors may access and modify the LUMENIS Materials solely for
+work approved by the repository owner and subject to the repository's security,
+confidentiality, governance and contribution requirements. Access to this
+private repository does not by itself grant any intellectual-property license
+beyond that authorized work.
+
+THIRD-PARTY MATERIALS
+
+This notice does not replace, restrict, expand, relicense or claim ownership of
+third-party or open-source software, libraries, assets, fonts, icons, datasets,
+models, tools or other materials included in, referenced by, or used with this
+repository. Such components remain subject to their respective copyright,
+license, attribution, notice and usage terms.
+
+The canonical third-party register for this repository is:
+
+    00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md
+
+Where a third-party component's license is not yet verified, it must be treated
+as unresolved for release purposes rather than inferred from this repository
+license.
+
+NO WARRANTY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LUMENIS MATERIALS ARE
+PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+WITHOUT LIMITATION WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, TITLE OR NON-INFRINGEMENT. THE COPYRIGHT OWNER SHALL NOT BE LIABLE FOR
+ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM UNAUTHORIZED OR PERMITTED USE
+OF THE LUMENIS MATERIALS, EXCEPT WHERE SUCH LIMITATION IS PROHIBITED BY LAW.
+
+For licensing, distribution, commercial-use or contribution permissions,
+obtain explicit written authorization from the repository owner.
