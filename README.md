@@ -7,9 +7,22 @@
 
 本仓库承载当前生产实现、运行时、数据契约、Evidence、API、Permission、Metric、Experience、测试与发布证据。`README.md` 是人类工程入口，不是历史进度日志；文档、提交说明、CI 绿色或页面可打开，都不能单独证明功能已经 `VERIFIED / RELEASED / OPERATING`。
 
-## 0. 当前源码审计基线 / Current source-audit baseline
+> Coding Agent / Codex 的当前执行入口固定为：`AGENTS.md` → `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`。当前 HEAD 必须通过 `git fetch origin` + `git rev-parse origin/main` 动态解析，不得从 README、历史 handoff、截图或粘贴 SHA 推断。
 
-2026-09-16 文档更新前的远程 `main` 审计基线：
+## 0. CURRENT 接管入口与历史审计基线 / Current takeover and audit provenance
+
+当前执行入口：
+
+```text
+AGENTS.md
+→ 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ README.md
+→ 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
+→ 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
+→ current source / runtime / DB / API / Permission / Evidence / tests for the active slice
+```
+
+2026-09-16 文档更新前的远程 `main` 审计点：
 
 ```text
 repo   = Zachary-1012/LUMENIS-codex-Clean-OS
@@ -17,12 +30,14 @@ branch = main
 sha    = 147e3bd331b22236930ae29112a67c613a148f67
 ```
 
-本次更新基于远程源码、运行入口、依赖清单、CI 分层、Evidence、Collector、Experience V2 与内容生成实现进行核对；审计记录见：
+**这个 SHA 只保留为 point-in-time audit provenance，不是当前 HEAD、checkout target、reset target 或 Codex 开发基线。** 当前 `origin/main` 必须在每次工程会话开始时重新读取。
+
+该历史审计基于当时远程源码、运行入口、依赖清单、CI 分层、Evidence、Collector、Experience V2 与内容生成实现进行核对；记录见：
 
 - [`08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`](08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md)
 - [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
 
-远程基线与本地尚未 push 的有效实现必须分开描述；不得把 local-only 代码写成 GitHub 已实现。
+远程、当前本地 working tree、local-only commit、历史审计点、最后 runner-backed green baseline、current-head CI 与 live runtime 必须分开描述；不得互相冒充。
 
 ---
 
@@ -70,49 +85,51 @@ CTH 与 BMP 可以共享 Subject Context 与基础设施，但不得静默合并
 
 ---
 
-## 2. 当前远程源码确认到的生产事实
+## 2. 2026-09-16 源码审计确认的生产事实 / Point-in-time source facts
+
+以下内容是 `147e3bd...` 审计点确认的 source evidence，不是对未来/current HEAD 的永久声明。Codex 开始具体工作时必须以当前源码重新核验 owner、caller、contract、runtime 与 tests；若当前源码不同，以当前源码为准。
 
 ### Runtime
 
-当前 Windows canonical launcher：
+审计点确认的 Windows canonical launcher：
 
 ```powershell
 Set-Location D:\LUMENIS_REBUILD
 powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
 ```
 
-当前 core health target：
+审计点确认的 core health target：
 
 ```text
 http://127.0.0.1:8201/healthz
 ```
 
-启动链使用现有 `.venv`、`run_supervised.py`、Flask/Waitress 运行时，并维护 8201 supervisor；Resident Browser 由现有脚本管理 9222/9223 双身份 CDP。工作站路径是本机入口，不应成为可移植生产代码硬依赖。
+审计点启动链使用现有 `.venv`、`run_supervised.py`、Flask/Waitress 运行时，并维护 8201 supervisor；Resident Browser 使用现有 9222/9223 双身份 CDP。工作站路径是本机入口，不应成为可移植生产代码硬依赖。
 
 ### Experience V2
 
-`app.py` 已注册 `experience_runtime`；当前生产 Experience 挂载到：
+审计点 `app.py` 已注册 `experience_runtime`，Experience 挂载到：
 
 ```text
 /experience/
 /api/experience/*
 ```
 
-当前源码明确声明真实后端绑定屏幕为 `CTH-01` 与 `AI-01`；其他屏幕不得仅因原型存在就视为生产绑定完成。
+审计点源码明确声明真实后端绑定屏幕为 `CTH-01` 与 `AI-01`；其他屏幕不得仅因原型存在就视为生产绑定完成。当前 HEAD 是否已有变化必须重新以源码验证。
 
 ### Evidence / Canonical
 
-`evidence_chain.py` 提供 `zbc_evidence`、`zbc_canonical_data` 与 lifecycle tracking 等链路，强调 Evidence 不被分析结果覆盖、provenance、rule version、AI 输出与人工修正分离。
+审计点 `evidence_chain.py` 提供 `zbc_evidence`、`zbc_canonical_data` 与 lifecycle tracking 等链路，强调 Evidence 不被分析结果覆盖、provenance、rule version、AI 输出与人工修正分离。
 
-远程 `main` 的 XHS side-write 仍应以当前源码和测试为准；若本地存在比远程更新的 lineage convergence 修复，必须先完成 local→main 收敛再把状态升级为远程已实现。
+XHS side-write、lineage convergence 与其他 Evidence 行为必须以当前源码和测试为准；若本地存在比远程更新的有效修复，必须先完成 local→main 收敛再把状态升级为远程已实现。
 
 ### Collector / XHS runtime
 
-`xhs_cookie_bridge.py` 当前源码包含受控本地 Cookie/Profile 读取、双身份逻辑、9222/9223 Resident Browser、冷却/风控/次数兜底和 policy gate。Cookie/session 不得进入源码、日志、公开配置或文档。
+审计点 `xhs_cookie_bridge.py` 包含受控本地 Cookie/Profile 读取、双身份逻辑、9222/9223 Resident Browser、冷却/风控/次数兜底和 policy gate。Cookie/session 不得进入源码、日志、公开配置或文档。
 
 ### Content & Creation
 
-`content_generation.py` 当前实现包含结构化内容类型、研究库检索、Evidence、Evaluation、人工反馈迭代以及 local-first AI / 显式 cloud enable 语义。AI 输出仍不是 Production Truth。
+审计点 `content_generation.py` 包含结构化内容类型、研究库检索、Evidence、Evaluation、人工反馈迭代以及 local-first AI / 显式 cloud enable 语义。AI 输出仍不是 Production Truth。
 
 ---
 
@@ -146,9 +163,9 @@ OPERATING   = 真实运行产生规定的线上/时间性证据
 
 ---
 
-## 4. 当前依赖与零授权能力边界
+## 4. 审计点依赖与零授权能力边界
 
-远程 `requirements.txt` 当前包含并可作为现有基础设施核验对象：
+2026-09-16 审计点的 `requirements.txt` 包含并可作为既有基础设施的历史核验对象：
 
 ```text
 Flask / Waitress
@@ -161,13 +178,13 @@ tenacity
 Alembic
 ```
 
-根 `package.json` 当前仅承担 Node tooling，并直接依赖 Playwright；它不是 Next.js/React/Vite 生产前端 manifest。
+审计点根 `package.json` 承担 Node tooling，并直接依赖 Playwright；它不是 Next.js/React/Vite 生产前端 manifest。当前依赖状态必须以当前 manifest 重新读取。
 
 本轮“零授权能力”标准：免费、无需第三方 API Key/OAuth、可进入 LUMENIS 自有 Production Truth。正式验收表见：
 
 [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
 
-特别说明：远程审计基线 `requirements.txt` **尚未包含 `feedparser`**。本地安装/验证可以记为 local evidence，但在对应 `requirements.txt` 修改 push 到 `main` 前，不得称为 remote implemented。
+特别说明：2026-09-16 远程审计点 `requirements.txt` **尚未包含 `feedparser`**。这是历史审计事实，不得反向覆盖当前 manifest；Codex 应先读取当前 `requirements.txt` 再判断其当前状态。
 
 ---
 
@@ -260,7 +277,7 @@ git rev-parse origin/main
 
 ## 8. Codex / Coding Agent 执行标准
 
-Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
+Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
 默认执行方式：
 
@@ -278,6 +295,8 @@ Active Gate / Ticket
 ```
 
 Codex 本地开发工具（如 Playwright MCP、Filesystem MCP、Git、rg、fd、jq、sqlite3 CLI、curl）属于开发/验收工具层，不自动成为 LUMENIS 生产依赖。
+
+不得为了“确认权限”、测试 connector、重触发 Actions 或制造活动记录而创建/删除 probe 文件、空提交、无内容变化提交或重复改写同一文件。已有证据可复用时不得重复取证；只有当前任务所需且尚未验证的事实才继续读取。
 
 ---
 
@@ -309,6 +328,8 @@ UI Entry
 → Automated Test
 → E2E
 ```
+
+GitHub Actions 若出现 job 未真正开始、`steps=[]`、0-step 或无 repository-step log，只能标记为 execution-layer unverified；不得伪装成源码测试 PASS，也不得直接归因为产品回归。不要通过空提交重触发。
 
 ---
 
@@ -365,9 +386,15 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 
 ## 13. Canonical documents
 
-优先级较高的长期文档：
+当前接管与跨产品治理优先读取：
 
 - [`AGENTS.md`](AGENTS.md)
+- [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)
+- [`00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`](00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md)
+- [`00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`](00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json)
+
+其他优先级较高的长期文档：
+
 - [`00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md`](00-GOVERNANCE/ENGINEERING-MAINTAINABILITY-AND-RELEASE-V1.md)
 - [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
 - [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
