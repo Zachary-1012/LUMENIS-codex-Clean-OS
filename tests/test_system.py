@@ -1,12 +1,19 @@
 """本地回归测试：不访问网络，不启动浏览器。"""
-import os, tempfile
 import database as db
 import ai_analyzer
 from subject_rules import SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS, subject_hit, subject_sql_and_values
 
-old=db.DB_PATH
-tmp=tempfile.NamedTemporaryFile(suffix='.db',delete=False); tmp.close(); db.DB_PATH=tmp.name
-try:
+def test_system_contract(tmp_path, monkeypatch):
+    """Run the legacy system contract against an OS-temporary database.
+
+    ``database.get_db`` resolves the database at call time through
+    ``ZBC_DB_PATH``.  Keeping this as a real pytest function prevents module
+    collection from executing writes and ensures every assertion uses the
+    same isolated database.
+    """
+    db_path = str(tmp_path / "system.db")
+    monkeypatch.setenv("ZBC_DB_PATH", db_path)
+    monkeypatch.setattr(db, "DB_PATH", db_path)
     db.init_db()
     with db.get_db() as c:
         cols={r[1] for r in c.execute('pragma table_info(notes)')}
@@ -41,7 +48,3 @@ try:
     db.upsert_feedback_keyword('停车',1.2,'web')
     assert db.get_feedback_keywords(1)[0]['keyword']=='停车'
     print('ALL TESTS PASSED')
-finally:
-    db.DB_PATH=old
-    try: os.unlink(tmp.name)
-    except OSError: pass

@@ -167,8 +167,8 @@ class TestQuietHours:
     def test_quiet_hours_suppresses_important(self, protector):
         """静默期内 IMPORTANT 被抑制。"""
         policy = FocusPolicy()
-        # 设为全天静默
-        policy.quiet_hours = QuietHours(enabled=True, start_hour=0, end_hour=23)
+        # 设为全天静默；结束边界按区间右开处理，使用 24 覆盖 23 点。
+        policy.quiet_hours = QuietHours(enabled=True, start_hour=0, end_hour=24)
         protector.update_policy(policy)
         event = {"source": "risk", "event_type": "anomaly", "title": "x"}
         assert protector.should_notify(

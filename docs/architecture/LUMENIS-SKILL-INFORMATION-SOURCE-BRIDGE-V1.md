@@ -17,9 +17,9 @@
 | TrendHub 本地状态 | `src/store/history.ts`、`src/store/reliability.ts`、`src/store/snapshot.ts` | 快照、有限历史、可靠性在本地保存；写入失败不应伪造成功 |
 | 序境公共源 | `platform_adapters/web_rss.py:17-113` | 已存在无 Cookie、无 Key 的 Google News RSS 适配器，状态会显式返回 |
 | 序境平台入口 | `v4_upgrade/adapters/registry.py:35-76` | `platforms=None` 时遍历全部已注册平台，并逐平台返回状态 |
-| 序境 Skill 预检 | `skill_package_runtime.py:110-462` | 支持来源识别、manifest 校验、精确 Git revision；当前不等于已安装/已执行 |
-| 序境 Skill 登记 | `account/skills.py:128-217` | 通过验证的本地/ZIP/SKILL.md 只能登记为 `disabled + not_installed` |
-| MCP 当前边界 | `skill_package_runtime.py:401-409`、`tests/test_skill_package_runtime.py:226-236` | MCP 仍需 discovery、权限审批、隔离自测；不得伪造已接入 |
+| 序境 Skill 预检 | `skill_package_runtime.py` | 支持来源识别、manifest 校验、精确 Git revision，以及临时目录中的远程 manifest 只读发现；当前不等于已安装/已执行 |
+| 序境 Skill 登记 | `account/skills.py:128-217` | 通过验证的本地/ZIP/SKILL.md/GitHub remote manifest 只能登记为 `disabled + not_installed`；MCP 仍阻断 |
+| MCP 当前边界 | `mcp_discovery.py`、`account/api.py`、`tests/test_skill_package_runtime.py` | stdio `tools/list` 只读发现已实现；`tools/call`、安装、启用、生产执行仍需权限审批与隔离自测，不得伪造已接入 |
 
 本文件不改变以上事实，也不把“覆盖目录”“代码存在”“构建通过”改写成“平台实时可用”。
 
@@ -279,21 +279,27 @@ UI 必须显示真实状态：`OK / DEGRADED / MISSING / AUTH_REQUIRED / NOT_CON
 Zachary-Skill main revision = 487b3d6da41181b892772f638a6c267204a8626e
 TrendHub build/test/smoke = PASS
 TrendHub MCP tools = 19
-序境 Skill/secondary collection focused tests = 35 passed
+序境 Skill/secondary collection focused tests = 40 passed
+序境 adapter/evidence/canonical/failure-isolation focused tests = 193 passed
+clean-checkout hermetic selector = 262 test files selected
+clean-checkout hermetic pytest (本地等价执行) = PASS / exit 0 / no thread leak
 GitHub revision resolution = PASS
-当前序境 HEAD = 19c50b2b765ae8ca1df2334304050d1bb5c1f2b5
+当前序境执行前基线 HEAD = 35c74da38839934da83d8b595b2823149b8d059c
 当前序境与 origin/main = 0 0
+远程 Skill manifest 只读发现 = PASS（pinned revision、临时目录、无安装/无执行）
+MCP stdio tools/list 只读发现 = PASS（真实本地镜像、19 tools、0 tool calls）
 ```
 
 仍未标记完成：
 
 ```text
-Zachary-Skill 已作为外部 Skill 进入序境生产执行链
 远程 Skill 隔离安装与依赖缓存
-MCP tools/list 与 tools/call 的序境正式 Client
+Zachary-Skill 已安装、启用并作为外部 Skill 进入序境生产执行链
+MCP tools/call 的序境正式 Client 与受控调用闭环
 38 个 TrendHub 源全部实时在线
 其他平台的真实运行状态全部通过
 CTH/BMP UI 已完成该桥接后的真实页面验收
+G02-G15 的完整上线 Gate（依赖、Adapter、Evidence、Canonical、API、UI、Runtime、Browser Live、Release、Live Verify）全部通过
 ```
 
 ## 7. 研究依据
