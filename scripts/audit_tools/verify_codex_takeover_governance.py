@@ -9,13 +9,14 @@ EXPECTED_CONTRACT_ID = "lumenis-ggi-cross-product"
 EXPECTED_VERSION = "1.1.0"
 EXPECTED_FINGERPRINT = "68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f"
 EXPECTED_LOCAL_REPO = "Zachary-1012/LUMENIS-codex-Clean-OS"
+CONTRACT_BASENAME = "LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json"
 
 PATHS = {
     "agents": ROOT / "AGENTS.md",
     "readme": ROOT / "README.md",
     "takeover": ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md",
     "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
-    "contract": ROOT / "00-GOVERNANCE" / "LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
+    "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
 }
 
 
@@ -32,12 +33,29 @@ def _require(text: str, *needles: str, label: str) -> None:
         raise AssertionError(f"{label} missing required current markers: {missing}")
 
 
+def _assert_single_machine_contract() -> None:
+    canonical = PATHS["contract"].resolve()
+    copies = sorted(
+        path.resolve()
+        for path in ROOT.rglob(CONTRACT_BASENAME)
+        if path.resolve() != canonical
+    )
+    if copies:
+        relative = [str(path.relative_to(ROOT.resolve())) for path in copies]
+        raise AssertionError(
+            "duplicate live machine contract copies are forbidden; "
+            f"canonical={canonical.relative_to(ROOT.resolve())}; duplicates={relative}"
+        )
+
+
 def validate() -> None:
     agents = _read("agents")
     readme = _read("readme")
     takeover = _read("takeover")
     registry = _read("registry")
     contract = json.loads(_read("contract"))
+
+    _assert_single_machine_contract()
 
     assert contract["contract_id"] == EXPECTED_CONTRACT_ID
     assert contract["contract_version"] == EXPECTED_VERSION
@@ -54,6 +72,7 @@ def validate() -> None:
         "序蕴 / LUMENIS Intelligence",
         "序衍 / LUMENIS Growth",
         "序枢 / LUMENIS Command",
+        "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
         label="cross-repo registry",
     )
     if "version     = 1.0.0" in registry:
@@ -101,5 +120,6 @@ if __name__ == "__main__":
     validate()
     print(
         "CODEX TAKEOVER GOVERNANCE OK "
-        f"{EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} {EXPECTED_FINGERPRINT}"
+        f"{EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} {EXPECTED_FINGERPRINT} "
+        "single-machine-contract=PASS"
     )
