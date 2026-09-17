@@ -1,5 +1,5 @@
 # LUMENIS production idempotent launcher (safe to run repeatedly).
-# Starts 8201 supervisor and the 9222/9223 dual Resident Browsers (idempotent).
+# Starts 8201 supervisor, the HK/International 9223 collector resident, and 9224 general browser (idempotent).
 # Triple idempotency: global mutex (no concurrent launchers) + existing-process guard + healthz.
 # Does NOT touch 8200. All ASCII-safe for Windows PowerShell 5.1.
 #
@@ -27,7 +27,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 Write-Output ''
 Write-Output '============================================================'
 Write-Output ' LUMENIS production launcher'
-Write-Output '   8201 Flask supervisor  +  9222/9223 Resident Browsers'
+Write-Output '   8201 Flask supervisor  +  9223 HK Collector + 9224 General Browser'
 Write-Output '============================================================'
 Write-Output "Root: $Root"
 
@@ -97,14 +97,15 @@ if ($httpOk) {
     }
 }
 
-# --------------- 9222/9223 Resident Browsers (dual identity) ---------------
+# --------------- 9223/9224 Resident Browsers (HK collection + general browse) ---------------
 # Delegated to scripts/start_resident_browsers.py (single source of truth = xhs_cookie_bridge):
-#   9222 XHS_CN_PRIMARY  profile edge-cdp-newaccount  direct connection (no system proxy)
 #   9223 XHS_RETINAUT    profile edge-cdp-retinaut    inherits system/overseas proxy
+#   9224 GENERAL_BROWSE  profile edge-cdp-general     general browsing only
+#   9222 XHS_CN_PRIMARY  is retained for diagnostics/history only and is not launched here
 # The launcher is idempotent: an online port is reused and its platform login tab is ensured.
 $resident = Join-Path $Root 'scripts\start_resident_browsers.py'
 if (Test-Path $resident) {
-    Write-Output '[LUMENIS-Resident] ensuring 9222/9223 dual resident browsers ...'
+    Write-Output '[LUMENIS-Resident] ensuring 9223 HK collector + 9224 general browser ...'
     & $Py $resident
 } else {
     Write-Output "[LUMENIS-Resident] launcher missing: $resident"
@@ -114,7 +115,7 @@ Write-Output ''
 Write-Output '============================================================'
 Write-Output '  UP  ->  http://127.0.0.1:8201/'
 Write-Output '  HZ  ->  http://127.0.0.1:8201/healthz'
-Write-Output '  CDP ->  9222 XHS_CN_PRIMARY | 9223 XHS_RETINAUT'
+Write-Output '  CDP ->  9223 XHS_RETINAUT (HK) | 9224 GENERAL_BROWSE'
 Write-Output '============================================================'
 
 } finally {

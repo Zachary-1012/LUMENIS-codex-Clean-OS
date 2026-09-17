@@ -7,7 +7,7 @@
   const SKILL_COLORS = {ai_analyzer:'#0F766E',risk_engine:'#cf222e',report_generator:'#8250df',kos_engine:'#bf8700',collector_xhs:'#ff2442',collector_weibo:'#e6162d',collector_bilibili:'#0969da',brand_analysis:'#8250df',internal_browser:'#0969da',data_visualization:'#1a7f37',intelligence_library:'#8250df',alert_engine:'#bc4c00'};
   const SKILL_ICONS = {ai_analyzer:'🧠',risk_engine:'⚠️',report_generator:'📄',kos_engine:'👥',collector_xhs:'📕',collector_weibo:'🔴',collector_bilibili:'📺',brand_analysis:'📊',internal_browser:'🌐',data_visualization:'📈',intelligence_library:'📚',alert_engine:'🔔'};
   const DEFAULT_COLOR = '#656d76';
-  let allSkills = [], currentTab = 'plugins', expandedSkillId = null, searchQuery = '';
+  let allSkills = [], currentTab = 'plugins', expandedSkillId = null, searchQuery = '', lastPreviewSource = '', lastPreviewResolveRemote = false;
 
   async function api(url, opts) {
     try { const r = await fetch(url, {credentials:'include', ...opts}); return await r.json(); }
@@ -18,6 +18,67 @@
   async function addSkill(id, name, desc) { return api('/api/system/account/skills', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({skill_id:id,name,description:desc,product:'SYSTEM',domain:'global'})}); }
   async function fetchExecutions(id, limit) { return (await api(`/api/system/account/skills/${id}/executions?limit=${limit||5}`)).executions || []; }
   async function executeSkill(id, task) { return api(`/api/system/account/skills/${id}/execute`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task:task||'manual run', action_type:'ANALYZE'})}); }
+  async function previewSource(source, resolveRemote) { return api('/api/system/account/skills/source/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote})}); }
+  async function registerSource(source, resolveRemote) { return api('/api/system/account/skills/source/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote})}); }
+  async function fetchGithubStatus() { return api('/api/system/account/connectors/github/status'); }
+
+  function escapeHTML(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  function listValue(value) {
+    return Array.isArray(value) && value.length ? value.map(escapeHTML).join(', ') : '—';
+  }
+
+  function renderGithubStatus(result) {
+    const state = document.getElementById('ssGithubState');
+    const meta = document.getElementById('ssGithubMeta');
+    if (!state || !meta) return;
+    if (!result || result.ok !== true || !result.connector) {
+      state.textContent = result?.error || 'GitHub 连接状态不可用';
+      meta.textContent = '未取得证据，不将此状态解释为已连接。';
+      return;
+    }
+    const connector = result.connector;
+    const labels = {
+      NOT_CONFIGURED: '未配置 GitHub App / 外部凭证',
+      READY_FOR_AUTHORIZATION: '授权入口已配置，等待用户授权',
+      CONNECTED: '凭证已提供，仍需健康检查确认可用',
+    };
+    state.textContent = labels[connector.state] || connector.state || 'UNKNOWN';
+    const repos = Array.isArray(connector.repositories) ? connector.repositories.length : 0;
+    meta.textContent = `状态 ${connector.state || 'UNKNOWN'} · 白名单仓库 ${repos} 个 · 只读 · 写权限关闭`;
+  }
+
+  window.__ssRefreshGithubStatus = async function() {
+    const state = document.getElementById('ssGithubState');
+    if (state) state.textContent = '正在读取真实连接状态…';
+    renderGithubStatus(await fetchGithubStatus());
+  };
+
+  function renderSourceResult(result) {
+    const el = document.getElementById('ssSourceResult');
+    if (!el) return;
+    if (!result || result.ok !== true) {
+      const security = result && result.security ? result.security : {};
+      el.innerHTML = `<div class="ss-preview-state">${escapeHTML(result?.state || 'BLOCKED')}</div><div>${escapeHTML(result?.error || '来源预检未通过')}</div><div style="margin-top:6px;color:var(--ss-text3)">执行：${escapeHTML(security.execution || 'BLOCKED_UNVERIFIED')}</div>`;
+      return;
+    }
+    const source = result.source || {};
+    const validation = result.validation || {};
+    const security = result.security || {};
+    const ownership = result.ownership || {};
+    el.innerHTML = `<div class="ss-preview-state">${escapeHTML(result.state || 'UNKNOWN')}</div>
+      <div style="margin-top:8px"><b>来源</b>：<code>${escapeHTML(source.source || '')}</code></div>
+      <div><b>类型 / 运行时</b>：${escapeHTML(source.source_type || 'unknown')} / ${escapeHTML(result.runtime || 'unknown')}</div>
+      <div><b>Manifest</b>：${escapeHTML(result.manifest_state || 'UNKNOWN')}；兼容性：${validation.valid === true ? '通过' : '未通过'}</div>
+      <div><b>能力</b>：${listValue(result.capabilities)}；工具：${listValue(result.tools)}</div>
+      <div><b>请求权限</b>：${listValue(security.permissions_requested)}；已授予：${listValue(security.permissions_granted)}</div>
+      <div><b>安全</b>：${escapeHTML(security.decision || 'DENY_BY_DEFAULT')}；Secrets 注入：${security.secrets_injected === true ? '是' : '否'}</div>
+      <div><b>归属</b>：Registry=${escapeHTML(ownership.registry || '—')}；Evidence=${escapeHTML(ownership.evidence || '—')}</div>
+      <div style="margin-top:8px;color:var(--ss-text3)">当前仅完成来源预检。安装、隔离执行、权限授予与生命周期更新仍未开放。</div>
+      ${result.state === 'VALIDATED' ? '<button class="ss-btn ss-btn-primary" style="margin-top:10px" onclick="window.__ssRegisterSourcePreview()">登记为禁用 Skill</button>' : ''}`;
+  }
 
   const getColor = id => SKILL_COLORS[id] || DEFAULT_COLOR;
   const getIcon = id => SKILL_ICONS[id] || '⚡';
@@ -111,7 +172,7 @@
   window.__ssSwitchTab = function(tab) {
     currentTab = tab;
     document.querySelectorAll('.ss-tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
-    if (tab==='mcp') document.getElementById('ssList').innerHTML = `<div class="ss-empty"><div class="ss-empty-icon">🔌</div><div class="ss-empty-title">MCP 服务器</div><div class="ss-empty-desc">MCP 服务器管理将在后续版本开放。当前版本聚焦内置 Skill 管理。</div></div>`;
+    if (tab==='mcp') document.getElementById('ssList').innerHTML = `<div class="ss-empty"><div class="ss-empty-icon">🔌</div><div class="ss-empty-title">来源 / 协议适配</div><div class="ss-empty-desc">MCP 是可选传输协议，不是独立产品线。点击「来源预检」验证 GitHub、目录、ZIP、SKILL.md 或 MCP/HTTP 来源。</div><button class="ss-btn ss-btn-primary" style="margin-top:8px" onclick="window.__ssOpenSourcePreview()">来源预检</button></div>`;
     else renderList();
   };
   window.__ssBrowseCatalog = function() { document.getElementById('ssSearchInput').focus(); document.getElementById('ssSearchInput').value=''; searchQuery=''; renderList(); };
@@ -128,12 +189,44 @@
   window.__ssViewExecutions = function(id) { toggleExpand(id); };
   window.__ssEnableSkill = async function(id) { await toggleSkill(id,true); await refresh(); };
   window.__ssDisableSkill = async function(id) { await toggleSkill(id,false); await refresh(); };
+  window.__ssOpenSourcePreview = function() {
+    const modal = document.getElementById('ssSourceModal');
+    if (!modal) return;
+    modal.style.display='flex';
+    document.getElementById('ssSourceResult').innerHTML='';
+    document.getElementById('ssSourceInput').focus();
+  };
+  window.__ssCloseSourcePreview = function() {
+    const modal = document.getElementById('ssSourceModal');
+    if (modal) modal.style.display='none';
+  };
+  window.__ssSubmitSourcePreview = async function() {
+    const input = document.getElementById('ssSourceInput');
+    const result = document.getElementById('ssSourceResult');
+    const source = (input?.value || '').trim();
+    if (!source) { if (result) result.innerHTML='<div class="ss-preview-state">BLOCKED</div><div>请提供 Skill 来源。</div>'; return; }
+    if (result) result.innerHTML='<div class="ss-preview-state">CHECKING</div><div>正在执行只读来源预检…</div>';
+    lastPreviewSource = source;
+    lastPreviewResolveRemote = !!document.getElementById('ssResolveRemote')?.checked;
+    const response = await previewSource(source, lastPreviewResolveRemote);
+    renderSourceResult(response);
+  };
+  window.__ssRegisterSourcePreview = async function() {
+    if (!lastPreviewSource) return;
+    const result = document.getElementById('ssSourceResult');
+    if (result) result.innerHTML='<div class="ss-preview-state">REGISTERING</div><div>正在登记元数据；不会安装或执行…</div>';
+    const response = await registerSource(lastPreviewSource, lastPreviewResolveRemote);
+    if (response.success || response.ok) {
+      if (result) result.innerHTML=`<div class="ss-preview-state">REGISTERED</div><div>已登记 ${escapeHTML(response.skill_id || '')}，状态：disabled，安装状态：not_installed。</div><div style="margin-top:6px;color:var(--ss-text3)">权限仍为默认拒绝，后续需经过安装、隔离、自测与人工授权门。</div>`;
+      await refresh();
+    } else renderSourceResult(response);
+  };
 
   function setupSearch() {
     const input = document.getElementById('ssSearchInput');
     if(!input) return;
     input.addEventListener('input', () => { searchQuery=input.value.trim(); if(currentTab==='plugins') renderList(); });
-    document.addEventListener('keydown', e => { if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();input.focus();} if(e.key==='Escape') window.__ssCloseAddModal(); });
+    document.addEventListener('keydown', e => { if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();input.focus();} if(e.key==='Escape'){window.__ssCloseAddModal();window.__ssCloseSourcePreview();} });
   }
 
   async function refresh() {
@@ -143,5 +236,5 @@
     if (currentTab==='plugins') renderList();
   }
 
-  document.addEventListener('DOMContentLoaded', () => { setupSearch(); refresh(); });
+  document.addEventListener('DOMContentLoaded', () => { setupSearch(); refresh(); window.__ssRefreshGithubStatus(); });
 })();

@@ -384,9 +384,9 @@ def _domain_template_vars(active_nav, active_domain, page_title):
 
 @lumenis_bp.route("/zbmp/overview")
 def zbmp_overview():
-    """ZBMP Overview — 多主体品牌管理平台总览（KPI + 趋势 + 品牌列表）。"""
-    return render_template("zbmp/overview.html",
-                           **_domain_template_vars("zbmp_overview", "zbmp", "ZBMP Overview"))
+    """Canonical ZBMP overview entry; legacy template remains compatibility-only."""
+    from flask import redirect
+    return redirect("/experience/#/BMP-01")
 
 
 @lumenis_bp.route("/zbmp/intelligence")
@@ -454,9 +454,9 @@ def zbmp_launch():
 
 @lumenis_bp.route("/cth/overview")
 def cth_overview():
-    """CTH Overview — 太古汇生产真相域总览（KPI + 舆情趋势 + 风险 + 小红书）。"""
-    return render_template("cth/overview.html",
-                           **_domain_template_vars("cth_overview", "cth", "CTH Overview"))
+    """Canonical CTH overview entry; legacy template remains compatibility-only."""
+    from flask import redirect
+    return redirect("/experience/#/CTH-01")
 
 
 @lumenis_bp.route("/cth/realtime")

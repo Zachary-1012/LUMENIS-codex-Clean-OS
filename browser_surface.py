@@ -189,14 +189,18 @@ def evaluate_navigation(url: str, mode: Optional[str] = None) -> dict:
     if _is_platform_internal_host(host):
         return {"allowed": True, "status": "allowed", "mode": mode, "host": host,
                 "reason": "平台内部主机直接放行"}
-    # SSRF 防护：其他私网/保留地址仍拦截（10.x/192.168.x/172.16.x/169.254.x等）
-    if _is_internal_host(host):
-        return {"allowed": False, "status": "blocked", "mode": mode, "host": host,
-                "reason": "拒绝访问内网/回环/保留地址（SSRF 防护）"}
     # strict / allowlist 域校验
     platform_suffixes = [s for s in ib.NAVIGATION_WHITELIST_SUFFIXES]
+    platform_host = _domain_allowed(host, platform_suffixes)
+    # SSRF 防护：其他私网/保留地址仍拦截（10.x/192.168.x/172.16.x/169.254.x等）。
+    # 代理（例如 flclash）可能把已明确白名单的平台域映射到 198.18/15
+    # 合成地址；strict 平台域仍受域名白名单约束，不应被代理地址误判为内网。
+    # open/allowlist 不享受此例外，保留原有 SSRF 门禁。
+    if _is_internal_host(host) and not (mode == "strict" and platform_host):
+        return {"allowed": False, "status": "blocked", "mode": mode, "host": host,
+                "reason": "拒绝访问内网/回环/保留地址（SSRF 防护）"}
     if mode == "strict":
-        if not _domain_allowed(host, platform_suffixes):
+        if not platform_host:
             # P1-D: strict 模式外部域名 → need_confirmation，由前端弹窗确认
             return {"allowed": False, "status": "need_confirmation", "mode": mode, "host": host,
                     "reason": f"strict 模式：外部域名 {host} 需用户确认后方可访问"}

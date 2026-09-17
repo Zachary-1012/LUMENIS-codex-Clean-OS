@@ -4,6 +4,14 @@ import json
 import internal_browser as ib
 
 
+def test_internal_browser_defaults_to_hk_production(monkeypatch):
+    """无账号/无显式端口的生产浏览请求不得静默落到大陆诊断端口。"""
+    monkeypatch.setattr(ib, "bridge", None)
+    assert ib._canonical_account(None) == "XHS_RETINAUT"
+    assert ib._port_for(None) == 9223
+    assert ib._home_for(None) == "https://www.rednote.com"
+
+
 def _patch(monkeypatch, **kwargs):
     """mock 掉依赖驻场浏览器的函数，返回可注入行为的 dict。"""
     calls = {"click": [], "type": [], "evaluate": [], "navigate": [], "scroll": []}

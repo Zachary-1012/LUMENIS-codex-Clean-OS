@@ -23,6 +23,7 @@ import os
 import sqlite3
 import time
 import uuid
+from datetime import datetime as _datetime, timedelta as _timedelta
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request, g
@@ -171,6 +172,249 @@ system_bp = Blueprint("system_api", __name__, url_prefix="/api/system")
 
 
 # ---------------------------------------------------------------------------
+# ZBMP canonical snapshot
+# ---------------------------------------------------------------------------
+# ZBMP is a market-intelligence consumer of the canonical layer.  It must not
+# infer a brand from a CTH author, source, or an unverified row in notes.  This
+# snapshot is the single read path shared by the ZBMP APIs and Experience
+# screen bindings; it intentionally does not create tables or write data.
+def _optional_int(value: Any) -> Optional[int]:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _sum_optional(values: List[Any]) -> Optional[int]:
+    observed = [_optional_int(value) for value in values]
+    observed = [value for value in observed if value is not None]
+    return sum(observed) if observed else None
+
+
+def _canonical_from_row(row: sqlite3.Row):
+    """Build the existing CanonicalRecord without inventing missing columns."""
+    from canonical_data import CanonicalRecord
+
+    keys = set(row.keys())
+    values = {}
+    for field_name in CanonicalRecord.__dataclass_fields__:
+        if field_name in keys and row[field_name] is not None:
+            values[field_name] = row[field_name]
+    return CanonicalRecord(**values)
+
+
+def _safe_zbmp_record(row: sqlite3.Row, adapter: Any) -> Optional[Dict[str, Any]]:
+    """Adapt one already domain-filtered row and retain provenance only."""
+    try:
+        record = _canonical_from_row(row)
+        domain_record = adapter.to_domain(record)
+    except (TypeError, ValueError):
+        return None
+
+    raw = dict(row)
+    safe = domain_record.to_dict()
+    # These are generic trace fields, not CTH-specific data.  Keeping them at
+    # the view boundary makes source -> canonical -> UI traceable without
+    # exposing the rest of the raw row.
+    for key in (
+        "source_id", "external_id", "source_type", "source_table",
+        "source_keyword", "provenance", "content_hash", "evidence_ref",
+        "raw_ref", "verification_status", "quality_status",
+    ):
+        if key in raw:
+            safe[key] = raw.get(key)
+
+    # A brand is only a brand when an explicitly verified field exists.  The
+    # current canonical schema has neither field, so current output is
+    # intentionally empty instead of treating author_name as brand_key.
+    if "brand_key" in raw and "brand_key_verified" in raw and raw.get("brand_key_verified"):
+        brand_key = str(raw.get("brand_key") or "").strip()
+        if brand_key:
+            safe["brand_key"] = brand_key
+    return safe
+
+
+def _build_zbmp_brands(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for record in records:
+        brand_key = str(record.get("brand_key") or "").strip()
+        if not brand_key:
+            continue
+        item = grouped.setdefault(brand_key, {
+            "brand_key": brand_key,
+            "platforms": set(),
+            "record_count": 0,
+            "total_likes": [],
+            "total_comments": [],
+            "domain": DOMAIN_ZBMP,
+        })
+        platform = str(record.get("source_platform") or "").strip()
+        if platform:
+            item["platforms"].add(platform)
+        item["record_count"] += 1
+        item["total_likes"].append(record.get("engagement_likes"))
+        item["total_comments"].append(record.get("engagement_comments"))
+
+    result = []
+    for item in grouped.values():
+        result.append({
+            "brand_key": item["brand_key"],
+            "platforms": sorted(item["platforms"]),
+            "record_count": item["record_count"],
+            "total_likes": _sum_optional(item["total_likes"]),
+            "total_comments": _sum_optional(item["total_comments"]),
+            "domain": item["domain"],
+        })
+    result.sort(key=lambda value: (-value["record_count"], value["brand_key"]))
+    return result[:100]
+
+
+def _zbmp_capture_trend(records: List[Dict[str, Any]], days: int = 14) -> Dict[str, Any]:
+    today = _datetime.now().date()
+    counts: Dict[str, Dict[str, int]] = {}
+    for record in records:
+        captured_at = str(record.get("captured_at") or "")
+        date_key = captured_at[:10]
+        if len(date_key) != 10:
+            continue
+        bucket = counts.setdefault(date_key, {"total": 0, "negative": 0})
+        bucket["total"] += 1
+        if str(record.get("sentiment") or "").lower() == "negative":
+            bucket["negative"] += 1
+
+    labels = []
+    totals = []
+    negatives = []
+    for back in range(days - 1, -1, -1):
+        day = today - _timedelta(days=back)
+        key = day.isoformat()
+        bucket = counts.get(key, {"total": 0, "negative": 0})
+        labels.append(key[5:])
+        totals.append(bucket["total"])
+        negatives.append(bucket["negative"])
+    return {"labels": labels, "total": totals, "negative": negatives}
+
+
+def get_zbmp_product_snapshot() -> Dict[str, Any]:
+    """Read the verified ZBMP canonical slice used by API and UI.
+
+    The function deliberately treats a missing table, no ZBMP rows, and rows
+    rejected by the domain adapter as NOT_COLLECTED.  It never falls back to
+    the CTH ``notes``/``web_mentions`` tables and never fills missing metrics
+    with fabricated zeros.
+    """
+    from canonical_data import PRODUCT_ZBMP
+
+    snapshot: Dict[str, Any] = {
+        "data_state": "NOT_COLLECTED",
+        "records": [],
+        "canonical_records": [],
+        "brands": [],
+        "total_records": 0,
+        "errors": [],
+        "metrics": {
+            "total_notes": 0,
+            "total_web_mentions": 0,
+            "total_canonical_zbmp": 0,
+            "total_engagement": {
+                "likes": None, "comments": None, "collects": None, "shares": None,
+            },
+            "sentiment_distribution": {},
+            "risk_distribution": {},
+            "platform_distribution": {},
+            "latest_capture": "",
+            "capture_trend": {"labels": [], "total": [], "negative": []},
+        },
+    }
+
+    conn = None
+    try:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM canonical_data "
+                "WHERE product_id = ? AND domain_id = ? "
+                "ORDER BY captured_at DESC",
+                (PRODUCT_ZBMP, DOMAIN_ZBMP),
+            ).fetchall()
+        except sqlite3.Error as exc:
+            # A missing canonical table means the domain has not collected
+            # data; it is not an API failure and must not trigger table writes.
+            snapshot["errors"].append(f"canonical_data unavailable: {exc}")
+            return snapshot
+
+        adapter = get_adapter(DOMAIN_ZBMP)
+        safe_records = []
+        rejected = 0
+        for row in rows:
+            safe = _safe_zbmp_record(row, adapter)
+            if safe is None:
+                rejected += 1
+                continue
+            safe_records.append(safe)
+
+        if rejected:
+            snapshot["errors"].append(f"rejected_domain_records={rejected}")
+
+        snapshot["records"] = safe_records
+        snapshot["canonical_records"] = safe_records[:200]
+        snapshot["total_records"] = len(safe_records)
+        snapshot["brands"] = _build_zbmp_brands(safe_records)
+        if not safe_records:
+            return snapshot
+
+        metrics = snapshot["metrics"]
+        metrics["total_canonical_zbmp"] = len(safe_records)
+        metrics["total_notes"] = sum(
+            1 for record in safe_records
+            if record.get("source_type") in ("note", "collected_note")
+        )
+        metrics["total_web_mentions"] = sum(
+            1 for record in safe_records if record.get("source_type") == "web_mention"
+        )
+        for field_name, output_name in (
+            ("engagement_likes", "likes"),
+            ("engagement_comments", "comments"),
+            ("engagement_collects", "collects"),
+            ("engagement_shares", "shares"),
+        ):
+            metrics["total_engagement"][output_name] = _sum_optional(
+                [record.get(field_name) for record in safe_records]
+            )
+
+        for record in safe_records:
+            platform = str(record.get("source_platform") or "unknown")
+            metrics["platform_distribution"][platform] = (
+                metrics["platform_distribution"].get(platform, 0) + 1
+            )
+            sentiment = str(record.get("sentiment") or "").strip()
+            if sentiment:
+                metrics["sentiment_distribution"][sentiment] = (
+                    metrics["sentiment_distribution"].get(sentiment, 0) + 1
+                )
+            risk = str(record.get("risk_level") or "").strip()
+            if risk:
+                metrics["risk_distribution"][risk] = (
+                    metrics["risk_distribution"].get(risk, 0) + 1
+                )
+
+        captures = [str(record.get("captured_at") or "") for record in safe_records]
+        captures = [value for value in captures if value]
+        metrics["latest_capture"] = max(captures) if captures else ""
+        metrics["capture_trend"] = _zbmp_capture_trend(safe_records)
+        snapshot["data_state"] = "READY"
+        return snapshot
+    except Exception as exc:
+        snapshot["errors"].append(str(exc))
+        return snapshot
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+# ---------------------------------------------------------------------------
 # before_request / after_request 钩子（每个蓝图独立）
 # ---------------------------------------------------------------------------
 @zbmp_bp.before_request
@@ -222,83 +466,19 @@ def _system_after(response):
 # ===========================================================================
 @zbmp_bp.route("/overview", methods=["GET"])
 def zbmp_overview():
-    """ZBMP 品牌总览：从 canonical_data 按 product_id=ZBMP 聚合 + notes/web_mentions 多品牌视图。
-
-    读真实数据：canonical_data(product_id=ZBMP)、notes、web_mentions。
-    ZBMP 不读 CTH 专项字段（通过 DomainAdapter 剥离）。
-    """
+    """ZBMP 品牌总览：只读经过域校验的 ZBMP canonical slice。"""
     try:
-        conn = _get_conn()
-        data = {"brands": [], "total_records": 0, "by_platform": {}, "by_sentiment": {}}
-
-        # 1. canonical_data 中 product_id=ZBMP 的记录
-        try:
-            rows = conn.execute(
-                "SELECT * FROM canonical_data WHERE product_id = ? ORDER BY captured_at DESC LIMIT 200",
-                (PRODUCT_ZBMP,)
-            ).fetchall()
-            zbmp_records = [dict(r) for r in rows]
-            # 通过 ZBMPAdapter 剥离 CTH 专项字段
-            adapter = get_adapter(DOMAIN_ZBMP)
-            safe_records = []
-            for rec_dict in zbmp_records:
-                # 构造 CanonicalRecord 再转换（仅用于字段剥离）
-                from canonical_data import CanonicalRecord
-                rec = CanonicalRecord(**{k: v for k, v in rec_dict.items()
-                                          if k in CanonicalRecord.__dataclass_fields__})
-                try:
-                    domain_rec = adapter.to_domain(rec)
-                    safe_records.append(domain_rec.to_dict())
-                except ValueError:
-                    # 域不匹配的记录跳过（如 CTH 记录误入）
-                    continue
-            data["canonical_records"] = safe_records
-            data["total_records"] = len(safe_records)
-        except Exception as e:
-            data["canonical_records"] = []
-            data["canonical_error"] = str(e)
-
-        # 2. notes 表多品牌视图（按 author 聚合品牌）
-        try:
-            note_rows = conn.execute(
-                "SELECT author_nickname, source_platform, COUNT(*) as cnt, "
-                "SUM(likes) as total_likes, SUM(comments) as total_comments "
-                "FROM notes GROUP BY author_nickname ORDER BY cnt DESC LIMIT 50"
-            ).fetchall()
-            brands = []
-            for r in note_rows:
-                d = dict(r)
-                # ZBMP 视图：不包含 CTH 专项字段
-                brands.append({
-                    "brand_key": d.get("author_nickname", "unknown"),
-                    "platform": d.get("source_platform", ""),
-                    "note_count": d.get("cnt", 0),
-                    "total_likes": d.get("total_likes") or 0,
-                    "total_comments": d.get("total_comments") or 0,
-                })
-            data["brands"] = brands
-        except Exception as e:
-            data["brands_error"] = str(e)
-
-        # 3. 按平台统计
-        try:
-            plat_rows = conn.execute(
-                "SELECT source_platform, COUNT(*) as cnt FROM notes GROUP BY source_platform"
-            ).fetchall()
-            data["by_platform"] = {r["source_platform"] or "unknown": r["cnt"] for r in plat_rows}
-        except Exception:
-            pass
-
-        # 4. 按情感统计
-        try:
-            sent_rows = conn.execute(
-                "SELECT sentiment, COUNT(*) as cnt FROM notes WHERE sentiment != '' GROUP BY sentiment"
-            ).fetchall()
-            data["by_sentiment"] = {r["sentiment"]: r["cnt"] for r in sent_rows}
-        except Exception:
-            pass
-
-        conn.close()
+        snapshot = get_zbmp_product_snapshot()
+        metrics = snapshot["metrics"]
+        data = {
+            "data_state": snapshot["data_state"],
+            "brands": snapshot["brands"],
+            "total_records": snapshot["total_records"],
+            "by_platform": metrics["platform_distribution"],
+            "by_sentiment": metrics["sentiment_distribution"],
+            "canonical_records": snapshot["canonical_records"],
+            "errors": snapshot["errors"],
+        }
         return _api_response(data=data, domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP)
     except Exception as e:
         return _api_response(error=str(e), domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP, status=500)
@@ -306,57 +486,15 @@ def zbmp_overview():
 
 @zbmp_bp.route("/brands", methods=["GET"])
 def zbmp_brands():
-    """ZBMP 品牌列表：从 notes/web_mentions 提取多品牌主体。
-
-    读真实数据：notes(author_nickname)、web_mentions(source)。
-    """
+    """ZBMP 品牌列表：只接受 canonical 中显式且已验证的 brand_key。"""
     try:
-        conn = _get_conn()
-        brands = []
-        seen = set()
-
-        # 从 notes 提取品牌（作者维度）
-        try:
-            rows = conn.execute(
-                "SELECT DISTINCT author_nickname, source_platform, COUNT(*) as cnt "
-                "FROM notes WHERE author_nickname != '' AND author_nickname IS NOT NULL "
-                "GROUP BY author_nickname, source_platform ORDER BY cnt DESC LIMIT 100"
-            ).fetchall()
-            for r in rows:
-                key = f"{r['author_nickname']}@{r['source_platform'] or 'unknown'}"
-                if key not in seen:
-                    seen.add(key)
-                    brands.append({
-                        "brand_key": r["author_nickname"],
-                        "platform": r["source_platform"] or "unknown",
-                        "record_count": r["cnt"],
-                        "domain": DOMAIN_ZBMP,
-                    })
-        except Exception as e:
-            brands.append({"error": f"notes query: {e}"})
-
-        # 从 web_mentions 提取品牌（来源维度）
-        try:
-            rows = conn.execute(
-                "SELECT DISTINCT source_adapter, source_platform, COUNT(*) as cnt "
-                "FROM web_mentions GROUP BY source_adapter, source_platform ORDER BY cnt DESC LIMIT 50"
-            ).fetchall()
-            for r in rows:
-                src = r["source_adapter"] or r["source_platform"] or "unknown"
-                key = f"{src}@web"
-                if key not in seen:
-                    seen.add(key)
-                    brands.append({
-                        "brand_key": src,
-                        "platform": "web",
-                        "record_count": r["cnt"],
-                        "domain": DOMAIN_ZBMP,
-                    })
-        except Exception:
-            pass
-
-        conn.close()
-        data = {"brands": brands, "total_brands": len(brands)}
+        snapshot = get_zbmp_product_snapshot()
+        data = {
+            "data_state": snapshot["data_state"],
+            "brands": snapshot["brands"],
+            "total_brands": len(snapshot["brands"]),
+            "errors": snapshot["errors"],
+        }
         return _api_response(data=data, domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP)
     except Exception as e:
         return _api_response(error=str(e), domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP, status=500)
@@ -364,90 +502,12 @@ def zbmp_brands():
 
 @zbmp_bp.route("/metrics", methods=["GET"])
 def zbmp_metrics():
-    """ZBMP 指标：多品牌平台的采集量、互动量、情感分布等真实指标。
-
-    读真实数据：notes、web_mentions、canonical_data。
-    """
+    """ZBMP 指标：从同一 canonical snapshot 计算，避免重复口径。"""
     try:
-        conn = _get_conn()
-        metrics = {
-            "total_notes": 0,
-            "total_web_mentions": 0,
-            "total_canonical_zbmp": 0,
-            "total_engagement": {"likes": 0, "comments": 0, "collects": 0, "shares": 0},
-            "sentiment_distribution": {},
-            "risk_distribution": {},
-            "platform_distribution": {},
-            "latest_capture": "",
-        }
-
-        # notes 统计
-        try:
-            row = conn.execute("SELECT COUNT(*) as c FROM notes").fetchone()
-            metrics["total_notes"] = row["c"] if row else 0
-            row = conn.execute(
-                "SELECT SUM(likes) as l, SUM(comments) as c, SUM(collects) as col, SUM(shares) as s FROM notes"
-            ).fetchone()
-            if row:
-                metrics["total_engagement"]["likes"] = row["l"] or 0
-                metrics["total_engagement"]["comments"] = row["c"] or 0
-                metrics["total_engagement"]["collects"] = row["col"] or 0
-                metrics["total_engagement"]["shares"] = row["s"] or 0
-        except Exception:
-            pass
-
-        # web_mentions 统计
-        try:
-            row = conn.execute("SELECT COUNT(*) as c FROM web_mentions").fetchone()
-            metrics["total_web_mentions"] = row["c"] if row else 0
-        except Exception:
-            pass
-
-        # canonical ZBMP 统计
-        try:
-            row = conn.execute(
-                "SELECT COUNT(*) as c FROM canonical_data WHERE product_id = ?",
-                (PRODUCT_ZBMP,)
-            ).fetchone()
-            metrics["total_canonical_zbmp"] = row["c"] if row else 0
-        except Exception:
-            pass
-
-        # 情感分布
-        try:
-            rows = conn.execute(
-                "SELECT sentiment, COUNT(*) as cnt FROM notes WHERE sentiment != '' GROUP BY sentiment"
-            ).fetchall()
-            metrics["sentiment_distribution"] = {r["sentiment"]: r["cnt"] for r in rows}
-        except Exception:
-            pass
-
-        # 风险分布
-        try:
-            rows = conn.execute(
-                "SELECT risk_level, COUNT(*) as cnt FROM notes WHERE risk_level != '' GROUP BY risk_level"
-            ).fetchall()
-            metrics["risk_distribution"] = {r["risk_level"]: r["cnt"] for r in rows}
-        except Exception:
-            pass
-
-        # 平台分布
-        try:
-            rows = conn.execute(
-                "SELECT source_platform, COUNT(*) as cnt FROM notes GROUP BY source_platform"
-            ).fetchall()
-            metrics["platform_distribution"] = {r["source_platform"] or "unknown": r["cnt"] for r in rows}
-        except Exception:
-            pass
-
-        # 最新采集时间
-        try:
-            row = conn.execute("SELECT MAX(collected_at) as latest FROM notes").fetchone()
-            metrics["latest_capture"] = row["latest"] or ""
-        except Exception:
-            pass
-
-        conn.close()
+        snapshot = get_zbmp_product_snapshot()
+        metrics = dict(snapshot["metrics"])
+        metrics["data_state"] = snapshot["data_state"]
+        metrics["errors"] = snapshot["errors"]
         return _api_response(data=metrics, domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP)
     except Exception as e:
         return _api_response(error=str(e), domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP, status=500)

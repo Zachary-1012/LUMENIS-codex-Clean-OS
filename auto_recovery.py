@@ -47,6 +47,27 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 logger = logging.getLogger(__name__)
 
+# 生产采集的 CDP 身份必须与 xhs_cookie_bridge / resident launcher 共用同一
+# 个事实源。旧实现把 Guardian 的健康检查和自动修复固定在 9222，导致内地
+# profile 在 HK-only 生产策略下被后台线程重新拉起。
+PRODUCTION_COLLECTION_ACCOUNT = "XHS_RETINAUT"
+
+
+def _production_cdp_config():
+    """Return the currently authorized production browser contract.
+
+    Import lazily so the recovery module remains importable in isolated tests
+    and so account/port/profile resolution stays owned by the existing bridge.
+    """
+    import xhs_cookie_bridge as bridge
+
+    account = bridge.DEFAULT_COLLECTION_ACCOUNT or PRODUCTION_COLLECTION_ACCOUNT
+    return {
+        "account": account,
+        "port": bridge.cdp_port_for(account),
+        "home": bridge.home_url_for(account),
+    }
+
 class FixStatus(Enum):
     """修复状态"""
     PENDING = "pending"
@@ -186,8 +207,8 @@ class AutoRecoveryEngine:
             return False, f'数据库连接失败: {str(e)}'
 
     def check_cdp(self):
-        """检查CDP浏览器"""
-        return self.check_port(port=9222)
+        """检查生产采集 CDP；当前生产身份固定为香港/国际 RedNote。"""
+        return self.check_port(port=_production_cdp_config()["port"])
 
     def backup_database(self):
         """备份数据库（自动修复前）"""
@@ -287,47 +308,50 @@ class AutoRecoveryEngine:
         return False, f'网络恢复失败，已重试{self.max_retries}次'
 
     def fix_cdp_crash(self, module='cdp'):
-        """修复CDP浏览器崩溃 - 重启浏览器"""
-        self.log('info', '检测到CDP浏览器崩溃，尝试重启...', module=module)
+        """通过官方驻场启动器恢复香港/国际采集浏览器。
+
+        Guardian 不再自行拼接 Edge 命令或启动历史 9222 profile。这样
+        Resident Browser 的账号隔离、profile、网络和页面预热仍由唯一
+        启动入口负责，故障恢复也不会绕过 HK-only 采集门禁。
+        """
+        config = _production_cdp_config()
+        self.log(
+            'info',
+            f'检测到生产 CDP 浏览器崩溃，尝试恢复 {config["account"]}:{config["port"]}...',
+            module=module,
+        )
 
         try:
-            # 启动Edge浏览器带CDP端口
-            edge_paths = [
-                r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-                r'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
-            ]
+            launcher = os.path.join(self.root_dir, 'scripts', 'start_resident_browsers.py')
+            python_path = os.path.join(self.root_dir, '.venv', 'Scripts', 'python.exe')
+            if not os.path.isfile(python_path):
+                python_path = sys.executable
+            if not os.path.isfile(launcher):
+                return False, '未找到官方驻场浏览器启动器'
 
-            edge_path = None
-            for p in edge_paths:
-                if os.path.exists(p):
-                    edge_path = p
-                    break
-
-            if not edge_path:
-                return False, '未找到Edge浏览器'
-
-            user_data_dir = os.path.join(self.root_dir, 'edge-cdp-profile')
-            os.makedirs(user_data_dir, exist_ok=True)
-
-            subprocess.Popen([
-                edge_path,
-                '--remote-debugging-port=9222',
-                f'--user-data-dir={user_data_dir}',
-                '--no-first-run',
-                '--no-default-browser-check',
-                '--remote-allow-origins=*'
-            ])
+            creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+            subprocess.Popen(
+                [python_path, launcher, '--account', config['account']],
+                cwd=self.root_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                creationflags=creationflags,
+            )
 
             # 等待启动并验证
             for i in range(15):
                 time.sleep(2)
                 if self.check_cdp():
-                    self.log('info', f'CDP浏览器重启成功', module=module)
-                    return True, 'CDP浏览器重启成功'
+                    self.log(
+                        'info',
+                        f'生产 CDP 浏览器恢复成功（{config["account"]}:{config["port"]}）',
+                        module=module,
+                    )
+                    return True, f'生产 CDP 浏览器恢复成功（{config["account"]}:{config["port"]}）'
 
-            return False, 'CDP浏览器重启超时'
+            return False, f'生产 CDP 浏览器恢复超时（{config["account"]}:{config["port"]}）'
         except Exception as e:
-            return False, f'CDP浏览器重启失败: {str(e)}'
+            return False, f'生产 CDP 浏览器恢复失败: {str(e)}'
 
     def health_check(self):
         """全面健康检查"""

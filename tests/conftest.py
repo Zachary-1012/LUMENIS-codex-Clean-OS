@@ -22,10 +22,60 @@ _PYTEST_DB_ROOT = tempfile.mkdtemp(prefix="lumenis-pytest-")
 _PYTEST_DB_PATH = os.path.join(_PYTEST_DB_ROOT, "monitor-test-copy.db")
 _LOCAL_CANDIDATE_DB = os.path.join(_REPO_ROOT, "data", "monitor.db")
 _EXPLICIT_TEST_SEED_DB = os.environ.get("LUMENIS_TEST_SEED_DB", "").strip()
-_TEST_SEED_DB = _EXPLICIT_TEST_SEED_DB or _LOCAL_CANDIDATE_DB
+
+
+def _dotenv_path(name: str, dotenv_path: str) -> str:
+    """Read one non-secret path setting without loading the whole .env file."""
+    try:
+        with open(dotenv_path, encoding="utf-8") as _f:
+            for _raw in _f:
+                _line = _raw.strip()
+                if not _line or _line.startswith("#") or not _line.startswith(name + "="):
+                    continue
+                _value = _line.split("=", 1)[1].strip().strip('"').strip("'")
+                return os.path.expandvars(_value)
+    except OSError:
+        pass
+    return ""
+
+
+def _existing_seed(*candidates: str) -> str:
+    """Choose the first existing read-only seed, preserving CI fallback behavior."""
+    for _candidate in candidates:
+        if _candidate and os.path.isfile(_candidate):
+            return os.path.abspath(_candidate)
+    return _LOCAL_CANDIDATE_DB
+
+
+# The production launcher keeps the canonical runtime DB outside the checkout.
+# Prefer that path only as a read-only seed; every test still receives its own
+# OS-temp copy and the sqlite guard is installed before any test executes.
+_ENV_TEST_SEED_DB = os.environ.get("ZBC_DB_PATH", "").strip()
+_DOTENV_TEST_SEED_DB = _dotenv_path("ZBC_DB_PATH", os.path.join(_REPO_ROOT, ".env"))
+_TEST_SEED_DB = _existing_seed(
+    _EXPLICIT_TEST_SEED_DB,
+    _ENV_TEST_SEED_DB,
+    _DOTENV_TEST_SEED_DB,
+    _LOCAL_CANDIDATE_DB,
+)
 if os.path.isfile(_TEST_SEED_DB):
-    # The source is read-only test input. Every test process operates on its own copy.
-    shutil.copy2(_TEST_SEED_DB, _PYTEST_DB_PATH)
+    # The source is read-only test input. SQLite backup gives a consistent
+    # snapshot when the production DB is live/WAL-enabled; all tests operate on
+    # the temporary destination only.
+    try:
+        _src = _sqlite3_guard.connect(
+            f"file:{_TEST_SEED_DB}?mode=ro", uri=True, timeout=10
+        )
+        _dst = _sqlite3_guard.connect(_PYTEST_DB_PATH, timeout=10)
+        try:
+            _src.backup(_dst)
+        finally:
+            _src.close()
+            _dst.close()
+    except Exception:
+        # CI may provide a non-SQLite placeholder; preserve the existing
+        # behavior so the test process can report the actual fixture failure.
+        shutil.copy2(_TEST_SEED_DB, _PYTEST_DB_PATH)
 else:
     # CI/新机器允许从空文件开始；具体迁移测试必须自行初始化 schema，不能回退生产路径。
     open(_PYTEST_DB_PATH, "ab").close()

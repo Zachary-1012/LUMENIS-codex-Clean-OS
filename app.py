@@ -97,6 +97,7 @@ import architecture_api
 import badge_api
 import system_ai_data_api
 import settings_module
+import subject_registry
 import export_report
 import security_scanner
 import runtime_preflight  # ZBIP Runtime Integrity Preflight（统一启动闸门；默认只记录不阻断，ZBC_PREFLIGHT_ENFORCE=1 时 P0 阻断）
@@ -148,6 +149,8 @@ app.register_blueprint(badge_api.badge_bp)
 app.register_blueprint(system_ai_data_api.system_ai_bp)
 # 注册设置模块蓝图
 app.register_blueprint(settings_module.settings_bp)
+# 通用主体注册表：CTH/BMP 共用配置入口；不改变两域既有运行规则
+app.register_blueprint(subject_registry.subject_registry_bp)
 # 注册导出报告模块蓝图
 app.register_blueprint(export_report.export_bp)
 # 注册公关案例整合模块蓝图
@@ -6007,9 +6010,9 @@ print("[dual-domain] deprecated 兼容层已注册：旧 /api/xhs|v4|notes|web �
 @app.route('/api/skills')
 @app.route('/api/skills/list')
 def api_skills_list():
-    """Skill 列表（从 skill_registry 读取真实数据）。"""
+    """Skill 列表（复用 account.skills 的现有 DB 注册表 owner）。"""
     try:
-        from skill_registry import list_skills
+        from account.skills import list_skills
         skills = list_skills()
         return jsonify({"success": True, "data": {"skills": skills, "total": len(skills)},
                         "error": "", "domain_id": "system", "product_id": "SYSTEM"})
@@ -6019,9 +6022,31 @@ def api_skills_list():
 
 @app.route('/api/skills/status')
 def api_skills_status():
-    """Skill 运行状态。"""
-    return jsonify({"success": True, "data": {"status": "available", "loaded": 0},
-                    "error": "", "domain_id": "system", "product_id": "SYSTEM"})
+    """Skill 运行状态（来自现有注册表，不返回固定假值）。"""
+    try:
+        from account.skills import list_skills
+        skills = list_skills()
+        enabled = [skill for skill in skills if skill.get("status") == "enabled"]
+        return jsonify({
+            "success": True,
+            "data": {
+                "status": "ready" if enabled else ("registered" if skills else "not_collected"),
+                "registered": len(skills),
+                "loaded": len(enabled),
+                "skills": [{
+                    "skill_id": skill.get("skill_id"),
+                    "status": skill.get("status"),
+                    "source_type": skill.get("source_type") or "builtin",
+                    "health_state": skill.get("health_state") or "unknown",
+                    "lifecycle_state": skill.get("lifecycle_state") or "registered",
+                } for skill in skills],
+            },
+            "error": "", "domain_id": "system", "product_id": "SYSTEM",
+        })
+    except Exception as exc:
+        return jsonify({"success": False, "data": {"status": "unknown", "registered": None,
+                        "loaded": None, "skills": []}, "error": str(exc),
+                        "domain_id": "system", "product_id": "SYSTEM"}), 200
 
 @app.route('/api/auxiliary/sources')
 def api_auxiliary_sources():
@@ -6840,14 +6865,26 @@ def api_cookies_import_status():
             except Exception:
                 return {'configured': True, 'error': 'parse_error'}
         return {'configured': False}
+
+    def _probe_hk_runtime_login():
+        """以驻场 CDP 三层探测为准，禁止把 Cookie 文件存在误报为已登录。
+
+        Cookie 文件是凭证配置事实；浏览器中的 web_session/id_token 和当前
+        页面才是生产采集可用事实。探测失败时返回 UNKNOWN，由调用方保留
+        ``configured`` 但将 ``logged_in`` 置为 False。
+        """
+        try:
+            import resident_health as _resident_health
+            return _resident_health.check_account('XHS_RETINAUT')
+        except Exception as _e:
+            return {'status': 'UNKNOWN', 'error_type': type(_e).__name__}
     # 生产主路径是受保护目录中的私有 Cookie 文件，不要求也不允许把
     # 凭证复制成可提交的 xhs_cookies.source.json。状态字段必须反映真实
     # 主路径，否则前端会把“已配置”误显示成“来源不存在”。
-    xhs_private_files = (
-        _data / 'private' / 'xhs_cookie_header.txt',
-        _data / 'private' / 'xhs_cookie_retinaut.txt',
-    )
-    xhs_private_exists = any(p.is_file() and p.stat().st_size > 0 for p in xhs_private_files)
+    # 生产状态只认香港/国际账号专属 Header；CN 文件即使历史存在，也不计入
+    # 当前可用状态，避免设置页把停用账号显示成生产已连接。
+    xhs_hk_private = _data / 'private' / 'xhs_cookie_retinaut.txt'
+    xhs_private_exists = xhs_hk_private.is_file() and xhs_hk_private.stat().st_size > 0
     status = {
         'weibo': _stat('weibo'),
         'bilibili': _stat('bilibili'),
@@ -6857,15 +6894,28 @@ def api_cookies_import_status():
     # 私有 Header 文件是生产主路径，不要求存在可提交的源 JSON。
     if xhs_private_exists:
         status['xhs']['source'] = 'private_cookie_file'
-    xhs_private = _data / 'private' / 'xhs_cookie_header.txt'
-    if xhs_private.is_file() and xhs_private.stat().st_size > 0 and not status['xhs'].get('configured'):
+        status['xhs']['account'] = 'XHS_RETINAUT'
+        status['xhs']['collection_region'] = 'intl'
+    if xhs_hk_private.is_file() and xhs_hk_private.stat().st_size > 0 and not status['xhs'].get('configured'):
         try:
             verified, _ = xhs_cookie_bridge.verify_account()
             status['xhs'] = {'configured': True, 'logged_in': bool(verified), 'cookie_count': 0,
-                             'source': 'private_cookie_file'}
+                             'source': 'private_cookie_file', 'account': 'XHS_RETINAUT',
+                             'collection_region': 'intl'}
         except Exception:
             status['xhs'] = {'configured': True, 'logged_in': False, 'cookie_count': 0,
-                             'source': 'private_cookie_file'}
+                             'source': 'private_cookie_file', 'account': 'XHS_RETINAUT',
+                             'collection_region': 'intl'}
+
+    # 生产真实性门禁：即使历史 login_status.json 写过 logged_in=true，
+    # 只要当前驻场 CDP 没有有效会话，就必须对外报告未登录/待人工登录。
+    if xhs_hk_private.is_file() and xhs_hk_private.stat().st_size > 0:
+        runtime = _probe_hk_runtime_login()
+        status['xhs']['runtime_status'] = runtime.get('status', 'UNKNOWN')
+        status['xhs']['runtime_authenticated'] = runtime.get('status') == 'HEALTHY'
+        status['xhs']['logged_in'] = runtime.get('status') == 'HEALTHY'
+        if runtime.get('cookie_count') is not None:
+            status['xhs']['cookie_count'] = int(runtime.get('cookie_count') or 0)
     return jsonify({'ok': True, 'status': status})
 
 
@@ -6892,6 +6942,19 @@ def api_cookies_import_raw():
         return jsonify({'ok': False, 'error': 'platform 必须是 weibo/bilibili/xhs'}), 400
     if not isinstance(cookies, list) or not cookies:
         return jsonify({'ok': False, 'error': 'cookies 必须是非空 JSON 数组'}), 400
+    xhs_account = ''
+    if platform in ('xhs', 'xiaohongshu'):
+        # 生产采集当前只允许香港/国际身份；CN Cookie 不再进入新增/应用路径。
+        # CN profile 仍保留在隔离保护目录供诊断与历史取证，不在本 API 删除。
+        try:
+            import xhs_cookie_bridge as _xhs_bridge
+            xhs_account = str(body.get('account') or _xhs_bridge.DEFAULT_COLLECTION_ACCOUNT).strip().upper()
+            if xhs_account != _xhs_bridge.DEFAULT_COLLECTION_ACCOUNT:
+                return jsonify({'ok': False, 'code': 'MAINLAND_COLLECTION_DISABLED',
+                                'error': '当前生产仅支持 XHS_RETINAUT 香港/国际账号，内地账号已停用'}), 403
+        except Exception:
+            return jsonify({'ok': False, 'code': 'XHS_ACCOUNT_CONFIG_UNAVAILABLE',
+                            'error': '无法确认香港/国际采集身份配置，已拒绝导入'}), 503
     # 规范化：仅保留合法 cookie 字段
     cleaned = []
     for c in cookies:
@@ -6926,16 +6989,25 @@ def api_cookies_import_raw():
     else:  # xhs / xiaohongshu
         src_file = _data / 'xhs_cookies.source.json'
         status_file = _data / 'xhs_login_status.json'
-        status = {'logged_in': True, 'cookie_count': len(cleaned), 'login_method': 'cookie_import_api_raw', 'platform': 'xiaohongshu'}
+        status = {'logged_in': True, 'cookie_count': len(cleaned), 'login_method': 'cookie_import_api_raw',
+                  'platform': 'xiaohongshu', 'account': xhs_account}
     src_file.write_text(_json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8')
     # 仅当 apply=true 才同步生产 cookie 文件（防止测试污染；默认只写 source 待确认）
     apply = bool(body.get('apply', False))
     if apply and platform in ('xhs', 'xiaohongshu'):
-        (_data / 'xhs_cookies.json').write_text(_json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8')
+        # 应用到 bridge 的香港账号专属 Cookie 文件，避免再次落回旧的 CN 默认路径。
+        _cookie_path = _xhs_bridge.ACCOUNT_PROFILES[_xhs_bridge.DEFAULT_COLLECTION_ACCOUNT][0]
+        _cookie_path = _Path(_cookie_path)
+        _cookie_path.parent.mkdir(parents=True, exist_ok=True)
         parts = [f"{c['name']}={c['value']}" for c in cleaned
-                 if c.get('domain','').endswith('xiaohongshu.com') and not c['name'].startswith('x-user-id-')]
+                 if (str(c.get('domain', '')).endswith(('rednote.com', 'xiaohongshu.com'))
+                     or not c.get('domain')) and not c['name'].startswith('x-user-id-')]
+        _cookie_path.write_text('; '.join(parts), encoding='utf-8')
+        # 保留既有 JSON 源文件兼容面，但生产桥接以账号专属 header 为准。
+        (_data / 'xhs_cookies.json').write_text(_json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8')
         (_data / 'xhs_cookie_string.txt').write_text('; '.join(parts), encoding='utf-8')
         status['applied'] = True
+        status['applied_account'] = xhs_account
     status['last_login'] = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     status_file.write_text(_json.dumps(status, ensure_ascii=False, indent=2), encoding='utf-8')
     # Evidence（不记录 Cookie 值）
@@ -6947,7 +7019,9 @@ def api_cookies_import_raw():
                         actual=_json.dumps({'platform': platform, 'cookie_count': len(cleaned)}, ensure_ascii=False))
     except Exception:
         pass
-    return jsonify({'ok': True, 'platform': platform, 'cookie_count': len(cleaned), 'applied': apply and platform in ('xhs', 'xiaohongshu')})
+    return jsonify({'ok': True, 'platform': platform, 'account': xhs_account or None,
+                    'cookie_count': len(cleaned), 'applied': apply and platform in ('xhs', 'xiaohongshu'),
+                    'secrets_returned': False})
 
 if __name__ == '__main__':
     # 启动前注入 node 运行时 PATH（话题监测/采集脚本依赖 node，8201 worker 进程 PATH 可能不含沙箱 node）

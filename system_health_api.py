@@ -53,6 +53,38 @@ def get_data_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 
+def get_production_collection_contract():
+    """Return the active collection account's runtime health contract.
+
+    The production policy currently allows only the Hong Kong/International
+    RedNote account.  Mainland account ports and credentials remain available
+    to the diagnostic surface, but must never determine the production health
+    light or recovery decision.
+    """
+    try:
+        import xhs_cookie_bridge as bridge
+
+        account = bridge.DEFAULT_COLLECTION_ACCOUNT
+        cookie_file = bridge.ACCOUNT_PROFILES[account][0]
+        return {
+            'account': account,
+            'region': 'intl',
+            'cdp_port': bridge.cdp_port_for(account),
+            'cookie_file': cookie_file,
+            'home_url': bridge.home_url_for(account),
+        }
+    except Exception:
+        # Keep the health module importable in isolated tests/fresh checkouts;
+        # the fallback remains HK-only and does not reintroduce 9222.
+        return {
+            'account': 'XHS_RETINAUT',
+            'region': 'intl',
+            'cdp_port': 9223,
+            'cookie_file': os.path.join(get_data_dir(), 'private', 'xhs_cookie_retinaut.txt'),
+            'home_url': 'https://www.rednote.com',
+        }
+
+
 def check_database():
     """检查数据库状态"""
     try:
@@ -92,6 +124,7 @@ def check_database():
 def check_collector():
     """检查采集器状态"""
     try:
+        collection = get_production_collection_contract()
         # 检查采集计数文件
         stats_file = os.path.join(get_data_dir(), 'collector_stats.json')
         today_runs = 0
@@ -105,20 +138,20 @@ def check_collector():
                 today_runs = stats.get('manual_runs', 0) + stats.get('auto_runs', 0)
             last_run = stats.get('updated_at')
         
-        # 检查CDP端口
+        # 只检查当前生产身份的 CDP；暂停的内地 9222 只留在诊断面。
         import socket
         cdp_running = False
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
-            result = sock.connect_ex(('127.0.0.1', 9222))
+            result = sock.connect_ex(('127.0.0.1', collection['cdp_port']))
             cdp_running = (result == 0)
             sock.close()
         except:
             pass
         
         # 检查Cookie配置
-        cookie_file = os.path.join(get_data_dir(), 'private', 'xhs_cookie_header.txt')
+        cookie_file = collection['cookie_file']
         cookie_configured = os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 0
         
         status = 'ok' if (cdp_running and cookie_configured and today_runs > 0) else 'warning'
@@ -130,6 +163,9 @@ def check_collector():
             'today_runs': today_runs,
             'last_run': last_run,
             'cdp_running': cdp_running,
+            'collection_account': collection['account'],
+            'collection_region': collection['region'],
+            'cdp_port': collection['cdp_port'],
             'cookie_configured': cookie_configured,
             'max_daily_runs': 12,
             'remaining_runs': 12 - today_runs
@@ -141,6 +177,7 @@ def check_collector():
 def check_login_status():
     """检查登录态状态"""
     try:
+        collection = get_production_collection_contract()
         # 检查Cookie是否有效（通过最近采集是否成功判断）
         db_path = get_db_path()
         if not os.path.exists(db_path):
@@ -159,7 +196,9 @@ def check_login_status():
         return {
             'status': status,
             'recent_7d_collects': recent_7d,
-            'cookie_file_exists': os.path.exists(os.path.join(get_data_dir(), 'private', 'xhs_cookie_header.txt'))
+            'cookie_file_exists': os.path.exists(collection['cookie_file']),
+            'collection_account': collection['account'],
+            'collection_region': collection['region'],
         }
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
@@ -559,11 +598,11 @@ def system_health_summary():
             database_light = 'warning'
         else:
             database_light = 'ok'
-        # 2) collector_light: CDP + cookie + today_runs 综合（原 check_collector 已覆盖）
+        # 2) collector_light: 当前生产身份的 CDP + cookie + today_runs
         collector_light = collector_status.get('status', 'warning')
         # 3) auth_light: 登录态 + 最近采集有效性（recent_24h=0 为黄 最近7天=0 为红）
         auth_light = login_status.get('status', 'warning')
-        # 4) xhs_platform_light: 小红书采集链路综合（CDP OK + 最近24h有数据才绿；CDP OK 但 24h=0 → 黄；CDP 掉 → 红）
+        # 4) xhs_platform_light: HK/International RedNote 采集链路综合
         recent_24h = db_status.get('recent_24h', 0)
         cdp_ok = collector_status.get('cdp_running', False)
         cookie_ok = collector_status.get('cookie_configured', False)
@@ -592,10 +631,27 @@ def system_health_summary():
         # -------- 诊断 hint（4 子灯各自说明问题所在，帮助用户快速定位 32h 0 条类故障） --------
         hints = []
         if database_light != 'ok':
-            hints.append(f"数据库：{db_status.get('message','异常')}；写权限={db_write.get('status','unknown')}（{db_write.get('reason','')}）")
+            if (
+                db_status.get('status') == 'warning'
+                and db_status.get('notes_count', 0) > 0
+                and recent_24h == 0
+                and db_write.get('status') == 'ok'
+            ):
+                hints.append(
+                    "数据库：连接、写权限与 quick_check 正常；最近24小时无新采集，"
+                    "当前是数据新鲜度提示，不是数据库故障"
+                )
+            else:
+                hints.append(
+                    f"数据库：{db_status.get('message','异常')}；"
+                    f"写权限={db_write.get('status','unknown')}（{db_write.get('reason','')}）"
+                )
         if collector_light != 'ok':
             if not collector_status.get('cdp_running'):
-                hints.append("采集：浏览器(Edge CDP 9222)未启动 → 点 [启动浏览器] 或运行 start_system.bat")
+                hints.append(
+                    f"采集：香港/国际 RedNote 浏览器(Edge CDP {collector_status.get('cdp_port', 9223)})未启动 "
+                    "→ 运行 scripts/start_resident_browsers.py --account XHS_RETINAUT"
+                )
             elif not collector_status.get('cookie_configured'):
                 hints.append("采集：Cookie 缺失 → 登录小红书后扫码恢复")
             else:
@@ -618,13 +674,18 @@ def system_health_summary():
                                 'writable': db_write.get('writable', False)},
                 'collector':   {'light': collector_light,   'label': '采集器', 'status': collector_light,
                                 'cdp_running': collector_status.get('cdp_running', False),
+                                'cdp_port': collector_status.get('cdp_port', 9223),
+                                'collection_account': collector_status.get('collection_account', 'XHS_RETINAUT'),
+                                'collection_region': collector_status.get('collection_region', 'intl'),
                                 'cookie_ok': collector_status.get('cookie_configured', False),
                                 'today_runs': collector_status.get('today_runs', 0)},
                 'auth':        {'light': auth_light,        'label': '登录态/Auth', 'status': login_status.get('status',''),
                                 'recent_7d': login_status.get('recent_7d_collects', 0),
                                 'cookie_file_exists': login_status.get('cookie_file_exists', False)},
-                'xhs_platform':{'light': xhs_light,         'label': '小红书主平台', 'status': xhs_light,
+                'xhs_platform':{'light': xhs_light,         'label': 'RedNote 主平台（香港/国际）', 'status': xhs_light,
                                 'recent_24h_new_notes': recent_24h,
+                                'collection_account': collector_status.get('collection_account', 'XHS_RETINAUT'),
+                                'cdp_port': collector_status.get('cdp_port', 9223),
                                 'next_auto_collect': get_collection_schedule().get('next_collect','')},
             },
             'need_manual_intervention': alerts_info.get('need_manual_intervention', 0),

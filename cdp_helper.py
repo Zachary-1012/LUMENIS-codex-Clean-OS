@@ -233,7 +233,7 @@ def ensure_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, auto_start=True,
         return {"available": True, "message": f"CDP端口 {port} 可用", "port": port, "auto_started": False}
     
     if not auto_start:
-        return {"available": False, "message": f"CDP端口 {port} 未启动，请先运行 start_cdp_auto.bat", "port": port, "auto_started": False}
+        return {"available": False, "message": f"CDP端口 {port} 未启动，请先运行 scripts/start_production.ps1（生产会启动 9223 香港采集 + 9224 通用浏览）", "port": port, "auto_started": False}
     
     logger.info(f"CDP端口 {port} 未启动，正在自动启动Edge浏览器...")
     result = start_cdp_browser(port, profile_dir, **launch_kwargs)

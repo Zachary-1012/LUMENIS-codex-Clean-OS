@@ -304,9 +304,14 @@ def runtime_identity():
 
 @experience_bp.route("/api/experience/subjects")
 def runtime_subjects():
-    """当前主体与可用域。主体列表的呈现层仍由前端 fixtures 提供，这里给真实当前主体。"""
+    """当前主体、可用域与通用主体注册表（真实运行数据）。
+
+    注册表只提供可选工作上下文，不切换当前生产主体，也不改变 CTH/BMP
+    原有规则；没有登记数据时返回空数组，不用 fixture 冒充生产主体。
+    """
     try:
         import subject_context as sc
+        from subject_registry import list_subjects
 
         scope = sc.current_scope()
         return jsonify({
@@ -317,6 +322,8 @@ def runtime_subjects():
                 {"id": "CTH", "name": "商业运营"},
                 {"id": "BMP", "name": "品牌市场"},
             ],
+            "subjects": list_subjects(),
+            "selection_only": True,
         })
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(exc)}), 500

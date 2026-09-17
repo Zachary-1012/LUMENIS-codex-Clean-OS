@@ -39,7 +39,10 @@ from .nav_config import (
 from .skills import (
     list_skills, set_skill_status, configure_skill, add_custom_skill, get_enabled_skills,
     get_skill_info, execute_skill_api, get_skill_executions, get_skills_status_light,
+    register_validated_skill,
 )
+from skill_package_runtime import preview_skill_source
+from github_connector import GitHubConnector, GitHubConnectorError
 
 account_bp = Blueprint("account", __name__, url_prefix="/api/system/account")
 
@@ -586,6 +589,51 @@ def api_list_skills():
     status = request.args.get("status")
     skills = list_skills(product=product, status=status)
     return jsonify({"ok": True, "skills": skills})
+
+
+@account_bp.route("/skills/source/preview", methods=["POST"])
+@require_owner
+def api_preview_skill_source():
+    """只读探测 Skill 来源；不下载、不安装、不执行、不授予权限。"""
+    data = request.get_json(silent=True) or {}
+    source = data.get("source", "")
+    result = preview_skill_source(source, resolve_remote=bool(data.get("resolve_remote", False)))
+    return jsonify(result), 200 if result.get("ok") else 400
+
+
+@account_bp.route("/skills/source/register", methods=["POST"])
+@require_owner
+def api_register_skill_source():
+    """登记已验证的 Skill 元数据；不安装、不执行、不授予权限。"""
+    data = request.get_json(silent=True) or {}
+    source = data.get("source", "")
+    preview = preview_skill_source(source, resolve_remote=bool(data.get("resolve_remote", False)))
+    result = register_validated_skill(preview)
+    return jsonify(result), 201 if result.get("success") else 400
+
+
+@account_bp.route("/connectors/github/status", methods=["GET"])
+@require_owner
+def api_github_connector_status():
+    """Return GitHub connector state without exposing credential material."""
+    return jsonify({"ok": True, "connector": GitHubConnector().status()})
+
+
+@account_bp.route("/connectors/github/authorization-url", methods=["POST"])
+@require_owner
+def api_github_authorization_url():
+    """Build an OAuth request; callback state must be persisted and verified by the host."""
+    data = request.get_json(silent=True) or {}
+    try:
+        url = GitHubConnector().authorization_url(data.get("state", ""))
+    except GitHubConnectorError as exc:
+        return jsonify({"ok": False, "code": exc.code, "error": str(exc)}), 400
+    return jsonify({
+        "ok": True,
+        "authorization_url": url,
+        "state_handling": "host_must_persist_and_verify_before_callback_exchange",
+        "write_enabled": False,
+    })
 
 
 @account_bp.route("/skills/<skill_id>/enable", methods=["POST"])

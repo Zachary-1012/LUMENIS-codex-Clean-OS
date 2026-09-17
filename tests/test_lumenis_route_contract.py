@@ -49,3 +49,15 @@ def test_real_app_redirects_legacy_page_without_rendering_old_template(monkeypat
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/experience/#/CTH-01")
     assert b"zbc-nav" not in response.data
+
+
+def test_real_app_redirects_bmp_overview_without_rendering_old_template(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module, "_auth_enabled", lambda: False)
+    client = app_module.app.test_client()
+    response = client.get("/lumenis/zbmp/overview", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/experience/#/BMP-01")
+    assert b"zbc-nav" not in response.data

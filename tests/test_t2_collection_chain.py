@@ -356,7 +356,8 @@ def run_tests():
         print(f"\n!!! 有 {FAIL} 项失败 !!!")
         return False
     else:
-        print("\n全部通过 ✓")
+        # Windows CI/pytest capture may use GBK; keep the pass marker ASCII.
+        print("\n全部通过 [OK]")
         return True
 
 

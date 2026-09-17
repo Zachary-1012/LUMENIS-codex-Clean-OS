@@ -492,6 +492,177 @@
     bindActions(root, handlers);
   }
 
+  /* ---------------- SYS-05: 通用主体 + 香港授权 Cookie ----------------
+   * 这是设置工作区的真实增量接线。主体登记只写通用注册表，不切换默认主体；
+   * Cookie 只发往本地 LUMENIS Runtime，成功后清空输入框，响应永不回显凭证。
+   */
+  function wireSettingsSurface(root) {
+    const surface = root.querySelector('[data-lumenis-settings-surface]');
+    if (!surface || surface.dataset.wired) return;
+    surface.dataset.wired = '1';
+
+    const subjectForm = surface.querySelector('[data-subject-form]');
+    const subjectList = surface.querySelector('[data-subject-list]');
+    const subjectStatus = surface.querySelector('[data-subject-status]');
+    const domain = surface.querySelector('[data-subject-domain]');
+    const type = surface.querySelector('[data-subject-type]');
+    const nameEn = surface.querySelector('[data-subject-name-en]');
+    const nameZh = surface.querySelector('[data-subject-name-zh]');
+    const industry = surface.querySelector('[data-subject-industry]');
+
+    function subjectStatusText(text, tone) {
+      if (!subjectStatus) return;
+      subjectStatus.textContent = String(text || '');
+      subjectStatus.dataset.tone = tone || 'neutral';
+    }
+    function renderSubjects(items) {
+      if (!subjectList) return;
+      subjectList.replaceChildren();
+      if (!Array.isArray(items) || !items.length) {
+        const empty = document.createElement('span');
+        empty.className = 'lum-caption';
+        empty.textContent = '尚未登记主体；此处不展示设计样例。';
+        subjectList.appendChild(empty);
+        return;
+      }
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'lum-opt lum-opt-flat';
+        const top = document.createElement('div');
+        top.className = 'lum-row-between';
+        const title = document.createElement('b');
+        title.textContent = `${item.name_zh || '—'} / ${item.name_en || '—'}`;
+        const badge = document.createElement('span');
+        badge.className = 'lum-chip';
+        badge.textContent = `${item.domain_id || '—'} · ${item.subject_type_name || item.subject_type || '—'}`;
+        top.append(title, badge);
+        const meta = document.createElement('span');
+        meta.className = 'lum-caption';
+        meta.textContent = `${item.industry || '不限行业'} · ${item.status || 'configured'} · 仅上下文选择`;
+        row.append(top, meta);
+        subjectList.appendChild(row);
+      });
+    }
+    async function loadSubjects() {
+      try {
+        const resp = await apiFetch('/api/settings/subjects', { headers: { Accept: 'application/json' } });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        renderSubjects(data.subjects);
+      } catch (err) {
+        renderSubjects([]);
+        subjectStatusText(`主体注册表读取失败：${String(err.message || err)}`, 'error');
+      }
+    }
+    if (subjectForm && !subjectForm.dataset.wired) {
+      subjectForm.dataset.wired = '1';
+      subjectForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        const en = String(nameEn && nameEn.value || '').trim();
+        const zh = String(nameZh && nameZh.value || '').trim();
+        if (!en || !zh) {
+          subjectStatusText('英文名与中文名必须同时填写；未写入。', 'error');
+          return;
+        }
+        const submit = subjectForm.querySelector('[data-subject-submit]');
+        if (submit) { submit.disabled = true; submit.textContent = '登记中…'; }
+        subjectStatusText('正在等待权限门并写入通用主体注册表…', 'pending');
+        try {
+          const resp = await apiFetch('/api/settings/subjects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+              domain_id: domain && domain.value,
+              subject_type: type && type.value,
+              name_en: en,
+              name_zh: zh,
+              industry: industry && industry.value,
+            }),
+          });
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+          subjectStatusText(data.created ? '主体已登记；未切换默认主体。' : '主体已存在；未重复写入。', 'success');
+          if (data.created) {
+            if (nameEn) nameEn.value = '';
+            if (nameZh) nameZh.value = '';
+            if (industry) industry.value = '';
+          }
+          await loadSubjects();
+          toast(data.created ? '主体登记完成' : '主体已存在', 'success');
+        } catch (err) {
+          subjectStatusText(`主体登记未完成：${String(err.message || err)}`, 'error');
+          toast('主体登记未完成，未改变两域运行规则', 'info');
+        } finally {
+          if (submit) { submit.disabled = false; submit.textContent = '登记主体'; }
+        }
+      });
+    }
+    const refresh = surface.querySelector('[data-subject-refresh]');
+    if (refresh && !refresh.dataset.wired) {
+      refresh.dataset.wired = '1';
+      refresh.addEventListener('click', loadSubjects);
+    }
+
+    const cookieJson = surface.querySelector('[data-setting-cookie-json]');
+    const cookieApply = surface.querySelector('[data-setting-cookie-apply]');
+    const cookieStatus = surface.querySelector('[data-setting-cookie-status]');
+    const cookieSubmit = surface.querySelector('[data-setting-cookie-submit]');
+    function cookieStatusText(text) { if (cookieStatus) cookieStatus.textContent = String(text || ''); }
+    async function loadCookieStatus() {
+      try {
+        const resp = await apiFetch('/api/cookies/import/status', { headers: { Accept: 'application/json' } });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        const xhs = data.status && data.status.xhs || {};
+        const active = xhs.source === 'private_cookie_file' && xhs.account === 'XHS_RETINAUT';
+        cookieStatusText(active ? `XHS_RETINAUT 已配置 · ${xhs.logged_in ? '登录态已验证' : '等待验证'}` : 'XHS_RETINAUT 尚未应用有效 Cookie');
+      } catch (err) {
+        cookieStatusText(`Cookie 状态不可用：${String(err.message || err)}`);
+      }
+    }
+    if (cookieSubmit && !cookieSubmit.dataset.wired) {
+      cookieSubmit.dataset.wired = '1';
+      cookieSubmit.addEventListener('click', async () => {
+        let cookies;
+        try { cookies = JSON.parse(String(cookieJson && cookieJson.value || '')); } catch (_) {
+          cookieStatusText('Cookie 必须是合法 JSON 数组；未发起导入。');
+          return;
+        }
+        if (!Array.isArray(cookies) || !cookies.length) {
+          cookieStatusText('Cookie 必须是非空 JSON 数组；未发起导入。');
+          return;
+        }
+        cookieSubmit.disabled = true;
+        cookieStatusText('正在安全导入；不会向平台写入…');
+        try {
+          const resp = await apiFetch('/api/cookies/import/raw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ platform: 'xhs', account: 'XHS_RETINAUT', cookies, apply: !!(cookieApply && cookieApply.checked) }),
+          });
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+          if (cookieJson) cookieJson.value = '';
+          cookieStatusText(data.applied ? '已绑定 XHS_RETINAUT 香港/国际采集；凭证不回显。' : '已暂存待应用；凭证不回显。');
+          toast('Cookie 导入完成（未向平台发布或写操作）', 'success');
+          await loadCookieStatus();
+        } catch (err) {
+          cookieStatusText(`Cookie 未导入：${String(err.message || err)}`);
+          toast('Cookie 导入未完成，未改变平台', 'info');
+        } finally {
+          cookieSubmit.disabled = false;
+        }
+      });
+    }
+    const cookieRefresh = surface.querySelector('[data-cookie-status-refresh]');
+    if (cookieRefresh && !cookieRefresh.dataset.wired) {
+      cookieRefresh.dataset.wired = '1';
+      cookieRefresh.addEventListener('click', loadCookieStatus);
+    }
+    loadSubjects();
+    loadCookieStatus();
+  }
+
   /* ---------------- CTH secondary platform collection ---------------- */
   function wirePlatformCollection(root) {
     const forms = $$('[data-platform-collection-form]', root);
@@ -607,6 +778,7 @@
     if (!root) return;
     init(root);                 // countup / tabs（对已水合真实数值生效）
     wireActions(root);
+    wireSettingsSurface(root);
     wirePlatformCollection(root);
     wireComposer(root);
     mountSharedSkillPalette(root);

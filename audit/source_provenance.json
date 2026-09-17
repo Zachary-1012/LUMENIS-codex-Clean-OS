@@ -42,10 +42,11 @@
     {"name": "aiohttp", "version_constraint": ">=3.9.0", "source": "PyPI", "license": "Apache-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Async HTTP client"},
     {"name": "yyds-logger", "version_constraint": ">=0.8.0", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Unified logging enhancement"},
     {"name": "tenacity", "version_constraint": ">=9.1.0", "source": "PyPI", "license": "Apache-2.0", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Retry library"},
-    {"name": "alembic", "version_constraint": ">=1.19.1", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Database migrations"}
+    {"name": "alembic", "version_constraint": ">=1.19.1", "source": "PyPI", "license": "MIT", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "Database migrations"},
+    {"name": "feedparser", "version_constraint": ">=6.0.11", "source": "PyPI", "license": "BSD-2-Clause", "commercial_use": true, "modified": false, "notice_required": true, "purpose": "RSS / Atom public-feed parsing"}
   ],
   "python_license_stats": {
-    "MIT": 12, "BSD-3-Clause": 10, "Apache-2.0": 5, "BSD-2-Clause": 1,
+    "MIT": 12, "BSD-3-Clause": 10, "Apache-2.0": 5, "BSD-2-Clause": 2,
     "ZPL-2.1": 1, "MIT/MPL-2.0_dual": 1, "Apache-2.0/BSD-3-Clause_dual": 1,
     "GPL_or_AGPL": 0, "non_commercial_restricted": 0
   },

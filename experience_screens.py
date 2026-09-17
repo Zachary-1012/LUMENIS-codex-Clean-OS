@@ -1066,57 +1066,103 @@ def _risk_items(notes: List[Dict[str, Any]], limit: int = 5) -> List[Dict[str, A
 
 
 def _build_bmp01() -> Dict[str, Any]:
-    """品牌市场总览（editorial）：与 CTH 同源只读口径，编辑式呈现品牌市场全局。"""
-    import database as db
-    import daily_report
+    """品牌市场总览：只读 ZBMP canonical snapshot，不借用 CTH 统计。"""
+    from api_dual_domain import get_zbmp_product_snapshot
 
-    stats = _safe(db.get_stats, default={})
-    stats = stats if isinstance(stats, dict) and not _is_err(stats) else {}
-    summ = _safe(daily_report.generate_today_summary, today_str(), default={})
-    ri = summ.get("risk_index") if isinstance(summ, dict) and not _is_err(summ) else None
-    bh = summ.get("brand_health_score") if isinstance(summ, dict) and not _is_err(summ) else None
+    snapshot = _safe(get_zbmp_product_snapshot, default={})
+    snapshot = snapshot if isinstance(snapshot, dict) and not _is_err(snapshot) else {}
+    metrics = snapshot.get("metrics") if isinstance(snapshot.get("metrics"), dict) else {}
+    data_state = snapshot.get("data_state") or STATE_NOT_COLLECTED.upper()
+    ready = data_state == "READY"
+    state = STATE_READY if ready else STATE_NOT_COLLECTED
 
-    def _has(k: str) -> str:
-        return STATE_READY if k in stats else STATE_NOT_COLLECTED
+    sentiment = metrics.get("sentiment_distribution")
+    sentiment = sentiment if isinstance(sentiment, dict) else {}
+    risk = metrics.get("risk_distribution")
+    risk = risk if isinstance(risk, dict) else {}
+    engagement = metrics.get("total_engagement")
+    engagement = engagement if isinstance(engagement, dict) else {}
+    observed_engagement = [value for value in engagement.values() if isinstance(value, (int, float))]
+    total_engagement = sum(observed_engagement) if observed_engagement else None
 
+    negative = sentiment.get("negative") if ready else None
+    high_risk = sum(risk.get(level, 0) for level in ("high", "critical")) if ready else None
+    total = metrics.get("total_canonical_zbmp") if ready else None
     kpis = [
-        metric("bmp01.total", "总声量", value=_int_or_none(stats.get("total")), state=_has("total"),
-               icon="trend", source="database.get_stats"),
-        metric("bmp01.neg", "负面声量", value=_int_or_none(stats.get("negative")), state=_has("negative"),
-               icon="risk", source="database.get_stats"),
-        metric("bmp01.high", "高风险", value=_int_or_none(stats.get("high_risk")), state=_has("high_risk"),
-               icon="risk", source="database.get_stats"),
-        metric("bmp01.eng", "总互动", value=_int_or_none(stats.get("total_engagements")),
-               state=_has("total_engagements"), icon="trend", source="database.get_stats"),
-        metric("bmp01.ri", "风险指数", value=ri, decimals=1,
-               state=STATE_READY if ri is not None else STATE_EMPTY, icon="risk",
-               source="daily_report.generate_today_summary", evidence_id="MET-RISK-01"),
-        metric("bmp01.health", "品牌健康分", value=bh, decimals=1,
-               state=STATE_READY if bh is not None else STATE_EMPTY, icon="trend",
-               source="daily_report.generate_today_summary", evidence_id="MET-RISK-02"),
+        metric("bmp01.total", "总声量", value=_int_or_none(total), state=state,
+               icon="trend", source="api_dual_domain.get_zbmp_product_snapshot"),
+        metric("bmp01.neg", "负面声量", value=_int_or_none(negative), state=state,
+               icon="risk", source="api_dual_domain.get_zbmp_product_snapshot"),
+        metric("bmp01.high", "高风险", value=_int_or_none(high_risk), state=state,
+               icon="risk", source="api_dual_domain.get_zbmp_product_snapshot"),
+        metric("bmp01.eng", "总互动", value=_int_or_none(total_engagement), state=state,
+               icon="trend", source="api_dual_domain.get_zbmp_product_snapshot"),
+        metric("bmp01.ri", "风险指数", value=None, decimals=1, state=STATE_NOT_COLLECTED,
+               icon="risk", source="ZBMP canonical metric not yet available", evidence_id="NOT_COLLECTED"),
+        metric("bmp01.health", "品牌健康分", value=None, decimals=1, state=STATE_NOT_COLLECTED,
+               icon="trend", source="ZBMP canonical metric not yet available", evidence_id="NOT_COLLECTED"),
     ]
-    labels: List[str] = []
-    totals, negs = [], []
-    today = _dt.date.today()
-    for back in range(13, -1, -1):
-        d = today - _dt.timedelta(days=back)
-        st = _safe(db.get_stats_by_date_range, d.strftime("%Y-%m-%d"), d.strftime("%Y-%m-%d"), default={})
-        labels.append(d.strftime("%m-%d"))
-        totals.append(int(st.get("total", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
-        negs.append(int(st.get("negative", 0)) if isinstance(st, dict) and not _is_err(st) else 0)
-    chart = section("chart", STATE_READY, kind="line", title="近14日声量与负面", sub="按天现算",
-                    labels=labels,
-                    series=[{"name": "总声量", "data": totals, "color": "var(--lum-text-2,#8a8f98)"},
-                            {"name": "负面", "data": negs, "color": "var(--lum-c-danger,#c0563f)"}],
-                    legend=[{"label": "总声量", "color": "var(--lum-text-2,#8a8f98)"},
-                            {"label": "负面", "color": "var(--lum-c-danger,#c0563f)"}])
-    ev = _curated(_safe(db.get_events_curated, 6, default=[]))
-    rn = _safe(db.get_high_risk_notes, 6, default=[])
-    rn = rn if isinstance(rn, list) else []
-    ev_sec = section("events", STATE_READY if ev else STATE_EMPTY, title="重点事件", items=_events_items(ev))
-    risk_sec = section("risks", STATE_READY if rn else STATE_EMPTY, items=_risk_items(rn))
-    sections = [_head("BMP-01"), section("kpis", STATE_READY, items=kpis), chart, ev_sec, risk_sec]
-    return _envelope("BMP-01", sections, truth={"risk_index": ri, "brand_health_score": bh})
+
+    trend = metrics.get("capture_trend") if isinstance(metrics.get("capture_trend"), dict) else {}
+    labels = trend.get("labels") if ready and isinstance(trend.get("labels"), list) else []
+    totals = trend.get("total") if ready and isinstance(trend.get("total"), list) else []
+    negs = trend.get("negative") if ready and isinstance(trend.get("negative"), list) else []
+    chart = section(
+        "chart", state, kind="line", title="近14日声量与负面", sub="按 canonical captured_at 统计",
+        labels=labels,
+        series=[
+            {"name": "总声量", "data": totals, "color": "var(--lum-text-2,#8a8f98)"},
+            {"name": "负面", "data": negs, "color": "var(--lum-c-danger,#c0563f)"},
+        ] if ready else [],
+        legend=[
+            {"label": "总声量", "color": "var(--lum-text-2,#8a8f98)"},
+            {"label": "负面", "color": "var(--lum-c-danger,#c0563f)"},
+        ] if ready else [],
+    )
+
+    # No canonical event source is defined for ZBMP yet.  Do not reuse CTH
+    # curated events or synthesize events from note authors.
+    ev_sec = section(
+        "events", STATE_NOT_COLLECTED, title="重点事件", items=[],
+        description="ZBMP 事件源尚未形成 canonical 事件契约；未借用 CTH 事件。",
+    )
+    records = snapshot.get("canonical_records")
+    records = records if isinstance(records, list) else []
+    risk_records = [
+        record for record in records
+        if isinstance(record, dict)
+        and (str(record.get("risk_level") or "").lower() in ("medium", "high", "critical")
+             or isinstance(record.get("risk_score"), (int, float)) and record.get("risk_score", 0) > 0)
+    ]
+    risk_items = []
+    for record in risk_records[:5]:
+        evidence = record.get("evidence_ref") or f"CANONICAL:{record.get('canonical_id') or 'UNKNOWN'}"
+        risk_items.append({
+            "level": _LV.get(record.get("risk_level", "low"), "low"),
+            "score": record.get("risk_score") if isinstance(record.get("risk_score"), (int, float)) else None,
+            "title": (record.get("title") or "风险记录")[:40],
+            "desc": (record.get("content") or "")[:90],
+            "evidence": evidence,
+        })
+    risk_sec = section("risks", STATE_READY if risk_items else (state if ready else STATE_NOT_COLLECTED),
+                       items=risk_items)
+    blocked = [
+        _block("BMP-01", "risk_index", "缺少 ZBMP 专属风险指标真值源", "ZBMP canonical metric"),
+        _block("BMP-01", "brand_health_score", "缺少 ZBMP 专属健康评分真值源", "ZBMP evaluation output"),
+        _block("BMP-01", "events", "缺少 ZBMP canonical 事件契约", "ZBMP event source"),
+    ]
+    sections = [_head("BMP-01"), section("kpis", state, items=kpis), chart, ev_sec, risk_sec]
+    return _envelope(
+        "BMP-01", sections,
+        truth={
+            "domain_id": "zbmp",
+            "product_id": "ZBMP",
+            "data_state": data_state,
+            "canonical_count": snapshot.get("total_records", 0),
+            "latest_capture": metrics.get("latest_capture") or None,
+        },
+        blocked=blocked,
+    )
 
 
 def _build_bmp02() -> Dict[str, Any]:
@@ -1248,7 +1294,12 @@ def _build_sh05() -> Dict[str, Any]:
 
 
 def _build_sys05() -> Dict[str, Any]:
-    """设置 / 外观 / 语言：纯前端本地偏好（localStorage），无后端数据源——显式 INTENTIONALLY_NOT_APPLICABLE。"""
+    """设置 / 外观 / 语言 + 主体与授权入口。
+
+    外观偏好仍是 localStorage；主体登记与 Cookie 导入使用真实受保护 API。
+    两者放在同一设置工作区，但不混淆数据责任：主体登记不会切换默认主体，
+    Cookie 导入不会绕过香港采集策略或人工权限门。
+    """
     form = section("form", STATE_READY, title="本地偏好（仅存于本浏览器 localStorage，不上传、无后端表）",
                    fields=[
                        {"label": "外观主题（黑银浅色 / 白银深色）", "type": "select",
@@ -1257,17 +1308,66 @@ def _build_sys05() -> Dict[str, Any]:
                        {"label": "光学密度 Optical", "type": "select", "opts": ["LOW", "BALANCED", "HIGH"]},
                        {"label": "减弱动态效果（无障碍）", "type": "select", "opts": ["跟随系统", "开启", "关闭"]},
                    ])
+    integrations = section("raw", STATE_READY, html=(
+        '<section class="lum-card lum-card-pad lum-stack-6" data-lumenis-settings-surface>'
+        '<div class="lum-row-between"><div>'
+        '<div class="lum-eyebrow">LUMENIS CONTROL PLANE</div>'
+        '<h2 class="lum-h4" style="margin-top:6px">主体与授权 Session</h2>'
+        '<p class="lum-caption" style="margin-top:6px">CTH 商业运营与 BMP 品牌市场共用通用主体模块；'
+        '主体只作为可选择的工作上下文，不改变两域既有运行规则。</p>'
+        '</div><span class="lum-badge lum-badge-info">HUMAN CONTROL</span></div>'
+        '<div class="lum-grid-main-side" style="grid-template-columns:minmax(0,1fr) minmax(260px,.8fr)">'
+        '<form class="lum-stack-4" data-subject-form aria-label="新增通用主体">'
+        '<div class="lum-field"><label class="lum-label" for="lumenis-subject-domain">归属领域</label>'
+        '<select class="lum-select" id="lumenis-subject-domain" data-subject-domain>'
+        '<option value="CTH">商业运营 · CTH</option><option value="BMP">品牌市场 · BMP</option>'
+        '</select></div>'
+        '<div class="lum-field"><label class="lum-label" for="lumenis-subject-type">主体类型</label>'
+        '<select class="lum-select" id="lumenis-subject-type" data-subject-type>'
+        '<option value="brand">品牌主体</option><option value="company">商业主体</option>'
+        '</select></div>'
+        '<div class="lum-field"><label class="lum-label" for="lumenis-subject-en">英文名</label>'
+        '<input class="lum-input" id="lumenis-subject-en" data-subject-name-en autocomplete="organization" '
+        'placeholder="例如：LUMENIS Holdings" required></div>'
+        '<div class="lum-field"><label class="lum-label" for="lumenis-subject-zh">中文名</label>'
+        '<input class="lum-input" id="lumenis-subject-zh" data-subject-name-zh autocomplete="organization" '
+        'placeholder="例如：序境控股" required></div>'
+        '<div class="lum-field"><label class="lum-label" for="lumenis-subject-industry">行业（可选）</label>'
+        '<input class="lum-input" id="lumenis-subject-industry" data-subject-industry '
+        'placeholder="不限行业；例如：零售、科技、地产、制造"></div>'
+        '<div class="lum-row"><button type="submit" class="lum-btn lum-btn-primary" data-subject-submit>登记主体</button>'
+        '<span class="lum-caption" data-subject-status role="status">需人工审批后写入生产配置</span></div>'
+        '</form>'
+        '<div class="lum-stack-4"><div class="lum-row-between"><b>已登记主体</b>'
+        '<button type="button" class="lum-chip" data-subject-refresh>刷新</button></div>'
+        '<div class="lum-stack-2" data-subject-list><span class="lum-caption">读取真实注册表…</span></div>'
+        '<p class="lum-caption">选择主体只改变工作上下文；默认 CTH/BMP 生产规则、权限和数据归属保持不变。</p></div>'
+        '</div>'
+        '<div class="lum-opt lum-opt-flat lum-stack-4" data-cookie-surface>'
+        '<div class="lum-row-between"><div><b>新增授权 Cookie</b>'
+        '<p class="lum-caption" style="margin-top:4px">当前生产采集仅接入香港/国际小红书；凭证只写入本机受保护运行数据，界面不回显明文。</p></div>'
+        '<span class="lum-badge lum-badge-warning">HK ONLY</span></div>'
+        '<div class="lum-field"><label class="lum-label" for="lumenis-cookie-json">小红书 Cookie JSON 数组</label>'
+        '<textarea class="lum-textarea" id="lumenis-cookie-json" data-setting-cookie-json rows="4" '
+        'placeholder="粘贴浏览器导出的 Cookie JSON；提交后不会在页面显示凭证" spellcheck="false"></textarea></div>'
+        '<label class="lum-row lum-caption"><input type="checkbox" data-setting-cookie-apply> 经人工确认后立即绑定 XHS_RETINAUT 香港/国际生产采集</label>'
+        '<div class="lum-row"><button type="button" class="lum-btn lum-btn-secondary" data-setting-cookie-submit>安全导入</button>'
+        '<button type="button" class="lum-chip" data-cookie-status-refresh>读取状态</button>'
+        '<span class="lum-caption" data-setting-cookie-status role="status">状态读取中…</span></div>'
+        '</div></section>'
+    ))
     note = section("note", STATE_READY, kind="INTENTIONALLY-NOT-APPLICABLE",
                    code="FRONTEND_LOCAL_ONLY",
                    text="本屏为前端本地偏好，不依赖后端/数据库，分类 INTENTIONALLY_NOT_APPLICABLE；"
                         "不产生外部数据缺口，也不伪造任何后端状态。")
-    sections = [_head("SYS-05"), form, note]
+    sections = [_head("SYS-05"), form, integrations, note]
     return _envelope("SYS-05", sections, truth={"data_source": "localStorage", "backend_required": False})
 
 
 def _build_acc02() -> Dict[str, Any]:
-    """主体选择与领域视角：真实已配置主体（subject_rules.BRAND_PROFILES）+ 当前激活主体。"""
+    """主体选择与领域视角：默认配置 + 通用主体注册表的真实只读投影。"""
     import subject_rules as sr
+    from subject_registry import list_subjects
 
     profiles = sr.BRAND_PROFILES if isinstance(sr.BRAND_PROFILES, dict) else {}
     active = _safe(sr.get_active_brand, default="")
@@ -1277,23 +1377,42 @@ def _build_acc02() -> Dict[str, Any]:
         kws = cfg.get("collect_keywords")
         rows.append({
             "主体": cfg.get("display_name") or key,
+            "领域": "CTH",
+            "类型": "品牌主体",
             "地区": cfg.get("region") or "本地",
             "业态": cfg.get("store_type") or "商业体",
             "采集关键词": len(kws) if isinstance(kws, list) else 0,
             "当前": "● 激活" if key == active else "",
         })
+    configured = _safe(list_subjects, default=[])
+    if isinstance(configured, list):
+        for item in configured:
+            if not isinstance(item, dict):
+                continue
+            rows.append({
+                "主体": f"{item.get('name_zh') or '—'} / {item.get('name_en') or '—'}",
+                "领域": item.get("domain_name") or item.get("domain_id") or "—",
+                "类型": item.get("subject_type_name") or item.get("subject_type") or "—",
+                "地区": "通用",
+                "业态": item.get("industry") or "不限行业",
+                "采集关键词": len(item.get("keywords") or []) if isinstance(item.get("keywords"), list) else 0,
+                "当前": "",
+            })
     kpis = [
         metric("acc02.subjects", "已配置主体", value=len(rows), state=STATE_READY, icon="collection",
-               source="subject_rules.BRAND_PROFILES"),
+               source="subject_rules.BRAND_PROFILES + lumenis_subject_registry"),
     ]
     tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="可选主体（真实配置）",
-                  columns=[{"label": "主体", "key": "主体"}, {"label": "地区", "key": "地区"},
+                  columns=[{"label": "主体", "key": "主体"}, {"label": "领域", "key": "领域"},
+                           {"label": "类型", "key": "类型"}, {"label": "地区", "key": "地区"},
                            {"label": "业态", "key": "业态"}, {"label": "采集关键词", "key": "采集关键词", "numeric": True},
                            {"label": "当前", "key": "当前"}], rows=rows)
     note = section("note", STATE_READY, kind="RULE",
                    text="选择主体只切换工作上下文（SubjectContext），不改变数据归属；进入领域后由后端重验授权。")
     sections = [_head("ACC-02"), section("kpis", STATE_READY, items=kpis), tbl, note]
-    return _envelope("ACC-02", sections, truth={"active_brand": active})
+    return _envelope("ACC-02", sections, truth={"active_brand": active,
+                                                  "registry_subjects": len(configured) if isinstance(configured, list) else 0,
+                                                  "selection_only": True})
 
 
 def _build_acc03() -> Dict[str, Any]:

@@ -214,6 +214,8 @@ class BilibiliAdapter(BaseAdapter):
             return AdapterResult(success=False, error="bvid 为空")
         try:
             import json as _json, requests as _req
+            if not self._cookie_ok():
+                return AdapterResult(success=False, error="B站 cookie 缺失或无关键认证 cookie，请更新 data/bilibili_cookies.json")
             cookies = self._load_cookies()
             if not cookies:
                 return AdapterResult(success=False, error="B站 cookie 不存在，无法获取详情")
@@ -272,6 +274,8 @@ class BilibiliAdapter(BaseAdapter):
             return AdapterResult(success=False, error="bvid 为空")
         try:
             import requests as _req
+            if not self._cookie_ok():
+                return AdapterResult(success=False, error="B站 cookie 缺失或无关键认证 cookie，请更新 data/bilibili_cookies.json")
             cookies = self._load_cookies()
             if not cookies:
                 return AdapterResult(success=False, error="B站 cookie 不存在，无法获取评论")

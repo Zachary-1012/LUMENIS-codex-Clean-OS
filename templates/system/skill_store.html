@@ -70,24 +70,70 @@
   .ss-empty-icon{font-size:36px;opacity:.5}
   .ss-empty-title{font-size:14px;font-weight:600;color:var(--ss-text2)}
   .ss-empty-desc{font-size:12px;color:var(--ss-text3);max-width:300px;line-height:1.5}
+  .ss-runtime-strip{margin:18px 0 14px;padding:14px 16px;border:1px solid var(--ss-border-light);border-left:3px solid var(--ss-primary);background:var(--ss-canvas);border-radius:var(--ss-radius)}
+  .ss-runtime-kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ss-primary);font-weight:700}
+  .ss-runtime-title{font-size:14px;font-weight:650;color:var(--ss-text);margin-top:4px}
+  .ss-runtime-desc{font-size:12px;color:var(--ss-text2);line-height:1.55;margin-top:4px;max-width:780px}
+  .ss-connector-strip{display:flex;align-items:center;gap:14px;margin:0 0 14px;padding:12px 16px;border:1px solid var(--ss-border-light);border-radius:var(--ss-radius);background:var(--ss-bg)}
+  .ss-connector-mark{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#24292f;color:#fff;font-size:15px;font-weight:700}
+  .ss-connector-copy{min-width:0;flex:1}.ss-connector-title{font-size:13px;font-weight:650;color:var(--ss-text)}.ss-connector-state{font-size:12px;color:var(--ss-text2);margin-top:3px}.ss-connector-meta{font-size:11px;color:var(--ss-text3);margin-top:2px}
+  .ss-preview-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:var(--z-modal);align-items:center;justify-content:center}
+  .ss-preview-dialog{background:var(--ss-bg);border-radius:12px;padding:24px;max-width:620px;width:92%;max-height:88vh;overflow:auto;border:1px solid var(--ss-border)}
+  .ss-preview-input{width:100%;padding:9px 12px;border:1px solid var(--ss-border);border-radius:6px;font-size:13px;background:var(--ss-bg);color:var(--ss-text);outline:none}
+  .ss-preview-input:focus{border-color:var(--ss-primary);box-shadow:0 0 0 3px rgba(15,118,110,.15)}
+  .ss-preview-check{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ss-text2);margin:12px 0}
+  .ss-preview-result{margin-top:16px;padding:12px 14px;border:1px solid var(--ss-border-light);border-radius:8px;background:var(--ss-canvas);font-size:12px;line-height:1.55;white-space:normal}
+  .ss-preview-result:empty{display:none}
+  .ss-preview-result code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;overflow-wrap:anywhere}
+  .ss-preview-state{font-weight:700;letter-spacing:.04em}
   .ss-category-header{display:flex;align-items:center;gap:8px;padding:14px 16px 8px;font-size:12px;font-weight:600;color:var(--ss-text2);text-transform:uppercase;letter-spacing:.04em}
   .ss-category-count{font-size:11px;color:var(--ss-text3);font-weight:400}
   @media(max-width:640px){.ss-page{padding:12px 16px 80px}.ss-toolbar{flex-wrap:wrap;gap:10px}.ss-search-wrap{max-width:100%;order:3;width:100%}.ss-toolbar-actions{margin-left:0}.ss-detail-grid{grid-template-columns:1fr 1fr}}
 </style>
 
 <div class="ss-page" id="ssPage">
+  <section class="ss-runtime-strip" aria-label="Universal Skill Runtime boundary">
+    <div class="ss-runtime-kicker">Universal Skill Runtime · Source Adapter</div>
+    <div class="ss-runtime-title">先识别，再验证；任何 Skill 都必须通过兼容性、信任与权限门</div>
+    <div class="ss-runtime-desc">支持 GitHub 仓库、目录、ZIP、SKILL.md 与 MCP/HTTP 来源的统一预检。预检是只读的，不下载、不安装、不执行、不授予权限；实际状态只显示已由运行时返回的证据。</div>
+  </section>
+  <section class="ss-connector-strip" aria-label="GitHub Connector status">
+    <div class="ss-connector-mark" aria-hidden="true">GH</div>
+    <div class="ss-connector-copy">
+      <div class="ss-connector-title">GitHub Connector · 用户授权 / 仓库白名单</div>
+      <div class="ss-connector-state" id="ssGithubState">正在读取真实连接状态…</div>
+      <div class="ss-connector-meta" id="ssGithubMeta">不读取浏览器 Cookie；不显示 Token；写入权限默认关闭。</div>
+    </div>
+    <button class="ss-btn" type="button" onclick="window.__ssRefreshGithubStatus()">刷新状态</button>
+  </section>
   <div class="ss-toolbar">
     <div class="ss-tabs">
       <div class="ss-tab active" data-tab="plugins" onclick="window.__ssSwitchTab('plugins')">插件 <span class="ss-tab-count" id="ssCountPlugins">0</span></div>
-      <div class="ss-tab" data-tab="mcp" onclick="window.__ssSwitchTab('mcp')">MCP <span class="ss-tab-count" id="ssCountMcp">0</span></div>
+      <div class="ss-tab" data-tab="mcp" onclick="window.__ssSwitchTab('mcp')">来源 / 协议 <span class="ss-tab-count" id="ssCountMcp">—</span></div>
     </div>
     <div class="ss-search-wrap"><span class="ss-search-icon">🔍</span><input type="text" class="ss-search-input" id="ssSearchInput" placeholder="搜索 Skill…" autocomplete="off"></div>
     <div class="ss-toolbar-actions">
+      <button class="ss-btn" onclick="window.__ssOpenSourcePreview()">来源预检</button>
       <button class="ss-btn" onclick="window.__ssBrowseCatalog()">浏览目录</button>
       <button class="ss-btn ss-btn-primary" onclick="window.__ssAddSkill()">+ 添加</button>
     </div>
   </div>
   <div class="ss-list" id="ssList"><div class="ss-loading"><div class="ss-spinner"></div><div class="ss-loading-text">正在加载…</div></div></div>
+</div>
+
+<div id="ssSourceModal" class="ss-preview-modal" role="dialog" aria-modal="true" aria-labelledby="ssSourceTitle">
+  <div class="ss-preview-dialog">
+    <h3 id="ssSourceTitle" style="font-size:16px;font-weight:600;margin-bottom:6px;color:var(--ss-text)">Skill 来源预检</h3>
+    <p style="font-size:12px;color:var(--ss-text2);line-height:1.55;margin-bottom:14px">输入 GitHub 仓库地址、目录、ZIP、SKILL.md 或 MCP/HTTP 来源。远程 revision 解析是可选的只读操作；不会把来源标记为已安装或已连接。</p>
+    <label for="ssSourceInput" style="font-size:12px;color:var(--ss-text2);display:block;margin-bottom:4px">来源</label>
+    <input id="ssSourceInput" class="ss-preview-input" type="text" placeholder="https://github.com/owner/repo 或本地路径" autocomplete="off">
+    <label class="ss-preview-check"><input id="ssResolveRemote" type="checkbox"> 对 GitHub HEAD 做只读 revision 解析</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="ss-btn" onclick="window.__ssCloseSourcePreview()">关闭</button>
+      <button class="ss-btn ss-btn-primary" onclick="window.__ssSubmitSourcePreview()">开始预检</button>
+    </div>
+    <div id="ssSourceResult" class="ss-preview-result" aria-live="polite"></div>
+  </div>
 </div>
 
 <div id="ssAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:var(--z-modal);align-items:center;justify-content:center">

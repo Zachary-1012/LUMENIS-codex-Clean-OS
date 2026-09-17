@@ -9,12 +9,12 @@ Contract：OSAI 研究侧 → ZBC 生产侧。
     ↓ HTTP API（本模块 Blueprint）
   CDP 命令层（Page.captureScreenshot / Page.navigate / Input.* / Runtime.evaluate）
     ↓ WebSocket
-  驻场浏览器实例（9222 大陆 / 9223 香港，长期驻场、人工登录一次）
+  驻场浏览器实例（9223 香港生产采集；9222 仅保留诊断兼容）
 
 安全：
   - 导航域名白名单（xiaohongshu.com / rednote.com），防 SSRF
   - 只读 cookie 数量，不回传 cookie 值
-  - 双身份硬白名单（XHS_CN_PRIMARY / XHS_RETINAUT）
+  - 生产默认身份为 XHS_RETINAUT；XHS_CN_PRIMARY 仅允许显式诊断调用
 """
 from __future__ import annotations
 import base64
@@ -52,19 +52,19 @@ ACCOUNT_LABELS = {
 def _canonical_account(account: Optional[str]) -> str:
     if bridge:
         return bridge._canonical_account_name(account)
-    return account or "XHS_CN_PRIMARY"
+    return account or "XHS_RETINAUT"
 
 
 def _port_for(account: Optional[str]) -> int:
     if bridge:
         return bridge.cdp_port_for(account)
-    return 9222
+    return 9223
 
 
 def _home_for(account: Optional[str]) -> str:
     if bridge:
         return bridge.home_url_for(account)
-    return "https://www.xiaohongshu.com"
+    return "https://www.rednote.com"
 
 
 def _get_page_targets(port: int, timeout: float = 2.0) -> list[dict]:
@@ -444,9 +444,9 @@ def register_internal_browser(app):
         confirmed = bool(data.get("confirmed", False))
         account = data.get("account", "")
         try:
-            port = _port_for(_canonical_account(account)) if account else 9222
+            port = _port_for(_canonical_account(account))
         except Exception:
-            port = 9222
+            port = 9223
         try:
             import internal_browser_adapter as adapter
             result = adapter.navigate(url, port=port, confirmed=confirmed)
@@ -457,8 +457,8 @@ def register_internal_browser(app):
 
     @bp.route("/api/internal-browser/tabs", methods=["GET"])
     def api_tabs():
-        """P1-D: 当前Tab列表（指定端口，默认9222）。"""
-        port = int(request.args.get("port", "9222"))
+        """P1-D: 当前Tab列表（指定端口，默认香港生产端口9223）。"""
+        port = int(request.args.get("port", "9223"))
         try:
             import internal_browser_adapter as adapter
             return jsonify(adapter.list_tabs(port=port))
@@ -469,7 +469,7 @@ def register_internal_browser(app):
     def api_refresh():
         """P1-D: 刷新当前Tab（CDP Page.reload）。"""
         data = request.get_json(force=True, silent=True) or {}
-        port = int(data.get("port", 9222))
+        port = int(data.get("port", 9223))
         target_id = data.get("target_id", "")
         try:
             import internal_browser_adapter as adapter
@@ -481,7 +481,7 @@ def register_internal_browser(app):
     def api_switch_tab():
         """P1-D: 切换（激活）指定Tab。"""
         data = request.get_json(force=True, silent=True) or {}
-        port = int(data.get("port", 9222))
+        port = int(data.get("port", 9223))
         target_id = data.get("target_id", "")
         if not target_id:
             return jsonify({"ok": False, "error": "target_id 为空"}), 400

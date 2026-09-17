@@ -125,6 +125,97 @@ def add_custom_skill(skill_id: str, name: str, description: str = "",
         conn.close()
 
 
+def register_validated_skill(preview: dict) -> dict:
+    """登记已通过来源预检的 Skill 元数据，但保持禁用/未安装状态。
+
+    这是生命周期中的 ``VALIDATED -> REGISTERED`` 节点，不是安装器：
+    不下载、不解压、不导入、不启动进程、不授予权限。端点调用者必须
+    先通过 owner 权限门，注册时再次读取并校验预检结果，避免信任浏览器
+    回传的字段。元数据写入现有 ``skills_registry``，不创建第二注册表。
+    """
+    if not isinstance(preview, dict):
+        return {"success": False, "error": "only VALIDATED Skill sources can be registered",
+                "code": "SOURCE_NOT_VALIDATED"}
+    validation = preview.get("validation") or {}
+    normalized = validation.get("normalized") if isinstance(validation, dict) else None
+    source = preview.get("source") if isinstance(preview.get("source"), dict) else {}
+    source_type = str(source.get("source_type") or "unknown")
+    if source_type in ("mcp_stdio", "mcp_http"):
+        return {
+            "success": False,
+            "error": "MCP registration requires capability discovery and human approval",
+            "code": "MCP_DISCOVERY_AND_APPROVAL_REQUIRED",
+        }
+    if source_type not in ("local", "zip", "skill_md"):
+        return {
+            "success": False,
+            "error": "only local, ZIP, or standalone SKILL.md metadata can be registered at this stage",
+            "code": "SOURCE_REGISTRATION_NOT_SUPPORTED",
+        }
+    if preview.get("state") != "VALIDATED":
+        return {"success": False, "error": "only VALIDATED Skill sources can be registered",
+                "code": "SOURCE_NOT_VALIDATED"}
+    if not isinstance(normalized, dict) or not normalized.get("skill_id"):
+        return {"success": False, "error": "validated manifest is incomplete",
+                "code": "MANIFEST_INCOMPLETE"}
+
+    # Ensure an older production database receives the additive columns before
+    # the single canonical insert. This never replaces or recreates tables.
+    from .models import init_account_db
+    init_account_db()
+    skill_id = str(normalized["skill_id"])
+    conn = get_db()
+    try:
+        if conn.execute("SELECT id FROM skills_registry WHERE skill_id=?", (skill_id,)).fetchone():
+            return {"success": False, "error": "skill_id 已存在", "code": "SKILL_EXISTS",
+                    "skill_id": skill_id}
+        payload = (
+            skill_id,
+            str(normalized.get("name") or skill_id),
+            str(normalized.get("description") or ""),
+            "SYSTEM",
+            "global",
+            "disabled",
+            str(normalized.get("version") or ""),
+            str(source.get("source") or ""),
+            str(source.get("source_type") or "unknown"),
+            preview.get("revision"),
+            preview.get("digest") or None,
+            str(normalized.get("runtime") or "unknown"),
+            str(normalized.get("entrypoint") or "") or None,
+            json.dumps(normalized.get("capabilities") or [], ensure_ascii=False),
+            json.dumps(normalized.get("tools") or [], ensure_ascii=False),
+            json.dumps(normalized.get("input_schema") or {}, ensure_ascii=False),
+            json.dumps(normalized.get("output_schema") or {}, ensure_ascii=False),
+            json.dumps(normalized.get("permissions_requested") or [], ensure_ascii=False),
+            "[]",
+            json.dumps(normalized.get("secrets_required") or [], ensure_ascii=False),
+            json.dumps(normalized.get("dependencies") or [], ensure_ascii=False),
+            json.dumps(preview.get("compatibility") or {}, ensure_ascii=False),
+            "unverified",
+            "unknown",
+            "not_installed",
+            "validated",
+        )
+        conn.execute(
+            """INSERT INTO skills_registry (
+                skill_id, name, description, product, domain, status, version,
+                source, source_type, revision, digest, runtime, entrypoint,
+                capabilities_json, tools_json, input_schema_json, output_schema_json,
+                permissions_requested_json, permissions_granted_json, secrets_required_json,
+                dependencies_json, compatibility_json, trust_level, health_state,
+                install_state, lifecycle_state
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            payload,
+        )
+        conn.commit()
+        return {"success": True, "skill_id": skill_id, "status": "disabled",
+                "install_state": "not_installed", "lifecycle_state": "validated",
+                "permissions_granted": []}
+    finally:
+        conn.close()
+
+
 def get_enabled_skills(product: str = None) -> list:
     """获取已启用的技能（用于前端判断是否显示入口）"""
     skills = list_skills(product=product, status="enabled")

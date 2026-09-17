@@ -227,6 +227,36 @@ _WS_KEY_NEW_COLUMNS = [
     ("key_type", "TEXT DEFAULT 'programmatic'"),
 ]
 
+# Universal Skill Runtime metadata extends the existing skills_registry.  It
+# is deliberately a column migration rather than a second plugin database.
+# Runtime/package contents and secrets are not stored in this table.
+_SKILL_RUNTIME_COLUMNS = [
+    ("source", "TEXT"),
+    ("source_type", "TEXT DEFAULT 'builtin'"),
+    ("revision", "TEXT"),
+    ("digest", "TEXT"),
+    ("runtime", "TEXT DEFAULT 'builtin'"),
+    ("entrypoint", "TEXT"),
+    ("capabilities_json", "TEXT DEFAULT '[]'"),
+    ("tools_json", "TEXT DEFAULT '[]'"),
+    ("input_schema_json", "TEXT DEFAULT '{}'"),
+    ("output_schema_json", "TEXT DEFAULT '{}'"),
+    ("permissions_requested_json", "TEXT DEFAULT '[]'"),
+    ("permissions_granted_json", "TEXT DEFAULT '[]'"),
+    ("secrets_required_json", "TEXT DEFAULT '[]'"),
+    ("dependencies_json", "TEXT DEFAULT '[]'"),
+    ("compatibility_json", "TEXT DEFAULT '{}'"),
+    ("trust_level", "TEXT DEFAULT 'unverified'"),
+    ("health_state", "TEXT DEFAULT 'unknown'"),
+    ("install_state", "TEXT DEFAULT 'not_installed'"),
+    ("lifecycle_state", "TEXT DEFAULT 'registered'"),
+    ("install_path", "TEXT"),
+    ("active_version", "TEXT"),
+    ("previous_version", "TEXT"),
+    ("last_error", "TEXT"),
+    ("last_health_at", "TEXT"),
+]
+
 
 def get_db():
     """获取数据库连接；路径在调用时通过全仓 canonical resolver 解析。"""
@@ -287,6 +317,9 @@ def init_account_db():
         for col, col_type in _WS_KEY_NEW_COLUMNS:
             if not _column_exists(conn, "v4_workspace_keys", col):
                 conn.execute(f"ALTER TABLE v4_workspace_keys ADD COLUMN {col} {col_type}")
+        for col, col_type in _SKILL_RUNTIME_COLUMNS:
+            if not _column_exists(conn, "skills_registry", col):
+                conn.execute(f"ALTER TABLE skills_registry ADD COLUMN {col} {col_type}")
         conn.commit()
         # 索引
         conn.executescript("""

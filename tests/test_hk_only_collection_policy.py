@@ -111,6 +111,30 @@ def test_cookie_status_recognizes_private_runtime_source(monkeypatch, tmp_path):
     assert payload['status']['xhs']['source'] == 'private_cookie_file'
 
 
+def test_cookie_status_requires_runtime_authentication(monkeypatch, tmp_path):
+    """私有 Cookie 文件存在不等于当前驻场浏览器已认证。"""
+    import app as app_module
+    import xhs_cookie_bridge as bridge
+
+    (tmp_path / 'private').mkdir()
+    (tmp_path / 'private' / 'xhs_cookie_retinaut.txt').write_text(
+        'retinaut_cookie=test-only', encoding='utf-8'
+    )
+    monkeypatch.setattr(bridge, 'DATA_DIR', str(tmp_path))
+    import resident_health
+    monkeypatch.setattr(resident_health, 'check_account', lambda account: {
+        'status': 'NEEDS_LOGIN', 'cookie_count': 3,
+    })
+    with app_module.app.test_request_context('/api/cookies/import/status'):
+        response = app_module.api_cookies_import_status()
+    xhs = response.get_json()['status']['xhs']
+    assert xhs['configured'] is True
+    assert xhs['logged_in'] is False
+    assert xhs['runtime_authenticated'] is False
+    assert xhs['runtime_status'] == 'NEEDS_LOGIN'
+    assert xhs['cookie_count'] == 3
+
+
 def test_collect_all_returns_stable_tuple_when_kind_blocked():
     import collector
 
@@ -136,6 +160,84 @@ def test_private_v2_client_never_reaches_network():
             await XHSClient(cookie='test').request('GET', 'https://edith.xiaohongshu.com/test')
 
     asyncio.run(invoke())
+
+
+def test_guardian_recovery_uses_hk_resident_launcher(monkeypatch):
+    """Guardian 恢复必须复用 HK 驻场入口，不能重新拉起历史 9222。"""
+    import auto_recovery as recovery
+
+    calls = []
+
+    def fake_popen(args, **kwargs):
+        calls.append((list(args), kwargs))
+        return object()
+
+    engine = recovery.AutoRecoveryEngine()
+    monkeypatch.setattr(recovery.subprocess, 'Popen', fake_popen)
+    monkeypatch.setattr(recovery.time, 'sleep', lambda _seconds: None)
+    monkeypatch.setattr(engine, 'check_cdp', lambda: True)
+
+    ok, message = engine.fix_cdp_crash()
+
+    assert ok is True
+    assert 'XHS_RETINAUT:9223' in message
+    assert calls
+    args, kwargs = calls[0]
+    assert args[-2:] == ['--account', 'XHS_RETINAUT']
+    assert args[-3].endswith('scripts\\start_resident_browsers.py')
+    assert '9222' not in ' '.join(args)
+    assert kwargs['cwd'] == engine.root_dir
+
+
+def test_system_health_uses_active_hk_contract(monkeypatch, tmp_path):
+    """生产健康灯只读取 HK 身份，不把暂停的 9222 算成故障。"""
+    import socket
+    import system_health_api as health
+    import xhs_cookie_bridge as bridge
+
+    cookie_file = tmp_path / 'private' / 'xhs_cookie_retinaut.txt'
+    cookie_file.parent.mkdir()
+    cookie_file.write_text('session=test-only', encoding='utf-8')
+    monkeypatch.setitem(
+        bridge.ACCOUNT_PROFILES,
+        bridge.XHS_RETINAUT_NAME,
+        (str(cookie_file), str(tmp_path / 'profile')),
+    )
+    monkeypatch.setattr(health, 'get_data_dir', lambda: str(tmp_path))
+
+    seen = {}
+
+    class FakeSocket:
+        def settimeout(self, _timeout):
+            pass
+
+        def connect_ex(self, address):
+            seen['address'] = address
+            return 0
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(socket, 'socket', lambda *_args, **_kwargs: FakeSocket())
+
+    result = health.check_collector()
+
+    assert seen['address'] == ('127.0.0.1', 9223)
+    assert result['collection_account'] == 'XHS_RETINAUT'
+    assert result['collection_region'] == 'intl'
+    assert result['cdp_port'] == 9223
+    assert result['cookie_configured'] is True
+
+
+def test_system_health_summary_has_no_mainland_cdp_hint():
+    """健康摘要的生产提示不得再引导用户启动 9222。"""
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parent.parent / 'system_health_api.py').read_text(
+        encoding='utf-8'
+    )
+    assert "connect_ex(('127.0.0.1', 9222))" not in source
+    assert 'Edge CDP 9222' not in source
 
 
 def test_cdp_result_updates_canonical_collection_log(monkeypatch):

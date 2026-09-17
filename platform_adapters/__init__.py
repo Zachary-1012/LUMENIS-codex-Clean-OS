@@ -21,6 +21,7 @@ from . import kuaishou as _kuaishou  # noqa: F401,E402
 from . import web_rss as _web_rss  # noqa: F401,E402
 from . import facebook as _facebook  # noqa: F401,E402
 from . import x_platform as _x_platform  # noqa: F401,E402
+from . import github as _github  # noqa: F401,E402
 
 __all__ = [
     "BasePlatformAdapter",

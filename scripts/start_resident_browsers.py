@@ -2,18 +2,18 @@
 """
 Zachary OS AI · Z-Brand-Core 驻场浏览器（Resident Browser）统一启动器
 ================================================================================
-按双子星库 Contract（xhs_cookie_bridge 单一事实源）幂等拉起三个物理隔离的
-Edge CDP 驻场实例，人工在各自窗口登录一次后 profile 长期复用、长期驻场：
+按采集 Contract（xhs_cookie_bridge 单一事实源）幂等拉起香港/国际采集与通用浏览
+两个物理隔离的 Edge CDP 驻场实例，人工在各自窗口登录一次后 profile 长期复用：
 
-  XHS_CN_PRIMARY  端口 9222  profile edge-cdp-newaccount  xiaohongshu.com  直连(不走系统代理)
   XHS_RETINAUT    端口 9223  profile edge-cdp-retinaut    rednote.com      继承系统/海外代理
   GENERAL_BROWSE  端口 9224  profile edge-cdp-general     bing.com         直连(平台内置通用浏览)
 
-采集链只通过 CDP 附着到对应端口，采集结束不关闭驻场窗口。
-通用浏览实例与采集物理隔离（独立 cookie jar），不混入采集双身份。
+生产采集链只通过 CDP 附着到 9223 香港/国际身份，采集结束不关闭驻场窗口。
+9222 内地 profile 保留为诊断/历史凭证隔离资产，但不属于生产驻场计划、不自动启动。
+通用浏览实例与采集物理隔离（独立 cookie jar），不混入生产采集身份。
 
 用法（用项目 .venv 的 python 运行）：
-  python scripts/start_resident_browsers.py            # 拉起全部驻场实例并确保平台页打开
+  python scripts/start_resident_browsers.py            # 拉起香港采集 + 通用浏览
   python scripts/start_resident_browsers.py --status   # 只看在线状态，不启动
   python scripts/start_resident_browsers.py --account XHS_RETINAUT   # 只起指定身份
   python scripts/start_resident_browsers.py --account GENERAL_BROWSE # 只起通用浏览
@@ -31,17 +31,50 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-try:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
-except Exception:
-    pass
+
+def _load_project_env():
+    """Keep the resident child process on the same runtime identity as app.py.
+
+    The production launcher starts this file as a separate Python process, so
+    it cannot rely on app.py having already loaded the repository's .env.
+    Loading only missing keys preserves explicit service-manager environment
+    values while preventing a silent fallback to <repo>/data/monitor.db.
+    """
+    env_path = os.path.join(_ROOT, ".env")
+    if not os.path.isfile(env_path):
+        return
+    try:
+        with open(env_path, encoding="utf-8") as handle:
+            for raw in handle:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+    except OSError:
+        # Browser availability must not be blocked by an optional local env
+        # file; the child will still use explicit process-level settings.
+        return
+
+
+_load_project_env()
+
+# 仅在脚本作为进程入口时设置 UTF-8 输出；被 pytest/Runtime import 时不得重包
+# 宿主输出流，否则会关闭测试捕获器并造成与业务无关的连锁错误。
+if __name__ == "__main__":
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
+    except Exception:
+        pass
 
 import xhs_cookie_bridge as bridge
 import cdp_helper
 
-# (逻辑身份, 是否强制直连)。大陆主号直连保证国内站稳定；香港 rednote 继承系统/海外代理。
+# (逻辑身份, 是否强制直连)。生产仅使用香港/国际 RedNote；内地身份不进入驻场计划。
 RESIDENT_PLAN = [
-    (bridge.XHS_CN_PRIMARY_NAME, True),
     (bridge.XHS_RETINAUT_NAME, False),
 ]
 
@@ -167,7 +200,7 @@ def main():
         return 2
 
     print("=" * 72)
-    print(" Zachary OS AI · Resident Browser 驻场启动器（双采集 + 通用浏览）")
+    print(" 序境 LUMENIS · Resident Browser 驻场启动器（香港采集 + 通用浏览）")
     print("=" * 72)
     rows = []
     for account, direct in plan:

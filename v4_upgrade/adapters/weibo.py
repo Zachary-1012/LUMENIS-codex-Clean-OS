@@ -216,6 +216,8 @@ class WeiboAdapter(BaseAdapter):
         if not mid or not str(mid).strip():
             return AdapterResult(success=False, error="mid 为空")
         try:
+            if not self._cookie_ok():
+                return AdapterResult(success=False, error="微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json")
             cookie_string = to_cookie_string("weibo")
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
@@ -245,6 +247,8 @@ class WeiboAdapter(BaseAdapter):
         if not mid or not str(mid).strip():
             return AdapterResult(success=False, error="mid 为空")
         try:
+            if not self._cookie_ok():
+                return AdapterResult(success=False, error="微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json")
             cookie_string = to_cookie_string("weibo")
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")

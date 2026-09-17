@@ -20,10 +20,10 @@ P0 目标流程（硬编码在 run_once / trigger_collection）：
   auth_recovery_center : recovery_center 服务层（create_task / mark_in_progress /
                        mark_completed / mark_failed）——不依赖 HTTP 请求上下文，可后台线程调用
 
-身份硬白名单（双子星库 Contract）：
-  XHS_CN_PRIMARY  = 主账号（日常采集/驻场）
-  XHS_RETINAUT    = Retinaut 备用身份（配置后启用）
-  除上述两个逻辑身份外，任何身份无法进入采集任务。
+生产采集身份门禁（RedNote HK-only Contract）：
+  XHS_RETINAUT    = 香港/国际生产采集身份
+  XHS_CN_PRIMARY  = 保留为诊断/历史凭证映射，但不得进入生产采集任务。
+  除香港/国际身份外，任何身份无法进入采集任务。
 
 本模块是"编排 + 状态聚合"，不复制任何采集实现（防止两套 Core）。
 """
@@ -38,11 +38,10 @@ from datetime import datetime, timedelta
 import xhs_cookie_bridge as bridge
 import runtime_preflight
 
-# ============ 常量（双子星库 Contract 硬白名单） ============
-# 直接引用 bridge 的唯一权威白名单（绝不本地再复制一份账号表）
+# ============ 常量（生产采集 Contract 硬白名单） ============
+# 只引用 bridge 的生产默认身份；ACCOUNT_PROFILES 仍保留历史/诊断映射。
 ALLOWED_IDENTITY_NAMES: tuple[str, ...] = (
-    bridge.XHS_CN_PRIMARY_NAME,
-    bridge.XHS_RETINAUT_NAME,
+    bridge.DEFAULT_COLLECTION_ACCOUNT,
 )
 
 # 心跳周期（秒）与失效判定阈值（连续失败次数）
@@ -206,7 +205,11 @@ def trigger_collection(account_name: str | None = None,
     # 门控 1：身份硬白名单 + 当前生产边界（仅香港/国际账号）
     account = account_name or bridge.DEFAULT_COLLECTION_ACCOUNT
     if not _identity_allowed(account):
+        policy_gate = bridge.collection_policy_gate(account=account, region='intl')
         return {"ok": False,
+                "account": account,
+                "code": policy_gate.get("code", "account_paused"),
+                "collection_policy": policy_gate,
                 "msg": f"身份 [{account}] 不在双子星库 Contract 硬白名单中。"
                        f"允许身份: {list(ALLOWED_IDENTITY_NAMES)}"}
     policy_gate = bridge.collection_policy_gate(account=account, region='intl')
@@ -343,7 +346,8 @@ def _selfcheck() -> None:
     print(f"allow evil_identity -> {_identity_allowed('evil_identity')}")
     # 白名单拒绝测试：非白名单身份必须被拒
     assert not _identity_allowed("evil_identity"), "FAIL: evil identity must be rejected"
-    assert _identity_allowed(bridge.XHS_CN_PRIMARY_NAME), "FAIL: primary must be allowed"
+    assert not _identity_allowed(bridge.XHS_CN_PRIMARY_NAME), "FAIL: mainland identity must be paused"
+    assert _identity_allowed(bridge.XHS_RETINAUT_NAME), "FAIL: HK identity must be allowed"
     print("whitelist gate: PASS")
     print("selfcheck OK")
 

@@ -3,8 +3,11 @@
 legacy template inventory, reference provenance. READ-ONLY wrt the rest of repo.
 Writes ONLY under experience_v2/."""
 import os,json,hashlib,subprocess,datetime,glob
+from pathlib import Path
 
-ROOT=r"D:\LUMENIS_REBUILD\LUMENIS-codex-Clean-OS"
+# Resolve the product root from this script so the scaffold cannot revive a
+# retired absolute checkout path after the brand workspace is reorganized.
+ROOT=str(Path(__file__).resolve().parents[2])
 EV=os.path.join(ROOT,"experience_v2")
 REFS=r"C:\Users\28049\AppData\Local\DoubaoWork\User Data\Default\.doubaowork\agent_mode\workspace\.sessions\38441083278598146\agents\m_0cwEJL9QVVn\refs"
 WX=r"D:\微信数据\微信下载\xwechat_files\wxid_tkz9s7tlr1kn22_0eec\temp\RWTemp\2026-09\9e20f478899dc29eb19741386f9343c8"

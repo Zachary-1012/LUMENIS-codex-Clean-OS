@@ -38,7 +38,7 @@ def backup_database(backup_name=None):
     print("=== 数据库备份 ===")
 
     if not os.path.exists(DB_PATH):
-        print(f"❌ 数据库文件不存在: {DB_PATH}")
+        print(f"[ERROR] 数据库文件不存在: {DB_PATH}")
         return None
 
     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -57,23 +57,23 @@ def backup_database(backup_name=None):
         src_conn.backup(dst_conn)
         src_conn.close()
         dst_conn.close()
-        print(f"✅ SQLite backup API 备份成功: {backup_path}")
+        print(f"[OK] SQLite backup API 备份成功: {backup_path}")
     except Exception as e:
         # 仅当明确是"数据库被独占锁定"类错误才走文件拷贝（WAL 下拷贝可能不一致）；
         # 其他错误直接报失败，避免产生不可用的"假备份"。
         msg = str(e)
         if any(k in msg for k in ('locked', 'Locked', 'busy', 'Busy', 'cannot open')):
-            print(f"⚠️ backup API 锁定异常({e})，尝试文件拷贝兜底...")
+            print(f"[WARN] backup API 锁定异常({e})，尝试文件拷贝兜底...")
             shutil.copy2(DB_PATH, backup_path)
             used_fallback = True
         else:
-            print(f"❌ 备份失败(非锁定类): {e}")
+            print(f"[ERROR] 备份失败(非锁定类): {e}")
             return None
 
     # 备份完整性校验（文件拷贝兜底时尤其必要）
     v = verify_backup(backup_path)
     if not v.get('ok'):
-        print(f"❌ 备份校验失败: {v}")
+        print(f"[ERROR] 备份校验失败: {v}")
         try:
             os.remove(backup_path)
         except Exception:
@@ -122,7 +122,7 @@ def restore_database(backup_name):
     backup_path = os.path.join(BACKUP_DIR, backup_name)
 
     if not os.path.exists(backup_path):
-        print(f"❌ 备份文件不存在: {backup_path}")
+        print(f"[ERROR] 备份文件不存在: {backup_path}")
         return False
 
     # 先备份当前数据库
@@ -132,10 +132,10 @@ def restore_database(backup_name):
     # 恢复
     try:
         shutil.copy2(backup_path, DB_PATH)
-        print(f"✅ 恢复成功: {backup_name}")
+        print(f"[OK] 恢复成功: {backup_name}")
         return True
     except Exception as e:
-        print(f"❌ 恢复失败: {e}")
+        print(f"[ERROR] 恢复失败: {e}")
         return False
 
 

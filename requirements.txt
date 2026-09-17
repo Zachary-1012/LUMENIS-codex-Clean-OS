@@ -62,3 +62,5 @@ tenacity>=9.1.0        # 网络层指数退避重试（可选增强：CDP探测�
 
 # alembic>=1.19.1：T-P1-3 可回滚 DB 迁移（stamp-only baseline，生产接入前需满足 DB-MIGRATION-PLAYBOOK Gate）
 alembic>=1.19.1
+
+feedparser>=6.0.11  # RSS / Atom public-feed adapter
