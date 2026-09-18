@@ -391,7 +391,7 @@ class TestReportEngineArtifactVerification:
              patch.object(report_engine.db, 'get_stats_by_date_range', return_value={'total': 0}), \
              patch.object(report_engine.ai_analyzer, 'generate_period_report', return_value=mock_report), \
              patch.object(report_engine.ai_filter, 'run_filter_batch', return_value=None), \
-             patch.object(report_engine.daily_report, 'generate_daily_digest', return_value={}), \
+             patch.object(report_engine.daily, 'generate_daily_digest', return_value={}), \
              patch.object(report_engine.db, 'save_daily_report', return_value=42) as mock_save:
             report, digest = Shared Reporting engine.generate_report("daily", "2026-09-01", "2026-09-01")
             assert report["_db_row_id"] == 42

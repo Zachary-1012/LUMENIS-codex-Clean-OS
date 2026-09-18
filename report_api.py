@@ -10,7 +10,7 @@ import database as db
 from lumenis.shared.reporting import engine as report_engine
 import canonical_metrics
 from subject_rules import subject_sql_and_values
-import daily_report
+from lumenis.shared.reporting import daily
 from lumenis.shared.reporting.filtering import (filter_negative_for_period_report, classify_notes_by_age,
     get_daily_report_filter_stats, filter_notes_for_daily_report, get_report_period)
 
@@ -306,10 +306,10 @@ def api_generate_report():
 
 def _canonical_report_metrics(report_type, date_str):
     """UDIP V1.0: 报告统一消费 Canonical Metric（MET-RISK-01/02）。
-    不重复计算业务 Truth：风险指数/品牌健康度仅由 daily_report.generate_today_summary 权威计算。
+    不重复计算业务 Truth：风险指数/品牌健康度仅由 daily.generate_today_summary 权威计算。
     报告展示层从此消费该字段；如与 stats 的原始计数并存，两者语义不同（聚合风险 vs 计数）。"""
     try:
-        import daily_report as _dr
+        from lumenis.shared.reporting import daily as _dr
         from lumenis.shared.reporting.filtering import (filter_negative_for_period_report, classify_notes_by_age,
             get_daily_report_filter_stats, filter_notes_for_daily_report, get_report_period)
         from datetime import datetime as _dt
@@ -516,7 +516,7 @@ def api_digest_today():
     if not digest:
         # 尝试自动生成
         try:
-            digest = daily_report.generate_daily_digest(date_str)
+            digest = daily.generate_daily_digest(date_str)
         except Exception as e:
             return jsonify({'ok':False,'error':str(e)}),500
     # ZBC Phase 9: 验证 digest 非空且有日期
@@ -530,7 +530,7 @@ def api_digest_generate():
     data = request.get_json(silent=True) or {}
     date_str = data.get('date') or datetime.now().strftime('%Y-%m-%d')
     try:
-        digest = daily_report.generate_daily_digest(date_str)
+        digest = daily.generate_daily_digest(date_str)
         return jsonify({'ok':True,'digest':digest,'message':'日报生成完成'})
     except Exception as e:
         return jsonify({'ok':False,'error':str(e)}),500
@@ -973,7 +973,7 @@ def api_record_special_trigger():
 @report_bp.route('/api/daily-report/5sections', methods=['GET'])
 def api_daily_report_5sections():
     """P1-D: 获取5板块标准格式日报。"""
-    from daily_report import generate_daily_digest, format_daily_report_5sections
+    from lumenis.shared.reporting.daily import generate_daily_digest, format_daily_report_5sections
     from datetime import datetime
     date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     try:

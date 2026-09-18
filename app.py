@@ -81,7 +81,7 @@ import function_registry
 import reprocess
 import xhs_cookie_bridge
 import ai_filter
-import daily_report
+from lumenis.shared.reporting import daily
 import report_engine
 import topic_campaign
 import app_evidence
@@ -2065,7 +2065,7 @@ def version_file():
 def api_metrics_canonical():
     """Unified Data Intelligence Pipeline: Canonical Metric API (UDIP P2)
     Consumption surface for Dashboard / Table / Chart / Report / Export / AI.
-    All values computed once by daily_report.generate_today_summary (FUNC-RISK-01/02).
+    All values computed once by daily.generate_today_summary (FUNC-RISK-01/02).
     No page/chart/report/AI should recompute these metrics."""
     date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
     try:
@@ -2073,7 +2073,7 @@ def api_metrics_canonical():
     except Exception:
         date_str = datetime.now().strftime('%Y-%m-%d')
     try:
-        summary = daily_report.generate_today_summary(date_str=date_str)
+        summary = daily.generate_today_summary(date_str=date_str)
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
     return jsonify({
@@ -2095,7 +2095,7 @@ def api_metrics_canonical():
         },
         'lineage': {
             'source': 'notes + events (data/monitor.db)',
-            'function': 'daily_report.generate_today_summary',
+            'function': 'lumenis.shared.reporting.daily.generate_today_summary',
             'registry': 'FUNCTION_REGISTRY.md FUNC-RISK-01/02 / METRIC_REGISTRY.md MET-RISK-01/02',
         },
     })
@@ -4449,7 +4449,7 @@ def _send_daily_email():
     if not recipients or not (st.get('host') and st.get('user') and st.get('password')):
         return {'sent':0,'skipped':'SMTP未配置或未设置收件邮箱'}
     date_str=(datetime.now()-timedelta(days=1)).strftime('%Y-%m-%d')
-    try: digest=daily_report.generate_daily_digest(date_str)
+    try: digest=daily.generate_daily_digest(date_str)
     except Exception: digest={}
     body=('广州太古汇小红书舆情日报｜'+date_str+'\n\n'
           '总监测：'+str(digest.get('total_found','—'))+'\n'
@@ -4558,7 +4558,7 @@ def _generate_daily_report(date_str=None):
     try:
         date_str = date_str or datetime.now().strftime('%Y-%m-%d')
         # 调用daily_report模块生成日报摘要
-        digest = daily_report.generate_daily_digest(date_str)
+        digest = daily.generate_daily_digest(date_str)
         # 保存到日报表
         try:
             with db.get_db() as conn:

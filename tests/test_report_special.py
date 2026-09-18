@@ -52,7 +52,7 @@ def test_generate_special_smoke(monkeypatch):
     monkeypatch.setattr(report_engine, "ai_analyzer", FakeAnalyzer())
     monkeypatch.setattr(report_engine, "db", FakeDb())
     monkeypatch.setattr(report_engine.ai_filter, "run_filter_batch", lambda limit=500: None)
-    monkeypatch.setattr(report_engine.daily_report, "generate_daily_digest", lambda d: None)
+    monkeypatch.setattr(report_engine.daily, "generate_daily_digest", lambda d: None)
 
     report, digest = report_engine.generate_report("special", "2026-08-01", "2026-08-31")
     assert captured["rtype"] == "special"

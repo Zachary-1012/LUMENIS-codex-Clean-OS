@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 import database as db
 import ai_analyzer
 import ai_filter
-import daily_report
+from . import daily
 from lumenis.shared.reporting import artifact as ra
 
 logger = logging.getLogger(__name__)
@@ -200,7 +200,7 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
 
     digest = None
     if report_type == 'daily':
-        digest = daily_report.generate_daily_digest(end)
+        digest = daily.generate_daily_digest(end)
     report['started_at'] = started_at
     report['finished_at'] = datetime.now().isoformat()
     report['status'] = 'success'
