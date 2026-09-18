@@ -3,16 +3,16 @@
 GAP-10 reporting 旁路路由挂载
 【施工标准】先旁路、再切换；默认关闭；未完成真实验证不得标记完成。
 
-在 app.py 中新增报告中心旁路路由，使用 lumenis.shared.reporting 的 ReportGenerator/ReportExporter。
-Feature Gate: ZBC_REPORT_CENTER=1 才启用，默认关闭。
-不改变现有报告功能（/api/report/* 等），仅新增旁路入口。
+在 app.py 中新增Shared Reporting 路由，使用 lumenis.shared.reporting 的 ReportGenerator/ReportExporter。
+Feature Gate: LUMENIS_REPORTING=1 才启用，默认关闭。
+不改变现有报告功能（/api/report/* 等），作为 Shared Capability 正式入口。
 """
 import os
 from flask import Blueprint, jsonify, request
 
-reporting_bp = Blueprint('reporting', __name__, url_prefix='/api/report-center')
+reporting_bp = Blueprint('reporting', __name__, url_prefix='/api/reporting')
 
-FEATURE_GATE_ENV = "ZBC_REPORT_CENTER"
+FEATURE_GATE_ENV = "LUMENIS_REPORTING"
 
 
 def is_enabled() -> bool:
@@ -21,7 +21,7 @@ def is_enabled() -> bool:
 
 @reporting_bp.route('/status', methods=['GET'])
 def status():
-    """报告中心状态（旁路，Feature Gate 控制）。"""
+    """Shared Reporting 状态（旁路，Feature Gate 控制）。"""
     enabled = is_enabled()
     resp = {
         "ok": True,
@@ -51,7 +51,7 @@ def generate():
     """生成标准化报告（旁路，Feature Gate 控制）。"""
     if not is_enabled():
         return jsonify({"ok": False, "error": f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用",
-                        "code": "REPORT_CENTER_DISABLED"}), 403
+                        "code": "REPORTING_DISABLED"}), 403
     data = request.get_json(silent=True) or {}
     brand_mode = data.get("brand_mode", "cth")
     period = data.get("period", "daily")
@@ -85,7 +85,7 @@ def export():
     """导出 Word/PDF 报告（旁路，Feature Gate 控制）。"""
     if not is_enabled():
         return jsonify({"ok": False, "error": f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用",
-                        "code": "REPORT_CENTER_DISABLED"}), 403
+                        "code": "REPORTING_DISABLED"}), 403
     data = request.get_json(silent=True) or {}
     brand_mode = data.get("brand_mode", "cth")
     period = data.get("period", "daily")

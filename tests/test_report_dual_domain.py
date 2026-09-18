@@ -217,13 +217,13 @@ class TestReportApiSharedEngine:
 class TestBrandReportGenerator:
     """验证 lumenis/shared/reporting/brand_report.py 存在（ZBMP 品牌报告）。"""
 
-    def test_lumenis.shared.reporting.brand_report_exists(self):
+    def test_shared_brand_report_exists(self):
         """lumenis/shared/reporting/brand_report.py 存在。"""
         path = os.path.join(PROJECT_ROOT, "lumenis/shared/reporting/brand_report.py")
         assert os.path.exists(path), "lumenis/shared/reporting/brand_report.py 不存在"
 
-    def test_lumenis.shared.reporting.brand_report_has_generate(self):
-        """lumenis.shared.reporting.brand_report 有生成函数。"""
+    def test_shared_brand_report_has_generate(self):
+        """Shared brand report 有生成函数。"""
         with open(os.path.join(PROJECT_ROOT, "lumenis/shared/reporting/brand_report.py"), encoding="utf-8") as f:
             content = f.read()
         assert "def " in content, "lumenis.shared.reporting.brand_report 应有函数定义"

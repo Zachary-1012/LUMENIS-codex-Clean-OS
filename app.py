@@ -858,7 +858,7 @@ def event_graph_rebuild_relations():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-# ===== v4 Shared Reporting 标准化报告：只读旁路预览（不改既有 daily/brand 报告路由、不抢 RPT Owner、不写库/不导出/不自动发送）=====
+# ===== Shared Reporting 标准化报告：只读旁路预览（不改既有 daily/brand 报告路由、不抢 RPT Owner、不写库/不导出/不自动发送）=====
 @app.route('/api/v2/marketing/overview')
 def marketing_overview():
     """营销节点速览：当月节气/节日 + 垂直行业交叉建议 + 创意引擎当前绑定节点。
@@ -1335,9 +1335,9 @@ def _report_deprecation_headers(resp):
             resp.headers['Sunset'] = _REPORT_SUNSET
             resp.headers['X-Deprecated'] = 'true'
             if path.startswith('/api/brand-report/'):
-                resp.headers['Link'] = '</api/report-center/generate>; rel="successor-version"'
+                resp.headers['Link'] = '</api/reporting/generate>; rel="successor-version"'
             elif path.startswith('/api/report/') or path.startswith('/api/v2/report/') or path.startswith('/api/reports/'):
-                resp.headers['Link'] = '</api/report-center/generate>; rel="successor-version"'
+                resp.headers['Link'] = '</api/reporting/generate>; rel="successor-version"'
     except Exception:
         pass  # 绝不因标记失败影响响应
     return resp
@@ -6012,7 +6012,7 @@ try:
 except Exception as _acct_err:
     print(f"[account] 主线账户体系注册失败（不阻断启动）: {_acct_err}")
 
-# GAP-10 Shared Reporting 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
+# GAP-10 Shared Reporting 旁路路由（Feature Gate: LUMENIS_REPORTING=1 启用，默认关闭）
 from lumenis.shared.reporting.api import reporting_bp
 app.register_blueprint(reporting_bp)
 

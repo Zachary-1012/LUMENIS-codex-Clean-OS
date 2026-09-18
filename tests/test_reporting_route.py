@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""reporting 标准化报告只读旁路预览路由测试（GAP-10 边界：不抢既有报告 Owner）。"""
+"""Shared Reporting 标准化预览路由测试（Shared Owner contract）。"""
 import os
 import sys
 
