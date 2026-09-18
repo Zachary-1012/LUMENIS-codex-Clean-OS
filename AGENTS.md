@@ -29,6 +29,7 @@ This root `AGENTS.md` is the first coding-agent instruction boundary. Before cha
 ```text
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
 → 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
@@ -170,6 +171,18 @@ Source
 → Evaluation
 → Learning Asset
 ```
+
+### App-only Experience direction
+
+The final user-facing LUMENIS product is one cross-platform Flutter application for Windows, macOS, Linux, Android and iOS.
+
+Existing Flask/Jinja/static/Experience V2 browser surfaces are migration sources only. Do not create new public web product pages, a second frontend, a compatibility UI, or a reference-driven redesign. Before deleting any old surface, trace and preserve its business capability, ViewModel, permission, state, Evidence and tests in the canonical app path.
+
+All UI/UX/visual/presentation decisions remain subordinate to the sole authority:
+
+`00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
+
+Historical UI/UX documents, screenshots, Apple/GPT references and old design systems are forbidden development inputs.
 
 ## 5. No duplicate truth
 

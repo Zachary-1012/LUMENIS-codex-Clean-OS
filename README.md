@@ -16,6 +16,7 @@
 ```text
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
 → 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
@@ -40,6 +41,14 @@ sha    = 147e3bd331b22236930ae29112a67c613a148f67
 远程、当前本地 working tree、local-only commit、历史审计点、最后 runner-backed green baseline、current-head CI 与 live runtime 必须分开描述；不得互相冒充。
 
 ---
+
+## Canonical product architecture
+
+The sole product/domain architecture authority is:
+
+`00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
+
+LUMENIS is now **App-first / App-only as the final user-facing product**. The canonical Experience target is one Flutter application codebase for Windows, macOS, Linux, Android and iOS. Existing browser/Jinja/static surfaces are migration sources only and may be removed only after capability parity is proven.
 
 ## 1. 产品定位 / Product definition
 
@@ -226,7 +235,6 @@ LICENSE                         LUMENIS 源码许可边界
 00-GOVERNANCE/                 权威规则、验收、handoff evidence
 02-ARCHITECTURE/               架构资料
 08-AUDIT/                      当前审计证据
-99-ARCHIVE/                    历史/归档证据
 .github/workflows/             CI
 scripts/                       运维、启动、维护脚本
 app.py                         当前 Flask 应用入口

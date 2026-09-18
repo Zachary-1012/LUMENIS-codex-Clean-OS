@@ -13,11 +13,11 @@ Root `AGENTS.md` is the first coding-agent instruction boundary. After reading i
 
 1. `AGENTS.md`
 2. this file: `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`
-3. `README.md`
-4. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
-5. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
-6. `08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`
-7. `08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md`
+3. `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
+4. `README.md`
+5. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
+6. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
+7. `08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`
 8. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
 9. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
 
@@ -173,7 +173,7 @@ Source
 
 These chains already exist in `README.md` and `AGENTS.md`. Do not create a second architecture or parallel truth to restate them.
 
-Current four-domain ownership remains:
+Current four-domain ownership remains. The canonical definition is `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`:
 
 ```text
 CTH               Subject-first Commerce Operations
@@ -181,6 +181,10 @@ BMP               Brand/Market-first
 Shared Capability Content & Creation / Evidence / Research / Evaluation / Learning / AI Enhancement
 SYSTEM            Collector / Runtime / Scheduler / AI Gateway / DB / Security / Permission / Settings / Recovery / Observability
 ```
+
+### App-only target
+
+The final LUMENIS Experience is a single Flutter application for Windows, macOS, Linux, Android and iOS. Browser/Jinja/static UI is transitional only. No new public web product surface, parallel frontend or legacy visual reference path may be introduced. Capability parity must be proven before old surfaces are deleted.
 
 ## 5. Current source/runtime facts — source-audited, not live-certified by this handoff
 

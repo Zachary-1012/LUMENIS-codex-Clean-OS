@@ -41,6 +41,9 @@ jobs:
       - name: Validate Codex takeover governance consistency (BLOCKING)
         run: python scripts/audit_tools/verify_codex_takeover_governance.py
 
+      - name: Validate Only-One App-first product architecture (BLOCKING)
+        run: python scripts/audit_tools/verify_lumenis_single_product.py
+
       - name: Validate sole Experience design authority (BLOCKING)
         run: python scripts/audit_tools/verify_experience_authority_exclusive.py
 
