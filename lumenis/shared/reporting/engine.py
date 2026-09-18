@@ -3,7 +3,7 @@
 统一负责：日报、周报、月报、年报的生成、读取与客户预览数据。
 所有统计通过 database.py 的广州太古汇主体硬过滤，不在报告层自行放宽口径。
 
-ZBC Phase 9 加固：
+LUMENIS Reporting integrity 加固：
 - 生成后必须验证 DB artifact 真实落库（report_id 可追溯）
 - 报告携带 report_id / artifact_hash / generator_version / data_version
 - get_bundle 区分"缓存命中"与"即时生成"，避免静默重复生成导致数据漂移
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 REPORT_TYPES = ('daily', 'weekly', 'monthly', 'yearly', 'special')
 
 # ============================================================
-# ZBC V2.0 双域报告类型定义
+# LUMENIS dual-domain reporting 双域报告类型定义
 # ============================================================
 # CTH 报告：太古汇专项
 CTH_REPORT_TYPES = ('daily', 'weekly', 'monthly', 'event_special', 'risk_special', 'taikoo_intelligence')
@@ -80,7 +80,7 @@ def period_for(report_type: str, now: datetime | None = None):
 def generate_report(report_type: str, start: str | None = None, end: str | None = None,
                     domain_id: str | None = None):
     started_at = datetime.now().isoformat()
-    # ZBC V2.0 双域隔离：解析域身份
+    # LUMENIS dual-domain reporting 双域隔离：解析域身份
     if domain_id is None:
         try:
             from ai_domain_context import get_current_domain
@@ -185,7 +185,7 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
                          "is_estimate": True,
                          "disclaimer": "EMV 引擎不可用，未估算"}
 
-    # ===== ZBC Phase 9: artifact 元数据 + 真实性校验 =====
+    # ===== LUMENIS Reporting integrity: artifact 元数据 + 真实性校验 =====
     meta = ra.build_artifact_metadata(report_type, start, end, report_data=report)
     report.update(meta)
     # source_snapshot：记录数据来源口径（publish_date 区间 + 主体过滤已由 db 层保证）
@@ -236,7 +236,7 @@ def get_bundle(report_type: str, date_str: str | None = None):
 
 
 # ============================================================
-# ZBC V2.0 双域报告生成（独立函数，不影响现有 generate_report）
+# LUMENIS dual-domain reporting 双域报告生成（独立函数，不影响现有 generate_report）
 # ============================================================
 def generate_domain_report(
     report_type: str,

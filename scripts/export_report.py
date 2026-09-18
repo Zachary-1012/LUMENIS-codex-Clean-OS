@@ -76,7 +76,7 @@ def export_report(report_type='daily', date=None, format='word'):
 
     # 尝试使用report_engine
     try:
-        from report_engine import ReportEngine
+        from lumenis.shared.reporting.engine import ReportEngine
         engine = ReportEngine()
         report_data = engine.generate_report(
             report_type=report_type,
@@ -96,9 +96,9 @@ def export_report(report_type='daily', date=None, format='word'):
         return True
 
     except ImportError:
-        print("⚠️ report_engine不可用，尝试使用daily_report")
+        print("⚠️ Shared Reporting engine不可用，尝试使用daily_report")
     except Exception as e:
-        print(f"⚠️ report_engine导出失败: {e}")
+        print(f"⚠️ Shared Reporting engine导出失败: {e}")
 
     # 尝试使用daily_report
     try:
@@ -111,7 +111,7 @@ def export_report(report_type='daily', date=None, format='word'):
             print(f"   负面: {report_data.get('negative_count', 0)}")
             return True
         else:
-            print(f"⚠️ daily_report仅支持日报，{report_type}需要report_engine")
+            print(f"⚠️ daily_report仅支持日报，{report_type}需要 Shared Reporting engine")
             return False
     except ImportError:
         print("❌ daily_report不可用")

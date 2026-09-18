@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 
-import report_engine  # noqa: E402
+from lumenis.shared.reporting import engine as report_engine  # noqa: E402
 
 
 def test_special_in_report_types():

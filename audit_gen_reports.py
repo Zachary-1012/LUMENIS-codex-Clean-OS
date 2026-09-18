@@ -8,7 +8,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from report_engine import generate_report, period_for
+from lumenis.shared.reporting.engine import generate_report, period_for
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report_export", "audit")
 os.makedirs(OUT_DIR, exist_ok=True)

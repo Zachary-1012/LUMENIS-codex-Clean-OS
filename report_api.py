@@ -7,7 +7,7 @@ import os, re, json, time, traceback
 from datetime import datetime, timedelta
 
 import database as db
-import report_engine
+from lumenis.shared.reporting import engine as report_engine
 import canonical_metrics
 from subject_rules import subject_sql_and_values
 import daily_report

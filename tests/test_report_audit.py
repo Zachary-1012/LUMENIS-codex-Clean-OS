@@ -354,15 +354,15 @@ class TestExportArtifactReuse:
 
 
 # ============================================================
-# 7. report_engine 落库验证（mock，不碰真实 DB）
+# 7. Shared Reporting engine 落库验证（mock，不碰真实 DB）
 # ============================================================
 
 class TestReportEngineArtifactVerification:
-    """report_engine.generate_report 必须验证落库成功。"""
+    """Shared Reporting engine.generate_report 必须验证落库成功。"""
 
     def test_generate_report_raises_on_zero_row_id(self):
         """save_daily_report 返回 0 或 None 时必须抛异常（禁止假成功）。"""
-        import report_engine
+        from lumenis.shared.reporting import engine as report_engine
         # mock 所有外部依赖
         with patch.object(report_engine.db, 'get_notes_by_date_range', return_value=[]), \
              patch.object(report_engine.db, 'get_stats_by_date_range', return_value={'total': 0}), \
@@ -370,22 +370,22 @@ class TestReportEngineArtifactVerification:
              patch.object(report_engine.ai_filter, 'run_filter_batch', return_value=None), \
              patch.object(report_engine.db, 'save_daily_report', return_value=0):
             with pytest.raises(RuntimeError, match="落库失败"):
-                report_engine.generate_report("daily", "2026-09-01", "2026-09-01")
+                Shared Reporting engine.generate_report("daily", "2026-09-01", "2026-09-01")
 
     def test_generate_report_raises_on_none_row_id(self):
         """save_daily_report 返回 None 时必须抛异常。"""
-        import report_engine
+        from lumenis.shared.reporting import engine as report_engine
         with patch.object(report_engine.db, 'get_notes_by_date_range', return_value=[]), \
              patch.object(report_engine.db, 'get_stats_by_date_range', return_value={'total': 0}), \
              patch.object(report_engine.ai_analyzer, 'generate_period_report', return_value={}), \
              patch.object(report_engine.ai_filter, 'run_filter_batch', return_value=None), \
              patch.object(report_engine.db, 'save_daily_report', return_value=None):
             with pytest.raises(RuntimeError, match="落库失败"):
-                report_engine.generate_report("daily", "2026-09-01", "2026-09-01")
+                Shared Reporting engine.generate_report("daily", "2026-09-01", "2026-09-01")
 
     def test_generate_report_success_has_artifact_metadata(self):
         """成功生成的报告必须包含 artifact 元数据字段。"""
-        import report_engine
+        from lumenis.shared.reporting import engine as report_engine
         mock_report = {"summary": "test", "top_topics": [], "hot_notes": []}
         with patch.object(report_engine.db, 'get_notes_by_date_range', return_value=[]), \
              patch.object(report_engine.db, 'get_stats_by_date_range', return_value={'total': 0}), \
@@ -393,7 +393,7 @@ class TestReportEngineArtifactVerification:
              patch.object(report_engine.ai_filter, 'run_filter_batch', return_value=None), \
              patch.object(report_engine.daily_report, 'generate_daily_digest', return_value={}), \
              patch.object(report_engine.db, 'save_daily_report', return_value=42) as mock_save:
-            report, digest = report_engine.generate_report("daily", "2026-09-01", "2026-09-01")
+            report, digest = Shared Reporting engine.generate_report("daily", "2026-09-01", "2026-09-01")
             assert report["_db_row_id"] == 42
             assert report["_artifact_verified"] is True
             assert "report_id" in report
@@ -408,7 +408,7 @@ class TestReportEngineArtifactVerification:
 
     def test_get_bundle_cached_returns_regenerated_false(self):
         """get_bundle 缓存命中时 regenerated=False。"""
-        import report_engine
+        from lumenis.shared.reporting import engine as report_engine
         cached_report = {
             "report_type": "daily", "report_date": "2026-09-01",
             "total_notes": 5, "report_id": "RPT-daily-2026-09-01-2026-09-01",
@@ -421,7 +421,7 @@ class TestReportEngineArtifactVerification:
 
     def test_get_bundle_miss_triggers_regeneration_flag(self):
         """get_bundle 缓存未命中时 regenerated=True（调用方可感知数据漂移）。"""
-        import report_engine
+        from lumenis.shared.reporting import engine as report_engine
         with patch.object(report_engine.db, 'get_latest_report', return_value=None), \
              patch.object(report_engine, 'generate_report', return_value=({"_artifact_verified": True, "_db_row_id": 1}, {})):
             bundle = report_engine.get_bundle("daily", "2026-09-01")
