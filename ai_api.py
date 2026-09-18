@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 bp = Blueprint("ai_api", __name__)
 
 # 依赖模块（与 app.py 保持一致）
-import intelligence
+from lumenis.system.ai_gateway import core as intelligence
 import ai_governance
 import ai_analyzer
 import ai_learning_engine
@@ -362,7 +362,7 @@ def api_ai_channel_health():
     """云端 AI 通道多层稳固层健康快照（熔断/心跳/可用性），供前端小 icon 与 24h 监控"""
     try:
         from lumenis.system.ai_gateway import channel as ai_channel as _aic
-        import intelligence as _intel
+        from lumenis.system.ai_gateway import core as _intel
         _st = _intel.ai_status()
         _h = _aic.channel_health(provider=_st.get('provider',''), model=_st.get('model',''))
         return jsonify({'ok': True, 'enabled': bool(_st.get('enabled')), **{'health': _h}})

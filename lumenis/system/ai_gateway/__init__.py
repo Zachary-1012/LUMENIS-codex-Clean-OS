@@ -4,6 +4,7 @@ Provider transport and provider-state ownership live here.
 Business truth remains outside the AI layer.
 """
 from . import channel
+from . import core
 from .providers import (
     active_providers,
     available_providers,
@@ -15,6 +16,7 @@ from .providers import (
 
 __all__ = [
     "channel",
+    "core",
     "active_providers",
     "available_providers",
     "is_provider_active",

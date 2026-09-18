@@ -17,7 +17,7 @@ for _p in (_ROOT,):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import intelligence          # 主系统本地智能层（三级回退）
+from lumenis.system.ai_gateway import core as intelligence  # canonical SYSTEM AI Gateway
 import function_registry as freg
 from ..config import DB_PATH
 

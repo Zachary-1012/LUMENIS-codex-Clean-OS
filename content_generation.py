@@ -346,7 +346,7 @@ HUMAN_INTERACTION_LAYER = """【人类交互模式层 — 所有内容生成必�
 
 
 # ============================================================
-# AI 调用（复用 intelligence.py 统一通道）
+# AI 调用（复用 SYSTEM AI Gateway 统一通道）
 # ============================================================
 def _call_ai(system_prompt: str, user_prompt: str, level: str = "high") -> Tuple[Optional[str], str, Dict]:
     """调用统一智能网关，失败返回(None, 'rule', meta)，不抛异常。
@@ -355,7 +355,7 @@ def _call_ai(system_prompt: str, user_prompt: str, level: str = "high") -> Tuple
     自动注入人类交互模式层（HUMAN_INTERACTION_LAYER）。
     """
     try:
-        import intelligence as intel
+        from lumenis.system.ai_gateway import core as intel
         # 清除provider缓存，避免30秒TTL导致使用旧的ollama检测结果
         if hasattr(intel, '_CACHE'):
             intel._CACHE['ts'] = 0

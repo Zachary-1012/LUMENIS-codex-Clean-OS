@@ -38,7 +38,7 @@ def chat(role, user_content, temperature=0.3, max_tokens=None, model=None):
     失败时 content 为 None（由调用方降级，绝不阻断主流程）。
     """
     from scripts.prompt_registry import load_system_prompt
-    from intelligence import _chat
+    from lumenis.system.ai_gateway.core import _chat
 
     system = load_system_prompt(role)  # 固定前缀（KeyError 会暴露角色拼写漂移）
     t0 = time.time()
@@ -72,7 +72,7 @@ def chat_json(role, user_content, temperature=0.1, max_tokens=1200, model=None, 
       data      修复/解析后的 Python 对象（成功）或 None（失败，调用方降级）
       meta      {role, attempts, strategies, elapsed_s}
     """
-    from intelligence import _chat
+    from lumenis.system.ai_gateway.core import _chat
     from scripts.prompt_registry import load_system_prompt
     from scripts.json_repair import repair_json
 
