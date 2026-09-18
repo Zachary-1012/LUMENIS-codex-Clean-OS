@@ -4554,54 +4554,34 @@ def api_send_weekly_email():
 
 # ===== 定时任务辅助函数 =====
 def _generate_daily_report(date_str=None):
-    """生成指定日期的日报（保存到数据库和文件）"""
+    """通过 Shared Reporting canonical engine 生成并验证日报。"""
     try:
         date_str = date_str or datetime.now().strftime('%Y-%m-%d')
-        # 调用daily_report模块生成日报摘要
-        digest = daily.generate_daily_digest(date_str)
-        # 保存到日报表
-        try:
-            with db.get_db() as conn:
-                conn.execute(
-                    'INSERT OR REPLACE INTO daily_reports (date, title, summary, data_json, created_at) VALUES (?, ?, ?, ?, ?)',
-                    (date_str, f'舆情日报 {date_str}', digest.get('summary', ''), 
-                     json.dumps(digest, ensure_ascii=False), datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                )
-                conn.commit()
-        except Exception as e:
-            print(f'[Report] 日报保存到数据库失败: {e}')
+        report, _digest = report_engine.generate_report('daily', date_str, date_str)
+        if not (report.get('_artifact_verified') and report.get('_db_row_id')):
+            raise RuntimeError('Shared Reporting 日报未通过落库/artifact 验证')
         print(f'[Report] 日报生成完成: {date_str}')
         return True
     except Exception as e:
         print(f'[Report] 日报生成失败: {e}')
         return False
 
+
 def _generate_weekly_report():
-    """生成周报（保存到数据库）"""
+    """通过 Shared Reporting canonical engine 生成并验证自然周周报。"""
     try:
         now = datetime.now()
         week_start = (now - timedelta(days=now.weekday())).strftime('%Y-%m-%d')
         week_end = now.strftime('%Y-%m-%d')
-        # 调用weekly_events模块生成周报
-        try:
-            with db.get_db() as conn:
-                payload = weekly_events.weekly_payload(conn, week_start, week_end)
-            # 保存到数据库
-            with db.get_db() as conn:
-                conn.execute(
-                    'INSERT OR REPLACE INTO weekly_reports (week_start, week_end, title, summary, data_json, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-                    (week_start, week_end, f'舆情周报 {week_start}~{week_end}', 
-                     f'本周共{payload.get("total_events", 0)}个事件，其中紧急{payload.get("urgent_count", 0)}个',
-                     json.dumps(payload, ensure_ascii=False), datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                )
-                conn.commit()
-        except Exception as e:
-            print(f'[Report] 周报保存失败: {e}')
+        report, _digest = report_engine.generate_report('weekly', week_start, week_end)
+        if not (report.get('_artifact_verified') and report.get('_db_row_id')):
+            raise RuntimeError('Shared Reporting 周报未通过落库/artifact 验证')
         print(f'[Report] 周报生成完成: {week_start}~{week_end}')
         return True
     except Exception as e:
         print(f'[Report] 周报生成失败: {e}')
         return False
+
 
 # 周报定时任务（每周一9:10生成，9:15发送邮件 - 错峰执行）
 def _weekly_scheduler():
