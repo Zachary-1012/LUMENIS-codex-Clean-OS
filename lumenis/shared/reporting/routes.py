@@ -1,9 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 """Shared Reporting routes — 报告/摘要/品牌报告 canonical API 蓝图。
-原则：只搬不移逻辑，函数体零改动；依赖 app.py 内 helper 时用函数内延迟导入。
+原则：Shared Reporting 为报告能力唯一 Owner；路由只依赖 Shared/canonical 能力。
 注册点：app.register_blueprint(lumenis.shared.reporting.routes.report_bp)"""
 from flask import Blueprint, request, jsonify, Response, send_file, send_from_directory
-import os, re, json, time, traceback, io, tempfile
+import os, re, json, time, traceback, io, tempfile, logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -17,6 +17,7 @@ from lumenis.shared.reporting.filtering import (filter_negative_for_period_repor
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REPORT_DIR = PROJECT_ROOT / 'data' / 'reports'
+LOGGER = logging.getLogger(__name__)
 
 report_bp = Blueprint('report', __name__)
 
@@ -43,11 +44,11 @@ def shared_reporting_preview():
         rep = ReportGenerator(brand_mode=brand_mode).generate(
             period, start_date=sd or None, end_date=ed or None)
         return jsonify({'ok': True, 'report': rep,
-                        'note': '只读旁路预览，不替代既有报告 Owner（GAP-10 边界）'})
+                        'note': 'Shared Reporting canonical preview；只读预览不产生导出副作用'})
     except ValueError as ve:
         return jsonify({'ok': False, 'error': str(ve)}), 400
     except Exception:
-        app.logger.exception('shared reporting preview failed')
+        LOGGER.exception('shared reporting preview failed')
         return jsonify({'ok': False, 'error': '报告生成失败，请查看服务端日志'}), 500
 
 # ===== Global BIL 全球品牌智能：research-stage 只读（从 seed JSON 读，不建表/不写库/不联网，不参与生产口径）=====
