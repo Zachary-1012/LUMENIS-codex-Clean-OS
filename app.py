@@ -858,7 +858,7 @@ def event_graph_rebuild_relations():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-# ===== v4 report_center 标准化报告：只读旁路预览（不改既有 daily/brand 报告路由、不抢 RPT Owner、不写库/不导出/不自动发送）=====
+# ===== v4 Shared Reporting 标准化报告：只读旁路预览（不改既有 daily/brand 报告路由、不抢 RPT Owner、不写库/不导出/不自动发送）=====
 @app.route('/api/v2/marketing/overview')
 def marketing_overview():
     """营销节点速览：当月节气/节日 + 垂直行业交叉建议 + 创意引擎当前绑定节点。
@@ -6012,8 +6012,8 @@ try:
 except Exception as _acct_err:
     print(f"[account] 主线账户体系注册失败（不阻断启动）: {_acct_err}")
 
-# GAP-10 report_center 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
-from lumenis.report_center.api import report_center_bp
+# GAP-10 Shared Reporting 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
+from lumenis.shared.reporting.api import report_center_bp
 app.register_blueprint(report_center_bp)
 
 # ===== ZBC V2.0 双域核心扩展：请求级域上下文 + 双域 API 命名空间 =====

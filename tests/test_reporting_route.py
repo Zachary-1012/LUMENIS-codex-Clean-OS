@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""report_center 标准化报告只读旁路预览路由测试（GAP-10 边界：不抢既有报告 Owner）。"""
+"""reporting 标准化报告只读旁路预览路由测试（GAP-10 边界：不抢既有报告 Owner）。"""
 import os
 import sys
 

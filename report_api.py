@@ -19,7 +19,7 @@ report_bp = Blueprint('report', __name__)
 # ===== 报告 API（从 app.py 拆分，函数体零改动）=====
 
 @report_bp.route('/api/v2/report-center/preview')
-def report_center_preview():
+def shared_reporting_preview():
     import re as _re
     period = (request.args.get('period') or 'daily').strip().lower()
     brand_mode = (request.args.get('brand_mode') or 'cth').strip().lower()
@@ -35,7 +35,7 @@ def report_center_preview():
     if ed and not _dr.match(ed):
         return jsonify({'ok': False, 'error': 'end_date 需 YYYY-MM-DD'}), 400
     try:
-        from lumenis.report_center import ReportGenerator
+        from lumenis.shared.reporting import ReportGenerator
         rep = ReportGenerator(brand_mode=brand_mode).generate(
             period, start_date=sd or None, end_date=ed or None)
         return jsonify({'ok': True, 'report': rep,
@@ -43,7 +43,7 @@ def report_center_preview():
     except ValueError as ve:
         return jsonify({'ok': False, 'error': str(ve)}), 400
     except Exception:
-        app.logger.exception('report_center preview failed')
+        app.logger.exception('shared reporting preview failed')
         return jsonify({'ok': False, 'error': '报告生成失败，请查看服务端日志'}), 500
 
 # ===== Global BIL 全球品牌智能：research-stage 只读（从 seed JSON 读，不建表/不写库/不联网，不参与生产口径）=====

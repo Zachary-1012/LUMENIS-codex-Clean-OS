@@ -1,5 +1,5 @@
 """
-lumenis.report_center 标准化报告中心
+lumenis.shared.reporting Shared Reporting
 ======================================
 CTH太古汇专属 + ZBMP通用品牌 两套话术
 日报/周报/月报/年报/专项报告
@@ -13,7 +13,7 @@ Word & PDF 导出
 - word_pdf_export: Word/PDF导出器
 
 用法：
-    from lumenis.report_center import ReportGenerator, ReportExporter
+    from lumenis.shared.reporting import ReportGenerator, ReportExporter
 
     # 生成CTH日报
     gen = ReportGenerator(brand_mode="cth")
