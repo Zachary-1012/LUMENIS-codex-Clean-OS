@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from platform_adapters.base import CollectionStatus
+from lumenis.system.collector.adapters.base import CollectionStatus
 
 
 def _make_v4_note(title="测试", author="作者", url="https://example.com/1",
@@ -46,29 +46,29 @@ def _search_backend(result):
 
 class TestBilibiliMainAdapter:
 
-    @patch("platform_adapters.bilibili.BilibiliAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.bilibili.BilibiliAdapter._load_backend")
     def test_search_success(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=True, notes=[_make_v4_note()], raw_count=1))
-        from platform_adapters.bilibili import BilibiliAdapter
+        from lumenis.system.collector.adapters.bilibili import BilibiliAdapter
         ad = BilibiliAdapter()
         r = ad.search("测试", max_results=10)
         assert r.status == CollectionStatus.SUCCESS
         assert len(r.items) == 1
         assert r.items[0]["author_nickname"] == "作者"
 
-    @patch("platform_adapters.bilibili.BilibiliAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.bilibili.BilibiliAdapter._load_backend")
     def test_search_session_expired(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=False, error="登录态失效"))
-        from platform_adapters.bilibili import BilibiliAdapter
+        from lumenis.system.collector.adapters.bilibili import BilibiliAdapter
         assert BilibiliAdapter().search("x").status == CollectionStatus.SESSION_EXPIRED
 
-    @patch("platform_adapters.bilibili.BilibiliAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.bilibili.BilibiliAdapter._load_backend")
     def test_search_risk_warning(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=False, error="风控验证 wbi 签名失败"))
-        from platform_adapters.bilibili import BilibiliAdapter
+        from lumenis.system.collector.adapters.bilibili import BilibiliAdapter
         assert BilibiliAdapter().search("x").status == CollectionStatus.RISK_WARNING
 
     def test_detail_without_configured_session_is_not_configured(self, monkeypatch, tmp_path):
@@ -76,37 +76,37 @@ class TestBilibiliMainAdapter:
         # a real network request.
         monkeypatch.setenv("ZBC_DATA_DIR", str(tmp_path))
         monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "monitor.db"))
-        from platform_adapters.bilibili import BilibiliAdapter
+        from lumenis.system.collector.adapters.bilibili import BilibiliAdapter
         assert BilibiliAdapter().detail("1").status == CollectionStatus.NOT_CONFIGURED
 
     def test_registry(self):
-        from platform_adapters import get_adapter
+        from lumenis.system.collector.adapters import get_adapter
         ad = get_adapter("bilibili")
         assert ad is not None and ad.platform == "bilibili"
 
 
 class TestWeiboMainAdapter:
 
-    @patch("platform_adapters.weibo.WeiboAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.weibo.WeiboAdapter._load_backend")
     def test_search_success(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=True, notes=[_make_v4_note()], raw_count=1))
-        from platform_adapters.weibo import WeiboAdapter
+        from lumenis.system.collector.adapters.weibo import WeiboAdapter
         r = WeiboAdapter().search("测试")
         assert r.status == CollectionStatus.SUCCESS
         assert len(r.items) == 1
 
-    @patch("platform_adapters.weibo.WeiboAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.weibo.WeiboAdapter._load_backend")
     def test_search_no_new_data(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(success=True, notes=[]))
-        from platform_adapters.weibo import WeiboAdapter
+        from lumenis.system.collector.adapters.weibo import WeiboAdapter
         assert WeiboAdapter().search("x").status == CollectionStatus.NO_NEW_DATA
 
-    @patch("platform_adapters.weibo.WeiboAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.weibo.WeiboAdapter._load_backend")
     def test_search_collect_error(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=False, error="网络超时"))
-        from platform_adapters.weibo import WeiboAdapter
+        from lumenis.system.collector.adapters.weibo import WeiboAdapter
         assert WeiboAdapter().search("x").status == CollectionStatus.COLLECT_ERROR
 
     def test_comments_without_configured_session_is_not_configured(self, monkeypatch, tmp_path):
@@ -114,56 +114,56 @@ class TestWeiboMainAdapter:
         # a real network request.
         monkeypatch.setenv("ZBC_DATA_DIR", str(tmp_path))
         monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "monitor.db"))
-        from platform_adapters.weibo import WeiboAdapter
+        from lumenis.system.collector.adapters.weibo import WeiboAdapter
         assert WeiboAdapter().comments("1").status == CollectionStatus.NOT_CONFIGURED
 
     def test_registry(self):
-        from platform_adapters import get_adapter
+        from lumenis.system.collector.adapters import get_adapter
         assert get_adapter("weibo") is not None
 
 
 class TestZhihuMainAdapter:
 
-    @patch("platform_adapters.zhihu.ZhihuAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.zhihu.ZhihuAdapter._load_backend")
     def test_search_success(self, mock_load):
         mock_load.return_value.search.return_value = _make_v4_result(
             success=True, notes=[_make_v4_note()], raw_count=1)
-        from platform_adapters.zhihu import ZhihuAdapter
+        from lumenis.system.collector.adapters.zhihu import ZhihuAdapter
         ad = ZhihuAdapter()
         r = ad.search("测试")
         assert r.status == CollectionStatus.SUCCESS
         assert len(r.items) == 1
 
-    @patch("platform_adapters.zhihu.ZhihuAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.zhihu.ZhihuAdapter._load_backend")
     def test_search_risk_warning(self, mock_load):
         mock_load.return_value.search.return_value = _make_v4_result(
             success=False, error="429 频控")
-        from platform_adapters.zhihu import ZhihuAdapter
+        from lumenis.system.collector.adapters.zhihu import ZhihuAdapter
         assert ZhihuAdapter().search("x").status == CollectionStatus.RISK_WARNING
 
-    @patch("platform_adapters.zhihu.ZhihuAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.zhihu.ZhihuAdapter._load_backend")
     def test_search_exception(self, mock_load):
         mock_load.side_effect = RuntimeError("引擎崩溃")
-        from platform_adapters.zhihu import ZhihuAdapter
+        from lumenis.system.collector.adapters.zhihu import ZhihuAdapter
         r = ZhihuAdapter().search("x")
         assert r.status == CollectionStatus.COLLECT_ERROR
         assert "引擎崩溃" in r.message
 
-    @patch("platform_adapters.zhihu.ZhihuAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.zhihu.ZhihuAdapter._load_backend")
     def test_creator_delegates_v4(self, mock_load):
         from v4_upgrade.adapters.base import AdapterResult
         mock_load.return_value.creator.return_value = AdapterResult(success=True, notes=[], raw_count=0)
-        from platform_adapters.zhihu import ZhihuAdapter
+        from lumenis.system.collector.adapters.zhihu import ZhihuAdapter
         r = ZhihuAdapter().creator("user123")
         assert r.status == CollectionStatus.NO_NEW_DATA
         mock_load.return_value.creator.assert_called_once_with(user_id="user123")
 
     def test_health_no_cookie_required(self):
-        from platform_adapters.zhihu import ZhihuAdapter
+        from lumenis.system.collector.adapters.zhihu import ZhihuAdapter
         r = ZhihuAdapter().health_check()
         # 知乎公开搜索无需 cookie，引擎就绪即 SUCCESS
         assert r.status in (CollectionStatus.SUCCESS, CollectionStatus.COLLECT_ERROR)
 
     def test_registry(self):
-        from platform_adapters import get_adapter
+        from lumenis.system.collector.adapters import get_adapter
         assert get_adapter("zhihu") is not None

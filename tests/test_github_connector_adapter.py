@@ -1,8 +1,8 @@
 """GitHub connector/adapter contract tests; all network calls are injected."""
 
 from github_connector import GitHubConnector, GitHubConnectorConfig, GitHubConnectorError
-from platform_adapters.github import GitHubAdapter
-from platform_adapters.base import CollectionStatus
+from lumenis.system.collector.adapters.github import GitHubAdapter
+from lumenis.system.collector.adapters.base import CollectionStatus
 
 
 def test_github_adapter_maps_allowlisted_read_data_without_business_rules():
