@@ -2,7 +2,7 @@
 Word / PDF 报告导出模块
 ========================
 将标准化报告数据导出为Word(.docx)和PDF文件
-支持CTH太古汇专属模板和ZBMP通用模板
+支持 CTH / 序境·商业运营与 BMP / 序境·品牌市场模板
 
 依赖：python-docx（Word）、docx2pdf或reportlab（PDF）
 """
@@ -166,7 +166,7 @@ class ReportExporter:
         footer = doc.add_paragraph()
         footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
         footer.add_run(
-            f"本报告由 {'CTH-POMS' if report.get('brand_mode') == 'cth' else 'ZBMP'} 舆情监控系统自动生成 | "
+            f"本报告由 {'LUMENIS Commerce Operations (CTH)' if report.get('brand_mode') == 'cth' else 'LUMENIS Brand & Market (BMP)'} 自动生成 | "
             f"数据来源可追溯 | {datetime.now().strftime('%Y-%m-%d')}"
         ).font.size = Pt(8)
 
@@ -266,7 +266,7 @@ class ReportExporter:
             brand_mode: cth/zbmp
             period: daily/weekly/monthly/yearly/event
             export_formats: ["word", "pdf"]，默认两者都导出
-            brand_config: ZBMP模式品牌配置
+            brand_config: BMP 模式品牌配置
 
         Returns:
             {"report": 报告数据, "word_path": ..., "pdf_path": ...}
