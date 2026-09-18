@@ -69,7 +69,7 @@ print(f"\n{'='*60}")
 print("Generating brand report...")
 started = datetime.now().isoformat()
 try:
-    from brand_report_generator import BrandReportGenerator
+    from lumenis.shared.reporting.brand_report import BrandReportGenerator
     gen = BrandReportGenerator(brand_name="广州太古汇", report_period="2026年9月", language="zh")
     # 设置母模型数据（用真实DB数据填充）
     import database as db
