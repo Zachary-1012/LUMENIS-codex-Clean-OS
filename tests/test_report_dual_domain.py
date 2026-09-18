@@ -215,15 +215,15 @@ class TestReportApiSharedEngine:
 # 6. 品牌报告生成器验证
 # ============================================================================
 class TestBrandReportGenerator:
-    """验证 brand_report_generator.py 存在（ZBMP 品牌报告）。"""
+    """验证 lumenis/shared/reporting/brand_report.py 存在（ZBMP 品牌报告）。"""
 
-    def test_brand_report_generator_exists(self):
-        """brand_report_generator.py 存在。"""
-        path = os.path.join(PROJECT_ROOT, "brand_report_generator.py")
-        assert os.path.exists(path), "brand_report_generator.py 不存在"
+    def test_lumenis.shared.reporting.brand_report_exists(self):
+        """lumenis/shared/reporting/brand_report.py 存在。"""
+        path = os.path.join(PROJECT_ROOT, "lumenis/shared/reporting/brand_report.py")
+        assert os.path.exists(path), "lumenis/shared/reporting/brand_report.py 不存在"
 
-    def test_brand_report_generator_has_generate(self):
-        """brand_report_generator 有生成函数。"""
-        with open(os.path.join(PROJECT_ROOT, "brand_report_generator.py"), encoding="utf-8") as f:
+    def test_lumenis.shared.reporting.brand_report_has_generate(self):
+        """lumenis.shared.reporting.brand_report 有生成函数。"""
+        with open(os.path.join(PROJECT_ROOT, "lumenis/shared/reporting/brand_report.py"), encoding="utf-8") as f:
             content = f.read()
-        assert "def " in content, "brand_report_generator 应有函数定义"
+        assert "def " in content, "lumenis.shared.reporting.brand_report 应有函数定义"

@@ -20,6 +20,7 @@ FORBIDDEN_EXACT = {
     "08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md",
     "audit/take_screenshot.ps1",
     "static/css/zbc-design-system.css",
+    "brand_report_generator.py",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_RESEARCH_SPEC_V2.md",
@@ -73,13 +74,23 @@ def main() -> int:
         if not (ROOT / path).is_file():
             errors.append(f"missing canonical app foundation: {path}")
 
-    for path in tracked():
+    tracked_paths = tracked()
+    for path in tracked_paths:
         if any(path.startswith(prefix) for prefix in FORBIDDEN_PREFIXES):
             errors.append(f"legacy UI/UX/reference artifact present: {path}")
         if path in FORBIDDEN_EXACT:
             errors.append(f"legacy UI/UX/reference artifact present: {path}")
         if ".pre-opt" in path:
             errors.append(f"pre-opt backup artifact present: {path}")
+
+    grep = subprocess.run(
+        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+    if grep.returncode == 0 and grep.stdout.strip():
+        errors.append("legacy reporting import present:\n" + grep.stdout.strip())
 
     if errors:
         print("LUMENIS Only-One/App-first architecture guard: FAIL")

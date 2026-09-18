@@ -52,7 +52,7 @@ def shared_reporting_preview():
 def brand_report_generate():
     """生成品牌分析报告"""
     try:
-        from brand_report_generator import BrandReportGenerator
+        from lumenis.shared.reporting.brand_report import BrandReportGenerator
         data = request.get_json() or {}
         generator = BrandReportGenerator(
             brand_name=data.get('brand_name', '序境'),
@@ -115,7 +115,7 @@ def brand_report_generate():
 def brand_report_export(report_id):
     """导出品牌分析报告（JSON/Markdown）"""
     try:
-        from brand_report_generator import BrandReportGenerator
+        from lumenis.shared.reporting.brand_report import BrandReportGenerator
         import report_artifact as ra
         format_type = request.args.get('format', 'json')
         # 这里简化处理，实际应从存储中读取报告

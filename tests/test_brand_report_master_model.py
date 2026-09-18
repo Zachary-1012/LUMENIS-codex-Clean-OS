@@ -3,7 +3,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from brand_report_generator import BrandReportGenerator
+from lumenis.shared.reporting.brand_report import BrandReportGenerator
 
 
 def _gen_with_decision_model():
@@ -75,7 +75,7 @@ def test_export_json_with_decision_model(tmp_path):
 
 def test_report_trilingual_zh_en_ko():
     """序境中英韩：报告标题/母模型章节按 language 输出"""
-    from brand_report_generator import BrandReportGenerator
+    from lumenis.shared.reporting.brand_report import BrandReportGenerator
     expect = {
         "zh": "品牌传播与市场情报报告",
         "en": "Brand Communication & Market Intelligence Report",
