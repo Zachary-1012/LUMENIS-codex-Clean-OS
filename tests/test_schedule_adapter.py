@@ -7,8 +7,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 
-from collector_guard.resource_guard import HIGH_EFFICIENCY, NORMAL, RECOVERY, RESOURCE_GUARDED  # noqa: E402
-from collector_guard.schedule_adapter import advice, schedule_state, should_stop_schedule  # noqa: E402
+from lumenis.system.collector.guard.resource_guard import HIGH_EFFICIENCY, NORMAL, RECOVERY, RESOURCE_GUARDED  # noqa: E402
+from lumenis.system.collector.guard.schedule_adapter import advice, schedule_state, should_stop_schedule  # noqa: E402
 
 
 @pytest.mark.parametrize("action,stop", [

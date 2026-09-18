@@ -8,7 +8,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-import collector_guard_integration as cgi
+import lumenis.system.collector.guard_integration as cgi
 
 
 class TestCollectorGuardIntegration:
@@ -58,7 +58,7 @@ class TestCollectorGuardIntegration:
 
     def test_guard_run_passthrough_when_disabled(self):
         """guard disabled 时直通，仅异常兜底。"""
-        from collector_guard import CollectorGuard
+        from lumenis.system.collector.guard import CollectorGuard
         guard = CollectorGuard("test", enabled=False)
         result = guard.run(lambda: {"notes": [{"note_id": "1"}]}, "keyword")
         assert result.ok is True
@@ -66,7 +66,7 @@ class TestCollectorGuardIntegration:
 
     def test_guard_run_catches_exception(self):
         """guard 捕获采集异常，不向上拖垮系统。"""
-        from collector_guard import CollectorGuard
+        from lumenis.system.collector.guard import CollectorGuard
         guard = CollectorGuard("test", enabled=False)
         result = guard.run(lambda: (_ for _ in ()).throw(RuntimeError("boom")), "keyword")
         assert result.ok is False
@@ -75,7 +75,7 @@ class TestCollectorGuardIntegration:
     def test_status_api_importable(self):
         """app.py 中的 API 路由可导入（不实际启动 Flask）。"""
         # 验证集成层可被 app.py 的路由函数调用
-        from collector_guard_integration import get_all_status, is_enabled
+        from lumenis.system.collector.guard_integration import get_all_status, is_enabled
         status = get_all_status()
         assert isinstance(status, dict)
         assert isinstance(is_enabled(), bool)

@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 
-from collector_guard.resource_guard import (  # noqa: E402
+from lumenis.system.collector.guard.resource_guard import (  # noqa: E402
     HIGH_EFFICIENCY,
     NORMAL,
     RECOVERY,
