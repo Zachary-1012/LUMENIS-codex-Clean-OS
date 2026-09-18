@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Canonical Capability V1 阶段八/九: 生产路径 DUAL RUN + 稳定性验证 (offline)
-阶段八: export_report/report_engine/KOS 生产路径与 canonical 同源（无算法分叉）:
-  a) export_report.generate_report_data 情感分桶 == canonical_metrics 直算（同一有效舆情集合）
+阶段八: Shared Reporting export/KOS 生产路径与 canonical 同源（无算法分叉）:
+  a) Shared export_api.generate_report_data 情感分桶 == canonical_metrics 直算（同一有效舆情集合）
 阶段九: 熔断/恢复/回滚能力:
   b) CircuitBreaker 连续失败->OPEN, 冷却->HALF_OPEN, 成功->CLOSED
   c) classify_error: URLError 可重试, 鉴权致命, 未知异常保守不重试
@@ -29,11 +29,11 @@ def _load(name):
 @pytest.fixture(scope='module')
 def env():
     os.environ['ZBC_DB_PATH'] = DB
-    return _load('export_report'), _load('ai_channel')
+    return _load('lumenis.shared.reporting.export_api'), _load('ai_channel')
 
 
 def _is_valid_yuqing(n):
-    """复现 export_report 内部有效舆情过滤（剔除重复/噪音）"""
+    """复现 Shared export_api 内部有效舆情过滤（剔除重复/噪音）"""
     try:
         if int(n.get('is_duplicate') or 0) == 1:
             return False
@@ -45,7 +45,7 @@ def _is_valid_yuqing(n):
 
 
 def test_export_sentiment_matches_canonical(env):
-    """阶段八 a) export_report 情感分桶 == canonical 直算（同一有效舆情集合）"""
+    """阶段八 a) Shared export_api 情感分桶 == canonical 直算（同一有效舆情集合）"""
     er, _ = env
     cm = _load('canonical_metrics')
     d = er.generate_report_data('daily')
