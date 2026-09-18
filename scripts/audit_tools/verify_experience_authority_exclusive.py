@@ -2,6 +2,7 @@
 """Enforce one and only one LUMENIS Experience design authority in current main."""
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -162,6 +163,25 @@ LEGACY_COMPOSER_PHRASE = (
     "44 screens may ONLY compose registered patterns/components (no bespoke layout)"
 )
 
+# Future-proof catch: a renamed design bible must not bypass the historical blacklist.
+# This intentionally targets presentation-authority style document names, not generic
+# business/architecture documents that happen to contain the word "design".
+SUSPICIOUS_DOC_RE = re.compile(
+    r"(?:^|/)[^/]*(?:"
+    r"UI[_-]?UX|UIUX|"
+    r"UX[_-](?:ARCHITECTURE|DESIGN|SYSTEM)|"
+    r"UI[_-](?:DESIGN|STANDARD|SYSTEM|ARCHITECTURE|INTERACTION|VISUAL)|"
+    r"DESIGN[_-](?:SYSTEM|LANGUAGE|BASELINE|AUTHORITY)|"
+    r"EXPERIENCE[_-](?:DESIGN|LANGUAGE|AUTHORITY)|"
+    r"VISUAL[_-](?:SYSTEM|SPEC|BASELINE|DESIGN|AUDIT)|"
+    r"MOTION[_-](?:SYSTEM|SPEC|GUIDE|GUIDELINE|TOKENS)|"
+    r"FRONTEND[_-](?:DESIGN|REDESIGN|HANDOFF)|"
+    r"PAGE[_-]LEVEL[_-]DESIGN|"
+    r"LOGO[_-](?:DESIGN|SPEC|MOTION|STATIC)"
+    r")[^/]*\.(?:md|docx|pdf|xlsx|html|txt)$",
+    re.IGNORECASE,
+)
+
 
 def tracked() -> list[str]:
     out = subprocess.check_output(
@@ -195,6 +215,9 @@ def main() -> int:
             errors.append(f"legacy design artifact present: {p}")
         if any(p.startswith(prefix) for prefix in FORBIDDEN_PREFIXES):
             errors.append(f"legacy design tree present: {p}")
+
+        if p != CANONICAL and SUSPICIOUS_DOC_RE.search(p):
+            errors.append(f"competing design-authority-like document present: {p}")
 
         # Under experience_v2, human-authored docs are not allowed except AGENTS router.
         if (
