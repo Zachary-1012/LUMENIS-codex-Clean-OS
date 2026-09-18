@@ -112,7 +112,7 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
     # ZBMP 报告不得使用 CTH 专项过滤条件作为隐式全局过滤
     if domain_id == "zbmp":
         # 确保不加载 CTH 专项 subject 过滤作为全局过滤
-        pass  # ZBMP 使用多品牌过滤，由 brand_report_generator 处理
+        pass  # ZBMP 使用多品牌过滤，由 Shared Reporting brand owner 处理
 
     if not start or not end:
         if is_domain_specific and report_type in ('event_special', 'risk_special', 'taikoo_intelligence'):
