@@ -544,7 +544,7 @@ def api_digest_generate():
 @report_bp.route('/api/v2/report/export')
 @report_bp.route('/api/report/export')
 def api_report_export():
-    from app import _calc_alert_level, _classify_category, export_report_to_csv  # 延迟导入避免循环
+    from lumenis.shared.reporting.export_api import _calc_alert_level, _classify_category, export_report_to_csv
     report_type = request.args.get('type', 'daily')
     date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
     fmt = request.args.get('format', 'xlsx').lower()
