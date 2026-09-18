@@ -6013,8 +6013,8 @@ except Exception as _acct_err:
     print(f"[account] 主线账户体系注册失败（不阻断启动）: {_acct_err}")
 
 # GAP-10 Shared Reporting 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
-from lumenis.shared.reporting.api import report_center_bp
-app.register_blueprint(report_center_bp)
+from lumenis.shared.reporting.api import reporting_bp
+app.register_blueprint(reporting_bp)
 
 # ===== ZBC V2.0 双域核心扩展：请求级域上下文 + 双域 API 命名空间 =====
 # subject_context.init_app: 注册 before/after_request 钩子，
