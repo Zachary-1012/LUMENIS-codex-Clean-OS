@@ -91,12 +91,15 @@ def test_shell_serves_and_injects_runtime(isolated_client):
     r = cli.get("/experience/")
     assert r.status_code == 200
     assert b"assets/runtime.js" in r.data
+    assert r.data.index(b"assets/runtime.js") < r.data.index(b"/static/js/browser.js")
     assert "<title>序境 LUMENIS · Production</title>".encode() in r.data
     r2 = cli.get("/experience/assets/runtime.js")
     assert r2.status_code == 200 and r2.content_length and r2.content_length > 1000
     assert b"lum-production-truth-fence" in r2.data
     assert b"/api/auth/config" in r2.data
     assert b"async function apiFetch" in r2.data
+    assert b"lumenisAuth.Auth.getHeader = loadAuthHeader" in r2.data
+    assert b"lumenisAuth.fetch = apiFetch" in r2.data
     assert b"const initialId" in r2.data
     assert b'.lum-qa-bar{display:none!important}' in r2.data
     assert b'.lum-page[data-source="prototype"]' in r2.data

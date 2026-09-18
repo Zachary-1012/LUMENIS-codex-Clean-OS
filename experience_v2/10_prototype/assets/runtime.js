@@ -30,9 +30,6 @@
     document.head.appendChild(fence);
   }
 
-  const { $, $$, toast, bindActions, init } = global.LumUI || {};
-  if (!$) { console.warn('[runtime] LumUI missing, hydration disabled'); return; }
-
   // The production shell is protected by the same Basic contract as the
   // legacy app.  Browser navigation may satisfy the challenge once, but
   // script fetches are not guaranteed to reuse that header.  Reuse the
@@ -64,6 +61,21 @@
     opts.credentials = opts.credentials || 'include';
     return fetch(input, opts);
   }
+
+  // Shared production auth bridge.  The experience shell does not load the
+  // legacy base.html bundle, while SYS-06/browser.js still needs the same
+  // backend auth contract.  Expose only the header getter/fetch wrapper; no
+  // credential value is embedded in the frontend source.
+  const lumenisAuth = global.LUMENIS || (global.LUMENIS = {});
+  lumenisAuth.Auth = lumenisAuth.Auth || {};
+  lumenisAuth.Auth.getHeader = loadAuthHeader;
+  lumenisAuth.fetch = apiFetch;
+
+  // UI hydration is optional; the auth bridge above is not.  SYS-06/browser.js
+  // must still be able to call protected Browser Surface APIs if a visual
+  // module fails to initialize.
+  const { $, $$, toast, bindActions, init } = global.LumUI || {};
+  if (!$) { console.warn('[runtime] LumUI missing, hydration disabled'); return; }
 
   const SCREENS = () => global.LUM_SCREENS || {};
   const pending = new Set();      // 正在拉取的屏幕签名，防重复

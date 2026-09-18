@@ -58,13 +58,18 @@ function Test-ProcExists([string]$CmdPattern) {
 }
 function Get-CanonicalSupervisor {
     $rootPattern = [regex]::Escape($Root)
-    @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+    $hits = @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object {
             $_.CommandLine -and
             ($_.CommandLine -match 'run_supervised\.py') -and
             ($_.CommandLine -match '8201') -and
             ($_.CommandLine -match $rootPattern)
         })
+    # Windows virtualenv launchers expose both the launcher and its Python
+    # child with the same command line.  Count one supervisor tree, not two
+    # processes, otherwise every idempotent launch looks like a duplicate.
+    $ids = @($hits | ForEach-Object { [int]$_.ProcessId })
+    @($hits | Where-Object { -not ($ids -contains [int]$_.ParentProcessId) })
 }
 function Wait-Healthz([string]$Url, [int]$Seconds=15) {
     for ($i=0; $i -lt $Seconds; $i++) {

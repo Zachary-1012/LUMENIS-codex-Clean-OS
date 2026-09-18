@@ -211,8 +211,11 @@ def shared_skill_surface(surface: str = "AI") -> Dict[str, Any]:
 _RUNTIME_BOOT = (
     '<script>window.LUM_RUNTIME_API="/api/experience";'
     'window.LUM_RUNTIME={served:true,mode:"production"};</script>'
-    '<script src="/static/js/browser.js" defer></script>'
+    # runtime.js owns the production auth/config bridge.  It must execute
+    # before browser.js so the SYS-06 controller can reuse the same
+    # Authorization contract instead of issuing unauthenticated fetches.
     '<script src="./assets/runtime.js" defer></script>'
+    '<script src="/static/js/browser.js" defer></script>'
 )
 
 
