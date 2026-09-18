@@ -13,6 +13,7 @@ FORBIDDEN_PREFIXES = (
     "research/ui-ux/",
     "ref_gpt_v2/",
     "audit/screenshots/",
+    "intelligence_library/10_工程审计方法/治理架构/00-GOVERNANCE/_path_backup/",
 )
 
 FORBIDDEN_EXACT = {
@@ -77,6 +78,8 @@ def main() -> int:
             errors.append(f"legacy UI/UX/reference artifact present: {path}")
         if path in FORBIDDEN_EXACT:
             errors.append(f"legacy UI/UX/reference artifact present: {path}")
+        if ".pre-opt" in path:
+            errors.append(f"pre-opt backup artifact present: {path}")
 
     if errors:
         print("LUMENIS Only-One/App-first architecture guard: FAIL")
