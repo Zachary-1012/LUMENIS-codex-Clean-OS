@@ -194,19 +194,19 @@ class TestReportOutputDomainTags:
 
 
 # ============================================================================
-# 5. report_api.py 共享引擎验证
+# 5. Shared Reporting routes 共享引擎验证
 # ============================================================================
 class TestReportApiSharedEngine:
-    """验证 report_api.py 使用共享引擎。"""
+    """验证 Shared Reporting routes 使用共享引擎。"""
 
     def test_report_api_exists(self):
-        """report_api.py 存在。"""
-        path = os.path.join(PROJECT_ROOT, "report_api.py")
+        """Shared Reporting routes 存在。"""
+        path = os.path.join(PROJECT_ROOT, "lumenis", "shared", "reporting", "routes.py")
         assert os.path.exists(path)
 
     def test_report_api_imports_engine(self):
-        """report_api.py 导入 report_engine（共享引擎）。"""
-        with open(os.path.join(PROJECT_ROOT, "report_api.py"), encoding="utf-8") as f:
+        """Shared Reporting routes 导入 report_engine（共享引擎）。"""
+        with open(os.path.join(PROJECT_ROOT, "lumenis", "shared", "reporting", "routes.py"), encoding="utf-8") as f:
             content = f.read()
         assert "lumenis.shared.reporting.engine" in content or "generate_report" in content
 
