@@ -19,12 +19,18 @@
 """
 import json
 import re
+import os
 from datetime import datetime, timedelta
 
 import database as db
 import ai_analyzer
 import intelligence
 import canonical_metrics as cm
+
+
+def _ai_allowed_for_report():
+    """Return whether report generation may invoke an external/local model."""
+    return os.environ.get('ZBC_TEST_OFFLINE', '').strip() != '1'
 
 
 # ============== 风险指数计算 ==============
@@ -296,7 +302,7 @@ def generate_event_insight(event, notes):
     # AI深度总结（如果AI可用）
     ai_summary = ''
     recommended_action = ''
-    if intelligence.ai_enabled() and event_notes:
+    if _ai_allowed_for_report() and intelligence.ai_enabled() and event_notes:
         ai_result = _ai_summarize_event(event, event_notes)
         if ai_result:
             ai_summary = ai_result.get('summary', '')
@@ -597,7 +603,7 @@ def generate_daily_digest(date_str=None):
 
     # 8. AI总结（如果AI可用）
     ai_summary = ''
-    if intelligence.ai_enabled() and effective_notes:
+    if _ai_allowed_for_report() and intelligence.ai_enabled() and effective_notes:
         ai_summary = _ai_generate_daily_summary(summary, insights, event_insights)
 
     if not ai_summary:
@@ -636,6 +642,11 @@ def generate_daily_digest(date_str=None):
 
 def _ai_generate_daily_summary(summary, insights, events):
     """AI生成日报总结。"""
+    # Hermetic/离线测试必须保持有界：报告的事实摘要与规则预警仍然运行，
+    # 但不触发本地 Ollama 或云端模型请求。生产环境不设置该门禁时，
+    # 继续沿用现有 AI 增强路径，失败后由调用方使用规则结果。
+    if os.environ.get('ZBC_TEST_OFFLINE', '').strip() == '1':
+        return ''
     system = '''你是广州太古汇舆情日报撰写专家。基于数据生成一段150字以内的日报总结。
 
 要求：
@@ -663,6 +674,17 @@ def _ai_generate_executive_insight(summary, insights, events):
     """P1-E(2026-09-02): AI生成管理层一句话洞察（高层视角核心结论）。
     智谱驱动，输出严格JSON：executive_insight + priority + focus_area
     """
+    if not _ai_allowed_for_report():
+        neg_pct = round(summary.get('negative_count',0) / max(summary.get('effective_count',1),1) * 100, 1)
+        high_risk = sum(1 for e in events if e.get('risk_level') == 'high')
+        priority = 'high' if (neg_pct > 30 or high_risk >= 2) else ('medium' if (neg_pct > 15 or high_risk >= 1) else 'low')
+        return {
+            'executive_insight': f"今日有效舆情{summary.get('effective_count',0)}条，负面占比{neg_pct}%，高风险事件{high_risk}起，品牌健康分{summary.get('brand_health_score','N/A')}。",
+            'priority': priority,
+            'focus_area': '综合舆情',
+            'key_metric': f"负面占比{neg_pct}%",
+            'provider': 'rule_fallback',
+        }
     system = '你是广州太古汇品牌公关总监。基于今日舆情数据，给出管理层一句话洞察。\n\n输出严格JSON：\n{\n  "executive_insight": "不超过80字，高层视角的核心结论，要有具体数据支撑",\n  "priority": "high|medium|low",\n  "focus_area": "需要管理层关注的具体领域",\n  "key_metric": "最关键的一个数据指标"\n}\n\n要求：必须有具体数据，不能说"整体平稳"这种空话；priority=high时必须说明为什么紧急；focus_area要具体到业务领域。'
     user = json.dumps({
         'summary': {k: summary[k] for k in ['total_found','effective_count','positive_count','neutral_count','negative_count','risk_count','risk_index','brand_health_score'] if k in summary},
