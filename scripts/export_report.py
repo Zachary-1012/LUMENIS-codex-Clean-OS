@@ -74,54 +74,39 @@ def export_report(report_type='daily', date=None, format='word'):
     print(f"报告周期: {period_start} 至 {period_end}")
     print()
 
-    # 尝试使用report_engine
+    # 唯一导出 Owner：lumenis.shared.reporting.export_engine
+    format_key = {
+        'word': 'docx',
+        'docx': 'docx',
+        'excel': 'xlsx',
+        'xlsx': 'xlsx',
+        'csv': 'csv',
+    }.get((format or '').lower())
+    if not format_key:
+        print(f"❌ 不支持的格式: {format}")
+        return False
+
     try:
-        from lumenis.shared.reporting.engine import ReportEngine
-        engine = ReportEngine()
-        report_data = engine.generate_report(
-            report_type=report_type,
-            period_start=period_start,
-            period_end=period_end
+        from lumenis.shared.reporting.export_engine import export_report as canonical_export_report
+        result = canonical_export_report(
+            report_type,
+            period_start,
+            period_end,
+            (format_key,),
         )
-
-        if format == 'word':
-            output_path = engine.export_to_word(report_data, report_title)
-        elif format == 'excel':
-            output_path = engine.export_to_excel(report_data, report_title)
-        else:
-            print(f"❌ 不支持的格式: {format}")
+        output_path = (result.get('files') or {}).get(format_key)
+        verification = (result.get('artifact_verified') or {}).get(format_key) or {}
+        if not output_path:
+            print("❌ 导出失败：未生成 artifact 路径")
             return False
-
+        if verification.get('valid') is not True:
+            print(f"❌ 导出失败：artifact 未通过真实性校验: {verification}")
+            return False
         print(f"✅ 报告导出成功: {output_path}")
         return True
-
-    except ImportError:
-        print("⚠️ Shared Reporting engine不可用，尝试使用daily_report")
     except Exception as e:
-        print(f"⚠️ Shared Reporting engine导出失败: {e}")
-
-    # 尝试使用daily_report
-    try:
-        from daily_report import generate_daily_report
-        if report_type == 'daily':
-            report_data = generate_daily_report(period_start)
-            print(f"✅ 日报生成成功")
-            print(f"   总笔记: {report_data.get('total_notes', 0)}")
-            print(f"   正面: {report_data.get('positive_count', 0)}")
-            print(f"   负面: {report_data.get('negative_count', 0)}")
-            return True
-        else:
-            print(f"⚠️ daily_report仅支持日报，{report_type}需要 Shared Reporting engine")
-            return False
-    except ImportError:
-        print("❌ daily_report不可用")
-    except Exception as e:
-        print(f"❌ 日报生成失败: {e}")
-
-    print()
-    print("⚠️ 报告导出模块不可用，请检查系统配置")
-    return False
-
+        print(f"❌ Shared Reporting 导出失败: {e}")
+        return False
 
 if __name__ == '__main__':
     report_type = sys.argv[1] if len(sys.argv) > 1 else 'daily'
