@@ -19,6 +19,9 @@ from . import weibo as _weibo  # noqa: F401,E402
 from . import zhihu as _zhihu  # noqa: F401,E402
 from . import kuaishou as _kuaishou  # noqa: F401,E402
 from . import web_rss as _web_rss  # noqa: F401,E402
+from . import public_http as _public_http  # noqa: F401,E402
+from . import web_atom as _web_atom  # noqa: F401,E402
+from . import sitemap as _sitemap  # noqa: F401,E402
 from . import facebook as _facebook  # noqa: F401,E402
 from . import x_platform as _x_platform  # noqa: F401,E402
 from . import github as _github  # noqa: F401,E402

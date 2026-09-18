@@ -31,7 +31,8 @@ def test_surface_has_exact_launch_allowlist(monkeypatch):
     assert result["product"] == "LUMENIS"
     assert result["domain"] == "CTH"
     assert [item["platform"] for item in result["platforms"]] == [
-        "bilibili", "weibo", "douyin", "kuaishou", "web_rss", "zhihu", "instagram"
+        "bilibili", "weibo", "douyin", "kuaishou", "web_rss",
+        "public_http", "web_atom", "sitemap", "zhihu", "instagram"
     ]
     assert result["manual_only"] is True
     assert result["read_only"] is True

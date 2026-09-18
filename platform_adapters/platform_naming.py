@@ -33,6 +33,9 @@ PLATFORM_ALIASES: Dict[str, str] = {
     "kuaishou": "kuaishou", "ks": "kuaishou", "快手": "kuaishou",
     # 公开 RSS 聚合源（不是社交平台账号）
     "web_rss": "web_rss", "rss": "web_rss", "google_news_rss": "web_rss",
+    "public_http": "public_http", "http": "public_http", "web_http": "public_http",
+    "web_atom": "web_atom", "atom": "web_atom",
+    "sitemap": "sitemap", "xml_sitemap": "sitemap",
     # 微博
     "weibo": "weibo", "wb": "weibo", "微博": "weibo",
     # B 站
@@ -66,6 +69,7 @@ PLATFORM_ALIASES: Dict[str, str] = {
 PLATFORM_DISPLAY_NAME: Dict[str, str] = {
     "xiaohongshu": "小红书", "douyin": "抖音", "kuaishou": "快手", "weibo": "微博",
     "web_rss": "Web RSS",
+    "public_http": "Public HTTP", "web_atom": "Web Atom", "sitemap": "Sitemap",
     "bilibili": "B站", "zhihu": "知乎", "tieba": "贴吧",
     "instagram": "Instagram", "facebook": "Facebook", "x": "X",
     "channels": "视频号", "youtube": "YouTube", "tiktok": "TikTok",
@@ -140,6 +144,21 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         published_at="published_at", like_field="like_count", comment_field="comment_count",
         collect_field=None, share_field="share_count", url_template="",
         notes="公共 RSS 来源；仅保留文章标题、来源、URL 与发布时间，互动指标不可用"),
+    "public_http": PlatformFieldSpec(
+        content_id="content_id", author_id="author_id", published_at="published_at",
+        like_field="like_count", comment_field="comment_count", collect_field=None,
+        share_field="share_count", url_template="",
+        notes="公共 HTML 页面；只保留公开标题、摘要、URL、发布时间与采集时间"),
+    "web_atom": PlatformFieldSpec(
+        content_id="content_id", author_id="author_id", published_at="published_at",
+        like_field="like_count", comment_field="comment_count", collect_field=None,
+        share_field="share_count", url_template="",
+        notes="公共 Atom 订阅；条目 identity/link 是来源主键，互动指标不可用"),
+    "sitemap": PlatformFieldSpec(
+        content_id="content_id", author_id="author_id", published_at="lastmod",
+        like_field="like_count", comment_field="comment_count", collect_field=None,
+        share_field="share_count", url_template="",
+        notes="公共 Sitemap URL discovery；不把 Sitemap 当作内容事实存储"),
     "weibo": PlatformFieldSpec(
         content_id="mid", author_id="idstr", id_is_bigint=True,
         published_at="created_at", like_field="attitudes_count", comment_field="comments_count",

@@ -36,7 +36,7 @@ from .safe_collection import CollectionHygienePolicy, RateGovernor
 
 
 SECONDARY_COLLECTION_PLATFORMS = (
-    "bilibili", "weibo", "douyin", "kuaishou", "web_rss", "zhihu", "instagram",
+    "bilibili", "weibo", "douyin", "kuaishou", "web_rss", "public_http", "web_atom", "sitemap", "zhihu", "instagram",
 )
 PLATFORM_NAMES = {
     "bilibili": "B站",
@@ -44,6 +44,9 @@ PLATFORM_NAMES = {
     "kuaishou": "快手",
     "weibo": "微博",
     "web_rss": "Web RSS",
+    "public_http": "Public HTTP",
+    "web_atom": "Web Atom",
+    "sitemap": "Sitemap",
     "zhihu": "知乎",
     "instagram": "Instagram",
 }

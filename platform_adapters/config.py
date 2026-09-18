@@ -87,6 +87,27 @@ PLATFORM_CAPABILITIES = {
         "author_posts": False, "healthcheck": True,
         "provider_state": "public_keyless_rss",
     },
+    "public_http": {
+        "name": "Public HTTP", "enabled": False, "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only", "product_owner": "CTH",
+        "priority": "secondary", "search": True, "detail": True,
+        "comments": False, "creator": False, "author": False, "author_posts": False,
+        "healthcheck": True, "provider_state": "public_keyless_http",
+    },
+    "web_atom": {
+        "name": "Web Atom", "enabled": False, "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only", "product_owner": "CTH",
+        "priority": "secondary", "search": True, "detail": False,
+        "comments": False, "creator": False, "author": False, "author_posts": False,
+        "healthcheck": True, "provider_state": "public_keyless_atom",
+    },
+    "sitemap": {
+        "name": "Sitemap", "enabled": False, "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only", "product_owner": "CTH",
+        "priority": "secondary", "search": True, "detail": False,
+        "comments": False, "creator": False, "author": False, "author_posts": False,
+        "healthcheck": True, "provider_state": "public_keyless_sitemap",
+    },
     "tieba": {"name": "贴吧", "enabled": False, "priority": "event"},
     "zhihu": {
         "name": "知乎",
