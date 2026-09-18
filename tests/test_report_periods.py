@@ -7,7 +7,7 @@ try:
 except Exception:
     pass
 os.chdir(_root)
-import export_report as E
+from lumenis.shared.reporting import export_api as E
 for period in ('daily','weekly','monthly','yearly'):
     try:
         r = E.generate_report_data(period)
