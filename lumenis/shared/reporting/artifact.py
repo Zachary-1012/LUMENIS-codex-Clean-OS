@@ -8,7 +8,7 @@
 
 G4 (2026-09-06): 新增 verify_report_hash() 读取时 hash 一致性验证。
 
-本模块不依赖 Flask / app，可被 report_engine / export_report / report_api / 测试直接导入。
+本模块不依赖 Flask / app，由 Shared Reporting engine / exporters / routes / tests 直接复用。
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
 # 报告生成器版本（每次报告逻辑变更应递增，用于 artifact 血缘追踪）
-GENERATOR_VERSION = "zbc-report-1.0.0"
+GENERATOR_VERSION = "lumenis-report-1.0.0"
 
 # artifact 最小字节数：低于此值视为空文件/损坏文件
 ARTIFACT_MIN_BYTES = 64
