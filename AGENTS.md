@@ -456,6 +456,29 @@ No fake values, fake 200s, `undefined`, `NaN`, `[object Object]`, or silent miss
 
 Do not treat prototype-only screens as production-bound screens.
 
+### Experience V3 anti-template execution
+
+For any task that changes user-visible Experience structure, navigation, layout, visual hierarchy, realm composition, AI workspace, Evidence presentation or Experience CSS/JS, Codex must read before implementation:
+
+00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION-V3-20260918.md
+→ experience_v2/AGENTS.md
+→ exact current ViewModel / State / Action / Permission / Evidence owners for the active screen
+
+V3 supersedes conflicting older Experience V2/V2.4/V2.5 presentation guidance. Older files remain provenance/research unless revalidated.
+
+Hard rules:
+
+- LUMENIS is not a generic SaaS/dashboard/admin/BI/card-grid product.
+- “Apple style”, “Korean style”, Linear/Notion/ChatGPT imitation and global glass are not product targets; external products are research inputs only.
+- shared primitives are encouraged; identical page skeletons across different workflows are not.
+- do not add a top-level KPI wall or generic card grid to a Golden Page.
+- do not treat Event / Evidence / Case / Insight as generic CRUD records.
+- AI is artifact-first, not chat-first.
+- before claiming a core Experience change complete, run: python scripts/audit_tools/verify_experience_anti_template.py --strict
+- a failing anti-template gate must be fixed, not weakened or made advisory.
+
+Current V3 Golden Pages: AI-01, CTH-01, BMP-01, SH-01, SYS-01.
+
 ## 14. Testing policy
 
 Default progression:

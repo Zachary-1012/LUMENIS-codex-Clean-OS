@@ -1,5 +1,7 @@
 # Authority Alignment — Experience V2
 
+> **V3 supersession notice (2026-09-18):** The canonical presentation authority is now 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION-V3-20260918.md. The DONE rows below prove compliance with the earlier V2 package only; they do not prove V3 anti-template compliance. A source audit at main@17570ae found repeated generic section signatures and a fixed-composer rule that can force unrelated workflows into the same dashboard grammar. Current status is therefore **V3 AUTHORITY ACTIVE / MIGRATION REQUIRED** until the strict anti-template gate passes. See ANTI_TEMPLATE_BASELINE_V3.json.
+
 Maps each requirement in the four remote governance docs (main `b910117`, `00-GOVERNANCE/*20260911.md`) to the concrete implementation here. Read-only compliance trace; the governance docs themselves are not modified.
 
 | Authority requirement | Where implemented | Status |
