@@ -26,6 +26,9 @@ FORBIDDEN_EXACT = {
     "static/css/zbc-design-system.css",
     "ai_channel.py",
     "provider_registry.py",
+    "skill_registry.py",
+    "skill_execution_chain.py",
+    "skill_package_runtime.py",
     "brand_report_generator.py",
     "report_artifact.py",
     "report_filter.py",
@@ -94,7 +97,7 @@ def main() -> int:
             errors.append(f"pre-opt backup artifact present: {path}")
 
     grep = subprocess.run(
-        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel"],
+        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime"],
         cwd=ROOT,
         text=True,
         capture_output=True,
