@@ -7,6 +7,7 @@
 import csv, sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+from lumenis.shared.reporting.artifact import verify_artifact_file
 
 try:
     from docx import Document
