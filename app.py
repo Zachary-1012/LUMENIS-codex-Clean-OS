@@ -99,7 +99,7 @@ import badge_api
 import system_ai_data_api
 import settings_module
 import subject_registry
-import export_report
+from lumenis.shared.reporting import export_api
 import security_scanner
 import runtime_preflight  # ZBIP Runtime Integrity Preflight（统一启动闸门；默认只记录不阻断，ZBC_PREFLIGHT_ENFORCE=1 时 P0 阻断）
 import local_ai_client
@@ -154,7 +154,7 @@ app.register_blueprint(settings_module.settings_bp)
 # 通用主体注册表：CTH/BMP 共用配置入口；不改变两域既有运行规则
 app.register_blueprint(subject_registry.subject_registry_bp)
 # 注册导出报告模块蓝图
-app.register_blueprint(export_report.export_bp)
+app.register_blueprint(export_api.export_bp)
 # 注册公关案例整合模块蓝图
 app.register_blueprint(pr_case_integration.pr_case_bp)
 # 注册系统功能API蓝图
@@ -3755,7 +3755,7 @@ def api_negative_stats():
         return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 # ===== v5.3.2 报告导出模块（从monitor.db读取，支持DOCX/CSV/XLSX）=====
-from report_export.report_engine import export_report as export_report_v532
+from lumenis.shared.reporting.export_engine import export_report as export_report_v532
 
 @app.get("/api/reports/export")
 def api_reports_export_v532():
