@@ -5,7 +5,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import intelligence
+from lumenis.system.ai_gateway import core as intelligence
 
 
 def test_no_key_ai_status_degrades(monkeypatch):

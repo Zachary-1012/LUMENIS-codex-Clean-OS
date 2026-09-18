@@ -20,15 +20,15 @@ def test_per_call_passes_model_to_chat(monkeypatch):
     monkeypatch.setattr('ai_resource_packs.record_usage', lambda *a, **k: None)
     monkeypatch.setattr('ai_resource_packs._get_pack_usage', lambda p: {'remaining': 10})
     import types
-    fake_int = types.ModuleType('intelligence')
+    fake_int = types.ModuleType('lumenis.system.ai_gateway.core')
     fake_int._chat = fake_chat
-    # execute_per_call_request 函数体内 import intelligence，注入 sys.modules
-    monkeypatch.setitem(sys.modules, 'intelligence', fake_int)
+    # execute_per_call_request 函数体内导入 canonical AI Gateway core，注入 sys.modules
+    monkeypatch.setitem(sys.modules, 'lumenis.system.ai_gateway.core', fake_int)
     ai_resource_packs.execute_per_call_request('测试需求', model='glm-5.3')
     assert captured['model'] == 'glm-5.3'
 
 def test_intelligence_chat_model_override(monkeypatch):
-    import intelligence
+    from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     def fake_provider_config():
         return ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4')
@@ -56,7 +56,7 @@ def test_intelligence_chat_model_override(monkeypatch):
 
 def test_intelligence_chat_glm53_no_thinking(monkeypatch):
     """glm-5.3 始终思考：不得传 thinking（否则 400），且 content 空时回退 reasoning_content。"""
-    import intelligence
+    from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
                         lambda: ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4'))
@@ -82,7 +82,7 @@ def test_intelligence_chat_glm53_no_thinking(monkeypatch):
 # ---------- P0B-2 智谱评审发现修复回归（2026-09-03）----------
 def test_provider_config_glm_alias_no_keyerror(monkeypatch):
     """AI_PROVIDER=glm 时不得 KeyError（configs 无 'glm' 键，应映射到 zhipu）。智谱评审 P0B-2。"""
-    import intelligence
+    from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('AI_PROVIDER', 'glm')
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-abc')
     intelligence._CACHE['ts'] = 0  # 强制重算
@@ -94,7 +94,7 @@ def test_provider_config_glm_alias_no_keyerror(monkeypatch):
 
 def test_provider_config_glm_without_key_returns_none(monkeypatch):
     """AI_PROVIDER=glm 且无 key 时返回 None（不崩溃、不降级异常）。"""
-    import intelligence
+    from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('AI_PROVIDER', 'glm')
     monkeypatch.delenv('ZHIPU_API_KEY', raising=False)
     intelligence._CACHE['ts'] = 0
@@ -104,7 +104,7 @@ def test_provider_config_glm_without_key_returns_none(monkeypatch):
 
 def test_glm53_case_insensitive_no_thinking(monkeypatch):
     """GLM-5.3 大写也应视为始终思考模型，不传 thinking（防 400）。"""
-    import intelligence
+    from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
                         lambda: ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4'))
@@ -129,7 +129,7 @@ def test_glm53_case_insensitive_no_thinking(monkeypatch):
 
 def test_glm53_flash_variant_no_thinking(monkeypatch):
     """glm-5.3-flash 变体也应视为始终思考，不传 thinking。"""
-    import intelligence
+    from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
                         lambda: ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4'))
@@ -155,7 +155,8 @@ def test_glm53_flash_variant_no_thinking(monkeypatch):
 def test_search_enhance_default_model_is_web_search_pro(monkeypatch):
     """search_enhance 默认运行时使用智谱联网搜索 web-search-pro。
     签名 model=None 为动态路由（自 ZHIPU_SEARCH_MODEL 获取），无环境覆盖时回退官方联网搜索 web-search-pro。"""
-    import intelligence, inspect
+    from lumenis.system.ai_gateway import core as intelligence
+    import inspect
     sig = inspect.signature(intelligence.search_enhance)
     assert sig.parameters['model'].default is None, '签名默认应为 None（动态读 ZHIPU_SEARCH_MODEL）'
     monkeypatch.delenv('ZHIPU_SEARCH_MODEL', raising=False)
@@ -163,7 +164,8 @@ def test_search_enhance_default_model_is_web_search_pro(monkeypatch):
 
 def test_search_enhance_parses_tool_calls(monkeypatch):
     """web-search-pro 返回 message.tool_calls[].search_result 时应正确解析为 results（真实联网搜索）。"""
-    import intelligence, sys, types
+    from lumenis.system.ai_gateway import core as intelligence
+    import sys, types
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-abc')
     monkeypatch.setenv('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')
     # mock ai_resource_packs 额度

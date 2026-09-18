@@ -234,7 +234,7 @@ def execute_per_call_request(user_request: str, model: str = "glm-5.3") -> Dict:
 
     # 调用 AI 执行需求（通过 intelligence 网关；model 真正传下去，默认智谱旗舰 glm-5.3）
     try:
-        import intelligence
+        from lumenis.system.ai_gateway import core as intelligence
         result, provider = intelligence._chat(
             system="你是Z-Brand Intelligence Platform的AI执行助手。根据用户需求，给出专业、可执行的方案。",
             user=user_request,
