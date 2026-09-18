@@ -19,7 +19,7 @@ Collector Guard 集成层（旁路模式 V1.0）
 import logging
 from typing import Dict, Optional
 
-from collector_guard import CollectorGuard, create_guard, guard_enabled
+from lumenis.system.collector.guard import CollectorGuard, create_guard, guard_enabled
 
 logger = logging.getLogger(__name__)
 

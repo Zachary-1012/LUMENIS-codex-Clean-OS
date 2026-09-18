@@ -1,0 +1,1 @@
+"""LUMENIS SYSTEM ownership boundary."""

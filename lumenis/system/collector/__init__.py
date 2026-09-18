@@ -1,0 +1,1 @@
+"""Canonical SYSTEM Collector owner."""

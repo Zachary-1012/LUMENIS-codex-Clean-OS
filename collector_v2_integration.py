@@ -23,13 +23,13 @@ from functools import wraps
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from collector_v2.xhs.collector import XHSCollector
-    from collector_v2.pipeline.normalize import NoteNormalizer
-    from collector_v2.pipeline.deduplicate import SimHashDeduplicator
-    from collector_v2.pipeline.spam_filter import SpamFilter
-    from collector_v2.pipeline.subject_filter import SubjectFilter, filter_subject
-    from collector_v2.pipeline.persist import NotePersister
-    from collector_v2.scheduler.collector_job import Scheduler, CollectMode
+    from lumenis.system.collector.runtime.xhs.collector import XHSCollector
+    from lumenis.system.collector.runtime.pipeline.normalize import NoteNormalizer
+    from lumenis.system.collector.runtime.pipeline.deduplicate import SimHashDeduplicator
+    from lumenis.system.collector.runtime.pipeline.spam_filter import SpamFilter
+    from lumenis.system.collector.runtime.pipeline.subject_filter import SubjectFilter, filter_subject
+    from lumenis.system.collector.runtime.pipeline.persist import NotePersister
+    from lumenis.system.collector.runtime.scheduler.collector_job import Scheduler, CollectMode
     from subject_rules import subject_hit_text
     V2_AVAILABLE = True
 except ImportError as e:

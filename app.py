@@ -4172,7 +4172,7 @@ def api_official_info():
 def api_official_collect():
     """触发官方信息采集"""
     try:
-        from collector_v2.official_info_scraper import OfficialInfoScraper
+        from lumenis.system.collector.runtime.official_info_scraper import OfficialInfoScraper
         scraper = OfficialInfoScraper(db=db)
         results = scraper.collect_all()
         return jsonify({'ok': True, 'message': f'采集完成，共{len(results)}条', 'count': len(results)})
