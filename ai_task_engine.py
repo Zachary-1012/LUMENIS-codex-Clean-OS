@@ -1161,7 +1161,7 @@ class TaskEngine:
 
         def _ai_worker():
             try:
-                import ai_channel
+                from lumenis.system.ai_gateway import channel as ai_channel
                 if hasattr(ai_channel, "call_ai_with_fallback"):
                     r = ai_channel.call_ai_with_fallback(
                         prompt=text, operation=operation, context=data,

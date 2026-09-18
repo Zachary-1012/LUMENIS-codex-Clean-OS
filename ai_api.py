@@ -17,7 +17,7 @@ import ai_governance
 import ai_analyzer
 import ai_learning_engine
 import ai_filter
-import ai_channel
+from lumenis.system.ai_gateway import channel as ai_channel
 import function_registry
 import database as db
 from report_api import _canonical_report_metrics
@@ -361,7 +361,7 @@ def api_ai_filter_cleanup():
 def api_ai_channel_health():
     """云端 AI 通道多层稳固层健康快照（熔断/心跳/可用性），供前端小 icon 与 24h 监控"""
     try:
-        import ai_channel as _aic
+        from lumenis.system.ai_gateway import channel as ai_channel as _aic
         import intelligence as _intel
         _st = _intel.ai_status()
         _h = _aic.channel_health(provider=_st.get('provider',''), model=_st.get('model',''))

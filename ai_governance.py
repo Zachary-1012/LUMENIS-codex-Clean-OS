@@ -262,7 +262,7 @@ class AIUsageTracker:
         provider_stats = self.get_provider_stats()
         # 判断当前主力 provider
         try:
-            from provider_registry import active_providers
+            from lumenis.system.ai_gateway.providers import active_providers
             active = active_providers()
         except Exception:
             active = ["zhipu"]

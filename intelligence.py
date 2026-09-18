@@ -1,5 +1,5 @@
 import threading, time
-from provider_registry import is_provider_available, provider_status
+from lumenis.system.ai_gateway.providers import is_provider_available, provider_status
 
 # V1.0: 线程安全的最后一次 AI 调用元信息（用于 token 记录，不破坏 _chat 2-tuple 接口）
 _last_call_meta_lock = threading.Lock()
@@ -30,7 +30,7 @@ def _get_call_meta():
 否则自动退回可审计的本地规则智能引擎。外部 API Key 永远不是必需项。
 """
 import json, os, re, urllib.request, urllib.error, time, shutil, platform
-import ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+心跳保活）
+from lumenis.system.ai_gateway import channel as ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+心跳保活）
 
 # ZBC Phase 7: module status markers
 MODULE_STATUS = 'ACTIVE_PRIMARY'
@@ -224,7 +224,7 @@ def select_model_by_capability(capability='daily'):
     entry['capability'] = cap
     # 运行时检查主 provider 可用性，不可用时标记并建议 fallback
     try:
-        from provider_registry import is_provider_available, provider_status
+        from lumenis.system.ai_gateway.providers import is_provider_available, provider_status
         primary = entry['provider']
         entry['primary_available'] = is_provider_available(primary)
         entry['primary_status'] = provider_status(primary)
@@ -672,7 +672,7 @@ def search_enhance(query, context='', max_results=5, model=None, level='medium')
             'max_tokens': 2000,
             'thinking': {'type': 'disabled'},
         }
-        import ai_channel
+        from lumenis.system.ai_gateway import channel as ai_channel
         resp_bytes, _attempts = ai_channel.post_with_retry(
             base_url.rstrip('/') + '/chat/completions',
             json.dumps(payload, ensure_ascii=False).encode('utf-8'),
