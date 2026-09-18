@@ -5,6 +5,7 @@ from platform_adapters.public_http import PublicHttpAdapter
 from platform_adapters.public_source import PublicResponse, PublicSourceError, validate_public_url
 from platform_adapters.sitemap import SitemapAdapter
 from platform_adapters.web_atom import AtomAdapter
+from platform_adapters.web_rss import WebRSSAdapter
 
 
 def _response(body: str, content_type: str) -> PublicResponse:
@@ -57,6 +58,38 @@ def test_atom_normalizes_entry_identity_and_timestamp():
     assert result.items[0]["author_nickname"] == "Publisher"
     assert result.items[0]["publish_datetime"]
     assert result.metadata["provider"] == "feedparser_atom"
+
+
+def test_web_rss_normalizes_existing_public_reader_and_provenance(monkeypatch):
+    import web_monitor_v570
+
+    monkeypatch.setattr(
+        web_monitor_v570,
+        "fetch_google_news_rss",
+        lambda query, max_results=20: {
+            "ok": True,
+            "collected_at": "2026-09-18T04:00:00+00:00",
+            "provider": "google_news_rss",
+            "source": "news.google.com/rss/search",
+            "items": [{
+                "title": "Public RSS result",
+                "url": "https://public.example.test/rss-1",
+                "source": "Example Publisher",
+                "published_at": "2026-09-18T03:00:00+00:00",
+            }],
+        },
+    )
+
+    result = WebRSSAdapter().search("lumenis", max_results=1)
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]["platform_content_id"].startswith("google-news:")
+    assert result.items[0]["title"] == "Public RSS result"
+    assert result.items[0]["author_nickname"] == "Example Publisher"
+    assert result.items[0]["url"] == "https://public.example.test/rss-1"
+    assert result.metadata["provider"] == "google_news_rss"
+    assert result.metadata["source"] == "news.google.com/rss/search"
+    assert result.metadata["collected_at"]
 
 
 def test_sitemap_discovers_urls_without_creating_content_store():

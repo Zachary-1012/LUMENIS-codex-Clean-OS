@@ -243,3 +243,22 @@ OPERATING   = real operation produces required live/time evidence
 ```
 
 Never convert dependency installation, plugin installation, documentation, a CI trigger, an HTTP 200 or a rendered page into `LIVE_VERIFIED`.
+
+## 2026-09-18 closure update — current evidence, not a historical overwrite
+
+This dated addendum records the current implementation after the original baseline above. It does not rewrite the earlier failure record or claim public deployment.
+
+| Area | Current evidence | Classification |
+|---|---|---|
+| Dependency | `requirements.txt` contains `feedparser>=6.0.11` | MANIFEST_PRESENT |
+| Public HTTP | `platform_adapters/public_http.py` uses the shared SSRF-safe public fetch boundary | IMPLEMENTED / TESTED |
+| RSS | Existing `web_monitor_v570.fetch_google_news_rss` is normalized by `WebRSSAdapter` and covered by a fixture test | IMPLEMENTED / TESTED |
+| Atom | `AtomAdapter` uses `feedparser`, shared public fetch, provenance, and bounded item normalization | IMPLEMENTED / TESTED |
+| Sitemap | `SitemapAdapter` discovers URL entries without creating a second content store | IMPLEMENTED / TESTED |
+| Evidence boundary | `tests/test_public_source_adapters.py` proves adapter output enters the existing `secondary_collection` evidence/canonical boundary | TESTED |
+| Hermetic regression | The repository CI selector reached 100% locally with `pytest -m 'not online'`; no production DB was used by the new fixtures | LOCAL_PASS |
+| Runtime | Canonical 8201 was converged to one supervisor-owned process tree; `/healthz` returned 200 after restart | RUNTIME_VERIFIED_LOCAL |
+| Internal browser | Codex In-app Browser tab 3 operated CTH-03: platform selector, keyword input, and read-only collection action were visible and controllable | UI_VERIFIED_LOCAL |
+| External release | GitHub Actions billing/account gate and public deployment are separate release gates | NOT_CLAIMED |
+
+The current runtime boundary remains: human-triggered, public or authorized read-only collection; no platform write and no automatic publishing. The built-in browser is the product interaction surface for this acceptance path; an external browser is not evidence for this gate.

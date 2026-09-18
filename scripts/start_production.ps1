@@ -56,6 +56,16 @@ function Test-ProcExists([string]$CmdPattern) {
         Where-Object { $_.CommandLine -and ($_.CommandLine -match $CmdPattern) }
     return [bool]$hit
 }
+function Get-CanonicalSupervisor {
+    $rootPattern = [regex]::Escape($Root)
+    @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object {
+            $_.CommandLine -and
+            ($_.CommandLine -match 'run_supervised\.py') -and
+            ($_.CommandLine -match '8201') -and
+            ($_.CommandLine -match $rootPattern)
+        })
+}
 function Wait-Healthz([string]$Url, [int]$Seconds=15) {
     for ($i=0; $i -lt $Seconds; $i++) {
         if (Test-Http $Url -TimeoutSec 2) { return $true }
@@ -64,19 +74,38 @@ function Wait-Healthz([string]$Url, [int]$Seconds=15) {
     return $false
 }
 
-# --------------- 8201 watchdog (deterministic: healthy -> skip; unhealthy -> clean stale then single start) ---------------
+# --------------- 8201 watchdog (deterministic: healthy + supervisor -> skip; otherwise converge) ---------------
 # Root cause fixed 2026-09-03: HealthGuard fires every 5min; old branch waited on an alive-but-broken
 # run_supervised forever and never cleaned, so repeated firings stacked run_supervised->run_supervised
 # and app.py -> app.py competing for 8201. Now unhealthy always means: kill stale 8201 python, drop
 # stale lock, then start exactly ONE supervisor (whose own lock is atomic-create).
 $httpOk = Test-Http 'http://127.0.0.1:8201/healthz'
-if ($httpOk) {
-    Write-Output '[LUMENIS-8201] already healthy, skip'
+$supervisors = @(Get-CanonicalSupervisor)
+if ($httpOk -and $supervisors.Count -eq 1) {
+    Write-Output '[LUMENIS-8201] healthy with exactly one canonical supervisor, skip'
 } else {
-    $stale = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -and ($_.CommandLine -match '8201') -and ($_.CommandLine -match 'run_supervised\.py|app\.py') }
-    if ($stale) {
-        Write-Output ("[LUMENIS-8201] cleaning stale pids: " + (($stale | ForEach-Object { $_.ProcessId }) -join ','))
-        $stale | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    if ($httpOk -and $supervisors.Count -eq 0) {
+        Write-Output '[LUMENIS-8201] healthy but supervisor missing; converging orphan app tree'
+    } elseif ($supervisors.Count -gt 1) {
+        Write-Output ("[LUMENIS-8201] duplicate canonical supervisors detected: " + $supervisors.Count)
+    } else {
+        Write-Output '[LUMENIS-8201] health check failed; converging stale 8201 tree'
+    }
+    $stale = @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object {
+            $_.CommandLine -and
+            ($_.CommandLine -match '8201') -and
+            ($_.CommandLine -match 'run_supervised\.py|app\.py') -and
+            ($_.CommandLine -match [regex]::Escape($Root))
+        })
+    if ($stale.Count -gt 0) {
+        $stalePids = @($stale | ForEach-Object { [int]$_.ProcessId })
+        $treeRoots = @($stale | Where-Object { $stalePids -notcontains [int]$_.ParentProcessId })
+        if ($treeRoots.Count -eq 0) { $treeRoots = $stale }
+        Write-Output ("[LUMENIS-8201] cleaning exact stale tree roots: " + (($treeRoots | ForEach-Object { $_.ProcessId }) -join ','))
+        foreach ($rootProc in $treeRoots) {
+            & taskkill.exe /PID $rootProc.ProcessId /T /F 2>$null | Out-Null
+        }
         Start-Sleep -Seconds 3
     }
     Remove-Item (Join-Path $Root 'data\supervisor_8201.lock') -Force -ErrorAction SilentlyContinue

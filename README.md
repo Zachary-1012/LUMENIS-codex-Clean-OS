@@ -184,7 +184,7 @@ Alembic
 
 [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
 
-特别说明：2026-09-16 远程审计点 `requirements.txt` **尚未包含 `feedparser`**。这是历史审计事实，不得反向覆盖当前 manifest；Codex 应先读取当前 `requirements.txt` 再判断其当前状态。
+特别说明：2026-09-16 远程审计点记录 `requirements.txt` **尚未包含 `feedparser`**，这是历史事实。当前 canonical `requirements.txt` 已包含 `feedparser>=6.0.11`；验收必须继续以当前 manifest、重启后的 runtime 和测试证据为准。
 
 ---
 

@@ -272,10 +272,10 @@ APScheduler
 tenacity
 ```
 
-`feedparser` was verified locally during the current acceptance session, but the audited remote baseline did not contain it in `requirements.txt`. Until that manifest change is committed/pushed, classify it as:
+The earlier audit baseline did not contain `feedparser` in `requirements.txt`. The current canonical manifest now contains `feedparser>=6.0.11`, and the production adapter imports it through the Atom adapter. Treat the dated audit statement below as historical only; current status must be read from the manifest and runtime evidence:
 
 ```text
-LOCAL_VERIFIED / REMOTE_NOT_YET_IMPLEMENTED
+MANIFEST_PRESENT / LOCAL_VERIFIED / RUNTIME_ADAPTER_RESTART_REQUIRED_AFTER_SOURCE_CHANGES
 ```
 
 Do not lie by upgrading it to remote `IMPLEMENTED` before the repository manifest actually contains it.
