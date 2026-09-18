@@ -235,21 +235,21 @@ class TestTime口径:
         assert "collected_at BETWEEN" not in source
 
     def test_export_filter_uses_publish_date(self):
-        """export_report.filter_notes_by_period 必须使用 publish_date。"""
+        """Shared Reporting export_api.filter_notes_by_period 必须使用 publish_date。"""
         import inspect
-        import export_report as er
+        from lumenis.shared.reporting import export_api as er
         source = inspect.getsource(er.filter_notes_by_period)
         assert "publish_date" in source
         # 日报逻辑用 publish_date >= day_before，周期用 publish_date BETWEEN
         assert "publish_date >= ?" in source or "publish_date >= ? AND publish_date <= ?" in source
 
     def test_report_export_engine_uses_publish_date(self):
-        """report_export/report_engine._notes 必须优先使用 publish_date。"""
+        """Shared Reporting export_engine._notes 必须优先使用 publish_date。"""
         import inspect
         # 动态导入 report_export 下的模块
         import importlib.util
         mod_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                "report_export", "report_engine.py")
+                                "lumenis", "shared", "reporting", "export_engine.py")
         spec = importlib.util.spec_from_file_location("report_export_engine", mod_path)
         mod = importlib.util.module_from_spec(spec)
         # 不执行模块（避免依赖），只读源码
@@ -259,10 +259,10 @@ class TestTime口径:
         assert "publish_datetime" in source
 
     def test_report_filter_fallback_collected_at_is_flagged(self):
-        """report_filter 在无 publish_date 时回退 collected_at，这是已知行为。
+        """Shared Reporting filtering 在无 publish_date 时回退 collected_at，这是已知行为。
         测试确认回退逻辑存在（审计标记为 P2 待优化）。"""
         import inspect
-        import report_filter as rf
+        from lumenis.shared.reporting import filtering as rf
         source = inspect.getsource(rf.filter_notes_for_daily_report)
         # 确认存在 collected_at 回退（已知时间口径混淆点）
         assert "collected_at" in source
@@ -285,17 +285,17 @@ class TestSubjectFiltering:
         assert "subject" in source.lower() or "_subject_clause" in source
 
     def test_export_report_has_subject_filter(self):
-        """export_report.filter_notes_by_period 必须包含主体过滤（Phase 9 修复）。"""
+        """Shared Reporting export_api.filter_notes_by_period 必须包含主体过滤（Phase 9 修复）。"""
         import inspect
-        import export_report as er
+        from lumenis.shared.reporting import export_api as er
         source = inspect.getsource(er.filter_notes_by_period)
         assert "is_taikoo_verified=1" in source
         assert "subject_sql_and_values" in source or "subject" in source.lower()
 
     def test_report_export_engine_has_subject_filter(self):
-        """report_export/report_engine._notes 必须包含主体过滤（Phase 9 修复）。"""
+        """Shared Reporting export_engine._notes 必须包含主体过滤（Phase 9 修复）。"""
         mod_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                "report_export", "report_engine.py")
+                                "lumenis", "shared", "reporting", "export_engine.py")
         with open(mod_path, "r", encoding="utf-8") as f:
             source = f.read()
         assert "is_taikoo_verified=1" in source
@@ -309,9 +309,9 @@ class TestSubjectFiltering:
         assert "subject_sql_and_values" in source
 
     def test_no_full_table_scan_in_export(self):
-        """export_report 不得出现无主体过滤的全表扫描 SELECT * FROM notes WHERE 1=1。"""
+        """Shared Reporting export_api 不得出现无主体过滤的全表扫描 SELECT * FROM notes WHERE 1=1。"""
         import inspect
-        import export_report as er
+        from lumenis.shared.reporting import export_api as er
         source = inspect.getsource(er.filter_notes_by_period)
         # 修复后不应有裸的 WHERE 1=1 全表扫描
         assert "SELECT * FROM notes WHERE 1=1" not in source
