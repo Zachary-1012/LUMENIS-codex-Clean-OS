@@ -1,1 +1,0 @@
-{"ts": "2026-09-06T04:56:44", "provider": "rule", "model": "rule", "task": "gateway:summarizer", "ok": false, "elapsed_s": 0.0, "tokens_est": 99, "note": "", "in_tokens": 99, "out_tokens": 0}
