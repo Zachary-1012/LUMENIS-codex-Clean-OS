@@ -458,14 +458,11 @@ Do not treat prototype-only screens as production-bound screens.
 
 ### Experience authority routing
 
-For any user-visible Experience/UI task, read:
+For any user-visible Experience/UI task, the **sole design authority** is:
 
 ```text
-00-GOVERNANCE/LUMENIS-EXPERIENCE-AUTHORITY-CURRENT.json
-→ 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 ```
-
-The Constitution is the sole current design authority for the whole product.
 
 `experience_v2/AGENTS.md` is an execution router only and must not define a second design language.
 
@@ -476,7 +473,7 @@ python scripts/audit_tools/verify_experience_authority_exclusive.py
 python scripts/audit_tools/verify_experience_anti_template.py --strict
 ```
 
-Do not perform additional broad legacy-design deletion during the V3 convergence round. Physical cleanup is a separate next-round task. Historical material, if present, is provenance only and never current design authority.
+Do not reintroduce deleted historical design/handoff/reference material into the current main tree.
 
 ## 14. Testing policy
 

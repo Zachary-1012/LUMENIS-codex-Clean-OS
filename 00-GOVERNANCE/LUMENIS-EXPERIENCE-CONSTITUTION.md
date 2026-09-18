@@ -3,8 +3,7 @@
 > Status: **CANONICAL / SOLE EXPERIENCE DESIGN AUTHORITY**  
 > Internal version: **3.0**  
 > Effective: 2026-09-18  
-> Stable path: `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`  
-> Machine authority: `00-GOVERNANCE/LUMENIS-EXPERIENCE-AUTHORITY-CURRENT.json`
+> Stable path: `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
 
 This file is the **only human-authored UI / UX / visual / interaction / motion / responsive / presentation design authority in the repository**.
 
@@ -35,7 +34,7 @@ Feature contracts may define **objects, fields, states, permissions, workflows a
 
 The directory name `experience_v2/**` is a compatibility path. It does **not** grant Experience V2 design authority.
 
-Historical design material is non-authoritative provenance. Physical cleanup is a separate next-round task; the V3 convergence round must not continue broad deletion.
+Historical design material is recoverable from Git history. It does not belong in the current main tree.
 
 ## 1. Authority order
 
@@ -417,7 +416,7 @@ Unless a current product requirement proves a narrow exception, fail review when
 - another brand name is used as target style;
 - CSS decoration changes but semantic hierarchy does not;
 - many pages are declared complete because one generic schema renders them;
-- a competing design authority is introduced or historical material is treated as current design authority.
+- a parallel design/handoff/reference document is committed.
 
 ## 25. Golden Pages
 
@@ -458,31 +457,20 @@ choose fashionable style → add cards → add glass → insert data → call it
 
 For non-trivial work, the plan names active workflow, truth sources, semantic primitives, generic pattern being retired/avoided and acceptance checks.
 
-## 27. Authority exclusivity and cleanup freeze
+## 27. Repository exclusivity
 
-V3 is the sole current design authority.
+The current main tree must not contain historical UI/UX/visual design authorities, design research packs, Apple/UI reference packs, old visual baselines, old design-system documents, old frontend design handoffs or old page-design specifications.
 
-For the **current V3 convergence round**, do not perform additional legacy-design cleanup, archive purges, screenshot/reference-pack deletion, or broad historical-file removal merely to make the tree look clean.
+Those remain recoverable from Git history.
 
-This round is limited to:
-
-```text
-V3 authority
-→ Codex routing
-→ anti-template enforcement
-→ implementation migration
-→ acceptance
-```
-
-Historical material, if still present, is non-authoritative provenance only and must not be normal Codex implementation input.
-
-Physical legacy cleanup is a **separate next-round task** with its own inventory, dependency check, reference repair and regression evidence.
-
-Machine authority registry:
+If research is needed:
 
 ```text
-00-GOVERNANCE/LUMENIS-EXPERIENCE-AUTHORITY-CURRENT.json
+research externally → extract principle → decide
+→ update THIS Constitution only if canonical → implement
 ```
+
+Do not commit a second design bible.
 
 Blocking checks:
 
@@ -514,9 +502,8 @@ This sole authority does not claim current implementation is already compliant.
 Current honest state:
 
 ```text
-V3 SOLE AUTHORITY ACTIVE
-V3 WHOLE-PRODUCT COVERAGE ACTIVE
-ADDITIONAL LEGACY CLEANUP FROZEN FOR THIS ROUND
+SOLE AUTHORITY ACTIVE
+LEGACY DESIGN AUTHORITIES REMOVED FROM MAIN TREE
 IMPLEMENTATION MIGRATION REQUIRED
 ```
 
