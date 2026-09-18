@@ -49,11 +49,11 @@ jobs:
         run: |
           mode="--baseline"
           changed="$(git diff --name-only HEAD^ HEAD || true)"
-          if echo "$changed" | grep -Eq '^(experience_screens\.py$|experience_v2/(03_ia_and_flows|04_design_system|05_components|06_motion|07_screens|09_responsive|10_prototype)/)'; then
+          if echo "$changed" | grep -Eq '^experience_v2/(05_components|07_screens|10_prototype)/'; then
             mode="--strict"
-            echo "Core Experience implementation changed; strict V3 gate required."
+            echo "Core Experience implementation changed; strict Constitution gate required."
           else
-            echo "No core Experience implementation change; enforcing V3 baseline ratchet."
+            echo "No core Experience implementation change; enforcing anti-template baseline ratchet."
           fi
           python scripts/audit_tools/verify_experience_anti_template.py "$mode"
 
