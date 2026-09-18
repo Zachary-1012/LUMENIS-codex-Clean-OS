@@ -302,9 +302,9 @@ class TestSubjectFiltering:
         assert "subject_sql_and_values" in source
 
     def test_api_report_daily_has_subject_filter(self):
-        """report_api.api_report_daily 必须包含 subject_sql_and_values。"""
+        """Shared Reporting routes.api_report_daily 必须包含 subject_sql_and_values。"""
         import inspect
-        import report_api as rap
+        from lumenis.shared.reporting import routes as rap
         source = inspect.getsource(rap.api_report_daily)
         assert "subject_sql_and_values" in source
 
@@ -472,7 +472,7 @@ class TestAPIFakeSuccessPrevention:
     def test_reports_list_no_fake_success_on_error(self):
         """api_reports_list 异常分支必须返回 ok=False。"""
         import inspect
-        import report_api as rap
+        from lumenis.shared.reporting import routes as rap
         source = inspect.getsource(rap.api_reports_list)
         # 异常分支不应有 ok: True
         except_section = source.split("except Exception")[1] if "except Exception" in source else ""
@@ -482,7 +482,7 @@ class TestAPIFakeSuccessPrevention:
     def test_generate_report_verifies_artifact(self):
         """api_generate_report 必须验证 _artifact_verified。"""
         import inspect
-        import report_api as rap
+        from lumenis.shared.reporting import routes as rap
         source = inspect.getsource(rap.api_generate_report)
         assert "_artifact_verified" in source
         assert "_db_row_id" in source
@@ -490,14 +490,14 @@ class TestAPIFakeSuccessPrevention:
     def test_brand_report_export_verifies_file(self):
         """brand_report_export 必须调用 artifact 验证。"""
         import inspect
-        import report_api as rap
+        from lumenis.shared.reporting import routes as rap
         source = inspect.getsource(rap.brand_report_export)
         assert "verify_artifact_file" in source or "artifact" in source.lower()
 
     def test_api_report_uses_verify_report_dict(self):
         """api_report 必须调用 verify_report_dict 而非仅 bool(report)。"""
         import inspect
-        import report_api as rap
+        from lumenis.shared.reporting import routes as rap
         source = inspect.getsource(rap.api_report)
         assert "verify_report_dict" in source
         # 不应仅有 bool(bundle.get('report'))
