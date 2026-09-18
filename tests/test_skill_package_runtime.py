@@ -19,7 +19,7 @@ def test_local_skill_manifest_is_previewed_with_deny_by_default(tmp_path):
         "secrets_required": ["provider_token"],
     }), encoding="utf-8")
 
-    from skill_package_runtime import preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 
     result = preview_skill_source(str(package))
     assert result["ok"] is True
@@ -33,7 +33,7 @@ def test_local_skill_manifest_is_previewed_with_deny_by_default(tmp_path):
 
 
 def test_github_source_requires_explicit_revision_resolution():
-    from skill_package_runtime import detect_source, preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import detect_source, preview_skill_source
 
     source = "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS"
     detected = detect_source(source)
@@ -47,7 +47,7 @@ def test_github_source_requires_explicit_revision_resolution():
 
 
 def test_github_revision_resolution_accepts_advertised_head(monkeypatch):
-    import skill_package_runtime as runtime
+    from lumenis.shared.agents.skills import package_runtime as runtime
 
     calls = []
 
@@ -83,7 +83,7 @@ def test_standard_agentskills_skill_md_is_validated_without_json_manifest(tmp_pa
         encoding="utf-8",
     )
 
-    from skill_package_runtime import preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 
     result = preview_skill_source(str(package))
     assert result["state"] == "VALIDATED"
@@ -101,7 +101,7 @@ def test_standalone_skill_md_file_is_supported(tmp_path):
         encoding="utf-8",
     )
 
-    from skill_package_runtime import preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 
     result = preview_skill_source(str(skill_md))
     assert result["source"]["source_type"] == "skill_md"
@@ -115,7 +115,7 @@ def test_zip_path_traversal_manifest_is_not_accepted(tmp_path):
     with zipfile.ZipFile(package, "w") as archive:
         archive.writestr("../SKILL.md", "---\nname: unsafe-skill\ndescription: unsafe\n---\n")
 
-    from skill_package_runtime import preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 
     result = preview_skill_source(str(package))
     assert result["state"] == "BLOCKED"
@@ -123,7 +123,7 @@ def test_zip_path_traversal_manifest_is_not_accepted(tmp_path):
 
 
 def test_github_skill_directory_is_pinned_before_manifest_fetch(monkeypatch):
-    import skill_package_runtime as runtime
+    from lumenis.shared.agents.skills import package_runtime as runtime
 
     source = "https://github.com/example/skill/tree/main/skills/research-skill"
     detected = runtime.detect_source(source)
@@ -150,7 +150,7 @@ def test_github_skill_directory_is_pinned_before_manifest_fetch(monkeypatch):
 
 
 def test_github_skill_directory_preserves_exact_commit_pin_without_ls_remote(monkeypatch):
-    import skill_package_runtime as runtime
+    from lumenis.shared.agents.skills import package_runtime as runtime
 
     revision = "0123456789abcdef0123456789abcdef01234567"
     source = f"https://github.com/example/skill/tree/{revision}/trendhub-mcp"
@@ -166,7 +166,7 @@ def test_github_skill_directory_preserves_exact_commit_pin_without_ls_remote(mon
 
 
 def test_github_skill_manifest_is_discovered_at_pinned_revision_without_checkout(monkeypatch):
-    import skill_package_runtime as runtime
+    from lumenis.shared.agents.skills import package_runtime as runtime
 
     source = "https://github.com/Zachary-1012/Zachary-Skill/tree/main/trendhub-mcp"
     revision = "0123456789abcdef0123456789abcdef01234567"
@@ -197,7 +197,7 @@ def test_github_skill_manifest_is_discovered_at_pinned_revision_without_checkout
 
 
 def test_github_skill_root_manifest_does_not_guess_between_nested_skills(monkeypatch):
-    import skill_package_runtime as runtime
+    from lumenis.shared.agents.skills import package_runtime as runtime
 
     revision = "fedcba9876543210fedcba9876543210fedcba98"
 
@@ -226,7 +226,7 @@ def test_github_skill_root_manifest_does_not_guess_between_nested_skills(monkeyp
 
 
 def test_github_remote_registration_requires_validated_manifest_evidence(tmp_path, monkeypatch):
-    import skill_package_runtime as runtime
+    from lumenis.shared.agents.skills import package_runtime as runtime
     from account.models import init_account_db
     from account.skills import list_skills, register_validated_skill, set_skill_status
 
@@ -268,7 +268,7 @@ def test_github_remote_registration_requires_validated_manifest_evidence(tmp_pat
 
 
 def test_unknown_source_is_blocked_and_never_installed(tmp_path):
-    from skill_package_runtime import preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 
     result = preview_skill_source(str(tmp_path / "does-not-exist"))
     assert result["ok"] is False
@@ -353,7 +353,7 @@ def test_validated_skill_metadata_is_registered_disabled_and_uninstalled(tmp_pat
 
     from account.models import init_account_db
     from account.skills import list_skills, register_validated_skill
-    from skill_package_runtime import preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 
     init_account_db()
     preview = preview_skill_source(str(package))
@@ -370,7 +370,7 @@ def test_validated_skill_metadata_is_registered_disabled_and_uninstalled(tmp_pat
 
 def test_mcp_registration_is_fail_closed(tmp_path):
     from account.skills import register_validated_skill
-    from skill_package_runtime import preview_skill_source
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 
     preview = preview_skill_source("mcp+http://localhost:9000/tools")
     assert preview["state"] == "MCP_DISCOVERY_REQUIRED"

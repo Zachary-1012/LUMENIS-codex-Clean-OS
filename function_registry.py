@@ -138,7 +138,7 @@ def register_functions_as_skills(registry=None):
     skill entry. No execution capability is granted. Returns registration results.
     """
     try:
-        from skill_registry import (
+        from lumenis.shared.agents.skills.registry import (
             get_skill_registry, SkillMetadata, RiskLevel,
             ExecutionPolicy, EvaluationStatus,
         )

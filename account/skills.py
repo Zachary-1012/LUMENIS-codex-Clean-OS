@@ -325,7 +325,7 @@ def get_skill_info(skill_id: str) -> dict:
             info["config"] = {}
         # 最近执行状态
         try:
-            from skill_execution_chain import query_executions
+            from lumenis.shared.agents.skills.execution import query_executions
             execs = query_executions(skill_id=skill_id, limit=1)
             info["last_execution"] = execs[0] if execs else None
         except Exception:
@@ -339,7 +339,7 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
                       action_type: str = "ANALYZE", user_id: int = None,
                       user_role: str = "user", product: str = "SYSTEM") -> dict:
     """执行 Skill（走完整执行链：Permission→Firewall→Effect Fence→Execute→Evidence→Evaluation→Trace）"""
-    from skill_execution_chain import (
+    from lumenis.shared.agents.skills.execution import (
         run_execution_chain, ActionType, SkillRuntimeInfo,
     )
     # 获取 Skill 信息用于权限检查
@@ -401,13 +401,13 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
 
 def get_skill_executions(skill_id: str = None, limit: int = 50, status: str = None) -> list:
     """获取 Skill 执行历史"""
-    from skill_execution_chain import query_executions
+    from lumenis.shared.agents.skills.execution import query_executions
     return query_executions(skill_id=skill_id, limit=limit, status=status)
 
 
 def get_skills_status_light(product: str = None) -> dict:
     """轻量状态（主界面卡片用，只返回已启用+已注册）"""
-    from skill_execution_chain import get_skills_light_status
+    from lumenis.shared.agents.skills.execution import get_skills_light_status
     skills = get_skills_light_status(product=product)
     # 按类别分组
     categories = {}
