@@ -82,7 +82,7 @@ import reprocess
 import xhs_cookie_bridge
 import ai_filter
 from lumenis.shared.reporting import daily
-import report_engine
+from lumenis.shared.reporting import engine as report_engine
 import topic_campaign
 import app_evidence
 import swire_group
@@ -2655,7 +2655,7 @@ def api_translate():
 def api_notes_historical_v2():
     """历史案例笔记API v2（过期笔记，发布时间超过7天）"""
     try:
-        from report_filter import classify_notes_by_age
+        from lumenis.shared.reporting.filtering import classify_notes_by_age
         from datetime import datetime, timedelta
         
         end = datetime.now().strftime('%Y-%m-%d')
