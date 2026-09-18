@@ -1,14 +1,14 @@
 """
 lumenis.shared.reporting Shared Reporting
 ======================================
-CTH太古汇专属 + ZBMP通用品牌 两套话术
+CTH / 序境·商业运营 + BMP / 序境·品牌市场 双域报告话术
 日报/周报/月报/年报/专项报告
 Word & PDF 导出
 
 模块：
 - standard_taxonomy: 标准化分类体系（事件类型/风险等级/情感/传播主体/报告周期）
 - cth_phrases: 太古汇专属话术库（基于运营SOP提取）
-- zbmp_phrases: 通用品牌话术库（多行业适配）
+- zbmp_phrases: BMP 通用品牌话术库（内部技术 ID 保持 zbmp，多行业适配）
 - report_generator: 标准化报告生成器
 - word_pdf_export: Word/PDF导出器
 
