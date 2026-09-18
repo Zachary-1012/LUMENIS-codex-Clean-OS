@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 
 import collector
-from collector_guard.risk_engine import RiskEngine
+from lumenis.system.collector.guard.risk_engine import RiskEngine
 
 
 @pytest.fixture(autouse=True)

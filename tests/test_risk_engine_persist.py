@@ -11,7 +11,7 @@ import time
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from collector_guard.risk_engine import RiskEngine, _TRIPPED_BANDS  # noqa: E402
+from lumenis.system.collector.guard.risk_engine import RiskEngine, _TRIPPED_BANDS  # noqa: E402
 
 
 def test_default_no_state_file_pure_memory(tmp_path):
