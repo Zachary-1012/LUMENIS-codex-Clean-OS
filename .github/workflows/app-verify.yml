@@ -1,0 +1,55 @@
+name: LUMENIS App Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
+      - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+      - ".github/workflows/app-verify.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
+      - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+      - ".github/workflows/app-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-app:
+    name: Flutter application foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout LUMENIS
+        uses: actions/checkout@v5
+
+      - name: Install Flutter 3.47.2 stable
+        shell: bash
+        run: |
+          git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Flutter environment
+        shell: bash
+        run: |
+          flutter config --no-analytics
+          flutter --version
+          dart --version
+
+      - name: Resolve app dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyze canonical app
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test canonical app
+        working-directory: app
+        run: flutter test
