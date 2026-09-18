@@ -344,7 +344,7 @@ def generate_domain_report(
             }
             # 尝试使用品牌报告生成器
             try:
-                from brand_report_generator import BrandReportGenerator
+                from .brand_report import BrandReportGenerator
                 gen = BrandReportGenerator(brand_name="多品牌平台", report_period=f"{start}~{end}")
                 report_data["brand_report_available"] = True
             except Exception as _e:
