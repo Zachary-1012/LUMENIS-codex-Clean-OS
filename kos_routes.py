@@ -16,7 +16,7 @@
 
 
 
-复用 kos_engine.py 和 kos_report.py，不重复建设。
+复用 kos_engine.py 与 Shared Reporting KOS owner，不重复建设。
 
 
 
@@ -114,39 +114,8 @@ def _engine():
 
 
 def _report():
-
-
-
-
-
-    if "kos_report" not in sys.modules:
-
-
-
-
-
-        import kos_report
-
-
-
-
-
-    return sys.modules["kos_report"]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    from lumenis.shared.reporting import kos as kos_report
+    return kos_report
 
 
 @kos_bp.route("/overview", methods=["GET"])
@@ -2648,7 +2617,6 @@ def register_kos_api(app):
 
 
     app.register_blueprint(kos_bp)
-
 
 
 
