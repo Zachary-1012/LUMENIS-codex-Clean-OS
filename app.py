@@ -321,7 +321,7 @@ except Exception as _li_e:
 
 # Shard C：多平台数据导入接口（平台归一化+字段映射+ID精度保护，复用 notes 表）
 try:
-    from platform_adapters.multi_platform_import import import_multi_platform_records
+    from lumenis.system.collector.adapters.multi_platform_import import import_multi_platform_records
 
     @app.route('/api/import/multi-platform', methods=['POST'])
     def api_import_multi_platform():
@@ -2686,7 +2686,7 @@ def api_notes_historical_v2():
 def api_platform_health():
     """全局采集健康状态中心（只读）：逐平台状态 + 三类分清 + 动态调度，供首页健康小点与统一 Auth Modal。"""
     try:
-        from platform_adapters.health_center import build_platform_health
+        from lumenis.system.collector.adapters.health_center import build_platform_health
         return jsonify(build_platform_health())
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex)}), 500
@@ -4662,7 +4662,7 @@ def _get_shadow_planner():
     global _shadow_schedule_planner
     if _shadow_schedule_planner is None:
         try:
-            from platform_adapters.scheduling import get_planner
+            from lumenis.system.collector.adapters.scheduling import get_planner
             _shadow_schedule_planner = get_planner()  # 包级进程单例，与采集结果回写共享状态
         except Exception as e:
             print(f'[ShadowPlanner] init fail (non-blocking): {e}')
@@ -4727,7 +4727,7 @@ def scheduler_loop():
             _sp = _get_shadow_planner()
             if _sp is not None:
                 try:
-                    from platform_adapters.scheduling.gate import gate_should_run
+                    from lumenis.system.collector.adapters.scheduling.gate import gate_should_run
                     _should_run, _sd, _gate_mode = gate_should_run(
                         _sp, 'xhs', now=now, hard_allow=True, persist=True)
                     if _sd is not None:

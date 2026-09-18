@@ -137,7 +137,7 @@ def _platform_collection_section(*, consumer: str = "CTH") -> Dict[str, Any]:
     deliberately does not create a second BMP collector or truth table.
     """
     try:
-        from platform_adapters.secondary_collection import get_collection_surface
+        from lumenis.system.collector.adapters.secondary_collection import get_collection_surface
 
         surface = _safe(get_collection_surface, default={})
     except Exception:
