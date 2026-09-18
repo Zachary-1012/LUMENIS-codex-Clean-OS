@@ -1,8 +1,10 @@
 /* ============================================================================
- * LUMENIS Experience V2 — Section composition engine (Pattern -> Component)
- * Renders declarative section descriptors into the 10 core component families.
- * 44 screens may ONLY compose registered patterns/components (no bespoke layout).
- * All rendered data is prototype fixture: every root carries data-source=prototype.
+ * LUMENIS current section renderer.
+ * Implementation infrastructure only; design authority lives exclusively in
+ * 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md.
+ * Existing generic renderers are migration debt, not page-design precedent.
+ * Workflow-specific semantic compositions may replace/extend them.
+ * Prototype roots carry data-source=prototype until runtime hydration.
  * Charts are deterministic inline SVG (no external chart library).
  * Exposes window.LumSections.render(section, state)
  * ========================================================================== */
