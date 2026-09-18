@@ -137,7 +137,7 @@ class ReportGenerator:
         )
         # 风险指数（复用现有算法）
         try:
-            from daily_report import calculate_risk_index, calculate_brand_health_score
+            from .daily import calculate_risk_index, calculate_brand_health_score
             risk_index = calculate_risk_index(notes, events)
             brand_health = calculate_brand_health_score(notes, risk_index)
         except Exception:
