@@ -39,7 +39,7 @@ from .nav_config import (
 from .skills import (
     list_skills, set_skill_status, configure_skill, add_custom_skill, get_enabled_skills,
     get_skill_info, execute_skill_api, get_skill_executions, get_skills_status_light,
-    register_validated_skill,
+    register_validated_skill, activate_installed_mcp_skill,
 )
 from skill_package_runtime import preview_skill_source
 from mcp_discovery import call_mcp_stdio, discover_mcp_stdio
@@ -619,6 +619,27 @@ def api_register_skill_source():
     )
     result = register_validated_skill(preview)
     return jsonify(result), 201 if result.get("success") else 400
+
+
+@account_bp.route("/skills/source/activate", methods=["POST"])
+@require_owner
+def api_activate_installed_skill():
+    """Activate a built, locally installed MCP Skill after its self-test.
+
+    The endpoint never downloads or executes an arbitrary path.  The runtime
+    adapter accepts only packages under the canonical Skill package root and
+    records the result in the existing registry; enabling remains separate.
+    """
+    data = request.get_json(silent=True) or {}
+    skill_id = str(data.get("skill_id") or "").strip()
+    install_path = str(data.get("install_path") or "").strip()
+    result = activate_installed_mcp_skill(
+        skill_id,
+        install_path,
+        revision=str(data.get("revision") or "").strip(),
+        digest=str(data.get("digest") or "").strip(),
+    )
+    return jsonify(result), 200 if result.get("success") else 400
 
 
 @account_bp.route("/skills/source/mcp/discover", methods=["POST"])

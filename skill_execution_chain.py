@@ -159,12 +159,33 @@ def effect_fence(ctx):
             if writes else "read-only action, no production side effect"}
 
 
-def execute_skill(ctx, handler=None):
+def execute_skill(ctx, handler=None, skill_info=None):
     if handler is not None:
         try:
             return {"success": True, "result": handler(ctx), "source": "custom_handler"}
         except Exception as e:
             return {"success": False, "error": str(e), "traceback": traceback.format_exc()[-500:], "source": "custom_handler"}
+    # Registered MCP Skills use the same execution chain as built-ins.  The
+    # adapter is deliberately read-only and fail-closed; the Skill metadata is
+    # passed through the existing registry rather than creating a new one.
+    if skill_info and str((skill_info.config or {}).get("runtime") or "").lower() == "mcp":
+        try:
+            from mcp_skill_runtime import invoke_registered_mcp
+            mcp_result = invoke_registered_mcp(
+                {"skill_id": skill_info.skill_id, **(skill_info.config or {})},
+                ctx.input_payload,
+            )
+            return {
+                "success": bool(mcp_result.get("ok")),
+                "result": mcp_result,
+                "source": "registered_mcp",
+                "error": ("; ".join(mcp_result.get("errors") or [])
+                          if not mcp_result.get("ok") else None),
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e),
+                    "traceback": traceback.format_exc()[-500:],
+                    "source": "registered_mcp"}
     try:
         from lumenis_skill_adapter import get_skill_adapter
         adapter = get_skill_adapter()
@@ -370,7 +391,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
         write_trace(ctx, int((time.time() - start) * 1000)); return ctx
     ctx.effect_fence_result = effect_fence(ctx)
     ctx.status = ExecutionStatus.RUNNING
-    ctx.execute_result = execute_skill(ctx, handler=handler)
+    ctx.execute_result = execute_skill(ctx, handler=handler, skill_info=skill_info)
     ctx.evidence = build_evidence(ctx)
     ctx.evidence_record = record_execution_evidence(ctx)
     ctx.evaluation = evaluate_execution(ctx)

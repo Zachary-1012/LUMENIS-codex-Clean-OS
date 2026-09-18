@@ -144,6 +144,8 @@ tests/_*.bin
 video_frames/
 # ---------- 轻量 Staging 运行时（独立库副本/日志，不入库） ----------
 staging/
+# ---------- 本机已安装的远程 Skill 运行时（来源与构建产物不入 LUMENIS 仓） ----------
+runtime/skill_packages/
 # ---------- 例外：UI/交互研究源视频（统一走 Git LFS，见 .gitattributes） ----------
 !docs/reference/ui-research/source-videos/
 !docs/reference/ui-research/source-videos/*.mp4

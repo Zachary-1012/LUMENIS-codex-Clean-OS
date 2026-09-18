@@ -695,6 +695,13 @@ def resolve_github_revision(source: str, *, git_executable: str = "git", timeout
     detected = detect_source(source)
     if detected.source_type != "github":
         raise SkillSourceError("source is not a GitHub repository URL")
+    # A tree/blob URL may already carry an exact commit SHA.  ``git
+    # ls-remote <remote> <sha>`` is not a reliable existence query because
+    # ls-remote advertises refs, not arbitrary object IDs.  Preserve the
+    # pinned revision here; fetch_github_manifest() performs the authoritative
+    # object and manifest validation at that exact revision.
+    if detected.ref and _REVISION_RE.fullmatch(detected.ref):
+        return detected.ref.lower()
     try:
         # Do not pass --refs here: Git documents that --refs hides symbolic
         # refs, while the remote default HEAD is commonly advertised as one.

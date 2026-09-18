@@ -4,8 +4,8 @@
  */
 (function () {
   'use strict';
-  const SKILL_COLORS = {ai_analyzer:'#0F766E',risk_engine:'#cf222e',report_generator:'#8250df',kos_engine:'#bf8700',collector_xhs:'#ff2442',collector_weibo:'#e6162d',collector_bilibili:'#0969da',brand_analysis:'#8250df',internal_browser:'#0969da',data_visualization:'#1a7f37',intelligence_library:'#8250df',alert_engine:'#bc4c00'};
-  const SKILL_ICONS = {ai_analyzer:'🧠',risk_engine:'⚠️',report_generator:'📄',kos_engine:'👥',collector_xhs:'📕',collector_weibo:'🔴',collector_bilibili:'📺',brand_analysis:'📊',internal_browser:'🌐',data_visualization:'📈',intelligence_library:'📚',alert_engine:'🔔'};
+  const SKILL_COLORS = {ai_analyzer:'#0F766E',risk_engine:'#cf222e',report_generator:'#8250df',kos_engine:'#bf8700',collector_xhs:'#ff2442',collector_weibo:'#e6162d',collector_bilibili:'#0969da',brand_analysis:'#8250df',internal_browser:'#0969da',data_visualization:'#1a7f37',intelligence_library:'#8250df',alert_engine:'#bc4c00','trendhub-mcp':'#6d28d9'};
+  const SKILL_ICONS = {ai_analyzer:'🧠',risk_engine:'⚠️',report_generator:'📄',kos_engine:'👥',collector_xhs:'📕',collector_weibo:'🔴',collector_bilibili:'📺',brand_analysis:'📊',internal_browser:'🌐',data_visualization:'📈',intelligence_library:'📚',alert_engine:'🔔','trendhub-mcp':'🛰️'};
   const DEFAULT_COLOR = '#656d76';
   let allSkills = [], currentTab = 'plugins', expandedSkillId = null, searchQuery = '', lastPreviewSource = '', lastPreviewResolveRemote = false, lastPreviewFetchRemoteManifest = false;
 
@@ -17,7 +17,7 @@
   async function toggleSkill(id, en) { return api(`/api/system/account/skills/${id}/${en?'enable':'disable'}`, {method:'POST'}); }
   async function addSkill(id, name, desc) { return api('/api/system/account/skills', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({skill_id:id,name,description:desc,product:'SYSTEM',domain:'global'})}); }
   async function fetchExecutions(id, limit) { return (await api(`/api/system/account/skills/${id}/executions?limit=${limit||5}`)).executions || []; }
-  async function executeSkill(id, task) { return api(`/api/system/account/skills/${id}/execute`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task:task||'manual run', action_type:'ANALYZE'})}); }
+  async function executeSkill(id, task, input) { return api(`/api/system/account/skills/${id}/execute`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task:task||'manual run', action_type:'ANALYZE', input:input||{}})}); }
   async function previewSource(source, resolveRemote, fetchRemoteManifest) { return api('/api/system/account/skills/source/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote, fetch_remote_manifest:!!fetchRemoteManifest})}); }
   async function registerSource(source, resolveRemote, fetchRemoteManifest) { return api('/api/system/account/skills/source/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, resolve_remote:!!resolveRemote, fetch_remote_manifest:!!fetchRemoteManifest})}); }
   async function fetchGithubStatus() { return api('/api/system/account/connectors/github/status'); }
@@ -159,11 +159,12 @@
         <div class="ss-detail-item"><div class="ss-detail-label">版本</div><div class="ss-detail-value">${s?.version||'1.0'}</div></div>
         <div class="ss-detail-item"><div class="ss-detail-label">产品/域</div><div class="ss-detail-value">${s?.product||'SYSTEM'} / ${s?.domain||'global'}</div></div>
         <div class="ss-detail-item"><div class="ss-detail-label">状态</div><div class="ss-detail-value" style="color:${on?'#1a7f37':'#656d76'}">${on?'已启用':'已禁用'}</div></div>
+        <div class="ss-detail-item"><div class="ss-detail-label">运行状态</div><div class="ss-detail-value">${escapeHTML(s?.runtime||'builtin')} · ${escapeHTML(s?.install_state||'—')} · ${escapeHTML(s?.health_state||'—')}</div></div>
         <div class="ss-detail-item"><div class="ss-detail-label">分类</div><div class="ss-detail-value">${categorize(s||{})}</div></div>
         <div class="ss-detail-item"><div class="ss-detail-label">权限</div><div class="ss-detail-value">READ / ANALYZE</div></div>
       </div>
       <div class="ss-detail-actions">
-        <button class="ss-btn ss-btn-primary" onclick="window.__ssRunSkill('${id}')">运行测试</button>
+        <button class="ss-btn ss-btn-primary" onclick="window.__ssRunSkill('${id}')">${s?.runtime==='mcp'?'人工确认后读取':'运行测试'}</button>
         <button class="ss-btn" onclick="window.__ssConfigSkill('${id}')">配置</button>
         <button class="ss-btn" onclick="window.__ssViewExecutions('${id}')">全部记录</button>
         ${on?`<button class="ss-btn ss-btn-danger" onclick="window.__ssDisableSkill('${id}')">禁用</button>`:`<button class="ss-btn ss-btn-primary" onclick="window.__ssEnableSkill('${id}')">启用</button>`}
@@ -188,7 +189,19 @@
     const r=await addSkill(id,name,desc);
     if(r.success||r.ok){window.__ssCloseAddModal();await refresh();}else alert('添加失败：'+(r.error||'未知错误'));
   };
-  window.__ssRunSkill = async function(id) { const r=await executeSkill(id); alert(`执行完成\n状态：${r.status||(r.success?'completed':'failed')}\n${r.error?'错误：'+r.error:''}`); if(expandedSkillId===id) loadDetail(id); };
+  window.__ssRunSkill = async function(id) {
+    const skill = allSkills.find(x => x.skill_id === id) || {};
+    let input = {};
+    if (skill.runtime === 'mcp') {
+      const approved = window.confirm('这将通过已登记的 MCP 只读权限读取平台目录，并留下执行审计。确认继续？');
+      if (!approved) return;
+      input = {tool_name:'list_platforms', arguments:{}, human_approved:true, timeout:30};
+    }
+    const r = await executeSkill(id, skill.runtime === 'mcp' ? '人工批准读取 MCP 平台目录' : 'manual run', input);
+    const nested = r?.result?.result || {};
+    alert(`执行完成\n状态：${r.status||(r.success?'completed':'failed')}\n${r.error?'错误：'+r.error:''}${nested.production_truth_write===false?'\n生产事实写入：否':''}`);
+    if(expandedSkillId===id) loadDetail(id);
+  };
   window.__ssConfigSkill = function(id) { alert('配置入口：Skill '+id+'\n（可通过 API PUT /api/system/account/skills/<id>/config 配置）'); };
   window.__ssViewExecutions = function(id) { toggleExpand(id); };
   window.__ssEnableSkill = async function(id) { await toggleSkill(id,true); await refresh(); };

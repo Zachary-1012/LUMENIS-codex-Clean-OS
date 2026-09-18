@@ -149,6 +149,22 @@ def test_github_skill_directory_is_pinned_before_manifest_fetch(monkeypatch):
     assert calls == [["git", "ls-remote", "https://github.com/example/skill", "main"]]
 
 
+def test_github_skill_directory_preserves_exact_commit_pin_without_ls_remote(monkeypatch):
+    import skill_package_runtime as runtime
+
+    revision = "0123456789abcdef0123456789abcdef01234567"
+    source = f"https://github.com/example/skill/tree/{revision}/trendhub-mcp"
+    calls = []
+
+    def unexpected_run(command, **kwargs):
+        calls.append(command)
+        raise AssertionError("exact commit URL must not be resolved as a remote ref")
+
+    monkeypatch.setattr(runtime.subprocess, "run", unexpected_run)
+    assert runtime.resolve_github_revision(source) == revision
+    assert calls == []
+
+
 def test_github_skill_manifest_is_discovered_at_pinned_revision_without_checkout(monkeypatch):
     import skill_package_runtime as runtime
 
@@ -212,7 +228,7 @@ def test_github_skill_root_manifest_does_not_guess_between_nested_skills(monkeyp
 def test_github_remote_registration_requires_validated_manifest_evidence(tmp_path, monkeypatch):
     import skill_package_runtime as runtime
     from account.models import init_account_db
-    from account.skills import list_skills, register_validated_skill
+    from account.skills import list_skills, register_validated_skill, set_skill_status
 
     revision = "abcdef0123456789abcdef0123456789abcdef01"
 
@@ -246,6 +262,9 @@ def test_github_remote_registration_requires_validated_manifest_evidence(tmp_pat
     assert registered["revision"] == revision
     assert registered["install_state"] == "not_installed"
     assert registered["status"] == "disabled"
+    not_ready = set_skill_status("trendhub-mcp", "enabled")
+    assert not_ready["success"] is False
+    assert not_ready["code"] == "RUNTIME_NOT_READY"
 
 
 def test_unknown_source_is_blocked_and_never_installed(tmp_path):

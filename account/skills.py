@@ -69,12 +69,22 @@ def set_skill_status(skill_id: str, status: str) -> dict:
     """启用/禁用技能"""
     if status not in ("enabled", "disabled"):
         return {"success": False, "error": "status 必须是 enabled 或 disabled"}
+    # A non-builtin Skill cannot become visible as enabled before its
+    # verified runtime has passed install/self-test/health gates.
+    from .models import init_account_db
+    init_account_db()
     conn = get_db()
     try:
-        cur = conn.execute("SELECT name, product FROM skills_registry WHERE skill_id=?", (skill_id,))
+        cur = conn.execute("SELECT * FROM skills_registry WHERE skill_id=?", (skill_id,))
         row = cur.fetchone()
         if not row:
             return {"success": False, "error": "技能不存在"}
+        columns = set(row.keys())
+        runtime = str(row["runtime"] if "runtime" in columns and row["runtime"] else "builtin").lower()
+        install_state = str(row["install_state"] if "install_state" in columns and row["install_state"] else "not_installed").lower()
+        health_state = str(row["health_state"] if "health_state" in columns and row["health_state"] else "unknown").lower()
+        if status == "enabled" and runtime != "builtin" and (install_state != "installed" or health_state != "healthy"):
+            return {"success": False, "error": "技能运行时尚未通过安装、自测与健康门禁", "code": "RUNTIME_NOT_READY"}
         conn.execute(
             "UPDATE skills_registry SET status=?, updated_at=datetime('now','localtime') WHERE skill_id=?",
             (status, skill_id)
@@ -224,6 +234,67 @@ def register_validated_skill(preview: dict) -> dict:
         conn.close()
 
 
+def activate_installed_mcp_skill(skill_id: str, install_path: str, *,
+                                 revision: str = "", digest: str = "") -> dict:
+    """Activate a locally built MCP package in the existing Skill registry.
+
+    The package must already have passed the remote-source preview and local
+    build/smoke gate.  This function only records the verified runtime in the
+    canonical registry; it never downloads, executes, enables, or grants a
+    write permission.  Enabling remains a separate owner action.
+    """
+    from .models import init_account_db
+    from mcp_skill_runtime import READ_ONLY_PERMISSIONS, build_entrypoint, validate_installation
+
+    init_account_db()
+    conn = get_db()
+    try:
+        row = conn.execute("SELECT * FROM skills_registry WHERE skill_id=?", (skill_id,)).fetchone()
+        if not row:
+            return {"success": False, "error": "Skill must be registered before activation", "code": "SKILL_NOT_REGISTERED"}
+        if str(row["runtime"] or "").lower() != "mcp":
+            return {"success": False, "error": "only MCP runtime Skills can use this activation path", "code": "RUNTIME_NOT_MCP"}
+        if revision and str(row["revision"] or "") != revision:
+            return {"success": False, "error": "installed revision does not match registered revision", "code": "REVISION_MISMATCH"}
+        if digest and str(row["digest"] or "") != digest:
+            return {"success": False, "error": "installed manifest digest does not match registered digest", "code": "DIGEST_MISMATCH"}
+        check = validate_installation(
+            install_path,
+            expected_skill_id=skill_id,
+            expected_version=str(row["version"] or ""),
+        )
+        if not check.get("ok"):
+            return {"success": False, "error": "MCP package self-check failed", "code": "SELFTEST_FAILED", "health": check}
+        entrypoint = build_entrypoint(install_path)
+        conn.execute(
+            """UPDATE skills_registry SET entrypoint=?, permissions_granted_json=?,
+               trust_level='verified', health_state='healthy', install_state='installed',
+               lifecycle_state='available', install_path=?, active_version=?,
+               last_error=NULL, last_health_at=datetime('now','localtime'),
+               updated_at=datetime('now','localtime') WHERE skill_id=?""",
+            (
+                json.dumps(entrypoint, ensure_ascii=False, sort_keys=True),
+                json.dumps(list(READ_ONLY_PERMISSIONS), ensure_ascii=False),
+                str(check["install_path"]),
+                str(check["version"]),
+                skill_id,
+            ),
+        )
+        conn.commit()
+        return {
+            "success": True,
+            "skill_id": skill_id,
+            "status": str(row["status"] or "disabled"),
+            "install_state": "installed",
+            "lifecycle_state": "available",
+            "health_state": "healthy",
+            "permissions_granted": list(READ_ONLY_PERMISSIONS),
+            "health": check,
+        }
+    finally:
+        conn.close()
+
+
 def get_enabled_skills(product: str = None) -> list:
     """获取已启用的技能（用于前端判断是否显示入口）"""
     skills = list_skills(product=product, status="enabled")
@@ -276,13 +347,23 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
     if not info:
         return {"success": False, "error": f"skill '{skill_id}' not found", "code": "NOT_FOUND"}
 
+    runtime_config = dict(info.get("config") or {})
+    for key in (
+        "runtime", "source", "source_type", "entrypoint", "install_path",
+        "active_version", "version", "tools_json", "permissions_granted_json",
+        "install_state", "lifecycle_state", "health_state",
+    ):
+        if info.get(key) is not None:
+            runtime_config[key] = info.get(key)
     skill_runtime = SkillRuntimeInfo(
         skill_id=skill_id,
         name=info.get("name", skill_id),
         product=info.get("product", "SYSTEM"),
         domain=info.get("domain", "global"),
         enabled=info.get("status") == "enabled",
-        config=info.get("config", {}),
+        config=runtime_config,
+        source=info.get("source") or "builtin",
+        version=info.get("version") or "1.0.0",
     )
 
     # 映射 action_type
