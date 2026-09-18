@@ -470,7 +470,7 @@ th,td{{padding:6px 4px}}
 <div class="meta">传播主体智能报告 · 生成于 {data['generated_at']}</div>
 
 
-<div class="brand-tag">Z-Brand-Core KOS Engine v1.0 · 数据来源：真实采集数据库</div>
+<div class="brand-tag">LUMENIS KOS Reporting · 数据来源：真实采集数据库</div>
 
 
 </div>
@@ -1341,4 +1341,3 @@ def generate_report(brand_name: str = "广州太古汇", output_path: Optional[s
 
 
 __all__ = ["generate_report", "REPORT_DIR"]
-
