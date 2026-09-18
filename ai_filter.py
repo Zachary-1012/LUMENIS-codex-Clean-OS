@@ -214,8 +214,10 @@ def ai_secondary_review(note):
             'provider': 'rule'
         }
 
-    # 4. AI深度判断（如果AI可用）
-    if intelligence.ai_enabled():
+    # 4. AI深度判断（如果AI可用）。测试/离线门禁下不触发任何本地或云端
+    # 推理请求：报告生成必须保持有界，规则结果仍然可审计且不改变事实。
+    # 生产运行不设置 ZBC_TEST_OFFLINE 时，仍按现有本地优先 AI 路径执行。
+    if os.environ.get('ZBC_TEST_OFFLINE', '').strip() != '1' and intelligence.ai_enabled():
         ai_result = _ai_deep_review(note, quality_score)
         if ai_result:
             return ai_result
