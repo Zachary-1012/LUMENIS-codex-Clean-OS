@@ -6,7 +6,7 @@
 输出结构化数据，供Word/PDF导出使用
 
 设计原则：
-- 不改动现有daily_report.py/brand_report_generator.py，作为增强层
+- 复用 Shared Reporting canonical daily/brand owners，不创建平行报告 Truth
 - 所有结论可追溯到原始数据
 - 不把单一用户指控写成已证实事实
 - 数据不完整时明确标注，不据空数据下结论
