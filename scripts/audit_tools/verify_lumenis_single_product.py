@@ -34,6 +34,8 @@ FORBIDDEN_EXACT = {
     "report_filter.py",
     "report_engine.py",
     "daily_report.py",
+    "export_report.py",
+    "report_export/report_engine.py",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_RESEARCH_SPEC_V2.md",
@@ -97,7 +99,7 @@ def main() -> int:
             errors.append(f"pre-opt backup artifact present: {path}")
 
     grep = subprocess.run(
-        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime"],
+        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^from daily_report|^import daily_report|^from report_artifact|^import report_artifact|^from report_filter|^import report_filter|^from report_export|^import export_report|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime"],
         cwd=ROOT,
         text=True,
         capture_output=True,
