@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-import report_artifact as ra
+from lumenis.shared.reporting import artifact as ra
 
 
 class TestG4HashComputation:

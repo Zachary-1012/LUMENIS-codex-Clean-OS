@@ -16,7 +16,7 @@ import database as db
 import ai_analyzer
 import ai_filter
 import daily_report
-import report_artifact as ra
+from lumenis.shared.reporting import artifact as ra
 
 logger = logging.getLogger(__name__)
 

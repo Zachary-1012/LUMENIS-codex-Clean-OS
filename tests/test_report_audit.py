@@ -18,7 +18,7 @@ import pytest
 # 确保项目根目录在 path 中
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import report_artifact as ra
+from lumenis.shared.reporting import artifact as ra
 
 
 # ============================================================
@@ -26,7 +26,7 @@ import report_artifact as ra
 # ============================================================
 
 class TestReportArtifactModule:
-    """report_artifact.py 基础功能测试。"""
+    """lumenis/shared/reporting/artifact.py 基础功能测试。"""
 
     def test_compute_hash_deterministic(self):
         """SHA-256 hash 对相同输入必须确定性。"""

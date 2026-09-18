@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""report_artifact.py — 报告 artifact 真实性校验模块（ZBC Phase 9 + G4 hash 验证）
+"""lumenis/shared/reporting/artifact.py — 报告 artifact 真实性校验模块（LUMENIS Reporting integrity + G4 hash 验证）
 
 核心目标：报告必须是真实 artifact，禁止"假成功"。
 - 文件 artifact：存在 + 非空 + hash 可校验

@@ -116,7 +116,7 @@ def brand_report_export(report_id):
     """导出品牌分析报告（JSON/Markdown）"""
     try:
         from lumenis.shared.reporting.brand_report import BrandReportGenerator
-        import report_artifact as ra
+        from lumenis.shared.reporting import artifact as ra
         format_type = request.args.get('format', 'json')
         # 这里简化处理，实际应从存储中读取报告
         generator = BrandReportGenerator()
@@ -268,7 +268,7 @@ def api_report(report_type):
         bundle=report_engine.get_bundle(report_type, request.args.get('date') or None)
         rpt = bundle.get('report') or {}
         # ZBC Phase 9: ok 必须基于报告真实非空 + artifact 已验证，不能仅凭 dict 非空
-        import report_artifact as ra
+        from lumenis.shared.reporting import artifact as ra
         vr = ra.verify_report_dict(rpt)
         ok = bool(rpt) and vr['valid']
         return jsonify({'ok':ok,'report':rpt,'digest':bundle.get('digest'),'report_type':report_type,

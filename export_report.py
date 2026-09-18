@@ -28,7 +28,7 @@ os.makedirs(EXPORT_DIR, exist_ok=True)
 
 # ZBC Phase 9: artifact 真实性校验
 try:
-    import report_artifact as ra
+    from lumenis.shared.reporting import artifact as ra
 except Exception:
     ra = None
 
