@@ -16,6 +16,9 @@ FORBIDDEN_PREFIXES = (
 )
 
 FORBIDDEN_EXACT = {
+    "08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md",
+    "audit/take_screenshot.ps1",
+    "static/css/zbc-design-system.css",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_RESEARCH_SPEC_V2.md",
@@ -56,6 +59,18 @@ def main() -> int:
                 errors.append(f"architecture marker missing: {marker}")
     if not EXPERIENCE.is_file():
         errors.append("missing sole Experience authority")
+
+    required_app_files = (
+        "app/pubspec.yaml",
+        "app/lib/main.dart",
+        "app/lib/core/lumenis_core_client.dart",
+        "app/lib/product/product_domain.dart",
+        "app/lib/product/lumenis_app.dart",
+        "app/lib/features/launch/launch_surface.dart",
+    )
+    for path in required_app_files:
+        if not (ROOT / path).is_file():
+            errors.append(f"missing canonical app foundation: {path}")
 
     for path in tracked():
         if any(path.startswith(prefix) for prefix in FORBIDDEN_PREFIXES):
