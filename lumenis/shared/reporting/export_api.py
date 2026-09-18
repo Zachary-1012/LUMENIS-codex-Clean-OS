@@ -29,11 +29,8 @@ DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or str(PROJECT_ROOT / 'd
 EXPORT_DIR = str(PROJECT_ROOT / 'data' / 'exports')
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
-# ZBC Phase 9: artifact 真实性校验
-try:
-    from lumenis.shared.reporting import artifact as ra
-except Exception:
-    ra = None
+# Artifact 真实性校验是 Shared Reporting 的强制依赖，不允许静默跳过。
+from lumenis.shared.reporting import artifact as ra
 
 
 def get_db():
