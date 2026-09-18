@@ -1,17 +1,21 @@
-"""序境 / LUMENIS — Experience V2 屏幕级生产绑定（P1 传播层）.
+"""序境 / LUMENIS — Experience 生产 ViewModel 绑定层.
 
-定位（ONE-SHOT §10「Shared Contract / Domain Adapter / Screen Configuration」）：
-  * 结构唯一源仍是 ``experience_v2/10_prototype/data/screens.js``；本文件**不重画布局**，
-    只产出与 ``assets/sections.js`` 渲染器同构的真实 ViewModel section 描述符。
-  * 每个数值必须来自既有后端只读函数（database / canonical_data / runtime_guardian /
-    evidence_store / skill_execution_chain / ai_governance / function_registry / permission_gate）。
-  * 后端没有数据源的字段一律 state='notcollected' + value=None，并在 binding.blocked 标
-    BLOCKED_BY_EXTERNAL_DEPENDENCY —— 绝不填 0、绝不保留原型 fixture 假值。
-  * 读取异常一律降级为对应 section 的 offline/error 状态，不向上抛、不伪造 200。
+唯一设计权威：00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 
-只新增只读聚合，不写业务库、不改后端语义。人类工程师维护约定：
-一屏 = 一个 ``_build_<id>``；新增屏幕时在末尾 ``SCREEN_BUILDERS`` 注册即可。
+本模块不拥有页面布局或视觉规则。它负责把真实后端事实映射成前端可消费的
+ViewModel/section 数据，并保持 Evidence、状态、权限与缺失语义诚实。
+
+experience_v2/10_prototype 目前只是兼容实现路径，不代表 V2 设计仍有权威。
+Golden Pages 迁移到新的语义 composition 时，本绑定层应保持 truth-first、
+layout-agnostic，必要时适配新的语义 section，而不是强迫 UI 继续使用旧模板。
+
+生产事实约束：
+  * 每个数值来自既有真实后端能力；
+  * 无数据源字段使用 notcollected / None，并记录真实 blocker；
+  * 读取异常降级为 offline/error，不伪造成功；
+  * 只读聚合不改变 Canonical Data、Evidence 或权限边界。
 """
+
 
 from __future__ import annotations
 
