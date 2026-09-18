@@ -2130,7 +2130,7 @@ def api_ai_tasks():
             status_filter = request.args.get('status', '')
             limit = min(int(request.args.get('limit', 50)), 200)
             try:
-                from skill_execution_chain import query_executions
+                from lumenis.shared.agents.skills.execution import query_executions
                 tasks = query_executions(limit=limit, status=status_filter or None)
                 return jsonify({'ok': True, 'tasks': tasks, 'count': len(tasks)})
             except Exception as e:
@@ -2142,7 +2142,7 @@ def api_ai_tasks():
             if not task_desc and not skill_id:
                 return jsonify({'ok': False, 'error': 'task or skill_id required'}), 400
             try:
-                from skill_execution_chain import run_execution_chain, ActionType
+                from lumenis.shared.agents.skills.execution import run_execution_chain, ActionType
                 action_type = ActionType(data.get('action_type', 'ANALYZE'))
                 ctx = run_execution_chain(
                     skill_id=skill_id or 'zbc.generic_analysis',

@@ -554,10 +554,10 @@ def _build_cth10() -> Dict[str, Any]:
 
 
 # ===========================================================================
-# AI Agent 域（真实数据源：skill_execution_chain / ai_governance / function_registry）
+# AI Agent 域（真实数据源：Agent Groups Skill Execution / ai_governance / function_registry）
 # ===========================================================================
 def _task_timeline(limit: int = 8) -> Dict[str, Any]:
-    from skill_execution_chain import query_executions
+    from lumenis.shared.agents.skills.execution import query_executions
 
     tasks = _safe(query_executions, limit, default=[])
     items = []
@@ -814,7 +814,7 @@ def _build_sys02() -> Dict[str, Any]:
 def _build_sys07() -> Dict[str, Any]:
     """验收评估：ai_governance OWASP 启用项 + 已注册技能轻状态（真实）。"""
     import ai_governance as gov
-    from skill_execution_chain import get_skills_light_status
+    from lumenis.shared.agents.skills.execution import get_skills_light_status
 
     ow = _safe(gov.get_owasp_security_status, default={})
     ow = ow if isinstance(ow, dict) and not _is_err(ow) else {}
@@ -828,7 +828,7 @@ def _build_sys07() -> Dict[str, Any]:
                source="ai_governance.get_owasp_security_status"),
         metric("sys07.skills", "已注册技能", value=len(sk) or None,
                state=STATE_READY if sk else STATE_EMPTY, icon="ai",
-               source="skill_execution_chain.get_skills_light_status"),
+               source="lumenis.shared.agents.skills.execution.get_skills_light_status"),
     ]
     rows = [{"防护项": str(c), "参考": ow.get("ic_reference") or "—"} for c in checks]
     tbl = section("table", STATE_READY if rows else STATE_EMPTY,

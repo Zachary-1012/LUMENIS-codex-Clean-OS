@@ -12,7 +12,7 @@
      前端 assets/runtime.js 拿到同构 sections 后就地水合（hydrate），并把 data-source 切到 runtime。
 
 生产事实红线（ONE-SHOT §7）：
-  * 只复用既有后端能力（database / daily_report / evidence_store / skill_execution_chain /
+  * 只复用既有后端能力（database / daily_report / evidence_store / Agent Groups Skill Execution /
     ai_governance / runtime_guardian / subject_context），不并行实现第二套真值。
   * 后端不存在数据源的指标（如到店客流 / 会员销售，需 POS 外部源）一律 state='notcollected'、
     value=None，并在 binding.blocked 里标 BLOCKED_BY_EXTERNAL_DEPENDENCY —— 绝不填 0、不造假。
@@ -593,7 +593,7 @@ def _build_ai01() -> Dict[str, Any]:
                icon="link", source="evidence_store.get_stats().total", fresh="live"),
         metric("ai.traceability", "AI 结论可追溯率", value=trace_val, unit="%",
                decimals=1, state=trace_state, icon="evaluation", note=trace_note,
-               source="skill_execution_chain（样本不足）"),
+               source="Agent Groups Skill Execution（样本不足）"),
         metric("ai.provider_health", "Provider 健康", value=healthy if prov_kpi_state == STATE_READY else None,
                unit=f"/{len(provider_states)}", state=prov_kpi_state, icon="ops",
                source="ai_governance.get_governance_status", fresh="m5"),
@@ -693,7 +693,7 @@ def _build_ai01() -> Dict[str, Any]:
 
 
 def _ai_recent_tasks(limit: int) -> List[Dict[str, Any]]:
-    from skill_execution_chain import query_executions
+    from lumenis.shared.agents.skills.execution import query_executions
 
     return query_executions(limit=limit)
 
@@ -938,7 +938,7 @@ def render_shared_video_artifact():
     normalized_payload["domain"] = domain_id
     normalized_payload["product"] = "LUMENIS"
 
-    from skill_execution_chain import ActionType, SkillRuntimeInfo, run_execution_chain
+    from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
 
     runtime_info = SkillRuntimeInfo(
         skill_id="shared.video_shotcraft",
@@ -1193,7 +1193,7 @@ def run_shared_skill_route(skill_id: str):
     payload["domain"] = domain_id
     payload["product"] = "LUMENIS"
 
-    from skill_execution_chain import ActionType, SkillRuntimeInfo, run_execution_chain
+    from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
 
     try:
         action_type = ActionType(action_value)
@@ -1280,7 +1280,7 @@ def content_evidence_detail(evidence_id: str):
 @experience_bp.route("/api/experience/ai/intent", methods=["POST"])
 def ai_intent():
     """AI-01 composer 提交：先过标准权限门（P0-WRITEPERM-02），通过后复用既有
-    skill_execution_chain（不重复实现 AI），走 Contract/Artifact 边界。
+    Agent Groups Skill Execution（不重复实现 AI），走 Contract/Artifact 边界。
 
     四态：granted / pending_approval / denied / permanent_deny。未通过权限门时在进入
     执行链之前返回，保证不写任何证据、不触碰生产写侧，也不回显任何安全内部。
@@ -1293,7 +1293,7 @@ def ai_intent():
         return jsonify({"ok": False, "error": "task too long (max 4000)"}), 400
 
     # ── 第 1 步：解析动作类型（非法值 fail-closed） ──
-    from skill_execution_chain import ActionType, run_execution_chain
+    from lumenis.shared.agents.skills.execution import ActionType, run_execution_chain
     raw_action = str(body.get("action_type", "ANALYZE")).upper()
     try:
         action_type = ActionType(raw_action)
