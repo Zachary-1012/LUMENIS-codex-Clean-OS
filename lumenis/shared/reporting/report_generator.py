@@ -1,7 +1,7 @@
 """
 标准化报告生成器
 ================
-支持CTH太古汇专属 + ZBMP通用品牌两套话术
+支持 CTH / 序境·商业运营 + BMP / 序境·品牌市场双域话术
 支持日报/周报/月报/年报/专项报告
 输出结构化数据，供Word/PDF导出使用
 
@@ -29,8 +29,8 @@ class ReportGenerator:
 
     def __init__(self, brand_mode: str = "cth", brand_config: dict = None):
         """
-        brand_mode: "cth"（太古汇专属）或 "zbmp"（通用品牌）
-        brand_config: ZBMP模式下的品牌配置
+        brand_mode: "cth"（Subject-first）或 "zbmp"（BMP 内部技术 ID，Brand-first）
+        brand_config: BMP 模式下的品牌配置
         """
         self.brand_mode = brand_mode
         self.brand_config = brand_config or {}
@@ -165,7 +165,7 @@ class ReportGenerator:
     def _get_brand_name(self) -> str:
         if self.brand_mode == "cth":
             return cth_phrases.BRAND_INFO["full_name"]
-        return self.brand_config.get("brand_name", "Z-Brand")
+        return self.brand_config.get("brand_name", "LUMENIS")
 
     def _generate_executive_summary(self, stats: dict, notes: List[dict], events: List[dict]) -> str:
         """生成执行摘要（一句话）"""
