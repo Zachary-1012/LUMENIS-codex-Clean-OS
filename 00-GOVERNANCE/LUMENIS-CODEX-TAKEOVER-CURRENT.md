@@ -38,21 +38,24 @@ Current executable source/runtime truth always outranks this handoff. Historical
 
 The root README, this CURRENT handoff, the human-readable cross-repo registry and the machine contract must not define conflicting current protocol identities. A mismatch is a governance failure to repair before cross-product changes continue.
 
-### Experience V3 conditional authority
+### Experience authority
 
-If the active task touches any user-visible Experience/UI, navigation, visual hierarchy, responsive behavior, Evidence presentation, AI workspace, CTH/BMP/Shared/SYSTEM screen composition, or Experience CSS/JS, the bootstrap additionally requires:
+If the active task touches any user-visible Experience/UI, read the sole design authority:
 
-00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION-V3-20260918.md
-→ experience_v2/AGENTS.md
-→ current screen ViewModel / State / Action / Permission / Evidence owners
+```text
+00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+```
 
-V3 is the current presentation authority and supersedes conflicting older V2/V2.4/V2.5 presentation guidance. It does not override Production Truth.
+Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
-Any core Experience implementation change must pass:
+The `experience_v2/**` directory name is a compatibility path, not a V2 authority.
 
+Required design gates:
+
+```text
+python scripts/audit_tools/verify_experience_authority_exclusive.py
 python scripts/audit_tools/verify_experience_anti_template.py --strict
-
-Do not weaken this gate to make a template-shaped implementation pass.
+```
 
 ## 2. Remote evidence lock
 
