@@ -22,6 +22,7 @@ FORBIDDEN_EXACT = {
     "static/css/zbc-design-system.css",
     "brand_report_generator.py",
     "report_artifact.py",
+    "report_filter.py",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_RESEARCH_SPEC_V2.md",

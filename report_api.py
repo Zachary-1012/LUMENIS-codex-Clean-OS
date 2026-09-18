@@ -11,7 +11,7 @@ import report_engine
 import canonical_metrics
 from subject_rules import subject_sql_and_values
 import daily_report
-from report_filter import (filter_negative_for_period_report, classify_notes_by_age,
+from lumenis.shared.reporting.filtering import (filter_negative_for_period_report, classify_notes_by_age,
     get_daily_report_filter_stats, filter_notes_for_daily_report, get_report_period)
 
 report_bp = Blueprint('report', __name__)
@@ -310,7 +310,7 @@ def _canonical_report_metrics(report_type, date_str):
     报告展示层从此消费该字段；如与 stats 的原始计数并存，两者语义不同（聚合风险 vs 计数）。"""
     try:
         import daily_report as _dr
-        from report_filter import (filter_negative_for_period_report, classify_notes_by_age,
+        from lumenis.shared.reporting.filtering import (filter_negative_for_period_report, classify_notes_by_age,
             get_daily_report_filter_stats, filter_notes_for_daily_report, get_report_period)
         from datetime import datetime as _dt
         d = date_str or _dt.now().strftime('%Y-%m-%d')
@@ -347,7 +347,7 @@ def api_report_v2(report_type):
         return jsonify({'ok': False, 'error': '无效报告类型'}), 400
     
     try:
-        from report_filter import get_report_period, filter_notes_for_daily_report, filter_negative_for_period_report, classify_notes_by_age, get_daily_report_filter_stats
+        from lumenis.shared.reporting.filtering import get_report_period, filter_notes_for_daily_report, filter_negative_for_period_report, classify_notes_by_age, get_daily_report_filter_stats
         
         date_str = request.args.get('date')
         start, end = get_report_period(report_type)
@@ -412,7 +412,7 @@ def api_report_v2(report_type):
 def api_report_v2_stats():
     """报告筛选统计API"""
     try:
-        from report_filter import get_daily_report_filter_stats, classify_notes_by_age
+        from lumenis.shared.reporting.filtering import get_daily_report_filter_stats, classify_notes_by_age
         
         # 获取最近7天的笔记
         from datetime import datetime, timedelta
