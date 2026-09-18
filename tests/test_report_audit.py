@@ -370,7 +370,7 @@ class TestReportEngineArtifactVerification:
              patch.object(report_engine.ai_filter, 'run_filter_batch', return_value=None), \
              patch.object(report_engine.db, 'save_daily_report', return_value=0):
             with pytest.raises(RuntimeError, match="落库失败"):
-                Shared Reporting engine.generate_report("daily", "2026-09-01", "2026-09-01")
+                report_engine.generate_report("daily", "2026-09-01", "2026-09-01")
 
     def test_generate_report_raises_on_none_row_id(self):
         """save_daily_report 返回 None 时必须抛异常。"""
@@ -381,7 +381,7 @@ class TestReportEngineArtifactVerification:
              patch.object(report_engine.ai_filter, 'run_filter_batch', return_value=None), \
              patch.object(report_engine.db, 'save_daily_report', return_value=None):
             with pytest.raises(RuntimeError, match="落库失败"):
-                Shared Reporting engine.generate_report("daily", "2026-09-01", "2026-09-01")
+                report_engine.generate_report("daily", "2026-09-01", "2026-09-01")
 
     def test_generate_report_success_has_artifact_metadata(self):
         """成功生成的报告必须包含 artifact 元数据字段。"""
@@ -393,7 +393,7 @@ class TestReportEngineArtifactVerification:
              patch.object(report_engine.ai_filter, 'run_filter_batch', return_value=None), \
              patch.object(report_engine.daily, 'generate_daily_digest', return_value={}), \
              patch.object(report_engine.db, 'save_daily_report', return_value=42) as mock_save:
-            report, digest = Shared Reporting engine.generate_report("daily", "2026-09-01", "2026-09-01")
+            report, digest = report_engine.generate_report("daily", "2026-09-01", "2026-09-01")
             assert report["_db_row_id"] == 42
             assert report["_artifact_verified"] is True
             assert "report_id" in report
