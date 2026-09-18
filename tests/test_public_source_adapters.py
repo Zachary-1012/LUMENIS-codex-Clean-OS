@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from platform_adapters.base import CollectionStatus
-from platform_adapters.public_http import PublicHttpAdapter
-from platform_adapters.public_source import PublicResponse, PublicSourceError, validate_public_url
-from platform_adapters.sitemap import SitemapAdapter
-from platform_adapters.web_atom import AtomAdapter
-from platform_adapters.web_rss import WebRSSAdapter
+from lumenis.system.collector.adapters.base import CollectionStatus
+from lumenis.system.collector.adapters.public_http import PublicHttpAdapter
+from lumenis.system.collector.adapters.public_source import PublicResponse, PublicSourceError, validate_public_url
+from lumenis.system.collector.adapters.sitemap import SitemapAdapter
+from lumenis.system.collector.adapters.web_atom import AtomAdapter
+from lumenis.system.collector.adapters.web_rss import WebRSSAdapter
 
 
 def _response(body: str, content_type: str) -> PublicResponse:
@@ -120,7 +120,7 @@ def test_public_url_rejects_local_network_targets():
 
 
 def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
-    import platform_adapters.secondary_collection as surface
+    import lumenis.system.collector.adapters.secondary_collection as surface
 
     adapter = PublicHttpAdapter(fetcher=lambda _: _response(
         "<html><head><title>Evidence source</title></head><body>text</body></html>",
@@ -136,7 +136,7 @@ def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
         "subject_matches": 0, "canonical_synced": 1, "subjects": [],
     })
     monkeypatch.setattr(
-        "platform_adapters.multi_platform_import.import_multi_platform_records",
+        "lumenis.system.collector.adapters.multi_platform_import.import_multi_platform_records",
         lambda records: {"imported": 1, "updated": 0, "failed": 0,
                          "details": [{"status": "imported", "note_id": "public-1"}]},
     )

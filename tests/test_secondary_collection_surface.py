@@ -14,8 +14,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from platform_adapters.base import CollectionResult, CollectionStatus
-from platform_adapters import secondary_collection as surface
+from lumenis.system.collector.adapters.base import CollectionResult, CollectionStatus
+from lumenis.system.collector.adapters import secondary_collection as surface
 
 
 def test_surface_has_exact_launch_allowlist(monkeypatch):
@@ -258,7 +258,7 @@ def test_collect_search_follows_read_only_import_and_evidence_chain(monkeypatch)
         "subject_matches": 1, "canonical_synced": 1, "subjects": [],
     })
     monkeypatch.setattr(
-        "platform_adapters.multi_platform_import.import_multi_platform_records",
+        "lumenis.system.collector.adapters.multi_platform_import.import_multi_platform_records",
         lambda records: {"imported": 1, "updated": 0, "failed": 0,
                          "details": [{"status": "imported", "note_id": "777"}]},
     )
@@ -410,7 +410,7 @@ def test_douyin_requires_explicit_remote_browser_worker(monkeypatch):
 
 
 def test_requested_adapters_expose_uniform_capability_contract():
-    from platform_adapters import get_adapter, list_adapters
+    from lumenis.system.collector.adapters import get_adapter, list_adapters
 
     required_platforms = {"xhs", "bilibili", "weibo", "douyin", "kuaishou", "web_rss"}
     assert required_platforms.issubset(set(list_adapters()))

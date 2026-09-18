@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from platform_adapters.platform_naming import (
+from lumenis.system.collector.adapters.platform_naming import (
     normalize_platform,
     platform_display_name,
     to_canonical_record,

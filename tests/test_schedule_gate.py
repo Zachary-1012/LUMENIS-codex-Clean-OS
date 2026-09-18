@@ -56,7 +56,7 @@ def _clean_env(monkeypatch):
 
 
 def test_default_shadow_does_not_gate(monkeypatch):
-    from platform_adapters.scheduling import gate_should_run, gate_mode
+    from lumenis.system.collector.adapters.scheduling import gate_should_run, gate_mode
     assert gate_mode() == 'shadow'
     # 即便决策 allow=False，shadow 也沿用固定触发 True（零行为变化）
     run, dec, mode = gate_should_run(_FakePlanner(allow=False), 'xhs', now=NOW)
@@ -64,14 +64,14 @@ def test_default_shadow_does_not_gate(monkeypatch):
 
 
 def test_enforce_gates_by_allow(monkeypatch):
-    from platform_adapters.scheduling import gate_should_run
+    from lumenis.system.collector.adapters.scheduling import gate_should_run
     monkeypatch.setenv('ZBC_SCHED_GATE_MODE', 'enforce')
     assert gate_should_run(_FakePlanner(allow=False), 'xhs', now=NOW)[0] is False
     assert gate_should_run(_FakePlanner(allow=True), 'xhs', now=NOW)[0] is True
 
 
 def test_canary_only_gates_listed_platforms(monkeypatch):
-    from platform_adapters.scheduling import gate_should_run
+    from lumenis.system.collector.adapters.scheduling import gate_should_run
     monkeypatch.setenv('ZBC_SCHED_GATE_MODE', 'canary')
     monkeypatch.setenv('ZBC_SCHED_GATE_PLATFORMS', 'web,bilibili')
     # xhs 不在灰度名单 -> 同 shadow，allow=False 也照常跑
@@ -82,14 +82,14 @@ def test_canary_only_gates_listed_platforms(monkeypatch):
 
 
 def test_gate_only_tightens_never_relaxes(monkeypatch):
-    from platform_adapters.scheduling import gate_should_run
+    from lumenis.system.collector.adapters.scheduling import gate_should_run
     monkeypatch.setenv('ZBC_SCHED_GATE_MODE', 'enforce')
     # 上游既有逻辑已判定不跑(hard_allow=False)，门控绝不可能放行
     assert gate_should_run(_FakePlanner(allow=True), 'xhs', now=NOW, hard_allow=False)[0] is False
 
 
 def test_fail_open_on_planner_error(monkeypatch):
-    from platform_adapters.scheduling import gate_should_run
+    from lumenis.system.collector.adapters.scheduling import gate_should_run
     monkeypatch.setenv('ZBC_SCHED_GATE_MODE', 'enforce')
     # enforce 下 planner 崩了也不能卡死既有调度 -> 回落到 hard_allow
     run, dec, mode = gate_should_run(_BoomPlanner(), 'xhs', now=NOW, hard_allow=True)
@@ -98,7 +98,7 @@ def test_fail_open_on_planner_error(monkeypatch):
 
 
 def test_invalid_mode_falls_back_shadow(monkeypatch):
-    from platform_adapters.scheduling import gate_should_run, gate_mode
+    from lumenis.system.collector.adapters.scheduling import gate_should_run, gate_mode
     monkeypatch.setenv('ZBC_SCHED_GATE_MODE', 'nonsense')
     assert gate_mode() == 'shadow'
     assert gate_should_run(_FakePlanner(allow=False), 'xhs', now=NOW)[0] is True
