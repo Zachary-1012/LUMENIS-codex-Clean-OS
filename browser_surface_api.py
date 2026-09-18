@@ -25,9 +25,13 @@ def register_browser_surface_api(app):
         data = request.get_json(silent=True) or {}
         raw = request.args.get("port") or data.get("port")
         try:
-            return int(raw) if raw else None
+            if raw:
+                return int(raw)
+            # 产品内置浏览器默认使用独立通用实例；只有显式传入 account
+            # 时才回到对应的采集身份端口，避免旧 9222/9223 逻辑覆盖浏览器。
+            return None if _acct() else bs.GENERAL_CDP_PORT
         except (TypeError, ValueError):
-            return None
+            return bs.GENERAL_CDP_PORT
 
     def _target_id():
         data = request.get_json(silent=True) or {}
@@ -87,7 +91,18 @@ def register_browser_surface_api(app):
             wait_ms = 600
         return jsonify(bs.navigate_tab(url, target_id=_target_id(), account=_acct(),
                                        port=_port(), mode=data.get("mode"),
-                                       wait_ms=wait_ms))
+                                       wait_ms=wait_ms,
+                                       confirmed=bool(data.get("confirmed", False))))
+
+    @bp.route("/api/browser-surface/tab/history", methods=["POST"])
+    def api_tab_history():
+        """内置浏览器页内历史：back/forward/reload，保持端口与标签页一致。"""
+        data = request.get_json(silent=True) or {}
+        action = (data.get("action") or "reload").strip().lower()
+        if action not in ("back", "forward", "reload"):
+            return jsonify({"ok": False, "error": "action 必须是 back/forward/reload"}), 400
+        return jsonify(bs.history_tab(action=action, target_id=_target_id(),
+                                      account=_acct(), port=_port()))
 
     # ── 页面截图（对标浏览器截图，支持指定 port/target_id）──────────
     @bp.route("/api/browser-surface/screenshot", methods=["GET"])

@@ -8,7 +8,8 @@
 
   // ===== Config =====
   var CONFIG = {
-    cdpPort: 9222,              // 默认 CDP 端口（采集主号）
+    productBrowserPort: 9224,   // 产品内置浏览器：独立通用实例（不占用采集身份）
+    collectionPort: 9223,       // 香港生产采集身份，仅用于状态展示
     screenshotQuality: 60,      // 截图质量
     screenshotInterval: 3000,   // 截图轮询间隔（ms）
     tabRefreshInterval: 5000,   // Tab 列表刷新间隔
@@ -31,6 +32,9 @@
     bookmarks: [],
     history: [],
     browserOnline: false,
+    initialized: false,
+    root: null,
+    timeTimer: null,
   };
 
   // ===== DOM Helpers =====
@@ -155,7 +159,7 @@
 
   // ===== Tab Management =====
   function loadTabs() {
-    apiGet('/api/browser-surface/tabs?port=' + CONFIG.cdpPort)
+    apiGet('/api/browser-surface/tabs?port=' + CONFIG.productBrowserPort)
       .then(function (d) {
         if (d.ok && d.tabs) {
           state.tabs = d.tabs;
@@ -187,7 +191,7 @@
 
   function switchTab(targetId) {
     state.activeTabId = targetId;
-    apiPost('/api/browser-surface/tab/activate', { target_id: targetId, port: CONFIG.cdpPort })
+    apiPost('/api/browser-surface/tab/activate', { target_id: targetId, port: CONFIG.productBrowserPort })
       .then(function () {
         renderTabs();
         refreshScreenshot();
@@ -197,7 +201,7 @@
   }
 
   function closeTab(targetId) {
-    apiPost('/api/browser-surface/tab/close', { target_id: targetId, port: CONFIG.cdpPort })
+    apiPost('/api/browser-surface/tab/close', { target_id: targetId, port: CONFIG.productBrowserPort })
       .then(function () {
         if (state.activeTabId === targetId) {
           state.activeTabId = null;
@@ -215,8 +219,8 @@
   }
 
   function newTab() {
-    var url = 'https://www.xiaohongshu.com';
-    apiPost('/api/browser-surface/tab/new', { url: url, port: CONFIG.cdpPort })
+    var url = 'https://www.bing.com';
+    apiPost('/api/browser-surface/tab/new', { url: url, port: CONFIG.productBrowserPort })
       .then(function (d) {
         if (d.ok && d.tab) {
           state.activeTabId = d.tab.target_id;
@@ -250,12 +254,12 @@
     state.isLoading = true;
     setLoadingUI(true);
 
-    var body = { url: targetUrl, port: CONFIG.cdpPort };
+    var body = { url: targetUrl, port: CONFIG.productBrowserPort };
     if (confirmed) body.confirmed = true;
     if (state.activeTabId) body.target_id = state.activeTabId;
 
-    // 使用 internal-browser navigate（支持 confirmed 参数）
-    apiPost('/api/internal-browser/navigate', body)
+    // 使用唯一 Browser Surface 导航入口；默认目标是产品内置浏览器。
+    apiPost('/api/browser-surface/tab/navigate', body)
       .then(function (d) {
         state.isLoading = false;
         setLoadingUI(false);
@@ -305,8 +309,9 @@
   }
 
   function goBack() {
-    // 使用 CDP history back
-    apiPost('/api/internal-browser/history', { action: 'back', account: '' })
+    apiPost('/api/browser-surface/tab/history', {
+      action: 'back', port: CONFIG.productBrowserPort, target_id: state.activeTabId
+    })
       .then(function () {
         setTimeout(function () {
           refreshScreenshot();
@@ -318,7 +323,9 @@
   }
 
   function goForward() {
-    apiPost('/api/internal-browser/history', { action: 'forward', account: '' })
+    apiPost('/api/browser-surface/tab/history', {
+      action: 'forward', port: CONFIG.productBrowserPort, target_id: state.activeTabId
+    })
       .then(function () {
         setTimeout(function () {
           refreshScreenshot();
@@ -330,9 +337,9 @@
   }
 
   function refresh() {
-    var body = { port: CONFIG.cdpPort };
+    var body = { action: 'reload', port: CONFIG.productBrowserPort };
     if (state.activeTabId) body.target_id = state.activeTabId;
-    apiPost('/api/internal-browser/refresh', body)
+    apiPost('/api/browser-surface/tab/history', body)
       .then(function () {
         state.isLoading = true;
         setLoadingUI(true);
@@ -366,7 +373,7 @@
     var placeholder = $('viewport-placeholder');
     if (!wrap) return;
 
-    var url = '/api/browser-surface/screenshot?port=' + CONFIG.cdpPort + '&quality=' + CONFIG.screenshotQuality;
+    var url = '/api/browser-surface/screenshot?port=' + CONFIG.productBrowserPort + '&quality=' + CONFIG.screenshotQuality;
     if (state.activeTabId) url += '&target_id=' + encodeURIComponent(state.activeTabId);
 
     apiGet(url)
@@ -581,12 +588,12 @@
   // ===== Collect Status =====
   function updateCollectStatus() {
     $('cs-platform').textContent = detectPlatform(state.currentUrl);
-    $('cs-port').textContent = CONFIG.cdpPort;
+    $('cs-port').textContent = '浏览 ' + CONFIG.productBrowserPort + ' · 采集 ' + CONFIG.collectionPort;
     $('cs-page').textContent = state.currentTitle || state.currentUrl || '—';
     $('cs-tabs').textContent = state.tabs.length;
 
     // 检测浏览器在线状态
-    apiGet('/api/browser-surface/tabs?port=' + CONFIG.cdpPort)
+    apiGet('/api/browser-surface/tabs?port=' + CONFIG.productBrowserPort)
       .then(function (d) {
         var online = d.ok && d.tabs && d.tabs.length > 0;
         var el = $('cs-online');
@@ -609,6 +616,22 @@
   function checkCollectStatus() {
     updateCollectStatus();
     refreshScreenshot();
+  }
+
+  // ===== External handoff (explicit user choice only) =====
+  function openExternal() {
+    var url = (state.currentUrl || '').trim();
+    if (!/^https?:\/\//i.test(url)) return;
+    var host = getHost(url) || url;
+    if (!global.confirm('将离开序境内置浏览器，在外部浏览器打开 ' + host + '。继续吗？')) return;
+    // 这是唯一的外部出口，必须由用户点击并二次确认；内部导航不会调用它。
+    global.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function ensureProductBrowser(done) {
+    apiPost('/api/browser-surface/general-browser/ensure', {})
+      .then(function () { if (typeof done === 'function') done(); })
+      .catch(function () { if (typeof done === 'function') done(); });
   }
 
   // ===== Status Bar =====
@@ -638,8 +661,34 @@
     state.tabTimer = null;
   }
 
+  function destroy() {
+    stopPolling();
+    if (state.timeTimer) clearInterval(state.timeTimer);
+    state.timeTimer = null;
+    state.initialized = false;
+    state.root = null;
+    state.tabs = [];
+    state.activeTabId = null;
+    state.pendingUrl = null;
+    state.pendingTargetId = null;
+  }
+
   // ===== Init =====
   function init() {
+    var shell = $('browser-shell');
+    // Experience V2 is a routed SPA.  Do not start timers when SYS-06 is not
+    // the visible screen; runtime.js will mount us when the screen appears.
+    if (!shell) return false;
+    if (state.initialized && state.root === shell) {
+      loadTabs();
+      refreshScreenshot();
+      updateCollectStatus();
+      return true;
+    }
+    if (state.initialized) destroy();
+    state.initialized = true;
+    state.root = shell;
+
     // 地址栏回车导航
     var addrInput = $('address-input');
     if (addrInput) {
@@ -652,13 +701,16 @@
       addrInput.addEventListener('focus', function () { this.select(); });
     }
 
-    // 初始加载
-    loadTabs();
+    // 初始加载：先确保产品专用内置浏览器 9224，绝不把采集 9222/9223
+    // 当作通用浏览器默认实例。
+    ensureProductBrowser(function () {
+      loadTabs();
+      refreshScreenshot();
+      updateCollectStatus();
+    });
     loadBookmarks();
-    refreshScreenshot();
-    updateCollectStatus();
     updateTime();
-    setInterval(updateTime, 1000);
+    state.timeTimer = setInterval(updateTime, 1000);
 
     // 启动轮询
     startPolling();
@@ -673,7 +725,8 @@
       }
     });
 
-    console.log('[LUMENIS Browser] Initialized, port=' + CONFIG.cdpPort);
+    console.log('[LUMENIS Browser] Initialized, internal product port=' + CONFIG.productBrowserPort);
+    return true;
   }
 
   // ===== Public API =====
@@ -696,16 +749,20 @@
     confirmNavigate: confirmNavigate,
     cancelNavigate: cancelNavigate,
     checkCollectStatus: checkCollectStatus,
+    openExternal: openExternal,
     onScreenshotClick: onScreenshotClick,
+    destroy: destroy,
   };
 
   global.BrowserApp = BrowserApp;
 
   // Auto-init
-  if (document.readyState !== 'loading') {
-    init();
-  } else {
-    document.addEventListener('DOMContentLoaded', init);
+  if (document.getElementById('browser-shell')) {
+    if (document.readyState !== 'loading') {
+      init();
+    } else {
+      document.addEventListener('DOMContentLoaded', init);
+    }
   }
 
 })(window);
@@ -775,7 +832,8 @@
   function createSession() {
     setActionResult('正在创建 AI Browser Session...', 'info');
     apiPost('/api/browser/sessions', {
-      cdp_port: 9222,
+      // AI Browser 与产品内置浏览器共用通用实例；采集身份 9222/9223 不作默认会话。
+      cdp_port: 9224,
       headless: true,
       auto_start: true,
       idle_timeout: 600,

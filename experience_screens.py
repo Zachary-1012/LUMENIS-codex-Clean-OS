@@ -1681,6 +1681,137 @@ def _build_sh01() -> Dict[str, Any]:
     return _envelope("SH-01", sections, truth=None if failed else {"evidence_total": evidence.get("total", 0)})
 
 
+def _browser_surface_markup() -> str:
+    """真实 SYS-06 浏览表面。
+
+    这里只声明现有 Browser Surface 控制器所需的 DOM 契约；标签页、导航、
+    截图、历史、书签、AI Browser Session 和外部出口都仍由
+    ``static/js/browser.js`` + ``browser_surface.py`` 提供，不复制浏览器后端。
+    外部出口是显式人工操作，默认路径始终留在序境内置浏览器。
+    """
+    return r'''
+<section class="lum-browser-surface" data-browser-surface data-reveal aria-label="序境内置浏览器">
+  <div class="lum-browser-surface__head">
+    <div>
+      <span class="lum-eyebrow">SYSTEM · INTERNAL BROWSER</span>
+      <h2 class="lum-h4">序境内置浏览器</h2>
+      <p class="lum-caption">默认在序境内读取、观察与固定证据；采集身份与通用浏览身份物理隔离。需要时可由人明确选择外部浏览器接力。</p>
+    </div>
+    <span class="lum-chip lum-mono">INTERNAL FIRST · 9224</span>
+  </div>
+
+  <div class="browser-shell" id="browser-shell">
+    <div class="browser-tabbar">
+      <div class="browser-tab-list" id="browser-tab-list" role="tablist" aria-label="浏览器标签页"></div>
+      <button type="button" class="browser-tab-new" id="browser-tab-new" title="新建标签页" aria-label="新建标签页" onclick="BrowserApp.newTab()">＋</button>
+    </div>
+
+    <div class="browser-toolbar">
+      <div class="browser-nav-btns">
+        <button type="button" class="browser-nav-btn" id="btn-back" title="后退" aria-label="后退" onclick="BrowserApp.goBack()">‹</button>
+        <button type="button" class="browser-nav-btn" id="btn-forward" title="前进" aria-label="前进" onclick="BrowserApp.goForward()">›</button>
+        <button type="button" class="browser-nav-btn" id="btn-refresh" title="刷新" aria-label="刷新" onclick="BrowserApp.refresh()">↻</button>
+        <button type="button" class="browser-nav-btn" id="btn-stop" title="停止" aria-label="停止" onclick="BrowserApp.stopLoading()" style="display:none">×</button>
+      </div>
+      <div class="browser-address-wrap">
+        <div class="browser-security-indicator is-unknown" id="security-indicator" aria-live="polite">
+          <span class="browser-security-icon" aria-hidden="true">●</span><span class="browser-security-label" id="security-label">未知</span>
+        </div>
+        <input type="text" class="browser-address-input" id="address-input" placeholder="输入 URL 或搜索…" autocomplete="off" spellcheck="false" aria-label="地址或搜索">
+      </div>
+      <div class="browser-toolbar-actions">
+        <button type="button" class="browser-action-btn" id="btn-bookmark" title="添加书签" aria-label="添加书签" onclick="BrowserApp.toggleBookmark()">☆</button>
+        <button type="button" class="browser-action-btn" id="btn-external" title="在外部浏览器打开（仅手动）" aria-label="在外部浏览器打开（仅手动）" onclick="BrowserApp.openExternal()">↗</button>
+        <button type="button" class="browser-action-btn is-active" id="btn-sidebar" title="侧边面板" aria-label="侧边面板" onclick="BrowserApp.toggleSidebar()">☷</button>
+      </div>
+    </div>
+
+    <div class="browser-main">
+      <div class="browser-viewport" id="browser-viewport">
+        <div class="browser-viewport__img-wrap" id="viewport-img-wrap">
+          <div class="browser-viewport__placeholder" id="viewport-placeholder">
+            <div class="browser-viewport__placeholder-icon">◌</div>
+            <div class="browser-viewport__placeholder-text">正在连接序境内置浏览器</div>
+            <div class="browser-viewport__placeholder-sub">通用浏览 9224 · 采集身份不混用</div>
+          </div>
+        </div>
+        <div class="browser-blocked" id="browser-blocked" style="display:none" role="alert">
+          <div class="browser-blocked__icon">!</div>
+          <div class="browser-blocked__title">访问被拦截</div>
+          <div class="browser-blocked__url" id="blocked-url"></div>
+          <div class="browser-blocked__reason" id="blocked-reason"></div>
+        </div>
+      </div>
+
+      <aside class="browser-sidebar" id="browser-sidebar" aria-label="浏览器侧边面板">
+        <div class="browser-sidebar__tabs" role="tablist">
+          <button type="button" class="browser-sidebar__tab is-active" data-panel="bookmarks" onclick="BrowserApp.switchPanel('bookmarks')">书签</button>
+          <button type="button" class="browser-sidebar__tab" data-panel="history" onclick="BrowserApp.switchPanel('history')">历史</button>
+          <button type="button" class="browser-sidebar__tab" data-panel="collect" onclick="BrowserApp.switchPanel('collect')">采集</button>
+          <button type="button" class="browser-sidebar__tab" data-panel="ai-agent" onclick="BrowserApp.switchPanel('ai-agent')">AI</button>
+        </div>
+        <div class="browser-sidebar__content" id="sidebar-content">
+          <div class="browser-panel" id="panel-bookmarks">
+            <div class="browser-panel-section__header"><span class="browser-panel-section__title">书签</span><button type="button" class="browser-panel-section__action" onclick="BrowserApp.refreshBookmarks()">刷新</button></div>
+            <div id="bookmarks-list"></div>
+          </div>
+          <div class="browser-panel" id="panel-history" style="display:none">
+            <div class="browser-panel-section__header"><span class="browser-panel-section__title">浏览历史</span><button type="button" class="browser-panel-section__action" onclick="BrowserApp.clearHistory()">清空</button></div>
+            <div id="history-list"></div>
+          </div>
+          <div class="browser-panel" id="panel-collect" style="display:none">
+            <div class="browser-readonly-banner">只读保护 · 不关注、不点赞、不评论、不私信、不发布</div>
+            <div class="browser-collect-status">
+              <div><span>当前平台</span><b id="cs-platform">—</b></div>
+              <div><span>浏览 / 采集</span><b id="cs-port">9224 / 9223</b></div>
+              <div><span>浏览器状态</span><b id="cs-online">检测中…</b></div>
+              <div><span>当前页面</span><b id="cs-page">—</b></div>
+              <div><span>标签页数</span><b id="cs-tabs">—</b></div>
+              <div><span>导航模式</span><b id="cs-navmode">—</b></div>
+            </div>
+            <button type="button" class="lum-btn lum-btn-secondary lum-btn-sm" onclick="BrowserApp.checkCollectStatus()">检测状态</button>
+          </div>
+          <div class="browser-panel" id="panel-ai-agent" style="display:none">
+            <div class="browser-readonly-banner">AI Browser Runtime · Observe → Act → Verify → Evidence</div>
+            <div class="browser-panel-section__header"><span class="browser-panel-section__title">Session</span><button type="button" class="browser-panel-section__action" onclick="AIBrowser.refreshStatus()">刷新</button></div>
+            <div class="browser-collect-status">
+              <div><span>Session</span><b id="ai-session-id">未创建</b></div>
+              <div><span>状态</span><b id="ai-session-status">—</b></div>
+              <div><span>当前 URL</span><b id="ai-current-url">—</b></div>
+              <div><span>风险</span><b id="ai-risk-level">medium</b></div>
+              <div><span>熔断</span><b id="ai-circuit-breaker">closed</b></div>
+            </div>
+            <div class="browser-inline-actions"><button type="button" class="lum-btn lum-btn-secondary lum-btn-sm" onclick="AIBrowser.createSession()">创建 Session</button><button type="button" class="lum-btn lum-btn-ghost lum-btn-sm" onclick="AIBrowser.stopSession()">关闭</button></div>
+            <div class="browser-panel-section__header"><span class="browser-panel-section__title">Observe</span><button type="button" class="browser-panel-section__action" onclick="AIBrowser.observe()">观察</button></div>
+            <div id="ai-observe-content" class="browser-panel-copy">点击“观察”读取当前页面 DOM 摘要与脱敏文本。</div>
+            <div id="ai-injection-warning" class="browser-warning" style="display:none"></div>
+            <div class="browser-panel-section__header"><span class="browser-panel-section__title">Act · Verify</span></div>
+            <select id="ai-action-type" class="lum-select" aria-label="AI Action 类型"><option value="click">click · 点击</option><option value="input">input · 输入</option><option value="navigate">navigate · 导航</option><option value="scroll">scroll · 滚动</option><option value="back">back · 后退</option><option value="forward">forward · 前进</option><option value="reload">reload · 刷新</option><option value="wait">wait · 等待</option><option value="keyboard">keyboard · 键盘</option></select>
+            <input id="ai-action-selector" class="lum-input" placeholder="CSS/XPath selector" aria-label="CSS或XPath selector">
+            <input id="ai-action-value" class="lum-input" placeholder="value / url / text" aria-label="Action value">
+            <input id="ai-action-expected" class="lum-input" placeholder="期望：url_contains=…" aria-label="Verification expected">
+            <button type="button" class="lum-btn lum-btn-secondary" onclick="AIBrowser.executeAction()">执行（带验证）</button>
+            <div id="ai-action-result" class="browser-panel-copy">等待执行…</div>
+            <div class="browser-panel-section__header"><span class="browser-panel-section__title">Evidence</span><button type="button" class="browser-panel-section__action" onclick="AIBrowser.refreshEvidence()">刷新</button></div>
+            <div id="ai-evidence-timeline" class="browser-panel-copy">暂无 Evidence 记录</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="browser-statusbar"><span><i class="browser-statusbar__dot is-offline" id="status-dot"></i><span id="status-text">未连接</span></span><span class="browser-statusbar__url" id="status-url">—</span><span class="browser-statusbar__spacer"></span><span id="status-time"></span></div>
+  </div>
+
+  <div class="browser-modal-overlay" id="confirm-modal">
+    <div class="browser-modal"><div class="browser-modal__icon">?</div><div class="browser-modal__title">确认在内置浏览器访问外部域名</div><div class="browser-modal__desc">该域名不在当前批准范围。确认后只允许本次在序境内置浏览器导航，不改变持久策略。</div><div class="browser-modal__url-box" id="confirm-url"></div><div class="browser-modal__actions"><button type="button" class="lum-btn lum-btn-ghost" onclick="BrowserApp.cancelNavigate()">取消</button><button type="button" class="lum-btn lum-btn-secondary" onclick="BrowserApp.confirmNavigate()">确认访问</button></div></div>
+  </div>
+  <div class="browser-modal-overlay" id="ai-approval-modal" style="display:none">
+    <div class="browser-modal"><div class="browser-modal__icon">!</div><div class="browser-modal__title">需要人工审批</div><div class="browser-modal__desc" id="ai-approval-reason">AI Browser Runtime 请求执行操作，需要人工确认。</div><div class="browser-approval-grid"><span>Action</span><b id="ai-approval-action">—</b><span>Target</span><b id="ai-approval-target">—</b><span>Expected</span><b id="ai-approval-expected">—</b><span>Risk</span><b id="ai-approval-risk">—</b></div><div class="browser-modal__actions"><button type="button" class="lum-btn lum-btn-ghost" onclick="AIBrowser.rejectAction()">拒绝</button><button type="button" class="lum-btn lum-btn-secondary" onclick="AIBrowser.approveAction()">批准执行</button></div></div>
+  </div>
+</section>
+'''
+
+
 def _build_sys06() -> Dict[str, Any]:
     """内部浏览器：只读能力与驻场实例状态，不返回 Profile 绝对路径或 Cookie。"""
     import browser_surface
@@ -1699,6 +1830,9 @@ def _build_sys06() -> Dict[str, Any]:
     state = STATE_OFFLINE if failed else STATE_READY
     sections = [
         _head("SYS-06"),
+        # 真实生产入口：复用 browser_surface 唯一后端与 browser.js 控制器。
+        # 不把旧 Jinja 页面或 prototype example.com 作为 fallback。
+        section("raw", STATE_READY, html=_browser_surface_markup()),
         section("kpis", state, items=[
             metric("sys06.instances", "浏览器实例", value=None if failed else len(rows), state=state,
                    icon="browser", source="browser_surface.capability_report"),

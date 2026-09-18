@@ -444,7 +444,12 @@ const AuthRecoveryModal = (function() {
   }
 
   function openRecoveryUrl(url) {
-    window.open(url, '_blank', 'width=800,height=600');
+    if (window.BrowserPanel && typeof window.BrowserPanel.navigate === 'function') {
+      window.BrowserPanel.navigate(url);
+      return;
+    }
+    // 外部窗口不再作为默认兜底；未加载产品浏览器时只提示用户从系统内打开。
+    window.alert('序境内置浏览器尚未就绪，请先打开浏览器面板。');
   }
 
   function refresh() {

@@ -1162,7 +1162,7 @@ class AIBrowserRuntime:
     def __init__(
         self,
         session_id: Optional[str] = None,
-        cdp_port: int = 9222,
+        cdp_port: int = 9224,
         headless: bool = True,
         user_data_dir: Optional[str] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,
@@ -1921,7 +1921,7 @@ class BrowserSessionManager:
 
     def create_session(
         self,
-        cdp_port: int = 9222,
+        cdp_port: int = 9224,
         headless: bool = True,
         user_data_dir: Optional[str] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,

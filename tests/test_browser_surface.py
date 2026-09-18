@@ -66,7 +66,15 @@ def test_strict_only_platform():
     r = bs.evaluate_navigation("https://www.xiaohongshu.com/explore", mode="strict")
     assert r["allowed"] is True
     r2 = bs.evaluate_navigation("https://www.zhihu.com/", mode="strict")
-    assert r2["allowed"] is False
+    assert r2["allowed"] is True
+
+
+def test_strict_allows_approved_platform_and_research_domains(monkeypatch):
+    """平台可在序境内置浏览器打开；这不等于启用对应采集器。"""
+    monkeypatch.setattr(bs, "_is_internal_host", lambda _host: False)
+    for domain in bs.BROWSER_PLATFORM_DOMAINS:
+        result = bs.evaluate_navigation(f"https://www.{domain}/", mode="strict")
+        assert result["allowed"] is True, domain
 
 
 def test_allowlist_extra_domains(monkeypatch):
@@ -204,6 +212,26 @@ def test_api_capabilities_and_policy(client):
     assert r.status_code == 200 and r.get_json()["ok"]
     p = client.get("/api/browser-surface/policy?url=file:///C:/x").get_json()
     assert p["evaluation"]["allowed"] is False
+
+
+def test_browser_surface_api_defaults_to_product_browser(monkeypatch, client):
+    """未指定端口的产品浏览器 API 必须走独立通用实例 9224。"""
+    seen = {}
+
+    def fake_list_tabs(account=None, port=None):
+        seen.update(account=account, port=port)
+        return {"ok": True, "cdp_port": port, "tabs": [], "count": 0}
+
+    monkeypatch.setattr(bs, "list_tabs", fake_list_tabs)
+    response = client.get("/api/browser-surface/tabs")
+    assert response.status_code == 200
+    assert seen["port"] == bs.GENERAL_CDP_PORT == 9224
+
+
+def test_browser_surface_history_endpoint_rejects_unknown_action(client):
+    response = client.post("/api/browser-surface/tab/history", json={"action": "javascript"})
+    assert response.status_code == 400
+    assert response.get_json()["ok"] is False
 
 
 def test_api_search_requires_query(client):

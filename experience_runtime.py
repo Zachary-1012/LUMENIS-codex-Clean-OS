@@ -211,6 +211,7 @@ def shared_skill_surface(surface: str = "AI") -> Dict[str, Any]:
 _RUNTIME_BOOT = (
     '<script>window.LUM_RUNTIME_API="/api/experience";'
     'window.LUM_RUNTIME={served:true,mode:"production"};</script>'
+    '<script src="/static/js/browser.js" defer></script>'
     '<script src="./assets/runtime.js" defer></script>'
 )
 
@@ -232,6 +233,11 @@ def experience_shell():
         "<title>序境 LUMENIS · Experience V2 Prototype</title>",
         "<title>序境 LUMENIS · Production</title>",
     )
+    if "assets/browser-surface.css" not in html:
+        html = html.replace(
+            "</head>",
+            '<link rel="stylesheet" href="./assets/browser-surface.css">\n</head>',
+        )
     if "assets/runtime.js" not in html:
         html = html.replace("</body>", f"{_RUNTIME_BOOT}\n</body>")
     # 生产外壳下隐藏原型 QA 工具条与 prototype 标记（由 runtime.js 统一改为 runtime 来源）

@@ -379,7 +379,13 @@
       // Evidence Chain
       html += '<div><h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">证据链</h4>';
       html += '<div style="font-size:12px;line-height:1.8;">';
-      if (risk.url) html += '<div>原文链接：<a href="' + risk.url + '" target="_blank" style="color:#0F766E;">' + this.escapeHtml(risk.url) + '</a></div>';
+      if (risk.url) {
+        html += '<div>原文链接：<button type="button" class="zbc-btn js-open-evidence" '
+          + 'data-url="' + this.escapeHtml(risk.url) + '" '
+          + 'style="padding:2px 8px;color:#0F766E;">在序境浏览器打开</button>';
+        html += '<div style="font-family:monospace;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);word-break:break-all;margin-top:4px;">'
+          + this.escapeHtml(risk.url) + '</div></div>';
+      }
       html += '<div>笔记ID：<code style="font-family:monospace;font-size:11px;">' + (risk.note_id || risk.id || '—') + '</code></div>';
       html += '<div>采集来源：' + this.escapeHtml(risk.source_platform || 'unknown') + '</div>';
       html += '</div></div>';
@@ -392,6 +398,13 @@
 
       document.getElementById('detail-body').innerHTML = html;
       document.getElementById('detail-title').textContent = '风险详情 · ' + cfg.label;
+      document.querySelectorAll('#detail-body .js-open-evidence').forEach(function (button) {
+        button.addEventListener('click', function () {
+          if (window.BrowserPanel && typeof window.BrowserPanel.navigate === 'function') {
+            window.BrowserPanel.navigate(button.getAttribute('data-url') || '');
+          }
+        });
+      });
     },
 
     closeDetail: function() {

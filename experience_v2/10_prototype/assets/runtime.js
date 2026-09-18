@@ -782,12 +782,23 @@
     wirePlatformCollection(root);
     wireComposer(root);
     mountSharedSkillPalette(root);
+    // SYS-06 is a routed production screen.  Reuse the existing canonical
+    // browser controller only while its real surface is mounted; leaving the
+    // screen stops polling so an old UI process cannot overwrite the new one.
+    if (currentId === 'SYS-06' && root.querySelector('[data-browser-surface]') &&
+        global.BrowserApp && typeof global.BrowserApp.init === 'function') {
+      global.BrowserApp.init();
+    }
   }
 
   /* ---------------- 事件接线 ---------------- */
   document.addEventListener('lum:screen', ev => {
     const id = ev.detail && ev.detail.id;
     if (!id) return;
+    if (currentId === 'SYS-06' && currentId !== id && global.BrowserApp &&
+        typeof global.BrowserApp.destroy === 'function') {
+      global.BrowserApp.destroy();
+    }
     currentId = id;
     const sig = subjectSignature(id);
     if (hydrated.has(sig)) { wireRuntime(document); return; }

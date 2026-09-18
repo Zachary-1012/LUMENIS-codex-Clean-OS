@@ -114,10 +114,27 @@
       }
     },
     navigate: function(url) {
-      if (iframe) {
-        if (placeholder) placeholder.style.display = 'none';
-        iframe.style.display = 'block';
-        iframe.src = url;
+      // 任何平台原文都先进入序境内置浏览器，由 browser_surface 的导航门禁决定
+      // 是否需要用户确认；这里禁止把 URL 直接写入 iframe，避免旧 UI 绕过门禁。
+      if (!iframe || !/^https?:\/\//i.test(String(url || '').trim())) return;
+      const target = String(url).trim();
+      const dispatch = function() {
+        try {
+          if (iframe.contentWindow && iframe.contentWindow.BrowserApp &&
+              typeof iframe.contentWindow.BrowserApp.navigateTo === 'function') {
+            iframe.contentWindow.BrowserApp.navigateTo(target);
+          }
+        } catch (e) {
+          console.warn('[BrowserPanel] internal navigation unavailable:', e);
+        }
+      };
+      if (placeholder) placeholder.style.display = 'none';
+      iframe.style.display = 'block';
+      if (iframe.contentWindow && iframe.contentWindow.BrowserApp) {
+        dispatch();
+      } else {
+        iframe.addEventListener('load', dispatch, { once: true });
+        iframe.src = '/lumenis/system/browser';
       }
     },
     _updateStatus: function(active) {

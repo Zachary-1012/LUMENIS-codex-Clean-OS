@@ -113,7 +113,7 @@ def register_ai_browser_api(app):
         """创建 Browser Session。
 
         Request JSON:
-          - cdp_port: int (默认 9222)
+          - cdp_port: int (默认 9224，产品内置浏览器通用实例)
           - headless: bool (默认 True)
           - user_data_dir: str (可选，独立 profile 路径)
           - idle_timeout: int (秒，默认 600)
@@ -125,7 +125,7 @@ def register_ai_browser_api(app):
             mgr = get_session_manager()
 
             session = mgr.create_session(
-                cdp_port=int(data.get("cdp_port", 9222)),
+                cdp_port=int(data.get("cdp_port", 9224)),
                 headless=bool(data.get("headless", True)),
                 user_data_dir=data.get("user_data_dir"),
                 idle_timeout=int(data.get("idle_timeout", 600)),

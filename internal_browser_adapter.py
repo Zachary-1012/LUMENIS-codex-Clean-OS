@@ -128,7 +128,8 @@ def navigate(url: str, port: int = 9222, target_id: Optional[str] = None,
 
     # Step 2: 执行 CDP 导航（复用 browser_surface 的底层 CDP 能力）
     try:
-        result = bs.navigate_tab(url, target_id=target_id, port=port, wait_ms=wait_ms)
+        result = bs.navigate_tab(url, target_id=target_id, port=port, wait_ms=wait_ms,
+                                 confirmed=confirmed)
         if result.get("ok"):
             return {"ok": True, "status": "navigated", "gate": gate,
                     "target_id": result.get("target_id"), "cdp_port": port}

@@ -43,7 +43,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 _ALLOWLIST_FILE = os.path.join(ROOT, "data", "private", "browser_allowlist.json")
 
 # ─────────────────────────── 导航策略（Policy）───────────────────────────
-# strict    : 仅平台采集域（复用 internal_browser 的平台白名单，采集链路零变化）
+# strict    : 仅已批准的平台域（浏览仍在序境内置浏览器完成，采集链路零变化）
 # allowlist : 平台域 + 用户显式追加的可信域（默认，兼顾安全与通用浏览）
 # open      : 任意公网 http/https（仍拦截危险协议 + SSRF 内网）
 NAV_MODES = ("strict", "allowlist", "open")
@@ -61,7 +61,7 @@ MAX_DOM_NODES = 400
 
 
 def current_nav_mode() -> str:
-    """当前导航模式：环境变量 > 本地配置 > 默认 allowlist。非法值回退默认。"""
+    """当前导航模式：环境变量 > 本地配置 > 默认 strict。非法值回退默认。"""
     mode = (os.getenv("INTERNAL_BROWSER_NAV_MODE", "") or "").strip().lower()
     if mode in NAV_MODES:
         return mode
@@ -190,7 +190,12 @@ def evaluate_navigation(url: str, mode: Optional[str] = None) -> dict:
         return {"allowed": True, "status": "allowed", "mode": mode, "host": host,
                 "reason": "平台内部主机直接放行"}
     # strict / allowlist 域校验
-    platform_suffixes = [s for s in ib.NAVIGATION_WHITELIST_SUFFIXES]
+    # 浏览器域白名单与采集账号白名单分离：采集仍只使用各自 Adapter/Session
+    # 的配置；这里仅决定“内置浏览器是否可在序境内打开该站点”。
+    platform_suffixes = list(ib.NAVIGATION_WHITELIST_SUFFIXES)
+    for domain in BROWSER_PLATFORM_DOMAINS:
+        if domain not in platform_suffixes:
+            platform_suffixes.append(domain)
     platform_host = _domain_allowed(host, platform_suffixes)
     # SSRF 防护：其他私网/保留地址仍拦截（10.x/192.168.x/172.16.x/169.254.x等）。
     # 代理（例如 flclash）可能把已明确白名单的平台域映射到 198.18/15
@@ -340,10 +345,12 @@ def activate_tab(target_id: str, account=None, port: Optional[int] = None) -> di
 
 def navigate_tab(url: str, target_id: Optional[str] = None, account=None,
                  port: Optional[int] = None, mode: Optional[str] = None,
-                 wait_ms: int = 600) -> dict:
+                 wait_ms: int = 600, confirmed: bool = False) -> dict:
     """在指定（或当前）标签页内导航；统一过导航门。平台内完成，不新开外部浏览器。"""
     gate = evaluate_navigation(url, mode)
-    if not gate["allowed"]:
+    # strict/allowlist 下的未知公网域必须由用户在内置浏览器界面明确确认；
+    # confirmed 只放行这一次当前 Tab 导航，不改变持久白名单和默认模式。
+    if not gate["allowed"] and not (gate.get("status") == "need_confirmation" and confirmed):
         return {"ok": False, "error": gate["reason"], "gate": gate}
     p = _resolve_port(account, port)
     ws, chosen = _find_tab_ws(p, target_id)
@@ -354,6 +361,53 @@ def navigate_tab(url: str, target_id: Optional[str] = None, account=None,
             time.sleep(min(wait_ms, 3000) / 1000.0)
         return {"ok": err is None, "cdp_port": p, "target_id": chosen["target_id"],
                 "gate": gate, "error": err}
+    finally:
+        try:
+            ws.close()
+        except Exception:
+            pass
+
+
+def history_tab(action: str = "reload", target_id: Optional[str] = None,
+                account=None, port: Optional[int] = None) -> dict:
+    """在指定内置浏览器标签页执行历史动作。
+
+    使用 CDP 的 navigation history，而不是 javascript: URL。这样后退/前进
+    与普通导航共用同一标签页和端口，也不会绕过危险协议门禁。
+    """
+    action = (action or "reload").strip().lower()
+    if action not in ("back", "forward", "reload"):
+        return {"ok": False, "error": f"未知历史动作: {action}"}
+    p = _resolve_port(account, port)
+    try:
+        ws, chosen = _find_tab_ws(p, target_id, timeout=5.0)
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "error": str(e)}
+    try:
+        if action == "reload":
+            resp = ib._cdp(ws, "Page.reload", {"ignoreCache": False}, msg_id=1, timeout=8.0)
+        else:
+            nav = ib._cdp(ws, "Page.getNavigationHistory", {}, msg_id=1, timeout=8.0)
+            result = nav.get("result", {})
+            entries = result.get("entries") or []
+            current = int(result.get("currentIndex", -1))
+            delta = -1 if action == "back" else 1
+            destination = current + delta
+            if current < 0 or destination < 0 or destination >= len(entries):
+                return {"ok": False, "cdp_port": p, "target_id": chosen["target_id"],
+                        "action": action, "error": "没有可用的历史页面"}
+            entry_id = entries[destination].get("id")
+            if entry_id is None:
+                return {"ok": False, "cdp_port": p, "target_id": chosen["target_id"],
+                        "action": action, "error": "历史条目缺少 entryId"}
+            resp = ib._cdp(ws, "Page.navigateToHistoryEntry", {"entryId": entry_id},
+                           msg_id=2, timeout=8.0)
+        error = (resp.get("result", {}) or {}).get("errorText")
+        return {"ok": error is None, "cdp_port": p, "target_id": chosen["target_id"],
+                "action": action, "error": error}
+    except Exception as e:
+        return {"ok": False, "cdp_port": p, "target_id": chosen["target_id"],
+                "action": action, "error": str(e)}
     finally:
         try:
             ws.close()
@@ -550,6 +604,14 @@ def capability_report() -> dict:
 GENERAL_CDP_PORT = 9224
 GENERAL_PROFILE_DIR = os.path.join(ROOT, "edge-cdp-general")
 GENERAL_HOME_URL = "https://www.bing.com"
+
+# 产品内置浏览器的浏览范围。它决定浏览器内的“平台域”视觉/门禁状态，
+# 不会启用相应平台采集器，也不会改变当前仅香港 XHS 生产采集的身份规则。
+BROWSER_PLATFORM_DOMAINS = (
+    "xiaohongshu.com", "rednote.com", "bilibili.com", "weibo.com",
+    "douyin.com", "kuaishou.com", "zhihu.com", "instagram.com",
+    "bing.com", "google.com", "baidu.com", "duckduckgo.com",
+)
 
 
 def general_browser_online() -> bool:

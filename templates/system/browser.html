@@ -450,6 +450,10 @@
       <button class="browser-action-btn" id="btn-bookmark" title="添加书签" onclick="BrowserApp.toggleBookmark()">
         <span data-icon="bookmark" data-icon-size="18"></span>
       </button>
+      <button class="browser-action-btn" id="btn-external" title="在外部浏览器打开（仅手动）"
+              aria-label="在外部浏览器打开（仅手动）" onclick="BrowserApp.openExternal()">
+        <span aria-hidden="true" style="font-size:20px;line-height:1;">↗</span>
+      </button>
       <button class="browser-action-btn is-active" id="btn-sidebar" title="侧边面板" onclick="BrowserApp.toggleSidebar()">
         <span data-icon="panel" data-icon-size="18"></span>
       </button>
@@ -532,7 +536,7 @@
             </div>
             <div class="browser-collect-status__row">
               <span class="browser-collect-status__label">CDP 端口</span>
-              <span class="browser-collect-status__value" id="cs-port">9222</span>
+              <span class="browser-collect-status__value" id="cs-port">浏览 9224 · 采集 9223</span>
             </div>
             <div class="browser-collect-status__row">
               <span class="browser-collect-status__label">浏览器状态</span>
