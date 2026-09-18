@@ -1,6 +1,6 @@
-"""序境 / LUMENIS — Experience V2 生产运行时挂载层 (Experience Runtime Mount).
+"""序境 / LUMENIS — Experience 生产运行时挂载层 (Experience Runtime Mount).
 
-职责（严格最小、加法式）：
+唯一设计权威为 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md；experience_v2 仅为兼容目录名。\n\n职责（严格最小、加法式）：
   1. 把零构建前端蓝图 ``experience_v2/10_prototype`` 通过现有 Flask 生产进程挂载到
      ``/experience/``（不新建 React/Vue；旧 Jinja 页面源码保留用于兼容与能力找回，
      但由 app 的 canonical route guard 统一阻止其作为生产 UI 入口）。
