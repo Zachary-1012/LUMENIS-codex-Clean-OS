@@ -1,0 +1,658 @@
+{% extends "base.html" %}
+{% block title %}SYSTEM Collector · 序境 LUMENIS{% endblock %}
+{% block page_title %}Collector Management{% endblock %}
+
+{% block content %}
+<div class="zbc-degraded-banner" id="degraded-banner" style="display:none;">
+  <span>⚡</span><span id="degraded-msg">部分采集器数据延迟</span>
+</div>
+
+<!-- ===== 5 platform collector status KPI cards ===== -->
+<div class="zbc-kpi-grid" id="collector-kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">小红书</div>
+    <div class="zbc-kpi-card__value" data-kpi id="kpi-xhs-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-xhs-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">抖音</div>
+    <div class="zbc-kpi-card__value" data-kpi id="kpi-dy-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-dy-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">微博</div>
+    <div class="zbc-kpi-card__value" data-kpi id="kpi-wb-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-wb-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">B站</div>
+    <div class="zbc-kpi-card__value" data-kpi id="kpi-bili-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-bili-sub">数据采集中…</div>
+  </div>
+  <div class="zbc-kpi-card">
+    <div class="zbc-kpi-card__label">知乎</div>
+    <div class="zbc-kpi-card__value" data-kpi id="kpi-zh-status" style="font-size:18px;">—</div>
+    <div class="zbc-kpi-card__change zbc-kpi-card__change--neutral" id="kpi-zh-sub">数据采集中…</div>
+  </div>
+</div>
+
+<!-- ===== Row 2: Account management + Proxy pool ===== -->
+<div class="zbc-grid-2">
+  <div class="zbc-card" id="account-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">账号管理</span>
+      <span class="zbc-tag zbc-tag--info" id="account-count">—</span>
+    </div>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="account-loading">
+        <div class="zbc-skeleton" style="width:75%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:55%;height:16px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="account-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">👤</div>
+        <div class="zbc-state-empty__text">暂无采集账号</div>
+      </div>
+      <div class="zbc-state-error" id="account-error" style="display:none;">
+        <div class="zbc-state-error__text" id="account-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadAccounts()">重试</button>
+      </div>
+      <div id="account-table-wrap" style="display:none;overflow-x:auto;"></div>
+    </div>
+  </div>
+
+  <div class="zbc-card" id="proxy-card">
+    <div class="zbc-card__header">
+      <span class="zbc-card__title">代理池</span>
+      <span class="zbc-tag zbc-tag--info" id="proxy-count">—</span>
+    </div>
+    <div class="zbc-card__body" style="padding:0;">
+      <div class="zbc-state-loading" id="proxy-loading">
+        <div class="zbc-skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:60%;height:16px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="proxy-empty" style="display:none;">
+        <div class="zbc-state-empty__icon">🌐</div>
+        <div class="zbc-state-empty__text">代理池为空</div>
+      </div>
+      <div class="zbc-state-error" id="proxy-error" style="display:none;">
+        <div class="zbc-state-error__text" id="proxy-error-msg">加载失败</div>
+        <button class="zbc-btn" onclick="loadProxy()">重试</button>
+      </div>
+      <div id="proxy-list" style="display:none;max-height:380px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Row 3: Quality Gate 5-step ===== -->
+<div class="zbc-card" id="quality-card">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">质量门禁 · 5 步通过率</span>
+    <span class="zbc-tag zbc-tag--info" id="quality-overall">—</span>
+  </div>
+  <div class="zbc-card__body">
+    <div class="zbc-state-loading" id="quality-loading">
+      <div class="zbc-skeleton" style="width:100%;height:80px;"></div>
+    </div>
+    <div class="zbc-state-error" id="quality-error" style="display:none;">
+      <div class="zbc-state-error__text" id="quality-error-msg">质量门禁数据不可用</div>
+      <button class="zbc-btn" onclick="loadQuality()">重试</button>
+    </div>
+    <div id="quality-content" style="display:none;">
+      <div id="quality-steps" style="display:flex;gap:12px;align-items:stretch;"></div>
+      <div style="margin-top:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--l-text-secondary,#6B7280);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">最近失败记录</div>
+        <div id="quality-failures" style="font-size:12px;color:var(--l-text-secondary,#6B7280);font-family:'JetBrains Mono',monospace;max-height:120px;overflow-y:auto;">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== Phase4: 采集浏览器模式选择器（内部AI浏览器默认，可切外部） ===== -->
+<div class="zbc-card" id="browser-mode-card" style="margin-top:12px;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">采集浏览器模式</span>
+    <span class="zbc-tag zbc-tag--success" id="browser-mode-current">内部AI浏览器（默认）</span>
+  </div>
+  <div class="zbc-card__body">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="browser-mode" value="internal_cdp" id="bm-internal" checked>
+        <span><strong>内部AI浏览器（CDP真人通道）</strong> — 9222大陆/9223港版持久登录态，稳定低风控，默认推荐</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="browser-mode" value="external_standalone" id="bm-external">
+        <span><strong>外部独立浏览器</strong> — 无持久登录态独立Chromium，易被风控，仅测试/兜底用</span>
+      </label>
+      <button class="zbc-btn zbc-btn--primary" style="font-size:12px;padding:4px 16px;margin-left:auto;" onclick="saveBrowserMode()">保存模式</button>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);" id="browser-mode-source">配置来源: 默认</div>
+  </div>
+</div>
+
+<!-- ===== P1-D: 实时采集画面（内置浏览器截图轮询） ===== -->
+<div class="zbc-card" id="live-view-card" style="margin-top:12px;max-height:380px;overflow:hidden;display:flex;flex-direction:column;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">实时采集画面</span>
+    <span class="zbc-tag zbc-tag--info" id="live-view-status">连接中…</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);" id="live-view-url">—</span>
+  </div>
+  <div class="zbc-card__body">
+    <div style="display:flex;gap:16px;align-items:stretch;max-height:300px;overflow:hidden;">
+      <div style="flex:1;min-width:0;">
+        <div id="live-view-screenshot-wrap" style="background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;overflow:hidden;height:260px;max-height:260px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="color:var(--l-text-tertiary,#9CA3AF);font-size:13px;">正在连接采集浏览器…</div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+          <button class="zbc-btn zbc-btn--secondary" style="font-size:12px;padding:4px 12px;" onclick="refreshLiveView()">刷新画面</button>
+          <label style="font-size:12px;color:var(--l-text-secondary,#6B7280);display:flex;align-items:center;gap:4px;">
+            <input type="checkbox" id="live-view-auto" checked style="margin:0;"> 自动轮询(5s)
+          </label>
+          <span style="font-size:11px;color:var(--l-text-tertiary,#9CA3AF);margin-left:auto;" id="live-view-time">—</span>
+        </div>
+      </div>
+      <div style="width:240px;flex-shrink:0;">
+        <div style="font-size:12px;color:var(--l-text-secondary,#6B7280);margin-bottom:8px;font-weight:600;">采集器状态</div>
+        <div id="live-view-collector-status" style="font-size:12px;color:var(--l-text-primary,#111827);line-height:1.8;max-height:240px;overflow-y:auto;">
+          <div>当前页面：<span id="lv-page">—</span></div>
+          <div>当前动作：<span id="lv-action">—</span></div>
+          <div>CDP端口：<span id="lv-port">9222</span></div>
+          <div>在线状态：<span id="lv-online">—</span></div>
+        </div>
+      </div>
+    </div>
+  
+
+<!-- ===== 采集日志与生命周期追溯 ===== -->
+<div class="zbc-card" id="collection-logs-card" style="margin-top:12px;">
+  <div class="zbc-card__header">
+    <span class="zbc-card__title">采集日志 · 生命周期追溯</span>
+    <span class="zbc-tag zbc-tag--info" id="logs-total">—</span>
+    <span style="margin-left:8px;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">来源: collection_logs 真实记录</span>
+  </div>
+  <div class="zbc-card__body">
+    <!-- 摘要 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;">
+      <div style="padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">总任务</div>
+        <div style="font-size:20px;font-weight:600;color:var(--l-text-primary,#111827);" id="logs-summary-total">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(16,185,129,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">成功</div>
+        <div style="font-size:20px;font-weight:600;color:#10B981;" id="logs-summary-success">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(239,68,68,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">失败</div>
+        <div style="font-size:20px;font-weight:600;color:#EF4444;" id="logs-summary-failed">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(245,158,11,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">降级/风控</div>
+        <div style="font-size:20px;font-weight:600;color:#F59E0B;" id="logs-summary-degraded">—</div>
+      </div>
+      <div style="padding:10px;background:rgba(99,102,241,0.08);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">累计采集</div>
+        <div style="font-size:20px;font-weight:600;color:#6366F1;" id="logs-summary-notes">—</div>
+      </div>
+      <div style="padding:10px;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;">
+        <div style="font-size:11px;color:var(--l-text-secondary,#6B7280);">成功率</div>
+        <div style="font-size:20px;font-weight:600;color:var(--l-text-primary,#111827);" id="logs-summary-rate">—</div>
+      </div>
+    </div>
+    <!-- 筛选 -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+      <select id="logs-status-filter" style="padding:6px 10px;border:1px solid var(--l-border,#E5E7EB);border-radius:6px;font-size:12px;background:var(--l-bg-primary,#FFF);color:var(--l-text-primary,#111827);">
+        <option value="">全部状态</option>
+        <option value="SUCCESS">成功</option>
+        <option value="FAILED">失败</option>
+        <option value="COOLING_DOWN">降级/风控</option>
+      </select>
+      <input type="text" id="logs-keyword-filter" placeholder="搜索关键词..." style="padding:6px 10px;border:1px solid var(--l-border,#E5E7EB);border-radius:6px;font-size:12px;flex:1;min-width:120px;background:var(--l-bg-primary,#FFF);color:var(--l-text-primary,#111827);">
+      <button class="zbc-btn zbc-btn--secondary" style="font-size:12px;padding:6px 14px;" onclick="loadCollectionLogs()">刷新</button>
+    </div>
+    <!-- 日志表格 -->
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--l-border,#E5E7EB);text-align:left;">
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">ID</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">关键词</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">采集数</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">状态</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">生命周期</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">开始时间</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">结束时间</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">耗时</th>
+            <th style="padding:8px 10px;color:var(--l-text-secondary,#6B7280);font-weight:600;">来源</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody">
+          <tr><td colspan="9" style="padding:20px;text-align:center;color:var(--l-text-tertiary,#9CA3AF);">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- 分页 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:var(--l-text-secondary,#6B7280);">
+      <span id="logs-page-info">—</span>
+      <div style="display:flex;gap:6px;">
+        <button class="zbc-btn zbc-btn--secondary" style="font-size:11px;padding:4px 10px;" onclick="logsPrevPage()" id="logs-prev-btn">上一页</button>
+        <button class="zbc-btn zbc-btn--secondary" style="font-size:11px;padding:4px 10px;" onclick="logsNextPage()" id="logs-next-btn">下一页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  function isMissing(v) { return v === null || v === undefined || v === '' || v === 'unknown' || v === 'null'; }
+  function disp(v) { return isMissing(v) ? '—' : v; }
+  function dispNum(v) { return isMissing(v) || isNaN(Number(v)) ? '—' : Number(v); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+  function statusTag(s) {
+    var up = String(s || 'UNKNOWN').toUpperCase();
+    var map = {
+      'RUNNING': 'zbc-tag--low', 'HEALTHY': 'zbc-tag--low', 'OK': 'zbc-tag--low', 'ACTIVE': 'zbc-tag--low',
+      'DEGRADED': 'zbc-tag--medium', 'WARNING': 'zbc-tag--medium', 'RECOVERING': 'zbc-tag--medium', 'BLOCKED': 'zbc-tag--medium',
+      'FAILED': 'zbc-tag--high', 'ERROR': 'zbc-tag--high', 'CRITICAL': 'zbc-tag--high', 'EXPIRED': 'zbc-tag--high',
+      'STOPPED': 'zbc-tag--unknown', 'IDLE': 'zbc-tag--unknown', 'UNKNOWN': 'zbc-tag--unknown', 'PAUSED': 'zbc-tag--unknown'
+    };
+    return '<span class="zbc-tag ' + (map[up] || 'zbc-tag--unknown') + '">' + up + '</span>';
+  }
+
+  function showSection(prefix, state) {
+    ['loading', 'empty', 'error'].forEach(function(s) {
+      var el = document.getElementById(prefix + '-' + s);
+      if (el) el.style.display = (s === state) ? '' : 'none';
+    });
+    var wrap = document.getElementById(prefix + '-table-wrap') || document.getElementById(prefix + '-list') || document.getElementById(prefix + '-content');
+    if (wrap) wrap.style.display = (state === 'success') ? '' : 'none';
+  }
+
+  function showDegraded(msg) {
+    var b = document.getElementById('degraded-banner');
+    document.getElementById('degraded-msg').textContent = msg;
+    b.style.display = '';
+  }
+
+  var PLATFORMS = [
+    { key: 'xhs', name: 'xiaohongshu' },
+    { key: 'dy', name: 'douyin' },
+    { key: 'wb', name: 'weibo' },
+    { key: 'bili', name: 'bilibili' },
+    { key: 'zh', name: 'zhihu' }
+  ];
+
+  /* ---- Collector status (xjViz.api driven) ---- */
+  function loadCollectors() {
+    xjViz.api('/viz/collectors').catch(function() { return xjViz.api('/system/collectors'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var collectors = data.collectors || data.platforms || {};
+        PLATFORMS.forEach(function(p) {
+          var c = collectors[p.name] || collectors[p.key] || {};
+          var el = document.getElementById('kpi-' + p.key + '-status');
+          var subEl = document.getElementById('kpi-' + p.key + '-sub');
+          var st = c.status || c.state;
+          el.textContent = isMissing(st) ? '—' : String(st).toUpperCase();
+          el.style.color = (st === 'running' || st === 'healthy') ? '#10B981' : (st === 'failed' || st === 'error') ? '#DC2626' : (st === 'degraded' || st === 'blocked') ? '#D97706' : '';
+          var last = c.last_collect_at || c.last_run_at;
+          var rate = isMissing(c.success_rate) ? null : (c.success_rate * 100).toFixed(1) + '%';
+          subEl.textContent = '最近: ' + disp(last) + ' · 成功率: ' + (rate || '—');
+          subEl.className = 'zbc-kpi-card__change ' + (!isMissing(c.success_rate) && c.success_rate < 0.8 ? 'zbc-kpi-card__change--down' : 'zbc-kpi-card__change--neutral');
+        });
+      })
+      .catch(function() {
+        // Fallback: /api/collector/status
+        xjViz.api('/collector/status').then(function(d) {
+          var data = d.data || d;
+          var running = data.is_running;
+          PLATFORMS.forEach(function(p) {
+            var el = document.getElementById('kpi-' + p.key + '-status');
+            var subEl = document.getElementById('kpi-' + p.key + '-sub');
+            el.textContent = running ? 'RUNNING' : 'IDLE';
+            el.style.color = running ? '#10B981' : '';
+            subEl.textContent = 'state: ' + disp(data.state) + ' · task: ' + disp(data.current_task);
+          });
+        }).catch(function(e2) {
+          PLATFORMS.forEach(function(p) {
+            document.getElementById('kpi-' + p.key + '-status').textContent = '—';
+            document.getElementById('kpi-' + p.key + '-sub').textContent = 'API 不可用';
+          });
+          showDegraded('采集器 API 不可用: ' + e2.message);
+        });
+      });
+  }
+
+  /* ---- Accounts (xjViz.api + xjViz.table) ---- */
+  function loadAccounts() {
+    showSection('account', 'loading');
+    xjViz.api('/cookies').then(function(d) {
+      var data = d.data || d;
+      var accounts = data.accounts || data.cookies || data.items || [];
+      if (!Array.isArray(accounts)) accounts = [];
+      document.getElementById('account-count').textContent = accounts.length + ' 账号';
+      if (accounts.length === 0) { showSection('account', 'empty'); return; }
+      showSection('account', 'success');
+      xjViz.table('#account-table-wrap', accounts, [
+        { key: 'platform', label: '平台', render: function(v, r) { return disp(v || r.platform_id); } },
+        { key: 'account_id', label: '账号 ID', render: function(v, r) { return '<span style="font-family:JetBrains Mono,monospace;font-size:12px;">' + esc(disp(v || r.user_id || r.username)) + '</span>'; } },
+        { key: 'cookie_status', label: 'Cookie 状态', render: function(v, r) { return statusTag(v || r.cookie_state); } },
+        { key: 'keepalive_status', label: '保活状态', render: function(v, r) { return statusTag(v || r.alive); } },
+        { key: 'last_used_at', label: '最后使用', render: function(v, r) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);">' + esc(disp(v || r.updated_at)) + '</span>'; } }
+      ]);
+    }).catch(function() {
+      xjViz.api('/cookies/import/status').then(function(d) {
+        var data = d.data || d;
+        var items = data.cookies || data.accounts || [];
+        if (!Array.isArray(items) || items.length === 0) { showSection('account', 'empty'); return; }
+        document.getElementById('account-count').textContent = items.length + ' 账号';
+        showSection('account', 'success');
+        xjViz.table('#account-table-wrap', items, [
+          { key: 'platform', label: '平台', render: function(v) { return disp(v); } },
+          { key: 'account_id', label: '账号 ID', render: function(v, r) { return '<span style="font-family:JetBrains Mono,monospace;font-size:12px;">' + esc(disp(v || r.id)) + '</span>'; } },
+          { key: 'status', label: 'Cookie 状态', render: function(v) { return statusTag(v); } },
+          { key: 'keepalive', label: '保活', render: function() { return '—'; } },
+          { key: 'imported_at', label: '最后使用', render: function(v) { return '<span style="font-size:12px;color:var(--l-text-secondary,#6B7280);">' + esc(disp(v)) + '</span>'; } }
+        ]);
+      }).catch(function(e2) {
+        showSection('account', 'error');
+        document.getElementById('account-error-msg').textContent = e2.message;
+      });
+    });
+  }
+
+  /* ---- Proxy pool (xjViz.api driven) ---- */
+  function loadProxy() {
+    showSection('proxy', 'loading');
+    xjViz.api('/proxy').then(function(d) {
+      var data = d.data || d;
+      var proxies = data.proxies || data.items || data.pool || [];
+      if (!Array.isArray(proxies)) proxies = [];
+      document.getElementById('proxy-count').textContent = proxies.length + ' 代理';
+      if (proxies.length === 0) { showSection('proxy', 'empty'); return; }
+      showSection('proxy', 'success');
+      var html = proxies.map(function(p) {
+        var latency = p.latency_ms || p.latency;
+        var latCls = typeof latency === 'number' && latency > 1000 ? 'color:#DC2626;' : typeof latency === 'number' && latency > 300 ? 'color:#D97706;' : '';
+        return '<div style="padding:10px 20px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;align-items:center;justify-content:space-between;">'
+          + '<div>'
+          + '<div style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600;">' + esc(disp(p.host || p.ip || p.address)) + ':' + esc(disp(p.port)) + '</div>'
+          + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);margin-top:2px;">' + esc(disp(p.protocol || p.type)) + ' · ' + esc(disp(p.location || p.region)) + '</div>'
+          + '</div>'
+          + '<div style="text-align:right;">'
+          + '<div style="font-size:12px;font-variant-numeric:tabular-nums;' + latCls + '">' + (typeof latency === 'number' ? latency + 'ms' : '—') + '</div>'
+          + statusTag(p.status || (p.available ? 'HEALTHY' : 'UNKNOWN'))
+          + '</div>'
+          + '</div>';
+      }).join('');
+      document.getElementById('proxy-list').innerHTML = html;
+    }).catch(function() {
+      xjViz.api('/proxy/status').then(function(d) {
+        var data = d.data || d;
+        var total = data.total || data.count || 0;
+        var available = data.available || data.alive || 0;
+        document.getElementById('proxy-count').textContent = available + '/' + total + ' 可用';
+        if (total === 0) { showSection('proxy', 'empty'); return; }
+        showSection('proxy', 'success');
+        document.getElementById('proxy-list').innerHTML = '<div style="padding:16px 20px;">'
+          + '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>总数</span><span style="font-weight:600;">' + total + '</span></div>'
+          + '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>可用</span><span style="font-weight:600;color:#10B981;">' + available + '</span></div>'
+          + '<div style="display:flex;justify-content:space-between;"><span>不可用</span><span style="font-weight:600;color:#DC2626;">' + (total - available) + '</span></div>'
+          + '</div>';
+      }).catch(function(e2) {
+        showSection('proxy', 'error');
+        document.getElementById('proxy-error-msg').textContent = e2.message;
+      });
+    });
+  }
+
+  /* ---- Quality Gate (xjViz.api driven) ---- */
+  var QUALITY_STEPS = [
+    { key: 'source', label: 'Source', desc: '原始采集' },
+    { key: 'raw', label: 'Raw', desc: '原始入库' },
+    { key: 'dedup', label: 'Dedup', desc: '去重过滤' },
+    { key: 'subject', label: 'Subject Filter', desc: '主体过滤' },
+    { key: 'canonical', label: 'Canonical', desc: '规范化' }
+  ];
+
+  function loadQuality() {
+    showSection('quality', 'loading');
+    xjViz.api('/viz/collector-quality').catch(function() { return xjViz.api('/collector/quality'); })
+      .then(function(d) {
+        var data = d.data || d;
+        var steps = data.steps || data.quality_gate || {};
+        var overall = data.overall_pass_rate || data.pass_rate;
+        document.getElementById('quality-overall').textContent = isMissing(overall) ? '—' : (overall * 100).toFixed(1) + '% 总通过';
+        showSection('quality', 'success');
+        var html = QUALITY_STEPS.map(function(s, i) {
+          var step = steps[s.key] || steps[s.label] || {};
+          var rate = isMissing(step.pass_rate) ? (step.input && step.output ? step.output / step.input : null) : step.pass_rate;
+          var pct = rate != null ? (rate * 100).toFixed(1) : '—';
+          var input = disp(step.input || step.count_in);
+          var output = disp(step.output || step.count_out);
+          var barColor = rate != null && rate >= 0.9 ? '#10B981' : rate != null && rate >= 0.7 ? '#D97706' : rate != null ? '#DC2626' : '#9CA3AF';
+          return '<div style="flex:1;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;padding:14px;text-align:center;">'
+            + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">' + (i + 1) + '. ' + s.label + '</div>'
+            + '<div style="font-size:20px;font-weight:700;color:' + barColor + ';font-variant-numeric:tabular-nums;">' + pct + '%</div>'
+            + '<div style="font-size:11px;color:var(--l-text-secondary,#6B7280);margin-top:4px;">' + s.desc + '</div>'
+            + '<div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);margin-top:2px;font-family:JetBrains Mono,monospace;">' + input + ' → ' + output + '</div>'
+            + '</div>';
+        }).join('');
+        document.getElementById('quality-steps').innerHTML = html;
+        var failures = data.failures || data.recent_failures || [];
+        document.getElementById('quality-failures').textContent = failures.length > 0
+          ? failures.map(function(f) { return (f.timestamp || '') + ' [' + (f.step || '') + '] ' + (f.reason || f.error || ''); }).join('\n')
+          : '—';
+      })
+      .catch(function(e) {
+        showSection('quality', 'error');
+        document.getElementById('quality-error-msg').textContent = e.message;
+      });
+  }
+
+  window.loadAccounts = loadAccounts;
+  window.loadProxy = loadProxy;
+  window.loadQuality = loadQuality;
+
+
+  /* ---- P1-D: 实时采集画面（5s轮询截图） ---- */
+  var LIVE_VIEW_PORT = 9222;
+  var liveViewTimer = null;
+
+  function refreshLiveView() {
+    var wrap = document.getElementById('live-view-screenshot-wrap');
+    var statusEl = document.getElementById('live-view-status');
+    var urlEl = document.getElementById('live-view-url');
+    var timeEl = document.getElementById('live-view-time');
+    if (!wrap) return;
+    statusEl.textContent = '加载中…';
+    fetch('/api/internal-browser/screenshot?port=' + LIVE_VIEW_PORT + '&quality=50')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok && d.image_base64) {
+          wrap.innerHTML = '<img src="data:image/jpeg;base64,' + d.image_base64 + '" style="max-width:100%;max-height:260px;object-fit:contain;display:block;" alt="采集浏览器画面">';
+          statusEl.textContent = '在线';
+          statusEl.className = 'zbc-tag zbc-tag--low';
+          urlEl.textContent = (d.url || '').substring(0, 60);
+          document.getElementById('lv-page').textContent = (d.title || d.url || '—').substring(0, 30);
+          document.getElementById('lv-online').textContent = '在线';
+          document.getElementById('lv-online').style.color = '#10B981';
+        } else {
+          wrap.innerHTML = '<div style="color:var(--l-text-tertiary,#9CA3AF);font-size:13px;">截图失败: ' + esc(d.error || '未知') + '</div>';
+          statusEl.textContent = '离线';
+          statusEl.className = 'zbc-tag zbc-tag--medium';
+          document.getElementById('lv-online').textContent = '离线';
+          document.getElementById('lv-online').style.color = '#DC2626';
+        }
+        timeEl.textContent = new Date().toLocaleTimeString();
+      })
+      .catch(function(e) {
+        wrap.innerHTML = '<div style="color:var(--l-text-tertiary,#9CA3AF);font-size:13px;">连接失败: ' + esc(e.message) + '</div>';
+        statusEl.textContent = '连接失败';
+        statusEl.className = 'zbc-tag zbc-tag--error';
+      });
+    // 同步采集器状态
+    fetch('/api/collector/status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var data = d.data || d;
+        document.getElementById('lv-action').textContent = disp(data.current_task || data.state || '—');
+      })
+      .catch(function() { /* 状态API不可用时静默 */ });
+  }
+
+  function startLiveViewPolling() {
+    if (liveViewTimer) clearInterval(liveViewTimer);
+    var auto = document.getElementById('live-view-auto');
+    if (auto && !auto.checked) return;
+    liveViewTimer = setInterval(refreshLiveView, 5000);
+  }
+
+  window.refreshLiveView = refreshLiveView;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadCollectors();
+    loadAccounts();
+    loadProxy();
+    loadQuality();
+    refreshLiveView();
+    startLiveViewPolling();
+    document.getElementById('live-view-auto').addEventListener('change', startLiveViewPolling);
+  });
+  setInterval(loadCollectors, 30000);
+
+  // ===== 采集日志与生命周期 =====
+  var logsOffset = 0;
+  var logsLimit = 20;
+  var logsTotal = 0;
+
+  function lifecycleTag(lc) {
+    var map = {
+      'completed': 'zbc-tag--low',
+      'running': 'zbc-tag--info',
+      'failed': 'zbc-tag--high',
+      'degraded': 'zbc-tag--medium',
+      'unknown': 'zbc-tag--neutral'
+    };
+    return '<span class="zbc-tag ' + (map[lc] || 'zbc-tag--neutral') + '">' + lc + '</span>';
+  }
+
+  function statusTag(s) {
+    var up = String(s || '').toUpperCase();
+    var cls = 'zbc-tag--neutral';
+    if (up === 'SUCCESS' || up === 'OK' || up === 'COMPLETED') cls = 'zbc-tag--low';
+    else if (up === 'FAILED' || up === 'ERROR') cls = 'zbc-tag--high';
+    else if (up === 'COOLING_DOWN' || up === 'RISK_WARNING' || up === 'NEED_VERIFY' || up === 'BLOCKED') cls = 'zbc-tag--medium';
+    else if (up === 'RUNNING' || up === 'COLLECTING') cls = 'zbc-tag--info';
+    return '<span class="zbc-tag ' + cls + '">' + up + '</span>';
+  }
+
+  function loadCollectionLogs() {
+    var status = document.getElementById('logs-status-filter').value;
+    var keyword = document.getElementById('logs-keyword-filter').value;
+    var url = '/api/collection/logs?limit=' + logsLimit + '&offset=' + logsOffset;
+    if (status) url += '&status=' + encodeURIComponent(status);
+    if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+
+    fetch(url, { credentials: 'same-origin' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok) { document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#EF4444;">加载失败: ' + (d.error || 'unknown') + '</td></tr>'; return; }
+        logsTotal = d.total || 0;
+        var s = d.summary || {};
+        document.getElementById('logs-total').textContent = logsTotal + ' 条';
+        document.getElementById('logs-summary-total').textContent = s.total_runs || 0;
+        document.getElementById('logs-summary-success').textContent = s.success || 0;
+        document.getElementById('logs-summary-failed').textContent = s.failed || 0;
+        document.getElementById('logs-summary-degraded').textContent = s.degraded || 0;
+        document.getElementById('logs-summary-notes').textContent = (s.total_notes_collected || 0).toLocaleString();
+        document.getElementById('logs-summary-rate').textContent = (s.success_rate || 0) + '%';
+
+        var tbody = document.getElementById('logs-tbody');
+        if (!d.logs || d.logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--l-text-tertiary,#9CA3AF);">暂无采集日志</td></tr>';
+        } else {
+          tbody.innerHTML = d.logs.map(function(log) {
+            var dur = log.duration_ms ? (log.duration_ms / 1000).toFixed(1) + 's' : '—';
+            return '<tr style="border-bottom:1px solid var(--l-border,#E5E7EB);">' +
+              '<td style="padding:8px 10px;font-family:monospace;">#' + log.id + '</td>' +
+              '<td style="padding:8px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (log.keyword || '') + '">' + (log.keyword || '—') + '</td>' +
+              '<td style="padding:8px 10px;font-weight:600;">' + (log.notes_count || 0) + '</td>' +
+              '<td style="padding:8px 10px;">' + statusTag(log.status) + '</td>' +
+              '<td style="padding:8px 10px;">' + lifecycleTag(log.lifecycle) + '</td>' +
+              '<td style="padding:8px 10px;font-size:11px;color:var(--l-text-secondary,#6B7280);">' + (log.started_at || '—') + '</td>' +
+              '<td style="padding:8px 10px;font-size:11px;color:var(--l-text-secondary,#6B7280);">' + (log.finished_at || '—') + '</td>' +
+              '<td style="padding:8px 10px;">' + dur + '</td>' +
+              '<td style="padding:8px 10px;font-size:11px;color:var(--l-text-tertiary,#9CA3AF);">' + (log.source || '—') + '</td>' +
+              '</tr>';
+          }).join('');
+        }
+
+        var page = Math.floor(logsOffset / logsLimit) + 1;
+        var totalPages = Math.ceil(logsTotal / logsLimit);
+        document.getElementById('logs-page-info').textContent = '第 ' + page + ' / ' + totalPages + ' 页 (共 ' + logsTotal + ' 条)';
+        document.getElementById('logs-prev-btn').disabled = logsOffset === 0;
+        document.getElementById('logs-next-btn').disabled = logsOffset + logsLimit >= logsTotal;
+      })
+      .catch(function(e) {
+        document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#EF4444;">加载失败: ' + e.message + '</td></tr>';
+      });
+  }
+
+  function logsPrevPage() { if (logsOffset >= logsLimit) { logsOffset -= logsLimit; loadCollectionLogs(); } }
+  function logsNextPage() { if (logsOffset + logsLimit < logsTotal) { logsOffset += logsLimit; loadCollectionLogs(); } }
+
+  // ===== Phase4: 采集浏览器模式选择器 =====
+  function loadBrowserMode() {
+    fetch('/api/collector/browser-mode')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d || !d.ok) return;
+        var mode = d.mode || 'internal_cdp';
+        var radios = document.querySelectorAll('input[name="browser-mode"]');
+        radios.forEach(function(r) { r.checked = (r.value === mode); });
+        var tag = document.getElementById('browser-mode-current');
+        if (tag) {
+          tag.textContent = (mode === 'internal_cdp') ? '内部AI浏览器（默认）' : '外部独立浏览器';
+          tag.className = 'zbc-tag ' + (mode === 'internal_cdp' ? 'zbc-tag--success' : 'zbc-tag--warning');
+        }
+        var src = document.getElementById('browser-mode-source');
+        if (src) { src.textContent = '配置来源: ' + (d.source || 'default') + '（' + (d.config_file || '') + '）'; }
+      })
+      .catch(function(e) { console.error('[BrowserMode] 加载失败:', e); });
+  }
+
+  function saveBrowserMode() {
+    var checked = document.querySelector('input[name="browser-mode"]:checked');
+    if (!checked) { alert('请选择浏览器模式'); return; }
+    var mode = checked.value;
+    fetch('/api/collector/browser-mode', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({mode: mode})
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d && d.ok) {
+          alert('浏览器模式已保存为: ' + (mode === 'internal_cdp' ? '内部AI浏览器（CDP）' : '外部独立浏览器') + '\n下次采集生效。');
+          loadBrowserMode();
+        } else {
+          alert('保存失败: ' + (d && d.error ? d.error : '未知错误'));
+        }
+      })
+      .catch(function(e) { alert('请求失败: ' + e.message); });
+  }
+
+  // 页面加载时自动加载
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { loadCollectionLogs(); loadBrowserMode(); });
+  } else {
+    loadCollectionLogs();
+    loadBrowserMode();
+  }
+
+})();
+</script>
+{% endblock %}

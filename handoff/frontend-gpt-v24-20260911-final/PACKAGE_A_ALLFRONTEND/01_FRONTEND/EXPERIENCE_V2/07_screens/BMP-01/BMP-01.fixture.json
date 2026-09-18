@@ -1,0 +1,253 @@
+{
+  "screen": "BMP-01",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "EV-B108",
+      "EV-B110",
+      "EV-B112"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "BMP · 序境·品牌市场",
+      "title": "品牌市场总览",
+      "titleKey": "screen.BMP-01",
+      "desc": "品牌健康、传播、创作者与市场情报的统一视图，全部锚定证据。",
+      "actions": [
+        {
+          "label": "品牌简报",
+          "variant": "primary",
+          "id": "draft",
+          "cls": "DRAFT",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "report:write",
+          "ico": "report"
+        },
+        {
+          "label": "切换品牌",
+          "variant": "secondary",
+          "id": "",
+          "cls": "NAVIGATION",
+          "scope": "UNKNOWN",
+          "target": "UNKNOWN",
+          "permission": "UNKNOWN",
+          "ico": "campaign"
+        }
+      ]
+    },
+    {
+      "type": "kpis",
+      "items": [
+        {
+          "label": "品牌健康分",
+          "value": 82.4,
+          "icon": "evaluation",
+          "source": "EV:brand_health",
+          "fresh": "live",
+          "decimals": 1,
+          "delta": 1.6,
+          "deltaUnit": "%",
+          "spark": [
+            12,
+            18,
+            15,
+            22,
+            19,
+            26,
+            24
+          ]
+        },
+        {
+          "label": "全网声量",
+          "value": 28640,
+          "icon": "trend",
+          "source": "EV:voice.canonical",
+          "fresh": "live",
+          "decimals": 0,
+          "delta": 9.4,
+          "deltaUnit": "%",
+          "spark": [
+            8,
+            10,
+            9,
+            13,
+            12,
+            15,
+            14,
+            18,
+            16,
+            20,
+            19,
+            22
+          ]
+        },
+        {
+          "label": "正向占比",
+          "value": 76.2,
+          "icon": "check",
+          "source": "EV:sentiment",
+          "fresh": "live",
+          "decimals": 1,
+          "unit": "%",
+          "delta": 2.0,
+          "deltaUnit": "%",
+          "spark": [
+            20,
+            17,
+            22,
+            19,
+            25,
+            21,
+            28
+          ]
+        },
+        {
+          "label": "在投 Campaign",
+          "value": 4,
+          "icon": "campaign",
+          "source": "EV:campaign.open",
+          "fresh": "live",
+          "decimals": 0
+        }
+      ]
+    },
+    {
+      "type": "split",
+      "main": [
+        {
+          "type": "chart",
+          "title": "声量与情绪趋势",
+          "kind": "line",
+          "series": [
+            {
+              "data": [
+                40,
+                48,
+                46,
+                55,
+                60,
+                58,
+                66
+              ],
+              "color": "var(--lum-c-brand-500)"
+            },
+            {
+              "data": [
+                28,
+                30,
+                33,
+                32,
+                38,
+                37,
+                42
+              ],
+              "color": "var(--lum-c-success)"
+            }
+          ],
+          "labels": [
+            "9/2",
+            "9/5",
+            "9/8",
+            "9/11",
+            "9/14",
+            "9/17",
+            "9/20"
+          ],
+          "legend": [
+            {
+              "label": "声量",
+              "color": "var(--lum-c-brand-500)"
+            },
+            {
+              "label": "正向",
+              "color": "var(--lum-c-success)"
+            }
+          ]
+        },
+        {
+          "type": "events",
+          "title": "品牌动态",
+          "items": [
+            {
+              "time": "09:40",
+              "title": "新品话题进入热榜",
+              "desc": "微博话题榜 #36",
+              "date": "09-10",
+              "level": "low",
+              "tags": [
+                "传播"
+              ],
+              "evidence": "EV-B110"
+            },
+            {
+              "time": "昨日",
+              "title": "竞品发布同类新品",
+              "desc": "声量 +44%",
+              "date": "09-09",
+              "level": "med",
+              "tags": [
+                "竞品"
+              ],
+              "evidence": "EV-B108"
+            }
+          ],
+          "more": true
+        }
+      ],
+      "side": [
+        {
+          "type": "insight",
+          "text": "正向占比回升主要来自 KOC 真实体验内容；建议把预算向腰部 KOC 倾斜并复用高互动脚本。",
+          "why": "创作者分层贡献拆解，见 EV-B110/B112。",
+          "evidence": [
+            "EV-B110",
+            "EV-B112"
+          ]
+        },
+        {
+          "type": "risks",
+          "items": [
+            {
+              "level": "med",
+              "title": "竞品声量反超",
+              "evidence": "EV-B108",
+              "desc": "同类新品窗口，需 72h 内回应。",
+              "score": 52
+            }
+          ]
+        },
+        {
+          "type": "actions",
+          "title": "建议行动",
+          "items": [
+            {
+              "id": "go-creator",
+              "title": "打开创作者分析",
+              "icon": "creators",
+              "cls": "NAVIGATION",
+              "scope": "UNKNOWN",
+              "target": "BMP-05",
+              "permission": "UNKNOWN",
+              "desc": "NAVIGATION"
+            },
+            {
+              "id": "draft-plan",
+              "title": "起草传播计划",
+              "icon": "edit",
+              "cls": "NAVIGATION",
+              "scope": "UNKNOWN",
+              "target": "UNKNOWN",
+              "permission": "plan:write",
+              "desc": "DRAFT"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

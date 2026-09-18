@@ -1,0 +1,37 @@
+{
+  "screen": "ACC-02",
+  "viewmodel": {
+    "subjects": [
+      "{subject_id,subject_type,scope,name}"
+    ]
+  },
+  "binding": {
+    "subjects": "CODEX_VERIFY (subject resolver/permission = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "subjects"
+    ],
+    "Capability": [
+      "PAT-NAV-01"
+    ],
+    "Motion": [
+      "M01",
+      "M07"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "ACC-02.actions.json",
+    "Permission": [
+      "UNKNOWN"
+    ],
+    "Evidence": [
+      "SubjectContext v2.1"
+    ]
+  },
+  "unknown_binding_keys": [
+    "subjects"
+  ],
+  "binding_owner_default": "CODEX"
+}

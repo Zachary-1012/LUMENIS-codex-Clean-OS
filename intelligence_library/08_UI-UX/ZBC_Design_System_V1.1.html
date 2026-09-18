@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZBC / 序境 — Design System V1.1</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    /* Light Theme - Codex/GPT Light */
+    --l-bg: #FFFFFF;
+    --l-bg-secondary: #F7F7F8;
+    --l-sidebar: #FAFAFA;
+    --l-card: #FFFFFF;
+    --l-border: #E8E8E8;
+    --l-border-light: #F0F0F0;
+    --l-text: #0D0D0D;
+    --l-text-secondary: #6B7280;
+    --l-text-tertiary: #9CA3AF;
+    --l-accent: #0F766E;
+    --l-accent-hover: #14B8A6;
+    --l-accent-deep: #0D5D56;
+    --l-gold: #C9A961;
+    --l-danger: #DC2626;
+    --l-warning: #D97706;
+    --l-info: #2563EB;
+    --l-gradient-1: linear-gradient(135deg, #0F766E 0%, #14B8A6 100%);
+    --l-gradient-2: linear-gradient(135deg, #64748B 0%, #94A3B8 100%);
+    --l-gradient-3: linear-gradient(135deg, #C9A961 0%, #E8D5A3 100%);
+    --l-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+    --l-shadow-lg: 0 4px 24px rgba(0,0,0,0.06);
+
+    /* Dark Theme - OpenAI/ChatGPT Dark */
+    --d-bg: #0D0D0D;
+    --d-bg-secondary: #141414;
+    --d-sidebar: #171717;
+    --d-card: #1F1F1F;
+    --d-card-hover: #262626;
+    --d-border: #2F2F2F;
+    --d-border-light: #262626;
+    --d-text: #F5F5F5;
+    --d-text-secondary: #A1A1AA;
+    --d-text-tertiary: #71717A;
+    --d-accent: #14B8A6;
+    --d-accent-hover: #2DD4BF;
+    --d-accent-deep: #0F766E;
+    --d-gold: #D4B978;
+    --d-danger: #F87171;
+    --d-warning: #FBBF24;
+    --d-info: #60A5FA;
+    --d-gradient-1: linear-gradient(135deg, rgba(15,118,110,0.25) 0%, rgba(20,184,166,0.12) 100%);
+    --d-gradient-2: linear-gradient(135deg, rgba(100,116,139,0.2) 0%, rgba(148,163,184,0.1) 100%);
+    --d-gradient-3: linear-gradient(135deg, rgba(201,169,97,0.18) 0%, rgba(232,213,163,0.08) 100%);
+    --d-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+    --d-shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+    background: var(--l-bg-secondary);
+    color: var(--l-text);
+    transition: background 0.3s, color 0.3s;
+    line-height: 1.6;
+  }
+  body.dark {
+    background: var(--d-bg-secondary);
+    color: var(--d-text);
+  }
+
+  /* ===== Page Header ===== */
+  .page-header {
+    padding: 48px 64px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .page-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .page-header .subtitle {
+    font-size: 14px;
+    color: var(--l-text-secondary);
+    margin-top: 4px;
+  }
+  body.dark .page-header .subtitle { color: var(--d-text-secondary); }
+
+  .theme-toggle {
+    display: flex;
+    background: var(--l-card);
+    border: 1px solid var(--l-border);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 2px;
+  }
+  body.dark .theme-toggle { background: var(--d-card); border-color: var(--d-border); }
+  .theme-toggle button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: var(--l-text-secondary);
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  body.dark .theme-toggle button { color: var(--d-text-secondary); }
+  .theme-toggle button.active {
+    background: var(--l-text);
+    color: #fff;
+  }
+  body.dark .theme-toggle button.active { background: var(--d-text); color: var(--d-bg); }
+
+  /* ===== Section ===== */
+  .section {
+    padding: 0 64px 48px;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--l-text-tertiary);
+    margin-bottom: 20px;
+  }
+  body.dark .section-title { color: var(--d-text-tertiary); }
+
+  /* ===== Color Palette ===== */
+  .palette-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .palette-card {
+    background: var(--l-card);
+    border: 1px solid var(--l-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--l-shadow);
+  }
+  body.dark .palette-card { background: var(--d-card); border-color: var(--d-border); box-shadow: var(--d-shadow); }
+  .palette-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .palette-card h3 .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .color-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .color-swatch {
+    border-radius: 10px;
+    padding: 12px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .color-swatch .hex {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+  .gradient-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .gradient-swatch {
+    border-radius: 10px;
+    height: 64px;
+    display: flex;
+    align-items: flex-end;
+    padding: 10px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* ===== Navigation Mockup ===== */
+  .nav-mockup {
+    display: flex;
+    background: var(--l-card);
+    border: 1px solid var(--l-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--l-shadow-lg);
+    min-height: 560px;
+  }
+  body.dark .nav-mockup { background: var(--d-card); border-color: var(--d-border); box-shadow: var(--d-shadow-lg); }
+
+  .sidebar {
+    width: 240px;
+    background: var(--l-sidebar);
+    border-right: 1px solid var(--l-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  body.dark .sidebar { background: var(--d-sidebar); border-color: var(--d-border); }
+
+  .sidebar-logo {
+    padding: 20px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--l-border-light);
+  }
+  body.dark .sidebar-logo { border-color: var(--d-border-light); }
+  .sidebar-logo .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--l-text);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; font-weight: 700;
+  }
+  body.dark .sidebar-logo .logo-mark { background: var(--d-text); color: var(--d-bg); }
+  .sidebar-logo .logo-text {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .sidebar-logo .logo-text span {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--l-text-tertiary);
+  }
+  body.dark .sidebar-logo .logo-text span { color: var(--d-text-tertiary); }
+
+  .product-switcher {
+    padding: 12px 12px;
+    display: flex;
+    gap: 4px;
+    background: var(--l-bg-secondary);
+    margin: 12px;
+    border-radius: 10px;
+  }
+  body.dark .product-switcher { background: var(--d-bg-secondary); }
+  .product-switcher button {
+    flex: 1;
+    padding: 7px 4px;
+    border: none;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--l-text-secondary);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  body.dark .product-switcher button { color: var(--d-text-secondary); }
+  .product-switcher button.active {
+    background: var(--l-card);
+    color: var(--l-text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  body.dark .product-switcher button.active { background: var(--d-card); color: var(--d-text); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+  .nav-section {
+    padding: 8px 12px;
+  }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--l-text-tertiary);
+    padding: 8px 10px 6px;
+  }
+  body.dark .nav-section-label { color: var(--d-text-tertiary); }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--l-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  body.dark .nav-item { color: var(--d-text-secondary); }
+  .nav-item:hover {
+    background: var(--l-bg-secondary);
+    color: var(--l-text);
+  }
+  body.dark .nav-item:hover { background: var(--d-bg-secondary); color: var(--d-text); }
+  .nav-item.active {
+    background: var(--l-bg-secondary);
+    color: var(--l-text);
+    font-weight: 600;
+  }
+  body.dark .nav-item.active { background: var(--d-bg-secondary); color: var(--d-text); }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--l-accent);
+    border-radius: 0 3px 3px 0;
+  }
+  body.dark .nav-item.active::before { background: var(--d-accent); }
+  .nav-item .icon {
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    opacity: 0.8;
+  }
+  .nav-item .badge {
+    margin-left: auto;
+    background: var(--l-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  body.dark .nav-item .badge { background: var(--d-accent); }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px;
+    border-top: 1px solid var(--l-border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  body.dark .sidebar-footer { border-color: var(--d-border-light); }
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--l-gradient-3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: #fff;
+  }
+  .user-info { flex: 1; }
+  .user-info .name { font-size: 13px; font-weight: 600; }
+  .user-info .role { font-size: 11px; color: var(--l-text-tertiary); }
+  body.dark .user-info .role { color: var(--d-text-tertiary); }
+
+  /* Main content area in mockup */
+  .mock-main {
+    flex: 1;
+    padding: 24px;
+    overflow: hidden;
+  }
+  .mock-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .mock-topbar h2 {
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .mock-topbar .actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--l-border);
+    background: var(--l-card);
+    color: var(--l-text);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  body.dark .btn { border-color: var(--d-border); background: var(--d-card); color: var(--d-text); }
+  .btn-primary {
+    background: var(--l-text);
+    color: #fff;
+    border-color: var(--l-text);
+  }
+  body.dark .btn-primary { background: var(--d-text); color: var(--d-bg); border-color: var(--d-text); }
+  .btn:hover { opacity: 0.85; }
+
+  .mock-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--l-bg-secondary);
+    border: 1px solid var(--l-border-light);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  body.dark .stat-card { background: var(--d-bg-secondary); border-color: var(--d-border-light); }
+  .stat-card .label {
+    font-size: 11px;
+    color: var(--l-text-tertiary);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  body.dark .stat-card .label { color: var(--d-text-tertiary); }
+  .stat-card .value {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .stat-card .change {
+    font-size: 11px;
+    color: var(--l-accent);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  body.dark .stat-card .change { color: var(--d-accent); }
+  .stat-card.gradient-1 { background: var(--l-gradient-1); border: none; }
+  body.dark .stat-card.gradient-1 { background: var(--d-gradient-1); }
+  .stat-card.gradient-2 { background: var(--l-gradient-2); border: none; }
+  body.dark .stat-card.gradient-2 { background: var(--d-gradient-2); }
+
+  .mock-charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+  }
+  .chart-card {
+    background: var(--l-bg-secondary);
+    border: 1px solid var(--l-border-light);
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 180px;
+  }
+  body.dark .chart-card { background: var(--d-bg-secondary); border-color: var(--d-border-light); }
+  .chart-card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .chart-placeholder {
+    height: 120px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 0 8px;
+  }
+  .chart-bar {
+    flex: 1;
+    background: var(--l-accent);
+    border-radius: 4px 4px 0 0;
+    opacity: 0.7;
+    min-height: 8px;
+  }
+  body.dark .chart-bar { background: var(--d-accent); }
+
+  /* ===== Components ===== */
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .comp-card {
+    background: var(--l-card);
+    border: 1px solid var(--l-border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  body.dark .comp-card { background: var(--d-card); border-color: var(--d-border); }
+  .comp-card h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--l-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 14px;
+  }
+  body.dark .comp-card h4 { color: var(--d-text-tertiary); }
+
+  .tabs-demo {
+    display: flex;
+    background: var(--l-bg-secondary);
+    border-radius: 9px;
+    padding: 3px;
+    gap: 2px;
+  }
+  body.dark .tabs-demo { background: var(--d-bg-secondary); }
+  .tabs-demo .tab {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--l-text-secondary);
+    cursor: pointer;
+  }
+  body.dark .tabs-demo .tab { color: var(--d-text-secondary); }
+  .tabs-demo .tab.active {
+    background: var(--l-card);
+    color: var(--l-text);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  body.dark .tabs-demo .tab.active { background: var(--d-card); color: var(--d-text); }
+
+  .tags-demo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tag {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag-high { background: rgba(220,38,38,0.1); color: #DC2626; }
+  .tag-medium { background: rgba(217,119,6,0.1); color: #D97706; }
+  .tag-low { background: rgba(15,118,110,0.1); color: #0F766E; }
+  .tag-info { background: rgba(37,99,235,0.1); color: #2563EB; }
+  body.dark .tag-high { background: rgba(248,113,113,0.15); color: #F87171; }
+  body.dark .tag-medium { background: rgba(251,191,36,0.15); color: #FBBF24; }
+  body.dark .tag-low { background: rgba(20,184,166,0.15); color: #14B8A6; }
+  body.dark .tag-info { background: rgba(96,165,250,0.15); color: #60A5FA; }
+
+  .status-demo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .status-running { background: #0F766E; box-shadow: 0 0 0 3px rgba(15,118,110,0.15); }
+  .status-degraded { background: #D97706; box-shadow: 0 0 0 3px rgba(217,119,6,0.15); }
+  .status-failed { background: #DC2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.15); }
+  .status-recovering { background: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+
+  .input-demo {
+    display: flex;
+    align-items: center;
+    background: var(--l-bg-secondary);
+    border: 1px solid var(--l-border);
+    border-radius: 12px;
+    padding: 4px 4px 4px 14px;
+    gap: 8px;
+  }
+  body.dark .input-demo { background: var(--d-bg-secondary); border-color: var(--d-border); }
+  .input-demo input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--l-text);
+    outline: none;
+    font-family: inherit;
+  }
+  body.dark .input-demo input { color: var(--d-text); }
+  .input-demo .send-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--l-text);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  body.dark .input-demo .send-btn { background: var(--d-text); color: var(--d-bg); }
+
+  /* ===== Typography ===== */
+  .type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .type-card {
+    background: var(--l-card);
+    border: 1px solid var(--l-border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  body.dark .type-card { background: var(--d-card); border-color: var(--d-border); }
+  .type-sample {
+    margin-bottom: 20px;
+  }
+  .type-sample:last-child { margin-bottom: 0; }
+  .type-sample .spec {
+    font-size: 10px;
+    color: var(--l-text-tertiary);
+    font-family: monospace;
+    margin-bottom: 4px;
+  }
+  body.dark .type-sample .spec { color: var(--d-text-tertiary); }
+  .type-h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+  .type-h2 { font-size: 17px; font-weight: 600; }
+  .type-h3 { font-size: 15px; font-weight: 600; }
+  .type-body { font-size: 13px; font-weight: 400; color: var(--l-text-secondary); }
+  body.dark .type-body { color: var(--d-text-secondary); }
+  .type-caption { font-size: 11px; font-weight: 400; color: var(--l-text-tertiary); }
+  body.dark .type-caption { color: var(--d-text-tertiary); }
+  .type-data { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+
+  /* ===== Nav Hierarchy ===== */
+  .hierarchy-card {
+    background: var(--l-card);
+    border: 1px solid var(--l-border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  body.dark .hierarchy-card { background: var(--d-card); border-color: var(--d-border); }
+  .hierarchy-card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .tree {
+    font-size: 13px;
+    line-height: 2;
+  }
+  .tree .l1 {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--l-text);
+    padding: 6px 0;
+  }
+  body.dark .tree .l1 { color: var(--d-text); }
+  .tree .l2 {
+    padding-left: 24px;
+    color: var(--l-text-secondary);
+    font-weight: 500;
+  }
+  body.dark .tree .l2 { color: var(--d-text-secondary); }
+  .tree .l2::before {
+    content: '└ ';
+    color: var(--l-text-tertiary);
+  }
+  body.dark .tree .l2::before { color: var(--d-text-tertiary); }
+  .tree .domain-tag {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .domain-zbmp { background: rgba(15,118,110,0.1); color: #0F766E; }
+  .domain-cth { background: rgba(37,99,235,0.1); color: #2563EB; }
+  .domain-system { background: rgba(124,58,237,0.1); color: #7C3AED; }
+  body.dark .domain-zbmp { background: rgba(20,184,166,0.12); color: #14B8A6; }
+  body.dark .domain-cth { background: rgba(96,165,250,0.12); color: #60A5FA; }
+  body.dark .domain-system { background: rgba(167,139,250,0.12); color: #A78BFA; }
+
+  .footer-note {
+    text-align: center;
+    padding: 32px;
+    font-size: 12px;
+    color: var(--l-text-tertiary);
+  }
+  body.dark .footer-note { color: var(--d-text-tertiary); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <h1>ZBC / 序境 — Design System V1.1</h1>
+    <div class="subtitle">双主题（默认浅色）· 三域隔离 · 芥子纳须弥品牌色 · 商业化交付级 · 基于 10 帧参考 + 2 段动态视频 + Codex/GPT/OpenAI 视觉语言提炼</div>
+  </div>
+  <div class="theme-toggle">
+    <button class="active" onclick="setTheme('light')">浅色</button>
+    <button onclick="setTheme('dark')">深色</button>
+  </div>
+</div>
+
+<!-- ===== 1. Color Palette ===== -->
+<div class="section">
+  <div class="section-title">01 — Color System / 色彩系统</div>
+  <div class="palette-grid">
+    <!-- Light -->
+    <div class="palette-card">
+      <h3><span class="dot" style="background:#fff;border:1px solid #ddd"></span> 浅色主题 · Light (Codex/GPT Light)</h3>
+      <div class="color-row">
+        <div class="color-swatch" style="background:#FFFFFF;color:#0D0D0D">BG<div class="hex">#FFFFFF</div></div>
+        <div class="color-swatch" style="background:#F7F7F8;color:#0D0D0D">BG Sec<div class="hex">#F7F7F8</div></div>
+        <div class="color-swatch" style="background:#FAFAFA;color:#0D0D0D">Sidebar<div class="hex">#FAFAFA</div></div>
+        <div class="color-swatch" style="background:#E8E8E8;color:#0D0D0D">Border<div class="hex">#E8E8E8</div></div>
+        <div class="color-swatch" style="background:#0D0D0D;color:#fff">Text<div class="hex">#0D0D0D</div></div>
+      </div>
+      <div class="color-row">
+        <div class="color-swatch" style="background:#0F766E;color:#fff">Accent<div class="hex">#0F766E</div></div>
+        <div class="color-swatch" style="background:#14B8A6;color:#fff">Accent Hover<div class="hex">#14B8A6</div></div>
+        <div class="color-swatch" style="background:#C9A961;color:#0D0D0D">Gold<div class="hex">#C9A961</div></div>
+        <div class="color-swatch" style="background:#DC2626;color:#fff">Danger<div class="hex">#DC2626</div></div>
+        <div class="color-swatch" style="background:#D97706;color:#fff">Warning<div class="hex">#D97706</div></div>
+      </div>
+      <div class="gradient-row">
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff">Teal Glow</div>
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#64748B,#94A3B8);color:#fff">Slate Mist</div>
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,#C9A961,#E8D5A3);color:#0D0D0D">Mustard Gold</div>
+      </div>
+    </div>
+    <!-- Dark -->
+    <div class="palette-card">
+      <h3><span class="dot" style="background:#0D0D0D"></span> 深色主题 · Dark (OpenAI/ChatGPT Dark)</h3>
+      <div class="color-row">
+        <div class="color-swatch" style="background:#0D0D0D;color:#F5F5F5;border-color:#333">BG<div class="hex">#0D0D0D</div></div>
+        <div class="color-swatch" style="background:#141414;color:#F5F5F5;border-color:#333">BG Sec<div class="hex">#141414</div></div>
+        <div class="color-swatch" style="background:#171717;color:#F5F5F5;border-color:#333">Sidebar<div class="hex">#171717</div></div>
+        <div class="color-swatch" style="background:#2F2F2F;color:#F5F5F5;border-color:#444">Border<div class="hex">#2F2F2F</div></div>
+        <div class="color-swatch" style="background:#F5F5F5;color:#0D0D0D">Text<div class="hex">#F5F5F5</div></div>
+      </div>
+      <div class="color-row">
+        <div class="color-swatch" style="background:#14B8A6;color:#0D0D0D">Accent<div class="hex">#14B8A6</div></div>
+        <div class="color-swatch" style="background:#0F766E;color:#F5F5F5;border-color:#333">Accent Deep<div class="hex">#0F766E</div></div>
+        <div class="color-swatch" style="background:#D4B978;color:#0D0D0D">Gold<div class="hex">#D4B978</div></div>
+        <div class="color-swatch" style="background:#F87171;color:#0D0D0D">Danger<div class="hex">#F87171</div></div>
+        <div class="color-swatch" style="background:#FBBF24;color:#0D0D0D">Warning<div class="hex">#FBBF24</div></div>
+      </div>
+      <div class="gradient-row">
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,rgba(15,118,110,0.3),rgba(20,184,166,0.15));color:#F5F5F5;border:1px solid #2F2F2F">Teal Glow</div>
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,rgba(100,116,139,0.25),rgba(148,163,184,0.12));color:#F5F5F5;border:1px solid #2F2F2F">Slate Mist</div>
+        <div class="gradient-swatch" style="background:linear-gradient(135deg,rgba(201,169,97,0.22),rgba(232,213,163,0.1));color:#F5F5F5;border:1px solid #2F2F2F">Gold Glow</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 2. Navigation Hierarchy ===== -->
+<div class="section">
+  <div class="section-title">02 — Navigation Hierarchy / 导航层级收敛</div>
+  <div class="hierarchy-card">
+    <h3>左侧导航 · 三域结构（从 20+ 页面收敛为 3 域 × 5-7 入口，二级功能收进页面内 Tab）</h3>
+    <div class="tree">
+      <div class="l1">LUMENIS / 序境
+        <span class="domain-tag domain-zbmp">产品切换器</span>
+      </div>
+      <div class="l2">顶部：ZBMP ↔ CTH ↔ SYSTEM 一键切换（切换时重载 Domain Context / 指标 / 权限 / 报告）</div>
+
+      <div class="l1" style="margin-top:12px">ZBMP · Brand Intelligence
+        <span class="domain-tag domain-zbmp">品牌智能域 · 7 入口</span>
+      </div>
+      <div class="l2">Overview — 品牌总览（声量 / 传播 / 竞争 / 增长指标 / 风险 一屏）</div>
+      <div class="l2">Brand — 品牌库 & 品牌资产（199 品牌画像 / 业态映射 / 增长指标 Tab）</div>
+      <div class="l2">Content — 内容智能（笔记 / 文案 / 创意 / 话题活动）</div>
+      <div class="l2">KOS — 达人运营（KOL/KOS/KOC 档案 / 付费 / 执行 / 归因，页内 Tab 拆分）</div>
+      <div class="l2">Competition — 竞品监测（对标品牌 / 声量对比 / 差异化，独立入口：品牌智能核心差异化）</div>
+      <div class="l2">Risk — 品牌风险（声誉 / 负反馈 / 危机预警）</div>
+      <div class="l2">Reports — 品牌报告（Brand / Performance / Competitive / Content）</div>
+      <div class="l2" style="color:var(--l-text-tertiary);font-style:italic">※ Growth 不独立设入口：增长是跨模块结果指标，整合进 Overview + Brand 页内 Tab</div>
+
+      <div class="l1" style="margin-top:12px">CTH · Taikoo Hui Intelligence
+        <span class="domain-tag domain-cth">太古汇专项域 · 6 入口</span>
+      </div>
+      <div class="l2">Overview — 舆情总览（实时态势 / 风险事件 / 品牌&业态 Tab / 待处理）</div>
+      <div class="l2">Real-time — 实时情报（小红书流 / 事件追踪 / 品牌&业态筛选器 / 传播路径）</div>
+      <div class="l2">Events — 事件中心（传播 / 营销 / 舆情事件图谱）</div>
+      <div class="l2">Risk — 风险研判（太古汇专项风险 / 扩散 / 安全 / 歧视 / KOC 集中传播）</div>
+      <div class="l2">Xiaohongshu — 小红书专项（采集状态 / 笔记 / 评论 / 账号 / Cookie）</div>
+      <div class="l2">Reports — 舆情报告（日报 / 周报 / 月报 / 事件专报 / 风险专报）</div>
+      <div class="l2" style="color:var(--l-text-tertiary);font-style:italic">※ Brands / Industries 不独立设入口：199 品牌 & 9 业态是筛选维度，整合为 Overview 页内 Tab + Real-time 筛选器</div>
+
+      <div class="l1" style="margin-top:12px">SYSTEM · Runtime Control
+        <span class="domain-tag domain-system">系统控制域 · 5 入口</span>
+      </div>
+      <div class="l2">Runtime — 运行时（Worker / Lease / Heartbeat / Guardian / Checkpoint / DLQ）</div>
+      <div class="l2">Collector — 采集管理（平台 / 账号 / Cookie / 代理池 / 质量门禁 / 去重）</div>
+      <div class="l2">AI — AI 网关（Provider / Model / 调用日志 / 治理 / 评估 / Trace）</div>
+      <div class="l2">Database — 数据库（62 表 / 迁移 / 锁 / 索引 / 数据质量）</div>
+      <div class="l2">Security — 安全权限（认证 / 授权 / 域隔离 / 审计日志 / 敏感数据脱敏）</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 3. Layout Mockup ===== -->
+<div class="section">
+  <div class="section-title">03 — Layout Mockup / 布局原型（ZBMP Overview）</div>
+  <div class="nav-mockup">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">序</div>
+        <div class="logo-text">LUMENIS<span>序境 · ZBC</span></div>
+      </div>
+      <div class="product-switcher">
+        <button class="active">ZBMP</button>
+        <button>CTH</button>
+        <button>SYSTEM</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Brand Intelligence</div>
+        <div class="nav-item active"><span class="icon">◎</span> Overview</div>
+        <div class="nav-item"><span class="icon">◈</span> Brand</div>
+        <div class="nav-item"><span class="icon">✎</span> Content</div>
+        <div class="nav-item"><span class="icon">◉</span> KOS <span class="badge">12</span></div>
+        <div class="nav-item"><span class="icon">⇄</span> Competition</div>
+        <div class="nav-item"><span class="icon">⚠</span> Risk</div>
+        <div class="nav-item"><span class="icon">▤</span> Reports</div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="avatar">Z</div>
+        <div class="user-info">
+          <div class="name">Zachary</div>
+          <div class="role">Admin · ZBMP+CTH</div>
+        </div>
+      </div>
+    </div>
+    <div class="mock-main">
+      <div class="mock-topbar">
+        <h2>Brand Overview</h2>
+        <div class="actions">
+          <button class="btn">导出</button>
+          <button class="btn btn-primary">+ 新建任务</button>
+        </div>
+      </div>
+      <div class="mock-stats">
+        <div class="stat-card gradient-1">
+          <div class="label">今日声量</div>
+          <div class="value">2,847</div>
+          <div class="change">↑ 12.4%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">活跃品牌</div>
+          <div class="value">156</div>
+          <div class="change" style="color:#6B7280">/ 199</div>
+        </div>
+        <div class="stat-card gradient-2">
+          <div class="label">KOS 互动</div>
+          <div class="value">18.2K</div>
+          <div class="change">↑ 8.1%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">风险事件</div>
+          <div class="value" style="color:#DC2626">3</div>
+          <div class="change" style="color:#DC2626">需处理</div>
+        </div>
+      </div>
+      <div class="mock-charts">
+        <div class="chart-card">
+          <h4>声量趋势 · 近 7 天</h4>
+          <div class="chart-placeholder">
+            <div class="chart-bar" style="height:40%"></div>
+            <div class="chart-bar" style="height:65%"></div>
+            <div class="chart-bar" style="height:50%"></div>
+            <div class="chart-bar" style="height:80%"></div>
+            <div class="chart-bar" style="height:60%"></div>
+            <div class="chart-bar" style="height:90%"></div>
+            <div class="chart-bar" style="height:75%"></div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h4>业态分布</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px"><span>时尚服饰</span><span style="font-weight:600">34%</span></div>
+            <div style="height:6px;background:var(--l-border-light);border-radius:3px;overflow:hidden"><div style="width:34%;height:100%;background:#0F766E;border-radius:3px"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px"><span>餐饮美食</span><span style="font-weight:600">28%</span></div>
+            <div style="height:6px;background:var(--l-border-light);border-radius:3px;overflow:hidden"><div style="width:28%;height:100%;background:#2563EB;border-radius:3px"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px"><span>美妆护肤</span><span style="font-weight:600">22%</span></div>
+            <div style="height:6px;background:var(--l-border-light);border-radius:3px;overflow:hidden"><div style="width:22%;height:100%;background:#D97706;border-radius:3px"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px"><span>其他</span><span style="font-weight:600">16%</span></div>
+            <div style="height:6px;background:var(--l-border-light);border-radius:3px;overflow:hidden"><div style="width:16%;height:100%;background:#7C3AED;border-radius:3px"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 4. Components ===== -->
+<div class="section">
+  <div class="section-title">04 — Components / 组件规范</div>
+  <div class="components-grid">
+    <div class="comp-card">
+      <h4>Tabs · 胶囊标签页</h4>
+      <div class="tabs-demo">
+        <div class="tab active">Overview</div>
+        <div class="tab">Brand</div>
+        <div class="tab">Content</div>
+        <div class="tab">KOS</div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <h4>Tags · 状态标签</h4>
+      <div class="tags-demo">
+        <span class="tag tag-high">Critical</span>
+        <span class="tag tag-medium">Warning</span>
+        <span class="tag tag-low">Normal</span>
+        <span class="tag tag-info">Info</span>
+      </div>
+    </div>
+    <div class="comp-card">
+      <h4>Status · 运行状态</h4>
+      <div class="status-demo">
+        <div class="status-row"><span class="status-dot status-running"></span> RUNNING</div>
+        <div class="status-row"><span class="status-dot status-degraded"></span> DEGRADED</div>
+        <div class="status-row"><span class="status-dot status-failed"></span> FAILED</div>
+        <div class="status-row"><span class="status-dot status-recovering"></span> RECOVERING</div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <h4>Buttons · 按钮</h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary">主要操作</button>
+        <button class="btn">次要操作</button>
+      </div>
+    </div>
+    <div class="comp-card">
+      <h4>AI Input · 智能输入框</h4>
+      <div class="input-demo">
+        <span style="font-size:12px;color:var(--l-text-tertiary)">AI</span>
+        <input placeholder="输入分析指令，如：分析太古汇本周舆情风险…">
+        <button class="send-btn">→</button>
+      </div>
+    </div>
+    <div class="comp-card">
+      <h4>Cards · 数据卡片</h4>
+      <div style="display:flex;gap:8px">
+        <div class="stat-card gradient-1" style="flex:1;padding:12px">
+          <div class="label" style="font-size:10px">声量</div>
+          <div class="value" style="font-size:18px">2,847</div>
+        </div>
+        <div class="stat-card" style="flex:1;padding:12px">
+          <div class="label" style="font-size:10px">品牌</div>
+          <div class="value" style="font-size:18px">156</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 5. Typography ===== -->
+<div class="section">
+  <div class="section-title">05 — Typography / 字体规范</div>
+  <div class="type-grid">
+    <div class="type-card">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:16px;color:var(--l-text-secondary)">字体族</h4>
+      <div class="type-sample">
+        <div class="spec">Primary: Inter / Noto Sans SC</div>
+        <div class="type-h1">序境 LUMENIS</div>
+      </div>
+      <div class="type-sample">
+        <div class="spec">Monospace: SF Mono / JetBrains Mono（数据 / 代码 / trace_id）</div>
+        <div style="font-family:monospace;font-size:14px">task_0x8a3f · trace_a1b2c3 · 2026-09-06T14:30:00Z</div>
+      </div>
+    </div>
+    <div class="type-card">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:16px;color:var(--l-text-secondary)">字号层级（舒适适中 · 不粗不细 · 按信息层级划分）</h4>
+      <div class="type-sample"><div class="spec">H1 · 22px / 600 · 页面标题</div><div class="type-h1">Brand Overview</div></div>
+      <div class="type-sample"><div class="spec">H2 · 17px / 600 · 区块标题</div><div class="type-h2">声量趋势分析</div></div>
+      <div class="type-sample"><div class="spec">H3 · 15px / 600 · 卡片标题</div><div class="type-h3">今日数据概览</div></div>
+      <div class="type-sample"><div class="spec">Data · 24px / 700 · 核心数据</div><div class="type-data">2,847</div></div>
+      <div class="type-sample"><div class="spec">Body · 13px / 400 · 正文</div><div class="type-body">太古汇本周共监测到 2,847 条有效笔记，涉及 156 个品牌。</div></div>
+      <div class="type-sample"><div class="spec">Caption · 11px / 400 · 辅助说明</div><div class="type-caption">数据更新于 2 分钟前 · 数据源：小红书</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 6. Domain Visual Identity ===== -->
+<div class="section">
+  <div class="section-title">06 — Domain Identity / 三域视觉区分</div>
+  <div class="palette-grid">
+    <div class="palette-card" style="border-left:3px solid #0F766E">
+      <h3><span class="domain-tag domain-zbmp">ZBMP</span> 品牌智能域</h3>
+      <p style="font-size:13px;color:var(--l-text-secondary);margin-bottom:12px">主色：深青绿 #0F766E · 渐变：Teal Glow · 语义：芥子纳须弥——微观数据中洞察品牌增长</p>
+      <div style="height:4px;background:linear-gradient(90deg,#0F766E,#14B8A6);border-radius:2px"></div>
+    </div>
+    <div class="palette-card" style="border-left:3px solid #2563EB">
+      <h3><span class="domain-tag domain-cth">CTH</span> 太古汇专项域</h3>
+      <p style="font-size:13px;color:var(--l-text-secondary);margin-bottom:12px">主色：信息蓝 #2563EB · 渐变：Slate Mist · 语义：专业监测 / 情报研判 / 实时态势</p>
+      <div style="height:4px;background:linear-gradient(90deg,#2563EB,#64748B);border-radius:2px"></div>
+    </div>
+    <div class="palette-card" style="border-left:3px solid #7C3AED;grid-column:span 2">
+      <h3><span class="domain-tag domain-system">SYSTEM</span> 系统控制域</h3>
+      <p style="font-size:13px;color:var(--l-text-secondary);margin-bottom:12px">主色：紫罗兰 #7C3AED · 语义：基础设施 / 运行时 / 技术运维 · 不使用业务渐变，保持中性技术感 · 特殊标记用芥子金 #C9A961</p>
+      <div style="height:4px;background:linear-gradient(90deg,#7C3AED,#6366F1);border-radius:2px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">
+  ZBC Design System V1.1 · 芥子纳须弥 · 深青绿 #0F766E · 默认浅色可切换深色 · 2026-09-06
+</div>
+
+<script>
+function setTheme(theme) {
+  document.body.classList.toggle('dark', theme === 'dark');
+  document.querySelectorAll('.theme-toggle button').forEach((btn, i) => {
+    btn.classList.toggle('active', (theme === 'light' && i === 0) || (theme === 'dark' && i === 1));
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+{% block title %}Xiaohongshu · 序境 LUMENIS{% endblock %}
+{% block page_title %}Xiaohongshu{% endblock %}
+
+{% block topbar_actions %}
+<div id="xhs-cookie-status" style="display:flex;align-items:center;gap:6px;font-size:12px;">
+  <span class="zbc-dot zbc-dot--unknown" id="xhs-cookie-dot"></span>
+  <span id="xhs-cookie-text" style="color:var(--l-text-secondary,#6B7280);">Cookie: 检测中…</span>
+</div>
+<button class="zbc-btn" id="xhs-start-btn" onclick="xhsControl('start')" style="border-color:#10B981;color:#10B981;">
+  <span>▶</span> 启动采集
+</button>
+<button class="zbc-btn" id="xhs-stop-btn" onclick="xhsControl('stop')" style="border-color:#DC2626;color:#DC2626;display:none;">
+  <span>⏸</span> 暂停采集
+</button>
+<button class="zbc-btn" onclick="loadXHSAll()"><span>↻</span> 刷新</button>
+{% endblock %}
+
+{% block content %}
+<!-- Platform Header with brand color -->
+<section class="ld-platform-header ld-platform-header--xhs" style="margin-bottom:20px;">
+  <div class="ld-platform-icon ld-platform-icon--xhs">RED</div>
+  <div style="flex:1;min-width:0;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <h2 style="font-size:20px;font-weight:700;margin:0;letter-spacing:-0.3px;">小红书 Xiaohongshu</h2>
+      <span class="zbc-tag zbc-tag--info" style="font-size:10px;">note_id + xsec_token</span>
+    </div>
+    <div style="font-size:12px;color:var(--l-text-secondary,#6B7280);">广州太古汇主体舆情采集 · 只读模式 · 官方账号保护中</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+    <div style="text-align:center;">
+      <div class="ld-kpi-value ld-kpi-value--sm" id="xhs-kpi-total" style="font-size:24px;" ld-count-up ld-value="0">—</div>
+      <div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">采集总数</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="ld-kpi-value ld-kpi-value--sm" id="xhs-kpi-canonical" style="font-size:24px;color:#8B5CF6;" ld-count-up ld-value="0">—</div>
+      <div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">入库笔记</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="ld-kpi-value ld-kpi-value--sm" id="xhs-kpi-comments" style="font-size:24px;color:#00D4AA;" ld-count-up ld-value="0">—</div>
+      <div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);">评论数</div>
+    </div>
+  </div>
+</section>
+
+<div class="zbc-degraded-banner" id="xhs-degraded-banner" style="display:none;">
+  <span>⚠</span><span id="xhs-degraded-msg">部分数据延迟，已加载数据正常显示</span>
+</div>
+
+<!-- Seven-State Machine -->
+<section class="zbc-card" id="xhs-state-card" style="margin-bottom:20px;">
+  <div class="zbc-card__header">
+    <div class="zbc-card__title">采集器状态机</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="zbc-dot zbc-dot--unknown" id="xhs-state-dot"></span>
+      <span id="xhs-state-text" style="font-size:13px;font-weight:600;">检测中…</span>
+    </div>
+  </div>
+  <div class="zbc-card__body">
+    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;" id="xhs-state-machine"></div>
+    <div id="xhs-state-detail" style="margin-top:12px;font-size:12px;color:var(--l-text-secondary,#6B7280);"></div>
+  </div>
+</section>
+
+<!-- Page Tabs -->
+<div class="zbc-card" style="margin-bottom:20px;">
+  <div style="display:flex;border-bottom:1px solid var(--l-border,#E8E8E8);padding:0 8px;">
+    <button class="xhs-tab is-active" data-tab="status" onclick="switchTab('status')" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:600;color:#2563EB;border-bottom:2px solid #2563EB;cursor:pointer;font-family:inherit;">采集状态</button>
+    <button class="xhs-tab" data-tab="notes" onclick="switchTab('notes')" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:500;color:var(--l-text-secondary,#6B7280);border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;">笔记管理</button>
+    <button class="xhs-tab" data-tab="comments" onclick="switchTab('comments')" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:500;color:var(--l-text-secondary,#6B7280);border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;">评论管理</button>
+    <button class="xhs-tab" data-tab="accounts" onclick="switchTab('accounts')" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:500;color:var(--l-text-secondary,#6B7280);border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;">账号管理</button>
+  </div>
+
+  <!-- Tab: 采集状态 -->
+  <div class="xhs-tab-panel" id="xhs-tab-status">
+    <div class="zbc-card__body">
+      <!-- Dedup (xjViz.kpi driven) -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          <span style="width:3px;height:14px;background:var(--ld-gradient-purple-blue);border-radius:2px;"></span>
+          去重统计 <span style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);font-weight:400;">content_hash + platform_id 复合键</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <div class="ld-kpi-card">
+            <div class="ld-kpi-label">采集前 Raw</div>
+            <div class="ld-kpi-value" id="xhs-dedup-before" ld-count-up ld-value="0">—</div>
+            <div class="ld-kpi-sub">原始采集量</div>
+          </div>
+          <div class="ld-kpi-card">
+            <div class="ld-kpi-label">去重后 Canonical</div>
+            <div class="ld-kpi-value" style="color:#8B5CF6;" id="xhs-dedup-after" ld-count-up ld-value="0">—</div>
+            <div class="ld-kpi-sub">规范化入库</div>
+          </div>
+          <div class="ld-kpi-card" style="background:linear-gradient(135deg,rgba(139,92,246,0.04),rgba(59,130,246,0.04));border-color:rgba(139,92,246,0.15);">
+            <div class="ld-kpi-label">去重率 Dedup Rate</div>
+            <div class="ld-kpi-value" style="color:#6366F1;" id="xhs-dedup-rate">—</div>
+            <div class="ld-kpi-sub">去重 / 采集前</div>
+          </div>
+        </div>
+      </div>
+      <!-- Quality Gate 5 Steps -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+          <span style="width:3px;height:14px;background:var(--ld-gradient-mint);border-radius:2px;"></span>
+          采集质量门禁 <span style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);font-weight:400;">5步流水线</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="xhs-quality-gate"></div>
+      </div>
+      <!-- Recent Logs -->
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">最近采集日志</div>
+        <div class="zbc-state-loading" id="xhs-log-loading"><div class="zbc-skeleton" style="width:100%;height:60px;"></div></div>
+        <div class="zbc-state-empty" id="xhs-log-empty" style="display:none;"><div class="zbc-state-empty__text">暂无采集日志</div></div>
+        <div id="xhs-log-content" style="display:none;max-height:240px;overflow-y:auto;background:var(--l-bg-secondary,#F7F7F8);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: 笔记管理 (xjViz.table driven) -->
+  <div class="xhs-tab-panel" id="xhs-tab-notes" style="display:none;">
+    <div class="zbc-card__body" style="padding:0;overflow-x:auto;">
+      <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--l-border-light,#F0F0F0);">
+        <div style="font-size:13px;font-weight:600;">笔记列表</div>
+        <div class="ld-tabs" style="padding:3px;">
+          <button class="ld-tab is-active" onclick="xhsSetView('table')" style="padding:5px 12px;font-size:11px;">表格</button>
+          <button class="ld-tab" onclick="xhsSetView('card')" style="padding:5px 12px;font-size:11px;">卡片</button>
+        </div>
+      </div>
+      <div class="zbc-state-loading" id="xhs-notes-loading" style="padding:24px;">
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div>
+        <div class="zbc-skeleton" style="width:80%;height:44px;"></div>
+      </div>
+      <div class="zbc-state-empty" id="xhs-notes-empty" style="display:none;"><div class="zbc-state-empty__icon">📝</div><div class="zbc-state-empty__text">暂无笔记数据</div></div>
+      <div class="zbc-state-error" id="xhs-notes-error" style="display:none;"><div class="zbc-state-error__text">笔记加载失败</div></div>
+      <div id="xhs-notes-content" style="display:none;"></div>
+      <div id="xhs-notes-card-view" class="ld-content-grid" style="display:none;padding:20px;"></div>
+    </div>
+  </div>
+
+  <!-- Tab: 评论管理 (failed/partial/timeout 不静默丢弃) -->
+  <div class="xhs-tab-panel" id="xhs-tab-comments" style="display:none;">
+    <div class="zbc-card__body" style="padding:0;">
+      <div style="padding:16px;border-bottom:1px solid var(--l-border-light,#F0F0F0);display:flex;gap:16px;flex-wrap:wrap;">
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:#10B981;" id="xhs-comment-success">—</div><div style="font-size:10px;color:var(--l-text-secondary,#6B7280);">成功</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:#D97706;" id="xhs-comment-partial">—</div><div style="font-size:10px;color:var(--l-text-secondary,#6B7280);">Partial</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:#DC2626;" id="xhs-comment-failed">—</div><div style="font-size:10px;color:var(--l-text-secondary,#6B7280);">Failed</div></div>
+        <div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:#7C3AED;" id="xhs-comment-timeout">—</div><div style="font-size:10px;color:var(--l-text-secondary,#6B7280);">Timeout</div></div>
+      </div>
+      <div class="zbc-state-loading" id="xhs-comments-loading" style="padding:24px;"><div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div><div class="zbc-skeleton" style="width:100%;height:44px;"></div></div>
+      <div class="zbc-state-empty" id="xhs-comments-empty" style="display:none;"><div class="zbc-state-empty__icon">💬</div><div class="zbc-state-empty__text">暂无评论数据（评论抓取失败不会静默丢弃，将在下方显示状态）</div></div>
+      <div id="xhs-comments-content" style="display:none;max-height:500px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- Tab: 账号管理 (xjViz.table driven) -->
+  <div class="xhs-tab-panel" id="xhs-tab-accounts" style="display:none;">
+    <div class="zbc-card__body" style="padding:0;overflow-x:auto;">
+      <div class="zbc-state-loading" id="xhs-accounts-loading" style="padding:24px;"><div class="zbc-skeleton" style="width:100%;height:44px;margin-bottom:8px;"></div><div class="zbc-skeleton" style="width:80%;height:44px;"></div></div>
+      <div class="zbc-state-empty" id="xhs-accounts-empty" style="display:none;"><div class="zbc-state-empty__icon">👤</div><div class="zbc-state-empty__text">暂无采集账号</div></div>
+      <div id="xhs-accounts-content" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+  var SEVEN_STATES=['STARTING','RUNNING','DEGRADED','FAILED','STOPPING','STOPPED','RECOVERING'];
+  var STATE_COLORS={'STARTING':'#60A5FA','RUNNING':'#10B981','DEGRADED':'#D97706','FAILED':'#DC2626','STOPPING':'#9CA3AF','STOPPED':'#6B7280','RECOVERING':'#7C3AED'};
+  var QUALITY_STEPS=[
+    {key:'source',label:'Source 源数据获取',desc:'从小红书平台获取原始数据'},
+    {key:'raw',label:'Raw 原始解析',desc:'HTML/JSON 解析为结构化数据'},
+    {key:'dedup',label:'Dedup 去重',desc:'content_hash + platform_id 复合键去重'},
+    {key:'subject',label:'Subject Filter 主体过滤',desc:'subject_rules.py 红线保护过滤'},
+    {key:'canonical',label:'Canonical 规范化入库',desc:'统一字段格式，写入 canonical 表'}
+  ];
+  var degradedApis=[]; var currentTab='status';
+
+  function fmtNum(v){if(v==null||isNaN(v))return null;return Number(v);}
+  function fmtSize(b){if(b==null||isNaN(b))return'—';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
+  function fmtTime(iso){if(!iso)return'—';try{var d=new Date(iso);if(isNaN(d.getTime()))return iso;var p=function(n){return n<10?'0'+n:n;};return p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}catch(e){return iso;}}
+  function escapeHtml(s){if(s==null)return'';return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function markDegraded(api){if(degradedApis.indexOf(api)<0)degradedApis.push(api);var b=document.getElementById('xhs-degraded-banner');var m=document.getElementById('xhs-degraded-msg');if(b&&m){m.textContent='部分数据延迟（'+degradedApis.join(', ')+'），已加载数据正常显示';b.style.display='';}}
+
+  // ===== Tab Switching =====
+  function switchTab(tab){
+    currentTab=tab;
+    document.querySelectorAll('.xhs-tab').forEach(function(btn){
+      if(btn.getAttribute('data-tab')===tab){btn.style.color='#2563EB';btn.style.fontWeight='600';btn.style.borderBottom='2px solid #2563EB';}
+      else{btn.style.color='var(--l-text-secondary,#6B7280)';btn.style.fontWeight='500';btn.style.borderBottom='2px solid transparent';}
+    });
+    document.querySelectorAll('.xhs-tab-panel').forEach(function(p){p.style.display='none';});
+    var target=document.getElementById('xhs-tab-'+tab);if(target)target.style.display='';
+    if(tab==='notes')loadNotes();
+    if(tab==='comments')loadComments();
+    if(tab==='accounts')loadAccounts();
+  }
+
+  // ===== State Machine =====
+  function renderStateMachine(activeState){
+    var container=document.getElementById('xhs-state-machine');if(!container)return;
+    var html='';
+    SEVEN_STATES.forEach(function(state,idx){
+      var isActive=state===activeState;var color=STATE_COLORS[state];
+      html+='<div style="display:flex;align-items:center;gap:4px;">';
+      html+='<div style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:0.02em;';
+      if(isActive)html+='background:'+color+';color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.15);';
+      else html+='background:var(--l-bg-secondary,#F7F7F8);color:var(--l-text-tertiary,#9CA3AF);';
+      html+='">'+state+'</div>';
+      if(idx<SEVEN_STATES.length-1)html+='<span style="color:var(--l-border,#E8E8E8);font-size:14px;">→</span>';
+      html+='</div>';
+    });
+    container.innerHTML=html;
+    var dot=document.getElementById('xhs-state-dot');var text=document.getElementById('xhs-state-text');
+    if(dot&&text){
+      var dc='zbc-dot--unknown';
+      if(activeState==='RUNNING')dc='zbc-dot--ok';
+      else if(activeState==='DEGRADED'||activeState==='RECOVERING'||activeState==='STARTING')dc='zbc-dot--warning';
+      else if(activeState==='FAILED')dc='zbc-dot--error';
+      dot.className='zbc-dot '+dc;text.textContent=activeState||'UNKNOWN';text.style.color=STATE_COLORS[activeState]||'#9CA3AF';
+    }
+    var startBtn=document.getElementById('xhs-start-btn');var stopBtn=document.getElementById('xhs-stop-btn');
+    if(startBtn&&stopBtn){
+      if(activeState==='RUNNING'||activeState==='STARTING'||activeState==='DEGRADED'){startBtn.style.display='none';stopBtn.style.display='';}
+      else{startBtn.style.display='';stopBtn.style.display='none';}
+    }
+  }
+
+  function loadState(){
+    xjViz.api('/xhs/p0/status').then(function(d){
+      if(d){
+        var state=(d.state||d.status||'').toUpperCase();if(!state)state='STOPPED';
+        renderStateMachine(state);
+        var detail=document.getElementById('xhs-state-detail');
+        if(detail)detail.textContent='P0 状态: '+(d.message||d.description||state)+(d.last_heartbeat?' · 最近心跳: '+fmtTime(d.last_heartbeat):'')+(d.error?' · 错误: '+d.error:'');
+        return;
+      }
+      throw new Error('empty');
+    }).catch(function(){
+      xjViz.api('/xhs/runtime-check').then(function(d){
+        if(d){
+          var state=(d.state||d.status||d.runtime_state||'').toUpperCase();if(!state)state=d.ok?'RUNNING':'STOPPED';
+          renderStateMachine(state);
+        } else renderStateMachine('STOPPED');
+      }).catch(function(){
+        xjViz.api('/collector-guard/status').then(function(d){
+          if(d){var state=(d.status||d.state||'').toUpperCase();if(!state)state='STOPPED';renderStateMachine(state);}
+          else renderStateMachine('STOPPED');
+        }).catch(function(){renderStateMachine('STOPPED');markDegraded('xhs-status');});
+      });
+    });
+  }
+
+  // ===== Collector Control =====
+  function xhsControl(action){
+    var url=action==='start'?'/collector/browser/start':'/collector/browser/stop';
+    var btn=document.getElementById(action==='start'?'xhs-start-btn':'xhs-stop-btn');
+    if(btn)btn.disabled=true;
+    xjViz.api(url,{}).then(function(d){
+      if(btn)btn.disabled=false;
+      renderStateMachine(action==='start'?'STARTING':'STOPPING');
+      setTimeout(loadState,3000);loadQualityGate();loadLogs();
+    }).catch(function(e){
+      if(btn)btn.disabled=false;console.error('Control error:',e);markDegraded('collector-control');
+    });
+  }
+
+  // ===== Cookie Status =====
+  function loadCookieStatus(){
+    xjViz.api('/cookies/import/status').then(function(d){
+      var dot=document.getElementById('xhs-cookie-dot');var text=document.getElementById('xhs-cookie-text');
+      if(!dot||!text)return;
+      if(d&&(d.valid||d.status==='valid'||d.ok)){dot.className='zbc-dot zbc-dot--ok';text.textContent='Cookie: 有效';text.style.color='#10B981';}
+      else if(d&&(d.expired||d.status==='expired')){dot.className='zbc-dot zbc-dot--error';text.textContent='Cookie: 已过期';text.style.color='#DC2626';}
+      else{dot.className='zbc-dot zbc-dot--warning';text.textContent='Cookie: 检测中';text.style.color='#D97706';}
+    }).catch(function(){
+      var dot=document.getElementById('xhs-cookie-dot');var text=document.getElementById('xhs-cookie-text');
+      if(dot)dot.className='zbc-dot zbc-dot--unknown';if(text)text.textContent='Cookie: 未知';
+    });
+  }
+
+  // ===== Dedup Stats (xjViz.kpi driven) =====
+  function loadDedupStats(){
+    xjViz.api('/collection/counter').then(function(d){
+      if(!d)return;
+      var before=d.raw_count||d.total_collected||d.before||null;
+      var after=d.canonical_count||d.deduped_count||d.after||null;
+      var bEl=document.getElementById('xhs-dedup-before');var aEl=document.getElementById('xhs-dedup-after');var rEl=document.getElementById('xhs-dedup-rate');
+      if(bEl)bEl.textContent=before!=null?Number(before).toLocaleString('zh-CN'):'—';
+      if(aEl)aEl.textContent=after!=null?Number(after).toLocaleString('zh-CN'):'—';
+      if(rEl)rEl.textContent=(before!=null&&after!=null&&before>0)?((before-after)/before*100).toFixed(1)+'%':'—';
+      // Trigger count-up animation
+      if (typeof LDMotion !== 'undefined') {
+        if (before != null) LDMotion.countUp(document.getElementById('xhs-dedup-before'), before);
+        if (after != null) LDMotion.countUp(document.getElementById('xhs-dedup-after'), after);
+      }
+    }).catch(function(){markDegraded('collection-counter');});
+  }
+
+  // ===== Quality Gate =====
+  function loadQualityGate(){
+    xjViz.api('/collector-guard/status').then(function(d){
+      var gate=d&&d.quality_gate?d.quality_gate:(d&&d.gate?d.gate:null);
+      renderQualityGate(gate);
+    }).catch(function(){renderQualityGate(null);});
+  }
+  function renderQualityGate(gate){
+    var container=document.getElementById('xhs-quality-gate');if(!container)return;
+    var html='';
+    QUALITY_STEPS.forEach(function(step,idx){
+      var passRate=null;var status='unknown';
+      if(gate&&gate[step.key]){var g=gate[step.key];passRate=g.pass_rate!=null?g.pass_rate:(g.rate!=null?g.rate:null);status=g.status||(passRate!=null?(passRate>=90?'pass':(passRate>=70?'warning':'fail')):'unknown');}
+      var sc=status==='pass'?'#10B981':(status==='warning'?'#D97706':(status==='fail'?'#DC2626':'#9CA3AF'));
+      var bw=passRate!=null?passRate:0;
+      html+='<div style="display:flex;align-items:center;gap:12px;">';
+      html+='<div style="width:24px;height:24px;border-radius:50%;background:'+sc+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">'+(idx+1)+'</div>';
+      html+='<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;font-weight:600;">'+step.label+'</span><span style="font-size:11px;font-variant-numeric:tabular-nums;color:'+sc+';">'+(passRate!=null?passRate+'%':'—')+'</span></div>';
+      html+='<div style="height:6px;background:var(--l-bg-secondary,#F7F7F8);border-radius:999px;overflow:hidden;"><div style="width:'+bw+'%;height:100%;background:'+sc+';border-radius:999px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1);"></div></div>';
+      html+='<div style="font-size:10px;color:var(--l-text-tertiary,#9CA3AF);margin-top:2px;">'+step.desc+'</div></div></div>';
+    });
+    container.innerHTML=html;
+  }
+
+  // ===== Logs =====
+  function loadLogs(){
+    var loading=document.getElementById('xhs-log-loading');var empty=document.getElementById('xhs-log-empty');var content=document.getElementById('xhs-log-content');
+    if(loading)loading.style.display='';if(empty)empty.style.display='none';if(content)content.style.display='none';
+    xjViz.api('/collect/tasks',{limit:20}).then(function(d){
+      if(loading)loading.style.display='none';
+      var tasks=(d&&d.tasks)?d.tasks:((d&&d.data)?d.data:[]);
+      if(!tasks||tasks.length===0){if(empty)empty.style.display='';return;}
+      var html='';
+      tasks.forEach(function(t){
+        var time=t.created_at||t.started_at||t.timestamp||'';var status=t.status||t.state||'unknown';var taskId=t.task_id||t.id||'';var detail=t.detail||t.message||t.error||'';
+        var sc=status==='success'||status==='completed'?'#10B981':(status==='failed'||status==='error'?'#DC2626':'#D97706');
+        html+='<div style="color:var(--l-text-secondary,#6B7280);">['+fmtTime(time)+'] <span style="color:'+sc+';">'+escapeHtml(status.toUpperCase())+'</span> '+escapeHtml(taskId)+' '+escapeHtml(detail)+'</div>';
+      });
+      if(content){content.innerHTML=html;content.style.display='';}
+    }).catch(function(){
+      if(loading)loading.style.display='none';
+      if(empty){empty.style.display='';empty.querySelector('.zbc-state-empty__text').textContent='采集日志获取失败';}
+      markDegraded('collect-tasks');
+    });
+  }
+
+  // ===== Notes (xjViz.table driven) =====
+  function loadNotes(){
+    var loading=document.getElementById('xhs-notes-loading');var empty=document.getElementById('xhs-notes-empty');var error=document.getElementById('xhs-notes-error');var content=document.getElementById('xhs-notes-content');
+    if(loading)loading.style.display='';if(empty)empty.style.display='none';if(error)error.style.display='none';if(content)content.style.display='none';
+    xjViz.api('/hot-notes',{limit:50}).then(function(d){
+      if(loading)loading.style.display='none';
+      var notes=(d&&d.notes)?d.notes:((d&&d.data)?d.data:[]);
+      if(notes.length===0){if(empty)empty.style.display='';return;}
+      // Update platform header KPIs
+      var totalLikes = 0, totalComments = 0;
+      notes.forEach(function(n) {
+        totalLikes += Number(n.likes || n.like_count || 0);
+        totalComments += Number(n.comments || n.comment_count || 0);
+      });
+      if (typeof LDMotion !== 'undefined') {
+        LDMotion.updateValue(document.getElementById('xhs-kpi-total'), notes.length);
+        LDMotion.updateValue(document.getElementById('xhs-kpi-canonical'), notes.length);
+        LDMotion.updateValue(document.getElementById('xhs-kpi-comments'), totalComments);
+      }
+      var tableData=notes.map(function(n){
+        return{
+          cover:n.cover_url||n.image_url||n.cover||'',
+          title:n.title||n.note_title||'无标题',
+          author:n.author||n.user_name||'—',
+          brand:n.brand_name||n.brand||'—',
+          likes:n.likes!=null?n.likes:(n.like_count!=null?n.like_count:null),
+          comments:n.comments!=null?n.comments:(n.comment_count!=null?n.comment_count:null),
+          comment_status:n.comment_status||(n.comments>0?'success':'pending'),
+          captured_at:n.captured_at||n.capture_time||n.collected_at||n.created_at||''
+        };
+      });
+      window._xhsNotesData = notes;
+      xjViz.table('#xhs-notes-content',tableData,[
+        {key:'cover',label:'封面',render:function(v){return v?'<img src="'+escapeHtml(v)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;" onerror="this.style.display=\'none\'">':'<div style="width:36px;height:36px;background:var(--l-bg-secondary,#F7F7F8);border-radius:4px;"></div>';}},
+        {key:'title',label:'标题',render:function(v){return'<span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;" title="'+escapeHtml(v)+'">'+escapeHtml(v)+'</span>';}},
+        {key:'author',label:'账号',render:function(v){return escapeHtml(v);}},
+        {key:'brand',label:'品牌',render:function(v){return escapeHtml(v);}},
+        {key:'likes',label:'点赞',render:function(v){return v!=null?'<span style="font-variant-numeric:tabular-nums;">'+Number(v).toLocaleString('zh-CN')+'</span>':'—';}},
+        {key:'comments',label:'评论',render:function(v){return v!=null?'<span style="font-variant-numeric:tabular-nums;">'+Number(v).toLocaleString('zh-CN')+'</span>':'—';}},
+        {key:'comment_status',label:'评论状态',render:function(v){
+          if(v==='success')return'<span class="zbc-tag zbc-tag--low">已抓取</span>';
+          if(v==='partial')return'<span class="zbc-tag zbc-tag--medium">Partial</span>';
+          if(v==='failed')return'<span class="zbc-tag zbc-tag--high">Failed</span>';
+          return'<span class="zbc-tag zbc-tag--unknown">待抓取</span>';
+        }},
+        {key:'captured_at',label:'入库时间',render:function(v){return v?'<span style="font-size:12px;white-space:nowrap;">'+fmtTime(v)+'</span>':'—';}}
+      ]);
+      if(content)content.style.display='';
+    }).catch(function(e){
+      if(loading)loading.style.display='none';if(error)error.style.display='';markDegraded('hot-notes');
+    });
+  }
+
+  // ===== Comments (failed/partial/timeout 不静默丢弃) =====
+  function loadComments(){
+    var loading=document.getElementById('xhs-comments-loading');var empty=document.getElementById('xhs-comments-empty');var content=document.getElementById('xhs-comments-content');
+    if(loading)loading.style.display='';if(empty)empty.style.display='none';if(content)content.style.display='none';
+    xjViz.api('/hot-notes',{limit:20}).then(function(d){
+      if(loading)loading.style.display='none';
+      var notes=(d&&d.notes)?d.notes:[];
+      var comments=[];var s=0,p=0,f=0,t=0;
+      notes.forEach(function(n){
+        var nc=n.comments_list||n.comment_details||[];
+        if(nc.length>0){
+          nc.slice(0,3).forEach(function(c){
+            var st=c.status||'success';
+            if(st==='success')s++;else if(st==='partial')p++;else if(st==='failed')f++;else if(st==='timeout')t++;
+            comments.push({note_title:n.title||'笔记',content:c.content||c.text||'',author:c.author||c.user_name||'—',status:st,error:c.error||c.error_message||'',time:c.created_at||c.time||''});
+          });
+        } else {
+          // 评论抓取失败不静默丢弃 — 显示 failed/partial/timeout
+          var cs=n.comment_status||'pending';
+          if(cs==='failed'){f++;comments.push({note_title:n.title||'笔记',content:'(评论抓取失败)',author:'—',status:'failed',error:n.comment_error||'Unknown error',time:''});}
+          else if(cs==='partial'){p++;comments.push({note_title:n.title||'笔记',content:'(部分评论缺失)',author:'—',status:'partial',error:n.comment_error||'Partial fetch',time:''});}
+          else if(cs==='timeout'){t++;comments.push({note_title:n.title||'笔记',content:'(评论抓取超时)',author:'—',status:'timeout',error:'Request timeout',time:''});}
+        }
+      });
+      document.getElementById('xhs-comment-success').textContent=Number(s).toLocaleString('zh-CN');
+      document.getElementById('xhs-comment-partial').textContent=Number(p).toLocaleString('zh-CN');
+      document.getElementById('xhs-comment-failed').textContent=Number(f).toLocaleString('zh-CN');
+      document.getElementById('xhs-comment-timeout').textContent=Number(t).toLocaleString('zh-CN');
+      if(comments.length===0){if(empty)empty.style.display='';return;}
+      xjViz.table('#xhs-comments-content',comments,[
+        {key:'note_title',label:'笔记',render:function(v){return'<span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">'+escapeHtml(v)+'</span>';}},
+        {key:'content',label:'评论内容',render:function(v){return'<span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">'+escapeHtml(v)+'</span>';}},
+        {key:'author',label:'评论者',render:function(v){return escapeHtml(v);}},
+        {key:'status',label:'状态',render:function(v){
+          if(v==='success')return'<span class="zbc-tag zbc-tag--low">Success</span>';
+          if(v==='partial')return'<span class="zbc-tag zbc-tag--medium">Partial</span>';
+          if(v==='failed')return'<span class="zbc-tag zbc-tag--high">Failed</span>';
+          if(v==='timeout')return'<span class="zbc-tag zbc-tag--info">Timeout</span>';
+          return'<span class="zbc-tag zbc-tag--unknown">Unknown</span>';
+        }},
+        {key:'error',label:'错误信息',render:function(v){return v?'<span style="font-size:11px;color:#DC2626;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">'+escapeHtml(v)+'</span>':'—';}},
+        {key:'time',label:'时间',render:function(v){return v?'<span style="font-size:12px;white-space:nowrap;">'+fmtTime(v)+'</span>':'—';}}
+      ]);
+      if(content)content.style.display='';
+    }).catch(function(){
+      if(loading)loading.style.display='none';
+      if(empty){empty.style.display='';empty.querySelector('.zbc-state-empty__text').textContent='评论数据加载失败';}
+      markDegraded('comments');
+    });
+  }
+
+  // ===== Accounts (xjViz.table driven) =====
+  function loadAccounts(){
+    var loading=document.getElementById('xhs-accounts-loading');var empty=document.getElementById('xhs-accounts-empty');var content=document.getElementById('xhs-accounts-content');
+    if(loading)loading.style.display='';if(empty)empty.style.display='none';if(content)content.style.display='none';
+    xjViz.api('/xhs/accounts').then(function(d){
+      if(loading)loading.style.display='none';
+      var accounts=(d&&d.accounts)?d.accounts:((d&&d.data)?d.data:[]);
+      if(accounts.length===0){if(empty)empty.style.display='';return;}
+      xjViz.table('#xhs-accounts-content',accounts,[
+        {key:'account_id',label:'账号ID',render:function(v,row){return'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+escapeHtml(v||row.id||row.user_id||'—')+'</span>';}},
+        {key:'nickname',label:'昵称',render:function(v,row){return escapeHtml(v||row.name||row.user_name||'—');}},
+        {key:'cookie_status',label:'Cookie状态',render:function(v,row){
+          var cs=v||row.cookie_state||'unknown';
+          if(cs==='valid'||cs==='ok')return'<span class="zbc-tag zbc-tag--low">有效</span>';
+          if(cs==='expired')return'<span class="zbc-tag zbc-tag--high">过期</span>';
+          return'<span class="zbc-tag zbc-tag--unknown">'+escapeHtml(cs)+'</span>';
+        }},
+        {key:'keepalive_status',label:'保活状态',render:function(v,row){
+          var ks=v||row.keepalive||'unknown';
+          if(ks==='active'||ks==='ok')return'<span class="zbc-tag zbc-tag--low">活跃</span>';
+          if(ks==='warning')return'<span class="zbc-tag zbc-tag--medium">预警</span>';
+          return'<span class="zbc-tag zbc-tag--unknown">'+escapeHtml(ks)+'</span>';
+        }},
+        {key:'last_active',label:'最近活跃',render:function(v,row){return(v||row.last_heartbeat||row.updated_at)?'<span style="font-size:12px;white-space:nowrap;">'+fmtTime(v||row.last_heartbeat||row.updated_at)+'</span>':'—';}},
+        {key:'collect_count',label:'采集次数',render:function(v,row){var c=v||row.total_collections||row.task_count;return c!=null?'<span style="font-variant-numeric:tabular-nums;">'+Number(c).toLocaleString('zh-CN')+'</span>':'—';}},
+        {key:'account_id',label:'操作',render:function(v,row){return'<button class="zbc-btn" style="padding:4px 10px;font-size:11px;" onclick="xhsSwitchAccount(\''+escapeHtml(v||row.id||'')+'\')">切换</button>';}}
+      ]);
+      if(content)content.style.display='';
+    }).catch(function(e){
+      if(loading)loading.style.display='none';
+      if(empty){empty.style.display='';empty.querySelector('.zbc-state-empty__text').textContent='账号数据加载失败: '+e.message;}
+      markDegraded('xhs-accounts');
+    });
+  }
+
+  function xhsSwitchAccount(accountId){
+    xjViz.api('/xhs/switch-account',{account_id:accountId}).then(function(d){loadAccounts();loadState();}).catch(function(e){console.error('Switch account error:',e);});
+  }
+
+  // ===== View Toggle (Table/Card) =====
+  var xhsViewMode = 'table';
+  function xhsSetView(mode) {
+    xhsViewMode = mode;
+    document.querySelectorAll('#xhs-tab-notes .ld-tab').forEach(function(t) { t.classList.remove('is-active'); });
+    event.target.classList.add('is-active');
+    var tableEl = document.getElementById('xhs-notes-content');
+    var cardEl = document.getElementById('xhs-notes-card-view');
+    if (mode === 'card') {
+      if (tableEl) tableEl.style.display = 'none';
+      if (cardEl) { cardEl.style.display = 'grid'; renderNotesCardView(); }
+    } else {
+      if (tableEl) tableEl.style.display = '';
+      if (cardEl) cardEl.style.display = 'none';
+    }
+  }
+  function renderNotesCardView() {
+    var cardEl = document.getElementById('xhs-notes-card-view');
+    if (!cardEl || !window._xhsNotesData || window._xhsNotesData.length === 0) return;
+    var html = '';
+    window._xhsNotesData.slice(0, 24).forEach(function(n, idx) {
+      var cover = n.cover_url || n.image_url || n.cover || '';
+      var title = n.title || n.note_title || '无标题';
+      var author = n.author || n.user_name || '—';
+      var likes = n.likes != null ? n.likes : (n.like_count != null ? n.like_count : 0);
+      var comments = n.comments != null ? n.comments : (n.comment_count != null ? n.comment_count : 0);
+      html += '<div class="ld-content-card" style="animation-delay:' + (idx * 40) + 'ms;">';
+      if (cover) {
+        html += '<img class="ld-content-card__cover" src="' + escapeHtml(cover) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
+      }
+      html += '<div style="height:120px;background:var(--l-bg-secondary,#F7F7F8);display:none;align-items:center;justify-content:center;color:var(--l-text-tertiary,#9CA3AF);font-size:24px;">📝</div>';
+      html += '<div class="ld-content-card__body">';
+      html += '<div class="ld-content-card__title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</div>';
+      html += '<div class="ld-content-card__meta">';
+      html += '<div class="ld-content-card__author"><span style="width:20px;height:20px;border-radius:50%;background:var(--ld-gradient-purple-blue);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;">' + escapeHtml(String(author).charAt(0)) + '</span><span class="ld-content-card__author-name">' + escapeHtml(author) + '</span></div>';
+      html += '<div class="ld-content-card__stats">';
+      html += '<span class="ld-content-card__stat" style="color:#FF2442;">♥ ' + Number(likes).toLocaleString('zh-CN') + '</span>';
+      html += '<span class="ld-content-card__stat" style="color:#6366F1;">💬 ' + Number(comments).toLocaleString('zh-CN') + '</span>';
+      html += '</div></div></div></div>';
+    });
+    cardEl.innerHTML = html;
+    if (typeof LDMotion !== 'undefined') LDMotion.staggerChildren(cardEl);
+  }
+
+  // ===== Orchestrator =====
+  function loadXHSAll(){
+    loadState();loadCookieStatus();loadDedupStats();loadQualityGate();loadLogs();
+    if(currentTab==='notes')loadNotes();
+    if(currentTab==='comments')loadComments();
+    if(currentTab==='accounts')loadAccounts();
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    loadXHSAll();
+    setInterval(function(){loadState();loadCookieStatus();},15000);
+  });
+
+  window.switchTab=switchTab;window.xhsControl=xhsControl;window.loadXHSAll=loadXHSAll;window.xhsSwitchAccount=xhsSwitchAccount;window.xhsSetView=xhsSetView;
+})();
+</script>
+{% endblock %}

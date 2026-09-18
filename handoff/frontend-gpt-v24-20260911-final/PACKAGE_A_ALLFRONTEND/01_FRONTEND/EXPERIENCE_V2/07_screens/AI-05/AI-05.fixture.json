@@ -1,0 +1,204 @@
+{
+  "screen": "AI-05",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "RUNTIME: ai_gateway",
+      "EV: provider health"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "AI Agent",
+      "title": "AI Gateway 与 Provider",
+      "titleKey": "screen.AI-05",
+      "desc": "Provider 不可用时核心生产链由规则与数据继续运行；云 AI 不是启动硬依赖。"
+    },
+    {
+      "type": "runtime",
+      "title": "Provider 实时状态",
+      "items": [
+        {
+          "name": "智谱 glm-5.3（深度推理）",
+          "state": "ok",
+          "detail": "healthy · 1.2s · balance ok"
+        },
+        {
+          "name": "智谱 glm-4.5-air（快速）",
+          "state": "ok",
+          "detail": "healthy · 0.4s"
+        },
+        {
+          "name": "本地 Ollama",
+          "state": "ok",
+          "detail": "local fallback"
+        },
+        {
+          "name": "确定性规则引擎",
+          "state": "ok",
+          "detail": "always-on"
+        }
+      ]
+    },
+    {
+      "type": "split",
+      "main": [
+        {
+          "type": "chart",
+          "title": "近 24h 调用量（按 Provider）",
+          "kind": "line",
+          "series": [
+            {
+              "data": [
+                12,
+                18,
+                15,
+                22,
+                30,
+                26,
+                34,
+                40,
+                38,
+                46,
+                52,
+                48
+              ],
+              "color": "var(--lum-c-brand-500)"
+            },
+            {
+              "data": [
+                4,
+                6,
+                5,
+                8,
+                7,
+                9,
+                11,
+                10,
+                12,
+                13,
+                12,
+                14
+              ],
+              "color": "var(--lum-c-success)"
+            }
+          ],
+          "labels": [
+            "00",
+            "02",
+            "04",
+            "06",
+            "08",
+            "10",
+            "12",
+            "14",
+            "16",
+            "18",
+            "20",
+            "22"
+          ],
+          "legend": [
+            {
+              "label": "智谱",
+              "color": "var(--lum-c-brand-500)"
+            },
+            {
+              "label": "本地",
+              "color": "var(--lum-c-success)"
+            }
+          ]
+        }
+      ],
+      "side": [
+        {
+          "type": "kpis",
+          "items": [
+            {
+              "label": "今日调用",
+              "value": 1842,
+              "icon": "ops",
+              "source": "RUNTIME:ai_gateway",
+              "fresh": "live",
+              "decimals": 0,
+              "delta": 8,
+              "deltaUnit": "%"
+            },
+            {
+              "label": "规则兜底率",
+              "value": 6.4,
+              "icon": "skill",
+              "source": "RUNTIME:rules",
+              "fresh": "live",
+              "decimals": 1,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "text": "降级策略：云端失败→本地模型→确定性规则；任何一层失败都不阻塞 Evidence/Canonical 主链。",
+          "kind": "RULE",
+          "code": "AI-FALLBACK"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Provider 配置",
+      "columns": [
+        {
+          "label": "Provider",
+          "key": "n"
+        },
+        {
+          "label": "用途",
+          "key": "use"
+        },
+        {
+          "label": "状态",
+          "key": "s",
+          "numeric": true,
+          "type": "t"
+        },
+        {
+          "label": "延迟ms",
+          "key": "lat",
+          "numeric": true
+        }
+      ],
+      "rows": [
+        {
+          "n": "glm-5.3",
+          "use": "深度推理",
+          "s": "OK",
+          "t": "success",
+          "lat": 1204
+        },
+        {
+          "n": "glm-4.5-air",
+          "use": "日常快速",
+          "s": "OK",
+          "t": "success",
+          "lat": 410
+        },
+        {
+          "n": "ollama-local",
+          "use": "本地兜底",
+          "s": "OK",
+          "t": "success",
+          "lat": 88
+        },
+        {
+          "n": "legacy-provider",
+          "use": "历史通道",
+          "s": "STANDBY",
+          "t": "neutral",
+          "lat": "—"
+        }
+      ]
+    }
+  ]
+}

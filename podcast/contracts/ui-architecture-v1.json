@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"zbc://podcast/ui/v1",
+  "title":"ZBC Podcast Workspace UI v1",
+  "type":"object",
+  "properties":{
+    "global_navigation":{"type":"array","items":{"enum":["overview","shows","episodes","people","topics","cases","assets","platforms","research","production","learning"]}},
+    "episode_navigation":{"type":"array","items":{"enum":["overview","player","transcript","story_map","questions","highlights","assets","audience","evidence","ai_runs"]}},
+    "visual_tokens":{"type":"object","properties":{"surface":{"type":"string"},"text":{"type":"string"},"radius":{"type":"array","items":{"type":"number"}},"motion_ms":{"type":"array","items":{"type":"number"}}}},
+    "interaction_principles":{"type":"array","items":{"type":"string"}}
+  },
+  "additionalProperties":false
+}

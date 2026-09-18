@@ -1,0 +1,28 @@
+{
+  "screen": "ACC-03",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 1,
+  "actions": [
+    {
+      "action_id": "ACC-03.card:进入商业运营",
+      "display_label_zh": "进入",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "ACC-03",
+        "section": "card:进入商业运营",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": null
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "screen": "CTH-09",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 3,
+  "actions": [
+    {
+      "action_id": "CTH-09.decide-b3",
+      "display_label_zh": "开放 B3 备用通道（18-21点）",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "facility:write",
+      "input_context": {
+        "screen": "CTH-09",
+        "section": "actions:待决策",
+        "scope": "facility:parking",
+        "target": "access_control"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": true,
+      "prototype_behavior": "local/navigation only",
+      "icon": "check"
+    },
+    {
+      "action_id": "CTH-09.decide-staff",
+      "display_label_zh": "增派晚高峰引导 4 人",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "roster:write",
+      "input_context": {
+        "screen": "CTH-09",
+        "section": "actions:待决策",
+        "scope": "team:ops",
+        "target": "roster"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "users"
+    },
+    {
+      "action_id": "CTH-09.decide-sign",
+      "display_label_zh": "更新北区指引标识",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "ops:write",
+      "input_context": {
+        "screen": "CTH-09",
+        "section": "actions:待决策",
+        "scope": "facility:signage",
+        "target": "work_order"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "edit"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "note": "Legacy product/UI wording forbidden in Production Experience. Action=DO_NOT_REUSE; owner=CODEX for production locale cleanup.",
+  "owner": "CODEX",
+  "action": "DO_NOT_REUSE",
+  "forbidden_terms": [
+    {
+      "legacy": "Commerce & Trading Hub / CTH 旧英文全称",
+      "canonical": "LUMENIS Commerce Operations / 序境·商业运营"
+    },
+    {
+      "legacy": "Brand Monitoring Platform",
+      "canonical": "LUMENIS Brand & Market / 序境·品牌市场"
+    },
+    {
+      "legacy": "Brand Intelligence",
+      "canonical": "LUMENIS Brand & Market"
+    },
+    {
+      "legacy": "太古汇智能（作为产品名）",
+      "canonical": "序境 LUMENIS（太古汇仅作为 Subject 示例）"
+    },
+    {
+      "legacy": "CorTech / Z-Brand 历史产品命名",
+      "canonical": "序境 LUMENIS（历史仅能力证据，不复用命名/UI）"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "writable_root": "experience_v2/",
+  "backend_tracked_files_changed": 0,
+  "experience_v2_files_changed_this_session": [
+    "build/capture_all.py",
+    "build/demo_video.py",
+    "10_prototype/assets/sections.js",
+    "build/src/spec_cth.py",
+    "08_psd/PSD_BLOCKED.md(new)",
+    "09_responsive/RESPONSIVE_MATRIX.md(new)",
+    "16_versioning/DESIGN_VERSION.json(new) + regenerated registries/data/shots/previews"
+  ],
+  "forbidden": [
+    "any tracked backend file",
+    "database/migration",
+    "README/AGENTS/Governance",
+    "git add/commit/push/pull/merge/checkout/reset/stash"
+  ],
+  "git_index_mutations": "NONE"
+}

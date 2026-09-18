@@ -1,0 +1,28 @@
+{
+  "screen": "ACC-04",
+  "viewmodel": {
+    "guard": "{reason,required_permission,subject_id,recovery_paths[]}"
+  },
+  "binding": {
+    "guard": "CODEX_VERIFY (auth guard/recovery = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "guard"
+    ],
+    "Capability": [],
+    "Motion": [
+      "M01"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "ACC-04.actions.json",
+    "Permission": [],
+    "Evidence": []
+  },
+  "unknown_binding_keys": [
+    "guard"
+  ],
+  "binding_owner_default": "CODEX"
+}

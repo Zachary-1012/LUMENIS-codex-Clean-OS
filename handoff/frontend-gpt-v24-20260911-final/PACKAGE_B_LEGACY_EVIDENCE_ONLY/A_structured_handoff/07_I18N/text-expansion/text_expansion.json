@@ -1,0 +1,146 @@
+{
+ "AI-01@1440": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 3,
+   "worst_el": "lbl"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 7311,
+   "worst_el": "lum-grid-main-side"
+  }
+ },
+ "CTH-01@1440": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 20,
+   "worst_el": "lum-card lum-insight is-in"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 18564,
+   "worst_el": "[object SVGAnimatedString]"
+  }
+ },
+ "SH-01@1440": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 5,
+   "worst_el": "lum-table-wrap is-in"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 14933,
+   "worst_el": "lum-table-wrap is-in"
+  }
+ },
+ "AI-02@1440": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 3,
+   "worst_el": "lbl"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 3295,
+   "worst_el": "lum-evidence__head"
+  }
+ },
+ "CTH-09@1440": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 3,
+   "worst_el": "lbl"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 5861,
+   "worst_el": "lum-evidence__head"
+  }
+ },
+ "BMP-01@1440": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 20,
+   "worst_el": "lum-card lum-insight is-in"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 10406,
+   "worst_el": "[object SVGAnimatedString]"
+  }
+ },
+ "AI-01@390": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 6,
+   "worst_el": "lum-btn lum-btn-primary"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 6867,
+   "worst_el": "lum-grid-main-side"
+  }
+ },
+ "CTH-01@390": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 20,
+   "worst_el": "lum-card lum-insight is-in"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 18564,
+   "worst_el": "[object SVGAnimatedString]"
+  }
+ },
+ "SH-01@390": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 1064,
+   "worst_el": "lum-steps"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 28721,
+   "worst_el": "lum-steps"
+  }
+ },
+ "AI-02@390": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 193,
+   "worst_el": "lum-steps"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 8467,
+   "worst_el": "lum-steps"
+  }
+ },
+ "CTH-09@390": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 0,
+   "worst_el": ""
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 5851,
+   "worst_el": "lum-grid-main-side"
+  }
+ },
+ "BMP-01@390": {
+  "before": {
+   "body_overflow": 0,
+   "worst_el_overflow": 20,
+   "worst_el": "lum-card lum-insight is-in"
+  },
+  "after_135pct": {
+   "body_overflow": 0,
+   "worst_el_overflow": 14339,
+   "worst_el": "[object SVGAnimatedString]"
+  }
+ }
+}

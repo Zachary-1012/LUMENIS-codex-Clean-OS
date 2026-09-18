@@ -1,0 +1,49 @@
+{
+  "screen": "AI-01",
+  "action_contract_version": "Design-Authority-V2 (9 fields)",
+  "count": 2,
+  "actions": [
+    {
+      "action_id": "AI-01.go-AI-05",
+      "display_label_zh": "查看 AI Gateway",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "AI-01",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "ops"
+    },
+    {
+      "action_id": "AI-01.go-AI-04",
+      "display_label_zh": "技能中心",
+      "display_key": null,
+      "action_class": "NAVIGATION",
+      "capability_status": "VERIFIED_AVAILABLE",
+      "permission_requirement": "UNKNOWN",
+      "input_context": {
+        "screen": "AI-01",
+        "section": "head",
+        "scope": "UNKNOWN",
+        "target": "UNKNOWN"
+      },
+      "success_state": "NEEDS_CODEX_DEFINE",
+      "failure_state": "NEEDS_CODEX_DEFINE",
+      "evidence_effect": "UNKNOWN",
+      "binding_owner": "FRONTEND",
+      "high_risk_confirmation_required": false,
+      "prototype_behavior": "local/navigation only",
+      "icon": "skill"
+    }
+  ]
+}

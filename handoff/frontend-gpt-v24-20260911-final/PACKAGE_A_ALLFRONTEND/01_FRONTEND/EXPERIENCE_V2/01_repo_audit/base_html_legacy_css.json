@@ -1,0 +1,20 @@
+{
+  "source": "templates/base.html",
+  "legacy_stylesheets": [
+    "fonts/fonts.css",
+    "css/zbc-design-v1.1.css",
+    "css/xujing-core.css",
+    "css/zbc-layout-v1.1.css",
+    "css/lumenis-global-design.css",
+    "css/adaptive-layout.css",
+    "css/adaptive-components.css",
+    "css/zbc-design-system.css",
+    "css/zbc-ui-enhancement.css"
+  ],
+  "rule": "experience_v2 MUST NOT extend/import/copy base.html or any listed stylesheet; LEGACY_CSS_IMPORTED target=0",
+  "new_namespace": {
+    "root": ".lum-app",
+    "component_prefix": "lum-",
+    "token_prefix": "--lum-"
+  }
+}

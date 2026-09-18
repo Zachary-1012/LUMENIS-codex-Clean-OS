@@ -1,0 +1,285 @@
+{
+  "generated_at": "2026-09-11T15:49:51+08:00",
+  "repository": "Zachary-1012/LUMENIS-codex-Clean-OS",
+  "base_branch": "main",
+  "base_sha": "31c68a942d639cd1c48fb6d37e025b9447504ef0",
+  "work_branch": "main (no branch created; not authorized)",
+  "head_sha": "ab67612367c172ced2dff62b44e98de86469d1e6",
+  "dirty": true,
+  "dirty_detail": "untracked: experience_v2/ and this additive docs/handoff bundle; tracked production diff = none",
+  "objective": "ChatGPT public distribution compliance closure (audit + proposed contracts; implementation handed to Codex)",
+  "final_status": "PARTIAL",
+  "verified_facts": [
+    "HEAD ab67612367c172ced2dff62b44e98de86469d1e6 on main; origin = LUMENIS-codex-Clean-OS; no tracked production diff",
+    "0 MCP annotations / inputSchema / outputSchema anywhere in backend",
+    "0 public MCP server; list_tools/call_tool hits are internal agent_capability/agent_smart_tool registries",
+    "0 privacy/terms/data-policy/support files or Flask routes; 0 chatgpt-app-submission.json",
+    "openai matches are LLM-provider config only (DISABLED), not a plugin",
+    "internal reusable primitives: account/ auth, collector_guard governance, contracts/ versioned APIs, ToolRiskLevel, source provenance",
+    "owned frontend full syntax/JSON scan = 0 findings after one 18-escape fix; validate_handoff 34/34; secret scan 0/367"
+  ],
+  "changed_files": [
+    {
+      "path": "(outside git) _handoff_build/.../LUMENIS_EXPERIENCE_V2.4.1_QA_CORRECTION/03_I18N/hardcoded_copy_before.json",
+      "reason": "fix 18 invalid \\' JSON escapes (syntax only)",
+      "rollback": "re-extract from LUMENIS_EXPERIENCE_HANDOFF_20260911_ab67612.zip"
+    },
+    {
+      "path": "docs/handoff/chatgpt-plugin-compliance-doubao-v1/**",
+      "reason": "additive handoff docs + proposed contracts; not imported by app",
+      "rollback": "delete that directory"
+    }
+  ],
+  "tests": [
+    {
+      "command": "python _syntax_audit.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "evidence_path": "docs/handoff/chatgpt-plugin-compliance-doubao-v1/evidence/syntax_audit_result.txt"
+    },
+    {
+      "command": "node --check (13 JS, within audit)",
+      "exit_code": 0,
+      "status": "PASS",
+      "evidence_path": "evidence/syntax_audit_result.txt"
+    },
+    {
+      "command": "py_compile (22 PY, within audit)",
+      "exit_code": 0,
+      "status": "PASS",
+      "evidence_path": "evidence/syntax_audit_result.txt"
+    },
+    {
+      "command": "python experience_v2/18_validation/validate_handoff.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "evidence_path": "evidence/validate_handoff_result.txt"
+    },
+    {
+      "command": "python _secret_scan.py",
+      "exit_code": 0,
+      "status": "PASS",
+      "evidence_path": "evidence/secret_scan_result.txt"
+    }
+  ],
+  "compliance_items": [
+    {
+      "id": "WP0",
+      "status": "VERIFIED",
+      "evidence": [
+        "00_VERIFIED_REPO_STATE.md"
+      ]
+    },
+    {
+      "id": "WP1",
+      "status": "GAP",
+      "evidence": [
+        "proposed/source_provenance_contract.proposed.json"
+      ]
+    },
+    {
+      "id": "WP2",
+      "status": "GAP",
+      "evidence": [
+        "proposed/privacy_terms_data_support.DRAFT.md"
+      ]
+    },
+    {
+      "id": "WP3",
+      "status": "GAP",
+      "evidence": [
+        "proposed/public_mcp_tools.proposed.json",
+        "proposed/public_distribution_layer_arch.proposed.md"
+      ]
+    },
+    {
+      "id": "WP4",
+      "status": "GAP",
+      "evidence": [
+        "account/ existing; plugin OAuth TODO(CODEX)"
+      ]
+    },
+    {
+      "id": "WP5",
+      "status": "VERIFIED",
+      "evidence": [
+        "evidence/secret_scan_result.txt (owned scope); public-IO enforcement GAP"
+      ]
+    },
+    {
+      "id": "WP6",
+      "status": "GAP",
+      "evidence": [
+        "proposed/public_distribution_layer_arch.proposed.md"
+      ]
+    },
+    {
+      "id": "WP7",
+      "status": "GAP",
+      "evidence": [
+        "proposed/privacy_terms_data_support.DRAFT.md#4"
+      ]
+    },
+    {
+      "id": "WP8",
+      "status": "GAP",
+      "evidence": [
+        "03_TEST_EVIDENCE.md",
+        "proposed/chatgpt_app_submission.skeleton.json"
+      ]
+    },
+    {
+      "id": "WP9",
+      "status": "VERIFIED",
+      "evidence": [
+        "this bundle"
+      ]
+    },
+    {
+      "id": "RULE_A_NAMES",
+      "status": "GAP",
+      "evidence": [
+        "proposed/public_mcp_tools.proposed.json"
+      ]
+    },
+    {
+      "id": "RULE_B_HINTS",
+      "status": "GAP",
+      "evidence": [
+        "0 annotations in tree; proposed hints drafted"
+      ]
+    },
+    {
+      "id": "RULE_C_MIN_INPUTS",
+      "status": "GAP",
+      "evidence": [
+        "inputSchema additionalProperties=false in proposed"
+      ]
+    },
+    {
+      "id": "RULE_D_AUTH_SCOPE",
+      "status": "GAP",
+      "evidence": [
+        "account/ reusable"
+      ]
+    },
+    {
+      "id": "RULE_E_3P_RIGHTS",
+      "status": "BLOCKED",
+      "evidence": [
+        "04_OPEN_BLOCKERS.md B2"
+      ]
+    },
+    {
+      "id": "RULE_F_PRIVACY_URL",
+      "status": "BLOCKED",
+      "evidence": [
+        "04_OPEN_BLOCKERS.md B1"
+      ]
+    },
+    {
+      "id": "RULE_G_RESTRICTED_DATA",
+      "status": "GAP",
+      "evidence": [
+        "owned scan clean; public contract tests TODO"
+      ]
+    },
+    {
+      "id": "RULE_H_RESP_MIN",
+      "status": "GAP",
+      "evidence": [
+        "arch output minimizer"
+      ]
+    },
+    {
+      "id": "RULE_I_WRITE_SAFETY",
+      "status": "GAP",
+      "evidence": [
+        "CPLG-06"
+      ]
+    },
+    {
+      "id": "RULE_J_NO_CHECKOUT",
+      "status": "GAP",
+      "evidence": [
+        "enforce at build; no plugin commerce"
+      ]
+    },
+    {
+      "id": "RULE_K_SUBMISSION",
+      "status": "BLOCKED",
+      "evidence": [
+        "skeleton only; needs tools+demo+legal"
+      ]
+    }
+  ],
+  "blockers": [
+    "B1 legal privacy/terms + published URL",
+    "B2 third-party rights evidence",
+    "B3 review demo account",
+    "B4 verified developer",
+    "B5 plugin OAuth (Codex)",
+    "B6 public MCP adapter (Codex)",
+    "B7 real-table retention map",
+    "B8 commit/push authorization",
+    "B9 re-verify live OpenAI/MCP pages"
+  ],
+  "unverified": [
+    "real handler side effects per future tool",
+    "MCP Inspector / ChatGPT dev-mode runtime",
+    "exhaustive per-blueprint privacy-name search"
+  ],
+  "security_notes": [
+    "never expose collector/browser/cookie/session/raw-DB",
+    "MCP pessimistic annotation defaults -> explicit hints required",
+    "restricted data never in public IO",
+    "secrets only via legitimate mechanism, never git/tool IO"
+  ],
+  "files_to_read_first": [
+    "README.md",
+    "AGENTS.md",
+    "00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md",
+    "docs/handoff/chatgpt-plugin-compliance-doubao-v1/00_VERIFIED_REPO_STATE.md",
+    "docs/handoff/chatgpt-plugin-compliance-doubao-v1/01_COMPLIANCE_GAP_MATRIX.md",
+    "docs/handoff/chatgpt-plugin-compliance-doubao-v1/proposed/public_mcp_tools.proposed.json"
+  ],
+  "recommended_next_actions": [
+    "CPLG-01 provenance",
+    "CPLG-02 public MCP adapter read-first",
+    "CPLG-03 safety/isolation tests",
+    "CPLG-04 secrets gate",
+    "CPLG-05 privacy routes",
+    "CPLG-06 write fence",
+    "CPLG-07 submission finalize"
+  ],
+  "syntax_supplement": {
+    "syntax_errors_found": 0,
+    "syntax_errors_fixed": 0,
+    "json_errors_found": 18,
+    "json_errors_fixed": 18,
+    "json_errors_detail": "hardcoded_copy_before.json: 18 invalid \\' escapes (1 file)",
+    "schema_mismatches": 0,
+    "remaining_blocked": 9,
+    "validation_commands": [
+      "python _syntax_audit.py",
+      "node --check per JS",
+      "py_compile per PY",
+      "python experience_v2/18_validation/validate_handoff.py",
+      "python _secret_scan.py"
+    ],
+    "validation_results": {
+      "JSON_PARSE_ERRORS": 0,
+      "SYNTAX_ERRORS": 0,
+      "NEW_CONFIG_PARSE_FAILURES": 0,
+      "validate_handoff": "34/34 EXIT=0",
+      "secret_scan": "0 hits / 367 text files"
+    }
+  },
+  "rollback": [
+    "delete docs/handoff/chatgpt-plugin-compliance-doubao-v1 to remove all in-repo additions",
+    "restore hardcoded_copy_before.json from the delivered ZIP; no production source/DB/git state was changed"
+  ],
+  "push": "NOT_PERFORMED",
+  "commit": "NOT_PERFORMED",
+  "db_mutated": false
+}

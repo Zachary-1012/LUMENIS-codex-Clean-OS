@@ -1,0 +1,42 @@
+{
+  "screen": "BMP-09",
+  "viewmodel": {
+    "dimensions": [
+      "{name,score}"
+    ],
+    "reports": [
+      "report"
+    ]
+  },
+  "binding": {
+    "eval": "CODEX_VERIFY (brand_evaluation = UNKNOWN)"
+  },
+  "ports": {
+    "ViewModel": [
+      "dimensions",
+      "reports"
+    ],
+    "Capability": [
+      "PAT-EVD-01",
+      "PAT-DATA-01"
+    ],
+    "Motion": [
+      "M11"
+    ],
+    "State": {
+      "context_state_source": "DESIGN_ONLY fixture"
+    },
+    "Action": "BMP-09.actions.json",
+    "Permission": [
+      "report:write"
+    ],
+    "Evidence": [
+      "EV-R01",
+      "EV-R02"
+    ]
+  },
+  "unknown_binding_keys": [
+    "eval"
+  ],
+  "binding_owner_default": "CODEX"
+}

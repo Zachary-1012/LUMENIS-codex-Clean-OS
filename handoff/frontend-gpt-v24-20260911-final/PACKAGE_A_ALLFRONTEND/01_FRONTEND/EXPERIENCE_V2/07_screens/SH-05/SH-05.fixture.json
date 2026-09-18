@@ -1,0 +1,104 @@
+{
+  "screen": "SH-05",
+  "data_source": "prototype",
+  "state_source": "DESIGN_ONLY fixture",
+  "subjects_ref": "window.LUM_FIXTURES.subjects",
+  "context": {
+    "evidence": [
+      "资产来源 Case/Report"
+    ]
+  },
+  "sections": [
+    {
+      "type": "head",
+      "eyebrow": "Shared · 序境·内容创作",
+      "title": "学习与评估资产",
+      "titleKey": "screen.SH-05",
+      "desc": "沉淀 SOP、复盘、培训与评估题库，区分已验证资产与草稿。"
+    },
+    {
+      "type": "cards",
+      "items": [
+        {
+          "title": "高峰疏导 SOP",
+          "desc": "已验证 · 来自 CASE-221",
+          "ico": "folder",
+          "badge": {
+            "text": "已验证",
+            "cls": "success"
+          }
+        },
+        {
+          "title": "活动保障 Checklist",
+          "desc": "跨部门清单",
+          "ico": "folder"
+        },
+        {
+          "title": "AI 提示词库",
+          "desc": "按能力分类的可复用 Prompt",
+          "ico": "skill"
+        },
+        {
+          "title": "评估题库",
+          "desc": "验收/回归用例",
+          "ico": "evaluation",
+          "badge": {
+            "text": "128 题",
+            "cls": "brand"
+          }
+        },
+        {
+          "title": "历史复盘",
+          "desc": "按 Campaign/事件归档",
+          "ico": "case"
+        },
+        {
+          "title": "培训材料",
+          "desc": "新人上手路径",
+          "ico": "content"
+        }
+      ],
+      "cols": 3
+    },
+    {
+      "type": "table",
+      "title": "最近更新",
+      "columns": [
+        {
+          "label": "资产",
+          "key": "a"
+        },
+        {
+          "label": "类型",
+          "key": "t"
+        },
+        {
+          "label": "验证",
+          "key": "v",
+          "numeric": true,
+          "type": "vt"
+        },
+        {
+          "label": "更新",
+          "key": "u"
+        }
+      ],
+      "rows": [
+        {
+          "a": "高峰疏导 SOP",
+          "t": "SOP",
+          "v": "已验证",
+          "vt": "success",
+          "u": "09-10"
+        },
+        {
+          "a": "KOC 脚本模板",
+          "t": "Prompt",
+          "v": "待验证",
+          "vt": "warning",
+          "u": "09-08"
+        }
+      ]
+    }
+  ]
+}
