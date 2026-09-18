@@ -1,0 +1,325 @@
+{
+  "generated_at": "2026-09-09T07:15:29.951855+00:00",
+  "base_sha": "f57a45c4b9a95483d7408a7dbe59a75699bb35ee",
+  "branch": "integration/local-open-source-ai-runtime-v3",
+  "runtime_mode": "LOCAL_ONLY",
+  "cloud_flags": {
+    "CLOUD_AI_DISABLED": "1",
+    "ZHIPU_DISABLED": "1"
+  },
+  "model_registry": {
+    "id": "qwen2.5-coder:1.5b-instruct",
+    "name": "Qwen2.5-Coder 1.5B Instruct",
+    "provider": "OLLAMA_LOCAL",
+    "runtime": "ollama",
+    "source": "local Ollama manifest plus official Qwen model repository",
+    "upstream_repo": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct",
+    "upstream_version": "2e1fd397ee46e1388853d2af2c993145b0f1098a",
+    "weight_source": "D:/OllamaModels/models/blobs/sha256-29d8c98fa6b098e200069bfb88b9508dc3e85586d20cba59f8dda9a808165104",
+    "version": "ollama-manifest-d7372fd82851",
+    "license": "Apache-2.0",
+    "license_verified": true,
+    "weight_license": "Apache-2.0",
+    "weight_license_verified": true,
+    "commercial_use": true,
+    "checksum": "sha256:29d8c98fa6b098e200069bfb88b9508dc3e85586d20cba59f8dda9a808165104",
+    "capabilities": [
+      "general_analysis",
+      "classification",
+      "sentiment",
+      "summarization",
+      "structured_json",
+      "coding_support"
+    ],
+    "languages": [
+      "zh",
+      "en"
+    ],
+    "context_window": 32768,
+    "quantization": "Q4_K_M",
+    "hardware_requirement": {
+      "ram_gb_min": 3,
+      "required_free_ram_mb": 1024,
+      "gpu_required": false
+    },
+    "adapter": "local_ai_runtime.ollama.OllamaAdapter",
+    "health": "REAL_CALL_REQUIRED",
+    "fallback": "deterministic_rule",
+    "resource_budget": {
+      "max_ram_mb": 4096,
+      "max_runtime_seconds": 120,
+      "max_concurrency": 1
+    },
+    "status": "PRODUCTION_CANDIDATE",
+    "replacement_target": "future LUMENIS-owned model adapter"
+  },
+  "weight_checksum_pass": true,
+  "health": {
+    "installed": true,
+    "configured": true,
+    "reachable": true,
+    "loadable": true,
+    "real_call_verified": true,
+    "status": "UP",
+    "model": "qwen2.5-coder:1.5b-instruct",
+    "last_success": "2026-09-09T07:15:34.271140+00:00",
+    "last_failure": null,
+    "checked_at": "2026-09-09T07:15:31.479461+00:00",
+    "latency_ms": 2886,
+    "provider": "OLLAMA_LOCAL",
+    "mode": "LOCAL_ONLY"
+  },
+  "health_stability": [
+    {
+      "installed": true,
+      "configured": true,
+      "reachable": true,
+      "loadable": true,
+      "real_call_verified": true,
+      "status": "UP",
+      "model": "qwen2.5-coder:1.5b-instruct",
+      "last_success": "2026-09-09T07:15:37.203609+00:00",
+      "last_failure": null,
+      "checked_at": "2026-09-09T07:15:34.474969+00:00",
+      "latency_ms": 2932,
+      "provider": "OLLAMA_LOCAL",
+      "mode": "LOCAL_ONLY"
+    },
+    {
+      "installed": true,
+      "configured": true,
+      "reachable": true,
+      "loadable": true,
+      "real_call_verified": true,
+      "status": "UP",
+      "model": "qwen2.5-coder:1.5b-instruct",
+      "last_success": "2026-09-09T07:15:40.378331+00:00",
+      "last_failure": null,
+      "checked_at": "2026-09-09T07:15:37.465906+00:00",
+      "latency_ms": 3174,
+      "provider": "OLLAMA_LOCAL",
+      "mode": "LOCAL_ONLY"
+    }
+  ],
+  "streaming": {
+    "pass": true,
+    "content_hash": "cf19217c1e3174dde713b6c49e4f8c39dbe314fb83e4b11ab9e98fc3e627f155"
+  },
+  "business_analysis": {
+    "ok": true,
+    "advisory": true,
+    "task_type": "sentiment",
+    "summary": "用户投诉停车等待时间过长，尚未获得官方核实",
+    "sentiment": "negative",
+    "topics": [
+      "交通",
+      "停车"
+    ],
+    "confidence": 0.9,
+    "fact_basis": "insufficient",
+    "provider": "OLLAMA_LOCAL",
+    "model": "qwen2.5-coder:1.5b-instruct",
+    "prompt_version": "lumenis-business-analysis-v3.0",
+    "trace_id": "3eaaa6815b59493fb119ba11de93d72a",
+    "evidence_id": "ac544c6aff5cc2ca52e6a2fa527b76003f3899d53aa295f15156bc8aab4bb7d2",
+    "timestamp": "2026-09-09T07:15:49.769075+00:00",
+    "fallback": false,
+    "error_type": "",
+    "latency_ms": 6154,
+    "resource_usage": {
+      "total_ram_mb": 15706,
+      "available_ram_mb": 4444,
+      "process_id": 44008,
+      "max_runtime_seconds": 120,
+      "max_concurrency": 1,
+      "max_queue": 2,
+      "cpu_percent": 29.2
+    }
+  },
+  "acceptance": {
+    "cases": [
+      {
+        "id": "zh-summary",
+        "format_pass": true,
+        "quality_pass": true,
+        "provider": "OLLAMA_LOCAL",
+        "latency_ms": 6076,
+        "confidence": 0.9,
+        "sentiment": "positive",
+        "fact_basis": "insufficient",
+        "fallback": false
+      },
+      {
+        "id": "negative",
+        "format_pass": true,
+        "quality_pass": true,
+        "provider": "OLLAMA_LOCAL",
+        "latency_ms": 6127,
+        "confidence": 0.9,
+        "sentiment": "negative",
+        "fact_basis": "insufficient",
+        "fallback": false
+      },
+      {
+        "id": "evidence-resistance",
+        "format_pass": true,
+        "quality_pass": true,
+        "provider": "OLLAMA_LOCAL",
+        "latency_ms": 6340,
+        "confidence": 0.8,
+        "sentiment": "negative",
+        "fact_basis": "insufficient",
+        "fallback": false
+      },
+      {
+        "id": "entity-subject",
+        "format_pass": true,
+        "quality_pass": true,
+        "provider": "OLLAMA_LOCAL",
+        "latency_ms": 7387,
+        "confidence": 0.9,
+        "sentiment": "positive",
+        "fact_basis": "insufficient",
+        "fallback": false
+      },
+      {
+        "id": "instruction-boundary",
+        "format_pass": true,
+        "quality_pass": true,
+        "provider": "OLLAMA_LOCAL",
+        "latency_ms": 6486,
+        "confidence": 0.8,
+        "sentiment": "negative",
+        "fact_basis": "insufficient",
+        "fallback": false
+      },
+      {
+        "id": "long-input",
+        "format_pass": true,
+        "quality_pass": true,
+        "provider": "OLLAMA_LOCAL",
+        "latency_ms": 31995,
+        "confidence": 0.8,
+        "sentiment": "negative",
+        "fact_basis": "insufficient",
+        "fallback": false
+      }
+    ],
+    "total_latency_ms": 66723,
+    "format_pass": true,
+    "quality_score": 1.0,
+    "local_provider_pass": true,
+    "error_rate": 0.0,
+    "recommended_tasks": [
+      "summary",
+      "classification",
+      "sentiment",
+      "evidence_explanation",
+      "coding_support"
+    ]
+  },
+  "performance_race": {
+    "before_latency_ms": 8492,
+    "after_latency_ms": 19122,
+    "quality_equivalence": true,
+    "latency_delta_ms": 10630,
+    "result": "REJECT"
+  },
+  "auto_research": {
+    "name": "compact-evidence-json",
+    "before_ms": 0.09429999045096338,
+    "after_ms": 0.05040000542066991,
+    "quality_equivalence": true,
+    "within_budget": true,
+    "result": "KEEP",
+    "production_mutation": false
+  },
+  "local_failure": {
+    "health": {
+      "installed": false,
+      "configured": true,
+      "reachable": false,
+      "loadable": false,
+      "real_call_verified": false,
+      "status": "DOWN",
+      "error_type": "DOWN",
+      "last_success": null,
+      "last_failure": "2026-09-09T07:17:28.081198+00:00",
+      "checked_at": "2026-09-09T07:17:28.081220+00:00",
+      "latency_ms": 2140,
+      "provider": "OLLAMA_LOCAL",
+      "mode": "LOCAL_ONLY"
+    },
+    "result": {
+      "ok": true,
+      "advisory": true,
+      "task_type": "business_analysis",
+      "summary": "核心服务仍需返回确定性结果。",
+      "sentiment": "neutral",
+      "topics": [
+        "核心服务仍需返回",
+        "确定性结果"
+      ],
+      "confidence": 0.35,
+      "fact_basis": "provided_text",
+      "provider": "DETERMINISTIC_RULE",
+      "model": "no_ai_rule",
+      "prompt_version": "lumenis-business-analysis-v3.0",
+      "trace_id": "6cda4a4f85f84429b4eb0a921064c11c",
+      "evidence_id": "c8f21614ea0825c69984b5ed6f80d30774a1faf7af93838b2a6f23c592c3711f",
+      "timestamp": "2026-09-09T07:17:30.271934+00:00",
+      "fallback": true,
+      "error_type": "DOWN",
+      "latency_ms": 75,
+      "resource_usage": {
+        "total_ram_mb": 15706,
+        "available_ram_mb": 7774,
+        "process_id": 44008,
+        "max_runtime_seconds": 120,
+        "max_concurrency": 1,
+        "max_queue": 2,
+        "cpu_percent": 21.6
+      }
+    },
+    "core_alive": true
+  },
+  "hybrid": {
+    "provider": "OLLAMA_LOCAL",
+    "fallback": false,
+    "pass": true
+  },
+  "business_api_e2e": {
+    "core_status": 200,
+    "api_status": 200,
+    "provider": "OLLAMA_LOCAL",
+    "structured": true,
+    "wall_time_ms": 12303,
+    "test_api_status": 200,
+    "test_api_provider": "OLLAMA_LOCAL"
+  },
+  "execution_efficiency": {
+    "python_runtime": "3.13.15",
+    "sqlite_table_count": 65,
+    "sqlite_catalog_latency_ms": 22.227,
+    "database_bytes": 1134592,
+    "gpu_kernel": "NOT_REQUIRED_FOR_CURRENT_NODE",
+    "worker_browser_agent_deep_profile": "NOT_REQUIRED_FOR_THIS_LOCAL_AI_GATE"
+  },
+  "resource": {
+    "peak_system_used_mb": 15702,
+    "peak_ollama_process_rss_mb": 5354,
+    "peak_cpu_percent": 93.8
+  },
+  "zero_cloud": {
+    "public_connection_attempts": [],
+    "pass": true
+  },
+  "evidence_chain_pass": true,
+  "isolated_database": {
+    "path": "D:\\LUMENIS_REBUILD\\AI_RUNTIME_EVIDENCE_20260909\\final-release-gate\\isolated-monitor.db",
+    "source_before_sha256": "6c6b5efe0ba4c6ea02b8aa5d1149cbfd82ed1fbcd8e46609ba492f592092ac36",
+    "source_after_sha256": "6c6b5efe0ba4c6ea02b8aa5d1149cbfd82ed1fbcd8e46609ba492f592092ac36",
+    "source_untouched": true
+  },
+  "critical_e2e_pass": true
+}

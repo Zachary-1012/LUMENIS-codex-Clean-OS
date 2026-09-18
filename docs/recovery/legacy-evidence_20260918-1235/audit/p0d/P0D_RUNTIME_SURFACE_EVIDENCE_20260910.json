@@ -1,0 +1,5833 @@
+{
+  "schema": "lumenis.p0d.runtime-surface-evidence.v1",
+  "generated_at": "2026-09-12T11:15:28.178208+00:00",
+  "runtime_mode": "isolated-test-client",
+  "database": "os-temp/test/monitor.db",
+  "network": "offline",
+  "route_count": 815,
+  "blueprint_count": 47,
+  "blueprints": [
+    "account",
+    "account_compat",
+    "adaptive_ui",
+    "agent_proactive",
+    "ai_api",
+    "ai_browser_runtime",
+    "architecture",
+    "auth_recovery",
+    "badge",
+    "browser_runtime_api",
+    "browser_surface",
+    "collection",
+    "collector_status",
+    "content_generation",
+    "cth_api",
+    "data_center",
+    "data_query",
+    "domain_api",
+    "evidence_api",
+    "export",
+    "feature_governance",
+    "ic_contracts",
+    "intelligence_library",
+    "internal_browser",
+    "internal_browser_stream",
+    "kos",
+    "lumenis",
+    "lumenis_agg",
+    "podcast",
+    "pr_case",
+    "report",
+    "report_center",
+    "settings",
+    "system_ai_data",
+    "system_api",
+    "system_features",
+    "system_health",
+    "trend",
+    "v4",
+    "v4.v4_ai",
+    "v4.v4_collect",
+    "v4.v4_console",
+    "v4.v4_importer",
+    "v4.v4_settings",
+    "v4.v4_version",
+    "viz",
+    "zbmp_api"
+  ],
+  "routes": [
+    {
+      "path": "/",
+      "endpoint": "index",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/VERSION",
+      "endpoint": "version_file",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/adaptive/can-collect",
+      "endpoint": "architecture.adaptive_can_collect",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/adaptive/report-result",
+      "endpoint": "architecture.adaptive_report_result",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/adaptive/reset",
+      "endpoint": "architecture.adaptive_reset",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/adaptive/status",
+      "endpoint": "architecture.adaptive_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/agent/adaptive-panel/<run_id>",
+      "endpoint": "adaptive_ui.get_panel",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/agent/adaptive-panel/<run_id>/refresh",
+      "endpoint": "adaptive_ui.refresh_panel",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/agent/adaptive-panel/types",
+      "endpoint": "adaptive_ui.list_panel_types",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/agent/proactive/actions",
+      "endpoint": "agent_proactive.list_actions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/agent/proactive/approve/<action_id>",
+      "endpoint": "agent_proactive.approve_action",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/agent/proactive/detect",
+      "endpoint": "agent_proactive.detect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/agent/proactive/reject/<action_id>",
+      "endpoint": "agent_proactive.reject_action",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/agent/proactive/signals",
+      "endpoint": "agent_proactive.list_signals",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/agents/status",
+      "endpoint": "lumenis_agg.agents_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai-filter/cleanup",
+      "endpoint": "ai_api.api_ai_filter_cleanup",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai-filter/run",
+      "endpoint": "ai_api.api_ai_filter_run",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai-filter/stats",
+      "endpoint": "ai_api.api_ai_filter_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai-governance/status",
+      "endpoint": "api_ai_governance_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai-learning/optimization/<operation_type>",
+      "endpoint": "ai_api.api_ai_learning_optimization",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai-learning/status",
+      "endpoint": "ai_api.api_ai_learning_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai-resource-packs/glm-4-5-air",
+      "endpoint": "api_ai_resource_packs_glm_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai-resource-packs/pause",
+      "endpoint": "api_ai_resource_packs_pause",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai-resource-packs/per-call-execute",
+      "endpoint": "api_ai_resource_packs_per_call_execute",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai-resource-packs/resume",
+      "endpoint": "api_ai_resource_packs_resume",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai-resource-packs/status",
+      "endpoint": "api_ai_resource_packs_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/agents",
+      "endpoint": "ai_api.api_ai_agents",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/analyze",
+      "endpoint": "ai_api.api_ai_analyze_v580",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/analyze-v570",
+      "endpoint": "ai_api.api_ai_analyze_v570",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/capabilities",
+      "endpoint": "ai_api.api_ai_capabilities",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/channel-health",
+      "endpoint": "ai_api.api_ai_channel_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/chat",
+      "endpoint": "ai_api.api_ai_chat",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/evaluations",
+      "endpoint": "system_ai_data.ai_evaluations",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/logs",
+      "endpoint": "system_ai_data.ai_logs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/owasp",
+      "endpoint": "system_ai_data.ai_owasp",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/permissions",
+      "endpoint": "ai_api.api_ai_permissions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/providers",
+      "endpoint": "ai_api.api_ai_providers_v570",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/runtime-modes",
+      "endpoint": "ai_api.api_ai_runtime_modes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/skills",
+      "endpoint": "ai_api.api_ai_skills",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/status",
+      "endpoint": "ai_api.api_ai_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/task-engine/dlq",
+      "endpoint": "ai_api.api_ai_task_engine_dlq",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/task-engine/health",
+      "endpoint": "ai_api.api_ai_task_engine_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks",
+      "endpoint": "ai_api.api_ai_tasks_create",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks",
+      "endpoint": "ai_api.api_ai_tasks_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks",
+      "endpoint": "api_ai_tasks",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks/<task_id>",
+      "endpoint": "ai_api.api_ai_tasks_get",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks/<task_id>/approve",
+      "endpoint": "ai_api.api_ai_tasks_approve",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks/<task_id>/cancel",
+      "endpoint": "ai_api.api_ai_tasks_cancel",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks/<task_id>/evidence",
+      "endpoint": "ai_api.api_ai_tasks_evidence",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks/<task_id>/run",
+      "endpoint": "ai_api.api_ai_tasks_run",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/tasks/<task_id>/steps",
+      "endpoint": "ai_api.api_ai_tasks_steps",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ai/test",
+      "endpoint": "ai_api.api_ai_test",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ai/trace",
+      "endpoint": "ai_api.api_ai_trace",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/alerts",
+      "endpoint": "api_alerts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/alerts/read",
+      "endpoint": "api_alerts_read",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/alerts/refresh",
+      "endpoint": "api_alerts_refresh",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/analyze",
+      "endpoint": "api_analyze",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/<int:record_id>",
+      "endpoint": "api_evidence_delete",
+      "methods": [
+        "DELETE"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/<int:record_id>",
+      "endpoint": "api_evidence_get",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/<int:record_id>/confirm",
+      "endpoint": "api_evidence_confirm",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/<int:record_id>/reject",
+      "endpoint": "api_evidence_reject",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/<int:record_id>/shadow",
+      "endpoint": "api_evidence_shadow",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/list",
+      "endpoint": "api_evidence_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/stats",
+      "endpoint": "api_evidence_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/app_evidence/upload",
+      "endpoint": "api_evidence_upload",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/architecture/status",
+      "endpoint": "architecture.architecture_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ark/chat",
+      "endpoint": "ai_api.api_ark_chat",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ark/keywords",
+      "endpoint": "ai_api.api_ark_keywords",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ark/sentiment",
+      "endpoint": "ai_api.api_ark_sentiment",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ark/status",
+      "endpoint": "ai_api.api_ark_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ark/summary",
+      "endpoint": "ai_api.api_ark_summary",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auth-recovery/health",
+      "endpoint": "auth_recovery.health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/auth-recovery/summary",
+      "endpoint": "auth_recovery.get_summary",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/auth-recovery/tasks",
+      "endpoint": "auth_recovery.create_task",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auth-recovery/tasks",
+      "endpoint": "auth_recovery.list_tasks",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/auth-recovery/tasks/<int:task_id>/complete",
+      "endpoint": "auth_recovery.complete_task",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auth-recovery/tasks/<int:task_id>/fail",
+      "endpoint": "auth_recovery.fail_task",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auth-recovery/tasks/<int:task_id>/start",
+      "endpoint": "auth_recovery.start_task",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auth/config",
+      "endpoint": "auth_config_api",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/auth/domain-identity",
+      "endpoint": "api_domain_identity",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/auth/zbmp-entry/leave",
+      "endpoint": "api_zbmp_entry_leave",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auth/zbmp-entry/status",
+      "endpoint": "api_zbmp_entry_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/auth/zbmp-entry/unlock",
+      "endpoint": "api_zbmp_entry_unlock",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auth/zbmp-entry/verify",
+      "endpoint": "api_zbmp_entry_verify",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/auxiliary/sources",
+      "endpoint": "api_auxiliary_sources",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/backup",
+      "endpoint": "api_backup",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/badge/counts",
+      "endpoint": "badge.badge_counts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/badge/mark-all-read",
+      "endpoint": "badge.badge_mark_all_read",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/badge/mark-read/<notif_id>",
+      "endpoint": "badge.badge_mark_read",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/badge/notifications",
+      "endpoint": "badge.badge_notifications",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/bilibili/clear-login",
+      "endpoint": "api_bilibili_clear_login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/bilibili/login-status",
+      "endpoint": "api_bilibili_login_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/bilibili/search",
+      "endpoint": "api_bilibili_search",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/boundary/approve/<int:confirmation_id>",
+      "endpoint": "architecture.boundary_approve",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/boundary/file-integrity/baseline",
+      "endpoint": "architecture.boundary_file_integrity_baseline",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/boundary/file-integrity/check",
+      "endpoint": "architecture.boundary_file_integrity_check",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/boundary/pending-confirmations",
+      "endpoint": "architecture.boundary_pending_confirmations",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/boundary/reject/<int:confirmation_id>",
+      "endpoint": "architecture.boundary_reject",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/boundary/safety-level/<operation_type>",
+      "endpoint": "architecture.boundary_safety_level",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/boundary/stats",
+      "endpoint": "architecture.boundary_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brand-industry/brands",
+      "endpoint": "api_brand_industry_brands_alias",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brand-industry/brands/<path:name>",
+      "endpoint": "api_brand_industry_brand_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brand-industry/recompute",
+      "endpoint": "api_brand_industry_recompute",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/brand-industry/stats",
+      "endpoint": "api_brand_industry_stats_alias",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brand-knowledge/search",
+      "endpoint": "brand_knowledge_search",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brand-knowledge/stats",
+      "endpoint": "brand_knowledge_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brand-report/export/<report_id>",
+      "endpoint": "report.brand_report_export",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brand-report/generate",
+      "endpoint": "report.brand_report_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/brand-stats",
+      "endpoint": "api_brand_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brands",
+      "endpoint": "api_brand_add",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/brands",
+      "endpoint": "api_brands_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brands/<brand_en>",
+      "endpoint": "api_brand_delete",
+      "methods": [
+        "DELETE"
+      ]
+    },
+    {
+      "path": "/api/brands/<brand_en>",
+      "endpoint": "api_brand_update",
+      "methods": [
+        "PUT"
+      ]
+    },
+    {
+      "path": "/api/brands/logo-stats",
+      "endpoint": "api_brand_logo_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/brands/logos",
+      "endpoint": "api_brands_logos",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-runtime/probe",
+      "endpoint": "browser_runtime_api.browser_runtime_probe",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-runtime/status",
+      "endpoint": "browser_runtime_api.browser_runtime_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/bookmark/remove",
+      "endpoint": "browser_surface.api_bookmark_remove",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/bookmarks",
+      "endpoint": "browser_surface.api_bookmarks",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/capabilities",
+      "endpoint": "browser_surface.api_capabilities",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/downloads",
+      "endpoint": "browser_surface.api_downloads_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/downloads/active",
+      "endpoint": "browser_surface.api_download_active",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/downloads/cancel",
+      "endpoint": "browser_surface.api_download_cancel",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/downloads/config",
+      "endpoint": "browser_surface.api_downloads_config",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/downloads/monitor/start",
+      "endpoint": "browser_surface.api_download_monitor_start",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/downloads/monitor/status",
+      "endpoint": "browser_surface.api_download_monitor_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/downloads/monitor/stop",
+      "endpoint": "browser_surface.api_download_monitor_stop",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/extract",
+      "endpoint": "browser_surface.api_extract",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/find",
+      "endpoint": "browser_surface.api_find",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/find/stop",
+      "endpoint": "browser_surface.api_find_stop",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/general-browser/ensure",
+      "endpoint": "browser_surface.api_general_ensure",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/general-browser/status",
+      "endpoint": "browser_surface.api_general_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/general-browser/stop",
+      "endpoint": "browser_surface.api_general_stop",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/history",
+      "endpoint": "browser_surface.api_history",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/history/clear",
+      "endpoint": "browser_surface.api_history_clear",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/hybrid/analyze",
+      "endpoint": "browser_surface.api_hybrid_analyze",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/nav-config",
+      "endpoint": "browser_surface.api_nav_config",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/policy",
+      "endpoint": "browser_surface.api_policy",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/screenshot",
+      "endpoint": "browser_surface.api_screenshot",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/search",
+      "endpoint": "browser_surface.api_search",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/tab/activate",
+      "endpoint": "browser_surface.api_tab_activate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/tab/close",
+      "endpoint": "browser_surface.api_tab_close",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/tab/navigate",
+      "endpoint": "browser_surface.api_tab_navigate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/tab/new",
+      "endpoint": "browser_surface.api_tab_new",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser-surface/tabs",
+      "endpoint": "browser_surface.api_tabs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser/evidence/stats",
+      "endpoint": "ai_browser_runtime.evidence_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser/security/status",
+      "endpoint": "ai_browser_runtime.security_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions",
+      "endpoint": "ai_browser_runtime.create_session",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions",
+      "endpoint": "ai_browser_runtime.list_sessions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions",
+      "endpoint": "api_browser_sessions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>",
+      "endpoint": "ai_browser_runtime.get_session_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>/action",
+      "endpoint": "ai_browser_runtime.execute_action",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>/evidence",
+      "endpoint": "ai_browser_runtime.get_evidence",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>/human-approval",
+      "endpoint": "ai_browser_runtime.human_approval",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>/navigate",
+      "endpoint": "ai_browser_runtime.navigate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>/observe",
+      "endpoint": "ai_browser_runtime.observe",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>/stop",
+      "endpoint": "ai_browser_runtime.stop_session",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/browser/sessions/<session_id>/verify",
+      "endpoint": "ai_browser_runtime.verify_state",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cache/create",
+      "endpoint": "api_cache_create",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cache/data",
+      "endpoint": "api_cache_data",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cache/snapshots",
+      "endpoint": "api_cache_snapshots",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cache/status",
+      "endpoint": "api_cache_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/ai-evaluate",
+      "endpoint": "case_analysis_ai_evaluate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/crisis-sop",
+      "endpoint": "case_analysis_crisis_sop",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/detail",
+      "endpoint": "case_analysis_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/list",
+      "endpoint": "case_analysis_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/methodology",
+      "endpoint": "case_analysis_methodology",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/search",
+      "endpoint": "case_analysis_search",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/stats",
+      "endpoint": "case_analysis_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/system-insights",
+      "endpoint": "case_analysis_system_insights",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/case-analysis/template-match",
+      "endpoint": "case_analysis_template_match",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cases",
+      "endpoint": "api_case_add",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cases",
+      "endpoint": "api_cases_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cases/<case_id>",
+      "endpoint": "api_case_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cases/brands",
+      "endpoint": "api_cases_brands",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cases/import",
+      "endpoint": "api_cases_import",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cases/list",
+      "endpoint": "api_public_cases_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cases/match",
+      "endpoint": "api_case_match",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cases/other-malls",
+      "endpoint": "api_cases_other_malls",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cases/stats",
+      "endpoint": "api_cases_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cases/taikoo-hui",
+      "endpoint": "api_cases_taikoo_hui",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collect",
+      "endpoint": "api_collect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/collect/schedule-status",
+      "endpoint": "collection.api_collect_schedule_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collect/status/<task_id>",
+      "endpoint": "api_collect_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collect/tasks",
+      "endpoint": "api_collect_tasks",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collection/counter",
+      "endpoint": "api_collection_counter_v580",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collection/logs",
+      "endpoint": "api_collection_logs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collector-guard/status",
+      "endpoint": "api_collector_guard_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collector/browser-mode",
+      "endpoint": "api_collector_browser_mode_get",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collector/browser-mode",
+      "endpoint": "api_collector_browser_mode_set",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/collector/browser/start",
+      "endpoint": "api_collector_browser_start",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/collector/browser/stop",
+      "endpoint": "api_collector_browser_stop",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/collector/history",
+      "endpoint": "collection.api_collector_history",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collector/quality",
+      "endpoint": "api_collector_quality",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collector/start",
+      "endpoint": "collection.api_collector_start",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/collector/start-cdp",
+      "endpoint": "system_features.collector_start_cdp",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/collector/status",
+      "endpoint": "collection.api_collector_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collector/status",
+      "endpoint": "collector_status.collector_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/collector/stop",
+      "endpoint": "collection.api_collector_stop",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/collector/stop-cdp",
+      "endpoint": "system_features.collector_stop_cdp",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/comments",
+      "endpoint": "data_query.api_comments",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/config/brand-directory",
+      "endpoint": "api_brand_directory",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/config/company-domain",
+      "endpoint": "api_company_domain",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/config/email-settings",
+      "endpoint": "api_email_settings",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/config/emails",
+      "endpoint": "api_push_emails",
+      "methods": [
+        "DELETE",
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/config/run-code",
+      "endpoint": "api_run_code",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/ad-strategy",
+      "endpoint": "content_generation.api_ad_strategy",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/brand-report/generate",
+      "endpoint": "content_generation.api_brand_report_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/evidence",
+      "endpoint": "content_generation.api_list_evidence",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/content/evidence/<evidence_id>",
+      "endpoint": "content_generation.api_get_evidence",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/content/feedback",
+      "endpoint": "content_generation.api_feedback",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/generate",
+      "endpoint": "content_generation.api_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/generate/<content_type>",
+      "endpoint": "content_generation.api_generate_typed",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/modules",
+      "endpoint": "content_generation.api_modules",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/content/podcast-research",
+      "endpoint": "content_generation.api_podcast_research",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/research/search",
+      "endpoint": "content_generation.api_research_search",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/content/resources",
+      "endpoint": "content_generation.api_resources",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/content/topic-campaign/status",
+      "endpoint": "content_generation.api_topic_campaign_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/content/topic-snapshot",
+      "endpoint": "content_generation.api_topic_snapshot",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/content/types",
+      "endpoint": "content_generation.api_content_types",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/content/video-analyze",
+      "endpoint": "content_generation.api_video_analyze",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cookies/import",
+      "endpoint": "api_cookies_import",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cookies/import/raw",
+      "endpoint": "api_cookies_import_raw",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cookies/import/status",
+      "endpoint": "api_cookies_import_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/creative/ideas",
+      "endpoint": "creative_ideas",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/creative/pitch-analyze",
+      "endpoint": "creative_pitch_analyze",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/creative/pitch-export",
+      "endpoint": "creative_pitch_export",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/creative/social-ops",
+      "endpoint": "creative_social_ops",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/creative/video-script",
+      "endpoint": "creative_video_script",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/cth",
+      "endpoint": "api_cth_base",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cth/events",
+      "endpoint": "cth_api.cth_events",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cth/overview",
+      "endpoint": "cth_api.cth_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/cth/xiaohongshu",
+      "endpoint": "cth_api.cth_xiaohongshu",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/daily-report/5sections",
+      "endpoint": "report.api_daily_report_5sections",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/dashboard/all",
+      "endpoint": "api_dashboard_all",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/dashboard/changes",
+      "endpoint": "api_dashboard_changes_v570",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/data-center/platform/<platform_id>",
+      "endpoint": "data_center.get_platform_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/data-center/platforms",
+      "endpoint": "data_center.list_platforms",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/data-center/stats/overview",
+      "endpoint": "data_center.get_overview_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/data-center/table/<table_name>",
+      "endpoint": "data_center.query_table",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/data-center/table/<table_name>/schema",
+      "endpoint": "data_center.get_table_schema",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/dev/run-code",
+      "endpoint": "api_dev_run_code",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/developer/run",
+      "endpoint": "api_developer_run",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/digest/generate",
+      "endpoint": "report.api_digest_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/digest/today",
+      "endpoint": "report.api_digest_today",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/domain/brands",
+      "endpoint": "domain_api.api_domain_brands",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/domain/context",
+      "endpoint": "domain_api.api_domain_context",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/domain/overview",
+      "endpoint": "domain_api.api_domain_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/domain/risk",
+      "endpoint": "domain_api.api_domain_risk",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/engineering-metrics",
+      "endpoint": "api_engineering_metrics",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evaluation/analysis",
+      "endpoint": "system_features.evaluation_analysis",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evaluation/badcases",
+      "endpoint": "system_features.evaluation_badcases",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evaluation/collection",
+      "endpoint": "system_features.evaluation_collection",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evaluation/golden-cases",
+      "endpoint": "system_features.evaluation_golden_cases",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evaluation/run",
+      "endpoint": "system_features.evaluation_run",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evaluation/stability",
+      "endpoint": "system_features.evaluation_stability",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evaluation/status",
+      "endpoint": "lumenis_agg.evaluation_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/event-graph/chain/<event_id>",
+      "endpoint": "event_graph_chain",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/event-graph/events",
+      "endpoint": "event_graph_create_event",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/event-graph/events",
+      "endpoint": "event_graph_events",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/event-graph/events/<event_id>",
+      "endpoint": "event_graph_delete_event",
+      "methods": [
+        "DELETE"
+      ]
+    },
+    {
+      "path": "/api/event-graph/import",
+      "endpoint": "event_graph_import_existing",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/event-graph/rebuild-relations",
+      "endpoint": "event_graph_rebuild_relations",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/event-graph/relations",
+      "endpoint": "event_graph_add_relation",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/event-graph/stats",
+      "endpoint": "event_graph_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/event-graph/types",
+      "endpoint": "event_graph_types",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/event-review/<event_id>/confirm",
+      "endpoint": "api_event_review_confirm",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/event-review/<event_id>/reject",
+      "endpoint": "api_event_review_reject",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/event-review/pending",
+      "endpoint": "api_event_review_pending",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/event-review/stats",
+      "endpoint": "api_event_review_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/events",
+      "endpoint": "data_query.api_events",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/events/<event_id>/notes",
+      "endpoint": "api_event_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evidence/<int:record_id>",
+      "endpoint": "evidence_api.evidence_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evidence/list",
+      "endpoint": "evidence_api.evidence_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evidence/replay-failed",
+      "endpoint": "evidence_api.evidence_replay_failed",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/evidence/stats",
+      "endpoint": "evidence_api.evidence_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/evidence/timeline",
+      "endpoint": "evidence_api.evidence_timeline",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/export/excel",
+      "endpoint": "export.export_excel",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/export/file/<path:filename>",
+      "endpoint": "export.export_file",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/export/generate",
+      "endpoint": "export.export_generate",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/export/list",
+      "endpoint": "export.export_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/export/preview",
+      "endpoint": "export.export_preview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/export/report",
+      "endpoint": "export.export_unified",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/export/word",
+      "endpoint": "export.export_word",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feature-registry/capability-map",
+      "endpoint": "feature_governance.get_capability_map",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feature-registry/feature/<feature_id>",
+      "endpoint": "feature_governance.get_feature",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feature-registry/governance-report",
+      "endpoint": "feature_governance.get_governance_report",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feature-registry/runtime-matrix",
+      "endpoint": "feature_governance.get_runtime_matrix",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feature-registry/tree",
+      "endpoint": "feature_governance.get_tree",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feedback-keywords",
+      "endpoint": "data_query.api_feedback_keywords",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feedback/analyze",
+      "endpoint": "architecture.feedback_analyze",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feedback/history",
+      "endpoint": "architecture.feedback_history",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feedback/pending",
+      "endpoint": "architecture.feedback_pending",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feedback/run-cycle",
+      "endpoint": "architecture.feedback_run_cycle",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/feedback/stats",
+      "endpoint": "architecture.feedback_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/feedback/suggestions",
+      "endpoint": "architecture.feedback_suggestions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/function-map",
+      "endpoint": "api_function_map",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/health",
+      "endpoint": "api_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/historical-notes",
+      "endpoint": "api_historical_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/hot-notes",
+      "endpoint": "data_query.api_hot_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/hot-topics",
+      "endpoint": "data_query.api_hot_topics",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ic/alert/<int:alert_id>/state",
+      "endpoint": "ic_contracts.alert_transition",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ic/alert/config",
+      "endpoint": "ic_contracts.alert_config",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ic/alert/evaluate",
+      "endpoint": "ic_contracts.alert_evaluate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ic/alert/records",
+      "endpoint": "ic_contracts.alert_records",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ic/emv",
+      "endpoint": "ic_contracts.ic_emv",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ic/kos-scenario",
+      "endpoint": "ic_contracts.kos_scenario",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ic/kos/interest-signal",
+      "endpoint": "ic_contracts.kos_interest_signal",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ic/localization/check",
+      "endpoint": "ic_contracts.localization_check",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ic/marketing/calendar",
+      "endpoint": "ic_contracts.marketing_calendar",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ic/synthetic/scan",
+      "endpoint": "ic_contracts.synthetic_scan",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ic/vis/quality-check",
+      "endpoint": "ic_contracts.vis_quality_check",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/ic/vis/quality-gate",
+      "endpoint": "ic_contracts.vis_quality_gate",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/import/multi-platform",
+      "endpoint": "api_import_multi_platform",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/intelligence/library",
+      "endpoint": "intelligence_library.list_assets",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/intelligence/library/<asset_id>",
+      "endpoint": "intelligence_library.get_asset",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/intelligence/library/search",
+      "endpoint": "intelligence_library.search_assets",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/intelligence/library/stats",
+      "endpoint": "intelligence_library.get_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/intelligence/library/sub_libraries",
+      "endpoint": "intelligence_library.list_sub_libraries",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/intelligence/models",
+      "endpoint": "lumenis_agg.intelligence_models",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/intelligence/refresh",
+      "endpoint": "api_intelligence_refresh",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/accounts",
+      "endpoint": "internal_browser.api_accounts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/click",
+      "endpoint": "internal_browser.api_click",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/click-selector",
+      "endpoint": "internal_browser.api_click_selector",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/evaluate",
+      "endpoint": "internal_browser.api_evaluate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/find",
+      "endpoint": "internal_browser.api_find",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/history",
+      "endpoint": "internal_browser.api_history",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/navigate",
+      "endpoint": "internal_browser.api_navigate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/refresh",
+      "endpoint": "internal_browser.api_refresh",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/screenshot",
+      "endpoint": "internal_browser.api_screenshot",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/scroll",
+      "endpoint": "internal_browser.api_scroll",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/state",
+      "endpoint": "internal_browser.api_state",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/stream",
+      "endpoint": "internal_browser_stream.api_stream",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/stream-state",
+      "endpoint": "internal_browser_stream.api_stream_state",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/switch-tab",
+      "endpoint": "internal_browser.api_switch_tab",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/tabs",
+      "endpoint": "internal_browser.api_tabs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/task",
+      "endpoint": "internal_browser.api_task",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/type",
+      "endpoint": "internal_browser.api_type",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/internal-browser/type-into",
+      "endpoint": "internal_browser.api_type_into",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/account",
+      "endpoint": "kos.api_kos_account",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/ad-candidates",
+      "endpoint": "kos.api_ad_candidates",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/attribution",
+      "endpoint": "kos.api_attribution",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/brand",
+      "endpoint": "kos.api_kos_brand",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/campaign",
+      "endpoint": "kos.api_kos_campaign",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/channel-roi",
+      "endpoint": "kos.api_kos_channel_roi",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/collect",
+      "endpoint": "kos.api_kos_collect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/comments",
+      "endpoint": "kos.api_comments",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/competitor-benchmark",
+      "endpoint": "kos.api_competitor_benchmark",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/content-dna",
+      "endpoint": "kos.api_content_dna",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/cooperation",
+      "endpoint": "kos.api_kos_cooperation",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/cooperation/confirm",
+      "endpoint": "kos.api_kos_cooperation_confirm",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/cooperation/execute",
+      "endpoint": "kos.api_kos_cooperation_execute",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/cost",
+      "endpoint": "kos.api_kos_cost",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/detail",
+      "endpoint": "kos.api_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/email/invitation",
+      "endpoint": "kos.api_kos_email_invitation",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/email/send",
+      "endpoint": "kos.api_kos_email_send",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/execution",
+      "endpoint": "kos.api_kos_execution_create",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/execution/<execution_id>/transition",
+      "endpoint": "kos.api_kos_execution_transition",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/executions",
+      "endpoint": "kos.api_kos_executions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/funnel",
+      "endpoint": "kos.api_kos_funnel",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/intent-analysis",
+      "endpoint": "kos.api_intent_analysis",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/koc-tier",
+      "endpoint": "kos.api_kos_koc_tier",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/kos-identity",
+      "endpoint": "kos.api_kos_identity",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/lead",
+      "endpoint": "kos.api_kos_lead",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/list",
+      "endpoint": "kos.api_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/manual",
+      "endpoint": "kos.api_kos_manual",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/operation",
+      "endpoint": "kos.api_kos_record_operation",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/operations",
+      "endpoint": "kos.api_kos_operations",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/outreach",
+      "endpoint": "kos.api_outreach",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/overview",
+      "endpoint": "kos.api_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/ownership",
+      "endpoint": "kos.api_kos_ownership",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/ownership/confirm",
+      "endpoint": "kos.api_kos_ownership_confirm",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/ownership/overrides",
+      "endpoint": "kos.api_kos_ownership_overrides",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/paid/execute",
+      "endpoint": "kos.api_kos_paid_execute",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/paid/plan",
+      "endpoint": "kos.api_kos_paid_plan",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/paid/plans",
+      "endpoint": "kos.api_kos_paid_plans",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/paid/result",
+      "endpoint": "kos.api_kos_paid_result",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/disable",
+      "endpoint": "kos.api_professional_disable",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/disable",
+      "endpoint": "lumenis_agg.kos_professional_disable",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/enable",
+      "endpoint": "kos.api_professional_enable",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/enable",
+      "endpoint": "lumenis_agg.kos_professional_enable",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/import",
+      "endpoint": "kos.api_professional_import",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/import",
+      "endpoint": "lumenis_agg.kos_professional_import",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/metrics",
+      "endpoint": "kos.api_professional_metrics",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/status",
+      "endpoint": "kos.api_professional_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/professional/status",
+      "endpoint": "lumenis_agg.kos_professional_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/profile",
+      "endpoint": "kos.api_kos_profile",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/refresh",
+      "endpoint": "kos.api_refresh",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/reply/generate",
+      "endpoint": "kos.api_reply_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/report/generate",
+      "endpoint": "kos.api_report_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/report/view",
+      "endpoint": "kos.api_report_view",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/reward",
+      "endpoint": "kos.api_reward",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/reward/execute",
+      "endpoint": "kos.api_kos_reward_execute",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/reward/issue",
+      "endpoint": "kos.api_kos_reward_issue",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/kos/rewards",
+      "endpoint": "kos.api_kos_rewards",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/kos/tier",
+      "endpoint": "kos.api_kos_tier",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/learning/history",
+      "endpoint": "api_learning_history",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/learning/scan",
+      "endpoint": "api_learning_scan",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/local-ai/analyze",
+      "endpoint": "system_features.local_ai_analyze",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/local-ai/chat",
+      "endpoint": "system_features.local_ai_chat",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/local-ai/status",
+      "endpoint": "system_features.local_ai_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/local-import",
+      "endpoint": "api_local_import",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/metric-trend",
+      "endpoint": "data_query.api_metric_trend",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/metrics/canonical",
+      "endpoint": "api_metrics_canonical",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/modules",
+      "endpoint": "api_modules_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/modules/<module_id>/layout",
+      "endpoint": "api_module_layout",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/modules/<module_id>/toggle",
+      "endpoint": "api_module_toggle",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/modules/reorder",
+      "endpoint": "api_modules_reorder",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/modules/reset",
+      "endpoint": "api_modules_reset",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/negative-review/<note_id>/confirm",
+      "endpoint": "api_negative_review_confirm",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/negative-review/<note_id>/reject",
+      "endpoint": "api_negative_review_reject",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/negative-review/stats",
+      "endpoint": "api_negative_review_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/negative/confirm",
+      "endpoint": "api_negative_confirm",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/negative/pending",
+      "endpoint": "api_negative_pending",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/negative/reject",
+      "endpoint": "api_negative_reject",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/negative/stats",
+      "endpoint": "api_negative_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/network/reset",
+      "endpoint": "api_network_reset",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/network/status",
+      "endpoint": "api_network_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/note/<note_id>",
+      "endpoint": "api_note_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/notes",
+      "endpoint": "data_query.api_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/notes/<note_id>",
+      "endpoint": "api_note_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/notes/historical",
+      "endpoint": "api_notes_historical_v2",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/notes/library",
+      "endpoint": "api_notes_library_v571",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/notes/publish-buckets",
+      "endpoint": "api_publish_buckets_v570",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/official-info",
+      "endpoint": "api_official_info",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/official-info/collect",
+      "endpoint": "api_official_collect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/operations/permissions",
+      "endpoint": "lumenis_agg.operations_permissions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/overview",
+      "endpoint": "api_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/platform-health",
+      "endpoint": "api_platform_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/podcast/breakout",
+      "endpoint": "podcast.api_breakout",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/podcast/content-yield",
+      "endpoint": "podcast.api_content_yield",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/podcast/entities",
+      "endpoint": "podcast.api_entities",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/podcast/entity",
+      "endpoint": "podcast.api_create_entity",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/podcast/entity",
+      "endpoint": "podcast.api_get_entity",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/podcast/overview",
+      "endpoint": "podcast.api_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/podcast/runtime/validate",
+      "endpoint": "podcast.api_runtime_validate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/podcast/story-nodes",
+      "endpoint": "podcast.api_story_nodes",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/podcast/topic-score",
+      "endpoint": "podcast.api_topic_score",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/podcast/topics",
+      "endpoint": "api_podcast_topics_compat",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr-cases",
+      "endpoint": "pr_case.api_pr_cases_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr-cases/<case_id>",
+      "endpoint": "pr_case.api_pr_case_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr-cases/match",
+      "endpoint": "pr_case.api_pr_cases_match",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/pr-response-templates",
+      "endpoint": "pr_case.api_pr_response_templates",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr/act-principle",
+      "endpoint": "pr_case.get_act_principle",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr/cases",
+      "endpoint": "api_pr_cases",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr/cases/<case_id>",
+      "endpoint": "api_pr_case_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr/cases/<int:case_id>",
+      "endpoint": "pr_case.get_pr_case_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr/check-trigger",
+      "endpoint": "api_pr_check_trigger",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/pr/match",
+      "endpoint": "api_pr_match",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/pr/recommend",
+      "endpoint": "api_pr_recommend",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/pr/statistics",
+      "endpoint": "api_pr_statistics",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr/templates",
+      "endpoint": "api_pr_templates",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/pr/triggers",
+      "endpoint": "pr_case.get_special_report_triggers",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/production/reports",
+      "endpoint": "lumenis_agg.production_reports",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/proxy/check",
+      "endpoint": "proxy_check_api",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/proxy/status",
+      "endpoint": "proxy_status_api",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/recovery/alerts",
+      "endpoint": "architecture.recovery_alerts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/recovery/health-check",
+      "endpoint": "architecture.recovery_health_check",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/recovery/run-cycle",
+      "endpoint": "architecture.recovery_run_cycle",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/recovery/stats",
+      "endpoint": "architecture.recovery_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/rednote/collect",
+      "endpoint": "api_rednote_collect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/report-center/export",
+      "endpoint": "report_center.export",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/report-center/generate",
+      "endpoint": "report_center.generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/report-center/status",
+      "endpoint": "report_center.status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/report/<report_type>",
+      "endpoint": "report.api_report",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/report/daily",
+      "endpoint": "report.api_report_daily",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/report/export",
+      "endpoint": "report.api_report_export",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/report/generate",
+      "endpoint": "report.api_generate_report",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/report/special/export",
+      "endpoint": "report.api_special_report_export",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/report/special/generate-strategies",
+      "endpoint": "report.api_generate_special_strategies",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/report/special/record-trigger",
+      "endpoint": "report.api_record_special_trigger",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/report/v2/<report_type>",
+      "endpoint": "report.api_report_v2",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/report/v2/stats",
+      "endpoint": "report.api_report_v2_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/report/verify",
+      "endpoint": "report.api_report_verify_v571",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/reports",
+      "endpoint": "report.api_reports_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/reports/<path:report_id>/download",
+      "endpoint": "report.api_report_download",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/reports/<path:report_id>/file",
+      "endpoint": "report.api_report_file",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/reports/export",
+      "endpoint": "api_reports_export_v532",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/reports/export-all",
+      "endpoint": "api_reports_export_all_v532",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/research/pipeline",
+      "endpoint": "lumenis_agg.research_pipeline_view",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/research/start",
+      "endpoint": "lumenis_agg.research_start",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/research/status",
+      "endpoint": "lumenis_agg.research_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/resident/health",
+      "endpoint": "api_resident_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/resident/recover",
+      "endpoint": "api_resident_recover",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/resource-guard",
+      "endpoint": "data_query.api_resource_guard",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/risk-alerts",
+      "endpoint": "data_query.api_risk_alerts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/risk/active",
+      "endpoint": "data_query.api_risk_active",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/risks/active",
+      "endpoint": "data_query.api_risks_active",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/runtime/archive-dead",
+      "endpoint": "api_runtime_archive_dead",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/runtime/attestation",
+      "endpoint": "api_runtime_attestation",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/runtime/workers",
+      "endpoint": "api_runtime_workers",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/runtime/workers/<worker_id>/archive",
+      "endpoint": "api_runtime_archive_worker",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/search",
+      "endpoint": "api_unified_search",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/search/enhance",
+      "endpoint": "api_search_enhance",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/security/baseline",
+      "endpoint": "system_features.security_create_baseline",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/security/dangerous-code",
+      "endpoint": "system_features.security_dangerous_code",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/security/integrity",
+      "endpoint": "system_features.security_check_integrity",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/security/scan",
+      "endpoint": "api_security_scan",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/security/scan",
+      "endpoint": "system_features.security_scan",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/security/sensitive-info",
+      "endpoint": "system_features.security_sensitive_info",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/security/status",
+      "endpoint": "api_security_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/settings",
+      "endpoint": "api_settings_get",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/settings/config",
+      "endpoint": "settings.get_config",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/settings/config",
+      "endpoint": "settings.update_config",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/settings/developer/execute",
+      "endpoint": "settings.developer_execute",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/settings/developer/logs",
+      "endpoint": "settings.developer_logs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/settings/domain",
+      "endpoint": "settings.get_domain_config",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/settings/domain",
+      "endpoint": "settings.update_domain_config",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/settings/domain/delete",
+      "endpoint": "settings.delete_domain_config",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/settings/system-info",
+      "endpoint": "settings.system_info",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/skills",
+      "endpoint": "api_skills_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/skills/list",
+      "endpoint": "api_skills_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/skills/status",
+      "endpoint": "api_skills_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/special-report/check-trigger",
+      "endpoint": "api_check_special_report_trigger",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/special-report/generate",
+      "endpoint": "api_generate_special_report",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/stability/crash-log",
+      "endpoint": "api_stability_crash_log",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/stability/heartbeat",
+      "endpoint": "api_stability_heartbeat",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/stability/status",
+      "endpoint": "api_stability_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/stats",
+      "endpoint": "data_query.api_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/status",
+      "endpoint": "api_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/subject-classifier/classify",
+      "endpoint": "subject_classify",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/subject-classifier/types",
+      "endpoint": "subject_types",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/swire/brand-collect",
+      "endpoint": "swire_brand_collect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/swire/brand-detail",
+      "endpoint": "swire_brand_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/swire/brand-remove",
+      "endpoint": "swire_brand_remove",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/swire/brand-save",
+      "endpoint": "swire_brand_save",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/swire/event",
+      "endpoint": "swire_event_add",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/swire/events",
+      "endpoint": "swire_events",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/swire/notes",
+      "endpoint": "swire_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/swire/overview",
+      "endpoint": "swire_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/acceptance/dimensions",
+      "endpoint": "api_acceptance_dimensions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/acceptance/judge",
+      "endpoint": "api_acceptance_judge",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account",
+      "endpoint": "api_system_account_base",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/approvals",
+      "endpoint": "account.api_list_approvals",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/approvals/<int:approval_id>/approve",
+      "endpoint": "account.api_approve_login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/approvals/<int:approval_id>/reject",
+      "endpoint": "account.api_reject_login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/audit",
+      "endpoint": "account.api_audit_logs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/audit/stats",
+      "endpoint": "account.api_audit_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/change-password",
+      "endpoint": "account.api_change_password",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/devices",
+      "endpoint": "account.api_list_devices",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/devices/<int:session_id>/revoke",
+      "endpoint": "account.api_revoke_device",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/members",
+      "endpoint": "account.api_create_member",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/members",
+      "endpoint": "account.api_list_members",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/members/<int:user_id>",
+      "endpoint": "account.api_remove_member",
+      "methods": [
+        "DELETE"
+      ]
+    },
+    {
+      "path": "/api/system/account/members/<int:user_id>",
+      "endpoint": "account.api_update_member",
+      "methods": [
+        "PUT"
+      ]
+    },
+    {
+      "path": "/api/system/account/members/<int:user_id>/authorizations",
+      "endpoint": "account.api_get_member_auths",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/members/<int:user_id>/authorizations",
+      "endpoint": "account.api_set_member_auths",
+      "methods": [
+        "PUT"
+      ]
+    },
+    {
+      "path": "/api/system/account/nav",
+      "endpoint": "account.api_get_nav",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/nav",
+      "endpoint": "account.api_save_nav",
+      "methods": [
+        "PUT"
+      ]
+    },
+    {
+      "path": "/api/system/account/nav/reset",
+      "endpoint": "account.api_reset_nav",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/profile",
+      "endpoint": "account.api_get_profile",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/profile",
+      "endpoint": "account.api_update_profile",
+      "methods": [
+        "PUT"
+      ]
+    },
+    {
+      "path": "/api/system/account/protection",
+      "endpoint": "account.api_get_protection",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/protection",
+      "endpoint": "account.api_set_protection",
+      "methods": [
+        "PUT"
+      ]
+    },
+    {
+      "path": "/api/system/account/quota",
+      "endpoint": "account.api_quota",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/recovery",
+      "endpoint": "account.api_recovery_options",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills",
+      "endpoint": "account.api_add_skill",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills",
+      "endpoint": "account.api_list_skills",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills/<skill_id>",
+      "endpoint": "account.api_get_skill_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills/<skill_id>/config",
+      "endpoint": "account.api_configure_skill",
+      "methods": [
+        "PUT"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills/<skill_id>/disable",
+      "endpoint": "account.api_disable_skill",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills/<skill_id>/enable",
+      "endpoint": "account.api_enable_skill",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills/<skill_id>/execute",
+      "endpoint": "account.api_execute_skill",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills/<skill_id>/executions",
+      "endpoint": "account.api_skill_executions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/skills/status",
+      "endpoint": "account.api_skills_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/totp/confirm",
+      "endpoint": "account.api_totp_confirm",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/totp/reset",
+      "endpoint": "account.api_totp_reset",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/totp/setup",
+      "endpoint": "account.api_totp_setup",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/totp/status",
+      "endpoint": "account.api_totp_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/totp/verify",
+      "endpoint": "account.api_totp_verify",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/verification/pending",
+      "endpoint": "account.api_pending_codes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/verification/request",
+      "endpoint": "account.api_request_verification",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/verification/resend",
+      "endpoint": "account.api_resend_code",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/verification/verify",
+      "endpoint": "account.api_verify_code",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/workspace-keys",
+      "endpoint": "account.api_create_workspace_key",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/account/workspace-keys",
+      "endpoint": "account.api_list_workspace_keys",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/account/workspace-keys/<int:key_id>",
+      "endpoint": "account.api_revoke_workspace_key",
+      "methods": [
+        "DELETE"
+      ]
+    },
+    {
+      "path": "/api/system/config",
+      "endpoint": "api_system_config",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/config",
+      "endpoint": "api_system_config_update",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/system/database",
+      "endpoint": "api_system_database",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/dlq",
+      "endpoint": "api_system_dlq",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/domains",
+      "endpoint": "system_api.system_domains",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/health",
+      "endpoint": "api_system_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/health/detailed",
+      "endpoint": "system_health.system_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/health/module/<module_name>",
+      "endpoint": "system_health.system_health_module",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/health/summary",
+      "endpoint": "system_health.system_health_summary",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/repository",
+      "endpoint": "lumenis_agg.system_repository",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/runtime",
+      "endpoint": "api_system_runtime",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/runtime",
+      "endpoint": "lumenis_agg.system_runtime",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/runtime-workers",
+      "endpoint": "system_api.system_runtime_workers",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/security",
+      "endpoint": "api_system_security",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/security/audit",
+      "endpoint": "api_system_security_audit",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/status",
+      "endpoint": "system_api.system_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/system/workers",
+      "endpoint": "api_system_workers",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/test/export",
+      "endpoint": "api_test_export",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/backfill-detail",
+      "endpoint": "topic_backfill_detail",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/campaign-save",
+      "endpoint": "tc_campaign_save",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/campaign-toggle",
+      "endpoint": "tc_campaign_toggle",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/campaigns",
+      "endpoint": "tc_campaign_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/export",
+      "endpoint": "topic_export",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/half-open-probe",
+      "endpoint": "topic_half_open_probe",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/note/<note_id>",
+      "endpoint": "topic_note_detail",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/notes",
+      "endpoint": "topic_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/recover",
+      "endpoint": "topic_recover",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/run",
+      "endpoint": "topic_run",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/runtime-state",
+      "endpoint": "topic_runtime_state",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/stats",
+      "endpoint": "topic_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/status",
+      "endpoint": "topic_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/timeline",
+      "endpoint": "topic_timeline",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/topic-campaign/topics",
+      "endpoint": "topic_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/translate",
+      "endpoint": "api_translate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/trend/engagement",
+      "endpoint": "trend.trend_engagement",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/trend/events",
+      "endpoint": "trend.trend_events",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/trend/kos",
+      "endpoint": "trend.trend_kos",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/trend/notes",
+      "endpoint": "trend.trend_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/trend/overview",
+      "endpoint": "trend.trend_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/trend/risk",
+      "endpoint": "trend.trend_risk",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/trend/sentiment",
+      "endpoint": "trend.trend_sentiment",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/trends/global",
+      "endpoint": "api_global_trends_v570",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v2/global-bil/<resource>",
+      "endpoint": "global_bil_read",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v2/global-bil/overview",
+      "endpoint": "global_bil_read",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v2/marketing/overview",
+      "endpoint": "marketing_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v2/report-center/preview",
+      "endpoint": "report.report_center_preview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v2/report/export",
+      "endpoint": "report.api_report_export",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v4/api-keys",
+      "endpoint": "account_compat.compat_api_keys_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v4/api-keys",
+      "endpoint": "api_v4_api_keys_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/v4/api-keys/generate",
+      "endpoint": "account_compat.compat_api_keys_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/v4/api-keys/generate",
+      "endpoint": "api_v4_api_keys_generate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/v4/api-keys/revoke",
+      "endpoint": "account_compat.compat_api_keys_revoke",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/v4/api-keys/revoke",
+      "endpoint": "api_v4_api_keys_revoke",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/viz/<function_name>",
+      "endpoint": "viz.api_viz_function",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/viz/overview.stats",
+      "endpoint": "api_viz_overview_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/viz/overview.trend",
+      "endpoint": "api_viz_overview_trend",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/viz/registry",
+      "endpoint": "viz.api_viz_registry",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/viz/risk.active",
+      "endpoint": "api_viz_risk_active",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web-mentions",
+      "endpoint": "data_query.api_web_mentions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web-sentiment/history",
+      "endpoint": "ai_api.api_web_sentiment_history",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web-sentiment/search",
+      "endpoint": "ai_api.api_web_sentiment_search",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/web-sources",
+      "endpoint": "api_web_sources",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web-topics",
+      "endpoint": "api_web_topics",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web-topics/refresh",
+      "endpoint": "api_web_topics_refresh",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/web/brand-industry",
+      "endpoint": "api_web_brand_industry_v580",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web/brand-industry/plan",
+      "endpoint": "api_brand_industry_plan_v570",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web/brand-industry/run",
+      "endpoint": "api_brand_industry_run_v570",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/web/browser-discovery",
+      "endpoint": "api_browser_discovery_v570",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/web/collect",
+      "endpoint": "api_web_collect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/web/events",
+      "endpoint": "api_web_events_v580",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web/topics",
+      "endpoint": "api_web_topics_v580",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/web/topics/refresh",
+      "endpoint": "api_web_topics_refresh_v580",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/weekly/events",
+      "endpoint": "api_weekly_events_v570",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/weekly/send-email",
+      "endpoint": "api_send_weekly_email",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/weibo/clear-login",
+      "endpoint": "api_weibo_clear_login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/weibo/cookies",
+      "endpoint": "api_weibo_cookies",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/weibo/login-status",
+      "endpoint": "api_weibo_login_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/weibo/start-login",
+      "endpoint": "api_weibo_start_login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/workspace/file",
+      "endpoint": "api_workspace_file",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/workspace/file-tree",
+      "endpoint": "api_workspace_file_tree",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/workspace/term",
+      "endpoint": "api_workspace_term",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/accounts",
+      "endpoint": "api_xhs_accounts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/collect-health",
+      "endpoint": "collection.api_xhs_collect_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/collect-pause",
+      "endpoint": "collection.api_xhs_collect_pause",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/collect-pause-state",
+      "endpoint": "collection.api_xhs_collect_pause_state",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/collect-resume",
+      "endpoint": "collection.api_xhs_collect_resume",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/cookie/status",
+      "endpoint": "collection.api_xhs_cookie_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/cookie/sync",
+      "endpoint": "collection.api_xhs_cookie_sync",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/cookie/sync/<task_id>",
+      "endpoint": "collection.api_xhs_cookie_sync_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/keepalive/mark",
+      "endpoint": "api_xhs_keepalive_mark",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/keepalive/recheck",
+      "endpoint": "api_xhs_keepalive_recheck",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/login/save",
+      "endpoint": "api_xhs_login_save",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/login/start",
+      "endpoint": "api_xhs_login_start",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/login/status",
+      "endpoint": "api_xhs_login_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/optimizer/classify",
+      "endpoint": "api_xhs_optimizer_classify",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/optimizer/config",
+      "endpoint": "api_xhs_optimizer_config",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/p0/collection",
+      "endpoint": "api_xhs_p0_collection",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/p0/recovery/complete",
+      "endpoint": "api_xhs_p0_recovery_complete",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/p0/status",
+      "endpoint": "api_xhs_p0_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/rednote/check-login",
+      "endpoint": "api_xhs_rednote_check_login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/rednote/keepalive",
+      "endpoint": "api_xhs_rednote_keepalive",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/xhs/runtime-check",
+      "endpoint": "api_xhs_runtime_check",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/xhs/switch-account",
+      "endpoint": "api_xhs_switch_account",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/zbmp",
+      "endpoint": "api_zbmp_base",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/zbmp/brands",
+      "endpoint": "zbmp_api.zbmp_brands",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/zbmp/metrics",
+      "endpoint": "zbmp_api.zbmp_metrics",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/zbmp/overview",
+      "endpoint": "zbmp_api.zbmp_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/cth/login",
+      "endpoint": "cth_login_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/favicon.ico",
+      "endpoint": "favicon",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/healthz",
+      "endpoint": "healthz",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/intelligence/library",
+      "endpoint": "intelligence_library_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/",
+      "endpoint": "lumenis.command_home",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/api/intelligence/evidence",
+      "endpoint": "lumenis.api_intelligence_evidence",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/api/skills/invocations",
+      "endpoint": "lumenis.skill_invocations_history",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/api/skills/invoke",
+      "endpoint": "lumenis.skill_invoke",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/lumenis/api/skills/status",
+      "endpoint": "lumenis.skill_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/api/skills/sync",
+      "endpoint": "lumenis.skill_sync",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/analysis",
+      "endpoint": "lumenis.cth_analysis",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/brand-industry",
+      "endpoint": "lumenis.cth_brand_industry",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/brands",
+      "endpoint": "lumenis.cth_brands",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/calendar",
+      "endpoint": "lumenis.cth_calendar",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/case-analysis",
+      "endpoint": "lumenis.cth_case_analysis",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/cases",
+      "endpoint": "lumenis.cth_cases",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/data-center",
+      "endpoint": "lumenis.cth_data_center",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/data-center/<platform_id>",
+      "endpoint": "lumenis.cth_data_center_platform",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/event-graph",
+      "endpoint": "lumenis.cth_event_graph",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/events",
+      "endpoint": "lumenis.cth_events",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/evidence",
+      "endpoint": "lumenis.cth_evidence",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/industries",
+      "endpoint": "lumenis.cth_industries",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/knowledge",
+      "endpoint": "lumenis.cth_knowledge",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/kos",
+      "endpoint": "lumenis.cth_kos",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/launch",
+      "endpoint": "lumenis.cth_launch",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/negative",
+      "endpoint": "lumenis.cth_negative",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/notes",
+      "endpoint": "lumenis.cth_notes",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/official",
+      "endpoint": "lumenis.cth_official",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/overview",
+      "endpoint": "lumenis.cth_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/qa",
+      "endpoint": "lumenis.cth_qa",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/realtime",
+      "endpoint": "lumenis.cth_realtime",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/reports",
+      "endpoint": "lumenis.cth_reports",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/risk",
+      "endpoint": "lumenis.cth_risk",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/topic-campaign",
+      "endpoint": "lumenis.cth_topic_campaign",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/topics",
+      "endpoint": "lumenis.cth_topics",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/trend",
+      "endpoint": "lumenis.cth_trend",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/weekly",
+      "endpoint": "lumenis.cth_weekly",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/weibo",
+      "endpoint": "lumenis.cth_weibo",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/workspace",
+      "endpoint": "lumenis.cth_workspace",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/cth/xiaohongshu",
+      "endpoint": "lumenis.cth_xhs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/healthz",
+      "endpoint": "lumenis.foundation_healthz",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/static/<path:filename>",
+      "endpoint": "lumenis.static",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/adaptive-demo",
+      "endpoint": "lumenis.system_adaptive_demo",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/ai",
+      "endpoint": "lumenis.system_ai",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/browser",
+      "endpoint": "lumenis.system_browser",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/collector",
+      "endpoint": "lumenis.system_collector",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/database",
+      "endpoint": "lumenis.system_database",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/evaluation",
+      "endpoint": "lumenis.system_evaluation",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/runtime",
+      "endpoint": "lumenis.system_runtime",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/system/security",
+      "endpoint": "lumenis.system_security",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/brand",
+      "endpoint": "lumenis.zbmp_brand",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/competition",
+      "endpoint": "lumenis.zbmp_competition",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/content",
+      "endpoint": "lumenis.zbmp_content",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/evaluation",
+      "endpoint": "lumenis.zbmp_evaluation",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/intelligence",
+      "endpoint": "lumenis.zbmp_intelligence",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/kos",
+      "endpoint": "lumenis.zbmp_kos",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/launch",
+      "endpoint": "lumenis.zbmp_launch",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/overview",
+      "endpoint": "lumenis.zbmp_overview",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/podcast",
+      "endpoint": "lumenis.zbmp_podcast",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/reports",
+      "endpoint": "lumenis.zbmp_reports",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/lumenis/zbmp/risk",
+      "endpoint": "lumenis.zbmp_risk",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/remote",
+      "endpoint": "remote_access",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/static/<path:filename>",
+      "endpoint": "static",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/system/runtime",
+      "endpoint": "system_runtime_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/system/settings",
+      "endpoint": "system_settings_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/system/skills",
+      "endpoint": "system_skills_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/topic-campaign",
+      "endpoint": "topic_campaign_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/",
+      "endpoint": "v4.v4_console.v4_root",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/collect",
+      "endpoint": "v4.api_adapter_collect",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/adapters/health",
+      "endpoint": "v4.api_adapter_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/platforms",
+      "endpoint": "v4.api_list_platforms",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/recovery/cancel",
+      "endpoint": "v4.api_recovery_cancel",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/adapters/recovery/check",
+      "endpoint": "v4.api_recovery_check",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/adapters/recovery/health/<platform>",
+      "endpoint": "v4.api_recovery_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/recovery/platforms",
+      "endpoint": "v4.api_recovery_platforms",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/recovery/shot/<platform>",
+      "endpoint": "v4.api_recovery_shot",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/recovery/start",
+      "endpoint": "v4.api_recovery_start",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/adapters/recovery/status",
+      "endpoint": "v4.api_recovery_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/risk",
+      "endpoint": "v4.api_risk_snapshot",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/adapters/search",
+      "endpoint": "v4.api_adapter_search",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/adapters/search-merged",
+      "endpoint": "v4.api_adapter_search_merged",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/adapters/task/<task_id>",
+      "endpoint": "v4.api_adapter_task",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/ai/analyze",
+      "endpoint": "v4.v4_ai.ai_analyze",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/ai/chat",
+      "endpoint": "v4.v4_ai.ai_chat",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/ai/learn",
+      "endpoint": "v4.v4_ai.ai_learn",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/ai/shadow",
+      "endpoint": "v4.v4_ai.ai_shadow",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/ai/shadow/<sid>/decide",
+      "endpoint": "v4.v4_ai.ai_shadow_decide",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/ai/shadow/stats",
+      "endpoint": "v4.v4_ai.ai_shadow_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/ai/status",
+      "endpoint": "v4.v4_ai.ai_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/auth/login",
+      "endpoint": "v4.api_login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/auth/login-by-key",
+      "endpoint": "v4.api_login_by_key",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/auth/logout",
+      "endpoint": "v4.api_logout",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/auth/me",
+      "endpoint": "v4.api_me",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/auth/workspace/keys",
+      "endpoint": "v4.api_workspace_keys_issue",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/auth/workspace/keys",
+      "endpoint": "v4.api_workspace_keys_list",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/auth/workspace/keys/revoke",
+      "endpoint": "v4.api_workspace_keys_revoke",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/auth/workspace/status",
+      "endpoint": "v4.api_workspace_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/auth/workspace/unlock",
+      "endpoint": "v4.api_workspace_unlock",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/collect/",
+      "endpoint": "v4.v4_collect.collect_center",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/console/",
+      "endpoint": "v4.v4_console.console_home",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/data/backfill-tasks",
+      "endpoint": "v4.api_backfill_tasks",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/data/empty-content",
+      "endpoint": "v4.api_empty_content",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/data/fix-publish-date",
+      "endpoint": "v4.api_fix_publish_date",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/health",
+      "endpoint": "v4.api_health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/importer/confirm",
+      "endpoint": "v4.v4_importer.confirm_import",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/importer/upload",
+      "endpoint": "v4.v4_importer.upload_file",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/settings/",
+      "endpoint": "v4.v4_settings.settings_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/audit-logs",
+      "endpoint": "v4.v4_settings.api_audit_logs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/audit-stats",
+      "endpoint": "v4.v4_settings.api_audit_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/change-password",
+      "endpoint": "v4.v4_settings.api_change_password",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/security-questions",
+      "endpoint": "v4.v4_settings.api_add_security_question",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/security-questions",
+      "endpoint": "v4.v4_settings.api_get_security_questions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/security-questions/<int:qid>",
+      "endpoint": "v4.v4_settings.api_delete_security_question",
+      "methods": [
+        "DELETE"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/system-config",
+      "endpoint": "v4.v4_settings.api_get_system_config",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/system-config",
+      "endpoint": "v4.v4_settings.api_update_system_config",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/users",
+      "endpoint": "v4.v4_settings.api_create_user",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/users",
+      "endpoint": "v4.v4_settings.api_list_users",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/users/<int:user_id>/reset-password",
+      "endpoint": "v4.v4_settings.api_reset_password",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/settings/api/users/<int:user_id>/status",
+      "endpoint": "v4.v4_settings.api_toggle_user_status",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/settings/login",
+      "endpoint": "v4.v4_settings.v4_login_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/static/<path:filename>",
+      "endpoint": "v4.static",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/version-center/",
+      "endpoint": "v4.v4_version.version_center_page",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/check",
+      "endpoint": "v4.v4_version.api_check",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/config",
+      "endpoint": "v4.v4_version.api_config",
+      "methods": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/history",
+      "endpoint": "v4.v4_version.api_history",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/pull",
+      "endpoint": "v4.v4_version.api_pull",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/push",
+      "endpoint": "v4.v4_version.api_push",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/rollback",
+      "endpoint": "v4.v4_version.api_rollback",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/save",
+      "endpoint": "v4.v4_version.api_save",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v4/version-center/api/status",
+      "endpoint": "v4.v4_version.api_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/zbmp/login",
+      "endpoint": "zbmp_login_page",
+      "methods": [
+        "GET"
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "path": "/healthz",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 462
+    },
+    {
+      "path": "/api/runtime/attestation",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 959
+    },
+    {
+      "path": "/lumenis/cth/overview",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 112495
+    },
+    {
+      "path": "/lumenis/zbmp/overview",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 115265
+    }
+  ],
+  "protected_database_before": {
+    "D:\\LUMENIS_REBUILD\\Z-Brand-Core\\data\\monitor.db": {
+      "sha256": "fa10e00c9eb98995a643a47823e72b533ffc11763b22e9516bd13a6c40c1fa6f",
+      "size": 1142784,
+      "mtime_ns": 1788974243440556600
+    },
+    "D:\\LUMENIS_REBUILD\\Z-Brand-Core\\data\\monitor.db-wal": null,
+    "D:\\LUMENIS_REBUILD\\Z-Brand-Core\\data\\monitor.db-shm": null
+  },
+  "protected_database_after": {
+    "D:\\LUMENIS_REBUILD\\Z-Brand-Core\\data\\monitor.db": {
+      "sha256": "fa10e00c9eb98995a643a47823e72b533ffc11763b22e9516bd13a6c40c1fa6f",
+      "size": 1142784,
+      "mtime_ns": 1788974243440556600
+    },
+    "D:\\LUMENIS_REBUILD\\Z-Brand-Core\\data\\monitor.db-wal": null,
+    "D:\\LUMENIS_REBUILD\\Z-Brand-Core\\data\\monitor.db-shm": null
+  },
+  "protected_database_unchanged": true,
+  "pass": true
+}
