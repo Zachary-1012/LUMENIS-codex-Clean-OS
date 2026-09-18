@@ -1116,6 +1116,9 @@ _PG_BYPASS_PATHS = frozenset({
     '/api/developer/run', '/api/config/run-code', '/api/dev/run-code',
     # 验收判定 judge：纯内存函数计算，不读写 DB/文件/网络/外部状态，等同只读
     '/api/system/acceptance/judge',
+    # 仅用于生成一次、资源范围固定的人工审批令牌；实际 archive 写操作
+    # 仍必须再次经过 PermissionGate，且成功后由 handler 消费令牌。
+    '/api/runtime/archive-dead/approval',
     # P1-Content: 统一内容生成AI增强（仅写content_generation_evidence/content_evaluation表，不碰生产数据）
     '/api/content/generate', '/api/content/feedback', '/api/content/ad-strategy',
     '/api/content/video-analyze', '/api/content/brand-report/generate',
@@ -3260,9 +3263,68 @@ def api_runtime_archive_dead():
         g = _rg.get_guardian("system")
         hours = float(request.args.get("hours", 24))
         count = g.archive_dead_workers(older_than_hours=hours)
-        return jsonify({"ok": True, "archived": count, "hours": hours})
+        # 审批是一次性运行时授权：成功执行后立即撤销，防止重复提交重放。
+        try:
+            if _pg is not None:
+                token = _pg.get_valid_approval_token(
+                    OperationType.RUNTIME_OPERATION.value, '/api/runtime/archive-dead')
+                if token:
+                    _pg.revoke_approval(token)
+        except Exception:
+            # 归档已经完成；撤销失败必须留下可见状态，而不是伪装成完整闭环。
+            return jsonify({"ok": True, "archived": count, "hours": hours,
+                            "approval_consumed": False,
+                            "warning": "归档已执行，但审批令牌撤销未确认"})
+        return jsonify({"ok": True, "archived": count, "hours": hours,
+                        "approval_consumed": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route('/api/runtime/archive-dead/approval', methods=['POST'])
+def api_runtime_archive_dead_approval():
+    """发放一次、固定资源范围的 dead-worker 归档审批令牌。
+
+    该端点不执行归档；它只在已认证用户通过产品确认对话框提交精确
+    confirm/action/resource 后创建短时令牌。实际归档请求仍会被全局 Gate
+    拦截，避免把“用户文字授权”误当成运行时审批。
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        if payload.get('confirm') is not True:
+            return jsonify({'ok': False, 'status': 'REQUIRES_CONFIRMATION',
+                            'error': '必须由产品确认界面提交 confirm=true'}), 400
+        if payload.get('action') != 'archive_dead_workers':
+            return jsonify({'ok': False, 'status': 'INVALID_ACTION',
+                            'error': '审批动作不匹配'}), 400
+        if payload.get('resource') != '/api/runtime/archive-dead':
+            return jsonify({'ok': False, 'status': 'INVALID_RESOURCE',
+                            'error': '审批资源范围不匹配'}), 400
+        hours = float(payload.get('hours', 24))
+        if not (0 < hours <= 24 * 365):
+            return jsonify({'ok': False, 'status': 'INVALID_HOURS',
+                            'error': 'hours 必须在 0 与 8760 之间'}), 400
+        if _pg is None:
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'error': 'PermissionGate 未初始化（fail-closed）'}), 503
+        caller = (request.authorization.username if request.authorization else None) or 'human-ui'
+        token = _pg.grant_approval(
+            OperationType.RUNTIME_OPERATION.value,
+            duration_minutes=5,
+            resource='/api/runtime/archive-dead',
+            granted_by=caller,
+        )
+        return jsonify({
+            'ok': True,
+            'status': 'APPROVED',
+            'operation': OperationType.RUNTIME_OPERATION.value,
+            'resource': '/api/runtime/archive-dead',
+            'hours': hours,
+            'approval_token': token,
+            'expires_in_minutes': 5,
+            'execution_required': True,
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(e)}), 500
 
 # ===== Collector Guard 状态 API（旁路模式，只读）=====
 @app.route('/api/collector-guard/status')
@@ -6574,15 +6636,21 @@ def api_xhs_login_status():
 
 @app.route('/api/xhs/login/save', methods=['POST'])
 def api_xhs_login_save():
-    """保存小红书登录态（cookies）"""
+    """保存香港/国际小红书登录态到 canonical protected runtime store。
+
+    Experience V2 的授权恢复不能把会话凭证写回源码仓库 ``data/``，也不能
+    继续生成旧的 ``rednote_cookies.json`` 平行来源。生产身份唯一由
+    ``xhs_cookie_bridge.ACCOUNT_PROFILES[XHS_RETINAUT]`` 所声明的受保护路径
+    持有；这里只保存 header 形式，响应不回显路径或 Cookie 值。
+    """
     try:
-        import json
-        # 平台（任意别名归一化）：大陆→xhs_cookies.json，香港 RedNote→rednote_cookies.json，互不覆盖
+        # 生产边界：当前只允许香港/国际 RedNote；大陆身份保持暂停，不允许从新 UI 写入。
         import xhs_collection_optimizer as _xco_sv
         _b = request.get_json(silent=True) or {}
         _ep = _xco_sv.get_platform_endpoint(_b.get('platform') or request.args.get('platform') or 'xhs_cn')
         _pf = _ep['key']
-        _cookie_name = 'rednote_cookies.json' if _pf == 'rednote_hk' else 'xhs_cookies.json'
+        if _pf != 'rednote_hk':
+            return jsonify({'ok': False, 'error': '当前生产仅允许香港/国际 RedNote，内地账号登录恢复已暂停'}), 403
         # 从对应平台 CDP 浏览器获取 cookies 并保存
         cookies_saved = False
         cookie_count = 0
@@ -6594,11 +6662,21 @@ def api_xhs_login_save():
                 if ctx:
                     cookies = ctx.cookies(_ep['home_url'])
                     cookie_count = len(cookies or [])
-                    # 保存到文件
-                    cookie_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', _cookie_name)
-                    with open(cookie_path, 'w', encoding='utf-8') as f:
-                        json.dump(cookies, f, ensure_ascii=False, indent=2)
-                    cookies_saved = cookie_count > 0
+                    # 唯一生产凭证落点：runtime data/private/xhs_cookie_retinaut.txt。
+                    # 该路径由 ZBC_DB_PATH/ZBC_DATA_DIR 解析，不随源码仓库移动。
+                    import xhs_cookie_bridge as _xhs_bridge
+                    _cookie_path = _xhs_bridge.ACCOUNT_PROFILES[_xhs_bridge.XHS_RETINAUT_NAME][0]
+                    _cookie_path = os.path.abspath(_cookie_path)
+                    os.makedirs(os.path.dirname(_cookie_path), exist_ok=True)
+                    _header = '; '.join(
+                        f"{c.get('name')}={c.get('value')}"
+                        for c in (cookies or [])
+                        if c.get('name') and c.get('value') is not None
+                    )
+                    if _header:
+                        with open(_cookie_path, 'w', encoding='utf-8') as f:
+                            f.write(_header)
+                    cookies_saved = bool(_header)
                 browser.close()
         except Exception as e:
             return jsonify({'ok': False, 'error': f'保存cookies失败: {str(e)}'}), 500
@@ -6612,6 +6690,7 @@ def api_xhs_login_save():
         except Exception:
             pass
         return jsonify({'ok': True, 'platform': _pf, 'label': _ep['label'],
+                        'account': 'XHS_RETINAUT', 'credential_store': 'protected_runtime',
                         'cookies_saved': cookies_saved, 'cookie_count': cookie_count,
                         'message': f'{_ep["label"]}登录态已保存'})
     except Exception as e:

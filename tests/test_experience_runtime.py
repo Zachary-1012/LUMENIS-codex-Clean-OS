@@ -140,6 +140,10 @@ def test_sys06_is_real_internal_browser_surface(isolated_client):
     assert 'id="address-input"' in raw
     assert 'id="viewport-img-wrap"' in raw
     assert 'id="panel-ai-agent"' in raw
+    assert 'id="hk-auth-state"' in raw
+    assert 'id="browser-auth-modal"' in raw
+    assert 'BrowserApp.openHKLogin()' in raw
+    assert '大陆采集' in raw
     assert '在外部浏览器打开（仅手动）' in raw
     assert 'example.com/subject' not in raw
     assert '原型占位' not in raw

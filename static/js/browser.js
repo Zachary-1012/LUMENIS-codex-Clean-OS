@@ -35,6 +35,11 @@
     initialized: false,
     root: null,
     timeTimer: null,
+    authSessionId: null,
+    authStage: 'unknown',
+    authTimer: null,
+    authAutoOpened: false,
+    authReturnFocus: null,
   };
 
   // ===== DOM Helpers =====
@@ -391,6 +396,10 @@
           }
           if (d.title) state.currentTitle = d.title;
           $('status-url').textContent = d.url || state.currentUrl || '—';
+          // Screenshot 是当前标签真实地址的权威回读；同步采集面板，避免
+          // 首次挂载时因 tabs 与 screenshot 到达顺序不同而短暂显示“外部网站”。
+          if ($('cs-platform')) $('cs-platform').textContent = detectPlatform(state.currentUrl);
+          if ($('cs-page')) $('cs-page').textContent = state.currentTitle || state.currentUrl || '—';
         } else {
           state.browserOnline = false;
           updateStatusBar(false);
@@ -586,6 +595,203 @@
   }
 
   // ===== Collect Status =====
+  function setHKAuthState(stateKey, label, trace) {
+    var badge = $('hk-auth-state');
+    var traceEl = $('hk-auth-trace');
+    if (badge) {
+      badge.dataset.state = stateKey || 'unknown';
+      badge.textContent = label || '未检查';
+    }
+    if (traceEl) traceEl.textContent = trace || '';
+    state.authStage = stateKey || 'unknown';
+  }
+
+  function setAuthModalMessage(message, type) {
+    var el = $('browser-auth-message');
+    if (!el) return;
+    el.className = 'browser-auth-modal__message' + (type ? ' is-' + type : '');
+    el.textContent = message || '';
+  }
+
+  function setAuthModalStage(message) {
+    var el = $('browser-auth-stage');
+    if (el) el.textContent = message || '';
+  }
+
+  function setAuthQr(image, visible) {
+    var wrap = $('browser-auth-qr-wrap');
+    var img = $('browser-auth-qr');
+    if (!wrap || !img) return;
+    if (image) img.src = image;
+    wrap.hidden = !visible;
+  }
+
+  function setAuthConfirm(enabled, label) {
+    var btn = $('browser-auth-confirm');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.textContent = label || '我已完成扫码';
+  }
+
+  function showHKLoginModal() {
+    var modal = $('browser-auth-modal');
+    if (!modal) return;
+    state.authReturnFocus = document.activeElement;
+    modal.classList.add('is-visible');
+    modal.setAttribute('aria-hidden', 'false');
+    var later = $('browser-auth-later');
+    if (later) later.focus();
+  }
+
+  function closeHKLogin() {
+    if (state.authTimer) clearTimeout(state.authTimer);
+    state.authTimer = null;
+    var modal = $('browser-auth-modal');
+    if (modal) {
+      modal.classList.remove('is-visible');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+    if (state.authReturnFocus && typeof state.authReturnFocus.focus === 'function') {
+      state.authReturnFocus.focus();
+    }
+    state.authReturnFocus = null;
+  }
+
+  function scheduleHKLoginPoll() {
+    if (state.authTimer || !state.authSessionId) return;
+    state.authTimer = setTimeout(function () {
+      state.authTimer = null;
+      pollHKLogin();
+    }, 2500);
+  }
+
+  function pollHKLogin() {
+    if (!state.authSessionId) return;
+    apiGet('/api/xhs/login/status?session_id=' + encodeURIComponent(state.authSessionId))
+      .then(function (d) {
+        var stage = d.stage || d.status || 'unknown';
+        if (stage === 'logged_in' || d.is_logged_in === true) {
+          setHKAuthState('logged_in', '已检测到登录态', '香港小红书登录态已在 9223 驻场端确认；保存前仍需人工确认。');
+          setAuthModalStage('已检测到真实登录态');
+          setAuthModalMessage('已验证账号状态，可以保存本次授权。', 'success');
+          setAuthQr(null, false);
+          setAuthConfirm(true, '保存香港授权');
+          return;
+        }
+        if (stage === 'qr_ready' || stage === 'no_qr') {
+          setHKAuthState(stage, stage === 'qr_ready' ? '等待扫码' : '二维码加载中', '二维码只在序境内置浏览器显示，未检测到登录前不会保存授权。');
+          setAuthModalStage(stage === 'qr_ready' ? '请使用小红书 App 扫描二维码' : '正在等待平台二维码…');
+          setAuthModalMessage(d.message || '等待扫码后点击“我已完成扫码”。', stage === 'no_qr' ? 'warning' : '');
+          setAuthQr(d.qr_image || null, Boolean(d.qr_image));
+          setAuthConfirm(true, '我已完成扫码');
+          scheduleHKLoginPoll();
+          return;
+        }
+        if (stage === 'error') {
+          setHKAuthState('error', '授权检查失败', '登录页探测失败；可重试，不会改变现有采集数据。');
+          setAuthModalStage('授权会话暂时不可用');
+          setAuthModalMessage(d.message || d.error || '请稍后重试。', 'error');
+          setAuthQr(null, false);
+          setAuthConfirm(true, '重试检查');
+          return;
+        }
+        setHKAuthState('unknown', '准备中', '正在连接香港/国际采集驻场端口 9223。');
+        setAuthModalStage('正在连接香港账号…');
+        setAuthModalMessage(d.message || '请稍候。');
+        setAuthConfirm(false, '我已完成扫码');
+        scheduleHKLoginPoll();
+      })
+      .catch(function (e) {
+        setHKAuthState('error', '授权检查失败', '内置浏览器未能读取授权状态；不会将失败显示为已登录。');
+        setAuthModalStage('无法读取授权状态');
+        setAuthModalMessage(e.message || '请求失败，请稍后重试。', 'error');
+        setAuthConfirm(true, '重试检查');
+      });
+  }
+
+  function openHKLogin() {
+    if (state.authTimer) clearTimeout(state.authTimer);
+    state.authTimer = null;
+    setHKAuthState('unknown', '准备授权', '正在创建香港/国际采集身份授权会话。');
+    setAuthModalStage('正在准备香港账号授权会话…');
+    setAuthModalMessage('二维码只会在序境内置浏览器内呈现。');
+    setAuthQr(null, false);
+    setAuthConfirm(false, '我已完成扫码');
+    showHKLoginModal();
+    apiPost('/api/xhs/login/start', { platform: 'rednote_hk' })
+      .then(function (d) {
+        if (!d.ok || !d.session_id) throw new Error(d.error || '无法创建授权会话');
+        state.authSessionId = d.session_id;
+        setAuthModalStage('授权会话已创建，正在读取二维码…');
+        pollHKLogin();
+      })
+      .catch(function (e) {
+        setHKAuthState('error', '无法启动授权', '授权会话未创建；现有香港采集链路保持不变。');
+        setAuthModalStage('无法启动香港账号授权');
+        setAuthModalMessage(e.message || '请求失败，请稍后重试。', 'error');
+        setAuthConfirm(true, '重试授权');
+      });
+  }
+
+  function confirmHKLogin() {
+    if (!state.authSessionId) {
+      openHKLogin();
+      return;
+    }
+    // “我已完成扫码”只是触发再次观测，绝不直接把用户意图当作登录事实。
+    if (state.authStage !== 'logged_in') {
+      setAuthModalStage('正在重新检查真实登录态…');
+      setAuthModalMessage('尚未保存授权；系统先验证平台会话。');
+      setAuthConfirm(false, '检查中…');
+      pollHKLogin();
+      return;
+    }
+    setAuthModalStage('正在保存本次人工确认的香港授权…');
+    setAuthModalMessage('仅保存授权元信息与受保护会话，不在界面回显 Cookie。');
+    setAuthConfirm(false, '保存中…');
+    apiPost('/api/xhs/login/save', { platform: 'rednote_hk' })
+      .then(function (d) {
+        if (!d.ok || !d.cookies_saved) throw new Error(d.error || '未检测到可保存的登录态');
+        setHKAuthState('logged_in', '授权已保存', '香港/国际采集身份已恢复；后续采集仍按只读与 Evidence 契约执行。');
+        setAuthModalStage('香港授权已保存');
+        setAuthModalMessage('真实登录态已保存，序境不会自动发布或执行账号写操作。', 'success');
+        setAuthConfirm(false, '已完成');
+        setTimeout(closeHKLogin, 1200);
+      })
+      .catch(function (e) {
+        setHKAuthState('error', '保存失败', '真实登录态未保存；请保持当前二维码页面并重试。');
+        setAuthModalStage('香港授权保存失败');
+        setAuthModalMessage(e.message || '保存失败，请重试。', 'error');
+        setAuthConfirm(true, '重试保存');
+      });
+  }
+
+  function checkHKAuth(autoOpen) {
+    apiPost('/api/xhs/keepalive/recheck', { platform: 'rednote_hk' })
+      .then(function (d) {
+        if (d.status === 'logged_in' || d.is_logged_in === true) {
+          setHKAuthState('logged_in', '已连接', '香港/国际采集身份在线；当前页面仍使用通用浏览 9224。');
+          return;
+        }
+        if (d.status === 'cdp_down') {
+          setHKAuthState('offline', '采集驻场离线', '9223 未在线，暂不弹扫码；浏览器 9224 与现有产品页面不受影响。');
+          return;
+        }
+        if (d.need_relogin) {
+          setHKAuthState('needs_login', '需要重新授权', '检测到香港/国际账号会话失效；请在序境内完成扫码恢复。');
+          if (autoOpen && !state.authAutoOpened) {
+            state.authAutoOpened = true;
+            openHKLogin();
+          }
+          return;
+        }
+        setHKAuthState('unknown', '未确认', d.message || '授权状态暂未确认。');
+      })
+      .catch(function (e) {
+        setHKAuthState('error', '检查失败', e.message || '无法读取香港账号授权状态。');
+      });
+  }
+
   function updateCollectStatus() {
     $('cs-platform').textContent = detectPlatform(state.currentUrl);
     $('cs-port').textContent = '浏览 ' + CONFIG.productBrowserPort + ' · 采集 ' + CONFIG.collectionPort;
@@ -665,12 +871,18 @@
     stopPolling();
     if (state.timeTimer) clearInterval(state.timeTimer);
     state.timeTimer = null;
+    if (state.authTimer) clearTimeout(state.authTimer);
+    state.authTimer = null;
+    closeHKLogin();
     state.initialized = false;
     state.root = null;
     state.tabs = [];
     state.activeTabId = null;
     state.pendingUrl = null;
     state.pendingTargetId = null;
+    state.authSessionId = null;
+    state.authStage = 'unknown';
+    state.authAutoOpened = false;
   }
 
   // ===== Init =====
@@ -707,6 +919,8 @@
       loadTabs();
       refreshScreenshot();
       updateCollectStatus();
+      // 只做一次香港身份健康检查；不会在轮询中反复触发 QR/登录探测。
+      checkHKAuth(true);
     });
     loadBookmarks();
     updateTime();
@@ -722,6 +936,11 @@
         refreshScreenshot();
         loadTabs();
         startPolling();
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && $('browser-auth-modal') && $('browser-auth-modal').classList.contains('is-visible')) {
+        closeHKLogin();
       }
     });
 
@@ -749,6 +968,10 @@
     confirmNavigate: confirmNavigate,
     cancelNavigate: cancelNavigate,
     checkCollectStatus: checkCollectStatus,
+    openHKLogin: openHKLogin,
+    closeHKLogin: closeHKLogin,
+    confirmHKLogin: confirmHKLogin,
+    checkHKAuth: function () { checkHKAuth(false); },
     openExternal: openExternal,
     onScreenshotClick: onScreenshotClick,
     destroy: destroy,

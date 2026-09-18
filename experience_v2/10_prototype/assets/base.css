@@ -143,6 +143,36 @@
 @keyframes lum-shimmer{100%{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){.lum-skeleton::after{animation:none}}
 
+/* ============================================================================
+   SPATIAL LUMEN OS · incremental material pass
+   The field remains open; only the shell and intentional tools receive depth.
+   This is the implementation of 核对.docx M0→M3, not a universal glass layer.
+   ========================================================================== */
+.lum-shell{isolation:isolate;position:relative;background:linear-gradient(115deg,
+  color-mix(in srgb,var(--lum-bg) 88%,var(--lum-c-slate-0)),var(--lum-bg) 48%,
+  color-mix(in srgb,var(--lum-bg) 92%,var(--lum-c-slate-900)))}
+.lum-shell::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;
+  background:radial-gradient(70% 42% at 52% 0%,color-mix(in srgb,var(--lum-material-tint) 70%,transparent),transparent 72%);
+  opacity:.9}
+.lum-main{background:radial-gradient(55% 32% at 52% 0%,color-mix(in srgb,var(--lum-material-tint) 62%,transparent),transparent 72%)}
+.lum-app[data-realm="intent"] .lum-main{background:radial-gradient(62% 36% at 52% 0%,color-mix(in srgb,var(--lum-c-icy-100) 22%,transparent),transparent 72%)}
+.lum-app[data-theme="dark"][data-realm="intent"] .lum-main{background:radial-gradient(62% 36% at 52% 0%,color-mix(in srgb,var(--lum-c-icy-500) 9%,transparent),transparent 72%)}
+.lum-app[data-realm="editorial"] .lum-main{background:radial-gradient(48% 32% at 75% 4%,color-mix(in srgb,var(--lum-c-slate-0) 10%,transparent),transparent 74%)}
+.lum-page-head{padding-top:clamp(8px,1vw,18px)}
+.lum-page-head::before{content:"";position:absolute;left:-10px;top:calc(var(--lum-page-pad) * .7);width:5px;height:5px;border-radius:50%;
+  background:var(--lum-c-icy-500);box-shadow:0 0 0 4px color-mix(in srgb,var(--lum-c-icy-500) 12%,transparent)}
+.lum-page-head h1{max-width:15ch;text-wrap:balance}
+.lum-card-solid,.lum-softglass{box-shadow:var(--lum-edge-light)}
+.lum-card-solid{transform:translateZ(var(--lum-depth-1))}
+.lum-softglass{background:linear-gradient(180deg,color-mix(in srgb,var(--lum-material-tint) 70%,var(--lum-glass-bg)),var(--lum-glass-bg))}
+@media (max-width:768px){
+  .lum-main{background:none}
+  .lum-page-head::before{left:-4px;top:calc(var(--lum-page-pad) * .72)}
+}
+@media (prefers-reduced-motion:reduce){
+  .lum-shell,.lum-card-solid,.lum-softglass{transform:none}
+}
+
 /* ---------- utilities ---------- */
 .lum-mt-2{margin-top:var(--lum-sp-2)}.lum-mt-4{margin-top:var(--lum-sp-4)}.lum-mt-6{margin-top:var(--lum-sp-6)}
 .lum-mb-2{margin-bottom:var(--lum-sp-2)}.lum-mb-4{margin-bottom:var(--lum-sp-4)}

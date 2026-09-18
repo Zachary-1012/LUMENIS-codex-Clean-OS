@@ -598,6 +598,14 @@ class PermissionGate:
         """检查指定操作/资源是否有有效审批令牌。"""
         return self._has_valid_approval(operation, resource)
 
+    def get_valid_approval_token(self, operation: str, resource: Optional[str] = None) -> Optional[str]:
+        """返回指定操作/资源当前有效的人工审批令牌（供一次性消费方使用）。
+
+        生产调用方不应直接读取内部审批字典。这个窄接口让需要消费令牌的
+        handler 在成功执行后撤销同一令牌，避免一次人工确认被重放。
+        """
+        return self._get_approval_token(operation, resource)
+
     def _has_valid_approval(self, operation: str, resource: Optional[str] = None) -> bool:
         with self._approval_lock:
             for approval in self._approvals.values():

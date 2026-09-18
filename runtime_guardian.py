@@ -1320,7 +1320,7 @@ class RuntimeGuardian:
         with _get_db(self._db_path) as conn:
             rows = conn.execute(
                 """SELECT worker_id FROM runtime_guardian_workers
-                   WHERE status IN ('dead', 'stopped', 'failed')
+                   WHERE status IN ('dead', 'stopped')
                    AND last_heartbeat_at != '' AND last_heartbeat_at < ?""",
                 (cutoff_str,),
             ).fetchall()

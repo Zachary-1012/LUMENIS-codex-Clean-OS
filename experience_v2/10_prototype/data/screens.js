@@ -5144,6 +5144,17 @@ window.LUM_SCREENS = {
                 "permission": "secret:rotate",
                 "desc": "EFFECT",
                 "risk": true
+              },
+              {
+                "id": "archive-dead-workers",
+                "title": "归档历史 dead workers",
+                "icon": "runtime",
+                "cls": "EFFECT",
+                "scope": "system_runtime",
+                "target": "/api/runtime/archive-dead",
+                "permission": "human_approval",
+                "desc": "先审批，再一次性归档超过 24 小时的 DEAD/STOPPED worker",
+                "risk": true
               }
             ]
           },

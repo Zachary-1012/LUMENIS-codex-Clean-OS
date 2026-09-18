@@ -42,6 +42,18 @@
 .lum-app .lum-btn-danger-ghost{background:transparent;color:var(--lum-c-danger)}
 .lum-app .lum-btn-effect-risk{background:transparent;color:var(--lum-c-danger)}
 
+/* Lumen Beam: directional light is an interaction/event marker, never chrome. */
+.lum-app .lum-btn-primary,.lum-app .lum-ai-composer,.lum-app .lum-opt-composer,.lum-app .lum-dock__fab{position:relative;isolation:isolate;overflow:hidden}
+.lum-app .lum-btn-primary::after,.lum-app .lum-ai-composer::after,.lum-app .lum-opt-composer::after,.lum-app .lum-dock__fab::after{
+  content:"";position:absolute;z-index:0;pointer-events:none;inset:0;opacity:0;
+  background:linear-gradient(104deg,transparent calc(50% - var(--lum-beam-width)),color-mix(in srgb,var(--lum-c-icy-500) 30%,transparent) 50%,transparent calc(50% + var(--lum-beam-width)));
+  transform:translateX(-118%);mix-blend-mode:screen}
+.lum-app .lum-btn-primary:hover::after,.lum-app .lum-btn-primary:focus-visible::after,
+.lum-app .lum-ai-composer:focus-within::after,.lum-app .lum-opt-composer[data-strength="focus"]::after,
+.lum-app .lum-opt-composer[data-strength="composing"]::after{opacity:var(--lum-beam-opacity);animation:lum-beam-sweep var(--lum-beam-duration) var(--lum-ease-standard) both}
+.lum-app .lum-btn-primary>*,.lum-app .lum-ai-composer>*:not(canvas),.lum-app .lum-opt-composer>*:not(canvas),.lum-app .lum-dock__fab>*{position:relative;z-index:1}
+@keyframes lum-beam-sweep{from{transform:translateX(-118%)}to{transform:translateX(118%)}}
+
 /* ============================ 2 · FIELDS ============================ */
 .lum-field{display:flex;flex-direction:column;gap:7px}
 .lum-label{font-family:var(--lum-font-mono);font-size:var(--lum-fs-2xs);letter-spacing:.14em;text-transform:uppercase;color:var(--lum-text-3);font-weight:500}
@@ -88,7 +100,8 @@
 
 /* ============================ 4 · EVIDENCE (the Trace signature) ============================ */
 .lum-evidence{background:var(--lum-surface-solid);border:1px solid var(--lum-line);border-radius:var(--lum-r-md);
-  padding:var(--lum-sp-4) var(--lum-sp-5);position:relative}
+  padding:var(--lum-sp-4) var(--lum-sp-5);position:relative;transition:transform var(--lum-dur-fast) var(--lum-ease-standard),border-color var(--lum-dur-fast),box-shadow var(--lum-dur-fast)}
+.lum-evidence:hover,.lum-evidence[data-active="true"]{transform:translateY(calc(-1 * var(--lum-interaction-depth)));border-color:var(--lum-line-strong);box-shadow:var(--lum-edge-light)}
 /* Trace rail: Claim → Evidence → Source; silver at rest, icy when active */
 .lum-evidence-rail{position:absolute;left:0;top:14px;bottom:14px;width:2px;border-radius:2px;background:var(--lum-lumen-line);opacity:calc(.5 * var(--lum-trace-strength,.8))}
 .lum-evidence[data-active="true"] .lum-evidence-rail,.lum-evidence:hover .lum-evidence-rail{background:var(--lum-lumen-line-icy);opacity:var(--lum-trace-strength,.8)}
@@ -335,6 +348,10 @@
 @media (max-width:1100px){
   .lum-platform-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 100px}
   .lum-platform-form>[data-platform-collection-submit]{grid-column:1/-1;justify-self:start}
+}
+@media (prefers-reduced-motion:reduce){
+  .lum-app .lum-btn-primary::after,.lum-app .lum-ai-composer::after,.lum-app .lum-opt-composer::after,.lum-app .lum-dock__fab::after{animation:none!important;opacity:0!important}
+  .lum-evidence:hover,.lum-evidence[data-active="true"]{transform:none}
 }
 @media (max-width:680px){
   .lum-platform-surface{padding:var(--lum-sp-4);gap:var(--lum-sp-3)}

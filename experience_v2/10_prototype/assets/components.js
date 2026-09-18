@@ -145,6 +145,11 @@
        <button class="lum-btn ${risk ? 'lum-btn-effect-risk' : 'lum-btn-primary'}" id="effect-ok">${t('common.confirm')}</button>`);
     $('#effect-ok').onclick = () => {
       closeModal($('#effect-confirm'));
+      if (node.dataset.action === 'archive-dead-workers' && global.LumRuntime &&
+          typeof global.LumRuntime.archiveDeadWorkers === 'function') {
+        global.LumRuntime.archiveDeadWorkers(node);
+        return;
+      }
       // Prototype: show pending then an explicit "not wired" result — never fake success.
       toast(t('action.not_wired_to_backend'), 'info');
       run && run(node);

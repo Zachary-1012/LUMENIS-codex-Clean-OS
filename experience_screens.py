@@ -718,10 +718,23 @@ def _build_sys04() -> Dict[str, Any]:
                  source="permission_gate.PermissionLevel")
     tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="权限级别（真实枚举）",
                   columns=[{"label": "权限级别", "key": "权限级别"}, {"label": "范围", "key": "范围"}], rows=rows)
+    actions_sec = section("actions", title="受控运行操作", items=[
+        {
+            "id": "archive-dead-workers",
+            "title": "归档历史 dead workers",
+            "icon": "runtime",
+            "cls": "EFFECT",
+            "scope": "system_runtime",
+            "target": "/api/runtime/archive-dead",
+            "permission": "human_approval",
+            "desc": "先审批，再一次性归档超过 24 小时的 DEAD/STOPPED worker",
+            "risk": True,
+        },
+    ])
     note_sec = section("note", STATE_READY, kind="RULE", code="NO-SECRET",
                        text="界面只呈现权限级别与操作类型，不展示任何 token/cookie/密钥/浏览器会话。"
                             + (f"（枚举读取：{levels_err}）" if levels_err else ""))
-    sections = [_head("SYS-04"), section("kpis", STATE_READY, items=[kpi]), tbl, note_sec]
+    sections = [_head("SYS-04"), section("kpis", STATE_READY, items=[kpi]), tbl, actions_sec, note_sec]
     return _envelope("SYS-04", sections, truth={"operation_types": ops})
 
 
@@ -1761,6 +1774,21 @@ def _browser_surface_markup() -> str:
           </div>
           <div class="browser-panel" id="panel-collect" style="display:none">
             <div class="browser-readonly-banner">只读保护 · 不关注、不点赞、不评论、不私信、不发布</div>
+            <section class="browser-auth-card" aria-labelledby="hk-auth-title">
+              <div class="browser-auth-card__head">
+                <div>
+                  <span class="browser-panel-section__title">COLLECTOR IDENTITY</span>
+                  <h3 id="hk-auth-title" class="browser-auth-card__title">香港小红书 · XHS_RETINAUT</h3>
+                </div>
+                <span class="lum-chip lum-chip--sm" id="hk-auth-state" data-state="unknown">未检查</span>
+              </div>
+              <p class="browser-panel-copy">授权恢复只在序境内置浏览器完成。二维码由香港/国际采集驻场端口 9223 提供；不展示 Cookie，不启用大陆采集，不自动发布。</p>
+              <div class="browser-inline-actions">
+                <button type="button" class="lum-btn lum-btn-secondary lum-btn-sm" id="hk-auth-open" onclick="BrowserApp.openHKLogin()">连接香港账号</button>
+                <button type="button" class="lum-btn lum-btn-ghost lum-btn-sm" id="hk-auth-check" onclick="BrowserApp.checkHKAuth()">检查授权</button>
+              </div>
+              <p class="browser-auth-card__trace" id="hk-auth-trace" aria-live="polite">授权状态尚未读取。</p>
+            </section>
             <div class="browser-collect-status">
               <div><span>当前平台</span><b id="cs-platform">—</b></div>
               <div><span>浏览 / 采集</span><b id="cs-port">9224 / 9223</b></div>
@@ -1804,6 +1832,23 @@ def _browser_surface_markup() -> str:
 
   <div class="browser-modal-overlay" id="confirm-modal">
     <div class="browser-modal"><div class="browser-modal__icon">?</div><div class="browser-modal__title">确认在内置浏览器访问外部域名</div><div class="browser-modal__desc">该域名不在当前批准范围。确认后只允许本次在序境内置浏览器导航，不改变持久策略。</div><div class="browser-modal__url-box" id="confirm-url"></div><div class="browser-modal__actions"><button type="button" class="lum-btn lum-btn-ghost" onclick="BrowserApp.cancelNavigate()">取消</button><button type="button" class="lum-btn lum-btn-secondary" onclick="BrowserApp.confirmNavigate()">确认访问</button></div></div>
+  </div>
+  <div class="browser-modal-overlay" id="browser-auth-modal" aria-hidden="true">
+    <div class="browser-modal browser-auth-modal" role="dialog" aria-modal="true" aria-labelledby="browser-auth-modal-title" aria-describedby="browser-auth-modal-desc">
+      <div class="browser-modal__icon browser-auth-modal__icon">⌁</div>
+      <div class="browser-modal__title" id="browser-auth-modal-title">香港小红书授权恢复</div>
+      <div class="browser-modal__desc" id="browser-auth-modal-desc">请在序境内完成扫码。系统只会在检测到真实登录态后保存授权，不会以“我已扫码”替代验证。</div>
+      <div class="browser-auth-modal__stage" id="browser-auth-stage" aria-live="polite">正在准备香港账号授权会话…</div>
+      <div class="browser-auth-modal__qr-wrap" id="browser-auth-qr-wrap" hidden>
+        <img class="browser-auth-modal__qr" id="browser-auth-qr" alt="香港小红书登录二维码">
+        <span class="browser-auth-modal__qr-caption">使用小红书 App 扫描二维码；二维码仅在本机序境页面显示。</span>
+      </div>
+      <div class="browser-auth-modal__message" id="browser-auth-message"></div>
+      <div class="browser-modal__actions">
+        <button type="button" class="lum-btn lum-btn-ghost" id="browser-auth-later" onclick="BrowserApp.closeHKLogin()">稍后处理</button>
+        <button type="button" class="lum-btn lum-btn-secondary" id="browser-auth-confirm" onclick="BrowserApp.confirmHKLogin()" disabled>我已完成扫码</button>
+      </div>
+    </div>
   </div>
   <div class="browser-modal-overlay" id="ai-approval-modal" style="display:none">
     <div class="browser-modal"><div class="browser-modal__icon">!</div><div class="browser-modal__title">需要人工审批</div><div class="browser-modal__desc" id="ai-approval-reason">AI Browser Runtime 请求执行操作，需要人工确认。</div><div class="browser-approval-grid"><span>Action</span><b id="ai-approval-action">—</b><span>Target</span><b id="ai-approval-target">—</b><span>Expected</span><b id="ai-approval-expected">—</b><span>Risk</span><b id="ai-approval-risk">—</b></div><div class="browser-modal__actions"><button type="button" class="lum-btn lum-btn-ghost" onclick="AIBrowser.rejectAction()">拒绝</button><button type="button" class="lum-btn lum-btn-secondary" onclick="AIBrowser.approveAction()">批准执行</button></div></div>

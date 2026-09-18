@@ -140,6 +140,24 @@
   --lum-glass-line: rgba(255,255,255,.7);
   --lum-glass-sh: inset 0 1px 0 rgba(255,255,255,.8),inset 0 0 0 1px rgba(20,22,28,.05),0 14px 38px rgba(14,16,22,.1);
 
+  /* ===== Spatial Lumen v2.5 material grammar =====
+     These are semantic depth tokens, not a second design system.  M0/M1
+     remain opaque and deterministic; M2/M3 are reserved for shell/tools. */
+  --lum-depth-0:0px; --lum-depth-1:1px; --lum-depth-2:2px;
+  --lum-depth-3:6px; --lum-depth-4:14px; --lum-depth-5:28px;
+  --lum-specular-low:rgba(255,255,255,.24);
+  --lum-specular-med:rgba(255,255,255,.46);
+  --lum-specular-high:rgba(255,255,255,.72);
+  --lum-edge-light:inset 0 1px 0 var(--lum-specular-low);
+  --lum-beam-width:clamp(42px,6vw,96px);
+  --lum-beam-opacity:.32;
+  --lum-beam-duration:480ms;
+  --lum-glass-blur-low:8px; --lum-glass-blur-med:16px; --lum-glass-blur-high:24px;
+  --lum-material-tint:rgba(255,255,255,.16);
+  --lum-interaction-depth:1px;
+  --lum-spatial-shell-bg:color-mix(in srgb,var(--lum-surface-solid) 72%,transparent);
+  --lum-spatial-shell-edge:color-mix(in srgb,var(--lum-line-strong) 72%,transparent);
+
   /* ===== Optical V1 (7 params) ===== */
   --lum-opt-refraction:.10; --lum-opt-aberration:.12; --lum-opt-edge-width:1.2px;
   --lum-opt-fresnel:.22; --lum-opt-specular:.28; --lum-opt-blur:.18; --lum-opt-opacity:.9;
@@ -193,6 +211,13 @@
   --lum-glass-bg:rgba(17,18,22,.58); --lum-glass-line:rgba(255,255,255,.09);
   --lum-glass-sh:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.05),0 14px 38px rgba(0,0,0,.5);
   --lum-c-success-bg:#10332a; --lum-c-warning-bg:#3a2a12; --lum-c-danger-bg:#3a1a19; --lum-c-info-bg:#122640;
+  --lum-specular-low:rgba(255,255,255,.08);
+  --lum-specular-med:rgba(255,255,255,.14);
+  --lum-specular-high:rgba(255,255,255,.22);
+  --lum-edge-light:inset 0 1px 0 var(--lum-specular-low);
+  --lum-material-tint:rgba(255,255,255,.045);
+  --lum-spatial-shell-bg:color-mix(in srgb,var(--lum-surface-raised) 76%,transparent);
+  --lum-spatial-shell-edge:color-mix(in srgb,var(--lum-line-strong) 82%,transparent);
 }
 
 /* ============================================================================

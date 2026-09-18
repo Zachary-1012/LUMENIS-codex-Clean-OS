@@ -803,6 +803,46 @@
     }
   }
 
+  /* ---------------- SYS Runtime: explicit human approval -> one-shot archive ----------------
+   * The confirmation modal is the human action.  The first request only mints
+   * a five-minute, resource-scoped token; the second request performs the
+   * archive and the backend consumes the token.  Text outside the product
+   * cannot mint this approval. */
+  async function archiveDeadWorkers() {
+    try {
+      toast('正在生成本次归档的人工审批令牌…', 'info');
+      const approvalResp = await apiFetch('/api/runtime/archive-dead/approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          confirm: true,
+          action: 'archive_dead_workers',
+          resource: '/api/runtime/archive-dead',
+          hours: 24,
+        }),
+      });
+      const approval = await approvalResp.json();
+      if (!approvalResp.ok || !approval.ok || !approval.approval_token) {
+        throw new Error(approval.error || `审批未通过（HTTP ${approvalResp.status}）`);
+      }
+      const runResp = await apiFetch('/api/runtime/archive-dead?hours=24', {
+        method: 'POST', headers: { Accept: 'application/json' },
+      });
+      const result = await runResp.json();
+      if (!runResp.ok || !result.ok || result.approval_consumed !== true) {
+        throw new Error(result.error || result.warning || `归档未确认（HTTP ${runResp.status}）`);
+      }
+      toast(`已完成一次性归档：${result.archived || 0} 个 worker，审批已消费`, 'success');
+      if (currentId) {
+        for (const key of Array.from(hydrated)) if (key.startsWith(currentId + '|')) hydrated.delete(key);
+        await hydrate(currentId);
+        wireRuntime(document);
+      }
+    } catch (err) {
+      toast(`归档未完成：${String(err.message || err)}`, 'error');
+    }
+  }
+
   /* ---------------- 事件接线 ---------------- */
   document.addEventListener('lum:screen', ev => {
     const id = ev.detail && ev.detail.id;
@@ -840,5 +880,5 @@
     console.info('[runtime] identity', idn && idn.database, idn && idn.runtime_guardian);
   }).catch(() => { /* 静默：屏幕水合各自处理失败 */ });
 
-  global.LumRuntime = { hydrate, subjectSignature, setSourceTag };
+  global.LumRuntime = { hydrate, subjectSignature, setSourceTag, archiveDeadWorkers };
 })(window);

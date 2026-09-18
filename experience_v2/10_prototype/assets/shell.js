@@ -41,8 +41,9 @@
 
   function navGroupHTML(id, label, items, labelKey, extraClass = '') {
     const i18n = labelKey ? `data-i18n="${labelKey}"` : '';
+    const entryRoute = (id === 'cth' || id === 'bmp') && items[0] ? `data-route="${items[0].id}"` : '';
     return `<div class="lum-nav-group ${extraClass}" data-group="${id}">
-      <button type="button" class="lum-nav-group__label" data-collapse-group="${id}" aria-expanded="true">
+      <button type="button" class="lum-nav-group__label" ${entryRoute} data-collapse-group="${id}" aria-expanded="true">
         <span ${i18n}>${label}</span><span class="lum-nav-group__chev" aria-hidden="true">${icon('chevron-down', 12)}</span>
       </button>${items.map(linkHTML).join('')}</div>`;
   }
@@ -101,6 +102,22 @@
     $$('#lum-domain-switch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.val === dom ? 'true' : 'false'));
   }
 
+  // Keep the rail as a realm switcher, not a permanent memo list.  The active
+  // realm opens its next level; the other product and Settings stay folded.
+  // Route IDs and IA do not change — only the visible hierarchy does.
+  function syncNavHierarchy(id) {
+    const active = String(id || '');
+    const product = active.startsWith('BMP-') ? 'bmp' : active.startsWith('CTH-') ? 'cth' : '';
+    $$('.lum-nav-group').forEach(group => {
+      const groupId = group.dataset.group;
+      const isProduct = group.classList.contains('lum-nav-group--product');
+      const open = isProduct ? (product ? groupId === product : false) : (groupId === 'settings' && active.startsWith('SYS-'));
+      group.dataset.collapsed = open ? 'false' : 'true';
+      const toggle = group.querySelector('[data-collapse-group]');
+      if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
   function subjectDrawer() {
     const list = subjects().map(s => `<button class="lum-action-item" data-pick="${s.subject_id}" style="width:100%;text-align:left;border:0;cursor:pointer;background:transparent">
         <span class="lum-action-item__ico">${icon(s.subject_type === 'brand' ? 'campaign' : 'target')}</span>
@@ -131,7 +148,14 @@
 
     $('#lum-rail-toggle').onclick = () => { const sh = $('#lum-shell'); sh.dataset.rail = sh.dataset.rail === 'collapsed' ? '' : 'collapsed'; };
     $('#lum-subject-pill').onclick = subjectDrawer;
-    global.LumUI.bindSegmented($('#lum-domain-switch'), v => SubjectContext.setDomain(v));
+    global.LumUI.bindSegmented($('#lum-domain-switch'), v => {
+      SubjectContext.setDomain(v);
+      // The lens switch is a real first-level navigation action.  It lands on
+      // the overview of the selected product domain rather than leaving the
+      // user on a page whose evidence context silently changed.
+      const next = v === 'BMP' ? 'BMP-01' : 'CTH-01';
+      if (location.hash !== '#/' + next) location.hash = '#/' + next;
+    });
     $('#lum-theme-btn').onclick = () => { const next = app.dataset.theme === 'dark' ? 'light' : 'dark'; app.dataset.theme = next; localStorage.setItem('lum-theme', next); };
     $$('[data-route]').forEach(b => b.addEventListener('click', () => { const r = b.dataset.route; if (r) location.hash = '#/' + r; }));
     // Collapsible nav groups (function folding); clicking a group label toggles its items.
@@ -148,11 +172,13 @@
       if (mq.addEventListener) mq.addEventListener('change', sync); else if (mq.addListener) mq.addListener(sync);
     }
     renderSubject();
+    syncNavHierarchy((global.location.hash || '').replace('#/', '') || global.LUM_FIRST || 'AI-01');
     return app;
   }
 
   function setActiveRoute(id) {
     $$('.lum-nav-item,.lum-dock__item').forEach(n => n.setAttribute('aria-current', n.dataset.route === id ? 'page' : 'false'));
+    syncNavHierarchy(id);
     const item = navTree().flatMap(g => g.items).find(i => i.id === id);
     const crumb = $('#lum-crumb-page');
     const domain = $('#lum-crumb-domain');
@@ -180,5 +206,5 @@
     }
   }
   function setContext(html) { const c = $('#lum-context-inner'); if (c) c.innerHTML = html; }
-  global.LumShell = { mountShell, setActiveRoute, setContext, SubjectContext, currentSubject, renderSubject };
+  global.LumShell = { mountShell, setActiveRoute, setContext, SubjectContext, currentSubject, renderSubject, syncNavHierarchy };
 })(window);

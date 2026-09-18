@@ -17,7 +17,9 @@
 
 /* ---------- Compact rail (the catalog field) ---------- */
 .lum-rail{grid-area:rail;display:flex;flex-direction:column;gap:2px;padding:18px 14px 14px;
-  background:transparent;border-right:1px solid var(--lum-line);z-index:var(--lum-z-rail);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+  background:var(--lum-spatial-shell-bg);border-right:1px solid var(--lum-spatial-shell-edge);box-shadow:var(--lum-edge-light);
+  backdrop-filter:blur(var(--lum-glass-blur-low)) saturate(1.08);-webkit-backdrop-filter:blur(var(--lum-glass-blur-low)) saturate(1.08);
+  z-index:var(--lum-z-rail);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
 /* brand lockup — Lumen Mark + wordmark, domain line beneath */
 .lum-rail__brand{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:2px 10px 16px;min-height:var(--lum-topbar-h);box-sizing:border-box;
   text-decoration:none;color:inherit;cursor:pointer;flex:0 0 auto}
@@ -42,6 +44,12 @@
 .lum-nav-group[data-collapsed="true"] .lum-nav-group__chev{transform:rotate(-90deg)}
 .lum-nav-group[data-collapsed="true"] .lum-nav-item{display:none}
 .lum-nav-group{display:flex;flex-direction:column;gap:0;position:relative}
+.lum-nav-group--product{margin:10px 0 4px;padding:7px 0 9px;border-top:1px solid var(--lum-line);border-bottom:1px solid color-mix(in srgb,var(--lum-line) 45%,transparent)}
+.lum-nav-group--product .lum-nav-group__label{font-family:var(--lum-font-display);font-size:var(--lum-fs-lg);font-weight:560;letter-spacing:-.02em;color:var(--lum-text);padding-top:10px}
+.lum-nav-group--product .lum-nav-group__label span:first-child::after{content:"  /  realm";font-family:var(--lum-font-mono);font-size:9px;letter-spacing:.15em;color:var(--lum-text-3);vertical-align:middle}
+.lum-nav-group--product .lum-nav-item{height:34px}
+.lum-nav-group--product .lum-nav-item[aria-current="page"]{background:linear-gradient(90deg,color-mix(in srgb,var(--lum-c-icy-500) 9%,transparent),transparent 82%)}
+.lum-nav-group--product .lum-nav-item[aria-current="page"]::after{background:var(--lum-c-icy-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--lum-c-icy-500) 12%,transparent)}
 /* the single 序轴 behind the catalog — a whisper Boundary, strength follows realm */
 .lum-nav-group::before{content:"";position:absolute;left:11px;top:30px;bottom:8px;width:1px;background:var(--lum-line-strong);
   opacity:calc(var(--lum-axis-strength,.22) * .8)}
@@ -75,7 +83,8 @@
 
 /* ---------- Topbar ---------- */
 .lum-topbar{grid-area:topbar;display:flex;align-items:center;gap:14px;padding:0 var(--lum-sp-6);
-  border-bottom:1px solid var(--lum-line);background:transparent;z-index:var(--lum-z-topbar)}
+  border-bottom:1px solid var(--lum-spatial-shell-edge);background:var(--lum-spatial-shell-bg);box-shadow:var(--lum-edge-light);
+  backdrop-filter:blur(var(--lum-glass-blur-med)) saturate(1.12);-webkit-backdrop-filter:blur(var(--lum-glass-blur-med)) saturate(1.12);z-index:var(--lum-z-topbar)}
 .lum-crumb{display:flex;align-items:center;gap:8px;font-size:var(--lum-fs-sm);color:var(--lum-text-3)}
 .lum-crumb svg{opacity:.55}
 .lum-crumb b{color:var(--lum-text);font-weight:var(--lum-fw-sb);letter-spacing:-.01em}
@@ -103,7 +112,8 @@
 .lum-main{grid-area:main;overflow:auto;position:relative;scroll-behavior:smooth}
 
 /* ---------- Context panel ---------- */
-.lum-context{grid-area:context;border-left:1px solid var(--lum-line);background:transparent;overflow:auto;z-index:var(--lum-z-context)}
+.lum-context{grid-area:context;border-left:1px solid var(--lum-spatial-shell-edge);background:var(--lum-spatial-shell-bg);box-shadow:inset 1px 0 0 var(--lum-specular-low);
+  backdrop-filter:blur(var(--lum-glass-blur-low)) saturate(1.08);-webkit-backdrop-filter:blur(var(--lum-glass-blur-low)) saturate(1.08);overflow:auto;z-index:var(--lum-z-context)}
 .lum-shell[data-context="closed"] .lum-context{display:none}
 .lum-context__inner{padding:var(--lum-sp-5);display:flex;flex-direction:column;gap:var(--lum-sp-4)}
 
@@ -150,7 +160,7 @@
   .lum-dock__fab::after{content:"";position:absolute;inset:-1px;border-radius:50%;pointer-events:none;
     box-shadow:inset 0 0 0 1px var(--lum-line-strong)}
   .lum-page{padding:var(--lum-sp-4)}
-}
+  }
 @media (max-width:430px){ .lum-page{padding:var(--lum-sp-3);gap:var(--lum-sp-4)} .lum-metric__value{font-size:var(--lum-fs-3xl)} }
 @media (max-width:390px){
   .lum-grid-4,.lum-grid-3,.lum-grid-2{grid-template-columns:1fr!important}
