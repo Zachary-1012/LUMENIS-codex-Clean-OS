@@ -7,7 +7,7 @@ ZBC 历史数据适配性融合迁移脚本 v2（可重跑 / 幂等 / 只增不�
      → Domain打product_id → 幂等upsert(note_id/platform_id/content_hash)
 
 硬约束（audit/HISTORICAL_MIGRATION_PLAN_V1.0.md §8）：
-1. publish_date/publish_datetime 100%回填；复用 v4_upgrade/data_cleanup/fix_publish_date.py
+1. publish_date/publish_datetime 100%回填；复用 lumenis/data_cleanup/fix_publish_date.py
 2. topic_campaign taikoo_15th 任务完整保留：paused状态/起止日期/240min间隔/7 topic/120笔记/325快照时间线
 3. 本地审计优先：不复用已存在模块，产出reusable/adapt/missing清单
 
@@ -59,7 +59,7 @@ from database import get_db, DB_PATH  # noqa: E402
 
 # 硬约束#1：复用 fix_publish_date.py 的 parse_relative_date，不重写
 try:
-    from v4_upgrade.data_cleanup.fix_publish_date import (
+    from lumenis.data_cleanup.fix_publish_date import (
         parse_relative_date as _canonical_parse_relative_date,
         fix_publish_dates as _canonical_fix_publish_dates,
         backfill_captured_from_collected as _canonical_backfill_captured,

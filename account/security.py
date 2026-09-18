@@ -2,7 +2,7 @@
 account/security.py — 安全工具
 
 密码哈希(PBKDF2)、验证码哈希、登录限流、安全问答。
-从 v4_upgrade/auth/security.py 主线化提升，保持兼容。
+从 lumenis/auth/security.py 主线化提升，保持兼容。
 """
 import hashlib
 import hmac
@@ -10,7 +10,7 @@ import secrets
 import time
 import os
 
-# 认证配置（与 v4_upgrade/config.py 保持一致）
+# 认证配置（与 lumenis/config.py 保持一致）
 AUTH_CONFIG = {
     "token_expire_hours": 24 * 7,
     "max_login_attempts": 5,
@@ -20,7 +20,7 @@ AUTH_CONFIG = {
     "master_access_key": os.environ.get("V4_ACCESS_KEY", "张志宏"),
 }
 
-# 角色权限（与 v4_upgrade/config.py 保持一致）
+# 角色权限（与 lumenis/config.py 保持一致）
 ROLE_PERMISSIONS = {
     "owner": {
         "browse_all": True, "update_data": True, "add_topic": True,

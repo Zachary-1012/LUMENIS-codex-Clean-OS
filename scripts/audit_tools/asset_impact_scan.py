@@ -73,7 +73,7 @@ DOMAIN_RULES = [
              "production_evidence", "app_evidence"]),
     ("OSAI", ["osai", "zachary", "序境"]),
     ("PODCAST", ["podcast"]),
-    ("MIGRATION", ["migration", "migrate", "alembic", "v4_upgrade", "historical"]),
+    ("MIGRATION", ["migration", "migrate", "alembic", "lumenis", "historical"]),
     ("COOKIE", ["cookie", "auth_recovery", "login_manager", "account_keepalive",
                 "browser_runtime", "internal_browser", "cdp_", "edge-cdp"]),
     ("NOTIFICATION", ["notification", "alert", "wechat_notifier", "badge"]),

@@ -29,7 +29,7 @@ class BilibiliAdapter(BasePlatformAdapter):
         if self.backend is not None:
             return self.backend
         try:
-            from v4_upgrade.adapters.bilibili import BilibiliAdapter as V4BilibiliAdapter
+            from lumenis.adapters.bilibili import BilibiliAdapter as V4BilibiliAdapter
             self.backend = V4BilibiliAdapter()
             return self.backend
         except Exception as exc:
@@ -143,7 +143,7 @@ class BilibiliAdapter(BasePlatformAdapter):
         return self._delegate_v4("creator", mid=creator_id)
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
-        from v4_upgrade.adapters.cookie_vault import check_cookie_status
+        from lumenis.adapters.cookie_vault import check_cookie_status
         session_state = check_cookie_status("bilibili").get("status")
         try:
             backend = self._load_backend()

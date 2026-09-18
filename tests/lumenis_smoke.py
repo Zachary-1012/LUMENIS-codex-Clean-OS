@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""V4 模块零污染旁路冒烟测试：临时库 + Flask test_client，不碰真实 data/monitor.db、不占 8200。"""
+"""LUMENIS 核心模块零污染旁路冒烟测试：临时库 + Flask test_client，不碰真实 data/monitor.db、不占 8200。"""
 import os, sys, tempfile, json, traceback
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 TMP = os.path.join(ROOT, "tests", "_v4_smoke.db")
 if os.path.exists(TMP):
     os.remove(TMP)
-os.environ["MONITOR_DB_PATH"] = TMP  # 必须在 import v4_upgrade 之前
+os.environ["MONITOR_DB_PATH"] = TMP  # 必须在 import lumenis 之前
 os.environ["V4_TOKEN_SECRET"] = "smoke-test-secret"
 # D7: 密钥登录走与生产一致的“环境变量注入”路径（生产由 .env V4_ACCESS_KEY 提供），
 # 测试用固定假密钥自洽验证，不再硬编码历史默认值、也不依赖真实 .env / 真实密钥。
@@ -20,11 +20,11 @@ def check(name, cond, extra=""):
 # 1) 依赖/import
 try:
     from flask import Flask
-    import v4_upgrade
-    from v4_upgrade import create_v4_blueprint, init_v4_modules
-    from v4_upgrade.adapters import registry, register_default_adapters
-    from v4_upgrade.importer.analyzer import analyze_text
-    check("import v4_upgrade 成功", True, v4_upgrade.__version__)
+    import lumenis
+    from lumenis import create_v4_blueprint, init_v4_modules
+    from lumenis.adapters import registry, register_default_adapters
+    from lumenis.importer.analyzer import analyze_text
+    check("import lumenis 成功", True, lumenis.__version__)
 except Exception:
     traceback.print_exc(); print("import 阶段即失败，终止"); sys.exit(1)
 
@@ -143,7 +143,7 @@ notes = analyze_text("太古汇15周年活动很热闹，整体体验不错，�
 check("analyze_text 规则回退产出笔记", len(notes)>=1 and notes[0].title, f"sentiment={notes[0].sentiment if notes else '-'}")
 
 # 16) 数据清洗（隔离库样本）
-from v4_upgrade.data_cleanup.fix_publish_date import fix_publish_dates, find_empty_content_notes, generate_backfill_tasks
+from lumenis.data_cleanup.fix_publish_date import fix_publish_dates, find_empty_content_notes, generate_backfill_tasks
 dry = fix_publish_dates(dry_run=True)
 check("publish_date dry-run 识别脏数据", dry["dirty_count"]>=1, str({k:dry[k] for k in ('total_checked','dirty_count')}))
 emp = find_empty_content_notes()

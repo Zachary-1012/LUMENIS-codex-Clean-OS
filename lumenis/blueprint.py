@@ -2,7 +2,7 @@
 V4 升级模块蓝图总入口
 注册所有V4新模块的路由，不修改现有app.py
 用法（在app.py末尾添加）:
-    from v4_upgrade import create_v4_blueprint
+    from lumenis import create_v4_blueprint
     app.register_blueprint(create_v4_blueprint())
 """
 from flask import Blueprint, jsonify, request, send_file, g

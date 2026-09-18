@@ -22,7 +22,7 @@ SCAN_DIRS = ['', 'collector_v2', 'platform_adapters', 'browser_runtime',
              'evaluation', 'audit', 'config', 'contracts', 'core',
              'ad_intelligence', 'proxy_pool', 'edge-cdp-general',
              'edge-cdp-newaccount', 'edge-cdp-profile', 'edge-cdp-retinaut',
-             'ref_gpt_v2', 'v4_upgrade']
+             'ref_gpt_v2', 'lumenis']
 
 PATTERNS = [
     (r'D:\\Taikoo-monitor-new', 'ZBC'),

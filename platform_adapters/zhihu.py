@@ -29,7 +29,7 @@ class ZhihuAdapter(BasePlatformAdapter):
         if self.backend is not None:
             return self.backend
         try:
-            from v4_upgrade.adapters.zhihu import ZhihuAdapter as V4ZhihuAdapter
+            from lumenis.adapters.zhihu import ZhihuAdapter as V4ZhihuAdapter
             return V4ZhihuAdapter()
         except Exception as exc:
             raise RuntimeError(f"无法加载 v4 知乎采集引擎: {exc}") from exc

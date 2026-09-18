@@ -12,7 +12,7 @@ import sqlite3
 
 from db_paths import main_db_path
 
-# ── 基础 v4 表（与 v4_upgrade/auth/models.py 保持一致，幂等重建） ──
+# ── 基础 v4 表（与 lumenis/auth/models.py 保持一致，幂等重建） ──
 BASE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS v4_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -42,7 +42,7 @@ def health_check() -> tuple[bool, str]:
     """只读、非破坏：关键模块可导入 + 生产库只读 quick_check（绝不写库）。"""
     try:
         import subject_rules  # noqa: F401  主体红线模块
-        from v4_upgrade.version_center.git_manager import GitVersionManager  # noqa: F401
+        from lumenis.version_center.git_manager import GitVersionManager  # noqa: F401
         if os.path.exists(DB):
             uri = "file:" + DB.replace("\\", "/") + "?mode=ro"
             con = sqlite3.connect(uri, uri=True)
@@ -64,7 +64,7 @@ def main() -> int:
         return 2
 
     try:
-        from v4_upgrade.version_center.git_manager import GitVersionManager
+        from lumenis.version_center.git_manager import GitVersionManager
         gm = GitVersionManager(ROOT)
 
         # [2/5] 安全闸 + 本地成版本（不推送）

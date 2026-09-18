@@ -8,9 +8,9 @@ import sys, os, time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from v4_upgrade.adapters import registry, register_default_adapters
-from v4_upgrade.adapters import collector_service as cs
-from v4_upgrade.adapters.persist import get_conn
+from lumenis.adapters import registry, register_default_adapters
+from lumenis.adapters import collector_service as cs
+from lumenis.adapters.persist import get_conn
 
 register_default_adapters()
 print("platforms:", registry.list_platforms())

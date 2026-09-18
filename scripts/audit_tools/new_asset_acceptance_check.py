@@ -348,7 +348,7 @@ def check_wechat_adapter() -> Dict:
     }
     # 检查 wechat_notifier.py
     wechat_file = PROJECT_ROOT / "wechat_notifier.py"
-    sogou_file = PROJECT_ROOT / "v4_upgrade" / "adapters" / "sogou_wechat.py"
+    sogou_file = PROJECT_ROOT / "lumenis" / "adapters" / "sogou_wechat.py"
 
     has_wechat = wechat_file.exists()
     has_sogou = sogou_file.exists()

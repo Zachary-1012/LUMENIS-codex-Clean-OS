@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from v4_upgrade.adapters.zhihu import ZhihuAdapter
+from lumenis.adapters.zhihu import ZhihuAdapter
 
 
 def _mock_response(json_data):
@@ -23,10 +23,10 @@ class TestZhihuAdapterSearch:
     @pytest.fixture(autouse=True)
     def _disable_browser(self):
         """测试环境禁用浏览器采集，走API路径（mock requests.get）。"""
-        with patch("v4_upgrade.adapters.zhihu.ZhihuAdapter._search_browser", return_value=None):
+        with patch("lumenis.adapters.zhihu.ZhihuAdapter._search_browser", return_value=None):
             yield
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_answer_success(self, mock_get):
         mock_get.return_value = _mock_response({
             "data": [
@@ -53,7 +53,7 @@ class TestZhihuAdapterSearch:
         assert result.notes[0].source_platform == "zhihu"
         assert result.notes[0].publish_date.startswith("2023-")
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_article_success(self, mock_get):
         mock_get.return_value = _mock_response({
             "data": [
@@ -73,7 +73,7 @@ class TestZhihuAdapterSearch:
         assert result.notes[0].title == "深度分析"
         assert result.notes[0].url == "https://zhuanlan.zhihu.com/p/art1"
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_question_success(self, mock_get):
         mock_get.return_value = _mock_response({
             "data": [
@@ -91,7 +91,7 @@ class TestZhihuAdapterSearch:
         assert result.notes[0].comments == 5
         assert result.notes[0].url == "https://www.zhihu.com/question/q2"
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_empty(self, mock_get):
         mock_get.return_value = _mock_response({"data": []})
         ad = ZhihuAdapter()
@@ -99,7 +99,7 @@ class TestZhihuAdapterSearch:
         assert result.success is True
         assert len(result.notes) == 0
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_api_error(self, mock_get):
         mock_get.return_value = _mock_response({"error": {"message": "参数错误", "code": 100}})
         ad = ZhihuAdapter()
@@ -113,7 +113,7 @@ class TestZhihuAdapterSearch:
         assert result.success is False
         assert "关键词" in result.error
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_exception(self, mock_get):
         mock_get.side_effect = RuntimeError("网络中断")
         ad = ZhihuAdapter()
@@ -121,7 +121,7 @@ class TestZhihuAdapterSearch:
         assert result.success is False
         assert "异常" in result.error
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_max_results(self, mock_get):
         items = [{"object": {"type": "question", "id": str(i), "title": f"q{i}",
                              "answer_count": 0}} for i in range(10)]
@@ -130,7 +130,7 @@ class TestZhihuAdapterSearch:
         result = ad.search("test", max_results=3)
         assert len(result.notes) == 3
 
-    @patch("v4_upgrade.adapters.zhihu.requests.get")
+    @patch("lumenis.adapters.zhihu.requests.get")
     def test_search_skips_unknown_types(self, mock_get):
         mock_get.return_value = _mock_response({
             "data": [
@@ -163,7 +163,7 @@ class TestZhihuAdapterUtils:
 class TestZhihuAdapterRegistry:
 
     def test_registry_has_zhihu(self):
-        from v4_upgrade.adapters.registry import registry, register_default_adapters
+        from lumenis.adapters.registry import registry, register_default_adapters
         register_default_adapters()
         ad = registry.get("zhihu")
         assert ad is not None

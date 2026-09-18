@@ -11,22 +11,22 @@ sys.path.insert(0, ROOT)
 class TestFacebookAdapter:
 
     def test_init_auto_load_cookie(self):
-        from v4_upgrade.adapters.facebook import FacebookAdapter
-        with patch("v4_upgrade.adapters.facebook.FacebookAdapter._auto_load_cookie", return_value="c=1"):
+        from lumenis.adapters.facebook import FacebookAdapter
+        with patch("lumenis.adapters.facebook.FacebookAdapter._auto_load_cookie", return_value="c=1"):
             ad = FacebookAdapter()
             assert ad._cookie_string == "c=1"
             assert ad.platform_name == "facebook"
 
     def test_search_empty_keyword(self):
-        from v4_upgrade.adapters.facebook import FacebookAdapter
+        from lumenis.adapters.facebook import FacebookAdapter
         ad = FacebookAdapter(cookie_string="test")
         r = ad.search("", max_results=5)
         assert r.success is False
         assert "关键词为空" in r.error
 
-    @patch("v4_upgrade.adapters.facebook.FacebookAdapter._search_browser")
+    @patch("lumenis.adapters.facebook.FacebookAdapter._search_browser")
     def test_search_success(self, mock_search):
-        from v4_upgrade.adapters.facebook import FacebookAdapter, CollectedNote
+        from lumenis.adapters.facebook import FacebookAdapter, CollectedNote
         mock_search.return_value = MagicMock(success=True, notes=[
             CollectedNote(title="test", content="content", url="https://fb.com/1",
                           author="user", likes=10, comments=2, source_platform="facebook")
@@ -37,13 +37,13 @@ class TestFacebookAdapter:
         assert len(r.notes) == 1
 
     def test_auto_load_cookie_missing_file(self):
-        from v4_upgrade.adapters.facebook import FacebookAdapter
+        from lumenis.adapters.facebook import FacebookAdapter
         with patch("pathlib.Path.exists", return_value=False):
             result = FacebookAdapter._auto_load_cookie()
             assert result == ""
 
     def test_extract_metric(self):
-        from v4_upgrade.adapters.facebook import FacebookAdapter
+        from lumenis.adapters.facebook import FacebookAdapter
         card = MagicMock()
         card.query_selector.return_value = None
         assert FacebookAdapter._extract_metric(card, "span") == 0
@@ -52,22 +52,22 @@ class TestFacebookAdapter:
 class TestXAdapter:
 
     def test_init_auto_load_cookie(self):
-        from v4_upgrade.adapters.x_platform import XAdapter
-        with patch("v4_upgrade.adapters.x_platform.XAdapter._auto_load_cookie", return_value="c=1"):
+        from lumenis.adapters.x_platform import XAdapter
+        with patch("lumenis.adapters.x_platform.XAdapter._auto_load_cookie", return_value="c=1"):
             ad = XAdapter()
             assert ad._cookie_string == "c=1"
             assert ad.platform_name == "x"
 
     def test_search_empty_keyword(self):
-        from v4_upgrade.adapters.x_platform import XAdapter
+        from lumenis.adapters.x_platform import XAdapter
         ad = XAdapter(cookie_string="test")
         r = ad.search("", max_results=5)
         assert r.success is False
         assert "关键词为空" in r.error
 
-    @patch("v4_upgrade.adapters.x_platform.XAdapter._search_browser")
+    @patch("lumenis.adapters.x_platform.XAdapter._search_browser")
     def test_search_success(self, mock_search):
-        from v4_upgrade.adapters.x_platform import XAdapter, CollectedNote
+        from lumenis.adapters.x_platform import XAdapter, CollectedNote
         mock_search.return_value = MagicMock(success=True, notes=[
             CollectedNote(title="test tweet", content="content", url="https://x.com/1",
                           author="user", author_id="@user", likes=100, comments=5,
@@ -80,7 +80,7 @@ class TestXAdapter:
         assert r.notes[0].author_id == "@user"
 
     def test_extract_metric_no_element(self):
-        from v4_upgrade.adapters.x_platform import XAdapter
+        from lumenis.adapters.x_platform import XAdapter
         tweet = MagicMock()
         tweet.query_selector.return_value = None
         assert XAdapter._extract_metric(tweet, '[data-testid="like"]') == 0
@@ -91,8 +91,8 @@ class TestXAdapter:
         直接 mock cookie_vault.load_cookies 返回测试 cookie 列表，避免依赖真实 cookie 文件。
         （历史版本 mock Path.read_text 无效，因为 load_cookies 内部用 open(p) 而非 p.read_text()）
         """
-        from v4_upgrade.adapters.x_platform import XAdapter
-        with patch("v4_upgrade.adapters.cookie_vault.load_cookies",
+        from lumenis.adapters.x_platform import XAdapter
+        with patch("lumenis.adapters.cookie_vault.load_cookies",
                    return_value=[{"name": "auth_token", "value": "abc"}]):
             result = XAdapter._auto_load_cookie()
             assert "auth_token=abc" in result

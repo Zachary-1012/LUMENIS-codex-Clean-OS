@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from v4_upgrade.adapters.bilibili import BilibiliAdapter
-from v4_upgrade.adapters.base import AdapterResult
+from lumenis.adapters.bilibili import BilibiliAdapter
+from lumenis.adapters.base import AdapterResult
 
 
 def _make_manager(logged_in=True, search_result=None):
@@ -156,7 +156,7 @@ class TestBilibiliAdapterRegistry:
 
     def test_registry_can_get_bilibili(self):
         """register_default_adapters 后可获取 bilibili adapter。"""
-        from v4_upgrade.adapters.registry import registry, register_default_adapters
+        from lumenis.adapters.registry import registry, register_default_adapters
         register_default_adapters()
         ad = registry.get("bilibili")
         assert ad is not None

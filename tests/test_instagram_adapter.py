@@ -19,7 +19,7 @@ if os.path.exists(envp):
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-from v4_upgrade.adapters.registry import registry, register_default_adapters
+from lumenis.adapters.registry import registry, register_default_adapters
 register_default_adapters()
 
 ad = registry.get("instagram")

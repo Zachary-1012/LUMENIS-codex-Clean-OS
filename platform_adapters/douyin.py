@@ -30,7 +30,7 @@ class DouyinAdapter(BasePlatformAdapter):
         if self.backend is not None:
             return self.backend
         try:
-            from v4_upgrade.adapters.douyin import DouyinAdapter as V4DouyinAdapter
+            from lumenis.adapters.douyin import DouyinAdapter as V4DouyinAdapter
             self.backend = V4DouyinAdapter()
             return self.backend
         except Exception as exc:
@@ -146,8 +146,8 @@ class DouyinAdapter(BasePlatformAdapter):
     def health_check(self, **kwargs: Any) -> CollectionResult:
         """Check configured worker reachability without launching a browser."""
         try:
-            from v4_upgrade.adapters.douyin import _configured_browser_worker_url
-            from v4_upgrade.adapters.human_browser import is_cdp_url_open
+            from lumenis.adapters.douyin import _configured_browser_worker_url
+            from lumenis.adapters.human_browser import is_cdp_url_open
             cdp_url = _configured_browser_worker_url()
         except Exception:
             return CollectionResult(

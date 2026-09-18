@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def test_loader_overview_lists_real_seeds():
-    from v4_upgrade.global_bil import overview, load_resource, _FILES
+    from lumenis.global_bil import overview, load_resource, _FILES
     ov = overview()
     assert set(ov) == set(_FILES)
     for name, info in ov.items():
@@ -19,7 +19,7 @@ def test_loader_overview_lists_real_seeds():
 
 
 def test_loader_rejects_unknown_resource():
-    from v4_upgrade.global_bil import load_resource
+    from lumenis.global_bil import load_resource
     with pytest.raises(KeyError):
         load_resource('secret_etc')
 

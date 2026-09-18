@@ -6,7 +6,7 @@ ZBC 资产收敛 ② —— 资产身份登记生成器（只读，不改任何�
   docs/governance/consolidation-002/raw/module_graph.json
   app 及各模块路由（AST/正则只读提取）
   data/monitor.db（sqlite 只读 mode=ro，读表名与行数）
-  static / templates / v4_upgrade 模板、requirements.txt
+  static / templates / lumenis 模板、requirements.txt
 输出：
   docs/governance/consolidation-002/ASSET-REGISTRY.md
 
@@ -54,7 +54,7 @@ def domain_of(rel):
         if any(k in base or k in low for k in kws):
             return dom
     # 目录归属兜底
-    if low.startswith("v4_upgrade/"):
+    if low.startswith("lumenis/"):
         return "v4增强层"
     if low.startswith("collector_v2/"):
         return "采集器(新一代)"
@@ -63,7 +63,7 @@ def domain_of(rel):
     return "其他/待归类"
 
 def layer_of(rel):
-    if rel.startswith("v4_upgrade/"):
+    if rel.startswith("lumenis/"):
         return "ZBMP增强层(共用Core)"
     if rel.startswith(("platform_adapters/", "collector_v2/", "collector_guard/", "proxy_pool/", "report_export/", "deployment/")):
         return "子系统包"
@@ -161,7 +161,7 @@ for sub in ("templates",):
             for f in fns:
                 if f.endswith(".html"):
                     tpl_files.append(os.path.relpath(os.path.join(dp, f), ROOT).replace("\\", "/"))
-for dp, _, fns in os.walk(os.path.join(ROOT, "v4_upgrade")):
+for dp, _, fns in os.walk(os.path.join(ROOT, "lumenis")):
     for f in fns:
         if f.endswith(".html"):
             tpl_files.append(os.path.relpath(os.path.join(dp, f), ROOT).replace("\\", "/"))

@@ -168,7 +168,7 @@ def patch_logging():
     original_getLogger = logging.getLogger
 
     def patched_getLogger(name=None):
-        if name and name in ("collector", "analyzer", "audit", "risk", "v4_upgrade"):
+        if name and name in ("collector", "analyzer", "audit", "risk", "lumenis"):
             return get_logger(name)
         return original_getLogger(name)
 

@@ -7,8 +7,8 @@
 口径约束：只规范 publish_date（发布时间），绝不改动 captured_at/collected_at（采集时间），二者不混淆。
 基准时间优先 captured_at（新规范列），回退 collected_at（旧列），再回退当前时间。
 用法:
-  python -m v4_upgrade.data_cleanup.fix_publish_date        # dry run 只预览
-  python -m v4_upgrade.data_cleanup.fix_publish_date --apply # 真正写库
+  python -m lumenis.data_cleanup.fix_publish_date        # dry run 只预览
+  python -m lumenis.data_cleanup.fix_publish_date --apply # 真正写库
 """
 import re
 import sqlite3

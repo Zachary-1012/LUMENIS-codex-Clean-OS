@@ -14,8 +14,8 @@ ZBC Canonical Data Layer（产品域 08：Canonical Data）
   - 幂等写入：按 canonical_id 去重，已存在则更新非标注字段
 
 数据流：
-  CollectedNote (v4_upgrade/adapters/base.py)
-    → persist_social_note() / persist_web_mention() (v4_upgrade/adapters/persist.py)
+  CollectedNote (lumenis/adapters/base.py)
+    → persist_social_note() / persist_web_mention() (lumenis/adapters/persist.py)
     → notes / web_mentions 表（现有主存储）
     → note_to_canonical() / web_mention_to_canonical() (本模块)
     → canonical_data 表（统一 Canonical 视图，旁路新增）
@@ -26,8 +26,8 @@ ZBC Canonical Data Layer（产品域 08：Canonical Data）
   - canonical_data.web_mention_to_canonical()  → canonical_data.py:280
   - canonical_data.collected_note_to_canonical()→ canonical_data.py:320
   - canonical_data.sync_all_to_canonical()      → canonical_data.py:370
-  - persist.persist_social_note()               → v4_upgrade/adapters/persist.py:103
-  - persist.persist_web_mention()               → v4_upgrade/adapters/persist.py:134
+  - persist.persist_social_note()               → lumenis/adapters/persist.py:103
+  - persist.persist_web_mention()               → lumenis/adapters/persist.py:134
 """
 from __future__ import annotations
 
@@ -661,9 +661,9 @@ def web_mention_to_canonical(web_row: Dict[str, Any], product_id: str = PRODUCT_
 
 def collected_note_to_canonical(collected: Any, source_platform: str = "",
                                   keyword: str = "", product_id: str = PRODUCT_CTH) -> CanonicalRecord:
-    """将 v4_upgrade CollectedNote（dataclass）转化为 CanonicalRecord。
+    """将 lumenis CollectedNote（dataclass）转化为 CanonicalRecord。
 
-    调用链：CollectedNote (v4_upgrade/adapters/base.py:25)
+    调用链：CollectedNote (lumenis/adapters/base.py:25)
             → collected_note_to_canonical() → canonical_data 表
     文件: canonical_data.py:320
 

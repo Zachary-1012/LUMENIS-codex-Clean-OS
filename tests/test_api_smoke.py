@@ -14,8 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def test_api_smoke_release_gate():
     from app import app
-    from v4_upgrade.auth.security import generate_token
-    from v4_upgrade.auth.models import get_db, init_auth_db
+    from lumenis.auth.security import generate_token
+    from lumenis.auth.models import get_db, init_auth_db
 
     init_auth_db()
     conn = get_db()

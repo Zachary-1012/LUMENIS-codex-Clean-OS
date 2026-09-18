@@ -9,7 +9,7 @@
 import sys, os, time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from v4_upgrade.adapters.douyin import DouyinAdapter
+from lumenis.adapters.douyin import DouyinAdapter
 
 t0 = time.time()
 r = DouyinAdapter().search("广州太古汇", 10)

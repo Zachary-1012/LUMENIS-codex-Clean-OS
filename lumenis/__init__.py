@@ -1,12 +1,12 @@
 """
 V4 升级模块入口
 用法:
-    from v4_upgrade import create_v4_blueprint, init_v4_modules
+    from lumenis import create_v4_blueprint, init_v4_modules
     init_v4_modules()
     app.register_blueprint(create_v4_blueprint())
 
 导入优化（2026-09-07）：blueprint / auth 为重量级子树（拉起 collect/importer/ai_hub 等），
-改为 PEP 562 惰性导入，避免 `import v4_upgrade.adapters.*` 等轻量场景被重子树拖慢。
+改为 PEP 562 惰性导入，避免 `import lumenis.adapters.*` 等轻量场景被重子树拖慢。
 config 为纯标准库轻量模块，保持直接导入。
 """
 from .config import AUTH_CONFIG, ROLE_PERMISSIONS, ADAPTER_CONFIG

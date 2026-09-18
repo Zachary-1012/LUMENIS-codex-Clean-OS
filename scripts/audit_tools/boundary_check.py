@@ -60,7 +60,7 @@ PRODUCTION_DIRS = [
     "edge-cdp-general", "edge-cdp-newaccount", "edge-cdp-profile", "edge-cdp-retinaut",
     "evaluation", "migrations", "nodejs", "platform_adapters", "podcast",
     "proxy_pool", "ref_gpt_v2", "report_export", "scripts",
-    "static", "templates", "tests", "tools", "v4_upgrade", "序境",
+    "static", "templates", "tests", "tools", "lumenis", "序境",
 ]
 
 # 严重度

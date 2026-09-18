@@ -3,7 +3,7 @@
 GAP-10 report_center 旁路路由挂载
 【施工标准】先旁路、再切换；默认关闭；未完成真实验证不得标记完成。
 
-在 app.py 中新增报告中心旁路路由，使用 v4_upgrade.report_center 的 ReportGenerator/ReportExporter。
+在 app.py 中新增报告中心旁路路由，使用 lumenis.report_center 的 ReportGenerator/ReportExporter。
 Feature Gate: ZBC_REPORT_CENTER=1 才启用，默认关闭。
 不改变现有报告功能（/api/report/* 等），仅新增旁路入口。
 """
@@ -27,7 +27,7 @@ def status():
         "ok": True,
         "enabled": enabled,
         "feature_gate": FEATURE_GATE_ENV,
-        "module": "v4_upgrade.report_center",
+        "module": "lumenis.report_center",
         "capabilities": ["ReportGenerator", "ReportExporter", "standard_taxonomy"],
         "brand_modes": ["cth", "zbmp"],
         "periods": ["daily", "weekly", "monthly", "yearly", "custom"],
@@ -36,7 +36,7 @@ def status():
         resp["note"] = f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用"
         return jsonify(resp), 200
     try:
-        from v4_upgrade.report_center import ReportGenerator, ReportExporter
+        from lumenis.report_center import ReportGenerator, ReportExporter
         resp["import_ok"] = True
         resp["report_generator"] = ReportGenerator.__name__
         resp["report_exporter"] = ReportExporter.__name__
@@ -64,7 +64,7 @@ def generate():
         return jsonify({"ok": False, "error": f"不支持的 period: {period}"}), 400
 
     try:
-        from v4_upgrade.report_center import ReportGenerator
+        from lumenis.report_center import ReportGenerator
         gen = ReportGenerator(brand_mode=brand_mode)
         report = gen.generate(period=period, start_date=start_date, end_date=end_date)
         return jsonify({
@@ -94,7 +94,7 @@ def export():
         return jsonify({"ok": False, "error": f"不支持的 brand_mode: {brand_mode}"}), 400
 
     try:
-        from v4_upgrade.report_center import ReportExporter
+        from lumenis.report_center import ReportExporter
         exporter = ReportExporter()
         result = exporter.generate_and_export(brand_mode=brand_mode, period=period)
         return jsonify({

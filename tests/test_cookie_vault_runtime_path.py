@@ -5,7 +5,7 @@ import json
 
 
 def test_cookie_vault_follows_runtime_data_dir_without_reimport(monkeypatch, tmp_path):
-    from v4_upgrade.adapters import cookie_vault
+    from lumenis.adapters import cookie_vault
 
     runtime_root = tmp_path / "protected-runtime"
     cookie_dir = runtime_root / "cookies"

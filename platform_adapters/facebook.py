@@ -28,7 +28,7 @@ class FacebookAdapter(BasePlatformAdapter):
         if self.backend is not None:
             return self.backend
         try:
-            from v4_upgrade.adapters.facebook import FacebookAdapter as V4FacebookAdapter
+            from lumenis.adapters.facebook import FacebookAdapter as V4FacebookAdapter
             return V4FacebookAdapter()
         except Exception as exc:
             raise RuntimeError(f"无法加载 v4 Facebook 采集引擎: {exc}") from exc

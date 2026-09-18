@@ -12,9 +12,9 @@ from unittest.mock import MagicMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from v4_upgrade.adapters.base import AdapterResult, CollectedNote
-from v4_upgrade.adapters.sogou_wechat import SogouWechatAdapter
-from v4_upgrade.adapters.sogou_search import SogouSearchAdapter
+from lumenis.adapters.base import AdapterResult, CollectedNote
+from lumenis.adapters.sogou_wechat import SogouWechatAdapter
+from lumenis.adapters.sogou_search import SogouSearchAdapter
 
 
 # ============================================================
@@ -67,7 +67,7 @@ class TestSogouWechatAdapter:
         normal = "<html><body>" + "正常搜索结果内容展示 " * 80 + "</body></html>"
         assert ad._is_blocked(normal) is False
 
-    @patch("v4_upgrade.adapters.sogou_wechat.SogouWechatAdapter._load_cookies", return_value={})
+    @patch("lumenis.adapters.sogou_wechat.SogouWechatAdapter._load_cookies", return_value={})
     def test_search_blocked_returns_failure(self, mock_cookies):
         """命中反爬页 → success=False，绝不返回空列表冒充成功。"""
         ad = SogouWechatAdapter()
@@ -81,7 +81,7 @@ class TestSogouWechatAdapter:
         assert "反爬" in r.error or "验证" in r.error
         assert r.notes == []
 
-    @patch("v4_upgrade.adapters.sogou_wechat.SogouWechatAdapter._load_cookies", return_value={})
+    @patch("lumenis.adapters.sogou_wechat.SogouWechatAdapter._load_cookies", return_value={})
     def test_search_network_error_returns_failure(self, mock_cookies):
         """网络异常 → success=False，显式记录。"""
         ad = SogouWechatAdapter()
@@ -163,7 +163,7 @@ class TestSogouWechatAdapter:
     def test_cookie_vault_load_no_crash(self):
         """cookie_vault 加载失败时降级匿名，不崩溃。"""
         ad = SogouWechatAdapter()
-        with patch("v4_upgrade.adapters.cookie_vault.to_requests_cookies", side_effect=Exception("no vault")):
+        with patch("lumenis.adapters.cookie_vault.to_requests_cookies", side_effect=Exception("no vault")):
             cookies = ad._load_cookies()
         assert cookies == {}
 
@@ -210,7 +210,7 @@ class TestSogouSearchAdapter:
         assert "news" in names
         assert "web" in names
 
-    @patch("v4_upgrade.adapters.sogou_search.SogouSearchAdapter._load_cookies", return_value={})
+    @patch("lumenis.adapters.sogou_search.SogouSearchAdapter._load_cookies", return_value={})
     def test_search_all_channels_blocked(self, mock_cookies):
         """两个频道都被拦 → success=False，不返回空成功。"""
         ad = SogouSearchAdapter()
@@ -275,7 +275,7 @@ class TestSogouSearchAdapter:
 
     def test_cookie_vault_load(self):
         ad = SogouSearchAdapter()
-        with patch("v4_upgrade.adapters.cookie_vault.to_requests_cookies", return_value={"SNUID": "abc"}):
+        with patch("lumenis.adapters.cookie_vault.to_requests_cookies", return_value={"SNUID": "abc"}):
             cookies = ad._load_cookies()
         assert cookies == {"SNUID": "abc"}
 
@@ -292,13 +292,13 @@ class TestAdapterRegistryIntegration:
 
     def test_sogou_adapters_registered(self):
         """搜狗微信/搜索在默认注册表中。"""
-        from v4_upgrade.adapters.registry import registry, register_default_adapters
+        from lumenis.adapters.registry import registry, register_default_adapters
         register_default_adapters()
         assert registry.get("sogou_wechat") is not None
         assert registry.get("sogou_search") is not None
 
     def test_sogou_wechat_in_registry_list(self):
-        from v4_upgrade.adapters.registry import registry, register_default_adapters
+        from lumenis.adapters.registry import registry, register_default_adapters
         register_default_adapters()
         platforms = registry.list_platforms()
         assert "sogou_wechat" in platforms

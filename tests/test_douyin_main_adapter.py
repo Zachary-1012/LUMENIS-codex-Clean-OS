@@ -37,7 +37,7 @@ def _make_v4_note(title="测试视频", author="up主", url="https://v.douyin.co
 
 
 def _make_v4_result(success=True, notes=None, error="", raw_count=0, duration=0.5):
-    from v4_upgrade.adapters.base import AdapterResult
+    from lumenis.adapters.base import AdapterResult
     return AdapterResult(success=success, notes=notes or [], error=error,
                          raw_count=raw_count, duration_seconds=duration)
 
@@ -111,7 +111,7 @@ class TestDouyinMainAdapterDetailCommentsCreator:
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_detail_delegates_v4(self, mock_load):
-        from v4_upgrade.adapters.base import AdapterResult
+        from lumenis.adapters.base import AdapterResult
         mock_load.return_value.detail.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         ad = DouyinAdapter()
         result = ad.detail("aweme123")
@@ -120,7 +120,7 @@ class TestDouyinMainAdapterDetailCommentsCreator:
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_comments_delegates_v4(self, mock_load):
-        from v4_upgrade.adapters.base import AdapterResult
+        from lumenis.adapters.base import AdapterResult
         mock_load.return_value.comments.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         ad = DouyinAdapter()
         result = ad.comments("aweme123")
@@ -129,7 +129,7 @@ class TestDouyinMainAdapterDetailCommentsCreator:
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
     def test_creator_delegates_v4(self, mock_load):
-        from v4_upgrade.adapters.base import AdapterResult
+        from lumenis.adapters.base import AdapterResult
         mock_load.return_value.creator.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         ad = DouyinAdapter()
         result = ad.creator("sec123")
@@ -140,8 +140,8 @@ class TestDouyinMainAdapterDetailCommentsCreator:
 class TestDouyinMainAdapterHealth:
 
     @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
-    @patch("v4_upgrade.adapters.human_browser.is_cdp_url_open", return_value=True)
-    @patch("v4_upgrade.adapters.douyin._configured_browser_worker_url",
+    @patch("lumenis.adapters.human_browser.is_cdp_url_open", return_value=True)
+    @patch("lumenis.adapters.douyin._configured_browser_worker_url",
            return_value="https://browser-worker.example")
     def test_health_worker_reachable_requires_runtime_verification(
             self, mock_url, mock_open, mock_load):
@@ -151,15 +151,15 @@ class TestDouyinMainAdapterHealth:
         assert result.metadata["endpoint_configured"] is True
         assert result.metadata["session_state"] == "worker_reachable_unverified"
 
-    @patch("v4_upgrade.adapters.douyin._configured_browser_worker_url",
+    @patch("lumenis.adapters.douyin._configured_browser_worker_url",
            side_effect=RuntimeError("DOUYIN_CDP_URL is not configured"))
     def test_health_without_worker_configuration_is_not_configured(self, mock_url):
         result = DouyinAdapter().health_check()
         assert result.status == CollectionStatus.NOT_CONFIGURED
         assert result.metadata["endpoint_configured"] is False
 
-    @patch("v4_upgrade.adapters.human_browser.is_cdp_url_open", return_value=False)
-    @patch("v4_upgrade.adapters.douyin._configured_browser_worker_url",
+    @patch("lumenis.adapters.human_browser.is_cdp_url_open", return_value=False)
+    @patch("lumenis.adapters.douyin._configured_browser_worker_url",
            return_value="https://browser-worker.example")
     def test_health_configured_but_unreachable_is_provider_unavailable(self, mock_url, mock_open):
         result = DouyinAdapter().health_check()

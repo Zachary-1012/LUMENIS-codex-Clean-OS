@@ -442,7 +442,7 @@ class ReportGenerator:
             "note_ids": [n.get("note_id", n.get("id", "")) for n in notes[:50]],
             "event_ids": [e.get("id", "") for e in events],
             "data_source": "monitor.db notes/events表",
-            "generated_by": "v4_upgrade.report_center.ReportGenerator",
+            "generated_by": "lumenis.report_center.ReportGenerator",
         }
 
     # ============ CTH专属 ============

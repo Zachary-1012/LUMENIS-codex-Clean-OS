@@ -35,7 +35,7 @@ def report_center_preview():
     if ed and not _dr.match(ed):
         return jsonify({'ok': False, 'error': 'end_date 需 YYYY-MM-DD'}), 400
     try:
-        from v4_upgrade.report_center import ReportGenerator
+        from lumenis.report_center import ReportGenerator
         rep = ReportGenerator(brand_mode=brand_mode).generate(
             period, start_date=sd or None, end_date=ed or None)
         return jsonify({'ok': True, 'report': rep,

@@ -40,7 +40,7 @@ PROD_SUBDIRS = {
     'config', 'contracts', 'dependencies', 'deployment', 'docker',
     'edge-cdp-general', 'edge-cdp-newaccount', 'edge-cdp-profile',
     'edge-cdp-retinaut', 'evaluation', 'migrations', 'proxy_pool',
-    'report_export', 'scripts', 'static', 'templates', 'v4_upgrade',
+    'report_export', 'scripts', 'static', 'templates', 'lumenis',
     'account_keepalive', 'ad_intelligence', 'podcast', 'ref_gpt_v2',
     'alembic',
 }

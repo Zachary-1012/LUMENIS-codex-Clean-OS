@@ -12,7 +12,7 @@ from .registry import register_adapter
 class InstagramAdapter(BasePlatformAdapter):
     """Thin boundary layer around the v4 Instagram engine.
 
-    Delegates all real collection to v4_upgrade.adapters.instagram.InstagramAdapter.
+    Delegates all real collection to lumenis.adapters.instagram.InstagramAdapter.
     This layer only maps v4 AdapterResult -> CollectionResult and normalizes fields.
     No subject filtering, risk scoring, or business logic lives here.
 
@@ -40,7 +40,7 @@ class InstagramAdapter(BasePlatformAdapter):
     def _get_engine(self) -> Any:
         if self._engine is not None:
             return self._engine
-        from v4_upgrade.adapters.instagram import InstagramAdapter as V4Engine
+        from lumenis.adapters.instagram import InstagramAdapter as V4Engine
         self._engine = V4Engine()
         self._engine_loaded = True
         return self._engine
@@ -195,7 +195,7 @@ class InstagramAdapter(BasePlatformAdapter):
         cookie_path = self.COOKIE_PATH
         if cookie_path == self._DEFAULT_COOKIE_PATH:
             try:
-                from v4_upgrade.adapters.cookie_vault import _resolve_path
+                from lumenis.adapters.cookie_vault import _resolve_path
                 cookie_path = _resolve_path("instagram") or cookie_path
             except Exception:
                 pass

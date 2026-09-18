@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-sync_v4_owner_password.py
+sync_owner_password.py
 把 v4 独立用户体系的 owner 主账号密码，安全对齐到 .env 的 Basic Auth 凭证
 （TAIKOO_AUTH_USER / TAIKOO_AUTH_PASSWORD），并清除失败计数 / 锁定。
 
-背景：Basic Auth(.env) 与 v4_users 是两套独立凭证，改了 .env 不会自动同步 v4 owner，
+背景：Basic Auth(.env) 与 users 是两套独立凭证，改了 .env 不会自动同步 v4 owner，
 会出现“现网密码已改、v4 设置页仍登不上 / 差一次就锁”的旧残留。本脚本做一次性收敛，
 也可在每次改 Basic 密码后复跑保持单一来源。
 
 安全约束：
-- 只 UPDATE v4_users 中 role='owner' 的这一行认证字段，绝不触碰任何业务表 / 舆情数据；
+- 只 UPDATE users 中 role='owner' 的这一行认证字段，绝不触碰任何业务表 / 舆情数据；
 - 写入前用 sqlite 在线 backup API 一致性备份整个库到 data/backups/；
 - 默认 dry-run 只打印不写；加 --apply 才真正写入；
 - 密码不硬编码，一律从 .env 读取；
 - 写入后用 verify_password 在本地校验，并走一次 service.login 完整验证（不经过 HTTP、不消耗外部尝试）。
 
 用法：
-  .venv\\Scripts\\python.exe scripts/sync_v4_owner_password.py            # 预演
-  .venv\\Scripts\\python.exe scripts/sync_v4_owner_password.py --apply    # 真正执行
+  .venv\\Scripts\\python.exe scripts/sync_owner_password.py            # 预演
+  .venv\\Scripts\\python.exe scripts/sync_owner_password.py --apply    # 真正执行
 """
 import os
 import sys
@@ -54,8 +54,8 @@ def main():
     ap.add_argument("--apply", action="store_true", help="真正写入；缺省仅预演")
     args = ap.parse_args()
 
-    from v4_upgrade.config import DB_PATH
-    from v4_upgrade.auth.security import hash_password, verify_password
+    from lumenis.config import DB_PATH
+    from lumenis.auth.security import hash_password, verify_password
 
     target_user, target_pw = load_env_basic()
     if not target_user or not target_pw:
@@ -82,7 +82,7 @@ def main():
     try:
         row = conn.execute(
             "SELECT id,username,role,status,failed_attempts,locked_until,password_hash "
-            "FROM v4_users WHERE role='owner' ORDER BY id LIMIT 1"
+            "FROM users WHERE role='owner' ORDER BY id LIMIT 1"
         ).fetchone()
         if not row:
             print("[FATAL] 不存在 role=owner 账号，终止（不擅自创建）。")
@@ -99,14 +99,14 @@ def main():
 
         with conn:  # 事务
             conn.execute(
-                "UPDATE v4_users SET username=?, password_hash=?, status='active', "
+                "UPDATE users SET username=?, password_hash=?, status='active', "
                 "failed_attempts=0, locked_until=NULL, must_change_password=0, "
                 "updated_at=datetime('now','localtime') WHERE id=? AND role='owner'",
                 (target_user, new_hash, row["id"]),
             )
         after = conn.execute(
             "SELECT username,status,failed_attempts,locked_until,password_hash "
-            "FROM v4_users WHERE id=?", (row["id"],)
+            "FROM users WHERE id=?", (row["id"],)
         ).fetchone()
         ok_hash = verify_password(target_pw, after["password_hash"])
         print(f"[AFTER] username={after['username']!r} status={after['status']} "
@@ -118,7 +118,7 @@ def main():
         conn.close()
 
     # 走完整 service.login 验证（内存内，成功会清计数并发 token；不经过 HTTP）
-    from v4_upgrade.auth import service
+    from lumenis.auth import service
     res = service.login(target_user, target_pw, ip="127.0.0.1", user_agent="ownersync-script")
     print("[LOGIN-CHECK] success=", res.get("success"),
           "role=", (res.get("user") or {}).get("role"),

@@ -1,12 +1,12 @@
 """
 account/ — ZBC/LUMENIS 主线账户体系模块（P1-F Apple ID 式账户）
 
-将 v4_upgrade/auth/ 提升为一级主线模块，保留 v4_ 表名保护现有数据。
+将 lumenis/auth/ 提升为一级主线模块，保留 v4_ 表名保护现有数据。
 新增：名额硬约束(1+3+5)、双域授权矩阵、TOTP动态口令、随机数字验证码、
 产品保护配置(ZBMP=TOTP/CTH=密码/SYSTEM=二次确认)、导航自定义、技能管理、
 静态密钥迁移。
 
-不删表、不丢数据；v4_upgrade/auth/ 保留为 deprecated 兼容层。
+不删表、不丢数据；lumenis/auth/ 保留为 deprecated 兼容层。
 """
 from .models import init_account_db, get_db, ACCOUNT_TABLES_SQL
 from .service import (

@@ -29,7 +29,7 @@ class WeiboAdapter(BasePlatformAdapter):
         if self.backend is not None:
             return self.backend
         try:
-            from v4_upgrade.adapters.weibo import WeiboAdapter as V4WeiboAdapter
+            from lumenis.adapters.weibo import WeiboAdapter as V4WeiboAdapter
             self.backend = V4WeiboAdapter()
             return self.backend
         except Exception as exc:
@@ -142,7 +142,7 @@ class WeiboAdapter(BasePlatformAdapter):
         return self._delegate_v4("creator", uid=creator_id)
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
-        from v4_upgrade.adapters.cookie_vault import check_cookie_status
+        from lumenis.adapters.cookie_vault import check_cookie_status
         session_state = check_cookie_status("weibo").get("status")
         try:
             backend = self._load_backend()

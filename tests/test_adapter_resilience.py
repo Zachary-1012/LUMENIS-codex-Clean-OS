@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""阶段4b：v4_upgrade.adapters 韧性增强层单测（纯标准库、tmp 隔离、不触网、不改主采集链）。
+"""阶段4b：lumenis.adapters 韧性增强层单测（纯标准库、tmp 隔离、不触网、不改主采集链）。
 
 覆盖 base 的熔断器/令牌桶/指标/safe_collect 不抛，以及 dual_pool 的 Cookie/Proxy 状态机、
 300012 直接冷却、池选择摘除、DualPoolManager 凭证与风控回调。
@@ -12,10 +12,10 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from v4_upgrade.adapters.base import (  # noqa: E402
+from lumenis.adapters.base import (  # noqa: E402
     CircuitBreaker, RateLimiter, AdapterMetrics, BaseAdapter, AdapterResult,
 )
-from v4_upgrade.adapters.dual_pool import (  # noqa: E402
+from lumenis.adapters.dual_pool import (  # noqa: E402
     CookieItem, ProxyItem, CookieStatus, ProxyStatus,
     CookiePool, ProxyPool, DualPoolManager,
 )
@@ -27,7 +27,7 @@ def _patch_sleep_for_tests(monkeypatch):
     """safe_collect 重试循环会 time.sleep(retry_delay*(attempt+1))，
     生产配置 retry_delay=2/max_retries=3 累计真睡12秒。
     单测里把 base.time.sleep 压成 no-op，重试逻辑仍被验证，只是不等。"""
-    import v4_upgrade.adapters.base as _base
+    import lumenis.adapters.base as _base
     monkeypatch.setattr(_base.time, 'sleep', lambda *_a, **_k: None)
     yield
 

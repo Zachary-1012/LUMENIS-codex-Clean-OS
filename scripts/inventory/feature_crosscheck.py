@@ -75,7 +75,7 @@ for rel in ["static/index.html"]:
     if os.path.exists(p):
         front_blob += io.open(p, encoding="utf-8", errors="ignore").read()
 tpl_files = []
-for dd in ["templates", os.path.join("v4_upgrade", "templates")]:
+for dd in ["templates", os.path.join("lumenis", "templates")]:
     d = os.path.join(ROOT, dd)
     if os.path.isdir(d):
         for dp2, _, fns in os.walk(d):

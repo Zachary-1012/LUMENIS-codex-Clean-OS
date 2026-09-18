@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from v4_upgrade.adapters.weibo import WeiboAdapter
+from lumenis.adapters.weibo import WeiboAdapter
 
 
 def _make_manager(logged_in=True, cookie="SUB=abc; SSOLoginState=xyz"):
@@ -29,7 +29,7 @@ def _mock_response(json_data, status_code=200):
 
 class TestWeiboAdapterSearch:
 
-    @patch("v4_upgrade.adapters.weibo.requests.get")
+    @patch("lumenis.adapters.weibo.requests.get")
     def test_search_success_returns_notes(self, mock_get):
         """成功搜索：返回标准化 CollectedNote。"""
         mock_get.return_value = _mock_response({
@@ -73,7 +73,7 @@ class TestWeiboAdapterSearch:
         assert result.notes[0].source_platform == "weibo"
         assert result.notes[0].publish_date.startswith("2024-09-03")
 
-    @patch("v4_upgrade.adapters.weibo.requests.get")
+    @patch("lumenis.adapters.weibo.requests.get")
     def test_search_empty_returns_success(self, mock_get):
         """正常无内容：success=True 但空。"""
         mock_get.return_value = _mock_response({"ok": 1, "data": {"cards": []}})
@@ -95,7 +95,7 @@ class TestWeiboAdapterSearch:
         result = ad.search("test", max_results=5)
         assert result.success is False
 
-    @patch("v4_upgrade.adapters.weibo.requests.get")
+    @patch("lumenis.adapters.weibo.requests.get")
     def test_search_api_error_login(self, mock_get):
         """API 返回登录失效。"""
         mock_get.return_value = _mock_response({"ok": 0, "msg": "请先登录"})
@@ -104,7 +104,7 @@ class TestWeiboAdapterSearch:
         assert result.success is False
         assert "登录" in result.error
 
-    @patch("v4_upgrade.adapters.weibo.requests.get")
+    @patch("lumenis.adapters.weibo.requests.get")
     def test_search_api_error_captcha(self, mock_get):
         """API 返回风控/验证。"""
         mock_get.return_value = _mock_response({"ok": 0, "msg": "需要验证"})
@@ -119,7 +119,7 @@ class TestWeiboAdapterSearch:
         assert result.success is False
         assert "关键词" in result.error
 
-    @patch("v4_upgrade.adapters.weibo.requests.get")
+    @patch("lumenis.adapters.weibo.requests.get")
     def test_search_max_results_truncation(self, mock_get):
         cards = [{"mblog": {"mid": str(i), "text": f"微博{i}",
                             "created_at": "Tue Sep 03 12:00:00 +0800 2024",
@@ -130,7 +130,7 @@ class TestWeiboAdapterSearch:
         result = ad.search("test", max_results=3)
         assert len(result.notes) == 3
 
-    @patch("v4_upgrade.adapters.weibo.requests.get")
+    @patch("lumenis.adapters.weibo.requests.get")
     def test_search_exception_handled(self, mock_get):
         """网络异常：捕获返回失败，不崩溃。"""
         mock_get.side_effect = RuntimeError("网络中断")
@@ -174,7 +174,7 @@ class TestWeiboAdapterDate:
 class TestWeiboAdapterRegistry:
 
     def test_registry_can_get_weibo(self):
-        from v4_upgrade.adapters.registry import registry, register_default_adapters
+        from lumenis.adapters.registry import registry, register_default_adapters
         register_default_adapters()
         ad = registry.get("weibo")
         assert ad is not None

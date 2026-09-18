@@ -52,7 +52,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     os.environ.setdefault("APP_ENV", "prod")
     os.environ.setdefault("LOG_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs"))
-    from v4_upgrade.unified_logger import patch_logging
+    from lumenis.unified_logger import patch_logging
     patch_logging()
     print("[UnifiedLogger] yyds-logger补丁已启用（JSON结构化+多实例隔离+request_id）")
 except Exception as _log_e:
@@ -915,7 +915,7 @@ def marketing_overview():
 @app.route('/api/v2/global-bil/<resource>')
 def global_bil_read(resource='overview'):
     try:
-        from v4_upgrade.global_bil import load_resource, overview, _FILES
+        from lumenis.global_bil import load_resource, overview, _FILES
         if resource == 'overview':
             return jsonify({'ok': True, 'stage': 'research', 'overview': overview()})
         if resource not in _FILES:
@@ -1088,7 +1088,7 @@ def _basic_auth():
     # 使手机端登录 v4 后根级只读健康 API（/api/platform-health 等）可被全局 Auth 健康中心取到；
     # 未登录/无效会话仍 401，安全等级不降，现网 HTTP Basic 行为完全保留。
     try:
-        from v4_upgrade.auth.service import get_current_user
+        from lumenis.auth.service import get_current_user
         if get_current_user():
             return None
     except Exception:
@@ -1409,7 +1409,7 @@ def _run_collect_task(task_id,keywords,max_scroll):
             # 这样夜间失效也会保留登录/验证入口，手机打开即可恢复，而不是次日才发现失败。
             if cstate in ('AUTH_REQUIRED', 'CAPTCHA', 'BLOCKED'):
                 try:
-                    from v4_upgrade.adapters import auth_recovery as _ar
+                    from lumenis.adapters import auth_recovery as _ar
                     _ar.request_recovery('xiaohongshu', source_state=cstate, detail=_err)
                     print(f'[Collect] 检测到 {cstate}，已自动创建登录/验证恢复任务（{r.get("keyword","")}）')
                 except Exception as _re:  # 恢复通道异常绝不影响采集主流程
@@ -5998,7 +5998,7 @@ def api_pr_check_trigger():
 
 
 # ===== V4 升级模块旁路接入：独立 /v4 蓝图、独立认证与 v4_ 建表，不改写现网业务、不挂自动调度 =====
-from v4_upgrade import create_v4_blueprint, init_v4_modules
+from lumenis import create_v4_blueprint, init_v4_modules
 init_v4_modules()
 app.register_blueprint(create_v4_blueprint())
 
@@ -6013,7 +6013,7 @@ except Exception as _acct_err:
     print(f"[account] 主线账户体系注册失败（不阻断启动）: {_acct_err}")
 
 # GAP-10 report_center 旁路路由（Feature Gate: ZBC_REPORT_CENTER=1 启用，默认关闭）
-from v4_upgrade.report_center.api import report_center_bp
+from lumenis.report_center.api import report_center_bp
 app.register_blueprint(report_center_bp)
 
 # ===== ZBC V2.0 双域核心扩展：请求级域上下文 + 双域 API 命名空间 =====

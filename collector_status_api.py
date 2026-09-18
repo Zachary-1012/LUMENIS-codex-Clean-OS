@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from flask import Blueprint, jsonify
 
-from v4_upgrade.adapters.cookie_vault import check_cookie_status, load_cookies
+from lumenis.adapters.cookie_vault import check_cookie_status, load_cookies
 
 logger = logging.getLogger(__name__)
 

@@ -28,7 +28,7 @@ class XAdapter(BasePlatformAdapter):
         if self.backend is not None:
             return self.backend
         try:
-            from v4_upgrade.adapters.x_platform import XAdapter as V4XAdapter
+            from lumenis.adapters.x_platform import XAdapter as V4XAdapter
             return V4XAdapter()
         except Exception as exc:
             raise RuntimeError(f"无法加载 v4 X 采集引擎: {exc}") from exc

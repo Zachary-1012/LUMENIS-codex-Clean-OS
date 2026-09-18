@@ -207,7 +207,7 @@ class TestCollectedNoteToCanonical:
     """CollectedNote → CanonicalRecord 转化测试。"""
 
     def test_basic_conversion(self):
-        from v4_upgrade.adapters.base import CollectedNote
+        from lumenis.adapters.base import CollectedNote
         cn = CollectedNote(
             title="采集测试", content="采集内容", url="https://xhs.com/123",
             author="测试用户", author_id="u123", publish_date="2026-09-01",

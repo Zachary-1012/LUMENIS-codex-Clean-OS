@@ -394,7 +394,7 @@ def test_product_route_requires_explicit_human_read_only_confirmation():
 
 
 def test_douyin_requires_explicit_remote_browser_worker(monkeypatch):
-    from v4_upgrade.adapters.douyin import _configured_browser_worker_url
+    from lumenis.adapters.douyin import _configured_browser_worker_url
 
     monkeypatch.delenv("DOUYIN_CDP_URL", raising=False)
     with pytest.raises(RuntimeError, match="not configured"):
