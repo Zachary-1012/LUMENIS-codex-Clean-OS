@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-GAP-10 reporting 旁路路由挂载
-【施工标准】先旁路、再切换；默认关闭；未完成真实验证不得标记完成。
+Shared Reporting canonical capability routes
 
-在 app.py 中新增Shared Reporting 路由，使用 lumenis.shared.reporting 的 ReportGenerator/ReportExporter。
-Feature Gate: LUMENIS_REPORTING=1 才启用，默认关闭。
-不改变现有报告功能（/api/report/* 等），作为 Shared Capability 正式入口。
+使用 lumenis.shared.reporting 的 ReportGenerator / ReportExporter。
+Feature Gate: LUMENIS_REPORTING=1 控制该组 API 的暴露，不改变 Shared Reporting 的 canonical ownership。
+报告 Production Truth、artifact 与既有 /api/report/* 契约统一归 Shared Reporting。
 """
 import os
 from flask import Blueprint, jsonify, request
@@ -21,7 +20,7 @@ def is_enabled() -> bool:
 
 @reporting_bp.route('/status', methods=['GET'])
 def status():
-    """Shared Reporting 状态（旁路，Feature Gate 控制）。"""
+    """Shared Reporting canonical capability 状态（Feature Gate 仅控制 API 暴露）。"""
     enabled = is_enabled()
     resp = {
         "ok": True,
@@ -48,7 +47,7 @@ def status():
 
 @reporting_bp.route('/generate', methods=['POST'])
 def generate():
-    """生成标准化报告（旁路，Feature Gate 控制）。"""
+    """生成标准化报告（Shared Reporting canonical capability）。"""
     if not is_enabled():
         return jsonify({"ok": False, "error": f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用",
                         "code": "REPORTING_DISABLED"}), 403
@@ -82,7 +81,7 @@ def generate():
 
 @reporting_bp.route('/export', methods=['POST'])
 def export():
-    """导出 Word/PDF 报告（旁路，Feature Gate 控制）。"""
+    """导出 Word/PDF 报告（Shared Reporting canonical capability）。"""
     if not is_enabled():
         return jsonify({"ok": False, "error": f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用",
                         "code": "REPORTING_DISABLED"}), 403
