@@ -177,7 +177,7 @@ class TestSilentFailureDetection:
         # 验证 _feed_risk_engine 函数源码中包含 CollectState 导入
         import inspect
         source = inspect.getsource(collector._feed_risk_engine)
-        assert 'from collector_guard.state import CollectState' in source
+        assert 'from lumenis.system.collector.guard.state import CollectState' in source
 
     def test_base_variable_defined_in_collect_all(self):
         """P0-2 修复验证：collect_all 中 base 变量已定义。"""
@@ -224,7 +224,7 @@ class TestSilentFailureDetection:
         import collector
         import os
         # 模拟 collect_all 中的调度间隔计算逻辑
-        from collector_guard.schedule_adapter import schedule_sleep_seconds
+        from lumenis.system.collector.guard.schedule_adapter import schedule_sleep_seconds
         base = float(os.getenv('XHS_GUARD_BASE_INTERVAL', '6'))
         interval = schedule_sleep_seconds('cooldown', base_interval=base)
         assert interval >= base  # cooldown 应 >= base

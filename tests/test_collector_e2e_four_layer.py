@@ -16,10 +16,10 @@ import time
 
 import pytest
 
-from collector_guard.dlq_replay import DeadLetterQueue
-from collector_guard.risk_engine import RiskEngine
-from collector_guard.runtime_switch import RuntimeSwitch
-from collector_guard.schedule_adapter import maybe_replay_dlq, should_stop_schedule
+from lumenis.system.collector.guard.dlq_replay import DeadLetterQueue
+from lumenis.system.collector.guard.risk_engine import RiskEngine
+from lumenis.system.collector.guard.runtime_switch import RuntimeSwitch
+from lumenis.system.collector.guard.schedule_adapter import maybe_replay_dlq, should_stop_schedule
 
 
 def _mk_risk(**kw):

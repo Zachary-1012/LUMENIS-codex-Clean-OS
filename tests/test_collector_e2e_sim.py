@@ -13,8 +13,8 @@ import time
 
 import pytest
 
-from collector_guard.risk_engine import RiskEngine
-from collector_guard.schedule_adapter import should_stop_schedule
+from lumenis.system.collector.guard.risk_engine import RiskEngine
+from lumenis.system.collector.guard.schedule_adapter import should_stop_schedule
 
 # 与 collector.py 同构的最小采集循环
 def _collect_loop(keywords, factor_by_state, run_one, risk, max_probe_ok=1):

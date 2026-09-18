@@ -6,8 +6,8 @@
 """
 import os, sys, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from collector_guard.risk_engine import RiskEngine, BAND_TO_STATE
-from collector_guard.state import CollectState
+from lumenis.system.collector.guard.risk_engine import RiskEngine, BAND_TO_STATE
+from lumenis.system.collector.guard.state import CollectState
 
 fails = []
 def check(name, cond, extra=''):
