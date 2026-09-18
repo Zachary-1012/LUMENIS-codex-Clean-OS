@@ -6,7 +6,7 @@ import ai_analyzer
 import logging
 import intelligence
 import canonical_metrics as cm
-import web_monitor
+import web_discovery
 
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ def reprocess_notes(limit=5000, translate=False):
 
 def discover_web(limit=120, translate=False):
     started=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    items=web_monitor.discover(limit)
+    items=web_discovery.discover(limit)
     new=analyzed=0
     for item in items:
         if db.insert_web_mention(item): new += 1
@@ -98,9 +98,9 @@ def discover_web(limit=120, translate=False):
         else:
             review['relevance']='relevant'; analyzed += 1
         db.update_web_analysis(item.get('source_id') or item.get('url') or item.get('title'), {**review, **rule, 'provider':review.get('provider','rule')})
-    for kw in web_monitor.feedback_keywords(items):
+    for kw in web_discovery.feedback_keywords(items):
         db.upsert_feedback_keyword(kw, 1.0, 'web')
-    feedback=web_monitor.feedback_keywords(items)
+    feedback=web_discovery.feedback_keywords(items)
     try: db.log_web_run('multi-source','multi-query',started,datetime.now().strftime('%Y-%m-%d %H:%M:%S'),len(items),analyzed,len(items)-analyzed,'')
     except Exception as e: logger.warning("Unhandled exception: %s", e)
     return {'fetched':len(items),'new':new,'analyzed':analyzed,'feedback_keywords':feedback}

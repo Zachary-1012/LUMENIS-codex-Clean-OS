@@ -91,7 +91,7 @@ import browser_discovery
 # P1-A(2026-09-02): ai_gateway_v570已废弃，统一到intelligence.py
 import memory_optimizer
 import stability_monitor
-import web_monitor_v570
+import web_discovery
 import system_health_api
 import system_creator_ops_api
 import architecture_api
@@ -2810,7 +2810,7 @@ def api_browser_discovery_v570():
 def api_brand_industry_plan_v570():
     brands=_load_brands()
     cats=sorted({b.get('category','') for b in brands if b.get('category')})
-    qs=web_monitor_v570.brand_queries(brands,cats)
+    qs=web_discovery.brand_queries(brands,cats)
     return jsonify({'ok':True,'total_targets':len(qs),'brands':len(brands),'categories':cats,'batch_size':int(request.args.get('batch','12'))})
 
 @app.route('/api/web/brand-industry/run',methods=['POST'])
@@ -2820,7 +2820,7 @@ def api_brand_industry_run_v570():
     cats=sorted({b.get('category','') for b in brands if b.get('category')})
     batch=max(1,min(30,int(data.get('batch',12))))
     offset=max(0,int(data.get('offset',0)))
-    items,total=web_monitor_v570.discover_brand_industry(brands,cats,batch,offset)
+    items,total=web_discovery.discover_brand_industry(brands,cats,batch,offset)
     saved=0
     for item in items:
         try: db.insert_web_mention(item); saved+=1

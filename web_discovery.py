@@ -1,12 +1,95 @@
-"""
-Web Monitor v5.7.0
-全网品牌业态监测，不占用小红书采集次数
+"""LUMENIS public web discovery.
+
+Canonical public-source discovery for brand/industry monitoring and the
+reprocessing pipeline. This module is version-neutral and owns the public RSS
+normalization used by both API and background analysis paths.
 """
 import os
 import json
 import requests
 from datetime import datetime, timedelta
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
+
+
+DEFAULT_DISCOVERY_QUERIES = [
+    '广州太古汇',
+    '广州太古汇 投诉',
+    '广州太古汇 避雷',
+    '广州太古汇 安全',
+    '广州太古汇 活动',
+    '广州太古汇 品牌',
+    '广州太古汇 餐饮',
+    '广州太古汇 服务',
+]
+
+FEEDBACK_SIGNALS = (
+    '投诉', '差评', '避雷', '问题', '失望', '安全', '事故', '消防',
+    '服务', '停车', '售后', '骚扰',
+)
+
+
+def _as_web_mention(item):
+    """Normalize one public RSS item to the canonical web_mentions contract."""
+    url = str(item.get('url') or '').strip()
+    title = str(item.get('title') or '').strip()
+    source_name = str(item.get('source') or '').strip()
+    return {
+        'source_id': url or title,
+        'source_platform': 'web',
+        'source_type': 'public_rss',
+        'title': title,
+        'content': source_name,
+        'url': url,
+        'domain': urlparse(url).netloc.lower() if url else '',
+        'published_at': item.get('published_at') or '',
+        'source_adapter': 'google_news_rss',
+        'query': item.get('query') or '',
+        'canonical_url': url,
+    }
+
+
+def discover(limit=20, queries=None):
+    """Discover public mentions through the canonical no-key RSS source.
+
+    Returns only real normalized results. Failures are isolated per query and
+    never converted into fabricated mentions.
+    """
+    try:
+        wanted = max(1, min(int(limit), 200))
+    except (TypeError, ValueError):
+        wanted = 20
+    query_list = [str(q).strip() for q in (queries or DEFAULT_DISCOVERY_QUERIES) if str(q).strip()]
+    seen = set()
+    items = []
+    per_query = max(3, min(20, (wanted + max(len(query_list), 1) - 1) // max(len(query_list), 1)))
+    for query in query_list:
+        outcome = fetch_google_news_rss(query, max_results=per_query)
+        if not outcome.get('ok'):
+            continue
+        for raw in outcome.get('items', []):
+            item = _as_web_mention(raw)
+            key = item.get('canonical_url') or item.get('source_id')
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            items.append(item)
+            if len(items) >= wanted:
+                return items
+    return items
+
+
+def feedback_keywords(items=None):
+    """Extract deterministic feedback signals from collected public mentions."""
+    found = []
+    seen = set()
+    for item in items or []:
+        text = ' '.join(str(item.get(k) or '') for k in ('title', 'content', 'query'))
+        for signal in FEEDBACK_SIGNALS:
+            if signal in text and signal not in seen:
+                seen.add(signal)
+                found.append(signal)
+    return found
+
 
 # 品牌业态分类
 BRAND_CATEGORIES = {

@@ -218,7 +218,7 @@ def build_release(version: Optional[str] = None) -> Optional[str]:
         'app.py', 'database.py', 'models.py', 'collector.py',
         'ai_analyzer.py', 'intelligence.py', 'ai_filter.py',
         'risk_engine.py', 'report_engine.py', 'daily_report.py',
-        'reprocess.py', 'web_monitor.py', 'monitor_pipeline.py',
+        'reprocess.py', 'web_discovery.py', 'monitor_pipeline.py',
         'function_registry.py', 'subject_rules.py', 'config.py',
         'logger.py', 'database_migrations.py', 'ci_cd.py',
         'monitoring.py',

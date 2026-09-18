@@ -25,7 +25,7 @@ _SKIP_FILE_MARK = ("_backup", "_v5", "app_backup", "legacy")
 # 已知「无 CREATE 声明」的实际表及其定性（只允许登记，不允许悄悄新增无主表）
 LEGACY_NO_DECLARATION = {
     "industry_stats": "LEGACY 历史遗留预聚合表（8 行旧数据）；现役 /api/brand-industry/* 实际查 "
-                      "brand_industry_monitor，web_monitor_v570 为旧文件；保留不删，待人工确认后清理",
+                      "brand_industry_monitor；旧版本化网页监测模块已收敛为 web_discovery.py；该表保留待数据治理确认",
 }
 # migration 隔离、生产库当前不建的预留表前缀/集合（设计如此，不算无主）
 MIGRATION_ISOLATED_PREFIX = ("bi_",)
