@@ -5,7 +5,7 @@ import socket
 import urllib.request, urllib.error
 import pytest
 
-import ai_channel as ac
+from lumenis.system.ai_gateway import channel as ac
 
 
 # ---------- 失败分类 ----------
@@ -136,7 +136,7 @@ def test_ensure_env_loads_missing_without_overwrite(tmp_path, monkeypatch):
 # ---------- 健康快照 ----------
 def test_channel_health_available_flag():
     b, now = _breaker_with_clock(1, 5)
-    import ai_channel
+    from lumenis.system.ai_gateway import channel as ai_channel
     orig = ai_channel.breaker
     ai_channel.breaker = b
     try:

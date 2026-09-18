@@ -183,16 +183,19 @@ def analyze_module(module: str, text: str, meta=None) -> dict:
     if not data:
         # 规则保底：主系统本地规则分析器
         try:
-            import ai_gateway_v570 as gw
-            base = gw.analyze(text, module)
+            import ai_analyzer
+            base = ai_analyzer.analyze_note(
+                {"title": text[:120], "content": text, "likes": 0, "comments": 0},
+                provider="rule",
+            )
             data = {
-                "summary": (base.get("analysis") or "")[:60] or "规则引擎已完成基础判定，建议接入模型获得更细分析。",
+                "summary": (base.get("summary") or "")[:60] or "规则引擎已完成基础判定，建议接入模型获得更细分析。",
                 "sentiment": base.get("sentiment", "neutral"),
                 "risk_level": base.get("risk_level", "low"),
-                "risk_points": [],
+                "risk_points": base.get("sentiment_reasons", [])[:3],
                 "suggestion": "按既有审核流程核查原始来源后再定级。",
             }
-            provider = base.get("provider", "rule")
+            provider = "rule"
         except Exception:
             data = {"summary": "模型与规则分析均不可用。", "sentiment": "neutral",
                     "risk_level": "low", "risk_points": [], "suggestion": "稍后重试或检查本地AI。"}
