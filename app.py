@@ -93,6 +93,7 @@ import memory_optimizer
 import stability_monitor
 import web_monitor_v570
 import system_health_api
+import system_creator_ops_api
 import architecture_api
 import badge_api
 import system_ai_data_api
@@ -143,6 +144,7 @@ app=Flask(__name__, static_folder='static', static_url_path='/static')
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 # 注册系统控制中心蓝图
 app.register_blueprint(system_health_api.system_health_bp)
+app.register_blueprint(system_creator_ops_api.system_creator_ops_bp)
 # 注册5层闭环架构蓝图
 app.register_blueprint(architecture_api.architecture_bp)
 app.register_blueprint(badge_api.badge_bp)
