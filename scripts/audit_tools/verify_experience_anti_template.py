@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LUMENIS Experience V3 anti-template gate.
+"""LUMENIS Experience anti-template gate.
 
 Baseline mode prevents new template debt while V3 migration is incomplete.
 Strict mode is required for core Experience implementation changes and forces
@@ -19,10 +19,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 EXP = ROOT / "experience_v2"
-BASELINE = EXP / "02_authority" / "ANTI_TEMPLATE_BASELINE_V3.json"
+BASELINE = EXP / "02_authority" / "ANTI_TEMPLATE_BASELINE.json"
 SCREENS = EXP / "10_prototype" / "data" / "screens.js"
 SECTIONS = EXP / "10_prototype" / "assets" / "sections.js"
-CONSTITUTION = ROOT / "00-GOVERNANCE" / "LUMENIS-EXPERIENCE-CONSTITUTION-V3-20260918.md"
+CONSTITUTION = ROOT / "00-GOVERNANCE" / "LUMENIS-EXPERIENCE-CONSTITUTION.md"
 LOCAL_AGENTS = EXP / "AGENTS.md"
 
 
