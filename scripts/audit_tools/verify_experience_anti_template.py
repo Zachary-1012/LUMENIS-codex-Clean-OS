@@ -84,7 +84,9 @@ def metric_count(screen: dict) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--strict", action="store_true", help="require Golden Page V3 migration")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--baseline", action="store_true", help="enforce ratchet without requiring completed Golden Page migration")
+    mode.add_argument("--strict", action="store_true", help="require Golden Page V3 migration")
     args = parser.parse_args()
 
     errors: list[str] = []
