@@ -1,1 +1,0 @@
-三语文本压力测试：Pseudo 语言 + 对 6 关键屏注入 *{font-size:1.35em}（≈130–135% 膨胀），1440 与 390 下 body 横向溢出均为 0px。原始结果见 text_expansion.json。
