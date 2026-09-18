@@ -15,7 +15,7 @@ from __future__ import annotations
 def register_browser_runtime_api(app):
     """在 Flask app 上注册 Browser Runtime 只读 API。"""
     from flask import Blueprint, jsonify, request
-    from browser_runtime import browser_router, BrowserContract, BrowserState, FailureClass
+    from lumenis.system.browser.runtime import browser_router, BrowserContract, BrowserState, FailureClass
 
     bp = Blueprint("browser_runtime_api", __name__)
 

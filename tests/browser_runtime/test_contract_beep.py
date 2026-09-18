@@ -4,7 +4,7 @@ import pytest
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from browser_runtime.contract import (
+from lumenis.system.browser.runtime.contract import (
     BrowserContract, BrowserState, FailureClass, FAILURE_POLICY,
     BEEPExecutor, BEEPTrace, BEEPStep, MAX_RETRY,
 )

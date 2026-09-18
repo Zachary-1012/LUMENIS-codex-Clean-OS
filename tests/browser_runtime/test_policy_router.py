@@ -4,11 +4,11 @@ import pytest
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from browser_runtime.policy import (
+from lumenis.system.browser.runtime.policy import (
     BrowserPolicyEngine, PolicyDecision, browser_policy_engine,
 )
-from browser_runtime.router import BrowserRouter, BrowserRouterError, browser_router
-from browser_runtime.contract import BrowserContract
+from lumenis.system.browser.runtime.router import BrowserRouter, BrowserRouterError, browser_router
+from lumenis.system.browser.runtime.contract import BrowserContract
 
 
 class TestPolicyEngine:

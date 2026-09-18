@@ -7,10 +7,10 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import pytest
 
-from browser_runtime.contract import (
+from lumenis.system.browser.runtime.contract import (
     BrowserContract, BrowserState, FailureClass, BEEPExecutor, MAX_RETRY,
 )
-from browser_runtime.policy import (
+from lumenis.system.browser.runtime.policy import (
     BrowserPolicyEngine, PolicyDecision,
 )
 
@@ -119,7 +119,7 @@ class TestPolicyCooldownSemantics:
         cls = BrowserContract.classify_failure(f"policy {r.decision.value}: {r.reason}")
         assert cls == FailureClass.PLATFORM_RISK
         # 处理策略：cooldown_or_stop（非 limited_retry）
-        from browser_runtime.contract import FAILURE_POLICY
+        from lumenis.system.browser.runtime.contract import FAILURE_POLICY
         assert FAILURE_POLICY[FailureClass.PLATFORM_RISK] == "cooldown_or_stop"
 
     def test_dangerous_action_safe_stop(self):

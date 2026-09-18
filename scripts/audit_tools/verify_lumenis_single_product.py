@@ -17,6 +17,7 @@ FORBIDDEN_PREFIXES = (
     "collector_v2/",
     "collector_guard/",
     "platform_adapters/",
+    "browser_runtime/",
 )
 
 FORBIDDEN_EXACT = {
@@ -91,7 +92,7 @@ def main() -> int:
             errors.append(f"pre-opt backup artifact present: {path}")
 
     grep = subprocess.run(
-        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters"],
+        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime"],
         cwd=ROOT,
         text=True,
         capture_output=True,
