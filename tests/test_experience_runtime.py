@@ -116,6 +116,30 @@ def test_shell_serves_and_injects_runtime(isolated_client):
     r6 = cli.get("/experience/assets/sections.js")
     assert r6.status_code == 200
     assert b"${m.evidenceId ?" in r6.data
+    r7 = cli.get("/experience/assets/browser-surface.css")
+    assert r7.status_code == 200
+    assert b"lum-browser-surface" in r7.data
+    assert b"browser-tabbar" in r7.data
+
+
+def test_sys06_is_real_internal_browser_surface(isolated_client):
+    """SYS-06 must expose the existing internal browser, not the old fixture view."""
+    cli, _ = isolated_client
+    payload = cli.get("/api/experience/screen/SYS-06").get_json()
+    assert payload["bound"] is True
+    raw = "\n".join(
+        section.get("html", "")
+        for section in payload["sections"]
+        if section.get("type") == "raw"
+    )
+    assert 'data-browser-surface' in raw
+    assert 'id="browser-shell"' in raw
+    assert 'id="address-input"' in raw
+    assert 'id="viewport-img-wrap"' in raw
+    assert 'id="panel-ai-agent"' in raw
+    assert '在外部浏览器打开（仅手动）' in raw
+    assert 'example.com/subject' not in raw
+    assert '原型占位' not in raw
 
 
 # --------------------------- CTH-01 真实绑定 + 诚实缺失 ---------------------------
