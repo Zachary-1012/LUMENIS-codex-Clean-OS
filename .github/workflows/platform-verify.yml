@@ -41,7 +41,10 @@ jobs:
       - name: Validate Codex takeover governance consistency (BLOCKING)
         run: python scripts/audit_tools/verify_codex_takeover_governance.py
 
-      - name: Validate Experience V3 anti-template contract (BLOCKING)
+      - name: Validate sole Experience design authority (BLOCKING)
+        run: python scripts/audit_tools/verify_experience_authority_exclusive.py
+
+      - name: Validate Experience anti-template contract (BLOCKING)
         shell: bash
         run: |
           mode="--baseline"
