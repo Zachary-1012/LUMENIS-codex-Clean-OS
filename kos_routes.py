@@ -2481,8 +2481,8 @@ def api_kos_rewards():
 
 def _kos_profile_field(author_id: str, field: str):
     """辅助：读取 kos_profiles 单字段。"""
-    import sqlite3
-    conn = sqlite3.connect(_DB())
+    from lumenis.shared.database import get_repository
+    conn = get_repository().connect()
     try:
         r = conn.execute(f"SELECT {field} FROM kos_profiles WHERE author_id = ?", (author_id,)).fetchone()
         return r[0] if r else None
@@ -2491,9 +2491,8 @@ def _kos_profile_field(author_id: str, field: str):
 
 
 def _DB():
-    import os
-    from pathlib import Path
-    return os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+    from lumenis.shared.database import main_db_path
+    return main_db_path()
 
 
 
