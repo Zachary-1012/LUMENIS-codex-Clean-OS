@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""evidence_chain.py 单元测试 —— ZBC Phase 8 Evidence/Canonical Data 数据链
+"""Shared Evidence chain 单元测试 —— Evidence/Canonical Data 数据链
 
 测试覆盖：
   1. Evidence hash 计算和去重
