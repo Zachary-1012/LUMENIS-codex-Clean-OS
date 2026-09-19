@@ -1255,9 +1255,9 @@ db.init_db()
 
 # P0-3/P0-4/P1-2/P1-3/P1-4: Evidence Chain + Canonical Data 旁路接入 + Collector Health + 双域隔离迁移
 try:
-    import database_migrations as _dm
+    from lumenis.shared.database import migrations as _dm
     _dm.migrate()
-    print("[db_migrations] migration completed (v11: collection_quality_log + dual-domain + evidence_ids)")
+    print("[db_migrations] migration completed (canonical Shared Database migrations)")
 except Exception as _e:
     print(f"[db_migrations] migration warning (non-fatal): {_e}")
 

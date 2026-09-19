@@ -42,3 +42,14 @@ def test_known_runtime_callers_use_shared_database_owner():
     ]:
         source = (REPO / rel).read_text(encoding="utf-8")
         assert "from db_paths import" not in source, rel
+
+def test_migration_owner_is_shared_database():
+    canonical = (REPO / "lumenis/shared/database/migrations.py").read_text(encoding="utf-8")
+    root = (REPO / "database_migrations.py").read_text(encoding="utf-8")
+    app = (REPO / "app.py").read_text(encoding="utf-8")
+    assert "CURRENT_VERSION = 12" in canonical
+    assert "MIGRATIONS" in canonical
+    assert "from lumenis.shared.database.migrations import *" in root
+    assert "CURRENT_VERSION =" not in root
+    assert "import database_migrations as _dm" not in app
+    assert "from lumenis.shared.database import migrations as _dm" in app

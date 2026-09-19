@@ -1,3 +1,4 @@
+from . import migrations
 """LUMENIS Shared Database canonical runtime primitives."""
 
 from .connection import connect_sqlite
