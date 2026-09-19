@@ -13,6 +13,7 @@ import os
 import sys
 import json
 import sqlite3
+from lumenis.shared.database import get_repository, main_db_path
 import csv
 import io
 from pathlib import Path
@@ -28,7 +29,7 @@ if str(PROJECT_ROOT) not in sys.path:
 export_bp = Blueprint('export', __name__)
 
 # 数据库/导出路径保持原生产位置，不因模块迁移改变数据归属。
-DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or str(PROJECT_ROOT / 'data' / 'monitor.db'))
+DB_PATH = main_db_path()
 EXPORT_DIR = str(PROJECT_ROOT / 'data' / 'exports')
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
@@ -38,7 +39,7 @@ from lumenis.shared.reporting import artifact as ra
 
 def get_db():
     """获取数据库连接"""
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = get_repository().connect(timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
