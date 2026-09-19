@@ -4,7 +4,7 @@
 """
 import sqlite3
 import os
-from ..config import DB_PATH
+from lumenis.shared.database import get_repository
 
 V4_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS v4_users (
@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_v4_audit_time ON v4_audit_logs(created_at);
 
 def get_db():
     """获取数据库连接"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_repository().connect()
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
