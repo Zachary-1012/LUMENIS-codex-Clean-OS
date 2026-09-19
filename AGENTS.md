@@ -176,7 +176,7 @@ Source
 
 The final user-facing LUMENIS product is one cross-platform Flutter application for Windows, macOS, Linux, Android and iOS.
 
-Existing Flask/Jinja/static/Experience V2 browser surfaces are migration sources only. Do not create new public web product pages, a second frontend, a compatibility UI, or a reference-driven redesign. Before deleting any old surface, trace and preserve its business capability, ViewModel, permission, state, Evidence and tests in the canonical app path.
+The Flutter application under `app/` is the sole user-facing LUMENIS Experience. Flask routes serve Product Core/API/ViewModel contracts and must not become a parallel web frontend. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical App/API path.
 
 All UI/UX/visual/presentation decisions remain subordinate to the sole authority:
 
@@ -209,37 +209,11 @@ Do not create a second:
 
 A missing adapter does not justify a parallel platform.
 
-## 6. Point-in-time source audit (non-authoritative for current HEAD)
+## 6. Current source truth
 
-The 2026-09-16 source audit was performed against pre-documentation-update remote `main` SHA:
+Resolve the current remote `main` commit at the start of each task. Do not use a historical SHA, audit, handoff, chat, or README as the current checkout or capability baseline.
 
-```text
-147e3bd331b22236930ae29112a67c613a148f67
-```
-
-See:
-
-```text
-08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md
-```
-
-This SHA is retained only as audit provenance. **Codex must never use it as a checkout target, current baseline, or reason to reset/downgrade `main`.** Current truth must always be resolved from `origin/main` at session start.
-
-Key facts verified at that audit point:
-
-- production launcher is `scripts/start_production.ps1`;
-- core application target is port `8201` with `/healthz`;
-- Resident Browser infrastructure uses the existing 9222/9223 dual-identity model;
-- `app.py` is the Flask application entry and registers existing runtime/API blueprints;
-- Experience V2 is mounted through `experience_runtime.py` at `/experience/` and `/api/experience/*`;
-- current source explicitly listed `CTH-01` and `AI-01` as bound Experience screens; prototype existence is not backend-binding proof;
-- `evidence_chain.py` owned the audited `zbc_evidence` / `zbc_canonical_data` lineage model;
-- `xhs_cookie_bridge.py` contained the audited XHS/RedNote collection safety/runtime logic;
-- `content_generation.py` contained the audited research → generation → Evidence → Evaluation → human-feedback flow;
-- root Node tooling was Playwright-oriented and was not a React/Next/Vite production application manifest;
-- clean CI and Production/Live acceptance are separate tiers.
-
-If current source differs, current source wins over this point-in-time list.
+Verify each capability claim against the source, contracts, routes, runtime behavior, scoped acceptance evidence, and exact current commit. If any of these disagree, current executable source and runtime evidence take precedence; record unknown behavior as unverified.
 
 ## 7. Codex local development tools
 
@@ -477,7 +451,7 @@ For any user-visible Experience/UI task, the **sole design authority** is:
 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 ```
 
-`experience_v2/AGENTS.md` is an execution router only and must not define a second design language.
+No nested router, archived screen, or prototype document may define a second design authority.
 
 Before claiming Experience work complete, run both blocking checks:
 
@@ -642,15 +616,8 @@ Stop for user input only when required by a real blocker such as:
 
 Large code volume, many files, long tests or context size are not themselves blockers.
 
-## 23. Remote App-only cutover (current main)
+## 23. Current App-only product surface
 
-At `main@3ba304f5d752dabcdc40531ce176f189527c29af`, the legacy browser presentation roots
-`templates/`, `static/`, and `experience_v2/` were removed from the production repository.
-The retained Experience contracts now live under `contracts/experience/`. `experience_runtime.py`
-is API/ViewModel-only, `lumenis_app_api.py` is JSON/API-only, and the canonical user-facing
-surface is `app/` (Flutter). Do not recreate Jinja, static assets, browser prototype mounts,
-compatibility HTML pages, or arbitrary developer code-execution endpoints.
+The canonical user-facing application is `app/` (Flutter); binding experience contracts live under `contracts/experience/`. `experience_runtime.py` provides the API/ViewModel boundary and `lumenis_app_api.py` provides JSON APIs.
 
-This cutover removes the old presentation surface; it does not claim that every Flutter
-workspace surface is finished. New App screens must bind real Product Core/API, Canonical Data,
-Evidence, Permission and Evaluation behavior before being marked complete.
+A launch shell, route, or contract does not establish that an end-to-end product workflow is complete. App screens must bind real Product Core/API, Canonical Data, Evidence, Permission, and Evaluation behavior before they can be described as complete.
