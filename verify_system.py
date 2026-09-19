@@ -1,11 +1,12 @@
 import sqlite3
 import json
 import os
+from lumenis.shared.database import get_repository
 
 print("=" * 60)
 print("数据库表检查")
 print("=" * 60)
-conn = sqlite3.connect('data/monitor.db')
+conn = get_repository().connect()
 c = conn.cursor()
 tables = c.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()
 print(f"共{len(tables)}张表:")
