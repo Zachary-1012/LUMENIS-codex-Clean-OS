@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Zachary OS AI · Evidence API（证据查询 REST 接口）
+"""LUMENIS Shared Evidence API（证据查询 REST 接口）
 
-Phase 2：把 evidence_store 的能力暴露给前端 Dashboard。
+把 Shared Evidence Store 能力暴露给产品客户端/API consumer。
 只读接口，不提供删除/修改（证据不可篡改，只能追加）。
 """
 from __future__ import annotations
