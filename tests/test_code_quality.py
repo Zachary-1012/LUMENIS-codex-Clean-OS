@@ -21,7 +21,7 @@ EXCLUDE_DIRS = {
     '.github', '.vscode', '.skills-router', 'staging', 'backups',
     'data', 'logs', 'deliverables', '2026-08-30', '2026-09-01',
     '序境', '_pitch_dump', '_ref_frames', '_shots', '_u', '_video_frames',
-    '00-GOVERNANCE', '02-ARCHITECTURE', '08-AUDIT',
+    '00-GOVERNANCE', '02-ARCHITECTURE',
 }
 
 PROD_SUBDIRS = {

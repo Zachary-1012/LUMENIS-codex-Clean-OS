@@ -23,7 +23,7 @@ EXCLUDE_DIRS = {
     "_shots", "_u", "_video_frames", "99-ARCHIVE", "序境",
     "docs", "audit", "tests", "static", "templates", "migrations",
     "alembic", "deliverables", "deployment", "docker", "00-GOVERNANCE",
-    "02-ARCHITECTURE", "08-AUDIT", "2026-08-30", "2026-09-01",
+    "02-ARCHITECTURE", "2026-08-30", "2026-09-01",
     ".trae", ".trae-cn", ".vscode", ".skills-router", ".ollama",
     "edge-cdp-general", "edge-cdp-newaccount", "edge-cdp-profile",
     "edge-cdp-retinaut", "archive", "podcast", "contracts",

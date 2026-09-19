@@ -2,13 +2,12 @@
 """序境-Core · IC-035/044/048 Contract 测试。
 
 覆盖：
-- IC-035：OWASP Agentic 审计清单已落盘（盘点上确认覆盖分层五层，不新建重复能力）
+- IC-035：当前安全边界保留五层控制模型，不把文档存在当作实现证明
 - IC-044：耸动/合成内容风险信号接入 alert_engine（向后兼容 + 危机期收紧 + 独立扫描）
 - IC-048：可视化质量门检查清单（check() 结果结构化 + 必填项判定）
 
 强制 DB：module 级 autouse fixture 设置 ZBC_DB_PATH=临时库 + init_alert_tables 建全 schema。
 """
-import io
 import os
 import sqlite3
 import sys
@@ -44,23 +43,16 @@ def _db():
     os.environ.pop("ZBC_DB_PATH", None)
 
 
-# ============ IC-035 · OWASP Agentic 审计 ============
+# ============ IC-035 · 当前安全边界 ============
 class TestIC035:
-    def test_audit_file_exists(self):
-        p = os.path.join(BASE, "序境", "08-AUDIT", "OWASP_AGENTIC_AUDIT_20260904.md")
-        assert os.path.exists(p), "OWASP Agentic 审计清单应已落盘"
-
-    def test_audit_covers_five_layers(self):
-        s = io.open(os.path.join(BASE, "序境", "08-AUDIT", "OWASP_AGENTIC_AUDIT_20260904.md"),
-                    encoding="utf-8").read()
+    def test_current_boundary_covers_five_layers(self):
+        path = os.path.join(BASE, "00-GOVERNANCE", "SECURITY-BOUNDARY-CURRENT.md")
+        assert os.path.exists(path), "当前安全边界必须存在"
+        with open(path, encoding="utf-8") as source:
+            text = source.read()
         for layer in ["输入护栏", "身份权限", "执行沙箱", "输出护栏", "可观测审计"]:
-            assert layer in s, f"审计清单应覆盖安全层[{layer}]"
-
-    def test_no_fake_enhancement(self):
-        # 审计只做盘点；不得声称已实施 GAP 增强
-        s = io.open(os.path.join(BASE, "序境", "08-AUDIT", "OWASP_AGENTIC_AUDIT_20260904.md"),
-                    encoding="utf-8").read()
-        assert "GAP 未实施" in s, "审计必须真实声明 GAP 未实施"
+            assert layer in text, f"当前安全边界缺少[{layer}]"
+        assert "does not claim" in text, "文档不得冒充实现验证证据"
 
 
 # ============ IC-044 · 耸动/合成内容风险信号 ============

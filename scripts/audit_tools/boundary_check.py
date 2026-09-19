@@ -47,7 +47,7 @@ EXCLUDE_DIRS = {
     ".vscode", "_pitch_dump", "_ref_frames", "_shots", "_u",
     "99-ARCHIVE", "archive", "backups", "logs", "deliverables",
     "staging", "user_file", "_path_backup", "_scan_output",
-    "audit", "docs", "00-GOVERNANCE", "02-ARCHITECTURE", "08-AUDIT",
+    "audit", "docs", "00-GOVERNANCE", "02-ARCHITECTURE",
     "intelligence_library",  # 研究库单独检查
 }
 

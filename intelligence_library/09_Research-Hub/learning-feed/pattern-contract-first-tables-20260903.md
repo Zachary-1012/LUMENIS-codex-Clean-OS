@@ -2,7 +2,7 @@
 
 - 日期：2026-09-03
 - 类型：ZELL Learning / 双子库协作 + 前端工程模式
-- 来源实例：DFS KOS 三表补齐（ZBC commit a70e8fc；契约 contracts/CTR-KOS-METRICS-P1-01.md；Evidence：ZBC `序境/08-AUDIT/UI_KOS_AUDIT_06_DFS_TABLES.md`）
+- 来源实例：DFS KOS 三表补齐（ZBC commit a70e8fc；契约 contracts/CTR-KOS-METRICS-P1-01.md；Evidence：Archived screenshot evidence removed; current capability claims require verification against current source and acceptance evidence）
 - 状态：PRODUCTION-VERIFIED
 
 ## 1. 原则（用户纠偏固化）

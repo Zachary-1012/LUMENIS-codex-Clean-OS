@@ -126,7 +126,7 @@ def test_production_modules_do_not_bypass_database_repository():
         "lumenis/shared/database/migrations.py",
     }
     excluded_roots = {
-        "tests", "scripts", "audit", "docs", "99-ARCHIVE", "08-AUDIT",
+        "tests", "scripts", "audit", "docs", "99-ARCHIVE",
         "OSAI测试证据", "intelligence_library", "build", "vendor",
     }
     violations = []

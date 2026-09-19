@@ -27,7 +27,7 @@ python scripts/ai_budget.py summary        # 含 cache 统计
 ✅ **已确认智谱上下文缓存为隐式自动**（docs.bigmodel.cn/cn/guide/capabilities/cache：自动识别重复前缀，
 缓存命中 token 按优惠价计费、缓存存储限时免费；响应返回 usage.prompt_tokens_details.cached_tokens）。
 
-✅ **固定前缀收敛已落地**：config/prompts/zbc-prompts.yaml（4 角色版本化前缀）+ scripts/prompt_registry.py（强制加载、禁内联），
+✅ **固定前缀收敛已落地**：config/prompts/lumenis-prompts.yaml（4 角色版本化前缀）+ scripts/prompt_registry.py（强制加载、禁内联），
 	ests/test_prompt_registry.py 强制逐字符稳定（改前缀必须 bump version）。缓存命中前提达成。
 
 1. 调用方改用 prompt_registry.load_system_prompt(role) 加载前缀（禁止内联复制）。

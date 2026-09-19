@@ -94,7 +94,7 @@ Goldenberg SIT 六模板（类比/极端/后果/竞争/换维/实效）已作为
 - mech_order 四分支（luxury/negative/positive/neutral）全接入
 - 案例背书 `case_reference`：按机制匹配 case_study 真实案例挂到 provenance（8/8 命中），生成时可直接看到"为什么这样写"的真实案例背书
 - 7 项新测试 + 36 项相关回归通过
-- Evidence：ZBC `序境/08-AUDIT/P1_UI_CONVERGENCE_EVIDENCE_10.md`
+- Evidence：Archived screenshot evidence removed; current capability claims require verification against current source and acceptance evidence
 
 判定更新：**ADOPT → DONE**（研究→生产闭环完成）。
 
@@ -119,7 +119,7 @@ Goldenberg SIT 六模板（类比/极端/后果/竞争/换维/实效）已作为
 
 **判定**：圈层扩充 ADOPT→DONE；SIT×约束 ADOPT→DONE。
 **验证**：新圈层真实产出 + 约束映射断言 + 12 项相关测试通过（idea_sit_backing 12 + idea_generator 20 等，exit=0）。
-**Evidence**：ZBC `序境/08-AUDIT/P1_UI_CONVERGENCE_EVIDENCE_11.md`
+**Evidence**：Archived screenshot evidence removed; current capability claims require verification against current source and acceptance evidence
 
 ---
 
@@ -135,7 +135,7 @@ Goldenberg SIT 六模板（类比/极端/后果/竞争/换维/实效）已作为
 
 **判定**：全部 ADOPT→DONE。
 **验证**：相关回归 exit=0（idea_sit_backing 17 项等）。
-**Evidence**：ZBC `序境/08-AUDIT/P1_UI_CONVERGENCE_EVIDENCE_12.md`
+**Evidence**：Archived screenshot evidence removed; current capability claims require verification against current source and acceptance evidence
 
 ---
 
@@ -149,4 +149,4 @@ Goldenberg SIT 六模板（类比/极端/后果/竞争/换维/实效）已作为
 
 **判定**：全部 ADOPT→DONE。
 **验证**：真实产出（中秋×新中式×预算）国际背书+节点+约束转译同时命中；相关回归 exit=0（idea_sit_backing 21 项）。
-**Evidence**：ZBC `序境/08-AUDIT/P1_UI_CONVERGENCE_EVIDENCE_13.md`
+**Evidence**：Archived screenshot evidence removed; current capability claims require verification against current source and acceptance evidence

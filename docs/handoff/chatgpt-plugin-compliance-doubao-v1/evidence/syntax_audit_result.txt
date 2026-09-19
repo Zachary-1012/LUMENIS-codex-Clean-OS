@@ -1,5 +1,0 @@
-POST-FIX FULL SCAN (experience_v2 + V2.4.1 correction)
-file ext counts: json=222 html=89 py=22 js=13 css=6 (plus media)
-json errors=0  duplicate keys=0  jsonl=0  js=0  py=0  css=0  html=0  yaml=0  BOM=0
-TOTAL FINDINGS=0
-prior fix: hardcoded_copy_before.json 18 invalid \' -> ' (legal escapes preserved)

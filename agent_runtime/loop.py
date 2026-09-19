@@ -699,7 +699,7 @@ class AgentLoop:
     def _default_tool_executor(step: PlanStep, context: Dict[str, Any]) -> Dict[str, Any]:
         """默认工具执行器（仅记录，不真实执行）。
 
-        生产环境应注入真实的 tool_executor，通过 skill_execution_chain 或 function_registry 执行。
+        生产环境应注入经过 SYSTEM 权限校验的 tool_executor；默认执行器只记录任务，不调用工具。
         """
         return {
             "success": True,

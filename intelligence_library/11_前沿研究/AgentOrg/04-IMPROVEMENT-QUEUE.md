@@ -207,14 +207,14 @@
 - **内容**：舆情系统加可配置危机告警阈值（提及暴涨/情绪骤降/负面数）、反讽检测、情感模型季度校准；告警走即时通知+升级流程（对应 HCG 门控）
 - **反哺对象**：舆情模块（ZBC 生产侧，需走 Contract/Test/Gate）
 - **评分**：Business +3  Reliability +2  ⇒ **PROMOTE（生产候选，先 Contract）**
-- **状态**：✅ **IMPLEMENTED**（2026-09-04，P1 告警配置表+状态机已实施：alert_engine.py + /api/ic/alert/* + 8 测试；Evidence 见 ZBC 序境/08-AUDIT/IC020_028_047_IMPLEMENTATION_EVIDENCE_20260904.md §一）
+- **状态**：✅ **IMPLEMENTED**（2026-09-04，P1 告警配置表+状态机已实施：alert_engine.py + /api/ic/alert/* + 8 测试；历史审计文件已清理；当前实现状态须按当前 HEAD 源代码和本功能验收结果核对）
 
 ## IC-021 earned media value + agentic 监测闭环
 - **来源**：E2（AI Brand Monitoring 2026：EMV 替代 AVE / Year3 agentic 闭环）
 - **内容**：报告系统补 earned media value 指标（替代 AVE 口径），纳入报告模板；长期目标=agentic 品牌监测自主检测→情感→危机告警→达人触达→ROI 报告（与 KOS 闭环融合）
 - **反哺对象**：报告系统/METRIC_REGISTRY（生产侧，需 Contract）
 - **评分**：Business +3  ⇒ **PROMOTE（生产候选，先 Contract）**
-- **状态**：✅ **IMPLEMENTED**（2026-09-04，emv.py FUNC-CONTENT-04 + MET-CONTENT-04 登记 + 报告接入 + 4 测试；Evidence 见 ZBC 序境/08-AUDIT/IC021_039_040_IMPLEMENTATION_EVIDENCE_20260904.md §一）
+- **状态**：✅ **IMPLEMENTED**（2026-09-04，emv.py FUNC-CONTENT-04 + MET-CONTENT-04 登记 + 报告接入 + 4 测试；历史审计文件已清理；当前实现状态须按当前 HEAD 源代码和本功能验收结果核对）
 
 ## IC-022 内容跨媒介转译 + 个性化叙事（播客/品牌内容）
 - **来源**：E2（《万里茶道》AI 衍生剧 / Computational Creativity）
@@ -261,7 +261,7 @@
 - **内容**：marketing_nodes 增强——节点分级（核心/节气/新兴高增长）、传播周期（长线预热 vs 短期爆发）、行业适配、六大趋势（时令叙事/反套路/搭子文化）驱动 hotspot 自动增强创意
 - **反哺对象**：marketing_nodes / 创意引擎 hotspot（业务向）
 - **评分**：Business +3  ⇒ **PROMOTE（生产候选，先 Contract）**
-- **状态**：✅ **IMPLEMENTED**（2026-09-04，P1 字段建模已实施：marketing_calendar.py priority/lead_days/burst + 5 测试；Evidence 见 ZBC 序境/08-AUDIT/IC020_028_047_IMPLEMENTATION_EVIDENCE_20260904.md §二）
+- **状态**：✅ **IMPLEMENTED**（2026-09-04，P1 字段建模已实施：marketing_calendar.py priority/lead_days/burst + 5 测试；历史审计文件已清理；当前实现状态须按当前 HEAD 源代码和本功能验收结果核对）
 
 
 | IC-029 | Cycle S | KOS/内容运营引入 NPS（推荐意愿）与 DRI（问题直接责任人）式评价维度，报告新增用户推荐度与问题闭环率视角 | 商业成长与品牌理论（库克/苹果） | 中 | ✅ **RESEARCH-DONE**（2026-09-04，05-IC-029-NPS-DRI-EVALUATION.md） | KOS 运营/报告 | ADAPT | 需先定口径与数据源，避免新增重复计算 |

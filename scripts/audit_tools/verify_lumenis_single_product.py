@@ -3,11 +3,36 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import re
 from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parents[2]
 ARCH = ROOT / "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
 EXPERIENCE = ROOT / "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+SECURITY_BOUNDARY = ROOT / "00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md"
+PRODUCT_POSITIONING = ROOT / "00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md"
+README = ROOT / "README.md"
+CROSS_REPO_REGISTRY = ROOT / "00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md"
+
+PRODUCT_POSITIONING_MARKERS = (
+    "CTH · 商业运营",
+    "BMP · 品牌市场",
+    "Shared Capability",
+    "SYSTEM",
+    "Subject-first",
+    "Brand/Market-first",
+)
+ECOSYSTEM_REPOSITORY_MARKERS = (
+    "Zachary-1012/Zachary-OS-AI",
+    "Zachary-1012/global-growth-intelligence",
+    "Zachary-1012/lumenis-command",
+)
+LEGACY_PATH_TOKEN = re.compile(
+    r"(?i)(?:^|[^a-z0-9])(?:zbc|zbmp|zachary|osai|dcc|sici|zbip|adrh|legacy|frontend|z-brand-core|experience_v2)(?=$|[^a-z0-9])"
+)
 
 FORBIDDEN_PREFIXES = (
     "research/ui-ux/",
@@ -21,7 +46,6 @@ FORBIDDEN_PREFIXES = (
 )
 
 FORBIDDEN_EXACT = {
-    "08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md",
     "audit/take_screenshot.ps1",
     "static/css/zbc-design-system.css",
     "ai_channel.py",
@@ -87,7 +111,12 @@ REQUIRED_ARCH_MARKERS = (
 )
 
 def tracked() -> list[str]:
-    out = subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True)
+    out = subprocess.check_output(
+        ["git", "-c", "core.quotePath=false", "ls-files"],
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+    )
     return [line.strip().replace("\\", "/") for line in out.splitlines() if line.strip()]
 
 def main() -> int:
@@ -101,6 +130,29 @@ def main() -> int:
                 errors.append(f"architecture marker missing: {marker}")
     if not EXPERIENCE.is_file():
         errors.append("missing sole Experience authority")
+    if not SECURITY_BOUNDARY.is_file():
+        errors.append("missing current layered security boundary")
+    if not PRODUCT_POSITIONING.is_file():
+        errors.append("missing current product positioning and ownership contract")
+    else:
+        positioning_text = PRODUCT_POSITIONING.read_text(encoding="utf-8")
+        for marker in ("CTH", "BMP", "Shared Capability", "SYSTEM", "Windows", "macOS", "Linux", "Android", "iOS"):
+            if marker not in positioning_text:
+                errors.append(f"current product positioning marker missing: {marker}")
+    if not README.is_file():
+        errors.append("missing product definition and engineering entry point")
+    else:
+        readme_text = README.read_text(encoding="utf-8")
+        for marker in PRODUCT_POSITIONING_MARKERS:
+            if marker not in readme_text:
+                errors.append(f"product positioning marker missing: {marker}")
+    if not CROSS_REPO_REGISTRY.is_file():
+        errors.append("missing cross-repository ecosystem boundary")
+    else:
+        registry_text = CROSS_REPO_REGISTRY.read_text(encoding="utf-8")
+        for marker in ECOSYSTEM_REPOSITORY_MARKERS:
+            if marker not in registry_text:
+                errors.append(f"ecosystem repository marker missing: {marker}")
 
     required_app_files = (
         "app/pubspec.yaml",
@@ -116,6 +168,11 @@ def main() -> int:
 
     tracked_paths = tracked()
     for path in tracked_paths:
+        normalized = path.replace("\\", "/")
+        if normalized.casefold().startswith("08-audit/"):
+            errors.append(f"obsolete audit archive path present: {path}")
+        if LEGACY_PATH_TOKEN.search(normalized):
+            errors.append(f"obsolete product/archive path token present: {path}")
         if any(path.startswith(prefix) for prefix in FORBIDDEN_PREFIXES):
             errors.append(f"legacy UI/UX/reference artifact present: {path}")
         if path in FORBIDDEN_EXACT:
@@ -148,8 +205,10 @@ def main() -> int:
         evaluation_recorder_text = evaluation_recorder_path.read_text(encoding="utf-8")
         if 'os.path.dirname(os.path.abspath(__file__))' in evaluation_recorder_text:
             errors.append("Shared Evaluation recorder must not derive Production DB from module-local directory")
-        if 'Path(__file__).resolve().parents[3]' not in evaluation_recorder_text:
-            errors.append("Shared Evaluation recorder must anchor repository Production Truth")
+        if "from lumenis.shared.database import DatabaseRepository, main_db_path" not in evaluation_recorder_text:
+            errors.append("Shared Evaluation recorder must use the canonical database owner")
+        if "path = db_path or main_db_path()" not in evaluation_recorder_text:
+            errors.append("Shared Evaluation recorder must resolve the canonical Production Truth path")
 
     learning_owner = ROOT / "lumenis/shared/learning"
     required_learning_files = (
@@ -213,8 +272,11 @@ def main() -> int:
         ad_permission_text = ad_permission_path.read_text(encoding="utf-8")
         if "from lumenis.system.security import" not in ad_permission_text:
             errors.append("Ad permission adapter is not bound to canonical SYSTEM Permission")
-        if "_human_approved" in ad_permission_text or "_approval_expiry" in ad_permission_text:
+        if re.search(r"self\._(?:human_approved|approval_expiry)\s*=", ad_permission_text):
             errors.append("Ad permission adapter owns parallel human-approval state")
+        for marker in (".grant_approval(", ".revoke_approval(", ".is_approved("):
+            if marker not in ad_permission_text:
+                errors.append(f"Ad permission adapter bypasses canonical approval owner: {marker}")
 
     security_owner = ROOT / "lumenis/system/security"
     for filename in ("permission.py", "action_firewall.py", "effect_fence.py", "__init__.py"):
@@ -224,7 +286,12 @@ def main() -> int:
     agent_loop_path = ROOT / "agent_runtime/loop.py"
     if agent_loop_path.is_file():
         agent_loop_text = agent_loop_path.read_text(encoding="utf-8")
-        for retired in ("from permission_gate", "import permission_gate", "skill_execution_chain"):
+        for retired in (
+            "from permission_gate",
+            "import permission_gate",
+            "from skill_execution_chain",
+            "import skill_execution_chain",
+        ):
             if retired in agent_loop_text:
                 errors.append(f"Agent Runtime bypasses canonical SYSTEM security owner: {retired}")
 
@@ -238,9 +305,11 @@ def main() -> int:
         ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^[[:space:]]*from daily_report|^[[:space:]]*import daily_report|^[[:space:]]*from report_artifact|^[[:space:]]*import report_artifact|^[[:space:]]*from report_filter|^[[:space:]]*import report_filter|^[[:space:]]*from report_export|^[[:space:]]*import export_report|^[[:space:]]*from report_api|^[[:space:]]*import report_api|^[[:space:]]*from kos_report|^[[:space:]]*import kos_report|^[[:space:]]*from evidence_chain|^[[:space:]]*import evidence_chain|^[[:space:]]*from evidence_store|^[[:space:]]*import evidence_store|^[[:space:]]*from evidence_api|^[[:space:]]*import evidence_api|^[[:space:]]*from production_evidence_contract|^[[:space:]]*import production_evidence_contract|^[[:space:]]*from app_evidence|^[[:space:]]*import app_evidence|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^[[:space:]]*import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime|^[[:space:]]*from evaluation_recorder|^[[:space:]]*import evaluation_recorder|^[[:space:]]*from evaluation_dimensions|^[[:space:]]*import evaluation_dimensions|^[[:space:]]*from evaluation_runner|^[[:space:]]*import evaluation_runner|^[[:space:]]*from evaluation_system|^[[:space:]]*import evaluation_system|^[[:space:]]*from ai_evaluation|^[[:space:]]*import ai_evaluation|from agent_runtime\\.evaluation|from evaluation\\.agent_benchmark_contract|from evaluation\\.collection_benchmark|^[[:space:]]*from learning_collector|^[[:space:]]*import learning_collector|^[[:space:]]*from learning_persistence|^[[:space:]]*import learning_persistence|^[[:space:]]*from data_feedback_loop|^[[:space:]]*import data_feedback_loop|^[[:space:]]*from ai_learning_engine|^[[:space:]]*import ai_learning_engine|^[[:space:]]*from agent_memory\\.learning|^[[:space:]]*from agent_memory\\.learning_loop|^[[:space:]]*from permission_gate|^[[:space:]]*import permission_gate|^[[:space:]]*from p2_action_firewall|^[[:space:]]*import p2_action_firewall"],
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
     )
-    if grep.returncode == 0 and grep.stdout.strip():
+    if grep.returncode == 0 and (grep.stdout or "").strip():
         errors.append("retired owner import present:\n" + grep.stdout.strip())
 
     if errors:

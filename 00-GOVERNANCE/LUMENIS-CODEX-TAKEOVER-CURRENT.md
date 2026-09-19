@@ -2,10 +2,10 @@
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
 > Updated: 2026-09-17  
-> Last runner-backed green remote baseline: `main@5a14ff25b51303efb776126d0f6a3a5a936ec73f`  
+> CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
-This file records the current Codex handoff model, authority order and the latest runner-backed baseline. It does **not** upgrade source evidence into LIVE / RELEASED / OPERATING claims.
+This file records the current Codex execution path and authority order. It does **not** upgrade source evidence into LIVE / RELEASED / OPERATING claims.
 
 ## 1. Mandatory Codex bootstrap and authority
 
@@ -17,7 +17,7 @@ Root `AGENTS.md` is the first coding-agent instruction boundary. After reading i
 4. `README.md`
 5. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
 6. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
-7. `08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`
+7. `00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`
 8. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
 9. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
 
@@ -94,26 +94,7 @@ live workstation runtime
 
 Do not collapse these into a single "current" claim.
 
-Last runner-backed green baseline:
-
-```text
-HEAD = 5a14ff25b51303efb776126d0f6a3a5a936ec73f
-LUMENIS Product Gate          = SUCCESS
-Verify LUMENIS-GGI Contract   = SUCCESS
-```
-
-That baseline contains the LUMENIS product gate, baseline repairs and ecosystem contract/brand convergence available at that point in history.
-
-Later documentation/governance pushes have also encountered GitHub Actions execution-layer failures where jobs end in seconds with an empty step list and no repository-step logs. Therefore:
-
-```text
-last runner-backed green source baseline = 5a14ff25...
-current origin/main                      = MUST BE FETCHED
-current-head CI                          = MUST BE READ, NOT INFERRED
-0-step / empty-step Actions failure      = EXECUTION-LAYER UNVERIFIED, NOT A SOURCE TEST FAILURE
-```
-
-Do not create empty commits merely to retrigger Actions. Rerun the same commit when the runner executes normally.
+Current remote and checks are always resolved dynamically from origin/main. This document does not embed old SHAs or historical green runs as current evidence. If GitHub has no check result for the fetched HEAD, record that current status as unavailable.
 
 ## 3. Current cross-product protocol — v1.1
 
@@ -216,7 +197,7 @@ Do not replace these with screenshot-derived or generic stack assumptions. If cu
 
 The three user-provided screenshots were reviewed against the repository. The reliably readable architecture principles that match repository truth are represented by the canonical chains, truth hierarchy, main/local/origin separation and completion semantics.
 
-Two screenshots were too low-resolution for exact line-by-line extraction. Their unreadable package names, versions, commands or implementation claims were **not imported as truth**. See `08-AUDIT/SCREENSHOT-ARCHITECTURE-INTAKE-20260917.md`.
+Two screenshots were too low-resolution for exact line-by-line extraction. Their unreadable package names, versions, commands or implementation claims were **not imported as truth**. Current code, contracts and acceptance evidence remain authoritative.
 
 Rule for later higher-resolution re-ingestion:
 
@@ -240,7 +221,7 @@ RELEASED    = required production/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/scheduled evidence
 ```
 
-The last runner-backed green baseline proves its workflows passed at that commit. It does **not** by itself prove the current fetched HEAD, workstation live health, release or operation.
+This handoff does not claim live workstation health, release or operation.
 
 ```text
 8201 live workstation health = NOT VERIFIED by this handoff
@@ -249,7 +230,7 @@ RELEASED                     = NO NEW CLAIM
 OPERATING                    = NO NEW CLAIM
 ```
 
-Do not repeat the old CI #148 failure as current product state: it belongs to the 2026-09-16 source-audit history and was followed by later repairs and a green runner-backed baseline.
+Check CI and runtime evidence for the exact current HEAD before making a release or operation claim.
 
 ## 8. Codex resume protocol
 
@@ -258,7 +239,7 @@ After the bootstrap and local/remote reconciliation:
 ```text
 preserve unknown/uncommitted/unpushed valid work
 → compare local HEAD vs origin/main
-→ inspect commits after the last runner-backed green baseline
+→ read GitHub checks for the fetched origin/main commit
 → do not repeat already-merged gate/contract/brand/handoff repairs
 → inspect exact active owner/caller/contract/tests
 → reuse/adapt/bind before rebuild

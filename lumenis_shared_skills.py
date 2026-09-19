@@ -97,7 +97,7 @@ _LOCAL_RESEARCH = [
     "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
     "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
     "00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md",
-    "intelligence_library/02_ZBMP研究/品牌营销知识/brand-marketing-knowledge-08-meta-framework-seed-to-world-20260903.md",
+    "intelligence_library/02_BMP研究/品牌营销知识/brand-marketing-knowledge-08-meta-framework-seed-to-world-20260903.md",
 ]
 
 

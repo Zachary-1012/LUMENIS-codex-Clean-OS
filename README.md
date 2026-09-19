@@ -166,7 +166,7 @@ AGENTS.md                       Coding Agent 执行路由
 LICENSE                         LUMENIS 源码许可边界
 00-GOVERNANCE/                 权威规则、验收、handoff evidence
 02-ARCHITECTURE/               架构资料
-08-AUDIT/                      当前审计证据
+scripts/audit_tools/            当前仓库结构与边界检查
 .github/workflows/             CI
 scripts/                       运维、启动、维护脚本
 app.py                         当前 Flask 应用入口
@@ -330,6 +330,8 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 
 - [`AGENTS.md`](AGENTS.md)
 - [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)
+- [`00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md`](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)
+- [`00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`](00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md)
 - [`00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`](00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md)
 - [`00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`](00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json)
 
@@ -339,6 +341,6 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 - [`00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`](00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md)
 - [`00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md`](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
 - [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
-- [`08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`](08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md)
+- [`scripts/audit_tools/verify_lumenis_single_product.py`](scripts/audit_tools/verify_lumenis_single_product.py)
 
 历史 handoff / audit / archive 只在迁移、回溯、审计需要时读取，不作为正常开发必读材料。

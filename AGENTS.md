@@ -30,9 +30,11 @@ This root `AGENTS.md` is the first coding-agent instruction boundary. Before cha
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
 → 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
+→ 00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md
 → exact current source / runtime / DB / API / Permission / Evidence / tests for the active slice
 ```
 
@@ -140,6 +142,8 @@ BMP             Brand / Market-first
 Shared Capability
 SYSTEM          Collector / Runtime / Scheduler / AI Gateway / DB / Security / Permission / Settings / Recovery / Observability
 ```
+
+This product definition is locked. Repository cleanup must preserve the four domains, their owners, business workflows and shared services. A legacy-looking folder or identifier is not evidence that the capability is obsolete. Before removing a path, map its implementation and contracts to the current owner; retain the newer owner or migrate any unique behavior first. This repository is the only code-change target for 序境. The three companion products remain represented by the cross-repository registry as ecosystem specifications and ownership boundaries.
 
 AI enhances the product; AI is not Production Truth.
 

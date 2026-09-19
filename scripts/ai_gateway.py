@@ -2,7 +2,7 @@
 """AI Gateway：生产 AI 调用统一入口（固定前缀收敛 + budget 统一记录）。
 
 把「智谱隐式缓存命中」与「AI 成本可观测」落到真实调用：
-  1. 固定 system 前缀：从 config/prompts/zbc-prompts.yaml 加载（逐字符稳定→缓存命中前提），
+  1. 固定 system 前缀：从 config/prompts/lumenis-prompts.yaml 加载（逐字符稳定→缓存命中前提），
      禁止调用方内联复制（防前缀漂移）。
   2. 统一 budget 记录：每次调用写 ai-budget.jsonl（含 in/out token 估算 + 可选 cache 标记），
      供 Observatory 消费，观测 cache.hit_rate。

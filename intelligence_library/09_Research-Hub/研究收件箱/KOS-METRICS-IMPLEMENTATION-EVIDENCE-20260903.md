@@ -55,6 +55,6 @@
   - 健康画像复用 /api/kos/tier 的 profile.high_avg/low_avg（不新增请求）；manual_data_kos=0 时提示回填后生成。
   - KOC Gold/Silver/Bronze 规则表 + 实时判定器（调 /api/kos/koc-tier，不前端硬算；实测 120/999→gold、30/90→bronze）。
   - 面板顺序按业务漏斗固定：漏斗→成本→健康画像→KOC→ROI。
-- 验证：Playwright 真实 8201，三表 7/4/4 行、0 真实 pageerror、node --check 通过；Evidence：ZBC 序境/08-AUDIT/UI_KOS_AUDIT_06_DFS_TABLES.md。
+- 验证：Playwright 真实 8201，三表 7/4/4 行、0 真实 pageerror、node --check 通过；Evidence：historical audit evidence removed; verify current source and acceptance evidence。
 - 原则沉淀：learning-feed/pattern-contract-first-tables-20260903.md（契约 Schema 为业务表格唯一 Canonical，前端只渲染不自创字段）。
 - 仍待：KM-05 Campaign 复盘需选定活动 KOC 明细；Phase B 聚光 API 认证后成本/WeCom/Sales 自动归因。

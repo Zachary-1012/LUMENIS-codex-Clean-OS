@@ -45,7 +45,7 @@
 | 参考实现+使用文档 | `static/taiji-state-demo.html` | 两个真实形状实例：九态信号管线 / 创意芥子→须弥循环 | 纯新增 |
 | idea 上下文指纹 | `scripts/idea_generator.py` | 每个 idea 强制挂 `provenance`（见 H/I） | 仅新增字段，旧字段全保留 |
 | 创意卡证据链 | `creative_workbench.html` | 原生 `<details>` 渐进披露溯源（键盘可达，零额外 JS） | 仅新增区块 |
-| 元审阅固定前缀 | `config/prompts/zbc-prompts.yaml` | 新增 `meta_reviewer` 角色（固定前缀收敛，bump 即版本化） | 纯新增 role |
+| 元审阅固定前缀 | `config/prompts/lumenis-prompts.yaml` | 新增 `meta_reviewer` 角色（固定前缀收敛，bump 即版本化） | 纯新增 role |
 
 ## H. 芥子→须弥 反馈链（具体生产 → 抽象能力）
 真实信号（ZBC 舆情/Topic/人群，芥子）→ `brand_insight` 诊断 → `idea_generator` 抽象为机制/L1 公式（须弥）→ 知识库沉淀可复用法则 → Observatory 评估 → 下一轮调用。

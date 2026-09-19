@@ -289,7 +289,7 @@ class TestNoHardcodedPathsInProduction:
         "tests", "99-ARCHIVE", "docs", "node_modules", ".venv",
         ".git", "__pycache__", ".pytest_cache", ".vscode",
         "00-GOVERNANCE", "audit", "scripts", "OSAI测试证据",
-        "08-AUDIT", "handoff", "build",
+        "handoff", "build",
     }
 
     # 需扫描的硬编码模式
