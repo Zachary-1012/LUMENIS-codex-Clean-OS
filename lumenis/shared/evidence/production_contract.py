@@ -1,6 +1,6 @@
-"""LUMENIS Production Evidence Contract（V2 P0-16，ZBC侧）
+"""LUMENIS Production Evidence Contract（Shared Evidence）
 
-生产证据契约：ZBC 的生产操作必须产生可验证证据。
+生产证据契约：LUMENIS 的受保护生产操作必须产生可验证证据。
 保护 Production Truth：AI/Agent 不得直接修改生产数据，必须经过 Evidence → Evaluation → Human Approval。
 与 OSAI Canonical Data 的 Evidence 实体通过 Contract 对接。
 """
