@@ -216,6 +216,18 @@ def main() -> int:
         if "_human_approved" in ad_permission_text or "_approval_expiry" in ad_permission_text:
             errors.append("Ad permission adapter owns parallel human-approval state")
 
+    security_owner = ROOT / "lumenis/system/security"
+    for filename in ("permission.py", "action_firewall.py", "effect_fence.py", "__init__.py"):
+        if not (security_owner / filename).is_file():
+            errors.append(f"missing canonical SYSTEM security owner: lumenis/system/security/{filename}")
+
+    agent_loop_path = ROOT / "agent_runtime/loop.py"
+    if agent_loop_path.is_file():
+        agent_loop_text = agent_loop_path.read_text(encoding="utf-8")
+        for retired in ("from permission_gate", "import permission_gate", "skill_execution_chain"):
+            if retired in agent_loop_text:
+                errors.append(f"Agent Runtime bypasses canonical SYSTEM security owner: {retired}")
+
     routes_path = ROOT / "lumenis/shared/reporting/routes.py"
     if routes_path.is_file():
         routes_text = routes_path.read_text(encoding="utf-8")
