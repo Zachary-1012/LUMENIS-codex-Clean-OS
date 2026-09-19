@@ -39,14 +39,13 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
+from lumenis.shared.database import get_repository, main_db_path
 
 # ============================================================
 # 1) 数据库路径（与 database.py 保持一致的环境变量约定）
 # ============================================================
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.abspath(
-    os.environ.get('ZBC_DB_PATH') or os.path.join(_BASE_DIR, 'data', 'monitor.db')
-)
+DB_PATH = main_db_path()
 
 _WRITE_LOCK = threading.Lock()  # SQLite 多线程写保护
 
@@ -128,7 +127,7 @@ def _migrate_schema(conn):
 
 
 def _ensure_dir():
-    d = os.path.dirname(DB_PATH)
+    d = os.path.dirname(main_db_path())
     if d and not os.path.exists(d):
         try:
             os.makedirs(d, exist_ok=True)
@@ -153,8 +152,7 @@ def _sanitize_input(text: str) -> str:
 def _get_conn():
     """获取 SQLite 连接（自动建表+迁移）。调用方应在短事务内使用。"""
     _ensure_dir()
-    conn = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+    conn = get_repository().connect(timeout=10, check_same_thread=False)
     try:
         conn.executescript(_SCHEMA)
         _migrate_schema(conn)
