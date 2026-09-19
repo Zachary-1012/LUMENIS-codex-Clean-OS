@@ -194,14 +194,14 @@ try:
     # 4.3 Evidence 存储
     print(f"  4.3 Evidence storage...")
     try:
-        import evidence_store as es
+        from lumenis.shared.evidence import store as es
         es_funcs = [x for x in dir(es) if not x.startswith("_") and callable(getattr(es, x))]
         print(f"    evidence_store callables: {es_funcs[:15]}")
     except Exception as e:
         print(f"    evidence_store import: {e}")
 
     try:
-        import evidence_chain as ec
+        from lumenis.shared.evidence import chain as ec
         ec_funcs = [x for x in dir(ec) if not x.startswith("_") and callable(getattr(ec, x))]
         print(f"    evidence_chain callables: {ec_funcs[:15]}")
     except Exception as e:
