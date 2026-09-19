@@ -66,6 +66,43 @@ DB_PATH = os.environ.get("ZBC_DB_PATH", str(PROJECT_ROOT / "data" / "monitor.db"
 
 
 
+EVIDENCE_TABLE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS app_evidence_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL DEFAULT 'xhs_app',
+    capture_mode TEXT NOT NULL DEFAULT 'screenshot',
+    captured_at TEXT,
+    topic TEXT,
+    metric_name TEXT NOT NULL,
+    metric_value TEXT NOT NULL,
+    evidence_hash TEXT,
+    evidence_path TEXT,
+    parse_confidence REAL DEFAULT 1.0,
+    verified_by TEXT,
+    verified_at TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_app_evidence_topic ON app_evidence_records(topic);
+CREATE INDEX IF NOT EXISTS idx_app_evidence_status ON app_evidence_records(status);
+CREATE INDEX IF NOT EXISTS idx_app_evidence_hash ON app_evidence_records(evidence_hash);
+"""
+
+
+def init_evidence_store(db_path: str = None) -> None:
+    """Create the canonical Evidence table/indexes and apply additive chain fields."""
+    path = db_path or DB_PATH
+    conn = sqlite3.connect(path, timeout=10)
+    try:
+        conn.executescript(EVIDENCE_TABLE_SCHEMA)
+        conn.commit()
+    finally:
+        conn.close()
+    migrate_evidence_chain_fields(path)
+
+
 # Evidence 级别常量（L0-L10，对齐 EVIDENCE-PATTERNS.md）
 
 LEVELS = ["L0", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9", "L10"]
@@ -581,9 +618,9 @@ def record_evidence(
 
     *,
 
-    source: str = "zbc",
+    source: str = "lumenis",
 
-    project: str = "ZBC",
+    project: str = "LUMENIS",
 
     product: str = "CTH",
 
@@ -954,7 +991,7 @@ def record_collection_evidence(
 
         source="collector",
 
-        project="ZBC",
+        project="LUMENIS",
 
         product="CTH",
 
@@ -1060,7 +1097,7 @@ def record_health_evidence(
 
         source="health_monitor",
 
-        project="ZBC",
+        project="LUMENIS",
 
         product="CTH",
 
@@ -1276,6 +1313,7 @@ def get_stats() -> dict:
 
 __all__ = [
 
+    "init_evidence_store",
     "record_evidence",
 
     "record_collection_evidence",
