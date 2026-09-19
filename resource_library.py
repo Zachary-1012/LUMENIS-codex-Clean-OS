@@ -24,8 +24,9 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 from datetime import datetime
+from lumenis.shared.database import get_repository, main_db_path
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+DB_PATH = main_db_path()
 
 # 资源类别元数据（物理并表后不再关联表名，仅作类别配置）
 RESOURCE_REGISTRY = {
@@ -48,9 +49,7 @@ RESOURCE_REGISTRY = {
 
 
 def _get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect(timeout=10)
 
 
 def _row_to_resource(row: sqlite3.Row) -> dict:
