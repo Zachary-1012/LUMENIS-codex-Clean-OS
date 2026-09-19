@@ -1,9 +1,7 @@
-"""Legacy XHS CLI compatibility entrypoint.
+"""XHS collection entrypoint.
 
-This preserves the historical ``collector_v2.run_xhs_live`` command without
-reintroducing the retired collector implementation.  All collection remains
-owned by ``collector_v2.xhs.live_engine`` and its existing Evidence/Canonical
-Data persistence path.
+This module supplies a thin multi-keyword wrapper. Collection, filtering, and
+persistence behavior are owned by the canonical live engine under `.xhs.live_engine`.
 """
 
 from __future__ import annotations

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collector_v2 import run_xhs_live
+from lumenis.system.collector.runtime import run_xhs_live
 
 
-def test_legacy_xhs_entrypoint_delegates_to_canonical_engine(monkeypatch):
+def test_xhs_collection_entrypoint_delegates_to_canonical_engine(monkeypatch):
     calls = []
 
     def fake_run_live(keyword, **kwargs):

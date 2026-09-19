@@ -1,4 +1,4 @@
-"""V2 P0 module integration tests.
+"""LUMENIS product core module integration tests.
 
 Covers provider registry, subject context, domain isolation and repository registry.
 All repository file access is resolved from this checkout rather than a developer-machine path.
@@ -88,7 +88,7 @@ class TestDomainIsolation:
         from domain_isolation import get_domain
         assert get_domain("cth").is_protected is True
 
-    def test_zbmp_domain_not_protected(self):
+    def test_bmp_domain_not_protected(self):
         from domain_isolation import get_domain
         assert get_domain("zbmp").is_protected is False
 
