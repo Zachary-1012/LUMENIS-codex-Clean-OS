@@ -107,3 +107,9 @@ def test_priority_database_writers_use_repository_layer():
         source = (REPO / rel).read_text(encoding="utf-8")
         assert "lumenis.shared.database" in source, rel
         assert "os.environ.get(\"ZBC_DB_PATH\"" not in source, rel
+
+def test_app_has_no_direct_sqlite_connections():
+    source = (REPO / "app.py").read_text(encoding="utf-8")
+    assert "sqlite3.connect(" not in source
+    assert "_sq3.connect(" not in source
+    assert "get_repository" in source
