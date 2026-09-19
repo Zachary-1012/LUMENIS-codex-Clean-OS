@@ -128,9 +128,15 @@ http://127.0.0.1:8201/healthz
 
 ### Evidence / Canonical
 
-审计点 `evidence_chain.py` 提供 `zbc_evidence`、`zbc_canonical_data` 与 lifecycle tracking 等链路，强调 Evidence 不被分析结果覆盖、provenance、rule version、AI 输出与人工修正分离。
+当前 canonical owner 为 `lumenis/shared/evidence/`，提供 Evidence / Canonical lineage、存储、API 与生产契约；旧根级 `evidence_chain.py` 等 owner 已退休。Evidence 不被分析结果覆盖，provenance、rule version、AI 输出与人工修正保持分离。
 
 XHS side-write、lineage convergence 与其他 Evidence 行为必须以当前源码和测试为准；若本地存在比远程更新的有效修复，必须先完成 local→main 收敛再把状态升级为远程已实现。
+
+### Evaluation / Learning
+
+当前 canonical owners 为 `lumenis/shared/evaluation/` 与 `lumenis/shared/learning/`。Evaluation 统一承载真实质量、AI、Benchmark 与 Agent trajectory 评估；Learning 统一承载反馈、修正、规则建议、学习扫描、反馈闭环与学习持久化。
+
+Learning 输出本身不是 Production Truth。规则建议必须经过人工审核，写入规则注册表时保持非激活状态，且 AI 生成的研究内容不得绕过 Evidence 直接写成外部事件事实。
 
 ### Collector / XHS runtime
 
