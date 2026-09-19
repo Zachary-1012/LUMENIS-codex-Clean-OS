@@ -50,13 +50,18 @@ class TestAdPermissionGate:
         assert gate.has_permission(AdPermissionLevel.PREVIEW) is False
         assert gate.has_permission(AdPermissionLevel.EXECUTE) is False
 
-    def test_execute_requires_human_approval(self):
+    def test_execute_requires_canonical_human_approval(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        gate = AdPermissionGate()
-        # 即使环境变量允许execute，也需要人工确认
-        gate._enabled_levels.add(AdPermissionLevel.EXECUTE)
+        from lumenis.system.security import PermissionGate, PermissionLevel
+
+        system_gate = PermissionGate()
+        system_gate.grant_permission(PermissionLevel.PUSH)
+        gate = AdPermissionGate(system_gate=system_gate)
+        gate.enable_level(AdPermissionLevel.EXECUTE)
+
         assert gate.require(AdPermissionLevel.EXECUTE, "test") is False
-        gate.grant_human_approval(duration_minutes=5)
+        token = gate.grant_human_approval(duration_minutes=5)
+        assert token.startswith("apr_")
         assert gate.require(AdPermissionLevel.EXECUTE, "test") is True
 
     def test_execute_with_gate_denied(self):
@@ -68,15 +73,21 @@ class TestAdPermissionGate:
         assert success is False
         assert "权限不足" in result
 
-    def test_human_approval_expiry(self):
+    def test_human_approval_expiry_is_owned_by_system_permission(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
+        from lumenis.system.security import PermissionGate, PermissionLevel, OperationType
         from datetime import datetime, timedelta
-        gate = AdPermissionGate()
-        gate._enabled_levels.add(AdPermissionLevel.EXECUTE)
-        gate.grant_human_approval(duration_minutes=1)
-        gate._approval_expiry = datetime.now() - timedelta(minutes=2)
+
+        system_gate = PermissionGate()
+        system_gate.grant_permission(PermissionLevel.PUSH)
+        gate = AdPermissionGate(system_gate=system_gate)
+        gate.enable_level(AdPermissionLevel.EXECUTE)
+        token = gate.grant_human_approval(duration_minutes=1)
+        system_gate._approvals[token].expires_at = datetime.now() - timedelta(minutes=2)
+
         gate._check_approval_expiry()
-        assert gate._human_approved is False
+        assert system_gate.is_approved(OperationType.AD_EXECUTE.value) is False
+        assert gate.get_status()["human_approved"] is False
 
 
 class TestCTRPredictor:
