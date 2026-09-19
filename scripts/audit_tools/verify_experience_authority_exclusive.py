@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce one and only one LUMENIS Experience design authority in current main."""
+"""Enforce one App-only LUMENIS Experience design authority in current main."""
 from __future__ import annotations
 
 import re
@@ -12,7 +12,6 @@ CANONICAL = "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
 
 ROUTERS = {
     "AGENTS.md",
-    "experience_v2/AGENTS.md",
     "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
 }
 
@@ -235,12 +234,6 @@ def main() -> int:
         if CANONICAL not in text:
             errors.append(f"router not bound to sole Experience authority: {router}")
 
-    sections = ROOT / "experience_v2/10_prototype/assets/sections.js"
-    if sections.exists():
-        text = sections.read_text(encoding="utf-8", errors="replace")
-        if LEGACY_COMPOSER_PHRASE in text:
-            errors.append("legacy fixed-component composition authority remains in sections.js")
-
     if errors:
         print("LUMENIS Experience authority exclusivity: FAIL")
         for error in sorted(set(errors)):
@@ -249,6 +242,7 @@ def main() -> int:
 
     print("LUMENIS Experience authority exclusivity: PASS")
     print(f"sole_authority={CANONICAL}")
+    print("canonical_experience_surface=app/")
     print("legacy_design_authorities=0")
     return 0
 
