@@ -186,30 +186,134 @@ class LearningMemory(BaseMemoryLayer):
 
     def promote_record(self, record_id: str,
                        new_stage: LifecycleStage) -> bool:
-        """推进学习记录的生命周期阶段。
+        """推进学习记录生命周期，并同步持久化状态。
 
-        raw → reviewed → validated → promoted → archived
-        只有 promoted 阶段的记录才能影响生产规则。
+        合法链路：
+          raw → reviewed → validated → promoted → archived
+
+        archived 也可作为任一非终态的人工拒绝/收口终点。
+        只有 promoted 阶段的记录才能进入 prompt context 或影响后续规则使用。
         """
-        # 按 record_id 查找（记录存储时 key 为 learning:xxx，record_id 是独立字段）
-        rec = None
-        for r in self._in_memory.values():
-            if r.record_id == record_id:
-                rec = r
-                break
-        if not rec:
+        rec = next(
+            (r for r in self._in_memory.values() if r.record_id == record_id),
+            None,
+        )
+
+        current_stage: Optional[str] = None
+        if rec:
+            current_stage = rec.value.get("lifecycle_stage", LifecycleStage.RAW.value)
+
+        # 允许跨进程继续治理：内存没有记录时，从持久化表读取当前阶段。
+        if current_stage is None and self.db_path:
+            try:
+                conn = get_db_connection(self.db_path)
+                try:
+                    row = conn.execute(
+                        "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
+                        (record_id,),
+                    ).fetchone()
+                    if row:
+                        current_stage = row["lifecycle_stage"]
+                finally:
+                    conn.close()
+            except Exception:
+                current_stage = None
+
+        if current_stage is None:
             return False
-        rec.value["lifecycle_stage"] = new_stage.value
-        rec.metadata["lifecycle_stage"] = new_stage.value
+
+        # 幂等推进。
+        if current_stage == new_stage.value:
+            return True
+
+        allowed = {
+            LifecycleStage.RAW.value: {
+                LifecycleStage.REVIEWED.value,
+                LifecycleStage.ARCHIVED.value,
+            },
+            LifecycleStage.REVIEWED.value: {
+                LifecycleStage.VALIDATED.value,
+                LifecycleStage.ARCHIVED.value,
+            },
+            LifecycleStage.VALIDATED.value: {
+                LifecycleStage.PROMOTED.value,
+                LifecycleStage.ARCHIVED.value,
+            },
+            LifecycleStage.PROMOTED.value: {
+                LifecycleStage.ARCHIVED.value,
+            },
+            LifecycleStage.ARCHIVED.value: set(),
+        }
+        if new_stage.value not in allowed.get(current_stage, set()):
+            return False
+
+        if rec:
+            rec.value["lifecycle_stage"] = new_stage.value
+            rec.metadata["lifecycle_stage"] = new_stage.value
+
+        if self.db_path:
+            try:
+                conn = get_db_connection(self.db_path)
+                try:
+                    conn.execute(
+                        "UPDATE agent_learning_records SET lifecycle_stage=? WHERE record_id=?",
+                        (new_stage.value, record_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+            except Exception:
+                # 迁移表尚未创建时，内存推进仍然有效；Production Truth 不受影响。
+                pass
+
         return True
 
     def get_promoted_rules(self) -> List[Dict[str, Any]]:
-        """获取已提升为规则的学习记录（可用于 prompt context）。"""
+        """获取已提升规则；优先读取持久化记录，保证重启后仍可追溯。"""
         if not self.enabled:
             return []
+
+        persisted: List[Dict[str, Any]] = []
+        if self.db_path:
+            try:
+                conn = get_db_connection(self.db_path)
+                try:
+                    rows = conn.execute(
+                        """SELECT record_id, learning_type, source, content_json,
+                                  confidence, lifecycle_stage, related_task_id, created_at
+                           FROM agent_learning_records
+                           WHERE learning_type=? AND lifecycle_stage=?
+                           ORDER BY created_at DESC LIMIT 100""",
+                        (LearningType.RULE_SUGGESTION.value, LifecycleStage.PROMOTED.value),
+                    ).fetchall()
+                    for row in rows:
+                        try:
+                            content = json.loads(row["content_json"] or "{}")
+                        except (TypeError, json.JSONDecodeError):
+                            content = {}
+                        persisted.append({
+                            "record_id": row["record_id"],
+                            "learning_type": row["learning_type"],
+                            "content": content,
+                            "source": row["source"],
+                            "confidence": row["confidence"],
+                            "related_task_id": row["related_task_id"],
+                            "lifecycle_stage": row["lifecycle_stage"],
+                            "recorded_at": row["created_at"],
+                        })
+                finally:
+                    conn.close()
+            except Exception:
+                persisted = []
+
+        if persisted:
+            return persisted
+
         results = self.query({"learning_type": "rule_suggestion"}, limit=100)
-        return [r.value for r in results
-                if r.value.get("lifecycle_stage") == LifecycleStage.PROMOTED.value]
+        return [
+            r.value for r in results
+            if r.value.get("lifecycle_stage") == LifecycleStage.PROMOTED.value
+        ]
 
     # ── 持久化（agent_learning_records 表，迁移脚本定义） ────────
 
