@@ -20,7 +20,7 @@ from ai_task_engine import (
     TaskEngine, TaskStatus, init_task_engine_db,
     get_task_engine, reset_task_engine,
 )
-from permission_gate import (
+from lumenis.system.security import (
     PermissionGate, PermissionLevel, RiskLevel, OperationType,
     get_permission_gate, reset_permission_gate, set_testing_bypass,
 )
