@@ -7,14 +7,13 @@ import os
 import sys
 import sqlite3
 from datetime import datetime, timedelta
+from lumenis.shared.database import get_repository, main_db_path
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+DB_PATH = main_db_path()
 
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect(timeout=10)
 
 
 def populate_web_topics():
