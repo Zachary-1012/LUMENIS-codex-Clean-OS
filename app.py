@@ -58,6 +58,7 @@ try:
 except Exception as _log_e:
     print(f"[UnifiedLogger] 启用失败（不影响系统运行）: {_log_e}")
 import database as db
+from lumenis.shared.database import get_repository
 # === LUMENIS SYSTEM: canonical Permission initialization ===
 from lumenis.system.security import (
     get_permission_gate, PermissionLevel, OperationType, RiskLevel, require_permission,
@@ -936,7 +937,7 @@ def event_graph_delete_event(event_id):
         graph.relations = [r for r in graph.relations
                           if r.source_event.event_id != event_id and r.target_event.event_id != event_id]
         _dbp = db.main_db_path()  # P0-DBISO-01 统一隔离
-        with _sq3.connect(_dbp) as conn:
+        with get_repository().connect() as conn:
             conn.execute("DELETE FROM event_graph_events WHERE event_id=?", (event_id,))
             conn.execute("DELETE FROM event_graph_relations WHERE source_event_id=? OR target_event_id=?", (event_id, event_id))
             conn.commit()
@@ -2980,8 +2981,7 @@ def api_podcast_topics_compat():
         from podcast_routes import podcast_bp
         # 直接调用overview逻辑
         import sqlite3
-        from lumenis.shared.database import main_db_path as _main_db_path  # Shared Database canonical authority
-        db = sqlite3.connect(_main_db_path())
+        db = get_repository().connect()
         c = db.cursor()
         tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
         topics = []
@@ -3268,7 +3268,7 @@ def api_negative_pending():
         per_page = int(request.args.get('per_page', 20))
         status = request.args.get('status', 'pending')
         offset = (page - 1) * per_page
-        conn = sqlite3.connect(db.DB_PATH)
+        conn = get_repository().connect()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -3310,7 +3310,7 @@ def _note_set_review(note_id, state, by='admin'):
     state=1 确认负面；state=2 驳回。写 notes.negative_confirmed 同一字段。"""
     if not note_id:
         return {'ok': False, 'error': '缺少note_id'}, 400, None
-    conn = sqlite3.connect(db.DB_PATH)
+    conn = get_repository().connect()
     try:
         cur = conn.cursor()
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -3360,7 +3360,7 @@ def _event_set_review(event_id, state, by='admin'):
     """事件二次确认。state=1确认负面时，联动确认其关联负面笔记（事件由笔记聚合，
     确认事件即确认其下笔记）；关联走 event_mentions，缺失时用事件关键词兜底匹配。
     返回 {'events':事件更新行数, 'notes':联动笔记数}"""
-    conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    conn = get_repository().connect(); conn.row_factory = sqlite3.Row; cur = conn.cursor()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     # 兼容主键 id 或 event_key，先定位到事件真实行
     try:
@@ -3425,7 +3425,7 @@ def api_event_review_pending():
     """待人工确认的事件：风险事件且未二次确认（negative_confirmed=0），按风险/时间倒序"""
     try:
         limit = request.args.get('limit', 50, type=int)
-        conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row
+        conn = get_repository().connect(); conn.row_factory = sqlite3.Row
         rows = conn.execute("""SELECT * FROM events
                                WHERE (negative_confirmed=0 OR negative_confirmed IS NULL)
                                  AND (risk_level IN ('high','medium') OR fact_status IN ('unconfirmed','partially_confirmed'))
@@ -3439,7 +3439,7 @@ def api_event_review_pending():
 def api_event_review_stats():
     """事件负面确认统计：待确认/已确认/已驳回"""
     try:
-        conn = sqlite3.connect(db.DB_PATH); cur = conn.cursor()
+        conn = get_repository().connect(); cur = conn.cursor()
         pending = cur.execute("SELECT COUNT(*) FROM events WHERE (negative_confirmed=0 OR negative_confirmed IS NULL) AND risk_level IN('high','medium')").fetchone()[0]
         confirmed = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=1").fetchone()[0]
         rejected = cur.execute("SELECT COUNT(*) FROM events WHERE negative_confirmed=2").fetchone()[0]
@@ -3453,7 +3453,7 @@ def api_event_notes(event_id):
     """事件关联的真实笔记：优先 event_mentions 关联表（event_id→note_id），
     关联缺失时用事件关键词兜底匹配。负面/高风险在前，供事件详情“查看相关笔记案例”。"""
     try:
-        conn = sqlite3.connect(db.DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+        conn = get_repository().connect(); conn.row_factory = sqlite3.Row; cur = conn.cursor()
         try:
             row = cur.execute("SELECT * FROM events WHERE id=?", (int(event_id),)).fetchone()
         except (TypeError, ValueError):
@@ -3492,7 +3492,7 @@ def api_event_notes(event_id):
 def api_negative_stats():
     """获取负面舆情统计"""
     try:
-        conn = sqlite3.connect(db.DB_PATH)
+        conn = get_repository().connect()
         cursor = conn.cursor()
         # 待确认
         cursor.execute("SELECT COUNT(*) FROM notes WHERE sentiment='negative' AND (negative_confirmed=0 OR negative_confirmed IS NULL)")
@@ -3833,7 +3833,7 @@ def api_brand_add():
             monitor_task_id = f'brand_monitor_{brand_en.lower().replace(" ", "_")}_{int(datetime.now().timestamp())}'
             try:
                 # 记录监测任务到数据库
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_repository().connect()
                 conn.execute("""CREATE TABLE IF NOT EXISTS brand_monitor_tasks (
                     task_id TEXT PRIMARY KEY, brand_en TEXT, brand_cn TEXT,
                     category TEXT, keywords TEXT, status TEXT, created_at TEXT,
@@ -4714,7 +4714,7 @@ def api_dashboard_all():
         
         DB_PATH = db.DB_PATH
         # 使用WAL模式和超时配置，提高多线程稳定性
-        conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
+        conn = get_repository().connect(timeout=30, check_same_thread=False)
         conn.execute('PRAGMA journal_mode=WAL')
         conn.execute('PRAGMA busy_timeout=30000')
         conn.row_factory = sqlite3.Row
@@ -5060,7 +5060,7 @@ def api_web_collect():
         
         # 保存到全网话题表（对齐 web_topics 真实结构：topic/source/sentiment/mention_count/first_seen/last_seen/tags/summary/created_at）
         try:
-            conn = sqlite3.connect(db.DB_PATH, timeout=30)
+            conn = get_repository().connect(timeout=30)
             now_s = datetime.now().strftime('%Y-%m-%d %H:%M:%S'); today_s = datetime.now().strftime('%Y-%m-%d')
             def _save_topic(topic, source, mention, tags, summary):
                 topic = (topic or '').strip()
@@ -5097,7 +5097,7 @@ def api_web_collect():
 
 def get_db():
     db_path = db.DB_PATH
-    conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
+    conn = get_repository().connect(timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     # 启用WAL模式，提高并发性能
     try:
@@ -5114,7 +5114,7 @@ def api_web_topics_v580():
     """获取全网话题列表"""
     limit = request.args.get('limit', 50, type=int)
     
-    conn = sqlite3.connect(db.DB_PATH, timeout=30)
+    conn = get_repository().connect(timeout=30)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
@@ -5145,7 +5145,7 @@ def api_web_events_v580():
     """获取全网事件列表"""
     limit = request.args.get('limit', 50, type=int)
     
-    conn = sqlite3.connect(db.DB_PATH, timeout=30)
+    conn = get_repository().connect(timeout=30)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
@@ -5166,7 +5166,7 @@ def api_web_brand_industry_v580():
     industry = request.args.get('industry')
     limit = request.args.get('limit', 50, type=int)
     
-    conn = sqlite3.connect(db.DB_PATH, timeout=30)
+    conn = get_repository().connect(timeout=30)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -5198,7 +5198,7 @@ def api_collection_counter_v580():
     runs=今日关键词任务数 / collector_stats 为调度轮次与 manual/auto 拆分；blocked=熔断/受限任务数（如实展示）。"""
     today = datetime.now().strftime('%Y-%m-%d')
 
-    conn = sqlite3.connect(db.DB_PATH, timeout=30)
+    conn = get_repository().connect(timeout=30)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     # 1) 今日真实入库条数（采集时刻：captured_at 优先、回退 collected_at）
@@ -5280,7 +5280,7 @@ def api_collection_logs():
         date_to = request.args.get('to', '').strip()
         keyword = request.args.get('keyword', '').strip()
 
-        conn = sqlite3.connect(db.DB_PATH, timeout=30)
+        conn = get_repository().connect(timeout=30)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -5466,7 +5466,7 @@ def api_web_topics():
     """v5.9.0 优先读 web_topics 表真实数据并映射前端字段，为空回退内存缓存"""
     topics=[];updated_at=None
     try:
-        _c=sqlite3.connect(db.DB_PATH,timeout=30);_c.row_factory=sqlite3.Row
+        _c=get_repository().connect(timeout=30);_c.row_factory=sqlite3.Row
         rows=_c.execute('SELECT * FROM web_topics ORDER BY mention_count DESC, last_seen DESC LIMIT 50').fetchall()
         _c.close()
         for r in rows:
@@ -6121,8 +6121,7 @@ def api_v4_api_keys_list():
     """API Key 列表"""
     try:
         import sqlite3
-        db_path = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
-        conn = sqlite3.connect(db_path)
+        conn = get_repository().connect()
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         c.execute("""SELECT id, workspace, label, key_prefix, status, expires_at, last_used_at, created_at, created_by
@@ -6157,8 +6156,7 @@ def api_v4_api_keys_generate():
         expires_at = (datetime.now() + timedelta(days=expires_days)).isoformat() if expires_days > 0 else None
 
         import sqlite3
-        db_path = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
-        conn = sqlite3.connect(db_path)
+        conn = get_repository().connect()
         c = conn.cursor()
         c.execute("""INSERT INTO v4_workspace_keys
                      (workspace, label, key_prefix, key_hash, created_by, status, expires_at, created_at)
@@ -6191,8 +6189,7 @@ def api_v4_api_keys_revoke():
             return jsonify({'ok': False, 'error': 'key_id 不能为空'}), 400
         import sqlite3
         from datetime import datetime
-        db_path = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
-        conn = sqlite3.connect(db_path)
+        conn = get_repository().connect()
         c = conn.cursor()
         c.execute("UPDATE v4_workspace_keys SET status='revoked' WHERE id=?", (key_id,))
         conn.commit()
