@@ -15,11 +15,11 @@ Agent Loop — Goal-driven Agent Runtime 主循环
   - cancellation : 支持外部取消
 
 每步检查：
-  - permission_gate    : 复用现有权限门（fail-closed）
-  - action_firewall    : 复用 skill_execution_chain.action_firewall
-  - effect_fence       : 复用 skill_execution_chain.effect_fence
+  - SYSTEM Permission Gate（fail-closed）
+  - SYSTEM Action Firewall
+  - SYSTEM Effect Fence / Idempotency
 
-COMMIT/PUSH/Production Write 默认 DENY（复用 permission_gate fail-closed）。
+COMMIT/PUSH/Production Write 默认 DENY；所有副作用必须走唯一 SYSTEM 安全链。
 Circuit breaker：复用 runtime_guardian / ai_channel 的熔断器。
 
 设计原则：
@@ -276,7 +276,8 @@ class AgentLoop:
                 self._safe_transition(sm, AgentState.EXECUTING,
                                       reason=f"executing step {step_index}",
                                       metadata={"step": step_index})
-                exec_result = self._execute_step(step, context, task_id, step_index)
+                exec_result = self._execute_step(
+                    step, context, task_id, step_index, security=security)
 
                 # 5. OBSERVE
                 sm.transition_to(AgentState.OBSERVING, reason=f"step {step_index} done")
@@ -372,66 +373,172 @@ class AgentLoop:
             return "max_cost"
         return "ok"
 
+    @staticmethod
+    def _security_action(step: PlanStep):
+        """Derive a deterministic SYSTEM action classification for one Agent step."""
+        from lumenis.system.security import AgentAction
+
+        explicit = str((step.params or {}).get("action_type") or "").strip().upper()
+        if explicit in AgentAction.__members__:
+            return AgentAction[explicit]
+
+        text = f"{step.tool} {step.action}".lower()
+        if "deploy" in text:
+            return AgentAction.DEPLOY
+        if "push" in text or "publish" in text:
+            return AgentAction.PUSH
+        if "commit" in text:
+            return AgentAction.COMMIT
+        if "export" in text:
+            return AgentAction.EXPORT
+        if str(step.risk_level).lower() in {"high", "critical"}:
+            return AgentAction.WRITE
+        return AgentAction.ANALYZE
+
+    @staticmethod
+    def _security_operation(action):
+        from lumenis.system.security import AgentAction, OperationType
+
+        return {
+            AgentAction.READ: OperationType.SKILL_EXECUTE,
+            AgentAction.ANALYZE: OperationType.SKILL_EXECUTE,
+            AgentAction.SUGGEST: OperationType.SKILL_EXECUTE,
+            AgentAction.EXPORT: OperationType.DATA_EXPORT,
+            AgentAction.WRITE: OperationType.DB_WRITE,
+            AgentAction.COMMIT: OperationType.CONFIG_MODIFY,
+            AgentAction.PUSH: OperationType.RUNTIME_OPERATION,
+            AgentAction.DEPLOY: OperationType.RUNTIME_OPERATION,
+        }[action]
+
     def _check_security(self, step: PlanStep, context: Dict[str, Any]) -> Dict[str, Any]:
-        """每步安全检查：permission_gate → action_firewall → effect_fence。"""
-        # 1. Permission Gate
+        """SYSTEM Permission → Action Firewall → Effect Fence; every error fails closed."""
+        from lumenis.system.security import (
+            ActionRequest,
+            RiskLevel,
+            get_effect_fence,
+            is_testing_bypass_enabled,
+            validate_action,
+        )
+
+        action = self._security_action(step)
+        operation = self._security_operation(action)
+        risk_name = str(step.risk_level or "low").upper()
+        risk = RiskLevel[risk_name] if risk_name in RiskLevel.__members__ else RiskLevel.LOW
+        target = str((step.params or {}).get("target") or f"skill:{step.tool or 'agent_step'}")
+        scope = str(
+            context.get("domain")
+            or context.get("product")
+            or "system"
+        ).strip().lower()
+        operation_id = str(step.step_id)
+
+        # 1. Canonical Permission. A missing/broken permission owner is never auto-allowed.
         try:
             gate = self._get_permission_gate()
-            if gate is not None:
-                from permission_gate import OperationType, RiskLevel
-                risk = RiskLevel[step.risk_level.upper()] if step.risk_level.upper() in RiskLevel.__members__ else RiskLevel.LOW
-                op = OperationType.SKILL_EXECUTE if step.tool else OperationType.AI_CALL
-                perm_result = gate.check(op, resource=step.tool or "agent_step", risk_level=risk)
-                if not perm_result.allowed:
-                    return {"allowed": False, "reason": f"permission denied: {perm_result.reason}",
-                            "layer": "permission_gate"}
-        except Exception as e:
-            # 权限门异常时 fail-closed（除非测试模式）
-            try:
-                from permission_gate import _TESTING_BYPASS_ENABLED
-                if not _TESTING_BYPASS_ENABLED:
-                    return {"allowed": False, "reason": f"permission gate error: {e}", "layer": "permission_gate"}
-            except Exception:
-                pass
-
-        # 2. Action Firewall（复用 skill_execution_chain）
-        try:
-            from skill_execution_chain import action_firewall, SkillExecutionContext, ActionType
-            ctx = SkillExecutionContext(
-                skill_id=step.tool or "agent_step",
-                task=step.action,
-                input_payload=step.params,
-                action_type=ActionType.WRITE if step.risk_level in ("high", "critical") else ActionType.ANALYZE,
+            if gate is None:
+                raise RuntimeError("canonical SYSTEM Permission unavailable")
+            perm_result = gate.check(
+                operation,
+                resource=target,
+                risk_level=risk,
+                caller=f"agent_runtime:{self._observation_layer.agent_id}",
+                operation_id=operation_id,
+                domain_id=str(context.get("domain_id") or "") or None,
+                role=str(context.get("role") or "") or None,
             )
-            fw_result = action_firewall(ctx)
-            if not fw_result.get("allowed"):
-                return {"allowed": False, "reason": fw_result.get("reason", "firewall blocked"),
-                        "layer": "action_firewall"}
-        except Exception:
-            pass  # firewall 不可用时不阻断（permission_gate 已兜底）
+            if not perm_result.allowed:
+                return {
+                    "allowed": False,
+                    "reason": f"permission denied: {perm_result.reason}",
+                    "layer": "permission",
+                    "permission": perm_result.to_dict(),
+                }
+        except Exception as exc:
+            if is_testing_bypass_enabled():
+                return {
+                    "allowed": True,
+                    "reason": f"explicit testing bypass: {exc}",
+                    "layer": "testing_bypass",
+                    "fence_idempotency_key": None,
+                }
+            return {
+                "allowed": False,
+                "reason": f"permission error: {exc}",
+                "layer": "permission",
+            }
 
-        # 3. Effect Fence（复用 skill_execution_chain）
+        # 2. Canonical Action Firewall. Permission is an input, never re-invented here.
         try:
-            from skill_execution_chain import effect_fence, SkillExecutionContext, ActionType
-            ctx = SkillExecutionContext(
-                skill_id=step.tool or "agent_step",
-                input_payload=step.params,
-                action_type=ActionType.WRITE if step.risk_level in ("high", "critical") else ActionType.ANALYZE,
+            fw_result = validate_action(
+                ActionRequest(
+                    identity=f"agent_runtime:{self._observation_layer.agent_id}",
+                    intent=step.action or "execute planned step",
+                    tool=step.tool or "agent_step",
+                    parameters=dict(step.params or {}),
+                    target=target,
+                    scope=scope,
+                    action=action,
+                ),
+                permission_result=perm_result,
             )
-            fence_result = effect_fence(ctx)
-            if fence_result.get("writes_production") and not fence_result.get("auto_admit", True):
-                # 写操作需要人工审批，这里标记为需要审批（不直接阻断，由上层决定）
-                pass
-        except Exception:
-            pass
+        except Exception as exc:
+            return {
+                "allowed": False,
+                "reason": f"action firewall error: {exc}",
+                "layer": "action_firewall",
+            }
 
-        return {"allowed": True, "reason": "all security checks passed"}
+        if not fw_result.allowed:
+            return {
+                "allowed": False,
+                "reason": fw_result.reason,
+                "layer": "action_firewall",
+                "permission": perm_result.to_dict(),
+                "firewall": fw_result.to_dict(),
+            }
+
+        # 3. Canonical Effect Fence / side-effect idempotency.
+        try:
+            fence_result = get_effect_fence().check(
+                action=action,
+                target=target,
+                payload=dict(step.params or {}),
+                operation_id=operation_id,
+            )
+        except Exception as exc:
+            return {
+                "allowed": False,
+                "reason": f"effect fence error: {exc}",
+                "layer": "effect_fence",
+                "permission": perm_result.to_dict(),
+                "firewall": fw_result.to_dict(),
+            }
+
+        if not fence_result.allowed:
+            return {
+                "allowed": False,
+                "reason": fence_result.reason,
+                "layer": "effect_fence",
+                "permission": perm_result.to_dict(),
+                "firewall": fw_result.to_dict(),
+                "effect_fence": fence_result.to_dict(),
+            }
+
+        return {
+            "allowed": True,
+            "reason": "SYSTEM security chain passed",
+            "layer": "effect_fence",
+            "permission": perm_result.to_dict(),
+            "firewall": fw_result.to_dict(),
+            "effect_fence": fence_result.to_dict(),
+            "fence_idempotency_key": fence_result.idempotency_key,
+        }
 
     def _get_permission_gate(self) -> Optional[Any]:
-        """延迟获取权限门。"""
+        """延迟获取唯一 SYSTEM Permission owner。"""
         if self._permission_gate is None:
             try:
-                from permission_gate import get_permission_gate
+                from lumenis.system.security import get_permission_gate
                 self._permission_gate = get_permission_gate()
             except Exception:
                 self._permission_gate = None
@@ -443,6 +550,7 @@ class AgentLoop:
         context: Dict[str, Any],
         task_id: str,
         step_index: int,
+        security: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """执行单个步骤。"""
         start = time.time()
@@ -460,6 +568,13 @@ class AgentLoop:
             # 执行工具
             result = self._tool_executor(step, context)
 
+            # Close the Effect Fence reservation with the real execution outcome.
+            fence_key = (security or {}).get("fence_idempotency_key")
+            if fence_key:
+                from lumenis.system.security import get_effect_fence
+                get_effect_fence().complete(
+                    fence_key, success=bool(result.get("success")))
+
             duration_ms = round((time.time() - start) * 1000, 2)
             result["duration_ms"] = duration_ms
 
@@ -474,6 +589,13 @@ class AgentLoop:
             return result
 
         except Exception as e:
+            fence_key = (security or {}).get("fence_idempotency_key")
+            if fence_key:
+                try:
+                    from lumenis.system.security import get_effect_fence
+                    get_effect_fence().complete(fence_key, success=False)
+                except Exception:
+                    pass
             duration_ms = round((time.time() - start) * 1000, 2)
             return {
                 "success": False,
