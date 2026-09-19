@@ -74,7 +74,7 @@ def export_report(report_type='daily', date=None, format='word'):
     print(f"报告周期: {period_start} 至 {period_end}")
     print()
 
-    # 唯一导出 Owner：lumenis.shared.reporting.export_engine
+    # 唯一导出 Owner：lumenis.shared.reporting.export_api
     format_key = {
         'word': 'docx',
         'docx': 'docx',
@@ -87,7 +87,7 @@ def export_report(report_type='daily', date=None, format='word'):
         return False
 
     try:
-        from lumenis.shared.reporting.export_engine import export_report as canonical_export_report
+        from lumenis.shared.reporting.export_api import export_artifacts as canonical_export_report
         result = canonical_export_report(
             report_type,
             period_start,
