@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """[Legacy] ComplianceGate（P1-H｜统一合规 Gate · Legacy 保留）。
 
-⚠️ Legacy 模块：Phase 3 后，权限控制由 permission_gate.py 统一，合规裁决仍由本模块负责（多法域 BLOCK/REVIEW/PASS）。两者互补：PermissionGate 管操作权限，ComplianceGate 管法域合规，不替代、不删除。
+⚠️ Legacy 模块：Phase 3 后，权限控制由 lumenis.system.security.PermissionGate 统一，合规裁决仍由本模块负责（多法域 BLOCK/REVIEW/PASS）。两者互补：PermissionGate 管操作权限，ComplianceGate 管法域合规，不替代、不删除。
 
 ComplianceGate（P1-H｜统一合规 Gate）。
 
