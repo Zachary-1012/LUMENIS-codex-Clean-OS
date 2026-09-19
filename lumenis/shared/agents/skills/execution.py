@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""ZBC/LUMENIS P1 — Skill Execution Chain (适配接入，不重写 skill_registry)。
+"""LUMENIS — canonical Skill Execution Chain (适配接入，不重写 skill_registry)。
 执行链：Task → Permission → Agent → Skill → Tool → Action Firewall
-       → Effect Fence → Execute → Evidence → Evaluation → Trace
+       → Effect Fence / Idempotency → Execute → Evidence → Evaluation → Trace
 """
 from __future__ import annotations
 import json, traceback, uuid
@@ -22,12 +22,6 @@ class ActionType(str, Enum):
 class ExecutionStatus(str, Enum):
     PENDING = "pending"; RUNNING = "running"; COMPLETED = "completed"
     FAILED = "failed"; BLOCKED = "blocked"; REJECTED = "rejected"
-
-_ACTION_POLICY = {
-    ActionType.READ: "ALLOW", ActionType.ANALYZE: "ALLOW", ActionType.SUGGEST: "ALLOW",
-    ActionType.EXPORT: "CONDITIONAL", ActionType.WRITE: "RESTRICTED",
-    ActionType.COMMIT: "DENY", ActionType.PUSH: "DENY",
-}
 
 _VALID_TRANSITIONS = {
     SkillState.REGISTERED: {SkillState.ENABLED, SkillState.DISABLED},
@@ -83,7 +77,26 @@ except Exception:
     _LIFECYCLE_AVAILABLE = False
 
 
+def _canonical_operation(action_type):
+    from lumenis.system.security import OperationType
+    mapping = {
+        ActionType.READ: OperationType.SKILL_EXECUTE,
+        ActionType.ANALYZE: OperationType.SKILL_EXECUTE,
+        ActionType.SUGGEST: OperationType.SKILL_EXECUTE,
+        ActionType.EXPORT: OperationType.DATA_EXPORT,
+        ActionType.WRITE: OperationType.DB_WRITE,
+        ActionType.COMMIT: OperationType.CONFIG_MODIFY,
+        ActionType.PUSH: OperationType.RUNTIME_OPERATION,
+    }
+    return mapping[action_type]
+
+
 def check_permission(ctx, user_role="user", skill_info=None):
+    """Skill context checks + canonical SYSTEM Permission decision.
+
+    Skill enablement and product affinity are execution-context facts. Final
+    operation authorization is owned only by lumenis.system.security.
+    """
     if skill_info and not skill_info.enabled:
         return {"allowed": False, "reason": f"skill '{ctx.skill_id}' is disabled", "code": "SKILL_DISABLED"}
     if skill_info and skill_info.product != "SHARED":
@@ -92,11 +105,28 @@ def check_permission(ctx, user_role="user", skill_info=None):
             if caller not in [a.upper() for a in skill_info.cross_domain_allowed]:
                 return {"allowed": False, "reason": f"cross-domain denied: caller={caller}, skill={sk}",
                         "code": "CROSS_DOMAIN_DENIED"}
-    if user_role not in ("owner", "admin"):
-        if ctx.action_type in (ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH):
-            return {"allowed": False, "reason": f"role '{user_role}' cannot execute {ctx.action_type.value}",
-                    "code": "INSUFFICIENT_ROLE"}
-    return {"allowed": True, "reason": "OK", "code": "PERMISSION_GRANTED"}
+
+    # Preserve the existing least-privilege role boundary, but do not let it
+    # become a second permission authority.
+    if user_role not in ("owner", "admin") and ctx.action_type in (
+        ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH,
+    ):
+        return {"allowed": False, "reason": f"role '{user_role}' cannot execute {ctx.action_type.value}",
+                "code": "INSUFFICIENT_ROLE"}
+
+    from lumenis.system.security import get_permission_gate
+    target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    result = get_permission_gate().check(
+        operation_type=_canonical_operation(ctx.action_type),
+        resource=target,
+        caller=f"skill_executor:{ctx.skill_id}",
+        operation_id=ctx.execution_id,
+    )
+    payload = result.to_dict()
+    payload["code"] = "PERMISSION_GRANTED" if result.allowed else (
+        "APPROVAL_REQUIRED" if result.requires_approval else "PERMISSION_DENIED"
+    )
+    return payload
 
 
 def _check_sensitive_data(payload):
@@ -106,57 +136,45 @@ def _check_sensitive_data(payload):
 
 
 def action_firewall(ctx, extra_policy=None):
-    """Action Firewall：P1 基础策略 + P2 深度校验链。"""
-    policy = dict(_ACTION_POLICY)
-    if extra_policy: policy.update(extra_policy)
-    decision = policy.get(ctx.action_type, "DENY")
-
-    # P2 深度校验链（可选接入）
-    p2_result = None
-    try:
-        from p2_action_firewall import validate_action as p2_validate, ActionRequest, AgentAction
-        try: p2_action = AgentAction(ctx.action_type.value)
-        except ValueError: p2_action = AgentAction.ANALYZE
-        p2_req = ActionRequest(
-            identity=f"skill_executor:{ctx.execution_id}",
-            intent=ctx.task or f"execute skill {ctx.skill_id}",
-            tool=f"skill:{ctx.skill_id}", parameters=ctx.input_payload,
-            target=ctx.input_payload.get("target", "staging"), scope=ctx.domain,
-            action=p2_action, user_role="owner")
-        p2_result = p2_validate(p2_req)
-    except Exception:
-        p2_result = None
-
-    if p2_result is not None and not p2_result.allowed:
-        return {"allowed": False, "action": ctx.action_type.value, "decision": p2_result.decision,
-                "reason": p2_result.reason, "code": "P2_FIREWALL_DENY",
-                "p2_checks": p2_result.checks, "requires_approval": p2_result.requires_approval}
-
-    if decision == "ALLOW":
-        return {"allowed": True, "action": ctx.action_type.value, "decision": "ALLOW",
-                "reason": "action type permitted", "p2_passed": p2_result is not None}
-    elif decision == "CONDITIONAL":
-        if _check_sensitive_data(ctx.input_payload):
-            return {"allowed": False, "action": ctx.action_type.value, "decision": "DENY",
-                    "reason": "export contains sensitive data", "code": "EXPORT_SENSITIVE"}
-        return {"allowed": True, "action": ctx.action_type.value, "decision": "CONDITIONAL_PASS",
-                "reason": "export without sensitive data"}
-    elif decision == "RESTRICTED":
-        return {"allowed": True, "action": ctx.action_type.value, "decision": "RESTRICTED",
-                "reason": "write allowed only through Effect Fence", "requires_effect_fence": True,
-                "p2_passed": p2_result is not None}
-    else:
-        return {"allowed": False, "action": ctx.action_type.value, "decision": "DENY",
-                "reason": f"action type {ctx.action_type.value} is denied by default", "code": "ACTION_DENIED"}
+    """Consume canonical Permission and run the canonical SYSTEM Action Firewall."""
+    from lumenis.system.security import (
+        ActionRequest, AgentAction, PermissionResult, validate_action,
+    )
+    target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    req = ActionRequest(
+        identity=f"skill_executor:{ctx.execution_id}",
+        intent=ctx.task or f"execute skill {ctx.skill_id}",
+        tool=f"skill:{ctx.skill_id}",
+        parameters=ctx.input_payload,
+        target=target,
+        scope=ctx.domain,
+        action=AgentAction(ctx.action_type.value),
+    )
+    permission = None
+    if ctx.permission_result:
+        fields = {
+            "allowed", "reason", "requires_approval", "approval_token", "audit_id",
+            "operation_type", "resource", "risk_level", "permission_required",
+            "caller", "operation_id", "idempotent_hit", "domain_id", "timestamp",
+        }
+        permission = PermissionResult(**{
+            k: v for k, v in ctx.permission_result.items() if k in fields
+        })
+    result = validate_action(req, permission_result=permission, extra_policy=extra_policy)
+    return result.to_dict()
 
 
 def effect_fence(ctx):
-    writes = ctx.action_type in (ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH)
-    return {"fenced": True, "writes_production": writes, "staging_required": writes,
-            "auto_admit": False,
-            "validation_status": "pending_validation" if writes else "read_only_pass",
-            "reason": "results staged; production admission requires Evidence -> Evaluation -> manual validation"
-            if writes else "read-only action, no production side effect"}
+    """Run the canonical Effect Fence; mutating handlers cannot bypass it."""
+    from lumenis.system.security import AgentAction, get_effect_fence
+    target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    decision = get_effect_fence().check(
+        action=AgentAction(ctx.action_type.value),
+        target=target,
+        payload=ctx.input_payload,
+        operation_id=ctx.execution_id,
+    )
+    return decision.to_dict()
 
 
 def execute_skill(ctx, handler=None, skill_info=None):
@@ -390,8 +408,21 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
         ctx.status = ExecutionStatus.REJECTED; ctx.error = ctx.firewall_result.get("reason", "action denied")
         write_trace(ctx, int((time.time() - start) * 1000)); return ctx
     ctx.effect_fence_result = effect_fence(ctx)
+    if not ctx.effect_fence_result.get("allowed", False):
+        ctx.status = ExecutionStatus.BLOCKED
+        ctx.error = ctx.effect_fence_result.get("reason", "effect fence blocked")
+        write_trace(ctx, int((time.time() - start) * 1000))
+        return ctx
     ctx.status = ExecutionStatus.RUNNING
     ctx.execute_result = execute_skill(ctx, handler=handler, skill_info=skill_info)
+    try:
+        from lumenis.system.security import get_effect_fence
+        get_effect_fence().complete(
+            ctx.effect_fence_result.get("idempotency_key"),
+            success=bool(ctx.execute_result.get("success")),
+        )
+    except Exception:
+        pass
     ctx.evidence = build_evidence(ctx)
     ctx.evidence_record = record_execution_evidence(ctx)
     ctx.evaluation = evaluate_execution(ctx)
