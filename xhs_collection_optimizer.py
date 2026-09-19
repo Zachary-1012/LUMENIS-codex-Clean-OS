@@ -23,9 +23,10 @@ import time
 import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 # ============ 配置 ============
-DB_PATH = os.environ.get('ZBC_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
+DB_PATH = main_db_path()
 LOGIN_KEEPALIVE_FILE = os.environ.get('XHS_LOGIN_KEEPALIVE_FILE',
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'xhs_login_keepalive.json'))
 
@@ -142,7 +143,7 @@ class NoteTypeClassifier:
         """分类并保存到数据库。"""
         note_type, scores = self.classify(title, content, keywords)
         try:
-            conn = sqlite3.connect(db_path)
+            conn = DatabaseRepository(db_path).connect()
             c = conn.cursor()
             # 检查 note_type 列是否存在
             c.execute("PRAGMA table_info(notes)")
