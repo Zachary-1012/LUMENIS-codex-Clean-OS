@@ -22,7 +22,8 @@ PC/移动端自适应，支持动态筛选/Hover/Tooltip/排序/搜索/Tab切换
 from __future__ import annotations
 
 
-import sqlite3, os, json, io, math
+import sqlite3
+from lumenis.shared.database import get_repository, main_db_path, os, json, io, math
 
 
 from datetime import datetime
@@ -38,7 +39,7 @@ from typing import Optional
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(PROJECT_ROOT / "data" / "monitor.db"))
+DB_PATH = main_db_path()
 
 
 REPORT_DIR = str(PROJECT_ROOT / "data" / "reports")
@@ -56,7 +57,7 @@ os.makedirs(REPORT_DIR, exist_ok=True)
 def _get_conn() -> sqlite3.Connection:
 
 
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = get_repository().connect(timeout=10)
 
 
     conn.row_factory = sqlite3.Row
