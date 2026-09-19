@@ -21,8 +21,8 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import evidence_chain
-from evidence_chain import (
+from lumenis.shared.evidence import chain as evidence_chain
+from lumenis.shared.evidence.chain import (
     Evidence,
     CanonicalData,
     EvidenceStore,
@@ -653,14 +653,14 @@ class TestEndToEnd:
 class TestBackwardCompatibility:
     def test_adapt_evidence_store_hash(self):
         """adapt_evidence_store_hash 返回完整 SHA256。"""
-        from evidence_chain import adapt_evidence_store_hash
+        from lumenis.shared.evidence.chain import adapt_evidence_store_hash
         h = adapt_evidence_store_hash("test content")
         assert len(h) == 64
         assert h == compute_content_hash("test content")
 
     def test_build_provenance_metadata(self):
         """build_provenance_metadata 构建标准元数据。"""
-        from evidence_chain import build_provenance_metadata
+        from lumenis.shared.evidence.chain import build_provenance_metadata
         meta = build_provenance_metadata(
             source_type="xhs_note",
             source_url="https://x.com/1",
