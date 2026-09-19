@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""LUMENIS Frontend Foundation Blueprint — 序境体验层（L0）页面路由。
+"""LUMENIS App API Blueprint — JSON contracts only.
 
 本模块只负责渲染前端 Foundation 页面 + Skill Hub API，不包含任何业务逻辑、
 数据采集、主体判断或数据库写操作。与 ZBC 生产核心解耦：在 app.py 中用一行注册即可：
 
-    from lumenis_frontend import lumenis_bp
+    from lumenis_app_api import lumenis_bp
     app.register_blueprint(lumenis_bp)
 
 不注册也不影响现有系统；模板与静态资源独立于旧前端。
@@ -13,65 +13,16 @@
 import json
 import time as _time
 import uuid as _uuid
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, request, jsonify
 
-lumenis_bp = Blueprint(
-    "lumenis", __name__,
-    template_folder="templates",
-    static_folder="static",
-    url_prefix="/lumenis",
-)
+lumenis_bp = Blueprint("lumenis", __name__, url_prefix="/lumenis")
 
 # Domain API blueprint (root-level, no /lumenis prefix — for xujing-viz.js /api/* calls)
 domain_api_bp = Blueprint("domain_api", __name__)
 
 
-@lumenis_bp.route("/")
-def command_home():
-    """Canonical product entry — LUMENIS AI first, backed by Experience V2 runtime.
 
-    The legacy /lumenis/<domain> routes remain compatibility surfaces for existing
-    links and API/UI regression coverage.  New product navigation starts at the
-    AI workspace so CTH/BMP are product domains, not competing application roots.
-    """
-    from flask import redirect
-    return redirect("/experience/#/AI-01")
-
-
-@lumenis_bp.route("/ai")
-def command_ai():
-    """Stable deep-link for the canonical LUMENIS AI workspace."""
-    from flask import redirect
-    return redirect("/experience/#/AI-01")
-
-
-@lumenis_bp.route("/cth")
-def command_cth():
-    """Stable product-domain entry without introducing a third product line."""
-    from flask import redirect
-    return redirect("/experience/#/CTH-01")
-
-
-@lumenis_bp.route("/zbmp")
-def command_zbmp():
-    """Stable product-domain entry without introducing a third product line."""
-    from flask import redirect
-    return redirect("/experience/#/BMP-01")
-
-
-@lumenis_bp.route("/settings")
-def command_settings():
-    """Settings entry: system, account, security and runtime controls."""
-    from flask import redirect
-    return redirect("/experience/#/SYS-05")
-
-
-@lumenis_bp.route("/healthz")
-def foundation_healthz():
-    """Foundation 层存活探针（不触达业务/数据库）。"""
-    return {"status": "ok", "layer": "L0-experience", "component": "lumenis-frontend-foundation"}
-
-
+# Shared Skill JSON API (App transport)
 # ========== Skill Hub API（Cross-Core Adapter，ZBC 不维护独立 Skill Truth） ==========
 
 from lumenis_skill_adapter import get_skill_adapter
@@ -359,8 +310,7 @@ def api_intelligence_evidence():
 
 
 
-# ========== ZBC V2.0 Dual-Domain Workspace (ZBMP / CTH / SYSTEM) ==========
-# Domain context helper: read from cookie, header, or query param
+
 def _get_domain_context():
     """Resolve current domain from cookie/header/query, default cth."""
     dom = (request.cookies.get('zbc_domain')
@@ -369,335 +319,6 @@ def _get_domain_context():
            or 'cth')
     return dom if dom in ('zbmp', 'cth', 'system') else 'cth'
 
-
-def _domain_template_vars(active_nav, active_domain, page_title):
-    """Common template variables for dual-domain pages."""
-    return dict(
-        active_nav=active_nav,
-        active_domain=active_domain,
-        home_url="/lumenis/",
-        page_title=page_title,
-    )
-
-
-# ---------- ZBMP Domain Routes ----------
-
-@lumenis_bp.route("/zbmp/overview")
-def zbmp_overview():
-    """Canonical ZBMP overview entry; legacy template remains compatibility-only."""
-    from flask import redirect
-    return redirect("/experience/#/BMP-01")
-
-
-@lumenis_bp.route("/zbmp/intelligence")
-def zbmp_intelligence():
-    return render_template("zbmp/intelligence.html",
-                           **_domain_template_vars("zbmp_intelligence", "zbmp", "Brand Intelligence"))
-
-
-@lumenis_bp.route("/zbmp/brand")
-def zbmp_brand():
-    return render_template("zbmp/brand.html",
-                           **_domain_template_vars("zbmp_brand", "zbmp", "Brand Management"))
-
-
-@lumenis_bp.route("/zbmp/content")
-def zbmp_content():
-    return render_template("zbmp/content.html",
-                           **_domain_template_vars("zbmp_content", "zbmp", "Content"))
-
-
-@lumenis_bp.route("/zbmp/podcast")
-def zbmp_podcast():
-    """ZBMP Podcast — 播客内容管理（调用真实 podcast API）。"""
-    return render_template("zbmp/podcast.html",
-                           **_domain_template_vars("zbmp_podcast", "zbmp", "Podcast"))
-
-
-@lumenis_bp.route("/zbmp/kos")
-def zbmp_kos():
-    return render_template("zbmp/kos.html",
-                           **_domain_template_vars("zbmp_kos", "zbmp", "KOS-KOL-KOC"))
-
-
-@lumenis_bp.route("/zbmp/competition")
-def zbmp_competition():
-    return render_template("zbmp/competition.html",
-                           **_domain_template_vars("zbmp_competition", "zbmp", "Competition"))
-
-
-@lumenis_bp.route("/zbmp/risk")
-def zbmp_risk():
-    return render_template("zbmp/risk.html",
-                           **_domain_template_vars("zbmp_risk", "zbmp", "Risk"))
-
-
-@lumenis_bp.route("/zbmp/reports")
-def zbmp_reports():
-    return render_template("zbmp/reports.html",
-                           **_domain_template_vars("zbmp_reports", "zbmp", "Reports"))
-
-
-@lumenis_bp.route("/zbmp/evaluation")
-def zbmp_evaluation():
-    return render_template("zbmp/evaluation.html",
-                           **_domain_template_vars("zbmp_evaluation", "zbmp", "Evaluation"))
-
-
-@lumenis_bp.route("/zbmp/launch")
-def zbmp_launch():
-    """ZBMP Launch Screen — 品牌智能域启动屏。"""
-    return render_template("zbmp/launch.html")
-
-
-# ---------- CTH Domain Routes ----------
-
-@lumenis_bp.route("/cth/overview")
-def cth_overview():
-    """Canonical CTH overview entry; legacy template remains compatibility-only."""
-    from flask import redirect
-    return redirect("/experience/#/CTH-01")
-
-
-@lumenis_bp.route("/cth/realtime")
-def cth_realtime():
-    return render_template("cth/realtime.html",
-                           **_domain_template_vars("cth_realtime", "cth", "Real-time Intelligence"))
-
-
-@lumenis_bp.route("/cth/topics")
-def cth_topics():
-    """CTH Topics — 话题监测端口（活动/话题/笔记/时间线/导出）。"""
-    return render_template("cth/topics.html",
-                           **_domain_template_vars("cth_topics", "cth", "Topic Monitor"))
-
-
-@lumenis_bp.route("/cth/events")
-def cth_events():
-    return render_template("cth/events.html",
-                           **_domain_template_vars("cth_events", "cth", "Events"))
-
-
-@lumenis_bp.route("/cth/risk")
-def cth_risk():
-    """CTH Risk — 映射现有 /lumenis/production/risk（Domain Adapter）。"""
-    return render_template("cth/risk.html",
-                           **_domain_template_vars("cth_risk", "cth", "Risk Center"))
-
-
-@lumenis_bp.route("/cth/brands")
-def cth_brands():
-    return render_template("cth/brands.html",
-                           **_domain_template_vars("cth_brands", "cth", "Brands (199)"))
-
-
-@lumenis_bp.route("/cth/industries")
-def cth_industries():
-    return render_template("cth/industries.html",
-                           **_domain_template_vars("cth_industries", "cth", "Industries (9)"))
-
-
-@lumenis_bp.route("/cth/xiaohongshu")
-def cth_xhs():
-    return render_template("cth/xiaohongshu.html",
-                           **_domain_template_vars("cth_xhs", "cth", "Xiaohongshu"))
-
-
-@lumenis_bp.route("/cth/kos")
-def cth_kos():
-    return render_template("cth/kos.html",
-                           **_domain_template_vars("cth_kos", "cth", "KOS-KOL-KOC-UGC"))
-
-
-@lumenis_bp.route("/cth/reports")
-def cth_reports():
-    return render_template("cth/reports.html",
-                           **_domain_template_vars("cth_reports", "cth", "Reports"))
-
-
-@lumenis_bp.route("/cth/evidence")
-def cth_evidence():
-    return render_template("cth/evidence.html",
-                           **_domain_template_vars("cth_evidence", "cth", "Evidence"))
-
-
-
-@lumenis_bp.route("/cth/brand-industry")
-def cth_brand_industry():
-    return render_template("cth/brand_industry.html",
-                           **_domain_template_vars("cth_brand_industry", "cth", "品牌业态"))
-
-
-@lumenis_bp.route("/cth/trend")
-def cth_trend():
-    return render_template("cth/trend.html",
-                           **_domain_template_vars("cth_trend", "cth", "趋势分析"))
-
-
-@lumenis_bp.route("/cth/topic-campaign")
-def cth_topic_campaign():
-    return render_template("cth/topic_campaign.html",
-                           **_domain_template_vars("cth_topic_campaign", "cth", "话题活动"))
-
-
-@lumenis_bp.route("/cth/weekly")
-def cth_weekly():
-    return render_template("cth/weekly.html",
-                           **_domain_template_vars("cth_weekly", "cth", "周报"))
-
-
-@lumenis_bp.route("/cth/weibo")
-def cth_weibo():
-    return render_template("cth/weibo.html",
-                           **_domain_template_vars("cth_weibo", "cth", "微博状态"))
-
-
-@lumenis_bp.route("/cth/workspace")
-def cth_workspace():
-    return render_template("cth/workspace.html",
-                           **_domain_template_vars("cth_workspace", "cth", "Workspace"))
-
-@lumenis_bp.route("/cth/data-center")
-def cth_data_center():
-    return render_template("cth/data_center/index.html",
-                           **_domain_template_vars("cth_data_center", "cth", "Data Center"))
-
-
-@lumenis_bp.route("/cth/data-center/<platform_id>")
-def cth_data_center_platform(platform_id):
-    return render_template("cth/data_center/platform.html",
-                           platform_id=platform_id,
-                           **_domain_template_vars("cth_data_center", "cth", "Data Center"))
-
-
-
-@lumenis_bp.route("/cth/qa")
-def cth_qa():
-    """智能问答 — AI 智能问答 · 舆情/品牌/风险一站式咨询（CTH保护域）。"""
-    return render_template("cth/qa.html",
-                           **_domain_template_vars("cth_qa", "cth", "智能问答"))
-
-
-@lumenis_bp.route("/cth/negative")
-def cth_negative():
-    """负面监测 — 负面内容监测 · 待审核/已确认/统计（CTH保护域）。"""
-    return render_template("cth/negative.html",
-                           **_domain_template_vars("cth_negative", "cth", "负面监测"))
-
-
-@lumenis_bp.route("/cth/official")
-def cth_official():
-    """官方动态 — 官方账号动态 · 专业号/平台官方内容监测（CTH保护域）。"""
-    return render_template("cth/official.html",
-                           **_domain_template_vars("cth_official", "cth", "官方动态"))
-
-
-@lumenis_bp.route("/cth/event-graph")
-def cth_event_graph():
-    """事件关系 — 事件关系图谱 · 触发/衍生/继发/并行关系（CTH保护域）。"""
-    return render_template("cth/event_graph.html",
-                           **_domain_template_vars("cth_event_graph", "cth", "事件关系"))
-
-
-@lumenis_bp.route("/cth/calendar")
-def cth_calendar():
-    """舆情日历 — 舆情日历 · 按时间轴展示事件/笔记/报告（CTH保护域）。"""
-    return render_template("cth/calendar.html",
-                           **_domain_template_vars("cth_calendar", "cth", "舆情日历"))
-
-
-@lumenis_bp.route("/cth/analysis")
-def cth_analysis():
-    """舆情分析 — 舆情分析 · 声量/情绪/互动/趋势多维分析（CTH保护域）。"""
-    return render_template("cth/analysis.html",
-                           **_domain_template_vars("cth_analysis", "cth", "舆情分析"))
-
-
-@lumenis_bp.route("/cth/cases")
-def cth_cases():
-    """案例库 — 品牌案例库 · 营销/传播/舆情案例沉淀与复用（CTH保护域）。"""
-    return render_template("cth/cases.html",
-                           **_domain_template_vars("cth_cases", "cth", "案例库"))
-
-
-@lumenis_bp.route("/cth/case-analysis")
-def cth_case_analysis():
-    """案例分析 — 案例深度分析 · 方法论/危机SOP/AI评估（CTH保护域）。"""
-    return render_template("cth/case_analysis.html",
-                           **_domain_template_vars("cth_case_analysis", "cth", "案例分析"))
-
-
-@lumenis_bp.route("/cth/knowledge")
-def cth_knowledge():
-    """知识库 — 品牌知识库 · 品牌知识/情报资产/智能检索（CTH保护域）。"""
-    return render_template("cth/knowledge.html",
-                           **_domain_template_vars("cth_knowledge", "cth", "知识库"))
-
-
-@lumenis_bp.route("/cth/notes")
-def cth_notes():
-    """全平台笔记 — 全平台笔记 · 小红书/微博/B站/抖音等多平台内容（CTH保护域）。"""
-    return render_template("cth/notes.html",
-                           **_domain_template_vars("cth_notes", "cth", "全平台笔记"))
-
-
-@lumenis_bp.route("/cth/launch")
-def cth_launch():
-    """CTH Launch Screen — 太古汇情报域启动屏。"""
-    return render_template("cth/launch.html")
-
-
-# ---------- SYSTEM Domain Routes ----------
-
-@lumenis_bp.route("/system/runtime")
-def system_runtime():
-    """SYSTEM Runtime Control Center — worker/task 列表 + 健康状态。"""
-    return render_template("system/runtime.html",
-                           **_domain_template_vars("sys_runtime", "system", "Runtime Control Center"))
-
-
-@lumenis_bp.route("/system/collector")
-def system_collector():
-    return render_template("system/collector.html",
-                           **_domain_template_vars("sys_collector", "system", "Collector"))
-
-
-@lumenis_bp.route("/system/browser")
-def system_browser():
-    """SYSTEM Internal Browser — 平台内置浏览器，对标 Safari/Chrome，全部在平台内完成。"""
-    return render_template("system/browser.html",
-                           **_domain_template_vars("sys_browser", "system", "Internal Browser"))
-
-
-@lumenis_bp.route("/system/ai")
-def system_ai():
-    return render_template("system/ai.html",
-                           **_domain_template_vars("sys_ai", "system", "AI Gateway"))
-
-
-@lumenis_bp.route("/system/database")
-def system_database():
-    return render_template("system/database.html",
-                           **_domain_template_vars("sys_database", "system", "Database"))
-
-
-@lumenis_bp.route("/system/security")
-def system_security():
-    return render_template("system/security.html",
-                           **_domain_template_vars("sys_security", "system", "Security"))
-
-
-@lumenis_bp.route("/system/evaluation")
-def system_evaluation():
-    return render_template("system/evaluation.html",
-                           **_domain_template_vars("sys_evaluation", "system", "Evaluation"))
-
-
-@lumenis_bp.route("/system/adaptive-demo")
-def system_adaptive_demo():
-    """G Shard: Adaptive UI + Motion System 演示页 — 新模块接入示例。"""
-    return render_template("system/adaptive_demo.html",
-                           **_domain_template_vars("sys_adaptive_demo", "system", "Adaptive Demo"))
 
 
 # ---------- Domain Data APIs (real data binding for xujing-viz.js) ----------

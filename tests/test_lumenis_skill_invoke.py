@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import lumenis_frontend as lf  # noqa: E402
+import lumenis_app_api as lf  # noqa: E402
 
 
 class _FakeAdapter:

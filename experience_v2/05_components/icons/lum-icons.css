@@ -1,5 +1,0 @@
-/* LUMENIS lum-icon family — use: <svg class="lum-icon"><use href="lum-icons-sprite.svg#lum-icon-search"/></svg> */
-.lum-icon{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.125em;flex:none}
-.lum-icon--xs{width:14px;height:14px}.lum-icon--sm{width:18px;height:18px}.lum-icon--md{width:24px;height:24px}.lum-icon--lg{width:32px;height:32px}
-.lum-icon [fill]{fill:currentColor}
-@media (prefers-reduced-motion:reduce){.lum-icon .lum-spin{animation:none}}

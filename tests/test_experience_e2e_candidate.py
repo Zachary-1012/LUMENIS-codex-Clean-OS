@@ -31,7 +31,7 @@ if REPO_ROOT not in sys.path:
 
 SRC_DB = os.environ.get("LUMENIS_TEST_SEED_DB", "").strip()
 ALL_SCREENS_REGISTRY = os.path.join(
-    REPO_ROOT, "experience_v2", "06_CONTRACTS", "actions", "ACTION_REGISTRY.json"
+    REPO_ROOT, "contracts", "experience", "actions", "ACTION_REGISTRY.json"
 )
 # 全部 44 屏均有 Canonical 只读 Runtime ViewModel；外部字段仍可在屏内逐项 notcollected，
 # 但不得再让整屏退回 prototype。
@@ -179,8 +179,6 @@ def test_source_db_immutable_after_full_run(candidate_client):
     # 跑一遍全部屏幕 + 外壳 + runtime.js，制造完整读负载
     for sid in _all_screen_ids():
         cli.get(f"/api/experience/screen/{sid}")
-    cli.get("/experience/")
-    cli.get("/experience/assets/runtime.js")
     # 源库字节必须逐位不变
     assert _sha256(SRC_DB) == src_before
     # 已有 WAL/SHM 属候选库既有状态；完整读负载不得新增或改变它们。

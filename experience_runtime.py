@@ -1,33 +1,13 @@
-"""序境 / LUMENIS — Experience 生产运行时挂载层 (Experience Runtime Mount).
+"""序境 / LUMENIS — App-only Experience ViewModel/API runtime.
 
-唯一设计权威为 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md；experience_v2 仅为兼容目录名。\n\n职责（严格最小、加法式）：
-  1. 把零构建前端蓝图 ``experience_v2/10_prototype`` 通过现有 Flask 生产进程挂载到
-     ``/experience/``（不新建 React/Vue；旧 Jinja 页面源码保留用于兼容与能力找回，
-     但由 app 的 canonical route guard 统一阻止其作为生产 UI 入口）。
-  2. 提供与原型 section 描述符**同构**的真实 ViewModel JSON：
-       GET  /api/experience/screen/<screen_id>
-       GET  /api/experience/runtime/identity
-       GET  /api/experience/subjects
-       POST /api/experience/ai/intent
-     前端 assets/runtime.js 拿到同构 sections 后就地水合（hydrate），并把 data-source 切到 runtime。
-
-生产事实红线（ONE-SHOT §7）：
-  * 只复用既有后端能力（database / daily_report / evidence_store / Agent Groups Skill Execution /
-    ai_governance / runtime_guardian / subject_context），不并行实现第二套真值。
-  * 后端不存在数据源的指标（如到店客流 / 会员销售，需 POS 外部源）一律 state='notcollected'、
-    value=None，并在 binding.blocked 里标 BLOCKED_BY_EXTERNAL_DEPENDENCY —— 绝不填 0、不造假。
-  * 任何读取异常都降级为对应 section 的 error/offline 状态，不伪造 200 成功数据。
-  * identity 不返回绝对路径、密钥、cookie、token、浏览器会话等安全内部。
-
-本模块以只读聚合层 + 静态托管层为主；共享视频渲染只写入受保护的 staged
-artifact registry，并通过现有执行链记录 Evidence。发布接口只创建人工审批
-任务，不执行外部平台动作、不改变 Canonical Data。
+本模块是 Flutter App 使用的 JSON transport 与只读 ViewModel 聚合层。
+它不托管 Jinja、static、浏览器原型或第二套网页 Experience；所有真实数据、
+Evidence、Canonical Data、Permission、Evaluation 与 Learning 仍由既有 canonical
+owners 提供。本模块只负责把这些事实以受约束的 API contract 暴露给 App。
 """
-
 from __future__ import annotations
 
 import datetime as _dt
-import io as _io
 import os
 import json
 import re
@@ -35,14 +15,11 @@ import threading
 import traceback as _tb
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Blueprint, jsonify, request, send_file, send_from_directory
+from flask import Blueprint, jsonify, request, send_file
 
 # ---------------------------------------------------------------------------
 # 路径与蓝图
 # ---------------------------------------------------------------------------
-_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROTO_DIR = os.path.join(_BASE_DIR, "experience_v2", "10_prototype")
-
 experience_bp = Blueprint("experience_runtime", __name__, static_folder=None)
 
 # 已完成真实后端绑定的屏幕（其余屏幕由前端保持原型，服务端明确返回 bound=False）
@@ -203,54 +180,6 @@ def shared_skill_surface(surface: str = "AI") -> Dict[str, Any]:
         '</p></section>'
     )
     return section("raw", STATE_READY, html=html)
-
-
-# ===========================================================================
-# 静态托管：把零构建原型作为生产前端提供（注入运行时配置，不改动磁盘上的原型文件）
-# ===========================================================================
-_RUNTIME_BOOT = (
-    '<script>window.LUM_RUNTIME_API="/api/experience";'
-    'window.LUM_RUNTIME={served:true,mode:"production"};</script>'
-    # runtime.js owns the production auth/config bridge.  It must execute
-    # before browser.js so the SYS-06 controller can reuse the same
-    # Authorization contract instead of issuing unauthenticated fetches.
-    '<script src="./assets/runtime.js" defer></script>'
-    '<script src="/static/js/browser.js" defer></script>'
-)
-
-
-@experience_bp.route("/experience/")
-@experience_bp.route("/experience/index.html")
-def experience_shell():
-    """生产外壳：返回原型 index.html，并在 </body> 前注入运行时配置与 runtime.js。
-
-    磁盘上的 index.html 保持离线原型不变；仅在响应文本里注入，离线直接打开仍是 prototype。
-    """
-    index_path = os.path.join(PROTO_DIR, "index.html")
-    try:
-        with _io.open(index_path, "r", encoding="utf-8") as fh:
-            html = fh.read()
-    except OSError as exc:
-        return f"experience prototype missing: {exc}", 500
-    html = html.replace(
-        "<title>序境 LUMENIS · Experience V2 Prototype</title>",
-        "<title>序境 LUMENIS · Production</title>",
-    )
-    if "assets/browser-surface.css" not in html:
-        html = html.replace(
-            "</head>",
-            '<link rel="stylesheet" href="./assets/browser-surface.css">\n</head>',
-        )
-    if "assets/runtime.js" not in html:
-        html = html.replace("</body>", f"{_RUNTIME_BOOT}\n</body>")
-    # 生产外壳下隐藏原型 QA 工具条与 prototype 标记（由 runtime.js 统一改为 runtime 来源）
-    return html
-
-
-@experience_bp.route("/experience/<path:filename>")
-def experience_asset(filename: str):
-    """托管原型 assets/data（send_from_directory 自带路径穿越保护）。"""
-    return send_from_directory(PROTO_DIR, filename)
 
 
 # ===========================================================================
@@ -766,7 +695,7 @@ def screen_viewmodel(screen_id: str):
     """返回与原型同构的真实 section 描述符。未绑定屏幕明确 bound=False（前端保留原型，不假装）。"""
     builder = _all_builders().get(screen_id)
     if builder is None:
-        return jsonify({"ok": True, "screen": screen_id, "source": "prototype", "bound": False,
+        return jsonify({"ok": True, "screen": screen_id, "source": "runtime", "bound": False,
                         "sections": None,
                         "classification": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
                         "note": _unbound_reason(screen_id)}), 200

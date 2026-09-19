@@ -38,14 +38,13 @@ def _thread_excepthook(args):
 threading.excepthook = _thread_excepthook
 
 from datetime import datetime, timedelta
-import dev_exec_core
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
 try:
     from runtime_bin import resolve_node as _resolve_node
     _NODE_BIN = _resolve_node() or 'node'
 except Exception:
     _NODE_BIN = 'node'
-from flask import Flask, jsonify, request, send_from_directory, send_file, Response, redirect
+from flask import Flask, jsonify, request, send_file, Response, redirect
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # === v5.9.9 统一日志增强：yyds-logger补丁模式，一行启用，不影响现有logging调用 ===
 # 多实例隔离/JSON结构化/request_id/按sink级别/异常捕获，所有后续模块自动受益
@@ -105,7 +104,6 @@ import xhs_p0_orchestrator
 import collector_automation
 import public_opinion_cases
 from lumenis.shared.reporting import routes as report_routes  # Shared Reporting canonical routes
-from lumenis.shared.reporting.routes import _DEV_EXEC_ENABLED, _DEV_EXEC_BLOCK_RE  # GAP-04 开发执行闸门共享变量
 import viz_api  # Phase 14: function-driven visualization backend /api/viz/*
 import data_center_api  # V1.0: 全平台数据中心API /api/data-center/*
 import feature_governance_api  # ZBC Feature Governance: 功能注册表只读查询 /api/feature-registry/*
@@ -133,7 +131,7 @@ import brand_logo_manager
 # 统一时间序列趋势API（全局趋势线数据源）
 import trend_api
 
-app=Flask(__name__, static_folder='static', static_url_path='/static')
+app=Flask(__name__)
 # 全局上传大小限制：500MB（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 # 注册系统控制中心蓝图
@@ -204,10 +202,6 @@ try:
 except Exception as _ap_e:
     print(f"[agent_proactive] register failed: {_ap_e}")
 
-# P1-C: Intelligence Library page (no-scroll, left tree + right list + detail drawer)
-@app.route('/intelligence/library')
-def intelligence_library_page():
-    return render_template('intelligence/library.html')
   # P1-C: Intelligence Library API
 import data_query_api
 data_query_api.register_data_query_api(app)  # P1-10 拆分批1: 数据只读查询
@@ -245,26 +239,24 @@ try:
 except Exception as _ev_e:
     print(f"[evidence_api] blueprint register failed: {_ev_e}")
 
-# 序境 LUMENIS 体验层（L0）前端 Foundation — 隔离 Blueprint，零业务逻辑/零写库
+# 序境 LUMENIS App API：仅提供 Flutter/Core JSON contracts，不注册任何网页、模板或静态资源。
 try:
-    from lumenis_frontend import lumenis_bp, domain_api_bp
+    from lumenis_app_api import lumenis_bp, domain_api_bp
     from collector_status_api import collector_status_bp
     app.register_blueprint(collector_status_bp)
     app.register_blueprint(lumenis_bp)
     app.register_blueprint(domain_api_bp)
-    print("[lumenis] frontend registered: /lumenis/*")
+    print("[lumenis] App API registered: /lumenis/api/* + /api/domain/*")
 except Exception as _lm_e:
-    print(f"[lumenis] blueprint register failed: {_lm_e}")
+    print(f"[lumenis] App API register failed: {_lm_e}")
 
-# 序境 Experience V2 生产运行时挂载层（/experience/ 零构建前端 + /api/experience/* 真实 ViewModel）
-# 旧 /lumenis/* 页面源代码保留用于兼容与能力找回；真正的页面入口由下方
-# _canonical_lumenis_experience_route 统一切到 Experience V2，避免旧 UI 再次成为生产入口。
+# 序境 Experience ViewModel/API：App-only transport；不再托管浏览器原型。
 try:
     from experience_runtime import register_experience_runtime
     register_experience_runtime(app)
-    print("[experience_runtime] registered: /experience/ + /api/experience/*")
+    print("[experience_runtime] API registered: /api/experience/*")
 except Exception as _er_e:
-    print(f"[experience_runtime] register failed: {_er_e}")
+    print(f"[experience_runtime] API register failed: {_er_e}")
 
 # 序境 LUMENIS 聚合只读 API（全局 /api：模型/Agent/评估/研究/权限/仓库/运行时/报告/KOS专业号）
 try:
@@ -1045,35 +1037,11 @@ def auth_config_api():
 
 
 @app.before_request
-def _canonical_lumenis_experience_route():
-    """Make Experience V2 the only UI served by the public LUMENIS page paths.
-
-    Historical Jinja handlers remain registered so their APIs and source can
-    still be recovered, but a browser navigation to an old page must never
-    render that UI.  Compatibility APIs/static assets/probes are explicitly
-    left alone.  The hook is registered before authentication so both the
-    redirect and the target use one deterministic page contract.
-    """
-    if request.method not in ('GET', 'HEAD') or not request.path.startswith('/lumenis'):
-        return None
-    try:
-        from lumenis_route_contract import canonical_screen_for_lumenis_path
-        screen_id = canonical_screen_for_lumenis_path(request.path)
-    except Exception:
-        # A routing guard must fail open to the existing auth/error boundary,
-        # never invent a page or expose a second static implementation.
-        return None
-    if screen_id:
-        return redirect(f'/experience/#/{screen_id}', code=302)
-    return None
-
-
-@app.before_request
 def _basic_auth():
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
     # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）
-    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or request.path.startswith('/static/') or _is_cth_readonly_get(request.path, request.method):
+    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or _is_cth_readonly_get(request.path, request.method):
         return None
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
@@ -3700,24 +3668,6 @@ def api_push_emails():
     _save_config(config)
     return jsonify({'ok': True, 'message': f'邮箱 {email} 已添加', 'emails': config['push_emails'], 'count': len(config['push_emails'])})
 
-@app.route('/api/config/run-code', methods=['POST'])
-@require_permission(OperationType.RUNTIME_OPERATION, RiskLevel.HIGH,
-    deny_return=lambda: (jsonify({'ok': False, 'error': '权限不足：代码运行需管理员审批', 'code': 'PERMISSION_DENIED'}), 403))
-def api_run_code():
-    """GAP-04 统一收口点②：运行代码热更新（调用 dev_exec_core 统一执行核心）。"""
-    data = request.get_json(silent=True) or {}
-    code = data.get('code', '')
-    if not code or len(code.strip()) < 5:
-        return jsonify({'ok': False, 'error': '请输入有效的Python代码'}), 400
-    resp, status = dev_exec_core.execute_dev_code_safe(
-        code, 'python', backup=False, app=app, db=db, guard_func=_dev_exec_guard,
-        endpoint='/api/config/run-code'
-    )
-    # GAP-04 修复: guard 返回 (Flask Response, status) 时不可再 jsonify
-    if hasattr(resp, 'get_data'):
-        return resp, status
-    return jsonify(resp), status
-
 @app.route('/api/config/brand-directory')
 def api_brand_directory():
     """场内品牌目录查询"""
@@ -5486,30 +5436,6 @@ def api_web_topics_refresh():
     topics = update_web_topics()
     return jsonify({'ok': True, 'topics': topics, 'count': len(topics)})
 
-# ===== v5.6.6 开发者工具 - 运行升级代码 =====
-import tempfile
-import importlib.util
-
-@app.route('/api/dev/run-code', methods=['POST'])
-@require_permission(OperationType.RUNTIME_OPERATION, RiskLevel.HIGH,
-    deny_return=lambda: (jsonify({'ok': False, 'error': '权限不足：开发者代码运行需管理员审批', 'code': 'PERMISSION_DENIED'}), 403))
-def api_dev_run_code():
-    """GAP-04 统一收口点③：开发者工具运行升级代码（调用 dev_exec_core 统一执行核心）。"""
-    data = request.get_json(silent=True) or {}
-    code = data.get('code', '').strip()
-    code_type = data.get('type', 'python')  # python / javascript
-    if not code:
-        return jsonify({'ok': False, 'error': '代码不能为空'}), 400
-    resp, status = dev_exec_core.execute_dev_code_safe(
-        code, code_type, backup=True, app=app, db=db, guard_func=_dev_exec_guard,
-        endpoint='/api/dev/run-code'
-    )
-    # GAP-04 修复: guard 返回 (Flask Response, status) 时不可再 jsonify
-    if hasattr(resp, 'get_data'):
-        return resp, status
-    return jsonify(resp), status
-
-
 # ===== ZBIP Workspace 只读面板（文件树 / 只读终端）——Staging 旁路，纯只读、过滤敏感、防路径穿越 =====
 import subprocess as _ws_sp
 _WS_ROOT = Path(__file__).resolve().parent
@@ -5913,39 +5839,6 @@ print("[dual-domain] API 契约断链修复完成：skills/auxiliary/web-sources
 import ai_governance
 import ai_resource_packs
 
-
-
-# ===== P1-F 账户体系页面路由（Settings + CTH/ZBMP登录页） =====
-@app.route('/system/settings')
-def system_settings_page():
-    """SYSTEM 设置页（8分区，双域隔离，No-Scroll）"""
-    from flask import render_template
-    return render_template('system/settings.html')
-
-@app.route('/system/skills')
-def system_skills_page():
-    """Skill 商店页（ChatGPT 插件商店风格）"""
-    from flask import render_template
-    return render_template('system/skill_store.html')
-
-@app.route('/system/runtime')
-def system_runtime_page():
-    """Runtime Control Center — 统一生命周期 Worker 状态展示（Lifecycle Contract V1.0）"""
-    from flask import render_template
-    return render_template('system/runtime.html')
-
-@app.route('/cth/login')
-def cth_login_page():
-    """CTH 登录页（账号+密码）"""
-    from flask import render_template
-    return render_template('auth/cth_login.html')
-
-@app.route('/zbmp/login')
-def zbmp_login_page():
-    """ZBMP 登录兼容路由：重定向到CTH页并触发ZBMP入口面板。
-    新流程：CTH是主入口，ZBMP通过CTH内TOTP验证进入。"""
-    from flask import redirect
-    return redirect('/lumenis/cth/overview?zbmp-entry=1')
 
 
 # ===== P0 登录流程重构：ZBMP 域身份入口（CTH内TOTP验证） =====

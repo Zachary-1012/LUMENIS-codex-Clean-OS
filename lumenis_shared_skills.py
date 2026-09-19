@@ -94,8 +94,8 @@ def _metadata(
 
 _LOCAL_RESEARCH = [
     "LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md",
-    "experience_v2/03_ia_and_flows/IA_AND_FLOWS.md",
-    "experience_v2/04_design_system/v2.5/DESIGN_ECOSYSTEM_V2.5.md",
+    "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
     "00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md",
     "intelligence_library/02_ZBMP研究/品牌营销知识/brand-marketing-knowledge-08-meta-framework-seed-to-world-20260903.md",
 ]
@@ -229,7 +229,7 @@ SHARED_SKILL_CATALOG: List[Dict[str, Any]] = [
         research_basis=_LOCAL_RESEARCH + ["用户提供：quizang-social-card-skill 规格"],
         bindings=[
             {"module": "lumenis_shared_skills.py", "functions": ["_render_social_card"]},
-            {"module": "experience_v2/04_design_system/v2.5/DESIGN_ECOSYSTEM_V2.5.md", "functions": ["material / point / trace language"]},
+            {"module": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md", "functions": ["material / point / trace language"]},
         ],
     ),
     _metadata(
@@ -255,7 +255,7 @@ SHARED_SKILL_CATALOG: List[Dict[str, Any]] = [
         research_basis=_LOCAL_RESEARCH + ["database.py", "用户提供：last30days-skill 规格"],
         bindings=[
             {"module": "database.py", "functions": ["get_notes_by_date_range", "get_stats_by_date_range"]},
-            {"module": "experience_v2/03_ia_and_flows/IA_AND_FLOWS.md", "functions": ["Observe -> Understand -> Evidence"]},
+            {"module": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md", "functions": ["Observe -> Understand -> Evidence"]},
         ],
     ),
 ]
@@ -278,7 +278,7 @@ def _binding_state(spec: Mapping[str, Any]) -> Dict[str, Any]:
             module_name = module_name[:-3].replace("/", ".")
         if "/" in module_name:
             module_name = module_name.replace("/", ".")
-        if module_name.startswith("experience_v2."):
+        if module_name.startswith("contracts.experience.") or module_name.startswith("contracts/experience/"):
             # Documentation binding: presence is checked by the catalog's own source.
             results.append({"module": str(binding.get("module")), "available": True, "functions": binding.get("functions", [])})
             continue

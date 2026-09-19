@@ -85,44 +85,9 @@ def _kpis(j):
     return {m["id"]: m for m in _sections(j)["kpis"]["items"]}
 
 
-# --------------------------- 外壳托管 ---------------------------
-def test_shell_serves_and_injects_runtime(isolated_client):
+def test_legacy_browser_surface_is_not_served(isolated_client):
     cli, _ = isolated_client
-    r = cli.get("/experience/")
-    assert r.status_code == 200
-    assert b"assets/runtime.js" in r.data
-    assert r.data.index(b"assets/runtime.js") < r.data.index(b"/static/js/browser.js")
-    assert "<title>序境 LUMENIS · Production</title>".encode() in r.data
-    r2 = cli.get("/experience/assets/runtime.js")
-    assert r2.status_code == 200 and r2.content_length and r2.content_length > 1000
-    assert b"lum-production-truth-fence" in r2.data
-    assert b"/api/auth/config" in r2.data
-    assert b"async function apiFetch" in r2.data
-    assert b"lumenisAuth.Auth.getHeader = loadAuthHeader" in r2.data
-    assert b"lumenisAuth.fetch = apiFetch" in r2.data
-    assert b"const initialId" in r2.data
-    assert b'.lum-qa-bar{display:none!important}' in r2.data
-    assert b'.lum-page[data-source="prototype"]' in r2.data
-    assert b"RUNTIME_UNAVAILABLE" in r2.data
-    r3 = cli.get("/experience/assets/components.css")
-    assert r3.status_code == 200
-    assert b".lum-drawer.is-open" in r3.data
-    assert b"pointer-events:none" in r3.data
-    r4 = cli.get("/experience/assets/components.js")
-    assert r4.status_code == 200
-    assert b"const host = $('.lum-app') || document.body" in r4.data
-    assert b"host.appendChild(d)" in r4.data
-    r5 = cli.get("/experience/assets/app.js")
-    assert r5.status_code == 200
-    assert b"const routeDomain = id.startsWith('BMP-')" in r5.data
-    assert b"global.LumShell.renderSubject()" in r5.data
-    r6 = cli.get("/experience/assets/sections.js")
-    assert r6.status_code == 200
-    assert b"${m.evidenceId ?" in r6.data
-    r7 = cli.get("/experience/assets/browser-surface.css")
-    assert r7.status_code == 200
-    assert b"lum-browser-surface" in r7.data
-    assert b"browser-tabbar" in r7.data
+    assert cli.get("/experience/").status_code == 404
 
 
 def test_sys06_is_real_internal_browser_surface(isolated_client):
@@ -525,7 +490,7 @@ def test_bmp04_propagation_three_dashboards(isolated_client):
 
 def test_screen_meta_covers_44_screens():
     import json
-    path = os.path.join(REPO_ROOT, "experience_v2", "10_prototype", "data", "screen_meta.json")
+    path = os.path.join(REPO_ROOT, "contracts", "experience", "screen_meta.json")
     meta = json.load(open(path, encoding="utf-8"))
     assert len(meta) == 44
     for sid in ["AI-01", "CTH-01", "SH-01"]:

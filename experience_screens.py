@@ -5,7 +5,7 @@
 本模块不拥有页面布局或视觉规则。它负责把真实后端事实映射成前端可消费的
 ViewModel/section 数据，并保持 Evidence、状态、权限与缺失语义诚实。
 
-experience_v2/10_prototype 目前只是兼容实现路径，不代表 V2 设计仍有权威。
+Flutter App 是唯一用户 Experience；本模块只提供 layout-agnostic ViewModel 绑定。
 Golden Pages 迁移到新的语义 composition 时，本绑定层应保持 truth-first、
 layout-agnostic，必要时适配新的语义 section，而不是强迫 UI 继续使用旧模板。
 
@@ -41,7 +41,7 @@ from experience_runtime import (  # noqa: E402
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _META_PATH = os.path.join(
-    _BASE_DIR, "experience_v2", "10_prototype", "data", "screen_meta.json"
+    _BASE_DIR, "contracts", "experience", "screen_meta.json"
 )
 
 # 前端风险枚举：后端 medium -> 前端 med（与 sections.js risk.level.* 对齐）

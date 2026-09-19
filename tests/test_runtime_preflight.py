@@ -69,8 +69,8 @@ def test_sanitize_mapping_nested():
     ("v4_upgrade/adapters/cookie_vault.py", False),
     ("import_cookies.py", False),
     ("inject_cookies.js", False),
-    ("static/css/tokens.css", False),
-    ("static/css/zbip-tokens.css", False),
+    ("app/lib/main.dart", False),
+    ("contracts/experience/screen_meta.json", False),
     (".env.example", False),
     ("docs/CAPABILITY_BASELINE.md", False),
 ])
