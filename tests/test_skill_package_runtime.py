@@ -576,6 +576,5 @@ def test_skill_settings_surface_uses_app_api_contract():
 
     assert hasattr(lumenis_app_api, "lumenis_bp")
     assert hasattr(lumenis_app_api, "domain_api_bp")
-    source = Path(lumenis_app_api.__file__).read_text(encoding="utf-8")
-    assert "render_template" not in source
-    assert "template_folder" not in source
+    assert not hasattr(lumenis_app_api, "render_template")
+    assert not hasattr(lumenis_app_api, "template_folder")

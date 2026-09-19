@@ -20,7 +20,7 @@ from flask import Blueprint, jsonify, request, send_file
 # ---------------------------------------------------------------------------
 # 路径与蓝图
 # ---------------------------------------------------------------------------
-experience_bp = Blueprint("experience_runtime", __name__, static_folder=None)
+experience_bp = Blueprint("experience_runtime", __name__)
 
 # 已完成真实后端绑定的屏幕（其余屏幕由前端保持原型，服务端明确返回 bound=False）
 BOUND_SCREENS = ("CTH-01", "AI-01")
