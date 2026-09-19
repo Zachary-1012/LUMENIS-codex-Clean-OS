@@ -16,7 +16,9 @@ from email.message import EmailMessage
 import kos_execution as kx
 import kos_engine as ke
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+from lumenis.shared.database import get_repository, main_db_path
+
+DB_PATH = main_db_path()
 
 
 def _now() -> str:
@@ -24,10 +26,8 @@ def _now() -> str:
 
 
 def _conn() -> sqlite3.Connection:
-    # 每次现取 env：避免其他测试模块级污染 ZBC_DB_PATH 导致的连接错库（回归隔离）
-    path = os.environ.get("ZBC_DB_PATH") or DB_PATH
-    conn = sqlite3.connect(path, timeout=10)
-    conn.row_factory = sqlite3.Row
+    # Shared Database resolves ZBC_DB_PATH at call time.
+    conn = get_repository().connect(timeout=10)
     # 运营动作台账（KOS 运营闭环）
     conn.execute("""
         CREATE TABLE IF NOT EXISTS kos_operations (
