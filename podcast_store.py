@@ -15,8 +15,9 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from lumenis.shared.database import get_repository, main_db_path
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+DB_PATH = main_db_path()
 
 # domain contract 允许的实体类型
 ENTITY_TYPES = (
@@ -32,11 +33,7 @@ def _now():
 
 
 def _get_conn():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    return get_repository().connect(timeout=30)
 
 
 def init_db():
