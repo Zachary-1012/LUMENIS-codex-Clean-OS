@@ -3,7 +3,7 @@
 
 This module is a source adapter and preflight layer, not a second registry or
 an arbitrary-code executor.  It extends the existing ``skills_registry``
-owner through account APIs and leaves execution to ``skill_execution_chain``.
+owner through account APIs and leaves execution to canonical Shared Agent Skill execution.
 
 Supported source families are explicit.  An unknown URL or package is never
 executed.  Preview is read-only: it does not clone, install, import, spawn a
@@ -419,9 +419,9 @@ def preview_skill_source(source: str, *, resolve_remote: bool = False,
         },
         "ownership": {
             "registry": "account.models.skills_registry",
-            "execution": "skill_execution_chain",
-            "evidence": "evidence_chain",
-            "permission": "existing permission/action gate",
+            "execution": "lumenis.shared.agents.skills.execution",
+            "evidence": "lumenis.shared.evidence",
+            "permission": "lumenis.system.security",
         },
         "registration": {
             "allowed": False,
