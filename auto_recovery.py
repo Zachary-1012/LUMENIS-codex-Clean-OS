@@ -35,7 +35,7 @@ import time
 import json
 import socket
 import sqlite3
-from db_paths import main_db_path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 import subprocess
 import threading
 from datetime import datetime
@@ -197,7 +197,7 @@ class AutoRecoveryEngine:
             if not os.path.exists(db_path):
                 return False, '数据库文件不存在'
 
-            conn = sqlite3.connect(db_path, timeout=5)
+            conn = DatabaseRepository(db_path).connect(timeout=5)
             c = conn.cursor()
             c.execute("SELECT COUNT(*) FROM notes")
             count = c.fetchone()[0]
@@ -272,7 +272,7 @@ class AutoRecoveryEngine:
         for attempt in range(self.max_retries):
             try:
                 db_path = main_db_path()
-                conn = sqlite3.connect(db_path, timeout=10)
+                conn = DatabaseRepository(db_path).connect(timeout=10)
                 c = conn.cursor()
                 c.execute("SELECT 1")
                 result = c.fetchone()
