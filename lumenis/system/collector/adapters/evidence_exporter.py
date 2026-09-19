@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sqlite3
+from lumenis.shared.database import DatabaseRepository
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
@@ -193,11 +194,10 @@ def export_evidence(db_path: str, outbox_dir: str,
     if os.path.exists(watermark_path):
         wm = json.load(open(watermark_path, encoding="utf-8"))
 
-    uri = db_path if db_path.startswith("file:") else "file:" + db_path.replace("\\", "/")
-    if "mode=ro" not in uri:
-        uri += ("&" if "?" in uri else "?") + "mode=ro"
-    conn = sqlite3.connect(uri, uri=True)
-    conn.row_factory = sqlite3.Row
+    path = db_path
+    if path.startswith("file:"):
+        path = path[len("file:"):].split("?", 1)[0]
+    conn = DatabaseRepository(path).connect(read_only=True)
     try:
         records, new_wm, redacted = build_export(conn, wm)
     finally:
