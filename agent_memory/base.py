@@ -169,6 +169,7 @@ class BaseMemoryLayer:
 def get_db_connection(db_path: str):
     """获取 SQLite 连接（只读模式优先，写入时用普通连接）。"""
     import sqlite3
-    conn = sqlite3.connect(db_path)
+from lumenis.shared.database import DatabaseRepository
+    conn = DatabaseRepository(db_path).connect()
     conn.row_factory = sqlite3.Row
     return conn
