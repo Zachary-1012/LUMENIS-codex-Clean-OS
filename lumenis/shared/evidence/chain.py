@@ -37,8 +37,8 @@ from typing import Any, Dict, List, Optional, Tuple
 # 配置
 # ============================================================
 # P0-DBISO-01：统一走 db_paths（ZBC_EVIDENCE_DB_PATH -> ZBC_DB_PATH -> 默认），call-time
-from db_paths import evidence_db_path
-DB_PATH = evidence_db_path()
+from lumenis.shared.database import main_db_path
+DB_PATH = main_db_path()
 
 # 规则版本：每次规则变更递增，历史数据保留创建时的版本
 RULE_VERSION = "evidence-chain-v1.0.0"
@@ -354,7 +354,7 @@ CREATE INDEX IF NOT EXISTS idx_zbc_lifecycle_stage ON zbc_lifecycle_tracking(sta
 
 
 def _get_conn(db_path: Optional[str] = None) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path or evidence_db_path(), timeout=10)
+    conn = sqlite3.connect(db_path or main_db_path(), timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -427,7 +427,7 @@ class EvidenceStore:
     })
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or evidence_db_path()
+        self.db_path = db_path or main_db_path()
         init_db(self.db_path)
 
     def add_evidence(
@@ -626,7 +626,7 @@ class CanonicalDataStore:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or evidence_db_path()
+        self.db_path = db_path or main_db_path()
         init_db(self.db_path)
 
     def create_canonical(
@@ -809,7 +809,7 @@ class LifecycleTracker:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or evidence_db_path()
+        self.db_path = db_path or main_db_path()
         init_db(self.db_path)
 
     def record_stage(
@@ -944,7 +944,7 @@ class EvidenceChain:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or evidence_db_path()
+        self.db_path = db_path or main_db_path()
         self.evidence_store = EvidenceStore(self.db_path)
         self.canonical_store = CanonicalDataStore(self.db_path)
         self.lifecycle = LifecycleTracker(self.db_path)
@@ -1110,7 +1110,7 @@ def capture_note_lineage(
     if not source_id:
         return {"ok": False, "errors": [{"stage": "validation", "error_type": "missing_source_id"}]}
 
-    path = db_path or evidence_db_path()
+    path = db_path or main_db_path()
     captured_at = str(note.get("captured_at") or note.get("collected_at") or _now())
     note["captured_at"] = captured_at
     title = str(note.get("title") or "").strip()

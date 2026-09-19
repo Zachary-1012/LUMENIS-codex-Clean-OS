@@ -1,0 +1,27 @@
+"""Only-One guard for Shared Database path ownership."""
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+
+def test_shared_database_is_canonical_path_owner():
+    source = (REPO / "lumenis/shared/database/paths.py").read_text(encoding="utf-8")
+    assert "ZBC_DB_PATH" in source
+    assert "ZBC_EVIDENCE_DB_PATH" not in source
+    assert "ZBC_RUNTIME_GUARDIAN_DB" not in source
+    assert "ZBC_TOKEN_DB_PATH" not in source
+
+def test_root_db_paths_has_no_independent_resolution_logic():
+    source = (REPO / "db_paths.py").read_text(encoding="utf-8")
+    assert "lumenis.shared.database.paths" in source
+    assert "_BASE_DIR" not in source
+    assert "_first_env" not in source
+    assert "os.environ" not in source
+
+def test_shared_evidence_consumes_shared_database():
+    for rel in [
+        "lumenis/shared/evidence/chain.py",
+        "lumenis/shared/evidence/store.py",
+    ]:
+        source = (REPO / rel).read_text(encoding="utf-8")
+        assert "from db_paths import" not in source
+        assert "lumenis.shared.database" in source

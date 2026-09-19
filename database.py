@@ -19,7 +19,7 @@ _DB_RETRY_BASE_DELAY = 0.5  # 秒，指数退避基数
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 数据库路径：允许通过环境变量 ZBC_DB_PATH 指定独立库（Staging/测试隔离）。
 # 未设置该变量时默认生产库 data/monitor.db，行为与历史完全一致（向后兼容）。
-from db_paths import main_db_path  # P0-DBISO-01 统一隔离解析（call-time，向后兼容默认路径）
+from lumenis.shared.database import main_db_path  # Shared Database canonical path authority
 DB_PATH = main_db_path()
 
 SCHEMA = """
