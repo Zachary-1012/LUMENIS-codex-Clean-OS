@@ -30,9 +30,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install development/test dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
-
       - name: Validate four-product contract and LUMENIS authority (BLOCKING)
         run: >-
           python scripts/audit_tools/verify_lumenis_ggi_contract.py
@@ -47,16 +44,16 @@ jobs:
       - name: Validate sole Experience design authority (BLOCKING)
         run: python scripts/audit_tools/verify_experience_authority_exclusive.py
 
-      - name: Validate Experience anti-template contract (BLOCKING)
+      - name: Validate App-only Experience anti-template contract (BLOCKING)
         shell: bash
         run: |
           mode="--baseline"
           changed="$(git diff --name-only HEAD^ HEAD || true)"
-          if echo "$changed" | grep -Eq '^experience_v2/(05_components|07_screens|10_prototype)/'; then
+          if echo "$changed" | grep -Eq '^(app/lib/|app/pubspec.yaml|00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)'; then
             mode="--strict"
-            echo "Core Experience implementation changed; strict Constitution gate required."
+            echo "Canonical Flutter Experience changed; strict App-only gate required."
           else
-            echo "No core Experience implementation change; enforcing anti-template baseline ratchet."
+            echo "Canonical Flutter Experience unchanged; enforcing App-only baseline."
           fi
           python scripts/audit_tools/verify_experience_anti_template.py "$mode"
 
@@ -99,6 +96,11 @@ jobs:
           fi
           echo "Hermetic test files selected: $selected_count"
           exit "$missing"
+
+      - name: Install development/test dependencies (EXECUTION-LAYER)
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --retries 4 --timeout 30 -r requirements-dev.txt
 
       - name: Credential-path boundary diagnostic (INFORMATIONAL)
         shell: bash
