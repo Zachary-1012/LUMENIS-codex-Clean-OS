@@ -35,6 +35,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from lumenis.shared.database import DatabaseRepository
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -449,7 +450,7 @@ CANONICAL_INDEXES = [
 def ensure_canonical_table(db_path: str) -> None:
     """确保 canonical_data 表存在（幂等，不破坏现有数据）。"""
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     try:
         con.execute(CANONICAL_TABLE_DDL)
         for idx_sql in CANONICAL_INDEXES:
@@ -470,7 +471,7 @@ def ensure_canonical_table(db_path: str) -> None:
 
 
 def get_connection(db_path: str) -> sqlite3.Connection:
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL;")
     return con
@@ -920,7 +921,7 @@ CREATE TABLE IF NOT EXISTS {SCHEMA_VERSION_TABLE} (
 
 def ensure_schema_version_table(db_path: str) -> None:
     """确保 schema_version 表存在。"""
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     try:
         con.execute(SCHEMA_VERSION_DDL)
         con.commit()
@@ -932,7 +933,7 @@ def register_schema_version(db_path: str, version: str, description: str,
                              applied_by: str = "t4-canonical") -> None:
     """注册一条 schema 版本记录。"""
     ensure_schema_version_table(db_path)
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     try:
         con.execute(
             f"INSERT INTO {SCHEMA_VERSION_TABLE} (version, description, applied_at, applied_by) VALUES (?,?,?,?)",
@@ -946,7 +947,7 @@ def register_schema_version(db_path: str, version: str, description: str,
 def get_schema_versions(db_path: str) -> List[Dict[str, Any]]:
     """查询所有 schema 版本记录。"""
     ensure_schema_version_table(db_path)
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     con.row_factory = sqlite3.Row
     try:
         rows = con.execute(f"SELECT * FROM {SCHEMA_VERSION_TABLE} ORDER BY id").fetchall()
@@ -973,7 +974,7 @@ def self_check(db_path: str) -> Dict[str, Any]:
         "status": "PASS",
         "issues": [],
     }
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     con.row_factory = sqlite3.Row
     try:
         # 表存在性
