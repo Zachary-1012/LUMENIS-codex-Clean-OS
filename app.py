@@ -3526,7 +3526,6 @@ def api_negative_stats():
         return jsonify({'ok': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 # ===== v5.3.2 报告导出模块（从monitor.db读取，支持DOCX/CSV/XLSX）=====
-from lumenis.shared.reporting.export_engine import export_report as export_report_v532
 
 @app.get("/api/reports/export")
 def api_reports_export_v532():
@@ -3535,7 +3534,7 @@ def api_reports_export_v532():
     if fmt not in ("docx", "csv", "xlsx"):
         return jsonify({"ok": False, "error": "format 必须为 docx/csv/xlsx"}), 400
     try:
-        result = export_report_v532(kind, request.args.get("start"), request.args.get("end"), (fmt,))
+        result = export_api.export_artifacts(kind, request.args.get("start"), request.args.get("end"), (fmt,))
         file_path = result["files"][fmt]
         # 读取文件内容，使用英文文件名避免latin-1编码问题
         with open(file_path, 'rb') as f:
@@ -3557,7 +3556,7 @@ def api_reports_export_v532():
 @app.get("/api/reports/export-all")
 def api_reports_export_all_v532():
     try:
-        result = export_report_v532(request.args.get("type", "daily"), request.args.get("start"), request.args.get("end"), ("docx", "csv", "xlsx"))
+        result = export_api.export_artifacts(request.args.get("type", "daily"), request.args.get("start"), request.args.get("end"), ("docx", "csv", "xlsx"))
         return jsonify({"ok": True, "files": result["files"], "payload": result["payload"]})
     except Exception as e:
         import traceback
