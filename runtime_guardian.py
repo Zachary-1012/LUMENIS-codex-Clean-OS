@@ -39,7 +39,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 允许通过环境变量覆盖 DB 路径（测试隔离 / Staging），未设置时默认生产库
 # P0-DBISO-01：统一走 db_paths（ZBC_RUNTIME_GUARDIAN_DB -> ZBC_DB_PATH -> 默认），call-time
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 DB_PATH = main_db_path()
 
 # 默认策略常量
@@ -378,12 +378,9 @@ CREATE INDEX IF NOT EXISTS idx_rg_dlq_worker ON runtime_guardian_dlq(worker_id);
 def _get_db(db_path: Optional[str] = None) -> sqlite3.Connection:
     """获取数据库连接（每次新建，线程安全）"""
     path = db_path or main_db_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    conn = sqlite3.connect(path, timeout=30, isolation_level=None)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=5000")
-    return conn
+    return DatabaseRepository(path).connect(
+        timeout=30, isolation_level=None, busy_timeout_ms=5000
+    )
 
 
 def init_db(db_path: Optional[str] = None) -> None:
@@ -418,10 +415,9 @@ class DLQ:
         init_db(self._db_path)
 
     def _conn(self) -> sqlite3.Connection:
-        os.makedirs(os.path.dirname(self._db_path), exist_ok=True)
-        conn = sqlite3.connect(self._db_path, timeout=30, isolation_level=None)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return DatabaseRepository(self._db_path).connect(
+            timeout=30, isolation_level=None
+        )
 
     def enqueue(
         self,
