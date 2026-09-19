@@ -13,7 +13,9 @@ from pathlib import Path
 
 import kos_execution as kx
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+from lumenis.shared.database import get_repository, main_db_path
+
+DB_PATH = main_db_path()
 
 
 def _now() -> str:
@@ -21,10 +23,8 @@ def _now() -> str:
 
 
 def _conn() -> sqlite3.Connection:
-    # 每次现取 env：避免其他测试模块级污染 ZBC_DB_PATH 导致的连接错库（回归隔离）
-    path = os.environ.get("ZBC_DB_PATH") or DB_PATH
-    conn = sqlite3.connect(path, timeout=10)
-    conn.row_factory = sqlite3.Row
+    # Shared Database resolves ZBC_DB_PATH at call time.
+    conn = get_repository().connect(timeout=10)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS kos_paid_plans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
