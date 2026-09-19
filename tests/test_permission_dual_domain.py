@@ -29,7 +29,7 @@ class TestRoleDomainPermissionMatrix:
 
     def test_zbmp_analyst_no_cth_permission(self):
         """ZBMP Analyst 无 CTH 权限（核心红线）。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         gate = PermissionGate()
         matrix = gate.ROLE_DOMAIN_PERMISSIONS
         assert "zbmp_analyst" in matrix
@@ -39,7 +39,7 @@ class TestRoleDomainPermissionMatrix:
 
     def test_cth_analyst_no_zbmp_write(self):
         """CTH Analyst 无 ZBMP 写权限。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         gate = PermissionGate()
         matrix = gate.ROLE_DOMAIN_PERMISSIONS
         cth_analyst_zbmp = matrix["cth_analyst"].get("zbmp", set())
@@ -51,7 +51,7 @@ class TestRoleDomainPermissionMatrix:
 
     def test_zbmp_admin_cth_readonly(self):
         """ZBMP Admin 对 CTH 只有只读权限。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         gate = PermissionGate()
         matrix = gate.ROLE_DOMAIN_PERMISSIONS
         zbmp_admin_cth = matrix["zbmp_admin"].get("cth", set())
@@ -63,7 +63,7 @@ class TestRoleDomainPermissionMatrix:
 
     def test_cth_admin_zbmp_readonly(self):
         """CTH Admin 对 ZBMP 只有只读权限。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         gate = PermissionGate()
         matrix = gate.ROLE_DOMAIN_PERMISSIONS
         cth_admin_zbmp = matrix["cth_admin"].get("zbmp", set())
@@ -74,7 +74,7 @@ class TestRoleDomainPermissionMatrix:
 
     def test_system_role_full_access(self):
         """System 角色拥有全域全权限。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         gate = PermissionGate()
         matrix = gate.ROLE_DOMAIN_PERMISSIONS
         assert "*" in matrix["system"]["cth"]
@@ -82,7 +82,7 @@ class TestRoleDomainPermissionMatrix:
 
     def test_roles_are_domain_specific(self):
         """角色按域分离：zbmp_* 和 cth_* 是不同角色。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         gate = PermissionGate()
         roles = list(gate.ROLE_DOMAIN_PERMISSIONS.keys())
         assert "zbmp_admin" in roles
@@ -101,12 +101,12 @@ class TestCheckRoleDomainPermission:
 
     @pytest.fixture
     def gate(self):
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         return PermissionGate()
 
     def test_zbmp_analyst_denied_cth_write(self, gate):
         """ZBMP Analyst 尝试 CTH 写操作被拒。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         result = gate._check_role_domain_permission(
             role="zbmp_analyst",
             domain_id="cth",
@@ -116,7 +116,7 @@ class TestCheckRoleDomainPermission:
 
     def test_zbmp_analyst_denied_cth_config(self, gate):
         """ZBMP Analyst 尝试 CTH 配置修改被拒。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         result = gate._check_role_domain_permission(
             role="zbmp_analyst",
             domain_id="cth",
@@ -126,7 +126,7 @@ class TestCheckRoleDomainPermission:
 
     def test_zbmp_analyst_allowed_zbmp_analyze(self, gate):
         """ZBMP Analyst 允许 ZBMP 分析操作。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         result = gate._check_role_domain_permission(
             role="zbmp_analyst",
             domain_id="zbmp",
@@ -136,7 +136,7 @@ class TestCheckRoleDomainPermission:
 
     def test_cth_analyst_denied_zbmp_write(self, gate):
         """CTH Analyst 尝试 ZBMP 写操作被拒。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         result = gate._check_role_domain_permission(
             role="cth_analyst",
             domain_id="zbmp",
@@ -146,7 +146,7 @@ class TestCheckRoleDomainPermission:
 
     def test_cth_admin_allowed_cth_write(self, gate):
         """CTH Admin 允许 CTH 写操作。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         result = gate._check_role_domain_permission(
             role="cth_admin",
             domain_id="cth",
@@ -156,7 +156,7 @@ class TestCheckRoleDomainPermission:
 
     def test_zbmp_admin_allowed_zbmp_write(self, gate):
         """ZBMP Admin 允许 ZBMP 写操作。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         result = gate._check_role_domain_permission(
             role="zbmp_admin",
             domain_id="zbmp",
@@ -166,7 +166,7 @@ class TestCheckRoleDomainPermission:
 
     def test_unknown_role_fail_closed(self, gate):
         """未注册角色 fail-closed。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         result = gate._check_role_domain_permission(
             role="unknown_hacker",
             domain_id="cth",
@@ -176,7 +176,7 @@ class TestCheckRoleDomainPermission:
 
     def test_cross_domain_read_may_be_allowed(self, gate):
         """跨域只读：CTH Admin 可读 ZBMP（按矩阵配置）。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         # CTH Admin 对 ZBMP 有 read/audit/analyze
         result = gate._check_role_domain_permission(
             role="cth_admin",
@@ -197,20 +197,20 @@ class TestRequirePermissionDecorator:
     def test_decorator_accepts_domain_id(self):
         """require_permission 装饰器接受 domain_id 参数。"""
         import inspect
-        from permission_gate import require_permission
+        from lumenis.system.security import require_permission
         sig = inspect.signature(require_permission)
         assert "domain_id" in sig.parameters, "require_permission 缺少 domain_id 参数"
 
     def test_decorator_accepts_operation_type(self):
         """require_permission 装饰器接受 operation_type 参数。"""
         import inspect
-        from permission_gate import require_permission
+        from lumenis.system.security import require_permission
         sig = inspect.signature(require_permission)
         assert "operation_type" in sig.parameters or "operation" in sig.parameters
 
     def test_decorator_exists(self):
         """require_permission 装饰器存在且可调用。"""
-        from permission_gate import require_permission
+        from lumenis.system.security import require_permission
         assert callable(require_permission)
 
 
@@ -223,14 +223,14 @@ class TestPermissionGateDomainContext:
     def test_check_permission_accepts_domain_id(self):
         """_check_role_domain_permission 接受 domain_id 参数。"""
         import inspect
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         sig = inspect.signature(PermissionGate._check_role_domain_permission)
         assert "domain_id" in sig.parameters, "_check_role_domain_permission 缺少 domain_id 参数"
 
     def test_check_permission_reads_thread_context(self):
         """require_permission 装饰器 domain_id 默认 None（从线程上下文读取）。"""
         import inspect
-        from permission_gate import require_permission
+        from lumenis.system.security import require_permission
         sig = inspect.signature(require_permission)
         param = sig.parameters.get("domain_id")
         assert param is not None, "require_permission 缺少 domain_id 参数"
@@ -238,7 +238,7 @@ class TestPermissionGateDomainContext:
 
     def test_get_role_domain_matrix_returns_structured(self):
         """get_role_domain_matrix 返回结构化矩阵。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         gate = PermissionGate()
         matrix = gate.get_role_domain_matrix()
         assert "roles" in matrix
@@ -277,7 +277,7 @@ class TestAccountModuleIntegration:
 
     def test_permission_gate_has_role_domain_bridge(self):
         """permission_gate 有角色-域权限桥接层（ROLE_DOMAIN_PERMISSIONS）。"""
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         assert hasattr(PermissionGate, "ROLE_DOMAIN_PERMISSIONS")
         assert isinstance(PermissionGate.ROLE_DOMAIN_PERMISSIONS, dict)
         assert len(PermissionGate.ROLE_DOMAIN_PERMISSIONS) >= 4, \
@@ -292,7 +292,7 @@ class TestWriteOperationsCovered:
 
     def test_all_write_operations_registered(self):
         """所有写操作类型已注册。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         write_ops = [
             OperationType.FILE_WRITE,
             OperationType.CONFIG_MODIFY,
@@ -308,7 +308,7 @@ class TestWriteOperationsCovered:
 
     def test_operation_type_has_domain_relevant_ops(self):
         """OperationType 包含域相关操作。"""
-        from permission_gate import OperationType
+        from lumenis.system.security import OperationType
         values = [e.value for e in OperationType]
         assert "db_write" in values
         assert "config_modify" in values
@@ -324,7 +324,7 @@ class TestDualDomainPermissionE2E:
 
     def test_zbmp_analyst_full_cth_denial(self):
         """ZBMP Analyst 对 CTH 所有写操作均被拒。"""
-        from permission_gate import PermissionGate, OperationType
+        from lumenis.system.security import PermissionGate, OperationType
         gate = PermissionGate()
         write_ops = [
             OperationType.FILE_WRITE,
@@ -344,7 +344,7 @@ class TestDualDomainPermissionE2E:
 
     def test_cth_analyst_zbmp_write_denial(self):
         """CTH Analyst 对 ZBMP 所有写操作均被拒。"""
-        from permission_gate import PermissionGate, OperationType
+        from lumenis.system.security import PermissionGate, OperationType
         gate = PermissionGate()
         write_ops = [
             OperationType.FILE_WRITE,
@@ -364,7 +364,7 @@ class TestDualDomainPermissionE2E:
 
     def test_same_domain_admin_full_access(self):
         """同域 Admin 对本域所有操作放行。"""
-        from permission_gate import PermissionGate, OperationType
+        from lumenis.system.security import PermissionGate, OperationType
         gate = PermissionGate()
         all_ops = list(OperationType)
         for op in all_ops:
