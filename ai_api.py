@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""AI API Blueprint（批4拆分自 app.py）
-包含：ai/status, ai/test, ark/*, ai-learning/*, web-sentiment/*, ai/chat, ai/providers,
-ai/analyze-v570, ai-filter/*, ai/channel-health, ai/analyze
-原则：只搬不移逻辑，函数体零改动，路由与行为保持一致。
+"""LUMENIS AI API Blueprint.
+
+AI runtime is owned by SYSTEM AI Gateway. Learning endpoints consume Shared
+Learning. The historical ungrounded "AI web search" route is kept only as an
+explicit retired compatibility surface and cannot create canonical events.
 """
 from __future__ import annotations
 import json
@@ -15,12 +16,12 @@ bp = Blueprint("ai_api", __name__)
 from lumenis.system.ai_gateway import core as intelligence
 import ai_governance
 import ai_analyzer
-import ai_learning_engine
 import ai_filter
 from lumenis.system.ai_gateway import channel as ai_channel
+from lumenis.shared.learning import operations as learning_operations
 import function_registry
 import database as db
-from report_api import _canonical_report_metrics
+from lumenis.shared.reporting.routes import _canonical_report_metrics
 
 
 @bp.route('/api/ai/status')
@@ -222,37 +223,49 @@ def api_ark_keywords():
 
 @bp.route('/api/ai-learning/status')
 def api_ai_learning_status():
-    """AI学习状态查询"""
+    """Shared Learning operation-pattern status."""
     try:
-        engine = ai_learning_engine.get_ai_learning_engine()
-        status = engine.get_learning_status()
-        return jsonify({'ok': True, **status})
+        return jsonify({'ok': True, **learning_operations.get_learning_status()})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @bp.route('/api/web-sentiment/search', methods=['POST'])
 def api_web_sentiment_search():
-    """全网舆情检索（使用豆包AI）"""
-    try:
-        data = request.get_json(silent=True) or {}
-        keywords = data.get('keywords')
-        platform = data.get('platform', 'all')
-        limit = data.get('limit', 20)
-        
-        search = ai_learning_engine.get_web_sentiment_search()
-        result = search.search_public_opinion(keywords=keywords, platform=platform, limit=limit)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    """Retired unsafe compatibility route.
+
+    The old implementation asked an LLM to impersonate web retrieval and then
+    wrote generated rows into web_events. That violates Evidence/Canonical Data
+    ownership. Keep the route explicit rather than silently fabricating search.
+    """
+    data = request.get_json(silent=True) or {}
+    result = {
+        'ok': False,
+        'status': 'RETIRED_UNGROUNDED',
+        'error': '未接入可验证外部检索证据源；旧 AI 模拟全网检索已退役，请使用生产采集器与 Evidence-backed 数据源。',
+        'results': [],
+        'total': 0,
+        'requested': {
+            'keywords': data.get('keywords'),
+            'platform': data.get('platform', 'all'),
+            'limit': data.get('limit', 20),
+        },
+        'production_truth_write': False,
+    }
+    return jsonify(result), 410
 
 @bp.route('/api/web-sentiment/history')
 def api_web_sentiment_history():
-    """全网舆情检索历史"""
+    """Return only governed historical operation records, never invented events."""
     try:
         limit = request.args.get('limit', 20, type=int)
-        search = ai_learning_engine.get_web_sentiment_search()
-        history = search.get_search_history(limit=limit)
-        return jsonify({'ok': True, 'history': history})
+        history = learning_operations.get_operation_history(
+            operation_type='web_sentiment_search', limit=limit)
+        return jsonify({
+            'ok': True,
+            'status': 'RETIRED_UNGROUNDED',
+            'history': history,
+            'production_truth_write': False,
+        })
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -361,10 +374,9 @@ def api_ai_filter_cleanup():
 def api_ai_channel_health():
     """云端 AI 通道多层稳固层健康快照（熔断/心跳/可用性），供前端小 icon 与 24h 监控"""
     try:
-        from lumenis.system.ai_gateway import channel as ai_channel as _aic
         from lumenis.system.ai_gateway import core as _intel
         _st = _intel.ai_status()
-        _h = _aic.channel_health(provider=_st.get('provider',''), model=_st.get('model',''))
+        _h = ai_channel.channel_health(provider=_st.get('provider',''), model=_st.get('model',''))
         return jsonify({'ok': True, 'enabled': bool(_st.get('enabled')), **{'health': _h}})
     except Exception as _e:
         return jsonify({'ok': False, 'error': str(_e)}), 500
@@ -398,11 +410,15 @@ def api_ai_analyze_v580():
 
 @bp.route('/api/ai-learning/optimization/<operation_type>')
 def api_ai_learning_optimization(operation_type):
-    """获取操作优化建议（从 app.py 迁入 ai_api.py，拆分收尾）"""
+    """Return evidence-bound optimization hints from Shared Learning."""
     try:
-        engine = ai_learning_engine.get_ai_learning_engine()
-        suggestion = engine.get_optimization_suggestion(operation_type)
-        return jsonify({'ok': True, 'operation_type': operation_type, 'suggestion': suggestion})
+        suggestion = learning_operations.get_optimization_suggestion(operation_type)
+        return jsonify({
+            'ok': True,
+            'operation_type': operation_type,
+            'suggestion': suggestion,
+            'owner': 'lumenis.shared.learning.operations',
+        })
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
