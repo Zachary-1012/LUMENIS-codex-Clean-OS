@@ -5,7 +5,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 使用临时数据库
-import evidence_store
+from lumenis.shared.evidence import store as evidence_store
 _tmp_db = tempfile.mktemp(suffix=".db")
 evidence_store.DB_PATH = _tmp_db
 
@@ -214,7 +214,7 @@ def test_evidence_hash_dedup():
 
 def test_safe_identifier():
     """验证 _safe_identifier 拒绝非法标识符，接受合法表名/列名。"""
-    import evidence_store as es
+    from lumenis.shared.evidence import store as es
     # 合法标识符
     assert es._safe_identifier("notes") == "notes"
     assert es._safe_identifier("app_evidence_records") == "app_evidence_records"
