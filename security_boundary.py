@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from permission_gate import (
+from lumenis.system.security import (
     PermissionGate,
     PermissionLevel,
     RiskLevel,
@@ -521,19 +521,11 @@ class ApplicationLayer:
 # ═══════════════════════════════════════════════════════════════
 
 class AIAgentLayer:
-    """AI Agent 层安全。
+    """AI Agent security adapter over the canonical SYSTEM security owners.
 
-    集成：
-      - PermissionGate（全局统一权限门）
-      - Action Firewall（AI 动作防火墙）
-      - tool_allowlist（工具白名单）
-      - identity_binding（身份绑定）
-      - idempotency（幂等性）
-      - human_approval（人工审批）
-
-    与现有 agent_security.py（Prompt Injection 五层防御）互补：
-      agent_security.py 负责输入/输出净化和注入检测，
-      本层负责权限控制和动作级防火墙。
+    Tool allowlisting and identity binding are Agent-layer context checks.
+    Permission and Action Firewall decisions are delegated to
+    :mod:`lumenis.system.security`.
     """
 
     LAYER_NAME = "ai_agent"
@@ -544,54 +536,36 @@ class AIAgentLayer:
         tool_allowlist: Optional[Set[str]] = None,
     ):
         self.gate = gate or get_permission_gate()
-        # 默认工具白名单（AI Agent 允许调用的工具）
         self.tool_allowlist: Set[str] = tool_allowlist or {
             "search_notes", "get_events", "generate_report",
             "query_database", "analyze_sentiment",
             "get_audit_log", "health_check",
         }
-        # 身份绑定：agent_id → allowed_operations
         self._identity_bindings: Dict[str, Set[OperationType]] = {}
         self._identity_lock = threading.Lock()
-        # 动作防火墙规则
-        self._action_firewall_rules: List[Dict[str, Any]] = [
-            {"pattern": r"delete_|drop_|truncate_", "action": "block", "reason": "禁止 AI 直接调用删除类操作"},
-            {"pattern": r"grant_|revoke_|permission_", "action": "block", "reason": "禁止 AI 自行修改权限"},
-            {"pattern": r"commit_|push_|deploy_", "action": "require_approval", "reason": "代码提交/部署需人工审批"},
-        ]
-
-    # ── 工具白名单 ──
 
     def is_tool_allowed(self, tool_name: str) -> Tuple[bool, str]:
-        """检查工具是否在白名单内。"""
         if tool_name in self.tool_allowlist:
             return True, f"工具 {tool_name} 在白名单内"
         return False, f"工具 {tool_name} 不在白名单内"
 
     def register_tool(self, tool_name: str) -> None:
-        """注册工具到白名单。"""
         self.tool_allowlist.add(tool_name)
 
     def unregister_tool(self, tool_name: str) -> None:
-        """从白名单移除工具。"""
         self.tool_allowlist.discard(tool_name)
 
-    # ── 身份绑定 ──
-
     def bind_identity(self, agent_id: str, operations: Set[OperationType]) -> None:
-        """绑定 AI Agent 身份与允许的操作集合。"""
         with self._identity_lock:
             self._identity_bindings[agent_id] = set(operations)
 
     def unbind_identity(self, agent_id: str) -> None:
-        """解除身份绑定。"""
         with self._identity_lock:
             self._identity_bindings.pop(agent_id, None)
 
     def check_identity_binding(
         self, agent_id: str, operation: OperationType
     ) -> Tuple[bool, str]:
-        """检查 AI Agent 身份是否允许执行指定操作。"""
         with self._identity_lock:
             allowed_ops = self._identity_bindings.get(agent_id)
         if allowed_ops is None:
@@ -600,20 +574,40 @@ class AIAgentLayer:
             return True, f"Agent {agent_id} 允许操作 {operation.value}"
         return False, f"Agent {agent_id} 不允许操作 {operation.value}"
 
-    # ── Action Firewall ──
+    @staticmethod
+    def _agent_action(operation_type: OperationType):
+        from lumenis.system.security import AgentAction
+        if operation_type == OperationType.DATA_EXPORT:
+            return AgentAction.EXPORT
+        if operation_type in {OperationType.DB_WRITE, OperationType.FILE_WRITE, OperationType.DATA_IMPORT}:
+            return AgentAction.WRITE
+        if operation_type == OperationType.CONFIG_MODIFY:
+            return AgentAction.COMMIT
+        if operation_type == OperationType.RUNTIME_OPERATION:
+            return AgentAction.DEPLOY
+        if operation_type in {OperationType.DATA_DELETE, OperationType.AD_EXECUTE}:
+            return AgentAction.PUSH
+        return AgentAction.ANALYZE
 
     def check_action_firewall(self, action_name: str) -> Dict[str, Any]:
-        """AI 动作防火墙检查。
-
-        Returns:
-            {"action": "allow"|"block"|"require_approval", "reason": str}
-        """
-        for rule in self._action_firewall_rules:
-            if re.search(rule["pattern"], action_name, re.IGNORECASE):
-                return {"action": rule["action"], "reason": rule["reason"]}
-        return {"action": "allow", "reason": "动作未命中防火墙规则"}
-
-    # ── 统一 AI 动作检查 ──
+        """Compatibility-facing method backed only by canonical Action Firewall."""
+        from lumenis.system.security import ActionRequest, AgentAction, validate_action
+        req = ActionRequest(
+            identity="security_boundary:audit",
+            intent=f"audit tool action {action_name}",
+            tool=action_name,
+            parameters={},
+            target="",
+            scope="system",
+            action=AgentAction.ANALYZE,
+        )
+        result = validate_action(req)
+        return {
+            "action": "allow" if result.allowed else "block",
+            "reason": result.reason,
+            "canonical": True,
+            "checks": result.checks,
+        }
 
     def check_ai_action(
         self,
@@ -624,30 +618,9 @@ class AIAgentLayer:
         resource: Optional[str] = None,
         operation_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """对 AI Agent 动作执行全链路安全检查。
+        """Run identity/tool context checks then canonical Permission + Firewall."""
+        checks: Dict[str, Any] = {}
 
-        检查顺序：
-          1. Action Firewall（动作防火墙）
-          2. Tool Allowlist（工具白名单）
-          3. Identity Binding（身份绑定）
-          4. PermissionGate（权限门）
-
-        Returns:
-            {"allowed": bool, "blocked_at": str|None, "reason": str,
-             "permission_result": PermissionResult|None, "checks": {...}}
-        """
-        checks = {}
-
-        # 1. Action Firewall
-        fw = self.check_action_firewall(tool_name)
-        checks["action_firewall"] = fw
-        if fw["action"] == "block":
-            return {
-                "allowed": False, "blocked_at": "action_firewall",
-                "reason": fw["reason"], "permission_result": None, "checks": checks,
-            }
-
-        # 2. Tool Allowlist
         tool_ok, tool_reason = self.is_tool_allowed(tool_name)
         checks["tool_allowlist"] = {"allowed": tool_ok, "reason": tool_reason}
         if not tool_ok:
@@ -656,7 +629,6 @@ class AIAgentLayer:
                 "reason": tool_reason, "permission_result": None, "checks": checks,
             }
 
-        # 3. Identity Binding
         id_ok, id_reason = self.check_identity_binding(agent_id, operation_type)
         checks["identity_binding"] = {"allowed": id_ok, "reason": id_reason}
         if not id_ok:
@@ -665,7 +637,6 @@ class AIAgentLayer:
                 "reason": id_reason, "permission_result": None, "checks": checks,
             }
 
-        # 4. PermissionGate
         perm_result = self.gate.check(
             operation_type=operation_type,
             resource=resource,
@@ -681,11 +652,22 @@ class AIAgentLayer:
                 "permission_result": perm_result, "checks": checks,
             }
 
-        # Action Firewall require_approval 需确认 PermissionGate 已通过审批
-        if fw["action"] == "require_approval" and not perm_result.approval_token:
+        from lumenis.system.security import ActionRequest, validate_action
+        req = ActionRequest(
+            identity=f"ai_agent:{agent_id}",
+            intent=f"execute {tool_name}",
+            tool=tool_name,
+            parameters={},
+            target=resource or "",
+            scope="system",
+            action=self._agent_action(operation_type),
+        )
+        firewall = validate_action(req, permission_result=perm_result)
+        checks["action_firewall"] = firewall.to_dict()
+        if not firewall.allowed:
             return {
-                "allowed": False, "blocked_at": "action_firewall_approval",
-                "reason": f"{fw['reason']}，且 PermissionGate 无有效审批令牌",
+                "allowed": False, "blocked_at": "action_firewall",
+                "reason": firewall.reason,
                 "permission_result": perm_result, "checks": checks,
             }
 
@@ -696,37 +678,35 @@ class AIAgentLayer:
         }
 
     def validate(self, context: Optional[Dict[str, Any]] = None) -> LayerValidationResult:
-        """AI Agent 层验证。"""
         findings: List[Dict[str, Any]] = []
         checks_total = 5
         checks_passed = 0
 
-        # Check 1: PermissionGate 健康
         gate_health = self.gate.health_check()
         if gate_health["status"] == "healthy":
             checks_passed += 1
         else:
             findings.append({"check": "permission_gate", "severity": "critical", "message": "PermissionGate 不健康"})
 
-        # Check 2: 工具白名单非空
         if self.tool_allowlist:
             checks_passed += 1
         else:
             findings.append({"check": "tool_allowlist", "severity": "high", "message": "工具白名单为空"})
 
-        # Check 3: Action Firewall 规则存在
-        if self._action_firewall_rules:
-            checks_passed += 1
-        else:
-            findings.append({"check": "action_firewall", "severity": "high", "message": "Action Firewall 规则为空"})
+        try:
+            fw = self.check_action_firewall("delete_records")
+            if fw.get("action") == "block" and fw.get("canonical") is True:
+                checks_passed += 1
+            else:
+                findings.append({"check": "action_firewall", "severity": "high", "message": "canonical Action Firewall 未阻止危险动作"})
+        except Exception as exc:
+            findings.append({"check": "action_firewall", "severity": "critical", "message": str(exc)})
 
-        # Check 4: fail-closed 启用
         if self.gate.fail_closed:
             checks_passed += 1
         else:
-            findings.append({"check": "fail_closed", "severity": "medium", "message": "PermissionGate fail_closed=False（生产环境应启用）"})
+            findings.append({"check": "fail_closed", "severity": "medium", "message": "PermissionGate fail_closed=False"})
 
-        # Check 5: 高风险操作需审批（require_human_approval）
         if self.gate.require_human_approval(RiskLevel.HIGH):
             checks_passed += 1
         else:
@@ -744,14 +724,13 @@ class AIAgentLayer:
         )
 
     def health_check(self) -> Dict[str, Any]:
-        """AI Agent 层健康检查。"""
         return {
             "layer": self.LAYER_NAME,
             "status": "healthy",
             "permission_gate": self.gate.health_check(),
             "tool_allowlist_size": len(self.tool_allowlist),
             "tool_allowlist": sorted(self.tool_allowlist),
-            "action_firewall_rules": len(self._action_firewall_rules),
+            "action_firewall_owner": "lumenis.system.security.action_firewall",
             "identity_bindings": len(self._identity_bindings),
             "timestamp": datetime.now().isoformat(),
         }
