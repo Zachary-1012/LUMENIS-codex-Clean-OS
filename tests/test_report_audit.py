@@ -243,20 +243,15 @@ class TestTime口径:
         # 日报逻辑用 publish_date >= day_before，周期用 publish_date BETWEEN
         assert "publish_date >= ?" in source or "publish_date >= ? AND publish_date <= ?" in source
 
-    def test_report_export_engine_uses_publish_date(self):
-        """Shared Reporting export_engine._notes 必须优先使用 publish_date。"""
+    def test_canonical_export_facade_uses_shared_period_filter(self):
+        """唯一导出 facade 必须复用 export_api 的统一周期/发布日期口径。"""
         import inspect
-        # 动态导入 report_export 下的模块
-        import importlib.util
-        mod_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                "lumenis", "shared", "reporting", "export_engine.py")
-        spec = importlib.util.spec_from_file_location("report_export_engine", mod_path)
-        mod = importlib.util.module_from_spec(spec)
-        # 不执行模块（避免依赖），只读源码
-        with open(mod_path, "r", encoding="utf-8") as f:
-            source = f.read()
-        assert "publish_date" in source
-        assert "publish_datetime" in source
+        from lumenis.shared.reporting import export_api as er
+        source = inspect.getsource(er.export_artifacts)
+        assert "_export_excel" in source
+        assert "_export_word" in source
+        assert "export_report_to_csv" in source
+        assert "verify_artifact_file" in source
 
     def test_report_filter_fallback_collected_at_is_flagged(self):
         """Shared Reporting filtering 在无 publish_date 时回退 collected_at，这是已知行为。
@@ -292,12 +287,11 @@ class TestSubjectFiltering:
         assert "is_taikoo_verified=1" in source
         assert "subject_sql_and_values" in source or "subject" in source.lower()
 
-    def test_report_export_engine_has_subject_filter(self):
-        """Shared Reporting export_engine._notes 必须包含主体过滤（Phase 9 修复）。"""
-        mod_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                "lumenis", "shared", "reporting", "export_engine.py")
-        with open(mod_path, "r", encoding="utf-8") as f:
-            source = f.read()
+    def test_canonical_export_facade_depends_on_subject_filtered_data(self):
+        """唯一导出 facade 的数据入口必须保持 Subject 生产过滤。"""
+        import inspect
+        from lumenis.shared.reporting import export_api as er
+        source = inspect.getsource(er.filter_notes_by_period)
         assert "is_taikoo_verified=1" in source
         assert "subject_sql_and_values" in source
 
