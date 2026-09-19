@@ -12,7 +12,9 @@ import json, os, sqlite3, uuid
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+from lumenis.shared.database import get_repository, main_db_path
+
+DB_PATH = main_db_path()
 
 # 敏感动作类型（HCG 强制人工确认）
 GATED_ACTIONS = {
@@ -43,8 +45,7 @@ def _now() -> str:
 
 
 def _conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
+    conn = get_repository().connect(timeout=10)
     # 幂等自建（表缺失时兜底，migration 会正式创建）
     conn.execute("""
         CREATE TABLE IF NOT EXISTS kos_executions (
