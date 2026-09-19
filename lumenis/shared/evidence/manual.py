@@ -66,30 +66,8 @@ STATUS_CONFIRMED = 'confirmed'
 STATUS_REJECTED = 'rejected'
 STATUS_SHADOW = 'shadow'
 
-# ========== 数据库 Schema ==========
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS app_evidence_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source TEXT NOT NULL DEFAULT 'xhs_app',
-    capture_mode TEXT NOT NULL DEFAULT 'screenshot',
-    captured_at TEXT,
-    topic TEXT,
-    metric_name TEXT NOT NULL,
-    metric_value TEXT NOT NULL,
-    evidence_hash TEXT,
-    evidence_path TEXT,
-    parse_confidence REAL DEFAULT 1.0,
-    verified_by TEXT,
-    verified_at TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    notes TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_app_evidence_topic ON app_evidence_records(topic);
-CREATE INDEX IF NOT EXISTS idx_app_evidence_status ON app_evidence_records(status);
-CREATE INDEX IF NOT EXISTS idx_app_evidence_hash ON app_evidence_records(evidence_hash);
-"""
+# Canonical table/schema ownership lives in Shared Evidence Store.
+from . import store as evidence_store
 
 
 logger = logging.getLogger(__name__)
@@ -103,10 +81,8 @@ def _get_db():
 
 
 def init_db():
-    """初始化数据库表"""
-    with _get_db() as conn:
-        conn.executescript(SCHEMA)
-        conn.commit()
+    """初始化 Shared Evidence Store（manual adapter 不拥有 schema）。"""
+    evidence_store.init_evidence_store(main_db_path())
 
 
 def _now():
