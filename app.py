@@ -58,21 +58,15 @@ try:
 except Exception as _log_e:
     print(f"[UnifiedLogger] 启用失败（不影响系统运行）: {_log_e}")
 import database as db
-# === ZBC Phase 12: PermissionGate 全局初始化（高风险操作审计+权限门） ===
-_pg = None
-try:
-    from permission_gate import get_permission_gate, PermissionLevel, OperationType, RiskLevel, require_permission
-    _pg = get_permission_gate()
-    _pg.grant_permission(PermissionLevel.COMMIT)
-    _pg.grant_permission(PermissionLevel.PUSH)
-    _pg.grant_permission(PermissionLevel.HUMAN_APPROVAL)
-    print('[PermissionGate] 全局门已初始化（基线权限=COMMIT/PUSH/HUMAN_APPROVAL，审计已激活）')
-except Exception as _pg_e:
-    print(f'[PermissionGate] 初始化失败（不影响系统运行）: {_pg_e}')
-    def require_permission(*args, **kwargs):
-        def _noop(func):
-            return func
-        return _noop
+# === LUMENIS SYSTEM: canonical Permission initialization ===
+from lumenis.system.security import (
+    get_permission_gate, PermissionLevel, OperationType, RiskLevel, require_permission,
+)
+_pg = get_permission_gate()
+_pg.grant_permission(PermissionLevel.COMMIT)
+_pg.grant_permission(PermissionLevel.PUSH)
+_pg.grant_permission(PermissionLevel.HUMAN_APPROVAL)
+print('[Permission] SYSTEM canonical gate initialized; high-risk actions still require human approval')
 import ai_analyzer
 import collector
 import intelligence
@@ -1209,8 +1203,8 @@ def _permission_gate_write_check():
     # TESTING 旁路：必须显式开启（set_testing_bypass(True) 或 PERMISSION_GATE_TESTING=1），
     # 不得因 pytest 环境或 Flask TESTING 自动跳过写拦截（OWASP deny-by-default）。
     try:
-        from permission_gate import _TESTING_BYPASS_ENABLED
-        if _TESTING_BYPASS_ENABLED or os.environ.get('PERMISSION_GATE_TESTING') == '1':
+        from lumenis.system.security import is_testing_bypass_enabled
+        if is_testing_bypass_enabled():
             return None
     except Exception:
         pass
