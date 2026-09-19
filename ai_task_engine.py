@@ -378,7 +378,7 @@ class TaskEngine:
     def permission_gate(self):
         if self._permission_gate is None:
             try:
-                from permission_gate import get_permission_gate
+                from lumenis.system.security import get_permission_gate
                 self._permission_gate = get_permission_gate()
             except ImportError:
                 self._permission_gate = None
@@ -804,7 +804,7 @@ class TaskEngine:
         # L0/L1/L2：通过 PermissionGate 检查
         if self.permission_gate is not None:
             try:
-                from permission_gate import OperationType, RiskLevel as PGRisk
+                from lumenis.system.security import OperationType, RiskLevel as PGRisk
                 # 映射操作类型
                 agent_id = task.get("agent_id", "")
                 if "browser" in agent_id:
