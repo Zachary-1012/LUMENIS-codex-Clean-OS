@@ -7,16 +7,15 @@ import os
 import sqlite3
 from datetime import datetime
 from flask import Blueprint, jsonify, request
+from lumenis.shared.database import get_repository, main_db_path
 
 system_ai_bp = Blueprint('system_ai_data', __name__)
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+DB_PATH = main_db_path()
 
 
 def _get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect(timeout=10)
 
 
 def _table_exists(conn, table_name):
