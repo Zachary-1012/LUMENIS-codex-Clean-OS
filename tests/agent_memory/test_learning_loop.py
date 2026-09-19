@@ -7,8 +7,8 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from agent_memory.learning_loop import LearningLoop, RuleSuggestion
-from agent_memory.learning import LifecycleStage
+from lumenis.shared.learning.loop import LearningLoop, RuleSuggestion
+from lumenis.shared.learning.memory import LifecycleStage
 
 
 class TestLearningLoop:
