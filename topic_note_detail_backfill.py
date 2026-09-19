@@ -18,10 +18,11 @@ V2.0 P0-5：Topic Note Detail 补抓脚本
   - 主体判断仍由 subject_rules.py 负责（_save_notes 已集成）
 """
 import os, sys, json, time, sqlite3, argparse, random
+from lumenis.shared.database import get_repository, main_db_path
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'data', 'monitor.db')
+DB_PATH = main_db_path()
 CDP_URL = os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9222')
 
 # 熔断文件（与 topic_campaign.py 一致）
@@ -164,7 +165,7 @@ def main():
         print('请先在系统内完成扫码验证并解除熔断，再运行补抓。')
         sys.exit(1)
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_repository().connect()
     conn.row_factory = sqlite3.Row
 
     # 查询待补抓笔记
