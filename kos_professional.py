@@ -9,6 +9,7 @@ LUMENIS KOS Professional Account Gateway
 - 轻量：不做强制全量脱敏，开启后按需授权
 """
 import sqlite3
+from lumenis.shared.database import get_repository
 import os
 import time
 from datetime import datetime
@@ -56,12 +57,7 @@ CREATE TABLE IF NOT EXISTS professional_metrics (
 
 
 def _get_conn() -> sqlite3.Connection:
-    db_path = os.environ.get('TAIKOO_DB_PATH',
-                             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db'))
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    return get_repository().connect()
 
 
 def init_db():
