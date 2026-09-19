@@ -22,12 +22,9 @@ try:
 except Exception:
     def _resolve_node(): return 'node'
 
-try:
-    import database as _dbmod
-    DB_PATH = _dbmod.DB_PATH
-except Exception:  # 兜底
-    import os
-    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+from lumenis.shared.database import get_repository, main_db_path
+
+DB_PATH = main_db_path()
 
 _init_lock = threading.Lock()
 _inited = False
@@ -75,7 +72,7 @@ SEED_EVENTS = [
 
 
 def _conn():
-    return sqlite3.connect(DB_PATH, timeout=30)
+    return get_repository().connect(timeout=30)
 
 
 def init_swire():
