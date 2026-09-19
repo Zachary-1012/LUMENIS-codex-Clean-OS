@@ -259,11 +259,7 @@ APScheduler
 tenacity
 ```
 
-The earlier audit baseline did not contain `feedparser` in `requirements.txt`. The current canonical manifest now contains `feedparser>=6.0.11`, and the production adapter imports it through the Atom adapter. Treat the dated audit statement below as historical only; current status must be read from the manifest and runtime evidence:
-
-```text
-MANIFEST_PRESENT / LOCAL_VERIFIED / RUNTIME_ADAPTER_RESTART_REQUIRED_AFTER_SOURCE_CHANGES
-```
+Dependency declarations and runtime availability are separate claims. For each adapter dependency, verify the current manifest, import and call path, installation in the target runtime, restart state after source changes, and scoped runtime acceptance at the active commit. A manifest entry or import alone does not prove implementation. Dated audit statements are provenance only; do not present them as current runtime status.
 
 Do not lie by upgrading it to remote `IMPLEMENTED` before the repository manifest actually contains it.
 
