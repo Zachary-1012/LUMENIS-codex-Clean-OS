@@ -8,6 +8,7 @@ import hashlib, json, os, re, sqlite3
 import hashlib, json, os, re, sqlite3
 from datetime import datetime
 from typing import Any, Optional
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 DEFAULT_PRODUCT_ID = "CTH"
 HISTORICAL_RULE_VERSION = "hist-v1.0"
@@ -27,14 +28,12 @@ except Exception:
 
 
 def _get_db_path():
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "monitor.db")
+    return main_db_path()
 
 
 def _get_connection(db_path=None):
     path = db_path or _get_db_path()
-    conn = sqlite3.connect(path, timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return DatabaseRepository(path).connect(timeout=10)
 
 
 def normalize_content(title="", content="", body=""):
