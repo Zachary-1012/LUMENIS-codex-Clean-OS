@@ -152,12 +152,13 @@ def main() -> int:
     learning_owner = ROOT / "lumenis/shared/learning"
     required_learning_files = (
         "memory.py", "loop.py", "collector.py", "feedback.py", "persistence.py",
+        "operations.py",
     )
     for filename in required_learning_files:
         if not (learning_owner / filename).is_file():
             errors.append(f"missing Shared Learning owner: lumenis/shared/learning/{filename}")
 
-    for filename in ("collector.py", "feedback.py", "persistence.py"):
+    for filename in ("collector.py", "feedback.py", "persistence.py", "operations.py"):
         path = learning_owner / filename
         if path.is_file():
             text = path.read_text(encoding="utf-8")
@@ -171,6 +172,14 @@ def main() -> int:
                 errors.append(
                     f"Shared Learning must not write AI-generated learning directly into canonical web_events: {path.name}"
                 )
+
+    operations_path = learning_owner / "operations.py"
+    if operations_path.is_file():
+        operations_text = operations_path.read_text(encoding="utf-8")
+        if "INSERT INTO web_events" in operations_text or "UPDATE web_events" in operations_text:
+            errors.append("Shared Learning operations must never write generated data into canonical web_events")
+        if "ark_llm" in operations_text:
+            errors.append("Shared Learning operations must not restore retired ungrounded ark_llm web search")
 
     routes_path = ROOT / "lumenis/shared/reporting/routes.py"
     if routes_path.is_file():
