@@ -38,6 +38,11 @@ FORBIDDEN_EXACT = {
     "report_export/report_engine.py",
     "report_api.py",
     "kos_report.py",
+    "evidence_chain.py",
+    "evidence_store.py",
+    "evidence_api.py",
+    "production_evidence_contract.py",
+    "app_evidence.py",
     "lumenis/shared/reporting/export_engine.py",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
@@ -115,6 +120,12 @@ def main() -> int:
         if marker in app_text:
             errors.append(f"app.py reintroduced Reporting implementation: {marker}")
 
+    evidence_store_path = ROOT / "lumenis/shared/evidence/store.py"
+    if evidence_store_path.is_file():
+        evidence_store_text = evidence_store_path.read_text(encoding="utf-8")
+        if "Path(__file__).parent / \"data\" / \"monitor.db\"" in evidence_store_text:
+            errors.append("Shared Evidence Store points at module-local DB instead of production DB truth")
+
     routes_path = ROOT / "lumenis/shared/reporting/routes.py"
     if routes_path.is_file():
         routes_text = routes_path.read_text(encoding="utf-8")
@@ -122,7 +133,7 @@ def main() -> int:
             errors.append("Shared Reporting routes must not depend on app.py implementation")
 
     grep = subprocess.run(
-        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^from daily_report|^import daily_report|^from report_artifact|^import report_artifact|^from report_filter|^import report_filter|^from report_export|^import export_report|^from report_api|^import report_api|^from kos_report|^import kos_report|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime"],
+        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^from daily_report|^import daily_report|^from report_artifact|^import report_artifact|^from report_filter|^import report_filter|^from report_export|^import export_report|^from report_api|^import report_api|^from kos_report|^import kos_report|^from evidence_chain|^import evidence_chain|^from evidence_store|^import evidence_store|^from evidence_api|^import evidence_api|^from production_evidence_contract|^import production_evidence_contract|^from app_evidence|^import app_evidence|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime"],
         cwd=ROOT,
         text=True,
         capture_output=True,
