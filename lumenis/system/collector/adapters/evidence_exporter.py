@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 try:  # 同仓零副作用契约层
-    from platform_adapters.safe_collection import redact_text
+    from lumenis.system.collector.adapters.safe_collection import redact_text
 except Exception:  # pragma: no cover - 兜底，不允许因脱敏缺失而导出明文联系方式
     import re
     _PATTERNS = [
