@@ -40,7 +40,7 @@ PROVIDER_ACTIVE = AI_PROVIDER in ('ark', 'doubao', 'volc', 'doubao-ark')
 
 # 数据库路径（使用绝对路径）
 BASE_DIR = Path(__file__).parent
-from lumenis.shared.database import main_db_path  # token accounting shares canonical production DB
+from lumenis.shared.database import get_repository, main_db_path  # token accounting shares canonical production DB
 TOKEN_DB = main_db_path()
 # ======================
 
@@ -49,8 +49,7 @@ def load_daily_token():
     """加载今日已使用的token数"""
     try:
         today = date.today().isoformat()
-        os.makedirs(os.path.dirname(main_db_path()), exist_ok=True)
-        conn = sqlite3.connect(main_db_path())
+        conn = get_repository().connect()
         cur = conn.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS token_stat (day TEXT PRIMARY KEY, used INTEGER)''')
         cur.execute("SELECT used FROM token_stat WHERE day=?", (today,))
@@ -68,8 +67,7 @@ def save_daily_token(total: int):
     """保存今日已使用的token数"""
     try:
         today = date.today().isoformat()
-        os.makedirs(os.path.dirname(main_db_path()), exist_ok=True)
-        conn = sqlite3.connect(main_db_path())
+        conn = get_repository().connect()
         cur = conn.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS token_stat (day TEXT PRIMARY KEY, used INTEGER)''')
         cur.execute('''INSERT OR REPLACE INTO token_stat(day,used) VALUES (?,?)''', (today, total))
