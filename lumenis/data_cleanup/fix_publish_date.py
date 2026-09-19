@@ -14,7 +14,7 @@ import re
 import sqlite3
 import sys
 from datetime import datetime, timedelta
-from ..config import DB_PATH
+from lumenis.shared.database import get_repository
 
 
 # 相对时间正则（顺序敏感：先匹配更具体的）
@@ -98,7 +98,7 @@ def fix_publish_dates(dry_run: bool = True) -> dict:
     - publish_datetime 若残留“编辑于/昨天/小时前”等脏原文，用同一标准日期同步，避免双列不一致；
     - 只规范发布时间，绝不改 captured_at/collected_at（采集时间）。dry_run=True 只预览。
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_repository().connect()
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.execute(
@@ -147,7 +147,7 @@ def backfill_captured_from_collected(dry_run: bool = True) -> dict:
     语义：collected_at 本就是历史采集时刻，回填到 captured_at 仅为补齐“采集时间”列，
     绝不触碰任何发布时间列，不混淆 publish 与 captured。
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_repository().connect()
     try:
         where = ("(captured_at IS NULL OR TRIM(captured_at)='') "
                  "AND collected_at IS NOT NULL AND TRIM(collected_at)<>''")
@@ -162,7 +162,7 @@ def backfill_captured_from_collected(dry_run: bool = True) -> dict:
 
 def find_empty_content_notes() -> dict:
     """查找空正文笔记，生成补抓清单（不写库）。"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_repository().connect()
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.execute("""
