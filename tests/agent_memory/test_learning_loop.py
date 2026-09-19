@@ -50,6 +50,7 @@ class TestLearningLoop:
         assert suggestion is not None
         assert suggestion.rule_type == "risk"
         assert suggestion.status == "proposed"
+        assert suggestion.learning_record_id is not None
         assert len(loop._rule_suggestions) == 1
 
     def test_review_rule_suggestion_approve(self, seeded_db):
@@ -59,6 +60,17 @@ class TestLearningLoop:
         updated = next(x for x in loop._rule_suggestions if x.suggestion_id == s.suggestion_id)
         assert updated.status == "approved"
         assert updated.reviewed_by == "tester"
+        assert updated.learning_record_id is not None
+        import sqlite3
+        conn = sqlite3.connect(seeded_db)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
+            (updated.learning_record_id,),
+        ).fetchone()
+        conn.close()
+        assert row is not None
+        assert row["lifecycle_stage"] == "reviewed"
 
     def test_review_rule_suggestion_reject(self, seeded_db):
         loop = LearningLoop(db_path=seeded_db, enabled=True)
@@ -66,6 +78,17 @@ class TestLearningLoop:
         assert loop.review_rule_suggestion(s.suggestion_id, approved=False)
         updated = next(x for x in loop._rule_suggestions if x.suggestion_id == s.suggestion_id)
         assert updated.status == "rejected"
+        assert updated.learning_record_id is not None
+        import sqlite3
+        conn = sqlite3.connect(seeded_db)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
+            (updated.learning_record_id,),
+        ).fetchone()
+        conn.close()
+        assert row is not None
+        assert row["lifecycle_stage"] == "archived"
 
     def test_apply_approved_rule(self, seeded_db):
         import sqlite3
@@ -83,6 +106,17 @@ class TestLearningLoop:
         conn.close()
         assert row is not None
         assert row["is_active"] == 0  # 不自动激活
+
+        learning_row = conn = None
+        conn = sqlite3.connect(seeded_db)
+        conn.row_factory = sqlite3.Row
+        learning_row = conn.execute(
+            "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
+            (s.learning_record_id,),
+        ).fetchone()
+        conn.close()
+        assert learning_row is not None
+        assert learning_row["lifecycle_stage"] == "validated"
 
     def test_apply_unapproved_rule_fails(self, seeded_db):
         loop = LearningLoop(db_path=seeded_db, enabled=True)
