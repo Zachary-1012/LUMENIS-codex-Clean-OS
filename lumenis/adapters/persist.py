@@ -22,7 +22,7 @@ import hashlib
 import datetime
 from typing import List, Dict
 from .base import CollectedNote, AdapterResult
-from ..config import DB_PATH
+from lumenis.shared.database import get_repository, main_db_path
 
 import logging
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def _canonical_bypass(con, n, keyword, source_platform=""):
     if not _CANONICAL_AVAILABLE:
         return
     try:
-        ensure_canonical_table(DB_PATH)
+        ensure_canonical_table(main_db_path())
         rec = collected_note_to_canonical(n, source_platform=source_platform, keyword=keyword)
         persist_canonical(con, rec)
     except Exception as e:
@@ -86,13 +86,8 @@ def now_str() -> str:
 
 
 def get_conn() -> sqlite3.Connection:
-    """连接主库（调用方负责关闭）。"""
-    path = DB_PATH
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    con = sqlite3.connect(path, timeout=15)
-    con.row_factory = sqlite3.Row
-    con.execute("PRAGMA journal_mode=WAL;")
-    return con
+    """连接唯一生产主库（调用方负责关闭）。"""
+    return get_repository().connect(timeout=15)
 
 
 def _md5(text: str) -> str:
