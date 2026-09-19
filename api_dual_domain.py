@@ -53,22 +53,13 @@ from subject_context import (
     get_subject_context,
 )
 from domain_adapter import get_adapter, CTH_ONLY_FIELDS, ZBMP_ONLY_FIELDS
+from lumenis.shared.database import get_repository
 
 # ---------------------------------------------------------------------------
-# 数据库路径（复用生产库，测试时可通过环境变量覆盖）
+# 数据库连接：统一通过 Shared Database repository
 # ---------------------------------------------------------------------------
-def _get_db_path() -> str:
-    return os.path.abspath(
-        os.environ.get("ZBC_DB_PATH")
-        or os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "monitor.db")
-    )
-
-
 def _get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(_get_db_path(), timeout=15)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    return get_repository().connect(timeout=15)
 
 
 # ---------------------------------------------------------------------------
