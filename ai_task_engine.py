@@ -43,7 +43,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import get_repository, main_db_path
 
 logger = logging.getLogger(__name__)
 # ZBC Lifecycle Contract V1.0 (bypass-mode, never breaks main chain)
@@ -69,8 +69,7 @@ except ImportError:
 
     @contextmanager
     def get_db():
-        conn = sqlite3.connect(DB_PATH, timeout=30)
-        conn.row_factory = sqlite3.Row
+        conn = get_repository().connect(timeout=30)
         try:
             yield conn
             conn.commit()
@@ -216,8 +215,7 @@ def init_task_engine_db() -> None:
         # cannot send approval tasks to a stale import-time database.
         db_path = main_db_path()
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        with sqlite3.connect(db_path, timeout=30) as conn:
-            conn.row_factory = sqlite3.Row
+        with get_repository().connect(timeout=30) as conn:
             conn.executescript(_TASK_ENGINE_SCHEMA)
             # 向后兼容迁移：evidence 链式哈希字段（Decision 6: 全链路Evidence/Audit Trail）
             ev_cols = {r[1] for r in conn.execute('PRAGMA table_info(ai_task_evidence)').fetchall()}
