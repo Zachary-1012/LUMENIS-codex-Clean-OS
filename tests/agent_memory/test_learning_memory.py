@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from agent_memory.learning import (
+from lumenis.shared.learning.memory import (
     LearningMemory, LearningType, LifecycleStage, SampleType,
 )
 
