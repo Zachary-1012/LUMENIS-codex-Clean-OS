@@ -26,7 +26,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
-from db_paths import main_db_path
+from lumenis.shared.database import get_repository, main_db_path
 
 
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
@@ -55,7 +55,7 @@ def artifact_root() -> Path:
 
 
 def _db_connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(main_db_path(), timeout=10)
+    conn = get_repository().connect(timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
