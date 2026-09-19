@@ -540,13 +540,13 @@ def _build_cth01() -> Dict[str, Any]:
 # AI-01 AI 意图入口 —— 真实绑定
 # ===========================================================================
 def _evidence_recent(limit: int = 2) -> List[Dict[str, Any]]:
-    import evidence_store as es
+    from lumenis.shared.evidence import store as es
 
     return es.query_evidence(limit=limit)
 
 
 def _build_ai01() -> Dict[str, Any]:
-    import evidence_store as es
+    from lumenis.shared.evidence import store as es
 
     blocked: List[Dict[str, str]] = []
     truth: Dict[str, Any] = {}
