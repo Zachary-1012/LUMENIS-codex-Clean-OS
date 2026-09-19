@@ -19,13 +19,13 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import app as app_module
-from permission_gate import (
+from lumenis.system.security import (
     PermissionGate, PermissionLevel, OperationType, RiskLevel,
     get_permission_gate, reset_permission_gate,
 )
 
 # 权限门集成测试需要严格模式：不被TESTING通用放行影响
-from permission_gate import set_testing_bypass
+from lumenis.system.security import set_testing_bypass
 
 
 # ═══════════════════════════════════════════════════════════════
