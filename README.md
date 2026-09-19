@@ -9,10 +9,11 @@
 
 > Coding Agent / Codex 的当前执行入口固定为：`AGENTS.md` → `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`。当前 HEAD 必须通过 `git fetch origin` + `git rev-parse origin/main` 动态解析，不得从 README、历史 handoff、截图或粘贴 SHA 推断。
 
-## 0. CURRENT 接管入口与历史审计基线 / Current takeover and audit provenance
+## 0. Current source and acceptance
 
-当前执行入口：
+At the start of every engineering task, resolve the current remote `main` HEAD. A README SHA, dated audit, handoff, or commit message is never a substitute for the current source tree.
 
+Before changing product code, read:
 ```text
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
@@ -20,27 +21,10 @@ AGENTS.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
 → 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
-→ current source / runtime / DB / API / Permission / Evidence / tests for the active slice
+→ current source, runtime, DB, API, Permission, Evidence and scoped tests
 ```
 
-2026-09-16 文档更新前的远程 `main` 审计点：
-
-```text
-repo   = Zachary-1012/LUMENIS-codex-Clean-OS
-branch = main
-sha    = 147e3bd331b22236930ae29112a67c613a148f67
-```
-
-**这个 SHA 只保留为 point-in-time audit provenance，不是当前 HEAD、checkout target、reset target 或 Codex 开发基线。** 当前 `origin/main` 必须在每次工程会话开始时重新读取。
-
-该历史审计基于当时远程源码、运行入口、依赖清单、CI 分层、Evidence、Collector、Experience V2 与内容生成实现进行核对；记录见：
-
-- [`08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md`](08-AUDIT/SOURCE-LEVEL-REPOSITORY-AUDIT-20260916.md)
-- [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
-
-远程、当前本地 working tree、local-only commit、历史审计点、最后 runner-backed green baseline、current-head CI 与 live runtime 必须分开描述；不得互相冒充。
-
----
+Describe `IMPLEMENTED`, `TESTED`, `VERIFIED`, `RELEASED` and `OPERATING` separately, with evidence tied to the current commit. A green CI result or an old audit alone does not prove live product behavior.
 
 ## Canonical product architecture
 
@@ -94,59 +78,15 @@ CTH 与 BMP 可以共享 Subject Context 与基础设施，但不得静默合并
 
 ---
 
-## 2. 2026-09-16 源码审计确认的生产事实 / Point-in-time source facts
+## 2. Current implementation map
 
-以下内容是 `147e3bd...` 审计点确认的 source evidence，不是对未来/current HEAD 的永久声明。Codex 开始具体工作时必须以当前源码重新核验 owner、caller、contract、runtime 与 tests；若当前源码不同，以当前源码为准。
+- `app.py` and the supervised runtime are the LUMENIS Product Core entry points; verify their current behavior from source and runtime evidence.
+- `lumenis/` contains canonical production owners for shared capability and system services.
+- `contracts/experience/` contains the retained Experience contracts.
+- `app/` is the canonical Flutter user application. Its bootstrap connects to Product Core APIs; a launch surface or registered route alone does not prove complete CTH/BMP workflows.
+- CTH and BMP are distinct LUMENIS business domains. Shared services do not merge their data, metrics, actions or user tasks.
 
-### Runtime
-
-审计点确认的 Windows canonical launcher：
-
-```powershell
-Set-Location D:\LUMENIS_REBUILD
-powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
-```
-
-审计点确认的 core health target：
-
-```text
-http://127.0.0.1:8201/healthz
-```
-
-审计点启动链使用现有 `.venv`、`run_supervised.py`、Flask/Waitress 运行时，并维护 8201 supervisor；Resident Browser 使用现有 9222/9223 双身份 CDP。工作站路径是本机入口，不应成为可移植生产代码硬依赖。
-
-### Experience V2
-
-审计点 `app.py` 已注册 `experience_runtime`，Experience 挂载到：
-
-```text
-/experience/
-/api/experience/*
-```
-
-审计点源码明确声明真实后端绑定屏幕为 `CTH-01` 与 `AI-01`；其他屏幕不得仅因原型存在就视为生产绑定完成。当前 HEAD 是否已有变化必须重新以源码验证。
-
-### Evidence / Canonical
-
-当前 canonical owner 为 `lumenis/shared/evidence/`，提供 Evidence / Canonical lineage、存储、API 与生产契约；旧根级 `evidence_chain.py` 等 owner 已退休。Evidence 不被分析结果覆盖，provenance、rule version、AI 输出与人工修正保持分离。
-
-XHS side-write、lineage convergence 与其他 Evidence 行为必须以当前源码和测试为准；若本地存在比远程更新的有效修复，必须先完成 local→main 收敛再把状态升级为远程已实现。
-
-### Evaluation / Learning
-
-当前 canonical owners 为 `lumenis/shared/evaluation/` 与 `lumenis/shared/learning/`。Evaluation 统一承载真实质量、AI、Benchmark 与 Agent trajectory 评估；Learning 统一承载反馈、修正、规则建议、学习扫描、反馈闭环与学习持久化。
-
-Learning 输出本身不是 Production Truth。规则建议必须经过人工审核，写入规则注册表时保持非激活状态，且 AI 生成的研究内容不得绕过 Evidence 直接写成外部事件事实。
-
-### Collector / XHS runtime
-
-审计点 `xhs_cookie_bridge.py` 包含受控本地 Cookie/Profile 读取、双身份逻辑、9222/9223 Resident Browser、冷却/风控/次数兜底和 policy gate。Cookie/session 不得进入源码、日志、公开配置或文档。
-
-### Content & Creation
-
-审计点 `content_generation.py` 包含结构化内容类型、研究库检索、Evidence、Evaluation、人工反馈迭代以及 local-first AI / 显式 cloud enable 语义。AI 输出仍不是 Production Truth。
-
----
+Architecture documents describe intended boundaries. Production capability is established only by the current implementation and its scoped acceptance evidence.
 
 ## 3. 事实权威 / Authority order
 
@@ -158,7 +98,7 @@ Current Production Source
 > Current DB / API / Permission / Evidence Contracts
 > Tests / E2E / Production Acceptance
 > Current Canonical Governance
-> Experience V2 / Current UI Capability Evidence
+> Canonical Experience Constitution / Current UI Capability Evidence
 > README
 > Historical Handoff / Legacy Evidence
 > Chat History
@@ -178,30 +118,16 @@ OPERATING   = 真实运行产生规定的线上/时间性证据
 
 ---
 
-## 4. 审计点依赖与零授权能力边界
+## 4. Dependencies and optional capabilities
 
-2026-09-16 审计点的 `requirements.txt` 包含并可作为既有基础设施的历史核验对象：
+Treat the checked-in manifests as the current dependency authority:
+- `requirements.txt` for Python runtime dependencies;
+- `app/pubspec.yaml` for the Flutter application;
+- `package.json` for repository tooling.
 
-```text
-Flask / Waitress
-APScheduler / schedule
-requests / httpx / aiohttp
-BeautifulSoup4 / lxml
-Playwright
-SQLite (stdlib)
-tenacity
-Alembic
-```
+Do not infer a production frontend, active provider, or capability from a dependency name or an old audit snapshot. Optional external providers must remain explicitly configured and must not silently become required for core product behavior.
 
-审计点根 `package.json` 承担 Node tooling，并直接依赖 Playwright；它不是 Next.js/React/Vite 生产前端 manifest。当前依赖状态必须以当前 manifest 重新读取。
-
-本轮“零授权能力”标准：免费、无需第三方 API Key/OAuth、可进入 LUMENIS 自有 Production Truth。正式验收表见：
-
-[`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md)
-
-特别说明：2026-09-16 远程审计点记录 `requirements.txt` **尚未包含 `feedparser`**，这是历史事实。当前 canonical `requirements.txt` 已包含 `feedparser>=6.0.11`；验收必须继续以当前 manifest、重启后的 runtime 和测试证据为准。
-
----
+The zero-auth capability acceptance criteria are maintained in [`00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md`](00-GOVERNANCE/CODEX-ZERO-AUTH-CAPABILITY-ACCEPTANCE-V1.md).
 
 ## 5. 标准闭环 / Canonical closed loop
 
