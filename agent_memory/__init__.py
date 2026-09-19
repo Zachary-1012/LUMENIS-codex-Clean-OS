@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""ZBC×OSAI Agent Runtime — 分层 Memory Layer（ZBC PARTIAL 项补齐）。
+"""LUMENIS Agent Runtime — 分层 Memory Layer（ZBC PARTIAL 项补齐）。
 
 六层记忆：
   Working  → 当前任务上下文（内存 + ai_task_step）
@@ -7,7 +7,7 @@
   Episodic → 情景记忆（ai_task_evidence + note_review_history）
   Semantic → 语义记忆（intelligence_assets + rule_version_registry）
   Skill    → 技能记忆（skills_registry + skill_executions）
-  Learning → 学习记忆（feedback_keywords + agent_learning_records[迁移脚本]）
+  Learning → 由 lumenis.shared.learning 唯一拥有；Agent Memory 仅提供通用记忆基础设施
 
 设计原则：
   - 优先复用现有表，不修改生产 DB schema
