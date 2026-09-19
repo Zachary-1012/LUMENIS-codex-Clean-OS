@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-tests/test_learning_persistence.py — ZBC 学习数据持久化模块测试
+tests/test_learning_persistence.py — LUMENIS Shared Learning 持久化测试
 覆盖：初始化 / 禁用回退 / 保存加载 / 备份恢复 / 集合校验 / 状态查询 / StorageAdapter 契约
 """
 
@@ -10,7 +10,7 @@ import tempfile
 
 import pytest
 
-import learning_persistence as lp
+from lumenis.shared.learning import persistence as lp
 
 
 @pytest.fixture(autouse=True)
