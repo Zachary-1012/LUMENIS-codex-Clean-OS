@@ -11,7 +11,7 @@ import sqlite3
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
-from db_paths import main_db_path
+from lumenis.shared.database import main_db_path
 
 data_center_bp = Blueprint("data_center", __name__, url_prefix="/api/data-center")
 

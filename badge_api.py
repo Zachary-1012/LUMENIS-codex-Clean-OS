@@ -6,7 +6,7 @@ badge_api.py — 轻量红点提醒 API（ZBC V1.1 前端回补）
 import sqlite3
 from datetime import datetime
 from flask import Blueprint, jsonify, request
-from db_paths import main_db_path
+from lumenis.shared.database import main_db_path
 
 badge_bp = Blueprint('badge', __name__)
 

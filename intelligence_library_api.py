@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 # Blueprint
 intelligence_library_bp = Blueprint('intelligence_library', __name__, url_prefix='/api/intelligence/library')
 
-from db_paths import main_db_path  # P0-DBISO-01 隔离重定向，call-time
+from lumenis.shared.database import main_db_path  # P0-DBISO-01 隔离重定向，call-time
 DB_PATH = main_db_path()
 
 

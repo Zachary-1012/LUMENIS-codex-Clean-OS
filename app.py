@@ -2980,7 +2980,7 @@ def api_podcast_topics_compat():
         from podcast_routes import podcast_bp
         # 直接调用overview逻辑
         import sqlite3
-        from db_paths import main_db_path as _main_db_path  # P0-DBISO-01（本函数局部变量 db 遮蔽模块，故局部 import）
+        from lumenis.shared.database import main_db_path as _main_db_path  # Shared Database canonical authority
         db = sqlite3.connect(_main_db_path())
         c = db.cursor()
         tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]

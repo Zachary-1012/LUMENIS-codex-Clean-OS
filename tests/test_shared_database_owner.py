@@ -25,3 +25,20 @@ def test_shared_evidence_consumes_shared_database():
         source = (REPO / rel).read_text(encoding="utf-8")
         assert "from db_paths import" not in source
         assert "lumenis.shared.database" in source
+
+def test_known_runtime_callers_use_shared_database_owner():
+    for rel in [
+        "database.py",
+        "database_migrations.py",
+        "runtime_guardian.py",
+        "ai_task_engine.py",
+        "ark_llm.py",
+        "intelligence_library_api.py",
+        "badge_api.py",
+        "data_center_api.py",
+        "lumenis/shared/evidence/manual.py",
+        "lumenis/shared/evaluation/recorder.py",
+        "lumenis/shared/learning/feedback.py",
+    ]:
+        source = (REPO / rel).read_text(encoding="utf-8")
+        assert "from db_paths import" not in source, rel
