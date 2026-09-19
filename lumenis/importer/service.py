@@ -8,7 +8,8 @@ import sqlite3
 from typing import List, Dict
 from flask import Blueprint, request, jsonify
 from ..auth import require_auth, get_current_user, log_audit
-from ..config import IMPORTER_CONFIG, DB_PATH
+from ..config import IMPORTER_CONFIG
+from lumenis.shared.database import get_repository
 from .parser import parse_file
 from .analyzer import analyze_text, analyze_parsed, AnalyzedNote
 
@@ -141,7 +142,7 @@ def _insert_notes(notes: List[AnalyzedNote], table: str = "notes") -> int:
     import uuid
     if table != "notes":
         raise ValueError(f"外部导入当前仅支持 notes 表，收到: {table}")
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_repository().connect()
     inserted = 0
     try:
         for note in notes:
