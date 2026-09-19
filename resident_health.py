@@ -221,7 +221,7 @@ def check_account_with_evidence(account: str) -> dict[str, Any]:
         result.setdefault("last_failure_at", None)
         result["health_history_error"] = str(e)
     try:
-        from evidence_store import record_health_evidence
+        from lumenis.shared.evidence.store import record_health_evidence
         # 状态映射：HEALTHY→PASS，其他→FAIL
         ev_result = "PASS" if result["status"] == "HEALTHY" else "FAIL"
         # 级别映射：DOWN→L1, CDP_DEGRADED→L2, 其他→L3
