@@ -56,7 +56,7 @@ STATE_OFFLINE = "offline"              # 依赖运行时不可用
 STATE_ERROR = "error"
 
 # ---------------------------------------------------------------------------
-# P0-WRITEPERM-02：AI composer 写权限边界（标准 permission_gate.PermissionGate）
+# P0-WRITEPERM-02：AI composer 写权限边界（标准 lumenis.system.security.PermissionGate）
 #
 # 执行任何 skill 前先过统一权限门，deny-by-default，四态：
 #   granted          -> 权限通过，进入执行链
@@ -70,12 +70,12 @@ PERMANENT_DENY_ACTIONS = frozenset({"PUSH"})
 
 
 def _action_gate_spec(action_value: str):
-    """skill ActionType -> (permission_gate.OperationType, RiskLevel)。
+    """skill ActionType -> (lumenis.system.security.OperationType, RiskLevel)。
 
     未注册动作返回 None，由调用方 fail-closed 拒绝。只读/分析低风险自动放行；
     导出为中风险（VERIFY 权限）；写/提交为高风险，需要对应权限等级 + 人工审批。
     """
-    from permission_gate import OperationType, RiskLevel
+    from lumenis.system.security import OperationType, RiskLevel
     mapping = {
         "READ": (OperationType.AI_CALL, RiskLevel.LOW),
         "ANALYZE": (OperationType.AI_CALL, RiskLevel.LOW),
@@ -94,7 +94,7 @@ def get_permission_gate():
     """AI composer 边界复用的标准权限门单例（deny-by-default，caller 固定为本模块）。"""
     global _perm_gate_singleton
     if _perm_gate_singleton is None:
-        from permission_gate import PermissionGate
+        from lumenis.system.security import PermissionGate
         _perm_gate_singleton = PermissionGate(caller="experience_runtime.ai_intent")
     return _perm_gate_singleton
 
