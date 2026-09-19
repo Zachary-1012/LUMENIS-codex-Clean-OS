@@ -141,7 +141,9 @@ class OperationLearning:
 
     def get_optimization_suggestion(self, operation_type: str) -> Optional[List[str]]:
         """Return evidence-bound hints from observed operation outcomes only."""
-        pattern = self._load_state()["patterns"].get(str(operation_type or ""))
+        state = self._load_state()
+        operation_type = str(operation_type or "")
+        pattern = state["patterns"].get(operation_type)
         if not isinstance(pattern, dict) or not pattern:
             return None
 
@@ -154,6 +156,38 @@ class OperationLearning:
             errors = [str(x) for x in pattern.get("common_errors", [])[-3:]]
             detail = f"；最近错误：{'、'.join(errors)}" if errors else ""
             suggestions.append(f"观察成功率 {success_rate:.1%}，需复核失败原因{detail}")
+
+        # A single recorded timeout is already actionable evidence even when
+        # the arithmetic mean stays below the general slow-operation limit.
+        # Inspect raw records so this hint reflects actual failed outcomes,
+        # rather than a de-duplicated summary or an inferred cause.
+        timeout_markers = ("timeout", "timed out", "超时")
+        timeout_records = []
+        for record in state["records"]:
+            if not isinstance(record, dict) or record.get("operation_type") != operation_type:
+                continue
+            outcome = record.get("result")
+            if not isinstance(outcome, dict):
+                continue
+            error_text = str(outcome.get("error") or "").casefold()
+            if any(marker in error_text for marker in timeout_markers):
+                timeout_records.append(record)
+        if timeout_records:
+            timeout_durations = []
+            for record in timeout_records:
+                try:
+                    duration = float(record["duration_ms"])
+                    if duration >= 0:
+                        timeout_durations.append(duration)
+                except (KeyError, TypeError, ValueError):
+                    continue
+            duration_note = (
+                f"（已记录最长耗时 {max(timeout_durations):.0f}ms）"
+                if timeout_durations else ""
+            )
+            suggestions.append(
+                f"记录到超时失败{duration_note}，可复核该操作的超时边界与重试策略"
+            )
 
         avg_duration = float(pattern.get("avg_duration_ms") or 0.0)
         if avg_duration > 5000:

@@ -63,11 +63,30 @@ def recommend(brand: str = "海南中免", limit: int = 20,
         "tags": scenario_tags(brand),
         "keywords": _brand_keywords(brand) or HN_CDF_DEFAULT_KEYWORDS,
         "note_source": "brand_profiles 实时聚合（不写主表，与广州主链隔离）",
+        # Keep the response contract stable without turning a missing/unready
+        # collection schema into a fabricated zero-count result.
+        "collection_stats": {
+            "brand": brand,
+            "status": "unavailable",
+            "note_count": None,
+            "author_count": None,
+            "last_captured_at": None,
+        },
     }
     try:
         stats = kos_engine.brand_collection_stats(brand)
+        note_count = stats.get("note_count")
+        stats["status"] = (
+            "unavailable" if note_count is None
+            else "available" if note_count > 0
+            else "not_collected"
+        )
         result["collection_stats"] = stats
-        if not stats.get("note_count"):
+        if note_count is None:
+            result["message"] = "采集统计未提供笔记计数，无法确认是否已有采集笔记"
+            result["profiles"] = []
+            return result
+        if note_count == 0:
             result["note_count"] = 0
             result["message"] = "当前品牌无已采集笔记（需真实采集；请勿用假数据填充）"
             result["profiles"] = []
@@ -84,7 +103,10 @@ def recommend(brand: str = "海南中免", limit: int = 20,
         result["message"] = "OK（只读聚合）"
         return result
     except Exception as e:
-        result["message"] = f"ERR: {e}"
+        if result["collection_stats"].get("status") == "unavailable":
+            result["message"] = f"采集状态暂不可用，无法确认是否已有采集笔记：{e}"
+        else:
+            result["message"] = f"ERR: {e}"
         result["profiles"] = []
         return result
 
