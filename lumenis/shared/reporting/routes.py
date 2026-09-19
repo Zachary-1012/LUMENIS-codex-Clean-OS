@@ -545,7 +545,8 @@ def api_digest_generate():
 @report_bp.route('/api/v2/report/export')
 @report_bp.route('/api/report/export')
 def api_report_export():
-    from lumenis.shared.reporting.export_api import _calc_alert_level, _classify_category, export_report_to_csv
+    """兼容旧 HTTP 契约；实现统一委托 Shared Reporting canonical export facade。"""
+    from lumenis.shared.reporting import export_api as canonical_export
     report_type = request.args.get('type', 'daily')
     date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
     fmt = request.args.get('format', 'xlsx').lower()
@@ -553,242 +554,25 @@ def api_report_export():
         return jsonify({'ok': False, 'error': 'type 必须是 daily/weekly/monthly/yearly'}), 400
     if fmt not in ('xlsx', 'docx', 'csv'):
         return jsonify({'ok': False, 'error': 'format 仅支持 xlsx/docx/csv'}), 400
-    # 精确时间维度计算
-    now = datetime.now()
-    ref_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else now
-    if report_type == 'daily':
-        start = end = ref_date.strftime('%Y-%m-%d')
-        period_label = ref_date.strftime('%Y.%m.%d')
-    elif report_type == 'weekly':
-        # 自然周：周一到周日
-        week_start = ref_date - timedelta(days=ref_date.weekday())
-        week_end = week_start + timedelta(days=6)
-        start = week_start.strftime('%Y-%m-%d')
-        end = week_end.strftime('%Y-%m-%d')
-        period_label = f'{week_start.strftime("%Y.%m.%d")} – {week_end.strftime("%Y.%m.%d")}'
-    elif report_type == 'monthly':
-        # 自然月：1号到月末
-        month_start = ref_date.replace(day=1)
-        if month_start.month == 12:
-            next_month = month_start.replace(year=month_start.year+1, month=1)
-        else:
-            next_month = month_start.replace(month=month_start.month+1)
-        month_end = next_month - timedelta(days=1)
-        start = month_start.strftime('%Y-%m-%d')
-        end = month_end.strftime('%Y-%m-%d')
-        period_label = f'{month_start.strftime("%Y.%m.%d")} – {month_end.strftime("%Y.%m.%d")}'
-    elif report_type == 'yearly':
-        # 自然年：1.1到12.31
-        year_start = ref_date.replace(month=1, day=1)
-        year_end = ref_date.replace(month=12, day=31)
-        start = year_start.strftime('%Y-%m-%d')
-        end = year_end.strftime('%Y-%m-%d')
-        period_label = f'{year_start.strftime("%Y.%m.%d")} – {year_end.strftime("%Y.%m.%d")}'
-    # 生成报告数据
-    notes = db.get_notes_by_date_range(start, end)
-    stats = db.get_stats_by_date_range(start, end) or {}
-    category_stats = {}
-    category_order = ['零售品牌', '餐饮', '商场服务', '活动/展览', '环境/设施', '安全/突发事件', '其他']
-    for n in notes:
-        cat = _classify_category(n)
-        if cat not in category_stats:
-            category_stats[cat] = {'total': 0, 'negative': 0, 'positive': 0, 'engagement': 0}
-        category_stats[cat]['total'] += 1
-        if n.get('sentiment') == 'negative': category_stats[cat]['negative'] += 1
-        elif n.get('sentiment') == 'positive': category_stats[cat]['positive'] += 1
-        category_stats[cat]['engagement'] += int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3
-    alert_level, alert_desc = _calc_alert_level(stats, notes)
-    total = stats.get('total', len(notes))
-    negative = stats.get('negative', sum(1 for n in notes if n.get('sentiment')=='negative'))
-    positive = stats.get('positive', sum(1 for n in notes if n.get('sentiment')=='positive'))
-    max_engage = max([int(n.get('likes',0) or 0)+int(n.get('comments',0) or 0)*3 for n in notes], default=0)
-    report_title = {'daily':'daily','weekly':'weekly','monthly':'monthly','yearly':'yearly'}[report_type]
-    safe_name = re.sub(r'[^0-9A-Za-z_-]+','_',f'Taikoo_{report_title}_{start}')[:80]
-    # 确保文件名完全ASCII
-    from urllib.parse import quote
-    ascii_filename = safe_name
-    # 按格式导出
-    if fmt == 'csv':
-        csv_content, _ = export_report_to_csv(report_type, date_str)
-        resp = Response(csv_content, mimetype='text/csv; charset=utf-8-sig')
-        resp.headers['Content-Disposition'] = f'attachment; filename="{ascii_filename}.csv"'
-        return resp
-    elif fmt == 'xlsx':
-        try:
-            import openpyxl
-            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            ws.title = report_title
-            # 样式
-            title_font = Font(name='微软雅黑', size=16, bold=True, color='FFFFFF')
-            header_font = Font(name='微软雅黑', size=11, bold=True, color='FFFFFF')
-            normal_font = Font(name='微软雅黑', size=10)
-            title_fill = PatternFill(start_color='1a1a2e', end_color='1a1a2e', fill_type='solid')
-            header_fill = PatternFill(start_color='2563eb', end_color='2563eb', fill_type='solid')
-            center = Alignment(horizontal='center', vertical='center', wrap_text=True)
-            left = Alignment(horizontal='left', vertical='center', wrap_text=True)
-            thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-            row = 1
-            # 标题
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = f'【广州太古汇{report_title}】'
-            ws[f'A{row}'].font = title_font
-            ws[f'A{row}'].fill = title_fill
-            ws[f'A{row}'].alignment = center
-            ws.row_dimensions[row].height = 35
-            row += 1
-            # 基本信息
-            info = [('汇报周期', period_label), ('汇报人', '舆情监测系统'), ('舆情等级', f'{alert_level} — {alert_desc}')]
-            for k, v in info:
-                ws[f'A{row}'] = k; ws[f'A{row}'].font = Font(name='微软雅黑', size=10, bold=True)
-                ws.merge_cells(f'B{row}:F{row}'); ws[f'B{row}'] = v; ws[f'B{row}'].font = normal_font
-                row += 1
-            row += 1
-            # 1. 核心结论
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '1. 核心结论'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill; ws[f'A{row}'].alignment = left
-            row += 1
-            core = f'本期共监测小红书舆情{total}条，负面{negative}条，主要集中在【{max(category_stats, key=lambda k: category_stats[k]["total"]) if category_stats else "综合"}】，最高互动{max_engage}，{"已出现扩散" if negative > 5 else "暂无扩散"}。'
-            ws.merge_cells(f'A{row}:F{row}'); ws[f'A{row}'] = core; ws[f'A{row}'].font = normal_font; ws[f'A{row}'].alignment = left
-            ws.row_dimensions[row].height = 40
-            row += 2
-            # 2. 数据概览
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '2. 数据概览'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill
-            row += 1
-            data_headers = ['指标', '本期', '环比', '指标', '本期', '环比']
-            for c, h in enumerate(data_headers, 1):
-                cell = ws.cell(row=row, column=c, value=h)
-                cell.font = Font(name='微软雅黑', size=10, bold=True); cell.alignment = center; cell.border = thin_border
-            row += 1
-            data_rows = [
-                ('总提及量', total, '—', '负面量', negative, '—'),
-                ('负面占比', f'{round(negative/total*100,1) if total else 0}%', '—', '最高单条互动', max_engage, '—'),
-                ('正面量', positive, '—', '有效舆情', total, '—'),
-            ]
-            for dr in data_rows:
-                for c, v in enumerate(dr, 1):
-                    cell = ws.cell(row=row, column=c, value=v)
-                    cell.font = normal_font; cell.alignment = center; cell.border = thin_border
-                row += 1
-            row += 1
-            # 3. 分业态舆情分布
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '3. 分业态舆情分布'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill
-            row += 1
-            cat_headers = ['业态/模块', '提及量', '负面量', '正面量', '互动量', '等级']
-            for c, h in enumerate(cat_headers, 1):
-                cell = ws.cell(row=row, column=c, value=h)
-                cell.font = Font(name='微软雅黑', size=10, bold=True); cell.alignment = center; cell.border = thin_border
-            row += 1
-            for cat in category_order:
-                if cat in category_stats:
-                    cs = category_stats[cat]
-                    level = '🔴' if cs['negative'] > 3 else ('🟡' if cs['negative'] > 0 else '🟢')
-                    vals = [cat, cs['total'], cs['negative'], cs['positive'], cs['engagement'], level]
-                    for c, v in enumerate(vals, 1):
-                        cell = ws.cell(row=row, column=c, value=v)
-                        cell.font = normal_font; cell.alignment = center; cell.border = thin_border
-                    row += 1
-            row += 1
-            # 4. 重点笔记清单
-            ws.merge_cells(f'A{row}:F{row}')
-            ws[f'A{row}'] = '4. 重点笔记清单'
-            ws[f'A{row}'].font = header_font; ws[f'A{row}'].fill = header_fill
-            row += 1
-            note_headers = ['序号', '标题', '作者', '发布时间', '互动量', '情感']
-            for c, h in enumerate(note_headers, 1):
-                cell = ws.cell(row=row, column=c, value=h)
-                cell.font = Font(name='微软雅黑', size=10, bold=True); cell.alignment = center; cell.border = thin_border
-            row += 1
-            for i, n in enumerate(notes[:20], 1):
-                engage = int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3
-                vals = [i, (n.get('title') or '无标题')[:40], n.get('author_nickname') or '未知', n.get('publish_date') or '—', engage, n.get('sentiment') or '中性']
-                for c, v in enumerate(vals, 1):
-                    cell = ws.cell(row=row, column=c, value=v)
-                    cell.font = normal_font; cell.alignment = center if c != 2 else left; cell.border = thin_border
-                row += 1
-            # 列宽
-            ws.column_dimensions['A'].width = 18
-            ws.column_dimensions['B'].width = 35
-            ws.column_dimensions['C'].width = 15
-            ws.column_dimensions['D'].width = 15
-            ws.column_dimensions['E'].width = 12
-            ws.column_dimensions['F'].width = 10
-            # 使用BytesIO在内存中创建文件，避免磁盘IO问题
-            output = io.BytesIO()
-            wb.save(output)
-            output.seek(0)
-            file_data = output.getvalue()
-            resp = Response(file_data, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            resp.headers['Content-Disposition'] = f'attachment; filename="{ascii_filename}.xlsx"'
-            resp.headers['Content-Length'] = str(len(file_data))
-            return resp
-        except Exception as exc:
-            import traceback
-            tb = traceback.format_exc()
-            return jsonify({'ok': False, 'error': 'Excel导出失败：' + str(exc), 'traceback': tb}), 500
-    elif fmt == 'docx':
-        try:
-            from docx import Document
-            from docx.shared import Pt, Inches, RGBColor
-            from docx.enum.text import WD_ALIGN_PARAGRAPH
-            doc = Document()
-            # 标题
-            title = doc.add_heading(f'广州太古汇{report_title}', 0)
-            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            # 基本信息
-            doc.add_paragraph(f'汇报周期：{period_label}')
-            doc.add_paragraph(f'汇报人：舆情监测系统')
-            doc.add_paragraph(f'舆情等级：{alert_level} — {alert_desc}')
-            doc.add_paragraph()
-            # 1. 核心结论
-            doc.add_heading('1. 核心结论', level=1)
-            core = f'本期共监测小红书舆情{total}条，负面{negative}条，主要集中在【{max(category_stats, key=lambda k: category_stats[k]["total"]) if category_stats else "综合"}】，最高互动{max_engage}，{"已出现扩散" if negative > 5 else "暂无扩散"}。'
-            doc.add_paragraph(core)
-            # 2. 数据概览
-            doc.add_heading('2. 数据概览', level=1)
-            table = doc.add_table(rows=1, cols=4)
-            table.style = 'Table Grid'
-            hdr = table.rows[0].cells
-            hdr[0].text = '指标'; hdr[1].text = '本期'; hdr[2].text = '指标'; hdr[3].text = '本期'
-            data_pairs = [('总提及量', str(total), '负面量', str(negative)), ('负面占比', f'{round(negative/total*100,1) if total else 0}%', '最高互动', str(max_engage)), ('正面量', str(positive), '有效舆情', str(total))]
-            for dp in data_pairs:
-                row = table.add_row().cells
-                for i, v in enumerate(dp): row[i].text = v
-            # 3. 分业态分布
-            doc.add_heading('3. 分业态舆情分布', level=1)
-            table2 = doc.add_table(rows=1, cols=5)
-            table2.style = 'Table Grid'
-            hdr2 = table2.rows[0].cells
-            for i, h in enumerate(['业态', '提及量', '负面量', '正面量', '互动量']): hdr2[i].text = h
-            for cat in category_order:
-                if cat in category_stats:
-                    cs = category_stats[cat]
-                    row = table2.add_row().cells
-                    row[0].text = cat; row[1].text = str(cs['total']); row[2].text = str(cs['negative']); row[3].text = str(cs['positive']); row[4].text = str(cs['engagement'])
-            # 4. 重点笔记
-            doc.add_heading('4. 重点笔记清单', level=1)
-            for i, n in enumerate(notes[:15], 1):
-                engage = int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3
-                p = doc.add_paragraph()
-                p.add_run(f'{i}. {n.get("title") or "无标题"}').bold = True
-                doc.add_paragraph(f'   作者：{n.get("author_nickname") or "未知"} | 发布：{n.get("publish_date") or "—"} | 互动：{engage} | 情感：{n.get("sentiment") or "中性"}')
-            # 使用BytesIO在内存中创建文件
-            output = io.BytesIO()
-            doc.save(output)
-            output.seek(0)
-            file_data = output.getvalue()
-            resp = Response(file_data, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-            resp.headers['Content-Disposition'] = f'attachment; filename="{ascii_filename}.docx"'
-            resp.headers['Content-Length'] = str(len(file_data))
-            return resp
-        except Exception as exc:
-            return jsonify({'ok': False, 'error': 'Word导出失败：' + str(exc)}), 500
+    try:
+        start_dt, end_dt = canonical_export.get_date_range(report_type, date_str)
+        result = canonical_export.export_artifacts(
+            report_type,
+            start_dt.strftime('%Y-%m-%d'),
+            end_dt.strftime('%Y-%m-%d'),
+            (fmt,),
+        )
+        file_path = result['files'][fmt]
+        safe_name = f"Taikoo_{report_type}_{result['payload']['period_start']}.{fmt}"
+        mimetype = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'csv': 'text/csv; charset=utf-8-sig',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }[fmt]
+        return send_file(file_path, as_attachment=True, download_name=safe_name, mimetype=mimetype)
+    except Exception as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 500
+
 
 # ===== v5.4 系统配置 API =====
 
