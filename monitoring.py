@@ -21,10 +21,11 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, asdict
 from enum import Enum
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'data', 'monitor.db')
+DB_PATH = main_db_path()
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 
 
@@ -113,9 +114,7 @@ class SystemMonitor:
     
     def get_connection(self) -> sqlite3.Connection:
         """获取数据库连接"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return DatabaseRepository(self.db_path).connect()
     
     def check_database(self) -> Dict[str, Any]:
         """检查数据库状态"""
