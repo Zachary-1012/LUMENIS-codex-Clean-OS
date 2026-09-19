@@ -585,7 +585,7 @@ def system_health_summary():
         # P1 非静默健康：evidence 写入失败计数（最近24h）
         evidence_write_failures = 0
         try:
-            from evidence_store import get_evidence_write_failure_count
+            from lumenis.shared.evidence.store import get_evidence_write_failure_count
             evidence_write_failures = get_evidence_write_failure_count(24)
         except Exception:
             pass
