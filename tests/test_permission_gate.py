@@ -22,7 +22,7 @@ import pytest
 # 确保仓库根目录在 path 中
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from permission_gate import (
+from lumenis.system.security import (
     PermissionGate,
     PermissionLevel,
     RiskLevel,
