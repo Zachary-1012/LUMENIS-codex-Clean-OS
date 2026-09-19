@@ -939,7 +939,7 @@ def record_collection_evidence(
                 safe_metadata[key] = value
 
     try:
-        from platform_adapters.safe_collection import sanitize
+        from lumenis.system.collector.adapters.safe_collection import sanitize
 
         safe_metadata = sanitize(safe_metadata)
     except Exception:
@@ -1298,4 +1298,3 @@ __all__ = [
     "ENVS",
 
 ]
-
