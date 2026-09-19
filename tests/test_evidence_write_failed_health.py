@@ -72,7 +72,7 @@ class TestEvidenceWriteFailedHealth(unittest.TestCase):
 
         # 重新导入 evidence_store 以使用新 DB_PATH
         import importlib
-        import evidence_store
+        from lumenis.shared.evidence import store as evidence_store
         importlib.reload(evidence_store)
         self.evidence_store = evidence_store
 
