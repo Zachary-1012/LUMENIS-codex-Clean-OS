@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from lumenis.shared.database import DatabaseRepository
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -68,7 +69,7 @@ QUALITY_LOG_INDEXES = [
 def ensure_quality_log_table(db_path: str) -> None:
     """确保质量日志表存在（幂等）。"""
     os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     try:
         con.execute(QUALITY_LOG_DDL)
         for idx in QUALITY_LOG_INDEXES:
@@ -234,7 +235,7 @@ class CollectionQualityGate:
         """执行五步门禁。任何一步失败记录日志并返回。"""
         own_con = con is None
         if own_con:
-            con = sqlite3.connect(self.db_path, timeout=15)
+            con = DatabaseRepository(self.db_path).connect(timeout=15)
         try:
             results = []
             content_hash = ""
@@ -310,7 +311,7 @@ def get_quality_logs(db_path: str, step: str = "", status: str = "",
                      run_id: str = "", limit: int = 100) -> List[Dict[str, Any]]:
     """查询质量日志。"""
     ensure_quality_log_table(db_path)
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     con.row_factory = sqlite3.Row
     try:
         sql = f"SELECT * FROM {QUALITY_LOG_TABLE}"

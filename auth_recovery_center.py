@@ -25,8 +25,7 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from repository_registry import resolve_path
-from db_paths import main_db_path
+from lumenis.shared.database import get_repository, main_db_path
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +80,7 @@ class AuthRecoveryCenter:
     """
 
     _instance: Optional['AuthRecoveryCenter'] = None
-    DB_PATH = resolve_path('data/monitor.db')
+    DB_PATH = main_db_path()
     TASK_TTL_SECONDS = 3600  # 恢复任务有效期1小时
 
     def __new__(cls) -> 'AuthRecoveryCenter':
@@ -101,7 +100,7 @@ class AuthRecoveryCenter:
     def _ensure_table(self) -> None:
         """确保恢复任务表存在"""
         try:
-            conn = sqlite3.connect(main_db_path())
+            conn = get_repository().connect()
             cur = conn.cursor()
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS auth_recovery_tasks (
@@ -130,9 +129,7 @@ class AuthRecoveryCenter:
             print(f"[AuthRecoveryCenter] 创建表失败: {e}")
 
     def _get_conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(main_db_path())
-        conn.row_factory = sqlite3.Row
-        return conn
+        return get_repository().connect()
 
     # ── 恢复任务管理 ──────────────────────────────────────────
 

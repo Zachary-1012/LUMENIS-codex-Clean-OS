@@ -27,23 +27,22 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from repository_registry import resolve_path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 
-DB_PATH = resolve_path('data/monitor.db')
+DB_PATH = main_db_path()
 
 
 class CaseDeepAnalysis:
     """案例深度拆解"""
 
-    def __init__(self, db_path: str = DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: str | None = None):
+        self.db_path = db_path or main_db_path()
+        self._repository = DatabaseRepository(db_path)
         self._ensure_table()
 
     def _conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, timeout=15)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return self._repository.connect(timeout=15)
 
     def _ensure_table(self):
         """确保案例深度拆解表存在"""

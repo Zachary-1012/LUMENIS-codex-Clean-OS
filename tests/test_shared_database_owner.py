@@ -80,3 +80,14 @@ def test_first_standard_runtime_callers_use_repository_layer():
         source = (REPO / rel).read_text(encoding="utf-8")
         assert "get_repository" in source, rel
         assert "sqlite3.connect(" not in source, rel
+
+def test_second_standard_runtime_callers_use_repository_layer():
+    for rel in [
+        "auth_recovery_center.py",
+        "brand_knowledge_base.py",
+        "case_deep_analysis.py",
+        "collection_quality_gate.py",
+    ]:
+        source = (REPO / rel).read_text(encoding="utf-8")
+        assert "DatabaseRepository" in source or "get_repository" in source, rel
+        assert "sqlite3.connect(" not in source, rel
