@@ -24,7 +24,7 @@ except Exception:
 # RedNote 采集策略 SoT 旁路接入（阶段5 集中策略）：香港/国际主链 + 内地暂停
 # 这是生产采集入口的硬门禁；策略模块缺失时必须拒绝，不得 fail-open。
 try:
-    from platform_adapters import rednote_policy as _rednote_policy
+    from lumenis.system.collector.adapters import rednote_policy as _rednote_policy
     _REDNOTE_POLICY_AVAILABLE = True
 except Exception:
     _rednote_policy = None
@@ -153,7 +153,7 @@ def _get_xhs_guard():
     """懒加载小红书采集保护层（CollectorGuard），避免无条件 import 影响其它通道。"""
     global _XHS_GUARD
     if _XHS_GUARD is None:
-        from collector_guard.guard import CollectorGuard
+        from lumenis.system.collector.guard.guard import CollectorGuard
         enabled = os.getenv('TAIKOO_COLLECTOR_GUARD', '1').lower() not in ('0', 'false', 'no', 'off')
         base = float(os.getenv('XHS_GUARD_BASE_INTERVAL', '6'))
         _XHS_GUARD = CollectorGuard('xiaohongshu', enabled=enabled, base_interval=base)
@@ -172,7 +172,7 @@ def _get_xhs_risk_engine():
     if _XHS_RISK is None:
         enabled = os.getenv('TAIKOO_RISK_ENGINE', '1').lower() not in ('0', 'false', 'no', 'off')
         if enabled:
-            from collector_guard.risk_engine import RiskEngine
+            from lumenis.system.collector.guard.risk_engine import RiskEngine
             # T-P0A-1: 熔断/冷却状态跨进程重启持久化（data/collector_* 已 gitignore，不入库）
             _risk_state = os.path.join('data', 'collector_guard', 'xhs_risk_state.json')
             _XHS_RISK = RiskEngine(state_file=_risk_state)
@@ -213,7 +213,7 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
     if snap['should_stop_request']:
         # RiskEngine熔断联动guard.limiter.force_pause（P0-C加固：避免两套熔断系统脱节）
         try:
-            from collector_guard.state import CollectState
+            from lumenis.system.collector.guard.state import CollectState
             _guard = _get_xhs_guard()
             if _guard and hasattr(_guard, 'limiter'):
                 _guard.limiter.force_pause(CollectState.PAUSED, cooldown_seconds=max(300, risk.reset_timeout))
@@ -228,7 +228,7 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
         print(f"[Collector]   !! 风险引擎熔断({snap['band']}, score={snap['risk_score']})，停止后续关键词请求")
         return True
     # P1-A：ResourceGuard 资源/效率层联动——消费 lifecycle_action(六态) -> 四态 -> 调度停止
-    from collector_guard.schedule_adapter import schedule_state, should_stop_schedule
+    from lumenis.system.collector.guard.schedule_adapter import schedule_state, should_stop_schedule
     if should_stop_schedule(snap.get('lifecycle_action')):
         results.append({
             'keyword': kw, 'count': count,
@@ -586,7 +586,7 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
         # 服务基线 §9/§10「动态熔断联动」：降频不停止，资源恢复后自动回升。
         try:
             import time as _sched_time
-            from collector_guard.schedule_adapter import schedule_sleep_seconds
+            from lumenis.system.collector.guard.schedule_adapter import schedule_sleep_seconds
             _life = _get_xhs_risk_engine().snapshot().get('lifecycle_action')
             base = float(os.getenv('XHS_GUARD_BASE_INTERVAL', '6'))
             _interval = schedule_sleep_seconds(_life, base_interval=base)
