@@ -13,9 +13,10 @@ total_engagement/risk_level 是预聚合字段，历史上曾出现整库笔记�
 """
 import os
 import sqlite3
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(ROOT, 'data', 'monitor.db')
+DB_PATH = main_db_path()
 
 # 笔记中用于匹配品牌名的文本列（与单品牌详情接口保持一致）
 _MATCH_COLS = ('title', 'content', 'summary', 'body')
@@ -46,7 +47,7 @@ def _brand_keys(cn, en):
 def recompute_brand_stats(db_path=DB_PATH, verbose=True):
     """按实时 LIKE 口径重算全部品牌的预聚合统计。
     返回 {updated, nonzero, negative_brands, positive_brands, samples}"""
-    conn = sqlite3.connect(db_path)
+    conn = DatabaseRepository(db_path).connect()
     conn.row_factory = sqlite3.Row
     brands = [dict(r) for r in conn.execute(
         "SELECT id, brand_name, brand_name_cn FROM brand_industry_monitor").fetchall()]
