@@ -8,14 +8,14 @@
 from __future__ import annotations
 import os, json, sqlite3, threading, uuid
 from datetime import datetime
-from ..config import DB_PATH
+from lumenis.shared.database import get_repository
 
 _lock = threading.Lock()
 VALID_STATUS = ("pending", "accepted", "rejected", "dismissed")
 
 
 def _conn():
-    c = sqlite3.connect(DB_PATH, timeout=15)
+    c = get_repository().connect(timeout=15)
     c.row_factory = sqlite3.Row
     return c
 
