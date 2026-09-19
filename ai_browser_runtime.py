@@ -41,10 +41,9 @@ logger = logging.getLogger(__name__)
 # 1. 常量与枚举
 # ═══════════════════════════════════════════════════════════════
 
-DB_PATH = os.environ.get(
-    "ZBC_DB_PATH",
-    str(Path(__file__).parent / "data" / "monitor.db"),
-)
+from lumenis.shared.database import DatabaseRepository, get_repository, main_db_path
+
+DB_PATH = main_db_path()
 
 # Session 生命周期配置（秒）
 DEFAULT_SESSION_IDLE_TIMEOUT = 600      # 空闲 10 分钟自动关闭
@@ -535,8 +534,8 @@ CREATE INDEX IF NOT EXISTS idx_browser_evidence_timestamp ON browser_evidence(ti
 def init_browser_evidence_db() -> bool:
     """初始化 browser_evidence 表（向后兼容，CREATE IF NOT EXISTS）。"""
     try:
-        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-        conn = sqlite3.connect(DB_PATH, timeout=30)
+        os.makedirs(os.path.dirname(main_db_path()), exist_ok=True)
+        conn = get_repository().connect(timeout=30)
         conn.executescript(BROWSER_EVIDENCE_SCHEMA)
         conn.commit()
         conn.close()
@@ -585,12 +584,12 @@ class BrowserEvidenceStore:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or main_db_path()
         self._screenshot_dir = EVIDENCE_SCREENSHOT_DIR
         os.makedirs(self._screenshot_dir, exist_ok=True)
         # 使用实例 db_path 初始化表（向后兼容）
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        conn = sqlite3.connect(self.db_path, timeout=30)
+        conn = DatabaseRepository(self.db_path).connect(timeout=30)
         conn.executescript(BROWSER_EVIDENCE_SCHEMA)
         conn.commit()
         conn.close()
@@ -611,7 +610,7 @@ class BrowserEvidenceStore:
         safe_recovery = sanitize_sensitive(record.recovery_strategy or "")[:500]
 
         try:
-            conn = sqlite3.connect(self.db_path, timeout=30)
+            conn = DatabaseRepository(self.db_path).connect(timeout=30)
             cursor = conn.execute("""
                 INSERT INTO browser_evidence (
                     task_id, run_id, step_id, agent_id, skill_id, session_id,
@@ -653,7 +652,7 @@ class BrowserEvidenceStore:
     ) -> List[Dict[str, Any]]:
         """查询 Evidence 记录。"""
         try:
-            conn = sqlite3.connect(self.db_path, timeout=30)
+            conn = DatabaseRepository(self.db_path).connect(timeout=30)
             conn.row_factory = sqlite3.Row
             query = "SELECT * FROM browser_evidence WHERE 1=1"
             params: List[Any] = []
@@ -681,7 +680,7 @@ class BrowserEvidenceStore:
     def get_stats(self, session_id: Optional[str] = None) -> Dict[str, Any]:
         """获取 Evidence 统计。"""
         try:
-            conn = sqlite3.connect(self.db_path, timeout=30)
+            conn = DatabaseRepository(self.db_path).connect(timeout=30)
             base_query = "SELECT result, COUNT(*) as cnt FROM browser_evidence"
             params: List[Any] = []
             if session_id:
