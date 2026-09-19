@@ -113,3 +113,30 @@ def test_app_has_no_direct_sqlite_connections():
     assert "sqlite3.connect(" not in source
     assert "_sq3.connect(" not in source
     assert "get_repository" in source
+
+def test_production_modules_do_not_bypass_database_repository():
+    """Ordinary production modules must not open SQLite directly.
+
+    Canonical connection/migration infrastructure is the only allowed owner of
+    raw sqlite3.connect. Tests, scripts and historical audit assets are outside
+    this production-runtime guard.
+    """
+    allowed = {
+        "lumenis/shared/database/connection.py",
+        "lumenis/shared/database/migrations.py",
+    }
+    excluded_roots = {
+        "tests", "scripts", "audit", "docs", "99-ARCHIVE", "08-AUDIT",
+        "OSAI测试证据", "intelligence_library", "build", "vendor",
+    }
+    violations = []
+    for path in REPO.rglob("*.py"):
+        rel = path.relative_to(REPO).as_posix()
+        if rel in allowed:
+            continue
+        if rel.split("/", 1)[0] in excluded_roots:
+            continue
+        source = path.read_text(encoding="utf-8", errors="ignore")
+        if "sqlite3.connect(" in source:
+            violations.append(rel)
+    assert not violations, "Direct SQLite bypasses: " + ", ".join(sorted(violations))
