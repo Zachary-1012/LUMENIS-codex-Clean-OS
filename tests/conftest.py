@@ -512,7 +512,7 @@ def pytest_ignore_collect(collection_path, config):
 def _permission_gate_testing_default():
     """测试环境默认开启 PermissionGate 旁路（业务 API 写操作不被写门拦截），
     权限专项测试模块用 module 级 fixture 覆盖为严格模式。生产默认严格（deny-by-default）。"""
-    from permission_gate import set_testing_bypass
+    from lumenis.system.security import set_testing_bypass
     set_testing_bypass(True)
     yield
     set_testing_bypass(False)
