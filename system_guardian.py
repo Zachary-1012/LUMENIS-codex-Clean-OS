@@ -23,7 +23,7 @@ import traceback
 from datetime import datetime
 from functools import wraps
 
-from db_paths import main_db_path
+from lumenis.shared.database import get_repository, main_db_path
 
 # Runtime Guardian 委托层（延迟导入，避免循环依赖；失败不阻断原模块）
 _RUNTIME_GUARDIAN = None
@@ -169,8 +169,7 @@ def health_check():
 
     # 检查数据库
     try:
-        import sqlite3
-        conn = sqlite3.connect(main_db_path())
+        conn = get_repository().connect()
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes")
         notes_count = c.fetchone()[0]
