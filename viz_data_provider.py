@@ -22,6 +22,8 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from lumenis.shared.database import get_repository, main_db_path
+
 from ui_view_model import (
     DataQuery,
     DataResult,
@@ -34,17 +36,11 @@ from ui_view_model import (
 # ── DB 连接 ────────────────────────────────────────────────────────────────
 
 def _get_db_path() -> str:
-    return os.path.abspath(
-        os.environ.get("ZBC_DB_PATH")
-        or os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "monitor.db")
-    )
+    return main_db_path()
 
 
 def _get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(_get_db_path(), timeout=15)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    return get_repository().connect(timeout=15, read_only=True)
 
 
 def _rows_to_dicts(rows) -> List[Dict[str, Any]]:
