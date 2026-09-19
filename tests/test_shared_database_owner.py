@@ -61,8 +61,8 @@ def test_repository_registry_has_one_canonical_owner():
     assert "class RepositoryRegistry" in canonical
     assert "class RepositoryRegistry" not in root
     assert "class RepositoryRegistry" not in core
-    assert "lumenis.shared.database.repository" in root
-    assert "lumenis.shared.database.repository" in core
+    assert "lumenis.shared.database.registry" in root
+    assert "lumenis.shared.database.registry" in core
 
 def test_database_repository_layer_is_canonical():
     source = (REPO / "lumenis/shared/database/repository.py").read_text(encoding="utf-8")
@@ -91,3 +91,19 @@ def test_second_standard_runtime_callers_use_repository_layer():
         source = (REPO / rel).read_text(encoding="utf-8")
         assert "DatabaseRepository" in source or "get_repository" in source, rel
         assert "sqlite3.connect(" not in source, rel
+
+def test_priority_database_writers_use_repository_layer():
+    for rel in [
+        "ai_browser_runtime.py",
+        "auth_recovery_center.py",
+        "content_generation.py",
+        "kos_engine.py",
+        "kos_execution.py",
+        "kos_ops.py",
+        "kos_paid.py",
+        "canonical_data.py",
+        "human_correction.py",
+    ]:
+        source = (REPO / rel).read_text(encoding="utf-8")
+        assert "lumenis.shared.database" in source, rel
+        assert "os.environ.get(\"ZBC_DB_PATH\"" not in source, rel
