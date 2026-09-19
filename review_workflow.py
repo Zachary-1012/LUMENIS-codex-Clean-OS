@@ -10,6 +10,7 @@ import sqlite3
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from enum import Enum
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 
 class ReviewStatus(Enum):
@@ -33,17 +34,12 @@ class ReviewWorkflow:
     
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
-            db_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "data", "monitor.db"
-            )
+            db_path = main_db_path()
         self.db_path = db_path
         self._ensure_tables()
     
     def _get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return DatabaseRepository(self.db_path).connect()
     
     def _ensure_tables(self):
         """确保复核相关表存在"""
