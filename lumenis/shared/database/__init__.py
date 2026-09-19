@@ -10,4 +10,9 @@ __all__ = [
     "connect_sqlite",
     "main_db_path",
     "production_db_path",
+    "RepositoryRegistry",
+    "get_registry",
+    "resolve_path",
 ]
+
+from .repository import RepositoryRegistry, get_registry, resolve_path

@@ -53,3 +53,13 @@ def test_migration_owner_is_shared_database():
     assert "CURRENT_VERSION =" not in root
     assert "import database_migrations as _dm" not in app
     assert "from lumenis.shared.database import migrations as _dm" in app
+
+def test_repository_registry_has_one_canonical_owner():
+    canonical = (REPO / "lumenis/shared/database/repository.py").read_text(encoding="utf-8")
+    root = (REPO / "repository_registry.py").read_text(encoding="utf-8")
+    core = (REPO / "core/repository_registry.py").read_text(encoding="utf-8")
+    assert "class RepositoryRegistry" in canonical
+    assert "class RepositoryRegistry" not in root
+    assert "class RepositoryRegistry" not in core
+    assert "lumenis.shared.database.repository" in root
+    assert "lumenis.shared.database.repository" in core

@@ -38,10 +38,13 @@ def clean_registry(monkeypatch):
         monkeypatch.delenv(k, raising=False)
 
     # 重置模块级单例
+    import lumenis.shared.database.repository as canonical_registry
     import repository_registry
+    importlib.reload(canonical_registry)
     importlib.reload(repository_registry)
     yield repository_registry
-    # 恢复
+    # 恢复 canonical singleton 与转发面
+    importlib.reload(canonical_registry)
     importlib.reload(repository_registry)
 
 
