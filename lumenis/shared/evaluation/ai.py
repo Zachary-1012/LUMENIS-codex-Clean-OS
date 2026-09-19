@@ -28,6 +28,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import ai_call_logger as acl
+from lumenis.shared.database import DatabaseRepository
 
 # ============================================================
 # 1) 数据库连接（复用 ai_call_logger 的路径约定）
@@ -36,7 +37,7 @@ _DB_PATH = acl.DB_PATH
 
 
 def _conn():
-    conn = sqlite3.connect(_DB_PATH, timeout=10, check_same_thread=False)
+    conn = DatabaseRepository(_DB_PATH).connect(timeout=10, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
