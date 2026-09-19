@@ -14,6 +14,7 @@ import json, os, shutil, time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 BASE = Path(__file__).resolve().parent
 CACHE_DIR = BASE / "data" / "cache"
@@ -50,7 +51,7 @@ def create_snapshot(db_path: str = None) -> Dict:
     _ensure_dirs()
     
     if db_path is None:
-        db_path = str(BASE / "data" / "monitor.db")
+        db_path = main_db_path()
     
     if not os.path.exists(db_path):
         return {"success": False, "error": "数据库不存在"}
@@ -109,9 +110,7 @@ def create_snapshot(db_path: str = None) -> Dict:
 def _generate_db_summary(db_path: str) -> Dict:
     """生成数据库摘要（统计信息）"""
     try:
-        import sqlite3
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        conn = DatabaseRepository(db_path).connect(wal=False, foreign_keys=False)
         
         summary = {"tables": {}}
         
@@ -196,9 +195,7 @@ def get_cached_data(query_type: str = "stats", limit: int = 50) -> Dict:
         return {"has_cache": False, "data": None, "message": "缓存数据库不存在"}
     
     try:
-        import sqlite3
-        conn = sqlite3.connect(str(cache_db))
-        conn.row_factory = sqlite3.Row
+        conn = DatabaseRepository(str(cache_db)).connect(wal=False, foreign_keys=False)
         
         result = {
             "has_cache": True,
