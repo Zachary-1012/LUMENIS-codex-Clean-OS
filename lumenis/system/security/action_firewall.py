@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+import re
 from typing import Any, Dict, Optional
 
 from .permission import PermissionResult
@@ -62,6 +63,11 @@ _SENSITIVE_PARAMS = {
     "private_key", "credential",
 }
 _VALID_SCOPES = {"global", "bmp", "zbmp", "cth", "system", "user", "shared"}
+_TOOL_RULES = (
+    (re.compile(r"delete_|drop_|truncate_", re.I), "block", "destructive tool action is hard-denied"),
+    (re.compile(r"grant_|revoke_|permission_", re.I), "block", "permission mutation cannot be initiated by an Agent tool"),
+    (re.compile(r"commit_|push_|deploy_", re.I), "classified", "high-risk tool name must use a matching high-risk action classification"),
+)
 
 
 @dataclass
@@ -125,6 +131,16 @@ def _structural_checks(req: ActionRequest) -> tuple[bool, str, FirewallRisk, Dic
     checks["tool"] = {"passed": ok}
     if not ok:
         return False, "tool is required", FirewallRisk.HIGH, checks
+    for pattern, rule, detail in _TOOL_RULES:
+        if not pattern.search(req.tool):
+            continue
+        if rule == "block":
+            checks["tool_policy"] = {"passed": False, "rule": detail}
+            return False, detail, FirewallRisk.CRITICAL, checks
+        if req.action not in {AgentAction.COMMIT, AgentAction.PUSH, AgentAction.DEPLOY}:
+            checks["tool_policy"] = {"passed": False, "rule": detail}
+            return False, detail, FirewallRisk.CRITICAL, checks
+    checks["tool_policy"] = {"passed": True}
 
     if not isinstance(req.parameters, dict):
         checks["parameters"] = {"passed": False}
