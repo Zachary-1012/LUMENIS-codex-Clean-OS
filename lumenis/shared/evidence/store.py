@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Zachary OS AI · Evidence Store（统一证据存储层）
+"""LUMENIS Shared Evidence Store（统一证据存储层）
 
 
 
-Contract：OSAI 研究侧 → ZBC 生产侧。
+归属：LUMENIS Shared Capability / Evidence；跨仓学习输出仅通过 versioned Contract / Artifact。
 
 对齐 EVIDENCE-PATTERNS.md：每个"完成/DONE"都有可回放证据，禁止"写完=完成"。
 
@@ -61,7 +61,8 @@ from typing import Any, Optional
 
 import os
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DB_PATH = os.environ.get("ZBC_DB_PATH", str(PROJECT_ROOT / "data" / "monitor.db"))
 
 
 
