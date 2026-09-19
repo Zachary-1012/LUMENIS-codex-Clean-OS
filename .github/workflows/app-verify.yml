@@ -29,10 +29,27 @@ jobs:
       - name: Checkout LUMENIS
         uses: actions/checkout@v5
 
-      - name: Install Flutter 3.47.2 stable
+      - name: Validate App-only Experience authority (BLOCKING)
         shell: bash
         run: |
-          git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          python3 scripts/audit_tools/verify_experience_authority_exclusive.py
+          python3 scripts/audit_tools/verify_experience_anti_template.py --strict
+
+      - name: Install Flutter 3.47.2 stable (EXECUTION-LAYER)
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/flutter"
+          ok=0
+          for attempt in 1 2 3; do
+            if git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"; then
+              ok=1
+              break
+            fi
+            echo "Flutter SDK fetch attempt $attempt failed; retrying..."
+            rm -rf "$RUNNER_TEMP/flutter"
+            sleep 8
+          done
+          test "$ok" -eq 1
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
 
       - name: Flutter environment
@@ -42,9 +59,20 @@ jobs:
           flutter --version
           dart --version
 
-      - name: Resolve app dependencies
+      - name: Resolve app dependencies (EXECUTION-LAYER)
         working-directory: app
-        run: flutter pub get
+        shell: bash
+        run: |
+          ok=0
+          for attempt in 1 2 3; do
+            if flutter pub get; then
+              ok=1
+              break
+            fi
+            echo "flutter pub get attempt $attempt failed; retrying..."
+            sleep 8
+          done
+          test "$ok" -eq 1
 
       - name: Analyze canonical app
         working-directory: app
