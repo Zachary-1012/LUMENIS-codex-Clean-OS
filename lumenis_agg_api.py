@@ -19,6 +19,7 @@ import sqlite3
 import subprocess
 import platform
 from pathlib import Path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request, current_app
@@ -44,8 +45,7 @@ def _osai_root():
 
 def _db_path():
     """生产数据库路径（只读使用）。"""
-    configured = os.environ.get("ZBC_DB_PATH", "").strip()
-    p = Path(configured) if configured else _ZBC_ROOT / "data" / "monitor.db"
+    p = Path(main_db_path())
     return p if p.exists() else None
 
 
@@ -54,9 +54,9 @@ def _db_readonly():
     db = _db_path()
     if not db:
         return None
-    conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True, timeout=5)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return DatabaseRepository(str(db)).connect(
+        timeout=5, read_only=True, wal=False
+    )
 
 
 def _osai_module(name):
