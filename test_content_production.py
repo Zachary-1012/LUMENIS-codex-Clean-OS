@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dotenv import load_dotenv
 load_dotenv()
 import app as app_module
+from lumenis.shared.database import get_repository
 import base64 as _b64
 
 _au = getattr(app_module, 'AUTH_USER', '')
@@ -180,7 +181,7 @@ test("SEC-9 prompt injection", t_prompt_inj)
 
 def t_db():
     import sqlite3
-    conn = sqlite3.connect("data/monitor.db")
+    conn = get_repository().connect()
     tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
     conn.close()
     has = "content_generation_evidence" in tables and "content_evaluation" in tables
