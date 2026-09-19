@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from platform_adapters import evidence_exporter as EE  # noqa: E402
+from lumenis.system.collector.adapters import evidence_exporter as EE  # noqa: E402
 
 
 def _make_db(path):
@@ -97,7 +97,7 @@ def test_export_end_to_end_manifest_and_readonly(tmp_path):
 
 def test_safe_identifier():
     """验证 _safe_identifier 拒绝非法SQL标识符。"""
-    import platform_adapters.evidence_exporter as ee
+    from lumenis.system.collector.adapters import evidence_exporter as ee
     assert ee._safe_identifier("notes") == "notes"
     assert ee._safe_identifier("daily_reports") == "daily_reports"
     import pytest
