@@ -40,8 +40,7 @@ chrome-cdp-*/
 *.sqlite
 *.sqlite3
 
-# Tests' one-off artifacts / archived snapshots
-tests/_archive/
+# Tests' one-off artifacts
 tests/_*.py
 tests/_*.png
 tests/_*.bin
