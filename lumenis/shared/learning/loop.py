@@ -42,7 +42,8 @@ class RuleSuggestion:
     suggestion_text: str = ""
     evidence: Dict[str, Any] = field(default_factory=dict)
     confidence: float = 0.5
-    status: str = "proposed"             # proposed / reviewed / approved / rejected
+    learning_record_id: Optional[str] = None
+    status: str = "proposed"             # proposed / approved / rejected / applied
     created_at: str = field(default_factory=_utc_now_iso)
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[str] = None
@@ -55,6 +56,7 @@ class RuleSuggestion:
             "suggestion_text": self.suggestion_text,
             "evidence": self.evidence,
             "confidence": self.confidence,
+            "learning_record_id": self.learning_record_id,
             "status": self.status,
             "created_at": self.created_at,
             "reviewed_by": self.reviewed_by,
@@ -154,10 +156,8 @@ class LearningLoop:
             evidence={"learning_type": learning_type, "content": content},
             confidence=confidence,
         )
-        self._rule_suggestions.append(suggestion)
-
-        # 同时记录到 Learning Memory
-        self.learning_memory.record_learning(
+        # 同时记录到 Learning Memory，并保存真实 record_id 作为治理关联键。
+        learning_record = self.learning_memory.record_learning(
             learning_type=LearningType.RULE_SUGGESTION,
             content={
                 "suggestion_id": suggestion.suggestion_id,
@@ -165,10 +165,13 @@ class LearningLoop:
                 "suggestion_text": suggestion.suggestion_text,
                 "confidence": confidence,
             },
-            source="learning_loop",
+            source="lumenis.shared.learning.loop",
             confidence=confidence,
             lifecycle_stage=LifecycleStage.RAW,
         )
+        if learning_record:
+            suggestion.learning_record_id = learning_record.record_id
+        self._rule_suggestions.append(suggestion)
         return suggestion
 
     def review_rule_suggestion(self, suggestion_id: str, approved: bool,
@@ -183,10 +186,13 @@ class LearningLoop:
                 s.status = "approved" if approved else "rejected"
                 s.reviewed_by = reviewer
                 s.reviewed_at = _utc_now_iso()
-                if approved:
-                    # 推进 Learning Memory 中的对应记录
+                if s.learning_record_id:
+                    target_stage = (
+                        LifecycleStage.REVIEWED if approved
+                        else LifecycleStage.ARCHIVED
+                    )
                     self.learning_memory.promote_record(
-                        f"learning:{suggestion_id}", LifecycleStage.REVIEWED)
+                        s.learning_record_id, target_stage)
                 return True
         return False
 
@@ -235,6 +241,11 @@ class LearningLoop:
                 )
                 conn.commit()
                 suggestion.status = "applied"
+                # 写入的是 inactive 候选版本，只能推进到 validated；
+                # promoted 必须由后续显式激活/治理步骤完成。
+                if suggestion.learning_record_id:
+                    self.learning_memory.promote_record(
+                        suggestion.learning_record_id, LifecycleStage.VALIDATED)
                 return True
             finally:
                 conn.close()
