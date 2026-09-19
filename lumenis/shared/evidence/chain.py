@@ -37,7 +37,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # 配置
 # ============================================================
 # P0-DBISO-01：统一走 db_paths（ZBC_EVIDENCE_DB_PATH -> ZBC_DB_PATH -> 默认），call-time
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 DB_PATH = main_db_path()
 
 # 规则版本：每次规则变更递增，历史数据保留创建时的版本
@@ -354,7 +354,7 @@ CREATE INDEX IF NOT EXISTS idx_zbc_lifecycle_stage ON zbc_lifecycle_tracking(sta
 
 
 def _get_conn(db_path: Optional[str] = None) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path or main_db_path(), timeout=10)
+    conn = DatabaseRepository(db_path or main_db_path()).connect(timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
