@@ -244,9 +244,9 @@ try:
 except Exception as _bsf_e:
     print(f"[browser_surface_api] blueprint register failed: {_bsf_e}")
 
-# Zachary OS AI：Evidence 查询 API（只读证据接口）
+# LUMENIS Shared Evidence 查询 API（只读证据接口）
 try:
-    import evidence_api
+    from lumenis.shared.evidence import api as evidence_api
     evidence_api.register_evidence_api(app)
 except Exception as _ev_e:
     print(f"[evidence_api] blueprint register failed: {_ev_e}")
@@ -1281,7 +1281,7 @@ try:
 except Exception as _e:
     print(f"[collection_quality_gate] init warning (non-fatal): {_e}")
 try:
-    import evidence_chain as _ec
+    from lumenis.shared.evidence import chain as _ec
     _ec.init_db(db.DB_PATH)
     print("[evidence_chain] zbc_evidence/zbc_canonical_data tables ensured")
 except Exception as _e:
@@ -1485,11 +1485,11 @@ def _bypass_evidence_canonical(note_data, provider='rednote'):
     """P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write）。
 
     硬红线：所有写入必须 try/except 吞掉并 log warning，绝不影响 notes 主入库。
-    委托统一的 evidence_chain.capture_note_lineage，避免不同小红书入口各自
+    委托统一的 Shared Evidence chain.capture_note_lineage，避免不同小红书入口各自
     复制一套 Evidence/Canonical 写入逻辑。
     """
     try:
-        import evidence_chain as _ec
+        from lumenis.shared.evidence import chain as _ec
         result = _ec.capture_note_lineage(
             note_data, db_path=db.DB_PATH, provider=provider,
             subject_scope='CTH', domain_id='cth', product_id='CTH',
