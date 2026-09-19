@@ -9,6 +9,7 @@ import time
 import os
 import sqlite3
 from datetime import datetime
+from lumenis.shared.database import get_repository
 
 BASE_URL = "http://127.0.0.1:8200"
 AUTH = base64.b64encode(b'Zachary:Zachary01').decode()
@@ -138,7 +139,7 @@ print("\n\n【第三部分：数据库查询性能检查】")
 print("-" * 70)
 
 try:
-    conn = sqlite3.connect('data/monitor.db')
+    conn = get_repository().connect()
     c = conn.cursor()
     
     tables_to_check = [
