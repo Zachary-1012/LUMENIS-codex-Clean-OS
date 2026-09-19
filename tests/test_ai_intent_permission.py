@@ -37,7 +37,7 @@ def client_and_gate(tmp_path, monkeypatch):
     database.DB_PATH = str(db_file)
     database.init_db()
 
-    import permission_gate
+    from lumenis.system import security as permission_gate
     importlib.reload(permission_gate)
     import experience_runtime
     importlib.reload(experience_runtime)
