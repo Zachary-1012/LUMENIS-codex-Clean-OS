@@ -240,7 +240,7 @@ Selected Subject → Domain Lens → Scope / Permission
 
 CTH and BMP may interpret the Subject differently but must not create competing subject-context systems.
 
-Navigation reveals current context and the next meaningful move. It is not a catalog of backend routes. No fixed rail/dock/sidebar shape is sacred.
+Navigation follows the current product/domain ownership in `LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`, then the owning module and page. A route's existence alone does not make a destination top-level; keep utility workflows within their owning domain/module or the deliberate SYSTEM context. Navigation reveals current context and the next meaningful move rather than listing backend routes. No fixed rail/dock/sidebar shape is sacred.
 
 ## 10. AI / Agent experience
 
