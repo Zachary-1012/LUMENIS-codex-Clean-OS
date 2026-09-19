@@ -19,10 +19,11 @@ import sqlite3
 from canonical_metrics import engagement_stats as _canon_es, engagement_of as _canon_eo
 from typing import Optional
 from pathlib import Path
+from lumenis.shared.database import get_repository, main_db_path
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path(__file__).parent / "data" / "monitor.db"
+DB_PATH = Path(main_db_path())
 CONFIG_PATH = Path(__file__).parent / "config" / "kos_platform_rules.json"
 
 # G1: 归因模块默认值（必须与 config/kos_platform_rules.json 的 attribution_weights 一致）
@@ -143,9 +144,7 @@ def _platform_weighted_interactions(note, platform=""):
 
 
 def _conn():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect()
 
 
 def calculate_attribution(author_id: str, brand_name: str = "广州太古汇") -> dict:
