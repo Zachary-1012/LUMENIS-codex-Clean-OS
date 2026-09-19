@@ -6663,7 +6663,7 @@ def api_cookies_import():
 
     # Evidence 记录（不记录 Cookie 值，只记录元信息）
     try:
-        from evidence_store import record_evidence
+        from lumenis.shared.evidence.store import record_evidence
         record_evidence(source='zbc', project='ZBC', product='CTH', feature_id='GAP21_COOKIE_IMPORT',
                         env='prod', level='L4', test_name='cookie_import_api', result='PASS' if any(r.get('ok') for r in results.values()) else 'GAP',
                         outputs={'weibo': results.get('weibo',{}).get('count',0), 'bilibili': results.get('bilibili',{}).get('count',0), 'xhs': results.get('xhs',{}).get('count',0)},
@@ -6835,7 +6835,7 @@ def api_cookies_import_raw():
     status_file.write_text(_json.dumps(status, ensure_ascii=False, indent=2), encoding='utf-8')
     # Evidence（不记录 Cookie 值）
     try:
-        from evidence_store import record_evidence
+        from lumenis.shared.evidence.store import record_evidence
         record_evidence(source='zbc', project='ZBC', product='CTH', feature_id='GAP21_COOKIE_IMPORT_RAW',
                         env='prod', level='L4', test_name='cookie_import_api_raw', result='PASS',
                         outputs={'platform': platform, 'cookie_count': len(cleaned)},
