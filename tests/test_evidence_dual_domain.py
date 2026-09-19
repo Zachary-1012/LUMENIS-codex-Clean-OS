@@ -17,7 +17,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from evidence_chain import (
+from lumenis.shared.evidence.chain import (
     EvidenceStore, CanonicalDataStore, LifecycleTracker, EvidenceChain,
     init_db, list_evidence_by_domain, get_evidence_domain_summary,
 )
