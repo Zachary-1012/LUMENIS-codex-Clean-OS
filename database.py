@@ -19,7 +19,7 @@ _DB_RETRY_BASE_DELAY = 0.5  # 秒，指数退避基数
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 数据库路径：允许通过环境变量 ZBC_DB_PATH 指定独立库（Staging/测试隔离）。
 # 未设置该变量时默认生产库 data/monitor.db，行为与历史完全一致（向后兼容）。
-from lumenis.shared.database import main_db_path  # Shared Database canonical path authority
+from lumenis.shared.database import DatabaseRepository, get_repository, main_db_path  # Shared Database canonical authority
 DB_PATH = main_db_path()
 
 SCHEMA = """
@@ -306,11 +306,7 @@ def _db_connect_with_retry():
     last_exc = None
     for attempt in range(_DB_MAX_RETRIES):
         try:
-            conn = sqlite3.connect(main_db_path(), timeout=30)
-            conn.row_factory = sqlite3.Row
-            conn.execute('PRAGMA busy_timeout=30000')
-            conn.execute('PRAGMA journal_mode=WAL')
-            return conn
+            return get_repository().connect(timeout=30)
         except sqlite3.OperationalError as e:
             last_exc = e
             if 'locked' in str(e).lower() or 'busy' in str(e).lower():
@@ -794,9 +790,11 @@ def backup_database(destination):
     不直接 copy monitor.db，避免 WAL 模式运行中复制数据库时得到不完整快照。
     """
     os.makedirs(os.path.dirname(os.path.abspath(destination)), exist_ok=True)
-    src = sqlite3.connect(main_db_path(), timeout=30)
+    src = get_repository().connect(timeout=30)
     try:
-        dst = sqlite3.connect(destination)
+        dst = DatabaseRepository(destination).connect(
+            wal=False, foreign_keys=False, row_factory=False
+        )
         try:
             src.backup(dst)
         finally:
