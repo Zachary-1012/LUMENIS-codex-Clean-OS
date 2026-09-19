@@ -320,7 +320,7 @@ Tier C  Production / Live / Environment required acceptance evidence
 
 详见 [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md)。
 
-当前 GitHub workflow 会执行 dependency install、`compileall`、test-tier manifest validation 与 hermetic pytest；Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。
+当前自动 CI 只保留两类正式 Gate：`LUMENIS Product Gate`（唯一的跨产品契约 / Only-One / App-only / Python hermetic 产品 Gate）与按 App 变更触发的 `LUMENIS App Gate`（Flutter analyze/test）。重复的独立 LUMENIS-GGI workflow 已退休。Product Gate 会先执行不依赖外网的治理、App-only 架构、源码编译与 test-tier manifest 检查，再进入 dependency install / hermetic pytest；App Gate 也先执行 App-only Experience 审计，再获取 Flutter SDK/依赖。Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。Runner 0-step、DNS、package registry 等执行层故障必须记为 `EXECUTION-LAYER UNVERIFIED`，不得冒充产品 PASS/FAIL。
 
 重要用户功能应证明：
 
