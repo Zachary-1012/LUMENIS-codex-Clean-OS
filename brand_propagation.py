@@ -30,6 +30,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 
 # ============================================================
@@ -143,16 +144,11 @@ class BrandPropagationEngine:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or os.environ.get(
-            "ZBC_DB_PATH",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "monitor.db")
-        )
+        self.db_path = db_path or main_db_path()
         self._ensure_tables()
 
     def _get_conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return DatabaseRepository(self.db_path).connect()
 
     def _ensure_tables(self) -> None:
         """确保传播平台表存在（Phase 1 基础表）。"""
