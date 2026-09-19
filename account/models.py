@@ -10,7 +10,7 @@ account/models.py — 数据库模型与建表
 """
 import sqlite3
 
-from db_paths import main_db_path
+from lumenis.shared.database import get_repository, main_db_path
 
 # ── 基础 v4 表（与 lumenis/auth/models.py 保持一致，幂等重建） ──
 BASE_TABLES_SQL = """
@@ -260,7 +260,7 @@ _SKILL_RUNTIME_COLUMNS = [
 
 def get_db():
     """获取数据库连接；路径在调用时通过全仓 canonical resolver 解析。"""
-    conn = sqlite3.connect(main_db_path())
+    conn = get_repository().connect()
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
