@@ -6,14 +6,12 @@ badge_api.py — 轻量红点提醒 API（ZBC V1.1 前端回补）
 import sqlite3
 from datetime import datetime
 from flask import Blueprint, jsonify, request
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import get_repository
 
 badge_bp = Blueprint('badge', __name__)
 
 def _get_db():
-    conn = sqlite3.connect(main_db_path(), timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect(timeout=10)
 
 
 def _table_exists(conn, table_name):

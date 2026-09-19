@@ -27,7 +27,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+from lumenis.shared.database import get_repository, main_db_path
+DB_PATH = main_db_path()
 
 # ============================================================
 # 内容类型注册表
@@ -149,9 +150,7 @@ EVAL_LABELS = {
 # DB 层
 # ============================================================
 def _get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect(timeout=10)
 
 
 def init_db():

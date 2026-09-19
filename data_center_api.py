@@ -11,7 +11,7 @@ import sqlite3
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import get_repository
 
 data_center_bp = Blueprint("data_center", __name__, url_prefix="/api/data-center")
 
@@ -69,9 +69,7 @@ PLATFORM_COLORS: Dict[str, str] = {
 
 
 def _get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(main_db_path())
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect()
 
 
 @data_center_bp.route("/platforms", methods=["GET"])

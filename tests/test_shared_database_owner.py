@@ -69,3 +69,14 @@ def test_database_repository_layer_is_canonical():
     assert "class DatabaseRepository" in source
     assert "connect_sqlite" in source
     assert "sqlite3.connect(" not in source
+
+def test_first_standard_runtime_callers_use_repository_layer():
+    for rel in [
+        "badge_api.py",
+        "data_center_api.py",
+        "intelligence_library_api.py",
+        "content_generation.py",
+    ]:
+        source = (REPO / rel).read_text(encoding="utf-8")
+        assert "get_repository" in source, rel
+        assert "sqlite3.connect(" not in source, rel
