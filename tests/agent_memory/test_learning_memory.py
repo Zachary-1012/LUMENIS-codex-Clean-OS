@@ -88,9 +88,34 @@ class TestLearningMemory:
             learning_type=LearningType.RULE_SUGGESTION,
             content={"rule": "promoted rule"},
         )
-        lm.promote_record(rec.record_id, LifecycleStage.PROMOTED)
+        assert lm.promote_record(rec.record_id, LifecycleStage.REVIEWED) is True
+        assert lm.promote_record(rec.record_id, LifecycleStage.VALIDATED) is True
+        assert lm.promote_record(rec.record_id, LifecycleStage.PROMOTED) is True
         promoted = lm.get_promoted_rules()
         assert len(promoted) >= 1
+
+    def test_promote_record_persists_across_restart(self, seeded_db):
+        import sqlite3
+        lm = LearningMemory(db_path=seeded_db, enabled=True)
+        rec = lm.record_learning(
+            learning_type=LearningType.RULE_SUGGESTION,
+            content={"rule": "restart-safe"},
+        )
+        assert lm.promote_record(rec.record_id, LifecycleStage.REVIEWED) is True
+
+        # 新实例没有旧内存记录，仍必须能从 SQLite 继续治理生命周期。
+        restarted = LearningMemory(db_path=seeded_db, enabled=True)
+        assert restarted.promote_record(rec.record_id, LifecycleStage.VALIDATED) is True
+
+        conn = sqlite3.connect(seeded_db)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
+            (rec.record_id,),
+        ).fetchone()
+        conn.close()
+        assert row is not None
+        assert row["lifecycle_stage"] == "validated"
 
     def test_persist_to_agent_learning_records(self, seeded_db):
         import sqlite3
