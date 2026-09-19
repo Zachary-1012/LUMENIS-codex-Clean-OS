@@ -13,6 +13,7 @@ import os
 import re
 import sqlite3
 from typing import Dict, List, Optional, Set, Tuple
+from lumenis.shared.database import DatabaseRepository
 
 CRE_RE = re.compile(
     r"CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+[`\"\[]*([a-zA-Z_][a-zA-Z0-9_]*)",
@@ -33,8 +34,9 @@ MIGRATION_ISOLATED_PREFIX = ("bi_",)
 
 def reflect(db_path: str) -> Dict[str, dict]:
     """只读反射数据库结构。返回 {table: {columns, indexes, row_count}}。以 ro 打开，绝不写入。"""
-    uri = "file:" + db_path.replace("\\", "/") + "?mode=ro"
-    con = sqlite3.connect(uri, uri=True)
+    con = DatabaseRepository(db_path).connect(
+        read_only=True, wal=False, foreign_keys=False
+    )
     try:
         tables = [r[0] for r in con.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
