@@ -84,7 +84,7 @@ import ai_filter
 from lumenis.shared.reporting import daily
 from lumenis.shared.reporting import engine as report_engine
 import topic_campaign
-import app_evidence
+from lumenis.shared.evidence import manual as app_evidence
 import swire_group
 import weekly_events
 import browser_discovery
@@ -282,7 +282,7 @@ except Exception as _lag_e:
 
 # 统一本地文件导入 API（参考 GPT 文件夹 icon，点击浏览本地；复用 app_evidence 扩展名+500MB 校验）
 try:
-    from app_evidence import EVIDENCE_ALLOWED_EXTENSIONS, EVIDENCE_MAX_FILE_SIZE_BYTES
+    from lumenis.shared.evidence.manual import EVIDENCE_ALLOWED_EXTENSIONS, EVIDENCE_MAX_FILE_SIZE_BYTES
     _IMPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'imports')
     os.makedirs(_IMPORT_DIR, exist_ok=True)
 
