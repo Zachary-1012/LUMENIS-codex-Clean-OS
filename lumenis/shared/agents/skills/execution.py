@@ -330,12 +330,12 @@ def transition_state(current, target):
 
 
 def record_execution_evidence(ctx):
-    """连接点a: skill_execution_chain -> evidence_chain 桥接。
-    执行链完成后将执行证据写入 evidence_chain.EvidenceStore (zbc_evidence表)，
+    """连接点a: Skill execution -> Shared Evidence 桥接。
+    执行链完成后将执行证据写入 lumenis.shared.evidence.EvidenceStore (zbc_evidence表)，
     走 Contract/Artifact 边界。失败不阻断主链路（旁路记录）。
     """
     try:
-        from evidence_chain import EvidenceStore
+        from lumenis.shared.evidence import EvidenceStore
         store = EvidenceStore()
         exec_res = ctx.execute_result or {}
         raw_content = json.dumps({
@@ -365,7 +365,7 @@ def record_execution_evidence(ctx):
                 "effect_fence": ctx.effect_fence_result,
                 "evaluation": ctx.evaluation,
             },
-            provider="skill_execution_chain",
+            provider="lumenis.shared.agents.skills.execution",
             domain_id=ctx.domain or "system",
             product_id=ctx.product or "SYSTEM",
         )
