@@ -5,6 +5,8 @@
 验证：CI/Function 分离、6 态功能状态、证据链可追溯、PARTIAL 原因分类、
 AI/Browser 特殊验收、批量判定、最高原则。
 """
+import sqlite3
+
 import pytest
 
 import acceptance_gate as ag
@@ -96,6 +98,81 @@ class TestBuildAndJudge:
         assert chain.evidence_coverage == 100.0
         assert chain.partial_reasons == []
         assert chain.missing_dimensions == []
+
+    @pytest.mark.parametrize(
+        "release_flags",
+        [{}, {"is_released": True}, {"is_released": True, "has_continuous_runtime": True}],
+    )
+    def test_shared_evidence_write_exception_downgrades_positive_verdict(
+        self, monkeypatch, release_flags
+    ):
+        from lumenis.shared.evidence import store as evidence_store
+
+        monkeypatch.setattr(evidence_store, "init_evidence_store", lambda: None)
+
+        def fail_write(**_kwargs):
+            raise OSError("simulated durable Evidence write failure")
+
+        monkeypatch.setattr(evidence_store, "record_evidence", fail_write)
+        evidence = _all_passed(**release_flags)
+        chain = build_and_judge(
+            "T-EVIDENCE-PERSIST-FAIL", persist_evidence=True, **evidence
+        )
+
+        assert chain.functional_status == "PARTIAL"
+        assert chain.get_node("final_status").status == "failed"
+        assert "evidence" in chain.missing_dimensions
+        assert "evidence" not in chain.satisfied_dimensions
+        assert "Shared Evidence persistence failed" in chain.partial_reasons
+        assert "simulated durable Evidence write failure" in chain.note
+
+    def test_real_store_write_failure_returning_minus_one_downgrades_verdict(
+        self, monkeypatch, tmp_path
+    ):
+        from lumenis.shared.database import DatabaseRepository
+        from lumenis.shared.evidence import store as evidence_store
+
+        db_path = tmp_path / "acceptance-evidence-write-fail.sqlite3"
+        monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+        repository = DatabaseRepository(str(db_path))
+        monkeypatch.setattr(evidence_store, "get_repository", lambda: repository)
+        original_get_conn = evidence_store._get_conn
+
+        class FailingEvidenceInsert:
+            def __init__(self, conn):
+                self.conn = conn
+
+            def execute(self, sql, *params):
+                if sql.lstrip().upper().startswith("INSERT INTO APP_EVIDENCE_RECORDS"):
+                    raise sqlite3.OperationalError("simulated database write failure")
+                return self.conn.execute(sql, *params)
+
+            def commit(self):
+                return self.conn.commit()
+
+            def rollback(self):
+                return self.conn.rollback()
+
+            def close(self):
+                return self.conn.close()
+
+        monkeypatch.setattr(
+            evidence_store,
+            "_get_conn",
+            lambda: FailingEvidenceInsert(original_get_conn()),
+        )
+
+        chain = build_and_judge(
+            "T-EVIDENCE-STORE-FAIL",
+            persist_evidence=True,
+            **_all_passed(),
+        )
+
+        assert chain.functional_status == "PARTIAL"
+        assert chain.get_node("final_status").status == "failed"
+        assert "evidence" in chain.missing_dimensions
+        assert "Shared Evidence persistence failed" in chain.partial_reasons
+        assert "no persisted record id" in chain.note
 
     def test_planned_when_no_source(self):
         chain = build_and_judge("T-PLANNED", source_exists=False)

@@ -211,16 +211,16 @@ class TestBrokenRouteFixes:
 # 5. API 域归属清单存在
 # ============================================================================
 class TestApiDomainMappingDocument:
-    """验证 API 域归属清单文档存在。"""
+    """验证当前 API Owner map 存在并描述现行产品域。"""
 
     def test_mapping_document_exists(self):
-        """audit/API_DOMAIN_MAPPING_V1.0.md 存在。"""
-        path = os.path.join(PROJECT_ROOT, "audit", "API_DOMAIN_MAPPING_V1.0.md")
+        """当前治理文档内的 API owner map 存在。"""
+        path = os.path.join(PROJECT_ROOT, "00-GOVERNANCE", "LUMENIS-API-OWNER-MAP.md")
         assert os.path.exists(path), "API 域归属清单不存在"
 
     def test_mapping_document_has_zbmp_section(self):
         """清单包含 ZBMP 域部分。"""
-        path = os.path.join(PROJECT_ROOT, "audit", "API_DOMAIN_MAPPING_V1.0.md")
+        path = os.path.join(PROJECT_ROOT, "00-GOVERNANCE", "LUMENIS-API-OWNER-MAP.md")
         with open(path, encoding="utf-8") as f:
             content = f.read()
         assert "ZBMP" in content
@@ -228,7 +228,7 @@ class TestApiDomainMappingDocument:
 
     def test_mapping_document_has_cth_section(self):
         """清单包含 CTH 域部分。"""
-        path = os.path.join(PROJECT_ROOT, "audit", "API_DOMAIN_MAPPING_V1.0.md")
+        path = os.path.join(PROJECT_ROOT, "00-GOVERNANCE", "LUMENIS-API-OWNER-MAP.md")
         with open(path, encoding="utf-8") as f:
             content = f.read()
         assert "CTH" in content
@@ -236,7 +236,7 @@ class TestApiDomainMappingDocument:
 
     def test_mapping_document_has_deprecated_section(self):
         """清单包含 deprecated 旧路由部分。"""
-        path = os.path.join(PROJECT_ROOT, "audit", "API_DOMAIN_MAPPING_V1.0.md")
+        path = os.path.join(PROJECT_ROOT, "00-GOVERNANCE", "LUMENIS-API-OWNER-MAP.md")
         with open(path, encoding="utf-8") as f:
             content = f.read()
         assert "Deprecated" in content or "deprecated" in content

@@ -29,6 +29,10 @@ VALID_STATUSES = ("pass", "warn", "fail", "unknown")
 
 from lumenis.shared.database import DatabaseRepository, main_db_path
 
+# Public compatibility snapshot only; repository operations resolve the
+# canonical path at call time in _get_connection().
+DEFAULT_DB_PATH = main_db_path()
+
 
 # ============================================================
 # EvaluationRecord 数据类

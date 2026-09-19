@@ -13,7 +13,7 @@
 """
 # 话题APP端采集adapter（小红书APP搜索话题，与Web端互补）
 try:
-    from platform_adapters.xhs_app_topic import XHSAppTopicAdapter
+    from lumenis.system.collector.adapters.xhs_app_topic import XHSAppTopicAdapter
     APP_TOPIC_ENABLED = True
 except ImportError:
     APP_TOPIC_ENABLED = False
@@ -38,7 +38,7 @@ except Exception as _e:
 # V3.0 P0-2 阶段1：统一动态调度影子模式接入
 # 只做观察、记录、回写，不门控固定时钟，不改变任何生产采集行为
 try:
-    from platform_adapters.scheduling import get_planner
+    from lumenis.system.collector.adapters.scheduling import get_planner
     _SCHEDULER_AVAILABLE = True
 except Exception as _e:
     _SCHEDULER_AVAILABLE = False
@@ -258,12 +258,7 @@ def _save_notes(conn, campaign_key, topic, notes):
     新增字段：media_json, comments_json, subject_hit, content_type, sentiment, risk_level, evidence_quality, detail_captured_at。
     向后兼容：旧字段不变，新字段有默认值。
     """
-    try:
-        from subject_rules import subject_hit as _subject_hit
-    except Exception:
-        def _subject_hit(text):
-            t = (text or '').lower()
-            return any(k in t for k in ('太古汇', 'taikoo hui', '广州太古汇'))
+    from subject_rules import subject_hit as _subject_hit
 
     now = _now()
     new = 0
@@ -812,7 +807,7 @@ def _campaign_scheduler_loop():
                 _gate_run = True
                 if _SCHEDULER_AVAILABLE:
                     try:
-                        from platform_adapters.scheduling import gate_should_run
+                        from lumenis.system.collector.adapters.scheduling import gate_should_run
                         _gate_run, _gd, _gmode = gate_should_run(get_planner(), 'xhs', now=now)
                         if _gd is not None:
                             print(f'[Gate:{_gmode}][TopicCampaign] should_run={_gate_run}, allow={_gd.allow}, '

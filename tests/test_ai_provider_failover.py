@@ -23,19 +23,19 @@ class TestProviderChain:
     """provider_chain 验证"""
 
     def test_provider_chain_contains_zhipu_ark_ollama(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         chain = ac.provider_chain()
         assert 'zhipu' in chain
         assert 'ark' in chain
         assert 'ollama' in chain
 
     def test_provider_chain_zhipu_is_first(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         chain = ac.provider_chain()
         assert chain[0] == 'zhipu'
 
     def test_provider_chain_env_override(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         os.environ['AI_PROVIDER_CHAIN'] = 'zhipu,ark'
         try:
             chain = ac.provider_chain()
@@ -48,32 +48,32 @@ class TestProviderStatus:
     """Provider 状态验证"""
 
     def test_active_fallback_constant_exists(self):
-        import provider_registry as pr
+        from lumenis.system.ai_gateway import providers as pr
         assert hasattr(pr, 'ACTIVE_FALLBACK')
         assert pr.ACTIVE_FALLBACK == 'ACTIVE_FALLBACK'
 
     def test_ark_is_active_fallback(self):
-        import provider_registry as pr
+        from lumenis.system.ai_gateway import providers as pr
         assert pr.provider_status('ark') == 'ACTIVE_FALLBACK'
 
     def test_doubao_is_active_fallback(self):
-        import provider_registry as pr
+        from lumenis.system.ai_gateway import providers as pr
         assert pr.provider_status('doubao') == 'ACTIVE_FALLBACK'
 
     def test_qwen_is_not_configured(self):
-        import provider_registry as pr
+        from lumenis.system.ai_gateway import providers as pr
         assert pr.provider_status('qwen') == 'NOT_CONFIGURED'
 
     def test_zhipu_is_active(self):
-        import provider_registry as pr
+        from lumenis.system.ai_gateway import providers as pr
         assert pr.provider_status('zhipu') == 'ACTIVE'
 
     def test_ark_available_for_call(self):
-        import provider_registry as pr
+        from lumenis.system.ai_gateway import providers as pr
         assert pr.is_provider_available('ark') is True
 
     def test_doubao_available_for_call(self):
-        import provider_registry as pr
+        from lumenis.system.ai_gateway import providers as pr
         assert pr.is_provider_available('doubao') is True
 
     def test_ai_call_logger_provider_status(self):
@@ -133,7 +133,7 @@ class TestTokenUsageRecording:
     """token_usage 记录验证（修复 token=0 bug）"""
 
     def test_set_call_meta_stores_tokens(self):
-        import intelligence as intel
+        from lumenis.system.ai_gateway import core as intel
         intel._set_call_meta(
             provider='zhipu', model='glm-4.5-air',
             prompt_tokens=200, completion_tokens=100, total_tokens=300
@@ -145,7 +145,7 @@ class TestTokenUsageRecording:
         assert meta['completion_tokens'] == 100
 
     def test_extract_token_usage_standard(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         data = {"usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}}
         result = ac.extract_token_usage(data)
         assert result['total_tokens'] == 150
@@ -153,19 +153,19 @@ class TestTokenUsageRecording:
         assert result['completion_tokens'] == 50
 
     def test_extract_token_usage_missing_total(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         data = {"usage": {"prompt_tokens": 100, "completion_tokens": 50}}
         result = ac.extract_token_usage(data)
         assert result['total_tokens'] == 150  # pt + ct
 
     def test_extract_token_usage_empty(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         assert ac.extract_token_usage({})['total_tokens'] == 0
         assert ac.extract_token_usage(None)['total_tokens'] == 0
 
     def test_chat_meta_contains_token_usage(self):
         """验证 chat() 返回的 meta 包含 token_usage 字段"""
-        import intelligence as intel
+        from lumenis.system.ai_gateway import core as intel
         # 设置一个模拟的 call_meta
         intel._set_call_meta(provider='zhipu', model='glm-4.5-air',
                               prompt_tokens=50, completion_tokens=30, total_tokens=80)
@@ -178,12 +178,12 @@ class TestCircuitBreaker:
     """熔断器状态机验证"""
 
     def test_breaker_starts_closed(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         pb = ac.get_provider_breaker('test_cb_start')
         assert pb.state in ('CLOSED', 'HALF_OPEN')
 
     def test_breaker_independent_per_provider(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         pb1 = ac.get_provider_breaker('test_indep_a')
         pb2 = ac.get_provider_breaker('test_indep_b')
         pb1.breaker.record_success()
@@ -192,7 +192,7 @@ class TestCircuitBreaker:
         assert pb2.state == 'CLOSED' or pb2.allow() is True
 
     def test_global_breaker_snapshot(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         snap = ac.breaker.snapshot()
         assert 'state' in snap
         assert 'consecutive_failures' in snap
@@ -227,7 +227,7 @@ class TestRouteWithFallback:
     """route_with_fallback 验证"""
 
     def test_fallback_returns_rule_when_all_fail(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         def always_fail(prov):
             raise ConnectionError(f"{prov} down")
         result, used = ac.route_with_fallback(
@@ -237,7 +237,7 @@ class TestRouteWithFallback:
         assert result is None
 
     def test_fallback_returns_first_success(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         call_count = {'n': 0}
         def succeed_on_ark(prov):
             call_count['n'] += 1
@@ -252,7 +252,7 @@ class TestRouteWithFallback:
         assert call_count['n'] == 2
 
     def test_fallback_skips_circuit_open(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         # 先把 zhipu 熔断打开
         pb = ac.get_provider_breaker('test_skip_open')
         for _ in range(5):
@@ -273,7 +273,7 @@ class TestProviderSwitchAudit:
     """Provider 切换审计验证"""
 
     def test_record_switch_creates_entry(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         before = len(ac.get_failover_log(limit=200))
         ac.record_provider_switch(
             from_provider='zhipu', to_provider='ark',
@@ -287,7 +287,7 @@ class TestProviderSwitchAudit:
         assert log['reason'] == 'rate_limit_429'
 
     def test_switch_log_has_required_fields(self):
-        import ai_channel as ac
+        from lumenis.system.ai_gateway import channel as ac
         ac.record_provider_switch('ark', 'ollama', 'circuit_open', 't2', 'tr2')
         log = ac.get_failover_log(limit=1)[-1]
         for field in ['timestamp', 'from_provider', 'to_provider', 'reason', 'task_id', 'trace_id']:
@@ -300,13 +300,13 @@ class TestResourcePacks:
     def test_default_pack_id_is_glm_4_5_air(self):
         """验证 intelligence.chat() 默认 pack_id='glm_4_5_air'"""
         import inspect
-        import intelligence as intel
+        from lumenis.system.ai_gateway import core as intel
         sig = inspect.signature(intel.chat)
         assert sig.parameters['pack_id'].default == 'glm_4_5_air'
 
     def test_budget_check_default_pack_id(self):
         import inspect
-        import intelligence as intel
+        from lumenis.system.ai_gateway import core as intel
         sig = inspect.signature(intel._budget_check)
         assert sig.parameters['pack_id'].default == 'glm_4_5_air'
 

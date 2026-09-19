@@ -7,6 +7,9 @@ The selector enumerates repository test files and subtracts two explicit sources
 It prints one repository-relative path per line for the workflow to pass explicitly
 to pytest. Environment/live exclusion is not PASS; those suites remain release
 evidence as documented in CI_TEST_TIERS.md.
+
+The platform catalog/data-center contract suite is hermetic and is selected
+normally; its SQLite fixture runs the canonical schema migration in a temp path.
 """
 from __future__ import annotations
 

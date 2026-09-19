@@ -270,7 +270,7 @@ class TestL4FullChain:
     def test_step_09_evidence(self, chain_state):
         """STEP 9: EVIDENCE - 证据链"""
         try:
-            from evidence_chain import EvidenceStore, init_db
+            from lumenis.shared.evidence.chain import EvidenceStore, init_db
             # 初始化证据库
             init_db()
             store = EvidenceStore()
@@ -307,7 +307,7 @@ class TestL4FullChain:
     def test_step_10_report(self, chain_state):
         """STEP 10: REPORT - 报告生成"""
         try:
-            import daily_report
+            from lumenis.shared.reporting import daily as daily_report
             # 生成今日摘要
             summary = daily_report.generate_today_summary()
             assert summary is not None, "报告摘要为空"

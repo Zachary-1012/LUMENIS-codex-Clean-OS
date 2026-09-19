@@ -6,10 +6,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from platform_adapters import get_adapter
-from platform_adapters.base import BasePlatformAdapter, CollectionStatus
-from platform_adapters.instagram import InstagramAdapter
-from v4_upgrade.adapters.base import AdapterResult, CollectedNote
+from lumenis.system.collector.adapters import get_adapter
+from lumenis.system.collector.adapters.base import BasePlatformAdapter, CollectionStatus
+from lumenis.system.collector.adapters.instagram import InstagramAdapter
+from lumenis.adapters.base import AdapterResult, CollectedNote
 
 
 # ---------------------------------------------------------------------------

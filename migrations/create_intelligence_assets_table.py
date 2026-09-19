@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Migration: Create intelligence_assets table for Unified Intelligence Library.
-Idempotent - safe to run multiple times.
-Does NOT modify or drop any existing tables.
+"""Controlled additive schema operation for the intelligence asset catalog.
+
+Use the canonical Shared Database connection owner. An explicit path is useful
+for isolated verification; the default resolves the configured production DB.
+The operation is idempotent and does not modify or drop existing tables.
 """
-import sqlite3, os
+from typing import Optional
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'monitor.db')
+from lumenis.shared.database import connect_sqlite
 
-def upgrade():
-    conn = sqlite3.connect(DB_PATH)
+
+def upgrade(db_path: Optional[str] = None):
+    conn = connect_sqlite(db_path)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS intelligence_assets (

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """通用主体模块与香港 Cookie 绑定的隔离验收。"""
 import json
+import sqlite3
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -58,6 +60,154 @@ def test_subject_registry_requires_bilingual_names(tmp_path, monkeypatch):
 
     with pytest.raises(SubjectValidationError, match="name_en 与 name_zh"):
         add_subject({"domain_id": "CTH", "subject_type": "brand", "name_en": "Only English"})
+
+
+@pytest.fixture
+def subject_registry_client(tmp_path, monkeypatch):
+    """Run the real route and account product matrix against an isolated DB."""
+    import account.authorization as authorization
+    import database
+    import lumenis.auth.service as auth_service
+    from flask import Flask
+    import subject_registry
+
+    db_path = tmp_path / "subject-registry-routes.sqlite3"
+
+    def connect_test_db():
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    @contextmanager
+    def database_test_context():
+        conn = connect_test_db()
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    with connect_test_db() as conn:
+        conn.executescript(
+            """
+            CREATE TABLE v4_users (
+                id INTEGER PRIMARY KEY,
+                role TEXT NOT NULL,
+                status TEXT NOT NULL
+            );
+            CREATE TABLE v4_member_authorizations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                product_id TEXT NOT NULL,
+                module TEXT NOT NULL,
+                action TEXT NOT NULL
+            );
+            INSERT INTO v4_users (id, role, status) VALUES
+                (1, 'user', 'active'),
+                (2, 'user', 'active'),
+                (3, 'user', 'active'),
+                (4, 'owner', 'active'),
+                (5, 'admin', 'active');
+            INSERT INTO v4_member_authorizations
+                (user_id, product_id, module, action) VALUES
+                (1, 'CTH', 'subject_registry', 'read'),
+                (2, 'ZBMP', 'subject_registry', 'read');
+            """
+        )
+
+    monkeypatch.setattr(authorization, "get_db", connect_test_db)
+    monkeypatch.setattr(database, "get_db", database_test_context)
+    current = {"user": None}
+    monkeypatch.setattr(auth_service, "get_current_user", lambda: current["user"])
+
+    subject_registry.add_subject({
+        "domain_id": "CTH", "subject_type": "company",
+        "name_en": "North Star Operations", "name_zh": "北辰运营",
+    })
+    subject_registry.add_subject({
+        "domain_id": "BMP", "subject_type": "brand",
+        "name_en": "North Star Brand", "name_zh": "北辰品牌",
+    })
+
+    app = Flask(__name__)
+    app.register_blueprint(subject_registry.subject_registry_bp)
+    return app.test_client(), current
+
+
+@pytest.mark.parametrize(
+    ("user_id", "expected_domain", "hidden_domain"),
+    [(1, "CTH", "BMP"), (2, "BMP", "CTH")],
+)
+def test_subject_registry_route_limits_implicit_listing_to_authorized_domain(
+    subject_registry_client, user_id, expected_domain, hidden_domain
+):
+    client, current = subject_registry_client
+    current["user"] = {"id": user_id, "role": "user"}
+
+    response = client.get("/api/settings/subjects")
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert [domain["id"] for domain in body["domains"]] == [expected_domain]
+    assert {subject["domain_id"] for subject in body["subjects"]} == {expected_domain}
+    assert all(subject["domain_id"] != hidden_domain for subject in body["subjects"])
+
+    explicit = client.get(f"/api/settings/subjects?domain_id={expected_domain}")
+    assert explicit.status_code == 200
+    assert {subject["domain_id"] for subject in explicit.get_json()["subjects"]} == {
+        expected_domain
+    }
+
+
+@pytest.mark.parametrize(
+    ("user_id", "requested_domain"),
+    [(1, "BMP"), (2, "CTH"), (3, "CTH"), (3, None)],
+)
+def test_subject_registry_route_denies_unapproved_domain(
+    subject_registry_client, user_id, requested_domain
+):
+    client, current = subject_registry_client
+    current["user"] = {"id": user_id, "role": "user"}
+
+    url = (
+        f"/api/settings/subjects?domain_id={requested_domain}"
+        if requested_domain
+        else "/api/settings/subjects"
+    )
+    response = client.get(url)
+
+    assert response.status_code == 403
+    assert response.get_json()["code"] == "SUBJECT_SCOPE_DENIED"
+
+
+@pytest.mark.parametrize("role", ["owner", "admin"])
+def test_subject_registry_route_owner_and_admin_can_read_both_domains(
+    subject_registry_client, role
+):
+    client, current = subject_registry_client
+    user_id = 4 if role == "owner" else 5
+    current["user"] = {"id": user_id, "role": role}
+
+    response = client.get("/api/settings/subjects")
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert {domain["id"] for domain in body["domains"]} == {"CTH", "BMP"}
+    assert {subject["domain_id"] for subject in body["subjects"]} == {"CTH", "BMP"}
+
+
+def test_subject_registry_route_requires_an_authenticated_account_session(
+    subject_registry_client,
+):
+    client, _current = subject_registry_client
+
+    response = client.get("/api/settings/subjects")
+
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTH_REQUIRED"
 
 
 def test_hk_cookie_apply_targets_hk_profile_and_rejects_cn(tmp_path, monkeypatch):

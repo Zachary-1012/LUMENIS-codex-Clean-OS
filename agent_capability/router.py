@@ -108,6 +108,42 @@ class ToolExecutionResult:
     execution_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
 
 
+@dataclass(frozen=True)
+class ToolActorContext:
+    """Actor claims supplied by a server-side caller.
+
+    This is deliberately separate from tool params, which are untrusted task
+    input and must never select an identity or product permission scope. Its
+    field shape alone is not proof of authentication or product authorization;
+    CapabilityRouter requires an injected server-owned actor_authorizer before
+    execution. That authorizer must bind the actor to the authenticated caller
+    and current account authorization matrix.
+    """
+    user_id: int
+    user_role: str
+    product_id: str
+    domain_id: str
+    permission_role: str
+
+    def valid(self) -> bool:
+        product = str(self.product_id or "").upper()
+        domain = str(self.domain_id or "").lower()
+        permission_role = str(self.permission_role or "").lower()
+        expected_domain = {"CTH": "cth", "BMP": "zbmp", "ZBMP": "zbmp", "SYSTEM": "system"}.get(product)
+        expected_roles = {
+            "CTH": {"cth_admin", "cth_analyst", "cth_operator"},
+            "BMP": {"zbmp_admin", "zbmp_analyst", "zbmp_operator"},
+            "ZBMP": {"zbmp_admin", "zbmp_analyst", "zbmp_operator"},
+            "SYSTEM": {"system_admin", "system_operator", "system_writer"},
+        }.get(product, set())
+        return (
+            isinstance(self.user_id, int) and self.user_id > 0
+            and str(self.user_role or "").lower() in {"owner", "admin", "user"}
+            and expected_domain == domain
+            and permission_role in expected_roles
+        )
+
+
 # ═══════════════════════════════════════════════════════════════
 # 首批核心 Tool 定义
 # ═══════════════════════════════════════════════════════════════
@@ -318,11 +354,16 @@ class CapabilityRouter:
     """
 
     def __init__(self, db_path: Optional[str] = None, enabled: bool = False,
-                 skill_memory=None):
+                 skill_memory=None,
+                 actor_authorizer: Optional[Callable[[ToolActorContext, ToolDefinition], bool]] = None):
         self.db_path = db_path
         self.enabled = enabled
         self._tools: Dict[str, ToolDefinition] = {}
         self.skill_memory = skill_memory
+        # No production call site currently supplies trusted actor binding.
+        # Keep execution disabled by default until an authenticated server
+        # integration provides and tests this authorization boundary.
+        self._actor_authorizer = actor_authorizer
         self._execution_history: List[ToolExecutionResult] = []
         self._register_core_tools()
 
@@ -443,9 +484,10 @@ class CapabilityRouter:
     # ── Tool 执行（复用 skill_execution_chain） ──────────────────
 
     def execute_tool(self, tool_id: str, params: Dict[str, Any],
-                     user_role: str = "user",
+                     user_role: Optional[str] = None,
                      agent_id: str = "agent_runtime",
-                     task_id: Optional[str] = None) -> ToolExecutionResult:
+                     task_id: Optional[str] = None,
+                     actor_context: Optional[ToolActorContext] = None) -> ToolExecutionResult:
         """执行 Tool，经过完整安全链路。
 
         链路：参数校验 → permission_gate → action_firewall → effect_fence → 执行 → evidence
@@ -470,16 +512,37 @@ class CapabilityRouter:
             result.error = f"param validation failed: {msg}"
             return result
 
-        # 2. 构建执行上下文（复用 skill_execution_chain 的 SkillExecutionContext）
+        if not isinstance(actor_context, ToolActorContext) or not actor_context.valid():
+            result.error = "trusted actor context required"
+            return result
+        if user_role and user_role != actor_context.user_role:
+            result.error = "caller role conflicts with trusted actor context"
+            return result
+        if self._actor_authorizer is None:
+            result.error = "trusted actor authorization validator not configured"
+            return result
         try:
-            from skill_execution_chain import (
+            authorized = self._actor_authorizer(actor_context, tool)
+        except Exception as exc:
+            result.error = f"trusted actor authorization failed: {exc}"
+            result.duration_ms = int((time.time() - start) * 1000)
+            return result
+        if authorized is not True:
+            result.error = "actor is not authorized for this product tool"
+            return result
+        user_role = actor_context.user_role
+
+        # 2. 构建执行上下文（复用 canonical Shared Skills execution owner）
+        try:
+            from lumenis.shared.agents.skills.execution import (
                 SkillExecutionContext, ActionType, check_permission,
                 action_firewall, effect_fence, execute_skill, build_evidence,
                 evaluate_execution, write_trace,
             )
-        except ImportError:
-            # fallback：直接执行 handler
-            return self._execute_direct(tool, params, result, start)
+        except Exception as exc:
+            result.error = f"canonical skill execution owner unavailable: {exc}"
+            result.duration_ms = int((time.time() - start) * 1000)
+            return result
 
         action_type = ActionType.WRITE if tool.permission_level == ToolPermissionLevel.WRITE else (
             ActionType.ANALYZE if tool.permission_level == ToolPermissionLevel.ANALYZE
@@ -488,9 +551,10 @@ class CapabilityRouter:
 
         ctx = SkillExecutionContext(
             skill_id=tool_id,
-            user_id=None,
-            domain="global",
-            product="SYSTEM",
+            user_id=actor_context.user_id,
+            permission_role=actor_context.permission_role,
+            domain=actor_context.domain_id,
+            product=actor_context.product_id,
             task=goal_from_params(tool_id, params),
             input_payload=params,
             action_type=action_type,
@@ -526,8 +590,14 @@ class CapabilityRouter:
         try:
             fence_result = effect_fence(ctx)
             result.effect_fence_result = fence_result
-        except Exception:
-            pass
+            if not fence_result.get("allowed", False):
+                result.error = f"effect fence denied: {fence_result.get('reason', 'unknown')}"
+                result.duration_ms = int((time.time() - start) * 1000)
+                return result
+        except Exception as e:
+            result.error = f"effect fence error: {e}"
+            result.duration_ms = int((time.time() - start) * 1000)
+            return result
 
         # 6. 执行
         try:

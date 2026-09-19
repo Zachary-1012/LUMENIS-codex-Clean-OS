@@ -41,7 +41,7 @@ from .skills import (
     get_skill_info, execute_skill_api, get_skill_executions, get_skills_status_light,
     register_validated_skill, activate_installed_mcp_skill,
 )
-from skill_package_runtime import preview_skill_source
+from lumenis.shared.agents.skills.package_runtime import preview_skill_source
 from mcp_discovery import call_mcp_stdio, discover_mcp_stdio
 from github_connector import GitHubConnector, GitHubConnectorError
 
@@ -648,7 +648,7 @@ def api_discover_mcp_source():
     """只读发现 MCP 能力；不调用工具、不注册、不授予权限。"""
     data = request.get_json(silent=True) or {}
     source = str(data.get("source") or "")
-    from skill_package_runtime import detect_source
+    from lumenis.shared.agents.skills.package_runtime import detect_source
     detected = detect_source(source)
     if detected.source_type != "mcp_stdio":
         return jsonify({"ok": False, "state": "BLOCKED", "error": "source must be an mcp+stdio source"}), 400
@@ -671,7 +671,7 @@ def api_call_mcp_tool():
     """Call one reviewed read-only MCP tool; never persist its result."""
     data = request.get_json(silent=True) or {}
     source = str(data.get("source") or "")
-    from skill_package_runtime import detect_source
+    from lumenis.shared.agents.skills.package_runtime import detect_source
     detected = detect_source(source)
     if detected.source_type != "mcp_stdio":
         return jsonify({
@@ -795,7 +795,9 @@ def api_execute_skill(skill_id):
         action_type=data.get("action_type", "ANALYZE"),
         user_id=user.get("id"),
         user_role=user.get("role", "user"),
-        product=data.get("product", "SYSTEM"),
+        # Product is a requested lens only; execute_skill_api rechecks it
+        # against the authenticated user's server-side authorization matrix.
+        product=data.get("product"),
     )
     status_code = 200 if result.get("success") else (404 if result.get("code") == "NOT_FOUND" else 400)
     return jsonify(result), status_code

@@ -13,7 +13,12 @@ from .connection import connect_sqlite
 
 
 class DatabaseRepository:
-    """Thin, explicit repository over the one canonical production database."""
+    """Repository over the canonical business database or a registered system store.
+
+    The default path is the only Production Truth database. An explicit path is
+    reserved for isolated tests, controlled migrations, and architecture-registered
+    SYSTEM operational stores; it must never create a second business-truth owner.
+    """
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path

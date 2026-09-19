@@ -498,7 +498,7 @@ def _mark_subject_and_sync(note_ids: Iterable[str], keyword: str) -> Dict[str, A
     # Canonical writes use the same active DB path, and are deliberately after
     # the notes transaction so a missing canonical table cannot lose raw notes.
     try:
-        from db_paths import main_db_path
+        from lumenis.shared.database import main_db_path
         from canonical_data import ensure_canonical_table, get_connection, note_to_canonical, persist_canonical
 
         db_path = main_db_path()
@@ -532,7 +532,7 @@ def _write_run_log(platform: str, keyword: str, *, started: str, finished: str,
 
 def _ensure_evidence_schema() -> None:
     """Initialize the existing Evidence table for the currently bound runtime DB."""
-    from db_paths import main_db_path
+    from lumenis.shared.database import main_db_path
 
     db_path = main_db_path()
     if db_path in _evidence_schema_paths:
@@ -542,18 +542,16 @@ def _ensure_evidence_schema() -> None:
             return
         # Reuse the existing schema and additive evidence-chain migration. Both
         # resolve through the same ZBC_DB_PATH-bound runtime database.
-        from app_evidence import init_db as init_app_evidence_db
-        from evidence_store import migrate_evidence_chain_fields
+        from lumenis.shared.evidence import store as evidence_store
 
-        init_app_evidence_db()
-        migrate_evidence_chain_fields(db_path)
+        evidence_store.init_evidence_store(db_path)
         _evidence_schema_paths.add(db_path)
 
 
 def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, started: str) -> int | None:
     try:
         _ensure_evidence_schema()
-        from evidence_store import record_collection_evidence
+        from lumenis.shared.evidence.store import record_collection_evidence
 
         status = result.get("status") or "COLLECT_ERROR"
         provenance = result.get("provenance") if isinstance(result.get("provenance"), dict) else {}

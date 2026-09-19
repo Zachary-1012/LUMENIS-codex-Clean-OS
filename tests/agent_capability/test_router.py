@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from agent_capability.router import (
     CapabilityRouter, ToolDefinition, ToolParam, ToolRiskLevel,
-    ToolPermissionLevel, ToolExecutionResult, CORE_TOOLS,
+    ToolPermissionLevel, ToolExecutionResult, ToolActorContext, CORE_TOOLS,
 )
 
 
@@ -141,7 +141,10 @@ class TestCapabilityRouter:
         assert "missing required param" in result.error
 
     def test_execute_tool_with_handler(self):
-        router = CapabilityRouter(enabled=True)
+        router = CapabilityRouter(
+            enabled=True,
+            actor_authorizer=lambda actor, tool: actor.user_id == 7 and tool.tool_id == "handler_test",
+        )
         # 注册一个带 handler 的 tool
         def mock_handler(query="", limit=10):
             return {"results": [{"id": 1, "title": query}]}
@@ -151,9 +154,73 @@ class TestCapabilityRouter:
             handler=mock_handler,
         )
         router.register_tool(tool)
-        result = router.execute_tool("handler_test", {"query": "hello"})
+        actor = ToolActorContext(7, "user", "CTH", "cth", "cth_analyst")
+        result = router.execute_tool("handler_test", {"query": "hello"}, actor_context=actor)
         assert result.success is True
         assert result.data["results"][0]["title"] == "hello"
+
+    def test_execution_fails_closed_without_trusted_actor(self):
+        router = CapabilityRouter(enabled=True)
+        called = []
+        router.register_tool(ToolDefinition(
+            tool_id="actor_required", name="actor required", description="test",
+            params=[], handler=lambda: called.append(True),
+        ))
+        result = router.execute_tool("actor_required", {})
+        assert result.success is False
+        assert result.error == "trusted actor context required"
+        assert called == []
+
+    def test_execution_fails_closed_without_server_actor_authorizer(self):
+        router = CapabilityRouter(enabled=True)
+        called = []
+        router.register_tool(ToolDefinition(
+            tool_id="actor_authorizer_required", name="actor authorization required",
+            description="test", params=[], handler=lambda: called.append(True),
+        ))
+        actor = ToolActorContext(7, "user", "CTH", "cth", "cth_analyst")
+
+        result = router.execute_tool("actor_authorizer_required", {}, actor_context=actor)
+
+        assert result.success is False
+        assert result.error == "trusted actor authorization validator not configured"
+        assert called == []
+
+    def test_execution_scope_comes_from_actor_not_tool_params(self, monkeypatch):
+        import lumenis.shared.agents.skills.execution as execution
+
+        captured = {}
+        monkeypatch.setattr(execution, "check_permission", lambda ctx, user_role="user": (
+            captured.setdefault("ctx", ctx) and {"allowed": True, "reason": "test"}
+        ))
+        monkeypatch.setattr(execution, "action_firewall", lambda ctx: {"allowed": True})
+        monkeypatch.setattr(execution, "effect_fence", lambda ctx: {"allowed": True})
+        monkeypatch.setattr(execution, "execute_skill", lambda ctx, handler=None: {
+            "success": True, "result": {"ok": True}
+        })
+        monkeypatch.setattr(execution, "build_evidence", lambda ctx: {"ok": True})
+        monkeypatch.setattr(execution, "evaluate_execution", lambda ctx: {"status": "ok"})
+        monkeypatch.setattr(execution, "write_trace", lambda *args, **kwargs: None)
+
+        router = CapabilityRouter(
+            enabled=True,
+            actor_authorizer=lambda actor, tool: actor.user_id == 9 and tool.tool_id == "scoped_tool",
+        )
+        router.register_tool(ToolDefinition(
+            tool_id="scoped_tool", name="scoped", description="test",
+            params=[], handler=lambda **kwargs: {"ok": True},
+        ))
+        actor = ToolActorContext(9, "user", "BMP", "zbmp", "zbmp_analyst")
+        result = router.execute_tool(
+            "scoped_tool",
+            {"domain": "cth", "product": "CTH", "user_id": 1},
+            actor_context=actor,
+        )
+        assert result.success is True
+        ctx = captured["ctx"]
+        assert (ctx.user_id, ctx.domain, ctx.product, ctx.permission_role) == (
+            9, "zbmp", "BMP", "zbmp_analyst"
+        )
 
     def test_execute_tool_disabled_router(self):
         router = CapabilityRouter(enabled=False)

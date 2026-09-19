@@ -39,7 +39,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
-from lumenis.shared.database import get_repository, main_db_path
+from lumenis.shared.database import main_db_path
+from lumenis.shared.database.repository import DatabaseRepository
 
 # ============================================================
 # 1) 数据库路径（与 database.py 保持一致的环境变量约定）
@@ -152,7 +153,7 @@ def _sanitize_input(text: str) -> str:
 def _get_conn():
     """获取 SQLite 连接（自动建表+迁移）。调用方应在短事务内使用。"""
     _ensure_dir()
-    conn = get_repository().connect(timeout=10, check_same_thread=False)
+    conn = DatabaseRepository(DB_PATH).connect(timeout=10, check_same_thread=False)
     try:
         conn.executescript(_SCHEMA)
         _migrate_schema(conn)

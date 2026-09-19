@@ -75,15 +75,16 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
     return data
 
 
-def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2'):
+def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
+                                    subject_scope='CTH', domain_id='cth', product_id='CTH'):
     """P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write）。
 
     硬红线：所有写入必须 try/except 吞掉并 log warning，绝不影响 notes 主入库。
     """
     try:
-        import evidence_chain as _ec
+        from lumenis.shared.evidence import EvidenceChain
         _raw = (str(note_data.get('title','')) + ' ' + str(note_data.get('content',''))).strip()
-        _chain = _ec.EvidenceChain(database.DB_PATH)
+        _chain = EvidenceChain(database.DB_PATH)
         _chain.capture_and_canonicalize(
             source_type='xhs_note',
             source_url=str(note_data.get('url','')),
@@ -101,16 +102,17 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2'):
                 'shares': note_data.get('shares',0),
             },
             publish_datetime=note_data.get('publish_datetime') or note_data.get('publish_date') or None,
-            subject_scope='CTH',
+            subject_scope=subject_scope,
             provider=provider,
-            domain_id='cth',
-            product_id='CTH',
+            domain_id=domain_id,
+            product_id=product_id,
         )
     except Exception as _e:
-        print(f"[bypass][evidence_chain][live] side-write skipped (non-fatal): {_e}")
+        print(f"[bypass][shared_evidence][live] side-write skipped (non-fatal): {_e}")
     try:
         import canonical_data as _cd
-        _rec = _cd.note_to_canonical(note_data, product_id='CTH')
+        _cd.ensure_canonical_table(database.DB_PATH)
+        _rec = _cd.note_to_canonical(note_data, product_id=product_id)
         _con = _cd.get_connection(database.DB_PATH)
         try:
             _cd.persist_canonical(_con, _rec)
@@ -121,7 +123,8 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2'):
         print(f"[bypass][canonical_data][live] side-write skipped (non-fatal): {_e}")
 
 
-def persist_live(data: dict, subject_hit: Callable[[str], bool]) -> dict:
+def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
+                 subject_scope='CTH', domain_id='cth', product_id='CTH') -> dict:
     if data.get('code') in ('account_paused', 'region_paused', 'policy_unavailable',
                             'policy_error', 'cdp_port_not_allowed'):
         return {'ok': False, 'status': 'policy_blocked', 'accepted': 0,
@@ -145,7 +148,10 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool]) -> dict:
         n['comments_collected'] = int(n.get('comments_collected',0) or 0)
         database.insert_note(n)
         # P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write，失败不影响主入库）
-        _bypass_evidence_canonical_live(n, provider='xhs-live-v2')
+        _bypass_evidence_canonical_live(
+            n, provider='xhs-live-v2', subject_scope=subject_scope,
+            domain_id=domain_id, product_id=product_id,
+        )
         database.save_collector_quality(n.get('note_id'), {
             **q, 'detail_status': n.get('detail_status',''),
             'comments_collected': n.get('comments_collected',0), 'collector_version':'xhs-live-v2'

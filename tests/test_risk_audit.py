@@ -117,7 +117,7 @@ class TestCriticalNotDowngraded:
 
     def test_daily_report_risk_index_includes_critical(self):
         """calculate_risk_index 必须将 critical 纳入高风险得分（Phase 6 修复前 critical 贡献为 0）。"""
-        from daily_report import calculate_risk_index
+        from lumenis.shared.reporting.daily import calculate_risk_index
         critical_notes = [
             {"sentiment": "negative", "risk_level": "critical", "likes": 100, "comments": 50,
              "title": "test", "content": "test"},

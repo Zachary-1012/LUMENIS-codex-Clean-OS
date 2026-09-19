@@ -272,7 +272,7 @@ def runtime_subjects():
 # ===========================================================================
 def _build_cth01() -> Dict[str, Any]:
     import database as db
-    import daily_report
+    from lumenis.shared.reporting import daily as daily_reporting
 
     blocked: List[Dict[str, str]] = []
     truth: Dict[str, Any] = {}
@@ -281,7 +281,7 @@ def _build_cth01() -> Dict[str, Any]:
 
     stats = _safe(db.get_stats, default={})
     stats_err = _is_err(stats)
-    canonical = _safe(daily_report.generate_today_summary, today_str(), default={})
+    canonical = _safe(daily_reporting.generate_today_summary, today_str(), default={})
     canon_err = _is_err(canonical)
     risk_notes = _safe(db.get_high_risk_notes, 6, default=[])
     events = _safe(db.get_events, 6, default=[])
@@ -322,7 +322,7 @@ def _build_cth01() -> Dict[str, Any]:
         "risk_count": canonical.get("risk_count"),
         "events_count": canonical.get("events_count"),
         "collection_health": canonical.get("collection_health"),
-        "lineage": "daily_report.generate_today_summary / FUNC-RISK-01/02",
+        "lineage": "lumenis.shared.reporting.daily.generate_today_summary / FUNC-RISK-01/02",
     }
 
     # ---- 主区：真实 14 日负面/高风险趋势（替换无数据源的客流销售趋势） ----
@@ -352,7 +352,7 @@ def _build_cth01() -> Dict[str, Any]:
     events_sec = section("events", STATE_READY if ev_items else STATE_EMPTY,
                          title="重点事件", more=True, items=ev_items)
 
-    # ---- 证据链：真实 evidence_store ----
+    # ---- 证据链：Shared Evidence 的真实存储 ----
     ev_rail = []
     for r in (evid if isinstance(evid, list) else [])[:2]:
         ev_rail.append({
@@ -519,7 +519,7 @@ def _build_ai01() -> Dict[str, Any]:
         metric("ai.anchored_evidence", "今日已锚定证据",
                value=None if ev_err or anchored is None else anchored,
                state=STATE_READY if not ev_err and anchored is not None else STATE_OFFLINE,
-               icon="link", source="evidence_store.get_stats().total", fresh="live"),
+               icon="link", source="lumenis.shared.evidence.store.get_stats().total", fresh="live"),
         metric("ai.traceability", "AI 结论可追溯率", value=trace_val, unit="%",
                decimals=1, state=trace_state, icon="evaluation", note=trace_note,
                source="Agent Groups Skill Execution（样本不足）"),
@@ -527,7 +527,7 @@ def _build_ai01() -> Dict[str, Any]:
                unit=f"/{len(provider_states)}", state=prov_kpi_state, icon="ops",
                source="ai_governance.get_governance_status", fresh="m5"),
         metric("ai.review_queue", "待人工复核", value=review, state=review_state,
-               icon="risk", source="evidence_store.by_result(pending/review/shadow)"),
+               icon="risk", source="lumenis.shared.evidence.store.by_result(pending/review/shadow)"),
     ]
     truth["evidence_stats"] = None if ev_err else {
         "total": ev_stats.get("total"),
@@ -732,7 +732,7 @@ def cth_platform_collection_surface():
     collector.
     """
     try:
-        from platform_adapters.secondary_collection import get_collection_surface
+        from lumenis.system.collector.adapters.secondary_collection import get_collection_surface
         return jsonify(get_collection_surface())
     except Exception as exc:  # pragma: no cover - defensive runtime boundary
         return jsonify({
@@ -774,7 +774,7 @@ def cth_platform_collection_search():
     keyword = body.get("keyword")
     max_results = body.get("max_results", 20)
     try:
-        from platform_adapters.secondary_collection import collect_search
+        from lumenis.system.collector.adapters.secondary_collection import collect_search
         result = collect_search(platform, keyword, max_results=max_results, operator=operator)
         http_status = 409 if result.get("status") in {"BUSY", "RATE_LIMITED"} else 200
         return jsonify(result), http_status

@@ -19,7 +19,8 @@ import sqlite3
 from canonical_metrics import engagement_stats as _canon_es, engagement_of as _canon_eo
 from typing import Optional
 from pathlib import Path
-from lumenis.shared.database import get_repository, main_db_path
+from lumenis.shared.database import main_db_path
+from lumenis.shared.database.repository import DatabaseRepository
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ def _platform_weighted_interactions(note, platform=""):
 
 
 def _conn():
-    return get_repository().connect()
+    return DatabaseRepository(str(DB_PATH)).connect()
 
 
 def calculate_attribution(author_id: str, brand_name: str = "广州太古汇") -> dict:

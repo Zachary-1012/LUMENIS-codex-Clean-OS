@@ -523,7 +523,7 @@ def get_channel_status_detailed():
     )
 
     return {
-        "module": "ai_channel",
+        "module": "lumenis.system.ai_gateway.channel",
         "track_b_status": "ACTIVE",
         "global_breaker": global_snap,
         "providers": snapshots,

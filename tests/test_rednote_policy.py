@@ -13,7 +13,7 @@ def test_default_policy_matches_signed_off_strategy(monkeypatch):
               "REDNOTE_KIND_TOPIC", "REDNOTE_KIND_PUBLIC_OPINION",
               "REDNOTE_KIND_EVENT", "REDNOTE_PRIMARY_REGION", "REDNOTE_CN_PAUSED"):
         monkeypatch.delenv(k, raising=False)
-    from platform_adapters.rednote_policy import effective_policy
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy
     p = effective_policy()
     assert p.primary_region == "intl" and p.cn_paused is True
     assert p.to_dict()["collection_account"] == "XHS_RETINAUT"
@@ -27,7 +27,7 @@ def test_default_policy_matches_signed_off_strategy(monkeypatch):
 
 
 def test_unknown_kind_denied_by_default(monkeypatch):
-    from platform_adapters.rednote_policy import effective_policy
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy
     assert effective_policy().can_run_kind("something_else") is False
 
 
@@ -35,7 +35,7 @@ def test_env_overrides_are_explicit(monkeypatch):
     monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
     monkeypatch.setenv("REDNOTE_DAILY_LOGIN_KEEPALIVE", "true")
     monkeypatch.setenv("REDNOTE_KIND_EVENT", "true")
-    from platform_adapters.rednote_policy import effective_policy
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy
     p = effective_policy()
     assert p.auto_run_enabled and p.daily_login_keepalive and p.can_run_kind("event")
 
@@ -44,14 +44,14 @@ def test_mainland_pause_cannot_be_unlocked_by_runtime_env(monkeypatch):
     monkeypatch.setenv("REDNOTE_MAINLAND_ENABLE", "true")
     monkeypatch.setenv("REDNOTE_CN_PAUSED", "false")
     monkeypatch.setenv("REDNOTE_PRIMARY_REGION", "cn")
-    from platform_adapters.rednote_policy import effective_policy
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy
     p = effective_policy()
     assert p.cn_paused is True
     assert p.to_dict()["mainland_opt_in"] is False
 
 
 def test_human_cadence_marked_not_verified(monkeypatch):
-    from platform_adapters.rednote_policy import effective_policy, HUMAN_CADENCE_PLACEHOLDER
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy, HUMAN_CADENCE_PLACEHOLDER
     # 真人频率在最新实测前必须显式标 NOT_VERIFIED，不得伪装实测值
     assert effective_policy().human_cadence["status"] == "NOT_VERIFIED"
     assert HUMAN_CADENCE_PLACEHOLDER["daily_login_keepalive"] == "once_per_day"

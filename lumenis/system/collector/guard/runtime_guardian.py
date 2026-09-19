@@ -9,7 +9,7 @@ import json
 import os
 import time
 
-from core.repository_registry import get_data_dir
+from lumenis.shared.database.registry import get_data_dir
 from .dlq_replay import DeadLetterQueue
 from .queue_worker import QueueWorker
 

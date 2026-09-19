@@ -21,7 +21,7 @@ import os
 import threading
 import uuid
 
-from core.repository_registry import get_data_dir
+from lumenis.shared.database.registry import get_data_dir
 
 DEFAULT_DLQ_PATH = os.path.join(get_data_dir(), "collector_dlq.jsonl")
 

@@ -24,7 +24,9 @@ print("=" * 60)
 
 # ===== 1. BEEP 执行协议 =====
 print("\n[1] BEEPExecutor 有限重试 + 证据链")
-from browser_runtime.contract import BEEPExecutor, BEEPTrace, FailureClass, BrowserContract, MAX_RETRY
+from lumenis.system.browser.runtime.contract import (
+    BEEPExecutor, BEEPTrace, FailureClass, BrowserContract, MAX_RETRY,
+)
 
 beep = BEEPExecutor(max_retry=3)
 
@@ -83,8 +85,8 @@ check("unknown→UNKNOWN", cf("something weird") == FailureClass.UNKNOWN)
 
 # ===== 3. 自适应限速器 =====
 print("\n[3] AdaptiveRateLimiter 指数退避 + 冷却恢复")
-from collector_guard.rate_limiter import AdaptiveRateLimiter
-from collector_guard.state import CollectState
+from lumenis.system.collector.guard.rate_limiter import AdaptiveRateLimiter
+from lumenis.system.collector.guard.state import CollectState
 
 rl = AdaptiveRateLimiter(base_interval=10, min_interval=5, fail_threshold=3, cooldown_seconds=60, enabled=True)
 check("初始 HEALTHY", rl.state == CollectState.HEALTHY)
@@ -134,14 +136,14 @@ check("NETWORK_ERROR 不停止（可退避重试）", CollectState.NETWORK_ERROR
 
 # ===== 5. CollectorGuard 显式风控码映射 =====
 print("\n[5] CollectorGuard 显式风控码映射")
-from collector_guard.guard import _EXPLICIT
+from lumenis.system.collector.guard.guard import _EXPLICIT
 check("IP_RISK_OR_300012→COOLDOWN", _EXPLICIT.get("IP_RISK_OR_300012")[0] == CollectState.COOLDOWN)
 check("NEED_VERIFY→NEED_VERIFY", _EXPLICIT.get("NEED_VERIFY")[0] == CollectState.NEED_VERIFY)
 check("AUTH_REQUIRED→AUTH_REQUIRED", _EXPLICIT.get("AUTH_REQUIRED")[0] == CollectState.AUTH_REQUIRED)
 
 # ===== 6. BrowserState 状态机序列 =====
 print("\n[6] BrowserState 成功路径序列")
-from browser_runtime.contract import BrowserState
+from lumenis.system.browser.runtime.contract import BrowserState
 seq = BrowserContract.state_sequence()
 check("状态序列含 INIT", "INIT" in seq)
 check("状态序列含 SESSION_VALID", "SESSION_VALID" in seq)
@@ -151,7 +153,7 @@ check("状态序列含 CLASSIFY_FAILURE", hasattr(BrowserState, "CLASSIFY_FAILUR
 
 # ===== 7. 状态映射三类分清 =====
 print("\n[7] state_map 三类分清（A Auth / B Verify / C Risk）")
-from platform_adapters.scheduling.state_map import (
+from lumenis.system.collector.adapters.scheduling.state_map import (
     CS, incident_class, CLASS_A_AUTH, CLASS_B_VERIFY, CLASS_C_RISK,
     is_stop_request, needs_human, is_ok, to_canonical
 )

@@ -8,7 +8,8 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-import lumenis.system.collector.guard_integration as cgi
+# This retained integration adapter delegates to the canonical guard owner.
+import collector_guard_integration as cgi
 
 
 class TestCollectorGuardIntegration:
@@ -75,7 +76,7 @@ class TestCollectorGuardIntegration:
     def test_status_api_importable(self):
         """app.py 中的 API 路由可导入（不实际启动 Flask）。"""
         # 验证集成层可被 app.py 的路由函数调用
-        from lumenis.system.collector.guard_integration import get_all_status, is_enabled
+        from collector_guard_integration import get_all_status, is_enabled
         status = get_all_status()
         assert isinstance(status, dict)
         assert isinstance(is_enabled(), bool)

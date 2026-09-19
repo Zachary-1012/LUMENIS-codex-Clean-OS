@@ -125,7 +125,7 @@ def home_url_for(account=None):
 
 def collection_policy_gate(account=None, region='intl'):
     """统一生产采集门禁；只判定，不读取 Cookie 内容、不连平台、不启动浏览器。"""
-    from platform_adapters import rednote_policy
+    from lumenis.system.collector.adapters import rednote_policy
     requested = account
     if requested in (None, '', 'default'):
         requested = rednote_policy.DEFAULT_COLLECTION_ACCOUNT
@@ -778,9 +778,9 @@ def select_account(account_name: str):
 def _record_note_lineage(note_data, provider="xhs_cookie_bridge"):
     """写 Evidence/Canonical 旁路；任何异常都不能覆盖或回滚 notes 主记录。"""
     try:
-        import evidence_chain as _evidence_chain
+        from lumenis.shared.evidence import capture_note_lineage
 
-        result = _evidence_chain.capture_note_lineage(
+        result = capture_note_lineage(
             note_data,
             db_path=db.DB_PATH,
             provider=provider,
@@ -971,7 +971,7 @@ def _shadow_record_result(task_state, items_found, blocked='', run_type='auto'):
     """v5.8.6 动态调度影子闭环：把本次真实采集状态回写统一规划器。
     仅演进影子状态/写审计，不门控、不影响采集，任何异常 fail-open；AI 不参与此决策。"""
     try:
-        from platform_adapters.scheduling import get_planner
+        from lumenis.system.collector.adapters.scheduling import get_planner
         _map = {'EMPTY': 'NO_NEW_DATA', 'PARTIAL_BLOCKED': 'RISK_WARNING', 'SUCCESS': 'SUCCESS'}
         raw = _map.get(task_state, task_state)
         planner = get_planner()

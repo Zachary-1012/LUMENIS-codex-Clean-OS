@@ -61,10 +61,10 @@ def test_atom_normalizes_entry_identity_and_timestamp():
 
 
 def test_web_rss_normalizes_existing_public_reader_and_provenance(monkeypatch):
-    import web_monitor_v570
+    import web_discovery
 
     monkeypatch.setattr(
-        web_monitor_v570,
+        web_discovery,
         "fetch_google_news_rss",
         lambda query, max_results=20: {
             "ok": True,

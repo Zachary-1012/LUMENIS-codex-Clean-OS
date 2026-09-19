@@ -95,7 +95,7 @@ def _make_test_db(path):
 
 def test_05_contribution_adapter_generates_records(tmp_path):
     """evidence_exporter.build_export 从只读库生成贡献记录（notes/events/reports）。"""
-    from platform_adapters import evidence_exporter as EE
+    from lumenis.system.collector.adapters import evidence_exporter as EE
     db = tmp_path / "t.db"
     _make_test_db(str(db))
     conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
@@ -125,7 +125,7 @@ def test_05_lumenis_adapter_readonly_snapshot():
 # ---------------------------------------------------------------------------
 def test_06_outbox_write_success(tmp_path):
     """export_evidence 将 JSONL + manifest + watermark 写入 outbox 目录。"""
-    from platform_adapters import evidence_exporter as EE
+    from lumenis.system.collector.adapters import evidence_exporter as EE
     db = tmp_path / "t.db"
     _make_test_db(str(db))
     outbox = tmp_path / "outbox"
@@ -149,7 +149,7 @@ def test_07_outbox_failure_isolated_from_production(tmp_path):
     模拟：传入不存在的 db 路径，export_evidence 抛异常；
     验证调用方捕获后生产操作（如 db 查询）仍可正常执行。
     """
-    from platform_adapters import evidence_exporter as EE
+    from lumenis.system.collector.adapters import evidence_exporter as EE
     outbox = tmp_path / "outbox"
     production_ok = False
     try:
@@ -170,7 +170,7 @@ def test_07_outbox_failure_isolated_from_production(tmp_path):
 
 def test_07_evidence_exporter_source_db_readonly(tmp_path):
     """证据导出器以 mode=ro 打开源库，物理上不可能写生产库。"""
-    from platform_adapters import evidence_exporter as EE
+    from lumenis.system.collector.adapters import evidence_exporter as EE
     db = tmp_path / "t.db"
     _make_test_db(str(db))
     before = sqlite3.connect(str(db)).execute("SELECT COUNT(*) FROM notes").fetchone()[0]
@@ -187,7 +187,7 @@ def test_09_osai_unavailable_local_contribution_pending(tmp_path):
     """OSAI 不可用时（无网络/无 OSAI endpoint），evidence_exporter 仍将
     贡献记录落盘到本地 outbox 目录，即「待发送」状态。
     evidence_exporter 设计为零网络、纯本地文件导出，天然满足此约束。"""
-    from platform_adapters import evidence_exporter as EE
+    from lumenis.system.collector.adapters import evidence_exporter as EE
     db = tmp_path / "t.db"
     _make_test_db(str(db))
     outbox = tmp_path / "outbox"
@@ -212,14 +212,14 @@ def test_10_network_recovery_retry_mechanism():
     因此不存在「网络断开后 retry」机制。retry 属于 OSAI 侧（Receiver/Sync）
     职责，不在本仓范围内。本仓保证：导出幂等（watermark），重复运行不会
     重复导出已发送记录。"""
-    from platform_adapters import evidence_exporter as EE
+    from lumenis.system.collector.adapters import evidence_exporter as EE
     # 验证幂等性：二次导出为空增量（即 retry 不会重复发送）
     pytest.skip("TEST-10 BLOCKED: evidence_exporter 零网络，retry 属 OSAI 侧职责；本仓仅保证幂等")
 
 
 def test_10_export_idempotent_watermark(tmp_path):
     """幂等性验证：watermark 确保重复导出不产生重复记录（retry 安全基础）。"""
-    from platform_adapters import evidence_exporter as EE
+    from lumenis.system.collector.adapters import evidence_exporter as EE
     db = tmp_path / "t.db"
     _make_test_db(str(db))
     outbox = tmp_path / "outbox"
@@ -234,14 +234,14 @@ def test_10_export_idempotent_watermark(tmp_path):
 # ---------------------------------------------------------------------------
 def test_20_osai_not_in_production_imports():
     """源码级审计：app.py / collector.py / database.py / intelligence.py /
-    daily_report.py / event_graph.py 等生产核心模块不得 import OSAI 相关模块
-    （contracts.lumenis_adapter / platform_adapters.evidence_exporter /
+    Shared Reporting / event_graph.py 等生产核心模块不得 import OSAI 相关模块
+    （contracts.lumenis_adapter / lumenis.system.collector.adapters.evidence_exporter /
     lumenis_skill_adapter）。"""
     osai_modules = (
         'contracts.lumenis_adapter',
         'contracts import lumenis_adapter',
-        'platform_adapters.evidence_exporter',
-        'platform_adapters import evidence_exporter',
+        'lumenis.system.collector.adapters.evidence_exporter',
+        'lumenis.system.collector.adapters import evidence_exporter',
         'lumenis_skill_adapter',
         'import lumenis_skill_adapter',
     )
@@ -250,10 +250,10 @@ def test_20_osai_not_in_production_imports():
         os.path.join(_REPO_ROOT, 'collector.py'),
         os.path.join(_REPO_ROOT, 'database.py'),
         os.path.join(_REPO_ROOT, 'intelligence.py'),
-        os.path.join(_REPO_ROOT, 'daily_report.py'),
+        os.path.join(_REPO_ROOT, 'lumenis', 'shared', 'reporting', 'daily.py'),
         os.path.join(_REPO_ROOT, 'event_graph.py'),
         os.path.join(_REPO_ROOT, 'risk_engine.py'),
-        os.path.join(_REPO_ROOT, 'report_engine.py'),
+        os.path.join(_REPO_ROOT, 'lumenis', 'shared', 'reporting', 'report_generator.py'),
         os.path.join(_REPO_ROOT, 'weekly_events.py'),
         os.path.join(_REPO_ROOT, 'subject_rules.py'),
     ]
@@ -279,7 +279,7 @@ def test_20_osai_modules_not_in_app_import_chain():
     2. get_skill_adapter() 实例化不阻塞、不调用 OSAI
     3. OSAI 不可用时 adapter.available=False，不抛异常
     4. 生产核心模块（app/collector/database/intelligence/daily_report/event_graph）
-       源码中不 import contracts.lumenis_adapter / platform_adapters.evidence_exporter
+       源码中不 import contracts.lumenis_adapter / lumenis.system.collector.adapters.evidence_exporter
     """
     import subprocess
     # 1. 无 OSAI 环境变量时 app 正常启动
@@ -309,11 +309,14 @@ def test_20_osai_modules_not_in_app_import_chain():
     # 4. 生产核心模块源码级 import 审计
     osai_imports = (
         'contracts.lumenis_adapter', 'contracts import lumenis_adapter',
-        'platform_adapters.evidence_exporter', 'platform_adapters import evidence_exporter',
+        'lumenis.system.collector.adapters.evidence_exporter',
+        'lumenis.system.collector.adapters import evidence_exporter',
     )
     core_files = ['app.py', 'collector.py', 'database.py', 'intelligence.py',
-                  'daily_report.py', 'event_graph.py', 'risk_engine.py',
-                  'report_engine.py', 'weekly_events.py', 'subject_rules.py']
+                  os.path.join('lumenis', 'shared', 'reporting', 'daily.py'),
+                  'event_graph.py', 'risk_engine.py',
+                  os.path.join('lumenis', 'shared', 'reporting', 'report_generator.py'),
+                  'weekly_events.py', 'subject_rules.py']
     violations = []
     for fname in core_files:
         fpath = os.path.join(_REPO_ROOT, fname)
@@ -344,4 +347,4 @@ def test_20_app_starts_with_all_osai_modules_broken(monkeypatch, tmp_path):
     assert resp.status_code == 200
     # 确认 app 导入链未加载 OSAI 贡献模块
     assert 'contracts.lumenis_adapter' not in sys.modules
-    assert 'platform_adapters.evidence_exporter' not in sys.modules
+    assert 'lumenis.system.collector.adapters.evidence_exporter' not in sys.modules

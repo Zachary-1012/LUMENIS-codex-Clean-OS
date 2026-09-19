@@ -44,7 +44,7 @@ def shared_reporting_preview():
         rep = ReportGenerator(brand_mode=brand_mode).generate(
             period, start_date=sd or None, end_date=ed or None)
         return jsonify({'ok': True, 'report': rep,
-                        'note': 'Shared Reporting canonical preview；只读预览不产生导出副作用'})
+                        'note': 'Shared Reporting canonical preview；只读预览，不替代既有报告 Owner，不产生导出副作用'})
     except ValueError as ve:
         return jsonify({'ok': False, 'error': str(ve)}), 400
     except Exception:

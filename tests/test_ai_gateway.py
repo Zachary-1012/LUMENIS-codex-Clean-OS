@@ -27,11 +27,9 @@ def test_chat_uses_fixed_prefix_and_records_budget(tmp_path, monkeypatch):
         captured["system"] = system
         return "这是摘要结果", "zhipu"
 
-    # 注入 intelligence 模块（chat 内部 from intelligence import _chat）
-    import types
-    fake_intel = types.ModuleType("intelligence")
-    fake_intel._chat = fake_chat
-    monkeypatch.setitem(sys.modules, "intelligence", fake_intel)
+    # Patch the current canonical AI Gateway owner used by scripts.ai_gateway.
+    from lumenis.system.ai_gateway import core as ai_core
+    monkeypatch.setattr(ai_core, "_chat", fake_chat)
 
     content, provider, meta = chat("summarizer", "请摘要这段内容", model="glm-4.7")
     assert content == "这是摘要结果" and provider == "zhipu"
@@ -47,10 +45,8 @@ def test_chat_uses_fixed_prefix_and_records_budget(tmp_path, monkeypatch):
 def test_chat_unknown_role_raises_keyerror(monkeypatch):
     import pytest
     import scripts.ai_gateway as g
-    import types
-    fake_intel = types.ModuleType("intelligence")
-    fake_intel._chat = lambda *a, **k: ("x", "zhipu")
-    monkeypatch.setitem(sys.modules, "intelligence", fake_intel)
+    from lumenis.system.ai_gateway import core as ai_core
+    monkeypatch.setattr(ai_core, "_chat", lambda *a, **k: ("x", "zhipu"))
     with pytest.raises(KeyError):
         chat("no_such_role", "hi")
 
@@ -63,7 +59,6 @@ def test_chat_json_repairs_broken_output(tmp_path, monkeypatch):
     monkeypatch.setattr(ab, "QUOTA", str(tmp_path / "quota.json"))
     json.dump({"provider": "zhipu", "resources": []},
               open(str(tmp_path / "quota.json"), "w", encoding="utf-8"))
-    import types
     captured = {}
 
     def fake_chat(system, user, temperature=0.1, max_tokens=1200, model=None):
@@ -73,9 +68,8 @@ def test_chat_json_repairs_broken_output(tmp_path, monkeypatch):
             return "`json\n{'name': 'Alice', 'age': 30,}\n`", "zhipu"
         return '{"name": "Alice", "age": 30}', "zhipu"
 
-    fake_intel = types.ModuleType("intelligence")
-    fake_intel._chat = fake_chat
-    monkeypatch.setitem(sys.modules, "intelligence", fake_intel)
+    from lumenis.system.ai_gateway import core as ai_core
+    monkeypatch.setattr(ai_core, "_chat", fake_chat)
 
     data, provider, meta = g.chat_json("summarizer", "返回用户 JSON", max_retries=0)
     assert data == {"name": "Alice", "age": 30}
@@ -93,7 +87,6 @@ def test_chat_json_retries_on_failure(tmp_path, monkeypatch):
     monkeypatch.setattr(ab, "QUOTA", str(tmp_path / "q.json"))
     json.dump({"provider": "zhipu", "resources": []},
               open(str(tmp_path / "q.json"), "w", encoding="utf-8"))
-    import types
 
     def fake_chat(system, user, temperature=0.1, max_tokens=1200, model=None):
         # 第一次坏，第二次好
@@ -101,9 +94,8 @@ def test_chat_json_retries_on_failure(tmp_path, monkeypatch):
             return '{"name": "Bob", "age": 25}', "zhipu"
         return "完全不是JSON", "zhipu"
 
-    fake_intel = types.ModuleType("intelligence")
-    fake_intel._chat = fake_chat
-    monkeypatch.setitem(sys.modules, "intelligence", fake_intel)
+    from lumenis.system.ai_gateway import core as ai_core
+    monkeypatch.setattr(ai_core, "_chat", fake_chat)
 
     data, provider, meta = g.chat_json("summarizer", "返回用户 JSON", max_retries=1)
     assert data == {"name": "Bob", "age": 25}

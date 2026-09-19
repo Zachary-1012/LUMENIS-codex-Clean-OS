@@ -1,52 +1,63 @@
-"""测试数据闭环引擎"""
-import os as _os, sys as _sys
-_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
-from data_feedback_loop import data_feedback_loop
+"""Isolated tests for the canonical shared-learning feedback loop."""
+import json
+import sqlite3
+from datetime import datetime, timedelta
+from pathlib import Path
 
-print("=== 测试数据闭环引擎 ===")
-print()
+import pytest
 
-# 1. 分析报告异常
-print("1. 分析报告异常:")
-anomalies = data_feedback_loop.analyze_report_anomalies()
-print(f"   发现异常数: {len(anomalies)}")
-for i, anomaly in enumerate(anomalies):
-    print(f"   [{i+1}] {anomaly['type']} ({anomaly['severity']}): {anomaly['description']}")
-    print(f"       建议: {anomaly['suggestion']}")
-print()
+from lumenis.shared.learning.feedback import DataFeedbackLoop
 
-# 2. 生成策略建议
-print("2. 生成策略建议:")
-suggestions = data_feedback_loop.generate_strategy_suggestions(anomalies)
-print(f"   生成建议数: {len(suggestions)}")
-for i, suggestion in enumerate(suggestions):
-    print(f"   [{i+1}] 优先级: {suggestion['priority']}")
-    print(f"       行动项: {len(suggestion['action_items'])}个")
-    for j, action in enumerate(suggestion['action_items'][:3]):
-        print(f"         - {action}")
-print()
 
-# 3. 运行完整反馈周期
-print("3. 运行完整反馈周期:")
-result = data_feedback_loop.run_feedback_cycle()
-print(f"   状态: {result['status']}")
-print(f"   异常数: {len(result.get('anomalies', []))}")
-print(f"   建议数: {len(result.get('suggestions', []))}")
-print(f"   已应用: {result.get('applied_count', 0)}")
-print()
+@pytest.fixture
+def feedback_loop(tmp_path, monkeypatch):
+    """Use temporary database and output files; never read or write product data."""
+    monkeypatch.setattr(DataFeedbackLoop, "_load_feedback", lambda self: [])
+    loop = DataFeedbackLoop()
+    loop.db_path = str(tmp_path / "feedback-test.sqlite")
+    loop.feedback_file = str(tmp_path / "feedback.json")
+    loop.suggestions_file = str(tmp_path / "suggestions.json")
 
-# 4. 获取统计信息
-print("4. 统计信息:")
-stats = data_feedback_loop.get_stats()
-for key, value in stats.items():
-    print(f"   {key}: {value}")
-print()
+    today = datetime.now()
+    yesterday = today - timedelta(days=1)
+    loop.fixture_date = today.strftime("%Y-%m-%d")
+    with sqlite3.connect(loop.db_path) as connection:
+        connection.execute(
+            "CREATE TABLE notes (note_id TEXT, sentiment TEXT, collected_at TEXT, brand TEXT)"
+        )
+        connection.execute(
+            "INSERT INTO notes VALUES (?, ?, ?, ?)",
+            ("previous-day", "negative", yesterday.strftime("%Y-%m-%d 10:00:00"), "太古汇"),
+        )
+        for note_id in ("a", "b", "c", "d", "d", "d", "d"):
+            connection.execute(
+                "INSERT INTO notes VALUES (?, ?, ?, ?)",
+                (note_id, "negative", today.strftime("%Y-%m-%d 12:00:00"), "太古汇"),
+            )
+    return loop
 
-# 5. 获取待处理反馈
-print("5. 待处理反馈:")
-pending = data_feedback_loop.get_pending_feedback()
-print(f"   待处理数: {len(pending)}")
-for i, f in enumerate(pending[-3:]):
-    print(f"   [{i+1}] {f['timestamp']} - {f['anomaly_type']} - {f['status']}")
 
-print("\n测试完成")
+def test_feedback_cycle_analyzes_generates_persists_and_reports(feedback_loop):
+    today = feedback_loop.fixture_date
+
+    anomalies = feedback_loop.analyze_report_anomalies(today)
+    anomaly_types = {item["type"] for item in anomalies}
+    assert {"negative_surge", "brand_complaint_cluster", "sentiment_imbalance",
+            "high_duplicate_rate"}.issubset(anomaly_types)
+
+    suggestions = feedback_loop.generate_strategy_suggestions(anomalies)
+    assert len(suggestions) == len(anomalies)
+    assert all(item["action_items"] for item in suggestions)
+
+    result = feedback_loop.run_feedback_cycle(today)
+    assert result["status"] == "feedback_applied"
+    assert result["applied_count"] == len(result["suggestions"])
+    assert result["applied_count"] > 0
+
+    stats = feedback_loop.get_stats()
+    pending = feedback_loop.get_pending_feedback()
+    assert stats["total_feedback"] == result["applied_count"]
+    assert stats["pending"] == len(pending) == result["applied_count"]
+    assert stats["last_feedback"]
+    assert len(feedback_loop.get_feedback_history(limit=20)) == result["applied_count"]
+    assert json.loads(Path(feedback_loop.suggestions_file).read_text(encoding="utf-8"))

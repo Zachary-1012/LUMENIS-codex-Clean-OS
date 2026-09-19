@@ -50,9 +50,13 @@ class TestAdPermissionGate:
         assert gate.has_permission(AdPermissionLevel.PREVIEW) is False
         assert gate.has_permission(AdPermissionLevel.EXECUTE) is False
 
-    def test_execute_requires_canonical_human_approval(self):
+    def test_execute_requires_canonical_human_approval(self, monkeypatch):
+        monkeypatch.delenv("AD_PERMISSION_LEVEL", raising=False)
+        monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        from lumenis.system.security import PermissionGate, PermissionLevel
+        from lumenis.system.security import PermissionGate, PermissionLevel, permission as permission_module
+
+        monkeypatch.setattr(permission_module, "_TESTING_BYPASS_ENABLED", False)
 
         system_gate = PermissionGate()
         system_gate.grant_permission(PermissionLevel.PUSH)

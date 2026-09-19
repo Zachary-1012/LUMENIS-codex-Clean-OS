@@ -3,8 +3,8 @@
 import threading
 import time
 
-from collector_guard.task_queue import TaskQueue
-from collector_guard.queue_worker import QueueWorker, collect_processor_factory
+from lumenis.system.collector.guard.task_queue import TaskQueue
+from lumenis.system.collector.guard.queue_worker import QueueWorker, collect_processor_factory
 
 
 def _mk_queue(tmp_path):

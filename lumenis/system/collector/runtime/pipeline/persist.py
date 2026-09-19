@@ -3,33 +3,23 @@
 将处理后的笔记写入数据库
 去重（note_id唯一）、更新已有笔记
 """
-import os
 import sqlite3
 from typing import Dict, List, Optional
 from datetime import datetime
+
+from lumenis.shared.database import DatabaseRepository
 
 
 class NotePersister:
     """笔记持久化器"""
     
     def __init__(self, db_path: Optional[str] = None):
-        if db_path is None:
-            db_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "data", "monitor.db"
-            )
         self.db_path = db_path
-        self._ensure_dir()
-    
-    def _ensure_dir(self):
-        """确保数据库目录存在"""
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self._repository = DatabaseRepository(db_path)
     
     def _get_connection(self) -> sqlite3.Connection:
         """获取数据库连接"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return self._repository.connect()
     
     def note_exists(self, note_id: str) -> bool:
         """检查笔记是否已存在"""

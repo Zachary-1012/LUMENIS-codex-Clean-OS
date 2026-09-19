@@ -13,8 +13,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from collector_guard.guard import CollectorGuard  # noqa: E402
-from collector_guard.rate_limiter import AdaptiveRateLimiter  # noqa: E402
+from lumenis.system.collector.guard import CollectorGuard, AdaptiveRateLimiter  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -27,7 +26,7 @@ def test_active_guard_uses_state_machine_not_scoring_engine():
     # 关键：现役 Guard 不持有/不实例化连续分 RiskEngine
     assert not hasattr(g, "risk_engine")
     # guard.py 源码层也不导入 risk_engine（两套机制独立，避免误耦合）
-    guard_src = open(os.path.join(ROOT, "collector_guard", "guard.py"), encoding="utf-8").read()
+    guard_src = open(os.path.join(ROOT, "lumenis", "system", "collector", "guard", "guard.py"), encoding="utf-8").read()
     assert "risk_engine" not in guard_src and "RiskEngine" not in guard_src
 
 
@@ -48,9 +47,9 @@ def test_compat_root_risk_engine_is_pure_forward(monkeypatch):
 
 def test_scoring_engine_module_independent_from_active_state_machine():
     # 备用评分器模块可独立导入，且不反向依赖现役 guard
-    re_src = open(os.path.join(ROOT, "collector_guard", "risk_engine.py"), encoding="utf-8").read()
+    re_src = open(os.path.join(ROOT, "lumenis", "system", "collector", "guard", "risk_engine.py"), encoding="utf-8").read()
     assert "from .guard" not in re_src and "import guard" not in re_src
-    from collector_guard.risk_engine import RiskEngine
+    from lumenis.system.collector.guard.risk_engine import RiskEngine
     r = RiskEngine()
     snap = r.snapshot()
     assert "risk_score" in snap and "should_stop_request" in snap

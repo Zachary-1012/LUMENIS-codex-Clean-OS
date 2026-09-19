@@ -547,7 +547,7 @@ def api_ai_tasks_list():
 def api_ai_skills():
     """可用 Skill 列表。"""
     try:
-        from skill_registry import get_skill_registry
+        from lumenis.shared.agents.skills.registry import get_skill_registry
         reg = get_skill_registry()
         skills = [s.to_dict() for s in reg.list_all()]
         return jsonify({'ok': True, 'skills': skills, 'stats': reg.stats()})

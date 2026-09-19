@@ -10,7 +10,7 @@
 
 
 
-表：app_evidence_records（43字段，16原有指标证据 + 27新增通用证据）
+表：app_evidence_records（迁移后51字段：16原有指标证据 + 27通用证据 + 8证据链字段）
 
 
 
@@ -43,6 +43,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 
 import sqlite3
@@ -60,11 +61,41 @@ from typing import Any, Optional
 from lumenis.shared.database import DatabaseRepository, get_repository, main_db_path
 
 
+logger = logging.getLogger(__name__)
+
+
 
 EVIDENCE_TABLE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS app_evidence_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL DEFAULT 'xhs_app',
+    project TEXT,
+    product TEXT,
+    feature_id TEXT,
+    asset_id TEXT,
+    commit_sha TEXT,
+    version TEXT,
+    env TEXT,
+    level TEXT,
+    test_name TEXT,
+    result TEXT,
+    started_at TEXT,
+    finished_at TEXT,
+    inputs_json TEXT,
+    outputs_json TEXT,
+    expected TEXT,
+    actual TEXT,
+    log_path TEXT,
+    screenshot_path TEXT,
+    trace_path TEXT,
+    api_request TEXT,
+    api_response TEXT,
+    db_before TEXT,
+    db_after TEXT,
+    root_cause TEXT,
+    resolution TEXT,
+    account TEXT,
+    duration_ms INTEGER,
     capture_mode TEXT NOT NULL DEFAULT 'screenshot',
     captured_at TEXT,
     topic TEXT,
@@ -95,6 +126,7 @@ def init_evidence_store(db_path: str = None) -> None:
         conn.commit()
     finally:
         conn.close()
+    migrate_evidence_contract_fields(path)
     migrate_evidence_chain_fields(path)
 
 
@@ -445,15 +477,26 @@ def replay_failed_evidence(limit: int = 50) -> dict:
 
     for row in rows:
 
+        attempts = int(row["attempts"] or 0) + 1
         try:
-
             fields = json.loads(row["payload"])
-
-        except Exception:
-
+        except Exception as exc:
+            failed += 1
+            _update_dlq_status(
+                row["id"], "DEAD_LETTER", attempts, now,
+                error=f"invalid evidence replay JSON: {str(exc)[:250]}",
+            )
             continue
 
-        attempts = row["attempts"] + 1
+        if not isinstance(fields, dict) or not fields or not all(
+            isinstance(key, str) for key in fields
+        ):
+            failed += 1
+            _update_dlq_status(
+                row["id"], "DEAD_LETTER", attempts, now,
+                error="invalid evidence replay payload: expected a non-empty JSON object",
+            )
+            continue
 
         try:
 
@@ -467,7 +510,10 @@ def replay_failed_evidence(limit: int = 50) -> dict:
 
                 fields = {k: v for k, v in fields.items() if k in existing_cols}
 
-            cols = ", ".join(fields.keys())
+            if not fields:
+                raise ValueError("evidence replay payload contains no known columns")
+
+            cols = ", ".join(_safe_identifier(key) for key in fields)
 
             placeholders = ", ".join(["?"] * len(fields))
 
@@ -495,7 +541,9 @@ def replay_failed_evidence(limit: int = 50) -> dict:
 
             failed += 1
 
-            new_status = "FAILED" if attempts >= row["max_attempts"] else "PENDING"
+            max_attempts = int(row["max_attempts"] or 0)
+
+            new_status = "DEAD_LETTER" if max_attempts and attempts >= max_attempts else "PENDING"
 
             _update_dlq_status(row["id"], new_status, attempts, now, error=str(e)[:300])
 
@@ -571,7 +619,7 @@ def _update_dlq_status(row_id: int, status: str, attempts: int, now: str, error:
 
     except Exception:
 
-        pass
+        logger.exception("Failed to update evidence DLQ row %s to %s", row_id, status)
 
 
 
@@ -1332,3 +1380,75 @@ __all__ = [
     "ENVS",
 
 ]
+
+
+# Generic execution-evidence columns consumed by record_evidence,
+# query_evidence and get_stats. Keep additions nullable: older manual Evidence
+# rows do not contain execution provenance, and migrations must not invent it.
+EVIDENCE_CONTRACT_NEW_COLUMNS = [
+    ("project", "TEXT"),
+    ("product", "TEXT"),
+    ("feature_id", "TEXT"),
+    ("asset_id", "TEXT"),
+    ("commit_sha", "TEXT"),
+    ("version", "TEXT"),
+    ("env", "TEXT"),
+    ("level", "TEXT"),
+    ("test_name", "TEXT"),
+    ("result", "TEXT"),
+    ("started_at", "TEXT"),
+    ("finished_at", "TEXT"),
+    ("inputs_json", "TEXT"),
+    ("outputs_json", "TEXT"),
+    ("expected", "TEXT"),
+    ("actual", "TEXT"),
+    ("log_path", "TEXT"),
+    ("screenshot_path", "TEXT"),
+    ("trace_path", "TEXT"),
+    ("api_request", "TEXT"),
+    ("api_response", "TEXT"),
+    ("db_before", "TEXT"),
+    ("db_after", "TEXT"),
+    ("root_cause", "TEXT"),
+    ("resolution", "TEXT"),
+    ("account", "TEXT"),
+    ("duration_ms", "INTEGER"),
+]
+
+
+def migrate_evidence_contract_fields(db_path: str = None) -> dict:
+    """Add missing generic Evidence fields without rewriting existing rows.
+
+    SQLite ADD COLUMN is used one field at a time so pre-existing evidence
+    values, ids and table identity remain untouched. Nullable columns preserve
+    the distinction between old rows with no execution metadata and new rows
+    written through ``record_evidence``.
+    """
+    path = db_path or main_db_path()
+    conn = DatabaseRepository(path).connect(timeout=10)
+    try:
+        existing = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(app_evidence_records)").fetchall()
+        }
+        if not existing:
+            raise sqlite3.OperationalError("app_evidence_records table is not initialized")
+
+        added, skipped = [], []
+        for col_name, col_type in EVIDENCE_CONTRACT_NEW_COLUMNS:
+            if col_name in existing:
+                skipped.append(col_name)
+                continue
+            conn.execute(
+                f"ALTER TABLE app_evidence_records ADD COLUMN {_safe_identifier(col_name)} {col_type}"
+            )
+            added.append(col_name)
+        conn.commit()
+        return {
+            "added": added,
+            "skipped": skipped,
+            "total_existing_columns": len(existing) + len(added),
+            "note": "逐列 ADD COLUMN 非破坏性迁移，历史记录与值保持不变",
+        }
+    finally:
+        conn.close()

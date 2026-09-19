@@ -2,7 +2,7 @@
 """P0-WRITEPERM-02 回归：AI composer (/api/experience/ai/intent) 四态写权限边界。
 
 四态必须全部成立：
-  granted          —— 权限通过才进入 skill_execution_chain；
+  granted          —— 权限通过才进入 canonical skill execution chain；
   pending_approval —— 权限等级够但高风险缺人工审批：HTTP 200，**不执行、不写证据**；
   denied           —— 权限不足/未注册：HTTP 403，**不执行、不写证据**；
   permanent_deny   —— PUSH 等 AI 派生层永不放行的类别：HTTP 403，不执行。
@@ -39,6 +39,10 @@ def client_and_gate(tmp_path, monkeypatch):
 
     from lumenis.system import security as permission_gate
     importlib.reload(permission_gate)
+    prior_testing_bypass = permission_gate.is_testing_bypass_enabled()
+    # conftest enables a session-wide bypass for ordinary route tests; this
+    # permission contract must exercise the canonical Gate in strict mode.
+    permission_gate.set_testing_bypass(False)
     import experience_runtime
     importlib.reload(experience_runtime)
 
@@ -71,11 +75,12 @@ def client_and_gate(tmp_path, monkeypatch):
             evidence_record={"ok": False},
         )
 
-    # ai_intent 在调用时 `from skill_execution_chain import ... run_execution_chain`
-    import skill_execution_chain
-    monkeypatch.setattr(skill_execution_chain, "run_execution_chain", _fake_run)
+    # ai_intent 在调用时从 canonical Skills owner 导入执行链。
+    from lumenis.shared.agents.skills import execution as skill_execution
+    monkeypatch.setattr(skill_execution, "run_execution_chain", _fake_run)
 
-    return cli, gate, permission_gate, calls
+    yield cli, gate, permission_gate, calls
+    permission_gate.set_testing_bypass(prior_testing_bypass)
 
 
 def _post(cli, action_type="ANALYZE", **extra):

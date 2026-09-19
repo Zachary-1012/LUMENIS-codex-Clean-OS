@@ -3,9 +3,9 @@
 纯增强、不改语义：默认 jitter=True（可关），retry_after 仅在调用方提供时生效。"""
 import random
 import time
-from collector_guard.rate_limiter import AdaptiveRateLimiter
-from collector_guard.analyzer import ResponseAnalyzer
-from collector_guard.state import CollectState
+from lumenis.system.collector.guard.rate_limiter import AdaptiveRateLimiter
+from lumenis.system.collector.guard.analyzer import ResponseAnalyzer
+from lumenis.system.collector.guard.state import CollectState
 
 
 def test_wait_slot_jitter_bounds():

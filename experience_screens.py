@@ -498,7 +498,7 @@ def _build_cth08() -> Dict[str, Any]:
 def _build_cth09() -> Dict[str, Any]:
     """风险中心与决策看板：真实风险笔记 + Canonical 风险指数。"""
     import database as db
-    import daily_report
+    from lumenis.shared.reporting import daily as daily_report
 
     risk = _safe(db.get_high_risk_notes, 10, default=[])
     summ = _safe(daily_report.generate_today_summary, today_str(), default={})
@@ -507,9 +507,9 @@ def _build_cth09() -> Dict[str, Any]:
     bh = summ.get("brand_health_score") if isinstance(summ, dict) and not _is_err(summ) else None
     kpis = [
         metric("cth09.risk_index", "风险指数", value=ri, decimals=1, state=STATE_READY if ri is not None else STATE_EMPTY,
-               icon="risk", source="daily_report.generate_today_summary", evidence_id="MET-RISK-01"),
+               icon="risk", source="lumenis.shared.reporting.daily.generate_today_summary", evidence_id="MET-RISK-01"),
         metric("cth09.health", "品牌健康分", value=bh, decimals=1, state=STATE_READY if bh is not None else STATE_EMPTY,
-               icon="trend", source="daily_report.generate_today_summary", evidence_id="MET-RISK-02"),
+               icon="trend", source="lumenis.shared.reporting.daily.generate_today_summary", evidence_id="MET-RISK-02"),
         metric("cth09.risk_notes", "高风险记录", value=len(risk), state=STATE_READY,
                icon="event", source="database.get_high_risk_notes"),
     ]
@@ -705,9 +705,9 @@ def _build_sys03() -> Dict[str, Any]:
 
 
 def _build_sys04() -> Dict[str, Any]:
-    """安全与权限：permission_gate 真实权限级别枚举（不泄露任何凭据）。"""
+    """安全与权限：读取 SYSTEM Permission owner 的真实枚举（不泄露凭据）。"""
     try:
-        import permission_gate as pg
+        from lumenis.system.security import permission as pg
 
         levels = [lvl.name for lvl in getattr(pg, "PermissionLevel", [])] or []
         ops = [op.name for op in getattr(pg, "OperationType", [])] or []
@@ -719,7 +719,7 @@ def _build_sys04() -> Dict[str, Any]:
     rows = [{"权限级别": x, "范围": "READ/TASK/AUDIT/WRITE/DEPLOY" if x in levels else "—"} for x in levels]
     kpi = metric("sys04.levels", "权限级别数", value=len(levels) or None,
                  state=STATE_READY if levels else STATE_EMPTY, icon="permission",
-                 source="permission_gate.PermissionLevel")
+                 source="lumenis.system.security.permission.PermissionLevel")
     tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="权限级别（真实枚举）",
                   columns=[{"label": "权限级别", "key": "权限级别"}, {"label": "范围", "key": "范围"}], rows=rows)
     actions_sec = section("actions", title="受控运行操作", items=[
@@ -899,8 +899,8 @@ def _build_sh02() -> Dict[str, Any]:
 
 
 def _build_sh04() -> Dict[str, Any]:
-    """报告导出中心：report_engine.list_domain_reports 真实目录（导出 EFFECT 待端点，不造假下载）。"""
-    import report_engine as re_
+    """报告导出中心：读取 Shared Reporting 真实目录（导出 EFFECT 未接通时不造假下载）。"""
+    from lumenis.shared.reporting import engine as re_
 
     cat = _safe(re_.list_domain_reports, default={})
     cat = cat if isinstance(cat, dict) and not _is_err(cat) else {}
@@ -915,12 +915,12 @@ def _build_sh04() -> Dict[str, Any]:
                          "受保护": "是" if meta.get("protected") else "否"})
     kpi = metric("sh04.types", "报告类型", value=len(rows) or None,
                  state=STATE_READY if rows else STATE_EMPTY, icon="report",
-                 source="report_engine.list_domain_reports")
+                 source="lumenis.shared.reporting.engine.list_domain_reports")
     tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="可导出报告目录（真实）",
                   columns=[{"label": "领域", "key": "领域"}, {"label": "类型", "key": "类型"},
                            {"label": "名称", "key": "名称"}, {"label": "受保护", "key": "受保护"}], rows=rows)
     note = section("note", STATE_READY, kind="RULE", code="EXPORT-EFFECT",
-                   text="目录为真实只读；点击导出属写操作，需 report_engine 导出端点 + 权限门控，未接通前不提供假下载。")
+                   text="目录为真实只读；点击导出属写操作，需 Shared Reporting 导出端点 + 权限门控，未接通前不提供假下载。")
     sections = [_head("SH-04"), section("kpis", STATE_READY, items=[kpi]), tbl, note]
     return _envelope("SH-04", sections, truth={"domains": list(cat.keys())})
 
@@ -1183,8 +1183,8 @@ def _build_bmp01() -> Dict[str, Any]:
 
 
 def _build_bmp02() -> Dict[str, Any]:
-    """品牌中心 / 多品牌与竞品：真实零售目录业态分布（web_monitor_v570 策展目录）。"""
-    import web_monitor_v570 as wm
+    """品牌中心 / 多品牌与竞品：读取当前 Web Discovery owner 的真实零售目录。"""
+    import web_discovery as wm
 
     d = _safe(wm.get_brand_directory, default={})
     d = d if isinstance(d, dict) and not _is_err(d) else {}
@@ -1196,9 +1196,9 @@ def _build_bmp02() -> Dict[str, Any]:
     kpis = [
         metric("bmp02.total", "目录品牌总数", value=total,
                state=STATE_READY if total is not None else STATE_EMPTY, icon="collection",
-               source="web_monitor_v570.get_brand_directory"),
+               source="web_discovery.get_brand_directory"),
         metric("bmp02.cats", "业态类目数", value=len(cats), state=STATE_READY,
-               icon="collection", source="web_monitor_v570.get_brand_directory"),
+               icon="collection", source="web_discovery.get_brand_directory"),
     ]
     tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="零售目录业态分布（真实）",
                   columns=[{"label": "业态类目", "key": "业态类目"},
@@ -1240,12 +1240,12 @@ def _build_bmp07() -> Dict[str, Any]:
 
 
 def _build_bmp09() -> Dict[str, Any]:
-    """品牌报告与评估：evaluation_recorder 真实评估汇总 + 记录（空库诚实空态）。"""
-    from lumenis.shared.evaluation import recorder as er
+    """品牌报告与评估：Shared Evaluation 汇总与真实记录（空库诚实空态）。"""
+    from lumenis.shared.evaluation import get_evaluation_records, get_evaluation_summary
 
-    s = _safe(er.get_evaluation_summary, default={})
+    s = _safe(get_evaluation_summary, default={})
     s = s if isinstance(s, dict) and not _is_err(s) else {}
-    recs = _safe(er.get_evaluation_records, 100, default=[])
+    recs = _safe(get_evaluation_records, limit=100, default=[])
     recs = recs if isinstance(recs, list) else []
     counts = s.get("counts")
     counts = counts if isinstance(counts, dict) else {}
@@ -1256,16 +1256,16 @@ def _build_bmp09() -> Dict[str, Any]:
     kpis = [
         metric("bmp09.total", "评估记录总数", value=_int_or_none(s.get("total_records")),
                state=STATE_READY if "total_records" in s else STATE_NOT_COLLECTED, icon="report",
-               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.get_evaluation_summary"),
         metric("bmp09.pass", "通过", value=_c("pass"),
                state=STATE_READY if "pass" in counts else STATE_NOT_COLLECTED, icon="check",
-               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.get_evaluation_summary"),
         metric("bmp09.warn", "警示", value=_c("warn"),
                state=STATE_READY if "warn" in counts else STATE_NOT_COLLECTED, icon="risk",
-               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.get_evaluation_summary"),
         metric("bmp09.fail", "失败", value=_c("fail"),
                state=STATE_READY if "fail" in counts else STATE_NOT_COLLECTED, icon="risk",
-               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.get_evaluation_summary"),
     ]
     crows = [{"评估状态": {"pass": "通过", "warn": "警示", "fail": "失败", "unknown": "未知"}.get(k, k),
               "数量": _c(k)} for k in ("pass", "warn", "fail", "unknown")]

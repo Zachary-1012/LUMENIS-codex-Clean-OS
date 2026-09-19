@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import os
 
 import pytest
 
@@ -15,8 +16,10 @@ SCRIPT = os.path.join(ROOT, "scripts", "lean_footprint.py")
 @pytest.fixture(scope="module")
 def result(tmp_path_factory):
     out = tmp_path_factory.mktemp("lean") / "m.json"
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
     r = subprocess.run([sys.executable, SCRIPT, "--out", str(out)],
-                       cwd=ROOT, capture_output=True, text=True, timeout=300)
+                       cwd=ROOT, capture_output=True, text=True, timeout=300, env=env)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.load(open(out, encoding="utf-8"))
 

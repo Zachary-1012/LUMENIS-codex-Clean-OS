@@ -38,6 +38,7 @@ class SkillExecutionContext:
     execution_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     skill_id: str = ""
     user_id: Optional[int] = None
+    permission_role: Optional[str] = None
     domain: str = "SYSTEM"
     product: str = "SYSTEM"
     task: str = ""
@@ -111,8 +112,17 @@ def check_permission(ctx, user_role="user", skill_info=None):
     if user_role not in ("owner", "admin") and ctx.action_type in (
         ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH,
     ):
-        return {"allowed": False, "reason": f"role '{user_role}' cannot execute {ctx.action_type.value}",
-                "code": "INSUFFICIENT_ROLE"}
+        low_write_roles = {
+            "cth": "cth_operator",
+            "zbmp": "zbmp_operator",
+            "system": "system_writer",
+        }
+        if (
+            ctx.action_type is not ActionType.WRITE
+            or ctx.permission_role != low_write_roles.get(str(ctx.domain or "").lower())
+        ):
+            return {"allowed": False, "reason": f"role '{user_role}' cannot execute {ctx.action_type.value}",
+                    "code": "INSUFFICIENT_ROLE"}
 
     from lumenis.system.security import get_permission_gate
     target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
@@ -121,6 +131,8 @@ def check_permission(ctx, user_role="user", skill_info=None):
         resource=target,
         caller=f"skill_executor:{ctx.skill_id}",
         operation_id=ctx.execution_id,
+        domain_id=ctx.domain,
+        role=ctx.permission_role,
     )
     payload = result.to_dict()
     payload["code"] = "PERMISSION_GRANTED" if result.allowed else (
@@ -394,11 +406,13 @@ def record_execution_evidence(ctx):
 
 def run_execution_chain(skill_id, task="", input_payload=None, action_type=ActionType.ANALYZE,
                         user_id=None, user_role="user", product="SYSTEM", domain="global",
+                        permission_role=None,
                         skill_info=None, handler=None):
     import time
     start = time.time()
     ctx = SkillExecutionContext(skill_id=skill_id, task=task, input_payload=input_payload or {},
-                                 action_type=action_type, user_id=user_id, product=product, domain=domain)
+                                 action_type=action_type, user_id=user_id, product=product, domain=domain,
+                                 permission_role=permission_role)
     ctx.permission_result = check_permission(ctx, user_role=user_role, skill_info=skill_info)
     if not ctx.permission_result["allowed"]:
         ctx.status = ExecutionStatus.REJECTED; ctx.error = ctx.permission_result["reason"]

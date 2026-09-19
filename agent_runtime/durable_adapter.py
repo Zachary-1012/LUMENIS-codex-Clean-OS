@@ -98,7 +98,7 @@ class DurableExecutionAdapter:
         """延迟获取 PermissionGate。"""
         if self._permission_gate is None:
             try:
-                from permission_gate import get_permission_gate
+                from lumenis.system.security import get_permission_gate
                 self._permission_gate = get_permission_gate()
             except Exception:
                 self._permission_gate = None
@@ -110,7 +110,11 @@ class DurableExecutionAdapter:
         if gate is None:
             return False  # 无权限门时 fail-closed
         try:
-            result = gate.check(operation, resource=resource)
+            result = gate.check(
+                operation_type=operation,
+                resource=resource,
+                caller="agent_runtime.durable_adapter",
+            )
             return result.allowed
         except Exception:
             return False
@@ -144,7 +148,7 @@ class DurableExecutionAdapter:
             if engine is not None:
                 try:
                     # 检查权限
-                    from permission_gate import OperationType, RiskLevel
+                    from lumenis.system.security import OperationType
                     if not self._check_permission(OperationType.DB_WRITE, "ai_task"):
                         return task_id  # 权限不足时仅内存
 
@@ -194,7 +198,7 @@ class DurableExecutionAdapter:
             engine = self._get_task_engine()
             if engine is not None:
                 try:
-                    from permission_gate import OperationType
+                    from lumenis.system.security import OperationType
                     if not self._check_permission(OperationType.DB_WRITE, "ai_task_step"):
                         return cp
 
@@ -244,7 +248,7 @@ class DurableExecutionAdapter:
             return None
 
         try:
-            from permission_gate import OperationType
+            from lumenis.system.security import OperationType
             if not self._check_permission(OperationType.DB_WRITE, "ai_task_evidence"):
                 return None
 

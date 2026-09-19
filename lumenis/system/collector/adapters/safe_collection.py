@@ -3,7 +3,7 @@
 
 【边界 / 红线】
 - 本模块**零网络、零采集客户端、零登录**：不发 HTTP、不绕过验证码/签名/设备指纹、不实现账号池或代理池。
-- 它只定义任何采集器（collector_v2 / xhs_cdp_collector / rednote_collector / 未来 adapter）在采集
+- 它定义现役 XHS runtime、RedNote browser adapter 与其他采集 adapter 在采集
   *公开*数据后必须穿过的、与具体引擎解耦的离线契约：
     1. PII 脱敏 redact_text / redact_record（字段级 + 自由文本联系方式级，深拷贝不改原记录）
     2. CollectionHygienePolicy + RateGovernor（声明式只读/低频策略 + 纯限速/风险信号判定，不 sleep）

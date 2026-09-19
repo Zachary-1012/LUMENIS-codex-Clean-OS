@@ -2,7 +2,7 @@
 """RedNote 生产区域门控：香港/国际 9223；大陆暂停；worker 必须显式配置。"""
 import pytest
 
-from platform_adapters import rednote_policy as rp
+from lumenis.system.collector.adapters import rednote_policy as rp
 
 
 @pytest.fixture(autouse=True)

@@ -22,8 +22,9 @@ def connect_sqlite(
 ) -> sqlite3.Connection:
     """Open SQLite through the canonical database authority.
 
-    Explicit db_path is reserved for disposable tests and controlled migration
-    tooling. Omitting it always resolves main_db_path() at call time.
+    Explicit db_path is reserved for disposable tests, controlled migration
+    tooling, or an explicitly architecture-registered SYSTEM operational store.
+    Ordinary business callers omit it and resolve main_db_path() at call time.
     """
     path = os.path.abspath(db_path or main_db_path())
     if read_only:

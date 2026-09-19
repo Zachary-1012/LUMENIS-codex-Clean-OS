@@ -17,7 +17,7 @@ ComplianceGate（P1-H｜统一合规 Gate）。
       data_minimization / copyright
 法域：CN / HK / EU / UK / US（* = 全域适用）
 
-可选对接：若采集动作以 scrape_* 开头且 platform_adapters.safe_collection 可用，
+可选对接：若采集动作以 scrape_* 开头且序境 SYSTEM Collector safe_collection 可用，
 则并入其本地守卫结论（try/except 可选，不因组件缺失阻塞）。
 
 用法：
@@ -104,7 +104,7 @@ class ComplianceGate:
 
     def _merge_local_guard(self, action, detail):
         try:
-            from platform_adapters import safe_collection  # noqa: F401
+            from lumenis.system.collector.adapters import safe_collection  # noqa: F401
             # safe_collection 具体接口以仓库实际为准；仅当存在通用守卫函数才并入。
             fn = getattr(safe_collection, "guard", None) or getattr(safe_collection, "check", None)
             if callable(fn):

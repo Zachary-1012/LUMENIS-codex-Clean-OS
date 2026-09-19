@@ -17,37 +17,37 @@ if str(REPO_ROOT) not in sys.path:
 
 class TestProviderRegistry:
     def test_zhipu_active(self):
-        from provider_registry import provider_status, ACTIVE
+        from lumenis.system.ai_gateway.providers import provider_status, ACTIVE
         assert provider_status("zhipu") == ACTIVE
 
     def test_ollama_available(self):
-        from provider_registry import provider_status, AVAILABLE
+        from lumenis.system.ai_gateway.providers import provider_status, AVAILABLE
         assert provider_status("ollama") == AVAILABLE
 
     def test_ark_active_fallback(self):
-        from provider_registry import provider_status, ACTIVE_FALLBACK
+        from lumenis.system.ai_gateway.providers import provider_status, ACTIVE_FALLBACK
         assert provider_status("ark") == ACTIVE_FALLBACK
 
     def test_qwen_not_configured(self):
-        from provider_registry import provider_status, NOT_CONFIGURED
+        from lumenis.system.ai_gateway.providers import provider_status, NOT_CONFIGURED
         assert provider_status("qwen") == NOT_CONFIGURED
 
     def test_openai_disabled(self):
-        from provider_registry import provider_status, DISABLED
+        from lumenis.system.ai_gateway.providers import provider_status, DISABLED
         assert provider_status("openai") == DISABLED
 
     def test_deepseek_disabled(self):
-        from provider_registry import provider_status, DISABLED
+        from lumenis.system.ai_gateway.providers import provider_status, DISABLED
         assert provider_status("deepseek") == DISABLED
 
     def test_active_providers(self):
-        from provider_registry import active_providers
+        from lumenis.system.ai_gateway.providers import active_providers
         active = active_providers()
         assert "zhipu" in active
         assert "qwen" not in active
 
     def test_unknown_provider_disabled(self):
-        from provider_registry import provider_status, DISABLED
+        from lumenis.system.ai_gateway.providers import provider_status, DISABLED
         assert provider_status("nonexistent") == DISABLED
 
 

@@ -20,7 +20,7 @@ def _fresh_bridge():
 
 def test_exception_feeds_planner_network_backoff(monkeypatch):
     """sync 未兜住的异常 -> NETWORK_ERROR 回写 -> 立即决策必须被间隔退避拦下（不高频重试）。"""
-    import platform_adapters.scheduling as sch
+    import lumenis.system.collector.adapters.scheduling as sch
     # 内存态规划器：state_file=None 不加载/不落盘，store=None 不写审计库
     mem_planner = sch.PlatformSchedulePlanner(state_file=None, store=None)
     monkeypatch.setattr(sch, 'get_planner', lambda *a, **k: mem_planner, raising=False)
@@ -42,7 +42,7 @@ def test_exception_feeds_planner_network_backoff(monkeypatch):
 
 def test_three_network_fails_enter_cooldown(monkeypatch):
     """连续网络失败达到 network_fail_to_cooldown(=3) 后进入 IN_COOLDOWN，更强拦截。"""
-    import platform_adapters.scheduling as sch
+    import lumenis.system.collector.adapters.scheduling as sch
     mem_planner = sch.PlatformSchedulePlanner(state_file=None, store=None)
     monkeypatch.setattr(sch, 'get_planner', lambda *a, **k: mem_planner, raising=False)
     xcb = _fresh_bridge()
@@ -58,7 +58,7 @@ def test_three_network_fails_enter_cooldown(monkeypatch):
 
 def test_shadow_record_fail_open(monkeypatch):
     """规划器自身抛错时 _shadow_record_result 必须吞掉，绝不向上冒泡阻断采集主流程。"""
-    import platform_adapters.scheduling as sch
+    import lumenis.system.collector.adapters.scheduling as sch
 
     class _Boom:
         def record_result(self, *a, **k):

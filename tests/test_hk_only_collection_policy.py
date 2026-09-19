@@ -153,7 +153,7 @@ def test_p0_orchestrator_blocks_cn_before_select():
 
 
 def test_private_v2_client_never_reaches_network():
-    from collector_v2.xhs.client import XHSClient
+    from lumenis.system.collector.runtime.xhs.client import XHSClient
 
     async def invoke():
         with pytest.raises(RuntimeError, match='非生产路径'):

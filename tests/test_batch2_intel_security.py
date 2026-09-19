@@ -2,11 +2,11 @@
 """Batch2 智能+安全模块单元测试 — Shard D verification.
 
 覆盖9个无测试模块：
-- repository_registry
-- ad_intelligence.permission_gate
+- lumenis.shared.database.registry
+- LUMENIS SYSTEM Permission（Ad adapter through SYSTEM owner）
 - kos_execution (temp DB)
 - kos_metrics (pure functions)
-- evidence_api (Flask test app)
+- lumenis.shared.evidence.api (Flask test app)
 - kos_intel (classify_intent pure)
 - kos_professional (temp DB + circuit breaker)
 - kos_report (temp DB)
@@ -24,54 +24,54 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(r'D:\Taikoo-monitor-new')
+REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 
 # ═══════════════════════════════════════════════════════════════
-# 1. repository_registry
+# 1. lumenis.shared.database.registry
 # ═══════════════════════════════════════════════════════════════
 class TestRepositoryRegistry:
     def test_singleton(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         r1 = get_registry()
         r2 = get_registry()
         assert r1 is r2
 
     def test_force_reload(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         r1 = get_registry()
         r2 = get_registry(force_reload=True)
         assert r1 is not r2
 
     def test_repo_root_resolves(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         reg = get_registry()
         assert reg.repo_root.exists()
-        assert (reg.repo_root / 'permission_gate.py').exists()
+        assert (reg.repo_root / 'lumenis' / 'system' / 'security' / 'permission.py').exists()
 
     def test_resolve_relative_path(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         reg = get_registry()
         p = reg.resolve('data/monitor.db')
         assert p.endswith('data' + os.sep + 'monitor.db') or p.endswith('data/monitor.db')
         assert os.path.isabs(p)
 
     def test_resolve_absolute_passthrough(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         reg = get_registry()
         abs_path = os.path.join(tempfile.gettempdir(), 'test_abs.txt')
         p = reg.resolve(abs_path)
         assert p == os.path.normpath(abs_path) or os.path.samefile(os.path.dirname(p), os.path.dirname(abs_path))
 
     def test_data_dir_property(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         reg = get_registry()
         assert reg.data_dir.name == 'data'
         assert reg.data_dir.exists()
 
     def test_ensure_dir_creates(self):
-        from repository_registry import RepositoryRegistry
+        from lumenis.shared.database.registry import RepositoryRegistry
         with tempfile.TemporaryDirectory() as tmp:
             reg = RepositoryRegistry(repo_root=tmp)
             d = reg.ensure_dir('data')
@@ -79,13 +79,13 @@ class TestRepositoryRegistry:
             assert d.name == 'data'
 
     def test_ensure_dir_invalid_key_raises(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         reg = get_registry()
         with pytest.raises(KeyError):
             reg.ensure_dir('nonexistent_key')
 
     def test_to_dict_serializable(self):
-        from repository_registry import get_registry
+        from lumenis.shared.database.registry import get_registry
         reg = get_registry()
         d = reg.to_dict()
         assert 'repo_root' in d
@@ -93,18 +93,41 @@ class TestRepositoryRegistry:
         json.dumps(d)  # must be JSON serializable
 
     def test_module_level_resolve_path(self):
-        from repository_registry import resolve_path
+        from lumenis.shared.database.registry import resolve_path
         p = resolve_path('data')
         assert os.path.isabs(p)
 
 
 # ═══════════════════════════════════════════════════════════════
-# 2. ad_intelligence.permission_gate
+# 2. LUMENIS SYSTEM Permission owner, consumed through the Ad domain adapter
 # ═══════════════════════════════════════════════════════════════
+@pytest.fixture
+def strict_system_permission_mode():
+    from lumenis.system.security import is_testing_bypass_enabled, set_testing_bypass
+
+    was_enabled = is_testing_bypass_enabled()
+    set_testing_bypass(False)
+    yield
+    set_testing_bypass(was_enabled)
+
+
+@pytest.mark.usefixtures('strict_system_permission_mode')
 class TestAdPermissionGate:
+    @staticmethod
+    def _new_gate():
+        from ad_intelligence.permission_gate import AdPermissionGate
+        from lumenis.system.security import PermissionGate, PermissionLevel
+
+        system_gate = PermissionGate(enabled_permissions={
+            PermissionLevel.READ,
+            PermissionLevel.ANALYZE,
+            PermissionLevel.PUSH,
+        })
+        return AdPermissionGate(system_gate=system_gate)
+
     def test_default_levels_read_analyze_only(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         assert g.has_permission(AdPermissionLevel.READ)
         assert g.has_permission(AdPermissionLevel.ANALYZE)
         assert not g.has_permission(AdPermissionLevel.PREVIEW)
@@ -112,26 +135,26 @@ class TestAdPermissionGate:
 
     def test_require_execute_denied_without_human(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         # Even if EXECUTE were enabled, human approval required
         g._enabled_levels.add(AdPermissionLevel.EXECUTE)
         assert g.require(AdPermissionLevel.EXECUTE, 'test_op') is False
 
     def test_require_read_allowed(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         assert g.require(AdPermissionLevel.READ, 'read_op') is True
 
     def test_grant_human_approval_enables_execute(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         g._enabled_levels.add(AdPermissionLevel.EXECUTE)
         g.grant_human_approval(duration_minutes=5)
         assert g.require(AdPermissionLevel.EXECUTE, 'test_op') is True
 
     def test_revoke_human_approval(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         g._enabled_levels.add(AdPermissionLevel.EXECUTE)
         g.grant_human_approval()
         g.revoke_human_approval()
@@ -139,21 +162,21 @@ class TestAdPermissionGate:
 
     def test_execute_with_gate_permission_denied(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         success, result = g.execute_with_gate(AdPermissionLevel.EXECUTE, 'bad_op', lambda: 'should not run')
         assert success is False
         assert '权限不足' in result
 
     def test_execute_with_gate_success(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         success, result = g.execute_with_gate(AdPermissionLevel.READ, 'read_op', lambda: 42)
         assert success is True
         assert result == 42
 
     def test_execute_with_gate_exception_captured(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         def fail():
             raise ValueError('test error')
         success, result = g.execute_with_gate(AdPermissionLevel.READ, 'fail_op', fail)
@@ -162,7 +185,7 @@ class TestAdPermissionGate:
 
     def test_get_status(self):
         from ad_intelligence.permission_gate import AdPermissionGate
-        g = AdPermissionGate()
+        g = self._new_gate()
         s = g.get_status()
         assert 'read' in s['enabled_levels']
         assert 'analyze' in s['enabled_levels']
@@ -171,7 +194,7 @@ class TestAdPermissionGate:
 
     def test_log_operation_records(self):
         from ad_intelligence.permission_gate import AdPermissionGate, AdPermissionLevel
-        g = AdPermissionGate()
+        g = self._new_gate()
         g.log_operation(AdPermissionLevel.READ, 'test', {'k': 'v'}, True)
         assert len(g._operation_log) == 1
         assert g._operation_log[0]['operation'] == 'test'
@@ -349,12 +372,26 @@ class TestKosMetrics:
 
 
 # ═══════════════════════════════════════════════════════════════
-# 5. evidence_api (Flask test app)
+# 5. lumenis.shared.evidence.api (Flask test app)
 # ═══════════════════════════════════════════════════════════════
+@pytest.fixture
+def evidence_client(tmp_path, monkeypatch):
+    from flask import Flask
+    from lumenis.shared.evidence import store
+    from lumenis.shared.evidence.api import register_evidence_api
+
+    db_file = tmp_path / 'test_ev.db'
+    monkeypatch.setenv('ZBC_DB_PATH', str(db_file))
+    store.init_evidence_store(str(db_file))
+    app = Flask(__name__)
+    register_evidence_api(app)
+    return app.test_client()
+
+
 class TestEvidenceApi:
     def test_register_blueprint(self):
         from flask import Flask
-        from evidence_api import register_evidence_api
+        from lumenis.shared.evidence.api import register_evidence_api
         app = Flask(__name__)
         bp = register_evidence_api(app)
         assert bp.name == 'evidence_api'
@@ -364,63 +401,33 @@ class TestEvidenceApi:
         assert '/api/evidence/list' in rules
         assert '/api/evidence/timeline' in rules
 
-    def test_stats_endpoint(self, tmp_path, monkeypatch):
-        # Use temp DB
-        db_file = tmp_path / 'test_ev.db'
-        monkeypatch.setenv('ZBC_DB_PATH', str(db_file))
-        import importlib
-        import evidence_store
-        importlib.reload(evidence_store)
-        # Create table with all columns needed by get_stats()
-        conn = sqlite3.connect(str(db_file))
-        conn.execute("""CREATE TABLE IF NOT EXISTS app_evidence_records (
-            id INTEGER PRIMARY KEY, source TEXT, project TEXT, product TEXT,
-            feature_id TEXT, level TEXT, result TEXT, account TEXT,
-            actual TEXT, created_at TEXT, test_name TEXT, env TEXT,
-            started_at TEXT, finished_at TEXT, inputs_json TEXT, outputs_json TEXT,
-            expected TEXT, log_path TEXT, screenshot_path TEXT, trace_path TEXT,
-            api_request TEXT, api_response TEXT, db_before TEXT, db_after TEXT,
-            root_cause TEXT, resolution TEXT, duration_ms INTEGER, notes TEXT,
-            metric_name TEXT, metric_value TEXT, topic TEXT, status TEXT,
-            evidence_hash TEXT, capture_mode TEXT, captured_at TEXT, updated_at TEXT,
-            asset_id TEXT, commit_sha TEXT, version TEXT
-        )""")
-        conn.execute("INSERT INTO app_evidence_records (source, result, level, account, actual, created_at, feature_id) VALUES ('test', 'PASS', 'L4', 'acc1', 'test actual', '2026-01-01 00:00:00', 'TEST_FEATURE')")
-        conn.commit()
-        conn.close()
+    def test_stats_endpoint(self, evidence_client):
+        from lumenis.shared.evidence import store
 
-        from flask import Flask
-        from evidence_api import register_evidence_api
-        app = Flask(__name__)
-        register_evidence_api(app)
-        client = app.test_client()
-        resp = client.get('/api/evidence/stats')
+        record_id = store.record_evidence(
+            source='test', project='LUMENIS', product='CTH',
+            feature_id='TEST_FEATURE', level='L4', result='PASS',
+            account='acc1', actual='test actual', test_name='evidence_stats',
+        )
+        assert record_id > 0
+        resp = evidence_client.get('/api/evidence/stats')
         assert resp.status_code == 200
         data = resp.get_json()
         assert data['ok'] is True
         assert data['stats']['total'] >= 1
 
-    def test_list_endpoint_params(self):
+    def test_list_endpoint_params(self, evidence_client):
         from flask import Flask
-        from evidence_api import register_evidence_api
-        app = Flask(__name__)
-        register_evidence_api(app)
-        client = app.test_client()
         # Test with limit param
-        resp = client.get('/api/evidence/list?limit=10&offset=0')
+        resp = evidence_client.get('/api/evidence/list?limit=10&offset=0')
         assert resp.status_code == 200
         data = resp.get_json()
         assert data['ok'] is True
         assert 'count' in data
         assert 'records' in data
 
-    def test_detail_endpoint_404(self):
-        from flask import Flask
-        from evidence_api import register_evidence_api
-        app = Flask(__name__)
-        register_evidence_api(app)
-        client = app.test_client()
-        resp = client.get('/api/evidence/999999')
+    def test_detail_endpoint_404(self, evidence_client):
+        resp = evidence_client.get('/api/evidence/999999')
         assert resp.status_code == 404
         data = resp.get_json()
         assert data['ok'] is False
@@ -488,7 +495,7 @@ class TestKosIntel:
 @pytest.fixture
 def kprof_temp_db(tmp_path, monkeypatch):
     db_file = tmp_path / 'test_kprof.db'
-    monkeypatch.setenv('TAIKOO_DB_PATH', str(db_file))
+    monkeypatch.setenv('ZBC_DB_PATH', str(db_file))
     import importlib
     import kos_professional
     importlib.reload(kos_professional)
@@ -498,7 +505,8 @@ def kprof_temp_db(tmp_path, monkeypatch):
 class TestKosProfessional:
     def test_init_db_creates_tables(self, kprof_temp_db):
         kp = kprof_temp_db
-        conn = sqlite3.connect(os.environ['TAIKOO_DB_PATH'])
+        from lumenis.shared.database import DatabaseRepository
+        conn = DatabaseRepository(os.environ['ZBC_DB_PATH']).connect()
         tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
         conn.close()
         assert 'professional_accounts' in tables
@@ -618,10 +626,8 @@ def kreport_temp_db(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
 
-    import importlib
-    import kos_report
-    importlib.reload(kos_report)
-    return kos_report
+    from lumenis.shared.reporting import kos as current_kos_report
+    return current_kos_report
 
 
 class TestKosReport:
@@ -706,19 +712,19 @@ class TestKosRoutes:
 # ═══════════════════════════════════════════════════════════════
 class TestEvidenceStoreImport:
     def test_import_and_constants(self):
-        import evidence_store
+        from lumenis.shared.evidence import store as evidence_store
         assert 'L0' in evidence_store.LEVELS
         assert 'PASS' in evidence_store.RESULTS
         assert 'prod' in evidence_store.ENVS
 
     def test_evidence_hash_deterministic(self):
-        import evidence_store
+        from lumenis.shared.evidence import store as evidence_store
         h1 = evidence_store._evidence_hash({"a": 1, "b": 2})
         h2 = evidence_store._evidence_hash({"b": 2, "a": 1})
         assert h1 == h2  # sort_keys ensures deterministic
 
     def test_json_dumps_handles_objects(self):
-        import evidence_store
+        from lumenis.shared.evidence import store as evidence_store
         class CustomObj:
             def __str__(self):
                 return "custom"

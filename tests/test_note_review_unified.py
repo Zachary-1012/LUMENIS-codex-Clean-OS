@@ -49,8 +49,10 @@ def tmp_db(monkeypatch):
     )
     conn.commit()
     conn.close()
-    # 让 app.db.DB_PATH 指向临时库（_note_set_review 用 db.DB_PATH）
-    monkeypatch.setattr(app_mod.db, "DB_PATH", path)
+    # Route writes must exercise the canonical repository with an explicit
+    # disposable test database, rather than mutating a legacy module path.
+    from lumenis.shared.database.repository import DatabaseRepository
+    monkeypatch.setattr(app_mod, "get_repository", lambda: DatabaseRepository(path))
     yield path
     try:
         os.unlink(path)

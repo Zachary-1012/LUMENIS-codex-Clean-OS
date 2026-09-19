@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""collector_guard.dlq_replay 的运维 CLI（研究自 baldur DLQ-replay 范式落地）。
+"""SYSTEM Collector DLQ 的运维 CLI。
 
 用法：
   python scripts/dlq_ops.py stats                       # DLQ 统计（pending/done/dead）
@@ -7,7 +7,7 @@
   python scripts/dlq_ops.py enqueue <keyword> --error <err> [--context <json>]
   python scripts/dlq_ops.py replay <module:handler> [--max 50]
         # handler(keyword, context) -> 成功 ack / 失败 fail_retry
-        # 例: python scripts/dlq_ops.py replay collector_guard.demo_dlq:handler
+        # 将已审核的应用 handler 以 module:handler 形式传入。
   python scripts/dlq_ops.py ack <task_id>
 """
 import argparse
@@ -20,7 +20,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from collector_guard.dlq_replay import DeadLetterQueue
+from lumenis.system.collector.guard.dlq_replay import DeadLetterQueue
 
 
 def main():
@@ -48,7 +48,7 @@ def main():
     elif args.cmd == "replay":
         mod_name, _, fn = args.arg.partition(":")
         if not fn:
-            print("need module:handler, e.g. collector_guard.demo_dlq:handler"); sys.exit(2)
+            print("need module:handler for an approved replay handler"); sys.exit(2)
         mod = importlib.import_module(mod_name)
         ok, fail = dq.replay(getattr(mod, fn), max_items=args.max)
         print("replayed ok=%d fail=%d" % (ok, fail))

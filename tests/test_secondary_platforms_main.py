@@ -30,7 +30,7 @@ def _make_v4_note(title="测试", author="作者", url="https://example.com/1",
 
 
 def _make_v4_result(success=True, notes=None, error="", raw_count=0, duration=0.3):
-    from v4_upgrade.adapters.base import AdapterResult
+    from lumenis.adapters.base import AdapterResult
     return AdapterResult(success=success, notes=notes or [], error=error,
                          raw_count=raw_count, duration_seconds=duration)
 
@@ -151,7 +151,7 @@ class TestZhihuMainAdapter:
 
     @patch("lumenis.system.collector.adapters.zhihu.ZhihuAdapter._load_backend")
     def test_creator_delegates_v4(self, mock_load):
-        from v4_upgrade.adapters.base import AdapterResult
+        from lumenis.adapters.base import AdapterResult
         mock_load.return_value.creator.return_value = AdapterResult(success=True, notes=[], raw_count=0)
         from lumenis.system.collector.adapters.zhihu import ZhihuAdapter
         r = ZhihuAdapter().creator("user123")

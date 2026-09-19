@@ -1,42 +1,45 @@
-"""KOS P2 投流与奖励执行闭环测试（kos_paid.py）
-
-覆盖：投流计划 HCG 门控、投流执行全路径、效果反馈 ROI、奖励发放 HCG 门控、台账。
-使用真实 kos_profiles 数据（不实际投放/发放，仅登记与台账）。
-"""
-import sys, os, json
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-# 强制指向生产库：防止其他测试模块级污染 ZBC_DB_PATH 导致连接错库
-os.environ.setdefault("ZBC_DB_PATH", str(Path(__file__).parent.parent / "data" / "monitor.db"))
-
-import pytest
-import pytest
-
-
-@pytest.fixture(scope="module", autouse=True)
-def _fix_kos_db():
-    """执行阶段强制重置 ZBC_DB_PATH 到生产库：
-    防止 test_workspace_keys/test_cookies_import_api 的模块级/函数级污染跨文件泄漏，
-    导致本模块连接错库（no such table: kos_profiles/kos_paid_plans）。"""
-    os.environ.setdefault("ZBC_DB_PATH", str(Path(__file__).parent.parent / "data" / "monitor.db"))
-    yield
-
+"""Current KOS paid media and reward execution entry points."""
+import os
 import sqlite3
 
+import pytest
+
+import kos_engine
+import kos_execution
 import kos_paid
+
+
+@pytest.fixture(autouse=True)
+def isolated_kos_database(tmp_path, monkeypatch):
+    """Build the current KOS schema in an isolated DB for every test."""
+    monkeypatch.setenv("ZBC_DB_PATH", str(tmp_path / "kos-paid.db"))
+    previous_schema_state = kos_engine._KOS_SCHEMA_ENSURED
+    kos_engine._KOS_SCHEMA_ENSURED = False
+    conn = kos_engine.get_repository().connect()
+    try:
+        kos_engine._ensure_table(conn)
+        kos_engine._ensure_asset_columns(conn)
+        conn.execute(
+            "INSERT INTO kos_profiles (author_id, author_nickname, kos_tier) VALUES (?, ?, ?)",
+            ("test_author_kos_001", "测试KOS作者", "C"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    for owner in (kos_paid, kos_execution):
+        owner_conn = owner._conn()
+        owner_conn.close()
+    try:
+        yield
+    finally:
+        kos_engine._KOS_SCHEMA_ENSURED = previous_schema_state
 
 
 @pytest.fixture()
 def author_id():
     c = sqlite3.connect(os.environ["ZBC_DB_PATH"])
     row = c.execute("SELECT author_id FROM kos_profiles LIMIT 1").fetchone()
-    if not row:
-        # 表为空时插入测试数据，使测试自洽（不依赖生产数据）
-        c.execute("INSERT OR IGNORE INTO kos_profiles (author_id, author_nickname, kos_tier) VALUES (?, ?, ?)",
-                  ("test_author_kos_001", "测试KOS作者", "C"))
-        c.commit()
-        row = ("test_author_kos_001",)
     aid = row[0]
     c.close()
     return aid

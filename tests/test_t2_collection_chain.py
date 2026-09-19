@@ -38,7 +38,7 @@ def run_tests():
 
     # ===== 1. 数据模型 =====
     print("\n[1] 数据模型 RawNote / RawComment")
-    from collector_v2.base import RawNote, RawComment, PlatformCollector
+    from lumenis.system.collector.runtime.base import RawNote, RawComment, PlatformCollector
 
     note = RawNote(note_id="test_001", title="广州太古汇探店", content="测试正文",
                    author_id="u1", author_nickname="测试用户", likes=100,
@@ -54,7 +54,7 @@ def run_tests():
 
     # ===== 2. XHS 搜索结果解析 =====
     print("\n[2] XHSCollector 搜索结果解析")
-    from collector_v2.xhs.collector import XHSCollector
+    from lumenis.system.collector.runtime.xhs.collector import XHSCollector
 
     collector = XHSCollector(cookie="mock_cookie")
     mock_search_item = {
@@ -104,7 +104,7 @@ def run_tests():
 
     # ===== 4. 标准化 =====
     print("\n[4] NoteNormalizer 标准化")
-    from collector_v2.pipeline.normalize import NoteNormalizer, normalize_note
+    from lumenis.system.collector.runtime.pipeline.normalize import NoteNormalizer, normalize_note
 
     normalizer = NoteNormalizer()
     raw_note_dict = {
@@ -134,7 +134,7 @@ def run_tests():
 
     # ===== 5. SimHash 去重 =====
     print("\n[5] SimHashDeduplicator 去重")
-    from collector_v2.pipeline.deduplicate import SimHashDeduplicator, deduplicate
+    from lumenis.system.collector.runtime.pipeline.deduplicate import SimHashDeduplicator, deduplicate
 
     dedup = SimHashDeduplicator(hash_bits=64, threshold=6)
     notes_for_dedup = [
@@ -150,7 +150,7 @@ def run_tests():
 
     # ===== 6. 主体过滤（只读验证，不修改口径） =====
     print("\n[6] SubjectFilter 主体过滤（只读验证）")
-    from collector_v2.pipeline.subject_filter import SubjectFilter, filter_subject
+    from lumenis.system.collector.runtime.pipeline.subject_filter import SubjectFilter, filter_subject
 
     sf = SubjectFilter()
     # 广州太古汇应通过
@@ -177,7 +177,7 @@ def run_tests():
 
     # ===== 7. 持久化（临时 DB） =====
     print("\n[7] NotePersister 持久化（临时DB）")
-    from collector_v2.pipeline.persist import NotePersister
+    from lumenis.system.collector.runtime.pipeline.persist import NotePersister
 
     tmp_fd, tmp_path = tempfile.mkstemp(suffix=".db")
     os.close(tmp_fd)
@@ -244,7 +244,7 @@ def run_tests():
 
     # ===== 8. 采集状态机 =====
     print("\n[8] 采集状态机 CollectionStatus")
-    from platform_adapters.base import CollectionStatus, CollectionResult, BasePlatformAdapter
+    from lumenis.system.collector.adapters.base import CollectionStatus, CollectionResult, BasePlatformAdapter
 
     required_states = ["SUCCESS", "NO_NEW_DATA", "RISK_WARNING", "NEED_VERIFY",
                        "BLOCKED", "SESSION_EXPIRED", "COLLECT_ERROR", "COOLING_DOWN"]
@@ -261,7 +261,7 @@ def run_tests():
 
     # ===== 9. 状态映射 state_map =====
     print("\n[9] 状态映射 state_map（多套状态兼容）")
-    from platform_adapters.scheduling.state_map import (
+    from lumenis.system.collector.adapters.scheduling.state_map import (
         CS, to_canonical, to_guard, to_log_status, incident_class,
         is_stop_request, needs_human, is_ok, CLASS_A_AUTH, CLASS_B_VERIFY, CLASS_C_RISK
     )
@@ -284,9 +284,9 @@ def run_tests():
     check("NEED_VERIFY=B类", incident_class(CS.NEED_VERIFY) == CLASS_B_VERIFY)
     check("BLOCKED=C类", incident_class(CS.BLOCKED) == CLASS_C_RISK)
 
-    # ===== 10. collector_guard 状态机 =====
-    print("\n[10] collector_guard CollectState")
-    from collector_guard.state import CollectState
+    # ===== 10. Collector Guard 状态机 =====
+    print("\n[10] Canonical CollectState")
+    from lumenis.system.collector.guard.state import CollectState
 
     guard_states = ["HEALTHY", "WARNING", "COOLDOWN", "PAUSED", "AUTH_REQUIRED", "NEED_VERIFY", "NETWORK_ERROR"]
     for s in guard_states:
@@ -298,8 +298,8 @@ def run_tests():
 
     # ===== 11. Browser Runtime 路由与降级 =====
     print("\n[11] BrowserRuntime 路由与降级")
-    from browser_runtime.router import BrowserRouter, BrowserRouterError, browser_router
-    from browser_runtime.contract import BrowserContract
+    from lumenis.system.browser.runtime.router import BrowserRouter, BrowserRouterError, browser_router
+    from lumenis.system.browser.runtime.contract import BrowserContract
 
     router = BrowserRouter()
     check("Router 初始无 provider", len(router.providers()) == 0)
@@ -331,8 +331,8 @@ def run_tests():
 
     # ===== 12. XHS Adapter 状态映射 =====
     print("\n[12] XiaohongshuAdapter 状态映射")
-    from platform_adapters.xhs import XiaohongshuAdapter
-    from platform_adapters.base import CollectionStatus
+    from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+    from lumenis.system.collector.adapters.base import CollectionStatus
 
     adapter = XiaohongshuAdapter()
     check("Adapter platform=xhs", adapter.platform == "xhs")

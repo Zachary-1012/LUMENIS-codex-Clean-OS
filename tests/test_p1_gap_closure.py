@@ -21,7 +21,7 @@ class TestTrackBEncoding:
     """验证编码转换（UTF-8/特殊字符）。"""
 
     def test_safe_encode_utf8(self):
-        from ai_channel import safe_encode_payload
+        from lumenis.system.ai_gateway.channel import safe_encode_payload
         data = {"content": "测试中文内容"}
         encoded, enc = safe_encode_payload(data)
         assert isinstance(encoded, bytes)
@@ -29,14 +29,14 @@ class TestTrackBEncoding:
         assert "测试中文内容".encode("utf-8") in encoded
 
     def test_safe_encode_with_special_chars(self):
-        from ai_channel import safe_encode_payload
+        from lumenis.system.ai_gateway.channel import safe_encode_payload
         data = {"content": "包含\u200b零宽字符\ufeffBOM和控制字符\x01"}
         encoded, enc = safe_encode_payload(data)
         assert isinstance(encoded, bytes)
         # 不应抛异常
 
     def test_safe_decode_utf8(self):
-        from ai_channel import safe_decode_response
+        from lumenis.system.ai_gateway.channel import safe_decode_response
         text = "测试响应内容"
         decoded, enc, replaced = safe_decode_response(text.encode("utf-8"))
         assert decoded == text
@@ -44,7 +44,7 @@ class TestTrackBEncoding:
         assert replaced is False
 
     def test_safe_decode_fallback_chain(self):
-        from ai_channel import safe_decode_response
+        from lumenis.system.ai_gateway.channel import safe_decode_response
         # GBK 编码的内容
         gbk_text = "GBK编码内容".encode("gbk")
         decoded, enc, replaced = safe_decode_response(gbk_text)
@@ -52,7 +52,7 @@ class TestTrackBEncoding:
         assert enc in ("gbk", "gb18030")
 
     def test_normalize_special_chars(self):
-        from ai_channel import normalize_special_chars
+        from lumenis.system.ai_gateway.channel import normalize_special_chars
         text = "\ufeff正常内容\u200b带零宽\x01控制字符"
         normalized = normalize_special_chars(text)
         assert "\ufeff" not in normalized
@@ -66,7 +66,7 @@ class TestTrackBReconnect:
     """验证断线重连（指数退避+上限）。"""
 
     def test_reconnect_success_first_attempt(self):
-        from ai_channel import reconnect_with_backoff
+        from lumenis.system.ai_gateway.channel import reconnect_with_backoff
         call_count = 0
         def connect():
             nonlocal call_count
@@ -78,7 +78,7 @@ class TestTrackBReconnect:
         assert attempts == 1
 
     def test_reconnect_with_failures(self):
-        from ai_channel import reconnect_with_backoff
+        from lumenis.system.ai_gateway.channel import reconnect_with_backoff
         call_count = 0
         def connect():
             nonlocal call_count
@@ -93,7 +93,7 @@ class TestTrackBReconnect:
         assert attempts == 3
 
     def test_reconnect_exhausted(self):
-        from ai_channel import reconnect_with_backoff
+        from lumenis.system.ai_gateway.channel import reconnect_with_backoff
         def connect():
             raise ConnectionError("always fail")
         success, result, attempts = reconnect_with_backoff(
@@ -108,9 +108,9 @@ class TestTrackBObservability:
     """验证可观测性（连接状态/最后成功/失败计数/熔断）。"""
 
     def test_get_channel_status_detailed(self):
-        from ai_channel import get_channel_status_detailed
+        from lumenis.system.ai_gateway.channel import get_channel_status_detailed
         status = get_channel_status_detailed()
-        assert status["module"] == "ai_channel"
+        assert status["module"] == "lumenis.system.ai_gateway.channel"
         assert status["track_b_status"] == "ACTIVE"
         assert "global_breaker" in status
         assert "providers" in status
@@ -120,7 +120,7 @@ class TestTrackBObservability:
         assert "heartbeat" in status
 
     def test_provider_breaker_independent(self):
-        from ai_channel import get_provider_breaker
+        from lumenis.system.ai_gateway.channel import get_provider_breaker
         pb1 = get_provider_breaker("zhipu")
         pb2 = get_provider_breaker("ark")
         assert pb1.name == "zhipu"
@@ -130,7 +130,7 @@ class TestTrackBObservability:
         assert pb1.breaker.failure_count > 0
 
     def test_full_fallback_chain(self):
-        from ai_channel import full_fallback_chain
+        from lumenis.system.ai_gateway.channel import full_fallback_chain
         chain = full_fallback_chain()
         assert "zhipu" in chain
         assert "doubao" in chain
@@ -138,7 +138,7 @@ class TestTrackBObservability:
         assert chain[-1] == "rule"  # 本地规则始终最后兜底
 
     def test_doubao_fallback_config(self):
-        from ai_channel import get_doubao_fallback_config
+        from lumenis.system.ai_gateway.channel import get_doubao_fallback_config
         config = get_doubao_fallback_config()
         assert config["provider"] == "doubao"
         assert config["role"] == "minimal_fallback"
@@ -146,7 +146,7 @@ class TestTrackBObservability:
         assert "model" in config
 
     def test_track_b_self_check(self):
-        from ai_channel import track_b_self_check
+        from lumenis.system.ai_gateway.channel import track_b_self_check
         check = track_b_self_check()
         assert check["status"] == "READY"
         assert "connection_keepalive" in check

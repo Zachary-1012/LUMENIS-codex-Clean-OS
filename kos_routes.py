@@ -2094,7 +2094,7 @@ def api_kos_collect():
                             "reason": paused.get("reason", "采集已暂停"), "brand": brand}), 200
         cdp_url = (body.get("cdp_url") or "").strip() or cdp_url_for(XHS_RETINAUT_NAME)  # KOS 统一香港账号采集（用户指令，可 body 覆盖）
         comments = bool(body.get("comments", True))
-        from collector_v2.xhs.live_engine import run_live, persist_live
+        from lumenis.system.collector.runtime.xhs.live_engine import run_live, persist_live
 
         def brand_hit(text):
             try:
@@ -2109,7 +2109,14 @@ def api_kos_collect():
         for kw in kws:
             data = run_live(kw, max_scroll=max_scroll, max_details=max_details,
                             max_comment_pages=max_comment_pages, comments=comments, cdp_url=cdp_url)
-            stats = persist_live(data, brand_hit)
+            # Preserve the selected BMP brand as the Evidence/Canonical scope;
+            # the predicate stays brand-specific and never switches CTH's default.
+            raw_notes = data.get("notes", []) if isinstance(data, dict) else []
+            for note in raw_notes:
+                if isinstance(note, dict):
+                    note.setdefault("source_keyword", kw)
+            stats = persist_live(data, brand_hit, subject_scope=brand,
+                                 domain_id="bmp", product_id="BMP")
             accepted_total += int(stats.get("persisted", 0))
             results.append({"keyword": kw, "stats": stats,
                             "verification_required": data.get("verification_required", False)})

@@ -9,7 +9,7 @@
   3. 审计：每次翻转记录 who/why/when，事件时间线完整。
 
 用法（程序化检查，供 collector 等调用）：
-  from collector_guard.runtime_switch import get_switch
+  from lumenis.system.collector.guard.runtime_switch import get_switch
   if get_switch().is_enabled() and not get_switch().is_dry_run():   # 才真正行动
       ...
 """
@@ -19,7 +19,7 @@ import json
 import os
 import threading
 
-from core.repository_registry import get_data_dir
+from lumenis.shared.database.registry import get_data_dir
 
 STATE_PATH = os.path.join(get_data_dir(), "runtime-switch.json")
 AUDIT_PATH = os.path.join(get_data_dir(), "runtime-switch-audit.jsonl")

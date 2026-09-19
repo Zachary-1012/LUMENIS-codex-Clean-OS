@@ -9,7 +9,6 @@ tests/test_collector_multi_platform.py | requires real platform cookies/session 
 tests/test_data_quality_subject_rejudge.py | asserts production row-count/data-quality baseline
 tests/test_database.py | validates the protected/full production database schema instance
 tests/test_dual_run_stability.py | requires production/staging DB plus local rollback/runtime context
-tests/test_platform_data_dict_v1.py | DB schema assertions currently target local data/monitor.db; refactor to temp migrated DB
 tests/test_production_baseline.py | requires generated production-baseline evidence and local git/runtime context
 tests/test_udip_consistency.py | cross-surface consistency currently requires protected production DB
 tests/test_weibo_adapter.py | requires real Weibo credential/session behavior

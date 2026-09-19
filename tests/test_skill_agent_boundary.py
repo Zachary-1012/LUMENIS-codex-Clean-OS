@@ -18,7 +18,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from skill_registry import (
+from lumenis.shared.agents.skills.registry import (
     SkillMetadata, SkillRegistry, RiskLevel, ExecutionPolicy,
     EvaluationStatus, get_skill_registry, SKILL_PROHIBITIONS,
 )
@@ -648,7 +648,7 @@ class TestExistingModuleAdapters:
 
     def test_function_registry_registers_skills(self):
         from function_registry import register_functions_as_skills
-        from skill_registry import SkillRegistry
+        from lumenis.shared.agents.skills.registry import SkillRegistry
         reg = SkillRegistry()
         result = register_functions_as_skills(registry=reg)
         assert result["registered"] > 0

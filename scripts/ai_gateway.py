@@ -82,6 +82,10 @@ def chat_json(role, user_content, temperature=0.1, max_tokens=1200, model=None, 
     strategies = []
     t0 = time.time()
     provider = "unknown"
+    # A failed provider call or an empty response must still produce a valid
+    # failure result and budget record when max_retries is zero.
+    data = None
+    content = None
     for _ in range(max_retries + 1):
         attempts += 1
         try:

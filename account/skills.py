@@ -337,7 +337,7 @@ def get_skill_info(skill_id: str) -> dict:
 
 def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
                       action_type: str = "ANALYZE", user_id: int = None,
-                      user_role: str = "user", product: str = "SYSTEM") -> dict:
+                      user_role: str = "user", product: str = None) -> dict:
     """执行 Skill（走完整执行链：Permission→Firewall→Effect Fence→Execute→Evidence→Evaluation→Trace）"""
     from lumenis.shared.agents.skills.execution import (
         run_execution_chain, ActionType, SkillRuntimeInfo,
@@ -346,6 +346,55 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
     info = get_skill_info(skill_id)
     if not info:
         return {"success": False, "error": f"skill '{skill_id}' not found", "code": "NOT_FOUND"}
+
+    # Derive identity from the active account record and check the requested
+    # product lens against the member authorization matrix. The request body
+    # and a caller-supplied role are never authorization sources.
+    if not isinstance(user_id, int) or user_id <= 0:
+        return {"success": False, "error": "authenticated actor required", "code": "ACTOR_REQUIRED"}
+    try:
+        conn = get_db()
+        try:
+            row = conn.execute(
+                "SELECT role, status FROM v4_users WHERE id=?", (user_id,)
+            ).fetchone()
+        finally:
+            conn.close()
+    except Exception:
+        row = None
+    if not row or row["status"] != "active" or row["role"] not in ("owner", "admin", "user"):
+        return {"success": False, "error": "active authenticated actor required", "code": "ACTOR_INVALID"}
+    actual_role = row["role"]
+
+    requested_product = str(product or info.get("product") or "").strip().upper()
+    product_map = {
+        "CTH": ("CTH", "cth"),
+        "BMP": ("ZBMP", "zbmp"),
+        "ZBMP": ("ZBMP", "zbmp"),
+        "SYSTEM": ("SYSTEM", "system"),
+    }
+    selected_scope = product_map.get(requested_product)
+    if not selected_scope or requested_product == "SHARED":
+        return {"success": False, "error": "select an authorized CTH, BMP or SYSTEM context", "code": "PRODUCT_CONTEXT_REQUIRED"}
+    product_id, domain_id = selected_scope
+
+    at_name = str(action_type or "ANALYZE").upper()
+    if actual_role == "user" and at_name in {"COMMIT", "PUSH"}:
+        return {
+            "success": False,
+            "error": "explicit product admin role required for commit or push",
+            "code": "DOMAIN_ROLE_REQUIRED",
+        }
+
+    try:
+        from account.authorization import check_dual_domain_permission
+        access_action = "write" if at_name in {"WRITE", "COMMIT", "PUSH"} else "read"
+        if not check_dual_domain_permission(
+            user_id, product_id, module=skill_id, action=access_action
+        ):
+            return {"success": False, "error": "product scope permission denied", "code": "PRODUCT_SCOPE_DENIED"}
+    except Exception:
+        return {"success": False, "error": "product scope permission unavailable", "code": "PRODUCT_SCOPE_UNAVAILABLE"}
 
     runtime_config = dict(info.get("config") or {})
     for key in (
@@ -370,7 +419,26 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
     try:
         at = ActionType(action_type.upper())
     except ValueError:
-        at = ActionType.ANALYZE
+        return {"success": False, "error": "unknown action type", "code": "ACTION_TYPE_INVALID"}
+
+    # Domain permission roles are derived only from active server-side account
+    # state and the exact module/action matrix checked above. A module WRITE
+    # grant maps to a narrow writer role, never to a domain-wide admin role.
+    if product_id == "CTH":
+        permission_role = (
+            "cth_admin" if actual_role in ("owner", "admin") else
+            "cth_operator" if access_action == "write" else "cth_analyst"
+        )
+    elif product_id == "ZBMP":
+        permission_role = (
+            "zbmp_admin" if actual_role in ("owner", "admin") else
+            "zbmp_operator" if access_action == "write" else "zbmp_analyst"
+        )
+    else:
+        permission_role = (
+            "system_admin" if actual_role in ("owner", "admin") else
+            "system_writer" if access_action == "write" else "system_operator"
+        )
 
     ctx = run_execution_chain(
         skill_id=skill_id,
@@ -378,9 +446,10 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
         input_payload=input_payload or {},
         action_type=at,
         user_id=user_id,
-        user_role=user_role,
-        product=product,
-        domain=info.get("domain", "global"),
+        user_role=actual_role,
+        product=product_id,
+        domain=domain_id,
+        permission_role=permission_role,
         skill_info=skill_runtime,
     )
 

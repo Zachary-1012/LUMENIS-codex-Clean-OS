@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from platform_adapters.scheduling import (
+from lumenis.system.collector.adapters.scheduling import (
     PlatformSchedulePolicy, ScheduleDecider, PlatformScheduleState,
     PlatformSchedulePlanner, ScheduleDecisionStore, state_map as sm,
 )

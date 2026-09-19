@@ -28,16 +28,17 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import ai_call_logger as acl
-from lumenis.shared.database import DatabaseRepository
+from lumenis.shared.database import get_repository
 
 # ============================================================
-# 1) 数据库连接（复用 ai_call_logger 的路径约定）
+# 1) 数据库连接（由 Shared Database 在调用时解析唯一运行库）
 # ============================================================
-_DB_PATH = acl.DB_PATH
 
 
 def _conn():
-    conn = DatabaseRepository(_DB_PATH).connect(timeout=10, check_same_thread=False)
+    # Keep database selection dynamic so tests, workers and runtime overrides all
+    # use the same canonical repository/path as ai_call_logger.
+    conn = get_repository().connect(timeout=10, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 

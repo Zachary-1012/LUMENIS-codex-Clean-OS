@@ -405,6 +405,7 @@ class PermissionGate:
         operation_id: Optional[str] = None,
         domain_id: Optional[str] = None,
         role: Optional[str] = None,
+        exact_approval_required: bool = False,
     ) -> PermissionResult:
         """执行权限检查。
 
@@ -416,6 +417,8 @@ class PermissionGate:
             operation_id: 幂等性 ID（相同 ID 重复调用返回缓存结果）
             domain_id: 域身份（cth/zbmp），None 则从线程上下文读取
             role: 调用者角色（如 zbmp_analyst, cth_admin），用于跨域权限检查
+            exact_approval_required: 仅接受操作和资源均完全匹配的审批令牌；
+                默认 False 以保留现有调用方兼容性
 
         Returns:
             PermissionResult
@@ -496,8 +499,12 @@ class PermissionGate:
         # 5. 高风险操作需人工审批
         if self.require_human_approval(final_risk):
             # 检查是否有有效审批令牌
-            if self._has_valid_approval(operation_type.value, resource):
-                token = self._get_approval_token(operation_type.value, resource)
+            if self._has_valid_approval(
+                operation_type.value, resource, exact=exact_approval_required
+            ):
+                token = self._get_approval_token(
+                    operation_type.value, resource, exact=exact_approval_required
+                )
                 result = self._allow(
                     operation_type, resource, final_risk, spec.permission,
                     caller or self.default_caller, operation_id,
@@ -611,24 +618,48 @@ class PermissionGate:
         """检查指定操作/资源是否有有效审批令牌。"""
         return self._has_valid_approval(operation, resource)
 
-    def get_valid_approval_token(self, operation: str, resource: Optional[str] = None) -> Optional[str]:
+    def get_valid_approval_token(
+        self,
+        operation: str,
+        resource: Optional[str] = None,
+        exact: bool = False,
+    ) -> Optional[str]:
         """返回指定操作/资源当前有效的人工审批令牌（供一次性消费方使用）。
 
         生产调用方不应直接读取内部审批字典。这个窄接口让需要消费令牌的
-        handler 在成功执行后撤销同一令牌，避免一次人工确认被重放。
+        handler 在成功执行后撤销同一令牌，避免一次人工确认被重放。exact=True
+        时只返回 operation 与 resource 都完全匹配的审批，不接受通配授权。
         """
-        return self._get_approval_token(operation, resource)
+        return self._get_approval_token(operation, resource, exact=exact)
 
-    def _has_valid_approval(self, operation: str, resource: Optional[str] = None) -> bool:
+    def _has_valid_approval(
+        self,
+        operation: str,
+        resource: Optional[str] = None,
+        exact: bool = False,
+    ) -> bool:
         with self._approval_lock:
             for approval in self._approvals.values():
+                if exact and (
+                    approval.operation != operation or approval.resource != resource
+                ):
+                    continue
                 if approval.is_valid(operation, resource):
                     return True
         return False
 
-    def _get_approval_token(self, operation: str, resource: Optional[str] = None) -> Optional[str]:
+    def _get_approval_token(
+        self,
+        operation: str,
+        resource: Optional[str] = None,
+        exact: bool = False,
+    ) -> Optional[str]:
         with self._approval_lock:
             for approval in self._approvals.values():
+                if exact and (
+                    approval.operation != operation or approval.resource != resource
+                ):
+                    continue
                 if approval.is_valid(operation, resource):
                     return approval.token
         return None
@@ -826,16 +857,29 @@ class PermissionGate:
             "zbmp": {"read", "audit", "analyze"},  # 仅只读 ZBMP
         },
         "cth_analyst": {
-            "cth": {"read", "audit", "analyze", "research", "report_generate", "ai_call"},
+            "cth": {"read", "audit", "analyze", "research", "report_generate", "ai_call", "skill_execute"},
             "zbmp": {"read"},
+        },
+        "cth_operator": {
+            "cth": {"read", "audit", "analyze", "research", "report_generate", "ai_call", "skill_execute", "db_write"},
         },
         "zbmp_admin": {
             "zbmp": {"*"},  # ZBMP 域全部操作
             "cth": {"read", "audit"},  # 仅只读 CTH（不能写/删/改配置）
         },
         "zbmp_analyst": {
-            "zbmp": {"read", "audit", "analyze", "research", "report_generate", "ai_call"},
+            "zbmp": {"read", "audit", "analyze", "research", "report_generate", "ai_call", "skill_execute"},
             "cth": set(),  # ZBMP Analyst 无 CTH 权限
+        },
+        "zbmp_operator": {
+            "zbmp": {"read", "audit", "analyze", "research", "report_generate", "ai_call", "skill_execute", "db_write"},
+        },
+        "system_admin": {"system": {"*"}},
+        "system_operator": {
+            "system": {"read", "audit", "analyze", "research", "report_generate", "ai_call", "skill_execute", "runtime_operation"},
+        },
+        "system_writer": {
+            "system": {"read", "audit", "analyze", "research", "report_generate", "ai_call", "skill_execute", "db_write"},
         },
         "system": {
             "cth": {"*"},

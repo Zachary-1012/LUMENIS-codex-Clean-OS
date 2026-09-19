@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""P1-7 guardian 三模块「受控接入运行时」接线锁定测试。
+"""P1-7 guardian runtime and Shared Learning startup wiring contract.
 
 不重复 test_auto_recovery.py / test_data_feedback.py 的模块内部行为；
 本测试只锁定 app.py 启动接线：默认启用、可整体关闭、各自 try/except 隔离不阻断启动、
@@ -23,9 +23,9 @@ def test_p17_wiring_default_on_isolated_and_before_app_run():
     assert "P1-7 三 guardian 模块受控接入" in src
     # 默认启用，且可用 ZBC_GUARDIAN_ENABLED=0 整体关闭
     assert "os.environ.get('ZBC_GUARDIAN_ENABLED', '1') == '1'" in src
-    # 三模块都在启动路径被导入
+    # Recovery and health adapters stay wired; feedback uses its current owner.
     for mod in ("import auto_recovery as _ar",
-                "import data_feedback_loop as _dfl",
+                "from lumenis.shared.learning import feedback as _dfl",
                 "import system_guardian as _sg"):
         assert mod in src
     # 三个模块各自 try/except 隔离（任一失败不阻断启动）
@@ -38,7 +38,7 @@ def test_p17_wiring_default_on_isolated_and_before_app_run():
 
 def test_guardian_singletons_and_entrypoints():
     import auto_recovery
-    import data_feedback_loop as dfl_mod
+    from lumenis.shared.learning import feedback as dfl_mod
     import system_guardian
 
     assert isinstance(auto_recovery.recovery_engine, auto_recovery.AutoRecoveryEngine)

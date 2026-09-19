@@ -7,10 +7,11 @@
 """
 from __future__ import annotations
 
-import os
 import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+from lumenis.shared.database import DatabaseRepository
 
 _FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -46,12 +47,10 @@ CREATE INDEX IF NOT EXISTS idx_schedule_decisions_platform ON schedule_decisions
 class ScheduleDecisionStore:
     def __init__(self, db_path: str):
         self.db_path = db_path
-        os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+        self._repository = DatabaseRepository(db_path)
 
     def _conn(self) -> sqlite3.Connection:
-        c = sqlite3.connect(self.db_path, timeout=15)
-        c.row_factory = sqlite3.Row
-        return c
+        return self._repository.connect(timeout=15)
 
     def ensure_schema(self) -> None:
         """幂等建表；只新增 schedule_decisions，不触碰任何既有表。"""

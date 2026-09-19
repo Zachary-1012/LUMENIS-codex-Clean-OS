@@ -345,7 +345,7 @@ class TestEvidenceDomain:
 
     def test_evidence_with_explicit_domain(self, temp_db_path, cth_domain_ctx):
         """显式传 domain_id/product_id 的 evidence 正确写入。"""
-        from evidence_chain import EvidenceChain
+        from lumenis.shared.evidence.chain import EvidenceChain
         chain = EvidenceChain(db_path=temp_db_path)
         ev, is_new = chain.evidence_store.add_evidence(source_type="xiaohongshu",
             source_url="https://example.com/ev1",
@@ -359,7 +359,7 @@ class TestEvidenceDomain:
 
     def test_evidence_zbmp_domain(self, temp_db_path, zbmp_domain_ctx):
         """ZBMP evidence 写入域=zbmp。"""
-        from evidence_chain import EvidenceChain
+        from lumenis.shared.evidence.chain import EvidenceChain
         chain = EvidenceChain(db_path=temp_db_path)
         ev, is_new = chain.evidence_store.add_evidence(source_type="web",
             source_url="https://example.com/ev_zbmp",
@@ -372,7 +372,7 @@ class TestEvidenceDomain:
 
     def test_evidence_inherits_thread_context(self, temp_db_path, cth_domain_ctx):
         """不传 domain_id 时从线程上下文继承（CTH 域）。"""
-        from evidence_chain import EvidenceChain
+        from lumenis.shared.evidence.chain import EvidenceChain
         chain = EvidenceChain(db_path=temp_db_path)
         ev, _ = chain.evidence_store.add_evidence(source_type="weibo",
             source_url="https://example.com/ev_ctx",
@@ -385,7 +385,7 @@ class TestEvidenceDomain:
     def test_evidence_db_stores_domain(self, temp_db_path, cth_domain_ctx):
         """Evidence 写入数据库后域列有值。"""
         import sqlite3
-        from evidence_chain import EvidenceChain
+        from lumenis.shared.evidence.chain import EvidenceChain
         chain = EvidenceChain(db_path=temp_db_path)
         ev, _ = chain.evidence_store.add_evidence(source_type="xiaohongshu",
             source_url=f"https://example.com/ev_db_{uuid.uuid4().hex[:8]}",
@@ -412,20 +412,20 @@ class TestReportDomainRouting:
 
     def test_dual_domain_report_registry_exists(self):
         """双域报告注册表存在。"""
-        from report_engine import DUAL_DOMAIN_REPORTS
+        from lumenis.shared.reporting.engine import DUAL_DOMAIN_REPORTS
         assert isinstance(DUAL_DOMAIN_REPORTS, dict)
         assert "cth" in DUAL_DOMAIN_REPORTS or "zbmp" in DUAL_DOMAIN_REPORTS
 
     def test_generate_report_accepts_domain_id(self):
         """generate_report 接受 domain_id 参数。"""
         import inspect
-        from report_engine import generate_report
+        from lumenis.shared.reporting.engine import generate_report
         sig = inspect.signature(generate_report)
         assert "domain_id" in sig.parameters, "generate_report 缺少 domain_id 参数"
 
     def test_cth_report_types_registered(self):
         """CTH 报告类型已注册（日报/专报等）。"""
-        from report_engine import DUAL_DOMAIN_REPORTS
+        from lumenis.shared.reporting.engine import DUAL_DOMAIN_REPORTS
         cth_reports = DUAL_DOMAIN_REPORTS.get("cth", {})
         # CTH 至少应有 daily/special 之一
         report_types = list(cth_reports.keys())
@@ -433,7 +433,7 @@ class TestReportDomainRouting:
 
     def test_report_domain_not_silent_system(self):
         """报告域不静默落 SYSTEM——无效域应报错。"""
-        from report_engine import generate_report
+        from lumenis.shared.reporting.engine import generate_report
         with pytest.raises(Exception):
             generate_report("nonexistent_report", domain_id="invalid_domain")
 
@@ -448,7 +448,7 @@ class TestZBMPEndToEndChain:
         """ZBMP 全链路每跳 domain_id=zbmp, product_id=ZBMP。"""
         import sqlite3
         from canonical_data import CanonicalRecord, persist_canonical, CANONICAL_TABLE, ensure_canonical_table
-        from evidence_chain import EvidenceChain
+        from lumenis.shared.evidence.chain import EvidenceChain
         from risk_engine import evaluate_risk, ZBMP_RISK_POLICY
 
         # 跳1：采集→canonical（模拟 ZBMP 品牌数据采集）
@@ -503,7 +503,7 @@ class TestZBMPEndToEndChain:
         assert ev.product_id == "ZBMP", f"evidence product_id 丢域: {ev.product_id}"
 
         # 跳5：report 域路由（验证 ZBMP 报告类型可访问）
-        from report_engine import DUAL_DOMAIN_REPORTS
+        from lumenis.shared.reporting.engine import DUAL_DOMAIN_REPORTS
         zbmp_reports = DUAL_DOMAIN_REPORTS.get("zbmp", {})
         # ZBMP 报告注册表存在（可能为空=待补全，但不应报错）
         assert isinstance(zbmp_reports, dict)
@@ -531,7 +531,7 @@ class TestCTHEndToEndChain:
         """CTH 全链路每跳 domain_id=cth, product_id=CTH，必须过 subject 规则。"""
         import sqlite3
         from canonical_data import CanonicalRecord, persist_canonical, CANONICAL_TABLE, ensure_canonical_table
-        from evidence_chain import EvidenceChain
+        from lumenis.shared.evidence.chain import EvidenceChain
         from risk_engine import evaluate_risk, CTH_RISK_POLICY
         from subject_rules import subject_hit
 
@@ -591,7 +591,7 @@ class TestCTHEndToEndChain:
         assert ev.product_id == "CTH"
 
         # 跳6：report 域路由
-        from report_engine import DUAL_DOMAIN_REPORTS
+        from lumenis.shared.reporting.engine import DUAL_DOMAIN_REPORTS
         cth_reports = DUAL_DOMAIN_REPORTS.get("cth", {})
         assert isinstance(cth_reports, dict)
         assert len(cth_reports) > 0, "CTH 报告注册表不应为空"

@@ -11,8 +11,8 @@ Smart Tool Base — 智能工具化核心模块
   - recover()         : 自恢复策略
 
 与现有 Skill → Tool → Firewall → Effect Fence 兼容：
-  - 执行时如检测到 permission_gate / action_firewall / effect_fence 存在则调用
-  - 不存在则仅记录到 evidence，不绕过
+  - 安全门启用时始终调用 canonical SYSTEM Permission / Action Firewall / Effect Fence
+  - owner 缺失或检查失败时拒绝执行，并将原因写入 evidence
   - 与 agent_capability.router.ToolDefinition 兼容（可从 ToolDefinition 构建 SmartTool）
 
 设计原则：
@@ -39,21 +39,28 @@ from .recovery import (
     NO_RETRY_POLICY,
 )
 
-# 尝试导入现有安全网关（不存在则降级为仅记录）
+# 使用唯一 SYSTEM Security owner；owner 不可用时安全门保持关闭。
 try:
-    from permission_gate import get_permission_gate as _get_permission_gate
+    from lumenis.system.security import (
+        ActionRequest as _ActionRequest,
+        AgentAction as _AgentAction,
+        OperationType as _OperationType,
+        RiskLevel as _CanonicalRiskLevel,
+        get_effect_fence as _get_effect_fence,
+        get_permission_gate as _get_permission_gate,
+        validate_action as _validate_action,
+    )
     _HAS_PERMISSION_GATE = True
 except Exception:
     _get_permission_gate = None  # type: ignore
+    _get_effect_fence = None  # type: ignore
+    _validate_action = None  # type: ignore
+    _ActionRequest = None  # type: ignore
+    _AgentAction = None  # type: ignore
+    _OperationType = None  # type: ignore
+    _CanonicalRiskLevel = None  # type: ignore
     _HAS_PERMISSION_GATE = False
-
-try:
-    from skill_execution_chain import action_firewall as _action_firewall, effect_fence as _effect_fence
-    _HAS_EXECUTION_CHAIN = True
-except Exception:
-    _action_firewall = None  # type: ignore
-    _effect_fence = None  # type: ignore
-    _HAS_EXECUTION_CHAIN = False
+_HAS_EXECUTION_CHAIN = _HAS_PERMISSION_GATE
 
 
 # ─────────────────────────────────────────────────────────────
@@ -216,9 +223,9 @@ class SmartTool:
     def _check_security_gates(
         self, params: Dict[str, Any]
     ) -> Tuple[bool, str, Dict[str, Any]]:
-        """检查 permission_gate / action_firewall / effect_fence。
+        """检查 canonical SYSTEM Permission、Action Firewall 和 Effect Fence。
 
-        存在则调用，不存在则仅记录。
+        需要安全门但 owner 不可用、检查异常或拒绝时一律阻止工具执行。
 
         Returns:
             (allowed, reason, gate_evidence)
@@ -233,76 +240,95 @@ class SmartTool:
             gate_evidence["checks"]["skipped"] = "use_security_gates=False"
             return True, "security gates disabled by config", gate_evidence
 
-        # Permission Gate
-        if _HAS_PERMISSION_GATE and _get_permission_gate is not None:
-            try:
-                gate = _get_permission_gate()
-                # 兼容不同的 check 接口
-                if hasattr(gate, "check"):
-                    result = gate.check(
-                        operation=self.tool_id or self.name,
-                        params=params,
-                        permission_level=self.permission_level,
-                    )
-                    allowed = bool(result) if isinstance(result, bool) else bool(result.get("allowed", True))
-                    gate_evidence["checks"]["permission_gate"] = {
-                        "called": True,
-                        "result": str(result)[:200],
-                        "allowed": allowed,
-                    }
-                    if not allowed:
-                        return False, f"permission_gate denied: {str(result)[:200]}", gate_evidence
-                else:
-                    gate_evidence["checks"]["permission_gate"] = {"called": False, "reason": "no check method"}
-            except Exception as e:
-                gate_evidence["checks"]["permission_gate"] = {"error": str(e)[:200]}
-                # 网关异常时 fail-closed？不，网关本身异常不应阻断工具，记录即可
-                # 但如果是权限明确拒绝则阻断
+        required_owners = (
+            _get_permission_gate, _get_effect_fence, _validate_action,
+            _ActionRequest, _AgentAction, _OperationType, _CanonicalRiskLevel,
+        )
+        if not _HAS_PERMISSION_GATE or any(owner is None for owner in required_owners):
+            gate_evidence["checks"]["security_owner"] = {"available": False}
+            return False, "canonical SYSTEM Security owner unavailable", gate_evidence
 
-        # Action Firewall
-        if _HAS_EXECUTION_CHAIN and _action_firewall is not None:
-            try:
-                if callable(_action_firewall):
-                    result = _action_firewall(
-                        tool_id=self.tool_id,
-                        params=params,
-                        risk_level=self.risk_level,
-                    )
-                    allowed = bool(result) if isinstance(result, bool) else bool(
-                        result.get("allowed", True) if isinstance(result, dict) else True
-                    )
-                    gate_evidence["checks"]["action_firewall"] = {
-                        "called": True,
-                        "result": str(result)[:200],
-                        "allowed": allowed,
-                    }
-                    if not allowed:
-                        return False, f"action_firewall blocked: {str(result)[:200]}", gate_evidence
-            except Exception as e:
-                gate_evidence["checks"]["action_firewall"] = {"error": str(e)[:200]}
+        permission_level = str(
+            getattr(self.permission_level, "value", self.permission_level)
+        ).strip().lower()
+        action_map = {
+            "read": (_OperationType.SKILL_EXECUTE, _AgentAction.READ),
+            "analyze": (_OperationType.SKILL_EXECUTE, _AgentAction.ANALYZE),
+            "suggest": (_OperationType.SKILL_EXECUTE, _AgentAction.SUGGEST),
+            "export": (_OperationType.DATA_EXPORT, _AgentAction.EXPORT),
+            "write": (_OperationType.DB_WRITE, _AgentAction.WRITE),
+            "commit": (_OperationType.CONFIG_MODIFY, _AgentAction.COMMIT),
+            "push": (_OperationType.RUNTIME_OPERATION, _AgentAction.PUSH),
+            "deploy": (_OperationType.RUNTIME_OPERATION, _AgentAction.DEPLOY),
+        }
+        mapped = action_map.get(permission_level)
+        if mapped is None:
+            gate_evidence["checks"]["permission_gate"] = {
+                "called": False,
+                "allowed": False,
+                "reason": f"unrecognized permission level: {permission_level or 'empty'}",
+            }
+            return False, "permission denied: unrecognized permission level", gate_evidence
 
-        # Effect Fence
-        if _HAS_EXECUTION_CHAIN and _effect_fence is not None:
-            try:
-                if callable(_effect_fence):
-                    result = _effect_fence(
-                        tool_id=self.tool_id,
-                        params=params,
-                    )
-                    allowed = bool(result) if isinstance(result, bool) else bool(
-                        result.get("allowed", True) if isinstance(result, dict) else True
-                    )
-                    gate_evidence["checks"]["effect_fence"] = {
-                        "called": True,
-                        "result": str(result)[:200],
-                        "allowed": allowed,
-                    }
-                    if not allowed:
-                        return False, f"effect_fence blocked: {str(result)[:200]}", gate_evidence
-            except Exception as e:
-                gate_evidence["checks"]["effect_fence"] = {"error": str(e)[:200]}
+        operation_type, action = mapped
+        risk_value = str(
+            getattr(self.risk_level, "value", self.risk_level)
+        ).strip().upper()
+        risk_level = getattr(_CanonicalRiskLevel, risk_value, _CanonicalRiskLevel.HIGH)
+        target = str(params.get("target") or self.tool_id or self.name or "unnamed_tool")
+        tool_id = str(self.tool_id or self.name or "unnamed_tool")
 
-        return True, "all gates passed (or not available)", gate_evidence
+        try:
+            permission = _get_permission_gate().check(
+                operation_type=operation_type,
+                resource=target,
+                risk_level=risk_level,
+                caller=f"smart_tool:{tool_id}",
+            )
+            gate_evidence["checks"]["permission_gate"] = {
+                "called": True,
+                "result": str(permission.to_dict())[:200],
+                "allowed": bool(permission.allowed),
+            }
+            if not permission.allowed:
+                return False, f"permission_gate denied: {permission.reason}", gate_evidence
+
+            action_request = _ActionRequest(
+                identity=f"smart_tool:{tool_id}",
+                intent=f"execute {tool_id}",
+                tool=tool_id,
+                parameters=params,
+                target=target,
+                scope=str(params.get("domain") or "global").lower(),
+                action=action,
+            )
+            firewall = _validate_action(action_request, permission_result=permission)
+            gate_evidence["checks"]["action_firewall"] = {
+                "called": True,
+                "result": str(firewall.to_dict())[:200],
+                "allowed": bool(firewall.allowed),
+            }
+            if not firewall.allowed:
+                return False, f"action_firewall blocked: {firewall.reason}", gate_evidence
+
+            fence = _get_effect_fence().check(
+                action=action,
+                target=target,
+                payload=params,
+                operation_id=permission.operation_id,
+            )
+            gate_evidence["checks"]["effect_fence"] = {
+                "called": True,
+                "result": str(fence.to_dict())[:200],
+                "allowed": bool(fence.allowed),
+            }
+            if not fence.allowed:
+                return False, f"effect_fence blocked: {fence.reason}", gate_evidence
+        except Exception as e:
+            gate_evidence["checks"]["canonical_security"] = {"error": str(e)[:200]}
+            return False, f"canonical security check failed: {str(e)[:200]}", gate_evidence
+
+        return True, "all canonical SYSTEM Security gates passed", gate_evidence
 
     # ── 自恢复 ──────────────────────────────────────────────
 

@@ -52,30 +52,20 @@ def collect_now(keyword='广州太古汇', max_scroll=5, max_details=20):
     print("开始采集...")
     print()
 
-    # 尝试使用collector_v2
+    # 通过 SYSTEM Collector 的当前 XHS runtime 采集并按现行 Subject 规则入库。
     try:
-        from collector_v2.xhs.live_engine import XHSLiveEngine
-        engine = XHSLiveEngine()
-        result = engine.collect(
-            keyword=keyword,
-            max_scroll=max_scroll,
-            max_details=max_details
-        )
-        print(f"采集完成: {result}")
-        return True
-    except ImportError:
-        print("⚠️ collector_v2不可用，尝试使用collector.py")
-    except Exception as e:
-        print(f"⚠️ collector_v2采集失败: {e}")
+        from lumenis.system.collector.runtime.xhs.live_engine import run_live, persist_live
+        from subject_rules import subject_hit_text
 
-    # 尝试使用collector.py
-    try:
-        from collector import collect_all
-        result = collect_all(keyword=keyword)
-        print(f"采集完成: {result}")
-        return True
-    except ImportError:
-        print("❌ collector.py不可用")
+        result = run_live(
+            keyword,
+            max_scroll=max_scroll,
+            max_details=max_details,
+        )
+        stats = persist_live(result, subject_hit_text)
+        print(f"采集结果: {result}")
+        print(f"入库结果: {stats}")
+        return bool(stats.get("ok"))
     except Exception as e:
         print(f"❌ 采集失败: {e}")
 

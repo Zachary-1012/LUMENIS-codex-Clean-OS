@@ -23,7 +23,7 @@ class WebRSSAdapter(BasePlatformAdapter):
                 message="keyword is required",
             )
         try:
-            from web_monitor_v570 import fetch_google_news_rss
+            from web_discovery import fetch_google_news_rss
 
             outcome = fetch_google_news_rss(query, max_results=kwargs.get("max_results", 20))
         except Exception as exc:

@@ -147,13 +147,15 @@ def test_primary_hk_sync_writes_note_evidence_canonical_and_trace(tmp_path, monk
 
 def test_primary_note_survives_evidence_sidewrite_failure(tmp_path, monkeypatch):
     db_path = _init_temp_database(tmp_path, monkeypatch)
-    import evidence_chain
+    import lumenis.shared.evidence as evidence
     import xhs_cookie_bridge as bridge
 
     def fail_lineage(*_args, **_kwargs):
         raise sqlite3.OperationalError("injected temporary-store failure")
 
-    monkeypatch.setattr(evidence_chain, "capture_note_lineage", fail_lineage)
+    # The bridge imports the canonical package API at call time. Patch that
+    # public owner surface to inject the same non-fatal side-write failure.
+    monkeypatch.setattr(evidence, "capture_note_lineage", fail_lineage)
     _stub_primary_sync(monkeypatch, bridge, _sample_note())
     result = bridge.sync(
         keywords=["广州太古汇"],

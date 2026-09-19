@@ -2,7 +2,7 @@
 """SQLite 任务队列测试（能力提取自 neotask）。"""
 import time
 
-from collector_guard.task_queue import TaskQueue
+from lumenis.system.collector.guard.task_queue import TaskQueue
 
 
 def _q(tmp_path):

@@ -1,8 +1,10 @@
 """Canonical LUMENIS production database path authority.
 
-Production has one SQLite truth. ZBC_DB_PATH is the single supported runtime
-override for tests, staging and deployment. Shared capabilities and SYSTEM
-services must not select parallel production database files.
+Production has one SQLite business-truth database. ZBC_DB_PATH is the single
+supported runtime override for that truth store in tests, staging and deployment.
+An explicitly architecture-registered SYSTEM operational store (such as durable
+task-queue state) may use its own owner-declared path, but cannot store Canonical
+Data, Evidence or business outcomes and must use the shared connection owner.
 """
 from __future__ import annotations
 

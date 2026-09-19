@@ -272,7 +272,7 @@ def scheduling_health() -> Dict[str, Any]:
     证据下钻：platform 名即状态 key，可回查 platform_adapters/scheduling/planner.py。
     """
     try:
-        from platform_adapters.scheduling.planner import PlatformSchedulePlanner
+        from lumenis.system.collector.adapters.scheduling.planner import PlatformSchedulePlanner
 
         # 无参数实例化（默认 policies/state_file），若需要参数则退化
         planner = PlatformSchedulePlanner()

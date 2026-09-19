@@ -6,10 +6,10 @@ try:
 except Exception:
     pass
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from platform_adapters.health_center import build_platform_health, IDLE, DISABLED
-from platform_adapters.config import PLATFORM_CAPABILITIES
-from platform_adapters.scheduling import PlatformSchedulePlanner
-from platform_adapters.scheduling import state_map as sm
+from lumenis.system.collector.adapters.health_center import build_platform_health, IDLE, DISABLED
+from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+from lumenis.system.collector.adapters.scheduling import PlatformSchedulePlanner
+from lumenis.system.collector.adapters.scheduling import state_map as sm
 
 _fails, _total = [], 0
 def check(name, cond):

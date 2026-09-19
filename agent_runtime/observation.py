@@ -166,7 +166,7 @@ class AIStatusObserver(BaseObserver):
 
         result = {"status": "unknown", "provider": "", "circuit_state": "unknown", "error": None}
         try:
-            from ai_channel import channel_health, get_provider_status_v1
+            from lumenis.system.ai_gateway.channel import channel_health, get_provider_status_v1
             try:
                 health = channel_health()
                 result["status"] = health.get("status", "unknown")
@@ -206,7 +206,7 @@ class ToolStatusObserver(BaseObserver):
 
         result = {"tools": {}}
         try:
-            from skill_registry import get_skill_registry
+            from lumenis.shared.agents.skills.registry import get_skill_registry
             reg = get_skill_registry()
             stats = reg.stats()
             result["tools"]["skill_registry_total"] = stats.get("total", 0)

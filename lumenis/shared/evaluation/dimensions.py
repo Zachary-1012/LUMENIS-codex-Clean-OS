@@ -28,10 +28,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from lumenis.shared.database import DatabaseRepository
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 from .recorder import (
-    DEFAULT_DB_PATH,
     EvaluationRecord,
     judge_status,
     record_evaluation,
@@ -78,7 +77,7 @@ def _get_threshold(metric_key: str) -> Dict[str, Any]:
 
 
 def _conn(db_path: Optional[str] = None) -> sqlite3.Connection:
-    path = db_path or DEFAULT_DB_PATH
+    path = db_path or main_db_path()
     conn = DatabaseRepository(path).connect(timeout=10, read_only=True)
     conn.row_factory = sqlite3.Row
     return conn

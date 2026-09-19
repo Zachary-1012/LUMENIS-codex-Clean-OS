@@ -1,4 +1,4 @@
-"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
 from pathlib import Path
 
@@ -1075,7 +1075,6 @@ _PG_BYPASS_PATHS = frozenset({
     '/api/zbmp/overview', '/api/zbmp/brands', '/api/zbmp/metrics',
     '/api/cth/overview', '/api/cth/events', '/api/cth/xiaohongshu',
     '/api/system/status', '/api/system/runtime', '/api/system/domains',
-    '/api/developer/run', '/api/config/run-code', '/api/dev/run-code',
     # 验收判定 judge：纯内存函数计算，不读写 DB/文件/网络/外部状态，等同只读
     '/api/system/acceptance/judge',
     # 仅用于生成一次、资源范围固定的人工审批令牌；实际 archive 写操作
@@ -1148,7 +1147,7 @@ def _pg_resolve_operation_type(path, method):
     if any(k in p for k in ('/ai', '/intelligence', '/creative', '/case-analysis/ai-evaluate', '/pr/')):
         return OperationType.AI_CALL
     # 11. Skill/开发者代码执行
-    if any(k in p for k in ('/skill', '/developer/run', '/run-code', '/workspace/term', '/dev/run-code')):
+    if any(k in p for k in ('/skill', '/workspace/term')):
         return OperationType.SKILL_EXECUTE
     # 12. 事件确认/负面确认/审核（DB写入）
     if any(k in p for k in ('/confirm', '/reject', '/review', '/event-graph', '/event-review', '/negative')):
@@ -1225,10 +1224,11 @@ db.init_db()
 # P0-3/P0-4/P1-2/P1-3/P1-4: Evidence Chain + Canonical Data 旁路接入 + Collector Health + 双域隔离迁移
 try:
     from lumenis.shared.database import migrations as _dm
-    _dm.migrate()
+    if not _dm.migrate():
+        raise RuntimeError("canonical Shared Database migration returned failure")
     print("[db_migrations] migration completed (canonical Shared Database migrations)")
 except Exception as _e:
-    print(f"[db_migrations] migration warning (non-fatal): {_e}")
+    raise RuntimeError(f"canonical Shared Database migration failed; application startup stopped: {_e}") from _e
 
 # P0-2: 独立确保 publish_datetime 索引存在（双保险，幂等，不依赖版本迁移成功）
 try:
@@ -2322,31 +2322,6 @@ def api_negative_review_stats():
         return jsonify({'ok': True, 'total': total, 'confirmed': confirmed, 'rejected': rejected, 'pending': pending, 'high_risk': high_risk})
     except Exception as e:
         return jsonify({'ok': False, 'total': 0, 'confirmed': 0, 'rejected': 0, 'pending': 0, 'high_risk': 0, 'error': str(e), 'code': 'NEGATIVE_REVIEW_STATS_ERROR'}), 500
-
-def _dev_exec_guard(code):
-    """统一代码执行闸门：None=放行(仅开发态)；否则返回 (response,403/400)。"""
-    if not _DEV_EXEC_ENABLED:
-        return jsonify({'ok': False, 'code': 'DEV_EXEC_DISABLED',
-                        'error': '生产环境已禁用服务端任意代码执行/写文件（GAP-04 安全收口）；本地热更请显式设置 ZBC_DEV_EXEC=1',
-                        'version': APP_VERSION}), 403
-    if code is None or not str(code).strip():
-        return jsonify({'ok': False, 'error': '代码不能为空'}), 400
-    if _DEV_EXEC_BLOCK_RE.search(str(code)):
-        print('[SEC][GAP-04] dev-exec blocked dangerous construct')
-        return jsonify({'ok': False, 'code': 'DEV_EXEC_DANGEROUS',
-                        'error': '开发态仍拦截危险构造（import/exec/eval/文件写/网络/反射等），请改用受控 API'}), 400
-    return None
-
-@app.route('/api/developer/run', methods=['POST'])
-def api_developer_run():
-    """GAP-04 统一收口点①（兼容保留）：生产永久禁用，开发态走统一闸门。"""
-    data = request.get_json(silent=True) or {}
-    guarded = _dev_exec_guard(data.get('code', ''))
-    if guarded:
-        return guarded
-    return jsonify({'ok': False, 'code': 'DEV_EXEC_DISABLED',
-                    'error': '该入口为兼容保留端点，生产不执行任意代码', 'version': APP_VERSION}), 403
-
 
 @app.route('/api/settings')
 def api_settings_get():
@@ -4547,9 +4522,9 @@ if __name__=='__main__':
     except Exception as e:
         print(f'[Stability] 稳定性监控启动失败: {e}')
 
-    # 云端 AI 通道 24h 心跳保活（ai_channel；探活走底层传输、不占按次预算）
+    # SYSTEM AI Gateway heartbeat; this transport probe does not consume call budget.
     try:
-        import ai_channel as _aic
+        from lumenis.system.ai_gateway import channel as _aic
         import intelligence as _intel
         def _ai_channel_ping():
             try:
@@ -4565,7 +4540,7 @@ if __name__=='__main__':
     auth_state='开启' if _auth_enabled() else '关闭（仅建议本机访问）'
     print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{not args.no_scheduler} | HTTP认证：{auth_state}')
 
-# ===== 云端 AI 通道健康（ai_channel） =====
+# ===== SYSTEM AI Gateway health =====
 @app.route('/api/xhs/p0/status', methods=['GET'])
 def api_xhs_p0_status():
     """前端轮询：小红书 P0 驻场/会话/恢复状态聚合"""

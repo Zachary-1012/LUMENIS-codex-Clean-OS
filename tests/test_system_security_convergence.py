@@ -102,7 +102,12 @@ def test_effect_fence_idempotency_blocks_duplicate_side_effect():
     assert second.idempotent_hit is True
 
 
-def test_high_risk_permission_still_requires_human_approval():
+def test_high_risk_permission_still_requires_human_approval(monkeypatch):
+    # conftest enables an explicit global TESTING bypass for broad suites;
+    # this contract test must exercise the production fail-closed path.
+    from lumenis.system.security import permission as permission_module
+    monkeypatch.setattr(permission_module, "_TESTING_BYPASS_ENABLED", False)
+    monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     gate = PermissionGate()
     gate.grant_permission(PermissionLevel.COMMIT)
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import database as db
 from flask import Blueprint, jsonify, request
-from collector_guard.resource_guard import ResourceGuard
+from lumenis.system.collector.guard.resource_guard import ResourceGuard
 
 _resource_guard = ResourceGuard()  # P0-G 统一资源守卫（只读决策，无共享状态）
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """ai_channel 多 Provider 故障转移层单测（纯逻辑，不发真实网络请求）"""
 import pytest
-import ai_channel as ac
+from lumenis.system.ai_gateway import channel as ac
 
 
 class TestProviderBreaker:

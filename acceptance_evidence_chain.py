@@ -119,6 +119,9 @@ class AcceptanceEvidenceChain:
     partial_reasons: List[str] = field(default_factory=list)
     missing_dimensions: List[str] = field(default_factory=list)
     satisfied_dimensions: List[str] = field(default_factory=list)
+    evidence_refs: Dict[str, Any] = field(default_factory=dict)
+    is_released: bool = False
+    has_continuous_runtime: bool = False
     note: str = ""
 
     def chain_order(self) -> List[str]:
@@ -246,6 +249,9 @@ class AcceptanceEvidenceChain:
             "regression_passed": regression,
             "ai_chain_closed": ai_chain_closed,
             "is_ai_or_browser": self.is_ai_or_browser,
+            "is_released": self.is_released,
+            "has_continuous_runtime": self.has_continuous_runtime,
+            "evidence_refs": self.evidence_refs,
             "note": self.note,
         }
 
@@ -298,3 +304,201 @@ class AcceptanceEvidenceChain:
 
 # ============================================================
 # 核心构建器
+# ============================================================
+ACCEPTANCE_PRINCIPLE = (
+    "CI PASS ≠ VERIFIED; 代码存在 ≠ VERIFIED; AI说完成 ≠ VERIFIED"
+)
+
+
+def _node_status(value: Any) -> str:
+    if value is True:
+        return "passed"
+    if value is False:
+        return "failed"
+    return "missing"
+
+
+def _add_flag_node(chain: AcceptanceEvidenceChain, name: str, value: Any,
+                   ref: str = "", detail: str = "") -> None:
+    chain.add_node(name, _node_status(value), evidence_ref=ref, detail=detail)
+
+
+def build_chain(task_id: str, **evidence: Any) -> AcceptanceEvidenceChain:
+    """Create an explicit graph from supplied acceptance facts.
+
+    Unknown values remain ``missing`` and explicit false values remain
+    ``failed``. This keeps missing proof distinct from a failed check.
+    """
+    is_ai = bool(evidence.get("is_ai_or_browser", False))
+    chain = AcceptanceEvidenceChain(
+        task_id=str(task_id),
+        is_ai_or_browser=is_ai,
+        commit_sha=str(evidence.get("commit_sha") or ""),
+        note=str(evidence.get("note") or ""),
+        is_released=bool(evidence.get("is_released", False)),
+        has_continuous_runtime=bool(evidence.get("has_continuous_runtime", False)),
+    )
+    chain.add_node("task", "passed", detail="Task identifier supplied")
+
+    refs: Dict[str, Any] = {}
+    dimensions = (
+        ("commit", "ci_passed", "commit_sha"),
+        ("source", "source_exists", "source_ref"),
+        ("call_graph", "call_graph_closed", "call_graph_ref"),
+        ("test", "test_passed", "test_ref"),
+        ("runtime", "runtime_evidence", "runtime_ref"),
+    )
+    for node, key, ref_key in dimensions:
+        ref = str(evidence.get(ref_key) or "")
+        _add_flag_node(chain, node, evidence.get(key), ref)
+        if ref:
+            refs[key] = ref
+
+    if is_ai:
+        ai_dimensions = (
+            ("agent", "ai_agent_ok", "ai_agent_ref"),
+            ("skill", "ai_skill_ok", "ai_skill_ref"),
+            ("permission", "ai_permission_ok", "ai_permission_ref"),
+            ("browser_tool", "ai_browser_tool_ok", "ai_browser_tool_ref"),
+            ("action", "ai_action_ok", "ai_action_ref"),
+            ("result", "ai_result_ok", "ai_result_ref"),
+            ("evidence", "evidence_recorded", "evidence_ref"),
+            ("verification", "verification_passed", "verification_ref"),
+            ("trace", "ai_trace_ok", "ai_trace_ref"),
+        )
+    else:
+        ai_dimensions = (
+            ("evidence", "evidence_recorded", "evidence_ref"),
+            ("verification", "verification_passed", "verification_ref"),
+        )
+    for node, key, ref_key in ai_dimensions:
+        ref = str(evidence.get(ref_key) or "")
+        _add_flag_node(chain, node, evidence.get(key), ref)
+        if ref:
+            refs[key] = ref
+
+    _add_flag_node(chain, "final_status", None)
+    chain.evidence_refs = refs
+    task_node = chain.get_node("task")
+    if task_node is not None:
+        for key in ("security_verified", "regression_passed"):
+            if evidence.get(key) is not None:
+                task_node.metadata[key] = evidence[key]
+    return chain
+
+
+def build_and_judge(task_id: str, *, persist_evidence: bool = False,
+                    **evidence: Any) -> AcceptanceEvidenceChain:
+    """Build, judge and backfill an acceptance chain.
+
+    The normal path is pure. Persistence is opt-in and goes through the
+    current Shared Evidence owner.
+    """
+    chain = build_chain(task_id, **evidence)
+    acceptance_input = chain.to_acceptance_input()
+    if acceptance_input is None:
+        chain.note = (chain.note + " | acceptance_gate unavailable").strip(" |")
+        return chain
+
+    verdict = ag.judge(ag.AcceptanceInput(**acceptance_input))
+    chain.ci_status = verdict.ci_status
+    chain.functional_status = verdict.functional_status
+    chain.evidence_coverage = verdict.evidence_coverage
+    chain.partial_reasons = list(verdict.partial_reasons)
+    chain.missing_dimensions = list(verdict.missing_dimensions)
+    chain.satisfied_dimensions = list(verdict.satisfied_dimensions)
+    accepted = verdict.functional_status in {"VERIFIED", "RELEASED", "OPERATING"}
+    final_node = chain.get_node("final_status")
+    if final_node is not None:
+        final_node.status = "passed" if accepted else "failed"
+        final_node.detail = f"Functional Status: {verdict.functional_status}"
+        final_node.metadata.update({
+            "ci_status": verdict.ci_status,
+            "partial_reasons": list(verdict.partial_reasons),
+        })
+
+    if persist_evidence:
+        from lumenis.shared.evidence import store as evidence_store
+
+        persistence_error = None
+        try:
+            evidence_store.init_evidence_store()
+            record_id = evidence_store.record_evidence(
+                source="lumenis.acceptance",
+                project="LUMENIS",
+                product="SYSTEM",
+                subject_scope="SYSTEM",
+                feature_id="FUNCTION_ACCEPTANCE",
+                asset_id=chain.task_id,
+                commit_sha=chain.commit_sha,
+                env="prod",
+                level="L4",
+                test_name="acceptance_evidence_chain",
+                result="PASS" if accepted else "PARTIAL",
+                inputs=acceptance_input,
+                outputs=chain.to_dict(),
+                expected="VERIFIED",
+                actual=chain.functional_status,
+                account="SYSTEM_ACCEPTANCE",
+                status=chain.functional_status.lower(),
+                notes="; ".join(chain.partial_reasons),
+            )
+            if not isinstance(record_id, int) or record_id <= 0:
+                persistence_error = "Shared Evidence returned no persisted record id"
+        except Exception as exc:
+            persistence_error = f"Shared Evidence persistence raised {type(exc).__name__}: {exc}"
+
+        if persistence_error:
+            # A positive verdict is not durable until the requested Shared
+            # Evidence write succeeds. Keep CI status independent.
+            chain.functional_status = "PARTIAL"
+            chain.partial_reasons = list(dict.fromkeys([
+                *chain.partial_reasons,
+                ag.PartialReason.MISSING_EVIDENCE.value,
+                "Shared Evidence persistence failed",
+            ]))
+            if "evidence" in chain.satisfied_dimensions:
+                chain.satisfied_dimensions.remove("evidence")
+            if "evidence" not in chain.missing_dimensions:
+                chain.missing_dimensions.append("evidence")
+            chain.evidence_coverage = min(
+                chain.evidence_coverage,
+                round(100.0 * len(chain.satisfied_dimensions) / len(ag.REQUIRED_DIMENSIONS), 1),
+            )
+            chain.note = (chain.note + " | " + persistence_error).strip(" |")
+            if final_node is not None:
+                final_node.status = "failed"
+                final_node.detail = "Functional Status: PARTIAL (Shared Evidence persistence failed)"
+                final_node.metadata.update({
+                    "functional_status": chain.functional_status,
+                    "partial_reasons": list(chain.partial_reasons),
+                    "persistence_error": persistence_error,
+                })
+    return chain
+
+
+def batch_build_and_judge(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Judge multiple tasks and report counts, coverage and open reasons."""
+    chains = [build_and_judge(**dict(task)) for task in tasks]
+    by_status: Dict[str, int] = {}
+    accepted = {"VERIFIED", "RELEASED", "OPERATING"}
+    partial_detail = []
+    for chain in chains:
+        by_status[chain.functional_status] = by_status.get(chain.functional_status, 0) + 1
+        if chain.functional_status not in accepted:
+            partial_detail.append({
+                "task_id": chain.task_id,
+                "functional_status": chain.functional_status,
+                "ci_status": chain.ci_status,
+                "evidence_coverage": chain.evidence_coverage,
+                "partial_reasons": list(chain.partial_reasons),
+            })
+    coverages = [chain.evidence_coverage for chain in chains]
+    return {
+        "ok": True,
+        "total": len(chains),
+        "by_functional_status": by_status,
+        "average_evidence_coverage": round(sum(coverages) / len(coverages), 1) if coverages else 0.0,
+        "verdicts": [chain.to_dict() for chain in chains],
+        "partial_detail": partial_detail,
+    }

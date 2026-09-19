@@ -3,7 +3,7 @@
 统一暴露5层架构引擎的API接口
 - 自动调节引擎 (adaptive_engine)
 - 自动修复引擎 (auto_recovery)
-- 数据闭环引擎 (data_feedback_loop)
+- 数据闭环反馈 (LUMENIS Shared Learning)
 - 系统控制中心 (system_health_api - 已单独注册)
 - 边界控制引擎 (safety_boundary)
 """
@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # 导入5层引擎
 from adaptive_engine import adaptive_engine, StrategyLevel, RiskLevel
 from auto_recovery import recovery_engine, FixStatus, AlertLevel
-from data_feedback_loop import data_feedback_loop
+from lumenis.shared.learning.feedback import data_feedback_loop
 from safety_boundary import boundary_control_engine, OperationType, SafetyLevel
 
 architecture_bp = Blueprint('architecture', __name__)

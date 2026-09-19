@@ -386,7 +386,7 @@ class TaskEngine:
     def skill_registry(self):
         if self._skill_registry is None:
             try:
-                from skill_registry import get_skill_registry
+                from lumenis.shared.agents.skills.registry import get_skill_registry
                 self._skill_registry = get_skill_registry()
             except ImportError:
                 self._skill_registry = None

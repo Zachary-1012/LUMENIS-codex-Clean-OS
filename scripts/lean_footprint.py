@@ -117,7 +117,9 @@ def measure_db():
 def measure_frontend():
     st = os.path.join(ROOT, "static")
     if not os.path.isdir(st):
-        return {"frontend": {}}
+        # The retired web client is intentionally absent. Keep the metric
+        # schema stable so downstream reports can represent zero bytes.
+        return {"frontend_bytes": 0, "frontend_files_by_ext": {}}
     total = 0
     counts = {}
     for root, _, files in os.walk(st):

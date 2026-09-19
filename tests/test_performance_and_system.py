@@ -149,30 +149,36 @@ class TestSystemFaultLocalization:
 # 3. 六态验收框架
 # ============================================================================
 class TestSixStatesFramework:
-    """验证六态（Loading/Empty/Error/Success/Degraded/Permission）框架存在。"""
+    """验证未来 App 的真实状态注册表，避免旧网页状态脚本复活。"""
 
     def test_lumenis_core_has_ui_states(self):
-        """lumenis-core.js 定义了 UI 状态机。"""
-        with open(os.path.join(PROJECT_ROOT, "static", "js", "lumenis-core.js"), encoding="utf-8") as f:
-            content = f.read()
-        assert "UI_STATES" in content
-        assert "loading" in content
-        assert "error" in content
-        assert "success" in content
+        """规范状态表定义真实空态与数据错误语义。"""
+        import json
+        path = os.path.join(PROJECT_ROOT, "contracts", "experience", "states", "STATE_REGISTRY.json")
+        with open(path, encoding="utf-8") as f:
+            registry = json.load(f)
+        states = registry["non_ready_states"]
+        for state in ("loading", "empty_true", "empty_notcollected", "error"):
+            assert state in states
 
     def test_ui_states_include_six(self):
-        """UI 状态包含六态核心。"""
-        with open(os.path.join(PROJECT_ROOT, "static", "js", "lumenis-core.js"), encoding="utf-8") as f:
-            content = f.read()
-        # 六态：loading/empty/error/success/degraded/permission
-        for state in ["loading", "empty", "error", "success"]:
-            assert state in content, f"缺少 UI 状态: {state}"
+        """UI 状态注册表覆盖可区分的访问、离线和降级状态。"""
+        import json
+        path = os.path.join(PROJECT_ROOT, "contracts", "experience", "states", "STATE_REGISTRY.json")
+        with open(path, encoding="utf-8") as f:
+            registry = json.load(f)
+        states = registry["non_ready_states"]
+        for state in ("offline", "degraded", "permission_denied"):
+            assert state in states
+        assert "ready" in registry
 
     def test_domain_context_has_permission_state(self):
-        """域切换涉及权限重载（permissions 在五样重载中）。"""
-        with open(os.path.join(PROJECT_ROOT, "static", "js", "domain-context.js"), encoding="utf-8") as f:
-            content = f.read()
-        assert "permissions" in content, "域切换应重载 permissions"
+        """权限拒绝是独立状态，且规范要求服务端逐请求重验。"""
+        import json
+        path = os.path.join(PROJECT_ROOT, "contracts", "experience", "states", "STATE_REGISTRY.json")
+        with open(path, encoding="utf-8") as f:
+            states = json.load(f)["non_ready_states"]
+        assert "empty_permission" in states or "permission_denied" in states
 
     def test_degraded_state_in_system(self):
         """System 健康检查支持 degraded/warning 状态。"""

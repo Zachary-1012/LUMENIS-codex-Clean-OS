@@ -48,6 +48,8 @@ If the active task touches any user-visible Experience/UI, read the sole design 
 
 Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
+The current App is bootstrap-only. Do not start feature-screen implementation until the product owner accepts the plan in §§30–36, which specifies 44 distinct compositions. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
+
 Historical browser presentation material was removed from `main`; retained App contracts are canonical under `contracts/experience/`.
 
 Required design gates:
@@ -70,7 +72,7 @@ current HEAD = READ WITH git fetch + git rev-parse origin/main
 Mandatory start commands on the canonical workstation:
 
 ```powershell
-Set-Location D:\LUMENIS_REBUILD
+Set-Location D:\LUMENIS_REBUILD\序\序境
 git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
@@ -286,8 +288,6 @@ python scripts/audit_tools/verify_experience_anti_template.py
 The Experience checks are App-only. Historical browser implementation has been removed from `main`; retained contracts under `contracts/experience/` may inform Flutter binding but never act as a second Experience authority.
 
 The second check prevents regression of the CURRENT takeover path, v1.1 protocol identity, root agent routing and human/machine contract alignment. A runner-level 0-step failure means the check did not execute; it is not a passing or failing repository assertion.
-## Current remote cutover evidence
+## Historical remote cutover checkpoint
 
-The current remote `main` is App-only at `3ba304f5d752dabcdc40531ce176f189527c29af`.
-Legacy Jinja/static/prototype surfaces are absent from the tree. The next Codex task is
-Flutter surface completion and runtime/CI/E2E verification, not web-surface migration.
+Commit `3ba304f5d752dabcdc40531ce176f189527c29af` is the historical checkpoint at which the App-only surface cutover was recorded. It is not evidence of the current remote HEAD or branch inventory. Before any takeover, release or cleanup claim, fetch `origin` and verify local `main`, remote-tracking `origin/main`, and live `git ls-remote --heads origin`; only a live result containing `refs/heads/main` is current evidence. See the branch-cleanup gate in `AGENTS.md` §2 and `README.md` §7.

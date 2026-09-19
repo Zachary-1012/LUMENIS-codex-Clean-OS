@@ -5,7 +5,7 @@ AI 与原始数据分离存储测试（P0 红线）
 验证：
 1. AI 结果存入独立字段 ai_analysis，不覆盖原始 content/sentiment/risk
 2. CanonicalRecord 有 ai_analysis 独立字段
-3. evidence_chain 中 AI 证据与原始数据分离
+3. Shared Evidence 中 AI 证据与原始数据分离
 4. AI 结果可关联 source_id/raw_id/canonical_id
 
 运行: .venv\\Scripts\\python.exe -m pytest tests/test_ai_raw_separation.py -v
@@ -152,19 +152,64 @@ class TestAiRawSeparationInDb:
             con.close()
 
 
-class TestEvidenceChainSeparation:
-    """验证 evidence_chain 中 AI 与原始数据分离原则。"""
+class TestSharedEvidenceSeparation:
+    """Verify the current Shared Evidence owner preserves raw and derived truth."""
 
-    def test_evidence_chain_has_immutable_principle(self):
-        """evidence_chain 模块声明原始证据不可被分析结果覆盖。"""
-        import evidence_chain
-        source = evidence_chain.__doc__ or ""
-        assert "原始证据" in source or "Evidence" in source
-        # 检查模块中有 AI 与人工分离的概念
-        assert "ai_analysis" in dir(evidence_chain) or "human_correction" in source or "AI" in source
+    def test_shared_evidence_immutability_contract(self, tmp_path):
+        """Raw Evidence uses canonical append-only storage and reports immutable fields."""
+        from lumenis.shared.evidence.chain import EvidenceStore
 
-    def test_evidence_store_fact_vs_declaration(self):
-        """evidence_store 遵循事实 vs 声明分离原则。"""
-        import evidence_store
-        source = evidence_store.__doc__ or ""
-        assert "事实" in source or "fact" in source.lower() or "AI" in source
+        store = EvidenceStore(str(tmp_path / "shared-evidence.db"))
+        evidence, created = store.add_evidence(
+            source_type="test_fixture",
+            source_url="https://example.invalid/source/1",
+            source_id="source-1",
+            raw_content="不可变的原始内容",
+            domain_id="cth",
+            product_id="CTH",
+        )
+
+        assert created is True
+        assert evidence.raw_content == "不可变的原始内容"
+        report = store.verify_immutability(evidence.evidence_id)
+        assert report["valid"] is True
+        assert {"raw_content", "content_hash", "source_type", "source_url"}.issubset(
+            set(report["immutable_fields"])
+        )
+        persisted = store.get_evidence(evidence.evidence_id)
+        assert persisted.raw_content == "不可变的原始内容"
+        assert persisted.content_hash == evidence.content_hash
+
+    def test_ai_analysis_and_human_correction_are_independent(self, tmp_path):
+        """Human correction updates its field while retaining the original AI output."""
+        from lumenis.shared.evidence.chain import (
+            EvidenceStore,
+            CanonicalDataStore,
+        )
+
+        db_path = str(tmp_path / "shared-canonical.db")
+        evidence_store = EvidenceStore(db_path)
+        canonical_store = CanonicalDataStore(db_path)
+        evidence, _ = evidence_store.add_evidence(
+            source_type="test_fixture",
+            source_url="https://example.invalid/source/2",
+            source_id="source-2",
+            raw_content="原始内容保持不变",
+            domain_id="cth",
+            product_id="CTH",
+        )
+        canonical = canonical_store.create_canonical(
+            evidence_id=evidence.evidence_id,
+            normalized_content="规范化内容",
+            ai_analysis={"sentiment": "positive", "summary": "AI 判断"},
+        )
+
+        corrected = canonical_store.apply_human_correction(
+            canonical.canonical_id,
+            {"sentiment": "neutral", "reason": "人工复核"},
+            operator="reviewer",
+        )
+
+        assert corrected.ai_analysis["sentiment"] == "positive"
+        assert corrected.human_correction["sentiment"] == "neutral"
+        assert evidence_store.get_evidence(evidence.evidence_id).raw_content == "原始内容保持不变"

@@ -55,6 +55,9 @@ jobs:
           fi
           python scripts/audit_tools/verify_experience_anti_template.py "$mode"
 
+      - name: Validate bespoke screen UX blueprints and binding inventory (BLOCKING)
+        run: python scripts/audit_tools/verify_experience_screen_blueprints.py
+
       - name: Compile tracked Python sources (BLOCKING)
         shell: bash
         run: |

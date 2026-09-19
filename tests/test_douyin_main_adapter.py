@@ -13,8 +13,8 @@ from unittest.mock import MagicMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from platform_adapters.douyin import DouyinAdapter
-from platform_adapters.base import CollectionStatus
+from lumenis.system.collector.adapters.douyin import DouyinAdapter
+from lumenis.system.collector.adapters.base import CollectionStatus
 
 
 def _make_v4_note(title="测试视频", author="up主", url="https://v.douyin.com/abc/",
@@ -53,7 +53,7 @@ def _search_backend(result):
 
 class TestDouyinMainAdapterSearch:
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_search_success(self, mock_load):
         mock_backend = _search_backend(_make_v4_result(
             success=True, notes=[_make_v4_note()], raw_count=1))
@@ -70,35 +70,35 @@ class TestDouyinMainAdapterSearch:
         assert result.raw_count == 1
         mock_backend.search.assert_called_once_with("测试", max_results=10)
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_search_no_new_data(self, mock_load):
         mock_load.return_value = _search_backend(
             _make_v4_result(success=True, notes=[], raw_count=0))
         result = DouyinAdapter().search("空结果")
         assert result.status == CollectionStatus.NO_NEW_DATA
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_search_session_expired(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=False, error="登录态失效，请重新登录"))
         result = DouyinAdapter().search("测试")
         assert result.status == CollectionStatus.SESSION_EXPIRED
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_search_risk_warning(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=False, error="风控验证，请稍后再试"))
         result = DouyinAdapter().search("测试")
         assert result.status == CollectionStatus.RISK_WARNING
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_search_collect_error(self, mock_load):
         mock_load.return_value = _search_backend(_make_v4_result(
             success=False, error="网络连接超时"))
         result = DouyinAdapter().search("测试")
         assert result.status == CollectionStatus.COLLECT_ERROR
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_search_exception_is_provider_unavailable_without_internal_leak(self, mock_load):
         mock_load.side_effect = RuntimeError("引擎加载失败")
         result = DouyinAdapter().search("测试")
@@ -109,7 +109,7 @@ class TestDouyinMainAdapterSearch:
 
 class TestDouyinMainAdapterDetailCommentsCreator:
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_detail_delegates_v4(self, mock_load):
         from lumenis.adapters.base import AdapterResult
         mock_load.return_value.detail.return_value = AdapterResult(success=True, notes=[], raw_count=0)
@@ -118,7 +118,7 @@ class TestDouyinMainAdapterDetailCommentsCreator:
         assert result.status == CollectionStatus.NO_NEW_DATA
         mock_load.return_value.detail.assert_called_once_with(aweme_id="aweme123")
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_comments_delegates_v4(self, mock_load):
         from lumenis.adapters.base import AdapterResult
         mock_load.return_value.comments.return_value = AdapterResult(success=True, notes=[], raw_count=0)
@@ -127,7 +127,7 @@ class TestDouyinMainAdapterDetailCommentsCreator:
         assert result.status == CollectionStatus.NO_NEW_DATA
         mock_load.return_value.comments.assert_called_once()
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     def test_creator_delegates_v4(self, mock_load):
         from lumenis.adapters.base import AdapterResult
         mock_load.return_value.creator.return_value = AdapterResult(success=True, notes=[], raw_count=0)
@@ -139,7 +139,7 @@ class TestDouyinMainAdapterDetailCommentsCreator:
 
 class TestDouyinMainAdapterHealth:
 
-    @patch("platform_adapters.douyin.DouyinAdapter._load_backend")
+    @patch("lumenis.system.collector.adapters.douyin.DouyinAdapter._load_backend")
     @patch("lumenis.adapters.human_browser.is_cdp_url_open", return_value=True)
     @patch("lumenis.adapters.douyin._configured_browser_worker_url",
            return_value="https://browser-worker.example")
@@ -170,7 +170,7 @@ class TestDouyinMainAdapterHealth:
 class TestDouyinMainAdapterRegistry:
 
     def test_registry_has_douyin(self):
-        from platform_adapters import get_adapter
+        from lumenis.system.collector.adapters import get_adapter
         ad = get_adapter("douyin")
         assert ad is not None
         assert ad.platform == "douyin"

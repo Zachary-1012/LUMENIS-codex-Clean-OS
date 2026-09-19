@@ -29,6 +29,8 @@ Requirements for a Tier B test:
 - no live external platform/network requirement;
 - deterministic fixture setup and teardown.
 
+Shared Database and platform data-center schema tests use temporary SQLite databases. Keep them in Tier B and exercise the production migration and API route contracts without opening a local production database.
+
 If a product/contract test can be made hermetic, move it out of the environment list instead of weakening its assertions.
 
 ## Tier C — Production / Live / Environment Gate

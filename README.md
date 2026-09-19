@@ -2,12 +2,16 @@
 
 > **Production Core · Production Truth Owner**  
 > 当前阶段 / Current phase: **PRODUCTION CONVERGENCE**
+>
+> Canonical repository: Zachary-1012/LUMENIS-codex-Clean-OS (default branch: main).
 
 序境 / LUMENIS 是面向商业运营与品牌市场的生产级产品。AI 是增强能力，不拥有 Production Truth。
 
 本仓库承载当前生产实现、运行时、数据契约、Evidence、API、Permission、Metric、Experience、测试与发布证据。`README.md` 是人类工程入口，不是历史进度日志；文档、提交说明、CI 绿色或页面可打开，都不能单独证明功能已经 `VERIFIED / RELEASED / OPERATING`。
 
 > Coding Agent / Codex 的当前执行入口固定为：`AGENTS.md` → `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`。当前 HEAD 必须通过 `git fetch origin` + `git rev-parse origin/main` 动态解析，不得从 README、历史 handoff、截图或粘贴 SHA 推断。
+
+Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
 
 ## 0. Current source and acceptance
 
@@ -85,6 +89,8 @@ CTH 与 BMP 可以共享 Subject Context 与基础设施，但不得静默合并
 - `contracts/experience/` contains the retained Experience contracts.
 - `app/` is the canonical Flutter user application. Its bootstrap connects to Product Core APIs; a launch surface or registered route alone does not prove complete CTH/BMP workflows.
 - CTH and BMP are distinct LUMENIS business domains. Shared services do not merge their data, metrics, actions or user tasks.
+
+The Experience plan now covers **44 distinct screen-specific UX blueprints** plus **54 fail-closed data/permission/Evidence binding records**. The machine-readable binding registry at `contracts/experience/lumenis_app_binding_registry.json` is not a UI template: legacy `sectionTypes` are inventory only, and one generic renderer with swapped titles is prohibited. The sole UX authority is `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` §§30–36. These blueprints are design direction, not implementation-ready screen specifications. After the product owner accepts the plan, record each screen's verified source fields, route, state matrix, separate PC/mobile composition, authorization/effects and executable acceptance in `contracts/experience/screen-specifications/` from `SCREEN_SPEC_TEMPLATE.md` before implementing that screen. The Flutter app remains a bootstrap; feature implementation waits for the product owner's acceptance of the plan and each applicable screen specification.
 
 Architecture documents describe intended boundaries. Production capability is established only by the current implementation and its scoped acceptance evidence.
 
@@ -186,7 +192,7 @@ package.json                   Node tooling manifest
 当前 Windows 研发机唯一有效工作区：
 
 ```text
-D:\LUMENIS_REBUILD
+D:\LUMENIS_REBUILD\序\序境
 ```
 
 `main` 是唯一可写研发、集成和生产候选主线。
@@ -194,7 +200,7 @@ D:\LUMENIS_REBUILD
 开始工作前：
 
 ```powershell
-Set-Location D:\LUMENIS_REBUILD
+Set-Location D:\LUMENIS_REBUILD\序\序境
 git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
@@ -212,6 +218,17 @@ git rev-parse origin/main
 - 不 force-push `main`；
 - validated change → coherent commit → push `origin/main`；
 - side branch 只作历史证据，必要时一次性吸收其独有有效实现。
+
+每次交付前后都要证明本地与实时远端分支清单：
+
+```powershell
+git fetch origin --prune
+git branch --format="%(refname:short)"
+git branch -r --format="%(refname:short)"
+git ls-remote --heads origin
+```
+
+验收只接受本地 `main`、远端跟踪 `origin/main` 和实时 `refs/heads/main`。若发现其他分支，先检查独有提交和文件，保留有效能力到 `main`，再删除已确认冗余的分支并复查实时清单。不得删除未审查分支，也不得 force-push 来通过检查。
 
 ---
 

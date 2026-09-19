@@ -13,11 +13,11 @@
 本层只做确定性裁决，无共享状态，纯函数式，便于测试。
 
 用法：
-  from collector_guard.schedule_adapter import should_stop_schedule, advice
+  from lumenis.system.collector.guard.schedule_adapter import should_stop_schedule, advice
   if should_stop_schedule(lifecycle_action):   # cooldown/freeze -> True（停止后续请求）
       ...
 """
-from collector_guard.resource_guard import RESOURCE_GUARDED, ResourceGuard
+from .resource_guard import RESOURCE_GUARDED, ResourceGuard
 
 _GUARD = ResourceGuard()
 
@@ -88,7 +88,7 @@ def maybe_replay_dlq(lifecycle_action, handler=None, dlq=None, max_items=50):
     if lifecycle_action not in _REPLAY_ACTIONS:
         return None
     if dlq is None:
-        from collector_guard.dlq_replay import DeadLetterQueue
+        from .dlq_replay import DeadLetterQueue
         dlq = DeadLetterQueue()
     if handler is None:
         pending = dlq.list_pending()[:max_items]

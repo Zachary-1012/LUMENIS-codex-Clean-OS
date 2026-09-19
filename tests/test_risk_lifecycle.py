@@ -14,7 +14,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from collector_guard.risk_engine import RiskEngine, LIFECYCLE_ACTIONS  # noqa: E402
+from lumenis.system.collector.guard.risk_engine import RiskEngine, LIFECYCLE_ACTIONS  # noqa: E402
 
 
 def test_initial_normal():

@@ -29,7 +29,8 @@ def _load(name):
 @pytest.fixture(scope='module')
 def env():
     os.environ['ZBC_DB_PATH'] = DB
-    return _load('lumenis.shared.reporting.export_api'), _load('ai_channel')
+    return (_load('lumenis.shared.reporting.export_api'),
+            _load('lumenis.system.ai_gateway.channel'))
 
 
 def _is_valid_yuqing(n):
@@ -66,7 +67,7 @@ def test_export_sentiment_matches_canonical(env):
 
 def test_breaker_open_halfopen_recover():
     """阶段九 b) 熔断状态迁移: 失败->OPEN, 冷却->HALF_OPEN, 成功->CLOSED"""
-    from ai_channel import CircuitBreaker
+    from lumenis.system.ai_gateway.channel import CircuitBreaker
     cb = CircuitBreaker(fail_threshold=3, cooldown_sec=0.8)
     for _ in range(3):
         cb.record_failure()
@@ -81,7 +82,7 @@ def test_breaker_open_halfopen_recover():
 def test_classify_error_retry_policy():
     """阶段九 c) 分类重试: 网络可重试, 鉴权致命, 未知保守"""
     import urllib.error
-    from ai_channel import classify_error
+    from lumenis.system.ai_gateway.channel import classify_error
     _, r1 = classify_error(urllib.error.URLError('refused'))
     assert r1 is True
     class _AuthErr(Exception):

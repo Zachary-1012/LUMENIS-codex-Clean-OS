@@ -8,7 +8,7 @@ Z-Brand Runtime Integrity Preflight（运行时完整性启动预检）
 启动前检查（PASS 才正常运行；P0 硬项失败在 enforce 模式下阻断）：
   1. identity     产品身份 / VERSION / Git 来源(head,branch)
   2. permissions  关键目录可读、数据目录可写（临时文件探测后即删）
-  3. dependencies 核心依赖与红线模块可导入（flask + database/risk_engine/subject_rules/event_graph/daily_report）
+  3. dependencies 核心依赖与红线模块可导入（Flask + 数据、主体、风险、事件与当前日报 owner）
   4. data_boundary复用 data_boundary：凭证不得入 Git 跟踪面、数据库分区识别
   5. sensitive    被跟踪源码不得含明文 Cookie/Token/密钥（复用 security_scanner 规则，只记路径行号不记值）
   6. dangerous    危险运行组合（debug 暴露 0.0.0.0 / 隔离库却开生产采集 等）
@@ -45,7 +45,7 @@ ATTEST_DIR = os.path.join(ROOT_DIR, "data", "security")
 # 核心红线模块：缺一即 P0（对应生产红线：主体/风险/事件/报告/数据层）
 CORE_MODULES = [
     "flask", "database", "subject_rules", "risk_engine",
-    "event_graph", "daily_report", "config",
+    "event_graph", "lumenis.shared.reporting.daily", "config",
 ]
 READ_DIRS = ["static", "templates", "tests", "docs"]
 # 敏感扫描只覆盖被 Git 跟踪的代码文件，且不扫数据/依赖目录
@@ -231,7 +231,7 @@ def check_capability():
     # App Evidence 当前应为 shadow_only（不自动采集 App）
     mode = "unknown"
     try:
-        import app_evidence
+        from lumenis.shared.evidence import manual as app_evidence
         mode = getattr(app_evidence, "MODULE_VERSION", "unknown")
     except Exception:
         pass

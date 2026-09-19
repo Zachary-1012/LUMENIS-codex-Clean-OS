@@ -7,45 +7,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 使用临时数据库
 from lumenis.shared.evidence import store as evidence_store
 _tmp_db = tempfile.mktemp(suffix=".db")
-evidence_store.DB_PATH = _tmp_db
-
-# 建表（简化版，只建测试需要的字段）
-import sqlite3
-_conn = sqlite3.connect(_tmp_db)
-_conn.execute("""CREATE TABLE app_evidence_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source TEXT NOT NULL DEFAULT 'xhs_app',
-    capture_mode TEXT NOT NULL DEFAULT 'screenshot',
-    captured_at TEXT,
-    topic TEXT,
-    metric_name TEXT NOT NULL,
-    metric_value TEXT NOT NULL,
-    evidence_hash TEXT,
-    evidence_path TEXT,
-    parse_confidence REAL DEFAULT 1.0,
-    verified_by TEXT,
-    verified_at TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    notes TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    project TEXT, product TEXT, feature_id TEXT, asset_id TEXT,
-    commit_sha TEXT, version TEXT, env TEXT, level TEXT, test_name TEXT,
-    result TEXT, started_at TEXT, finished_at TEXT,
-    inputs_json TEXT, outputs_json TEXT, expected TEXT, actual TEXT,
-    log_path TEXT, screenshot_path TEXT, trace_path TEXT,
-    api_request TEXT, api_response TEXT, db_before TEXT, db_after TEXT,
-    root_cause TEXT, resolution TEXT, account TEXT, duration_ms INTEGER
-)""")
-_conn.commit()
-_conn.close()
 
 
 @pytest.fixture(autouse=True)
-def _clean_evidence_table_each_test():
-    """每个用例前把 evidence_store.DB_PATH 强制指回本模块临时库并清空，
-    对抗完整套件中其它测试模块级泄漏的 ZBC_DB_PATH / 运行期改 DB_PATH 导致的跨库累积。"""
-    evidence_store.DB_PATH = _tmp_db  # 对抗运行期污染，确保写入/查询都落在本模块临时库
+def _clean_evidence_table_each_test(monkeypatch):
+    """每个用例使用 Shared Database 当前路径契约指向独立临时库。"""
+    monkeypatch.setenv("ZBC_DB_PATH", _tmp_db)
+    evidence_store.init_evidence_store(_tmp_db)
+    import sqlite3
+
     _c = sqlite3.connect(_tmp_db)
     try:
         _c.execute("DELETE FROM app_evidence_records")

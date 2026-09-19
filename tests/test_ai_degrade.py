@@ -6,6 +6,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lumenis.system.ai_gateway import core as intelligence
+from lumenis.system.ai_gateway import channel as ai_channel
 
 
 def test_no_key_ai_status_degrades(monkeypatch):
@@ -27,7 +28,7 @@ def test_no_key_chat_fallback_no_throw(monkeypatch):
         raise Exception("simulated all providers down")
 
     # 模拟所有云端 Provider 不可用：route_with_fallback 抛异常 → _chat 降级到 rule
-    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _all_providers_fail)
+    monkeypatch.setattr(ai_channel, "route_with_fallback", _all_providers_fail)
     text, tag = intelligence._chat("sys", "user")
     assert text is None
     assert tag in ("rule", "no_key")  # 优雅降级，不抛异常

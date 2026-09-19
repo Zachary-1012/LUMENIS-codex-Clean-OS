@@ -162,6 +162,25 @@ old surface
 
 Never delete a user capability merely to remove a web page.
 
+### Flutter implementation boundary
+
+Implement the App in four layers. These are code boundaries, not new business-truth owners:
+
+```text
+presentation  44 purpose-built screen compositions, semantic primitives,
+              adaptive navigation, accessible rendering and local view state
+application   domain use cases, typed state transitions, routing/deep links,
+              authorized CTH SubjectContext and BMP BrandFocus
+data           typed Product Core clients, request cancellation, pagination,
+              bounded cache, freshness labels, retry/idempotency and decoding
+platform/core  account/session, secure credential storage, permission-aware
+              affordances, connectivity, filesystem/export and device services
+```
+
+Do not implement one catch-all screen renderer driven by `sectionTypes`, a page-family skin with only swapped labels, or a global store that merges SubjectContext and BrandFocus. Reusable elements are limited to behavior contracts (focus, form validation, chart semantics, evidence citation, empty/error states, motion and density); each of the 44 screens owns its question, information hierarchy, composition and primary action. Route state may restore a user's working context but cannot grant authorization. Every server request rechecks the actor and product/domain scope.
+
+Cache is a presentation aid only: show its capture time and stale state; never silently promote it to current truth. Retry is bounded and safe for the operation's idempotency contract. Offline mode allows inspection of explicitly cached material and drafting when safe; it cannot imply that a write, approval, publication or collection completed. Provider, platform and API errors remain distinguishable for recovery.
+
 ## 6. AI / Skill / Agent
 
 Target:
@@ -223,6 +242,30 @@ app/
 ```
 
 This is an ownership target, not permission to mass-move files. Every move requires owner/caller/read-write/runtime/test tracing.
+
+For each vertical delivery slice, pair one PC composition with its mobile recomposition of the same use case and Product Core contract. Windows/macOS/Linux and Android/iOS are platform targets, not separate business implementations. Start acceptance on the actual available desktop and mobile reference hosts; record unavailable device/runtime combinations as `UNVERIFIED`, and do not claim an OS release target until its build and runtime flows pass.
+
+### Current runtime caller map
+
+These paths are the current owners for production callers. A route or compatibility façade may preserve an established API name, but it may not own the underlying business, security, data or runtime truth.
+
+| Caller family | Canonical owner | Behavior that migration must preserve |
+| --- | --- | --- |
+| `account/api.py`, `agent_runtime/`, `agent_capability/router.py`, `agent_smart_tool/base.py`, `ai_api.py`, `ai_task_engine.py` | `lumenis/shared/agents/skills/{registry,package_runtime,execution}.py` | Skill discovery, source preview/validation, permission checks, execution state transitions, effect fencing and execution Evidence. |
+| `subject_registry.py`, `experience_screens.py`, `lumenis/shared/evidence/api.py`, agent callers | `lumenis/system/security/{permission,action_firewall,effect_fence}.py` | Domain-aware Operation/Risk decisions, system scope, approval state, fail-closed behavior and audited side-effect boundaries. |
+| `app.py`, `agent_runtime/observation.py` | `lumenis/system/ai_gateway/{channel,providers,core}.py` | Provider health, fallback order, retry/error classification, circuit breaking and token accounting. |
+| `browser_runtime_api.py` and browser callers | `lumenis/system/browser/runtime/{contract,policy,router}.py` | Existing status/probe route contracts, authorization context and safe browser state transitions. |
+| `data_query_api.py`, collector scheduling/operations | `lumenis/system/collector/guard/` | Resource limits, queue/DLQ replay, schedule state, recovery gating and runtime switches. |
+| `compliance_gate.py`, `engineering_metrics.py`, `experience_runtime.py`, `topic_campaign.py`, `xhs_cookie_bridge.py` | `lumenis/system/collector/adapters/` | Platform registry, source-specific collection policy, schedule decisions, rate/safety limits and normalized records. |
+| `kos_routes.py`, `scripts/collect_now.py` | `lumenis/system/collector/runtime/xhs/` and `runtime/pipeline/` | Live collection, deduplication, existing `subject_hit()` semantics, persistence, comments, quality fields and platform-blocked/verification-required states. |
+| `collector_automation.py`, collector Evidence writers, `runtime_preflight.py` | `lumenis/shared/evidence/{chain,store,api,production_contract}.py` | Stable identifiers/hashes, primary database path, source/domain/Subject lineage, replay behavior and explicit write-failure evidence. |
+| `experience_screens._build_bmp02` | `web_discovery.get_brand_directory()` with `data/brand_directory.json` | Preserve the curated 194-brand / 13-category retail directory and honest source/update metadata; external benchmarking stays unavailable until sourced. |
+| `experience_runtime.py`, `experience_screens.py`, `risk_engine.py`, `content_generation.py` | `lumenis/shared/reporting/` | CTH operational/risk report semantics remain separate from BMP brand/market report semantics; export remains permission-gated. |
+| `system_features_api.py`, `experience_screens._build_bmp09`, `architecture_api.py`, evaluation/learning callers | `lumenis/shared/{evaluation,learning}/` | Unknown is not PASS, records retain lineage, learning stays reviewable and never writes Production Truth automatically. |
+| Business / Canonical Production Truth | `lumenis/shared/database/` | `data/monitor.db` selected through the single compatibility override `ZBC_DB_PATH` remains the only CTH/BMP/Shared business-truth database; all business schema/version ownership stays in the Shared Database migrations. |
+| SYSTEM durable task queue | `lumenis/system/collector/guard/task_queue.py` through `DatabaseRepository` | Existing `data/task_queue.db` holds only operational queue/lease state, never Canonical Data, Evidence or business outcomes. Preserve its durable records and replay semantics; any future move requires an explicit, tested data migration. No new module-local SQLite sidecar is allowed without an architecture entry, recovery/retention owner and acceptance evidence. |
+
+The production import gate parses Python import nodes and rejects exact retired owners. It excludes tests, audit prose and comments from the production dependency decision, while the relevant test suite remains responsible for proving each migrated behavior.
 
 ## 9. Convergence disposition
 

@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
-"""ZBC全平台数据字典V1.0 数据库迁移脚本。
+"""Platform data-center schema owned by the Shared Database migration engine.
 
-安全规则：
-- 全部使用 CREATE TABLE IF NOT EXISTS
-- 不 DROP / DELETE / 清空任何现有表
-- events表现有字段只加不改（ALTER TABLE ADD COLUMN）
-- 执行后验证所有表存在
+This module provides schema declarations and a connection-scoped, additive
+migration operation. The versioned migration runner is the only production
+entry point; this module never selects or opens a database path.
 """
 from __future__ import annotations
 
-import os
+import json
+import re
 import sqlite3
-import sys
-from typing import List
-
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "monitor.db")
+from typing import Dict, List, Tuple
 
 # ============================================================
 # 1. Platform Raw 层 — 12平台原生表
@@ -774,121 +770,214 @@ EVENTS_EXTENSION_COLUMNS = [
 ]
 
 
-def migrate(db_path: str = DB_PATH) -> dict:
-    """执行迁移，返回结果统计。"""
-    if not os.path.exists(db_path):
-        raise FileNotFoundError(f"数据库不存在: {db_path}")
+PLATFORM_REGISTRY_SQL = """
+CREATE TABLE IF NOT EXISTS platform_registry (
+    platform_id TEXT PRIMARY KEY,
+    platform_name TEXT NOT NULL,
+    display_name TEXT,
+    status TEXT NOT NULL DEFAULT 'PLANNED',
+    ui_visible INTEGER NOT NULL DEFAULT 0,
+    collector_endpoint TEXT,
+    adapter_module TEXT,
+    raw_tables TEXT,
+    normalized_mapping TEXT,
+    last_sync_at TEXT,
+    data_quality_score REAL,
+    has_collector INTEGER DEFAULT 0,
+    has_api_routes INTEGER DEFAULT 0,
+    has_real_data INTEGER,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+)
+"""
 
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    result = {"raw_tables": 0, "normalized_tables": 0, "evidence_tables": 0,
-              "business_tables": 0, "indexes": 0, "events_columns_added": 0,
-              "errors": []}
 
+def _table_name(sql: str) -> str:
+    match = re.search(r"CREATE TABLE IF NOT EXISTS\s+(\w+)", sql, re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Unsupported platform schema statement: {sql[:80]}")
+    return match.group(1)
+
+
+def _unique_column_groups(
+    conn: sqlite3.Connection, table_name: str, schema: str = "main"
+) -> set[Tuple[str, ...]]:
+    groups: set[Tuple[str, ...]] = set()
+    for index in conn.execute(f'PRAGMA {schema}.index_list("{table_name}")').fetchall():
+        if not int(index[2]):
+            continue
+        columns = tuple(
+            row[2] for row in conn.execute(
+                f'PRAGMA {schema}.index_info("{index[1]}")'
+            ).fetchall()
+        )
+        if columns and all(columns):
+            groups.add(columns)
+    return groups
+
+
+def _expected_table_contracts(conn: sqlite3.Connection) -> Dict[str, dict]:
+    """Compile declared DDL in temp schema for conflict validation."""
+    table_sql = RAW_TABLES_SQL + NORMALIZED_TABLES_SQL + EVIDENCE_TABLES_SQL + BUSINESS_TABLES_SQL + [PLATFORM_REGISTRY_SQL]
+    savepoint = "lumenis_platform_schema_contract_probe"
+    conn.execute(f"SAVEPOINT {savepoint}")
     try:
-        # 1. Raw层
-        for sql in RAW_TABLES_SQL:
-            try:
-                cursor.execute(sql)
-                result["raw_tables"] += 1
-            except Exception as e:
-                result["errors"].append(f"RAW: {str(e)[:100]}")
-
-        # 2. Normalized层
-        for sql in NORMALIZED_TABLES_SQL:
-            try:
-                cursor.execute(sql)
-                result["normalized_tables"] += 1
-            except Exception as e:
-                result["errors"].append(f"NORMALIZED: {str(e)[:100]}")
-
-        # 3. Evidence层
-        for sql in EVIDENCE_TABLES_SQL:
-            try:
-                cursor.execute(sql)
-                result["evidence_tables"] += 1
-            except Exception as e:
-                result["errors"].append(f"EVIDENCE: {str(e)[:100]}")
-
-        # 4. 业务层
-        for sql in BUSINESS_TABLES_SQL:
-            try:
-                cursor.execute(sql)
-                result["business_tables"] += 1
-            except Exception as e:
-                result["errors"].append(f"BUSINESS: {str(e)[:100]}")
-
-        # 5. 索引
-        for sql in INDEX_SQL:
-            try:
-                cursor.execute(sql)
-                result["indexes"] += 1
-            except Exception as e:
-                result["errors"].append(f"INDEX: {str(e)[:100]}")
-
-        # 6. events表扩展字段（向后兼容）
-        existing_cols = {row[1] for row in cursor.execute("PRAGMA table_info(events)").fetchall()}
-        for col_name, col_type in EVENTS_EXTENSION_COLUMNS:
-            if col_name not in existing_cols:
-                try:
-                    cursor.execute(f"ALTER TABLE events ADD COLUMN {col_name} {col_type}")
-                    result["events_columns_added"] += 1
-                except Exception as e:
-                    result["errors"].append(f"EVENTS_ALTER: {col_name}: {str(e)[:100]}")
-
-        conn.commit()
-
-        # 验证：统计新建表
-        all_tables = {row[0] for row in cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-        expected_new = []
-        for sql_list in [RAW_TABLES_SQL, NORMALIZED_TABLES_SQL, EVIDENCE_TABLES_SQL, BUSINESS_TABLES_SQL]:
-            for sql in sql_list:
-                # 提取表名
-                import re
-                m = re.search(r"CREATE TABLE IF NOT EXISTS (\w+)", sql)
-                if m:
-                    expected_new.append(m.group(1))
-        missing = [t for t in expected_new if t not in all_tables]
-        result["expected_new_tables"] = len(expected_new)
-        result["missing_tables"] = missing
-        result["total_tables_after"] = len(all_tables)
-
+        probe_names = {}
+        contracts = {}
+        for sql in table_sql:
+            name = _table_name(sql)
+            probe_name = f"__lumenis_schema_contract_{name}"
+            temp_sql = re.sub(
+                r"CREATE TABLE IF NOT EXISTS\s+\w+",
+                f'CREATE TEMP TABLE IF NOT EXISTS "{probe_name}"',
+                sql,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            conn.execute(temp_sql)
+            probe_names[name] = probe_name
+        for name, probe_name in probe_names.items():
+            columns = {
+                row[1]: (str(row[2] or "").upper(), int(row[3]), int(row[5]))
+                for row in conn.execute(f'PRAGMA temp.table_info("{probe_name}")').fetchall()
+            }
+            contracts[name] = {
+                "columns": columns,
+                "unique_groups": _unique_column_groups(conn, probe_name, schema="temp"),
+            }
+        return contracts
     finally:
-        conn.close()
+        conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+        conn.execute(f"RELEASE SAVEPOINT {savepoint}")
 
-    return result
+
+def _validate_table_contract(conn: sqlite3.Connection, table_name: str, expected: dict) -> None:
+    actual_rows = conn.execute(f'PRAGMA main.table_info("{table_name}")').fetchall()
+    actual = {
+        row[1]: (str(row[2] or "").upper(), int(row[3]), int(row[5]))
+        for row in actual_rows
+    }
+    missing = sorted(set(expected["columns"]) - set(actual))
+    incompatible = sorted(
+        name for name, spec in expected["columns"].items()
+        if name in actual and actual[name] != spec
+    )
+    actual_unique = _unique_column_groups(conn, table_name, schema="main")
+    missing_unique = sorted(expected["unique_groups"] - actual_unique)
+    if missing or incompatible or missing_unique:
+        raise sqlite3.DatabaseError(
+            f"Conflicting existing table schema for {table_name}: "
+            f"missing_columns={missing}, incompatible_columns={incompatible}, "
+            f"missing_unique_constraints={missing_unique}"
+        )
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("ZBC全平台数据字典V1.0 数据库迁移")
-    print(f"数据库: {DB_PATH}")
-    print("=" * 60)
+def _catalog_rows() -> List[dict]:
+    """Load static platform metadata from the SYSTEM Collector catalog owner."""
+    from lumenis.system.collector.adapters.platform_naming import get_platform_registry_catalog
 
-    result = migrate()
+    rows = get_platform_registry_catalog()
+    if len({row["platform_id"] for row in rows}) != len(rows):
+        raise ValueError("SYSTEM Collector catalog contains duplicate platform IDs")
+    for row in rows:
+        if not row.get("platform_id") or not row.get("platform_name"):
+            raise ValueError("SYSTEM Collector catalog has an empty platform identity")
+        if row.get("has_real_data") is not None:
+            raise ValueError("SYSTEM Collector catalog must not assert runtime data presence")
+        row["raw_tables"] = json.dumps(row.get("raw_tables") or [], ensure_ascii=False, separators=(",", ":"))
+        row["normalized_mapping"] = json.dumps(
+            row.get("normalized_mapping") or {}, ensure_ascii=False, separators=(",", ":")
+        )
+    return rows
 
-    print(f"\n迁移结果:")
-    print(f"  Raw层表: {result['raw_tables']}")
-    print(f"  Normalized层表: {result['normalized_tables']}")
-    print(f"  Evidence层表: {result['evidence_tables']}")
-    print(f"  业务层表: {result['business_tables']}")
-    print(f"  索引: {result['indexes']}")
-    print(f"  events扩展字段: {result['events_columns_added']}")
-    print(f"  预期新表总数: {result['expected_new_tables']}")
-    print(f"  缺失表: {result['missing_tables'] if result['missing_tables'] else '无'}")
-    print(f"  迁移后总表数: {result['total_tables_after']}")
-    if result["errors"]:
-        print(f"\n  错误 ({len(result['errors'])}):")
-        for e in result["errors"]:
-            print(f"    - {e}")
-    else:
-        print(f"\n  错误: 无")
 
-    print("\n" + "=" * 60)
-    if result["missing_tables"] or result["errors"]:
-        print("迁移存在问题，请检查上方输出。")
-        sys.exit(1)
-    else:
-        print("迁移完成，所有表已创建。")
-        sys.exit(0)
+def apply_platform_schema(conn: sqlite3.Connection) -> dict:
+    """Create/validate platform data-center schema and synchronize static catalog metadata.
+
+    Existing table data and runtime-owned registry fields are preserved. Any
+    conflicting table structure aborts the savepoint so partial DDL cannot be
+    committed by the versioned migration runner.
+    """
+    result = {
+        "raw_tables": len(RAW_TABLES_SQL),
+        "normalized_tables": len(NORMALIZED_TABLES_SQL),
+        "evidence_tables": len(EVIDENCE_TABLES_SQL),
+        "business_tables": len(BUSINESS_TABLES_SQL),
+        "registry_table": 1,
+        "indexes": len(INDEX_SQL),
+        "events_columns_added": 0,
+        "catalog_inserted": 0,
+        "catalog_updated": 0,
+    }
+    contracts = _expected_table_contracts(conn)
+    statements = RAW_TABLES_SQL + NORMALIZED_TABLES_SQL + EVIDENCE_TABLES_SQL + BUSINESS_TABLES_SQL + [PLATFORM_REGISTRY_SQL]
+    savepoint = "lumenis_platform_schema_v13"
+    conn.execute(f"SAVEPOINT {savepoint}")
+    try:
+        events = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='events'"
+        ).fetchone()
+        if events is None:
+            raise sqlite3.DatabaseError("Schema v13 requires the existing Shared Database events table")
+
+        for sql in statements:
+            conn.execute(sql)
+        for sql in INDEX_SQL:
+            conn.execute(sql)
+
+        event_columns = {
+            row[1]: str(row[2] or "").upper()
+            for row in conn.execute("PRAGMA table_info(events)").fetchall()
+        }
+        for name, type_name in EVENTS_EXTENSION_COLUMNS:
+            existing_type = event_columns.get(name)
+            if existing_type is None:
+                conn.execute(f"ALTER TABLE events ADD COLUMN {name} {type_name}")
+                result["events_columns_added"] += 1
+            elif existing_type != type_name.upper():
+                raise sqlite3.DatabaseError(
+                    f"Conflicting existing events.{name} type: {existing_type}, expected {type_name.upper()}"
+                )
+
+        for table_name, contract in contracts.items():
+            _validate_table_contract(conn, table_name, contract)
+
+        catalog = _catalog_rows()
+        static_columns = (
+            "platform_name", "display_name", "adapter_module", "raw_tables",
+            "normalized_mapping", "has_collector", "has_api_routes", "notes",
+        )
+        for row in catalog:
+            existing = conn.execute(
+                "SELECT 1 FROM platform_registry WHERE platform_id=?", (row["platform_id"],)
+            ).fetchone()
+            if existing:
+                assignments = ", ".join(f"{column}=?" for column in static_columns)
+                conn.execute(
+                    f"UPDATE platform_registry SET {assignments}, updated_at=datetime('now') WHERE platform_id=?",
+                    tuple(row[column] for column in static_columns) + (row["platform_id"],),
+                )
+                result["catalog_updated"] += 1
+            else:
+                conn.execute(
+                    """INSERT INTO platform_registry
+                    (platform_id, platform_name, display_name, status, ui_visible,
+                     adapter_module, raw_tables, normalized_mapping, has_collector,
+                     has_api_routes, has_real_data, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)""",
+                    (
+                        row["platform_id"], row["platform_name"], row["display_name"],
+                        row["status"], row["ui_visible"], row["adapter_module"],
+                        row["raw_tables"], row["normalized_mapping"], row["has_collector"],
+                        row["has_api_routes"], row["notes"],
+                    ),
+                )
+                result["catalog_inserted"] += 1
+
+        conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+        return result
+    except Exception:
+        conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+        conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+        raise

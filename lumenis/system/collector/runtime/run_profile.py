@@ -2,9 +2,9 @@
 """品牌 Profile 驱动小红书实时采集入口（链路：profile -> collect_keywords -> 采集 -> 主体过滤 -> 入库）。
 
 用法：
-  python -m collector_v2.run_profile --dry-run                 # 只打印激活品牌关键词（不采集）
-  python -m collector_v2.run_profile --cdp-url <ws>            # 真采（需双账号登录态在场）
-  python -m collector_v2.run_profile --brand hainan_cdf --max-scroll 3
+  python -m lumenis.system.collector.runtime.run_profile --dry-run                 # 只打印激活品牌关键词（不采集）
+  python -m lumenis.system.collector.runtime.run_profile --cdp-url <ws>            # 真采（需双账号登录态在场）
+  python -m lumenis.system.collector.runtime.run_profile --brand hainan_cdf --max-scroll 3
 """
 import argparse
 import json

@@ -107,7 +107,9 @@ def run_ai_off_tests():
     # 6. Provider Registry still works
     print("\n--- 6. Provider Registry (No AI) ---")
     try:
-        from provider_registry import provider_status, is_provider_available, active_providers
+        from lumenis.system.ai_gateway.providers import (
+            provider_status, is_provider_available, active_providers,
+        )
         check("zhipu status=ACTIVE", provider_status("zhipu") == "ACTIVE", "")
         check("ark status=ACTIVE_FALLBACK", provider_status("ark") == "ACTIVE_FALLBACK", "")
         check("qwen status=NOT_CONFIGURED", provider_status("qwen") == "NOT_CONFIGURED", "")

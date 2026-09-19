@@ -6,8 +6,8 @@ task_queue.fail 内置）。采集/事件分析/报告生成等批量任务可�
 与同步采集互补；生产接入可按 collector 任务类型注册 processor。
 
 用法：
-  from collector_guard.task_queue import TaskQueue
-  from collector_guard.queue_worker import QueueWorker
+  from lumenis.system.collector.guard.task_queue import TaskQueue
+  from lumenis.system.collector.guard.queue_worker import QueueWorker
 
   def proc(task):
       print(task["task_type"], task["payload"])

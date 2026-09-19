@@ -126,6 +126,6 @@ def test_subject_sql_alias_backward_compatible(sr):
 # ---------- 日报入口稳定性（不连库，仅验证委托契约不被改坏）----------
 def test_build_daily_report_entry_stable():
     import risk_engine
-    import daily_report
+    from lumenis.shared.reporting import daily as daily_report
     assert callable(risk_engine.build_daily_report)
     assert callable(daily_report.generate_daily_digest)

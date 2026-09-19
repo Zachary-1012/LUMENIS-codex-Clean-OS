@@ -21,13 +21,13 @@ def artifact_client(tmp_path, monkeypatch):
     importlib.reload(shared_artifacts)
     shared_artifacts.ensure_artifact_table()
 
-    import evidence_chain
+    from lumenis.shared.evidence.chain import init_db as init_evidence_db
 
-    evidence_chain.init_db(str(db_file))
+    init_evidence_db(str(db_file))
 
-    import skill_execution_chain
+    from lumenis.shared.agents.skills import execution as canonical_execution
 
-    skill_execution_chain.ensure_skill_executions_table()
+    canonical_execution.ensure_skill_executions_table()
 
     from flask import Flask
     import experience_runtime

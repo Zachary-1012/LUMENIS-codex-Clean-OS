@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-ZBC Phase 17 - Source Provenance / License Audit Tests
+"""Current-source dependency and third-party provenance safeguards.
 
-1. 无 INFRINGEMENT_RISK 模块进入生产路径
-2. 所有第三方依赖有 License 记录
-3. 源码中无未归因的第三方代码
+The dependency register, LICENSE, and active manifests are the only evidence
+used here. A missing verification remains UNVERIFIED; it is never converted
+into a historical audit PASS or a commercial-use grant.
 """
 import json
 import os
 import re
+
 import pytest
 
+
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-AUDIT_JSON = os.path.join(REPO_ROOT, "audit", "source_provenance.json")
-AUDIT_REPORT = os.path.join(REPO_ROOT, "audit", "SOURCE-PROVENANCE-AUDIT.md")
+REGISTER = os.path.join(REPO_ROOT, "00-GOVERNANCE", "THIRD-PARTY-COMPONENT-REGISTER.md")
+LICENSE = os.path.join(REPO_ROOT, "LICENSE")
 REQUIREMENTS = os.path.join(REPO_ROOT, "requirements.txt")
+DEV_REQUIREMENTS = os.path.join(REPO_ROOT, "requirements-dev.txt")
+PACKAGE_JSON = os.path.join(REPO_ROOT, "package.json")
 
 EXCLUDE_DIRS = {
     ".venv", "node_modules", "nodejs", "dependencies", ".git",
@@ -31,23 +34,67 @@ EXCLUDE_DIRS = {
 }
 
 
-def _load_audit_json():
-    assert os.path.exists(AUDIT_JSON), f"审计 JSON 不存在: {AUDIT_JSON}"
-    with open(AUDIT_JSON, "r", encoding="utf-8") as f:
-        return json.load(f)
+def _read_utf8(path):
+    with open(path, "r", encoding="utf-8") as file:
+        return file.read()
 
 
-def _parse_requirements():
+def _canonical_package_name(name):
+    """Normalize package separators according to common Python/Node naming."""
+    return re.sub(r"[-_.]+", "-", str(name).strip().lower())
+
+
+def _parse_requirements(path=REQUIREMENTS):
     packages = []
-    with open(REQUIREMENTS, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            match = re.match(r"^([a-zA-Z0-9_.-]+)", line)
-            if match:
-                packages.append(match.group(1).lower())
+    for line in _read_utf8(path).splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("-"):
+            continue
+        match = re.match(r"^([a-zA-Z0-9_.-]+)", line)
+        if match:
+            packages.append(_canonical_package_name(match.group(1)))
     return packages
+
+
+def _register_section(start_heading, end_heading):
+    text = _read_utf8(REGISTER)
+    start = text.index(start_heading)
+    end = text.index(end_heading, start)
+    return text[start:end]
+
+
+def _dependency_records(start_heading, end_heading):
+    """Read component/license-status rows from the current markdown register."""
+    records = {}
+    for line in _register_section(start_heading, end_heading).splitlines():
+        if not line.startswith("|") or line.startswith("| ---"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 5 or cells[0] == "Component":
+            continue
+        records[_canonical_package_name(cells[0])] = {
+            "name": cells[0],
+            "class": cells[1],
+            "license_status": cells[4],
+        }
+    return records
+
+
+def _all_manifest_records():
+    return {
+        "python": _dependency_records(
+            "## 2. Python direct dependencies observed in `requirements.txt`",
+            "## 3. Python development/test dependencies",
+        ),
+        "development": _dependency_records(
+            "## 3. Python development/test dependencies",
+            "## 4. Node direct dependencies",
+        ),
+        "node": _dependency_records(
+            "## 4. Node direct dependencies",
+            "## 5. Built-in / platform dependencies",
+        ),
+    }
 
 
 def _list_production_python_files():
@@ -55,120 +102,89 @@ def _list_production_python_files():
     for root, dirs, files in os.walk(REPO_ROOT):
         rel = os.path.relpath(root, REPO_ROOT)
         parts = rel.split(os.sep) if rel != "." else []
-        if any(p in EXCLUDE_DIRS for p in parts):
+        if any(part in EXCLUDE_DIRS for part in parts):
             continue
-        for f in files:
-            if f.endswith(".py"):
-                py_files.append(os.path.join(root, f))
+        for filename in files:
+            if filename.endswith(".py"):
+                py_files.append(os.path.join(root, filename))
     return py_files
 
 
-# ============================================================
-# Test 1: 审计产物存在性
-# ============================================================
-
-class TestAuditArtifactsExist:
-    def test_audit_json_exists(self):
-        assert os.path.exists(AUDIT_JSON)
-
-    def test_audit_json_valid(self):
-        data = _load_audit_json()
-        assert "audit_metadata" in data
-        assert "classification_summary" in data
-        assert "python_dependencies" in data
-        assert "infringement_risk" in data
-
-    def test_audit_report_exists(self):
-        assert os.path.exists(AUDIT_REPORT)
-
-    def test_third_party_audit_exists(self):
-        assert os.path.exists(os.path.join(REPO_ROOT, "THIRD_PARTY_LICENSE_AUDIT.md"))
+def _git_history_provenance_status():
+    """Current allowed evidence contains no verified Git-history audit record."""
+    current_sources = "\n".join(
+        _read_utf8(path) for path in (REGISTER, LICENSE, REQUIREMENTS)
+    )
+    has_verified_history_record = bool(re.search(
+        r"(?is)(?:git\s+history|third.party\s+(?:fork|merge|cherry.pick))"
+        r".{0,120}\b(?:verified|pass|clear)\b",
+        current_sources,
+    ))
+    return "VERIFIED" if has_verified_history_record else "UNVERIFIED"
 
 
-# ============================================================
-# Test 2: 所有第三方依赖有 License 记录
-# ============================================================
-
-class TestAllDependenciesHaveLicense:
-    def test_requirements_parsed(self):
-        pkgs = _parse_requirements()
-        assert len(pkgs) >= 25
-
-    def test_each_requirement_has_license_record(self):
-        audit = _load_audit_json()
-        recorded = {dep["name"].lower() for dep in audit.get("python_dependencies", [])}
-        missing = [p for p in _parse_requirements() if p not in recorded]
-        assert not missing, f"缺少 License 记录: {missing}"
-
-    def test_no_gpl_or_agpl(self):
-        stats = _load_audit_json().get("python_license_stats", {})
-        assert stats.get("GPL_or_AGPL", 0) == 0
-        assert stats.get("non_commercial_restricted", 0) == 0
-
-    def test_all_commercial_use_allowed(self):
-        for dep in _load_audit_json().get("python_dependencies", []):
-            assert dep.get("commercial_use") is True, f"{dep['name']} 不允许商业使用"
-
-    def test_nodejs_dependency_has_license(self):
-        deps = _load_audit_json().get("nodejs_dependencies", [])
-        assert len(deps) >= 1
-        for dep in deps:
-            assert dep.get("license")
-            assert dep.get("commercial_use") is True
+def _license_status(record):
+    if not record:
+        return "UNVERIFIED"
+    status = record.get("license_status", "").strip()
+    if status == "VERIFY_BEFORE_RELEASE":
+        return "UNVERIFIED"
+    return status or "UNVERIFIED"
 
 
-# ============================================================
-# Test 3: 无 INFRINGEMENT_RISK 模块进入生产路径
-# ============================================================
+class TestCurrentGovernanceSources:
+    def test_current_register_license_and_manifests_exist(self):
+        assert os.path.isfile(REGISTER)
+        assert os.path.isfile(LICENSE)
+        assert os.path.isfile(REQUIREMENTS)
+        assert os.path.isfile(DEV_REQUIREMENTS)
 
-class TestNoInfringementRiskInProduction:
-    def test_infringement_risk_recorded(self):
-        assert len(_load_audit_json().get("infringement_risk", [])) > 0
-
-    def test_infringement_risk_not_in_production(self):
-        for risk in _load_audit_json().get("infringement_risk", []):
-            assert risk.get("in_production_path") is False, f"{risk.get('file')} 在生产路径"
-
-    def test_pitch_dump_not_really_imported(self):
-        """_pitch_dump 不得被生产代码真正 import/open（排除列表中的引用不算）。"""
-        violations = []
-        for py_file in _list_production_python_files():
-            try:
-                with open(py_file, "r", encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                if "_pitch_dump" in content:
-                    rel = os.path.relpath(py_file, REPO_ROOT)
-                    # 判断是否仅在排除/跳过/注释语境中出现
-                    lines = [l.strip() for l in content.splitlines() if "_pitch_dump" in l]
-                    is_exclude_only = all(
-                        any(kw in l.lower() for kw in [
-                            "exclude", "skip", "ignore", "排除", "跳过",
-                            "blacklist", "filter_out", "not_in",
-                        ]) or l.startswith("#") or l.startswith("'") or l.startswith('"')
-                        for l in lines
-                    )
-                    if not is_exclude_only:
-                        violations.append(rel)
-            except Exception:
-                continue
-        assert not violations, f"生产代码真正引用了 _pitch_dump: {violations}"
-
-    def test_infringement_files_are_text_only(self):
-        for risk in _load_audit_json().get("infringement_risk", []):
-            assert risk.get("file", "").endswith(".txt"), f"不是纯文本: {risk.get('file')}"
-
-    def test_production_safety_flags(self):
-        safety = _load_audit_json().get("production_path_safety", {})
-        assert safety.get("infringement_risk_in_production_path") is False
-        assert safety.get("derived_with_license_in_production_path") is False
-        assert safety.get("third_party_source_modified") is False
+    def test_register_explicitly_blocks_unverified_licenses(self):
+        register = _read_utf8(REGISTER)
+        assert "VERIFY_BEFORE_RELEASE" in register
+        assert "Unknown licensing or unregistered shipped third-party code is a release blocker" in register
+        assert "do not guess" in register
 
 
-# ============================================================
-# Test 4: 源码中无未归因的第三方代码
-# ============================================================
+class TestManifestDependencyCoverage:
+    def test_all_python_runtime_dependencies_are_registered(self):
+        manifest = set(_parse_requirements())
+        records = _all_manifest_records()["python"]
+        missing = sorted(manifest - set(records))
+        extra = sorted(set(records) - manifest)
+        assert not missing, f"当前 requirements.txt 中的依赖未登记，许可状态必须保持 UNVERIFIED: {missing}"
+        assert not extra, f"治理表登记了当前 manifest 中不存在的直接依赖: {extra}"
 
-class TestNoUnattributedThirdPartyCode:
+    def test_python_license_status_is_explicitly_unverified(self):
+        records = _all_manifest_records()["python"]
+        statuses = {name: _license_status(records.get(name)) for name in _parse_requirements()}
+        assert set(statuses) == set(_parse_requirements())
+        assert statuses
+        assert set(statuses.values()) == {"UNVERIFIED"}, (
+            "当前 register 只记录 VERIFY_BEFORE_RELEASE；不得据此声称 GPL/AGPL 已排除或可商用"
+        )
+
+    def test_dev_dependencies_are_not_misclassified_as_production(self):
+        dev_requirements = set(_parse_requirements(DEV_REQUIREMENTS)) - set(_parse_requirements())
+        records = _all_manifest_records()["development"]
+        assert dev_requirements <= set(records), f"未登记的开发/测试依赖: {sorted(dev_requirements - set(records))}"
+        for name in dev_requirements:
+            assert records[name]["class"] == "TEST ONLY"
+            assert _license_status(records[name]) == "UNVERIFIED"
+
+    def test_node_dependencies_are_registered_without_license_inference(self):
+        package = json.loads(_read_utf8(PACKAGE_JSON))
+        dependencies = {
+            _canonical_package_name(name)
+            for name in (package.get("dependencies") or {})
+        }
+        records = _all_manifest_records()["node"]
+        assert dependencies == set(records)
+        for name in dependencies:
+            assert _license_status(records[name]) == "UNVERIFIED"
+
+
+class TestCurrentProvenanceEvidence:
     SOURCE_MARKERS = [
         r"copied\s+from", r"adapted\s+from", r"derived\s+from",
         r"forked\s+from", r"ported\s+from", r"based\s+on\s+https?://",
@@ -179,6 +195,16 @@ class TestNoUnattributedThirdPartyCode:
         r"Apache", r"BSD", r"attribution", r"归因",
     ]
 
+    def test_historical_git_and_source_audit_status_is_unverified(self):
+        """No current register/LICENSE/manifest entry proves a historical audit."""
+        assert _git_history_provenance_status() == "UNVERIFIED"
+
+    def test_current_register_requires_pre_release_reconciliation(self):
+        register = _read_utf8(REGISTER)
+        assert "Re-scan `requirements*.txt`" in register
+        assert "vendored source" in register
+        assert "Verify licenses from authoritative package/project sources" in register
+
     def test_production_files_scannable(self):
         assert len(_list_production_python_files()) > 50
 
@@ -186,85 +212,87 @@ class TestNoUnattributedThirdPartyCode:
         violations = []
         for py_file in _list_production_python_files():
             try:
-                with open(py_file, "r", encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                if any(re.search(p, content, re.IGNORECASE) for p in self.SOURCE_MARKERS):
-                    if not any(re.search(p, content, re.IGNORECASE) for p in self.ATTRIBUTION_MARKERS):
-                        violations.append(os.path.relpath(py_file, REPO_ROOT))
-            except Exception:
+                content = _read_utf8(py_file)
+            except (OSError, UnicodeError):
                 continue
-        assert not violations, f"缺少归因: {violations}"
+            if any(re.search(pattern, content, re.IGNORECASE) for pattern in self.SOURCE_MARKERS):
+                if not any(re.search(pattern, content, re.IGNORECASE) for pattern in self.ATTRIBUTION_MARKERS):
+                    violations.append(os.path.relpath(py_file, REPO_ROOT))
+        assert not violations, f"当前源码中的第三方来源标记缺少同文件归因: {violations}"
 
-    def test_derived_files_have_attribution(self):
-        for item in _load_audit_json().get("derived_with_license", []):
-            assert item.get("attribution_present") is True
-            assert item.get("source_repo")
-            assert item.get("license")
+    def test_pitch_dump_not_really_imported(self):
+        """_pitch_dump 不得被生产代码真正 import/open（排除列表中的引用不算）。"""
+        violations = []
+        for py_file in _list_production_python_files():
+            try:
+                content = _read_utf8(py_file)
+            except (OSError, UnicodeError):
+                continue
+            if "_pitch_dump" in content:
+                rel = os.path.relpath(py_file, REPO_ROOT)
+                lines = [line.strip() for line in content.splitlines() if "_pitch_dump" in line]
+                is_exclude_only = all(
+                    any(keyword in line.lower() for keyword in [
+                        "exclude", "skip", "ignore", "排除", "跳过",
+                        "blacklist", "filter_out", "not_in",
+                    ]) or line.startswith("#") or line.startswith("'") or line.startswith('"')
+                    for line in lines
+                )
+                if not is_exclude_only:
+                    violations.append(rel)
+        assert not violations, f"生产代码真正引用了 _pitch_dump: {violations}"
 
-    def test_derived_not_in_production(self):
-        for item in _load_audit_json().get("derived_with_license", []):
-            assert item.get("in_production_path") is False
+    def test_license_keeps_third_party_terms_separate(self):
+        license_text = _read_utf8(LICENSE)
+        assert "LUMENIS Materials" in license_text
+        assert "does not replace, restrict, expand, relicense or claim ownership of" in license_text
+        assert re.search(
+            r"subject to their respective copyright,\s*license, attribution, notice and usage terms",
+            license_text,
+        )
+        assert "unresolved for release purposes rather than inferred" in license_text
 
-    def test_no_media_crawler_source(self):
-        """MediaCrawler 非商业源码不得出现在仓库中（license_audit.py 中的检测标记不算）。"""
+    def test_no_media_crawler_noncommercial_source_marker(self):
+        """Reject the known non-commercial source marker in production Python files."""
         violations = []
         for root, dirs, files in os.walk(REPO_ROOT):
             rel = os.path.relpath(root, REPO_ROOT)
             parts = rel.split(os.sep) if rel != "." else []
-            if any(p in EXCLUDE_DIRS for p in parts):
+            if any(part in EXCLUDE_DIRS for part in parts):
                 continue
-            for f in files:
-                if not f.endswith(".py"):
+            for filename in files:
+                if not filename.endswith(".py") or "license_audit" in filename:
                     continue
-                fpath = os.path.join(root, f)
-                # scripts/license_audit.py 是检测工具，含标记字符串是正常的
-                if "license_audit" in f:
-                    continue
+                file_path = os.path.join(root, filename)
                 try:
-                    with open(fpath, "r", encoding="utf-8", errors="ignore") as fh:
-                        if "NON-COMMERCIAL LEARNING LICENSE" in fh.read():
-                            violations.append(os.path.relpath(fpath, REPO_ROOT))
-                except Exception:
+                    if "NON-COMMERCIAL LEARNING LICENSE" in _read_utf8(file_path):
+                        violations.append(os.path.relpath(file_path, REPO_ROOT))
+                except (OSError, UnicodeError):
                     continue
-        assert not violations, f"存在 MediaCrawler 非商业源码: {violations}"
+        assert not violations, f"生产 Python 代码包含已知非商业源码标记: {violations}"
 
-
-# ============================================================
-# Test 5: Git / .gitignore 合规
-# ============================================================
 
 class TestGitAndGitignore:
-    def test_gitignore_excludes_key_dirs(self):
-        with open(os.path.join(REPO_ROOT, ".gitignore"), "r", encoding="utf-8") as f:
-            content = f.read()
+    def test_gitignore_excludes_key_runtime_artifacts(self):
+        content = _read_utf8(os.path.join(REPO_ROOT, ".gitignore"))
         for pattern in ["node_modules/", ".venv/", "dependencies/", "*.exe", "*.db"]:
             assert pattern in content, f".gitignore 缺少 {pattern}"
 
-    def test_no_third_party_fork_in_history(self):
-        git = _load_audit_json().get("git_history_audit", {})
-        assert git.get("third_party_fork_found") is False
-        assert git.get("third_party_merge_found") is False
-        assert git.get("third_party_cherry_pick_found") is False
+    def test_git_history_is_not_claimed_as_pass(self):
+        assert _git_history_provenance_status() == "UNVERIFIED"
 
 
-# ============================================================
-# Test 6: 审计数据一致性
-# ============================================================
+class TestDependencyEvidenceConsistency:
+    def test_register_count_matches_runtime_manifest(self):
+        records = _all_manifest_records()["python"]
+        assert len(records) == len(_parse_requirements())
 
-class TestAuditDataConsistency:
-    def test_python_dep_count_matches_requirements(self):
-        audit = _load_audit_json()
-        assert len(audit.get("python_dependencies", [])) == len(_parse_requirements())
-
-    def test_infringement_count_matches_summary(self):
-        audit = _load_audit_json()
-        summary = audit["classification_summary"]["INFRINGEMENT_RISK"]["file_count"]
-        assert summary == len(audit["infringement_risk"])
-
-    def test_derived_count_matches_summary(self):
-        audit = _load_audit_json()
-        summary = audit["classification_summary"]["DERIVED_WITH_LICENSE"]["file_count"]
-        assert summary == len(audit["derived_with_license"])
+    def test_all_registered_license_states_have_release_gate(self):
+        for source, records in _all_manifest_records().items():
+            for dependency, record in records.items():
+                assert record["license_status"] == "VERIFY_BEFORE_RELEASE", (
+                    f"{source}:{dependency} 的状态已变化；必须先补齐权威许可证据再调整此验收"
+                )
 
 
 if __name__ == "__main__":

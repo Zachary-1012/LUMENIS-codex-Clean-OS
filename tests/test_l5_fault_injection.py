@@ -424,7 +424,7 @@ class TestDuplicateData:
     """模拟重复数据，验证去重不重复入库"""
 
     def test_duplicate_data_dedup(self):
-        from evidence_chain import EvidenceStore, init_db, compute_content_hash
+        from lumenis.shared.evidence.chain import EvidenceStore, init_db, compute_content_hash
 
         test_db = os.path.join(os.path.dirname(__file__), "_l5_test_duplicate.db")
         if os.path.exists(test_db):

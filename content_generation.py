@@ -27,7 +27,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from lumenis.shared.database import get_repository, main_db_path
+from lumenis.shared.database import main_db_path
+from lumenis.shared.database.repository import DatabaseRepository
 DB_PATH = main_db_path()
 
 # ============================================================
@@ -150,7 +151,10 @@ EVAL_LABELS = {
 # DB 层
 # ============================================================
 def _get_conn() -> sqlite3.Connection:
-    return get_repository().connect(timeout=10)
+    # DB_PATH is the canonical main DB in production and the narrow injection
+    # point for disposable tests/migrations. Connection policy remains owned by
+    # the Shared Database repository.
+    return DatabaseRepository(str(DB_PATH)).connect(timeout=10)
 
 
 def init_db():
@@ -888,12 +892,12 @@ def api_video_analyze():
 
 @content_bp.route("/brand-report/generate", methods=["POST"])
 def api_brand_report_generate():
-    """品牌报告生成（复用brand_report_generator + AI增强）。"""
+    """品牌报告生成（复用 Shared Reporting 的 BMP 报告 owner + AI增强）。"""
     data = request.get_json(silent=True) or {}
     brand = data.get("brand", "序境")
     period = data.get("period", "")
     try:
-        from brand_report_generator import BrandReportGenerator
+        from lumenis.shared.reporting.brand_report import BrandReportGenerator
         gen = BrandReportGenerator(brand_name=brand, report_period=period)
         # 用AI生成报告内容
         ai_result = generate_content(

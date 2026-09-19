@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 from datetime import datetime
@@ -23,10 +24,11 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from flask import Blueprint, jsonify, request
 
-from permission_gate import OperationType, RiskLevel, require_permission
+from lumenis.system.security import OperationType, RiskLevel, require_permission
 
 
 subject_registry_bp = Blueprint("subject_registry", __name__)
+logger = logging.getLogger(__name__)
 
 DOMAINS: Dict[str, Dict[str, str]] = {
     "CTH": {"name": "商业运营", "product": "CTH"},
@@ -221,18 +223,59 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
 
 @subject_registry_bp.route("/api/settings/subjects", methods=["GET"])
 def get_subjects():
+    # Listing is scoped to the authenticated account and this registry module.
+    # Basic auth alone has no product identity, so it cannot authorize this
+    # domain-sensitive response.
+    from lumenis.auth.service import get_current_user
+
+    user = get_current_user()
+    if not user or not isinstance(user.get("id"), int):
+        return jsonify({"ok": False, "code": "AUTH_REQUIRED", "error": "需要有效账号会话"}), 401
+
     domain_arg = request.args.get("domain_id") or request.args.get("domain")
     try:
-        subjects = list_subjects(domain_arg)
+        requested_domain = normalize_domain(domain_arg) if domain_arg else None
     except SubjectValidationError as exc:
         return jsonify({"ok": False, "error": str(exc), "code": "INVALID_SUBJECT_SCOPE"}), 400
+
+    try:
+        from account.authorization import check_dual_domain_permission
+
+        candidates = [requested_domain] if requested_domain else list(DOMAINS)
+        authorized_domains = [
+            domain for domain in candidates
+            if check_dual_domain_permission(
+                user["id"],
+                "ZBMP" if domain == "BMP" else "CTH",
+                module="subject_registry",
+                action="read",
+            )
+        ]
+    except Exception:
+        logger.exception("Subject registry read authorization failed")
+        return jsonify({"ok": False, "code": "AUTHORIZATION_UNAVAILABLE",
+                        "error": "主体范围授权暂不可用"}), 503
+
+    if not authorized_domains:
+        return jsonify({"ok": False, "code": "SUBJECT_SCOPE_DENIED",
+                        "error": "没有读取该主体范围的权限"}), 403
+
+    try:
+        subjects = [
+            subject
+            for domain in authorized_domains
+            for subject in list_subjects(domain)
+        ]
+    except SubjectValidationError as exc:
+        return jsonify({"ok": False, "error": str(exc), "code": "INVALID_SUBJECT_SCOPE"}), 400
+
     return jsonify({
         "ok": True,
         "source": "lumenis_subject_registry",
         "selection_only": True,
         "domains": [
             {"id": key, "name": value["name"], "product": value["product"]}
-            for key, value in DOMAINS.items()
+            for key, value in DOMAINS.items() if key in authorized_domains
         ],
         "subject_types": [
             {"id": key, "name": value} for key, value in SUBJECT_TYPES.items()

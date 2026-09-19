@@ -8,7 +8,7 @@ ZBC Runtime Guardian — 采集链路集成测试
   2. 采集失败 → 重试 → 超过上限 → DLQ（不阻塞主链路）
   3. worker 假死 → 心跳超时 → Reaper 检测 → 标记 DEAD
   4. CircuitBreaker 触发 → 冷却 → HALF_OPEN → 恢复
-  5. ai_channel CircuitBreaker 收敛验证（继承 runtime_guardian）
+  5. canonical AI Gateway channel CircuitBreaker 状态与 ProviderBreaker 行为
   6. collector_automation 生命周期：注册→租约→心跳→清理
   7. collector.collect_all 旁路参数：不传 guardian 时行为不变
 
@@ -357,63 +357,33 @@ class TestCircuitBreakerFullCycle:
 
 
 # ---------------------------------------------------------------------------
-# 场景5：ai_channel CircuitBreaker 收敛验证
+# 场景5：canonical AI Gateway channel 熔断器行为
 # ---------------------------------------------------------------------------
 class TestAICircuitBreakerConvergence:
 
     @pytest.fixture(autouse=True)
-    def _reset_ai_channel_globals(self):
-        """Reset ai_channel global breaker/provider cache before each test.
+    def _reset_ai_channel_globals(self, monkeypatch):
+        """Isolate canonical channel state without reloading other owners."""
+        from lumenis.system.ai_gateway import channel as ai_channel
 
-        Other test files may leave ai_channel.breaker or provider breaker cache in a
-        modified state. If runtime_guardian was reloaded (e.g. by
-        test_runtime_guardian.py), ai_channel.CircuitBreaker may inherit from a stale
-        base class; reload ai_channel to re-establish the inheritance chain.
-        """
-        import importlib
-        import ai_channel
-        # Save originals (other test files may monkeypatch CircuitBreaker/breaker)
-        _saved_cb = getattr(ai_channel, 'CircuitBreaker', None)
-        _saved_breaker = getattr(ai_channel, 'breaker', None)
-        _saved_pbs = getattr(ai_channel, '_provider_breakers', None)
-        # Defense: if ai_channel.CircuitBreaker is not a subclass of the current
-        # runtime_guardian.CircuitBreaker (happens after importlib.reload of
-        # runtime_guardian), reload ai_channel to re-establish inheritance.
-        try:
-            if not (isinstance(_saved_cb, type) and issubclass(_saved_cb, rg.CircuitBreaker)):
-                importlib.reload(ai_channel)
-        except Exception:
-            pass
-        # Ensure real CircuitBreaker class is visible
-        if not isinstance(getattr(ai_channel, 'CircuitBreaker', None), type):
-            from runtime_guardian import CircuitBreaker as _RGB
-            ai_channel.CircuitBreaker = _RGB
-        # Guarantee a valid global breaker instance
-        try:
-            ai_channel.breaker = ai_channel.CircuitBreaker(fail_threshold=5, cooldown_sec=300)
-        except Exception:
-            pass
-        # Clear provider breaker cache
-        if isinstance(getattr(ai_channel, '_provider_breakers', None), dict):
-            ai_channel._provider_breakers.clear()
-        else:
-            ai_channel._provider_breakers = {}
+        monkeypatch.setattr(
+            ai_channel,
+            "breaker",
+            ai_channel.CircuitBreaker(fail_threshold=5, cooldown_sec=300),
+        )
+        monkeypatch.setattr(ai_channel, "_PROVIDER_BREAKERS", {})
         yield
-        # Restore originals after test
-        if _saved_cb is not None:
-            ai_channel.CircuitBreaker = _saved_cb
-        if _saved_breaker is not None:
-            ai_channel.breaker = _saved_breaker
-        if _saved_pbs is not None:
-            ai_channel._provider_breakers = _saved_pbs
-    def test_ai_channel_cb_inherits_runtime_guardian(self):
-        """ai_channel.CircuitBreaker 继承自 runtime_guardian.CircuitBreaker"""
-        import ai_channel
-        assert issubclass(ai_channel.CircuitBreaker, rg.CircuitBreaker)
+
+    def test_canonical_channel_owns_breaker_contract(self):
+        """AI channel and its provider breaker resolve through the canonical owner."""
+        from lumenis.system.ai_gateway import channel as ai_channel
+        assert ai_channel.__name__ == "lumenis.system.ai_gateway.channel"
+        assert ai_channel.CircuitBreaker.__module__ == ai_channel.__name__
+        assert ai_channel.ProviderBreaker.__module__ == ai_channel.__name__
 
     def test_ai_channel_cb_state_transitions(self):
         """ai_channel.CircuitBreaker 状态转换正常（字符串状态兼容）"""
-        import ai_channel
+        from lumenis.system.ai_gateway import channel as ai_channel
         b = ai_channel.CircuitBreaker(fail_threshold=2, cooldown_sec=0.1)
         assert b.state == ai_channel.CircuitBreaker.CLOSED
         b.record_failure()
@@ -427,7 +397,7 @@ class TestAICircuitBreakerConvergence:
 
     def test_ai_channel_cb_extra_fields(self):
         """ai_channel.CircuitBreaker 保留传输层额外字段"""
-        import ai_channel
+        from lumenis.system.ai_gateway import channel as ai_channel
         b = ai_channel.CircuitBreaker(fail_threshold=1, cooldown_sec=30)
         b.record_success(latency_ms=150)
         assert b.last_latency_ms == 150
@@ -442,7 +412,7 @@ class TestAICircuitBreakerConvergence:
 
     def test_ai_channel_cb_injected_clock(self):
         """ai_channel.CircuitBreaker 支持 now_func 注入（原测试兼容性）"""
-        import ai_channel
+        from lumenis.system.ai_gateway import channel as ai_channel
         now = [1000.0]
         b = ai_channel.CircuitBreaker(fail_threshold=1, cooldown_sec=30, now_func=lambda: now[0])
         b.record_failure()
@@ -452,7 +422,7 @@ class TestAICircuitBreakerConvergence:
 
     def test_ai_channel_global_breaker(self):
         """ai_channel 全局 breaker 实例可用"""
-        import ai_channel
+        from lumenis.system.ai_gateway import channel as ai_channel
         assert ai_channel.breaker is not None
         assert isinstance(ai_channel.breaker, ai_channel.CircuitBreaker)
         snap = ai_channel.breaker.snapshot()
@@ -460,7 +430,7 @@ class TestAICircuitBreakerConvergence:
 
     def test_ai_channel_provider_breaker(self):
         """ai_channel ProviderBreaker 使用收敛后的 CircuitBreaker"""
-        import ai_channel
+        from lumenis.system.ai_gateway import channel as ai_channel
         pb = ai_channel.get_provider_breaker("test_provider", fail_threshold=1, cooldown_sec=30)
         assert pb is not None
         assert isinstance(pb.breaker, ai_channel.CircuitBreaker)

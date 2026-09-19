@@ -148,7 +148,7 @@ class SubjectFilter:
 
 
 def filter_subject(notes, subject_hit) -> list:
-    """模块级适配函数：兼容 collector_v2/xhs/live_engine.py 的调用契约
+    """模块级适配函数：兼容 SYSTEM Collector XHS live_engine.py 的调用契约
     filter_subject(notes, subject_hit) -> accepted_notes
     委托外部传入的 subject_hit 权威回调（subject_rules.subject_hit_text），
     不在采集器内重写主体口径（红线：主体过滤唯一入口）。"""

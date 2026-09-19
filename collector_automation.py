@@ -655,7 +655,7 @@ class CollectorAutomation:
                 logger.warning('Checkpoint 保存失败(不影响主流程): %s', _cp_err)
             # Evidence：采集成功落证据（禁止只存状态不存证据）
             try:
-                from evidence_store import record_collection_evidence
+                from lumenis.shared.evidence.store import record_collection_evidence
                 _detail = task.get('collect_detail', {}) or {}
                 _start = datetime.fromisoformat(task['start_time'])
                 _dur = int((datetime.now() - _start).total_seconds() * 1000)
@@ -685,7 +685,7 @@ class CollectorAutomation:
             logger.error(f"任务 {task['id']}: 采集失败: {e}", exc_info=True)
             # Evidence：采集失败必留证据链（异常类型+消息，禁止以0条充当结果）
             try:
-                from evidence_store import record_collection_evidence
+                from lumenis.shared.evidence.store import record_collection_evidence
                 _start = datetime.fromisoformat(task['start_time'])
                 _dur = int((datetime.now() - _start).total_seconds() * 1000)
                 _err_str = str(e)

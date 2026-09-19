@@ -52,7 +52,7 @@ Hard rules:
 Current Windows workstation entrypoint:
 
 ```text
-D:\\LUMENIS_REBUILD
+D:\\LUMENIS_REBUILD\\序\\序境
 ```
 
 Expected repository:
@@ -66,7 +66,7 @@ Zachary-1012/LUMENIS-codex-Clean-OS
 Start every engineering session with:
 
 ```powershell
-Set-Location D:\\LUMENIS_REBUILD
+Set-Location D:\\LUMENIS_REBUILD\\序\\序境
 git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
@@ -98,6 +98,8 @@ Do not claim local-only work exists on GitHub. If local valid work is ahead, pre
 - do not force-push `main`;
 - historical side branches are read-only evidence only;
 - if an old branch has unique valid work, compare it once, absorb only the unique valid implementation into `main`, then continue on `main`.
+- before and after a delivery, run `git fetch origin --prune`, inspect `git branch --format="%(refname:short)"`, `git branch -r --format="%(refname:short)"`, and `git ls-remote --heads origin`; accepted inventory is exactly local `main`, `origin/main`, and live `refs/heads/main`;
+- if any side branch exists, inspect its unique commits and paths, preserve valid capability on `main`, delete only verified redundant branches, and repeat the live check; cached refs alone are not branch-cleanup evidence.
 
 ## 3. Execution mode
 
@@ -349,6 +351,8 @@ excluded test → PASS
 
 Tests/staging must use explicit isolated/disposable DBs and prove the protected production DB is unchanged when persistence is touched.
 
+`data/monitor.db` selected by `ZBC_DB_PATH` is the sole business/Canonical Production Truth database. A separately owned SYSTEM operational store such as the durable task queue may remain only when its path and schema owner are explicit, it contains no CTH/BMP business truth or Evidence, it opens through `lumenis/shared/database` repository/connection abstractions, and its durability/replay/recovery is covered by tests. Do not add another per-module SQLite file silently; consolidating an existing store requires a data-preserving migration.
+
 Do not delete, rewrite, migrate or repair real production data without required evidence and approval.
 
 ## 10. Evidence and lineage
@@ -453,11 +457,14 @@ For any user-visible Experience/UI task, the **sole design authority** is:
 
 No nested router, archived screen, or prototype document may define a second design authority.
 
+The current canonical Flutter App is a bootstrap. The product owner must explicitly accept §§30–36 (including all 44 screen-specific UX blueprints) before feature-screen implementation begins. The blueprints are design direction, not implementation-ready screen specifications. After plan acceptance and before implementing any screen, create its reviewed specification under `contracts/experience/screen-specifications/` from `SCREEN_SPEC_TEMPLATE.md`; each specification must pass §36's owner, binding, entry/return, field-priority, state, desktop/mobile, permission/effect, accessibility and executable-acceptance gates. The 54-row binding registry is a data/permission/Evidence truth ledger only; it is not a layout system. Any `UNKNOWN` owner, callable, permission or lineage blocks the dependent behavior. Legacy `sectionTypes` must not drive a generic renderer or swapped-title page template. Reusable components may share accessible behavior and design tokens, while each screen keeps its own task, hierarchy, composition and interaction path.
+
 Before claiming Experience work complete, run both blocking checks:
 
 ```text
 python scripts/audit_tools/verify_experience_authority_exclusive.py
 python scripts/audit_tools/verify_experience_anti_template.py --strict
+python scripts/audit_tools/verify_experience_screen_blueprints.py
 ```
 
 Do not reintroduce deleted historical design/handoff/reference material into the current main tree.
@@ -508,7 +515,7 @@ A green workflow is insufficient if blocking work did not actually execute.
 Canonical Windows command:
 
 ```powershell
-Set-Location D:\\LUMENIS_REBUILD
+Set-Location D:\\LUMENIS_REBUILD\\序\\序境
 powershell -ExecutionPolicy Bypass -File scripts\\start_production.ps1
 ```
 

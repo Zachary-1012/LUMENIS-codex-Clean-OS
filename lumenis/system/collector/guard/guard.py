@@ -14,7 +14,7 @@ from .analyzer import ResponseAnalyzer, Reason
 from .rate_limiter import AdaptiveRateLimiter
 from .metrics import GuardMetrics
 from .checkpoint import Checkpoint
-from core.repository_registry import get_data_dir
+from lumenis.shared.database.registry import get_data_dir
 
 
 @dataclass

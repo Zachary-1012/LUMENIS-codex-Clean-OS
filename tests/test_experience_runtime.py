@@ -30,10 +30,12 @@ def isolated_client(tmp_path, monkeypatch):
     database.DB_PATH = str(db_file)
     database.init_db()
 
-    import evidence_store
-    evidence_store.DB_PATH = str(db_file)
-    # account.models resolves db_paths.main_db_path() at call time on current main;
-    # the ZBC_DB_PATH fixture above is the canonical isolation contract.
+    from lumenis.shared.evidence import store as evidence_store
+    # Evidence is owned by Shared Evidence and resolves ZBC_DB_PATH at call time.
+    evidence_store.init_evidence_store(str(db_file))
+    # The real app initializes the AI task tables before exposing these screens.
+    import ai_task_engine
+    ai_task_engine.init_task_engine_db()
 
     today = dt.date.today().strftime("%Y-%m-%d")
     with database.get_db() as c:
@@ -57,18 +59,15 @@ def isolated_client(tmp_path, monkeypatch):
                VALUES('e1','太古汇 排队投诉事件','多平台提及','high','active',5,3,?,?,?)""",
             (today, today, today),
         )
-        c.execute(
-            """CREATE TABLE IF NOT EXISTS app_evidence_records(
-               id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT, project TEXT, product TEXT,
-               feature_id TEXT, level TEXT, result TEXT, account TEXT, env TEXT,
-               actual TEXT, created_at TEXT)"""
-        )
-        c.executemany(
-            """INSERT INTO app_evidence_records(source,feature_id,level,result,account,actual,created_at)
-               VALUES(?,?,?,?,?,?,datetime('now','localtime'))""",
-            [("unit", "FUNC-RISK-01", "feature", "pass", "acc1", "risk computed"),
-             ("integration", "EVENT-GRAPH", "feature", "pass", "acc1", "event chain")],
-        )
+
+    evidence_store.record_evidence(
+        source="unit", feature_id="FUNC-RISK-01", level="feature",
+        result="pass", account="acc1", actual="risk computed",
+    )
+    evidence_store.record_evidence(
+        source="integration", feature_id="EVENT-GRAPH", level="feature",
+        result="pass", account="acc1", actual="event chain",
+    )
 
     import experience_runtime
     from flask import Flask
@@ -416,7 +415,7 @@ def test_bmp03_missing_table_honest_not_fake(isolated_client):
 def test_platform_collection_is_cth_owned_and_bmp_read_only(isolated_client, monkeypatch):
     """CTH owns the actionable form; BMP receives only the shared read-only surface."""
     cli, _ = isolated_client
-    import platform_adapters.secondary_collection as collection
+    from lumenis.system.collector.adapters import secondary_collection as collection
 
     monkeypatch.setattr(collection, "get_collection_surface", lambda: {
         "ok": True,

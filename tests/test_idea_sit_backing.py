@@ -185,12 +185,18 @@ def test_provenance_circle_and_luxe():
     assert p.get("luxe_profile") and p["luxe_profile"].get("trigger")
 
 
-def test_report_payload_consumes_circles():
-    """报告引擎 payload 消费圈层资产（case_circles + 16 圈层符号表）。"""
-    from report_export.report_engine import payload
-    p = payload("daily")
-    assert isinstance(p.get("case_circles"), dict)
-    assert len(p.get("circle_symbols", {})) == 16
+def test_idea_payload_carries_circle_assets():
+    """当前创意引擎输出携带圈层符号与来源，不假设已下线报告引擎消费层。"""
+    result = ig.generate_ideas(
+        "某商业体", "零售", {"topics": ["上新"], "sentiment": "positive",
+                         "circle": "都市高净值"},
+        n=1, seed=17,
+    )
+    assert len(ig.CIRCLE_SYMBOLS) == 16
+    idea = result["ideas"][0]
+    assert idea["circle"] == "都市高净值"
+    assert idea["circle_symbols"] == ig.CIRCLE_SYMBOLS["都市高净值"]["symbols"]
+    assert isinstance(idea["provenance"], dict)
 
 
 # ============================================================

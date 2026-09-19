@@ -1,6 +1,7 @@
 """Blocking guard for LUMENIS Only-One / App-first convergence."""
 from __future__ import annotations
 
+import ast
 import subprocess
 import sys
 import re
@@ -32,6 +33,23 @@ ECOSYSTEM_REPOSITORY_MARKERS = (
 )
 LEGACY_PATH_TOKEN = re.compile(
     r"(?i)(?:^|[^a-z0-9])(?:zbc|zbmp|zachary|osai|dcc|sici|zbip|adrh|legacy|frontend|z-brand-core|experience_v2)(?=$|[^a-z0-9])"
+)
+
+RETIRED_IMPORT_MODULES = (
+    "lumenis.report_center", "brand_report_generator", "daily_report",
+    "report_engine",
+    "report_artifact", "report_filter", "report_export", "export_report",
+    "report_api", "kos_report", "evidence_chain", "evidence_store",
+    "evidence_api", "production_evidence_contract", "app_evidence",
+    "collector_guard", "collector_v2", "platform_adapters", "browser_runtime",
+    "provider_registry", "ai_channel", "skill_registry", "skill_execution_chain",
+    "skill_package_runtime", "evaluation_recorder", "evaluation_dimensions",
+    "evaluation_runner", "evaluation_system", "ai_evaluation",
+    "agent_runtime.evaluation", "evaluation.agent_benchmark_contract",
+    "evaluation.collection_benchmark", "learning_collector", "learning_persistence",
+    "data_feedback_loop", "ai_learning_engine", "agent_memory.learning",
+    "agent_memory.learning_loop", "permission_gate", "p2_action_firewall",
+    "web_monitor_v570",
 )
 
 FORBIDDEN_PREFIXES = (
@@ -301,16 +319,54 @@ def main() -> int:
         if "from app import" in routes_text or "import app" in routes_text:
             errors.append("Shared Reporting routes must not depend on app.py implementation")
 
-    grep = subprocess.run(
-        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^[[:space:]]*from daily_report|^[[:space:]]*import daily_report|^[[:space:]]*from report_artifact|^[[:space:]]*import report_artifact|^[[:space:]]*from report_filter|^[[:space:]]*import report_filter|^[[:space:]]*from report_export|^[[:space:]]*import export_report|^[[:space:]]*from report_api|^[[:space:]]*import report_api|^[[:space:]]*from kos_report|^[[:space:]]*import kos_report|^[[:space:]]*from evidence_chain|^[[:space:]]*import evidence_chain|^[[:space:]]*from evidence_store|^[[:space:]]*import evidence_store|^[[:space:]]*from evidence_api|^[[:space:]]*import evidence_api|^[[:space:]]*from production_evidence_contract|^[[:space:]]*import production_evidence_contract|^[[:space:]]*from app_evidence|^[[:space:]]*import app_evidence|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^[[:space:]]*import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime|^[[:space:]]*from evaluation_recorder|^[[:space:]]*import evaluation_recorder|^[[:space:]]*from evaluation_dimensions|^[[:space:]]*import evaluation_dimensions|^[[:space:]]*from evaluation_runner|^[[:space:]]*import evaluation_runner|^[[:space:]]*from evaluation_system|^[[:space:]]*import evaluation_system|^[[:space:]]*from ai_evaluation|^[[:space:]]*import ai_evaluation|from agent_runtime\\.evaluation|from evaluation\\.agent_benchmark_contract|from evaluation\\.collection_benchmark|^[[:space:]]*from learning_collector|^[[:space:]]*import learning_collector|^[[:space:]]*from learning_persistence|^[[:space:]]*import learning_persistence|^[[:space:]]*from data_feedback_loop|^[[:space:]]*import data_feedback_loop|^[[:space:]]*from ai_learning_engine|^[[:space:]]*import ai_learning_engine|^[[:space:]]*from agent_memory\\.learning|^[[:space:]]*from agent_memory\\.learning_loop|^[[:space:]]*from permission_gate|^[[:space:]]*import permission_gate|^[[:space:]]*from p2_action_firewall|^[[:space:]]*import p2_action_firewall"],
-        cwd=ROOT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        capture_output=True,
-    )
-    if grep.returncode == 0 and (grep.stdout or "").strip():
-        errors.append("retired owner import present:\n" + grep.stdout.strip())
+    # Inspect executable production imports, not docs, tests, comments or
+    # identifiers that merely share a retired module prefix. Stable API facades
+    # such as browser_runtime_api and collector_guard_integration stay valid.
+    retired_imports = []
+    ignored_dirs = {".git", "__pycache__", "node_modules", "tests", "test", "docs"}
+    for source_path in ROOT.rglob("*.py"):
+        relative = source_path.relative_to(ROOT)
+        parts = tuple(part.lower() for part in relative.parts)
+        if any(part in ignored_dirs for part in parts[:-1]):
+            continue
+        if relative.name.lower().startswith(("test_", "audit_")):
+            continue
+        try:
+            tree = ast.parse(source_path.read_text(encoding="utf-8-sig"), filename=str(relative))
+        except (OSError, UnicodeError, SyntaxError) as exc:
+            errors.append(f"cannot inspect production Python source {relative}: {exc}")
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                if node.level:
+                    package = list(relative.parts[:-1])
+                    package = package[:max(0, len(package) - node.level + 1)]
+                    base = ".".join(package)
+                    module = ".".join(part for part in (base, node.module) if part)
+                    imported = [module] if node.module else [
+                        ".".join(part for part in (base, alias.name) if part)
+                        for alias in node.names
+                    ]
+                elif node.module:
+                    imported = [node.module]
+                else:
+                    imported = []
+            else:
+                continue
+            for module in imported:
+                retired = next(
+                    (name for name in RETIRED_IMPORT_MODULES
+                     if module == name or module.startswith(name + ".")),
+                    None,
+                )
+                if retired:
+                    retired_imports.append(
+                        f"{relative.as_posix()}:{node.lineno}: {module} (retired owner {retired})"
+                    )
+    if retired_imports:
+        errors.append("retired owner imports in production source:\n" + "\n".join(sorted(retired_imports)))
 
     if errors:
         print("LUMENIS Only-One/App-first architecture guard: FAIL")

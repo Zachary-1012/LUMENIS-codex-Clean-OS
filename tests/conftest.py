@@ -307,13 +307,13 @@ def _global_state_isolation(request):
     _self_sets_env = _module_self_sets_env(getattr(request, 'module', None))
 
     def _reset_global_state():
-        # ai_channel：清空每-provider 熔断器（get 时按 CLOSED 重建）+ 复位全局 breaker
+        # Canonical AI Gateway channel：清空 provider 熔断器缓存并复位全局 breaker。
         try:
-            import ai_channel
-            _pb = getattr(ai_channel, '_PROVIDER_BREAKERS', None)
+            from lumenis.system.ai_gateway import channel as _ai_channel
+            _pb = getattr(_ai_channel, '_PROVIDER_BREAKERS', None)
             if isinstance(_pb, dict):
                 _pb.clear()
-            _gb = getattr(ai_channel, 'breaker', None)
+            _gb = getattr(_ai_channel, 'breaker', None)
             if _gb is not None and hasattr(_gb, 'reset'):
                 _gb.reset()
         except Exception:

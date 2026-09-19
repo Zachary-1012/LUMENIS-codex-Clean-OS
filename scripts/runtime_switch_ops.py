@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""采集运维控制面 CLI（研究自 baldur System-Control，落地 ZBC）。
+"""SYSTEM Collector runtime switch 运维 CLI。
 
 用法：
   python scripts/runtime_switch_ops.py status                      # 当前状态
@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from collector_guard.runtime_switch import get_switch  # noqa: E402
+from lumenis.system.collector.guard.runtime_switch import get_switch  # noqa: E402
 
 
 def main():

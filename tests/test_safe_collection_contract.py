@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from platform_adapters.safe_collection import (
+from lumenis.system.collector.adapters.safe_collection import (
     redact_text, redact_record, sanitize, CollectionHygienePolicy, RateGovernor,
     build_collection_audit, validate_collection_audit, run_offline_pipeline,
     MIN_INTERVAL_FLOOR, AUDIT_SCHEMA,

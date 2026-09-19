@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from collector_guard.dlq_replay import DeadLetterQueue
+from lumenis.system.collector.guard.dlq_replay import DeadLetterQueue
 
 
 @pytest.fixture

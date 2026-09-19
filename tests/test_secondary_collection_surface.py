@@ -330,7 +330,7 @@ def test_provider_exception_isolated_and_recorded(monkeypatch):
 
 
 def test_evidence_failure_marker_is_not_reported_as_persisted(monkeypatch):
-    import evidence_store
+    from lumenis.shared.evidence import store as evidence_store
 
     monkeypatch.setattr(surface, "_ensure_evidence_schema", lambda: None)
     monkeypatch.setattr(evidence_store, "record_collection_evidence", lambda **kwargs: -1)

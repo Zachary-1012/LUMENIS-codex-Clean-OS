@@ -15,11 +15,11 @@ neotask（neopen/neotask, 2026-03）是 Celery 的轻量零依赖替代——SQL
 """
 import json
 import os
-import sqlite3
 import threading
 import time
 
-from core.repository_registry import get_data_dir
+from lumenis.shared.database import DatabaseRepository
+from lumenis.shared.database.registry import get_data_dir
 
 # 默认队列文件（可注入）
 DEFAULT_PATH = os.path.join(get_data_dir(), "task_queue.db")
@@ -31,9 +31,8 @@ class TaskQueue:
     def __init__(self, path=None, max_attempts=3):
         self.path = path or DEFAULT_PATH
         self.max_attempts = max_attempts
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        self._conn = sqlite3.connect(self.path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
+        self._repository = DatabaseRepository(self.path)
+        self._conn = self._repository.connect(check_same_thread=False)
         self._init()
 
     def _init(self):

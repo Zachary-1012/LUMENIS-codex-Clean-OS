@@ -23,8 +23,9 @@ import traceback
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from lumenis.shared.database import main_db_path
+
 from .recorder import (
-    DEFAULT_DB_PATH,
     EvaluationRecord,
     get_evaluation_summary,
     init_db,
@@ -53,7 +54,7 @@ class EvaluationRunner:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or DEFAULT_DB_PATH
+        self.db_path = db_path or main_db_path()
         init_db(self.db_path)
 
     def run_dimension_evaluation(

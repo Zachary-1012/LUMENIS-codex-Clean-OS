@@ -395,7 +395,8 @@ class TestModifiedFilesImport:
         import brand_knowledge_base
         import case_deep_analysis
 
-        expected = str((Path(REPO_ROOT) / "data" / "monitor.db").resolve())
+        from lumenis.shared.database import main_db_path
+        expected = str(Path(main_db_path()).resolve())
         assert auth_recovery_center.AuthRecoveryCenter.DB_PATH == expected
         assert brand_knowledge_base.DB_PATH == expected
         assert case_deep_analysis.DB_PATH == expected

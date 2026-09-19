@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from collector_guard.runtime_switch import RuntimeSwitch
+from lumenis.system.collector.guard.runtime_switch import RuntimeSwitch
 
 
 @pytest.fixture

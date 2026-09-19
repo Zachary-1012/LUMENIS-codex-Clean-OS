@@ -13,11 +13,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入模块
 from security_scanner import security_scanner
-from evaluation_system import evaluation_system
 from local_ai_client import local_ai
 from collector_auto_start import collector_starter
 
 system_features_bp = Blueprint('system_features', __name__)
+
+
+def _evaluation_runner():
+    """Create the current Shared Evaluation runner at the point of use."""
+    from lumenis.shared.evaluation.runner import EvaluationRunner
+
+    return EvaluationRunner()
 
 
 # ============================================
@@ -82,7 +88,7 @@ def security_sensitive_info():
 def evaluation_run():
     """运行完整评测"""
     try:
-        result = evaluation_system.run_full_evaluation()
+        result = _evaluation_runner().run_full_evaluation()
         return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -92,7 +98,7 @@ def evaluation_run():
 def evaluation_collection():
     """采集质量评测"""
     try:
-        result = evaluation_system.evaluate_collection_quality()
+        result = _evaluation_runner().run_dimension_evaluation('collector')
         return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -102,7 +108,7 @@ def evaluation_collection():
 def evaluation_analysis():
     """分析质量评测"""
     try:
-        result = evaluation_system.evaluate_analysis_quality()
+        result = _evaluation_runner().run_dimension_evaluation('ai')
         return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -112,7 +118,7 @@ def evaluation_analysis():
 def evaluation_stability():
     """系统稳定性评测"""
     try:
-        result = evaluation_system.evaluate_system_stability()
+        result = _evaluation_runner().run_dimension_evaluation('runtime')
         return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -120,21 +126,34 @@ def evaluation_stability():
 
 @system_features_bp.route('/api/evaluation/badcases')
 def evaluation_badcases():
-    """获取Badcase列表"""
+    """获取真实失败评估记录；不从合成种子或 AI 猜测生成 badcase。"""
     try:
         category = request.args.get('category')
-        result = evaluation_system.get_badcases(category)
-        return jsonify({'ok': True, 'badcases': result})
+        from lumenis.shared.evaluation.recorder import get_evaluation_records
+        from lumenis.shared.evaluation.runner import VALID_DIMENSIONS
+
+        dimension = {'collection': 'collector', 'analysis': 'ai', 'stability': 'runtime'}.get(
+            category, category
+        )
+        if dimension and dimension not in VALID_DIMENSIONS:
+            return jsonify({'ok': False, 'error': 'unknown evaluation category'}), 400
+        result = get_evaluation_records(dimension=dimension, status='fail', limit=100)
+        return jsonify({'ok': True, 'badcases': result, 'source': 'lumenis.shared.evaluation.recorder'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
 @system_features_bp.route('/api/evaluation/golden-cases')
 def evaluation_golden_cases():
-    """获取Golden Case列表"""
+    """返回人工核验用例；当前 synthetic seed 不满足 golden 数据要求。"""
     try:
-        result = evaluation_system.get_golden_cases()
-        return jsonify({'ok': True, 'golden_cases': result})
+        return jsonify({
+            'ok': True,
+            'golden_cases': [],
+            'state': 'NOT_AVAILABLE',
+            'reason': 'The current benchmark registry contains synthetic seed data only; human ground truth is required.',
+            'source': 'lumenis/shared/evaluation/benchmark_cases.json',
+        })
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

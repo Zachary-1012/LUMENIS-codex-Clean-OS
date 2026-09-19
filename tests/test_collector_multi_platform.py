@@ -19,12 +19,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from v4_upgrade.adapters.cookie_vault import (
+from lumenis.adapters.cookie_vault import (
     load_cookies, to_cookie_string, to_requests_cookies,
     check_cookie_status, PLATFORM_COOKIE_PATHS, PLATFORM_AUTH_COOKIES,
 )
-from v4_upgrade.adapters.registry import registry, register_default_adapters
-from v4_upgrade.adapters.base import BaseAdapter, CollectedNote, AdapterResult
+from lumenis.adapters.registry import registry, register_default_adapters
+from lumenis.adapters.base import BaseAdapter, CollectedNote, AdapterResult
 
 
 # ============================================================
@@ -271,7 +271,7 @@ class TestDualDomainIsolation:
     def test_subject_rules_are_domain_scoped(self):
         """subject_rules 应按域隔离，CTH 规则不隐式过滤 ZBMP"""
         # 检查是否有全局 subject_filter 可能跨域过滤
-        base_path = Path(__file__).resolve().parents[1] / "v4_upgrade" / "adapters" / "base.py"
+        base_path = Path(__file__).resolve().parents[1] / "lumenis" / "adapters" / "base.py"
         content = base_path.read_text(encoding="utf-8", errors="ignore")
         # base adapter 不应有硬编码的 CTH 品牌/业态过滤
         assert "199品牌" not in content, "base adapter 不应硬编码 CTH 品牌过滤"

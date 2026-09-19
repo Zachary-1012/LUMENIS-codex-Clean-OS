@@ -8,7 +8,7 @@ import os
 import threading
 import time
 
-from core.repository_registry import get_data_dir
+from lumenis.shared.database.registry import get_data_dir
 
 
 class Checkpoint:

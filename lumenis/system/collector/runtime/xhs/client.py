@@ -68,7 +68,7 @@ class XHSClient:
         该 V2 适配器依赖平台私有接口/签名契约，研究边界已将其排除在
         生产采集主链之外；保留代码用于历史解析与回放，但默认禁止真实请求。
         """
-        raise RuntimeError('collector_v2 XHS 私有接口适配器已标记为非生产路径，禁止发起真实请求')
+        raise RuntimeError('XHS 私有接口适配器已标记为非生产路径，禁止发起真实请求')
         await self._rate_limit()
         
         try:

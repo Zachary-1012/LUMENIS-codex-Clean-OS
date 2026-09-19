@@ -137,8 +137,6 @@ class TestPermissionDecorators:
 
     HIGH_RISK_ENDPOINTS = [
         # (路由路径, 方法, 期望的 OperationType)
-        ('/api/dev/run-code', 'POST', 'RUNTIME_OPERATION'),
-        ('/api/config/run-code', 'POST', 'RUNTIME_OPERATION'),
         ('/api/brands/<brand_en>', 'DELETE', 'DATA_DELETE'),
         ('/api/event-graph/events/<event_id>', 'DELETE', 'DATA_DELETE'),
         ('/api/system/config', 'POST', 'CONFIG_MODIFY'),
@@ -146,21 +144,22 @@ class TestPermissionDecorators:
     ]
 
     def test_require_permission_imported_in_app(self):
-        """app.py: 应导入 require_permission。"""
+        """app.py 必须从唯一 SYSTEM Security owner 导入权限门。"""
         source = _read_file(APP_PY)
-        assert 'from permission_gate import' in source, (
-            "app.py 应从 permission_gate 导入 require_permission"
+        assert 'from lumenis.system.security import (' in source, (
+            "app.py 应从 lumenis.system.security 导入 require_permission"
         )
         assert 'require_permission' in source, (
             "app.py 应包含 require_permission 引用"
         )
 
-    def test_six_high_risk_endpoints_have_decorator(self):
-        """6个高风险端点均应有 @require_permission 装饰器。"""
+    def test_all_directly_protected_high_risk_endpoints_have_decorator(self):
+        """每个需要端点级保护的高风险路由均有 @require_permission。"""
         source = _read_file(APP_PY)
         decorator_count = source.count('@require_permission(')
-        assert decorator_count >= 6, (
-            f"应至少有 6 个 @require_permission 装饰器，实际找到 {decorator_count} 个"
+        assert decorator_count >= len(self.HIGH_RISK_ENDPOINTS), (
+            f"应至少有 {len(self.HIGH_RISK_ENDPOINTS)} 个 @require_permission 装饰器，"
+            f"实际找到 {decorator_count} 个"
         )
 
     @pytest.mark.parametrize("path,method,op_type", HIGH_RISK_ENDPOINTS)
@@ -190,23 +189,24 @@ class TestPermissionDecorators:
             break
 
     def test_decorator_has_deny_return_403(self):
-        """@require_permission 装饰器应配置 deny_return 返回 403。"""
+        """端点级高风险权限装饰器拒绝时应返回 403 和结构化错误码。"""
         source = _read_file(APP_PY)
         # 统计含 PERMISSION_DENIED 和 403 的 @require_permission 装饰器数量
         import re as _re
         blocks = _re.split(r'(?=@require_permission\()', source)
         count = sum(1 for b in blocks if 'PERMISSION_DENIED' in b and '403' in b and 'deny_return' in b)
-        assert count >= 6, (
-            f"应至少有 6 个装饰器配置 deny_return=(..., 403) + PERMISSION_DENIED，"
+        assert count >= len(self.HIGH_RISK_ENDPOINTS), (
+            f"应至少有 {len(self.HIGH_RISK_ENDPOINTS)} 个装饰器配置 deny_return=(..., 403) + PERMISSION_DENIED，"
             f"实际找到 {count} 个"
         )
 
     def test_noop_fallback_on_import_failure(self):
-        """app.py: permission_gate import 失败时应有 no-op 装饰器降级。"""
+        """权限 owner 导入失败时不能静默退化成放行装饰器。"""
         source = _read_file(APP_PY)
-        assert 'def require_permission(*args, **kwargs):' in source or \
-               'require_permission = None' in source, (
-            "app.py 应在 import 失败时提供 require_permission 降级方案"
+        assert 'from lumenis.system.security import (' in source
+        assert 'def require_permission(*args, **kwargs):' not in source
+        assert 'require_permission = None' not in source, (
+            "app.py 必须由 canonical SYSTEM Security 提供权限装饰器，不能加 no-op 放行回退"
         )
 
 
@@ -234,19 +234,16 @@ class TestPermissionGateInit:
             "app.py 应授予 PUSH 基线权限"
         )
 
-    def test_init_wrapped_in_try_except(self):
-        """app.py: PermissionGate 初始化应在 try/except 中，失败不影响启动。"""
+    def test_app_initializes_canonical_gate_without_permissive_fallback(self):
+        """app.py 在导入后初始化 canonical gate 并授予配置的操作等级。"""
         source = _read_file(APP_PY)
-        init_section = source[
-            source.find('PermissionGate 全局初始化'):
-            source.find('PermissionGate 全局初始化') + 1500
-        ] if 'PermissionGate 全局初始化' in source else ''
-        assert 'try:' in init_section, (
-            "PermissionGate 初始化应在 try 块中"
-        )
-        assert 'except Exception' in init_section, (
-            "PermissionGate 初始化应有 except 兜底"
-        )
+        start = source.find('_pg = get_permission_gate()')
+        assert start >= 0, "app.py 应初始化 canonical PermissionGate 单例"
+        init_section = source[start:start + 600]
+        for permission in ('COMMIT', 'PUSH', 'HUMAN_APPROVAL'):
+            assert f'PermissionLevel.{permission}' in init_section, (
+                f"app.py 应显式配置 {permission} 权限等级"
+            )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -300,7 +297,7 @@ class TestPermissionGateBehavior:
     @pytest.fixture(autouse=True)
     def _strict_permission_gate(self):
         # 本类验证权限门严格行为（拒绝/授权放行/装饰器/审计），必须关闭 TESTING 旁路，结束还原
-        from permission_gate import set_testing_bypass
+        from lumenis.system.security import set_testing_bypass
         set_testing_bypass(False)
         yield
         set_testing_bypass(True)
@@ -310,14 +307,14 @@ class TestPermissionGateBehavior:
     def test_gate_default_fail_closed(self):
         """默认 PermissionGate 应为 fail-closed。"""
         sys.path.insert(0, PROJECT_ROOT)
-        from permission_gate import PermissionGate, OperationType, RiskLevel
+        from lumenis.system.security import PermissionGate, OperationType, RiskLevel
         gate = PermissionGate()
         assert gate.fail_closed is True
 
     def test_data_delete_requires_push_permission(self):
         """DATA_DELETE 操作应需要 PUSH 权限（默认未授予时应拒绝）。"""
         sys.path.insert(0, PROJECT_ROOT)
-        from permission_gate import PermissionGate, OperationType, RiskLevel
+        from lumenis.system.security import PermissionGate, OperationType, RiskLevel
         gate = PermissionGate()  # 默认权限不含 PUSH
         result = gate.check(OperationType.DATA_DELETE, resource="/test", risk_level=RiskLevel.CRITICAL)
         assert result.allowed is False, (
@@ -327,7 +324,7 @@ class TestPermissionGateBehavior:
     def test_grant_push_allows_data_delete(self):
         """授予 PUSH + HUMAN_APPROVAL 后 DATA_DELETE 应通过。"""
         sys.path.insert(0, PROJECT_ROOT)
-        from permission_gate import PermissionGate, PermissionLevel, OperationType, RiskLevel
+        from lumenis.system.security import PermissionGate, PermissionLevel, OperationType, RiskLevel
         gate = PermissionGate()
         gate.grant_permission(PermissionLevel.PUSH)
         gate.grant_permission(PermissionLevel.HUMAN_APPROVAL)
@@ -340,7 +337,7 @@ class TestPermissionGateBehavior:
     def test_ai_call_auto_allowed(self):
         """AI_CALL (LOW 风险, ANALYZE 权限) 应自动放行。"""
         sys.path.insert(0, PROJECT_ROOT)
-        from permission_gate import PermissionGate, OperationType
+        from lumenis.system.security import PermissionGate, OperationType
         gate = PermissionGate()
         result = gate.check(OperationType.AI_CALL, resource="/test")
         assert result.allowed is True, (
@@ -350,7 +347,7 @@ class TestPermissionGateBehavior:
     def test_require_permission_decorator_denies(self):
         """@require_permission 装饰器在权限不足时应返回 deny_return。"""
         sys.path.insert(0, PROJECT_ROOT)
-        from permission_gate import PermissionGate, PermissionLevel, OperationType, RiskLevel, require_permission
+        from lumenis.system.security import PermissionGate, PermissionLevel, OperationType, RiskLevel, require_permission
         gate = PermissionGate()  # 默认权限，不含 COMMIT/PUSH
 
         denied_marker = {"ok": False, "error": "DENIED", "code": "PERMISSION_DENIED"}
@@ -368,7 +365,7 @@ class TestPermissionGateBehavior:
     def test_require_permission_decorator_allows(self):
         """@require_permission 装饰器在权限充足时应执行函数体。"""
         sys.path.insert(0, PROJECT_ROOT)
-        from permission_gate import PermissionGate, PermissionLevel, OperationType, require_permission
+        from lumenis.system.security import PermissionGate, PermissionLevel, OperationType, require_permission
         gate = PermissionGate()
         # AI_CALL 默认权限足够
 
@@ -384,7 +381,7 @@ class TestPermissionGateBehavior:
     def test_audit_log_records_high_risk_calls(self):
         """PermissionGate 应记录高风险操作审计日志。"""
         sys.path.insert(0, PROJECT_ROOT)
-        from permission_gate import PermissionGate, PermissionLevel, OperationType, RiskLevel
+        from lumenis.system.security import PermissionGate, PermissionLevel, OperationType, RiskLevel
         gate = PermissionGate()
         gate.grant_permission(PermissionLevel.PUSH)
         gate.grant_permission(PermissionLevel.HUMAN_APPROVAL)

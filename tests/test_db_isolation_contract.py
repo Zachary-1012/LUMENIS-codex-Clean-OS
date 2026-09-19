@@ -45,7 +45,7 @@ def test_specialized_envs_cannot_split_production_truth(iso_db, monkeypatch):
     assert _norm(db_paths.token_db_path()) == _norm(iso_db)
 
 def test_scheduler_store_uses_single_canonical_env(iso_db, monkeypatch):
-    import platform_adapters.scheduling as scheduling
+    import lumenis.system.collector.adapters.scheduling as scheduling
     monkeypatch.setenv("ZBC_DB_PATH", iso_db)
     monkeypatch.setattr(scheduling, "_PLANNER", None)
     planner = scheduling.get_planner()

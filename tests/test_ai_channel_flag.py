@@ -19,11 +19,8 @@ def test_per_call_passes_model_to_chat(monkeypatch):
     monkeypatch.setattr('ai_resource_packs.check_quota', lambda *a, **k: {'allowed': True})
     monkeypatch.setattr('ai_resource_packs.record_usage', lambda *a, **k: None)
     monkeypatch.setattr('ai_resource_packs._get_pack_usage', lambda p: {'remaining': 10})
-    import types
-    fake_int = types.ModuleType('lumenis.system.ai_gateway.core')
-    fake_int._chat = fake_chat
-    # execute_per_call_request 函数体内导入 canonical AI Gateway core，注入 sys.modules
-    monkeypatch.setitem(sys.modules, 'lumenis.system.ai_gateway.core', fake_int)
+    from lumenis.system.ai_gateway import core as ai_gateway
+    monkeypatch.setattr(ai_gateway, '_chat', fake_chat)
     ai_resource_packs.execute_per_call_request('测试需求', model='glm-5.3')
     assert captured['model'] == 'glm-5.3'
 

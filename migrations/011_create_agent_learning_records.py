@@ -26,8 +26,9 @@ from __future__ import annotations
 
 import os
 import sys
-import sqlite3
 from datetime import datetime, timezone
+
+from lumenis.shared.database import connect_sqlite
 
 # 迁移元数据
 MIGRATION_ID = "011"
@@ -79,7 +80,7 @@ def upgrade(db_path: str) -> bool:
         print(f"[ERROR] Database not found: {db_path}")
         return False
 
-    conn = sqlite3.connect(db_path)
+    conn = connect_sqlite(db_path)
     try:
         conn.execute(CREATE_TABLE_SQL)
         conn.executescript(CREATE_INDEX_SQL)
@@ -119,7 +120,7 @@ def downgrade(db_path: str) -> bool:
         print(f"[ERROR] Database not found: {db_path}")
         return False
 
-    conn = sqlite3.connect(db_path)
+    conn = connect_sqlite(db_path)
     try:
         conn.execute("DROP TABLE IF EXISTS agent_learning_records")
         conn.commit()
@@ -137,7 +138,7 @@ def verify(db_path: str) -> bool:
     """验证迁移是否已应用。"""
     if not os.path.exists(db_path):
         return False
-    conn = sqlite3.connect(db_path)
+    conn = connect_sqlite(db_path)
     try:
         row = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='agent_learning_records'"

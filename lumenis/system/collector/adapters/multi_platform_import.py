@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from platform_adapters.platform_naming import (
+from lumenis.system.collector.adapters.platform_naming import (
     normalize_platform_name,
     get_platform_fields,
     normalize_content_id,

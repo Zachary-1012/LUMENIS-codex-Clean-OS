@@ -7,7 +7,9 @@ T-P1-3 Alembic 可回滚 DB 迁移 —— 回归测试
 避免 alembic env.py 误连到别的库。不触碰生产库 data/monitor.db。
 """
 import os
+import shutil
 import sqlite3
+from contextlib import closing
 import pytest
 
 from alembic.config import Config
@@ -16,7 +18,6 @@ from alembic import command
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(TESTS_DIR)
 INI = os.path.join(REPO_DIR, "alembic.ini")
-VERSIONS_DIR = os.path.join(REPO_DIR, "alembic", "versions")
 BASELINE_REV = "e4278c4d1d79"
 _MIG_FILE = "zz_test_rollback.py"
 
@@ -26,8 +27,15 @@ def _restore_cwd():
     """_cfg() 内 os.chdir(REPO_DIR) 改变进程 CWD 且不还原，会污染后续测试的相对路径解析；
     每个用例后强制还原。"""
     _old_cwd = os.getcwd()
-    yield
-    os.chdir(_old_cwd)
+    _old_db_path = os.environ.get("ZBC_DB_PATH")
+    try:
+        yield
+    finally:
+        os.chdir(_old_cwd)
+        if _old_db_path is None:
+            os.environ.pop("ZBC_DB_PATH", None)
+        else:
+            os.environ["ZBC_DB_PATH"] = _old_db_path
 
 
 def _make_mini_db(db_path: str) -> str:
@@ -57,13 +65,18 @@ def _make_mini_db(db_path: str) -> str:
     return db_path
 
 
-def _cfg(db_path: str) -> Config:
+def _cfg(db_path: str, script_location: str) -> Config:
     # Alembic env.py honors the canonical DB environment first. Point it at the
     # same disposable mini DB; deleting the variable would silently fall back to
     # the repository database and create test artifacts there.
     os.environ["ZBC_DB_PATH"] = os.path.abspath(db_path)
     os.chdir(REPO_DIR)
     cfg = Config(INI)
+    # Every test gets its own Alembic script directory. Writing temporary
+    # revisions into the repository's shared versions/ directory races with
+    # parallel pytest workers and can leave a duplicate revision behind after
+    # interruption, making the whole suite fail with multiple Alembic heads.
+    cfg.set_main_option("script_location", os.path.abspath(script_location))
     cfg.set_main_option(
         "sqlalchemy.url",
         "sqlite:///" + os.path.abspath(db_path).replace("\\", "/"),
@@ -71,34 +84,41 @@ def _cfg(db_path: str) -> Config:
     return cfg
 
 
+def _copy_migrations(destination: str) -> str:
+    """Copy the real Alembic environment/history into an isolated test tree."""
+    source = os.path.join(REPO_DIR, "alembic")
+    shutil.copytree(
+        source,
+        destination,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
+    return destination
+
+
 def _tables(db_path: str):
-    c = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    rows = [r[0] for r in c.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
-    c.close()
-    return rows
+    with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as conn:
+        return [r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
 
 
 def _version(db_path: str):
-    c = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    try:
-        rows = [r[0] for r in c.execute("SELECT version_num FROM alembic_version")]
-    except Exception:
-        rows = []
-    c.close()
-    return rows
+    with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as conn:
+        try:
+            return [r[0] for r in conn.execute(
+                "SELECT version_num FROM alembic_version")]
+        except sqlite3.OperationalError:
+            return []
 
 
-def _cleanup_zz():
-    p = os.path.join(VERSIONS_DIR, _MIG_FILE)
-    if os.path.exists(p):
-        os.remove(p)
+def _columns(db_path: str, table: str):
+    with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as conn:
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})")]
 
 
 def test_stamp_baseline_writes_version(tmp_path):
-    _cleanup_zz()
     db = _make_mini_db(str(tmp_path / "t.db"))
-    cfg = _cfg(db)
+    script_location = _copy_migrations(str(tmp_path / "alembic"))
+    cfg = _cfg(db, script_location)
     command.stamp(cfg, BASELINE_REV)
     ver = _version(db)
     assert ver == [BASELINE_REV], (
@@ -109,15 +129,15 @@ def test_stamp_baseline_writes_version(tmp_path):
 
 
 def test_upgrade_then_downgrade_rollback(tmp_path):
-    _cleanup_zz()
     db = _make_mini_db(str(tmp_path / "t2.db"))
-    cfg = _cfg(db)
+    script_location = _copy_migrations(str(tmp_path / "alembic"))
+    cfg = _cfg(db, script_location)
     command.stamp(cfg, BASELINE_REV)
-    before = sqlite3.connect(f"file:{db}?mode=ro", uri=True).execute(
-        "SELECT count(*) FROM notes").fetchone()[0]
+    with closing(sqlite3.connect(f"file:{db}?mode=ro", uri=True)) as conn:
+        before = conn.execute("SELECT count(*) FROM notes").fetchone()[0]
     assert before == 2
 
-    mig_path = os.path.join(VERSIONS_DIR, _MIG_FILE)
+    mig_path = os.path.join(script_location, "versions", _MIG_FILE)
     mig_src = (
         '"""zz test rollback"""\n'
         "from alembic import op\n"
@@ -133,21 +153,16 @@ def test_upgrade_then_downgrade_rollback(tmp_path):
     )
     with open(mig_path, "w", encoding="utf-8") as fh:
         fh.write(mig_src)
-    try:
-        command.upgrade(cfg, "head")
-        cols = [r[1] for r in sqlite3.connect(
-            f"file:{db}?mode=ro", uri=True).execute("PRAGMA table_info(notes)")]
-        assert "zz_test_col" in cols
-        assert _version(db) == ["zztest0001"]
+    command.upgrade(cfg, "head")
+    cols = _columns(db, "notes")
+    assert "zz_test_col" in cols
+    assert _version(db) == ["zztest0001"]
 
-        command.downgrade(cfg, "-1")
-        cols = [r[1] for r in sqlite3.connect(
-            f"file:{db}?mode=ro", uri=True).execute("PRAGMA table_info(notes)")]
-        assert "zz_test_col" not in cols
-        assert _version(db) == [BASELINE_REV]
-    finally:
-        _cleanup_zz()
+    command.downgrade(cfg, "-1")
+    cols = _columns(db, "notes")
+    assert "zz_test_col" not in cols
+    assert _version(db) == [BASELINE_REV]
 
-    after = sqlite3.connect(f"file:{db}?mode=ro", uri=True).execute(
-        "SELECT count(*) FROM notes").fetchone()[0]
+    with closing(sqlite3.connect(f"file:{db}?mode=ro", uri=True)) as conn:
+        after = conn.execute("SELECT count(*) FROM notes").fetchone()[0]
     assert before == after, "回滚后数据行数必须不变"

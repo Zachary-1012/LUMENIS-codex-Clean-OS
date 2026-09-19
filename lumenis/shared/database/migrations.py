@@ -18,12 +18,12 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 # Database path selection is owned by LUMENIS Shared Database.
-from lumenis.shared.database import main_db_path
+from .paths import main_db_path
 DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 12
+CURRENT_VERSION = 13
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -39,6 +39,7 @@ MIGRATION_HISTORY = {
     10: "ZBC Phase15 历史数据治理: notes/canonical_data 添加 rule_version(可空), notes 添加 content_hash/provenance/product_id(可空), 新建 rule_version_registry 与 historical_import_log 表",
     11: "Evidence Chain/Canonical Data bypass: collection_quality_log table, zbc_canonical_data domain_id/product_id, notes domain_id, daily_reports evidence_ids",
     12: "P0-2 性能修复: notes.publish_datetime 添加索引 idx_notes_publish_datetime（趋势API日期范围查询加速）",
+    13: "SYSTEM Collector 数据中心平台 schema 与静态目录接入 Shared Database；既存 registry 运行状态保持不变",
 }
 
 
@@ -529,6 +530,13 @@ def migration_11_to_12(conn):
     conn.commit()
 
 
+def migration_12_to_13(conn):
+    """接入数据中心平台 schema，使用 additive DDL 并保留 registry 运行状态。"""
+    from .platform_schema import apply_platform_schema
+
+    apply_platform_schema(conn)
+
+
 def _migrate_add_publish_datetime_index():
     """独立入口：启动时直接确保 publish_datetime 索引存在（幂等，不触发完整版本迁移/备份）。
     P0-2：趋势API日期范围查询依赖此索引。
@@ -554,6 +562,7 @@ MIGRATIONS = {
     9: migration_9_to_10,
     10: migration_10_to_11,
     11: migration_11_to_12,
+    12: migration_12_to_13,
 }
 
 

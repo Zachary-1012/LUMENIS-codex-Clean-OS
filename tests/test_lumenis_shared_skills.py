@@ -10,7 +10,7 @@ from lumenis_shared_skills import (
     list_shared_skills,
     run_shared_skill,
 )
-from skill_registry import SkillMetadata, get_skill_registry
+from lumenis.shared.agents.skills.registry import SkillMetadata, get_skill_registry
 
 
 EXPECTED_TOOLS = {
@@ -33,12 +33,12 @@ def shared_client(tmp_path, monkeypatch):
     import database
 
     importlib.reload(database)
-    database.DB_PATH = str(db_file)
+    monkeypatch.setattr(database, "DB_PATH", str(db_file))
     database.init_db()
 
-    import evidence_store
+    from lumenis.shared.evidence import store as evidence_store
 
-    evidence_store.DB_PATH = str(db_file)
+    evidence_store.init_evidence_store(str(db_file))
 
     from flask import Flask
     import experience_runtime
