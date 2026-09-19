@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from lumenis.shared.database import get_repository, main_db_path
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -58,15 +59,12 @@ EVENT_STATUS = {
 }
 
 # 数据库路径
-_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+_DB_PATH = main_db_path()
 
 
 def _get_db() -> sqlite3.Connection:
     """获取数据库连接"""
-    conn = sqlite3.connect(_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    return get_repository().connect()
 
 
 def _now() -> str:
