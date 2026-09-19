@@ -7,10 +7,11 @@ LUMENIS SYSTEM 唯一应用层权限控制。所有受治理操作必须经过�
 
 定位：
   - 应用层权限控制（Application-Layer Authorization），**不是**网络 WAF。
-  - 与 ad_intelligence/permission_gate.py（广告域专用 AdPermissionGate）共存：
-    后者为 Domain-Specific，可委托本全局 Gate 但保留独立接口。
-  - 与 agent_security.py / safety_boundary.py / compliance_gate.py 等 Legacy 模块共存，
-    不替代、不删除，仅做统一编排入口。
+  - 本模块是唯一 Permission state / approval / operation authorization owner。
+  - ad_intelligence/permission_gate.py 仅是 Domain Adapter，必须委托本 Gate，
+    不得拥有独立审批状态或最终授权权。
+  - agent_security / safety_boundary / compliance_gate 只保留各自专项安全能力，
+    不得形成第二权限 owner。
 
 核心原则（AGENTS.md §13 修改安全协议）：
   审计 → 备份/确认 → 最小修改 → 单测 → E2E → 真实数据验证 → 回归 → CHANGELOG → 交付
