@@ -30,6 +30,8 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
+from lumenis.shared.database import DatabaseRepository, main_db_path
+
 
 @dataclass
 class Observation:
@@ -104,18 +106,14 @@ class DBStatusObserver(BaseObserver):
 
         result = {"status": "unknown", "tables": {}, "error": None}
         try:
-            import sqlite3
             import os
-            db_path = self._db_path or os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "data", "monitor.db"
-            )
+            db_path = self._db_path or main_db_path()
             if not os.path.exists(db_path):
                 result["status"] = "unavailable"
                 result["error"] = f"db file not found: {db_path}"
                 return result
 
-            conn = sqlite3.connect(db_path, timeout=5)
+            conn = DatabaseRepository(db_path).connect(timeout=5, read_only=True)
             try:
                 # 只读查询关键表行数
                 tables = ["notes", "comments", "events", "daily_reports",
@@ -233,14 +231,10 @@ class CollectionStatusObserver(BaseObserver):
 
         result = {"status": "unknown", "stats": {}, "error": None}
         try:
-            import sqlite3
             import os
-            db_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "data", "monitor.db"
-            )
+            db_path = main_db_path()
             if os.path.exists(db_path):
-                conn = sqlite3.connect(db_path, timeout=5)
+                conn = DatabaseRepository(db_path).connect(timeout=5, read_only=True)
                 try:
                     # 最近采集日志
                     row = conn.execute(
