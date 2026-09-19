@@ -15,6 +15,7 @@ import json
 import sqlite3
 from datetime import datetime
 from flask import Blueprint, jsonify, request
+from lumenis.shared.database import get_repository, main_db_path
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -22,14 +23,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 pr_case_bp = Blueprint('pr_case', __name__)
 
 # 数据库路径
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+DB_PATH = main_db_path()
 
 
 def get_db():
     """获取数据库连接"""
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_repository().connect(timeout=10)
 
 
 # ============================================
