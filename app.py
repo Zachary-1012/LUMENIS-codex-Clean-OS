@@ -108,7 +108,6 @@ import system_features_api
 import auth_recovery_api  # V3.0 P0: Auth Recovery Center
 import xhs_p0_orchestrator
 import collector_automation
-import ai_learning_engine
 import public_opinion_cases
 from lumenis.shared.reporting import routes as report_routes  # Shared Reporting canonical routes
 from lumenis.shared.reporting.routes import _DEV_EXEC_ENABLED, _DEV_EXEC_BLOCK_RE  # GAP-04 开发执行闸门共享变量
@@ -6472,7 +6471,7 @@ def api_learning_scan():
     try:
         data = request.get_json(silent=True) or {}
         use_ai = bool(data.get('use_ai', False))
-        import learning_collector
+        from lumenis.shared.learning import collector as learning_collector
         result = learning_collector.run_learning_scan(use_ai=use_ai)
         return jsonify({'ok': True, **result})
     except Exception as e:
@@ -6482,7 +6481,7 @@ def api_learning_scan():
 def api_learning_history():
     """获取学习历史"""
     try:
-        import learning_collector
+        from lumenis.shared.learning import collector as learning_collector
         result = learning_collector.get_learning_history()
         return jsonify({'ok': True, **result})
     except Exception as e:
@@ -7007,7 +7006,7 @@ if __name__ == '__main__':
         except Exception as _ge:
             print(f'[Guardian] auto_recovery 启动失败: {_ge}')
         try:
-            import data_feedback_loop as _dfl
+            from lumenis.shared.learning import feedback as _dfl
             _dfl_eng = _dfl.data_feedback_loop
             def _fb_loop():
                 import time as _t
@@ -7018,9 +7017,9 @@ if __name__ == '__main__':
                         print(f'[Guardian] 数据反馈闭环异常: {_fe}')
                     _t.sleep(21600)
             threading.Thread(target=_fb_loop, daemon=True, name='data-feedback-loop').start()
-            print('[Guardian] data_feedback_loop 数据反馈闭环已启动(6h)')
+            print('[Guardian] Shared Learning 数据反馈闭环已启动(6h)')
         except Exception as _ge:
-            print(f'[Guardian] data_feedback_loop 启动失败: {_ge}')
+            print(f'[Guardian] Shared Learning feedback 启动失败: {_ge}')
         try:
             import system_guardian as _sg
             _sg.health_check()

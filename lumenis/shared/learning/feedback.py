@@ -25,17 +25,15 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from collections import Counter
+from pathlib import Path
 from db_paths import main_db_path
-
-# 添加项目路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 class DataFeedbackLoop:
     """数据闭环引擎"""
 
     def __init__(self):
-        self.root_dir = os.path.dirname(os.path.abspath(__file__))
+        self.root_dir = str(Path(__file__).resolve().parents[3])
         self.db_path = main_db_path()
         self.feedback_file = os.path.join(self.root_dir, 'data', 'feedback_loop.json')
         self.suggestions_file = os.path.join(self.root_dir, 'data', 'strategy_suggestions.json')
@@ -377,4 +375,4 @@ class DataFeedbackLoop:
 # 全局实例
 data_feedback_loop = DataFeedbackLoop()
 
-print("[DataFeedback] 数据闭环引擎已加载", flush=True)
+print("[SharedLearning] 数据反馈闭环已加载", flush=True)

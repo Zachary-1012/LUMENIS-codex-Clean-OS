@@ -52,6 +52,12 @@ FORBIDDEN_EXACT = {
     "evaluation/collection_benchmark.py",
     "evaluation/agent_benchmark_contract.py",
     "evaluation/benchmark_cases.json",
+    "ai_learning_engine.py",
+    "learning_collector.py",
+    "learning_persistence.py",
+    "data_feedback_loop.py",
+    "agent_memory/learning.py",
+    "agent_memory/learning_loop.py",
     "lumenis/shared/reporting/export_engine.py",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
@@ -143,6 +149,29 @@ def main() -> int:
         if 'Path(__file__).resolve().parents[3]' not in evaluation_recorder_text:
             errors.append("Shared Evaluation recorder must anchor repository Production Truth")
 
+    learning_owner = ROOT / "lumenis/shared/learning"
+    required_learning_files = (
+        "memory.py", "loop.py", "collector.py", "feedback.py", "persistence.py",
+    )
+    for filename in required_learning_files:
+        if not (learning_owner / filename).is_file():
+            errors.append(f"missing Shared Learning owner: lumenis/shared/learning/{filename}")
+
+    for filename in ("collector.py", "feedback.py", "persistence.py"):
+        path = learning_owner / filename
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+            if "Path(__file__).resolve().parents[3]" not in text:
+                errors.append(f"Shared Learning {filename} must anchor repository root explicitly")
+
+    if learning_owner.is_dir():
+        for path in learning_owner.glob("*.py"):
+            text = path.read_text(encoding="utf-8")
+            if "INSERT INTO web_events" in text or "UPDATE web_events" in text:
+                errors.append(
+                    f"Shared Learning must not write AI-generated learning directly into canonical web_events: {path.name}"
+                )
+
     routes_path = ROOT / "lumenis/shared/reporting/routes.py"
     if routes_path.is_file():
         routes_text = routes_path.read_text(encoding="utf-8")
@@ -150,13 +179,13 @@ def main() -> int:
             errors.append("Shared Reporting routes must not depend on app.py implementation")
 
     grep = subprocess.run(
-        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^from daily_report|^import daily_report|^from report_artifact|^import report_artifact|^from report_filter|^import report_filter|^from report_export|^import export_report|^from report_api|^import report_api|^from kos_report|^import kos_report|^from evidence_chain|^import evidence_chain|^from evidence_store|^import evidence_store|^from evidence_api|^import evidence_api|^from production_evidence_contract|^import production_evidence_contract|^from app_evidence|^import app_evidence|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime|^from evaluation_recorder|^import evaluation_recorder|^from evaluation_dimensions|^import evaluation_dimensions|^from evaluation_runner|^import evaluation_runner|^from evaluation_system|^import evaluation_system|^from ai_evaluation|^import ai_evaluation|from agent_runtime\\.evaluation|from evaluation\\.agent_benchmark_contract|from evaluation\\.collection_benchmark"],
+        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^from daily_report|^import daily_report|^from report_artifact|^import report_artifact|^from report_filter|^import report_filter|^from report_export|^import export_report|^from report_api|^import report_api|^from kos_report|^import kos_report|^from evidence_chain|^import evidence_chain|^from evidence_store|^import evidence_store|^from evidence_api|^import evidence_api|^from production_evidence_contract|^import production_evidence_contract|^from app_evidence|^import app_evidence|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime|^from evaluation_recorder|^import evaluation_recorder|^from evaluation_dimensions|^import evaluation_dimensions|^from evaluation_runner|^import evaluation_runner|^from evaluation_system|^import evaluation_system|^from ai_evaluation|^import ai_evaluation|from agent_runtime\\.evaluation|from evaluation\\.agent_benchmark_contract|from evaluation\\.collection_benchmark|^from learning_collector|^import learning_collector|^from learning_persistence|^import learning_persistence|^from data_feedback_loop|^import data_feedback_loop|^from ai_learning_engine|^import ai_learning_engine|^from agent_memory\\.learning|^from agent_memory\\.learning_loop"],
         cwd=ROOT,
         text=True,
         capture_output=True,
     )
     if grep.returncode == 0 and grep.stdout.strip():
-        errors.append("legacy reporting import present:\n" + grep.stdout.strip())
+        errors.append("retired owner import present:\n" + grep.stdout.strip())
 
     if errors:
         print("LUMENIS Only-One/App-first architecture guard: FAIL")

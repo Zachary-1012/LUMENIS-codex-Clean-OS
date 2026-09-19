@@ -191,19 +191,24 @@ The final LUMENIS Experience is a single Flutter application for Windows, macOS,
 The latest source audit identifies these existing owners/contracts:
 
 ```text
-scripts/start_production.ps1  canonical Windows launcher
-app.py                        Flask application entry
-run_supervised.py             process/health supervision
-8201 /healthz                 core health target
-9222 / 9223                   existing Resident Browser logical identities
-experience_runtime.py         Experience V2 runtime binding
-CTH-01 / AI-01                explicit bound-screen claims in audited source
-evidence_chain.py             Evidence / Canonical lineage owner
-xhs_cookie_bridge.py          XHS/RedNote controlled collector runtime
-content_generation.py         research → generation → Evidence → Evaluation → human feedback
+scripts/start_production.ps1              canonical Windows launcher
+app.py                                    Flask Product Core entry
+run_supervised.py                         process/health supervision
+8201 /healthz                             core health target
+9222 / 9223                               existing Resident Browser logical identities
+experience_runtime.py                     transitional Experience migration binding
+CTH-01 / AI-01                            explicit bound-screen claims in audited source
+lumenis/shared/reporting/                  Shared Reporting canonical owner
+lumenis/shared/evidence/                   Shared Evidence canonical owner
+lumenis/shared/evaluation/                 Shared Evaluation canonical owner
+lumenis/shared/learning/                   Shared Learning canonical owner
+xhs_cookie_bridge.py                      XHS/RedNote controlled collector runtime
+content_generation.py                     research → generation → Evidence → Evaluation → human feedback
 ```
 
 Audited dependency foundations include Flask/Waitress, APScheduler, requests/httpx/aiohttp, BeautifulSoup/lxml, Playwright, SQLite, tenacity and Alembic. `package.json` is Playwright/tooling-oriented; it is not proof of a React/Next/Vite production frontend.
+
+P1 Reporting, P2 Evidence and P3 Evaluation/Learning are converged under Shared Capability owners above. Retired root owners are forbidden by `scripts/audit_tools/verify_lumenis_single_product.py`. Shared Learning must never write AI-generated research directly into canonical external-event tables; learning remains a reviewed input to later decisions, not Production Truth.
 
 Do not replace these with screenshot-derived or generic stack assumptions. If current source differs from a point-in-time audit, current source wins.
 

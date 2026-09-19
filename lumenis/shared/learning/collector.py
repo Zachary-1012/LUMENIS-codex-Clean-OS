@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Learning Collector — 按次计费学习采集模块
+LUMENIS Shared Learning Collector — 代码库学习采集模块
 【目标】全量学习内部代码库 + 针对性学习（ChatGPT/Codex编程设计/交互/可进化板块）
 【安全】学习结果仅存入学习数据库，不污染生产代码；使用按次计费额度（2次预留）
 【原则】先扫描代码库提取架构事实 → 再用AI学习分析 → 存储可复用知识
@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 
 # ============ 配置 ============
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = str(Path(__file__).resolve().parents[3])
 LEARNING_DB_PATH = os.environ.get(
     'ZBC_LEARNING_DB_PATH',
     os.path.join(PROJECT_ROOT, 'data', 'learning_database.json')
@@ -436,7 +436,7 @@ def get_learning_history() -> Dict[str, Any]:
 
 
 if __name__ == '__main__':
-    print('=== ZBC 学习采集模块 ===')
+    print('=== LUMENIS Shared Learning Collector ===')
     result = run_learning_scan(use_ai=False)
     print(f'扫描完成: {result["scan"]["total_files"]} 文件, {result["scan"]["total_lines"]} 行')
     print(f'技术栈: {result["learning"]["architecture_summary"]["tech_stack"]}')

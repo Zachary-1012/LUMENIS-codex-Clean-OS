@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Learning Loop（学习闭环）— 反馈→规则→prompt 影响链路。
+"""LUMENIS Shared Learning Loop — 反馈→规则→prompt 影响链路。
 
 核心链路：
   用户对AI输出的修正 → 记录到 Learning Memory → 沉淀为规则建议
@@ -25,8 +25,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from .base import get_db_connection, _utc_now_iso
-from .learning import (
+from agent_memory.base import get_db_connection, _utc_now_iso
+from .memory import (
     LearningMemory, LearningType, LifecycleStage, SampleType,
 )
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 class RuleSuggestion:
     """规则建议（学习沉淀的中间产物，不直接成为 Production Truth）。"""
     suggestion_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
-    source: str = "learning_loop"
+    source: str = "lumenis.shared.learning.loop"
     rule_type: str = ""                  # subject_words / exclude_words / risk / sentiment
     suggestion_text: str = ""
     evidence: Dict[str, Any] = field(default_factory=dict)

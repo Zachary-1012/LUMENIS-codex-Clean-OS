@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-learning_persistence.py — ZBC 学习数据持久化管理器
+lumenis.shared.learning.persistence — LUMENIS Shared Learning 持久化管理器
 =====================================================
 语义对齐 OSAI components/Development-Command-Console/server/persistence.js (V0.4.1 P3)，
-为 ZBC 生产侧提供独立的 JSON 文件持久化能力，用于沉淀 AI/开发执行学习数据。
+为 LUMENIS Shared Learning 提供本地 JSON 持久化能力，用于沉淀经治理的学习数据。
 
 集合（10）：
   cases / patterns / lessons / failures / shadow_analyses / bundles /
@@ -25,7 +25,8 @@ import os
 import time
 from pathlib import Path
 
-DEFAULT_DATA_DIR = Path("data/learning")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_DATA_DIR = REPO_ROOT / "data" / "learning"
 DEFAULT_BACKUP_COUNT = 5
 
 # 集合定义：name -> 描述（文件名为 <name>.json）
@@ -50,7 +51,7 @@ STORAGE_ADAPTER = {
 
 
 class LearningPersistence:
-    """ZBC 学习数据持久化管理器（单例语义）。"""
+    """LUMENIS Shared Learning 持久化管理器（单例语义）。"""
 
     def __init__(self):
         self._data_dir: Path | None = None

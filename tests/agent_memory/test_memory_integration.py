@@ -15,8 +15,8 @@ from agent_memory.task import TaskMemory
 from agent_memory.episodic import EpisodicMemory
 from agent_memory.semantic import SemanticMemory
 from agent_memory.skill import SkillMemory
-from agent_memory.learning import LearningMemory, LifecycleStage
-from agent_memory.learning_loop import LearningLoop
+from lumenis.shared.learning.memory import LearningMemory, LifecycleStage
+from lumenis.shared.learning.loop import LearningLoop
 
 
 class TestMemoryFullChain:

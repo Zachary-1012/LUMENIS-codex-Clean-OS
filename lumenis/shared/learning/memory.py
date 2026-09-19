@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Learning Memory（学习记忆）— 用户反馈、修正记录、规则沉淀。
+"""LUMENIS Shared Learning Memory — 用户反馈、修正记录、规则沉淀。
 
 存储：复用 feedback_keywords 表（16行）+ 新建 agent_learning_records 表（迁移脚本，不执行）
 能力：用户修正 → 沉淀为规则/样本 → 影响后续 AI prompt
@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from .base import BaseMemoryLayer, MemoryRecord, get_db_connection, _utc_now_iso
+from agent_memory.base import BaseMemoryLayer, MemoryRecord, get_db_connection, _utc_now_iso
 
 
 class LearningType(str, Enum):
