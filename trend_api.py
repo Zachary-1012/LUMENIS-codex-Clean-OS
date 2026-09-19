@@ -13,6 +13,7 @@ import sqlite3
 import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
+from lumenis.shared.database import get_repository, main_db_path
 
 from subject_rules import subject_sql_and_values, get_brand_config, SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 trend_bp = Blueprint('trend', __name__)
 
-DB_PATH = 'data/monitor.db'
+DB_PATH = main_db_path()
 
 # ============================================================
 # 白名单：动态列名 / 表名（P1-8：防 SQL 注入）
@@ -43,7 +44,7 @@ _SUBJECT_FIELDS = ('title', 'body', 'content', 'source_keyword', 'matched_keywor
 
 
 def _get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_repository().connect()
     conn.row_factory = sqlite3.Row
     return conn
 
