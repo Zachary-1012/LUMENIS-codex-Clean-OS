@@ -124,3 +124,63 @@ def test_high_risk_permission_still_requires_human_approval():
     )
     assert allowed.allowed is True
     assert allowed.approval_token
+
+
+def test_agent_runtime_uses_canonical_security_and_completes_fence(monkeypatch):
+    from agent_runtime.loop import AgentLoop
+    from agent_runtime.planner import PlanStep
+    from agent_runtime.durable_adapter import DurableExecutionAdapter
+    from lumenis.system.security import (
+        AgentAction,
+        OperationType,
+        PermissionLevel,
+        get_effect_fence,
+        is_testing_bypass_enabled,
+        set_testing_bypass,
+    )
+
+    previous_bypass = is_testing_bypass_enabled()
+    monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+    set_testing_bypass(False)
+    fence = get_effect_fence()
+    fence.clear_for_testing()
+
+    try:
+        gate = PermissionGate()
+        gate.grant_permission(PermissionLevel.COMMIT)
+        gate.grant_approval(OperationType.DB_WRITE.value, duration_minutes=5)
+
+        loop = AgentLoop(
+            permission_gate=gate,
+            durable_adapter=DurableExecutionAdapter(enabled=False),
+            tool_executor=lambda step, context: {"success": True, "output": "staged"},
+        )
+        step = PlanStep(
+            action="write staged result",
+            tool="staging_writer",
+            params={"target": "staging_db", "staging": True, "value": 1},
+            risk_level="high",
+        )
+
+        security = loop._check_security(step, {"domain": "SYSTEM"})
+        assert security["allowed"] is True
+        assert security["permission"]["allowed"] is True
+        assert security["firewall"]["requires_effect_fence"] is True
+        assert security["effect_fence"]["reservation_status"] == "reserved"
+
+        result = loop._execute_step(
+            step, {}, "test-task", 0, security=security)
+        assert result["success"] is True
+
+        duplicate = fence.check(
+            action=AgentAction.WRITE,
+            target="staging_db",
+            payload=step.params,
+            operation_id=step.step_id,
+        )
+        assert duplicate.allowed is False
+        assert duplicate.idempotent_hit is True
+        assert duplicate.reservation_status == "completed"
+    finally:
+        fence.clear_for_testing()
+        set_testing_bypass(previous_bypass)
