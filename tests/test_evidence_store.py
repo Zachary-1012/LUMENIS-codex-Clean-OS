@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""evidence_store.py 单元测试（使用临时数据库，不碰生产库）。"""
+"""Shared Evidence Store 单元测试（使用临时数据库，不碰生产库）。"""
 import sys, os, tempfile, json
 import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
