@@ -12,8 +12,9 @@ import urllib.parse
 import re
 from datetime import datetime
 from typing import List, Dict, Any
+from lumenis.shared.database import get_repository, main_db_path
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'monitor.db')
+DB_PATH = main_db_path()
 
 # 搜索关键词
 SEARCH_KEYWORDS = [
@@ -36,8 +37,7 @@ HEADERS = {
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = get_repository().connect()
     return conn
 
 
