@@ -1286,8 +1286,8 @@ def _build_bmp09() -> Dict[str, Any]:
 
 
 def _build_sh05() -> Dict[str, Any]:
-    """学习与评估资产：learning_collector 真实学习历史（空库诚实空态）。"""
-    import learning_collector as lc
+    """学习与评估资产：Shared Learning 真实学习历史（空库诚实空态）。"""
+    from lumenis.shared.learning import collector as lc
 
     h = _safe(lc.get_learning_history, default={})
     h = h if isinstance(h, dict) and not _is_err(h) else {}
@@ -1295,7 +1295,7 @@ def _build_sh05() -> Dict[str, Any]:
     items = items if isinstance(items, list) else []
     kpis = [
         metric("sh05.count", "学习资产", value=len(items), state=STATE_READY, icon="collection",
-               source="learning_collector.get_learning_history"),
+               source="lumenis.shared.learning.collector.get_learning_history"),
     ]
     rows = [{"标题": str(x.get("title") or x.get("summary") or "—")[:60],
              "类型": str(x.get("type") or x.get("kind") or "—"),
