@@ -27,9 +27,7 @@ from typing import Any, Dict, List, Optional
 VALID_DIMENSIONS = ("data", "ai", "collector", "report", "runtime")
 VALID_STATUSES = ("pass", "warn", "fail", "unknown")
 
-# 默认数据库路径必须锚定仓库 Production Truth，而不是模块目录。
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DB_PATH = os.environ.get("ZBC_DB_PATH", str(_REPO_ROOT / "data" / "monitor.db"))
+from lumenis.shared.database import main_db_path
 
 
 # ============================================================
@@ -153,11 +151,7 @@ CREATE INDEX IF NOT EXISTS idx_eval_records_evaluated ON evaluation_records(eval
 
 
 def _get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
-    if db_path is None:
-        from db_paths import main_db_path
-        path = main_db_path()
-    else:
-        path = db_path
+    path = db_path or main_db_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     conn = sqlite3.connect(path, timeout=10)
     conn.row_factory = sqlite3.Row

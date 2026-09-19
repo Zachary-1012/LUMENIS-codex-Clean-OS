@@ -39,8 +39,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 允许通过环境变量覆盖 DB 路径（测试隔离 / Staging），未设置时默认生产库
 # P0-DBISO-01：统一走 db_paths（ZBC_RUNTIME_GUARDIAN_DB -> ZBC_DB_PATH -> 默认），call-time
-from db_paths import guardian_db_path
-DB_PATH = guardian_db_path()
+from lumenis.shared.database import main_db_path
+DB_PATH = main_db_path()
 
 # 默认策略常量
 DEFAULT_MAX_RETRIES = 3
@@ -377,7 +377,7 @@ CREATE INDEX IF NOT EXISTS idx_rg_dlq_worker ON runtime_guardian_dlq(worker_id);
 
 def _get_db(db_path: Optional[str] = None) -> sqlite3.Connection:
     """获取数据库连接（每次新建，线程安全）"""
-    path = db_path or guardian_db_path()
+    path = db_path or main_db_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     conn = sqlite3.connect(path, timeout=30, isolation_level=None)
     conn.row_factory = sqlite3.Row
@@ -414,7 +414,7 @@ class DLQ:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self._db_path = db_path or guardian_db_path()
+        self._db_path = db_path or main_db_path()
         init_db(self._db_path)
 
     def _conn(self) -> sqlite3.Connection:
@@ -723,7 +723,7 @@ class RuntimeGuardian:
 
     def __init__(self, name: str = "default", db_path: Optional[str] = None):
         self.name = name
-        self._db_path = db_path or guardian_db_path()
+        self._db_path = db_path or main_db_path()
         self._lock = threading.RLock()
         self._workers: Dict[str, Dict[str, Any]] = {}
         self._heartbeats: Dict[str, Heartbeat] = {}

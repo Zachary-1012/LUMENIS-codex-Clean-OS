@@ -51,7 +51,7 @@ EVIDENCE_ALLOWED_EXTENSIONS = {
 EVIDENCE_MAX_FILE_SIZE_MB = 500
 EVIDENCE_MAX_FILE_SIZE_BYTES = EVIDENCE_MAX_FILE_SIZE_MB * 1024 * 1024
 
-from db_paths import main_db_path  # P0-DBISO-01 隔离重定向，call-time
+from lumenis.shared.database import main_db_path  # Shared Database canonical authority
 DB_PATH = main_db_path()
 
 # 支持的来源平台

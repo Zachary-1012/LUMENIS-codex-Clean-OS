@@ -17,9 +17,9 @@ import shutil
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-# 数据库路径（与 database.py 保持一致，支持 ZBC_DB_PATH 环境变量覆盖）
-_DB_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.abspath(os.environ.get('ZBC_DB_PATH') or os.path.join(_DB_DIR, 'data', 'monitor.db'))
+# Database path selection is owned by LUMENIS Shared Database.
+from lumenis.shared.database import main_db_path
+DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
@@ -43,13 +43,13 @@ MIGRATION_HISTORY = {
 
 
 def get_db_path() -> str:
-    """获取数据库路径"""
-    return DB_PATH
+    """获取数据库路径（call-time canonical authority）。"""
+    return main_db_path()
 
 
 def get_connection() -> sqlite3.Connection:
     """获取数据库连接"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(main_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")

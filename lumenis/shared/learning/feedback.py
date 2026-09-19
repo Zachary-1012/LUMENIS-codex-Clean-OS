@@ -26,7 +26,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from collections import Counter
 from pathlib import Path
-from db_paths import main_db_path
+from lumenis.shared.database import main_db_path
 
 
 class DataFeedbackLoop:

@@ -43,7 +43,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from db_paths import main_db_path
+from lumenis.shared.database import main_db_path
 
 logger = logging.getLogger(__name__)
 # ZBC Lifecycle Contract V1.0 (bypass-mode, never breaks main chain)
