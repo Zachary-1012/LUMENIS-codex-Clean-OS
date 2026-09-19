@@ -58,6 +58,8 @@ FORBIDDEN_EXACT = {
     "data_feedback_loop.py",
     "agent_memory/learning.py",
     "agent_memory/learning_loop.py",
+    "permission_gate.py",
+    "p2_action_firewall.py",
     "lumenis/shared/reporting/export_engine.py",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
@@ -181,6 +183,39 @@ def main() -> int:
         if "ark_llm" in operations_text:
             errors.append("Shared Learning operations must not restore retired ungrounded ark_llm web search")
 
+    security_owner = ROOT / "lumenis/system/security"
+    for filename in ("__init__.py", "permission.py", "action_firewall.py", "effect_fence.py"):
+        if not (security_owner / filename).is_file():
+            errors.append(f"missing SYSTEM Security owner: lumenis/system/security/{filename}")
+
+    skill_execution_path = ROOT / "lumenis/shared/agents/skills/execution.py"
+    if skill_execution_path.is_file():
+        skill_text = skill_execution_path.read_text(encoding="utf-8")
+        if "_ACTION_POLICY =" in skill_text:
+            errors.append("Skill runtime reintroduced a parallel Action Firewall policy")
+        if "from p2_action_firewall" in skill_text or "import p2_action_firewall" in skill_text:
+            errors.append("Skill runtime depends on retired p2_action_firewall owner")
+        if "from evidence_chain" in skill_text or "import evidence_chain" in skill_text:
+            errors.append("Skill runtime depends on retired root Evidence owner")
+        if "lumenis.system.security" not in skill_text:
+            errors.append("Skill runtime is not bound to canonical SYSTEM Security")
+
+    security_boundary_path = ROOT / "security_boundary.py"
+    if security_boundary_path.is_file():
+        security_boundary_text = security_boundary_path.read_text(encoding="utf-8")
+        if "_action_firewall_rules" in security_boundary_text:
+            errors.append("SecurityBoundary reintroduced a parallel Action Firewall rule owner")
+        if "from lumenis.system.security import" not in security_boundary_text:
+            errors.append("SecurityBoundary is not bound to canonical SYSTEM Security")
+
+    ad_permission_path = ROOT / "ad_intelligence/permission_gate.py"
+    if ad_permission_path.is_file():
+        ad_permission_text = ad_permission_path.read_text(encoding="utf-8")
+        if "from lumenis.system.security import" not in ad_permission_text:
+            errors.append("Ad permission adapter is not bound to canonical SYSTEM Permission")
+        if "_human_approved" in ad_permission_text or "_approval_expiry" in ad_permission_text:
+            errors.append("Ad permission adapter owns parallel human-approval state")
+
     routes_path = ROOT / "lumenis/shared/reporting/routes.py"
     if routes_path.is_file():
         routes_text = routes_path.read_text(encoding="utf-8")
@@ -188,7 +223,7 @@ def main() -> int:
             errors.append("Shared Reporting routes must not depend on app.py implementation")
 
     grep = subprocess.run(
-        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^from daily_report|^import daily_report|^from report_artifact|^import report_artifact|^from report_filter|^import report_filter|^from report_export|^import export_report|^from report_api|^import report_api|^from kos_report|^import kos_report|^from evidence_chain|^import evidence_chain|^from evidence_store|^import evidence_store|^from evidence_api|^import evidence_api|^from production_evidence_contract|^import production_evidence_contract|^from app_evidence|^import app_evidence|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime|^from evaluation_recorder|^import evaluation_recorder|^from evaluation_dimensions|^import evaluation_dimensions|^from evaluation_runner|^import evaluation_runner|^from evaluation_system|^import evaluation_system|^from ai_evaluation|^import ai_evaluation|from agent_runtime\\.evaluation|from evaluation\\.agent_benchmark_contract|from evaluation\\.collection_benchmark|^from learning_collector|^import learning_collector|^from learning_persistence|^import learning_persistence|^from data_feedback_loop|^import data_feedback_loop|^from ai_learning_engine|^import ai_learning_engine|^from agent_memory\\.learning|^from agent_memory\\.learning_loop"],
+        ["git", "grep", "-n", "-E", r"lumenis\.report_center|from brand_report_generator|import brand_report_generator|^[[:space:]]*from daily_report|^[[:space:]]*import daily_report|^[[:space:]]*from report_artifact|^[[:space:]]*import report_artifact|^[[:space:]]*from report_filter|^[[:space:]]*import report_filter|^[[:space:]]*from report_export|^[[:space:]]*import export_report|^[[:space:]]*from report_api|^[[:space:]]*import report_api|^[[:space:]]*from kos_report|^[[:space:]]*import kos_report|^[[:space:]]*from evidence_chain|^[[:space:]]*import evidence_chain|^[[:space:]]*from evidence_store|^[[:space:]]*import evidence_store|^[[:space:]]*from evidence_api|^[[:space:]]*import evidence_api|^[[:space:]]*from production_evidence_contract|^[[:space:]]*import production_evidence_contract|^[[:space:]]*from app_evidence|^[[:space:]]*import app_evidence|from collector_guard|import collector_guard|from collector_v2|import collector_v2|from platform_adapters|import platform_adapters|from browser_runtime|import browser_runtime|from provider_registry|import provider_registry|^[[:space:]]*import ai_channel|from ai_channel|from skill_registry|import skill_registry|from skill_execution_chain|import skill_execution_chain|from skill_package_runtime|import skill_package_runtime|^[[:space:]]*from evaluation_recorder|^[[:space:]]*import evaluation_recorder|^[[:space:]]*from evaluation_dimensions|^[[:space:]]*import evaluation_dimensions|^[[:space:]]*from evaluation_runner|^[[:space:]]*import evaluation_runner|^[[:space:]]*from evaluation_system|^[[:space:]]*import evaluation_system|^[[:space:]]*from ai_evaluation|^[[:space:]]*import ai_evaluation|from agent_runtime\\.evaluation|from evaluation\\.agent_benchmark_contract|from evaluation\\.collection_benchmark|^[[:space:]]*from learning_collector|^[[:space:]]*import learning_collector|^[[:space:]]*from learning_persistence|^[[:space:]]*import learning_persistence|^[[:space:]]*from data_feedback_loop|^[[:space:]]*import data_feedback_loop|^[[:space:]]*from ai_learning_engine|^[[:space:]]*import ai_learning_engine|^[[:space:]]*from agent_memory\\.learning|^[[:space:]]*from agent_memory\\.learning_loop|^[[:space:]]*from permission_gate|^[[:space:]]*import permission_gate|^[[:space:]]*from p2_action_firewall|^[[:space:]]*import p2_action_firewall"],
         cwd=ROOT,
         text=True,
         capture_output=True,
