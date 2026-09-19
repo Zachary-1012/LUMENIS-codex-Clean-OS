@@ -42,6 +42,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 logger = logging.getLogger(__name__)
 
@@ -114,10 +115,7 @@ class IPRiskConfig:
 
     def __post_init__(self):
         if not self.db_path:
-            self.db_path = os.environ.get(
-                "ZBC_DB_PATH",
-                os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "monitor.db")
-            )
+            self.db_path = main_db_path()
 
 
 # ============================================================
@@ -228,9 +226,7 @@ class IPRiskStateMachine:
     # ── 数据库 ────────────────────────────────────────────────
 
     def _get_conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.config.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return DatabaseRepository(self.config.db_path).connect()
 
     def _ensure_table(self) -> None:
         """确保状态表和转换日志表存在。"""
