@@ -51,7 +51,7 @@ EVIDENCE_ALLOWED_EXTENSIONS = {
 EVIDENCE_MAX_FILE_SIZE_MB = 500
 EVIDENCE_MAX_FILE_SIZE_BYTES = EVIDENCE_MAX_FILE_SIZE_MB * 1024 * 1024
 
-from lumenis.shared.database import main_db_path  # Shared Database canonical authority
+from lumenis.shared.database import get_repository, main_db_path  # Shared Database canonical authority
 DB_PATH = main_db_path()
 
 # 支持的来源平台
@@ -74,7 +74,7 @@ logger = logging.getLogger(__name__)
 
 def _get_db():
     """获取数据库连接"""
-    conn = sqlite3.connect(main_db_path())
+    conn = get_repository().connect()
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
