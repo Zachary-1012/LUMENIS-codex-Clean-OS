@@ -21,6 +21,7 @@ import sqlite3
 import platform
 from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
+from lumenis.shared.database import get_repository, main_db_path
 
 # psutil可选
 try:
@@ -179,10 +180,10 @@ def system_info():
     """获取系统信息"""
     try:
         # 数据库统计
-        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+        db_path = main_db_path()
         db_size = os.path.getsize(db_path) / 1024 / 1024 if os.path.exists(db_path) else 0
 
-        conn = sqlite3.connect(db_path, timeout=5)
+        conn = get_repository().connect(timeout=5)
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes")
         notes_count = c.fetchone()[0]
