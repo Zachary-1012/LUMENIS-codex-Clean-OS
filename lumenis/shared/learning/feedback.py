@@ -26,7 +26,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from collections import Counter
 from pathlib import Path
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 
 class DataFeedbackLoop:
@@ -63,7 +63,7 @@ class DataFeedbackLoop:
 
     def _get_db_connection(self):
         """获取数据库连接"""
-        return sqlite3.connect(self.db_path, timeout=10)
+        return DatabaseRepository(self.db_path).connect(timeout=10)
 
     def analyze_report_anomalies(self, date_str=None):
         """分析报告异常，发现需要反馈的问题"""
