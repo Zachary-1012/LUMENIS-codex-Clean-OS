@@ -1,6 +1,6 @@
 import unittest
 
-from evaluation.agent_benchmark_contract import BenchmarkTask
+from lumenis.shared.evaluation.agent_benchmark_contract import BenchmarkTask
 
 
 class BenchmarkTaskTests(unittest.TestCase):

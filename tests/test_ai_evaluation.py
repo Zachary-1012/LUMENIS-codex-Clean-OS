@@ -23,7 +23,7 @@ import pytest
 # 测试必须在导入 ai_call_logger / ai_evaluation 之前设置测试库路径，
 # 但这两个模块在 import 时已固定 DB_PATH。因此用 monkeypatch 运行时替换。
 import ai_call_logger as acl
-import ai_evaluation as aev
+from lumenis.shared.evaluation import ai as aev
 
 
 # ============================================================

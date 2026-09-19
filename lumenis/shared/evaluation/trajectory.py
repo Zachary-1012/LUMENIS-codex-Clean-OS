@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Trajectory Evaluation — 轨迹评估（ZBC MISSING 项补齐）
+LUMENIS Shared Evaluation — Agent Trajectory Evaluation
 ======================================================
 执行完成后评估：步骤效率、工具选择质量、目标达成度、成本。
 
@@ -16,7 +16,7 @@ Trajectory Evaluation — 轨迹评估（ZBC MISSING 项补齐）
   - 确定性评分，不依赖 AI
   - 可追溯：每个评分维度有计算依据
   - 可人工修正
-  - 不重写现有 evaluation 模块，作为补充
+  - 由 Shared Evaluation 唯一拥有；Agent Runtime 仅消费此能力
 
 与 OSAI Contract 对齐点（C-08 Trace & Evaluation Contract）：
   - evaluation.score / evaluation.dimensions / evaluation.method

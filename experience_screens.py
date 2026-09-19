@@ -1241,7 +1241,7 @@ def _build_bmp07() -> Dict[str, Any]:
 
 def _build_bmp09() -> Dict[str, Any]:
     """品牌报告与评估：evaluation_recorder 真实评估汇总 + 记录（空库诚实空态）。"""
-    import evaluation_recorder as er
+    from lumenis.shared.evaluation import recorder as er
 
     s = _safe(er.get_evaluation_summary, default={})
     s = s if isinstance(s, dict) and not _is_err(s) else {}
@@ -1256,16 +1256,16 @@ def _build_bmp09() -> Dict[str, Any]:
     kpis = [
         metric("bmp09.total", "评估记录总数", value=_int_or_none(s.get("total_records")),
                state=STATE_READY if "total_records" in s else STATE_NOT_COLLECTED, icon="report",
-               source="evaluation_recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
         metric("bmp09.pass", "通过", value=_c("pass"),
                state=STATE_READY if "pass" in counts else STATE_NOT_COLLECTED, icon="check",
-               source="evaluation_recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
         metric("bmp09.warn", "警示", value=_c("warn"),
                state=STATE_READY if "warn" in counts else STATE_NOT_COLLECTED, icon="risk",
-               source="evaluation_recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
         metric("bmp09.fail", "失败", value=_c("fail"),
                state=STATE_READY if "fail" in counts else STATE_NOT_COLLECTED, icon="risk",
-               source="evaluation_recorder.get_evaluation_summary"),
+               source="lumenis.shared.evaluation.recorder.get_evaluation_summary"),
     ]
     crows = [{"评估状态": {"pass": "通过", "warn": "警示", "fail": "失败", "unknown": "未知"}.get(k, k),
               "数量": _c(k)} for k in ("pass", "warn", "fail", "unknown")]
@@ -1280,7 +1280,7 @@ def _build_bmp09() -> Dict[str, Any]:
                             {"label": "状态", "key": "状态"}], rows=rrows)
     gstatus = s.get("global_status")
     note = section("note", STATE_READY, kind="STATUS",
-                   text=f"全局评估状态：{gstatus or '—'}（来自 evaluation_recorder，未产生评估记录前为 unknown，属真实空态）。")
+                   text=f"全局评估状态：{gstatus or '—'}（来自 Shared Evaluation，未产生评估记录前为 unknown，属真实空态）。")
     sections = [_head("BMP-09"), section("kpis", STATE_READY, items=kpis), ctbl, rtbl, note]
     return _envelope("BMP-09", sections, truth={"global_status": gstatus})
 

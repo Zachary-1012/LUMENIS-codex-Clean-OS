@@ -9,7 +9,7 @@ Goal-driven Agent Runtime 核心执行层。
   - observation   : 观察/感知层（ZBC MISSING 项补齐）— 感知 DB 状态、API 可用性、工具可用性、前一步执行结果
   - planner       : 基于 OSAI Contract 的规划器 — 调用智谱 GLM 将 goal 分解为步骤列表
   - replanner     : 重规划器（ZBC MISSING 项补齐）— 基于 observation 调整策略，非同参数 retry
-  - evaluation    : 轨迹评估（ZBC MISSING 项补齐）— 步骤效率/工具选择/目标达成度/成本
+  - Shared Evaluation: 轨迹评估由 lumenis.shared.evaluation 唯一拥有，Agent Runtime 仅消费
   - durable_adapter: Durable Execution 适配器 — 复用 ai_task_engine 的 checkpoint/retry/recover/cancel
   - loop          : Agent Loop 主循环 — Plan→Execute→Observe→(Replan)→完成/失败/取消
 
@@ -44,7 +44,6 @@ __all__ = [
     "observation",
     "planner",
     "replanner",
-    "evaluation",
     "durable_adapter",
     "loop",
 ]

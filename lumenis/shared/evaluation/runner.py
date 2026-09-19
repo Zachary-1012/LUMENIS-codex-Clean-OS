@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-evaluation_runner.py — ZBC Phase 10 统一评估执行器
+lumenis.shared.evaluation.runner — LUMENIS Shared Evaluation 统一执行器
 
 职责：
 - run_full_evaluation(): 执行五维度全量评估，返回汇总结果
@@ -23,14 +23,14 @@ import traceback
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from evaluation_recorder import (
+from .recorder import (
     DEFAULT_DB_PATH,
     EvaluationRecord,
     get_evaluation_summary,
     init_db,
     record_evaluation,
 )
-from evaluation_dimensions import (
+from .dimensions import (
     DIMENSION_EVALUATORS,
     THRESHOLDS,
     evaluate_ai_dimension,
@@ -106,7 +106,7 @@ class EvaluationRunner:
                 metric_value=None,
                 pass_threshold=0, warn_threshold=0,
                 higher_is_better=True,
-                source="evaluation_runner",
+                source="lumenis.shared.evaluation.runner",
                 evidence_ref=f"exception: {error}",
                 metadata={"error": error},
                 db_path=self.db_path,

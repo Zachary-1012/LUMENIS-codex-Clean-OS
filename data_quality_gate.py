@@ -205,7 +205,7 @@ def batch_quality_to_evaluation(validation_results, db_path=None):
     """将 DataQualityGate 批量校验结果接入统一 Evaluation 系统。
 
     把 validate_batch() 的结果聚合为 data.completeness 指标，
-    通过 evaluation_recorder.record_evaluation() 持久化。
+    通过 lumenis.shared.evaluation.record_evaluation() 持久化。
 
     Args:
         validation_results: validate_batch() 返回的结果列表
@@ -215,7 +215,7 @@ def batch_quality_to_evaluation(validation_results, db_path=None):
         EvaluationRecord 列表
     """
     try:
-        from evaluation_recorder import record_evaluation
+        from lumenis.shared.evaluation import record_evaluation
     except Exception:
         return []
 

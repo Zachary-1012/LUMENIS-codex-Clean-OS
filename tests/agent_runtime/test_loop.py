@@ -17,7 +17,7 @@ from agent_runtime.state_machine import AgentState
 from agent_runtime.planner import Plan, PlanStep, Planner, PlanMode
 from agent_runtime.replanner import Replanner
 from agent_runtime.observation import ObservationLayer
-from agent_runtime.evaluation import TrajectoryEvaluator
+from lumenis.shared.evaluation.trajectory import TrajectoryEvaluator
 from agent_runtime.durable_adapter import DurableExecutionAdapter
 
 

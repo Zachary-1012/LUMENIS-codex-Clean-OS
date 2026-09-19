@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-evaluation_dimensions.py — ZBC Phase 10 五维度真实质量评估
+lumenis.shared.evaluation.dimensions — LUMENIS 五维度真实质量评估
 
 五维度：data / ai / collector / report / runtime
 
@@ -9,7 +9,7 @@ evaluation_dimensions.py — ZBC Phase 10 五维度真实质量评估
 2. unknown 绝不默认 pass —— 无数据时 metric_value=None → status=unknown
 3. 支持 mock_data 注入 —— 测试时不执行真实采集/AI调用/报告生成
 4. 每个指标有明确阈值（pass/warn/fail）
-5. 所有结果通过 evaluation_recorder.record_evaluation() 持久化
+5. 所有结果通过 Shared Evaluation recorder.record_evaluation() 持久化
 
 数据源映射：
 - data:      notes 表（必填字段、新鲜度、重复率、溯源字段）
@@ -25,9 +25,10 @@ import json
 import os
 import sqlite3
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from evaluation_recorder import (
+from .recorder import (
     DEFAULT_DB_PATH,
     EvaluationRecord,
     judge_status,
@@ -35,7 +36,7 @@ from evaluation_recorder import (
     threshold_to_str,
 )
 
-_REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 # ============================================================

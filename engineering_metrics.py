@@ -410,7 +410,7 @@ def engineering_to_evaluation(snapshot=None, db_path=None):
         EvaluationRecord 列表
     """
     try:
-        from evaluation_recorder import record_evaluation
+        from lumenis.shared.evaluation import record_evaluation
     except Exception:
         return []
 

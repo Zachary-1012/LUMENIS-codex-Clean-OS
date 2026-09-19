@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-tests/test_evaluation_system.py — ZBC Phase 10 统一 Evaluation 系统测试
+tests/test_evaluation_system.py — LUMENIS Shared Evaluation 系统测试
 
 测试覆盖：
 1. EvaluationRecord 持久化（CRUD）
@@ -23,7 +23,7 @@ import pytest
 # 项目根目录
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from evaluation_recorder import (
+from lumenis.shared.evaluation.recorder import (
     EvaluationRecord,
     judge_status,
     record_evaluation,
@@ -33,7 +33,7 @@ from evaluation_recorder import (
     VALID_DIMENSIONS,
     VALID_STATUSES,
 )
-from evaluation_dimensions import (
+from lumenis.shared.evaluation.dimensions import (
     evaluate_data_dimension,
     evaluate_ai_dimension,
     evaluate_collector_dimension,
@@ -41,7 +41,7 @@ from evaluation_dimensions import (
     evaluate_runtime_dimension,
     THRESHOLDS,
 )
-from evaluation_runner import EvaluationRunner, run_full_evaluation
+from lumenis.shared.evaluation.runner import EvaluationRunner, run_full_evaluation
 
 
 # ============================================================
@@ -563,12 +563,10 @@ class TestNotOnlyHTTP200:
                 assert metric_info["threshold"] != "", f"{dim_name}.{metric_name} has no threshold"
                 assert metric_info["source"] != "", f"{dim_name}.{metric_name} has no source"
 
-    def test_legacy_stability_is_not_200_only(self):
-        """验证 Legacy evaluation_system 的 stability 确实是端口检查（文档化已知局限）。"""
-        import evaluation_system
-        assert hasattr(evaluation_system, "LEGACY")
-        assert evaluation_system.LEGACY is True
-        assert "200" in evaluation_system.LEGACY_REPLACED_BY or True  # 仅确认 Legacy 标记存在
+    def test_shared_evaluation_is_the_quality_owner(self):
+        """Shared Evaluation 是真实质量评估 owner，不保留 HTTP-200 legacy owner。"""
+        from lumenis.shared.evaluation import EvaluationRunner as SharedRunner
+        assert SharedRunner is EvaluationRunner
 
 
 # ============================================================
@@ -641,11 +639,10 @@ class TestEvaluationRunner:
 # 8. 现有模块桥接测试
 # ============================================================
 class TestLegacyBridges:
-    def test_evaluation_system_legacy_marker(self):
-        """evaluation_system.py 有 Legacy 标记。"""
-        import evaluation_system
-        assert evaluation_system.LEGACY is True
-        assert evaluation_system.LEGACY_SINCE == "2026-09-06"
+    def test_shared_evaluation_owner_import(self):
+        """统一评估通过 Shared Capability owner 导入。"""
+        from lumenis.shared.evaluation import record_evaluation as shared_record
+        assert shared_record is record_evaluation
 
     def test_data_quality_gate_bridge(self, temp_db):
         """data_quality_gate.batch_quality_to_evaluation 接入统一系统。"""

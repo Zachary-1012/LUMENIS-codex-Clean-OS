@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-evaluation_recorder.py — ZBC Phase 10 统一 Evaluation 记录与持久化层
+lumenis.shared.evaluation.recorder — LUMENIS Shared Evaluation 记录与持久化层
 
 核心原则（不可违反）：
 1. 不允许只统计接口是否返回 200 —— 必须评价真实质量（数据/AI/Collector/Report/Runtime）
@@ -20,15 +20,16 @@ import sqlite3
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # ---- 常量 ----
 VALID_DIMENSIONS = ("data", "ai", "collector", "report", "runtime")
 VALID_STATUSES = ("pass", "warn", "fail", "unknown")
 
-# 默认数据库路径（与项目 data/monitor.db 一致）
-_REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DB_PATH = os.path.join(_REPO_ROOT, "data", "monitor.db")
+# 默认数据库路径必须锚定仓库 Production Truth，而不是模块目录。
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_DB_PATH = os.environ.get("ZBC_DB_PATH", str(_REPO_ROOT / "data" / "monitor.db"))
 
 
 # ============================================================
@@ -409,4 +410,4 @@ def get_evaluation_records(
 try:
     init_db()
 except Exception as _e:
-    print(f"[evaluation_recorder] init_db warning: {_e}", flush=True)
+    print(f"[SharedEvaluation] init_db warning: {_e}", flush=True)

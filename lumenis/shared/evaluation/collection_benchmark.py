@@ -1,4 +1,4 @@
-"""Deterministic benchmark primitives for collection quality.
+"""LUMENIS Shared Evaluation deterministic benchmark primitives for collection quality.
 
 This module intentionally evaluates records only; it never collects data and
 never changes production state.

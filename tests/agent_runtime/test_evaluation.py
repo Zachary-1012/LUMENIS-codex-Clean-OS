@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from agent_runtime.evaluation import (
+from lumenis.shared.evaluation.trajectory import (
     TrajectoryEvaluator, TrajectoryMetrics, TrajectoryEvaluation, DimensionScore,
 )
 

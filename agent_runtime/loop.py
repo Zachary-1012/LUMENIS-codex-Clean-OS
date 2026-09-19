@@ -49,7 +49,7 @@ from .state_machine import AgentState, AgentStateMachine, StateTransitionError
 from .observation import ObservationLayer, Observation
 from .planner import Plan, PlanStep, Planner, PlanMode
 from .replanner import Replanner, ReplanDecision
-from .evaluation import TrajectoryEvaluator, TrajectoryMetrics, TrajectoryEvaluation
+from lumenis.shared.evaluation.trajectory import TrajectoryEvaluator, TrajectoryMetrics, TrajectoryEvaluation
 from .durable_adapter import DurableExecutionAdapter
 
 

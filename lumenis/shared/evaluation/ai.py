@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ai_evaluation.py — AI 质量评估体系（ZBC Phase 7）
+lumenis.shared.evaluation.ai — LUMENIS Shared Evaluation AI 质量评估
 
 核心原则：AI 是辅助判断层，永远不替代核心确定性规则。
 评估体系追踪 AI 与规则的一致性、人工修正率、Provider 可靠性，

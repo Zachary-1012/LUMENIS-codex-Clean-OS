@@ -1,4 +1,4 @@
-"""Minimal contract for resumable, evidence-aware benchmark tasks.
+"""LUMENIS Shared Evaluation contract for resumable, evidence-aware benchmark tasks.
 
 This is deliberately platform-neutral. It is a contract for our own runner,
 not an imported agent framework.
