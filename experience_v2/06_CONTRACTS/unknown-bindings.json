@@ -800,7 +800,7 @@
       "binding_id": "BACKEND-GAP-053",
       "screen": "SH-05",
       "field": "assets",
-      "current_api": "learning_collector.get_learning_history()（只读，空库诚实空态）",
+      "current_api": "lumenis.shared.learning.collector.get_learning_history()（只读，空库诚实空态）",
       "permission": "READ",
       "evidence": "experience_screens._build_sh05 + tests test_all_propagated",
       "frontend_viewmodel": "READY",
