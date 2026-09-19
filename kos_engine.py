@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Optional
 import subject_rules as sr  # KOS 主体归属硬规则（Contract 第六条）
 
-DB_PATH = os.environ.get("ZBC_DB_PATH", str(Path(__file__).parent / "data" / "monitor.db"))
+from lumenis.shared.database import get_repository, main_db_path
+
+DB_PATH = main_db_path()
 
 # KOS 分层阈值（第一版可配置，根据真实数据校准）
 TIER_THRESHOLDS = {
@@ -87,7 +89,7 @@ def _ensure_table(conn):
 
 def _get_conn() -> sqlite3.Connection:
     global _KOS_SCHEMA_ENSURED
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = get_repository().connect(timeout=10)
     conn.row_factory = sqlite3.Row
     if not _KOS_SCHEMA_ENSURED:
         _ensure_table(conn)
@@ -630,11 +632,7 @@ def extract_content_dna(author_id: str, limit: int = 20) -> dict:
 
     从现有notes数据提取，不调用AI（AI可用时可增强语义标签）。
     """
-    import sqlite3
-    from pathlib import Path
-    db = Path(__file__).parent / "data" / "monitor.db"
-    conn = sqlite3.connect(str(db))
-    conn.row_factory = sqlite3.Row
+    conn = get_repository().connect()
     try:
         notes = conn.execute(
             "SELECT note_id, title, body, content, likes, comments, collects, shares, sentiment, content_type, publish_datetime FROM notes WHERE author_id=? ORDER BY publish_datetime DESC LIMIT ?",
