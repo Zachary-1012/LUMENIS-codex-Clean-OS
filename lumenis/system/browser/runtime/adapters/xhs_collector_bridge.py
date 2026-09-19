@@ -70,7 +70,7 @@ def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9222",
     start = time.time()
     adapter = None
     try:
-        from browser_runtime.adapters.playwright_adapter import PlaywrightAdapter
+        from lumenis.system.browser.runtime.adapters.playwright_adapter import PlaywrightAdapter
         adapter = PlaywrightAdapter(cdp_url=cdp_url, timeout_ms=timeout_ms)
         health = adapter.health()
         result["cdp_connected"] = health.get("cdp_connected", False)
@@ -155,7 +155,7 @@ def collect_keyword_bypass(keyword: str,
     start = time.time()
     adapter = None
     try:
-        from browser_runtime.adapters.playwright_adapter import PlaywrightAdapter
+        from lumenis.system.browser.runtime.adapters.playwright_adapter import PlaywrightAdapter
         import xhs_cdp_collector as xhs
 
         adapter = PlaywrightAdapter(cdp_url=cdp_url, timeout_ms=timeout_ms)
