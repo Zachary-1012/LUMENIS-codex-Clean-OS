@@ -19,6 +19,7 @@ from .chain import (
 )
 from .production_contract import ProductionEvidence, ProductionEvidenceContract
 from . import store
+from . import manual
 
 __all__ = [
     "Evidence",
@@ -36,4 +37,5 @@ __all__ = [
     "ProductionEvidence",
     "ProductionEvidenceContract",
     "store",
+    "manual",
 ]
