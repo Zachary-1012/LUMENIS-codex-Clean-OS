@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""ZBC Phase 8 — Evidence / Canonical Data 数据链核心模块
+"""LUMENIS Shared Evidence / Canonical Data 数据链核心模块
 
 统一数据生命周期：
   External Source → Evidence → Canonical Data → Event → Case → Finding
@@ -16,7 +16,7 @@
   5. 完整 provenance —— 每条 Evidence 携带 hash/timestamp/source/subject_scope/
      collection_metadata/provider/authenticity_score。
 
-本模块使用独立表（zbc_evidence / zbc_canonical_data / zbc_lifecycle_tracking），
+本模块使用受治理的 Evidence/Canonical lifecycle 表（历史物理表名保持 zbc_evidence / zbc_canonical_data / zbc_lifecycle_tracking），
 不修改、不覆盖现有 canonical_data、app_evidence_records、notes 等生产表。
 新字段一律可空，向后兼容。
 """
