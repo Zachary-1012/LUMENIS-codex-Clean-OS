@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional
 VALID_DIMENSIONS = ("data", "ai", "collector", "report", "runtime")
 VALID_STATUSES = ("pass", "warn", "fail", "unknown")
 
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 
 # ============================================================
@@ -153,7 +153,7 @@ CREATE INDEX IF NOT EXISTS idx_eval_records_evaluated ON evaluation_records(eval
 def _get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
     path = db_path or main_db_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    conn = sqlite3.connect(path, timeout=10)
+    conn = DatabaseRepository(path).connect(timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
