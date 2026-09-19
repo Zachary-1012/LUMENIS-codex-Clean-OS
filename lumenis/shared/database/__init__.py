@@ -13,6 +13,10 @@ __all__ = [
     "RepositoryRegistry",
     "get_registry",
     "resolve_path",
+    "DatabaseRepository",
+    "get_repository",
 ]
 
-from .repository import RepositoryRegistry, get_registry, resolve_path
+from .registry import RepositoryRegistry, get_registry, resolve_path
+
+from .repository import DatabaseRepository, get_repository

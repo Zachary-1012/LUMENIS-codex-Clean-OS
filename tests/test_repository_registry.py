@@ -38,7 +38,7 @@ def clean_registry(monkeypatch):
         monkeypatch.delenv(k, raising=False)
 
     # 重置模块级单例
-    import lumenis.shared.database.repository as canonical_registry
+    import lumenis.shared.database.registry as canonical_registry
     import repository_registry
     importlib.reload(canonical_registry)
     importlib.reload(repository_registry)

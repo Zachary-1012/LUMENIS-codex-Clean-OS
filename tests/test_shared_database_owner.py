@@ -55,7 +55,7 @@ def test_migration_owner_is_shared_database():
     assert "from lumenis.shared.database import migrations as _dm" in app
 
 def test_repository_registry_has_one_canonical_owner():
-    canonical = (REPO / "lumenis/shared/database/repository.py").read_text(encoding="utf-8")
+    canonical = (REPO / "lumenis/shared/database/registry.py").read_text(encoding="utf-8")
     root = (REPO / "repository_registry.py").read_text(encoding="utf-8")
     core = (REPO / "core/repository_registry.py").read_text(encoding="utf-8")
     assert "class RepositoryRegistry" in canonical
@@ -63,3 +63,9 @@ def test_repository_registry_has_one_canonical_owner():
     assert "class RepositoryRegistry" not in core
     assert "lumenis.shared.database.repository" in root
     assert "lumenis.shared.database.repository" in core
+
+def test_database_repository_layer_is_canonical():
+    source = (REPO / "lumenis/shared/database/repository.py").read_text(encoding="utf-8")
+    assert "class DatabaseRepository" in source
+    assert "connect_sqlite" in source
+    assert "sqlite3.connect(" not in source

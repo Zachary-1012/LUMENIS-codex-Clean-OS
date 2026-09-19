@@ -2,7 +2,7 @@
 
 Canonical repository/path authority lives in lumenis.shared.database.repository.
 """
-from lumenis.shared.database.repository import (
+from lumenis.shared.database.registry import (
     ensure_standard_dirs,
     get_backup_dir,
     get_config_dir,
