@@ -353,49 +353,34 @@ def _generate_core_conclusion(stats, notes, category_stats):
     return f'本期共监测小红书舆情{total}条，负面{negative}条，主要集中在【{top_cat_name}】，最高互动{max_engagement}，{spreading}。'
 
 # ========== 报告导出（太古汇舆情汇报模板） ==========
-def export_report_to_csv(report_type='daily', date_str=None):
-    """按太古汇舆情汇报模板导出CSV：核心结论→数据概览→分业态分布→重点负面帖→舆情归因→应对动作"""
+def export_report_to_csv(report_type='daily', date_str=None, start_date=None, end_date=None):
+    """按太古汇舆情汇报模板导出CSV；显式 start/end 优先，保持所有导出入口同一周期 Truth。"""
     now = datetime.now()
     date_str = date_str or now.strftime('%Y-%m-%d')
-    if report_type == 'daily':
-        start = end = date_str
-        period_label = f'{date_str.replace("-", ".")}'
-    elif report_type == 'weekly':
-        start = (now - timedelta(days=now.weekday())).strftime('%Y-%m-%d')
-        end = date_str
-        period_label = f'{start.replace("-",".")} – {end.replace("-",".")}'
-    elif report_type == 'monthly':
-        start = now.replace(day=1).strftime('%Y-%m-%d')
-        end = date_str
-        period_label = f'{start.replace("-",".")} – {end.replace("-",".")}'
-    elif report_type == 'yearly':
-        start = now.replace(month=1, day=1).strftime('%Y-%m-%d')
-        end = date_str
-        period_label = f'{start.replace("-",".")} – {end.replace("-",".")}'
-    else:
-        start = end = date_str
-        period_label = date_str
+    range_start, range_end = get_date_range(report_type, date_str)
+    if start_date:
+        range_start = datetime.strptime(start_date, '%Y-%m-%d').replace(hour=0, minute=0, second=0)
+    if end_date:
+        range_end = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+    start = range_start.strftime('%Y-%m-%d')
+    end = range_end.strftime('%Y-%m-%d')
+    period_label = start.replace("-", ".") if start == end else f'{start.replace("-",".")} – {end.replace("-",".")}'
 
     notes = db.get_notes_by_date_range(start, end)
     stats = db.get_stats_by_date_range(start, end)
 
-    # 计算环比（上一周期）
+    # 环比统一按当前实际周期长度向前平移，避免不同入口用不同“上一周期”定义。
     try:
-        if report_type == 'daily':
-            prev_start = prev_end = (now - timedelta(days=1)).strftime('%Y-%m-%d')
-        elif report_type == 'weekly':
-            prev_start = (now - timedelta(days=now.weekday()+7)).strftime('%Y-%m-%d')
-            prev_end = (now - timedelta(days=now.weekday()+1)).strftime('%Y-%m-%d')
-        elif report_type == 'monthly':
-            prev_month = now.month - 1 if now.month > 1 else 12
-            prev_year = now.year if now.month > 1 else now.year - 1
-            prev_start = f'{prev_year}-{prev_month:02d}-01'
-            prev_end = (now.replace(day=1) - timedelta(days=1)).strftime('%Y-%m-%d')
-        else:
-            prev_start = prev_end = start
+        current_start = datetime.strptime(start, '%Y-%m-%d')
+        current_end = datetime.strptime(end, '%Y-%m-%d')
+        span_days = max(1, (current_end - current_start).days + 1)
+        prev_end_dt = current_start - timedelta(days=1)
+        prev_start_dt = prev_end_dt - timedelta(days=span_days - 1)
+        prev_start = prev_start_dt.strftime('%Y-%m-%d')
+        prev_end = prev_end_dt.strftime('%Y-%m-%d')
         prev_notes = db.get_notes_by_date_range(prev_start, prev_end)
         prev_stats = db.get_stats_by_date_range(prev_start, prev_end)
-    except:
+    except Exception:
         prev_stats = {'total': 0, 'negative': 0, 'positive': 0, 'high_risk': 0, 'total_engagement': 0}
 
     # 分业态统计
@@ -537,6 +522,60 @@ def export_report_to_csv(report_type='daily', date_str=None):
 
     filename = f'太古汇{report_title}_{date_str}.csv'
     return output.getvalue(), filename
+
+def export_artifacts(kind='daily', start=None, end=None, formats=('docx', 'csv', 'xlsx')):
+    """唯一文件导出 facade：所有 DOCX/CSV/XLSX artifact 统一由 Shared Reporting export_api 生成与校验。"""
+    allowed = {'docx', 'csv', 'xlsx'}
+    requested = tuple(dict.fromkeys(str(x).lower() for x in formats))
+    unknown = [x for x in requested if x not in allowed]
+    if unknown:
+        raise ValueError(f"不支持的导出格式: {unknown}")
+
+    date_str = end or start
+    files = {}
+    if 'xlsx' in requested:
+        path = _export_excel(kind, date_str, start, end)
+        if not isinstance(path, str) or not path.lower().endswith('.xlsx'):
+            raise RuntimeError(f"XLSX 导出未返回有效文件路径: {path}")
+        files['xlsx'] = path
+
+    if 'docx' in requested:
+        path = _export_word(kind, date_str, start, end)
+        if not isinstance(path, str) or not path.lower().endswith('.docx'):
+            raise RuntimeError(f"DOCX 导出未返回有效文件路径: {path}")
+        files['docx'] = path
+
+    if 'csv' in requested:
+        csv_content, filename = export_report_to_csv(kind, date_str, start, end)
+        path = os.path.join(EXPORT_DIR, filename)
+        with open(path, 'w', encoding='utf-8', newline='') as fh:
+            fh.write(csv_content)
+        files['csv'] = path
+
+    verified = {}
+    for fmt, path in files.items():
+        vr = ra.verify_artifact_file(path)
+        verified[fmt] = {
+            'exists': vr['exists'], 'size': vr['size'], 'hash': vr['hash'], 'valid': vr['valid']
+        }
+        if not vr['valid']:
+            raise RuntimeError(f"导出 artifact 校验失败 [{fmt}]: {vr['reason']}")
+
+    resolved_start, resolved_end = get_date_range(kind, date_str)
+    if start:
+        resolved_start = datetime.strptime(start, '%Y-%m-%d')
+    if end:
+        resolved_end = datetime.strptime(end, '%Y-%m-%d')
+    return {
+        'files': files,
+        'artifact_verified': verified,
+        'payload': {
+            'report_type': kind,
+            'period_start': resolved_start.strftime('%Y-%m-%d'),
+            'period_end': resolved_end.strftime('%Y-%m-%d'),
+        },
+    }
+
 
 # ============================================
 # API接口
