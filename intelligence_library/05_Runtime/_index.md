@@ -1,28 +1,10 @@
-# 05_Runtime - 资产索引
+# 05_Runtime — 资源索引
 
-> 生成时间: 2026-09-06 20:26:09
-> 文件数: 13
+> 以下条目按当前 `main` 目录结构生成。条目存在不代表它已成为生产实现或通过验收。
 
-## 文件清单
+## 子目录
+- `architecture/`
+- `共享智能能力/`
 
-### (根目录)
-
-- `LOCAL_AI_CONTINUOUS_RUNTIME_P0.md` (2699 bytes)
-
-### ADRH架构
-
-- `ADRH架构\ADR-0001-hub-no-devcontainer.md` (1087 bytes)
-- `ADRH架构\CONTENT-INTELLIGENCE-SPEC-v1.md` (8626 bytes)
-- `ADRH架构\ZACHARY-AI-GROWTH-MODEL-v1.md` (3589 bytes)
-- `ADRH架构\ZACHARY-CAPABILITY-BENCHMARK-v1.md` (4491 bytes)
-- `ADRH架构\ZACHARY-DOMAIN-ADAPTER-CONTRACT-v1.md` (2973 bytes)
-- `ADRH架构\ZACHARY-EXPERIENCE-SCHEMA-v1.md` (2313 bytes)
-- `ADRH架构\ZACHARY-INTERNAL-LEARNING-CONTRACT-v1.md` (6223 bytes)
-- `ADRH架构\ZACHARY-INTERNAL-MATURATION-AND-DOMAIN-ISOLATION-v1.md` (7223 bytes)
-- `ADRH架构\ZACHARY-LEARNING-DATA-CONTRACT-v1.json` (1732 bytes)
-- `ADRH架构\ZACHARY-LEARNING-PROMOTION-ENGINE-v1.md` (4173 bytes)
-- `ADRH架构\ZACHARY-MEMORY-LIFECYCLE-v1.md` (2640 bytes)
-
-### architecture
-
-- `architecture\ZACHARY_ZBC_AI_PROGRAMMING_BASELINE_V1.md` (4657 bytes)
+## 文件
+- `LOCAL_AI_CONTINUOUS_RUNTIME_P0.md`

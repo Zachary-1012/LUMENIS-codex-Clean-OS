@@ -1,15 +1,10 @@
-# 00_总览 - 资产索引
+# 00_总览 — 资源索引
 
-> 生成时间: 2026-09-06 20:26:09
-> 文件数: 6
+> 以下条目按当前 `main` 目录结构生成。条目存在不代表它已成为生产实现或通过验收。
 
-## 文件清单
+## 子目录
+- 无
 
-### (根目录)
-
-- `INTELLIGENCE_LIBRARY_ARCHITECTURE_V1.0.md` (8506 bytes)
-- `OSAI_ZBC_研究汇编总目录_20260906.docx` (49865 bytes)
-- `README-main-latest.md` (5686 bytes)
-- `README.md` (4483 bytes)
-- `THREE_REPO_FEEDING_RULE_V1.0_20260906.md` (4145 bytes)
-- `公关话术模版-舆情信息.docx` (21206 bytes)
+## 文件
+- `README.md`
+- `公关话术模版-舆情信息.docx`

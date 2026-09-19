@@ -1,0 +1,423 @@
+{
+  "schema": "osai.learning-asset-registry.v1",
+  "saved_at": "2026-09-05 18:22:44",
+  "total": 7,
+  "assets": [
+    {
+      "asset_id": "LA-7df08a7334be",
+      "contribution_id": "zbc-daily_reports-1",
+      "title": "ZBC daily 2026-09-04",
+      "content": "监测报告类型: daily\n统计周期: 2026-09-04 至 2026-09-04\n监测笔记总数: 0\n情感分布: 正面=0, 中性=0, 负面=0\n风险分布: 高=0, 中=0, 低=0\n互动总量: 0\n摘要: 2026-09-04 至 2026-09-04 日报：共监测 0 条笔记\n该报告遵循标准化监测流程与数据汇总规则，可作为品牌舆情监测方法论的经验总结与模式参考。",
+      "source": "runtime",
+      "schema_version": "1.0.0",
+      "metadata": {
+        "zbc_kind": "daily_reports",
+        "kind": "daily_reports",
+        "id": 1,
+        "report_type": "daily",
+        "report_date": "2026-09-04",
+        "period_start": "2026-09-04",
+        "period_end": "2026-09-04",
+        "total_notes": 0,
+        "positive_count": 0,
+        "neutral_count": 0,
+        "negative_count": 0,
+        "high_risk_count": 0,
+        "medium_risk_count": 0,
+        "low_risk_count": 0,
+        "total_engagements": 0,
+        "generated_at": "2026-09-04 23:55:04"
+      },
+      "status": "LEARNING_ASSET",
+      "created_at": "2026-09-05 18:03:29",
+      "updated_at": "2026-09-05 18:03:29",
+      "validation_result": {
+        "validated_at": "2026-09-05 18:03:29",
+        "checks": [
+          "schema",
+          "content",
+          "source",
+          "sensitive"
+        ]
+      },
+      "generalization_result": {
+        "generalized_at": "2026-09-05 18:03:29",
+        "signals_hit": [
+          "方法",
+          "流程",
+          "规则",
+          "模式",
+          "经验",
+          "总结"
+        ],
+        "content_length": 189
+      },
+      "admission_result": {
+        "admitted_at": "2026-09-05 18:03:29",
+        "admission_criteria": [
+          "validation_passed",
+          "generalization_passed",
+          "no_sensitive_data"
+        ]
+      },
+      "reject_reason": "",
+      "sensitive_hits": []
+    },
+    {
+      "asset_id": "LA-d8e2846f5595",
+      "contribution_id": "zbc-daily_reports-2",
+      "title": "ZBC weekly 2026-09-04",
+      "content": "监测报告类型: weekly\n统计周期: 2026-08-31 至 2026-09-04\n监测笔记总数: 0\n情感分布: 正面=0, 中性=0, 负面=0\n风险分布: 高=0, 中=0, 低=0\n互动总量: 0\n摘要: 2026-08-31 至 2026-09-04 周报：共监测 0 条笔记\n该报告遵循标准化监测流程与数据汇总规则，可作为品牌舆情监测方法论的经验总结与模式参考。",
+      "source": "runtime",
+      "schema_version": "1.0.0",
+      "metadata": {
+        "zbc_kind": "daily_reports",
+        "kind": "daily_reports",
+        "id": 2,
+        "report_type": "weekly",
+        "report_date": "2026-09-04",
+        "period_start": "2026-08-31",
+        "period_end": "2026-09-04",
+        "total_notes": 0,
+        "positive_count": 0,
+        "neutral_count": 0,
+        "negative_count": 0,
+        "high_risk_count": 0,
+        "medium_risk_count": 0,
+        "low_risk_count": 0,
+        "total_engagements": 0,
+        "generated_at": "2026-09-04 23:55:05"
+      },
+      "status": "LEARNING_ASSET",
+      "created_at": "2026-09-05 18:03:29",
+      "updated_at": "2026-09-05 18:03:29",
+      "validation_result": {
+        "validated_at": "2026-09-05 18:03:29",
+        "checks": [
+          "schema",
+          "content",
+          "source",
+          "sensitive"
+        ]
+      },
+      "generalization_result": {
+        "generalized_at": "2026-09-05 18:03:29",
+        "signals_hit": [
+          "方法",
+          "流程",
+          "规则",
+          "模式",
+          "经验",
+          "总结"
+        ],
+        "content_length": 190
+      },
+      "admission_result": {
+        "admitted_at": "2026-09-05 18:03:29",
+        "admission_criteria": [
+          "validation_passed",
+          "generalization_passed",
+          "no_sensitive_data"
+        ]
+      },
+      "reject_reason": "",
+      "sensitive_hits": []
+    },
+    {
+      "asset_id": "LA-607d1f2e4ac2",
+      "contribution_id": "zbc-daily_reports-3",
+      "title": "ZBC monthly 2026-09-04",
+      "content": "监测报告类型: monthly\n统计周期: 2026-09-01 至 2026-09-04\n监测笔记总数: 0\n情感分布: 正面=0, 中性=0, 负面=0\n风险分布: 高=0, 中=0, 低=0\n互动总量: 0\n摘要: 2026-09-01 至 2026-09-04 月报：共监测 0 条笔记\n该报告遵循标准化监测流程与数据汇总规则，可作为品牌舆情监测方法论的经验总结与模式参考。",
+      "source": "runtime",
+      "schema_version": "1.0.0",
+      "metadata": {
+        "zbc_kind": "daily_reports",
+        "kind": "daily_reports",
+        "id": 3,
+        "report_type": "monthly",
+        "report_date": "2026-09-04",
+        "period_start": "2026-09-01",
+        "period_end": "2026-09-04",
+        "total_notes": 0,
+        "positive_count": 0,
+        "neutral_count": 0,
+        "negative_count": 0,
+        "high_risk_count": 0,
+        "medium_risk_count": 0,
+        "low_risk_count": 0,
+        "total_engagements": 0,
+        "generated_at": "2026-09-04 23:55:05"
+      },
+      "status": "LEARNING_ASSET",
+      "created_at": "2026-09-05 18:03:29",
+      "updated_at": "2026-09-05 18:03:29",
+      "validation_result": {
+        "validated_at": "2026-09-05 18:03:29",
+        "checks": [
+          "schema",
+          "content",
+          "source",
+          "sensitive"
+        ]
+      },
+      "generalization_result": {
+        "generalized_at": "2026-09-05 18:03:29",
+        "signals_hit": [
+          "方法",
+          "流程",
+          "规则",
+          "模式",
+          "经验",
+          "总结"
+        ],
+        "content_length": 191
+      },
+      "admission_result": {
+        "admitted_at": "2026-09-05 18:03:29",
+        "admission_criteria": [
+          "validation_passed",
+          "generalization_passed",
+          "no_sensitive_data"
+        ]
+      },
+      "reject_reason": "",
+      "sensitive_hits": []
+    },
+    {
+      "asset_id": "LA-d94bf4ea1c4b",
+      "contribution_id": "zbc-daily_reports-4",
+      "title": "ZBC yearly 2026-09-04",
+      "content": "监测报告类型: yearly\n统计周期: 2026-01-01 至 2026-09-04\n监测笔记总数: 0\n情感分布: 正面=0, 中性=0, 负面=0\n风险分布: 高=0, 中=0, 低=0\n互动总量: 0\n摘要: 2026-01-01 至 2026-09-04 年报：共监测 0 条笔记\n该报告遵循标准化监测流程与数据汇总规则，可作为品牌舆情监测方法论的经验总结与模式参考。",
+      "source": "runtime",
+      "schema_version": "1.0.0",
+      "metadata": {
+        "zbc_kind": "daily_reports",
+        "kind": "daily_reports",
+        "id": 4,
+        "report_type": "yearly",
+        "report_date": "2026-09-04",
+        "period_start": "2026-01-01",
+        "period_end": "2026-09-04",
+        "total_notes": 0,
+        "positive_count": 0,
+        "neutral_count": 0,
+        "negative_count": 0,
+        "high_risk_count": 0,
+        "medium_risk_count": 0,
+        "low_risk_count": 0,
+        "total_engagements": 0,
+        "generated_at": "2026-09-04 23:55:05"
+      },
+      "status": "LEARNING_ASSET",
+      "created_at": "2026-09-05 18:03:29",
+      "updated_at": "2026-09-05 18:03:29",
+      "validation_result": {
+        "validated_at": "2026-09-05 18:03:29",
+        "checks": [
+          "schema",
+          "content",
+          "source",
+          "sensitive"
+        ]
+      },
+      "generalization_result": {
+        "generalized_at": "2026-09-05 18:03:29",
+        "signals_hit": [
+          "方法",
+          "流程",
+          "规则",
+          "模式",
+          "经验",
+          "总结"
+        ],
+        "content_length": 190
+      },
+      "admission_result": {
+        "admitted_at": "2026-09-05 18:03:29",
+        "admission_criteria": [
+          "validation_passed",
+          "generalization_passed",
+          "no_sensitive_data"
+        ]
+      },
+      "reject_reason": "",
+      "sensitive_hits": []
+    },
+    {
+      "asset_id": "LA-0c50e6e7b04f",
+      "contribution_id": "zbc-daily_reports-5",
+      "title": "ZBC special 2026-09-04",
+      "content": "监测报告类型: special\n统计周期: 2026-08-05 至 2026-09-04\n监测笔记总数: 0\n情感分布: 正面=0, 中性=0, 负面=0\n风险分布: 高=0, 中=0, 低=0\n互动总量: 0\n摘要: 2026-08-05 至 2026-09-04 专报：共监测 0 条笔记\n该报告遵循标准化监测流程与数据汇总规则，可作为品牌舆情监测方法论的经验总结与模式参考。",
+      "source": "runtime",
+      "schema_version": "1.0.0",
+      "metadata": {
+        "zbc_kind": "daily_reports",
+        "kind": "daily_reports",
+        "id": 5,
+        "report_type": "special",
+        "report_date": "2026-09-04",
+        "period_start": "2026-08-05",
+        "period_end": "2026-09-04",
+        "total_notes": 0,
+        "positive_count": 0,
+        "neutral_count": 0,
+        "negative_count": 0,
+        "high_risk_count": 0,
+        "medium_risk_count": 0,
+        "low_risk_count": 0,
+        "total_engagements": 0,
+        "generated_at": "2026-09-04 23:55:05"
+      },
+      "status": "LEARNING_ASSET",
+      "created_at": "2026-09-05 18:03:29",
+      "updated_at": "2026-09-05 18:03:29",
+      "validation_result": {
+        "validated_at": "2026-09-05 18:03:29",
+        "checks": [
+          "schema",
+          "content",
+          "source",
+          "sensitive"
+        ]
+      },
+      "generalization_result": {
+        "generalized_at": "2026-09-05 18:03:29",
+        "signals_hit": [
+          "方法",
+          "流程",
+          "规则",
+          "模式",
+          "经验",
+          "总结"
+        ],
+        "content_length": 191
+      },
+      "admission_result": {
+        "admitted_at": "2026-09-05 18:03:29",
+        "admission_criteria": [
+          "validation_passed",
+          "generalization_passed",
+          "no_sensitive_data"
+        ]
+      },
+      "reject_reason": "",
+      "sensitive_hits": []
+    },
+    {
+      "asset_id": "LA-7c8a7160dd6e",
+      "contribution_id": "zbc-notes-xhs-demo-001",
+      "title": "小红书品牌舆情监测方法论总结",
+      "content": "来源平台: xiaohongshu\n标题: 小红书品牌舆情监测方法论总结\n内容: 本文总结了品牌小红书舆情监测的完整方法与流程框架，包括关键词策略、主体口径规则、情感分类模式、风险分级经验和数据归因方法。该框架可复用于不同品牌的社媒监测场景，是经过实战验证的最佳实践总结。\n情感: neutral, 风险等级: low\n匹配关键词: 太古汇,舆情,监测",
+      "source": "runtime",
+      "schema_version": "1.0.0",
+      "metadata": {
+        "zbc_kind": "notes",
+        "kind": "notes",
+        "id": 101,
+        "note_id": "xhs-demo-001",
+        "url": "https://www.xiaohongshu.com/explore/demo001",
+        "source_platform": "xiaohongshu",
+        "sentiment": "neutral",
+        "risk_level": "low",
+        "matched_keywords": "太古汇,舆情,监测",
+        "is_taikoo_verified": 1,
+        "negative_confirmed": 0,
+        "publish_datetime": "2026-09-01 10:00:00",
+        "captured_at": "2026-09-01 10:05:00"
+      },
+      "status": "LEARNING_ASSET",
+      "created_at": "2026-09-05 18:03:56",
+      "updated_at": "2026-09-05 18:03:56",
+      "validation_result": {
+        "validated_at": "2026-09-05 18:03:56",
+        "checks": [
+          "schema",
+          "content",
+          "source",
+          "sensitive"
+        ]
+      },
+      "generalization_result": {
+        "generalized_at": "2026-09-05 18:03:56",
+        "signals_hit": [
+          "方法",
+          "流程",
+          "规则",
+          "模式",
+          "框架",
+          "策略",
+          "经验",
+          "总结"
+        ],
+        "content_length": 176
+      },
+      "admission_result": {
+        "admitted_at": "2026-09-05 18:03:56",
+        "admission_criteria": [
+          "validation_passed",
+          "generalization_passed",
+          "no_sensitive_data"
+        ]
+      },
+      "reject_reason": "",
+      "sensitive_hits": []
+    },
+    {
+      "asset_id": "LA-e94dd1335367",
+      "contribution_id": "zbc-events-event-demo-001",
+      "title": "品牌负面事件应急响应流程案例",
+      "content": "事件标题: 品牌负面事件应急响应流程案例\n事件摘要: 某品牌负面事件的完整应急响应流程复盘：从事件发现、风险评估、分级响应、话术制定到效果追踪的全流程策略总结。该案例提炼了可复用的应急响应规则和模式，适用于类似舆情事件的处理框架。\n事实状态: confirmed, 风险等级: medium, 提及次数: 15",
+      "source": "runtime",
+      "schema_version": "1.0.0",
+      "metadata": {
+        "zbc_kind": "events",
+        "kind": "events",
+        "id": 201,
+        "event_key": "event-demo-001",
+        "fact_status": "confirmed",
+        "risk_level": "medium",
+        "mention_count": 15,
+        "source_count": 3,
+        "first_seen": "2026-09-02 08:00:00",
+        "last_seen": "2026-09-03 18:00:00",
+        "status": "resolved",
+        "event_date": "2026-09-02",
+        "negative_confirmed": 1
+      },
+      "status": "LEARNING_ASSET",
+      "created_at": "2026-09-05 18:03:56",
+      "updated_at": "2026-09-05 18:03:56",
+      "validation_result": {
+        "validated_at": "2026-09-05 18:03:56",
+        "checks": [
+          "schema",
+          "content",
+          "source",
+          "sensitive"
+        ]
+      },
+      "generalization_result": {
+        "generalized_at": "2026-09-05 18:03:56",
+        "signals_hit": [
+          "流程",
+          "规则",
+          "模式",
+          "框架",
+          "策略",
+          "总结"
+        ],
+        "content_length": 155
+      },
+      "admission_result": {
+        "admitted_at": "2026-09-05 18:03:56",
+        "admission_criteria": [
+          "validation_passed",
+          "generalization_passed",
+          "no_sensitive_data"
+        ]
+      },
+      "reject_reason": "",
+      "sensitive_hits": []
+    }
+  ]
+}

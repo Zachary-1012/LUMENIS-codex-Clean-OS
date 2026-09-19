@@ -21,7 +21,7 @@ from .standard_taxonomy import (
     classify_risk_level, classify_sentiment, classify_subject,
 )
 from . import cth_phrases
-from . import zbmp_phrases
+from . import bmp_phrases
 
 
 class ReportGenerator:
@@ -34,7 +34,7 @@ class ReportGenerator:
         """
         self.brand_mode = brand_mode
         self.brand_config = brand_config or {}
-        self.phrases = cth_phrases if brand_mode == "cth" else zbmp_phrases
+        self.phrases = cth_phrases if brand_mode == "cth" else bmp_phrases
 
     def generate(self, period: str, start_date: str = None, end_date: str = None,
                  notes: List[dict] = None, events: List[dict] = None,
@@ -224,7 +224,7 @@ class ReportGenerator:
             if self.brand_mode == "cth":
                 alert = cth_phrases.get_risk_phrase(risk_level, title, score)
             else:
-                alert = zbmp_phrases.generate_zbmp_phrase(
+                alert = bmp_phrases.generate_zbmp_phrase(
                     "risk_alert", risk_level,
                     brand=self._get_brand_name(), event=title, score=score,
                     time=RiskLevel(risk_level).response_time if risk_level in [l.value for l in RiskLevel] else "持续观察",
@@ -498,11 +498,11 @@ class ReportGenerator:
     def _generate_zbmp_specific(self, notes: List[dict], events: List[dict], stats: dict) -> dict:
         """通用品牌专属内容"""
         industry = self.brand_config.get("industry", "retail")
-        industry_focus = zbmp_phrases.get_industry_focus(industry)
+        industry_focus = bmp_phrases.get_industry_focus(industry)
 
         return {
             "brand_config": self.brand_config,
             "industry_focus": industry_focus,
-            "multi_brand_comparison": zbmp_phrases.MULTI_BRAND_COMPARISON,
-            "period_focus": zbmp_phrases.get_period_focus("daily"),
+            "multi_brand_comparison": bmp_phrases.MULTI_BRAND_COMPARISON,
+            "period_focus": bmp_phrases.get_period_focus("daily"),
         }

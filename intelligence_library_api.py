@@ -40,7 +40,7 @@ def list_assets():
     """List all intelligence assets with optional filters.
     
     Query params:
-        sub_library: filter by 13-directory sub-library
+        sub_library: filter by asset category
         source_origin: OSAI/ADRH/SICI/ZBC-internal/Governance/DCC
         product: ZBC/GGI/SHARED
         domain: ZBMP/CTH/SYSTEM/SHARED
@@ -230,7 +230,7 @@ def get_stats():
 # ============================================================
 @intelligence_library_bp.route('/sub_libraries', methods=['GET'])
 def list_sub_libraries():
-    """List all 13 sub-libraries with file counts."""
+    """List all configured sub-libraries with asset counts."""
     conn = _get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT sub_library, COUNT(*) as cnt FROM intelligence_assets GROUP BY sub_library ORDER BY sub_library")

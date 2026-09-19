@@ -32,7 +32,7 @@ This Constitution governs every current and future user-visible or user-operable
 
 Feature contracts may define **objects, fields, states, permissions, workflows and truth semantics**. They may not define a separate visual language or page-composition authority.
 
-Historical `experience_v2/**` presentation material was removed from `main`. Retained contracts under `contracts/experience/` do not grant a second Experience design authority.
+Historical browser presentation material was removed from `main`. Retained contracts under `contracts/experience/` do not grant a second Experience design authority.
 
 Historical design material is recoverable from Git history. It does not belong in the current main tree.
 

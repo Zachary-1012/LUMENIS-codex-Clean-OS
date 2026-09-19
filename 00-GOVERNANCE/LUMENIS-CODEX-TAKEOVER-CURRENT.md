@@ -48,7 +48,7 @@ If the active task touches any user-visible Experience/UI, read the sole design 
 
 Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
-Historical `experience_v2/**` browser material was removed from `main`; retained App contracts are canonical under `contracts/experience/`.
+Historical browser presentation material was removed from `main`; retained App contracts are canonical under `contracts/experience/`.
 
 Required design gates:
 

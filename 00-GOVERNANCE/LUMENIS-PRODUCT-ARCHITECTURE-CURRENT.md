@@ -147,7 +147,7 @@ iOS
 
 The existing Flask/Python implementation remains the Product Core / API / runtime during convergence. HTTP/JSON may remain an internal transport boundary; it is not a public Web Experience contract.
 
-The legacy Jinja/static/Experience V2 browser presentation surfaces have been removed from `main`. Retained ViewModel/IA contracts under `contracts/experience/` are binding inputs for the canonical Flutter App only; they do not constitute a second Experience.
+Historical browser and static presentation surfaces have been removed from `main`. Retained ViewModel/IA contracts under `contracts/experience/` are binding inputs for the canonical Flutter App only; they do not constitute a second Experience.
 
 Removal rule:
 

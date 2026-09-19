@@ -1,35 +1,9 @@
-# 11_前沿研究 - 资产索引
+# 11_前沿研究 — 资源索引
 
-> 生成时间: 2026-09-06 20:26:09
-> 文件数: 26
+> 以下条目按当前 `main` 目录结构生成。条目存在不代表它已成为生产实现或通过验收。
 
-## 文件清单
+## 子目录
+- `AgentOrg/`
 
-### AgentOrg
-
-- `AgentOrg\00-RESEARCH-MAP.md` (10466 bytes)
-- `AgentOrg\01-CASE-LIBRARY.md` (11452 bytes)
-- `AgentOrg\02-PAPER-TRACKING.md` (12144 bytes)
-- `AgentOrg\03-TECHNOLOGY-RADAR.md` (90449 bytes)
-- `AgentOrg\04-IMPROVEMENT-QUEUE.md` (32927 bytes)
-- `AgentOrg\05-IC-029-NPS-DRI-EVALUATION.md` (1953 bytes)
-- `AgentOrg\05-IC-030-PODCAST-8STEP-SOP.md` (2556 bytes)
-- `AgentOrg\05-IC-031-AI-SEMANTIC-LAYER.md` (2184 bytes)
-- `AgentOrg\05-IC-032-MODEL-COMPRESSION-EVAL.md` (1846 bytes)
-- `AgentOrg\05-IC-033-EMOTIONAL-AROUSAL.md` (2122 bytes)
-- `AgentOrg\05-IC-034-VISION-MODEL-SELECTION.md` (1811 bytes)
-- `AgentOrg\05-IC-036-BRAND-NAMING-PIPELINE.md` (2296 bytes)
-- `AgentOrg\05-IC-037-MEMORY-ARCHITECTURE.md` (1765 bytes)
-- `AgentOrg\05-IC-038-REWARD-DESIGN.md` (1976 bytes)
-- `AgentOrg\05-IC-041-TALENT-TIERING-STRATEGY.md` (2628 bytes)
-- `AgentOrg\05-IC-042-CUSTOM-PERSUASION-STORYLINE.md` (1742 bytes)
-- `AgentOrg\05-IC-043-LONG-HORIZON-RELIABILITY.md` (3173 bytes)
-- `AgentOrg\05-IC-045-BRAND-NARRATIVE-WORLD.md` (2917 bytes)
-- `AgentOrg\05-IC-046-COMPLEXITY-EMERGENCE.md` (1993 bytes)
-- `AgentOrg\05-IC-049-AGENTIC-KNOWLEDGE-GRAPH.md` (1768 bytes)
-- `AgentOrg\05-IC-050-AI-NATIVE-APP-ARCHITECTURE.md` (3527 bytes)
-- `AgentOrg\05-IC-051-AI-BROWSER-AGENT-FRONTIER.md` (4606 bytes)
-- `AgentOrg\05-IC-052-EMBEDDED-BROWSER-SURFACE-CONTRACT.md` (7828 bytes)
-- `AgentOrg\05-IC-053-VISION-DOM-HYBRID-CONTRACT.md` (4092 bytes)
-- `AgentOrg\05-RESEARCH-AI-STANDALONE-APP-ARCHITECTURE.md` (3986 bytes)
-- `AgentOrg\05-RESEARCH-BROWSER-AGENT-COMPUTER-USE-2026.md` (4741 bytes)
+## 文件
+- 无

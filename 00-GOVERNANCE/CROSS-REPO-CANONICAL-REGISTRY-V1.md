@@ -18,7 +18,7 @@ When this document and the machine contract disagree, **fail closed**: do not in
 | `Zachary-1012/global-growth-intelligence` | 序衍 / LUMENIS Growth · Independent Research & Growth Product | Research / Growth Truth |
 | `Zachary-1012/lumenis-command` | 序枢 / LUMENIS Command · R&D Control Sidecar | Engineering Evidence |
 
-`Zachary-1012/Z-Brand-Core` is legacy engineering history and is **not** a current canonical production repository.
+Historical repositories are provenance only and are not current canonical production repositories.
 
 Repository names, package names, API identifiers, database identifiers and other stable technical aliases are compatibility identities. Do not rename them merely to match current product branding.
 
