@@ -22,9 +22,10 @@ import sqlite3
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
+from lumenis.shared.database import get_repository, main_db_path
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.abspath(os.environ.get("ZBC_DB_PATH") or os.path.join(_BASE_DIR, "data", "monitor.db"))
+DB_PATH = main_db_path()
 
 # ============== 告警状态机（IC-020 Contract §1.4） ==============
 # 状态转移表：只允许如下转移
@@ -56,12 +57,8 @@ DEFAULT_ALERT_CONFIG = {
 
 
 def _conn() -> sqlite3.Connection:
-    """每次现取 env（与 kos_ops/kos_paid 同模式，防测试污染）。"""
-    p = os.environ.get("ZBC_DB_PATH") or DB_PATH
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    c = sqlite3.connect(p, timeout=30)
-    c.row_factory = sqlite3.Row
-    return c
+    """Canonical Shared Database repository connection."""
+    return get_repository().connect(timeout=30)
 
 
 def init_alert_tables(conn: Optional[sqlite3.Connection] = None) -> None:
