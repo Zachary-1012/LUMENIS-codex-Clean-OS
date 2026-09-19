@@ -38,6 +38,7 @@ FORBIDDEN_EXACT = {
     "report_export/report_engine.py",
     "report_api.py",
     "kos_report.py",
+    "lumenis/shared/reporting/export_engine.py",
     "research/podcast/UX_ARCHITECTURE_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_BUILD_PLAN_V1.md",
     "research/research-hub/docs/MASTER/UI_DATA_PODCAST_RESEARCH_SPEC_V2.md",
