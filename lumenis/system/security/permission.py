@@ -37,9 +37,13 @@ logger = logging.getLogger(__name__)
 _TESTING_BYPASS_ENABLED = False
 
 def set_testing_bypass(enabled: bool) -> None:
-    """设置TESTING bypass开关（测试用）。"""
+    """设置 TESTING bypass 开关（仅测试用）。"""
     global _TESTING_BYPASS_ENABLED
     _TESTING_BYPASS_ENABLED = enabled
+
+def is_testing_bypass_enabled() -> bool:
+    """返回显式 TESTING bypass 状态；生产代码不得根据 pytest 自动推断。"""
+    return bool(_TESTING_BYPASS_ENABLED) or os.environ.get("PERMISSION_GATE_TESTING") == "1"
 
 # ═══════════════════════════════════════════════════════════════
 # 1. 枚举定义
@@ -1028,4 +1032,6 @@ __all__ = [
     "require_permission",
     "get_permission_gate",
     "reset_permission_gate",
+    "set_testing_bypass",
+    "is_testing_bypass_enabled",
 ]
