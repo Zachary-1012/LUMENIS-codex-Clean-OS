@@ -274,7 +274,7 @@ Do not create a second Evidence, Canonical Data, Metric, Permission, DB, Runtime
 
 Do not make 序蕴、序衍、序枢 hard runtime dependencies of 序境. Do not share production databases across products. Do not allow AI/research artifacts to overwrite LUMENIS Production Truth automatically.
 
-Do not weaken CI, delete legitimate tests, broaden quarantine or use `continue-on-error` to manufacture green status.
+Do not weaken CI, delete legitimate tests, broaden quarantine or use `continue-on-error` to manufacture green status. Repository-deterministic product failures remain blocking. Runner/DNS/package-registry failures are execution-layer failures and must be reported as `EXECUTION-LAYER UNVERIFIED`, never rewritten as product PASS or product FAIL.
 
 ## 10. Historical documents
 
@@ -282,13 +282,21 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
-The LUMENIS Product Gate must run:
+The LUMENIS Product Gate is the single blocking repository workflow for cross-product contract + takeover governance. Do not create a second workflow for the same assertions.
+
+It must run:
 
 ```text
 python scripts/audit_tools/verify_lumenis_ggi_contract.py \
   00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
 
 python scripts/audit_tools/verify_codex_takeover_governance.py
+
+python scripts/audit_tools/verify_lumenis_single_product.py
+python scripts/audit_tools/verify_experience_authority_exclusive.py
+python scripts/audit_tools/verify_experience_anti_template.py
 ```
+
+The Experience checks are App-only. Historical Jinja/static/experience_v2 browser implementation is a migration source and must not act as a blocking design/runtime authority.
 
 The second check prevents regression of the CURRENT takeover path, v1.1 protocol identity, root agent routing and human/machine contract alignment. A runner-level 0-step failure means the check did not execute; it is not a passing or failing repository assertion.
