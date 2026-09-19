@@ -18,6 +18,7 @@ def connect_sqlite(
     wal: bool = True,
     foreign_keys: bool = True,
     busy_timeout_ms: int = 30000,
+    read_only: bool = False,
 ) -> sqlite3.Connection:
     """Open SQLite through the canonical database authority.
 
@@ -25,20 +26,30 @@ def connect_sqlite(
     tooling. Omitting it always resolves main_db_path() at call time.
     """
     path = os.path.abspath(db_path or main_db_path())
-    parent = os.path.dirname(path)
-    if parent:
-        os.makedirs(parent, exist_ok=True)
-    conn = sqlite3.connect(
-        path,
-        timeout=timeout,
-        check_same_thread=check_same_thread,
-        isolation_level=isolation_level,
-    )
+    if read_only:
+        target = f"file:{path.replace(os.sep, '/')}?mode=ro"
+        conn = sqlite3.connect(
+            target,
+            uri=True,
+            timeout=timeout,
+            check_same_thread=check_same_thread,
+            isolation_level=isolation_level,
+        )
+    else:
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        conn = sqlite3.connect(
+            path,
+            timeout=timeout,
+            check_same_thread=check_same_thread,
+            isolation_level=isolation_level,
+        )
     if row_factory:
         conn.row_factory = sqlite3.Row
     if busy_timeout_ms > 0:
         conn.execute(f"PRAGMA busy_timeout={int(busy_timeout_ms)}")
-    if wal:
+    if wal and not read_only:
         conn.execute("PRAGMA journal_mode=WAL")
     if foreign_keys:
         conn.execute("PRAGMA foreign_keys=ON")
