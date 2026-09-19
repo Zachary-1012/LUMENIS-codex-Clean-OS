@@ -48,7 +48,7 @@ If the active task touches any user-visible Experience/UI, read the sole design 
 
 Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
-The `experience_v2/**` directory name is a compatibility path, not a V2 authority.
+Historical `experience_v2/**` browser material was removed from `main`; retained App contracts are canonical under `contracts/experience/`.
 
 Required design gates:
 
@@ -184,7 +184,7 @@ SYSTEM            Collector / Runtime / Scheduler / AI Gateway / DB / Security /
 
 ### App-only target
 
-The final LUMENIS Experience is a single Flutter application for Windows, macOS, Linux, Android and iOS. Browser/Jinja/static UI is transitional only. No new public web product surface, parallel frontend or legacy visual reference path may be introduced. Capability parity must be proven before old surfaces are deleted.
+The final LUMENIS Experience is a single Flutter application for Windows, macOS, Linux, Android and iOS. The legacy browser/Jinja/static presentation surface has been removed from `main`. No new public web product surface, parallel frontend or legacy visual reference path may be introduced. Retained contracts under `contracts/experience/` are binding inputs for Flutter surfaces.
 
 ## 5. Current source/runtime facts — source-audited, not live-certified by this handoff
 
@@ -302,6 +302,11 @@ python scripts/audit_tools/verify_experience_authority_exclusive.py
 python scripts/audit_tools/verify_experience_anti_template.py
 ```
 
-The Experience checks are App-only. Historical Jinja/static/experience_v2 browser implementation is a migration source and must not act as a blocking design/runtime authority.
+The Experience checks are App-only. Historical browser implementation has been removed from `main`; retained contracts under `contracts/experience/` may inform Flutter binding but never act as a second Experience authority.
 
 The second check prevents regression of the CURRENT takeover path, v1.1 protocol identity, root agent routing and human/machine contract alignment. A runner-level 0-step failure means the check did not execute; it is not a passing or failing repository assertion.
+## Current remote cutover evidence
+
+The current remote `main` is App-only at `3ba304f5d752dabcdc40531ce176f189527c29af`.
+Legacy Jinja/static/prototype surfaces are absent from the tree. The next Codex task is
+Flutter surface completion and runtime/CI/E2E verification, not web-surface migration.

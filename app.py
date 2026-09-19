@@ -1780,7 +1780,7 @@ def api_brand_stats():
 
 @app.route('/')
 def index():
-    # LUMENIS 前端重构后入口为 /lumenis/（旧 static/index.html 已在 UI HARD RESET 删除）
+    # LUMENIS 用户入口由 Flutter App 提供；此 Flask 进程仅承载 Product Core/API。
     return redirect('/lumenis/')
 @app.route('/favicon.ico')
 def favicon():

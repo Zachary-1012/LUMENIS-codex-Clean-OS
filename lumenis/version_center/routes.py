@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """版本中心路由：页面 + 状态/历史/保存/检查更新/推送/拉取/回滚/自动配置。"""
 import os
-from flask import Blueprint, render_template, request, jsonify, redirect
+from flask import Blueprint, request, jsonify, redirect
 from ..auth import require_auth, require_owner, get_current_user, log_audit
 from .git_manager import gm
 
 version_bp = Blueprint(
     "v4_version", __name__,
-    template_folder=os.path.join(os.path.dirname(__file__), "templates"),
     url_prefix="/version-center",
 )
 

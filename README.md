@@ -48,7 +48,7 @@ The sole product/domain architecture authority is:
 
 `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
 
-LUMENIS is now **App-first / App-only as the final user-facing product**. The canonical Experience target is one Flutter application codebase for Windows, macOS, Linux, Android and iOS. Existing browser/Jinja/static surfaces are migration sources only and may be removed only after capability parity is proven.
+LUMENIS is now **App-only as the final user-facing product**. The canonical Experience is one Flutter application codebase for Windows, macOS, Linux, Android and iOS. The legacy browser/Jinja/static surfaces have been removed from `main`; retained Experience contracts live under `contracts/experience/` and bind the Flutter App to Product Core/API.
 
 ## 1. 产品定位 / Product definition
 

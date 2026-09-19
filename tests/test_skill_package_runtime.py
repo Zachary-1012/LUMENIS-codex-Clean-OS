@@ -571,15 +571,11 @@ def test_github_connector_status_route_requires_owner(client):
     assert response.status_code == 401
 
 
-def test_skill_settings_surface_uses_real_source_preview_and_no_fake_mcp_ready_state():
-    root = Path(__file__).resolve().parents[1]
-    template = (root / "templates/system/skill_store.html").read_text(encoding="utf-8")
-    script = (root / "static/js/skill-store.js").read_text(encoding="utf-8")
+def test_skill_settings_surface_uses_app_api_contract():
+    import lumenis_app_api
 
-    assert "Universal Skill Runtime" in template
-    assert "ssSourceModal" in template
-    assert "/api/system/account/skills/source/preview" in script
-    assert "MCP 服务器管理将在后续版本开放" not in script
-    assert "不下载、不安装、不执行、不授予权限" in template
-    assert "/api/system/account/connectors/github/status" in script
-    assert "GitHub Connector" in template
+    assert hasattr(lumenis_app_api, "lumenis_bp")
+    assert hasattr(lumenis_app_api, "domain_api_bp")
+    source = Path(lumenis_app_api.__file__).read_text(encoding="utf-8")
+    assert "render_template" not in source
+    assert "template_folder" not in source

@@ -641,3 +641,16 @@ Stop for user input only when required by a real blocker such as:
 - production hosting/domain/paid resource requires authorization.
 
 Large code volume, many files, long tests or context size are not themselves blockers.
+
+## 23. Remote App-only cutover (current main)
+
+At `main@3ba304f5d752dabcdc40531ce176f189527c29af`, the legacy browser presentation roots
+`templates/`, `static/`, and `experience_v2/` were removed from the production repository.
+The retained Experience contracts now live under `contracts/experience/`. `experience_runtime.py`
+is API/ViewModel-only, `lumenis_app_api.py` is JSON/API-only, and the canonical user-facing
+surface is `app/` (Flutter). Do not recreate Jinja, static assets, browser prototype mounts,
+compatibility HTML pages, or arbitrary developer code-execution endpoints.
+
+This cutover removes the old presentation surface; it does not claim that every Flutter
+workspace surface is finished. New App screens must bind real Product Core/API, Canonical Data,
+Evidence, Permission and Evaluation behavior before being marked complete.

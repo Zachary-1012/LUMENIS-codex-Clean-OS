@@ -10,7 +10,7 @@
   6. tool_allowlist 白名单机制
   7. 审批流程（ApprovalManager）
   8. 幂等性保护（IdempotencyGuard）
-  9. 现有模块适配层（lumenis / function_registry / dev_exec_core）
+  9. 现有模块适配层（lumenis / function_registry）
 """
 import sys
 import os
@@ -657,16 +657,6 @@ class TestExistingModuleAdapters:
         for s in reg.list_all():
             assert s.risk_level == RiskLevel.LOW
             assert s.execution_policy == ExecutionPolicy.READ_ONLY
-
-    def test_dev_exec_core_has_boundary_check(self):
-        from dev_exec_core import agent_boundary_check
-        assert callable(agent_boundary_check)
-
-    def test_dev_exec_boundary_check_returns_dict(self):
-        from dev_exec_core import agent_boundary_check
-        result = agent_boundary_check("print('hello')", agent_id="test-dev")
-        assert isinstance(result, dict)
-        assert "allowed" in result
 
     def test_agent_security_legacy_marker(self):
         import agent_security

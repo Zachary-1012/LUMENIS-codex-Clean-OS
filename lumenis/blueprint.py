@@ -29,9 +29,8 @@ from .config import AUTH_CONFIG
 
 def create_v4_blueprint() -> Blueprint:
     """创建V4总蓝图"""
-    # static_url_path 相对 url_prefix，最终暴露为 /v4/static/<file>，供各 v4 页面共享全局脚本
-    v4_bp = Blueprint("v4", __name__, url_prefix="/v4",
-                      static_folder="static", static_url_path="/static")
+    # V4 只提供 Product Core/API 路由；用户界面由 Flutter App 承载。
+    v4_bp = Blueprint("v4", __name__, url_prefix="/v4")
 
     # 注册子蓝图
     v4_bp.register_blueprint(settings_bp)

@@ -3,7 +3,7 @@
 主账号专属：账号管理、安全问答、系统配置、模块管理、审计日志
 """
 import os
-from flask import Blueprint, render_template, request, jsonify, g, redirect
+from flask import Blueprint, request, jsonify, g, redirect
 from ..auth import (
     require_owner, require_auth, get_current_user, create_user, list_users,
     update_user_status, change_password, reset_user_password,
@@ -14,7 +14,6 @@ from ..auth.models import get_db
 from ..auth.security import hash_security_answer
 
 settings_bp = Blueprint("v4_settings", __name__,
-                        template_folder=os.path.join(os.path.dirname(__file__), "templates"),
                         url_prefix="/settings")  # 相对前缀，由父蓝图 /v4 拼成 /v4/settings
 
 

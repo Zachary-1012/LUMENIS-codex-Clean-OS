@@ -32,7 +32,7 @@ This Constitution governs every current and future user-visible or user-operable
 
 Feature contracts may define **objects, fields, states, permissions, workflows and truth semantics**. They may not define a separate visual language or page-composition authority.
 
-The directory name `experience_v2/**` is a compatibility path. It does **not** grant Experience V2 design authority.
+Historical `experience_v2/**` presentation material was removed from `main`. Retained contracts under `contracts/experience/` do not grant a second Experience design authority.
 
 Historical design material is recoverable from Git history. It does not belong in the current main tree.
 
@@ -437,7 +437,7 @@ Before Experience implementation:
 1. resolve current `origin/main`;
 2. read root `AGENTS.md`;
 3. read **this file**;
-4. read `experience_v2/AGENTS.md` only as an execution router;
+4. read retained `contracts/experience/` assets only as App binding contracts;
 5. inspect current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners;
 6. state the user problem and semantic composition before editing CSS.
 

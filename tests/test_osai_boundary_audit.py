@@ -272,7 +272,7 @@ def test_20_osai_not_in_production_imports():
 def test_20_osai_modules_not_in_app_import_chain():
     """运行时验证：app 启动过程中不发起任何 OSAI 子进程调用。
 
-    已知事实：lumenis_skill_adapter 经 lumenis_frontend 被 app 导入（体验层蓝图），
+    已知事实：lumenis_skill_adapter 由 App API 适配层导入，
     但该模块导入时零副作用（仅定义 CrossCoreSkillAdapter 类），OSAI subprocess
     仅在 /lumenis/api/skills/status 端点被访问时才触发。本测试验证：
     1. app 可在无 OSAI_REPO_ROOT 环境下正常导入并响应 healthz

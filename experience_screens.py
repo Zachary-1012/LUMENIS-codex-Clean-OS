@@ -1703,7 +1703,7 @@ def _browser_surface_markup() -> str:
 
     这里只声明现有 Browser Surface 控制器所需的 DOM 契约；标签页、导航、
     截图、历史、书签、AI Browser Session 和外部出口都仍由
-    ``static/js/browser.js`` + ``browser_surface.py`` 提供，不复制浏览器后端。
+    Flutter App 通过 Browser Surface API 消费，不复制浏览器后端。
     外部出口是显式人工操作，默认路径始终留在序境内置浏览器。
     """
     return r'''
@@ -1879,8 +1879,8 @@ def _build_sys06() -> Dict[str, Any]:
     state = STATE_OFFLINE if failed else STATE_READY
     sections = [
         _head("SYS-06"),
-        # 真实生产入口：复用 browser_surface 唯一后端与 browser.js 控制器。
-        # 不把旧 Jinja 页面或 prototype example.com 作为 fallback。
+        # 真实生产入口：复用 browser_surface 唯一后端与 App API 控制器。
+        # 不把旧网页或 prototype example.com 作为 fallback。
         section("raw", STATE_READY, html=_browser_surface_markup()),
         section("kpis", state, items=[
             metric("sys06.instances", "浏览器实例", value=None if failed else len(rows), state=state,
