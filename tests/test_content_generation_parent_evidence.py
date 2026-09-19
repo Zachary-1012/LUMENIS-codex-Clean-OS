@@ -3,6 +3,7 @@
 import sqlite3
 
 import content_generation as generation
+from lumenis.shared.database.repository import DatabaseRepository
 
 
 def _record_kwargs(parent=None):
@@ -25,7 +26,8 @@ def _record_kwargs(parent=None):
 
 def test_blank_parent_is_stored_as_null(tmp_path, monkeypatch):
     db_path = tmp_path / "content.db"
-    monkeypatch.setattr(generation, "DB_PATH", str(db_path))
+    repository = DatabaseRepository(str(db_path))
+    monkeypatch.setattr(generation, "get_repository", lambda: repository)
 
     generation.init_db()
     evidence_id = generation.record_evidence(**_record_kwargs(parent="  "))
@@ -40,7 +42,8 @@ def test_blank_parent_is_stored_as_null(tmp_path, monkeypatch):
 
 def test_init_db_repairs_historical_blank_parent(tmp_path, monkeypatch):
     db_path = tmp_path / "content.db"
-    monkeypatch.setattr(generation, "DB_PATH", str(db_path))
+    repository = DatabaseRepository(str(db_path))
+    monkeypatch.setattr(generation, "get_repository", lambda: repository)
 
     generation.init_db()
     with sqlite3.connect(db_path) as conn:

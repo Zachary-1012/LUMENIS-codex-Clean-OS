@@ -263,7 +263,7 @@ def get_stats() -> dict:
 def list_profiles(*, tier: str = "", lifecycle: str = "", potential_only: bool = False,
                   risk_only: bool = False, search: str = "", limit: int = 50, offset: int = 0,
                   sort_by: str = "kos_score") -> dict:
-    """KOS 列表查询（支持筛选/搜索/分页/排序）。"""
+    """KOS 列表只读查询；空库不会因读取而创建业务表。"""
     conds, params = [], []
     if tier: conds.append("kos_tier = ?"); params.append(tier)
     if lifecycle: conds.append("lifecycle_stage = ?"); params.append(lifecycle)
@@ -272,13 +272,36 @@ def list_profiles(*, tier: str = "", lifecycle: str = "", potential_only: bool =
     if search: conds.append("(author_nickname LIKE ? OR subject_type LIKE ?)"); params.extend([f"%{search}%"] * 2)
     where = " WHERE " + " AND ".join(conds) if conds else ""
     sort_col = sort_by if sort_by in ["kos_score", "total_engagement", "note_count", "total_likes", "avg_engagement"] else "kos_score"
-    conn = _get_conn()
-    total = conn.execute(f"SELECT COUNT(*) FROM kos_profiles{where}", params).fetchone()[0]
-    rows = conn.execute(f"SELECT * FROM kos_profiles{where} ORDER BY {sort_col} DESC LIMIT ? OFFSET ?",
-                         params + [limit, offset]).fetchall()
-    conn.close()
-    return {"total": total, "returned": len(rows), "limit": limit, "offset": offset,
-            "profiles": [dict(r) for r in rows]}
+    conn = get_repository().connect(timeout=10)
+    conn.row_factory = sqlite3.Row
+    try:
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='kos_profiles'"
+        ).fetchone()
+        if exists is None:
+            return {
+                "total": 0,
+                "returned": 0,
+                "limit": limit,
+                "offset": offset,
+                "profiles": [],
+                "schema_status": "unavailable",
+            }
+        total = conn.execute(f"SELECT COUNT(*) FROM kos_profiles{where}", params).fetchone()[0]
+        rows = conn.execute(
+            f"SELECT * FROM kos_profiles{where} ORDER BY {sort_col} DESC LIMIT ? OFFSET ?",
+            params + [limit, offset],
+        ).fetchall()
+        return {
+            "total": total,
+            "returned": len(rows),
+            "limit": limit,
+            "offset": offset,
+            "profiles": [dict(r) for r in rows],
+            "schema_status": "available",
+        }
+    finally:
+        conn.close()
 
 
 def get_profile(author_id: str) -> Optional[dict]:
@@ -755,8 +778,22 @@ def _brand_source_filter(brand: str) -> tuple:
 
 def brand_collection_stats(brand: str) -> dict:
     """品牌采集状态：笔记数 / 作者数 / 最新采集时间。"""
-    conn = _get_conn()
+    # This aggregate is a read path: never bootstrap the KOS write schema just
+    # to answer whether source notes exist in an isolated or not-yet-migrated DB.
+    conn = get_repository().connect(timeout=10)
+    conn.row_factory = sqlite3.Row
     try:
+        notes_table = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='notes'"
+        ).fetchone()
+        if notes_table is None:
+            return {
+                "brand": brand,
+                "status": "unavailable",
+                "note_count": None,
+                "author_count": None,
+                "last_captured_at": None,
+            }
         cond, params = _brand_source_filter(brand)
         row = conn.execute(
             f"SELECT COUNT(*) AS note_count, COUNT(DISTINCT author_id) AS author_count, "
@@ -765,6 +802,7 @@ def brand_collection_stats(brand: str) -> dict:
         ).fetchone()
         return {
             "brand": brand,
+            "status": "available" if row["note_count"] else "not_collected",
             "note_count": int(row["note_count"] or 0),
             "author_count": int(row["author_count"] or 0),
             "last_captured_at": row["last_captured_at"],
@@ -775,8 +813,15 @@ def brand_collection_stats(brand: str) -> dict:
 
 def brand_profiles(brand: str, limit: int = 20) -> list:
     """品牌 KOS 作者实时聚合（不写 kos_profiles，与广州主链隔离）。"""
-    conn = _get_conn()
+    # Brand profiles are derived from source notes and must remain read-only.
+    conn = get_repository().connect(timeout=10)
+    conn.row_factory = sqlite3.Row
     try:
+        notes_table = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='notes'"
+        ).fetchone()
+        if notes_table is None:
+            return []
         cond, params = _brand_source_filter(brand)
         rows = conn.execute(
             f"""

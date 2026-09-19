@@ -401,8 +401,6 @@ class TestEndpointEnumeration:
 
     CRITICAL_ENDPOINTS = [
         '/api/auth/config',
-        '/api/dev/run-code',
-        '/api/config/run-code',
         '/api/brands/<brand_en>',
         '/api/event-graph/events/<event_id>',
         '/api/system/config',
@@ -417,6 +415,12 @@ class TestEndpointEnumeration:
         """关键端点不得被删除。"""
         source = _read_file(APP_PY)
         assert path in source, f"关键端点 {path} 不得被删除"
+
+    def test_arbitrary_server_code_routes_are_removed(self):
+        """服务端任意代码执行入口已退役，不能重新暴露。"""
+        source = _read_file(APP_PY)
+        for path in ('/api/developer/run', '/api/dev/run-code', '/api/config/run-code'):
+            assert path not in source
 
 
 # ═══════════════════════════════════════════════════════════════

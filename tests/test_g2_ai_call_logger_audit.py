@@ -6,28 +6,22 @@
 2. 新字段（target_type/target_id/model_version/system_result/accepted）可写入
 3. 旧调用（不传新参数）兼容，新字段为空
 """
-import os
 import sqlite3
-import tempfile
-from unittest.mock import patch
 
 import pytest
 
 import ai_call_logger as acl
+from lumenis.shared.database.repository import DatabaseRepository
 
 
 @pytest.fixture
-def temp_db():
+def temp_db(tmp_path, monkeypatch):
     """使用临时数据库，不污染生产库。"""
-    fd, path = tempfile.mkstemp(suffix='.db')
-    os.close(fd)
-    old_path = acl.DB_PATH
-    acl.DB_PATH = path
-    # 重置连接缓存
+    path = str(tmp_path / 'ai_call_logger.db')
+    repository = DatabaseRepository(path)
+    monkeypatch.setattr(acl, 'get_repository', lambda: repository)
     acl.init_db()
     yield path
-    acl.DB_PATH = old_path
-    os.unlink(path)
 
 
 class TestG2SchemaMigration:

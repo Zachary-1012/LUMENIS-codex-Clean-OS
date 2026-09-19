@@ -15,7 +15,6 @@ content_generation.py — ZBC 统一内容生成引擎
 """
 from __future__ import annotations
 import json
-import os
 import sqlite3
 import hashlib
 import time
@@ -27,9 +26,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from lumenis.shared.database import main_db_path
-from lumenis.shared.database.repository import DatabaseRepository
-DB_PATH = main_db_path()
+from lumenis.shared.database import get_repository
 
 # ============================================================
 # 内容类型注册表
@@ -151,10 +148,9 @@ EVAL_LABELS = {
 # DB 层
 # ============================================================
 def _get_conn() -> sqlite3.Connection:
-    # DB_PATH is the canonical main DB in production and the narrow injection
-    # point for disposable tests/migrations. Connection policy remains owned by
-    # the Shared Database repository.
-    return DatabaseRepository(str(DB_PATH)).connect(timeout=10)
+    # Ordinary runtime callers resolve the current canonical repository at call
+    # time; tests inject an explicit DatabaseRepository into get_repository.
+    return get_repository().connect(timeout=10)
 
 
 def init_db():

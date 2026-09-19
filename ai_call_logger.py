@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import sqlite3
 import threading
@@ -39,15 +38,11 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
-from lumenis.shared.database import main_db_path
-from lumenis.shared.database.repository import DatabaseRepository
+from lumenis.shared.database import get_repository
 
 # ============================================================
 # 1) 数据库路径（与 database.py 保持一致的环境变量约定）
 # ============================================================
-_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = main_db_path()
-
 _WRITE_LOCK = threading.Lock()  # SQLite 多线程写保护
 
 # ============================================================
@@ -127,15 +122,6 @@ def _migrate_schema(conn):
             pass
 
 
-def _ensure_dir():
-    d = os.path.dirname(main_db_path())
-    if d and not os.path.exists(d):
-        try:
-            os.makedirs(d, exist_ok=True)
-        except Exception:
-            pass
-
-
 # 脱敏：写入 input_text 前清除可能的 API key / token / cookie
 _SENSITIVE_RE = re.compile(
     r'(?i)(api[_-]?key|access[_-]?token|secret|password|cookie|authorization|bearer|session[_-]?id)\s*[:=]\s*\S+',
@@ -152,8 +138,7 @@ def _sanitize_input(text: str) -> str:
 @contextmanager
 def _get_conn():
     """获取 SQLite 连接（自动建表+迁移）。调用方应在短事务内使用。"""
-    _ensure_dir()
-    conn = DatabaseRepository(DB_PATH).connect(timeout=10, check_same_thread=False)
+    conn = get_repository().connect(timeout=10, check_same_thread=False)
     try:
         conn.executescript(_SCHEMA)
         _migrate_schema(conn)

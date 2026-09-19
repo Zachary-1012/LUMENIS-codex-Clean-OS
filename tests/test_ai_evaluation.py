@@ -14,16 +14,14 @@ tests/test_ai_evaluation.py — ZBC Phase 7 AI Evaluation 体系测试
 import json
 import os
 import sys
-import tempfile
 import time
 from unittest.mock import patch, MagicMock
 
 import pytest
 
-# Every test selects a disposable DB through the same runtime override as the
-# canonical Shared Database owner.
 import ai_call_logger as acl
 from lumenis.shared.evaluation import ai as aev
+from lumenis.shared.database.repository import DatabaseRepository
 
 
 # ============================================================
@@ -33,18 +31,18 @@ from lumenis.shared.evaluation import ai as aev
 def test_db(tmp_path, monkeypatch):
     """每个测试函数使用独立的临时 SQLite 数据库。"""
     db_file = tmp_path / 'test_ai_eval.db'
-    db_path = str(db_file)
-    monkeypatch.setenv('ZBC_DB_PATH', db_path)
-    # 重新建表
+    repository = DatabaseRepository(str(db_file))
+    # Explicitly inject one temp repository into both database consumers. This
+    # keeps production default resolution dynamic and the tests hermetic.
+    monkeypatch.setattr(acl, 'get_repository', lambda: repository)
+    monkeypatch.setattr(aev, 'get_repository', lambda: repository)
     acl.init_db()
-    yield db_path
-    # 清理（tmp_path 自动清理）
+    return str(db_file)
 
 
 def _seed_calls(test_db, calls):
     """向测试库批量写入调用记录。"""
-    import sqlite3
-    conn = sqlite3.connect(test_db)
+    conn = acl.get_repository().connect()
     conn.executescript(acl._SCHEMA)
     for c in calls:
         conn.execute(

@@ -159,9 +159,10 @@ class TestOperationTypeResolver:
             assert app_module._pg_resolve_operation_type(path, 'POST') == OperationType.DATA_EXPORT
 
     def test_skill_execute(self):
-        assert app_module._pg_resolve_operation_type('/api/developer/run', 'POST') == OperationType.SKILL_EXECUTE
-        assert app_module._pg_resolve_operation_type('/api/dev/run-code', 'POST') == OperationType.SKILL_EXECUTE
         assert app_module._pg_resolve_operation_type('/api/workspace/term', 'POST') == OperationType.SKILL_EXECUTE
+        routes = {rule.rule for rule in app_module.app.url_map.iter_rules()}
+        for retired_route in ('/api/developer/run', '/api/dev/run-code', '/api/config/run-code'):
+            assert retired_route not in routes
 
     def test_db_write_event_confirmation(self):
         assert app_module._pg_resolve_operation_type('/api/negative/confirm', 'POST') == OperationType.DB_WRITE

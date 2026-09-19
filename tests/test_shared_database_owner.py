@@ -79,6 +79,7 @@ def test_first_standard_runtime_callers_use_repository_layer():
         "badge_api.py",
         "data_center_api.py",
         "intelligence_library_api.py",
+        "ai_call_logger.py",
         "content_generation.py",
     ]:
         source = (REPO / rel).read_text(encoding="utf-8")

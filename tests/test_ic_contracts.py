@@ -163,10 +163,17 @@ class TestKosScenarios:
 
     def test_recommend_no_write(self):
         """只读聚合：不写 kos_profiles 主表，不改变 profile 条数。"""
-        before = len(ks.kos_engine.list_profiles(limit=1000))
+        repo = ks.kos_engine.get_repository()
+        schema_before = repo.table_exists("kos_profiles")
+        before = ks.kos_engine.list_profiles(limit=1000)
         r = ks.recommend("海南中免", limit=5)
-        after = len(ks.kos_engine.list_profiles(limit=1000))
+        after = ks.kos_engine.list_profiles(limit=1000)
         assert before == after  # 主表未被写
+        assert before["schema_status"] == "unavailable"
+        assert schema_before is False
+        assert repo.table_exists("kos_profiles") is False
+        assert repo.table_exists("notes") is False
+        assert r["collection_stats"]["status"] == "unavailable"
         assert "message" in r
         assert "tags" in r
 
