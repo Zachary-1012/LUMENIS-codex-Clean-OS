@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from lumenis.shared.database import DatabaseRepository
 import time
 from typing import Any, Dict, List, Optional
 
@@ -47,7 +48,7 @@ CORRECTION_INDEXES = [
 def ensure_correction_table(db_path: str) -> None:
     """确保人工修正表存在（幂等）。"""
     os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     try:
         con.execute(CORRECTION_DDL)
         for idx in CORRECTION_INDEXES:
@@ -87,7 +88,7 @@ def record_correction(db_path: str, *, field_name: str,
     cid = _new_correction_id()
     now = _now_str()
 
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     try:
         con.execute(
             f"INSERT INTO {CORRECTION_TABLE} "
@@ -126,7 +127,7 @@ def get_corrections(db_path: str, *, canonical_id: str = "",
                     limit: int = 100) -> List[Dict[str, Any]]:
     """查询人工修正记录。"""
     ensure_correction_table(db_path)
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     con.row_factory = sqlite3.Row
     try:
         sql = f"SELECT * FROM {CORRECTION_TABLE}"
@@ -168,7 +169,7 @@ def revert_correction(db_path: str, correction_id: str,
     """撤销一条人工修正（标记为 reverted，不删除记录）。"""
     ensure_correction_table(db_path)
     now = _now_str()
-    con = sqlite3.connect(db_path, timeout=15)
+    con = DatabaseRepository(db_path).connect(timeout=15)
     try:
         con.execute(
             f"UPDATE {CORRECTION_TABLE} SET status='reverted', "
