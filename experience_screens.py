@@ -532,7 +532,7 @@ def _build_cth09() -> Dict[str, Any]:
 def _build_cth10() -> Dict[str, Any]:
     """报告 / 周报 / 证据：最近报告元数据 + 真实证据链。"""
     import database as db
-    import evidence_store as es
+    from lumenis.shared.evidence import store as es
 
     rep = _safe(db.get_latest_report, "daily", default=None)
     evid = _safe(es.query_evidence, limit=6, default=[])
@@ -580,7 +580,7 @@ def _build_ai02() -> Dict[str, Any]:
 
 def _build_ai03() -> Dict[str, Any]:
     """证据锚定分析线程：执行链 + 证据。"""
-    import evidence_store as es
+    from lumenis.shared.evidence import store as es
 
     evid = _safe(es.query_evidence, limit=6, default=[])
     tl = _task_timeline(8)
@@ -868,7 +868,7 @@ def _build_sys08() -> Dict[str, Any]:
 
 def _build_sh02() -> Dict[str, Any]:
     """证据库：evidence_store 真实只读列表 + 统计。"""
-    import evidence_store as es
+    from lumenis.shared.evidence import store as es
 
     recs = _safe(es.query_evidence, limit=30, default=[])
     stats = _safe(es.get_stats, default={})
