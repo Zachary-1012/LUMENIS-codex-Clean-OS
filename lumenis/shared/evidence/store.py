@@ -57,7 +57,7 @@ from typing import Any, Optional
 
 
 
-from lumenis.shared.database import main_db_path
+from lumenis.shared.database import DatabaseRepository, get_repository, main_db_path
 
 
 
@@ -89,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_app_evidence_hash ON app_evidence_records(evidenc
 def init_evidence_store(db_path: str = None) -> None:
     """Create the canonical Evidence table/indexes and apply additive chain fields."""
     path = db_path or main_db_path()
-    conn = sqlite3.connect(path, timeout=10)
+    conn = DatabaseRepository(path).connect(timeout=10)
     try:
         conn.executescript(EVIDENCE_TABLE_SCHEMA)
         conn.commit()
@@ -221,7 +221,7 @@ def migrate_evidence_chain_fields(db_path: str = None) -> dict:
 
     path = db_path or main_db_path()
 
-    conn = sqlite3.connect(path, timeout=10)
+    conn = DatabaseRepository(path).connect(timeout=10)
 
     try:
 
@@ -267,7 +267,7 @@ def migrate_evidence_chain_fields(db_path: str = None) -> dict:
 
 def _get_conn() -> sqlite3.Connection:
 
-    conn = sqlite3.connect(main_db_path(), timeout=10)
+    conn = get_repository().connect(timeout=10)
 
     conn.row_factory = sqlite3.Row
 
@@ -341,7 +341,7 @@ def _record_write_failure(fields: dict, error: Exception) -> None:
 
     try:
 
-        audit_conn = sqlite3.connect(main_db_path(), timeout=5)
+        audit_conn = get_repository().connect(timeout=5)
 
         audit_conn.execute(
 
@@ -367,7 +367,7 @@ def _record_write_failure(fields: dict, error: Exception) -> None:
 
     try:
 
-        dlq_conn = sqlite3.connect(main_db_path(), timeout=5)
+        dlq_conn = get_repository().connect(timeout=5)
 
         dlq_conn.execute(
 
@@ -411,7 +411,7 @@ def replay_failed_evidence(limit: int = 50) -> dict:
 
     now = _now()
 
-    conn = sqlite3.connect(main_db_path(), timeout=10)
+    conn = get_repository().connect(timeout=10)
 
     conn.row_factory = sqlite3.Row
 
@@ -459,7 +459,7 @@ def replay_failed_evidence(limit: int = 50) -> dict:
 
             # 重试写入
 
-            retry_conn = sqlite3.connect(main_db_path(), timeout=10)
+            retry_conn = get_repository().connect(timeout=10)
 
             existing_cols = _get_table_columns(retry_conn)
 
@@ -505,7 +505,7 @@ def replay_failed_evidence(limit: int = 50) -> dict:
 
     try:
 
-        count_conn = sqlite3.connect(main_db_path(), timeout=5)
+        count_conn = get_repository().connect(timeout=5)
 
         remaining = count_conn.execute(
 
@@ -543,7 +543,7 @@ def _update_dlq_status(row_id: int, status: str, attempts: int, now: str, error:
 
     try:
 
-        conn = sqlite3.connect(main_db_path(), timeout=5)
+        conn = get_repository().connect(timeout=5)
 
         if error:
 
@@ -583,7 +583,7 @@ def get_evidence_write_failure_count(hours: int = 24) -> int:
 
     try:
 
-        conn = sqlite3.connect(main_db_path(), timeout=5)
+        conn = get_repository().connect(timeout=5)
 
         count = conn.execute(
 
