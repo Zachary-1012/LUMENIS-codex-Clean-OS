@@ -9,6 +9,7 @@ import sys
 import urllib.request
 import base64
 from datetime import datetime
+from lumenis.shared.database import get_repository
 
 BASE_URL = "http://127.0.0.1:8200"
 AUTH = base64.b64encode(b'Zachary:Zachary01').decode()
@@ -148,7 +149,7 @@ check("采集器状态API", data is not None and data.get('ok') == True,
 # 4.2 数据库完整性检查
 print("\n  --- 数据库完整性检查 ---")
 try:
-    conn = sqlite3.connect('data/monitor.db')
+    conn = get_repository().connect()
     c = conn.cursor()
     tables = c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     check("数据库连接", True, f"共{len(tables)}张表")
@@ -276,7 +277,7 @@ print("\n【第七部分：端到端数据流验证】")
 
 # 验证：数据库有数据 → API能返回 → 导出能生成
 try:
-    conn = sqlite3.connect('data/monitor.db')
+    conn = get_repository().connect()
     c = conn.cursor()
     notes_count = c.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
     events_count = c.execute("SELECT COUNT(*) FROM events").fetchone()[0]
