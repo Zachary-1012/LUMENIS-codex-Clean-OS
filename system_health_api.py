@@ -12,6 +12,7 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from flask import jsonify, Blueprint
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,12 +24,8 @@ HEALTH_STATUS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'd
 
 
 def get_db_path():
-    """获取数据库路径（统一使用 database.DB_PATH，支持 ZBC_DB_PATH 环境变量）"""
-    try:
-        from database import DB_PATH as _db_path
-        return _db_path
-    except Exception:
-        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'monitor.db')
+    """获取唯一生产数据库路径（call-time canonical authority）。"""
+    return main_db_path()
 
 
 def get_data_dir():
@@ -92,7 +89,7 @@ def check_database():
         if not os.path.exists(db_path):
             return {'status': 'error', 'message': '数据库文件不存在', 'notes_count': 0}
         
-        conn = sqlite3.connect(db_path)
+        conn = DatabaseRepository(db_path).connect()
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes")
         notes_count = c.fetchone()[0]
@@ -101,7 +98,7 @@ def check_database():
         conn.close()
         
         # 检查最近24小时是否有采集
-        conn = sqlite3.connect(db_path)
+        conn = DatabaseRepository(db_path).connect()
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes WHERE collected_at >= datetime('now', '-24 hours', 'localtime')")
         recent_24h = c.fetchone()[0]
@@ -183,7 +180,7 @@ def check_login_status():
         if not os.path.exists(db_path):
             return {'status': 'error', 'message': '数据库不存在'}
         
-        conn = sqlite3.connect(db_path)
+        conn = DatabaseRepository(db_path).connect()
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes WHERE collected_at >= datetime('now', '-7 days', 'localtime')")
         recent_7d = c.fetchone()[0]
@@ -211,7 +208,7 @@ def check_dedup_module():
         if not os.path.exists(db_path):
             return {'status': 'error', 'message': '数据库不存在'}
         
-        conn = sqlite3.connect(db_path)
+        conn = DatabaseRepository(db_path).connect()
         c = conn.cursor()
         # 检查是否有重复note_id
         c.execute("SELECT note_id, COUNT(*) as cnt FROM notes GROUP BY note_id HAVING cnt > 1 LIMIT 5")
@@ -239,7 +236,7 @@ def check_subject_filter():
         if not os.path.exists(db_path):
             return {'status': 'error', 'message': '数据库不存在'}
         
-        conn = sqlite3.connect(db_path)
+        conn = DatabaseRepository(db_path).connect()
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes WHERE is_taikoo_verified=1")
         verified = c.fetchone()[0]
@@ -270,7 +267,7 @@ def check_risk_engine():
         if not os.path.exists(db_path):
             return {'status': 'error', 'message': '数据库不存在'}
         
-        conn = sqlite3.connect(db_path)
+        conn = DatabaseRepository(db_path).connect()
         c = conn.cursor()
         # 检查情绪分析分布
         c.execute("SELECT sentiment, COUNT(*) FROM notes GROUP BY sentiment")
@@ -433,7 +430,7 @@ def get_collection_schedule():
         today_runs = 0
         
         if os.path.exists(db_path):
-            conn = sqlite3.connect(db_path)
+            conn = DatabaseRepository(db_path).connect()
             c = conn.cursor()
             c.execute("SELECT MAX(collected_at) FROM notes")
             last_collect = c.fetchone()[0]
@@ -560,7 +557,7 @@ def _check_db_writable_fast():
             return {'writable': False, 'reason': 'data/ 目录不可写', 'status': 'error'}
         # 2. SQLite integrity quick_check
         import sqlite3
-        conn = sqlite3.connect(db_path, timeout=2)
+        conn = DatabaseRepository(db_path).connect(timeout=2)
         c = conn.cursor()
         c.execute("PRAGMA quick_check(1)")
         qc = c.fetchone()
