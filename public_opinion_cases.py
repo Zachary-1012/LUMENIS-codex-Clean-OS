@@ -14,10 +14,11 @@ import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from lumenis.shared.database import DatabaseRepository, main_db_path
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, 'data', 'monitor.db')
+DB_PATH = main_db_path()
 
 # ========== 广州太古汇舆情事件案例库 ==========
 TAIKOO_HUI_CASES = [
@@ -1016,7 +1017,7 @@ class PublicOpinionCaseDB:
     def _init_db(self):
         """初始化数据库表"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = DatabaseRepository(self.db_path).connect()
             cursor = conn.cursor()
             
             # 创建舆情案例表
@@ -1052,7 +1053,7 @@ class PublicOpinionCaseDB:
     def insert_case(self, case, case_type='taikoo_hui'):
         """插入单个案例"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = DatabaseRepository(self.db_path).connect()
             cursor = conn.cursor()
             
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -1136,7 +1137,7 @@ class PublicOpinionCaseDB:
     def get_cases(self, case_type=None, risk_level=None, category=None, limit=100):
         """获取案例列表"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = DatabaseRepository(self.db_path).connect()
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
@@ -1168,7 +1169,7 @@ class PublicOpinionCaseDB:
     def get_stats(self):
         """获取案例统计"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = DatabaseRepository(self.db_path).connect()
             cursor = conn.cursor()
             
             stats = {}
