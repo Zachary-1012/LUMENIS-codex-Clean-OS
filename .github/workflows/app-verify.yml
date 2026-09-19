@@ -1,13 +1,6 @@
 name: LUMENIS App Gate
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
-      - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
-      - ".github/workflows/app-verify.yml"
   pull_request:
     branches: [main]
     paths:
