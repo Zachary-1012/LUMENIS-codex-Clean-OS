@@ -15,10 +15,16 @@ from .loop import LearningLoop, RuleSuggestion
 from .collector import CodebaseScanner, LearningAnalyzer, run_learning_scan, get_learning_history
 from .feedback import DataFeedbackLoop, data_feedback_loop
 from .persistence import LearningPersistence
+from .operations import (
+    OperationLearning, get_operation_learning, get_learning_status,
+    get_operation_history, get_optimization_suggestion, record_operation,
+)
 
 __all__ = [
     "LearningMemory", "LearningType", "LifecycleStage", "SampleType",
     "LearningLoop", "RuleSuggestion",
     "CodebaseScanner", "LearningAnalyzer", "run_learning_scan", "get_learning_history",
     "DataFeedbackLoop", "data_feedback_loop", "LearningPersistence",
+    "OperationLearning", "get_operation_learning", "get_learning_status",
+    "get_operation_history", "get_optimization_suggestion", "record_operation",
 ]
