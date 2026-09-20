@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -17,9 +19,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('sys01/layout-mobile')), findsOneWidget);
-    expect(find.text('健康'), findsNWidgets(2));
+    expect(find.text('正常'), findsNWidgets(2));
     expect(find.text('2'), findsOneWidget);
     expect(find.text('0'), findsNWidgets(2));
+    expect(find.text('异常后台进程'), findsOneWidget);
+    expect(find.text('失败队列记录总数'), findsOneWidget);
+    expect(find.text('后台进程总数'), findsOneWidget);
 
     final failedY = tester
         .getTopLeft(find.byKey(const ValueKey('sys01/count-failed-workers')))
@@ -50,7 +55,26 @@ void main() {
     expect(find.byKey(const ValueKey('sys01/counts')), findsOneWidget);
     expect(find.byKey(const ValueKey('sys01/guardrails')), findsOneWidget);
     expect(find.byKey(const ValueKey('sys01/source-rail')), findsOneWidget);
-    expect(find.text('Runtime 样本时间'), findsOneWidget);
+    expect(find.text('状态检查时间'), findsOneWidget);
+    expect(find.text('系统运行监测'), findsOneWidget);
+    expect(find.text('已识别'), findsOneWidget);
+    expect(find.text('legacy'), findsNothing);
+    for (final internalTerm in [
+      'RuntimeGuardian',
+      'Runtime',
+      'Worker',
+      'DLQ',
+      'Reaper',
+      '熔断器',
+      'Owner',
+      'SYSTEM /',
+      'Evidence',
+      'Core',
+      'SYS-01',
+      'ready',
+    ]) {
+      expect(find.textContaining(internalTerm), findsNothing);
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -81,10 +105,68 @@ void main() {
 
     expect(find.text('0'), findsNothing);
     expect(find.text('当前不可用'), findsNWidgets(3));
-    expect(find.text('状态不可用'), findsOneWidget);
-    expect(find.text('未提供'), findsWidgets);
+    expect(find.text('暂不可用'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'authentication, access, offline, and response failures use safe copy',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final failures = [
+        (
+          error: Exception('HTTP 401 private authentication response'),
+          title: '需要登录',
+          detail: '请登录后查看系统运行状态。',
+          canRetry: false,
+        ),
+        (
+          error: Exception('HTTP 403 private permission response'),
+          title: '当前账号无法查看',
+          detail: '如需查看系统运行状态，请联系系统管理员。',
+          canRetry: false,
+        ),
+        (
+          error: const SocketException('private.internal service unavailable'),
+          title: '系统服务暂不可用',
+          detail: '暂时无法读取当前运行状态。请检查连接后重试。',
+          canRetry: true,
+        ),
+        (
+          error: const FormatException('Core HTTP 500 runtime contract detail'),
+          title: '运行状态暂不可用',
+          detail: '系统暂时无法提供有效状态，请稍后重试。',
+          canRetry: true,
+        ),
+      ];
+
+      for (final failure in failures) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpWidget(_app(_FailingSys01Repository(failure.error)));
+        await tester.pumpAndSettle();
+
+        expect(find.text(failure.title), findsOneWidget);
+        expect(find.text(failure.detail), findsOneWidget);
+        expect(
+          find.text('重新检查'),
+          failure.canRetry ? findsOneWidget : findsNothing,
+        );
+        for (final internalTerm in [
+          'Core',
+          'RuntimeGuardian',
+          'HTTP',
+          'private',
+          'contract',
+          'SYS-01',
+        ]) {
+          expect(find.textContaining(internalTerm), findsNothing);
+        }
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 }
 
 Widget _app(Sys01Repository repository) => MaterialApp(
@@ -99,6 +181,15 @@ class _FakeSys01Repository implements Sys01Repository {
 
   @override
   Future<Sys01Snapshot> load() async => snapshot;
+}
+
+class _FailingSys01Repository implements Sys01Repository {
+  const _FailingSys01Repository(this.error);
+
+  final Object error;
+
+  @override
+  Future<Sys01Snapshot> load() async => throw error;
 }
 
 Sys01Snapshot _snapshot({

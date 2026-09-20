@@ -65,7 +65,7 @@ class _LoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       liveRegion: true,
-      label: '正在读取 RuntimeGuardian 运行状态',
+      label: '正在读取系统运行状态',
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -122,26 +122,14 @@ class _FailureState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (title, detail, canRetry) = switch (kind) {
-      Sys01FailureKind.authentication => (
-        '需要登录',
-        '当前会话无法读取 RuntimeGuardian 状态。请返回应用完成登录后再进入此页。',
-        false,
-      ),
+      Sys01FailureKind.authentication => ('需要登录', '请登录后查看系统运行状态。', false),
       Sys01FailureKind.permissionDenied => (
-        '没有读取权限',
-        '当前账号无权读取 SYS-01 运行状态。请联系系统管理员确认访问权限。',
+        '当前账号无法查看',
+        '如需查看系统运行状态，请联系系统管理员。',
         false,
       ),
-      Sys01FailureKind.offline => (
-        'Core 当前不可连接',
-        'Production Core 没有返回本次运行状态；页面已清除旧快照。',
-        true,
-      ),
-      Sys01FailureKind.response => (
-        '运行状态读取失败',
-        'Core 响应无效或暂时无法处理；本页没有把错误转换为零值。',
-        true,
-      ),
+      Sys01FailureKind.offline => ('系统服务暂不可用', '暂时无法读取当前运行状态。请检查连接后重试。', true),
+      Sys01FailureKind.response => ('运行状态暂不可用', '系统暂时无法提供有效状态，请稍后重试。', true),
     };
 
     return Align(
@@ -154,7 +142,7 @@ class _FailureState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _Eyebrow('SYSTEM / RUNTIME'),
+              const _Eyebrow('系统运行'),
               const SizedBox(height: 16),
               Text(
                 title,
@@ -173,7 +161,7 @@ class _FailureState extends StatelessWidget {
                 const SizedBox(height: 20),
                 FilledButton.tonal(
                   onPressed: onRetry,
-                  child: const Text('重新读取'),
+                  child: const Text('重新检查'),
                 ),
               ],
             ],
@@ -222,9 +210,9 @@ class _RuntimeDashboard extends StatelessWidget {
                     children: [
                       _CountStack(
                         counts: [
-                          _CountEntry('注册 Worker', snapshot.registeredWorkers),
-                          _CountEntry('失败 Worker', snapshot.failedWorkers),
-                          _CountEntry('DLQ 总数', snapshot.dlqTotal),
+                          _CountEntry('后台进程总数', snapshot.registeredWorkers),
+                          _CountEntry('异常后台进程', snapshot.failedWorkers),
+                          _CountEntry('失败队列记录总数', snapshot.dlqTotal),
                         ],
                       ),
                       const SizedBox(height: 18),
@@ -245,11 +233,11 @@ class _RuntimeDashboard extends StatelessWidget {
           children: [
             overview,
             const SizedBox(height: 16),
-            _CountCard(label: '失败 Worker', count: snapshot.failedWorkers),
+            _CountCard(label: '异常后台进程', count: snapshot.failedWorkers),
             const SizedBox(height: 10),
-            _CountCard(label: 'DLQ 总数', count: snapshot.dlqTotal),
+            _CountCard(label: '失败队列记录总数', count: snapshot.dlqTotal),
             const SizedBox(height: 10),
-            _CountCard(label: '注册 Worker', count: snapshot.registeredWorkers),
+            _CountCard(label: '后台进程总数', count: snapshot.registeredWorkers),
             const SizedBox(height: 18),
             _GuardrailPanel(snapshot: snapshot),
             const SizedBox(height: 14),
@@ -265,9 +253,9 @@ class _RuntimeDashboard extends StatelessWidget {
             const SizedBox(height: 16),
             _CountStack(
               counts: [
-                _CountEntry('注册 Worker', snapshot.registeredWorkers),
-                _CountEntry('失败 Worker', snapshot.failedWorkers),
-                _CountEntry('DLQ 总数', snapshot.dlqTotal),
+                _CountEntry('后台进程总数', snapshot.registeredWorkers),
+                _CountEntry('异常后台进程', snapshot.failedWorkers),
+                _CountEntry('失败队列记录总数', snapshot.dlqTotal),
               ],
             ),
             const SizedBox(height: 12),
@@ -326,7 +314,7 @@ class _PageHeader extends StatelessWidget {
         const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Eyebrow('SYSTEM / RUNTIMEGUARDIAN'),
+            _Eyebrow('系统运行'),
             SizedBox(height: 8),
             Text(
               '运行状态',
@@ -339,7 +327,7 @@ class _PageHeader extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text(
-              'Worker、DLQ 与运行保护状态',
+              '后台任务、失败队列与服务保护状态',
               style: TextStyle(color: LumenisTheme.muted, fontSize: 13),
             ),
           ],
@@ -348,12 +336,12 @@ class _PageHeader extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              snapshot.hasCompleteRuntimeSample ? '实时快照' : '部分数据',
+              snapshot.hasCompleteRuntimeSample ? '当前状态' : '部分数据',
               style: const TextStyle(color: LumenisTheme.muted, fontSize: 12),
             ),
             const SizedBox(width: 8),
             IconButton(
-              tooltip: '重新读取 RuntimeGuardian 状态',
+              tooltip: '刷新运行状态',
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh_rounded),
               color: LumenisTheme.system,
@@ -406,15 +394,15 @@ class _OverallStatus extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'RuntimeGuardian 总体状态',
+                  '系统整体状态',
                   style: TextStyle(color: LumenisTheme.muted, fontSize: 13),
                 ),
                 const SizedBox(height: 6),
                 Semantics(
                   liveRegion: true,
-                  label: 'RuntimeGuardian 总体状态：$label',
+                  label: '系统整体状态：${available ? label : '暂不可用'}',
                   child: Text(
-                    available ? label : '状态不可用',
+                    available ? label : '暂不可用',
                     style: TextStyle(
                       color: available ? color : LumenisTheme.muted,
                       fontSize: 23,
@@ -425,7 +413,7 @@ class _OverallStatus extends StatelessWidget {
                 if (available) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'RuntimeGuardian · ${snapshot.overall}',
+                    '本次系统状态检查已完成',
                     style: const TextStyle(
                       color: LumenisTheme.quiet,
                       fontSize: 12,
@@ -434,7 +422,7 @@ class _OverallStatus extends StatelessWidget {
                 ] else ...[
                   const SizedBox(height: 4),
                   const Text(
-                    'Core 未提供可确认的健康状态',
+                    '当前无法确认系统整体状态',
                     style: TextStyle(color: LumenisTheme.muted, fontSize: 12),
                   ),
                 ],
@@ -442,7 +430,7 @@ class _OverallStatus extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _StateTag(label: available ? label : '未提供', color: color),
+          _StateTag(label: available ? label : '暂不可用', color: color),
         ],
       ),
     );
@@ -465,8 +453,8 @@ class _CountStack extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       key: const ValueKey('sys01/counts'),
-      title: 'Worker 与 DLQ',
-      detail: '只显示当前 RuntimeGuardian 返回且标记为 ready 的整数',
+      title: '后台任务与失败队列',
+      detail: '展示当前已确认的数量；暂未提供的数据会单独标明。',
       child: Column(
         children: [
           for (var index = 0; index < counts.length; index++) ...[
@@ -531,7 +519,7 @@ class _CountValue extends StatelessWidget {
     final value = count.value;
     final available = value != null;
     return Semantics(
-      label: available ? '$value' : '计数未提供',
+      label: available ? '$value' : '系统状态暂不可用',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -548,7 +536,7 @@ class _CountValue extends StatelessWidget {
           if (!available) ...[
             const SizedBox(height: 3),
             Text(
-              count.state == 'offline' ? '当前不可用' : 'Core 未提供',
+              count.state == 'offline' ? '当前不可用' : '暂未提供',
               style: const TextStyle(color: LumenisTheme.quiet, fontSize: 11),
             ),
           ],
@@ -567,14 +555,12 @@ class _GuardrailPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       key: const ValueKey('sys01/guardrails'),
-      title: '运行保护',
-      detail: snapshot.hasCompleteRuntimeSample
-          ? '来自本次 RuntimeGuardian 健康快照'
-          : '快照不完整；不展示后端可能规范化的默认状态',
+      title: '服务保护状态',
+      detail: snapshot.hasCompleteRuntimeSample ? '本次检查数据完整' : '部分服务状态暂无法确认',
       child: Column(
         children: [
           _GuardrailLine(
-            label: 'Reaper',
+            label: '过期任务回收服务',
             value: _reaperLabel(snapshot.reaperRunning),
             color: snapshot.reaperRunning == true
                 ? LumenisTheme.positive
@@ -584,14 +570,14 @@ class _GuardrailPanel extends StatelessWidget {
           ),
           const _Rule(),
           _GuardrailLine(
-            label: 'OPEN 熔断器',
-            value: snapshot.openBreakers?.toString() ?? '未提供',
+            label: '已触发的调用保护',
+            value: snapshot.openBreakers?.toString() ?? '暂不可用',
             color: _breakerColor(snapshot.openBreakers),
           ),
           const _Rule(),
           _GuardrailLine(
-            label: '已登记熔断器',
-            value: snapshot.registeredBreakers?.toString() ?? '未提供',
+            label: '已配置的调用保护',
+            value: snapshot.registeredBreakers?.toString() ?? '暂不可用',
             color: snapshot.registeredBreakers == null
                 ? LumenisTheme.muted
                 : LumenisTheme.foreground,
@@ -617,9 +603,9 @@ class _GuardrailDisclosure extends StatelessWidget {
       ),
       child: ExpansionTile(
         key: const ValueKey('sys01/guardrail-inspector'),
-        title: const Text('运行保护检查'),
+        title: const Text('服务保护状态'),
         subtitle: Text(
-          snapshot.hasCompleteRuntimeSample ? '查看 Reaper 与熔断器' : '本次快照不完整',
+          snapshot.hasCompleteRuntimeSample ? '查看任务回收与调用保护' : '部分服务状态暂无法确认',
           style: const TextStyle(color: LumenisTheme.muted, fontSize: 12),
         ),
         iconColor: LumenisTheme.system,
@@ -673,25 +659,25 @@ class _SourceRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       key: const ValueKey('sys01/source-rail'),
-      title: '来源与采样时间',
-      detail: 'SYS-01 实时读取 · 不代表持久化 Evidence',
+      title: '数据来源与更新时间',
+      detail: '每次打开或刷新时读取当前状态',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SourceLine(label: 'Owner', value: 'SYSTEM / RuntimeGuardian'),
+          _SourceLine(label: '状态来源', value: '系统运行监测'),
           if (snapshot.guardianName != null) ...[
             const _Rule(),
-            _SourceLine(label: 'Guardian', value: snapshot.guardianName!),
+            const _SourceLine(label: '运行服务状态', value: '已识别'),
           ],
           const _Rule(),
           _SourceLine(
-            label: 'Runtime 样本时间',
+            label: '状态检查时间',
             value: snapshot.sampleTimestamp ?? '未提供',
             emphasize: true,
           ),
           const SizedBox(height: 12),
           const Text(
-            '时间取自 RuntimeGuardian 健康样本；没有样本时间时不使用设备时间或页面生成时间替代。',
+            '显示时间来自系统运行状态检查记录。',
             style: TextStyle(
               color: LumenisTheme.quiet,
               fontSize: 11,
@@ -846,17 +832,17 @@ class _Rule extends StatelessWidget {
 }
 
 String _overallLabel(String? value) => switch (value?.toLowerCase()) {
-  'healthy' || 'ok' => '健康',
-  'degraded' => '降级',
+  'healthy' || 'ok' => '正常',
+  'degraded' => '部分异常',
   'unhealthy' => '异常',
-  'error' => '错误',
-  _ => '未提供',
+  'error' => '异常',
+  _ => '暂不可用',
 };
 
 String _reaperLabel(bool? running) => switch (running) {
   true => '运行中',
   false => '已停止',
-  null => '未提供',
+  null => '暂不可用',
 };
 
 Color _stateColor(String state) => switch (state) {
@@ -873,8 +859,8 @@ Color _breakerColor(int? count) => count == null
     : LumenisTheme.positive;
 
 String _countKey(String label) => switch (label) {
-  '注册 Worker' => 'registered-workers',
-  '失败 Worker' => 'failed-workers',
-  'DLQ 总数' => 'dlq',
+  '后台进程总数' => 'registered-workers',
+  '异常后台进程' => 'failed-workers',
+  '失败队列记录总数' => 'dlq',
   _ => 'metric',
 };

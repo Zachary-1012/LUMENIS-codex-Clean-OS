@@ -56,20 +56,32 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 
 | State | Trigger/evidence | User-visible meaning | Available actions | Recovery/return behavior | Acceptance ID |
 | --- | --- | --- | --- | --- | --- |
-| Loading | GET pending | Reading RuntimeGuardian snapshot | Wait or leave page | No placeholders or zero counts | SYS01-READ-01 |
+| Loading | GET pending | 正在读取系统运行状态 | Wait or leave page | No placeholders or zero counts | SYS01-READ-01 |
 | Empty / no source data | Bound response with known zero Worker/DLQ count | The returned source count is exactly zero | Read details | Render zero only for a numeric value whose KPI state is `ready` | SYS01-READ-02 |
-| Not collected | Metric is null/notcollected or field missing | This health value was not supplied | Read other available fields | Keep unavailable distinct from zero | SYS01-READ-03 |
+| Not collected | Metric is null/notcollected or field missing | Count shows “暂未提供”; unavailable status never appears as 0 | Read other available fields | Keep unavailable distinct from zero | SYS01-READ-03 |
 | Fresh | Runtime source timestamp is present | Show the timestamp returned by RuntimeGuardian | Read current snapshot | Do not claim a freshness SLA that is not in the contract | SYS01-READ-04 |
 | Stale | No stale threshold is defined | Staleness cannot be classified | Reload only through the normal screen refresh mechanism | Do not infer stale from device clock | SYS01-READ-05 |
 | Partial | Some KPI values are ready while others are null/offline, or sample timestamp/overall is absent | Show valid counts and mark affected runtime indicators unavailable | Return or retry GET | Do not interpret normalized `false`, `open=0`, `—` defaults as source facts when the sample is incomplete | SYS01-READ-06 |
-| Offline | Network/Socket failure | Runtime state cannot currently be read | Retry GET | Clear old snapshot; never keep stale values under a live label | SYS01-READ-07 |
-| Blocked / permission denied | HTTP 401 or 403 | Authentication is required or this account cannot read the endpoint | Return to shell authentication/access route; no operation action is offered | Keep 401 and 403 distinct | SYS01-AUTH-01 |
-| Error | Non-2xx other than 401/403, malformed JSON, wrong screen id or runtime error | Runtime health could not be read | Retry GET | Show a bounded error state, no zero values | SYS01-READ-08 |
+| Offline | Network/Socket failure | 系统服务暂不可用；暂时无法读取当前运行状态 | Retry GET | Clear old snapshot; never keep stale values under a live label | SYS01-READ-07 |
+| Blocked / permission denied | HTTP 401 or 403 | 401: “需要登录”；403: “当前账号无法查看” | Return to shell authentication/access route; no operation action is offered | Keep 401 and 403 distinct | SYS01-AUTH-01 |
+| Error | Non-2xx other than 401/403, malformed JSON, wrong screen id or runtime error | 运行状态暂不可用；系统暂时无法提供有效状态 | Retry GET | Show a bounded error state, no zero values | SYS01-READ-08 |
 | Success / persisted | Not applicable: endpoint is read-only | Nothing is persisted by this screen | None | Do not show a success toast or imply a runtime mutation | SYS01-EFFECT-01 |
+
+### App language mapping
+
+| Returned value | App display | Boundary |
+| --- | --- | --- |
+| `truth.overall`: healthy/ok, degraded, unhealthy/error, missing | 正常、部分异常、异常、暂不可用 | Never infer health from absent fields. |
+| Worker total / failed count | 后台进程总数 / 异常后台进程 | These are registered runtime worker records, not business-task counts. |
+| DLQ total | 失败队列记录总数 | Show a number only when the current source returns a ready integer. |
+| Reaper state | 过期任务回收服务：运行中、已停止或暂不可用 | Do not expose the internal service name. |
+| Circuit-breaker counts | 已触发的调用保护 / 已配置的调用保护 | Keep open and registered counts distinct; missing counts display 暂不可用. |
+| Runtime guardian instance name | 运行服务状态：已识别 | Do not display internal instance names. |
+| Health sample timestamp | 状态检查时间; absent value displays 暂不可用 | Use only the timestamp returned by the health source; do not substitute device time. |
 
 ## 5. Purpose-built desktop composition
 
-- Primary question: is RuntimeGuardian healthy, and which runtime counts or guardrails explain that state?
+- Primary question: is the system operating normally, and which counts or protections explain its current state?
 - At ≥1100 logical px of feature content after Shell navigation, use a vertical operational spine: overall state and source sample at the top; Worker/DLQ counts in the central inspection plane; reaper and circuit-breaker entry count in a narrow guardrail rail. Keep timestamp and guardian identity in the source rail.
 - At 768–1099 logical px of feature content, keep the overall state pinned above the count surface; move guardrail details into a reversible inspector so the primary status remains visible.
 - Use status text plus shape/label; never rely on color alone. A number is not colored as healthy unless its source state is ready.
@@ -77,7 +89,7 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 
 ## 6. Purpose-built mobile composition
 
-- At ≤767 px, use a single fault-priority column: overall health first, then failed Worker and DLQ counts, then total workers, then reaper/breaker details and sample time.
+- At ≤767 px, use a single fault-priority column: overall health first, then failed background processes and failed-queue records, then total background processes, then reaper/protection details and sample time.
 - Unknown/offline indicators remain beside each metric, not collapsed into a generic empty page.
 - Keep SYSTEM identity visible while scrolling. No destructive or recovery control is shown.
 - Use touch-sized refresh/back controls only when supplied by the existing shell. Return to the same originating navigation location.
@@ -92,7 +104,7 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 ## 8. Accessibility, motion and localization
 
 - Keyboard focus proceeds from overall state to counts, guardrails, guardian identity and timestamp; all text remains selectable.
-- Announce overall state and read failure through semantic labels/live region. Each unavailable count includes “未提供/离线”, not just a dash or color.
+- Announce overall state and read failure through semantic labels/live region. Each unavailable count says “暂未提供/当前不可用”, not just a dash or color.
 - Counts and breaker-entry count are textual; no chart is needed for this slice.
 - Motion is limited to state transitions and can be disabled for reduced-motion preference.
 - Chinese/English labels wrap at narrow widths and 200% text size. Do not claim Korean localization until verified.

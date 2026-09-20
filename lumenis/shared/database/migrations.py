@@ -537,6 +537,29 @@ def migration_12_to_13(conn):
     apply_platform_schema(conn)
 
 
+def _ensure_migration_prerequisites(conn, target_version: int) -> None:
+    """Create owner-managed base schemas required by the historical migrations.
+
+    The versioned upgrade predates the current Canonical Data and Evidence
+    owners. Fresh databases need those owner schemas before v9→v10 and
+    v10→v11 can add their versioned fields. Call the existing idempotent
+    initializers only when their required tables are absent.
+    """
+    if target_version >= 10 and conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='canonical_data'"
+    ).fetchone() is None:
+        from canonical_data import ensure_canonical_table
+
+        ensure_canonical_table(main_db_path())
+
+    if target_version >= 11 and conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='zbc_canonical_data'"
+    ).fetchone() is None:
+        from lumenis.shared.evidence.chain import init_db as init_evidence_chain_db
+
+        init_evidence_chain_db(main_db_path())
+
+
 def _migrate_add_publish_datetime_index():
     """独立入口：启动时直接确保 publish_datetime 索引存在（幂等，不触发完整版本迁移/备份）。
     P0-2：趋势API日期范围查询依赖此索引。
@@ -585,7 +608,14 @@ def migrate(target_version: Optional[int] = None) -> bool:
     # 迁移前自动备份
     print("\n📦 迁移前自动备份数据库...")
     backup_database(f"before_migration_v{current_version}_to_v{target_version}.db")
-    
+
+    try:
+        _ensure_migration_prerequisites(conn, target_version)
+    except Exception as e:
+        print(f"❌ 迁移前共享 schema 初始化失败: {e}")
+        conn.close()
+        return False
+
     # 执行迁移
     for version in range(current_version, target_version):
         if version in MIGRATIONS:

@@ -69,7 +69,7 @@ class _LoadingState extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: Semantics(
       liveRegion: true,
-      label: '正在读取 CTH 主体登记目录',
+      label: '正在查看 CTH 经营主体名单',
       child: const CircularProgressIndicator(),
     ),
   );
@@ -82,13 +82,12 @@ class _FailureState extends StatelessWidget {
   final VoidCallback onRetry;
 
   String get _message => switch (kind) {
-    Cth02FailureKind.authentication => '读取主体目录需要有效账号身份。验证完成前不会显示 Subject 信息。',
-    Cth02FailureKind.permissionDenied =>
-      '当前账号没有 CTH 主体目录读取权限。未读取或显示任何 Subject 信息。',
-    Cth02FailureKind.permissionUnavailable => '读取权限服务暂不可用。主体目录保持隐藏，请稍后重试。',
-    Cth02FailureKind.offline => '无法连接 LUMENIS Core。主体目录尚未读取。',
-    Cth02FailureKind.invalidResponse => 'Core 响应不符合 CTH 主体目录契约。未显示其中的主体数据。',
-    Cth02FailureKind.server => '主体目录读取失败。现有主体数据不会作为备用内容显示。',
+    Cth02FailureKind.authentication => '无法确认当前登录状态，请重新登录后查看 CTH 经营主体名单。',
+    Cth02FailureKind.permissionDenied => '当前账号无法查看 CTH 经营主体名单。名单内容未显示。',
+    Cth02FailureKind.permissionUnavailable => '暂时无法确认您是否可以查看 CTH 经营主体名单，请稍后重试。',
+    Cth02FailureKind.offline => '暂时无法连接服务，未能读取 CTH 经营主体名单。',
+    Cth02FailureKind.invalidResponse => 'CTH 经营主体名单暂时无法显示，请稍后重试。',
+    Cth02FailureKind.server => 'CTH 经营主体名单暂时无法加载，请稍后重试。',
   };
 
   @override
@@ -104,10 +103,10 @@ class _FailureState extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _Eyebrow('CTH  /  SUBJECT PROFILE'),
+                const _Eyebrow('CTH  ·  经营主体'),
                 const SizedBox(height: 15),
                 Text(
-                  '主体档案与归属关系',
+                  '经营主体与关联信息',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: LumenisTheme.foreground,
                     fontWeight: FontWeight.w600,
@@ -122,7 +121,7 @@ class _FailureState extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
-                _ActionButton(label: '重试主体目录读取', onPressed: onRetry),
+                _ActionButton(label: '重新查看主体名单', onPressed: onRetry),
               ],
             ),
           ),
@@ -208,14 +207,14 @@ class _PageHeading extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Eyebrow('CTH  /  SUBJECT PROFILE'),
+        const _Eyebrow('CTH  ·  经营主体'),
         const SizedBox(height: 11),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Text(
-                '主体档案与归属关系',
+                '经营主体与关联信息',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: LumenisTheme.foreground,
                   fontWeight: FontWeight.w600,
@@ -224,7 +223,7 @@ class _PageHeading extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: '重新读取 CTH 主体目录',
+              tooltip: '刷新 CTH 主体名单',
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh_rounded),
             ),
@@ -232,7 +231,7 @@ class _PageHeading extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          '仅展示已通过 CTH 主体目录读取权限返回的登记元数据；不切换当前 Subject。',
+          '仅展示 CTH 经营主体名单中的基本资料。名单可见不代表可以查看名单内任一主体的经营数据；本页不会切换当前主体。',
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
@@ -242,8 +241,8 @@ class _PageHeading extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            _StatusChip(label: '目录读取权限 · CTH', color: LumenisTheme.cth),
-            _StatusChip(label: '本次返回 $count 项', color: LumenisTheme.quiet),
+            _StatusChip(label: 'CTH 主体名单', color: LumenisTheme.cth),
+            _StatusChip(label: '名单中 $count 个主体', color: LumenisTheme.quiet),
           ],
         ),
       ],
@@ -263,10 +262,10 @@ class _DirectoryPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelHeading(eyebrow: 'CTH SUBJECT REGISTRY', title: '主体登记目录'),
+          const _PanelHeading(eyebrow: 'CTH 主体名单', title: '经营主体名单'),
           const SizedBox(height: 8),
           const Text(
-            '目录读取权限用于发现可选主体，不代表该主体的业务数据授权。',
+            '名单只展示主体基本资料，不会切换当前经营主体或显示主体经营数据。',
             style: TextStyle(color: LumenisTheme.muted, height: 1.5),
           ),
           const SizedBox(height: 16),
@@ -343,7 +342,7 @@ class _EmptyDirectory extends StatelessWidget {
   Widget build(BuildContext context) => const Padding(
     padding: EdgeInsets.symmetric(vertical: 26),
     child: Text(
-      '当前 CTH 主体登记目录为空。此状态仅说明目录没有已返回条目。',
+      '当前 CTH 经营主体名单中暂无主体。',
       style: TextStyle(color: LumenisTheme.muted, height: 1.5),
     ),
   );
@@ -359,15 +358,15 @@ class _OwnershipAvailabilityPanel extends StatelessWidget {
         key: const ValueKey('cth02/ownership-not-collected'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelHeading(eyebrow: 'OWNERSHIP / EVIDENCE', title: '主体归属链'),
+          const _PanelHeading(eyebrow: '主体关联信息', title: '主体关联信息'),
           const SizedBox(height: 9),
           const Text(
-            'Subject → 业务单元 → 品牌 / 业态',
+            '经营主体 → 业务单元 → 品牌 / 业态',
             style: TextStyle(color: LumenisTheme.foreground, fontSize: 16),
           ),
           const SizedBox(height: 7),
           Text(
-            '目录登记不包含关系主数据。关系及其来源、责任方和 Evidence 均未返回。',
+            '当前名单未提供已核实的主体与业务单元、品牌及业态关联资料。',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
@@ -375,13 +374,13 @@ class _OwnershipAvailabilityPanel extends StatelessWidget {
           const SizedBox(height: 22),
           const _RelationshipRecord(
             index: '01',
-            title: 'Subject → 业务单元',
-            detail: '业务单元主数据与归属边未采集',
+            title: '经营主体 → 业务单元',
+            detail: '主体对应的业务单元关联信息暂缺',
           ),
           const _RelationshipRecord(
             index: '02',
             title: '业务单元 → 品牌 / 业态',
-            detail: '品牌、业态与有效期关系未采集',
+            detail: '品牌、业态及有效期关联信息暂缺',
           ),
           const SizedBox(height: 15),
           const _LineageNotice(),
@@ -448,10 +447,7 @@ class _RelationshipRecord extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            const _StatusChip(
-              label: 'NOT_COLLECTED',
-              color: LumenisTheme.caution,
-            ),
+            const _StatusChip(label: '资料暂缺', color: LumenisTheme.caution),
           ],
         ),
       ),
@@ -477,7 +473,7 @@ class _LineageNotice extends StatelessWidget {
         SizedBox(width: 10),
         Expanded(
           child: Text(
-            '不使用静态品牌目录、全局聚合或示例数据补齐关系。当前目录读取不会切换工作 Subject，也不会请求 CTH-02 聚合接口。',
+            '本页不会根据其他资料推断主体之间的关联，也不会自动切换当前经营主体。',
             style: TextStyle(color: LumenisTheme.muted, height: 1.55),
           ),
         ),

@@ -157,9 +157,7 @@ class Cth01Repository {
     final product = _text(currentSubject?['product']);
     final domain = _text(identity['domain']).toLowerCase();
     if (subjectId.isEmpty || product != 'CTH' || domain != 'cth') {
-      throw const Cth01ContextUnavailable(
-        'LUMENIS Core 未返回当前 CTH Subject 上下文。',
-      );
+      throw const Cth01ContextUnavailable('当前经营主体暂不可用，请刷新后重试。');
     }
 
     final response = await _client.screen('CTH-01');
@@ -169,9 +167,7 @@ class Cth01Repository {
       );
     }
     if (response['bound'] != true) {
-      throw const Cth01ContextUnavailable(
-        'LUMENIS Core 尚未绑定 CTH-01 ViewModel。',
-      );
+      throw const Cth01ContextUnavailable('商业运营信息暂不可用，请稍后重试。');
     }
 
     return _decodeScreen(subjectId, response);

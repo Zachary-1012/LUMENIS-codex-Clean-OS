@@ -147,6 +147,10 @@ SYSTEM          Collector / Runtime / Scheduler / AI Gateway / DB / Security / P
 
 This product definition is locked. Repository cleanup must preserve the four domains, their owners, business workflows and shared services. A legacy-looking folder or identifier is not evidence that the capability is obsolete. Before removing a path, map its implementation and contracts to the current owner; retain the newer owner or migrate any unique behavior first. This repository is the only code-change target for 序境. The three companion products remain represented by the cross-repository registry as ecosystem specifications and ownership boundaries.
 
+The user-facing product abbreviation is **BMP**. Existing account and storage interfaces still carry `product_id=ZBMP` and `domain_id=zbmp` as compatibility identifiers; App labels and screen copy must resolve them to BMP. An identifier migration must preserve authorization and stored history across the account, database, API adapter and acceptance-test owners.
+
+User-facing App text and accessibility labels use product and business language, not implementation or governance terminology. Preserve distinct business states (such as no records, not collected, unavailable and access restricted); never merge them into a misleading empty state or fabricate zero values.
+
 AI enhances the product; AI is not Production Truth.
 
 Canonical production chain:
@@ -457,9 +461,9 @@ For any user-visible Experience/UI task, the **sole design authority** is:
 
 No nested router, archived screen, or prototype document may define a second design authority.
 
-The current canonical Flutter App is a bootstrap. The product owner must explicitly accept §§30–36 (including all 44 screen-specific UX blueprints) before feature-screen implementation begins. The blueprints are design direction, not implementation-ready screen specifications. After plan acceptance and before implementing any screen, create its reviewed specification under `contracts/experience/screen-specifications/` from `SCREEN_SPEC_TEMPLATE.md`; each specification must pass §36's owner, binding, entry/return, field-priority, state, desktop/mobile, permission/effect, accessibility and executable-acceptance gates. The 54-row binding registry is a data/permission/Evidence truth ledger only; it is not a layout system. Any `UNKNOWN` owner, callable, permission or lineage blocks the dependent behavior. Legacy `sectionTypes` must not drive a generic renderer or swapped-title page template. Reusable components may share accessible behavior and design tokens, while each screen keeps its own task, hierarchy, composition and interaction path.
+The product owner accepted §§30–36, including all 44 screen-specific UX blueprints, on 2026-09-20. App implementation proceeds through reviewed screen specifications under `contracts/experience/screen-specifications/` and source-backed vertical slices; this approval is not evidence that a screen or workflow is implemented or accepted. Each specification must pass §36's owner, binding, entry/return, field-priority, state, desktop/mobile, permission/effect, accessibility and executable-acceptance gates. The 54-row binding registry is a data/permission/Evidence truth ledger only; it is not a layout system. Any `UNKNOWN` owner, callable, permission or lineage blocks the dependent behavior. Legacy `sectionTypes` must not drive a generic renderer or swapped-title page template. Reusable components may share accessible behavior and design tokens, while each screen keeps its own task, hierarchy, composition and interaction path.
 
-Before claiming Experience work complete, run both blocking checks:
+Before claiming Experience work complete, run all three blocking checks:
 
 ```text
 python scripts/audit_tools/verify_experience_authority_exclusive.py

@@ -30,7 +30,7 @@ class Sh01Capability {
   static Sh01Capability? tryParse(Object? value) {
     final record = _asMap(value);
     if (record == null) return null;
-    final id = _string(record['id']);
+    final id = _string(record['id'] ?? record['skill_id']);
     final name = _string(record['name']);
     if (id.isEmpty || name.isEmpty) return null;
     return Sh01Capability(
@@ -41,8 +41,8 @@ class Sh01Capability {
       consumers: _strings(record['consumers']),
       category: _string(record['category']),
       version: _string(record['version']),
-      permission: _string(record['permission']),
-      risk: _string(record['risk']),
+      permission: _string(record['permission'] ?? record['permission_level']),
+      risk: _string(record['risk'] ?? record['risk_level']),
       executionPolicy: _string(record['execution_policy']),
       evaluationStatus: _string(record['evaluation_status']),
       implementationState: _string(record['implementation_state']),

@@ -10,7 +10,7 @@ This is the repository's **single canonical Flutter app target** and the only in
 - CTH-02 opens from CTH-01 as `浏览 CTH 主体登记目录`; it does not add a sixth top-level destination or change the active Subject/context. It displays only metadata returned by the account-authorized registry endpoint. Subject → business unit → brand/format ownership remains `NOT_COLLECTED`; the full profile remains blocked until its owner, read permission and Evidence lineage are verified.
 - BMP BrandFocus is shown only when Core returns both `domain=zbmp` and `subject.product=ZBMP`; a CTH `brand_key` is not a BMP brand context. CTH remains Subject-first, BMP remains Brand/Market-first, Shared retains source-domain lineage, and SYSTEM remains infrastructure.
 - The five Golden Page slices use screen-specific mappings and compositions. Their presence does **not** mean the Experience contracts or full workflows are accepted. The repository defines 44 screen-specific UX blueprints and 54 truth-binding rows. The binding registry constrains data/API/actor/permission/Evidence truth; legacy `sectionTypes` do not prescribe layouts, and a generic renderer is prohibited.
-- Windows Release and Android Release compilation have been verified locally. Windows/macOS/Linux/Android/iOS release support is not claimed: runtime, device, accessibility and end-to-end acceptance remain open by platform.
+- Windows and Android Release compilation have been verified locally. The Windows packaged binary also passed a launch smoke with the expected window title and a responsive process; this does not establish authenticated Product Core or screen-workflow acceptance. Android device acceptance and macOS/Linux/iOS packaging/runtime remain open.
 
 Do not invent UI data, backend behavior, permission results or successful actions to make an unbound screen appear complete. Keep `UNKNOWN`, `NOT_AVAILABLE`, `NOT_COLLECTED`, `STALE`, `BLOCKED` and `ERROR` distinct. A contract or fixture is not proof of a working endpoint or feature.
 
@@ -84,9 +84,9 @@ This is a staged delivery plan, not a claim that all 44 planned screens are impl
 
 - Toolchain: Flutter 3.47.5, Dart 3.13.4, Android API 36 / Build Tools 36, JDK 21.
 - `flutter analyze`: passed with no issues.
-- `flutter test`: 57 tests passed, including 1440 px / 390 px Shell and screen-layout coverage.
-- `pytest tests/test_experience_runtime.py tests/test_subject_registry.py`: 47 passed; no background-thread leaks. The cookie-route test isolates the unrelated app-startup migration from its file/identity assertions.
-- `flutter build windows --release`: succeeded; `build/windows/x64/runner/Release/lumenis_app.exe`.
+- `flutter test --no-pub`: 75 tests passed, including 1440 px / 390 px Shell and screen-layout coverage.
+- `py -3.13 -m pytest tests/test_experience_runtime.py tests/test_subject_registry.py tests/test_shared_database_migrations.py`: 48 passed; no background-thread leaks. The cookie-route test isolates the unrelated app-startup migration from its file/identity assertions.
+- `flutter build windows --release --no-pub`: succeeded; `build/windows/x64/runner/Release/lumenis_app.exe` launched locally with title `序境 - LUMENIS` and `Responding=True`.
 - `flutter build apk --release`: succeeded; `build/app/outputs/flutter-apk/app-release.apk`, 50,150,362 bytes, SHA-256 `F33E1F471343A0625EC3126FF40B78D895608997E880768DD821E8E22B0E6317`.
 - These results prove analysis, tests and compilation only. The APK currently uses the Flutter scaffold's debug signing key. Live Product Core account acceptance, packaged Windows runtime, Android device runtime, store signing, and macOS/Linux/iOS builds remain unverified.
 

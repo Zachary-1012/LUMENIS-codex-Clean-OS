@@ -17,9 +17,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AI 意图入口'), findsOneWidget);
-    expect(find.text('授权上下文未连接'), findsOneWidget);
-    expect(find.text('提交 AI 任务'), findsOneWidget);
-    expect(find.text('Evidence 摘要'), findsOneWidget);
+    expect(find.text('尚未确认可用的经营对象'), findsOneWidget);
+    expect(find.text('开始分析'), findsOneWidget);
+    expect(find.text('数据依据'), findsOneWidget);
+    _expectNoImplementationTerms(tester);
 
     await tester.ensureVisible(find.text('查看风险变化'));
     await tester.tap(find.text('查看风险变化'));
@@ -29,19 +30,26 @@ void main() {
       '检查风险变化并列出已有来源',
     );
 
-    await tester.ensureVisible(find.text('Evidence 摘要'));
-    await tester.tap(find.text('Evidence 摘要'));
+    await tester.ensureVisible(find.text('数据依据'));
+    await tester.tap(find.text('数据依据'));
     await tester.pumpAndSettle();
-    expect(find.text('现有 Evidence 统计源是全库口径，服务端暂不读取；数量和分布不返回。'), findsOneWidget);
+    expect(find.text('当前账号与经营主体或品牌的查看权限尚未确认，因此暂不展示资料总数或历史内容。'), findsOneWidget);
     expect(find.text('全局私有任务'), findsNothing);
 
-    await tester.ensureVisible(find.text('最近执行'));
-    await tester.tap(find.text('最近执行'));
+    await tester.ensureVisible(find.text('模型服务状态'));
+    await tester.tap(find.text('模型服务状态'));
     await tester.pumpAndSettle();
-    expect(find.text('最近执行接口未绑定已授权产品上下文，记录暂不展示。'), findsOneWidget);
+    expect(find.text('未启动'), findsOneWidget);
+    expect(find.text('daemon/model not ready'), findsNothing);
+
+    await tester.ensureVisible(find.text('近期分析记录'));
+    await tester.tap(find.text('近期分析记录'));
+    await tester.pumpAndSettle();
+    expect(find.text('当前账号可查看的经营范围尚未确认，暂时无法显示近期分析记录。'), findsOneWidget);
+    _expectNoImplementationTerms(tester);
 
     final submit = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '提交 AI 任务'),
+      find.widgetWithText(FilledButton, '开始分析'),
     );
     expect(submit.onPressed, isNull);
     expect(tester.takeException(), isNull);
@@ -57,44 +65,114 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('意图草稿'), findsOneWidget);
-    expect(find.text('EVIDENCE / SHARED'), findsOneWidget);
-    expect(find.text('RUNTIME / PROVIDERS'), findsOneWidget);
-    expect(find.text('AI EXECUTION / RECENT'), findsOneWidget);
+    expect(find.text('业务资料依据'), findsOneWidget);
+    expect(find.text('模型服务状态'), findsOneWidget);
+    expect(find.text('近期分析记录'), findsOneWidget);
+    _expectNoImplementationTerms(tester);
     expect(tester.takeException(), isNull);
   });
+
+  for (final failureCase in _failureCases) {
+    testWidgets('shows safe user copy for ${failureCase.name} failures', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(repository: _FakeAi01Repository(failure: failureCase.error)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(failureCase.message), findsOneWidget);
+      _expectNoImplementationTerms(tester);
+      expect(_visibleCopy(tester), isNot(contains('raw-diagnostic-marker')));
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
 
-Widget _app() {
+Widget _app({Ai01Repository? repository}) {
   return MaterialApp(
     theme: LumenisTheme.dark,
     home: Scaffold(
       body: Ai01Screen(
         client: LumenisCoreClient(),
-        repository: _FakeAi01Repository(),
+        repository: repository ?? _FakeAi01Repository(),
       ),
     ),
   );
 }
 
 class _FakeAi01Repository implements Ai01Repository {
+  _FakeAi01Repository({this.failure});
+
+  final Object? failure;
+
   @override
-  Future<Ai01Snapshot> load() async => const Ai01Snapshot(
-    isBound: true,
-    generatedAt: '2026-09-20T10:00:00',
-    providers: [
-      Ai01ProviderState(
-        name: '本地模型',
-        state: 'idle',
-        detail: 'daemon/model not ready',
+  Future<Ai01Snapshot> load() async {
+    if (failure != null) throw failure!;
+    return const Ai01Snapshot(
+      isBound: true,
+      generatedAt: '2026-09-20T10:00:00',
+      providers: [
+        Ai01ProviderState(
+          name: '本地模型',
+          state: 'idle',
+          detail: 'daemon/model not ready',
+        ),
+      ],
+      suggestions: [
+        Ai01Suggestion(
+          title: '查看风险变化',
+          description: '查看变化和来源',
+          intent: '检查风险变化并列出已有来源',
+        ),
+      ],
+      unavailableFields: [],
+    );
+  }
+}
+
+const _failureCases = <({String name, String error, String message})>[
+  (
+    name: 'authentication',
+    error: 'HTTP 401 raw-diagnostic-marker token=secret Core scope',
+    message: '请登录后再查看 AI 服务状态。',
+  ),
+  (
+    name: 'permission',
+    error: 'HTTP 403 raw-diagnostic-marker ViewModel contract',
+    message: '当前账号没有查看 AI 服务状态的权限。',
+  ),
+  (
+    name: 'offline',
+    error: 'Core unavailable raw-diagnostic-marker provider',
+    message: '请检查网络连接后重试。',
+  ),
+  (
+    name: 'service error',
+    error: 'SQLite trace raw-diagnostic-marker /private/path',
+    message: '请稍后重新读取服务状态。',
+  ),
+];
+
+String _visibleCopy(WidgetTester tester) => <String>[
+  ...tester
+      .widgetList<Text>(find.byType(Text))
+      .map((widget) => widget.data ?? widget.semanticsLabel ?? ''),
+  ...tester
+      .widgetList<Semantics>(find.byType(Semantics))
+      .map((widget) => widget.properties.label ?? ''),
+].join('\n');
+
+void _expectNoImplementationTerms(WidgetTester tester) {
+  expect(
+    _visibleCopy(tester),
+    isNot(
+      matches(
+        RegExp(
+          r'\b(core|viewmodel|evidence|owner|scope|contract|provider|runtime|subject|brandfocus|canonical|permission|shared capability|execution policy|registered consumers)\b',
+          caseSensitive: false,
+        ),
       ),
-    ],
-    suggestions: [
-      Ai01Suggestion(
-        title: '查看风险变化',
-        description: '查看变化和来源',
-        intent: '检查风险变化并列出已有来源',
-      ),
-    ],
-    unavailableFields: [],
+    ),
   );
 }

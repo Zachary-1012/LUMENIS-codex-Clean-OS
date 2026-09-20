@@ -38,7 +38,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       id: 'CTH-01',
       label: '商业运营',
       mobileLabel: '经营',
-      group: 'CTH · SUBJECT FIRST',
+      group: 'CTH · 商业运营',
       icon: Icons.timeline_rounded,
       color: LumenisTheme.cth,
     ),
@@ -46,23 +46,23 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       id: 'BMP-01',
       label: '品牌市场',
       mobileLabel: '品牌',
-      group: 'BMP · BRAND FIRST',
+      group: 'BMP · 品牌市场',
       icon: Icons.hub_outlined,
       color: LumenisTheme.bmp,
     ),
     _WorkspaceDestination(
       id: 'AI-01',
-      label: 'AI 意图入口',
+      label: 'AI 助理',
       mobileLabel: 'AI',
-      group: 'AI · AUGMENTATION',
+      group: 'AI · 智能助理',
       icon: Icons.auto_awesome_outlined,
       color: LumenisTheme.ai,
     ),
     _WorkspaceDestination(
       id: 'SH-01',
-      label: '内容工作室',
-      mobileLabel: '创作',
-      group: 'SHARED · CROSS DOMAIN',
+      label: '共享服务',
+      mobileLabel: '共享',
+      group: '共享服务',
       icon: Icons.edit_note_rounded,
       color: LumenisTheme.shared,
     ),
@@ -70,7 +70,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       id: 'SYS-01',
       label: '运行健康',
       mobileLabel: '运行',
-      group: 'SYSTEM · OPERATIONS',
+      group: '系统运行',
       icon: Icons.monitor_heart_outlined,
       color: LumenisTheme.system,
     ),
@@ -280,7 +280,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   }
 
   String get _coreLabel {
-    return widget.runtime['ok'] == true ? 'Core · 启动身份已读取' : 'Core · 启动身份未确认';
+    return widget.runtime['ok'] == true ? '服务已连接' : '连接状态待确认';
   }
 
   String _contextLabel(_WorkspaceDestination destination) {
@@ -291,24 +291,24 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     final product = scope['product'];
     final domain = '${widget.runtime['domain'] ?? ''}'.toLowerCase();
     return switch (destination.id) {
-      _ when _activeScreen.value == 'CTH-02' => '主体目录 · 当前上下文未变化',
+      _ when _activeScreen.value == 'CTH-02' => '经营主体目录 · 当前经营主体不变',
       'CTH-01' =>
         domain != 'cth' ||
                 product != 'CTH' ||
                 subjectId == null ||
                 '$subjectId'.trim().isEmpty
-            ? '当前 Subject 尚未确认'
-            : 'Subject · $subjectId',
+            ? '当前经营主体尚未确认'
+            : '当前经营主体：$subjectId',
       'BMP-01' =>
         domain != 'zbmp' ||
                 product != 'ZBMP' ||
                 brandKey == null ||
                 '$brandKey'.trim().isEmpty
-            ? '当前 BrandFocus 尚未确认'
-            : 'BrandFocus · $brandKey',
-      'AI-01' => 'AI 派生增强 · 不拥有生产事实',
-      'SH-01' => '跨域能力 · 保留来源与对象上下文',
-      'SYS-01' => '生产运行与安全基础设施',
+            ? '当前品牌尚未确认'
+            : '当前品牌：$brandKey',
+      'AI-01' => 'AI 助理 · 输出供你审阅',
+      'SH-01' => '共享服务目录',
+      'SYS-01' => '系统运行状态',
       _ => destination.group,
     };
   }
@@ -344,7 +344,7 @@ class _WideNavigation extends StatelessWidget {
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(22, 0, 16, 12),
-              child: _SectionLabel('WORKSPACES'),
+              child: _SectionLabel('工作区'),
             ),
             Expanded(
               child: ListView.builder(
@@ -360,7 +360,7 @@ class _WideNavigation extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.fromLTRB(22, 16, 20, 22),
               child: Text(
-                'Agent Groups\n跨产品协作层',
+                '经营 · 品牌 · 智能助理',
                 style: TextStyle(color: LumenisTheme.quiet, height: 1.7),
               ),
             ),
@@ -528,14 +528,14 @@ class _WorkspaceHeader extends StatelessWidget {
             )
           else if (destination.id == 'CTH-01')
             IconButton(
-              tooltip: '浏览 CTH 主体登记目录',
+              tooltip: '查看经营主体目录',
               onPressed: onOpenCth02,
               icon: const Icon(Icons.account_tree_outlined),
               color: LumenisTheme.muted,
             ),
           IconButton(
             key: const ValueKey('shell/logout'),
-            tooltip: '退出 Core 会话',
+            tooltip: '退出登录',
             onPressed: onLogout,
             icon: const Icon(Icons.logout_rounded),
             color: LumenisTheme.muted,
@@ -616,14 +616,14 @@ class _PhoneHeader extends StatelessWidget {
             )
           else if (destination.id == 'CTH-01')
             IconButton(
-              tooltip: '浏览 CTH 主体登记目录',
+              tooltip: '查看经营主体目录',
               onPressed: onOpenCth02,
               icon: const Icon(Icons.account_tree_outlined, size: 20),
               color: LumenisTheme.muted,
             ),
           IconButton(
             key: const ValueKey('shell/logout'),
-            tooltip: '退出 Core 会话',
+            tooltip: '退出登录',
             onPressed: onLogout,
             icon: const Icon(Icons.logout_rounded, size: 20),
             color: LumenisTheme.muted,
@@ -657,13 +657,11 @@ class _ContextInspector extends StatelessWidget {
     final product = subject['product'];
     final isCthContext =
         destination.id == 'CTH-01' && domain == 'cth' && product == 'CTH';
-    final isBmpContext =
-        destination.id == 'BMP-01' && domain == 'zbmp' && product == 'ZBMP';
-    final scopeText = isBmpContext
-        ? 'Core product · ZBMP'
-        : product == null
-        ? 'Core 未返回产品范围'
-        : 'Core product · $product';
+    final productCode = product?.toString();
+    final productLabel = productCode == 'ZBMP' ? 'BMP' : productCode;
+    final scopeText = productLabel == null || productLabel.trim().isEmpty
+        ? '当前产品尚未确认'
+        : '产品：$productLabel';
 
     return SizedBox(
       width: 258,
@@ -672,7 +670,7 @@ class _ContextInspector extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionLabel('ACTIVE CONTEXT'),
+            const _SectionLabel('当前工作对象'),
             const SizedBox(height: 16),
             Container(
               width: double.infinity,
@@ -700,19 +698,8 @@ class _ContextInspector extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            const _SectionLabel('TRUTH PATH'),
-            const SizedBox(height: 12),
             const Text(
-              'Source → Evidence → Canonical Data → Metric → View',
-              style: TextStyle(
-                color: LumenisTheme.muted,
-                fontSize: 12,
-                height: 1.7,
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              '工作上下文来自 Product Core。切换导航不会改写原始归属。',
+              '切换页面只改变查看内容，不会更改当前经营主体或品牌。',
               style: TextStyle(
                 color: LumenisTheme.quiet,
                 fontSize: 11,
@@ -721,11 +708,13 @@ class _ContextInspector extends StatelessWidget {
             ),
             if (isCthContext) ...[
               const SizedBox(height: 24),
-              _SectionLabel('REGISTERED SUBJECTS · ${subjects.length}'),
+              _SectionLabel('可浏览经营主体 · ${subjects.length}'),
               const SizedBox(height: 10),
               if (subjects.isEmpty)
                 Text(
-                  subjectDirectoryMessage ?? '主体注册表为空。Core 没有返回可浏览主体。',
+                  subjectDirectoryMessage == null
+                      ? '当前没有可浏览的经营主体。'
+                      : '经营主体列表暂不可用。请打开经营主体目录查看详情。',
                   style: TextStyle(
                     color: LumenisTheme.quiet,
                     fontSize: 11,
@@ -736,7 +725,7 @@ class _ContextInspector extends StatelessWidget {
                 ...subjects.take(4).map(_RegisteredSubjectLine.new),
               if (subjects.length > 4)
                 Text(
-                  '另有 ${subjects.length - 4} 个注册项',
+                  '另有 ${subjects.length - 4} 个经营主体',
                   style: const TextStyle(
                     color: LumenisTheme.quiet,
                     fontSize: 11,
@@ -797,7 +786,7 @@ class _LumenisMark extends StatelessWidget {
                 ),
                 SizedBox(height: 3),
                 Text(
-                  '序境 · PRODUCTION CORE',
+                  '经营与品牌工作台',
                   style: TextStyle(
                     color: LumenisTheme.quiet,
                     letterSpacing: 0.45,

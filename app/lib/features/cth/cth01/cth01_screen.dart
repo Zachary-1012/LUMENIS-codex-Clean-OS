@@ -49,14 +49,14 @@ class _Cth01ScreenState extends State<Cth01Screen> {
           builder: (context, _) => switch (_viewModel.status) {
             Cth01LoadStatus.loading => const _LoadingState(),
             Cth01LoadStatus.blocked => _UnavailableState(
-              title: 'CTH Subject 上下文不可用',
-              detail: _viewModel.message ?? 'LUMENIS Core 未返回当前 CTH Subject。',
+              title: '经营主体信息暂不可用',
+              detail: _viewModel.message ?? '请刷新后重试。',
               actionLabel: '重试',
               onAction: _viewModel.load,
             ),
             Cth01LoadStatus.failed => _UnavailableState(
-              title: 'CTH 数据暂不可用',
-              detail: _viewModel.message ?? '暂时无法读取 LUMENIS Core 的 CTH-01 数据。',
+              title: '运营信息暂不可用',
+              detail: _viewModel.message ?? '请检查连接后重试。',
               actionLabel: '重试',
               onAction: _viewModel.load,
             ),
@@ -81,7 +81,7 @@ class _LoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       liveRegion: true,
-      label: '正在读取 LUMENIS Core 当前 CTH Subject 与运营信号',
+      label: '正在加载经营主体与运营动态',
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -328,7 +328,7 @@ class _PageHeader extends StatelessWidget {
               const SizedBox(height: 13),
               Semantics(
                 key: const ValueKey('cth01/current-subject'),
-                label: 'LUMENIS Core 当前 CTH Subject ${data.subjectId}',
+                label: '当前经营主体',
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -343,7 +343,7 @@ class _PageHeader extends StatelessWidget {
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        '当前 Subject · ${data.subjectId}',
+                        '当前经营主体',
                         style: const TextStyle(
                           color: LumenisTheme.foreground,
                           fontSize: 15,
@@ -356,23 +356,13 @@ class _PageHeader extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               const Text(
-                '来自 Core 当前上下文；本页接口没有返回操作者与 Subject 的授权绑定。',
+                '这里汇总当前经营主体的运营信息。',
                 style: TextStyle(color: LumenisTheme.muted, height: 1.45),
               ),
-              if (data.generatedAt.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  'Core 聚合响应生成于 ${data.generatedAt}',
-                  style: const TextStyle(
-                    color: LumenisTheme.quiet,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
             ],
           ),
         ),
-        _CthTextButton(label: '重新读取', onPressed: onRetry),
+        _CthTextButton(label: '刷新数据', onPressed: onRetry),
       ],
     );
   }
@@ -385,7 +375,7 @@ class _ScopeNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       liveRegion: true,
-      label: '只读页面。趋势与 Subject 证据关联尚不可验证；业务写入操作不可用。',
+      label: '部分运营信息暂不可用；仅显示当前可确认的内容。',
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
@@ -395,7 +385,7 @@ class _ScopeNotice extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Text(
-          '只读数据 · Subject 授权、证据关联和部分趋势状态仍待 Core 验证',
+          '部分运营信息暂不可用；仅显示当前可确认的内容。',
           style: TextStyle(color: LumenisTheme.caution, height: 1.45),
         ),
       ),
@@ -422,10 +412,7 @@ class _MetricSpine extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeading(
-            title: '主体信号',
-            detail: '仅显示 CTH-01 当前返回的生产数据状态',
-          ),
+          const _SectionHeading(title: '经营概况', detail: '当前经营主体的重点运营信息'),
           const SizedBox(height: 15),
           if (compact)
             Column(
@@ -503,18 +490,12 @@ class _MetricLine extends StatelessWidget {
     final stateText = metric.hasValue
         ? _formatNumber(metric.value!) +
               (readyUnit.isEmpty ? metric.unit : readyUnit)
-        : metric.state.label;
+        : _metricAvailabilityLabel(metric.state);
     final stateColor = metric.hasValue
         ? LumenisTheme.foreground
         : metric.state == Cth01BackendState.notCollected
         ? LumenisTheme.caution
         : LumenisTheme.muted;
-    final detail = metric.note.isNotEmpty
-        ? metric.note
-        : metric.hasValue
-        ? '当前请求返回的记录数；未提供来源时间戳。'
-        : metric.source;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       child: Column(
@@ -536,17 +517,6 @@ class _MetricLine extends StatelessWidget {
               ),
             ),
           ),
-          if (detail.isNotEmpty) ...[
-            const SizedBox(height: 5),
-            Text(
-              detail,
-              style: const TextStyle(
-                color: LumenisTheme.quiet,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -569,22 +539,15 @@ class _SignalFlow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeading(
-          title: '时间信号流',
-          detail: '按 Core 返回顺序查看主体事件；这里只展示当前响应的样本',
-        ),
+        const _SectionHeading(title: '运营动态', detail: '查看当前经营主体的最新变化'),
         const SizedBox(height: 10),
         _TrendAvailability(),
         const SizedBox(height: 16),
         if (data.signals.isEmpty)
           _UnavailableInline(
             key: const ValueKey('cth01/events-empty-or-unknown'),
-            title: data.eventState == Cth01BackendState.empty
-                ? 'Core 未返回事件记录'
-                : '事件流当前不可用',
-            detail: data.eventState == Cth01BackendState.empty
-                ? '后端把空结果与查询异常映射成相同状态；不能据此断言“没有事件”。'
-                : 'Core 未提供可展示的事件记录或可判定的空状态。',
+            title: _signalEmptyTitle(data.eventState),
+            detail: _signalEmptyDetail(data.eventState),
           )
         else ...[
           for (var index = 0; index < data.signals.length; index++)
@@ -594,11 +557,6 @@ class _SignalFlow extends StatelessWidget {
               selected: selectedSignalIndex == index,
               onTap: () => onSelectSignal(index),
             ),
-          const SizedBox(height: 11),
-          const Text(
-            '最多显示 Core 返回的三条事件；该列表不代表全量在办数量。',
-            style: TextStyle(color: LumenisTheme.quiet, fontSize: 12),
-          ),
         ],
       ],
     );
@@ -794,10 +752,7 @@ class _SignalInspection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeading(
-            title: '信号检查',
-            detail: '仅检查 Core 返回的事件记录；未创建或更新业务数据',
-          ),
+          const _SectionHeading(title: '动态详情', detail: '查看事件时间、风险级别与摘要'),
           const SizedBox(height: 12),
           Text(
             signal.title,
@@ -818,15 +773,13 @@ class _SignalInspection extends StatelessWidget {
             _DetailLine(label: '摘要', value: signal.summary),
           if (signal.tags.isNotEmpty)
             _DetailLine(label: '标签', value: signal.tags.join(' · ')),
-          if (signal.eventReference.isNotEmpty)
-            _DetailLine(label: '事件记录引用', value: signal.eventReference),
           const SizedBox(height: 8),
           const Text(
-            '事件引用不是证据 ID；当前响应没有可核验的来源链接。',
+            '此条动态暂时没有可查看的来源链接。',
             style: TextStyle(color: LumenisTheme.quiet, fontSize: 12),
           ),
           const SizedBox(height: 11),
-          _CthTextButton(label: '返回信号流', onPressed: onReturn),
+          _CthTextButton(label: '返回运营动态', onPressed: onReturn),
         ],
       ),
     );
@@ -848,8 +801,6 @@ class _InsightColumn extends StatelessWidget {
         _RiskNotesView(risks: data.risks),
         const SizedBox(height: 22),
         const _EvidenceLineageState(),
-        const SizedBox(height: 22),
-        const _ActionAvailability(),
       ],
     );
   }
@@ -864,8 +815,8 @@ class _DailySummaryView extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ReadSection(
       key: const ValueKey('cth01/daily-summary'),
-      title: '今日确定性指标',
-      detail: '来自 Shared Reporting 对 CTH 记录的计算；不是 AI 结论',
+      title: '今日关键指标',
+      detail: '当前经营主体的今日运营情况',
       child: summary.hasValues
           ? Column(
               children: [
@@ -876,18 +827,18 @@ class _DailySummaryView extends StatelessWidget {
                   ),
                 if (summary.subjectHealthScore != null)
                   _FactLine(
-                    label: '当前 Subject 健康分',
+                    label: '经营主体健康分',
                     value:
                         '${_formatNumber(summary.subjectHealthScore!)} / 100',
                   ),
                 if (summary.mediumHighRiskNoteCount != null)
                   _FactLine(
-                    label: '中 / 高风险笔记',
+                    label: '中 / 高风险内容',
                     value: _formatNumber(summary.mediumHighRiskNoteCount!),
                   ),
                 const SizedBox(height: 9),
                 const Text(
-                  '风险笔记口径来自今日已筛选记录；不包含 critical 桶，且不代表事件总数。',
+                  '风险记录按今日数据统计，不代表全部运营事件总数。',
                   style: TextStyle(
                     color: LumenisTheme.quiet,
                     fontSize: 12,
@@ -897,7 +848,7 @@ class _DailySummaryView extends StatelessWidget {
               ],
             )
           : const Text(
-              '今日摘要未返回可用指标；当前接口未区分空值与汇总读取失败。',
+              '今日运营指标暂不可用，请稍后刷新。',
               style: TextStyle(color: LumenisTheme.muted, height: 1.5),
             ),
     );
@@ -913,11 +864,11 @@ class _RiskNotesView extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ReadSection(
       key: const ValueKey('cth01/risk-notes'),
-      title: '风险笔记',
-      detail: '主体筛选后的高风险记录样本',
+      title: '风险记录',
+      detail: '需要关注的运营记录',
       child: risks.isEmpty
           ? const Text(
-              'Core 未返回可展示的风险笔记；当前接口没有区分空结果与查询失败。',
+              '风险信息暂不可用，请稍后刷新。',
               style: TextStyle(color: LumenisTheme.muted, height: 1.5),
             )
           : Column(
@@ -942,9 +893,6 @@ class _RiskNoteLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final details = <String>[_severityLabel(risk.level)];
     if (risk.score != null) details.add('风险分 ${_formatNumber(risk.score!)}');
-    if (risk.noteReference.isNotEmpty) {
-      details.add('记录引用 ${risk.noteReference}');
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -987,8 +935,8 @@ class _TrendAvailability extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _UnavailableInline(
       key: ValueKey('cth01/trend-blocked'),
-      title: '14 日趋势暂不显示',
-      detail: '当前 Core 会将按日查询错误转换成 0；在返回可区分“零值 / 缺数 / 错误”的状态前，本页不绘制趋势。',
+      title: '14 日趋势暂不可用',
+      detail: '当前无法可靠展示每日变化，请稍后刷新。',
     );
   }
 }
@@ -1000,21 +948,8 @@ class _EvidenceLineageState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _UnavailableInline(
       key: ValueKey('cth01/evidence-scope-blocked'),
-      title: 'Subject 证据关联未验证',
-      detail: 'Core 当前只返回未按 product、Subject 或来源域筛选的共享记录，本页不展示或关联这些记录。',
-    );
-  }
-}
-
-class _ActionAvailability extends StatelessWidget {
-  const _ActionAvailability();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _UnavailableInline(
-      key: ValueKey('cth01/actions-blocked'),
-      title: '业务操作暂不可用',
-      detail: '简报、导出、建案、计划与通知尚无本页可验证的权限结果和执行接口。',
+      title: '信息来源',
+      detail: '当前暂无可查看的来源说明。',
     );
   }
 }
@@ -1291,12 +1226,43 @@ class _CthTextButtonState extends State<_CthTextButton> {
   }
 }
 
+String _metricAvailabilityLabel(Cth01BackendState state) => switch (state) {
+  Cth01BackendState.ready => '暂不可用',
+  Cth01BackendState.empty => '暂无记录',
+  Cth01BackendState.notCollected => '尚未采集',
+  Cth01BackendState.offline || Cth01BackendState.error => '暂不可用',
+  Cth01BackendState.unknown => '状态未确认',
+  Cth01BackendState.stale => '数据可能已过期',
+  Cth01BackendState.partial => '部分数据暂不可用',
+  Cth01BackendState.blocked => '暂时无法查看',
+};
+
+String _signalEmptyTitle(Cth01BackendState state) => switch (state) {
+  Cth01BackendState.empty || Cth01BackendState.ready => '暂无运营动态',
+  Cth01BackendState.notCollected => '运营动态尚未采集',
+  Cth01BackendState.offline => '暂时无法获取运营动态',
+  Cth01BackendState.stale => '暂无最新运营动态',
+  Cth01BackendState.partial => '暂无可展示的运营动态',
+  Cth01BackendState.blocked => '运营动态暂不可查看',
+  Cth01BackendState.error || Cth01BackendState.unknown => '运营动态暂不可用',
+};
+
+String _signalEmptyDetail(Cth01BackendState state) => switch (state) {
+  Cth01BackendState.empty || Cth01BackendState.ready => '当前没有可展示的运营动态。',
+  Cth01BackendState.notCollected => '目前没有可用的运营动态信息。',
+  Cth01BackendState.offline => '请检查连接后重试。',
+  Cth01BackendState.stale => '请刷新以确认最新信息。',
+  Cth01BackendState.partial => '部分信息暂不可用，请稍后刷新。',
+  Cth01BackendState.blocked => '请确认当前账号与经营主体后重试。',
+  Cth01BackendState.error || Cth01BackendState.unknown => '请稍后刷新。',
+};
+
 String _severityLabel(String level) => switch (level.toLowerCase()) {
   'critical' => '严重风险',
   'high' => '高风险',
   'medium' || 'med' => '中风险',
   'low' => '低风险',
-  _ => '风险级别未返回',
+  _ => '未评级',
 };
 
 Color _severityColor(String level) => switch (level.toLowerCase()) {

@@ -6,6 +6,8 @@ import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
 import 'ai01_view_model.dart';
 
+const _submitBlockedReason = '当前尚未确认可处理的经营主体或品牌，暂不能开始分析。';
+
 class Ai01Screen extends StatefulWidget {
   const Ai01Screen({required this.client, this.repository, super.key});
 
@@ -67,7 +69,6 @@ class _Ai01ScreenState extends State<Ai01Screen> {
       Ai01LoadPhase.loading => const _LoadingState(),
       Ai01LoadPhase.failed => _FailureState(
         kind: _viewModel.failureKind!,
-        message: _viewModel.failureMessage!,
         onRetry: _viewModel.refresh,
       ),
       Ai01LoadPhase.ready => _buildWorkbench(_viewModel.snapshot!),
@@ -107,7 +108,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                           flex: 7,
                           child: _ComposerPane(
                             controller: _draftController,
-                            blockedReason: _viewModel.submitBlockedReason,
+                            blockedReason: _submitBlockedReason,
                             suggestions: snapshot.suggestions,
                             onChooseSuggestion: _chooseSuggestion,
                           ),
@@ -122,7 +123,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                   else ...[
                     _ComposerPane(
                       controller: _draftController,
-                      blockedReason: _viewModel.submitBlockedReason,
+                      blockedReason: _submitBlockedReason,
                       suggestions: snapshot.suggestions,
                       onChooseSuggestion: _chooseSuggestion,
                     ),
@@ -140,11 +141,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                                 ? Icons.expand_less
                                 : Icons.account_tree_outlined,
                           ),
-                          label: Text(
-                            _showInspector
-                                ? '收起 Evidence 检视器'
-                                : '查看 Evidence 检视器',
-                          ),
+                          label: Text(_showInspector ? '收起资料依据' : '查看资料依据'),
                         ),
                       ),
                       AnimatedSize(
@@ -188,7 +185,7 @@ class _PageHeading extends StatelessWidget {
             const _AccentMark(),
             const SizedBox(width: 10),
             Text(
-              'SHARED CAPABILITY  /  AI',
+              'AI 助手',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: LumenisTheme.ai,
                 letterSpacing: 1.2,
@@ -208,7 +205,7 @@ class _PageHeading extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '先描述要理解的问题，再检查真实 Evidence 与执行边界。',
+          '描述想弄清的问题，查看可用资料和模型服务状态。',
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
@@ -242,7 +239,7 @@ class _ContextBoundary extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: '授权业务上下文尚未连接',
+      label: '尚未确认可用的经营主体或品牌',
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -260,14 +257,14 @@ class _ContextBoundary extends StatelessWidget {
           children: [
             Icon(Icons.lock_outline, color: LumenisTheme.caution, size: 18),
             Text(
-              '授权上下文未连接',
+              '尚未确认可用的经营对象',
               style: TextStyle(
                 color: LumenisTheme.foreground,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
-              'Subject / Brand Lens 未由服务端确认',
+              '当前尚未确认可处理的经营主体或品牌，暂不能开始分析。',
               style: TextStyle(color: LumenisTheme.muted),
             ),
           ],
@@ -290,7 +287,7 @@ class _RuntimeUnboundNotice extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'AI-01 当前没有可用的运行时绑定。以下区域不会以样例数据替代真实状态。',
+              '暂未读取到完整的 AI 服务状态；未确认的信息不会用示例补齐。',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
@@ -337,7 +334,7 @@ class _ComposerPane extends StatelessWidget {
             maxLength: 4000,
             textInputAction: TextInputAction.newline,
             decoration: const InputDecoration(
-              hintText: '描述要分析的问题。草稿只保留在当前页面内存中。',
+              hintText: '描述要分析的问题。离开页面后，草稿不会保留。',
               alignLabelWithHint: true,
               border: InputBorder.none,
             ),
@@ -345,7 +342,7 @@ class _ComposerPane extends StatelessWidget {
           if (suggestions.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              '来自当前运行时的任务方向',
+              '可参考的分析问题',
               style: Theme.of(
                 context,
               ).textTheme.labelMedium?.copyWith(color: LumenisTheme.muted),
@@ -384,14 +381,14 @@ class _ComposerPane extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: null,
                   icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('提交 AI 任务'),
+                  label: const Text('开始分析'),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
           const Text(
-            '当前安全边界：提交不会触发。草稿不会离开此页面。',
+            '草稿只保留在此页面；目前还不能开始分析。',
             style: TextStyle(color: LumenisTheme.quiet, fontSize: 12),
           ),
         ],
@@ -429,10 +426,10 @@ class _EvidencePanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelEyebrow(label: 'EVIDENCE / SHARED'),
+          const _PanelEyebrow(label: '业务资料依据'),
           const SizedBox(height: 12),
           Text(
-            '现有 Evidence 统计源是全库口径，服务端暂不读取；数量和分布不返回。',
+            '当前账号与经营主体或品牌的查看权限尚未确认，因此暂不展示资料总数或历史内容。',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
@@ -458,7 +455,7 @@ class _TraceBoundary extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
     ),
     child: const Text(
-      '当前没有经过 Subject 或 BrandFocus 范围校验的 Evidence 记录，因此不展示全库数量或历史记录。',
+      '当前账号与经营主体或品牌的查看权限尚未确认，因此不展示资料总数或历史明细。',
       style: TextStyle(color: LumenisTheme.muted, height: 1.5),
     ),
   );
@@ -475,11 +472,11 @@ class _ProviderPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelEyebrow(label: 'RUNTIME / PROVIDERS'),
+          const _PanelEyebrow(label: '模型服务状态'),
           const SizedBox(height: 9),
           if (providers.isEmpty)
             const Text(
-              '运行时未提供 Provider 状态。',
+              '暂未收到模型服务的状态。',
               style: TextStyle(color: LumenisTheme.muted),
             )
           else
@@ -522,19 +519,17 @@ class _ProviderRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  provider.name,
+                  _providerDisplayName(provider.name),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                if (provider.detail.isNotEmpty)
-                  Text(
-                    provider.detail,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          Text(provider.state, style: TextStyle(color: color, fontSize: 12)),
+          Text(
+            _providerStateLabel(provider.state),
+            style: TextStyle(color: color, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -550,10 +545,10 @@ class _ExecutionPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelEyebrow(label: 'AI EXECUTION / RECENT'),
+          const _PanelEyebrow(label: '近期分析记录'),
           const SizedBox(height: 9),
           Text(
-            '最近执行接口未绑定已授权产品上下文，记录暂不展示。',
+            '当前账号可查看的经营范围尚未确认，暂时无法显示近期分析记录。',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: LumenisTheme.muted),
@@ -575,19 +570,19 @@ class _MobileEvidenceSections extends StatelessWidget {
       children: [
         const SizedBox(height: 12),
         _DisclosureSection(
-          title: 'Evidence 摘要',
+          title: '数据依据',
           icon: Icons.account_tree_outlined,
           child: _EvidencePanel(),
         ),
         const SizedBox(height: 8),
         _DisclosureSection(
-          title: 'Provider 运行状态',
+          title: '模型服务状态',
           icon: Icons.hub_outlined,
           child: _ProviderPanel(providers: snapshot.providers),
         ),
         const SizedBox(height: 8),
         _DisclosureSection(
-          title: '最近执行',
+          title: '近期分析记录',
           icon: Icons.history,
           child: _ExecutionPanel(),
         ),
@@ -638,7 +633,7 @@ class _TruthBoundaryNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      'AI 输出是派生建议。原始 Evidence、Canonical Data、授权和业务结论仍由各自 owner 持有。',
+      'AI 提供整理与建议；经营数据、原始资料、授权范围和业务结论仍以各自业务记录为准。',
       style: Theme.of(
         context,
       ).textTheme.bodySmall?.copyWith(color: LumenisTheme.quiet),
@@ -736,10 +731,7 @@ class _LoadingState extends StatelessWidget {
           children: [
             CircularProgressIndicator(color: LumenisTheme.ai),
             SizedBox(height: 14),
-            Text(
-              '正在读取 AI-01 运行时状态',
-              style: TextStyle(color: LumenisTheme.muted),
-            ),
+            Text('正在读取 AI 服务状态', style: TextStyle(color: LumenisTheme.muted)),
           ],
         ),
       ),
@@ -748,23 +740,24 @@ class _LoadingState extends StatelessWidget {
 }
 
 class _FailureState extends StatelessWidget {
-  const _FailureState({
-    required this.kind,
-    required this.message,
-    required this.onRetry,
-  });
+  const _FailureState({required this.kind, required this.onRetry});
 
   final Ai01FailureKind kind;
-  final String message;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final title = switch (kind) {
       Ai01FailureKind.authentication => '需要登录',
-      Ai01FailureKind.permissionDenied => '访问被拒绝',
-      Ai01FailureKind.offline => 'Production Core 未连接',
-      Ai01FailureKind.server => 'AI-01 状态暂不可用',
+      Ai01FailureKind.permissionDenied => '暂时无法查看',
+      Ai01FailureKind.offline => 'AI 服务暂时无法连接',
+      Ai01FailureKind.server => '暂时无法读取 AI 服务状态',
+    };
+    final explanation = switch (kind) {
+      Ai01FailureKind.authentication => '请登录后再查看 AI 服务状态。',
+      Ai01FailureKind.permissionDenied => '当前账号没有查看 AI 服务状态的权限。',
+      Ai01FailureKind.offline => '请检查网络连接后重试。',
+      Ai01FailureKind.server => '请稍后重新读取服务状态。',
     };
 
     return Center(
@@ -779,7 +772,10 @@ class _FailureState extends StatelessWidget {
               children: [
                 Text(title, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(message, style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  explanation,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 const SizedBox(height: 14),
                 FilledButton.icon(
                   onPressed: onRetry,
@@ -794,3 +790,16 @@ class _FailureState extends StatelessWidget {
     );
   }
 }
+
+String _providerDisplayName(String name) => switch (name.trim()) {
+  '' || 'Provider' => 'AI 模型服务',
+  _ => name,
+};
+
+String _providerStateLabel(String state) =>
+    switch (state.trim().toLowerCase()) {
+      'ok' => '可用',
+      'idle' => '未启动',
+      'offline' => '暂不可用',
+      _ => '状态待确认',
+    };

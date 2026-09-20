@@ -33,10 +33,10 @@ class Cth01ViewModel extends ChangeNotifier {
       message = _messageForCoreError(error.message);
     } on FormatException {
       status = Cth01LoadStatus.failed;
-      message = 'LUMENIS Core 返回了当前页面无法读取的响应。';
+      message = '运营信息暂不可用，请稍后重试。';
     } catch (_) {
       status = Cth01LoadStatus.failed;
-      message = '暂时无法读取 LUMENIS Core 的 CTH-01 数据。';
+      message = '运营信息暂不可用，请稍后重试。';
     }
 
     _notify();
@@ -59,12 +59,12 @@ class Cth01ViewModel extends ChangeNotifier {
 
   static String _messageForCoreError(String message) {
     if (message.contains('HTTP 401')) {
-      return 'LUMENIS Core 要求完成身份验证后才能读取 CTH 数据。';
+      return '请登录后查看商业运营信息。';
     }
     if (message.contains('HTTP 403')) {
-      return 'LUMENIS Core 拒绝了本次 CTH 数据读取请求。';
+      return '当前账号暂时无法查看商业运营信息。';
     }
-    return '无法连接 LUMENIS Core，请检查连接后重试。';
+    return '暂时无法连接，请检查网络后重试。';
   }
 
   @override

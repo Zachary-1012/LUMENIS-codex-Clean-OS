@@ -8,7 +8,7 @@ import 'package:lumenis_app/features/bmp01/bmp01_snapshot.dart';
 
 void main() {
   testWidgets(
-    'desktop keeps BrandFocus beside the lineage canvas and hides aggregates',
+    'desktop keeps brand context beside market information and hides unscoped aggregates',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1440, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -16,12 +16,11 @@ void main() {
       await tester.pumpWidget(_app(_FakeRepository(_readySnapshot)));
       await tester.pumpAndSettle();
 
-      expect(find.text('品牌焦点未确认'), findsOneWidget);
-      expect(find.text('MARKET / EVIDENCE PATH'), findsOneWidget);
-      expect(
-        find.text('Core 返回了产品级快照。由于品牌范围和 Evidence lineage 未验证，指标、曲线与风险记录保持隐藏。'),
-        findsOneWidget,
-      );
+      expect(find.text('BMP · 品牌市场'), findsOneWidget);
+      expect(find.text('品牌市场动态'), findsOneWidget);
+      expect(find.text('尚未选择关注品牌'), findsOneWidget);
+      expect(find.text('当前没有已确认的关注品牌，因此暂不展示品牌表现或竞品数据。'), findsOneWidget);
+      _expectNoDeveloperCopy(tester);
       expect(find.text('99999'), findsNothing);
       expect(find.text('CANONICAL:UNSCOPED-RECORD'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -37,11 +36,11 @@ void main() {
     await tester.pumpWidget(_app(_FakeRepository(_notCollectedSnapshot)));
     await tester.pumpAndSettle();
 
-    expect(find.text('品牌焦点未确认'), findsOneWidget);
-    expect(
-      find.text('ZBMP 产品源当前没有已采集的 Canonical Data。此状态不代表品牌级零值。'),
-      findsOneWidget,
-    );
+    expect(find.text('暂无可展示的品牌信息'), findsOneWidget);
+    expect(find.text('暂时没有品牌市场数据'), findsOneWidget);
+    expect(find.text('品牌表现、竞品动态与市场变化会在数据可用后呈现。'), findsOneWidget);
+    _expectNoDeveloperCopy(tester);
+    expect(find.textContaining('ZBMP'), findsNothing);
     expect(find.text('99999'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -54,12 +53,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.calls, 1);
 
-    await tester.ensureVisible(find.text('重新读取产品契约'));
-    await tester.tap(find.text('重新读取产品契约'));
+    await tester.ensureVisible(find.text('刷新数据'));
+    await tester.tap(find.text('刷新数据'));
     await tester.pumpAndSettle();
 
     expect(repository.calls, 2);
-    expect(find.text('品牌焦点未确认'), findsOneWidget);
+    expect(find.text('尚未选择关注品牌'), findsOneWidget);
+    _expectNoDeveloperCopy(tester);
     expect(find.text('99999'), findsNothing);
   });
 
@@ -69,6 +69,23 @@ void main() {
       throwsFormatException,
     );
   });
+}
+
+void _expectNoDeveloperCopy(WidgetTester tester) {
+  for (final term in const [
+    'Core',
+    'Canonical Data',
+    'Evidence',
+    'Permission',
+    'BrandFocus',
+    '契约',
+    'lineage',
+    'binding',
+    'actor',
+    'scope',
+  ]) {
+    expect(find.textContaining(term), findsNothing, reason: 'UI leaked $term');
+  }
 }
 
 Widget _app(Bmp01Repository repository) {

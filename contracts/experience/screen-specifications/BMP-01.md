@@ -2,13 +2,13 @@
 
 screen_id: BMP-01
 status: REVIEWED_FOR_SCOPE_BLOCKED_SLICE
-revision: 1
+revision: 2
 owner_domain: BMP
 binding_ids: [BACKEND-GAP-018]
 product_owner_approval: APPROVED_OVERALL_EXPERIENCE_CONSTITUTION_30_36
 reviewer: Codex delegated BMP-01 specification review
 reviewed_at: 2026-09-20
-approval_reference: Product Owner instruction in current task; source review at checked-out HEAD 76fbe1afcbec656fbd06c0527d011ffecf17ca75
+approval_reference: Product Owner instruction in current task; implementation copy update against origin/main b4608331eacb868ff13ef74e770aa54c309ebef3
 
 ## 1. User problem and product invariant
 
@@ -46,21 +46,21 @@ The canonical query filters canonical_data by both product_id = ZBMP and domain_
 
 | State | Trigger/evidence | User-visible meaning | Available actions | Recovery/return behavior | Acceptance ID |
 | --- | --- | --- | --- | --- | --- |
-| Loading | Initial request or refresh in progress | Reading the BMP-01 source contract | None; announce busy | Keep page identity; do not flash data from another scope | BMP01-W-01 |
-| Empty / no source data | Endpoint says NOT_COLLECTED | No canonical BMP source data is available | Retry | Keep all metrics unavailable | BMP01-W-02 |
-| Not collected | truth.data_state=NOT_COLLECTED | Collection is absent for ZBMP | Retry | Do not display missing metrics as zero | BMP01-W-02 |
-| Fresh | Endpoint contract returned successfully | BMP screen endpoint responded; this does not authorize data display | Retry | Continue to scope blocker until actor/brand binding exists | BMP01-W-03 |
-| Stale | Capture time exists but freshness has no verified selected-brand rule | Freshness cannot be stated for a selected brand | Retry | Do not surface timestamp as selected-brand freshness | BMP01-W-04 |
-| Partial | Some product-wide metrics/records exist but scope or Evidence lineage is absent | Brand-level view is incomplete and blocked | Retry | Hide the unscoped payload; preserve explicit blocker | BMP01-W-05 |
-| Offline | Core client reports socket/unavailable failure | Product Core could not be reached | Retry | Retain no stale business data | BMP01-W-06 |
-| Blocked / access denied | Missing BrandFocus; HTTP 401/403; wrong product/domain; or missing lineage | No verified authorized brand context is available | Retry; Shell may later provide its real account/context recovery route | Do not grant access or show metrics; restore route state only through Shell | BMP01-W-07 |
-| Error | Other HTTP, JSON, or response-contract failure | Source could not be read or did not satisfy BMP-01 contract | Retry | Show stable Chinese recovery copy, never raw payload/error | BMP01-W-08 |
+| Loading | Initial request or refresh in progress | 正在加载品牌市场信息 | None; announce busy | Keep page identity; do not flash data from another scope | BMP01-W-01 |
+| Empty / no source data | Endpoint says NOT_COLLECTED | 暂时没有品牌市场数据 | Retry | Keep all metrics unavailable | BMP01-W-02 |
+| Not collected | truth.data_state=NOT_COLLECTED | 品牌表现、竞品动态与市场变化会在数据可用后呈现 | Retry | Do not display missing metrics as zero | BMP01-W-02 |
+| Fresh | Endpoint contract returned successfully | 暂无可展示的关注品牌信息 | Retry | Continue to scope blocker until actor/brand binding exists | BMP01-W-03 |
+| Stale | Capture time exists but freshness has no verified selected-brand rule | Brand freshness is not shown | Retry | Do not surface timestamp as selected-brand freshness | BMP01-W-04 |
+| Partial | Some product-wide metrics/records exist but scope or Evidence lineage is absent | 当前没有已确认的关注品牌，因此暂不展示品牌表现或竞品数据 | Retry | Hide the unscoped payload; preserve explicit blocker | BMP01-W-05 |
+| Offline | Core client reports socket/unavailable failure | 暂时无法连接，请检查网络连接后重试 | Retry | Retain no stale business data | BMP01-W-06 |
+| Blocked / access denied | Missing BrandFocus; HTTP 401/403; wrong product/domain; or missing lineage | 当前账号暂时无法查看此内容 | Retry; Shell may later provide its real account/context recovery route | Do not grant access or show metrics; restore route state only through Shell | BMP01-W-07 |
+| Error | Other HTTP, JSON, or response-contract failure | 品牌市场信息暂不可用，请稍后重试 | Retry | Show stable Chinese recovery copy, never raw payload/error | BMP01-W-08 |
 | Success / persisted | Read-only response; nothing is written | No successful selected-brand state exists under current contract | None | A future success state requires tested owner, actor/scope, Permission and Evidence | BMP01-W-09 |
 
 ## 5. Purpose-built desktop composition
 
 - Primary question: Which authorized brand's market signals am I viewing, and can each signal be traced?
-- Hierarchy: A compact BrandFocus rail occupies the left side and shows the missing authorized brand context. A broad right-side market-network/evidence canvas shows the blocking path: actor → authorized BrandFocus → ZBMP canonical scope → Evidence lineage. The canvas is a purposeful empty network state, not a graph populated with unscoped records.
+- Hierarchy: A compact brand panel occupies the left side and names the current viewing context in business language. A broad right-side market field is reserved for brand performance, competitor movement and market change. Until an authorized brand and scoped records exist, it presents a clear empty state without exposing implementation or permission diagnostics and without drawing fabricated signals.
 - Primary interaction: Refresh the existing BMP-01 read endpoint; show its result as contract status only. It must not unlock the canvas.
 - Secondary interaction and keyboard: Tab order is heading → context rail → scope guard → refresh. Enter/Space activates refresh; focus returns to the refresh control after completion.
 - Density/resize: Use LayoutBuilder; at workspace width ≥ 960 px use the two-region desk with content constrained to a readable maximum. Below that width, switch to the single active scope task. No hardware-type checks.
@@ -68,10 +68,10 @@ The canonical query filters canonical_data by both product_id = ZBMP and domain_
 
 ## 6. Purpose-built mobile composition
 
-- Single active task: Establish that an authorized brand context is unavailable and show what prevents market evidence from being opened.
+- Single active task: Explain that brand-market information is not available yet and let the user refresh it.
 - Navigation/back: Shell owns route/back behavior; page does not invent alternate brand destinations. Keep a compact BMP · 品牌市场 identity in view.
 - Touch: Refresh uses a minimum 48 px target. The focus guard precedes the recovery control in screen-reader order.
-- Recomposition: Replace the PC side rail/canvas with one vertical scope-recovery narrative. Do not shrink the PC split layout. The evidence canvas is represented as a short “等待授权品牌与证据链” state, not a miniature dashboard.
+- Recomposition: Replace the PC side rail/canvas with one vertical brand context and market-information state. Do not shrink the PC split layout or show a miniature dashboard.
 - Offline/interruption: Retry the same GET; display no cached business data because none is scoped to a verified brand.
 
 ## 7. Actions, authorization and effects
@@ -85,7 +85,7 @@ The canonical query filters canonical_data by both product_id = ZBMP and domain_
 ## 8. Accessibility, motion and localization
 
 - Keyboard: Preserve visible focus; Tab/Shift+Tab through the guard then refresh; Enter/Space retries. Do not trap focus during loading.
-- Screen reader: Announce 品牌范围不可用 as the primary heading, the missing actor/BrandFocus/Permission/Evidence gates in order, and refresh completion/error with polite live-region semantics.
+- Screen reader: Announce the current brand-market availability in plain Chinese, followed by the refresh control and its result with polite live-region semantics. Do not announce implementation gates or internal identifiers.
 - Chart/table equivalents: No chart/table is shown in the blocked slice. If those fields become eligible later, provide a data table and cited source equivalent.
 - Motion: No decorative motion. Respect reduced motion; state change may use no animation.
 - Localization: Chinese first, short labels; no status encoded by color alone; wrap long errors without horizontal scrolling.
@@ -103,6 +103,7 @@ The canonical query filters canonical_data by both product_id = ZBMP and domain_
 | BMP01-W-07 | HTTP 401/403 or wrong product/domain; show access/scope guard and no business payload | Access denied / scope blocked | Widget | Widget + API integration | app.py::_basic_auth, _build_bmp01; backend enforcement still needs dedicated acceptance |
 | BMP01-W-08 | Other transport/schema failure; show recoverable error without raw body | Error | Widget | Widget | Core exception contract; new local widget test |
 | BMP01-W-09 | Verify no write, report, plan, event synthesis, CTH fallback or Evidence claim occurs | All current states | Repository + API integration | Widget / existing Python unit | tests/test_bmp_truth_isolation.py; no write route invoked |
+| BMP01-W-10 | Verify user-visible loading, empty, blocked and failure states contain business wording only and expose no implementation identifiers or data-pipeline diagnostics | All user-visible states | PC and mobile | Widget | app/test/features/bmp01/bmp01_screen_test.dart |
 
 API integration remains an existing Python acceptance layer, not replaced by Flutter fixtures. Runtime/E2E for an authorized selected brand is BLOCKED until Product Core returns a verified actor, BrandFocus, per-screen read Permission decision and Shared Evidence lineage. The current implementation must be recorded as IMPLEMENTED / BLOCKED_FOR_BRAND_SCOPE; it is not a completed Golden Page.
 
