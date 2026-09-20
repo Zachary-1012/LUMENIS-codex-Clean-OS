@@ -15,6 +15,7 @@ PATHS = {
     "agents": ROOT / "AGENTS.md",
     "readme": ROOT / "README.md",
     "takeover": ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "source_index": ROOT / "00-GOVERNANCE" / "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
     "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
     "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
     "platform_workflow": ROOT / ".github" / "workflows" / "platform-verify.yml",
@@ -53,6 +54,7 @@ def validate() -> None:
     agents = _read("agents")
     readme = _read("readme")
     takeover = _read("takeover")
+    source_index = _read("source_index")
     registry = _read("registry")
     platform_workflow = _read("platform_workflow")
     contract = json.loads(_read("contract"))
@@ -86,6 +88,7 @@ def validate() -> None:
         "AGENTS.md",
         "00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md",
         "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
+        "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
         "git rev-parse origin/main",
         "version     = 1.1.0",
         EXPECTED_FINGERPRINT,
@@ -94,11 +97,43 @@ def validate() -> None:
     )
 
     _require(
+        source_index,
+        "CURRENT EXECUTION INDEX / THREE-DELIVERY RED LINE",
+        "App Experience",
+        "Backend and capability recovery",
+        "Closed-loop internal beta",
+        ".opencode/opencode.json",
+        "lumenis/system/ai_gateway/",
+        "lumenis/system/collector/",
+        "LUMENIS product account is deferred until after internal beta",
+        "Do not repeat a full-repository audit for normal work",
+        label="CURRENT source owner index",
+    )
+
+    for required_path in (
+        ROOT / ".opencode" / "opencode.json",
+        ROOT / "app" / "lib",
+        ROOT / "contracts" / "experience",
+        ROOT / "lumenis" / "system" / "ai_gateway",
+        ROOT / "lumenis" / "system" / "collector",
+        ROOT / "lumenis" / "system" / "browser" / "runtime",
+        ROOT / "lumenis" / "shared" / "evidence",
+        ROOT / "lumenis" / "shared" / "database",
+    ):
+        if not required_path.exists():
+            raise AssertionError(
+                "CURRENT source owner path is missing: "
+                f"{required_path.relative_to(ROOT)}"
+            )
+
+    _require(
         agents,
         "### Mandatory Codex bootstrap",
         "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
         "00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md",
         "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
+        "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+        "### Three-delivery product red line",
         "git rev-parse origin/main",
         "v1.1.0",
         EXPECTED_FINGERPRINT,

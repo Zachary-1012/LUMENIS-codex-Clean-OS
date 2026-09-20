@@ -4,6 +4,7 @@ This is the repository's **single canonical Flutter app target** and the only in
 
 ## Current implementation status
 
+- **Approved pre-beta boundary:** the LUMENIS product account is deferred until after internal beta. The current login-first launch slice described below is source reality, not the accepted target; Round 1 must remove it as a global blocker while preserving Product Core Permission/effect fences. Media-platform Cookie/session/browser authorization is separate and remains in the existing SYSTEM collector path.
 - The launch surface loads Product Core runtime identity and then the account-scoped CTH Subject Registry. The five Golden Pages call their existing `GET /api/experience/screen/<screen_id>` owner contracts. A returned Subject or a bound ViewModel does not establish actor-to-Subject authorization by itself.
 - The login surface shows the four `ProductDomain` ownership definitions and Agent Groups as an information-only product map. It does not choose the active domain; runtime context is read from Product Core identity.
 - The shell's neutral `启动身份已读取` label reports that the runtime identity request returned; it is not a continuous Core health check.
@@ -36,6 +37,7 @@ POST /v4/auth/logout
 
 ### Runtime and account sessions
 
+- The following bullets describe the current implementation that must be reconciled with the approved pre-beta boundary; they do not authorize a product-account wall for Round 1–3.
 - Runtime identity uses the existing Basic Auth contract at `GET /api/experience/runtime/identity`. After that succeeds, the App obtains the account session through `POST /v4/auth/login` and uses its Bearer token for the account-scoped CTH registry request.
 - Basic Auth credentials and the account token stay in memory only. The App does not write them to files, preferences, restoration state or logs. Logout clears both locally and attempts `POST /v4/auth/logout` for the account token.
 - Credentials are sent only over HTTPS or loopback HTTP (`localhost`, loopback IP addresses); authenticated requests do not follow redirects. Remote HTTP is rejected before credentials are sent.
@@ -46,6 +48,8 @@ The App consumes LUMENIS Product Core. It must not create a second Evidence, Can
 ## Required development authority
 
 Follow `../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` §§30–36 for app architecture, the 44 screen-specific UX blueprints, CTH/BMP/Shared/SYSTEM ownership, desktop/mobile composition, accessibility, motion and originality boundaries, ordered implementation and acceptance. That Constitution is the sole UI/UX and interaction authority. Do not create another visual design specification or copy historical web UI.
+
+The repository-wide execution order and fixed lookup map are `../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: Round 1 App Experience, Round 2 backend/capability recovery, Round 3 closed-loop internal beta. Apple, ChatGPT and TRAE contribute only the approved Experience principles in the Constitution; they do not add features or replace current functions.
 
 The 44 screen-specific UX blueprints are not implemented screens. The product owner accepted this architecture and Experience Constitution §§30–36 on 2026-09-20; App implementation is now proceeding through reviewed screen specifications and source-backed vertical slices. That approval does not make a route, contract row or fixture proof of a working feature, and it does not permit generic screen templates.
 
@@ -71,7 +75,7 @@ This section governs the App code structure and engineering sequence. The Experi
 
 ### Ordered engineering gates
 
-1. **Plan acceptance:** the product owner accepts this architecture and §§30–36. Until then, no feature-screen implementation.
+1. **Plan lock:** the product owner accepted this architecture and §§30–36 on 2026-09-20. Continue implementation without requesting overall-plan approval again; this approval is not per-screen acceptance.
 2. **Capability and owner mapping:** for the chosen workflow, reconcile existing behavior against its canonical module, route, fields, actor, scope, permission, Evidence, effects and regression tests. Record unresolved source claims as blocked; do not infer equivalence from filenames or a ViewModel.
 3. **Screen specification:** create one reviewed specification from `../contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md`. It must resolve owner and callable, entry/return paths, information priority, PC/mobile composition, state matrix, accessibility, side effects and executable acceptance.
 4. **Vertical slice:** implement one end-to-end workflow in its owning feature, reusing stable shared primitives only. Keep CTH Subject-first, BMP Brand/Market-first, Shared cross-domain, and SYSTEM infrastructure boundaries.

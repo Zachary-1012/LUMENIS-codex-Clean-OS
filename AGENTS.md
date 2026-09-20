@@ -30,6 +30,7 @@ This root `AGENTS.md` is the first coding-agent instruction boundary. Before cha
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
 → 00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
@@ -118,6 +119,20 @@ Explicit Completion Criteria
 
 Do not begin every task with a full-repository rediscovery. Load only the owners, callers, contracts, tests and runtime paths required by the active gate.
 
+The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Use its owner row for normal work. A full-repository re-audit is permitted only for the structural triggers listed there; a local gap, stale historical note or runner failure is not a trigger.
+
+### Three-delivery product red line
+
+All current product execution follows exactly this order:
+
+```text
+1. App Experience — UI / layout / responsive PC-mobile composition / UX motion
+2. Backend and capability recovery — current owners / Ollama / media Cookie chain / workflow binding
+3. Closed-loop internal beta — real data / E2E / recovery / release evidence
+```
+
+Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama is a SYSTEM AI runtime provider. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The LUMENIS account is deferred until after internal beta; pre-beta App access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
+
 Default loop:
 
 ```text
@@ -192,7 +207,7 @@ All UI/UX/visual/presentation decisions remain subordinate to the sole authority
 
 `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
 
-Historical UI/UX documents, screenshots, Apple/GPT references and old design systems are forbidden development inputs.
+Historical UI/UX documents, screenshots, copied Apple/GPT reference packs and old design systems are forbidden development inputs. The only permitted external-reference input is the bounded abstract principle mapping recorded in the current Experience Constitution; it cannot add features, copy layouts or become a second design authority.
 
 ## 5. No duplicate truth
 

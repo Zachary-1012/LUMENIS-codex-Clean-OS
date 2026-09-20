@@ -4,29 +4,36 @@
 >
 > 目标阶段：Production Convergence → Production Acceptance → Release Candidate → Production / Operating
 >
-> 本文件是最终收敛阶段的母清单。每次研发、修复、审计、回归、合并、发布准备前，必须先读取并重新审计当前仓库真实状态，直到最终收敛完成。
+> 本文件是最终收敛阶段的母清单。每次研发、修复、回归、合并或发布准备先解析实时 `origin/main`，再按固定源码 owner 索引审计 active slice；不得把母清单理解为每次重复全仓审计。
 
-## 0. 强制审计循环
+## 0. 固定索引与增量审计循环
 
 每次进入本仓库执行研发任务时，必须先执行：
 
 ```text
-READ CURRENT REPO → AUDIT CURRENT TRUTH → CLASSIFY GAPS
+RESOLVE origin/main → READ CURRENT SOURCE OWNER INDEX
+→ AUDIT ACTIVE SLICE + CURRENT DIFF → CLASSIFY GAPS
 → IMPLEMENT / FIX → TEST → VERIFY → EVIDENCE
-→ UPDATE STATUS → RE-AUDIT
+→ UPDATE STATUS / SPEC / INDEX IF CHANGED → RECHECK AFFECTED SLICE
 ```
 
 禁止依赖历史报告、旧 README、旧 commit message 或上一次会话结论直接继续。
 
 必须重新确认：
 - 当前 branch / HEAD / working tree
-- 当前 README / AGENTS / Governance
-- 当前 Production Truth 链
-- 当前 API / DB / Runtime / UI / Agent / AI / Content 状态
-- 当前 P0 / P1 / P2 阻塞
-- 当前测试、Runtime、Evidence 与 Release Lineage
+- `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` 中 active slice 的 owner / caller / contract / tests
+- active slice 的 Production Truth、API、DB、Runtime、UI、Agent、AI、Content 影响
+- active slice 的阻塞、测试、Runtime、Evidence 与 Release Lineage
 
-每一轮结束后必须再次审计，并将未闭环项保留在 Pending / Blocked / Needs Evidence 中，直到六大 Production Acceptance Gate 全部通过。
+每一轮结束后复查受影响路径，并将未闭环项保留在 Pending / Blocked / Needs Evidence 中。只有索引 owner 缺失/冲突、跨域 owner 或 DB/API/Auth/Permission/Evidence/Collector 边界改变、引入未分类外部资产、结构校验失败，或产品 Owner 明确要求时，才触发全仓源码重审。
+
+### 三回交付红线
+
+1. **App Experience：** UI、布局、PC/移动语义重组、UX 动效和真实现有绑定；不得从 Apple、ChatGPT、TRAE 参考推导新功能或通用 44 屏模板。
+2. **Backend / Recovery：** 按现有 owner 找回、适配并接通功能；Ollama 归 SYSTEM AI Gateway，媒体平台沿用现有 Cookie/session/browser 链，OpenCode/Codex 只作研发执行工具。
+3. **Closed-loop internal beta：** 用真实授权数据完成 UI Entry → Action → API → Canonical Result → Evidence/Trace → Return/Evaluation → E2E / recovery / release evidence。
+
+LUMENIS 产品账号延后到内测后；内测前和内测阶段不得以产品账号墙阻断现有产品。平台 Cookie/session 与产品账号是两类身份，后端 Permission 和 effect fence 始终保留。
 
 ## 1. 产品结构
 
@@ -475,6 +482,6 @@ Capability Closure → Runtime Verification
 
 除非是明确 P0/P1 缺口或最终收敛所需能力，否则新增功能默认进入 Backlog，不得横向扩张打断当前收敛。
 
-每一轮必须重新审计当前仓库真实状态、更新状态、保留未完成项并继续下一轮，直到六大硬门全部通过。
+每一轮必须复查当前 HEAD、差异和受影响 owner，更新状态并保留未完成项，直到六大硬门全部通过；正常工作不得重复全仓重审。
 
 > 最终原则：不以文档、页面、测试数量、commit message 或 AI 判断作为完成；只以当前真实 Source、Call Graph、Data/API、Runtime、Tests 与 Production Evidence 为准。

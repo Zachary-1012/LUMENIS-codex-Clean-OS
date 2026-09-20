@@ -22,3 +22,10 @@ This document defines the security boundary that every 序境 product path must 
 For each affected workflow, trace all five layers through its current source, API, data, Permission, Evidence, tests and runtime acceptance. Missing or unverified layers remain explicit blockers; a document, test file or archived audit is not proof of implementation.
 
 Platform acquisition and interaction must respect the platform authorization context, account safety limits and the product permission boundary. Credentials are not shared across products.
+
+Credential classes remain separate:
+
+- media-platform Cookie/session/browser material belongs to the existing SYSTEM collector/browser runtime and never becomes a LUMENIS product-account credential;
+- the LUMENIS product account is deferred until after internal beta and must not gate pre-beta product access;
+- server-side Permission, approval and effect fences still apply to protected actions even when no product account wall is shown;
+- Cookie, token, API key and browser profile secrets stay out of Git, logs, App copy and Evidence payloads.

@@ -14,12 +14,13 @@ Root `AGENTS.md` is the first coding-agent instruction boundary. After reading i
 1. `AGENTS.md`
 2. this file: `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`
 3. `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
-4. `README.md`
-5. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
-6. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
-7. `00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`
-8. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
-9. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
+4. `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`
+5. `README.md`
+6. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
+7. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
+8. `00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`
+9. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
+10. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
 
 When evidence conflicts:
 
@@ -195,6 +196,17 @@ P1 Reporting, P2 Evidence and P3 Evaluation/Learning are converged under Shared 
 
 Do not replace these with screenshot-derived or generic stack assumptions. If current source differs from a point-in-time audit, current source wins.
 
+### Fixed source owners and current tool/runtime disposition
+
+Use `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` for the fixed folder classification and per-task lookup route. Normal work follows the active owner row and its direct callers/contracts/tests; it does not repeat a repository-wide audit.
+
+Current source establishes these boundaries:
+
+- `.opencode/opencode.json` is a bounded **engineering** runtime configuration for development, audit, test and automation. OpenCode is not a Flutter feature, model provider, API owner or Production Truth owner.
+- `lumenis/system/ai_gateway/` is the canonical SYSTEM AI runtime owner. Ollama is a local provider behind that gateway; `local_ai_client.py` and `/api/local-ai/*` are current compatibility callers to reconcile, not a reason to create a second gateway. A configured provider is not `ACTIVE` until its daemon, model, real caller, fallback and Evidence pass runtime acceptance.
+- `lumenis/system/collector/` and `lumenis/system/browser/runtime/` are the canonical collector/browser owners. `xhs_cookie_bridge.py` remains an active compatibility caller for the existing XHS/RedNote Cookie chain until migrated with behavior parity.
+- Product Core currently contains an App account gate. The approved delivery boundary defers the LUMENIS product account until after internal beta. Round 1 must remove that global pre-beta blocker while keeping server Permission/effect fences and platform Cookie/session safety intact.
+
 ## 6. Screenshot architecture intake — disposition
 
 The three user-provided screenshots were reviewed against the repository. The reliably readable architecture principles that match repository truth are represented by the canonical chains, truth hierarchy, main/local/origin separation and completion semantics.
@@ -255,6 +267,18 @@ preserve unknown/uncommitted/unpushed valid work
 ```
 
 Never reset/clean valid local work merely to match remote. Never treat local-only code as GitHub-complete.
+
+### Three-delivery red line
+
+Execute and report product delivery in this order only:
+
+```text
+Round 1  App Experience: UI + layout + PC/mobile semantic recomposition + UX motion
+Round 2  Backend/recovery: existing capability + API/Permission/Evidence + Ollama/Cookie binding
+Round 3  Closed-loop internal beta: real workflow E2E + recovery + release evidence
+```
+
+Apple, ChatGPT and TRAE inform only restraint, content hierarchy, progressive complexity and visible task/execution/result feedback. They do not add or replace features. OpenCode/Codex stay in the engineering layer. Product functions and business semantics must survive all three rounds.
 
 ## 9. Non-regression boundaries
 

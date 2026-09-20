@@ -2,7 +2,7 @@
 
 ## 总原则
 
-Z-Brand-Core 必须在没有外部大模型 API Key 的情况下保持核心监测、分析、风险、事件、统计、报告和数据闭环可运行。
+序境 / LUMENIS 必须在没有外部大模型 API Key 的情况下保持核心监测、分析、风险、事件、统计、报告和数据闭环可运行。
 
 ## AI 优先级
 
@@ -36,6 +36,12 @@ AI 不得单独决定：主体口径、发布时间、采集数量、报告周�
 ## 本地 Ollama
 
 Ollama 是当前默认本地 AI 运行方向。模型名称、地址和参数必须配置化，禁止写死在业务代码中。模型不可用时，业务流程必须降级为系统规则链路，而不是整体失败。
+
+产品 AI 的 canonical owner 是 `lumenis/system/ai_gateway/`。`local_ai_client.py` 及现有 `/api/local-ai/*` 属于待收敛兼容调用，迁移前保留其独有行为，不得再建平行 AI Runtime。
+
+## 工程 AI
+
+OpenCode/Codex 用于研发、审计、测试和自动化。OpenCode 的仓库配置位于 `.opencode/opencode.json`；它不是用户功能、产品模型路由或 Production Truth owner。
 
 ## 隐私与密钥
 

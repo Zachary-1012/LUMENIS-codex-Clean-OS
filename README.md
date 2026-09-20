@@ -22,6 +22,7 @@ Before changing product code, read:
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
 → 00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
@@ -89,6 +90,7 @@ CTH 与 BMP 可以共享 Subject Context 与基础设施，但不得静默合并
 - `contracts/experience/` contains the retained Experience contracts.
 - `app/` is the canonical Flutter user application. It now contains source-backed vertical slices for the five Golden Pages and a nested, read-only CTH-02 Subject directory. A launch surface, widget test, or registered route alone does not prove complete CTH/BMP workflows.
 - CTH and BMP are distinct LUMENIS business domains. Shared services do not merge their data, metrics, actions or user tasks.
+- `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` is the fixed source classification and resume map. Normal work follows its exact owner/caller/contract/test row instead of repeating a repository-wide audit.
 
 The Experience plan covers **44 distinct screen-specific UX blueprints** plus **54 fail-closed data/permission/Evidence binding records**. The product owner approved the overall App architecture and Experience Constitution §§30–36 on 2026-09-20; implementation is active. That approval does not accept an individual screen, API, permission or workflow. Before implementing each screen, record its verified source fields, owner, route, states, separate PC/mobile composition, authorization/effects and executable acceptance in `contracts/experience/screen-specifications/` using `SCREEN_SPEC_TEMPLATE.md`. The machine-readable binding registry at `contracts/experience/lumenis_app_binding_registry.json` constrains data/actor/permission/Evidence truth and is not a UI template. Legacy `sectionTypes` are inventory only; one generic renderer with substituted titles is prohibited. Continue source-backed vertical slices and mark unresolved behavior as blocked or unverified until its owner and acceptance evidence exist.
 
@@ -171,7 +173,15 @@ README.md                       人类产品 + 工程入口
 AGENTS.md                       Coding Agent 执行路由
 LICENSE                         LUMENIS 源码许可边界
 00-GOVERNANCE/                 权威规则、验收、handoff evidence
+00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md  固定源码 owner / 三回交付路由
 02-ARCHITECTURE/               架构资料
+app/                           唯一 Flutter 用户端
+contracts/experience/          Screen / Action / State / Permission / Evidence / ViewModel 契约
+lumenis/shared/                Evidence / Database / Evaluation / Learning / Reporting / Agent Skill owner
+lumenis/system/                AI Gateway / Collector / Browser / Security owner
+tests/ + app/test/             Python 与 Flutter 验收代码
+data/ + migrations/            受保护运行数据边界与数据库迁移（不得按目录直接改写生产数据）
+.opencode/                     OpenCode 研发工具配置，不是产品运行能力
 scripts/audit_tools/            当前仓库结构与边界检查
 .github/workflows/             CI
 scripts/                       运维、启动、维护脚本
@@ -235,6 +245,8 @@ git ls-remote --heads origin
 ## 8. Codex / Coding Agent 执行标准
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
+
+当前产品执行只分三回：**App 前端 UI/布局/UX 动效 → 后端与既有功能找回/绑定 → 真实闭环内测**。OpenCode/Codex 属于研发工具层；Ollama 属于 SYSTEM AI 运行能力；媒体平台继续使用既有 Cookie/session/browser 采集链。序境产品账号延后到内测后，前期不得用账号墙阻断产品，但 Permission 与外部 effect fence 继续由后端执行。完整边界与固定查找路径见 [`00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。
 
 默认执行方式：
 
@@ -347,6 +359,7 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 
 - [`AGENTS.md`](AGENTS.md)
 - [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)
+- [`00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)
 - [`00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md`](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)
 - [`00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`](00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md)
 - [`00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`](00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md)

@@ -51,14 +51,15 @@
 
 ## 6. Model Routing
 
-统一管理：
+SYSTEM AI Gateway 统一管理产品运行模型：
 
 - Ollama Local AI
 - Zhipu
-- Codex/Sol Engineering Runtime
 - Future Models
 
 原则：根据成本、速度、复杂度、隐私、资源自动选择。
+
+Canonical owner：`lumenis/system/ai_gateway/`。`local_ai_client.py` 和现有 `/api/local-ai/*` 是需保留行为后收敛的兼容调用路径，不得形成第二或第三个 AI Gateway。
 
 ## AI Runtime Target Architecture
 
@@ -69,7 +70,7 @@ LUMENIS Chat Interface
  ↓
 Intelligence Router
  ↓
-Local AI / Cloud AI / Engineering AI
+Local AI / Approved Cloud AI / Deterministic Rules
  ↓
 Agent + Tools
  ↓
@@ -100,7 +101,13 @@ Codex / OpenCode：
 - 测试
 - 自动化
 
-不是用户聊天模型唯一依赖。
+OpenCode 的当前仓库配置位于 `.opencode/opencode.json`。Codex/OpenCode 不进入上述产品 Model Routing，不是 Flutter 功能、Product Core 必需依赖、用户聊天模型或 Production Truth owner。工程工具可以调用现有测试和受限本地检查，但不能绕过产品 Permission/Evidence 边界。
+
+## Source-audited current disposition
+
+- Ollama：canonical Gateway、provider probe、真实 backend callers 和 App provider-state binding 已存在；daemon、模型、真实推理、fallback 和 Evidence 必须在 Round 2 现场验证后才能标记 `ACTIVE / VERIFIED`。
+- OpenCode：工程配置已存在；当前产品源码没有 OpenCode runtime caller。其正确状态是 `ENGINEERING CONFIG PRESENT`，不是丢失的产品功能。
+- AI-01：当前 App 只显示 provider/能力状态，真实意图提交与 Evidence Trace 尚未闭环；不得把状态页写成完成的 AI workflow。
 
 ## Research Optimization Layer
 

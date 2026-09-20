@@ -229,7 +229,9 @@ SYSTEM may be dense and technical. It exposes machine relationships rather than 
 
 ## 9. Account, authentication and global context
 
-Authentication/access surfaces are calm, direct and explicit about identity, permission, blocked state and recovery. They are not marketing landing pages.
+The LUMENIS product account is a post-internal-beta capability. During the current three deliveries, the App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a LUMENIS login flow.
+
+When post-beta authentication/access surfaces are implemented, they are calm, direct and explicit about identity, permission, blocked state and recovery. They are not marketing landing pages.
 
 Global Subject Context:
 
@@ -517,7 +519,7 @@ The product is delivered through one Flutter application. Platform targets share
 ```text
 app composition root
 ├─ core        transport, typed contract decoding, auth/session, errors, cancellation
-├─ account     identity, sign-in/recovery, authorized context selection
+├─ account     post-beta product identity/sign-in/recovery; absent as a pre-beta global gate
 ├─ cth         SubjectContext, commercial operations, events, cases, decisions/actions
 ├─ bmp         BrandFocus, market signals, creators, campaigns, propagation/evaluation
 ├─ shared      Evidence, research, creation, evaluation, learning, reports/export
@@ -580,16 +582,20 @@ Motion may clarify causality, selection, progress, successful persistence, block
 
 External creative work, including Korean product-app craft and `motion-web`, may inform general principles such as task clarity, progressive disclosure, crisp response, restrained transitions, accessibility and measurable interaction quality. Product semantics, information architecture, composition and visual identity remain LUMENIS-owned and are derived from real domain objects and workflows.
 
+The approved principle mapping is narrow: Apple informs restraint, content priority, one clear primary action and an uncluttered search entry when an existing workflow is search-led; ChatGPT informs a single intent entry and progressive disclosure of existing complexity; TRAE informs visible **task → execution → result** feedback for existing workflows. These references do not authorize new Chat, Work, Project, recent-content, search, task-platform or account capabilities, and they do not replace any current business function or backend owner.
+
 For Korean product-app craft, study public product-engineering documentation such as the [Toss Design System component guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) for consistency, clear component guidance and task-focused implementation. Its UI Kit terms restrict use of Toss materials to the Apps in Toss service, so LUMENIS does not adopt the UI Kit, components, assets or visual patterns. Extract only general, non-visual principles, then test those against LUMENIS workflows.
 
 Do not copy another product's assets, source code, signature layout, visual identity, interaction sequence or implementation recipe. The supplied [motion-web repository](https://github.com/Zachary-1012/motion-web) is a fork of `feitangyuan/motion-web`; its [LICENSE](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) identifies CC BY-NC 4.0 and expressly restricts commercial integration of its Skill, prompts, cases and derived workflows. No code, case, asset, parameter set or derivative workflow from it is admitted into this commercial product. Inspiration is not a runtime dependency or a competing design authority.
 
 ## 34. Ordered App delivery and acceptance
 
+This section is the internal execution order for Round 1 of the three-delivery red line in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Round 2 recovers/binds backend capability; Round 3 proves the closed-loop internal beta. Do not mix a new product feature or global backend rewrite into Round 1.
+
 Do not build all screens from a generic template. Work in this order, with a capability-parity gate between phases:
 
 1. **Bind truth:** classify each Experience screen/action by owner, endpoint, ViewModel fields, permission, Evidence, read/write effect and known gaps. Resolve unknown owners from source before creating a new API.
-2. **Make the shell real:** implement session, authorized context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. Keep CTH SubjectContext separate from BMP BrandFocus.
+2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The LUMENIS product account is deferred until after internal beta and must not block pre-beta browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
 3. **Prove the five Golden Pages:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 each use their semantic signature in §25 and bind to live owners. Do not mark a fixture-backed page complete.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
 5. **Reach platform parity:** run PC and mobile interaction, accessibility, responsive, error/recovery and screenshot checks at §20 widths on representative target platforms.
@@ -605,14 +611,14 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) define the sco
 
 | Capability family | Product owner and scope | Required product outcome | Truth boundary |
 | --- | --- | --- | --- |
-| Account and work context | Account / SYSTEM authorization | Sign in, restore session, select only authorized context, resume prior work | Identity and authorization come from current auth owners; UI context is not proof of access |
+| Runtime and work context | SYSTEM runtime/permission; future product account after internal beta | Open the pre-beta product without an account wall, restore safe local work context, and expose a truthful local restriction only where a protected operation requires it | UI context is not proof of authorization; every protected server operation still enforces Permission/effect boundaries; media platform Cookie/session state is separate |
 | Commercial operations and subject intelligence | CTH | Start from a Subject; read its commercial signals, event stream, cases, risk, decisions, actions, schedules and reports; trace each decision to source and follow-up outcome | Subject ownership, CTH metrics and confirmed outcomes remain CTH-owned |
 | Brand and market intelligence | BMP | Start from Brand/Market focus; connect category movement, competitors, audience, creators, content, channels, campaigns, brand risk and evaluation | Brand focus and BMP metrics remain BMP-owned; competitor and creator data are relationships, not interchangeable subjects |
 | Analytics and decision support | Shared analytical capability with CTH/BMP-owned metric definitions | Cohort, compare, segment, trend, attribute, detect anomaly, explain change and export an auditable view | Shared computation keeps source domain, definition/version, scope, window, freshness, confidence and lineage; it cannot relabel a metric or combine incompatible scopes silently |
 | Business operations | CTH for commercial cases/actions; BMP for brand campaigns/marketing workflows | Convert a signal into an owned decision, accountable task, due date, status, approval and measurable follow-up | Each action is written by its source-domain owner; Shared provides orchestration/trace, not a replacement workflow truth |
 | Brand marketing and growth | BMP | Plan positioning, audience, campaign, creator/channel mix, content variants, launch calendar, budget/goal and evaluation | Proposed, approved, scheduled, published and measured are separate states; no simulated metric is presented as actual reach or ROI |
 | Media creation and propagation | Shared creation capability, with BMP or CTH owning business intent | Create/version assets, attach rights and provenance, adapt channel variants, route approval, prepare/publish through authorized adapters, capture delivery result and return to source campaign/subject | Asset lineage and source intent persist end-to-end; a queued/published adapter result is not proof of business impact |
-| Media platforms and connectors | SYSTEM integration adapters; product context remains CTH/BMP | Register platform/account connections, authorization health, quota, capability, schema mapping, webhook/sync status and recoverable errors | Connector state is operational truth only; platform metrics retain source/time/definition and map into the originating product scope |
+| Media platforms and connectors | SYSTEM integration adapters; product context remains CTH/BMP | Inspect existing Cookie/session connector health, quota, capability, schema mapping, sync status and recoverable errors; use the current authorized operational import/replacement path when recovery is needed | No new platform account/login flow is inferred; connector state is operational truth only; platform metrics retain source/time/definition and map into the originating product scope |
 | AI and Agent Groups | Shared capability operating within the caller's CTH/BMP context | Research, draft, explain, delegate or execute an explicitly permitted action with cited sources and reviewable trace | Model output is a proposal until independently grounded, authorized and, where needed, explicitly approved |
 | Evidence, evaluation, learning and reporting | Shared Capability | Preserve the evidence chain; evaluate source-backed outcomes; learn from reviewed feedback; produce reproducible reports/exports | Preserve `originDomain`, source IDs, actor, timestamp, policy/model/version and transformation lineage |
 | Runtime, security, collection and recovery | SYSTEM | Show health, collection/platform state, permissions, configuration, audit, backups and recovery actions | SYSTEM is infrastructure truth only; it must not acquire CTH/BMP business objects or metrics |

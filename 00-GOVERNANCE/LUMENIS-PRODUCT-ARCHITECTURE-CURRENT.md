@@ -173,7 +173,8 @@ application   domain use cases, typed state transitions, routing/deep links,
               authorized CTH SubjectContext and BMP BrandFocus
 data           typed Product Core clients, request cancellation, pagination,
               bounded cache, freshness labels, retry/idempotency and decoding
-platform/core  account/session, secure credential storage, permission-aware
+platform/core  runtime connectivity; future post-beta account/session,
+               secure credential storage, permission-aware
               affordances, connectivity, filesystem/export and device services
 ```
 
@@ -193,6 +194,14 @@ Zhipu + Local AI
 ```
 
 A Provider is ACTIVE only when real callers, health verification and tests prove it. Historical configuration is not runtime truth.
+
+Runtime and engineering roles are separate:
+
+- `lumenis/system/ai_gateway/` is the single SYSTEM AI runtime owner. Ollama is the local provider direction behind that owner; `local_ai_client.py` and existing `/api/local-ai/*` routes are compatibility callers that must converge without changing behavior or creating another gateway.
+- `.opencode/opencode.json` configures OpenCode for repository development, audit, test and automation. OpenCode/Codex are engineering runtimes, not user-facing model providers, Product Core dependencies or Production Truth owners.
+- Flutter consumes typed Product Core results and provider state. It does not run OpenCode, choose hidden tool chains or own model routing.
+
+The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. The product account is deferred until after internal beta; this timing does not weaken server-side Permission, approval or effect-fence enforcement.
 
 Production write chain:
 
@@ -280,7 +289,7 @@ DELETE    duplicate/obsolete code after capability parity is proven
 RESEARCH  non-runtime knowledge asset only
 ```
 
-UI/UX history, visual reference packs, old screenshots, Apple/GPT references and old design systems are not RESEARCH assets for current main. They are deleted so they cannot become competing design authority.
+UI/UX history, visual reference packs, old screenshots, copied Apple/GPT references and old design systems are not RESEARCH assets for current main. They are deleted so they cannot become competing design authority. Only the bounded abstract principles named in the current Experience Constitution may inform implementation; they do not authorize copied surfaces or new product functions.
 
 ## 10. Completion gate
 
