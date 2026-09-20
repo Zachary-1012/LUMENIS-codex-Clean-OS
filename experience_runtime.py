@@ -475,65 +475,53 @@ def _evidence_recent(limit: int = 2) -> List[Dict[str, Any]]:
 
 
 def _build_ai01() -> Dict[str, Any]:
-    from lumenis.shared.evidence import store as es
-
-    blocked: List[Dict[str, str]] = []
+    blocked: List[Dict[str, str]] = [
+        {
+            "field": "ai.anchored_evidence",
+            "reason": "UNSCOPED_EVIDENCE_STORE",
+            "required": "A trusted actor and authorized CTH Subject or BMP BrandFocus scope.",
+        },
+        {
+            "field": "ai.traceability",
+            "reason": "UNSCOPED_EXECUTION_STORE",
+            "required": "An actor-scoped execution query linked to authorized product context.",
+        },
+        {
+            "field": "ai.review_queue",
+            "reason": "UNSCOPED_EVIDENCE_STORE",
+            "required": "A trusted actor and authorized product-scoped review queue.",
+        },
+    ]
     truth: Dict[str, Any] = {}
 
-    ev_stats = _safe(es.get_stats, default={})
-    ev_err = _is_err(ev_stats)
-    tasks = _safe(_ai_recent_tasks, 4, default=[])
+    # The current Evidence and execution owners expose whole-store reads. Do not
+    # query or serialize them through this screen until trusted product scope is
+    # available; client-side filtering is not an authorization boundary.
     gov = _safe(_ai_governance, default={})
     gov_err = _is_err(gov)
 
-    anchored = ev_stats.get("total") if isinstance(ev_stats, dict) else None
-    # AI 结论可追溯率：需要执行链里“已完成且带证据”的真实样本才能计算；样本缺失时诚实 notcollected。
-    raw_tasks = tasks if isinstance(tasks, list) else []
-    done = [t for t in raw_tasks if t.get("status") in ("completed", "success", "done")]
-    if raw_tasks and done:
-        trace_val = round(100.0 * len(done) / len(raw_tasks), 1)
-        trace_state, trace_note = STATE_READY, ""
-    else:
-        trace_val, trace_state, trace_note = None, STATE_NOT_COLLECTED, "需 AI 执行链累计已完成样本后计算，当前不臆造比率"
-    if trace_state != STATE_READY:
-        blocked.append({"field": "ai.traceability", "reason": "INSUFFICIENT_RUNTIME_SAMPLE",
-                        "required": trace_note})
-
-    # Provider 健康：治理状态可用则给真实数量，否则 offline（不编 4/4）
+    # Provider health includes only actual model providers. Deterministic rules
+    # and standby plumbing are not providers and must not inflate the KPI.
     provider_states = _provider_runtime(gov, gov_err)
     healthy = sum(1 for p in provider_states if p["state"] == "ok")
     prov_kpi_state = STATE_READY if not gov_err else STATE_OFFLINE
 
-    # 待人工复核：证据 by_result 中 pending/review 计数（真实键存在才给值）
-    by_result = ev_stats.get("by_result", {}) if isinstance(ev_stats, dict) else {}
-    review = None
-    for k in ("pending", "review", "needs_review", "shadow"):
-        if k in by_result:
-            review = (review or 0) + int(by_result[k] or 0)
-    review_state = STATE_READY if review is not None else STATE_NOT_COLLECTED
-    if review_state != STATE_READY:
-        blocked.append({"field": "ai.review_queue", "reason": "NO_REVIEW_QUEUE_TABLE",
-                        "required": "需要人工复核队列表/结果枚举"})
-
     kpis = [
-        metric("ai.anchored_evidence", "今日已锚定证据",
-               value=None if ev_err or anchored is None else anchored,
-               state=STATE_READY if not ev_err and anchored is not None else STATE_OFFLINE,
-               icon="link", source="lumenis.shared.evidence.store.get_stats().total", fresh="live"),
-        metric("ai.traceability", "AI 结论可追溯率", value=trace_val, unit="%",
-               decimals=1, state=trace_state, icon="evaluation", note=trace_note,
-               source="Agent Groups Skill Execution（样本不足）"),
+        metric("ai.anchored_evidence", "已授权范围内的锚定证据",
+               value=None, state=STATE_NOT_COLLECTED, icon="link",
+               note="Evidence 查询尚未绑定可信 Subject / BrandFocus 权限范围。",
+               source="lumenis.shared.evidence.store.get_stats（全库，暂不读取）"),
+        metric("ai.traceability", "AI 结论可追溯率", value=None, unit="%",
+               decimals=1, state=STATE_NOT_COLLECTED, icon="evaluation",
+               note="执行历史查询尚未绑定 actor 与授权产品范围。",
+               source="Agent Groups Skill Execution（全局，暂不读取）"),
         metric("ai.provider_health", "Provider 健康", value=healthy if prov_kpi_state == STATE_READY else None,
                unit=f"/{len(provider_states)}", state=prov_kpi_state, icon="ops",
                source="ai_governance.get_governance_status", fresh="m5"),
-        metric("ai.review_queue", "待人工复核", value=review, state=review_state,
-               icon="risk", source="lumenis.shared.evidence.store.by_result(pending/review/shadow)"),
+        metric("ai.review_queue", "待人工复核", value=None, state=STATE_NOT_COLLECTED,
+               icon="risk", note="人工复核队列尚未绑定可信 actor 与产品范围。",
+               source="lumenis.shared.evidence.store（全库，暂不读取）"),
     ]
-    truth["evidence_stats"] = None if ev_err else {
-        "total": ev_stats.get("total"),
-        "by_result": ev_stats.get("by_result"),
-        "by_level": ev_stats.get("by_level"),
-    }
 
     # 能力入口卡（静态入口，点击由 runtime.js 填入 composer 意图，不产生假数据）
     def _card_action(aid, intent):
@@ -552,17 +540,10 @@ def _build_ai01() -> Dict[str, Any]:
          "action": _card_action("intent-draft", "起草内容并进入审批流程")},
     ])
 
-    # 最近任务（真实执行链）
-    tl_items = []
-    for t in raw_tasks[:4]:
-        tl_items.append({
-            "time": str(t.get("created_at") or "")[5:16] or "—",
-            "title": t.get("task") or t.get("skill_id") or "AI 任务",
-            "desc": f"{t.get('status', 'unknown')} · {t.get('execution_id', '')[:10]}",
-            "done": t.get("status") in ("completed", "success", "done"),
-        })
-    timeline_sec = section("timeline", STATE_READY if tl_items else STATE_EMPTY,
-                           title="最近任务", label="History", items=tl_items)
+    # The shared execution owner currently returns global history. Keep the
+    # section structurally present while withholding its rows at the server.
+    timeline_sec = section("timeline", STATE_NOT_COLLECTED,
+                           title="最近任务", label="History", items=[])
     runtime_sec = section("runtime", title="Provider 状态", items=provider_states)
     rule_note = section("note", STATE_READY, kind="RULE", code="AI-NOT-TRUTH",
                         text="AI 输出为派生结果，携带 Provider/Model/Prompt/Confidence/Evidence 引用与人工修正状态，"
@@ -644,13 +625,11 @@ def _provider_runtime(gov: Dict[str, Any], gov_err: bool) -> List[Dict[str, Any]
     active_provider = str(ai_state.get("provider") or "")
     zhipu_configured = isinstance(gov, dict) and not gov_err and bool(gov.get("providers") or gov.get("zhipu") or gov.get("enabled"))
     zhipu_ok = bool(ai_state.get("enabled")) and active_provider == "zhipu"
-    items.append({"name": "智谱 · 可选", "state": "ok" if zhipu_ok else ("idle" if zhipu_configured else "offline"),
+    items.append({"kind": "provider", "name": "智谱 · 可选", "state": "ok" if zhipu_ok else ("idle" if zhipu_configured else "offline"),
                   "detail": "active · verified by gateway" if zhipu_ok else ("configured · not active" if zhipu_configured else "not verified")})
     ollama_ok = bool(ai_state.get("enabled")) and active_provider == "ollama"
     ollama_detail = "active · local model" if ollama_ok else "daemon/model not ready"
-    items.append({"name": "本地 Ollama", "state": "ok" if ollama_ok else "idle", "detail": ollama_detail})
-    items.append({"name": "规则引擎", "state": "ok", "detail": "deterministic"})
-    items.append({"name": "备用通道", "state": "idle", "detail": "standby · no production truth"})
+    items.append({"kind": "provider", "name": "本地 Ollama", "state": "ok" if ollama_ok else "idle", "detail": ollama_detail})
     return items
 
 

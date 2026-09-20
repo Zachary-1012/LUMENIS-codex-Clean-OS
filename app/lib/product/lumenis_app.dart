@@ -1,6 +1,7 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import '../core/lumenis_core_client.dart';
+import '../core/lumenis_theme.dart';
 import '../features/launch/launch_surface.dart';
 
 class LumenisApp extends StatefulWidget {
@@ -15,15 +16,13 @@ class _LumenisAppState extends State<LumenisApp> {
 
   @override
   Widget build(BuildContext context) {
-    return WidgetsApp(
-      color: const Color(0xFF0D0E10),
+    return MaterialApp(
+      title: '序境 · LUMENIS',
+      theme: LumenisTheme.dark,
+      themeMode: ThemeMode.dark,
+      restorationScopeId: 'lumenis',
       debugShowCheckedModeBanner: false,
-      textStyle: const TextStyle(
-        color: Color(0xFFF2F3F4),
-        fontSize: 15,
-        height: 1.4,
-      ),
-      builder: (context, _) => LaunchSurface(client: _client),
+      home: LaunchSurface(client: _client),
     );
   }
 }

@@ -1,0 +1,187 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumenis_app/core/lumenis_core_client.dart';
+import 'package:lumenis_app/core/lumenis_theme.dart';
+import 'package:lumenis_app/shell/lumenis_workspace_shell.dart';
+
+void main() {
+  testWidgets(
+    '1440 wide CTH-02 stays nested in CTH and returns without switching context',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+
+      final openDirectory = find.byTooltip('浏览 CTH 主体登记目录');
+      expect(openDirectory, findsOneWidget);
+      await tester.tap(openDirectory);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('cth02/desktop-layout')),
+        findsOneWidget,
+      );
+      expect(find.text('主体目录 · 当前上下文未变化'), findsOneWidget);
+      expect(find.text('CTH 测试主体'), findsOneWidget);
+      expect(find.byTooltip('返回商业运营总览'), findsOneWidget);
+      expect(find.byTooltip('浏览 CTH 主体登记目录'), findsNothing);
+
+      await tester.tap(find.byTooltip('返回商业运营总览'));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('浏览 CTH 主体登记目录'), findsOneWidget);
+      expect(find.text('主体目录 · 当前上下文未变化'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    '390 phone CTH-02 is a nested browse flow, not a sixth destination',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationDestination), findsNWidgets(5));
+
+      await tester.tap(find.byTooltip('浏览 CTH 主体登记目录'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('cth02/mobile-layout')), findsOneWidget);
+      expect(find.text('主体目录 · 当前上下文未变化'), findsOneWidget);
+      expect(find.byType(NavigationDestination), findsNWidgets(5));
+      await tester.tap(find.byTooltip('返回商业运营总览'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('浏览 CTH 主体登记目录'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('1440 wide shell keeps the CTH brand key out of BMP context', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('品牌市场'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Core · 启动身份已读取'), findsOneWidget);
+    expect(find.textContaining('online'), findsNothing);
+    expect(find.text('当前 BrandFocus 尚未确认'), findsOneWidget);
+    expect(find.textContaining('BrandFocus · cth-brand'), findsNothing);
+    expect(find.byTooltip('浏览已登记 Subject'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('390 phone shell hides Subject registry entry in BMP', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('品牌'));
+    await tester.pumpAndSettle();
+
+    final startupIdentity = find.byTooltip('Core · 启动身份已读取');
+    expect(startupIdentity, findsOneWidget);
+    final indicator = tester.widget<Icon>(
+      find.descendant(of: startupIdentity, matching: find.byIcon(Icons.circle)),
+    );
+    expect(indicator.color, LumenisTheme.quiet);
+    expect(find.text('当前 BrandFocus 尚未确认'), findsOneWidget);
+    expect(find.textContaining('BrandFocus · cth-brand'), findsNothing);
+    expect(find.byTooltip('浏览已登记 Subject'), findsNothing);
+    expect(find.byTooltip('退出 Core 会话'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wide Context Inspector reports product, not false BrandFocus', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1720, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('品牌市场'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('当前 BrandFocus 尚未确认'), findsNWidgets(2));
+    expect(find.text('Core product · CTH'), findsOneWidget);
+    expect(find.textContaining('BrandFocus · cth-brand'), findsNothing);
+    expect(find.textContaining('REGISTERED SUBJECTS'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Widget _app() => MaterialApp(
+  theme: LumenisTheme.dark,
+  home: LumenisWorkspaceShell(
+    client: _ShellClient(),
+    runtime: const {
+      'ok': true,
+      'domain': 'cth',
+      'subject': {
+        'subject_id': 'CTH-SUBJECT-7',
+        'brand_key': 'cth-brand',
+        'product': 'CTH',
+      },
+    },
+    subjects: const [
+      {'subject_id': 'CTH-SUBJECT-7', 'name': 'CTH test subject'},
+    ],
+    onLogout: _noop,
+  ),
+);
+
+void _noop() {}
+
+class _ShellClient extends LumenisCoreClient {
+  @override
+  Future<Map<String, dynamic>> runtimeIdentity() async => const {
+    'ok': true,
+    'domain': 'cth',
+    'subject': {
+      'subject_id': 'CTH-SUBJECT-7',
+      'brand_key': 'cth-brand',
+      'product': 'CTH',
+    },
+  };
+
+  @override
+  Future<Map<String, dynamic>> screen(String screenId) async => {
+    'ok': true,
+    'screen': screenId,
+    'bound': true,
+    'generated_at': '2026-09-20T10:00:00',
+    'sections': const [],
+    'truth': const {},
+  };
+
+  @override
+  Future<Map<String, dynamic>> settingsSubjects() async => const {
+    'ok': true,
+    'source': 'lumenis_subject_registry',
+    'selection_only': true,
+    'domains': [
+      {'id': 'CTH', 'name': '商业运营', 'product': 'CTH'},
+    ],
+    'subjects': [
+      {
+        'subject_id': 'CTH-TEST-01',
+        'domain_id': 'CTH',
+        'name_zh': 'CTH 测试主体',
+        'subject_type_name': '商业主体',
+        'industry': '测试行业',
+      },
+    ],
+  };
+}

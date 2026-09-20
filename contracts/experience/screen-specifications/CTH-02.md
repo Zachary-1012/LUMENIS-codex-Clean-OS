@@ -1,0 +1,109 @@
+# CTH-02 — Subject / business-unit profile
+
+```yaml
+screen_id: CTH-02
+status: BLOCKED
+revision: 1
+owner_domain: CTH
+binding_ids:
+  - BACKEND-GAP-008
+product_owner_approval: OVERALL_EXPERIENCE_CONSTITUTION_30_36_ONLY
+reviewer: Codex delegated CTH-02 source review
+reviewed_at: 2026-09-20
+approval_reference: Product Owner approval of App / Experience Constitution §§30–36; this is not CTH-02 acceptance
+```
+
+## 1. User problem and product invariant
+
+- **Role / authorized context:** CTH operator. The CTH Subject Registry returns rows only after an authenticated account and `subject_registry` / `read` permission for CTH. That registry permission allows browsing selection metadata; it does not authorize business data for an individual Subject.
+- **User task:** inspect CTH Subject registry metadata and determine whether the Subject → business unit → brand/format ownership map has verified data.
+- **Completion signal for this bounded App slice:** show only the CTH registry fields returned by the permission-gated list endpoint; show ownership edges as NOT_COLLECTED until their canonical owner and Evidence lineage exist.
+- **Invariant:** CTH remains Subject-first. Reading the registry does not choose or switch the live Subject, alter ownership, or authorize Subject-scoped business data. Product identity, subject identity and context switching are separate concerns.
+- **Out of scope:** changing current Subject, calling the CTH-02 shared screen aggregate, using `subject_context.current_scope()` as a selected Subject, inferring relationships from category distribution, using the static brand directory or brand APIs as ownership, displaying Evidence-less relationship rows, or creating/editing registry records.
+
+## 2. Route, entry and return
+
+- **Entry:** open from the CTH-01 Shell header action `浏览 CTH 主体登记目录`. CTH-02 is a nested CTH workflow, not a sixth top-level destination. On phone the same five destinations remain visible and CTH stays selected.
+- **Required context:** the App holds a Product Core runtime session plus an account session. Runtime identity uses the existing Basic Auth contract; the account session comes from `POST /v4/auth/login` and supplies a Bearer token for this registry request. The server checks CTH `subject_registry` read permission. Subject-specific business authorization is not present in this list response.
+- **Current call:** `GET /api/settings/subjects?domain_id=CTH` through `LumenisCoreClient.settingsSubjects()` and `CoreCth02Repository.loadDirectory()`, with the account Bearer token. This is a read-only selection-metadata request. There is no pagination/cancellation contract or write effect.
+- **Authorization source:** `subject_registry.get_subjects()` calls `lumenis.auth.service.get_current_user()` and `account.authorization.check_dual_domain_permission(user_id, "CTH", module="subject_registry", action="read")`. A 401, 403 or permission-service 503 exposes no Subject rows in the App.
+- **Exit / Trace / Return:** the Shell back action returns to CTH-01 and preserves the active CTH destination and Product Core context. No Subject selection, context switch, business-data navigation, relationship expansion or Evidence trace is implemented. Refresh rereads only the registry list.
+
+## 3. Verified data and callable bindings
+
+| Priority | UI field / action | Current owner | Exact source / callable | Definition and missing behavior | Binding / Evidence |
+| --- | --- | --- | --- | --- | --- |
+| P0 | CTH directory access | SYSTEM Account / Permission | `subject_registry.get_subjects()`; account `get_current_user()` then `check_dual_domain_permission(..., "CTH", module="subject_registry", action="read")` | 401 = no account identity; 403 = CTH registry permission denied; 503 = authorization unavailable. In all cases render no row data. | `subject_registry.py`; route-level source verified. This does not establish per-Subject business authorization. |
+| P1 | Subject ID, Chinese/English name, type and industry | CTH Subject Registry | `GET /api/settings/subjects?domain_id=CTH`; response `source=lumenis_subject_registry`, `selection_only=true`, `domains[]`, `subjects[]` | App accepts only `ok=true`, `selection_only=true`, a returned CTH/CTH domain, and rows with `domain_id=CTH`. It renders `subject_id`, `name_zh` (else `name_en`), `subject_type_name`, and `industry`; excludes keywords and timestamps. Empty authorized list is an empty registry, not an access grant. | `subject_registry.py::_row_to_dict`, `get_subjects`; `BACKEND-GAP-008`; no Evidence lineage is asserted. |
+| P1 | Subject → business unit ownership | CTH canonical MDM / business-unit owner | No verified relation API or source callable | Always NOT_COLLECTED. No edge, count or owner is inferred from categories or another Subject's current context. | Required relation and source owner UNKNOWN; no relation Evidence returned. |
+| P1 | Business unit → brand / format ownership | CTH canonical brand/lease/format owner | No verified relation API or source callable | Always NOT_COLLECTED. Static brand directory and product-level brand lists do not establish CTH Subject ownership. | Required relation and source owner UNKNOWN; no relation Evidence returned. |
+| BLOCKED | Subject-level business profile, note/category aggregation, context switch | CTH Product Core / context owner | Existing `_build_cth02()` reads current scope, category distribution and note count; it is not actor-to-selected-Subject authorized. No verified context-switch command is bound to this screen. | Do not call the shared screen endpoint or use the current-scope aggregate. Do not switch context. | `experience_screens.py::_build_cth02`; actor/Subject READ Permission and Evidence lineage unresolved. |
+
+No fixture fields, global aggregates, static directory entries or inferred relations are used. The API's `selection_only` field limits this registry contract; it is not an App-side authorization decision.
+
+## 4. State and recovery matrix
+
+| State | Trigger/evidence | User-visible meaning | Available actions | Recovery | Acceptance |
+| --- | --- | --- | --- | --- | --- |
+| Loading | Registry GET in progress | Reading the CTH registry | None; announce busy | Keep all Subject data hidden | CTH02-W-01 |
+| Empty | Authenticated, CTH read permitted, response has `selection_only=true`, `domains` includes CTH and `subjects=[]` | No CTH registry rows were returned | Refresh | No fixture fallback | CTH02-W-04 |
+| Not collected | No relation source / lineage | Business-unit and brand/format edges are not collected | None | Show the missing source/owner boundary | CTH02-W-03 |
+| Fresh | Successful registry response | The registry request returned; freshness of business relations is unknown | Refresh | Do not call this business-data freshness | CTH02-W-02 |
+| Stale | No freshness policy for relationship data | Relationship freshness cannot be determined | None | Keep relation state NOT_COLLECTED | CTH02-W-03 |
+| Partial | Registry entries exist but ownership graph does not | Metadata is available; profile relationships remain unavailable | Refresh metadata | Keep business edges hidden | CTH02-W-03 |
+| Offline | Core connection failure | Registry could not be read | Retry | Do not use cached or embedded Subject rows | CTH02-W-05 |
+| Blocked / permission denied | HTTP 401 / 403 / 503 | Identity or CTH registry-read gate failed | Retry; use the account recovery surface when available | Never show response-body or cached Subject values | CTH02-W-05 |
+| Error | Other HTTP or invalid contract / cross-domain row | Source could not be safely interpreted | Retry | Keep all Subject data hidden | CTH02-W-06 |
+| Success / persisted | Registry GET only | No data is written and no live context changes | None | App remains on current context | CTH02-W-02 |
+
+## 5. Purpose-built desktop composition
+
+- **Primary hierarchy:** permission-scoped Subject directory on the left; a separate ownership-availability panel on the right.
+- **Layout:** at 1020 logical px and wider, a 370 px registry rail and flexible ownership pane. Registry list is independently scrollable; refresh remains in the page heading.
+- **Primary interaction:** none. Rows are read-only metadata, not selectors. The backend's `selection_only` contract must not be mistaken for a permissioned context-switch command.
+- **Specific composition:** the directory can be populated while both downstream ownership edges stay visibly unresolved. No invented tree nodes or brand metrics appear.
+
+## 6. Purpose-built mobile composition
+
+- **Single task:** review the scoped registry list, then inspect the two missing ownership links.
+- **Layout:** below 1020 logical px, the directory occupies the first full-width panel and the ownership state follows as separate relationship cards; list height is bounded and touch-scrollable.
+- **Context and return:** no Subject selection or context mutation is offered. Back/navigation remains owned by the App Shell; refresh reloads only registry metadata.
+- **Interruption:** 401 / 403 / offline states replace the directory with retryable text and reveal no cached identity data.
+
+## 7. Actions, authorization and effects
+
+| Action | Owner and actor/scope | Permission | Effect / lineage | Failure behavior |
+| --- | --- | --- | --- | --- |
+| Read CTH directory | SYSTEM Account + Subject Registry, authenticated account, requested domain CTH | Server checks `subject_registry` / `read` for product CTH | GET only; no write, context switch, Evidence emission or business-data access claim | 401/403/503 show no registry rows |
+| Refresh | Same as directory read | Same server-side gate | Repeats the same GET; no idempotent mutation | Keep directory hidden while loading; then show response or failure |
+| Inspect ownership availability | CTH profile UI | No business query issued | Local explanatory state only; no Evidence claim | Both relation edges remain NOT_COLLECTED |
+
+## 8. Accessibility, motion and localization
+
+- Subject rows expose name, ID, type and industry as a single screen-reader label; they are not announced as actionable controls.
+- Loading is announced as a live region. Failure and retry controls have explicit labels and retain keyboard focus behavior from Material controls.
+- Relation status uses both the `NOT_COLLECTED` text and explanatory copy, not color alone.
+- Layout changes from split to stacked based on available width; no device-orientation lock or essential animation is used.
+- Chinese and English Subject names are retained from the API; long text wraps and is not truncated into a fabricated identity.
+
+## 9. Executable acceptance
+
+| Acceptance ID | Action / expected result | State path | Platform/input | Test layer | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| CTH02-W-01 | Open CTH-02 while registry request is pending; no Subject data appears | Loading | Desktop/mobile | Widget | `cth02_screen_test.dart` |
+| CTH02-W-02 | Return valid selection-only CTH registry; show only approved metadata | Ready | Desktop/mobile | Widget + repository | `cth02_screen_test.dart` |
+| CTH02-W-03 | Show both ownership edges as NOT_COLLECTED, with no fabricated link/Evidence | Not collected | Desktop/mobile | Widget | `cth02_screen_test.dart` |
+| CTH02-W-04 | Return an authorized empty CTH registry; show empty state and unresolved relations | Empty | Desktop/mobile | Unit + widget | `cth02_screen_test.dart` |
+| CTH02-W-05 | Return HTTP 401 / 403 / 503; show a gate state and no Subject names or IDs | Blocked | Desktop/mobile | Widget + repository | `cth02_screen_test.dart`, `cth02_repository_test.dart` |
+| CTH02-W-06 | Reject `selection_only=false`, missing CTH scope, or a non-CTH row | Invalid contract | All App sizes | Unit | `cth02_screen_test.dart` |
+| CTH02-W-07 | Resize between desktop and mobile | Distinct split / stacked anatomy; no overflow | 1440 px / 390 px | Widget | `cth02_screen_test.dart` |
+| CTH02-W-08 | Read through the Core repository | Exactly `GET /api/settings/subjects?domain_id=CTH`; no `/api/experience/screen/CTH-02` request | Local API stub | Repository | `cth02_repository_test.dart` |
+
+The above does not accept the full profile. The nested Shell entry/return and local account-auth request sequence have widget/client coverage, but authenticated acceptance against a running Product Core, per-Subject READ authorization, owner-backed relationship data, Evidence provenance, and device/runtime E2E remain unverified.
+
+## 10. Review decision and open questions
+
+- **Decision:** BLOCKED for full CTH-02. The implemented nested App slice is limited to a read-only CTH registry list behind the existing account/domain permission gate and explicit NOT_COLLECTED ownership states.
+- **Reviewer:** Codex delegated CTH-02 source review; source snapshot is local `main` at `76fbe1afcbec656fbd06c0527d011ffecf17ca75`.
+- **Open dependencies:** (1) authenticated App-to-Core acceptance with a real account that has CTH `subject_registry/read`; (2) the CTH-owned Subject → unit → brand/format relation model, its read Permission and Evidence lineage; (3) a separately specified and authorized context-switch workflow if the product owner wants this screen to change active Subject context.
+- **Next acceptance evidence:** live authenticated API acceptance with allowed, denied and unauthenticated accounts; source-isolated relation tests after the canonical owner and callable are verified; desktop/mobile runtime E2E and Shell Trace/Return acceptance. No full CTH-02 profile data is labeled ACCEPTED / RELEASED / OPERATING by this specification.

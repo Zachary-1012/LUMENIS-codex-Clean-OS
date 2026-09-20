@@ -211,6 +211,14 @@ def test_subject_registry_route_requires_an_authenticated_account_session(
 
 
 def test_hk_cookie_apply_targets_hk_profile_and_rejects_cn(tmp_path, monkeypatch):
+    # This assertion exercises the cookie route's file/identity boundary, not
+    # the application's full database migration path. The pytest database is
+    # deliberately empty when no seed snapshot is configured, so bypass only
+    # this unrelated startup migration before importing the large Flask app.
+    from lumenis.shared.database import migrations
+
+    monkeypatch.setattr(migrations, "migrate", lambda: True)
+    monkeypatch.setattr(migrations, "_migrate_add_publish_datetime_index", lambda: None)
     import app as app_module
     import xhs_cookie_bridge as bridge
 

@@ -645,32 +645,88 @@ def _build_sys01() -> Dict[str, Any]:
     overall = hc.get("overall")
     workers = hc.get("workers") if isinstance(hc.get("workers"), dict) else {}
     dlq = hc.get("dlq") if isinstance(hc.get("dlq"), dict) else {}
+    raw_breakers = hc.get("circuit_breakers")
+    breakers = raw_breakers if isinstance(raw_breakers, dict) else None
 
     def _int(v, default=None):
         return v if isinstance(v, int) and not isinstance(v, bool) else default
 
-    # 只有真实数值才作为数值 KPI（kpis 渲染器会对 ready 值做 countup，状态串会变 NaN）
+    # Missing counts stay unavailable. Coercing them to zero turns a failed
+    # health read into a false healthy-looking KPI.
+    worker_total = _int(workers.get("total"))
+    worker_failed = _int(workers.get("failed"))
+    dlq_total = _int(dlq.get("total"))
+
+    def _count_metric(metric_id, title, value, icon, source):
+        return metric(
+            metric_id,
+            title,
+            value=value,
+            state=STATE_READY if value is not None else STATE_OFFLINE,
+            icon=icon,
+            source=source,
+        )
+
+    # Status strings stay in the runtime section; countup accepts only numbers.
     kpis = [
-        metric("sys01.workers_total", "注册 Worker", value=_int(workers.get("total"), 0),
-               state=STATE_READY, icon="ops", source="runtime_guardian.workers.total"),
-        metric("sys01.workers_failed", "失败 Worker", value=_int(workers.get("failed"), 0),
-               state=STATE_READY, icon="risk", source="runtime_guardian.workers.failed"),
-        metric("sys01.dlq", "DLQ 积压", value=_int(dlq.get("total"), 0),
-               state=STATE_READY, icon="database", source="runtime_guardian.dlq.total"),
+        _count_metric(
+            "sys01.workers_total", "注册 Worker", worker_total, "ops",
+            "runtime_guardian.workers.total",
+        ),
+        _count_metric(
+            "sys01.workers_failed", "失败 Worker", worker_failed, "risk",
+            "runtime_guardian.workers.failed",
+        ),
+        _count_metric(
+            "sys01.dlq", "DLQ 积压", dlq_total, "database",
+            "runtime_guardian.dlq.total",
+        ),
     ]
     overall_state = {"healthy": "ok", "ok": "ok", "degraded": "warn",
-                     "unhealthy": "bad", "error": "bad"}.get(str(overall).lower(), "idle")
+                     "unhealthy": "bad", "error": "bad"}.get(
+                         str(overall).lower(), "offline"
+                     )
+    if breakers is None:
+        breaker_state = "offline"
+        breaker_detail = "状态不可用"
+    else:
+        open_breakers = sum(
+            1
+            for breaker in breakers.values()
+            if isinstance(breaker, dict) and breaker.get("state") == "open"
+        )
+        breaker_state = "bad" if open_breakers else "ok"
+        breaker_detail = f"open={open_breakers} · registered={len(breakers)}"
+
+    reaper_value = hc.get("reaper_running")
     rt_items = [
         {"name": "总体状态", "state": overall_state, "detail": str(overall or "unknown")},
-        {"name": "reaper", "state": "ok" if hc.get("reaper_running") else "idle",
-         "detail": f"running={bool(hc.get('reaper_running'))}"},
-        {"name": "熔断器", "state": "ok",
-         "detail": f"open={len(hc.get('circuit_breakers') or {})}"},
-        {"name": "guardian", "state": "idle", "detail": str(hc.get("guardian_name") or "—")},
-        {"name": "时间戳", "state": "idle", "detail": str(hc.get("timestamp") or "—")},
+        {
+            "name": "reaper",
+            "state": "ok" if reaper_value is True else (
+                "idle" if reaper_value is False else "offline"
+            ),
+            "detail": f"running={reaper_value if isinstance(reaper_value, bool) else 'unknown'}",
+        },
+        {"name": "熔断器", "state": breaker_state, "detail": breaker_detail},
+        {
+            "name": "guardian",
+            "state": "ready" if hc.get("guardian_name") else "offline",
+            "detail": str(hc.get("guardian_name") or "状态不可用"),
+        },
+        {
+            "name": "时间戳",
+            "state": "ready" if hc.get("timestamp") else "offline",
+            "detail": str(hc.get("timestamp") or "状态不可用"),
+        },
     ]
     rt = section("runtime", title="健康明细（真实）", items=rt_items)
-    sections = [_head("SYS-01"), section("kpis", STATE_READY, items=kpis), rt]
+    counts_state = (
+        STATE_READY
+        if all(value is not None for value in (worker_total, worker_failed, dlq_total))
+        else STATE_OFFLINE
+    )
+    sections = [_head("SYS-01"), section("kpis", counts_state, items=kpis), rt]
     return _envelope("SYS-01", sections, truth={"overall": overall})
 
 

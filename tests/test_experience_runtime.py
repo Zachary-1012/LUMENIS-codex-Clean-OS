@@ -153,13 +153,38 @@ def test_cth01_risk_level_uses_frontend_enum(isolated_client):
 
 
 # --------------------------- AI-01 真实绑定 + 诚实缺失 ---------------------------
-def test_ai01_anchored_evidence_real(isolated_client):
+def test_ai01_withholds_unscoped_evidence_and_execution_data(isolated_client, monkeypatch):
     cli, _ = isolated_client
+
+    def fail_if_read(*_args, **_kwargs):
+        raise AssertionError("AI-01 must not query a global Evidence or execution store")
+
+    import experience_runtime
+    from lumenis.shared.evidence import store as evidence_store
+
+    monkeypatch.setattr(evidence_store, "get_stats", fail_if_read)
+    monkeypatch.setattr(experience_runtime, "_ai_recent_tasks", fail_if_read)
     j = cli.get("/api/experience/screen/AI-01").get_json()
+
     assert j["bound"] is True
     k = _kpis(j)
-    assert k["ai.anchored_evidence"]["value"] == 2
-    assert k["ai.anchored_evidence"]["state"] == "ready"
+    assert k["ai.anchored_evidence"]["value"] is None
+    assert k["ai.anchored_evidence"]["state"] == "notcollected"
+    assert k["ai.traceability"]["value"] is None
+    assert k["ai.traceability"]["state"] == "notcollected"
+    assert k["ai.review_queue"]["value"] is None
+    assert k["ai.review_queue"]["state"] == "notcollected"
+    assert "evidence_stats" not in j.get("truth", {})
+    assert any("ai.anchored_evidence" == item["field"] for item in j["binding"]["blocked"])
+    timeline = next(
+        section
+        for section in j["sections"]
+        if section.get("type") == "split"
+        for section in section.get("main", [])
+        if section.get("type") == "timeline"
+    )
+    assert timeline["items"] == []
+    assert not any("execution_id" in item for item in timeline["items"])
 
 
 def test_ai01_traceability_not_fabricated(isolated_client):
@@ -169,6 +194,20 @@ def test_ai01_traceability_not_fabricated(isolated_client):
     # 无已完成执行链样本时不得编造可追溯率
     assert k["ai.traceability"]["value"] is None
     assert k["ai.traceability"]["state"] == "notcollected"
+
+
+def test_ai01_provider_kpi_excludes_non_provider_components(isolated_client):
+    cli, _ = isolated_client
+    j = cli.get("/api/experience/screen/AI-01").get_json()
+    providers = next(
+        section["side"][0]["items"]
+        for section in j["sections"]
+        if section.get("type") == "split"
+        and section.get("side")
+        and section["side"][0].get("type") == "runtime"
+    )
+    assert all(item.get("kind") == "provider" for item in providers)
+    assert {item["name"] for item in providers} <= {"智谱 · 可选", "本地 Ollama"}
 
 
 def test_ai01_composer_present_and_no_cot_leak(isolated_client):
@@ -236,6 +275,55 @@ def test_sys01_status_is_not_a_numeric_kpi(isolated_client):
     rt = [s for s in j["sections"] if s.get("type") == "runtime"][0]
     overall = next(i for i in rt["items"] if i["name"] == "总体状态")
     assert overall["detail"] in ("healthy", "ok", "degraded", "unhealthy", "unknown")
+
+
+def test_sys01_unavailable_health_counts_are_not_reported_as_zero(
+    isolated_client, monkeypatch
+):
+    import runtime_guardian
+
+    cli, _ = isolated_client
+    monkeypatch.setattr(runtime_guardian, "legacy_health_check", lambda: {})
+
+    response = cli.get("/api/experience/screen/SYS-01").get_json()
+
+    kpis = _sections(response)["kpis"]["items"]
+    assert [item["value"] for item in kpis] == [None, None, None]
+    assert all(item["state"] == "offline" for item in kpis)
+    assert _sections(response)["kpis"]["state"] == "offline"
+    runtime = next(section for section in response["sections"] if section["type"] == "runtime")
+    overall = next(item for item in runtime["items"] if item["name"] == "总体状态")
+    assert overall["state"] == "offline"
+    assert overall["detail"] == "unknown"
+
+
+def test_sys01_circuit_breaker_summary_counts_open_state(isolated_client, monkeypatch):
+    import runtime_guardian
+
+    cli, _ = isolated_client
+    monkeypatch.setattr(
+        runtime_guardian,
+        "legacy_health_check",
+        lambda: {
+            "overall": "degraded",
+            "workers": {"total": 1, "failed": 0},
+            "dlq": {"total": 0},
+            "circuit_breakers": {
+                "open-worker": {"state": "open"},
+                "closed-worker": {"state": "closed"},
+            },
+            "reaper_running": True,
+            "guardian_name": "test-guardian",
+            "timestamp": "2026-09-20T00:00:00",
+        },
+    )
+
+    response = cli.get("/api/experience/screen/SYS-01").get_json()
+
+    runtime = next(section for section in response["sections"] if section["type"] == "runtime")
+    breaker = next(item for item in runtime["items"] if item["name"] == "熔断器")
+    assert breaker["state"] == "bad"
+    assert breaker["detail"] == "open=1 · registered=2"
 
 
 def test_cth07_chart_series_are_real_14d(isolated_client):

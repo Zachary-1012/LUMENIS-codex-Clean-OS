@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-17  
+> Updated: 2026-09-20
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -48,7 +48,7 @@ If the active task touches any user-visible Experience/UI, read the sole design 
 
 Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
-The current App is bootstrap-only. Do not start feature-screen implementation until the product owner accepts the plan in §§30–36, which specifies 44 distinct compositions. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
+The product owner approved the overall App architecture and Experience Constitution §§30–36 on 2026-09-20; source-backed App implementation is active under `app/`. Continue the five distinct Golden Page vertical slices and the nested CTH-02 selection-only directory without asking for overall-plan approval again. Before implementing another screen, complete and review its specification with current source/API, canonical owner, actor scope, Permission, Evidence lineage, purpose-built PC/mobile composition, states and executable acceptance. Overall-plan approval is not per-screen acceptance. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
 
 Historical browser presentation material was removed from `main`; retained App contracts are canonical under `contracts/experience/`.
 
