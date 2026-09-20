@@ -86,8 +86,9 @@ This is a staged delivery plan, not a claim that all 44 planned screens are impl
 - `flutter analyze`: passed with no issues.
 - `flutter test --no-pub`: 75 tests passed, including 1440 px / 390 px Shell and screen-layout coverage.
 - `py -3.13 -m pytest tests/test_experience_runtime.py tests/test_subject_registry.py tests/test_shared_database_migrations.py`: 48 passed; no background-thread leaks. The cookie-route test isolates the unrelated app-startup migration from its file/identity assertions.
+- Backend capability/permission regressions across BMP truth isolation, AI intent, App permission integration, Shared skills, RuntimeGuardian, login and dual-domain gates: 298 passed; no background-thread leaks.
 - `flutter build windows --release --no-pub`: succeeded; `build/windows/x64/runner/Release/lumenis_app.exe` launched locally with title `序境 - LUMENIS` and `Responding=True`.
 - `flutter build apk --release`: succeeded; `build/app/outputs/flutter-apk/app-release.apk`, 50,150,362 bytes, SHA-256 `F33E1F471343A0625EC3126FF40B78D895608997E880768DD821E8E22B0E6317`.
-- These results prove analysis, tests and compilation only. The APK currently uses the Flutter scaffold's debug signing key. Live Product Core account acceptance, packaged Windows runtime, Android device runtime, store signing, and macOS/Linux/iOS builds remain unverified.
+- These results prove analysis, tests, compilation and the stated Windows launch smoke only. The APK currently uses the Flutter scaffold's debug signing key. Live authenticated Product Core acceptance, Windows screen-workflow E2E, Android device runtime, store signing, and macOS/Linux/iOS builds remain unverified.
 
 Run Flutter checks from `app/`; run the focused Python suite from the repository root. Keep each failed, skipped and unrun release check distinct. Never report a build as a screen acceptance or platform release.
