@@ -90,7 +90,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('390 phone shell hides Subject registry entry in BMP', (
+  testWidgets('390 phone shell hides the CTH directory in BMP without logout', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -110,7 +110,9 @@ void main() {
     expect(find.text('当前品牌尚未确认'), findsOneWidget);
     expect(find.textContaining('BrandFocus · cth-brand'), findsNothing);
     expect(find.byTooltip('查看经营主体目录'), findsNothing);
-    expect(find.byTooltip('退出登录'), findsOneWidget);
+    expect(find.byTooltip('退出登录'), findsNothing);
+    expect(find.text('登录'), findsNothing);
+    expect(find.byType(NavigationDestination), findsNWidgets(5));
     expect(find.text('Core · 启动身份已读取'), findsNothing);
     expect(find.text('PRODUCTION CORE'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -228,11 +230,8 @@ Widget _app({
           {'subject_id': 'CTH-SUBJECT-7', 'name': 'CTH test subject'},
         ],
     subjectDirectoryMessage: subjectDirectoryMessage,
-    onLogout: _noop,
   ),
 );
-
-void _noop() {}
 
 class _ShellClient extends LumenisCoreClient {
   @override

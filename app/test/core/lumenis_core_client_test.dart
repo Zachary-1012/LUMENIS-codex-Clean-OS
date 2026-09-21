@@ -6,66 +6,89 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 
 void main() {
   test(
-    'account-scoped subject reads use the canonical Bearer session',
+    'bootstraps existing Core transport without a product account',
     () async {
       final server = await _CoreStub.start();
       addTearDown(server.close);
       final client = LumenisCoreClient(baseUrl: server.baseUrl);
 
-      await client.authenticate(username: _username, password: _password);
-      await client.authenticateAccount(
-        username: _username,
-        password: _password,
-      );
-      final subjects = await client.subjects();
-
-      expect(subjects, isEmpty);
-      expect(client.hasAccountSession, isTrue);
-      expect(server.requests.map((request) => request.path), [
-        '/api/experience/runtime/identity',
-        '/v4/auth/login',
-        '/api/settings/subjects?domain_id=CTH',
-      ]);
-      expect(server.requests[1].authorization, isNull);
-      expect(server.requests[2].authorization, 'Bearer test-session-token');
-    },
-  );
-
-  test(
-    'Shared GET helpers use the authenticated Core transport and safe paths',
-    () async {
-      final server = await _CoreStub.start();
-      addTearDown(server.close);
-      final client = LumenisCoreClient(baseUrl: server.baseUrl);
-
-      await client.authenticate(username: 'operator', password: 'secret');
+      await client.runtimeIdentity();
       final catalog = await client.sharedSkillsCatalog();
       final evidence = await client.contentEvidence('CGE-contract %?value');
 
       expect(catalog['capability'], 'Shared Content & Creation');
       expect(evidence['evidence']['evidence_id'], 'CGE-contract %?value');
       expect(server.requests.map((request) => request.path), [
+        '/api/auth/config',
         '/api/experience/runtime/identity',
         '/api/experience/shared-skills',
         '/api/experience/content/evidence/CGE-contract%20%25%3Fvalue',
       ]);
+      expect(server.requests.first.authorization, isNull);
       expect(
-        server.requests.every(
-          (request) => request.authorization == _authorization,
-        ),
+        server.requests
+            .skip(1)
+            .every((request) => request.authorization == _authorization),
         isTrue,
+      );
+      expect(
+        server.requests.any((request) => request.path.startsWith('/v4/auth/')),
+        isFalse,
       );
     },
   );
 
-  test('Shared GET helper preserves HTTP status on backend failure', () async {
+  test('Core auth disabled keeps existing public runtime access', () async {
+    final server = await _CoreStub.start(authEnabled: false);
+    addTearDown(server.close);
+    final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+    expect((await client.runtimeIdentity())['ok'], isTrue);
+    expect(server.requests.map((request) => request.path), [
+      '/api/auth/config',
+      '/api/experience/runtime/identity',
+    ]);
+    expect(server.requests.last.authorization, isNull);
+  });
+
+  test(
+    'CTH registry denial stays local and preserves the HTTP status',
+    () async {
+      final server = await _CoreStub.start(
+        subjectStatus: HttpStatus.unauthorized,
+      );
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+      await client.runtimeIdentity();
+      await expectLater(
+        client.settingsSubjects(),
+        throwsA(
+          isA<LumenisCoreException>().having(
+            (error) => error.statusCode,
+            'statusCode',
+            HttpStatus.unauthorized,
+          ),
+        ),
+      );
+      expect((await client.sharedSkillsCatalog())['ok'], isTrue);
+      expect(server.requests.last.path, '/api/experience/shared-skills');
+      expect(server.requests.last.authorization, _authorization);
+      expect(
+        server.requests.any((request) => request.path.startsWith('/v4/auth/')),
+        isFalse,
+      );
+    },
+  );
+
+  test('shared GET helpers preserve backend status on failure', () async {
     final server = await _CoreStub.start(
       catalogStatus: HttpStatus.serviceUnavailable,
     );
     addTearDown(server.close);
     final client = LumenisCoreClient(baseUrl: server.baseUrl);
 
-    await client.authenticate(username: 'operator', password: 'secret');
+    await client.runtimeIdentity();
     await expectLater(
       client.sharedSkillsCatalog(),
       throwsA(
@@ -78,6 +101,34 @@ void main() {
     );
     expect(server.requests.last.authorization, _authorization);
   });
+
+  for (final scheme in ['http', 'https']) {
+    test(
+      'remote $scheme skips config and never sends Core credentials',
+      () async {
+        final client = LumenisCoreClient(
+          baseUrl: '$scheme://core.example.invalid:8201',
+        );
+
+        await expectLater(
+          client.runtimeIdentity(),
+          throwsA(
+            isA<LumenisCoreException>()
+                .having(
+                  (error) => error.message,
+                  'attempted request',
+                  contains('GET /api/experience/runtime/identity'),
+                )
+                .having(
+                  (error) => error.message,
+                  'config bootstrap',
+                  isNot(contains('/api/auth/config')),
+                ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 const _username = 'operator';
@@ -93,19 +144,35 @@ class _RecordedRequest {
 }
 
 class _CoreStub {
-  _CoreStub._({required this.server, required this.catalogStatus}) {
+  _CoreStub._({
+    required this.server,
+    required this.authEnabled,
+    required this.catalogStatus,
+    required this.subjectStatus,
+  }) {
     server.listen(_handle);
   }
 
   final HttpServer server;
+  final bool authEnabled;
   final int catalogStatus;
+  final int subjectStatus;
   final List<_RecordedRequest> requests = [];
 
   String get baseUrl => 'http://127.0.0.1:${server.port}';
 
-  static Future<_CoreStub> start({int catalogStatus = HttpStatus.ok}) async {
+  static Future<_CoreStub> start({
+    bool authEnabled = true,
+    int catalogStatus = HttpStatus.ok,
+    int subjectStatus = HttpStatus.ok,
+  }) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    return _CoreStub._(server: server, catalogStatus: catalogStatus);
+    return _CoreStub._(
+      server: server,
+      authEnabled: authEnabled,
+      catalogStatus: catalogStatus,
+      subjectStatus: subjectStatus,
+    );
   }
 
   Future<void> close() => server.close(force: true);
@@ -117,20 +184,27 @@ class _CoreStub {
     );
     requests.add(_RecordedRequest(path: path, authorization: authorization));
 
-    if (path == '/v4/auth/login' && request.method == 'POST') {
-      await _reply(request, HttpStatus.ok, const {
-        'success': true,
-        'token': 'test-session-token',
-        'user': {'id': 1, 'username': _username},
+    if (path == '/api/auth/config') {
+      await _reply(request, HttpStatus.ok, {
+        'ok': true,
+        'auth_enabled': authEnabled,
+        'auth_header': authEnabled ? _authorization : '',
       });
+      return;
+    }
+    final authorized = !authEnabled || authorization == _authorization;
+    if (path == '/api/experience/runtime/identity') {
+      await _reply(
+        request,
+        authorized ? HttpStatus.ok : HttpStatus.unauthorized,
+        const {'ok': true},
+      );
       return;
     }
     if (path == '/api/settings/subjects?domain_id=CTH') {
       await _reply(
         request,
-        authorization == 'Bearer test-session-token'
-            ? HttpStatus.ok
-            : HttpStatus.unauthorized,
+        authorized ? subjectStatus : HttpStatus.unauthorized,
         const {
           'ok': true,
           'source': 'lumenis_subject_registry',
@@ -143,18 +217,18 @@ class _CoreStub {
       );
       return;
     }
-    if (path == '/api/experience/runtime/identity') {
-      await _reply(request, HttpStatus.ok, const {'ok': true});
-      return;
-    }
     if (path == '/api/experience/shared-skills') {
-      await _reply(request, catalogStatus, const {
-        'ok': true,
-        'product': 'LUMENIS',
-        'capability': 'Shared Content & Creation',
-        'consumers': ['CTH', 'BMP'],
-        'skills': [],
-      });
+      await _reply(
+        request,
+        authorized ? catalogStatus : HttpStatus.unauthorized,
+        const {
+          'ok': true,
+          'product': 'LUMENIS',
+          'capability': 'Shared Content & Creation',
+          'consumers': ['CTH', 'BMP'],
+          'skills': [],
+        },
+      );
       return;
     }
     if (path.startsWith('/api/experience/content/evidence/')) {

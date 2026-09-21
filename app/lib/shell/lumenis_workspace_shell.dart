@@ -15,7 +15,6 @@ class LumenisWorkspaceShell extends StatefulWidget {
     required this.runtime,
     required this.subjects,
     this.subjectDirectoryMessage,
-    required this.onLogout,
     super.key,
   });
 
@@ -23,7 +22,6 @@ class LumenisWorkspaceShell extends StatefulWidget {
   final Map<String, dynamic> runtime;
   final List<Map<String, dynamic>> subjects;
   final String? subjectDirectoryMessage;
-  final VoidCallback onLogout;
 
   @override
   State<LumenisWorkspaceShell> createState() => _LumenisWorkspaceShellState();
@@ -133,6 +131,35 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     _ => Cth01Screen(client: widget.client),
   };
 
+  Widget _screenTransition() {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final duration = reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 180);
+
+    return AnimatedSwitcher(
+      duration: duration,
+      reverseDuration: duration,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        if (reduceMotion) return child;
+        final position = animation.drive(
+          Tween<Offset>(
+            begin: const Offset(0.012, 0),
+            end: Offset.zero,
+          ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        );
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: position, child: child),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(_activeScreen.value), child: _screen()),
+    );
+  }
+
   Widget _buildPhone() {
     final destination = _selectedDestination;
     return Scaffold(
@@ -148,14 +175,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
               onOpenCth02: _openCth02,
               onReturnToCth: _returnFromCth02,
               isCth02: _activeScreen.value == 'CTH-02',
-              onLogout: widget.onLogout,
             ),
-            Expanded(
-              child: KeyedSubtree(
-                key: ValueKey(destination.id),
-                child: _screen(),
-              ),
-            ),
+            Expanded(child: _screenTransition()),
           ],
         ),
       ),
@@ -215,14 +236,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                   onOpenCth02: _openCth02,
                   onReturnToCth: _returnFromCth02,
                   isCth02: _activeScreen.value == 'CTH-02',
-                  onLogout: widget.onLogout,
                 ),
-                Expanded(
-                  child: KeyedSubtree(
-                    key: ValueKey(destination.id),
-                    child: _screen(),
-                  ),
-                ),
+                Expanded(child: _screenTransition()),
               ],
             ),
           ),
@@ -253,14 +268,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                   onOpenCth02: _openCth02,
                   onReturnToCth: _returnFromCth02,
                   isCth02: _activeScreen.value == 'CTH-02',
-                  onLogout: widget.onLogout,
                 ),
-                Expanded(
-                  child: KeyedSubtree(
-                    key: ValueKey(destination.id),
-                    child: _screen(),
-                  ),
-                ),
+                Expanded(child: _screenTransition()),
               ],
             ),
           ),
@@ -444,7 +453,6 @@ class _WorkspaceHeader extends StatelessWidget {
     required this.onOpenCth02,
     required this.onReturnToCth,
     required this.isCth02,
-    required this.onLogout,
     this.compact = false,
   });
 
@@ -454,7 +462,6 @@ class _WorkspaceHeader extends StatelessWidget {
   final VoidCallback onOpenCth02;
   final VoidCallback onReturnToCth;
   final bool isCth02;
-  final VoidCallback onLogout;
   final bool compact;
 
   @override
@@ -533,13 +540,6 @@ class _WorkspaceHeader extends StatelessWidget {
               icon: const Icon(Icons.account_tree_outlined),
               color: LumenisTheme.muted,
             ),
-          IconButton(
-            key: const ValueKey('shell/logout'),
-            tooltip: '退出登录',
-            onPressed: onLogout,
-            icon: const Icon(Icons.logout_rounded),
-            color: LumenisTheme.muted,
-          ),
         ],
       ),
     );
@@ -554,7 +554,6 @@ class _PhoneHeader extends StatelessWidget {
     required this.onOpenCth02,
     required this.onReturnToCth,
     required this.isCth02,
-    required this.onLogout,
   });
 
   final _WorkspaceDestination destination;
@@ -563,7 +562,6 @@ class _PhoneHeader extends StatelessWidget {
   final VoidCallback onOpenCth02;
   final VoidCallback onReturnToCth;
   final bool isCth02;
-  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -621,13 +619,6 @@ class _PhoneHeader extends StatelessWidget {
               icon: const Icon(Icons.account_tree_outlined, size: 20),
               color: LumenisTheme.muted,
             ),
-          IconButton(
-            key: const ValueKey('shell/logout'),
-            tooltip: '退出登录',
-            onPressed: onLogout,
-            icon: const Icon(Icons.logout_rounded, size: 20),
-            color: LumenisTheme.muted,
-          ),
         ],
       ),
     );

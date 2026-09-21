@@ -8,63 +8,57 @@ import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/launch/launch_surface.dart';
 
 void main() {
-  testWidgets('401 opens login and rejected credentials remain in the form', (
+  testWidgets('opens the existing workspace without a product account', (
     tester,
   ) async {
     await _runWithRealHttp(() async {
-      final server = await tester.runAsync(
-        () => _TestCoreServer.start(username: 'operator', password: 'correct'),
-      );
+      final server = await tester.runAsync(() => _TestCoreServer.start());
       expect(server, isNotNull);
       addTearDown(() => server!.close());
 
-      final client = LumenisCoreClient(baseUrl: server!.baseUrl);
-      await tester.pumpWidget(_app(client));
+      await tester.pumpWidget(
+        _app(LumenisCoreClient(baseUrl: server!.baseUrl)),
+      );
       await _pumpNetwork(tester);
 
-      expect(find.text('登录序境'), findsOneWidget);
-      expect(find.textContaining('CTH · 序境·商业运营'), findsOneWidget);
-      expect(find.textContaining('BMP · 序境·品牌市场'), findsOneWidget);
-      expect(find.textContaining('SHARED · 共享能力'), findsOneWidget);
-      expect(find.textContaining('SYSTEM · 系统'), findsOneWidget);
+      expect(find.text('商业运营总览'), findsOneWidget);
+      expect(find.text('登录序境'), findsNothing);
+      expect(find.byTooltip('退出登录'), findsNothing);
       expect(
-        find.textContaining('Agent Groups · Cross-Product Execution'),
-        findsOneWidget,
+        server.requests.map((request) => request.path),
+        containsAllInOrder([
+          '/api/auth/config',
+          '/api/experience/runtime/identity',
+          '/api/experience/screen/CTH-01',
+        ]),
+      );
+      expect(
+        server.requests.any((request) => request.path.startsWith('/v4/auth/')),
+        isFalse,
+      );
+      expect(
+        server.requests.any(
+          (request) => request.path == '/api/settings/subjects',
+        ),
+        isFalse,
       );
       expect(server.requests.first.authorization, isNull);
-
-      await tester.enterText(
-        find.byKey(const ValueKey('auth/username')),
-        'operator',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('auth/password')),
-        'wrong',
-      );
-      await tester.tap(find.byKey(const ValueKey('auth/submit')));
-      await tester.pump();
-      await _pumpNetwork(tester);
-
-      expect(find.text('账号凭证无效或未获准登录，请重试。'), findsOneWidget);
-      expect(find.text('商业运营总览'), findsNothing);
-      expect(server.requests.last.authorization, isNotNull);
-      expect(client.hasSession, isFalse);
       expect(
-        server.requests.any((request) => request.path == '/api/auth/config'),
-        isFalse,
+        server.requests
+            .where((request) => request.path != '/api/auth/config')
+            .every((request) => request.authorization == _authorization),
+        isTrue,
       );
       expect(tester.takeException(), isNull);
     });
   });
 
-  testWidgets('403 shows the separate access-denied state', (tester) async {
+  testWidgets('auth-disabled Core also opens without a product account', (
+    tester,
+  ) async {
     await _runWithRealHttp(() async {
       final server = await tester.runAsync(
-        () => _TestCoreServer.start(
-          username: 'operator',
-          password: 'correct',
-          identityStatus: HttpStatus.forbidden,
-        ),
+        () => _TestCoreServer.start(authEnabled: false),
       );
       expect(server, isNotNull);
       addTearDown(() => server!.close());
@@ -74,96 +68,81 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.text('当前账号没有访问权限'), findsOneWidget);
+      expect(find.text('商业运营总览'), findsOneWidget);
       expect(find.text('登录序境'), findsNothing);
-      expect(find.textContaining('HTTP 403'), findsOneWidget);
+      expect(server.requests.last.path, '/api/experience/screen/CTH-01');
+      expect(
+        server.requests.every((request) => request.authorization == null),
+        isTrue,
+      );
       expect(tester.takeException(), isNull);
     });
   });
 
-  testWidgets('logout clears memory credentials before the next Core request', (
+  testWidgets('CTH directory denial stays on CTH-02 without ejecting the App', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _DeniedDirectoryClient();
+
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('查看经营主体目录'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('经营主体目录 · 当前经营主体不变'), findsOneWidget);
+    expect(find.textContaining('主体名单授权尚未接入'), findsOneWidget);
+    expect(find.text('商业运营总览'), findsNothing);
+    expect(find.text('登录序境'), findsNothing);
+    expect(find.byTooltip('返回商业运营总览'), findsOneWidget);
+    expect(client.settingsSubjectsCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Core 401 shows recoverable connection state, never login form', (
     tester,
   ) async {
     await _runWithRealHttp(() async {
       final server = await tester.runAsync(
-        () => _TestCoreServer.start(username: 'operator', password: 'correct'),
+        () => _TestCoreServer.start(identityStatus: HttpStatus.unauthorized),
       );
       expect(server, isNotNull);
       addTearDown(() => server!.close());
 
-      final client = LumenisCoreClient(baseUrl: server!.baseUrl);
-      await tester.pumpWidget(_app(client));
-      await _pumpNetwork(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('auth/username')),
-        'operator',
+      await tester.pumpWidget(
+        _app(LumenisCoreClient(baseUrl: server!.baseUrl)),
       );
-      await tester.enterText(
-        find.byKey(const ValueKey('auth/password')),
-        'correct',
-      );
-      await tester.tap(find.byKey(const ValueKey('auth/submit')));
-      await tester.pump();
       await _pumpNetwork(tester);
 
-      expect(find.text('商业运营总览'), findsOneWidget);
-      expect(client.hasSession, isTrue);
-      expect(
-        server.requests.any((request) => request.authorization != null),
-        isTrue,
-      );
-
-      await tester.tap(find.byKey(const ValueKey('shell/logout')));
-      await tester.pump();
-      await _pumpNetwork(tester);
-
-      expect(client.hasSession, isFalse);
-      expect(find.text('登录序境'), findsOneWidget);
-
-      LumenisCoreException? responseWithoutCredentials;
-      await tester.runAsync(() async {
-        try {
-          await client.runtimeIdentity();
-        } on LumenisCoreException catch (error) {
-          responseWithoutCredentials = error;
-        }
-      });
-      expect(responseWithoutCredentials?.statusCode, HttpStatus.unauthorized);
-      expect(server.requests.last.path, '/api/experience/runtime/identity');
-      expect(server.requests.last.authorization, isNull);
-
-      // A fresh client has no persisted credentials to restore.
-      await tester.pumpWidget(const SizedBox.shrink());
-      final freshClient = LumenisCoreClient(baseUrl: server.baseUrl);
-      await tester.pumpWidget(_app(freshClient));
-      await _pumpNetwork(tester);
-      expect(freshClient.hasSession, isFalse);
-      expect(server.requests.last.authorization, isNull);
-      expect(find.text('登录序境'), findsOneWidget);
+      expect(find.text('序境核心暂不可访问'), findsOneWidget);
+      expect(find.text('登录序境'), findsNothing);
+      expect(find.text('重新连接'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
 
-  test(
-    'Basic Auth is refused for non-loopback HTTP before any request',
-    () async {
-      final client = LumenisCoreClient(
-        baseUrl: 'http://core.example.invalid:8201',
+  testWidgets('Core 403 remains distinct and does not ask for an account', (
+    tester,
+  ) async {
+    await _runWithRealHttp(() async {
+      final server = await tester.runAsync(
+        () => _TestCoreServer.start(identityStatus: HttpStatus.forbidden),
       );
+      expect(server, isNotNull);
+      addTearDown(() => server!.close());
 
-      await expectLater(
-        client.authenticate(username: 'operator', password: 'secret'),
-        throwsA(
-          isA<LumenisCoreException>().having(
-            (error) => error.statusCode,
-            'statusCode',
-            isNull,
-          ),
-        ),
+      await tester.pumpWidget(
+        _app(LumenisCoreClient(baseUrl: server!.baseUrl)),
       );
-      expect(client.hasSession, isFalse);
-    },
-  );
+      await _pumpNetwork(tester);
+
+      expect(find.text('当前核心请求被拒绝'), findsOneWidget);
+      expect(find.textContaining('HTTP 403'), findsOneWidget);
+      expect(find.text('登录序境'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 Future<void> _runWithRealHttp(Future<void> Function() body) =>
@@ -196,6 +175,11 @@ Future<void> _pumpNetwork(WidgetTester tester) async {
   }
 }
 
+const _username = 'operator';
+const _password = 'secret';
+final _authorization =
+    'Basic ${base64Encode(utf8.encode('$_username:$_password'))}';
+
 class _RecordedRequest {
   const _RecordedRequest({required this.path, required this.authorization});
 
@@ -203,82 +187,81 @@ class _RecordedRequest {
   final String? authorization;
 }
 
+class _DeniedDirectoryClient extends LumenisCoreClient {
+  int settingsSubjectsCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> runtimeIdentity() async => _identity;
+
+  @override
+  Future<Map<String, dynamic>> screen(String screenId) async => _cthScreen;
+
+  @override
+  Future<Map<String, dynamic>> settingsSubjects() async {
+    settingsSubjectsCalls += 1;
+    throw const LumenisCoreException(
+      'GET /api/settings/subjects?domain_id=CTH failed with HTTP 401',
+      statusCode: HttpStatus.unauthorized,
+    );
+  }
+}
+
 class _TestCoreServer {
   _TestCoreServer._({
     required this.server,
-    required this.username,
-    required this.password,
+    required this.authEnabled,
     required this.identityStatus,
+    required this.subjectStatus,
   }) {
     server.listen(_handle);
   }
 
   final HttpServer server;
-  final String username;
-  final String password;
+  final bool authEnabled;
   final int? identityStatus;
+  final int subjectStatus;
   final List<_RecordedRequest> requests = [];
-  static const _accountToken = 'test-session-token';
 
   String get baseUrl => 'http://127.0.0.1:${server.port}';
 
   static Future<_TestCoreServer> start({
-    required String username,
-    required String password,
+    bool authEnabled = true,
     int? identityStatus,
+    int subjectStatus = HttpStatus.ok,
   }) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     return _TestCoreServer._(
       server: server,
-      username: username,
-      password: password,
+      authEnabled: authEnabled,
       identityStatus: identityStatus,
+      subjectStatus: subjectStatus,
     );
   }
 
   Future<void> close() => server.close(force: true);
 
   Future<void> _handle(HttpRequest request) async {
+    final path = request.uri.path;
     final authorization = request.headers.value(
       HttpHeaders.authorizationHeader,
     );
     requests.add(
-      _RecordedRequest(path: request.uri.path, authorization: authorization),
+      _RecordedRequest(
+        path: request.uri.toString(),
+        authorization: authorization,
+      ),
     );
 
-    final expected =
-        'Basic ${base64Encode(utf8.encode('$username:$password'))}';
-    final authorized = authorization == expected;
-    final path = request.uri.path;
-    if (path == '/v4/auth/login' && request.method == 'POST') {
-      final credentials = jsonDecode(await utf8.decoder.bind(request).join());
-      final accountAuthorized =
-          credentials is Map &&
-          credentials['username'] == username &&
-          credentials['password'] == password;
-      await _reply(
-        request,
-        HttpStatus.ok,
-        accountAuthorized
-            ? const {
-                'success': true,
-                'token': _accountToken,
-                'user': {'id': 1, 'username': 'operator'},
-              }
-            : const {'success': false, 'message': 'rejected'},
-      );
+    if (path == '/api/auth/config') {
+      await _reply(request, HttpStatus.ok, {
+        'ok': true,
+        'auth_enabled': authEnabled,
+        'auth_header': authEnabled ? _authorization : '',
+      });
       return;
     }
-    if (path == '/v4/auth/logout' && request.method == 'POST') {
-      await _reply(
-        request,
-        authorization == 'Bearer $_accountToken'
-            ? HttpStatus.ok
-            : HttpStatus.unauthorized,
-        const {'success': true},
-      );
-      return;
-    }
+
+    final authorized = !authEnabled || authorization == _authorization;
     if (path == '/api/experience/runtime/identity') {
       final status =
           identityStatus ??
@@ -290,25 +273,15 @@ class _TestCoreServer {
       );
       return;
     }
-    if (path == '/api/settings/subjects') {
-      final accountAuthorized = authorization == 'Bearer $_accountToken';
-      await _reply(
-        request,
-        accountAuthorized ? HttpStatus.ok : HttpStatus.unauthorized,
-        const {
-          'ok': true,
-          'source': 'lumenis_subject_registry',
-          'selection_only': true,
-          'domains': [
-            {'id': 'CTH', 'product': 'CTH'},
-          ],
-          'subjects': [],
-        },
-      );
-      return;
-    }
     if (path == '/api/experience/screen/CTH-01' && authorized) {
       await _reply(request, HttpStatus.ok, _cthScreen);
+      return;
+    }
+    if (path == '/api/settings/subjects' &&
+        request.uri.queryParameters['domain_id'] == 'CTH') {
+      await _reply(request, subjectStatus, const {
+        'error': 'subject permission denied',
+      });
       return;
     }
     await _reply(request, HttpStatus.notFound, const {'error': 'not found'});

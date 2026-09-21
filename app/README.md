@@ -4,11 +4,11 @@ This is the repository's **single canonical Flutter app target** and the only in
 
 ## Current implementation status
 
-- **Approved pre-beta boundary:** the LUMENIS product account is deferred until after internal beta. The current login-first launch slice described below is source reality, not the accepted target; Round 1 must remove it as a global blocker while preserving Product Core Permission/effect fences. Media-platform Cookie/session/browser authorization is separate and remains in the existing SYSTEM collector path.
-- The launch surface loads Product Core runtime identity and then the account-scoped CTH Subject Registry. The five Golden Pages call their existing `GET /api/experience/screen/<screen_id>` owner contracts. A returned Subject or a bound ViewModel does not establish actor-to-Subject authorization by itself.
-- The login surface shows the four `ProductDomain` ownership definitions and Agent Groups as an information-only product map. It does not choose the active domain; runtime context is read from Product Core identity.
+- **Approved pre-beta boundary:** the LUMENIS product account is deferred until after internal beta and does not block App entry. Core's existing transport authentication remains separate from a product account. Media-platform Cookie/session/browser authorization is separate and remains in the existing SYSTEM collector path.
+- The launch surface reads the existing `GET /api/auth/config` transport configuration, then Product Core runtime identity. It does not call `/v4/auth/login` or load the account-scoped CTH Subject Registry at startup. The five Golden Pages call their existing `GET /api/experience/screen/<screen_id>` owner contracts. A returned Subject or a bound ViewModel does not establish actor-to-Subject authorization by itself.
+- The former login surface showed the four `ProductDomain` ownership definitions and Agent Groups as an information-only product map. Runtime context continues to come from Product Core identity; the removed login prompt did not choose the active domain.
 - The shell's neutral `启动身份已读取` label reports that the runtime identity request returned; it is not a continuous Core health check.
-- CTH-02 opens from CTH-01 as `浏览 CTH 主体登记目录`; it does not add a sixth top-level destination or change the active Subject/context. It displays only metadata returned by the account-authorized registry endpoint. Subject → business unit → brand/format ownership remains `NOT_COLLECTED`; the full profile remains blocked until its owner, read permission and Evidence lineage are verified.
+- CTH-02 opens from CTH-01 as `浏览 CTH 主体登记目录`; it does not add a sixth top-level destination or change the active Subject/context. It requests metadata from the existing server-protected registry only when opened. A server denial is shown locally on CTH-02 and does not eject the user from the App. Subject → business unit → brand/format ownership remains `NOT_COLLECTED`; the full profile remains blocked until its owner, read permission and Evidence lineage are verified.
 - BMP BrandFocus is shown only when Core returns both `domain=zbmp` and `subject.product=ZBMP`; a CTH `brand_key` is not a BMP brand context. CTH remains Subject-first, BMP remains Brand/Market-first, Shared retains source-domain lineage, and SYSTEM remains infrastructure.
 - The five Golden Page slices use screen-specific mappings and compositions. Their presence does **not** mean the Experience contracts or full workflows are accepted. The repository defines 44 screen-specific UX blueprints and 54 truth-binding rows. The binding registry constrains data/API/actor/permission/Evidence truth; legacy `sectionTypes` do not prescribe layouts, and a generic renderer is prohibited.
 - Windows and Android Release compilation have been verified locally. The Windows packaged binary also passed a launch smoke with the expected window title and a responsive process; this does not establish authenticated Product Core or screen-workflow acceptance. Android device acceptance and macOS/Linux/iOS packaging/runtime remain open.
@@ -31,19 +31,17 @@ Product Core integration contracts:
 GET /api/experience/runtime/identity
 GET /api/experience/screen/<screen_id>
 GET /api/settings/subjects?domain_id=CTH
-POST /v4/auth/login
-POST /v4/auth/logout
+GET /api/auth/config
 ```
 
-### Runtime and account sessions
+### Core transport and product account boundary
 
-- The following bullets describe the current implementation that must be reconciled with the approved pre-beta boundary; they do not authorize a product-account wall for Round 1–3.
-- Runtime identity uses the existing Basic Auth contract at `GET /api/experience/runtime/identity`. After that succeeds, the App obtains the account session through `POST /v4/auth/login` and uses its Bearer token for the account-scoped CTH registry request.
-- Basic Auth credentials and the account token stay in memory only. The App does not write them to files, preferences, restoration state or logs. Logout clears both locally and attempts `POST /v4/auth/logout` for the account token.
-- Credentials are sent only over HTTPS or loopback HTTP (`localhost`, loopback IP addresses); authenticated requests do not follow redirects. Remote HTTP is rejected before credentials are sent.
-- HTTP 403 remains a distinct access-denied state, not an invalid-password result. Registry access requires the server-side CTH `subject_registry/read` permission. That permission covers selection metadata only; it does not authorize business data for each Subject.
+- For a loopback Core only, the App reads the existing Core Basic Auth header from `GET /api/auth/config` when Core authentication is enabled and keeps it in process memory. This is technical transport authentication, not a LUMENIS product account. If Core auth is disabled, the App sends no authorization header.
+- The App never requests the reusable Basic header from a remote Core and never sends it to a non-loopback host. This avoids exposing the global Core credential through the unauthenticated configuration route. An authenticated remote Core requires its existing deployment-side transport path; the App does not replace that with a product-account prompt. Authenticated local requests do not follow redirects.
+- The pre-beta App does not call `/v4/auth/login` or `/v4/auth/logout`, persist product-account credentials, or block the workspace on product-account state. The account-backed CTH registry route remains the existing server Permission owner. CTH-02 presents a local denial state if that route refuses access; it does not substitute another registry endpoint or expose business data.
+- Registry access requires the server-side CTH `subject_registry/read` Permission. That Permission covers selection metadata only; it does not authorize business data for each Subject.
 
-The App consumes LUMENIS Product Core. It must not create a second Evidence, Canonical Data, Metric, Permission, Runtime or business-truth owner. `GET /api/experience/subjects` is not used for the account-scoped registry flow.
+The App consumes LUMENIS Product Core. It must not create a second Evidence, Canonical Data, Metric, Permission, Runtime or business-truth owner. `GET /api/experience/subjects` is not used as a substitute for the protected CTH registry.
 
 ## Required development authority
 

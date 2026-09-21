@@ -6,12 +6,13 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/features/cth/cth02/cth02_repository.dart';
 
 void main() {
-  test('repository fails closed without an account session', () async {
+  test('repository preserves the existing server Permission denial', () async {
     final requests = <String>[];
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(() => server.close(force: true));
     server.listen((request) async {
       requests.add(request.uri.toString());
+      expect(request.headers.value(HttpHeaders.authorizationHeader), isNull);
       request.response.statusCode = HttpStatus.unauthorized;
       request.response.headers.contentType = ContentType.json;
       request.response.write(jsonEncode({'subject_id': 'MUST_NOT_BE_EXPOSED'}));
@@ -33,7 +34,7 @@ void main() {
         ),
       ),
     );
-    expect(requests, isEmpty);
+    expect(requests, ['/api/settings/subjects?domain_id=CTH']);
     expect(requests, isNot(contains('/api/experience/screen/CTH-02')));
   });
 }

@@ -21,119 +21,67 @@ class LumenisCoreClient {
           );
 
   final String baseUrl;
-  String? _username;
-  String? _password;
-  String? _accountToken;
+  String? _coreAuthorization;
+  bool _authorizationBootstrapped = false;
 
-  /// Called when a request using the active session is rejected.
-  void Function(LumenisCoreException error)? onAccessFailure;
-
-  bool get hasSession => _username != null && _password != null;
-  bool get hasAccountSession => _accountToken != null;
-
-  Future<Map<String, dynamic>> authenticate({
-    required String username,
-    required String password,
-  }) async {
-    final normalizedUsername = username.trim();
-    if (normalizedUsername.isEmpty || normalizedUsername.contains(':')) {
-      throw const LumenisCoreException('Invalid Basic Auth username.');
-    }
-    if (password.isEmpty) {
-      throw const LumenisCoreException('Password is required.');
-    }
-
-    // Never keep an old session while validating a new set of credentials.
-    clearCredentials();
-    final uri = _uri('/api/experience/runtime/identity');
-    if (!_allowsAuthorization(uri)) {
-      throw const LumenisCoreException(
-        'Credentials require HTTPS or loopback HTTP.',
-      );
-    }
-
-    final identity = await _get(
-      '/api/experience/runtime/identity',
-      authorization: _basicAuthorization(normalizedUsername, password),
-    );
-    if (identity['ok'] != true) {
-      throw const LumenisCoreException(
-        'LUMENIS Core returned an invalid runtime identity.',
-      );
-    }
-
-    // Credentials stay in memory only, after Core has accepted them.
-    _username = normalizedUsername;
-    _password = password;
-    return identity;
-  }
-
+  /// Core transport credentials are read only from a loopback Core runtime
+  /// and kept in memory. They are not a product account and do not create an
+  /// account session.
   void clearCredentials() {
-    _username = null;
-    _password = null;
-    _accountToken = null;
+    _coreAuthorization = null;
+    _authorizationBootstrapped = false;
   }
 
-  Future<void> authenticateAccount({
-    required String username,
-    required String password,
-  }) async {
-    final normalizedUsername = username.trim();
-    if (normalizedUsername.isEmpty || password.isEmpty) {
-      clearCredentials();
-      throw const LumenisCoreException(
-        'Account username and password are required.',
-        statusCode: HttpStatus.unauthorized,
-      );
+  Future<void> _bootstrapCoreAuthorization() async {
+    if (_authorizationBootstrapped) return;
+
+    final uri = _uri('/api/auth/config');
+    if (!_isLoopback(uri)) {
+      // /api/auth/config returns a reusable Basic header. It is intentionally
+      // consumed only by a local Core process, never by a remote client.
+      _authorizationBootstrapped = true;
+      return;
     }
 
     try {
-      final response = await _postJson('/v4/auth/login', {
-        'username': normalizedUsername,
-        'password': password,
-      });
-      final token = response['token'];
-      if (response['success'] != true || token is! String || token.isEmpty) {
-        clearCredentials();
-        throw LumenisCoreException(
-          response['success'] == true
-              ? 'Account login did not return a session token.'
-              : 'Account login was rejected.',
-          statusCode: response['success'] == true
-              ? HttpStatus.internalServerError
-              : HttpStatus.unauthorized,
-        );
+      final config = await _get(
+        '/api/auth/config',
+        useCoreAuthorization: false,
+      );
+      if (config['ok'] != true || config['auth_enabled'] is! bool) {
+        throw const FormatException('Core auth configuration is invalid.');
       }
-      _accountToken = token;
-    } on LumenisCoreException {
-      clearCredentials();
-      rethrow;
-    } catch (_) {
-      clearCredentials();
+
+      if (config['auth_enabled'] == true) {
+        final authorization = config['auth_header'];
+        if (authorization is! String ||
+            !authorization.startsWith('Basic ') ||
+            authorization.contains('\r') ||
+            authorization.contains('\n')) {
+          throw const FormatException(
+            'Core did not provide a valid configured authorization header.',
+          );
+        }
+        _coreAuthorization = authorization;
+      } else {
+        _coreAuthorization = null;
+      }
+      _authorizationBootstrapped = true;
+    } on LumenisCoreException catch (error) {
+      // Older/local Core builds may not expose this optional bootstrap route.
+      // Try the normal no-credential read; an actual 401 remains visible.
+      if (error.statusCode == HttpStatus.notFound) {
+        _authorizationBootstrapped = true;
+        return;
+      }
       rethrow;
     }
   }
 
-  /// Revokes the account session where possible, then immediately drops both
-  /// in-memory authentication channels.
-  Future<void> logout() async {
-    final token = _accountToken;
-    clearCredentials();
-    if (token == null) return;
-
-    try {
-      await _postJson(
-        '/v4/auth/logout',
-        const <String, Object?>{},
-        authorization: _bearerAuthorization(token),
-      );
-    } catch (_) {
-      // Local logout is complete even when Core is unavailable.
-    }
+  Future<Map<String, dynamic>> runtimeIdentity() async {
+    await _bootstrapCoreAuthorization();
+    return _get('/api/experience/runtime/identity');
   }
-
-  Future<Map<String, dynamic>> runtimeIdentity() =>
-      _get('/api/experience/runtime/identity');
 
   Future<List<Map<String, dynamic>>> subjects() async {
     final payload = await settingsSubjects();
@@ -191,22 +139,10 @@ class LumenisCoreClient {
         .toList(growable: false);
   }
 
-  /// Reads the account-scoped Subject Registry for CTH selection metadata.
-  /// This does not authorize business data for any returned Subject.
-  Future<Map<String, dynamic>> settingsSubjects() {
-    final token = _accountToken;
-    if (token == null) {
-      throw const LumenisCoreException(
-        'An account session is required for the CTH Subject Registry.',
-        statusCode: HttpStatus.unauthorized,
-      );
-    }
-    return _get(
-      '/api/settings/subjects?domain_id=CTH',
-      authorization: _bearerAuthorization(token),
-      accountScoped: true,
-    );
-  }
+  /// Reads the existing account-scoped CTH Subject Registry. A denial is
+  /// surfaced to that screen only and does not eject the user from the App.
+  Future<Map<String, dynamic>> settingsSubjects() =>
+      _get('/api/settings/subjects?domain_id=CTH');
 
   Future<Map<String, dynamic>> sharedSkillsCatalog() =>
       _get('/api/experience/shared-skills');
@@ -220,20 +156,13 @@ class LumenisCoreClient {
 
   Future<Map<String, dynamic>> _get(
     String path, {
-    String? authorization,
-    bool notifyAccessFailure = true,
-    bool accountScoped = false,
+    bool useCoreAuthorization = true,
   }) async {
     final uri = _uri(path);
-    final usesSessionCredentials = authorization == null && hasSession;
-    final requestAuthorization =
-        authorization ??
-        (usesSessionCredentials
-            ? _basicAuthorization(_username!, _password!)
-            : null);
-    if (requestAuthorization != null && !_allowsAuthorization(uri)) {
+    final authorization = useCoreAuthorization ? _coreAuthorization : null;
+    if (authorization != null && !_allowsAuthorization(uri)) {
       throw const LumenisCoreException(
-        'Credentials require HTTPS or loopback HTTP.',
+        'Core credentials require a loopback Core endpoint.',
       );
     }
 
@@ -241,93 +170,28 @@ class LumenisCoreClient {
     try {
       http.connectionTimeout = const Duration(seconds: 8);
       final request = await http.getUrl(uri);
-      if (requestAuthorization != null) {
+      if (authorization != null) {
         request.followRedirects = false;
-        request.headers.set(
-          HttpHeaders.authorizationHeader,
-          requestAuthorization,
-        );
+        request.headers.set(HttpHeaders.authorizationHeader, authorization);
       }
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
       final reply = await request.close();
       final body = await utf8.decoder.bind(reply).join();
       if (reply.statusCode < 200 || reply.statusCode >= 300) {
-        final error = LumenisCoreException(
+        throw LumenisCoreException(
           'GET $path failed with HTTP ${reply.statusCode}',
           statusCode: reply.statusCode,
         );
-        if (usesSessionCredentials &&
-            (reply.statusCode == HttpStatus.unauthorized ||
-                reply.statusCode == HttpStatus.forbidden)) {
-          if (reply.statusCode == HttpStatus.unauthorized) {
-            clearCredentials();
-          }
-          if (notifyAccessFailure) onAccessFailure?.call(error);
-        }
-        if (accountScoped && reply.statusCode == HttpStatus.unauthorized) {
-          clearCredentials();
-          if (notifyAccessFailure) onAccessFailure?.call(error);
-        }
-        throw error;
       }
       final decoded = jsonDecode(body);
       if (decoded is! Map<String, dynamic>) {
         throw LumenisCoreException('GET $path returned non-object JSON');
       }
       return decoded;
-    } on SocketException catch (error) {
+    } on IOException catch (error) {
       throw LumenisCoreException(
-        'LUMENIS Core unavailable at $baseUrl: ${error.message}',
-      );
-    } finally {
-      http.close(force: true);
-    }
-  }
-
-  Future<Map<String, dynamic>> _postJson(
-    String path,
-    Map<String, Object?> payload, {
-    String? authorization,
-  }) async {
-    final uri = _uri(path);
-    if (!_allowsAuthorization(uri)) {
-      throw const LumenisCoreException(
-        'Account credentials require HTTPS or loopback HTTP.',
-      );
-    }
-    if (authorization != null && !_allowsAuthorization(uri)) {
-      throw const LumenisCoreException(
-        'Credentials require HTTPS or loopback HTTP.',
-      );
-    }
-
-    final http = HttpClient();
-    try {
-      http.connectionTimeout = const Duration(seconds: 8);
-      final request = await http.postUrl(uri);
-      request.followRedirects = false;
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      request.headers.contentType = ContentType.json;
-      if (authorization != null) {
-        request.headers.set(HttpHeaders.authorizationHeader, authorization);
-      }
-      request.write(jsonEncode(payload));
-      final reply = await request.close();
-      final body = await utf8.decoder.bind(reply).join();
-      if (reply.statusCode < 200 || reply.statusCode >= 300) {
-        throw LumenisCoreException(
-          'POST $path failed with HTTP ${reply.statusCode}',
-          statusCode: reply.statusCode,
-        );
-      }
-      final decoded = jsonDecode(body);
-      if (decoded is! Map<String, dynamic>) {
-        throw LumenisCoreException('POST $path returned non-object JSON');
-      }
-      return decoded;
-    } on SocketException catch (error) {
-      throw LumenisCoreException(
-        'LUMENIS Core unavailable at $baseUrl: ${error.message}',
+        'LUMENIS Core unavailable at $baseUrl for GET $path: '
+        '$error',
       );
     } finally {
       http.close(force: true);
@@ -342,14 +206,12 @@ class LumenisCoreClient {
     return uri;
   }
 
-  static String _basicAuthorization(String username, String password) =>
-      'Basic ${base64Encode(utf8.encode('$username:$password'))}';
-
-  static String _bearerAuthorization(String token) => 'Bearer $token';
-
   static bool _allowsAuthorization(Uri uri) {
-    if (uri.scheme == 'https') return true;
-    if (uri.scheme != 'http') return false;
+    return _isLoopback(uri);
+  }
+
+  static bool _isLoopback(Uri uri) {
+    if (uri.scheme != 'http' && uri.scheme != 'https') return false;
     final host = uri.host.toLowerCase();
     if (host == 'localhost' || host.endsWith('.localhost')) return true;
     return InternetAddress.tryParse(host)?.isLoopback ?? false;

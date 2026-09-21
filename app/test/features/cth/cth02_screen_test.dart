@@ -32,7 +32,7 @@ void main() {
   });
 
   testWidgets(
-    'sign-in failure hides the list and does not expose server details',
+    'unavailable CTH list access stays local and does not expose server details',
     (tester) async {
       await tester.pumpWidget(
         _app(
@@ -48,7 +48,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('请重新登录'), findsOneWidget);
+      expect(find.text('主体名单授权尚未接入，名单内容暂不显示；其他工作区不受影响。'), findsOneWidget);
+      expect(find.textContaining('请重新登录'), findsNothing);
+      expect(find.text('重新查看主体名单'), findsOneWidget);
       expect(find.text('SUBJ-PRIVATE-01'), findsNothing);
       expect(find.text('主体敏感名称'), findsNothing);
       expect(find.text('DANGER-KEYWORD'), findsNothing);
@@ -56,23 +58,44 @@ void main() {
     },
   );
 
-  testWidgets('all failure states use business copy without internal details', (
+  testWidgets('account denial and other failures stay inside the CTH list', (
     tester,
   ) async {
-    final failures = <Object>[
-      const LumenisCoreException('denied', statusCode: 403),
-      const LumenisCoreException('authorization unavailable', statusCode: 503),
-      const LumenisCoreException('Core unavailable'),
-      const FormatException('Subject Registry contract invalid'),
-      StateError('raw internal server response'),
+    final failures = <({Object error, String copy})>[
+      (
+        error: const LumenisCoreException('denied', statusCode: 403),
+        copy: '当前没有查看 CTH 经营主体名单的权限。名单内容未显示。',
+      ),
+      (
+        error: const LumenisCoreException(
+          'authorization unavailable',
+          statusCode: 503,
+        ),
+        copy: '暂时无法确认 CTH 经营主体名单的访问权限，请稍后重试。',
+      ),
+      (
+        error: const LumenisCoreException('Core unavailable'),
+        copy: '暂时无法连接服务，未能读取 CTH 经营主体名单。',
+      ),
+      (
+        error: const FormatException('Subject Registry contract invalid'),
+        copy: 'CTH 经营主体名单暂时无法显示，请稍后重试。',
+      ),
+      (
+        error: StateError('raw internal server response'),
+        copy: 'CTH 经营主体名单暂时无法加载，请稍后重试。',
+      ),
     ];
 
     for (final failure in failures) {
       await tester.pumpWidget(
-        _app(_FakeRepository(() => Future.error(failure))),
+        _app(_FakeRepository(() => Future.error(failure.error))),
       );
       await tester.pumpAndSettle();
 
+      expect(find.text(failure.copy), findsOneWidget);
+      expect(find.textContaining('请重新登录'), findsNothing);
+      expect(find.text('重新查看主体名单'), findsOneWidget);
       _expectNoInternalCopy(tester);
       _expectRestrictedValuesHidden(tester);
     }

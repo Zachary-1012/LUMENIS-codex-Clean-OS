@@ -82,9 +82,9 @@ class _FailureState extends StatelessWidget {
   final VoidCallback onRetry;
 
   String get _message => switch (kind) {
-    Cth02FailureKind.authentication => '无法确认当前登录状态，请重新登录后查看 CTH 经营主体名单。',
-    Cth02FailureKind.permissionDenied => '当前账号无法查看 CTH 经营主体名单。名单内容未显示。',
-    Cth02FailureKind.permissionUnavailable => '暂时无法确认您是否可以查看 CTH 经营主体名单，请稍后重试。',
+    Cth02FailureKind.authentication => '主体名单授权尚未接入，名单内容暂不显示；其他工作区不受影响。',
+    Cth02FailureKind.permissionDenied => '当前没有查看 CTH 经营主体名单的权限。名单内容未显示。',
+    Cth02FailureKind.permissionUnavailable => '暂时无法确认 CTH 经营主体名单的访问权限，请稍后重试。',
     Cth02FailureKind.offline => '暂时无法连接服务，未能读取 CTH 经营主体名单。',
     Cth02FailureKind.invalidResponse => 'CTH 经营主体名单暂时无法显示，请稍后重试。',
     Cth02FailureKind.server => 'CTH 经营主体名单暂时无法加载，请稍后重试。',
