@@ -9,6 +9,51 @@ This evidence is subordinate to current executable source, runtime truth, the
 Product Architecture, and the Source Owner Index. It does not claim that a test
 fixture is Production Truth or that a static check proves live database health.
 
+## B002 canonical business-schema continuation
+
+`ROUND-03-B002` continued from live `origin/main` baseline
+`755c06c68365b84e1899bdc73efef5f479ba61b9`. It moved the root compatibility
+module's `SCHEMA`, four additive migration dictionaries, and idempotent apply
+logic into `lumenis/shared/database/business_schema.py`. The root
+`database.py` keeps the compatibility exports and delegates `init_db()` to the
+canonical owner. Exact-value, insertion-order, and AST comparison against the
+baseline root implementation passed, including the backfill and event-date SQL
+text.
+
+The canonical package now exports the compatibility symbols explicitly.
+Regression tests lock the single owner, root/package identity compatibility,
+thin delegation, schema-registry source, isolated backfills, the unique report
+index, and event-date correction. The scoped B002 suite completed with
+`37 passed`; Python compilation, the database-authority verifier, the Only-One
+validator, and tracked/untracked whitespace checks all passed. The authority
+verifier audited 553 production Python modules and retained only
+`connection.py` and `migrations.py` as direct SQLite connection owners.
+
+During Sol acceptance, the original isolation test exposed two protection
+defects instead of being accepted as green: it imported `runtime_guardian`
+before binding a temporary `ZBC_DB_PATH`, and the pytest seed bootstrap opened
+the protected repository database through SQLite, which could create WAL/SHM
+sidecars. The first run therefore changed the repository database before a
+later assertion captured its baseline. The changed database and sidecars were
+preserved outside the repository, and `data/monitor.db` was restored from a
+byte-identical copy with the required SHA-256 before testing resumed.
+
+The corrected tests bind an isolated database before any potentially
+persistent import, verify call-time redirection with a second temporary path,
+fingerprint the main database plus WAL/SHM sidecars, and copy the quiescent
+repository seed without opening it through SQLite. A repository seed with any
+WAL/SHM sidecar now fails closed rather than checkpointing, ignoring, or
+mutating source state. The final scoped run preserved all protected artifacts:
+
+- size: `53248` bytes;
+- UTC modification time: `2026-09-20T00:52:49.6770349Z`;
+- SHA-256: `F69208CFBA914E455B0BF34424E78E382940EE3C155F7F9C7CA4714E641E40DD`;
+- `data/monitor.db-wal`: absent before and after;
+- `data/monitor.db-shm`: absent before and after.
+
+This is protected-file integrity and hermetic-test evidence. Production DB
+contents and live runtime health remain **UNVERIFIED**.
+
 ## Implemented and tested boundary
 
 - Canonical database owner remains `lumenis/shared/database/`.

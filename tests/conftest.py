@@ -47,6 +47,45 @@ def _existing_seed(*candidates: str) -> str:
     return _LOCAL_CANDIDATE_DB
 
 
+def _is_protected_local_seed(path: str) -> bool:
+    return os.path.normcase(os.path.abspath(path)) == os.path.normcase(
+        os.path.abspath(_LOCAL_CANDIDATE_DB)
+    )
+
+
+def _protected_sidecars(path: str):
+    return [
+        (candidate, os.path.getsize(candidate))
+        for candidate in (path + "-wal", path + "-shm")
+        if os.path.exists(candidate)
+    ]
+
+
+def _copy_protected_local_seed(source: str, destination: str) -> None:
+    """Copy the repository DB without opening it through SQLite.
+
+    A WAL or SHM file means a plain main-file copy may omit uncheckpointed
+    state. Fail closed instead of opening or checkpointing the protected source.
+    """
+    sidecars = _protected_sidecars(source)
+    if sidecars:
+        details = ", ".join(f"{path} ({size} bytes)" for path, size in sidecars)
+        raise RuntimeError(
+            "[P0-C TEST DB GATE] protected repository seed has SQLite sidecars; "
+            f"refusing an incomplete or source-mutating snapshot: {details}"
+        )
+
+    shutil.copy2(source, destination)
+
+    sidecars = _protected_sidecars(source)
+    if sidecars:
+        details = ", ".join(f"{path} ({size} bytes)" for path, size in sidecars)
+        raise RuntimeError(
+            "[P0-C TEST DB GATE] protected repository seed gained SQLite "
+            f"sidecars during file copy; snapshot rejected: {details}"
+        )
+
+
 # The production launcher keeps the canonical runtime DB outside the checkout.
 # Prefer that path only as a read-only seed; every test still receives its own
 # OS-temp copy and the sqlite guard is installed before any test executes.
@@ -59,23 +98,28 @@ _TEST_SEED_DB = _existing_seed(
     _LOCAL_CANDIDATE_DB,
 )
 if os.path.isfile(_TEST_SEED_DB):
-    # The source is read-only test input. SQLite backup gives a consistent
-    # snapshot when the production DB is live/WAL-enabled; all tests operate on
-    # the temporary destination only.
-    try:
-        _src = _sqlite3_guard.connect(
-            f"file:{_TEST_SEED_DB}?mode=ro", uri=True, timeout=10
-        )
-        _dst = _sqlite3_guard.connect(_PYTEST_DB_PATH, timeout=10)
+    if _is_protected_local_seed(_TEST_SEED_DB):
+        # Never open the protected repository DB through SQLite: even a
+        # read-only WAL connection may create -wal/-shm sidecars. A plain file
+        # copy is safe only when no sidecar state exists.
+        _copy_protected_local_seed(_TEST_SEED_DB, _PYTEST_DB_PATH)
+    else:
+        # Explicit external seeds keep SQLite backup semantics so a live,
+        # WAL-enabled source can produce a consistent temporary snapshot.
         try:
-            _src.backup(_dst)
-        finally:
-            _src.close()
-            _dst.close()
-    except Exception:
-        # CI may provide a non-SQLite placeholder; preserve the existing
-        # behavior so the test process can report the actual fixture failure.
-        shutil.copy2(_TEST_SEED_DB, _PYTEST_DB_PATH)
+            _src = _sqlite3_guard.connect(
+                f"file:{_TEST_SEED_DB}?mode=ro", uri=True, timeout=10
+            )
+            _dst = _sqlite3_guard.connect(_PYTEST_DB_PATH, timeout=10)
+            try:
+                _src.backup(_dst)
+            finally:
+                _src.close()
+                _dst.close()
+        except Exception:
+            # CI may provide a non-SQLite placeholder; preserve the existing
+            # behavior so the test process can report the actual fixture failure.
+            shutil.copy2(_TEST_SEED_DB, _PYTEST_DB_PATH)
 else:
     # CI/新机器允许从空文件开始；具体迁移测试必须自行初始化 schema，不能回退生产路径。
     open(_PYTEST_DB_PATH, "ab").close()

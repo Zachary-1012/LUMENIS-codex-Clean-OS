@@ -1,4 +1,5 @@
 """Only-One guard for Shared Database path ownership."""
+import ast
 from pathlib import Path
 
 from scripts.audit_tools.verify_database_authority import (
@@ -8,6 +9,56 @@ from scripts.audit_tools.verify_database_authority import (
 )
 
 REPO = Path(__file__).resolve().parents[1]
+
+BUSINESS_SCHEMA_SYMBOLS = {
+    "SCHEMA",
+    "NOTE_MIGRATIONS",
+    "WEB_MIGRATIONS",
+    "REPORT_MIGRATIONS",
+    "EVENT_MIGRATIONS",
+}
+
+
+def test_business_schema_has_one_canonical_owner_and_compatible_exports():
+    import database
+    import lumenis.shared.database as shared_database
+    from lumenis.shared.database import business_schema
+
+    root_tree = ast.parse((REPO / "database.py").read_text(encoding="utf-8"))
+    root_assignments = {
+        target.id
+        for node in root_tree.body
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+        for target in (
+            node.targets if isinstance(node, ast.Assign) else (node.target,)
+        )
+        if isinstance(target, ast.Name)
+    }
+
+    assert BUSINESS_SCHEMA_SYMBOLS.isdisjoint(root_assignments)
+    for symbol in BUSINESS_SCHEMA_SYMBOLS:
+        canonical = getattr(business_schema, symbol)
+        assert getattr(database, symbol) is canonical
+        assert getattr(shared_database, symbol) is canonical
+        assert symbol in shared_database.__all__
+    assert shared_database.apply_business_schema is business_schema.apply_business_schema
+    assert "apply_business_schema" in shared_database.__all__
+
+
+def test_root_init_db_is_a_thin_canonical_schema_delegate():
+    root_tree = ast.parse((REPO / "database.py").read_text(encoding="utf-8"))
+    init_db = next(
+        node
+        for node in root_tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "init_db"
+    )
+    calls = [
+        node.func.id
+        for node in ast.walk(init_db)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    ]
+    assert calls.count("apply_business_schema") == 1
+    assert "executescript" not in ast.unparse(init_db)
 
 def test_shared_database_is_canonical_path_owner():
     source = (REPO / "lumenis/shared/database/paths.py").read_text(encoding="utf-8")

@@ -34,7 +34,9 @@ def test_reflect_opens_readonly(tmp_path):
 
 def test_declared_sources_finds_core_tables():
     srcs = sr.declared_sources(ROOT)
-    assert "notes" in srcs and any("database.py" == s for s in srcs["notes"])
+    assert "notes" in srcs
+    assert "lumenis/shared/database/business_schema.py" in srcs["notes"]
+    assert "database.py" not in srcs["notes"]
 
 
 def test_classify_states():
