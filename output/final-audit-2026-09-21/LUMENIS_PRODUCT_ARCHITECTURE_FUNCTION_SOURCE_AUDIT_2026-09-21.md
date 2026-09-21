@@ -16,7 +16,7 @@
 | 运行接口 | 44/44 Screen GET 均 200 且自报 bound=true | 不能证明业务闭环；ready/bound 语义过度乐观 |
 | 任务书 | 235 页：10 协议页 + 225 Task；SOL 54 / LUNA 171 | 任务 ID 连续且已 100% 映射到 15 轮 |
 | 本地验证 | 6/6 治理门通过；107 Skill/Agent/AI Task 测试通过；79 Flutter 测试通过 | 仅 targeted TESTED，不是 release VERIFIED |
-| CI | NOT RUN / latest attempted jobs failed before steps | 当前 HEAD 无绿色 Gate 证据 |
+| CI | BLOCKED / GitHub billing or spending limit prevented all job steps | 当前 HEAD 无绿色 Gate 证据 |
 | 多终端 | Public Website ABSENT；Web Workspace ABSENT；Desktop/Mobile 仅 6 个切片 | APP ONLY 不适合商业化；四表面方案已获用户批准 |
 
 ## A. REMOTE TRUTH
@@ -153,7 +153,7 @@
 | MISS-006 | P0 | Evidence | Shared Evidence reads are globally scoped and duplicate stores remain | PARTIAL | app_evidence_records + zbc_evidence + task evidence; AI-01 withholds global data | Converge read contracts and actor/domain/object lineage without rewriting source facts | 4 | Every claim/action traces to immutable source and Return; no cross-scope leakage |
 | MISS-007 | P0 | Product context | Authorized Subject/BrandFocus does not propagate through all workflows | PARTIAL | Live identity returns CTH Subject; AI-01 blocks scoped submit; BMP live path unproved | One server-authorized context contract shared by Web/Desktop/Mobile | 4 | Context selection cannot grant access; task/history/report all retain scope |
 | MISS-008 | P0 | Action closure | Most declared UI actions have no verified API/Permission/effect/Evidence contract | PARTIAL | Experience action registries vs implemented routes; six UI slices mostly read-only | Resolve one action at a time through existing owner/firewall/fence | 4 | Decision→approval→idempotent effect→result→Evidence→rollback |
-| MISS-009 | P0 | CI | No passing Product/App Gate for current HEAD | BLOCKED | Latest runs at 3f93c128 failed before any steps; current df15a99d has no run | Repair runner/account/infrastructure and execute current-head blocking gates | 15 | Current SHA has complete logs and green required jobs; Tier C remains separate |
+| MISS-009 | P0 | CI | No passing Product/App Gate for current HEAD | BLOCKED | Current-head Product/App jobs were created but GitHub did not start any steps: recent account payments failed or the spending limit must be increased | Repair GitHub billing/spending-limit availability, then rerun both current-head blocking gates | 15 | Current SHA has complete logs and green required jobs; Tier C remains separate |
 | MISS-010 | P0 | Release | No clean-clone/cross-platform/Internal Beta evidence | ABSENT | Targets exist; no current artifact matrix or fresh-data smoke | Build/install/test Windows/macOS/Linux/Android/iOS as applicable with rollback | 15 | Release manifest ties source/schema/tests/artifacts/live evidence |
 | MISS-011 | P0 | Security | Sensitive default account/recovery bootstrap material is hardcoded in source | BLOCKED | account/models.py initializes owner/recovery defaults | Remove fixed secret material through approved migration/recovery design without blocking pre-beta | 4 | No plaintext/default personal secret; upgrade/migration/recovery tested |
 | MISS-012 | P0 | Runtime output | Mutable Collector schedule state is tracked inside the source tree | EXISTS_BUT_UNSCOPED | df15a99d auto-watch commit added lumenis/system/collector/data/schedule_state.json | Move future runtime state to canonical operational storage; preserve current behavior/data until owner and migration are approved | 5 | Read endpoints do not mutate source tree; operational state survives/recoverable without auto-committing runtime changes |
