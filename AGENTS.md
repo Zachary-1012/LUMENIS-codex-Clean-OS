@@ -126,6 +126,8 @@ The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE
 
 All current product execution follows the approved 15-round dependency order in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: current truth; authority/Only-One; database; identity/Permission/Evidence; runtime; collector/browser; AI/Agent/Shared engines; cross-surface foundation; Golden Pages; CTH monitoring; CTH decision loop; BMP market loop; BMP content/campaign loop; remaining ACC/AI/Shared/SYSTEM Experience; then closed-loop internal beta/release. Do not skip a round, start all rounds together, or treat a later dependency as proof for the active round.
 
+The 15 rounds are exactly 15 sequential Codex tasks: one Sol-controlled task for each round. A round task may contain bounded Luna Batches, but it must finish Sol acceptance, publish the next round's Task Card and stop; it must not enter another round. Each Luna receives exactly one Batch and may not continue automatically. At the start of every new round task, resolve current `origin/main`, local state, dependencies and protected work again.
+
 Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama and the approved Jev candidate are providers behind the one SYSTEM AI Gateway. Jev is limited to typed decision/evaluation tasks and cannot own Permission, Evidence, Production Truth or effects. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The LUMENIS account is deferred until after internal beta; pre-beta product access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
 
 Default loop:
@@ -191,6 +193,27 @@ Source
 → Evaluation
 → Learning Asset
 ```
+
+### Continuous capability evolution contract
+
+Collection, browser acquisition, creation, AI, agents, reporting, evaluation, learning and every CTH/BMP/Shared/SYSTEM workflow are versioned capabilities, not frozen modules. During the 15-round build and after release, improve a capability when real Evidence, outcome feedback or evaluation identifies a bounded gap. Reuse its canonical owner and preserve the Product Architecture, workflow meaning, Permission, Evidence lineage and state semantics; never create an alternate owner in order to learn faster.
+
+Controlled evolution path:
+
+```text
+Evidence + Canonical Input
+→ Versioned Execution
+→ Real Result
+→ User / Outcome Feedback
+→ Evaluation
+→ Versioned Learning Asset / Model / Skill / Configuration
+→ Shadow or Targeted Validation
+→ Permission / Approval Gate
+→ Promoted Capability Version
+→ Observability + Rollback
+```
+
+Learning is derivative. It may recommend, evaluate and promote a tested version through the canonical owner, but it must never silently rewrite source Evidence, Canonical Truth, permissions, approvals or external effects. Every user invocation must produce the real requested result or an explicit unavailable/error/blocked state; fixtures, empty output, HTTP 200, provider registration and unverified AI text are not completion.
 
 ### Multi-surface Experience direction
 
