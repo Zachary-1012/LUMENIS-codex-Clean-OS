@@ -1,0 +1,84 @@
+LUMENIS / 序境 — AGENTS 执行规则文字版
+版本：2026-09-21 源码审计基线
+状态：候选执行合同；Product Owner 审核前不启动 ROUND 02，不派发序境09。
+
+1. 唯一产品与仓库
+- Canonical workspace：D:\LUMENIS_REBUILD\序\序境。
+- 每轮开始重新读取 git remote、fetch origin、origin/main、HEAD、工作区、运行态与仓库 AGENTS.md。
+- 不把 D:\Z-Brand-Core、D:\LUMENIS 或 D:\codex 下的副本当作产品仓库，除非实时 Git 证据改变此事实。
+- 禁止 reset --hard、clean、force push、覆盖或删除未知本地工作。
+
+2. 主控与执行角色
+- GPT-5.6 Sol 是唯一主控、产品经理、架构/owner 决策者与最终验收者。
+- GPT-5.6 Luna 是单 Batch、边界明确的实现执行者。每个 Luna 只接收一张 Task Card，不跨 Batch 自动继续。
+- OpenCode、Ollama、Jev、插件、CLI 和其他模型只是执行资源，不拥有产品架构、数据库、Permission、Evidence、Collector、Browser、AI Gateway、Agent Runtime 或发布决定。
+- 用户临时切换模型不改写持久默认，也不改变权责。
+
+3. 十五任务硬合同
+- 产品开发闭环严格由 ROUND 01 至 ROUND 15 共十五个顺序 Codex 任务组成；一轮就是一个独立任务。
+- 一个任务只闭合当前 Round，发布 Sol 的 PASS / REWORK / BLOCKED / SPLIT / REORDER 和下一 Task Card 后停止。
+- 不同时创建十五任务，不跳轮，不让同一 Luna 自动进入下一 Batch；最多两个经 Sol 明确批准、无文件/owner/测试/迁移冲突的 Luna 并行。
+- 当前 ROUND 01 只读审计完成后，必须等待 Product Owner 批准；序境09保持冻结。
+
+4. 产品范围完整性
+- ONE Product / ONE Repository / ONE Main / ONE Product Architecture / ONE Product Core。
+- ONE Canonical Data / ONE Database Authority / ONE Evidence / ONE Permission / ONE Runtime Ownership。
+- ONE Collector / ONE Browser / ONE AI Gateway / ONE Agent Runtime / ONE API-ViewModel Contract。
+- MULTIPLE EXPERIENCE SURFACES：Public Website、Web Workspace、Desktop Power Client、Mobile Companion。
+- Public Website 只拥有商业信息与入口，不拥有生产业务真相。
+- Web、Desktop、Mobile 必须共享 Product Core、Canonical API/ViewModel、Permission、Evidence、Subject/BrandFocus、状态语义与 workflow 意义。
+- Desktop 独占或增强能力通过 Capability Boundary 表达：Local Collector、Browser/CDP、Cookie/Session、Local AI、File System、Long-running Runtime、内网/私有部署。
+
+5. 必须保住并闭合的能力
+- Governance/Only-One、Database/Migrations/Repository、Canonical Data/Metrics/ViewModel。
+- Evidence、Permission/Approval/Effect Fence、Identity、CTH Subject、BMP BrandFocus。
+- Runtime/Startup/Health/Queue/DLQ/Recovery/Observability。
+- Collector/Scheduler/Adapters/Public Sources/XHS/Browser/CDP/Cookie/Session。
+- AI Gateway/Provider/Ollama/Jev/AI Task Engine/Agent Runtime。
+- LUMENIS Product Skill Store：发现、信任/许可/I-O/风险检查、准入、安装/注册、启用、配置、验证调用、Evidence/历史、版本升级、停用/卸载、健康状态；AI-04 必须绑定 canonical SkillRegistry，而不是旧 FUNCTION_MAP。
+- Artifact、Reporting/Export、Evaluation、Learning、CTH/BMP/Shared/SYSTEM 全工作流、44 Screen、多终端体验、发布与恢复。
+- module_registry、root callers、历史能力和兼容层在证明 owner/contract/Permission/Evidence/test parity 前不得删除。
+
+6. 持续能力进化
+- 采集、创作、AI、Agent、Reporting、Evaluation、Learning 与业务 workflow 是版本化能力，不是固定实现。
+- 受控学习回路：Evidence/Canonical input → execution → real result → user/outcome feedback → evaluation → versioned model/skill/config/asset → shadow/targeted validation → required Permission/approval → promotion → observability/rollback。
+- AI、Jev 或学习结果是 derivative candidate；不得自动改写 Evidence、Canonical Truth、Permission、审批或外部 effect。
+- 面向用户的能力必须返回真实结果，或诚实返回 unavailable/error/blocked；禁止 missing→0、fixture→production、HTTP 200→business success、provider registered→healthy。
+
+7. Source-first 审计与状态
+- 文件名、PDF、README、历史交接和聊天都不是当前完成证明；当前可执行源码、调用链、数据、测试和运行证据优先。
+- 每个领域必须映射 Owner → implementation → callers → API/contract → database → Permission → Evidence → tests → runtime → surface binding → compatibility/duplicate。
+- 状态只使用 VERIFIED / IMPLEMENTED / TESTED / PARTIAL / EXISTS_BUT_UNSCOPED / LOCAL_ONLY / ABSENT / BLOCKED / LIVE_UNVERIFIED / RELEASED / OPERATING。
+- 不能把 IMPLEMENTED 写成 VERIFIED，不能把 TESTED 写成 live/release verified。
+
+8. Luna Task Card
+- 固定包含：TASK ID、ROUND、ROLE、BASE REMOTE SHA、BASE LOCAL SHA、GOAL、OUTCOME、READ、OWNER、CALLERS、INPUT CONTRACT、ALLOWED、FORBIDDEN、PRESERVE、REQUIREMENTS、STATE、RESPONSIVE、TESTS、VALIDATION、EVIDENCE、STOP CONDITION。
+- owner/API/Permission/Evidence/migration/runtime 任一 UNKNOWN 时不得发明、扩围、造假按钮或启用假成功；返回 BLOCKED 并说明准确下一 owner。
+
+9. Luna 回传与 Sol 验收
+- Luna 固定回传 RESULT、STATUS、BASE/FINAL remote/local SHA、READ/CHANGED、IMPLEMENTED/PRESERVED、TESTS/RESULTS、RUNTIME/E2E、GOVERNANCE、BLOCKERS、OUT-OF-SCOPE、RISKS、COMMIT、PUSH。
+- Sol 必须亲自检查 diff、scope、owner、contract、Permission、Evidence、data truth、tests、runtime/E2E、commit/push 与 PDF 完成条件。
+- 只有实际存在、依赖满足、验证真实执行、没有弱化测试/伪造 Evidence/破坏邻近 owner，才可 PASS。
+
+10. 十五轮顺序
+- ROUND 01 Current Truth / PDF Full Coverage：Freeze current remote/local/runtime/PDF truth and protect unknown work.
+- ROUND 02 Authority / Only-One / Compatibility：One current product authority, four approved surfaces, named owner for every caller/capability.
+- ROUND 03 Database / Canonical Truth：One DB path/repository/schema truth with isolated tests and protected production data.
+- ROUND 04 Identity / Context / Permission / Evidence：Trusted actor + Subject/BrandFocus + scoped reads/writes/effects + lineage.
+- ROUND 05 Runtime / Health / Recovery / Observability：Honest startup, dependency health, worker/queue/DLQ, recovery and trace.
+- ROUND 06 Collector / Browser / Acquisition：One authorized acquisition chain from source/session to Evidence and Canonical Data.
+- ROUND 07 AI / Agent / Skill Store / Shared Engines：One Gateway and Agent runtime; restore full Skill Store; reporting/evaluation/learning remain derivative and governed.
+- ROUND 08 Cross-Surface Experience Foundation：Public Website + Web Workspace + Desktop + Mobile roles over one Product Core.
+- ROUND 09 Golden Pages + CTH-02：AI-01, CTH-01/02, BMP-01, SH-01, SYS-01 become real cross-surface workflows.
+- ROUND 10 CTH Monitoring / Analysis：CTH-03..07 source-backed live monitoring, event relations, calendar, feedback and trends.
+- ROUND 11 CTH Case / Risk / Decision / Report：CTH-08..10 close Case→Insight→Decision→Action→Outcome→Report.
+- ROUND 12 BMP Portfolio / Market / Propagation / Creator：BMP-02..05 close BrandFocus→market→propagation→creator evidence.
+- ROUND 13 BMP Content / Campaign / Podcast / Evaluation：BMP-06..11 close asset/campaign/podcast/result/evaluation/risk/benchmark.
+- ROUND 14 Remaining ACC / AI / Shared / SYSTEM：Deliver ACC-01..04, AI-02..05, SH-02..06, SYS-02..08 with honest deferrals.
+- ROUND 15 Closed-loop Internal Beta / Clean Clone / Release：Public→Web→real context/workflow/Evidence→Desktop execution→Web result→Mobile approval→Report/Evaluation/Learning.
+
+11. 当前冻结与批准门
+- 当前审计基线 SHA：df15a99de6f5ffc3eb85e2c9924afb59c1c3c781。派发时必须重新读取，不得复用。
+- 当前 protected runtime item：lumenis/system/collector/data/schedule_state.json 已由 auto-watch 纳入 df15a99d；未经 owner/data migration 判断不得删除或迁移。
+- 当前 Product/App Gate 不能称绿；OpenCode Zhipu route 当前认证失败；Jev adapter 当前 ABSENT。
+- Product Owner 明确批准本次报告、缺失表、草图和 15 轮映射之前，不启动 ROUND 02，不允许序境09或 Luna 修改产品源码。
