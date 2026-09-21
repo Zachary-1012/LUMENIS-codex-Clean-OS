@@ -102,6 +102,8 @@ Sys01Snapshot _readySnapshot() => const Sys01Snapshot(
   failedWorkers: Sys01Count(value: 0, state: 'ready'),
   dlqTotal: Sys01Count(value: 0, state: 'ready'),
   sampleTimestamp: '2026-09-20T09:30:00Z',
+  observationAvailable: true,
+  observationTraceId: 'sys01rt-0123456789abcdef01234567',
   guardianName: 'legacy',
   reaperRunning: true,
   openBreakers: 0,

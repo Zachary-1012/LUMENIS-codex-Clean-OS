@@ -665,6 +665,11 @@ class _SourceRail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SourceLine(label: '状态来源', value: '系统运行监测'),
+          const _Rule(),
+          _SourceLine(
+            label: '观测状态',
+            value: snapshot.observationAvailable ? '已读取当前观测' : '暂无可用观测',
+          ),
           if (snapshot.guardianName != null) ...[
             const _Rule(),
             const _SourceLine(label: '运行服务状态', value: '已识别'),
@@ -672,12 +677,19 @@ class _SourceRail extends StatelessWidget {
           const _Rule(),
           _SourceLine(
             label: '状态检查时间',
-            value: snapshot.sampleTimestamp ?? '未提供',
+            value: snapshot.sampleTimestamp ?? '暂不可用',
             emphasize: true,
           ),
+          const _Rule(),
+          _SourceLine(
+            label: '观测编号',
+            value: snapshot.observationTraceId ?? '暂不可用',
+          ),
+          const _Rule(),
+          const _SourceLine(label: '访问边界', value: '只读，不修改运行状态'),
           const SizedBox(height: 12),
           const Text(
-            '显示时间来自系统运行状态检查记录。',
+            '来源、时间与观测编号对应同一次系统状态读取。',
             style: TextStyle(
               color: LumenisTheme.quiet,
               fontSize: 11,

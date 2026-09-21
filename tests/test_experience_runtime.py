@@ -297,6 +297,87 @@ def test_sys01_unavailable_health_counts_are_not_reported_as_zero(
     assert overall["detail"] == "unknown"
 
 
+def test_sys01_returns_stable_read_only_runtime_observation_without_internal_values(
+    isolated_client, monkeypatch
+):
+    import json
+    import runtime_guardian
+
+    cli, _ = isolated_client
+    monkeypatch.setattr(
+        runtime_guardian,
+        "legacy_health_check",
+        lambda: {
+            "overall": "degraded",
+            "workers": {"total": 2, "failed": 1},
+            "dlq": {"total": 3},
+            "circuit_breakers": {"worker": {"state": "open"}},
+            "guardian_name": r"C:\\private\\runtime-token-should-not-leak",
+            "timestamp": "2026-09-21T10:11:12Z",
+        },
+    )
+
+    first = cli.get("/api/experience/screen/SYS-01").get_json()
+    second = cli.get("/api/experience/screen/SYS-01").get_json()
+    observation = first["runtime_observation"]
+
+    assert observation == {
+        "state": "ready",
+        "source": "runtime_guardian.legacy_health_check",
+        "captured_at": "2026-09-21T10:11:12+00:00",
+        "trace_id": observation["trace_id"],
+        "boundary": "read_only",
+    }
+    assert observation["trace_id"].startswith("sys01rt-")
+    assert observation["trace_id"] == second["runtime_observation"]["trace_id"]
+    assert observation["trace_id"] != ""
+    assert "runtime-token-should-not-leak" not in json.dumps(first)
+    assert "C:\\\\private" not in json.dumps(first)
+
+
+def test_sys01_missing_runtime_observation_stays_unavailable(isolated_client, monkeypatch):
+    import runtime_guardian
+
+    cli, _ = isolated_client
+    monkeypatch.setattr(runtime_guardian, "legacy_health_check", lambda: {})
+
+    response = cli.get("/api/experience/screen/SYS-01").get_json()
+    observation = response["runtime_observation"]
+
+    assert observation["state"] == "unavailable"
+    assert observation["source"] == "runtime_guardian.legacy_health_check"
+    assert observation["captured_at"] is None
+    assert observation["trace_id"] is None
+    assert observation["boundary"] == "read_only"
+
+
+def test_sys01_rejects_untrusted_observation_time_and_state_without_path_leaks(
+    isolated_client, monkeypatch
+):
+    import json
+    import runtime_guardian
+
+    cli, _ = isolated_client
+    private_value = r"D:\private\secret-value"
+    monkeypatch.setattr(
+        runtime_guardian,
+        "legacy_health_check",
+        lambda: {
+            "overall": private_value,
+            "timestamp": private_value,
+            "guardian_name": private_value,
+        },
+    )
+
+    response = cli.get("/api/experience/screen/SYS-01").get_json()
+    observation = response["runtime_observation"]
+
+    assert observation["state"] == "unavailable"
+    assert observation["captured_at"] is None
+    assert observation["trace_id"] is None
+    assert private_value not in json.dumps(response)
+
+
 def test_sys01_circuit_breaker_summary_counts_open_state(isolated_client, monkeypatch):
     import runtime_guardian
 

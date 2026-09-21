@@ -46,58 +46,96 @@ def _doc_summary(view_func: Any) -> str:
     return doc[0].strip() if doc else ""
 
 
-def build_spec(app: Any, title: str = "Z-Brand-Core API", version: str = "1.0.0") -> dict:
-    paths: Dict[str, dict] = {}
-    covered_rules = 0
+def build_spec(app: Any, title: str = "LUMENIS API", version: str = "1.0.0") -> dict:
+    url_map_rule_count = 0
+    static_route_count = 0
+    route_count = 0
+    operation_count = 0
+    operation_candidates: Dict[tuple, List[Dict[str, str]]] = {}
+    summaries: Dict[tuple, str] = {}
     for rule in app.url_map.iter_rules():
+        url_map_rule_count += 1
         if rule.endpoint == "static":
+            static_route_count += 1
             continue
-        covered_rules += 1
+        route_count += 1
         path = flask_rule_to_path(rule)
         view = app.view_functions.get(rule.endpoint)
         summary = _doc_summary(view) if view else ""
-        ops = {}
-        for method in sorted(rule.methods or []):
-            if method not in HTTP_METHODS:
-                continue
-            sec = auth_for(path)
-            op: Dict[str, Any] = {
-                "operationId": rule.endpoint,
-                "tags": [_tag_of(path)],
-                "parameters": [
-                    {"name": p, "in": "path", "required": True,
-                     "schema": {"type": "string"}}
-                    for p in _PARAM_RE.findall(rule.rule)
-                ],
-            }
+        for method in sorted((rule.methods or set()) & HTTP_METHODS):
+            operation_count += 1
+            key = (path, method)
+            operation_candidates.setdefault(key, []).append({
+                "endpoint": rule.endpoint,
+                "rule": rule.rule,
+            })
+            summaries[(path, method, rule.endpoint, rule.rule)] = summary
+
+    paths: Dict[str, dict] = {}
+    duplicate_candidates = []
+    for (path, method), candidates in sorted(operation_candidates.items()):
+        candidates = sorted(candidates, key=lambda item: (item["endpoint"], item["rule"]))
+        op: Dict[str, Any] = {
+            "tags": [_tag_of(path)],
+            "parameters": [
+                {"name": name, "in": "path", "required": True,
+                 "schema": {"type": "string"}}
+                for name in re.findall(r"\{([^}]+)\}", path)
+            ],
+        }
+        sec = auth_for(path)
+        if sec:
+            op["security"] = [sec] if len(sec) == 1 else [[{k: []}] for k in sec]
+
+        if len(candidates) == 1:
+            candidate = candidates[0]
+            op["operationId"] = candidate["endpoint"]
+            op["x-flask-rule"] = candidate["rule"]
+            summary = summaries[(path, method, candidate["endpoint"], candidate["rule"])]
             if summary:
                 op["summary"] = summary
-            if sec:
-                op["security"] = [sec] if len(sec) == 1 else [[{k: []}] for k in sec]
-            ops[method.lower()] = op
-        if ops:
-            paths.setdefault(path, {}).update(ops)
+        else:
+            op["x-route-candidates"] = candidates
+            duplicate_candidates.append({
+                "path": path,
+                "method": method,
+                "candidates": candidates,
+            })
+        paths.setdefault(path, {})[method.lower()] = op
+
     return {
         "openapi": "3.0.3",
         "info": {"title": title, "version": version,
-                 "description": "Auto-generated from Flask url_map (P1-2). Do not edit by hand."},
+                 "description": "Auto-generated from the active LUMENIS Flask url_map. Route ownership is recorded as evidence; duplicate candidates remain explicit."},
         "components": {"securitySchemes": {
             "httpBasic": {"type": "http", "scheme": "basic"},
             "v4Auth": {"type": "apiKey", "in": "header", "name": "Authorization",
                        "description": "v4 独立 token/会话（Bearer 或同名 session cookie）"},
         }},
-        "x-route-count": covered_rules,
+        "x-url-map-rule-count": url_map_rule_count,
+        "x-static-route-count": static_route_count,
+        "x-route-count": route_count,
+        "x-path-count": len(paths),
+        "x-operation-count": operation_count,
+        "x-operation-group-count": len(operation_candidates),
+        "x-duplicate-operation-group-count": len(duplicate_candidates),
+        "x-duplicate-operation-candidate-count": sum(
+            len(item["candidates"]) for item in duplicate_candidates
+        ),
+        "x-duplicate-operation-candidates": duplicate_candidates,
         "paths": paths,
     }
 
 
 def build_matrix_md(spec: dict) -> str:
     paths = spec["paths"]
-    lines = ["# API 路由矩阵（P1-2，由 openapi_spec 从 url_map 自动生成，勿手改）\n",
-             f"- 非 static 路由（path 去重后）：**{len(paths)}**；url_map 规则数：{spec.get('x-route-count')}",
+    lines = ["# API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）\n",
+             f"- Flask url_map rules：**{spec.get('x-url-map-rule-count')}**（static：**{spec.get('x-static-route-count')}**；API routes：**{spec.get('x-route-count')}**）",
+             f"- 唯一路径：**{spec.get('x-path-count', len(paths))}**；operation groups：**{spec.get('x-operation-group-count')}**",
+             f"- route operation candidates：**{spec.get('x-operation-count')}**；重复冲突组：**{spec.get('x-duplicate-operation-group-count')}**（候选项：**{spec.get('x-duplicate-operation-candidate-count')}**）",
              "- 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。\n",
-             "| 路径 | 方法 | Endpoint | 认证 | 分组 |",
-             "|------|------|----------|------|------|"]
+             "| 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |",
+             "|------|------|--------------------|------------|------|------|"]
     for path in sorted(paths):
         for method, op in sorted(paths[path].items()):
             sec = op.get("security")
@@ -107,12 +145,20 @@ def build_matrix_md(spec: dict) -> str:
                 auth = "v4Auth"
             else:
                 auth = "basic/v4"
-            lines.append(f"| `{path}` | {method.upper()} | {op['operationId']} | {auth} | {op['tags'][0]} |")
+            candidates = op.get("x-route-candidates") or [{
+                "endpoint": op.get("operationId", ""),
+                "rule": op.get("x-flask-rule", ""),
+            }]
+            for candidate in candidates:
+                lines.append(
+                    f"| `{path}` | {method.upper()} | {candidate['endpoint']} | `"
+                    f"{candidate['rule']}` | {auth} | {op['tags'][0]} |"
+                )
     return "\n".join(lines) + "\n"
 
 
 def generate(app: Any, json_path: str, matrix_path: Optional[str] = None,
-             title: str = "Z-Brand-Core API", version: str = "1.0.0") -> dict:
+             title: str = "LUMENIS API", version: str = "1.0.0") -> dict:
     spec = build_spec(app, title=title, version=version)
     with open(json_path, "w", encoding="utf-8", newline="") as f:
         json.dump(spec, f, ensure_ascii=False, indent=2)

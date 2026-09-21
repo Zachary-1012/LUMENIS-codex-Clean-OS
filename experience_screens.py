@@ -20,6 +20,7 @@ layout-agnostic，必要时适配新的语义 section，而不是强迫 UI 继�
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
 import json
 import os
 from typing import Any, Dict, List, Optional
@@ -642,7 +643,13 @@ def _build_sys01() -> Dict[str, Any]:
 
     hc = _safe(rg.legacy_health_check, default={})
     hc = hc if isinstance(hc, dict) and not _is_err(hc) else {}
-    overall = hc.get("overall")
+    raw_overall = hc.get("overall")
+    overall = (
+        raw_overall
+        if isinstance(raw_overall, str)
+        and raw_overall.lower() in {"healthy", "ok", "degraded", "unhealthy", "error"}
+        else None
+    )
     workers = hc.get("workers") if isinstance(hc.get("workers"), dict) else {}
     dlq = hc.get("dlq") if isinstance(hc.get("dlq"), dict) else {}
     raw_breakers = hc.get("circuit_breakers")
@@ -656,6 +663,56 @@ def _build_sys01() -> Dict[str, Any]:
     worker_total = _int(workers.get("total"))
     worker_failed = _int(workers.get("failed"))
     dlq_total = _int(dlq.get("total"))
+
+    source = "runtime_guardian.legacy_health_check"
+    captured_at = None
+    raw_timestamp = hc.get("timestamp")
+    if isinstance(raw_timestamp, str) and raw_timestamp and len(raw_timestamp) <= 64:
+        try:
+            normalized_timestamp = (
+                raw_timestamp[:-1] + "+00:00"
+                if raw_timestamp.endswith("Z")
+                else raw_timestamp
+            )
+            captured_at = _dt.datetime.fromisoformat(
+                normalized_timestamp
+            ).isoformat(timespec="seconds")
+        except (TypeError, ValueError, OverflowError):
+            captured_at = None
+
+    open_breaker_count = None
+    registered_breaker_count = None
+    if breakers is not None:
+        open_breaker_count = sum(
+            1
+            for breaker in breakers.values()
+            if isinstance(breaker, dict) and breaker.get("state") == "open"
+        )
+        registered_breaker_count = len(breakers)
+    observation_ready = captured_at is not None and overall is not None
+    trace_id = None
+    if observation_ready:
+        trace_material = {
+            "source": source,
+            "captured_at": captured_at,
+            "overall": overall.lower(),
+            "workers_total": worker_total,
+            "workers_failed": worker_failed,
+            "dlq_total": dlq_total,
+            "open_breakers": open_breaker_count,
+            "registered_breakers": registered_breaker_count,
+        }
+        digest = hashlib.sha256(
+            json.dumps(trace_material, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:24]
+        trace_id = f"sys01rt-{digest}"
+    runtime_observation = {
+        "state": "ready" if observation_ready else "unavailable",
+        "source": source,
+        "captured_at": captured_at if observation_ready else None,
+        "trace_id": trace_id,
+        "boundary": "read_only",
+    }
 
     def _count_metric(metric_id, title, value, icon, source):
         return metric(
@@ -690,13 +747,10 @@ def _build_sys01() -> Dict[str, Any]:
         breaker_state = "offline"
         breaker_detail = "状态不可用"
     else:
-        open_breakers = sum(
-            1
-            for breaker in breakers.values()
-            if isinstance(breaker, dict) and breaker.get("state") == "open"
+        breaker_state = "bad" if open_breaker_count else "ok"
+        breaker_detail = (
+            f"open={open_breaker_count} · registered={registered_breaker_count}"
         )
-        breaker_state = "bad" if open_breakers else "ok"
-        breaker_detail = f"open={open_breakers} · registered={len(breakers)}"
 
     reaper_value = hc.get("reaper_running")
     rt_items = [
@@ -712,12 +766,12 @@ def _build_sys01() -> Dict[str, Any]:
         {
             "name": "guardian",
             "state": "ready" if hc.get("guardian_name") else "offline",
-            "detail": str(hc.get("guardian_name") or "状态不可用"),
+            "detail": "已识别" if hc.get("guardian_name") else "状态不可用",
         },
         {
             "name": "时间戳",
-            "state": "ready" if hc.get("timestamp") else "offline",
-            "detail": str(hc.get("timestamp") or "状态不可用"),
+            "state": "ready" if captured_at else "offline",
+            "detail": captured_at or "状态不可用",
         },
     ]
     rt = section("runtime", title="健康明细（真实）", items=rt_items)
@@ -727,7 +781,10 @@ def _build_sys01() -> Dict[str, Any]:
         else STATE_OFFLINE
     )
     sections = [_head("SYS-01"), section("kpis", counts_state, items=kpis), rt]
-    return _envelope("SYS-01", sections, truth={"overall": overall})
+    response = _envelope("SYS-01", sections, truth={"overall": overall})
+    # This is a correlation label for one SYSTEM runtime read, not canonical business Evidence.
+    response["runtime_observation"] = runtime_observation
+    return response
 
 
 def _scalar_str(v: Any) -> str:

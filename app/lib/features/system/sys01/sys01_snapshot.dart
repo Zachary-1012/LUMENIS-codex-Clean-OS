@@ -6,6 +6,8 @@ class Sys01Snapshot {
     required this.failedWorkers,
     required this.dlqTotal,
     required this.sampleTimestamp,
+    required this.observationAvailable,
+    required this.observationTraceId,
     required this.guardianName,
     required this.reaperRunning,
     required this.openBreakers,
@@ -19,6 +21,8 @@ class Sys01Snapshot {
   final Sys01Count failedWorkers;
   final Sys01Count dlqTotal;
   final String? sampleTimestamp;
+  final bool observationAvailable;
+  final String? observationTraceId;
   final String? guardianName;
   final bool? reaperRunning;
   final int? openBreakers;
@@ -37,8 +41,33 @@ class Sys01Snapshot {
     final kpis = _findSection(sections, 'kpis');
     final runtime = _findSection(sections, 'runtime');
     final truth = _asMap(response['truth']);
-    if (kpis == null || runtime == null || truth == null) {
+    final observation = _asMap(response['runtime_observation']);
+    if (kpis == null ||
+        runtime == null ||
+        truth == null ||
+        observation == null) {
       throw const FormatException('SYS-01 runtime response is incomplete.');
+    }
+    if (observation['source'] != 'runtime_guardian.legacy_health_check' ||
+        observation['boundary'] != 'read_only') {
+      throw const FormatException('SYS-01 observation provenance is invalid.');
+    }
+    final observationState = _asString(observation['state']);
+    if (observationState != 'ready' && observationState != 'unavailable') {
+      throw const FormatException('SYS-01 observation state is invalid.');
+    }
+    final observationAvailable = observationState == 'ready';
+    final observationTimestamp = observationAvailable
+        ? _asString(observation['captured_at'])
+        : null;
+    final traceId = observationAvailable
+        ? _asString(observation['trace_id'])
+        : null;
+    if (observationAvailable &&
+        (observationTimestamp == null ||
+            traceId == null ||
+            !RegExp(r'^sys01rt-[a-f0-9]{24}$').hasMatch(traceId))) {
+      throw const FormatException('SYS-01 observation trace is incomplete.');
     }
 
     final metrics = _asMapList(kpis['items']);
@@ -47,16 +76,13 @@ class Sys01Snapshot {
     final reaperRow = _findRuntimeItem(runtimeItems, 'reaper');
     final breakerRow = _findRuntimeItem(runtimeItems, '熔断器');
     final guardianRow = _findRuntimeItem(runtimeItems, 'guardian');
-    final timestampRow = _findRuntimeItem(runtimeItems, '时间戳');
 
     final overall = _asString(truth['overall']);
-    final sampleTimestamp = _runtimeState(timestampRow) == 'ready'
-        ? _runtimeDetail(timestampRow)
-        : null;
     final completeSample =
         overall != null &&
         overall.toLowerCase() != 'unknown' &&
-        sampleTimestamp != null;
+        observationTimestamp != null &&
+        traceId != null;
 
     final reaperRunning =
         completeSample &&
@@ -77,7 +103,9 @@ class Sys01Snapshot {
       registeredWorkers: _findMetric(metrics, 'sys01.workers_total'),
       failedWorkers: _findMetric(metrics, 'sys01.workers_failed'),
       dlqTotal: _findMetric(metrics, 'sys01.dlq'),
-      sampleTimestamp: sampleTimestamp,
+      sampleTimestamp: observationTimestamp,
+      observationAvailable: observationAvailable,
+      observationTraceId: traceId,
       guardianName: guardian,
       reaperRunning: reaperRunning,
       openBreakers: breakerCounts?.$1,

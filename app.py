@@ -466,7 +466,7 @@ def case_analysis_methodology():
 
 @app.route('/api/case-analysis/system-insights')
 def case_analysis_system_insights():
-    """获取所有对Z-Brand系统的启示"""
+    """获取所有对 LUMENIS 系统的启示"""
     try:
         from case_deep_analysis import get_case_analysis
         analysis = get_case_analysis()

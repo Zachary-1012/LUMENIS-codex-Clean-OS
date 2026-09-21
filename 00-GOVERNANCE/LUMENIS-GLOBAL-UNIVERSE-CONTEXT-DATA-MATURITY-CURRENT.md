@@ -1,0 +1,194 @@
+# LUMENIS Global Product Universe / Focus Context / Data Maturity — CURRENT
+
+> Status: **CURRENT SUBORDINATE CONTEXT AND DATA-MATURITY CONTRACT**
+>
+> Approved by Product Owner: 2026-09-21
+>
+> Authority boundary: subordinate to the sole Product Architecture, Source Owner Index, Permission, Evidence, Database, Collector/Browser, AI Gateway and Experience Constitution owners. This contract defines shared semantics and acceptance; it does not create another Subject/BrandFocus, database, Evidence, Permission, collector, AI or UI owner.
+
+This contract governs exactly one internal full-universe edition: `ONE Product`, `ONE Repository`, `ONE Product Core`, `ONE Global Product Universe`, `ONE Canonical Data`, `ONE Evidence`, `ONE Permission`, `ONE Context Model` and `ONE Experience Ecosystem`. Its coverage rows are acceptance dimensions of the same product, never separate products, versions, repositories, entries, release tracks or truth stacks. Future customer/workspace/role/entitlement/source/compliance restrictions remain access policy over this same product truth.
+
+## 1. Canonical model
+
+```text
+GLOBAL PRODUCT UNIVERSE
+├─ global commercial-entity universe for CTH
+├─ global brand-entity universe for BMP
+├─ legally collected real signals, relationships and business-domain content
+└─ continuously operating Collector / Browser / AI / Content / Report capabilities
+          ↓
+select Subject / BrandFocus
+          ↓
+change only the current focus context
+          ↓
+Visibility / Permission / Commercial Policy decides what is visible and actionable
+```
+
+The default product context is `GLOBAL / ALL`. It is neither a blank workspace nor a fixed Subject or BrandFocus. CTH and BMP share the Global Product Universe discovery/context foundation while retaining separate business semantics, metrics, relationships, workflows and owners.
+
+Selection is not authorization and is not a runtime control. Selecting or clearing a Subject/BrandFocus must not start, stop or authorize Collector, Browser, AI, content, report or background-task execution. Those capabilities continue only within their configured, source-authorized and permitted scopes.
+
+Clearing focus returns to `GLOBAL / ALL`. Every result, Evidence reference, AI task, content/report artifact and consequential action must carry its actual scope. A client-supplied header, route parameter, selected card or local UI state never grants access.
+
+## 2. Existing owners and compatibility boundary
+
+| Concern | Sole current owner | Contract boundary |
+| --- | --- | --- |
+| Product and domain meaning | `LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md` | CTH is Subject-first; BMP is Brand/Market-first; neither becomes the other. |
+| Context execution | current `subject_context.py` / domain context callers until explicitly converged by their scheduled owner round | Must evolve toward explicit `GLOBAL / ALL` and focused context without creating a second context service. |
+| Entity identity and discovery | existing `subject_registry.py` and scheduled canonical registry/database work | Directory membership or discovery is not Permission and does not prove collected data. |
+| Canonical persistence | `lumenis/shared/database/` and `data/monitor.db` contract | Global registry, focus keys and business data must not be faked through one default row or a second database. |
+| Source and Evidence | SYSTEM Collector/Browser plus `lumenis/shared/evidence/` | Source authorization, capture, Evidence and Canonical Data remain traceable and separate from focus selection. |
+| Permission | existing account/authorization and SYSTEM Permission owners | Internal Product Owner/Admin full audit and commercial-customer visibility require explicit, auditable policy; no hard-coded key or bypass. |
+| Surfaces | one Product Core/API/ViewModel consumed by approved Website/Web/Desktop/Mobile roles | Surfaces display and change focus; they do not own context, Permission or data truth. |
+
+`GUANGZHOU_TAIKOO_HUI / 广州太古汇` is the controlled depth-reference Subject across all relevant rounds. It is not the product default, not `GLOBAL / ALL`, not a substitute for the global universe, and not proof that global CTH or BMP data is mature.
+
+Current source still contains legacy CTH compatibility fallbacks to `GUANGZHOU_TAIKOO_HUI`. ROUND 02 classifies those values as protected compatibility behavior only. Consumers must not reinterpret them as the default product truth. Behavioral migration belongs to the scheduled database/context/permission/surface rounds and must preserve protected CTH behavior while removing implicit defaulting from global product entry.
+
+## 3. Honest states and add/search semantics
+
+Users may discover, search and add any commercial entity or brand entity supported by the product contract. Adding an entity means a controlled path through entity registration/identity resolution, source configuration and authorization, acquisition state, Evidence and Canonical Data. It never means generating synthetic content.
+
+The Subject/BrandFocus selector serves the Global Product Universe, not a Guangzhou Taikoo Hui allowlist. CTH must support discovery/search/add/select for global commercial entities; BMP must support the same for global brand entities. A selectable identity carries a stable canonical ID plus sufficient type, region, industry and relationship metadata for disambiguation. Duplicate merge and identity-conflict handling remain explicit canonical-registry operations, never silent UI aliasing.
+
+Entities without usable data remain discoverable with an honest state:
+
+```text
+NOT_COLLECTED | COLLECTING | NOT_CONFIGURED | BLOCKED
+```
+
+Keep these distinct from `READY`, `0`, `NULL`, `UNKNOWN`, `NOT_AVAILABLE`, `STALE`, `OFFLINE` and `ERROR`. The `GLOBAL / ALL` entry may prioritize entities, signals and content that meet the applicable data-maturity gate; it must not imply that every world entity has complete data or mix immature entities into the same ready state.
+
+## 4. DATA_MATURE minimum contract
+
+Record count, a non-empty page, a global directory, a few connected platforms or one successful Subject is never sufficient. For the active round and capability slice, `DATA_MATURE` requires auditable evidence that:
+
+1. entity identity and relationships are disambiguated; Subject/Brand ID, name and business domain are traceable;
+2. source legality, authorized purpose, collection state and capture time are explicit;
+3. Raw Capture → Evidence → Canonical Data IDs, owner, timestamp and scope are traceable;
+4. freshness, coverage, missing/not-collected/failure and numeric zero are distinct;
+5. metric definition, denominator, time window, source and computation owner are explicit;
+6. at least one real user path uses the data to finish the round's job rather than only rendering cards;
+7. continuous operation, failure recovery, rollback and data-quality evidence meet the round's responsibility;
+8. fixtures, mocks, manual database injection and AI-invented content are not presented as mature production data.
+
+Global maturity additionally requires an approved, auditable coverage matrix for regions, languages, industries and sources, freshness SLA, Evidence coverage, entity-disambiguation/relationship quality, data quality, continuous operation, recovery and an extensible add-entity path. Uncovered entities remain honest and enter the add/collection workflow; the product must never claim complete data for every world entity without executable evidence.
+
+### PRE-LAUNCH GLOBAL FOUNDATION
+
+The mature global foundation exists and refreshes before customer onboarding. A customer's first search, selection, purchase or workspace entry must not be the product's first collection, first entity registration or first creation of baseline data. Before release, the same one Product must already provide:
+
+- a continuously maintained canonical global commercial-entity and brand-entity registry/index with stable IDs, aliases, type, region, industry/domain, relationships and controlled deduplication/disambiguation;
+- authorized CTH/BMP sources, scheduled acquisition, Evidence lineage, freshness and quality states operating before a customer arrives;
+- a `GLOBAL / ALL` entry with real, mature and traceable product content rather than a fixture, empty shell or wait-for-customer placeholder;
+- honest incremental onboarding/acquisition for new, long-tail or source-restricted entities as extension of the mature base, with real state and source limitations rather than an invented complete profile.
+
+Commercial customers later apply Workspace/Role/Entitlement/Source Authorization/Compliance visibility and action policy to this same mature product truth. They do not trigger or receive a second customer-specific data truth.
+
+### Measurable maturity matrix
+
+Every owning round defines and verifies thresholds appropriate to its slice from current source, real runtime and real data samples. At minimum the matrix reports `coverage`, `freshness`, `completeness`, `provenance/Evidence`, `deduplication/entity resolution`, `source authorization/compliance`, `failed/stale/blocked ratios` and `CTH/BMP workflow usability`. Counts, “many records”, HTTP 200 or page non-emptiness do not satisfy a threshold. Thresholds must state numerator, denominator, population/scope, window, source, owner, sample method and failure condition.
+
+## 5. ONE INTERNAL EDITION ACCEPTANCE MATRIX
+
+The following are three supporting coverage dimensions of one internal edition. They must be advanced and evaluated separately for diagnostic honesty, but they never become separate products, releases, databases, APIs, permissions, contexts, surfaces or delivery plans:
+
+| Gate | Required proof | Current baseline at ROUND 02 |
+| --- | --- | --- |
+| `Global Commercial Coverage` | Global commercial-entity universe, relationships, industries/domains, legal sources, acquisition coverage, signals, Evidence, Canonical Data, freshness, quality, continuous operation, recovery and extensible entity addition meet the approved delivery threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
+| `Global Brand Coverage` | Global brand universe plus authorized market, competitor, creator, channel, content, propagation, campaign and evaluation data meet the same auditable threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
+| `Guangzhou Taikoo Hui Reference Coverage` | `GLOBAL / ALL` → locate/add/focus/clear → Source → Capture → Evidence → Canonical Data → applicable CTH/BMP workflow → AI/content/report/action → Outcome → Evaluation/Learning → Return, with other configured work continuing. | `NO / PARTIAL`; controlled test identity exists, but the complete loop is not implemented or accepted. |
+
+Only when all three coverage dimensions are `YES` may Sol set the single top-level conclusion:
+
+```text
+LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES
+```
+
+If any dimension is `NO`, `PARTIAL`, `BLOCKED` or `LIVE_UNVERIFIED`, the single conclusion is `NO` and the exact blocker must be named. A single-subject E2E, non-empty UI or catalog presence cannot substitute for either global coverage dimension. This conclusion is evaluated before the Real Delivery Overlay's final seven statuses; it does not create an eighth status or a second product release.
+
+The `YES` conclusion additionally requires cross-Subject selection/workflow validation and continuous refresh/recovery to pass on the same release candidate. “Global” means the approved and disclosed coverage scope backed by authorized sources and measurable evidence; it never means an unprovable claim that every entity in the world has complete data.
+
+## 6. Per-round responsibility
+
+| Round | Required incremental responsibility |
+| --- | --- |
+| 02 | Fix this single semantic owner, consumer contract and compatibility routing. Classify Guangzhou Taikoo Hui fallback as compatibility, never global truth. Add the three-line impact to Charter/Delivery Card; do not claim data maturity. |
+| 03 | Separate Global entity registry, focused-context keys and canonical data/migration boundaries; no synthetic default record. Prove protected-data safety and rollback. |
+| 04 | Implement `GLOBAL / ALL` visibility, controlled internal audit, commercial customer scope, and strict separation of focus from Permission. |
+| 05 | Runtime and recovery remain independent of UI focus; runtime observations carry actual scope where applicable. |
+| 06 | Collector/Browser continuously execute authorized work independent of focus and close Source → Capture → Evidence → Canonical Data for relevant global matrices and the reference Subject. |
+| 07 | AI/Agent/Shared outputs carry actual scope; no AI-created truth; evaluation/learning preserves lineage and Permission. |
+| 08 | Four-surface contract implements default `GLOBAL / ALL`, search/add/focus/clear/restore interactions without a hard-coded test Subject. |
+| 09 | Golden Pages execute Global → Focus → Return with honest data states and reference-Subject evidence on applicable surfaces. |
+| 10 | CTH monitoring/analysis advances global CTH coverage and the reference Subject's source-backed signal/Evidence path. |
+| 11 | CTH case/decision advances the reference loop through outcome, report/export and Return while preserving global CTH maturity evidence. |
+| 12 | BMP portfolio/market advances global BMP entity/relationship/market/competitor/creator maturity and applicable reference relationships. |
+| 13 | BMP content/campaign/evaluation advances authorized content, channel, propagation, campaign, outcome and learning maturity. |
+| 14 | Remaining ACC/AI/Shared/SYSTEM experiences preserve Global → Focus → Return, honest states, scope and continuous background operation. |
+| 15 | Revalidate all three lines on the exact release SHA across promised surfaces and commercial/release gates. It may not implement accumulated obligations from prior rounds. |
+
+## 7. Per-round acceptance block
+
+Every relevant Round Charter and `REAL DELIVERY CARD` includes `GLOBAL UNIVERSE / DATA MATURITY IMPACT` with:
+
+- `GLOBAL CTH maturity impact`;
+- `GLOBAL BMP maturity impact`;
+- `Guangzhou Taikoo Hui reference-loop impact`;
+- in-scope responsibility, verified evidence, still-immature facts, exact next owner/round and non-blocking unrelated work;
+- current values of the three supporting coverage dimensions and `LUMENIS_INTERNAL_FULL_UNIVERSE_READY`.
+
+The one-edition selector acceptance matrix is:
+
+| ID | Required acceptance |
+| --- | --- |
+| A | Global Subject/Brand discovery and selection works through the canonical owner. |
+| B | At least one non-Guangzhou-Taikoo-Hui commercial Subject and one non-Guangzhou-Taikoo-Hui brand Subject complete honest selection/state validation; uncollected entities enter onboarding/acquisition rather than receiving synthetic data. |
+| C | Guangzhou Taikoo Hui completes the deep reference workflow required by the active round. |
+| D | Clearing selection restores `GLOBAL / ALL` without stopping other configured background capabilities. |
+
+If current source, fixtures, APIs, ViewModels or UI hard-code Guangzhou Taikoo Hui as the sole selectable/default Subject, the round records a real gap and assigns it to the owning scheduled round. A fixture pass is not global selector capability.
+
+## 8. RANDOM ENTITY DATA ACCEPTANCE
+
+Every context/data/collector/AI/content/report/API/ViewModel/surface/workflow round performs a reproducible rotating sample from the canonical global registry. Sampling is stratified by region, industry, entity type and freshness; it includes Guangzhou Taikoo Hui as the fixed deep reference plus rotating non-reference commercial and brand Subjects and cross-region samples. Fixtures and a fixed all-Guangzhou set are forbidden as live acceptance.
+
+For each sampled entity, the applicable real path is:
+
+```text
+GLOBAL / ALL → search/discover → select Subject/BrandFocus
+→ page/ViewModel/API → Canonical Data → Evidence Trace
+→ the round's real business result
+```
+
+An entity already classified covered/mature must not produce silent blank, all-zero, missing→0, placeholder or invented content. Such a defect makes the relevant round `REWORK` or `BLOCKED` until fixed and resampled. A new, long-tail or restricted entity still returns real identity, stable ID, coverage/freshness, source/Permission limit, acquisition state and canonical onboarding path.
+
+Each round preserves a reproducible evidence record containing sampling seed, selection query/strata, sample IDs, timestamp, data/schema/capability version, request and applicable real-surface evidence, Evidence IDs, expected/actual result and failure reason. Samples rotate and cumulative coverage is reported. For a promised page, API 200 or fixture tests alone do not count.
+
+Every related Round report includes:
+
+```text
+RANDOM ENTITY DATA ACCEPTANCE
+sample seed / sample count / sample IDs
+non-empty valid result rate
+stale / blocked / failed rate
+Evidence trace rate
+empty-state defects
+maturity delta since prior round
+```
+
+If the canonical registry or required maturity fields do not yet exist, record `sample count = 0`, `NOT YET IMPLEMENTED` and the exact owning round. Never manufacture a sample or percentage. ROUND 15 expands and revalidates cumulative coverage; it is not the first random inspection.
+
+The round also evaluates, only where its owned slice can honestly do so:
+
+1. enter `GLOBAL / ALL` without fabricating worldwide completeness;
+2. search/add a Subject or BrandFocus through the canonical path;
+3. focus Guangzhou Taikoo Hui as the controlled reference path;
+4. prove correct scope on results, Evidence, AI tasks and reports;
+5. clear focus and return to `GLOBAL / ALL`;
+6. prove selection grants no Permission;
+7. distinguish no data, not collected, not configured, blocked and denied;
+8. prove other configured acquisition/background tasks continue independently.
+
+Unavailable later-round functionality must be recorded as `NOT IN ROUND / NOT YET IMPLEMENTED`, not simulated and not allowed to block unrelated work. A relevant round cannot claim its own contextual responsibility complete without its required proof.

@@ -19,12 +19,14 @@ Root `AGENTS.md` is the first coding-agent instruction boundary. After reading i
 3. `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
 4. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`
 5. `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`
-6. `README.md`
-7. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
-8. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
-9. `00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`
-10. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
-11. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
+6. `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`
+7. `00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`
+8. `README.md`
+9. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
+10. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
+11. `00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`
+12. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
+13. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
 
 When evidence conflicts:
 
@@ -42,6 +44,10 @@ Current Production Source
 Current executable source/runtime truth always outranks this handoff. Historical handoffs, chat history and screenshots never override executable truth.
 
 The root README, this CURRENT handoff, the human-readable cross-repo registry and the machine contract must not define conflicting current protocol identities. A mismatch is a governance failure to repair before cross-product changes continue.
+
+`LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md` is the single subordinate acceptance overlay for all 15 rounds. Every new round inherits its `REAL DELIVERY CARD`, real-user E2E and Section 23 commercial-readiness routing. A commercial-readiness gap must be recorded as `BLOCKED FOR COMMERCIAL_READY` and must not be misreported as an unrelated engineering failure.
+
+`LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` is the single subordinate semantic and acceptance contract for `GLOBAL / ALL`, focus-only Subject/BrandFocus selection, honest entity/data states and the one internal full-universe acceptance matrix. Its Global Commercial, Global Brand and Guangzhou Taikoo Hui rows are supporting dimensions of the same Product/Core/Data/Evidence/Permission/API/Context/Experience stack, never separate products or releases. It routes to existing owners and creates none of them.
 
 ### Experience authority
 

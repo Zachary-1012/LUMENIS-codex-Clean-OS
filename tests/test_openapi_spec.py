@@ -59,19 +59,69 @@ def test_build_spec_covers_every_nonstatic_rule():
     assert "security" not in spec["paths"]["/healthz"]["get"]
 
 
+def test_duplicate_routes_keep_all_candidates_without_selecting_one():
+    a = Flask(__name__)
+
+    @a.get("/api/shared", endpoint="shared_first")
+    def shared_first():
+        return "first"
+
+    @a.get("/api/shared", endpoint="shared_second")
+    def shared_second():
+        return "second"
+
+    spec = build_spec(a)
+    operation = spec["paths"]["/api/shared"]["get"]
+    assert "operationId" not in operation
+    assert operation["x-route-candidates"] == [
+        {"endpoint": "shared_first", "rule": "/api/shared"},
+        {"endpoint": "shared_second", "rule": "/api/shared"},
+    ]
+    assert spec["x-duplicate-operation-candidates"] == [{
+        "path": "/api/shared",
+        "method": "GET",
+        "candidates": operation["x-route-candidates"],
+    }]
+    assert spec["x-route-count"] == 2
+    assert spec["x-operation-count"] == 2
+    assert spec["x-operation-group-count"] == 1
+    assert spec["x-duplicate-operation-group-count"] == 1
+
+
 def test_real_app_spec_full_coverage(app):
     spec = build_spec(app)
     rules = [r for r in app.url_map.iter_rules() if r.endpoint != "static"]
     expected_paths = {flask_rule_to_path(r) for r in rules}
     assert set(spec["paths"]) == expected_paths  # 一条路由都不能漏
     assert spec["x-route-count"] == len(rules)
-    # 每个 operation 都有 operationId/tags
+    assert spec["x-url-map-rule-count"] == sum(1 for _ in app.url_map.iter_rules())
+    assert spec["x-static-route-count"] == sum(
+        1 for rule in app.url_map.iter_rules() if rule.endpoint == "static"
+    )
+    assert spec["x-operation-count"] == sum(
+        len((rule.methods or set()) & {"GET", "POST", "PUT", "DELETE", "PATCH"})
+        for rule in rules
+    )
+    assert spec["x-path-count"] == len(expected_paths)
+    assert spec["info"]["title"] == "LUMENIS API"
+    summaries = [
+        operation.get("summary", "")
+        for operations in spec["paths"].values()
+        for operation in operations.values()
+    ]
+    assert not any("Z-Brand" in summary or "ZBrand" in summary for summary in summaries)
+    # Unique operations have an operationId; collisions preserve every endpoint.
     for path, ops in spec["paths"].items():
         for method, op in ops.items():
-            assert op["operationId"] and op["tags"]
+            assert op["tags"]
+            if "x-route-candidates" in op:
+                assert "operationId" not in op
+                assert len(op["x-route-candidates"]) > 1
+            else:
+                assert op["operationId"] and op["x-flask-rule"]
 
 
-def test_generated_spec_files_valid():
+def test_generated_spec_files_valid(app):
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     j = os.path.join(root, "docs", "API-OPENAPI-SPEC.json")
     assert os.path.exists(j)
@@ -79,5 +129,24 @@ def test_generated_spec_files_valid():
     assert spec["openapi"].startswith("3.0")
     assert "httpBasic" in spec["components"]["securitySchemes"]
     assert "/healthz" in spec["paths"] and len(spec["paths"]) > 300
+    current = build_spec(app)
+    assert spec["info"]["title"] == "LUMENIS API"
+    assert spec["paths"] == current["paths"]
+    for key in (
+        "x-url-map-rule-count",
+        "x-static-route-count",
+        "x-route-count",
+        "x-path-count",
+        "x-operation-count",
+        "x-operation-group-count",
+        "x-duplicate-operation-group-count",
+        "x-duplicate-operation-candidate-count",
+    ):
+        assert spec[key] == current[key]
+    assert spec["x-duplicate-operation-candidates"] == current[
+        "x-duplicate-operation-candidates"
+    ]
     md = build_matrix_md(spec)
     assert "API 路由矩阵" in md and "/healthz" in md
+    matrix_path = os.path.join(root, "docs", "API-ROUTE-MATRIX.md")
+    assert open(matrix_path, encoding="utf-8").read() == md

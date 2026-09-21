@@ -57,6 +57,9 @@ void main() {
     expect(find.byKey(const ValueKey('sys01/source-rail')), findsOneWidget);
     expect(find.text('状态检查时间'), findsOneWidget);
     expect(find.text('系统运行监测'), findsOneWidget);
+    expect(find.text('观测编号'), findsOneWidget);
+    expect(find.text('sys01rt-0123456789abcdef01234567'), findsOneWidget);
+    expect(find.text('只读，不修改运行状态'), findsOneWidget);
     expect(find.text('已识别'), findsOneWidget);
     expect(find.text('legacy'), findsNothing);
     for (final internalTerm in [
@@ -92,6 +95,8 @@ void main() {
             overall: null,
             overallState: 'offline',
             sampleTimestamp: null,
+            observationAvailable: false,
+            observationTraceId: null,
             guardianName: null,
             reaperRunning: null,
             openBreakers: null,
@@ -106,6 +111,7 @@ void main() {
     expect(find.text('0'), findsNothing);
     expect(find.text('当前不可用'), findsNWidgets(3));
     expect(find.text('暂不可用'), findsWidgets);
+    expect(find.text('暂无可用观测'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -199,6 +205,8 @@ Sys01Snapshot _snapshot({
   String? overall = 'healthy',
   String overallState = 'ok',
   String? sampleTimestamp = '2026-09-20T09:30:00Z',
+  bool observationAvailable = true,
+  String? observationTraceId = 'sys01rt-0123456789abcdef01234567',
   String? guardianName = 'legacy',
   bool? reaperRunning = true,
   int? openBreakers = 0,
@@ -211,6 +219,8 @@ Sys01Snapshot _snapshot({
   failedWorkers: failedWorkers,
   dlqTotal: dlqTotal,
   sampleTimestamp: sampleTimestamp,
+  observationAvailable: observationAvailable,
+  observationTraceId: observationTraceId,
   guardianName: guardianName,
   reaperRunning: reaperRunning,
   openBreakers: openBreakers,

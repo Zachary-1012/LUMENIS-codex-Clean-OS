@@ -52,6 +52,8 @@ AGENTS.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md
 → 00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
@@ -147,6 +149,18 @@ The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE
 All current product execution follows the approved 15-round dependency order in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: current truth; authority/Only-One; database; identity/Permission/Evidence; runtime; collector/browser; AI/Agent/Shared engines; cross-surface foundation; Golden Pages; CTH monitoring; CTH decision loop; BMP market loop; BMP content/campaign loop; remaining ACC/AI/Shared/SYSTEM Experience; then closed-loop internal beta/release. Do not skip a round, start all rounds together, or treat a later dependency as proof for the active round.
 
 The 15 rounds are exactly 15 sequential Codex tasks: one Sol-controlled task for each round. A round task may contain bounded Luna Batches, but it must finish Sol acceptance, publish the next round's Task Card and stop; it must not enter another round. Each Luna receives exactly one Batch and may not continue automatically. At the start of every new round task, resolve current `origin/main`, local state, dependencies and protected work again.
+
+### REAL USER WORK E2E ACCEPTANCE — ROUND 02 through ROUND 15
+
+`00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md` is the single content owner for the eight real-delivery questions, per-round constraints, `REAL DELIVERY CARD`, completion semantics, final seven statuses and the six Section 23 commercial-readiness gates. It is an execution/acceptance overlay, not a second Product Architecture or Experience authority, and it does not add a sixteenth round.
+
+Every ROUND 02–15 task must define and pass at least one `REAL USER WORK E2E ACCEPTANCE` before Sol may return `PASS` or publish the next round as executable. The Round Charter, contributing Luna Task Cards and Sol report must route through the Overlay's `REAL USER JOB`, `ENTRY`, `REAL INPUT`, `END-TO-END PATH`, `USER-VISIBLE RESULT`, `FAILURE/RECOVERY`, `EVIDENCE` and `ACCEPTANCE ASSERTION` gates and include `真实用户工作闭环验收`, `REAL DELIVERY CARD` and `COMMERCIAL OVERLAY IMPACT`. Missing E2E evidence forces Sol to return `REWORK` or `BLOCKED`; code/HTTP success, fixtures, mocks, hard-coded examples, screenshots, builds, tests, CI or model output cannot pass alone.
+
+`00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` is the single subordinate contract for default `GLOBAL / ALL`, focus-only Subject/BrandFocus selection, honest uncollected states and data-maturity acceptance. It governs one internal full-universe edition over one Product/Core/Data/Evidence/Permission/API/Context/Experience stack; no acceptance dimension may become a separate product or release. Every related Round Charter and `REAL DELIVERY CARD` must add `GLOBAL UNIVERSE / DATA MATURITY IMPACT` and report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage`. Guangzhou Taikoo Hui is the controlled depth-reference Subject, never the product default or a substitute for global coverage. Only all three `YES` permits `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`; later-round functionality must be reported honestly and must not block unrelated work.
+
+Every related round also runs `RANDOM ENTITY DATA ACCEPTANCE` against the canonical registry with a recorded rotating/stratified seed and non-reference commercial, brand and cross-region samples. Covered/mature samples may not return silent blank, all-zero, missing→0, placeholder or invented content; a real defect forces `REWORK`/`BLOCKED`. If the canonical sample population does not yet exist, record sample count zero and the owning gap rather than fabricating data. ROUND 15 expands cumulative inspection and is never the first random check.
+
+When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and a Sol-approved `DESIGN_READY` specification. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
 
 The Product Owner accepted the ROUND 01 source audit, missing-capability register,
 multi-surface direction and 15-round mapping on 2026-09-21 as the execution baseline.

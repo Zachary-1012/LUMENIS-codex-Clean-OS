@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-01
 status: APPROVED
-revision: 1
+revision: 2
 owner_domain: SYSTEM / RuntimeGuardian
 binding_ids:
   - BACKEND-GAP-036
@@ -47,6 +47,7 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 | P1 | Circuit breaker OPEN / registered counts | SYSTEM RuntimeGuardian | Runtime item `name=熔断器`, `detail=open=N · registered=N`; source `health_check().circuit_breakers` | `open` counts entries whose state is `open`; `registered` is the number of breaker entries returned. | Hide if snapshot is incomplete or the runtime item is offline. | BACKEND-GAP-036 | Current `_build_sys01` filters breaker entries by `state == "open"` and separately returns `len(breakers)` |
 | P1 | Guardian identity | SYSTEM RuntimeGuardian | Runtime item `name=guardian`, `detail`; source `health_check().guardian_name` | RuntimeGuardian instance name | `—` or absent is unavailable | BACKEND-GAP-036 | Same source chain |
 | P0 | Sample timestamp | SYSTEM RuntimeGuardian | Runtime item `name=时间戳`, `detail`; source `health_check().timestamp` | ISO timestamp returned by the health check, distinct from the screen envelope's `generated_at` | Missing/`—` means sample time unavailable; do not substitute client time | BACKEND-GAP-036 | `RuntimeGuardian.health_check`; `_build_sys01` |
+| P0 | Runtime observation trace | SYSTEM RuntimeGuardian binding | `runtime_observation.state/captured_at/trace_id/boundary` | Read-only operational-provenance envelope derived from the same validated health snapshot | Missing or malformed source yields unavailable; never expose guardian name, path-shaped values or internal implementation details | BACKEND-GAP-036 | `_build_sys01`; `tests/test_experience_runtime.py`; SYS-01 Flutter snapshot/view-model/widget tests |
 
 ### Exact callable and effect
 
@@ -54,6 +55,7 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 - The current builder returns one `kpis` section containing the three count metrics and one `runtime` section containing overall, reaper, circuit-breaker, guardian and timestamp items.
 - `app.py::_basic_auth` may require Basic/session authentication when auth is enabled. The GET route is not in the explicit CTH read-only GET allowlist. The route has no separate SYS-01 action permission check because the page defines no action.
 - No Evidence record is emitted by this GET. RuntimeGuardian's timestamp and source name are operational provenance, not a persisted Shared Evidence artifact.
+- `runtime_observation` is additive operational provenance only. Its deterministic `sys01rt-...` identifier does not become Canonical Data or Shared Evidence, and `boundary=read_only` authorizes no runtime effect.
 - `viewmodel.latency: number[]` and the fixture's dependency uptime / response chart are not backed by this RuntimeGuardian callable. They are excluded and remain unimplemented.
 
 ## 4. State and recovery matrix
@@ -126,6 +128,7 @@ This specification approves the **read-only RuntimeGuardian health slice**. It d
 | SYS01-READ-07 | Network error clears snapshot and exposes retry | Offline | Phone/desktop | ViewModel/widget | LumenisCoreClient socket exception contract |
 | SYS01-AUTH-01 | 401 and 403 show different access states | Authentication / permission denied | All widths | ViewModel/widget | `app.py::_basic_auth` response contract |
 | SYS01-READ-08 | Bad shape, wrong screen, and server error do not render health values | Error | All widths | Snapshot/widget | screen envelope validation |
+| SYS01-TRACE-01 | A valid live health snapshot displays observation state, capture time, trace ID and read-only boundary; malformed or absent provenance remains unavailable | Ready / partial / error | Desktop and phone | API + snapshot + widget + live desktop | `_build_sys01`; SYS-01 focused tests; ROUND 02 evidence bundle |
 | SYS01-RESP-01 | Desktop shows topology + inspector; mobile orders by failure priority | 1440/1024/390 logical px | Pointer/keyboard/touch | Widget + visual review | Constitution §§20, 31 and SYS-01 §36 |
 
 ## 10. Review decision and open questions

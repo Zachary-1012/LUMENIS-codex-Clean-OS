@@ -1,216 +1,253 @@
 {
   "version": "2026.08.27",
   "description": "系统函数映射表，用于开发者工具和AI调用",
+  "authority": {
+    "classification": "LEGACY_COMPATIBILITY_INVENTORY",
+    "runtime_route_truth": "current Flask app.url_map",
+    "product_skill_store_canonical_owner": "lumenis/shared/agents/skills",
+    "is_skill_availability_registry": false,
+    "is_production_truth": false
+  },
   "functions": {
     "collect": {
       "name": "采集数据",
       "description": "触发小红书数据采集",
       "endpoint": "/api/collect/trigger",
       "method": "POST",
-      "params": {"keyword": "搜索关键词", "max_scroll": "滚动次数", "max_details": "详情数量"}
+      "params": {"keyword": "搜索关键词", "max_scroll": "滚动次数", "max_details": "详情数量"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "SYSTEM Collector", "scheduled_round": "R06", "milestone": "Collector route/API compatibility parity", "reason": "No current route exactly matches this legacy method/path; no substitute endpoint is inferred."}
     },
     "collect_status": {
       "name": "采集状态",
       "description": "获取当前采集状态和今日计数",
       "endpoint": "/api/collect/status",
       "method": "GET",
-      "params": {}
+      "params": {},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "SYSTEM Collector", "scheduled_round": "R06", "milestone": "Collector status route/API compatibility parity", "reason": "No current route exactly matches this legacy method/path; no substitute endpoint is inferred."}
     },
     "notes_list": {
       "name": "笔记列表",
       "description": "获取笔记列表，支持分页和筛选",
       "endpoint": "/api/notes",
       "method": "GET",
-      "params": {"page": "页码", "per_page": "每页数量", "sentiment": "情绪筛选", "industry": "业态筛选"}
+      "params": {"page": "页码", "per_page": "每页数量", "sentiment": "情绪筛选", "industry": "业态筛选"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "note_detail": {
       "name": "笔记详情",
       "description": "获取单条笔记详情",
       "endpoint": "/api/notes/<note_id>",
       "method": "GET",
-      "params": {"note_id": "笔记ID"}
+      "params": {"note_id": "笔记ID"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "negative_pending": {
       "name": "待确认负面",
       "description": "获取待确认的负面笔记列表",
       "endpoint": "/api/negative/pending",
       "method": "GET",
-      "params": {"page": "页码", "per_page": "每页数量"}
+      "params": {"page": "页码", "per_page": "每页数量"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "negative_confirm": {
       "name": "确认负面",
       "description": "确认负面笔记",
       "endpoint": "/api/negative/confirm",
       "method": "POST",
-      "params": {"note_id": "笔记ID", "reason": "确认原因"}
+      "params": {"note_id": "笔记ID", "reason": "确认原因"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "negative_reject": {
       "name": "驳回负面",
       "description": "驳回负面笔记",
       "endpoint": "/api/negative/reject",
       "method": "POST",
-      "params": {"note_id": "笔记ID", "reason": "驳回原因"}
+      "params": {"note_id": "笔记ID", "reason": "驳回原因"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "negative_stats": {
       "name": "负面统计",
       "description": "获取负面舆情统计",
       "endpoint": "/api/negative/stats",
       "method": "GET",
-      "params": {}
+      "params": {},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "events_list": {
       "name": "事件列表",
       "description": "获取舆情事件列表",
       "endpoint": "/api/events",
       "method": "GET",
-      "params": {"page": "页码", "per_page": "每页数量", "level": "事件等级"}
+      "params": {"page": "页码", "per_page": "每页数量", "level": "事件等级"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "event_detail": {
       "name": "事件详情",
       "description": "获取单个舆情事件详情",
       "endpoint": "/api/events/<event_id>",
       "method": "GET",
-      "params": {"event_id": "事件ID"}
+      "params": {"event_id": "事件ID"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "CTH monitoring/event", "scheduled_round": "R10", "milestone": "CTH monitoring/event detail and lineage", "reason": "The exact GET detail path is absent; an event-list route is not a detail-route substitute."}
     },
     "report_export": {
       "name": "导出报告",
       "description": "导出日报/周报/月报/年报",
       "endpoint": "/api/report/export",
       "method": "GET",
-      "params": {"type": "报告类型(daily/weekly/monthly/yearly)", "date": "日期", "format": "格式(word/excel)"}
+      "params": {"type": "报告类型(daily/weekly/monthly/yearly)", "date": "日期", "format": "格式(word/excel)"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "ai_analyze": {
       "name": "AI分析",
       "description": "使用AI分析舆情数据",
       "endpoint": "/api/ai/analyze",
       "method": "POST",
-      "params": {"note_id": "笔记ID", "prompt": "分析提示词", "provider": "AI提供商"}
+      "params": {"note_id": "笔记ID", "prompt": "分析提示词", "provider": "AI提供商"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "ai_providers": {
       "name": "AI提供商列表",
       "description": "获取可用的AI提供商列表",
       "endpoint": "/api/ai/providers",
       "method": "GET",
-      "params": {}
+      "params": {},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "trends_global": {
       "name": "全局趋势",
       "description": "获取全局舆情趋势数据",
       "endpoint": "/api/trends/global",
       "method": "GET",
-      "params": {"days": "天数"}
+      "params": {"days": "天数"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "publish_buckets": {
       "name": "发布时间分桶",
       "description": "按发布时间区分当日发布和历史采集",
       "endpoint": "/api/notes/publish-buckets",
       "method": "GET",
-      "params": {"date": "日期"}
+      "params": {"date": "日期"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "dashboard_changes": {
       "name": "仪表盘变更",
       "description": "获取仪表盘数据变更，用于实时刷新",
       "endpoint": "/api/dashboard/changes",
       "method": "GET",
-      "params": {"last_check": "上次检查时间"}
+      "params": {"last_check": "上次检查时间"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "weekly_events": {
       "name": "周报事件",
       "description": "获取本周舆情事件列表",
       "endpoint": "/api/weekly/events",
       "method": "GET",
-      "params": {"week_start": "周开始日期"}
+      "params": {"week_start": "周开始日期"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "web_browser_discovery": {
       "name": "全网浏览器发现",
       "description": "通过普通浏览器搜索发现舆情话题，不占用小红书检索次数",
       "endpoint": "/api/web/browser-discovery",
       "method": "GET",
-      "params": {"keyword": "搜索关键词"}
+      "params": {"keyword": "搜索关键词"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "SYSTEM Browser/Collector", "scheduled_round": "R06", "milestone": "Browser acquisition route/API compatibility parity", "reason": "The legacy GET method/path has no exact match; a different method is not treated as equivalent."}
     },
     "brand_industry": {
       "name": "品牌业态监测",
       "description": "获取品牌业态全网监测数据",
       "endpoint": "/api/web/brand-industry/<brand>",
       "method": "GET",
-      "params": {"brand": "品牌名称"}
+      "params": {"brand": "品牌名称"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "BMP market", "scheduled_round": "R12", "milestone": "BMP market monitoring route/API compatibility parity", "reason": "The exact brand-parameter path is absent; no aggregate or similar route is substituted."}
     },
     "web_topics": {
       "name": "全网话题",
       "description": "获取全网热门话题事件",
       "endpoint": "/api/web-topics",
       "method": "GET",
-      "params": {}
+      "params": {},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "web_topics_refresh": {
       "name": "刷新全网话题",
       "description": "手动刷新全网话题缓存",
       "endpoint": "/api/web-topics/refresh",
       "method": "POST",
-      "params": {}
+      "params": {},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "overview": {
       "name": "总览数据",
       "description": "获取系统总览数据",
       "endpoint": "/api/overview",
       "method": "GET",
-      "params": {}
+      "params": {},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "alerts": {
       "name": "告警列表",
       "description": "获取系统告警列表",
       "endpoint": "/api/alerts",
       "method": "GET",
-      "params": {"unread": "是否只显示未读"}
+      "params": {"unread": "是否只显示未读"},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "alert_read": {
       "name": "标记告警已读",
       "description": "标记告警为已读，消除红点",
       "endpoint": "/api/alerts/<alert_id>/read",
       "method": "POST",
-      "params": {"alert_id": "告警ID"}
+      "params": {"alert_id": "告警ID"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "Shared notifications / Experience", "scheduled_round": "R14", "milestone": "Notification read-state interaction and route parity", "reason": "No exact read-state method/path exists in the current route map."}
     },
     "settings_get": {
       "name": "获取设置",
       "description": "获取系统设置",
       "endpoint": "/api/settings",
       "method": "GET",
-      "params": {}
+      "params": {},
+      "resolution": {"status": "EXACT_CURRENT_ROUTE"}
     },
     "settings_update": {
       "name": "更新设置",
       "description": "更新系统设置",
       "endpoint": "/api/settings",
       "method": "POST",
-      "params": {"settings": "设置项"}
+      "params": {"settings": "设置项"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "SYSTEM Settings", "scheduled_round": "R14", "milestone": "Settings write contract and route parity", "reason": "No exact POST method/path exists; no other settings endpoint is assumed equivalent."}
     },
     "developer_run": {
       "name": "运行代码",
       "description": "开发者工具：运行升级代码并部署",
       "endpoint": "/api/developer/run",
       "method": "POST",
-      "params": {"code": "要运行的代码"}
+      "params": {"code": "要运行的代码"},
+      "resolution": {"status": "DEFERRED_POST_LAUNCH", "canonical_owner_family": "SYSTEM Settings / authorized developer operations", "scheduled_round": "POST_LAUNCH_UPGRADE", "milestone": "Post-launch developer operations authorization review", "reason": "No exact route exists; privileged run/deploy behavior remains deferred and is not inferred from another endpoint."}
     },
     "email_test": {
       "name": "测试邮件",
       "description": "测试邮件发送配置",
       "endpoint": "/api/email/test",
       "method": "POST",
-      "params": {"to": "收件邮箱"}
+      "params": {"to": "收件邮箱"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "SYSTEM Settings", "scheduled_round": "R14", "milestone": "Settings integration configuration and route parity", "reason": "No exact email-test method/path exists; an external send effect is not inferred."}
     },
     "domain_add": {
       "name": "添加公司域名",
       "description": "添加公司域名接入配置",
       "endpoint": "/api/domain/add",
       "method": "POST",
-      "params": {"domain": "域名", "config": "配置"}
+      "params": {"domain": "域名", "config": "配置"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "SYSTEM Settings", "scheduled_round": "R14", "milestone": "Settings/domain configuration owner and route parity", "reason": "No exact domain-add method/path exists; no replacement owner or endpoint is inferred."}
     },
     "domain_delete": {
       "name": "删除公司域名",
       "description": "删除公司域名接入配置",
       "endpoint": "/api/domain/delete",
       "method": "POST",
-      "params": {"domain": "域名"}
+      "params": {"domain": "域名"},
+      "resolution": {"status": "BLOCKED", "canonical_owner_family": "SYSTEM Settings", "scheduled_round": "R14", "milestone": "Settings/domain configuration owner and route parity", "reason": "No exact domain-delete method/path exists; no replacement owner or endpoint is inferred."}
     }
   },
   "last_updated": "2026-08-27"

@@ -33,6 +33,8 @@ void main() {
     expect(snapshot.registeredBreakers, 5);
     expect(snapshot.guardianName, 'legacy');
     expect(snapshot.sampleTimestamp, '2026-09-20T09:30:00Z');
+    expect(snapshot.observationAvailable, isTrue);
+    expect(snapshot.observationTraceId, 'sys01rt-0123456789abcdef01234567');
   });
 
   test('does not turn offline and null metrics into zero', () {
@@ -71,6 +73,8 @@ void main() {
 
       expect(snapshot.hasCompleteRuntimeSample, isFalse);
       expect(snapshot.sampleTimestamp, isNull);
+      expect(snapshot.observationAvailable, isFalse);
+      expect(snapshot.observationTraceId, isNull);
       expect(snapshot.reaperRunning, isNull);
       expect(snapshot.openBreakers, isNull);
       expect(snapshot.registeredBreakers, isNull);
@@ -122,6 +126,17 @@ Map<String, dynamic> _response({
     'source': 'runtime',
     'bound': true,
     'generated_at': '2026-09-20T09:31:00Z',
+    'runtime_observation': {
+      'state': overall != null && timestamp != '状态不可用'
+          ? 'ready'
+          : 'unavailable',
+      'source': 'runtime_guardian.legacy_health_check',
+      'captured_at': overall != null && timestamp != '状态不可用' ? timestamp : null,
+      'trace_id': overall != null && timestamp != '状态不可用'
+          ? 'sys01rt-0123456789abcdef01234567'
+          : null,
+      'boundary': 'read_only',
+    },
     'truth': {'overall': overall},
     'sections': [
       {
