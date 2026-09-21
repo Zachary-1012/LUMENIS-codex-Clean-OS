@@ -2,7 +2,7 @@
 
 > Status: **ROUND 02 EVIDENCE / NOT A SOURCE OR PRODUCT AUTHORITY**
 >
-> Baseline: `a13ff0cf19de894e917031a2fe7e62c751d58344`; final SHA is recorded after Sol acceptance and commit.
+> Baseline: `a13ff0cf19de894e917031a2fe7e62c751d58344`; current committed candidate: `542ee83164f3bcee1583d3ad20a64208bc066b06` (external auto-watch commit; ROUND 02 remains REWORK).
 
 This audit records current API/caller truth and the ROUND 02 owner decisions. It does not delete routes, promote future surfaces, prove global data maturity or create a second Product Core, Context, Permission, Evidence or Database owner.
 
